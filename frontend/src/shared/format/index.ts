@@ -1,0 +1,11 @@
+// Display-only formatting (Tech Stack 5.3). Nothing here calculates money (CLAUDE.md rule 1).
+export {
+  comparePaisa,
+  formatPaisa,
+  groupDigits,
+  type FormatPaisaOptions,
+  type Grouping,
+  type Paisa,
+} from './money';
+export { DEFAULT_PRINT_DIGITS, printDigits, toUrduDigits, type PrintDigits } from './digits';
+export { DEFAULT_GROUPING, useGrouping, useGroupingStore } from './grouping';

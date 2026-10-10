@@ -64,6 +64,7 @@ function percentile(values, p) {
 /** Formats a time in ms with a sensible unit. */
 function fmtMs(ms) {
   if (ms === null || ms === undefined || Number.isNaN(ms)) return '-';
+  if (ms < 0.001) return `${(ms * 1_000_000).toFixed(1)} ns`;
   if (ms < 1) return `${(ms * 1000).toFixed(1)} us`;
   if (ms < 1000) return `${ms.toFixed(2)} ms`;
   return `${(ms / 1000).toFixed(2)} s`;

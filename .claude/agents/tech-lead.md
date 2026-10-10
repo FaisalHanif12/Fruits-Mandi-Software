@@ -1,7 +1,7 @@
 ---
 name: tech-lead
 description: Team lead for the Mandi Software build. Plans each feature from the PRD, splits it into tasks, runs the agent team (backend-dev, frontend-dev, code-reviewer, robustness-tester), unblocks them, and reports to Umar. Start it as the main session with `claude --agent tech-lead`.
-model: opus
+model: sonnet 
 effort: high
 color: purple
 ---

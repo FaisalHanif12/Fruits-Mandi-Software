@@ -41,7 +41,7 @@ Exactly the types and functions of `.claude/agents/money-calculations.md` Sectio
 
 ### 4.3 `mandi_core::text`
 
-- `normalize_urdu(s)`: NFC; ي and ى -> ی; ك -> ک; ه (Arabic heh) -> ہ; ۃ -> ہ; ھ unchanged; remove diacritics (zabar, zer, pesh, shadd, sukun, tanween, the small letters); remove zero-width characters (ZWJ, ZWNJ, ZWSP, BOM); collapse spaces; trim (Tech Stack 4.3, NFR-URD-18).
+- `normalize_urdu(s)`: NFC; ي and ى -> ی; ك -> ک; ه (Arabic heh) -> ہ; ۃ -> ہ; ھ unchanged; remove diacritics (zabar, zer, pesh, shadd, sukun, tanween, the small letters); remove zero-width characters (ZWJ, ZWNJ, ZWSP, word joiner U+2060, BOM); collapse spaces; trim (Tech Stack 4.3, NFR-URD-18).
 - `search_ur(name_ur)`, `search_en(name_en)` (lower case, trimmed, single spaces), `search_phonetic(name_en)` (lower case Latin letters only, vowels a e i o u removed except a first letter, doubled letters made single; "arshad" and "arshd" give the same key).
 - `urdu_sort_key` or a comparator using `icu_collator` with the `ur` locale, so lists sort ا ب پ ت ٹ ... (NFR-URD-19). Test: a shuffled list sorts to the expected order.
 - Script checks for FR-7.28 (`is_urdu_name`, `is_english_name`), used by `validate`.
@@ -58,11 +58,16 @@ The field rules of Code Standards 4.2 as functions that return `Result<T, FieldE
 
 `ERR_REQUIRED`, `ERR_NOT_A_NUMBER`, `ERR_DECIMALS_NOT_ALLOWED`, `ERR_NEGATIVE_NOT_ALLOWED`, `ERR_AMOUNT_TOO_LARGE`, `ERR_MUST_BE_MORE_THAN_ZERO`, `ERR_TOO_MANY_DECIMALS`, `ERR_PERCENT_OVER_100`, `ERR_QTY_TOO_LARGE`, `ERR_WEIGHT_TOO_LARGE`, `ERR_DATE_INVALID`, `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE`, `ERR_CODE_INVALID`, `ERR_NAME_UR_SCRIPT`, `ERR_NAME_EN_SCRIPT`, `ERR_NAME_TOO_LONG`, `ERR_PHONE_INVALID`, `ERR_TEXT_TOO_LONG`, `ERR_CONTROL_CHARS`, `ERR_OVERFLOW`, `ERR_SHARES_NOT_100`. If backend needs another code, it tells the lead first.
 
+Error `values` are display units (whole rupees, نگ, kg, characters), never paisa. Example: `ERR_AMOUNT_TOO_LARGE` sends `max` = 10000000000 (rupees). (Plan 02 review finding 2.)
+
+Number input (lead decisions, plan 02): `ERR_QTY_NOT_WHOLE` is the code for a quantity with decimals; `ERR_DECIMALS_NOT_ALLOWED` is for money and rates. Before parsing, only U+200B, U+200C, U+200D, U+200E (LRM), U+2060 (word joiner) and U+FEFF are removed. The zero-width marks never reorder text; LRM is safe only because every number field is `dir="ltr"` (pinned by a frontend test). Every other bidi control (U+200F RLM, U+202A to U+202E, U+2066 to U+2069, U+061C) is refused as `ERR_NOT_A_NUMBER`, so the screen can never show digits in a different order from the value saved (Trojan Source). A trailing point (`850.`, `6.`, `12.`) is refused. A comma grouping must start with a non-zero group (`0,500` is refused), and weight and percent take no commas (`12,345` kg is refused, not read as 12,345 kg). A phone with an Arabic-Indic digit and a hyphen is refused as `ERR_PHONE_INVALID`. `ERR_CONTROL_CHARS` covers tabs, line breaks and hidden text-direction marks in free text. Arabic-Indic digits (٠-٩) and ٫ ٬ are accepted in a single value (money agent 3.1), but refused as `ERR_NOT_A_NUMBER` in a sum with `+` or `-`, because bidi shows such a sum in a different order from the one read.
+
 `backend` exports the list as a ts-rs type `ErrorCode` (a string union) so `frontend` can check every code has a message.
 
 ### 4.7 Frontend contract
 
 - `frontend/src/shared/format/money.ts`: `formatPaisa(p: Paisa, opts: { grouping: 'international' | 'lakh' }): string`. Integer `%`, `Math.trunc` and string work only; throws in development (logs in production) if `p` is not a multiple of 100 or not a safe integer. Unit tests mirror the Rust `format_paisa` cases, including 1,316,040 and 13,16,040.
+- Money and qty fields: commas the field inserts by itself for display (FR-7.20) are never sent. A comma the user typed or pasted is sent exactly as typed, so the backend checks the grouping (Code Standards M8): "850,50" reaches the backend and is refused, never saved as 85,050. (Plan 02 review finding 3, corrected by robustness finding R02-6.)
 - `frontend/src/shared/format/digits.ts`: Urdu digits (۰-۹) for prints only (NFR-URD-14), off by default.
 - `errors.ftl` in `ur` and `en`: one message `err-<code-in-kebab>` for every code in 4.6, with values (for example the max amount). A test checks that every `ErrorCode` from the bindings has a message in both languages.
 
@@ -73,6 +78,7 @@ The field rules of Code Standards 4.2 as functions that return `Result<T, FieldE
 | T1 | Public types and function signatures in `mandi-core` (bodies may return a not-implemented error), `ErrorCode` export, `pnpm gen:types`. Message the lead with the API. | backend | 01 done |
 | T2 | Bodies and tests. Call the `money-calculations` agent before writing `money` and again before handoff; attach its final report. Property tests with at least 10,000 cases each (money agent 11.2 items 1, 2, 5, 6, 9, plus words never panic and `normalize_urdu` / search keys never panic on any Unicode). Coverage: `cargo llvm-cov` 100% lines on `core::money`, at least 95% on `text`, `urdu_words`, `english_words`. | backend | T1 |
 | T3 | `formatPaisa`, digits helper, error messages for every code, the bindings check test. Then the design system: `styles/tokens.css` exactly from `docs/design/design-system.md` Sections 2 to 5, bundled font faces, and the base components in `shared/ui`: `Button` (with `KeyChip`), `Field`, `TextInput`, `MoneyInput`, `QtyInput`, `DateInput`, `CodeInput`, `Select`, `Card`, `EmptyState`, `ErrorState`, `LoadingState`, `Num`, `Code`, `Toast`, `ConfirmDialog`. Each with a component test in both languages. A development-only gallery page (`/dev/gallery`, not in the shipped build) shows every component in Urdu and English. | frontend | 01 done |
+| T3b | Plan 01 follow-ups: 01-M1 (money lint rule: report Object.values, Object.entries and JSON.stringify on object types that have a Paisa property, or write the case in the rule's scope note) and 01-M2 (left/right keywords in the `background` and `mask` shorthands). | frontend | 01 done |
 | T5 | Review | reviewer | T2, T3 |
 | T6 | Robustness: the D1 attack list item 1 (extreme values, i64 limits, overflow returns an error, malformed texts `1,00,0`, Urdu digits, spaces, signs, empty) | robustness | T2 |
 | T7 | Gate and merge | lead | T5, T6 |

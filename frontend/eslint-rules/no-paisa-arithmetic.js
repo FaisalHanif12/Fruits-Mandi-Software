@@ -15,7 +15,17 @@
 //   `identity<unknown>(amount)`, and a spread of Paisa[] into such a rest parameter;
 // - a function passed where it would receive Paisa into a parameter not typed Paisa:
 //   `amounts.map(Number)`, `amounts.map(String)`, `amounts.forEach(console.log)`,
-//   `amounts.map((p: unknown) => p)`.
+//   `amounts.map((p: unknown) => p)`;
+// - `Object.values`, `Object.entries` and `JSON.stringify` on an object that holds Paisa in a
+//   property, at any depth (plan 01 review finding 01-M1). They hand the amounts back as
+//   `any` or as text: `Object.values(bill)` where bill is `{ total: Paisa }` gives `any[]`,
+//   and `JSON.stringify(bill)` turns the amounts into digits in a string. Read the fields by
+//   name instead (`bill.total`).
+//   Scope note: this is strict on purpose. `Object.values` on a type alias whose values are
+//   all Paisa would keep the type, and is still reported; write the fields out instead.
+//   Other ways an object leaves its type (`Object.assign`, `structuredClone`, spreading into
+//   `unknown`) are covered by the flow check only when the object itself is Paisa or a list of
+//   it; the review checklist covers the rest.
 // Allowed: Paisa into Paisa slots (`formatPaisa(a)`, `setTotal(a)` from useState<Paisa | null>,
 // props typed Paisa), `amounts.sort(comparePaisa)`, `amounts.map((p) => formatPaisa(p))`.
 // Comparisons (`<`, `===`) stay allowed, because sorting needs them.
@@ -25,7 +35,13 @@
 // where formatPaisa builds the display text.
 
 import { ESLintUtils } from '@typescript-eslint/utils';
-import { carriesPaisa, isPaisaType, leaksThroughCallback, parameterTypeAt } from './paisa-types.js';
+import {
+  carriesPaisa,
+  hasPaisaProperty,
+  isPaisaType,
+  leaksThroughCallback,
+  parameterTypeAt,
+} from './paisa-types.js';
 
 /** @typedef {import('@typescript-eslint/utils').TSESTree.Node} Node */
 
@@ -57,6 +73,8 @@ const NUMBER_TEXT_METHODS = new Set([
   'valueOf',
 ]);
 const CONVERT_FUNCTIONS = new Set(['Number', 'String', 'BigInt', 'parseFloat', 'parseInt']);
+/** Calls that take an object apart or turn it into text: `Object.values(bill)`. */
+const OBJECT_SPREADERS = new Set(['Object.values', 'Object.entries', 'JSON.stringify']);
 export default createRule({
   name: 'no-paisa-arithmetic',
   meta: {
@@ -71,6 +89,8 @@ export default createRule({
       call: "Money maths in the frontend: '{{name}}' on a Paisa value. Only formatPaisa in shared/format/money.ts may touch Paisa (Code Standards F3, M3).",
       cast: 'A Paisa value is cast to another type. Casting it would let money maths through; only formatPaisa in shared/format/money.ts may touch Paisa (Code Standards F3).',
       flow: "A Paisa value goes into '{{name}}', where the parameter is not typed Paisa, so the amount stops being money and maths becomes possible. Pass Paisa only where Paisa is expected (Code Standards F3, M12).",
+      objectFlow:
+        "'{{name}}' takes apart an object that holds Paisa ({{property}}), so the amounts come back as any or as text. Read the fields by name instead (Code Standards F3, M12).",
       callback:
         "'{{name}}' would receive Paisa values into a parameter that is not typed Paisa. Use comparePaisa, formatPaisa or an inline function that keeps the value Paisa (Code Standards F3, M12).",
     },
@@ -195,6 +215,20 @@ export default createRule({
         if (callee.type !== 'MemberExpression' || callee.property.type !== 'Identifier') return;
         const method = callee.property.name;
         const objectName = callee.object.type === 'Identifier' ? callee.object.name : '';
+        const qualified = `${objectName}.${method}`;
+        if (OBJECT_SPREADERS.has(qualified)) {
+          const [first] = node.arguments;
+          if (first !== undefined && first.type !== 'SpreadElement') {
+            const argumentType = services.getTypeAtLocation(first);
+            if (!carriesPaisa(argumentType, checker) && hasPaisaProperty(argumentType, checker)) {
+              context.report({
+                node: first,
+                messageId: 'objectFlow',
+                data: { name: qualified, property: context.sourceCode.getText(first).slice(0, 40) },
+              });
+            }
+          }
+        }
         if (objectName === 'Math' || objectName === 'Number') {
           if (anyPaisaArgument(node.arguments)) {
             context.report({ node, messageId: 'call', data: { name: `${objectName}.${method}` } });

@@ -131,3 +131,8 @@ Where a board breaks a rule, the rule wins (recorded 10-10-2026, plan 01 review)
 1. NFR-USE-20: Latin text is at least 16 px outside grids. English running text, labels and button labels use 16 px (`--text-body`), not the 14 or 15 px drawn on some English boards. 14 px Latin is used only inside grids. Urdu stays 18 px as drawn.
 2. Key chips use Inter 16 px semibold, not 12 px, for the same reason. The chip grows to fit; buttons stay 44 px tall.
 3. Extra token `--color-on-primary` (`#FFFFFF`): text and icons on the primary colour.
+4. Urdu text inside fields is 18 px (`--text-field`), not 20 px. At 20 px, Gulzar touches the top border of a 44 px field. Latin field text stays 16 px. (Plan 02.)
+5. The gap between label, field and hint is 8 px, not 4 px, so Nastaliq hints never touch the field border. (Plan 02.)
+6. Urdu hints are 18 px, not the 16 px drawn on `StatesUr` (NFR-USE-20). (Plan 02.)
+7. Added tokens (plan 02): `--color-scrim`, `--color-skeleton`, `--color-money-in-on-nav` `#5FBF8A` (6.7:1 on nav), `--color-due-on-nav` `#F2A29B` (7.5:1 on nav, error toast), `--shadow-overlay`, icon sizes 16 / 20 / 26, badge 56, `--spacing-0`, layout steps `normal:` 1366 and `wide:` 1920, `--page-max-w` 1600, `--dialog-w` 520, `--toast-max-w` 480, `--motion-fast` 150 ms.
+8. The page sets `translate="no"`, so the browser translator never rewrites Urdu text (found in plan 02).

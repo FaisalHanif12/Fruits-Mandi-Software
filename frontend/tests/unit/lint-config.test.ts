@@ -131,6 +131,12 @@ describe('Stylelint: physical position keywords', () => {
     'object-position: left center;',
     'mask-position: right;',
     '-webkit-mask-position: left;',
+    // 01-M2: the shorthands.
+    'background: url("a.png") no-repeat right top;',
+    'background: var(--color-bg) left center;',
+    'background: linear-gradient(to right, var(--color-bg), var(--color-surface));',
+    'mask: url("m.svg") left / contain;',
+    '-webkit-mask: url("m.svg") no-repeat right;',
   ])('fails on %s', async (declaration) => {
     expect(await rulesFor(declaration)).toContain('declaration-property-value-disallowed-list');
   });
@@ -140,6 +146,10 @@ describe('Stylelint: physical position keywords', () => {
     'transform-origin: center top;',
     'object-position: center;',
     'background-position: top center;',
+    'background: var(--color-bg);',
+    'background: url("a.png") no-repeat center;',
+    'background: linear-gradient(to bottom, var(--color-bg), var(--color-surface));',
+    'mask: url("m.svg") center / contain;',
   ])('allows %s', async (declaration) => {
     expect(await rulesFor(declaration)).toEqual([]);
   });

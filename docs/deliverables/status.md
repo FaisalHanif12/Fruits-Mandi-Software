@@ -5,14 +5,14 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 ## Current
 
 - Deliverable: D1 (foundation).
-- Plan file in progress: 01-scaffold, branch `feature/scaffold-repo`.
+- Plan file in progress: 03-database next. 02-core is committed on `feature/core-money`, stacked on `feature/scaffold-repo` (PR #1 waits for Umar to merge it; GitHub workflows are off).
 
 ## Plan files
 
 | Plan | Branch | Pull requests | reviewer | robustness | State |
 |---|---|---|---|---|---|
-| 01-scaffold | feature/scaffold-repo | (pending) | PASS WITH MINOR | PASS | gate passed; waiting for CI |
-| 02-core | | | | | waiting |
+| 01-scaffold | feature/scaffold-repo | #1 | PASS WITH MINOR | PASS | gate passed; waiting for CI |
+| 02-core | feature/core-money | (pending) | PASS WITH MINOR | PASS | gate passed; committed locally |
 | 03-database | | | | | waiting |
 | 04-shell-and-login | | | | | waiting |
 
@@ -33,8 +33,16 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Follow-ups (MINOR)
 
-- 01-M1: Paisa fields read through Object.values on an interface are not followed by the money lint rule. Do in plan 02.
-- 01-M2: `background` and `mask` shorthands with left/right pass Stylelint. Do in plan 02.
+- 01-M1 and 01-M2: done in plan 02.
+- 02: Windows WebView2 check of the Urdu field text position (design-system 8.4).
+- 02: frontend `shared/` coverage (80%, Code Standards 9.4) is not measured yet; add `@vitest/coverage-v8` when `shared/` grows.
+
+## Urdu words waiting for Umar's review (NFR-URD-4)
+
+- Plan 02 words in amounts (`core::urdu_words`): the 0 to 99 list, "ایک روپیہ" for exactly one rupee, "ایک سو" for 100.
+- Plan 02 error messages, all `# review: pending` in `frontend/src/i18n/ur/errors.ftl` (25 codes). New or reworded: `err-not-a-number` ("یہاں نمبر لکھیں، مثلاً 12,000۔ حروف اور غلط جگہ پر لگا ہوا کاما نہیں لکھ سکتے۔": check کاما, غلط جگہ پر لگا ہوا, مثلاً), `err-qty-not-whole`, `err-negative-not-allowed`, `err-control-chars` ("اس خانے میں چھپا ہوا حرف ہے، مثلاً ٹیب، نئی سطر یا تحریر کی سمت کا نشان۔ ...": check چھپا ہوا حرف, تحریر کی سمت کا نشان).
+- Plan 01 glossary: 51 terms marked `# review: pending` in `glossary.ftl`.
+- Dev-only gallery words (never shipped): not on the list.
 
 ## Open questions for Umar
 

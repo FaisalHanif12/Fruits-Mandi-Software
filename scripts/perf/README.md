@@ -120,3 +120,54 @@ Other measured targets:
 | NFR-REL-12 | 12 hours with no slowdown or memory growth | No slowdown, no growth | Same             | Long run, simulated with many operations                                                               | D5         | Pending                      |
 
 When a measurement is added, its plan file adds an entry to `thresholds.json` (`kind: "nfr"`, `nfr`, `action`, `stat: "p95"`, `target_ms`) and changes its Status here to "Measured".
+
+## 6. Budgets for core functions (plan 02)
+
+The NFR sets targets for user actions, not for one function. A core function (parse, percent charge, split, search key) is a small part of an action, so it gets a **budget**: its share of the action's NFR target. Each budget is a row in `thresholds.json` with `kind: "nfr"`, the NFR it comes from marked "(budget)", and the p95 compared as for any other row. Factor 1.0 applies.
+
+Benchmarks: `backend/crates/core/benches/money.rs` and `backend/crates/core/benches/text.rs`. Both need a `[[bench]]` entry with `harness = false` in `backend/crates/core/Cargo.toml` (owned by `backend`).
+
+### 6.1 Money maths, from NFR-SPD-7
+
+- The live summary must show 150 ms after the last key. 50 ms is the wait for the user to stop typing, so the preview has **100 ms** (Section 5).
+- The largest بکری has 500 sale lines (NFR-SCL-3). The preview also reads SQLite, crosses the Tauri bridge and builds the journal and the working records. The pure money maths gets 10% of the 100 ms: **10 ms for 500 lines, 20 µs per line**.
+- One line parses about 3 texts (qty, seller rate, buyer rate) and makes about 3 percent charges (seller commission, buyer commission, لاگا as a percent). 3 × 2 µs + 3 × 1 µs = 9 µs of the 20 µs. The rest is for `line_value`, `per_unit` and the sums.
+- A partner split runs once per posting, not per line.
+
+| Benchmark id | What it runs | Budget | Working |
+|---|---|---|---|
+| `money/parse_rupees` | `parse_rupees("1,23,456")` | 2 µs | per-line share, above |
+| `money/apply_bps` | `apply_bps(5,630, 6%)` | 1 µs | per-line share, above |
+| `money/split_by_bps_3` | split 3,948 at 40/30/30 | 5 µs | once per posting |
+| `money/split_by_bps_10` | split 3,948 over 10 partners (NFR-SCL-5 maximum) | 10 µs | once per posting |
+| `preview/maths_500_lines` | 500 lines: parse qty and both rates (some typed as `20+25` and `1,234`), both line values, both commissions, لاگا, all totals, one 3-partner split | 10 ms | 10% of 100 ms |
+
+### 6.2 Search keys, from NFR-SPD-6 and NFR-SPD-1
+
+- The in-memory search index builds the three keys (`search_ur`, `search_en`, `search_phonetic`) for every account at start-up and after a restore (Tech Stack 4.7). With 20,000 accounts (NFR-SCL-1), the build gets 10% of the 2 s cold start (NFR-SPD-1): **200 ms, so 10 µs per account**.
+- On each key press in a picker, the typed text gets the same keys. NFR-SPD-6 gives the whole search 50 ms; building the query keys must take under 1% (0.5 ms). The 10 µs per name budget meets that with a wide margin.
+
+| Benchmark id | What it runs | Budget | Working |
+|---|---|---|---|
+| `text/normalize_urdu_name` | `normalize_urdu` on a typical name with Arabic letter variants, a diacritic and double spaces | 5 µs | half of the 10 µs per account |
+| `text/search_keys_name` | all three keys of that name | 10 µs | 200 ms ÷ 20,000 |
+| `text/search_keys_name_100` | all three keys of a 96-character Urdu and 91-character English name (near the 100-character maximum, Code Standards 4.2) | 30 µs | worst case; the average stays at 10 µs |
+| `index/keys_20000_accounts` | all three keys for 20,000 generated accounts | 200 ms | 10% of NFR-SPD-1 |
+
+### 6.3 Measured on the developer Mac (10-10-2026)
+
+Criterion mean on the Apple M1 Pro. "Reference estimate" = Mac × 3,752 ÷ 2,268 (Section 2), the expected time on the i3-7100.
+
+| Benchmark id | Mac | Reference estimate | Budget | Headroom on the reference |
+|---|---|---|---|---|
+| `money/apply_bps` | 2.9 ns | 4.8 ns | 1 µs | about 200 × |
+| `money/parse_rupees` | 139 ns | 230 ns | 2 µs | about 8 × |
+| `money/split_by_bps_3` | 87 ns | 145 ns | 5 µs | about 34 × |
+| `money/split_by_bps_10` | 251 ns | 415 ns | 10 µs | about 24 × |
+| `preview/maths_500_lines` | 253 µs | 419 µs | 10 ms | about 24 × |
+| `text/normalize_urdu_name` | 470 ns | 777 ns | 5 µs | about 6 × |
+| `text/search_keys_name` | 1.33 µs | 2.2 µs | 10 µs | about 4.5 × |
+| `text/search_keys_name_100` | 5.0 µs | 8.3 µs | 30 µs | about 3.6 × |
+| `index/keys_20000_accounts` | 19.7 ms | 32.6 ms | 200 ms | about 6 × |
+
+The budgets are hard limits taken from the NFR, not alarms set just above today's time. A slowdown that stays inside a budget passes; one that breaks it means the action's NFR target is at risk and is a finding.

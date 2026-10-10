@@ -88,3 +88,48 @@ body {
   font-weight: var(--font-weight-semibold);
   line-height: var(--leading-chip);
 }
+
+/* Field labels (design system 3 and 6): body size; semibold in English, Gulzar's one weight in
+   Urdu. */
+@utility type-label {
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/* Text typed into a field: Latin 16 px (design system 3 "Field text"), Urdu 18 px (boards). */
+@utility type-field {
+  font-family: var(--font-text);
+  font-size: var(--text-field);
+  line-height: var(--leading-text);
+}
+
+/* Section, card and dialog titles: step 3. */
+@utility type-section {
+  font-family: var(--font-text);
+  font-size: var(--text-3);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/*
+ * Codes, amounts, quantities and dates typed into a field (design system 6): Inter with
+ * equal-width digits, written left to right and set against the physical right edge
+ * (NFR-USE-19, Code Standards F17). direction: ltr plus text-align: end gives the right edge in
+ * both languages, so no physical keyword is needed.
+ */
+@utility type-number-field {
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-latin-2);
+  line-height: var(--leading-latin);
+  direction: ltr;
+  text-align: end;
+}
+
+/* Only colour and opacity move, at most 150 ms (design system 7). */
+@utility transition-calm {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: var(--motion-fast);
+}

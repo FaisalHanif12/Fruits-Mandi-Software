@@ -542,3 +542,43 @@ describe('reviewer recheck 2 finding A2: Paisa flows only into Paisa slots', () 
     ],
   });
 });
+
+// Plan 01 review finding 01-M1: objects that hold Paisa, taken apart or turned into text.
+describe('01-M1: Object.values, Object.entries and JSON.stringify on objects with Paisa', () => {
+  const BILL = `${PAISA_API}interface Bill { total: Paisa; laga: Paisa; note: string }\ndeclare const bill: Bill;\n`;
+  ruleTester.run('no-paisa-arithmetic', noPaisaArithmetic, {
+    valid: [
+      { code: `${BILL}const text = formatPaisa(bill.total);` },
+      {
+        code: 'declare const qty: { n: number }; const v = Object.values(qty); const s = JSON.stringify(qty);',
+      },
+      { code: `${BILL}const keys = Object.keys(bill);` },
+      {
+        code: 'declare const row: { name: string; codes: string[] }; const e = Object.entries(row);',
+      },
+    ],
+    invalid: [
+      {
+        code: `${BILL}const all = Object.values(bill);`,
+        errors: [{ messageId: 'objectFlow', data: { name: 'Object.values', property: 'bill' } }],
+      },
+      {
+        code: `${BILL}const pairs = Object.entries(bill);`,
+        errors: [{ messageId: 'objectFlow', data: { name: 'Object.entries', property: 'bill' } }],
+      },
+      {
+        code: `${BILL}const text = JSON.stringify(bill);`,
+        errors: [{ messageId: 'objectFlow', data: { name: 'JSON.stringify', property: 'bill' } }],
+      },
+      {
+        // Deeper: a list of lines inside a bill, and an optional amount.
+        code: `${PAISA_API}declare const posting: { lines: { amount: Paisa | null }[] }; const t = JSON.stringify(posting);`,
+        errors: [{ messageId: 'objectFlow' }],
+      },
+      {
+        code: `${BILL}const bills: Bill[] = [bill]; const t = JSON.stringify(bills);`,
+        errors: [{ messageId: 'objectFlow' }],
+      },
+    ],
+  });
+});

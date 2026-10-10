@@ -14,6 +14,7 @@ use std::path::PathBuf;
 
 use mandi_app_lib::commands::app::AppInfo;
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
+use mandi_services::core::money::Paisa;
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -72,4 +73,69 @@ fn bindings_have_the_contract_shape() {
     let codes = ErrorCode::decl(&cfg);
     assert!(codes.contains("\"ERR_NOT_IMPLEMENTED\""), "{codes}");
     assert!(codes.contains("\"ERR_INTERNAL\""), "{codes}");
+}
+
+/// Every code of plan 02 Section 4.6 is in the exported union, spelled as the JSON the
+/// commands send, and nothing else is.
+#[test]
+fn error_code_union_has_every_code() {
+    let decl = ErrorCode::decl(&Config::new());
+    for code in ErrorCode::ALL {
+        let json = serde_json::to_string(&code).unwrap();
+        assert!(decl.contains(&json), "{json} missing in {decl}");
+    }
+    assert_eq!(
+        decl.matches("\"ERR_").count(),
+        ErrorCode::ALL.len(),
+        "{decl}"
+    );
+    for code in [
+        "ERR_REQUIRED",
+        "ERR_NOT_A_NUMBER",
+        "ERR_DECIMALS_NOT_ALLOWED",
+        "ERR_NEGATIVE_NOT_ALLOWED",
+        "ERR_AMOUNT_TOO_LARGE",
+        "ERR_MUST_BE_MORE_THAN_ZERO",
+        "ERR_TOO_MANY_DECIMALS",
+        "ERR_PERCENT_OVER_100",
+        "ERR_QTY_TOO_LARGE",
+        "ERR_QTY_NOT_WHOLE",
+        "ERR_WEIGHT_TOO_LARGE",
+        "ERR_DATE_INVALID",
+        "ERR_DATE_CLOSED",
+        "ERR_DATE_IN_FUTURE",
+        "ERR_CODE_INVALID",
+        "ERR_NAME_UR_SCRIPT",
+        "ERR_NAME_EN_SCRIPT",
+        "ERR_NAME_TOO_LONG",
+        "ERR_PHONE_INVALID",
+        "ERR_TEXT_TOO_LONG",
+        "ERR_CONTROL_CHARS",
+        "ERR_OVERFLOW",
+        "ERR_SHARES_NOT_100",
+    ] {
+        assert!(
+            decl.contains(&format!("\"{code}\"")),
+            "{code} missing in {decl}"
+        );
+    }
+}
+
+/// Money fields are typed `Paisa` (the frontend's opaque type) and no `Paisa.ts` is
+/// written or imported from `./Paisa` (plan 02 Section 4.1).
+#[test]
+fn money_fields_are_typed_paisa() {
+    #[derive(TS)]
+    #[allow(dead_code)]
+    struct MoneyProbe {
+        amount: Paisa,
+        maybe: Option<Paisa>,
+    }
+    let cfg = Config::new();
+    let decl = MoneyProbe::decl(&cfg);
+    assert!(decl.contains("amount: Paisa"), "{decl}");
+    assert!(decl.contains("maybe: Paisa | null"), "{decl}");
+    let file = MoneyProbe::export_to_string(&cfg).unwrap();
+    assert!(!file.contains("./Paisa"), "{file}");
+    assert!(<Paisa as TS>::output_path().is_none());
 }
