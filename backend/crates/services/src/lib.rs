@@ -2,6 +2,9 @@
 //! (Code Standards B3), plus the in-memory search index and read-only assist queries.
 //! Depends on `mandi-domain` and `mandi-db`.
 
+/// `mandi-core`, re-exported for the app (error codes, money types).
+pub use mandi_domain::core;
+
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");
 

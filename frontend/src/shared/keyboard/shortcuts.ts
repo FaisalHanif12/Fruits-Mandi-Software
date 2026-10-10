@@ -17,6 +17,12 @@ export interface Shortcut {
 export const SHORTCUTS = {
   /** Switch between اردو and English, anywhere (PRD FR-7.30). */
   languageToggle: { code: 'KeyL', alt: true, label: 'Alt+L' },
+  /** New entry on the current screen (PRD 7.3). */
+  newEntry: { code: 'F2', label: 'F2' },
+  /** Save on entry screens (PRD 7.3). Ctrl+S does the same. */
+  save: { code: 'F10', label: 'F10' },
+  /** Close a list or dialog, else go back (PRD FR-7.18). Shown on "back" buttons. */
+  back: { code: 'Escape', label: 'Esc' },
 } as const satisfies Record<string, Shortcut>;
 
 /** True when the key event is exactly this shortcut (no extra modifier keys). */

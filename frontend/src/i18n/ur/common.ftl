@@ -19,3 +19,13 @@ common-language-en = English
 common-language-switch = زبان بدلیں
 # review: pending
 common-language-hint = زبان بدلنے کے لیے { $key } دبائیں۔
+
+## Shared controls (design system 6).
+
+# review: pending
+common-back = واپس
+# review: pending
+common-select-placeholder = چنیں
+# Name of the toast area, read by screen readers.
+# review: pending
+common-notifications = اطلاعات

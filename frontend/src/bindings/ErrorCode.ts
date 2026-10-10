@@ -4,4 +4,29 @@
  * Every error code the backend can send. Serialised as `ERR_` + SCREAMING_SNAKE_CASE.
  * Each code needs a message in `frontend/src/i18n/{ur,en}/errors.ftl`.
  */
-export type ErrorCode = 'ERR_NOT_IMPLEMENTED' | 'ERR_INTERNAL';
+export type ErrorCode =
+  | 'ERR_NOT_IMPLEMENTED'
+  | 'ERR_INTERNAL'
+  | 'ERR_REQUIRED'
+  | 'ERR_NOT_A_NUMBER'
+  | 'ERR_DECIMALS_NOT_ALLOWED'
+  | 'ERR_NEGATIVE_NOT_ALLOWED'
+  | 'ERR_AMOUNT_TOO_LARGE'
+  | 'ERR_MUST_BE_MORE_THAN_ZERO'
+  | 'ERR_TOO_MANY_DECIMALS'
+  | 'ERR_PERCENT_OVER_100'
+  | 'ERR_QTY_TOO_LARGE'
+  | 'ERR_QTY_NOT_WHOLE'
+  | 'ERR_WEIGHT_TOO_LARGE'
+  | 'ERR_DATE_INVALID'
+  | 'ERR_DATE_CLOSED'
+  | 'ERR_DATE_IN_FUTURE'
+  | 'ERR_CODE_INVALID'
+  | 'ERR_NAME_UR_SCRIPT'
+  | 'ERR_NAME_EN_SCRIPT'
+  | 'ERR_NAME_TOO_LONG'
+  | 'ERR_PHONE_INVALID'
+  | 'ERR_TEXT_TOO_LONG'
+  | 'ERR_CONTROL_CHARS'
+  | 'ERR_OVERFLOW'
+  | 'ERR_SHARES_NOT_100';

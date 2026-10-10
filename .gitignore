@@ -121,3 +121,6 @@ $RECYCLE.BIN/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Browser tool output from local UI checks
+.playwright-mcp/

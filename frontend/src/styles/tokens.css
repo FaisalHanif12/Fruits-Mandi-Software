@@ -35,6 +35,20 @@
   /* The double rule an accountant draws under a total (start screen). */
   --rule-gap: 3px;
 
+  /* Layout steps (design system 4, Code Standards F22): compact 1024 to 1365 px, normal 1366
+     to 1919, wide 1920 and up, where the content stops at 1600 px and is centred. */
+  --page-max-w: 1600px;
+
+  /* Toast and dialog sizes (UsersEn, FormEn boards). */
+  --toast-max-w: 480px;
+  --dialog-w: 520px;
+
+  /* Motion (design system 7): colour and opacity only, at most 150 ms. */
+  --motion-fast: 150ms;
+
+  /* Loading skeleton bars (StatesUr board). */
+  --skeleton-h: 14px;
+
   /* Type scale per script (design system 3, Code Standards F11). */
   --text-latin-1: 14px;
   --text-latin-2: 16px;
@@ -78,7 +92,25 @@
   --color-warn-soft: #fdf1dc;
   --color-warn-border: #e9c98f;
 
-  /* Tailwind spacing classes (p-1 ... p-7, h-control) read the scale and sizes above. */
+  /*
+   * Additions for plan 02 components (reported to tech-lead; design system 6 and the boards).
+   * Scrim behind a dialog: nav colour at 35% (design system 6, "ConfirmDialog").
+   * Skeleton bars of the loading state (StatesUr board).
+   * Icons on the nav-coloured toast ground: a light green and a light red, because
+   * money-in and due are too dark on nav (UsersEn board draws the tick in #5FBF8A).
+   */
+  --color-scrim: rgb(22 38 63 / 35%);
+  --color-skeleton: #ece8e0;
+  --color-money-in-on-nav: #5fbf8a;
+  --color-due-on-nav: #f2a29b;
+
+  /* Layout steps as Tailwind variants: `normal:` and `wide:` (compact is the default). */
+  --breakpoint-normal: 1366px;
+  --breakpoint-wide: 1920px;
+
+  /* Tailwind spacing classes (p-1 ... p-7, h-control) read the scale and sizes above.
+     spacing-0 makes `inset-0`, `p-0` and `gap-0` work after the reset above. */
+  --spacing-0: 0px;
   --spacing-1: var(--space-1);
   --spacing-2: var(--space-2);
   --spacing-3: var(--space-3);
@@ -89,6 +121,17 @@
   --spacing-control: var(--control-h);
   --spacing-control-compact: var(--control-h-compact);
   --spacing-chip: var(--chip-h);
+
+  /* Icon sizes (Code Standards F13): 16 in grids and field messages, 20 in buttons and
+     toasts, 26 inside the round badge of the empty and error states, badge 56. */
+  --spacing-icon-sm: 16px;
+  --spacing-icon-md: 20px;
+  --spacing-icon-lg: 26px;
+  --spacing-badge: 56px;
+  --spacing-skeleton: var(--skeleton-h);
+
+  /* Shadows of things that float over the page: dialogs and toasts (boards). */
+  --shadow-overlay: 0 12px 40px rgb(22 38 63 / 25%);
 
   /* Type steps. These are the English (Latin) values; Urdu values are set below. */
   --text-1: var(--text-latin-1);
@@ -115,6 +158,9 @@
 
   /* Widest reading column of the start screen. */
   --container-reading: 720px;
+  --container-page: var(--page-max-w);
+  --container-dialog: var(--dialog-w);
+  --container-toast: var(--toast-max-w);
 }
 
 /*
@@ -132,6 +178,7 @@
   --text-4: var(--text-latin-4);
   --text-5: var(--text-latin-5);
   --text-body: var(--text-latin-2);
+  --text-field: var(--text-latin-2);
   --font-text: var(--font-latin);
   --leading-text: var(--leading-latin);
   --weight-strong: var(--font-weight-semibold);
@@ -144,6 +191,10 @@
   --text-4: var(--text-urdu-4);
   --text-5: var(--text-urdu-5);
   --text-body: var(--text-urdu-1);
+
+  /* Text typed into a field. 18 px, as the boards draw it: at 20 px (design system 3, step 2)
+     Gulzar's tall letters reach the border of a 44 px field. Reported to tech-lead. */
+  --text-field: var(--text-urdu-1);
   --font-text: var(--font-urdu);
   --leading-text: var(--leading-urdu);
 

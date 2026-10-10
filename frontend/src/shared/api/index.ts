@@ -1,2 +1,2 @@
-export { CommandError, callCommand, isUiError, toUiError } from './invoke';
-export { errorMessageId, uiErrorOf } from './errors';
+export { CommandError, callCommand, hasAppBridge, isUiError, toUiError } from './invoke';
+export { errorMessageId, messageVars, uiErrorOf } from './errors';

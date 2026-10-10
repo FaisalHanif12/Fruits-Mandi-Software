@@ -51,6 +51,13 @@ thiserror = "2.0.21"
 ts-rs = "12.0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
+# Core text and tests (Tech Stack 2): NFC for names and search keys, Urdu sort
+# order (ICU4X, Unicode-3.0 licence, compiled data built in), property tests.
+unicode-normalization = "0.1.25"
+icu_collator = "2.3.1"
+icu_locale_core = "2.3.0"
+proptest = { version = "1.11.0", default-features = false, features = ["std", "bit-set"] }
+
 # Benchmarks for the NFR speed targets (Code Standards B25). No HTML or plot output.
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 

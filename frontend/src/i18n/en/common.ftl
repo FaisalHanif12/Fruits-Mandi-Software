@@ -19,3 +19,13 @@ common-language-en = English
 common-language-switch = Change language
 # review: pending
 common-language-hint = Press { $key } to change the language.
+
+## Shared controls (design system 6).
+
+# review: pending
+common-back = Back
+# review: pending
+common-select-placeholder = Choose
+# Name of the toast area, read by screen readers.
+# review: pending
+common-notifications = Notifications

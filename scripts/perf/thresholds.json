@@ -9,6 +9,87 @@
       "stat": "mean",
       "expected_reference_ms": 0.228,
       "$comment": "Not an NFR target. 0.228 ms = 0.138 ms measured on the Apple M1 Pro x (PassMark single thread 3,752 / 2,268 for the Core i3-7100). README Section 3."
+    },
+    {
+      "id": "money/apply_bps",
+      "action": "apply_bps, one percent charge",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7 (budget)",
+      "stat": "p95",
+      "target_ms": 0.001,
+      "$comment": "1 us. Per-line share of the 100 ms preview at 500 lines. README Section 6."
+    },
+    {
+      "id": "money/parse_rupees",
+      "action": "parse_rupees, one money text",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7 (budget)",
+      "stat": "p95",
+      "target_ms": 0.002,
+      "$comment": "2 us. Per-line share of the 100 ms preview at 500 lines. README Section 6."
+    },
+    {
+      "id": "money/split_by_bps_3",
+      "action": "split_by_bps, 3 partners",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7 (budget)",
+      "stat": "p95",
+      "target_ms": 0.005,
+      "$comment": "5 us. Once per posting. README Section 6."
+    },
+    {
+      "id": "money/split_by_bps_10",
+      "action": "split_by_bps, 10 partners",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7 (budget)",
+      "stat": "p95",
+      "target_ms": 0.01,
+      "$comment": "10 us. Once per posting, NFR-SCL-5 maximum. README Section 6."
+    },
+    {
+      "id": "preview/maths_500_lines",
+      "action": "Preview money maths, 500 lines",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7 (budget)",
+      "stat": "p95",
+      "target_ms": 10,
+      "$comment": "10 ms = 10% of the 100 ms preview, at the NFR-SCL-3 maximum. README Section 6."
+    },
+    {
+      "id": "text/normalize_urdu_name",
+      "action": "normalize_urdu, one name",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6 (budget)",
+      "stat": "p95",
+      "target_ms": 0.005,
+      "$comment": "5 us. README Section 6."
+    },
+    {
+      "id": "text/search_keys_name",
+      "action": "Three search keys, one name",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6 (budget)",
+      "stat": "p95",
+      "target_ms": 0.01,
+      "$comment": "10 us = 200 ms index build / 20,000 accounts. README Section 6."
+    },
+    {
+      "id": "text/search_keys_name_100",
+      "action": "Three search keys, 100-char name",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6 (budget)",
+      "stat": "p95",
+      "target_ms": 0.03,
+      "$comment": "30 us for the longest allowed name. README Section 6."
+    },
+    {
+      "id": "index/keys_20000_accounts",
+      "action": "Search keys for 20,000 accounts",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-1 (budget)",
+      "stat": "p95",
+      "target_ms": 200,
+      "$comment": "200 ms = 10% of the 2 s cold start. README Section 6."
     }
   ],
   "install": {

@@ -8,6 +8,10 @@
 #![deny(clippy::arithmetic_side_effects)]
 #![cfg_attr(test, allow(clippy::arithmetic_side_effects))]
 
+/// `mandi-core`, re-exported so the crates above reach it through the one allowed path
+/// (app -> services -> domain -> core).
+pub use mandi_core as core;
+
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");
 

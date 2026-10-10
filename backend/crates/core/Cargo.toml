@@ -6,13 +6,31 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+serde.workspace = true
+thiserror.workspace = true
+ts-rs.workspace = true
+chrono.workspace = true
+unicode-normalization.workspace = true
+icu_collator.workspace = true
+icu_locale_core.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
+proptest.workspace = true
+serde_json.workspace = true
 
 # Owned by robustness: the speed harness calibration (plan 01 T5).
 [[bench]]
 name = "calibration"
+harness = false
+
+# Speed targets for money and text (NFR-SPD, Code Standards B25). Owned by robustness.
+[[bench]]
+name = "money"
+harness = false
+
+[[bench]]
+name = "text"
 harness = false
 
 [lints]

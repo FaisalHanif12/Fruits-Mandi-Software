@@ -77,9 +77,10 @@ export default defineConfig(
   },
   {
     // The one place allowed to work with Paisa digits: formatPaisa builds the display text
-    // (Code Standards F3).
+    // (Code Standards F3). In production a bad amount is logged, not thrown, so the screen stays
+    // up (plan 02 contract 4.7); console.error is the only console call allowed there.
     files: ['src/shared/format/money.ts'],
-    rules: { 'mandi/no-paisa-arithmetic': 'off' },
+    rules: { 'mandi/no-paisa-arithmetic': 'off', 'no-console': ['error', { allow: ['error'] }] },
   },
   {
     // Node tools: config files, the lint rules themselves and the Windows end-to-end suite.

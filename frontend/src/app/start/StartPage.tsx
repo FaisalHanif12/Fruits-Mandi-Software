@@ -3,13 +3,23 @@
 // (there is no empty state: the version always exists).
 
 import { Localized } from '@fluent/react';
-import { uiErrorOf } from '../../shared/api';
+import { Suspense, lazy } from 'react';
+import { hasAppBridge, uiErrorOf } from '../../shared/api';
 import { SHORTCUTS } from '../../shared/keyboard';
 import { Button, Code, ErrorNotice } from '../../shared/ui';
 import { LanguageSwitch } from '../layout/LanguageSwitch';
 import { useAppInfo } from './useAppInfo';
 
-function VersionLine() {
+// Development only. The helpers are loaded through import.meta.env.DEV, so a build has neither
+// the code nor its words. In a build both constants are null and the branches below are removed.
+const BrowserPreviewNote = import.meta.env.DEV
+  ? lazy(() => import('../dev/StartDevTools').then((m) => ({ default: m.BrowserPreviewNote })))
+  : null;
+const GalleryLink = import.meta.env.DEV
+  ? lazy(() => import('../dev/StartDevTools').then((m) => ({ default: m.GalleryLink })))
+  : null;
+
+function AppVersionLine() {
   const query = useAppInfo();
   if (query.isPending) {
     return (
@@ -45,6 +55,18 @@ function VersionLine() {
   );
 }
 
+function VersionLine() {
+  // A plain browser tab has no app bridge, so app_info cannot answer. Say so, in development.
+  if (BrowserPreviewNote !== null && !hasAppBridge()) {
+    return (
+      <Suspense fallback={null}>
+        <BrowserPreviewNote />
+      </Suspense>
+    );
+  }
+  return <AppVersionLine />;
+}
+
 export function StartPage() {
   return (
     <div className="flex min-h-screen flex-col bg-bg text-ink">
@@ -65,10 +87,15 @@ export function StartPage() {
           <VersionLine />
         </section>
       </main>
-      <footer className="px-6 pb-5">
+      <footer className="flex flex-wrap items-center justify-between gap-4 px-6 pb-5">
         <Localized id="common-language-hint" vars={{ key: SHORTCUTS.languageToggle.label }}>
           <p className="type-body text-ink-muted" />
         </Localized>
+        {GalleryLink === null ? null : (
+          <Suspense fallback={null}>
+            <GalleryLink />
+          </Suspense>
+        )}
       </footer>
     </div>
   );

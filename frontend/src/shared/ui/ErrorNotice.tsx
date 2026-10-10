@@ -3,8 +3,8 @@
 
 import { Localized } from '@fluent/react';
 import type { UiError } from '../../bindings/UiError';
-import { errorMessageId } from '../api';
 import { Code } from './Code';
+import { ErrorMessage } from './ErrorMessage';
 
 interface ErrorNoticeProps {
   error: UiError;
@@ -14,13 +14,9 @@ export function ErrorNotice({ error }: ErrorNoticeProps) {
   return (
     <div role="alert" className="flex flex-col gap-1 text-due">
       {error.errors.map((item, index) => (
-        <Localized
-          key={`${item.code}-${String(index)}`}
-          id={errorMessageId(item.code)}
-          vars={item.values}
-        >
+        <ErrorMessage key={`${item.code}-${String(index)}`} item={item}>
           <p className="type-body" />
-        </Localized>
+        </ErrorMessage>
       ))}
       {error.ref === '' ? null : (
         <Localized id="err-reference" vars={{ ref: error.ref }} elems={{ code: <Code /> }}>

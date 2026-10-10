@@ -19,7 +19,9 @@ export default {
     // start/end where the property allows it, or a token offset set per direction.
     'declaration-property-value-disallowed-list': [
       {
-        '/^(-webkit-)?(background-position(-x)?|transform-origin|object-position|mask-position(-x)?|perspective-origin|offset-anchor|offset-position)$/':
+        // The `background` and `mask` shorthands hold a position too, and a gradient's
+        // `to left` / `to right` (plan 01 review finding 01-M2).
+        '/^(-webkit-)?(background(-position(-x)?)?|transform-origin|object-position|mask(-position(-x)?)?|perspective-origin|offset-anchor|offset-position)$/':
           ['/\\b(left|right)\\b/'],
       },
       {

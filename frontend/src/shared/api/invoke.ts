@@ -61,3 +61,11 @@ export async function callCommand<T>(command: string, args?: InvokeArgs): Promis
     throw new CommandError(toUiError(error));
   }
 }
+
+/**
+ * True inside the Tauri window, false in a plain browser tab (for example the Vite page opened
+ * in Chrome during development). Tauri puts `__TAURI_INTERNALS__` on the window; invoke() needs it.
+ */
+export function hasAppBridge(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}

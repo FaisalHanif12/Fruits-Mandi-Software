@@ -121,3 +121,31 @@ export function leaksThroughCallback(slotType, functionType, checker) {
     }),
   );
 }
+
+/**
+ * True when an object type holds Paisa in a property, at any depth up to MAX_DEPTH:
+ * `{ total: Paisa }`, `{ lines: { amount: Paisa }[] }`, `{ total: Paisa | null }`.
+ * Paisa itself and plain Paisa lists are not "objects with a Paisa property"; carriesPaisa
+ * covers those.
+ * @param {TsType} type
+ * @param {TypeChecker} checker
+ * @param {number} [depth]
+ * @returns {boolean}
+ */
+export function hasPaisaProperty(type, checker, depth = 0) {
+  if (depth > MAX_DEPTH) return false;
+  if (type.isUnion()) return type.types.some((part) => hasPaisaProperty(part, checker, depth + 1));
+  if (isPaisaType(type, checker)) return false;
+  if ((type.flags & ts.TypeFlags.Object) === 0) return false;
+  const element = type.getNumberIndexType();
+  if (element !== undefined) {
+    return hasPaisaProperty(element, checker, depth + 1);
+  }
+  return type.getProperties().some((property) => {
+    const propertyType = checker.getTypeOfSymbol(property);
+    return (
+      carriesPaisa(propertyType, checker, depth + 1) ||
+      hasPaisaProperty(propertyType, checker, depth + 1)
+    );
+  });
+}

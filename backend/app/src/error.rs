@@ -17,26 +17,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use serde::{Serialize, Serializer};
 use ts_rs::TS;
 
-/// Every error code the backend can send. Serialised as `ERR_` + SCREAMING_SNAKE_CASE.
-/// Each code needs a message in `frontend/src/i18n/{ur,en}/errors.ftl`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ErrorCode {
-    /// The command exists in the contract but is not built yet (task T1 stubs).
-    ErrNotImplemented,
-    /// Something failed inside the backend that the user cannot fix by changing input.
-    ErrInternal,
-}
-
-/// One value that goes into an error message, for example `{"available": 5}`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(untagged)]
-pub enum ErrorValue {
-    /// A text value, for example a code or a name.
-    Text(String),
-    /// A whole number, for example a quantity.
-    Number(i64),
-}
+/// The one list of error codes and message values lives in `mandi-core` (plan 02 Section 4.6).
+pub use mandi_services::core::error::{ErrorCode, ErrorValue, FieldError};
 
 /// One problem, pointing at the field or grid cell it belongs to.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -48,6 +30,16 @@ pub struct UiErrorItem {
     /// Values for the message, for example `{"available": 5}`.
     #[ts(type = "Record<string, string | number>")]
     pub values: BTreeMap<String, ErrorValue>,
+}
+
+impl From<FieldError> for UiErrorItem {
+    fn from(e: FieldError) -> Self {
+        Self {
+            code: e.code,
+            field: Some(e.field),
+            values: e.values,
+        }
+    }
 }
 
 /// Always serialises as `false`, so `ok` can never be `true` on an error.
@@ -149,6 +141,22 @@ mod tests {
                 "code": "ERR_INTERNAL",
                 "field": "lots[0].sales[2].qty",
                 "values": { "available": 5, "item": "کیلا" },
+            })
+        );
+    }
+
+    #[test]
+    fn field_errors_become_items() {
+        let field_error = FieldError::new(ErrorCode::ErrQtyTooLarge, "lots[0].qty")
+            .with("max", ErrorValue::Number(1_000_000));
+        let error = UiError::from_items(vec![field_error.into()]);
+        let value = serde_json::to_value(&error).unwrap();
+        assert_eq!(
+            value["errors"][0],
+            json!({
+                "code": "ERR_QTY_TOO_LARGE",
+                "field": "lots[0].qty",
+                "values": { "max": 1_000_000 },
             })
         );
     }
