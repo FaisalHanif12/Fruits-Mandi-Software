@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Form Urdu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;family=Noto+Nastaliq+Urdu:wght@400;600&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Gulzar,"Noto Nastaliq Urdu",serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,"Noto Nastaliq Urdu",serif;line-height:1.9}
+.num{font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+.nav{display:flex;align-items:center;height:40px;padding:0 14px;border-radius:8px;color:#D6DDE8;font-size:18px;text-decoration:none}
+.lbl{display:flex;flex-direction:column;gap:4px;font-size:18px}
+.in{height:44px;box-sizing:border-box;border:1px solid #8C8577;border-radius:4px;padding:0 12px;background:#FFFFFF}
+.hint{font-size:16px;color:#565C64}
+.row{display:flex;justify-content:space-between;align-items:baseline;font-size:18px}
+</style>
+</helmet>
+<div dir="rtl" style="width:1366px;height:768px;display:flex;background:#F6F4EF">
+  <nav aria-label="بکری مینو" class="ur" style="width:200px;background:#EFECE5;border-inline-end:1px solid #D9D4C9;display:flex;flex-direction:column;padding:16px 10px;gap:2px;box-sizing:border-box">
+    <div style="font-size:16px;color:#565C64;padding:0 14px 6px">بکری</div>
+    <a class="nav" href="#" style="color:#1C1F23">بکری بک</a>
+    <a class="nav" href="#" style="color:#1C1F23">وصولی / اگراہی</a>
+    <a class="nav" href="#" style="color:#1C1F23">ادائیگی</a>
+    <a class="nav" href="#" aria-current="page" style="background:#1D3D6E;color:#FFFFFF">پیشگی کھاتہ</a>
+    <a class="nav" href="#" style="color:#1C1F23">پختہ کھاتہ</a>
+    <a class="nav" href="#" style="color:#1C1F23">آج کی بکری</a>
+    <a class="nav" href="#" style="color:#1C1F23">باقی مال</a>
+  </nav>
+  <main style="flex:1;padding:28px 32px;display:flex;flex-direction:column;gap:18px;min-width:0">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;align-items:baseline;gap:12px"><span class="ur" style="font-size:28px">پیشگی</span><span class="ur hint">نیا واؤچر · نمبر محفوظ کرنے پر ملے گا</span></div>
+      <span class="ur" style="font-size:16px;color:#8A5300;background:#FDF1DC;border-radius:14px;padding:0 12px">محفوظ نہیں ہوا</span>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start">
+      <div style="background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:24px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px">
+        <label class="lbl ur">تاریخ<input class="in num" value="01-09-2026" style="font-size:16px;text-align:right"></label>
+        <label class="lbl ur">ذریعہ<select class="in ur" style="font-size:18px"><option>نقد</option><option>بینک</option><option>چیک</option></select></label>
+        <label class="lbl ur" style="grid-column:span 2">بیوپاری
+          <span style="display:flex;gap:8px"><input class="in num" value="1" style="width:120px;font-size:16px;text-align:right"><input class="in ur" value="رحیم" readonly style="flex:1;font-size:18px;background:#F6F4EF"></span>
+          <span class="hint ur">کوڈ، مختصر کوڈ یا نام لکھیں · نیا کھاتہ <span class="kbd" style="background:#EFECE5;color:#1C1F23">F4</span></span>
+        </label>
+        <label class="lbl ur">رقم<input class="in num" value="15,000.50" style="font-size:16px;text-align:right;border-color:#B3261E;background:#FBEAE8;outline:3px solid #2563C9;outline-offset:2px">
+          <span style="display:flex;gap:6px;align-items:center;font-size:16px;color:#B3261E"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B3261E" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16v.5"></path></svg>رقم پورے روپوں میں لکھیں</span>
+        </label>
+        <label class="lbl ur">متوقع مال<input class="in ur" placeholder="مثلاً کیلا، اگلا سیزن" style="font-size:18px"></label>
+        <label class="lbl ur" style="grid-column:span 2">تفصیل<input class="in ur" value="سیزن سے پہلے پیشگی" style="font-size:18px"></label>
+        <div style="grid-column:span 2;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #E6E1D7;padding-top:16px">
+          <div style="display:flex;gap:10px">
+            <button style="height:44px;padding:0 16px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">نیا</span><span class="kbd" style="background:#EFECE5;color:#1C1F23">F2</span></button>
+            <button style="height:44px;padding:0 16px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">پرنٹ</span><span class="kbd" style="background:#EFECE5;color:#1C1F23">F9</span></button>
+          </div>
+          <button style="height:44px;padding:0 18px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">محفوظ کریں</span><span class="kbd" style="background:#2E5288;color:#FFFFFF">F10</span></button>
+        </div>
+      </div>
+      <aside aria-label="پارٹی کارڈ" style="background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div class="ur" style="font-size:24px">رحیم</div><div class="ur hint">ولد کریم بخش · سوات · بیوپاری</div></div>
+          <span class="num" style="font-size:14px;color:#565C64">030110001</span>
+        </div>
+        <div class="num" style="font-size:14px;color:#565C64;text-align:end">0300-1234567</div>
+        <div style="border-top:1px solid #E6E1D7;padding-top:10px;display:flex;flex-direction:column;gap:6px">
+          <div class="row ur"><span>موجودہ بقایا</span><span class="num" style="font-size:18px;font-weight:600">0</span></div>
+          <div class="row ur"><span>کھلی پیشگی</span><span class="num" style="font-size:18px;font-weight:600">0</span></div>
+          <div class="row ur"><span>آخری پیشگی</span><span class="hint">کوئی نہیں</span></div>
+          <div class="row ur"><span>آخری اندراج</span><span class="num" style="font-size:15px">31-08-2026</span></div>
+        </div>
+        <div style="border-top:1px solid #E6E1D7;padding-top:10px" class="row ur"><span>نیا بقایا</span><span class="hint">رقم درست ہونے پر دکھے گا</span></div>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

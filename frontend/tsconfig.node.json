@@ -1,0 +1,30 @@
+{
+  // Build tools, lint rules and the Windows end-to-end suite. They run in Node, not in the app.
+  // DOM is listed because e2e tests pass small functions that run inside the app window.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node", "mocha", "@wdio/globals/types", "@wdio/mocha-framework"],
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": [
+    "vite.config.ts",
+    "eslint.config.js",
+    "stylelint.config.js",
+    "eslint-rules/**/*.js",
+    "stylelint-rules/**/*.js",
+    "tests/e2e/**/*.mjs"
+  ]
+}

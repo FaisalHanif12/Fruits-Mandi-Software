@@ -1,0 +1,14 @@
+# Prettier checks the frontend and the root scripts only.
+# backend/ uses rustfmt. docs/, .claude/ and .github/ belong to the lead.
+backend/
+docs/
+.claude/
+.github/
+**/node_modules/
+**/dist/
+**/target/
+frontend/tests/e2e/output/
+frontend/public/fonts/
+pnpm-lock.yaml
+*.md
+*.ftl

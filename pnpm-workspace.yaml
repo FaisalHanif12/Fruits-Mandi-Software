@@ -1,0 +1,27 @@
+# pnpm workspace (Tech Stack 5.1). The Rust workspace lives in backend/ and is not a pnpm package.
+packages:
+  - frontend
+# No dependency may run install scripts. These three ask to and do not need to:
+# edgedriver and geckodriver download browser drivers (the e2e suite uses tauri-driver and the
+# Edge driver that the Windows workflow installs); esbuild already gets its binary from an
+# optional package.
+allowBuilds:
+  edgedriver: false
+  esbuild: false
+  geckodriver: false
+# pnpm holds back very new releases. These exact versions were the latest stable on 10-10-2026
+# and are pinned in frontend/package.json (Tech Stack: latest stable, pinned exactly).
+minimumReleaseAgeExclude:
+  - '@tanstack/history@1.162.5'
+  - '@tanstack/react-router@1.170.42'
+  - '@tanstack/router-core@1.171.35'
+  - '@types/node@26.6.5'
+  - lucide-react@1.55.0
+  - prettier@3.9.10
+# pnpm audit (CI runs `pnpm audit --audit-level moderate`, Code Standards S6).
+# GHSA-vfj7-8cjw-p6xm: braces <=3.0.3, stack exhaustion on deeply nested patterns. It reaches us
+# only through stylelint (dev-only lint tool, never shipped in the app) and had no patched
+# version on 10-10-2026. Remove this entry when a fixed braces ships.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>Users English</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Inter,system-ui,sans-serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,serif;line-height:1.9}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+.nav{display:flex;align-items:center;height:44px;padding:0 14px;border-radius:8px;color:#D6DDE8;font-size:15px;font-weight:500;text-decoration:none}
+.tab{height:40px;padding:0 14px;display:inline-flex;align-items:center;border-radius:8px;font-size:15px;font-weight:500;color:#1C1F23;text-decoration:none}
+.th{font-size:13px;font-weight:600;color:#565C64;padding:0 16px;text-transform:uppercase;letter-spacing:.04em}
+.td{padding:0 16px;font-size:15px}
+.pill{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:13px;font-size:13px;font-weight:600}
+</style>
+</helmet>
+<div dir="ltr" style="width:1366px;height:768px;display:flex;flex-direction:column;background:#F6F4EF;position:relative">
+  <div style="flex:1;display:flex;min-height:0">
+    <nav aria-label="Main menu" style="width:224px;background:#16263F;display:flex;flex-direction:column;padding:16px 12px;gap:4px;box-sizing:border-box">
+      <div style="font-size:16px;font-weight:700;color:#FFFFFF;padding:10px 14px 16px">Mandi Software</div>
+      <a class="nav" href="#">Dashboard</a><a class="nav" href="#">Index</a><a class="nav" href="#">Sale</a><a class="nav" href="#">Cash Book</a><a class="nav" href="#">Partners</a><a class="nav" href="#">Analytics</a><a class="nav" href="#">Reports</a><a class="nav" href="#">Backup</a>
+      <a class="nav" href="#" aria-current="page" style="background:#24406B;color:#FFFFFF">Settings</a>
+    </nav>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+      <header style="height:60px;background:#FFFFFF;border-bottom:1px solid #D9D4C9;display:flex;align-items:center;padding:0 24px;gap:16px">
+        <div style="font-size:22px;font-weight:700">Settings</div>
+        <div style="flex:1"></div>
+        <div role="group" aria-label="Language" style="display:inline-flex;border:1px solid #8C8577;border-radius:8px;overflow:hidden;height:40px"><button class="ur" style="border:0;background:#FFFFFF;padding:0 12px;font-size:18px">اردو</button><button style="border:0;background:#1D3D6E;color:#FFFFFF;padding:0 12px;font:500 14px Inter,sans-serif">English</button></div>
+      </header>
+      <main style="flex:1;padding:24px 32px;display:flex;flex-direction:column;gap:16px;min-height:0">
+        <div role="tablist" style="display:flex;gap:6px">
+          <a class="tab" href="#">Firm</a>
+          <a class="tab" href="#" aria-selected="true" style="background:#E6ECF5;color:#1D3D6E">Users</a>
+          <a class="tab" href="#">Language and text</a>
+          <a class="tab" href="#">Auto lock</a>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:15px;color:#565C64">4 users</div>
+          <button style="height:44px;padding:0 16px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px;font:600 15px Inter,sans-serif">New user<span class="kbd" style="background:#2E5288;color:#FFFFFF">F2</span></button>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #D9D4C9;border-radius:8px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1.4fr;height:44px;align-items:center;background:#EFECE5"><span class="th">Name</span><span class="th">User name</span><span class="th">Role</span><span class="th">Status</span><span class="th" style="text-align:end">Last login</span></div>
+          <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1.4fr;height:48px;align-items:center;border-top:1px solid #E6E1D7"><span class="td">Adnan</span><span class="td">owner</span><span class="td">Owner</span><span class="td"><span class="pill" style="background:#E5F3EA;color:#17703F">Active</span></span><span class="td num" style="text-align:end">10-10-2026 09:02</span></div>
+          <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1.4fr;height:48px;align-items:center;border-top:1px solid #E6E1D7"><span class="td">Tariq</span><span class="td">munshi1</span><span class="td">Munshi</span><span class="td"><span class="pill" style="background:#E5F3EA;color:#17703F">Active</span></span><span class="td num" style="text-align:end">09-10-2026 18:40</span></div>
+          <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1.4fr;height:48px;align-items:center;border-top:1px solid #E6E1D7;background:#E6ECF5;outline:2px solid #2563C9;outline-offset:-2px"><span class="td">Nasir</span><span class="td">munshi2</span><span class="td">Munshi</span><span class="td"><span class="pill" style="background:#E5F3EA;color:#17703F">Active</span></span><span class="td" style="color:#565C64;text-align:end">Never</span></div>
+          <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 1.4fr;height:48px;align-items:center;border-top:1px solid #E6E1D7"><span class="td">Bilal</span><span class="td">partner.b</span><span class="td">Partner</span><span class="td"><span class="pill" style="background:#EFECE5;color:#565C64">Inactive</span></span><span class="td" style="color:#565C64;text-align:end">Never</span></div>
+        </div>
+        <div style="font-size:13px;color:#565C64">Arrow keys move between rows. Enter opens the user. Esc goes back.</div>
+      </main>
+    </div>
+  </div>
+  <div role="status" style="position:absolute;bottom:48px;inset-inline-end:32px;display:flex;align-items:center;gap:12px;background:#16263F;color:#FFFFFF;border-radius:8px;padding:12px 16px;box-shadow:0 8px 24px rgba(22,38,63,.25)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5FBF8A" stroke-width="2.5" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+    <span style="font-size:15px">User Nasir saved</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

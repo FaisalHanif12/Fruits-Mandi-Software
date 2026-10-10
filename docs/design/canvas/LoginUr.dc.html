@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Login Urdu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;family=Noto+Nastaliq+Urdu:wght@400;600&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Gulzar,"Noto Nastaliq Urdu",serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,"Noto Nastaliq Urdu",serif;line-height:1.9}
+.lat{font-family:Inter,system-ui,sans-serif}
+.num{font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+</style>
+</helmet>
+<div dir="rtl" style="width:1366px;height:768px;display:flex;background:#F6F4EF">
+  <div style="width:520px;background:#16263F;color:#E8ECF2;padding:56px 48px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="ur" style="font-size:20px;color:#A9B6C9">منڈی سافٹ ویئر</div>
+      <div class="ur" style="font-size:34px;line-height:1.8">مہر عدنان اینڈ برادرز</div>
+      <div class="ur" style="font-size:20px;color:#C9D2DF">نئی سبزی منڈی، کوٹ رادھا کشن</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;gap:12px;align-items:center"><span style="width:8px;height:8px;border-radius:4px;background:#5FBF8A"></span><span class="ur" style="font-size:18px;color:#C9D2DF">آخری بیک اپ: آج</span><span class="num" style="font-size:14px;color:#C9D2DF">08:45 PM</span></div>
+      <div class="lat" style="font-size:13px;color:#8FA0B8;direction:ltr;text-align:end">Version 0.1.12</div>
+    </div>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;padding:32px 48px;box-sizing:border-box">
+    <div style="display:flex;justify-content:flex-end">
+      <div role="group" aria-label="زبان" style="display:inline-flex;border:1px solid #8C8577;border-radius:8px;overflow:hidden;height:40px">
+        <button style="border:0;background:#1D3D6E;color:#FFFFFF;padding:0 14px" class="ur" aria-pressed="true"><span style="font-size:18px">اردو</span></button>
+        <button style="border:0;background:#FFFFFF;color:#1C1F23;padding:0 14px;font:500 15px Inter,sans-serif" aria-pressed="false">English</button>
+      </div>
+    </div>
+
+    <div style="flex:1;display:flex;align-items:center;justify-content:center">
+      <div style="width:440px;background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;box-shadow:0 1px 2px rgba(28,31,35,.06),0 8px 24px rgba(28,31,35,.06)">
+        <div class="ur" style="font-size:28px">داخل ہوں</div>
+
+        <div role="alert" style="display:flex;gap:12px;align-items:flex-start;background:#FDF1DC;border:1px solid #E9C98F;border-radius:8px;padding:10px 14px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A5300" stroke-width="2" style="margin-top:8px;flex:none" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <div style="display:flex;flex-direction:column">
+            <span class="ur" style="font-size:18px;color:#8A5300">پانچ بار غلط پاس ورڈ۔ ذرا انتظار کریں۔</span>
+            <span class="ur" style="font-size:18px;color:#8A5300">دوبارہ کوشش <span class="num" style="font-size:15px;font-weight:600">0:42</span> میں</span>
+          </div>
+        </div>
+
+        <label class="ur" style="display:flex;flex-direction:column;gap:6px;font-size:18px">صارف کا نام
+          <input value="owner" class="lat" style="height:44px;box-sizing:border-box;border:1px solid #8C8577;border-radius:4px;padding:0 12px;font-size:16px;direction:ltr;text-align:right">
+        </label>
+        <label class="ur" style="display:flex;flex-direction:column;gap:6px;font-size:18px">پاس ورڈ
+          <span style="position:relative;display:flex">
+            <input type="password" value="secret12" style="flex:1;height:44px;box-sizing:border-box;border:1px solid #8C8577;border-radius:4px;padding:0 12px 0 44px;font:16px Inter,sans-serif;outline:3px solid #2563C9;outline-offset:2px">
+            <button aria-label="پاس ورڈ دکھائیں" style="position:absolute;inset-inline-end:4px;top:4px;width:36px;height:36px;border:0;background:transparent;border-radius:4px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#565C64" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+          </span>
+        </label>
+
+        <div style="display:flex;gap:12px;justify-content:space-between;align-items:center">
+          <button disabled style="height:44px;padding:0 18px;border:0;border-radius:8px;background:#8A9BB5;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">داخل ہوں</span><span class="kbd" style="background:#9AAAC2;color:#FFFFFF">Enter</span></button>
+          <button style="height:44px;padding:0 16px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF;color:#1C1F23;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">باہر</span></button>
+        </div>
+        <a href="#" class="ur" style="font-size:18px">پاس ورڈ بھول گئے؟ ریکوری کوڈ سے کھولیں</a>
+      </div>
+    </div>
+    <div class="ur" style="font-size:18px;color:#565C64;text-align:center">زبان بدلنے کے لیے <span class="kbd" style="background:#EFECE5;color:#1C1F23">Alt+L</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

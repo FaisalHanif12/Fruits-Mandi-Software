@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>First run Urdu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;family=Noto+Nastaliq+Urdu:wght@400;600&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Gulzar,"Noto Nastaliq Urdu",serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,"Noto Nastaliq Urdu",serif;line-height:1.9}
+.num{font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+</style>
+</helmet>
+<div dir="rtl" style="width:1366px;height:768px;display:flex;flex-direction:column;background:#F6F4EF;box-sizing:border-box;padding:32px 64px;gap:24px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="ur" style="font-size:24px">پہلی بار ترتیب</div>
+    <div role="group" aria-label="زبان" style="display:inline-flex;border:1px solid #8C8577;border-radius:8px;overflow:hidden;height:40px">
+      <button class="ur" style="border:0;background:#1D3D6E;color:#FFFFFF;padding:0 14px;font-size:18px" aria-pressed="true">اردو</button>
+      <button style="border:0;background:#FFFFFF;color:#1C1F23;padding:0 14px;font:500 15px Inter,sans-serif" aria-pressed="false">English</button>
+    </div>
+  </div>
+
+  <ol style="list-style:none;margin:0;padding:0;display:flex;gap:12px">
+    <li style="flex:1;display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:8px;background:#E5F3EA;color:#17703F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#17703F" stroke-width="2.5" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span class="ur" style="font-size:18px">فرم کی تفصیل</span></li>
+    <li style="flex:1;display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:8px;background:#E5F3EA;color:#17703F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#17703F" stroke-width="2.5" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span class="ur" style="font-size:18px">مالک کا پاس ورڈ</span></li>
+    <li aria-current="step" style="flex:1;display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:8px;background:#1D3D6E;color:#FFFFFF"><span class="num" style="width:24px;height:24px;border-radius:12px;background:#FFFFFF;color:#1D3D6E;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">3</span><span class="ur" style="font-size:18px">ریکوری کوڈ</span></li>
+  </ol>
+
+  <div style="flex:1;display:flex;justify-content:center;align-items:flex-start">
+    <div style="width:720px;background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+      <div class="ur" style="font-size:28px">ریکوری کوڈ پرنٹ کر کے محفوظ رکھیں</div>
+      <div class="ur" style="font-size:18px;color:#565C64">اگر مالک کا پاس ورڈ بھول جائے تو یہی کوڈ دوبارہ داخل ہونے کا واحد راستہ ہے۔ یہ کوڈ دوبارہ نہیں دکھایا جائے گا۔</div>
+      <div class="num" style="align-self:center;display:flex;gap:12px;font-size:28px;font-weight:600;letter-spacing:.06em;background:#F6F4EF;border:1px dashed #8C8577;border-radius:8px;padding:16px 24px">
+        <span>7KQ2</span><span style="color:#8C8577">-</span><span>M9XD</span><span style="color:#8C8577">-</span><span>4TPA</span><span style="color:#8C8577">-</span><span>HW3C</span>
+      </div>
+      <div class="ur" style="font-size:14px;color:#565C64;align-self:center;font-family:Inter,sans-serif">[نمونہ]</div>
+      <label class="ur" style="display:flex;gap:12px;align-items:center;font-size:18px"><input type="checkbox" checked style="width:20px;height:20px;accent-color:#1D3D6E">میں نے کوڈ پرنٹ کر لیا ہے اور محفوظ جگہ رکھ دیا ہے</label>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div style="display:flex;gap:10px">
+          <button style="height:44px;padding:0 16px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">پرنٹ کریں</span><span class="kbd" style="background:#EFECE5;color:#1C1F23">F9</span></button>
+          <button style="height:44px;padding:0 16px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF"><span class="ur" style="font-size:18px">پیچھے</span></button>
+        </div>
+        <button style="height:44px;padding:0 18px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">مکمل کریں</span><span class="kbd" style="background:#2E5288;color:#FFFFFF">Enter</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -62,6 +62,22 @@ jobs:
       # The PRD worked day by keyboard only, E2E-17, E2E-22 to E2E-27, screenshots of
       # each screen in Urdu and English at every window size, and PDFs of every print.
       # Writes its report, screenshots and PDFs to frontend/tests/e2e/output/.
+      # Screenshots at 1920 x 1080 need a display at least that big (NFR-USE-15).
+      # The runner starts smaller. Raise it; the e2e spec fails with a clear
+      # message if a size still cannot be reached, so a wrong size is never saved.
+      - name: Raise the display resolution
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          try {
+            Set-DisplayResolution -Width 2560 -Height 1440 -Force -ErrorAction Stop
+          } catch {
+            Write-Host "Set-DisplayResolution not available: $($_.Exception.Message)"
+          }
+          Add-Type -AssemblyName System.Windows.Forms
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          Write-Host "Display is now $($b.Width) x $($b.Height)"
+
       - name: End-to-end suite
         id: e2e
         run: pnpm e2e
@@ -70,7 +86,7 @@ jobs:
       # Runs even when the e2e suite fails, so one run shows both results.
       - name: Speed benchmarks
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: pnpm perf
+        run: pnpm perf --require-install
 
       - name: Upload the installers
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -97,6 +113,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: speed-results
-          path: backend/target/criterion/
+          path: |
+            backend/target/criterion/
+            backend/target/perf/report.json
           if-no-files-found: warn
           retention-days: 14
