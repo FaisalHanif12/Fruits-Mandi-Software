@@ -1,0 +1,50 @@
+name: Setup
+description: >
+  Shared first steps for CI, Windows and Release. Checks that the repository
+  scaffold exists, then installs pnpm, Node, the pinned Rust toolchain and the
+  workspace packages. Run actions/checkout before this.
+
+runs:
+  using: composite
+  steps:
+    # CI cannot pass until build step 1 (the scaffold) is merged. Say so clearly
+    # instead of failing later with a confusing error.
+    - name: Check the scaffold exists
+      shell: bash
+      run: |
+        missing=0
+        for f in package.json pnpm-lock.yaml .nvmrc rust-toolchain.toml backend/Cargo.toml backend/app/tauri.conf.json; do
+          if [ ! -f "$f" ]; then
+            echo "::error file=$f::Missing $f. CI needs the repository scaffold (CLAUDE.md build order, step 1)."
+            missing=1
+          fi
+        done
+        exit $missing
+
+    # Uses the exact version in "packageManager" in the root package.json.
+    - name: Install pnpm
+      uses: pnpm/action-setup@v6
+
+    - name: Install Node
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    # rust-toolchain.toml pins the version and components. rustup reads it.
+    - name: Install the pinned Rust toolchain
+      shell: bash
+      run: |
+        rustup toolchain install
+        rustup component add rustfmt clippy
+        rustc --version
+        cargo --version
+
+    - name: Cache Rust builds
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: backend
+
+    - name: Install packages
+      shell: bash
+      run: pnpm install --frozen-lockfile

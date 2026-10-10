@@ -1,0 +1,74 @@
+# CI: the fast checks on every change (Release_Pipeline.md section 2, Tech Stack 7).
+# The job name "Checks (Windows)" is a required status check on main. Do not rename it.
+name: CI
+
+on:
+  push:
+    # main is only changed by merging a pull request. Release calls this file
+    # for the merged commit, so a separate push run on main would be a duplicate.
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  # A new push to a branch cancels the older run. Runs for main (inside Release) are never cancelled.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  checks:
+    name: Checks (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm, Node and Rust
+        uses: ./.github/actions/setup
+
+      - name: Lint (ESLint, Prettier, cargo fmt, clippy)
+        run: pnpm lint
+
+      - name: Type check (TypeScript)
+        run: pnpm typecheck
+
+      # Frontend component tests, then every Rust test, including the
+      # golden money tests of the PRD worked day (Code Standards 9.2).
+      - name: Tests
+        run: pnpm test
+
+      - name: Urdu and English messages match
+        run: pnpm i18n:check
+
+      # frontend/src/bindings is generated from Rust by ts-rs and is never edited by hand.
+      - name: Generated types are up to date
+        run: |
+          pnpm gen:types
+          if [ -n "$(git status --porcelain -- frontend/src/bindings)" ]; then
+            echo "::error::frontend/src/bindings does not match the Rust types. Run 'pnpm gen:types' and commit the result."
+            git status --short -- frontend/src/bindings
+            git --no-pager diff -- frontend/src/bindings
+            exit 1
+          fi
+
+      # Code Standards S6: known vulnerabilities block the release.
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: Rust dependency check (cargo deny)
+        working-directory: backend
+        run: cargo deny check
+
+      - name: Frontend dependency check (pnpm audit)
+        run: pnpm audit --audit-level moderate

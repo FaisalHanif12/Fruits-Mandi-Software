@@ -1,0 +1,123 @@
+# Mandi Software .gitignore
+# This repository is public. Anything secret or private must match a rule here.
+
+# ---------------------------------------------------------------
+# Secrets: never commit these (Code Standards S3, NFR-SEC-7)
+# Real secrets live in Windows Credential Manager on the shop computer
+# and in GitHub repository secrets for CI. Never in files here.
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+.envrc
+secrets/
+.secrets/
+*.secret
+*.secrets
+secrets.json
+secrets.toml
+credentials.json
+*credentials*.json
+service-account*.json
+
+# Keys and certificates (Tauri updater key, Windows code-signing certificate, SSH keys)
+.tauri/
+*.key
+*.key.pub
+*.pem
+*.pfx
+*.p12
+*.p8
+*.jks
+*.keystore
+*.cer
+*.crt
+*.der
+*.csr
+id_rsa*
+id_ed25519*
+
+# Cloud backup settings saved by hand during testing (R2 / S3 keys)
+rclone.conf
+.aws/
+.r2/
+
+# Local Claude Code settings (may hold tokens or personal paths)
+.claude/settings.local.json
+.claude/**/*.local.*
+
+# ---------------------------------------------------------------
+# Client data: never commit (Release_Pipeline.md 4: "Client data is never in the repository")
+# ---------------------------------------------------------------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+backups/
+*.mandibackup
+*.bak
+
+# Recordings and exports of the old software or the client's books
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.xlsx
+*.xls
+!**/tests/**/fixtures/**/*.xlsx
+
+# ---------------------------------------------------------------
+# Build output and dependencies
+# ---------------------------------------------------------------
+node_modules/
+.pnpm-store/
+dist/
+dist-ssr/
+*.tsbuildinfo
+.vite/
+coverage/
+.nyc_output/
+
+# Rust (workspace lives in backend/)
+target/
+**/*.rs.bk
+
+# Tauri generated files
+backend/app/gen/schemas/
+
+# Test and verification output (windows-verify skill, e2e, perf)
+.verify/
+frontend/tests/e2e/output/
+playwright-report/
+test-results/
+*.lcov
+
+# ---------------------------------------------------------------
+# Logs, caches, editors and operating systems
+# ---------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+.eslintcache
+.cache/
+.turbo/
+
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+.idea/
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

@@ -1,0 +1,1809 @@
+# Product Requirements Document (PRD)
+# Mandi Software for Commission Agents (آڑھتی)
+
+| | |
+|---|---|
+| Version | 1.1 (functional requirements, final baseline for build) |
+| Date | 10 October 2026 |
+| Status | Approved for build. Will be revised after the client demo. |
+| Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
+| Platform | Windows desktop app, one computer, works offline |
+| Language | Urdu by default (right-to-left). One switch turns the whole app, including names, into English (left-to-right). |
+
+---
+
+## 0. How to read this document
+
+### 0.1 The document set
+
+This is the **functional** document: what the software must do, screen by screen, field by field, and how every part connects. It is the master. If any other document disagrees with it, this one wins and the other is corrected.
+
+| # | Document | Covers | Status |
+|---|---|---|---|
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.1, final for build |
+| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality | v1.1, final for build |
+| 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.1, final for build |
+| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.1, final for build |
+| 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.1, final for build |
+| 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.1, final for build |
+
+**Versions.** All six documents are at version 1.1, the final baseline for build. Once development starts, any change to a document raises its version (1.2, 1.3 ...) and adds a line to its change log. If the change affects other documents, they are updated in the same step.
+
+### 0.2 What we take from the old software
+
+We take **only the business requirements** from the old software: what data is entered, what is calculated, what reports exist, how the modules connect. We do **not** copy its design, layout, colours, speed or way of working. The client's main complaint is that the old software is hard to use. Our design and user experience are our own, and they are the top priority.
+
+### 0.3 Source tags
+
+| Tag | Meaning | What happens at the demo |
+|---|---|---|
+| **[C]** Confirmed | Umar stated it, or it is plainly required | Build exactly as written |
+| **[S]** Seen | Clearly visible in the old software video (as a requirement, not as a design) | Build the requirement. The client will recognise the data. |
+| **[A]** Assumed | Our best reading of a vague point. A sensible default, configurable where we can. | Show it in the demo, ask the client, then keep or fix it |
+
+### 0.4 Five rules for the whole project
+
+1. **When something is unclear, we do not stop.** We pick the most sensible option, tag it [A], add it to the Assumptions Register (Section 24), and make it easy to change later.
+2. **Everything must be connected.** The demo fails if one screen works alone but does not update the others. Section 6 lists every connection. Section 27 has end-to-end tests with exact expected numbers.
+3. **No missing inputs.** Every screen lists every field, including fields the video did not show (hidden inputs) and fields the system fills by itself (system fields).
+4. **Money is whole rupees.** Every amount typed, calculated, stored as a result, shown or printed is a whole number of rupees (Section 22).
+5. **Two languages, one set of data.** Every screen, print and name exists in Urdu and in English. Urdu is the default. Switching language changes only what is shown, never the data (Section 7.5).
+
+Requirement IDs look like `FR-12.3` (functional requirement, section 12, item 3).
+
+---
+
+## 1. Product overview
+
+### 1.1 The problem
+
+The firm runs a commission agent business in a vegetable and fruit mandi. Trucks arrive with goods from growers. The firm auctions the goods to buyers, charges commission, collects money from buyers (often later), and pays the growers. The firm is owned by several partners who share its income.
+
+The old software:
+
+- Is hard to use. The client's main complaint is poor user experience.
+- Shows three different errors in a 4-minute recording.
+- Has a daily journal that does not balance (1,316,042 on one side, 1,316,040 on the other).
+- Has a manual backup that stays on the same laptop.
+- Shows "Session End 31-12-2026" at login. It may stop working on 1 January 2027.
+- Has no analytics and no live view of each partner's share.
+
+### 1.2 What we are building
+
+A modern, simple, Urdu-first desktop app that anyone can sit down and use. It covers everything the old software does for daily mandi work, plus:
+
+- Flexible commission rules (by item, seller, buyer).
+- Live income split between partners on every posting.
+- Analytics: commission and sales by item, seller, buyer, month and year.
+- Books that always balance.
+- Automatic local and cloud backups.
+- Urdu and English: one switch changes the whole app, including every name. Names can be typed in English letters and become Urdu by themselves.
+- Smart entry: type a code or a few letters and the app fills the rest (party details, balances, last values), so the user mostly checks rather than types.
+
+### 1.3 Goals for the MVP
+
+| ID | Goal | How we measure it |
+|---|---|---|
+| G1 | A new user can record a sale without training | A person who has never seen the app enters بکری 1 (Section 4.4) with only on-screen hints |
+| G2 | A munshi can record a full day of mandi work | The day in Section 4 is entered with no help |
+| G3 | Every module is connected | All end-to-end tests in Section 27 pass with the exact expected numbers |
+| G4 | Books always balance | Trial balance difference is always 0 |
+| G5 | Partners see their share live | Partner totals update the moment a بکری is saved |
+| G6 | Analytics answer "how much commission from کیلا, from this seller, this month?" | Answer on one screen with a few filter choices |
+| G7 | No data loss | Cloud backup every day; restore tested |
+| G8 | Natural, professional Urdu | Munshi reads every screen without asking what a word means |
+| G9 | The whole app works in English too | Switching to English mid-entry shows every screen, name and print in English, with no data lost (E2E-22) |
+| G10 | The app fills, the user checks | Typing a party code anywhere shows his full details at once; a sale line needs only buyer, qty and rate (Section 7.6, E2E-24 to E2E-27) |
+
+---
+
+## 2. Users and roles
+
+| Role (Urdu) | Role | Can do | Source |
+|---|---|---|---|
+| مالک | Owner | Everything, including settings, users, commission rules, partner shares, reopening closed days, restore | [C] |
+| منشی | Munshi (data entry) | All entries and reports. Cannot change settings, rules or shares. Cannot reopen a closed day or restore. | [A] |
+| شراکت دار | Partner (view only) | Dashboard, analytics, reports, own partner statement. No entries. | [A] |
+
+FR-2.1 [A] The app ships with one Owner account. The Owner adds users and picks a role for each.
+FR-2.2 [A] A partner user can be linked to a partner record, so "my share" screens open directly.
+FR-2.3 [A] Only one user is logged in at a time on the computer. Switching user needs a logout.
+FR-2.4 [A] Role order for permission checks: Owner can do everything a Munshi can. Partner is view only and cannot do Munshi actions.
+
+---
+
+## 3. Glossary (Urdu term, English term, meaning, example)
+
+Developers must use these exact Urdu words on Urdu screens and these exact English words on English screens (FR-7.37). The Urdu words are the ones the munshi already uses. Mandi words with no exact English word keep their Roman name in English.
+
+| Urdu | English (on screen) | Meaning | Example |
+|---|---|---|---|
+| آڑھتی | Commission Agent (Arhti) | Commission agent (our client) | The firm itself |
+| انڈکس | Index | Master list of all accounts | "Add a new buyer to the index" |
+| بیوپاری / زمیندار / بزگر | Seller / Zamindar / Grower | Seller side: trader, landowner, grower | رحیم sends 50 پیٹی of کیلا |
+| گاہک / خریدار | Buyer | Buyer | اکرم ٹول ٹیکس buys 20 پیٹی |
+| پختہ کھاتہ | Pukhta Khata | Shared account for one-time or rare parties who do not have their own account. The client's word is پختہ کھاتہ (not پکا کھاتہ). Charged like any other buyer or seller. | A walk-in buyer شاہد buys 10 پیٹی once |
+| نگ | Nag | One unit or package (پیٹی، کریٹ، بوری، دانہ) | 10 نگ = 10 پیٹی |
+| بکری | Sale | Sale | |
+| بکری بک | Sale Book | Sale book; one بکری = one truck's goods sold | بکری نمبر 1 |
+| لاٹ | Lot | One seller's goods of one item on a truck | رحیم's 50 پیٹی کیلا |
+| قسم مال | Item | Item | کیلا، سیب، انگور، جاپانی پھل، مولی |
+| پیکنگ | Packing | Packing unit | پیٹی، کریٹ، بوری، دانہ |
+| مارکہ | Mark | Mark on crates showing whose goods they are | "AR" on رحیم's crates |
+| اڈا | Adda | Truck stand the truck came from | سوات اڈا |
+| خام بکری | Gross Sale | Gross sale before deductions | 29,400 |
+| صافی بکری | Net Sale | Net sale payable to seller | 19,316 |
+| کمیشن | Commission | Commission: a percent, a fixed amount per نگ, or a fixed amount per lot | 6% of خام بکری (a rule can make it a fixed amount per نگ) |
+| لاگا | Laga | Small charge on the buyer, per نگ | 8 per نگ |
+| مزدوری | Labour | Labour (loading, unloading) | 250 typed on a lot |
+| منشیانہ | Munshiana | Munshi's fee, charged to the seller, paid to the munshi | 50 per lot |
+| کرایہ | Freight | Truck freight | 3,000 |
+| کرایہ سٹور | Store Rent | Store or cold-storage rent | 0 |
+| نقد | Cash Paid | Cash given to the seller at the time of sale | 5,000 |
+| فون | Phone Charge | Phone charge on the seller | 20 |
+| نقدی منڈی | Naqdi Mandi | The cash buyer with no name (system account 03040000) | Walk-in buyer who pays at once |
+| ریٹ فرق | Rate Difference | Buyer value − seller amount when the two rates differ; firm income | Buyer rate 610, seller rate 600, 20 نگ: 200 |
+| ادھاری / نقدی | Credit / Cash | Credit sale / cash sale | |
+| روکڑ | Cash Book | Cash book | |
+| وصولی | Receipt | Receipt from a buyer | Buyer pays 10,000 |
+| اگراہی | Collection | Collection of dues from credit buyers | The collection round |
+| ادائیگی | Payment | Payment out, mainly to sellers | Pay رحیم 4,316 |
+| پیشگی کھاتہ | Advance | Advance given to a seller before his goods are sold | رحیم takes 15,000 before season |
+| جنرل | Journal | General journal entry | Transfers, corrections |
+| خرچہ | Expense (Shop Expense / Personal Drawing) | Expense. دکان خرچہ = shop, ذاتی خرچہ = a partner's personal drawing | Electricity bill 3,000 |
+| سٹاک / باقی مال | Unsold Stock | Goods received but not yet sold | 5 پیٹی of کیلا left |
+| شراکت دار / حصہ | Partner / Share | Partner / share | Partner الف, 40% |
+| تجزیات | Analytics | Analytics | Commission by item for October |
+| روزنامچہ | Day Book | Daily journal | All entries of 10-10-26 |
+| کھاتہ / فرد حساب | Ledger / Statement | Party ledger / statement handed to a party | Printed for a buyer |
+| بنام / جمع | Debit / Credit | Debit / Credit | |
+| میزان | Total | Total | |
+| ٹرائل بیلنس | Trial Balance | Trial balance | |
+
+Everyday comparison: the آڑھتی is like a property dealer. The seller is the house owner, the buyer is the purchaser. The dealer takes a fee from both, keeps a record of who owes what, and pays the owner what is left after costs. The dealer's office is owned by three brothers, and every rupee the office earns is split between them by their agreed shares.
+
+---
+
+## 4. The business flow and one full worked day
+
+### 4.1 The daily flow
+
+```
+Truck arrives -> بکری بک (truck details + lots + sales + live summary)
+              -> Save = one posting event, which updates:
+                   buyer ledgers, seller ledgers, پختہ کھاتہ,
+                   income and payable accounts, cash,
+                   partner share ledger (live split),
+                   stock (باقی مال), analytics, dashboard, اگراہی list
+Later         -> sell leftover stock from باقی مال (a new posting event)
+              -> بکری side menu: وصولی/اگراہی, ادائیگی, پیشگی کھاتہ
+              -> روکڑ: دکان خرچہ, ذاتی خرچہ, جنرل
+Any time      -> تجزیات, رپورٹ, شراکت دار
+Closing time  -> Day close + automatic cloud backup
+```
+
+### 4.2 Default settings used in the example
+
+All of these are editable. The commission agent can set any other rate for a seller, a buyer, an item or a group of items (Section 11), for example 3%, 4%, 7% or 8%.
+
+| Setting | Default | Evidence |
+|---|---|---|
+| Seller commission | **6%** of sale value | [C] Umar: 6% by default. Old video: the sales book shows 6% (276 ÷ 4,600) and 4% (180 ÷ 4,500) on different lots, so rates do vary by seller or item. |
+| Buyer commission | **6%** of sale value, for every buyer, including one-time buyers in پختہ کھاتہ | [C] Umar: 6% by default. (The old video's bills show 5%, for example مولی 700 → 735. The client's current default is 6%.) |
+| لاگا | **8 per نگ** on fruit items; none on vegetables | [C] Umar: 8 per نگ on all fruit items. [A] None on vegetables: in the old video, the مولی and ساگ bills carry exactly 5% and nothing more (700 → 735, 1,000 → 1,050). |
+| مزدوری, منشیانہ, فون, کرایہ, کرایہ سٹور | **No default.** Typed on each lot, or filled by a rule the commission agent makes. | [C] Umar: set by the commission agent. Old video: مزدوری is 0 on most lots and 5 or 3 per نگ on a few. |
+| Partners | الف 40%, ب 30%, ج 30% | [A] Placeholder names and shares |
+
+In the worked day below, the munshi types مزدوری at 5 per نگ, منشیانہ 50 and فون 20 on each lot.
+
+Which accounts are income and which are payables (FR-10.4, FR-17.3):
+
+| Charge | Kind | Shared between partners? |
+|---|---|---|
+| Seller commission, buyer commission, لاگا, فون, ریٹ فرق | Firm income | Yes, all income is shared |
+| مزدوری, کرایہ, کرایہ سٹور, منشیانہ | Money the firm collects for others (labour, transporters, store, munshi) | No, they are payables, not income |
+| دکان خرچہ | Firm expense | Yes, every shop expense is split |
+| ذاتی خرچہ | One partner's drawing | Charged to that partner only |
+
+### 4.3 Opening position and how tests set it up
+
+This is the position at the start of 10-10-26:
+
+| Account | Code | بنام (Dr) | جمع (Cr) |
+|---|---|---|---|
+| روکڑ (cash in hand) | 01010001 | 50,000 | |
+| رحیم (seller, open advance from 01-09-26) | 030110001 | 15,000 | |
+| ابتدائی سرمایہ (opening capital) | 06010001 | | 65,000 |
+| **میزان** | | **65,000** | **65,000** |
+
+How it is created (this is exactly what the golden test does, and what a new client does on setup):
+
+1. On 31-08-26, opening balances are typed on the account forms: روکڑ opening بنام 65,000; ابتدائی سرمایہ opening جمع 65,000. These post as one opening entry against the system account ابتدائی فرق (06019999), which ends at 0 because both sides are equal (FR-10.9).
+2. On 01-09-26, a پیشگی voucher gives رحیم 15,000 cash. Cash becomes 65,000 − 15,000 = 50,000.
+3. Days up to and including 09-10-26 are closed. 10-10-26 is open.
+
+### 4.4 Event 1: بکری 1 (regular buyers)
+
+Truck LES-1234 from سوات اڈا, header زمیندار رحیم (030110001). One lot: seller رحیم (030110001), item کیلا, packing پیٹی, 50 نگ received. Freight 3,000, paid by the firm. رحیم is given 5,000 cash on arrival (نقد). On the lot the munshi types مزدوری 250 (5 per نگ × 50), منشیانہ 50 and فون 20.
+
+**Sales.** Each line works out its own commissions, so analytics can show commission by buyer as well as by seller.
+
+| Buyer | Qty | Rate | Value (qty × rate) | Seller comm 6% | Buyer comm 6% | لاگا (qty × 8) | Buyer pays |
+|---|---|---|---|---|---|---|---|
+| اکرم ٹول ٹیکس 03040001 | 20 | 600 | 12,000 | 720 | 720 | 160 | 12,000 + 720 + 160 = 12,880 |
+| ارشد ملتانی 03040002 | 30 | 580 | 17,400 | 1,044 | 1,044 | 240 | 17,400 + 1,044 + 240 = 18,684 |
+| **Total** | **50** | | **29,400** | **1,764** | **1,764** | **400** | **31,564** |
+
+How a cell is worked out, for example the first seller commission: 12,000 × 6 ÷ 100 = 720.
+
+**Seller summary.**
+
+| Line | Working | Amount |
+|---|---|---|
+| خام بکری | 12,000 + 17,400 | 29,400 |
+| کرایہ | entered | 3,000 |
+| کمیشن | 720 + 1,044 | 1,764 |
+| مزدوری | typed: 5 per نگ × 50 | 250 |
+| منشیانہ | typed | 50 |
+| نقد | entered | 5,000 |
+| کرایہ سٹور | none | 0 |
+| فون | typed | 20 |
+| **کل اخراجات** | 3,000 + 1,764 + 250 + 50 + 5,000 + 0 + 20 | **10,084** |
+| **صافی بکری** | 29,400 − 10,084 | **19,316** |
+
+**The posting event (one journal entry, dated 10-10-26).** It has a sale part and a cash part. Each part balances on its own, so the whole entry balances.
+
+Sale part:
+
+| Account | بنام | جمع | Why |
+|---|---|---|---|
+| اکرم ٹول ٹیکس | 12,880 | | He owes this |
+| ارشد ملتانی | 18,684 | | He owes this |
+| رحیم | | 24,316 | 29,400 − (10,084 − 5,000 نقد) |
+| کمیشن آمدن (بیوپاری) | | 1,764 | Seller commission |
+| کمیشن آمدن (گاہک) | | 1,764 | Buyer commission |
+| لاگا آمدن | | 400 | |
+| فون آمدن | | 20 | |
+| مزدوری کھاتہ | | 250 | Owed to labour |
+| کرایہ کھاتہ | | 3,000 | Owed to the transporter |
+| منشیانہ کھاتہ | | 50 | Owed to the munshi |
+| **Sale part میزان** | **31,564** | **31,564** | Balanced |
+
+Cash part (the نقد given on arrival):
+
+| Account | بنام | جمع |
+|---|---|---|
+| رحیم | 5,000 | |
+| روکڑ | | 5,000 |
+
+Whole entry: بنام 31,564 + 5,000 = 36,564; جمع 31,564 + 5,000 = 36,564.
+
+**Partner split, in the same save.** Shared income = all income in this posting = 1,764 + 1,764 + 400 + 20 = 3,948.
+
+| Partner | Share | Exact | After the rounding rule |
+|---|---|---|---|
+| الف | 40% | 3,948 × 40 ÷ 100 = 1,579.2 | 1,580 |
+| ب | 30% | 3,948 × 30 ÷ 100 = 1,184.4 | 1,184 |
+| ج | 30% | 1,184.4 | 1,184 |
+| **Total** | 100% | | **3,948** |
+
+Rounding rule: round each share down to whole rupees (1,579 + 1,184 + 1,184 = 3,947), then give the leftover 1 rupee to the partner with the biggest share (if two are equal, the one created first). The total always equals the shared income exactly.
+
+### 4.5 Event 2: بکری 2 (one-time buyer through پختہ کھاتہ)
+
+Truck LHR-0077 from لاہور اڈا, header زمیندار کریم (030110002). One lot: seller کریم (030110002), item سیب, packing پیٹی, 10 نگ. Freight 1,000, paid by the firm. No نقد. On the lot the munshi types مزدوری 50 (5 per نگ × 10), منشیانہ 50 and فون 20.
+
+A one-time buyer, شاہد (phone 0300-0000000), buys all 10 پیٹی at 1,200. He has no account, so the line goes to **پختہ کھاتہ (خریدار)**, code 03049999. His name and phone are saved on the line. He is charged like any buyer: 6% commission and لاگا 8 per نگ. He pays cash, so the line is نقدی.
+
+| Item | Working | Amount |
+|---|---|---|
+| Value | 10 × 1,200 | 12,000 |
+| Seller commission 6% | 12,000 × 6 ÷ 100 | 720 |
+| Buyer commission 6% | 12,000 × 6 ÷ 100 | 720 |
+| لاگا | 10 × 8 | 80 |
+| Buyer pays | 12,000 + 720 + 80 | 12,800 |
+| Seller کل اخراجات | 1,000 + 720 + (10 × 5 = 50) + 50 + 0 + 0 + 20 | 1,840 |
+| Seller صافی بکری | 12,000 − 1,840 | 10,160 |
+
+Sale part: پختہ کھاتہ بنام 12,800. کریم جمع 10,160, کمیشن آمدن (بیوپاری) 720, کمیشن آمدن (گاہک) 720, لاگا 80, فون 20, مزدوری 50, کرایہ 1,000, منشیانہ 50. Total جمع = 12,800. Balanced.
+Cash part (because the line is نقدی): روکڑ بنام 12,800, پختہ کھاتہ جمع 12,800.
+Whole entry: 25,600 on each side.
+
+Partner split: shared income = 720 + 720 + 80 + 20 = 1,540. الف 616, ب 462, ج 462. Total 1,540 (no leftover).
+
+### 4.6 Event 3: وصولی (collection)
+
+اکرم ٹول ٹیکس pays 10,000 cash. روکڑ بنام 10,000, اکرم جمع 10,000. He still owes 12,880 − 10,000 = 2,880.
+
+### 4.7 Event 4: ادائیگی to رحیم
+
+رحیم's account: 15,000 بنام (advance) + 5,000 بنام (نقد) − 24,316 جمع (بکری) = 4,316 جمع. So the firm owes him 4,316. Pay it in cash: رحیم بنام 4,316, روکڑ جمع 4,316. His balance becomes 0. The پیشگی report shows his 15,000 advance as fully adjusted.
+
+### 4.8 Event 5: expenses
+
+- دکان خرچہ: electricity 3,000 cash. Split across partners by share: الف 1,200, ب 900, ج 900.
+- ذاتی خرچہ: partner الف takes 2,000 cash for home. Charged to الف only.
+
+### 4.9 End of day: what every screen must show
+
+| Screen | Expected |
+|---|---|
+| Cash in hand | 50,000 − 5,000 + 12,800 + 10,000 − 4,316 − 3,000 − 2,000 = **58,484** |
+| Today's خام بکری | 29,400 + 12,000 = **41,400** (2 بکری) |
+| Today's commission (both sides + لاگا) | (1,764 + 1,764 + 400) + (720 + 720 + 80) = 3,928 + 1,520 = **5,448** |
+| Today's shared income (commission + لاگا + فون) | 3,948 + 1,540 = **5,488** |
+| Buyers' dues | اکرم 2,880 + ارشد 18,684 = **21,564** |
+| Sellers payable | کریم **10,160** (رحیم 0) |
+| Advances open | **0** (رحیم's 15,000 fully adjusted) |
+| Stock (باقی مال) | **0** (everything sold) |
+| Partner الف | income share 1,580 + 616 = 2,196; expense share 1,200; profit share **996**; drawings 2,000 |
+| Partner ب | 1,184 + 462 = 1,646; expense 900; profit share **746** |
+| Partner ج | 1,646; expense 900; profit share **746** |
+| Firm profit today | 5,488 − 3,000 = **2,488** = 996 + 746 + 746 |
+| Trial balance | Both sides **85,048** (Section 27, test E2E-10) |
+
+### 4.10 The same day in English
+
+Every name above has an English name (FR-7.24). The tests use these:
+
+| Urdu | English | Code |
+|---|---|---|
+| رحیم | Rahim | 030110001 |
+| کریم | Karim | 030110002 |
+| اکرم ٹول ٹیکس | Akram Toll Tax | 03040001 |
+| ارشد ملتانی | Arshad Multani | 03040002 |
+| شاہد (one-time buyer) | Shahid | 03049999, phone 0300-0000000 |
+| کیلا / سیب | Banana / Apple | |
+| پیٹی | Box | |
+| سوات اڈا / لاہور اڈا | Swat Adda / Lahore Adda | |
+| الف / ب / ج | Partner A / Partner B / Partner C | |
+| بجلی (دکان خرچہ) | Electricity | |
+
+In the English app every number in Section 4 is the same. Only words and names change.
+
+---
+
+## 5. Navigation and screen map
+
+FR-5.1 [C] After login, the user lands on the Dashboard.
+
+FR-5.2 [C] Main navigation bar on the start side of the screen: on the right in Urdu, on the left in English (FR-7.31). Items, in this order:
+
+| # | Urdu | English | Section |
+|---|---|---|---|
+| 1 | ڈیش بورڈ | Dashboard | 9 |
+| 2 | انڈکس | Masters (accounts, items, commission rules) | 10, 11 |
+| 3 | بکری | Sales area, with its own side menu | 12 to 15 |
+| 4 | روکڑ | Cash book, expenses, journal | 16 |
+| 5 | شراکت دار | Partners | 17 |
+| 6 | تجزیات | Analytics | 18 |
+| 7 | رپورٹ | Reports | 19 |
+| 8 | بیک اپ | Backup | 20 |
+| 9 | ترتیبات | Settings (Owner only) | 21 |
+
+FR-5.3 [C] **The بکری area has its own side menu.** When the user opens بکری, a second menu appears next to the main bar:
+
+| # | Urdu | What it opens | Section |
+|---|---|---|---|
+| 1 | بکری بک | Sales voucher | 12 |
+| 2 | وصولی / اگراہی | Receipts from buyers | 15.2 |
+| 3 | ادائیگی | Payments to sellers, transporters and others | 15.3 |
+| 4 | پیشگی کھاتہ | Advances to sellers | 15.4 |
+| 5 | پختہ کھاتہ | One-time parties register | 13 |
+| 6 | آج کی بکری | List of today's بکری | 12.7 |
+| 7 | باقی مال | Goods not yet sold | 12.8 |
+
+FR-5.4 [A] Global search (`Ctrl+K`, or the search box at the top) finds any account, بکری number, truck number, voucher number or screen, by Urdu name, English name or code, with the smart search of FR-7.40.
+
+FR-5.5 [A] Bottom status bar: user, today's date, day status (کھلا / بند), last cloud backup time with a coloured dot.
+
+FR-5.6 [A] Top bar: global search box (FR-5.4), attention bell with its count (FR-7.44), language switch اردو | English (FR-7.30), and the user menu (text size, change password, logout).
+
+---
+
+## 6. How the modules connect
+
+### 6.1 Posting events
+
+Every action that changes money is a **posting event**. A posting event has one date, one journal entry, and all its side effects, saved together. Types: بکری (first save), later sale (Section 12.9), reversal (for an edit or cancel), وصولی, ادائیگی, پیشگی, دکان خرچہ, ذاتی خرچہ, جنرل, opening balances, month close.
+
+### 6.2 What each action updates (all inside one save)
+
+| Action | Updates immediately |
+|---|---|
+| Add or edit an account | Pickers everywhere; its opening balance posting; trial balance; dashboard totals |
+| Add or edit a commission rule | New sale lines from now on. Saved lines keep their stored values (FR-11.6). |
+| Add a partner share change | Splits of postings dated on or after its effective date (FR-17.2) |
+| Save a بکری | Buyer ledgers; seller ledgers; پختہ کھاتہ register; cash (for نقد and نقدی lines); income and payable accounts; partner share ledger; stock; analytics facts; dashboard; اگراہی list; seller payables; advance matching; bill matching; کرایہ کھاتہ (freight owed); روزنامچہ; trial balance; audit log; draft removed |
+| Later sale from باقی مال | Same as above, for the new lines only (Section 12.9) |
+| Edit a بکری posting (day open) | Reversal of that posting (journal, split, stock, facts, matching), then the new version posted; audit log keeps the old version |
+| Cancel a بکری (all its days open) | Reversal of every posting of that بکری; receipts that were matched to its lines become unmatched credit on the buyer and are re-matched to his next oldest bills |
+| Save وصولی | Buyer ledger, cash or bank, bill matching and aging, اگراہی list, dashboard |
+| Save ادائیگی | Account ledger, cash or bank, seller payables, dashboard |
+| Save پیشگی | Seller ledger (بنام), cash or bank, advance list, پیشگی report, dashboard |
+| Save دکان خرچہ | Expense account, cash, partner expense shares, partner profit, dashboard |
+| Save ذاتی خرچہ | That partner's drawings, cash, partner statement, dashboard |
+| Save جنرل | Every account in the entry; partner shares for any line on an income or shop expense account; matching for buyer and seller lines; trial balance |
+| Day close | Locks the day; starts the cloud backup; dashboard day status |
+| Month close | Moves the month's income and shop expenses into partner capital accounts (FR-17.6) |
+| Restore a backup | Everything (whole data replaced after a safety copy) |
+
+### 6.3 Rules that hold everywhere
+
+FR-6.1 [C] No screen keeps its own separate totals. Every total is read from the posted records (journal, partner share ledger, stock moves, analytics facts), all written in the same save, so totals can never disagree between screens.
+FR-6.2 [C] A journal entry whose بنام total does not equal its جمع total is rejected. This cannot be bypassed by any user.
+FR-6.3 [C] A posted entry is never changed or deleted. Corrections are made with a reversing entry, so the history is always complete.
+FR-6.4 [C] All money is whole rupees (Section 22). The same rounded number is used on every side: on the bill, in the journal, in the partner split and in analytics.
+FR-6.5 [C] Every posting that touches an income account or a shop expense account writes partner share rows in the same save, whatever module it comes from (including جنرل). So, for any period, the sum of all partner shares equals income minus shop expenses exactly.
+FR-6.6 [A] **Dates and open days.** Days are closed in order. The system keeps one "closed up to" date. A posting can only be dated after that date and no later than today. Reopening is described in FR-21.2.
+
+---
+
+## 7. Ease of use (functional UX requirements)
+
+The client's main complaint is that the old software is hard to use. These requirements describe **behaviour** that makes the app simple. Visual design (colours, fonts, spacing) is covered in the NFR and Code Standards documents.
+
+### 7.1 Simplicity rules
+
+FR-7.1 [C] A person who has never used the software can enter a بکری with only on-screen hints. Every field has a clear Urdu label and a short grey hint inside it (for example "گاہک کا کوڈ یا نام لکھیں").
+FR-7.2 [C] One main job per screen. No screen needs scrolling sideways at any supported window size (NFR-USE-15).
+FR-7.3 [C] Every action is a visible, labelled button. Keyboard keys are a shortcut, never the only way.
+FR-7.4 [A] Each button shows its key next to its name (for example "محفوظ کریں F10").
+FR-7.5 [A] Totals and results update live as the user types. There is no "calculate" or "refresh" step to remember.
+FR-7.6 [A] Mistakes are explained in plain words (in the app language) next to the field, with what to do (for example "مقدار باقی مال سے زیادہ ہے: باقی 5 نگ ہیں"). No error codes on screen.
+FR-7.7 [A] Success is shown as a small message that disappears by itself ("بکری 1 محفوظ ہو گئی"). It never needs an OK click.
+FR-7.8 [A] Before anything that cannot be undone easily (cancel, day close, restore), a simple confirm box in Urdu says exactly what will happen.
+FR-7.9 [A] Leaving a screen with unsaved work asks "محفوظ کریں؟" with three buttons: محفوظ کریں، محفوظ کیے بغیر جائیں، واپس.
+FR-7.10 [A] Pickers search as you type, by code, short code, Urdu name or English name (FR-7.39, FR-7.40). A new account can be added from the picker without leaving the screen.
+FR-7.11 [A] Large, easy click targets and readable text for older users. Text size can be changed with `Ctrl +` / `Ctrl −` (within the limits in NFR-USE-18), and the app remembers it per user.
+FR-7.12 [A] First-run guide: on first login, a 5-step guided tour of the dashboard, انڈکس, بکری بک, وصولی and reports. Can be replayed from the help menu.
+
+### 7.2 Arrow-key navigation [C]
+
+Umar: make the keyboard work with the arrow keys (up, down, left, right), so a non-technical person can move around easily.
+
+FR-7.13 [C] **Arrows move the way the user sees.** Because the app is right-to-left, the next field is usually to the left. `←` moves to the field on the left, `→` to the field on the right, `↑` to the field or row above, `↓` to the field or row below.
+
+FR-7.14 [C] **Grids work like a spreadsheet.**
+
+| Key | Moving between cells | While typing in a cell |
+|---|---|---|
+| `↑` `↓` | Move to the cell above or below | Finish the cell, then move up or down |
+| `←` `→` | Move to the neighbouring cell | Move the text cursor inside the cell; at the edge of the text (FR-7.15), finish and move to the neighbouring cell |
+| `Enter` | Move to the next **editable** cell in reading order, skipping read-only (calculated) cells. An editable cell that the app filled (FR-7.51, FR-7.52) is still a stop, so the user sees and confirms it. On the last editable cell of a row, start a new row and go to its first editable cell. | Finish the cell, then the same as moving |
+| Any letter or number | Start typing and replace the cell content | |
+| `↓` on the last row | Create a new empty row | |
+| `Esc` | (see FR-7.18) | Cancel the typing in this cell |
+
+Example for a sale line: buyer code `Enter`, qty `Enter`, rate `Enter` and the cursor is on the buyer code of a new line. Three fields, three `Enter`s (NFR-USE-6).
+
+FR-7.15 [C] **Forms.** In normal fields, `↑` and `↓` move to the field above or below. When the user enters a field its whole value is selected; while it is fully selected, `←` and `→` move to the neighbouring field. Once the user types or moves the cursor, `←` and `→` move the cursor inside the text, and when the cursor is already at the visual edge of the text in the arrow's direction, the next press moves to the neighbouring field.
+
+FR-7.16 [C] **Pickers.** Typing in a picker opens its list of matches. While the list is open, `↑` `↓` move through matches and `Enter` picks. While the list is closed, `↑` `↓` move between fields like any other field. `Alt+↓` opens the full list without typing.
+
+FR-7.17 [C] **Menus, lists and reports.** In the main bar and the بکری side menu, `↑` `↓` move between items and `Enter` opens. `←` moves from the menu into the screen, `→` moves back to the menu. In lists and reports, `↑` `↓` move between rows, `Enter` opens the selected row, `Page Up` / `Page Down` move a page.
+
+FR-7.18 [C] **Esc, in this order:** close an open list or dialog; else cancel typing in the current cell; else leave the screen (asking first if there is unsaved work, FR-7.9).
+
+FR-7.19 [A] **Dates.** In a date field, `+` = next day and `-` = previous day (arrows still move between fields). Typing `10` alone fills the current month and year; `10-9` fills the current year.
+
+FR-7.20 [A] **Numbers.** Amount and quantity fields accept the number keypad. Thousands separators appear by themselves. Only whole numbers are accepted for money (Section 22).
+
+### 7.3 Other keys
+
+All keys are shortcuts; every action also has a button. The app turns off the built-in browser keys of the Windows web view (reload, browser find, browser zoom, browser print), so these keys only do what is listed here.
+
+| Key | Where | Action |
+|---|---|---|
+| `F2` | Any entry screen | New (بکری or voucher on the current screen). Inside a grid, F2 does not start cell editing. |
+| `F3` | Any entry screen | Find |
+| `F4` | In a picker | Add a new account without leaving the screen |
+| `F9` | Any screen | Print |
+| `F10` or `Ctrl+S` | Entry screens | Save |
+| `Ctrl+Enter` | Entry screens | Save, print the ticked documents and start a new one (FR-7.57) |
+| `Ctrl+Delete` | In a grid, before save | Remove the current row |
+| `Alt+U` | In a text field | Typing mode: رومن سے اردو, اردو کی بورڈ, انگریزی (FR-7.21) |
+| `Alt+L` | Anywhere | Language: اردو or English (FR-7.30) |
+| `Ctrl+K` | Anywhere | Global search |
+| `Ctrl+I` | On a calculated amount | How was this worked out? (FR-7.43) |
+| `Ctrl+D` | In a sale-line cell | Copy the value from the line above (FR-7.54) |
+| `Alt+Z` | While the saved message shows | Undo the save (FR-7.47) |
+| `Ctrl +` / `Ctrl −` / `Ctrl 0` | Anywhere | Text size bigger / smaller / normal |
+| `Alt+B` | Anywhere | New بکری |
+| `Alt+V` | Anywhere | New وصولی |
+| `Alt+A` | Anywhere | New ادائیگی |
+| `Alt+P` | Anywhere | New پیشگی |
+| `Alt+K` | Anywhere | New دکان خرچہ |
+| `Esc` | Anywhere | See FR-7.18 |
+
+### 7.4 Typing names in two scripts [C]
+
+Umar: users may type in English letters, for example "Arshad". When the app is in Urdu, it should become Urdu.
+
+Every name in the app is kept in **two scripts**: an Urdu name (shown in the Urdu app) and an English name (shown in the English app). The user types only one of them. The app writes the other, and the user only checks it.
+
+FR-7.21 [C] **Three ways to type Urdu, with no Windows setting.**
+1. **رومن سے اردو** (English letters to Urdu): type the word in English letters and the app converts it (FR-7.22).
+2. **اردو کی بورڈ** (built-in phonetic keyboard): English keys type Urdu letters (`a` → ا, `b` → ب), for exact spelling.
+3. A Windows Urdu keyboard, if the user has one, also works: Urdu letters are taken as typed.
+
+`Alt+U` switches a text field between رومن سے اردو, اردو کی بورڈ and انگریزی (no conversion). The current mode shows as a small tag inside the field. Code, number and phone fields always take English digits and are never converted.
+
+FR-7.22 [C] **English typing becomes Urdu.** In the Urdu app, Urdu text fields (names, notes, narrations, reasons) start in رومن سے اردو mode.
+- As the user types a word in English letters, up to 3 Urdu spellings appear under the field, the most likely one highlighted.
+- `Space`, `Enter` or leaving the field takes the highlighted spelling. `Space` then stays in the field for the next word; `Enter` then moves to the next field as usual. While the list is open, `↑` `↓` move the highlight (as in pickers, FR-7.16).
+- `Esc` closes the list and keeps the English letters.
+- `Backspace` straight after a conversion brings back the English letters of that word.
+
+Example: typing `arshad multani` gives ارشد ملتانی.
+
+Pickers, global search and code, number and phone fields never convert: they take the letters as typed and search both scripts (FR-7.40).
+
+FR-7.23 [C] **Professional language in both.** All Urdu on screens and prints is professional, natural mandi Urdu, using the glossary (Section 3). All English is plain, professional English, using the glossary's English column. No word-by-word machine translation in either language.
+
+FR-7.24 [C] **Every name has an Urdu and an English name.** This covers accounts, cities, items, packings, truck stands, stores, standard narrations, expense heads, staff, partners, the firm, and one-time (پختہ کھاتہ) people. Both names are required. The user types one; the other is filled by itself:
+- Typed in English letters (and converted to Urdu by FR-7.22): the English name is exactly what was typed, with capital first letters. `arshad multani` → "Arshad Multani".
+- Typed in Urdu letters: the English name is suggested from the Urdu. ارشد ملتانی → "Arshad Multani".
+- In the English app the order is reversed: the user types the English name and the Urdu name is suggested from it.
+
+The filled name stays editable. Once the user edits it, it is never overwritten again.
+
+FR-7.25 [A] **What is not translated.** Codes, amounts, dates, phone numbers, truck numbers, cheque numbers, مارکہ text, bank names and bank account titles, and free text (notes, hand-typed narrations, reasons) are stored once, exactly as typed, and look the same in both languages.
+
+FR-7.26 [A] **The app learns.** When the user picks another suggestion or corrects a converted word, the pair (English spelling → Urdu spelling) is remembered and offered first next time, for all users of this computer. The Owner can see and remove learned pairs in ترتیبات. Learned pairs are part of every backup. Learning never changes a name that is already saved.
+
+FR-7.27 [A] **Starting word list.** The app ships with a reviewed word list: common Pakistani first names, family and firm names, cities and towns of Punjab and Khyber Pakhtunkhwa, fruits, vegetables, packings and the mandi words of the glossary. Words not in the list are converted by spelling rules. Everything works offline.
+
+FR-7.28 [A] **Script checks.** An Urdu name must be in Urdu letters. An English name must be in English letters. Digits, spaces and `. - ' ( ) & /` are allowed in both. A wrong script shows "اردو نام اردو حروف میں لکھیں" or "انگریزی نام انگریزی حروف میں لکھیں".
+
+FR-7.29 [A] **One-time people.** In a پختہ کھاتہ name or phone field, typing shows **one** list: first the one-time people already recorded (both names, phone, last date), then the Urdu spellings of the typed word (FR-7.22). Picking a person reuses his exact names and phone, so all his entries stay under one person key (FR-13.5). For a new person, the other-script name is filled by FR-7.24.
+
+### 7.5 Language switch: اردو | English [C]
+
+Umar: a toggle that stays on Urdu by default. Switched to English, the whole app, including the words and the names, is in English.
+
+FR-7.30 [C] A switch "اردو | English" is always visible in the top bar (FR-5.6) and on the login screen. `Alt+L` also switches. A new user starts in the default language set in Section 21 (اردو unless the Owner changes it). Each user's choice is remembered; the login screen uses the language last used on this computer.
+
+FR-7.31 [C] **Everything changes.** In English, these are all in English: labels, menus, buttons, hints, messages, confirm boxes, report titles and columns, chart labels, month names, amounts in words, and every name (FR-7.24). The layout becomes left-to-right: the main bar moves to the left, and forms, grids and charts are mirrored. In Urdu, all of these are in Urdu, right-to-left.
+
+FR-7.32 [C] **The data never changes.** Switching changes only how things are shown. Codes, amounts, dates, balances and saved records are identical in both languages. Digits are English digits (0-9) on screen in both, with the same number grouping (Section 21). Only Urdu prints can use Urdu digits, by the Printing setting.
+
+FR-7.33 [C] **Instant, and nothing is lost.** The switch works at once on the open screen, with no restart and no logout. Unsaved entries, the selected row, open lists, filters and the cursor position stay. Example: halfway through بکری 1, the user switches to English. The lines now read "Akram Toll Tax" and "Arshad Multani", the item reads "Banana", the packing "Box", all numbers are the same, and the user carries on typing.
+
+FR-7.34 [C] **Keys follow what the user sees.** Arrow keys move in the direction shown on screen in both layouts (FR-7.13). In English the next field is usually to the right.
+
+FR-7.35 [A] **Search finds both.** Pickers and global search find a record by its Urdu or its English name, whichever language the app is in.
+
+FR-7.36 [A] **Prints.** Every print and PDF uses the app language by default. The print box has a language choice (اردو / English), so, for example, a buyer slip can be printed in Urdu while the app is in English. Excel export uses the app language. The readable backup pack (FR-20.5) uses the default language set in Section 21.
+
+FR-7.37 [A] **Mandi words in English.** Where English has a clear word, it is used (Sale, Receipt, Payment, Advance, Commission, Freight, Labour). Mandi words with no exact English word keep their usual Roman name (Laga, Munshiana, Pukhta Khata, Adda, Nag). The glossary's English column (Section 3) and the English names of the seeded accounts (FR-10.4) are the only source.
+
+### 7.6 Smart assistance: the app fills, the user checks [C]
+
+Umar: once a party is in the index, typing his code anywhere should bring up his whole detail. Make every page as easy as possible.
+
+The principle: **the user types as little as possible, the app fills what it already knows, and the user only checks.** Nothing filled by the app is saved without being visible on screen, and every filled value can be changed. The app never fills a rate or an amount of money by guessing.
+
+**Everywhere**
+
+FR-7.38 [C] **A code brings the whole party.** In every account field on every screen (بکری header and lots, sale lines, وصولی, ادائیگی, پیشگی, جنرل, ledgers, statements, report filters), the moment a full code is complete the name fills and a **party card** appears next to the field. A short code (FR-7.39) is taken on `Enter` or on leaving the field, because `1` may be the start of `12`; while typing, the card previews the top match. It shows:
+- For everyone: name with father or firm, city, phone, current balance (بنام or جمع), last entry date.
+- For a buyer: credit limit and how much of it is used; oldest unpaid bill and its days.
+- For a seller: open advance and amount payable.
+- Warnings in amber or red, with a word as well as a colour: inactive, over credit limit, owes the firm.
+
+No extra key is needed: `Enter` moves on as usual.
+
+FR-7.39 [A] **Short codes.** In a seller or buyer field, the serial alone is enough. In a buyer field `1` (or `0001`) means 03040001; in a seller field `7` means 030110007. The full code always works too. Short codes cover seller and buyer accounts only; other accounts are found by full code or name. In a field that takes any account (جنرل, ledgers), a short code that fits both a seller and a buyer lists both with their type, for example "گاہک 03040001 اکرم ٹول ٹیکس" and "بیوپاری 030110001 رحیم".
+
+FR-7.40 [A] **Smart search in every picker.**
+- Matches code, short code, Urdu name, English name, father or firm, city and phone, in either language.
+- Small spelling mistakes are forgiven: "arshd" finds ارشد ملتانی, and "اکرام" finds اکرم ٹول ٹیکس.
+- Order: exact code first, then names that start with the typed text, then recently and often used, then close matches.
+- Each row shows code, name, father or firm, city and balance, so two people with the same name are easy to tell apart.
+
+FR-7.41 [A] **Recent first.** Opening a picker without typing (`Alt+↓`) shows the last 10 records used on that screen, then the rest.
+
+FR-7.42 [A] **Unknown code.** A code that does not exist shows "اس کوڈ کا کوئی گاہک نہیں" (or بیوپاری) with an `F4` button to add a new account with that code.
+
+FR-7.43 [A] **How was this worked out?** Every calculated amount (commission, لاگا, صافی بکری, partner share, balance, aging days) has a small ⓘ. Clicking it, or `Ctrl+I` on it, shows the working with the real numbers and the rule used, for example "12,000 × 6 ÷ 100 = 720 (اصول: عام بیوپاری کمیشن 6%)".
+
+FR-7.44 [A] **Attention list (توجہ طلب).** A bell in the top bar shows a count. Its list shows what needs action, and each item opens the right screen:
+- Unsaved drafts.
+- Earlier days that are not closed.
+- Lots waiting in باقی مال for more than 2 days.
+- Buyers over their credit limit.
+- Buyer dues older than 30 days.
+- Seller payables older than 7 days.
+- Last cloud backup older than 24 hours.
+- Records with a missing English or Urdu name (possible only after the Phase 2 import of old data).
+
+The dashboard shows the same list as "آج کے کام" (Section 9.3).
+
+FR-7.45 [A] **Remembers the last choices.** Per user: the screen that was open at logout, report and analytics filters, print choices (FR-7.57) and text size. The user starts where he left off.
+
+FR-7.46 [A] **Helpful empty screens.** A list with nothing in it says why and what to do next, with a button. Example: "آج کوئی بکری نہیں۔ نئی بکری کے لیے Alt+B دبائیں".
+
+FR-7.47 [A] **Undo straight after saving.** After a بکری or voucher is saved, the success message shows a "واپس لیں" button (`Alt+Z`) for 10 seconds. Undo cancels that posting with a reversal (FR-6.3) with the reason "محفوظ کرنے کے فوراً بعد واپس", then opens a new unsaved entry with the same values so it can be corrected and saved again. The cancelled number is not reused. Only the user who saved can undo, and only while the date is open.
+
+FR-7.48 [A] **Simple sums in number fields.** Quantity and money fields accept `+` and `−` between whole numbers. Typing `20+25` gives 45. The result shows before the field is left. A result below 0 is not accepted. (In date fields, `+` and `−` still mean next and previous day, FR-7.19.)
+
+**بکری**
+
+FR-7.49 [A] **Truck memory.** Typing a truck number that was used before offers it in a list. Picking it fills اڈا, زمیندار and driver from that truck's last بکری (shown with its date). All are editable.
+
+FR-7.50 [A] **Same truck today.** If the truck already has a بکری today, the app says "اس ٹرک کی آج بکری نمبر 5 پہلے سے موجود ہے" with two buttons: کھولیں (open it) and نئی بکری جاری رکھیں (continue with this new one). This stops the same truck being entered twice by mistake.
+
+FR-7.51 [A] **Seller memory.** Choosing a lot's seller fills item and packing from his last lot, and مارکہ from his default مارکہ, else his last lot (all editable). His card shows his open advance and payable. A new lot's seller starts as the previous lot's seller (or the header زمیندار for the first lot).
+
+FR-7.52 [A] **Remaining quantity.** A new sale line's quantity starts as the lot's remaining quantity, already selected, so typing replaces it. Example: 50 received and the first line sold 20, so the second line starts at 30. A row whose buyer and rate are both empty is a blank row: the preview and the save ignore it, and save removes it.
+
+FR-7.53 [A] **Rate help, never a guess.** The rate field stays empty and shows a grey hint with the last rate of the same item and packing: from the earlier lines of this بکری first (saved or not), else today's saved sales, else the last day it sold. Example: "آج کا آخری ریٹ 600". The hint is never saved by itself. The user types the rate, or presses `Ctrl+D` to copy the rate of the line above.
+
+FR-7.54 [A] **Copy from the line above.** `Ctrl+D` in any sale-line cell copies the value of the same cell in the line above, as in a spreadsheet.
+
+FR-7.55 [A] **Rate check.** When the rate check setting is on (Section 21), a rate more than 30% above or below the item's average rate of the last 7 days shows an amber warning "ریٹ معمول سے بہت مختلف ہے (اوسط 600)". It never blocks saving.
+
+FR-7.56 [A] **Buyer memory.** Choosing a buyer on a line shows his card (FR-7.38). The payment type comes from his credit setting (Section 12.4). If the line takes him over his credit limit, the warning shows on the line straight away (FR-12.4), not only at save.
+
+FR-7.57 [A] **Save, print and next in one step.** `Ctrl+Enter` saves, prints the documents ticked in the "محفوظ کرنے کے بعد پرنٹ" list (seller bill, buyer slips, پختہ کھاتہ slip), and opens a new بکری. The ticked list is remembered per user.
+
+**وصولی, ادائیگی, پیشگی, خرچہ**
+
+FR-7.58 [A] **Receipts show what is owed.** After choosing a buyer in وصولی, his open bills show oldest first (date, بکری no, amount, still open, days). Buttons "پورا بقایا" (full balance) and "پرانا بل" (oldest bill) fill the amount. While the amount is typed, the list marks which bills it will settle (FR-15.4).
+
+FR-7.59 [A] **Payments show what is payable.** After choosing a seller in ادائیگی, his payable postings show (date, بکری no, seller credit, advance adjusted, paid, still open), with a "پورا بقایا" button. "Paid" and "still open" are worked out when shown, oldest first: the seller's debits that are not advances (ادائیگی, نقد, جنرل) settle his oldest credits left after advance matching (FR-15.8). Nothing extra is saved. The same working gives the age used in FR-7.44.
+
+FR-7.60 [A] **Advances show history.** In پیشگی, the seller's card shows his open advances and the date and amount of his last advance.
+
+FR-7.61 [A] **Collection round.** From the اگراہی فہرست (FR-15.6), one button opens a receipt list already filled with that collector's buyers and their dues. The user types only the amounts received and saves them together (FR-15.1). A buyer left at 0 is skipped.
+
+FR-7.62 [A] **Expenses.** The most used expense heads are at the top of the list. "پچھلے مہینے والے دہرائیں" fills this month's regular expenses (for example shop rent) from last month, for the user to check and save.
+
+**انڈکس and reports**
+
+FR-7.63 [A] **Duplicate check while typing.** While a new account's name is typed, similar existing accounts show below it (in both scripts, with code, father or firm, city and phone), before save. This extends FR-10.7.
+
+FR-7.64 [A] **Add a missing city or اڈا on the spot** from the account form with `F4` (FR-10.8), without losing what is already typed.
+
+FR-7.65 [A] **Party reports from the card.** The party card has buttons کھاتہ (ledger, R13) and فرد حساب (statement, R14) for that party, with the date range already filled.
+
+---
+
+## 8. Module: Login and security
+
+### 8.1 Login screen
+
+| Field | Urdu label | Type | Rules | Source |
+|---|---|---|---|---|
+| User name | صارف کا نام | Text | Required | [C][S] |
+| Password | پاس ورڈ | Password | Required, masked | [C][S] |
+| Show password | پاس ورڈ دکھائیں | Eye icon | | [A] |
+| Login | داخل ہوں | Button | `Enter` also logs in | [C][S] |
+| Exit | باہر | Button | Closes the app | [S] |
+| Language | اردو \| English | Switch | Last language used on this computer (FR-7.30) | [C] |
+
+Display only: firm name in Urdu and English, mandi name, app version.
+
+FR-8.1 [C] Username and password are checked. Passwords are never stored in readable form.
+FR-8.2 [A] Wrong passwords: after 5 wrong tries, wait 1 minute; after 5 more, wait 5 minutes; after that, 15 minutes each time.
+FR-8.3 [A] The old "Session Start / Session End" dates are not used to block login. Report date ranges replace them.
+FR-8.4 [A] Auto-lock after 15 minutes idle (setting). Unlock needs the password; unsaved work stays.
+FR-8.5 [A] Owner can reset other passwords. A recovery code is printed at first setup for the Owner.
+FR-8.6 [A] Every login, failed login and logout is written to the audit log.
+
+---
+
+## 9. Module: Dashboard (ڈیش بورڈ)
+
+### 9.1 Tiles (today, live)
+
+| Tile | Urdu | Calculation |
+|---|---|---|
+| Today's sales | آج کی بکری | Sum of خام بکری of today's postings, and count of بکری |
+| Today's commission | آج کا کمیشن | Seller + buyer commission + لاگا, today |
+| Cash in hand | روکڑ بقایا | Balance of the cash account now |
+| Buyers' dues | وصولی باقی | Sum of buyer debit balances, including open پختہ کھاتہ dues per person |
+| Sellers payable | ادائیگی باقی | Sum of seller credit balances |
+| Advances open | پیشگی باقی | Sum of advances not yet adjusted (FR-15.8) |
+| Goods not sold | باقی مال | Count of نگ in stock and number of lots |
+| Today's expenses | آج کا خرچہ | دکان خرچہ today |
+| Last backup | آخری بیک اپ | Green under 24 hours, red above |
+
+FR-9.1 [A] Every tile is clickable and opens the screen or report behind it.
+
+### 9.2 Partner strip [C]
+
+One card per partner: today's share, this month's share, this year's share (from the partner share ledger, income shares minus expense shares). Click opens the partner statement (R31).
+
+### 9.3 Lists and quick actions
+
+- Today's بکری: number, truck, seller, خام بکری, صافی بکری, status.
+- Top 10 oldest buyer dues: name, city, amount, days.
+- Quick action buttons: نئی بکری, وصولی, ادائیگی, پیشگی, خرچہ, روزنامچہ.
+- آج کے کام: the attention list (FR-7.44), each item one click from its screen.
+
+### 9.4 Mini charts [A]
+
+- Last 30 days: خام بکری and commission.
+- This month's commission by top 5 items.
+
+---
+
+## 10. Module: انڈکس (Masters)
+
+### 10.1 Chart of accounts: three levels [S]
+
+```
+Head (مد)            01 Assets | 02 Payables | 03 Parties | 04 Income | 05 Expenses | 06 Capital
+  Control (کنٹرول)    0101 Cash, 0201 Payables, 03011 Sellers, 0304 Buyers, 0401 Income ...
+    Account (کھاتہ)    030110001 رحیم
+```
+
+FR-10.1 [S] Screens: Chart of Account Head, Chart of Account Control, Chart of Account Tree (all three levels with live balances, expand and collapse with arrow keys).
+
+FR-10.2 [C] **Account codes** = control code + 4-digit serial.
+
+| Party type | Control code | Example codes | Source |
+|---|---|---|---|
+| Seller (بیوپاری / زمیندار / بزگر) | **03011** | 030110001, 030110002 | [C] |
+| Buyer (گاہک) | **0304** | 03040001, 03040002 | [C] |
+| Others | their own control | 01010001 cash, 04010001 seller commission | [A] |
+
+FR-10.3 [A] **Serial rules.** Serials 0001 to 8999 are for normal accounts. Serials 0000 and 9000 to 9999 are reserved for system accounts. The next code suggested is the highest normal serial in that control + 1 (reserved serials are ignored). The user can type a different free serial. When 8999 is used, the app says the series is full. That allows 8,999 sellers and 8,999 buyers.
+
+FR-10.4 [A] Seeded at install (system accounts: cannot be deleted; codes cannot be changed):
+
+| Code | Account | English name | Kind | Partner-shared |
+|---|---|---|---|---|
+| 01010001 | روکڑ (cash in hand) | Cash in Hand | Asset | |
+| 01020001 | بینک (default bank) | Bank | Asset | |
+| 02010001 | مزدوری کھاتہ | Labour Payable | Payable to labour | No |
+| 02010002 | کرایہ کھاتہ | Freight Payable | Payable to transporters | No |
+| 02010003 | کرایہ سٹور کھاتہ | Store Rent Payable | Payable to store owners | No |
+| 02010004 | منشیانہ کھاتہ | Munshiana Payable | Payable to the munshi | No |
+| 030119999 | پختہ کھاتہ (بیوپاری) | Pukhta Khata (Seller) | Seller | |
+| 03040000 | نقدی منڈی (cash buyer with no name) | Naqdi Mandi (Cash Buyer) | Buyer | |
+| 03049999 | پختہ کھاتہ (خریدار) | Pukhta Khata (Buyer) | Buyer | |
+| 04010001 | کمیشن آمدن (بیوپاری) | Commission Income (Seller) | Income | Yes |
+| 04010002 | کمیشن آمدن (گاہک) | Commission Income (Buyer) | Income | Yes |
+| 04010003 | لاگا آمدن | Laga Income | Income | Yes |
+| 04010004 | فون آمدن | Phone Charge Income | Income | Yes |
+| 04010005 | ریٹ فرق | Rate Difference | Income (can be negative) | Yes |
+| 0501xxxx | دکان خرچہ heads (بجلی، کرایہ دکان، چائے، تنخواہ ...) | Shop expense heads (Electricity, Shop Rent, Tea, Salaries ...) | Expense | Yes, always split |
+| 06010001 | ابتدائی سرمایہ | Opening Capital | Capital | |
+| 06019999 | ابتدائی فرق (opening difference) | Opening Difference | Capital | |
+| 0602xxxx | One capital account per partner | Capital, <partner name> | Capital | |
+| 0603xxxx | One drawings account (ذاتی خرچہ) per partner | Drawings, <partner name> | Capital | |
+
+Seller and buyer commission go to two income accounts, so analytics and the profit report can show each side. Heads and controls also have English names: Assets, Payables, Parties, Income, Expenses, Capital; Cash, Bank, Payables, Sellers, Buyers, Income, Shop Expenses, Capital, Drawings. All seeded English names follow the glossary (FR-7.37).
+
+### 10.2 Account (انڈکس) form
+
+| Field | Urdu label | Type | Req | Rules | Source |
+|---|---|---|---|---|---|
+| Account type | قسم کھاتہ | Select: بیوپاری، گاہک، دیگر | Yes | Sets the control and code | [C] |
+| Head (display) | مد | Read-only | | Shown for the chosen control | [S] |
+| Control | کنٹرول | Select | Yes | From type, can change for دیگر | [S] |
+| Account code | کوڈ | Text | Yes | Auto (FR-10.3), unique | [S][C] |
+| Urdu name | اردو نام | Text | Yes | Type in Urdu or English letters (FR-7.22); Urdu letters only (FR-7.28) | [S] |
+| English name | انگریزی نام | Text | Yes | Filled by itself from the Urdu name, editable (FR-7.24); English letters only | [S] field, required [C] |
+| Father / firm name | ولدیت / فرم | Text, Urdu and English (FR-7.24) | No | Tells apart two people with the same name | [A] hidden |
+| City | شہر | Select | No | From city master | [S] |
+| اڈا | اڈا | Select | No | Sellers usually come from one اڈا | [A] hidden |
+| Phone 1 | فون | Text | No | Pakistani mobile check | [A] |
+| Phone 2 | فون 2 | Text | No | | [A] |
+| Address | پتہ | Text | No | | [A] |
+| Linked account | منسلک کھاتہ | Account picker | No | Same person as both seller and buyer: links his two accounts so a combined balance can be shown | [A] hidden |
+| Opening date | ابتدائی تاریخ | Date | Yes | Default today; must be an open date | [S] |
+| Opening debit | ابتدائی بنام | Money | No | Only one of debit or credit | [S] |
+| Opening credit | ابتدائی جمع | Money | No | | [S] |
+| Opening is an advance | ابتدائی پیشگی | Checkbox | No | Sellers only, with an opening debit: the opening debit counts as an advance (FR-15.8) | [A] hidden |
+| Credit allowed | ادھار کی اجازت | Checkbox | No | Ticked by default (as in the old account form). Off = cash only | [S] |
+| Credit limit | ادھار حد | Money | No | Warning on بکری when exceeded | [A] |
+| Commission rules | کمیشن اصول | Link | No | Opens this party's rules (Section 11) | [C] |
+| Default مارکہ | مارکہ | Select | No | Sellers | [A] |
+| Collector | اگراہی والا | Select (staff) | No | Who collects from this buyer | [A] hidden |
+| Collection day | اگراہی کا دن | Select (weekday) | No | For the اگراہی plan | [A] hidden |
+| Active | فعال | Checkbox | Yes | Inactive = hidden from pickers, kept in reports | [A] |
+| Note | نوٹ | Text | No | | [A] |
+| System fields | | Auto | | Created by and at, updated by and at | [A] |
+
+FR-10.5 [S] List screen columns: code, Urdu name, English name, city, opening date, opening debit, opening credit, credit allowed, current balance. Footer: total debit, total credit.
+FR-10.6 [A] An account with postings cannot be deleted, only made inactive.
+FR-10.7 [A] Duplicate warning when name and phone match an existing account. Similar names show while typing (FR-7.63).
+FR-10.8 [A] Quick add (`F4` or a "+" button in any picker) opens a small form without leaving the current screen.
+FR-10.9 [A] **Opening balances post.** An opening debit or credit posts as an opening entry dated the opening date: the account on its side, and ابتدائی فرق (06019999) on the other side. When all openings are entered correctly, ابتدائی فرق is 0. The trial balance shows it, so a wrong opening is visible. Changing an opening reverses the old opening posting and posts the new one.
+
+### 10.3 Other masters
+
+All have add, edit and inactive, and cannot be deleted once used. Every name is entered once and filled in the other script by itself (FR-7.24).
+
+| Master | Urdu | Fields | Source |
+|---|---|---|---|
+| City | شہر | Code, Urdu name, English name | [S] |
+| Item | قسم مال | Code, Urdu name, English name, item group (پھل / سبزی), default packing, sold by (نگ / وزن), active | [S] fields [A] |
+| Packing | پیکنگ | Code, Urdu name, English name, approx weight kg | [S] fields [A] |
+| Truck stand | اڈا | Code, Urdu name, English name, city | [S] |
+| Mark | مارکہ | Code, mark text (as typed, FR-7.25), owner seller | [S] |
+| Store | سٹور | Code, Urdu name, English name | [S] |
+| Standard narration | تفصیل | Urdu text, English text, used in (voucher types) | [S] |
+| Expense head | خرچہ مد | Code, Urdu name, English name (always a دکان خرچہ account under 0501) | [A] |
+| Staff | عملہ | Urdu name, English name, role (منشی، اگراہی والا، مزدور), phone | [A] |
+| Bank account | بینک | Bank name, account title, account number, as typed (FR-7.25), and the Urdu and English names of the account it creates under 0102 (FR-7.24, suggested from the bank name) | [A] |
+
+---
+
+## 11. Module: Commission rules (کمیشن اصول) [C]
+
+Umar: commission changes depending on the item, the seller or the buyer.
+
+### 11.1 Rule fields
+
+| Field | Urdu | Type | Req | Notes |
+|---|---|---|---|---|
+| Side | جانب | Select: بیوپاری (seller), گاہک (buyer) | Yes | Seller side is deducted from the seller. Buyer side is added to the buyer's bill. |
+| Charge type | قسم | Select (allowed list in 11.2) | Yes | |
+| Party | کھاتہ | Account picker | No | Blank = any party |
+| Item | قسم مال | Picker | No | Blank = any item |
+| Item group | گروپ | Select: پھل، سبزی | No | Blank = any group. Only when Item is blank. |
+| Method | طریقہ | Select (allowed list in 11.2) | Yes | |
+| Value | شرح | Number | Yes | Percent with up to 2 decimals (6 or 2.5), or whole rupees per نگ or per lot |
+| From date | تاریخ سے | Date | Yes | |
+| To date | تاریخ تک | Date | No | Blank = no end |
+| Active | فعال | Checkbox | Yes | |
+| Note | نوٹ | Text | No | |
+
+### 11.2 Allowed charges
+
+Only these combinations exist. The rule screen does not offer any other.
+
+| Side | Charge | Methods allowed | Applied to | Posts to |
+|---|---|---|---|---|
+| بیوپاری | کمیشن | فیصد, فی نگ, فی لاٹ | Each sale line (فی لاٹ: once per lot, see FR-11.9) | کمیشن آمدن (بیوپاری) |
+| بیوپاری | مزدوری | فی نگ, فی لاٹ | The lot, on qty received | مزدوری کھاتہ |
+| بیوپاری | منشیانہ | فی نگ, فی لاٹ | The lot, on qty received | منشیانہ کھاتہ |
+| بیوپاری | فون | فی نگ, فی لاٹ | The lot, on qty received | فون آمدن |
+| گاہک | کمیشن | فیصد, فی نگ | Each sale line | کمیشن آمدن (گاہک) |
+| گاہک | لاگا | فی نگ, فیصد | Each sale line | لاگا آمدن |
+
+### 11.3 Which rule wins (most specific first)
+
+| Priority | Rule matches on | Example |
+|---|---|---|
+| 1 | Typed on the line (only commission and لاگا, only if the Owner allows overrides) | Munshi types 4% for this one line |
+| 2 | Party + item | رحیم selling کیلا: 5% |
+| 3 | Party only | رحیم, any item: 4% |
+| 4 | Item only | جاپانی پھل, any seller: 30 per نگ |
+| 5 | Item group (پھل or سبزی) | All fruit: لاگا 8 per نگ |
+| 6 | Global default for that side and charge | Seller 6%, buyer 6%; لاگا 0; مزدوری, منشیانہ, فون 0 (no default) |
+
+The rule date used is the date of the posting the line belongs to. The party is the seller for seller-side charges and the buyer for buyer-side charges.
+
+Worked example with these rules, each on 20 نگ × 600 = 12,000:
+
+| Sale | Which rule | Commission |
+|---|---|---|
+| رحیم sells کیلا | Priority 2 (party + item) 5% | 12,000 × 5 ÷ 100 = 600 |
+| رحیم sells سیب | Priority 3 (party) 4% | 12,000 × 4 ÷ 100 = 480 |
+| کریم sells جاپانی پھل | Priority 4 (item) 30 per نگ | 20 × 30 = 600 |
+| کریم sells کیلا | Priority 6 (default) 6% | 12,000 × 6 ÷ 100 = 720 |
+
+### 11.4 Requirements
+
+FR-11.1 [C] Seller-side and buyer-side commission are worked out per sale line using the winning rule.
+FR-11.2 [C] Methods supported: percent of line value, fixed amount per نگ, fixed amount per lot (seller side only).
+FR-11.3 [A] The same rule system works out لاگا, مزدوری, منشیانہ and فون (Section 11.2).
+FR-11.4 [A] Each sale line shows a small tag with the rule used (for example "رحیم + کیلا 5%"). Pointing at it shows the full rule.
+FR-11.5 [A] If two rules at the same priority overlap in dates, the newer one wins and the rule screen warns about the overlap.
+FR-11.6 [C] The method, value, rule and resulting amount are saved on each sale line and lot (snapshot). Changing a rule later never changes saved results, including when an unchanged line is part of an edit (FR-12.20).
+FR-11.7 [C] پختہ کھاتہ follows the same rules as any party (6% by default). A rule on a پختہ کھاتہ account changes the rate for all one-time parties on that side.
+FR-11.8 [A] A "test a rule" box: pick seller, buyer, item, qty and rate, and see which rule wins and the amount, before saving the rule.
+FR-11.9 [A] Seller commission "فی لاٹ" is charged once per lot, on the first sale line of the lot's first posting. Later sales of that lot do not charge it again.
+FR-11.10 [A] Lot charges (مزدوری, منشیانہ, فون) are suggested by the rules but are always editable amounts on the lot. Commission and لاگا are editable on a line only if the Owner turns on "allow override"; an edited value is saved with method "دستی" (manual).
+
+---
+
+## 12. Module: بکری بک (Sales voucher)
+
+### 12.1 What the screen must let the user do
+
+The layout is our own design. Functionally, one screen must let the user:
+
+1. Enter the truck details (header).
+2. Add one or more lots (one per seller per item on the truck).
+3. For the selected lot, add its sales to buyers.
+4. See a live summary for the lot and for the whole بکری: seller side, buyer side, partner split.
+5. Save, print, find, move between بکری, and cancel.
+
+FR-12.1 [S] Lots and their sales are linked: selecting a lot shows only its sales. A "پوری بکری" view shows all sales of all lots.
+FR-12.2 [C] Everything fits on one screen without scrolling sideways (FR-7.2). Less-used fields sit behind a "مزید" (more) toggle per lot, so the main view stays simple.
+
+### 12.2 Header fields
+
+| Field | Urdu | Type | Req | Default / rule | Source |
+|---|---|---|---|---|---|
+| بکری number | بکری نمبر | Auto | Yes | Given at first save (drafts have no number). Never reused. | [S] |
+| Book / series | بک | Text | No | Optional second number from the old screen (for example a yearly series) | [S] meaning [A] |
+| Entry date | تاریخ | Date | Yes | Today. Must be an open date (FR-6.6). | [S] |
+| Bill date | تاریخ بل | Date | Yes | Same as تاریخ. Can be later, when the seller's bill is made. | [S] field, meaning [A] |
+| Truck number | ٹرک نمبر | Text | No | Suggestions from past entries; fills اڈا, زمیندار and driver (FR-7.49, FR-7.50) | [S] |
+| Zamindar | زمیندار کوڈ + name | Seller picker | No | Becomes the default seller for new lots | [S] |
+| Truck stand | اڈا کوڈ + name | Picker | No | Default from the zamindar's اڈا | [S] |
+| Driver name | ڈرائیور | Text | No | | [A] hidden |
+| Driver phone | ڈرائیور فون | Text | No | | [A] hidden |
+| Total truck freight | کل کرایہ | Money | No | If filled, a "تقسیم" button splits it across lots by نگ received (C17) | [A] hidden |
+| Store | سٹور | Picker | No | Default store for lots | [S] |
+| Note | نوٹ | Text | No | | [A] |
+| Status | حالت | Read-only: محفوظ، منسوخ | | | [A] system |
+| System fields | | Auto | | Created/updated by and at, print count | [A] system |
+
+### 12.3 Lot fields
+
+Fields seen [S]: بزگر code, بزگر name, فون, منشیانہ, نقد, کرایہ سٹور, سٹور. The old grid scrolled sideways, so it had more fields than the video shows. We add every input the calculation needs [A].
+
+| Field | Urdu | Type | Req | Default / rule | Source |
+|---|---|---|---|---|---|
+| Lot no | لاٹ | Auto (1, 2, 3 ...) | Yes | | [A] system |
+| Seller code | بزگر کوڈ | Seller picker (includes پختہ کھاتہ بیوپاری) | Yes | Previous lot's seller, else header زمیندار (FR-7.51) | [S] |
+| Seller name | بزگر | Read-only, or typed if پختہ کھاتہ | | | [S] |
+| One-time seller name | نام | Text, Urdu and English (FR-7.29) | If پختہ کھاتہ | Suggests known one-time people | [C] |
+| One-time seller phone | فون نمبر | Text | If پختہ کھاتہ | Needed to pay him later | [A] |
+| Item | قسم مال | Picker | Yes | Seller's last item (FR-7.51) | [A] hidden |
+| Packing | پیکنگ | Picker | Yes | Seller's last packing, else the item's default | [A] hidden |
+| Mark | مارکہ | Picker | No | Seller's default, else his last مارکہ | [A] hidden |
+| Quantity received | تعداد | Whole number | Yes | More than 0 | [A] hidden |
+| Weight received | وزن (کلو) | Number, up to 3 decimals | If the item is sold by weight | | [A] hidden |
+| Freight | کرایہ | Money | No | From header split, editable | [S] summary |
+| Freight paid by | کرایہ ادا | Select: آڑھتی، بیوپاری | Yes | آڑھتی. If بیوپاری (the seller paid the driver himself), freight is shown but not deducted or posted. | [A] hidden |
+| Labour | مزدوری | Money | No | Typed. Filled by a rule only if the commission agent made one. Starts at 0. | [S] |
+| Munshiana | منشیانہ | Money | No | Typed, or from a rule. Starts at 0. | [S] |
+| Phone charge | فون | Money | No | Typed, or from a rule. Starts at 0. | [S] |
+| Cash paid now | نقد | Money | No | Cash given to the seller in this posting | [S] |
+| Store rent | کرایہ سٹور | Money | No | Typed by the munshi | [S] |
+| Store | سٹور | Picker | No | Header store | [S] |
+| Seller commission | کمیشن | Read-only | | Sum of the lot's line commissions | [C] |
+| Sold qty | فروخت | Read-only | | Sum of this lot's sold qty in all postings | [A] system |
+| Written-off qty | ضائع | Read-only | | FR-12.16 | [A] system |
+| Balance qty | باقی | Read-only | | Received − sold − written off. Red if more than 0. | [A] system |
+| Lot gross | خام بکری | Read-only | | | [S] |
+| Lot net | صافی بکری | Read-only | | | [S] |
+
+### 12.4 Sale line fields
+
+Fields seen [S]: تاریخ, کوڈ گاہک, گاہک, تعداد بیوپاری, ریٹ بیوپاری, رقم بیوپاری, تعداد گاہک, ریٹ گاہک, کمیشن ریٹ, لاگا ریٹ, رقم گاہک, میزان.
+
+| Field | Urdu | Type | Req | Default / rule | Source |
+|---|---|---|---|---|---|
+| Line no | نمبر | Auto | Yes | | [A] system |
+| Date | تاریخ | Read-only | | The date of the posting this line belongs to | [S] |
+| Buyer code | کوڈ گاہک | Buyer picker (includes نقدی منڈی and پختہ کھاتہ) | Yes | Code, short code, Urdu or English name (FR-7.39, FR-7.40); shows the party card (FR-7.38) | [S] |
+| Buyer name | گاہک | Read-only, or typed if پختہ کھاتہ | | | [S] |
+| One-time buyer name | نام | Text, Urdu and English (FR-7.29) | If پختہ کھاتہ | Suggests known one-time people | [C] |
+| One-time buyer phone | فون نمبر | Text | If پختہ کھاتہ and ادھاری | | [A] |
+| Qty (نگ) | تعداد | Whole number | Yes | Starts as the lot's remaining qty (FR-7.52). Shown in both the تعداد بیوپاری and تعداد گاہک columns; they are always equal (A29) | [S] |
+| Weight sold | وزن (کلو) | Number, up to 3 decimals | If the item is sold by weight | | [A] hidden |
+| Seller rate | ریٹ بیوپاری | Money | Yes | Per نگ, or per kg for weight items. Empty, with a hint of the last rate (FR-7.53) | [S] |
+| Seller amount | رقم بیوپاری | Read-only | | C1 | [S] |
+| Seller commission | کمیشن بیوپاری | Read-only | | From rule, per line | [C] |
+| Buyer rate | ریٹ گاہک | Money | Yes | Copies seller rate; editable only after "ریٹ مختلف" is switched on | [S] copy [A] |
+| Buyer value | قیمت گاہک | Read-only | | C1 with the buyer rate | [A] system |
+| Buyer commission rate | کمیشن ریٹ | Read-only tag (editable if override allowed) | | From rule | [S] |
+| Buyer commission | کمیشن گاہک | Read-only | | | [S] |
+| لاگا rate | لاگا ریٹ | Read-only tag (editable if override allowed) | | From rule | [S] |
+| لاگا | لاگا | Read-only | | | [S] |
+| Buyer total | رقم گاہک | Read-only | | C5 | [S] |
+| Payment type | ادھاری / نقدی | Toggle | Yes | ادھاری if the buyer has credit allowed, else نقدی. نقدی منڈی is always نقدی. | [S] |
+| Credit warning | | Icon | | Shows if over credit limit | [A] |
+| Note | نوٹ | Text | No | | [A] |
+
+FR-12.3 [A] By default each line has one quantity and one rate, and the buyer rate equals the seller rate. A "ریٹ مختلف" toggle on the line lets the buyer rate differ. The difference (buyer value − seller amount) posts to ریٹ فرق (income, shared). It can be negative (a loss).
+FR-12.4 [A] Credit limit exceeded: warning (Owner setting can make it a block).
+FR-12.5 [C] پختہ کھاتہ lines require the one-time name. If ادھاری, phone is also required.
+FR-12.6 [A] A lot's sold qty can never be more than its received qty.
+
+### 12.5 Live summary [S]
+
+For the selected lot, or the whole بکری with "پوری بکری":
+
+| Line | Urdu | Formula |
+|---|---|---|
+| Gross sale | خام بکری | Sum of seller amounts |
+| Freight | کرایہ | Sum of lot freight paid by آڑھتی |
+| Commission | کمیشن | Sum of seller commission per line |
+| Labour | مزدوری | Sum |
+| Munshiana | منشیانہ | Sum |
+| Cash paid | نقد | Sum |
+| Store rent | کرایہ سٹور | Sum |
+| Phone | فون | Sum |
+| Total deductions | کل اخراجات | Sum of the 7 lines above |
+| Net to seller | صافی بکری | خام بکری − کل اخراجات |
+| Buyer commission | گاہک کمیشن | Sum |
+| لاگا | لاگا | Sum |
+| Rate difference | ریٹ فرق | Sum, shown only if not 0 |
+| Buyer bills: credit / cash | ادھاری / نقدی | Sums of buyer totals by payment type |
+| Partner split | شراکت داروں کا حصہ | Each partner's share of this posting's shared income |
+
+FR-12.7 [A] If a lot's net is negative (deductions more than gross), the summary shows it in red with "بیوپاری کے ذمے" and the save is allowed. The seller's account then shows a debit.
+
+### 12.6 Saving (first posting of a بکری)
+
+FR-12.8 [C] Save writes, as **one action** (all or nothing): the بکری, lots and lines with their snapshots, one journal entry (sale part + cash part), the partner split, stock moves, analytics facts, bill matching, advance matching, and the audit entry.
+
+Checks before save:
+
+1. At least one lot and one sale line.
+2. All required fields filled (including پختہ کھاتہ name).
+3. Sold qty more than received qty: blocked (FR-12.6).
+4. Sold qty less than received qty: warning "5 نگ باقی ہیں". Save is allowed; the rest goes to باقی مال (Section 12.8).
+5. بنام = جمع for the whole entry (cannot be bypassed) [C].
+6. Partner split total = shared income (cannot be bypassed) [C].
+7. Active partner shares total 100% on the posting date (cannot be bypassed) [C].
+8. The date is an open date (FR-6.6).
+
+FR-12.9 [C] **Journal lines of a بکری posting.** All amounts come from the stored line and lot values.
+
+Sale part:
+
+| Account | Side | Amount |
+|---|---|---|
+| Buyer of each line (own account, نقدی منڈی, or پختہ کھاتہ) | بنام | Line buyer total |
+| Seller of each lot | جمع (بنام if negative) | Seller credit, C8 |
+| کمیشن آمدن (بیوپاری) | جمع | Σ seller commission |
+| کمیشن آمدن (گاہک) | جمع | Σ buyer commission |
+| لاگا آمدن | جمع | Σ لاگا |
+| فون آمدن | جمع | Σ فون |
+| ریٹ فرق | جمع (بنام if negative) | Σ rate difference |
+| مزدوری کھاتہ, کرایہ کھاتہ, منشیانہ کھاتہ, کرایہ سٹور کھاتہ | جمع | Their sums (freight only when paid by آڑھتی) |
+
+Cash part:
+
+| Case | بنام | جمع |
+|---|---|---|
+| Each lot with نقد | Seller: نقد | روکڑ: نقد |
+| Each نقدی line | روکڑ: buyer total | The line's buyer account: buyer total |
+
+So a نقدی line for a named regular buyer still appears on his ledger (bought and paid the same day), and on his buyer slip.
+
+FR-12.10 [A] Auto-save draft every 5 seconds while typing. After a crash or power cut, the app offers to reopen it.
+FR-12.11 [A] Cancel (منسوخ): see Section 12.9. Reason required.
+FR-12.12 [S] Print: seller bill, buyer slips for this بکری, پختہ کھاتہ slip.
+FR-12.13 [S] Move between saved بکری: first, previous, next, last, and find by number, truck, seller, date or item.
+
+### 12.7 Today's بکری list (آج کی بکری)
+
+Columns: بکری no, time, truck, seller(s), items, نگ, خام بکری, صافی بکری, buyer total, status. Filters: date, seller, item, status. `Enter` or click opens it.
+
+### 12.8 Goods not yet sold (باقی مال) [S + A]
+
+The old reports menu has a stock report ("مکمل سٹاک") and an Inventory Reports menu. In a commission business, "stock" means goods received but not yet sold.
+
+FR-12.14 [A] The باقی مال screen lists every lot with balance qty more than 0: date received, بکری no, seller, item, packing, received, sold, written off, balance, days waiting.
+FR-12.15 [A] "فروخت کریں" on a row opens a **later sale** for that lot (Section 12.9).
+FR-12.16 [A] A lot balance can be written off with a reason (خراب، واپس). This records a stock move only. It has no money effect unless a جنرل entry is also made. A write-off can be undone the same way as an edit.
+
+### 12.9 Postings of a بکری: first save, later sales, edits, cancel
+
+A بکری can have more than one posting over time. Each posting is a posting event (Section 6.1) with its own date and journal entry.
+
+**Later sale** (selling leftover stock on a later day):
+
+FR-12.17 [A] A later sale adds new sale lines to an existing lot. Its date is the day it happens (an open date). It posts only the new lines:
+- Buyer side and seller commission for the new lines, by the rules on the later sale's date.
+- Seller credit = Σ new seller amounts − Σ new seller commission.
+- Lot charges (freight, مزدوری, منشیانہ, فون, کرایہ سٹور, per-lot commission) are **not** charged again. They belong to the first posting.
+- Partner split by shares on the later sale's date.
+- The original posting and its day are not touched, even if that day is closed.
+
+**Edit:**
+
+FR-12.18 [A] Any one posting of a بکری can be edited while that posting's date is open. Editing a posting in a closed day needs the Owner to reopen the day first (FR-21.2). There is no other path.
+FR-12.19 [A] An edit is saved as a reversal of that posting (same date) plus a new posting (same date), in one action.
+FR-12.20 [A] In an edit, a line or lot charge the user did not change keeps its stored method, value and amount exactly (FR-11.6). Only changed or new lines look up the rules again (by the posting date).
+FR-12.21 [A] The partner split of the edited posting is recalculated from the new shared income, with the shares of the posting date.
+
+**Cancel:**
+
+FR-12.22 [A] Cancelling a بکری reverses every posting of that بکری. All their dates must be open; otherwise the Owner reopens the days first. The بکری is marked منسوخ. Receipts that were matched to its lines become unmatched credit on each buyer and are re-matched to that buyer's next oldest bills.
+
+Example (E2E-16 and E2E-16b): on 10-10-26 only 45 of رحیم's 50 کیلا are sold. On 11-10-26 the last 5 are sold to ارشد at 560. The later sale posts 2,800 of sales and 168 of seller commission; freight, labour, munshiana and phone are not charged again.
+
+---
+
+## 13. Module: پختہ کھاتہ (one-time parties) [C]
+
+Umar: a new or rare customer who comes once and buys. He has no account of his own. His record goes into پختہ کھاتہ. Umar (review): one-time parties are charged the same as everyone else, 6% by default, plus لاگا.
+
+Video evidence [S]: the old sales book report (بکری 20856) shows پختہ کھاتہ as the seller on every lot, with کل خرچہ equal to خام بکری and صافی بکری 0. So one-time sellers were paid their whole net in cash on the spot. We support both sides.
+
+FR-13.1 [C] Two system accounts: پختہ کھاتہ (خریدار) 03049999 and پختہ کھاتہ (بیوپاری) 030119999.
+FR-13.2 [C] Using پختہ کھاتہ on a line or lot requires the person's name; phone is also required for a credit buyer and for a seller.
+FR-13.3 [C] پختہ کھاتہ uses the same commission and لاگا rules as any party (FR-11.7).
+FR-13.4 [A] Default payment type is نقدی.
+FR-13.5 [A] **Person key.** Inside a پختہ کھاتہ account, each person is identified by name + phone (name compared after Urdu normalisation). Balances, bill matching, aging and dues are kept per person, not for the whole account. Example: شاہد's payment never settles ناصر's bill.
+FR-13.6 [A] **پختہ کھاتہ register:** every پختہ کھاتہ line with date, بکری no, side, name, phone, item, نگ, amount, commission, paid or due. Filters: date, name, phone, paid or due.
+FR-13.7 [A] Receiving from a one-time buyer: وصولی on پختہ کھاتہ (خریدار), then pick the person from his open lines. Paying a one-time seller: ادائیگی on پختہ کھاتہ (بیوپاری), then pick the person from his open lots.
+FR-13.8 [A] **Make regular.** If a one-time person starts coming often, a button creates a proper account and moves his open balance to it with a جنرل entry.
+FR-13.9 [A] Analytics and reports can group پختہ کھاتہ by person, so "how much did شاہد buy" still works.
+FR-13.10 [S] **One-time sellers are paid on the spot.** On a پختہ کھاتہ (بیوپاری) lot, نقد starts as the lot's صافی بکری, so his balance is 0 after the save. The munshi can change it if part is paid later.
+
+Example (Section 4.5): شاہد buys 10 پیٹی سیب at 1,200. Commission 12,000 × 6 ÷ 100 = 720. لاگا 10 × 8 = 80. He pays 12,800 cash. The register shows one line, paid.
+
+---
+
+## 14. Freight (کرایہ) [S]
+
+The old software's بکری menu has one button, labelled "کرایہ بک", and it opens the بکری بک screen. So the old software has no separate freight register, and we do not build one.
+
+FR-14.1 [S] Freight is typed on each lot, or split from the header total (C17). When the firm pays the driver, it posts in the بکری journal to کرایہ کھاتہ (02010002), the money owed to transporters (FR-12.9).
+FR-14.2 [A] A transporter is paid with a normal ادائیگی from کرایہ کھاتہ (Section 15.3). The ledger of کرایہ کھاتہ (R13) shows what is still owed.
+
+---
+
+## 15. Module: وصولی, ادائیگی, پیشگی (in the بکری side menu) [C]
+
+### 15.1 Common voucher fields
+
+| Field | Urdu | Type | Req | Rule |
+|---|---|---|---|---|
+| Voucher no | واؤچر نمبر | Auto at save | Yes | Own series per type (و-1, ا-1, پ-1) |
+| Date | تاریخ | Date | Yes | Today; must be an open date |
+| Account | کھاتہ | Picker | Yes | Filtered by type |
+| پختہ کھاتہ person | نام | Picker of open persons | If the account is a پختہ کھاتہ | |
+| Current balance | موجودہ بقایا | Read-only | | Shown as soon as the account is picked |
+| Amount | رقم | Money | Yes | More than 0 |
+| Mode | ذریعہ | Select: نقد، بینک، چیک | Yes | Default نقد |
+| Bank account | بینک | Picker | If بینک or چیک | The money posts to this bank account at once [A] |
+| Cheque no and date | چیک نمبر، تاریخ | Text, date | If چیک | Kept on the voucher and shown in the ledger |
+| Narration | تفصیل | Text + standard narration | No | |
+| New balance | نیا بقایا | Read-only | | After this voucher |
+| System fields | | Auto | | Created/updated by and at, status, cancel reason |
+
+FR-15.1 [A] Several vouchers can be entered one after another in a list, with a running total, and saved together (each is its own posting event).
+FR-15.2 [A] Print a receipt slip with the amount in words (FR-19.7).
+FR-15.3 [A] Edit while its date is open (reversal + new posting); cancel with reason; all effects reversed (Section 6).
+
+### 15.2 وصولی / اگراہی (receipt from buyer) [C]
+
+Umar: the buyer took goods but did not pay. The firm collects later (اگراہی).
+
+Extra field: collector (اگراہی والا) [A].
+
+- Picker shows buyers first, oldest due at the top. After a buyer is picked, his open bills show (FR-7.58).
+- Effect: cash (or bank) بنام, buyer جمع.
+- FR-15.4 [A] **Bill matching (oldest first).** A buyer's "bills" are every debit posted to his account (or to his person key in پختہ کھاتہ): sale line totals, opening debits and جنرل debits. A receipt settles the oldest open bills first. This keeps aging correct.
+- FR-15.5 [A] If a buyer pays more than he owes, the extra stays as his credit and settles his next bills automatically.
+- FR-15.6 [A] "اگراہی فہرست" button: today's planned collections by collector and city, printable.
+- Example: اکرم owes 12,880, pays 10,000, still owes 2,880.
+
+### 15.3 ادائیگی (payment) [C]
+
+- Picker shows sellers first, with payable balance. After a seller is picked, his payable postings show (FR-7.59).
+- Effect: account بنام, cash (or bank) جمع.
+- FR-15.7 [A] If the payment is more than the payable balance, a warning shows "یہ رقم بقایا سے زیادہ ہے". The user can still save. The extra shows as the seller owing the firm ("بیوپاری کے ذمے" list). It is not an advance; advances are only made with پیشگی.
+- Example: pay رحیم 4,316. Balance 0.
+
+### 15.4 پیشگی کھاتہ (advance to seller) [C]
+
+Umar: the seller takes money in advance, before his goods are sold.
+
+Extra field: expected goods or season (text) [A].
+
+- Effect: seller بنام, cash (or bank) جمع. The voucher is an advance.
+- FR-15.8 [A] **Advance matching (oldest first).** A seller's advances are his پیشگی vouchers and any opening debit marked as an advance (FR-10.2). Each later seller credit from a بکری posting adjusts his open advances, oldest first. The پیشگی report shows given, adjusted and open; the dashboard tile shows the open total.
+- FR-15.9 [A] If a seller's advances are more than his sales, he owes the firm; his balance shows as بنام and he appears in the "بیوپاری کے ذمے" list.
+- Example: رحیم took 15,000 on 01-09-26. His بکری on 10-10-26 credits 24,316, and he got 5,000 نقد. Advance adjusted 15,000 (fully). Payable 24,316 − 5,000 − 15,000 = 4,316.
+
+FR-15.10 [A] The same three screens are also reachable from the روکڑ area. They are the same screens, not copies.
+
+---
+
+## 16. Module: روکڑ (Cash book, expenses, journal)
+
+The روکڑ area shows: روکڑ بک, دکان خرچہ, ذاتی خرچہ, جنرل, and shortcuts to وصولی, ادائیگی, پیشگی. The old software's four-part روکڑ menu (وصولی, پیشگی, ادائیگی, جنرل) is fully covered [S].
+
+### 16.1 روکڑ بک (cash book)
+
+Opening cash, every cash in and out from all modules, closing cash. Filters: date range.
+
+FR-16.1 [A] Cash count box (کیش گنتی): the munshi types the counted cash and the app shows the difference from the book. It does not post anything.
+
+### 16.2 دکان خرچہ (shop expense) [C]
+
+| Field | Urdu | Type | Req |
+|---|---|---|---|
+| Date | تاریخ | Date | Yes |
+| Expense head | خرچہ مد | Picker | Yes |
+| Amount | رقم | Money | Yes |
+| Mode | ذریعہ | نقد، بینک | Yes |
+| Paid to | ادا کیا | Text | No |
+| Narration | تفصیل | Text | No |
+
+Effect: expense head بنام, cash (or bank) جمع. Every shop expense is split between partners by their shares on that date (FR-6.5). An expense that belongs to one partner only is entered as ذاتی خرچہ instead.
+
+### 16.3 ذاتی خرچہ (partner personal drawing) [C]
+
+| Field | Urdu | Type | Req |
+|---|---|---|---|
+| Date | تاریخ | Date | Yes |
+| Partner | شراکت دار | Picker | Yes |
+| Amount | رقم | Money | Yes |
+| Mode | ذریعہ | نقد، بینک | Yes |
+| Narration | تفصیل | Text | No |
+
+Effect: that partner's drawings account بنام, cash (or bank) جمع. Not split.
+
+### 16.4 جنرل (journal) [S]
+
+A list of lines: account, بنام, جمع, narration (and person for پختہ کھاتہ lines). Cannot save unless totals match. Used for corrections, transfers, bank deposits, goods returns. Lines on income or shop expense accounts write partner shares (FR-6.5); lines on buyer or seller accounts take part in matching (FR-15.4, FR-15.8).
+
+---
+
+## 17. Module: شراکت دار (Partners and income split) [C]
+
+Umar: there are multiple partners. As each sale is done, the commission is divided and added to each partner's total. Commission itself changes by item, seller and buyer (Section 11).
+
+### 17.1 Partner setup (Owner only)
+
+| Field | Urdu | Type | Req |
+|---|---|---|---|
+| Partner name | نام | Text, Urdu and English (FR-7.24) | Yes |
+| Linked user | صارف | Picker | No |
+| Capital account | سرمایہ کھاتہ | Auto-created | Yes |
+| Drawings account | ذاتی خرچہ کھاتہ | Auto-created | Yes |
+| Share % | حصہ فیصد | Number, up to 2 decimals | Yes |
+| Effective from | تاریخ سے | Date | Yes |
+| Active | فعال | Checkbox | Yes |
+
+FR-17.1 [C] Shares of active partners must total exactly 100% for every date. The screen shows the running total and will not save otherwise.
+FR-17.2 [A] A share change takes effect from its effective date, which must be today or later (no back-dating). Share history is kept. Postings already saved keep their split.
+FR-17.3 [A] **What is shared.** All income accounts (head 04) are shared. All shop expense accounts (head 05) are split. Payables (مزدوری, کرایہ, کرایہ سٹور, منشیانہ) are not income and are not shared. So no income or expense is ever left without an owner.
+
+### 17.2 Live split
+
+FR-17.4 [C] Every posting that touches income or shop expense accounts records each partner's share at once: income shares positive, expense shares negative, using C10 and C11, with the shares on the posting's date. A reversal records the exact opposite rows.
+FR-17.5 [A] Partner share rows are kept per posting (not per sale line).
+FR-17.6 [A] **Month close (مہینہ بند).** The Owner presses it for a finished month. It posts one journal: each income account بنام its month balance, each shop expense account جمع its month balance, and each partner's capital account جمع (or بنام if negative) the sum of that partner's share rows for the month. It balances because of FR-6.5. After month close, the month's days must be closed.
+
+### 17.3 Partner screens
+
+**Partner overview** (one card or row per partner):
+
+| Column | Meaning |
+|---|---|
+| آج کا حصہ | Today's income share |
+| مہینے کا حصہ | This month's income share |
+| سال کا حصہ | This year's income share |
+| خرچہ حصہ | Expense share this month |
+| منافع حصہ | Income share − expense share |
+| ذاتی خرچہ | Drawings this month |
+| سرمایہ بقایا | Capital balance |
+
+**Partner statement** (R31, per partner, date range): every share row and drawing, running total, printable.
+
+Example from Section 4: الف today: income share 2,196, expense share 1,200, profit share 996, drawings 2,000.
+
+---
+
+## 18. Module: تجزیات (Analytics) [C]
+
+Umar: filter by month or year, and see how much commission we got by item (for example banana), by seller, by buyer.
+
+### 18.1 Filters
+
+| Filter | Urdu | Options |
+|---|---|---|
+| Period | مدت | آج، یہ ہفتہ، یہ مہینہ، پچھلا مہینہ، یہ سال، پچھلا سال، custom from-to |
+| Group by | ترتیب | Day, month (ماہانہ), year (سالانہ) |
+| Item | قسم مال | All, or pick one or more |
+| Seller | بیوپاری | All, or pick |
+| Buyer | گاہک | All, or pick (پختہ کھاتہ persons included) |
+| City | شہر | All, or pick |
+| اڈا | اڈا | All, or pick |
+| Partner | شراکت دار | Views F and G only |
+| Commission side | جانب | Both, seller only, buyer only |
+| Compare | موازنہ | Off, previous period, same period last year |
+
+FR-18.1 [C] In views A to E and H, item, seller, buyer, city, اڈا, side and period combine freely. Example: "کیلا, seller رحیم, monthly, 2026". The partner filter applies to views F and G, which work on periods (FR-17.5).
+
+### 18.2 Views
+
+| View | Urdu | Rows | Columns |
+|---|---|---|---|
+| A. By item | قسم مال وار | Item | نگ, خام بکری, avg rate, seller comm, buyer comm, لاگا, total comm, % of all commission |
+| B. By seller | بیوپاری وار | Seller | بکری count, نگ, خام بکری, seller comm, buyer comm on his goods, total comm, صافی بکری |
+| C. By buyer | گاہک وار | Buyer | نگ, purchase value, buyer comm, لاگا, dues now, avg days to pay |
+| D. Item × month | قسم مال × مہینہ | Item | One column per month, total commission in each |
+| E. Seller × item | بیوپاری × قسم مال | Seller | One column per item |
+| F. Partner | شراکت دار وار | Partner | Income share, expense share, profit share per period |
+| G. Trend | رجحان | Period | خام بکری, commission, shared income, shop expenses, profit (chart) |
+| H. Top 10 | سرفہرست | Top items, sellers, buyers by total commission | |
+
+Definitions: "total comm" = seller comm + buyer comm + لاگا. "avg rate" = خام بکری ÷ نگ (C18). "% of all commission" = row total comm ÷ grand total comm × 100, 2 decimals. "avg days to pay" = average days from bill date to the date the bill was fully paid, for bills fully paid in the period; empty if none.
+
+### 18.3 Behaviour
+
+FR-18.2 [A] Every number can be opened (click or `Enter`) to see the lines behind it, and from a line, its بکری.
+FR-18.3 [A] Each view has a simple chart above the table.
+FR-18.4 [A] Export to Excel and print.
+FR-18.5 [A] Saved views: save a filter set with a name ("کیلا کمیشن ماہانہ") and open it from the dashboard.
+FR-18.6 [C] Sales numbers come from the stored values of each line (analytics facts), never recalculated with today's rules. Expense and profit numbers come from the journal and the partner share ledger.
+FR-18.7 [A] Cancelled postings cancel themselves out (their reversals are included), so a cancelled بکری adds nothing.
+
+### 18.4 Example: how to read the views
+
+Filter: October 2026, everything else "all", both sides. Data = the two بکری from Section 4.
+
+View A, by item:
+
+| قسم مال | نگ | خام بکری | Avg rate | Seller comm | Buyer comm | لاگا | Total comm | % |
+|---|---|---|---|---|---|---|---|---|
+| کیلا | 50 | 29,400 | 29,400 ÷ 50 = 588 | 1,764 | 1,764 | 400 | 3,928 | 3,928 ÷ 5,448 × 100 = 72.10 |
+| سیب | 10 | 12,000 | 1,200 | 720 | 720 | 80 | 1,520 | 27.90 |
+| **میزان** | **60** | **41,400** | | **2,484** | **2,484** | **480** | **5,448** | **100.00** |
+
+How to read it: in the کیلا row, seller comm 1,764 is 720 + 1,044 from the two lines of بکری 1 (Section 4.4). Total comm = 1,764 + 1,764 + 400 = 3,928. The grand total 5,448 matches today's commission on the dashboard.
+
+View B, by seller:
+
+| بیوپاری | بکری | نگ | خام بکری | Seller comm | Buyer comm on his goods | Total comm | صافی بکری |
+|---|---|---|---|---|---|---|---|
+| رحیم | 1 | 50 | 29,400 | 1,764 | 1,764 | 3,928 | 19,316 |
+| کریم | 1 | 10 | 12,000 | 720 | 720 | 1,520 | 10,160 |
+
+View C, by buyer:
+
+| گاہک | نگ | Purchase value | Buyer comm | لاگا | Dues now | Avg days to pay |
+|---|---|---|---|---|---|---|
+| ارشد ملتانی | 30 | 17,400 | 1,044 | 240 | 18,684 | (empty, nothing fully paid) |
+| اکرم ٹول ٹیکس | 20 | 12,000 | 720 | 160 | 2,880 | (empty, nothing fully paid) |
+| پختہ کھاتہ: شاہد | 10 | 12,000 | 720 | 80 | 0 | 0 |
+
+View F, partners, 10-10-26:
+
+| شراکت دار | Income share | Expense share | Profit share |
+|---|---|---|---|
+| الف | 2,196 | 1,200 | 996 |
+| ب | 1,646 | 900 | 746 |
+| ج | 1,646 | 900 | 746 |
+| **میزان** | **5,488** | **3,000** | **2,488** |
+
+---
+
+## 19. Module: رپورٹ (Reports)
+
+### 19.1 Common behaviour
+
+FR-19.1 [S] Each report first shows its filters: از, تا, and where relevant بیوپاری, زمیندار, گاہک, قسم مال, شہر, اڈا.
+FR-19.2 [A] Date shortcuts: آج، کل، یہ ہفتہ، یہ مہینہ، پچھلا مہینہ.
+FR-19.3 [A] Every report: on-screen view, print (A4, in the print language of FR-7.36, page numbers, firm header, print time), save as PDF, Excel.
+FR-19.4 [S] Open a row (click or `Enter`) to see its source بکری or voucher.
+FR-19.5 [C] Totals (میزان) always shown. بنام and جمع totals match where applicable.
+FR-19.6 [C] Numbers never flip next to Urdu text (`(16 @ 900)` stays correct), and Urdu text inside an English print (a note typed in Urdu) keeps its own direction.
+FR-19.7 [A] Amount in words on bills and statements, in the print language: 19,316 = "انیس ہزار تین سو سولہ روپے" or "Nineteen thousand three hundred sixteen rupees only". Urdu words always use لاکھ, کروڑ and ارب. English words follow the number grouping setting: thousand, million, billion for 1,316,040 style; thousand, lakh, crore for 13,16,040 style.
+
+### 19.2 Report catalogue
+
+**Sales** (filters as in the old sales report box [S]: از، تا، بیوپاری، زمیندار، قسم مال)
+
+| ID | Report | Urdu | Columns | Source |
+|---|---|---|---|---|
+| R1 | Sale book print | بکری بک | One بکری in full (seller bill) | [S] |
+| R2 | Full sales register | مکمل بکری | بکری no, buyer, city, item, (qty @ rate), amount | [S] |
+| R3 | Cash sales | نقدی | R2, نقدی lines only | [S] |
+| R4 | Credit sales | ادھاری | بکری no, buyer, (qty @ rate), amount | [S] |
+| R5 | Buyer bills | ادھاری تفصیل (Print All) | One row per buyer: items as (item qty @ rate), رقم, رقم بعد لاگا. Print All = one slip per buyer. | [S] |
+| R6 | Seller summary | بکری تفصیل / روزنامچہ بکری | Per lot: بکری no, تعداد, بیوپاری, خام بکری, کل خرچہ, صافی بکری, کرایہ, کمیشن, مزدوری, منشیانہ, نقد, فون | [S] |
+| R7 | Item-wise sales | قسم مال وار بکری | Item, نگ, gross, avg rate | [A] |
+| R8 | Truck stand report | اڈا رپورٹ | اڈا, trucks, lots, نگ, gross | [S] |
+| R9 | پختہ کھاتہ register | پختہ کھاتہ رپورٹ | Date, side, name, phone, item, نگ, amount, commission, paid / due (per person) | [C] |
+| R10 | Stock | مکمل سٹاک / باقی مال | Lot, date, seller, item, received, sold, written off, balance, days | [S] menu, columns [A] |
+
+**Accounts**
+
+| ID | Report | Urdu | Columns | Source |
+|---|---|---|---|---|
+| R11 | Daily journal | روزنامچہ | Date, voucher, account, narration, بنام, جمع, میزان | [S] |
+| R12 | Cash book | روکڑ | Opening, receipts, payments, closing | [S] |
+| R13 | Party ledger | کھاتہ | Opening, entries, running balance, closing | [S] |
+| R14 | Party statement | فرد حساب | Opening, total bought or sold, paid, balance; option "صرف بیلنس" (balance only) or with detail. From-date defaults to the first date of data. | [S] |
+| R15 | Vouchers list | ووچر | Vouchers by type and date | [S] |
+| R16 | Account index | انڈکس | Accounts with code, city, balance | [S] |
+| R17 | Head balances | مدوں بیلنس | Balance per head and control | [S] |
+| R18 | Trial balance | ٹرائل بیلنس | Every account, totals equal | [S] |
+| R19 | Opening trial | اوپن ٹرائل | Opening balances only | [S] |
+
+**Collections, payments, advances**
+
+| ID | Report | Urdu | Columns | Source |
+|---|---|---|---|---|
+| R20 | Buyer dues | وصولی / اگراہی رپورٹ | Buyer (or پختہ person), city, phone, balance, oldest open bill date, days, aging 0-7, 8-30, 31-90, 91+ days | [C] |
+| R21 | Collection by city | اگراہی بحساب شہر | R20 grouped by city, with city totals | [S] |
+| R22 | Collection by collector | اگراہی بحساب اگراہی والا | R20 grouped by collector | [S] second menu item (blurry), meaning [A] |
+| R23 | Receipts register | وصولی رجسٹر | Date, voucher, buyer, amount, mode, collector | [A] |
+| R24 | Seller payables | ادائیگی باقی | Seller, payable, last بکری date; separate list "بیوپاری کے ذمے" for sellers who owe | [C] |
+| R25 | Payments register | ادائیگی رجسٹر | Date, voucher, account, amount, mode | [A] |
+| R26 | Advances | پیشگی کھاتہ | Seller, given, adjusted, open, date | [C][S] |
+| R27 | Bill series | بیجک سیریز | Seller bills (بیجک) in number order for a date range: بکری no, date, seller, خام بکری, کل اخراجات, صافی بکری | [S] menu (shown as "بجک سیریز"), columns [A] |
+
+**Business**
+
+| ID | Report | Urdu | Columns |
+|---|---|---|---|
+| R28 | Income report | آمدن رپورٹ | Each income account by day or month |
+| R29 | Expense report | خرچہ رپورٹ | دکان خرچہ by head; ذاتی خرچہ by partner |
+| R30 | Profit and partner split | منافع و تقسیم | Income − shop expenses = profit; each partner's share |
+| R31 | Partner statement | شراکت دار کھاتہ | Section 17.3 |
+
+---
+
+## 20. Module: بیک اپ (Backup and restore) [C]
+
+Quality targets (frequency checks, encryption, provider) are in the NFR and Tech Stack documents.
+
+FR-20.1 [C] Backups happen by themselves. Nobody needs a USB stick to keep data safe.
+FR-20.2 [A] A local copy every 15 minutes while data is changing.
+FR-20.3 [C] A cloud copy at closing time (setting, default 9:00 PM) and when the app is closed (the app finishes the backup before it exits, showing progress).
+FR-20.4 [A] A USB copy at the same time, if a USB drive is plugged in.
+FR-20.5 [A] A readable daily pack in the cloud: روزنامچہ PDF, and spreadsheets for buyers, sellers, دکان خرچہ, ذاتی خرچہ, partner shares.
+FR-20.6 [A] No internet: the cloud copy waits and retries by itself. The status bar shows the last good cloud backup, red if older than 24 hours.
+FR-20.7 [A] Each backup is checked after it is made. A failed check shows an alert on the dashboard.
+FR-20.8 [A] Backup screen: list of backups (date, size, place, status), بیک اپ ابھی لیں (backup now), بحال کریں (restore, Owner only), test restore.
+FR-20.9 [A] Restore: pick a backup, see its date and totals, confirm. The current data is backed up first, then replaced. A warning says entries made after that backup will be lost.
+FR-20.10 [A] USB and cloud backups are locked with a key that is shown once at setup and printed for the Owner.
+
+---
+
+## 21. Module: ترتیبات (Settings), day close and audit
+
+| Group | Settings |
+|---|---|
+| Firm | Firm name (Urdu, English), mandi name, address, phones, logo |
+| Codes | Seller control 03011, buyer control 0304 (fixed after the first account is made) |
+| Charges | Global defaults: seller commission 6%, buyer commission 6%, لاگا 8 per نگ on fruit (as an item-group rule). مزدوری, منشیانہ, فون have no default. The commission agent changes any of them (Section 11). |
+| Overrides | Allow line-level commission and لاگا override (on / off) |
+| Checks | Credit limit: warn or block. Rate check (FR-7.55) on or off, with its percent (default 30%). |
+| Day | Closing time; auto day close on or off |
+| Backup | Cloud account details, local backup folder, USB on / off, closing time |
+| Printing | Paper size per document (A4, A5, 80 mm), printer, copies. Urdu digits (۰-۹) on Urdu prints: on or off (default off). |
+| Language | Default language for new users and for the backup pack (default اردو); each user switches with FR-7.30. Number grouping (1,316,040 or 13,16,040). Default text size. Learned words list (FR-7.26): view and remove. |
+| Users | Add, role, reset password, active |
+
+Rounding (Section 22) and the split leftover rule (C10) are fixed rules, not settings.
+
+FR-21.1 [A] **Day close (دن بند کریں).** Closes the oldest open day (and can close several days up to a chosen date, in order). It shows the day summary first: بکری count, خام بکری, commission, partner shares, cash in hand, trial balance difference (must be 0), lots with باقی مال. Confirm moves the "closed up to" date forward and starts the cloud backup.
+FR-21.2 [A] **Reopen.** Only the Owner can reopen, with a reason. Reopening a date reopens that date and every later date (the "closed up to" date moves back to the day before it). It is written to the audit log. A month that has been month-closed cannot be reopened until its month close is reversed by the Owner.
+FR-21.3 [A] **Audit log.** Every create, edit, cancel, login, rule change, share change, opening change, day close, reopen, month close and restore: user, time, screen, record, old value, new value, reason. Read-only. Owner can filter it.
+
+---
+
+## 22. Calculation reference (all formulas in one place)
+
+Money rule: every money input and every stored money result is a **whole number of rupees**. Rates are whole rupees. Percent values can have up to 2 decimals (2.5%). Weights can have up to 3 decimals (kg). Any calculation that is not a whole rupee is rounded once, at the point shown, to the nearest rupee, half up (337.5 → 338, 337.4 → 337).
+
+| # | Formula | Example |
+|---|---|---|
+| C1 | Line value (by نگ) = qty × rate. Line value (by weight) = round(weight kg × rate per kg). | 20 × 600 = 12,000. 12.345 kg × 100 = 1,234.5 → 1,235. |
+| C2 | Percent charge = round(base × percent ÷ 100) | 12,000 × 6 ÷ 100 = 720; 5,630 × 6 ÷ 100 = 337.8 → 338 |
+| C3 | Per-نگ charge = qty × value (no rounding needed) | 10 × 20 = 200 |
+| C4 | Per-lot charge = value, once per lot | منشیانہ 50 |
+| C5 | Buyer total = buyer value + buyer commission + لاگا | 12,000 + 720 + 160 = 12,880 |
+| C6 | Lot deductions = freight (if paid by آڑھتی) + seller commission + labour + munshiana + نقد + store rent + phone | 3,000 + 1,764 + 250 + 50 + 5,000 + 0 + 20 = 10,084 |
+| C7 | Lot net (صافی بکری) = lot gross − lot deductions | 29,400 − 10,084 = 19,316 |
+| C8 | Seller credit in a posting = seller amounts − seller commission − lot charges of that posting except نقد. (Lot charges only in the first posting.) | 29,400 − 1,764 − 3,000 − 250 − 50 − 0 − 20 = 24,316 |
+| C9 | Shared income of a posting = sum of all income lines in it (seller comm + buyer comm + لاگا + فون + ریٹ فرق) | 1,764 + 1,764 + 400 + 20 = 3,948 |
+| C10 | Partner share = round down (shared × share% ÷ 100) to whole rupees; leftover to the largest share (tie: partner created first) | 3,948 → 1,579 + 1 = 1,580; 1,184; 1,184 |
+| C11 | Expense share = C10 on the expense amount, then made negative | 3,000 → −1,200 / −900 / −900 |
+| C12 | Partner profit share = income shares − expense shares | 2,196 − 1,200 = 996 |
+| C13 | Buyer balance = opening + Σ debits − Σ credits | 0 + 12,880 − 10,000 = 2,880 |
+| C14 | Aging days = today − date of the oldest open bill after matching | |
+| C15 | Rounding = nearest whole rupee, half up. Fixed rule. | 337.8 → 338 |
+| C16 | Lot balance qty = received − sold − written off | 50 − 50 − 0 = 0 |
+| C17 | Header freight split = round down (total × lot qty ÷ all lots' qty); leftover to the lot with the most نگ (tie: lowest lot number) | 1,000 over 30 and 20 نگ → 600 and 400 |
+| C18 | Average rate (display only) = round(خام بکری ÷ نگ) | 29,400 ÷ 50 = 588 |
+| C19 | Rate difference = buyer value − seller amount (can be negative) | |
+
+---
+
+## 23. Edge cases (consolidated)
+
+| # | Case | Required behaviour |
+|---|---|---|
+| E1 | One truck, several sellers | Several lots, each with its own seller and its own "freight paid by" |
+| E2 | One seller, several items on one truck | Several lots, same seller |
+| E3 | Lot not fully sold today | Warning; save allowed; balance in باقی مال; sold later as a later sale (FR-12.17) |
+| E4 | Goods spoiled or returned to seller | Write off the lot balance with a reason (FR-12.16) |
+| E5 | Buyer returns goods after sale | جنرل entry for now [A]; dedicated return screen later |
+| E6 | Seller already paid the driver | Lot "freight paid by بیوپاری": freight not deducted or posted |
+| E7 | Same buyer on many lines | Allowed; buyer slip groups his lines |
+| E8 | Rate typed wrong (6000 instead of 600, or 60 instead of 600) | Rate check warning (FR-7.55) |
+| E9 | Partner shares not 100% | Posting cannot save; message points to partner setup |
+| E10 | Same person is both seller and buyer | Two accounts (one per code series), linked; combined balance shown on his ledger [A] |
+| E11 | Buyer pays more than he owes | Extra kept as his credit, settles his next bills |
+| E12 | Payment to seller more than payable | Warning; seller then owes the firm ("بیوپاری کے ذمے"); not an advance |
+| E13 | Seller's advance bigger than his sales | He owes the firm; shown in "بیوپاری کے ذمے" |
+| E14 | بکری edited after the buyer paid part of it | Receipts re-matched oldest first; aging updated |
+| E15 | بکری cancelled after the buyer paid | Payment stays on his account as credit; re-matched to his next oldest bills |
+| E16 | Back-dated entry | Only after the "closed up to" date; earlier dates need the Owner to reopen |
+| E17 | Rule changed mid-day | New and changed lines use the new rule; saved and unchanged lines keep theirs |
+| E18 | Share changed | Only from today or later; postings split by the share on their own date |
+| E19 | Power cut while typing | Draft restored on next start |
+| E20 | Power cut during save | Either the whole save happened or none of it |
+| E21 | Master record in use | Cannot delete; can make inactive |
+| E22 | Same truck twice in one day | Allowed; separate بکری |
+| E23 | Item sold by weight | Rate per kg; value = round(weight × rate); per-نگ charges use the نگ count; percent charges use the value |
+| E24 | Zero or negative qty or rate | Not allowed |
+| E25 | پختہ کھاتہ credit sale without phone | Not allowed |
+| E26 | Restore of an older backup | Warning listing what will be lost; safety copy first |
+| E27 | Rounding leftover in a split | Goes to the largest share; totals always exact |
+| E28 | Lot net negative (deductions more than gross) | Allowed with a red warning; seller ends up owing |
+| E29 | Account series full (serial 8999 used) | Clear message; no code reused |
+| E30 | Two one-time people in پختہ کھاتہ | Separate balances and matching per person (FR-13.5) |
+| E31 | Money typed with decimals ("850.50") | Not allowed: "رقم پورے روپوں میں لکھیں" |
+| E32 | Language switched in the middle of an unsaved بکری | Values, selected row, cursor and draft stay; only words, names and direction change (FR-7.33) |
+| E33 | English letters typed in a name field and the first suggestion is wrong | User picks another suggestion or edits the word; the pair is learned (FR-7.26); saved names never change |
+| E34 | A rare name not in the word list | Spelling rules still give suggestions; for exact spelling the user switches to اردو کی بورڈ with `Alt+U` |
+| E35 | Urdu letters in the English name, or English letters in the Urdu name | Not saved; clear message (FR-7.28) |
+| E36 | A short code that fits a buyer and a seller, in a field that takes any account | Both listed with their type (FR-7.39) |
+| E37 | A code or short code with no account | Message, and `F4` adds an account with that code (FR-7.42) |
+| E38 | Two accounts with the same name | Search rows and the party card show father or firm, city, phone and balance (FR-7.40) |
+| E39 | The same truck entered twice on one day | Warning with a button to open the first بکری (FR-7.50) |
+| E40 | Print language differs from the app language | Print uses the chosen language and the names in that script; notes print as typed (FR-7.36, FR-7.25) |
+| E41 | A record with only one of its two names (possible only after the Phase 2 import) | Shown with the name it has, marked, and listed in the attention list until fixed (FR-7.44) |
+| E42 | `20+25` typed in a money field; `10-20` typed | 45 accepted; a result below 0 refused (FR-7.48) |
+| E43 | Undo tried after the day was closed, or by another user | Not offered (FR-7.47) |
+
+---
+
+## 24. Assumptions register (to validate at the demo)
+
+| ID | Assumption | Default | Ask the client |
+|---|---|---|---|
+| A1 | Seller commission is a percent, with rules by seller and item | 6% | Real rates per seller and item? |
+| A2 | لاگا on vegetables | None (fruit only, 8 per نگ) | Is there any لاگا on vegetables? |
+| A3 | Old bills show buyer charges that differ by item (سیب about 99 per نگ, مولی 5%) | Rules per item or group (Section 11) | Which items need their own buyer rate? |
+| A4 | پختہ کھاتہ on both buyer and seller side | Both | Only for buyers? |
+| A5 | مزدوری, when a rule is made, is per نگ received | No default | On received or sold qty? |
+| A6 | منشیانہ and فون are typed per lot | No default | Usual amounts, so a rule can fill them? |
+| A7 | Buyer rate normally equals seller rate | Same rate | When do they differ? Who keeps the difference? |
+| A8 | All income (commission, لاگا, فون, ریٹ فرق) is shared between partners | | Correct? |
+| A9 | All shop expenses are split by the same shares | | Correct? |
+| A10 | Partner names and shares | الف 40, ب 30, ج 30 | Real names and shares? |
+| A11 | Split leftover to the largest share (tie: partner created first) | | OK? |
+| A12 | One truck can carry several sellers' lots | Yes | Correct? |
+| A13 | تاریخ بل = the date of the seller's bill | Same as تاریخ | What is the old تاریخ بل used for? |
+| A14 | Codes: 03011 + 4 digits, 0304 + 4 digits | 030110001, 03040001 | Exact old format? Keep old codes on migration? |
+| A15 | Rounding to the nearest rupee, half up | | Correct? |
+| A16 | Receipts settle the oldest bills first | | OK? |
+| A17 | No separate freight register. The old menu's "کرایہ بک" button opens the بکری بک screen. | Freight on lots; transporters paid by ادائیگی | Correct? |
+| A18 | Credit limit = warning | | Should it block? |
+| A19 | Munshi cannot reopen a closed day | | Rights per user? |
+| A20 | English digits, 1,316,040 style | | Lakh style? |
+| A21 | Bills on A4, slips on A5 or 80 mm | | Printer and paper? |
+| A22 | "Stock" in the old menus means unsold goods | | Does the firm also buy and hold its own goods? |
+| A23 | Second اگراہی report = by collector | | What was the second اگراہی report? |
+| A24 | Old KACHA_KHATA table (empty) is not needed | | Was کچا کھاتہ ever used? |
+| A25 | Old "Session End 31-12-2026" | | Does the old software stop then? |
+| A26 | منشیانہ is paid to the munshi (a payable, not firm income) | | Correct? |
+| A27 | All money is whole rupees, including rates | | Any rates with paisa (for example per kg)? |
+| A28 | Lot charges are charged once, on the first posting | | Correct? |
+| A29 | Buyer qty always equals seller qty on a line | | Is there ever a quantity difference? |
+| A30 | Cheques post to the bank account at once (no clearing step) | | Do they wait for cheques to clear? |
+| A31 | Partner shares cannot be back-dated | | OK? |
+| A32 | Weight items: rate per kg, نگ still counted | | Which items are sold by weight? |
+| A33 | English screens use English words, with Roman names for mandi words | Glossary English column (Laga, Munshiana, Pukhta Khata, Adda, Nag) | Who will use English? Are these the words they use? |
+| A34 | Prints use the app language, with a choice on each print | App language | Should buyer slips always be in Urdu? |
+| A35 | Short code = the serial alone, by field type | `1` = 03040001 in a buyer field | OK? |
+| A36 | A rate is never filled by itself: only a hint and `Ctrl+D` | Hint only | Would they rather have the last rate filled in? |
+| A37 | Urdu text fields start in English-to-Urdu typing | رومن سے اردو | Does the munshi prefer the phonetic keyboard? |
+| A38 | A new sale line's qty starts at the lot's remaining qty | On | OK? |
+| A39 | A seller's item and packing come from his last lot; مارکہ from his default, else his last lot | On | OK? |
+| A40 | Attention list limits | باقی مال 2 days, dues 30 days, payables 7 days | Real limits? |
+| A41 | Undo straight after save, as a reversal | 10 seconds | OK? |
+| A42 | Some old lines (mostly کیلا) have no rate and an amount that is not qty × a whole rate (4 نگ = 2,950) | Weight items (rate per kg) | Is کیلا sold by weight, or is a lump amount typed? |
+
+---
+
+## 25. Verification against the old software video
+
+Every item seen in the video, and where this PRD covers it.
+
+### 25.1 Screens and menus
+
+| Seen in the video | Covered in |
+|---|---|
+| Login: user name, password, session start/end, login, exit, firm name, mandi name | Section 8 (session dates replaced by report ranges) |
+| Main menu: Setup Forms, Transactions Forms, Financial Reports, Inventory Reports, Backup | Section 5 |
+| Inventory Reports menu, "مکمل سٹاک" report, PUR_ITEM tables | Section 12.8, R10 |
+| Side buttons: انڈکس, بکری, روکڑ, رپورٹ, بیک اپ | Section 5 |
+| Welcome user, today's date | Section 5 (status bar) |
+| انڈکس menu: COA Head, Control, Tree, انڈکس, شہر, قسم مال, پیکنگ | Section 10 |
+| Account grid: S.Code, A/C Code, Description, Urdu Name, City, Open Date, Open Debit, Open Credit, Credit Allowed, totals | Section 10.2, FR-10.5 |
+| Account grid footer: Main/Head Title, Control Head | Section 10.2 (Head display) |
+| بکری menu: one button labelled کرایہ بک, which opens the بکری بک screen | Section 12 (no separate freight register, Section 14) |
+| بکری screen header: بکری نمبر (2 boxes), تاریخ بل, تاریخ, ٹرک نمبر, زمیندار کوڈ + name, اڈا + name, ریفریش | Section 12.2 (refresh replaced by live totals, FR-7.5) |
+| Upper grid: بزگر code/name, فون, منشیانہ, نقد, کرایہ سٹور, سٹور, sideways scroll | Section 12.3 (+ hidden inputs) |
+| Lower grid: all 11 columns + میزان | Section 12.4 |
+| Summary: خام بکری ... صافی بکری | Section 12.5 |
+| Toolbar: save, print, first, previous, next, last, new record, delete record, query | FR-12.11 to FR-12.13 |
+| روکڑ: وصولی, پیشگی کھاتہ, ادائیگی, جنرل | Sections 15, 16 |
+| Reports left: انڈکس, روکڑ, فرد حساب اور کھاتہ, روزنامچہ, ووچر, مکمل سٹاک, پیشگی کھاتہ | R16, R12, R13/R14, R11, R15, R10, R26 |
+| Reports right: بکری, بجک سیریز (بیجک), اڈا رپورٹ | R1 to R6, R27, R8 |
+| Reports bottom: اوپن ٹرائل, ٹرائل بیلنس, اگراہی بحساب شہر, second اگراہی item | R19, R18, R21, R22 |
+| بکری report box: از, تا, بیوپاری, زمیندار, قسم مال; buttons بکری بک, مکمل بکری, نقدی, ادھاری, بکری تفصیل, اخراج | FR-19.1, R1 to R6 |
+| فرد حساب box: از (01-01-18), تا, کھاتہ نام, بیلنس, buttons فرد حساب / کھاتہ | R13, R14 |
+| Daily report box: single From date | R11 |
+| Backup button runs a full export | Section 20 |
+
+### 25.2 Report contents
+
+| Seen | Covered |
+|---|---|
+| ادھاری: بکری no, party, (qty @ rate), amount, drill-down arrow | R4, FR-19.4 |
+| ادھاری تفصیل: party, detail, رقم, رقم بعد لاگا, Print All, page x of y | R5, FR-19.3 |
+| مکمل بکری: بکری no, party, city/منڈی, detail | R2 |
+| روزنامچہ بکری: بکری no, تعداد, بیوپاری, خام بکری, کل خرچہ, صافی بکری, ٹرک کرایہ, کمیشن, مزدوری | R6 |
+| روزنامچہ (voucher list): firm header, date, account, بنام, جمع, totals | R11 |
+| پختہ کھاتہ in seller column | Section 13 (both sides) |
+| Cash buyers shown as نقدی / منڈی | نقدی منڈی account, FR-10.4 |
+
+### 25.3 Old database tables
+
+| Old table | Covered by |
+|---|---|
+| CHART | Accounts, Section 10 |
+| CITY | City master |
+| CONFIG | Settings, Section 21 |
+| ENTRY_TYPE (about 10 types) | Posting event types, Section 6.1 |
+| JMST / JDTL (journal) | Posting rules, Sections 6 and 12.6 |
+| KACHA_KHATA (empty) | Not used; A24 |
+| LOCATION | Store master |
+| MARKA | Mark master |
+| NARR | Standard narration master |
+| PACKING | Packing master |
+| PUR_ITEM, PUR_ITEM_GROUP | Item master with item group |
+| SDTL / SDTL_B | Lots and sale lines |
+
+### 25.4 Problems seen in the old software, and how this PRD prevents them
+
+| Problem | Prevented by |
+|---|---|
+| Journal off by 2 rupees | FR-6.2, FR-6.4, C15: same rounded number on every side; unbalanced entries rejected |
+| Missing program file for ووچر | One app, no separate report programs |
+| Reports failing to launch | Reports are part of the same app |
+| Backup only on the same laptop | Section 20 |
+| Numbers flipping in Urdu reports | FR-19.6 |
+| Hard to use | Section 7 |
+
+### 25.5 Second check of the video (before build)
+
+After Umar's review, every frame of the video was read again. These findings changed the PRD:
+
+| Seen in the video | What the PRD had | Now |
+|---|---|---|
+| بکری header field "تاریخ بل" | "تاریخ مال" (misread) | تاریخ بل, bill date (Section 12.2, A13) |
+| The بکری menu has one button, "کرایہ بک", and it opens the بکری بک screen | A separate freight register | Removed (Section 14, A17) |
+| Reports panel: "بجک سیریز" | Cheque series | بیجک (bill) series, R27 |
+| Sales book: seller commission 6% (276 on 4,600) and 4% (180 on 4,500) on different lots | 6% default | 6% default confirmed by Umar; other rates by rules |
+| Sales book: مزدوری 0 on most lots; 25 on 5 نگ (5 each), 15 on 5 نگ (3 each) | 5 per نگ on every lot | No default; typed or set by a rule |
+| Credit bills: مولی and ساگ exactly 5% (700 → 735, 1,000 → 1,050); سیب 99 per نگ; کیلا 400 → 423 | Buyer 5% + لاگا 3 | Umar: buyer 6%, لاگا 8 per نگ on fruit; item and group rules for exceptions (A2, A3) |
+| پختہ کھاتہ seller lots: کل خرچہ equals خام بکری, so صافی بکری is 0 | One-time sellers paid later | نقد starts as the net, paid on the spot (FR-13.10) |
+| Account form: "Allowed" is ticked by default; opening date defaults to today | Credit allowed off by default | Ticked by default (Section 10.2) |
+| Many کیلا lines have no rate, and amounts like 4 نگ = 2,950 | Not covered | A42 |
+| Day book 1,316,042 against 1,316,040; one lot with صافی −1 | Already noted | Prevented by FR-6.2 and C15 |
+
+---
+
+## 26. MVP scope
+
+| Priority | Items |
+|---|---|
+| **Must (demo, all connected)** | Login; dashboard with partner strip; انڈکس with seller 03011 and buyer 0304 codes and opening balances; all masters; commission rules; بکری بک with side menu, later sales, edit and cancel; پختہ کھاتہ; باقی مال; وصولی/اگراہی; ادائیگی; پیشگی; دکان خرچہ; ذاتی خرچہ; جنرل; partners with live split; day close and reopen; analytics views A, B, C, F, G; reports R1, R2, R4, R5, R6, R9, R10, R11, R12, R13, R14, R18, R20, R21, R22, R24, R26, R27, R30, R31; Excel export (needed for the backup pack); arrow-key navigation; Urdu keyboard; language switch with the whole app in English (Section 7.5); names in two scripts with English-to-Urdu typing and learning (Section 7.4); party card, short codes, smart search, recent first, unknown code add (FR-7.38 to FR-7.42); how was this worked out (FR-7.43); attention list and آج کے کام (FR-7.44); helpful empty screens (FR-7.46); truck, seller and buyer memory, same truck warning, remaining qty, rate hint, copy from above, save-print-next (FR-7.49 to FR-7.54, FR-7.56, FR-7.57); receipt, payment and advance helpers (FR-7.58 to FR-7.60); backup and restore; printing in both languages; audit log (written) |
+| **Should (right after demo)** | Analytics views D, E, H and saved views; reports R3, R7, R8, R15, R16, R17, R19, R23, R25, R28, R29; month close; audit log viewer; first-run guide; undo after save (FR-7.47); simple sums (FR-7.48); rate check (FR-7.55); collection round (FR-7.61); repeat last month's expenses (FR-7.62); duplicate check while typing (FR-7.63); remember last screen (FR-7.45); party report buttons (FR-7.65) |
+| **Could (Phase 2)** | Import of 2018 to 2026 data from the old software; crate (پیٹی) in and out tracking; goods return screen; interest on old dues; daily rate board |
+| **Won't (for now)** | Multi-computer, firm's own stock trading, tax filing |
+
+---
+
+## 27. Demo script and end-to-end acceptance tests
+
+### 27.1 Demo script (about 45 minutes)
+
+1. Log in. Show the dashboard and partner strip.
+2. Show partners (الف 40, ب 30, ج 30) and commission rules. Use "test a rule".
+3. Add a new seller and a new buyer using only the arrow keys and `Enter`: type the name in English letters, see it become Urdu with the English name filled. Show the codes.
+4. Enter بکری 1 (Section 4.4) with short codes (`1`, `2`). Show the party card, remaining qty, rate hint, live summary and live partner split, and ⓘ on a commission. Halfway, switch to English with `Alt+L`, carry on, switch back. Save with `Ctrl+Enter`, which prints the seller bill and buyer slips.
+5. Enter بکری 2 with پختہ کھاتہ (Section 4.5). Show the seller memory and the same truck warning.
+6. Record وصولی (open bills, پورا بقایا), ادائیگی, دکان خرچہ, ذاتی خرچہ (Sections 4.6 to 4.8).
+6a. Show the attention bell and آج کے کام. Print a buyer slip in Urdu and in English.
+7. Dashboard: every tile matches Section 4.9.
+8. Analytics: views A, B, C, F match Section 18.4.
+9. Partner overview matches Section 4.9.
+10. روزنامچہ and trial balance: both balance.
+11. Backup screen.
+12. Walk through the Assumptions Register and note answers.
+
+### 27.2 End-to-end tests (must pass before the demo)
+
+Start from the opening position created as in Section 4.3, then run Events 1 to 5, unless a test says otherwise. Where each test runs is set in Code Standards Section 9.2.
+
+| Test | Check | Expected |
+|---|---|---|
+| E2E-1 | بکری 1 summary | خام 29,400; کل اخراجات 10,084; صافی 19,316 |
+| E2E-2 | بکری 1 buyer totals | اکرم 12,880; ارشد 18,684 |
+| E2E-3 | بکری 1 journal entry | Sale part بنام 31,564 = جمع 31,564; whole entry with the نقد lines 36,564 = 36,564 |
+| E2E-4 | بکری 1 partner split | Shared income 3,948; 1,580 / 1,184 / 1,184 |
+| E2E-5 | بکری 2 (پختہ کھاتہ) | Buyer pays 12,800; seller صافی 10,160; whole entry 25,600 = 25,600; shared income 1,540; split 616 / 462 / 462; register shows شاہد, paid |
+| E2E-6 | اکرم after وصولی | 2,880 بنام; aging 0 days |
+| E2E-7 | رحیم after ادائیگی | Balance 0; پیشگی report: given 15,000, adjusted 15,000, open 0 |
+| E2E-8 | Cash in hand | 58,484 |
+| E2E-9 | Partner shares for the day | Income 2,196 / 1,646 / 1,646; expense −1,200 / −900 / −900; profit 996 / 746 / 746; الف drawings 2,000 |
+| E2E-10 | Trial balance | Table below; both sides 85,048 |
+| E2E-11 | Analytics | View A as in Section 18.4 (including avg rate 588 / 1,200 and 72.10% / 27.90%); view F as in Section 18.4 |
+| E2E-12 | Stock | باقی مال empty |
+| E2E-13 | Edit بکری 1: اکرم's rate 600 → 610 | His line 20 × 610 = 12,200; buyer comm 12,200 × 6 ÷ 100 = 732; he pays 12,200 + 732 + 160 = 13,092; خام بکری 29,600; seller comm 732 + 1,044 = 1,776; کل اخراجات 10,096; صافی 19,504; shared income 1,776 + 1,776 + 400 + 20 = 3,972; split 1,590 / 1,191 / 1,191; audit log has the old version |
+| E2E-14 | Edit back to 600 | Every number returns exactly to E2E-1 to E2E-4 |
+| E2E-15 | Cancel بکری 2 | پختہ کھاتہ register shows cancelled; analytics excludes سیب; split reversed (616 / 462 / 462 removed); cash down by 12,800; trial balance still balances |
+| E2E-16 | Separate run: Event 1 with only 45 of 50 sold (اکرم 20 at 600, ارشد 25 at 580) | خام 26,500; seller comm 720 + 870 = 1,590; کل اخراجات 3,000 + 1,590 + 250 + 50 + 5,000 + 0 + 20 = 9,910; صافی 16,590; buyer comm 720 + 870 = 1,590; لاگا 45 × 8 = 360; shared income 1,590 + 1,590 + 360 + 20 = 3,560; split 1,424 / 1,068 / 1,068; باقی مال 5 نگ کیلا |
+| E2E-16b | Continue E2E-16: on 11-10-26 a later sale of the 5 نگ to ارشد at 560 | Value 2,800; seller comm 168; buyer comm 168; لاگا 5 × 8 = 40; ارشد pays 3,008; seller credit 2,800 − 168 = 2,632; no lot charges again; shared income 168 + 168 + 40 = 376; split 152 / 112 / 112; lot totals خام 29,300, کل اخراجات 10,078, صافی 19,222; باقی مال empty |
+| E2E-13b | Separate run: after Event 1, the Owner changes the default buyer commission to 7%, then edits اکرم's rate to 610 | اکرم's changed line uses 7%: 12,200 × 7 ÷ 100 = 854, he pays 12,200 + 854 + 160 = 13,214; ارشد's unchanged line keeps 1,044; shared income 1,776 + 1,898 + 400 + 20 = 4,094; split 1,638 / 1,228 / 1,228 |
+| E2E-17 | Close the app while typing a بکری; reopen | Draft offered and restored |
+| E2E-18 | Backup, then restore | All balances identical after restore |
+| E2E-19 | Opening set-up only (Section 4.3) | Trial balance 65,000 = 65,000; ابتدائی فرق 0; advances open 15,000; cash 50,000 |
+| E2E-20 | A shop expense of 3,384 | Shares −1,354 / −1,015 / −1,015 (sum −3,384) |
+| E2E-21 | Two one-time credit buyers in پختہ کھاتہ: شاہد 1,000 and ناصر 2,000; receipt for شاہد 1,000 | شاہد 0, ناصر 2,000 still due |
+| E2E-22 | Start بکری 1, enter اکرم's line, switch to English (`Alt+L`), enter ارشد's line, save, print the seller bill in English, switch back | After the switch: line reads "Akram Toll Tax", "Banana", "Box", 20, 600, 12,000; layout left-to-right; nothing typed is lost. Saved numbers identical to E2E-1 to E2E-4. English bill: Gross Sale 29,400, Net Sale 19,316, "Nineteen thousand three hundred sixteen rupees only". Back in Urdu, the same بکری shows Urdu names. |
+| E2E-23 | New buyer: type `tariq mehmood` in the Urdu name field, accept, save | Urdu name طارق محمود; English name "Tariq Mehmood" filled by itself; code 03040003. Typing "tarq" in a buyer picker finds him in both languages. |
+| E2E-24 | After Events 1 to 5: new وصولی, buyer field `1` | 03040001 اکرم ٹول ٹیکس; card shows 2,880 بنام, oldest open bill 10-10-26 (بکری 1), 0 days; "پورا بقایا" fills 2,880. In a جنرل line, `1` lists both 03040001 اکرم ٹول ٹیکس and 030110001 رحیم with their types. |
+| E2E-25 | After Events 1 and 2: new بکری, truck `LES-1234`, lot seller `1` | Same truck warning names بکری 1; continuing fills سوات اڈا and زمیندار رحیم; the lot fills کیلا and پیٹی. |
+| E2E-26 | In بکری 1, after اکرم's line (20 of 50) | ارشد's line qty starts at 30; rate field empty with hint 600; `Ctrl+D` in the rate cell copies 600; ⓘ on اکرم's seller commission shows "12,000 × 6 ÷ 100 = 720". |
+| E2E-27 | After Event 2, ادائیگی to کریم | Payable postings show بکری 2, صافی بکری 10,160, open 10,160; "پورا بقایا" fills 10,160. |
+
+E2E-10 expected trial balance (after Events 1 to 5):
+
+| Account | بنام | جمع |
+|---|---|---|
+| روکڑ | 58,484 | |
+| اکرم ٹول ٹیکس | 2,880 | |
+| ارشد ملتانی | 18,684 | |
+| دکان خرچہ (بجلی) | 3,000 | |
+| الف ذاتی خرچہ | 2,000 | |
+| رحیم | | 0 |
+| کریم | | 10,160 |
+| پختہ کھاتہ (خریدار) | | 0 |
+| ابتدائی فرق | | 0 |
+| کمیشن آمدن (بیوپاری) | | 2,484 |
+| کمیشن آمدن (گاہک) | | 2,484 |
+| لاگا آمدن | | 480 |
+| فون آمدن | | 40 |
+| مزدوری کھاتہ | | 300 |
+| کرایہ کھاتہ | | 4,000 |
+| منشیانہ کھاتہ | | 100 |
+| ابتدائی سرمایہ | | 65,000 |
+| **میزان** | **85,048** | **85,048** |
+
+How to check the total: بنام = 58,484 + 2,880 + 18,684 + 3,000 + 2,000 = 85,048. جمع = 10,160 + 2,484 + 2,484 + 480 + 40 + 300 + 4,000 + 100 + 65,000 = 85,048.
+
+---
+
+## 28. Research: similar projects and what we took
+
+| Project | What it is | What we took |
+|---|---|---|
+| designer-haxxan/ghallamandiapp (Pakistan) | Offline ghalla mandi app, Urdu RTL | Peshgi, oldest-first matching, aging buckets, cancel with reversal, credit limit warning |
+| httpsasad/Grain-Market-Management-System (Pakistan) | Urdu and English mandi app with aamad, bikri, running khata | Commission as %, per unit or fixed; both sides recorded on each sale; slips |
+| Devesh2325/arhatpro-mandi-erp (India) | Mandi ERP with Munshi and Accountant roles | Roles, unbalanced-entry rejection, per-box labour |
+| Iamvive/MandiSamiti (India) | Offline ledger for commission agents | Integer money storage, cash register formula |
+| smihheemmaanntt/Aadhat (India) | Desktop mandi software | Keyboard shortcut map, crate manager idea for Phase 2 |
+| BUSY for Mandi (commercial) | Mandi accounting | Configurable deduction list, item-wise profit |
+
+None of these has a live partner split or a commission rule system by item, seller and buyer. Those are our own design for this client.
+
+---
+
+## 29. Change log
+
+| Version | Date | Change |
+|---|---|---|
+| 1.0 | 10-10-2026 | Pre-build drafts and reviews: Umar's requirements, analysis of the old software video, research, client review comments and full cross-document reviews. |
+| 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
