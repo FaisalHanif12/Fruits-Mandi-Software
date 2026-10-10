@@ -1,0 +1,78 @@
+# Mandi Software Rust workspace (Tech Stack 5.4).
+# Dependency direction, never the other way (CLAUDE.md rule 6, Code Standards B1):
+#   app -> services, reports, backup
+#   services -> domain, db
+#   reports -> db, core
+#   backup -> db, core
+#   domain -> core
+#   db -> core
+# The test app/tests/workspace_rules.rs checks this list.
+
+[workspace]
+resolver = "3"
+members = [
+    "app",
+    "crates/core",
+    "crates/domain",
+    "crates/db",
+    "crates/services",
+    "crates/reports",
+    "crates/backup",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[workspace.dependencies]
+# Our crates
+mandi-core = { path = "crates/core" }
+mandi-domain = { path = "crates/domain" }
+mandi-db = { path = "crates/db" }
+mandi-services = { path = "crates/services" }
+mandi-reports = { path = "crates/reports" }
+mandi-backup = { path = "crates/backup" }
+
+# Tauri 2 and the five plugins of Tech Stack 2. No other plugin.
+tauri = { version = "2.12.2", features = [] }
+tauri-build = { version = "2.7.1", features = [] }
+tauri-plugin-single-instance = "2.5.2"
+tauri-plugin-updater = "2.13.2"
+tauri-plugin-dialog = "2.8.1"
+tauri-plugin-window-state = "2.5.0"
+tauri-plugin-process = "2.4.0"
+
+# Serialisation, errors, TypeScript types, dates
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.21"
+ts-rs = "12.0.1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+# Benchmarks for the NFR speed targets (Code Standards B25). No HTML or plot output.
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+# Code Standards B8, G4. "forbid", so no #[allow(...)] can switch them off in
+# real code. clippy.toml still allows them inside tests.
+[workspace.lints.clippy]
+unwrap_used = "forbid"
+expect_used = "forbid"
+panic = "forbid"
+unreachable = "forbid"
+indexing_slicing = "forbid"
+todo = "forbid"
+unimplemented = "forbid"
+dbg_macro = "forbid"
+print_stdout = "forbid"
+print_stderr = "forbid"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+strip = true

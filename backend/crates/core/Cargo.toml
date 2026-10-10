@@ -1,0 +1,19 @@
+[package]
+name = "mandi-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+criterion.workspace = true
+
+# Owned by robustness: the speed harness calibration (plan 01 T5).
+[[bench]]
+name = "calibration"
+harness = false
+
+[lints]
+workspace = true

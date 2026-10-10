@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The main window. Only our own commands and the plugin calls the shell needs. No shell, no general file access (NFR-SEC-10, Code Standards S4).",
+  "windows": ["main"],
+  "permissions": [
+    "allow-app-info",
+    "core:event:default",
+    "window-state:default",
+    "updater:allow-check",
+    "process:allow-restart",
+    "dialog:allow-message",
+    "dialog:allow-ask",
+    "dialog:allow-confirm"
+  ]
+}

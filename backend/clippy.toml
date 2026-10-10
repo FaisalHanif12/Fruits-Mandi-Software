@@ -1,0 +1,8 @@
+# Code Standards B8: unwrap, expect, panic, indexing and printing are denied
+# in real code (see [workspace.lints] in Cargo.toml) but allowed in tests.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-print-in-tests = true
+allow-dbg-in-tests = true

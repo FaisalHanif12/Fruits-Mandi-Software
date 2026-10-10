@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>First run English</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Inter,system-ui,sans-serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,serif;line-height:1.9}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+.lbl{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.in{height:44px;box-sizing:border-box;border:1px solid #8C8577;border-radius:4px;padding:0 12px;font:16px Inter,sans-serif;background:#FFFFFF}
+</style>
+</helmet>
+<div style="width:1366px;height:768px;display:flex;flex-direction:column;background:#F6F4EF;box-sizing:border-box;padding:32px 64px;gap:24px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:22px;font-weight:700">First-time setup</div>
+    <div role="group" aria-label="Language" style="display:inline-flex;border:1px solid #8C8577;border-radius:8px;overflow:hidden;height:40px">
+      <button class="ur" style="border:0;background:#FFFFFF;color:#1C1F23;padding:0 14px;font-size:18px" aria-pressed="false">اردو</button>
+      <button style="border:0;background:#1D3D6E;color:#FFFFFF;padding:0 14px;font:500 15px Inter,sans-serif" aria-pressed="true">English</button>
+    </div>
+  </div>
+  <ol style="list-style:none;margin:0;padding:0;display:flex;gap:12px">
+    <li aria-current="step" style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1D3D6E;color:#FFFFFF;font-size:15px;font-weight:600"><span class="num" style="width:24px;height:24px;border-radius:12px;background:#FFFFFF;color:#1D3D6E;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">1</span>Firm details</li>
+    <li style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#EFECE5;color:#565C64;font-size:15px;font-weight:600"><span class="num" style="width:24px;height:24px;border-radius:12px;border:1px solid #8C8577;display:inline-flex;align-items:center;justify-content:center;font-size:13px">2</span>Owner password</li>
+    <li style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#EFECE5;color:#565C64;font-size:15px;font-weight:600"><span class="num" style="width:24px;height:24px;border-radius:12px;border:1px solid #8C8577;display:inline-flex;align-items:center;justify-content:center;font-size:13px">3</span>Recovery code</li>
+  </ol>
+  <div style="flex:1;display:flex;justify-content:center;align-items:flex-start">
+    <div style="width:760px;background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+      <div style="font-size:22px;font-weight:700">Tell us about the firm</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+        <label class="lbl">Firm name (English)<input class="in" value="Maher Adnan and Brothers" style="outline:3px solid #2563C9;outline-offset:2px"></label>
+        <label class="lbl">Firm name (Urdu)<input class="in ur" dir="rtl" value="مہر عدنان اینڈ برادرز" style="font-size:18px;font-family:Gulzar,serif"></label>
+        <label class="lbl">Mandi<input class="in" value="New Sabzi Mandi, Kot Radha Kishan"></label>
+        <label class="lbl">Phone<input class="in num" value="0300-0000000"></label>
+        <label class="lbl" style="grid-column:span 2">Address<input class="in" placeholder="Shop number and street"></label>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:#565C64">You can change these later in Settings.</span>
+        <button style="height:44px;padding:0 18px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px;font:600 15px Inter,sans-serif">Next<span class="kbd" style="background:#2E5288;color:#FFFFFF">Enter</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

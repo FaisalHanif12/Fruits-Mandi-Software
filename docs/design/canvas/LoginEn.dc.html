@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>Login English</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Inter,system-ui,sans-serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,serif;line-height:1.9}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+</style>
+</helmet>
+<div dir="ltr" style="width:1366px;height:768px;display:flex;background:#F6F4EF">
+  <div style="width:520px;background:#16263F;color:#E8ECF2;padding:56px 48px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:600;letter-spacing:.08em;color:#A9B6C9">MANDI SOFTWARE</div>
+      <div style="font-size:30px;font-weight:700;line-height:1.25">Maher Adnan and Brothers</div>
+      <div style="font-size:16px;color:#C9D2DF">New Sabzi Mandi, Kot Radha Kishan</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;gap:10px;align-items:center;font-size:14px;color:#C9D2DF"><span style="width:8px;height:8px;border-radius:4px;background:#5FBF8A"></span>Last backup: today <span class="num">08:45 PM</span></div>
+      <div style="font-size:13px;color:#8FA0B8">Version 0.1.12</div>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;padding:32px 48px;box-sizing:border-box">
+    <div style="display:flex;justify-content:flex-end">
+      <div role="group" aria-label="Language" style="display:inline-flex;border:1px solid #8C8577;border-radius:8px;overflow:hidden;height:40px">
+        <button class="ur" style="border:0;background:#FFFFFF;color:#1C1F23;padding:0 14px;font-size:18px" aria-pressed="false">اردو</button>
+        <button style="border:0;background:#1D3D6E;color:#FFFFFF;padding:0 14px;font:500 15px Inter,sans-serif" aria-pressed="true">English</button>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center">
+      <div style="width:440px;background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;box-shadow:0 1px 2px rgba(28,31,35,.06),0 8px 24px rgba(28,31,35,.06)">
+        <div style="font-size:24px;font-weight:700">Log in</div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">User name
+          <input value="owner" style="height:44px;box-sizing:border-box;border:1px solid #8C8577;border-radius:4px;padding:0 12px;font:16px Inter,sans-serif">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Password
+          <span style="position:relative;display:flex">
+            <input type="password" value="secret12" style="flex:1;height:44px;box-sizing:border-box;border:1px solid #B3261E;background:#FBEAE8;border-radius:4px;padding:0 44px 0 12px;font:16px Inter,sans-serif;outline:3px solid #2563C9;outline-offset:2px">
+            <button aria-label="Show password" style="position:absolute;inset-inline-end:4px;top:4px;width:36px;height:36px;border:0;background:transparent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#565C64" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+          </span>
+          <span style="display:flex;gap:6px;align-items:center;font-size:13px;font-weight:500;color:#B3261E"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B3261E" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16v.5"></path></svg>Wrong user name or password. 3 tries left before a short wait.</span>
+        </label>
+        <div style="display:flex;gap:12px;justify-content:space-between;align-items:center">
+          <button style="height:44px;padding:0 18px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px;font:600 15px Inter,sans-serif">Log in<span class="kbd" style="background:#2E5288;color:#FFFFFF">Enter</span></button>
+          <button style="height:44px;padding:0 16px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF;color:#1C1F23;font:600 15px Inter,sans-serif">Exit</button>
+        </div>
+        <a href="#" style="font-size:14px">Forgot the password? Open with the recovery code</a>
+      </div>
+    </div>
+    <div style="font-size:14px;color:#565C64;text-align:center">Switch language <span class="kbd" style="background:#EFECE5;color:#1C1F23">Alt+L</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

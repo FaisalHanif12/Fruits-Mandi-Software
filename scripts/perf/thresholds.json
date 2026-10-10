@@ -1,0 +1,18 @@
+{
+  "$comment": "Runner thresholds for pnpm perf. threshold = target_ms x runner_factor. The factor and its source are in scripts/perf/README.md Sections 2 and 3. Every criterion benchmark must have one entry here; a benchmark with no entry fails the run. Later plan files only add entries; they never change runner_factor.",
+  "runner_factor": 1.0,
+  "benches": [
+    {
+      "id": "calibration/cpu_fixed_10k",
+      "action": "Calibration (fixed CPU workload)",
+      "kind": "calibration",
+      "stat": "mean",
+      "expected_reference_ms": 0.228,
+      "$comment": "Not an NFR target. 0.228 ms = 0.138 ms measured on the Apple M1 Pro x (PassMark single thread 3,752 / 2,268 for the Core i3-7100). README Section 3."
+    }
+  ],
+  "install": {
+    "nfr": "NFR-INS-1",
+    "target_ms": 120000
+  }
+}

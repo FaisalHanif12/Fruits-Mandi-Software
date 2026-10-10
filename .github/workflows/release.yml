@@ -149,3 +149,26 @@ jobs:
           done
           gh release edit "$TAG" --draft=false --latest
           echo "Published $TAG"
+
+      # The installed app reads exactly this URL (tauri.conf.json plugins.updater.endpoints).
+      # Prove it serves the new version, signed, pointing at the NSIS setup file.
+      - name: Check the published update file
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/latest.json"
+          for i in 1 2 3 4 5 6; do
+            if curl -fsSL "$url" -o latest.json; then break; fi
+            echo "Not served yet, waiting 10 seconds"; sleep 10
+          done
+          node <<'EOF'
+          const fs = require('fs');
+          const j = JSON.parse(fs.readFileSync('latest.json', 'utf8'));
+          const p = (j.platforms || {})['windows-x86_64'];
+          const fail = (m) => { console.log(`::error::latest.json: ${m}`); process.exit(1); };
+          if (j.version !== process.env.VERSION) fail(`version is ${j.version}, expected ${process.env.VERSION}`);
+          if (!p) fail('no windows-x86_64 entry');
+          if (!p.signature || p.signature.length < 100) fail('signature is missing');
+          if (!/-setup\.exe$/.test(p.url)) fail(`url is not the NSIS setup file: ${p.url}`);
+          console.log(`latest.json OK: version ${j.version}, ${p.url}, signature ${p.signature.length} characters`);
+          EOF

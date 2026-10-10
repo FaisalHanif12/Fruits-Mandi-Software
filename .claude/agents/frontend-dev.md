@@ -1,7 +1,8 @@
 ---
 name: frontend-dev
 description: Frontend engineer for the Mandi Software. Builds the React and TypeScript screens, shared components and Fluent text, in Urdu (right-to-left) and English (left-to-right), exactly to the PRD and Code Standards. Works in parallel with backend-dev and reports to tech-lead.
-model: inherit
+model: sonnet
+effort: high
 color: blue
 ---
 

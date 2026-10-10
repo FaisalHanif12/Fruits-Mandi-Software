@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>Form English</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Inter,system-ui,sans-serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+.nav{display:flex;align-items:center;height:40px;padding:0 14px;border-radius:8px;color:#1C1F23;font-size:15px;font-weight:500;text-decoration:none}
+.lbl{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.in{height:44px;box-sizing:border-box;border:1px solid #8C8577;border-radius:4px;padding:0 12px;background:#FFFFFF;font:16px Inter,sans-serif}
+.hint{font-size:13px;color:#565C64;font-weight:400}
+.row{display:flex;justify-content:space-between;align-items:baseline;font-size:15px}
+</style>
+</helmet>
+<div dir="ltr" style="width:1366px;height:768px;display:flex;background:#F6F4EF;position:relative">
+  <nav aria-label="Sale menu" style="width:200px;background:#EFECE5;border-inline-end:1px solid #D9D4C9;display:flex;flex-direction:column;padding:16px 10px;gap:2px;box-sizing:border-box">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.06em;color:#565C64;padding:0 14px 8px">SALE</div>
+    <a class="nav" href="#">Sale Book</a><a class="nav" href="#">Receipt / Collection</a><a class="nav" href="#">Payment</a>
+    <a class="nav" href="#" aria-current="page" style="background:#1D3D6E;color:#FFFFFF">Advance</a>
+    <a class="nav" href="#">Pukhta Khata</a><a class="nav" href="#">Today's Sales</a><a class="nav" href="#">Unsold Stock</a>
+  </nav>
+  <main style="flex:1;padding:28px 32px;display:flex;flex-direction:column;gap:18px;min-width:0">
+    <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:28px;font-weight:700">Advance</span><span class="hint">New voucher · number given on save</span></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start">
+      <div style="background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:24px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px">
+        <label class="lbl">Date<input class="in num" value="01-09-2026"></label>
+        <label class="lbl">Mode<select class="in"><option>Cash</option><option>Bank</option><option>Cheque</option></select></label>
+        <label class="lbl" style="grid-column:span 2">Seller<span style="display:flex;gap:8px"><input class="in num" value="1" style="width:120px"><input class="in" value="Rahim" readonly style="flex:1;background:#F6F4EF"></span><span class="hint">Code, short code or name · new account <span class="kbd" style="background:#EFECE5;color:#1C1F23">F4</span></span></label>
+        <label class="lbl">Amount<input class="in num" value="15,000" style="text-align:end"></label>
+        <label class="lbl">Expected goods<input class="in" placeholder="For example banana, next season"></label>
+        <label class="lbl" style="grid-column:span 2">Narration<input class="in" value="Advance before the season"></label>
+        <div style="grid-column:span 2;display:flex;justify-content:flex-end;border-top:1px solid #E6E1D7;padding-top:16px">
+          <button style="height:44px;padding:0 18px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px;font:600 15px Inter,sans-serif">Save<span class="kbd" style="background:#2E5288;color:#FFFFFF">F10</span></button>
+        </div>
+      </div>
+      <aside aria-label="Party card" style="background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between"><div><div style="font-size:20px;font-weight:700">Rahim</div><div class="hint">s/o Karim Bakhsh · Swat · Seller</div></div><span class="num hint">030110001</span></div>
+        <div style="border-top:1px solid #E6E1D7;padding-top:10px;display:flex;flex-direction:column;gap:8px">
+          <div class="row"><span>Balance now</span><span class="num" style="font-weight:600">0</span></div>
+          <div class="row"><span>Open advance</span><span class="num" style="font-weight:600">0</span></div>
+        </div>
+        <div class="row" style="border-top:1px solid #E6E1D7;padding-top:10px"><span style="font-weight:600">New balance</span><span style="display:inline-flex;gap:6px;align-items:baseline"><span class="num" style="font-size:22px;font-weight:700;color:#B3261E">15,000</span><span style="font-size:13px;font-weight:600;color:#B3261E">Dr</span></span></div>
+      </aside>
+    </div>
+  </main>
+  <div style="position:absolute;inset:0;background:rgba(22,38,63,.35)"></div>
+  <div role="alertdialog" aria-modal="true" aria-labelledby="q" style="position:absolute;top:220px;inset-inline-start:calc(50% - 250px);width:500px;background:#FFFFFF;border-radius:12px;box-shadow:0 12px 40px rgba(22,38,63,.25);padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+    <div id="q" style="font-size:20px;font-weight:700">Save changes?</div>
+    <div style="font-size:15px;color:#565C64">This advance is not saved yet. If you leave now, what you typed is lost.</div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;flex-wrap:wrap">
+      <button style="height:44px;padding:0 14px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF;display:inline-flex;align-items:center;gap:8px;font:600 15px Inter,sans-serif">Back<span class="kbd" style="background:#EFECE5;color:#1C1F23">Esc</span></button>
+      <button style="height:44px;padding:0 14px;border:1px solid #B3261E;border-radius:8px;background:#FFFFFF;color:#B3261E;font:600 15px Inter,sans-serif">Leave without saving</button>
+      <button style="height:44px;padding:0 16px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:8px;font:600 15px Inter,sans-serif;outline:3px solid #2563C9;outline-offset:2px">Save<span class="kbd" style="background:#2E5288;color:#FFFFFF">F10</span></button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
