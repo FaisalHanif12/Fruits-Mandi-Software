@@ -1,2 +1,11 @@
 export { CommandError, callCommand, hasAppBridge, isUiError, toUiError } from './invoke';
-export { errorMessageId, messageVars, uiErrorOf } from './errors';
+export {
+  FALLBACK_ERROR_MESSAGE_ID,
+  errorMessageId,
+  errorsForField,
+  errorsOutsideFields,
+  messageVars,
+  splitErrors,
+  uiErrorOf,
+  type SplitErrors,
+} from './errors';

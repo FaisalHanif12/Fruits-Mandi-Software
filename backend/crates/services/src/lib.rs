@@ -2,8 +2,31 @@
 //! (Code Standards B3), plus the in-memory search index and read-only assist queries.
 //! Depends on `mandi-domain` and `mandi-db`.
 
+mod audit;
+pub mod auth;
+pub mod context;
+pub mod error;
+pub mod ports;
+pub mod secret;
+pub mod settings;
+mod store;
+pub mod testing;
+pub mod users;
+pub mod day;
+
+pub use context::{Context, Parts};
+pub use error::{Rejection, ServiceError};
+pub use secret::Secret;
+
 /// `mandi-core`, re-exported for the app (error codes, money types).
 pub use mandi_domain::core;
+
+/// `mandi-domain`, re-exported for the app.
+pub use mandi_domain as domain;
+
+/// `mandi-db`, re-exported for the app: the `Db` handle, `DbError` and the seed (the app does
+/// not depend on the db crate itself, Code Standards B1).
+pub use mandi_db as db;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

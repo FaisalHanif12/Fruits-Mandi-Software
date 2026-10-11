@@ -13,12 +13,43 @@
 use std::path::PathBuf;
 
 use mandi_app_lib::commands::app::AppInfo;
+use mandi_app_lib::commands::{auth, day, settings, users};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
+use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
-const EXPECTED_FILES: &[&str] = &["AppInfo.ts", "ErrorCode.ts", "UiError.ts", "UiErrorItem.ts"];
+const EXPECTED_FILES: &[&str] = &[
+    "AppInfo.ts",
+    "AuthStatus.ts",
+    "DataStatus.ts",
+    "DayStatus.ts",
+    "ErrorCode.ts",
+    "FirmDisplay.ts",
+    "FirmSettings.ts",
+    "FirstRunDone.ts",
+    "FirstRunInput.ts",
+    "Grouping.ts",
+    "Language.ts",
+    "LoginInput.ts",
+    "PrefKey.ts",
+    "PrefsSetInput.ts",
+    "RecoverDone.ts",
+    "RecoverInput.ts",
+    "ResetPasswordInput.ts",
+    "Role.ts",
+    "SessionUser.ts",
+    "SetDefaultLanguageInput.ts",
+    "SetSecurityInput.ts",
+    "Settings.ts",
+    "UiError.ts",
+    "UiErrorItem.ts",
+    "UnlockInput.ts",
+    "UserCreateInput.ts",
+    "UserRow.ts",
+    "UserUpdateInput.ts",
+];
 
 fn export_dir() -> PathBuf {
     match std::env::var_os("TS_RS_EXPORT_DIR") {
@@ -34,6 +65,27 @@ fn export_bindings() {
 
     // export_all also writes every type these types use.
     AppInfo::export_all(&cfg).unwrap();
+    DataStatus::export_all(&cfg).unwrap();
+    auth::AuthStatus::export_all(&cfg).unwrap();
+    auth::SessionUser::export_all(&cfg).unwrap();
+    auth::FirmDisplay::export_all(&cfg).unwrap();
+    auth::FirstRunInput::export_all(&cfg).unwrap();
+    auth::FirstRunDone::export_all(&cfg).unwrap();
+    auth::LoginInput::export_all(&cfg).unwrap();
+    auth::UnlockInput::export_all(&cfg).unwrap();
+    auth::RecoverInput::export_all(&cfg).unwrap();
+    auth::RecoverDone::export_all(&cfg).unwrap();
+    users::UserRow::export_all(&cfg).unwrap();
+    users::UserCreateInput::export_all(&cfg).unwrap();
+    users::UserUpdateInput::export_all(&cfg).unwrap();
+    users::ResetPasswordInput::export_all(&cfg).unwrap();
+    settings::Settings::export_all(&cfg).unwrap();
+    settings::FirmSettings::export_all(&cfg).unwrap();
+    settings::SetSecurityInput::export_all(&cfg).unwrap();
+    settings::SetDefaultLanguageInput::export_all(&cfg).unwrap();
+    mandi_services::core::auth::PrefKey::export_all(&cfg).unwrap();
+    settings::PrefsSetInput::export_all(&cfg).unwrap();
+    day::DayStatus::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();
@@ -53,6 +105,14 @@ fn bindings_have_the_contract_shape() {
     let app_info = AppInfo::decl(&cfg);
     assert!(app_info.contains("version: string"), "{app_info}");
     assert!(app_info.contains("identifier: string"), "{app_info}");
+
+    let status = DataStatus::decl(&cfg);
+    assert!(
+        status.contains("state: 'checking' | 'ok' | 'failed'")
+            || status.contains("state: \"checking\" | \"ok\" | \"failed\""),
+        "{status}"
+    );
+    assert!(status.contains("reference: string | null"), "{status}");
 
     let ui_error = UiError::decl(&cfg);
     assert!(ui_error.contains("ok: false"), "{ui_error}");
@@ -75,7 +135,7 @@ fn bindings_have_the_contract_shape() {
     assert!(codes.contains("\"ERR_INTERNAL\""), "{codes}");
 }
 
-/// Every code of plan 02 Section 4.6 is in the exported union, spelled as the JSON the
+/// Every code of plan 02 Section 4.6 and plan 03 Section 4.6 is in the exported union, spelled as the JSON the
 /// commands send, and nothing else is.
 #[test]
 fn error_code_union_has_every_code() {
@@ -90,6 +150,10 @@ fn error_code_union_has_every_code() {
         "{decl}"
     );
     for code in [
+        "ERR_DISK_FULL",
+        "ERR_DATA_CHECK_FAILED",
+        "ERR_MIGRATION_FAILED",
+        "ERR_DB_BUSY",
         "ERR_REQUIRED",
         "ERR_NOT_A_NUMBER",
         "ERR_DECIMALS_NOT_ALLOWED",
@@ -138,4 +202,126 @@ fn money_fields_are_typed_paisa() {
     let file = MoneyProbe::export_to_string(&cfg).unwrap();
     assert!(!file.contains("./Paisa"), "{file}");
     assert!(<Paisa as TS>::output_path().is_none());
+}
+
+/// The plan 04 contract: property names are the snake_case names of the plan, ids are numbers,
+/// and the closed lists are string unions.
+#[test]
+fn plan_04_contract_shapes() {
+    let cfg = Config::new();
+    let has = |decl: String, parts: &[&str]| {
+        for part in parts {
+            assert!(decl.contains(part), "{part} missing in {decl}");
+        }
+    };
+    has(
+        auth::AuthStatus::decl(&cfg),
+        &[
+            "first_run: boolean",
+            "session: SessionUser | null",
+            "locked: boolean",
+            "login_language: Language",
+            "firm: FirmDisplay",
+            "app_version: string",
+        ],
+    );
+    has(
+        auth::SessionUser::decl(&cfg),
+        &[
+            "id: number",
+            "username: string",
+            "display_name: string",
+            "role: Role",
+            "language: Language",
+            "text_size: number",
+        ],
+    );
+    has(
+        auth::FirstRunInput::decl(&cfg),
+        &[
+            "firm_name_ur: string",
+            "firm_name_en: string",
+            "mandi_ur: string",
+            "mandi_en: string",
+            "address: string",
+            "phone: string",
+            "owner_username: string",
+            "owner_display_name: string",
+            "password: string",
+            "password_repeat: string",
+        ],
+    );
+    has(auth::FirstRunDone::decl(&cfg), &["recovery_code: string"]);
+    has(
+        auth::LoginInput::decl(&cfg),
+        &["username: string", "password: string"],
+    );
+    has(auth::UnlockInput::decl(&cfg), &["password: string"]);
+    has(
+        auth::RecoverInput::decl(&cfg),
+        &[
+            "username: string",
+            "recovery_code: string",
+            "new_password: string",
+            "new_password_repeat: string",
+        ],
+    );
+    has(
+        auth::RecoverDone::decl(&cfg),
+        &["new_recovery_code: string"],
+    );
+    has(
+        users::UserRow::decl(&cfg),
+        &[
+            "id: number",
+            "role: Role",
+            "is_active: boolean",
+            "last_login_at: string | null",
+        ],
+    );
+    has(
+        users::UserUpdateInput::decl(&cfg),
+        &["id: number", "role: Role", "is_active: boolean"],
+    );
+    has(
+        settings::Settings::decl(&cfg),
+        &[
+            "firm: FirmSettings",
+            "idle_lock_minutes: number",
+            "default_language: Language",
+            "number_grouping: Grouping",
+        ],
+    );
+    has(
+        settings::SetSecurityInput::decl(&cfg),
+        &["idle_lock_minutes: string"],
+    );
+    has(
+        settings::PrefsSetInput::decl(&cfg),
+        &["key: PrefKey", "value: string"],
+    );
+    has(
+        day::DayStatus::decl(&cfg),
+        &[
+            "today: string",
+            "closed_up_to: string | null",
+            "today_open: boolean",
+        ],
+    );
+    let role = mandi_services::core::auth::Role::decl(&cfg);
+    for word in ["'partner'", "'munshi'", "'owner'"] {
+        assert!(
+            role.contains(word) || role.contains(&word.replace('\'', "\"")),
+            "{role}"
+        );
+    }
+    let keys = mandi_services::core::auth::PrefKey::decl(&cfg);
+    for word in ["language", "text_size", "last_screen"] {
+        assert!(keys.contains(word), "{keys}");
+    }
+    let grouping = mandi_services::core::money::Grouping::decl(&cfg);
+    assert!(
+        grouping.contains("international") && grouping.contains("lakh"),
+        "{grouping}"
+    );
 }

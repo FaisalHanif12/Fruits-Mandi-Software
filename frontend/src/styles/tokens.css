@@ -28,6 +28,14 @@
   --chip-h: 22px;
   --border-w: 1px;
 
+  /* Shell sizes (design system 4): the main menu is 224 px, a 64 px icon rail below 1366 px; the
+     side menu of an area is 200 px; the top bar 60 px; the status bar 32 px. */
+  --nav-w: 224px;
+  --rail-w: 64px;
+  --module-menu-w: 200px;
+  --topbar-h: 60px;
+  --statusbar-h: 32px;
+
   /* Focus outline, always visible (design system 5, NFR-USE-22). */
   --focus-width: 3px;
   --focus-offset: 2px;
@@ -121,6 +129,11 @@
   --spacing-control: var(--control-h);
   --spacing-control-compact: var(--control-h-compact);
   --spacing-chip: var(--chip-h);
+  --spacing-nav: var(--nav-w);
+  --spacing-rail: var(--rail-w);
+  --spacing-module-menu: var(--module-menu-w);
+  --spacing-topbar: var(--topbar-h);
+  --spacing-statusbar: var(--statusbar-h);
 
   /* Icon sizes (Code Standards F13): 16 in grids and field messages, 20 in buttons and
      toasts, 26 inside the round badge of the empty and error states, badge 56. */

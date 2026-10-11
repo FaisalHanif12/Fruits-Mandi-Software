@@ -12,9 +12,62 @@ export function errorMessageId(code: ErrorCode): string {
   return `err-${code.replace(/^ERR_/, '').toLowerCase().replaceAll('_', '-')}`;
 }
 
+/**
+ * The message used when the backend sends a code this build has no words for (for example a
+ * newer backend). The user still gets plain words, never the raw code (NFR-USE-14).
+ */
+export const FALLBACK_ERROR_MESSAGE_ID = errorMessageId('ERR_INTERNAL');
+
 /** The UiError inside anything a query or mutation failed with. */
 export function uiErrorOf(error: unknown): UiError {
   return error instanceof CommandError ? error.uiError : toUiError(error);
+}
+
+/** True when the problem points at one field or grid cell, not at the whole form. */
+function isFieldError(item: UiErrorItem): item is UiErrorItem & { field: string } {
+  return typeof item.field === 'string' && item.field !== '';
+}
+
+/** The problems of one error, split into whole-form ones and ones that point at a field. */
+export interface SplitErrors {
+  /** No field: the whole form or screen. These carry the reference number. */
+  general: UiErrorItem[];
+  /** Field path (for example `lots[0].sales[2].qty`) to the problems on that field. */
+  byField: ReadonlyMap<string, UiErrorItem[]>;
+}
+
+export function splitErrors(error: UiError): SplitErrors {
+  const general: UiErrorItem[] = [];
+  const byField = new Map<string, UiErrorItem[]>();
+  for (const item of error.errors) {
+    if (!isFieldError(item)) {
+      general.push(item);
+      continue;
+    }
+    const onField = byField.get(item.field);
+    if (onField === undefined) {
+      byField.set(item.field, [item]);
+    } else {
+      onField.push(item);
+    }
+  }
+  return { general, byField };
+}
+
+/** The problems on one field path. The path must match exactly, `lots[0]` is not `lots[1]`. */
+export function errorsForField(error: UiError | null | undefined, field: string): UiErrorItem[] {
+  if (error === null || error === undefined) return [];
+  return error.errors.filter((item) => item.field === field);
+}
+
+/**
+ * The problems that no field on the screen will show: the whole-form ones, and any whose field
+ * is not in `fields`. A screen passes the field paths it draws, so a problem can never vanish
+ * because its field is not there (Code Standards 4.3).
+ */
+export function errorsOutsideFields(error: UiError, fields: readonly string[]): UiErrorItem[] {
+  const shown = new Set(fields);
+  return error.errors.filter((item) => !isFieldError(item) || !shown.has(item.field));
 }
 
 /** A whole number as grouped digits, with a minus sign when it is below zero. */

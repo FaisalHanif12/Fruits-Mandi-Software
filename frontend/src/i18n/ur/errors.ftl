@@ -71,3 +71,59 @@ err-overflow = رقم بہت بڑی ہو گئی ہے۔ رقمیں دوبارہ �
 # PRD FR-17.1, E9.
 # review: pending
 err-shares-not-100 = تمام { -shirakat-dar } کا کل { -hissa } 100 فیصد نہیں بنتا۔ مالک سے کہیں کہ { -shirakat-dar } کی ترتیب میں اسے درست کریں۔
+
+## The data file (plan 03, contract 4.6; NFR-REL-6, NFR-REL-7, NFR-REL-10, NFR-REL-13).
+## The reference number follows each of these messages (err-reference), so they do not repeat it.
+
+# NFR-REL-10. Nothing was written.
+# review: pending
+err-disk-full = ڈسک بھر گئی ہے۔ کچھ جگہ خالی کریں اور دوبارہ کوشش کریں۔ کچھ بھی محفوظ نہیں ہوا۔
+# NFR-REL-7. Saving stays stopped until the check passes.
+# review: pending
+err-data-check-failed = ڈیٹا فائل جانچ میں ٹھیک نہیں نکلی، اس لیے آپ کے ڈیٹا کو بچانے کے لیے محفوظ کرنا روک دیا گیا ہے۔ ایپ بند کر کے دوبارہ کھولیں۔ یہ پیغام پھر آئے تو مدد کے لیے رابطہ کریں۔
+# NFR-REL-13. The copy made before the update was put back.
+# review: pending
+err-migration-failed = نئے ورژن کے لیے ڈیٹا کی تبدیلی مکمل نہیں ہو سکی۔ آپ کا ڈیٹا محفوظ ہے: تبدیلی سے پہلے بنائی گئی کاپی واپس رکھ دی گئی ہے۔ پچھلا ورژن دوبارہ لگائیں، یا مدد کے لیے رابطہ کریں۔
+# The data file was in use by another task. Nothing was written.
+# review: pending
+err-db-busy = ڈیٹا فائل ابھی مصروف ہے۔ ذرا دیر بعد دوبارہ کوشش کریں۔
+
+## Sign-in, users and settings (plan 04, contract 4. NFR-SEC-1, NFR-SEC-2, NFR-SEC-4, PRD FR-8.2).
+## The reference number follows these messages when the backend sends one (err-reference).
+
+# $min: the shortest password, in characters.
+# review: pending
+err-password-too-short = پاس ورڈ کم از کم { $min } حروف کا ہونا چاہیے۔
+# review: pending
+err-passwords-differ = دونوں پاس ورڈ ایک جیسے نہیں۔ دوبارہ لکھیں۔
+# review: pending
+err-username-invalid = صارف کا نام 3 سے 32 حروف کا ہو۔ اس میں انگریزی چھوٹے حروف، ہندسے، نقطہ، نیچے کی لکیر یا درمیانی لکیر ہی لکھ سکتے ہیں۔
+# review: pending
+err-username-taken = یہ صارف کا نام کسی اور کے پاس ہے۔ کوئی دوسرا نام لکھیں۔
+# The same message for a wrong password and an unknown name, so nobody learns which names exist.
+# $tries_left: tries left before the sign-in waits.
+# review: pending
+err-wrong-password = صارف کا نام یا پاس ورڈ غلط ہے۔ باقی کوششیں: { $tries_left }
+# PRD FR-8.2. $seconds: seconds left to wait. The sign-in screen counts down by itself.
+# review: pending
+err-locked-wait = بہت زیادہ غلط کوششیں ہو گئیں۔ { $seconds } سیکنڈ رک کر دوبارہ کوشش کریں۔
+# review: pending
+err-user-inactive = یہ صارف بند کر دیا گیا ہے۔ مالک سے رابطہ کریں۔
+# review: pending
+err-recovery-code-wrong = صارف کا نام یا بحالی کا کوڈ غلط ہے۔ دیکھ کر دوبارہ لکھیں۔
+# review: pending
+err-already-set-up = پہلی ترتیب پہلے ہی مکمل ہو چکی ہے۔ لاگ ان کریں۔
+# NFR-SEC-4.
+# review: pending
+err-not-allowed = آپ کو یہ کام کرنے کی اجازت نہیں۔ مالک سے کہیں۔
+# review: pending
+err-last-owner = کم از کم ایک فعال مالک ضرور ہونا چاہیے۔ پہلے کسی اور کو مالک بنائیں۔
+# review: pending
+err-out-of-range = یہ قیمت مقررہ حد سے باہر ہے۔ درست قیمت لکھیں۔
+# review: pending
+err-not-logged-in = پہلے لاگ ان کریں۔
+# PRD FR-8.4.
+# review: pending
+err-session-locked = ایپ لاک ہے۔ پاس ورڈ لکھ کر کھولیں۔
+# review: pending
+err-not-found = یہ چیز نہیں ملی۔ فہرست دوبارہ کھولیں۔

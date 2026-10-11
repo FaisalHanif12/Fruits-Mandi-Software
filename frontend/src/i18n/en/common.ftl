@@ -29,3 +29,15 @@ common-select-placeholder = Choose
 # Name of the toast area, read by screen readers.
 # review: pending
 common-notifications = Notifications
+
+## Data check at start-up (plan 03, NFR-REL-7). The words under this title are err-data-check-failed.
+
+# review: pending
+common-data-check-title = The app cannot open your data yet
+
+## Password field.
+
+# review: pending
+common-password-show = Show password
+# review: pending
+common-password-hide = Hide password

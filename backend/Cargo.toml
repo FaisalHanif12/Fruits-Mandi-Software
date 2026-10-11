@@ -58,6 +58,24 @@ icu_collator = "2.3.1"
 icu_locale_core = "2.3.0"
 proptest = { version = "1.11.0", default-features = false, features = ["std", "bit-set"] }
 
+# Database (Tech Stack 2): SQLite built in, with the online backup API and custom collations.
+rusqlite = { version = "0.40.2", features = ["bundled", "backup", "collation"] }
+rusqlite_migration = "2.6.0"
+# Hash chain over audit entries (NFR-SEC-6). Plan 03 4.5.
+blake3 = "1.8.7"
+# Key store for the audit chain key: Windows Credential Manager, macOS keychain in development.
+keyring = "4.2.0"
+# Logging (NFR-OBS-1). Daily files, our own clean-up.
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "registry", "fmt"] }
+tracing-appender = "0.2.5"
+# Passwords: Argon2id (Tech Stack 2, plan 04). We give the salt ourselves, so no random feature.
+argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "password-hash"] }
+# Plan 03 4.2c, approved by tech-lead: random audit key, free disk space, temp folders in tests.
+getrandom = "0.4.3"
+fs4 = "1.1.0"
+tempfile = "3.27.0"
+
 # Benchmarks for the NFR speed targets (Code Standards B25). No HTML or plot output.
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 
@@ -77,6 +95,13 @@ unimplemented = "forbid"
 dbg_macro = "forbid"
 print_stdout = "forbid"
 print_stderr = "forbid"
+
+# The password hash is memory-hard and slow without optimisation. Build it optimised even in
+# debug builds, so tests and `pnpm dev` stay fast (login takes about 60 ms, not 2 s).
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
 
 [profile.release]
 codegen-units = 1

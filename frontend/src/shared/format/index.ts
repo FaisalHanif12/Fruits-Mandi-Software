@@ -9,3 +9,4 @@ export {
 } from './money';
 export { DEFAULT_PRINT_DIGITS, printDigits, toUrduDigits, type PrintDigits } from './digits';
 export { DEFAULT_GROUPING, useGrouping, useGroupingStore } from './grouping';
+export { formatDateParts, readDateText, shiftDateText } from './dates';

@@ -73,3 +73,59 @@ err-overflow = The amount has become too large. Check the amounts and try again.
 # PRD FR-17.1, E9.
 # review: pending
 err-shares-not-100 = The { -shirakat-dar } { -hissa } total is not 100%. Ask the Owner to correct it in { -shirakat-dar } setup.
+
+## The data file (plan 03, contract 4.6; NFR-REL-6, NFR-REL-7, NFR-REL-10, NFR-REL-13).
+## The reference number follows each of these messages (err-reference), so they do not repeat it.
+
+# NFR-REL-10. Nothing was written.
+# review: pending
+err-disk-full = The disk is full. Free some space, then try again. Nothing was saved.
+# NFR-REL-7. Saving stays stopped until the check passes.
+# review: pending
+err-data-check-failed = The data file did not pass its check, so saving is stopped to protect your data. Close the app and open it again. If this shows again, contact support.
+# NFR-REL-13. The copy made before the update was put back.
+# review: pending
+err-migration-failed = The data could not be updated for the new version. Your data is safe: the copy made before the update was put back. Install the previous version, or contact support.
+# The data file was in use by another task. Nothing was written.
+# review: pending
+err-db-busy = The data file is busy. Try again in a moment.
+
+## Sign-in, users and settings (plan 04, contract 4. NFR-SEC-1, NFR-SEC-2, NFR-SEC-4, PRD FR-8.2).
+## The reference number follows these messages when the backend sends one (err-reference).
+
+# $min: the shortest password, in characters.
+# review: pending
+err-password-too-short = The password must be at least { $min } characters long.
+# review: pending
+err-passwords-differ = The two passwords are not the same. Type them again.
+# review: pending
+err-username-invalid = The user name must be 3 to 32 characters. Use only small English letters, digits, a dot, an underscore or a hyphen.
+# review: pending
+err-username-taken = Another user already has this user name. Choose a different one.
+# The same message for a wrong password and an unknown name, so nobody learns which names exist.
+# $tries_left: tries left before the sign-in waits.
+# review: pending
+err-wrong-password = The user name or password is wrong. Tries left: { $tries_left }
+# PRD FR-8.2. $seconds: seconds left to wait. The sign-in screen counts down by itself.
+# review: pending
+err-locked-wait = Too many wrong tries. Wait { $seconds } seconds, then try again.
+# review: pending
+err-user-inactive = This user has been made inactive. Please ask the Owner.
+# review: pending
+err-recovery-code-wrong = The user name or the recovery code is wrong. Check and type them again.
+# review: pending
+err-already-set-up = First-time setup is already done. Please sign in.
+# NFR-SEC-4.
+# review: pending
+err-not-allowed = You are not allowed to do this. Ask the Owner.
+# review: pending
+err-last-owner = There must be at least one active Owner. Make someone else an Owner first.
+# review: pending
+err-out-of-range = This value is outside the allowed range. Enter a valid value.
+# review: pending
+err-not-logged-in = Please sign in first.
+# PRD FR-8.4.
+# review: pending
+err-session-locked = The app is locked. Type your password to unlock it.
+# review: pending
+err-not-found = This item was not found. Open the list again.

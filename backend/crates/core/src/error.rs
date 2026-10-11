@@ -21,6 +21,44 @@ pub enum ErrorCode {
     ErrNotImplemented,
     /// Something failed inside the backend that the user cannot fix by changing input.
     ErrInternal,
+    /// Not enough free disk space to save safely. Nothing was written (NFR-REL-10).
+    ErrDiskFull,
+    /// The data file failed its start-up check, so saving is stopped (NFR-REL-7).
+    ErrDataCheckFailed,
+    /// A database upgrade failed. The data was put back from the copy taken before it (NFR-REL-13).
+    ErrMigrationFailed,
+    /// The data file is busy with another write and did not free up in time.
+    ErrDbBusy,
+    /// First-run setup was asked for, but a user already exists (plan 04).
+    ErrAlreadySetUp,
+    /// A password shorter than 6 characters (NFR-SEC-1). Values: `min`.
+    ErrPasswordTooShort,
+    /// The password and its repeat differ.
+    ErrPasswordsDiffer,
+    /// A user name that is not 3 to 32 of `a-z 0-9 . _ -`.
+    ErrUsernameInvalid,
+    /// Another user already has this user name.
+    ErrUsernameTaken,
+    /// Wrong user name or password (the same code for an unknown name). Values: `tries_left`.
+    ErrWrongPassword,
+    /// Too many wrong tries; sign-in waits (PRD FR-8.2). Values: `seconds` left.
+    ErrLockedWait,
+    /// The user was made inactive by the Owner.
+    ErrUserInactive,
+    /// The recovery code, or the user name it belongs to, is wrong (counts as a wrong try).
+    ErrRecoveryCodeWrong,
+    /// The signed-in role may not do this (NFR-SEC-4).
+    ErrNotAllowed,
+    /// The change would leave no active Owner.
+    ErrLastOwner,
+    /// A setting outside its allowed range, for example idle lock 0 or 500 minutes.
+    ErrOutOfRange,
+    /// The command needs a signed-in user.
+    ErrNotLoggedIn,
+    /// The session is locked (idle lock). Unlock with the password first (PRD FR-8.4).
+    ErrSessionLocked,
+    /// The record asked for does not exist.
+    ErrNotFound,
     /// A required field is empty.
     ErrRequired,
     /// The text is not a number, or not a simple sum such as `20+25` (PRD FR-7.48).
@@ -73,9 +111,28 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 25] = [
+    pub const ALL: [ErrorCode; 44] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
+        ErrorCode::ErrDiskFull,
+        ErrorCode::ErrDataCheckFailed,
+        ErrorCode::ErrMigrationFailed,
+        ErrorCode::ErrDbBusy,
+        ErrorCode::ErrAlreadySetUp,
+        ErrorCode::ErrPasswordTooShort,
+        ErrorCode::ErrPasswordsDiffer,
+        ErrorCode::ErrUsernameInvalid,
+        ErrorCode::ErrUsernameTaken,
+        ErrorCode::ErrWrongPassword,
+        ErrorCode::ErrLockedWait,
+        ErrorCode::ErrUserInactive,
+        ErrorCode::ErrRecoveryCodeWrong,
+        ErrorCode::ErrNotAllowed,
+        ErrorCode::ErrLastOwner,
+        ErrorCode::ErrOutOfRange,
+        ErrorCode::ErrNotLoggedIn,
+        ErrorCode::ErrSessionLocked,
+        ErrorCode::ErrNotFound,
         ErrorCode::ErrRequired,
         ErrorCode::ErrNotANumber,
         ErrorCode::ErrDecimalsNotAllowed,

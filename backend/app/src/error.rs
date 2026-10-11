@@ -12,10 +12,12 @@
 //! ```
 
 use std::collections::BTreeMap;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use serde::{Serialize, Serializer};
 use ts_rs::TS;
+
+use crate::refs::next_reference;
+use mandi_services::db::DbError;
 
 /// The one list of error codes and message values lives in `mandi-core` (plan 02 Section 4.6).
 pub use mandi_services::core::error::{ErrorCode, ErrorValue, FieldError};
@@ -66,18 +68,6 @@ pub struct UiError {
     pub reference: String,
 }
 
-/// Counter for reference numbers in this run of the app.
-static NEXT_REF: AtomicU32 = AtomicU32::new(1);
-
-/// Makes a reference number like `E-20261010-0001`.
-///
-/// Plan 01 uses today's local date and a counter. Plan 03 ties it to the log line.
-fn next_reference() -> String {
-    let counter = NEXT_REF.fetch_add(1, Ordering::Relaxed);
-    let today = chrono::Local::now().format("%Y%m%d");
-    format!("E-{today}-{counter:04}")
-}
-
 impl UiError {
     /// An error with one problem.
     pub fn single(code: ErrorCode, field: Option<&str>) -> Self {
@@ -89,18 +79,65 @@ impl UiError {
     }
 
     /// An error with several problems, each with its own field.
+    ///
+    /// The reference number is written to the log with the codes and field paths, never
+    /// the values (NFR-OBS-2, NFR-OBS-3).
     pub fn from_items(errors: Vec<UiErrorItem>) -> Self {
+        let error = Self::build(errors);
+        let codes = error
+            .errors
+            .iter()
+            .map(|e| format!("{:?}", e.code))
+            .collect::<Vec<_>>();
+        let fields = error
+            .errors
+            .iter()
+            .filter_map(|e| e.field.clone())
+            .collect::<Vec<_>>();
+        tracing::warn!(
+            reference = %error.reference,
+            codes = %codes.join(","),
+            fields = %fields.join(","),
+            "command returned an error"
+        );
+        error
+    }
+
+    /// An internal failure, for example a background task that stopped. The detail is not
+    /// sent to the screen. It is written to the log with the reference number.
+    pub fn internal<E: std::fmt::Display>(detail: E) -> Self {
+        Self::coded(ErrorCode::ErrInternal, &detail)
+    }
+
+    /// An error with one code and no field, whose cause goes to the log (Code Standards B12).
+    fn coded(code: ErrorCode, detail: &dyn std::fmt::Display) -> Self {
+        let error = Self::build(vec![UiErrorItem {
+            code,
+            field: None,
+            values: BTreeMap::new(),
+        }]);
+        tracing::error!(
+            reference = %error.reference,
+            code = ?code,
+            detail = %detail,
+            "command failed"
+        );
+        error
+    }
+
+    fn build(errors: Vec<UiErrorItem>) -> Self {
         Self {
             ok: NotOk,
             errors,
             reference: next_reference(),
         }
     }
+}
 
-    /// An internal failure, for example a background task that stopped.
-    /// The detail is not sent to the screen. Plan 03 writes it to the log.
-    pub fn internal<E: std::fmt::Display>(_detail: E) -> Self {
-        Self::single(ErrorCode::ErrInternal, None)
+impl From<DbError> for UiError {
+    /// The code comes from the database error; the cause goes to the log.
+    fn from(error: DbError) -> Self {
+        Self::coded(error.code(), &error)
     }
 }
 
@@ -171,6 +208,26 @@ mod tests {
         assert_eq!(date.len(), 8);
         assert!(date.chars().all(|c| c.is_ascii_digit()));
         assert!(counter.chars().all(|c| c.is_ascii_digit()));
+    }
+
+    #[test]
+    fn database_errors_keep_their_code() {
+        let disk = UiError::from(DbError::DiskFull {
+            available_bytes: 10,
+            needed_bytes: 50,
+        });
+        assert_eq!(disk.errors[0].code, ErrorCode::ErrDiskFull);
+        assert_eq!(
+            UiError::from(DbError::Busy).errors[0].code,
+            ErrorCode::ErrDbBusy
+        );
+        let value =
+            serde_json::to_value(UiError::from(DbError::DataCheckFailed("page 3".into()))).unwrap();
+        assert_eq!(value["errors"][0]["code"], "ERR_DATA_CHECK_FAILED");
+        assert!(
+            !value.to_string().contains("page 3"),
+            "the cause stays in the log"
+        );
     }
 
     #[test]

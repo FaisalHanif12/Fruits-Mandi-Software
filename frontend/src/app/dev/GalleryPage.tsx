@@ -9,6 +9,7 @@ import { directionOf, useLanguage } from '../../shared/i18n';
 import { LanguageSwitch } from '../layout/LanguageSwitch';
 import { GalleryLocalization } from './GalleryLocalization';
 import {
+  BackendErrorsSection,
   ButtonsSection,
   FieldsSection,
   MessagesSection,
@@ -34,6 +35,7 @@ function Pane({ language }: { language: Language }) {
         <FieldsSection />
         <NumbersSection />
         <StatesSection />
+        <BackendErrorsSection />
         <MessagesSection />
       </div>
     </GalleryLocalization>

@@ -7,6 +7,20 @@ publish.workspace = true
 
 [dependencies]
 mandi-core.workspace = true
+rusqlite.workspace = true
+rusqlite_migration.workspace = true
+blake3.workspace = true
+keyring.workspace = true
+getrandom.workspace = true
+fs4.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

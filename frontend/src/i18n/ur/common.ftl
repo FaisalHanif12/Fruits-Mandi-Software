@@ -29,3 +29,15 @@ common-select-placeholder = چنیں
 # Name of the toast area, read by screen readers.
 # review: pending
 common-notifications = اطلاعات
+
+## Data check at start-up (plan 03, NFR-REL-7). The words under this title are err-data-check-failed.
+
+# review: pending
+common-data-check-title = ایپ آپ کا ڈیٹا ابھی نہیں کھول سکی
+
+## Password field.
+
+# review: pending
+common-password-show = پاس ورڈ دکھائیں
+# review: pending
+common-password-hide = پاس ورڈ چھپائیں

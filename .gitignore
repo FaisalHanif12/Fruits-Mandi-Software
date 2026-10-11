@@ -124,3 +124,6 @@ $RECYCLE.BIN/
 
 # Browser tool output from local UI checks
 .playwright-mcp/
+
+# Local development database (pnpm seed)
+dev-data/
