@@ -173,7 +173,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
             vec!["text_ur", "text_en", "used_in_json", "is_active"],
         ),
         ("expense_heads", with_code(&["account_id", "is_active"])),
-        ("staff", named(&[], &["role", "phone", "is_active"])),
+        (
+            "staff",
+            named(&[], &["role", "phone", "account_id", "is_active"]),
+        ),
         (
             "bank_accounts",
             vec!["bank_name", "title", "number", "account_id", "is_active"],
@@ -265,13 +268,20 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "freight_paisa",
                 "freight_paid_by",
                 "labour_paisa",
+                "labour_method",
+                "labour_value_paisa",
                 "labour_rule_id",
                 "munshiana_paisa",
+                "munshiana_method",
+                "munshiana_value_paisa",
                 "munshiana_rule_id",
                 "phone_paisa",
+                "phone_method",
+                "phone_value_paisa",
                 "phone_rule_id",
                 "cash_paid_paisa",
                 "store_rent_paisa",
+                "adjust_advance",
                 "first_entry_id",
                 "qty_sold",
                 "qty_written_off",
@@ -377,6 +387,9 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "partner_id",
                 "expense_head_id",
                 "expected_goods",
+                "reason",
+                "return_by_date",
+                "taken_by",
                 "narration",
                 "status",
                 "cancel_reason",
@@ -553,9 +566,9 @@ fn every_paisa_column_has_the_whole_rupee_check() {
         }
     }
     // Counted by hand from Architecture 15: accounts 3, charge_rules 1, partner_share_rows 2,
-    // bikri_entries 1, bikri_lots 10, bikri_sales 12, analytics_facts 5, vouchers 1,
+    // bikri_entries 1, bikri_lots 13, bikri_sales 12, analytics_facts 5, vouchers 1,
     // journal_entries 1, journal_lines 2, bill_allocations 1, advance_allocations 1.
-    assert_eq!(found, 40);
+    assert_eq!(found, 43);
 }
 
 /// Every `*_date` column checks for a real date.

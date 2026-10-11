@@ -10,10 +10,12 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use mandi_db::Db;
 use mandi_db::clock::{Clock, format_utc};
-use mandi_domain::core::auth::Role;
+use mandi_domain::core::translit::LearnedPair;
 
 use crate::error::ServiceError;
-use crate::ports::{Argon2Hasher, Monotonic, OsRandom, PasswordHasher, RandomSource, SystemMonotonic};
+use crate::ports::{
+    Argon2Hasher, Monotonic, OsRandom, PasswordHasher, RandomSource, SystemMonotonic,
+};
 use crate::secret::Secret;
 
 /// The parts of a [`Context`] that tests replace. The clock comes from the `Db`.
@@ -73,6 +75,10 @@ pub struct Context {
     pub(crate) random: Arc<dyn RandomSource>,
     pub(crate) session: Mutex<Option<Session>>,
     pub(crate) lockouts: Mutex<Lockouts>,
+    /// The learned word pairs, kept in memory (Tech Stack 4.4). `None` until first needed.
+    pub(crate) learned: Mutex<Option<Arc<Vec<LearnedPair>>>>,
+    /// The search index (Tech Stack 4.7), kept in memory. `None` until first needed.
+    pub(crate) search: Mutex<Option<Arc<crate::search::Index>>>,
     dummy_hash: OnceLock<String>,
 }
 
@@ -97,6 +103,8 @@ impl Context {
             random: parts.random,
             session: Mutex::new(None),
             lockouts: Mutex::new(Lockouts::default()),
+            learned: Mutex::new(None),
+            search: Mutex::new(None),
             dummy_hash: OnceLock::new(),
         }
     }
@@ -125,6 +133,14 @@ impl Context {
         self.session.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    pub(crate) fn search_lock(&self) -> MutexGuard<'_, Option<Arc<crate::search::Index>>> {
+        self.search.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn learned_lock(&self) -> MutexGuard<'_, Option<Arc<Vec<LearnedPair>>>> {
+        self.learned.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     pub(crate) fn lockouts_lock(&self) -> MutexGuard<'_, Lockouts> {
         self.lockouts.lock().unwrap_or_else(PoisonError::into_inner)
     }
@@ -146,9 +162,4 @@ impl Context {
         let hash = self.hasher.hash(&secret)?;
         Ok(self.dummy_hash.get_or_init(|| hash))
     }
-}
-
-/// Role as stored in `users.role`.
-pub(crate) fn role_from_column(text: &str) -> Result<Role, ServiceError> {
-    Role::parse(text).ok_or_else(|| ServiceError::Data(format!("unknown role {text}")))
 }

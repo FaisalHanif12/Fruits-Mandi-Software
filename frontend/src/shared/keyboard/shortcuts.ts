@@ -86,6 +86,8 @@ export const SHORTCUTS = {
   newAdvance: { code: 'KeyP', alt: true, label: 'Alt+P', scope: 'anywhere' },
   /** New دکان خرچہ. */
   newExpense: { code: 'KeyK', alt: true, label: 'Alt+K', scope: 'anywhere' },
+  /** Enter finishes a small form: sign in, next step (PRD Section 8.1, FR-7.22). */
+  confirm: { code: 'Enter', label: 'Enter', scope: 'field' },
   /** Close a list or dialog, else cancel the typing, else go back (FR-7.18). */
   back: { code: 'Escape', label: 'Esc', scope: 'anywhere' },
   /** In a picker: open the full list without typing (FR-7.16). */

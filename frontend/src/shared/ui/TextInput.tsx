@@ -10,7 +10,7 @@ interface TextInputProps extends FieldControlProps {
   /** Grey text shown while empty. Comes from Fluent. */
   placeholder?: string;
   /** Set when the text is in the other language, for example an English name on an Urdu screen. */
-  lang?: string;
+  lang?: string | undefined;
 }
 
 export function TextInput({

@@ -43,6 +43,8 @@ const PLUGIN_PERMISSIONS = new Set([
   // Check only. Download and install go behind an Owner-checked command (NFR-INS-3, D5).
   'updater:allow-check',
   'process:allow-restart',
+  // The sign-in screen's Exit button closes the app (PRD 8.1, plan 04).
+  'process:allow-exit',
   'dialog:allow-message',
   'dialog:allow-ask',
   'dialog:allow-confirm',
@@ -117,6 +119,13 @@ describe('Capability file (NFR-SEC-10, Code Standards S4)', () => {
     // NFR-INS-3: the update installs only when the Owner agrees, so the screens may not call
     // the updater's download or install directly (updater:default includes both).
     expect(ids.filter((id) => id.startsWith('updater:'))).toEqual(['updater:allow-check']);
+  });
+
+  it('gives only the process permissions restart and exit', () => {
+    expect(ids.filter((id) => id.startsWith('process:'))).toEqual([
+      'process:allow-restart',
+      'process:allow-exit',
+    ]);
   });
 
   it('gives no file system, shell, http or opener access', () => {

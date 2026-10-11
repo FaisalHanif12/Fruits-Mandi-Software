@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-translit-pairs-list"
+description = "Enables the translit_pairs_list command without any pre-configured scope."
+commands.allow = ["translit_pairs_list"]
+
+[[permission]]
+identifier = "deny-translit-pairs-list"
+description = "Denies the translit_pairs_list command without any pre-configured scope."
+commands.deny = ["translit_pairs_list"]

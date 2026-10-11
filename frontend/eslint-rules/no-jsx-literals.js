@@ -36,7 +36,7 @@ const createRule = ESLintUtils.RuleCreator(
 /**
  * Attributes whose value is code, never text a user reads or hears. Each one is either a DOM
  * attribute with a fixed set of keyword values, an identifier, or a prop of our own components
- * that takes a code value (`variant`, Fluent's message `id` and `labelId`, `fieldsShown`: field
+ * that takes a code value (`variant`, Fluent's message `id`, `labelId`, `titleId`, `helpId`, `finishId`, `fieldsShown`: field
  * paths such as `lots[0].sales[2].qty`, `hidden`: menu item IDs, `theme`: AG Grid's "legacy").
  */
 const CODE_ATTRIBUTES = new Set([
@@ -55,6 +55,10 @@ const CODE_ATTRIBUTES = new Set([
   'variant',
   'fieldsShown',
   'labelId',
+  'titleId',
+  'helpId',
+  'finishId',
+  'scope',
   'hidden',
   'theme',
   'autoComplete',

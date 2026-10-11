@@ -71,6 +71,8 @@ tracing-subscriber = { version = "0.3.23", default-features = false, features = 
 tracing-appender = "0.2.5"
 # Passwords: Argon2id (Tech Stack 2, plan 04). We give the salt ourselves, so no random feature.
 argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "password-hash"] }
+# Close spellings in the picker search (Tech Stack 2, plan 06): Damerau-Levenshtein style distance.
+strsim = "0.11.1"
 # Plan 03 4.2c, approved by tech-lead: random audit key, free disk space, temp folders in tests.
 getrandom = "0.4.3"
 fs4 = "1.1.0"
@@ -102,6 +104,10 @@ print_stderr = "forbid"
 opt-level = 3
 [profile.dev.package.blake2]
 opt-level = 3
+# The transliteration engine trains on 4,500 word pairs on first use and searches many
+# spellings per key press. Unoptimised it is about 30 times slower, which makes tests crawl.
+[profile.dev.package.mandi-core]
+opt-level = 2
 
 [profile.release]
 codegen-units = 1

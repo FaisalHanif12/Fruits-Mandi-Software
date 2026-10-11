@@ -56,13 +56,16 @@ fn start_logging<R: tauri::Runtime>(app: &tauri::App<R>, data_dir: &std::path::P
 
 /// The app configuration and assets, built in once. Shared by `run` and the
 /// tests, because the macro may only be used once per crate on macOS.
-fn context<R: tauri::Runtime>() -> tauri::Context<R> {
+#[doc(hidden)]
+pub fn context<R: tauri::Runtime>() -> tauri::Context<R> {
     tauri::generate_context!()
 }
 
 /// Every command the screens may call. Keep in step with `APP_COMMANDS` in
 /// `build.rs` and with `capabilities/default.json`.
-fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
+#[doc(hidden)]
+pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static
+{
     tauri::generate_handler![
         commands::app::app_info,
         commands::app::app_data_status,
@@ -73,16 +76,34 @@ fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send
         commands::auth::auth_lock,
         commands::auth::auth_unlock,
         commands::auth::auth_recover,
-        commands::users::users_list,
-        commands::users::users_create,
-        commands::users::users_update,
-        commands::users::users_reset_password,
         commands::settings::settings_get,
         commands::settings::settings_set_firm,
         commands::settings::settings_set_security,
         commands::settings::settings_set_default_language,
         commands::settings::prefs_set,
         commands::day::day_status,
+        commands::translit::translit_suggest,
+        commands::translit::translit_learn,
+        commands::translit::translit_pairs_list,
+        commands::translit::translit_pairs_remove,
+        commands::masters::masters_list,
+        commands::masters::masters_save,
+        commands::masters::masters_set_active,
+        commands::masters::masters_next_code,
+        commands::search::search_masters,
+        commands::search::search_recent,
+        commands::search::search_touch,
+        commands::accounts::accounts_save,
+        commands::accounts::accounts_get,
+        commands::accounts::accounts_list,
+        commands::accounts::accounts_set_active,
+        commands::accounts::accounts_next_code,
+        commands::accounts::accounts_similar,
+        commands::accounts::accounts_openings_preview,
+        commands::accounts::accounts_openings_save,
+        commands::accounts::coa_tree,
+        commands::accounts::coa_heads_list,
+        commands::accounts::coa_controls_list,
     ]
 }
 

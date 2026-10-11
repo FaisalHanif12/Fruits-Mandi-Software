@@ -39,7 +39,11 @@ pub(crate) fn ceil_seconds(duration: Duration) -> u64 {
 }
 
 /// Seconds the sign-in still waits for this name, or `None` if it may try.
-pub(crate) fn remaining_seconds(ctx: &Context, key: &str, user: Option<&UserRecord>) -> Option<u64> {
+pub(crate) fn remaining_seconds(
+    ctx: &Context,
+    key: &str,
+    user: Option<&UserRecord>,
+) -> Option<u64> {
     let now = ctx.monotonic.elapsed();
     let mut lockouts = ctx.lockouts_lock();
     if let Some(lock) = lockouts.locks.get(key) {
@@ -88,7 +92,9 @@ pub(crate) fn clear(ctx: &Context, key: &str) {
 /// Counts one wrong try of a name that is not a user, and returns how many in a row.
 pub(crate) fn count_unknown(ctx: &Context, key: &str) -> u32 {
     let mut lockouts = ctx.lockouts_lock();
-    if lockouts.unknown_tries.len() >= MAX_UNKNOWN_NAMES && !lockouts.unknown_tries.contains_key(key) {
+    if lockouts.unknown_tries.len() >= MAX_UNKNOWN_NAMES
+        && !lockouts.unknown_tries.contains_key(key)
+    {
         // Bounded memory: forget the old names rather than grow without end.
         lockouts.unknown_tries.clear();
     }

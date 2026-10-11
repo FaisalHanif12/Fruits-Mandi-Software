@@ -24,3 +24,6 @@ gridpage-col-summary = لائن
 gridpage-rate-hint = آج کا آخری ریٹ 600
 # review: pending
 gridpage-add-row = نئی لائن
+
+# review: pending
+shellpage-title = ڈویلپمنٹ: شیل کا صفحہ

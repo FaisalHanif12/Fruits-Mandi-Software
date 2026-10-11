@@ -94,3 +94,22 @@
 .entry-grid .ag-cell-inline-editing input {
   padding-inline: var(--ag-cell-horizontal-padding);
 }
+
+/* A read-only list (masters, registers): a row that is switched off reads dimmer, and carries the
+   word "inactive" in its status column as well, so colour is never the only signal (NFR-USE-12). */
+.entry-grid .row-inactive .ag-cell {
+  color: var(--color-ink-muted);
+}
+
+/* A name in the other script (an Urdu name in the English app) reads in its own font and size. */
+.entry-grid .cell-lang {
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+  line-height: var(--leading-text);
+}
+
+/* A list fills the height its parent gives it, with room for a few rows at least. */
+.entry-grid.list-grid-fill {
+  block-size: 100%;
+  min-block-size: calc(var(--control-h) * 5);
+}

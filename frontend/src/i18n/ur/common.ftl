@@ -41,3 +41,17 @@ common-data-check-title = ایپ آپ کا ڈیٹا ابھی نہیں کھول �
 common-password-show = پاس ورڈ دکھائیں
 # review: pending
 common-password-hide = پاس ورڈ چھپائیں
+
+## The two sides of an account (PRD Section 3).
+
+# review: pending
+common-side-dr = { -banaam }
+# review: pending
+common-side-cr = { -jama }
+
+## Yes and no.
+
+# review: pending
+common-yes = ہاں
+# review: pending
+common-no = نہیں

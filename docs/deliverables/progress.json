@@ -11,7 +11,9 @@
     "01-scaffold": "passed",
     "02-core": "passed",
     "03-database": "reviewing",
-    "04-shell-and-login": "building"
+    "04-shell-and-login": "building",
+    "05-names-two-scripts": "building",
+    "06-masters-and-search": "building"
   },
   "acceptance": [
     "D1-A1",
@@ -21,7 +23,9 @@
     "D1-A7",
     "D1-A8",
     "D1-A9",
-    "D1-A10"
+    "D1-A10",
+    "D1-A11",
+    "D1-A13"
   ],
   "reports": []
 }

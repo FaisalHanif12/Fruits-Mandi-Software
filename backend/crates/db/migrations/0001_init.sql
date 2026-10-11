@@ -5,7 +5,8 @@
 -- created_by and updated_by hold a user id but have no foreign key: they would need an
 -- index on every table for no gain (B18). A released migration is never edited (B19).
 
--- Architecture 15.3. Roles: PRD Section 2.
+-- Architecture 15.3 (v1.2). One row, the Owner (PRD Section 2). role and partner_id are kept from
+-- the first design but nothing reads them: the app has no roles and writes role = 'owner'.
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -366,7 +367,8 @@ CREATE TABLE expense_heads (
     is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
 ) STRICT;
 
--- Architecture 15.4.
+-- Architecture 15.4 (v1.2). account_id is his ادھار رقم account under control 0103, made the first
+-- time he is lent money (PRD FR-16.4). One account belongs to one staff member at most.
 CREATE TABLE staff (
     id INTEGER PRIMARY KEY,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -381,6 +383,7 @@ CREATE TABLE staff (
     search_phonetic TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('munshi', 'collector', 'labour')),
     phone TEXT,
+    account_id INTEGER REFERENCES accounts(id),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
 ) STRICT;
 
@@ -503,7 +506,7 @@ CREATE TABLE bikri_entries (
     CHECK (status <> 'cancelled' OR (cancel_reason IS NOT NULL AND length(trim(cancel_reason)) > 0))
 ) STRICT;
 
--- Architecture 15.6. Sold plus written off can never be more than received (PRD FR-12.6). net_paisa can be negative (PRD FR-12.7).
+-- Architecture 15.6 (v1.2) and PRD FR-11.6 (lot charge snapshots). adjust_advance is the tick "پیشگی سے کاٹیں" (PRD FR-12.23): 1 (the default) lets the seller credit of this lot adjust his open advances, 0 leaves them open. It changes matching only, never the journal. Sold plus written off can never be more than received (PRD FR-12.6). net_paisa can be negative (PRD FR-12.7).
 CREATE TABLE bikri_lots (
     id INTEGER PRIMARY KEY,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -527,13 +530,20 @@ CREATE TABLE bikri_lots (
     freight_paisa INTEGER NOT NULL DEFAULT 0 CHECK (freight_paisa >= 0) CHECK (freight_paisa % 100 = 0),
     freight_paid_by TEXT NOT NULL DEFAULT 'firm' CHECK (freight_paid_by IN ('firm', 'seller')),
     labour_paisa INTEGER NOT NULL DEFAULT 0 CHECK (labour_paisa >= 0) CHECK (labour_paisa % 100 = 0),
+    labour_method TEXT NOT NULL DEFAULT 'manual' CHECK (labour_method IN ('per_unit', 'per_lot', 'manual')),
+    labour_value_paisa INTEGER NOT NULL DEFAULT 0 CHECK (labour_value_paisa >= 0) CHECK (labour_value_paisa % 100 = 0),
     labour_rule_id INTEGER REFERENCES charge_rules(id),
     munshiana_paisa INTEGER NOT NULL DEFAULT 0 CHECK (munshiana_paisa >= 0) CHECK (munshiana_paisa % 100 = 0),
+    munshiana_method TEXT NOT NULL DEFAULT 'manual' CHECK (munshiana_method IN ('per_unit', 'per_lot', 'manual')),
+    munshiana_value_paisa INTEGER NOT NULL DEFAULT 0 CHECK (munshiana_value_paisa >= 0) CHECK (munshiana_value_paisa % 100 = 0),
     munshiana_rule_id INTEGER REFERENCES charge_rules(id),
     phone_paisa INTEGER NOT NULL DEFAULT 0 CHECK (phone_paisa >= 0) CHECK (phone_paisa % 100 = 0),
+    phone_method TEXT NOT NULL DEFAULT 'manual' CHECK (phone_method IN ('per_unit', 'per_lot', 'manual')),
+    phone_value_paisa INTEGER NOT NULL DEFAULT 0 CHECK (phone_value_paisa >= 0) CHECK (phone_value_paisa % 100 = 0),
     phone_rule_id INTEGER REFERENCES charge_rules(id),
     cash_paid_paisa INTEGER NOT NULL DEFAULT 0 CHECK (cash_paid_paisa >= 0) CHECK (cash_paid_paisa % 100 = 0),
     store_rent_paisa INTEGER NOT NULL DEFAULT 0 CHECK (store_rent_paisa >= 0) CHECK (store_rent_paisa % 100 = 0),
+    adjust_advance INTEGER NOT NULL DEFAULT 1 CHECK (adjust_advance IN (0, 1)),
     first_entry_id INTEGER REFERENCES journal_entries(id),
     qty_sold INTEGER NOT NULL DEFAULT 0 CHECK (qty_sold >= 0),
     qty_written_off INTEGER NOT NULL DEFAULT 0 CHECK (qty_written_off >= 0),
@@ -543,7 +553,17 @@ CREATE TABLE bikri_lots (
     net_paisa INTEGER NOT NULL DEFAULT 0 CHECK (net_paisa % 100 = 0),
     UNIQUE (bikri_id, lot_no),
     CHECK (qty_sold + qty_written_off <= qty_received),
-    CHECK (net_paisa = gross_paisa - deductions_paisa)
+    CHECK (net_paisa = gross_paisa - deductions_paisa),
+    CHECK (deductions_paisa = (CASE WHEN freight_paid_by = 'firm' THEN freight_paisa ELSE 0 END) + seller_comm_paisa + labour_paisa + munshiana_paisa + cash_paid_paisa + store_rent_paisa + phone_paisa),
+    CHECK ((labour_method = 'manual' AND labour_value_paisa = 0) OR labour_method IN ('per_unit', 'per_lot')),
+    CHECK (labour_method <> 'per_lot' OR labour_paisa = labour_value_paisa),
+    CHECK (labour_method <> 'per_unit' OR labour_paisa = labour_value_paisa * qty_received),
+    CHECK ((munshiana_method = 'manual' AND munshiana_value_paisa = 0) OR munshiana_method IN ('per_unit', 'per_lot')),
+    CHECK (munshiana_method <> 'per_lot' OR munshiana_paisa = munshiana_value_paisa),
+    CHECK (munshiana_method <> 'per_unit' OR munshiana_paisa = munshiana_value_paisa * qty_received),
+    CHECK ((phone_method = 'manual' AND phone_value_paisa = 0) OR phone_method IN ('per_unit', 'per_lot')),
+    CHECK (phone_method <> 'per_lot' OR phone_paisa = phone_value_paisa),
+    CHECK (phone_method <> 'per_unit' OR phone_paisa = phone_value_paisa * qty_received)
 ) STRICT;
 
 -- Architecture 15.6. Each line keeps the rule snapshot (PRD FR-11.6). Method 'manual' is the hand-typed value of PRD FR-11.10. rate_diff_paisa can be negative.
@@ -602,7 +622,13 @@ CREATE TABLE bikri_sales (
         OR laga_method = 'manual'),
     CHECK (buyer_total_paisa = buyer_value_paisa + buyer_comm_paisa + laga_paisa),
     CHECK (rate_diff_paisa = buyer_value_paisa - seller_amount_paisa),
-    CHECK (replaced_by_sale_id IS NULL OR is_active = 0)
+    CHECK (replaced_by_sale_id IS NULL OR is_active = 0),
+    CHECK (replaced_by_sale_id IS NULL OR replaced_by_sale_id <> id),
+    CHECK (weight_grams IS NOT NULL OR seller_amount_paisa = qty * seller_rate_paisa),
+    CHECK (weight_grams IS NOT NULL OR buyer_value_paisa = qty * buyer_rate_paisa),
+    CHECK (seller_comm_method <> 'per_unit' OR seller_comm_paisa = seller_comm_value_paisa * qty),
+    CHECK (buyer_comm_method <> 'per_unit' OR buyer_comm_paisa = buyer_comm_value_paisa * qty),
+    CHECK (laga_method <> 'per_unit' OR laga_paisa = laga_value_paisa * qty)
 ) STRICT;
 
 -- Architecture 15.6. Append-only (B17). qty is signed. journal_entry_id is NULL for write-offs.
@@ -652,7 +678,7 @@ CREATE TABLE analytics_facts (
     CHECK (year = CAST(substr(entry_date, 1, 4) AS INTEGER) AND month = CAST(substr(entry_date, 6, 2) AS INTEGER))
 ) STRICT;
 
--- Architecture 15.7. Bank and cheque rules: PRD 15.1. A cancel needs a reason.
+-- Architecture 15.7 (v1.2). Bank and cheque rules: PRD 15.1. Partner money taken and returned: PRD 16.3. Money lent: PRD 16.5. A cancel needs a reason.
 CREATE TABLE vouchers (
     id INTEGER PRIMARY KEY,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -660,13 +686,13 @@ CREATE TABLE vouchers (
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_by INTEGER,
     version INTEGER NOT NULL DEFAULT 1,
-    type TEXT NOT NULL CHECK (type IN ('receipt', 'payment', 'advance', 'shop_expense', 'personal_expense', 'general')),
+    type TEXT NOT NULL CHECK (type IN ('receipt', 'payment', 'advance', 'shop_expense', 'personal_expense', 'personal_return', 'money_lent', 'money_lent_return', 'general')),
     number INTEGER NOT NULL CHECK (number > 0),
     entry_date TEXT NOT NULL CHECK (date(entry_date) IS entry_date),
     account_id INTEGER REFERENCES accounts(id),
     pukhta_person_key TEXT,
     amount_paisa INTEGER NOT NULL CHECK (amount_paisa > 0) CHECK (amount_paisa % 100 = 0),
-    mode TEXT NOT NULL DEFAULT 'cash' CHECK (mode IN ('cash', 'bank', 'cheque')),
+    mode TEXT NOT NULL DEFAULT 'cash' CHECK (mode IN ('cash', 'bank', 'cheque', 'salary')),
     bank_account_id INTEGER REFERENCES bank_accounts(id),
     cheque_no TEXT,
     cheque_date TEXT CHECK (date(cheque_date) IS cheque_date),
@@ -674,12 +700,25 @@ CREATE TABLE vouchers (
     partner_id INTEGER REFERENCES partners(id),
     expense_head_id INTEGER REFERENCES expense_heads(id),
     expected_goods TEXT,
+    reason TEXT,
+    return_by_date TEXT CHECK (date(return_by_date) IS return_by_date),
+    taken_by TEXT,
     narration TEXT,
     status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('saved', 'cancelled')),
     cancel_reason TEXT,
     current_entry_id INTEGER REFERENCES journal_entries(id),
     UNIQUE (type, number),
-    CHECK (mode = 'cash' OR bank_account_id IS NOT NULL),
+    CHECK (mode IN ('cash', 'salary') OR bank_account_id IS NOT NULL),
+    -- Only the three screens of PRD 15 take a cheque. Expenses, money taken and money lent offer cash and bank (PRD 16.2, 16.3, 16.5).
+    CHECK (mode <> 'cheque' OR type IN ('receipt', 'payment', 'advance')),
+    -- A salary deduction moves no cash and no bank money. It names the salary head (PRD FR-16.4).
+    CHECK (mode <> 'salary' OR (type = 'money_lent_return' AND bank_account_id IS NULL AND expense_head_id IS NOT NULL)),
+    -- A reason is required for a partner's money taken and for money lent (PRD FR-16.2, FR-16.4).
+    -- A payment to a buyer also needs one (PRD FR-15.11): see the trigger vouchers_payment_to_buyer_needs_reason.
+    CHECK (type NOT IN ('personal_expense', 'money_lent') OR (reason IS NOT NULL AND length(trim(reason)) > 0)),
+    CHECK (return_by_date IS NULL OR type IN ('personal_expense', 'money_lent')),
+    CHECK (taken_by IS NULL OR (type = 'personal_expense' AND length(trim(taken_by)) > 0)),
+    CHECK (type NOT IN ('personal_expense', 'personal_return') OR partner_id IS NOT NULL),
     CHECK (mode <> 'cheque' OR (cheque_no IS NOT NULL AND cheque_date IS NOT NULL)),
     CHECK (status <> 'cancelled' OR (cancel_reason IS NOT NULL AND length(trim(cancel_reason)) > 0))
 ) STRICT;
@@ -693,7 +732,7 @@ CREATE TABLE journal_entries (
     updated_by INTEGER,
     version INTEGER NOT NULL DEFAULT 1,
     entry_date TEXT NOT NULL CHECK (date(entry_date) IS entry_date),
-    posting_type TEXT NOT NULL CHECK (posting_type IN ('bikri_first', 'bikri_later', 'reversal', 'receipt', 'payment', 'advance', 'shop_expense', 'personal_expense', 'general', 'opening', 'month_close')),
+    posting_type TEXT NOT NULL CHECK (posting_type IN ('bikri_first', 'bikri_later', 'reversal', 'receipt', 'payment', 'advance', 'shop_expense', 'personal_expense', 'personal_return', 'money_lent', 'money_lent_return', 'general', 'opening', 'month_close')),
     source_type TEXT NOT NULL CHECK (source_type IN ('bikri', 'voucher', 'account', 'month_close')),
     source_id INTEGER NOT NULL,
     reverses_entry_id INTEGER REFERENCES journal_entries(id),
@@ -831,7 +870,7 @@ CREATE INDEX idx_charge_rules_item ON charge_rules (item_id);
 CREATE INDEX idx_account_controls_head ON account_controls (head_id);
 CREATE INDEX idx_items_packing ON items (default_packing_id);
 CREATE INDEX idx_addas_city ON addas (city_id);
-CREATE INDEX idx_markas_code ON markas (code);
+CREATE UNIQUE INDEX idx_markas_code ON markas (code);
 CREATE INDEX idx_markas_owner ON markas (owner_account_id);
 CREATE INDEX idx_expense_heads_account ON expense_heads (account_id);
 CREATE INDEX idx_bank_accounts_account ON bank_accounts (account_id);
@@ -848,6 +887,7 @@ CREATE INDEX idx_vouchers_collector ON vouchers (collector_staff_id);
 CREATE INDEX idx_vouchers_partner ON vouchers (partner_id);
 CREATE INDEX idx_vouchers_expense_head ON vouchers (expense_head_id);
 CREATE INDEX idx_vouchers_current_entry ON vouchers (current_entry_id);
+CREATE UNIQUE INDEX idx_staff_account ON staff (account_id) WHERE account_id IS NOT NULL;
 CREATE INDEX idx_users_partner ON users (partner_id);
 CREATE INDEX idx_audit_log_entity ON audit_log (entity, entity_id);
 CREATE INDEX idx_audit_log_user ON audit_log (user_id);
@@ -863,27 +903,27 @@ CREATE INDEX idx_accounts_search_phonetic ON accounts (search_phonetic);
 CREATE INDEX idx_cities_search_ur ON cities (search_ur);
 CREATE INDEX idx_cities_search_en ON cities (search_en);
 CREATE INDEX idx_cities_search_phonetic ON cities (search_phonetic);
-CREATE INDEX idx_cities_code ON cities (code);
+CREATE UNIQUE INDEX idx_cities_code ON cities (code);
 CREATE INDEX idx_items_search_ur ON items (search_ur);
 CREATE INDEX idx_items_search_en ON items (search_en);
 CREATE INDEX idx_items_search_phonetic ON items (search_phonetic);
-CREATE INDEX idx_items_code ON items (code);
+CREATE UNIQUE INDEX idx_items_code ON items (code);
 CREATE INDEX idx_packings_search_ur ON packings (search_ur);
 CREATE INDEX idx_packings_search_en ON packings (search_en);
 CREATE INDEX idx_packings_search_phonetic ON packings (search_phonetic);
-CREATE INDEX idx_packings_code ON packings (code);
+CREATE UNIQUE INDEX idx_packings_code ON packings (code);
 CREATE INDEX idx_addas_search_ur ON addas (search_ur);
 CREATE INDEX idx_addas_search_en ON addas (search_en);
 CREATE INDEX idx_addas_search_phonetic ON addas (search_phonetic);
-CREATE INDEX idx_addas_code ON addas (code);
+CREATE UNIQUE INDEX idx_addas_code ON addas (code);
 CREATE INDEX idx_stores_search_ur ON stores (search_ur);
 CREATE INDEX idx_stores_search_en ON stores (search_en);
 CREATE INDEX idx_stores_search_phonetic ON stores (search_phonetic);
-CREATE INDEX idx_stores_code ON stores (code);
+CREATE UNIQUE INDEX idx_stores_code ON stores (code);
 CREATE INDEX idx_expense_heads_search_ur ON expense_heads (search_ur);
 CREATE INDEX idx_expense_heads_search_en ON expense_heads (search_en);
 CREATE INDEX idx_expense_heads_search_phonetic ON expense_heads (search_phonetic);
-CREATE INDEX idx_expense_heads_code ON expense_heads (code);
+CREATE UNIQUE INDEX idx_expense_heads_code ON expense_heads (code);
 CREATE INDEX idx_staff_search_ur ON staff (search_ur);
 CREATE INDEX idx_staff_search_en ON staff (search_en);
 CREATE INDEX idx_staff_search_phonetic ON staff (search_phonetic);
@@ -1032,11 +1072,23 @@ WHEN NOT EXISTS (SELECT 1 FROM journal_lines b WHERE b.id = NEW.bill_line_id AND
   OR NOT EXISTS (SELECT 1 FROM journal_lines p WHERE p.id = NEW.payment_line_id AND p.cr_paisa > 0
                    AND p.account_id = NEW.account_id AND p.pukhta_person_key IS NEW.pukhta_person_key)
 BEGIN SELECT RAISE(ABORT, 'ERR_ALLOCATION_LINES'); END;
+-- The credit that adjusts an advance is a credit on a seller account that comes from a بکری
+-- posting or from the seller's own receipt (Architecture 15.7, PRD FR-15.8, FR-15.12). A
+-- reversal, a payment, a جنرل entry or an opening credit never adjusts an advance. (PRD 16.4
+-- says جنرل lines on seller accounts take part in matching; Architecture 15.7 and the money
+-- agent 8.2 do not list them. The narrower rule is built until Umar decides.) Whether the lot
+-- has adjust_advance = 1 (PRD FR-12.23) is a service rule: a journal line does not name its lot.
+-- The advance line must itself be a real advance: see the trigger journal_lines_advance_flag.
 CREATE TRIGGER advance_allocations_lines_match BEFORE INSERT ON advance_allocations
 WHEN NOT EXISTS (SELECT 1 FROM journal_lines a WHERE a.id = NEW.advance_line_id AND a.dr_paisa > 0 AND a.is_advance = 1
                    AND a.account_id = NEW.account_id AND a.pukhta_person_key IS NEW.pukhta_person_key)
-  OR NOT EXISTS (SELECT 1 FROM journal_lines c WHERE c.id = NEW.credit_line_id AND c.cr_paisa > 0
-                   AND c.account_id = NEW.account_id AND c.pukhta_person_key IS NEW.pukhta_person_key)
+  OR NOT EXISTS (SELECT 1 FROM journal_lines c
+                   JOIN journal_entries e ON e.id = c.entry_id
+                   JOIN accounts s ON s.id = c.account_id
+                   WHERE c.id = NEW.credit_line_id AND c.cr_paisa > 0
+                     AND c.account_id = NEW.account_id AND c.pukhta_person_key IS NEW.pukhta_person_key
+                     AND s.party_type = 'seller'
+                     AND e.posting_type IN ('bikri_first', 'bikri_later', 'receipt'))
 BEGIN SELECT RAISE(ABORT, 'ERR_ALLOCATION_LINES'); END;
 
 -- The active allocations of a line never add up to more than the line (B-1 of the money review).
@@ -1052,6 +1104,35 @@ WHEN (SELECT COALESCE(SUM(amount_paisa), 0) FROM advance_allocations WHERE advan
   OR (SELECT COALESCE(SUM(amount_paisa), 0) FROM advance_allocations WHERE credit_line_id = NEW.credit_line_id AND is_active = 1) + NEW.amount_paisa
        > (SELECT cr_paisa FROM journal_lines WHERE id = NEW.credit_line_id)
 BEGIN SELECT RAISE(ABORT, 'ERR_ALLOCATION_AMOUNT'); END;
+
+-- Only an advance voucher or the opening debit of a seller can be an advance (PRD FR-15.8; a
+-- payment is never an advance, E2E-28). The flag is set when the line is made and never changes.
+CREATE TRIGGER journal_lines_advance_flag BEFORE INSERT ON journal_lines
+WHEN NEW.is_advance = 1
+  AND (NOT EXISTS (SELECT 1 FROM journal_entries e WHERE e.id = NEW.entry_id AND e.posting_type IN ('advance', 'opening'))
+       OR NOT EXISTS (SELECT 1 FROM accounts a WHERE a.id = NEW.account_id AND a.party_type = 'seller'))
+BEGIN SELECT RAISE(ABORT, 'ERR_ADVANCE_FLAG'); END;
+
+-- A payment to a buyer is cash lent to him and needs a reason (PRD FR-15.11, E2E-32). The CHECK
+-- of the table cannot see the account, so a trigger does, on insert and on update.
+CREATE TRIGGER vouchers_payment_to_buyer_needs_reason BEFORE INSERT ON vouchers
+WHEN NEW.type = 'payment' AND NEW.account_id IS NOT NULL AND (NEW.reason IS NULL OR length(trim(NEW.reason)) = 0)
+  AND EXISTS (SELECT 1 FROM accounts a WHERE a.id = NEW.account_id AND a.party_type = 'buyer')
+BEGIN SELECT RAISE(ABORT, 'ERR_REASON_REQUIRED'); END;
+CREATE TRIGGER vouchers_payment_to_buyer_needs_reason_update BEFORE UPDATE OF type, account_id, reason ON vouchers
+WHEN NEW.type = 'payment' AND NEW.account_id IS NOT NULL AND (NEW.reason IS NULL OR length(trim(NEW.reason)) = 0)
+  AND EXISTS (SELECT 1 FROM accounts a WHERE a.id = NEW.account_id AND a.party_type = 'buyer')
+BEGIN SELECT RAISE(ABORT, 'ERR_REASON_REQUIRED'); END;
+
+-- The person of money lent has his account under control 0103 (PRD FR-10.4 v1.2, FR-16.4).
+CREATE TRIGGER vouchers_money_lent_account_is_0103 BEFORE INSERT ON vouchers
+WHEN NEW.type IN ('money_lent', 'money_lent_return')
+  AND NOT EXISTS (SELECT 1 FROM accounts a JOIN account_controls c ON c.id = a.control_id WHERE a.id = NEW.account_id AND c.code = '0103')
+BEGIN SELECT RAISE(ABORT, 'ERR_MONEY_LENT_ACCOUNT'); END;
+CREATE TRIGGER vouchers_money_lent_account_is_0103_update BEFORE UPDATE OF type, account_id ON vouchers
+WHEN NEW.type IN ('money_lent', 'money_lent_return')
+  AND NOT EXISTS (SELECT 1 FROM accounts a JOIN account_controls c ON c.id = a.control_id WHERE a.id = NEW.account_id AND c.code = '0103')
+BEGIN SELECT RAISE(ABORT, 'ERR_MONEY_LENT_ACCOUNT'); END;
 
 -- A saved sale line keeps its stored values (PRD FR-11.6). An edit replaces the line: the old
 -- one only gets is_active = 0 and replaced_by_sale_id (PRD FR-12.19).

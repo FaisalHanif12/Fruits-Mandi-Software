@@ -14,7 +14,7 @@ Until D1-Q1 is answered, plan file 01 builds the suite without visual comparison
 
 ## 1. What Umar can do at the end
 
-He downloads the installer from the GitHub Releases page and installs it on a Windows computer with no internet. The app opens in under 2 seconds. The first-run wizard, in Urdu, asks for the firm details and the Owner password, then shows the recovery code to print. He logs in. He sees the dashboard with a friendly empty state, the main menu on the right, the top bar, and the status bar. He presses `Alt+L`: everything turns to English and mirrors to the left, instantly. He moves through every menu with the arrow keys only. He adds a Munshi user in Settings. Five wrong passwords lock the login for one minute, and the audit log shows every try.
+He downloads the installer from the GitHub Releases page and installs it on a Windows computer with no internet. The app opens in under 2 seconds. The first-run wizard, in Urdu, asks for the firm details and the Owner password, then shows the recovery code to print. He logs in. He sees the dashboard with a friendly empty state, the main menu on the right, the top bar, and the status bar. He presses `Alt+L`: everything turns to English and mirrors to the left, instantly. He moves through every menu with the arrow keys only. Settings holds the firm details, the auto-lock time, the language and the text size. Five wrong passwords lock the login for one minute, and the audit log shows every try.
 
 Behind that: the repository, the checks, the release pipeline, the money core with its proofs, and the full database are in place.
 
@@ -109,17 +109,17 @@ The worked example in `README.md` Section 4 shows how the team runs the login pa
 
 **backend builds:**
 
-- Users and roles: Owner, Munshi, Partner. The role check is the first line of every command (NFR-SEC-4). One user logged in at a time (FR-2.3).
-- Login: Argon2id (NFR-SEC-1), the lockout steps of FR-8.2, idle lock after 15 minutes as a setting (FR-8.4), Owner resets passwords, recovery code at first setup (FR-8.5), audit rows for every login, failed login and logout (FR-8.6).
+- One user: the Owner, made by the first-run wizard (Umar, 11-10-2026: only the Owner uses the app, so there are no user or role screens and no add-user commands). Every command except first run, sign-in, recovery, app info and data status needs the signed-in Owner (the check is the first line of every command, NFR-SEC-4). The database keeps its `users` table and role column. One user logged in at a time (FR-2.3).
+- Login: Argon2id (NFR-SEC-1), the lockout steps of FR-8.2, idle lock after 15 minutes as a setting (FR-8.4), the recovery code printed at first setup is the way back in (FR-8.5), audit rows for every login, failed login and logout (FR-8.6).
 - First-run setup: firm details, Owner account, recovery code. The wizard has room for the partners step (added in D3) and the backup key step (added in D5).
-- Settings commands for firm details, users, idle lock minutes, default language and text size.
+- Settings commands for firm details, idle lock minutes, default language and text size.
 - The "closed up to" date and today's day status, read for the status bar.
 
 **frontend builds:**
 
 - The rest of the design system in `shared/` (tokens and base components were started in 02): bundled fonts (Nastaliq for Urdu, Inter for English and numbers, Noto Naskh Arabic for Urdu digits; NFR-URD-9, NFR-URD-27), `Num`, `Code`, buttons that show their key (FR-7.4), success toasts (FR-7.7), the confirm dialog (FR-7.8), the "save changes?" prompt (FR-7.9), field errors (FR-7.6), empty states, and text size with `Ctrl +` and `Ctrl −` (FR-7.11, NFR-USE-18).
 - `shared/keyboard` and `shared/grid`: the arrow-key rules of FR-7.13 to FR-7.20 and the keys of PRD 7.3, in both directions. The grid is proven on a development-only page (not in the shipped build), with the `entry-grid` skill. Every later grid uses it.
-- The login screen with the language switch (FR-7.30), the first-run wizard, the shell (main menu on the start side, top bar with the search box and bell as placeholders, status bar), the بکری side menu frame (FR-5.3) with its items leading to "coming soon" empty states, the dashboard empty state, and Settings for firm, users, idle lock, language and text size.
+- The login screen with the language switch (FR-7.30), the first-run wizard, the shell (main menu on the start side, top bar with the search box and bell as placeholders, status bar), the بکری side menu frame (FR-5.3) with its items leading to "coming soon" empty states, the dashboard empty state, and Settings for firm, idle lock, language and text size.
 - The language switch on every screen: instant, no reload, nothing typed is lost, keys follow the screen direction (FR-7.31 to FR-7.34).
 
 **robustness** measures cold start, login to dashboard, screen open, arrow-key move and language switch through the E2E suite (NFR-SPD-1 to NFR-SPD-3, NFR-SPD-5, NFR-SPD-19).
@@ -133,7 +133,7 @@ Right after 01 is merged, the lead runs `/design` with the brief in `README.md` 
 1. Login, with the language switch and the lockout message.
 2. First-run wizard: firm details, Owner password, recovery code.
 3. App shell with the empty dashboard.
-4. Settings: users list and the add-user form.
+4. Settings: firm details, auto lock, language and text size.
 5. A sample entry form and a sample entry grid, to fix the look of every later form and grid.
 
 The lead writes `docs/design/design-system.md` from the canvas: colours and their one meaning each, type scale for Nastaliq and Inter, spacing grid, focus outline, button styles with their key labels, form field states, grid row heights (Nastaliq line height at least 1.8), toasts and dialogs. `frontend` builds the tokens and components from it before any screen.
@@ -159,7 +159,7 @@ The lead writes `docs/design/design-system.md` from the canvas: colours and thei
 1. Money core: property tests with extreme values (0, 1 rupee, `i64` limits); an overflow returns an error, never wraps or panics. Malformed text inputs from Code Standards 4.2 (decimals, `1,00,0`, Urdu digits, spaces, signs, empty).
 2. Login: 1,000 wrong passwords in a row; a 10,000-character password; Urdu letters in the password; the clock moved back during a lockout (NFR-REL-11); the app killed during login.
 3. Database: the app killed during a migration, then restarted (the copy is restored or the migration resumes cleanly); a full disk before a save (NFR-REL-10); a corrupted data file at start-up (NFR-REL-7 shows a clear message, never a crash).
-4. Security: try to call a command that is not in the capability file from the frontend; try a command with a lower role; check the log for passwords or keys; check the CSP blocks a remote script.
+4. Security: try to call a command that is not in the capability file from the frontend; call a command before signing in; check the log for passwords or keys; check the CSP blocks a remote script.
 5. Speed on the Windows runner: NFR-SPD-1, NFR-SPD-2, NFR-SPD-3, NFR-SPD-5 and NFR-SPD-19. Report each measured value against its runner threshold and its NFR target.
 6. Two copies of the app (NFR-REL-9). Running all day: open and switch screens for 30 minutes in a loop and watch memory (NFR-SPD-16).
 
@@ -179,7 +179,7 @@ The lead writes `docs/design/design-system.md` from the canvas: colours and thei
 | D1-A10 | Seeded accounts match FR-10.4 row for row | Test output |
 | D1-A11 | Audit rows for login, failed login and logout, with a keyed hash; an edited row is detected | Test output |
 | D1-A12 | FR-8.1 to FR-8.6 pass: lockout steps, idle lock keeps unsaved work, recovery code reset | Integration test output |
-| D1-A13 | Every command refuses a lower role and writes nothing | Role test output |
+| D1-A13 | Before sign-in, every command except first run, sign-in, recovery, app info and data status refuses with `ERR_NOT_LOGGED_IN` (or `ERR_SESSION_LOCKED` while locked) and writes nothing | Test output |
 | D1-A14 | First-run wizard and the D1 story of Section 1 pass by keyboard only, in Urdu and English, on Windows | Windows E2E names and results |
 | D1-A15 | Runner factor recorded; NFR-SPD-1, NFR-SPD-2, NFR-SPD-3, NFR-SPD-5 and NFR-SPD-19 met at their runner thresholds (README Section 6) | `scripts/perf/README.md`; E2E timings against each threshold |
 | D1-A16 | Design system written; screenshots in both languages at the three sizes match it; contrast check passes (NFR-USE-21); Urdu renders with no broken letters (NFR-URD-10) | Canvas link, screenshot file names, contrast check output, `windows-verify` report |

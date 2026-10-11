@@ -10,6 +10,8 @@ pub const ALPHABET: &[u8; 30] = b"ABCDEFGHJKMNPQRSTVWXYZ23456789";
 pub const CODE_CHARS: usize = 16;
 /// Characters in each group of the shown code.
 pub const GROUP_CHARS: usize = 4;
+/// The longest typed code read, in bytes (16 characters, dashes, spaces and some slack).
+const MAX_TYPED_BYTES: usize = 128;
 /// Random bytes under this limit are used; the others are skipped, so every letter is equally
 /// likely (240 = 8 x 30).
 const ACCEPT_BELOW: u8 = 240;
@@ -60,6 +62,10 @@ pub fn format_code(raw: &str) -> String {
 /// assert_eq!(normalize("ABCD-EFGH-JKMN-PQR0"), None); // 0 is not in the alphabet
 /// ```
 pub fn normalize(input: &str) -> Option<String> {
+    // A real code, with dashes and spaces, is far shorter. Refuse a huge text before reading it.
+    if input.len() > MAX_TYPED_BYTES {
+        return None;
+    }
     let cleaned: String = input
         .chars()
         .filter(|c| !c.is_whitespace() && *c != '-')
@@ -129,6 +135,15 @@ mod tests {
         ] {
             assert_eq!(normalize(bad), None, "{bad}");
         }
+    }
+
+    #[test]
+    fn a_huge_text_is_refused_not_read() {
+        assert_eq!(normalize(&"A".repeat(1_000_000)), None);
+        assert_eq!(
+            normalize(&format!("{}ABCD-EFGH-JKMN-PQRS", " ".repeat(200))),
+            None
+        );
     }
 
     #[test]

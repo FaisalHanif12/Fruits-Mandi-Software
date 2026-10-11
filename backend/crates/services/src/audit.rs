@@ -39,12 +39,6 @@ impl Event {
         self
     }
 
-    /// Why.
-    pub fn reason(mut self, text: &str) -> Self {
-        self.0.reason = Some(text.to_owned());
-        self
-    }
-
     pub fn into_entry(self) -> AuditEntry {
         self.0
     }

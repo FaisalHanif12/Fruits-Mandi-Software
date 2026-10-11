@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-accounts-similar"
+description = "Enables the accounts_similar command without any pre-configured scope."
+commands.allow = ["accounts_similar"]
+
+[[permission]]
+identifier = "deny-accounts-similar"
+description = "Denies the accounts_similar command without any pre-configured scope."
+commands.deny = ["accounts_similar"]

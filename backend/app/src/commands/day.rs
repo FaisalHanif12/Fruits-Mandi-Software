@@ -3,7 +3,9 @@
 use serde::Serialize;
 use ts_rs::TS;
 
-use super::not_implemented;
+use mandi_services::{auth, day};
+
+use super::run;
 use crate::error::UiError;
 
 /// Today and the closed-up-to date.
@@ -17,10 +19,17 @@ pub struct DayStatus {
     pub today_open: bool,
 }
 
-/// Today and the day state. Any signed-in user.
+/// Today and the day state.
 #[tauri::command]
-pub async fn day_status<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-) -> Result<DayStatus, UiError> {
-    not_implemented()
+pub async fn day_status<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<DayStatus, UiError> {
+    run(app, "day_status", |ctx| {
+        auth::require(ctx)?;
+        let info = day::status(ctx)?;
+        Ok(DayStatus {
+            today: info.today,
+            closed_up_to: info.closed_up_to,
+            today_open: info.today_open,
+        })
+    })
+    .await
 }

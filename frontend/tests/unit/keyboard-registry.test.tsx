@@ -41,6 +41,7 @@ const PRD_KEYS: readonly (readonly [keyof typeof SHORTCUTS, string])[] = [
   ['newPayment', 'Alt+A'],
   ['newAdvance', 'Alt+P'],
   ['newExpense', 'Alt+K'],
+  ['confirm', 'Enter'],
   ['back', 'Esc'],
   ['openList', 'Alt+↓'],
   ['dateNextDay', '+'],

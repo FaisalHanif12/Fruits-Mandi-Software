@@ -82,3 +82,27 @@ layout-save-description = اس صفحے پر ایسی تبدیلیاں ہیں ج
 layout-save-leave = محفوظ کیے بغیر جائیں
 # review: pending
 layout-save-save = محفوظ کریں
+
+## User menu and start-up.
+
+# review: pending
+layout-user-lock = ایپ لاک کریں
+
+# review: pending
+layout-user-signout = لاگ آؤٹ
+
+# review: pending
+layout-loading-session = ایپ کھل رہی ہے…
+# review: pending
+layout-loading-failed = ایپ نہیں کھل سکی
+
+## The search box of the top bar (plan 08, PRD FR-5.4).
+
+# review: pending
+layout-search-results = تلاش کے نتائج
+# review: pending
+layout-search-searching = تلاش جاری ہے…
+# review: pending
+layout-search-none = کوئی کھاتہ نہیں ملا۔
+# review: pending
+layout-search-failed = تلاش نہیں ہو سکی۔

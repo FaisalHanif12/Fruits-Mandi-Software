@@ -36,6 +36,19 @@
   --topbar-h: 60px;
   --statusbar-h: 32px;
 
+  /* Room inside an Urdu typing field for the mode badge, and for the badge plus the key-map
+     button (plan 05). The badge sits at the start of the field, the text after it. */
+  --field-badge-w: 80px;
+  --field-badge-keys-w: 128px;
+
+  /* The list under a picker (plan 06): one row is two lines, so Nastaliq fits; five rows show. */
+  --picker-row-h: 72px;
+  --picker-list-h: 360px;
+
+  /* The chart tree always shows at least eight rows (plan 07). */
+  --tree-min-h: 360px;
+  --tree-view-h: 60vh;
+
   /* Focus outline, always visible (design system 5, NFR-USE-22). */
   --focus-width: 3px;
   --focus-offset: 2px;
@@ -46,6 +59,10 @@
   /* Layout steps (design system 4, Code Standards F22): compact 1024 to 1365 px, normal 1366
      to 1919, wide 1920 and up, where the content stops at 1600 px and is centred. */
   --page-max-w: 1600px;
+
+  /* The width of a form screen (a master's form) and of a short field in it, such as a code. */
+  --form-max-w: 960px;
+  --field-short-w: 320px;
 
   /* Toast and dialog sizes (UsersEn, FormEn boards). */
   --toast-max-w: 480px;
@@ -134,6 +151,12 @@
   --spacing-module-menu: var(--module-menu-w);
   --spacing-topbar: var(--topbar-h);
   --spacing-statusbar: var(--statusbar-h);
+  --spacing-field-badge: var(--field-badge-w);
+  --spacing-field-badge-keys: var(--field-badge-keys-w);
+  --spacing-picker-row: var(--picker-row-h);
+  --spacing-picker-list: var(--picker-list-h);
+  --spacing-tree: var(--tree-min-h);
+  --spacing-tree-view: var(--tree-view-h);
 
   /* Icon sizes (Code Standards F13): 16 in grids and field messages, 20 in buttons and
      toasts, 26 inside the round badge of the empty and error states, badge 56. */
@@ -174,6 +197,8 @@
   --container-page: var(--page-max-w);
   --container-dialog: var(--dialog-w);
   --container-toast: var(--toast-max-w);
+  --container-form: var(--form-max-w);
+  --container-field: var(--field-short-w);
 }
 
 /*

@@ -1,0 +1,27 @@
+# Floors for the accuracy test (tests/translit_accuracy.rs). One `key = percent` per line.
+#
+# *_outside_top3: the share of names with at least one word outside the word list (so the spelling
+# rules alone must make that word) for which the right Urdu spelling is among the three
+# suggestions. NFR-URD-24 v1.2: this rate is reported on every build and must not drop below the
+# value here. The build fails if it does.
+# *_in_list_*, frozen_english: floors for names whose words are all in the list and for the
+# English suggestion (NFR-URD-25). They are NOT the NFR gates; the gates are the ignored test.
+#
+# Measured on 12-10-2026 with the 12,942-entry word list (8,212 known entries) after the Indian
+# Wikidata people sets were taken out (lead decision). Several numbers are LOWER than the first
+# baseline (for example frozen_outside_top3 61.4 -> 47.0). That is not a worse engine: the names
+# with a word the list lacks are now 300, not 270, because the words the Indian rows had made
+# known are unknown again, and unknown words are the hard ones. The in-list numbers went up.
+#
+# Raise a number when the rules or the list get better. Never lower one to make a change pass:
+# a lower number means the suggestions got worse and the change must be fixed.
+frozen_outside_top3 = 47.0
+holdout_outside_top3 = 37.9
+dev_outside_top3 = 60.9
+frozen_in_list_top1 = 92.0
+frozen_in_list_top3 = 95.4
+frozen_english = 72.2
+holdout_in_list_top1 = 82.7
+holdout_in_list_top3 = 89.3
+dev_in_list_top1 = 95.4
+dev_in_list_top3 = 98.1

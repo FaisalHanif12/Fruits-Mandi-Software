@@ -19,7 +19,7 @@ export {
 export { arrowSide, elementDirection, intoScreenSide, menuSide, type Side } from './direction';
 export { focusRegion, registerFocusRegion, useFocusRegion, type FocusRegion } from './focusRegions';
 export { pickNeighbour, shouldLeaveField, type Box, type Move } from './fieldNavigation';
-export { formNavigationProps, useFormNavigation } from './formNavigation';
+export { focusNextField, formNavigationProps, useFormNavigation } from './formNavigation';
 export {
   DEFAULT_PAGE_SIZE,
   moveIndex,

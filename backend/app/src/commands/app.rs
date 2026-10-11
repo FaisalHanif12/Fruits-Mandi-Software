@@ -27,14 +27,14 @@ impl AppInfo {
     }
 }
 
-/// Returns the app version and identifier. Needs no role: it is shown before login.
+/// Returns the app version and identifier. Needs no sign-in: it is shown before login.
 #[tauri::command]
 pub fn app_info<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<AppInfo, UiError> {
     Ok(AppInfo::from_config(app.package_info(), app.config()))
 }
 
 /// Tells the start screen whether the data file passed its start-up check (plan 03 Section
-/// 4.2b, NFR-REL-7). Needs no role: it is asked before login. It never waits for the check.
+/// 4.2b, NFR-REL-7). Needs no sign-in: it is asked before login. It never waits for the check.
 #[tauri::command]
 pub fn app_data_status(state: tauri::State<'_, AppState>) -> Result<DataStatus, UiError> {
     guard("app_data_status", || Ok(state.data_status()))

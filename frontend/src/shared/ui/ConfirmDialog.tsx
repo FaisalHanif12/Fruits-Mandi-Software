@@ -25,6 +25,12 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   tone?: ConfirmTone;
   confirmShortcut?: Shortcut;
+  /**
+   * Called when the dialog has closed and focus is about to go back to where it was. A screen that
+   * wants focus somewhere else (for example the field to fix) moves it there and calls
+   * `event.preventDefault()`, so the default return does not take it back.
+   */
+  onCloseFocus?: ((event: Event) => void) | undefined;
 }
 
 export function ConfirmDialog({
@@ -36,6 +42,7 @@ export function ConfirmDialog({
   onConfirm,
   tone = 'primary',
   confirmShortcut,
+  onCloseFocus,
 }: ConfirmDialogProps) {
   const { language, direction } = useUiLanguage();
   const backRef = useRef<HTMLButtonElement>(null);
@@ -55,6 +62,8 @@ export function ConfirmDialog({
             (tone === 'danger' ? backRef : confirmRef).current?.focus();
           }}
           onCloseAutoFocus={(event) => {
+            onCloseFocus?.(event);
+            if (event.defaultPrevented) return;
             const target = returnFocusRef.current;
             if (!target?.isConnected) return;
             event.preventDefault();

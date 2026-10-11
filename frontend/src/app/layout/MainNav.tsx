@@ -51,11 +51,9 @@ export const MAIN_NAV: readonly NavEntry[] = [
 interface MainNavProps {
   current: MainNavId;
   onSelect: (id: MainNavId) => void;
-  /** Items the user's role cannot open, for example settings for a Munshi (PRD FR-2.4). */
-  hidden?: readonly MainNavId[];
 }
 
-export function MainNav({ current, onSelect, hidden = [] }: MainNavProps) {
+export function MainNav({ current, onSelect }: MainNavProps) {
   const { l10n } = useLocalization();
   const region = useFocusRegion<HTMLElement>('menu');
   const onKeyDown = useRovingKeys({ isMenu: true });
@@ -69,7 +67,7 @@ export function MainNav({ current, onSelect, hidden = [] }: MainNavProps) {
       <p className="type-section hidden px-3 pb-3 text-on-primary normal:block">
         {l10n.getString('common-app-name')}
       </p>
-      {MAIN_NAV.filter((entry) => !hidden.includes(entry.id)).map(({ id, labelId, icon: Icon }) => {
+      {MAIN_NAV.map(({ id, labelId, icon: Icon }) => {
         const label = l10n.getString(labelId);
         const isCurrent = id === current;
         return (

@@ -1,0 +1,1003 @@
+# Frozen test list for NFR-URD-24 and NFR-URD-25 (plan 05). Do not tune the engine to it.
+# Columns (tab separated): typed English letters, correct Urdu (alternatives with |), accepted English names (alternatives with |)
+# Composed from hand-written word pools (given names, surnames, places, items, firm words) that were written separately from the seed word list. The test works out which names hold a word the seed lacks.
+pervaiz	پرویز	Pervaiz|Parvez|Pervez
+asmatullah	عصمت اللہ	Asmatullah|Ismatullah
+wahaj	وہاج	Wahaj
+amaan	امان	Amaan|Aman
+zaman	زمان	Zaman
+gulfam	گلفام	Gulfam
+sanaullah	ثناء اللہ	Sanaullah|Sana Ullah
+bilawal	بلاول	Bilawal|Bilaval
+ajmal	اجمل	Ajmal
+shehla	شہلا	Shehla|Shahla
+ehtisham	احتشام	Ehtisham|Ihtisham|Ehtesham
+shehnaz	شہناز	Shehnaz|Shahnaz
+nadir	نادر	Nadir|Nader
+adnan	عدنان	Adnan
+tameez	تمیز	Tameez
+zarar	ضرار	Zarar|Zirar
+jamaluddin	جمال الدین	Jamaluddin|Jamal Uddin
+rohaan	روحان	Rohaan|Ruhan
+tajammul	تجمل	Tajammul
+tehmoor	تیمور	Tehmoor|Taimoor|Taimur
+shafia	شافعہ	Shafia
+kaukab	کوکب	Kaukab|Kokab
+rahbar	رہبر	Rahbar|Rehbar
+habibullah	حبیب اللہ	Habibullah
+aimen	ایمن	Aimen|Aiman|Ayman
+erum	ارم	Erum|Irum
+mubin	مبین	Mubin|Mubeen
+fakhar	فخر	Fakhar|Fakhr
+zareen	زرین	Zareen|Zarin
+nehal	نہال	Nehal|Nihal
+raheel	راحیل	Raheel|Rahil
+yawar	یاور	Yawar|Yawer
+aiza	ایزہ	Aiza|Aizah
+ibad	عباد	Ibad
+ayyaz	ایاز	Ayyaz|Ayaz
+yusra	یسریٰ|یسری	Yusra|Usra
+jawad	جواد	Jawad|Jawwad
+wardah	وردہ	Wardah|Warda
+ikhlaq	اخلاق	Ikhlaq
+farrukh	فرخ	Farrukh|Farukh
+azaan	اذان	Azaan|Azan
+jamila	جمیلہ	Jamila|Jameela
+shafaat	شفاعت	Shafaat
+dilnasheen	دلنشین	Dilnasheen|Dilnashin
+rais	رئیس	Rais|Raees
+naheed	ناہید	Naheed|Nahid
+sanobar	صنوبر	Sanobar|Sanober
+karim	کریم	Karim|Kareem
+hamida	حمیدہ	Hamida|Hameeda
+misha	مشا	Misha
+subhan	سبحان	Subhan|Sobhan
+mutahir	مطہر	Mutahir|Mutahhir
+mavra	ماورا	Mavra|Mawra
+ramzan	رمضان	Ramzan|Ramadan
+akif	عاکف	Akif|Aakif
+iffat	عفت	Iffat
+wasay	واسع	Wasay|Wasae
+kifayat	کفایت	Kifayat
+gohar	گوہر	Gohar
+yameen	یامین	Yameen|Yamin
+ammar	عمار	Ammar|Amar
+ghous	غوث	Ghous|Ghaus
+madeeha	مدیحہ	Madeeha|Madiha
+jalal	جلال	Jalal
+hilal	ہلال	Hilal
+moeen	معین	Moeen|Moin|Mueen
+akhlaq	اخلاق	Akhlaq|Akhlaque
+jan	جان	Jan|Jaan
+rashad	رشاد	Rashad
+rustam	رستم	Rustam
+nizam cheema	نظام چیمہ	Nizam Cheema
+zarar niazi	ضرار نیازی	Zarar Niazi|Zirar Niazi
+rehana zehri	ریحانہ زہری	Rehana Zehri|Rihana Zehri
+hazoor zaidi	حضور زیدی	Hazoor Zaidi|Hazoor Zaydi|Huzoor Zaidi|Huzoor Zaydi
+shamsuddin qureshi	شمس الدین قریشی	Shamsuddin Qureshi|Shamsuddin Quraishi|Shams Uddin Qureshi|Shams Uddin Quraishi
+nadir durrani	نادر درانی	Nadir Durrani|Nader Durrani
+wahid zaidi	واحد زیدی	Wahid Zaidi|Wahid Zaydi|Waheed Zaidi|Waheed Zaydi
+hammad wattoo	حماد وٹو	Hammad Wattoo|Hammad Watto
+abid minhas	عابد منہاس	Abid Minhas|Aabid Minhas
+fouzia zaidi	فوزیہ زیدی	Fouzia Zaidi|Fouzia Zaydi|Fauzia Zaidi|Fauzia Zaydi|Fozia Zaidi|Fozia Zaydi
+falak jadoon	فلک جدون	Falak Jadoon
+bareera zaidi	بریرہ زیدی	Bareera Zaidi|Bareera Zaydi|Barira Zaidi|Barira Zaydi
+ashhad khosa	اشہد کھوسہ	Ashhad Khosa
+mehrunnisa jutt	مہرالنساء جٹ|مہر النساء جٹ	Mehrunnisa Jutt|Mehrunnisa Jat|Mehr Un Nisa Jutt|Mehr Un Nisa Jat
+jaffar soomro	جعفر سومرو	Jaffar Soomro|Jafar Soomro
+taufiq qureshi	توفیق قریشی	Taufiq Qureshi|Taufiq Quraishi|Tawfiq Qureshi|Tawfiq Quraishi|Taufeeq Qureshi|Taufeeq Quraishi
+sanaullah kakar	ثناء اللہ کاکڑ	Sanaullah Kakar|Sana Ullah Kakar
+shahrukh shirazi	شاہ رخ شیرازی	Shahrukh Shirazi|Sharukh Shirazi
+sharafat janjua	شرافت جنجوعہ	Sharafat Janjua
+fidaullah soomro	فدا اللہ سومرو	Fidaullah Soomro
+asjad lodhi	اسجد لودھی	Asjad Lodhi|Asjad Lodi
+kalsoom langah	کلثوم لنگاہ	Kalsoom Langah|Kalsoom Langaha|Kulsoom Langah|Kulsoom Langaha|Kalsum Langah|Kalsum Langaha
+zahir sheikh	ظاہر شیخ	Zahir Sheikh|Zahir Shaikh|Zahir Shaykh|Zaheer Sheikh|Zaheer Shaikh|Zaheer Shaykh
+hadayat mayo	ہدایت مایو	Hadayat Mayo|Hidayat Mayo
+afzaal mahar	افضال مہر	Afzaal Mahar|Afzaal Mehr|Afzal Mahar|Afzal Mehr
+afreen gabol	آفرین گبول	Afreen Gabol|Afrin Gabol
+hazrat afridi	حضرت آفریدی	Hazrat Afridi
+sahibzada hashmi	صاحبزادہ ہاشمی	Sahibzada Hashmi
+humaira gabol	حمیرا گبول	Humaira Gabol|Humera Gabol
+perwasha rathore	پروشا راٹھور	Perwasha Rathore|Perwasha Rathod|Parwasha Rathore|Parwasha Rathod
+kashmala minhas	کشمالہ منہاس	Kashmala Minhas|Kashmalah Minhas
+qalandar tarar	قلندر تارڑ	Qalandar Tarar|Kalandar Tarar
+wahid noon	واحد نون	Wahid Noon|Waheed Noon
+saeedullah bhutta	سعید اللہ بھٹہ	Saeedullah Bhutta
+isar durrani	ایثار درانی	Isar Durrani
+hakim cheema	حکیم چیمہ	Hakim Cheema|Hakeem Cheema
+afzaal sahu	افضال ساہو	Afzaal Sahu|Afzal Sahu
+ramzan wattoo	رمضان وٹو	Ramzan Wattoo|Ramzan Watto|Ramadan Wattoo|Ramadan Watto
+zeeshan ranjha	ذیشان رانجھا	Zeeshan Ranjha|Zishan Ranjha
+chiragh gakkhar	چراغ گکھڑ	Chiragh Gakkhar|Chiragh Gakhar|Chirag Gakkhar|Chirag Gakhar
+bahram lakhani	بہرام لاکھانی	Bahram Lakhani
+jawad chattha	جواد چٹھہ	Jawad Chattha|Jawad Chatha|Jawwad Chattha|Jawwad Chatha
+anum khosa	انم کھوسہ	Anum Khosa
+aneeq gakkhar	انیق گکھڑ	Aneeq Gakkhar|Aneeq Gakhar
+sarwar syed	سرور سید	Sarwar Syed|Sarwar Sayed|Sarwar Sayyid|Sarwer Syed|Sarwer Sayed|Sarwer Sayyid
+hilal sahi	ہلال ساہی	Hilal Sahi
+humaira afridi	حمیرا آفریدی	Humaira Afridi|Humera Afridi
+shahnaz dar	شہناز ڈار	Shahnaz Dar|Shehnaz Dar
+mashal raisani	مشعل رئیسانی	Mashal Raisani|Mishal Raisani
+musaddiq syed	مصدق سید	Musaddiq Syed|Musaddiq Sayed|Musaddiq Sayyid|Musaddique Syed|Musaddique Sayed|Musaddique Sayyid
+murid rathore	مرید راٹھور	Murid Rathore|Murid Rathod|Mureed Rathore|Mureed Rathod
+sidrah marwat	سدرہ مروت	Sidrah Marwat|Sidra Marwat
+mehboob akhtar	محبوب اختر	Mehboob Akhtar|Mehboob Akhter|Mahboob Akhtar|Mahboob Akhter
+qamaruddin raisani	قمر الدین رئیسانی	Qamaruddin Raisani|Qamar Uddin Raisani
+falak butt	فلک بٹ	Falak Butt|Falak But
+aryan baloch	آریان بلوچ	Aryan Baloch|Aryan Baluch
+rahim hashmi	رحیم ہاشمی	Rahim Hashmi|Raheem Hashmi|Rehim Hashmi
+wahid gakkhar	واحد گکھڑ	Wahid Gakkhar|Wahid Gakhar|Waheed Gakkhar|Waheed Gakhar
+abbas kayani	عباس کیانی	Abbas Kayani|Abbas Kiyani
+taqi lashari	تقی لاشاری	Taqi Lashari
+awais bhatti	اویس بھٹی	Awais Bhatti|Awais Bhutti|Uwais Bhatti|Uwais Bhutti|Owais Bhatti|Owais Bhutti
+jumma sheikh	جمعہ شیخ	Jumma Sheikh|Jumma Shaikh|Jumma Shaykh|Juma Sheikh|Juma Shaikh|Juma Shaykh
+iqrar marwat	اقرار مروت	Iqrar Marwat
+abdul syed	عبد سید	Abdul Syed|Abdul Sayed|Abdul Sayyid
+sakhawat gabol	سخاوت گبول	Sakhawat Gabol
+raheela akhtar	راحیلہ اختر	Raheela Akhtar|Raheela Akhter|Rahila Akhtar|Rahila Akhter
+sarwar dar	سرور ڈار	Sarwar Dar|Sarwer Dar
+arman mangi	ارمان مانگی	Arman Mangi
+rasool sipra	رسول سپرا	Rasool Sipra|Rasul Sipra
+sabtain mohmand	سبطین مہمند	Sabtain Mohmand|Sabtain Mehmand|Sibtain Mohmand|Sibtain Mehmand
+tabish dar	تابش ڈار	Tabish Dar
+asjad rathore	اسجد راٹھور	Asjad Rathore|Asjad Rathod
+dilnasheen dogar	دلنشین ڈوگر	Dilnasheen Dogar|Dilnasheen Dogger|Dilnashin Dogar|Dilnashin Dogger
+ramzan meo	رمضان میو	Ramzan Meo|Ramadan Meo
+gulbahar chandio	گلبہار چانڈیو	Gulbahar Chandio
+hamayun baloch	ہمایوں بلوچ	Hamayun Baloch|Hamayun Baluch|Humayun Baloch|Humayun Baluch
+najam yousafzai	نجم یوسفزئی	Najam Yousafzai|Najam Yusufzai
+karim sial	کریم سیال	Karim Sial|Kareem Sial
+raja sandhu	راجہ سندھو	Raja Sandhu|Raja Sindhu
+farkhanda sial	فرخندہ سیال	Farkhanda Sial|Farkhunda Sial
+hadayat jadoon	ہدایت جدون	Hadayat Jadoon|Hidayat Jadoon
+badar khakwani	بدر خاکوانی	Badar Khakwani|Badr Khakwani
+mahpara makhdoom	ماہ پارہ مخدوم	Mahpara Makhdoom|Mahpara Makhdum
+hakim arain	حکیم آرائیں	Hakim Arain|Hakim Araeen|Hakeem Arain|Hakeem Araeen
+farman jutt	فرمان جٹ	Farman Jutt|Farman Jat
+intizar butt	انتظار بٹ	Intizar Butt|Intizar But|Intezar Butt|Intezar But
+armeen chandio	ارمین چانڈیو	Armeen Chandio|Armin Chandio
+sahar mayo	سحر مایو	Sahar Mayo|Sehar Mayo
+isar bangash	ایثار بنگش	Isar Bangash
+tasadduq afridi	تصدق آفریدی	Tasadduq Afridi|Tasaduq Afridi
+fawad meo	فواد میو	Fawad Meo|Fuad Meo
+hamayun bugti	ہمایوں بگٹی	Hamayun Bugti|Humayun Bugti
+badar hashmi	بدر ہاشمی	Badar Hashmi|Badr Hashmi
+nazakat sandhu	نزاکت سندھو	Nazakat Sandhu|Nazakat Sindhu
+ayyaz gilani	ایاز گیلانی	Ayyaz Gilani|Ayyaz Gillani|Ayaz Gilani|Ayaz Gillani
+sameer toor	سمیر تور	Sameer Toor|Samir Toor
+akhlaq sheikh	اخلاق شیخ	Akhlaq Sheikh|Akhlaq Shaikh|Akhlaq Shaykh|Akhlaque Sheikh|Akhlaque Shaikh|Akhlaque Shaykh
+gulsher kharal	گلشیر کھرل	Gulsher Kharal
+mahpara mirani	ماہ پارہ میرانی	Mahpara Mirani
+tasadduq ranjha	تصدق رانجھا	Tasadduq Ranjha|Tasaduq Ranjha
+gohar qureshi	گوہر قریشی	Gohar Qureshi|Gohar Quraishi
+elahi arbab	الٰہی ارباب|الہی ارباب	Elahi Arbab|Ilahi Arbab
+kashif khattak	کاشف خٹک	Kashif Khattak|Kaashif Khattak
+ghazala niazi	غزالہ نیازی	Ghazala Niazi|Ghazalah Niazi
+hazoor mohmand	حضور مہمند	Hazoor Mohmand|Hazoor Mehmand|Huzoor Mohmand|Huzoor Mehmand
+inaya mazari	عنایہ مزاری	Inaya Mazari|Ainaya Mazari
+tahseen siddiqui	تحسین صدیقی	Tahseen Siddiqui|Tahseen Siddiqi|Tehseen Siddiqui|Tehseen Siddiqi|Tahsin Siddiqui|Tahsin Siddiqi
+rais kiani	رئیس کیانی	Rais Kiani|Rais Kayani|Raees Kiani|Raees Kayani
+mujahid tarar	مجاہد تارڑ	Mujahid Tarar
+ashhad chandio	اشہد چانڈیو	Ashhad Chandio
+asfandyar chandio	اسفندیار چانڈیو	Asfandyar Chandio|Asfandiyar Chandio
+sultan rathore	سلطان راٹھور	Sultan Rathore|Sultan Rathod
+yahya langah	یحییٰ لنگاہ|یحیی لنگاہ	Yahya Langah|Yahya Langaha|Yahyaa Langah|Yahyaa Langaha
+zunaira minhas	زنیرہ منہاس	Zunaira Minhas|Zunera Minhas
+sajawal kayani	سجاول کیانی	Sajawal Kayani|Sajawal Kiyani|Sajaval Kayani|Sajaval Kiyani
+aimen gabol	ایمن گبول	Aimen Gabol|Aiman Gabol|Ayman Gabol
+farrukh mangi	فرخ مانگی	Farrukh Mangi|Farukh Mangi
+shujaat mangi	شجاعت مانگی	Shujaat Mangi
+shamsuddin kanju	شمس الدین کنجو	Shamsuddin Kanju|Shams Uddin Kanju
+sahibzada chattha	صاحبزادہ چٹھہ	Sahibzada Chattha|Sahibzada Chatha
+adnan zaidi	عدنان زیدی	Adnan Zaidi|Adnan Zaydi
+sajal arain	سجل آرائیں	Sajal Arain|Sajal Araeen
+madeeha kanju	مدیحہ کنجو	Madeeha Kanju|Madiha Kanju
+ershad mazari	ارشاد مزاری	Ershad Mazari|Irshad Mazari
+kashif marwat	کاشف مروت	Kashif Marwat|Kaashif Marwat
+adeel arain	عدیل آرائیں	Adeel Arain|Adeel Araeen|Adil Arain|Adil Araeen
+ashhad rathore	اشہد راٹھور	Ashhad Rathore|Ashhad Rathod
+abdul mirani	عبد میرانی	Abdul Mirani
+akif gakkhar	عاکف گکھڑ	Akif Gakkhar|Akif Gakhar|Aakif Gakkhar|Aakif Gakhar
+zebunnisa dogar	زیب النساء ڈوگر	Zebunnisa Dogar|Zebunnisa Dogger|Zeb Un Nisa Dogar|Zeb Un Nisa Dogger
+yahya sheikh	یحییٰ شیخ|یحیی شیخ	Yahya Sheikh|Yahya Shaikh|Yahya Shaykh|Yahyaa Sheikh|Yahyaa Shaikh|Yahyaa Shaykh
+wakeel paracha	وکیل پراچہ	Wakeel Paracha|Wakil Paracha
+kalsoom meo	کلثوم میو	Kalsoom Meo|Kulsoom Meo|Kalsum Meo
+rukhsar bhutta	رخسار بھٹہ	Rukhsar Bhutta
+khushbakht toor	خوش بخت تور	Khushbakht Toor
+mazhar mirani	مظہر میرانی	Mazhar Mirani
+rahat gabol	راحت گبول	Rahat Gabol
+shamim baloch	شمیم بلوچ	Shamim Baloch|Shamim Baluch|Shameem Baloch|Shameem Baluch
+majid malik	ماجد ملک	Majid Malik|Majeed Malik
+hussnain arain	حسنین آرائیں	Hussnain Arain|Hussnain Araeen|Hasnain Arain|Hasnain Araeen
+aabida naich	عابدہ نائچ	Aabida Naich|Abida Naich
+nehal mirani	نہال میرانی	Nehal Mirani|Nihal Mirani
+asfandyar tanoli	اسفندیار تنولی	Asfandyar Tanoli|Asfandiyar Tanoli
+nehal kiani	نہال کیانی	Nehal Kiani|Nehal Kayani|Nihal Kiani|Nihal Kayani
+bahadur khakwani	بہادر خاکوانی	Bahadur Khakwani
+hadayat niazi	ہدایت نیازی	Hadayat Niazi|Hidayat Niazi
+sabtain sahu	سبطین ساہو	Sabtain Sahu|Sibtain Sahu
+ghous afridi	غوث آفریدی	Ghous Afridi|Ghaus Afridi
+subhan abbasi	سبحان عباسی	Subhan Abbasi|Sobhan Abbasi
+mansab lakhani	منصب لاکھانی	Mansab Lakhani
+syed rohail	سید روحیل	Syed Rohail|Syed Ruhail
+sheikh noorullah	شیخ نور اللہ	Sheikh Noorullah|Sheikh Nurullah|Shaikh Noorullah|Shaikh Nurullah
+khawaja sharif	خواجہ شریف	Khawaja Sharif|Khawaja Shareef|Khwaja Sharif|Khwaja Shareef
+mirza muntazir	مرزا منتظر	Mirza Muntazir
+rana musaddiq	رانا مصدق	Rana Musaddiq|Rana Musaddique
+ghulam zikriya	غلام ذکریا	Ghulam Zikriya|Ghulam Zakariya
+khawaja sheroz	خواجہ شیروز	Khawaja Sheroz|Khwaja Sheroz
+khawaja israr	خواجہ اسرار	Khawaja Israr|Khwaja Israr
+syed rameez	سید رمیز	Syed Rameez|Syed Ramiz
+chaudhry tipu	چوہدری ٹیپو	Chaudhry Tipu|Chaudhary Tipu
+haji raja	حاجی راجہ	Haji Raja
+mian burhan	میاں برہان	Mian Burhan
+ghulam alamdar	غلام علمدار	Ghulam Alamdar
+ghulam waheed	غلام وحید	Ghulam Waheed|Ghulam Wahid
+mian tabish	میاں تابش	Mian Tabish
+haji bakhtiyar	حاجی بختیار	Haji Bakhtiyar|Haji Bakhtiar
+syed jaffar	سید جعفر	Syed Jaffar|Syed Jafar
+chaudhry iltaf	چوہدری الطاف	Chaudhry Iltaf|Chaudhary Iltaf
+muhammad wahaj	محمد وہاج	Muhammad Wahaj
+sheikh isar	شیخ ایثار	Sheikh Isar|Shaikh Isar
+sheikh mohiuddin	شیخ محی الدین	Sheikh Mohiuddin|Sheikh Muhiuddin|Shaikh Mohiuddin|Shaikh Muhiuddin
+sheikh wakeel	شیخ وکیل	Sheikh Wakeel|Sheikh Wakil|Shaikh Wakeel|Shaikh Wakil
+syed zubayr	سید زبیر	Syed Zubayr|Syed Zubair
+mian shamsuddin	میاں شمس الدین	Mian Shamsuddin|Mian Shams Uddin
+malik azfar	ملک اظفر	Malik Azfar
+mirza eid	مرزا عید	Mirza Eid|Mirza Eed
+syed nazakat	سید نزاکت	Syed Nazakat
+malik latafat	ملک لطافت	Malik Latafat
+rana khurshid	رانا خورشید	Rana Khurshid|Rana Khursheed
+mirza behroz	مرزا بہروز	Mirza Behroz|Mirza Behrooz
+muhammad tasleem	محمد تسلیم	Muhammad Tasleem|Muhammad Taslim
+ghulam mahar	غلام مہر	Ghulam Mahar|Ghulam Mehr
+raja najeeb	راجہ نجیب	Raja Najeeb|Raja Najib
+syed shamim	سید شمیم	Syed Shamim|Syed Shameem
+hafiz jaffar	حافظ جعفر	Hafiz Jaffar|Hafiz Jafar
+mirza awais	مرزا اویس	Mirza Awais|Mirza Uwais|Mirza Owais
+muhammad adnan	محمد عدنان	Muhammad Adnan
+khawaja obaidullah	خواجہ عبید اللہ	Khawaja Obaidullah|Khawaja Ubaidullah|Khwaja Obaidullah|Khwaja Ubaidullah
+mirza badar	مرزا بدر	Mirza Badar|Mirza Badr
+ghulam karim	غلام کریم	Ghulam Karim|Ghulam Kareem
+raja rahim	راجہ رحیم	Raja Rahim|Raja Raheem|Raja Rehim
+khawaja rahbar	خواجہ رہبر	Khawaja Rahbar|Khawaja Rehbar|Khwaja Rahbar|Khwaja Rehbar
+ghulam imtiaz	غلام امتیاز	Ghulam Imtiaz|Ghulam Imtiyaz
+ghulam anser	غلام انصر	Ghulam Anser|Ghulam Ansar
+sheikh tabish	شیخ تابش	Sheikh Tabish|Shaikh Tabish
+raja shamsuddin	راجہ شمس الدین	Raja Shamsuddin|Raja Shams Uddin
+khawaja shuja	خواجہ شجاع	Khawaja Shuja|Khawaja Shujaa|Khwaja Shuja|Khwaja Shujaa
+rana nouroz	رانا نوروز	Rana Nouroz|Rana Nowroz
+mirza miraj	مرزا معراج	Mirza Miraj|Mirza Meraj
+malik abid	ملک عابد	Malik Abid|Malik Aabid
+raja iftikhar	راجہ افتخار	Raja Iftikhar|Raja Iftikar
+haji shuja	حاجی شجاع	Haji Shuja|Haji Shujaa
+raja nuzhat	راجہ نزہت	Raja Nuzhat
+syed raheel	سید راحیل	Syed Raheel|Syed Rahil
+malik mobeen	ملک مبین	Malik Mobeen|Malik Mubeen
+haji ershad	حاجی ارشاد	Haji Ershad|Haji Irshad
+mian abid	میاں عابد	Mian Abid|Mian Aabid
+chaudhry daniyal	چوہدری دانیال	Chaudhry Daniyal|Chaudhry Danyal|Chaudhry Danial|Chaudhary Daniyal|Chaudhary Danyal|Chaudhary Danial
+muhammad rahbar	محمد رہبر	Muhammad Rahbar|Muhammad Rehbar
+raja shafqat	راجہ شفقت	Raja Shafqat
+khawaja baber	خواجہ بابر	Khawaja Baber|Khawaja Babar|Khwaja Baber|Khwaja Babar
+chaudhry amtiaz	چوہدری امتیاز	Chaudhry Amtiaz|Chaudhry Imtiaz|Chaudhary Amtiaz|Chaudhary Imtiaz
+muhammad zeeshan	محمد ذیشان	Muhammad Zeeshan|Muhammad Zishan
+chaudhry latafat	چوہدری لطافت	Chaudhry Latafat|Chaudhary Latafat
+rana intizar	رانا انتظار	Rana Intizar|Rana Intezar
+muhammad mukarram	محمد مکرم	Muhammad Mukarram|Muhammad Mukaram
+malik rohail	ملک روحیل	Malik Rohail|Malik Ruhail
+haji tasadduq	حاجی تصدق	Haji Tasadduq|Haji Tasaduq
+khawaja bahadur	خواجہ بہادر	Khawaja Bahadur|Khwaja Bahadur
+khawaja tabish	خواجہ تابش	Khawaja Tabish|Khwaja Tabish
+raja farman	راجہ فرمان	Raja Farman
+mirza mahar	مرزا مہر	Mirza Mahar|Mirza Mehr
+rana nizamuddin	رانا نظام الدین	Rana Nizamuddin|Rana Nizam Uddin
+mirza musaddiq	مرزا مصدق	Mirza Musaddiq|Mirza Musaddique
+haji mazhar	حاجی مظہر	Haji Mazhar
+malik nasrullah	ملک نصر اللہ	Malik Nasrullah|Malik Nasarullah
+ghulam mubin	غلام مبین	Ghulam Mubin|Ghulam Mubeen
+malik taqi	ملک تقی	Malik Taqi
+raja tasawwar	راجہ تصور	Raja Tasawwar|Raja Tasawar|Raja Tasawur
+muhammad mujeeb	محمد مجیب	Muhammad Mujeeb|Muhammad Mujib
+mian gohar	میاں گوہر	Mian Gohar
+mian sahibzada	میاں صاحبزادہ	Mian Sahibzada
+khawaja falak	خواجہ فلک	Khawaja Falak|Khwaja Falak
+muhammad yawar	محمد یاور	Muhammad Yawar|Muhammad Yawer
+syed ammar	سید عمار	Syed Ammar|Syed Amar
+mirza asmatullah	مرزا عصمت اللہ	Mirza Asmatullah|Mirza Ismatullah
+khawaja wahaj	خواجہ وہاج	Khawaja Wahaj|Khwaja Wahaj
+chaudhry shehryar	چوہدری شہریار	Chaudhry Shehryar|Chaudhry Shahryar|Chaudhry Shehriyar|Chaudhary Shehryar|Chaudhary Shahryar|Chaudhary Shehriyar
+syed rahbar	سید رہبر	Syed Rahbar|Syed Rehbar
+hafiz fasih	حافظ فصیح	Hafiz Fasih|Hafiz Faseeh
+sultan ahmed	سلطان احمد	Sultan Ahmed|Sultan Ahmad
+aryan ali	آریان علی	Aryan Ali
+mohkam baksh	محکم بخش	Mohkam Baksh|Mohkam Bakhsh|Mohkam Bux|Muhkam Baksh|Muhkam Bakhsh|Muhkam Bux
+sadaqat ullah	صداقت اللہ	Sadaqat Ullah
+yameen khan	یامین خان	Yameen Khan|Yamin Khan
+naqeeb shah	نقیب شاہ	Naqeeb Shah|Naqib Shah
+farman hussain	فرمان حسین	Farman Hussain|Farman Husain|Farman Hussein
+tabish ullah	تابش اللہ	Tabish Ullah
+arham ali	ارحم علی	Arham Ali
+akif khan	عاکف خان	Akif Khan|Aakif Khan
+jan ullah	جان اللہ	Jan Ullah|Jaan Ullah
+bahadur shah	بہادر شاہ	Bahadur Shah
+basit ali	باسط علی	Basit Ali
+ishtiaq din	اشتیاق دین	Ishtiaq Din|Ishtiaq Deen
+isar hussain	ایثار حسین	Isar Hussain|Isar Husain|Isar Hussein
+hilal shah	ہلال شاہ	Hilal Shah
+zarar ahmed	ضرار احمد	Zarar Ahmed|Zarar Ahmad|Zirar Ahmed|Zirar Ahmad
+sanaullah ahmed	ثناء اللہ احمد	Sanaullah Ahmed|Sanaullah Ahmad|Sana Ullah Ahmed|Sana Ullah Ahmad
+obaidullah hussain	عبید اللہ حسین	Obaidullah Hussain|Obaidullah Husain|Obaidullah Hussein|Ubaidullah Hussain|Ubaidullah Husain|Ubaidullah Hussein
+musarrat din	مسرت دین	Musarrat Din|Musarrat Deen
+anser khan	انصر خان	Anser Khan|Ansar Khan
+yahya ahmed	یحییٰ احمد|یحیی احمد	Yahya Ahmed|Yahya Ahmad|Yahyaa Ahmed|Yahyaa Ahmad
+chiragh din	چراغ دین	Chiragh Din|Chiragh Deen|Chirag Din|Chirag Deen
+irtaza ali	ارتضیٰ علی|ارتضی علی	Irtaza Ali|Irtiza Ali
+jameel khan	جمیل خان	Jameel Khan|Jamil Khan
+gulsher hussain	گلشیر حسین	Gulsher Hussain|Gulsher Husain|Gulsher Hussein
+wakeel khan	وکیل خان	Wakeel Khan|Wakil Khan
+hilal ahmed	ہلال احمد	Hilal Ahmed|Hilal Ahmad
+nouroz shah	نوروز شاہ	Nouroz Shah|Nowroz Shah
+altamash baksh	التمش بخش	Altamash Baksh|Altamash Bakhsh|Altamash Bux|Altamish Baksh|Altamish Bakhsh|Altamish Bux
+habibullah baksh	حبیب اللہ بخش	Habibullah Baksh|Habibullah Bakhsh|Habibullah Bux
+jawad baksh	جواد بخش	Jawad Baksh|Jawad Bakhsh|Jawad Bux|Jawwad Baksh|Jawwad Bakhsh|Jawwad Bux
+amtiaz baksh	امتیاز بخش	Amtiaz Baksh|Amtiaz Bakhsh|Amtiaz Bux|Imtiaz Baksh|Imtiaz Bakhsh|Imtiaz Bux
+sabtain shah	سبطین شاہ	Sabtain Shah|Sibtain Shah
+abdul baksh	عبد بخش	Abdul Baksh|Abdul Bakhsh|Abdul Bux
+ayyaz ali	ایاز علی	Ayyaz Ali|Ayaz Ali
+sahibzada ullah	صاحبزادہ اللہ	Sahibzada Ullah
+behroz ali	بہروز علی	Behroz Ali|Behrooz Ali
+najam ali	نجم علی	Najam Ali
+sibghatullah ahmed	صبغۃ اللہ احمد	Sibghatullah Ahmed|Sibghatullah Ahmad|Sibghatulla Ahmed|Sibghatulla Ahmad
+jamaluddin shah	جمال الدین شاہ	Jamaluddin Shah|Jamal Uddin Shah
+rasool hussain	رسول حسین	Rasool Hussain|Rasool Husain|Rasool Hussein|Rasul Hussain|Rasul Husain|Rasul Hussein
+tasawwar ali	تصور علی	Tasawwar Ali|Tasawar Ali|Tasawur Ali
+nizam khan	نظام خان	Nizam Khan
+raheel ahmed	راحیل احمد	Raheel Ahmed|Raheel Ahmad|Rahil Ahmed|Rahil Ahmad
+isar baksh	ایثار بخش	Isar Baksh|Isar Bakhsh|Isar Bux
+aneeq ali	انیق علی	Aneeq Ali
+sikandar din	سکندر دین	Sikandar Din|Sikandar Deen|Sikander Din|Sikander Deen
+jibran khan	جبران خان	Jibran Khan|Gibran Khan
+munawar hussain	منور حسین	Munawar Hussain|Munawar Husain|Munawar Hussein|Munawwar Hussain|Munawwar Husain|Munawwar Hussein
+ziaullah ahmed	ضیاء اللہ احمد	Ziaullah Ahmed|Ziaullah Ahmad|Zia Ullah Ahmed|Zia Ullah Ahmad
+shahnawaz ahmed	شاہ نواز احمد	Shahnawaz Ahmed|Shahnawaz Ahmad|Shah Nawaz Ahmed|Shah Nawaz Ahmad
+ghayoor baksh	غیور بخش	Ghayoor Baksh|Ghayoor Bakhsh|Ghayoor Bux|Ghayur Baksh|Ghayur Bakhsh|Ghayur Bux
+yahya hussain	یحییٰ حسین|یحیی حسین	Yahya Hussain|Yahya Husain|Yahya Hussein|Yahyaa Hussain|Yahyaa Husain|Yahyaa Hussein
+tasadduq hussain	تصدق حسین	Tasadduq Hussain|Tasadduq Husain|Tasadduq Hussein|Tasaduq Hussain|Tasaduq Husain|Tasaduq Hussein
+shair ullah	شاعر اللہ	Shair Ullah|Shayar Ullah
+behroz din	بہروز دین	Behroz Din|Behroz Deen|Behrooz Din|Behrooz Deen
+ashhad ullah	اشہد اللہ	Ashhad Ullah
+sheroz ullah	شیروز اللہ	Sheroz Ullah
+tehmoor din	تیمور دین	Tehmoor Din|Tehmoor Deen|Taimoor Din|Taimoor Deen|Taimur Din|Taimur Deen
+ahtesham hussain	احتشام حسین	Ahtesham Hussain|Ahtesham Husain|Ahtesham Hussein|Ehtesham Hussain|Ehtesham Husain|Ehtesham Hussein|Ahtisham Hussain|Ahtisham Husain|Ahtisham Hussein
+muntazir hussain	منتظر حسین	Muntazir Hussain|Muntazir Husain|Muntazir Hussein
+ahtesham ullah	احتشام اللہ	Ahtesham Ullah|Ehtesham Ullah|Ahtisham Ullah
+jumma baksh	جمعہ بخش	Jumma Baksh|Jumma Bakhsh|Jumma Bux|Juma Baksh|Juma Bakhsh|Juma Bux
+akhlaq ahmed	اخلاق احمد	Akhlaq Ahmed|Akhlaq Ahmad|Akhlaque Ahmed|Akhlaque Ahmad
+aryan ullah	آریان اللہ	Aryan Ullah
+sabtain ullah	سبطین اللہ	Sabtain Ullah|Sibtain Ullah
+shahnawaz din	شاہ نواز دین	Shahnawaz Din|Shahnawaz Deen|Shah Nawaz Din|Shah Nawaz Deen
+wasay ali	واسع علی	Wasay Ali|Wasae Ali
+mehrban din	مہربان دین	Mehrban Din|Mehrban Deen|Meherban Din|Meherban Deen
+nauman khan	نعمان خان	Nauman Khan|Noman Khan|Nouman Khan
+kashif ahmed	کاشف احمد	Kashif Ahmed|Kashif Ahmad|Kaashif Ahmed|Kaashif Ahmad
+bahram ullah	بہرام اللہ	Bahram Ullah
+mehrban baksh	مہربان بخش	Mehrban Baksh|Mehrban Bakhsh|Mehrban Bux|Meherban Baksh|Meherban Bakhsh|Meherban Bux
+usaid ali	اسید علی	Usaid Ali
+fidaullah ullah	فدا اللہ اللہ	Fidaullah Ullah
+rasool ullah	رسول اللہ	Rasool Ullah|Rasul Ullah
+jaffar ali	جعفر علی	Jaffar Ali|Jafar Ali
+mohkam din	محکم دین	Mohkam Din|Mohkam Deen|Muhkam Din|Muhkam Deen
+shan khan	شان خان	Shan Khan
+tayyeb ullah	طیب اللہ	Tayyeb Ullah|Tayyab Ullah
+zaeem shah	زعیم شاہ	Zaeem Shah|Zaim Shah
+fakhar shah	فخر شاہ	Fakhar Shah|Fakhr Shah
+waheed din	وحید دین	Waheed Din|Waheed Deen|Wahid Din|Wahid Deen
+hammad hussain	حماد حسین	Hammad Hussain|Hammad Husain|Hammad Hussein
+salar shah	سالار شاہ	Salar Shah
+aneeq hussain	انیق حسین	Aneeq Hussain|Aneeq Husain|Aneeq Hussein
+khushal khan	خوشحال خان	Khushal Khan|Khushhal Khan
+asjad baksh	اسجد بخش	Asjad Baksh|Asjad Bakhsh|Asjad Bux
+mohib din	محب دین	Mohib Din|Mohib Deen|Muhib Din|Muhib Deen
+ghulam mujeeb zehri	غلام مجیب زہری	Ghulam Mujeeb Zehri|Ghulam Mujib Zehri
+khawaja yousaf syed	خواجہ یوسف سید	Khawaja Yousaf Syed|Khawaja Yousaf Sayed|Khawaja Yousaf Sayyid|Khawaja Yousuf Syed|Khawaja Yousuf Sayed|Khawaja Yousuf Sayyid|Khawaja Yusuf Syed|Khawaja Yusuf Sayed|Khawaja Yusuf Sayyid|Khwaja Yousaf Syed|Khwaja Yousaf Sayed|Khwaja Yousaf Sayyid|Khwaja Yousuf Syed|Khwaja Yousuf Sayed|Khwaja Yousuf Sayyid|Khwaja Yusuf Syed
+chaudhry sibghatullah kayani	چوہدری صبغۃ اللہ کیانی	Chaudhry Sibghatullah Kayani|Chaudhry Sibghatullah Kiyani|Chaudhry Sibghatulla Kayani|Chaudhry Sibghatulla Kiyani|Chaudhary Sibghatullah Kayani|Chaudhary Sibghatullah Kiyani|Chaudhary Sibghatulla Kayani|Chaudhary Sibghatulla Kiyani
+rana hakim gabol	رانا حکیم گبول	Rana Hakim Gabol|Rana Hakeem Gabol
+ghulam jan mohmand	غلام جان مہمند	Ghulam Jan Mohmand|Ghulam Jan Mehmand|Ghulam Jaan Mohmand|Ghulam Jaan Mehmand
+hafiz sarmad daha	حافظ سرمد ڈاہا	Hafiz Sarmad Daha
+mirza safeer rathore	مرزا سفیر راٹھور	Mirza Safeer Rathore|Mirza Safeer Rathod|Mirza Safir Rathore|Mirza Safir Rathod
+haji wasif sahi	حاجی واصف ساہی	Haji Wasif Sahi|Haji Waseef Sahi
+rana hakim zaidi	رانا حکیم زیدی	Rana Hakim Zaidi|Rana Hakim Zaydi|Rana Hakeem Zaidi|Rana Hakeem Zaydi
+mirza tayyeb abbasi	مرزا طیب عباسی	Mirza Tayyeb Abbasi|Mirza Tayyab Abbasi
+muhammad yameen minhas	محمد یامین منہاس	Muhammad Yameen Minhas|Muhammad Yamin Minhas
+syed muntazir mirani	سید منتظر میرانی	Syed Muntazir Mirani
+muhammad ihsanullah janjua	محمد احسان اللہ جنجوعہ	Muhammad Ihsanullah Janjua|Muhammad Ehsanullah Janjua
+ghulam sabtain chandio	غلام سبطین چانڈیو	Ghulam Sabtain Chandio|Ghulam Sibtain Chandio
+chaudhry najeeb baloch	چوہدری نجیب بلوچ	Chaudhry Najeeb Baloch|Chaudhry Najeeb Baluch|Chaudhry Najib Baloch|Chaudhry Najib Baluch|Chaudhary Najeeb Baloch|Chaudhary Najeeb Baluch|Chaudhary Najib Baloch|Chaudhary Najib Baluch
+raja nawazish khokhar	راجہ نوازش کھوکھر	Raja Nawazish Khokhar
+muhammad usaid abbasi	محمد اسید عباسی	Muhammad Usaid Abbasi
+mirza ershad sahu	مرزا ارشاد ساہو	Mirza Ershad Sahu|Mirza Irshad Sahu
+malik shafaat lakhani	ملک شفاعت لاکھانی	Malik Shafaat Lakhani
+mirza qalandar makhdoom	مرزا قلندر مخدوم	Mirza Qalandar Makhdoom|Mirza Qalandar Makhdum|Mirza Kalandar Makhdoom|Mirza Kalandar Makhdum
+mirza anser jadoon	مرزا انصر جدون	Mirza Anser Jadoon|Mirza Ansar Jadoon
+chaudhry aneeq langah	چوہدری انیق لنگاہ	Chaudhry Aneeq Langah|Chaudhry Aneeq Langaha|Chaudhary Aneeq Langah|Chaudhary Aneeq Langaha
+muhammad muslim bugti	محمد مسلم بگٹی	Muhammad Muslim Bugti
+haji mohkam dar	حاجی محکم ڈار	Haji Mohkam Dar|Haji Muhkam Dar
+sheikh atiqullah raisani	شیخ عتیق اللہ رئیسانی	Sheikh Atiqullah Raisani|Sheikh Ateequllah Raisani|Shaikh Atiqullah Raisani|Shaikh Ateequllah Raisani
+hafiz wahid khattak	حافظ واحد خٹک	Hafiz Wahid Khattak|Hafiz Waheed Khattak
+ghulam shahab mayo	غلام شہاب مایو	Ghulam Shahab Mayo|Ghulam Shihab Mayo
+ghulam naqeeb lakhani	غلام نقیب لاکھانی	Ghulam Naqeeb Lakhani|Ghulam Naqib Lakhani
+mirza nehal bhatti	مرزا نہال بھٹی	Mirza Nehal Bhatti|Mirza Nehal Bhutti|Mirza Nihal Bhatti|Mirza Nihal Bhutti
+malik rohail bugti	ملک روحیل بگٹی	Malik Rohail Bugti|Malik Ruhail Bugti
+malik gohar gakkhar	ملک گوہر گکھڑ	Malik Gohar Gakkhar|Malik Gohar Gakhar
+syed moeen arbab	سید معین ارباب	Syed Moeen Arbab|Syed Moin Arbab|Syed Mueen Arbab
+mirza nazakat janjua	مرزا نزاکت جنجوعہ	Mirza Nazakat Janjua
+mian mehrban noon	میاں مہربان نون	Mian Mehrban Noon|Mian Meherban Noon
+sheikh rohail sahu	شیخ روحیل ساہو	Sheikh Rohail Sahu|Sheikh Ruhail Sahu|Shaikh Rohail Sahu|Shaikh Ruhail Sahu
+khawaja rehan sahu	خواجہ ریحان ساہو	Khawaja Rehan Sahu|Khawaja Rayhan Sahu|Khawaja Reyhan Sahu|Khwaja Rehan Sahu|Khwaja Rayhan Sahu|Khwaja Reyhan Sahu
+khawaja rehan virk	خواجہ ریحان ورک	Khawaja Rehan Virk|Khawaja Rehan Werk|Khawaja Rayhan Virk|Khawaja Rayhan Werk|Khawaja Reyhan Virk|Khawaja Reyhan Werk|Khwaja Rehan Virk|Khwaja Rehan Werk|Khwaja Rayhan Virk|Khwaja Rayhan Werk|Khwaja Reyhan Virk|Khwaja Reyhan Werk
+chaudhry mubin ranjha	چوہدری مبین رانجھا	Chaudhry Mubin Ranjha|Chaudhry Mubeen Ranjha|Chaudhary Mubin Ranjha|Chaudhary Mubeen Ranjha
+chaudhry tabish lashari	چوہدری تابش لاشاری	Chaudhry Tabish Lashari|Chaudhary Tabish Lashari
+syed waleed gilani	سید ولید گیلانی	Syed Waleed Gilani|Syed Waleed Gillani|Syed Walid Gilani|Syed Walid Gillani
+khawaja rashad qazi	خواجہ رشاد قاضی	Khawaja Rashad Qazi|Khwaja Rashad Qazi
+raja irtaza mangi	راجہ ارتضیٰ مانگی|راجہ ارتضی مانگی	Raja Irtaza Mangi|Raja Irtiza Mangi
+rana rohaan kanju	رانا روحان کنجو	Rana Rohaan Kanju|Rana Ruhan Kanju
+ghulam arbab afridi	غلام ارباب آفریدی	Ghulam Arbab Afridi
+hafiz dilbar gakkhar	حافظ دلبر گکھڑ	Hafiz Dilbar Gakkhar|Hafiz Dilbar Gakhar
+muhammad shafaat kanju	محمد شفاعت کنجو	Muhammad Shafaat Kanju
+chaudhry adnan naich	چوہدری عدنان نائچ	Chaudhry Adnan Naich|Chaudhary Adnan Naich
+malik uzair zardari	ملک عزیر زرداری	Malik Uzair Zardari|Malik Uzayr Zardari
+ghulam amaan lakhani	غلام امان لاکھانی	Ghulam Amaan Lakhani|Ghulam Aman Lakhani
+khawaja wajahat gabol	خواجہ وجاہت گبول	Khawaja Wajahat Gabol|Khwaja Wajahat Gabol
+ranjha and company	رانجھا اینڈ کمپنی	Ranjha And Company|Ranjha & Co
+mazari cold storage	مزاری کولڈ سٹوریج	Mazari Cold Storage
+meo and company	میو اینڈ کمپنی	Meo And Company|Meo & Co
+jadoon traders	جدون ٹریڈرز	Jadoon Traders
+chandio vegetable store	چانڈیو ویجیٹیبل سٹور	Chandio Vegetable Store
+kiani commission shop	کیانی کمیشن شاپ	Kiani Commission Shop|Kayani Commission Shop
+kayani traders	کیانی ٹریڈرز	Kayani Traders|Kiyani Traders
+awan vegetable store	اعوان ویجیٹیبل سٹور	Awan Vegetable Store
+gakkhar cold storage	گکھڑ کولڈ سٹوریج	Gakkhar Cold Storage|Gakhar Cold Storage
+marwat and company	مروت اینڈ کمپنی	Marwat And Company|Marwat & Co
+lakhani fruit centre	لاکھانی فروٹ سینٹر	Lakhani Fruit Centre|Lakhani Fruit Center
+naich commission agency	نائچ کمیشن ایجنسی	Naich Commission Agency
+wattoo enterprises	وٹو انٹرپرائزز	Wattoo Enterprises|Watto Enterprises
+alvi cold storage	علوی کولڈ سٹوریج	Alvi Cold Storage|Alavi Cold Storage
+mayo fruit house	مایو فروٹ ہاؤس	Mayo Fruit House
+lakhani general store	لاکھانی جنرل سٹور	Lakhani General Store
+raisani fruit house	رئیسانی فروٹ ہاؤس	Raisani Fruit House
+naich vegetable store	نائچ ویجیٹیبل سٹور	Naich Vegetable Store
+gakkhar commission shop	گکھڑ کمیشن شاپ	Gakkhar Commission Shop|Gakhar Commission Shop
+virk commission shop	ورک کمیشن شاپ	Virk Commission Shop|Werk Commission Shop
+langah and sons	لنگاہ اینڈ سنز	Langah And Sons|Langah & Sons|Langaha And Sons|Langaha & Sons
+kayani packing house	کیانی پیکنگ ہاؤس	Kayani Packing House|Kiyani Packing House
+sahu commission shop	ساہو کمیشن شاپ	Sahu Commission Shop
+langah enterprises	لنگاہ انٹرپرائزز	Langah Enterprises|Langaha Enterprises
+bhatti traders	بھٹی ٹریڈرز	Bhatti Traders|Bhutti Traders
+bugti general store	بگٹی جنرل سٹور	Bugti General Store
+minhas enterprises	منہاس انٹرپرائزز	Minhas Enterprises
+durrani commission agency	درانی کمیشن ایجنسی	Durrani Commission Agency
+mangi brothers	مانگی برادرز	Mangi Brothers|Mangi Bros
+kayani vegetable store	کیانی ویجیٹیبل سٹور	Kayani Vegetable Store|Kiyani Vegetable Store
+mirani and company	میرانی اینڈ کمپنی	Mirani And Company|Mirani & Co
+sahu fruit centre	ساہو فروٹ سینٹر	Sahu Fruit Centre|Sahu Fruit Center
+makhdoom vegetable store	مخدوم ویجیٹیبل سٹور	Makhdoom Vegetable Store|Makhdum Vegetable Store
+naich fruit centre	نائچ فروٹ سینٹر	Naich Fruit Centre|Naich Fruit Center
+lakhani trading company	لاکھانی ٹریڈنگ کمپنی	Lakhani Trading Company|Lakhani Trading Co
+khattak commission shop	خٹک کمیشن شاپ	Khattak Commission Shop
+minhas commission agency	منہاس کمیشن ایجنسی	Minhas Commission Agency
+mangi fruit company	مانگی فروٹ کمپنی	Mangi Fruit Company|Mangi Fruit Co
+gabol trading company	گبول ٹریڈنگ کمپنی	Gabol Trading Company|Gabol Trading Co
+jadoon vegetable store	جدون ویجیٹیبل سٹور	Jadoon Vegetable Store
+latafat and sons	لطافت اینڈ سنز	Latafat And Sons|Latafat & Sons
+khushal brothers	خوشحال برادرز	Khushal Brothers|Khushal Bros|Khushhal Brothers|Khushhal Bros
+ashhad and company	اشہد اینڈ کمپنی	Ashhad And Company|Ashhad & Co
+sikandar fruit house	سکندر فروٹ ہاؤس	Sikandar Fruit House|Sikander Fruit House
+tayyeb brothers	طیب برادرز	Tayyeb Brothers|Tayyeb Bros|Tayyab Brothers|Tayyab Bros
+yawar brothers	یاور برادرز	Yawar Brothers|Yawar Bros|Yawer Brothers|Yawer Bros
+tasawwar trading company	تصور ٹریڈنگ کمپنی	Tasawwar Trading Company|Tasawwar Trading Co|Tasawar Trading Company|Tasawar Trading Co|Tasawur Trading Company|Tasawur Trading Co
+hazoor and sons	حضور اینڈ سنز	Hazoor And Sons|Hazoor & Sons|Huzoor And Sons|Huzoor & Sons
+iftikhar trading company	افتخار ٹریڈنگ کمپنی	Iftikhar Trading Company|Iftikhar Trading Co|Iftikar Trading Company|Iftikar Trading Co
+altamash fruit house	التمش فروٹ ہاؤس	Altamash Fruit House|Altamish Fruit House
+asjad commission shop	اسجد کمیشن شاپ	Asjad Commission Shop
+gulsher enterprises	گلشیر انٹرپرائزز	Gulsher Enterprises
+tipu traders	ٹیپو ٹریڈرز	Tipu Traders
+shahab fruit house	شہاب فروٹ ہاؤس	Shahab Fruit House|Shihab Fruit House
+rafiuddin fruit centre	رفیع الدین فروٹ سینٹر	Rafiuddin Fruit Centre|Rafiuddin Fruit Center
+jamaluddin general store	جمال الدین جنرل سٹور	Jamaluddin General Store|Jamal Uddin General Store
+chiragh general store	چراغ جنرل سٹور	Chiragh General Store|Chirag General Store
+nawazish commission agency	نوازش کمیشن ایجنسی	Nawazish Commission Agency
+raja vegetable store	راجہ ویجیٹیبل سٹور	Raja Vegetable Store
+ibtisam fruit company	ابتسام فروٹ کمپنی	Ibtisam Fruit Company|Ibtisam Fruit Co
+mohkam commission shop	محکم کمیشن شاپ	Mohkam Commission Shop|Muhkam Commission Shop
+asmatullah commission agency	عصمت اللہ کمیشن ایجنسی	Asmatullah Commission Agency|Ismatullah Commission Agency
+zohaib fruit centre	زوہیب فروٹ سینٹر	Zohaib Fruit Centre|Zohaib Fruit Center|Zuhaib Fruit Centre|Zuhaib Fruit Center
+mobeen fruit centre	مبین فروٹ سینٹر	Mobeen Fruit Centre|Mobeen Fruit Center|Mubeen Fruit Centre|Mubeen Fruit Center
+yahya fruit company	یحییٰ فروٹ کمپنی|یحیی فروٹ کمپنی	Yahya Fruit Company|Yahya Fruit Co|Yahyaa Fruit Company|Yahyaa Fruit Co
+ziaullah packing house	ضیاء اللہ پیکنگ ہاؤس	Ziaullah Packing House|Zia Ullah Packing House
+ershad fruit company	ارشاد فروٹ کمپنی	Ershad Fruit Company|Ershad Fruit Co|Irshad Fruit Company|Irshad Fruit Co
+shair fruit company	شاعر فروٹ کمپنی	Shair Fruit Company|Shair Fruit Co|Shayar Fruit Company|Shayar Fruit Co
+kifayat and company	کفایت اینڈ کمپنی	Kifayat And Company|Kifayat & Co
+bakhtawar trading company	بختاور ٹریڈنگ کمپنی	Bakhtawar Trading Company|Bakhtawar Trading Co
+waris fruit house	وارث فروٹ ہاؤس	Waris Fruit House|Warith Fruit House
+mahar general store	مہر جنرل سٹور	Mahar General Store|Mehr General Store
+samad general store	صمد جنرل سٹور	Samad General Store
+akif enterprises	عاکف انٹرپرائزز	Akif Enterprises|Aakif Enterprises
+yousaf fruit company	یوسف فروٹ کمپنی	Yousaf Fruit Company|Yousaf Fruit Co|Yousuf Fruit Company|Yousuf Fruit Co|Yusuf Fruit Company|Yusuf Fruit Co
+khurshid commission agency	خورشید کمیشن ایجنسی	Khurshid Commission Agency|Khursheed Commission Agency
+ashar brothers	اشعر برادرز	Ashar Brothers|Ashar Bros
+mohib packing house	محب پیکنگ ہاؤس	Mohib Packing House|Muhib Packing House
+ghous trading company	غوث ٹریڈنگ کمپنی	Ghous Trading Company|Ghous Trading Co|Ghaus Trading Company|Ghaus Trading Co
+wajahat brothers	وجاہت برادرز	Wajahat Brothers|Wajahat Bros
+kundian vegetable store	کنڈیاں ویجیٹیبل سٹور	Kundian Vegetable Store
+sakhi sarwar packing house	سخی سرور پیکنگ ہاؤس	Sakhi Sarwar Packing House
+taxila commission agency	ٹیکسلا کمیشن ایجنسی	Taxila Commission Agency
+nawabpur general store	نواب پور جنرل سٹور	Nawabpur General Store
+bunga hayat fruit company	بونگا حیات فروٹ کمپنی	Bunga Hayat Fruit Company|Bunga Hayat Fruit Co
+nazimabad brothers	ناظم آباد برادرز	Nazimabad Brothers|Nazimabad Bros
+sakhi sarwar vegetable store	سخی سرور ویجیٹیبل سٹور	Sakhi Sarwar Vegetable Store
+kalar general store	کلر جنرل سٹور	Kalar General Store
+garhi yasin fruit house	گڑھی یاسین فروٹ ہاؤس	Garhi Yasin Fruit House|Garhi Yaseen Fruit House
+rustam packing house	رستم پیکنگ ہاؤس	Rustam Packing House
+kamalia fruit centre	کمالیہ فروٹ سینٹر	Kamalia Fruit Centre|Kamalia Fruit Center
+murree commission shop	مری کمیشن شاپ	Murree Commission Shop
+rustam and company	رستم اینڈ کمپنی	Rustam And Company|Rustam & Co
+bhaiphero trading company	بھائی پھیرو ٹریڈنگ کمپنی	Bhaiphero Trading Company|Bhaiphero Trading Co|Bhai Pheru Trading Company|Bhai Pheru Trading Co
+sheikhupura and sons	شیخوپورہ اینڈ سنز	Sheikhupura And Sons|Sheikhupura & Sons
+jhok enterprises	جھوک انٹرپرائزز	Jhok Enterprises
+ramdas enterprises	رامداس انٹرپرائزز	Ramdas Enterprises
+sanda general store	سندہ جنرل سٹور	Sanda General Store
+multan and sons	ملتان اینڈ سنز	Multan And Sons|Multan & Sons
+sultanpur fruit centre	سلطان پور فروٹ سینٹر	Sultanpur Fruit Centre|Sultanpur Fruit Center
+bannu enterprises	بنوں انٹرپرائزز	Bannu Enterprises
+hafizabad enterprises	حافظ آباد انٹرپرائزز	Hafizabad Enterprises
+bahawalnagar and sons	بہاولنگر اینڈ سنز	Bahawalnagar And Sons|Bahawalnagar & Sons
+kotla arab ali khan trading company	کوٹلہ عرب علی خان ٹریڈنگ کمپنی	Kotla Arab Ali Khan Trading Company|Kotla Arab Ali Khan Trading Co
+makhdoom pur commission agency	مخدوم پور کمیشن ایجنسی	Makhdoom Pur Commission Agency|Makhdoompur Commission Agency|Makhdum Pur Commission Agency
+ubauro packing house	اوباڑو پیکنگ ہاؤس	Ubauro Packing House
+chaprar and sons	چپرار اینڈ سنز	Chaprar And Sons|Chaprar & Sons
+kalar packing house	کلر پیکنگ ہاؤس	Kalar Packing House
+zaman colony traders	زمان کالونی ٹریڈرز	Zaman Colony Traders
+qadirabad commission agency	قادر آباد کمیشن ایجنسی	Qadirabad Commission Agency
+ahmadabad fruit centre	احمد آباد فروٹ سینٹر	Ahmadabad Fruit Centre|Ahmadabad Fruit Center|Ahmedabad Fruit Centre|Ahmedabad Fruit Center
+amirabad brothers	امیر آباد برادرز	Amirabad Brothers|Amirabad Bros|Ameerabad Brothers|Ameerabad Bros
+kasur and company	قصور اینڈ کمپنی	Kasur And Company|Kasur & Co
+tulamba traders	تلمبہ ٹریڈرز	Tulamba Traders
+vanike tarar packing house	وینیکے تارڑ پیکنگ ہاؤس	Vanike Tarar Packing House
+israr yousafzai brothers	اسرار یوسفزئی برادرز	Israr Yousafzai Brothers|Israr Yousafzai Bros|Israr Yusufzai Brothers|Israr Yusufzai Bros
+hilal akhtar brothers	ہلال اختر برادرز	Hilal Akhtar Brothers|Hilal Akhtar Bros|Hilal Akhter Brothers|Hilal Akhter Bros
+rohail gondal fruit house	روحیل گوندل فروٹ ہاؤس	Rohail Gondal Fruit House|Ruhail Gondal Fruit House
+rasool minhas and company	رسول منہاس اینڈ کمپنی	Rasool Minhas And Company|Rasool Minhas & Co|Rasul Minhas And Company|Rasul Minhas & Co
+taqi chandio traders	تقی چانڈیو ٹریڈرز	Taqi Chandio Traders
+bahadur syed and sons	بہادر سید اینڈ سنز	Bahadur Syed And Sons|Bahadur Syed & Sons|Bahadur Sayed And Sons|Bahadur Sayed & Sons|Bahadur Sayyid And Sons|Bahadur Sayyid & Sons
+jaffar awan cold storage	جعفر اعوان کولڈ سٹوریج	Jaffar Awan Cold Storage|Jafar Awan Cold Storage
+rashad lodhi traders	رشاد لودھی ٹریڈرز	Rashad Lodhi Traders|Rashad Lodi Traders
+mukhtiar syed packing house	مختیار سید پیکنگ ہاؤس	Mukhtiar Syed Packing House|Mukhtiar Sayed Packing House|Mukhtiar Sayyid Packing House|Mukhtyar Syed Packing House|Mukhtyar Sayed Packing House|Mukhtyar Sayyid Packing House
+pervaiz shirazi trading company	پرویز شیرازی ٹریڈنگ کمپنی	Pervaiz Shirazi Trading Company|Pervaiz Shirazi Trading Co|Parvez Shirazi Trading Company|Parvez Shirazi Trading Co|Pervez Shirazi Trading Company|Pervez Shirazi Trading Co
+burhan tanoli vegetable store	برہان تنولی ویجیٹیبل سٹور	Burhan Tanoli Vegetable Store
+zikriya arbab cold storage	ذکریا ارباب کولڈ سٹوریج	Zikriya Arbab Cold Storage|Zakariya Arbab Cold Storage
+lal akhtar fruit house	لال اختر فروٹ ہاؤس	Lal Akhtar Fruit House|Lal Akhter Fruit House
+usaid mohmand enterprises	اسید مہمند انٹرپرائزز	Usaid Mohmand Enterprises|Usaid Mehmand Enterprises
+rauf baloch and company	رؤف بلوچ اینڈ کمپنی	Rauf Baloch And Company|Rauf Baloch & Co|Rauf Baluch And Company|Rauf Baluch & Co|Raoof Baloch And Company|Raoof Baloch & Co|Raoof Baluch And Company|Raoof Baluch & Co
+atiq sheikh fruit company	عتیق شیخ فروٹ کمپنی	Atiq Sheikh Fruit Company|Atiq Sheikh Fruit Co|Atiq Shaikh Fruit Company|Atiq Shaikh Fruit Co|Atiq Shaykh Fruit Company|Atiq Shaykh Fruit Co|Ateeq Sheikh Fruit Company|Ateeq Sheikh Fruit Co|Ateeq Shaikh Fruit Company|Ateeq Shaikh Fruit Co|Ateeq Shaykh Fruit Company|Ateeq Shaykh Fruit Co
+zikriya kakar and company	ذکریا کاکڑ اینڈ کمپنی	Zikriya Kakar And Company|Zikriya Kakar & Co|Zakariya Kakar And Company|Zakariya Kakar & Co
+afzaal mazari fruit house	افضال مزاری فروٹ ہاؤس	Afzaal Mazari Fruit House|Afzal Mazari Fruit House
+hamayun afridi fruit centre	ہمایوں آفریدی فروٹ سینٹر	Hamayun Afridi Fruit Centre|Hamayun Afridi Fruit Center|Humayun Afridi Fruit Centre|Humayun Afridi Fruit Center
+rameez baloch trading company	رمیز بلوچ ٹریڈنگ کمپنی	Rameez Baloch Trading Company|Rameez Baloch Trading Co|Rameez Baluch Trading Company|Rameez Baluch Trading Co|Ramiz Baloch Trading Company|Ramiz Baloch Trading Co|Ramiz Baluch Trading Company|Ramiz Baluch Trading Co
+mohib meo trading company	محب میو ٹریڈنگ کمپنی	Mohib Meo Trading Company|Mohib Meo Trading Co|Muhib Meo Trading Company|Muhib Meo Trading Co
+subhan raisani trading company	سبحان رئیسانی ٹریڈنگ کمپنی	Subhan Raisani Trading Company|Subhan Raisani Trading Co|Sobhan Raisani Trading Company|Sobhan Raisani Trading Co
+moeen gabol traders	معین گبول ٹریڈرز	Moeen Gabol Traders|Moin Gabol Traders|Mueen Gabol Traders
+haseeb minhas commission agency	حسیب منہاس کمیشن ایجنسی	Haseeb Minhas Commission Agency|Hasib Minhas Commission Agency
+tasawwar marwat commission agency	تصور مروت کمیشن ایجنسی	Tasawwar Marwat Commission Agency|Tasawar Marwat Commission Agency|Tasawur Marwat Commission Agency
+hadayat khokhar brothers	ہدایت کھوکھر برادرز	Hadayat Khokhar Brothers|Hadayat Khokhar Bros|Hidayat Khokhar Brothers|Hidayat Khokhar Bros
+bazid dogar commission agency	بایزید ڈوگر کمیشن ایجنسی	Bazid Dogar Commission Agency|Bazid Dogger Commission Agency|Bayazid Dogar Commission Agency|Bayazid Dogger Commission Agency
+naqeeb gakkhar trading company	نقیب گکھڑ ٹریڈنگ کمپنی	Naqeeb Gakkhar Trading Company|Naqeeb Gakkhar Trading Co|Naqeeb Gakhar Trading Company|Naqeeb Gakhar Trading Co|Naqib Gakkhar Trading Company|Naqib Gakkhar Trading Co|Naqib Gakhar Trading Company|Naqib Gakhar Trading Co
+ihsanullah lashari cold storage	احسان اللہ لاشاری کولڈ سٹوریج	Ihsanullah Lashari Cold Storage|Ehsanullah Lashari Cold Storage
+pervaiz shirazi enterprises	پرویز شیرازی انٹرپرائزز	Pervaiz Shirazi Enterprises|Parvez Shirazi Enterprises|Pervez Shirazi Enterprises
+mehboob zehri commission agency	محبوب زہری کمیشن ایجنسی	Mehboob Zehri Commission Agency|Mahboob Zehri Commission Agency
+aryan zardari brothers	آریان زرداری برادرز	Aryan Zardari Brothers|Aryan Zardari Bros
+intizar ghauri commission shop	انتظار غوری کمیشن شاپ	Intizar Ghauri Commission Shop|Intizar Ghori Commission Shop|Intezar Ghauri Commission Shop|Intezar Ghori Commission Shop
+nasrullah zehri vegetable store	نصر اللہ زہری ویجیٹیبل سٹور	Nasrullah Zehri Vegetable Store|Nasarullah Zehri Vegetable Store
+mazhar kakar packing house	مظہر کاکڑ پیکنگ ہاؤس	Mazhar Kakar Packing House
+adamjee nagar	آدم جی نگر	Adamjee Nagar
+ahmadabad	احمد آباد	Ahmadabad|Ahmedabad
+akbarabad	اکبر آباد	Akbarabad
+alipur chattha	علی پور چٹھہ	Alipur Chattha|Ali Pur Chatha
+allahabad	اللہ آباد	Allahabad
+allahyar	اللہ یار	Allahyar|Allah Yar
+amirabad	امیر آباد	Amirabad|Ameerabad
+aminpur	امین پور	Aminpur|Ameenpur
+ark mandi	ارک منڈی	Ark Mandi
+attabad	عطا آباد	Attabad|Ataabad
+baddomalhi	بدوملہی	Baddomalhi|Baddo Malhi
+bagh e jinnah	باغ جناح	Bagh E Jinnah|Bagh Jinnah
+bahadurnagar	بہادر نگر	Bahadurnagar|Bahadur Nagar
+bahadurpur	بہادر پور	Bahadurpur|Bahadur Pur
+bakhar	بھکر	Bakhar|Bhakkar
+bakhtawarpur	بختاور پور	Bakhtawarpur
+bandial	بندیال	Bandial
+bankey	بانکے	Bankey|Banke
+basirpur	بصیر پور	Basirpur
+basti malook	بستی ملوک	Basti Malook|Basti Maluk
+basti rajoo	بستی راجو	Basti Rajoo|Basti Raju
+begowala	بیگووالہ	Begowala|Begowal
+bhagtanwala	بھگتانوالہ	Bhagtanwala
+bhaiphero	بھائی پھیرو	Bhaiphero|Bhai Pheru
+bhawana	بھوانہ	Bhawana|Bhowana
+bhera	بھیرہ	Bhera|Bhaira
+bhikhi	بھکھی	Bhikhi
+bhone	بھونے	Bhone|Bhoney
+bunga hayat	بونگا حیات	Bunga Hayat
+burj	برج	Burj
+chah miran	چاہ میراں	Chah Miran
+chak bedi	چک بیدی	Chak Bedi
+chak jamal	چک جمال	Chak Jamal
+chak lala musa	چک لالہ موسیٰ|چک لالہ موسی	Chak Lala Musa
+chak sawar	چک سوار	Chak Sawar
+chambar	چمبر	Chambar
+chamkani	چمکنی	Chamkani
+chaprar	چپرار	Chaprar
+chatta bakhtawar	چٹہ بختاور	Chatta Bakhtawar
+chenab nagar	چناب نگر	Chenab Nagar
+chhanga manga	چھانگا مانگا	Chhanga Manga|Changa Manga
+chicha watni	چیچہ وطنی	Chicha Watni|Chichawatni
+chinot	چنیوٹ	Chinot|Chiniot
+chiniot	چنیوٹ	Chiniot
+chishtian	چشتیاں	Chishtian|Chishtiyan
+chowk dalgran	چوک ڈلگراں	Chowk Dalgran
+chowk pindi bhattian	چوک پنڈی بھٹیاں	Chowk Pindi Bhattian
+dadu	دادو	Dadu
+dajkot	ڈجکوٹ	Dajkot|Dijkot
+daud khel	داؤد خیل	Daud Khel|Dawood Khel
+daulatpur	دولت پور	Daulatpur|Dowlatpur
+deepalpur	دیپالپور	Deepalpur|Depalpur
+dera nanak	ڈیرہ نانک	Dera Nanak
+dhamial	دھمیال	Dhamial
+dhapai	دھپئی	Dhapai
+dharanwala	دھرانوالہ	Dharanwala
+dhudial	دھدیال	Dhudial
+dolatwala	دولت والا	Dolatwala|Daulatwala
+dunyapur	دنیا پور	Dunyapur|Duniapur
+faqirabad	فقیر آباد	Faqirabad|Fakirabad
+faridkot	فرید کوٹ	Faridkot
+fatehabad	فتح آباد	Fatehabad
+fazalabad	فضل آباد	Fazalabad|Fazlabad
+fort munro	فورٹ منرو	Fort Munro
+gadoon	گڈون	Gadoon|Gadun
+gaggo mandi	گگو منڈی	Gaggo Mandi|Gago Mandi
+gambat	گمبٹ	Gambat
+garhi shahu	گڑھی شاہو	Garhi Shahu
+garhi yasin	گڑھی یاسین	Garhi Yasin|Garhi Yaseen
+gharibwal	غریب وال	Gharibwal
+ghazi ghat	غازی گھاٹ	Ghazi Ghat
+ghulamabad	غلام آباد	Ghulamabad
+gojra	گوجرہ	Gojra|Gojrah
+golra	گولڑہ	Golra
+gujrat	گجرات	Gujrat
+gulabad	گل آباد	Gulabad
+gulshan e iqbal	گلشن اقبال	Gulshan E Iqbal|Gulshan Iqbal
+habibabad	حبیب آباد	Habibabad
+hafizabad	حافظ آباد	Hafizabad
+hakimabad	حکیم آباد	Hakimabad
+harappa	ہڑپہ	Harappa
+haripur hazara	ہری پور ہزارہ	Haripur Hazara
+hazro	حضرو	Hazro
+hussainabad	حسین آباد	Hussainabad|Husainabad
+islamgarh	اسلام گڑھ	Islamgarh|Islam Garh
+ismailabad	اسماعیل آباد	Ismailabad
+jamalpur	جمال پور	Jamalpur
+jandiala sher khan	جنڈیالہ شیر خان	Jandiala Sher Khan
+jauharabad	جوہرآباد	Jauharabad|Johar Abad
+jhang sadar	جھنگ صدر	Jhang Sadar
+jhok	جھوک	Jhok
+jhumra	جھمرہ	Jhumra|Jhamra
+kacha khoh	کچا کھوہ	Kacha Khoh
+kahuta	کہوٹہ	Kahuta
+kalar	کلر	Kalar
+kalarkot	کلرکوٹ	Kalarkot
+kallar syedan	کلر سیداں	Kallar Syedan
+kamra	کامرہ	Kamra
+karimabad	کریم آباد	Karimabad
+kasowal	کسووال	Kasowal|Kassowal
+kasur	قصور	Kasur
+khadian	کھڈیاں	Khadian|Khudian
+khairabad	خیرآباد	Khairabad
+khairpur	خیرپور	Khairpur
+khanabad	خان آباد	Khanabad
+khanewal	خانیوال	Khanewal
+kharian	کھاریاں	Kharian
+khushab	خوشاب	Khushab
+kot lakhpat	کوٹ لکھپت	Kot Lakhpat
+kot nakka	کوٹ نکہ	Kot Nakka
+kot radha kishan	کوٹ رادھا کشن	Kot Radha Kishan|Kot Radhakishan
+kot sabzal	کوٹ سبزل	Kot Sabzal
+kotla arab ali khan	کوٹلہ عرب علی خان	Kotla Arab Ali Khan
+kundian	کنڈیاں	Kundian
+kunjah	کنجاہ	Kunjah
+lahore cantt	لاہور کینٹ	Lahore Cantt|Lahore Cantonment
+lakhodair	لکھوڈیر	Lakhodair
+lalamusa	لالہ موسیٰ|لالہ موسی	Lalamusa|Lala Musa
+lalpur	لال پور	Lalpur
+layyah	لیہ	Layyah|Leiah
+lillah	للہ	Lillah
+machhiwal	مچھی وال	Machhiwal
+mailsi	میلسی	Mailsi
+makhdoom pur	مخدوم پور	Makhdoom Pur|Makhdoompur|Makhdum Pur
+malakwal	ملکوال	Malakwal
+mandi bahauddin	منڈی بہاؤالدین	Mandi Bahauddin
+mandi sadiqganj	منڈی صادق گنج	Mandi Sadiqganj
+mananwala	مانانوالہ	Mananwala
+mangowal	مانگوال	Mangowal
+mariala	مریالہ	Mariala
+marot	مروٹ	Marot
+mehmoodabad	محمود آباد	Mehmoodabad|Mahmoodabad
+mian wali	میانوالی	Mian Wali|Mianwali
+miani	میانی	Miani
+mirpur sakro	میرپور ساکرو	Mirpur Sakro
+mohri pur	موہری پور	Mohri Pur|Mohripur
+morgah	مورگاہ	Morgah
+mughalabad	مغل آباد	Mughalabad
+mughalpura	مغلپورہ	Mughalpura
+multan cantt	ملتان کینٹ	Multan Cantt
+muridwala	مریدوالا	Muridwala
+muzaffargarh	مظفر گڑھ	Muzaffargarh|Muzaffar Garh
+nabipur	نبی پور	Nabipur
+nankana sahib	ننکانہ صاحب	Nankana Sahib
+narowal	نارووال	Narowal
+nawabpur	نواب پور	Nawabpur
+nawan kot	نواں کوٹ	Nawan Kot
+nazimabad	ناظم آباد	Nazimabad
+noorpur	نور پور	Noorpur|Nurpur
+okara	اوکاڑہ	Okara
+pakka anna	پکا اننا	Pakka Anna
+pasrur	پسرور	Pasrur
+pattoki	پتوکی	Pattoki
+phalia	پھالیہ	Phalia
+pindi bhattian	پنڈی بھٹیاں	Pindi Bhattian
+pir mahal	پیر محل	Pir Mahal
+qadirabad	قادر آباد	Qadirabad
+qaimpur	قائم پور	Qaimpur
+qila sheikhupura	قلعہ شیخوپورہ	Qila Sheikhupura
+rahwali	رہوالی	Rahwali
+raiwind	رائیونڈ	Raiwind
+rajanpur	راجن پور	Rajanpur
+ramdas	رامداس	Ramdas
+rasoolpur	رسول پور	Rasoolpur|Rasulpur
+rattokot	رتو کوٹ	Rattokot
+renala	رینالہ	Renala
+sadhoke	سادھوکی	Sadhoke
+saidpur	سید پور	Saidpur|Sayedpur
+sakhi sarwar	سخی سرور	Sakhi Sarwar
+sanda	سندہ	Sanda
+sangla hill	سانگلہ ہل	Sangla Hill
+sarai sidhu	سرائے سدھو	Sarai Sidhu
+sargodha	سرگودھا	Sargodha
+shadiwal	شادیوال	Shadiwal
+shahdadpur	شہداد پور	Shahdadpur
+shahkot	شاہکوٹ	Shahkot
+shahpur kanjra	شاہ پور کانجرا	Shahpur Kanjra
+shakargarh	شکرگڑھ	Shakargarh
+sharaqpur	شرقپور	Sharaqpur|Sharaqpur Sharif
+sheikhupura	شیخوپورہ	Sheikhupura
+shergarh	شیرگڑھ	Shergarh|Sher Garh
+shujaabad	شجاع آباد	Shujaabad|Shujabad
+sialkot	سیالکوٹ	Sialkot
+sillanwali	سلانوالی	Sillanwali
+sukheki	سکھیکی	Sukheki
+sultanpur	سلطان پور	Sultanpur
+talwandi	تلونڈی	Talwandi
+tarnol	ترنول	Tarnol
+tibba	ٹبہ	Tibba
+tulamba	تلمبہ	Tulamba
+ubauro	اوباڑو	Ubauro
+uch sharif	اوچ شریف	Uch Sharif
+vanike tarar	وینیکے تارڑ	Vanike Tarar
+wahndo	واہنڈو	Wahndo
+wan radha ram	وان رادھا رام	Wan Radha Ram
+warburton	وار برٹن	Warburton
+yazman mandi	یزمان منڈی	Yazman Mandi
+zahir pir	ظاہر پیر	Zahir Pir
+zaman colony	زمان کالونی	Zaman Colony
+zarghoon	زرغون	Zarghoon
+lahore	لاہور	Lahore
+karachi	کراچی	Karachi
+faisalabad	فیصل آباد	Faisalabad|Faislabad
+multan	ملتان	Multan
+rawalpindi	راولپنڈی	Rawalpindi|Rawal Pindi
+islamabad	اسلام آباد	Islamabad
+peshawar	پشاور	Peshawar
+quetta	کوئٹہ	Quetta
+hyderabad	حیدرآباد	Hyderabad|Haiderabad
+gujranwala	گوجرانوالہ	Gujranwala
+bahawalpur	بہاولپور	Bahawalpur
+sukkur	سکھر	Sukkur
+larkana	لاڑکانہ	Larkana
+mardan	مردان	Mardan
+abbottabad	ایبٹ آباد	Abbottabad
+mansehra	مانسہرہ	Mansehra
+swat	سوات	Swat
+chitral	چترال	Chitral
+kohat	کوہاٹ	Kohat
+bannu	بنوں	Bannu
+jhelum	جہلم	Jhelum
+attock	اٹک	Attock
+chakwal	چکوال	Chakwal
+sahiwal	ساہیوال	Sahiwal
+pakpattan	پاکپتن	Pakpattan
+vehari	وہاڑی	Vehari
+lodhran	لودھراں	Lodhran
+bhakkar	بھکر	Bhakkar
+jhang	جھنگ	Jhang
+sadiqabad	صادق آباد	Sadiqabad
+rahim yar khan	رحیم یار خان	Rahim Yar Khan
+dera ghazi khan	ڈیرہ غازی خان	Dera Ghazi Khan
+bahawalnagar	بہاولنگر	Bahawalnagar
+toba tek singh	ٹوبہ ٹیک سنگھ	Toba Tek Singh
+kamalia	کمالیہ	Kamalia
+chunian	چونیاں	Chunian
+depalpur	دیپالپور	Depalpur
+burewala	بورے والا	Burewala
+arifwala	عارف والا	Arifwala
+hasilpur	حاصل پور	Hasilpur
+wazirabad	وزیرآباد	Wazirabad
+daska	ڈسکہ	Daska
+kamoke	کامونکی	Kamoke
+muridke	مریدکے	Muridke
+taxila	ٹیکسلا	Taxila
+murree	مری	Murree
+mehmoodabad mandi	محمود آباد منڈی	Mehmoodabad Mandi|Mahmoodabad Mandi
+nawan kot colony	نواں کوٹ کالونی	Nawan Kot Colony
+shahdadpur road	شہداد پور روڈ	Shahdadpur Road
+haripur hazara bazaar	ہری پور ہزارہ بازار	Haripur Hazara Bazaar|Haripur Hazara Bazar
+aam	آم	Aam|Mango
+aaloo	آلو	Aaloo|Aloo|Potato
+alubokhara	آلو بخارا	Alubokhara|Alubukhara|Aloo Bukhara|Plum
+amarood	امرود	Amarood|Amrood|Amrud|Guava
+anaar	انار	Anaar|Anar|Pomegranate
+ananas	انناس	Ananas|Pineapple
+anjeer	انجیر	Anjeer|Anjir|Fig
+aru	آڑو	Aru|Aadu|Peach
+badam	بادام	Badam|Almond
+baingan	بینگن	Baingan|Brinjal
+bandh gobi	بند گوبھی	Bandh Gobi|Band Gobhi|Cabbage
+bathu	بتھوا	Bathu|Bathua
+bhindi	بھنڈی	Bhindi|Okra
+bhutta	بھٹہ	Bhutta|Corn
+broccoli	بروکلی	Broccoli
+chaunsa	چونسا	Chaunsa|Chausa
+chikoo	چیکو	Chikoo|Chiku|Sapodilla
+chukandar	چقندر	Chukandar|Beetroot
+dhania	دھنیا	Dhania|Dhaniya|Coriander
+dragon fruit	ڈریگن فروٹ	Dragon Fruit
+dusehri	دسہری	Dusehri|Dasehri
+falsa	فالسہ	Falsa
+fruit chaat	فروٹ چاٹ	Fruit Chaat
+gajar	گاجر	Gajar|Carrot
+ghia tori	گھیا توری	Ghia Tori
+gobhi	گوبھی	Gobhi|Gobi|Cauliflower
+grapes	انگور	Grapes|Angoor
+guava	امرود	Guava|Amrood
+hari mirch	ہری مرچ	Hari Mirch|Green Chilli
+imli	املی	Imli|Tamarind
+jamun	جامن	Jamun
+kachalu	کچالو	Kachalu
+kaddu	کدو	Kaddu|Pumpkin
+kakri	ککڑی	Kakri|Kakdi
+kala jamun	کالا جامن	Kala Jamun
+karela	کریلا	Karela|Bitter Gourd
+kela	کیلا	Kela|Banana
+keenu	کنو	Keenu|Kinnu|Kinno
+kharbooza	خربوزہ	Kharbooza|Kharbuza|Melon
+khira	کھیرا	Khira|Kheera|Cucumber
+khubani	خوبانی	Khubani|Khoobani|Apricot
+kiwi	کیوی	Kiwi
+lahsun	لہسن	Lahsun|Lehsun|Garlic
+langra	لنگڑا	Langra|Langda
+lauki	لوکی	Lauki|Loki
+lemon	لیموں	Lemon|Limu
+lichi	لیچی	Lichi|Litchi|Lychee
+loquat	لوکاٹ	Loquat|Lukat
+makai	مکئی	Makai|Corn
+malta	مالٹا	Malta|Orange
+mausami	موسمی	Mausami|Mosambi
+methi	میتھی	Methi
+mooli	مولی	Mooli|Muli|Radish
+mosambi	موسمی	Mosambi
+mushroom	مشروم	Mushroom
+nashpati	ناشپاتی	Nashpati|Pear
+papita	پپیتا	Papita|Papeeta|Papaya
+pyaaz	پیاز	Pyaaz|Piyaz|Pyaz|Onion
+pudina	پودینہ	Pudina|Podina|Mint
+rasbhari	رسبھری	Rasbhari
+sabz mirch	سبز مرچ	Sabz Mirch
+saib	سیب	Saib|Sib|Apple
+sarda	سردہ	Sarda|Sardah
+shaftalu	شفتالو	Shaftalu|Shaftaloo
+shahtoot	شہتوت	Shahtoot|Shehtoot|Mulberry
+shakarkandi	شکرقندی	Shakarkandi|Sweet Potato
+shalgham	شلغم	Shalgham|Shalgam|Turnip
+shimla mirch	شملہ مرچ	Shimla Mirch|Capsicum
+sindhri	سندھڑی	Sindhri|Sindhdi
+strawberry	سٹرابیری	Strawberry
+tamatar	ٹماٹر	Tamatar|Tomato
+tarbooz	تربوز	Tarbooz|Tarbuz|Watermelon
+tinda	ٹینڈا|ٹنڈا	Tinda|Tinday
+toori	توری	Toori|Tori
+zucchini	زوکینی	Zucchini
+kakri bori	ککڑی بوری	Kakri Bori|Kakdi Bori
+chikoo crate	چیکو کریٹ	Chikoo Crate|Chiku Crate|Sapodilla Crate
+hari mirch bori	ہری مرچ بوری	Hari Mirch Bori|Green Chilli Bori
+chukandar bori	چقندر بوری	Chukandar Bori|Beetroot Bori
+chikoo carton	چیکو کارٹن	Chikoo Carton|Chiku Carton|Sapodilla Carton
+aaloo carton	آلو کارٹن	Aaloo Carton|Aloo Carton|Potato Carton
+sindhri carton	سندھڑی کارٹن	Sindhri Carton|Sindhdi Carton
+keenu dabba	کنو ڈبہ	Keenu Dabba|Kinnu Dabba|Kinno Dabba
+karela bori	کریلا بوری	Karela Bori|Bitter Gourd Bori
+jamun peti	جامن پیٹی	Jamun Peti|Jamun Petti
+amarood peti	امرود پیٹی	Amarood Peti|Amarood Petti|Amrood Peti|Amrood Petti|Amrud Peti|Amrud Petti|Guava Peti|Guava Petti
+shaftalu bori	شفتالو بوری	Shaftalu Bori|Shaftaloo Bori
+alubokhara crate	آلو بخارا کریٹ	Alubokhara Crate|Alubukhara Crate|Aloo Bukhara Crate|Plum Crate
+fruit chaat crate	فروٹ چاٹ کریٹ	Fruit Chaat Crate
+lichi tokri	لیچی ٹوکری	Lichi Tokri|Litchi Tokri|Lychee Tokri
+shahtoot peti	شہتوت پیٹی	Shahtoot Peti|Shahtoot Petti|Shehtoot Peti|Shehtoot Petti|Mulberry Peti|Mulberry Petti
+gajar carton	گاجر کارٹن	Gajar Carton|Carrot Carton
+aru tokri	آڑو ٹوکری	Aru Tokri|Aadu Tokri|Peach Tokri
+pyaaz bori	پیاز بوری	Pyaaz Bori|Piyaz Bori|Pyaz Bori|Onion Bori
+bathu carton	بتھوا کارٹن	Bathu Carton|Bathua Carton
+gobhi bori	گوبھی بوری	Gobhi Bori|Gobi Bori|Cauliflower Bori
+fruit chaat dabba	فروٹ چاٹ ڈبہ	Fruit Chaat Dabba
+pudina dabba	پودینہ ڈبہ	Pudina Dabba|Podina Dabba|Mint Dabba
+dusehri bori	دسہری بوری	Dusehri Bori|Dasehri Bori
+anaar crate	انار کریٹ	Anaar Crate|Anar Crate|Pomegranate Crate
+gajar dabba	گاجر ڈبہ	Gajar Dabba|Carrot Dabba
+dragon fruit crate	ڈریگن فروٹ کریٹ	Dragon Fruit Crate
+kakri dabba	ککڑی ڈبہ	Kakri Dabba|Kakdi Dabba
+zucchini bori	زوکینی بوری	Zucchini Bori
+bhutta dabba	بھٹہ ڈبہ	Bhutta Dabba|Corn Dabba
+nashpati dabba	ناشپاتی ڈبہ	Nashpati Dabba|Pear Dabba
+keenu crate	کنو کریٹ	Keenu Crate|Kinnu Crate|Kinno Crate
+aru carton	آڑو کارٹن	Aru Carton|Aadu Carton|Peach Carton
+tarbooz peti	تربوز پیٹی	Tarbooz Peti|Tarbooz Petti|Tarbuz Peti|Tarbuz Petti|Watermelon Peti|Watermelon Petti
+kaddu peti	کدو پیٹی	Kaddu Peti|Kaddu Petti|Pumpkin Peti|Pumpkin Petti
+keenu bori	کنو بوری	Keenu Bori|Kinnu Bori|Kinno Bori
+rasbhari crate	رسبھری کریٹ	Rasbhari Crate
+aru dabba	آڑو ڈبہ	Aru Dabba|Aadu Dabba|Peach Dabba
+shimla mirch crate	شملہ مرچ کریٹ	Shimla Mirch Crate|Capsicum Crate
+shalgham carton	شلغم کارٹن	Shalgham Carton|Shalgam Carton|Turnip Carton
+grapes crate	انگور کریٹ	Grapes Crate|Angoor Crate
+baingan carton	بینگن کارٹن	Baingan Carton|Brinjal Carton
+kela crate	کیلا کریٹ	Kela Crate|Banana Crate
+khira crate	کھیرا کریٹ	Khira Crate|Kheera Crate|Cucumber Crate
+sabz mirch bori	سبز مرچ بوری	Sabz Mirch Bori
+aru peti	آڑو پیٹی	Aru Peti|Aru Petti|Aadu Peti|Aadu Petti|Peach Peti|Peach Petti
+mausami tokri	موسمی ٹوکری	Mausami Tokri|Mosambi Tokri
+nashpati bori	ناشپاتی بوری	Nashpati Bori|Pear Bori
+alubokhara tokri	آلو بخارا ٹوکری	Alubokhara Tokri|Alubukhara Tokri|Aloo Bukhara Tokri|Plum Tokri
+falsa bori	فالسہ بوری	Falsa Bori
+lahsun dabba	لہسن ڈبہ	Lahsun Dabba|Lehsun Dabba|Garlic Dabba
+mushroom crate	مشروم کریٹ	Mushroom Crate
+fruit chaat peti	فروٹ چاٹ پیٹی	Fruit Chaat Peti|Fruit Chaat Petti
+shimla mirch peti	شملہ مرچ پیٹی	Shimla Mirch Peti|Shimla Mirch Petti|Capsicum Peti|Capsicum Petti
+alubokhara dabba	آلو بخارا ڈبہ	Alubokhara Dabba|Alubukhara Dabba|Aloo Bukhara Dabba|Plum Dabba
+guava crate	امرود کریٹ	Guava Crate|Amrood Crate
+lichi carton	لیچی کارٹن	Lichi Carton|Litchi Carton|Lychee Carton
+saib dabba	سیب ڈبہ	Saib Dabba|Sib Dabba|Apple Dabba
+bandh gobi bori	بند گوبھی بوری	Bandh Gobi Bori|Band Gobhi Bori|Cabbage Bori
+shahtoot dabba	شہتوت ڈبہ	Shahtoot Dabba|Shehtoot Dabba|Mulberry Dabba
+sabz mirch peti	سبز مرچ پیٹی	Sabz Mirch Peti|Sabz Mirch Petti
+khira carton	کھیرا کارٹن	Khira Carton|Kheera Carton|Cucumber Carton
+bhutta bori	بھٹہ بوری	Bhutta Bori|Corn Bori
+lichi peti	لیچی پیٹی	Lichi Peti|Lichi Petti|Litchi Peti|Litchi Petti|Lychee Peti|Lychee Petti
+kachalu tokri	کچالو ٹوکری	Kachalu Tokri
+ananas peti	انناس پیٹی	Ananas Peti|Ananas Petti|Pineapple Peti|Pineapple Petti
+dhania peti	دھنیا پیٹی	Dhania Peti|Dhania Petti|Dhaniya Peti|Dhaniya Petti|Coriander Peti|Coriander Petti
+chikoo bori	چیکو بوری	Chikoo Bori|Chiku Bori|Sapodilla Bori
+lauki bori	لوکی بوری	Lauki Bori|Loki Bori
+malta dabba	مالٹا ڈبہ	Malta Dabba|Orange Dabba
+chikoo dabba	چیکو ڈبہ	Chikoo Dabba|Chiku Dabba|Sapodilla Dabba
+anaar dabba	انار ڈبہ	Anaar Dabba|Anar Dabba|Pomegranate Dabba
+loquat peti	لوکاٹ پیٹی	Loquat Peti|Loquat Petti|Lukat Peti|Lukat Petti
+bhutta crate	بھٹہ کریٹ	Bhutta Crate|Corn Crate
+sabz mirch tokri	سبز مرچ ٹوکری	Sabz Mirch Tokri

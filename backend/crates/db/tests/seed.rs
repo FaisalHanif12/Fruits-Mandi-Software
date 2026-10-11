@@ -173,6 +173,7 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
     let want_controls = [
         ("0101", "Cash", "other", "01"),
         ("0102", "Bank", "other", "01"),
+        ("0103", "Money Lent", "other", "01"),
         ("0201", "Payables", "other", "02"),
         ("03011", "Sellers", "seller", "03"),
         ("0304", "Buyers", "buyer", "03"),
@@ -182,7 +183,7 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
         ("0602", "Partner Capital", "other", "06"),
         ("0603", "Drawings", "other", "06"),
     ];
-    assert_eq!(controls.len(), 10);
+    assert_eq!(controls.len(), 11);
     for (have, want) in controls.iter().zip(want_controls) {
         assert_eq!(
             (
@@ -213,7 +214,7 @@ fn a_second_run_changes_nothing() {
     let before = seed::counts(&conn).unwrap();
     assert_eq!(
         (before.heads, before.controls, before.accounts),
-        (6, 10, 16)
+        (6, 11, 16)
     );
     let changes_before = conn.total_changes();
     assert_eq!(seed::system_accounts(&conn).unwrap(), 0);
@@ -234,7 +235,7 @@ fn the_seed_only_fills_what_is_missing() {
     other.pragma_update(None, "foreign_keys", "ON").unwrap();
     other.execute_batch(mandi_db::migrate::INIT_SQL).unwrap();
     let tx = other.transaction().unwrap();
-    assert_eq!(seed::system_accounts(&tx).unwrap(), 6 + 10 + 16);
+    assert_eq!(seed::system_accounts(&tx).unwrap(), 6 + 11 + 16);
     tx.commit().unwrap();
     assert_eq!(seed::system_accounts(&other).unwrap(), 0);
     drop(conn);

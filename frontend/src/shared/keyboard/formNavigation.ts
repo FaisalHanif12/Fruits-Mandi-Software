@@ -50,10 +50,15 @@ function focusField(field: HTMLElement): void {
 }
 
 function makeKeyDown(onSubmit: (() => void) | undefined) {
-  return (event: KeyboardEvent<HTMLElement>): void => handleKeyDown(event, onSubmit);
+  return (event: KeyboardEvent<HTMLElement>): void => {
+    handleKeyDown(event, onSubmit);
+  };
 }
 
-function handleKeyDown(event: KeyboardEvent<HTMLElement>, onSubmit: (() => void) | undefined): void {
+function handleKeyDown(
+  event: KeyboardEvent<HTMLElement>,
+  onSubmit: (() => void) | undefined,
+): void {
   if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
     return;
   }
@@ -113,13 +118,35 @@ function onFocus(event: FocusEvent<HTMLElement>): void {
   if (target instanceof HTMLElement && isTextField(target) && !target.readOnly) target.select();
 }
 
+/**
+ * Moves focus to the next field of the form around `from`, selecting its value, as Enter does.
+ * A field that takes Enter for itself (the Urdu typing field turning a word into Urdu) calls this
+ * after it has done its own work. False when there is no next field.
+ */
+export function focusNextField(from: HTMLElement): boolean {
+  const container = from.closest<HTMLElement>('[data-form-zone]');
+  if (container === null) return false;
+  const fields = fieldsOf(container);
+  const next = fields.slice(fields.indexOf(from) + 1).find((field) => !field.matches('[readonly]'));
+  if (next === undefined) return false;
+  focusField(next);
+  return true;
+}
+
 /** Put these on the element that holds a form's fields. */
-export const formNavigationProps = { onKeyDown: makeKeyDown(undefined), onFocus } as const;
+export const formNavigationProps = {
+  onKeyDown: makeKeyDown(undefined),
+  onFocus,
+  'data-form-zone': '',
+} as const;
 
 /**
  * The same, and Enter in the last field runs `onSubmit` (the sign-in screen: "Enter also logs
  * in").
  */
 export function useFormNavigation(onSubmit: () => void) {
-  return useMemo(() => ({ onKeyDown: makeKeyDown(onSubmit), onFocus }), [onSubmit]);
+  return useMemo(
+    () => ({ onKeyDown: makeKeyDown(onSubmit), onFocus, 'data-form-zone': '' }),
+    [onSubmit],
+  );
 }

@@ -76,6 +76,9 @@ function Content() {
       nav={<MainNav current={main} onSelect={setMain} />}
       moduleMenu={main === 'bikri' ? <ModuleMenu current={module} onSelect={setModule} /> : null}
       userName={SAMPLE_USER}
+      onLock={() => undefined}
+      onSignOut={() => undefined}
+      onOpenAccount={() => undefined}
       date={SAMPLE_DATE}
       day="open"
     >

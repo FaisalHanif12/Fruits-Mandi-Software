@@ -88,7 +88,7 @@ err-migration-failed = نئے ورژن کے لیے ڈیٹا کی تبدیلی م
 # review: pending
 err-db-busy = ڈیٹا فائل ابھی مصروف ہے۔ ذرا دیر بعد دوبارہ کوشش کریں۔
 
-## Sign-in, users and settings (plan 04, contract 4. NFR-SEC-1, NFR-SEC-2, NFR-SEC-4, PRD FR-8.2).
+## Sign-in and settings (plan 04, contract 4. NFR-SEC-1, NFR-SEC-2, NFR-SEC-4, PRD FR-8.2).
 ## The reference number follows these messages when the backend sends one (err-reference).
 
 # $min: the shortest password, in characters.
@@ -98,8 +98,6 @@ err-password-too-short = پاس ورڈ کم از کم { $min } حروف کا ہ�
 err-passwords-differ = دونوں پاس ورڈ ایک جیسے نہیں۔ دوبارہ لکھیں۔
 # review: pending
 err-username-invalid = صارف کا نام 3 سے 32 حروف کا ہو۔ اس میں انگریزی چھوٹے حروف، ہندسے، نقطہ، نیچے کی لکیر یا درمیانی لکیر ہی لکھ سکتے ہیں۔
-# review: pending
-err-username-taken = یہ صارف کا نام کسی اور کے پاس ہے۔ کوئی دوسرا نام لکھیں۔
 # The same message for a wrong password and an unknown name, so nobody learns which names exist.
 # $tries_left: tries left before the sign-in waits.
 # review: pending
@@ -110,16 +108,16 @@ err-locked-wait = بہت زیادہ غلط کوششیں ہو گئیں۔ { $secon
 # review: pending
 err-user-inactive = یہ صارف بند کر دیا گیا ہے۔ مالک سے رابطہ کریں۔
 # review: pending
-err-recovery-code-wrong = صارف کا نام یا بحالی کا کوڈ غلط ہے۔ دیکھ کر دوبارہ لکھیں۔
+err-already-signed-in = آپ پہلے ہی لاگ ان ہیں۔
+# review: pending
+err-not-locked = ایپ لاک نہیں ہے۔
+# review: pending
+err-recovery-code-wrong = صارف کا نام یا ریکوری کوڈ غلط ہے۔ دیکھ کر دوبارہ لکھیں۔
 # review: pending
 err-already-set-up = پہلی ترتیب پہلے ہی مکمل ہو چکی ہے۔ لاگ ان کریں۔
-# NFR-SEC-4.
+# $min and $max: the allowed range.
 # review: pending
-err-not-allowed = آپ کو یہ کام کرنے کی اجازت نہیں۔ مالک سے کہیں۔
-# review: pending
-err-last-owner = کم از کم ایک فعال مالک ضرور ہونا چاہیے۔ پہلے کسی اور کو مالک بنائیں۔
-# review: pending
-err-out-of-range = یہ قیمت مقررہ حد سے باہر ہے۔ درست قیمت لکھیں۔
+err-out-of-range = یہ قیمت { $min } سے { $max } کے درمیان ہونی چاہیے۔
 # review: pending
 err-not-logged-in = پہلے لاگ ان کریں۔
 # PRD FR-8.4.
@@ -127,3 +125,17 @@ err-not-logged-in = پہلے لاگ ان کریں۔
 err-session-locked = ایپ لاک ہے۔ پاس ورڈ لکھ کر کھولیں۔
 # review: pending
 err-not-found = یہ چیز نہیں ملی۔ فہرست دوبارہ کھولیں۔
+# PRD FR-7.66, E49.
+# review: pending
+err-spelling-unconfirmed = ان لفظوں کے ہجے کی تصدیق نہیں ہوئی: { $words }۔ ہجے دیکھیں، پھر تصدیق کریں یا درست کریں۔
+
+## The master lists (plan 06).
+
+# review: pending
+err-code-taken = یہ کوڈ کسی اور کے پاس ہے۔ کوئی دوسرا کوڈ لکھیں۔
+# review: pending
+err-version-changed = آپ کے کھولنے کے بعد یہ اندراج بدل چکا ہے۔ اسے دوبارہ کھولیں۔
+# review: pending
+err-format-invalid = یہاں لکھی ہوئی بات درست شکل میں نہیں۔ دیکھ کر دوبارہ لکھیں۔
+# review: pending
+err-series-full = اس سلسلے کے سب کوڈ استعمال ہو چکے ہیں۔ کوئی اور سلسلہ استعمال کریں۔

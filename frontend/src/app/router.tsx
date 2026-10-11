@@ -8,16 +8,145 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
+  type RouterHistory,
 } from '@tanstack/react-router';
 import { moveDevPathToHash } from './dev/hash-route';
 
 const rootRoute = createRootRoute({ component: Outlet });
 
-const startRoute = createRoute({
+// Everything a signed-in user reaches sits under one layout route: the start-up data check, the
+// sign-in screens and the app shell come first (plan 04), and the screens render inside the shell.
+const appRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
-  component: lazyRouteComponent(() => import('./start/StartPage'), 'StartPage'),
+  id: 'app',
+  component: lazyRouteComponent(() => import('./AppFrame'), 'AppFrame'),
 });
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/',
+  component: lazyRouteComponent(
+    () => import('../features/dashboard/pages/DashboardPage'),
+    'DashboardPage',
+  ),
+});
+
+const settingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/settings',
+  component: lazyRouteComponent(
+    () => import('../features/settings/pages/SettingsPage'),
+    'SettingsPage',
+  ),
+});
+
+// انڈکس: the menu of the ten master lists, one list, and the form to add or change one (plan 06).
+// Static `new` wins over the `$id` parameter in the router.
+const indexRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/MastersMenuPage'),
+    'MastersMenuPage',
+  ),
+});
+
+const accountListRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/accounts',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/AccountListPage'),
+    'AccountListPage',
+  ),
+});
+
+const accountNewRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/accounts/new',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/AccountFormPage'),
+    'AccountFormPage',
+  ),
+});
+
+const accountEditRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/accounts/$id',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/AccountFormPage'),
+    'AccountFormPage',
+  ),
+});
+
+const chartRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/chart',
+  component: lazyRouteComponent(() => import('../features/masters/pages/ChartPage'), 'ChartPage'),
+});
+
+const masterListRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/$kind',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/MasterListPage'),
+    'MasterListPage',
+  ),
+});
+
+const masterNewRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/$kind/new',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/MasterFormPage'),
+    'MasterFormPage',
+  ),
+});
+
+const masterEditRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/$kind/$id',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/MasterFormPage'),
+    'MasterFormPage',
+  ),
+});
+
+/** A menu item whose module comes in a later plan opens the "coming soon" page (PRD FR-7.46). */
+function comingSoonRoute<Path extends string>(path: Path) {
+  return createRoute({
+    getParentRoute: () => appRoute,
+    path,
+    component: lazyRouteComponent(
+      () => import('../features/dashboard/pages/ComingSoonPage'),
+      'ComingSoonPage',
+    ),
+  });
+}
+
+const appRoutes = [
+  dashboardRoute,
+  settingsRoute,
+  indexRoute,
+  accountListRoute,
+  accountNewRoute,
+  accountEditRoute,
+  chartRoute,
+  masterListRoute,
+  masterNewRoute,
+  masterEditRoute,
+  comingSoonRoute('/bikri'),
+  comingSoonRoute('/bikri/receipt'),
+  comingSoonRoute('/bikri/payment'),
+  comingSoonRoute('/bikri/advance'),
+  comingSoonRoute('/bikri/pukhta'),
+  comingSoonRoute('/bikri/today'),
+  comingSoonRoute('/bikri/stock'),
+  comingSoonRoute('/rokar'),
+  comingSoonRoute('/partners'),
+  comingSoonRoute('/analytics'),
+  comingSoonRoute('/reports'),
+  comingSoonRoute('/backup'),
+];
 
 // The component gallery exists only in development (plan 02 T3). In a build, DEV is false, so
 // this branch and the gallery's code are removed from the bundle.
@@ -41,13 +170,18 @@ const devRoutes = import.meta.env.DEV
     ]
   : [];
 
-const routeTree = rootRoute.addChildren([startRoute, ...devRoutes]);
+const routeTree = rootRoute.addChildren([appRoute.addChildren(appRoutes), ...devRoutes]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router
 // reads the address. In a build, DEV is false, so this call and the helper are removed.
 if (import.meta.env.DEV) moveDevPathToHash();
 
-export const router = createRouter({ routeTree, history: createHashHistory() });
+/** The app's router. Tests give it a memory history; the app uses the hash (no address bar). */
+export function createAppRouter(history: RouterHistory = createHashHistory()) {
+  return createRouter({ routeTree, history });
+}
+
+export const router = createAppRouter();
 
 declare module '@tanstack/react-router' {
   interface Register {

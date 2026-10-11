@@ -37,6 +37,15 @@ pub enum DbError {
     /// An update or delete on an append-only table (Code Standards B17).
     #[error("append-only table")]
     AppendOnly,
+    /// A reversal that does not mirror a posted entry, or a second reversal of one entry (PRD FR-6.3).
+    #[error("reversal does not mirror its entry")]
+    JournalReversal,
+    /// A matching row bigger than the line it matches (PRD FR-15.4, FR-15.8).
+    #[error("matching amount is more than the line")]
+    AllocationAmount,
+    /// A matching row whose lines have the wrong direction, account or person key.
+    #[error("matching row points at wrong lines")]
+    AllocationLines,
     /// A change to a system account that is not allowed (PRD FR-10.4).
     #[error("system account cannot change")]
     SystemAccount,
@@ -67,9 +76,12 @@ impl DbError {
             DbError::DataCheckFailed(_) => ErrorCode::ErrDataCheckFailed,
             DbError::MigrationFailed(_) => ErrorCode::ErrMigrationFailed,
             DbError::Busy => ErrorCode::ErrDbBusy,
-            DbError::JournalUnbalanced
-            | DbError::JournalPosted
+            DbError::JournalUnbalanced => ErrorCode::ErrJournalUnbalanced,
+            DbError::JournalPosted
             | DbError::AppendOnly
+            | DbError::JournalReversal
+            | DbError::AllocationAmount
+            | DbError::AllocationLines
             | DbError::SystemAccount
             | DbError::Constraint(_)
             | DbError::KeyStore(_)
@@ -117,6 +129,12 @@ fn classify(error: rusqlite::Error) -> DbError {
                 DbError::JournalUnbalanced
             } else if text.contains("ERR_JOURNAL_POSTED") {
                 DbError::JournalPosted
+            } else if text.contains("ERR_JOURNAL_REVERSAL") {
+                DbError::JournalReversal
+            } else if text.contains("ERR_ALLOCATION_AMOUNT") {
+                DbError::AllocationAmount
+            } else if text.contains("ERR_ALLOCATION_LINES") {
+                DbError::AllocationLines
             } else if text.contains("ERR_APPEND_ONLY") {
                 DbError::AppendOnly
             } else if text.contains("ERR_SYSTEM_ACCOUNT") {

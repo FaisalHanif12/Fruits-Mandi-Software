@@ -80,7 +80,7 @@ fn an_empty_file_gets_the_whole_design_and_the_seed_without_a_copy() {
     let counts = seed::counts(&conn).unwrap();
     assert_eq!(
         (counts.heads, counts.controls, counts.accounts),
-        (6, 10, 16)
+        (6, 11, 16)
     );
 }
 

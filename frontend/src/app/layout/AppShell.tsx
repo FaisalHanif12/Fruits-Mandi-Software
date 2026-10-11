@@ -1,10 +1,9 @@
 // The frame of every screen after login (PRD FR-5.2 to FR-5.6): the main menu on the start side,
 // the top bar, the screen, the status bar, and optionally the side menu of an area. It registers
-// the menu and the screen for the arrow keys (PRD FR-7.17), and mounts the Esc order and the
-// text size keys once. The screens and the routes come in plan 04's next step.
+// the menu and the screen for the arrow keys (PRD FR-7.17), and mounts the text size keys once.
 
 import type { ReactNode } from 'react';
-import { useEscapeDispatcher, useFocusRegion } from '../../shared/keyboard';
+import { useFocusRegion } from '../../shared/keyboard';
 import { StatusBar, type DayState } from './StatusBar';
 import { TopBar } from './TopBar';
 import { useTextSize } from './text-size';
@@ -15,13 +14,26 @@ interface AppShellProps {
   /** The side menu of an area (the بکری side menu), between the main menu and the screen. */
   moduleMenu?: ReactNode;
   userName: string;
+  onLock: () => void;
+  onSignOut: () => void;
+  /** A result of the top bar's search was chosen: open that account. */
+  onOpenAccount: (id: number) => void;
   date: string;
-  day: DayState;
+  day: DayState | null;
   children: ReactNode;
 }
 
-export function AppShell({ nav, moduleMenu, userName, date, day, children }: AppShellProps) {
-  useEscapeDispatcher();
+export function AppShell({
+  nav,
+  moduleMenu,
+  userName,
+  onLock,
+  onSignOut,
+  onOpenAccount,
+  date,
+  day,
+  children,
+}: AppShellProps) {
   useTextSize();
   const screen = useFocusRegion<HTMLElement>('screen');
   return (
@@ -30,7 +42,12 @@ export function AppShell({ nav, moduleMenu, userName, date, day, children }: App
         {nav}
         {moduleMenu}
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar userName={userName} />
+          <TopBar
+            userName={userName}
+            onLock={onLock}
+            onSignOut={onSignOut}
+            onOpenAccount={onOpenAccount}
+          />
           <main
             ref={screen}
             className="min-h-0 flex-1 overflow-auto p-6 wide:mx-auto wide:w-full wide:max-w-page"

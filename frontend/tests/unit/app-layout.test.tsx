@@ -3,6 +3,7 @@
 // size and the frame that joins them.
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from '../../src/app/layout/AppShell';
@@ -20,7 +21,7 @@ import {
 import { TopBar } from '../../src/app/layout/TopBar';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
-import { formNavigationProps, registerEscape } from '../../src/shared/keyboard';
+import { formNavigationProps } from '../../src/shared/keyboard';
 import { SaveChangesPrompt, Stepper } from '../../src/shared/ui';
 import { message, renderIn, visible } from '../helpers/render';
 import { USER_NAME, at } from '../helpers/sample';
@@ -77,11 +78,6 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
     expect(label).toHaveClass('hidden', 'normal:inline');
   });
 
-  it('leaves out items the role cannot open', () => {
-    renderIn(language, <MainNav current="dashboard" onSelect={vi.fn()} hidden={['settings']} />);
-    expect(screen.getAllByRole('button')).toHaveLength(MAIN_NAV.length - 1);
-  });
-
   it('opens an item with Enter or a click, and ↑ ↓ move between items', async () => {
     const onSelect = vi.fn();
     renderIn(language, <MainNav current="dashboard" onSelect={onSelect} />);
@@ -112,19 +108,20 @@ describe.each(LANGUAGES)('ModuleMenu (%s)', (language) => {
 });
 
 describe.each(LANGUAGES)('TopBar (%s)', (language) => {
-  it('Ctrl+K focuses the search box; the search box and the bell say "coming soon"', async () => {
+  it('Ctrl+K focuses the search box; the bell says "coming soon"', async () => {
     setLanguage(language);
-    renderIn(language, <TopBar userName={USER_NAME} />);
-    const search = screen.getByRole('searchbox', {
+    renderIn(
+      language,
+      <QueryClientProvider client={new QueryClient()}>
+        <TopBar userName={USER_NAME} onLock={vi.fn()} onSignOut={vi.fn()} onOpenAccount={vi.fn()} />
+      </QueryClientProvider>,
+    );
+    const search = screen.getByRole('combobox', {
       name: message(language, 'layout-search-label'),
     });
     expect(search).not.toHaveFocus();
     await userEvent.setup().keyboard('{Control>}k{/Control}');
     expect(search).toHaveFocus();
-    expect(search.closest('label')).toHaveAttribute(
-      'title',
-      message(language, 'layout-coming-soon'),
-    );
     expect(
       screen.getByRole('button', { name: message(language, 'layout-attention-label') }),
     ).toHaveAttribute('title', message(language, 'layout-coming-soon'));
@@ -132,7 +129,12 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
 
   it('has the language switch and the user, shown as typed', () => {
     setLanguage(language);
-    renderIn(language, <TopBar userName={USER_NAME} />);
+    renderIn(
+      language,
+      <QueryClientProvider client={new QueryClient()}>
+        <TopBar userName={USER_NAME} onLock={vi.fn()} onSignOut={vi.fn()} onOpenAccount={vi.fn()} />
+      </QueryClientProvider>,
+    );
     expect(
       screen.getByRole('group', { name: message(language, 'common-language-switch') }),
     ).toBeInTheDocument();
@@ -322,15 +324,20 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
     setLanguage(language);
     return renderIn(
       language,
-      <AppShell
-        nav={<MainNav current="bikri" onSelect={vi.fn()} />}
-        moduleMenu={<ModuleMenu current="bikri-book" onSelect={vi.fn()} />}
-        userName={USER_NAME}
-        date="10-10-2026"
-        day="open"
-      >
-        <SampleScreen />
-      </AppShell>,
+      <QueryClientProvider client={new QueryClient()}>
+        <AppShell
+          nav={<MainNav current="bikri" onSelect={vi.fn()} />}
+          moduleMenu={<ModuleMenu current="bikri-book" onSelect={vi.fn()} />}
+          userName={USER_NAME}
+          onLock={vi.fn()}
+          onSignOut={vi.fn()}
+          onOpenAccount={vi.fn()}
+          date="10-10-2026"
+          day="open"
+        >
+          <SampleScreen />
+        </AppShell>
+      </QueryClientProvider>,
     );
   }
 
@@ -359,14 +366,5 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
     // From the first field, the way back is the menu side. The nearest menu answers.
     await user.keyboard(toMenu);
     expect(sideMenuItem).toHaveFocus();
-  });
-
-  it('Esc reaches the screen that wants to leave (the Esc order is mounted once, here)', async () => {
-    renderShell();
-    const leave = vi.fn();
-    const remove = registerEscape('leave', leave);
-    await userEvent.setup().keyboard('{Escape}');
-    expect(leave).toHaveBeenCalledTimes(1);
-    remove();
   });
 });

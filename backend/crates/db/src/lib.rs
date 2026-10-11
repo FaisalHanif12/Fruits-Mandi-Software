@@ -13,6 +13,7 @@ pub mod clock;
 mod db;
 pub mod disk;
 mod error;
+pub mod masters;
 pub mod migrate;
 pub mod seed;
 

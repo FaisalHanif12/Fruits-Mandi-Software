@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-masters-save"
+description = "Enables the masters_save command without any pre-configured scope."
+commands.allow = ["masters_save"]
+
+[[permission]]
+identifier = "deny-masters-save"
+description = "Denies the masters_save command without any pre-configured scope."
+commands.deny = ["masters_save"]

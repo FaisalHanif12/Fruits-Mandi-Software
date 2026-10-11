@@ -67,7 +67,7 @@ pub fn is_ignorable_in_number(c: char) -> bool {
 /// True for Arabic-script diacritics and small letters that change no letter of a name:
 /// tanween, zabar, zer, pesh, shadd, sukun, maddah and hamza marks, khari zabar
 /// (superscript alef) and the small high letters.
-fn is_diacritic(c: char) -> bool {
+pub fn is_urdu_mark(c: char) -> bool {
     matches!(c,
         '\u{0610}'..='\u{061A}'
         | '\u{064B}'..='\u{065F}'
@@ -108,7 +108,7 @@ fn single_spaces(s: &str) -> String {
 pub fn normalize_urdu(s: &str) -> String {
     let unified: String = s
         .nfc()
-        .filter(|&c| !is_ignored_in_key(c) && !is_diacritic(c))
+        .filter(|&c| !is_ignored_in_key(c) && !is_urdu_mark(c))
         .map(unify_letter)
         .nfc()
         .collect();
@@ -160,7 +160,7 @@ pub fn search_phonetic(name_en: &str) -> String {
 pub fn is_urdu_letter(c: char) -> bool {
     matches!(c, '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' | '\u{FB50}'..='\u{FDFF}' | '\u{FE70}'..='\u{FEFF}')
         && c.is_alphabetic()
-        && !is_diacritic(c)
+        && !is_urdu_mark(c)
 }
 
 /// True for a Latin letter of any kind (`A`, `é`, `ß`).
@@ -192,7 +192,7 @@ fn is_name_digit(c: char) -> bool {
 pub fn is_urdu_name(name: &str) -> bool {
     name.chars().any(is_urdu_letter)
         && name.chars().all(|c| {
-            is_urdu_letter(c) || is_diacritic(c) || is_name_digit(c) || is_name_punctuation(c)
+            is_urdu_letter(c) || is_urdu_mark(c) || is_name_digit(c) || is_name_punctuation(c)
         })
 }
 
@@ -225,6 +225,24 @@ impl UrduCollator {
     /// Urdu alphabetical order of two strings.
     pub fn compare(&self, a: &str, b: &str) -> Ordering {
         self.0.compare(a, b)
+    }
+
+    /// A key that sorts like the text does: comparing two keys byte by byte gives the same
+    /// answer as [`UrduCollator::compare`] on the two texts. Made once and kept, it makes a
+    /// sort of thousands of names cheap (the search index uses it).
+    ///
+    /// ```
+    /// use mandi_core::text::UrduCollator;
+    /// let collator = UrduCollator::new().unwrap();
+    /// // ا comes before ب comes before پ.
+    /// assert!(collator.sort_key("ا") < collator.sort_key("ب"));
+    /// assert!(collator.sort_key("ب") < collator.sort_key("پ"));
+    /// ```
+    pub fn sort_key(&self, s: &str) -> Vec<u8> {
+        let mut key = Vec::new();
+        // Writing into a Vec cannot fail.
+        let Ok(()) = self.0.write_sort_key_to(s, &mut key);
+        key
     }
 
     /// Sorts a list in Urdu alphabetical order.

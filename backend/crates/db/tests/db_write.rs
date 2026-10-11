@@ -283,6 +283,9 @@ fn error_codes_for_the_screen() {
         DbError::MigrationFailed("x".into()).code(),
         ErrorCode::ErrMigrationFailed
     );
-    assert_eq!(DbError::JournalUnbalanced.code(), ErrorCode::ErrInternal);
+    assert_eq!(
+        DbError::JournalUnbalanced.code(),
+        ErrorCode::ErrJournalUnbalanced
+    );
     assert_eq!(DbError::AppendOnly.code(), ErrorCode::ErrInternal);
 }

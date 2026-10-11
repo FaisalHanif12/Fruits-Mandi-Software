@@ -24,3 +24,6 @@ gridpage-col-summary = Line
 gridpage-rate-hint = Last rate 600
 # review: pending
 gridpage-add-row = New line
+
+# review: pending
+shellpage-title = Development: the shell page

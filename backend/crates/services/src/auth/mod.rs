@@ -1,16 +1,16 @@
 //! Sign-in, sessions, lock, recovery and the first run (PRD Section 8, plan 04).
 //!
-//! - `session`: who is signed in, `require` (the role check every command starts with).
+//! - `session`: who is signed in, `require` (the sign-in check every command starts with).
 //! - `login`: sign-in and unlock, with the lockout steps of PRD FR-8.2.
 //! - `lockout`: what the app remembers about wrong tries while it runs (NFR-REL-11).
 //! - `firstrun`: the first-run wizard and the recovery code (NFR-SEC-12).
 
 mod firstrun;
-mod lockout;
+pub(crate) mod lockout;
 mod login;
 mod session;
 
-use mandi_domain::core::auth::{Language, Role};
+use mandi_domain::core::auth::Language;
 
 use crate::secret::Secret;
 use crate::settings::Firm;
@@ -28,8 +28,6 @@ pub struct Actor {
     pub username: String,
     /// Name shown in the top bar.
     pub display_name: String,
-    /// His role, read from the database for this call.
-    pub role: Role,
 }
 
 /// The signed-in user as the screens show him.
@@ -41,8 +39,6 @@ pub struct SessionInfo {
     pub username: String,
     /// Name shown in the top bar.
     pub display_name: String,
-    /// His role.
-    pub role: Role,
     /// His language.
     pub language: Language,
     /// His text size in percent.

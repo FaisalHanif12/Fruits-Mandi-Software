@@ -1,9 +1,8 @@
-// Development helpers for the start page. They exist only in development: the start page loads
-// this file through `import.meta.env.DEV`, so it and its words never reach a build (plan 02 T3).
+// Development helper for the browser tab. It exists only in development: DevHome is loaded through
+// `import.meta.env.DEV`, so it and its words never reach a build (plan 02 T3).
 // The words are in app/dev/i18n, not in the shipped Fluent files.
 
 import { Localized } from '@fluent/react';
-import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
 import { useLanguage } from '../../shared/i18n';
 import { GalleryLocalization } from './GalleryLocalization';
@@ -31,18 +30,6 @@ export function BrowserPreviewNote() {
           </Localized>
         </div>
       </div>
-    </GalleryLocalization>
-  );
-}
-
-/** The link from the start page to the component gallery. */
-export function GalleryLink() {
-  const language = useLanguage();
-  return (
-    <GalleryLocalization language={language}>
-      <Localized id="gallery-title">
-        <Link to="/dev/gallery" className="type-body text-primary underline" />
-      </Localized>
     </GalleryLocalization>
   );
 }

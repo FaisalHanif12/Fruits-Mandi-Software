@@ -41,3 +41,17 @@ common-data-check-title = The app cannot open your data yet
 common-password-show = Show password
 # review: pending
 common-password-hide = Hide password
+
+## The two sides of an account (PRD Section 3).
+
+# review: pending
+common-side-dr = { -banaam }
+# review: pending
+common-side-cr = { -jama }
+
+## Yes and no.
+
+# review: pending
+common-yes = Yes
+# review: pending
+common-no = No

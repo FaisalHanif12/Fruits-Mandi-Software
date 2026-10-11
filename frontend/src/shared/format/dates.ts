@@ -69,3 +69,35 @@ export function shiftDateText(text: string, days: 1 | -1, today: Date): string {
     year: moved.getUTCFullYear(),
   });
 }
+
+const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** A date from the backend, YYYY-MM-DD, shown as DD-MM-YYYY (Tech Stack 4.5). Anything else is shown as it is. */
+export function isoToDisplayDate(iso: string): string {
+  const match = ISO.exec(iso);
+  return match ? `${match[3] ?? ''}-${match[2] ?? ''}-${match[1] ?? ''}` : iso;
+}
+
+function two(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+/**
+ * A time from the backend (UTC, ISO text) shown as DD-MM-YYYY HH:MM in the computer's own time,
+ * which is Pakistan time on the client's machine (Code Standards G9). Anything unreadable is
+ * shown as it is.
+ */
+export function utcToLocalDisplay(iso: string): string {
+  const moment = new Date(iso);
+  if (Number.isNaN(moment.getTime())) return iso;
+  return `${two(moment.getDate())}-${two(moment.getMonth() + 1)}-${String(moment.getFullYear())} ${two(moment.getHours())}:${two(moment.getMinutes())}`;
+}
+
+/** The computer's local date as DD-MM-YYYY, for a new record's date (PRD FR-6.6). */
+export function todayText(today: Date): string {
+  return formatDateParts({
+    day: today.getDate(),
+    month: today.getMonth() + 1,
+    year: today.getFullYear(),
+  });
+}

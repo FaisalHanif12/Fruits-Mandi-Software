@@ -23,6 +23,8 @@ export const IDENTICAL_ALLOWED = new Set([
   // The language switch shows each language's own name in its own script (PRD FR-7.30).
   'common-language-ur',
   'common-language-en',
+  // The badge of the "English, no conversion" typing mode is "EN" in both languages (Tech Stack 4.4).
+  'translit-mode-english',
 ]);
 
 const LANGUAGES = ['ur', 'en'];

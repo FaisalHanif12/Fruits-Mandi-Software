@@ -119,7 +119,13 @@ impl Firm {
     }
 
     fn from_json(value: &Value) -> Firm {
-        let text = |key: &str| value.get(key).and_then(Value::as_str).unwrap_or_default().to_owned();
+        let text = |key: &str| {
+            value
+                .get(key)
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_owned()
+        };
         Firm {
             name_ur: text("name_ur"),
             name_en: text("name_en"),
@@ -146,7 +152,9 @@ pub struct Settings {
 
 /// The firm as saved. Empty before the first run.
 pub(crate) fn load_firm(conn: &Connection) -> Result<Firm, ServiceError> {
-    Ok(store::setting(conn, KEY_FIRM)?.map(|v| Firm::from_json(&v)).unwrap_or_default())
+    Ok(store::setting(conn, KEY_FIRM)?
+        .map(|v| Firm::from_json(&v))
+        .unwrap_or_default())
 }
 
 fn load_language(conn: &Connection, key: &str) -> Result<Option<Language>, ServiceError> {
@@ -241,10 +249,19 @@ pub fn set_idle_lock(ctx: &Context, actor: &Actor, minutes_text: &str) -> Result
 ///
 /// # Errors
 /// `ServiceError::Db`.
-pub fn set_default_language(ctx: &Context, actor: &Actor, language: Language) -> Result<(), ServiceError> {
+pub fn set_default_language(
+    ctx: &Context,
+    actor: &Actor,
+    language: Language,
+) -> Result<(), ServiceError> {
     ctx.db.write(|tx| {
         let old = load_default_language(tx)?;
-        store::set_setting(tx, KEY_DEFAULT_LANGUAGE, &json!(language.as_str()), Some(actor.user_id))?;
+        store::set_setting(
+            tx,
+            KEY_DEFAULT_LANGUAGE,
+            &json!(language.as_str()),
+            Some(actor.user_id),
+        )?;
         ctx.db.auditor().write(
             tx,
             &Event::new(Some(actor.user_id), "edit", "settings")
@@ -262,11 +279,20 @@ pub fn set_default_language(ctx: &Context, actor: &Actor, language: Language) ->
 /// # Errors
 /// `ERR_OUT_OF_RANGE` (`value`) for a language that is not `ur` or `en`, a size outside
 /// 80 to 150 in tens, or a route that does not start with `/`; `ERR_NOT_A_NUMBER`.
-pub fn set_pref(ctx: &Context, actor: &Actor, key: PrefKey, value_text: &str) -> Result<(), ServiceError> {
+pub fn set_pref(
+    ctx: &Context,
+    actor: &Actor,
+    key: PrefKey,
+    value_text: &str,
+) -> Result<(), ServiceError> {
     let value: Value = match key {
         PrefKey::Language => {
-            let language = Language::parse(value_text.trim())
-                .ok_or_else(|| ServiceError::reject_field(mandi_domain::core::error::ErrorCode::ErrOutOfRange, "value"))?;
+            let language = Language::parse(value_text.trim()).ok_or_else(|| {
+                ServiceError::reject_field(
+                    mandi_domain::core::error::ErrorCode::ErrOutOfRange,
+                    "value",
+                )
+            })?;
             json!(language.as_str())
         }
         PrefKey::TextSize => json!(rules::text_size("value", value_text)?),

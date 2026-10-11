@@ -4,7 +4,7 @@ Deliverable: D1, plan file 04. Branches: `feature/auth-login` (backend and login
 
 ## 1. Goal
 
-The D1 story of `docs/deliverables/D1-foundation.md` Section 1 works end to end on Windows by keyboard only, in both languages: first-run wizard, login with lockout, the shell with the main menu on the start side, the top bar and status bar, the بکری side menu frame, the empty dashboard, Settings (firm, users, idle lock, language, text size), `Alt+L` everywhere, idle lock that keeps unsaved work, and audit rows for every login event.
+The D1 story of `docs/deliverables/D1-foundation.md` Section 1 works end to end on Windows by keyboard only, in both languages: first-run wizard, login with lockout, the shell with the main menu on the start side, the top bar and status bar, the بکری side menu frame, the empty dashboard, Settings (firm, idle lock, language, text size), `Alt+L` everywhere, idle lock that keeps unsaved work, and audit rows for every login event.
 
 ## 2. Requirements
 
@@ -42,10 +42,6 @@ All commands are `async`, run blocking work on a worker thread, check the role f
 | `auth_lock` | any logged in | none | `()` | |
 | `auth_unlock` | the locked user | `{ password }` | `SessionUser` | as login (same lockout counter) |
 | `auth_recover` | none | `{ username, recovery_code, new_password, new_password_repeat }` | `RecoverDone { new_recovery_code }` | `ERR_RECOVERY_CODE_WRONG` (counts as a wrong try), password errors. Owner only. A used code is spent; a new one is shown to print. |
-| `users_list` | Owner | none | `Vec<UserRow { id, username, display_name, role, is_active, last_login_at }>` | `ERR_NOT_ALLOWED` |
-| `users_create` | Owner | `{ username, display_name, role, password, password_repeat }` | `UserRow` | `ERR_USERNAME_TAKEN` (`username`), the password and name errors |
-| `users_update` | Owner | `{ id, display_name, role, is_active }` | `UserRow` | `ERR_LAST_OWNER` (cannot make the last active Owner inactive or not Owner) |
-| `users_reset_password` | Owner | `{ id, password, password_repeat }` | `()` | password errors |
 | `settings_get` | any logged in | none | `Settings { firm: FirmSettings, idle_lock_minutes, default_language, number_grouping }` | |
 | `settings_set_firm` | Owner | `FirmSettings` (text) | `FirmSettings` | name script errors |
 | `settings_set_security` | Owner | `{ idle_lock_minutes }` (1 to 120, default 15) | `()` | `ERR_OUT_OF_RANGE` |
@@ -53,12 +49,16 @@ All commands are `async`, run blocking work on a worker thread, check the role f
 | `prefs_set` | any logged in | `{ key: "language"\|"text_size"\|"last_screen", value }` (text size 80 to 150 in steps of 10) | `()` | `ERR_OUT_OF_RANGE` |
 | `day_status` | any logged in | none | `DayStatus { today, closed_up_to: Option<date>, today_open: bool }` | |
 
-- Roles: `require_at_least(Role::Munshi)` lets Owner and Munshi through; `require_owner()`; Partner is view only (FR-2.4). A refused call writes nothing except an audit row `denied` (NFR-SEC-4).
+- One user, the Owner (Umar, 11-10-2026: no user or role screens). Every command except `auth_status`, `setup_first_run`, `auth_login`, `auth_recover`, `app_info` and `app_data_status` checks only that the Owner is signed in (`ERR_NOT_LOGGED_IN`) and the app is not locked (`ERR_SESSION_LOCKED`) (PRD v1.2 Section 2, Code Standards B2, S1). There are no roles: no `Role` type, no role check, no `ERR_NOT_ALLOWED`. `users.role` and `users.partner_id` stay in the schema, unused (Architecture 15.3 v1.2). A refused call writes nothing except an audit row `denied` (NFR-SEC-4).
 - One logged-in user per app (FR-2.3). Session lives in `AppState` in memory.
 - Passwords: Argon2id (default params of the `argon2` crate's recommended setting), never logged, never returned (S2). Recovery code: 16 characters from an unambiguous alphabet, shown as `XXXX-XXXX-XXXX-XXXX`, stored as an Argon2id hash.
 - The clock is injected. Lock times use the wall clock stored in `users.locked_until_at` plus an in-process monotonic check, so moving the clock back during a lock never ends it early and never makes it longer than its step while the app runs (NFR-REL-11, robustness test).
 - `login_language` setting is the last language used on this computer (FR-7.30).
 - `today` for `day_status` is the computer's local date (Pakistan). `closed_up_to` is null until D2 adds day close.
+
+Removed on 11-10-2026 (Umar): `users_list`, `users_create`, `users_update`, `users_reset_password` and the Users tab. The wizard makes the one Owner; a forgotten password is reset with the recovery code.
+
+Added during the build (backend, lead approved): `ERR_NOT_LOGGED_IN`, `ERR_SESSION_LOCKED`, `ERR_NOT_FOUND`. The Exit button on the login screen needs the capability `process:allow-exit` (PRD 8.1); the capability guard test lists exactly `process:allow-restart` and `process:allow-exit`. The session is one in memory per app run (FR-2.3): a restart signs the user out.
 
 ## 5. Frontend
 
@@ -67,7 +67,7 @@ From the boards, with `bilingual-screen`, `urdu-english-text`, `entry-grid` skil
 1. Design system completion (tokens and base components came in 02): `LanguageSwitch`, `MainNav` (full and rail), `ModuleMenu`, `TopBar` (search box and bell are placeholders that say "coming soon" in a tooltip; `Ctrl+K` focuses the box), `StatusBar`, `Stepper`, `SaveChangesPrompt`, text size with `Ctrl +`, `Ctrl -`, `Ctrl 0` saved per user (FR-7.11, NFR-USE-18: stops where the content area would be narrower than 1024 px).
 2. `shared/keyboard`: the arrow rules FR-7.13 to FR-7.18 for forms, menus and lists, in both directions; the shortcut registry with every key of PRD 7.3 in one file (F29); `Esc` order (FR-7.18); date field keys (FR-7.19); number fields with thousands separators shown as you type, value kept as text (FR-7.20).
 3. `shared/grid`: AG Grid setup with RTL from the language, column types (money, qty, account, date, text) with fixed widths per type (F18), the Enter rule (skip read-only, stop on editable including app-filled), `↓` on the last row adds a row, `Ctrl+Delete` removes, `F2` does not start editing, `Esc` order. AG Grid uses its CSS-file theming (`theme: "legacy"` with the grid and theme CSS files imported through Vite and restyled from our tokens), never runtime `<style>` injection, so the CSP keeps `style-src 'self'` (Code Standards S5; lead decision 10-10-2026). Proven on `/dev/grid` (development build only) with a test of every key in both directions.
-4. Screens: login (lockout message with a live countdown, wrong-password field error, show-password, exit), recovery path, first-run wizard (firm, Owner password, recovery code with print `F9` and the "I printed it" tick), shell, بکری side menu with seven items that open "coming soon" empty states, empty dashboard, Settings tabs (firm, users with add and edit dialogs, auto lock, language and text size). Idle lock: an overlay after the set minutes; typing the password unlocks; nothing under it is lost (FR-8.4).
+4. Screens: login (lockout message with a live countdown, wrong-password field error, show-password, exit), recovery path, first-run wizard (firm, Owner password, recovery code with print `F9` and the "I printed it" tick), shell, بکری side menu with seven items that open "coming soon" empty states, empty dashboard, Settings tabs (firm, auto lock, language and text size; no Users tab). Idle lock: an overlay after the set minutes; typing the password unlocks; nothing under it is lost (FR-8.4).
 5. Language switch on every screen, no reload, nothing typed lost (unsaved form data in stores above the screens, F39). Keys follow screen direction (FR-7.34).
 6. Windows E2E (`frontend/tests/e2e/`): the D1 story by keyboard only in Urdu and in English; screenshots of every screen in both languages at the three sizes; timings for cold start, login to dashboard, screen open, arrow move, language switch written to `frontend/tests/e2e/output/timings.json`.
 
@@ -76,7 +76,7 @@ From the boards, with `bilingual-screen`, `urdu-english-text`, `entry-grid` skil
 | # | Task | Owner | Blocked by |
 |---|---|---|---|
 | T1 | Types and command stubs, `pnpm gen:types`, message frontend | backend | 03 |
-| T2 | Services: users, sessions, Argon2id, lockout, recovery, settings, prefs, day status, audit rows; integration tests for every row of Section 3, role refusal for every command (D1-A13), idle lock keeps the session | backend | T1 |
+| T2 | Services: sessions, Argon2id, lockout, recovery, settings, prefs, day status, audit rows; integration tests for every row of Section 3, refusal of every command before sign-in (D1-A13), idle lock keeps the session | backend | T1 |
 | T3 | Design system completion, keyboard engine, grid, screens against stubs | frontend | T1 |
 | T4 | Wire to real commands; E2E story and screenshots | frontend | T2, T3 |
 | T5 | Review (README Section 4 worked example) | reviewer | T2, T4 |
@@ -88,7 +88,7 @@ From the boards, with `bilingual-screen`, `urdu-english-text`, `entry-grid` skil
 1. Section 3 lockout table passes as an integration test; audit rows for login, failed login, logout (D1-A11, D1-A12).
 2. Idle lock after the set minutes; unlocking keeps unsaved form text (component test and E2E).
 3. Recovery code resets the Owner password; the old code no longer works.
-4. Every command refuses a lower role and writes nothing but the `denied` audit row (D1-A13).
+4. Before sign-in every command except first run, sign-in, recovery, app info and data status refuses and writes nothing (D1-A13).
 5. First-run wizard and the D1 story pass by keyboard only, in Urdu and English, on Windows (D1-A14).
 6. Timings within runner thresholds: NFR-SPD-1, 2, 3, 5, 19 (D1-A15).
 7. Screens match the boards in both languages at 1024 x 600, 1366 x 768, 1920 x 1080; contrast check passes; Urdu has no broken letters (D1-A16).

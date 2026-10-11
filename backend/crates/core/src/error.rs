@@ -37,8 +37,6 @@ pub enum ErrorCode {
     ErrPasswordsDiffer,
     /// A user name that is not 3 to 32 of `a-z 0-9 . _ -`.
     ErrUsernameInvalid,
-    /// Another user already has this user name.
-    ErrUsernameTaken,
     /// Wrong user name or password (the same code for an unknown name). Values: `tries_left`.
     ErrWrongPassword,
     /// Too many wrong tries; sign-in waits (PRD FR-8.2). Values: `seconds` left.
@@ -47,10 +45,10 @@ pub enum ErrorCode {
     ErrUserInactive,
     /// The recovery code, or the user name it belongs to, is wrong (counts as a wrong try).
     ErrRecoveryCodeWrong,
-    /// The signed-in role may not do this (NFR-SEC-4).
-    ErrNotAllowed,
-    /// The change would leave no active Owner.
-    ErrLastOwner,
+    /// Someone is already signed in, so a second sign-in is refused (PRD FR-2.3).
+    ErrAlreadySignedIn,
+    /// The session is not locked, so there is nothing to unlock.
+    ErrNotLocked,
     /// A setting outside its allowed range, for example idle lock 0 or 500 minutes.
     ErrOutOfRange,
     /// The command needs a signed-in user.
@@ -104,6 +102,31 @@ pub enum ErrorCode {
     ErrControlChars,
     /// A money total grew past what the app can hold (Code Standards M7).
     ErrOverflow,
+    /// A code that is already used by another record of the same list (plan 06).
+    ErrCodeTaken,
+    /// The record was changed by someone else since the screen read it. Open it again (plan 06).
+    ErrVersionChanged,
+    /// No free code is left: the 10-digit codes of a master list, or the serials 1 to 8999 of an
+    /// account series (PRD FR-10.3, E29). For an account series, `values.control` is the control
+    /// code.
+    ErrSeriesFull,
+    /// A journal entry whose debits do not equal its credits was refused; nothing was saved
+    /// (PRD FR-6.2). This is a bug signal, not the user's mistake.
+    ErrJournalUnbalanced,
+    /// A code in the reserved series: serial 0000 or 9000 to 9999 belong to system accounts
+    /// (PRD FR-10.3).
+    ErrCodeReserved,
+    /// An opening with both a debit and a credit (PRD FR-10.9). Only one side is allowed.
+    ErrOpeningBothSides,
+    /// "Opening is an advance" on an account that is not a seller, or on an opening without a
+    /// debit (PRD FR-15.8).
+    ErrAdvanceNotSeller,
+    /// A value that is not in the right form, for example a code with letters or a choice that
+    /// is not offered (plan 06).
+    ErrFormatInvalid,
+    /// A name holds a word that only the spelling rules could have made and the user has not
+    /// confirmed it (PRD FR-7.66, E49). Values: `words` (the words, separated by one space).
+    ErrSpellingUnconfirmed,
     /// Active partner shares do not total 100% on the posting date (PRD FR-17.1, E9).
     #[serde(rename = "ERR_SHARES_NOT_100")]
     ErrSharesNot100,
@@ -111,7 +134,7 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 44] = [
+    pub const ALL: [ErrorCode; 52] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -122,13 +145,12 @@ impl ErrorCode {
         ErrorCode::ErrPasswordTooShort,
         ErrorCode::ErrPasswordsDiffer,
         ErrorCode::ErrUsernameInvalid,
-        ErrorCode::ErrUsernameTaken,
         ErrorCode::ErrWrongPassword,
         ErrorCode::ErrLockedWait,
         ErrorCode::ErrUserInactive,
         ErrorCode::ErrRecoveryCodeWrong,
-        ErrorCode::ErrNotAllowed,
-        ErrorCode::ErrLastOwner,
+        ErrorCode::ErrAlreadySignedIn,
+        ErrorCode::ErrNotLocked,
         ErrorCode::ErrOutOfRange,
         ErrorCode::ErrNotLoggedIn,
         ErrorCode::ErrSessionLocked,
@@ -154,6 +176,15 @@ impl ErrorCode {
         ErrorCode::ErrPhoneInvalid,
         ErrorCode::ErrTextTooLong,
         ErrorCode::ErrControlChars,
+        ErrorCode::ErrCodeTaken,
+        ErrorCode::ErrVersionChanged,
+        ErrorCode::ErrSeriesFull,
+        ErrorCode::ErrJournalUnbalanced,
+        ErrorCode::ErrCodeReserved,
+        ErrorCode::ErrOpeningBothSides,
+        ErrorCode::ErrAdvanceNotSeller,
+        ErrorCode::ErrFormatInvalid,
+        ErrorCode::ErrSpellingUnconfirmed,
         ErrorCode::ErrOverflow,
         ErrorCode::ErrSharesNot100,
     ];

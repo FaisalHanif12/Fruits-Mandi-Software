@@ -13,10 +13,11 @@
 use std::path::PathBuf;
 
 use mandi_app_lib::commands::app::AppInfo;
-use mandi_app_lib::commands::{auth, day, settings, users};
+use mandi_app_lib::commands::{auth, day, settings, translit};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
+use mandi_services::core::{accounts, masters, search};
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -37,8 +38,6 @@ const EXPECTED_FILES: &[&str] = &[
     "PrefsSetInput.ts",
     "RecoverDone.ts",
     "RecoverInput.ts",
-    "ResetPasswordInput.ts",
-    "Role.ts",
     "SessionUser.ts",
     "SetDefaultLanguageInput.ts",
     "SetSecurityInput.ts",
@@ -46,9 +45,73 @@ const EXPECTED_FILES: &[&str] = &[
     "UiError.ts",
     "UiErrorItem.ts",
     "UnlockInput.ts",
-    "UserCreateInput.ts",
-    "UserRow.ts",
-    "UserUpdateInput.ts",
+    "SuggestInput.ts",
+    "Suggestions.ts",
+    "LearnInput.ts",
+    "PairRow.ts",
+    "RemovePairInput.ts",
+    "Direction.ts",
+    "Kind.ts",
+    "Source.ts",
+    "AccountType.ts",
+    "AccountInput.ts",
+    "RecordRef.ts",
+    "BalanceSide.ts",
+    "Balance.ts",
+    "AccountRow.ts",
+    "AccountFilter.ts",
+    "AccountsListInput.ts",
+    "AccountsList.ts",
+    "AccountsGetInput.ts",
+    "AccountsSetActiveInput.ts",
+    "AccountsNextCodeInput.ts",
+    "AccountsSimilarInput.ts",
+    "SimilarAccount.ts",
+    "OpeningLineInput.ts",
+    "OpeningsInput.ts",
+    "LineError.ts",
+    "OpeningPreviewRow.ts",
+    "OpeningsPreview.ts",
+    "OpeningsSaved.ts",
+    "CoaTree.ts",
+    "HeadNode.ts",
+    "ControlNode.ts",
+    "AccountNode.ts",
+    "CoaHead.ts",
+    "CoaControl.ts",
+    "MasterKind.ts",
+    "MasterInput.ts",
+    "CityInput.ts",
+    "ItemInput.ts",
+    "PackingInput.ts",
+    "AddaInput.ts",
+    "MarkaInput.ts",
+    "StoreInput.ts",
+    "NarrationInput.ts",
+    "ExpenseHeadInput.ts",
+    "StaffInput.ts",
+    "BankAccountInput.ts",
+    "MastersListInput.ts",
+    "MastersSetActiveInput.ts",
+    "MastersNextCodeInput.ts",
+    "MasterRow.ts",
+    "CityRow.ts",
+    "ItemRow.ts",
+    "PackingRow.ts",
+    "AddaRow.ts",
+    "MarkaRow.ts",
+    "StoreRow.ts",
+    "NarrationRow.ts",
+    "ExpenseHeadRow.ts",
+    "StaffRow.ts",
+    "BankAccountRow.ts",
+    "SearchScope.ts",
+    "SearchHit.ts",
+    "SearchMastersInput.ts",
+    "SearchRecentInput.ts",
+    "SearchTouchInput.ts",
+    "Suggestion.ts",
+    "SuggestedWord.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -75,10 +138,6 @@ fn export_bindings() {
     auth::UnlockInput::export_all(&cfg).unwrap();
     auth::RecoverInput::export_all(&cfg).unwrap();
     auth::RecoverDone::export_all(&cfg).unwrap();
-    users::UserRow::export_all(&cfg).unwrap();
-    users::UserCreateInput::export_all(&cfg).unwrap();
-    users::UserUpdateInput::export_all(&cfg).unwrap();
-    users::ResetPasswordInput::export_all(&cfg).unwrap();
     settings::Settings::export_all(&cfg).unwrap();
     settings::FirmSettings::export_all(&cfg).unwrap();
     settings::SetSecurityInput::export_all(&cfg).unwrap();
@@ -86,6 +145,37 @@ fn export_bindings() {
     mandi_services::core::auth::PrefKey::export_all(&cfg).unwrap();
     settings::PrefsSetInput::export_all(&cfg).unwrap();
     day::DayStatus::export_all(&cfg).unwrap();
+    translit::SuggestInput::export_all(&cfg).unwrap();
+    translit::Suggestions::export_all(&cfg).unwrap();
+    translit::LearnInput::export_all(&cfg).unwrap();
+    translit::PairRow::export_all(&cfg).unwrap();
+    translit::RemovePairInput::export_all(&cfg).unwrap();
+    masters::MasterInput::export_all(&cfg).unwrap();
+    masters::MasterRow::export_all(&cfg).unwrap();
+    masters::MasterKind::export_all(&cfg).unwrap();
+    masters::MastersListInput::export_all(&cfg).unwrap();
+    masters::MastersSetActiveInput::export_all(&cfg).unwrap();
+    masters::MastersNextCodeInput::export_all(&cfg).unwrap();
+    search::SearchScope::export_all(&cfg).unwrap();
+    search::SearchHit::export_all(&cfg).unwrap();
+    search::SearchMastersInput::export_all(&cfg).unwrap();
+    search::SearchRecentInput::export_all(&cfg).unwrap();
+    search::SearchTouchInput::export_all(&cfg).unwrap();
+    accounts::AccountInput::export_all(&cfg).unwrap();
+    accounts::AccountRow::export_all(&cfg).unwrap();
+    accounts::AccountsListInput::export_all(&cfg).unwrap();
+    accounts::AccountsList::export_all(&cfg).unwrap();
+    accounts::AccountsGetInput::export_all(&cfg).unwrap();
+    accounts::AccountsSetActiveInput::export_all(&cfg).unwrap();
+    accounts::AccountsNextCodeInput::export_all(&cfg).unwrap();
+    accounts::AccountsSimilarInput::export_all(&cfg).unwrap();
+    accounts::SimilarAccount::export_all(&cfg).unwrap();
+    accounts::OpeningsInput::export_all(&cfg).unwrap();
+    accounts::OpeningsPreview::export_all(&cfg).unwrap();
+    accounts::OpeningsSaved::export_all(&cfg).unwrap();
+    accounts::CoaTree::export_all(&cfg).unwrap();
+    accounts::CoaHead::export_all(&cfg).unwrap();
+    accounts::CoaControl::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();
@@ -231,7 +321,6 @@ fn plan_04_contract_shapes() {
             "id: number",
             "username: string",
             "display_name: string",
-            "role: Role",
             "language: Language",
             "text_size: number",
         ],
@@ -271,19 +360,6 @@ fn plan_04_contract_shapes() {
         &["new_recovery_code: string"],
     );
     has(
-        users::UserRow::decl(&cfg),
-        &[
-            "id: number",
-            "role: Role",
-            "is_active: boolean",
-            "last_login_at: string | null",
-        ],
-    );
-    has(
-        users::UserUpdateInput::decl(&cfg),
-        &["id: number", "role: Role", "is_active: boolean"],
-    );
-    has(
         settings::Settings::decl(&cfg),
         &[
             "firm: FirmSettings",
@@ -308,13 +384,6 @@ fn plan_04_contract_shapes() {
             "today_open: boolean",
         ],
     );
-    let role = mandi_services::core::auth::Role::decl(&cfg);
-    for word in ["'partner'", "'munshi'", "'owner'"] {
-        assert!(
-            role.contains(word) || role.contains(&word.replace('\'', "\"")),
-            "{role}"
-        );
-    }
     let keys = mandi_services::core::auth::PrefKey::decl(&cfg);
     for word in ["language", "text_size", "last_screen"] {
         assert!(keys.contains(word), "{keys}");

@@ -8,9 +8,11 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::{Hidden, not_implemented};
+use super::{Hidden, run};
 use crate::error::UiError;
-use mandi_services::core::auth::{Language, Role};
+use mandi_services::core::auth::Language;
+use mandi_services::settings::Firm;
+use mandi_services::{Secret, auth};
 
 /// The signed-in user, as the screens need him (plan 04 Section 4).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -22,8 +24,6 @@ pub struct SessionUser {
     pub username: String,
     /// Name shown in the top bar.
     pub display_name: String,
-    /// What he may do.
-    pub role: Role,
     /// His language (his last choice, else the default language of the firm).
     pub language: Language,
     /// His text size in percent: 80 to 150 in steps of 10 (NFR-USE-18). 100 is normal.
@@ -182,13 +182,78 @@ impl fmt::Debug for RecoverDone {
     }
 }
 
+impl From<auth::SessionInfo> for SessionUser {
+    fn from(info: auth::SessionInfo) -> Self {
+        Self {
+            id: info.id,
+            username: info.username,
+            display_name: info.display_name,
+            language: info.language,
+            text_size: info.text_size,
+        }
+    }
+}
+
+impl From<&Firm> for FirmDisplay {
+    fn from(firm: &Firm) -> Self {
+        Self {
+            name_ur: firm.name_ur.clone(),
+            name_en: firm.name_en.clone(),
+            mandi_ur: firm.mandi_ur.clone(),
+            mandi_en: firm.mandi_en.clone(),
+        }
+    }
+}
+
+impl From<FirstRunInput> for auth::FirstRunRaw {
+    fn from(input: FirstRunInput) -> Self {
+        Self {
+            firm: Firm {
+                name_ur: input.firm_name_ur,
+                name_en: input.firm_name_en,
+                mandi_ur: input.mandi_ur,
+                mandi_en: input.mandi_en,
+                address: input.address,
+                phone: input.phone,
+            },
+            owner_username: input.owner_username,
+            owner_display_name: input.owner_display_name,
+            password: Secret::new(input.password),
+            password_repeat: Secret::new(input.password_repeat),
+        }
+    }
+}
+
+impl From<RecoverInput> for auth::RecoverRaw {
+    fn from(input: RecoverInput) -> Self {
+        Self {
+            username: input.username,
+            recovery_code: Secret::new(input.recovery_code),
+            new_password: Secret::new(input.new_password),
+            new_password_repeat: Secret::new(input.new_password_repeat),
+        }
+    }
+}
+
 /// Who is signed in, whether a first run is needed, and the sign-in screen's data.
-/// No role needed: it is asked before sign-in.
+/// No sign-in needed: it is asked before sign-in. Works while the session is locked.
 #[tauri::command]
 pub async fn auth_status<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
+    app: tauri::AppHandle<R>,
 ) -> Result<AuthStatus, UiError> {
-    not_implemented()
+    let app_version = app.package_info().version.to_string();
+    run(app, "auth_status", move |ctx| {
+        let info = auth::status(ctx)?;
+        Ok(AuthStatus {
+            first_run: info.first_run,
+            session: info.session.map(SessionUser::from),
+            locked: info.locked,
+            login_language: info.login_language,
+            firm: FirmDisplay::from(&info.firm),
+            app_version,
+        })
+    })
+    .await
 }
 
 /// Creates the firm settings and the Owner. Only while no user exists.
@@ -200,41 +265,51 @@ pub async fn auth_status<R: tauri::Runtime>(
 /// `ERR_PASSWORDS_DIFFER` (`password_repeat`).
 #[tauri::command]
 pub async fn setup_first_run<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-    _input: FirstRunInput,
+    app: tauri::AppHandle<R>,
+    input: FirstRunInput,
 ) -> Result<FirstRunDone, UiError> {
-    not_implemented()
+    run(app, "setup_first_run", move |ctx| {
+        let recovery_code = auth::first_run(ctx, &auth::FirstRunRaw::from(input))?;
+        Ok(FirstRunDone { recovery_code })
+    })
+    .await
 }
 
 /// Signs in. Errors: `ERR_WRONG_PASSWORD` (`password`, value `tries_left`), `ERR_LOCKED_WAIT`
-/// (value `seconds`), `ERR_USER_INACTIVE`, `ERR_REQUIRED`.
+/// (value `seconds`; the 5th wrong try already returns it), `ERR_USER_INACTIVE`, `ERR_REQUIRED`.
 #[tauri::command]
 pub async fn auth_login<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-    _input: LoginInput,
+    app: tauri::AppHandle<R>,
+    input: LoginInput,
 ) -> Result<SessionUser, UiError> {
-    not_implemented()
+    run(app, "auth_login", move |ctx| {
+        auth::login(ctx, &input.username, &Secret::new(input.password)).map(SessionUser::from)
+    })
+    .await
 }
 
 /// Signs out. Needs a signed-in user (a locked one too).
 #[tauri::command]
-pub async fn auth_logout<R: tauri::Runtime>(_app: tauri::AppHandle<R>) -> Result<(), UiError> {
-    not_implemented()
+pub async fn auth_logout<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), UiError> {
+    run(app, "auth_logout", auth::logout).await
 }
 
 /// Locks the session (idle lock or the lock button). Unsaved work stays in the screens.
 #[tauri::command]
-pub async fn auth_lock<R: tauri::Runtime>(_app: tauri::AppHandle<R>) -> Result<(), UiError> {
-    not_implemented()
+pub async fn auth_lock<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<(), UiError> {
+    run(app, "auth_lock", auth::lock).await
 }
 
 /// Unlocks the session with the user's password. Errors as sign-in.
 #[tauri::command]
 pub async fn auth_unlock<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-    _input: UnlockInput,
+    app: tauri::AppHandle<R>,
+    input: UnlockInput,
 ) -> Result<SessionUser, UiError> {
-    not_implemented()
+    run(app, "auth_unlock", move |ctx| {
+        auth::unlock(ctx, &Secret::new(input.password)).map(SessionUser::from)
+    })
+    .await
 }
 
 /// Resets the Owner password with the recovery code and spends the code.
@@ -242,8 +317,12 @@ pub async fn auth_unlock<R: tauri::Runtime>(
 /// password errors on `new_password` and `new_password_repeat`.
 #[tauri::command]
 pub async fn auth_recover<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-    _input: RecoverInput,
+    app: tauri::AppHandle<R>,
+    input: RecoverInput,
 ) -> Result<RecoverDone, UiError> {
-    not_implemented()
+    run(app, "auth_recover", move |ctx| {
+        let new_recovery_code = auth::recover(ctx, &auth::RecoverRaw::from(input))?;
+        Ok(RecoverDone { new_recovery_code })
+    })
+    .await
 }

@@ -9,8 +9,10 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex, PoisonError};
 
+use mandi_services::Context;
 use mandi_services::db::{DataState, Db, DbError, DbOptions};
 use serde::Serialize;
+use tauri::Manager;
 use ts_rs::TS;
 
 use crate::error::UiError;
@@ -38,9 +40,10 @@ pub enum StatusName {
     Failed,
 }
 
-/// The shared state of the running app.
+/// The shared state of the running app. Cheap to clone: the parts are shared.
+#[derive(Clone)]
 pub struct AppState {
-    db: Result<Arc<Db>, UiError>,
+    ctx: Result<Arc<Context>, UiError>,
     check_failure: Arc<Mutex<Option<String>>>,
 }
 
@@ -54,17 +57,22 @@ impl AppState {
         match Db::open(&path, options) {
             Ok(db) => Self::with_db(Arc::new(db)),
             Err(error) => Self {
-                db: Err(UiError::from(error)),
+                ctx: Err(UiError::from(error)),
                 check_failure: Arc::default(),
             },
         }
     }
 
-    /// State for an already open database, and starts its start-up check.
+    /// State for an already open database, with the real parts, and starts its check.
     pub fn with_db(db: Arc<Db>) -> Self {
+        Self::with_context(Arc::new(Context::new(db)))
+    }
+
+    /// State for a ready context (tests give one with fake parts), and starts its check.
+    pub fn with_context(ctx: Arc<Context>) -> Self {
         let check_failure: Arc<Mutex<Option<String>>> = Arc::default();
         let worker = {
-            let db = Arc::clone(&db);
+            let db = Arc::clone(ctx.db());
             let slot = Arc::clone(&check_failure);
             move || check_and_note(&db, &slot)
         };
@@ -75,28 +83,61 @@ impl AppState {
             tracing::warn!("cannot start the check thread, running it now: {error}");
             worker();
         }
+        // Train the name suggestions now, so the first key press in an Urdu field is not the
+        // slow one (NFR-SPD-20), and build the search index. A failure here is not an error: the
+        // first use tries again.
+        let warm = Arc::clone(&ctx);
+        if let Err(error) = std::thread::Builder::new()
+            .name("mandi-translit-warm-up".to_owned())
+            .spawn(move || {
+                mandi_services::translit::warm_up(&warm);
+                // Build the search index too (NFR-SPD-6, Code Standards B27).
+                mandi_services::search::warm_up(&warm);
+            })
+        {
+            tracing::warn!("cannot start the warm-up thread: {error}");
+        }
         Self {
-            db: Ok(db),
+            ctx: Ok(ctx),
             check_failure,
         }
     }
 
-    /// The data file, or the error that stopped it opening (same reference every time).
+    /// The state the running app manages, as a copy a worker thread can own.
+    ///
+    /// # Errors
+    /// `ERR_INTERNAL` if the app forgot to manage a state.
+    pub fn of<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<Self, UiError> {
+        app.try_state::<AppState>()
+            .map(|state| state.inner().clone())
+            .ok_or_else(|| UiError::internal("the app has no state"))
+    }
+
+    /// The services context, or the error that stopped the data file opening (the same
+    /// reference every time).
     ///
     /// # Errors
     /// The start-up `UiError` when the file could not be opened or upgraded.
+    pub fn context(&self) -> Result<Arc<Context>, UiError> {
+        self.ctx.clone()
+    }
+
+    /// The data file, or the start-up error.
+    ///
+    /// # Errors
+    /// As [`AppState::context`].
     pub fn db(&self) -> Result<Arc<Db>, UiError> {
-        self.db.clone()
+        self.ctx.clone().map(|ctx| Arc::clone(ctx.db()))
     }
 
     /// What `app_data_status` returns.
     pub fn data_status(&self) -> DataStatus {
-        match &self.db {
+        match &self.ctx {
             Err(error) => DataStatus {
                 state: StatusName::Failed,
                 reference: Some(error.reference.clone()),
             },
-            Ok(db) => match db.data_state() {
+            Ok(ctx) => match ctx.db().data_state() {
                 DataState::Checking => DataStatus {
                     state: StatusName::Checking,
                     reference: None,

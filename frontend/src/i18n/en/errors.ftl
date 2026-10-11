@@ -90,7 +90,7 @@ err-migration-failed = The data could not be updated for the new version. Your d
 # review: pending
 err-db-busy = The data file is busy. Try again in a moment.
 
-## Sign-in, users and settings (plan 04, contract 4. NFR-SEC-1, NFR-SEC-2, NFR-SEC-4, PRD FR-8.2).
+## Sign-in and settings (plan 04, contract 4. NFR-SEC-1, NFR-SEC-2, NFR-SEC-4, PRD FR-8.2).
 ## The reference number follows these messages when the backend sends one (err-reference).
 
 # $min: the shortest password, in characters.
@@ -100,8 +100,6 @@ err-password-too-short = The password must be at least { $min } characters long.
 err-passwords-differ = The two passwords are not the same. Type them again.
 # review: pending
 err-username-invalid = The user name must be 3 to 32 characters. Use only small English letters, digits, a dot, an underscore or a hyphen.
-# review: pending
-err-username-taken = Another user already has this user name. Choose a different one.
 # The same message for a wrong password and an unknown name, so nobody learns which names exist.
 # $tries_left: tries left before the sign-in waits.
 # review: pending
@@ -112,16 +110,16 @@ err-locked-wait = Too many wrong tries. Wait { $seconds } seconds, then try agai
 # review: pending
 err-user-inactive = This user has been made inactive. Please ask the Owner.
 # review: pending
+err-already-signed-in = You are already signed in.
+# review: pending
+err-not-locked = The app is not locked.
+# review: pending
 err-recovery-code-wrong = The user name or the recovery code is wrong. Check and type them again.
 # review: pending
 err-already-set-up = First-time setup is already done. Please sign in.
-# NFR-SEC-4.
+# $min and $max: the allowed range.
 # review: pending
-err-not-allowed = You are not allowed to do this. Ask the Owner.
-# review: pending
-err-last-owner = There must be at least one active Owner. Make someone else an Owner first.
-# review: pending
-err-out-of-range = This value is outside the allowed range. Enter a valid value.
+err-out-of-range = This value must be between { $min } and { $max }.
 # review: pending
 err-not-logged-in = Please sign in first.
 # PRD FR-8.4.
@@ -129,3 +127,17 @@ err-not-logged-in = Please sign in first.
 err-session-locked = The app is locked. Type your password to unlock it.
 # review: pending
 err-not-found = This item was not found. Open the list again.
+# PRD FR-7.66, E49.
+# review: pending
+err-spelling-unconfirmed = The spelling of these words is not confirmed: { $words }. Check the spelling, then confirm it or fix it.
+
+## The master lists (plan 06).
+
+# review: pending
+err-code-taken = This code is already used by another one. Enter a different code.
+# review: pending
+err-version-changed = This was changed after you opened it. Open it again.
+# review: pending
+err-format-invalid = What is written here is not in the right form. Check it and write it again.
+# review: pending
+err-series-full = Every code of this series is used. Use another series.

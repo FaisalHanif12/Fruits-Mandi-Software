@@ -86,6 +86,17 @@ pub fn draft_entry(conn: &Connection, total_paisa: i64) -> i64 {
     conn.last_insert_rowid()
 }
 
+/// A draft entry of this posting type (not a reversal).
+pub fn draft_entry_of(conn: &Connection, posting_type: &str, total_paisa: i64) -> i64 {
+    conn.execute(
+        "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, total_paisa)
+         VALUES ('2026-10-10', ?1, 'voucher', 1, ?2)",
+        params![posting_type, total_paisa],
+    )
+    .unwrap();
+    conn.last_insert_rowid()
+}
+
 pub fn line(
     conn: &Connection,
     entry: i64,

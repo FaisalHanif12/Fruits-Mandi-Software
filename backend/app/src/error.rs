@@ -18,6 +18,7 @@ use ts_rs::TS;
 
 use crate::refs::next_reference;
 use mandi_services::db::DbError;
+use mandi_services::{Rejection, ServiceError};
 
 /// The one list of error codes and message values lives in `mandi-core` (plan 02 Section 4.6).
 pub use mandi_services::core::error::{ErrorCode, ErrorValue, FieldError};
@@ -130,6 +131,30 @@ impl UiError {
             ok: NotOk,
             errors,
             reference: next_reference(),
+        }
+    }
+}
+
+impl From<Rejection> for UiErrorItem {
+    fn from(item: Rejection) -> Self {
+        Self {
+            code: item.code,
+            field: item.field,
+            values: item.values,
+        }
+    }
+}
+
+impl From<ServiceError> for UiError {
+    /// A rejection keeps its codes, fields and values. A database error keeps its code. Any
+    /// other failure is `ERR_INTERNAL` with the cause in the log.
+    fn from(error: ServiceError) -> Self {
+        match error {
+            ServiceError::Rejected(items) if !items.is_empty() => {
+                Self::from_items(items.into_iter().map(UiErrorItem::from).collect())
+            }
+            ServiceError::Db(error) => Self::from(error),
+            other => Self::internal(other),
         }
     }
 }

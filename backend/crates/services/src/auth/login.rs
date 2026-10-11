@@ -12,9 +12,9 @@ use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::validate::FieldErrors;
 use serde_json::json;
 
+use super::SessionInfo;
 use super::lockout;
 use super::session::{self, session_info};
-use super::SessionInfo;
 use crate::audit::Event;
 use crate::context::Context;
 use crate::error::ServiceError;
@@ -54,6 +54,9 @@ impl Via {
     }
 }
 
+/// The most bytes a password can have: 128 characters of up to 4 bytes each.
+const MAX_PASSWORD_BYTES: usize = 512;
+
 /// The longest typed name written to the audit log.
 const MAX_AUDIT_NAME_CHARS: usize = 64;
 
@@ -75,7 +78,13 @@ pub(super) fn attempt(
     check: impl FnOnce() -> Result<bool, ServiceError>,
 ) -> Result<(), ServiceError> {
     if let Some(seconds) = lockout::remaining_seconds(ctx, key, user) {
-        record_failure(ctx, user, typed, via, &json!({ "reason": "locked", "seconds": seconds }))?;
+        record_failure(
+            ctx,
+            user,
+            typed,
+            via,
+            &json!({ "reason": "locked", "seconds": seconds }),
+        )?;
         return Err(locked(seconds));
     }
     if check()? {
@@ -209,6 +218,11 @@ pub(super) fn verify_password(
     user: Option<&UserRecord>,
     password: &Secret,
 ) -> Result<bool, ServiceError> {
+    // No password can be longer than this (4 bytes per character at most). Hashing a huge text
+    // would only waste time, so it is simply wrong.
+    if password.expose().len() > MAX_PASSWORD_BYTES {
+        return Ok(false);
+    }
     match user {
         Some(user) => Ok(ctx.hasher.verify(password, &user.password_hash)),
         None => {
@@ -220,7 +234,13 @@ pub(super) fn verify_password(
 
 /// A right password for an inactive user is refused (and logged).
 fn refuse_inactive(ctx: &Context, user: &UserRecord, via: Via) -> ServiceError {
-    match record_failure(ctx, Some(user), &user.username, via, &json!({ "reason": "inactive" })) {
+    match record_failure(
+        ctx,
+        Some(user),
+        &user.username,
+        via,
+        &json!({ "reason": "inactive" }),
+    ) {
         Ok(()) => ServiceError::reject(ErrorCode::ErrUserInactive),
         Err(error) => error,
     }
@@ -230,11 +250,15 @@ fn refuse_inactive(ctx: &Context, user: &UserRecord, via: Via) -> ServiceError {
 ///
 /// # Errors
 /// `ERR_REQUIRED` (`username`, `password`); `ERR_WRONG_PASSWORD` (`password`, `tries_left`);
-/// `ERR_LOCKED_WAIT` (`seconds`); `ERR_USER_INACTIVE`; `ERR_NOT_ALLOWED` if someone is already
-/// signed in (PRD FR-2.3: switching user needs a logout).
-pub fn login(ctx: &Context, username: &str, password: &Secret) -> Result<SessionInfo, ServiceError> {
+/// `ERR_LOCKED_WAIT` (`seconds`); `ERR_USER_INACTIVE`; `ERR_ALREADY_SIGNED_IN` if someone is
+/// already signed in (PRD FR-2.3).
+pub fn login(
+    ctx: &Context,
+    username: &str,
+    password: &Secret,
+) -> Result<SessionInfo, ServiceError> {
     if ctx.session_snapshot().is_some() {
-        return Err(ServiceError::reject(ErrorCode::ErrNotAllowed));
+        return Err(ServiceError::reject(ErrorCode::ErrAlreadySignedIn));
     }
     let mut errors = FieldErrors::default();
     if username.trim().is_empty() {
@@ -252,7 +276,9 @@ pub fn login(ctx: &Context, username: &str, password: &Secret) -> Result<Session
     })?;
     // A right password means the user exists.
     let Some(user) = user else {
-        return Err(ServiceError::Data("sign-in passed for an unknown user".to_owned()));
+        return Err(ServiceError::Data(
+            "sign-in passed for an unknown user".to_owned(),
+        ));
     };
     if !user.is_active {
         return Err(refuse_inactive(ctx, &user, Via::Login));
@@ -267,10 +293,17 @@ pub fn login(ctx: &Context, username: &str, password: &Secret) -> Result<Session
         )?;
         // The sign-in screen of this computer follows the last user's language (PRD FR-7.30).
         let language = session_info(tx, &user)?.language;
-        store::set_setting(tx, KEY_LOGIN_LANGUAGE, &json!(language.as_str()), Some(user.id))?;
+        store::set_setting(
+            tx,
+            KEY_LOGIN_LANGUAGE,
+            &json!(language.as_str()),
+            Some(user.id),
+        )?;
         ctx.db.auditor().write(
             tx,
-            &Event::new(Some(user.id), "login", "user").entity_id(user.id).into_entry(),
+            &Event::new(Some(user.id), "login", "user")
+                .entity_id(user.id)
+                .into_entry(),
         )?;
         Ok::<(), ServiceError>(())
     })?;
@@ -283,16 +316,19 @@ pub fn login(ctx: &Context, username: &str, password: &Secret) -> Result<Session
 /// sign-in (plan 04 Section 4).
 ///
 /// # Errors
-/// As [`login`]; `ERR_NOT_LOGGED_IN` without a session; `ERR_NOT_ALLOWED` if it is not locked.
+/// As [`login`]; `ERR_NOT_LOGGED_IN` without a session; `ERR_NOT_LOCKED` if it is not locked.
 pub fn unlock(ctx: &Context, password: &Secret) -> Result<SessionInfo, ServiceError> {
     let Some(open) = ctx.session_snapshot() else {
         return Err(ServiceError::reject(ErrorCode::ErrNotLoggedIn));
     };
     if !open.locked {
-        return Err(ServiceError::reject(ErrorCode::ErrNotAllowed));
+        return Err(ServiceError::reject(ErrorCode::ErrNotLocked));
     }
     if password.expose().is_empty() {
-        return Err(ServiceError::reject_field(ErrorCode::ErrRequired, "password"));
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrRequired,
+            "password",
+        ));
     }
     let user = ctx.db.read(|conn| store::user_by_id(conn, open.user_id))?;
     let Some(user) = user else {
@@ -315,7 +351,9 @@ pub fn unlock(ctx: &Context, password: &Secret) -> Result<SessionInfo, ServiceEr
         )?;
         ctx.db.auditor().write(
             tx,
-            &Event::new(Some(user.id), "unlock", "user").entity_id(user.id).into_entry(),
+            &Event::new(Some(user.id), "unlock", "user")
+                .entity_id(user.id)
+                .into_entry(),
         )?;
         Ok::<(), ServiceError>(())
     })?;

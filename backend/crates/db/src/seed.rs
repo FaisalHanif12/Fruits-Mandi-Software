@@ -85,7 +85,7 @@ const HEADS: [Head; 6] = [
 
 /// provisional, needs Urdu reviewer (NFR-URD-4): FR-10.4 gives only the English names.
 /// 0601 "Capital" and 0602 "Partner Capital" were agreed with the lead (plan 03 Section 4.2c).
-const CONTROLS: [Control; 10] = [
+const CONTROLS: [Control; 11] = [
     Control {
         head_code: "01",
         code: "0101",
@@ -98,6 +98,15 @@ const CONTROLS: [Control; 10] = [
         code: "0102",
         name_ur: "بینک",
         name_en: "Bank",
+        party_type: "other",
+    },
+    // PRD FR-10.4 v1.2: one ادھار رقم account per person (staff or anyone else) under 0103.
+    // The person accounts are made by the user (plan 06), never seeded.
+    Control {
+        head_code: "01",
+        code: "0103",
+        name_ur: "ادھار رقم",
+        name_en: "Money Lent",
         party_type: "other",
     },
     Control {

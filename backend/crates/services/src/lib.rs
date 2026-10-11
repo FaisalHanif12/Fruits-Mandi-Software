@@ -2,17 +2,22 @@
 //! (Code Standards B3), plus the in-memory search index and read-only assist queries.
 //! Depends on `mandi-domain` and `mandi-db`.
 
+pub mod accounts;
 mod audit;
 pub mod auth;
+pub mod coa;
 pub mod context;
+pub mod day;
 pub mod error;
+pub mod masters;
 pub mod ports;
+pub mod search;
 pub mod secret;
 pub mod settings;
+pub mod spelling;
 mod store;
 pub mod testing;
-pub mod users;
-pub mod day;
+pub mod translit;
 
 pub use context::{Context, Parts};
 pub use error::{Rejection, ServiceError};

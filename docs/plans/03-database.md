@@ -97,3 +97,15 @@ Login and users (04), accounts screens (D2), backup and restore screens (D5).
 ## 8. Open questions
 
 None.
+
+## 9. v1.2 additions (12-10-2026, PRD v1.2 and Architecture 15 v1.2)
+
+Migration 0001 is not released, so these go into `0001_init.sql` itself, with tests and the table and column list of the schema test updated:
+
+- `bikri_lots.adjust_advance` INTEGER NOT NULL DEFAULT 1, CHECK 0 or 1 (FR-12.23, پیشگی سے کاٹیں).
+- `vouchers.type` adds `personal_return`, `money_lent`, `money_lent_return`; `vouchers.mode` adds `salary`, allowed only when type is `money_lent_return` (CHECK); new columns `reason` (text, null), `return_by_date` (date text, null; on `personal_expense` and `money_lent`, PRD 16.3 and 16.5), `taken_by` (text, null, on `personal_expense` only: the person who took the cash, for example the partner's son, PRD 16.3) as Architecture 15.7 v1.2 names them. (Corrected 12-10-2026: the PRD wins over this plan's first wording.) Read the exact column list in Architecture 15.7 and use those names.
+- `journal_entries.posting_type` adds `personal_return`, `money_lent`, `money_lent_return`.
+- `staff.account_id` INTEGER NULL REFERENCES accounts(id) (his ادھار رقم account under control 0103).
+- `advance_allocations.credit_line_id` may be a seller credit line from a بکری posting whose lot has `adjust_advance = 1`, or from a seller's receipt voucher (FR-15.12); adjust the matching trigger and its tests.
+- Seed: control `0103` ادھار رقم / Money Lent under head 01 (FR-10.4 v1.2), names from the PRD table.
+- `users.role`, `users.partner_id` and `partners.user_id` stay, unused (Architecture 15.3 v1.2).

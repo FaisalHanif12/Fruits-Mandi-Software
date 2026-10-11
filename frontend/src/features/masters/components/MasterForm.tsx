@@ -1,0 +1,363 @@
+// The form of one master, for every kind (plan 06, PRD 10.3, FR-7.24): the code (with the next
+// one suggested), the name in two scripts, the fields that kind has, and the facts the backend
+// works out. One form, configured per kind (configs.ts).
+//
+// - Everything is text in this screen's state, so a language switch loses nothing (F39).
+// - The names go through NamePair; a word made by the spelling rules alone is checked before the
+//   save (useSpellingFlow, PRD FR-7.66).
+// - Keys: F10 or Ctrl+S saves, Enter on the last field saves, Esc goes back (asking first when
+//   there are unsaved changes), ↑ ↓ ← → move between fields (shared/keyboard).
+// - A master is never deleted. It is made inactive, after a confirm (PRD E21).
+
+import { Localized, useLocalization } from '@fluent/react';
+import { useNavigate } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { LeaveGuard } from '../../../app/LeaveGuard';
+import { uiErrorOf } from '../../../shared/api';
+import { useFocusFirstField, useSpellingFlow } from '../../../shared/hooks';
+import { useLanguage } from '../../../shared/i18n';
+import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
+import {
+  Button,
+  CodeInput,
+  ConfirmDialog,
+  ErrorNotice,
+  Field,
+  NamePair,
+  Picker,
+  Select,
+  TextInput,
+  fieldError,
+  showToast,
+  type PickerValue,
+} from '../../../shared/ui';
+import type { SearchHit } from '../../../shared/search';
+import type { FieldSpec, MasterConfig } from '../configs';
+import { labelOf, newValues, sameValues, valuesOf, type FormValues } from '../draft';
+import { useSaveMaster, useSetMasterActive } from '../hooks';
+import { useMasterFocus } from '../store';
+import type { MasterRecord } from '../types';
+
+interface MasterFormProps {
+  config: MasterConfig;
+  /** The master being edited, or null for a new one. */
+  record: MasterRecord | null;
+  /** The suggested code for a new master. */
+  suggestedCode: string;
+}
+
+/** The path the backend names a field by when it refuses it. */
+function fieldPath(spec: FieldSpec): string {
+  return spec.control.type === 'picker' ? `${spec.key}_id` : spec.key;
+}
+
+function toPickerValue(hit: SearchHit): PickerValue {
+  return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+}
+
+export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
+  const { l10n } = useLocalization();
+  const language = useLanguage();
+  const navigate = useNavigate();
+  const initial = useMemo(
+    () => (record === null ? newValues(config, suggestedCode) : valuesOf(config, record)),
+    [config, record, suggestedCode],
+  );
+  const [values, setValues] = useState<FormValues>(initial);
+  // What was last saved (or opened), to know whether anything changed.
+  const [baseline, setBaseline] = useState<FormValues>(initial);
+  const [leaving, setLeaving] = useState(false);
+  const [confirmInactive, setConfirmInactive] = useState(false);
+  const save = useSaveMaster(config.kind);
+  const setActive = useSetMasterActive(config.kind);
+  const remember = useMasterFocus((state) => state.remember);
+  const containerRef = useFocusFirstField<HTMLFormElement>();
+  const nameRef = useRef<HTMLFormElement>(null);
+
+  const error =
+    save.error !== null
+      ? uiErrorOf(save.error)
+      : setActive.error !== null
+        ? uiErrorOf(setActive.error)
+        : null;
+  const dirty = !leaving && !sameValues(values, baseline);
+  const listPath = `/index/${config.path}`;
+  const isNew = record === null;
+
+  const focusNames = () => {
+    nameRef.current?.querySelector<HTMLElement>('[role="combobox"], input')?.focus();
+  };
+  const spelling = useSpellingFlow({ onFix: focusNames });
+
+  // Go back to the list once a save or a change of state is finished and the form is clean.
+  useEffect(() => {
+    if (leaving) void navigate({ to: listPath });
+  }, [leaving, listPath, navigate]);
+
+  const persist = async (): Promise<boolean> => {
+    try {
+      const saved = await spelling.guard(
+        values.names,
+        (names) => {
+          setValues((current) => ({ ...current, names }));
+        },
+        (confirmedWords) => save.mutateAsync({ draft: values, confirmedWords }),
+      );
+      if (saved === undefined) return false;
+      remember(config.kind, saved.id);
+      setBaseline(valuesOf(config, saved));
+      showToast('success', l10n.getString('masters-saved'));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const saveAndClose = () => {
+    void persist().then((saved) => {
+      if (saved) setLeaving(true);
+    });
+  };
+  const navigation = useFormNavigation(saveAndClose);
+  useShortcut(SHORTCUTS.save, saveAndClose);
+
+  const goBack = () => {
+    void navigate({ to: listPath });
+  };
+  useEscape('leave', goBack);
+
+  const changeActive = (isActive: boolean) => {
+    if (record === null) return;
+    setActive.mutate(
+      { id: record.id, isActive },
+      {
+        onSuccess: (changed) => {
+          remember(config.kind, changed.id);
+          showToast(
+            'success',
+            l10n.getString(isActive ? 'masters-made-active' : 'masters-made-inactive'),
+          );
+          setLeaving(true);
+        },
+      },
+    );
+  };
+
+  const setText = (key: string) => (text: string) => {
+    setValues((current) => ({ ...current, text: { ...current.text, [key]: text } }));
+  };
+  const setRef = (key: string) => (hit: SearchHit | null) => {
+    setValues((current) => ({
+      ...current,
+      refs: { ...current.refs, [key]: hit === null ? null : toPickerValue(hit) },
+    }));
+  };
+
+  const fieldsShown = ['code', 'name_ur', 'name_en', ...config.fields.map(fieldPath)];
+
+  const control = (spec: FieldSpec) => {
+    const kind = spec.control;
+    return (
+      <Field
+        key={spec.key}
+        label={<Localized id={spec.labelId} />}
+        hint={spec.hintId === undefined ? undefined : <Localized id={spec.hintId} />}
+        error={fieldError(error, fieldPath(spec))}
+      >
+        {(props) => {
+          switch (kind.type) {
+            case 'text':
+              return (
+                <TextInput
+                  {...props}
+                  value={values.text[spec.key] ?? ''}
+                  onChange={setText(spec.key)}
+                />
+              );
+            case 'latin':
+              return (
+                <TextInput
+                  {...props}
+                  value={values.text[spec.key] ?? ''}
+                  onChange={setText(spec.key)}
+                  lang="en"
+                />
+              );
+            case 'select':
+              return (
+                <Select
+                  {...props}
+                  value={values.text[spec.key]}
+                  onChange={setText(spec.key)}
+                  options={kind.options.map((option) => ({
+                    value: option.value,
+                    label: <Localized id={option.labelId} />,
+                  }))}
+                />
+              );
+            case 'picker':
+              return (
+                <Picker
+                  {...props}
+                  scope={kind.scope}
+                  value={values.refs[spec.key] ?? null}
+                  onChange={setRef(spec.key)}
+                />
+              );
+          }
+        }}
+      </Field>
+    );
+  };
+
+  const heading = isNew ? (
+    <Localized id={config.newId}>
+      <h1 className="type-title" />
+    </Localized>
+  ) : (
+    <Localized id="masters-edit-title" vars={{ name: labelOf(record, language) }}>
+      <h1 className="type-title" />
+    </Localized>
+  );
+
+  return (
+    <div className="flex max-w-form flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-3">
+        {heading}
+        {record !== null && !record.is_active ? (
+          <Localized id="masters-status-inactive">
+            <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
+          </Localized>
+        ) : null}
+      </div>
+      {record !== null && !record.is_active ? (
+        <Localized id="masters-inactive-note">
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      ) : null}
+      <form
+        ref={(element) => {
+          containerRef.current = element;
+          nameRef.current = element;
+        }}
+        {...navigation}
+        onSubmit={(event) => {
+          event.preventDefault();
+        }}
+        className="flex flex-col gap-4"
+      >
+        <LeaveGuard dirty={dirty} onSave={persist} />
+        {error === null ? null : <ErrorNotice error={error} fieldsShown={fieldsShown} />}
+        {config.hasCode ? (
+          <div className="max-w-field">
+            <Field
+              label={<Localized id="masters-field-code" />}
+              hint={isNew ? <Localized id="masters-field-code-hint" /> : undefined}
+              error={fieldError(error, 'code')}
+            >
+              {(props) => (
+                <CodeInput
+                  {...props}
+                  value={values.code}
+                  onChange={(code) => {
+                    setValues((current) => ({ ...current, code }));
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+        ) : null}
+        {config.names === null ? null : (
+          <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
+            <NamePair
+              value={values.names}
+              onChange={(names) => {
+                setValues((current) => ({ ...current, names }));
+              }}
+              urduLabel={<Localized id={config.names.urduLabelId} />}
+              englishLabel={<Localized id={config.names.englishLabelId} />}
+              urduError={fieldError(error, 'name_ur')}
+              englishError={fieldError(error, 'name_en')}
+              checkSpelling={config.names.spelling}
+            />
+          </div>
+        )}
+        {config.fields.length === 0 && config.shown.length === 0 ? null : (
+          <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
+            {config.fields.map(control)}
+            {config.shown.map((spec) => {
+              const text = record?.shown[spec.key] ?? '';
+              return (
+                <Field
+                  key={spec.key}
+                  label={<Localized id={spec.labelId} />}
+                  hint={text === '' ? <Localized id={spec.emptyHintId} /> : undefined}
+                  readOnly
+                >
+                  {(props) => (
+                    <TextInput {...props} value={text} onChange={() => undefined} lang="en" />
+                  )}
+                </Field>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {record === null ? null : record.is_active ? (
+              <Button
+                variant="danger"
+                busy={setActive.isPending}
+                onClick={() => {
+                  setConfirmInactive(true);
+                }}
+              >
+                <Localized id="masters-make-inactive" />
+              </Button>
+            ) : (
+              <Button
+                busy={setActive.isPending}
+                onClick={() => {
+                  changeActive(true);
+                }}
+              >
+                <Localized id="masters-make-active" />
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button shortcut={SHORTCUTS.back} onClick={goBack}>
+              <Localized id="common-back" />
+            </Button>
+            <Button
+              variant="primary"
+              shortcut={SHORTCUTS.save}
+              busy={save.isPending}
+              onClick={saveAndClose}
+            >
+              <Localized id="layout-save-save" />
+            </Button>
+          </div>
+        </div>
+      </form>
+      {spelling.dialog}
+      {record === null ? null : (
+        <ConfirmDialog
+          open={confirmInactive}
+          onOpenChange={setConfirmInactive}
+          title={<Localized id="masters-inactive-title" />}
+          description={
+            <Localized
+              id="masters-inactive-description"
+              vars={{ name: labelOf(record, language) }}
+            />
+          }
+          confirmLabel={<Localized id="masters-make-inactive" />}
+          tone="danger"
+          onConfirm={() => {
+            changeActive(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}

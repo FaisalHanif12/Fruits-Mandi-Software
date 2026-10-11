@@ -82,3 +82,27 @@ layout-save-description = This page has changes that are not saved.
 layout-save-leave = Leave without saving
 # review: pending
 layout-save-save = Save
+
+## User menu and start-up.
+
+# review: pending
+layout-user-lock = Lock the app
+
+# review: pending
+layout-user-signout = Sign out
+
+# review: pending
+layout-loading-session = Opening the app…
+# review: pending
+layout-loading-failed = The app could not open
+
+## The search box of the top bar (plan 08, PRD FR-5.4).
+
+# review: pending
+layout-search-results = Search results
+# review: pending
+layout-search-searching = Searching…
+# review: pending
+layout-search-none = No account found.
+# review: pending
+layout-search-failed = The search could not be done.

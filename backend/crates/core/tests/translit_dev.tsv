@@ -1,0 +1,370 @@
+# Development list for tuning the translit rules (about 370 names). The frozen test list is translit_names.tsv: never tune to that one.
+# Columns (tab separated): typed English letters, correct Urdu (alternatives with |), accepted English names (alternatives with |)
+muhammad shafique	محمد شفیق	Muhammad Shafique
+mohammad rafique	محمد رفیق	Mohammad Rafique
+ghulam mustafa	غلام مصطفیٰ|غلام مصطفی	Ghulam Mustafa
+abdul rehman	عبدالرحمن|عبد الرحمٰن	Abdul Rehman
+sheikh nadeem	شیخ ندیم	Sheikh Nadeem
+hafiz abdullah	حافظ عبداللہ	Hafiz Abdullah
+rana shahid	رانا شاہد|رانا شاھد	Rana Shahid
+chaudhry rashid	چوہدری رشید	Chaudhry Rashid
+malik asif	ملک آصف	Malik Asif
+syed hussain	سید حسین	Syed Hussain
+mian saleem	میاں سلیم	Mian Saleem
+raja zahid	راجہ زاہد	Raja Zahid
+zeeshan haider	ذیشان حیدر	Zeeshan Haider
+usman ghani	عثمان غنی	Usman Ghani
+rizwan ahmad	رضوان احمد	Rizwan Ahmad
+tahir mahmood	طاہر محمود	Tahir Mahmood
+kamran akmal	کامران اکمل	Kamran Akmal
+imran khan	عمران خان	Imran Khan
+arslan butt	ارسلان بٹ	Arslan Butt
+fahad cheema	فہد چیمہ	Fahad Cheema
+waqas gondal	وقاص گوندل	Waqas Gondal
+adeel virk	عدیل ورک	Adeel Virk
+shoaib sandhu	شعیب سندھو	Shoaib Sandhu
+bilal ranjha	بلال رانجھا	Bilal Ranjha
+faisal warraich	فیصل وڑائچ	Faisal Warraich
+nasir bajwa	ناصر باجوہ	Nasir Bajwa
+sohail tarar	سہیل تارڑ	Sohail Tarar
+junaid arain	جنید آرائیں	Junaid Arain
+tariq jutt	طارق جٹ	Tariq Jutt
+yasir gujjar	یاسر گجر	Yasir Gujjar
+amir kharal	عامر کھرل	Amir Kharal
+shehzad dogar	شہزاد ڈوگر	Shehzad Dogar
+naveed mughal	نوید مغل	Naveed Mughal
+sajjad qureshi	سجاد قریشی	Sajjad Qureshi
+khurram siddiqui	خرم صدیقی	Khurram Siddiqui
+asim farooqi	عاصم فاروقی	Asim Farooqi
+saad ansari	سعد انصاری	Saad Ansari
+hamza lodhi	حمزہ لودھی	Hamza Lodhi
+talha niazi	طلحہ نیازی	Talha Niazi
+umar bhatti	عمر بھٹی	Umar Bhatti
+ali raza	علی رضا	Ali Raza
+hassan raza	حسن رضا	Hassan Raza
+ahsan ullah	احسن اللہ	Ahsan Ullah
+fazal ur rehman	فضل الرحمن	Fazal Ur Rehman
+noor ul haq	نور الحق	Noor Ul Haq
+shams ud din	شمس الدین	Shams Ud Din
+saif ullah	سیف اللہ	Saif Ullah
+atta ur rehman	عطاء الرحمن	Atta Ur Rehman
+muhammad ali	محمد علی	Muhammad Ali
+ahmed ali	احمد علی	Ahmed Ali
+ghulam abbas	غلام عباس	Ghulam Abbas
+sher khan	شیر خان	Sher Khan
+gul muhammad	گل محمد	Gul Muhammad
+din muhammad	دین محمد	Din Muhammad
+nawab din	نواب دین	Nawab Din
+karim bakhsh	کریم بخش	Karim Bakhsh
+allah ditta	اللہ دتہ	Allah Ditta
+allah baksh	اللہ بخش	Allah Baksh
+mehr din	مہر دین	Mehr Din
+fateh muhammad	فتح محمد	Fateh Muhammad
+shah nawaz	شاہ نواز	Shah Nawaz
+wali muhammad	ولی محمد	Wali Muhammad
+jan muhammad	جان محمد	Jan Muhammad
+rab nawaz	رب نواز	Rab Nawaz
+muhammad aslam	محمد اسلم	Muhammad Aslam
+rehmat ali	رحمت علی	Rehmat Ali
+fatima bibi	فاطمہ بی بی	Fatima Bibi
+ayesha bibi	عائشہ بی بی	Ayesha Bibi
+zainab	زینب	Zainab
+maryam	مریم	Maryam
+sana	ثناء|ثنا	Sana
+hina	حنا	Hina
+saima	صائمہ	Saima
+rabia	رابعہ	Rabia
+nazia	نازیہ	Nazia
+shabana	شبانہ	Shabana
+bushra	بشریٰ|بشری	Bushra
+sumaira	سمیرا	Sumaira
+farzana	فرزانہ	Farzana
+kausar	کوثر	Kausar
+nusrat	نصرت	Nusrat
+parveen	پروین	Parveen
+shaheen	شاہین	Shaheen
+razia	رضیہ	Razia
+khadija	خدیجہ	Khadija
+amina	آمنہ	Amina
+sadia	سعدیہ	Sadia
+tahira	طاہرہ	Tahira
+mehwish	مہوش	Mehwish
+iqra	اقراء|اقرا	Iqra
+al noor traders	النور ٹریڈرز	Al Noor Traders
+al madina fruit company	المدینہ فروٹ کمپنی	Al Madina Fruit Company
+bismillah traders	بسم اللہ ٹریڈرز	Bismillah Traders
+rehmat fruit centre	رحمت فروٹ سینٹر	Rehmat Fruit Centre
+ghulam rasool and sons	غلام رسول اینڈ سنز	Ghulam Rasool And Sons
+haji ismail brothers	حاجی اسماعیل برادرز	Haji Ismail Brothers
+madni fruit house	مدنی فروٹ ہاؤس	Madni Fruit House
+shan vegetable traders	شان ویجیٹیبل ٹریڈرز	Shan Vegetable Traders
+punjab fruit mandi	پنجاب فروٹ منڈی	Punjab Fruit Mandi
+lahore commission agency	لاہور کمیشن ایجنسی	Lahore Commission Agency
+new khan traders	نیو خان ٹریڈرز	New Khan Traders
+star fruit company	سٹار فروٹ کمپنی	Star Fruit Company
+sunrise traders	سن رائز ٹریڈرز	Sunrise Traders
+paradise fruit house	پیراڈائز فروٹ ہاؤس	Paradise Fruit House
+al ameen enterprises	الامین انٹرپرائزز	Al Ameen Enterprises
+mian brothers	میاں برادرز	Mian Brothers
+butt and sons	بٹ اینڈ سنز	Butt And Sons
+chaudhry traders	چوہدری ٹریڈرز	Chaudhry Traders
+bhatti fruit store	بھٹی فروٹ سٹور	Bhatti Fruit Store
+awan traders	اعوان ٹریڈرز	Awan Traders
+gondal fruit company	گوندل فروٹ کمپنی	Gondal Fruit Company
+sargodha kinnu	سرگودھا کنو	Sargodha Kinnu
+mian channu	میاں چنوں	Mian Channu
+haroonabad	ہارون آباد	Haroonabad
+mailsi	میلسی	Mailsi
+jalalpur	جلالپور	Jalalpur
+chishtian	چشتیاں	Chishtian
+yazman	یزمان	Yazman
+dunyapur	دنیا پور	Dunyapur
+kot addu	کوٹ ادو	Kot Addu
+ali pur	علی پور	Ali Pur
+jampur	جام پور	Jampur
+bhalwal	بھلوال	Bhalwal
+sillanwali	سلانوالی	Sillanwali
+kamalia	کمالیہ	Kamalia
+rajana	راجانہ	Rajana
+tandlianwala	ٹانڈلیانوالہ	Tandlianwala
+samundri	سمندری	Samundri
+jaranwala	جڑانوالہ	Jaranwala
+sangla hill	سانگلہ ہل	Sangla Hill
+shahkot	شاہ کوٹ	Shahkot
+khanqah dogran	خانقاہ ڈوگراں	Khanqah Dogran
+bhai pheru	بھائی پھیرو	Bhai Pheru
+kanganpur	کنگن پور	Kanganpur
+mustafabad	مصطفیٰ آباد|مصطفی آباد	Mustafabad
+jand	جنڈ	Jand
+fateh jang	فتح جنگ	Fateh Jang
+pindi gheb	پنڈی گھیب	Pindi Gheb
+jand wala	جنڈ والا	Jand Wala
+tarnol	ترنول	Tarnol
+rawat	راوت	Rawat
+gujjar khan	گجر خان	Gujjar Khan
+lakki	لکی	Lakki
+topi	ٹوپی	Topi
+shabqadar	شبقدر	Shabqadar
+tangi	تنگی	Tangi
+prang	پرانگ	Prang
+sher garh	شیر گڑھ	Sher Garh
+dargai	درگئی	Dargai
+batkhela	بٹ خیلہ	Batkhela
+chakdara	چکدرہ	Chakdara
+kalam	کالام	Kalam
+bahrain	بحرین	Bahrain
+madyan	مدین	Madyan
+alpuri	الپوری	Alpuri
+khwazakhela	خوازہ خیلہ	Khwazakhela
+matta	متہ	Matta
+balakot	بالاکوٹ	Balakot
+kaghan	کاغان	Kaghan
+oghi	اوگی	Oghi
+shinkiari	شنکیاری	Shinkiari
+banana	کیلا	Banana
+kela	کیلا	Kela
+sib	سیب	Sib
+angoor	انگور	Angoor
+amrud	امرود	Amrud
+aam	آم	Aam
+kinoo	کنو	Kinoo
+mausami	موسمی	Mausami
+malta	مالٹا	Malta
+anar	انار	Anar
+anjir	انجیر	Anjir
+tarbuz	تربوز	Tarbuz
+kharbuza	خربوزہ	Kharbuza
+papeeta	پپیتا	Papeeta
+lichi	لیچی	Lichi
+shaftaloo	شفتالو	Shaftaloo
+aloobukhara	آلو بخارا	Aloobukhara
+nashpaati	ناشپاتی	Nashpaati
+khoobani	خوبانی	Khoobani
+aloo	آلو	Aloo
+piyaaz	پیاز	Piyaaz
+tamaatar	ٹماٹر	Tamaatar
+gajar	گاجر	Gajar
+muli	مولی	Muli
+shalgham	شلغم	Shalgham
+bhindi	بھنڈی	Bhindi
+karela	کریلا	Karela
+tinda	ٹنڈا|ٹینڈا	Tinda
+palak	پالک	Palak
+gobi	گوبھی	Gobi
+matar	مٹر	Matar
+mirch	مرچ	Mirch
+lehsun	لہسن	Lehsun
+adrak	ادرک	Adrak
+dhaniya	دھنیا	Dhaniya
+pudeena	پودینہ	Pudeena
+kaddu	کدو	Kaddu
+lauki	لوکی	Lauki
+kheera	کھیرا	Kheera
+baingan	بینگن	Baingan
+shimla mirch	شملہ مرچ	Shimla Mirch
+sarson	سرسوں	Sarson
+methi	میتھی	Methi
+muhammad shafiq anjum	محمد شفیق انجم	Muhammad Shafiq Anjum
+abdul majeed gill	عبدالمجید گل	Abdul Majeed Gill
+zulfiqar ali bhutto	ذوالفقار علی بھٹو	Zulfiqar Ali Bhutto
+noorulhaq	نور الحق	Noorulhaq
+fazlurrehman	فضل الرحمن	Fazlurrehman
+ataullah khan	عطاء اللہ خان	Ataullah Khan
+hamidullah	حمید اللہ	Hamidullah
+rafiuddin	رفیع الدین	Rafiuddin
+shamsuddin	شمس الدین	Shamsuddin
+salahuddin	صلاح الدین	Salahuddin
+nizamuddin	نظام الدین	Nizamuddin
+moinuddin	معین الدین	Moinuddin
+abdulsamad	عبدالصمد	Abdulsamad
+ghulamrasool	غلام رسول	Ghulamrasool
+muhammadshafi	محمد شفیع	Muhammadshafi
+mushtaq ahmad	مشتاق احمد	Mushtaq Ahmad
+mansab ali	منصب علی	Mansab Ali
+ghafoor ahmed	غفور احمد	Ghafoor Ahmed
+manzoor hussain	منظور حسین	Manzoor Hussain
+latif ullah	لطیف اللہ	Latif Ullah
+shafaat ali	شفاعت علی	Shafaat Ali
+nazakat ali	نزاکت علی	Nazakat Ali
+sakhawat hussain	سخاوت حسین	Sakhawat Hussain
+basharat mahmood	بشارت محمود	Basharat Mahmood
+tasawar hussain	تصور حسین	Tasawar Hussain
+asadullah	اسد اللہ	Asadullah
+kifayat ullah	کفایت اللہ	Kifayat Ullah
+azizullah	عزیز اللہ	Azizullah
+sanaullah	ثناء اللہ	Sanaullah
+inamullah	انعام اللہ	Inamullah
+bakhtawar	بختاور	Bakhtawar
+dilawar khan	دلاور خان	Dilawar Khan
+sultan mahmood	سلطان محمود	Sultan Mahmood
+khushal khan	خوشحال خان	Khushal Khan
+mirza ghalib	مرزا غالب	Mirza Ghalib
+nawabzada	نوابزادہ	Nawabzada
+sahibzada	صاحبزادہ	Sahibzada
+makhdoom	مخدوم	Makhdoom
+pir sahib	پیر صاحب	Pir Sahib
+gaddi nasheen	گدی نشین	Gaddi Nasheen
+zamindar	زمیندار	Zamindar
+numberdar	نمبردار	Numberdar
+lambardar	لمبردار	Lambardar
+muzaffar iqbal	مظفر اقبال	Muzaffar Iqbal
+tanvir ahmad	تنویر احمد	Tanvir Ahmad
+shahzaib	شہزیب	Shahzaib
+zohaib	زوہیب	Zohaib
+moeen	معین	Moeen
+ubaid ullah	عبید اللہ	Ubaid Ullah
+ehtesham ul haq	احتشام الحق	Ehtesham Ul Haq
+saeed anwar	سعید انور	Saeed Anwar
+sarfaraz ahmed	سرفراز احمد	Sarfaraz Ahmed
+mohsin nawaz	محسن نواز	Mohsin Nawaz
+zubair ahmed	زبیر احمد	Zubair Ahmed
+mubeen	مبین	Mubeen
+tabish	تابش	Tabish
+hammad	حماد	Hammad
+rehan	ریحان	Rehan
+shuja	شجاع	Shuja
+sufyan	سفیان	Sufyan
+talib hussain	طالب حسین	Talib Hussain
+wasif	واصف	Wasif
+yawar	یاور	Yawar
+zaheer abbas	ظہیر عباس	Zaheer Abbas
+zakaullah	ذکاء اللہ	Zakaullah
+farhat	فرحت	Farhat
+gulzar	گلزار	Gulzar
+hidayat ullah	ہدایت اللہ	Hidayat Ullah
+ihtesham	احتشام	Ihtesham
+jameel	جمیل	Jameel
+kaleem ullah	کلیم اللہ	Kaleem Ullah
+lutf ali	لطف علی	Lutf Ali
+mahboob	محبوب	Mahboob
+nisar	نثار	Nisar
+obaidullah	عبید اللہ	Obaidullah
+pervaiz	پرویز	Pervaiz
+qamar	قمر	Qamar
+raheel	راحیل	Raheel
+sabtain	سبطین	Sabtain
+tufail	طفیل	Tufail
+uzair	عزیر	Uzair
+vaqar	وقار	Vaqar
+wahab	وہاب	Wahab
+yameen	یامین	Yameen
+zarar	ضرار	Zarar
+sidra	سدرہ	Sidra
+tehreem	تحریم	Tehreem
+urooj	عروج	Urooj
+fizza	فضہ	Fizza
+hira	ہیرا	Hira
+isha	عشاء	Isha
+javeria	جویریہ	Javeria
+kinza	کنزہ	Kinza
+laiba	لائبہ	Laiba
+mahnoor	مہنور	Mahnoor
+nimra	نمرہ	Nimra
+ramsha	رمشا	Ramsha
+sehrish	سحرش	Sehrish
+tayyaba	طیبہ	Tayyaba
+unaiza	عنیزہ	Unaiza
+wajiha	وجیہہ	Wajiha
+yumna	یمنہ	Yumna
+zoya	زویا	Zoya
+khanewal	خانیوال	Khanewal
+vehari	وہاڑی	Vehari
+burewala	بورے والا	Burewala
+pakpattan	پاکپتن	Pakpattan
+okara	اوکاڑہ	Okara
+depalpur	دیپالپور	Depalpur
+chunian	چونیاں	Chunian
+pattoki	پتوکی	Pattoki
+khudian	کھڈیاں	Khudian
+raiwind	رائیونڈ	Raiwind
+jhumra	جھمرہ	Jhumra
+mamu kanjan	ماموں کانجن	Mamu Kanjan
+kamoke	کامونکی	Kamoke
+sambrial	سمبڑیال	Sambrial
+daska	ڈسکہ	Daska
+gakhar	گکھڑ	Gakhar
+wazirabad	وزیرآباد	Wazirabad
+rangpur	رنگ پور	Rangpur
+shorkot	شورکوٹ	Shorkot
+rajoa	راجوعہ	Rajoa
+kallar kahar	کلر کہار	Kallar Kahar
+choa saidan shah	چوآ سیدن شاہ	Choa Saidan Shah
+jatoi	جتوئی	Jatoi
+alipur	علی پور	Alipur
+taunsa	تونسہ	Taunsa
+fazilpur	فاضل پور	Fazilpur
+rojhan	روجھان	Rojhan
+liaquatpur	لیاقت پور	Liaquatpur
+kot samaba	کوٹ سمابہ	Kot Samaba
+ghotki	گھوٹکی	Ghotki
+daharki	ڈہرکی	Daharki
+mehrabpur	مہراب پور	Mehrabpur
+chitral	چترال	Chitral
+booni	بونی	Booni
+mastuj	مستوج	Mastuj
+gilgit	گلگت	Gilgit
+skardu	سکردو	Skardu
+hunza	ہنزہ	Hunza
+ghizer	غذر	Ghizer
+astore	استور	Astore
+diamer	دیامر	Diamer
+muzaffarabad	مظفرآباد	Muzaffarabad
+kotli	کوٹلی	Kotli
+bagh	باغ	Bagh
+rawalakot	راولاکوٹ	Rawalakot
+mirpur	میرپور	Mirpur
+bhimber	بھمبر	Bhimber
+neelum	نیلم	Neelum
+sharda	شاردہ	Sharda
+kelan	کیلاں	Kelan
+jalkhad	جلکھڈ	Jalkhad
+sheikh fruit traders	شیخ فروٹ ٹریڈرز	Sheikh Fruit Traders
+rana brothers	رانا برادرز	Rana Brothers
+al shafi traders	الشافی ٹریڈرز	Al Shafi Traders
+al hamd fruit company	الحمد فروٹ کمپنی	Al Hamd Fruit Company
+faisal commission shop	فیصل کمیشن شاپ	Faisal Commission Shop
+iqbal vegetable store	اقبال ویجیٹیبل سٹور	Iqbal Vegetable Store
+madina trading company	مدینہ ٹریڈنگ کمپنی	Madina Trading Company
+ali raza enterprises	علی رضا انٹرپرائزز	Ali Raza Enterprises
+zam zam traders	زم زم ٹریڈرز	Zam Zam Traders
+makkah fruit house	مکہ فروٹ ہاؤس	Makkah Fruit House

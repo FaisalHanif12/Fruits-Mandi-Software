@@ -10,9 +10,10 @@ export type DayState = 'open' | 'closed';
 
 interface StatusBarProps {
   userName: string;
-  /** Today's date as DD-MM-YYYY, from the backend. */
+  /** Today's date as DD-MM-YYYY, from the backend. Empty until it has arrived. */
   date: string;
-  day: DayState;
+  /** Null until the backend has said. */
+  day: DayState | null;
 }
 
 export function StatusBar({ userName, date, day }: StatusBarProps) {
@@ -21,10 +22,12 @@ export function StatusBar({ userName, date, day }: StatusBarProps) {
       <Localized id="layout-status-user" vars={{ name: userName }}>
         <span />
       </Localized>
-      <Localized id="layout-status-date" vars={{ date }} elems={{ num: <Num /> }}>
-        <span />
-      </Localized>
-      {day === 'open' ? (
+      {date === '' ? null : (
+        <Localized id="layout-status-date" vars={{ date }} elems={{ num: <Num /> }}>
+          <span />
+        </Localized>
+      )}
+      {day === null ? null : day === 'open' ? (
         <span className="flex items-center gap-1 text-money-in">
           <Check aria-hidden="true" className="size-icon-sm" />
           <Localized id="layout-status-day-open" />

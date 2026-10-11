@@ -168,13 +168,18 @@ fn line_checks_reject_bad_amounts() {
     assert!(line(&conn, entry, 1, "01010001", 100, 0).is_ok());
     // A repeated line number in one entry.
     assert!(line(&conn, entry, 1, "01010001", 100, 0).is_err());
-    // An advance must be a debit.
-    let cash = common::account_id(&conn, "01010001");
+    // An advance must be a debit. The entry and account are the right kind, so the CHECK is
+    // what refuses it (the trigger journal_lines_advance_flag has its own test).
+    let advance_entry = common::draft_entry_of(&conn, "advance", 100);
+    let seller = common::account_id(&conn, "030119999");
     let credit_advance = conn.execute(
-        "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa, is_advance) VALUES (?1, 2, ?2, 0, 100, 1)",
-        params![entry, cash],
+        "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa, is_advance) VALUES (?1, 1, ?2, 0, 100, 1)",
+        params![advance_entry, seller],
     );
-    assert!(credit_advance.is_err());
+    assert!(matches!(
+        classify(credit_advance.unwrap_err()),
+        DbError::Constraint(m) if m.contains("CHECK constraint failed")
+    ));
 }
 
 #[test]
@@ -235,7 +240,7 @@ fn a_lot_cannot_sell_more_than_it_received() {
         )
         .is_err()
     );
-    assert!(conn.execute("UPDATE bikri_lots SET gross_paisa = 1_000_000, deductions_paisa = 1_100_000, net_paisa = -100_000 WHERE id = ?1", [f.lot]).is_ok());
+    assert!(conn.execute("UPDATE bikri_lots SET gross_paisa = 1_000_000, freight_paisa = 1_100_000, deductions_paisa = 1_100_000, net_paisa = -100_000 WHERE id = ?1", [f.lot]).is_ok());
     assert!(
         conn.execute(
             "UPDATE bikri_lots SET gross_paisa = 2_000_000 WHERE id = ?1",
@@ -711,7 +716,7 @@ fn an_advance_matching_row_needs_an_advance_debit_and_a_seller_credit() {
     let plain = line(&conn, advance_entry, 1, seller_code, 1_500_000, 0).unwrap();
     // is_advance can only be set when the line is made.
     let flagged = {
-        let entry = draft_entry(&conn, 1_500_000);
+        let entry = common::draft_entry_of(&conn, "advance", 1_500_000);
         conn.execute(
             "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa, is_advance) VALUES (?1, 1, ?2, 1500000, 0, 1)",
             params![entry, seller_id],
@@ -719,7 +724,7 @@ fn an_advance_matching_row_needs_an_advance_debit_and_a_seller_credit() {
         .unwrap();
         conn.last_insert_rowid()
     };
-    let credit_entry = draft_entry(&conn, 2_431_600);
+    let credit_entry = common::draft_entry_of(&conn, "bikri_first", 2_431_600);
     let credit = line(&conn, credit_entry, 1, seller_code, 0, 2_431_600).unwrap();
     let insert = |advance_line: i64, credit_line: i64, amount: i64| {
         conn.execute(

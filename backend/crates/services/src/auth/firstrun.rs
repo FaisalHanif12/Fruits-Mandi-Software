@@ -8,21 +8,22 @@
 use mandi_db::rusqlite::params;
 use mandi_domain::auth::recovery;
 use mandi_domain::auth::validate as rules;
-use mandi_domain::core::auth::{Language, Role};
+use mandi_domain::core::auth::Language;
 use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::money::Grouping;
 use mandi_domain::core::validate::FieldErrors;
 use serde_json::{Value, json};
 
-use super::login::{Via, attempt, verify_password};
 use super::lockout;
+use super::login::{Via, attempt, verify_password};
 use super::{FirstRunRaw, RecoverRaw};
 use crate::audit::Event;
 use crate::context::Context;
 use crate::error::ServiceError;
 use crate::secret::Secret;
 use crate::settings::{
-    FirmFields, KEY_DEFAULT_LANGUAGE, KEY_FIRM, KEY_IDLE_LOCK, KEY_LOGIN_LANGUAGE, KEY_NUMBER_GROUPING,
+    FirmFields, KEY_DEFAULT_LANGUAGE, KEY_FIRM, KEY_IDLE_LOCK, KEY_LOGIN_LANGUAGE,
+    KEY_NUMBER_GROUPING,
 };
 use crate::store;
 
@@ -43,11 +44,15 @@ fn new_code(ctx: &Context) -> Result<(Secret, String), ServiceError> {
             return Ok((Secret::new(raw), shown));
         }
     }
-    Err(ServiceError::Random("could not make a recovery code".to_owned()))
+    Err(ServiceError::Random(
+        "could not make a recovery code".to_owned(),
+    ))
 }
 
 /// The stored recovery record: the Owner it belongs to and the hash of his code.
-fn stored_recovery(conn: &mandi_db::rusqlite::Connection) -> Result<Option<(i64, String)>, ServiceError> {
+fn stored_recovery(
+    conn: &mandi_db::rusqlite::Connection,
+) -> Result<Option<(i64, String)>, ServiceError> {
     Ok(store::setting(conn, KEY_RECOVERY)?.and_then(|value| {
         let user_id = value.get("user_id")?.as_i64()?;
         let hash = value.get("hash")?.as_str()?.to_owned();
@@ -64,7 +69,7 @@ fn stored_recovery(conn: &mandi_db::rusqlite::Connection) -> Result<Option<(i64,
 /// `password`, `password_repeat`), all together.
 pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceError> {
     // Cheap check first, so a second setup is refused before any hashing.
-    if ctx.db.read(|conn| store::count_users(conn))? > 0 {
+    if ctx.db.read(store::count_users)? > 0 {
         return Err(ServiceError::reject(ErrorCode::ErrAlreadySetUp));
     }
     let mut errors = FieldErrors::default();
@@ -78,7 +83,10 @@ pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceEr
         }
     };
     let username = errors.take(rules::username("owner_username", &input.owner_username));
-    let display_name = errors.take(rules::display_name("owner_display_name", &input.owner_display_name));
+    let display_name = errors.take(rules::display_name(
+        "owner_display_name",
+        &input.owner_display_name,
+    ));
     rules::password_pair(
         &mut errors,
         "password",
@@ -88,7 +96,9 @@ pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceEr
     );
     errors.finish()?;
     let (Some(firm), Some(username), Some(display_name)) = (firm, username, display_name) else {
-        return Err(ServiceError::Data("first run: a checked field is missing".to_owned()));
+        return Err(ServiceError::Data(
+            "first run: a checked field is missing".to_owned(),
+        ));
     };
 
     // The slow work happens before the write lock is taken.
@@ -102,7 +112,7 @@ pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceEr
         }
         tx.execute(
             "INSERT INTO users (username, password_hash, display_name, role) VALUES (?1, ?2, ?3, ?4)",
-            params![username, password_hash, display_name, Role::Owner.as_str()],
+            params![username, password_hash, display_name, store::OWNER_ROLE_VALUE],
         )?;
         let owner_id = tx.last_insert_rowid();
         tx.execute(
@@ -128,7 +138,6 @@ pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceEr
                 .new_value(json!({
                     "username": username,
                     "display_name": display_name,
-                    "role": Role::Owner.as_str(),
                     "first_run": true,
                 }))
                 .into_entry(),
@@ -177,20 +186,27 @@ pub fn recover(ctx: &Context, input: &RecoverRaw) -> Result<String, ServiceError
     let normalized = recovery::normalize(input.recovery_code.expose());
     // The code can only be right for the one Owner it was made for.
     let target = match (&user, &stored) {
-        (Some(user), Some((owner_id, hash))) if user.id == *owner_id && user.role == Role::Owner => {
-            Some((user, hash.clone()))
-        }
+        (Some(user), Some((owner_id, hash))) if user.id == *owner_id => Some((user, hash.clone())),
         _ => None,
     };
-    attempt(ctx, &key, &input.username, user.as_ref(), Via::Recover, || {
-        match (&target, normalized) {
-            (Some((_, hash)), Some(code)) => Ok(ctx.hasher.verify(&Secret::new(code), hash)),
-            // Do the same work as for a right name, so the time tells nothing.
-            _ => verify_password(ctx, None, &Secret::new("x")).map(|_| false),
-        }
-    })?;
+    attempt(
+        ctx,
+        &key,
+        &input.username,
+        user.as_ref(),
+        Via::Recover,
+        || {
+            match (&target, normalized) {
+                (Some((_, hash)), Some(code)) => Ok(ctx.hasher.verify(&Secret::new(code), hash)),
+                // Do the same work as for a right name, so the time tells nothing.
+                _ => verify_password(ctx, None, &Secret::new("x")).map(|_| false),
+            }
+        },
+    )?;
     let Some((user, old_hash)) = target else {
-        return Err(ServiceError::Data("recovery passed without an Owner".to_owned()));
+        return Err(ServiceError::Data(
+            "recovery passed without an Owner".to_owned(),
+        ));
     };
     if !user.is_active {
         return Err(ServiceError::reject(ErrorCode::ErrUserInactive));
@@ -201,9 +217,13 @@ pub fn recover(ctx: &Context, input: &RecoverRaw) -> Result<String, ServiceError
     let new_code_hash = ctx.hasher.hash(&new_code_secret)?;
     ctx.db.write(|tx| {
         // The code is spent only once: a second request with the same code finds the hash changed.
-        let still_valid = stored_recovery(tx)?.is_some_and(|(id, hash)| id == user.id && hash == old_hash);
+        let still_valid =
+            stored_recovery(tx)?.is_some_and(|(id, hash)| id == user.id && hash == old_hash);
         if !still_valid {
-            return Err(ServiceError::reject_field(ErrorCode::ErrRecoveryCodeWrong, "recovery_code"));
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrRecoveryCodeWrong,
+                "recovery_code",
+            ));
         }
         tx.execute(
             "UPDATE users SET password_hash = ?1, failed_attempts = 0, locked_until_at = NULL,
@@ -214,7 +234,9 @@ pub fn recover(ctx: &Context, input: &RecoverRaw) -> Result<String, ServiceError
         store::set_setting(tx, KEY_RECOVERY, &record, Some(user.id))?;
         ctx.db.auditor().write(
             tx,
-            &Event::new(Some(user.id), "recover", "user").entity_id(user.id).into_entry(),
+            &Event::new(Some(user.id), "recover", "user")
+                .entity_id(user.id)
+                .into_entry(),
         )?;
         Ok(())
     })?;
