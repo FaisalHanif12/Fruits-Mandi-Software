@@ -1,6 +1,6 @@
 # D3. بکری: sale entry, journal, پختہ کھاتہ, partners and prints
 
-Version 1.0, 10-10-2026. Deliverable 3 of 5. Read `README.md` in this folder first.
+Version 1.1, 12-10-2026 (PRD v1.2: advance tick, one user). Deliverable 3 of 5. Read `README.md` in this folder first.
 Depends on: D2 done. Plan files: `11-partners`, `12-bikri-entry`, `13-bikri-save`, `14-bikri-prints`.
 Build order step: CLAUDE.md MVP step 5. Golden tests E2E-1 to E2E-5 pass.
 
@@ -30,17 +30,17 @@ If the power goes off in the middle of typing, the app offers the draft when it 
 
 ### 11-partners: partner setup and the live split
 
-**Requirements:** PRD 17.1 to 17.3 (FR-17.1 to FR-17.5), FR-6.5, FR-2.2, 4.2 (partners الف 40, ب 30, ج 30); NFR-INS-2 (the wizard's partners step), NFR-SCL-5, NFR-SEC-5; Architecture 10; the money-calculations agent (C10, C11).
+**Requirements:** PRD 17.1 to 17.3 (FR-17.1 to FR-17.5), FR-6.5, FR-2.4, 4.2 (partners الف 40, ب 30, ج 30); NFR-INS-2 (the wizard's partners step), NFR-SCL-5, NFR-SEC-5; Architecture 10; the money-calculations agent (C10, C11).
 
 **backend builds:**
 
-- Partners with the fields of 17.1: names in both scripts, linked user, capital and drawings accounts created by themselves, share with up to 2 decimals, effective date, active.
+- Partners with the fields of 17.1: names in both scripts, capital and drawings accounts created by themselves, share with up to 2 decimals, effective date, active.
 - Shares of active partners total exactly 100% for every date (FR-17.1). Changes take effect from today or later, never back-dated; history kept; saved postings keep their split (FR-17.2).
 - The split service: every posting that touches an income account (head 04) or a shop expense account (head 05) writes one share row per partner, per posting, with `split_by_bps` (FR-17.3 to FR-17.5, C10, C11). Payables are never split.
-- The partner overview data of 17.3 (today, month, year, expense share, profit share, drawings, capital balance).
-- A Partner user linked to a partner opens his own share directly (FR-2.2). Partner users are read-only (FR-2.4).
+- The partner overview data of 17.3 (today, month, year, expense share, profit share, drawings, capital balance). The returned and خالص columns come in D4 with the واپسی entry (FR-16.3).
+- Partners do not log in (FR-2.4).
 
-**frontend builds:** partner setup (Owner only) with the running share total; the partners step in the first-run wizard; the partner overview.
+**frontend builds:** partner setup with the running share total; the partners step in the first-run wizard; the partner overview.
 
 **Done when:** a share change dated today saves, a back-dated one is refused, and the split of 3,948 gives 1,580 / 1,184 / 1,184.
 
@@ -69,7 +69,7 @@ If the power goes off in the middle of typing, the app offers the draft when it 
 
 ### 13-bikri-save: save, journal, پختہ کھاتہ, freight and drafts
 
-**Requirements:** PRD 12.6 (FR-12.8 to FR-12.10, FR-12.13), 12.7, 13 (FR-13.1 to FR-13.6, FR-13.10), FR-7.29, 14 (FR-14.1, FR-14.2), FR-15.4 and FR-15.5 (the bill matching engine), FR-15.8 (advance adjusted by the seller credit), FR-5.4 (بکری numbers in global search), FR-6.1 to FR-6.6; NFR-SPD-8, NFR-REL-1, NFR-REL-2, NFR-REL-10; Architecture 7, 9 and 10; Code Standards 9.2. E2E-1 to E2E-5, E2E-17, E2E-25.
+**Requirements:** PRD 12.6 (FR-12.8 to FR-12.10, FR-12.13), 12.7, 13 (FR-13.1 to FR-13.6, FR-13.10), FR-7.29, 14 (FR-14.1, FR-14.2), FR-15.4 and FR-15.5 (the bill matching engine), FR-15.8 and FR-12.23 (advance adjusted by the seller credit, with the پیشگی سے کاٹیں tick on the lot), FR-5.4 (بکری numbers in global search), FR-6.1 to FR-6.6; NFR-SPD-8, NFR-REL-1, NFR-REL-2, NFR-REL-10; Architecture 7, 9 and 10; Code Standards 9.2. E2E-1 to E2E-5, E2E-17, E2E-25, E2E-28.
 
 `backend` calls the money-calculations agent before writing the save and the journal lines, and again to review them.
 
@@ -82,7 +82,7 @@ If the power goes off in the middle of typing, the app offers the draft when it 
 - Freight: typed per lot or split from the header total (C17), posting to کرایہ کھاتہ (FR-14.1).
 - Drafts: auto-save every 5 seconds while typing; offered back after a crash or power cut (FR-12.10, NFR-REL-2).
 - Today's بکری list (12.7), moving between saved بکری (FR-12.13), and بکری numbers in global search.
-- `golden_day.rs`: E2E-1 to E2E-5, after the D2 setup. `assist.rs`: the backend parts of E2E-25 and E2E-26.
+- `golden_day.rs`: E2E-1 to E2E-5 and E2E-28, after the D2 setup. `assist.rs`: the backend parts of E2E-25 and E2E-26.
 
 **frontend builds:** save with `F10`, the draft offer at start, today's list, first / previous / next / last and find, the پختہ person fields with their suggestions, and the پختہ کھاتہ register screen.
 
@@ -96,8 +96,9 @@ If the power goes off in the middle of typing, the app offers the draft when it 
 | E2E-4 | Shared income 1,764 + 1,764 + 400 + 20 = 3,948; split 1,580 / 1,184 / 1,184 |
 | E2E-5 | شاہد pays 12,800; seller صافی 10,160; whole entry 25,600 = 25,600; shared income 1,540; split 616 / 462 / 462; register shows شاہد, paid |
 | Advance | رحیم's credit 24,316; نقد 5,000; advance adjusted 15,000; payable 24,316 − 5,000 − 15,000 = 4,316 (FR-15.8 example) |
+| Advance tick off (E2E-28) | Separate run: same بکری with پیشگی سے کاٹیں unticked; credit 24,316, advance adjusted 0, advance open 15,000, ledger 4,316 جمع. The payable 19,316 and the ادائیگی part of E2E-28 are checked in D4. |
 
-**Done when:** all six checks above pass in `golden_day.rs`, E2E-25 passes, and E2E-17 passes in the Windows suite.
+**Done when:** all the checks above pass in `golden_day.rs`, E2E-25 passes, and E2E-17 passes in the Windows suite.
 
 ### 14-bikri-prints: seller bill, buyer slips and the پختہ slip
 
@@ -149,21 +150,21 @@ Test the design against NFR-USE-1 and NFR-USE-2: a new user can enter a بکری
 3. **Power cut.** Kill the app during save, many times: after restart, the بکری is either fully saved or not at all, and the books balance (NFR-REL-1). Kill it while typing: the draft returns, missing at most 5 seconds (NFR-REL-2). Full disk before save (NFR-REL-10).
 4. **Speed.** 50 lots and 500 lines with no lag (NFR-SCL-3); summary update (NFR-SPD-7); save of 30 lines (NFR-SPD-8); language switch with 30 unsaved lines (NFR-SPD-19); 500 بکری and 5,000 lines in one day (NFR-SCL-2); print preview of 15 pages (NFR-SPD-14).
 5. **Race.** Fast typing with slow preview answers: an old answer never overwrites a newer one.
-6. **Roles.** A Partner user cannot save or print a بکری; a Munshi cannot change shares.
+6. **Sign-in.** Before sign-in or while locked, `bikri_save`, `bikri_preview` and the partner commands are refused and write nothing.
 
 ## 7. Acceptance (D3-A1 to D3-A18)
 
 | ID | Item | Evidence expected |
 |---|---|---|
 | D3-A1 | Shares total 100% for every date; no back-dating; history kept (FR-17.1, FR-17.2) | Test output |
-| D3-A2 | Wizard partners step on a clean install; partner overview; a linked Partner user sees his own share (FR-2.2) | Windows E2E names |
+| D3-A2 | Wizard partners step on a clean install; partner overview | Windows E2E names |
 | D3-A3 | The بکری screen fits at 1024 × 600 with no sideways scroll, in both languages | Screenshots |
 | D3-A4 | Preview and save call one domain function; live summary update under NFR-SPD-7 | Code path in the review; timing |
 | D3-A5 | E2E-1 and E2E-2 pass | golden_day output |
 | D3-A6 | E2E-3 passes | golden_day output |
 | D3-A7 | E2E-4 passes; the live split on screen shows the same numbers | golden_day output; screenshot |
 | D3-A8 | E2E-5 passes, with the register showing شاہد, paid | golden_day output |
-| D3-A9 | Advance adjustment matches the FR-15.8 example (adjusted 15,000, payable 4,316) | Test output |
+| D3-A9 | Advance adjustment matches the FR-15.8 example (adjusted 15,000, payable 4,316); with the tick off, E2E-28's بکری part (advance adjusted 0, advance open 15,000, ledger 4,316 جمع) | Test output |
 | D3-A10 | E2E-25 and E2E-26 pass | assist.rs output and Windows E2E |
 | D3-A11 | ⓘ shows the working on every calculated amount, for example "12,000 × 6 ÷ 100 = 720" | Component test and screenshot |
 | D3-A12 | Save is all or nothing under repeated kills; books always balance | Robustness report |

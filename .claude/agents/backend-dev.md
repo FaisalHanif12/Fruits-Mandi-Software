@@ -30,7 +30,7 @@ Do not edit anything under `frontend/` other than the bindings, and do not touch
 
 1. **Contract first (task T1).** Write the input and output types and the command stubs that return `ERR_NOT_IMPLEMENTED`. Run `pnpm gen:types`. Message `frontend` with the command names and type names, so they can start. The contract must match the plan file exactly. If it cannot, tell `tech-lead` before you change it.
 2. **Worked numbers before code.** For any money code, write the expected values from the PRD into a test first. Then write the code.
-3. **Build in order:** `core`, then `domain` (pure functions, unit tests), then the `db` migration, then `services` (one transaction per user action, integration test), then the command (check role, parse, call one service).
+3. **Build in order:** `core`, then `domain` (pure functions, unit tests), then the `db` migration, then `services` (one transaction per user action, integration test), then the command (check sign-in, parse, call one service).
 4. **Money code goes through the specialist.** Before you write money code, and again before you hand it off, call the `money-calculations` agent as a subagent with the PRD IDs and your worked numbers. Fix everything it reports. Put its final report, with the money files it reviewed, in your HANDOFF, so `reviewer` can use it instead of running it again.
 5. **Run the checks** from `backend/`:
    - `cargo fmt --all --check`

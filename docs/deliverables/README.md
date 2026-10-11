@@ -1,6 +1,6 @@
 # Deliverables: how the whole build runs
 
-Version 1.0, 10-10-2026. Owner: Umar. Kept by `tech-lead`.
+Version 1.1, 12-10-2026 (PRD v1.2; one review gate per goal run). Owner: Umar. Kept by `tech-lead`.
 
 The whole Mandi Software is built in **five deliverables**. Each one is a file in this folder. You start one deliverable with one `/goal` line. The lead runs the agent team until that deliverable is finished and proven, then stops and reports.
 
@@ -44,34 +44,40 @@ Notes:
 
 Each line is under the 4,000-character limit. Copy it exactly.
 
+**D1 and D2 together (the current run, Umar 11-10-2026).** Use this line instead of the D1 and D2 lines below. Before pasting it, type `/goal clear` to end the old goal.
+
+```
+/goal You are tech-lead. Read docs/deliverables/README.md, D1-foundation.md, D2-accounts-names-rules.md and status.md fully, then finish D1 and D2 together as one goal run (README Section 4a), applying PRD v1.2: one user and no roles, and in D2 the spelling check, the 15,000-word list and control 0103. Build the remaining plan files on one branch, feature/d1-d2-foundation, with backend and frontend (plus the money-calculations agent for money code). When all are built, spawn a fresh reviewer and robustness once for the whole run, against every D1 and D2 acceptance item and attack list; send every finding to its owner, fix and recheck until both give PASS or PASS WITH MINOR. The goal is met only when you have posted a message headed "D1+D2 DONE REPORT" in the README Section 7 format, showing: every acceptance item D1-A1 to D1-A16 and D2-A1 to D2-A17 either ticked with the command you ran and its real output, or, only if it needs the Windows workflow and GitHub Actions is still unavailable, marked WAITING-CI with local evidence and listed under Follow-ups (items that name the final main are checked on the run branch); pnpm lint, pnpm typecheck, pnpm test, pnpm i18n:check and cargo test -p mandi-services --test golden_day exit 0 on the branch, with E2E-19 and E2E-23 passing; the final reviewer and robustness verdicts for the whole run; one pull request for the run, merged with a green Release run, or, if GitHub Actions is still unavailable, opened and left unmerged with that stated. Also stop if you have posted "D1+D2 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+```
+
 **D1**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D1-foundation.md fully, then deliver D1 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D1 DONE REPORT" in the README Section 7 format, showing: every acceptance item D1-A1 to D1-A16 ticked, each with the command you ran and its real output; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; reviewer and robustness gave PASS or PASS WITH MINOR on every D1 plan file; every D1 pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D1 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D1-foundation.md fully, then deliver D1 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D1 DONE REPORT" in the README Section 7 format, showing: every acceptance item D1-A1 to D1-A16 ticked, each with the command you ran and its real output; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a); the run's pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D1 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 **D2**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D2-accounts-names-rules.md fully, then deliver D2 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D2 DONE REPORT" in the README Section 7 format, showing: every acceptance item D2-A1 to D2-A16 ticked, each with the command you ran and its real output; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; E2E-19 and E2E-23 pass; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR on every D2 plan file; every D2 pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D2 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D2-accounts-names-rules.md fully, then deliver D2 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D2 DONE REPORT" in the README Section 7 format, showing: every acceptance item D2-A1 to D2-A17 ticked, each with the command you ran and its real output; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; E2E-19 and E2E-23 pass; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a); the run's pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D2 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 **D3**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D3-bikri.md fully, then deliver D3 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D3 DONE REPORT" in the README Section 7 format, showing: every acceptance item D3-A1 to D3-A18 ticked, each with the command you ran and its real output; cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-5 included and no expected number changed; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR on every D3 plan file, and the money-calculations agent reviewed all money code; every D3 pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D3 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D3-bikri.md fully, then deliver D3 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D3 DONE REPORT" in the README Section 7 format, showing: every acceptance item D3-A1 to D3-A18 ticked, each with the command you ran and its real output; cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-5 and E2E-28 (its بکری part) included and no expected number changed; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a), and the money-calculations agent reviewed all money code; the run's pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D3 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 **D4**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D4-money-in-out.md fully, then deliver D4 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D4 DONE REPORT" in the README Section 7 format, showing: every acceptance item D4-A1 to D4-A18 ticked, each with the command you ran and its real output; cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-10, E2E-12 to E2E-16b, E2E-13b and E2E-19 to E2E-21, including the trial balance of 85,048 on both sides, and the backend parts of E2E-22 to E2E-27 pass in assist.rs, with no expected number changed; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR on every D4 plan file, and the money-calculations agent reviewed all money code; every D4 pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D4 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D4-money-in-out.md fully, then deliver D4 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D4 DONE REPORT" in the README Section 7 format, showing: every acceptance item D4-A1 to D4-A22 ticked, each with the command you ran and its real output; cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-10, E2E-12 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32 and E2E-30b, including the trial balance of 85,048 on both sides, and the backend parts of E2E-22 to E2E-27 pass in assist.rs, with no expected number changed; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a), and the money-calculations agent reviewed all money code; the run's pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D4 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 **D5**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D5-reports-backup-golive.md fully, then deliver D5 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D5 DONE REPORT" in the README Section 7 format, showing: every acceptance item D5-A1 to D5-A20 ticked, each with the command you ran and its real output; every E2E test from E2E-1 to E2E-27 passes (golden tests in Rust and the Windows suite in the Windows workflow) with no expected number changed; every NFR Section 2 target is measured and met at its runner threshold in scripts/perf, shown beside the NFR target, as README Section 6 defines; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; reviewer and robustness gave PASS or PASS WITH MINOR on every D5 plan file and on the final whole-app review; every D5 pull request is merged and the first Release run after tauri.conf.json is set to 1.0.0 is green, publishing version 1.0.N. Also stop if you have posted "D5 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D5-reports-backup-golive.md fully, then deliver D5 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D5 DONE REPORT" in the README Section 7 format, showing: every acceptance item D5-A1 to D5-A20 ticked, each with the command you ran and its real output; every E2E test from E2E-1 to E2E-33 passes (golden tests in Rust and the Windows suite in the Windows workflow) with no expected number changed; every NFR Section 2 target is measured and met at its runner threshold in scripts/perf, shown beside the NFR target, as README Section 6 defines; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a) and on the final whole-app review; the run's pull request is merged and the first Release run after tauri.conf.json is set to 1.0.0 is green, publishing version 1.0.N. Also stop if you have posted "D5 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 ## 4. How the team works inside a deliverable
@@ -80,7 +86,7 @@ The lead follows `.claude/agents/tech-lead.md` for every plan file. In short:
 
 1. **One plan file per feature.** The deliverable names them (for example `docs/plans/04-shell-and-login.md`). The lead writes each one with the contract, the worked numbers and the acceptance checklist, before anyone codes.
 2. **Order.** Plan files run one after another, in number order. The team shares one working folder and one checkout, so two plan files on two branches at once would collide. The speed comes from inside a plan file: once T1 is done, `backend` and `frontend` work at the same time in their own folders.
-3. **Tasks T1 to T7** as in tech-lead.md: `backend` writes the contract stubs first, then `backend` and `frontend` build in parallel, then `reviewer` and `robustness` check in parallel, then the fix loop.
+3. **Tasks T1 to T7** as in tech-lead.md: `backend` writes the contract stubs first, then `backend` and `frontend` build in parallel, then `reviewer` and `robustness` check in parallel, then the fix loop. In a goal run (4a), T5 to T7 run once, at the end of the run.
 4. **Skills.** Teammates use the project skills for their kind of work:
 
    | Work | Skill |
@@ -93,20 +99,29 @@ The lead follows `.claude/agents/tech-lead.md` for every plan file. In short:
    | Before a UI or print feature is called done | `windows-verify` |
    | Any money code | the `money-calculations` agent, before writing and again to review |
 
-5. **One branch and one pull request per plan file** (`feature/<module>-<short>`). A big plan file may use two or three pull requests, each with one purpose.
+5. **One branch and one pull request per goal run** (Code Standards P3). The lead commits each built plan file on that branch, one Conventional Commit per plan step, and opens the pull request after the final gate.
 6. **Merge.** Before the `main` ruleset exists, the lead never uses `gh pr merge --auto` (with no rules it would merge at once). It runs `gh pr checks <number> --watch`, and only when every check is green, `gh pr merge --squash`. Once `gh api repos/FaisalHanif12/Fruits-Mandi-Software/rulesets` shows the active `main` ruleset, the lead uses `gh pr merge --auto --squash` as tech-lead.md says. Each merge to `main` publishes a release. That is expected during the build.
 7. **Status file.** The lead keeps `docs/deliverables/status.md`: plan files done, pull requests, verdicts, follow-ups, open questions. It updates it on each feature branch before the pull request, so it reaches `main` with the feature. (There are no docs-only pull requests.) This is how a resumed session knows where it stands.
-8. **Progress lines.** After each plan file, the lead posts three lines in the conversation: what was merged, the evidence, what is next.
-9. **Teammates.** As tech-lead.md says, the lead shuts the teammates down after each plan file and spawns fresh ones for the next, so each starts with a clean context. For the end-of-deliverable gate (Section 6), it spawns a fresh `reviewer` and `robustness`.
+8. **Progress lines.** After each plan file, the lead posts three lines in the conversation: what was built or merged, the evidence, what is next.
+9. **Teammates.** As tech-lead.md says, the lead shuts the teammates down after each plan file and spawns fresh ones for the next, so each starts with a clean context. For the end-of-run gate (Section 6), it spawns a fresh `reviewer` and `robustness`.
+
+### 4a. Goal runs (Umar, 11-10-2026)
+
+Reviewing every plan file on its own made D1 too slow. So one goal covers a whole run (for example D1 and D2 together), and works like this:
+
+1. The lead and `backend` and `frontend` build every plan file of the run, one after another (T1 to T4). A plan file is **built** when the builders' tests, lint and golden tests are green and the lead has checked its acceptance list with evidence. The lead marks it "built" in `status.md` and commits it.
+2. When every plan file is built, the lead spawns a fresh `reviewer` and `robustness` once. They review the whole run: every acceptance item and attack list of its deliverables, and regressions against earlier work.
+3. Every finding goes to the lead. The lead assigns it to its owner (`backend` or `frontend`), gets it fixed, and asks for a recheck. This repeats until both say PASS or PASS WITH MINOR.
+4. Then the lead runs the end checks of Section 6 on the run's branch, opens the one pull request, and posts the DONE REPORT. While GitHub Actions is unavailable, the lead does not wait on `gh pr checks --watch`; the pull request stays open and the report says so.
 
 ### Worked example: the login screen (plan file 04)
 
 - **Lead:** writes `docs/plans/04-shell-and-login.md`. The contract names `auth_login`, `auth_logout`, `auth_unlock`, `auth_status`, the error codes (`ERR_WRONG_PASSWORD`, `ERR_LOCKED_WAIT`) and the lockout numbers from FR-8.2. The lead runs `/design` for the login screen, both languages (Section 5), and saves the result in `docs/design/`.
-- **backend:** T1 stubs and `pnpm gen:types`; then T2: Argon2id hashing, lockout timing, the audit rows for every login, the role check. Integration test: 5 wrong tries, then a 1-minute wait, written to the audit log.
+- **backend:** T1 stubs and `pnpm gen:types`; then T2: Argon2id hashing, lockout timing, the audit rows for every login, the sign-in check. Integration test: 5 wrong tries, then a 1-minute wait, written to the audit log.
 - **frontend:** T3 builds the screen against the stubs, from the design, with `bilingual-screen` and `urdu-english-text`: the language switch on the login screen, keyboard only, the four states. T4 wires it to the real commands.
 - **reviewer:** checks FR-8.1 to FR-8.6, NFR-SEC-1 to NFR-SEC-3, both languages, no hard-coded words, no `left` or `right` in CSS, and the design match.
 - **robustness:** 1,000 wrong passwords in a row, a very long password, Urdu letters in the password, the clock moved back during a lockout, the app killed during login. Measures login to dashboard against NFR-SPD-2.
-- **Lead:** sends each finding to its owner, gets a recheck, then merges and updates `status.md`.
+- **Lead:** sends each finding to its owner, gets a recheck, then commits and updates `status.md` (in a goal run, the findings come at the end of the run).
 
 ## 5. Design: state of the art, made for the mandi
 
@@ -130,18 +145,18 @@ These rules come from NFR-USE-10 to NFR-USE-24, NFR-URD-9 to NFR-URD-13 and PRD 
 
 ## 6. The gates
 
-**After each plan file:** the gate in tech-lead.md Section 6 and 7. Both verdicts are PASS or PASS WITH MINOR, all golden tests pass, the Code Standards Section 11 checklist is complete.
+**After each plan file:** in a goal run (4a), the builders' checks and the lead's acceptance check only. All golden tests pass and the Code Standards Section 11 checklist is complete. The `reviewer` and `robustness` gate runs once, at the end of the run.
 
 **Speed on the runner.** GitHub's Windows runner is not the reference hardware of NFR 0.2. In D1, `robustness` measures a runner factor once and records it in `scripts/perf/README.md`, with each NFR target and its runner threshold side by side. For example, if the runner is 1.5 times slower, the 300 ms target of NFR-SPD-3 becomes 450 ms on the runner. "Met" in any acceptance item means met at that runner threshold, measured the way the NFR names (benchmark, E2E timing or the long run). The run on reference hardware is on Umar's go-live checklist (D5 plan 23).
 
 **At the end of each deliverable,** before the DONE REPORT:
 
-1. Merge all plan files. Pull the final `main`.
+1. All plan files of the run are built and committed on the run's branch.
 2. Run the full local set: `pnpm lint`, `pnpm test`, `pnpm i18n:check`, `cargo test -p mandi-services --test golden_day` (once it exists), `cargo deny check`.
-3. Run the `windows-verify` skill with `full` on `main`.
-4. Spawn a fresh `reviewer` for a **deliverable review**: every acceptance item, regressions against all earlier deliverables, consistency across this deliverable's screens.
-5. Spawn a fresh `robustness` for the deliverable's **attack list** (each deliverable has one).
-6. Fix, recheck, then write the DONE REPORT.
+3. Run the `windows-verify` skill with `full` on the run's branch (when GitHub Actions is available).
+4. Spawn a fresh `reviewer` for a **run review**: every acceptance item of every deliverable in the run, regressions against all earlier deliverables, consistency across this deliverable's screens.
+5. Spawn a fresh `robustness` for the **attack lists** of every deliverable in the run.
+6. Every finding goes to the lead, who assigns the fix to its owner. Recheck. Then open the pull request and write the DONE REPORT.
 
 ## 7. DONE REPORT format
 
@@ -165,9 +180,11 @@ Checks on final main
 - Windows run <id>: Checks (Windows) pass; Windows E2E and speed pass (<n>/<n>)
 
 Design: <canvas link>; screenshots compared (ur and en, three sizes)
-Follow-ups (MINOR): <list or "none">
+Follow-ups (MINOR, and WAITING-CI items): <list or "none">
 Open questions for Umar: <list or "none">
 ```
+
+In a goal run, the first line names the run (for example `D1+D2 DONE REPORT`), "Final main" becomes the run's branch and its last commit, the plan table has one row per plan file with "built" and its commit, the reviewer and robustness verdicts are given once for the whole run, and "Checks on final main" become checks on the run's branch.
 
 Every "Evidence" is a real command and the real line it printed. "Looks fine" is not evidence.
 
@@ -188,7 +205,7 @@ D<n> BLOCKED
 Question: <one sentence>
 Why the documents do not answer it: <sections read>
 Options: 1) <option, with a worked example>  2) <option, with a worked example>
-Done so far: <plan files merged>   Waiting: <plan files>
+Done so far: <plan files built or merged>   Waiting: <plan files>
 ```
 
 ## 9. Rules that hold in every deliverable

@@ -1,6 +1,6 @@
 # D4. Money in and out: changes to sales, vouchers, expenses and the full day
 
-Version 1.0, 10-10-2026. Deliverable 4 of 5. Read `README.md` in this folder first.
+Version 1.1, 12-10-2026 (PRD v1.2: partner money returns, ادھار رقم, cash lent to buyers, seller advance returns). Deliverable 4 of 5. Read `README.md` in this folder first.
 Depends on: D3 done. Plan files: `15-vouchers`, `16-later-sales-edit-cancel`, `17-cash-book-and-day-close`.
 Build order step: CLAUDE.md MVP step 6. At the end, the whole PRD worked day (Section 4) runs, and every golden test passes except E2E-11 (analytics) and E2E-18 (backup), which come in D5.
 
@@ -19,29 +19,33 @@ The munshi runs the whole of 10-10-26 from PRD Section 4, by keyboard:
 5. The cash book shows 58,484. The munshi counts the cash and types it in the cash count box.
 6. Day close shows the day summary: 2 بکری, خام بکری 41,400, the commission, the partner shares, cash 58,484, trial balance difference 0, nothing left in باقی مال. He confirms.
 
+He can also record the money that moves outside sales. When الف brings back the 2,000 he took, the munshi enters it on the same ذاتی خرچہ screen, and الف's خالص goes from −1,004 back to 996 (E2E-29). Staff member اسلم borrows 5,000 under ادھار رقم with a reason and a return date; he returns 3,000 in cash and 2,000 from his salary (E2E-30). A seller can bring back part of his advance (E2E-31), and a buyer can borrow cash, which then sits in his اگراہی like any bill (E2E-32).
+
 He can also correct a mistake: edit اکرم's rate from 600 to 610, and every number follows; edit it back, and every number returns exactly. He can cancel بکری 2, and everything it did is reversed. If a lot is not fully sold, its remaining goods sit in باقی مال until a later sale on another day.
 
 ## 2. Plan files
 
 ### 15-vouchers: وصولی, ادائیگی and the rest of پیشگی
 
-**Requirements:** PRD 15.1 to 15.4 (FR-15.1 to FR-15.7, FR-15.9, FR-15.10), 13 (FR-13.7, FR-13.8), R26 data (the advances query), FR-7.38 (oldest open bill and payables on the party card), FR-7.58, FR-7.59, FR-7.61, FR-5.4 (voucher numbers in global search); NFR-SPD-9, NFR-SPD-21; Architecture 11; the money-calculations agent. E2E-6, E2E-7, E2E-21, E2E-27.
+**Requirements:** PRD 15.1 to 15.4 (FR-15.1 to FR-15.7, FR-15.9 to FR-15.12), 13 (FR-13.7, FR-13.8), R26 data (the advances query), FR-7.38 (oldest open bill and payables on the party card), FR-7.58, FR-7.59, FR-7.61, FR-5.4 (voucher numbers in global search); NFR-SPD-9, NFR-SPD-21; Architecture 11; the money-calculations agent. E2E-6, E2E-7, E2E-21, E2E-27, E2E-28 (the ادائیگی part), E2E-31, E2E-32.
 
 **backend builds:**
 
 - وصولی / اگراہی: cash or bank بنام, buyer جمع, with the collector field. It uses the bill matching engine built in D3 (FR-15.4): oldest bills first, by account or by پختہ person key. A payment above what is owed stays as his credit and settles his next bills by itself (FR-15.5).
 - اگراہی فہرست: today's planned collections by collector and city, printable (FR-15.6), and the collection round that opens one receipt after another from it (FR-7.61).
 - ادائیگی: account بنام, cash or bank جمع. A payment above the payable warns but can save; the extra shows in "بیوپاری کے ذمے" (FR-15.7). Sellers whose advances are more than their sales are in that list too (FR-15.9).
+- ادائیگی to a buyer is cash lent to him (نقد ادھار): reason required; it becomes one of his bills for matching, aging and اگراہی (FR-15.11).
+- وصولی from a seller (he returns advance money): cash بنام, seller جمع; it adjusts his open advances oldest first, else settles what he owes (FR-15.12).
 - Receipts from one-time buyers and payments to one-time sellers through their person key (FR-13.7). "Make regular" creates an account and moves the open balance with a جنرل entry (FR-13.8).
 - Edit (reversal + new posting) and cancel with reason for all three voucher types, including the پیشگی of D2 (FR-15.3). Bank and cheque modes with the bank account and cheque details (15.1).
-- The party card gains the oldest open bill with its age, and the payable postings with the advance already adjusted against them (FR-7.38, FR-7.58, FR-7.59). "پورا بقایا" fills the full open amount. Advances are adjusted only at بکری save (FR-15.8, built in D3); ادائیگی never adjusts them again.
-- The advances query (given, adjusted, open per seller) that E2E-7 checks and that D5 shows as report R26.
+- The party card gains the oldest open bill with its age, and the payable postings with the advance already adjusted against them (FR-7.38, FR-7.58, FR-7.59). "پورا بقایا" fills the full open amount. Advances are adjusted at بکری save when the lot's tick is on (FR-15.8, FR-12.23, built in D3) and by a seller's وصولی (FR-15.12); ادائیگی never adjusts them.
+- The advances query (given, returned, adjusted, open per seller) that E2E-7 checks and that D5 shows as report R26.
 - The receipt slip print data with the amount in words (FR-15.2), with the `print-and-export` skill.
-- `golden_day.rs`: Events 3 and 4, E2E-6, E2E-7, E2E-21. `assist.rs`: the backend part of E2E-27.
+- `golden_day.rs`: Events 3 and 4, E2E-6, E2E-7, E2E-21, E2E-28 (open payable 19,316; after the payment of 19,316: ledger 15,000 بنام, advance open 15,000, not in بیوپاری کے ذمے), E2E-31, E2E-32 (Σ buyer debit balances 24,564; R20 and the tile are checked in D5). `assist.rs`: the backend part of E2E-27.
 
-**frontend builds:** the وصولی and ادائیگی list screens (entered one after another, with a running total; FR-15.1) in the بکری side menu, next to the پیشگی screen from D2. (Plan file 17 links all three from the روکڑ area, as the same screens; FR-15.10.) the open bills and payables panels; "پورا بقایا"; the اگراہی فہرست and the collection round; "make regular"; the receipt slip template.
+**frontend builds:** the وصولی and ادائیگی list screens (entered one after another, with a running total; FR-15.1) in the بکری side menu, next to the پیشگی screen from D2. (Plan file 17 links all three from the روکڑ area, as the same screens; FR-15.10.) the open bills and payables panels; "پورا بقایا"; the اگراہی فہرست and the collection round; "make regular"; the receipt slip template; the reason field when the ادائیگی account is a buyer; on a seller's وصولی, the open advances it will adjust.
 
-**Done when:** E2E-6, E2E-7, E2E-21 and E2E-27 pass.
+**Done when:** E2E-6, E2E-7, E2E-21, E2E-27, E2E-28, E2E-31 and E2E-32 pass.
 
 ### 16-later-sales-edit-cancel: باقی مال, later sales, edit, cancel and undo
 
@@ -70,18 +74,19 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 
 ### 17-cash-book-and-day-close: روکڑ, expenses, جنرل and the full day
 
-**Requirements:** PRD 16 (16.1 to 16.4, FR-16.1), FR-7.62, FR-6.5, FR-21.1 (full day summary), 4.6 to 4.9; NFR-REL-8; Architecture 6 and 10; the money-calculations agent. E2E-8, E2E-9, E2E-10, E2E-12, E2E-20, E2E-24.
+**Requirements:** PRD 16 (16.1 to 16.5, FR-16.1 to FR-16.5), 17.3 (taken, returned and خالص columns), C20, FR-7.44 (overdue loans and partner money), FR-7.62, FR-6.5, FR-21.1 (full day summary), 4.6 to 4.9; NFR-REL-8, NFR-URD-29; Architecture 6, 10 and 15.7; the money agent Section 8.2b. E2E-8, E2E-9, E2E-10, E2E-12, E2E-20, E2E-24, E2E-29, E2E-30, E2E-30b.
 
 **backend builds:**
 
 - روکڑ بک: opening cash, every cash in and out from all modules, closing cash, for a date range (16.1). Cash count box: shows the difference from the book; posts nothing (FR-16.1).
 - دکان خرچہ: expense head بنام, cash or bank جمع, split between partners by their shares on that date (16.2, FR-6.5). Most-used heads first, and "repeat last month's expenses" (FR-7.62).
-- ذاتی خرچہ: that partner's drawings بنام, cash or bank جمع; never split (16.3).
+- ذاتی خرچہ on one screen (16.3): money taken (reason required, optional return-by date and taken-by name) posts drawings بنام, cash or bank جمع; money returned posts the opposite. Never split. The list of takes with returned and still open, worked out at read time (FR-16.2). The partner overview gains taken, returned and خالص (FR-16.3, C20).
+- ادھار رقم (16.5): one account per person under control 0103, made with `F4` (and linked to the staff record when he is staff). Lend: person بنام, cash or bank جمع. Return in cash or bank, or by salary deduction: salary head بنام, person جمع, split as a shop expense (FR-16.4). Open amounts oldest first at read time; overdue loans and partner takes in the attention list data (FR-16.5, FR-7.44). The R32 data query (D5 shows the report).
 - جنرل: lines of account, بنام, جمع, narration (and person for پختہ lines); saves only when the totals match; lines on income or shop expense accounts are split (16.4).
 - The full day close summary of FR-21.1: بکری count, خام بکری, commission, partner shares, cash in hand, trial balance difference, lots with باقی مال.
-- `golden_day.rs`: Event 5 and the whole day, E2E-8, E2E-9, E2E-10, E2E-12, E2E-20. `assist.rs`: the backend part of E2E-24.
+- `golden_day.rs`: Event 5 (with its reason) and the whole day, E2E-8, E2E-9, E2E-10, E2E-12, E2E-20, E2E-29, E2E-30, E2E-30b. `assist.rs`: the backend part of E2E-24.
 
-**frontend builds:** the روکڑ area with روکڑ بک and the cash count box, دکان خرچہ, ذاتی خرچہ, and the جنرل grid (with the `entry-grid` skill), plus links to the وصولی, ادائیگی and پیشگی screens (FR-15.10); the full day close summary.
+**frontend builds:** the روکڑ area with روکڑ بک and the cash count box, دکان خرچہ, ذاتی خرچہ (one screen for taken and returned, with the partner's list below the form), ادھار رقم (one screen for lent and returned, with the person's list below the form), and the جنرل grid (with the `entry-grid` skill), plus links to the وصولی, ادائیگی and پیشگی screens (FR-15.10); the full day close summary.
 
 **Worked checks** (PRD 4.9 and 27.2):
 
@@ -89,6 +94,8 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 - E2E-9: income shares 2,196 / 1,646 / 1,646; expense shares −1,200 / −900 / −900; profit 996 / 746 / 746; الف drawings 2,000.
 - E2E-10: the trial balance table of PRD 27.2. بنام 58,484 + 2,880 + 18,684 + 3,000 + 2,000 = 85,048. جمع 10,160 + 2,484 + 2,484 + 480 + 40 + 300 + 4,000 + 100 + 65,000 = 85,048.
 - E2E-20: an expense of 3,384 splits −1,354 / −1,015 / −1,015 (sum −3,384).
+- E2E-29: الف خالص on 10-10-26 = 996 − 2,000 = −1,004; after returning 2,000 on 11-10-26, net taken 0, خالص 996, cash 60,484.
+- E2E-30: اسلم lent 5,000 (cash 53,484); returns 3,000 (open 2,000, cash 56,484); 2,000 from salary (open 0, cash 56,484, تنخواہ split −800 / −600 / −600).
 
 **Done when:** the whole worked day passes in `golden_day.rs`, and the day close summary shows the PRD 4.9 values.
 
@@ -100,7 +107,7 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 2. The ادائیگی screen with payable postings and the "more than due" warning.
 3. The باقی مال list and the later sale form.
 4. A saved بکری in edit mode, showing what changed, and the cancel dialog.
-5. The روکڑ بک with the cash count box; دکان خرچہ; ذاتی خرچہ; the جنرل grid.
+5. The روکڑ بک with the cash count box; دکان خرچہ; ذاتی خرچہ with taken and returned on one screen; ادھار رقم on one screen; the جنرل grid.
 6. The full day close summary.
 7. The receipt slip (A5 and 80 mm).
 
@@ -115,7 +122,8 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 
 - Reversals: every edit and cancel is a reversal plus a new posting. No posted row is ever changed (CLAUDE.md rule 4). Show the rows before and after an edit.
 - Matching: oldest first, against FR-15.4; the sum of a buyer's open bills always equals his balance.
-- Partner shares on every income and expense posting, never on payables, never on ذاتی خرچہ.
+- Partner shares on every income and expense posting, never on payables, never on ذاتی خرچہ or its واپسی. A salary deduction of a loan is split like any shop expense.
+- Urdu labels of the new screens say exactly what the English says (NFR-URD-29).
 - Golden tests: every number in PRD 27.2 for E2E-1 to E2E-10, E2E-12 to E2E-16b, E2E-13b and E2E-19 to E2E-21, unchanged. (E2E-11 is analytics, checked in D5.)
 
 ## 6. Robustness attack list for D4
@@ -125,9 +133,10 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 3. **Order of events.** Cancel a بکری that has a later sale; edit a posting after a receipt has matched its bill (the bill matching recalculates; nothing is lost); pay a seller twice.
 4. **Power cut** during an edit (the reversal and the new posting are saved together or not at all).
 5. **Speed.** Save any voucher under NFR-SPD-9; party card with 10 years of open bills under NFR-SPD-21; matching against a buyer with 10,000 open bills.
-6. **Bad inputs.** Amount 0, negative, decimal; cheque mode with no cheque number; a جنرل entry that does not balance; a ذاتی خرچہ with no partner.
+6. **Bad inputs.** Amount 0, negative, decimal; cheque mode with no cheque number; a جنرل entry that does not balance; a ذاتی خرچہ with no partner or no reason; an ادھار رقم with no reason; a salary deduction larger than the open loan; an ادائیگی to a buyer with no reason.
+7. **Returns.** Random sequences of lends, takes and returns (cash, bank, salary): open amounts always equal the account balance; a return never makes an open amount negative.
 
-## 7. Acceptance (D4-A1 to D4-A18)
+## 7. Acceptance (D4-A1 to D4-A22)
 
 | ID | Item | Evidence expected |
 |---|---|---|
@@ -149,6 +158,10 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 | D4-A16 | E2E-10 passes (85,048 on both sides) and E2E-12 passes (باقی مال empty) | golden_day output |
 | D4-A17 | The day close summary shows the PRD 4.9 values; the cash count box shows the difference and posts nothing | Test output; screenshot |
 | D4-A18 | NFR-SPD-9 and NFR-SPD-21 met at their runner thresholds; the full test suite, including every earlier test, passes on the final main; every D4 screen matches the design | `pnpm perf`; full test run; `windows-verify` report |
+| D4-A19 | E2E-28 (open payable 19,316 and the payment part), E2E-31 and E2E-32 (Σ buyer debit balances 24,564) pass | golden_day output |
+| D4-A20 | E2E-29 passes; the partner overview shows taken, returned and خالص | golden_day output; screenshot |
+| D4-A21 | E2E-30 and E2E-30b pass (an overdue loan shows in the attention list data) | golden_day output |
+| D4-A22 | ذاتی خرچہ and ادھار رقم screens work by keyboard in both languages, with the list of open amounts below the form | Windows E2E names; screenshots |
 
 ## 8. Not in D4
 

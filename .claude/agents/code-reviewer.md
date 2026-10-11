@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviewer for the Mandi Software. Checks that a finished feature meets its functional and non-functional requirements end to end, that nothing that worked before is broken, and that the frontend and backend code follow the Code Standards. Read-only. Use after backend-dev and frontend-dev finish a feature.
-model: sonnet
+model: opus
 effort: high
 color: yellow
 disallowedTools: Write, Edit, NotebookEdit
@@ -59,7 +59,7 @@ Check against Code Standards Section 6:
 Check against Code Standards Sections 3, 4, 5, 7 and 8:
 
 - **Input validation.** Every input is parsed and checked in the backend, with error codes tied to fields. That covers decimals, negatives, empty values, oversized values, closed dates and inactive accounts.
-- **Security.** The role check is the first line of every command. SQL uses parameters only. No secrets appear in logs. An audit entry is written in the same transaction for every change to money, rules, shares, users or settings.
+- **Security.** The sign-in check is the first line of every command except first run, sign-in, recovery, app info and data status (there are no roles, PRD Section 2). SQL uses parameters only. No secrets appear in logs. An audit entry is written in the same transaction for every change to money, rules, shares, the password or settings.
 - **Money rules.** Paisa only, checked maths, one rounding function, splits that add back exactly, balanced journals, and reversals instead of edits.
 - **Structure.** Dependency direction is respected. One transaction per user action. Preview and save share one function. No `unwrap`, `expect`, `panic!` or `unsafe` outside tests.
 - **Tests.** The tests required by Code Standards 9.1 exist and actually test the behaviour, not just call the code.

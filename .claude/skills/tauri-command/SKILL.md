@@ -15,7 +15,7 @@ Full code templates are in [templates.md](templates.md). Read them before writin
 
 1. Find the command in the feature's plan file (`docs/plans/<nn>-<feature>.md`). Its name, input fields, output fields and error codes are the **contract**. If the command is not in the plan, stop and ask `tech-lead` to add it first.
 2. Name it `<module>_<verb>[_<noun>]` (Tech Stack Section 6), for example `vouchers_save_receipt` or `bikri_preview`. The module name must be one from Tech Stack 5.2.
-3. Decide the role it needs (PRD Section 2): `Role::Partner` for read-only screens, `Role::Munshi` for entries, `Role::Owner` for settings, rules, shares, reopen and restore.
+3. There is one user, the Owner, and no roles (PRD Section 2). Every command needs the signed-in Owner, except first run, sign-in, recovery, app info and data status.
 
 ## Steps (backend owner)
 
@@ -28,7 +28,7 @@ Do them in this order. Each step has a template in [templates.md](templates.md).
 2. **Output type.** Money fields are `Paisa` with `#[ts(type = "number")]`. Include `working` records for every calculated amount the screen shows (Code Standards B30). Include everything the screen needs, so the frontend never has to calculate anything.
 3. **Parse step.** `XxxDraft::parse(input) -> Result<XxxDraft, UiError>` uses only `core::validate` and `core::money` parsers. It collects **all** field errors and returns them together, each with its `field` path (Code Standards 4.3).
 4. **Service function** in `backend/crates/services/src/<module>/`: one function, one transaction, takes the parsed draft and the current user. Business rules live in `domain`.
-5. **Command function.** Thin, in this order: clone what it needs from `AppState`, call `require_at_least(role)` as the first check, then `spawn_blocking` with parse and the service call. No business logic.
+5. **Command function.** Thin, in this order: clone what it needs from `AppState`, call `require_login()` as the first check, then `spawn_blocking` with parse and the service call. No business logic.
 6. **Register it** in two places:
    - the `generate_handler![...]` list in `backend/app/src/lib.rs`;
    - the app command list in `backend/app/build.rs` and the matching allow permission in `backend/app/capabilities/main.json`, so the screens can call only our listed commands (Code Standards S4). After a build, check the generated permission name under `backend/app/gen/schemas/` and use exactly that name.
@@ -38,7 +38,7 @@ Do them in this order. Each step has a template in [templates.md](templates.md).
 9. **Tests** (templates in [templates.md](templates.md)):
    - Parse: one test per rejected input in Code Standards 4.2 that applies (decimals, negative, empty, too large, wrong script, closed date).
    - Service: an integration test on a temporary database. Data written, journal balanced, audit row written, everything in PRD 6.2 for this action updated.
-   - Role: the command refuses a lower role and writes nothing.
+   - Sign-in: before sign-in and while locked, the command is refused (`ERR_NOT_LOGGED_IN`, `ERR_SESSION_LOCKED`) and writes nothing.
 10. **Tell `frontend`:** the command name, the type names, the error codes, and whether it is a stub or real.
 
 ### Stubs for the contract (task T1)
@@ -62,10 +62,10 @@ When the plan is new, first add the types and a command that returns `ERR_NOT_IM
 ## Done when
 
 - [ ] Name follows `<module>_<verb>[_<noun>]` and matches the plan.
-- [ ] Role check is the first line. Parse collects all errors with field paths.
+- [ ] Sign-in check is the first line. Parse collects all errors with field paths.
 - [ ] No business logic in the command. One service call, one transaction.
 - [ ] Registered in `lib.rs`, `build.rs` and the capability file.
 - [ ] Types generated; no hand-edited bindings.
-- [ ] Parse, service and role tests pass.
+- [ ] Parse, service and sign-in tests pass.
 - [ ] Every new error code has a message in `ur` and `en` (`pnpm i18n:check` passes).
 - [ ] Frontend calls it only through `api.ts`, sends text, and shows backend values only.

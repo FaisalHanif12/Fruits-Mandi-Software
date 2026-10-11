@@ -1,6 +1,6 @@
 ---
 name: money-calculations
-model: sonnet
+model: opus 
 effort: high
 description: MUST BE USED for any code, test, query or review that creates, calculates, rounds, splits, posts, sums, parses or displays money, quantities, weights, rates, commissions, لاگا, deductions, partner shares, balances, matching or journal entries in the Mandi Software. Use proactively before writing such code and again to review it before finishing.
 tools: Read, Grep, Glob, Edit, Write, Bash
@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.1, 10 October 2026. Final baseline for build. After development starts, every change raises the version (1.2, 1.3 ...).
+Version 1.2, 12 October 2026 (PRD v1.2: advance tick, seller advance return, cash lent to buyers, money lent, partner returns). Every change raises the version (1.3, 1.4 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -344,7 +344,7 @@ PRD E2E-16 and 16b (partial sale, then later sale): first posting 45 sold, خا�
 
 ```
 key = account_id, plus pukhta_person_key when the account is a پختہ کھاتہ
-bills    = debit journal lines on that key (sale line totals, opening debits, جنرل debits), oldest first by (entry_date, entry id, line no)
+bills    = debit journal lines on that key (sale line totals, opening debits, جنرل debits, cash lent by ادائیگی, PRD FR-15.11), oldest first by (entry_date, entry id, line no)
 credits  = credit journal lines on that key (receipts, جنرل credits, reversal credits)
 for each credit, oldest first:
     remaining = credit amount
@@ -358,13 +358,23 @@ Example: bills 12,880 (09-10) and 5,000 (10-10); receipt 15,000 → 12,880 to th
 
 ### 8.2 Seller advances
 
-Same algorithm on seller keys: "bills" are debit lines marked `is_advance` (پیشگی vouchers, opening debits marked as advances), and "credits" are seller credit lines from بکری postings. Payments (ادائیگی) are never advances.
+Same algorithm on seller keys: "bills" are debit lines marked `is_advance` (پیشگی vouchers, opening debits marked as advances), and "credits" are seller credit lines from بکری postings whose lot has `adjust_advance = 1` (PRD FR-12.23), and seller receipts (وصولی from a seller, PRD FR-15.12). Payments (ادائیگی) are never advances. A credit from a lot with the tick off never adjusts an advance.
+
+Golden: E2E-28 (tick off): رحیم credit 24,316 adjusts nothing; advance open 15,000. E2E-31: receipt 10,000 adjusts 10,000 of the 15,000; بکری 1 then adjusts the last 5,000; open 0.
 
 ### 8.2a Seller payable working (display only, PRD FR-7.59)
 
-For one seller key, at read time: take his credit lines from بکری postings, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open MUST equal his payable balance (جمع minus بنام) when that balance is a credit; test it.
+For one seller key, at read time: take his credit lines from بکری postings, plus the part of any seller receipt not used against advances, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open minus Σ open advances MUST equal his balance (جمع minus بنام) whenever Σ still open is more than 0; test it. Example E2E-28: 19,316 − 15,000 = 4,316 جمع.
 
 Golden: after PRD Event 2, کریم: credit 10,160 (بکری 2), adjusted 0, paid 0, still open 10,160 (E2E-27). After Event 4, رحیم: credit 24,316, adjusted 15,000, paid 5,000 (نقد) + 4,316 (ادائیگی), still open 0.
+
+### 8.2b Money lent and partner money (display only, PRD FR-16.2, FR-16.5)
+
+Same integer algorithm as 8.1, at read time, nothing stored. For an ادھار رقم account: "bills" are its debit lines (money lent), "credits" are its credit lines (returns in cash or bank, and salary deductions). For a partner's drawings account: "bills" are money taken, "credits" are money returned. The result per bill: amount, returned, still open, days past `return_by_date`. Σ still open MUST equal the account's بنام balance. A return more than the open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`), so an open amount is never negative.
+
+A salary deduction posts the salary head بنام and the person جمع. It is a shop expense, so it is split with C11 like any دکان خرچہ. Partner خالص (C20) = profit share − (taken − returned).
+
+Golden: E2E-30: lent 5,000, returned 3,000 cash, 2,000 by salary, open 0; salary split −800 / −600 / −600. E2E-29: الف خالص 996 − 2,000 = −1,004; after returning 2,000, net taken 0. E2E-32: اکرم's 3,000 cash loan is a bill; dues 5,880.
 
 ### 8.3 Undo and re-match
 
@@ -411,7 +421,7 @@ Every row in the tables of Sections 3, 4, 5 and 6.5 is a unit test.
 
 ### 11.3 Golden end-to-end tests
 
-`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b and E2E-19 to E2E-21. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
+`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32 and E2E-30b. E2E-33 (ledger with items) is in `backend/crates/reports/tests/ledger_items.rs`. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
 
 ### 11.4 Edge cases
 

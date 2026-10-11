@@ -2,7 +2,7 @@
 """Recalculates the PRD Section 4 worked day and the money end-to-end tests.
 
 Use it whenever a rate or default changes, so no number in the documents is
-worked out by hand. The defaults reproduce PRD v1.1. Change a rate with a flag:
+worked out by hand. The defaults reproduce PRD v1.2, including E2E-28 to E2E-33. Change a rate with a flag:
 
     python3 worked_day.py                    # current PRD numbers
     python3 worked_day.py --buyer-pct 5      # what changes if buyer commission is 5%
@@ -163,6 +163,50 @@ def run(a):
                     "lot_gross_total": e16["gross"] + v,
                     "lot_deductions_total": e16["deductions"] + sc,
                     "lot_net_total": e16["gross"] + v - (e16["deductions"] + sc)}
+
+    eod = r["end_of_day"]
+    profit = eod["partner_profit"]
+
+    # E2E-28 (PRD v1.2, FR-15.8): بکری 1 saved with "پیشگی سے کاٹیں" unticked.
+    # The advance stays open. Payable = seller credit - نقد. Ledger = advance + نقد - credit.
+    payable_28 = b1["seller_credit"] - b1["naqd"]
+    ledger_28 = rahim_advance + b1["naqd"] - b1["seller_credit"]  # negative = جمع
+    r["e2e_28"] = {"rahim_payable": payable_28, "advance_open": rahim_advance,
+                   "rahim_ledger_cr": -ledger_28,
+                   "rahim_after_paying_payable_dr": ledger_28 + payable_28}
+
+    # E2E-29 (FR-16.3): partner A takes 2,000 on 10-10 (Event 5), returns 2,000 on 11-10.
+    taken = drawing
+    r["e2e_29"] = {"a_profit_share": profit[0], "a_net_10_10": profit[0] - taken,
+                   "a_net_taken_after_return": taken - 2000, "a_net_after_return": profit[0],
+                   "cash_11_10": cash + 2000}
+
+    # E2E-30 (FR-16.5): staff Aslam is lent 5,000 on 10-10, returns 3,000 cash on 11-10,
+    # and 2,000 is deducted from his salary on 12-10 (posts shop expense تنخواہ, split).
+    lent, ret, sal = 5000, 3000, 2000
+    r["e2e_30"] = {"cash_10_10": cash - lent, "open_11_10": lent - ret, "cash_11_10": cash - lent + ret,
+                   "open_12_10": lent - ret - sal, "cash_12_10": cash - lent + ret,
+                   "salary_split": [-x for x in split(sal, a.shares)]}
+
+    # E2E-31 (FR-15.8): separate run. Rahim returns 10,000 of his advance in cash on 10-10,
+    # before بکری 1. Then بکری 1 adjusts only the 5,000 still open.
+    adv_ret = 10000
+    open_31 = rahim_advance - adv_ret
+    payable_31 = b1["seller_credit"] - b1["naqd"] - open_31
+    r["e2e_31"] = {"advance_open_after_return": open_31, "cash_after_return": 65000 - 15000 + adv_ret,
+                   "advance_adjusted_by_bikri1": open_31, "rahim_payable": payable_31,
+                   "rahim_ledger_cr": b1["seller_credit"] - (rahim_advance - adv_ret) - b1["naqd"]}
+
+    # E2E-32 (FR-15.11): after Events 1 to 5, Akram borrows 3,000 cash (ادائیگی to a buyer).
+    loan = 3000
+    r["e2e_32"] = {"akram_due": eod["akram_due"] + loan, "cash": cash - loan,
+                   "shop_total_ograhi": eod["buyers_dues"] + loan}
+
+    # E2E-33 (FR-19.8): Akram's ledger with items, after Events 1 to 5.
+    l0 = b1["lines"][0]
+    r["e2e_33"] = {"line_value": l0["value"], "line_comm": l0["buyer_comm"], "line_laga": l0["laga"],
+                   "line_total_dr": l0["buyer_pays"], "receipt_cr": receipt,
+                   "closing_dr": l0["buyer_pays"] - receipt, "r20_total": eod["buyers_dues"]}
     return r
 
 

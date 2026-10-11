@@ -19,6 +19,8 @@ import sys
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "."
 DOCS = os.path.join(ROOT, "docs")
+if not os.path.exists(os.path.join(DOCS, "PRD_Mandi_Software_v1.md")):
+    DOCS = os.path.join(ROOT, ".claude", "rules")  # this repository keeps the requirement documents here
 NAMES = {
     "prd": "PRD_Mandi_Software_v1.md",
     "nfr": "NFR_Mandi_Software_v1.md",
@@ -35,7 +37,7 @@ def read(path):
 
 docs = {k: read(os.path.join(DOCS, v)) for k, v in NAMES.items()}
 extra = {}
-for pattern in ("CLAUDE.md", ".claude/agents/*.md", ".claude/skills/*/*.md"):
+for pattern in ("CLAUDE.md", ".claude/CLAUDE.md", ".claude/agents/*.md", ".claude/skills/*/*.md"):
     for path in glob.glob(os.path.join(ROOT, pattern)):
         extra[os.path.relpath(path, ROOT)] = read(path)
 everything = {**{NAMES[k]: v for k, v in docs.items()}, **extra}

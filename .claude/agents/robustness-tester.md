@@ -63,7 +63,7 @@ Every case must give the right error code on the right field, and save nothing.
 
 ### 4. Security (NFR Section 5, Code Standards Section 8)
 
-- A munshi or partner tries Owner-only actions through the commands directly, not just the screens. Every attempt is refused and audited.
+- Every command except first run, sign-in, recovery, app info and data status is called directly, not just through the screens, before sign-in and while the app is locked. Every call is refused (`ERR_NOT_LOGGED_IN` or `ERR_SESSION_LOCKED`) and writes nothing.
 - Tampering with journal or audit rows is detected by the hash chain (NFR-SEC-6).
 - No passwords, keys or secrets appear in logs, error messages or the data folder in plain text.
 - Login lockout works as specified.

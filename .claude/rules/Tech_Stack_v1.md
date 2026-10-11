@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.1 (final baseline for build) |
-| Date | 10 October 2026 |
+| Version | 1.2 (Umar's changes of 11-10-2026) |
+| Date | 12 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.1 (the master), NFR v1.1 |
+| Depends on | PRD v1.2 (the master), NFR v1.2 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---
@@ -185,10 +185,10 @@ Codes, numbers and phones always take English digits and never convert. Urdu let
 **The `translit` engine** (Rust, `backend/crates/core/src/translit/`) is pure: no database. `services/src/translit` keeps the learned pairs in memory (loaded from the `translit_pairs` table at start-up, updated on each `translit_learn`) and passes them in. For each word the engine looks, in this order:
 
 1. **Learned pairs** from the `translit_pairs` table (PRD FR-7.26), ranked by how often each was chosen.
-2. **Word list**: `backend/crates/core/data/translit_seed.tsv` (columns: roman, urdu, kind, weight), embedded at build time. About 5,000 reviewed entries at the start: Pakistani first names, family and firm names, cities and towns of Punjab and Khyber Pakhtunkhwa, fruits, vegetables, packings and glossary words (PRD FR-7.27). Several Urdu spellings per Roman word are allowed (shahid → شاہد, شاھد), ordered by weight.
+2. **Word list**: `backend/crates/core/data/translit_seed.tsv` (columns: roman, urdu, kind, weight), embedded at build time. At least 15,000 reviewed entries (NFR-URD-24): Pakistani first names, family and firm names, cities and towns of Punjab and Khyber Pakhtunkhwa, fruits, vegetables, packings and glossary words (PRD FR-7.27). Several Urdu spellings per Roman word are allowed (shahid → شاہد, شاھد), ordered by weight.
 3. **Spelling rules** for words not found: longest-match rules on letter groups (`kh`→خ, `gh`→غ, `sh`→ش, `ch`→چ, `th`→تھ, `ph`→پھ, `aa`→ا, `ee`→ی, `oo`→و, final `a`→ا or ہ ...) produce candidates, which are scored by a small letter-pair model built from the word list at build time.
 
-Candidates from the three sources are merged in that order (learned pairs first), duplicates are removed, and the engine returns at most 3. Whole phrases are converted word by word ("arshad multani" → ارشد ملتانی).
+Candidates from the three sources are merged in that order (learned pairs first), duplicates are removed, and the engine returns at most 3. Whole phrases are converted word by word ("arshad multani" → ارشد ملتانی). Each suggestion carries its source (`learned`, `word_list` or `rules`), so `RomanUrduInput` and `NamePair` can mark rules-only words with "ہجے دیکھ لیں" and the save asks for confirmation (PRD FR-7.66).
 
 **Urdu to English** (PRD FR-7.24) uses the same data the other way: a reverse lookup in learned pairs and the word list, else letter rules (ش→sh, خ→kh ...), then capital first letters.
 
@@ -333,7 +333,7 @@ backend/
 │       ├── state.rs          Shared app state (database pool, current user)
 │       ├── error.rs          Turns crate errors into error codes for the frontend
 │       └── commands/         One file per module: bikri.rs, vouchers.rs, ...
-│                             Each command: check role -> call a service -> return a typed result
+│                             Each command: check sign-in -> call a service -> return a typed result
 └── crates/
     ├── core/                 No business rules, no database. Pure helpers.
     │   ├── data/             translit_seed.tsv (word list, embedded at build time)
@@ -429,3 +429,4 @@ Urdu words in code: we use simple English transliteration for business terms tha
 |---|---|---|
 | 1.0 | 10-10-2026 | Pre-build drafts and reviews: Umar's requirements, analysis of the old software video, research, client review comments and full cross-document reviews. |
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
+| 1.2 | 12-10-2026 | PRD v1.2: sign-in check instead of roles (5.4); word list of at least 15,000 entries and suggestion source for the spelling check (4.4). |
