@@ -6,7 +6,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 - Goal run: D1 and D2 together (README Section 4a, requirements v1.2 committed as `b0902a6`). Build every plan 01 to 10, mark each "built" and commit it; then one fresh `reviewer` and `robustness` for the whole run; then one pull request and the D1+D2 DONE REPORT.
 - Branch: `feature/db-schema` carries plans 03 onward (stacked on `feature/core-money`, PR #2, on `feature/scaffold-repo`, PR #1). GitHub Actions is off; Windows-workflow items are WAITING-CI.
-- Now (12-10-2026): backend handed off plan 06 T1+T2 (accepted, contract notes in plan 06 Section 4). Backend first removes the Wikidata people-of-India filler from `translit_seed.tsv` (10,616 wikidata rows still there) and reports honest counts and accuracy, then starts plan 07. Frontend adds ERR_SERIES_FULL, ERR_CODE_TAKEN, ERR_VERSION_CHANGED, ERR_FORMAT_INVALID messages and wires plan 06 T4, then plan 07 T3. Plans 04 to 06 are committed as built once checks are green and the word list is honest.
+- Now (12-10-2026): plans 04 to 06 committed as built (`76cc5ca`), waiting for the end gate. Word list honest: 12,942 entries, 8,212 known, below 15,000 (open question for Umar). Backend on plan 07 (T1 contract, then T2). Frontend on the openings grid, then plans 09 and 10 screens (the plan 09 rules folder is uncommitted work in progress).
 
 ## Plan files
 
@@ -17,12 +17,12 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 | 01-scaffold | feature/scaffold-repo | #1 | PASS WITH MINOR | PASS | gate passed; waiting for CI |
 | 02-core | feature/core-money | #2 | PASS WITH MINOR | PASS | gate passed; committed locally |
 | 03-database | feature/db-schema | #3 | at the end | at the end | built, local checks green |
-| 04-shell-and-login | feature/db-schema | | at the end | at the end | backend and frontend handed off; v1.2 role removal in progress; to commit as built |
-| 05-names-two-scripts | feature/db-schema | | at the end | at the end | building: frontend T3 done; backend T2 and v1.2 (source, spelling check, 15,000 words) in progress |
-| 06-masters-and-search | feature/db-schema | | at the end | at the end | built on both sides: backend T1/T2 (7 commands, index, 562 Rust tests), frontend T4 wired (1235 frontend tests); criterion bench at the end gate (robustness) |
+| 04-shell-and-login | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
+| 05-names-two-scripts | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
+| 06-masters-and-search | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
 | 07-journal-and-accounts | feature/db-schema | | at the end | at the end | building: frontend T3 done (tree, list, form; openings grid next); backend after the word-list fix. Openings grid contract added 12-10 |
 | 08-party-card-and-short-codes | feature/db-schema | | at the end | at the end | building: frontend T3 done (AccountPicker, PartyCard, quick add, global search); backend T1/T2 waiting |
-| 09-commission-rules | | | at the end | at the end | planned |
+| 09-commission-rules | feature/db-schema | | at the end | at the end | building: frontend T3 in progress |
 | 10-opening-position | | | at the end | at the end | planned (v1.2: reopen with reason only; seed بجلی, تنخواہ) |
 
 ## Design
@@ -79,7 +79,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 ## Open questions for Umar
 
 - Doc fix for Tech Stack 4.4: the word list file now has six columns (roman, urdu, kind, weight, review, source), not four.
-- Plan 05 accuracy (12-10-2026, before removing the India filler): frozen list, names fully in the word list: first suggestion 90.8%, top 3 95.2% (target 95% and 99%: not met); English 92.1%; whole list English 78.6% (target 90%: not met); silent wrong 8.8%, mostly words with two common spellings that are not marked today. Your answer to the two ideas (saved account names as suggestions; amber mark on two-spelling words) is what moves it, with your reviewer's work on the pending rows and the shop's account names.
+- Plan 05 accuracy (12-10-2026, after removing the India filler; backend's run of `cargo test -p mandi-core --test translit_accuracy`): word list 12,942 entries, 8,212 counted as known (team 4,588, Wikidata Pakistan 3,312, GeoNames ur names 312); 4,730 place words with engine-proposed Urdu stay amber until reviewed. Gap to 15,000 known: 6,788. Frozen 1,000 names: names fully in the list (700) first suggestion 92.0%, top 3 95.4% (target 95/99: not met), English 86.1%; names with an unknown word (300) top 3 47.0%; whole list English 72.2% (target 90: not met); silent wrong 7.6% in-list. Hold-out (749): in-list 82.7/89.3, silent wrong 16.9%. Before any release, the rules-only floors in `translit_baseline.txt` were lowered (61.4 to 47.0) because the filler had made 30 names look known; the engine did not change. Closing the gap needs: the reviewer confirming the engine rows, and the shop's 1,572 old account names.
 - Advance matching from a جنرل entry: PRD 16.4 and FR-15.8 say جنرل lines on seller accounts take part in advance matching, but Architecture 15.7 v1.2 and the money agent (8.2, 8.2a) list only بکری credits and seller receipts, and the payable working can break if a جنرل credit adjusts an advance (FR-13.8 "make regular" is also a جنرل). Built now: the Architecture version (a جنرل credit never adjusts an advance). Which is right? If the PRD, the trigger, Architecture and the agent text change together.
 - `return_by_date` earlier than the entry date: the PRD is silent. Nothing enforced now. Should a return-by date before the date of the money taken be refused?
 - Names in Urdu (research report `docs/research/translit-options.md`): the word list decides accuracy; no model reaches the targets on words it has never seen. Two ideas need your yes or no: (a) offer names already saved in your accounts as a fourth source of suggestions; (b) mark a word that has two common Urdu spellings (for example شاہد and شاھد) in amber like a rules-only word, so you choose instead of the app choosing silently. Also: please export the old software's account names (about 1,572) when you can; they are the best test and seed list (FR-7.27). Reviewing the roughly 10,500 new word-list entries needs about 26 hours of your Urdu reviewer's time.
