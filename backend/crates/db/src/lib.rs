@@ -1,5 +1,25 @@
 //! `mandi-db`: SQLite connection, migrations and repositories (Code Standards 5.3).
 //! Depends only on `mandi-core`.
+//!
+//! - [`Db`]: one write connection and one read connection; `Db::write` is the one
+//!   transaction of a user action, with a free disk check (plan 03 Sections 4.2, 4.3).
+//! - [`migrate`]: `0001_init.sql` (all of Architecture 15) with a full copy before an upgrade.
+//! - [`seed`]: the system accounts of PRD FR-10.4.
+//! - [`audit`]: audit rows with a keyed hash chain.
+//! - [`DbError`]: the one error type, with a code for the screen.
+
+pub mod audit;
+pub mod clock;
+mod db;
+pub mod disk;
+mod error;
+pub mod migrate;
+pub mod seed;
+
+pub use db::{BUSY_TIMEOUT, CHECK_WAIT, DataState, Db, DbOptions};
+pub use error::DbError;
+/// SQLite types, re-exported so services use the same version (`Transaction`, `params!`).
+pub use rusqlite;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

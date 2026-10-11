@@ -13,6 +13,8 @@ gallery-section-numbers = نمبر اور کوڈ
 # review: pending
 gallery-section-states = حالتیں
 # review: pending
+gallery-section-backend-errors = بیک اینڈ کی خرابیاں
+# review: pending
 gallery-section-messages = پیغام اور تصدیق
 # review: pending
 gallery-button-save = محفوظ کریں
@@ -66,6 +68,8 @@ gallery-state-loading = انتظار
 gallery-state-empty = خالی
 # review: pending
 gallery-state-error = خرابی
+# review: pending
+gallery-state-data-check = ڈیٹا کی جانچ ناکام
 # review: pending
 gallery-loading-again = دوبارہ دکھائیں
 # review: pending

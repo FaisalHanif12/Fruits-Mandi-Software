@@ -2,6 +2,10 @@
 
 pub mod commands;
 pub mod error;
+pub mod logging;
+pub mod refs;
+pub mod runner;
+pub mod state;
 #[cfg(windows)]
 mod webview2;
 
@@ -28,12 +32,26 @@ pub fn run() -> tauri::Result<()> {
             if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
                 webview2::apply(&window)?;
             }
-            #[cfg(not(windows))]
-            let _ = app;
+            let data_dir = app.path().app_data_dir()?;
+            start_logging(app, &data_dir);
+            // Never fails: a damaged or unupgradable data file is kept in the state, and the
+            // screen learns of it through app_data_status (NFR-REL-6, NFR-REL-7).
+            app.manage(state::AppState::start(&data_dir));
             Ok(())
         })
         .invoke_handler(handler())
         .run(context())
+}
+
+/// Starts the log files and the error reference counter. If the log folder cannot be made
+/// the app still runs, without a log.
+fn start_logging<R: tauri::Runtime>(app: &tauri::App<R>, data_dir: &std::path::Path) {
+    let log_dir = data_dir.join("logs");
+    if let Ok(guard) = logging::init(&log_dir) {
+        // The guard flushes the last log lines when the app ends.
+        app.manage(std::sync::Mutex::new(Some(guard)));
+        refs::init(log_dir.join(refs::COUNTER_FILE));
+    }
 }
 
 /// The app configuration and assets, built in once. Shared by `run` and the
@@ -45,7 +63,27 @@ fn context<R: tauri::Runtime>() -> tauri::Context<R> {
 /// Every command the screens may call. Keep in step with `APP_COMMANDS` in
 /// `build.rs` and with `capabilities/default.json`.
 fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
-    tauri::generate_handler![commands::app::app_info]
+    tauri::generate_handler![
+        commands::app::app_info,
+        commands::app::app_data_status,
+        commands::auth::auth_status,
+        commands::auth::setup_first_run,
+        commands::auth::auth_login,
+        commands::auth::auth_logout,
+        commands::auth::auth_lock,
+        commands::auth::auth_unlock,
+        commands::auth::auth_recover,
+        commands::users::users_list,
+        commands::users::users_create,
+        commands::users::users_update,
+        commands::users::users_reset_password,
+        commands::settings::settings_get,
+        commands::settings::settings_set_firm,
+        commands::settings::settings_set_security,
+        commands::settings::settings_set_default_language,
+        commands::settings::prefs_set,
+        commands::day::day_status,
+    ]
 }
 
 /// Shows, restores and focuses the main window. Used when a second copy of the
@@ -100,6 +138,41 @@ mod tests {
             serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
         assert_eq!(info["version"], conf["version"]);
         assert_eq!(info["identifier"], "pk.mandisoftware.app");
+    }
+
+    /// The status command through Tauri's IPC and the real capability file (plan 03 4.2b).
+    #[test]
+    fn app_data_status_reports_the_start_up_check() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = state::AppState::start(dir.path());
+        let app = mock_builder()
+            .manage(state)
+            .invoke_handler(handler())
+            .build(context())
+            .unwrap();
+        let window = tauri::WebviewWindowBuilder::new(&app, MAIN_WINDOW, Default::default())
+            .build()
+            .unwrap();
+        let ask = || -> serde_json::Value {
+            get_ipc_response(&window, request("app_data_status", window.url().unwrap()))
+                .unwrap()
+                .deserialize()
+                .unwrap()
+        };
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            let status = ask();
+            if status["state"] == "ok" {
+                assert_eq!(
+                    status,
+                    serde_json::json!({ "state": "ok", "reference": null })
+                );
+                break;
+            }
+            assert_eq!(status["state"], "checking", "{status}");
+            assert!(std::time::Instant::now() < deadline, "check did not finish");
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
     }
 
     /// A remote page can never call our commands (NFR-SEC-10).

@@ -12,8 +12,10 @@ import {
   Code,
   CodeInput,
   ConfirmDialog,
+  DataCheckFailedState,
   DateInput,
   EmptyState,
+  ErrorNotice,
   ErrorState,
   Field,
   LoadingState,
@@ -22,10 +24,17 @@ import {
   QtyInput,
   Select,
   TextInput,
+  fieldError,
   showToast,
   type SelectOption,
 } from '../../shared/ui';
-import { SAMPLE_AMOUNTS, SAMPLE_TRUCK } from './sample';
+import {
+  SAMPLE_AMOUNTS,
+  SAMPLE_BACKEND_ERROR,
+  SAMPLE_ERROR_FIELD,
+  SAMPLE_REFERENCE,
+  SAMPLE_TRUCK,
+} from './sample';
 
 type Mode = 'cash' | 'bank' | 'cheque';
 
@@ -38,7 +47,7 @@ const MODES: readonly SelectOption<Mode>[] = [
 const SAMPLE_ERROR: UiError = {
   ok: false,
   errors: [{ code: 'ERR_INTERNAL', field: null, values: {} }],
-  ref: 'E-20261010-0007',
+  ref: SAMPLE_REFERENCE,
 };
 
 const SAMPLE_BILL_NUMBER = '1';
@@ -215,6 +224,30 @@ export function StatesSection() {
         error={SAMPLE_ERROR}
         onRetry={() => undefined}
       />
+      <Localized id="gallery-state-data-check">
+        <h3 className="type-label text-ink-muted" />
+      </Localized>
+      <DataCheckFailedState
+        reference={SAMPLE_REFERENCE}
+        onRetry={() => undefined}
+        fullWindow={false}
+      />
+    </Card>
+  );
+}
+
+/** What the backend refused: a problem on one cell, and a whole-form problem with the reference. */
+export function BackendErrorsSection() {
+  const [qty, setQty] = useState('2000000');
+  return (
+    <Card title={<Label id="gallery-section-backend-errors" />}>
+      <Field
+        label={<Label id="gallery-field-qty" />}
+        error={fieldError(SAMPLE_BACKEND_ERROR, SAMPLE_ERROR_FIELD)}
+      >
+        {(control) => <QtyInput {...control} value={qty} onChange={setQty} />}
+      </Field>
+      <ErrorNotice error={SAMPLE_BACKEND_ERROR} fieldsShown={[SAMPLE_ERROR_FIELD]} />
     </Card>
   );
 }

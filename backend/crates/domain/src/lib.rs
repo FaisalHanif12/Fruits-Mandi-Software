@@ -8,6 +8,8 @@
 #![deny(clippy::arithmetic_side_effects)]
 #![cfg_attr(test, allow(clippy::arithmetic_side_effects))]
 
+pub mod auth;
+
 /// `mandi-core`, re-exported so the crates above reach it through the one allowed path
 /// (app -> services -> domain -> core).
 pub use mandi_core as core;

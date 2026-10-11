@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::{MoneyError, Paisa};
 
 /// Number grouping setting (PRD Section 21).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum Grouping {
     /// `1,316,040` (the default).

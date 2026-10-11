@@ -4,6 +4,8 @@ use serde::Serialize;
 use ts_rs::TS;
 
 use crate::error::UiError;
+use crate::runner::guard;
+use crate::state::{AppState, DataStatus};
 
 /// What the start screen shows about the running app.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -29,4 +31,11 @@ impl AppInfo {
 #[tauri::command]
 pub fn app_info<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<AppInfo, UiError> {
     Ok(AppInfo::from_config(app.package_info(), app.config()))
+}
+
+/// Tells the start screen whether the data file passed its start-up check (plan 03 Section
+/// 4.2b, NFR-REL-7). Needs no role: it is asked before login. It never waits for the check.
+#[tauri::command]
+pub fn app_data_status(state: tauri::State<'_, AppState>) -> Result<DataStatus, UiError> {
+    guard("app_data_status", || Ok(state.data_status()))
 }

@@ -28,6 +28,16 @@ const devRoutes = import.meta.env.DEV
         path: '/dev/gallery',
         component: lazyRouteComponent(() => import('./dev/GalleryPage'), 'GalleryPage'),
       }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/shell',
+        component: lazyRouteComponent(() => import('./dev/ShellPage'), 'ShellPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/grid',
+        component: lazyRouteComponent(() => import('./dev/GridPage'), 'GridPage'),
+      }),
     ]
   : [];
 

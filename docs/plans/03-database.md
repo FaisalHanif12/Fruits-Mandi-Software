@@ -15,7 +15,7 @@ Create the full SQLite database of Architecture Section 15 in one migration, wit
 
 ## 3. Worked numbers
 
-No money calculation. Seed check: the 18 fixed system accounts of FR-10.4 (codes 01010001, 01020001, 02010001 to 02010004, 030119999, 03040000, 03049999, 04010001 to 04010005, 06010001, 06019999) plus the heads (01 to 06) and the controls the table implies (0101, 0102, 0201, 03011, 0304, 0401, 0501, 0601, 0602, 0603), with the Urdu and English names exactly as the FR-10.4 table and its note under it. `0501xxxx`, `0602xxxx` and `0603xxxx` accounts are not seeded in D1 (shop expense heads come with masters in D2; partner accounts come with partners in D3).
+No money calculation. Seed check: the 16 fixed system accounts of FR-10.4 (codes 01010001, 01020001, 02010001 to 02010004, 030119999, 03040000, 03049999, 04010001 to 04010005, 06010001, 06019999) plus the heads (01 to 06) and the controls the table implies (0101, 0102, 0201, 03011, 0304, 0401, 0501, 0601, 0602, 0603), with the Urdu and English names exactly as the FR-10.4 table and its note under it. `0501xxxx`, `0602xxxx` and `0603xxxx` accounts are not seeded in D1 (shop expense heads come with masters in D2; partner accounts come with partners in D3).
 
 ## 4. Contract
 
@@ -30,6 +30,17 @@ No money calculation. Seed check: the 18 fixed system accounts of FR-10.4 (codes
 ### 4.2 Transaction wrapper (`mandi-db`)
 
 `Db::write(|tx| { ... })`: checks free disk space first (at least 50 MB, a named constant) and returns `ERR_DISK_FULL` without writing if there is not enough (NFR-REL-10); begins `IMMEDIATE`; commits only if the closure returns `Ok`; rolls back otherwise. Every service uses it (CLAUDE.md rule 3). `Db::read(|conn| ...)` for reads.
+
+### 4.2b Data status command
+
+`app_data_status` (no role, shown before login): input none, output `DataStatus { state: "checking" | "ok" | "failed", reference: Option<string> }`. The frontend uses it to show `DataCheckFailedState` with the reference number when the start-up check failed (NFR-REL-7). Add it to `APP_COMMANDS` in build.rs, the capability file and the capability guard test.
+
+### 4.2c Decisions (lead, 10-10-2026)
+
+- `day_state`: one row, id fixed to 1 by a CHECK, created by the migration; `closed_up_to_date` is NULL until a day is closed (D2).
+- Urdu names for heads and controls are provisional, built from PRD words, marked `provisional, needs Urdu reviewer (NFR-URD-4)` in the seed and on Umar's review list.
+- New crates approved: `getrandom` (random audit key), `fs4` (free disk space), `tempfile` (dev only). Each must pass `cargo deny check`.
+- Errors shown next to a field (the user's typing mistakes) carry no reference number; errors shown for a whole form, dialog or state carry one (NFR-OBS-3).
 
 ### 4.3 Start-up check
 

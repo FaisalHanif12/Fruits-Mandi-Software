@@ -14,7 +14,7 @@
 // a typed comma) is shown and sent as it is, so the backend can read it or say what is wrong
 // (FR-7.48, E31). The text cursor stays after the same character when a separator appears or goes.
 
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEventHandler } from 'react';
 import { groupDigits, type Grouping } from '../format';
 import { controlClasses } from './control-classes';
 import type { FieldControlProps } from './Field';
@@ -32,6 +32,8 @@ interface BaseProps extends NumberTextInputProps {
   /** Grouping to show while typing; undefined shows the text as typed. */
   grouping?: Grouping | undefined;
   inputMode: 'numeric' | 'text';
+  /** For keys the field itself answers, for example + and - in a date field (PRD FR-7.19). */
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }
 
 /** The text on screen for a value: grouped when it is plain digits, else the value itself. */
@@ -113,6 +115,7 @@ export function NumberTextInput({
   placeholder,
   grouping,
   inputMode,
+  onKeyDown,
 }: BaseProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaret = useRef<PendingCaret | null>(null);
@@ -144,6 +147,7 @@ export function NumberTextInput({
       aria-describedby={describedBy}
       autoComplete="off"
       spellCheck={false}
+      onKeyDown={onKeyDown}
       onChange={(event) => {
         const text = event.target.value;
         const caret = event.target.selectionStart ?? text.length;

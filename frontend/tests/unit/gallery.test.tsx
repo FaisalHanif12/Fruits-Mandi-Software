@@ -8,7 +8,7 @@ import { IDENTICAL_ALLOWED, checkI18n } from '../../../scripts/i18n-check-lib.mj
 import { GalleryPage } from '../../src/app/dev/GalleryPage';
 import { LANGUAGES } from '../../src/i18n';
 import { directionOf, useLanguageStore } from '../../src/shared/i18n';
-import { message } from '../helpers/render';
+import { message, visible } from '../helpers/render';
 import { renderRouted } from '../helpers/router';
 
 const GALLERY_I18N = path.resolve(import.meta.dirname, '../../src/app/dev/i18n');
@@ -31,11 +31,24 @@ describe('/dev/gallery', () => {
       expect(pane).toHaveAttribute('lang', language);
       expect(pane).toHaveAttribute('dir', directionOf(language));
       const inPane = within(pane);
-      // Buttons, six fields, numbers, the states and the overlay triggers.
-      expect(inPane.getAllByRole('textbox')).toHaveLength(6);
+      // Buttons, six fields and the backend-error cell, numbers, the states and the overlay triggers.
+      expect(inPane.getAllByRole('textbox')).toHaveLength(7);
       expect(inPane.getByRole('combobox')).toBeInTheDocument();
       expect(inPane.getByRole('status')).toHaveAttribute('aria-busy', 'true');
-      expect(inPane.getByRole('alert')).toHaveTextContent(message(language, 'common-retry'));
+      // The error state, the data-check state, and the notice of the backend-errors section.
+      const alerts = inPane.getAllByRole('alert');
+      expect(alerts).toHaveLength(3);
+      expect(alerts[0]).toHaveTextContent(message(language, 'common-retry'));
+      const dataCheck = visible(alerts[1]?.textContent);
+      expect(dataCheck).toContain(message(language, 'common-data-check-title'));
+      expect(dataCheck).toContain(message(language, 'err-data-check-failed'));
+      expect(dataCheck).toContain(message(language, 'common-retry'));
+      // The cell problem sits at its field; the notice keeps only the whole-form one.
+      const notice = visible(alerts[2]?.textContent);
+      expect(notice).toContain(
+        message(language, 'err-date-closed', { closed_up_to: '09-10-2026' }),
+      );
+      expect(notice).not.toContain(message(language, 'err-qty-too-large', { max: '1,000,000' }));
       expect(inPane.getAllByText('1,316,040').length).toBeGreaterThan(0);
       expect(inPane.getByRole('button', { name: /F10/ })).toBeInTheDocument();
     }

@@ -35,6 +35,9 @@ serde.workspace = true
 serde_json.workspace = true
 ts-rs.workspace = true
 chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
 
 # WebView2 settings of Tech Stack 7 (src/webview2.rs). Same versions as Tauri uses.
 [target.'cfg(windows)'.dependencies]
@@ -43,6 +46,7 @@ windows-core = "0.62.2"
 
 [dev-dependencies]
 tauri = { workspace = true, features = ["test"] }
+tempfile.workspace = true
 
 # The same lints as [workspace.lints] in ../Cargo.toml, with one difference:
 # unsafe_code is "deny" here, not "forbid", so src/webview2.rs alone can allow

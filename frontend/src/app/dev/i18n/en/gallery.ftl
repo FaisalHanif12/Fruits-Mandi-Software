@@ -13,6 +13,8 @@ gallery-section-numbers = Numbers and codes
 # review: pending
 gallery-section-states = States
 # review: pending
+gallery-section-backend-errors = Errors from the backend
+# review: pending
 gallery-section-messages = Messages and confirmation
 # review: pending
 gallery-button-save = Save
@@ -66,6 +68,8 @@ gallery-state-loading = Loading
 gallery-state-empty = Empty
 # review: pending
 gallery-state-error = Error
+# review: pending
+gallery-state-data-check = Data check failed
 # review: pending
 gallery-loading-again = Show again
 # review: pending

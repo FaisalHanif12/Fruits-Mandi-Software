@@ -1,0 +1,27 @@
+{
+  "goal": {
+    "key": "D1 and then D2",
+    "scope": [
+      "D1",
+      "D2"
+    ],
+    "baseline": []
+  },
+  "plans": {
+    "01-scaffold": "passed",
+    "02-core": "passed",
+    "03-database": "reviewing",
+    "04-shell-and-login": "building"
+  },
+  "acceptance": [
+    "D1-A1",
+    "D1-A4",
+    "D1-A5",
+    "D1-A6",
+    "D1-A7",
+    "D1-A8",
+    "D1-A9",
+    "D1-A10"
+  ],
+  "reports": []
+}

@@ -243,6 +243,18 @@ pub fn name_en(field: &str, input: &str) -> Result<String, FieldError> {
     )
 }
 
+/// The name of a person as shown in the top bar: 1 to 100 characters in any script, with at
+/// least one letter. Unlike `name_ur` and `name_en` it is not checked for one script, because
+/// it is typed once and not searched (plan 04). Returns the cleaned name.
+pub fn person_name(field: &str, input: &str) -> Result<String, FieldError> {
+    name(
+        field,
+        input,
+        |n| n.chars().any(char::is_alphabetic),
+        ErrorCode::ErrRequired,
+    )
+}
+
 /// A Pakistani mobile number: `03XXXXXXXXX` or `03XX-XXXXXXX`. Returned as 11 digits.
 /// A number with an Arabic-Indic digit (٠-٩) and a hyphen is `ERR_PHONE_INVALID`: bidi would
 /// show the two digit runs in a different order from the saved digits.

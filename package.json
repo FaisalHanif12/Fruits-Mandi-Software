@@ -15,7 +15,7 @@
     "test": "pnpm --filter frontend test && cd backend && cargo test --workspace",
     "gen:types": "node scripts/gen-types.mjs",
     "i18n:check": "node scripts/i18n-check.mjs",
-    "seed": "node -e \"console.log('seed: not available until plan 03')\"",
+    "seed": "node scripts/seed/run.mjs",
     "perf": "node scripts/perf/run.mjs",
     "e2e": "node frontend/tests/e2e/run.mjs"
   },

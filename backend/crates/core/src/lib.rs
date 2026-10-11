@@ -8,6 +8,7 @@
 #![deny(clippy::arithmetic_side_effects)]
 #![cfg_attr(test, allow(clippy::arithmetic_side_effects))]
 
+pub mod auth;
 pub mod dates;
 pub mod english_words;
 pub mod error;
