@@ -6,7 +6,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 - Goal run: D1 and D2 together (README Section 4a, requirements v1.2 committed as `b0902a6`). Build every plan 01 to 10, mark each "built" and commit it; then one fresh `reviewer` and `robustness` for the whole run; then one pull request and the D1+D2 DONE REPORT.
 - Branch: `feature/db-schema` carries plans 03 onward (stacked on `feature/core-money`, PR #2, on `feature/scaffold-repo`, PR #1). GitHub Actions is off; Windows-workflow items are WAITING-CI.
-- Now (12-10-2026): plans 04 to 06 committed as built (`76cc5ca`), waiting for the end gate. Word list honest: 12,942 entries, 8,212 known, below 15,000 (open question for Umar). Backend on plan 07 (T1 contract, then T2). Frontend on the openings grid, then plans 09 and 10 screens (the plan 09 rules folder is uncommitted work in progress).
+- Now (12-10-2026): plans 04 to 08 committed as built (`76cc5ca`, `9d585cd`). Backend on plan 09 T2 then plan 10. Frontend has plans 09 and 10 screens; plan 09 wired, plan 10 waits for backend commands. Then the end gate (README 4a).
 
 ## Plan files
 
@@ -20,8 +20,8 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 | 04-shell-and-login | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
 | 05-names-two-scripts | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
 | 06-masters-and-search | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
-| 07-journal-and-accounts | feature/db-schema | | at the end | at the end | built on both sides (backend 612 Rust tests, money agent PASS WITH MINOR, E2E-23 backend part in assist.rs); frontend T3+T4 wired to the bindings (tree, list, form, openings grid; 1340 frontend tests); backend after the word-list fix. Openings grid contract added 12-10 |
-| 08-party-card-and-short-codes | feature/db-schema | | at the end | at the end | building: frontend T3 done (AccountPicker, PartyCard, quick add, global search); backend T1/T2 waiting |
+| 07-journal-and-accounts | feature/db-schema | | at the end | at the end | built (`9d585cd`); end gate |
+| 08-party-card-and-short-codes | feature/db-schema | | at the end | at the end | built (`9d585cd`); end gate |
 | 09-commission-rules | feature/db-schema | | at the end | at the end | building: frontend T3 done (rules list, form, test a rule, settings tabs); backend after plan 08 |
 | 10-opening-position | feature/db-schema | | at the end | at the end | building: frontend T3 done (پیشگی screen with running list, day close and reopen); backend after plan 09 |
 
@@ -71,6 +71,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 - Plan 05 words: `translit.ftl` in ur and en (all `review: pending`), and the phonetic keyboard table in `frontend/src/shared/urdu/phonetic_keyboard.ts` (the letters beyond a ا b ب p پ t ت T ٹ h ہ H ھ were written by the team in the CRULP idea and need the Urdu reviewer). The seed list `core/data/translit_seed.tsv` (about 4,572 entries, all `review: pending`).
 - Plan 04 v1.2: `err-already-signed-in` "آپ پہلے ہی لاگ ان ہیں۔" (You are already signed in.); `err-not-locked` "ایپ لاک نہیں ہے۔" (The app is not locked.).
 - Plan 05 spelling check (FR-7.66, NFR-URD-29, each with its English): `translit-spelling-check` and `translit-spelling-title` "ہجے دیکھ لیں" (Check the spelling); `translit-spelling-body` "نشان زدہ لفظوں کے ہجے ایپ نے اپنے اصولوں سے بنائے ہیں، کیونکہ یہ لفظ اس کی لفظوں کی فہرست میں نہیں ہیں۔ ہجے ٹھیک ہوں تو تصدیق کریں۔ ٹھیک نہ ہوں تو واپس جا کر درست کریں۔"; `translit-spelling-confirm` "ہجے ٹھیک ہیں" (Spelling is right); `err-spelling-unconfirmed` "ان لفظوں کے ہجے کی تصدیق نہیں ہوئی: { $words }۔ ہجے دیکھیں، پھر تصدیق کریں یا درست کریں۔"; reworded `mode-full-urdu`, `words-col-count` "استعمال کتنی بار", `words-col-last` "آخری استعمال".
+- `accountpicker-inactive` ("نئی اندراج": اندراج is masculine, fix asked: "نئے اندراج"), `working-per-unit-received`, `rules-overlap-help`, `rules-status-default` changed to عام.
 - Plans 09 and 10 errors and fields: `err-rule-not-allowed` ("اصول کی یہ ترتیب درست نہیں": is ترتیب the right word for "combination"?), `err-date-range`, `err-user-inactive` reworded, `err-opening-not-allowed` (names income, دکان خرچہ, نقدی منڈی, پختہ کھاتہ, ابتدائی فرق); all of `ur/rules.ftl` (122), `ur/vouchers.ftl`, `ur/day.ftl`, working messages in `ur/assist.ftl`. Notes, narrations and reasons now start in رومن mode in the Urdu app (FR-7.22).
 - Plan 07 openings grid: `openings-*` lines in `ur/accounts.ftl`; `err-journal-unbalanced`, `err-code-reserved`, `err-opening-both-sides`, `err-advance-not-seller` (check the gender of پیشگی in "لگ سکتی ہے").
 - Plans 07 and 08: all of `ur/accounts.ftl` (about 90, کھاتہ used for "account" as in PRD 10.1), `ur/assist.ftl` (about 20; read first "اس پارٹی کے ذمے فرم کی رقم ہے" = "This party owes the firm"), `layout-search-*`, `common-side-dr/cr`, `common-yes` ہاں, `common-no` نہیں, `err-series-full`, `err-code-taken`, `err-version-changed`, `err-format-invalid`.
