@@ -26,8 +26,6 @@ import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit'
 import type { CoaTree } from '../../bindings/CoaTree';
 import type { GlobalHit as GlobalHitBinding } from '../../bindings/GlobalHit';
 import type { ResolvedCode as ResolvedCodeBinding } from '../../bindings/ResolvedCode';
-import type { SearchHit } from '../../bindings/SearchHit';
-import type { SearchScope } from '../../bindings/SearchScope';
 
 /** The chart in three levels with live balances (PRD FR-10.1). */
 export async function coaTree(): Promise<ChartHead[]> {
@@ -49,7 +47,10 @@ export function accountsGet(id: number): Promise<AccountRow> {
   return callCommand<AccountRow>('accounts_get', { input: { id } });
 }
 
-/** The most the backend returns in one page (it says 2,000). 0 asks for that many. */
+/**
+ * 0 asks for every matching account: the backend returns up to 50,000 (2.5 times the 20,000
+ * accounts of NFR-SCL-1), and the grid draws only the rows in view. The screen sets no cap.
+ */
 const LIST_PAGE_LIMIT = 0;
 
 export function accountsList(filter: AccountFilter, offset = 0): Promise<AccountList> {
@@ -158,25 +159,6 @@ async function withBalances(hits: readonly AccountHitBinding[]): Promise<Account
   return hits.map((hit) => ({ ...hit, balance: balances.get(hit.id) ?? null }));
 }
 
-/** The scope the search commands call a field's scope. A control has no recent list. */
-function recentScope(scope: AccountScope): SearchScope | null {
-  switch (scope) {
-    case 'seller':
-      return 'seller';
-    case 'buyer':
-      return 'buyer';
-    case 'any':
-      return 'any_account';
-    case 'control':
-      return null;
-  }
-}
-
-/** What kind of account a recent hit is, from the list it came from. */
-function typeOfRecent(hit: SearchHit): AccountHitBinding['account_type'] {
-  return hit.kind === 'seller' ? 'seller' : hit.kind === 'buyer' ? 'buyer' : 'other';
-}
-
 /**
  * Accounts for a picker: exact code first, then the exact serial, then names, then close
  * spellings (PRD FR-7.40). `controlId` is for a field that takes the accounts of one control.
@@ -198,34 +180,29 @@ export async function searchAccounts(input: {
   return withBalances(hits);
 }
 
-/** The recent accounts of a picker, then the rest (PRD FR-7.41). */
+/**
+ * The recent accounts of a field, then the rest (PRD FR-7.41). Each field (a scope, and a control
+ * for a field of one control) has its own list, and the hits come as accounts, with their type.
+ */
 export async function searchAccountsRecent(
   scope: AccountScope,
   controlId: number | null,
 ): Promise<AccountHit[]> {
-  const listScope = recentScope(scope);
-  if (listScope === null || controlId !== null) return [];
-  const hits = await callCommand<SearchHit[]>('search_recent', { input: { scope: listScope } });
-  return withBalances(
-    hits.map((hit) => ({
-      id: hit.id,
-      code: hit.code,
-      name_ur: hit.name_ur,
-      name_en: hit.name_en,
-      extra_ur: hit.extra_ur,
-      extra_en: hit.extra_en,
-      account_type: typeOfRecent(hit),
-      control_id: 0,
-      is_active: hit.is_active,
-    })),
-  );
+  const hits = await callCommand<AccountHitBinding[]>('search_accounts_recent', {
+    input: { scope, control_id: controlId },
+  });
+  return withBalances(hits);
 }
 
-/** Remembers that an account was chosen, so it comes first next time. */
-export function searchAccountsTouch(scope: AccountScope, id: number): Promise<null> {
-  const listScope = recentScope(scope);
-  if (listScope === null) return Promise.resolve(null);
-  return callCommand<null>('search_touch', { input: { scope: listScope, id } });
+/** Remembers that an account was chosen in a field, so it comes first next time. */
+export function searchAccountsTouch(
+  scope: AccountScope,
+  controlId: number | null,
+  id: number,
+): Promise<null> {
+  return callCommand<null>('search_accounts_touch', {
+    input: { scope, control_id: controlId, id },
+  });
 }
 
 /** What a code typed in an account field means. Called on Enter or on leaving the field only. */

@@ -300,6 +300,41 @@ pub const fn level_of(
     }
 }
 
+/// True if a rule with this scope is one of the three global defaults of PRD 4.2: the seller or
+/// buyer commission with no party, item or group, or the buyer's لاگا for the fruit group. Over
+/// time a default is a chain of dated rows (the Owner changes it in Settings, PRD 11.3); the
+/// rule form never creates, edits or switches off a row of that chain.
+///
+/// ```
+/// use mandi_core::rules::{ChargeSide, ChargeType, ItemGroup, is_default_scope};
+/// let s = ChargeSide::Seller;
+/// let b = ChargeSide::Buyer;
+/// assert!(is_default_scope(s, ChargeType::Commission, None, None, None));
+/// assert!(is_default_scope(b, ChargeType::Laga, None, None, Some(ItemGroup::Fruit)));
+/// assert!(!is_default_scope(b, ChargeType::Laga, None, None, Some(ItemGroup::Vegetable)));
+/// assert!(!is_default_scope(s, ChargeType::Labour, None, None, None));
+/// assert!(!is_default_scope(s, ChargeType::Commission, Some(1), None, None));
+/// ```
+pub const fn is_default_scope(
+    side: ChargeSide,
+    charge: ChargeType,
+    account_id: Option<i64>,
+    item_id: Option<i64>,
+    item_group: Option<ItemGroup>,
+) -> bool {
+    matches!(
+        (side, charge, account_id, item_id, item_group),
+        (_, ChargeType::Commission, None, None, None)
+            | (
+                ChargeSide::Buyer,
+                ChargeType::Laga,
+                None,
+                None,
+                Some(ItemGroup::Fruit)
+            )
+    )
+}
+
 /// Why a level did not decide.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -613,6 +648,10 @@ pub struct DefaultCharge {
     /// The version of the rule, to send back.
     #[ts(type = "number")]
     pub version: i64,
+    /// The first day this value applies, `YYYY-MM-DD`. A change made in Settings starts on the
+    /// day it is made; the value before it ends the day before (PRD 11.3: the rule date is the
+    /// posting date).
+    pub from_date: String,
 }
 
 /// The three defaults of PRD 4.2 and Section 21 "Charges".
@@ -698,19 +737,21 @@ use crate::money::parse_bps;
 use crate::validate::{self, FieldErrors};
 
 /// The value of a rule from its text, for the method (Code Standards 4.2): a percent is 0 to 100
-/// with up to 2 decimals; an amount per نگ is more than 0; an amount per lot is 0 or more.
+/// with up to 2 decimals; an amount per نگ or per lot is a whole number of rupees, 0 or more. A
+/// value of 0 is how the Owner says "no لاگا for this buyer" (lead decision 12-10-2026).
 ///
 /// `field` is the field the errors point at (`value`, or `seller_commission.value` on the
 /// Settings tab).
 ///
 /// # Errors
-/// The percent and money codes of the parsers; `ERR_MUST_BE_MORE_THAN_ZERO` for 0 per نگ.
+/// The percent and money codes of the parsers (a negative amount is refused; 0 is allowed).
 ///
 /// ```
 /// use mandi_core::rules::{ChargeMethod, ChargeValue, rule_value};
 /// assert!(matches!(rule_value("value", ChargeMethod::Percent, "2.5"), Ok(ChargeValue::Percent(_))));
 /// assert!(rule_value("value", ChargeMethod::Percent, "101").is_err());
-/// assert!(rule_value("value", ChargeMethod::PerUnit, "0").is_err());
+/// assert!(rule_value("value", ChargeMethod::PerUnit, "0").is_ok());
+/// assert!(rule_value("value", ChargeMethod::PerUnit, "-1").is_err());
 /// assert!(rule_value("value", ChargeMethod::PerLot, "0").is_ok());
 /// ```
 pub fn rule_value(
@@ -722,13 +763,7 @@ pub fn rule_value(
         ChargeMethod::Percent => parse_bps(text)
             .map(ChargeValue::Percent)
             .map_err(|c| FieldError::new(c, field)),
-        ChargeMethod::PerUnit => {
-            let amount = validate::money(field, text)?;
-            if amount == Paisa::ZERO {
-                return Err(FieldError::new(ErrorCode::ErrMustBeMoreThanZero, field));
-            }
-            Ok(ChargeValue::PerUnit(amount))
-        }
+        ChargeMethod::PerUnit => validate::money(field, text).map(ChargeValue::PerUnit),
         ChargeMethod::PerLot => validate::money(field, text).map(ChargeValue::PerLot),
     }
 }

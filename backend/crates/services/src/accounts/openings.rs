@@ -155,7 +155,11 @@ struct PlannedLine {
 }
 
 fn line_error(code: ErrorCode, field: String) -> LineError {
-    LineError { code, field }
+    LineError {
+        code,
+        field,
+        values: std::collections::BTreeMap::new(),
+    }
 }
 
 /// Checks every line of the grid against the database. Used by the preview and the save.
@@ -217,11 +221,11 @@ fn plan(
                         request = Some(found);
                     }
                     Err(found) => {
-                        errors.extend(
-                            found
-                                .into_iter()
-                                .map(|e: FieldError| line_error(e.code, e.field)),
-                        );
+                        errors.extend(found.into_iter().map(|e: FieldError| LineError {
+                            code: e.code,
+                            field: e.field,
+                            values: e.values,
+                        }));
                     }
                 }
             }
@@ -322,7 +326,7 @@ pub fn openings_save(
             .map(|e| Rejection {
                 code: e.code,
                 field: Some(e.field.clone()),
-                values: std::collections::BTreeMap::new(),
+                values: e.values.clone(),
             })
             .collect();
         if !problems.is_empty() {

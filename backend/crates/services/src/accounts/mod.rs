@@ -12,8 +12,8 @@ use mandi_db::accounts as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
     AccountInput, AccountRow, AccountType, AccountsList, AccountsListInput, AccountsSimilarInput,
-    ControlRule, EXPENSE_HEAD, INCOME_HEAD, NAQDI_MANDI_CODE, OPENING_DIFFERENCE_CODE,
-    OpeningRequest, SimilarAccount, account_code_for, prepare_account,
+    ControlRule, OpeningRequest, SimilarAccount, account_code_for, can_take_opening,
+    prepare_account,
 };
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
@@ -33,8 +33,9 @@ use crate::ledger;
 use crate::search;
 use crate::spelling::{self, NamePair, SpellingCheck};
 
-/// The most rows one page of the list returns (plan 07).
-pub const MAX_PAGE: u32 = 2_000;
+/// The most rows one list returns: 2.5 times the 20,000 accounts of NFR-SCL-1, so the list is
+/// never cut at the planned size (plan 07). A screen draws only the rows it can see.
+pub const MAX_PAGE: u32 = 50_000;
 /// The most accounts the duplicate warning shows.
 const MAX_SIMILAR: usize = 8;
 
@@ -50,9 +51,18 @@ fn series_full(control_code: &str) -> ServiceError {
 }
 
 /// Fills the balance of rows from the posted journal (one query for all accounts).
+/// A page of at most this many accounts reads its balances with one query that names them; a
+/// bigger page reads the balance of every account in one pass over the journal, which is cheaper
+/// than a very long list of ids.
+const NAMED_BALANCES_UP_TO: usize = 500;
+
 fn fill_balances(conn: &Connection, rows: &mut [AccountRow]) -> Result<(), ServiceError> {
-    let ids: Vec<i64> = rows.iter().map(|row| row.id).collect();
-    let totals = mandi_db::ledger::totals_for_accounts(conn, &ids)?;
+    let totals = if rows.len() <= NAMED_BALANCES_UP_TO {
+        let ids: Vec<i64> = rows.iter().map(|row| row.id).collect();
+        mandi_db::ledger::totals_for_accounts(conn, &ids)?
+    } else {
+        ledger::balances_by_account(conn, None)?
+    };
     for row in rows {
         if let Some(found) = totals.get(&row.id) {
             row.balance = ledger::balance_of(*found)?;
@@ -187,10 +197,7 @@ pub fn similar(
 /// itself, a پختہ کھاتہ account has no person to hold the balance, and نقدی منڈی pays at once.
 /// The documents do not say what to do about these; they are refused until Umar decides.
 pub(crate) fn opening_allowed(facts: &repo::AccountFacts) -> bool {
-    !matches!(facts.head_code.as_str(), INCOME_HEAD | EXPENSE_HEAD)
-        && facts.code != OPENING_DIFFERENCE_CODE
-        && facts.code != NAQDI_MANDI_CODE
-        && !facts.is_pukhta_khata
+    can_take_opening(&facts.head_code, &facts.code, facts.is_pukhta_khata)
 }
 
 /// Merges the answers of two spelling checks, so both fields come back together.

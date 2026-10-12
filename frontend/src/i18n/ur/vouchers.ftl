@@ -13,7 +13,7 @@ vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہل�
 vouchers-add-to-list = فہرست میں رکھیں
 
 # review: pending
-vouchers-load-failed = { -peshgi-khata } کھل نہیں سکی
+vouchers-load-failed = { -peshgi-khata } کھل نہیں سکا
 
 ## The fields of a voucher.
 
@@ -84,7 +84,7 @@ vouchers-some-refused = { $count } واؤچر محفوظ نہیں ہو سکے۔ 
 vouchers-advances-title = اس { -beopari } کی { -peshgi-khata }
 
 # review: pending
-vouchers-advances-none = اس { -beopari } کو ابھی کوئی پیشگی نہیں دی گئی۔
+vouchers-advances-none = اس { -beopari } کو ابھی کوئی { -peshgi } نہیں دی گئی۔
 
 # review: pending
 vouchers-advances-open = باقی { -peshgi-khata }
@@ -135,3 +135,7 @@ vouchers-state-saved = محفوظ
 
 # review: pending
 vouchers-remove = فہرست سے ہٹائیں
+
+# An advance that is an opening debit of the seller, not a voucher, in the list of his advances.
+# review: pending
+vouchers-source-opening = ابتدائی بقایا

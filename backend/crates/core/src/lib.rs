@@ -22,6 +22,7 @@ pub mod text;
 pub mod translit;
 pub mod urdu_words;
 pub mod validate;
+pub mod vouchers;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

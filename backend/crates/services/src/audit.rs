@@ -39,6 +39,12 @@ impl Event {
         self
     }
 
+    /// Why it was done (a reopened day, a cancel).
+    pub fn reason(mut self, reason: &str) -> Self {
+        self.0.reason = Some(reason.to_owned());
+        self
+    }
+
     pub fn into_entry(self) -> AuditEntry {
         self.0
     }

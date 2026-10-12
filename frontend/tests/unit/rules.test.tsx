@@ -126,6 +126,36 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
     expect(cell(4, 'status')).toBe(message(language, 'rules-status-active'));
   });
 
+  it('an old default that ended says until when, and the current one says only Default', async () => {
+    fakeRules([
+      rule(1, { is_default: true, to_date: '2026-09-30' }),
+      rule(11, { is_default: true, from_date: '2026-10-01' }),
+    ]);
+    await renderApp('/index/rules');
+    await waitFor(() => {
+      expect(rowIds()).toEqual(['1', '11']);
+    });
+    expect(cell(1, 'status')).toBe(
+      message(language, 'rules-status-default-ended', { to: '30-09-2026' }),
+    );
+    expect(cell(11, 'status')).toBe(message(language, 'rules-status-default'));
+  });
+
+  it('an ended default is read-only too, and its dates are told', async () => {
+    fakeRules([rule(1, { is_default: true, from_date: '2026-08-31', to_date: '2026-09-30' })]);
+    await renderApp('/index/rules/1');
+    await screen.findByRole('heading', {
+      level: 1,
+      name: message(language, 'rules-default-title'),
+    });
+    expect(visible(document.body.textContent)).toContain(
+      message(language, 'rules-dates', { from: '31-08-2026', to: '30-09-2026' }),
+    );
+    expect(
+      screen.queryByRole('button', { name: new RegExp(message(language, 'layout-save-save')) }),
+    ).toBeNull();
+  });
+
   it('a default rule has no form: it says it is changed in Settings, Charges, and the link opens that tab', async () => {
     fakeRules();
     const { router } = await renderApp('/index/rules/1');
@@ -415,6 +445,27 @@ describe.each(LANGUAGES)('the rule form (%s)', (language) => {
     expect(store.rows).toHaveLength(1);
   });
 
+  it('a value of 0 per نگ is sent as typed: the form does not refuse it', async () => {
+    fakeRules();
+    await renderApp('/index/rules/new');
+    const user = userEvent.setup();
+    await pick(user, language, 'rules-field-party', 'rahim', 'Rahim');
+    await user.click(await dropdown(language, 'rules-field-method'));
+    await user.click(
+      await screen.findByRole('option', {
+        name: named(message(language, 'rules-method-per_unit')),
+      }),
+    );
+    await user.click(await labelled(language, 'rules-field-value'));
+    await user.keyboard('0');
+    press('F10');
+    await waitFor(() => {
+      expect(rulesApi.rulesSave).toHaveBeenCalledTimes(1);
+    });
+    const sent = vi.mocked(rulesApi.rulesSave).mock.calls[0]?.[0];
+    expect(sent).toEqual(expect.objectContaining({ method: 'per_unit', value: '0' }));
+  });
+
   it('F10 sends the value and the dates as typed, says it is saved and goes back to the list', async () => {
     const store = fakeRules();
     const { router } = await renderApp('/index/rules/new');
@@ -468,7 +519,7 @@ describe.each(LANGUAGES)('the rule form (%s)', (language) => {
       expect(visible(warning?.textContent)).toContain(message(language, 'rules-charge-commission'));
     });
     expect(visible(warning?.textContent)).toContain(
-      message(language, 'rules-overlap-dates-open', { from: '31-08-2026' }),
+      message(language, 'rules-dates-open', { from: '31-08-2026' }),
     );
     expect(router.state.location.pathname).toBe('/index/rules/new');
     // The rule is saved already: F10 again only finishes.
@@ -755,6 +806,32 @@ describe.each(LANGUAGES)('the settings Charges and Overrides (%s)', (language) =
       word('rules-method-per_unit'),
       word('rules-method-percent'),
     ]);
+  });
+
+  it('each default says the day it applies from, and a change starts today and leaves the old rate in the list', async () => {
+    fakeRules();
+    const user = await openTab('settings-tab-charges');
+    const seller = await block('settings-charges-seller');
+    const from = (id: string) =>
+      visible(
+        screen.getByRole('heading', { name: named(message(language, id)) }).closest('section')
+          ?.textContent,
+      );
+    expect(from('settings-charges-seller')).toContain(
+      message(language, 'settings-charges-from', { date: '31-08-2026' }),
+    );
+    await user.clear(seller.value);
+    await user.type(seller.value, '7');
+    press('F10');
+    // The seller default now applies from today; the buyer one keeps its own start.
+    await waitFor(() => {
+      expect(from('settings-charges-seller')).toContain(
+        message(language, 'settings-charges-from', { date: '10-10-2026' }),
+      );
+    });
+    expect(from('settings-charges-buyer')).toContain(
+      message(language, 'settings-charges-from', { date: '31-08-2026' }),
+    );
   });
 
   it('Charges shows a refused rate at its field', async () => {

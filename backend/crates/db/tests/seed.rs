@@ -244,7 +244,7 @@ fn the_seed_only_fills_what_is_missing() {
 // ---- Plan 09: the default charges of PRD 4.2 are data ----
 
 #[test]
-fn the_default_charges_are_three_rules_named_in_the_settings() {
+fn the_default_charges_are_three_rules_found_by_their_scope() {
     // PRD 4.2: seller commission 6%, buyer commission 6%, لاگا 8 per نگ on fruit. Nothing for
     // مزدوری, منشیانہ and فون.
     let dir = tempdir().unwrap();
@@ -305,11 +305,61 @@ fn the_default_charges_are_three_rules_named_in_the_settings() {
     );
     assert!(
         rows.iter()
-            .all(|r| r.from == "2000-01-01" && r.to.is_none() && r.active == 1)
+            .all(|r| r.from == "1000-01-01" && r.to.is_none() && r.active == 1)
     );
-    // The settings name them, so the Settings screen finds them.
-    let named = mandi_db::rules::default_ids(&conn).unwrap();
-    assert_eq!(named, Some((rows[0].id, rows[1].id, rows[2].id)));
+    // They are found by their scope and dates: the one in force on a day.
+    use mandi_core::rules::{ChargeSide, ChargeType, ItemGroup};
+    let on = |side, charge, group, date| {
+        mandi_db::rules::default_in_force(&conn, side, charge, group, date)
+            .unwrap()
+            .map(|r| r.id)
+    };
+    assert_eq!(
+        on(
+            ChargeSide::Seller,
+            ChargeType::Commission,
+            None,
+            "2026-10-10"
+        ),
+        Some(rows[0].id)
+    );
+    assert_eq!(
+        on(
+            ChargeSide::Buyer,
+            ChargeType::Commission,
+            None,
+            "1000-01-01"
+        ),
+        Some(rows[1].id)
+    );
+    assert_eq!(
+        on(
+            ChargeSide::Buyer,
+            ChargeType::Laga,
+            Some(ItemGroup::Fruit),
+            "2099-12-31"
+        ),
+        Some(rows[2].id)
+    );
+    assert_eq!(
+        on(
+            ChargeSide::Buyer,
+            ChargeType::Laga,
+            Some(ItemGroup::Vegetable),
+            "2026-10-10"
+        ),
+        None
+    );
+    assert_eq!(
+        on(
+            ChargeSide::Seller,
+            ChargeType::Commission,
+            None,
+            "0999-12-31"
+        ),
+        None,
+        "before the start"
+    );
 }
 
 #[test]

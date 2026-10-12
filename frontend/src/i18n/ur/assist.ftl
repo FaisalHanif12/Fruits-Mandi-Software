@@ -34,7 +34,7 @@ accountpicker-unknown-any = اس کوڈ کا کوئی کھاتہ نہیں
 # review: pending
 accountpicker-reserved = یہ کوڈ خاص کھاتوں کے لیے ہے۔ عام کھاتے کا یہ کوڈ نہیں ہو سکتا۔
 # review: pending
-accountpicker-inactive = { $name } ({ $code }) غیر فعال ہے۔ نئی اندراج میں اسے استعمال نہیں کیا جا سکتا۔
+accountpicker-inactive = { $name } ({ $code }) غیر فعال ہے۔ نئے اندراج میں اسے استعمال نہیں کیا جا سکتا۔
 # review: pending
 accountpicker-several = اس کوڈ کے ایک سے زیادہ کھاتے ہیں۔ ایک چنیں۔
 # review: pending
@@ -68,3 +68,15 @@ working-per-lot = { $value } فی { -lot } = { $result }
 working-manual = ہاتھ سے لکھی گئی رقم: { $result }
 # review: pending
 working-none = کوئی اصول نہیں لگا۔ رقم { -lot } پر لکھی جاتی ہے۔
+
+# A value typed on a sale line, and a per-lot charge that is not due on this line (PRD FR-7.43, FR-11.9).
+# review: pending
+working-manual-percent = ہاتھ سے لکھا گیا: { $base } × { $bps } ÷ 100 = { $result }
+# review: pending
+working-manual-per-unit = ہاتھ سے لکھا گیا: { $qty } × { $value } = { $result }
+# review: pending
+working-manual-per-unit-received = ہاتھ سے لکھا گیا: { $qty_received } { -nag } وصول × { $value } = { $result }
+# review: pending
+working-manual-per-lot = ہاتھ سے لکھا گیا: { $value } فی { -lot } = { $result }
+# review: pending
+working-per-lot-already-charged = { -lot } کا یہ چارج پہلی بکری میں لگ چکا ہے، اس لیے اب کچھ نہیں لگا۔

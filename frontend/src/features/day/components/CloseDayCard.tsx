@@ -1,7 +1,8 @@
 // Close the day (دن بند کریں; PRD FR-21.1): the date to close up to, a preview of what exists now
-// (how many days, whether the books balance, the cash in hand), and a confirm box that says exactly
-// what will happen (FR-7.8). The numbers are the backend's. A day is closed in order, so the
-// backend refuses a date that skips one and a trial balance that does not balance.
+// (the days, the entries in them, whether the books balance, the cash in hand), and a confirm box
+// that says exactly what will happen (FR-7.8). The numbers are the backend's. A day is closed in
+// order, so the backend refuses a date that is closed already, a date after today and a trial
+// balance that does not balance; each problem shows next to the date or as a notice.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
@@ -25,27 +26,48 @@ import { useCloseDays, useDayClosePreview } from '../hooks';
 
 const FIELD_PATHS = ['up_to'];
 
-export function CloseDayCard() {
+interface CloseDayCardProps {
+  /** False when every day up to today is closed already: there is nothing to ask or close. */
+  todayOpen: boolean;
+}
+
+export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
   const { l10n } = useLocalization();
   // The date starts as the oldest open day, which the backend names; the user may pick a later one
   // to close several days in order (PRD FR-21.1). A field the user emptied closes nothing.
   const [typedUpTo, setTypedUpTo] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const preview = useDayClosePreview(typedUpTo ?? '');
+  const preview = useDayClosePreview(typedUpTo ?? '', todayOpen);
   const close = useCloseDays();
-  const error = close.error === null ? null : uiErrorOf(close.error);
+  const closeError = close.error === null ? null : uiErrorOf(close.error);
+  const previewError = preview.isError ? uiErrorOf(preview.error) : null;
+  // A problem with the date (closed already, after today) shows under the date. Anything else the
+  // preview could not do (a busy database) is a state with a retry, so it is not told twice.
+  const previewIsAboutDate = previewError?.errors.some((item) => item.field === 'up_to') ?? false;
+  const error = closeError ?? (previewIsAboutDate ? previewError : null);
   const data = preview.data;
   const upTo = typedUpTo ?? (data === undefined ? '' : isoToDisplayDate(data.up_to));
-  const nothingToClose = data?.days === 0;
+  const nothingToClose = !todayOpen || data?.days === 0;
 
   const confirm = () => {
     setConfirming(false);
     close.mutate(upTo, {
       onSuccess: () => {
         showToast('success', l10n.getString('day-closed', { date: upTo }));
+        setTypedUpTo(null);
       },
     });
   };
+
+  if (!todayOpen) {
+    return (
+      <Card title={<Localized id="day-close-title" />}>
+        <Localized id="day-close-nothing">
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      </Card>
+    );
+  }
 
   return (
     <Card title={<Localized id="day-close-title" />}>
@@ -59,7 +81,7 @@ export function CloseDayCard() {
         </Field>
       </div>
       {preview.isPending && preview.fetchStatus !== 'idle' ? <LoadingState /> : null}
-      {preview.isError ? (
+      {preview.isError && !previewIsAboutDate ? (
         <ErrorState
           title={<Localized id="day-close-preview-failed" />}
           error={uiErrorOf(preview.error)}
@@ -71,11 +93,43 @@ export function CloseDayCard() {
       {data === undefined || preview.isError ? null : (
         <dl className="flex flex-col gap-2 type-body">
           <div className="flex flex-wrap items-baseline gap-x-3">
+            <Localized id="day-close-from">
+              <dt className="text-ink-muted" />
+            </Localized>
+            <dd>
+              <Num>{isoToDisplayDate(data.from_date)}</Num>
+            </dd>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-3">
             <Localized id="day-close-days">
               <dt className="text-ink-muted" />
             </Localized>
             <dd>
               <Num>{String(data.days)}</Num>
+            </dd>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <Localized id="day-close-entries">
+              <dt className="text-ink-muted" />
+            </Localized>
+            <dd>
+              <Num>{String(data.entries)}</Num>
+            </dd>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <Localized id="day-close-trial-dr">
+              <dt className="text-ink-muted" />
+            </Localized>
+            <dd>
+              <Num paisa={data.trial_dr_paisa} />
+            </dd>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <Localized id="day-close-trial-cr">
+              <dt className="text-ink-muted" />
+            </Localized>
+            <dd>
+              <Num paisa={data.trial_cr_paisa} />
             </dd>
           </div>
           <div className="flex flex-wrap items-baseline gap-x-3">
@@ -105,7 +159,7 @@ export function CloseDayCard() {
         <Button
           variant="primary"
           busy={close.isPending}
-          disabled={data === undefined || upTo === '' || nothingToClose}
+          disabled={data === undefined || preview.isError || upTo === '' || nothingToClose}
           onClick={() => {
             setConfirming(true);
           }}

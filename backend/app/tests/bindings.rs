@@ -17,7 +17,7 @@ use mandi_app_lib::commands::{auth, day, settings, translit};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::{accounts, masters, rules, search};
+use mandi_services::core::{accounts, masters, rules, search, vouchers};
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -125,6 +125,8 @@ const EXPECTED_FILES: &[&str] = &[
     "CardWarning.ts",
     "PartyCard.ts",
     "SearchGlobalInput.ts",
+    "AccountsRecentInput.ts",
+    "AccountsTouchInput.ts",
     "GlobalHit.ts",
     "ChargeSide.ts",
     "ChargeType.ts",
@@ -154,6 +156,25 @@ const EXPECTED_FILES: &[&str] = &[
     "ChargesInput.ts",
     "CreditLimitMode.ts",
     "OverridesSettings.ts",
+    "VoucherType.ts",
+    "VoucherMode.ts",
+    "AdvanceInput.ts",
+    "VoucherSaved.ts",
+    "AdvancesInput.ts",
+    "AdvancePreviewRow.ts",
+    "AdvancesPreview.ts",
+    "AdvanceRowResult.ts",
+    "AdvancesSaved.ts",
+    "VouchersListInput.ts",
+    "VoucherRow.ts",
+    "AssistAdvancesInput.ts",
+    "OpenAdvance.ts",
+    "LastAdvance.ts",
+    "AdvancesInfo.ts",
+    "DayClosePreviewInput.ts",
+    "DayClosePreview.ts",
+    "DayCloseInput.ts",
+    "DayReopenInput.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -226,6 +247,8 @@ fn export_bindings() {
     accounts::PartyCardInput::export_all(&cfg).unwrap();
     accounts::PartyCard::export_all(&cfg).unwrap();
     accounts::SearchGlobalInput::export_all(&cfg).unwrap();
+    accounts::AccountsRecentInput::export_all(&cfg).unwrap();
+    accounts::AccountsTouchInput::export_all(&cfg).unwrap();
     accounts::GlobalHit::export_all(&cfg).unwrap();
     rules::RuleInput::export_all(&cfg).unwrap();
     rules::RuleSaved::export_all(&cfg).unwrap();
@@ -237,6 +260,19 @@ fn export_bindings() {
     rules::ChargesSettings::export_all(&cfg).unwrap();
     rules::ChargesInput::export_all(&cfg).unwrap();
     rules::OverridesSettings::export_all(&cfg).unwrap();
+    vouchers::AdvanceInput::export_all(&cfg).unwrap();
+    vouchers::VoucherSaved::export_all(&cfg).unwrap();
+    vouchers::AdvancesInput::export_all(&cfg).unwrap();
+    vouchers::AdvancesPreview::export_all(&cfg).unwrap();
+    vouchers::AdvancesSaved::export_all(&cfg).unwrap();
+    vouchers::VouchersListInput::export_all(&cfg).unwrap();
+    vouchers::VoucherRow::export_all(&cfg).unwrap();
+    vouchers::AssistAdvancesInput::export_all(&cfg).unwrap();
+    vouchers::AdvancesInfo::export_all(&cfg).unwrap();
+    vouchers::DayClosePreviewInput::export_all(&cfg).unwrap();
+    vouchers::DayClosePreview::export_all(&cfg).unwrap();
+    vouchers::DayCloseInput::export_all(&cfg).unwrap();
+    vouchers::DayReopenInput::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();

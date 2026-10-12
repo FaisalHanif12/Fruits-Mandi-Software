@@ -15,6 +15,7 @@ use mandi_services::core::money::Paisa;
 use mandi_services::core::search::SearchScope;
 use mandi_services::testing::TestEnv;
 use mandi_services::{ServiceError, accounts, auth, coa, ledger, search};
+use std::time::Instant;
 use tempfile::TempDir;
 
 fn ready() -> (TempDir, TestEnv, auth::Actor) {
@@ -1104,4 +1105,257 @@ fn random_opening_changes_always_leave_the_books_balanced() {
     }
     ledger::verify_journal_chain(&env.ctx).unwrap();
     assert_chain_ok(&dir);
+}
+
+#[test]
+fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
+    // NFR-SCL-1 and NFR-SPD-3: the list returns every matching account up to 20,000 (no page
+    // cap), with balances from the journal. The target is 300 ms in a release build; this checks
+    // a generous bound in a debug build.
+    const BOUND_MS: u128 = 5_000;
+    let (dir, env, owner) = ready();
+    {
+        let conn = raw(&dir);
+        let control = |code: &str| -> i64 {
+            conn.query_row(
+                "SELECT id FROM account_controls WHERE code = ?1",
+                [code],
+                |r| r.get(0),
+            )
+            .unwrap()
+        };
+        let (buyers, sellers) = (control("0304"), control("03011"));
+        conn.execute_batch("BEGIN").unwrap();
+        let mut statement = conn
+            .prepare(
+                "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+                 VALUES (?1, ?2, ?3, ?4, 'ناصر', 'Nasir', 'ناصر', 'nasir', 'nsr')",
+            )
+            .unwrap();
+        for serial in 1..=8_999_i64 {
+            statement
+                .execute((buyers, format!("0304{serial:04}"), serial, "buyer"))
+                .unwrap();
+            statement
+                .execute((sellers, format!("03011{serial:04}"), serial, "seller"))
+                .unwrap();
+        }
+        // 2,000 more under the cash control, so the list holds more than 20,000.
+        let others = control("0101");
+        for serial in 2..=2_001_i64 {
+            statement
+                .execute((others, format!("0101{serial:04}"), serial, "other"))
+                .unwrap();
+        }
+        drop(statement);
+        // 2,000 postings on the first buyers, so some balances are not zero. Each is a posted
+        // entry: buyer debit 1,000 rupees against ابتدائی فرق.
+        let difference: i64 = conn
+            .query_row("SELECT id FROM accounts WHERE code = '06019999'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        for serial in 1..=2_000_i64 {
+            let buyer: i64 = conn
+                .query_row(
+                    "SELECT id FROM accounts WHERE code = ?1",
+                    [format!("0304{serial:04}")],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            conn.execute(
+                "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id) VALUES ('2026-09-01', 'general', 'voucher', ?1)",
+                [serial],
+            )
+            .unwrap();
+            let entry = conn.last_insert_rowid();
+            conn.execute(
+                "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, 100000, 0)",
+                (entry, buyer),
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa) VALUES (?1, 2, ?2, 0, 100000)",
+                (entry, difference),
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE journal_entries SET status = 'posted', total_paisa = 100000 WHERE id = ?1",
+                [entry],
+            )
+            .unwrap();
+        }
+        conn.execute_batch("COMMIT").unwrap();
+    }
+    let started = Instant::now();
+    let all = accounts::list(
+        &env.ctx,
+        &AccountsListInput {
+            filter: AccountFilter {
+                account_type: None,
+                text: String::new(),
+                include_inactive: true,
+            },
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    let took = started.elapsed();
+    eprintln!(
+        "{} accounts listed in {took:?} (debug build)",
+        all.rows.len()
+    );
+    assert!(took.as_millis() < BOUND_MS, "{took:?}");
+    // Every account is there: no cap. 2 x 8,999 and 2,000 made here, and the 16 system accounts.
+    assert_eq!(all.rows.len(), 2 * 8_999 + 2_000 + 16);
+    assert!(all.rows.len() > 20_000);
+    assert_eq!(all.count, u32::try_from(all.rows.len()).unwrap());
+    let codes: Vec<&str> = all.rows.iter().map(|r| r.code.as_str()).collect();
+    let mut sorted = codes.clone();
+    sorted.sort_unstable();
+    assert_eq!(codes, sorted, "by code");
+    let row = all.rows.iter().find(|r| r.code == "03040007").unwrap();
+    assert_eq!(
+        (row.balance.side, row.balance.amount_paisa),
+        (BalanceSide::Dr, rupees(1_000))
+    );
+    let row = all.rows.iter().find(|r| r.code == "03042001").unwrap();
+    assert_eq!(row.balance.side, BalanceSide::Zero);
+    // A page of it is the same rows with the same balances, with a short named query.
+    let page = accounts::list(
+        &env.ctx,
+        &AccountsListInput {
+            filter: AccountFilter {
+                account_type: Some(AccountType::Buyer),
+                text: String::new(),
+                include_inactive: true,
+            },
+            offset: 5,
+            limit: 3,
+        },
+    )
+    .unwrap();
+    assert_eq!(page.rows.len(), 3);
+    assert_eq!(
+        page.count, 9_001,
+        "the count is of all that match, not of the page"
+    );
+    assert!(
+        page.rows
+            .iter()
+            .all(|r| r.balance.amount_paisa == rupees(1_000)
+                || r.code.ends_with("9999")
+                || r.code.ends_with("0000"))
+    );
+    let _ = owner;
+}
+
+#[test]
+fn the_account_rows_say_whether_they_can_take_an_opening() {
+    // The grid leaves out the accounts that cannot take one, by the same named list the save
+    // uses (ERR_OPENING_NOT_ALLOWED).
+    let (_dir, env, owner) = ready();
+    let rahim = seller(&env, &owner, "رحیم", "Rahim");
+    let list = accounts::list(
+        &env.ctx,
+        &AccountsListInput {
+            filter: AccountFilter {
+                account_type: None,
+                text: String::new(),
+                include_inactive: true,
+            },
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    let flag = |code: &str| {
+        list.rows
+            .iter()
+            .find(|r| r.code == code)
+            .unwrap()
+            .can_take_opening
+    };
+    assert!(flag("01010001"), "روکڑ");
+    assert!(flag("06010001"), "ابتدائی سرمایہ");
+    assert!(flag(&rahim.code), "a seller");
+    assert!(!flag("04010001"), "income");
+    assert!(!flag("06019999"), "ابتدائی فرق");
+    assert!(!flag("03040000"), "نقدی منڈی");
+    assert!(!flag("03049999"), "پختہ کھاتہ (buyer)");
+    assert!(!flag("030119999"), "پختہ کھاتہ (seller)");
+    // The flag and the save agree for every account.
+    for row in &list.rows {
+        let tried = accounts::openings_save(
+            &env.ctx,
+            &owner,
+            &OpeningsInput {
+                lines: vec![line(&env, row.id, "01-09-2026", "100", "", false)],
+            },
+        );
+        let refused = matches!(&tried, Err(ServiceError::Rejected(items)) if items.iter().any(|i| i.code == ErrorCode::ErrOpeningNotAllowed));
+        assert_eq!(refused, !row.can_take_opening, "{}", row.code);
+        if tried.is_ok() {
+            // Put it back, so the next account's difference is not counted twice.
+            accounts::openings_save(
+                &env.ctx,
+                &owner,
+                &OpeningsInput {
+                    lines: vec![line(&env, row.id, "", "", "", false)],
+                },
+            )
+            .unwrap();
+        }
+    }
+}
+
+#[test]
+fn a_line_error_of_the_openings_preview_carries_its_values() {
+    // Code Standards 4.3: every error has a code and its values, also on a line of the grid, so
+    // an ERR_DATE_CLOSED row can show the closed-up-to date.
+    let (dir, env, owner) = ready();
+    raw(&dir)
+        .execute(
+            "UPDATE day_state SET closed_up_to_date = '2026-09-09' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+    let akram = buyer(&env, &owner, "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    let preview = accounts::openings_preview(
+        &env.ctx,
+        &OpeningsInput {
+            lines: vec![
+                line(&env, akram.id, "01-09-2026", "100", "", false),
+                line(&env, akram.id, "01-09-2026", "x", "", false),
+            ],
+        },
+    )
+    .unwrap();
+    let closed = preview.rows[0]
+        .errors
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrDateClosed)
+        .expect("a closed day error");
+    assert_eq!(closed.field, "lines[0].opening_date");
+    assert_eq!(
+        closed.values.get("closed_up_to"),
+        Some(&ErrorValue::Text("09-09-2026".into()))
+    );
+    // The same values arrive when the grid is saved and refused.
+    let error = accounts::openings_save(
+        &env.ctx,
+        &owner,
+        &OpeningsInput {
+            lines: vec![line(&env, akram.id, "01-09-2026", "100", "", false)],
+        },
+    )
+    .unwrap_err();
+    let ServiceError::Rejected(items) = error else {
+        panic!("not a rejection")
+    };
+    assert_eq!(
+        items[0].values.get("closed_up_to"),
+        Some(&ErrorValue::Text("09-09-2026".into()))
+    );
 }

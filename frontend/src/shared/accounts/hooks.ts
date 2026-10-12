@@ -148,7 +148,7 @@ export function accountSource(
     key: ['search', 'accounts', scope, String(controlId)],
     search: (text, limit) => searchAccounts({ scope, controlId, text, limit }),
     recent: () => searchAccountsRecent(scope, controlId),
-    touch: (id) => searchAccountsTouch(scope, id),
+    touch: (id) => searchAccountsTouch(scope, controlId, id),
   };
 }
 

@@ -336,7 +336,11 @@ rules-test-result = Result
 settings-tab-charges = Charges
 
 # review: pending
-settings-charges-help = These are the default rates. A rate for one party or { -qism-maal } is written as a rule.
+settings-charges-help = These are the default rates. A new rate applies from the day you change it; earlier days keep the old rate. A rate for one party or { -qism-maal } is written as a rule.
+
+# $date: DD-MM-YYYY. The day this rate started: a change made here starts on the day it is made.
+# review: pending
+settings-charges-from = This rate applies from { $date }.
 
 # review: pending
 settings-charges-seller = { -beopari } { -commission }
@@ -382,13 +386,13 @@ settings-load-charges-failed = The charges could not be opened
 
 # The dates another rule covers, in the overlap warning.
 # review: pending
-rules-overlap-dates = From { $from } to { $to }
+rules-dates = From { $from } to { $to }
 
 # review: pending
 rules-overlap-open = Open the rule
 
 # review: pending
-rules-overlap-dates-open = From { $from }, no end date
+rules-dates-open = From { $from }, no end date
 
 # The winner of a charge is a value typed on the sale line.
 # review: pending
@@ -409,3 +413,7 @@ rules-default-notice = This is a default rate. Change it in Settings, Charges.
 
 # review: pending
 rules-default-open-settings = Open Settings
+
+# An old default rate that ended when a new one started (a change in Settings, Charges).
+# review: pending
+rules-status-default-ended = Default, until { $to }

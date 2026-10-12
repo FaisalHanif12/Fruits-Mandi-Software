@@ -85,50 +85,53 @@ describe('searchAccounts', () => {
 });
 
 describe('recent accounts', () => {
-  const recentHit = (kind: string) => ({
+  const recentHit = (type: string) => ({
     id: 7,
-    kind,
     code: '030110001',
     name_ur: 'رحیم',
     name_en: 'Rahim',
     extra_ur: '',
     extra_en: '',
+    account_type: type,
+    control_id: 5,
     is_active: true,
   });
 
-  it('asks the recent list of the field: seller, buyer, or any account', async () => {
-    backend({ search_recent: [], accounts_balances: [] });
+  it('asks the recent list of the field: seller, buyer, any account, or one control', async () => {
+    backend({ search_accounts_recent: [], accounts_balances: [] });
     await searchAccountsRecent('seller', null);
     await searchAccountsRecent('buyer', null);
     await searchAccountsRecent('any', null);
-    expect(call.mock.calls.map((entry) => JSON.stringify(entry[1]))).toEqual([
-      '{"input":{"scope":"seller"}}',
-      '{"input":{"scope":"buyer"}}',
-      '{"input":{"scope":"any_account"}}',
+    await searchAccountsRecent('control', 3);
+    expect(call.mock.calls.map((entry) => JSON.stringify(entry))).toEqual([
+      '["search_accounts_recent",{"input":{"scope":"seller","control_id":null}}]',
+      '["search_accounts_recent",{"input":{"scope":"buyer","control_id":null}}]',
+      '["search_accounts_recent",{"input":{"scope":"any","control_id":null}}]',
+      '["search_accounts_recent",{"input":{"scope":"control","control_id":3}}]',
     ]);
   });
 
-  it('takes the type of an account from the list it came from', async () => {
+  it('takes the accounts as the backend sends them, with their balances read in one call', async () => {
     backend({
-      search_recent: [recentHit('seller')],
+      search_accounts_recent: [recentHit('seller')],
       accounts_balances: [{ id: 7, balance: balance(100, 'cr') }],
     });
     const hits = await searchAccountsRecent('any', null);
-    expect(hits[0]).toMatchObject({ id: 7, account_type: 'seller' });
+    expect(hits[0]).toMatchObject({ id: 7, account_type: 'seller', control_id: 5 });
     expect(hits[0]?.balance?.side).toBe('cr');
+    expect(call.mock.calls.filter((entry) => entry[0] === 'accounts_balances')).toHaveLength(1);
   });
 
-  it('a field of one control has no recent list, and nothing is asked', async () => {
-    backend({});
-    expect(await searchAccountsRecent('control', 3)).toEqual([]);
-    expect(await searchAccountsTouch('control', 7)).toBeNull();
-    expect(call).not.toHaveBeenCalled();
-  });
-
-  it('remembers a choice in the list of its field', async () => {
-    backend({ search_touch: null });
-    await searchAccountsTouch('buyer', 21);
-    expect(call).toHaveBeenCalledWith('search_touch', { input: { scope: 'buyer', id: 21 } });
+  it('remembers a choice in the list of its field, with the control for a field of one control', async () => {
+    backend({ search_accounts_touch: null });
+    await searchAccountsTouch('buyer', null, 21);
+    await searchAccountsTouch('control', 3, 22);
+    expect(call).toHaveBeenNthCalledWith(1, 'search_accounts_touch', {
+      input: { scope: 'buyer', control_id: null, id: 21 },
+    });
+    expect(call).toHaveBeenNthCalledWith(2, 'search_accounts_touch', {
+      input: { scope: 'control', control_id: 3, id: 22 },
+    });
   });
 });
 

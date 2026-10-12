@@ -14,7 +14,8 @@ export type AccountsListInput = {
    */
   offset: number;
   /**
-   * How many rows to return, at most 2,000. 0 gives the most.
+   * How many rows to return, at most 50,000 (2.5 times the 20,000 accounts of NFR-SCL-1). 0
+   * gives the most, so a list with no limit returns every matching account.
    */
   limit: number;
 };

@@ -19,10 +19,10 @@ export function OverlapItem({ overlap }: { overlap: RuleOverlap }) {
       {rule.data === undefined ? null : <RuleSummary rule={rule.data} />}
       <span className="text-ink-muted">
         {overlap.to_date === null
-          ? l10n.getString('rules-overlap-dates-open', {
+          ? l10n.getString('rules-dates-open', {
               from: isoToDisplayDate(overlap.from_date),
             })
-          : l10n.getString('rules-overlap-dates', {
+          : l10n.getString('rules-dates', {
               from: isoToDisplayDate(overlap.from_date),
               to: isoToDisplayDate(overlap.to_date),
             })}

@@ -2,7 +2,8 @@
 //! writes the user's own preference and nothing else (Code Standards B29).
 
 use mandi_services::core::accounts::{
-    AccountHit, GlobalHit, SearchAccountsInput, SearchGlobalInput,
+    AccountHit, AccountsRecentInput, AccountsTouchInput, GlobalHit, SearchAccountsInput,
+    SearchGlobalInput,
 };
 use mandi_services::core::search::{
     SearchHit, SearchMastersInput, SearchRecentInput, SearchTouchInput,
@@ -77,6 +78,34 @@ pub async fn search_global<R: tauri::Runtime>(
     run(app, "search_global", move |ctx| {
         let actor = auth::require(ctx)?;
         search::global(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// The last accounts used in an account field, then the rest (`Alt+Down`, PRD FR-7.41). Each is
+/// an `AccountHit` with its type; each control has its own list. Read only.
+#[tauri::command]
+pub async fn search_accounts_recent<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: AccountsRecentInput,
+) -> Result<Vec<AccountHit>, UiError> {
+    run(app, "search_accounts_recent", move |ctx| {
+        let actor = auth::require(ctx)?;
+        search::recent_accounts(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Records that an account was chosen in a field, so it comes first next time. Writes the
+/// user's own preference and nothing else. Errors: `ERR_NOT_FOUND`.
+#[tauri::command]
+pub async fn search_accounts_touch<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: AccountsTouchInput,
+) -> Result<(), UiError> {
+    run(app, "search_accounts_touch", move |ctx| {
+        let actor = auth::require(ctx)?;
+        search::touch_account(ctx, &actor, &input)
     })
     .await
 }

@@ -17,6 +17,7 @@ use mandi_domain::core::accounts::{
     AccountBalance, AccountHit, AccountScope, BUYER_CONTROL, Balance, GlobalHit, ResolveCodeInput,
     ResolveStatus, ResolvedCode, SELLER_CONTROL, SearchAccountsInput, SearchGlobalInput,
 };
+use mandi_domain::core::accounts::{AccountsRecentInput, AccountsTouchInput};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
@@ -256,14 +257,71 @@ fn check_scope(scope: AccountScope, control_id: Option<i64>) -> Result<(), Servi
     Ok(())
 }
 
-/// The recent list a scope uses: sellers and buyers have their own, every other scope shares the
-/// list of any account.
-fn usage_scope(scope: AccountScope) -> SearchScope {
-    match scope {
-        AccountScope::Seller => SearchScope::Seller,
-        AccountScope::Buyer => SearchScope::Buyer,
-        AccountScope::Any | AccountScope::Control => SearchScope::AnyAccount,
+/// The preference key of the recent list of an account field: sellers, buyers and any-account
+/// fields have their own, and each control has its own (`recent.control_<id>`).
+fn account_usage_key(scope: AccountScope, control_id: Option<i64>) -> String {
+    match (scope, control_id) {
+        (AccountScope::Seller, _) => pref_key(SearchScope::Seller),
+        (AccountScope::Buyer, _) => pref_key(SearchScope::Buyer),
+        (AccountScope::Control, Some(id)) => format!("recent.control_{id}"),
+        (AccountScope::Any | AccountScope::Control, _) => pref_key(SearchScope::AnyAccount),
     }
+}
+
+fn usage_by_key(ctx: &Context, actor: &Actor, key: &str) -> Result<Usage, ServiceError> {
+    let value = ctx.db.read(|conn| store::pref(conn, actor.user_id, key))?;
+    Ok(value.as_ref().map(parse_usage).unwrap_or_default())
+}
+
+/// The last accounts this user chose in a field, then the rest (`Alt+Down`, PRD FR-7.41). Each
+/// is an `AccountHit`, like a search result. Only reads.
+///
+/// # Errors
+/// `ERR_REQUIRED` on `control_id` for scope `control`; `ServiceError::Db`.
+pub fn recent_accounts(
+    ctx: &Context,
+    actor: &Actor,
+    input: &AccountsRecentInput,
+) -> Result<Vec<AccountHit>, ServiceError> {
+    check_scope(input.scope, input.control_id)?;
+    let index = current(ctx)?;
+    let usage = usage_by_key(
+        ctx,
+        actor,
+        &account_usage_key(input.scope, input.control_id),
+    )?;
+    Ok(index.recent_accounts(input.scope, input.control_id, &usage))
+}
+
+/// Records that an account was chosen in a field, so it comes first next time (PRD FR-7.41).
+/// Writes the user's own preference `recent.<list>` and nothing else (Code Standards B29).
+///
+/// # Errors
+/// `ERR_REQUIRED` on `control_id` for scope `control`; `ERR_NOT_FOUND` on `id` if there is no
+/// active account with it in the field's list.
+pub fn touch_account(
+    ctx: &Context,
+    actor: &Actor,
+    input: &AccountsTouchInput,
+) -> Result<(), ServiceError> {
+    check_scope(input.scope, input.control_id)?;
+    let index = current(ctx)?;
+    if !index.has_active_account(input.scope, input.control_id, input.id) {
+        return Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "id"));
+    }
+    let key = account_usage_key(input.scope, input.control_id);
+    ctx.db.write(|tx| {
+        let mut usage = store::pref(tx, actor.user_id, &key)?
+            .as_ref()
+            .map(parse_usage)
+            .unwrap_or_default();
+        usage.recent.retain(|r| *r != input.id);
+        usage.recent.insert(0, input.id);
+        usage.recent.truncate(RECENT_KEPT);
+        let count = usage.counts.entry(input.id).or_insert(0);
+        *count = count.saturating_add(1);
+        store::set_pref(tx, actor.user_id, &key, &usage_json(&usage))
+    })
 }
 
 /// The accounts of a field that match the typed text, best first: exact full code, exact serial
@@ -282,7 +340,11 @@ pub fn search_accounts(
     check_scope(input.scope, input.control_id)?;
     check_text(&input.text)?;
     let index = current(ctx)?;
-    let usage = usage_of(ctx, actor, usage_scope(input.scope))?;
+    let usage = usage_by_key(
+        ctx,
+        actor,
+        &account_usage_key(input.scope, input.control_id),
+    )?;
     let limit = usize::try_from(input.limit).unwrap_or(MAX_HITS);
     Ok(index.search_accounts(input.scope, input.control_id, &input.text, limit, &usage))
 }

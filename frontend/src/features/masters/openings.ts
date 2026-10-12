@@ -24,6 +24,8 @@ export interface OpeningBaseline {
   version: number;
   /** The opening debit of this seller counts as an advance (shown, and kept when he has a debit). */
   isAdvance: boolean;
+  /** The account can take an opening balance. If not, its row is locked and never a line. */
+  canTake: boolean;
 }
 
 /** An amount from the backend as the text the cell shows: nothing for no amount. */
@@ -41,8 +43,12 @@ export function openingTyped(
 ): Record<string, string> {
   return {
     [ACCOUNT_FIELD]: String(account.id),
-    [DATE_FIELD]:
-      account.opening_date === null ? commonDate : isoToDisplayDate(account.opening_date),
+    // An account that cannot take an opening has no date to type either (the backend says which).
+    [DATE_FIELD]: !account.can_take_opening
+      ? ''
+      : account.opening_date === null
+        ? commonDate
+        : isoToDisplayDate(account.opening_date),
     [DR_FIELD]: amountText(account.opening_dr_paisa, grouping),
     [CR_FIELD]: amountText(account.opening_cr_paisa, grouping),
   };
@@ -57,6 +63,7 @@ export function baselineOf(
     hasOpening: account.opening_date !== null,
     version: account.version,
     isAdvance: account.account_type === 'seller' && account.opening_is_advance,
+    canTake: account.can_take_opening,
   };
 }
 
@@ -79,7 +86,7 @@ export function changedLines(
   for (const row of rows) {
     const id = row.typed[ACCOUNT_FIELD];
     const base = id === undefined ? undefined : baselines.get(id);
-    if (id === undefined || base === undefined) continue;
+    if (id === undefined || base?.canTake !== true) continue;
     const dr = row.typed[DR_FIELD] ?? '';
     const cr = row.typed[CR_FIELD] ?? '';
     const date = row.typed[DATE_FIELD] ?? '';
@@ -128,7 +135,7 @@ export function problemsOfPreview(
       problems.push({
         rowId: line.rowId,
         field: gridField(error.field),
-        item: { code: error.code, field: error.field, values: {} },
+        item: { code: error.code, field: error.field, values: error.values },
       });
     }
   });

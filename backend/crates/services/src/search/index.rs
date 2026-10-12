@@ -535,6 +535,56 @@ impl Index {
             .collect()
     }
 
+    /// The list for `Alt+Down` in an account field (PRD FR-7.41): the accounts this user chose
+    /// last (up to 10, the latest first), then the rest in Urdu alphabetical order. Active
+    /// accounts only, at most [`MAX_FULL_LIST`].
+    pub fn recent_accounts(
+        &self,
+        scope: AccountScope,
+        control_id: Option<i64>,
+        usage: &Usage,
+    ) -> Vec<AccountHit> {
+        let (list, in_control) = self.account_list(scope, control_id);
+        let mut out: Vec<AccountHit> = Vec::new();
+        for id in &usage.recent {
+            if let Ok(at) = list.binary_search_by_key(id, |e| e.id)
+                && let Some(entry) = list.get(at)
+                && entry.hit.is_active
+                && in_control(entry)
+                && let Some(hit) = account_hit(entry)
+            {
+                out.push(hit);
+            }
+        }
+        let mut rest: Vec<&Arc<Entry>> = list
+            .iter()
+            .filter(|e| e.hit.is_active && in_control(e) && !usage.recent.contains(&e.id))
+            .collect();
+        rest.sort_by(|a, b| {
+            usage
+                .count(b.id)
+                .cmp(&usage.count(a.id))
+                .then_with(|| by_name(a, b))
+        });
+        out.extend(rest.into_iter().filter_map(|e| account_hit(e)));
+        out.truncate(MAX_FULL_LIST);
+        out
+    }
+
+    /// True if there is an active account with this id in the field's list.
+    pub fn has_active_account(
+        &self,
+        scope: AccountScope,
+        control_id: Option<i64>,
+        id: i64,
+    ) -> bool {
+        let (list, in_control) = self.account_list(scope, control_id);
+        list.binary_search_by_key(&id, |e| e.id)
+            .ok()
+            .and_then(|at| list.get(at))
+            .is_some_and(|e| e.hit.is_active && in_control(e))
+    }
+
     /// The accounts of a field with this serial, active or not (PRD FR-7.39). Used when a code
     /// is taken on `Enter`.
     pub fn accounts_with_serial(&self, scope: AccountScope, serial: u32) -> Vec<AccountHit> {

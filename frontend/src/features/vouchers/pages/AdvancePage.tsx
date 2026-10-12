@@ -24,6 +24,7 @@ import { Button, ErrorNotice, ErrorState, LoadingState, showToast } from '../../
 import { AdvanceForm } from '../components/AdvanceForm';
 import { VoucherList } from '../components/VoucherList';
 import {
+  hasSeller,
   isFilled,
   listed,
   newAdvanceDraft,
@@ -47,12 +48,28 @@ const FIELD_PATHS = [
   'narration',
 ];
 
+/** A field path as one voucher's form knows it: `lines[2].amount` is `amount`. */
+const LINE_PREFIX = /^lines\[\d+\]\./;
+
 /** The problems of a preview row, shaped like a refused save so the fields can show them. */
 function errorOfPreview(row: AdvancePreviewRow | null): UiError | null {
   if (row === null || row.errors.length === 0) return null;
   return {
     ok: false,
-    errors: row.errors.map((error) => ({ code: error.code, field: error.field, values: {} })),
+    errors: row.errors.map((error) => ({
+      code: error.code,
+      field: error.field.replace(LINE_PREFIX, ''),
+      values: error.values,
+    })),
+    ref: '',
+  };
+}
+
+/** The seller is required: a voucher without one is told at the field, without asking the backend. */
+function sellerRequired(): UiError {
+  return {
+    ok: false,
+    errors: [{ code: 'ERR_REQUIRED', field: 'seller_account_id', values: {} }],
     ref: '',
   };
 }
@@ -80,7 +97,7 @@ function AdvanceEditor({ today }: { today: string }) {
   // is kept for a newer question, the rows no longer line up, so only the total is shown.
   const rows = query.data !== undefined && !query.isPlaceholderData ? query.data.rows : null;
   const previewOf = (candidate: AdvanceDraft): AdvancePreviewRow | null => {
-    const index = settled.indexOf(candidate);
+    const index = settled.findIndex((one) => one === candidate);
     return rows === null || index < 0 ? null : (rows[index] ?? null);
   };
   const previews = new Map<string, AdvancePreviewRow>();
@@ -122,6 +139,10 @@ function AdvanceEditor({ today }: { today: string }) {
 
   const addToList = () => {
     if (!filled) return;
+    if (!hasSeller(draft)) {
+      setRefused(sellerRequired());
+      return;
+    }
     setList((current) => [...current, listed(draft)]);
     setDraft(nextAdvanceDraft(draft));
     setRefused(null);
@@ -134,9 +155,13 @@ function AdvanceEditor({ today }: { today: string }) {
   const submit = async (): Promise<boolean> => {
     if (saving) return false;
     if (pending.length === 0 && !filled) return true;
+    if (filled && !hasSeller(draft)) {
+      setRefused(sellerRequired());
+      return false;
+    }
     setSaving(true);
     try {
-      if (pending.length === 0) {
+      if (pending.length === 0 && hasSeller(draft)) {
         const saved = await save.mutateAsync(draft);
         setList((current) => [...current, { ...listed(draft), status: { kind: 'saved', saved } }]);
         setDraft(nextAdvanceDraft(draft));
@@ -152,6 +177,11 @@ function AdvanceEditor({ today }: { today: string }) {
       let refusals = 0;
       let lastSaved: VoucherSaved | null = null;
       for (const voucher of todo) {
+        if (!hasSeller(voucher.draft)) {
+          refusals += 1;
+          markRefused(voucher.id, sellerRequired());
+          continue;
+        }
         try {
           const saved = await save.mutateAsync(voucher.draft);
           markSaved(voucher.id, saved);

@@ -30,6 +30,18 @@ day-close-up-to = Close up to this date
 day-close-days = Days that will close
 
 # review: pending
+day-close-from = First open day
+
+# review: pending
+day-close-entries = Entries in these days
+
+# review: pending
+day-close-trial-dr = { -trial-balance }: total { -banaam }
+
+# review: pending
+day-close-trial-cr = { -trial-balance }: total { -jama }
+
+# review: pending
 day-close-trial = Difference in the { -trial-balance }
 
 # review: pending

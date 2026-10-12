@@ -106,6 +106,65 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     ).toBeDisabled();
   });
 
+  it('shows the first open day, the days, the entries, the trial balance totals and the cash', async () => {
+    await open();
+    const list = (await screen.findByText(named(message(language, 'day-close-from')))).closest(
+      'dl',
+    );
+    await waitFor(() => {
+      expect(visible(list?.textContent)).toContain('85,048');
+    });
+    const words = visible(list?.textContent);
+    expect(words).toContain('01-10-2026');
+    expect(words).toContain(message(language, 'day-close-entries'));
+    expect(words).toContain(message(language, 'day-close-trial-dr'));
+    expect(words).toContain(message(language, 'day-close-trial-cr'));
+    // The entries of the days, as the backend counts them.
+    expect(words).toContain('12');
+  });
+
+  it('a backend that finds no open day says so at the date field and the button stays off', async () => {
+    fakeDay();
+    vi.mocked(dayApi.dayClosePreview).mockRejectedValueOnce(
+      fail({ code: 'ERR_NOTHING_TO_CLOSE', field: 'up_to' }),
+    );
+    await renderApp('/day');
+    const upTo = await labelled(language, 'day-close-up-to');
+    await waitFor(() => {
+      expect(upTo).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(visible(document.body.textContent)).toContain(message(language, 'err-nothing-to-close'));
+    expect(
+      screen.getByRole('button', { name: named(message(language, 'day-close-button')) }),
+    ).toBeDisabled();
+  });
+
+  it('with every day up to today closed there is nothing to ask or close', async () => {
+    await open({ status: { today: '2026-10-10', closed_up_to: '2026-10-10', today_open: false } });
+    expect(await screen.findByText(message(language, 'day-close-nothing'))).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: named(message(language, 'day-close-button')) }),
+    ).toBeNull();
+    expect(dayApi.dayClosePreview).not.toHaveBeenCalled();
+  });
+
+  it('a date the preview refuses shows at the date field with the date from the backend', async () => {
+    const { user } = await open();
+    vi.mocked(dayApi.dayClosePreview).mockRejectedValueOnce(
+      fail({ code: 'ERR_DATE_CLOSED', field: 'up_to', values: { closed_up_to: '30-09-2026' } }),
+    );
+    const upTo = await labelled(language, 'day-close-up-to');
+    await user.clear(upTo);
+    await user.keyboard('15-09-2026');
+    await waitFor(() => {
+      expect(upTo).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(visible(document.body.textContent)).toContain('30-09-2026');
+    expect(
+      screen.getByRole('button', { name: named(message(language, 'day-close-button')) }),
+    ).toBeDisabled();
+  });
+
   it('a close asks first, says exactly what will happen, then closes and the status bar follows', async () => {
     const { user } = await open();
     expect(statusBar()).toContain(message(language, 'layout-status-day-open'));

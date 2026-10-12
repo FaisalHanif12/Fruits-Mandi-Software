@@ -57,6 +57,9 @@ pub struct Posted {
     pub total: Paisa,
     /// The keyed hash that chains it to the entry before it.
     pub chain_hash: String,
+    /// For a reversal: how many advance matching rows and bill matching rows it switched off.
+    /// The caller writes them into its audit row (Code Standards S7).
+    pub matching_off: (usize, usize),
 }
 
 /// Turns a refused entry into the error the user sees. `Unbalanced` is a bug signal: it is
@@ -188,6 +191,7 @@ pub fn post(
         entry_id,
         total: event.entry.total(),
         chain_hash,
+        matching_off: (0, 0),
     })
 }
 
@@ -236,6 +240,10 @@ pub fn reverse(
     let mirror = build_reversal(&original);
     let source_type = SourceType::parse(&stored.source_type)
         .ok_or_else(|| ServiceError::Data(format!("source type {}", stored.source_type)))?;
+    // Matching that rests on a line of the reversed entry no longer holds (PRD 12.9, Architecture
+    // 12). It is switched off here, with who and when; matching again, oldest first, is done by
+    // the matching plan, which does not exist yet.
+    let matching_off = repo::deactivate_matching(tx, entry_id, user_id, &ctx.now_text())?;
     let event = PostingEvent {
         date,
         posting_type: PostingType::Reversal,
@@ -245,7 +253,9 @@ pub fn reverse(
         reverses: Some(EntryId::new(entry_id)),
         entry: mirror,
     };
-    post(ctx, tx, user_id, &event)
+    let mut posted = post(ctx, tx, user_id, &event)?;
+    posted.matching_off = matching_off;
+    Ok(posted)
 }
 
 /// Checks the whole journal chain. Returns the id of the first entry that does not match as a
@@ -358,54 +368,89 @@ pub struct TrialBalance {
 /// `ServiceError::Data` if the totals differ; `ServiceError::Db`.
 pub fn trial_balance(ctx: &Context, as_of: Option<&str>) -> Result<TrialBalance, ServiceError> {
     check_iso_date(as_of)?;
-    ctx.db.read(|conn| {
-        let totals = balances_by_account(conn, as_of)?;
-        let mut rows = Vec::new();
-        let (mut total_dr, mut total_cr) = (Paisa::ZERO, Paisa::ZERO);
-        for account in account_repo::tree_accounts(conn)? {
-            let Some(found) = totals.get(&account.id) else {
-                continue;
-            };
-            let balance = balance_of(*found)?;
-            match balance.side {
-                BalanceSide::Dr => {
-                    total_dr = total_dr
-                        .checked_add(balance.amount_paisa)
-                        .map_err(money_error)?;
-                }
-                BalanceSide::Cr => {
-                    total_cr = total_cr
-                        .checked_add(balance.amount_paisa)
-                        .map_err(money_error)?;
-                }
-                BalanceSide::Zero => {}
+    ctx.db.read(|conn| trial_balance_in(conn, as_of))
+}
+
+/// The trial balance inside the caller's connection (a day close checks it inside its own
+/// transaction).
+///
+/// # Errors
+/// As [`trial_balance`].
+pub fn trial_balance_in(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> Result<TrialBalance, ServiceError> {
+    let trial = trial_balance_unchecked(conn, as_of)?;
+    if trial.total_dr != trial.total_cr {
+        tracing::error!(
+            dr = trial.total_dr.as_paisa(),
+            cr = trial.total_cr.as_paisa(),
+            "the trial balance does not balance"
+        );
+        return Err(ServiceError::Data(format!(
+            "the trial balance does not balance: {} against {}",
+            trial.total_dr.as_paisa(),
+            trial.total_cr.as_paisa()
+        )));
+    }
+    Ok(trial)
+}
+
+/// The trial balance with its two totals, whether or not they are equal. A day close uses this
+/// and refuses the close itself (`ERR_TRIAL_NOT_BALANCED`).
+///
+/// # Errors
+/// `ServiceError::Db`; `ERR_OVERFLOW`.
+pub fn trial_balance_unchecked(
+    conn: &Connection,
+    as_of: Option<&str>,
+) -> Result<TrialBalance, ServiceError> {
+    let totals = balances_by_account(conn, as_of)?;
+    let mut rows = Vec::new();
+    let (mut total_dr, mut total_cr) = (Paisa::ZERO, Paisa::ZERO);
+    for account in account_repo::tree_accounts(conn)? {
+        let Some(found) = totals.get(&account.id) else {
+            continue;
+        };
+        let balance = balance_of(*found)?;
+        match balance.side {
+            BalanceSide::Dr => {
+                total_dr = total_dr
+                    .checked_add(balance.amount_paisa)
+                    .map_err(money_error)?;
             }
-            rows.push(TrialRow {
-                account_id: account.id,
-                code: account.code,
-                name_ur: account.name_ur,
-                name_en: account.name_en,
-                balance,
-            });
+            BalanceSide::Cr => {
+                total_cr = total_cr
+                    .checked_add(balance.amount_paisa)
+                    .map_err(money_error)?;
+            }
+            BalanceSide::Zero => {}
         }
-        if total_dr != total_cr {
-            tracing::error!(
-                dr = total_dr.as_paisa(),
-                cr = total_cr.as_paisa(),
-                "the trial balance does not balance"
-            );
-            return Err(ServiceError::Data(format!(
-                "the trial balance does not balance: {} against {}",
-                total_dr.as_paisa(),
-                total_cr.as_paisa()
-            )));
-        }
-        Ok(TrialBalance {
-            rows,
-            total_dr,
-            total_cr,
-        })
+        rows.push(TrialRow {
+            account_id: account.id,
+            code: account.code,
+            name_ur: account.name_ur,
+            name_en: account.name_en,
+            balance,
+        });
+    }
+    Ok(TrialBalance {
+        rows,
+        total_dr,
+        total_cr,
     })
+}
+
+/// A balance as a signed amount: debit positive, credit negative. For checked sums of
+/// balances; the screen never sees it.
+///
+/// # Errors
+/// `ERR_OVERFLOW` for an amount that cannot be negated.
+pub(crate) fn signed(balance: Balance) -> Result<Paisa, ServiceError> {
+    match balance.side {
+        BalanceSide::Cr => balance.amount_paisa.checked_neg().map_err(money_error),
+        _ => Ok(balance.amount_paisa),
+    }
 }
 
 /// One line of an account ledger with the balance after it.

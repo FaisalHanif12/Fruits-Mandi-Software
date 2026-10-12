@@ -153,11 +153,36 @@ err-code-reserved = یہ کوڈ ایپ کے اپنے کھاتوں کے لیے ر
 err-opening-both-sides = ابتدائی { -banaam } یا ابتدائی { -jama } لکھیں، دونوں نہیں۔
 # PRD FR-10.2, FR-15.8.
 # review: pending
-err-advance-not-seller = ابتدائی { -peshgi-khata } صرف { -beopari } کے ابتدائی { -banaam } پر لگ سکتی ہے۔
+err-advance-not-seller = ابتدائی { -peshgi } صرف { -beopari } کے ابتدائی { -banaam } پر لگ سکتی ہے۔
 
 # PRD FR-10.9, FR-6.5, FR-13.5. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one.
 # review: pending
 err-opening-not-allowed = اس کھاتے میں ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -pukhta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔
+
+## Advances and closing days (plan 10).
+
+# PRD FR-15.4. An advance goes to a seller, never to Pukhta Khata.
+# review: pending
+err-not-a-seller = یہ { -beopari } کا کھاتہ نہیں۔ { -peshgi } صرف { -beopari } کو دی جا سکتی ہے، { -pukhta-khata } کو نہیں۔
+# PRD FR-10.2. Hidden from pickers.
+# review: pending
+err-account-inactive = یہ کھاتہ بند ہے اور نئے اندراج میں استعمال نہیں ہو سکتا۔ کوئی دوسرا کھاتہ چنیں۔
+# PRD FR-21.2.
+# review: pending
+err-reason-required = وجہ لکھنا ضروری ہے۔
+# NFR-REL-8. Nothing was closed.
+# review: pending
+err-trial-not-balanced = { -trial-balance } میں فرق ہے، اس لیے دن بند نہیں ہو سکتا۔ پہلے { -trial-balance } دیکھ کر فرق ٹھیک کریں۔
+# PRD FR-21.2.
+# review: pending
+err-day-not-closed = یہ دن بند ہی نہیں، اس لیے کھولنے کے لیے کچھ نہیں۔ بند دن کی تاریخ لکھیں۔
+# PRD FR-17.6.
+# review: pending
+err-month-closed = اس تاریخ کا مہینہ بند ہو چکا ہے۔ دن کھولنے سے پہلے مہینے کی بندش واپس کریں۔
+
+# PRD FR-21.1. Every day up to today is closed already.
+# review: pending
+err-nothing-to-close = آج تک کے سب دن پہلے ہی بند ہیں، اس لیے بند کرنے کے لیے کوئی دن نہیں۔
 
 ## Commission rules (plan 09).
 

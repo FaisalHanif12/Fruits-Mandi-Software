@@ -3,11 +3,14 @@
 
 use mandi_db::accounts as account_repo;
 use mandi_db::ledger as ledger_repo;
+use mandi_db::vouchers as voucher_repo;
 use mandi_domain::core::accounts::{
     AccountRow, AccountType, Balance, BalanceSide, CardWarning, CardWarningKind, PartyCard,
+    SELLER_CONTROL,
 };
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::vouchers::{AdvancesInfo, OpenAdvance};
 
 use crate::context::Context;
 use crate::error::{ServiceError, money_error};
@@ -140,6 +143,67 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             credit_used,
             advance_open,
             warnings,
+        })
+    })
+}
+
+/// A seller's open advances and his last پیشگی voucher, for the card in the پیشگی screen (PRD
+/// FR-7.60). Each open advance is a posted advance line (a پیشگی voucher or an opening debit
+/// marked as an advance) with what has been adjusted against it; only lines with something left
+/// are listed, oldest first. The total equals the open advance on the party card. `last` is the
+/// last saved پیشگی voucher: an opening advance has no voucher number, so it is never "last".
+/// Only reads.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` and `ERR_NOT_A_SELLER` on `seller_id`; `ServiceError::Data` if more was
+/// adjusted against an advance than was given.
+pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceError> {
+    ctx.db.read(|conn| {
+        let facts = account_repo::facts(conn, seller_id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "seller_id"))?;
+        if facts.control_code != SELLER_CONTROL || facts.is_pukhta_khata {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrNotASeller,
+                "seller_id",
+            ));
+        }
+        let mut open = Vec::new();
+        let mut total = Paisa::ZERO;
+        for line in voucher_repo::advance_lines(conn, seller_id)? {
+            let given = paisa(line.given_paisa)?;
+            let adjusted = paisa(line.adjusted_paisa)?;
+            let left = given.checked_sub(adjusted).map_err(money_error)?;
+            if left.is_negative() {
+                tracing::error!(
+                    seller_id,
+                    "more was adjusted against an advance than was given"
+                );
+                return Err(ServiceError::Data(format!(
+                    "account {seller_id}: more adjusted than given as advance"
+                )));
+            }
+            if left == Paisa::ZERO {
+                continue;
+            }
+            total = total.checked_add(left).map_err(money_error)?;
+            open.push(OpenAdvance {
+                // Only a پیشگی voucher or an opening debit makes an advance line.
+                source: if line.voucher_number.is_some() {
+                    "voucher".to_owned()
+                } else {
+                    "opening".to_owned()
+                },
+                voucher_number: line.voucher_number,
+                entry_date: line.entry_date,
+                given_paisa: given,
+                adjusted_paisa: adjusted,
+                open_paisa: left,
+            });
+        }
+        Ok(AdvancesInfo {
+            open,
+            open_paisa: total,
+            last: voucher_repo::last_advance(conn, seller_id)?,
         })
     })
 }

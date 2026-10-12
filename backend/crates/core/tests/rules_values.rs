@@ -91,9 +91,14 @@ fn rule_values_follow_the_method() {
         value(ChargeMethod::PerUnit, "8").unwrap(),
         ChargeValue::PerUnit(Paisa::from_rupees(8).unwrap())
     );
+    // Zero per نگ is allowed: it is how the Owner says "no لاگا for this buyer".
     assert_eq!(
-        value(ChargeMethod::PerUnit, "0").unwrap_err().code,
-        ErrorCode::ErrMustBeMoreThanZero
+        value(ChargeMethod::PerUnit, "0").unwrap(),
+        ChargeValue::PerUnit(Paisa::ZERO)
+    );
+    assert_eq!(
+        value(ChargeMethod::PerUnit, "-1").unwrap_err().code,
+        ErrorCode::ErrNegativeNotAllowed
     );
     assert_eq!(
         value(ChargeMethod::PerUnit, "8.5").unwrap_err().code,
@@ -210,7 +215,7 @@ proptest! {
             }
             match ok.value {
                 ChargeValue::Percent(bps) => prop_assert!(bps.get() <= 10_000),
-                ChargeValue::PerUnit(p) => prop_assert!(p > Paisa::ZERO && p.as_paisa() % 100 == 0),
+                ChargeValue::PerUnit(p) => prop_assert!(!p.is_negative() && p.as_paisa() % 100 == 0),
                 ChargeValue::PerLot(p) => prop_assert!(!p.is_negative() && p.as_paisa() % 100 == 0),
             }
         }

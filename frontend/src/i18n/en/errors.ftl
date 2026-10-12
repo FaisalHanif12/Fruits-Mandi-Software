@@ -161,6 +161,31 @@ err-advance-not-seller = An opening Advance can only be set on the opening Debit
 # review: pending
 err-opening-not-allowed = This account cannot have an opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -pukhta-khata } and Opening Difference cannot take one.
 
+## Advances and closing days (plan 10).
+
+# PRD FR-15.4. An advance goes to a seller, never to Pukhta Khata.
+# review: pending
+err-not-a-seller = This is not a { -beopari } account. An { -peshgi } can only be given to a { -beopari }, not to { -pukhta-khata }.
+# PRD FR-10.2. Hidden from pickers.
+# review: pending
+err-account-inactive = This account is inactive and cannot be used in a new entry. Choose another account.
+# PRD FR-21.2.
+# review: pending
+err-reason-required = A reason is required.
+# NFR-REL-8. Nothing was closed.
+# review: pending
+err-trial-not-balanced = The { -trial-balance } has a difference, so the day cannot be closed. Check the { -trial-balance } and fix the difference first.
+# PRD FR-21.2.
+# review: pending
+err-day-not-closed = This day is not closed, so there is nothing to reopen. Enter the date of a closed day.
+# PRD FR-17.6.
+# review: pending
+err-month-closed = The month of this date is closed. Reverse the month close before reopening the day.
+
+# PRD FR-21.1. Every day up to today is closed already.
+# review: pending
+err-nothing-to-close = Every day up to today is already closed, so there is no day to close.
+
 ## Commission rules (plan 09).
 
 # PRD 11.2, 11.3. The field says which part.

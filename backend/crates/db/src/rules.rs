@@ -11,10 +11,9 @@ use mandi_core::rules::{
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
-/// The first day of the seeded defaults: early enough for any date the app accepts.
-pub const DEFAULT_RULES_FROM: &str = "2000-01-01";
-/// The settings key that names the three default rules.
-pub const DEFAULTS_KEY: &str = "charge_defaults";
+/// The first day of the seeded defaults: the earliest date the app accepts (`BusinessDate`), so
+/// a typed year can never fall before the defaults and make a commission silently 0.
+pub const DEFAULT_RULES_FROM: &str = "1000-01-01";
 
 const ROW_SELECT: &str = "SELECT r.id, r.version, r.side, r.charge_type,
         r.account_id, a.code, a.name_ur, a.name_en,
@@ -184,11 +183,27 @@ pub struct NewRule {
 /// # Errors
 /// Any SQLite error (a CHECK that the checks above should have caught).
 pub fn insert(conn: &Connection, rule: &NewRule, user_id: i64, now: &str) -> rusqlite::Result<i64> {
+    insert_with_version(conn, rule, 1, user_id, now)
+}
+
+/// Adds a rule with a chosen starting version and returns its id. A default that starts after an
+/// older one gets a version above anything the screen could still hold, so a stale Settings
+/// form never matches the new row (money review of the dated defaults).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn insert_with_version(
+    conn: &Connection,
+    rule: &NewRule,
+    version: i64,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO charge_rules (created_at, created_by, updated_at, updated_by, side, charge_type,
              account_id, item_id, item_group, method, value_bps, value_paisa, from_date, to_date,
-             is_active, note)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+             is_active, note, version)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
         params![
             now,
             user_id,
@@ -204,6 +219,7 @@ pub fn insert(conn: &Connection, rule: &NewRule, user_id: i64, now: &str) -> rus
             rule.to_date,
             rule.is_active,
             rule.note,
+            version,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -383,25 +399,94 @@ pub fn item_group_of(conn: &Connection, item_id: i64) -> rusqlite::Result<Option
     Ok(text.and_then(|t| ItemGroup::parse(&t)))
 }
 
-/// The ids of the three default rules, from the settings: seller commission, buyer commission,
-/// لاگا on fruit.
+/// The default rule in force on a day: the row of the default chain (PRD 4.2, see
+/// `mandi_core::rules::is_default_scope`) whose dates cover `date` (`YYYY-MM-DD`). `group` is the
+/// item group of the buyer's لاگا default, and `None` for the two commissions.
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn default_ids(conn: &Connection) -> rusqlite::Result<Option<(i64, i64, i64)>> {
-    let text: Option<String> = conn
-        .query_row(
-            "SELECT value_json FROM settings WHERE key = ?1",
-            [DEFAULTS_KEY],
-            |r| r.get(0),
-        )
-        .optional()?;
-    Ok(text.and_then(|text| {
-        let value: serde_json::Value = serde_json::from_str(&text).ok()?;
-        Some((
-            value.get("seller_commission")?.as_i64()?,
-            value.get("buyer_commission")?.as_i64()?,
-            value.get("laga_fruit")?.as_i64()?,
-        ))
-    }))
+pub fn default_in_force(
+    conn: &Connection,
+    side: ChargeSide,
+    charge: ChargeType,
+    group: Option<ItemGroup>,
+    date: &str,
+) -> rusqlite::Result<Option<RuleRow>> {
+    conn.query_row(
+        &format!(
+            "{ROW_SELECT} WHERE r.is_active = 1 AND r.side = ?1 AND r.charge_type = ?2
+               AND r.account_id IS NULL AND r.item_id IS NULL AND r.item_group IS ?3
+               AND r.from_date <= ?4 AND (r.to_date IS NULL OR r.to_date >= ?4)
+             ORDER BY r.from_date DESC, r.id DESC LIMIT 1"
+        ),
+        params![
+            side.as_str(),
+            charge.as_str(),
+            group.map(ItemGroup::as_str),
+            date
+        ],
+        row_from,
+    )
+    .optional()
+}
+
+/// Ends a rule on a day (`YYYY-MM-DD`), keeping everything else. Returns false if no row has this
+/// id and version.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn set_to_date(
+    conn: &Connection,
+    id: i64,
+    version: i64,
+    to_date: &str,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<bool> {
+    let changed = conn.execute(
+        "UPDATE charge_rules SET to_date = ?3, updated_at = ?4, updated_by = ?5, version = version + 1
+         WHERE id = ?1 AND version = ?2",
+        params![id, version, to_date, now, user_id],
+    )?;
+    Ok(changed == 1)
+}
+
+/// True if the rules table has any row of the default chain (the seed adds them once).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn has_defaults(conn: &Connection) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM charge_rules
+                        WHERE account_id IS NULL AND item_id IS NULL
+                          AND ((charge_type = 'commission' AND item_group IS NULL) OR (side = 'buyer' AND charge_type = 'laga' AND item_group = 'fruit')))",
+        [],
+        |r| r.get(0),
+    )
+}
+
+/// The first day, after `date`, on which a row of this default starts (`YYYY-MM-DD`). It exists
+/// only if the computer's clock was moved back after a change (NFR-REL-11).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn default_starting_after(
+    conn: &Connection,
+    side: ChargeSide,
+    charge: ChargeType,
+    group: Option<ItemGroup>,
+    date: &str,
+) -> rusqlite::Result<Option<String>> {
+    conn.query_row(
+        "SELECT MIN(from_date) FROM charge_rules
+         WHERE is_active = 1 AND side = ?1 AND charge_type = ?2
+           AND account_id IS NULL AND item_id IS NULL AND item_group IS ?3 AND from_date > ?4",
+        params![
+            side.as_str(),
+            charge.as_str(),
+            group.map(ItemGroup::as_str),
+            date
+        ],
+        |r| r.get(0),
+    )
 }

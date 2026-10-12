@@ -11,6 +11,8 @@ Business rules as pure functions (Code Standards B4). Never touches the database
 
 | Module | What it does |
 |---|---|
+| `rules` | Which charge rule wins (PRD 11.3): `RuleSet`, `resolve`, `charge_amount` with its working, the one `newer_key` order. |
+| `ledger` | Journal entries as pure functions: `build_entry`, `build_reversal`, `build_opening` (PRD FR-6.2, FR-6.3, FR-10.9). |
 | `auth::validate` | Sign-in name, password, display name, idle lock minutes, text size, last screen (PRD FR-8, NFR-SEC-1). |
 | `auth::lockout` | The lockout steps: 5 wrong tries lock 60 seconds, 10 lock 300, 15, 20, 25 ... lock 900 (PRD FR-8.2). |
 | `auth::recovery` | The Owner recovery code: 16 characters from an alphabet without look-alikes, shown as `XXXX-XXXX-XXXX-XXXX` (NFR-SEC-12). |

@@ -10,7 +10,14 @@ import * as vouchersApi from '../../src/features/vouchers/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
-import { account, balance, fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
+import {
+  ZERO,
+  account,
+  balance,
+  fakeAccountSearch,
+  fakeAccounts,
+  money,
+} from '../helpers/accounts';
 import {
   fail,
   healthyBackend,
@@ -179,7 +186,7 @@ describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
     });
     const sent = vi.mocked(vouchersApi.vouchersSaveAdvance).mock.calls[0]?.[0];
     expect(sent?.amount).toBe('5000');
-    expect(sent?.seller?.id).toBe(31);
+    expect(sent?.seller.id).toBe(31);
     expect(sent?.mode).toBe('cash');
     expect(sent?.date).toBe('10-10-2026');
     expect(sent?.narration).toBe('x');
@@ -226,6 +233,77 @@ describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
       message(language, 'err-decimals-not-allowed'),
     );
     expect(amount.value).toBe('50.5');
+  });
+
+  it('an advance given with the opening balance is listed as that, not as a voucher number', async () => {
+    const { user } = await open();
+    vi.mocked(vouchersApi.assistAdvances).mockResolvedValue({
+      open: [
+        {
+          source: 'opening',
+          voucher_number: null,
+          entry_date: '2026-08-31',
+          given_paisa: money(15000),
+          adjusted_paisa: money(0),
+          open_paisa: money(15000),
+        },
+      ],
+      open_paisa: money(15000),
+      last: null,
+    });
+    await pickSeller(user, language, 'rahim', '030110001');
+    const title = await screen.findByRole('heading', {
+      name: named(message(language, 'vouchers-advances-title')),
+    });
+    const panel = visible(title.closest('section')?.textContent);
+    expect(panel).toContain(message(language, 'vouchers-source-opening'));
+    expect(panel).toContain('31-08-2026');
+    expect(panel).not.toContain(message(language, 'vouchers-number-advance', { number: '0' }));
+  });
+
+  it("a refused date in the preview shows the date of the backend's own values at the date field", async () => {
+    const { user } = await open();
+    vi.mocked(vouchersApi.vouchersPreviewAdvances).mockImplementation((drafts) =>
+      Promise.resolve({
+        rows: drafts.map(() => ({
+          account: null,
+          errors: [
+            {
+              code: 'ERR_DATE_CLOSED' as const,
+              field: 'lines[0].date',
+              values: { closed_up_to: '09-10-2026' },
+            },
+          ],
+          amount_paisa: money(0),
+          current_balance: ZERO,
+          new_balance: ZERO,
+        })),
+        total_paisa: money(0),
+      }),
+    );
+    await pickSeller(user, language, 'rahim', '030110001');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('5000');
+    const date = await labelled(language, 'vouchers-field-date');
+    await waitFor(() => {
+      expect(date).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(visible(document.body.textContent)).toContain('09-10-2026');
+  });
+
+  it('an amount with no seller is told at the seller field, and the backend is not asked', async () => {
+    const { user } = await open();
+    const seller = await dropdown(language, 'vouchers-field-seller');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('5000');
+    press('F10');
+    await waitFor(() => {
+      expect(seller).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(vouchersApi.vouchersSaveAdvance).not.toHaveBeenCalled();
+    expect(vouchersApi.vouchersPreviewAdvances).not.toHaveBeenCalled();
+    // Nothing typed is lost (the field shows its thousands separator).
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('5,000');
   });
 
   it('the preview points at a bad amount before it is saved', async () => {

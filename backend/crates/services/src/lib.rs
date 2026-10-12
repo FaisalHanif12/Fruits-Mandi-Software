@@ -21,6 +21,7 @@ pub mod spelling;
 mod store;
 pub mod testing;
 pub mod translit;
+pub mod vouchers;
 
 pub use context::{Context, Parts};
 pub use error::{Rejection, ServiceError};

@@ -68,3 +68,15 @@ working-per-lot = { $value } per { -lot } = { $result }
 working-manual = Amount typed by hand: { $result }
 # review: pending
 working-none = No rule applies. The amount is typed on the { -lot }.
+
+# A value typed on a sale line, and a per-lot charge that is not due on this line (PRD FR-7.43, FR-11.9).
+# review: pending
+working-manual-percent = Typed by hand: { $base } × { $bps } ÷ 100 = { $result }
+# review: pending
+working-manual-per-unit = Typed by hand: { $qty } × { $value } = { $result }
+# review: pending
+working-manual-per-unit-received = Typed by hand: { $qty_received } { -nag } received × { $value } = { $result }
+# review: pending
+working-manual-per-lot = Typed by hand: { $value } per { -lot } = { $result }
+# review: pending
+working-per-lot-already-charged = This charge is made once per { -lot } and was made in the first sale, so nothing is added now.

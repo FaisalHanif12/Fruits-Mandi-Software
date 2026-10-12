@@ -658,3 +658,35 @@ pub fn is_reversed(conn: &Connection, entry_id: i64) -> rusqlite::Result<bool> {
         .optional()?
         .is_some())
 }
+
+/// Switches off the matching rows that point at a line of this entry, who and when (Code
+/// Standards B17: matching rows are never deleted). Called when the entry is reversed: a
+/// payment or an advance adjustment that rested on a reversed line no longer holds (PRD 12.9).
+/// Returns how many advance rows and bill rows were switched off.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn deactivate_matching(
+    conn: &Connection,
+    entry_id: i64,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<(usize, usize)> {
+    let advances = conn.execute(
+        "UPDATE advance_allocations SET is_active = 0, undone_at = ?2, undone_by = ?3,
+             updated_at = ?2, updated_by = ?3, version = version + 1
+         WHERE is_active = 1
+           AND (advance_line_id IN (SELECT id FROM journal_lines WHERE entry_id = ?1)
+                OR credit_line_id IN (SELECT id FROM journal_lines WHERE entry_id = ?1))",
+        params![entry_id, now, user_id],
+    )?;
+    let bills = conn.execute(
+        "UPDATE bill_allocations SET is_active = 0, undone_at = ?2, undone_by = ?3,
+             updated_at = ?2, updated_by = ?3, version = version + 1
+         WHERE is_active = 1
+           AND (bill_line_id IN (SELECT id FROM journal_lines WHERE entry_id = ?1)
+                OR payment_line_id IN (SELECT id FROM journal_lines WHERE entry_id = ?1))",
+        params![entry_id, now, user_id],
+    )?;
+    Ok((advances, bills))
+}

@@ -64,6 +64,11 @@ export function seededRules(): RuleRow[] {
   ];
 }
 
+/** The day of the tests (the fake day state of tests/helpers/app). */
+const TODAY = '2026-10-10';
+const DAY_BEFORE_TODAY = '2026-10-09';
+const DEFAULT_KEYS = ['seller_commission', 'buyer_commission', 'laga_fruit'] as const;
+
 export interface FakeRules {
   rows: RuleRow[];
   /** What the next save answers with, besides the saved rule. */
@@ -81,9 +86,27 @@ export function fakeRules(rows: RuleRow[] = seededRules()): FakeRules {
     rows: [...rows],
     overlapsOnNextSave: [],
     charges: {
-      seller_commission: { rule_id: 1, method: 'percent', value_text: '6', version: 1 },
-      buyer_commission: { rule_id: 2, method: 'percent', value_text: '6', version: 1 },
-      laga_fruit: { rule_id: 3, method: 'per_unit', value_text: '8', version: 1 },
+      seller_commission: {
+        rule_id: 1,
+        method: 'percent',
+        value_text: '6',
+        version: 1,
+        from_date: '2026-08-31',
+      },
+      buyer_commission: {
+        rule_id: 2,
+        method: 'percent',
+        value_text: '6',
+        version: 1,
+        from_date: '2026-08-31',
+      },
+      laga_fruit: {
+        rule_id: 3,
+        method: 'per_unit',
+        value_text: '8',
+        version: 1,
+        from_date: '2026-08-31',
+      },
     },
     overrides: { allow_line_override: false, credit_limit_mode: 'warn' },
   };
@@ -150,26 +173,39 @@ export function fakeRules(rows: RuleRow[] = seededRules()): FakeRules {
     Promise.resolve(structuredClone(store.charges)),
   );
   vi.mocked(settingsApi.settingsSetCharges).mockImplementation((input) => {
-    store.charges = {
-      seller_commission: {
-        ...store.charges.seller_commission,
-        method: input.seller_commission.method,
-        value_text: input.seller_commission.value,
-        version: input.seller_commission.version + 1,
-      },
-      buyer_commission: {
-        ...store.charges.buyer_commission,
-        method: input.buyer_commission.method,
-        value_text: input.buyer_commission.value,
-        version: input.buyer_commission.version + 1,
-      },
-      laga_fruit: {
-        ...store.charges.laga_fruit,
-        method: input.laga_fruit.method,
-        value_text: input.laga_fruit.value,
-        version: input.laga_fruit.version + 1,
-      },
-    };
+    // A change makes a dated row (plan 09): the new value applies from today, and the old one is
+    // kept as an ended default row, as the backend does.
+    const next = { ...store.charges };
+    for (const key of DEFAULT_KEYS) {
+      const old = store.charges[key];
+      const typed = input[key];
+      if (typed.method === old.method && typed.value === old.value_text) continue;
+      const row = store.rows.find((one) => one.id === old.rule_id);
+      if (row !== undefined) {
+        store.rows[store.rows.indexOf(row)] = { ...row, to_date: DAY_BEFORE_TODAY };
+      }
+      const newId = (nextId += 1);
+      store.rows.push(
+        rule(newId, {
+          side: row?.side ?? 'seller',
+          charge_type: row?.charge_type ?? 'commission',
+          item_group: row?.item_group ?? null,
+          level: row?.level ?? 'default',
+          method: typed.method,
+          value: typed.value,
+          from_date: TODAY,
+          is_default: true,
+        }),
+      );
+      next[key] = {
+        rule_id: newId,
+        method: typed.method,
+        value_text: typed.value,
+        version: typed.version + 1,
+        from_date: TODAY,
+      };
+    }
+    store.charges = next;
     return Promise.resolve(structuredClone(store.charges));
   });
   vi.mocked(settingsApi.settingsGetOverrides).mockImplementation(() =>

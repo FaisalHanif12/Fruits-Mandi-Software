@@ -103,3 +103,14 @@ pub fn code_and_value(error: &ServiceError, key: &str) -> (ErrorCode, Option<i64
 pub fn wrong_try(env: &TestEnv, username: &str) -> ServiceError {
     auth::login(&env.ctx, username, &Secret::new("not-the-password")).unwrap_err()
 }
+
+/// Sets the test clock to 09:00 UTC (14:00 in Pakistan) of a day, so "today" is that day.
+pub fn set_today(env: &TestEnv, year: i32, month: u32, day: u32) {
+    use chrono::TimeZone;
+    env.clock.set(
+        chrono::Utc
+            .with_ymd_and_hms(year, month, day, 9, 0, 0)
+            .single()
+            .unwrap(),
+    );
+}

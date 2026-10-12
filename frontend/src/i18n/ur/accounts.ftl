@@ -347,6 +347,9 @@ openings-errors-title = ان سطروں میں مسئلہ ہے
 # review: pending
 openings-problem = { $account } ({ $field }): { $message }
 
+# review: pending
+openings-locked-help = جن کھاتوں کے خانے بند ہیں، ان کا ابتدائی بقایا نہیں لگ سکتا۔
+
 # The name of a seller whose opening debit is an advance, in the opening balances grid.
 # review: pending
 openings-name-advance = { $name } ({ -peshgi-khata })

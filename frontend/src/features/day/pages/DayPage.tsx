@@ -24,7 +24,7 @@ export function DayPage() {
       />
     );
   }
-  const { today, closed_up_to } = day.data;
+  const { today, closed_up_to, today_open } = day.data;
   return (
     <div className="flex max-w-form flex-col gap-5">
       <div className="flex flex-col gap-1">
@@ -46,7 +46,7 @@ export function DayPage() {
           </span>
         </p>
       </div>
-      <CloseDayCard />
+      <CloseDayCard todayOpen={today_open} />
       <ReopenDayCard closedUpTo={closed_up_to} />
     </div>
   );

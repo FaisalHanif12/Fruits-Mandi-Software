@@ -433,13 +433,40 @@ CREATE TABLE charge_rules (
         OR (side = 'buyer' AND charge_type IN ('commission', 'laga') AND method IN ('percent', 'per_unit')))
 ) STRICT;
 
--- The three defaults of PRD 4.2 are the only rules at their level: a second seller commission or
--- buyer commission with no party, item or group, or a second buyer لاگا for the fruit group, would
--- hide the one the Settings screen shows. The service refuses them first; this is the second guard.
-CREATE UNIQUE INDEX idx_charge_rules_one_default_commission ON charge_rules (side)
-    WHERE charge_type = 'commission' AND account_id IS NULL AND item_id IS NULL AND item_group IS NULL;
-CREATE UNIQUE INDEX idx_charge_rules_one_fruit_laga ON charge_rules (side)
-    WHERE charge_type = 'laga' AND account_id IS NULL AND item_id IS NULL AND item_group = 'fruit';
+-- The three defaults of PRD 4.2 (seller commission, buyer commission, buyer لاگا on fruit) are a
+-- chain of dated rows: Settings ends the one in force the day before a change and starts a new one
+-- (PRD 11.3). Two active rows of one default must never cover the same day, or the Settings screen
+-- could show a rate that is not the one charged. The service builds the chain so; these triggers
+-- are the second guard.
+CREATE TRIGGER charge_rules_defaults_do_not_overlap_insert BEFORE INSERT ON charge_rules
+WHEN NEW.is_active = 1 AND NEW.account_id IS NULL AND NEW.item_id IS NULL
+ AND ((NEW.charge_type = 'commission' AND NEW.item_group IS NULL) OR (NEW.side = 'buyer' AND NEW.charge_type = 'laga' AND NEW.item_group = 'fruit'))
+ AND EXISTS (SELECT 1 FROM charge_rules o
+             WHERE o.is_active = 1 AND o.side = NEW.side AND o.charge_type = NEW.charge_type
+               AND o.account_id IS NULL AND o.item_id IS NULL AND o.item_group IS NEW.item_group
+               AND o.from_date <= COALESCE(NEW.to_date, '9999-12-31')
+               AND COALESCE(o.to_date, '9999-12-31') >= NEW.from_date)
+BEGIN SELECT RAISE(ABORT, 'ERR_RULE_OVERLAP'); END;
+CREATE TRIGGER charge_rules_defaults_do_not_overlap_update BEFORE UPDATE ON charge_rules
+WHEN NEW.is_active = 1 AND NEW.account_id IS NULL AND NEW.item_id IS NULL
+ AND ((NEW.charge_type = 'commission' AND NEW.item_group IS NULL) OR (NEW.side = 'buyer' AND NEW.charge_type = 'laga' AND NEW.item_group = 'fruit'))
+ AND EXISTS (SELECT 1 FROM charge_rules o
+             WHERE o.id <> NEW.id AND o.is_active = 1 AND o.side = NEW.side AND o.charge_type = NEW.charge_type
+               AND o.account_id IS NULL AND o.item_id IS NULL AND o.item_group IS NEW.item_group
+               AND o.from_date <= COALESCE(NEW.to_date, '9999-12-31')
+               AND COALESCE(o.to_date, '9999-12-31') >= NEW.from_date)
+BEGIN SELECT RAISE(ABORT, 'ERR_RULE_OVERLAP'); END;
+
+-- A default is never switched off or deleted: without it a commission would silently be 0 for
+-- some dates. Only the service ends a default, by a date (plan 09).
+CREATE TRIGGER charge_rules_defaults_stay_active BEFORE UPDATE OF is_active ON charge_rules
+WHEN NEW.is_active = 0 AND OLD.account_id IS NULL AND OLD.item_id IS NULL
+ AND ((OLD.charge_type = 'commission' AND OLD.item_group IS NULL) OR (OLD.side = 'buyer' AND OLD.charge_type = 'laga' AND OLD.item_group = 'fruit'))
+BEGIN SELECT RAISE(ABORT, 'ERR_RULE_DEFAULT'); END;
+CREATE TRIGGER charge_rules_defaults_are_not_deleted BEFORE DELETE ON charge_rules
+WHEN OLD.account_id IS NULL AND OLD.item_id IS NULL
+ AND ((OLD.charge_type = 'commission' AND OLD.item_group IS NULL) OR (OLD.side = 'buyer' AND OLD.charge_type = 'laga' AND OLD.item_group = 'fruit'))
+BEGIN SELECT RAISE(ABORT, 'ERR_RULE_DEFAULT'); END;
 
 -- Architecture 15.5. The partner created first has the lowest id (PRD C10).
 CREATE TABLE partners (

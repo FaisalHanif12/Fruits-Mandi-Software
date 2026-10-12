@@ -11,6 +11,7 @@ pub mod rules;
 pub mod search;
 pub mod settings;
 pub mod translit;
+pub mod vouchers;
 
 use std::fmt;
 

@@ -13,4 +13,9 @@ export type LineError = {
    * The field, for example `opening_dr`.
    */
   field: string;
+  /**
+   * Values for the message, as in any error (Code Standards 4.3): for example
+   * `{"closed_up_to": "09-10-2026"}` on `ERR_DATE_CLOSED`.
+   */
+  values: Record<string, string | number>;
 };

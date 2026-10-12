@@ -57,6 +57,34 @@ pub const EXPENSE_HEAD: &str = "05";
 /// نقدی منڈی, the cash buyer with no name (PRD FR-10.4): he pays at once, so he never holds a
 /// balance.
 pub const NAQDI_MANDI_CODE: &str = "03040000";
+/// Whether an account can take an opening balance (PRD FR-10.9). This is the one named place for
+/// the list, used by the save (`ERR_OPENING_NOT_ALLOWED`) and by `AccountRow::can_take_opening`
+/// for the openings grid. The documents do not say which accounts are left out; the list is the
+/// team default and an open question for Umar:
+///
+/// - income and shop expense accounts (heads 04 and 05), because their postings need partner
+///   share rows (PRD FR-6.5);
+/// - ابتدائی فرق itself, which is the other side of every opening;
+/// - نقدی منڈی, who pays at once and never holds a balance (PRD FR-12.4);
+/// - the پختہ کھاتہ accounts, which hold many people, each with his own balance (PRD FR-13.5).
+///
+/// ```
+/// use mandi_core::accounts::can_take_opening;
+/// assert!(can_take_opening("01", "01010001", false)); // روکڑ
+/// assert!(can_take_opening("03", "030110001", false)); // a seller
+/// assert!(!can_take_opening("04", "04010001", false)); // income
+/// assert!(!can_take_opening("06", "06019999", false)); // ابتدائی فرق
+/// assert!(!can_take_opening("03", "03040000", false)); // نقدی منڈی
+/// assert!(!can_take_opening("03", "03049999", true)); // پختہ کھاتہ
+/// ```
+pub fn can_take_opening(head_code: &str, code: &str, is_pukhta_khata: bool) -> bool {
+    head_code != INCOME_HEAD
+        && head_code != EXPENSE_HEAD
+        && code != OPENING_DIFFERENCE_CODE
+        && code != NAQDI_MANDI_CODE
+        && !is_pukhta_khata
+}
+
 /// Which controls an account of type `other` may go under.
 pub struct ControlRule;
 
@@ -295,6 +323,9 @@ pub struct AccountRow {
     pub collection_weekday: Option<i64>,
     /// A system account of PRD FR-10.4: its code cannot change and it cannot be deleted.
     pub is_system: bool,
+    /// False for the accounts that cannot take an opening balance (see `can_take_opening`), so
+    /// the openings grid can leave them out.
+    pub can_take_opening: bool,
     /// The پختہ کھاتہ account of one-time people (PRD Section 13).
     pub is_pukhta_khata: bool,
     /// False when hidden from pickers.
@@ -325,7 +356,8 @@ pub struct AccountsListInput {
     /// How many rows to skip. 0 for the first page.
     #[serde(default)]
     pub offset: u32,
-    /// How many rows to return, at most 2,000. 0 gives the most.
+    /// How many rows to return, at most 50,000 (2.5 times the 20,000 accounts of NFR-SCL-1). 0
+    /// gives the most, so a list with no limit returns every matching account.
     #[serde(default)]
     pub limit: u32,
 }
@@ -448,6 +480,10 @@ pub struct LineError {
     pub code: ErrorCode,
     /// The field, for example `opening_dr`.
     pub field: String,
+    /// Values for the message, as in any error (Code Standards 4.3): for example
+    /// `{"closed_up_to": "09-10-2026"}` on `ERR_DATE_CLOSED`.
+    #[ts(type = "Record<string, string | number>")]
+    pub values: std::collections::BTreeMap<String, crate::error::ErrorValue>,
 }
 
 /// One line of the preview.

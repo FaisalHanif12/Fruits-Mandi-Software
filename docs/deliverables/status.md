@@ -6,7 +6,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 - Goal run: D1 and D2 together (README Section 4a, requirements v1.2 committed as `b0902a6`). Build every plan 01 to 10, mark each "built" and commit it; then one fresh `reviewer` and `robustness` for the whole run; then one pull request and the D1+D2 DONE REPORT.
 - Branch: `feature/db-schema` carries plans 03 onward (stacked on `feature/core-money`, PR #2, on `feature/scaffold-repo`, PR #1). GitHub Actions is off; Windows-workflow items are WAITING-CI.
-- Now (12-10-2026): plans 04 to 08 committed as built (`76cc5ca`, `9d585cd`). Backend on plan 09 T2 then plan 10. Frontend has plans 09 and 10 screens; plan 09 wired, plan 10 waits for backend commands. Then the end gate (README 4a).
+- Now (12-10-2026): plans 01 to 10 are all built and committed. Plans 09 and 10, with the 7 follow-ups, checked by the lead: `pnpm lint`, `pnpm typecheck`, `pnpm i18n:check`, `pnpm test` all exit 0 (frontend 1,479 passed; Rust 715 passed, 0 failed, 2 ignored accuracy gates); `cargo deny check` ok; E2E-19 ok. Next: the end gate (README 4a), one fresh reviewer and one fresh robustness for all of D1+D2.
 
 ## Plan files
 
@@ -22,8 +22,8 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 | 06-masters-and-search | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
 | 07-journal-and-accounts | feature/db-schema | | at the end | at the end | built (`9d585cd`); end gate |
 | 08-party-card-and-short-codes | feature/db-schema | | at the end | at the end | built (`9d585cd`); end gate |
-| 09-commission-rules | feature/db-schema | | at the end | at the end | building: frontend T3 done (rules list, form, test a rule, settings tabs); backend after plan 08 |
-| 10-opening-position | feature/db-schema | | at the end | at the end | building: frontend T3 done (پیشگی screen with running list, day close and reopen); backend after plan 09 |
+| 09-commission-rules | feature/db-schema | | at the end | at the end | built (this commit): zero per نگ/per lot values, dated defaults with no-overlap triggers; money PASS WITH MINOR, fixes applied; end gate |
+| 10-opening-position | feature/db-schema | | at the end | at the end | built (this commit): پیشگی voucher and running list, day close (one day_closes row per day) and reopen, seed, E2E-19 green; money PASS WITH MINOR; end gate |
 
 ## Design
 
@@ -56,7 +56,18 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 - Commission rules with a party and an item group (for example "رحیم, all fruit: 5%"). PRD 11.1 allows a group whenever the item is blank, but the six levels of PRD 11.3 have no "party + group" level. The team refuses a group when a party is chosen (`ERR_RULE_NOT_ALLOWED`). Should there be a party + group level, and where in the order?
 
+- "Newer wins" when two rules of the same level overlap (FR-11.5): the team reads it as "the rule that starts later; on the same start day, the one made last". The other reading (the rule entered last, whatever its dates) can undo a planned change: "7% from 01-11" entered first, then "5% from 01-10", would give 5% in November. Which do you mean?
+- A per-lot seller commission is charged on the first line of the lot's first posting (FR-11.9). If an edit removes that line, the team plans to move the charge to the first remaining line (D3). Is that right?
+
+## Open questions added 12-10-2026 (plan 10)
+
+- An advance larger than the cash in hand is allowed today (cash goes below zero); no PRD rule refuses it. Do you want a warning that does not block, "روکڑ صفر سے کم ہو جائے گی"?
+- Before D3: PRD FR-7.59 works out a seller's payable from his بکری credits and receipts only. A seller with an opening جمع (for example کریم 10,160 جمع from the old books) then takes an advance of 4,000: is his opening credit payable, so the advance is set against it? Today the rule does not count opening credits.
+- PRD FR-10.9 says "changing an opening reverses the old opening posting and posts the new one". The build keeps one opening entry per account (the old one reversed, a new one posted, on each change). Confirm that is what you mean, and that the openings grid saving many accounts at once still gives each account its own opening entry.
+
 ## Team defaults on Umar's review list (12-10-2026)
+
+- New glossary term `-peshgi` = پیشگی (feminine, the money given in advance; English "Advance"), next to `-peshgi-khata` = پیشگی کھاتہ (masculine, the screen and register). PRD Section 3 lists only پیشگی کھاتہ; NFR-URD-2 names پیشگی as a locked term. Grammar rule used in all messages: پیشگی takes feminine verbs, پیشگی کھاتہ masculine.
 
 - English voucher letters R-1 (receipt), P-1 (payment), A-1 (advance); Urdu و-1, ا-1, پ-1 from PRD 15.1.
 - Settings tab name "دستی تبدیلی اور جانچ" (Overrides and checks).
@@ -72,6 +83,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 - Plan 04 v1.2: `err-already-signed-in` "آپ پہلے ہی لاگ ان ہیں۔" (You are already signed in.); `err-not-locked` "ایپ لاک نہیں ہے۔" (The app is not locked.).
 - Plan 05 spelling check (FR-7.66, NFR-URD-29, each with its English): `translit-spelling-check` and `translit-spelling-title` "ہجے دیکھ لیں" (Check the spelling); `translit-spelling-body` "نشان زدہ لفظوں کے ہجے ایپ نے اپنے اصولوں سے بنائے ہیں، کیونکہ یہ لفظ اس کی لفظوں کی فہرست میں نہیں ہیں۔ ہجے ٹھیک ہوں تو تصدیق کریں۔ ٹھیک نہ ہوں تو واپس جا کر درست کریں۔"; `translit-spelling-confirm` "ہجے ٹھیک ہیں" (Spelling is right); `err-spelling-unconfirmed` "ان لفظوں کے ہجے کی تصدیق نہیں ہوئی: { $words }۔ ہجے دیکھیں، پھر تصدیق کریں یا درست کریں۔"; reworded `mode-full-urdu`, `words-col-count` "استعمال کتنی بار", `words-col-last` "آخری استعمال".
 - `accountpicker-inactive` ("نئی اندراج": اندراج is masculine, fix asked: "نئے اندراج"), `working-per-unit-received`, `rules-overlap-help`, `rules-status-default` changed to عام.
+- `err-nothing-to-close` "آج تک کے سب دن پہلے ہی بند ہیں، اس لیے بند کرنے کے لیے کوئی دن نہیں۔"; `err-not-a-seller`, `err-account-inactive`, `err-reason-required`, `err-trial-not-balanced`, `err-day-not-closed`, `err-month-closed`; `day-close-*` labels; `vouchers-source-opening`.
 - Plans 09 and 10 errors and fields: `err-rule-not-allowed` ("اصول کی یہ ترتیب درست نہیں": is ترتیب the right word for "combination"?), `err-date-range`, `err-user-inactive` reworded, `err-opening-not-allowed` (names income, دکان خرچہ, نقدی منڈی, پختہ کھاتہ, ابتدائی فرق); all of `ur/rules.ftl` (122), `ur/vouchers.ftl`, `ur/day.ftl`, working messages in `ur/assist.ftl`. Notes, narrations and reasons now start in رومن mode in the Urdu app (FR-7.22).
 - Plan 07 openings grid: `openings-*` lines in `ur/accounts.ftl`; `err-journal-unbalanced`, `err-code-reserved`, `err-opening-both-sides`, `err-advance-not-seller` (check the gender of پیشگی in "لگ سکتی ہے").
 - Plans 07 and 08: all of `ur/accounts.ftl` (about 90, کھاتہ used for "account" as in PRD 10.1), `ur/assist.ftl` (about 20; read first "اس پارٹی کے ذمے فرم کی رقم ہے" = "This party owes the firm"), `layout-search-*`, `common-side-dr/cr`, `common-yes` ہاں, `common-no` نہیں, `err-series-full`, `err-code-taken`, `err-version-changed`, `err-format-invalid`.
@@ -80,6 +92,11 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 - Dev-only gallery words (never shipped): not on the list.
 
 ## Notes carried into later plans
+
+- D3 and D4 (from plan 10): `ledger::reverse` switches off matching rows on reversed lines but cannot re-match (the matching engine is D3); every reversal caller in D3 re-runs matching in the same transaction, with a test that no seller shows too high an open advance afterwards. A voucher edit must update the voucher row, or `last_advance` must read through `current_entry_id`.
+
+- D3 (بکری, plans 12 and 13), from backend's plan 09 money review: the working, prints and edits of a saved line come only from its snapshot columns (method, value, amount), never from resolving rules again; unchanged lines in an edit copy their snapshot; a typed value (method دستی) stores its percent or per نگ value too. Golden test E2E-13b (change the default, edit another line, the unchanged line keeps 1,044). Per-lot amounts only when `per_lot_due` (first line of the first posting). A restore must call `Context::invalidate_caches`.
+- D3 (plan 12), from backend's plan 10 handoff: a charge with no winning rule for seller or buyer commission must be an error in the بکری, not a zero (the defaults always exist, so it means broken data). A proptest over random postings for the per-day close summaries was offered and not written; the deterministic side-flip test covers the drift risk. robustness may add it at the end gate.
 
 - D5 About screen (plan 22): show the GeoNames credit "This product contains data from GeoNames (https://www.geonames.org), licensed under CC BY 4.0." (word list source, `backend/crates/core/data/SOURCES.md`).
 

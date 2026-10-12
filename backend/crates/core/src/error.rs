@@ -125,6 +125,21 @@ pub enum ErrorCode {
     /// need partner share rows, PRD FR-6.5), ابتدائی فرق itself, or a پختہ کھاتہ account (it has
     /// no person to hold it). Waiting for Umar's decision.
     ErrOpeningNotAllowed,
+    /// The account is not a seller (a پیشگی goes to a seller only), or is the پختہ کھاتہ account,
+    /// which has no person to hold the advance.
+    ErrNotASeller,
+    /// The account is hidden from pickers, so a new posting cannot use it (PRD FR-10.2).
+    ErrAccountInactive,
+    /// A reason is required (reopening a day, PRD FR-21.2).
+    ErrReasonRequired,
+    /// The trial balance does not balance, so the day cannot be closed (NFR-REL-8).
+    ErrTrialNotBalanced,
+    /// The day is not closed, so there is nothing to reopen.
+    ErrDayNotClosed,
+    /// Every day up to today is already closed, so there is no open day to close.
+    ErrNothingToClose,
+    /// The month was closed (PRD FR-17.6); its month close must be reversed first.
+    ErrMonthClosed,
     /// A rule that PRD 11.2 or 11.3 does not allow: a method the charge does not have, a charge
     /// the side does not have, a party on the wrong side, or a group together with a party or an
     /// item. The field says which part.
@@ -144,7 +159,7 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 55] = [
+    pub const ALL: [ErrorCode; 62] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -194,6 +209,13 @@ impl ErrorCode {
         ErrorCode::ErrOpeningBothSides,
         ErrorCode::ErrAdvanceNotSeller,
         ErrorCode::ErrOpeningNotAllowed,
+        ErrorCode::ErrNotASeller,
+        ErrorCode::ErrAccountInactive,
+        ErrorCode::ErrReasonRequired,
+        ErrorCode::ErrTrialNotBalanced,
+        ErrorCode::ErrDayNotClosed,
+        ErrorCode::ErrNothingToClose,
+        ErrorCode::ErrMonthClosed,
         ErrorCode::ErrRuleNotAllowed,
         ErrorCode::ErrDateRange,
         ErrorCode::ErrFormatInvalid,

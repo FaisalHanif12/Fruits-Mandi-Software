@@ -3,7 +3,8 @@
 //! (PRD FR-10.6). Balances are not here: they come from the journal (`crate::ledger`).
 
 use mandi_core::accounts::{
-    AccountFilter, AccountRow, AccountType, Balance, CoaControl, CoaHead, RecordRef, SimilarAccount,
+    AccountFilter, AccountRow, AccountType, Balance, CoaControl, CoaHead, RecordRef,
+    SimilarAccount, can_take_opening,
 };
 use mandi_core::masters::ColValue;
 use mandi_core::money::Paisa;
@@ -195,9 +196,10 @@ const ROW_SELECT: &str = "SELECT a.id, a.version, a.code, a.serial,
         a.credit_allowed, a.credit_limit_paisa,
         mk.id, mk.code, mk.mark_text,
         st.id, st.name_ur, st.name_en,
-        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note
+        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code
      FROM accounts a
      JOIN account_controls c ON c.id = a.control_id
+     JOIN account_heads h ON h.id = c.head_id
      LEFT JOIN cities ci ON ci.id = a.city_id
      LEFT JOIN addas ad ON ad.id = a.adda_id
      LEFT JOIN accounts l ON l.id = a.linked_account_id
@@ -278,6 +280,11 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         collector: optional_ref(r, 36, None)?,
         collection_weekday: r.get(39)?,
         is_system: r.get(40)?,
+        can_take_opening: can_take_opening(
+            &r.get::<_, String>(44)?,
+            &r.get::<_, String>(2)?,
+            r.get(41)?,
+        ),
         is_pukhta_khata: r.get(41)?,
         is_active: r.get(42)?,
         note: r.get::<_, Option<String>>(43)?.unwrap_or_default(),

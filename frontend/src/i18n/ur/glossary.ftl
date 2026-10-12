@@ -170,6 +170,12 @@
 -peshgi-khata = پیشگی کھاتہ
     .gender = masculine
 
+# The advance itself (the money given), as against the screen and register پیشگی کھاتہ. Feminine:
+# "پیشگی دی گئی"; the register is masculine: "پیشگی کھاتہ کھل گیا".
+# review: pending
+-peshgi = پیشگی
+    .gender = feminine
+
 # General journal entry
 # review: pending
 -general = جنرل

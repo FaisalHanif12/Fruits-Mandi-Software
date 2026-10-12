@@ -4,7 +4,7 @@
 
 import type { UiError } from '../../bindings/UiError';
 import { isoToDisplayDate } from '../../shared/format';
-import type { AdvanceDraft, VoucherSaved } from './types';
+import type { AdvanceDraft, ReadyAdvance, VoucherSaved } from './types';
 
 /** A new voucher: today as the date, cash as the mode, everything else empty (PRD 15.1). */
 export function newAdvanceDraft(today: string): AdvanceDraft {
@@ -32,6 +32,11 @@ export function nextAdvanceDraft(previous: AdvanceDraft): AdvanceDraft {
     mode: previous.mode,
     bank: previous.bank,
   };
+}
+
+/** Narrows a draft to one with a seller, which is what the backend takes (as an id). */
+export function hasSeller(draft: AdvanceDraft): draft is ReadyAdvance {
+  return draft.seller !== null;
 }
 
 /** A draft counts as a voucher once a seller or an amount is typed. An empty form is not one. */

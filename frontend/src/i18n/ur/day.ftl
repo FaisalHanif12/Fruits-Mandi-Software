@@ -30,6 +30,18 @@ day-close-up-to = اس تاریخ تک بند کریں
 day-close-days = بند ہونے والے دن
 
 # review: pending
+day-close-from = پہلا کھلا دن
+
+# review: pending
+day-close-entries = ان دنوں کی اندراجات
+
+# review: pending
+day-close-trial-dr = { -trial-balance }: { -banaam } میزان
+
+# review: pending
+day-close-trial-cr = { -trial-balance }: { -jama } میزان
+
+# review: pending
 day-close-trial = { -trial-balance } کا فرق
 
 # review: pending

@@ -76,16 +76,15 @@ export const RULE_COLUMNS: readonly ListColumn<RuleRow>[] = [
   },
   {
     field: 'status',
-    type: 'status',
+    // A default that has ended says until when, so the old defaults can be told apart.
+    type: 'text',
     headerId: 'rules-col-status',
     from: 'normal',
     value: (row, { text }) =>
-      text(
-        row.is_default
-          ? 'rules-status-default'
-          : row.is_active
-            ? 'rules-status-active'
-            : 'rules-status-inactive',
-      ),
+      row.is_default
+        ? row.to_date === null
+          ? text('rules-status-default')
+          : text('rules-status-default-ended', { to: isoToDisplayDate(row.to_date) })
+        : text(row.is_active ? 'rules-status-active' : 'rules-status-inactive'),
   },
 ];

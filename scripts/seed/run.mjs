@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// pnpm seed: makes dev-data/mandi.db with the full schema and the system accounts of
-// PRD FR-10.4, and prints the counts (plan 03 Section 4.4). dev-data/ is ignored by git.
+// pnpm seed: makes dev-data/mandi.db with the full schema, the system accounts of PRD FR-10.4,
+// the masters and parties of the worked day, and the PRD 4.3 opening position, all through the
+// real services (plan 10), and prints the E2E-19 numbers. dev-data/ is ignored by git.
 //
-// Usage: node scripts/seed/run.mjs [--reset]
+// Usage: pnpm seed [-- --reset]
 //   --reset   delete the old dev database first
 //
 // The project folder has spaces in its name. Paths are built with node:path and cargo is
@@ -27,7 +28,7 @@ if (process.argv.includes('--reset')) {
 
 const run = spawnSync(
   'cargo',
-  ['run', '--quiet', '-p', 'mandi-db', '--example', 'seed', '--', database],
+  ['run', '--quiet', '-p', 'mandi-services', '--example', 'seed_dev', '--', database],
   { cwd: path.join(root, 'backend'), stdio: 'inherit' },
 );
 if (run.error) {

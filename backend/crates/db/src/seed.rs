@@ -403,20 +403,15 @@ pub fn counts(conn: &Connection) -> rusqlite::Result<SeedCounts> {
 
 /// The default charges of PRD 4.2 and Section 21 "Charges" (they are data, NFR-MNT-5): seller
 /// commission 6%, buyer commission 6%, and لاگا 8 per نگ on fruit (an item-group rule). Nothing
-/// for مزدوری, منشیانہ and فون: they are typed on the lot. The ids go to the settings key
-/// `charge_defaults`, so the Settings screen knows which rows they are. Idempotent: returns
-/// 0 on a second run.
+/// for مزدوری, منشیانہ and فون: they are typed on the lot. They start on `1000-01-01`, the earliest date the
+/// app accepts, so any date has a default in force; a change in Settings ends a default on the day
+/// before and starts a new row (PRD 11.3). Idempotent: returns 0 if the chain already exists.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn default_rules(conn: &Connection) -> rusqlite::Result<usize> {
-    use crate::rules::{DEFAULT_RULES_FROM, DEFAULTS_KEY};
-    let present: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM settings WHERE key = ?1",
-        [DEFAULTS_KEY],
-        |r| r.get(0),
-    )?;
-    if present > 0 {
+    use crate::rules::{DEFAULT_RULES_FROM, has_defaults};
+    if has_defaults(conn)? {
         return Ok(0);
     }
     let insert = |side: &str,
@@ -425,26 +420,16 @@ pub fn default_rules(conn: &Connection) -> rusqlite::Result<usize> {
                   method: &str,
                   bps: Option<i32>,
                   paisa: Option<i64>|
-     -> rusqlite::Result<i64> {
+     -> rusqlite::Result<usize> {
         conn.execute(
             "INSERT INTO charge_rules (side, charge_type, item_group, method, value_bps, value_paisa, from_date, note)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'default (PRD 4.2)')",
             params![side, charge, group, method, bps, paisa, DEFAULT_RULES_FROM],
-        )?;
-        Ok(conn.last_insert_rowid())
+        )
     };
-    let seller = insert("seller", "commission", None, "percent", Some(600), None)?;
-    let buyer = insert("buyer", "commission", None, "percent", Some(600), None)?;
+    let mut added = insert("seller", "commission", None, "percent", Some(600), None)?;
+    added += insert("buyer", "commission", None, "percent", Some(600), None)?;
     // 8 rupees = 800 paisa.
-    let laga = insert("buyer", "laga", Some("fruit"), "per_unit", None, Some(800))?;
-    conn.execute(
-        "INSERT INTO settings (key, value_json) VALUES (?1, ?2)",
-        params![
-            DEFAULTS_KEY,
-            format!(
-                "{{\"seller_commission\":{seller},\"buyer_commission\":{buyer},\"laga_fruit\":{laga}}}"
-            )
-        ],
-    )?;
-    Ok(4)
+    added += insert("buyer", "laga", Some("fruit"), "per_unit", None, Some(800))?;
+    Ok(added)
 }

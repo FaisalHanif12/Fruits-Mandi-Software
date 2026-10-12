@@ -596,16 +596,6 @@ fn the_rule_form_refuses_what_prd_11_2_and_11_3_do_not_allow() {
                 ChargeSide::Seller,
                 ChargeType::Commission,
                 ChargeMethod::PerUnit,
-                "0",
-            ),
-            ErrorCode::ErrMustBeMoreThanZero,
-            "value",
-        ),
-        (
-            form(
-                ChargeSide::Seller,
-                ChargeType::Commission,
-                ChargeMethod::PerUnit,
                 "8.50",
             ),
             ErrorCode::ErrDecimalsNotAllowed,
@@ -991,108 +981,219 @@ fn rules_with_dates_that_meet_are_warned_about_and_the_later_start_wins() {
 }
 
 #[test]
-fn the_three_defaults_are_edited_in_settings_with_an_audit_row() {
+fn a_default_is_dated_like_any_rule_and_a_change_starts_today() {
+    // Lead decision 12-10-2026 (PRD 11.3: the rule date is the posting date). "Today" is
+    // 10-10-2026 in the test clock. E2E-13b: the Owner changes the buyer commission to 7%.
     let f = fixture();
     let before = rules::charges(&f.env.ctx).unwrap();
-    let input = |seller: &str, buyer: &str, laga_method: ChargeMethod, laga: &str| ChargesInput {
+    assert_eq!(before.buyer_commission.from_date, "1000-01-01");
+    let input = |c: &mandi_services::core::rules::ChargesSettings,
+                 seller: &str,
+                 buyer: &str,
+                 laga: &str| ChargesInput {
         seller_commission: DefaultChargeInput {
-            version: before.seller_commission.version,
+            version: c.seller_commission.version,
             method: ChargeMethod::Percent,
             value: seller.into(),
         },
         buyer_commission: DefaultChargeInput {
-            version: before.buyer_commission.version,
+            version: c.buyer_commission.version,
             method: ChargeMethod::Percent,
             value: buyer.into(),
         },
         laga_fruit: DefaultChargeInput {
-            version: before.laga_fruit.version,
-            method: laga_method,
+            version: c.laga_fruit.version,
+            method: ChargeMethod::PerUnit,
             value: laga.into(),
         },
     };
-    // E2E-13b: the Owner changes the default buyer commission to 7%.
+    let rule_count = || count(&f.dir, "SELECT COUNT(*) FROM charge_rules");
+    assert_eq!(rule_count(), 3);
     let audits = audit_total(&f.dir);
-    let after = rules::set_charges(
-        &f.env.ctx,
-        &f.owner,
-        &input("6", "7", ChargeMethod::PerUnit, "8"),
-    )
-    .unwrap();
-    assert_eq!(after.buyer_commission.value_text, "7");
+    let after = rules::set_charges(&f.env.ctx, &f.owner, &input(&before, "6", "7", "8")).unwrap();
+    // A new row from today; the old one ends on the day before.
+    assert_eq!(rule_count(), 4);
     assert_eq!(
-        after.buyer_commission.version,
-        before.buyer_commission.version + 1
+        (
+            after.buyer_commission.value_text.as_str(),
+            after.buyer_commission.from_date.as_str()
+        ),
+        ("7", "2026-10-10")
+    );
+    assert_ne!(
+        after.buyer_commission.rule_id,
+        before.buyer_commission.rule_id
     );
     assert_eq!(
-        after.seller_commission.version, before.seller_commission.version,
+        after.buyer_commission.version, 3,
+        "a new row starts above the old row's version, so a stale form never matches it"
+    );
+    assert_eq!(
+        after.seller_commission, before.seller_commission,
         "unchanged defaults are not touched"
     );
+    let old_end: Option<String> = raw(&f.dir)
+        .query_row(
+            "SELECT to_date FROM charge_rules WHERE id = ?1",
+            [before.buyer_commission.rule_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(old_end.as_deref(), Some("2026-10-09"));
     assert_eq!(
         audit_total(&f.dir),
-        audits + 1,
-        "one audit row, for the one default that changed"
+        audits + 2,
+        "one row ended, one row made"
     );
     let (old, new): (String, String) = raw(&f.dir)
-        .query_row("SELECT old_json, new_json FROM audit_log WHERE entity = 'charge_rule' ORDER BY id DESC LIMIT 1", [], |r| Ok((r.get(0)?, r.get(1)?)))
+        .query_row("SELECT old_json, new_json FROM audit_log WHERE entity = 'charge_rule' AND action = 'create' ORDER BY id DESC LIMIT 1", [], |r| Ok((r.get(0)?, r.get(1)?)))
         .unwrap();
     assert!(
         old.contains("\"value_bps\":600") && new.contains("\"value_bps\":700"),
         "{old} {new}"
     );
-    // A new sale uses it at once: 12,000 × 7% = 840.
+    // A sale dated today uses 7%: 12,000 x 7% = 840 (E2E-13b); one dated before the change keeps
+    // 6% (720), also a day on which the old default began, and far back.
+    let on = |date: &str| {
+        let t = rules::test(
+            &f.env.ctx,
+            &RuleTestInput {
+                seller_id: f.rahim,
+                buyer_id: f.akram,
+                item_id: f.banana,
+                date: date.into(),
+                qty: "20".into(),
+                rate: "600".into(),
+            },
+        )
+        .unwrap();
+        of(&t, ChargeSide::Buyer, ChargeType::Commission)
+    };
+    assert_eq!(on("10-10-2026"), (Some(RuleLevel::Default), 840));
+    assert_eq!(on("09-10-2026"), (Some(RuleLevel::Default), 720));
+    assert_eq!(on("01-01-2026"), (Some(RuleLevel::Default), 720));
+    // The charges tab shows the default in force today.
+    assert_eq!(rules::charges(&f.env.ctx).unwrap(), after);
+    // A second change on the same day updates that day's row; no row is added.
+    let again = rules::set_charges(&f.env.ctx, &f.owner, &input(&after, "6", "8", "8")).unwrap();
+    assert_eq!(rule_count(), 4);
     assert_eq!(
-        of(
-            &run(&f, f.rahim, f.akram, f.banana),
-            ChargeSide::Buyer,
-            ChargeType::Commission
+        again.buyer_commission.rule_id,
+        after.buyer_commission.rule_id
+    );
+    assert_eq!(
+        (
+            again.buyer_commission.value_text.as_str(),
+            again.buyer_commission.version
         ),
-        (Some(RuleLevel::Default), 840)
+        ("8", 4)
+    );
+    assert_eq!(on("10-10-2026").1, 960);
+    assert_eq!(
+        on("09-10-2026").1,
+        720,
+        "yesterday still has the first value"
     );
     // Saving the same values again changes nothing.
-    let same = rules::set_charges(
+    let audits = audit_total(&f.dir);
+    assert_eq!(
+        rules::set_charges(&f.env.ctx, &f.owner, &input(&again, "6", "8", "8")).unwrap(),
+        again
+    );
+    assert_eq!(audit_total(&f.dir), audits);
+    // The next day another change: the row of the 10th ends on the 10th.
+    set_today(&f.env, 2026, 10, 11);
+    let next = rules::charges(&f.env.ctx).unwrap();
+    assert_eq!(
+        next.buyer_commission.from_date, "2026-10-10",
+        "still in force"
+    );
+    let third = rules::set_charges(&f.env.ctx, &f.owner, &input(&next, "6", "5", "8")).unwrap();
+    assert_eq!(rule_count(), 5);
+    assert_eq!(
+        (
+            third.buyer_commission.value_text.as_str(),
+            third.buyer_commission.from_date.as_str()
+        ),
+        ("5", "2026-10-11")
+    );
+    assert_eq!(on("11-10-2026").1, 600);
+    assert_eq!(on("10-10-2026").1, 960);
+    assert_eq!(on("09-10-2026").1, 720);
+    // Every row of the chain is a default: it cannot be edited or switched off, old ones too.
+    let rows = rules::list(
         &f.env.ctx,
-        &f.owner,
-        &ChargesInput {
-            seller_commission: DefaultChargeInput {
-                version: after.seller_commission.version,
-                method: ChargeMethod::Percent,
-                value: "6".into(),
-            },
-            buyer_commission: DefaultChargeInput {
-                version: after.buyer_commission.version,
-                method: ChargeMethod::Percent,
-                value: "7".into(),
-            },
-            laga_fruit: DefaultChargeInput {
-                version: after.laga_fruit.version,
-                method: ChargeMethod::PerUnit,
-                value: "8".into(),
-            },
+        &RulesFilter {
+            side: Some(ChargeSide::Buyer),
+            charge_type: Some(ChargeType::Commission),
+            account_id: None,
+            item_id: None,
+            include_inactive: true,
         },
     )
     .unwrap();
-    assert_eq!(same, after);
-    assert_eq!(audit_total(&f.dir), audits + 1);
-    // The seller commission as a fixed amount per نگ, and لاگا as a percent.
+    assert_eq!(rows.len(), 3);
+    assert!(
+        rows.iter()
+            .all(|r| r.is_default && r.level == RuleLevel::Default)
+    );
+    assert_eq!(rows[0].from_date, "2026-10-11", "newest first");
+    let ended = rows.iter().find(|r| r.to_date.is_some()).unwrap();
+    assert_eq!(
+        rules::set_active(&f.env.ctx, &f.owner, ended.id, false)
+            .unwrap_err()
+            .code(),
+        ErrorCode::ErrRuleNotAllowed
+    );
+    assert_eq!(
+        refused(
+            &f,
+            &RuleInput {
+                id: Some(ended.id),
+                version: Some(ended.version),
+                ..form(
+                    ChargeSide::Buyer,
+                    ChargeType::Commission,
+                    ChargeMethod::Percent,
+                    "9"
+                )
+            }
+        )
+        .0,
+        ErrorCode::ErrRuleNotAllowed
+    );
+    // The seller commission and the fruit لاگا were not touched.
+    assert_eq!(
+        rules::charges(&f.env.ctx).unwrap().seller_commission,
+        before.seller_commission
+    );
+    assert_chain_ok(&f.dir);
+}
+
+#[test]
+fn the_three_defaults_can_be_other_methods_and_zero() {
+    let f = fixture();
+    let before = rules::charges(&f.env.ctx).unwrap();
+    // The seller commission as a fixed amount per نگ, the buyer commission as 2.5%, and لاگا as
+    // a percent; 0 is allowed ("no لاگا", lead decision 12-10-2026).
     let changed = rules::set_charges(
         &f.env.ctx,
         &f.owner,
         &ChargesInput {
             seller_commission: DefaultChargeInput {
-                version: after.seller_commission.version,
+                version: before.seller_commission.version,
                 method: ChargeMethod::PerUnit,
                 value: "30".into(),
             },
             buyer_commission: DefaultChargeInput {
-                version: after.buyer_commission.version,
+                version: before.buyer_commission.version,
                 method: ChargeMethod::Percent,
                 value: "2.5".into(),
             },
             laga_fruit: DefaultChargeInput {
-                version: after.laga_fruit.version,
-                method: ChargeMethod::Percent,
-                value: "1".into(),
+                version: before.laga_fruit.version,
+                method: ChargeMethod::PerUnit,
+                value: "0".into(),
             },
         },
     )
@@ -1104,12 +1205,12 @@ fn the_three_defaults_are_edited_in_settings_with_an_audit_row() {
         ),
         (ChargeMethod::PerUnit, "30")
     );
-    assert_eq!(changed.buyer_commission.value_text, "2.5");
+    assert_eq!(changed.laga_fruit.value_text, "0");
     let t = run(&f, f.rahim, f.akram, f.banana);
     assert_eq!(
         of(&t, ChargeSide::Seller, ChargeType::Commission).1,
         600,
-        "20 × 30"
+        "20 x 30"
     );
     assert_eq!(
         of(&t, ChargeSide::Buyer, ChargeType::Commission).1,
@@ -1117,11 +1218,45 @@ fn the_three_defaults_are_edited_in_settings_with_an_audit_row() {
         "2.5% of 12,000"
     );
     assert_eq!(
-        of(&t, ChargeSide::Buyer, ChargeType::Laga).1,
-        120,
-        "1% of 12,000"
+        of(&t, ChargeSide::Buyer, ChargeType::Laga),
+        (Some(RuleLevel::ItemGroup), 0)
     );
-    assert_chain_ok(&f.dir);
+    // A rule form accepts 0 per نگ and 0 per lot too: "no لاگا for this buyer" under the fruit
+    // group rule, and a free lot charge.
+    save(
+        &f,
+        &RuleInput {
+            account_id: Some(f.akram),
+            ..form(
+                ChargeSide::Buyer,
+                ChargeType::Laga,
+                ChargeMethod::PerUnit,
+                "0",
+            )
+        },
+    );
+    save(
+        &f,
+        &form(
+            ChargeSide::Seller,
+            ChargeType::Labour,
+            ChargeMethod::PerUnit,
+            "0",
+        ),
+    );
+    assert_eq!(
+        refused(
+            &f,
+            &form(
+                ChargeSide::Seller,
+                ChargeType::Labour,
+                ChargeMethod::PerUnit,
+                "-1"
+            )
+        )
+        .0,
+        ErrorCode::ErrNegativeNotAllowed
+    );
 }
 
 #[test]
@@ -1135,7 +1270,7 @@ fn settings_charges_check_every_value_and_name_the_field() {
     };
     let audits = audit_total(&f.dir);
     let bad = ChargesInput {
-        // 150 percent; the buyer commission has no per-lot method; laga 0 per نگ.
+        // 150 percent; the buyer commission has no per-lot method; a negative laga.
         seller_commission: DefaultChargeInput {
             value: "150".into(),
             ..ok(&before.seller_commission)
@@ -1145,7 +1280,7 @@ fn settings_charges_check_every_value_and_name_the_field() {
             ..ok(&before.buyer_commission)
         },
         laga_fruit: DefaultChargeInput {
-            value: "0".into(),
+            value: "-1".into(),
             ..ok(&before.laga_fruit)
         },
     };
@@ -1172,7 +1307,7 @@ fn settings_charges_check_every_value_and_name_the_field() {
         "{seen:?}"
     );
     assert!(
-        seen.contains(&(ErrorCode::ErrMustBeMoreThanZero, "laga_fruit.value".into())),
+        seen.contains(&(ErrorCode::ErrNegativeNotAllowed, "laga_fruit.value".into())),
         "{seen:?}"
     );
     assert_eq!(audit_total(&f.dir), audits);
@@ -1382,4 +1517,321 @@ fn ten_thousand_rules_are_filed_and_looked_up_fast() {
     );
     assert!(per_test.as_millis() < 100, "{per_test:?}");
     assert!(build.as_millis() < 2_000, "{build:?}");
+}
+
+#[test]
+fn a_posting_in_any_year_the_app_accepts_has_a_default() {
+    // Money review: a year typo must never find no default and make a commission silently 0.
+    let f = fixture();
+    for date in ["01-01-1950", "31-12-1999", "01-01-2000", "01-01-1000"] {
+        let t = rules::test(
+            &f.env.ctx,
+            &RuleTestInput {
+                seller_id: f.rahim,
+                buyer_id: f.akram,
+                item_id: f.banana,
+                date: date.into(),
+                qty: "20".into(),
+                rate: "600".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            of(&t, ChargeSide::Seller, ChargeType::Commission),
+            (Some(RuleLevel::Default), 720),
+            "{date}"
+        );
+        assert_eq!(
+            of(&t, ChargeSide::Buyer, ChargeType::Laga),
+            (Some(RuleLevel::ItemGroup), 160),
+            "{date}"
+        );
+    }
+}
+
+#[test]
+fn a_default_cannot_be_switched_off_or_deleted_even_outside_the_form() {
+    let f = fixture();
+    let conn = raw(&f.dir);
+    assert!(
+        conn.execute(
+            "UPDATE charge_rules SET is_active = 0 WHERE charge_type = 'commission'",
+            []
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute(
+            "DELETE FROM charge_rules WHERE charge_type = 'commission'",
+            []
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute(
+            "UPDATE charge_rules SET is_active = 0 WHERE charge_type = 'laga'",
+            []
+        )
+        .is_err()
+    );
+    assert_eq!(
+        count(
+            &f.dir,
+            "SELECT COUNT(*) FROM charge_rules WHERE is_active = 1"
+        ),
+        3
+    );
+}
+
+#[test]
+fn a_change_at_the_turn_of_a_month_a_year_and_a_leap_day_ends_the_row_on_the_right_day() {
+    // Money review: the old row ends the day before, whatever day that is.
+    let f = fixture();
+    let mut c = rules::charges(&f.env.ctx).unwrap();
+    for (year, month, day, ends, value) in [
+        (2026, 12, 1, "2026-11-30", "7"),
+        (2027, 1, 1, "2026-12-31", "8"),
+        (2028, 3, 1, "2028-02-29", "9"),
+    ] {
+        set_today(&f.env, year, month, day);
+        let input = ChargesInput {
+            seller_commission: DefaultChargeInput {
+                version: c.seller_commission.version,
+                method: ChargeMethod::Percent,
+                value: "6".into(),
+            },
+            buyer_commission: DefaultChargeInput {
+                version: c.buyer_commission.version,
+                method: ChargeMethod::Percent,
+                value: value.into(),
+            },
+            laga_fruit: DefaultChargeInput {
+                version: c.laga_fruit.version,
+                method: ChargeMethod::PerUnit,
+                value: "8".into(),
+            },
+        };
+        let old = c.buyer_commission.rule_id;
+        c = rules::set_charges(&f.env.ctx, &f.owner, &input).unwrap();
+        let end: Option<String> = raw(&f.dir)
+            .query_row(
+                "SELECT to_date FROM charge_rules WHERE id = ?1",
+                [old],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(end.as_deref(), Some(ends));
+        assert_eq!(
+            c.buyer_commission.from_date,
+            format!("{year:04}-{month:02}-{day:02}")
+        );
+    }
+}
+
+#[test]
+fn a_stale_form_never_matches_the_new_row_of_a_default() {
+    // Money review: after a change the new row starts above any version the old form holds.
+    let f = fixture();
+    let before = rules::charges(&f.env.ctx).unwrap();
+    let change =
+        |c: &mandi_services::core::rules::ChargesSettings, v: i64, value: &str| ChargesInput {
+            seller_commission: DefaultChargeInput {
+                version: c.seller_commission.version,
+                method: ChargeMethod::Percent,
+                value: "6".into(),
+            },
+            buyer_commission: DefaultChargeInput {
+                version: v,
+                method: ChargeMethod::Percent,
+                value: value.into(),
+            },
+            laga_fruit: DefaultChargeInput {
+                version: c.laga_fruit.version,
+                method: ChargeMethod::PerUnit,
+                value: "8".into(),
+            },
+        };
+    set_today(&f.env, 2026, 10, 9);
+    let first = rules::set_charges(
+        &f.env.ctx,
+        &f.owner,
+        &change(&before, before.buyer_commission.version, "7"),
+    )
+    .unwrap();
+    set_today(&f.env, 2026, 10, 10);
+    let second = rules::set_charges(
+        &f.env.ctx,
+        &f.owner,
+        &change(&first, first.buyer_commission.version, "8"),
+    )
+    .unwrap();
+    // A form that still holds the first version is refused.
+    let stale = change(&first, first.buyer_commission.version, "9");
+    let error = rules::set_charges(&f.env.ctx, &f.owner, &stale).unwrap_err();
+    assert_eq!(
+        error_code_field(error),
+        (
+            ErrorCode::ErrVersionChanged,
+            "buyer_commission.version".to_owned()
+        )
+    );
+    // And one that holds the very first row's version too.
+    let oldest = change(&first, before.buyer_commission.version, "9");
+    assert_eq!(
+        error_code_field(rules::set_charges(&f.env.ctx, &f.owner, &oldest).unwrap_err()).0,
+        ErrorCode::ErrVersionChanged
+    );
+    assert_eq!(rules::charges(&f.env.ctx).unwrap(), second);
+}
+
+fn error_code_field(error: ServiceError) -> (ErrorCode, String) {
+    match error {
+        ServiceError::Rejected(items) => {
+            (items[0].code, items[0].field.clone().unwrap_or_default())
+        }
+        other => panic!("not a rejection: {other:?}"),
+    }
+}
+
+#[test]
+fn a_clock_moved_back_past_a_change_is_refused_with_a_clear_code() {
+    // NFR-REL-11 and the money review: the default starts after "today", so a change would
+    // overlap it. The answer says so; nothing is written.
+    let f = fixture();
+    let before = rules::charges(&f.env.ctx).unwrap();
+    let input = |c: &mandi_services::core::rules::ChargesSettings, value: &str| ChargesInput {
+        seller_commission: DefaultChargeInput {
+            version: c.seller_commission.version,
+            method: ChargeMethod::Percent,
+            value: "6".into(),
+        },
+        buyer_commission: DefaultChargeInput {
+            version: c.buyer_commission.version,
+            method: ChargeMethod::Percent,
+            value: value.into(),
+        },
+        laga_fruit: DefaultChargeInput {
+            version: c.laga_fruit.version,
+            method: ChargeMethod::PerUnit,
+            value: "8".into(),
+        },
+    };
+    let changed = rules::set_charges(&f.env.ctx, &f.owner, &input(&before, "7")).unwrap();
+    assert_eq!(changed.buyer_commission.from_date, "2026-10-10");
+    set_today(&f.env, 2026, 10, 8);
+    // Settings shows the row in force on the 8th: the first one.
+    let shown = rules::charges(&f.env.ctx).unwrap();
+    assert_eq!(shown.buyer_commission.value_text, "6");
+    let rows = count(&f.dir, "SELECT COUNT(*) FROM charge_rules");
+    let audits = audit_total(&f.dir);
+    let error = rules::set_charges(&f.env.ctx, &f.owner, &input(&shown, "9")).unwrap_err();
+    let ServiceError::Rejected(items) = error else {
+        panic!("not a rejection")
+    };
+    assert_eq!(
+        (items[0].code, items[0].field.as_deref()),
+        (ErrorCode::ErrDateInFuture, Some("buyer_commission.value"))
+    );
+    assert_eq!(
+        items[0].values.get("today"),
+        Some(&ErrorValue::Text("10-10-2026".into()))
+    );
+    assert_eq!(count(&f.dir, "SELECT COUNT(*) FROM charge_rules"), rows);
+    assert_eq!(audit_total(&f.dir), audits);
+}
+
+#[test]
+fn a_zero_percent_rule_is_a_winner_that_charges_nothing() {
+    // Money review: 0% is a rule, not "no rule": the working says 12,000 x 0%.
+    let f = fixture();
+    save(
+        &f,
+        &RuleInput {
+            account_id: Some(f.akram),
+            ..form(
+                ChargeSide::Buyer,
+                ChargeType::Commission,
+                ChargeMethod::Percent,
+                "0",
+            )
+        },
+    );
+    let t = run(&f, f.rahim, f.akram, f.banana);
+    let c = t
+        .charges
+        .iter()
+        .find(|c| c.side == ChargeSide::Buyer && c.charge_type == ChargeType::Commission)
+        .unwrap();
+    assert_eq!(
+        (c.winner.map(|w| w.level), c.amount_paisa),
+        (Some(RuleLevel::Party), Paisa::ZERO)
+    );
+    assert_eq!(c.working.message_id, "working-percent");
+    assert_eq!(c.working.args[1].value, WorkingValue::Percent { bps: 0 });
+    assert_eq!(
+        rules::get(&f.env.ctx, c.winner.and_then(|w| w.rule_id).unwrap())
+            .unwrap()
+            .value_text,
+        "0"
+    );
+}
+
+#[test]
+fn e2e_13b_numbers_through_the_default_in_force_on_the_day() {
+    // E2E-13b: the Owner changes the default buyer commission to 7% on 10-10-26; a changed line
+    // 20 x 610 = 12,200 is charged 12,200 x 7% = 854 (the buyer pays 12,200 + 854 + 160 =
+    // 13,214); a posting of the day before keeps 6% (732). The unchanged line keeping its stored
+    // 1,044 is the edit path of the sale plan.
+    let f = fixture();
+    let before = rules::charges(&f.env.ctx).unwrap();
+    rules::set_charges(
+        &f.env.ctx,
+        &f.owner,
+        &ChargesInput {
+            seller_commission: DefaultChargeInput {
+                version: before.seller_commission.version,
+                method: ChargeMethod::Percent,
+                value: "6".into(),
+            },
+            buyer_commission: DefaultChargeInput {
+                version: before.buyer_commission.version,
+                method: ChargeMethod::Percent,
+                value: "7".into(),
+            },
+            laga_fruit: DefaultChargeInput {
+                version: before.laga_fruit.version,
+                method: ChargeMethod::PerUnit,
+                value: "8".into(),
+            },
+        },
+    )
+    .unwrap();
+    let on = |date: &str| {
+        rules::test(
+            &f.env.ctx,
+            &RuleTestInput {
+                seller_id: f.rahim,
+                buyer_id: f.akram,
+                item_id: f.banana,
+                date: date.into(),
+                qty: "20".into(),
+                rate: "610".into(),
+            },
+        )
+        .unwrap()
+    };
+    let t = on("10-10-2026");
+    assert_eq!(t.line_value_paisa, rupees(12_200));
+    let amounts = (
+        of(&t, ChargeSide::Buyer, ChargeType::Commission).1,
+        of(&t, ChargeSide::Buyer, ChargeType::Laga).1,
+        of(&t, ChargeSide::Seller, ChargeType::Commission).1,
+    );
+    assert_eq!(amounts, (854, 160, 732));
+    assert_eq!(12_200 + amounts.0 + amounts.1, 13_214);
+    assert_eq!(
+        of(&on("09-10-2026"), ChargeSide::Buyer, ChargeType::Commission).1,
+        732,
+        "the day before keeps 6%"
+    );
 }

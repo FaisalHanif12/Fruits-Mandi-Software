@@ -43,9 +43,9 @@ export function CalcInfo({ working }: CalcInfoProps) {
   if (working === null) return null;
   // A per-نگ charge of a lot names the quantity received, not the quantity of a line.
   const messageId =
-    working.message_id === 'working-per-unit' &&
+    working.message_id.endsWith('per-unit') &&
     working.args.some((arg) => arg.name === 'qty_received')
-      ? 'working-per-unit-received'
+      ? `${working.message_id}-received`
       : working.message_id;
   const known = l10n.getBundle(messageId) !== null;
   const vars: Record<string, string> = {};

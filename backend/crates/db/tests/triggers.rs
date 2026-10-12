@@ -787,25 +787,82 @@ fn an_opening_advance_needs_an_opening_debit() {
 }
 
 #[test]
-fn only_one_rule_can_be_each_of_the_three_defaults() {
-    // The seed holds seller commission, buyer commission and the fruit لاگا; a second rule with
-    // the same scope would hide the one the Settings screen shows (plan 09).
+fn two_rows_of_one_default_never_cover_the_same_day() {
+    // The seed holds seller commission, buyer commission and the fruit لاگا from 1000-01-01
+    // with no end. A change ends the old row the day before and starts a new one (plan 09).
     let (_dir, conn) = setup();
     let insert = |side: &str,
                   charge: &str,
                   group: Option<&str>,
                   method: &str,
                   bps: Option<i64>,
-                  paisa: Option<i64>| {
+                  paisa: Option<i64>,
+                  from: &str,
+                  to: Option<&str>| {
         conn.execute(
-            "INSERT INTO charge_rules (side, charge_type, item_group, method, value_bps, value_paisa, from_date) VALUES (?1, ?2, ?3, ?4, ?5, ?6, '2026-10-01')",
-            params![side, charge, group, method, bps, paisa],
+            "INSERT INTO charge_rules (side, charge_type, item_group, method, value_bps, value_paisa, from_date, to_date) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![side, charge, group, method, bps, paisa, from, to],
         )
     };
-    assert!(insert("seller", "commission", None, "percent", Some(700), None).is_err());
-    assert!(insert("buyer", "commission", None, "percent", Some(700), None).is_err());
-    assert!(insert("buyer", "laga", Some("fruit"), "per_unit", None, Some(900)).is_err());
-    // Other scopes are free: the vegetable group, and the default of a lot charge.
+    // Another row from any day is refused while the first has no end.
+    assert!(
+        insert(
+            "seller",
+            "commission",
+            None,
+            "percent",
+            Some(700),
+            None,
+            "2026-10-10",
+            None
+        )
+        .is_err()
+    );
+    assert!(
+        insert(
+            "buyer",
+            "laga",
+            Some("fruit"),
+            "per_unit",
+            None,
+            Some(900),
+            "2026-10-10",
+            None
+        )
+        .is_err()
+    );
+    // End the old row on 09-10, then the new row from 10-10 is fine.
+    conn.execute("UPDATE charge_rules SET to_date = '2026-10-09' WHERE side = 'seller' AND charge_type = 'commission'", []).unwrap();
+    assert!(
+        insert(
+            "seller",
+            "commission",
+            None,
+            "percent",
+            Some(700),
+            None,
+            "2026-10-10",
+            None
+        )
+        .is_ok()
+    );
+    // Moving the new row's start back over the old row's days is refused, and so is a row that
+    // meets the old one on its last day.
+    assert!(conn.execute("UPDATE charge_rules SET from_date = '2026-10-09' WHERE side = 'seller' AND charge_type = 'commission' AND from_date = '2026-10-10'", []).is_err());
+    assert!(
+        insert(
+            "seller",
+            "commission",
+            None,
+            "percent",
+            Some(800),
+            None,
+            "2026-10-09",
+            Some("2026-10-09")
+        )
+        .is_err()
+    );
+    // Other scopes are free: the vegetable group, a lot charge default, and a party rule.
     assert!(
         insert(
             "buyer",
@@ -813,11 +870,39 @@ fn only_one_rule_can_be_each_of_the_three_defaults() {
             Some("vegetable"),
             "per_unit",
             None,
-            Some(300)
+            Some(300),
+            "2026-10-10",
+            None
         )
         .is_ok()
     );
-    assert!(insert("seller", "labour", None, "per_unit", None, Some(500)).is_ok());
+    assert!(
+        insert(
+            "seller",
+            "labour",
+            None,
+            "per_unit",
+            None,
+            Some(500),
+            "2026-10-10",
+            None
+        )
+        .is_ok()
+    );
+    assert!(
+        insert(
+            "seller",
+            "labour",
+            None,
+            "per_unit",
+            None,
+            Some(600),
+            "2026-10-10",
+            None
+        )
+        .is_ok(),
+        "only the three defaults are guarded here"
+    );
     assert!(
         insert(
             "seller",
@@ -825,6 +910,8 @@ fn only_one_rule_can_be_each_of_the_three_defaults() {
             Some("fruit"),
             "percent",
             Some(500),
+            None,
+            "2026-10-10",
             None
         )
         .is_ok()

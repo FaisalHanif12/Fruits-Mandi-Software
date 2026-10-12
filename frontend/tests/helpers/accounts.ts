@@ -78,6 +78,7 @@ export function account(
     collector: null,
     collection_weekday: null,
     is_system: false,
+    can_take_opening: true,
     is_pukhta_khata: false,
     is_active: true,
     note: '',
@@ -436,7 +437,9 @@ export function fakeOpenings(store: FakeAccounts) {
       return {
         account:
           found === undefined ? null : ref(found.id, found.code, found.name_ur, found.name_en),
-        errors: both ? [{ code: 'ERR_OPENING_BOTH_SIDES' as const, field: 'opening_dr' }] : [],
+        errors: both
+          ? [{ code: 'ERR_OPENING_BOTH_SIDES' as const, field: 'opening_dr', values: {} }]
+          : [],
         opening_dr_paisa: money(both ? 0 : dr),
         opening_cr_paisa: money(both ? 0 : cr),
       };

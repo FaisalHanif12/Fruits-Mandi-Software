@@ -242,6 +242,43 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
     expect(text(22, 'opening_date')).toBe('15-09-2026');
   });
 
+  it('an account that cannot take an opening has locked cells, no date, and never goes to the backend', async () => {
+    const income = account(61, 'other', '04010001', 'کمیشن آمدن', 'Commission Income', {
+      opening_date: null,
+      can_take_opening: false,
+    });
+    ROWS.push(income);
+    try {
+      const { user } = await open([...ROWS]);
+      expect(text(61, 'opening_date')).toBe('');
+      expect(cell(61, 'opening_dr').getAttribute('aria-readonly') ?? '').not.toBe('false');
+      // The help line says why a row is locked.
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'openings-locked-help'),
+      );
+      // Typing on a locked cell changes nothing.
+      await user.click(cell(61, 'opening_dr'));
+      await user.keyboard('5000');
+      expect(text(61, 'opening_dr')).toBe('');
+      // The date for all does not touch it, and nothing is a line to save.
+      const common = await screen.findByLabelText<HTMLInputElement>(
+        named(message(language, 'openings-date-all')),
+      );
+      await user.clear(common);
+      await user.type(common, '31-08-2026');
+      await waitFor(() => {
+        expect(text(21, 'opening_date')).toBe('31-08-2026');
+      });
+      expect(text(61, 'opening_date')).toBe('');
+      const asked = vi
+        .mocked(accountApi.accountsOpeningsPreview)
+        .mock.calls.flatMap((call) => call[0].lines.map((line) => line.account_id));
+      expect(asked).not.toContain(61);
+    } finally {
+      ROWS.pop();
+    }
+  });
+
   it('a line the backend refuses is listed with its account and marked on its cell, and F10 shows the refusal of the save', async () => {
     const { user } = await open();
     await user.click(cell(21, 'opening_dr'));

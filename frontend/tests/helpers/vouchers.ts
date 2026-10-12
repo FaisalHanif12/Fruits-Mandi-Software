@@ -35,15 +35,30 @@ export function fakeAdvances(): FakeAdvances {
   vi.mocked(vouchersApi.vouchersPreviewAdvances).mockImplementation((drafts) => {
     const running = new Map<number, number>();
     let total = 0;
-    const rows = drafts.map((draft): AdvancePreviewRow => {
-      const seller = draft.seller?.id ?? 0;
+    const rows = drafts.map((draft, index): AdvancePreviewRow => {
+      const seller = draft.seller.id;
       const before = running.get(seller) ?? debit(seller);
       const amount = rupeesOf(draft.amount);
       const decimals = draft.amount.includes('.');
       running.set(seller, before + (decimals ? 0 : amount));
       if (!decimals) total += amount;
       return {
-        errors: decimals ? [{ code: 'ERR_DECIMALS_NOT_ALLOWED', field: 'amount' }] : [],
+        account: {
+          id: draft.seller.id,
+          code: draft.seller.code ?? '',
+          name_ur: draft.seller.name_ur,
+          name_en: draft.seller.name_en,
+        },
+        // The real answer names the line: `lines[i].<field>`.
+        errors: decimals
+          ? [
+              {
+                code: 'ERR_DECIMALS_NOT_ALLOWED',
+                field: `lines[${String(index)}].amount`,
+                values: {},
+              },
+            ]
+          : [],
         amount_paisa: money(decimals ? 0 : amount),
         current_balance: before === 0 ? ZERO : balance(before, 'dr'),
         new_balance: balance(before + (decimals ? 0 : amount), 'dr'),
@@ -52,9 +67,10 @@ export function fakeAdvances(): FakeAdvances {
     return Promise.resolve({ rows, total_paisa: money(total) });
   });
   vi.mocked(vouchersApi.vouchersSaveAdvance).mockImplementation((draft) => {
-    const seller = draft.seller?.id ?? 0;
+    const seller = draft.seller.id;
     store.saved.push({ seller, amount: draft.amount });
     return Promise.resolve({
+      voucher_id: 500 + store.saved.length,
       voucher_type: 'advance',
       number: store.saved.length,
       entry_id: 1000 + store.saved.length,
@@ -65,19 +81,20 @@ export function fakeAdvances(): FakeAdvances {
     Promise.resolve(
       sellerId === 31
         ? {
-            open_paisa: money(15000),
-            last: { date: '2026-09-01', number: 1, amount_paisa: money(15000) },
-            items: [
+            open: [
               {
-                date: '2026-09-01',
-                number: 1,
-                amount_paisa: money(15000),
+                source: 'voucher',
+                voucher_number: 1,
+                entry_date: '2026-09-01',
+                given_paisa: money(15000),
                 adjusted_paisa: money(0),
                 open_paisa: money(15000),
               },
             ],
+            open_paisa: money(15000),
+            last: { entry_date: '2026-09-01', amount_paisa: money(15000), voucher_number: 1 },
           }
-        : { open_paisa: money(0), last: null, items: [] },
+        : { open: [], open_paisa: money(0), last: null },
     ),
   );
   return store;
@@ -107,12 +124,15 @@ export function fakeDay(options: Partial<FakeDay> = {}): FakeDay {
   vi.mocked(appApi.dayStatus).mockImplementation(() => Promise.resolve(reading()));
   vi.mocked(dayApi.dayClosePreview).mockImplementation((upTo) =>
     Promise.resolve({
-      first_day: '2026-10-01',
+      from_date: '2026-10-01',
       // No date typed: the oldest open day (PRD FR-21.1).
       up_to: upTo === '' ? '2026-10-01' : isoOf(upTo),
       days: store.days,
+      trial_dr_paisa: money(85048),
+      trial_cr_paisa: money(85048),
       trial_difference: store.trial,
       cash_in_hand: balance(58484, 'dr'),
+      entries: 12,
     }),
   );
   vi.mocked(dayApi.dayClose).mockImplementation((upTo) => {

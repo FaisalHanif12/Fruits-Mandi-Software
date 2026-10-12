@@ -10,6 +10,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
+import { isoToDisplayDate } from '../../../shared/format';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -121,6 +122,12 @@ function ChargesForm({ saved }: { saved: ChargesSettings }) {
           <section key={key} className="flex flex-col gap-3">
             <Localized id={LABEL_ID[key]}>
               <h3 className="type-section" />
+            </Localized>
+            <Localized
+              id="settings-charges-from"
+              vars={{ date: isoToDisplayDate(saved[key].from_date) }}
+            >
+              <p className="type-body text-ink-muted" />
             </Localized>
             <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
               <Field

@@ -347,6 +347,9 @@ openings-errors-title = These lines have a problem
 # review: pending
 openings-problem = { $account } ({ $field }): { $message }
 
+# review: pending
+openings-locked-help = An account whose cells are locked cannot have an opening balance.
+
 # The name of a seller whose opening debit is an advance, in the opening balances grid.
 # review: pending
 openings-name-advance = { $name } ({ -peshgi-khata })

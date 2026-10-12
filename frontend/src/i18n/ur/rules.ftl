@@ -336,7 +336,11 @@ rules-test-result = نتیجہ
 settings-tab-charges = چارجز
 
 # review: pending
-settings-charges-help = یہ عام شرحیں ہیں۔ کسی کھاتے یا { -qism-maal } کی الگ شرح اصولوں میں لکھی جاتی ہے۔
+settings-charges-help = یہ عام شرحیں ہیں۔ نئی شرح اسی دن سے لاگو ہوتی ہے جس دن آپ اسے بدلیں؛ پرانے دن پرانی شرح پر رہتے ہیں۔ کسی کھاتے یا { -qism-maal } کی الگ شرح اصولوں میں لکھی جاتی ہے۔
+
+# $date: DD-MM-YYYY. The day this rate started: a change made here starts on the day it is made.
+# review: pending
+settings-charges-from = یہ شرح { $date } سے لاگو ہے۔
 
 # review: pending
 settings-charges-seller = { -beopari } { -commission }
@@ -382,13 +386,13 @@ settings-load-charges-failed = چارجز نہیں کھل سکے
 
 # The dates another rule covers, in the overlap warning.
 # review: pending
-rules-overlap-dates = { $from } سے { $to } تک
+rules-dates = { $from } سے { $to } تک
 
 # review: pending
 rules-overlap-open = اصول کھولیں
 
 # review: pending
-rules-overlap-dates-open = { $from } سے، کوئی آخری تاریخ نہیں
+rules-dates-open = { $from } سے، کوئی آخری تاریخ نہیں
 
 # The winner of a charge is a value typed on the sale line.
 # review: pending
@@ -409,3 +413,7 @@ rules-default-notice = یہ عام شرح ہے۔ اسے ترتیبات کے چا
 
 # review: pending
 rules-default-open-settings = ترتیبات کھولیں
+
+# An old default rate that ended when a new one started (a change in Settings, Charges).
+# review: pending
+rules-status-default-ended = عام، { $to } تک

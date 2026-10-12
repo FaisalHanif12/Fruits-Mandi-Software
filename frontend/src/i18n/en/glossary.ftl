@@ -141,6 +141,10 @@
 # review: pending
 -peshgi-khata = Advance
 
+# The advance itself (the money given), as against the screen and register.
+# review: pending
+-peshgi = Advance
+
 # General journal entry
 # review: pending
 -general = Journal

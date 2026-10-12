@@ -16,14 +16,14 @@ use mandi_db::accounts as account_repo;
 use mandi_db::rules::{self as repo, NewRule};
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{BUYER_CONTROL, SELLER_CONTROL};
-use mandi_domain::core::dates::BusinessDate;
-use mandi_domain::core::error::{ErrorCode, FieldError};
+use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
+use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::money::{Paisa, Qty, line_value};
 use mandi_domain::core::rules::{
     ChargeSide, ChargeTest, ChargeType, ChargeValue, ChargesInput, ChargesSettings,
-    CreditLimitMode, DefaultCharge, DefaultChargeInput, ItemGroup, OverridesSettings, RuleInput,
-    RuleRow, RuleSaved, RuleTest, RuleTestInput, RulesFilter, charge_allowed, check_combination,
-    level_of, prepare_rule, rule_value,
+    CreditLimitMode, DefaultCharge, ItemGroup, OverridesSettings, RuleInput, RuleRow, RuleSaved,
+    RuleTest, RuleTestInput, RulesFilter, check_combination, is_default_scope, level_of,
+    prepare_rule, rule_value,
 };
 use mandi_domain::core::validate;
 use mandi_domain::rules::{Query, Rule, RuleSet, charge_amount, resolve};
@@ -33,7 +33,7 @@ use crate::audit::Event;
 use crate::auth::Actor;
 use crate::context::Context;
 use crate::day;
-use crate::error::{ServiceError, money_error};
+use crate::error::{Rejection, ServiceError, money_error};
 use crate::store;
 
 /// The settings key of the two switches of "Overrides" and "Checks".
@@ -116,12 +116,17 @@ fn invalidate(ctx: &Context) {
 
 // ---- Reading ----
 
-fn mark_defaults(conn: &Connection, rows: &mut [RuleRow]) -> Result<(), ServiceError> {
-    // Without the names of the defaults they would look like ordinary rules and could be edited
-    // or switched off, so a missing record is an error, not a guess.
-    let (a, b, c) = default_ids(conn)?;
+fn mark_defaults(_conn: &Connection, rows: &mut [RuleRow]) -> Result<(), ServiceError> {
+    // A default is a row of the default chain, known by its scope (PRD 4.2): the rule form must
+    // not edit or switch off any row of it, old or new.
     for row in rows {
-        row.is_default = [a, b, c].contains(&row.id);
+        row.is_default = is_default_scope(
+            row.side,
+            row.charge_type,
+            row.account.as_ref().map(|a| a.id),
+            row.item.as_ref().map(|i| i.id),
+            row.item_group,
+        );
     }
     Ok(())
 }
@@ -469,9 +474,27 @@ pub fn test(ctx: &Context, input: &RuleTestInput) -> Result<RuleTest, ServiceErr
 
 // ---- Settings: the three defaults ----
 
-fn default_ids(conn: &Connection) -> Result<(i64, i64, i64), ServiceError> {
-    repo::default_ids(conn)?.ok_or_else(|| data("the default charge rules are missing".to_owned()))
-}
+/// The three defaults, as (name, side, charge, group).
+const DEFAULTS: [(&str, ChargeSide, ChargeType, Option<ItemGroup>); 3] = [
+    (
+        "seller_commission",
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        None,
+    ),
+    (
+        "buyer_commission",
+        ChargeSide::Buyer,
+        ChargeType::Commission,
+        None,
+    ),
+    (
+        "laga_fruit",
+        ChargeSide::Buyer,
+        ChargeType::Laga,
+        Some(ItemGroup::Fruit),
+    ),
+];
 
 fn default_charge(row: RuleRow) -> DefaultCharge {
     DefaultCharge {
@@ -479,29 +502,59 @@ fn default_charge(row: RuleRow) -> DefaultCharge {
         method: row.method,
         value_text: row.value_text,
         version: row.version,
+        from_date: row.from_date,
     }
 }
 
-fn charges_in(conn: &Connection) -> Result<ChargesSettings, ServiceError> {
-    let (seller, buyer, laga) = default_ids(conn)?;
+/// The default in force on a day, marked as a default.
+fn default_on(conn: &Connection, which: usize, date: &str) -> Result<RuleRow, ServiceError> {
+    let (name, side, charge, group) = DEFAULTS
+        .get(which)
+        .copied()
+        .ok_or_else(|| data("no such default".to_owned()))?;
+    let mut rows = [repo::default_in_force(conn, side, charge, group, date)?
+        .ok_or_else(|| data(format!("no default {name} is in force on {date}")))?];
+    mark_defaults(conn, &mut rows)?;
+    let [row] = rows;
+    Ok(row)
+}
+
+fn charges_in(conn: &Connection, today: &str) -> Result<ChargesSettings, ServiceError> {
     Ok(ChargesSettings {
-        seller_commission: default_charge(row_of(conn, seller)?),
-        buyer_commission: default_charge(row_of(conn, buyer)?),
-        laga_fruit: default_charge(row_of(conn, laga)?),
+        seller_commission: default_charge(default_on(conn, 0, today)?),
+        buyer_commission: default_charge(default_on(conn, 1, today)?),
+        laga_fruit: default_charge(default_on(conn, 2, today)?),
     })
 }
 
-/// The three global defaults (PRD 4.2, Section 21 "Charges").
-///
-/// # Errors
-/// `ServiceError::Data` if the default rows are missing.
-pub fn charges(ctx: &Context) -> Result<ChargesSettings, ServiceError> {
-    ctx.db.read(charges_in)
+fn today_iso(ctx: &Context) -> String {
+    ctx.clock().local_today().format("%Y-%m-%d").to_string()
 }
 
-/// Saves the three global defaults. They are rows of `charge_rules`, so each change is edited
-/// in place with an audit row (old and new value); saved sale lines keep what they stored
-/// (PRD FR-11.6). A default that did not change writes nothing.
+/// The three global defaults in force today (PRD 4.2, Section 21 "Charges"), each with the day it
+/// started.
+///
+/// # Errors
+/// `ServiceError::Data` if a default is missing.
+pub fn charges(ctx: &Context) -> Result<ChargesSettings, ServiceError> {
+    let today = today_iso(ctx);
+    ctx.db.read(|conn| charges_in(conn, &today))
+}
+
+/// The day before an ISO date.
+fn day_before(date: &str) -> Result<String, ServiceError> {
+    BusinessDate::parse_iso(date)
+        .and_then(BusinessDate::previous_day)
+        .map(BusinessDate::to_iso)
+        .ok_or_else(|| data(format!("the day before {date}")))
+}
+
+/// Saves the three global defaults. A default is dated like any rule (PRD 11.3: the rule date is
+/// the posting date). A change made today ends the row in force on the day before and starts a
+/// new row today; a second change on the same day updates that day's row. So a back-dated
+/// posting on an open day, and "Test a rule" on a past date, use the default in force on that
+/// date. Saved sale lines keep what they stored (PRD FR-11.6). A default that did not change
+/// writes nothing. All in one transaction, with an audit row for each row written.
 ///
 /// # Errors
 /// The percent and money codes on `<default>.value`; `ERR_RULE_NOT_ALLOWED` on
@@ -512,30 +565,14 @@ pub fn set_charges(
     input: &ChargesInput,
 ) -> Result<ChargesSettings, ServiceError> {
     // Check every value first, so all mistakes come back together.
-    let wanted: [(&str, ChargeSide, ChargeType, &DefaultChargeInput); 3] = [
-        (
-            "seller_commission",
-            ChargeSide::Seller,
-            ChargeType::Commission,
-            &input.seller_commission,
-        ),
-        (
-            "buyer_commission",
-            ChargeSide::Buyer,
-            ChargeType::Commission,
-            &input.buyer_commission,
-        ),
-        (
-            "laga_fruit",
-            ChargeSide::Buyer,
-            ChargeType::Laga,
-            &input.laga_fruit,
-        ),
+    let wanted = [
+        &input.seller_commission,
+        &input.buyer_commission,
+        &input.laga_fruit,
     ];
     let mut errors = validate::FieldErrors::default();
     let mut values: Vec<Option<ChargeValue>> = Vec::with_capacity(3);
-    for (name, side, charge, one) in &wanted {
-        debug_assert!(charge_allowed(*side, *charge));
+    for ((name, side, charge, _), one) in DEFAULTS.iter().zip(wanted) {
         let combination = check_combination(&format!("{name}."), *side, *charge, one.method);
         values.push(match combination {
             Err(e) => {
@@ -546,15 +583,35 @@ pub fn set_charges(
         });
     }
     errors.finish()?;
+    let today = today_iso(ctx);
+    let yesterday = day_before(&today)?;
     let saved = ctx.db.write(|tx| {
-        let ids = default_ids(tx)?;
-        let ids = [ids.0, ids.1, ids.2];
         let now = ctx.now_text();
-        for (((name, _, _, one), value), id) in wanted.iter().zip(&values).zip(ids) {
+        for (which, (one, value)) in wanted.iter().zip(&values).enumerate() {
             let Some(value) = value else {
                 return Err(ServiceError::reject(ErrorCode::ErrInternal));
             };
-            let old = row_of(tx, id)?;
+            let name = DEFAULTS.get(which).map_or("", |d| d.0);
+            // A default that starts after today can exist only if the computer's clock was moved
+            // back (NFR-REL-11). Changing the earlier row would overlap it, so it is refused.
+            let (_, side, charge, group) = DEFAULTS
+                .get(which)
+                .copied()
+                .ok_or_else(|| data("no such default".to_owned()))?;
+            if let Some(later) = repo::default_starting_after(tx, side, charge, group, &today)? {
+                let shown = BusinessDate::parse_iso(&later)
+                    .map(format_ddmmyyyy)
+                    .unwrap_or(later);
+                return Err(ServiceError::Rejected(vec![Rejection {
+                    code: ErrorCode::ErrDateInFuture,
+                    field: Some(format!("{name}.value")),
+                    values: std::collections::BTreeMap::from([(
+                        "today".to_owned(),
+                        ErrorValue::Text(shown),
+                    )]),
+                }]));
+            }
+            let old = default_on(tx, which, &today)?;
             if old.version != one.version {
                 return Err(ServiceError::reject_field(
                     ErrorCode::ErrVersionChanged,
@@ -572,22 +629,61 @@ pub fn set_charges(
             rule.method = value.method();
             rule.value_bps = value_bps;
             rule.value_paisa = value_paisa;
-            if !repo::update(tx, id, old.version, &rule, actor.user_id, &now)? {
-                return Err(ServiceError::reject_field(
-                    ErrorCode::ErrVersionChanged,
-                    &format!("{name}.version"),
-                ));
+            if old.from_date == today {
+                // A second change on the same day updates that day's row.
+                if !repo::update(tx, old.id, old.version, &rule, actor.user_id, &now)? {
+                    return Err(ServiceError::reject_field(
+                        ErrorCode::ErrVersionChanged,
+                        &format!("{name}.version"),
+                    ));
+                }
+                ctx.db.auditor().write(
+                    tx,
+                    &Event::new(Some(actor.user_id), "edit", "charge_rule")
+                        .entity_id(old.id)
+                        .old(row_json(&old))
+                        .new_value(audit_json(&rule))
+                        .into_entry(),
+                )?;
+            } else {
+                // End the row in force the day before, then start the new one today. The order
+                // matters: the table refuses two defaults that cover the same day.
+                if !repo::set_to_date(tx, old.id, old.version, &yesterday, actor.user_id, &now)? {
+                    return Err(ServiceError::reject_field(
+                        ErrorCode::ErrVersionChanged,
+                        &format!("{name}.version"),
+                    ));
+                }
+                ctx.db.auditor().write(
+                    tx,
+                    &Event::new(Some(actor.user_id), "edit", "charge_rule")
+                        .entity_id(old.id)
+                        .old(json!({ "to_date": old.to_date }))
+                        .new_value(json!({ "to_date": yesterday }))
+                        .into_entry(),
+                )?;
+                rule.from_date.clone_from(&today);
+                rule.to_date = None;
+                // Its version is above anything a stale form could still hold (the old row is
+                // now at version + 1).
+                let new_id = repo::insert_with_version(
+                    tx,
+                    &rule,
+                    old.version.saturating_add(2),
+                    actor.user_id,
+                    &now,
+                )?;
+                ctx.db.auditor().write(
+                    tx,
+                    &Event::new(Some(actor.user_id), "create", "charge_rule")
+                        .entity_id(new_id)
+                        .old(row_json(&old))
+                        .new_value(audit_json(&rule))
+                        .into_entry(),
+                )?;
             }
-            ctx.db.auditor().write(
-                tx,
-                &Event::new(Some(actor.user_id), "edit", "charge_rule")
-                    .entity_id(id)
-                    .old(row_json(&old))
-                    .new_value(audit_json(&rule))
-                    .into_entry(),
-            )?;
         }
-        charges_in(tx)
+        charges_in(tx, &today)
     })?;
     invalidate(ctx);
     Ok(saved)

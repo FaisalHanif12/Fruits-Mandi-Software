@@ -21,4 +21,10 @@ export type DefaultCharge = {
    * The version of the rule, to send back.
    */
   version: number;
+  /**
+   * The first day this value applies, `YYYY-MM-DD`. A change made in Settings starts on the
+   * day it is made; the value before it ends the day before (PRD 11.3: the rule date is the
+   * posting date).
+   */
+  from_date: string;
 };

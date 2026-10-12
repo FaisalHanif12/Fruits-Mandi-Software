@@ -33,7 +33,7 @@ The card in D2 shows: name in the current language with father or firm, city, ph
 - `assist_party_card { account_id }` -> `PartyCard { name_ur, name_en, father_or_firm_ur, father_or_firm_en, city_ur, city_en, phone, balance: Paisa, side, last_entry_date, credit_limit?, credit_used?, advance_open?, warnings: Vec<CardWarning> }`; balances from `journal_lines` (never from the index, B27); one indexed query (NFR-SPD-21; bench).
 - A timing test like plan 06's over 20,000 generated accounts for the account scopes.
 - Recent and touch use the plan 06 commands `search_recent { scope }` and `search_touch { scope, id }`, with `SearchScope` extended by `seller`, `buyer` and `any_account`. No separate account commands.
-- Added 12-10-2026: for the account scopes, `search_recent` returns `AccountHit` rows (with `account_type`), so a money lent person is not shown as "other"; the `control` scope has a recent list too.
+- Added 12-10-2026: for the account scopes, `search_recent` returns `AccountHit` rows (with `account_type`), so a money lent person is not shown as "other"; the `control` scope has a recent list too. Built as two separate commands, `search_accounts_recent { scope, control_id? }` -> `Vec<AccountHit>` and `search_accounts_touch { scope, control_id?, id }`, because one command cannot return two types; `search_recent` and `search_touch` stay for the master scopes.
 - `search_global { text }` -> accounts now (later deliverables add their own kinds).
 - Sign-in check first in every command.
 

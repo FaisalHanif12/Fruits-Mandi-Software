@@ -42,6 +42,12 @@ Each of the six levels has a test that shows it winning over every level below i
 
 - Decided 12-10-2026 (team default, open question for Umar in status.md): an item group only on a rule with no item and no party, because PRD 11.3 has no party + group level. The three global defaults are rows with `is_default`, changed only from Settings, Charges.
 
+- Decided 12-10-2026 after backend's T2:
+  - A zero value is allowed for per نگ and per lot (value 0 or more), so "no لاگا for this buyer" can be written as 0 per نگ. Negative values stay refused. The plan's earlier "zero per نگ refused" was the lead's wording, not a PRD rule.
+  - The three global defaults are dated like every other rule (PRD 11.3: the rule date is the posting date). Changing a default in Settings ends the current default row on the day before the change day and adds a new row from the change day; a second change on the same day updates that day's row. So a back-dated posting on an open day, and "Test a rule" on a past date, use the default that was in force on that date. The one-default-per-side guard becomes "no two defaults overlap in dates". E2E-13b numbers do not change.
+  - "Newer wins" (FR-11.5) is read as: the rule that starts later; on the same start day, the one made last. One function decides it. Open question for Umar (status.md).
+  - The criterion bench for NFR-SCL-6 (10,000 rules, under 1 ms) on `mandi_domain::rules::{RuleSet, resolve}` is written by `robustness` at the end gate (D2-A13).
+
 ### Frontend
 
 - Rules list (filters by side, charge, party, item, active), rule form (side, charge type limited to 11.2, party with `AccountPicker`, item with the plan 06 Picker, item group, method limited by charge, value as text with the right unit, dates, active, note), overlap warning, four states, keyboard only, both languages.

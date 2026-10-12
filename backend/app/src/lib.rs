@@ -106,6 +106,8 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::accounts::coa_controls_list,
         commands::search::search_accounts,
         commands::search::search_global,
+        commands::search::search_accounts_recent,
+        commands::search::search_accounts_touch,
         commands::accounts::accounts_resolve_code,
         commands::accounts::accounts_balances,
         commands::assist::assist_party_card,
@@ -118,6 +120,14 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::settings::settings_set_charges,
         commands::settings::settings_get_overrides,
         commands::settings::settings_set_overrides,
+        commands::vouchers::vouchers_save_advance,
+        commands::vouchers::vouchers_preview_advances,
+        commands::vouchers::vouchers_save_advances,
+        commands::vouchers::vouchers_list,
+        commands::assist::assist_advances,
+        commands::day::day_close_preview,
+        commands::day::day_close,
+        commands::day::day_reopen,
     ]
 }
 

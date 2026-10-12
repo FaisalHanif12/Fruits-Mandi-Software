@@ -19,6 +19,7 @@ pub mod masters;
 pub mod migrate;
 pub mod rules;
 pub mod seed;
+pub mod vouchers;
 
 pub use db::{BUSY_TIMEOUT, CHECK_WAIT, DataState, Db, DbOptions};
 pub use error::DbError;

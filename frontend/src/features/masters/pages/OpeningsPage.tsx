@@ -25,7 +25,7 @@ import {
 import type { UiError } from '../../../bindings/UiError';
 import type { UiErrorItem } from '../../../bindings/UiErrorItem';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
-import { EntryGrid, createEntryStore, type EntryColumn } from '../../../shared/grid';
+import { EntryGrid, createEntryStore, type EntryColumn, type EntryRow } from '../../../shared/grid';
 import { useDebouncedValue } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
@@ -70,13 +70,16 @@ const SHORT_GRID_ROWS = 30;
 /** Every active account, the same list the account screen opens with. */
 const ALL_ACTIVE: AccountFilter = { account_type: null, text: '', include_inactive: false };
 
-const COLUMNS: readonly EntryColumn[] = [
+const BASE_COLUMNS: readonly EntryColumn[] = [
   { field: 'code', type: 'calc', headerId: 'accounts-col-code' },
   { field: 'name', type: 'label', headerId: 'accounts-col-name' },
   { field: DATE_FIELD, type: 'date', headerId: 'accounts-col-opening-date' },
   { field: DR_FIELD, type: 'money', headerId: 'accounts-col-opening-dr' },
   { field: CR_FIELD, type: 'money', headerId: 'accounts-col-opening-cr' },
 ];
+
+/** The cells a user types in. A row of an account that cannot take an opening locks all three. */
+const TYPED_FIELDS: readonly string[] = [DATE_FIELD, DR_FIELD, CR_FIELD];
 
 const FIELD_LABEL: Record<string, string> = {
   [DATE_FIELD]: 'accounts-col-opening-date',
@@ -164,6 +167,24 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
     return byRow;
   }, [problems, messageOf]);
 
+  // The rows of accounts that cannot take an opening balance (PRD FR-10.9): their cells are locked.
+  const lockedRows = useMemo(() => {
+    const locked = new Set<string>();
+    for (const [rowId, account] of accountOfRow) {
+      if (!account.can_take_opening) locked.add(rowId);
+    }
+    return locked;
+  }, [accountOfRow]);
+  const columns = useMemo<readonly EntryColumn[]>(
+    () =>
+      BASE_COLUMNS.map((column) =>
+        TYPED_FIELDS.includes(column.field)
+          ? { ...column, editable: (row: EntryRow) => !lockedRows.has(row.rowId) }
+          : column,
+      ),
+    [lockedRows],
+  );
+
   // The cells the user never types in: the code and the name.
   const calc = useMemo(
     () =>
@@ -194,7 +215,12 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
       DATE_FIELD,
       (row) => {
         const base = baselines.get(row.typed['account_id'] ?? '');
-        return base !== undefined && !base.hasOpening && row.typed[DATE_FIELD] === previous;
+        return (
+          base !== undefined &&
+          base.canTake &&
+          !base.hasOpening &&
+          row.typed[DATE_FIELD] === previous
+        );
       },
       next,
     );
@@ -252,6 +278,11 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
           <Localized id="openings-help">
             <p className="type-body text-ink-muted" />
           </Localized>
+          {lockedRows.size === 0 ? null : (
+            <Localized id="openings-locked-help">
+              <p className="type-body text-ink-muted" />
+            </Localized>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -341,7 +372,7 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
       )}
       <div className={accounts.length <= SHORT_GRID_ROWS ? '' : 'min-h-0 flex-1'}>
         <EntryGrid
-          columns={COLUMNS}
+          columns={columns}
           store={store}
           labelId="openings-grid-label"
           calc={calc}

@@ -434,6 +434,16 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "search_accounts_recent",
+            json!({ "input": { "scope": "control", "control_id": 1 } }),
+            true,
+        ),
+        (
+            "search_accounts_touch",
+            json!({ "input": { "scope": "buyer", "control_id": null, "id": 1 } }),
+            true,
+        ),
+        (
             "accounts_resolve_code",
             json!({ "input": { "scope": "buyer", "control_id": null, "text": "1" } }),
             true,
@@ -481,6 +491,43 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         ("settings_get_overrides", json!({}), true),
+        (
+            "vouchers_save_advance",
+            json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "mode": "cash",
+                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "expected_goods": "", "narration": "" } }),
+            true,
+        ),
+        (
+            "vouchers_preview_advances",
+            json!({ "input": { "lines": [] } }),
+            true,
+        ),
+        (
+            "vouchers_save_advances",
+            json!({ "input": { "lines": [] } }),
+            true,
+        ),
+        (
+            "vouchers_list",
+            json!({ "input": { "voucher_type": "advance", "from": "", "to": "" } }),
+            true,
+        ),
+        (
+            "assist_advances",
+            json!({ "input": { "seller_id": 1 } }),
+            true,
+        ),
+        (
+            "day_close_preview",
+            json!({ "input": { "up_to": "" } }),
+            true,
+        ),
+        ("day_close", json!({ "input": { "up_to": "" } }), true),
+        (
+            "day_reopen",
+            json!({ "input": { "date": "10-10-2026", "reason": "x" } }),
+            true,
+        ),
         (
             "settings_set_overrides",
             json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn" } }),
@@ -971,7 +1018,9 @@ fn there_is_no_command_that_deletes_a_master() {
             &"search_recent",
             &"search_touch",
             &"search_accounts",
-            &"search_global"
+            &"search_global",
+            &"search_accounts_recent",
+            &"search_accounts_touch"
         ]
     );
     for name in &names {

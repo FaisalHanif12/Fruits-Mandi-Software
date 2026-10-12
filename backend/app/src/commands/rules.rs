@@ -38,8 +38,8 @@ pub async fn rules_get<R: tauri::Runtime>(
 
 /// Adds a rule (`id` null) or edits one (`id` and the `version` read). One transaction: the
 /// rule and its audit row. Errors: `ERR_RULE_NOT_ALLOWED` (`method`, `charge_type`,
-/// `account_id`, `item_group`), `ERR_PERCENT_OVER_100`, `ERR_MUST_BE_MORE_THAN_ZERO` (`value`,
-/// per نگ), the money and date codes, `ERR_DATE_RANGE` (`to_date`), `ERR_NOT_FOUND` (`account_id`,
+/// `account_id`, `item_group`), `ERR_PERCENT_OVER_100`, the money codes on `value` (0 per نگ and 0 per lot are
+/// allowed), the date codes, `ERR_DATE_RANGE` (`to_date`), `ERR_NOT_FOUND` (`account_id`,
 /// `item_id`, `id`), `ERR_VERSION_CHANGED`. Returns the rules whose dates overlap (PRD FR-11.5).
 #[tauri::command]
 pub async fn rules_save<R: tauri::Runtime>(

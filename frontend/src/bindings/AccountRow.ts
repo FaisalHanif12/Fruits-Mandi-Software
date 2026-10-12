@@ -113,6 +113,11 @@ export type AccountRow = {
    */
   is_system: boolean;
   /**
+   * False for the accounts that cannot take an opening balance (see `can_take_opening`), so
+   * the openings grid can leave them out.
+   */
+  can_take_opening: boolean;
+  /**
    * The پختہ کھاتہ account of one-time people (PRD Section 13).
    */
   is_pukhta_khata: boolean;

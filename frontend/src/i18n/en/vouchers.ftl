@@ -135,3 +135,7 @@ vouchers-state-saved = Saved
 
 # review: pending
 vouchers-remove = Remove from the list
+
+# An advance that is an opening debit of the seller, not a voucher, in the list of his advances.
+# review: pending
+vouchers-source-opening = Opening balance

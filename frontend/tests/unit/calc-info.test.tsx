@@ -90,6 +90,32 @@ describe.each(LANGUAGES)('CalcInfo (%s)', (language) => {
     );
   });
 
+  it('a value typed by hand on a lot charge also names the quantity received', async () => {
+    await open({
+      message_id: 'working-manual-per-unit',
+      args: [
+        { name: 'qty_received', value: { kind: 'count', value: 50 } },
+        { name: 'value', value: { kind: 'money', paisa: money(6) } },
+        { name: 'result', value: { kind: 'money', paisa: money(300) } },
+      ],
+      rule_id: null,
+    });
+    expect(visible(document.body.textContent)).toContain(
+      message(language, 'working-manual-per-unit-received', {
+        qty_received: '50',
+        value: '6',
+        result: '300',
+      }),
+    );
+  });
+
+  it('a per-lot charge not due on this line says so', async () => {
+    await open({ message_id: 'working-per-lot-already-charged', args: [], rule_id: 4 });
+    expect(visible(document.body.textContent)).toContain(
+      message(language, 'working-per-lot-already-charged'),
+    );
+  });
+
   it('the working picks its own direction, so a sum reads left to right in Urdu too (NFR-URD-13)', async () => {
     await open(PERCENT);
     const working = screen.getByText(
@@ -127,10 +153,23 @@ describe.each(LANGUAGES)('CalcInfo (%s)', (language) => {
       'working-per-unit',
       'working-per-lot',
       'working-manual',
+      'working-manual-percent',
+      'working-manual-per-unit',
+      'working-manual-per-unit-received',
+      'working-manual-per-lot',
+      'working-per-unit-received',
+      'working-per-lot-already-charged',
       'working-none',
     ]) {
       expect(
-        message(language, id, { base: '1', bps: '2', qty: '3', value: '4', result: '5' }),
+        message(language, id, {
+          base: '1',
+          bps: '2',
+          qty: '3',
+          qty_received: '3',
+          value: '4',
+          result: '5',
+        }),
       ).not.toBe('');
     }
   });

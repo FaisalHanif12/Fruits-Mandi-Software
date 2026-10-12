@@ -133,13 +133,15 @@ describe('problems', () => {
       rows: [
         {
           account: null,
-          errors: [{ code: 'ERR_OPENING_BOTH_SIDES', field: 'opening_dr' }],
+          errors: [{ code: 'ERR_OPENING_BOTH_SIDES', field: 'opening_dr', values: {} }],
           opening_dr_paisa: paisaForTest(0),
           opening_cr_paisa: paisaForTest(0),
         },
         {
           account: null,
-          errors: [{ code: 'ERR_ADVANCE_NOT_SELLER', field: 'opening_is_advance' }],
+          errors: [
+            { code: 'ERR_ADVANCE_NOT_SELLER', field: 'opening_is_advance', values: { x: 'y' } },
+          ],
           opening_dr_paisa: paisaForTest(0),
           opening_cr_paisa: paisaForTest(0),
         },
@@ -153,6 +155,8 @@ describe('problems', () => {
       // The advance mark is typed with the debit, so its problem shows on the debit cell.
       ['row-1', 'opening_dr', 'ERR_ADVANCE_NOT_SELLER'],
     ]);
+    // The values of the message go with the problem (Code Standards 4.3).
+    expect(problems.map((problem) => problem.item.values)).toEqual([{}, { x: 'y' }]);
   });
 
   it('a refused save puts lines[i].field on the i-th changed row, and the rest in a notice', () => {

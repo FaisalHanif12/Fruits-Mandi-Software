@@ -10,5 +10,5 @@ The voucher framework and the first voucher, the پیشگی (advance) screen of 
   refused one stays in the list with its message while the others are saved.
 - The voucher number series is made in Fluent (`vouchers-number-advance`): پ-1 in Urdu, A-1 in
   English. Umar to confirm the English letters.
-- `types.ts` and `api.ts` are the only files that know the command shapes. They are interim until
-  the generated bindings arrive.
+- `types.ts` re-exports the generated bindings and `api.ts` is the only file that knows the command
+  shapes. Tests mock `api.ts`, so logic that must run in tests (like `hasSeller`) lives in `draft.ts`.

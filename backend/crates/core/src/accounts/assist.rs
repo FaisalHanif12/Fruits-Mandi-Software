@@ -40,6 +40,32 @@ pub struct SearchAccountsInput {
     pub limit: u32,
 }
 
+/// The last accounts used in a field, then the rest (`Alt+Down`, PRD FR-7.41).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct AccountsRecentInput {
+    /// Which accounts the field takes.
+    pub scope: AccountScope,
+    /// The control, for scope `control`. Each control has its own recent list.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub control_id: Option<i64>,
+}
+
+/// Tell the app that an account was chosen in a field, so it comes first next time (PRD
+/// FR-7.41). Writes the user's own preference and nothing else (Code Standards B29).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct AccountsTouchInput {
+    /// Which accounts the field takes.
+    pub scope: AccountScope,
+    /// The control, for scope `control`.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub control_id: Option<i64>,
+    /// The account chosen.
+    #[ts(type = "number")]
+    pub id: i64,
+}
+
 /// One account a picker offers (PRD FR-7.40). The balance is not here: it is read from the
 /// journal on demand with `accounts_balances`, so the search stays fast.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]

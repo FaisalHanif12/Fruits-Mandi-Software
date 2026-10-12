@@ -1,9 +1,8 @@
 // Typed wrappers around the day commands (plan 10 contract). Components never call invoke()
 // (Code Standards F4). The only file that knows the wire shape. The date is the text typed.
 
-import type { DayStatus } from '../../bindings/DayStatus';
 import { callCommand } from '../../shared/api';
-import type { DayClosePreview } from './types';
+import type { DayClosePreview, DayStatus } from './types';
 
 /**
  * What closing every day up to `upTo` would do. An empty `upTo` asks for the oldest open day, which

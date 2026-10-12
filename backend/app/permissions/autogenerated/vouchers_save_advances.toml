@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-save-advances"
+description = "Enables the vouchers_save_advances command without any pre-configured scope."
+commands.allow = ["vouchers_save_advances"]
+
+[[permission]]
+identifier = "deny-vouchers-save-advances"
+description = "Denies the vouchers_save_advances command without any pre-configured scope."
+commands.deny = ["vouchers_save_advances"]

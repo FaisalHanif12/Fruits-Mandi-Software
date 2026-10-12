@@ -150,6 +150,23 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(text).toContain('50,000');
   });
 
+  it('Alt+Down opens the recent accounts of this field, and the pick is remembered in the same list', async () => {
+    const { input, user } = setup(language, 'buyer');
+    await user.click(input);
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(0);
+    });
+    expect(accountApi.searchAccountsRecent).toHaveBeenCalledWith('buyer', null);
+    await user.keyboard('{ArrowDown}{Enter}');
+    await waitFor(() => {
+      expect(accountApi.searchAccountsTouch).toHaveBeenCalledTimes(1);
+    });
+    const [scope, controlId, id] = vi.mocked(accountApi.searchAccountsTouch).mock.calls[0] ?? [];
+    expect([scope, controlId]).toEqual(['buyer', null]);
+    expect(typeof id).toBe('number');
+  });
+
   it('`0001` is the same buyer', async () => {
     const onValue = vi.fn();
     const { input, user } = setup(language, 'buyer', { onValue });

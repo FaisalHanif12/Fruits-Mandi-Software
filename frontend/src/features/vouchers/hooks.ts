@@ -5,7 +5,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useMemo } from 'react';
 import { useDebouncedValue } from '../../shared/hooks';
 import { assistAdvances, vouchersPreviewAdvances, vouchersSaveAdvance } from './api';
-import type { AdvanceDraft } from './types';
+import { hasSeller } from './draft';
+import type { AdvanceDraft, ReadyAdvance } from './types';
 
 const VOUCHERS_KEY = ['vouchers'] as const;
 /** The preview waits this long after the last key press, and the one before it is dropped (F35). */
@@ -28,7 +29,7 @@ export function useAdvances(sellerId: number | null) {
  */
 export function useAdvancePreview(drafts: readonly AdvanceDraft[]) {
   const ready = useMemo(
-    () => drafts.filter((draft) => draft.seller !== null && draft.amount.trim() !== ''),
+    () => drafts.filter(hasSeller).filter((draft) => draft.amount.trim() !== ''),
     [drafts],
   );
   const settled = useDebouncedValue(ready, PREVIEW_DELAY_MS);
@@ -48,7 +49,7 @@ export function useAdvancePreview(drafts: readonly AdvanceDraft[]) {
 export function useSaveAdvance() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (draft: AdvanceDraft) => vouchersSaveAdvance(draft),
+    mutationFn: (draft: ReadyAdvance) => vouchersSaveAdvance(draft),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: VOUCHERS_KEY }),

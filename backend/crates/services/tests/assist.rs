@@ -1119,3 +1119,103 @@ fn an_adjustment_that_points_at_a_reversed_entry_does_not_lower_the_open_advance
         "the reversed credit adjusts nothing"
     );
 }
+
+#[test]
+fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list() {
+    // PRD FR-7.41: `Alt+Down` shows the last 10 chosen, then the rest. Account fields get an
+    // `AccountHit` (with the type); a control has its own list (plan 08, lead's addition).
+    use mandi_services::core::accounts::{AccountsRecentInput, AccountsTouchInput};
+    let (_dir, env, owner) = ready();
+    let [rahim, karim, akram, arshad] = the_parties(&env, &owner);
+    let recent = |scope: AccountScope, control_id: Option<i64>| {
+        search::recent_accounts(&env.ctx, &owner, &AccountsRecentInput { scope, control_id })
+            .unwrap()
+            .into_iter()
+            .map(|h| (h.id, h.account_type))
+            .collect::<Vec<_>>()
+    };
+    let touch = |scope: AccountScope, control_id: Option<i64>, id: i64| {
+        search::touch_account(
+            &env.ctx,
+            &owner,
+            &AccountsTouchInput {
+                scope,
+                control_id,
+                id,
+            },
+        )
+    };
+    // Nothing chosen yet: Urdu alphabetical order of the buyers, with their type.
+    let before = recent(AccountScope::Buyer, None);
+    assert_eq!(before.len(), 4, "Akram, Arshad, نقدی منڈی and پختہ کھاتہ");
+    assert!(before.iter().all(|(_, t)| *t == AccountType::Buyer));
+    // Choose Arshad then Akram: the latest first.
+    touch(AccountScope::Buyer, None, arshad.id).unwrap();
+    touch(AccountScope::Buyer, None, akram.id).unwrap();
+    let after = recent(AccountScope::Buyer, None);
+    assert_eq!(
+        after[..2],
+        [
+            (akram.id, AccountType::Buyer),
+            (arshad.id, AccountType::Buyer)
+        ]
+    );
+    // The seller list is separate; the any-account list is its own too.
+    assert!(
+        recent(AccountScope::Seller, None)
+            .iter()
+            .all(|(id, _)| *id != akram.id)
+    );
+    touch(AccountScope::Any, None, rahim.id).unwrap();
+    assert_eq!(
+        recent(AccountScope::Any, None)[0],
+        (rahim.id, AccountType::Seller)
+    );
+    // A control has its own list, and the search puts a chosen account first among equals.
+    let person = add(&env, &owner, AccountType::MoneyLent, "ناصر", "Nasir");
+    let other = add(
+        &env,
+        &owner,
+        AccountType::MoneyLent,
+        "ناصر علی",
+        "Nasir Ali",
+    );
+    let control = Some(person.control.id);
+    touch(AccountScope::Control, control, other.id).unwrap();
+    let list = recent(AccountScope::Control, control);
+    assert_eq!(list[0], (other.id, AccountType::MoneyLent));
+    assert_eq!(list.len(), 2);
+    let hits = search::search_accounts(
+        &env.ctx,
+        &owner,
+        &SearchAccountsInput {
+            scope: AccountScope::Control,
+            control_id: control,
+            text: "nas".into(),
+            limit: 5,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        hits[0].id, other.id,
+        "used before comes first among equal matches"
+    );
+    // Wrong things are refused: an account that is not in the field's list, and no control.
+    let error = touch(AccountScope::Buyer, None, rahim.id).unwrap_err();
+    assert_eq!(error.code(), ErrorCode::ErrNotFound);
+    let error = touch(AccountScope::Control, control, rahim.id).unwrap_err();
+    assert_eq!(error.code(), ErrorCode::ErrNotFound);
+    let error = touch(AccountScope::Control, None, rahim.id).unwrap_err();
+    assert_eq!(error.code(), ErrorCode::ErrRequired);
+    let error = search::recent_accounts(
+        &env.ctx,
+        &owner,
+        &AccountsRecentInput {
+            scope: AccountScope::Control,
+            control_id: None,
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.code(), ErrorCode::ErrRequired);
+    let _ = karim;
+}

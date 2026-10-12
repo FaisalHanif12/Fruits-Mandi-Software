@@ -43,6 +43,8 @@ const APP_COMMANDS: &[&str] = &[
     "coa_controls_list",
     "search_accounts",
     "search_global",
+    "search_accounts_recent",
+    "search_accounts_touch",
     "accounts_resolve_code",
     "accounts_balances",
     "assist_party_card",
@@ -55,6 +57,14 @@ const APP_COMMANDS: &[&str] = &[
     "settings_set_charges",
     "settings_get_overrides",
     "settings_set_overrides",
+    "vouchers_save_advance",
+    "vouchers_preview_advances",
+    "vouchers_save_advances",
+    "vouchers_list",
+    "assist_advances",
+    "day_close_preview",
+    "day_close",
+    "day_reopen",
 ];
 
 fn main() {

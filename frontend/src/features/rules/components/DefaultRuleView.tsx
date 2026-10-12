@@ -2,7 +2,7 @@
 // is changed only in Settings, "Charges", so the rule form never edits or switches it off: this
 // view says what the rule is and takes the user to Settings.
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { isoToDisplayDate } from '../../../shared/format';
 import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
@@ -11,6 +11,7 @@ import type { RuleRow } from '../types';
 import { RuleSummary } from './RuleSummary';
 
 export function DefaultRuleView({ rule }: { rule: RuleRow }) {
+  const { l10n } = useLocalization();
   const navigate = useNavigate();
   const goBack = () => {
     void navigate({ to: '/index/rules' });
@@ -25,7 +26,14 @@ export function DefaultRuleView({ rule }: { rule: RuleRow }) {
         <p className="type-body font-semibold">
           <RuleSummary rule={rule} />
         </p>
-        <p className="type-body text-ink-muted">{isoToDisplayDate(rule.from_date)}</p>
+        <p className="type-body text-ink-muted">
+          {rule.to_date === null
+            ? l10n.getString('rules-dates-open', { from: isoToDisplayDate(rule.from_date) })
+            : l10n.getString('rules-dates', {
+                from: isoToDisplayDate(rule.from_date),
+                to: isoToDisplayDate(rule.to_date),
+              })}
+        </p>
         <Localized id="rules-default-notice">
           <p className="type-body" />
         </Localized>
