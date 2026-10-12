@@ -240,3 +240,107 @@ fn the_seed_only_fills_what_is_missing() {
     assert_eq!(seed::system_accounts(&other).unwrap(), 0);
     drop(conn);
 }
+
+// ---- Plan 09: the default charges of PRD 4.2 are data ----
+
+#[test]
+fn the_default_charges_are_three_rules_named_in_the_settings() {
+    // PRD 4.2: seller commission 6%, buyer commission 6%, لاگا 8 per نگ on fruit. Nothing for
+    // مزدوری, منشیانہ and فون.
+    let dir = tempdir().unwrap();
+    drop(common::open(dir.path()));
+    let conn = common::raw(dir.path());
+    struct Rule {
+        id: i64,
+        side: String,
+        charge: String,
+        group: Option<String>,
+        method: String,
+        bps: Option<i64>,
+        paisa: Option<i64>,
+        from: String,
+        to: Option<String>,
+        active: i64,
+    }
+    let rows: Vec<Rule> = conn
+        .prepare(
+            "SELECT id, side, charge_type, item_group, method, value_bps, value_paisa, from_date, to_date, is_active
+             FROM charge_rules ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| {
+            Ok(Rule {
+                id: r.get(0)?,
+                side: r.get(1)?,
+                charge: r.get(2)?,
+                group: r.get(3)?,
+                method: r.get(4)?,
+                bps: r.get(5)?,
+                paisa: r.get(6)?,
+                from: r.get(7)?,
+                to: r.get(8)?,
+                active: r.get(9)?,
+            })
+        })
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(rows.len(), 3);
+    assert_eq!(
+        rows.iter()
+            .map(|r| (
+                r.side.as_str(),
+                r.charge.as_str(),
+                r.group.as_deref(),
+                r.method.as_str(),
+                r.bps,
+                r.paisa
+            ))
+            .collect::<Vec<_>>(),
+        [
+            ("seller", "commission", None, "percent", Some(600), None),
+            ("buyer", "commission", None, "percent", Some(600), None),
+            ("buyer", "laga", Some("fruit"), "per_unit", None, Some(800)),
+        ]
+    );
+    assert!(
+        rows.iter()
+            .all(|r| r.from == "2000-01-01" && r.to.is_none() && r.active == 1)
+    );
+    // The settings name them, so the Settings screen finds them.
+    let named = mandi_db::rules::default_ids(&conn).unwrap();
+    assert_eq!(named, Some((rows[0].id, rows[1].id, rows[2].id)));
+}
+
+#[test]
+fn the_default_charges_are_seeded_once() {
+    let dir = tempdir().unwrap();
+    drop(common::open(dir.path()));
+    let conn = common::raw(dir.path());
+    let changes_before = conn.total_changes();
+    assert_eq!(seed::default_rules(&conn).unwrap(), 0);
+    assert_eq!(conn.total_changes(), changes_before);
+    let count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM charge_rules", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 3);
+}
+
+#[test]
+fn a_rule_for_a_party_together_with_a_group_has_no_level_and_is_refused() {
+    // PRD 11.3 has no level for it; the table refuses it too.
+    let dir = tempdir().unwrap();
+    drop(common::open(dir.path()));
+    let conn = common::raw(dir.path());
+    let account: i64 = conn
+        .query_row("SELECT id FROM accounts WHERE code = '03040000'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    let refused = conn.execute(
+        "INSERT INTO charge_rules (side, charge_type, account_id, item_group, method, value_bps, from_date)
+         VALUES ('buyer', 'commission', ?1, 'fruit', 'percent', 700, '2026-10-01')",
+        [account],
+    );
+    assert!(refused.is_err());
+}

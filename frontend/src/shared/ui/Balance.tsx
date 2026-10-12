@@ -3,16 +3,13 @@
 // backend's too. The screen never works out a side or a sum (CLAUDE.md rule 1).
 
 import { Localized } from '@fluent/react';
-import type { Paisa } from '../format';
+import type { Balance as BalanceBinding } from '../../bindings/Balance';
 import { Num } from './Num';
 
 /** How the backend sends a balance: how much (never below zero) and on which side. */
-export interface BalanceValue {
-  amount_paisa: Paisa;
-  side: 'dr' | 'cr' | 'none';
-}
+export type BalanceValue = BalanceBinding;
 
-/** The Fluent message of a side. `none` has no word: the balance is zero. */
+/** The Fluent message of a side. `zero` has no word: the balance is zero. */
 export function sideMessageId(side: BalanceValue['side']): string | null {
   if (side === 'dr') return 'common-side-dr';
   if (side === 'cr') return 'common-side-cr';

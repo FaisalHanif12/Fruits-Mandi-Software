@@ -424,6 +424,69 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("coa_heads_list", json!({}), true),
         ("coa_controls_list", json!({}), true),
         (
+            "search_accounts",
+            json!({ "input": { "scope": "buyer", "control_id": null, "text": "1", "limit": 10 } }),
+            true,
+        ),
+        (
+            "search_global",
+            json!({ "input": { "text": "akram", "limit": 10 } }),
+            true,
+        ),
+        (
+            "accounts_resolve_code",
+            json!({ "input": { "scope": "buyer", "control_id": null, "text": "1" } }),
+            true,
+        ),
+        (
+            "accounts_balances",
+            json!({ "input": { "ids": [1] } }),
+            true,
+        ),
+        (
+            "assist_party_card",
+            json!({ "input": { "account_id": 1 } }),
+            true,
+        ),
+        (
+            "rules_list",
+            json!({ "input": { "filter": { "side": null, "charge_type": null, "account_id": null, "item_id": null, "include_inactive": true } } }),
+            true,
+        ),
+        ("rules_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "rules_save",
+            json!({ "input": { "id": null, "version": null, "side": "seller", "charge_type": "commission",
+                "account_id": null, "item_id": null, "item_group": null, "method": "percent", "value": "6",
+                "from_date": "01-01-2026", "to_date": "", "is_active": true, "note": "" } }),
+            true,
+        ),
+        (
+            "rules_set_active",
+            json!({ "input": { "id": 1, "is_active": false } }),
+            true,
+        ),
+        (
+            "rules_test",
+            json!({ "input": { "seller_id": 1, "buyer_id": 2, "item_id": 1, "date": "10-10-2026", "qty": "20", "rate": "600" } }),
+            true,
+        ),
+        ("settings_get_charges", json!({}), true),
+        (
+            "settings_set_charges",
+            json!({ "input": {
+                "seller_commission": { "version": 1, "method": "percent", "value": "6" },
+                "buyer_commission": { "version": 1, "method": "percent", "value": "6" },
+                "laga_fruit": { "version": 1, "method": "per_unit", "value": "8" } } }),
+            true,
+        ),
+        ("settings_get_overrides", json!({}), true),
+        (
+            "settings_set_overrides",
+            json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn" } }),
+            true,
+        ),
+        (
             "accounts_save",
             json!({ "input": { "id": null, "version": null, "account_type": "buyer", "control_id": null, "code": "",
                 "name_ur": "اکرم", "name_en": "Akram", "confirmed_rules_words": [], "father_or_firm_ur": "",
@@ -598,8 +661,14 @@ fn passwords_and_codes_never_reach_the_log_or_the_debug_text() {
     .unwrap_err();
     h.ok("auth_logout", json!({}));
     h.call("auth_recover", json!({ "input": { "username": "owner", "recovery_code": "ABCD-EFGH-JKMN-PQRS", "new_password": "recover-Pw99", "new_password_repeat": "recover-Pw99" } })).unwrap_err();
-    // Give the worker threads a moment to flush their last lines.
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    // The worker threads write their last lines a moment after the answer: wait for the line
+    // we need, up to five seconds (a busy computer running every test at once can be slow).
+    for _ in 0..50 {
+        if log().text().contains("ErrWrongPassword") {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
     let text = log().text();
     for secret in [
         OWNER_PASSWORD,
@@ -900,7 +969,9 @@ fn there_is_no_command_that_deletes_a_master() {
             &"masters_next_code",
             &"search_masters",
             &"search_recent",
-            &"search_touch"
+            &"search_touch",
+            &"search_accounts",
+            &"search_global"
         ]
     );
     for name in &names {

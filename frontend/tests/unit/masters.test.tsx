@@ -98,7 +98,7 @@ describe.each(LANGUAGES)('the انڈکس menu (%s)', (language) => {
     fakeMasters();
   });
 
-  it('lists the accounts, the chart and the ten lists in order, and ↓ then Enter opens one', async () => {
+  it('lists the accounts, the chart, the rules and the ten lists in order, and ↓ then Enter opens one', async () => {
     const { router } = await renderApp('/index');
     const heading = await screen.findByRole('heading', {
       level: 1,
@@ -109,6 +109,7 @@ describe.each(LANGUAGES)('the انڈکس menu (%s)', (language) => {
     const shown = [
       { titleId: 'masters-accounts-title', helpId: 'masters-accounts-help' },
       { titleId: 'masters-chart-title', helpId: 'masters-chart-help' },
+      { titleId: 'masters-rules-title', helpId: 'masters-rules-help' },
       ...MASTER_CONFIGS,
     ];
     expect(links).toHaveLength(shown.length);

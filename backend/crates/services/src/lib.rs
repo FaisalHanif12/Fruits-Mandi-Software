@@ -3,14 +3,17 @@
 //! Depends on `mandi-domain` and `mandi-db`.
 
 pub mod accounts;
+pub mod assist;
 mod audit;
 pub mod auth;
 pub mod coa;
 pub mod context;
 pub mod day;
 pub mod error;
+pub mod ledger;
 pub mod masters;
 pub mod ports;
+pub mod rules;
 pub mod search;
 pub mod secret;
 pub mod settings;

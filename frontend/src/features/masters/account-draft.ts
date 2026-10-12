@@ -41,14 +41,15 @@ export function newAccountValues(
     credit_limit: '',
     default_marka: null,
     collector: null,
-    collection_weekday: '',
+    collection_weekday: null,
     is_active: true,
     note: '',
   };
 }
 
 /** An amount from the backend as the text the form shows: nothing for zero. */
-function openingText(amount: AccountRow['opening_dr_paisa'], grouping: Grouping): string {
+function openingText(amount: AccountRow['opening_dr_paisa'] | null, grouping: Grouping): string {
+  if (amount === null) return '';
   const text = formatPaisa(amount, { grouping });
   return text === '0' ? '' : text;
 }
@@ -59,7 +60,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     id: row.id,
     version: row.version,
     account_type: row.account_type,
-    control_id: row.control_id,
+    control_id: row.control.id,
     code: row.code,
     names: { urdu: row.name_ur, english: row.name_en },
     father: { urdu: row.father_or_firm_ur, english: row.father_or_firm_en },
@@ -69,7 +70,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     phone2: row.phone2,
     address: row.address,
     linked_account: row.linked_account,
-    opening_date: isoToDisplayDate(row.opening_date),
+    opening_date: row.opening_date === null ? '' : isoToDisplayDate(row.opening_date),
     opening_dr: openingText(row.opening_dr_paisa, grouping),
     opening_cr: openingText(row.opening_cr_paisa, grouping),
     opening_is_advance: row.opening_is_advance,
@@ -77,7 +78,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     credit_limit: openingText(row.credit_limit_paisa, grouping),
     default_marka: row.default_marka,
     collector: row.collector,
-    collection_weekday: row.collection_weekday ?? '',
+    collection_weekday: row.collection_weekday,
     is_active: row.is_active,
     note: row.note,
   };

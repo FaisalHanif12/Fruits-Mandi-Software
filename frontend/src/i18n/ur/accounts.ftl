@@ -288,3 +288,65 @@ masters-chart-title = کھاتوں کی ترتیب
 
 # review: pending
 masters-chart-help = مدیں، کنٹرول اور کھاتے درخت کی صورت میں۔
+
+## The opening balances grid (plan 07, PRD FR-10.9).
+
+# review: pending
+openings-open = ابتدائی بقایا لکھیں
+
+# review: pending
+openings-title = ابتدائی بقایا
+
+# review: pending
+openings-help = ہر کھاتے کے سامنے اس کا ابتدائی { -banaam } یا { -jama } لکھیں۔ جن کھاتوں کا کچھ نہیں، انہیں خالی چھوڑ دیں۔
+
+# review: pending
+openings-grid-label = ابتدائی بقایا کی فہرست
+
+# review: pending
+openings-date-all = نئے ابتدائی بقایا کی تاریخ
+
+# review: pending
+openings-date-all-hint = جن کھاتوں کا ابتدائی بقایا ابھی نہیں، انہیں یہی تاریخ ملتی ہے۔
+
+# review: pending
+openings-summary-title = بدلی ہوئی سطروں کا میزان
+
+# review: pending
+openings-changed = { $count ->
+    [one] ایک کھاتہ بدلا ہے
+   *[other] { $count } کھاتے بدلے ہیں
+}
+
+# review: pending
+openings-none-changed = ابھی کوئی تبدیلی نہیں
+
+# Opening Difference is the name of the account 06019999.
+# review: pending
+openings-difference = ابتدائی فرق
+
+# review: pending
+openings-difference-help = جب سب ابتدائی بقایا درست ہوں تو یہ صفر ہوتا ہے۔
+
+# review: pending
+openings-saved = ابتدائی بقایا محفوظ ہو گئے
+
+# review: pending
+openings-load-failed = ابتدائی بقایا کھل نہیں سکے
+
+# review: pending
+openings-empty = ابھی کوئی کھاتہ نہیں
+
+# review: pending
+openings-empty-help = پہلے { -index } میں کھاتہ بنائیں، پھر اس کا ابتدائی بقایا لکھیں۔
+
+# review: pending
+openings-errors-title = ان سطروں میں مسئلہ ہے
+
+# One problem of the openings grid: the account, the column and what is wrong.
+# review: pending
+openings-problem = { $account } ({ $field }): { $message }
+
+# The name of a seller whose opening debit is an advance, in the opening balances grid.
+# review: pending
+openings-name-advance = { $name } ({ -peshgi-khata })

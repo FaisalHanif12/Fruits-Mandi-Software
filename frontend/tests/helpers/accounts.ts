@@ -13,11 +13,12 @@ import type {
   AccountRow,
   AccountType,
   Balance,
-  CoaHead,
+  ChartHead,
 } from '../../src/shared/accounts';
+import { formatPaisa } from '../../src/shared/format';
 import { paisaForTest } from './paisa';
 
-export const ZERO: Balance = { amount_paisa: paisaForTest(0), side: 'none' };
+export const ZERO: Balance = { amount_paisa: paisaForTest(0), side: 'zero' };
 
 export const money = (rupees: number): ReturnType<typeof paisaForTest> =>
   paisaForTest(rupees * 100);
@@ -54,8 +55,8 @@ export function account(
     id,
     version: 1,
     code,
+    serial: Number(code.slice(-4)),
     account_type: type,
-    control_id: control.id,
     control,
     name_ur: ur,
     name_en: en,
@@ -72,11 +73,12 @@ export function account(
     opening_cr_paisa: money(0),
     opening_is_advance: false,
     credit_allowed: true,
-    credit_limit_paisa: money(0),
+    credit_limit_paisa: null,
     default_marka: null,
     collector: null,
     collection_weekday: null,
     is_system: false,
+    is_pukhta_khata: false,
     is_active: true,
     note: '',
     balance: ZERO,
@@ -86,17 +88,18 @@ export function account(
 
 export interface FakeAccounts {
   rows: AccountRow[];
-  tree: CoaHead[];
+  tree: ChartHead[];
 }
 
 /** The chart of PRD 10.1 in miniature, with balances as the backend would send them. */
-export function sampleTree(): CoaHead[] {
+export function sampleTree(): ChartHead[] {
   return [
     {
       id: 1,
       code: '01',
       name_ur: 'اثاثے',
       name_en: 'Assets',
+      nature: 'asset',
       balance: balance(58484, 'dr'),
       controls: [
         {
@@ -104,6 +107,7 @@ export function sampleTree(): CoaHead[] {
           code: '0101',
           name_ur: 'نقد',
           name_en: 'Cash',
+          party_type: 'other',
           balance: balance(58484, 'dr'),
           accounts: [
             {
@@ -112,6 +116,7 @@ export function sampleTree(): CoaHead[] {
               name_ur: 'روکڑ',
               name_en: 'Cash in Hand',
               is_active: true,
+              is_system: true,
               balance: balance(58484, 'dr'),
             },
           ],
@@ -123,6 +128,7 @@ export function sampleTree(): CoaHead[] {
       code: '03',
       name_ur: 'پارٹیاں',
       name_en: 'Parties',
+      nature: 'party',
       balance: balance(21564, 'dr'),
       controls: [
         {
@@ -130,6 +136,7 @@ export function sampleTree(): CoaHead[] {
           code: '0304',
           name_ur: 'گاہک',
           name_en: 'Buyers',
+          party_type: 'buyer',
           balance: balance(21564, 'dr'),
           accounts: [
             {
@@ -138,6 +145,7 @@ export function sampleTree(): CoaHead[] {
               name_ur: 'اکرم ٹول ٹیکس',
               name_en: 'Akram Toll Tax',
               is_active: true,
+              is_system: false,
               balance: balance(2880, 'dr'),
             },
             {
@@ -146,6 +154,7 @@ export function sampleTree(): CoaHead[] {
               name_ur: 'ارشد ملتانی',
               name_en: 'Arshad Multani',
               is_active: true,
+              is_system: false,
               balance: balance(18684, 'dr'),
             },
           ],
@@ -155,6 +164,7 @@ export function sampleTree(): CoaHead[] {
           code: '03011',
           name_ur: 'بیوپاری',
           name_en: 'Sellers',
+          party_type: 'seller',
           balance: ZERO,
           accounts: [],
         },
@@ -169,14 +179,34 @@ export function sampleTree(): CoaHead[] {
  */
 export function fakeAccounts(
   rows: AccountRow[] = [],
-  tree: CoaHead[] = sampleTree(),
+  tree: ChartHead[] = sampleTree(),
 ): FakeAccounts {
   const store: FakeAccounts = { rows: [...rows], tree };
   let nextId = 5000;
 
   vi.mocked(accountApi.coaTree).mockResolvedValue(tree);
-  vi.mocked(accountApi.coaHeadsList).mockResolvedValue(tree);
-  vi.mocked(accountApi.coaControlsList).mockResolvedValue(tree.flatMap((head) => head.controls));
+  vi.mocked(accountApi.coaHeadsList).mockResolvedValue(
+    tree.map((head) => ({
+      id: head.id,
+      code: head.code,
+      name_ur: head.name_ur,
+      name_en: head.name_en,
+      nature: head.nature,
+    })),
+  );
+  vi.mocked(accountApi.coaControlsList).mockResolvedValue(
+    tree.flatMap((head) =>
+      head.controls.map((control) => ({
+        id: control.id,
+        head_id: head.id,
+        code: control.code,
+        name_ur: control.name_ur,
+        name_en: control.name_en,
+        party_type: control.party_type,
+        allowed_for_other: control.party_type === 'other',
+      })),
+    ),
+  );
   vi.mocked(accountApi.accountsList).mockImplementation((filter) => {
     const wanted = filter.text.toLowerCase();
     const found = store.rows.filter(
@@ -188,6 +218,7 @@ export function fakeAccounts(
     );
     return Promise.resolve({
       rows: found,
+      count: found.length,
       total_dr_paisa: money(65000),
       total_cr_paisa: money(65000),
     });
@@ -240,6 +271,7 @@ function hitOf(row: AccountRow): AccountHit {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
+    control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
     extra_ur: row.city?.name_ur ?? '',
@@ -250,7 +282,7 @@ function hitOf(row: AccountRow): AccountHit {
 }
 
 function inScope(row: AccountRow, scope: AccountScope): boolean {
-  return scope === 'any' ? true : row.account_type === scope;
+  return scope === 'any' || scope === 'control' ? true : row.account_type === scope;
 }
 
 /** The serial of an account: the last four digits of its code (PRD FR-10.3). */
@@ -265,10 +297,11 @@ export function fakeAccountSearch(
   rows: AccountRow[],
   cards: Partial<Record<number, PartyCardData>> = {},
 ) {
-  const find = (scope: AccountScope, text: string): AccountRow[] => {
+  const find = (scope: AccountScope, text: string, withInactive = false): AccountRow[] => {
     const wanted = text.trim().toLowerCase();
     const digits = /^\d+$/.test(wanted);
-    const scoped = rows.filter((row) => inScope(row, scope));
+    // Only active accounts are offered; resolving a code also sees the inactive ones.
+    const scoped = rows.filter((row) => inScope(row, scope) && (withInactive || row.is_active));
     if (digits) {
       const exact = scoped.filter((row) => row.code === wanted);
       if (exact.length > 0) return exact;
@@ -288,7 +321,7 @@ export function fakeAccountSearch(
     Promise.resolve(rows.filter((row) => inScope(row, scope)).map(hitOf)),
   );
   vi.mocked(accountApi.searchAccountsTouch).mockResolvedValue(null);
-  vi.mocked(accountApi.accountsResolveCode).mockImplementation((scope, text) => {
+  vi.mocked(accountApi.accountsResolveCode).mockImplementation((scope, _controlId, text) => {
     const digits = /^\d+$/.test(text.trim());
     const serial = Number(text.trim());
     if (digits && text.trim().length <= SERIAL_LENGTH && RESERVED_SERIAL(serial)) {
@@ -299,11 +332,16 @@ export function fakeAccountSearch(
         suggested_code: null,
       });
     }
-    const found = find(scope, text).filter(() => digits);
+    const found = find(scope, text, true).filter(() => digits);
     const first = found[0];
     const result: ResolvedCode =
       found.length === 1 && first !== undefined
-        ? { status: 'found', account: hitOf(first), candidates: [], suggested_code: null }
+        ? {
+            status: first.is_active ? 'found' : 'inactive',
+            account: hitOf(first),
+            candidates: [],
+            suggested_code: null,
+          }
         : found.length > 1
           ? { status: 'several', account: null, candidates: found.map(hitOf), suggested_code: null }
           : {
@@ -326,9 +364,10 @@ export function fakeAccountSearch(
 /** The party card of an account, the way the backend builds it. */
 export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): PartyCardData {
   return {
-    account_id: row.id,
+    id: row.id,
     code: row.code,
     account_type: row.account_type,
+    is_active: row.is_active,
     name_ur: row.name_ur,
     name_en: row.name_en,
     father_or_firm_ur: row.father_or_firm_ur,
@@ -338,10 +377,99 @@ export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): Par
     phone: row.phone1,
     balance: row.balance,
     last_entry_date: '2026-10-10',
-    credit_limit_paisa: row.account_type === 'buyer' ? row.credit_limit_paisa : null,
-    credit_used_paisa: row.account_type === 'buyer' ? money(2880) : null,
-    advance_open_paisa: row.account_type === 'seller' ? money(15000) : null,
+    credit_limit: row.account_type === 'buyer' ? row.credit_limit_paisa : null,
+    credit_used: row.account_type === 'buyer' ? money(2880) : null,
+    advance_open: row.account_type === 'seller' ? money(15000) : null,
     warnings: [],
     ...extra,
   };
+}
+
+const rupeesOf = (text: string): number => Number(text.replaceAll(',', '') || '0');
+
+/** `DD-MM-YYYY` as the backend stores it, `YYYY-MM-DD`. */
+const isoOf = (text: string): string => text.split('-').reverse().join('-');
+
+/** The side and amount of ابتدائی فرق for these totals: it takes the opposite side of the excess. */
+function differenceOf(totalDr: number, totalCr: number): Balance {
+  if (totalDr === totalCr) return ZERO;
+  return totalDr > totalCr ? balance(totalDr - totalCr, 'cr') : balance(totalCr - totalDr, 'dr');
+}
+
+/**
+ * Sets the answers of the openings grid commands from the store's accounts, the way a healthy
+ * backend answers: a line with both sides is refused on its debit cell, the totals are those of
+ * the lines, and the difference is that of every opening after the lines are applied. The sums
+ * here are the fake backend's; the screen only shows them.
+ */
+export function fakeOpenings(store: FakeAccounts) {
+  const after = (
+    lines: readonly { account_id: number; opening_dr: string; opening_cr: string }[],
+  ) => {
+    let dr = 0;
+    let cr = 0;
+    for (const row of store.rows) {
+      const line = lines.find((candidate) => candidate.account_id === row.id);
+      dr +=
+        line === undefined
+          ? rupeesOf(formatPaisa(row.opening_dr_paisa, { grouping: 'international' }))
+          : rupeesOf(line.opening_dr);
+      cr +=
+        line === undefined
+          ? rupeesOf(formatPaisa(row.opening_cr_paisa, { grouping: 'international' }))
+          : rupeesOf(line.opening_cr);
+    }
+    return { dr, cr };
+  };
+  vi.mocked(accountApi.accountsOpeningsPreview).mockImplementation(({ lines }) => {
+    let totalDr = 0;
+    let totalCr = 0;
+    const rows = lines.map((line) => {
+      const found = store.rows.find((row) => row.id === line.account_id);
+      const dr = rupeesOf(line.opening_dr);
+      const cr = rupeesOf(line.opening_cr);
+      const both = dr > 0 && cr > 0;
+      if (!both) {
+        totalDr += dr;
+        totalCr += cr;
+      }
+      return {
+        account:
+          found === undefined ? null : ref(found.id, found.code, found.name_ur, found.name_en),
+        errors: both ? [{ code: 'ERR_OPENING_BOTH_SIDES' as const, field: 'opening_dr' }] : [],
+        opening_dr_paisa: money(both ? 0 : dr),
+        opening_cr_paisa: money(both ? 0 : cr),
+      };
+    });
+    const everything = after(lines);
+    return Promise.resolve({
+      rows,
+      total_dr_paisa: money(totalDr),
+      total_cr_paisa: money(totalCr),
+      opening_difference_after: differenceOf(everything.dr, everything.cr),
+    });
+  });
+  vi.mocked(accountApi.accountsOpeningsSave).mockImplementation(({ lines }) => {
+    const saved: AccountRow[] = [];
+    for (const line of lines) {
+      const index = store.rows.findIndex((row) => row.id === line.account_id);
+      const found = store.rows[index];
+      if (found === undefined) continue;
+      const changed: AccountRow = {
+        ...found,
+        version: found.version + 1,
+        opening_date: isoOf(line.opening_date),
+        opening_dr_paisa: money(rupeesOf(line.opening_dr)),
+        opening_cr_paisa: money(rupeesOf(line.opening_cr)),
+        opening_is_advance: line.opening_is_advance,
+      };
+      store.rows[index] = changed;
+      saved.push(changed);
+    }
+    const everything = after([]);
+    return Promise.resolve({
+      rows: saved,
+      opening_difference: differenceOf(everything.dr, everything.cr),
+    });
+  });
 }

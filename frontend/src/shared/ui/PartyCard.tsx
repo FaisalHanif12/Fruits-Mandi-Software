@@ -8,7 +8,7 @@
 
 import { Localized } from '@fluent/react';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
-import { usePartyCard, type CardWarning, type PartyCardData } from '../accounts';
+import { usePartyCard, type CardWarningKind, type PartyCardData } from '../accounts';
 import { uiErrorOf } from '../api';
 import { isoToDisplayDate } from '../format';
 import { displayName, useLanguage } from '../i18n';
@@ -23,13 +23,13 @@ interface PartyCardProps {
 }
 
 /** An inactive account is a warning (amber); the others are about money (red). */
-const WARNING_STYLE: Record<CardWarning, string> = {
+const WARNING_STYLE: Record<CardWarningKind, string> = {
   inactive: 'border-warn-border bg-warn-soft text-warn',
   over_credit_limit: 'border-due bg-due-soft text-due',
   owes_firm: 'border-due bg-due-soft text-due',
 };
 
-const WARNING_ID: Record<CardWarning, string> = {
+const WARNING_ID: Record<CardWarningKind, string> = {
   inactive: 'assist-warning-inactive',
   over_credit_limit: 'assist-warning-over-credit-limit',
   owes_firm: 'assist-warning-owes-firm',
@@ -80,19 +80,19 @@ function CardBody({ card }: { card: PartyCardData }) {
             <Num>{isoToDisplayDate(card.last_entry_date)}</Num>
           )}
         </Fact>
-        {card.credit_limit_paisa === null ? null : (
+        {card.credit_limit === null ? null : (
           <Fact labelId="assist-card-credit-limit">
-            <Num paisa={card.credit_limit_paisa} />
+            <Num paisa={card.credit_limit} />
           </Fact>
         )}
-        {card.credit_used_paisa === null ? null : (
+        {card.credit_used === null ? null : (
           <Fact labelId="assist-card-credit-used">
-            <Num paisa={card.credit_used_paisa} />
+            <Num paisa={card.credit_used} />
           </Fact>
         )}
-        {card.advance_open_paisa === null ? null : (
+        {card.advance_open === null ? null : (
           <Fact labelId="assist-card-advance">
-            <Num paisa={card.advance_open_paisa} />
+            <Num paisa={card.advance_open} />
           </Fact>
         )}
       </div>
@@ -100,15 +100,16 @@ function CardBody({ card }: { card: PartyCardData }) {
         <ul className="flex flex-wrap gap-2">
           {card.warnings.map((warning) => (
             <li
-              key={warning}
-              className={`flex items-center gap-2 rounded-1 border px-3 type-body ${WARNING_STYLE[warning]}`}
+              key={warning.kind}
+              className={`flex items-center gap-2 rounded-1 border px-3 type-body ${WARNING_STYLE[warning.kind]}`}
             >
-              {warning === 'inactive' ? (
+              {warning.kind === 'inactive' ? (
                 <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
               ) : (
                 <CircleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
               )}
-              <Localized id={WARNING_ID[warning]} />
+              <Localized id={WARNING_ID[warning.kind]} />
+              {warning.amount_paisa === null ? null : <Num paisa={warning.amount_paisa} />}
             </li>
           ))}
         </ul>

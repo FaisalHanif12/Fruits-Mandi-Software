@@ -3,18 +3,27 @@
 // data. Unsaved text in a tab is guarded by LeaveGuard when the user leaves.
 
 import { Localized, useLocalization } from '@fluent/react';
+import { useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ErrorState, LoadingState, Tabs } from '../../../shared/ui';
+import { ChargesTab } from '../components/ChargesTab';
 import { FirmTab } from '../components/FirmTab';
 import { LanguageTab } from '../components/LanguageTab';
 import { LockTab } from '../components/LockTab';
+import { OverridesTab } from '../components/OverridesTab';
 import { useSettings } from '../hooks';
+
+/** The tabs a link may open (`/settings?tab=charges`). */
+const TAB_IDS = ['firm', 'charges', 'overrides', 'language', 'lock'];
 
 export function SettingsPage() {
   const { l10n } = useLocalization();
   const settings = useSettings();
-  const [tab, setTab] = useState('firm');
+  const requested = useSearch({ strict: false }).tab;
+  const [tab, setTab] = useState(
+    requested !== undefined && TAB_IDS.includes(requested) ? requested : 'firm',
+  );
 
   if (settings.isPending) return <LoadingState />;
   if (settings.isError) {
@@ -43,6 +52,16 @@ export function SettingsPage() {
             id: 'firm',
             label: <Localized id="settings-tab-firm" />,
             content: <FirmTab firm={data.firm} />,
+          },
+          {
+            id: 'charges',
+            label: <Localized id="settings-tab-charges" />,
+            content: <ChargesTab />,
+          },
+          {
+            id: 'overrides',
+            label: <Localized id="settings-tab-overrides" />,
+            content: <OverridesTab />,
           },
           {
             id: 'language',

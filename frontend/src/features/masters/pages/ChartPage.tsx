@@ -11,10 +11,10 @@ import { useEscape } from '../../../shared/keyboard';
 import { displayName } from '../../../shared/i18n';
 import { ErrorState, LoadingState, Tabs, sideMessageId } from '../../../shared/ui';
 import { useCoaTree } from '../../../shared/accounts';
-import type { CoaControl, CoaHead } from '../../../shared/accounts';
+import type { ChartControl, ChartHead } from '../../../shared/accounts';
 import { ChartTree } from '../components/ChartTree';
 
-type ChartRow = CoaHead | CoaControl;
+type ChartRow = ChartHead | ChartControl;
 
 const COLUMNS: readonly ListColumn<ChartRow>[] = [
   { field: 'code', type: 'code', headerId: 'accounts-col-code', value: (row) => row.code },
@@ -51,7 +51,7 @@ export function ChartPage() {
     void navigate({ to: '/index' });
   });
   const heads = tree.data;
-  const controls = useMemo<CoaControl[]>(
+  const controls = useMemo<ChartControl[]>(
     () => (heads === undefined ? [] : heads.flatMap((head) => head.controls)),
     [heads],
   );

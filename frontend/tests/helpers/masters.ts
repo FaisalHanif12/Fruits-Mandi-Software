@@ -126,11 +126,18 @@ export function fakeMasters(
     rows[index] = changed;
     return Promise.resolve(changed);
   });
+  // The account scopes (seller, buyer, any account) belong to plan 08; a master list has no rows there.
+  const rowsOf = (scope: string): MasterRecord[] =>
+    KINDS.find((kind) => kind === scope) === undefined ? [] : store.rows[scope as MasterKind];
   vi.mocked(searchApi.searchMasters).mockImplementation(({ scope, text }) =>
-    Promise.resolve(store.rows[scope].filter((row) => matches(row, text)).map(hitOf)),
+    Promise.resolve(
+      rowsOf(scope)
+        .filter((row) => matches(row, text))
+        .map(hitOf),
+    ),
   );
   vi.mocked(searchApi.searchRecent).mockImplementation(({ scope }) =>
-    Promise.resolve(store.rows[scope].map(hitOf)),
+    Promise.resolve(rowsOf(scope).map(hitOf)),
   );
   vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
   return store;

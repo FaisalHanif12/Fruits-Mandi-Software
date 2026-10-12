@@ -26,6 +26,11 @@ impl BusinessDate {
             .map(BusinessDate)
     }
 
+    /// The day before, or `None` at the start of the calendar.
+    pub fn previous_day(self) -> Option<BusinessDate> {
+        self.0.pred_opt().map(BusinessDate)
+    }
+
     /// The storage form `YYYY-MM-DD`.
     pub fn to_iso(self) -> String {
         self.0.format("%Y-%m-%d").to_string()

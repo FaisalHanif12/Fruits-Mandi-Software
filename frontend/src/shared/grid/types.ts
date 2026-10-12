@@ -2,7 +2,16 @@
 // its columns and keeps its rows in a store. It never writes key handlers.
 
 /** The column types of the shared setup. Each has one fixed width (Code Standards F18). */
-export type EntryColumnType = 'account' | 'money' | 'qty' | 'rate' | 'date' | 'text' | 'calc';
+export type EntryColumnType =
+  'account' | 'money' | 'qty' | 'rate' | 'date' | 'text' | 'calc' | 'label';
+
+/**
+ * The types the user never types in: `calc` (a number from the backend) and `label` (words the
+ * screen shows, for example the name of the account on a line of the opening balances grid).
+ */
+export function isReadOnlyType(type: EntryColumnType): boolean {
+  return type === 'calc' || type === 'label';
+}
 
 /** One line the user typed. `typed` holds the text of each cell, as typed (CLAUDE.md rule 1). */
 export interface EntryRow {

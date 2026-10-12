@@ -341,7 +341,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     ).toBeChecked();
   });
 
-  it('accounts that look like the new one show below the name, with the balance and its side', async () => {
+  it('accounts that look like the new one show below the name, with city and phone', async () => {
     fakeAccounts([AKRAM]);
     vi.mocked(accountApi.accountsSimilar).mockResolvedValue([
       {
@@ -351,9 +351,10 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
         name_en: 'Akram Toll Tax',
         father_or_firm_ur: 'ٹول ٹیکس',
         father_or_firm_en: 'Toll Tax',
-        city: ref(1, '0001', 'کوٹ رادھا کشن', 'Kot Radha Kishan'),
+        city_ur: 'کوٹ رادھا کشن',
+        city_en: 'Kot Radha Kishan',
         phone1: '03001234567',
-        balance: balance(2880, 'dr'),
+        account_type: 'buyer',
       },
     ]);
     await renderApp('/index/accounts/new');
@@ -373,8 +374,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     const text = visible(panel?.textContent);
     expect(text).toContain('03040001');
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
-    expect(text).toContain('2,880');
-    expect(text).toContain(message(language, 'common-side-dr'));
+    expect(text).toContain(language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan');
     expect(text).toContain('03001234567');
     expect(accountApi.accountsSimilar).toHaveBeenCalledWith(expect.objectContaining({ phone: '' }));
   });
@@ -389,15 +389,18 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
         name_en: 'Akram Toll Tax',
         father_or_firm_ur: '',
         father_or_firm_en: '',
-        city: null,
+        city_ur: '',
+        city_en: '',
         phone1: '',
-        balance: balance(2880, 'dr'),
+        account_type: 'buyer',
       },
     ]);
     await renderApp('/index/accounts/21');
     await labelled(language, 'accounts-field-code');
     await waitFor(() => {
-      expect(accountApi.accountsSimilar).toHaveBeenCalled();
+      expect(accountApi.accountsSimilar).toHaveBeenCalledWith(
+        expect.objectContaining({ exclude_id: 21 }),
+      );
     });
     expect(
       screen.queryByRole('heading', { name: message(language, 'accounts-similar-title') }),
@@ -427,6 +430,90 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
       opening_dr: '15,000',
       opening_cr: '',
       opening_is_advance: true,
+    });
+  });
+
+  // The backend clears an opening when its fields come back empty (plan 07), so a form that opened
+  // an account with an opening must send that opening back unchanged when only another field
+  // is edited.
+  it('editing only the phone sends the stored opening back unchanged: date, debit and the advance mark', async () => {
+    fakeAccounts([RAHIM]);
+    await renderApp('/index/accounts/31');
+    const phone = await labelled(language, 'accounts-field-phone1');
+    const user = userEvent.setup();
+    await user.click(phone);
+    await user.keyboard('03001234567');
+    press('F10');
+    await waitFor(() => {
+      expect(accountApi.accountsSave).toHaveBeenCalledTimes(1);
+    });
+    const sent = vi.mocked(accountApi.accountsSave).mock.calls[0]?.[0];
+    expect(sent).toMatchObject({
+      id: 31,
+      phone1: '03001234567',
+      opening_date: '31-08-2026',
+      opening_dr: '15,000',
+      opening_cr: '',
+      opening_is_advance: true,
+    });
+  });
+
+  it('editing only the note sends an opening credit and a credit limit back unchanged', async () => {
+    const buyer = account(23, 'buyer', '03040003', 'ناصر', 'Nasir', {
+      opening_date: '2026-08-31',
+      opening_cr_paisa: money(2500),
+      credit_limit_paisa: money(50000),
+    });
+    fakeAccounts([buyer]);
+    await renderApp('/index/accounts/23');
+    const user = userEvent.setup();
+    await user.click(await labelled(language, 'accounts-field-note'));
+    await user.keyboard('x');
+    press('F10');
+    await waitFor(() => {
+      expect(accountApi.accountsSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(accountApi.accountsSave).mock.calls[0]?.[0]).toMatchObject({
+      note: 'x',
+      opening_date: '31-08-2026',
+      opening_dr: '',
+      opening_cr: '2,500',
+      credit_limit: '50,000',
+    });
+  });
+
+  it('an opening is sent empty only when the user cleared it', async () => {
+    fakeAccounts([RAHIM]);
+    await renderApp('/index/accounts/31');
+    const debit = await labelled(language, 'accounts-field-opening-dr');
+    const user = userEvent.setup();
+    await user.clear(debit);
+    press('F10');
+    await waitFor(() => {
+      expect(accountApi.accountsSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(accountApi.accountsSave).mock.calls[0]?.[0]).toMatchObject({
+      opening_dr: '',
+      opening_cr: '',
+    });
+  });
+
+  it('an account with no opening sends none when another field is edited', async () => {
+    const plain = account(24, 'buyer', '03040004', 'بغیر', 'Plain', { opening_date: null });
+    fakeAccounts([plain]);
+    await renderApp('/index/accounts/24');
+    const user = userEvent.setup();
+    await user.click(await labelled(language, 'accounts-field-note'));
+    await user.keyboard('x');
+    press('F10');
+    await waitFor(() => {
+      expect(accountApi.accountsSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(accountApi.accountsSave).mock.calls[0]?.[0]).toMatchObject({
+      opening_date: '',
+      opening_dr: '',
+      opening_cr: '',
+      opening_is_advance: false,
     });
   });
 

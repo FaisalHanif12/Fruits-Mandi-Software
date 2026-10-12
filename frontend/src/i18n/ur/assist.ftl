@@ -34,6 +34,8 @@ accountpicker-unknown-any = اس کوڈ کا کوئی کھاتہ نہیں
 # review: pending
 accountpicker-reserved = یہ کوڈ خاص کھاتوں کے لیے ہے۔ عام کھاتے کا یہ کوڈ نہیں ہو سکتا۔
 # review: pending
+accountpicker-inactive = { $name } ({ $code }) غیر فعال ہے۔ نئی اندراج میں اسے استعمال نہیں کیا جا سکتا۔
+# review: pending
 accountpicker-several = اس کوڈ کے ایک سے زیادہ کھاتے ہیں۔ ایک چنیں۔
 # review: pending
 accountpicker-add = نیا کھاتہ شامل کریں
@@ -50,10 +52,16 @@ calc-info-label = یہ کیسے نکالا گیا؟
 calc-info-title = حساب
 # review: pending
 calc-info-unknown = اس رقم کا حساب یہاں نہیں دکھایا جا سکتا۔
+# The level of the rule that was used, under the working (PRD FR-7.43).
 # review: pending
-working-percent = { $base } × { $rate } ÷ 100 = { $result }
+calc-info-rule = (اصول کا درجہ: { $level })
+# review: pending
+working-percent = { $base } × { $bps } ÷ 100 = { $result }
 # review: pending
 working-per-unit = { $qty } × { $value } = { $result }
+# A per-Nag charge of a lot is worked out on the quantity received.
+# review: pending
+working-per-unit-received = { $qty_received } { -nag } وصول × { $value } = { $result }
 # review: pending
 working-per-lot = { $value } فی { -lot } = { $result }
 # review: pending

@@ -20,6 +20,30 @@ pub struct DayStatusInfo {
     pub today_open: bool,
 }
 
+/// The open window for postings: the "closed up to" date and today (PRD FR-6.6). A posting date
+/// must be after the first and not after the second.
+///
+/// # Errors
+/// As [`status`].
+pub fn window(
+    ctx: &Context,
+) -> Result<
+    (
+        Option<mandi_domain::core::dates::BusinessDate>,
+        mandi_domain::core::dates::BusinessDate,
+    ),
+    ServiceError,
+> {
+    use mandi_domain::core::dates::BusinessDate;
+    let info = status(ctx)?;
+    let parse = |text: &str| {
+        BusinessDate::parse_iso(text)
+            .ok_or_else(|| ServiceError::Data(format!("a date is not YYYY-MM-DD: {text}")))
+    };
+    let closed = info.closed_up_to.as_deref().map(parse).transpose()?;
+    Ok((closed, parse(&info.today)?))
+}
+
 /// Today and the day state. A posting can only be dated after the closed-up-to date and not
 /// later than today (PRD FR-6.6).
 ///

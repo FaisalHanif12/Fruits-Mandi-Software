@@ -11,4 +11,10 @@ export {
   type ListColumnType,
 } from './columnTypes';
 export { isEditable, isEnterStop, nextEnterStop, type EnterStep } from './enterOrder';
-export type { CellRef, EntryColumn, EntryColumnType, EntryRow } from './types';
+export {
+  isReadOnlyType,
+  type CellRef,
+  type EntryColumn,
+  type EntryColumnType,
+  type EntryRow,
+} from './types';

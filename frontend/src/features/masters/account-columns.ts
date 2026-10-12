@@ -25,6 +25,7 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     type: 'name',
     headerId: 'accounts-col-other-name',
     from: 'wide',
+    grow: true,
     script: (language: Language) => (language === 'ur' ? 'en' : 'ur'),
     value: (row, { language }) => otherScriptName(nameOf(row), language),
   },
@@ -40,7 +41,7 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     type: 'date',
     headerId: 'accounts-col-opening-date',
     from: 'normal',
-    value: (row) => isoToDisplayDate(row.opening_date),
+    value: (row) => (row.opening_date === null ? '' : isoToDisplayDate(row.opening_date)),
   },
   {
     field: 'opening_dr',

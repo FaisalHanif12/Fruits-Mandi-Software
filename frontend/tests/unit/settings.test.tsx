@@ -67,15 +67,15 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
   }
 
   describe('tabs', () => {
-    it('has three tabs, and ← and → move between them in the direction the user sees', async () => {
+    it('has five tabs, and ← and → move between them in the direction the user sees', async () => {
       const { user } = await open();
       const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(3);
+      expect(tabs).toHaveLength(5);
       expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
       tabs[0]?.focus();
       // The next tab is on the left in Urdu and on the right in English.
       await user.keyboard(language === 'ur' ? '{ArrowLeft}' : '{ArrowRight}');
-      expect(tab(language, 'settings-tab-language')).toHaveAttribute('aria-selected', 'true');
+      expect(tab(language, 'settings-tab-charges')).toHaveAttribute('aria-selected', 'true');
       await user.keyboard(language === 'ur' ? '{ArrowRight}' : '{ArrowLeft}');
       expect(tab(language, 'settings-tab-firm')).toHaveAttribute('aria-selected', 'true');
     });

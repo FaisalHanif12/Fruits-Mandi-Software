@@ -14,21 +14,34 @@ import type {
   AccountMatch,
   AccountRow,
   AccountType,
-  CoaControl,
-  CoaHead,
+  ChartHead,
+  ControlItem,
+  HeadItem,
+  OpeningsInput,
+  OpeningsPreview,
+  OpeningsSaved,
 } from './types';
+import type { AccountBalance } from '../../bindings/AccountBalance';
+import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
+import type { CoaTree } from '../../bindings/CoaTree';
+import type { GlobalHit as GlobalHitBinding } from '../../bindings/GlobalHit';
+import type { ResolvedCode as ResolvedCodeBinding } from '../../bindings/ResolvedCode';
+import type { SearchHit } from '../../bindings/SearchHit';
+import type { SearchScope } from '../../bindings/SearchScope';
 
 /** The chart in three levels with live balances (PRD FR-10.1). */
-export function coaTree(): Promise<CoaHead[]> {
-  return callCommand<CoaHead[]>('coa_tree');
+export async function coaTree(): Promise<ChartHead[]> {
+  const tree = await callCommand<CoaTree>('coa_tree');
+  return tree.heads;
 }
 
-export function coaHeadsList(): Promise<CoaHead[]> {
-  return callCommand<CoaHead[]>('coa_heads_list');
+export function coaHeadsList(): Promise<HeadItem[]> {
+  return callCommand<HeadItem[]>('coa_heads_list');
 }
 
-export function coaControlsList(): Promise<CoaControl[]> {
-  return callCommand<CoaControl[]>('coa_controls_list');
+/** The controls; each says whether an account of type "other" may be made under it. */
+export function coaControlsList(): Promise<ControlItem[]> {
+  return callCommand<ControlItem[]>('coa_controls_list');
 }
 
 /** One account by id, for the form that edits it. */
@@ -36,8 +49,13 @@ export function accountsGet(id: number): Promise<AccountRow> {
   return callCommand<AccountRow>('accounts_get', { input: { id } });
 }
 
-export function accountsList(filter: AccountFilter): Promise<AccountList> {
-  return callCommand<AccountList>('accounts_list', { input: { filter } });
+/** The most the backend returns in one page (it says 2,000). 0 asks for that many. */
+const LIST_PAGE_LIMIT = 0;
+
+export function accountsList(filter: AccountFilter, offset = 0): Promise<AccountList> {
+  return callCommand<AccountList>('accounts_list', {
+    input: { filter, offset, limit: LIST_PAGE_LIMIT },
+  });
 }
 
 /** The next free code for a type (and a control, for "other"), to fill the code field. */
@@ -55,6 +73,7 @@ export function accountsSimilar(input: {
   name_ur: string;
   name_en: string;
   phone: string;
+  exclude_id: number | null;
 }): Promise<AccountMatch[]> {
   return callCommand<AccountMatch[]>('accounts_similar', { input });
 }
@@ -93,7 +112,7 @@ export function accountsSave(
       credit_limit: draft.credit_limit,
       default_marka_id: draft.default_marka?.id ?? null,
       collector_staff_id: draft.collector?.id ?? null,
-      collection_weekday: draft.collection_weekday === '' ? null : draft.collection_weekday,
+      collection_weekday: draft.collection_weekday,
       is_active: draft.is_active,
       note: draft.note,
     },
@@ -105,30 +124,126 @@ export function accountsSetActive(id: number, isActive: boolean): Promise<Accoun
   return callCommand<AccountRow>('accounts_set_active', { input: { id, is_active: isActive } });
 }
 
-// ---- Plan 08: short codes, the party card, search (INTERIM until the bindings arrive).
+/** Checks the openings grid and says what ابتدائی فرق would be. Nothing is saved. */
+export function accountsOpeningsPreview(input: OpeningsInput): Promise<OpeningsPreview> {
+  return callCommand<OpeningsPreview>('accounts_openings_preview', { input });
+}
 
-/** Accounts for a picker: exact code first, then the exact serial, then names (PRD FR-7.40). */
-export function searchAccounts(input: {
+/** Saves the openings grid in one transaction. Errors point to `lines[i].<field>`. */
+export function accountsOpeningsSave(input: OpeningsInput): Promise<OpeningsSaved> {
+  return callCommand<OpeningsSaved>('accounts_openings_save', { input });
+}
+
+// ---- Plan 08: short codes, the party card, search (PRD FR-7.38 to FR-7.42).
+
+/** The balances of some accounts, for the rows of a picker (PRD FR-7.40). */
+export function accountsBalances(ids: readonly number[]): Promise<AccountBalance[]> {
+  return callCommand<AccountBalance[]>('accounts_balances', { input: { ids: [...ids] } });
+}
+
+/**
+ * Adds the balance to each hit with one call for all of them. If the balances cannot be read the
+ * hits still come, without a balance: a row never shows a balance that was not read.
+ */
+async function withBalances(hits: readonly AccountHitBinding[]): Promise<AccountHit[]> {
+  if (hits.length === 0) return [];
+  const balances = new Map<number, AccountBalance['balance']>();
+  try {
+    for (const row of await accountsBalances(hits.map((hit) => hit.id))) {
+      balances.set(row.id, row.balance);
+    }
+  } catch {
+    // The picker works without balances.
+  }
+  return hits.map((hit) => ({ ...hit, balance: balances.get(hit.id) ?? null }));
+}
+
+/** The scope the search commands call a field's scope. A control has no recent list. */
+function recentScope(scope: AccountScope): SearchScope | null {
+  switch (scope) {
+    case 'seller':
+      return 'seller';
+    case 'buyer':
+      return 'buyer';
+    case 'any':
+      return 'any_account';
+    case 'control':
+      return null;
+  }
+}
+
+/** What kind of account a recent hit is, from the list it came from. */
+function typeOfRecent(hit: SearchHit): AccountHitBinding['account_type'] {
+  return hit.kind === 'seller' ? 'seller' : hit.kind === 'buyer' ? 'buyer' : 'other';
+}
+
+/**
+ * Accounts for a picker: exact code first, then the exact serial, then names, then close
+ * spellings (PRD FR-7.40). `controlId` is for a field that takes the accounts of one control.
+ */
+export async function searchAccounts(input: {
   scope: AccountScope;
+  controlId: number | null;
   text: string;
   limit: number;
 }): Promise<AccountHit[]> {
-  return callCommand<AccountHit[]>('search_accounts', { input });
+  const hits = await callCommand<AccountHitBinding[]>('search_accounts', {
+    input: {
+      scope: input.scope,
+      control_id: input.controlId,
+      text: input.text,
+      limit: input.limit,
+    },
+  });
+  return withBalances(hits);
 }
 
 /** The recent accounts of a picker, then the rest (PRD FR-7.41). */
-export function searchAccountsRecent(scope: AccountScope): Promise<AccountHit[]> {
-  return callCommand<AccountHit[]>('search_accounts_recent', { input: { scope } });
+export async function searchAccountsRecent(
+  scope: AccountScope,
+  controlId: number | null,
+): Promise<AccountHit[]> {
+  const listScope = recentScope(scope);
+  if (listScope === null || controlId !== null) return [];
+  const hits = await callCommand<SearchHit[]>('search_recent', { input: { scope: listScope } });
+  return withBalances(
+    hits.map((hit) => ({
+      id: hit.id,
+      code: hit.code,
+      name_ur: hit.name_ur,
+      name_en: hit.name_en,
+      extra_ur: hit.extra_ur,
+      extra_en: hit.extra_en,
+      account_type: typeOfRecent(hit),
+      control_id: 0,
+      is_active: hit.is_active,
+    })),
+  );
 }
 
 /** Remembers that an account was chosen, so it comes first next time. */
 export function searchAccountsTouch(scope: AccountScope, id: number): Promise<null> {
-  return callCommand<null>('search_accounts_touch', { input: { scope, id } });
+  const listScope = recentScope(scope);
+  if (listScope === null) return Promise.resolve(null);
+  return callCommand<null>('search_touch', { input: { scope: listScope, id } });
 }
 
 /** What a code typed in an account field means. Called on Enter or on leaving the field only. */
-export function accountsResolveCode(scope: AccountScope, text: string): Promise<ResolvedCode> {
-  return callCommand<ResolvedCode>('accounts_resolve_code', { input: { scope, text } });
+export async function accountsResolveCode(
+  scope: AccountScope,
+  controlId: number | null,
+  text: string,
+): Promise<ResolvedCode> {
+  const result = await callCommand<ResolvedCodeBinding>('accounts_resolve_code', {
+    input: { scope, control_id: controlId, text },
+  });
+  const plain = (hit: AccountHitBinding): AccountHit => ({ ...hit, balance: null });
+  return {
+    status: result.status,
+    account: result.account === null ? null : plain(result.account),
+    candidates: result.candidates.map(plain),
+    suggested_code: result.suggested_code,
+  };
 }
 
 /** The party card of an account, read from the books (PRD FR-7.38). */
@@ -136,7 +251,21 @@ export function assistPartyCard(accountId: number): Promise<PartyCardData> {
   return callCommand<PartyCardData>('assist_party_card', { input: { account_id: accountId } });
 }
 
+/** The most results of the global search the box shows. */
+const GLOBAL_SEARCH_LIMIT = 20;
+
 /** The global search (Ctrl+K): accounts for now. */
-export function searchGlobal(text: string): Promise<GlobalHit[]> {
-  return callCommand<GlobalHit[]>('search_global', { input: { text } });
+export async function searchGlobal(text: string): Promise<GlobalHit[]> {
+  const hits = await callCommand<GlobalHitBinding[]>('search_global', {
+    input: { text, limit: GLOBAL_SEARCH_LIMIT },
+  });
+  return hits.map((item) => ({
+    kind: item.kind,
+    id: item.hit.id,
+    code: item.hit.code,
+    name_ur: item.hit.name_ur,
+    name_en: item.hit.name_en,
+    extra_ur: item.hit.extra_ur,
+    extra_en: item.hit.extra_en,
+  }));
 }

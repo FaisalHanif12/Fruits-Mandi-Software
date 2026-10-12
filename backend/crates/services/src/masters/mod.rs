@@ -114,6 +114,12 @@ pub fn save(ctx: &Context, actor: &Actor, input: &MasterInput) -> Result<MasterR
         learned.after_commit(ctx);
     }
     search::refresh(ctx, kind, row.id());
+    // The account an expense head or a bank account made is searchable too (plan 07).
+    match &row {
+        MasterRow::ExpenseHead(r) => search::refresh_account(ctx, r.account_id),
+        MasterRow::BankAccount(r) => search::refresh_account(ctx, r.account_id),
+        _ => {}
+    }
     Ok(row)
 }
 
@@ -286,6 +292,11 @@ pub fn set_active(
     })?;
     if changed {
         search::refresh(ctx, kind, id);
+        match &row {
+            MasterRow::ExpenseHead(r) => search::refresh_account(ctx, r.account_id),
+            MasterRow::BankAccount(r) => search::refresh_account(ctx, r.account_id),
+            _ => {}
+        }
     }
     Ok(row)
 }

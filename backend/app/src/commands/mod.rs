@@ -3,9 +3,11 @@
 
 pub mod accounts;
 pub mod app;
+pub mod assist;
 pub mod auth;
 pub mod day;
 pub mod masters;
+pub mod rules;
 pub mod search;
 pub mod settings;
 pub mod translit;

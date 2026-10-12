@@ -13,12 +13,18 @@ use std::sync::Arc;
 
 use mandi_db::masters as repo;
 use mandi_db::rusqlite::Connection;
+use mandi_domain::core::accounts::{
+    AccountBalance, AccountHit, AccountScope, BUYER_CONTROL, Balance, GlobalHit, ResolveCodeInput,
+    ResolveStatus, ResolvedCode, SELLER_CONTROL, SearchAccountsInput, SearchGlobalInput,
+};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
 use serde_json::{Value, json};
 
-pub use index::{Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, Usage};
+pub use index::{
+    Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, SHORT_CODE_DIGITS, Usage, short_serial,
+};
 
 use crate::auth::Actor;
 use crate::context::Context;
@@ -34,6 +40,7 @@ fn build(conn: &Connection) -> Result<Index, ServiceError> {
     for kind in MasterKind::ALL {
         index.set_scope(kind, repo::search_sources(conn, kind, None)?);
     }
+    index.set_accounts(mandi_db::accounts::search_sources(conn, None)?);
     Ok(index)
 }
 
@@ -80,6 +87,47 @@ pub fn refresh(ctx: &Context, kind: MasterKind, id: i64) {
         Ok(mut found) => Arc::make_mut(index).put(kind, id, found.pop()),
         Err(_) => *slot = None,
     }
+}
+
+/// Updates the index for one account after the save that changed it has committed (plan 07).
+/// Like [`refresh`], any failure throws the index away so it is built again on the next use.
+pub fn refresh_account(ctx: &Context, id: i64) {
+    let mut slot = ctx.search_lock();
+    let Some(index) = slot.as_mut() else {
+        return;
+    };
+    let source = ctx
+        .db
+        .read(|conn| mandi_db::accounts::search_sources(conn, Some(id)));
+    match source {
+        Ok(mut found) => Arc::make_mut(index).put_account(id, found.pop()),
+        Err(_) => *slot = None,
+    }
+}
+
+/// The ids of active accounts whose name looks like what was typed, in either script, with
+/// mistakes forgiven (PRD FR-10.7, FR-7.63). Only reads.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn similar_account_ids(
+    ctx: &Context,
+    typed: &[&str],
+    exclude: Option<i64>,
+    limit: usize,
+) -> Result<Vec<i64>, ServiceError> {
+    let index = current(ctx)?;
+    let usage = Usage::default();
+    let mut ids: Vec<i64> = Vec::new();
+    for text in typed.iter().filter(|t| !t.trim().is_empty()) {
+        for hit in index.search(SearchScope::AnyAccount, text, limit, &usage) {
+            if Some(hit.id) != exclude && !ids.contains(&hit.id) {
+                ids.push(hit.id);
+            }
+        }
+    }
+    ids.truncate(limit);
+    Ok(ids)
 }
 
 fn usage_of(ctx: &Context, actor: &Actor, scope: SearchScope) -> Result<Usage, ServiceError> {
@@ -178,4 +226,209 @@ pub fn touch(
         *count = count.saturating_add(1);
         store::set_pref(tx, actor.user_id, &key, &usage_json(&usage))
     })
+}
+
+/// The most characters a typed search text may have. Longer text is refused, so a huge paste
+/// is never turned into keys.
+pub const MAX_QUERY_CHARS: usize = 200;
+/// The most accounts `balances` answers for in one call.
+pub const MAX_BALANCES: usize = 500;
+
+fn check_text(text: &str) -> Result<(), ServiceError> {
+    if text.chars().take(MAX_QUERY_CHARS.saturating_add(1)).count() > MAX_QUERY_CHARS {
+        return Err(ServiceError::reject_with(
+            ErrorCode::ErrTextTooLong,
+            Some("text"),
+            "max",
+            i64::try_from(MAX_QUERY_CHARS).unwrap_or(i64::MAX),
+        ));
+    }
+    Ok(())
+}
+
+fn check_scope(scope: AccountScope, control_id: Option<i64>) -> Result<(), ServiceError> {
+    if scope == AccountScope::Control && control_id.is_none() {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrRequired,
+            "control_id",
+        ));
+    }
+    Ok(())
+}
+
+/// The recent list a scope uses: sellers and buyers have their own, every other scope shares the
+/// list of any account.
+fn usage_scope(scope: AccountScope) -> SearchScope {
+    match scope {
+        AccountScope::Seller => SearchScope::Seller,
+        AccountScope::Buyer => SearchScope::Buyer,
+        AccountScope::Any | AccountScope::Control => SearchScope::AnyAccount,
+    }
+}
+
+/// The accounts of a field that match the typed text, best first: exact full code, exact serial
+/// (a short code, PRD FR-7.39), names that start with the text, accounts used before, close
+/// spellings. Only reads. A short code needs no `Enter` here: the list previews the top match
+/// while the user types, and the code is only taken by [`resolve_code`] (PRD FR-7.38).
+///
+/// # Errors
+/// `ERR_REQUIRED` on `control_id` for scope `control`; `ERR_TEXT_TOO_LONG` on `text`;
+/// `ServiceError::Db`.
+pub fn search_accounts(
+    ctx: &Context,
+    actor: &Actor,
+    input: &SearchAccountsInput,
+) -> Result<Vec<AccountHit>, ServiceError> {
+    check_scope(input.scope, input.control_id)?;
+    check_text(&input.text)?;
+    let index = current(ctx)?;
+    let usage = usage_of(ctx, actor, usage_scope(input.scope))?;
+    let limit = usize::try_from(input.limit).unwrap_or(MAX_HITS);
+    Ok(index.search_accounts(input.scope, input.control_id, &input.text, limit, &usage))
+}
+
+/// The full code a new account would get, if the typed digits are a well-formed code of the
+/// field's series and the serial is a normal one (PRD FR-10.3).
+fn well_formed(control_code: &str, digits: &str) -> Option<u32> {
+    let serial = digits.strip_prefix(control_code)?;
+    if serial.len() != 4 {
+        return None;
+    }
+    serial.parse().ok()
+}
+
+/// Takes a typed code on `Enter` or on leaving the field (PRD FR-7.38, FR-7.39, FR-7.42).
+///
+/// - 1 to 4 digits are a short code: the serial in a seller or buyer field, the seller and the
+///   buyer with that serial in a field that takes any account. Serial 0 and 9000 and up are
+///   `reserved`. Other accounts have no short code.
+/// - More digits are a full code, which must be in the field's series.
+/// - Anything that is not digits is a name, not a code: `unknown`, nothing suggested.
+///
+/// # Errors
+/// `ERR_REQUIRED` on `control_id` (scope `control`) or on `text` (empty); `ERR_TEXT_TOO_LONG`.
+pub fn resolve_code(ctx: &Context, input: &ResolveCodeInput) -> Result<ResolvedCode, ServiceError> {
+    check_scope(input.scope, input.control_id)?;
+    check_text(&input.text)?;
+    let text = input.text.trim();
+    if text.is_empty() {
+        return Err(ServiceError::reject_field(ErrorCode::ErrRequired, "text"));
+    }
+    let index = current(ctx)?;
+    let answer = |status, account: Option<AccountHit>, candidates, suggested_code| ResolvedCode {
+        status,
+        account,
+        candidates,
+        suggested_code,
+    };
+    let unknown =
+        |suggested: Option<String>| answer(ResolveStatus::Unknown, None, Vec::new(), suggested);
+    if !text.bytes().all(|b| b.is_ascii_digit()) {
+        return Ok(unknown(None));
+    }
+    let series = |scope: AccountScope| match scope {
+        AccountScope::Seller => Some(SELLER_CONTROL.to_owned()),
+        AccountScope::Buyer => Some(BUYER_CONTROL.to_owned()),
+        _ => None,
+    };
+    if text.len() <= SHORT_CODE_DIGITS {
+        if input.scope == AccountScope::Control {
+            return Ok(unknown(None));
+        }
+        let Some(serial) = short_serial(text) else {
+            return Ok(answer(ResolveStatus::Reserved, None, Vec::new(), None));
+        };
+        let all = index.accounts_with_serial(input.scope, serial);
+        let mut active: Vec<AccountHit> = all.iter().filter(|a| a.is_active).cloned().collect();
+        return Ok(match (active.len(), all.first()) {
+            (1, _) => answer(ResolveStatus::Found, active.pop(), Vec::new(), None),
+            (0, None) => unknown(series(input.scope).map(|code| format!("{code}{serial:04}"))),
+            (0, Some(first)) => answer(
+                ResolveStatus::Inactive,
+                Some(first.clone()),
+                Vec::new(),
+                None,
+            ),
+            _ => answer(ResolveStatus::Several, None, active, None),
+        });
+    }
+    if let Some(hit) = index.account_with_code(input.scope, input.control_id, text) {
+        let status = if hit.is_active {
+            ResolveStatus::Found
+        } else {
+            ResolveStatus::Inactive
+        };
+        return Ok(answer(status, Some(hit), Vec::new(), None));
+    }
+    // Not found: if the digits are a well-formed code of the field's series, say which add
+    // would make it, or that its serial is the system's.
+    let control_code = match input.scope {
+        AccountScope::Control => match input.control_id {
+            Some(id) => ctx
+                .db
+                .read(|conn| mandi_db::accounts::control_by_id(conn, id))?
+                .map(|c| c.code),
+            None => None,
+        },
+        other => series(other),
+    };
+    let serial = control_code
+        .as_deref()
+        .and_then(|code| well_formed(code, text));
+    Ok(match serial {
+        Some(serial) if short_serial(&serial.to_string()).is_some() => {
+            unknown(Some(text.to_owned()))
+        }
+        Some(_) => answer(ResolveStatus::Reserved, None, Vec::new(), None),
+        None => unknown(None),
+    })
+}
+
+/// The balances of some accounts, read from the posted journal (PRD FR-6.1). An account with no
+/// posted line has the zero balance. Only reads.
+///
+/// # Errors
+/// `ERR_OUT_OF_RANGE` on `ids` for more than [`MAX_BALANCES`] ids; `ServiceError::Db`.
+pub fn balances(ctx: &Context, ids: &[i64]) -> Result<Vec<AccountBalance>, ServiceError> {
+    if ids.len() > MAX_BALANCES {
+        return Err(ServiceError::reject_field(ErrorCode::ErrOutOfRange, "ids"));
+    }
+    let totals = ctx
+        .db
+        .read(|conn| mandi_db::ledger::totals_for_accounts(conn, ids))?;
+    ids.iter()
+        .map(|id| {
+            let balance = match totals.get(id) {
+                Some(found) => crate::ledger::balance_of(*found)?,
+                None => Balance::ZERO,
+            };
+            Ok(AccountBalance { id: *id, balance })
+        })
+        .collect()
+}
+
+/// Global search (`Ctrl+K`, PRD FR-5.4): accounts now, searched like a field that takes any
+/// account. Only reads.
+///
+/// # Errors
+/// As [`search_accounts`].
+pub fn global(
+    ctx: &Context,
+    actor: &Actor,
+    input: &SearchGlobalInput,
+) -> Result<Vec<GlobalHit>, ServiceError> {
+    let hits = search_accounts(
+        ctx,
+        actor,
+        &SearchAccountsInput {
+            scope: AccountScope::Any,
+            control_id: None,
+            text: input.text.clone(),
+            limit: input.limit,
+        },
+    )?;
+    Ok(hits
+        .into_iter()
+        .map(|hit| GlobalHit::Account { hit })
+        .collect())
 }

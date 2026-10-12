@@ -36,6 +36,12 @@ Each of the six levels has a test that shows it winning over every level below i
 - `domain::rules::resolve(side, charge, party_id?, item_id, item_group, date, rules, line_override?) -> Resolution { rule_id?, level, method, value, skipped: Vec<SkippedLevel> }`, pure. Amount through `core::money` only (`apply_bps`, `per_unit`; per_lot as the value). Under 1 ms with 10,000 rules (criterion bench; in-memory index by side, charge, party and item).
 - Commands: `rules_list { filter }`, `rules_save { id?, version?, side, charge_type, account_id?, item_id?, item_group?, method, value (text), from_date, to_date?, is_active, note }` (refuses combinations outside 11.2 with `ERR_RULE_NOT_ALLOWED`, percent over 100 `ERR_PERCENT_OVER_100`, negative or zero per-نگ values, `ERR_DATE_RANGE` when to_date is before from_date; returns overlap warnings), `rules_set_active`, `rules_test { seller_id, buyer_id, item_id, date, qty (text), rate (text) }` -> for each charge the winner, its level, the skipped levels and the amount with its working (FR-11.8). Settings `settings_set_charges` (the global defaults, written as rules) and `settings_set_overrides { allow_line_override, credit_limit_mode }`. Audit row on every rule change (S7). Sign-in check first.
 
+- Added 12-10-2026 (frontend's request, accepted): `rules_get { id }` -> `RuleRow` for the edit form; `settings_get_charges` and `settings_get_overrides` for the two Settings tabs.
+- Working shape (B30, FR-7.43): `Working { message_id, args, rule_id? }`. `message_id` is a Fluent ID (`working-percent`, `working-per-unit`, `working-per-lot`, `working-manual`, `working-none`), `args` are the formatted inputs and result (money as Paisa, rates as bps), and the rule's name or level for the "(اصول: ...)" part. The frontend never builds a working; it only renders this through `CalcInfo`.
+- Error messages needed in ur and en once the codes exist: `ERR_RULE_NOT_ALLOWED`, `ERR_PERCENT_OVER_100`, `ERR_DATE_RANGE`.
+
+- Decided 12-10-2026 (team default, open question for Umar in status.md): an item group only on a rule with no item and no party, because PRD 11.3 has no party + group level. The three global defaults are rows with `is_default`, changed only from Settings, Charges.
+
 ### Frontend
 
 - Rules list (filters by side, charge, party, item, active), rule form (side, charge type limited to 11.2, party with `AccountPicker`, item with the plan 06 Picker, item group, method limited by charge, value as text with the right unit, dates, active, note), overlap warning, four states, keyboard only, both languages.

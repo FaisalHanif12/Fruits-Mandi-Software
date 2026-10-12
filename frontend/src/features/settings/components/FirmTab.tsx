@@ -14,10 +14,11 @@ import {
   Button,
   ErrorNotice,
   Field,
-  NamePair,
-  TextInput,
   fieldError,
+  FreeTextInput,
+  NamePair,
   showToast,
+  TextInput,
 } from '../../../shared/ui';
 import { useSetFirm } from '../hooks';
 
@@ -93,7 +94,7 @@ export function FirmTab({ firm }: FirmTabProps) {
       </Field>
       <Field label={<Localized id="settings-firm-address" />} error={fieldError(error, 'address')}>
         {(control) => (
-          <TextInput {...control} value={values.address} onChange={setField('address')} />
+          <FreeTextInput {...control} value={values.address} onChange={setField('address')} />
         )}
       </Field>
       <div>

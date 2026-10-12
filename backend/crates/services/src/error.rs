@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 
 use mandi_db::DbError;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
+use mandi_domain::core::money::MoneyError;
 use thiserror::Error;
 
 /// One problem to show to the user: a code, the field it belongs to (if any) and the values
@@ -117,5 +118,14 @@ impl From<Vec<FieldError>> for ServiceError {
 impl From<mandi_db::rusqlite::Error> for ServiceError {
     fn from(error: mandi_db::rusqlite::Error) -> Self {
         Self::Db(DbError::from(error))
+    }
+}
+
+/// Money arithmetic that failed: an overflow is a clear refusal, anything else is a bug signal
+/// that is logged and shown as an internal error.
+pub fn money_error(error: MoneyError) -> ServiceError {
+    match error {
+        MoneyError::Overflow => ServiceError::reject(ErrorCode::ErrOverflow),
+        other => ServiceError::Data(format!("money: {other}")),
     }
 }

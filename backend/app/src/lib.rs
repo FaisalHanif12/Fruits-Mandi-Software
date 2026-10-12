@@ -104,6 +104,20 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::accounts::coa_tree,
         commands::accounts::coa_heads_list,
         commands::accounts::coa_controls_list,
+        commands::search::search_accounts,
+        commands::search::search_global,
+        commands::accounts::accounts_resolve_code,
+        commands::accounts::accounts_balances,
+        commands::assist::assist_party_card,
+        commands::rules::rules_list,
+        commands::rules::rules_get,
+        commands::rules::rules_save,
+        commands::rules::rules_set_active,
+        commands::rules::rules_test,
+        commands::settings::settings_get_charges,
+        commands::settings::settings_set_charges,
+        commands::settings::settings_get_overrides,
+        commands::settings::settings_set_overrides,
     ]
 }
 

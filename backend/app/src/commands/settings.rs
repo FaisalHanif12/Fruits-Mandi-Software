@@ -161,3 +161,58 @@ pub async fn prefs_set<R: tauri::Runtime>(
     })
     .await
 }
+
+/// The three global defaults of PRD 4.2 and Section 21 "Charges": seller commission, buyer
+/// commission and لاگا on fruit.
+#[tauri::command]
+pub async fn settings_get_charges<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<mandi_services::core::rules::ChargesSettings, UiError> {
+    run(app, "settings_get_charges", |ctx| {
+        auth::require(ctx)?;
+        mandi_services::rules::charges(ctx)
+    })
+    .await
+}
+
+/// Saves the three global defaults. They are rules, so the change is in the audit log with the
+/// old and new value, and saved sale lines keep what they stored (PRD FR-11.6). Errors: the
+/// value codes of a rule (`seller_commission.value` and so on), `ERR_RULE_NOT_ALLOWED`,
+/// `ERR_VERSION_CHANGED`.
+#[tauri::command]
+pub async fn settings_set_charges<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: mandi_services::core::rules::ChargesInput,
+) -> Result<mandi_services::core::rules::ChargesSettings, UiError> {
+    run(app, "settings_set_charges", move |ctx| {
+        let actor = auth::require(ctx)?;
+        mandi_services::rules::set_charges(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// The switches of Section 21 "Overrides" and "Checks": allow a typed commission or لاگا on a
+/// sale line, and whether going over a credit limit warns or blocks.
+#[tauri::command]
+pub async fn settings_get_overrides<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<mandi_services::core::rules::OverridesSettings, UiError> {
+    run(app, "settings_get_overrides", |ctx| {
+        auth::require(ctx)?;
+        mandi_services::rules::overrides(ctx)
+    })
+    .await
+}
+
+/// Saves the two switches (audit row with old and new value).
+#[tauri::command]
+pub async fn settings_set_overrides<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: mandi_services::core::rules::OverridesSettings,
+) -> Result<mandi_services::core::rules::OverridesSettings, UiError> {
+    run(app, "settings_set_overrides", move |ctx| {
+        let actor = auth::require(ctx)?;
+        mandi_services::rules::set_overrides(ctx, &actor, &input)
+    })
+    .await
+}

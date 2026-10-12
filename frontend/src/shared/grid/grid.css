@@ -63,6 +63,14 @@
   background-color: var(--color-surface-readonly);
 }
 
+/* A cell the backend refused: a red outline inside the cell and the words as the tooltip. The
+   list of errors above the grid carries the words too, so colour is never alone (NFR-USE-12). */
+.entry-grid .cell-error {
+  outline: var(--border-w) solid var(--color-due);
+  outline-offset: calc(-1 * var(--border-w));
+  background-color: var(--color-due-soft);
+}
+
 /* The rate hint, for example the last rate. Never saved (PRD FR-7.53). It is words with a
    number in them, so it reads in the direction of the language, not like a number cell. */
 .entry-grid .cell-num.cell-hint {

@@ -38,6 +38,10 @@ pub struct SearchSource {
     pub search_phonetic: Option<String>,
     /// True for an active record.
     pub is_active: bool,
+    /// For an account: its kind (decides which search lists it belongs to). `None` for masters.
+    pub account_type: Option<mandi_core::accounts::AccountType>,
+    /// For an account: the control it is under. `None` for masters.
+    pub control_id: Option<i64>,
 }
 
 fn value(v: &ColValue) -> Value {
@@ -259,6 +263,9 @@ pub fn exists(conn: &Connection, table: &str, id: i64) -> rusqlite::Result<bool>
         "packings" => "SELECT 1 FROM packings WHERE id = ?1",
         "cities" => "SELECT 1 FROM cities WHERE id = ?1",
         "accounts" => "SELECT 1 FROM accounts WHERE id = ?1",
+        "addas" => "SELECT 1 FROM addas WHERE id = ?1",
+        "markas" => "SELECT 1 FROM markas WHERE id = ?1",
+        "staff" => "SELECT 1 FROM staff WHERE id = ?1",
         _ => return Err(rusqlite::Error::InvalidQuery),
     };
     Ok(conn.query_row(sql, [id], |_| Ok(())).optional()?.is_some())
@@ -572,6 +579,8 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         search_en: r.get(8)?,
         search_phonetic: r.get(9)?,
         is_active: r.get(10)?,
+        account_type: None,
+        control_id: None,
     })
 }
 

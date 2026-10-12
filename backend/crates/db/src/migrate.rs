@@ -29,7 +29,8 @@ const BACKUP_PAGES_PER_STEP: i32 = 512;
 /// transaction (plan 03 Section 4.4).
 pub fn migrations() -> Migrations<'static> {
     Migrations::new(vec![M::up_with_hook(INIT_SQL, |tx| {
-        crate::seed::system_accounts(tx)
+        crate::seed::system_accounts(tx).map_err(HookError::from)?;
+        crate::seed::default_rules(tx)
             .map(|_| ())
             .map_err(HookError::from)
     })])

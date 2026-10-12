@@ -31,6 +31,7 @@ export { PickerBase, type PickerBaseProps, type PickerHit } from './PickerBase';
 export { QtyInput } from './QtyInput';
 export { QuickAddAccount } from './QuickAddAccount';
 export { RomanUrduInput, type ConvertedWord } from './RomanUrduInput';
+export { FreeTextInput } from './FreeTextInput';
 export { SaveChangesPrompt } from './SaveChangesPrompt';
 export { SegmentedControl, type SegmentedOption } from './SegmentedControl';
 export { Select, type SelectOption } from './Select';

@@ -368,3 +368,56 @@ describe('language switch in the middle of an entry (Code Standards F39)', () =>
     expect(rig.store.getState().rows.map((row) => row.typed['qty'])).toEqual(['20', '5']);
   });
 });
+
+describe.each(LANGUAGES)('entry grid with fixed rows (%s)', (language) => {
+  it('Enter on the last stop of the last row, and ↓ on the last row, add no row', async () => {
+    const rig = await renderGrid(language, { rows: [{}, {}], fixedRows: true });
+    await rig.focusCell(1, 'rate');
+    await rig.user.keyboard('600{Enter}');
+    expect(rig.store.getState().rows).toHaveLength(2);
+    expect(rig.focused()).toBe('1:rate');
+    await rig.user.keyboard('{ArrowDown}');
+    expect(rig.store.getState().rows).toHaveLength(2);
+    expect(rig.focused()).toBe('1:rate');
+  });
+
+  it('Ctrl+Delete removes no row', async () => {
+    const rig = await renderGrid(language, { rows: [{ qty: '5' }, { qty: '6' }], fixedRows: true });
+    await rig.focusCell(0, 'qty');
+    await rig.user.keyboard('{Control>}{Delete}{/Control}');
+    expect(rig.store.getState().rows).toHaveLength(2);
+  });
+
+  it('Enter still goes on to the next row while there is one', async () => {
+    const rig = await renderGrid(language, { rows: [{}, {}], fixedRows: true });
+    await rig.focusCell(0, 'rate');
+    await rig.user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(rig.focused()).toBe('1:buyer');
+    });
+  });
+});
+
+describe.each(LANGUAGES)('entry grid read-only words and cell errors (%s)', (language) => {
+  it('a label cell shows the words the screen gave, cannot be typed in and is not an Enter stop', async () => {
+    const rig = await renderGrid(language, { rows: [{ buyer: 'Akram' }, {}], withLabel: true });
+    expect(rig.cell(0, 'name').textContent).toBe('Akram');
+    expect(rig.cell(0, 'name')).toHaveClass('cell-calc');
+    await rig.focusCell(0, 'name');
+    await rig.user.keyboard('9');
+    expect(rig.isEditing()).toBe(false);
+    await rig.focusCell(1, 'rate');
+    await rig.user.keyboard('{Enter}');
+    expect(rig.focused()).not.toBe('1:name');
+  });
+
+  it('a cell the backend refused gets the error look, and the others do not', async () => {
+    const rig = await renderGrid(language, {
+      rows: [{}, {}],
+      cellErrors: (ids) => ({ [ids[1] ?? '']: { rate: 'x' } }),
+    });
+    expect(rig.cell(1, 'rate')).toHaveClass('cell-error');
+    expect(rig.cell(1, 'qty')).not.toHaveClass('cell-error');
+    expect(rig.cell(0, 'rate')).not.toHaveClass('cell-error');
+  });
+});

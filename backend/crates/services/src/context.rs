@@ -79,6 +79,9 @@ pub struct Context {
     pub(crate) learned: Mutex<Option<Arc<Vec<LearnedPair>>>>,
     /// The search index (Tech Stack 4.7), kept in memory. `None` until first needed.
     pub(crate) search: Mutex<Option<Arc<crate::search::Index>>>,
+    /// The active charge rules, filed for fast lookup (plan 09). `None` until first needed, and
+    /// after any change to a rule.
+    pub(crate) rules: Mutex<Option<Arc<mandi_domain::rules::RuleSet>>>,
     dummy_hash: OnceLock<String>,
 }
 
@@ -105,6 +108,7 @@ impl Context {
             lockouts: Mutex::new(Lockouts::default()),
             learned: Mutex::new(None),
             search: Mutex::new(None),
+            rules: Mutex::new(None),
             dummy_hash: OnceLock::new(),
         }
     }
@@ -135,6 +139,19 @@ impl Context {
 
     pub(crate) fn search_lock(&self) -> MutexGuard<'_, Option<Arc<crate::search::Index>>> {
         self.search.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Throws away everything kept in memory (the charge rules, the search index and the learned
+    /// word pairs), so the next use reads the database. A restore of a backup and any import
+    /// call this, because they replace data behind the services' back.
+    pub fn invalidate_caches(&self) {
+        *self.rules_lock() = None;
+        *self.search_lock() = None;
+        *self.learned_lock() = None;
+    }
+
+    pub(crate) fn rules_lock(&self) -> MutexGuard<'_, Option<Arc<mandi_domain::rules::RuleSet>>> {
+        self.rules.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     pub(crate) fn learned_lock(&self) -> MutexGuard<'_, Option<Arc<Vec<LearnedPair>>>> {

@@ -409,7 +409,9 @@ fn charge_rule_combinations_follow_prd_11_2() {
     let (_dir, conn) = setup();
     let insert = |side: &str, charge: &str, method: &str, bps: Option<i64>, paisa: Option<i64>| {
         conn.execute(
-            "INSERT INTO charge_rules (side, charge_type, method, value_bps, value_paisa, from_date) VALUES (?1, ?2, ?3, ?4, ?5, '2026-10-01')",
+            // A vegetable-group rule, so these do not meet the one-default indexes (the seed holds
+            // the defaults); the combinations are what is under test.
+            "INSERT INTO charge_rules (side, charge_type, item_group, method, value_bps, value_paisa, from_date) VALUES (?1, ?2, 'vegetable', ?3, ?4, ?5, '2026-10-01')",
             params![side, charge, method, bps, paisa],
         )
     };
@@ -782,4 +784,49 @@ fn an_opening_advance_needs_an_opening_debit() {
     assert!(set(0, 1).is_err());
     // Rahim's 15,000 advance of PRD 4.3.
     assert!(set(1_500_000, 1).is_ok());
+}
+
+#[test]
+fn only_one_rule_can_be_each_of_the_three_defaults() {
+    // The seed holds seller commission, buyer commission and the fruit لاگا; a second rule with
+    // the same scope would hide the one the Settings screen shows (plan 09).
+    let (_dir, conn) = setup();
+    let insert = |side: &str,
+                  charge: &str,
+                  group: Option<&str>,
+                  method: &str,
+                  bps: Option<i64>,
+                  paisa: Option<i64>| {
+        conn.execute(
+            "INSERT INTO charge_rules (side, charge_type, item_group, method, value_bps, value_paisa, from_date) VALUES (?1, ?2, ?3, ?4, ?5, ?6, '2026-10-01')",
+            params![side, charge, group, method, bps, paisa],
+        )
+    };
+    assert!(insert("seller", "commission", None, "percent", Some(700), None).is_err());
+    assert!(insert("buyer", "commission", None, "percent", Some(700), None).is_err());
+    assert!(insert("buyer", "laga", Some("fruit"), "per_unit", None, Some(900)).is_err());
+    // Other scopes are free: the vegetable group, and the default of a lot charge.
+    assert!(
+        insert(
+            "buyer",
+            "laga",
+            Some("vegetable"),
+            "per_unit",
+            None,
+            Some(300)
+        )
+        .is_ok()
+    );
+    assert!(insert("seller", "labour", None, "per_unit", None, Some(500)).is_ok());
+    assert!(
+        insert(
+            "seller",
+            "commission",
+            Some("fruit"),
+            "percent",
+            Some(500),
+            None
+        )
+        .is_ok()
+    );
 }

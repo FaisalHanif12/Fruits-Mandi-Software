@@ -40,6 +40,8 @@ interface AccountPickerProps extends FieldControlProps {
   placeholder?: string | undefined;
   /** Show the party card under the field. Default: yes (FR-7.38). */
   showCard?: boolean | undefined;
+  /** The control whose accounts the field takes, for scope `control` (for example ادھار رقم). */
+  controlId?: number | undefined;
 }
 
 /** What the screen says about a code that did not give one account. */
@@ -54,6 +56,7 @@ function hitOfRow(row: AccountRow): AccountHit {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
+    control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
     extra_ur: [row.father_or_firm_ur, row.city?.name_ur ?? '']
@@ -74,6 +77,7 @@ const UNKNOWN_ID: Record<AccountScope, string> = {
   seller: 'accountpicker-unknown-seller',
   buyer: 'accountpicker-unknown-buyer',
   any: 'accountpicker-unknown-any',
+  control: 'accountpicker-unknown-any',
 };
 
 export function AccountPicker({
@@ -81,10 +85,11 @@ export function AccountPicker({
   value,
   onChange,
   showCard = true,
+  controlId,
   ...field
 }: AccountPickerProps) {
   const language = useLanguage();
-  const source = useMemo(() => accountSource(scope), [scope]);
+  const source = useMemo(() => accountSource(scope, controlId ?? null), [scope, controlId]);
   const [note, setNote] = useState<CodeNote | null>(null);
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
@@ -92,7 +97,7 @@ export function AccountPicker({
   // A code typed and then left (or Enter with no match) is asked of the backend once.
   const resolve = (text: string) => {
     if (!CODE_TEXT.test(text)) return;
-    void accountsResolveCode(scope, text)
+    void accountsResolveCode(scope, controlId ?? null, text)
       .then((result) => {
         if (result.status === 'found' && result.account !== null) {
           setNote(null);
@@ -139,7 +144,7 @@ export function AccountPicker({
                 <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
               </Localized>
             ) : null}
-            <Balance balance={hit.balance} />
+            {hit.balance === null ? null : <Balance balance={hit.balance} />}
           </span>
         )}
       />
@@ -169,6 +174,18 @@ export function AccountPicker({
             </>
           ) : note.result.status === 'reserved' ? (
             <Localized id="accountpicker-reserved">
+              <p className="text-due" />
+            </Localized>
+          ) : note.result.status === 'inactive' ? (
+            // The account exists but is hidden, so a new entry cannot use it (PRD FR-7.42).
+            <Localized
+              id="accountpicker-inactive"
+              vars={{
+                name:
+                  note.result.account === null ? '' : displayName(note.result.account, language),
+                code: note.result.account?.code ?? note.text,
+              }}
+            >
               <p className="text-due" />
             </Localized>
           ) : (

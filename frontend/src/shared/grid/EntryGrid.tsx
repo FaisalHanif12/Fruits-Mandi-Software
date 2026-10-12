@@ -32,7 +32,7 @@ import { COLUMN_WIDTHS, isNumberLike } from './columnTypes';
 import { isEditable } from './enterOrder';
 import type { EntryStore } from './entryStore';
 import { createGridKeyHandler } from './gridKeys';
-import type { EntryColumn, EntryRow } from './types';
+import { isReadOnlyType, type EntryColumn, type EntryRow } from './types';
 
 interface EntryGridProps {
   columns: readonly EntryColumn[];
@@ -45,6 +45,14 @@ interface EntryGridProps {
   copyAbove?: boolean;
   /** Ctrl+I on a calculated cell: show how it was worked out. */
   onExplain?: (cell: { rowId: string; field: string }) => void;
+  /** No key adds or removes a row: one row per account in the opening balances grid. */
+  fixedRows?: boolean;
+  /**
+   * What the backend refused, per row and field, as words in the app language. The cell gets the
+   * error look and the words as its tooltip; the screen lists them too, so colour is never the
+   * only signal (NFR-USE-12).
+   */
+  cellErrors?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /**
    * 'fill': the parent gives the grid its height and only visible rows are drawn. 'auto': the
    * grid is as tall as its rows and draws them all (short grids, the development page, tests).
@@ -58,6 +66,7 @@ function toColDef(
   grouping: Grouping,
   onCommit: (rowId: string, field: string, text: string) => void,
   calc: EntryGridProps['calc'],
+  cellErrors: EntryGridProps['cellErrors'],
 ): ColDef<EntryRow> {
   const numberLike = isNumberLike(column.type);
   const grouped = column.type === 'money' || column.type === 'qty' || column.type === 'rate';
@@ -71,7 +80,7 @@ function toColDef(
     editable: (params) => params.data !== undefined && isEditable(column, params.data),
     valueGetter: (params: ValueGetterParams<EntryRow>) => {
       if (params.data === undefined) return '';
-      if (column.type === 'calc') return calc?.[params.data.rowId]?.[column.field] ?? '';
+      if (isReadOnlyType(column.type)) return calc?.[params.data.rowId]?.[column.field] ?? '';
       return params.data.typed[column.field] ?? '';
     },
     // The text goes to the store. Returning false tells the grid the value did not change in
@@ -88,8 +97,12 @@ function toColDef(
       return grouped ? displayText(value, grouping) : value;
     },
     cellClass: numberLike ? ['cell-num'] : [],
+    tooltipValueGetter: (params) =>
+      params.data === undefined ? undefined : cellErrors?.[params.data.rowId]?.[column.field],
     cellClassRules: {
-      'cell-calc': () => column.type === 'calc',
+      'cell-error': (params) =>
+        params.data !== undefined && cellErrors?.[params.data.rowId]?.[column.field] !== undefined,
+      'cell-calc': () => isReadOnlyType(column.type),
       'cell-hint': (params) =>
         params.data !== undefined &&
         (params.value === '' || params.value === undefined) &&
@@ -105,6 +118,8 @@ function GridInner({
   calc,
   copyAbove,
   onExplain,
+  fixedRows,
+  cellErrors,
   heightMode = 'fill',
 }: EntryGridProps) {
   const { l10n } = useLocalization();
@@ -138,9 +153,10 @@ function GridInner({
         columns,
         direction,
         copyAbove: copyAbove ?? false,
+        fixedRows: fixedRows ?? false,
         ...(onExplain === undefined ? {} : { onExplain }),
       }),
-    [store, columns, direction, copyAbove, onExplain],
+    [store, columns, direction, copyAbove, onExplain, fixedRows],
   );
 
   const columnDefs = useMemo(
@@ -152,9 +168,10 @@ function GridInner({
           grouping,
           store.getState().updateTyped,
           calc,
+          cellErrors,
         ),
       ),
-    [columns, l10n, grouping, store, calc],
+    [columns, l10n, grouping, store, calc, cellErrors],
   );
 
   const defaultColDef = useMemo<ColDef<EntryRow>>(
@@ -209,6 +226,7 @@ function GridInner({
         suppressColumnVirtualisation
         animateRows={false}
         suppressMovableColumns
+        tooltipShowDelay={300}
         stopEditingWhenCellsLoseFocus
         onGridReady={onGridReady}
         onCellFocused={onCellFocused}

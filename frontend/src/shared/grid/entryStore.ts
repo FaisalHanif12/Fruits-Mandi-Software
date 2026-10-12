@@ -12,6 +12,8 @@ export interface EntryState {
   /** Adds an empty row at the end and returns its ID. */
   addRow: (typed?: Record<string, string>) => string;
   updateTyped: (rowId: string, field: string, text: string) => void;
+  /** Sets one field to `text` on every row where `when` is true, in one change. */
+  updateTypedWhere: (field: string, when: (row: EntryRow) => boolean, text: string) => void;
   /** Removes a row. The grid always keeps at least one row. */
   removeRow: (rowId: string) => void;
   setFocus: (focus: CellRef | null) => void;
@@ -42,6 +44,13 @@ export function createEntryStore(initial: readonly Record<string, string>[] = []
       set((state) => ({
         rows: state.rows.map((row) =>
           row.rowId === rowId ? { ...row, typed: { ...row.typed, [field]: text } } : row,
+        ),
+      }));
+    },
+    updateTypedWhere: (field, when, text) => {
+      set((state) => ({
+        rows: state.rows.map((row) =>
+          when(row) ? { ...row, typed: { ...row.typed, [field]: text } } : row,
         ),
       }));
     },

@@ -1,7 +1,7 @@
 // The chart of accounts as the rows the tree shows (PRD FR-10.1): heads, then their controls,
 // then their accounts, only for what is expanded. Pure, so the keys can be tested without a page.
 
-import type { Balance, CoaAccount, CoaControl, CoaHead } from '../../shared/accounts';
+import type { Balance, ChartAccount, ChartControl, ChartHead } from '../../shared/accounts';
 
 export type NodeKind = 'head' | 'control' | 'account';
 
@@ -29,7 +29,7 @@ export const headKey = (id: number) => `head:${String(id)}`;
 export const controlKey = (id: number) => `control:${String(id)}`;
 export const accountKey = (id: number) => `account:${String(id)}`;
 
-function accountRow(account: CoaAccount, parent: string): TreeRow {
+function accountRow(account: ChartAccount, parent: string): TreeRow {
   return {
     key: accountKey(account.id),
     kind: 'account',
@@ -47,7 +47,7 @@ function accountRow(account: CoaAccount, parent: string): TreeRow {
 }
 
 /** The rows to show now: a head always, its controls when it is open, their accounts when open. */
-export function visibleRows(heads: readonly CoaHead[], expanded: ReadonlySet<string>): TreeRow[] {
+export function visibleRows(heads: readonly ChartHead[], expanded: ReadonlySet<string>): TreeRow[] {
   const rows: TreeRow[] = [];
   for (const head of heads) {
     const hk = headKey(head.id);
@@ -78,7 +78,7 @@ export function visibleRows(heads: readonly CoaHead[], expanded: ReadonlySet<str
   return rows;
 }
 
-function controlRow(control: CoaControl, parent: string, open: boolean): TreeRow {
+function controlRow(control: ChartControl, parent: string, open: boolean): TreeRow {
   return {
     key: controlKey(control.id),
     kind: 'control',
@@ -96,12 +96,12 @@ function controlRow(control: CoaControl, parent: string, open: boolean): TreeRow
 }
 
 /** The keys of every head, to start with the heads open and the controls closed. */
-export function headKeys(heads: readonly CoaHead[]): Set<string> {
+export function headKeys(heads: readonly ChartHead[]): Set<string> {
   return new Set(heads.map((head) => headKey(head.id)));
 }
 
 /** The keys of everything that can be opened, to open the whole chart. */
-export function allKeys(heads: readonly CoaHead[]): Set<string> {
+export function allKeys(heads: readonly ChartHead[]): Set<string> {
   const keys = new Set<string>();
   for (const head of heads) {
     keys.add(headKey(head.id));

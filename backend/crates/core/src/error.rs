@@ -121,6 +121,16 @@ pub enum ErrorCode {
     /// "Opening is an advance" on an account that is not a seller, or on an opening without a
     /// debit (PRD FR-15.8).
     ErrAdvanceNotSeller,
+    /// This account cannot take an opening balance: an income or shop expense account (it would
+    /// need partner share rows, PRD FR-6.5), ابتدائی فرق itself, or a پختہ کھاتہ account (it has
+    /// no person to hold it). Waiting for Umar's decision.
+    ErrOpeningNotAllowed,
+    /// A rule that PRD 11.2 or 11.3 does not allow: a method the charge does not have, a charge
+    /// the side does not have, a party on the wrong side, or a group together with a party or an
+    /// item. The field says which part.
+    ErrRuleNotAllowed,
+    /// The last day of a rule is before its first day.
+    ErrDateRange,
     /// A value that is not in the right form, for example a code with letters or a choice that
     /// is not offered (plan 06).
     ErrFormatInvalid,
@@ -134,7 +144,7 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 52] = [
+    pub const ALL: [ErrorCode; 55] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -183,6 +193,9 @@ impl ErrorCode {
         ErrorCode::ErrCodeReserved,
         ErrorCode::ErrOpeningBothSides,
         ErrorCode::ErrAdvanceNotSeller,
+        ErrorCode::ErrOpeningNotAllowed,
+        ErrorCode::ErrRuleNotAllowed,
+        ErrorCode::ErrDateRange,
         ErrorCode::ErrFormatInvalid,
         ErrorCode::ErrSpellingUnconfirmed,
         ErrorCode::ErrOverflow,

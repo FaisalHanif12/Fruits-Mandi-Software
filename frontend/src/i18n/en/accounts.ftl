@@ -288,3 +288,65 @@ masters-chart-title = Chart of accounts
 
 # review: pending
 masters-chart-help = Heads, controls and accounts as a tree.
+
+## The opening balances grid (plan 07, PRD FR-10.9).
+
+# review: pending
+openings-open = Write opening balances
+
+# review: pending
+openings-title = Opening balances
+
+# review: pending
+openings-help = Write the opening Debit or Credit against each account. Leave the accounts that have none empty.
+
+# review: pending
+openings-grid-label = Opening balances list
+
+# review: pending
+openings-date-all = Date for new opening balances
+
+# review: pending
+openings-date-all-hint = Accounts with no opening balance yet get this date.
+
+# review: pending
+openings-summary-title = Total of the lines you changed
+
+# review: pending
+openings-changed = { $count ->
+    [one] One account changed
+   *[other] { $count } accounts changed
+}
+
+# review: pending
+openings-none-changed = Nothing changed yet
+
+# Opening Difference is the name of the account 06019999.
+# review: pending
+openings-difference = Opening Difference
+
+# review: pending
+openings-difference-help = It is zero when all the opening balances are right.
+
+# review: pending
+openings-saved = Opening balances saved
+
+# review: pending
+openings-load-failed = The opening balances could not be opened
+
+# review: pending
+openings-empty = No accounts yet
+
+# review: pending
+openings-empty-help = Make an account in { -index } first, then write its opening balance.
+
+# review: pending
+openings-errors-title = These lines have a problem
+
+# One problem of the openings grid: the account, the column and what is wrong.
+# review: pending
+openings-problem = { $account } ({ $field }): { $message }
+
+# The name of a seller whose opening debit is an advance, in the opening balances grid.
+# review: pending
+openings-name-advance = { $name } ({ -peshgi-khata })

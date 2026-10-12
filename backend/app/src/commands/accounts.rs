@@ -3,11 +3,12 @@
 //! No delete command exists: an account with postings can only be made inactive (PRD FR-10.6).
 
 use mandi_services::core::accounts::{
-    AccountInput, AccountRow, AccountsGetInput, AccountsList, AccountsListInput,
-    AccountsNextCodeInput, AccountsSetActiveInput, AccountsSimilarInput, CoaControl, CoaHead,
-    CoaTree, OpeningsInput, OpeningsPreview, OpeningsSaved, SimilarAccount,
+    AccountBalance, AccountInput, AccountRow, AccountsBalancesInput, AccountsGetInput,
+    AccountsList, AccountsListInput, AccountsNextCodeInput, AccountsSetActiveInput,
+    AccountsSimilarInput, CoaControl, CoaHead, CoaTree, OpeningsInput, OpeningsPreview,
+    OpeningsSaved, ResolveCodeInput, ResolvedCode, SimilarAccount,
 };
-use mandi_services::{accounts, auth, coa};
+use mandi_services::{accounts, auth, coa, search};
 
 use super::run;
 use crate::error::UiError;
@@ -154,6 +155,36 @@ pub async fn coa_controls_list<R: tauri::Runtime>(
     run(app, "coa_controls_list", |ctx| {
         auth::require(ctx)?;
         coa::controls(ctx)
+    })
+    .await
+}
+
+/// Takes a code typed in an account field, on `Enter` or on leaving the field only (PRD
+/// FR-7.38, FR-7.39, FR-7.42). Status `found`, `several` (a field that takes any account),
+/// `unknown` (with the code an `F4` add would use), `reserved` (serial 0000 or 9000 to 9999) or
+/// `inactive`. Read only.
+#[tauri::command]
+pub async fn accounts_resolve_code<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ResolveCodeInput,
+) -> Result<ResolvedCode, UiError> {
+    run(app, "accounts_resolve_code", move |ctx| {
+        auth::require(ctx)?;
+        search::resolve_code(ctx, &input)
+    })
+    .await
+}
+
+/// The balances of some accounts (at most 500), for the rows of a picker (PRD FR-7.40). Read
+/// from the posted journal, so the search itself stays fast. Read only.
+#[tauri::command]
+pub async fn accounts_balances<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: AccountsBalancesInput,
+) -> Result<Vec<AccountBalance>, UiError> {
+    run(app, "accounts_balances", move |ctx| {
+        auth::require(ctx)?;
+        search::balances(ctx, &input.ids)
     })
     .await
 }

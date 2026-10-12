@@ -20,6 +20,10 @@ interface AppShellProps {
   onOpenAccount: (id: number) => void;
   date: string;
   day: DayState | null;
+  /** The last closed day as DD-MM-YYYY, or null (PRD FR-21.1). */
+  closedUpTo?: string | null;
+  /** The state of the day opens the screen where days are closed and reopened. */
+  onOpenDay?: () => void;
   children: ReactNode;
 }
 
@@ -32,6 +36,8 @@ export function AppShell({
   onOpenAccount,
   date,
   day,
+  closedUpTo = null,
+  onOpenDay,
   children,
 }: AppShellProps) {
   useTextSize();
@@ -56,7 +62,13 @@ export function AppShell({
           </main>
         </div>
       </div>
-      <StatusBar userName={userName} date={date} day={day} />
+      <StatusBar
+        userName={userName}
+        date={date}
+        day={day}
+        closedUpTo={closedUpTo}
+        {...(onOpenDay === undefined ? {} : { onOpenDay })}
+      />
     </div>
   );
 }

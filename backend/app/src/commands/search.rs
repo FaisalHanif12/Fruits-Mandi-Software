@@ -1,6 +1,9 @@
 //! Search for the pickers (plan 06, Tech Stack 4.7). Read only, except `search_touch`, which
 //! writes the user's own preference and nothing else (Code Standards B29).
 
+use mandi_services::core::accounts::{
+    AccountHit, GlobalHit, SearchAccountsInput, SearchGlobalInput,
+};
 use mandi_services::core::search::{
     SearchHit, SearchMastersInput, SearchRecentInput, SearchTouchInput,
 };
@@ -46,6 +49,34 @@ pub async fn search_touch<R: tauri::Runtime>(
     run(app, "search_touch", move |ctx| {
         let actor = auth::require(ctx)?;
         search::touch(ctx, &actor, input.scope, input.id)
+    })
+    .await
+}
+
+/// The accounts of a field that match the typed text (plan 08): exact full code, exact serial
+/// (a short code, PRD FR-7.39), names that start with the text, accounts used before, close
+/// spellings. Read only; the text is never converted (PRD FR-7.22).
+#[tauri::command]
+pub async fn search_accounts<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SearchAccountsInput,
+) -> Result<Vec<AccountHit>, UiError> {
+    run(app, "search_accounts", move |ctx| {
+        let actor = auth::require(ctx)?;
+        search::search_accounts(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Global search (`Ctrl+K`, PRD FR-5.4): accounts now, other kinds in later deliverables.
+#[tauri::command]
+pub async fn search_global<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SearchGlobalInput,
+) -> Result<Vec<GlobalHit>, UiError> {
+    run(app, "search_global", move |ctx| {
+        let actor = auth::require(ctx)?;
+        search::global(ctx, &actor, &input)
     })
     .await
 }

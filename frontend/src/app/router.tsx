@@ -34,6 +34,9 @@ const dashboardRoute = createRoute({
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/settings',
+  // `?tab=charges` opens a tab of the settings (the rules screens link to the Charges tab).
+  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
+    typeof search['tab'] === 'string' ? { tab: search['tab'] } : {},
   component: lazyRouteComponent(
     () => import('../features/settings/pages/SettingsPage'),
     'SettingsPage',
@@ -78,10 +81,70 @@ const accountEditRoute = createRoute({
   ),
 });
 
+const openingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/openings',
+  component: lazyRouteComponent(
+    () => import('../features/masters/pages/OpeningsPage'),
+    'OpeningsPage',
+  ),
+});
+
+const advanceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/advance',
+  component: lazyRouteComponent(
+    () => import('../features/vouchers/pages/AdvancePage'),
+    'AdvancePage',
+  ),
+});
+
+const dayRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/day',
+  component: lazyRouteComponent(() => import('../features/day/pages/DayPage'), 'DayPage'),
+});
+
 const chartRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/index/chart',
   component: lazyRouteComponent(() => import('../features/masters/pages/ChartPage'), 'ChartPage'),
+});
+
+const rulesListRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/rules',
+  component: lazyRouteComponent(
+    () => import('../features/rules/pages/RulesListPage'),
+    'RulesListPage',
+  ),
+});
+
+const rulesTestRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/rules/test',
+  component: lazyRouteComponent(
+    () => import('../features/rules/pages/RuleTestPage'),
+    'RuleTestPage',
+  ),
+});
+
+const rulesNewRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/rules/new',
+  component: lazyRouteComponent(
+    () => import('../features/rules/pages/RuleFormPage'),
+    'RuleFormPage',
+  ),
+});
+
+const rulesEditRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/index/rules/$id',
+  component: lazyRouteComponent(
+    () => import('../features/rules/pages/RuleFormPage'),
+    'RuleFormPage',
+  ),
 });
 
 const masterListRoute = createRoute({
@@ -130,14 +193,20 @@ const appRoutes = [
   accountListRoute,
   accountNewRoute,
   accountEditRoute,
+  openingsRoute,
   chartRoute,
+  rulesListRoute,
+  rulesTestRoute,
+  rulesNewRoute,
+  rulesEditRoute,
   masterListRoute,
   masterNewRoute,
   masterEditRoute,
   comingSoonRoute('/bikri'),
   comingSoonRoute('/bikri/receipt'),
   comingSoonRoute('/bikri/payment'),
-  comingSoonRoute('/bikri/advance'),
+  advanceRoute,
+  dayRoute,
   comingSoonRoute('/bikri/pukhta'),
   comingSoonRoute('/bikri/today'),
   comingSoonRoute('/bikri/stock'),

@@ -66,6 +66,12 @@ interface RomanUrduInputProps extends FieldControlProps {
    * checked.
    */
   marked?: readonly string[] | undefined;
+  /**
+   * The direction the field is written in. Default `rtl`: Urdu is always written right to left,
+   * whatever the app language. Free text typed in English in the English app is `ltr`
+   * (FreeTextInput).
+   */
+  direction?: 'rtl' | 'ltr' | undefined;
 }
 
 interface Conversion {
@@ -89,6 +95,7 @@ export function RomanUrduInput({
   onWordConverted,
   onPendingChange,
   marked,
+  direction = 'rtl',
 }: RomanUrduInputProps) {
   const { l10n } = useLocalization();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -251,15 +258,16 @@ export function RomanUrduInput({
   const fullName = l10n.getString(MODE_FULL_ID[mode]);
   const markedWords = marked === undefined ? [] : wordsStillIn(value, marked);
   return (
-    // Urdu text is always written right to left, so the badge is always on the left.
-    <div dir="rtl">
+    // Urdu text is written right to left, so the badge is on the left. English free text in the
+    // English app is the exception (`direction`).
+    <div dir={direction}>
       <div className="relative">
         <input
           ref={inputRef}
           id={id}
           type="text"
           role="combobox"
-          lang="ur"
+          lang={direction === 'rtl' ? 'ur' : 'en'}
           value={value}
           placeholder={placeholder}
           readOnly={readOnly}

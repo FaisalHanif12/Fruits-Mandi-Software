@@ -65,6 +65,8 @@ layout-status-day-open = Day open
 # review: pending
 layout-status-day-closed = Day closed
 # review: pending
+layout-status-closed-up-to = Closed up to <num>{ $date }</num>
+# review: pending
 layout-status-backup-none = Cloud backup: not set up yet
 
 ## Steps of a wizard.

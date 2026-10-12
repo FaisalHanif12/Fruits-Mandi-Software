@@ -9,6 +9,8 @@
 #![cfg_attr(test, allow(clippy::arithmetic_side_effects))]
 
 pub mod auth;
+pub mod ledger;
+pub mod rules;
 
 /// `mandi-core`, re-exported so the crates above reach it through the one allowed path
 /// (app -> services -> domain -> core).

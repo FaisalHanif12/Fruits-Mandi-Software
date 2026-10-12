@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assist-party-card"
+description = "Enables the assist_party_card command without any pre-configured scope."
+commands.allow = ["assist_party_card"]
+
+[[permission]]
+identifier = "deny-assist-party-card"
+description = "Denies the assist_party_card command without any pre-configured scope."
+commands.deny = ["assist_party_card"]

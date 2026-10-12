@@ -20,10 +20,10 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 | 04-shell-and-login | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
 | 05-names-two-scripts | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
 | 06-masters-and-search | feature/db-schema | | at the end | at the end | built (`76cc5ca`); end gate |
-| 07-journal-and-accounts | feature/db-schema | | at the end | at the end | building: frontend T3 done (tree, list, form; openings grid next); backend after the word-list fix. Openings grid contract added 12-10 |
+| 07-journal-and-accounts | feature/db-schema | | at the end | at the end | built on both sides (backend 612 Rust tests, money agent PASS WITH MINOR, E2E-23 backend part in assist.rs); frontend T3+T4 wired to the bindings (tree, list, form, openings grid; 1340 frontend tests); backend after the word-list fix. Openings grid contract added 12-10 |
 | 08-party-card-and-short-codes | feature/db-schema | | at the end | at the end | building: frontend T3 done (AccountPicker, PartyCard, quick add, global search); backend T1/T2 waiting |
-| 09-commission-rules | feature/db-schema | | at the end | at the end | building: frontend T3 in progress |
-| 10-opening-position | | | at the end | at the end | planned (v1.2: reopen with reason only; seed بجلی, تنخواہ) |
+| 09-commission-rules | feature/db-schema | | at the end | at the end | building: frontend T3 done (rules list, form, test a rule, settings tabs); backend after plan 08 |
+| 10-opening-position | feature/db-schema | | at the end | at the end | building: frontend T3 done (پیشگی screen with running list, day close and reopen); backend after plan 09 |
 
 ## Design
 
@@ -48,6 +48,20 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 - 02: Windows WebView2 check of the Urdu field text position (design-system 8.4).
 - 02: frontend `shared/` coverage (80%, Code Standards 9.4) is not measured yet; add `@vitest/coverage-v8` when `shared/` grows.
 
+## Open question added 12-10-2026 (plan 07)
+
+- Opening balances: the team refuses an opening on income and shop expense accounts, ابتدائی فرق, نقدی منڈی and the two پختہ کھاتہ accounts (`ERR_OPENING_NOT_ALLOWED`). The PRD does not say. Is that right? And should a partner's drawings account (0603) take an opening debit, which would count as money he took (C20)? Today it is allowed.
+
+## Open question added 12-10-2026 (plan 09)
+
+- Commission rules with a party and an item group (for example "رحیم, all fruit: 5%"). PRD 11.1 allows a group whenever the item is blank, but the six levels of PRD 11.3 have no "party + group" level. The team refuses a group when a party is chosen (`ERR_RULE_NOT_ALLOWED`). Should there be a party + group level, and where in the order?
+
+## Team defaults on Umar's review list (12-10-2026)
+
+- English voucher letters R-1 (receipt), P-1 (payment), A-1 (advance); Urdu و-1, ا-1, پ-1 from PRD 15.1.
+- Settings tab name "دستی تبدیلی اور جانچ" (Overrides and checks).
+- Saved message "پیشگی کھاتہ { $number } محفوظ ہو گیا" (gender: the voucher, not the advance).
+
 ## Urdu words waiting for Umar's review (NFR-URD-4)
 
 - Plan 02 words in amounts (`core::urdu_words`): the 0 to 99 list, "ایک روپیہ" for exactly one rupee, "ایک سو" for 100.
@@ -57,6 +71,8 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 - Plan 05 words: `translit.ftl` in ur and en (all `review: pending`), and the phonetic keyboard table in `frontend/src/shared/urdu/phonetic_keyboard.ts` (the letters beyond a ا b ب p پ t ت T ٹ h ہ H ھ were written by the team in the CRULP idea and need the Urdu reviewer). The seed list `core/data/translit_seed.tsv` (about 4,572 entries, all `review: pending`).
 - Plan 04 v1.2: `err-already-signed-in` "آپ پہلے ہی لاگ ان ہیں۔" (You are already signed in.); `err-not-locked` "ایپ لاک نہیں ہے۔" (The app is not locked.).
 - Plan 05 spelling check (FR-7.66, NFR-URD-29, each with its English): `translit-spelling-check` and `translit-spelling-title` "ہجے دیکھ لیں" (Check the spelling); `translit-spelling-body` "نشان زدہ لفظوں کے ہجے ایپ نے اپنے اصولوں سے بنائے ہیں، کیونکہ یہ لفظ اس کی لفظوں کی فہرست میں نہیں ہیں۔ ہجے ٹھیک ہوں تو تصدیق کریں۔ ٹھیک نہ ہوں تو واپس جا کر درست کریں۔"; `translit-spelling-confirm` "ہجے ٹھیک ہیں" (Spelling is right); `err-spelling-unconfirmed` "ان لفظوں کے ہجے کی تصدیق نہیں ہوئی: { $words }۔ ہجے دیکھیں، پھر تصدیق کریں یا درست کریں۔"; reworded `mode-full-urdu`, `words-col-count` "استعمال کتنی بار", `words-col-last` "آخری استعمال".
+- Plans 09 and 10 errors and fields: `err-rule-not-allowed` ("اصول کی یہ ترتیب درست نہیں": is ترتیب the right word for "combination"?), `err-date-range`, `err-user-inactive` reworded, `err-opening-not-allowed` (names income, دکان خرچہ, نقدی منڈی, پختہ کھاتہ, ابتدائی فرق); all of `ur/rules.ftl` (122), `ur/vouchers.ftl`, `ur/day.ftl`, working messages in `ur/assist.ftl`. Notes, narrations and reasons now start in رومن mode in the Urdu app (FR-7.22).
+- Plan 07 openings grid: `openings-*` lines in `ur/accounts.ftl`; `err-journal-unbalanced`, `err-code-reserved`, `err-opening-both-sides`, `err-advance-not-seller` (check the gender of پیشگی in "لگ سکتی ہے").
 - Plans 07 and 08: all of `ur/accounts.ftl` (about 90, کھاتہ used for "account" as in PRD 10.1), `ur/assist.ftl` (about 20; read first "اس پارٹی کے ذمے فرم کی رقم ہے" = "This party owes the firm"), `layout-search-*`, `common-side-dr/cr`, `common-yes` ہاں, `common-no` نہیں, `err-series-full`, `err-code-taken`, `err-version-changed`, `err-format-invalid`.
 - Plan 06 masters: all of `frontend/src/i18n/ur/masters.ftl` (about 110 messages, English beside in `en/masters.ftl`). Look first at `masters-inactive-description`, `masters-staff-account-hint`, `masters-field-code-hint`, `masters-item-packing` "طے شدہ { -packing }" (Default Packing), `masters-staff-job-collector` "{ -agrahi } والا" (Collector). Plain words not in the glossary: شہر, سٹور, تفصیل, عملہ, بینک, خرچہ مد. The narration list is called "تفصیل کی فہرست" / "Narration list" (PRD 10.3 says "Standard narration"): confirm.
 - Plan 01 glossary: 51 terms marked `# review: pending` in `glossary.ftl`.

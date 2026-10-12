@@ -154,7 +154,18 @@ export function AccountListPage() {
             <p className="type-body text-ink-muted" />
           </Localized>
         </div>
-        {data === undefined || data.rows.length === 0 ? null : newButton}
+        {data === undefined || data.rows.length === 0 ? null : (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                void navigate({ to: '/index/openings' });
+              }}
+            >
+              <Localized id="openings-open" />
+            </Button>
+            {newButton}
+          </div>
+        )}
       </div>
       <div ref={containerRef} {...formNavigationProps} className="flex flex-wrap items-end gap-4">
         <div className="w-56">

@@ -1,23 +1,35 @@
 // How was this worked out? (PRD FR-7.43, Tech Stack 4.7, Code Standards F42, B30.) The small ⓘ
 // next to every calculated amount. It shows the working the backend sent with the amount, with the
 // real numbers: "12,000 × 6 ÷ 100 = 720". The screen never builds a working itself: the backend
-// names the message (`message_id`) and gives its values already as text (`args`, grouped as the
-// app shows money); the words come from Fluent, in the app language. A working this build has no
-// words for shows the plain "no working" line, never the raw ID. Ctrl+I on the ⓘ opens it too.
+// names the message (`message_id`) and gives each value with its kind (money, percent, count,
+// level); this file only writes each value as text (money grouped as everywhere, a percent from its
+// basis points, a level as its word) and Fluent puts them into the message in the app language.
+// A working this build has no words for shows the plain "no working" line, never the raw ID.
+// Ctrl+I on the ⓘ opens it too.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Info } from 'lucide-react';
 import { Popover } from 'radix-ui';
-import { useUiLanguage } from '../i18n';
+import type { Working } from '../../bindings/Working';
+import type { WorkingValue } from '../../bindings/WorkingValue';
+import { formatBps, formatPaisa, useGrouping, type Grouping } from '../format';
+import { levelMessageId, useUiLanguage } from '../i18n';
 import { SHORTCUTS, matchesShortcut } from '../keyboard';
 
-/**
- * The working of one calculated amount, as the backend sends it (interim shape until the
- * generated binding arrives): the Fluent message that tells it and its values as text.
- */
-export interface Working {
-  message_id: string;
-  args: Record<string, string>;
+export type { Working };
+
+/** One value of a working as the text the message shows. */
+function valueText(value: WorkingValue, grouping: Grouping, word: (id: string) => string): string {
+  switch (value.kind) {
+    case 'money':
+      return formatPaisa(value.paisa, { grouping });
+    case 'percent':
+      return formatBps(value.bps);
+    case 'count':
+      return String(value.value);
+    case 'level':
+      return word(levelMessageId(value.level));
+  }
 }
 
 interface CalcInfoProps {
@@ -27,8 +39,20 @@ interface CalcInfoProps {
 export function CalcInfo({ working }: CalcInfoProps) {
   const { l10n } = useLocalization();
   const { language, direction } = useUiLanguage();
+  const grouping = useGrouping();
   if (working === null) return null;
-  const known = l10n.getBundle(working.message_id) !== null;
+  // A per-نگ charge of a lot names the quantity received, not the quantity of a line.
+  const messageId =
+    working.message_id === 'working-per-unit' &&
+    working.args.some((arg) => arg.name === 'qty_received')
+      ? 'working-per-unit-received'
+      : working.message_id;
+  const known = l10n.getBundle(messageId) !== null;
+  const vars: Record<string, string> = {};
+  for (const arg of working.args) {
+    vars[arg.name] = valueText(arg.value, grouping, (id) => l10n.getString(id));
+  }
+  const level = vars['level'];
   const label = l10n.getString('calc-info-label');
   return (
     <Popover.Root>
@@ -57,14 +81,22 @@ export function CalcInfo({ working }: CalcInfoProps) {
             <p className="type-label" />
           </Localized>
           {known ? (
-            <Localized id={working.message_id} vars={working.args}>
-              <p className="type-body" />
+            // dir="auto": a working that is only numbers and signs ("12,000 × 6 ÷ 100 = 720") reads
+            // left to right in Urdu too, and one with words reads in the direction of its words
+            // (NFR-URD-13).
+            <Localized id={messageId} vars={vars}>
+              <p dir="auto" className="type-body" />
             </Localized>
           ) : (
             <Localized id="calc-info-unknown">
               <p className="type-body text-ink-muted" />
             </Localized>
           )}
+          {known && level !== undefined ? (
+            <Localized id="calc-info-rule" vars={{ level }}>
+              <p dir="auto" className="type-body text-ink-muted" />
+            </Localized>
+          ) : null}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

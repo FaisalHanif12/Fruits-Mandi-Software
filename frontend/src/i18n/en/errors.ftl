@@ -108,7 +108,7 @@ err-wrong-password = The user name or password is wrong. Tries left: { $tries_le
 # review: pending
 err-locked-wait = Too many wrong tries. Wait { $seconds } seconds, then try again.
 # review: pending
-err-user-inactive = This user has been made inactive. Please ask the Owner.
+err-user-inactive = This account cannot sign in. Use the recovery code.
 # review: pending
 err-already-signed-in = You are already signed in.
 # review: pending
@@ -141,3 +141,30 @@ err-version-changed = This was changed after you opened it. Open it again.
 err-format-invalid = What is written here is not in the right form. Check it and write it again.
 # review: pending
 err-series-full = Every code of this series is used. Use another series.
+
+## Accounts, the chart and opening balances (plan 07).
+
+# PRD FR-6.2. Nothing was saved.
+# review: pending
+err-journal-unbalanced = The Debit and the Credit of this entry are not equal, so nothing was saved. Check the amounts and try again.
+# PRD FR-10.3.
+# review: pending
+err-code-reserved = This code is kept for the app's own accounts. Enter a different code.
+# PRD FR-10.2.
+# review: pending
+err-opening-both-sides = Enter an opening Debit or an opening Credit, not both.
+# PRD FR-10.2, FR-15.8.
+# review: pending
+err-advance-not-seller = An opening Advance can only be set on the opening Debit of a Seller.
+
+# PRD FR-10.9, FR-6.5, FR-13.5. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one.
+# review: pending
+err-opening-not-allowed = This account cannot have an opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -pukhta-khata } and Opening Difference cannot take one.
+
+## Commission rules (plan 09).
+
+# PRD 11.2, 11.3. The field says which part.
+# review: pending
+err-rule-not-allowed = This combination is not allowed for a rule. Choose a charge and a method from the lists, and a group only when no party or { -qism-maal } is chosen. The default rates are changed in Settings, Charges.
+# review: pending
+err-date-range = The last date is before the first date. Enter a last date on or after the first date.

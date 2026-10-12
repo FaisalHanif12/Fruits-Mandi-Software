@@ -5,6 +5,7 @@
 //
 //   Enter       next Enter stop (enterOrder.ts); finishes the cell being typed in
 //   ↑ ↓         move up or down; finish the typing first; ↓ on the last row adds a row
+//               (not in a grid with fixed rows)
 //   ← →         move to the neighbouring cell as the user sees it; while typing, move the text
 //               cursor, and at the edge of the text finish and move (PRD FR-7.14)
 //   F2          never starts editing (F2 is "New", PRD 7.3)
@@ -39,6 +40,11 @@ export interface GridKeyEnv {
   copyAbove?: boolean;
   /** Ctrl+I on a calculated cell. */
   onExplain?: (cell: { rowId: string; field: string }) => void;
+  /**
+   * The rows are fixed (one per account in the opening balances grid): no key adds or removes a
+   * row. ↓ on the last row and Enter on the last stop stay where they are.
+   */
+  fixedRows?: boolean;
 }
 
 type KeyParams = SuppressKeyboardEventParams<EntryRow>;
@@ -71,6 +77,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     const target = rowIndex + step;
     if (target < 0) return;
     if (target >= store.getState().rows.length) {
+      if (env.fixedRows === true) return;
       store.getState().addRow();
       store.getState().setPendingFocus({ rowIndex: 'last', field });
       return;
@@ -104,6 +111,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
 
     if (matchesShortcut(event, SHORTCUTS.removeRow)) {
       event.preventDefault();
+      if (env.fixedRows === true) return true;
       params.api.stopEditing(true);
       const remaining = rows.length - 1;
       store.getState().removeRow(row.rowId);
@@ -137,7 +145,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       if (step === null) return true;
       if (step.kind === 'cell') {
         focusCell(params, step.rowIndex, step.field);
-      } else {
+      } else if (env.fixedRows !== true) {
         store.getState().addRow();
         store.getState().setPendingFocus({ rowIndex: 'last', field: step.field });
       }

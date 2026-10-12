@@ -106,7 +106,7 @@ err-wrong-password = صارف کا نام یا پاس ورڈ غلط ہے۔ با�
 # review: pending
 err-locked-wait = بہت زیادہ غلط کوششیں ہو گئیں۔ { $seconds } سیکنڈ رک کر دوبارہ کوشش کریں۔
 # review: pending
-err-user-inactive = یہ صارف بند کر دیا گیا ہے۔ مالک سے رابطہ کریں۔
+err-user-inactive = اس کھاتے سے لاگ ان نہیں ہو سکتا۔ ریکوری کوڈ استعمال کریں۔
 # review: pending
 err-already-signed-in = آپ پہلے ہی لاگ ان ہیں۔
 # review: pending
@@ -139,3 +139,30 @@ err-version-changed = آپ کے کھولنے کے بعد یہ اندراج بد�
 err-format-invalid = یہاں لکھی ہوئی بات درست شکل میں نہیں۔ دیکھ کر دوبارہ لکھیں۔
 # review: pending
 err-series-full = اس سلسلے کے سب کوڈ استعمال ہو چکے ہیں۔ کوئی اور سلسلہ استعمال کریں۔
+
+## Accounts, the chart and opening balances (plan 07).
+
+# PRD FR-6.2. Nothing was saved.
+# review: pending
+err-journal-unbalanced = اندراج کا { -banaam } اور { -jama } برابر نہیں، اس لیے کچھ محفوظ نہیں ہوا۔ رقمیں دیکھ کر دوبارہ کوشش کریں۔
+# PRD FR-10.3.
+# review: pending
+err-code-reserved = یہ کوڈ ایپ کے اپنے کھاتوں کے لیے رکھا گیا ہے۔ کوئی دوسرا کوڈ لکھیں۔
+# PRD FR-10.2.
+# review: pending
+err-opening-both-sides = ابتدائی { -banaam } یا ابتدائی { -jama } لکھیں، دونوں نہیں۔
+# PRD FR-10.2, FR-15.8.
+# review: pending
+err-advance-not-seller = ابتدائی { -peshgi-khata } صرف { -beopari } کے ابتدائی { -banaam } پر لگ سکتی ہے۔
+
+# PRD FR-10.9, FR-6.5, FR-13.5. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one.
+# review: pending
+err-opening-not-allowed = اس کھاتے میں ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -pukhta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔
+
+## Commission rules (plan 09).
+
+# PRD 11.2, 11.3. The field says which part.
+# review: pending
+err-rule-not-allowed = اصول کی یہ ترتیب درست نہیں۔ چارج اور طریقہ فہرست میں سے چنیں، اور گروپ صرف اسی وقت چنیں جب کوئی کھاتہ یا { -qism-maal } نہ چنا ہو۔ عام شرحیں ترتیبات کے چارجز میں بدلتی ہیں۔
+# review: pending
+err-date-range = آخری تاریخ پہلی تاریخ سے پہلے ہے۔ آخری تاریخ پہلی تاریخ کے دن یا اس کے بعد کی لکھیں۔

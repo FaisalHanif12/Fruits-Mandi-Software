@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock};
 
 use mandi_db::masters::SearchSource;
+use mandi_domain::core::accounts::{AccountHit, AccountScope, AccountType};
 use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
 use mandi_domain::core::text::{self, UrduCollator};
@@ -39,10 +40,32 @@ pub struct Entry {
     words_en: Vec<String>,
     /// The Urdu name as a sort key: records with equal rank are ordered by comparing these bytes.
     name_key: Vec<u8>,
+    /// For a seller or a buyer: the serial in his code (1 to 8999 for a normal account, or a
+    /// system serial), which a short code names (PRD FR-7.39). `None` for every other record.
+    serial: Option<u32>,
+    /// For an account: what it is and the control it is under. `None` for masters.
+    account: Option<AccountFacts>,
+}
+
+/// What an account entry knows besides its search keys.
+#[derive(Debug, Clone, Copy)]
+struct AccountFacts {
+    account_type: AccountType,
+    control_id: i64,
+}
+
+/// The serial of a seller or buyer code: its last four digits.
+fn serial_of(code: &str) -> Option<u32> {
+    let digits = code.get(code.len().checked_sub(4)?..)?;
+    if digits.bytes().all(|b| b.is_ascii_digit()) {
+        digits.parse().ok()
+    } else {
+        None
+    }
 }
 
 impl Entry {
-    fn from_source(scope: SearchScope, source: SearchSource) -> Entry {
+    fn from_source(kind: SearchScope, source: SearchSource) -> Entry {
         // Bank accounts also find the bank name, title and number (typed in one script).
         let more = source.more_keys.trim();
         let mut key_ur = source
@@ -68,9 +91,21 @@ impl Entry {
             Some(c) => c.sort_key(&source.name_ur),
             None => source.name_ur.as_bytes().to_vec(),
         };
+        let account = match (source.account_type, source.control_id) {
+            (Some(account_type), Some(control_id)) => Some(AccountFacts {
+                account_type,
+                control_id,
+            }),
+            _ => None,
+        };
+        let serial = account
+            .filter(|a| matches!(a.account_type, AccountType::Seller | AccountType::Buyer))
+            .and_then(|_| serial_of(&source.code));
         Entry {
             id: source.id,
             name_key,
+            serial,
+            account,
             code: source.code.to_lowercase(),
             words_ur: words(&key_ur),
             words_en: words(&key_en),
@@ -79,7 +114,7 @@ impl Entry {
             key_ph,
             hit: SearchHit {
                 id: source.id,
-                kind: scope,
+                kind,
                 code: source.code,
                 name_ur: source.name_ur,
                 name_en: source.name_en,
@@ -112,6 +147,63 @@ impl Index {
             .collect();
         entries.sort_by_key(|e| e.id);
         self.scopes.insert(scope, entries);
+    }
+
+    /// Puts the accounts in the index (plan 07): every account in the `any_account` list, sellers
+    /// also in `seller` and buyers also in `buyer`. A hit carries the kind of account it is.
+    pub fn set_accounts(&mut self, sources: Vec<SearchSource>) {
+        for scope in [
+            SearchScope::AnyAccount,
+            SearchScope::Seller,
+            SearchScope::Buyer,
+        ] {
+            self.scopes.insert(scope, Vec::new());
+        }
+        for source in sources {
+            self.add_account(source);
+        }
+        for list in self.scopes.values_mut() {
+            list.sort_by_key(|e| e.id);
+        }
+    }
+
+    fn add_account(&mut self, source: SearchSource) {
+        let kind = match source.account_type {
+            Some(AccountType::Seller) => SearchScope::Seller,
+            Some(AccountType::Buyer) => SearchScope::Buyer,
+            _ => SearchScope::AnyAccount,
+        };
+        self.scopes
+            .entry(SearchScope::AnyAccount)
+            .or_default()
+            .push(Arc::new(Entry::from_source(kind, source.clone())));
+        if kind != SearchScope::AnyAccount {
+            self.scopes
+                .entry(kind)
+                .or_default()
+                .push(Arc::new(Entry::from_source(kind, source)));
+        }
+    }
+
+    /// Puts one account in (new or changed) in all the lists it belongs to.
+    pub fn put_account(&mut self, id: i64, source: Option<SearchSource>) {
+        for scope in [
+            SearchScope::AnyAccount,
+            SearchScope::Seller,
+            SearchScope::Buyer,
+        ] {
+            if let Some(list) = self.scopes.get_mut(&scope)
+                && let Ok(at) = list.binary_search_by_key(&id, |e| e.id)
+            {
+                list.remove(at);
+            }
+        }
+        if let Some(source) = source {
+            self.add_account(source);
+            for list in self.scopes.values_mut() {
+                list.sort_by_key(|e| e.id);
+            }
+        }
     }
 
     /// Puts one record in (new or changed), keeping the list in id order. `None` takes it out.
@@ -166,10 +258,29 @@ struct Query {
     ur_words: Vec<String>,
     en_words: Vec<String>,
     ph: String,
+    /// The serial a short code names: 1 to 4 digits, from 1 to 8999 (PRD FR-7.39, FR-10.3).
+    /// Serial 0 and 9000 and up are system serials and are never a short code.
+    serial: Option<u32>,
+}
+
+/// The most digits a short code has (PRD FR-7.39).
+pub const SHORT_CODE_DIGITS: usize = 4;
+/// The last normal serial (PRD FR-10.3).
+const LAST_NORMAL_SERIAL: u32 = 8_999;
+
+/// The serial a typed text names as a short code, if it is one.
+pub fn short_serial(typed: &str) -> Option<u32> {
+    let t = typed.trim();
+    if t.is_empty() || t.len() > SHORT_CODE_DIGITS || !t.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    t.parse()
+        .ok()
+        .filter(|n| (1..=LAST_NORMAL_SERIAL).contains(n))
 }
 
 impl Query {
-    fn new(typed: &str) -> Query {
+    fn new(typed: &str, short_codes: bool) -> Query {
         let ur = text::search_ur(typed);
         let en = text::search_en(typed);
         let words = |key: &str| -> Vec<String> {
@@ -184,6 +295,11 @@ impl Query {
             ur_words: words(&ur),
             en_words: words(&en),
             ph: text::search_phonetic(typed),
+            serial: if short_codes {
+                short_serial(typed)
+            } else {
+                None
+            },
         }
     }
 
@@ -200,9 +316,10 @@ struct Rank {
 }
 
 const TIER_CODE: u8 = 0;
-const TIER_STARTS: u8 = 1;
-const TIER_USED: u8 = 2;
-const TIER_CLOSE: u8 = 3;
+const TIER_SERIAL: u8 = 1;
+const TIER_STARTS: u8 = 2;
+const TIER_USED: u8 = 3;
+const TIER_CLOSE: u8 = 4;
 
 /// Numbers compare as numbers: `01` is `1`.
 fn same_code(entry_code: &str, typed: &str) -> bool {
@@ -275,6 +392,14 @@ fn rank_cheap(entry: &Entry, q: &Query, used: bool) -> Option<Rank> {
     if same_code(&entry.code, &q.code) {
         return Some(Rank {
             tier: TIER_CODE,
+            distance: 0,
+        });
+    }
+    if let (Some(want), Some(have)) = (q.serial, entry.serial)
+        && want == have
+    {
+        return Some(Rank {
+            tier: TIER_SERIAL,
             distance: 0,
         });
     }
@@ -356,6 +481,22 @@ fn by_name(a: &Entry, b: &Entry) -> Ordering {
     a.name_key.cmp(&b.name_key).then_with(|| a.id.cmp(&b.id))
 }
 
+/// An account entry as a picker row; `None` for an entry that is not an account.
+fn account_hit(entry: &Entry) -> Option<AccountHit> {
+    let facts = entry.account?;
+    Some(AccountHit {
+        id: entry.id,
+        code: entry.hit.code.clone(),
+        name_ur: entry.hit.name_ur.clone(),
+        name_en: entry.hit.name_en.clone(),
+        extra_ur: entry.hit.extra_ur.clone(),
+        extra_en: entry.hit.extra_en.clone(),
+        account_type: facts.account_type,
+        control_id: facts.control_id,
+        is_active: entry.hit.is_active,
+    })
+}
+
 impl Index {
     /// The active records of a list that match the typed text, best first: exact code, then
     /// records that start with the text, then records this user chose before, then close
@@ -368,7 +509,87 @@ impl Index {
         limit: usize,
         usage: &Usage,
     ) -> Vec<SearchHit> {
-        let query = Query::new(typed);
+        let query = Query::new(typed, true);
+        self.rank(self.entries(scope), |_| true, &query, limit, usage)
+            .into_iter()
+            .map(|e| e.hit.clone())
+            .collect()
+    }
+
+    /// The accounts of an account field that match the typed text, best first: exact code, exact
+    /// serial (a short code, not for scope `control`), names that start with the text, accounts
+    /// used before, close spellings (plan 08, PRD FR-7.38 to FR-7.40).
+    pub fn search_accounts(
+        &self,
+        scope: AccountScope,
+        control_id: Option<i64>,
+        typed: &str,
+        limit: usize,
+        usage: &Usage,
+    ) -> Vec<AccountHit> {
+        let query = Query::new(typed, scope != AccountScope::Control);
+        let (list, in_control) = self.account_list(scope, control_id);
+        self.rank(list, in_control, &query, limit, usage)
+            .into_iter()
+            .filter_map(|e| account_hit(e))
+            .collect()
+    }
+
+    /// The accounts of a field with this serial, active or not (PRD FR-7.39). Used when a code
+    /// is taken on `Enter`.
+    pub fn accounts_with_serial(&self, scope: AccountScope, serial: u32) -> Vec<AccountHit> {
+        if scope == AccountScope::Control {
+            return Vec::new();
+        }
+        let (list, _) = self.account_list(scope, None);
+        list.iter()
+            .filter(|e| e.serial == Some(serial))
+            .filter_map(|e| account_hit(e))
+            .collect()
+    }
+
+    /// The account of a field with exactly this full code, active or not.
+    pub fn account_with_code(
+        &self,
+        scope: AccountScope,
+        control_id: Option<i64>,
+        code: &str,
+    ) -> Option<AccountHit> {
+        let (list, in_control) = self.account_list(scope, control_id);
+        list.iter()
+            .filter(|e| in_control(e))
+            .find(|e| e.code == code.to_lowercase())
+            .and_then(|e| account_hit(e))
+    }
+
+    /// The list a scope searches, and the test that an entry is in the control (only scope
+    /// `control` narrows further).
+    fn account_list(
+        &self,
+        scope: AccountScope,
+        control_id: Option<i64>,
+    ) -> (&[Arc<Entry>], impl Fn(&Entry) -> bool) {
+        let list = match scope {
+            AccountScope::Seller => self.entries(SearchScope::Seller),
+            AccountScope::Buyer => self.entries(SearchScope::Buyer),
+            AccountScope::Any | AccountScope::Control => self.entries(SearchScope::AnyAccount),
+        };
+        let narrow = scope == AccountScope::Control;
+        (list, move |e: &Entry| {
+            !narrow || e.account.map(|a| a.control_id) == control_id
+        })
+    }
+
+    /// Ranks the active entries of a list that pass `keep` against the query and returns the
+    /// best `limit` (never more than [`MAX_HITS`]) in order.
+    fn rank<'a>(
+        &self,
+        list: &'a [Arc<Entry>],
+        keep: impl Fn(&Entry) -> bool,
+        query: &Query,
+        limit: usize,
+        usage: &Usage,
+    ) -> Vec<&'a Arc<Entry>> {
         if query.is_empty() {
             return Vec::new();
         }
@@ -377,15 +598,15 @@ impl Index {
         let mut open: Vec<&Arc<Entry>> = Vec::new();
         // First the cheap tiers. The close spellings are only worked out if the cheap ones
         // did not already fill the answer.
-        for entry in self.entries(scope).iter().filter(|e| e.hit.is_active) {
-            match rank_cheap(entry, &query, usage.knows(entry.id)) {
+        for entry in list.iter().filter(|e| e.hit.is_active && keep(e)) {
+            match rank_cheap(entry, query, usage.knows(entry.id)) {
                 Some(r) => found.push((r, entry)),
                 None => open.push(entry),
             }
         }
         if found.len() < limit {
             for entry in open {
-                if let Some(r) = rank_close(entry, &query) {
+                if let Some(r) = rank_close(entry, query) {
                     found.push((r, entry));
                 }
             }
@@ -402,11 +623,7 @@ impl Index {
             found.truncate(limit);
         }
         found.sort_by(order);
-        found
-            .into_iter()
-            .take(limit)
-            .map(|(_, e)| e.hit.clone())
-            .collect()
+        found.into_iter().take(limit).map(|(_, e)| e).collect()
     }
 
     /// The list for `Alt+Down` (PRD FR-7.41): the records this user chose last (up to 10, the

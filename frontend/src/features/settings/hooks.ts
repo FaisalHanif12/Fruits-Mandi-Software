@@ -6,10 +6,15 @@ import type { SetDefaultLanguageInput } from '../../bindings/SetDefaultLanguageI
 import type { SetSecurityInput } from '../../bindings/SetSecurityInput';
 import type { RemovePairInput } from '../../bindings/RemovePairInput';
 import { translitPairsList, translitPairsRemove } from '../../shared/urdu/api';
+import type { ChargesInput, OverridesSettings } from './types';
 import {
   settingsGet,
+  settingsGetCharges,
+  settingsGetOverrides,
+  settingsSetCharges,
   settingsSetDefaultLanguage,
   settingsSetFirm,
+  settingsSetOverrides,
   settingsSetSecurity,
 } from './api';
 
@@ -57,5 +62,39 @@ export function useRemoveLearnedPair() {
   return useMutation({
     mutationFn: (input: RemovePairInput) => translitPairsRemove(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: TRANSLIT_PAIRS_KEY }),
+  });
+}
+
+const CHARGES_KEY = ['settings', 'charges'] as const;
+const OVERRIDES_KEY = ['settings', 'overrides'] as const;
+/** The rules list (features/rules): the global defaults are written as rules, so it is read again. */
+const RULES_KEY = ['rules'] as const;
+
+export function useChargeDefaults() {
+  return useQuery({ queryKey: CHARGES_KEY, queryFn: settingsGetCharges, staleTime: Infinity });
+}
+
+export function useSetChargeDefaults() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ChargesInput) => settingsSetCharges(input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: CHARGES_KEY }),
+        queryClient.invalidateQueries({ queryKey: RULES_KEY }),
+      ]);
+    },
+  });
+}
+
+export function useOverrideSettings() {
+  return useQuery({ queryKey: OVERRIDES_KEY, queryFn: settingsGetOverrides, staleTime: Infinity });
+}
+
+export function useSetOverrideSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: OverridesSettings) => settingsSetOverrides(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: OVERRIDES_KEY }),
   });
 }

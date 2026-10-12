@@ -65,6 +65,8 @@ layout-status-day-open = دن کھلا
 # review: pending
 layout-status-day-closed = دن بند
 # review: pending
+layout-status-closed-up-to = بند: <num>{ $date }</num> تک
+# review: pending
 layout-status-backup-none = کلاؤڈ بیک اپ: ابھی ترتیب نہیں
 
 ## Steps of a wizard.

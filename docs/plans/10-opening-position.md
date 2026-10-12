@@ -30,6 +30,12 @@ E2E-19 expects: trial balance 65,000 = 65,000; ابتدائی فرق 0; advances
 - `pnpm seed` (scripts/seed and the backend seed example): builds the PRD 4.3 position through the real services (not raw SQL) plus the masters and parties the worked day needs, names in both scripts: sellers رحیم 030110001 and کریم 030110002; buyers اکرم ٹول ٹیکس 03040001 and ارشد ملتانی 03040002; items کیلا (پھل), سیب (پھل), مولی (سبزی); packing پیٹی; cities and اڈے سوات اڈا and لاہور اڈا; the expense heads بجلی and تنخواہ (control 0501, PRD v1.2); the partners are D3. `pnpm seed -- --reset` starts again.
 - `backend/crates/services/tests/golden_day.rs` starts here with the 4.3 setup and E2E-19, fixed "today" through the injected clock (Code Standards B1).
 
+- From plan 07 (12-10-2026): `services::ledger::reverse` does not touch matching. Any reversal in this plan (a cancelled or edited پیشگی voucher, a changed opening advance) sets the related `advance_allocations` and `bill_allocations` rows inactive (who and when) and re-runs matching for that party, oldest first, in the same transaction (Architecture 12, B17).
+
+- Added 12-10-2026 (frontend's request, accepted): `vouchers_preview_advances { lines }` -> each line's new balance and errors, and the list total, so the running list (FR-15.1) never adds money in the frontend (rule 1). Same domain function as the save (B5).
+- Decided 12-10-2026: voucher numbers show as و-1, ا-1, پ-1 in Urdu (PRD 15.1) and R-1, P-1, A-1 in English (team default, on Umar's review list). The number is stored per type; the letter comes from Fluent.
+- Decided 12-10-2026: day close defaults to the oldest open day (FR-21.1); the user may pick a later date to close several days in order.
+
 ### Frontend
 
 - پیشگی screen in the بکری side menu (and later from روکڑ in D4): the common voucher form with `AccountPicker` (sellers), `PartyCard` with the seller's open advances and last advance (FR-7.60), amount as text, mode with bank fields, narration, expected goods; current and new balance from the backend; the running list of several vouchers with a running total and save all; no print button yet (the receipt slip comes with D5's print work). Four states, keyboard only (`F10` save, `F2` new), both languages.

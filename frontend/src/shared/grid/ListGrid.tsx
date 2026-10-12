@@ -22,7 +22,12 @@ import { formatPaisa, useGrouping, type Paisa } from '../format';
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
 import { directionOf, useLanguage } from '../i18n';
 import './agGridSetup';
-import { LIST_COLUMN_WIDTHS, isListNumberLike, type ListColumnType } from './columnTypes';
+import {
+  LIST_COLUMN_WIDTHS,
+  LIST_GROW_MIN_WIDTH,
+  isListNumberLike,
+  type ListColumnType,
+} from './columnTypes';
 
 /** What a column needs to turn a row into text: the language, Fluent, and money formatting. */
 export interface ListContext {
@@ -52,7 +57,10 @@ export interface ListColumn<T> {
    * steps, so a list never scrolls sideways (NFR-USE-15, Code Standards F22). Default: compact.
    */
   readonly from?: LayoutStep | undefined;
-  /** The column takes the free width of the grid (at least its own width). One per list. */
+  /**
+   * The column takes the free width of the grid, and gives it up again when the grid is narrow
+   * (down to `LIST_GROW_MIN_WIDTH`). Several columns can grow; they share the free width.
+   */
   readonly grow?: boolean | undefined;
 }
 
@@ -85,11 +93,14 @@ function toColDef<T>(column: ListColumn<T>, headerName: string, context: ListCon
     colId: column.field,
     headerName,
     width: LIST_COLUMN_WIDTHS[column.type],
-    ...(column.grow === true ? { flex: 1, minWidth: LIST_COLUMN_WIDTHS[column.type] } : {}),
+    ...(column.grow === true ? { flex: 1, minWidth: LIST_GROW_MIN_WIDTH } : {}),
     resizable: false,
     sortable: false,
     suppressMovable: true,
     suppressHeaderMenuButton: true,
+    // A long header (for example "Credit allowed") wraps instead of being cut off.
+    wrapHeaderText: true,
+    autoHeaderHeight: true,
     valueGetter: (params: ValueGetterParams<T>) =>
       params.data === undefined ? '' : column.value(params.data, context),
     cellClass: isListNumberLike(column.type) ? ['cell-num'] : [],

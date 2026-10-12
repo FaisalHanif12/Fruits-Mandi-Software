@@ -11,6 +11,8 @@ import {
   searchAccountsTouch,
   searchGlobal,
   accountsList,
+  accountsOpeningsPreview,
+  accountsOpeningsSave,
   accountsNextCode,
   accountsSave,
   accountsSetActive,
@@ -19,7 +21,14 @@ import {
   coaTree,
 } from './api';
 import type { PickerSource } from '../search';
-import type { AccountDraft, AccountFilter, AccountHit, AccountScope, AccountType } from './types';
+import type {
+  AccountDraft,
+  AccountFilter,
+  AccountHit,
+  AccountScope,
+  AccountType,
+  OpeningLineInput,
+} from './types';
 
 const ACCOUNTS_KEY = ['accounts'] as const;
 const COA_KEY = ['coa'] as const;
@@ -66,7 +75,12 @@ export function useAccountNextCode(
  * Accounts that look like the one being typed (PRD FR-7.63). Asked after a pause, and only when
  * a name or a phone has been typed.
  */
-export function useSimilarAccounts(nameUr: string, nameEn: string, phone: string) {
+export function useSimilarAccounts(
+  nameUr: string,
+  nameEn: string,
+  phone: string,
+  excludeId: number | null,
+) {
   const [settled, setSettled] = useState({ ur: '', en: '', phone: '' });
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -78,9 +92,14 @@ export function useSimilarAccounts(nameUr: string, nameEn: string, phone: string
   }, [nameUr, nameEn, phone]);
   const typed = settled.ur !== '' || settled.en !== '' || settled.phone !== '';
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'similar', settled.ur, settled.en, settled.phone],
+    queryKey: [...ACCOUNTS_KEY, 'similar', settled.ur, settled.en, settled.phone, excludeId],
     queryFn: () =>
-      accountsSimilar({ name_ur: settled.ur, name_en: settled.en, phone: settled.phone }),
+      accountsSimilar({
+        name_ur: settled.ur,
+        name_en: settled.en,
+        phone: settled.phone,
+        exclude_id: excludeId,
+      }),
     enabled: typed,
     placeholderData: keepPreviousData,
   });
@@ -121,11 +140,14 @@ export function useSetAccountActive() {
 }
 
 /** Where an account picker gets its records: the accounts of a scope, recent ones first (FR-7.41). */
-export function accountSource(scope: AccountScope): PickerSource<AccountHit> {
+export function accountSource(
+  scope: AccountScope,
+  controlId: number | null = null,
+): PickerSource<AccountHit> {
   return {
-    key: ['search', 'accounts', scope],
-    search: (text, limit) => searchAccounts({ scope, text, limit }),
-    recent: () => searchAccountsRecent(scope),
+    key: ['search', 'accounts', scope, String(controlId)],
+    search: (text, limit) => searchAccounts({ scope, controlId, text, limit }),
+    recent: () => searchAccountsRecent(scope, controlId),
     touch: (id) => searchAccountsTouch(scope, id),
   };
 }
@@ -159,5 +181,29 @@ export function useGlobalSearch(text: string) {
     placeholderData: keepPreviousData,
     staleTime: 0,
     gcTime: 0,
+  });
+}
+
+/**
+ * The openings grid checked, nothing saved (PRD FR-10.9): each line's problems, the totals of the
+ * lines and what ابتدائی فرق would be. The same backend function as the save (Code Standards B5).
+ * Never kept: a balance changes with every posting.
+ */
+export function useOpeningsPreview(lines: readonly OpeningLineInput[]) {
+  return useQuery({
+    queryKey: [...ACCOUNTS_KEY, 'openings-preview', lines],
+    queryFn: () => accountsOpeningsPreview({ lines: [...lines] }),
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+/** Saves the openings grid, all or nothing. Refreshes the lists, the chart and the pickers. */
+export function useSaveOpenings() {
+  const refresh = useRefreshAfterChange();
+  return useMutation({
+    mutationFn: (lines: readonly OpeningLineInput[]) => accountsOpeningsSave({ lines: [...lines] }),
+    onSuccess: refresh,
   });
 }

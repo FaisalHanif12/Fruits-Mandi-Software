@@ -34,6 +34,8 @@ accountpicker-unknown-any = There is no account with this code
 # review: pending
 accountpicker-reserved = This code is kept for system accounts. An ordinary account cannot have it.
 # review: pending
+accountpicker-inactive = { $name } ({ $code }) is inactive. It cannot be used in a new entry.
+# review: pending
 accountpicker-several = More than one account has this code. Pick one.
 # review: pending
 accountpicker-add = Add a new account
@@ -50,10 +52,16 @@ calc-info-label = How was this worked out?
 calc-info-title = Working
 # review: pending
 calc-info-unknown = The working of this amount cannot be shown here.
+# The level of the rule that was used, under the working (PRD FR-7.43).
 # review: pending
-working-percent = { $base } × { $rate } ÷ 100 = { $result }
+calc-info-rule = (Rule level: { $level })
+# review: pending
+working-percent = { $base } × { $bps } ÷ 100 = { $result }
 # review: pending
 working-per-unit = { $qty } × { $value } = { $result }
+# A per-Nag charge of a lot is worked out on the quantity received.
+# review: pending
+working-per-unit-received = { $qty_received } { -nag } received × { $value } = { $result }
 # review: pending
 working-per-lot = { $value } per { -lot } = { $result }
 # review: pending

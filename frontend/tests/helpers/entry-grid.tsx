@@ -38,32 +38,46 @@ export const COLUMNS: readonly EntryColumn[] = [
   { field: 'line', type: 'calc', headerId: 'glossary-meezan' },
 ];
 
+/** A read-only words column, added to the grid when a test asks for it. */
+const LABEL_COLUMN: EntryColumn = { field: 'name', type: 'label', headerId: 'glossary-bikri' };
+
 function Harness({
   store,
   copyAbove,
   onExplain,
+  fixedRows,
+  cellErrors,
+  withLabel,
 }: {
+  withLabel?: boolean;
   store: EntryStore;
   copyAbove?: boolean;
   onExplain?: (cell: { rowId: string; field: string }) => void;
+  fixedRows?: boolean;
+  cellErrors?: Record<string, Record<string, string>>;
 }) {
   useEscapeDispatcher();
   const rows = store((state) => state.rows);
   const calc = useMemo(
     () =>
       Object.fromEntries(
-        rows.map((row) => [row.rowId, { line: [row.typed['qty'], row.typed['rate']].join('|') }]),
+        rows.map((row) => [
+          row.rowId,
+          { line: [row.typed['qty'], row.typed['rate']].join('|'), name: row.typed['buyer'] ?? '' },
+        ]),
       ),
     [rows],
   );
   return (
     <EntryGrid
-      columns={COLUMNS}
+      columns={withLabel === true ? [...COLUMNS, LABEL_COLUMN] : COLUMNS}
       store={store}
       labelId="glossary-bikri"
       calc={calc}
       copyAbove={copyAbove ?? false}
       {...(onExplain === undefined ? {} : { onExplain })}
+      {...(fixedRows === undefined ? {} : { fixedRows })}
+      {...(cellErrors === undefined ? {} : { cellErrors })}
       heightMode="auto"
     />
   );
@@ -87,16 +101,25 @@ export async function renderGrid(
     rows?: Record<string, string>[];
     copyAbove?: boolean;
     onExplain?: (cell: { rowId: string; field: string }) => void;
+    fixedRows?: boolean;
+    /** Adds a read-only words column called `name`, which shows the typed `buyer`. */
+    withLabel?: boolean;
+    /** Built from the rows that exist: row index, then field, then the words. */
+    cellErrors?: (rowIds: readonly string[]) => Record<string, Record<string, string>>;
   } = {},
 ): Promise<GridRig> {
   act(() => {
     useLanguageStore.setState({ language });
   });
   const store = createEntryStore(options.rows ?? []);
+  const cellErrors = options.cellErrors?.(store.getState().rows.map((row) => row.rowId));
   renderIn(
     language,
     <Harness
       store={store}
+      {...(options.fixedRows === undefined ? {} : { fixedRows: options.fixedRows })}
+      {...(options.withLabel === undefined ? {} : { withLabel: options.withLabel })}
+      {...(cellErrors === undefined ? {} : { cellErrors })}
       {...(options.copyAbove === undefined ? {} : { copyAbove: options.copyAbove })}
       {...(options.onExplain === undefined ? {} : { onExplain: options.onExplain })}
     />,

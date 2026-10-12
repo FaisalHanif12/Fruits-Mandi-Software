@@ -5,17 +5,17 @@
 // without a grid. Reading order is the order of the columns, which is right to left in Urdu
 // because the grid itself is drawn right to left.
 
-import type { EntryColumn, EntryRow } from './types';
+import { isReadOnlyType, type EntryColumn, type EntryRow } from './types';
 
 /** Can this cell be typed in on this row? A calculated cell never can. */
 export function isEditable(column: EntryColumn, row: EntryRow): boolean {
-  if (column.type === 'calc') return false;
+  if (isReadOnlyType(column.type)) return false;
   return column.editable?.(row) ?? true;
 }
 
 /** Does Enter stop at this column, when the cell is editable? */
 export function isEnterStop(column: EntryColumn): boolean {
-  return column.enterStop ?? column.type !== 'calc';
+  return column.enterStop ?? !isReadOnlyType(column.type);
 }
 
 export type EnterStep =

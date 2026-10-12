@@ -110,6 +110,10 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         }}
         date={day.data === undefined ? '' : isoToDisplayDate(day.data.today)}
         day={day.data === undefined ? null : day.data.today_open ? 'open' : 'closed'}
+        closedUpTo={day.data?.closed_up_to == null ? null : isoToDisplayDate(day.data.closed_up_to)}
+        onOpenDay={() => {
+          goTo('/day');
+        }}
       >
         <Outlet />
       </AppShell>

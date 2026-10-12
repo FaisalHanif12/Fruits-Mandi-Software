@@ -423,6 +423,8 @@ CREATE TABLE charge_rules (
     is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
     note TEXT,
     CHECK (item_id IS NULL OR item_group IS NULL),
+    -- A group rule is for any party: PRD 11.3 has no level for a party together with a group.
+    CHECK (account_id IS NULL OR item_group IS NULL),
     CHECK (to_date IS NULL OR to_date >= from_date),
     CHECK ((method = 'percent' AND value_bps IS NOT NULL AND value_paisa IS NULL)
         OR (method IN ('per_unit', 'per_lot') AND value_paisa IS NOT NULL AND value_bps IS NULL)),
@@ -430,6 +432,14 @@ CREATE TABLE charge_rules (
         OR (side = 'seller' AND charge_type IN ('labour', 'munshiana', 'phone') AND method IN ('per_unit', 'per_lot'))
         OR (side = 'buyer' AND charge_type IN ('commission', 'laga') AND method IN ('percent', 'per_unit')))
 ) STRICT;
+
+-- The three defaults of PRD 4.2 are the only rules at their level: a second seller commission or
+-- buyer commission with no party, item or group, or a second buyer لاگا for the fruit group, would
+-- hide the one the Settings screen shows. The service refuses them first; this is the second guard.
+CREATE UNIQUE INDEX idx_charge_rules_one_default_commission ON charge_rules (side)
+    WHERE charge_type = 'commission' AND account_id IS NULL AND item_id IS NULL AND item_group IS NULL;
+CREATE UNIQUE INDEX idx_charge_rules_one_fruit_laga ON charge_rules (side)
+    WHERE charge_type = 'laga' AND account_id IS NULL AND item_id IS NULL AND item_group = 'fruit';
 
 -- Architecture 15.5. The partner created first has the lowest id (PRD C10).
 CREATE TABLE partners (
@@ -969,10 +979,10 @@ BEGIN
   SELECT RAISE(ABORT, 'ERR_JOURNAL_REVERSAL')
   WHERE NOT EXISTS (SELECT 1 FROM journal_entries o
                     WHERE o.id = NEW.reverses_entry_id AND o.status = 'posted' AND o.total_paisa = NEW.total_paisa)
-     OR EXISTS (SELECT 1 FROM (SELECT account_id, pukhta_person_key AS person, SUM(dr_paisa - cr_paisa) AS net
+     OR EXISTS (SELECT 1 FROM (SELECT account_id, pukhta_person_key AS person, SUM(dr_paisa) AS dr, SUM(cr_paisa) AS cr
                                FROM journal_lines WHERE entry_id IN (OLD.id, NEW.reverses_entry_id)
                                GROUP BY account_id, person)
-                WHERE net <> 0);
+                WHERE dr <> cr);
 END;
 CREATE TRIGGER journal_entries_no_replace_reversal BEFORE INSERT ON journal_entries
 WHEN NEW.reverses_entry_id IS NOT NULL AND EXISTS (SELECT 1 FROM journal_entries WHERE reverses_entry_id = NEW.reverses_entry_id)

@@ -5,7 +5,7 @@
 import { Localized } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';
 import { useLanguage, displayName } from '../../../shared/i18n';
-import { Balance, Code } from '../../../shared/ui';
+import { Code } from '../../../shared/ui';
 import type { AccountMatch } from '../../../shared/accounts';
 
 interface SimilarAccountsProps {
@@ -36,10 +36,9 @@ export function SimilarAccounts({ matches }: SimilarAccountsProps) {
               )}
             </span>
             <span className="text-ink-muted">
-              {match.city === null ? '' : displayName(match.city, language)}
+              {displayName({ name_ur: match.city_ur, name_en: match.city_en }, language)}
             </span>
             {match.phone1 === '' ? null : <Code>{match.phone1}</Code>}
-            <Balance balance={match.balance} />
           </li>
         ))}
       </ul>

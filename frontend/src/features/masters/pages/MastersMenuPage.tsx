@@ -3,12 +3,12 @@
 
 import { Localized } from '@fluent/react';
 import { Link } from '@tanstack/react-router';
-import { Landmark, ListTree, type LucideIcon } from 'lucide-react';
+import { Landmark, ListTree, Scale, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useRovingKeys } from '../../../shared/keyboard';
 import { MASTER_CONFIGS } from '../configs';
 
-/** The lists that are not one of the ten masters: the accounts and the chart (plan 07). */
+/** The lists that are not one of the ten masters: the accounts, the chart and the rules (plans 07, 09). */
 const STATIC_ENTRIES = [
   {
     to: '/index/accounts',
@@ -22,13 +22,22 @@ const STATIC_ENTRIES = [
     titleId: 'masters-chart-title',
     helpId: 'masters-chart-help',
   },
+  {
+    to: '/index/rules',
+    icon: Scale,
+    titleId: 'masters-rules-title',
+    helpId: 'masters-rules-help',
+  },
 ] as const;
 
 type MenuCardProps = {
   icon: LucideIcon;
   titleId: string;
   helpId: string;
-} & ({ to: '/index/accounts' | '/index/chart' } | { to: '/index/$kind'; params: { kind: string } });
+} & (
+  | { to: '/index/accounts' | '/index/chart' | '/index/rules' }
+  | { to: '/index/$kind'; params: { kind: string } }
+);
 
 function MenuCard(props: MenuCardProps) {
   const { icon: Icon, titleId, helpId } = props;

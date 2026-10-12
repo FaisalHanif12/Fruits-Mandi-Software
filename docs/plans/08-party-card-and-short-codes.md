@@ -33,6 +33,7 @@ The card in D2 shows: name in the current language with father or firm, city, ph
 - `assist_party_card { account_id }` -> `PartyCard { name_ur, name_en, father_or_firm_ur, father_or_firm_en, city_ur, city_en, phone, balance: Paisa, side, last_entry_date, credit_limit?, credit_used?, advance_open?, warnings: Vec<CardWarning> }`; balances from `journal_lines` (never from the index, B27); one indexed query (NFR-SPD-21; bench).
 - A timing test like plan 06's over 20,000 generated accounts for the account scopes.
 - Recent and touch use the plan 06 commands `search_recent { scope }` and `search_touch { scope, id }`, with `SearchScope` extended by `seller`, `buyer` and `any_account`. No separate account commands.
+- Added 12-10-2026: for the account scopes, `search_recent` returns `AccountHit` rows (with `account_type`), so a money lent person is not shown as "other"; the `control` scope has a recent list too.
 - `search_global { text }` -> accounts now (later deliverables add their own kinds).
 - Sign-in check first in every command.
 
@@ -44,6 +45,15 @@ The card in D2 shows: name in the current language with father or firm, city, ph
 - Global search in the top bar (`Ctrl+K`) for accounts: results open the account.
 - Replace the plain Picker on the account form's linked account with `AccountPicker`.
 - Tests in ur and en: every row of Section 3, the F4 path returning to the field, the card in both languages, keyboard only.
+
+### Recorded during the build (12-10-2026)
+
+- `scope` is `"seller" | "buyer" | "any" | "control"` with a separate `control_id`. `accounts_resolve_code` has a fifth status, `inactive`.
+- `accounts_balances { ids }` (at most 500) loads row balances after the list is drawn, so typing never waits for journal sums (FR-7.40, NFR-SPD-6). No stored running balance (FR-6.1).
+- `PartyCard.balance` is the `Balance` object. `assist_party_card` is in the `assist_` group. Text over 200 characters: `ERR_TEXT_TOO_LONG`; more than 500 ids: `ERR_OUT_OF_RANGE`.
+- The two پختہ کھاتہ cards show the balance only (many people inside, FR-13.5).
+- Deferred, not lost: the buyer's oldest unpaid bill and its days needs bill matching (D3, with وصولی); the seller's amount payable comes with D4 (FR-7.59). Until advance matching from بکری exists (D3), `advance_open` is given minus adjusted.
+- Timing (debug build, Mac): 20,098 accounts, index build 317 ms, slowest account search 74 ms; party card over 10,000 entries 9 ms (NFR-SPD-21 asks 100 ms).
 
 ## 5. Tasks
 

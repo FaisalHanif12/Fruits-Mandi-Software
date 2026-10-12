@@ -184,7 +184,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     await user.keyboard('{Enter}');
     const note = await screen.findByText(named(message(language, 'accountpicker-unknown-seller')));
     expect(note).toBeInTheDocument();
-    expect(accountApi.accountsResolveCode).toHaveBeenCalledWith('seller', '7');
+    expect(accountApi.accountsResolveCode).toHaveBeenCalledWith('seller', null, '7');
     expect(
       screen.getByRole('button', {
         name: (name) => visible(name).startsWith(message(language, 'accountpicker-add')),
@@ -227,7 +227,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(onValue).not.toHaveBeenCalled();
     expect(accountApi.accountsResolveCode).not.toHaveBeenCalled();
     await user.keyboard('{Enter}');
-    expect(accountApi.accountsResolveCode).toHaveBeenCalledWith('buyer', '12');
+    expect(accountApi.accountsResolveCode).toHaveBeenCalledWith('buyer', null, '12');
   });
 
   it('`9999` is reserved: it is never a short code for an ordinary account', async () => {
@@ -241,6 +241,33 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(
       await screen.findByText(named(message(language, 'accountpicker-reserved'))),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: new RegExp(message(language, 'accountpicker-add')) }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('a code of an inactive account says so, names it, and offers no add and takes nothing', async () => {
+    const hidden = account(41, 'buyer', '03040009', 'پرانا', 'Old One', { is_active: false });
+    fakeAccountSearch([...ROWS, hidden]);
+    const onValue = vi.fn();
+    const { input, user } = setup(language, 'buyer', { onValue });
+    await user.click(input);
+    await user.keyboard('9');
+    await waitFor(() => {
+      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
+    });
+    await user.keyboard('{Enter}');
+    expect(
+      await screen.findByText(
+        named(
+          message(language, 'accountpicker-inactive', {
+            name: language === 'ur' ? 'پرانا' : 'Old One',
+            code: '03040009',
+          }),
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(onValue).not.toHaveBeenCalled();
     expect(
       screen.queryByRole('button', { name: new RegExp(message(language, 'accountpicker-add')) }),
     ).not.toBeInTheDocument();
@@ -283,6 +310,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     });
     expect(accountApi.searchAccounts).toHaveBeenLastCalledWith({
       scope: 'buyer',
+      controlId: null,
       text: 'akram',
       limit: 50,
     });
@@ -302,6 +330,33 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(row).toContain(language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan');
     expect(row).toContain('2,880');
     expect(row).toContain(message(language, 'common-side-dr'));
+  });
+
+  it('a row whose balance could not be read shows no balance, never a wrong one', async () => {
+    vi.mocked(accountApi.searchAccounts).mockResolvedValue([
+      {
+        id: AKRAM.id,
+        code: AKRAM.code,
+        account_type: 'buyer',
+        control_id: 4,
+        name_ur: AKRAM.name_ur,
+        name_en: AKRAM.name_en,
+        extra_ur: '',
+        extra_en: '',
+        is_active: true,
+        balance: null,
+      },
+    ]);
+    const { input, user } = setup(language, 'buyer');
+    await user.click(input);
+    await user.keyboard('akr');
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
+    });
+    const row = visible(options()[0]?.textContent);
+    expect(row).toContain('03040001');
+    expect(row).not.toContain(message(language, 'common-side-dr'));
+    expect(row).not.toContain('2,880');
   });
 });
 
@@ -504,7 +559,13 @@ describe.each(LANGUAGES)('PartyCard (%s)', (language) => {
 
   it('warnings come with a word and an icon, not by colour alone', async () => {
     vi.mocked(accountApi.assistPartyCard).mockResolvedValue(
-      cardOf(AKRAM, { warnings: ['inactive', 'over_credit_limit', 'owes_firm'] }),
+      cardOf(AKRAM, {
+        warnings: [
+          { kind: 'inactive', amount_paisa: null },
+          { kind: 'over_credit_limit', amount_paisa: null },
+          { kind: 'owes_firm', amount_paisa: null },
+        ],
+      }),
     );
     renderIn(language, <Card id={21} />);
     const items = await screen.findAllByRole('listitem');

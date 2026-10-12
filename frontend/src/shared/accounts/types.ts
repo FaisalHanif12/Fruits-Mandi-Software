@@ -1,118 +1,49 @@
-// INTERIM (plan 07 T3): the shape of the account and chart commands as the plan's contract
-// describes them (`accounts_*`, `coa_*`). When backend sends the generated bindings,
-// `account-api.ts` is the only file that changes. Code Standards F2: types of backend data come
-// from bindings. Money from the backend is `Paisa` (shown, never worked out); money typed by the
-// user is text.
+// Account and chart types. Plan 07 types come from the generated bindings (Code Standards F2);
+// the names below are the names the screens already use. (Plan 08:
+// short codes, the party card, global search) comes from the plan 08 bindings too.
+// Money from the backend is `Paisa` (shown, never worked out); money typed by the user is text.
 
-import type { Paisa } from '../format';
-import type { BalanceValue } from '../ui';
+import type { AccountFilter } from '../../bindings/AccountFilter';
+import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
+import type { AccountScope } from '../../bindings/AccountScope';
+import type { CardWarning } from '../../bindings/CardWarning';
+import type { CardWarningKind } from '../../bindings/CardWarningKind';
+import type { GlobalHit as GlobalHitBinding } from '../../bindings/GlobalHit';
+import type { PartyCard } from '../../bindings/PartyCard';
+import type { ResolveStatus } from '../../bindings/ResolveStatus';
+import type { AccountNode } from '../../bindings/AccountNode';
+import type { AccountRow } from '../../bindings/AccountRow';
+import type { AccountsList } from '../../bindings/AccountsList';
+import type { AccountType } from '../../bindings/AccountType';
+import type { Balance } from '../../bindings/Balance';
+import type { BalanceSide } from '../../bindings/BalanceSide';
+import type { CoaControl } from '../../bindings/CoaControl';
+import type { CoaHead } from '../../bindings/CoaHead';
+import type { ControlNode } from '../../bindings/ControlNode';
+import type { HeadNode } from '../../bindings/HeadNode';
+import type { RecordRef } from '../../bindings/RecordRef';
+import type { SimilarAccount } from '../../bindings/SimilarAccount';
 
-/** The four kinds of account of PRD 10.2. The type sets the control and the suggested code. */
-export type AccountType = 'seller' | 'buyer' | 'money_lent' | 'other';
-
-/** Which side a balance is on. The backend decides; the screen only shows the word. */
-export type Side = 'dr' | 'cr' | 'none';
-
-/** A balance: how much, never negative, and on which side (بنام or جمع). */
-export type Balance = BalanceValue;
+export type { AccountFilter, AccountRow, AccountType, Balance, BalanceSide };
+export type { OpeningLineInput } from '../../bindings/OpeningLineInput';
+export type { OpeningPreviewRow } from '../../bindings/OpeningPreviewRow';
+export type { OpeningsInput } from '../../bindings/OpeningsInput';
+export type { OpeningsPreview } from '../../bindings/OpeningsPreview';
+export type { OpeningsSaved } from '../../bindings/OpeningsSaved';
 
 /** A record another one points at, for a picker to show. */
-export interface AccountRef {
-  id: number;
-  code: string;
-  name_ur: string;
-  name_en: string;
-}
-
-export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
-
-/** One account as the list and the form read it. */
-export interface AccountRow {
-  id: number;
-  version: number;
-  code: string;
-  account_type: AccountType;
-  control_id: number;
-  /** The control, for display: code and names. */
-  control: AccountRef;
-  name_ur: string;
-  name_en: string;
-  father_or_firm_ur: string;
-  father_or_firm_en: string;
-  city: AccountRef | null;
-  adda: AccountRef | null;
-  phone1: string;
-  phone2: string;
-  address: string;
-  linked_account: AccountRef | null;
-  /** `YYYY-MM-DD`. */
-  opening_date: string;
-  opening_dr_paisa: Paisa;
-  opening_cr_paisa: Paisa;
-  opening_is_advance: boolean;
-  credit_allowed: boolean;
-  credit_limit_paisa: Paisa;
-  default_marka: AccountRef | null;
-  collector: AccountRef | null;
-  collection_weekday: Weekday | null;
-  is_system: boolean;
-  is_active: boolean;
-  note: string;
-  balance: Balance;
-}
-
-export interface AccountFilter {
-  account_type: AccountType | null;
-  text: string;
-  include_inactive: boolean;
-}
-
-export interface AccountList {
-  rows: AccountRow[];
-  total_dr_paisa: Paisa;
-  total_cr_paisa: Paisa;
-}
-
+export type AccountRef = RecordRef;
+/** The list with its count and footer totals. */
+export type AccountList = AccountsList;
 /** A close match shown while a name is typed (PRD FR-7.63, FR-10.7). */
-export interface AccountMatch {
-  id: number;
-  code: string;
-  name_ur: string;
-  name_en: string;
-  father_or_firm_ur: string;
-  father_or_firm_en: string;
-  city: AccountRef | null;
-  phone1: string;
-  balance: Balance;
-}
-
-/** A node of the chart: a head, a control or an account, with its live balance (FR-10.1). */
-export interface CoaAccount {
-  id: number;
-  code: string;
-  name_ur: string;
-  name_en: string;
-  is_active: boolean;
-  balance: Balance;
-}
-
-export interface CoaControl {
-  id: number;
-  code: string;
-  name_ur: string;
-  name_en: string;
-  balance: Balance;
-  accounts: CoaAccount[];
-}
-
-export interface CoaHead {
-  id: number;
-  code: string;
-  name_ur: string;
-  name_en: string;
-  balance: Balance;
-  controls: CoaControl[];
-}
+export type AccountMatch = SimilarAccount;
+/** The chart in three levels (PRD FR-10.1): head, control, account. */
+export type ChartHead = HeadNode;
+export type ChartControl = ControlNode;
+export type ChartAccount = AccountNode;
+/** The plain lists of heads and controls (the control list says where "other" may go). */
+export type HeadItem = CoaHead;
+export type ControlItem = CoaControl;
 
 /** What the account form holds, all as text (CLAUDE.md rule 1). */
 export interface AccountDraft {
@@ -138,28 +69,23 @@ export interface AccountDraft {
   credit_limit: string;
   default_marka: AccountRef | null;
   collector: AccountRef | null;
-  collection_weekday: Weekday | '';
+  /** 0 (Monday) to 6 (Sunday), or null for no day. */
+  collection_weekday: number | null;
   is_active: boolean;
   note: string;
 }
 
-// ---- Plan 08 (INTERIM until the generated bindings arrive): short codes, the party card, search.
+// ---- Plan 08: short codes, the party card, search.
 
-/** Which accounts an account field takes. `any` is a field for every account (جنرل, ledgers). */
-export type AccountScope = 'seller' | 'buyer' | 'any';
+export type { AccountScope, CardWarning, CardWarningKind, ResolveStatus };
 
-/** One account in a picker or a search: the row of a list, with his balance (FR-7.40). */
-export interface AccountHit {
-  id: number;
-  code: string;
-  account_type: AccountType;
-  name_ur: string;
-  name_en: string;
-  /** Father or firm and city, to tell two people with the same name apart. */
-  extra_ur: string;
-  extra_en: string;
-  is_active: boolean;
-  balance: Balance;
+/**
+ * One account in a picker or a search (PRD FR-7.40). The balance comes from a second call
+ * (`accounts_balances`), so the search itself stays fast; null when it is not known (the row then
+ * shows no balance, never a wrong one).
+ */
+export interface AccountHit extends AccountHitBinding {
+  balance: Balance | null;
 }
 
 /**
@@ -167,41 +93,19 @@ export interface AccountHit {
  * the field, never while typing: `1` may be the start of `12`.
  */
 export interface ResolvedCode {
-  status: 'found' | 'several' | 'unknown' | 'reserved';
+  status: ResolveStatus;
   account: AccountHit | null;
   candidates: AccountHit[];
   /** For an unknown code: the full code a new account would get. */
   suggested_code: string | null;
 }
 
-export type CardWarning = 'inactive' | 'over_credit_limit' | 'owes_firm';
-
 /** The party card (PRD FR-7.38): everything about a party, read from the books. */
-export interface PartyCardData {
-  account_id: number;
-  code: string;
-  account_type: AccountType;
-  name_ur: string;
-  name_en: string;
-  father_or_firm_ur: string;
-  father_or_firm_en: string;
-  city_ur: string;
-  city_en: string;
-  phone: string;
-  balance: Balance;
-  /** `YYYY-MM-DD`, or null when nothing was ever posted. */
-  last_entry_date: string | null;
-  /** A buyer: his credit limit and how much of it is used. */
-  credit_limit_paisa: Paisa | null;
-  credit_used_paisa: Paisa | null;
-  /** A seller: the advance still open. */
-  advance_open_paisa: Paisa | null;
-  warnings: CardWarning[];
-}
+export type PartyCardData = PartyCard;
 
 /** One result of the global search (Ctrl+K). Accounts now; later modules add their own kinds. */
 export interface GlobalHit {
-  kind: 'account';
+  kind: GlobalHitBinding['kind'];
   id: number;
   code: string;
   name_ur: string;

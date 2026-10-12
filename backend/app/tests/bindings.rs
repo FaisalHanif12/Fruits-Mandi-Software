@@ -17,7 +17,7 @@ use mandi_app_lib::commands::{auth, day, settings, translit};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::{accounts, masters, search};
+use mandi_services::core::{accounts, masters, rules, search};
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -112,6 +112,48 @@ const EXPECTED_FILES: &[&str] = &[
     "SearchTouchInput.ts",
     "Suggestion.ts",
     "SuggestedWord.ts",
+    "AccountScope.ts",
+    "SearchAccountsInput.ts",
+    "AccountHit.ts",
+    "ResolveCodeInput.ts",
+    "ResolveStatus.ts",
+    "ResolvedCode.ts",
+    "AccountsBalancesInput.ts",
+    "AccountBalance.ts",
+    "PartyCardInput.ts",
+    "CardWarningKind.ts",
+    "CardWarning.ts",
+    "PartyCard.ts",
+    "SearchGlobalInput.ts",
+    "GlobalHit.ts",
+    "ChargeSide.ts",
+    "ChargeType.ts",
+    "ChargeMethod.ts",
+    "ItemGroup.ts",
+    "RuleLevel.ts",
+    "SkipReason.ts",
+    "SkippedLevel.ts",
+    "WinnerView.ts",
+    "WorkingValue.ts",
+    "WorkingArg.ts",
+    "Working.ts",
+    "RuleInput.ts",
+    "RuleRow.ts",
+    "RulesFilter.ts",
+    "RulesListInput.ts",
+    "RulesGetInput.ts",
+    "RulesSetActiveInput.ts",
+    "RuleOverlap.ts",
+    "RuleSaved.ts",
+    "RuleTestInput.ts",
+    "ChargeTest.ts",
+    "RuleTest.ts",
+    "DefaultCharge.ts",
+    "ChargesSettings.ts",
+    "DefaultChargeInput.ts",
+    "ChargesInput.ts",
+    "CreditLimitMode.ts",
+    "OverridesSettings.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -176,6 +218,25 @@ fn export_bindings() {
     accounts::CoaTree::export_all(&cfg).unwrap();
     accounts::CoaHead::export_all(&cfg).unwrap();
     accounts::CoaControl::export_all(&cfg).unwrap();
+    accounts::SearchAccountsInput::export_all(&cfg).unwrap();
+    accounts::ResolveCodeInput::export_all(&cfg).unwrap();
+    accounts::ResolvedCode::export_all(&cfg).unwrap();
+    accounts::AccountsBalancesInput::export_all(&cfg).unwrap();
+    accounts::AccountBalance::export_all(&cfg).unwrap();
+    accounts::PartyCardInput::export_all(&cfg).unwrap();
+    accounts::PartyCard::export_all(&cfg).unwrap();
+    accounts::SearchGlobalInput::export_all(&cfg).unwrap();
+    accounts::GlobalHit::export_all(&cfg).unwrap();
+    rules::RuleInput::export_all(&cfg).unwrap();
+    rules::RuleSaved::export_all(&cfg).unwrap();
+    rules::RulesListInput::export_all(&cfg).unwrap();
+    rules::RulesGetInput::export_all(&cfg).unwrap();
+    rules::RulesSetActiveInput::export_all(&cfg).unwrap();
+    rules::RuleTestInput::export_all(&cfg).unwrap();
+    rules::RuleTest::export_all(&cfg).unwrap();
+    rules::ChargesSettings::export_all(&cfg).unwrap();
+    rules::ChargesInput::export_all(&cfg).unwrap();
+    rules::OverridesSettings::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();

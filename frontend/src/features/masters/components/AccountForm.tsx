@@ -30,14 +30,15 @@ import {
   DateInput,
   ErrorNotice,
   Field,
+  fieldError,
+  FreeTextInput,
   MoneyInput,
   NamePair,
+  type NamePairValue,
   Picker,
   Select,
-  TextInput,
-  fieldError,
   showToast,
-  type NamePairValue,
+  TextInput,
 } from '../../../shared/ui';
 import {
   accountValuesOf,
@@ -52,7 +53,7 @@ import {
   useSetAccountActive,
   useSimilarAccounts,
 } from '../../../shared/accounts';
-import type { AccountRef, AccountRow, AccountType, Weekday } from '../../../shared/accounts';
+import type { AccountRef, AccountRow, AccountType } from '../../../shared/accounts';
 import { QuickAddMaster, type QuickMasterKind } from './QuickAddMaster';
 import { SimilarAccounts } from './SimilarAccounts';
 
@@ -64,7 +65,10 @@ interface AccountFormProps {
 }
 
 const ACCOUNT_TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
-const WEEKDAYS: readonly Weekday[] = ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'];
+/** The name of each day by the backend's number: 0 is Monday, 6 is Sunday. */
+const WEEKDAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+/** The order the list shows them in: the mandi week starts on Saturday. */
+const WEEKDAY_ORDER = [5, 6, 0, 1, 2, 3, 4] as const;
 
 function toRef(hit: SearchHit): AccountRef {
   return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
@@ -105,7 +109,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
   const isNew = account === null;
   const controls = useCoaControls();
   const [type, setType] = useState<AccountType>(account?.account_type ?? 'buyer');
-  const [controlId, setControlId] = useState<number | null>(account?.control_id ?? null);
+  const [controlId, setControlId] = useState<number | null>(account?.control.id ?? null);
   const nextCode = useAccountNextCode(
     type,
     controlId,
@@ -129,7 +133,12 @@ export function AccountForm({ account, today }: AccountFormProps) {
   const setActive = useSetAccountActive();
   const containerRef = useFocusFirstField<HTMLFormElement>();
   const formRef = useRef<HTMLFormElement>(null);
-  const similar = useSimilarAccounts(values.names.urdu, values.names.english, values.phone1);
+  const similar = useSimilarAccounts(
+    values.names.urdu,
+    values.names.english,
+    values.phone1,
+    account?.id ?? null,
+  );
 
   // A new account shows the suggested code until the user types his own.
   const suggested = nextCode.data;
@@ -434,7 +443,9 @@ export function AccountForm({ account, today }: AccountFormProps) {
             label={<Localized id="accounts-field-address" />}
             error={fieldError(error, 'address')}
           >
-            {(props) => <TextInput {...props} value={values.address} onChange={text('address')} />}
+            {(props) => (
+              <FreeTextInput {...props} value={values.address} onChange={text('address')} />
+            )}
           </Field>
         </Card>
 
@@ -518,13 +529,17 @@ export function AccountForm({ account, today }: AccountFormProps) {
                 {(props) => (
                   <Select
                     {...props}
-                    value={values.collection_weekday === '' ? undefined : values.collection_weekday}
+                    value={
+                      values.collection_weekday === null
+                        ? undefined
+                        : String(values.collection_weekday)
+                    }
                     onChange={(next) => {
-                      setValues((current) => ({ ...current, collection_weekday: next }));
+                      setValues((current) => ({ ...current, collection_weekday: Number(next) }));
                     }}
-                    options={WEEKDAYS.map((day) => ({
-                      value: day,
-                      label: <Localized id={`accounts-weekday-${day}`} />,
+                    options={WEEKDAY_ORDER.map((day) => ({
+                      value: String(day),
+                      label: <Localized id={`accounts-weekday-${WEEKDAY_NAMES[day]}`} />,
                     }))}
                   />
                 )}
@@ -582,7 +597,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
             ) : null}
           </div>
           <Field label={<Localized id="accounts-field-note" />} error={fieldError(error, 'note')}>
-            {(props) => <TextInput {...props} value={values.note} onChange={text('note')} />}
+            {(props) => <FreeTextInput {...props} value={values.note} onChange={text('note')} />}
           </Field>
         </Card>
 

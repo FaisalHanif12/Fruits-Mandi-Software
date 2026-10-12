@@ -12,7 +12,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useState, type KeyboardEven
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { arrowSide, elementDirection } from '../../../shared/keyboard';
 import { Balance, Code } from '../../../shared/ui';
-import type { CoaHead } from '../../../shared/accounts';
+import type { ChartHead } from '../../../shared/accounts';
 import { headKeys, horizontalMove, moveActive, visibleRows, type TreeRow } from '../chart-tree';
 
 const FALLBACK_ROW_PX = 44;
@@ -24,7 +24,7 @@ const PAGE_ROWS = 10;
 const INDENT_CLASS: Record<TreeRow['level'], string> = { 1: 'ps-3', 2: 'ps-5', 3: 'ps-6' };
 
 interface ChartTreeProps {
-  heads: readonly CoaHead[];
+  heads: readonly ChartHead[];
   /** Enter or a double click on an account. */
   onOpenAccount: (id: number) => void;
 }

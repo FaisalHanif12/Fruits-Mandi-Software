@@ -117,7 +117,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     });
   });
 
-  it('Alt+B opens the بکری area with its seven items; each is a "coming soon" page, not made-up data', async () => {
+  it('Alt+B opens the بکری area with its seven items; the ones not built yet are "coming soon" pages, not made-up data', async () => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
@@ -131,11 +131,21 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     const items = within(side).getAllByRole('button');
     expect(items).toHaveLength(7);
     expect(items[0]).toHaveAttribute('aria-current', 'page');
+    // The advance item is a real screen now (plan 10).
     await user.click(at(items, 3));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: message(language, 'vouchers-advance-title'),
+      }),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[3]).toHaveAttribute('aria-current', 'page');
+    // The others still say "coming soon".
+    await user.click(at(items, 4));
     expect(
       await screen.findByRole('heading', { name: message(language, 'soon-title') }),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[3]).toHaveAttribute('aria-current', 'page');
+    expect(within(side).getAllByRole('button')[4]).toHaveAttribute('aria-current', 'page');
     // The way back is a button, and Esc does the same.
     await user.keyboard('{Escape}');
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();

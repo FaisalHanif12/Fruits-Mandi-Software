@@ -41,6 +41,20 @@ const APP_COMMANDS: &[&str] = &[
     "coa_tree",
     "coa_heads_list",
     "coa_controls_list",
+    "search_accounts",
+    "search_global",
+    "accounts_resolve_code",
+    "accounts_balances",
+    "assist_party_card",
+    "rules_list",
+    "rules_get",
+    "rules_save",
+    "rules_set_active",
+    "rules_test",
+    "settings_get_charges",
+    "settings_set_charges",
+    "settings_get_overrides",
+    "settings_set_overrides",
 ];
 
 fn main() {

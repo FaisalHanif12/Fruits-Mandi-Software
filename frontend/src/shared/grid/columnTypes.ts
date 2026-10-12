@@ -13,6 +13,7 @@ export const COLUMN_WIDTHS: Record<EntryColumnType, number> = {
   date: 140,
   text: 240,
   calc: 140,
+  label: 280,
 };
 
 /** The types whose cells are numbers, codes or dates: Latin digits, left to right, tabular. */
@@ -37,6 +38,13 @@ export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
   date: 140,
   status: 120,
 };
+
+/**
+ * The least width of a column that takes the free width of the grid (`grow`). Its own type width is
+ * where it starts; when the grid is narrower, a growing column gives up space down to this, so a
+ * list never scrolls sideways (NFR-USE-15). Enough for a name in either script.
+ */
+export const LIST_GROW_MIN_WIDTH = 160;
 
 /** Codes and numbers are Latin digits, written left to right and set against the right edge. */
 export function isListNumberLike(type: ListColumnType): boolean {

@@ -50,6 +50,25 @@ pub const BUYER_CONTROL: &str = "0304";
 pub const MONEY_LENT_CONTROL: &str = "0103";
 /// The system account that takes the other side of every opening (PRD FR-10.9).
 pub const OPENING_DIFFERENCE_CODE: &str = "06019999";
+/// The head of income accounts (PRD FR-17.3). Every posting on them writes partner share rows.
+pub const INCOME_HEAD: &str = "04";
+/// The head of shop expense accounts (PRD FR-17.3). Every posting on them is split.
+pub const EXPENSE_HEAD: &str = "05";
+/// نقدی منڈی, the cash buyer with no name (PRD FR-10.4): he pays at once, so he never holds a
+/// balance.
+pub const NAQDI_MANDI_CODE: &str = "03040000";
+/// Which controls an account of type `other` may go under.
+pub struct ControlRule;
+
+impl ControlRule {
+    /// True for a control with party type `other` that is not one of the controls that have
+    /// their own way in: 0103 is the type ادھار رقم, 0501 is filled by expense heads and 0102 by
+    /// bank accounts (plan 06).
+    pub fn allows_other(code: &str, party_type: &str) -> bool {
+        party_type == "other" && !matches!(code, "0103" | "0501" | "0102")
+    }
+}
+
 /// The first normal serial (PRD FR-10.3).
 pub const FIRST_SERIAL: u32 = 1;
 /// The last normal serial. 9000 to 9999 and 0 are for system accounts (PRD FR-10.3).
@@ -170,6 +189,49 @@ pub struct Balance {
     pub amount_paisa: Paisa,
     /// The side.
     pub side: BalanceSide,
+}
+
+impl Balance {
+    /// No balance.
+    pub const ZERO: Balance = Balance {
+        amount_paisa: Paisa::ZERO,
+        side: BalanceSide::Zero,
+    };
+
+    /// The balance from the debit and credit totals of an account: the difference with the side
+    /// it stands on (PRD C13). Checked arithmetic; the amount is never negative.
+    ///
+    /// ```
+    /// use mandi_core::accounts::{Balance, BalanceSide};
+    /// use mandi_core::money::Paisa;
+    /// let dr = Paisa::from_rupees(12_880).unwrap();
+    /// let cr = Paisa::from_rupees(10_000).unwrap();
+    /// let b = Balance::from_totals(dr, cr).unwrap();
+    /// assert_eq!((b.amount_paisa, b.side), (Paisa::from_rupees(2_880).unwrap(), BalanceSide::Dr));
+    /// assert_eq!(Balance::from_totals(cr, dr).unwrap().side, BalanceSide::Cr);
+    /// assert_eq!(Balance::from_totals(dr, dr).unwrap(), Balance::ZERO);
+    /// ```
+    pub fn from_totals(dr: Paisa, cr: Paisa) -> Result<Balance, crate::money::MoneyError> {
+        let net = dr.checked_sub(cr)?;
+        Balance::from_net(net)
+    }
+
+    /// The balance from a signed net (debit minus credit).
+    pub fn from_net(net: Paisa) -> Result<Balance, crate::money::MoneyError> {
+        if net == Paisa::ZERO {
+            Ok(Balance::ZERO)
+        } else if net.is_negative() {
+            Ok(Balance {
+                amount_paisa: net.checked_neg()?,
+                side: BalanceSide::Cr,
+            })
+        } else {
+            Ok(Balance {
+                amount_paisa: net,
+                side: BalanceSide::Dr,
+            })
+        }
+    }
 }
 
 /// One account as the list and the form show it.

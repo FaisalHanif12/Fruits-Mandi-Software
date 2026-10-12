@@ -7,6 +7,7 @@ export {
   type Grouping,
   type Paisa,
 } from './money';
+export { formatBps } from './percent';
 export { DEFAULT_PRINT_DIGITS, printDigits, toUrduDigits, type PrintDigits } from './digits';
 export { DEFAULT_GROUPING, useGrouping, useGroupingStore } from './grouping';
 export {

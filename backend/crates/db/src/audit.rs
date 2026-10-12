@@ -49,6 +49,12 @@ impl AuditKey {
         Ok(Self(bytes))
     }
 
+    /// The bytes of the key, for the hash functions of this crate. Not public: the key never
+    /// leaves the crate.
+    pub(crate) fn as_bytes(&self) -> &[u8; KEY_LEN] {
+        &self.0
+    }
+
     fn from_slice(bytes: &[u8]) -> Result<Self, DbError> {
         <[u8; KEY_LEN]>::try_from(bytes)
             .map(Self)
