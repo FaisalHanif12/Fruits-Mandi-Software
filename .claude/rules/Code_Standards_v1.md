@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.2 (Umar's changes of 11-10-2026) |
-| Date | 12 October 2026 |
+| Version | 1.4 (Umar's changes of 14-10-2026 and 15-10-2026) |
+| Date | 15 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.2 (the master), NFR v1.2, Tech Stack v1.2 |
+| Depends on | PRD v1.4 (the master), NFR v1.2, Tech Stack v1.2 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -297,6 +297,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 | F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The پختہ کھاتہ name field shows one merged list (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
 | F42 | Every calculated amount on screen has `CalcInfo`, which shows the backend's `working` (B30). The frontend never builds a working itself. |
 | F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints: the last rate is shown only as placeholder text (PRD FR-7.53). Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
+| F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, mode, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
 
 ---
 
@@ -346,10 +347,10 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 
 | Tests | Where | When |
 |---|---|---|
-| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b | `backend/crates/services/tests/golden_day.rs` | Every commit |
-| E2E-33 (ledger with items, R20 total) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
+| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, and the preview numbers of E2E-39 | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-33 (ledger with items, R20 total) and E2E-36 (day summary R34, filtered print data) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
-| E2E-17 (draft after closing the app) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
+| E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
 | E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
 | E2E-22 to E2E-27, full screen runs (including the language switch of E2E-22) | Windows end-to-end suite | Before every release |
 
@@ -360,8 +361,10 @@ They MUST pass. Their expected numbers MUST NOT be changed without a PRD change.
 With `proptest`, for thousands of random inputs:
 
 - Partner split parts always add up to the total.
-- For any random sequence of postings, Σ partner share rows = income − shop expenses (PRD FR-6.5).
+- For any random sequence of postings, Σ partner share rows = income − expenses of head 05, including cost of own goods (PRD FR-6.5, FR-17.3).
 - Every built journal entry balances.
+- For any sequence of sales and write-offs of one own goods purchase, the cost released never exceeds its total cost and equals it once nothing is left (PRD C21).
+- For any random sequence of postings, Σ partner کل رقم + ابتدائی سرمایہ = the firm's equity in the trial balance (PRD FR-17.9, C22).
 - Parse then format then parse gives the same paisa.
 - Commission is never negative and never more than the line value for percent rules up to 100%.
 - Reversal of an entry plus the entry gives zero on every account.
@@ -420,3 +423,5 @@ A change is done only when every box is ticked:
 | 1.0 | 10-10-2026 | Pre-build drafts and reviews: Umar's requirements, analysis of the old software video, research, client review comments and full cross-document reviews. |
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
 | 1.2 | 12-10-2026 | PRD v1.2: sign-in check instead of roles (B2, 5.6, S1, S7); golden tests E2E-28 to E2E-33 (9.2); one pull request per goal run (P3). |
+| 1.3 | 15-10-2026 | PRD v1.3: golden tests E2E-34 to E2E-38 (9.2); property tests for the cost of own goods and the partner total (9.3). |
+| 1.4 | 15-10-2026 | PRD v1.4: related entries share one screen (F44); E2E-39 (9.2). |

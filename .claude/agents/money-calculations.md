@@ -1,6 +1,6 @@
 ---
 name: money-calculations
-model: opus 
+model: sonnet
 effort: high
 description: MUST BE USED for any code, test, query or review that creates, calculates, rounds, splits, posts, sums, parses or displays money, quantities, weights, rates, commissions, لاگا, deductions, partner shares, balances, matching or journal entries in the Mandi Software. Use proactively before writing such code and again to review it before finishing.
 tools: Read, Grep, Glob, Edit, Write, Bash
@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.2, 12 October 2026 (PRD v1.2: advance tick, seller advance return, cash lent to buyers, money lent, partner returns). Every change raises the version (1.3, 1.4 ...).
+Version 1.3, 15 October 2026 (PRD v1.3: own goods and cost of goods sold, partner capital). Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -38,7 +38,7 @@ Source documents (read the relevant parts before you start; the PRD is the maste
 11. **Preview and save use the same function.** The live summary and the saved data come from one calculation path.
 12. **The frontend never calculates money.** It formats `Paisa` from the backend for display. That is all.
 13. **Snapshots.** Each sale line and lot stores the method, value, rule ID and amount used. Later rule or share changes never alter saved results, and an unchanged line inside an edit keeps them too. Reports and analytics read stored values, never recalculate.
-14. **Income and expenses always have owners.** Every posting that touches an income account or a shop expense account writes partner share rows in the same save (PRD FR-6.5), so Σ shares = income − shop expenses for any period.
+14. **Income and expenses always have owners.** Every posting that touches an income account or an expense account (head 05: دکان خرچہ 0501 and اپنا مال لاگت 0502) writes partner share rows in the same save (PRD FR-6.5), so Σ shares = income − shop expenses for any period.
 
 If any task seems to need breaking one of these rules, stop and explain why to the user. Do not break it.
 
@@ -253,6 +253,22 @@ leftover → the lot with the largest qty; tie → lowest lot number
 
 Examples: 1,000 over lots of 30 and 20 نگ → 600 and 400. 1,000 over 3 lots of 1 نگ each → 333 / 333 / 333, leftover 1 → lot 1 → 334 / 333 / 333.
 
+### 5.4 Cost of own goods sold or written off (`split_by_qty`, PRD C21, 12.10)
+
+```
+cost_left = total_cost − cost_released            // from the purchase row
+qty_left  = qty − qty_sold − qty_written_off
+[cost_taken, _] = split_by_qty(cost_left, [qty_taken, qty_left − qty_taken])
+                                                   // tie → the qty taken (first part)
+if qty_taken == qty_left: cost_taken = cost_left   // the last نگ takes all the cost left
+```
+
+Golden (E2E-34, 34b): purchase 20 × 500 + 400 freight = 10,400. Sell 15: split_by_qty(10,400, [15, 5]) = 7,800 / 2,600 → cost 7,800. Write off the last 5: cost 2,600. Σ cost released = 10,400 exactly. Property: for any sequence of sales and write-offs of one purchase, Σ cost released = total cost once qty left is 0, and never more before that.
+
+Posting of an own lot (FR-12.26): the seller credit (C8) is a جمع on تجارتی فروخت 04010006, never on a seller account (the اپنا مال account 030119998 never holds a balance); cost of goods sold is اپنا مال لاگت 05020001 بنام, اپنا مال سٹاک 01040001 جمع, in the same entry. Both lines take part in the partner split (income rows and expense rows, C10 and C11), so the net share rows equal the profit or loss split. Golden E2E-34: income 540 + 540 + 120 + 8,460 = 9,660 → 3,864 / 2,898 / 2,898; cost 7,800 → −3,120 / −2,340 / −2,340; entry 17,460 = 17,460.
+
+Purchase (FR-12.24): اپنا مال سٹاک بنام total cost; supplier جمع value (credit) or cash or bank جمع value; cash or bank جمع freight, labour and other cost. Partner capital (FR-17.7): cash بنام, capital 0602 جمع (or the reverse); never split.
+
 ---
 
 ## 6. بکری calculation (PRD 12.5, 12.9, Section 22)
@@ -374,6 +390,10 @@ Same integer algorithm as 8.1, at read time, nothing stored. For an ادھار �
 
 A salary deduction posts the salary head بنام and the person جمع. It is a shop expense, so it is split with C11 like any دکان خرچہ. Partner خالص (C20) = profit share − (taken − returned).
 
+الگ کھاتہ (PRD 16.6, FR-16.7): paid out = khata بنام, cash جمع; received = cash بنام, khata جمع; a lot with a separate khata as seller credits its seller credit (C8) to the khata, with seller-side defaults 0. It is never income or expense, never split, never in C22. Golden E2E-38: −10,000, −6,000, then +9,000 from the sale = +3,000; buyer side 540 + 80 = 620 split 248 / 186 / 186.
+
+Partner کل رقم (C22, PRD FR-17.9): opening capital + invested − taken back + Σ income shares − Σ expense shares − money taken + returned. Read from posted records only; month close never changes it. Property: Σ کل رقم of all partners + ابتدائی سرمایہ = equity (capital + income − expenses − drawings) after any sequence of postings. Golden E2E-37: −1,004 / 50,746 / 746; Σ 50,488 + 65,000 = 115,488.
+
 Golden: E2E-30: lent 5,000, returned 3,000 cash, 2,000 by salary, open 0; salary split −800 / −600 / −600. E2E-29: الف خالص 996 − 2,000 = −1,004; after returning 2,000, net taken 0. E2E-32: اکرم's 3,000 cash loan is a bill; dues 5,880.
 
 ### 8.3 Undo and re-match
@@ -416,12 +436,12 @@ Every row in the tables of Sections 3, 4, 5 and 6.5 is a unit test.
 5. `parse_rupees(format_paisa(x)) == x` for all valid whole-rupee `x` (with grouping commas).
 6. Percent charge ≤ base for bps ≤ 10,000; the charge never decreases when the base grows.
 7. Matching: Σ allocations + unmatched == credit; no bill allocated beyond its open amount; keys never mix (one پختہ person never pays another's bill).
-8. For any random sequence of postings (sales, later sales, edits, cancels, expenses, جنرل on income accounts): Σ partner share rows = income − shop expenses.
+8. For any random sequence of postings (sales, later sales, edits, cancels, expenses, جنرل on income accounts): Σ partner share rows = income − expenses (head 05, including اپنا مال لاگت).
 9. Every stored money value is a multiple of 100 paisa.
 
 ### 11.3 Golden end-to-end tests
 
-`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32 and E2E-30b. E2E-33 (ledger with items) is in `backend/crates/reports/tests/ledger_items.rs`. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
+`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37 and E2E-38. E2E-33 (ledger with items) and E2E-36 (day summary and filtered print) are in `backend/crates/reports/tests/ledger_items.rs`. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
 
 ### 11.4 Edge cases
 

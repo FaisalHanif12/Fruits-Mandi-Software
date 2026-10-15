@@ -26,7 +26,7 @@ All requirements live in `docs/`. These six files are final for build.
 - If two documents disagree, or a needed rule is missing, stop and ask Umar. Do not pick one yourself.
 - Items tagged `[A]` in the PRD are assumptions. Build the stated default and make it easy to change. Do not invent other behaviour.
 - Never change an expected number in a golden test. If the code and the test disagree, the code is wrong until Umar changes the PRD.
-- All six documents are at version 1.2 (Umar's changes of 11-10-2026). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
+- The documents are at versions 1.2 to 1.4 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
 
 ### Where to read before you start
 
@@ -36,7 +36,8 @@ All requirements live in `docs/`. These six files are final for build.
 | بکری screen or service | PRD 12, 11 and 4.4 to 4.5; Architecture 7, 9 and 12 |
 | وصولی, ادائیگی, پیشگی, پختہ کھاتہ | PRD 15 and 13; Architecture 11; agent Section 8 |
 | Partners and the income split | PRD 17; Architecture 10 |
-| Partner money taken and returned, ادھار رقم | PRD 16.3 and 16.5; agent Section 8.2b |
+| Expenses (one خرچہ screen), partner money taken and returned, ادھار رقم, الگ کھاتہ | PRD 16.2, 16.3, 16.5 and 16.6; FR-7.67; agent Section 8.2b |
+| Own goods (خریداری) and partner capital | PRD 12.10 and 17.4; agent Section 5.4 |
 | Accounts, codes, masters | PRD 10; Architecture 15.4 |
 | Keyboard, ease of use, language switch, typing names, smart assistance | PRD 7; Tech Stack 4; Code Standards 6.7 and 6.10 |
 | Reports and analytics | PRD 18 and 19 |

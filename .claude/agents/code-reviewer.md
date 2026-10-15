@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviewer for the Mandi Software. Checks that a finished feature meets its functional and non-functional requirements end to end, that nothing that worked before is broken, and that the frontend and backend code follow the Code Standards. Read-only. Use after backend-dev and frontend-dev finish a feature.
-model: opus
+model: sonnet
 effort: high
 color: yellow
 disallowedTools: Write, Edit, NotebookEdit

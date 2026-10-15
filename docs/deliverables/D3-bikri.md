@@ -1,6 +1,6 @@
 # D3. بکری: sale entry, journal, پختہ کھاتہ, partners and prints
 
-Version 1.1, 12-10-2026 (PRD v1.2: advance tick, one user). Deliverable 3 of 5. Read `README.md` in this folder first.
+Version 1.2, 15-10-2026 (PRD v1.3: opening capital per partner; v1.2: advance tick, one user). Deliverable 3 of 5. Read `README.md` in this folder first.
 Depends on: D2 done. Plan files: `11-partners`, `12-bikri-entry`, `13-bikri-save`, `14-bikri-prints`.
 Build order step: CLAUDE.md MVP step 5. Golden tests E2E-1 to E2E-5 pass.
 
@@ -34,7 +34,7 @@ If the power goes off in the middle of typing, the app offers the draft when it 
 
 **backend builds:**
 
-- Partners with the fields of 17.1: names in both scripts, capital and drawings accounts created by themselves, share with up to 2 decimals, effective date, active.
+- Partners with the fields of 17.1: names in both scripts, capital and drawings accounts created by themselves, opening capital (posted as the opening of his capital account, FR-10.9), share with up to 2 decimals, effective date, active. The capital in and out screen comes in D4 (17.4).
 - Shares of active partners total exactly 100% for every date (FR-17.1). Changes take effect from today or later, never back-dated; history kept; saved postings keep their split (FR-17.2).
 - The split service: every posting that touches an income account (head 04) or a shop expense account (head 05) writes one share row per partner, per posting, with `split_by_bps` (FR-17.3 to FR-17.5, C10, C11). Payables are never split.
 - The partner overview data of 17.3 (today, month, year, expense share, profit share, drawings, capital balance). The returned and خالص columns come in D4 with the واپسی entry (FR-16.3).

@@ -1,6 +1,6 @@
 # D5. Dashboard, reports, analytics, backup and go-live
 
-Version 1.1, 12-10-2026 (PRD v1.2: items in ledgers, the shop's total اگراہی, R32, one user). Deliverable 5 of 5. Read `README.md` in this folder first.
+Version 1.3, 15-10-2026 (PRD v1.4: E2E-39 in the full run; v1.3: print any day and any party, R33, R34, own goods; v1.2: items in ledgers, the shop's total اگراہی, R32, one user). Deliverable 5 of 5. Read `README.md` in this folder first.
 Depends on: D4 done. Plan files: `18-backup-and-restore`, `19-dashboard-and-attention`, `20-reports-and-export`, `21-analytics`, `22-settings-audit-updates`, `23-go-live`.
 At the end, version 1.0 is released and ready for the demo of PRD 27.1. (`tauri.conf.json` says 1.0.0; the pipeline publishes it as 1.0.N, where N is the release run number.)
 
@@ -20,7 +20,7 @@ Answer D5-Q1 before starting D5. Excel export and the daily backup pack (FR-20.5
 
 He logs in after the worked day. The dashboard shows every tile of PRD 9.1 with the PRD 4.9 numbers: today's sales 41,400 in 2 بکری, cash 58,484, buyers' dues 21,564, sellers payable 10,160, advances open 0, nothing in stock. The partner strip shows الف 996, ب 746, ج 746 for today. The bell shows what needs attention, and آج کے کام lists today's jobs.
 
-He opens any report from R1 to R32, filters it, prints it in Urdu or English, saves a PDF, exports to Excel. The trial balance balances. Analytics view A shows کیلا and سیب with their commission share, 72.10% and 27.90%. He clicks any number and sees the lines behind it.
+He opens any report from R1 to R34, for one day or a date range and for one party where it applies, filters it, prints it in Urdu or English, saves a PDF, exports to Excel. The trial balance balances. Analytics view A shows کیلا and سیب with their commission share, 72.10% and 27.90%. He clicks any number and sees the lines behind it.
 
 At closing time the cloud backup runs by itself. He plugs in a USB drive; a copy goes there too. On a second computer he installs the app, types the backup key, restores, and every balance is identical. A new version appears; the app shows what is new in Urdu, takes a backup, and updates only when he agrees.
 
@@ -48,7 +48,7 @@ The full demo of PRD 27.1 runs from start to end without a problem, and version 
 
 ### 19-dashboard-and-attention
 
-**Requirements:** PRD 9 (9.1 to 9.4, FR-9.1, including the ادھار رقم باقی tile), FR-5.6 (the bell), FR-7.12, FR-7.44 to FR-7.46 (with overdue loans and partner money); NFR-SPD-2, NFR-SPD-22, NFR-USE-9, NFR-OBS-5. PRD 27.1 step 7.
+**Requirements:** PRD 9 (9.1 to 9.4, FR-9.1, including the ادھار رقم باقی and اپنا مال tiles), FR-5.6 (the bell), FR-7.12, FR-7.44 to FR-7.46 (with overdue loans and partner money); NFR-SPD-2, NFR-SPD-22, NFR-USE-9, NFR-OBS-5. PRD 27.1 step 7.
 
 **backend builds:** the tile values (each read from posted records, FR-6.1), the partner strip, today's بکری list, the 10 oldest buyer dues, the mini chart series, the attention list and its count (FR-7.44), the daily health check result for the Owner (NFR-OBS-5), and the remembered last screen and choices per user (FR-7.45).
 
@@ -58,21 +58,21 @@ The full demo of PRD 27.1 runs from start to end without a problem, and version 
 
 ### 20-reports-and-export
 
-**Requirements:** PRD 19 (FR-19.1 to FR-19.9), every report R1 to R32 in 19.2, FR-5.4 (complete global search), FR-7.65, FR-13.9; NFR-SPD-10, NFR-SPD-11, NFR-SPD-13, NFR-SPD-14, NFR-SPD-17, NFR-SPD-18, NFR-SEC-13, NFR-URD-13 to NFR-URD-16, NFR-URD-28; Tech Stack 4.5. Use the `print-and-export` skill.
+**Requirements:** PRD 19 (FR-19.1 to FR-19.10), every report R1 to R34 in 19.2, FR-5.4 (complete global search), FR-7.65, FR-13.9; NFR-SPD-10, NFR-SPD-11, NFR-SPD-13, NFR-SPD-14, NFR-SPD-17, NFR-SPD-18, NFR-SEC-13, NFR-URD-13 to NFR-URD-16, NFR-URD-28; Tech Stack 4.5. Use the `print-and-export` skill.
 
-R1 and R5 exist from D3. This plan file adds R2 to R4 and R6 to R32, and gives every report the same behaviour: filters with date shortcuts, totals, open a row to its source, print, PDF and Excel (FR-19.1 to FR-19.5).
+R1 and R5 exist from D3. This plan file adds R2 to R4 and R6 to R34, and gives every report the same behaviour: filters with date shortcuts, totals, open a row to its source, print, PDF and Excel (FR-19.1 to FR-19.5).
 
 **backend builds:** one query and print data per report, reading posted records only. Party reports group پختہ کھاتہ by person (FR-13.9). Excel through `rust_xlsxwriter` once D5-Q1 is answered: Fluent headings, right-to-left sheets for Urdu, real dates, a totals row, the filters above the table. Exports need the signed-in Owner (NFR-SEC-13). R13 and R14 show the items of each sale line and each seller credit (FR-19.8). R20's میزان is the shop's total اگراہی and equals the dashboard tile (FR-19.9). Long exports run in the background with progress (NFR-SPD-17). Global search finds accounts, بکری, vouchers, trucks and پختہ persons (FR-5.4).
 
 **frontend builds:** the رپورٹ area with the catalogue grouped as in 19.2 (Sales, Accounts, Collections, Business); one report screen pattern used by all; the party report buttons on the party card (FR-7.65).
 
-**Worked checks:** after the worked day, R18 shows the E2E-10 table (85,048 both sides), R12 closes at 58,484, R20 shows اکرم 2,880 and ارشد 18,684 with میزان 21,564 equal to the dashboard tile, R13 for اکرم shows E2E-33 (کیلا 20 پیٹی @ 600 = 12,000، کمیشن 720، لاگا 160, then the receipt, closing 2,880 بنام), R24 shows کریم 10,160, R26 shows رحیم given 15,000, adjusted 15,000, open 0, and R30 and R31 show the PRD 4.9 partner numbers.
+**Worked checks:** after the worked day, R18 shows the E2E-10 table (85,048 both sides), R12 closes at 58,484, R34 for 10-10-26 shows E2E-36 (2 بکری, خام 41,400, commission 5,448, cash 50,000 + 22,800 − 14,316 = 58,484), R5 filtered to اکرم and 10-10-26 shows only his slip, R20 shows اکرم 2,880 and ارشد 18,684 with میزان 21,564 equal to the dashboard tile, R13 for اکرم shows E2E-33 (کیلا 20 پیٹی @ 600 = 12,000، کمیشن 720، لاگا 160, then the receipt, closing 2,880 بنام), R24 shows کریم 10,160, R26 shows رحیم given 15,000, adjusted 15,000, open 0, and R30 and R31 show the PRD 4.9 partner numbers; after E2E-35, R31 for ب shows the E2E-37 lines with the running کل رقم.
 
 **Done when:** every report opens, totals, prints and exports in both languages, and the worked checks pass.
 
 ### 21-analytics
 
-**Requirements:** PRD 18 (FR-18.1 to FR-18.7), views A to H, 18.4, FR-13.9, C18; NFR-SPD-12. E2E-11.
+**Requirements:** PRD 18 (FR-18.1 to FR-18.7), views A to H, 18.4, FR-13.9, C18, own goods in the views (FR-12.27); NFR-SPD-12. E2E-11.
 
 **backend builds:** every view from the analytics facts written at save (FR-18.6), never by recalculating sales. Cancelled postings cancel themselves out (FR-18.7). Filters combine freely (FR-18.1). Drill down from any number to its lines and then to the بکری (FR-18.2). Saved views (FR-18.5). Percentages to 2 decimals as 18.2 defines.
 
@@ -150,13 +150,13 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 5. **Long run.** 12 hours of mixed work without slowing down or memory growth.
 6. **Everything at once.** The full E2E-1 to E2E-27 run, in Urdu and in English, at 1366 × 768 and 125% scaling.
 
-## 7. Acceptance (D5-A1 to D5-A20)
+## 7. Acceptance (D5-A1 to D5-A21)
 
 | ID | Item | Evidence expected |
 |---|---|---|
 | D5-A1 | Every dashboard tile and the partner strip show the PRD 4.9 values; every tile opens its screen | Test output; screenshot |
 | D5-A2 | Attention list and آج کے کام; count updated within NFR-SPD-22 | Test output |
-| D5-A3 | Every report R1 to R32 opens, filters, totals and opens rows to their source | Test list output |
+| D5-A3 | Every report R1 to R34 opens, filters, totals and opens rows to their source | Test list output |
 | D5-A4 | Every report prints and saves as PDF in Urdu and English; headers repeat; numbers never flip | PDFs from the Windows run |
 | D5-A5 | Excel export with real numbers, dates, totals and right-to-left Urdu sheets (after D5-Q1) | Excel test output |
 | D5-A6 | The plan 20 worked checks pass (R12, R13, R18, R20, R24, R26, R30, R31); E2E-33 passes in `ledger_items.rs`; after E2E-32, R20's میزان and the وصولی باقی tile both show 24,564; after E2E-28, the ادائیگی باقی tile and R24 show 19,316 | Test output |
@@ -171,9 +171,10 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 | D5-A15 | Every NFR Section 2 target measured the way the NFR names and met at its runner threshold | Table of each target, its runner threshold and the measured value |
 | D5-A16 | NFR-SCL-1 to NFR-SCL-4 met with 10 years of generated data | Robustness report |
 | D5-A17 | 12-hour run with no slowdown or memory growth (NFR-REL-12) | Robustness report |
-| D5-A18 | E2E-1 to E2E-33 all pass: Rust golden tests and the full Windows suite, in both languages | golden_day, assist and round_trip output; Windows run ID |
+| D5-A18 | E2E-1 to E2E-39 all pass: Rust golden tests and the full Windows suite, in both languages | golden_day, assist and round_trip output; Windows run ID |
 | D5-A19 | Final whole-app review PASS or PASS WITH MINOR; `docs/demo/demo-checklist.md` and `docs/demo/urdu-review.md` written | `docs/reviews/final-1.0.md` |
 | D5-A20 | The first release after `tauri.conf.json` is set to 1.0.0 is green (version 1.0.N); installer installs in under 2 minutes on the runner; PRD 27.1 demo steps 1 to 11 run end to end in the Windows suite (step 12 is Umar's, with the client) | Release run ID and version; install time; demo run result |
+| D5-A21 | Print any day and any party (FR-19.10): every report, ledger, register and list screen has the date and party filters, and the print header shows them; E2E-36 passes; R33 shows E2E-34b (purchase −1,940) | Test output; PDFs |
 
 ## 8. Not in D5 (and not in this build)
 

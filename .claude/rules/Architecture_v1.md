@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.2 (Umar's changes of 11-10-2026) |
-| Date | 12 October 2026 |
+| Version | 1.4 (Umar's changes of 14-10-2026 and 15-10-2026) |
+| Date | 15 October 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.2 (the master), NFR v1.2, Tech Stack v1.2, Code Standards v1.2 |
+| Derived from | PRD v1.4 (the master), NFR v1.2, Tech Stack v1.2, Code Standards v1.4 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -232,17 +232,21 @@ flowchart RL
     BIK --> B6["پختہ کھاتہ"]
     BIK --> B7["آج کی بکری"]
     BIK --> B8["باقی مال"]
+    BIK --> B9["خریداری - own goods"]
+    PRT --> P1["Partner setup, overview, capital, statement"]
 
     ROK --> R1["روکڑ بک"]
-    ROK --> R2["دکان خرچہ"]
-    ROK --> R3["ذاتی خرچہ"]
+    ROK --> R2["خرچہ - one screen:
+    دکان خرچہ, ذاتی خرچہ, واپسی"]
+    ROK --> R3["ادھار رقم"]
+    ROK --> R5["الگ کھاتہ"]
     ROK --> R4["جنرل"]
     ROK -.-> B3
     ROK -.-> B4
     ROK -.-> B5
 ```
 
-Dotted lines: the same screens are reachable from روکڑ (PRD FR-15.10).
+Dotted lines: the same screens are reachable from روکڑ (PRD FR-15.10). B3, B4 and B5 are one voucher screen, opened with its type already chosen. Related entries share one screen with a type list at the top (PRD FR-7.67): R2 holds دکان خرچہ and ذاتی خرچہ, R3 lent and returned, R5 paid out and received.
 
 ---
 
@@ -257,9 +261,11 @@ flowchart LR
     SAVE_REC(["Save وصولی"])
     SAVE_PAY(["Save ادائیگی"])
     SAVE_ADV(["Save پیشگی"])
-    SAVE_SHOP(["Save دکان خرچہ"])
-    SAVE_PERS(["Save ذاتی خرچہ or its واپسی"])
+    SAVE_SHOP(["Save خرچہ as دکان خرچہ"])
+    SAVE_PERS(["Save خرچہ as ذاتی خرچہ or واپسی"])
     SAVE_LENT(["Save ادھار رقم or its واپسی"])
+    SAVE_PUR(["Save خریداری"])
+    SAVE_CAP(["Save سرمایہ جمع or واپسی"])
     SAVE_GEN(["Save جنرل"])
     DAYC(["Day close"])
 
@@ -284,6 +290,8 @@ flowchart LR
     SAVE_SHOP --> JRN & SPLIT & AUD
     SAVE_PERS --> JRN & AUD
     SAVE_LENT --> JRN & SPLIT & AUD
+    SAVE_PUR --> JRN & STOCK & AUD
+    SAVE_CAP --> JRN & AUD
     SAVE_GEN --> JRN & SPLIT & MATCH & AUD
     SAVE_ACC(["Save or edit an account"]) --> JRN & AUD & SIDX[("Search index - after commit")]
     DAYC --> DAYS & BACKUP & AUD
@@ -382,7 +390,8 @@ flowchart TD
     L1 --> DRB["Line's buyer account بنام buyer_total
     own account, نقدی منڈی, or پختہ کھاتہ with person key"]
     IN --> L2["Sale part - for each lot"]
-    L2 --> CRS["Seller جمع seller credit C8
+    L2 --> CRS["Seller جمع seller credit C8, or تجارتی فروخت for an own lot
+    own lot also: اپنا مال لاگت بنام, اپنا مال سٹاک جمع, cost C21
     بنام if negative"]
     IN --> INC["Income جمع: کمیشن بیوپاری, کمیشن گاہک, لاگا, فون, ریٹ فرق
     Payables جمع: مزدوری, کرایہ if paid by آڑھتی, منشیانہ, کرایہ سٹور
@@ -642,6 +651,8 @@ erDiagram
 
     BIKRI_SALES ||--|{ ANALYTICS_FACTS : "fact rows"
     BIKRI_LOTS ||--|{ STOCK_MOVES : moves
+    PURCHASES ||--o{ BIKRI_LOTS : "own lots"
+    PURCHASES ||--|{ STOCK_MOVES : moves
     USERS ||--o{ AUDIT_LOG : did
 ```
 
@@ -674,7 +685,7 @@ erDiagram
 | Table | Columns |
 |---|---|
 | `account_heads` | `code` (unique), `name_ur`, `name_en`, `nature` (asset, payable, party, income, expense, capital) |
-| `account_controls` | `head_id`, `code` (unique), `name_ur`, `name_en`, `party_type` (seller, buyer, other) |
+| `account_controls` | `head_id`, `code` (unique), `name_ur`, `name_en`, `party_type` (seller, buyer, separate, other; separate = a الگ کھاتہ under control 0305, PRD 16.6) |
 | `accounts` | `control_id`, `code` (unique), `serial`, `party_type`, `name_ur`, `name_en`, + search columns, `father_or_firm_ur`, `father_or_firm_en`, `city_id`, `adda_id`, `phone1`, `phone2`, `address`, `linked_account_id`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `opening_is_advance`, `opening_entry_id`, `credit_allowed`, `credit_limit_paisa`, `default_marka_id`, `collector_staff_id`, `collection_weekday`, `is_system`, `is_pukhta_khata`, `is_active`, `note` |
 | `cities` | `code`, `name_ur`, `name_en`, + search columns, `is_active` |
 | `items` | `code`, `name_ur`, `name_en`, + search columns, `item_group` (fruit, vegetable), `default_packing_id`, `sold_by` (unit, weight), `is_active` |
@@ -701,17 +712,18 @@ erDiagram
 | Table | Columns |
 |---|---|
 | `bikri_entries` | `number` (unique, given at first save), `book`, `entry_date`, `bill_date`, `truck_no`, `zamindar_account_id`, `adda_id`, `driver_name`, `driver_phone`, `total_freight_paisa`, `store_id`, `note`, `status` (saved, cancelled), `cancel_reason`, `cancelled_by`, `cancelled_at`, `print_count` |
-| `bikri_lots` | `bikri_id`, `lot_no`, `seller_account_id`, `pukhta_name_ur`, `pukhta_name_en`, `pukhta_phone`, `pukhta_person_key`, `item_id`, `packing_id`, `marka_id`, `store_id`, `qty_received`, `weight_received_grams`, `freight_paisa`, `freight_paid_by` (firm, seller), `labour_method`, `labour_value_paisa`, `labour_paisa`, `labour_rule_id`, `munshiana_method`, `munshiana_value_paisa`, `munshiana_paisa`, `munshiana_rule_id`, `phone_method`, `phone_value_paisa`, `phone_paisa`, `phone_rule_id` (method per_unit, per_lot or manual; PRD FR-12.20), `cash_paid_paisa`, `store_rent_paisa`, `adjust_advance` (0 or 1, default 1; PRD FR-12.23), `first_entry_id`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `gross_paisa`, `seller_comm_paisa`, `deductions_paisa`, `net_paisa` |
-| `bikri_sales` | `bikri_id`, `lot_id`, `line_no`, `journal_entry_id` (the posting it belongs to), `entry_date`, `buyer_account_id`, `pukhta_name_ur`, `pukhta_name_en`, `pukhta_phone`, `pukhta_person_key`, `qty`, `weight_grams` (null), `seller_rate_paisa`, `seller_amount_paisa`, `seller_comm_method`, `seller_comm_value_bps`, `seller_comm_value_paisa`, `seller_comm_rule_id`, `seller_comm_paisa`, `buyer_rate_paisa`, `buyer_value_paisa`, `buyer_comm_method`, `buyer_comm_value_bps`, `buyer_comm_value_paisa`, `buyer_comm_rule_id`, `buyer_comm_paisa`, `laga_method`, `laga_value_bps`, `laga_value_paisa`, `laga_rule_id`, `laga_paisa`, `buyer_total_paisa`, `rate_diff_paisa`, `payment_type` (credit, cash), `is_active` (0 when replaced by an edit or cancelled), `replaced_by_sale_id`, `note` |
-| `stock_moves` | `lot_id`, `journal_entry_id` (null for write-offs), `move_date`, `kind` (received, sold, written_off, reversal), `qty` (signed), `reason` |
-| `analytics_facts` | `journal_entry_id`, `entry_date`, `year`, `month`, `bikri_id`, `lot_id`, `sale_id`, `item_id`, `seller_account_id`, `buyer_account_id`, `pukhta_person_key`, `city_id`, `adda_id`, `qty`, `seller_amount_paisa`, `seller_comm_paisa`, `buyer_value_paisa`, `buyer_comm_paisa`, `laga_paisa`, `sign` (+1, or −1 for reversal rows). Totals are `SUM(sign × value)`. |
+| `bikri_lots` | `bikri_id`, `lot_no`, `seller_account_id`, `pukhta_name_ur`, `pukhta_name_en`, `pukhta_phone`, `pukhta_person_key`, `item_id`, `packing_id`, `marka_id`, `store_id`, `qty_received`, `weight_received_grams`, `freight_paisa`, `freight_paid_by` (firm, seller), `labour_method`, `labour_value_paisa`, `labour_paisa`, `labour_rule_id`, `munshiana_method`, `munshiana_value_paisa`, `munshiana_paisa`, `munshiana_rule_id`, `phone_method`, `phone_value_paisa`, `phone_paisa`, `phone_rule_id` (method per_unit, per_lot or manual; PRD FR-12.20), `cash_paid_paisa`, `store_rent_paisa`, `adjust_advance` (0 or 1, default 1; PRD FR-12.23), `purchase_id` (null; set when the seller is اپنا مال, PRD FR-12.26), `first_entry_id`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `gross_paisa`, `seller_comm_paisa`, `deductions_paisa`, `net_paisa` |
+| `bikri_sales` | `bikri_id`, `lot_id`, `line_no`, `journal_entry_id` (the posting it belongs to), `entry_date`, `buyer_account_id`, `pukhta_name_ur`, `pukhta_name_en`, `pukhta_phone`, `pukhta_person_key`, `qty`, `weight_grams` (null), `seller_rate_paisa`, `seller_amount_paisa`, `seller_comm_method`, `seller_comm_value_bps`, `seller_comm_value_paisa`, `seller_comm_rule_id`, `seller_comm_paisa`, `buyer_rate_paisa`, `buyer_value_paisa`, `buyer_comm_method`, `buyer_comm_value_bps`, `buyer_comm_value_paisa`, `buyer_comm_rule_id`, `buyer_comm_paisa`, `laga_method`, `laga_value_bps`, `laga_value_paisa`, `laga_rule_id`, `laga_paisa`, `buyer_total_paisa`, `rate_diff_paisa`, `cost_paisa` (0, or the cost of own goods sold on this line, C21), `payment_type` (credit, cash), `is_active` (0 when replaced by an edit or cancelled), `replaced_by_sale_id`, `note` |
+| `purchases` | `number` (unique, given at save), `entry_date`, `supplier_account_id` (null), `pukhta_name_ur`, `pukhta_name_en`, `pukhta_phone`, `pukhta_person_key`, `item_id`, `packing_id`, `qty`, `weight_grams` (null), `rate_paisa`, `value_paisa`, `freight_paisa`, `labour_paisa`, `other_cost_paisa`, `total_cost_paisa`, `payment_type` (credit, cash, bank), `bank_account_id`, `journal_entry_id`, `status` (saved, cancelled), `cancel_reason`, `note`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `cost_released_paisa` (cost already moved to اپنا مال لاگت). PRD 12.10. |
+| `stock_moves` | `lot_id` (null for a purchase move), `purchase_id` (null), `journal_entry_id` (null for write-offs of consigned goods), `move_date`, `kind` (received, sold, written_off, reversal), `qty` (signed), `reason` |
+| `analytics_facts` | `journal_entry_id`, `entry_date`, `year`, `month`, `bikri_id`, `lot_id`, `sale_id`, `item_id`, `seller_account_id`, `buyer_account_id`, `pukhta_person_key`, `city_id`, `adda_id`, `qty`, `seller_amount_paisa`, `seller_comm_paisa`, `buyer_value_paisa`, `buyer_comm_paisa`, `laga_paisa`, `purchase_id` (null; own goods), `cost_paisa`, `sign` (+1, or −1 for reversal rows). Totals are `SUM(sign × value)`. |
 
 ### 15.7 Vouchers, journal and matching
 
 | Table | Columns |
 |---|---|
-| `vouchers` | `type` (receipt, payment, advance, shop_expense, personal_expense, personal_return, money_lent, money_lent_return, general), `number` (unique per type, given at save), `entry_date`, `account_id`, `pukhta_person_key`, `amount_paisa`, `mode` (cash, bank, cheque, salary; salary only for money_lent_return), `bank_account_id`, `cheque_no`, `cheque_date`, `collector_staff_id`, `partner_id`, `expense_head_id`, `expected_goods`, `reason` (required for personal_expense, money_lent, and a payment to a buyer), `return_by_date` (null), `taken_by` (null), `narration`, `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
-| `journal_entries` | `entry_date`, `posting_type` (bikri_first, bikri_later, reversal, receipt, payment, advance, shop_expense, personal_expense, personal_return, money_lent, money_lent_return, general, opening, month_close), `source_type` (bikri, voucher, account, month_close), `source_id`, `reverses_entry_id` (null), `narration`, `status` (draft, posted), `total_paisa`, `chain_hash` |
+| `vouchers` | `type` (receipt, payment, advance, shop_expense, personal_expense, personal_return, money_lent, money_lent_return, capital_in, capital_out, khata_out, khata_in, general), `number` (unique per type, given at save), `entry_date`, `account_id`, `pukhta_person_key`, `amount_paisa`, `mode` (cash, bank, cheque, salary; salary only for money_lent_return), `bank_account_id`, `cheque_no`, `cheque_date`, `collector_staff_id`, `partner_id`, `expense_head_id`, `expected_goods`, `reason` (required for personal_expense, money_lent, and a payment to a buyer), `return_by_date` (null), `taken_by` (null), `narration`, `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
+| `journal_entries` | `entry_date`, `posting_type` (bikri_first, bikri_later, reversal, receipt, payment, advance, shop_expense, personal_expense, personal_return, money_lent, money_lent_return, capital_in, capital_out, khata_out, khata_in, purchase, own_write_off, general, opening, month_close), `source_type` (bikri, voucher, purchase, account, month_close), `source_id`, `reverses_entry_id` (null), `narration`, `status` (draft, posted), `total_paisa`, `chain_hash` |
 | `journal_lines` | `entry_id`, `line_no`, `account_id`, `pukhta_person_key` (null), `dr_paisa`, `cr_paisa`, `is_advance` (seller debit that counts as an advance), `narration`. CHECK: both ≥ 0, exactly one of them > 0. |
 | `bill_allocations` | `bill_line_id` (a debit line on a buyer account), `payment_line_id` (a credit line on the same account), `account_id`, `pukhta_person_key`, `amount_paisa`, `is_active`, `undone_at`, `undone_by` |
 | (no table) seller payable working | Paid and still open per seller credit are worked out at read time, oldest first, from `journal_lines` and `advance_allocations` (PRD FR-7.59). Nothing is stored. |
@@ -726,6 +738,7 @@ erDiagram
 | `journal_entries` | (`entry_date`), (`source_type`, `source_id`) |
 | `bikri_sales` | (`lot_id`), (`buyer_account_id`, `entry_date`), (`journal_entry_id`) |
 | `bikri_lots` | (`bikri_id`), (`seller_account_id`, `id`) for seller memory, (`item_id`, `packing_id`) for the rate hint, (`qty_received`, `qty_sold`, `qty_written_off`) for باقی مال |
+| `purchases` | (`entry_date`), (`supplier_account_id`, `entry_date`), (`item_id`), (`qty`, `qty_sold`, `qty_written_off`) for stock left |
 | `analytics_facts` | (`entry_date`), (`item_id`, `entry_date`), (`seller_account_id`, `entry_date`), (`buyer_account_id`, `entry_date`) |
 | `partner_share_rows` | (`partner_id`, `entry_date`) |
 | `bill_allocations`, `advance_allocations` | (`account_id`, `pukhta_person_key`, `is_active`) |
@@ -896,3 +909,5 @@ Search order (Tech Stack 4.7): exact code, exact serial (taken on Enter; in an a
 | 1.0 | 10-10-2026 | Pre-build drafts and reviews: Umar's requirements, analysis of the old software video, research, client review comments and full cross-document reviews. |
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
 | 1.2 | 12-10-2026 | PRD v1.2: one user (diagrams 1, 2, 5, 7; `users.role`, `users.partner_id` and `partners.user_id` kept but not used). Money lent and partner returns (diagram 6; `vouchers` types, mode, reason, return-by; posting types; read-time working). `bikri_lots` method and value columns and `adjust_advance`; advance matching from seller receipts; `staff.account_id`. |
+| 1.3 | 15-10-2026 | PRD v1.3: own goods (`purchases` table; `bikri_lots.purchase_id`; `bikri_sales.cost_paisa`; `stock_moves.purchase_id`; `analytics_facts.purchase_id` and `cost_paisa`; posting types purchase and own_write_off; diagrams 5, 6 and 15.1). Partner capital (voucher and posting types capital_in, capital_out). الگ کھاتہ (party_type separate, control 0305, voucher and posting types khata_out, khata_in; a lot's seller may be a separate khata). These go in a new numbered migration if 0001 is released by then. |
+| 1.4 | 15-10-2026 | PRD v1.4: one خرچہ screen and one voucher screen (diagrams 5 and 6). No table, column or posting type changed: each type on a shared screen keeps its voucher type and posting type (15.7). |
