@@ -90,6 +90,321 @@
       "stat": "p95",
       "target_ms": 200,
       "$comment": "200 ms = 10% of the 2 s cold start. README Section 6."
+    },
+    {
+      "id": "search/accounts_en_exact",
+      "action": "Picker search, English name, exact start",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_en_typo1",
+      "action": "Picker search, English name, 1 spelling mistake",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_en_typo2",
+      "action": "Picker search, English name, 2 spelling mistakes",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_ur_exact",
+      "action": "Picker search, Urdu name, exact start",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_ur_typo1",
+      "action": "Picker search, Urdu name, 1 spelling mistake",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_ur_typo2",
+      "action": "Picker search, Urdu name, 2 spelling mistakes",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_no_match",
+      "action": "Picker search, text that matches nothing",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_prefix_1",
+      "action": "Picker search, 1 letter typed",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/accounts_prefix_3",
+      "action": "Picker search, 3 letters typed",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/buyers_en_typo1",
+      "action": "Buyer picker search, English name, 1 mistake",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "search/masters_item_typo",
+      "action": "Item picker search with a mistake (500 items)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-6",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7. 20,000 accounts and 2,000 masters; 64 different texts in turn."
+    },
+    {
+      "id": "index/rebuild_22000",
+      "action": "Search index rebuild, 20,000 accounts and 2,000 masters",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-1 (budget)",
+      "stat": "p95",
+      "target_ms": 200,
+      "$comment": "200 ms = 10% of the 2 s cold start, the budget of README Section 6.2 now measured for the whole rebuild (database read and keys). Start-up and after a restore."
+    },
+    {
+      "id": "rules/resolve_spread_10000",
+      "action": "Rule resolution, 10,000 rules spread over parties and items",
+      "kind": "nfr",
+      "nfr": "NFR-SCL-6",
+      "stat": "p95",
+      "target_ms": 1,
+      "$comment": "1 ms. D2-A13. mandi_domain::rules::resolve on a RuleSet of 10,000 rules."
+    },
+    {
+      "id": "rules/resolve_one_party_item_10000",
+      "action": "Rule resolution, 10,000 rules for one party and item (worst case)",
+      "kind": "nfr",
+      "nfr": "NFR-SCL-6",
+      "stat": "p95",
+      "target_ms": 1,
+      "$comment": "1 ms. D2-A13. mandi_domain::rules::resolve on a RuleSet of 10,000 rules."
+    },
+    {
+      "id": "rules/resolve_one_default_10000",
+      "action": "Rule resolution, 10,000 dated versions of one default",
+      "kind": "nfr",
+      "nfr": "NFR-SCL-6",
+      "stat": "p95",
+      "target_ms": 1,
+      "$comment": "1 ms. D2-A13. mandi_domain::rules::resolve on a RuleSet of 10,000 rules."
+    },
+    {
+      "id": "rules/resolve_miss_10000",
+      "action": "Rule resolution, no rule at any of the six levels",
+      "kind": "nfr",
+      "nfr": "NFR-SCL-6",
+      "stat": "p95",
+      "target_ms": 1,
+      "$comment": "1 ms. D2-A13. mandi_domain::rules::resolve on a RuleSet of 10,000 rules."
+    },
+    {
+      "id": "rules/build_10000",
+      "action": "Filing 10,000 rules again after a rule change",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7 (budget)",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "50 ms = half of the 100 ms the live summary has, because the first preview after a rule change files the rules again."
+    },
+    {
+      "id": "accounts/list_all_20000",
+      "action": "Account list, every account with its balance",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "accounts/list_page_200",
+      "action": "Account list, first page of 200",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "accounts/search_text_all",
+      "action": "Account list filtered by text (about 2,000 matches)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "coa/tree",
+      "action": "Chart of accounts tree with every balance",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "assist/party_card_busiest_buyer",
+      "action": "Party card, the busiest buyer (about 55,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "assist/party_card_busiest_seller",
+      "action": "Party card, the busiest seller (about 49,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "assist/party_card_ordinary_buyer",
+      "action": "Party card, an ordinary buyer (about 90 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "assist/party_card_cash_account",
+      "action": "Party card, the cash account (about 514,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "assist/party_card_mixed",
+      "action": "Party card, 43 accounts in turn",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "ledger/party_ledger_busiest_10y",
+      "action": "Party ledger of the busiest buyer, 10 years",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-11",
+      "stat": "p95",
+      "target_ms": 2000,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "ledger/party_ledger_ordinary_10y",
+      "action": "Party ledger of an ordinary buyer, 10 years",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-11",
+      "stat": "p95",
+      "target_ms": 2000,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "ledger/cash_book_one_day",
+      "action": "Cash book of one day (opening = all before)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-10",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "ledger/trial_balance_10y",
+      "action": "Trial balance, 10 years",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-13",
+      "stat": "p95",
+      "target_ms": 2000,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "vouchers/save_advance",
+      "action": "Save an advance voucher for the busiest seller",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "vouchers/save_advance_ordinary_seller",
+      "action": "Save an advance voucher for an ordinary seller",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D2 plan 06/07/08/10 benchmark on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines). README Section 7."
+    },
+    {
+      "id": "translit/suggest_to_urdu_per_key",
+      "action": "Name suggestions per key press, English letters to Urdu",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-20",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 05 benchmark: services::translit::suggest with 500 learned pairs and the embedded word list, texts from the frozen 1,000-name list (NFR-URD-24). README Section 7."
+    },
+    {
+      "id": "translit/suggest_to_urdu_full_name",
+      "action": "Name suggestions for a whole typed name, English letters to Urdu",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-20",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 05 benchmark: services::translit::suggest with 500 learned pairs and the embedded word list, texts from the frozen 1,000-name list (NFR-URD-24). README Section 7."
+    },
+    {
+      "id": "translit/suggest_to_english_per_key",
+      "action": "Name suggestions per key press, Urdu letters to English",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-20",
+      "stat": "p95",
+      "target_ms": 50,
+      "$comment": "D2 plan 05 benchmark: services::translit::suggest with 500 learned pairs and the embedded word list, texts from the frozen 1,000-name list (NFR-URD-24). README Section 7."
     }
   ],
   "install": {

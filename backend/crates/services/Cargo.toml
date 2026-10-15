@@ -18,6 +18,23 @@ strsim.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "search"
+harness = false
+
+[[bench]]
+name = "accounts"
+harness = false
+
+[[bench]]
+name = "rules"
+harness = false
+
+[[bench]]
+name = "translit"
+harness = false
 
 [lints]
 workspace = true

@@ -3,6 +3,7 @@
 mod dates;
 mod money;
 mod parse;
+mod properties;
 mod splits;
 mod text;
 mod words;

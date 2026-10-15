@@ -71,7 +71,7 @@ How to repeat the Mac measurement: `node scripts/perf/run.mjs` five times on an 
 
 ## 4. How each number is measured
 
-- **Criterion benchmarks.** Criterion takes samples; each sample runs the code a number of times. The harness divides each sample's time by its run count and takes the 95th percentile of those values (nearest rank). That is the "p95" in the table. For a benchmark of one user action (milliseconds or more), set `group.sampling_mode(SamplingMode::Flat)` and a `sample_size` of at least 20, so each sample is a few single calls and the p95 is close to the p95 of one action. Each benchmark runs on a database built with the NFR-SCL-1 volume (1,200,000 sale lines, 3,500,000 journal lines, 20,000 accounts) from the generator in `scripts/perf/` (comes with the first benchmark that needs data, plan 03 or later).
+- **Criterion benchmarks.** Criterion takes samples; each sample runs the code a number of times. The harness divides each sample's time by its run count and takes the 95th percentile of those values (nearest rank). That is the "p95" in the table. For a benchmark of one user action (milliseconds or more), set `group.sampling_mode(SamplingMode::Flat)` and a `sample_size` of at least 20, so each sample is a few single calls and the p95 is close to the p95 of one action. Each benchmark runs on a database built with the NFR-SCL-1 volume (1,200,000 sale lines, 3,500,000 journal lines, 20,000 accounts) from the generator described in Section 7.2 (`backend/crates/services/benches/support/mod.rs`).
 - **E2E timings** come from the Windows end-to-end suite (`pnpm e2e`, `frontend/tests/e2e/`): the test reads `performance.now()` in the page around the action, or the time from process start to the first screen. Each action runs at least 20 times; the p95 is reported against the runner threshold.
 - **Long run** (NFR-REL-12, NFR-SPD-16): the E2E suite loops through screens and saves for a fixed time and samples the app's memory (working set) every minute. Pass: under the limit and no upward trend.
 - **Install** (NFR-INS-1): timed by this harness on Windows.
@@ -90,24 +90,24 @@ Factor 1.0, so each runner threshold equals its NFR target. "Plan" is where the 
 | NFR-SPD-1  | Cold start to login screen                               | < 2 s                                         | 2 s                                                                | E2E timing: process start to login screen shown, p95 of 20 starts                                                  | 01 (first screen), 04 (login)           | Pending |
 | NFR-SPD-2  | Login to dashboard fully loaded                          | < 1 s                                         | 1 s                                                                | E2E timing, p95                                                                                                    | 04                                      | Pending |
 | NFR-SPD-3  | Open any screen from the menu                            | < 300 ms                                      | 300 ms                                                             | E2E timing per screen, p95                                                                                         | 04, then each screen                    | Pending |
-| NFR-SPD-4  | Key press to character on screen                         | < 50 ms                                       | 50 ms                                                              | E2E timing: key event to DOM change, p95 of 100 keys, in a field and a grid cell                                   | 04, 11 (grid)                           | Pending |
-| NFR-SPD-5  | Arrow move between cells or fields                       | < 30 ms                                       | 30 ms                                                              | E2E timing: key event to focus change, p95                                                                         | 04, 11                                  | Pending |
-| NFR-SPD-6  | Picker search, 20,000 accounts, typos, both names        | < 50 ms                                       | 50 ms                                                              | Criterion: `services::search` on 20,000 generated accounts, p95; plus E2E                                          | D2 (search)                             | Pending |
+| NFR-SPD-4  | Key press to character on screen                         | < 50 ms                                       | 50 ms                                                              | E2E timing: key event to DOM change, p95 of 100 keys, in a field and a grid cell                                   | 04, 11 (grid)                           | jsdom guard 12-10-2026 (`frontend/tests/robustness/key-latency.test.tsx`); Windows E2E still to do |
+| NFR-SPD-5  | Arrow move between cells or fields                       | < 30 ms                                       | 30 ms                                                              | E2E timing: key event to focus change, p95                                                                         | 04, 11                                  | jsdom guard 12-10-2026 (same file); Windows E2E still to do |
+| NFR-SPD-6  | Picker search, 20,000 accounts, typos, both names        | < 50 ms                                       | 50 ms                                                              | Criterion: `services::search` on 20,000 generated accounts, p95; plus E2E                                          | D2 (search)                             | Measured D2 (Section 8) |
 | NFR-SPD-7  | Live summary after a sale line change (incl. 50 ms wait) | < 150 ms                                      | 150 ms                                                             | Criterion: `bikri_preview` with 30 lines, p95 must be under 100 ms (150 minus the 50 ms wait); plus E2E end to end | D3                                      | Pending |
 | NFR-SPD-8  | Save a بکری with 30 sale lines                           | < 300 ms                                      | 300 ms                                                             | Criterion: `services::bikri::save` on the NFR-SCL-1 database, p95                                                  | D3                                      | Pending |
-| NFR-SPD-9  | Save any voucher                                         | < 150 ms                                      | 150 ms                                                             | Criterion: each voucher save on the NFR-SCL-1 database, p95                                                        | D2 (پیشگی), D4                          | Pending |
-| NFR-SPD-10 | Any report for one day                                   | < 1 s                                         | 1 s                                                                | Criterion: each report query for one busy day (5,000 sale lines), p95                                              | D5                                      | Pending |
-| NFR-SPD-11 | Party ledger for 10 years                                | < 2 s                                         | 2 s                                                                | Criterion: busiest party, 10 years, p95                                                                            | D5                                      | Pending |
+| NFR-SPD-9  | Save any voucher                                         | < 150 ms                                      | 150 ms                                                             | Criterion: each voucher save on the NFR-SCL-1 database, p95                                                        | D2 (پیشگی), D4                          | Measured D2 for the advance (Section 8) |
+| NFR-SPD-10 | Any report for one day                                   | < 1 s                                         | 1 s                                                                | Criterion: each report query for one busy day (5,000 sale lines), p95                                              | D5                                      | Cash book of one day measured D2 (Section 8); the other reports are D5 |
+| NFR-SPD-11 | Party ledger for 10 years                                | < 2 s                                         | 2 s                                                                | Criterion: busiest party, 10 years, p95                                                                            | D5                                      | Measured D2 (Section 8) |
 | NFR-SPD-12 | Any analytics view over 5 years                          | < 1 s SSD, < 3 s HDD                          | 1 s (SSD only)                                                     | Criterion: each view A to H over 5 years, p95. HDD on reference hardware only                                      | D5                                      | Pending |
-| NFR-SPD-13 | Trial balance for 10 years                               | < 2 s                                         | 2 s                                                                | Criterion, p95                                                                                                     | D5                                      | Pending |
+| NFR-SPD-13 | Trial balance for 10 years                               | < 2 s                                         | 2 s                                                                | Criterion, p95                                                                                                     | D5                                      | Measured D2 (Section 8) |
 | NFR-SPD-14 | Print preview of a 15-page report                        | < 2 s                                         | 2 s                                                                | E2E timing: preview command to preview shown, p95                                                                  | D3 (first print), D5                    | Pending |
 | NFR-SPD-15 | Local backup snapshot, 300 MB                            | < 5 s                                         | 5 s                                                                | Criterion or timed test in `mandi-backup` on a 300 MB database, p95 of 10                                          | D5                                      | Pending |
 | NFR-SPD-16 | Memory in normal use                                     | < 400 MB                                      | 400 MB                                                             | Long run: working set sampled every minute                                                                         | 01 (D1 attack list, 30-minute loop), D5 | Pending |
 | NFR-SPD-17 | Long tasks show progress, never freeze                   | Rule: progress shown; screen keeps responding | Same rule; key press during the task still under 50 ms (NFR-SPD-4) | E2E: start an export or restore, type during it                                                                    | D5                                      | Pending |
 | NFR-SPD-18 | Lists with thousands of rows scroll smoothly             | Rule: only visible rows are drawn             | Same rule: rendered row count stays under 100 with 10,000 rows     | E2E: count rendered rows while scrolling                                                                           | D3 (first big grid), D5                 | Pending |
 | NFR-SPD-19 | Language switch, incl. a بکری with 30 unsaved lines      | < 500 ms                                      | 500 ms                                                             | E2E timing: `Alt+L` to `dir` changed and text redrawn, p95                                                         | 01 (first screen), 04, D3 (بکری)        | Pending |
-| NFR-SPD-20 | English-to-Urdu suggestions per key                      | < 50 ms                                       | 50 ms                                                              | Criterion: `translit_suggest` for the 1,000-name list, p95                                                         | D2                                      | Pending |
-| NFR-SPD-21 | Party card, 10 years of data                             | < 100 ms                                      | 100 ms                                                             | Criterion: `assist_party_card` on the NFR-SCL-1 database, p95                                                      | D2                                      | Pending |
+| NFR-SPD-20 | English-to-Urdu suggestions per key                      | < 50 ms                                       | 50 ms                                                              | Criterion: `translit_suggest` for the 1,000-name list, p95                                                         | D2                                      | Measured D2 (Section 8) |
+| NFR-SPD-21 | Party card, 10 years of data                             | < 100 ms                                      | 100 ms                                                             | Criterion: `assist_party_card` on the NFR-SCL-1 database, p95                                                      | D2                                      | Measured D2 (Section 8) |
 | NFR-SPD-22 | Attention list count after a save                        | within 1 s                                    | 1 s                                                                | Integration timing: save to updated count, p95                                                                     | D5                                      | Pending |
 | NFR-SPD-23 | Rate hint, seller and truck memory                       | < 100 ms                                      | 100 ms                                                             | Criterion: each `assist_*` query on the NFR-SCL-1 database, p95                                                    | D3                                      | Pending |
 
@@ -116,7 +116,7 @@ Other measured targets:
 | ID         | Action                                     | NFR target             | Runner threshold | How measured                                                                                           | Plan       | Status                       |
 | ---------- | ------------------------------------------ | ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------- |
 | NFR-INS-1  | Install with no internet needed            | < 2 minutes            | 2 minutes        | This harness on Windows (silent NSIS install). The no-internet install is on Umar's go-live checklist. | 01         | Measured on each Windows run |
-| NFR-SCL-6  | Find the winning rule, 10,000 rules        | < 1 ms                 | 1 ms             | Criterion: rule resolution, p95                                                                        | D2 (rules) | Pending                      |
+| NFR-SCL-6  | Find the winning rule, 10,000 rules        | < 1 ms                 | 1 ms             | Criterion: rule resolution, p95                                                                        | D2 (rules) | Measured D2 (Section 8)       |
 | NFR-REL-12 | 12 hours with no slowdown or memory growth | No slowdown, no growth | Same             | Long run, simulated with many operations                                                               | D5         | Pending                      |
 
 When a measurement is added, its plan file adds an entry to `thresholds.json` (`kind: "nfr"`, `nfr`, `action`, `stat: "p95"`, `target_ms`) and changes its Status here to "Measured".
@@ -171,3 +171,143 @@ Criterion mean on the Apple M1 Pro. "Reference estimate" = Mac × 3,752 ÷ 2,268
 | `index/keys_20000_accounts` | 19.7 ms | 32.6 ms | 200 ms | about 6 × |
 
 The budgets are hard limits taken from the NFR, not alarms set just above today's time. A slowdown that stays inside a budget passes; one that breaks it means the action's NFR target is at risk and is a finding.
+
+
+## 7. The D2 benchmarks and the NFR-SCL-1 data
+
+Added 12-10-2026 for plans 03 to 10. Owner: `robustness`.
+
+### 7.1 What runs
+
+`pnpm perf` runs these benchmark files (`[[bench]]` entries with `harness = false`):
+
+| File | Group ids | NFR |
+|---|---|---|
+| `backend/crates/core/benches/calibration.rs` | `calibration` | runner factor |
+| `backend/crates/core/benches/money.rs` | `money`, `preview` | NFR-SPD-7 budgets |
+| `backend/crates/core/benches/text.rs` | `text`, `index/keys` | NFR-SPD-6 and NFR-SPD-1 budgets |
+| `backend/crates/services/benches/search.rs` | `search`, `index/rebuild` | NFR-SPD-6 |
+| `backend/crates/services/benches/rules.rs` | `rules` | NFR-SCL-6 |
+| `backend/crates/services/benches/accounts.rs` | `accounts`, `coa`, `assist`, `ledger`, `vouchers` | NFR-SPD-3, 9, 10, 11, 13, 21 |
+| `backend/crates/services/benches/translit.rs` | `translit` | NFR-SPD-20 |
+
+Each service benchmark calls the same service function the screen calls (`search::search_accounts`, `accounts::list`, `assist::party_card`, `ledger::trial_balance`, `vouchers::save_advance`, `translit::suggest`), on the signed-in Owner's context, so the number includes the database, the checks and the audit row. It is not a number for an inner helper.
+
+### 7.2 The data (NFR-SCL-1)
+
+The generator is `backend/crates/services/benches/support/mod.rs`. It lives next to the Rust benchmarks, not in this folder, because it must use the real schema, indexes and triggers (every entry is first a draft and one `UPDATE` makes it posted, so the balance trigger checks all of them) and the real start-up path for the Owner and the system accounts.
+
+It builds once and keeps the file in `backend/target/perf/nfr_scl1/` (set `MANDI_PERF_DIR` to use another folder). The next run opens it again. A marker file `volume.ok` holds the generator version and the entry count; if either changes, the folder is deleted and built again. Delete the folder by hand to force a rebuild. `MANDI_PERF_BUILD_ONLY=1 cargo bench -p mandi-services --bench search` builds the data and stops.
+
+What is in it:
+
+| Part | Count |
+|---|---|
+| Accounts | 20,000: 8,999 sellers (03011), 8,999 buyers (0304), 2,002 others (0103) |
+| Masters | 2,000: 400 cities, 500 items, 100 packings, 300 addas, 100 stores, 200 expense heads, 400 staff |
+| Posted journal entries | 1,030,000, dated 11-10-2016 to 10-10-2026 (10 years) |
+| Journal lines | 3,503,940 |
+| Data file | about 670 MB |
+| Skewed accounts | the cash account has about 514,000 lines; the busiest buyer (03040001) about 55,000; the busiest seller (030110001) about 49,000; an ordinary buyer (03044500) about 90 |
+
+The skew is on purpose. A shop has a few parties that trade every day and the cash account is touched by every cash sale, so the worst case of a balance, a party card and a ledger is a busy account, not an average one. Benchmarks report the busiest and an ordinary account side by side.
+
+Not in it: the 1,200,000 sale lines of NFR-SCL-1 (`bikri_sales`, `analytics_facts`). No D1 or D2 query reads those tables. D3 adds them to the generator when the first بکری benchmark needs them; the version string is then raised so the file is built again.
+
+### 7.3 How to read the output
+
+```
+Action | NFR | Measured | Stat | Mean | Runner threshold | NFR target | Result
+```
+
+- **Measured** is the 95th percentile (p95) of the per-sample time per call, by nearest rank (Section 4). **Mean** is criterion's mean, for comparison.
+- **Runner threshold** is the NFR target times the runner factor (1.0). A row is `OK` when measured is at or under it and `OVER` when it is above.
+- `MISSING` means a registered benchmark did not run. `NO THRESHOLD` means a benchmark ran that has no entry in `thresholds.json`. Both fail the run.
+- The exit code is 0 (all rows OK or SKIPPED), 1 (any row not OK) or 2 (the harness itself failed).
+- **The Mac is faster than the reference machine.** The developer Mac (Apple M1 Pro, PassMark single-thread 3,752) is about 1.65 times faster than the reference Core i3-7100 (2,268), and the GitHub Windows runner is about 1.11 times faster (Section 2). A row that passes on the Mac with less than 1.65 times of room may still fail on the reference computer. For a close row, multiply the Mac number by 3,752 ÷ 2,268 = 1.65 to estimate the reference time.
+- The p95 of a flat sample of a few calls is close to the p95 of one call, but a slow call that happens once in a hundred (a checkpoint, a cache miss) shows in the Mean more than in the p95. When the two differ a lot (for example 642 ms mean and 1.94 s p95), the first call after a quiet moment is much slower than the next ones: the cold file cache. A user sees the cold number the first time he opens a busy party in the morning.
+
+### 7.4 Frontend timing
+
+`frontend/tests/robustness/key-latency.test.tsx` measures key press to character (NFR-SPD-4) and arrow key to focus (NFR-SPD-5) in jsdom, for the money and quantity fields and for the entry grid with 30 and 100 lines. It prints one line per case (`key-latency: ... p95 ... ms`). jsdom has no painting, so the numbers are the page's own code only: a guard against a slow handler or a render of too many rows, not proof of the NFR. The arrow-move guard is 100 ms (about three times the target) because AG Grid's focus code costs 13 to 17 ms per move in jsdom on a quiet machine and up to 45 ms on a busy one; it catches a slowdown of an order of magnitude. The real number comes from the Windows end-to-end suite. Typical quiet-machine values (12-10-2026): money and quantity fields p95 2 to 3 ms, grid cell typing p95 7 to 9 ms with 30 or 100 lines, arrow move p95 15 to 23 ms.
+
+
+## 8. Results of the first full D2 run (12-10-2026)
+
+Command: `pnpm perf` from the repository root (cargo bench of the whole workspace, then the table). The data is the NFR-SCL-1 volume of Section 7.2. Runner factor 1.0, so every threshold is the NFR target. The machine is the developer Mac, which is about 1.65 times faster than the reference computer (Section 7.3): multiply a Mac time by 1.65 to estimate the reference time.
+
+Machine: Apple M1 Pro, 8 logical CPUs, 16 GB. Runner factor 1.
+
+| Action | NFR | p95 | Mean | NFR target | Result |
+|---|---|---|---|---|---|
+| Calibration (fixed CPU workload) | factor check | 235.2 us | 235.2 us | - | CHECK FACTOR |
+| apply_bps, one percent charge | NFR-SPD-7 (budget) | 2.5 ns | 2.4 ns | 1.0 us | OK |
+| parse_rupees, one money text | NFR-SPD-7 (budget) | 258.3 ns | 166.5 ns | 2.0 us | OK |
+| split_by_bps, 3 partners | NFR-SPD-7 (budget) | 119.5 ns | 89.8 ns | 5.0 us | OK |
+| split_by_bps, 10 partners | NFR-SPD-7 (budget) | 254.4 ns | 248.5 ns | 10.0 us | OK |
+| Preview money maths, 500 lines | NFR-SPD-7 (budget) | 271.4 us | 254.3 us | 10.00 ms | OK |
+| normalize_urdu, one name | NFR-SPD-6 (budget) | 671.2 ns | 659.8 ns | 5.0 us | OK |
+| Three search keys, one name | NFR-SPD-6 (budget) | 1.3 us | 1.3 us | 10.0 us | OK |
+| Three search keys, 100-char name | NFR-SPD-6 (budget) | 5.3 us | 5.0 us | 30.0 us | OK |
+| Search keys for 20,000 accounts | NFR-SPD-1 (budget) | 22.78 ms | 22.57 ms | 200.00 ms | OK |
+| Picker search, English name, exact start | NFR-SPD-6 | 713.4 us | 681.6 us | 50.00 ms | OK |
+| Picker search, English name, 1 spelling mistake | NFR-SPD-6 | 3.30 ms | 2.92 ms | 50.00 ms | OK |
+| Picker search, English name, 2 spelling mistakes | NFR-SPD-6 | 4.19 ms | 3.88 ms | 50.00 ms | OK |
+| Picker search, Urdu name, exact start | NFR-SPD-6 | 559.2 us | 551.2 us | 50.00 ms | OK |
+| Picker search, Urdu name, 1 spelling mistake | NFR-SPD-6 | 5.22 ms | 5.01 ms | 50.00 ms | OK |
+| Picker search, Urdu name, 2 spelling mistakes | NFR-SPD-6 | 7.07 ms | 5.58 ms | 50.00 ms | OK |
+| Picker search, text that matches nothing | NFR-SPD-6 | 5.11 ms | 4.95 ms | 50.00 ms | OK |
+| Picker search, 1 letter typed | NFR-SPD-6 | 803.4 us | 780.5 us | 50.00 ms | OK |
+| Picker search, 3 letters typed | NFR-SPD-6 | 813.2 us | 775.5 us | 50.00 ms | OK |
+| Buyer picker search, English name, 1 mistake | NFR-SPD-6 | 2.70 ms | 2.63 ms | 50.00 ms | OK |
+| Item picker search with a mistake (500 items) | NFR-SPD-6 | 16.0 us | 15.7 us | 50.00 ms | OK |
+| Search index rebuild, 20,000 accounts and 2,000 masters | NFR-SPD-1 (budget) | 76.21 ms | 75.10 ms | 200.00 ms | OK |
+| Rule resolution, 10,000 rules spread over parties and items | NFR-SCL-6 | 245.4 ns | 241.2 ns | 1.00 ms | OK |
+| Rule resolution, 10,000 rules for one party and item (worst case) | NFR-SCL-6 | 10.1 us | 9.3 us | 1.00 ms | OK |
+| Rule resolution, 10,000 dated versions of one default | NFR-SCL-6 | 9.6 us | 9.5 us | 1.00 ms | OK |
+| Rule resolution, no rule at any of the six levels | NFR-SCL-6 | 53.7 ns | 50.5 ns | 1.00 ms | OK |
+| Filing 10,000 rules again after a rule change | NFR-SPD-7 (budget) | 1.95 ms | 926.9 us | 50.00 ms | OK |
+| Account list, every account with its balance | NFR-SPD-3 | 2.73 s | 1.92 s | 300.00 ms | OVER |
+| Account list, first page of 200 | NFR-SPD-3 | 318.79 ms | 291.90 ms | 300.00 ms | OVER |
+| Account list filtered by text (about 2,000 matches) | NFR-SPD-3 | 412.28 ms | 253.73 ms | 300.00 ms | OVER |
+| Chart of accounts tree with every balance | NFR-SPD-3 | 1.81 s | 1.63 s | 300.00 ms | OVER |
+| Party card, the busiest buyer (about 55,000 lines) | NFR-SPD-21 | 241.25 ms | 159.65 ms | 100.00 ms | OVER |
+| Party card, the busiest seller (about 49,000 lines) | NFR-SPD-21 | 228.29 ms | 182.61 ms | 100.00 ms | OVER |
+| Party card, an ordinary buyer (about 90 lines) | NFR-SPD-21 | 146.7 us | 134.6 us | 100.00 ms | OK |
+| Party card, the cash account (about 514,000 lines) | NFR-SPD-21 | 525.99 ms | 448.13 ms | 100.00 ms | OVER |
+| Party card, 43 accounts in turn | NFR-SPD-21 | 33.79 ms | 8.17 ms | 100.00 ms | OK |
+| Party ledger of the busiest buyer, 10 years | NFR-SPD-11 | 218.25 ms | 188.28 ms | 2.00 s | OK |
+| Party ledger of an ordinary buyer, 10 years | NFR-SPD-11 | 144.2 us | 139.8 us | 2.00 s | OK |
+| Cash book of one day (opening = all before) | NFR-SPD-10 | 782.42 ms | 629.08 ms | 1.00 s | OK |
+| Trial balance, 10 years | NFR-SPD-13 | 1.97 s | 1.64 s | 2.00 s | OK |
+| Save an advance voucher for the busiest seller | NFR-SPD-9 | 201.17 ms | 174.33 ms | 150.00 ms | OVER |
+| Save an advance voucher for an ordinary seller | NFR-SPD-9 | 4.94 ms | 4.48 ms | 150.00 ms | OK |
+| Name suggestions per key press, English letters to Urdu | NFR-SPD-20 | 669.1 us | 390.8 us | 50.00 ms | OK |
+| Name suggestions for a whole typed name, English letters to Urdu | NFR-SPD-20 | 809.8 us | 578.1 us | 50.00 ms | OK |
+| Name suggestions per key press, Urdu letters to English | NFR-SPD-20 | 13.26 ms | 5.95 ms | 50.00 ms | OK |
+| Install (NSIS, silent) | NFR-INS-1 | - | - | 120.00 s | SKIPPED |
+
+`pnpm perf` exit code 1: 8 rows OVER (the first run had 9). Everything else is OK, most of it by a wide margin: picker search 0.6 to 7 ms against 50 ms, rule resolution 0.05 to 10 us against 1 ms, name suggestions 0.4 to 13 ms against 50 ms, party ledger 218 ms against 2 s, voucher save for an ordinary seller 5 ms against 150 ms.
+
+### 8.1 The rows that are OVER
+
+All eight come from one cause. A balance is worked out when it is asked for: `SUM` over every journal line of the account, joined one line at a time to `journal_entries` to check that the entry is posted (`backend/crates/db/src/ledger.rs`, `totals_for_accounts`; `EXPLAIN QUERY PLAN`: `SEARCH l USING INDEX idx_journal_lines_account_entry (account_id=?)`, then `SEARCH e USING INTEGER PRIMARY KEY (rowid=?)` for each line). The cost grows with the number of lines of the account. Measured with the `sqlite3` tool on the same file, warm cache, CPU time: the busiest buyer (55,658 lines) 105 ms for the balance and 56 ms more for the last entry date; the cash account (513,970 lines) 360 ms for the balance. The party card does both (and a third scan for a seller's open advance), the account list and the chart tree do the balance for every account on the page, and the trial balance does it for all of them.
+
+| Row | Run 1 p95 | Run 2 p95 | Target | On the reference computer (x 1.65, run 2) |
+|---|---|---|---|---|
+| Party card, busiest buyer | 1.94 s | 241 ms | 100 ms | about 400 ms |
+| Party card, busiest seller | 599 ms | 228 ms | 100 ms | about 380 ms |
+| Party card, cash account | 1.20 s | 526 ms | 100 ms | about 870 ms |
+| Account list, first page of 200 | 442 ms | 319 ms | 300 ms | about 530 ms |
+| Account list, filtered by text | 302 ms | 412 ms | 300 ms | about 680 ms |
+| Account list, every account | 2.10 s | 2.73 s | 300 ms | about 4.5 s |
+| Chart of accounts tree | 2.08 s | 1.81 s | 300 ms | about 3.0 s |
+| Save an advance, busiest seller | 239 ms | 201 ms | 150 ms | about 330 ms |
+
+Trial balance, 10 years: run 1 2.51 s (OVER), run 2 1.97 s (OK by 30 ms). On the reference computer it would be about 3.2 s. Treat it as OVER.
+
+Run 1 and run 2 differ because the Mac was shared. Other builds and test runs were using it (load average 15.9 on 8 cores when checked), and run 2's calibration row also reads `CHECK FACTOR` (235 us against the expected 228 us; run 1 read 135 us). Run 1 also had a colder file cache: the first call after a quiet moment is much slower (the 642 ms mean against a 160 ms mean for the busiest buyer). The CPU-time measurement above does not depend on the load, and it agrees with run 2. The numbers on the Windows runner are the ones that count (Release_Pipeline.md Section 4).
+
+What the NFR says: NFR-SPD-21 (party card under 100 ms with 10 years of data), NFR-SPD-3 (a screen opens under 300 ms), NFR-SPD-9 (a voucher saves under 150 ms), NFR-SPD-13 (trial balance under 2 s). NFR-SPD-2 (login to dashboard under 1 s) is not measured yet, but the dashboard's cash tile reads the balance of the cash account, which costs 360 ms to 530 ms here.
+
+A way to fix it, for `backend` to decide: keep a running balance per account (and per پختہ کھاتہ person) in a table that the posting writes in the same transaction (Code Standards B20), so a balance, a card, a list page, the tree and the trial balance read one row each. The books stay the source of truth: the daily check (NFR-REL-8) compares the table with the sum of the lines.
