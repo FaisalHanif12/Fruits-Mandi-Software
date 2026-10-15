@@ -56,11 +56,20 @@ New error codes (added in `core::error`, with `errors.ftl` messages in `ur` and 
 - Four states on each page, keyboard only (arrows between rows, `F10` save), both directions, 1024 × 600 with no sideways scroll, language switch in the middle of an edit loses nothing (form state above the screen).
 - Design: `/design` is not available in this session. Fallback of README Section 5: `frontend` designs inside `docs/design/design-system.md` with the `frontend-design` plugin and the `bilingual-screen` skill, and notes any change in `docs/design/`.
 
+### Contract as built in T1 (agreed 15-10-2026, recorded by the lead)
+
+- Every command except `partners_list` and `partners_overview` takes one `input` object.
+- `ERR_SHARES_NOT_100` already existed. New codes: `ERR_SHARE_BACKDATED` (value `today`), `ERR_PARTNER_HAS_SHARE`, `ERR_PARTNER_NOT_LISTED` (field `shares`), `ERR_TOO_MANY_PARTNERS` (value `max` = 10). Their `errors.ftl` messages (ur and en, `# review: pending`) are written by `frontend`.
+- The name spelling confirmation is the masters one: `confirmed_rules_words: string[]` (default empty), not a `spelling` field. `PartnerCreateInput` is `{ name_ur, name_en, opening_capital: string | null, confirmed_rules_words }`. `PartnerUpdateInput` is `{ id, version, name_ur, name_en, is_active, confirmed_rules_words }`.
+- `share_bps` is a plain number (4000 = 40%). `effective_from` in `PartnersSetSharesInput` is DD-MM-YYYY text; `ShareHistoryRow.effective_from` comes back as YYYY-MM-DD, like the other lists.
+- `SharesCheck = { total_bps, is_100, errors: LineError[] }` with field paths `shares[i].share`.
+- `PartnerOverviewRow` money fields are signed `Paisa`; `capital_balance_paisa` is negative if the capital account stands on the debit side.
+
 ## 5. Tasks
 
 | # | Task | Owner | Blocked by |
 |---|---|---|---|
-| T1 | Contract: Rust types, command stubs returning `ERR_NOT_IMPLEMENTED`, new error codes, `pnpm gen:types` | backend | |
+| T1 | Contract: Rust types, command stubs returning `ERR_NOT_IMPLEMENTED`, new error codes, `pnpm gen:types` (done) | backend | |
 | T2 | Domain split, the hook in `ledger::post`, services, commands, tests, seed, money agent before and after | backend | T1 |
 | T3 | Setup, overview and wizard step against the stubs; Fluent in both languages | frontend | T1 |
 | T4 | Wire to the real commands; wizard step end to end | frontend | T2, T3 |
