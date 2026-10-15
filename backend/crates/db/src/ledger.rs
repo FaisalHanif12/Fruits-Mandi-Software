@@ -561,17 +561,50 @@ pub fn totals_for_accounts(
 /// How many of an account's newest lines [`last_entry_date`] reads first.
 pub const LAST_DATE_SAMPLE_LINES: i64 = 1_000;
 
+/// How many entries dated after the newest sampled line [`last_entry_date`] is willing to look
+/// through. Above it the answer comes from the old per-line join instead.
+///
+/// Measured on the NFR-SCL-1 volume (1.03 million entries, 3.5 million lines, warm cache):
+/// the look at later entries costs about 0.4 to 0.5 microseconds for each of them, so 50,000 of
+/// them is about 25 ms at the worst. The count that decides this reads only the date index, about
+/// 0.03 microseconds for each entry, so 1.5 ms at the worst. The per-line join costs 0.2 to 0.8
+/// microseconds for each line of the account (12 ms for a dormant account with 60,000 lines
+/// in a row, 44 ms for the busiest buyer whose lines are spread over ten years).
+pub const LAST_DATE_LATER_ENTRIES: i64 = 50_000;
+
 /// The date of the last posted entry that has a line on this account (`YYYY-MM-DD`), if any:
 /// the newest of all the entry dates, a back-dated entry included.
 ///
-/// An account with fewer than [`LAST_DATE_SAMPLE_LINES`] lines is read whole. A busier one (the
-/// cash account has half a million lines) is done in two steps that give the same answer:
-/// the newest date among its newest lines, then a look at the entries dated after that date, the
-/// only ones that could be later. That is a few days of entries, not every line of the account.
+/// Three ways, all with the same answer (the oracle is the old per-line join, kept as
+/// `join_last_entry_date`):
+///
+/// 1. An account with fewer than [`LAST_DATE_SAMPLE_LINES`] lines is read whole.
+/// 2. A busier account whose newest lines are recent (the cash account has half a million lines,
+///    and a regular buyer was served yesterday) takes the newest date among its newest lines,
+///    then looks at the entries dated after that date, the only ones that could be later. That is
+///    a few days of entries, not every line of the account.
+/// 3. A busier account that has been dormant for a long time has a million entries after its last
+///    line, and step 2 would look through all of them (330 ms and more, against NFR-SPD-21,
+///    100 ms). When more than [`LAST_DATE_LATER_ENTRIES`] entries are dated after its newest
+///    sampled line, the join over its own lines is cheaper and is used instead.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn last_entry_date(conn: &Connection, account_id: i64) -> rusqlite::Result<Option<String>> {
+    last_entry_date_with(conn, account_id, LAST_DATE_LATER_ENTRIES)
+}
+
+/// [`last_entry_date`] with the number of later entries that makes an account dormant given, so a
+/// test can reach both ways without writing fifty thousand entries.
+///
+/// # Errors
+/// Any SQLite error.
+#[doc(hidden)]
+pub fn last_entry_date_with(
+    conn: &Connection,
+    account_id: i64,
+    later_entries_limit: i64,
+) -> rusqlite::Result<Option<String>> {
     let (lines, newest): (i64, Option<String>) = conn.query_row(
         "SELECT COUNT(*), MAX(CASE WHEN e.status = 'posted' THEN e.entry_date END)
          FROM (SELECT entry_id FROM journal_lines WHERE account_id = ?1
@@ -585,14 +618,37 @@ pub fn last_entry_date(conn: &Connection, account_id: i64) -> rusqlite::Result<O
     }
     // Older lines belong to entries with smaller ids. Such an entry can still have a later date
     // (it was dated ahead of newer postings), so every entry dated after `newest` is checked.
+    // An empty `newest` (every sampled line is in a draft) counts every entry.
+    let after = newest.as_deref().unwrap_or("");
+    // Count them first, up to the limit. Drafts and all other entries are counted too: this only
+    // chooses the cheaper way and never changes the answer.
+    let later_entries: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM (SELECT 1 FROM journal_entries WHERE entry_date > ?1 LIMIT ?2)",
+        params![after, later_entries_limit.saturating_add(1)],
+        |r| r.get(0),
+    )?;
+    if later_entries > later_entries_limit {
+        return join_last_entry_date(conn, account_id);
+    }
     let later: Option<String> = conn.query_row(
         "SELECT MAX(e.entry_date) FROM journal_entries e
          WHERE e.status = 'posted' AND e.entry_date > ?2
            AND EXISTS (SELECT 1 FROM journal_lines l WHERE l.account_id = ?1 AND l.entry_id = e.id)",
-        params![account_id, newest.as_deref().unwrap_or("")],
+        params![account_id, after],
         |r| r.get(0),
     )?;
     Ok(later.or(newest))
+}
+
+/// The date of the last posted entry of the account by the join over every line of the account.
+/// The cost grows with the lines of the account, whatever the dates are.
+fn join_last_entry_date(conn: &Connection, account_id: i64) -> rusqlite::Result<Option<String>> {
+    conn.query_row(
+        "SELECT MAX(e.entry_date) FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id = ?1 AND e.status = 'posted'",
+        [account_id],
+        |r| r.get(0),
+    )
 }
 
 /// What a seller was given as advances, in paisa: the posted debit lines flagged as an advance

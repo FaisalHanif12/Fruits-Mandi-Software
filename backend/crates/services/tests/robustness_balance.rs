@@ -49,6 +49,8 @@ const INDEXES_OF_0002: [&str; 3] = [
     "idx_journal_entries_unposted",
     "idx_journal_lines_advance",
 ];
+const TRIGGER_OF_0003: &str = "accounts_system_stays_active";
+const LATEST_VERSION: i64 = 3;
 const NOW: &str = "2026-10-10T09:00:00Z";
 
 // ---- small helpers ----
@@ -886,7 +888,10 @@ fn objects(dir: &TempDir) -> Vec<(String, String)> {
         .unwrap()
 }
 
-fn migration_case(with_draft: bool) {
+/// `from_version` is the schema version of the faked old file: 1 (0002 and 0003 both run) or
+/// 2 (only 0003 runs).
+fn migration_case(with_draft: bool, from_version: i64) {
+    assert!(from_version == 1 || from_version == 2);
     let w = world();
     let p = populate(&w);
     if with_draft {
@@ -906,20 +911,32 @@ fn migration_case(with_draft: bool) {
     let World { dir, env, .. } = w;
     drop(env);
 
-    // Put the file back to schema version 1: the three indexes of 0002 are the only difference.
+    // Put the file back to an old schema version. The only differences from the latest file are
+    // what the later migrations add: the three indexes of 0002 (gone at version 1 only) and the
+    // trigger `accounts_system_stays_active` of 0003 (gone at versions 1 and 2).
     {
         let conn = raw(&dir);
-        for name in INDEXES_OF_0002 {
-            conn.execute_batch(&format!("DROP INDEX {name}")).unwrap();
+        if from_version == 1 {
+            for name in INDEXES_OF_0002 {
+                conn.execute_batch(&format!("DROP INDEX {name}")).unwrap();
+            }
         }
-        conn.pragma_update(None, "user_version", 1).unwrap();
+        conn.execute_batch(&format!("DROP TRIGGER {TRIGGER_OF_0003}"))
+            .unwrap();
+        conn.pragma_update(None, "user_version", from_version)
+            .unwrap();
     }
     for name in INDEXES_OF_0002 {
-        assert!(
-            !index_names(&dir).iter().any(|n| n == name),
-            "{name} must be gone"
+        assert_eq!(
+            index_names(&dir).iter().any(|n| n == name),
+            from_version == 2,
+            "{name}: wrong state in the faked version {from_version} file"
         );
     }
+    assert!(
+        !objects(&dir).iter().any(|(_, n)| n == TRIGGER_OF_0003),
+        "{TRIGGER_OF_0003} must be gone"
+    );
     assert_eq!(
         old_totals(&raw(&dir), p.busy, None),
         busy_total,
@@ -937,7 +954,7 @@ fn migration_case(with_draft: bool) {
     let version: i64 = raw(&dir)
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 2, "schema version after opening");
+    assert_eq!(version, LATEST_VERSION, "schema version after opening");
     for name in INDEXES_OF_0002 {
         assert!(
             index_names(&dir).iter().any(|n| n == name),
@@ -947,7 +964,7 @@ fn migration_case(with_draft: bool) {
     assert_eq!(
         objects(&dir),
         objects_before,
-        "a table, trigger or view changed"
+        "a table, trigger or view differs from the latest file (0003's trigger must be back)"
     );
     assert_eq!(
         fingerprint(&dir, &["audit_log"]),
@@ -974,9 +991,9 @@ fn migration_case(with_draft: bool) {
         .unwrap()
         .map(|e| e.unwrap().path())
         .filter(|p| {
-            p.file_name()
-                .and_then(|n| n.to_str())
-                .is_some_and(|n| n.starts_with("pre-migration-1-2-"))
+            p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
+                n.starts_with(&format!("pre-migration-{from_version}-{LATEST_VERSION}-"))
+            })
         })
         .collect();
     assert_eq!(
@@ -988,7 +1005,7 @@ fn migration_case(with_draft: bool) {
     let copy_version: i64 = copy
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(copy_version, 1, "the copy is the old file");
+    assert_eq!(copy_version, from_version, "the copy is the old file");
     let copy_integrity: String = copy
         .query_row("PRAGMA integrity_check", [], |r| r.get(0))
         .unwrap();
@@ -1040,12 +1057,17 @@ fn migration_case(with_draft: bool) {
 
 #[test]
 fn an_old_file_migrated_to_0002_keeps_every_number() {
-    migration_case(false);
+    migration_case(false, 1);
 }
 
 #[test]
 fn an_old_file_with_a_left_over_draft_migrates_and_still_leaves_the_draft_out() {
-    migration_case(true);
+    migration_case(true, 1);
+}
+
+#[test]
+fn a_version_2_file_migrated_to_0003_keeps_every_number() {
+    migration_case(false, 2);
 }
 
 // ---- 5. system accounts ----
@@ -1149,38 +1171,77 @@ fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
             .is_active
     );
 
-    // A file where somebody set a system account inactive by hand: the app can put it right,
-    // and a posting to it works again. (The database itself does not stop this update; see the
-    // report.)
+    // The database itself refuses the update (migration 0003, PRD FR-10.4): ERR_SYSTEM_ACCOUNT,
+    // the account stays active and nothing at all is written.
+    let before = fingerprint(&w.dir, &[]);
+    let audit_before = audit_total(&w.dir);
     let raw_conn = raw(&w.dir);
-    let changed = raw_conn.execute("UPDATE accounts SET is_active = 0 WHERE id = ?1", [w.cash]);
-    eprintln!("system account, raw is_active = 0: {changed:?}");
-    if changed.is_ok() {
-        let refused = ledger::post(
-            &w.env.ctx,
-            &raw_conn,
-            w.owner.user_id,
-            &PostingEvent {
-                date: BusinessDate::parse_iso("2026-10-10").unwrap(),
-                posting_type: PostingType::General,
-                source_type: SourceType::Voucher,
-                source_id: 903,
-                narration: None,
-                reverses: None,
-                entry: build_entry(vec![
-                    LedgerLine::new(AccountId::new(w.cash), Side::Dr, rupees(10)),
-                    LedgerLine::new(AccountId::new(w.capital), Side::Cr, rupees(10)),
-                ])
-                .unwrap(),
-            },
-        );
-        assert!(
-            refused.is_err(),
-            "a new posting on an inactive cash account must be refused"
-        );
-        drop(raw_conn);
-        let healed = accounts::set_active(&w.env.ctx, &w.owner, w.cash, true).unwrap();
-        assert!(healed.is_active);
-        post_plan(&w, w.cash, &[(TODAY_OFFSET, 1)]);
-    }
+    let refused = raw_conn
+        .execute("UPDATE accounts SET is_active = 0 WHERE is_system = 1", [])
+        .expect_err("the raw update must be refused by the trigger");
+    eprintln!("system account, raw is_active = 0: {refused:?}");
+    assert!(
+        matches!(
+            &refused,
+            mandi_services::db::rusqlite::Error::SqliteFailure(f, _)
+                if f.code == mandi_services::db::rusqlite::ErrorCode::ConstraintViolation
+        ),
+        "not a constraint violation: {refused:?}"
+    );
+    assert!(
+        refused.to_string().contains("ERR_SYSTEM_ACCOUNT"),
+        "wrong message: {refused}"
+    );
+    let still_inactive: i64 = raw_conn
+        .query_row(
+            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND is_active = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(still_inactive, 0, "a system account was made inactive");
+    drop(raw_conn);
+    assert_eq!(
+        fingerprint(&w.dir, &[]),
+        before,
+        "the refused raw update wrote something"
+    );
+    assert_eq!(audit_total(&w.dir), audit_before);
+
+    // A file damaged outside the app, with the trigger gone and a system account set inactive
+    // by hand: the app can put it right, and a posting to it works again.
+    let raw_conn = raw(&w.dir);
+    raw_conn
+        .execute_batch(&format!("DROP TRIGGER {TRIGGER_OF_0003}"))
+        .unwrap();
+    let changed = raw_conn
+        .execute("UPDATE accounts SET is_active = 0 WHERE id = ?1", [w.cash])
+        .unwrap();
+    assert_eq!(changed, 1);
+    let refused = ledger::post(
+        &w.env.ctx,
+        &raw_conn,
+        w.owner.user_id,
+        &PostingEvent {
+            date: BusinessDate::parse_iso("2026-10-10").unwrap(),
+            posting_type: PostingType::General,
+            source_type: SourceType::Voucher,
+            source_id: 903,
+            narration: None,
+            reverses: None,
+            entry: build_entry(vec![
+                LedgerLine::new(AccountId::new(w.cash), Side::Dr, rupees(10)),
+                LedgerLine::new(AccountId::new(w.capital), Side::Cr, rupees(10)),
+            ])
+            .unwrap(),
+        },
+    );
+    assert!(
+        refused.is_err(),
+        "a new posting on an inactive cash account must be refused"
+    );
+    drop(raw_conn);
+    let healed = accounts::set_active(&w.env.ctx, &w.owner, w.cash, true).unwrap();
+    assert!(healed.is_active);
+    post_plan(&w, w.cash, &[(TODAY_OFFSET, 1)]);
 }

@@ -11,10 +11,10 @@ mod common;
 
 use common::{account_id, setup};
 use mandi_db::ledger::{
-    self, ACCOUNT_TOTALS_ALL_POSTED_SQL, DayMethod, LAST_DATE_SAMPLE_LINES, PER_LINE_UP_TO_LINES,
-    Totals, account_totals, account_totals_sql, day_method, day_method_with, last_entry_date,
-    totals_for_accounts, totals_for_accounts_sql, totals_of, totals_of_by, totals_of_per_line_sql,
-    totals_of_sql,
+    self, ACCOUNT_TOTALS_ALL_POSTED_SQL, DayMethod, LAST_DATE_LATER_ENTRIES,
+    LAST_DATE_SAMPLE_LINES, PER_LINE_UP_TO_LINES, Totals, account_totals, account_totals_sql,
+    day_method, day_method_with, last_entry_date, last_entry_date_with, totals_for_accounts,
+    totals_for_accounts_sql, totals_of, totals_of_by, totals_of_per_line_sql, totals_of_sql,
 };
 use mandi_db::rusqlite::{Connection, params};
 
@@ -665,6 +665,31 @@ fn the_last_entry_date_and_the_advance_sums_use_their_indexes() {
         2,
     );
     assert!(!text.contains("TEMP B-TREE"), "{text}");
+    // The count that chooses between step two and the join: the date index alone, at most the
+    // limit plus one entries.
+    let text = plan(
+        &conn,
+        "SELECT COUNT(*) FROM (SELECT 1 FROM journal_entries WHERE entry_date > ?1 LIMIT ?2)",
+        2,
+    );
+    assert!(
+        text.contains("COVERING INDEX idx_journal_entries_entry_date"),
+        "{text}"
+    );
+    assert!(!text.contains("TEMP B-TREE"), "{text}");
+    // The join for a dormant account: the lines of the account from the amounts index, one
+    // point lookup of the entry for each (cost grows with the lines of the account only).
+    let text = plan(
+        &conn,
+        "SELECT MAX(e.entry_date) FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id = ?1 AND e.status = 'posted'",
+        1,
+    );
+    assert!(text.contains("account_id=?"), "{text}");
+    assert!(
+        !text.contains("SCAN l") && !text.contains("SCAN e"),
+        "{text}"
+    );
     // A seller's advances are read from the partial index.
     let text = plan(
         &conn,
@@ -808,4 +833,240 @@ fn the_last_entry_date_is_exact_at_the_edge_of_the_first_step() {
             assert_eq!(old_last_date(&conn, account), expected);
         }
     }
+}
+
+/// An account with one line more than the first step reads: the first entry of the account (the
+/// smallest id) carries `first_date`, the other 1,000 are dated in January 2026. Returns the
+/// account and a second account that holds the other side of every entry.
+fn dormant_account(conn: &Connection, first_date: Option<&str>) -> (i64, i64) {
+    let account = account_id(conn, "02010003");
+    let other = account_id(conn, "02010004");
+    let pair = |dr: i64| {
+        [
+            Line {
+                account,
+                dr,
+                cr: 0,
+                person: None,
+                advance: false,
+            },
+            Line {
+                account: other,
+                dr: 0,
+                cr: dr,
+                person: None,
+                advance: false,
+            },
+        ]
+    };
+    let mut lines = 0_i64;
+    if let Some(date) = first_date {
+        posted(conn, date, &pair(100), None);
+        lines += 1;
+    }
+    let mut n = 0_u64;
+    while lines <= LAST_DATE_SAMPLE_LINES {
+        posted(
+            conn,
+            &format!("2026-01-{:02}", 1 + n % 28),
+            &pair(100),
+            None,
+        );
+        lines += 1;
+        n += 1;
+    }
+    (account, other)
+}
+
+/// Entries that do not touch `account`, dated after January.
+fn later_entries_of_others(conn: &Connection, other: i64, count: usize) {
+    let third = account_id(conn, "02010002");
+    for n in 0..count {
+        let date = format!("2026-06-{:02}", 1 + n % 28);
+        posted(
+            conn,
+            &date,
+            &[
+                Line {
+                    account: other,
+                    dr: 100,
+                    cr: 0,
+                    person: None,
+                    advance: false,
+                },
+                Line {
+                    account: third,
+                    dr: 0,
+                    cr: 100,
+                    person: None,
+                    advance: false,
+                },
+            ],
+            None,
+        );
+    }
+}
+
+/// How many entries are dated after the newest of the account's newest sampled lines: the number
+/// `last_entry_date` compares with its limit.
+fn entries_after_the_sample(conn: &Connection, account: i64) -> i64 {
+    conn.query_row(
+        "SELECT COUNT(*) FROM journal_entries WHERE entry_date >
+           (SELECT MAX(e.entry_date) FROM journal_entries e WHERE e.status = 'posted' AND e.id IN
+              (SELECT entry_id FROM journal_lines WHERE account_id = ?1
+               ORDER BY entry_id DESC LIMIT ?2))",
+        params![account, LAST_DATE_SAMPLE_LINES],
+        |r| r.get(0),
+    )
+    .unwrap()
+}
+
+#[test]
+fn a_dormant_account_gives_the_old_answer_on_both_sides_of_the_later_entries_limit() {
+    // With more than `limit` entries dated after the sampled lines, the answer comes from the
+    // join over the account's lines; with `limit` or fewer, from the look at the later entries.
+    // Both must give the old join's answer, whether the account's latest date sits on a line
+    // behind the sample (a back-dated first entry) or on a sampled one, and a late draft or the
+    // entries of other accounts never count.
+    for first_date in [None, Some("2026-03-15")] {
+        for others in [0_usize, 1, 7, 25] {
+            let (_dir, conn) = setup();
+            let (account, other) = dormant_account(&conn, first_date);
+            later_entries_of_others(&conn, other, others);
+            // A draft of the account, dated after everything, is never its last date.
+            let pair = [
+                Line {
+                    account,
+                    dr: 100,
+                    cr: 0,
+                    person: None,
+                    advance: false,
+                },
+                Line {
+                    account: other,
+                    dr: 0,
+                    cr: 100,
+                    person: None,
+                    advance: false,
+                },
+            ];
+            draft(&conn, "2027-06-30", &pair, None);
+
+            let expected = old_last_date(&conn, account);
+            assert_eq!(
+                expected.as_deref(),
+                Some(first_date.unwrap_or("2026-01-28")),
+                "the oracle: {first_date:?}, {others} later entries of others"
+            );
+            let later = entries_after_the_sample(&conn, account);
+            assert!(later >= i64::try_from(others).unwrap());
+            // The limit below, at and above the number of later entries, and the extremes.
+            for limit in [0, later - 1, later, later + 1, later + 100, i64::MAX] {
+                assert_eq!(
+                    last_entry_date_with(&conn, account, limit).unwrap(),
+                    expected,
+                    "limit {limit}, {later} later entries, back-dated first entry: {first_date:?}"
+                );
+            }
+            assert_eq!(last_entry_date(&conn, account).unwrap(), expected);
+        }
+    }
+}
+
+#[test]
+fn a_dormant_account_is_exact_at_the_real_later_entries_limit() {
+    // 50,000 entries dated after the sample is the edge: the look at the later entries is used
+    // for exactly that many, the join for one more. Both must find the back-dated first entry.
+    let (_dir, conn) = setup();
+    let (account, _other) = dormant_account(&conn, Some("2026-03-15"));
+    // The first entry of the account already counts as one later entry. The others are added in
+    // a few statements: drafts, two balanced lines each on two other accounts, then posted.
+    let debit = account_id(&conn, "02010004");
+    let credit = account_id(&conn, "02010002");
+    let bulk = |count: i64| {
+        conn.execute(
+            "WITH RECURSIVE c(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM c WHERE n < ?1)
+             INSERT INTO journal_entries
+               (entry_date, posting_type, source_type, source_id, total_paisa)
+             SELECT '2026-06-01', 'general', 'voucher', 1, 100 FROM c",
+            [count],
+        )
+        .unwrap();
+        for (line_no, account, dr, cr) in [(1, debit, 100, 0), (2, credit, 0, 100)] {
+            conn.execute(
+                "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa)
+                 SELECT id, ?1, ?2, ?3, ?4 FROM journal_entries WHERE status = 'draft'",
+                params![line_no, account, dr, cr],
+            )
+            .unwrap();
+        }
+        conn.execute(
+            "UPDATE journal_entries SET status = 'posted' WHERE status = 'draft'",
+            [],
+        )
+        .unwrap();
+    };
+    bulk(LAST_DATE_LATER_ENTRIES - 1);
+    assert_eq!(
+        entries_after_the_sample(&conn, account),
+        LAST_DATE_LATER_ENTRIES
+    );
+    let expected = old_last_date(&conn, account);
+    assert_eq!(expected.as_deref(), Some("2026-03-15"));
+    assert_eq!(last_entry_date(&conn, account).unwrap(), expected);
+    bulk(1);
+    assert_eq!(
+        entries_after_the_sample(&conn, account),
+        LAST_DATE_LATER_ENTRIES + 1
+    );
+    assert_eq!(last_entry_date(&conn, account).unwrap(), expected);
+    bulk(1);
+    assert_eq!(last_entry_date(&conn, account).unwrap(), expected);
+}
+
+#[test]
+fn a_dormant_account_whose_newest_lines_are_all_drafts_gives_the_old_answer() {
+    // One posted line, then a thousand lines of drafts (a draft exists only inside the posting
+    // transaction, but the query must not depend on that): the sampled lines have no posted
+    // date at all, so the answer is the posted line behind them.
+    let (_dir, conn) = setup();
+    let account = account_id(&conn, "02010003");
+    let other = account_id(&conn, "02010004");
+    let pair = |dr: i64| {
+        [
+            Line {
+                account,
+                dr,
+                cr: 0,
+                person: None,
+                advance: false,
+            },
+            Line {
+                account: other,
+                dr: 0,
+                cr: dr,
+                person: None,
+                advance: false,
+            },
+        ]
+    };
+    posted(&conn, "2026-02-03", &pair(100), None);
+    for n in 0..LAST_DATE_SAMPLE_LINES {
+        draft(
+            &conn,
+            &format!("2026-07-{:02}", 1 + n % 28),
+            &pair(100),
+            None,
+        );
+    }
+    let expected = old_last_date(&conn, account);
+    assert_eq!(expected.as_deref(), Some("2026-02-03"));
+    for limit in [0, 1, 1_000, 1_001, i64::MAX] {
+        assert_eq!(
+            last_entry_date_with(&conn, account, limit).unwrap(),
+            expected,
+            "limit {limit}"
+        );
+    }
+    assert_eq!(last_entry_date(&conn, account).unwrap(), expected);
 }

@@ -9,14 +9,14 @@ use std::path::PathBuf;
 use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
-use mandi_db::migrate::{self, INIT_SQL, MigrationOutcome};
+use mandi_db::migrate::{self, BALANCE_INDEXES_SQL, INIT_SQL, MigrationOutcome};
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
 use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 2;
+const LATEST: usize = 3;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -39,6 +39,11 @@ fn version_2(second: &'static str) -> Migrations<'static> {
         }),
         M::up(second),
     ])
+}
+
+/// The schema as it was released at version 2: migrations 0001 and 0002.
+fn released_version_2() -> Migrations<'static> {
+    version_2(BALANCE_INDEXES_SQL)
 }
 
 fn connection(path: &std::path::Path) -> Connection {
@@ -372,4 +377,216 @@ fn migration_2_adds_only_indexes_and_keeps_every_number() {
     );
     let totals = mandi_db::ledger::totals_of(&conn, cash, None, None).unwrap();
     assert_eq!((totals.dr_paisa, totals.cr_paisa), (2_288_000, 0));
+}
+
+#[test]
+fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
+    // A file made at version 2 with posted entries, a system account and a user account is
+    // upgraded: a copy is taken, one trigger appears, no table, column or index changes, no row
+    // changes, and from then on a raw update cannot make a system account inactive.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_2(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 2);
+    let id_of = |conn: &Connection, code: &str| -> i64 {
+        conn.query_row("SELECT id FROM accounts WHERE code = ?1", [code], |r| {
+            r.get(0)
+        })
+        .unwrap()
+    };
+    let cash = id_of(&conn, "01010001");
+    let income = id_of(&conn, "04010001");
+    for (day, rupees) in [("2026-10-09", 12_880_i64), ("2026-10-10", 10_000)] {
+        conn.execute(
+            "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, total_paisa)
+             VALUES (?1, 'general', 'voucher', 1, ?2)",
+            (day, rupees * 100),
+        )
+        .unwrap();
+        let entry = conn.last_insert_rowid();
+        for (line_no, account, dr, cr) in [(1, cash, rupees * 100, 0), (2, income, 0, rupees * 100)]
+        {
+            conn.execute(
+                "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa) VALUES (?1, ?2, ?3, ?4, ?5)",
+                (entry, line_no, account, dr, cr),
+            )
+            .unwrap();
+        }
+        conn.execute(
+            "UPDATE journal_entries SET status = 'posted' WHERE id = ?1",
+            [entry],
+        )
+        .unwrap();
+    }
+    // An ordinary account, to make inactive and active again after the upgrade.
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+         SELECT id, '03040001', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
+        [],
+    )
+    .unwrap();
+    // The raw update that the database did not stop at version 2.
+    conn.execute(
+        "UPDATE accounts SET is_active = 0 WHERE code = '01010001'",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE accounts SET is_active = 1 WHERE code = '01010001'",
+        [],
+    )
+    .unwrap();
+
+    let schema = |conn: &Connection, kind: &str| -> Vec<String> {
+        conn.prepare("SELECT name || ':' || COALESCE(sql, '') FROM sqlite_master WHERE type = ?1 ORDER BY name")
+            .unwrap()
+            .query_map([kind], |r| r.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    // Every row of every table, as text, in a fixed order.
+    let all_rows = |conn: &Connection| -> Vec<(String, String)> {
+        let names: Vec<String> = conn
+            .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        names
+            .into_iter()
+            .map(|name| {
+                let columns: Vec<String> = conn
+                    .prepare(&format!(
+                        "SELECT name FROM pragma_table_info('{name}') ORDER BY cid"
+                    ))
+                    .unwrap()
+                    .query_map([], |r| r.get(0))
+                    .unwrap()
+                    .map(Result::unwrap)
+                    .collect();
+                let joined = columns
+                    .iter()
+                    .map(|c| format!("quote(\"{c}\")"))
+                    .collect::<Vec<_>>()
+                    .join(" || '|' || ");
+                let rows: Vec<String> = conn
+                    .prepare(&format!("SELECT {joined} FROM \"{name}\" ORDER BY rowid"))
+                    .unwrap()
+                    .query_map([], |r| r.get(0))
+                    .unwrap()
+                    .map(Result::unwrap)
+                    .collect();
+                (name, rows.join("\n"))
+            })
+            .collect()
+    };
+    let before_tables = schema(&conn, "table");
+    let before_indexes = schema(&conn, "index");
+    let before_triggers = schema(&conn, "trigger");
+    let before_rows = all_rows(&conn);
+    let before = mandi_db::ledger::account_totals(&conn, None).unwrap();
+    assert_eq!(before.len(), 2);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (2, 3));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 3);
+    // Only one trigger was added.
+    assert_eq!(schema(&conn, "table"), before_tables);
+    assert_eq!(schema(&conn, "index"), before_indexes);
+    let after_triggers = schema(&conn, "trigger");
+    let added: Vec<&String> = after_triggers
+        .iter()
+        .filter(|t| !before_triggers.contains(t))
+        .collect();
+    assert_eq!(added.len(), 1, "{added:?}");
+    assert!(
+        added[0].starts_with("accounts_system_stays_active:"),
+        "{added:?}"
+    );
+    assert_eq!(after_triggers.len(), before_triggers.len() + 1);
+    // Every row and every balance is what it was.
+    assert_eq!(all_rows(&conn), before_rows);
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before
+    );
+    let totals = mandi_db::ledger::totals_of(&conn, cash, None, None).unwrap();
+    assert_eq!((totals.dr_paisa, totals.cr_paisa), (2_288_000, 0));
+
+    // The migration also works on the copy taken before it: version 2, still the old behaviour.
+    let copy_conn = Connection::open(outcome.copy.unwrap()).unwrap();
+    assert_eq!(user_version(&copy_conn), 2);
+    copy_conn
+        .execute(
+            "UPDATE accounts SET is_active = 0 WHERE code = '01010001'",
+            [],
+        )
+        .unwrap();
+
+    // Now: no system account can be made inactive; the failure is classified, not a bare error.
+    let system: Vec<String> = conn
+        .prepare("SELECT code FROM accounts WHERE is_system = 1 ORDER BY code")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(system.len() >= 15, "{} system accounts", system.len());
+    for code in &system {
+        let error = conn
+            .execute("UPDATE accounts SET is_active = 0 WHERE code = ?1", [code])
+            .unwrap_err();
+        assert!(
+            matches!(common::classify(error), DbError::SystemAccount),
+            "{code}"
+        );
+    }
+    let all_at_once = conn
+        .execute("UPDATE accounts SET is_active = 0 WHERE is_system = 1", [])
+        .unwrap_err();
+    assert!(matches!(
+        common::classify(all_at_once),
+        DbError::SystemAccount
+    ));
+    let still_active: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND is_active = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(still_active, 0, "a refused update changed a row");
+    // Everything else stays allowed: the same value, other columns, a user account made inactive
+    // and active again.
+    conn.execute("UPDATE accounts SET is_active = 1 WHERE is_system = 1", [])
+        .unwrap();
+    conn.execute(
+        "UPDATE accounts SET note = 'x', is_active = 1 WHERE code = '01010001'",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE accounts SET opening_dr_paisa = 6_500_000, opening_date = '2026-08-31' WHERE code = '01010001'",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE accounts SET note = NULL WHERE code = '01010001'",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE accounts SET is_active = 0 WHERE code = '03040001'",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE accounts SET is_active = 1 WHERE code = '03040001'",
+        [],
+    )
+    .unwrap();
 }

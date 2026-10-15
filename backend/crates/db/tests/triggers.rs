@@ -400,6 +400,46 @@ fn system_accounts_cannot_be_deleted_or_recoded() {
         )
         .unwrap_err();
     assert!(matches!(classify(demote), DbError::SystemAccount));
+    // A system account cannot be made inactive (migration 0003), whatever else the update sets,
+    // and nothing is written when it is refused. Making it active, or no change, is allowed.
+    for sql in [
+        "UPDATE accounts SET is_active = 0 WHERE code = '01010001'",
+        "UPDATE accounts SET is_active = 0, note = 'x' WHERE code = '01010001'",
+        "UPDATE accounts SET is_active = 0 WHERE is_system = 1",
+    ] {
+        let inactive = conn.execute(sql, []).unwrap_err();
+        assert!(
+            matches!(classify(inactive), DbError::SystemAccount),
+            "{sql}"
+        );
+    }
+    let changed: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND (is_active = 0 OR note IS NOT NULL)",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(changed, 0);
+    conn.execute("UPDATE accounts SET is_active = 1 WHERE is_system = 1", [])
+        .unwrap();
+    // An ordinary account is not affected.
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+         SELECT id, '03040001', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE accounts SET is_active = 0 WHERE code = '03040001'",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE accounts SET is_active = 1 WHERE code = '03040001'",
+        [],
+    )
+    .unwrap();
     // The opening balance is typed on the account form (PRD 4.3): that update is allowed.
     conn.execute("UPDATE accounts SET opening_dr_paisa = 6_500_000, opening_date = '2026-08-31' WHERE code = '01010001'", []).unwrap();
 }

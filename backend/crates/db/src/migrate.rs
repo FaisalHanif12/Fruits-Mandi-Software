@@ -26,6 +26,11 @@ pub const INIT_SQL: &str = include_str!("../migrations/0001_init.sql");
 /// total (PRD FR-6.1).
 pub const BALANCE_INDEXES_SQL: &str = include_str!("../migrations/0002_balance_indexes.sql");
 
+/// The third migration: a trigger that stops a system account being made inactive (PRD FR-10.4).
+/// No table, column or index changes and no row is touched.
+pub const SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL: &str =
+    include_str!("../migrations/0003_system_accounts_stay_active.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -40,6 +45,7 @@ pub fn migrations() -> Migrations<'static> {
                 .map_err(HookError::from)
         }),
         M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
     ])
 }
 
