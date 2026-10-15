@@ -10,14 +10,14 @@
   "plans": {
     "01-scaffold": "passed",
     "02-core": "passed",
-    "03-database": "reviewing",
-    "04-shell-and-login": "reviewing",
+    "03-database": "passed",
+    "04-shell-and-login": "passed",
     "05-names-two-scripts": "reviewing",
-    "06-masters-and-search": "reviewing",
-    "07-journal-and-accounts": "reviewing",
-    "08-party-card-and-short-codes": "reviewing",
-    "09-commission-rules": "reviewing",
-    "10-opening-position": "reviewing"
+    "06-masters-and-search": "passed",
+    "07-journal-and-accounts": "passed",
+    "08-party-card-and-short-codes": "passed",
+    "09-commission-rules": "passed",
+    "10-opening-position": "passed"
   },
   "acceptance": [
     "D1-A1",
@@ -29,7 +29,21 @@
     "D1-A9",
     "D1-A10",
     "D1-A11",
-    "D1-A13"
+    "D1-A12",
+    "D1-A13",
+    "D2-A1",
+    "D2-A3",
+    "D2-A5",
+    "D2-A6",
+    "D2-A7",
+    "D2-A8",
+    "D2-A9",
+    "D2-A10",
+    "D2-A12",
+    "D2-A13",
+    "D2-A14",
+    "D2-A15",
+    "D2-A17"
   ],
   "reports": []
 }
