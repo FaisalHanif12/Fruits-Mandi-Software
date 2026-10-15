@@ -117,6 +117,39 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
     expect(footer).toContain('65,000');
   });
 
+  it('the wide layout puts the totals under the opening columns, in a pinned row, with no second line', async () => {
+    fakeAccounts([AKRAM, RAHIM]);
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    document.documentElement.style.setProperty('--breakpoint-normal', '1366px');
+    document.documentElement.style.setProperty('--breakpoint-wide', '1920px');
+    try {
+      await renderApp('/index/accounts');
+      await waitFor(() => {
+        expect(rowIds().slice(0, 2)).toEqual(['21', '31']);
+      });
+      const pinned = document.querySelector('.ag-row-pinned');
+      expect(pinned).not.toBeNull();
+      const under = (column: string) =>
+        visible(pinned?.querySelector(`[col-id="${column}"]`)?.textContent);
+      expect(under('name')).toBe(message(language, 'glossary-meezan'));
+      // The backend's totals (the fake sends 65,000 on each side), each under its own column.
+      expect(under('opening_dr')).toBe('65,000');
+      expect(under('opening_cr')).toBe('65,000');
+      expect(
+        screen.queryByText(named(message(language, 'accounts-total-dr'))),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+      document.documentElement.style.removeProperty('--breakpoint-normal');
+      document.documentElement.style.removeProperty('--breakpoint-wide');
+    }
+  });
+
   it('the type, the search and the inactive tick go to the backend filter', async () => {
     fakeAccounts([AKRAM, RAHIM, OLD]);
     await renderApp('/index/accounts');
@@ -136,6 +169,9 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
       include_inactive: true,
     });
     expect(document.querySelector('[row-id="41"]')).toHaveClass('row-inactive');
+    // Dimmed is not enough (NFR-USE-12): the name says "inactive" in words, in the app language.
+    expect(cell(41, 'name')).toContain(message(language, 'masters-status-inactive'));
+    expect(cell(21, 'name')).not.toContain(message(language, 'masters-status-inactive'));
     await user.click(
       screen.getByRole('combobox', { name: named(message(language, 'accounts-filter-type')) }),
     );
@@ -308,7 +344,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
   it('credit and collection are for a buyer; the default mark is for a seller', async () => {
     fakeAccounts([]);
     await renderApp('/index/accounts/new');
-    const credit = () => screen.queryByText(message(language, 'accounts-section-credit'));
+    const credit = () => screen.queryByText(named(message(language, 'accounts-section-credit')));
     expect(
       await screen.findByText(message(language, 'accounts-section-account')),
     ).toBeInTheDocument();
@@ -550,9 +586,33 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     fakeAccounts([CASH, AKRAM]);
     await renderApp('/index/accounts/51');
     await labelled(language, 'accounts-field-code');
+    // The button is there but off, and a line says why (PRD FR-10.4).
     expect(
-      screen.queryByRole('button', { name: message(language, 'accounts-make-inactive') }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: message(language, 'accounts-make-inactive') }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(named(message(language, 'accounts-system-stays-active'))),
+    ).toBeInTheDocument();
+  });
+
+  it('if the backend refuses to make a system account inactive, the screen says so in words', async () => {
+    // The screen thought the account an ordinary one (an old copy of it): the backend is the final word.
+    fakeAccounts([CASH, AKRAM]);
+    vi.mocked(accountApi.accountsSetActive).mockRejectedValueOnce(
+      fail({ code: 'ERR_SYSTEM_ACCOUNT', field: 'id' }),
+    );
+    await renderApp('/index/accounts/21');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: message(language, 'accounts-make-inactive') }),
+    );
+    const box = await screen.findByRole('alertdialog');
+    await user.click(
+      within(box).getByRole('button', { name: named(message(language, 'accounts-make-inactive')) }),
+    );
+    expect(
+      (await screen.findAllByText(named(message(language, 'err-system-account')))).length,
+    ).toBeGreaterThan(0);
   });
 
   it('making an account inactive asks first, says what happens, and nothing is deleted', async () => {

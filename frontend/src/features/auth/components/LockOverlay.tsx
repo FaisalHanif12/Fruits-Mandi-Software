@@ -6,7 +6,7 @@
 import { Localized } from '@fluent/react';
 import { Dialog } from 'radix-ui';
 import { uiErrorOf } from '../../../shared/api';
-import { useFormState } from '../../../shared/hooks';
+import { useFormState, useSingleFlight } from '../../../shared/hooks';
 import { useUiLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
 import { Button, ErrorNotice, Field, PasswordInput, fieldError } from '../../../shared/ui';
@@ -24,18 +24,23 @@ export function LockOverlay({ userName }: LockOverlayProps) {
   const { language, direction } = useUiLanguage();
   const { values, setField, reset } = useFormState({ password: '' });
   const unlock = useUnlock();
+  // One try at a time: three Enter keys in the same instant would count three wrong tries.
+  const flight = useSingleFlight();
   const logout = useLogout();
   const rawError = unlock.error === null ? null : uiErrorOf(unlock.error);
   const { shown: error, waiting } = useLockCountdown(rawError, unlock.submittedAt);
   const submit = () => {
     if (values.password === '' || unlock.isPending || waiting) return;
-    unlock.mutate(
-      { password: values.password },
-      {
-        onSuccess: () => {
-          reset();
-        },
-      },
+    void flight.run(
+      () =>
+        unlock
+          .mutateAsync({ password: values.password })
+          .then(() => {
+            reset();
+          })
+          // The refusal is shown on the form by its fields.
+          .catch(() => undefined),
+      undefined,
     );
   };
   const navigation = useFormNavigation(submit);
@@ -96,7 +101,7 @@ export function LockOverlay({ userName }: LockOverlayProps) {
                 variant="primary"
                 shortcut={SHORTCUTS.confirm}
                 disabled={values.password === '' || waiting}
-                busy={unlock.isPending}
+                busy={flight.busy || unlock.isPending}
                 onClick={submit}
               >
                 <Localized id="auth-lock-unlock" />

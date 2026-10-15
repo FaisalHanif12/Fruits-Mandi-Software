@@ -263,7 +263,7 @@ rules-made-inactive = Rule made inactive
 rules-inactive-title = Make this inactive?
 
 # review: pending
-rules-inactive-description = An inactive rule is not used from now on. Sales that are already saved do not change. You can make it active again at any time.
+rules-inactive-description = An inactive rule is not used from now on. A { -bikri } that is already saved does not change. You can make it active again at any time.
 
 # review: pending
 rules-overlap-title = Another rule at the same level covers the same dates
@@ -376,7 +376,7 @@ settings-overrides-credit = When the credit limit is passed
 settings-overrides-credit-warn = Only warn
 
 # review: pending
-settings-overrides-credit-block = Stop the sale
+settings-overrides-credit-block = Stop the { -bikri }
 
 # review: pending
 settings-overrides-saved = Settings saved

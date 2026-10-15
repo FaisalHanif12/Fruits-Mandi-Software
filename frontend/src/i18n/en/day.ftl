@@ -61,7 +61,10 @@ day-close-confirm-title = Close the day?
 
 # $date: the date to close up to. $days: how many days close.
 # review: pending
-day-close-confirm-description = { $days } days up to { $date } will be closed. Their entries cannot be changed until you reopen those days.
+day-close-confirm-description = { $days ->
+    [one] { $days } day up to { $date } will be closed. Its entries cannot be changed until you reopen that day.
+   *[other] { $days } days up to { $date } will be closed. Their entries cannot be changed until you reopen those days.
+}
 
 # review: pending
 day-closed = Days up to { $date } are closed

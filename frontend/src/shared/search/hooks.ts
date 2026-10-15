@@ -3,7 +3,7 @@
 // list keeps the last answer while the next one is on its way, so it never flashes empty.
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { searchMasters, searchRecent, searchTouch } from './api';
 import type { SearchHit, SearchScope } from './types';
 
@@ -54,20 +54,31 @@ export function masterSource(scope: SearchScope): PickerSource<SearchHit> {
  * The records a picker shows. Typed text searches; empty text (the user pressed Alt+↓, or
  * emptied the field) gives the recent records first, then the rest (PRD FR-7.41). Nothing is
  * asked while the list is closed.
+ *
+ * `current` says whether the list answers the text in the field right now. It is false while the
+ * list is an older answer kept on screen (the search waits a moment after the last key, and keeps
+ * the last answer while the next one is on its way), so a key that acts on the list (Enter) can
+ * tell a list it may trust from one it must not (a rapid "1" then "2" must not pick the match of
+ * "1" while the field shows "12").
  */
 export function usePickerHits<H>(source: PickerSource<H>, text: string, open: boolean) {
-  const typed = useSettled(text.trim(), PICKER_SEARCH_DELAY_MS);
+  const wanted = text.trim();
+  const typed = useSettled(wanted, PICKER_SEARCH_DELAY_MS);
   // Emptying the field must not wait: the recent list is the answer at once.
-  const query = text.trim() === '' ? '' : typed;
-  return useQuery({
-    queryKey: [...source.key, query],
-    queryFn: () => (query === '' ? source.recent() : source.search(query, PICKER_RESULT_LIMIT)),
+  const asked = wanted === '' ? '' : typed;
+  const query = useQuery({
+    queryKey: [...source.key, asked],
+    queryFn: () => (asked === '' ? source.recent() : source.search(asked, PICKER_RESULT_LIMIT)),
     enabled: open,
     placeholderData: keepPreviousData,
     // The same text can give a different answer after a save, so an answer is never reused.
     staleTime: 0,
     gcTime: 0,
   });
+  // A failed answer is final too: there is nothing more to wait for.
+  const current =
+    asked === wanted && !query.isPlaceholderData && (query.isSuccess || query.isError);
+  return { query, current };
 }
 
 /** Tells the backend a record was chosen, so it comes first next time (PRD FR-7.41). */
@@ -77,4 +88,22 @@ export function useTouchRecord<H>(source: PickerSource<H>) {
     mutationFn: (id: number) => source.touch(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [...source.key] }),
   });
+}
+
+/**
+ * Asks for the answer to the whole text now, without the short pause, for an Enter that came
+ * before the list caught up with the field. It shares the cache of `usePickerHits`, so a request
+ * already on its way is not asked twice.
+ */
+export function useFetchHits<H>(source: PickerSource<H>) {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (text: string) =>
+      queryClient.query({
+        queryKey: [...source.key, text],
+        queryFn: () => source.search(text, PICKER_RESULT_LIMIT),
+        staleTime: 0,
+      }),
+    [queryClient, source],
+  );
 }

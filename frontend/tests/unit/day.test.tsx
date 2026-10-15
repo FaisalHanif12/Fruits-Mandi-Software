@@ -173,7 +173,7 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     );
     const dialog = await screen.findByRole('alertdialog');
     expect(visible(dialog.textContent)).toContain(
-      message(language, 'day-close-confirm-description', { date: '01-10-2026', days: '10' }),
+      message(language, 'day-close-confirm-description', { date: '01-10-2026', days: 10 }),
     );
     expect(dayApi.dayClose).not.toHaveBeenCalled();
     await user.click(
@@ -195,6 +195,28 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
     });
     expect(statusBar()).toContain(message(language, 'layout-status-day-open'));
     expect(statusBar()).toContain(closedUpTo(language, '01-10-2026'));
+  });
+
+  it('by keyboard only: Enter on the close button asks, Esc backs out, Esc again leaves to the dashboard', async () => {
+    const { user, router } = await open();
+    const button = await screen.findByRole('button', {
+      name: named(message(language, 'day-close-button')),
+    });
+    button.focus();
+    await user.keyboard('{Enter}');
+    await screen.findByRole('alertdialog');
+    // Esc closes the question first and nothing is closed.
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(dayApi.dayClose).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe('/day');
+    // With nothing open, Esc leaves the screen (PRD FR-7.18).
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/');
+    });
   });
 
   it('cancelling the confirm box closes nothing', async () => {
@@ -320,11 +342,17 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
   it('with no closed day there is nothing to reopen, and the status bar shows no closed-up-to date', async () => {
     fakeDay({ status: { today: '2026-10-10', closed_up_to: null, today_open: true } });
     await renderApp('/day');
-    expect(await screen.findByText(message(language, 'day-reopen-none-title'))).toBeInTheDocument();
+    // The words are the same on the top line and on the reopen card: both are there.
+    expect((await screen.findAllByText(message(language, 'day-reopen-none-title'))).length).toBe(2);
     expect(visible(document.querySelector('footer')?.textContent)).not.toContain(
       closedUpTo(language, '').trim(),
     );
-    expect(await screen.findByText(message(language, 'day-none-closed'))).toBeInTheDocument();
+    // The label and its value are two elements of the line, so the gap between them shows
+    // ("Closed up to" and "No day is closed yet" never run together).
+    const label = await screen.findByText(message(language, 'day-closed-up-to'));
+    expect(visible(label.nextElementSibling?.textContent)).toBe(
+      message(language, 'day-none-closed'),
+    );
   });
 
   it('switching the language in the middle keeps the reason and the date typed', async () => {

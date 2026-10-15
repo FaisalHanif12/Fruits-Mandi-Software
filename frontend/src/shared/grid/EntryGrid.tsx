@@ -97,6 +97,8 @@ function toColDef(
       return grouped ? displayText(value, grouping) : value;
     },
     cellClass: numberLike ? ['cell-num'] : [],
+    // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
+    headerClass: numberLike ? ['header-num'] : [],
     tooltipValueGetter: (params) =>
       params.data === undefined ? undefined : cellErrors?.[params.data.rowId]?.[column.field],
     cellClassRules: {

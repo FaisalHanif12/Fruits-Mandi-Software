@@ -88,6 +88,9 @@ layout-save-save = محفوظ کریں
 ## User menu and start-up.
 
 # review: pending
+layout-user-change-password = پاس ورڈ بدلیں
+
+# review: pending
 layout-user-lock = ایپ لاک کریں
 
 # review: pending

@@ -9,7 +9,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { useSpellingFlow } from '../../../shared/hooks';
+import { useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -65,6 +65,8 @@ function QuickAddForm({
   const error = save.error === null ? null : uiErrorOf(save.error);
   const codeShown = code ?? nextCode.data ?? '';
 
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
   const submit = async () => {
     try {
       const saved = await spelling.guard(names, setNames, (confirmedWords) =>
@@ -90,7 +92,7 @@ function QuickAddForm({
     }
   };
   const submitNow = () => {
-    void submit();
+    void flight.run(submit, undefined);
   };
   const navigation = useFormNavigation(submitNow);
   useShortcut(SHORTCUTS.save, submitNow);
@@ -143,7 +145,7 @@ function QuickAddForm({
         <Button
           variant="primary"
           shortcut={SHORTCUTS.save}
-          busy={save.isPending}
+          busy={flight.busy || save.isPending}
           onClick={submitNow}
         >
           <Localized id="layout-save-save" />

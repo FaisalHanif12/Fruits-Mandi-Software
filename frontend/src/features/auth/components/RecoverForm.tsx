@@ -4,7 +4,7 @@
 
 import { Localized } from '@fluent/react';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField, useFormState } from '../../../shared/hooks';
+import { useFocusFirstField, useFormState, useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
 import {
   Button,
@@ -32,17 +32,26 @@ export function RecoverForm({ onBack }: RecoverFormProps) {
     new_password_repeat: '',
   });
   const recover = useRecover();
+  // One try at a time: three Enter keys in the same instant would count three wrong tries.
+  const flight = useSingleFlight();
   const firstField = useFocusFirstField<HTMLFormElement>();
   const rawError = recover.error === null ? null : uiErrorOf(recover.error);
   const { shown: error, waiting } = useLockCountdown(rawError, recover.submittedAt);
   const submit = () => {
     if (recover.isPending || waiting) return;
-    recover.mutate({
-      username: values.username,
-      recovery_code: values.recovery_code,
-      new_password: values.new_password,
-      new_password_repeat: values.new_password_repeat,
-    });
+    void flight.run(
+      () =>
+        recover
+          .mutateAsync({
+            username: values.username,
+            recovery_code: values.recovery_code,
+            new_password: values.new_password,
+            new_password_repeat: values.new_password_repeat,
+          })
+          // The refusal is shown on the form by its fields.
+          .catch(() => undefined),
+      undefined,
+    );
   };
   const navigation = useFormNavigation(submit);
 
@@ -133,7 +142,7 @@ export function RecoverForm({ onBack }: RecoverFormProps) {
           variant="primary"
           shortcut={SHORTCUTS.confirm}
           disabled={waiting}
-          busy={recover.isPending}
+          busy={flight.busy || recover.isPending}
           onClick={submit}
         >
           <Localized id="auth-recover-submit" />

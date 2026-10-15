@@ -27,6 +27,10 @@ err-negative-not-allowed = منفی نمبر نہیں لکھ سکتے۔ نمبر
 # $max: the largest amount in rupees.
 # review: pending
 err-amount-too-large = رقم بہت زیادہ ہے۔ زیادہ سے زیادہ { $max } روپے لکھ سکتے ہیں۔
+# A journal entry: one line, or the total of the entry, is over the largest amount allowed.
+# $max: the largest amount in rupees.
+# review: pending
+err-entry-too-large = یہ اندراج بہت بڑا ہے۔ ایک سطر، یا پورے اندراج کا { -meezan }، زیادہ سے زیادہ { $max } روپے ہو سکتا ہے۔
 # PRD E24.
 # review: pending
 err-must-be-more-than-zero = صفر سے بڑا نمبر لکھیں۔
@@ -166,7 +170,10 @@ err-opening-not-allowed = اس کھاتے میں ابتدائی بقایا نہ�
 err-not-a-seller = یہ { -beopari } کا کھاتہ نہیں۔ { -peshgi } صرف { -beopari } کو دی جا سکتی ہے، { -pukhta-khata } کو نہیں۔
 # PRD FR-10.2. Hidden from pickers.
 # review: pending
-err-account-inactive = یہ کھاتہ بند ہے اور نئے اندراج میں استعمال نہیں ہو سکتا۔ کوئی دوسرا کھاتہ چنیں۔
+err-account-inactive = یہ کھاتہ غیر فعال ہے اور نئے اندراج میں استعمال نہیں ہو سکتا۔ کوئی دوسرا کھاتہ چنیں۔
+# PRD FR-10.4. A system account is used by the books, so it stays active.
+# review: pending
+err-system-account = یہ نظام کا کھاتہ ہے۔ حساب کتاب میں اس کا استعمال ہوتا ہے، اس لیے اسے غیر فعال نہیں کیا جا سکتا۔
 # PRD FR-21.2.
 # review: pending
 err-reason-required = وجہ لکھنا ضروری ہے۔

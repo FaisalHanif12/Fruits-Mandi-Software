@@ -105,6 +105,31 @@ describe.each(LANGUAGES)('sign in (%s)', (language) => {
     expect(document.documentElement.lang).toBe('en');
   });
 
+  it('a language chosen on the sign-in screen stays after signing in and is saved as his choice (FR-7.30)', async () => {
+    const other: Language = language === 'ur' ? 'en' : 'ur';
+    // His saved choice is the language the screen opened in; he switches on the screen itself.
+    const owner = sessionUser({ language });
+    vi.mocked(authApi.authLogin).mockImplementation(() => {
+      vi.mocked(authApi.authStatus).mockResolvedValue(authState({ session: owner }));
+      return Promise.resolve(owner);
+    });
+    vi.mocked(settingsApi.prefsSet).mockResolvedValue(null);
+    await renderApp();
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: message(language, 'auth-login-title') });
+    act(() => {
+      useLanguageStore.getState().setLanguage(other);
+    });
+    await screen.findByRole('heading', { name: message(other, 'auth-login-title') });
+    await user.keyboard(`${USERNAME}{Enter}${PASSWORD}{Enter}`);
+    expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
+    expect(useLanguageStore.getState().language).toBe(other);
+    expect(document.documentElement.lang).toBe(other);
+    await waitFor(() => {
+      expect(settingsApi.prefsSet).toHaveBeenCalledWith({ key: 'language', value: other });
+    });
+  });
+
   it('a wrong password shows under the password field with the tries left, and no raw code', async () => {
     vi.mocked(authApi.authLogin).mockRejectedValue(
       fail({ code: 'ERR_WRONG_PASSWORD', field: 'password', values: { tries_left: 4 } }),

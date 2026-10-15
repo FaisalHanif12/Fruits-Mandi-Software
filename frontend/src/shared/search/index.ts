@@ -4,6 +4,7 @@ export {
   PICKER_RESULT_LIMIT,
   PICKER_SEARCH_DELAY_MS,
   masterSource,
+  useFetchHits,
   usePickerHits,
   useTouchRecord,
   type PickerSource,

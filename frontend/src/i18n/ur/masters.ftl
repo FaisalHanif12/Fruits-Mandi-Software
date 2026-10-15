@@ -23,7 +23,7 @@ masters-unknown-help = { -index } سے فہرست چنیں۔
 masters-city-title = شہروں کی فہرست
 
 # review: pending
-masters-city-help = وہ شہر جہاں سے مال اور گاہک آتے ہیں۔
+masters-city-help = وہ شہر جہاں سے مال اور { -gahak } آتے ہیں۔
 
 # review: pending
 masters-city-new = نیا شہر
@@ -47,7 +47,7 @@ masters-item-empty = { masters-item-title } ابھی خالی ہے
 masters-packing-title = { -packing } کی فہرست
 
 # review: pending
-masters-packing-help = مال کی پیکنگ کی قسمیں، جیسے پیٹی اور کریٹ۔
+masters-packing-help = مال کی { -packing } کی قسمیں، جیسے پیٹی اور کریٹ۔
 
 # review: pending
 masters-packing-new = نئی { -packing }
@@ -104,13 +104,13 @@ masters-narration-new = نئی تفصیل
 masters-narration-empty = { masters-narration-title } ابھی خالی ہے
 
 # review: pending
-masters-expense-head-title = خرچہ مد کی فہرست
+masters-expense-head-title = { -kharcha } مد کی فہرست
 
 # review: pending
 masters-expense-head-help = دکان کے خرچوں کی مدیں، جیسے بجلی اور چائے۔
 
 # review: pending
-masters-expense-head-new = نئی خرچہ مد
+masters-expense-head-new = نئی { -kharcha } مد
 
 # review: pending
 masters-expense-head-empty = { masters-expense-head-title } ابھی خالی ہے
@@ -119,7 +119,7 @@ masters-expense-head-empty = { masters-expense-head-title } ابھی خالی ہ
 masters-staff-title = عملے کی فہرست
 
 # review: pending
-masters-staff-help = منشی، اگراہی والے اور مزدور۔
+masters-staff-help = منشی، { -agrahi } والے اور مزدور۔
 
 # review: pending
 masters-staff-new = عملے کا نیا فرد
@@ -293,6 +293,30 @@ masters-marka-text = { -marka } کی تحریر
 masters-marka-text-hint = جیسا پیٹی پر لکھا ہے ویسا ہی لکھیں۔ یہ ترجمہ نہیں ہوتا۔
 
 # review: pending
+masters-marka-owner = { -beopari }
+
+# review: pending
+masters-marka-owner-hint = وہ { -beopari } جس کے مال پر یہ { -marka } لگتا ہے۔ خالی بھی چھوڑ سکتے ہیں۔
+
+# review: pending
+masters-narration-used-in = استعمال کی جگہ
+
+# review: pending
+masters-narration-used-in-hint = جن واؤچروں میں یہ تفصیل پیش ہو، ان پر نشان لگائیں۔ کسی پر نشان نہ لگائیں تو یہ ہر واؤچر میں پیش ہوگی۔
+
+## The voucher types a narration is offered in (PRD 10.3). Business words come from the glossary.
+
+masters-used-in-receipt = { -wasooli }
+masters-used-in-payment = { -adaigi }
+masters-used-in-advance = { -peshgi-khata }
+masters-used-in-shop_expense = { -dukan-kharcha }
+masters-used-in-personal_expense = { -zati-kharcha }
+masters-used-in-personal_return = { -zati-kharcha } { -wapsi }
+masters-used-in-money_lent = { -adhar-raqam }
+masters-used-in-money_lent_return = { -adhar-raqam } { -wapsi }
+masters-used-in-general = { -general }
+
+# review: pending
 masters-staff-job = کام
 
 # review: pending
@@ -308,10 +332,10 @@ masters-staff-job-labour = مزدور
 masters-staff-phone = فون نمبر
 
 # review: pending
-masters-staff-account = ادھار رقم کا کھاتہ
+masters-staff-account = { -adhar-raqam } کا کھاتہ
 
 # review: pending
-masters-staff-account-hint = جب اسے پہلی بار ادھار رقم دی جائے گی تو یہ کھاتہ خود بن جائے گا۔
+masters-staff-account-hint = جب اسے پہلی بار { -adhar-raqam } دی جائے گی تو یہ کھاتہ خود بن جائے گا۔
 
 # review: pending
 masters-bank-bank = بینک کا نام

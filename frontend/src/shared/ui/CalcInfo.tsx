@@ -5,7 +5,8 @@
 // level); this file only writes each value as text (money grouped as everywhere, a percent from its
 // basis points, a level as its word) and Fluent puts them into the message in the app language.
 // A working this build has no words for shows the plain "no working" line, never the raw ID.
-// Ctrl+I on the ⓘ opens it too.
+// Ctrl+I on the ⓘ opens it too. Every number of the working is in <Num>: Inter, equal-width
+// digits, left to right (Code Standards F25).
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Info } from 'lucide-react';
@@ -15,6 +16,7 @@ import type { WorkingValue } from '../../bindings/WorkingValue';
 import { formatBps, formatPaisa, useGrouping, type Grouping } from '../format';
 import { levelMessageId, useUiLanguage } from '../i18n';
 import { SHORTCUTS, matchesShortcut } from '../keyboard';
+import { Num } from './Num';
 
 export type { Working };
 
@@ -84,7 +86,7 @@ export function CalcInfo({ working }: CalcInfoProps) {
             // dir="auto": a working that is only numbers and signs ("12,000 × 6 ÷ 100 = 720") reads
             // left to right in Urdu too, and one with words reads in the direction of its words
             // (NFR-URD-13).
-            <Localized id={messageId} vars={vars}>
+            <Localized id={messageId} vars={vars} elems={{ num: <Num /> }}>
               <p dir="auto" className="type-body" />
             </Localized>
           ) : (

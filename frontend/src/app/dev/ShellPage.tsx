@@ -33,7 +33,7 @@ function SampleForm() {
   const [promptOpen, setPromptOpen] = useState(false);
   return (
     <Card title={<Localized id="gallery-section-fields" />}>
-      <form {...formNavigationProps} className="grid max-w-2xl grid-cols-2 gap-x-5 gap-y-4">
+      <form {...formNavigationProps} className="grid max-w-reading grid-cols-2 gap-x-5 gap-y-4">
         <Field label={<Localized id="gallery-field-amount" />}>
           {(control) => <MoneyInput {...control} value={amount} onChange={setAmount} />}
         </Field>

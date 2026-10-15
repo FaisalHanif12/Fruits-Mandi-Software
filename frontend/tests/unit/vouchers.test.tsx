@@ -393,7 +393,7 @@ describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
       (
         await screen.findAllByText(
           (content) =>
-            visible(content) === message(language, 'vouchers-some-refused', { count: '1' }),
+            visible(content) === message(language, 'vouchers-some-refused', { count: 1 }),
         )
       ).length,
     ).toBeGreaterThan(0);

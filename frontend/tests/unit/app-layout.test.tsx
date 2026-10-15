@@ -341,6 +341,16 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
     );
   }
 
+  it('is as tall as the window and clipped, and the screen is the containing block, so the page never scrolls itself', () => {
+    renderShell();
+    // Layout cannot be measured here; the classes that keep the page still are checked
+    // (D1+D2 review, finding 29, measured in a browser): the shell clips, the screen scrolls, and
+    // the screen holds the hidden native <select> Radix puts beside each drop-down.
+    const main = screen.getByRole('main');
+    expect(main).toHaveClass('relative', 'overflow-auto');
+    expect(main.closest('.h-screen')).toHaveClass('overflow-hidden');
+  });
+
   // The menu is on the start side: the right in Urdu, the left in English.
   const intoScreen = language === 'ur' ? '{ArrowLeft}' : '{ArrowRight}';
   const toMenu = language === 'ur' ? '{ArrowRight}' : '{ArrowLeft}';

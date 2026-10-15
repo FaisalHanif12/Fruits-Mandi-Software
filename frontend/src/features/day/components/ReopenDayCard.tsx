@@ -6,6 +6,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
+import { useSingleFlight } from '../../../shared/hooks';
 import {
   Button,
   Card,
@@ -36,6 +37,8 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
   const reopen = useReopenDay();
+  // One reopen at a time: a second Enter on the confirm box does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
   const error = reopen.error === null ? null : uiErrorOf(reopen.error);
 
   if (closedUpTo === null) {
@@ -52,14 +55,17 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
 
   const confirm = () => {
     setConfirming(false);
-    reopen.mutate(
-      { date, reason },
-      {
-        onSuccess: () => {
-          showToast('success', l10n.getString('day-reopened', { date }));
-          setReason('');
-        },
-      },
+    void flight.run(
+      () =>
+        reopen
+          .mutateAsync({ date, reason })
+          .then(() => {
+            showToast('success', l10n.getString('day-reopened', { date }));
+            setReason('');
+          })
+          // The refusal is shown on the card by its fields.
+          .catch(() => undefined),
+      undefined,
     );
   };
 
@@ -80,7 +86,7 @@ export function ReopenDayCard({ closedUpTo }: ReopenDayCardProps) {
       <div>
         <Button
           variant="danger"
-          busy={reopen.isPending}
+          busy={flight.busy || reopen.isPending}
           onClick={() => {
             setConfirming(true);
           }}

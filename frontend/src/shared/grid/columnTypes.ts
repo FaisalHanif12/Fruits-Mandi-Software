@@ -27,12 +27,15 @@ export function isNumberLike(type: EntryColumnType): boolean {
  * The columns of a read-only list (ListGrid). Same rule as above: one type, one width (F18). A
  * `name` column is wide enough for a Nastaliq name and the other script's name beside it.
  */
-export type ListColumnType = 'code' | 'name' | 'text' | 'number' | 'money' | 'date' | 'status';
+export type ListColumnType =
+  'code' | 'name' | 'text' | 'choice' | 'number' | 'money' | 'date' | 'status';
 
 export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
   code: 120,
   name: 260,
   text: 200,
+  // A phrase from a short fixed list, such as "sold by weight" (Urdu needs about 135 px for it).
+  choice: 160,
   number: 140,
   money: 140,
   date: 140,

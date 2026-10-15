@@ -10,7 +10,7 @@ dashboard-today = آج: <num>{ $date }</num>
 dashboard-empty-title = آج ابھی کوئی { -bikri } نہیں
 
 # review: pending
-dashboard-empty-help = پہلے { -index } میں بیوپاری اور گاہک شامل کریں، پھر پہلی { -bikri } درج کریں۔
+dashboard-empty-help = پہلے { -index } میں { -beopari } اور { -gahak } شامل کریں، پھر پہلی { -bikri } درج کریں۔
 
 # review: pending
 dashboard-open-index = { -index } کھولیں

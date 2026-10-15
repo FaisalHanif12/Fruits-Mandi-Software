@@ -22,6 +22,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { account, fakeAccountSearch } from '../helpers/accounts';
 import { fakeMasters, record } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
@@ -30,6 +31,7 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/masters/api');
+vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
@@ -611,7 +613,7 @@ describe.each(LANGUAGES)('masters with their own fields (%s)', (language) => {
     });
     await renderApp('/index/staff/31');
     const link = await screen.findByLabelText<HTMLInputElement>(
-      message(language, 'masters-staff-account'),
+      named(message(language, 'masters-staff-account')),
     );
     expect(link.value).toBe('');
     expect(link).toHaveAttribute('readonly');
@@ -622,6 +624,90 @@ describe.each(LANGUAGES)('masters with their own fields (%s)', (language) => {
     expect(
       screen.queryByLabelText(message(language, 'masters-field-code')),
     ).not.toBeInTheDocument();
+  });
+
+  it('a mark has an owner seller, found with the account picker and sent back as chosen', async () => {
+    const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim');
+    fakeAccountSearch([RAHIM]);
+    fakeMasters();
+    await renderApp('/index/markas/new');
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText(named(message(language, 'masters-marka-text'))));
+    await user.keyboard('AR');
+    const owner = screen.getByRole<HTMLInputElement>('combobox', {
+      name: named(message(language, 'masters-marka-owner')),
+    });
+    await user.click(owner);
+    await user.keyboard('rah');
+    await waitFor(() => {
+      expect(screen.getAllByRole('option')).toHaveLength(1);
+    });
+    await user.keyboard('{Enter}');
+    expect(owner.value).toBe(language === 'ur' ? 'رحیم' : 'Rahim');
+    press('F10');
+    await waitFor(() => {
+      expect(mastersApi.mastersSave).toHaveBeenCalledTimes(1);
+    });
+    const [kind, draft] = vi.mocked(mastersApi.mastersSave).mock.calls[0] ?? [];
+    expect(kind).toBe('marka');
+    expect(draft?.text).toMatchObject({ mark_text: 'AR' });
+    expect(draft?.refs['owner']).toMatchObject({ id: 31, code: '030110001' });
+  });
+
+  it('a narration is offered in the voucher types that are ticked, and in all when none is', async () => {
+    fakeMasters();
+    await renderApp('/index/narrations/new');
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText(message(language, 'masters-narration-text-ur')));
+    await user.keyboard('x');
+    // Nothing is ticked at first: the hint says that means every voucher.
+    expect(visible(document.body.textContent)).toContain(
+      message(language, 'masters-narration-used-in-hint'),
+    );
+    await user.click(
+      screen.getByRole('checkbox', { name: named(message(language, 'masters-used-in-receipt')) }),
+    );
+    await user.click(
+      screen.getByRole('checkbox', {
+        name: named(message(language, 'masters-used-in-personal_return')),
+      }),
+    );
+    press('F10');
+    await waitFor(() => {
+      expect(mastersApi.mastersSave).toHaveBeenCalledTimes(1);
+    });
+    const [kind, draft] = vi.mocked(mastersApi.mastersSave).mock.calls[0] ?? [];
+    expect(kind).toBe('narration');
+    expect([...(draft?.lists['used_in'] ?? [])].sort()).toEqual(['personal_return', 'receipt']);
+  });
+
+  it('a saved narration shows its voucher types ticked, and untick sends them out of the list', async () => {
+    fakeMasters({
+      narration: [
+        record('narration', 51, '', 'بجلی کا بل', 'Electricity bill', {
+          lists: { used_in: ['shop_expense', 'payment'] },
+        }),
+      ],
+    });
+    await renderApp('/index/narrations/51');
+    const user = userEvent.setup();
+    const shop = await screen.findByRole<HTMLInputElement>('checkbox', {
+      name: named(message(language, 'masters-used-in-shop_expense')),
+    });
+    expect(shop.checked).toBe(true);
+    expect(
+      screen.getByRole<HTMLInputElement>('checkbox', {
+        name: named(message(language, 'masters-used-in-receipt')),
+      }).checked,
+    ).toBe(false);
+    await user.click(shop);
+    press('F10');
+    await waitFor(() => {
+      expect(mastersApi.mastersSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(mastersApi.mastersSave).mock.calls[0]?.[1].lists['used_in']).toEqual([
+      'payment',
+    ]);
   });
 
   it('a mark keeps its text exactly as typed, with no names', async () => {

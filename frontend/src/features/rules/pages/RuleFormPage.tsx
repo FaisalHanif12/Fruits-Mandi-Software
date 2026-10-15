@@ -22,7 +22,18 @@ export function RuleFormPage() {
 function NewRule() {
   const day = useDayStatus();
   if (day.isPending) return <LoadingState />;
-  return <RuleForm rule={null} today={day.data?.today ?? ''} />;
+  if (day.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="rules-load-failed" />}
+        error={uiErrorOf(day.error)}
+        onRetry={() => {
+          void day.refetch();
+        }}
+      />
+    );
+  }
+  return <RuleForm rule={null} today={day.data.today} />;
 }
 
 function EditRule({ id }: { id: number }) {

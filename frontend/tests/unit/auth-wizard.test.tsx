@@ -1,7 +1,7 @@
 // The first-run wizard (plan 04, PRD NFR-INS-2, boards WizardUr and WizardEn), in Urdu and
 // English, by keyboard only, against a fake backend.
 
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../../src/features/auth/api';
@@ -108,6 +108,7 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
         owner_display_name: 'Adnan',
         password: 'secret12',
         password_repeat: 'secret12',
+        confirmed_rules_words: [],
       });
     });
     // The code is shown once, in groups of four, left to right. The passwords are gone.
@@ -291,6 +292,82 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
         expect.objectContaining({ firm_name_ur: 'طارق محمود', firm_name_en: 'Tariq Mehmood' }),
       );
     });
+  });
+
+  it('a firm name word made by the spelling rules alone is checked on the first step, then sent as confirmed (FR-7.66)', async () => {
+    vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+      Promise.resolve(
+        suggestionsFor(
+          { toUrdu: { zaheer: ['ظہیر'] }, toEnglish: { ظہیر: 'Zaheer' }, rulesOnly: ['zaheer'] },
+          text,
+          direction,
+        ),
+      ),
+    );
+    vi.mocked(authApi.setupFirstRun).mockResolvedValue({ recovery_code: '7KQ2M9XD4TPAHW3C' });
+    const user = await start();
+    await user.click(field(language, 'auth-wizard-firm-name-ur'));
+    await user.keyboard('zaheer ');
+    await waitFor(() => {
+      expect(field(language, 'auth-wizard-firm-name-en').value).toBe('Zaheer');
+    });
+    await user.click(field(language, 'auth-wizard-mandi-en'));
+    await user.keyboard(MANDI_NAMES.en);
+    await user.click(field(language, 'auth-wizard-mandi-ur'));
+    await user.keyboard(MANDI_NAMES.ur);
+    await user.click(field(language, 'auth-wizard-phone'));
+    await user.keyboard('0300-0000000{Enter}Shop 1{Enter}');
+    // Going on from the names asks first, and nothing is sent.
+    const dialog = await screen.findByRole('alertdialog');
+    expect(visible(dialog.textContent)).toContain('ظہیر');
+    expect(authApi.setupFirstRun).not.toHaveBeenCalled();
+    await user.click(
+      within(dialog).getByRole('button', {
+        name: new RegExp(message(language, 'translit-spelling-confirm')),
+      }),
+    );
+    await screen.findByRole('heading', { name: message(language, 'auth-wizard-owner-title') });
+    await user.keyboard(OWNER_STEP);
+    await waitFor(() => {
+      expect(authApi.setupFirstRun).toHaveBeenCalledWith(
+        expect.objectContaining({ confirmed_rules_words: ['ظہیر'] }),
+      );
+    });
+  });
+
+  it('going back to fix the spelling stays on the first step and sends nothing', async () => {
+    vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+      Promise.resolve(
+        suggestionsFor(
+          { toUrdu: { zaheer: ['ظہیر'] }, toEnglish: { ظہیر: 'Zaheer' }, rulesOnly: ['zaheer'] },
+          text,
+          direction,
+        ),
+      ),
+    );
+    const user = await start();
+    await user.click(field(language, 'auth-wizard-firm-name-ur'));
+    await user.keyboard('zaheer ');
+    await waitFor(() => {
+      expect(field(language, 'auth-wizard-firm-name-en').value).toBe('Zaheer');
+    });
+    await user.click(field(language, 'auth-wizard-mandi-en'));
+    await user.keyboard(MANDI_NAMES.en);
+    await user.click(field(language, 'auth-wizard-mandi-ur'));
+    await user.keyboard(MANDI_NAMES.ur);
+    await user.click(field(language, 'auth-wizard-phone'));
+    await user.keyboard('0300-0000000{Enter}Shop 1{Enter}');
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(
+      within(dialog).getByRole('button', { name: new RegExp(message(language, 'common-back')) }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole('heading', { name: message(language, 'auth-wizard-firm-title') }),
+    ).toBeInTheDocument();
+    expect(authApi.setupFirstRun).not.toHaveBeenCalled();
   });
 
   it('switching language while a word is being typed keeps the letters and the typing mode', async () => {

@@ -10,6 +10,9 @@
 //   where label is a local function that returns a word string;
 // - a word string as a Fluent variable: `l10n.getString('x', { v: 'Hello' })`,
 //   `<Localized vars={{ v: 'Hello' }}>`;
+// - words joined by `+`: `<p>{'Saved ' + name}</p>`, `showToast('success', 'Saved ' + name)`;
+// - a word string handed to a function that shows it: `showToast('success', 'Saved')`,
+//   `alert('Saved')`, `confirm('Sure?')`;
 // - a word string written into the page from code: `document.title = 'Mandi'`,
 //   `el.textContent = 'Saved'`, `el.innerText`, `el.innerHTML`, `el.setAttribute('title', 'x')`;
 // - a string with letters in ANY JSX attribute, also through a branch, except the attributes
@@ -208,6 +211,12 @@ function isWordString(node, scope, depth = 0) {
     if (value.type === 'TemplateLiteral') {
       return value.quasis.some((quasi) => HAS_LETTER.test(quasi.value.cooked ?? quasi.value.raw));
     }
+    // 'Saved ' + name: the words are still written in code.
+    if (value.type === 'BinaryExpression' && value.operator === '+') {
+      return (
+        isWordString(value.left, scope, depth + 1) || isWordString(value.right, scope, depth + 1)
+      );
+    }
     if (value.type === 'ArrayExpression') {
       return value.elements.some(
         (element) =>
@@ -288,6 +297,17 @@ const TEXT_PROPERTIES = new Set([
 /** Attributes set through setAttribute() that a user reads or hears. */
 const TEXT_ATTRIBUTE_NAMES = new Set(['title', 'aria-label', 'placeholder', 'alt', 'label']);
 
+/**
+ * Functions that put a text argument in front of the user, and which argument it is (0 is the
+ * first). `showToast(tone, text)` is ours; alert, confirm and prompt are the browser's.
+ */
+const TEXT_SINKS = new Map([
+  ['showToast', 1],
+  ['alert', 0],
+  ['confirm', 0],
+  ['prompt', 0],
+]);
+
 /** Props that pass variables into a Fluent message: `<Localized vars={...}>`. */
 const FLUENT_VARIABLE_PROPS = new Set(['vars']);
 
@@ -304,6 +324,7 @@ export default createRule({
         'Text written in code in the "{{name}}" attribute. Use a Fluent message instead (CLAUDE.md rule 7, Code Standards F31).',
       fluentArgs:
         'Text written in code as a Fluent variable. Variables carry values (numbers, names, codes); words belong in the message itself (CLAUDE.md rule 7, Code Standards F31).',
+      sink: 'Text written in code passed to "{{name}}", which shows it. Use a Fluent message instead (CLAUDE.md rule 7, Code Standards F31).',
       property:
         'Text written in code into "{{name}}". Use a Fluent message instead (CLAUDE.md rule 7, Code Standards F31).',
     },
@@ -382,6 +403,15 @@ export default createRule({
           const args = node.arguments[1];
           if (args?.type === 'ObjectExpression' && objectHasWord(args, scope)) {
             context.report({ node: args, messageId: 'fluentArgs' });
+          }
+          return;
+        }
+        // showToast('success', 'Saved'), alert('Saved')
+        const sink = TEXT_SINKS.get(name);
+        if (sink !== undefined) {
+          const shown = node.arguments[sink];
+          if (shown !== undefined && shown.type !== 'SpreadElement' && isWordString(shown, scope)) {
+            context.report({ node: shown, messageId: 'sink', data: { name } });
           }
           return;
         }

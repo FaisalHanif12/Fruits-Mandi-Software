@@ -1,5 +1,8 @@
 // Display helpers for the sign-in screens. Text only, no money.
 
+/** The shortest password (NFR-SEC-1). The backend enforces it and is the final word. */
+export const PASSWORD_MIN_LENGTH = 6;
+
 const GROUP = 4;
 const CODE_CHARACTERS = /[^A-Za-z0-9]/g;
 

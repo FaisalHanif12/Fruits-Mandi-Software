@@ -20,7 +20,7 @@ import {
 } from '../accounts';
 import { uiErrorOf } from '../api';
 import { todayText } from '../format';
-import { useSpellingFlow } from '../hooks';
+import { useSingleFlight, useSpellingFlow } from '../hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../keyboard';
 import { Button } from './Button';
 import { CodeInput } from './CodeInput';
@@ -128,6 +128,8 @@ function QuickAddForm({
     note: '',
   };
 
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
   const submit = async () => {
     try {
       const saved = await spelling.guard(names, setNames, (confirmedNames) =>
@@ -147,7 +149,7 @@ function QuickAddForm({
     }
   };
   const submitNow = () => {
-    void submit();
+    void flight.run(submit, undefined);
   };
   const navigation = useFormNavigation(submitNow);
   useShortcut(SHORTCUTS.save, submitNow);
@@ -230,7 +232,7 @@ function QuickAddForm({
         <Button
           variant="primary"
           shortcut={SHORTCUTS.save}
-          busy={save.isPending}
+          busy={flight.busy || save.isPending}
           onClick={submitNow}
         >
           <Localized id="layout-save-save" />

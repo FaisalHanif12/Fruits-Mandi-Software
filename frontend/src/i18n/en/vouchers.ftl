@@ -76,7 +76,10 @@ vouchers-saved-advance = { -peshgi-khata } { $number } saved
 vouchers-saved-many = { $count } { -peshgi-khata } vouchers saved
 
 # review: pending
-vouchers-some-refused = { $count } vouchers could not be saved. See the reason in the list.
+vouchers-some-refused = { $count ->
+    [one] One voucher could not be saved. See the reason in the list.
+   *[other] { $count } vouchers could not be saved. See the reason in the list.
+}
 
 ## The advances of a seller, under his party card (PRD FR-7.60).
 

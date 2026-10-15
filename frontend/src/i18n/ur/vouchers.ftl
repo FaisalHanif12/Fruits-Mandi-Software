@@ -7,7 +7,7 @@
 vouchers-advance-title = { -peshgi-khata }
 
 # review: pending
-vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہلے رقم دیں۔ رقم کے بعد اس کا نیا بقایا نظر آتا ہے۔
+vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہلے رقم دیں۔ محفوظ کرنے کے بعد اس کا نیا بقایا نظر آتا ہے۔
 
 # review: pending
 vouchers-add-to-list = فہرست میں رکھیں
@@ -76,7 +76,10 @@ vouchers-saved-advance = { -peshgi-khata } { $number } محفوظ ہو گیا
 vouchers-saved-many = { $count } { -peshgi-khata } محفوظ ہو گئے
 
 # review: pending
-vouchers-some-refused = { $count } واؤچر محفوظ نہیں ہو سکے۔ فہرست میں وجہ دیکھیں۔
+vouchers-some-refused = { $count ->
+    [one] ایک واؤچر محفوظ نہیں ہو سکا۔ فہرست میں وجہ دیکھیں۔
+   *[other] { $count } واؤچر محفوظ نہیں ہو سکے۔ فہرست میں وجہ دیکھیں۔
+}
 
 ## The advances of a seller, under his party card (PRD FR-7.60).
 

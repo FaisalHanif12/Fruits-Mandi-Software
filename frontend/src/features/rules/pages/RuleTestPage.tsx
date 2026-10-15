@@ -27,6 +27,8 @@ import {
   Picker,
   type PickerValue,
   QtyInput,
+  Table,
+  type TableColumn,
 } from '../../../shared/ui';
 import { formatBps, formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { levelMessageId } from '../../../shared/i18n';
@@ -56,67 +58,87 @@ function WinnerValue({ winner }: { winner: WinnerView }) {
   return <span>{l10n.getString(VALUE_ID[winner.method], { value })}</span>;
 }
 
-function ResultRow({ charge }: { charge: ChargeTest }) {
+/** Which rule won, with a link to it. */
+function WinnerCell({ charge }: { charge: ChargeTest }) {
   const navigate = useNavigate();
   const { winner } = charge;
+  if (winner === null) return <Localized id="rules-test-no-rule" />;
   return (
-    <tr className="border-t border-border align-top">
-      <td className="py-2 pe-3">
-        <Localized id={`rules-side-${charge.side}`} />{' '}
-        <Localized id={`rules-charge-${charge.charge_type}`} />
-      </td>
-      <td className="py-2 pe-3">
-        {winner === null ? (
-          <Localized id="rules-test-no-rule" />
-        ) : (
-          <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            {winner.manual ? <Localized id="rules-test-manual" /> : <WinnerValue winner={winner} />}
-            {winner.rule_id === null ? null : (
-              <LinkButton
-                onClick={() => {
-                  void navigate({
-                    to: '/index/rules/$id',
-                    params: { id: String(winner.rule_id) },
-                  });
-                }}
-              >
-                <Localized id="rules-overlap-open" />
-              </LinkButton>
-            )}
-          </span>
-        )}
-      </td>
-      <td className="py-2 pe-3">
-        {winner === null ? null : <Localized id={levelMessageId(winner.level)} />}
-      </td>
-      <td className="py-2 pe-3">
-        {charge.skipped.length === 0 ? (
-          <Localized id="rules-test-skipped-none" />
-        ) : (
-          <ul className="flex flex-wrap gap-1">
-            {charge.skipped.map((skipped) => (
-              <li key={skipped.level} className="rounded-1 bg-surface-sunken px-2 py-1 type-label">
-                <Localized id={levelMessageId(skipped.level)} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </td>
-      <td className="py-2">
-        {/* The cell reads left to right in both languages, so the number sits on the physical right
-            edge (NFR-USE-19); the ⓘ has a slot of its own on the left, so the icons line up. */}
-        <div dir="ltr" className="flex items-center justify-between gap-1">
-          <span className="inline-flex size-control-compact shrink-0 items-center justify-center">
-            <CalcInfo working={charge.working} />
-          </span>
-          <Num paisa={charge.amount_paisa} />
-        </div>
-      </td>
-    </tr>
+    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      {winner.manual ? <Localized id="rules-test-manual" /> : <WinnerValue winner={winner} />}
+      {winner.rule_id === null ? null : (
+        <LinkButton
+          onClick={() => {
+            void navigate({
+              to: '/index/rules/$id',
+              params: { id: String(winner.rule_id) },
+            });
+          }}
+        >
+          <Localized id="rules-overlap-open" />
+        </LinkButton>
+      )}
+    </span>
   );
 }
 
+const RESULT_COLUMNS: TableColumn<ChargeTest>[] = [
+  {
+    id: 'charge',
+    header: <Localized id="rules-col-charge" />,
+    cell: (charge) => (
+      <>
+        <Localized id={`rules-side-${charge.side}`} />{' '}
+        <Localized id={`rules-charge-${charge.charge_type}`} />
+      </>
+    ),
+  },
+  {
+    id: 'winner',
+    header: <Localized id="rules-test-winner" />,
+    cell: (charge) => <WinnerCell charge={charge} />,
+  },
+  {
+    id: 'level',
+    header: <Localized id="rules-test-level" />,
+    cell: ({ winner }) =>
+      winner === null ? null : <Localized id={levelMessageId(winner.level)} />,
+  },
+  {
+    id: 'skipped',
+    header: <Localized id="rules-test-skipped" />,
+    cell: (charge) =>
+      charge.skipped.length === 0 ? (
+        <Localized id="rules-test-skipped-none" />
+      ) : (
+        <ul className="flex flex-wrap gap-1">
+          {charge.skipped.map((skipped) => (
+            <li key={skipped.level} className="rounded-1 bg-surface-sunken px-2 py-1 type-label">
+              <Localized id={levelMessageId(skipped.level)} />
+            </li>
+          ))}
+        </ul>
+      ),
+  },
+  {
+    id: 'amount',
+    header: <Localized id="rules-test-amount" />,
+    kind: 'number',
+    // The ⓘ has a slot of its own at the start of the cell, so the icons line up and the number
+    // sits on the physical right edge (NFR-USE-19).
+    cell: (charge) => (
+      <div className="flex items-center justify-between gap-1">
+        <span className="inline-flex size-control-compact shrink-0 items-center justify-center">
+          <CalcInfo working={charge.working} />
+        </span>
+        <Num paisa={charge.amount_paisa} />
+      </div>
+    ),
+  },
+];
+
 export function RuleTestPage() {
+  const { l10n } = useLocalization();
   const navigate = useNavigate();
   const day = useDayStatus();
   const [seller, setSeller] = useState<PickerValue | null>(null);
@@ -255,30 +277,12 @@ export function RuleTestPage() {
               <Localized id="rules-test-line-value" />
               <Num paisa={test.data.line_value_paisa} />
             </p>
-            <table className="w-full border-collapse type-body text-start">
-              <thead>
-                <tr className="text-ink-muted">
-                  <th scope="col" className="pb-2 pe-3 text-start font-normal" />
-                  <th scope="col" className="pb-2 pe-3 text-start font-normal">
-                    <Localized id="rules-test-winner" />
-                  </th>
-                  <th scope="col" className="pb-2 pe-3 text-start font-normal">
-                    <Localized id="rules-test-level" />
-                  </th>
-                  <th scope="col" className="pb-2 pe-3 text-start font-normal">
-                    <Localized id="rules-test-skipped" />
-                  </th>
-                  <th scope="col" className="pb-2 text-end font-normal">
-                    <Localized id="rules-test-amount" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {test.data.charges.map((charge) => (
-                  <ResultRow key={`${charge.side}-${charge.charge_type}`} charge={charge} />
-                ))}
-              </tbody>
-            </table>
+            <Table
+              label={l10n.getString('rules-test-result')}
+              columns={RESULT_COLUMNS}
+              rows={test.data.charges}
+              rowKey={(charge) => `${charge.side}-${charge.charge_type}`}
+            />
           </div>
         )}
       </Card>

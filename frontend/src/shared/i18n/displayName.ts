@@ -13,6 +13,11 @@ export function displayName(record: Named, language: Language): string {
   return language === 'ur' ? record.name_ur : record.name_en;
 }
 
+/** The language of the script the app is not in, for a `lang` attribute on the other name. */
+export function otherScriptLang(language: Language): Language {
+  return language === 'ur' ? 'en' : 'ur';
+}
+
 /**
  * The name in the script the app is not in, for a dimmed second line that tells two records
  * apart (the English name on an Urdu screen, the Urdu name on an English one).

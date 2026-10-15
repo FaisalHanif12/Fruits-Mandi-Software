@@ -174,7 +174,7 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
       });
     });
     const summary = await screen.findByRole('heading', {
-      name: message(language, 'openings-summary-title'),
+      name: named(message(language, 'openings-summary-title')),
     });
     const panel = summary.closest('section');
     await waitFor(() => {

@@ -181,6 +181,9 @@
   --leading-latin: 1.45;
   --leading-chip: 1;
 
+  /* Letter spacing of a code read aloud or copied by hand, such as the recovery code. */
+  --tracking-code: 0.1em;
+
   --font-weight-normal: 400;
   --font-weight-semibold: 600;
 

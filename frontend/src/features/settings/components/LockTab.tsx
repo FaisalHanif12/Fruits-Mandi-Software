@@ -6,7 +6,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useEffect } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
-import { useFormState } from '../../../shared/hooks';
+import { useFormState, useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import { Button, ErrorNotice, Field, QtyInput, fieldError, showToast } from '../../../shared/ui';
 import { useSetSecurity } from '../hooks';
@@ -27,7 +27,7 @@ export function LockTab({ minutes }: LockTabProps) {
     setValues({ idle_lock_minutes: saved });
   }, [saved, setValues]);
 
-  const submit = (): Promise<boolean> =>
+  const submitOnce = (): Promise<boolean> =>
     save
       .mutateAsync({ idle_lock_minutes: values.idle_lock_minutes })
       .then(() => {
@@ -35,6 +35,9 @@ export function LockTab({ minutes }: LockTabProps) {
         return true;
       })
       .catch(() => false);
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
+  const submit = (): Promise<boolean> => flight.run(submitOnce, false);
   const submitNow = () => {
     void submit();
   };
@@ -47,7 +50,7 @@ export function LockTab({ minutes }: LockTabProps) {
       onSubmit={(event) => {
         event.preventDefault();
       }}
-      className="flex max-w-md flex-col gap-4"
+      className="flex max-w-dialog flex-col gap-4"
     >
       <LeaveGuard dirty={dirty} onSave={submit} />
       {error === null ? null : <ErrorNotice error={error} fieldsShown={['idle_lock_minutes']} />}
@@ -68,7 +71,7 @@ export function LockTab({ minutes }: LockTabProps) {
         <Button
           variant="primary"
           shortcut={SHORTCUTS.save}
-          busy={save.isPending}
+          busy={flight.busy || save.isPending}
           disabled={!dirty}
           onClick={submitNow}
         >

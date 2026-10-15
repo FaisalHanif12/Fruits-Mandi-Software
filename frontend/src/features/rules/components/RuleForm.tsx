@@ -15,7 +15,7 @@ import { TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField } from '../../../shared/hooks';
+import { useFocusFirstField, useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   AccountPicker,
@@ -87,7 +87,9 @@ export function RuleForm({ rule, today }: RuleFormProps) {
   }, [leaving, navigate]);
 
   // The saved rule and its overlap warnings, or null when the save was refused (the form shows why).
-  const persist = async (): Promise<RuleSaved | null> => {
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
+  const persistOnce = async (): Promise<RuleSaved | null> => {
     try {
       const saved = await save.mutateAsync(values);
       setBaseline(ruleDraftOf(saved.row));
@@ -99,6 +101,7 @@ export function RuleForm({ rule, today }: RuleFormProps) {
       return null;
     }
   };
+  const persist = (): Promise<RuleSaved | null> => flight.run(persistOnce, null);
   const finish = () => {
     setLeaving(true);
   };
@@ -227,7 +230,6 @@ export function RuleForm({ rule, today }: RuleFormProps) {
                   {...props}
                   scope={values.side}
                   value={values.account}
-                  showCard={false}
                   onChange={(hit) => {
                     // A party is more specific than a group: choosing one clears the group.
                     change({
@@ -402,7 +404,7 @@ export function RuleForm({ rule, today }: RuleFormProps) {
               <Button
                 variant="primary"
                 shortcut={SHORTCUTS.save}
-                busy={save.isPending}
+                busy={flight.busy || save.isPending}
                 onClick={saveAndClose}
               >
                 <Localized id="layout-save-save" />

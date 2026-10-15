@@ -86,9 +86,23 @@ interface ListGridProps<T> {
    * grid is as tall as its rows and draws them all (short lists, tests).
    */
   heightMode?: 'fill' | 'auto';
+  /**
+   * A total row pinned under the last row, with each figure under its column (Code Standards F19).
+   * It gives the column that holds the word and the text of the columns that have a total. The
+   * figures are the backend's, passed through `context.money`. Shown only while at least one of
+   * its columns is on screen, so a layout step without them keeps the totals where the screen put
+   * them.
+   */
+  totals?:
+    ((context: ListContext) => { labelField: string; values: Record<string, string> }) | undefined;
 }
 
-function toColDef<T>(column: ListColumn<T>, headerName: string, context: ListContext): ColDef<T> {
+function toColDef<T>(
+  column: ListColumn<T>,
+  headerName: string,
+  context: ListContext,
+  total: Record<string, string> | undefined,
+): ColDef<T> {
   return {
     colId: column.field,
     headerName,
@@ -102,8 +116,14 @@ function toColDef<T>(column: ListColumn<T>, headerName: string, context: ListCon
     wrapHeaderText: true,
     autoHeaderHeight: true,
     valueGetter: (params: ValueGetterParams<T>) =>
-      params.data === undefined ? '' : column.value(params.data, context),
+      params.node?.rowPinned === 'bottom'
+        ? (total?.[column.field] ?? '')
+        : params.data === undefined
+          ? ''
+          : column.value(params.data, context),
     cellClass: isListNumberLike(column.type) ? ['cell-num'] : [],
+    // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
+    headerClass: isListNumberLike(column.type) ? ['header-num'] : [],
     ...(column.script === undefined
       ? {}
       : {
@@ -127,6 +147,7 @@ function GridInner<T>({
   readFocusRow,
   onFocusRow,
   heightMode = 'fill',
+  totals,
 }: ListGridProps<T>) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -135,16 +156,31 @@ function GridInner<T>({
 
   const grouping = useGrouping();
   const step = useLayoutStep();
-  const columnDefs = useMemo(() => {
-    const context: ListContext = {
+  const shown = useMemo(
+    () => columns.filter((column) => isFromStep(step, column.from ?? 'compact')),
+    [columns, step],
+  );
+  const context = useMemo<ListContext>(
+    () => ({
       language,
       text: (id, vars) => l10n.getString(id, vars),
       money: (amount) => formatPaisa(amount, { grouping }),
-    };
-    return columns
-      .filter((column) => isFromStep(step, column.from ?? 'compact'))
-      .map((column) => toColDef(column, l10n.getString(column.headerId), context));
-  }, [columns, l10n, language, grouping, step]);
+    }),
+    [language, l10n, grouping],
+  );
+  // The total row exists while one of its columns is on screen.
+  const total = useMemo(() => {
+    const made = totals?.(context);
+    if (made === undefined) return undefined;
+    const visible = shown.some((column) => made.values[column.field] !== undefined);
+    return visible
+      ? { ...made.values, [made.labelField]: made.values[made.labelField] ?? '' }
+      : undefined;
+  }, [totals, context, shown]);
+  const columnDefs = useMemo(
+    () => shown.map((column) => toColDef(column, l10n.getString(column.headerId), context, total)),
+    [shown, l10n, context, total],
+  );
 
   const onGridReady = (event: GridReadyEvent<T>) => {
     apiRef.current = event.api;
@@ -170,7 +206,7 @@ function GridInner<T>({
 
   return (
     <div
-      className={`entry-grid list-grid ag-theme-quartz ${heightMode === 'fill' ? 'list-grid-fill' : ''}`}
+      className={`entry-grid ag-theme-quartz ${heightMode === 'fill' ? 'list-grid-fill' : ''}`}
       role="group"
       aria-label={l10n.getString(labelId)}
       dir={direction}
@@ -179,6 +215,7 @@ function GridInner<T>({
         theme="legacy"
         enableRtl={direction === 'rtl'}
         rowData={rows as T[]}
+        pinnedBottomRowData={total === undefined ? [] : [{} as T]}
         columnDefs={columnDefs}
         getRowId={(params) => getRowId(params.data)}
         domLayout={heightMode === 'auto' ? 'autoHeight' : 'normal'}

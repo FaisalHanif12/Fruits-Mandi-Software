@@ -29,6 +29,10 @@ err-negative-not-allowed = A negative number is not allowed. Write it without a 
 # $max: the largest amount in rupees.
 # review: pending
 err-amount-too-large = The amount is too large. The most you can enter is Rs { $max }.
+# A journal entry: one line, or the total of the entry, is over the largest amount allowed.
+# $max: the largest amount in rupees.
+# review: pending
+err-entry-too-large = This entry is too large. One line, or the total of an entry, can be at most Rs { $max }.
 # PRD E24.
 # review: pending
 err-must-be-more-than-zero = Enter a number more than zero.
@@ -169,6 +173,9 @@ err-not-a-seller = This is not a { -beopari } account. An { -peshgi } can only b
 # PRD FR-10.2. Hidden from pickers.
 # review: pending
 err-account-inactive = This account is inactive and cannot be used in a new entry. Choose another account.
+# PRD FR-10.4. A system account is used by the books, so it stays active.
+# review: pending
+err-system-account = This is a system account. The books use it, so it cannot be made inactive.
 # PRD FR-21.2.
 # review: pending
 err-reason-required = A reason is required.

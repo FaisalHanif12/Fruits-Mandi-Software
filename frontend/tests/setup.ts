@@ -1,6 +1,13 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
+
+// A test waits for what the screen shows with waitFor and findBy. The default one second is
+// enough on a quiet machine and not on a loaded one: 49 files run at the same time, and the
+// Windows runner is slower still (D1+D2 review, finding 26). A test that passes still ends at
+// once; only a test that fails waits this long.
+const ASYNC_UTIL_TIMEOUT_MS = 10_000;
+configure({ asyncUtilTimeout: ASYNC_UTIL_TIMEOUT_MS });
 
 afterEach(() => {
   cleanup();

@@ -8,12 +8,13 @@
 
 import { Localized } from '@fluent/react';
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useId, useLayoutEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useState } from 'react';
+import { tokenPx } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { arrowSide, elementDirection } from '../../../shared/keyboard';
+import { treeKeyHandler } from '../../../shared/keyboard';
 import { Balance, Code } from '../../../shared/ui';
 import type { ChartHead } from '../../../shared/accounts';
-import { headKeys, horizontalMove, moveActive, visibleRows, type TreeRow } from '../chart-tree';
+import { headKeys, horizontalMove, visibleRows, type TreeRow } from '../chart-tree';
 
 const FALLBACK_ROW_PX = 44;
 /** What is drawn when the height of the tree cannot be read (tests have no layout). */
@@ -29,13 +30,6 @@ interface ChartTreeProps {
   onOpenAccount: (id: number) => void;
 }
 
-function rowPixels(): number {
-  const size = Number.parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue('--control-h'),
-  );
-  return Number.isFinite(size) && size > 0 ? size : FALLBACK_ROW_PX;
-}
-
 export function ChartTree({ heads, onOpenAccount }: ChartTreeProps) {
   const language = useLanguage();
   const treeId = useId();
@@ -43,7 +37,7 @@ export function ChartTree({ heads, onOpenAccount }: ChartTreeProps) {
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportPx, setViewportPx] = useState(0);
-  const [rowPx] = useState(rowPixels);
+  const [rowPx] = useState(() => tokenPx('--control-h', FALLBACK_ROW_PX));
   const [box, setBox] = useState<HTMLDivElement | null>(null);
 
   const rows = useMemo(() => visibleRows(heads, expanded), [heads, expanded]);
@@ -94,32 +88,25 @@ export function ChartTree({ heads, onOpenAccount }: ChartTreeProps) {
     if (row !== undefined) setActiveKey(row.key);
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    const side = arrowSide(event.key);
-    if (side !== null) {
-      // The arrow that points away from the start edge leads to the children.
-      const toChildren = elementDirection(event.currentTarget) === 'rtl' ? 'left' : 'right';
-      const move = horizontalMove(rows, activeIndex, side === toChildren ? 'opens' : 'closes');
-      if (move.to === 'none') return;
-      event.preventDefault();
+  const onKeyDown = treeKeyHandler({
+    count: rows.length,
+    active: activeIndex,
+    pageSize: PAGE_ROWS,
+    onMove: activateIndex,
+    onHorizontal: (action) => {
+      const move = horizontalMove(rows, activeIndex, action);
+      if (move.to === 'none') return false;
       if (move.to === 'toggle') toggle(move.key, move.open);
       else if (move.to === 'index') activateIndex(move.index);
-      return;
-    }
-    if (event.key === 'Enter') {
+      return true;
+    },
+    onEnter: () => {
       const row = rows[activeIndex];
       if (row === undefined) return;
-      event.preventDefault();
       if (row.kind === 'account') onOpenAccount(row.id);
       else toggle(row.key, !row.expanded);
-      return;
-    }
-    const to = moveActive(activeIndex, rows.length, event.key, PAGE_ROWS);
-    if (to === null) return;
-    event.preventDefault();
-    activateIndex(to);
-  };
+    },
+  });
 
   const active = rows[activeIndex];
   return (

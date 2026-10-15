@@ -7,10 +7,10 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { Landmark, Plus, SearchX } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
-import { useFocusFirstField } from '../../../shared/hooks';
+import { ListGrid, type ListContext } from '../../../shared/grid';
+import { isFromStep, useFocusFirstField, useLayoutStep } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -71,6 +71,26 @@ export function AccountListPage() {
   );
   const filtering = filter.text !== '' || filter.account_type !== null || filter.include_inactive;
   const data = list.data;
+  // The opening debit and credit columns come with the wide layout; the totals stand under them
+  // there (Code Standards F19), and as a line under the list where the columns are not shown.
+  const totalsUnderColumns = isFromStep(useLayoutStep(), 'wide');
+  // The callback depends on the loaded list, not on the two amounts: a Paisa value must not go
+  // into a dependency list (it is typed unknown there, Code Standards F3).
+  const totals = useCallback(
+    (context: ListContext) => ({
+      labelField: 'name',
+      values: {
+        name: context.text('glossary-meezan'),
+        ...(data === undefined
+          ? {}
+          : {
+              opening_dr: context.money(data.total_dr_paisa),
+              opening_cr: context.money(data.total_cr_paisa),
+            }),
+      },
+    }),
+    [data],
+  );
 
   let body;
   if (data === undefined && list.isPending) {
@@ -123,22 +143,25 @@ export function AccountListPage() {
             onOpen={open}
             heightMode={data.rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
             isInactive={(row) => !row.is_active}
+            totals={totalsUnderColumns ? totals : undefined}
             focusRowId={focusRowId === undefined ? null : String(focusRowId)}
             onFocusRow={(rowId) => {
               remember('account', Number(rowId));
             }}
           />
         </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-1 type-body text-ink">
-          <span className="flex items-baseline gap-2">
-            <Localized id="accounts-total-dr" />
-            <Num paisa={data.total_dr_paisa} />
-          </span>
-          <span className="flex items-baseline gap-2">
-            <Localized id="accounts-total-cr" />
-            <Num paisa={data.total_cr_paisa} />
-          </span>
-        </div>
+        {totalsUnderColumns ? null : (
+          <div className="flex flex-wrap gap-x-6 gap-y-1 type-body text-ink">
+            <span className="flex items-baseline gap-2">
+              <Localized id="accounts-total-dr" />
+              <Num paisa={data.total_dr_paisa} />
+            </span>
+            <span className="flex items-baseline gap-2">
+              <Localized id="accounts-total-cr" />
+              <Num paisa={data.total_cr_paisa} />
+            </span>
+          </div>
+        )}
       </div>
     );
   }
@@ -168,7 +191,7 @@ export function AccountListPage() {
         )}
       </div>
       <div ref={containerRef} {...formNavigationProps} className="flex flex-wrap items-end gap-4">
-        <div className="w-56">
+        <div className="w-field">
           <Field label={<Localized id="accounts-filter-type" />}>
             {(props) => (
               <Select
@@ -186,7 +209,7 @@ export function AccountListPage() {
             )}
           </Field>
         </div>
-        <div className="min-w-0 flex-1 basis-64">
+        <div className="min-w-0 flex-1 basis-field">
           <Field label={<Localized id="accounts-filter-label" />}>
             {(props) => <TextInput {...props} value={text} onChange={setText} />}
           </Field>

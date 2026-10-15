@@ -28,6 +28,20 @@ body {
   outline-offset: var(--focus-offset);
 }
 
+/*
+ * The list of a drop-down (Radix Select) hides its own scrollbar. Radix writes the same rule into
+ * an inline <style> element, which the production Content Security Policy (style-src 'self')
+ * refuses (D1+D2 review, finding 30). The rule is here instead, so the list looks the same
+ * whether the browser accepts that element or not.
+ */
+[data-radix-select-viewport] {
+  scrollbar-width: none;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar {
+  display: none;
+}
+
 /* Design system 7: no motion for people who ask for none. */
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -79,15 +93,28 @@ body {
 }
 
 /*
- * Key chip text (design system 6). Inter semibold. The board draws it at 12 px, but NFR-USE-20
- * asks for at least 16 px Latin text outside grids, and the NFR wins, so it uses step 2 (16 px).
- * Reported to tech-lead.
+ * Key chip text (design system 6): the name of a key, such as F10 or Ctrl+K. Always Latin, so
+ * always Inter semibold, in both languages. The board draws it at 12 px, but NFR-USE-20 asks for
+ * at least 16 px Latin text outside grids, and the NFR wins, so it uses step 2 (16 px). Reported
+ * to tech-lead.
  */
-@utility type-chip {
+@utility type-key {
   font-family: var(--font-latin);
   font-size: var(--text-latin-2);
   font-weight: var(--font-weight-semibold);
   line-height: var(--leading-chip);
+}
+
+/*
+ * Words in a small label: the typing mode badge, the type of an account, "inactive". They are
+ * words, so they follow the language like all text: Urdu in Gulzar at 18 px with the Nastaliq line
+ * height (NFR-USE-20, NFR-URD-11), English in Inter at 16 px.
+ */
+@utility type-chip {
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
 }
 
 /* Field labels (design system 3 and 6): body size; semibold in English, Gulzar's one weight in

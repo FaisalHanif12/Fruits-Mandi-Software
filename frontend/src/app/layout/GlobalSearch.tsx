@@ -7,11 +7,11 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useCombobox } from 'downshift';
 import { Search } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import { useGlobalSearch, type GlobalHit } from '../../shared/accounts';
 import { uiErrorOf } from '../../shared/api';
-import { displayName, otherScriptName, useLanguage } from '../../shared/i18n';
-import { SHORTCUTS, useShortcut } from '../../shared/keyboard';
+import { displayName, otherScriptLang, otherScriptName, useLanguage } from '../../shared/i18n';
+import { SHORTCUTS, keepKeyForApp, useEscape, useShortcut } from '../../shared/keyboard';
 import { Code, ErrorMessage, KeyChip } from '../../shared/ui';
 
 interface GlobalSearchProps {
@@ -35,6 +35,15 @@ export function GlobalSearch({ onOpenAccount }: GlobalSearchProps) {
   useShortcut(SHORTCUTS.globalSearch, () => {
     inputEl?.focus();
   });
+  // Esc clears the box (PRD FR-7.18). The list closes with it, because it shows only while
+  // there is text. The Esc order is the shared one (F27); the box has no key handler of its own.
+  useEscape(
+    'edit',
+    () => {
+      setText('');
+    },
+    () => focused && text !== '',
+  );
 
   const { highlightedIndex, getInputProps, getItemProps, getMenuProps } = useCombobox<GlobalHit>({
     items: hits,
@@ -58,7 +67,7 @@ export function GlobalSearch({ onOpenAccount }: GlobalSearchProps) {
 
   const error = query.isError ? uiErrorOf(query.error) : null;
   return (
-    <div className="relative max-w-xl flex-1">
+    <div className="relative max-w-reading flex-1">
       <div className="flex h-control-compact items-center gap-2 rounded-2 border border-border-control bg-bg px-3">
         <Search aria-hidden="true" className="size-icon-sm shrink-0 text-ink-muted" />
         <input
@@ -75,16 +84,12 @@ export function GlobalSearch({ onOpenAccount }: GlobalSearchProps) {
             onBlur: () => {
               setFocused(false);
             },
-            onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => {
-              // Esc clears the box (PRD FR-7.18); the list closes with it.
-              if (event.key === 'Escape' && text !== '') {
-                event.preventDefault();
-                event.stopPropagation();
-                setText('');
-              }
+            // Esc is answered by the shared Esc order above, not by Downshift.
+            onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
+              if (event.key === 'Escape') keepKeyForApp(event);
             },
           })}
-          className="type-field min-w-0 flex-1 bg-transparent text-ink placeholder:text-ink-placeholder"
+          className="type-field min-w-0 flex-1 truncate bg-transparent text-ink placeholder:text-ink-placeholder"
         />
         <KeyChip shortcut={SHORTCUTS.globalSearch} tone="on-light" />
       </div>
@@ -111,11 +116,7 @@ export function GlobalSearch({ onOpenAccount }: GlobalSearchProps) {
                     <Code>{hit.code}</Code>
                   </span>
                   <span className="flex items-baseline gap-2 truncate type-body text-ink-muted">
-                    <span
-                      lang={language === 'ur' ? 'en' : 'ur'}
-                      dir={language === 'ur' ? 'ltr' : 'rtl'}
-                      className="truncate"
-                    >
+                    <span lang={otherScriptLang(language)} dir="auto" className="truncate">
                       {otherScriptName(hit, language)}
                     </span>
                     <span className="truncate">

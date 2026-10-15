@@ -56,27 +56,27 @@ calc-info-unknown = The working of this amount cannot be shown here.
 # review: pending
 calc-info-rule = (Rule level: { $level })
 # review: pending
-working-percent = { $base } × { $bps } ÷ 100 = { $result }
+working-percent = <num>{ $base }</num> × <num>{ $bps }</num> ÷ 100 = <num>{ $result }</num>
 # review: pending
-working-per-unit = { $qty } × { $value } = { $result }
+working-per-unit = <num>{ $qty }</num> × <num>{ $value }</num> = <num>{ $result }</num>
 # A per-Nag charge of a lot is worked out on the quantity received.
 # review: pending
-working-per-unit-received = { $qty_received } { -nag } received × { $value } = { $result }
+working-per-unit-received = <num>{ $qty_received }</num> { -nag } received × <num>{ $value }</num> = <num>{ $result }</num>
 # review: pending
-working-per-lot = { $value } per { -lot } = { $result }
+working-per-lot = <num>{ $value }</num> per { -lot } = <num>{ $result }</num>
 # review: pending
-working-manual = Amount typed by hand: { $result }
+working-manual = Amount typed by hand: <num>{ $result }</num>
 # review: pending
 working-none = No rule applies. The amount is typed on the { -lot }.
 
 # A value typed on a sale line, and a per-lot charge that is not due on this line (PRD FR-7.43, FR-11.9).
 # review: pending
-working-manual-percent = Typed by hand: { $base } × { $bps } ÷ 100 = { $result }
+working-manual-percent = Typed by hand: <num>{ $base }</num> × <num>{ $bps }</num> ÷ 100 = <num>{ $result }</num>
 # review: pending
-working-manual-per-unit = Typed by hand: { $qty } × { $value } = { $result }
+working-manual-per-unit = Typed by hand: <num>{ $qty }</num> × <num>{ $value }</num> = <num>{ $result }</num>
 # review: pending
-working-manual-per-unit-received = Typed by hand: { $qty_received } { -nag } received × { $value } = { $result }
+working-manual-per-unit-received = Typed by hand: <num>{ $qty_received }</num> { -nag } received × <num>{ $value }</num> = <num>{ $result }</num>
 # review: pending
-working-manual-per-lot = Typed by hand: { $value } per { -lot } = { $result }
+working-manual-per-lot = Typed by hand: <num>{ $value }</num> per { -lot } = <num>{ $result }</num>
 # review: pending
-working-per-lot-already-charged = This charge is made once per { -lot } and was made in the first sale, so nothing is added now.
+working-per-lot-already-charged = This charge is made once per { -lot } and was made in the first { -bikri }, so nothing is added now.

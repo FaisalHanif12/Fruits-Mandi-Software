@@ -18,7 +18,12 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     type: 'name',
     headerId: 'accounts-col-name',
     grow: true,
-    value: (row, { language }) => displayName(nameOf(row), language),
+    // An inactive account is dimmed and says so in words, because colour is never the only signal
+    // (NFR-USE-12). The word comes with the name, so it takes no column of its own.
+    value: (row, { language, text }) =>
+      row.is_active
+        ? displayName(nameOf(row), language)
+        : `${displayName(nameOf(row), language)} (${text('masters-status-inactive')})`,
   },
   {
     field: 'other_name',

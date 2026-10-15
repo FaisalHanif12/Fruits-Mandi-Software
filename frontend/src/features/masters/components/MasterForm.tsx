@@ -14,11 +14,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField, useSpellingFlow } from '../../../shared/hooks';
+import { useFocusFirstField, useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
+  AccountPicker,
   Button,
+  Checkbox,
   CodeInput,
   ConfirmDialog,
   ErrorNotice,
@@ -48,10 +50,17 @@ interface MasterFormProps {
 
 /** The path the backend names a field by when it refuses it. */
 function fieldPath(spec: FieldSpec): string {
-  return spec.control.type === 'picker' ? `${spec.key}_id` : spec.key;
+  switch (spec.control.type) {
+    case 'picker':
+      return `${spec.key}_id`;
+    case 'account':
+      return `${spec.key}_account_id`;
+    default:
+      return spec.key;
+  }
 }
 
-function toPickerValue(hit: SearchHit): PickerValue {
+function toPickerValue(hit: Pick<SearchHit, 'id' | 'code' | 'name_ur' | 'name_en'>): PickerValue {
   return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
 }
 
@@ -88,13 +97,15 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
     nameRef.current?.querySelector<HTMLElement>('[role="combobox"], input')?.focus();
   };
   const spelling = useSpellingFlow({ onFix: focusNames });
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
 
   // Go back to the list once a save or a change of state is finished and the form is clean.
   useEffect(() => {
     if (leaving) void navigate({ to: listPath });
   }, [leaving, listPath, navigate]);
 
-  const persist = async (): Promise<boolean> => {
+  const persistOnce = async (): Promise<boolean> => {
     try {
       const saved = await spelling.guard(
         values.names,
@@ -112,6 +123,7 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
       return false;
     }
   };
+  const persist = (): Promise<boolean> => flight.run(persistOnce, false);
   const saveAndClose = () => {
     void persist().then((saved) => {
       if (saved) setLeaving(true);
@@ -145,17 +157,52 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
   const setText = (key: string) => (text: string) => {
     setValues((current) => ({ ...current, text: { ...current.text, [key]: text } }));
   };
-  const setRef = (key: string) => (hit: SearchHit | null) => {
-    setValues((current) => ({
-      ...current,
-      refs: { ...current.refs, [key]: hit === null ? null : toPickerValue(hit) },
-    }));
-  };
+  const setRef =
+    (key: string) => (hit: Pick<SearchHit, 'id' | 'code' | 'name_ur' | 'name_en'> | null) => {
+      setValues((current) => ({
+        ...current,
+        refs: { ...current.refs, [key]: hit === null ? null : toPickerValue(hit) },
+      }));
+    };
 
   const fieldsShown = ['code', 'name_ur', 'name_en', ...config.fields.map(fieldPath)];
 
+  const toggleChoice = (key: string, choice: string, on: boolean) => {
+    setValues((current) => {
+      const ticked = (current.lists[key] ?? []).filter((item) => item !== choice);
+      return { ...current, lists: { ...current.lists, [key]: on ? [...ticked, choice] : ticked } };
+    });
+  };
+
   const control = (spec: FieldSpec) => {
     const kind = spec.control;
+    if (kind.type === 'multi') {
+      const ticked = values.lists[spec.key] ?? [];
+      return (
+        <fieldset key={spec.key} className="flex min-w-0 flex-col gap-1 normal:col-span-2">
+          <Localized id={spec.labelId}>
+            <legend className="type-label text-ink" />
+          </Localized>
+          {spec.hintId === undefined ? null : (
+            <Localized id={spec.hintId}>
+              <p className="type-body text-ink-muted" />
+            </Localized>
+          )}
+          <div className="grid grid-cols-1 gap-x-5 normal:grid-cols-3">
+            {kind.options.map((option) => (
+              <Checkbox
+                key={option.value}
+                checked={ticked.includes(option.value)}
+                onChange={(on) => {
+                  toggleChoice(spec.key, option.value, on);
+                }}
+                label={<Localized id={option.labelId} />}
+              />
+            ))}
+          </div>
+        </fieldset>
+      );
+    }
     return (
       <Field
         key={spec.key}
@@ -197,6 +244,15 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
             case 'picker':
               return (
                 <Picker
+                  {...props}
+                  scope={kind.scope}
+                  value={values.refs[spec.key] ?? null}
+                  onChange={setRef(spec.key)}
+                />
+              );
+            case 'account':
+              return (
+                <AccountPicker
                   {...props}
                   scope={kind.scope}
                   value={values.refs[spec.key] ?? null}
@@ -331,7 +387,7 @@ export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {
             <Button
               variant="primary"
               shortcut={SHORTCUTS.save}
-              busy={save.isPending}
+              busy={flight.busy || save.isPending}
               onClick={saveAndClose}
             >
               <Localized id="layout-save-save" />

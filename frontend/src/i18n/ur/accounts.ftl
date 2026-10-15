@@ -6,7 +6,7 @@
 accounts-title = کھاتے
 
 # review: pending
-accounts-help = بیوپاری، گاہک، ادھار رقم لینے والے اور باقی کھاتے۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
+accounts-help = { -beopari }، { -gahak }، { -adhar-raqam } لینے والے اور باقی کھاتے۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
 
 # review: pending
 accounts-new = نیا کھاتہ
@@ -31,6 +31,10 @@ accounts-make-active = فعال کریں
 
 # review: pending
 accounts-make-inactive = غیر فعال کریں
+
+# A system account (cash, commission income and the rest, PRD FR-10.4) is used by the books.
+# review: pending
+accounts-system-stays-active = یہ نظام کا کھاتہ ہے۔ حساب کتاب میں اس کا استعمال ہوتا ہے، اس لیے اسے غیر فعال نہیں کیا جا سکتا۔
 
 # review: pending
 accounts-inactive-title = غیر فعال کریں؟
@@ -89,7 +93,7 @@ accounts-type-seller = { -beopari }
 accounts-type-buyer = { -gahak }
 
 # review: pending
-accounts-type-money_lent = ادھار رقم
+accounts-type-money_lent = { -adhar-raqam }
 
 # review: pending
 accounts-type-other = دیگر
@@ -168,7 +172,7 @@ accounts-section-contact = رابطہ
 accounts-section-opening = ابتدائی بقایا
 
 # review: pending
-accounts-section-credit = ادھار اور اگراہی
+accounts-section-credit = { -udhari } اور { -agrahi }
 
 # review: pending
 accounts-section-more = مزید
@@ -231,16 +235,16 @@ accounts-field-credit-allowed = ادھار کی اجازت ہے
 accounts-field-credit-limit = ادھار کی حد
 
 # review: pending
-accounts-field-collector = اگراہی والا
+accounts-field-collector = { -agrahi } والا
 
 # review: pending
-accounts-field-weekday = اگراہی کا دن
+accounts-field-weekday = { -agrahi } کا دن
 
 # review: pending
 accounts-field-linked = منسلک کھاتہ
 
 # review: pending
-accounts-field-linked-hint = ایک ہی شخص بیوپاری بھی ہو اور گاہک بھی تو اس کے دونوں کھاتے جوڑ دیں۔
+accounts-field-linked-hint = ایک ہی شخص { -beopari } بھی ہو اور { -gahak } بھی تو اس کے دونوں کھاتے جوڑ دیں۔
 
 # review: pending
 accounts-field-marka = طے شدہ { -marka }
@@ -281,7 +285,7 @@ chart-load-failed = کھاتوں کی ترتیب نہیں کھل سکی
 masters-accounts-title = کھاتے
 
 # review: pending
-masters-accounts-help = بیوپاری، گاہک اور باقی کھاتے۔
+masters-accounts-help = { -beopari }، { -gahak } اور باقی کھاتے۔
 
 # review: pending
 masters-chart-title = کھاتوں کی ترتیب
@@ -310,7 +314,7 @@ openings-date-all = نئے ابتدائی بقایا کی تاریخ
 openings-date-all-hint = جن کھاتوں کا ابتدائی بقایا ابھی نہیں، انہیں یہی تاریخ ملتی ہے۔
 
 # review: pending
-openings-summary-title = بدلی ہوئی سطروں کا میزان
+openings-summary-title = بدلی ہوئی سطروں کا { -meezan }
 
 # review: pending
 openings-changed = { $count ->

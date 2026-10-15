@@ -21,7 +21,7 @@ day-load-failed = دن کی حالت کھل نہیں سکی
 day-close-title = دن بند کریں
 
 # review: pending
-day-close-help = دن بند ہونے کے بعد اس دن کی اندراجات اس وقت تک نہیں بدل سکتیں جب تک مالک وہ دن دوبارہ نہ کھولے۔
+day-close-help = دن بند ہونے کے بعد اس دن کے اندراجات اس وقت تک نہیں بدل سکتے جب تک مالک وہ دن دوبارہ نہ کھولے۔
 
 # review: pending
 day-close-up-to = اس تاریخ تک بند کریں
@@ -33,13 +33,13 @@ day-close-days = بند ہونے والے دن
 day-close-from = پہلا کھلا دن
 
 # review: pending
-day-close-entries = ان دنوں کی اندراجات
+day-close-entries = ان دنوں کے اندراجات
 
 # review: pending
-day-close-trial-dr = { -trial-balance }: { -banaam } میزان
+day-close-trial-dr = { -trial-balance }: { -banaam } { -meezan }
 
 # review: pending
-day-close-trial-cr = { -trial-balance }: { -jama } میزان
+day-close-trial-cr = { -trial-balance }: { -jama } { -meezan }
 
 # review: pending
 day-close-trial = { -trial-balance } کا فرق
@@ -61,7 +61,10 @@ day-close-confirm-title = دن بند کریں؟
 
 # $date: the date to close up to. $days: how many days close.
 # review: pending
-day-close-confirm-description = { $date } تک کے { $days } دن بند ہو جائیں گے۔ ان دنوں کی اندراجات اس وقت تک نہیں بدل سکیں گی جب تک آپ وہ دن دوبارہ نہ کھولیں۔
+day-close-confirm-description = { $days ->
+    [one] { $date } تک کا { $days } دن بند ہو جائے گا۔ اس دن کے اندراجات اس وقت تک نہیں بدل سکیں گے جب تک آپ وہ دن دوبارہ نہ کھولیں۔
+   *[other] { $date } تک کے { $days } دن بند ہو جائیں گے۔ ان دنوں کے اندراجات اس وقت تک نہیں بدل سکیں گے جب تک آپ وہ دن دوبارہ نہ کھولیں۔
+}
 
 # review: pending
 day-closed = { $date } تک کے دن بند ہو گئے

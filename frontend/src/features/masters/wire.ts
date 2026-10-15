@@ -3,8 +3,8 @@
 // tests work on `MasterRecord` and `MasterDraft`. This is the only file that knows each kind's
 // fields, so a change in the backend contract changes this file and nothing else.
 //
-// Data the form does not edit still travels back on a save, so a save never loses it: the owner of
-// a mark, the "used in" list of a narration.
+// Everything the form edits travels back on a save: the owner of a mark (an account picker) and
+// the "used in" list of a narration (ticked voucher types).
 
 import type { MasterInput } from '../../bindings/MasterInput';
 import type { MasterRow } from '../../bindings/MasterRow';
@@ -75,7 +75,7 @@ export function rowToRecord(row: MasterRow): MasterRecord {
         code: row.code,
         names: null,
         text: { mark_text: row.mark_text },
-        // The owner is chosen with the account picker (plan 08); until then it only travels.
+        // The owner is chosen with the account picker (a seller).
         refs: {
           owner: refOf(
             row.owner_account_id,

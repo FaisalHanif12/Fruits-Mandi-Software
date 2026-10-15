@@ -40,10 +40,15 @@ export function registerEscape(
   };
 }
 
-/** Runs the handler that should answer Esc now. True when one ran. */
-export function runEscape(): boolean {
+/**
+ * Runs the handler that should answer Esc now. True when one ran. With `only`, handlers of lower
+ * levels are left out: a dialog asks for `'overlay'` to learn whether an open list inside it must
+ * close first (PRD FR-7.18).
+ */
+export function runEscape(only?: EscapeLevel): boolean {
   let best: Entry | undefined;
   for (const entry of entries) {
+    if (only !== undefined && entry.level !== only) continue;
     if (!entry.isActive()) continue;
     if (
       best === undefined ||

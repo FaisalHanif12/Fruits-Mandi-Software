@@ -325,7 +325,7 @@ export function RomanUrduInput({
               inputRef.current?.focus();
             }}
             disabled={readOnly === true}
-            className="type-chip rounded-1 bg-surface-sunken px-2 text-ink"
+            className="min-h-6 type-chip rounded-1 bg-surface-sunken px-2 text-ink"
           >
             {l10n.getString(MODE_BADGE_ID[mode])}
           </button>

@@ -32,6 +32,10 @@ accounts-make-active = Make active
 # review: pending
 accounts-make-inactive = Make inactive
 
+# A system account (cash, commission income and the rest, PRD FR-10.4) is used by the books.
+# review: pending
+accounts-system-stays-active = This is a system account. The books use it, so it cannot be made inactive.
+
 # review: pending
 accounts-inactive-title = Make this inactive?
 
@@ -89,7 +93,7 @@ accounts-type-seller = { -beopari }
 accounts-type-buyer = { -gahak }
 
 # review: pending
-accounts-type-money_lent = Money lent
+accounts-type-money_lent = { -adhar-raqam }
 
 # review: pending
 accounts-type-other = Other
@@ -168,7 +172,7 @@ accounts-section-contact = Contact
 accounts-section-opening = Opening balance
 
 # review: pending
-accounts-section-credit = Credit and collection
+accounts-section-credit = { -udhari } and { -agrahi }
 
 # review: pending
 accounts-section-more = More

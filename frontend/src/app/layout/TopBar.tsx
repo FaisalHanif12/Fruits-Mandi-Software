@@ -4,6 +4,8 @@
 
 import { useLocalization } from '@fluent/react';
 import { Bell } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ChangePasswordDialog } from '../../features/auth/components/ChangePasswordDialog';
 import { GlobalSearch } from './GlobalSearch';
 import { LanguageSwitch } from './LanguageSwitch';
 import { UserMenu } from './UserMenu';
@@ -20,20 +22,36 @@ interface TopBarProps {
 export function TopBar({ userName, onLock, onSignOut, onOpenAccount }: TopBarProps) {
   const { l10n } = useLocalization();
   const comingSoon = l10n.getString('layout-coming-soon');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const userButton = useRef<HTMLButtonElement>(null);
   return (
     <header className="flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-5">
       <GlobalSearch onOpenAccount={onOpenAccount} />
-      <div className="flex-1" />
+      {/* The search box takes the room it can, up to its widest; the rest of the bar goes to the end
+          with the bell. A spacer that shared the room cut the placeholder short (finding 35). */}
       <button
         type="button"
         aria-label={l10n.getString('layout-attention-label')}
         title={comingSoon}
-        className="flex size-control-compact items-center justify-center rounded-2 border border-border bg-surface text-ink"
+        className="ms-auto flex size-control-compact items-center justify-center rounded-2 border border-border bg-surface text-ink"
       >
         <Bell aria-hidden="true" className="size-icon-md" />
       </button>
       <LanguageSwitch />
-      <UserMenu userName={userName} onLock={onLock} onSignOut={onSignOut} />
+      <UserMenu
+        userName={userName}
+        buttonRef={userButton}
+        onChangePassword={() => {
+          setChangingPassword(true);
+        }}
+        onLock={onLock}
+        onSignOut={onSignOut}
+      />
+      <ChangePasswordDialog
+        open={changingPassword}
+        onOpenChange={setChangingPassword}
+        returnFocusTo={userButton}
+      />
     </header>
   );
 }

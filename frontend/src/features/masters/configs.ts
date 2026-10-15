@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { Language } from '../../i18n';
 import { displayName, otherScriptName } from '../../shared/i18n';
+import type { AccountScope } from '../../shared/accounts';
 import type { ListColumn } from '../../shared/grid';
 import type { MasterKind, MasterRecord } from './types';
 
@@ -34,7 +35,11 @@ export type FieldControl =
   | { type: 'latin' }
   | { type: 'select'; options: readonly ChoiceOption[] }
   /** A record of another master, found by a Picker. */
-  | { type: 'picker'; scope: MasterKind };
+  | { type: 'picker'; scope: MasterKind }
+  /** An account (a seller), found by the AccountPicker, with his party card. */
+  | { type: 'account'; scope: AccountScope }
+  /** Several choices from a short fixed list, ticked. Nothing ticked means all (PRD 10.3). */
+  | { type: 'multi'; options: readonly ChoiceOption[] };
 
 export interface FieldSpec {
   /** The key in `MasterDraft.text` (or `refs` for a picker). */
@@ -102,10 +107,18 @@ const latinColumn = (key: string, headerId: string): ListColumn<MasterRecord> =>
   value: (row) => row.text[key] ?? '',
 });
 
-const choiceColumn = (key: string, headerId: string, prefix: string): ListColumn<MasterRecord> => ({
+/** A column that shows the label of a short choice (fruit, vegetable, sold by weight). */
+const choiceColumn = (
+  key: string,
+  headerId: string,
+  prefix: string,
+  options: { from?: ListColumn<MasterRecord>['from']; short?: boolean } = {},
+): ListColumn<MasterRecord> => ({
   field: key,
-  type: 'text',
+  // One short word (fruit, vegetable) fits the narrow column; a phrase needs the wider one.
+  type: options.short === true ? 'status' : 'choice',
   headerId,
+  from: options.from,
   value: (row, { text }) => {
     const value = row.text[key];
     return value === undefined || value === '' ? '' : text(`${prefix}-${value}`);
@@ -132,6 +145,19 @@ const shownColumn = (key: string, headerId: string): ListColumn<MasterRecord> =>
 const ITEM_GROUPS = choice('masters-item-group', ['fruit', 'vegetable']);
 const SOLD_BY = choice('masters-sold-by', ['unit', 'weight']);
 const STAFF_JOBS = choice('masters-staff-job', ['munshi', 'collector', 'labour']);
+
+/** The voucher types a standard narration is offered in (Architecture 15.4 `used_in`). */
+const VOUCHER_TYPES = choice('masters-used-in', [
+  'receipt',
+  'payment',
+  'advance',
+  'shop_expense',
+  'personal_expense',
+  'personal_return',
+  'money_lent',
+  'money_lent_return',
+  'general',
+]);
 
 export const MASTER_CONFIGS: readonly MasterConfig[] = [
   {
@@ -178,9 +204,10 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     ],
     shown: [],
     extraColumns: [
-      choiceColumn('item_group', 'masters-item-group', 'masters-item-group'),
+      choiceColumn('item_group', 'masters-item-group', 'masters-item-group', { short: true }),
       refColumn('default_packing', 'masters-item-packing'),
-      choiceColumn('sold_by', 'masters-item-sold-by', 'masters-sold-by'),
+      // Less used: it comes with the normal and wide layouts, so a list never scrolls sideways.
+      choiceColumn('sold_by', 'masters-item-sold-by', 'masters-sold-by', { from: 'normal' }),
     ],
   },
   {
@@ -237,9 +264,18 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
         hintId: 'masters-marka-text-hint',
         control: { type: 'text' },
       },
+      {
+        key: 'owner',
+        labelId: 'masters-marka-owner',
+        hintId: 'masters-marka-owner-hint',
+        control: { type: 'account', scope: 'seller' },
+      },
     ],
     shown: [],
-    extraColumns: [textColumn('mark_text', 'masters-marka-text')],
+    extraColumns: [
+      textColumn('mark_text', 'masters-marka-text'),
+      refColumn('owner', 'masters-marka-owner'),
+    ],
   },
   {
     kind: 'store',
@@ -270,7 +306,14 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
       englishLabelId: 'masters-narration-text-en',
       spelling: false,
     },
-    fields: [],
+    fields: [
+      {
+        key: 'used_in',
+        labelId: 'masters-narration-used-in',
+        hintId: 'masters-narration-used-in-hint',
+        control: { type: 'multi', options: VOUCHER_TYPES },
+      },
+    ],
     shown: [],
     extraColumns: [],
   },
@@ -387,12 +430,16 @@ export function columnsOf(config: MasterConfig): ListColumn<MasterRecord>[] {
         field: 'name',
         type: 'name',
         headerId: 'masters-col-name',
+        grow: true,
         value: (row, { language }) => (row.names === null ? '' : displayName(row.names, language)),
       },
       {
         field: 'other_name',
         type: 'name',
         headerId: 'masters-col-other-name',
+        grow: true,
+        // The name in the other script only tells two records apart: the normal layout shows it.
+        from: 'normal',
         script: (language: Language) => (language === 'ur' ? 'en' : 'ur'),
         value: (row, { language }) =>
           row.names === null ? '' : otherScriptName(row.names, language),

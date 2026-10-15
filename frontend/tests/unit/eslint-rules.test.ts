@@ -582,3 +582,38 @@ describe('01-M1: Object.values, Object.entries and JSON.stringify on objects wit
     ],
   });
 });
+
+// D1+D2 review, finding 37: words joined by `+`, words handed to a function that shows them, and
+// the float calls and casts that the app code must not use.
+describe('reviewer finding 37: text built by `+` and handed to showToast', () => {
+  ruleTester.run('no-jsx-literals', noJsxLiterals, {
+    valid: [
+      {
+        code: "declare function showToast(tone: string, text: string): void; declare const l10n: { getString(id: string): string }; showToast('success', l10n.getString('masters-saved'));",
+      },
+      { code: 'declare const a: number; declare const b: number; const total = a + b;' },
+      {
+        code: "declare const l10n: { getString(id: string): string }; const t = l10n.getString('masters-' + 'saved');",
+      },
+    ],
+    invalid: [
+      {
+        code: "declare const name: string; const x = <p>{'Saved ' + name}</p>;",
+        errors: [{ messageId: 'text' }],
+      },
+      {
+        code: "declare const name: string; const x = <span title={'Sale ' + name} />;",
+        errors: [{ messageId: 'attribute' }],
+      },
+      {
+        code: "declare function showToast(tone: string, text: string): void; showToast('success', 'Saved');",
+        errors: [{ messageId: 'sink' }],
+      },
+      {
+        code: "declare function showToast(tone: string, text: string): void; declare const n: string; showToast('error', 'Not saved: ' + n);",
+        errors: [{ messageId: 'sink' }],
+      },
+      { code: "alert('Saved');", errors: [{ messageId: 'sink' }] },
+    ],
+  });
+});

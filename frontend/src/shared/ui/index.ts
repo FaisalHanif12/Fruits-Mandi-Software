@@ -36,6 +36,7 @@ export { SaveChangesPrompt } from './SaveChangesPrompt';
 export { SegmentedControl, type SegmentedOption } from './SegmentedControl';
 export { Select, type SelectOption } from './Select';
 export { Stepper, type Step } from './Stepper';
+export { Table, type TableColumn, type TableColumnKind } from './Table';
 export { Tabs, type TabItem } from './Tabs';
 export { TextInput } from './TextInput';
 export { TOAST_DURATION_MS, Toaster } from './Toaster';

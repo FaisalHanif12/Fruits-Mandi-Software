@@ -189,6 +189,24 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     expect(searchApi.searchTouch).toHaveBeenCalledWith({ scope: 'city', id: 2 });
   });
 
+  it('Enter straight after a key never takes a row from the older text, it waits for the whole text', async () => {
+    const onValue = vi.fn();
+    const { input, user } = setup(language, { onValue });
+    await user.click(input);
+    await user.keyboard('a');
+    await waitFor(() => {
+      expect(options()).toHaveLength(3);
+    });
+    // `ar` is the text now. The list still shows the answer to `a` (Akram first), which must not
+    // be taken: the best match of `ar` is Arshad.
+    await user.keyboard('r{Enter}');
+    await waitFor(() => {
+      expect(onValue).toHaveBeenCalledTimes(1);
+    });
+    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 2, code: '0002' }));
+    expect(input.value).toBe(language === 'ur' ? ARSHAD.name_ur : ARSHAD.name_en);
+  });
+
   it('an inactive record is never offered', async () => {
     const { input, user } = setup(language);
     await user.click(input);

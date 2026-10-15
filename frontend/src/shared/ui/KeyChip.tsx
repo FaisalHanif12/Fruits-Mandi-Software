@@ -20,7 +20,7 @@ export function KeyChip({ shortcut, tone }: KeyChipProps) {
     <kbd
       lang="en"
       dir="ltr"
-      className={`inline-flex h-chip items-center rounded-1 px-2 type-chip ${TONE_CLASSES[tone]}`}
+      className={`inline-flex h-chip items-center rounded-1 px-2 type-key ${TONE_CLASSES[tone]}`}
     >
       {shortcut.label}
     </kbd>

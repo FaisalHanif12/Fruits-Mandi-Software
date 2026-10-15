@@ -138,3 +138,27 @@ auth-lock-user = صارف: { $name }
 
 # review: pending
 auth-lock-unlock = کھولیں
+
+## Change password, from the user menu (PRD FR-5.6).
+
+# review: pending
+auth-change-title = پاس ورڈ بدلیں
+
+# review: pending
+auth-change-help = جو پاس ورڈ ابھی استعمال کرتے ہیں وہ لکھیں، پھر نیا پاس ورڈ دو بار لکھیں۔
+
+# review: pending
+auth-change-current = موجودہ پاس ورڈ
+
+# review: pending
+auth-change-new = نیا پاس ورڈ
+
+# review: pending
+auth-change-repeat = نیا پاس ورڈ دوبارہ
+
+# $tries_left: how many wrong tries are left before the app makes him wait.
+# review: pending
+auth-change-wrong-current = موجودہ پاس ورڈ غلط ہے۔ باقی کوششیں: { $tries_left }
+
+# review: pending
+auth-change-saved = پاس ورڈ بدل دیا گیا۔

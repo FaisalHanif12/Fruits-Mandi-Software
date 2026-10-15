@@ -19,7 +19,7 @@ import { useDayStatus } from '../../../app/use-day-status';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
-import { useFocusFirstField } from '../../../shared/hooks';
+import { useFocusFirstField, useSingleFlight } from '../../../shared/hooks';
 import { Button, ErrorNotice, ErrorState, LoadingState, showToast } from '../../../shared/ui';
 import { AdvanceForm } from '../components/AdvanceForm';
 import { VoucherList } from '../components/VoucherList';
@@ -81,7 +81,9 @@ function AdvanceEditor({ today }: { today: string }) {
   const [list, setList] = useState<ListedVoucher[]>([]);
   // What the backend refused when the voucher on the form was saved; cleared by the next edit.
   const [refused, setRefused] = useState<UiError | null>(null);
-  const [saving, setSaving] = useState(false);
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
+  const saving = flight.busy;
   const save = useSaveAdvance();
   const formRef = useFocusFirstField<HTMLFormElement>();
 
@@ -152,14 +154,12 @@ function AdvanceEditor({ today }: { today: string }) {
 
   // A lone voucher is saved from the form, so a refusal stays on its fields. With vouchers in the
   // list, the form joins the list and each voucher is saved in turn, each its own transaction.
-  const submit = async (): Promise<boolean> => {
-    if (saving) return false;
+  const submitOnce = async (): Promise<boolean> => {
     if (pending.length === 0 && !filled) return true;
     if (filled && !hasSeller(draft)) {
       setRefused(sellerRequired());
       return false;
     }
-    setSaving(true);
     try {
       if (pending.length === 0 && hasSeller(draft)) {
         const saved = await save.mutateAsync(draft);
@@ -200,19 +200,18 @@ function AdvanceEditor({ today }: { today: string }) {
                   number: String(lastSaved.number),
                 }),
               })
-            : l10n.getString('vouchers-saved-many', { count: String(todo.length) }),
+            : l10n.getString('vouchers-saved-many', { count: todo.length }),
         );
       } else if (refusals > 0) {
-        showToast('error', l10n.getString('vouchers-some-refused', { count: String(refusals) }));
+        showToast('error', l10n.getString('vouchers-some-refused', { count: refusals }));
       }
       return refusals === 0;
     } catch (failure: unknown) {
       setRefused(uiErrorOf(failure));
       return false;
-    } finally {
-      setSaving(false);
     }
   };
+  const submit = (): Promise<boolean> => flight.run(submitOnce, false);
   const submitNow = () => {
     void submit();
   };

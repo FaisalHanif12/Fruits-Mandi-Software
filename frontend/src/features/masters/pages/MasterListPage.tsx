@@ -162,7 +162,7 @@ function MasterList({ config }: { config: MasterConfig }) {
         {list.data === undefined || list.data.length === 0 ? null : newButton}
       </div>
       <div ref={containerRef} {...formNavigationProps} className="flex flex-wrap items-end gap-4">
-        <div className="min-w-0 flex-1 basis-64">
+        <div className="min-w-0 flex-1 basis-field">
           <Field label={<Localized id="masters-filter-label" />}>
             {(props) => (
               <TextInput

@@ -8,6 +8,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
+import { useSingleFlight } from '../../../shared/hooks';
 import {
   Balance,
   Button,
@@ -39,6 +40,8 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
   const [confirming, setConfirming] = useState(false);
   const preview = useDayClosePreview(typedUpTo ?? '', todayOpen);
   const close = useCloseDays();
+  // One close at a time: a second Enter on the confirm box does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
   const closeError = close.error === null ? null : uiErrorOf(close.error);
   const previewError = preview.isError ? uiErrorOf(preview.error) : null;
   // A problem with the date (closed already, after today) shows under the date. Anything else the
@@ -51,12 +54,18 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
 
   const confirm = () => {
     setConfirming(false);
-    close.mutate(upTo, {
-      onSuccess: () => {
-        showToast('success', l10n.getString('day-closed', { date: upTo }));
-        setTypedUpTo(null);
-      },
-    });
+    void flight.run(
+      () =>
+        close
+          .mutateAsync(upTo)
+          .then(() => {
+            showToast('success', l10n.getString('day-closed', { date: upTo }));
+            setTypedUpTo(null);
+          })
+          // The refusal is shown on the card by its fields.
+          .catch(() => undefined),
+      undefined,
+    );
   };
 
   if (!todayOpen) {
@@ -91,60 +100,60 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
         />
       ) : null}
       {data === undefined || preview.isError ? null : (
-        <dl className="flex flex-col gap-2 type-body">
-          <div className="flex flex-wrap items-baseline gap-x-3">
+        <dl className="flex max-w-dialog flex-col gap-2 type-body">
+          <div className="grid grid-cols-2 items-baseline gap-x-4">
             <Localized id="day-close-from">
               <dt className="text-ink-muted" />
             </Localized>
-            <dd>
+            <dd dir="ltr" className="text-end">
               <Num>{isoToDisplayDate(data.from_date)}</Num>
             </dd>
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-3">
+          <div className="grid grid-cols-2 items-baseline gap-x-4">
             <Localized id="day-close-days">
               <dt className="text-ink-muted" />
             </Localized>
-            <dd>
+            <dd dir="ltr" className="text-end">
               <Num>{String(data.days)}</Num>
             </dd>
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-3">
+          <div className="grid grid-cols-2 items-baseline gap-x-4">
             <Localized id="day-close-entries">
               <dt className="text-ink-muted" />
             </Localized>
-            <dd>
+            <dd dir="ltr" className="text-end">
               <Num>{String(data.entries)}</Num>
             </dd>
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-3">
+          <div className="grid grid-cols-2 items-baseline gap-x-4">
             <Localized id="day-close-trial-dr">
               <dt className="text-ink-muted" />
             </Localized>
-            <dd>
+            <dd dir="ltr" className="text-end">
               <Num paisa={data.trial_dr_paisa} />
             </dd>
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-3">
+          <div className="grid grid-cols-2 items-baseline gap-x-4">
             <Localized id="day-close-trial-cr">
               <dt className="text-ink-muted" />
             </Localized>
-            <dd>
+            <dd dir="ltr" className="text-end">
               <Num paisa={data.trial_cr_paisa} />
             </dd>
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-3">
+          <div className="grid grid-cols-2 items-baseline gap-x-4">
             <Localized id="day-close-trial">
               <dt className="text-ink-muted" />
             </Localized>
-            <dd>
+            <dd dir="ltr" className="text-end">
               <Balance balance={data.trial_difference} />
             </dd>
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-3">
+          <div className="grid grid-cols-2 items-baseline gap-x-4">
             <Localized id="day-close-cash">
               <dt className="text-ink-muted" />
             </Localized>
-            <dd>
+            <dd dir="ltr" className="text-end">
               <Balance balance={data.cash_in_hand} />
             </dd>
           </div>
@@ -158,7 +167,7 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
       <div>
         <Button
           variant="primary"
-          busy={close.isPending}
+          busy={flight.busy || close.isPending}
           disabled={data === undefined || preview.isError || upTo === '' || nothingToClose}
           onClick={() => {
             setConfirming(true);
@@ -174,7 +183,7 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
         description={
           <Localized
             id="day-close-confirm-description"
-            vars={{ date: upTo, days: String(data?.days ?? 0) }}
+            vars={{ date: upTo, days: data?.days ?? 0 }}
           />
         }
         confirmLabel={<Localized id="day-close-button" />}

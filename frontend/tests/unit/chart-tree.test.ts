@@ -8,7 +8,6 @@ import {
   headKey,
   headKeys,
   horizontalMove,
-  moveActive,
   visibleRows,
 } from '../../src/features/masters/chart-tree';
 import { sampleTree } from '../helpers/accounts';
@@ -41,19 +40,6 @@ describe('visibleRows', () => {
   it('starts with the heads open and the controls closed, and can open everything', () => {
     expect(visibleRows(heads, headKeys(heads)).map((row) => row.level)).toEqual([1, 2, 1, 2, 2]);
     expect(allKeys(heads).size).toBe(5);
-  });
-});
-
-describe('moveActive', () => {
-  it('moves one row or a page, and stops at the ends', () => {
-    expect(moveActive(0, 5, 'ArrowDown', 10)).toBe(1);
-    expect(moveActive(0, 5, 'ArrowUp', 10)).toBe(0);
-    expect(moveActive(2, 50, 'PageDown', 10)).toBe(12);
-    expect(moveActive(2, 5, 'PageDown', 10)).toBe(4);
-    expect(moveActive(3, 5, 'Home', 10)).toBe(0);
-    expect(moveActive(0, 5, 'End', 10)).toBe(4);
-    expect(moveActive(0, 5, 'x', 10)).toBeNull();
-    expect(moveActive(0, 0, 'ArrowDown', 10)).toBeNull();
   });
 });
 

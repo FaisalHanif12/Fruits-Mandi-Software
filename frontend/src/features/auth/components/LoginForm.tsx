@@ -7,7 +7,7 @@
 import { Localized } from '@fluent/react';
 import { exitApp } from '../../../app/api';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField, useFormState } from '../../../shared/hooks';
+import { useFocusFirstField, useFormState, useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
 import {
   Button,
@@ -30,13 +30,27 @@ const FIELDS = ['password'] as const;
 export function LoginForm({ onForgot }: LoginFormProps) {
   const { values, setField } = useFormState({ username: '', password: '' });
   const login = useLogin();
+  // One try at a time: three Enter keys in the same instant would count three wrong tries.
+  const flight = useSingleFlight();
   const firstField = useFocusFirstField<HTMLFormElement>();
   const error = login.error === null ? null : uiErrorOf(login.error);
   const { shown: shownWithCountdown, waiting } = useLockCountdown(error, login.submittedAt);
   const canSubmit =
-    values.username !== '' && values.password !== '' && !waiting && !login.isPending;
+    values.username !== '' &&
+    values.password !== '' &&
+    !waiting &&
+    !login.isPending &&
+    !flight.busy;
   const submit = () => {
-    if (canSubmit) login.mutate({ username: values.username, password: values.password });
+    if (!canSubmit) return;
+    void flight.run(
+      () =>
+        login
+          .mutateAsync({ username: values.username, password: values.password })
+          // The refusal is shown on the form by its fields.
+          .catch(() => undefined),
+      undefined,
+    );
   };
   const navigation = useFormNavigation(submit);
 
@@ -78,7 +92,7 @@ export function LoginForm({ onForgot }: LoginFormProps) {
           variant="primary"
           shortcut={SHORTCUTS.confirm}
           disabled={!canSubmit}
-          busy={login.isPending}
+          busy={flight.busy || login.isPending}
           onClick={submit}
         >
           <Localized id="auth-login-submit" />

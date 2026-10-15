@@ -3,6 +3,7 @@
 import type { FirmSettings } from '../../bindings/FirmSettings';
 import type { PrefsSetInput } from '../../bindings/PrefsSetInput';
 import type { SetDefaultLanguageInput } from '../../bindings/SetDefaultLanguageInput';
+import type { SetFirmInput } from '../../bindings/SetFirmInput';
 import type { SetSecurityInput } from '../../bindings/SetSecurityInput';
 import type { Settings } from '../../bindings/Settings';
 import { callCommand } from '../../shared/api';
@@ -12,7 +13,8 @@ export function settingsGet(): Promise<Settings> {
   return callCommand<Settings>('settings_get');
 }
 
-export function settingsSetFirm(input: FirmSettings): Promise<FirmSettings> {
+/** Saves the firm. The names have the spelling check, so the words he confirmed go with it. */
+export function settingsSetFirm(input: SetFirmInput): Promise<FirmSettings> {
   return callCommand<FirmSettings>('settings_set_firm', { input });
 }
 

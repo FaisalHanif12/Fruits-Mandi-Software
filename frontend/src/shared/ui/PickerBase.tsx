@@ -31,9 +31,11 @@ import {
   type UIEvent,
 } from 'react';
 import { uiErrorOf } from '../api';
-import { displayName, otherScriptName, useLanguage, type Named } from '../i18n';
-import { SHORTCUTS, focusNextField, matchesShortcut, useEscape } from '../keyboard';
-import { usePickerHits, useTouchRecord, type PickerSource } from '../search';
+import { tokenPx } from '../hooks/tokenPx';
+import { displayName, otherScriptLang, otherScriptName, useLanguage, type Named } from '../i18n';
+import { SHORTCUTS, focusNextField, keepKeyForApp, matchesShortcut, useEscape } from '../keyboard';
+import { useFetchHits, usePickerHits, useTouchRecord, type PickerSource } from '../search';
+import { usePickerText } from './usePickerText';
 import { Button } from './Button';
 import { Code } from './Code';
 import { controlClasses } from './control-classes';
@@ -72,6 +74,13 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   onLeave?: ((typed: string) => void) | undefined;
   /** Enter was pressed with this text typed and no match in the list. */
   onEnterNoMatch?: ((typed: string) => void) | undefined;
+  /**
+   * Enter was pressed while the list is an older answer than the text in the field (a fast
+   * typist). Return true if the whole text is taken from here (the account picker sends a code to
+   * the backend); return false and the picker waits for the answer to the whole text and picks its
+   * best match then. Either way the older list is never picked from.
+   */
+  resolveOnEnter?: ((typed: string) => boolean) | undefined;
   /** The user typed in the field: a message about an earlier try can go. */
   onTyping?: (() => void) | undefined;
   /** Shown under the list's rows, inside the popup. */
@@ -84,25 +93,12 @@ const FALLBACK_LIST_PX = 360;
 /** Rows drawn above and below the view, so scrolling never shows a gap. */
 const OVERSCAN_ROWS = 3;
 
-/** A size in pixels from a design token (tokens.css), or the fallback when it is not there. */
-function tokenPx(name: string, fallback: number): number {
-  const size = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
-  return Number.isFinite(size) && size > 0 ? size : fallback;
-}
-
 /** Row height and list height as drawn, from the same tokens the classes use. */
 function readListSizes() {
   return {
     rowPx: tokenPx('--picker-row-h', FALLBACK_ROW_PX),
     listPx: tokenPx('--picker-list-h', FALLBACK_LIST_PX),
   };
-}
-
-type KeyEventWithGuard = KeyboardEvent<HTMLInputElement> & { preventDownshiftDefault?: boolean };
-
-/** Tells Downshift that this key is handled here, so its own handler does not run. */
-function ownKey(event: KeyboardEvent<HTMLInputElement>): void {
-  (event as KeyEventWithGuard).preventDownshiftDefault = true;
 }
 
 export function PickerBase<H extends PickerHit>({
@@ -119,6 +115,7 @@ export function PickerBase<H extends PickerHit>({
   onHighlight,
   onLeave,
   onEnterNoMatch,
+  resolveOnEnter,
   onTyping,
   footer,
 }: PickerBaseProps<H>) {
@@ -127,15 +124,15 @@ export function PickerBase<H extends PickerHit>({
   const listId = useId();
   // The list element, kept in state so the scroll effect can read it without touching a ref in render.
   const [listEl, setListEl] = useState<HTMLUListElement | null>(null);
-  // What the user is typing, or null while the field shows the chosen name.
-  const [typed, setTyped] = useState<string | null>(null);
+  const { typed, setTyped: setTypedNow, readTyped } = usePickerText();
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [{ rowPx, listPx }] = useState(readListSizes);
 
   const touch = useTouchRecord(source);
-  const query = usePickerHits(source, typed ?? '', open && readOnly !== true);
+  const { query, current } = usePickerHits(source, typed ?? '', open && readOnly !== true);
+  const fetchHits = useFetchHits(source);
   const hits = useMemo(() => (query.data ?? []).filter((hit) => hit.is_active), [query.data]);
 
   const shown = typed ?? (value === null ? '' : displayName(value, language));
@@ -149,7 +146,7 @@ export function PickerBase<H extends PickerHit>({
   const pick = (hit: H) => {
     onChange(hit);
     touch.mutate(hit.id);
-    setTyped(null);
+    setTypedNow(null);
     closeList();
   };
 
@@ -192,11 +189,20 @@ export function PickerBase<H extends PickerHit>({
     highlightRef.current?.(highlighted);
   }, [highlighted]);
 
-  // Esc closes the list first (Downshift answers it), then brings back the chosen name (FR-7.18).
+  // Esc closes the list first, then brings back the chosen name (FR-7.18). Downshift answers the
+  // key in the field itself; this entry lets a dialog around the field know a list is open, so
+  // the dialog stays until the next Esc.
+  useEscape(
+    'overlay',
+    () => {
+      closeList();
+    },
+    open,
+  );
   useEscape(
     'edit',
     () => {
-      setTyped(null);
+      setTypedNow(null);
     },
     () => focused && typed !== null && !open,
   );
@@ -222,14 +228,14 @@ export function PickerBase<H extends PickerHit>({
     if (matchesShortcut(event.nativeEvent, SHORTCUTS.openList)) {
       // Alt+↓: the full list without typing, recent records first (FR-7.16, FR-7.41).
       event.preventDefault();
-      ownKey(event);
+      keepKeyForApp(event);
       setOpen(true);
       return;
     }
     if (onAddNew !== undefined && matchesShortcut(event.nativeEvent, SHORTCUTS.addAccount)) {
       event.preventDefault();
       event.stopPropagation();
-      ownKey(event);
+      keepKeyForApp(event);
       closeList();
       onAddNew(typed ?? '');
       return;
@@ -237,18 +243,43 @@ export function PickerBase<H extends PickerHit>({
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !open) {
       // A closed picker is a field like any other: the arrows go on to the form (FR-7.16).
-      ownKey(event);
+      keepKeyForApp(event);
       return;
     }
     if (event.key === 'Escape' && !open) {
       // Closed: the Esc order decides (bring back the name, else leave the screen), not Downshift.
-      ownKey(event);
+      keepKeyForApp(event);
       return;
     }
     if (event.key === 'Enter' && open) {
-      const hit = hits[highlightedIndex];
-      ownKey(event);
+      keepKeyForApp(event);
       event.preventDefault();
+      if (!current) {
+        // The list is an older answer than the text in the field: never pick a row from it. The
+        // whole text goes on from here, or its own answer is asked for and picked when it comes
+        // (PRD FR-7.14, FR-7.39). If he types more, or leaves, in the meantime, nothing is picked.
+        const text = (readTyped() ?? '').trim();
+        if (resolveOnEnter?.(text) === true) {
+          closeList();
+          return;
+        }
+        const field = event.currentTarget;
+        void fetchHits(text)
+          .then((answer) => {
+            if ((readTyped() ?? '').trim() !== text) return;
+            const best = answer.find((candidate) => candidate.is_active);
+            if (best === undefined) {
+              closeList();
+              onEnterNoMatch?.(text);
+              return;
+            }
+            pick(best);
+            focusNextField(field);
+          })
+          .catch(() => undefined);
+        return;
+      }
+      const hit = hits[highlightedIndex];
       if (hit === undefined) {
         closeList();
         onEnterNoMatch?.(typed ?? '');
@@ -262,10 +293,12 @@ export function PickerBase<H extends PickerHit>({
 
   const onBlur = () => {
     setFocused(false);
-    // Emptying the field and leaving clears the value; any other typing is dropped.
-    if (typed !== null && typed.trim() === '' && value !== null) onChange(null);
-    else if (typed !== null && typed.trim() !== '') onLeave?.(typed.trim());
-    setTyped(null);
+    // Emptying the field and leaving clears the value; any other typing is dropped. The text is
+    // read as the last key left it: after a pick it is already gone, so nothing is resolved twice.
+    const left = readTyped();
+    if (left !== null && left.trim() === '' && value !== null) onChange(null);
+    else if (left !== null && left.trim() !== '') onLeave?.(left.trim());
+    setTypedNow(null);
     closeList();
   };
 
@@ -295,7 +328,7 @@ export function PickerBase<H extends PickerHit>({
           onBlur,
           onChange: (event: { currentTarget: HTMLInputElement }) => {
             if (readOnly !== true) {
-              setTyped(event.currentTarget.value);
+              setTypedNow(event.currentTarget.value);
               onTyping?.();
             }
           },
@@ -353,11 +386,7 @@ export function PickerBase<H extends PickerHit>({
                       <Code>{hit.code}</Code>
                     </span>
                     <span className="flex items-baseline gap-2 truncate type-body text-ink-muted">
-                      <span
-                        lang={language === 'ur' ? 'en' : 'ur'}
-                        dir={language === 'ur' ? 'ltr' : 'rtl'}
-                        className="truncate"
-                      >
+                      <span lang={otherScriptLang(language)} dir="auto" className="truncate">
                         {otherScriptName(hit, language)}
                       </span>
                       {extra === '' ? null : <span className="truncate">{extra}</span>}

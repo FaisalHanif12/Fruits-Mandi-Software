@@ -22,6 +22,7 @@ import {
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
 import { at } from '../helpers/sample';
+import { suggestionsFor } from '../helpers/translit';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -67,6 +68,24 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
   }
 
   describe('tabs', () => {
+    it('Esc leaves the settings for the dashboard, and asks first when text is not saved', async () => {
+      const { user, router } = await open();
+      await user.keyboard('{Escape}');
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/');
+      });
+    });
+
+    it('Esc with unsaved text asks "Save changes?" and stays until he answers', async () => {
+      const { user, router } = await open();
+      await user.click(field(language, 'settings-firm-address'));
+      await user.keyboard('{End} more');
+      await user.keyboard('{Escape}');
+      const prompt = await screen.findByRole('alertdialog');
+      expect(visible(prompt.textContent)).toContain(message(language, 'layout-save-title'));
+      expect(router.state.location.pathname).toBe('/settings');
+    });
+
     it('has five tabs, and ← and → move between them in the direction the user sees', async () => {
       const { user } = await open();
       const tabs = screen.getAllByRole('tab');
@@ -116,6 +135,80 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
         );
       });
       expect(await screen.findByText(message(language, 'settings-saved'))).toBeInTheDocument();
+    });
+
+    it('a firm name word made by the spelling rules alone is checked before the save (FR-7.66)', async () => {
+      vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+        Promise.resolve(
+          suggestionsFor(
+            {
+              toUrdu: { zaheer: ['ظہیر'] },
+              toEnglish: { ظہیر: 'Zaheer' },
+              rulesOnly: ['zaheer'],
+            },
+            text,
+            direction,
+          ),
+        ),
+      );
+      vi.mocked(settingsApi.settingsSetFirm).mockImplementation((input) => Promise.resolve(input));
+      const { user } = await open();
+      const mandi = field(language, 'settings-firm-mandi-ur');
+      await user.clear(mandi);
+      await user.click(mandi);
+      await user.keyboard('zaheer ');
+      await waitFor(() => {
+        expect(mandi.value).toBe('ظہیر ');
+      });
+      press('F10');
+      // The save waits: the Owner sees the name with the marked word and confirms it.
+      const dialog = await screen.findByRole('alertdialog');
+      expect(settingsApi.settingsSetFirm).not.toHaveBeenCalled();
+      expect(visible(dialog.textContent)).toContain('ظہیر');
+      await user.click(
+        within(dialog).getByRole('button', {
+          name: new RegExp(message(language, 'translit-spelling-confirm')),
+        }),
+      );
+      await waitFor(() => {
+        expect(settingsApi.settingsSetFirm).toHaveBeenCalledTimes(1);
+      });
+      expect(vi.mocked(settingsApi.settingsSetFirm).mock.calls[0]?.[0]).toMatchObject({
+        confirmed_rules_words: ['ظہیر'],
+      });
+      expect(await screen.findByText(message(language, 'settings-saved'))).toBeInTheDocument();
+    });
+
+    it('going back to fix the spelling saves nothing and puts the cursor in the names', async () => {
+      vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+        Promise.resolve(
+          suggestionsFor(
+            { toUrdu: { zaheer: ['ظہیر'] }, toEnglish: { ظہیر: 'Zaheer' }, rulesOnly: ['zaheer'] },
+            text,
+            direction,
+          ),
+        ),
+      );
+      const { user } = await open();
+      const firmName = field(language, 'settings-firm-name-ur');
+      await user.clear(firmName);
+      await user.click(firmName);
+      await user.keyboard('zaheer ');
+      await waitFor(() => {
+        expect(firmName.value).toBe('ظہیر ');
+      });
+      press('F10');
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(
+        within(dialog).getByRole('button', { name: new RegExp(message(language, 'common-back')) }),
+      );
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      });
+      expect(settingsApi.settingsSetFirm).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(document.activeElement).toBeInstanceOf(HTMLInputElement);
+      });
     });
 
     it('a refused field shows at the field, the rest in a notice with the reference', async () => {

@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 const DEV_PORT = 5173;
+// A whole test, with every wait inside it, gets this long (D1+D2 review, finding 26).
+const TEST_TIMEOUT_MS = 30_000;
+const HOOK_TIMEOUT_MS = 30_000;
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -28,5 +31,7 @@ export default defineConfig({
       'src/**/*.test.{ts,tsx}',
     ],
     css: false,
+    testTimeout: TEST_TIMEOUT_MS,
+    hookTimeout: HOOK_TIMEOUT_MS,
   },
 });

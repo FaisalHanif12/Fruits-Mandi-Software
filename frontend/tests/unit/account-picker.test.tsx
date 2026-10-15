@@ -247,6 +247,61 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(accountApi.accountsResolveCode).toHaveBeenCalledWith('buyer', null, '12');
   });
 
+  it('Enter straight after a key never takes a row from the older text (1, then 2 and Enter at once)', async () => {
+    const onValue = vi.fn();
+    const { input, user } = setup(language, 'buyer', { onValue });
+    await user.click(input);
+    await user.keyboard('1');
+    // The list answers `1` (one buyer). The next key and Enter come before the answer to `12`.
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
+    });
+    await user.keyboard('2{Enter}');
+    expect(input.value).toBe('12');
+    expect(onValue).not.toHaveBeenCalled();
+    // The whole code `12` goes to the backend, which says there is no such buyer.
+    await waitFor(() => {
+      expect(accountApi.accountsResolveCode).toHaveBeenCalledWith('buyer', null, '12');
+    });
+    expect(onValue).not.toHaveBeenCalled();
+  });
+
+  it('Enter straight after a name key waits for the answer to the whole text, then takes its best match', async () => {
+    const onValue = vi.fn();
+    const { input, user } = setup(language, 'buyer', { onValue });
+    await user.click(input);
+    await user.keyboard('ak');
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
+    });
+    // `aks` matches nothing: the row of `ak` (Akram) must not be taken.
+    await user.keyboard('s{Enter}');
+    await waitFor(() => {
+      expect(accountApi.searchAccounts).toHaveBeenCalledWith(
+        expect.objectContaining({ text: 'aks' }),
+      );
+    });
+    await waitFor(() => {
+      expect(input).toHaveAttribute('aria-expanded', 'false');
+    });
+    expect(onValue).not.toHaveBeenCalled();
+    expect(input.value).toBe('aks');
+  });
+
+  it('Enter then leaving the field resolves the code once, and shows no message under a filled field', async () => {
+    const onValue = vi.fn();
+    const { input, user } = setup(language, 'buyer', { onValue });
+    await user.click(input);
+    await user.keyboard('1');
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
+    });
+    await user.keyboard('{Enter}');
+    expect(onValue).toHaveBeenCalledTimes(1);
+    expect(accountApi.accountsResolveCode).not.toHaveBeenCalled();
+    expect(screen.queryByText(message(language, 'accountpicker-several'))).not.toBeInTheDocument();
+  });
+
   it('`9999` is reserved: it is never a short code for an ordinary account', async () => {
     const { input, user } = setup(language, 'buyer');
     await user.click(input);
@@ -486,6 +541,40 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
     await waitFor(() => {
       expect(input).toHaveFocus();
     });
+  });
+
+  it('one Esc closes the suggestion list inside the dialog, the next Esc closes the dialog (FR-7.18)', async () => {
+    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('03040003');
+    const { input, user } = setup(language, 'buyer');
+    await user.click(input);
+    await user.keyboard('zzz');
+    await waitFor(() => {
+      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
+    });
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { code: 'F4', key: 'F4', bubbles: true }));
+    });
+    const dialog = await screen.findByRole('dialog');
+    const urduName = within(dialog).getByLabelText<HTMLInputElement>(
+      named(message(language, 'accounts-field-name-ur')),
+    );
+    await user.click(urduName);
+    await user.keyboard('tariq');
+    await waitFor(() => {
+      expect(within(dialog).getAllByRole('option').length).toBeGreaterThan(0);
+    });
+    await user.keyboard('{Escape}');
+    // The list is gone, the dialog and the English letters are still there.
+    await waitFor(() => {
+      expect(within(dialog).queryAllByRole('option')).toHaveLength(0);
+    });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(urduName.value).toBe('tariq');
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(accountApi.accountsSave).not.toHaveBeenCalled();
   });
 
   it('in a field that takes any account the quick add asks which type', async () => {

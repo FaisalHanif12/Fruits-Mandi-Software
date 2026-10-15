@@ -176,6 +176,26 @@
 -peshgi = پیشگی
     .gender = feminine
 
+# Money the shop lends to staff or anyone else, to be given back
+# review: pending
+-adhar-raqam = ادھار رقم
+    .gender = feminine
+
+# Money given back: by a partner, by a person who borrowed, or by a seller returning his advance
+# review: pending
+-wapsi = واپسی
+    .gender = feminine
+
+# Cash the shop lends to a buyer; it is collected with his other dues
+# review: pending
+-naqd-udhar = نقد ادھار
+    .gender = masculine
+
+# A partner's profit share minus the money he took and has not returned
+# review: pending
+-khalis = خالص
+    .gender = masculine
+
 # General journal entry
 # review: pending
 -general = جنرل
@@ -285,6 +305,11 @@ glossary-wasooli = { -wasooli }
 glossary-agrahi = { -agrahi }
 glossary-adaigi = { -adaigi }
 glossary-peshgi-khata = { -peshgi-khata }
+glossary-peshgi = { -peshgi }
+glossary-adhar-raqam = { -adhar-raqam }
+glossary-wapsi = { -wapsi }
+glossary-naqd-udhar = { -naqd-udhar }
+glossary-khalis = { -khalis }
 glossary-general = { -general }
 glossary-kharcha = { -kharcha }
 glossary-dukan-kharcha = { -dukan-kharcha }

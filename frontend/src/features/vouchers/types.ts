@@ -5,6 +5,7 @@
 import type { AdvancePreviewRow } from '../../bindings/AdvancePreviewRow';
 import type { AdvancesInfo } from '../../bindings/AdvancesInfo';
 import type { AdvancesPreview } from '../../bindings/AdvancesPreview';
+import type { OpenAdvance } from '../../bindings/OpenAdvance';
 import type { VoucherMode } from '../../bindings/VoucherMode';
 import type { VoucherSaved } from '../../bindings/VoucherSaved';
 import type { VoucherType } from '../../bindings/VoucherType';
@@ -14,6 +15,7 @@ export type {
   AdvancePreviewRow,
   AdvancesInfo,
   AdvancesPreview,
+  OpenAdvance,
   VoucherMode,
   VoucherSaved,
   VoucherType,

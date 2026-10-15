@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
+import { useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -88,7 +89,7 @@ function ChargesForm({ saved }: { saved: ChargesSettings }) {
     (key) => values[key].method !== start[key].method || values[key].value !== start[key].value,
   );
 
-  const submit = (): Promise<boolean> =>
+  const submitOnce = (): Promise<boolean> =>
     save
       .mutateAsync(inputOf(saved, values))
       .then(() => {
@@ -96,6 +97,9 @@ function ChargesForm({ saved }: { saved: ChargesSettings }) {
         return true;
       })
       .catch(() => false);
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
+  const submit = (): Promise<boolean> => flight.run(submitOnce, false);
   const submitNow = () => {
     void submit();
   };
@@ -175,7 +179,7 @@ function ChargesForm({ saved }: { saved: ChargesSettings }) {
         <Button
           variant="primary"
           shortcut={SHORTCUTS.save}
-          busy={save.isPending}
+          busy={flight.busy || save.isPending}
           disabled={!dirty}
           onClick={submitNow}
         >

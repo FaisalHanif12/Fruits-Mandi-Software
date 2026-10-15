@@ -27,6 +27,8 @@ export function PasswordInput({
   const [shown, setShown] = useState(false);
   return (
     <div className="relative">
+      {/* The text keeps clear of the eye button on whichever side it is: the input is left to right in
+          both languages, the button sits at the end of the page's direction (left in Urdu). */}
       <input
         id={id}
         type={shown ? 'text' : 'password'}
@@ -41,7 +43,7 @@ export function PasswordInput({
         onChange={(event) => {
           onChange(event.target.value);
         }}
-        className={`${controlClasses({ invalid, readOnly })} type-number-field pe-12`}
+        className={`${controlClasses({ invalid, readOnly })} type-number-field pe-control ps-control`}
       />
       <button
         type="button"

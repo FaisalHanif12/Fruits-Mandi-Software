@@ -37,9 +37,15 @@ export function DayPage() {
             <Num>{isoToDisplayDate(today)}</Num>
           </span>
           <span className="flex items-baseline gap-2">
-            <Localized id="day-closed-up-to" />
+            {/* Each word is its own element: two bare texts in a flex row become one item, with
+                no gap between them. */}
+            <Localized id="day-closed-up-to">
+              <span />
+            </Localized>
             {closed_up_to === null ? (
-              <Localized id="day-none-closed" />
+              <Localized id="day-none-closed">
+                <span />
+              </Localized>
             ) : (
               <Num>{isoToDisplayDate(closed_up_to)}</Num>
             )}

@@ -21,7 +21,18 @@ export function AccountFormPage() {
 function NewAccount() {
   const day = useDayStatus();
   if (day.isPending) return <LoadingState />;
-  return <AccountForm account={null} today={day.data?.today ?? ''} />;
+  if (day.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="accounts-load-failed" />}
+        error={uiErrorOf(day.error)}
+        onRetry={() => {
+          void day.refetch();
+        }}
+      />
+    );
+  }
+  return <AccountForm account={null} today={day.data.today} />;
 }
 
 function EditAccount({ id }: { id: number }) {

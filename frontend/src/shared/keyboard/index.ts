@@ -8,6 +8,7 @@ export {
   type ShortcutKey,
   type ShortcutScope,
 } from './shortcuts';
+export { keepKeyForApp } from './downshiftKeys';
 export { useShortcut } from './useShortcut';
 export {
   registerEscape,
@@ -20,6 +21,7 @@ export { arrowSide, elementDirection, intoScreenSide, menuSide, type Side } from
 export { focusRegion, registerFocusRegion, useFocusRegion, type FocusRegion } from './focusRegions';
 export { pickNeighbour, shouldLeaveField, type Box, type Move } from './fieldNavigation';
 export { focusNextField, formNavigationProps, useFormNavigation } from './formNavigation';
+export { treeKeyHandler, type TreeKeyOptions } from './treeKeys';
 export {
   DEFAULT_PAGE_SIZE,
   moveIndex,

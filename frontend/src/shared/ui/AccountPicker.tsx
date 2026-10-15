@@ -133,6 +133,12 @@ export function AccountPicker({
         onHighlight={setHighlight}
         onLeave={resolve}
         onEnterNoMatch={resolve}
+        resolveOnEnter={(text) => {
+          // A code goes whole to the backend; anything else waits for the answer to its text.
+          if (!CODE_TEXT.test(text)) return false;
+          resolve(text);
+          return true;
+        }}
         onTyping={() => {
           setNote(null);
         }}

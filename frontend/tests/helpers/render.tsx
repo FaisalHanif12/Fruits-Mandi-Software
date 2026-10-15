@@ -28,9 +28,14 @@ export function visible(text: string | null | undefined): string {
 }
 
 /** The text of one Fluent message in one language, without isolation marks. */
-export function message(language: Language, id: string, args: Record<string, string> = {}): string {
+export function message(
+  language: Language,
+  id: string,
+  args: Record<string, string | number> = {},
+): string {
   const bundle = bundles[language];
   const pattern = bundle.getMessage(id)?.value;
   if (pattern == null) throw new Error(`${language}: no message ${id}`);
-  return visible(bundle.formatPattern(pattern, args));
+  // The <num> markup of a message is drawn as a number in the page, so its text is what is compared.
+  return visible(bundle.formatPattern(pattern, args)).replace(/<\/?num>/g, '');
 }

@@ -138,3 +138,27 @@ auth-lock-user = User: { $name }
 
 # review: pending
 auth-lock-unlock = Unlock
+
+## Change password, from the user menu (PRD FR-5.6).
+
+# review: pending
+auth-change-title = Change password
+
+# review: pending
+auth-change-help = Type the password you use now, then the new password twice.
+
+# review: pending
+auth-change-current = Current password
+
+# review: pending
+auth-change-new = New password
+
+# review: pending
+auth-change-repeat = New password again
+
+# $tries_left: how many wrong tries are left before the app makes him wait.
+# review: pending
+auth-change-wrong-current = The current password is wrong. Tries left: { $tries_left }
+
+# review: pending
+auth-change-saved = Password changed

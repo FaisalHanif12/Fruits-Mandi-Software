@@ -3,6 +3,7 @@
 // passwords are cleared the moment the setup succeeds.
 
 import { create } from 'zustand';
+import type { SpellingMarks } from '../../shared/urdu/spelling';
 
 export const WIZARD_FIELDS = [
   'firm_name_ur',
@@ -40,13 +41,19 @@ const EMPTY: WizardValues = {
   password_repeat: '',
 };
 
+/** The two names of the first step that have a spelling check (PRD FR-7.66). */
+export type WizardNameKey = 'firm' | 'mandi';
+
 interface WizardState {
   step: number;
   values: WizardValues;
+  /** The words of the firm and mandi names to check, and the ones he confirmed (FR-7.66). */
+  marks: Partial<Record<WizardNameKey, SpellingMarks>>;
   /** Shown once on step 3. Never saved anywhere else. */
   recoveryCode: string | null;
   setStep: (step: number) => void;
   setValue: (field: WizardField, text: string) => void;
+  setMarks: (name: WizardNameKey, marks: SpellingMarks | undefined) => void;
   finishSetup: (recoveryCode: string) => void;
   reset: () => void;
 }
@@ -54,12 +61,16 @@ interface WizardState {
 export const useWizardStore = create<WizardState>()((set) => ({
   step: 0,
   values: EMPTY,
+  marks: {},
   recoveryCode: null,
   setStep: (step) => {
     set({ step });
   },
   setValue: (field, text) => {
     set((state) => ({ values: { ...state.values, [field]: text } }));
+  },
+  setMarks: (name, marks) => {
+    set((state) => ({ marks: { ...state.marks, [name]: marks } }));
   },
   finishSetup: (recoveryCode) => {
     set((state) => ({
@@ -69,7 +80,7 @@ export const useWizardStore = create<WizardState>()((set) => ({
     }));
   },
   reset: () => {
-    set({ step: 0, values: EMPTY, recoveryCode: null });
+    set({ step: 0, values: EMPTY, marks: {}, recoveryCode: null });
   },
 }));
 

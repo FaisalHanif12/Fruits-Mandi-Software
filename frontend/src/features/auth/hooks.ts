@@ -3,15 +3,18 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
+import type { ChangePasswordInput } from '../../bindings/ChangePasswordInput';
 import type { FirstRunInput } from '../../bindings/FirstRunInput';
 import type { LoginInput } from '../../bindings/LoginInput';
 import type { RecoverInput } from '../../bindings/RecoverInput';
 import type { SessionUser } from '../../bindings/SessionUser';
 import type { UnlockInput } from '../../bindings/UnlockInput';
+import type { Language } from '../../i18n';
 import { useLanguageStore } from '../../shared/i18n';
 import { useTextSizeStore } from '../../app/layout/text-size';
 import { prefsSet } from '../settings/api';
 import {
+  authChangePassword,
   authLock,
   authLogin,
   authLogout,
@@ -35,19 +38,25 @@ function useRefreshSession() {
 
 /**
  * The language and the text size of a user who has just signed in (PRD FR-7.30, FR-7.11): his
- * own choices, saved on the computer, replace what the sign-in screen showed.
+ * own choices, saved on the computer, replace what the sign-in screen showed. One exception: a
+ * language he switched to on the sign-in screen itself stays, and `useSavePreferences` saves it as
+ * his choice, so the next sign-in screen uses it too.
  */
-function applyUserPreferences(user: SessionUser) {
-  useLanguageStore.getState().setLanguage(user.language);
+function applyUserPreferences(user: SessionUser, shownAtStart: Language | undefined) {
+  const shownNow = useLanguageStore.getState().language;
+  const switchedHere = shownAtStart !== undefined && shownNow !== shownAtStart;
+  if (!switchedHere) useLanguageStore.getState().setLanguage(user.language);
   useTextSizeStore.getState().setChosen(user.text_size);
 }
 
 export function useLogin() {
   const refresh = useRefreshSession();
+  // The language the sign-in screen opened in: the last one used on this computer.
+  const shownAtStart = useAuthStatus().data?.login_language;
   return useMutation({
     mutationFn: (input: LoginInput) => authLogin(input),
     onSuccess: async (user) => {
-      applyUserPreferences(user);
+      applyUserPreferences(user, shownAtStart);
       await refresh();
     },
   });
@@ -70,6 +79,11 @@ export function useLogout() {
 
 export function useFirstRun() {
   return useMutation({ mutationFn: (input: FirstRunInput) => setupFirstRun(input) });
+}
+
+/** A change of password from the user menu. Nothing to refresh: he stays signed in. */
+export function useChangePassword() {
+  return useMutation({ mutationFn: (input: ChangePasswordInput) => authChangePassword(input) });
 }
 
 export function useRecover() {

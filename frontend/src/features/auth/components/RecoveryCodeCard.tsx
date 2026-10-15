@@ -40,7 +40,7 @@ export function RecoveryCodeCard({
       </Localized>
       <p
         aria-label={code}
-        className="type-title rounded-2 border border-border bg-surface-sunken px-4 py-3 text-center tracking-widest"
+        className="type-title rounded-2 border border-border bg-surface-sunken px-4 py-3 text-center tracking-code"
       >
         <Code>{groupRecoveryCode(code)}</Code>
       </p>

@@ -58,6 +58,24 @@
   font-size: var(--text-latin-1);
 }
 
+/* The heading of a number column: the same physical right edge as its figures, in both
+   languages, so a heading stands over its column (NFR-USE-19, F17). */
+.entry-grid .header-num .ag-header-cell-label {
+  direction: ltr;
+  justify-content: flex-end;
+}
+
+.entry-grid .header-num .ag-header-cell-text {
+  text-align: end;
+}
+
+/* The total row under the last row: sunken ground, the emphasis a total has (F19). */
+.entry-grid .ag-row-pinned,
+.entry-grid .ag-row-pinned .ag-cell {
+  background-color: var(--color-surface-sunken);
+  font-weight: var(--weight-strong);
+}
+
 /* A cell the app works out: read-only ground (design system 2). */
 .entry-grid .cell-calc {
   background-color: var(--color-surface-readonly);

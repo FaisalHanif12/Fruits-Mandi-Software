@@ -100,7 +100,7 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
   it('shows the seeded defaults with side, charge, party, item or group, value and level', async () => {
     fakeRules();
     await renderApp('/index/rules');
-    await screen.findByRole('heading', { level: 1, name: message(language, 'rules-title') });
+    await screen.findByRole('heading', { level: 1, name: named(message(language, 'rules-title')) });
     await waitFor(() => {
       expect(rowIds()).toEqual(['1', '2', '3']);
     });
@@ -863,7 +863,10 @@ describe.each(LANGUAGES)('the settings Charges and Overrides (%s)', (language) =
       }),
     );
     expect(
-      await screen.findByRole('heading', { level: 1, name: message(language, 'rules-title') }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: named(message(language, 'rules-title')),
+      }),
     ).toBeInTheDocument();
   });
 

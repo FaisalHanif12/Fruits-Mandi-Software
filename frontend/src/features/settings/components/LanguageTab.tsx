@@ -41,7 +41,7 @@ export function LanguageTab({ defaultLanguage }: LanguageTabProps) {
   const error = setDefault.error === null ? null : uiErrorOf(setDefault.error);
   const size = effectiveTextSize(chosen, window.innerWidth);
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
+    <div className="flex max-w-reading flex-col gap-6">
       <section className="flex flex-col gap-3">
         <Localized id="settings-language-default">
           <h2 className="type-section" />

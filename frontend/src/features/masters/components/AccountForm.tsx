@@ -16,7 +16,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
-import { useFocusFirstField, useSpellingFlow } from '../../../shared/hooks';
+import { useFocusFirstField, useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import type { SearchHit } from '../../../shared/search';
@@ -25,6 +25,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Code,
   CodeInput,
   ConfirmDialog,
   DateInput,
@@ -155,6 +156,8 @@ export function AccountForm({ account, today }: AccountFormProps) {
     formRef.current?.querySelector<HTMLElement>('[role="combobox"], input')?.focus();
   };
   const spelling = useSpellingFlow({ onFix: focusNames });
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
 
   useEffect(() => {
     if (leaving) void navigate({ to: '/index/accounts' });
@@ -167,7 +170,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
     setValues((current) => ({ ...current, father }));
   };
 
-  const persist = async (): Promise<boolean> => {
+  const persistOnce = async (): Promise<boolean> => {
     try {
       // The names first, then father or firm: each pair asks about its own marked words.
       const saved = await spelling.guard(values.names, setNames, (confirmedNames) =>
@@ -186,6 +189,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
       return false;
     }
   };
+  const persist = (): Promise<boolean> => flight.run(persistOnce, false);
   const saveAndClose = () => {
     void persist().then((ok) => {
       if (ok) setLeaving(true);
@@ -339,7 +343,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
                       label: (
                         <span className="flex gap-2">
                           <span>{displayName(control, language)}</span>
-                          <span dir="ltr">{control.code}</span>
+                          <Code>{control.code}</Code>
                         </span>
                       ),
                     }))}
@@ -351,6 +355,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
               label={<Localized id="accounts-field-code" />}
               hint={isNew ? <Localized id="accounts-field-code-hint" /> : undefined}
               error={fieldError(error, 'code')}
+              readOnly={!isNew}
             >
               {(props) => (
                 <CodeInput
@@ -602,8 +607,21 @@ export function AccountForm({ account, today }: AccountFormProps) {
         </Card>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            {account === null || account.is_system ? null : account.is_active ? (
+          <div className="flex flex-col gap-1">
+            {account === null ? null : account.is_system ? (
+              // A system account is used by the books, so it stays active: the button is there,
+              // off, and the reason is said in words (PRD FR-10.4).
+              <>
+                <div>
+                  <Button disabled onClick={() => undefined}>
+                    <Localized id="accounts-make-inactive" />
+                  </Button>
+                </div>
+                <Localized id="accounts-system-stays-active">
+                  <p className="type-body text-ink-muted" />
+                </Localized>
+              </>
+            ) : account.is_active ? (
               <Button
                 variant="danger"
                 busy={setActive.isPending}
@@ -631,7 +649,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
             <Button
               variant="primary"
               shortcut={SHORTCUTS.save}
-              busy={save.isPending}
+              busy={flight.busy || save.isPending}
               onClick={saveAndClose}
             >
               <Localized id="layout-save-save" />

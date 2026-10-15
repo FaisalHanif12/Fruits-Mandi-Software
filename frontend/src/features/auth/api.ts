@@ -2,6 +2,7 @@
 // invoke() (Code Standards F4). Every input is text as typed; the backend checks it.
 
 import type { AuthStatus } from '../../bindings/AuthStatus';
+import type { ChangePasswordInput } from '../../bindings/ChangePasswordInput';
 import type { FirstRunDone } from '../../bindings/FirstRunDone';
 import type { FirstRunInput } from '../../bindings/FirstRunInput';
 import type { LoginInput } from '../../bindings/LoginInput';
@@ -40,4 +41,9 @@ export function authUnlock(input: UnlockInput): Promise<SessionUser> {
 /** Resets the Owner's password with the recovery code. Returns a new code to print. */
 export function authRecover(input: RecoverInput): Promise<RecoverDone> {
   return callCommand<RecoverDone>('auth_recover', { input });
+}
+
+/** Changes the Owner's password from the user menu (PRD FR-5.6). A wrong current password counts towards the lockout. */
+export function authChangePassword(input: ChangePasswordInput): Promise<null> {
+  return callCommand<null>('auth_change_password', { input });
 }

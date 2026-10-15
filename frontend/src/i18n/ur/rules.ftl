@@ -3,13 +3,13 @@
 ## Commission rules: menu, list, form, states (plan 09, PRD 11, FR-11.1 to FR-11.10).
 
 # review: pending
-masters-rules-title = کمیشن اصول
+masters-rules-title = { -commission } اصول
 
 # review: pending
 masters-rules-help = { -commission }، { -laga } اور باقی چارجز کے اصول، کھاتے، { -qism-maal } یا گروپ کے حساب سے۔
 
 # review: pending
-rules-title = کمیشن اصول
+rules-title = { -commission } اصول
 
 # review: pending
 rules-help = ہر چارج کا اصول یہاں لکھا جاتا ہے۔ سب سے خاص اصول جیتتا ہے۔ کوئی اصول نہ ہو تو عام اصول لگتا ہے۔
@@ -263,7 +263,7 @@ rules-made-inactive = اصول غیر فعال کر دیا گیا
 rules-inactive-title = غیر فعال کریں؟
 
 # review: pending
-rules-inactive-description = غیر فعال اصول آئندہ نہیں لگے گا۔ پہلے سے محفوظ بکریوں میں کوئی تبدیلی نہیں ہوگی۔ جب چاہیں دوبارہ فعال کر سکتے ہیں۔
+rules-inactive-description = غیر فعال اصول آئندہ نہیں لگے گا۔ پہلے سے محفوظ { -bikri } میں کوئی تبدیلی نہیں ہوگی۔ جب چاہیں دوبارہ فعال کر سکتے ہیں۔
 
 # review: pending
 rules-overlap-title = اسی درجے کا ایک اور اصول انہی تاریخوں میں لگتا ہے
@@ -376,7 +376,7 @@ settings-overrides-credit = ادھار کی حد پار ہو جائے تو
 settings-overrides-credit-warn = صرف خبردار کریں
 
 # review: pending
-settings-overrides-credit-block = بکری روک دیں
+settings-overrides-credit-block = { -bikri } روک دیں
 
 # review: pending
 settings-overrides-saved = ترتیب محفوظ ہو گئی

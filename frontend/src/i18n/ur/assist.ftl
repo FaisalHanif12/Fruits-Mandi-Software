@@ -56,27 +56,27 @@ calc-info-unknown = اس رقم کا حساب یہاں نہیں دکھایا ج�
 # review: pending
 calc-info-rule = (اصول کا درجہ: { $level })
 # review: pending
-working-percent = { $base } × { $bps } ÷ 100 = { $result }
+working-percent = <num>{ $base }</num> × <num>{ $bps }</num> ÷ 100 = <num>{ $result }</num>
 # review: pending
-working-per-unit = { $qty } × { $value } = { $result }
+working-per-unit = <num>{ $qty }</num> × <num>{ $value }</num> = <num>{ $result }</num>
 # A per-Nag charge of a lot is worked out on the quantity received.
 # review: pending
-working-per-unit-received = { $qty_received } { -nag } وصول × { $value } = { $result }
+working-per-unit-received = <num>{ $qty_received }</num> { -nag } وصول × <num>{ $value }</num> = <num>{ $result }</num>
 # review: pending
-working-per-lot = { $value } فی { -lot } = { $result }
+working-per-lot = <num>{ $value }</num> فی { -lot } = <num>{ $result }</num>
 # review: pending
-working-manual = ہاتھ سے لکھی گئی رقم: { $result }
+working-manual = ہاتھ سے لکھی گئی رقم: <num>{ $result }</num>
 # review: pending
 working-none = کوئی اصول نہیں لگا۔ رقم { -lot } پر لکھی جاتی ہے۔
 
 # A value typed on a sale line, and a per-lot charge that is not due on this line (PRD FR-7.43, FR-11.9).
 # review: pending
-working-manual-percent = ہاتھ سے لکھا گیا: { $base } × { $bps } ÷ 100 = { $result }
+working-manual-percent = ہاتھ سے لکھا گیا: <num>{ $base }</num> × <num>{ $bps }</num> ÷ 100 = <num>{ $result }</num>
 # review: pending
-working-manual-per-unit = ہاتھ سے لکھا گیا: { $qty } × { $value } = { $result }
+working-manual-per-unit = ہاتھ سے لکھا گیا: <num>{ $qty }</num> × <num>{ $value }</num> = <num>{ $result }</num>
 # review: pending
-working-manual-per-unit-received = ہاتھ سے لکھا گیا: { $qty_received } { -nag } وصول × { $value } = { $result }
+working-manual-per-unit-received = ہاتھ سے لکھا گیا: <num>{ $qty_received }</num> { -nag } وصول × <num>{ $value }</num> = <num>{ $result }</num>
 # review: pending
-working-manual-per-lot = ہاتھ سے لکھا گیا: { $value } فی { -lot } = { $result }
+working-manual-per-lot = ہاتھ سے لکھا گیا: <num>{ $value }</num> فی { -lot } = <num>{ $result }</num>
 # review: pending
-working-per-lot-already-charged = { -lot } کا یہ چارج پہلی بکری میں لگ چکا ہے، اس لیے اب کچھ نہیں لگا۔
+working-per-lot-already-charged = { -lot } کا یہ چارج پہلی { -bikri } میں لگ چکا ہے، اس لیے اب کچھ نہیں لگا۔

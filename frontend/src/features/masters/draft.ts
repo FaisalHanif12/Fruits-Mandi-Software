@@ -15,9 +15,12 @@ export interface FormValues extends Omit<MasterDraft, 'names'> {
 /** A new master: the suggested code, empty names, and the first choice of every select. */
 export function newValues(config: MasterConfig, code: string): FormValues {
   const text: Record<string, string> = {};
+  const lists: Record<string, readonly string[]> = {};
   for (const field of config.fields) {
-    if (field.control.type === 'select') text[field.key] = field.control.options[0]?.value ?? '';
-    else if (field.control.type !== 'picker') text[field.key] = '';
+    const { type } = field.control;
+    if (type === 'select') text[field.key] = field.control.options[0]?.value ?? '';
+    else if (type === 'multi') lists[field.key] = [];
+    else if (type !== 'picker' && type !== 'account') text[field.key] = '';
   }
   return {
     id: null,
@@ -26,9 +29,11 @@ export function newValues(config: MasterConfig, code: string): FormValues {
     names: { urdu: '', english: '' },
     text,
     refs: Object.fromEntries(
-      config.fields.filter((f) => f.control.type === 'picker').map((f) => [f.key, null]),
+      config.fields
+        .filter((f) => f.control.type === 'picker' || f.control.type === 'account')
+        .map((f) => [f.key, null]),
     ),
-    lists: {},
+    lists,
   };
 }
 
@@ -45,16 +50,23 @@ export function valuesOf(config: MasterConfig, record: MasterRecord): FormValues
         : { urdu: record.names.name_ur, english: record.names.name_en },
     text: { ...empty.text, ...record.text },
     refs: { ...empty.refs, ...record.refs },
-    lists: record.lists,
+    lists: { ...empty.lists, ...record.lists },
   };
 }
 
-/** True when nothing differs: the same code, names, texts and chosen records. */
+/** The same ticked choices, whatever the order they were ticked in. */
+function sameChoices(a: readonly string[] = [], b: readonly string[] = []): boolean {
+  return a.length === b.length && a.every((choice) => b.includes(choice));
+}
+
+/** True when nothing differs: the same code, names, texts, ticked choices and chosen records. */
 export function sameValues(a: FormValues, b: FormValues): boolean {
   const keys = new Set([...Object.keys(a.text), ...Object.keys(b.text)]);
   const refKeys = new Set([...Object.keys(a.refs), ...Object.keys(b.refs)]);
+  const listKeys = new Set([...Object.keys(a.lists), ...Object.keys(b.lists)]);
   return (
     a.code === b.code &&
+    [...listKeys].every((key) => sameChoices(a.lists[key], b.lists[key])) &&
     a.names.urdu === b.names.urdu &&
     a.names.english === b.names.english &&
     [...keys].every((key) => (a.text[key] ?? '') === (b.text[key] ?? '')) &&

@@ -18,7 +18,9 @@ import {
   ErrorState,
   LoadingState,
   Num,
+  Table,
   showToast,
+  type TableColumn,
 } from '../../../shared/ui';
 import { useLearnedPairs, useRemoveLearnedPair } from '../hooks';
 
@@ -57,62 +59,57 @@ export function LearnedWords() {
         />
       );
     }
+    const columns: TableColumn<PairRow>[] = [
+      {
+        id: 'roman',
+        header: <Localized id="translit-words-col-roman" />,
+        cell: (pair) => <Code>{pair.roman}</Code>,
+      },
+      {
+        id: 'urdu',
+        header: <Localized id="translit-words-col-urdu" />,
+        cell: (pair) => <span lang="ur">{pair.urdu}</span>,
+      },
+      {
+        id: 'kind',
+        header: <Localized id="translit-words-col-kind" />,
+        cell: (pair) => <Localized id={KIND_IDS[pair.kind]} />,
+      },
+      {
+        id: 'count',
+        header: <Localized id="translit-words-col-count" />,
+        kind: 'number',
+        cell: (pair) => <Num>{String(pair.use_count)}</Num>,
+      },
+      {
+        id: 'last',
+        header: <Localized id="translit-words-col-last" />,
+        cell: (pair) =>
+          pair.last_used_at === null ? null : <Num>{utcToLocalDisplay(pair.last_used_at)}</Num>,
+      },
+      {
+        id: 'remove',
+        header: <Localized id="translit-words-remove" />,
+        kind: 'action',
+        cell: (pair) => (
+          <Button
+            onClick={() => {
+              setAsking(pair);
+            }}
+          >
+            <Localized id="translit-words-remove" />
+          </Button>
+        ),
+      },
+    ];
     return (
-      <div className="overflow-auto rounded-3 border border-border bg-surface">
-        <table aria-label={l10n.getString('translit-words-table')} className="type-body w-full">
-          <thead className="bg-surface-sunken text-ink-muted">
-            <tr>
-              <Localized id="translit-words-col-roman">
-                <th scope="col" className="px-4 py-2 text-start" />
-              </Localized>
-              <Localized id="translit-words-col-urdu">
-                <th scope="col" className="px-4 py-2 text-start" />
-              </Localized>
-              <Localized id="translit-words-col-kind">
-                <th scope="col" className="px-4 py-2 text-start" />
-              </Localized>
-              <Localized id="translit-words-col-count">
-                <th scope="col" className="px-4 py-2 text-start" />
-              </Localized>
-              <Localized id="translit-words-col-last">
-                <th scope="col" className="px-4 py-2 text-start" />
-              </Localized>
-              <th scope="col" className="px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {pairs.data.map((pair) => (
-              <tr key={pair.id} className="border-t border-border">
-                <td className="px-4 py-2">
-                  <Code>{pair.roman}</Code>
-                </td>
-                <td lang="ur" className="px-4 py-2">
-                  {pair.urdu}
-                </td>
-                <td className="px-4 py-2">
-                  <Localized id={KIND_IDS[pair.kind]} />
-                </td>
-                <td className="px-4 py-2">
-                  <Num>{String(pair.use_count)}</Num>
-                </td>
-                <td className="px-4 py-2">
-                  {pair.last_used_at === null ? null : (
-                    <Num>{utcToLocalDisplay(pair.last_used_at)}</Num>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-end">
-                  <Button
-                    onClick={() => {
-                      setAsking(pair);
-                    }}
-                  >
-                    <Localized id="translit-words-remove" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="rounded-3 border border-border bg-surface">
+        <Table
+          label={l10n.getString('translit-words-table')}
+          columns={columns}
+          rows={pairs.data}
+          rowKey={(pair) => String(pair.id)}
+        />
       </div>
     );
   };

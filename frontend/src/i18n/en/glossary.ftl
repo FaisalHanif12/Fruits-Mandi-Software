@@ -145,6 +145,22 @@
 # review: pending
 -peshgi = Advance
 
+# Money the shop lends to staff or anyone else, to be given back
+# review: pending
+-adhar-raqam = Money Lent
+
+# Money given back: by a partner, by a person who borrowed, or by a seller returning his advance
+# review: pending
+-wapsi = Return
+
+# Cash the shop lends to a buyer; it is collected with his other dues
+# review: pending
+-naqd-udhar = Cash Lent
+
+# A partner's profit share minus the money he took and has not returned
+# review: pending
+-khalis = Net
+
 # General journal entry
 # review: pending
 -general = Journal
@@ -246,6 +262,11 @@ glossary-wasooli = { -wasooli }
 glossary-agrahi = { -agrahi }
 glossary-adaigi = { -adaigi }
 glossary-peshgi-khata = { -peshgi-khata }
+glossary-peshgi = { -peshgi }
+glossary-adhar-raqam = { -adhar-raqam }
+glossary-wapsi = { -wapsi }
+glossary-naqd-udhar = { -naqd-udhar }
+glossary-khalis = { -khalis }
 glossary-general = { -general }
 glossary-kharcha = { -kharcha }
 glossary-dukan-kharcha = { -dukan-kharcha }

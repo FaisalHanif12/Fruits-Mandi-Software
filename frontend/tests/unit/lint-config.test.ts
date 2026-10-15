@@ -49,6 +49,39 @@ describe('ESLint config', () => {
   );
 });
 
+describe('ESLint config: no floating point and no switched-off types in the app code', () => {
+  /** The rules the real config reports for a piece of app code. */
+  async function rulesFor(code: string): Promise<(string | null)[]> {
+    const eslint = new ESLint({ cwd: FRONTEND_DIR });
+    const [result] = await eslint.lintText(code, { filePath: APP_FILE });
+    return (result?.messages ?? []).map((message) => message.ruleId);
+  }
+
+  it.each([
+    ['parseFloat', "export const a = parseFloat('1.5');", 'no-restricted-globals'],
+    ['Number.parseFloat', "export const a = Number.parseFloat('1.5');", 'no-restricted-properties'],
+    ['Math.round', 'export const a = Math.round(1.5);', 'no-restricted-properties'],
+    ['toFixed', 'export const a = (1.5).toFixed(2);', 'no-restricted-properties'],
+    ['as unknown as', 'export const a = 5 as unknown as string;', 'no-restricted-syntax'],
+  ])(
+    'reports %s',
+    async (_name, code, rule) => {
+      expect(await rulesFor(code)).toContain(rule);
+    },
+    LINT_TIMEOUT_MS,
+  );
+
+  it(
+    'allows parseInt for whole pixel sizes',
+    async () => {
+      const rules = await rulesFor("export const a = Number.parseInt('44px', 10);");
+      expect(rules).not.toContain('no-restricted-properties');
+      expect(rules).not.toContain('no-restricted-globals');
+    },
+    LINT_TIMEOUT_MS,
+  );
+});
+
 describe('Stylelint config', () => {
   it.each([
     '/* stylelint-disable */\n.demo {\n  margin-left: var(--space-2);\n}\n',

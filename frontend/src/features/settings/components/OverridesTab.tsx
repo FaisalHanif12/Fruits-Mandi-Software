@@ -6,6 +6,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
+import { useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -32,7 +33,7 @@ function OverridesForm({ saved }: { saved: OverridesSettings }) {
     values.allow_line_override !== saved.allow_line_override ||
     values.credit_limit_mode !== saved.credit_limit_mode;
 
-  const submit = (): Promise<boolean> =>
+  const submitOnce = (): Promise<boolean> =>
     save
       .mutateAsync(values)
       .then(() => {
@@ -40,6 +41,9 @@ function OverridesForm({ saved }: { saved: OverridesSettings }) {
         return true;
       })
       .catch(() => false);
+  // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
+  const submit = (): Promise<boolean> => flight.run(submitOnce, false);
   const submitNow = () => {
     void submit();
   };
@@ -92,7 +96,7 @@ function OverridesForm({ saved }: { saved: OverridesSettings }) {
         <Button
           variant="primary"
           shortcut={SHORTCUTS.save}
-          busy={save.isPending}
+          busy={flight.busy || save.isPending}
           disabled={!dirty}
           onClick={submitNow}
         >

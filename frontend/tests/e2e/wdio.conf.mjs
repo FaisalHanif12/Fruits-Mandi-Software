@@ -3,10 +3,10 @@
 // built app and forwards WebDriver commands to WebView2 through the Edge driver.
 
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { APP_BINARY, OUTPUT_DIR, SCREENSHOT_DIR } from './paths.mjs';
+import { APP_BINARY, E2E_DIR, OUTPUT_DIR, SCREENSHOT_DIR } from './paths.mjs';
 
 const TAURI_DRIVER = path.join(
   os.homedir(),
@@ -16,6 +16,16 @@ const TAURI_DRIVER = path.join(
 );
 const TAURI_DRIVER_PORT = 4444;
 const TEST_TIMEOUT_MS = 120_000;
+
+/**
+ * The specs in the order of their numbers. They are one story: the first makes the Owner and the
+ * later ones sign in as him, and the data stays between them, so the order is written here and
+ * not left to a glob.
+ */
+const SPECS = readdirSync(path.join(E2E_DIR, 'specs'))
+  .filter((name) => name.endsWith('.e2e.mjs'))
+  .sort()
+  .map((name) => path.join(E2E_DIR, 'specs', name));
 
 /**
  * `tauri:options` is tauri-driver's own capability, which WebdriverIO's types do not list.
@@ -42,7 +52,7 @@ for (const signal of ['exit', 'SIGINT', 'SIGTERM']) {
 /** @type {WebdriverIO.Config} */
 export const config = {
   runner: 'local',
-  specs: ['./specs/**/*.e2e.mjs'],
+  specs: SPECS,
   maxInstances: 1,
   hostname: '127.0.0.1',
   port: TAURI_DRIVER_PORT,
@@ -58,6 +68,8 @@ export const config = {
   },
 
   beforeSession() {
+    // The app starts with the session; the cold start time (NFR-SPD-1) counts from here.
+    process.env.E2E_SESSION_STARTED = String(Date.now());
     tauriDriver = spawn(TAURI_DRIVER, [], { stdio: ['ignore', 'inherit', 'inherit'] });
     tauriDriver.on('error', (error) => {
       console.error(`e2e: could not start tauri-driver at ${TAURI_DRIVER}: ${error.message}`);

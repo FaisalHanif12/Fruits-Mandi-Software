@@ -73,14 +73,53 @@ export default defineConfig(
     rules: {
       'mandi/no-physical-direction': 'error',
       'mandi/no-raw-design-values': 'error',
+      // Floating point never touches an amount (CLAUDE.md rule 2, Code Standards M3), so the
+      // calls that make floats are closed everywhere in the app code, not only on a Paisa. Sizes
+      // are whole pixels and are read with parseInt (shared/hooks/tokenPx.ts).
+      'no-restricted-globals': [
+        'error',
+        { name: 'parseFloat', message: 'No floating point parsing (Code Standards M3).' },
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Number',
+          property: 'parseFloat',
+          message: 'No floating point parsing (Code Standards M3).',
+        },
+        {
+          object: 'Math',
+          property: 'round',
+          message: 'No rounding in the frontend. The backend rounds money (Code Standards M5).',
+        },
+        {
+          property: 'toFixed',
+          message: 'No toFixed. Show what the backend sent (Code Standards M3).',
+        },
+      ],
+      // `x as unknown as T` switches the type check off (Code Standards F1).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'TSAsExpression[expression.type="TSAsExpression"][expression.typeAnnotation.type="TSUnknownKeyword"]',
+          message: 'No `as unknown as` (Code Standards F1).',
+        },
+      ],
     },
   },
   {
     // The one place allowed to work with Paisa digits: formatPaisa builds the display text
     // (Code Standards F3). In production a bad amount is logged, not thrown, so the screen stays
     // up (plan 02 contract 4.7); console.error is the only console call allowed there.
+    // The brand cast `amount as unknown as number` that hands the digits to formatPaisa is here
+    // and only here.
     files: ['src/shared/format/money.ts'],
-    rules: { 'mandi/no-paisa-arithmetic': 'off', 'no-console': ['error', { allow: ['error'] }] },
+    rules: {
+      'mandi/no-paisa-arithmetic': 'off',
+      'no-console': ['error', { allow: ['error'] }],
+      'no-restricted-syntax': 'off',
+    },
   },
   {
     // Node tools: config files, the lint rules themselves and the Windows end-to-end suite.

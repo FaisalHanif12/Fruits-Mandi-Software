@@ -118,12 +118,18 @@ describe.each(LANGUAGES)('CalcInfo (%s)', (language) => {
 
   it('the working picks its own direction, so a sum reads left to right in Urdu too (NFR-URD-13)', async () => {
     await open(PERCENT);
-    const working = screen.getByText(
-      (content) =>
-        visible(content) ===
-        message(language, 'working-percent', { base: '12,000', bps: '6', result: '720' }),
-    );
+    // The numbers are <bdi> children (Num), so the paragraph is found by its whole text.
+    const working = screen
+      .getAllByText((_content, element) => element?.tagName === 'P' && element.hasAttribute('dir'))
+      .find(
+        (element) =>
+          visible(element.textContent) ===
+          message(language, 'working-percent', { base: '12,000', bps: '6', result: '720' }),
+      );
+    expect(working).toBeDefined();
     expect(working).toHaveAttribute('dir', 'auto');
+    // Each number of the working is isolated, left to right, in Inter (Code Standards F25).
+    expect(working?.querySelectorAll('bdi[dir="ltr"]')).toHaveLength(3);
   });
 
   it('names the level of the rule that was used, as its word', async () => {

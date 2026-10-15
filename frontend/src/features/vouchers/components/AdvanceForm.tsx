@@ -114,7 +114,7 @@ export function AdvanceForm({ draft, onChange, error, preview }: AdvanceFormProp
         </Field>
       </div>
       {preview === null ? null : (
-        <p className="flex flex-wrap items-baseline gap-x-8 gap-y-1 type-body">
+        <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1 type-body">
           <span className="flex items-baseline gap-2">
             <Localized id="vouchers-current-balance" />
             <Balance balance={preview.current_balance} />

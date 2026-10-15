@@ -26,7 +26,7 @@ import type { UiError } from '../../../bindings/UiError';
 import type { UiErrorItem } from '../../../bindings/UiErrorItem';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { EntryGrid, createEntryStore, type EntryColumn, type EntryRow } from '../../../shared/grid';
-import { useDebouncedValue } from '../../../shared/hooks';
+import { useDebouncedValue, useSingleFlight } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
@@ -240,7 +240,9 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
     setBaselines(next);
   };
 
-  const submit = (): Promise<boolean> => {
+  // One save at a time: a second F10 while one is on its way does nothing (NFR-REL-1).
+  const flight = useSingleFlight();
+  const submitOnce = (): Promise<boolean> => {
     if (changed.length === 0) return Promise.resolve(true);
     const sent = changed;
     return save
@@ -256,6 +258,7 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
         return false;
       });
   };
+  const submit = (): Promise<boolean> => flight.run(submitOnce, false);
   const submitNow = () => {
     void submit();
   };
@@ -296,7 +299,7 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
           <Button
             variant="primary"
             shortcut={SHORTCUTS.save}
-            busy={save.isPending}
+            busy={flight.busy || save.isPending}
             disabled={changed.length === 0}
             onClick={submitNow}
           >
@@ -304,7 +307,7 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
           </Button>
         </div>
       </div>
-      <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="w-full max-w-field">
           <Field
             label={<Localized id="openings-date-all" />}
@@ -390,13 +393,13 @@ export function OpeningsPage() {
   const list = useAccountList(ALL_ACTIVE);
   const day = useDayStatus();
   if ((list.data === undefined && list.isPending) || day.isPending) return <LoadingState />;
-  if (list.isError) {
+  if (list.isError || day.isError) {
     return (
       <ErrorState
         title={<Localized id="openings-load-failed" />}
-        error={uiErrorOf(list.error)}
+        error={uiErrorOf(list.isError ? list.error : day.error)}
         onRetry={() => {
-          void list.refetch();
+          void (list.isError ? list.refetch() : day.refetch());
         }}
       />
     );
@@ -422,5 +425,5 @@ export function OpeningsPage() {
       />
     );
   }
-  return <OpeningsEditor accounts={accounts} today={day.data?.today ?? ''} />;
+  return <OpeningsEditor accounts={accounts} today={day.data.today} />;
 }

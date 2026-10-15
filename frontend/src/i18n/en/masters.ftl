@@ -293,6 +293,30 @@ masters-marka-text = { -marka } text
 masters-marka-text-hint = Write it as it is written on the crate. It is not translated.
 
 # review: pending
+masters-marka-owner = { -beopari }
+
+# review: pending
+masters-marka-owner-hint = The { -beopari } whose goods carry this { -marka }. You can leave it empty.
+
+# review: pending
+masters-narration-used-in = Used in
+
+# review: pending
+masters-narration-used-in-hint = Tick the vouchers where this narration is offered. Tick none and it is offered in every voucher.
+
+## The voucher types a narration is offered in (PRD 10.3). Business words come from the glossary.
+
+masters-used-in-receipt = { -wasooli }
+masters-used-in-payment = { -adaigi }
+masters-used-in-advance = { -peshgi-khata }
+masters-used-in-shop_expense = { -dukan-kharcha }
+masters-used-in-personal_expense = { -zati-kharcha }
+masters-used-in-personal_return = { -zati-kharcha } { -wapsi }
+masters-used-in-money_lent = { -adhar-raqam }
+masters-used-in-money_lent_return = { -adhar-raqam } { -wapsi }
+masters-used-in-general = { -general }
+
+# review: pending
 masters-staff-job = Job
 
 # review: pending
@@ -308,7 +332,7 @@ masters-staff-job-labour = Labourer
 masters-staff-phone = Phone number
 
 # review: pending
-masters-staff-account = Money lent account
+masters-staff-account = { -adhar-raqam } account
 
 # review: pending
 masters-staff-account-hint = This account is made by itself the first time money is lent to this person.

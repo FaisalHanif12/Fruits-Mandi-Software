@@ -196,7 +196,6 @@ export function RulesListPage() {
               {...props}
               scope="any"
               value={party}
-              showCard={false}
               onChange={(hit) => {
                 setParty(
                   hit === null

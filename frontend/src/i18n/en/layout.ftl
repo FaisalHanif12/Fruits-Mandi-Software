@@ -88,6 +88,9 @@ layout-save-save = Save
 ## User menu and start-up.
 
 # review: pending
+layout-user-change-password = Change password
+
+# review: pending
 layout-user-lock = Lock the app
 
 # review: pending

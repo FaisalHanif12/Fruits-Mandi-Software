@@ -11,6 +11,7 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import * as accountApi from '../../src/shared/accounts/api';
 import type { GlobalHit } from '../../src/shared/accounts';
 import { useLanguageStore } from '../../src/shared/i18n';
+import { useEscapeDispatcher } from '../../src/shared/keyboard';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fail } from '../helpers/app';
 import { message, renderIn, visible } from '../helpers/render';
@@ -39,6 +40,12 @@ const HITS: GlobalHit[] = [
   },
 ];
 
+/** The shell mounts the Esc dispatcher once; the box asks it for the Esc order (F27). */
+function Shell({ onOpenAccount }: { onOpenAccount: (id: number) => void }) {
+  useEscapeDispatcher();
+  return <GlobalSearch onOpenAccount={onOpenAccount} />;
+}
+
 function setup(language: Language) {
   act(() => {
     useLanguageStore.setState({ language });
@@ -49,7 +56,7 @@ function setup(language: Language) {
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <GlobalSearch onOpenAccount={onOpenAccount} />
+      <Shell onOpenAccount={onOpenAccount} />
     </QueryClientProvider>,
   );
   const box = screen.getByRole<HTMLInputElement>('combobox');

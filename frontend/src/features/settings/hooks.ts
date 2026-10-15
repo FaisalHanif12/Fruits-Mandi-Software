@@ -1,8 +1,8 @@
 // Settings as hooks (Code Standards F6). A failed call shows as an error state with its message.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { FirmSettings } from '../../bindings/FirmSettings';
 import type { SetDefaultLanguageInput } from '../../bindings/SetDefaultLanguageInput';
+import type { SetFirmInput } from '../../bindings/SetFirmInput';
 import type { SetSecurityInput } from '../../bindings/SetSecurityInput';
 import type { RemovePairInput } from '../../bindings/RemovePairInput';
 import { translitPairsList, translitPairsRemove } from '../../shared/urdu/api';
@@ -26,7 +26,7 @@ export function useSettings() {
 export function useSetFirm() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: FirmSettings) => settingsSetFirm(input),
+    mutationFn: (input: SetFirmInput) => settingsSetFirm(input),
     onSuccess: async () => {
       // The firm names are also on the sign-in screen, so everything is read again.
       await queryClient.invalidateQueries();
