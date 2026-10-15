@@ -17,11 +17,16 @@ use windows_core::Interface;
 
 /// Applies the settings to one window's webview.
 ///
-/// A failure here is not fatal: the app still works, only the browser keys stay on.
-/// Plan 03 writes such a failure to the log.
+/// A failure here is not fatal: the app still works, only the browser keys stay on. It is
+/// written to the log, so a support file shows which call failed (NFR-OBS-1).
 pub fn apply(window: &WebviewWindow) -> tauri::Result<()> {
     window.with_webview(|webview| {
-        turn_off_browser_features(&webview.controller()).ok();
+        if let Err(error) = turn_off_browser_features(&webview.controller()) {
+            tracing::warn!(
+                error = %error,
+                "a WebView2 setting could not be turned off; the browser keys may still work"
+            );
+        }
     })
 }
 

@@ -13,6 +13,7 @@
     "allow-auth-lock",
     "allow-auth-unlock",
     "allow-auth-recover",
+    "allow-auth-change-password",
     "allow-settings-get",
     "allow-settings-set-firm",
     "allow-settings-set-security",

@@ -132,6 +132,7 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-auth-lock",
             "allow-auth-unlock",
             "allow-auth-recover",
+            "allow-auth-change-password",
             "allow-settings-get",
             "allow-settings-set-firm",
             "allow-settings-set-security",

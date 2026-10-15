@@ -75,7 +75,7 @@ pub fn ledger_error(error: LedgerError) -> ServiceError {
             ServiceError::reject(ErrorCode::ErrJournalUnbalanced)
         }
         LedgerError::TooLarge => ServiceError::Rejected(vec![Rejection {
-            code: ErrorCode::ErrAmountTooLarge,
+            code: ErrorCode::ErrEntryTooLarge,
             field: None,
             values: std::collections::BTreeMap::from([(
                 "max".to_owned(),
@@ -121,12 +121,38 @@ fn check_person_keys(tx: &Connection, entry: &BalancedEntry) -> Result<(), Servi
     Ok(())
 }
 
+/// A new posting may only touch active accounts (PRD FR-10.2: inactive = hidden from pickers,
+/// "must exist and be active for new postings", Code Standards 4.2). One query for the whole
+/// entry. A reversal does not come here (see [`post`]).
+fn check_accounts_active(tx: &Connection, entry: &BalancedEntry) -> Result<(), ServiceError> {
+    let mut ids: Vec<i64> = entry.lines().iter().map(|l| l.account_id.get()).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let inactive = account_repo::inactive_among(tx, &ids)?;
+    match inactive.first() {
+        Some(id) => Err(ServiceError::Rejected(vec![Rejection {
+            code: ErrorCode::ErrAccountInactive,
+            field: None,
+            values: std::collections::BTreeMap::from([(
+                "account_id".to_owned(),
+                ErrorValue::Number(*id),
+            )]),
+        }])),
+        None => Ok(()),
+    }
+}
+
 /// Posts an entry inside the caller's transaction `tx`.
 ///
+/// A new posting is refused if any of its accounts is inactive. A reversal (`event.reverses` is
+/// set, as [`reverse`] does) is not: an account made inactive after it was used must still have
+/// its entries taken back, so the books can be corrected at any time (PRD FR-6.3).
+///
 /// # Errors
-/// The date codes of [`check_posting_date`]; `ERR_JOURNAL_UNBALANCED` (a bug signal) if the
-/// database refuses the balance; `ServiceError::Db` for anything else. Nothing is left behind
-/// when the caller rolls back.
+/// The date codes of [`check_posting_date`]; `ERR_ACCOUNT_INACTIVE` (value `account_id`, no
+/// field: the caller names the field) for a new posting on an inactive account;
+/// `ERR_JOURNAL_UNBALANCED` (a bug signal) if the database refuses the balance;
+/// `ServiceError::Db` for anything else. Nothing is left behind when the caller rolls back.
 pub fn post(
     ctx: &Context,
     tx: &Connection,
@@ -134,6 +160,9 @@ pub fn post(
     event: &PostingEvent,
 ) -> Result<Posted, ServiceError> {
     check_posting_date(ctx, event.date)?;
+    if event.reverses.is_none() {
+        check_accounts_active(tx, &event.entry)?;
+    }
     check_person_keys(tx, &event.entry)?;
     let now = ctx.now_text();
     let iso = event.date.to_iso();

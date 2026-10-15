@@ -9,12 +9,13 @@ use mandi_db::accounts as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
     Balance, LineError, OPENING_DIFFERENCE_CODE, OpeningPreviewRow, OpeningRequest, OpeningsInput,
-    OpeningsPreview, OpeningsSaved, RecordRef, SELLER_CONTROL, opening_request,
+    OpeningsPreview, OpeningsSaved, RecordRef, SELLER_CONTROL, opening_request_in_force,
 };
-use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::validate;
 use mandi_domain::ledger::{PostingType, Side, SourceType, build_opening};
 use serde_json::json;
 
@@ -43,7 +44,8 @@ fn same_opening(have: &OpeningRequest, wanted: &OpeningRequest) -> bool {
         && have.is_advance == wanted.is_advance
 }
 
-/// Moves a date error from the posting date field to the opening date field.
+/// Moves a date error from the posting date field to the opening date field, and an
+/// inactive-account refusal of the ledger (which has no field) to the opening amount field.
 fn on_opening_date(error: ServiceError) -> ServiceError {
     match error {
         ServiceError::Rejected(items) => ServiceError::Rejected(
@@ -52,7 +54,30 @@ fn on_opening_date(error: ServiceError) -> ServiceError {
                 .map(|mut item| {
                     if item.field.as_deref() == Some("entry_date") {
                         item.field = Some("opening_date".to_owned());
+                    } else if item.field.is_none() && item.code == ErrorCode::ErrAccountInactive {
+                        item.field = Some("opening_dr".to_owned());
                     }
+                    item
+                })
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
+/// Puts the path of a grid line in front of a field that has none yet, so every error of the
+/// grid names `lines[i].<field>` (the screen cannot show an error that has no row).
+fn on_line(error: ServiceError, index: usize) -> ServiceError {
+    match error {
+        ServiceError::Rejected(items) => ServiceError::Rejected(
+            items
+                .into_iter()
+                .map(|mut item| {
+                    item.field = Some(match item.field.take() {
+                        Some(field) if field.starts_with("lines[") => field,
+                        Some(field) => format!("lines[{index}].{field}"),
+                        None => format!("lines[{index}]"),
+                    });
                     item
                 })
                 .collect(),
@@ -84,6 +109,14 @@ pub(crate) fn apply(
     if wanted.has_amount() && !opening_allowed(facts) {
         return Err(ServiceError::reject_field(
             ErrorCode::ErrOpeningNotAllowed,
+            amount_field,
+        ));
+    }
+    // A new opening entry is a new posting, so the account must be active (PRD FR-10.2). Taking
+    // an opening away (no amount wanted) only reverses the old entry, which is always allowed.
+    if wanted.has_amount() && !facts.is_active {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrAccountInactive,
             amount_field,
         ));
     }
@@ -201,15 +234,16 @@ fn plan(
                         format!("{prefix}version"),
                     ));
                 }
-                match opening_request(
+                let have = current_opening(facts)?;
+                match opening_request_in_force(
                     &prefix,
                     &line.opening_date,
                     &line.opening_dr,
                     &line.opening_cr,
                     line.opening_is_advance,
                     facts.control_code == SELLER_CONTROL,
-                    closed,
-                    today,
+                    (closed, today),
+                    Some(&have),
                 ) {
                     Ok(found) => {
                         if found.has_amount() && !opening_allowed(facts) {
@@ -217,6 +251,31 @@ fn plan(
                                 ErrorCode::ErrOpeningNotAllowed,
                                 format!("{prefix}opening_dr"),
                             ));
+                        }
+                        // The save refuses a new opening on an inactive account (the same
+                        // rule as `apply`, so the preview says what the save will say, B5).
+                        if found.has_amount() && !same_opening(&have, &found) && !facts.is_active {
+                            errors.push(line_error(
+                                ErrorCode::ErrAccountInactive,
+                                format!("{prefix}opening_dr"),
+                            ));
+                        }
+                        // A change reverses the old entry on its own date, which must be open
+                        // too. Checked here, so the preview says what the save will say (B5).
+                        if !same_opening(&have, &found)
+                            && let Some(old_date) = have.date.filter(|_| have.has_amount())
+                            && let Err(e) = validate::posting_date(
+                                &format!("{prefix}opening_date"),
+                                &format_ddmmyyyy(old_date),
+                                closed,
+                                today,
+                            )
+                        {
+                            errors.push(LineError {
+                                code: e.code,
+                                field: e.field,
+                                values: e.values,
+                            });
                         }
                         request = Some(found);
                     }
@@ -339,7 +398,9 @@ pub fn openings_save(
             };
             let have = current_opening(facts)?;
             let field = format!("lines[{index}].opening_dr");
-            if apply(ctx, tx, actor.user_id, &now, facts, wanted, &field)? {
+            if apply(ctx, tx, actor.user_id, &now, facts, wanted, &field)
+                .map_err(|e| on_line(e, index))?
+            {
                 ctx.db.auditor().write(
                     tx,
                     &Event::new(Some(actor.user_id), "edit", "account")

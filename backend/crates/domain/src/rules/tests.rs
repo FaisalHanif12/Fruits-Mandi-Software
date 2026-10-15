@@ -980,3 +980,180 @@ fn a_typed_value_follows_prd_11_2_and_a_negative_value_is_never_used() {
         Some(RuleLevel::ItemGroup)
     );
 }
+
+#[test]
+fn the_winner_view_has_the_columns_a_screen_shows() {
+    // A percent winner has basis points and no amount; a per-نگ winner the other way round; a
+    // typed value is marked manual and has no rule id.
+    let mut rules = defaults();
+    rules.push(rule(
+        9,
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        None,
+        Some(JAPANI),
+        None,
+        per_unit_value(30),
+    ));
+    let set = RuleSet::build(rules);
+    let by_default = ask(
+        &set,
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        RAHIM,
+        BANANA,
+    );
+    let view = by_default.winner.unwrap().view();
+    assert_eq!(
+        (
+            view.level,
+            view.rule_id,
+            view.value_bps,
+            view.value_paisa,
+            view.manual
+        ),
+        (RuleLevel::Default, Some(1), Some(600), None, false)
+    );
+    assert_eq!(view.method, mandi_core::rules::ChargeMethod::Percent);
+    let by_item = ask(
+        &set,
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        KARIM,
+        JAPANI,
+    );
+    let view = by_item.winner.unwrap().view();
+    assert_eq!(
+        (
+            view.level,
+            view.rule_id,
+            view.value_bps,
+            view.value_paisa,
+            view.manual
+        ),
+        (RuleLevel::Item, Some(9), None, Some(rupees(30)), false)
+    );
+    assert_eq!(view.method, mandi_core::rules::ChargeMethod::PerUnit);
+    let typed = resolve(
+        &set,
+        &Query {
+            side: ChargeSide::Seller,
+            charge: ChargeType::Commission,
+            party_id: Some(RAHIM),
+            item_id: BANANA,
+            item_group: Some(ItemGroup::Fruit),
+            date: day("2026-10-10"),
+            line_override: Some(LineOverride {
+                value: percent(400),
+            }),
+        },
+    );
+    let view = typed.winner.unwrap().view();
+    assert_eq!(
+        (view.level, view.rule_id, view.value_bps, view.manual),
+        (RuleLevel::LineOverride, None, Some(400), true)
+    );
+}
+
+#[test]
+fn the_set_knows_how_many_rules_it_holds() {
+    let empty = RuleSet::build(Vec::new());
+    assert_eq!((empty.len(), empty.is_empty()), (0, true));
+    let mut rules = defaults();
+    let all = rules.len();
+    // An inactive rule and a rule with no level are left out.
+    let mut off = rule(
+        50,
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        Some(RAHIM),
+        None,
+        None,
+        percent(500),
+    );
+    off.is_active = false;
+    rules.push(off);
+    rules.push(rule(
+        51,
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        Some(RAHIM),
+        None,
+        Some(ItemGroup::Fruit),
+        percent(500),
+    ));
+    let set = RuleSet::build(rules);
+    assert_eq!((set.len(), set.is_empty()), (all, false));
+}
+
+#[test]
+fn a_shelf_files_only_rules_that_have_a_level_and_never_a_typed_value() {
+    // A party together with an item group has no level: the shelf takes nothing.
+    let mut shelf = Shelf::default();
+    let no_level = rule(
+        1,
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        Some(RAHIM),
+        None,
+        Some(ItemGroup::Fruit),
+        percent(500),
+    );
+    assert!(!shelf.file(&no_level, 0));
+    let no_level_item = rule(
+        2,
+        ChargeSide::Seller,
+        ChargeType::Commission,
+        None,
+        Some(BANANA),
+        Some(ItemGroup::Fruit),
+        percent(500),
+    );
+    assert!(!shelf.file(&no_level_item, 1));
+    assert!(shelf.party_item.is_empty() && shelf.party.is_empty() && shelf.item.is_empty());
+    assert!(shelf.group.is_empty() && shelf.default.is_empty());
+    // The five levels that can be filed are taken.
+    let filed = [
+        (Some(RAHIM), Some(BANANA), None),
+        (Some(RAHIM), None, None),
+        (None, Some(BANANA), None),
+        (None, None, Some(ItemGroup::Fruit)),
+        (None, None, None),
+    ];
+    for (index, (party, item, group)) in filed.into_iter().enumerate() {
+        let r = rule(
+            10,
+            ChargeSide::Seller,
+            ChargeType::Commission,
+            party,
+            item,
+            group,
+            percent(500),
+        );
+        assert!(shelf.file(&r, index));
+    }
+    // And a typed value is never on a shelf.
+    let query = Query {
+        side: ChargeSide::Seller,
+        charge: ChargeType::Commission,
+        party_id: Some(RAHIM),
+        item_id: BANANA,
+        item_group: Some(ItemGroup::Fruit),
+        date: day("2026-10-10"),
+        line_override: None,
+    };
+    assert!(shelf.candidates(RuleLevel::LineOverride, &query).is_none());
+    for level in [
+        RuleLevel::PartyItem,
+        RuleLevel::Party,
+        RuleLevel::Item,
+        RuleLevel::ItemGroup,
+        RuleLevel::Default,
+    ] {
+        assert_eq!(
+            shelf.candidates(level, &query).map(Vec::len),
+            Some(1),
+            "{level:?}"
+        );
+    }
+}

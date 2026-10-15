@@ -671,3 +671,78 @@ fn field_errors_come_back_together_and_write_nothing() {
     );
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM cities"), 0);
 }
+
+/// The `DELETE FROM` statements in the source of a crate folder, as (file, table).
+fn deletes_in(folder: &str) -> Vec<(String, String)> {
+    fn walk(path: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        if path.is_dir() {
+            for entry in std::fs::read_dir(path).unwrap() {
+                walk(&entry.unwrap().path(), out);
+            }
+        } else if path.extension().is_some_and(|e| e == "rs") {
+            out.push(path.to_owned());
+        }
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(folder);
+    let mut files = Vec::new();
+    walk(&root, &mut files);
+    let mut found = Vec::new();
+    for file in files {
+        let text = std::fs::read_to_string(&file).unwrap();
+        for (at, _) in text.match_indices("DELETE FROM") {
+            let table = text[at + "DELETE FROM".len()..]
+                .split_whitespace()
+                .next()
+                .unwrap_or("")
+                .trim_matches(|c: char| !c.is_alphanumeric() && c != '_')
+                .to_owned();
+            found.push((file.display().to_string(), table));
+        }
+    }
+    found
+}
+
+#[test]
+fn there_is_no_way_to_delete_a_master_record() {
+    // End-gate review 19, PRD E21 and Code Standards D3: a master in use is made inactive, never
+    // deleted. Nothing in the services, the database layer or the commands deletes from a
+    // master table; the only DELETE FROM in the app is a learned word pair (audited).
+    for folder in ["src", "../db/src", "../../app/src"] {
+        for (file, table) in deletes_in(folder) {
+            assert_eq!(
+                table, "translit_pairs",
+                "{file} deletes from {table}: master records are made inactive, never deleted"
+            );
+        }
+    }
+    // The list of commands has no delete or remove, except for learned pairs.
+    let build_rs = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../app/build.rs"),
+    )
+    .unwrap();
+    let listed = build_rs.split("APP_COMMANDS").nth(1).unwrap();
+    let listed = &listed[listed.find('[').unwrap()..listed.find("];").unwrap()];
+    let deleting: Vec<&str> = listed
+        .split('"')
+        .enumerate()
+        .filter(|(i, _)| i % 2 == 1)
+        .map(|(_, name)| name)
+        .filter(|name| name.contains("delete") || name.contains("remove"))
+        .collect();
+    assert_eq!(deleting, ["translit_pairs_remove"]);
+}
+
+#[test]
+fn a_master_in_use_is_made_inactive_and_stays_in_the_table() {
+    let (dir, env, owner) = ready();
+    let row = masters::save(&env.ctx, &owner, &city("", "لاہور", "Lahore")).unwrap();
+    masters::set_active(&env.ctx, &owner, MasterKind::City, row.id(), false).unwrap();
+    let (active, rows): (i64, i64) = raw(&dir)
+        .query_row(
+            "SELECT MAX(is_active), COUNT(*) FROM cities WHERE id = ?1",
+            [row.id()],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((active, rows), (0, 1));
+}

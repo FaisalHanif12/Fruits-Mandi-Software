@@ -28,6 +28,27 @@ pub struct FirmSettings {
     pub phone: String,
 }
 
+/// The firm details to save, with the spelling the Owner confirmed (PRD FR-7.66).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct SetFirmInput {
+    /// Firm name, Urdu letters.
+    pub name_ur: String,
+    /// Firm name, English letters.
+    pub name_en: String,
+    /// Mandi name, Urdu letters.
+    pub mandi_ur: String,
+    /// Mandi name, English letters.
+    pub mandi_en: String,
+    /// Address, up to 500 characters.
+    pub address: String,
+    /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`.
+    pub phone: String,
+    /// Words of the four names that only the spelling rules made and that the Owner confirmed.
+    /// A word left out is refused with `ERR_SPELLING_UNCONFIRMED`. Missing means none confirmed.
+    #[serde(default)]
+    pub confirmed_rules_words: Vec<String>,
+}
+
 /// All settings the Settings screen shows.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct Settings {
@@ -77,15 +98,15 @@ impl From<Firm> for FirmSettings {
     }
 }
 
-impl From<FirmSettings> for Firm {
-    fn from(settings: FirmSettings) -> Self {
+impl From<&SetFirmInput> for Firm {
+    fn from(input: &SetFirmInput) -> Self {
         Self {
-            name_ur: settings.name_ur,
-            name_en: settings.name_en,
-            mandi_ur: settings.mandi_ur,
-            mandi_en: settings.mandi_en,
-            address: settings.address,
-            phone: settings.phone,
+            name_ur: input.name_ur.clone(),
+            name_en: input.name_en.clone(),
+            mandi_ur: input.mandi_ur.clone(),
+            mandi_en: input.mandi_en.clone(),
+            address: input.address.clone(),
+            phone: input.phone.clone(),
         }
     }
 }
@@ -109,15 +130,23 @@ pub async fn settings_get<R: tauri::Runtime>(
 }
 
 /// Saves the firm details, Errors: the name script errors on `name_ur`,
-/// `name_en`, `mandi_ur`, `mandi_en`; `ERR_PHONE_INVALID`; `ERR_TEXT_TOO_LONG`.
+/// `name_en`, `mandi_ur`, `mandi_en`; `ERR_PHONE_INVALID`; `ERR_TEXT_TOO_LONG`;
+/// `ERR_SPELLING_UNCONFIRMED` (value `words`) on a name field for a word the spelling rules made
+/// that is not in `confirmed_rules_words` (PRD FR-7.66). Confirmed words are learned (FR-7.26).
 #[tauri::command]
 pub async fn settings_set_firm<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    input: FirmSettings,
+    input: SetFirmInput,
 ) -> Result<FirmSettings, UiError> {
     run(app, "settings_set_firm", move |ctx| {
         let actor = auth::require(ctx)?;
-        services::set_firm(ctx, &actor, &Firm::from(input)).map(FirmSettings::from)
+        services::set_firm_confirmed(
+            ctx,
+            &actor,
+            &Firm::from(&input),
+            &input.confirmed_rules_words,
+        )
+        .map(FirmSettings::from)
     })
     .await
 }

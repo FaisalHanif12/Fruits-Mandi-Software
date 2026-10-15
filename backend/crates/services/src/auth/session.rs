@@ -96,7 +96,28 @@ pub fn require(ctx: &Context) -> Result<Actor, ServiceError> {
     })
 }
 
-/// Signs out. Also works while the session is locked.
+/// Writes the audit row of a session change as well as it can, after the change is made.
+///
+/// A lock or a sign-out is a safety step. It must never fail because the audit row cannot be
+/// written (full disk, failed data check, busy file; NFR-SEC-3), so the state is changed first
+/// and a failed row is only logged.
+fn audit_session_change(ctx: &Context, user_id: i64, action: &str) {
+    let written = ctx.db.write(|tx| {
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(user_id), action, "user")
+                .entity_id(user_id)
+                .into_entry(),
+        )?;
+        Ok::<(), ServiceError>(())
+    });
+    if let Err(error) = written {
+        tracing::error!(action, user_id, error = %error, "the audit row of a session change was not written");
+    }
+}
+
+/// Signs out. Also works while the session is locked. The session ends first; the audit row is
+/// written after, and a failure to write it does not keep the user signed in.
 ///
 /// # Errors
 /// `ERR_NOT_LOGGED_IN` without a session.
@@ -104,21 +125,14 @@ pub fn logout(ctx: &Context) -> Result<(), ServiceError> {
     let Some(open) = ctx.session_snapshot() else {
         return Err(ServiceError::reject(ErrorCode::ErrNotLoggedIn));
     };
-    ctx.db.write(|tx| {
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(open.user_id), "logout", "user")
-                .entity_id(open.user_id)
-                .into_entry(),
-        )?;
-        Ok::<(), ServiceError>(())
-    })?;
     *ctx.session_lock() = None;
+    audit_session_change(ctx, open.user_id, "logout");
     Ok(())
 }
 
 /// Locks the session (idle lock, PRD FR-8.4). The screens keep their unsaved text. Locking a
-/// locked session does nothing.
+/// locked session does nothing. The lock is set first; the audit row is written after, and a
+/// failure to write it does not leave the session open (NFR-SEC-3).
 ///
 /// # Errors
 /// `ERR_NOT_LOGGED_IN` without a session.
@@ -129,18 +143,10 @@ pub fn lock(ctx: &Context) -> Result<(), ServiceError> {
     if open.locked {
         return Ok(());
     }
-    ctx.db.write(|tx| {
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(open.user_id), "lock", "user")
-                .entity_id(open.user_id)
-                .into_entry(),
-        )?;
-        Ok::<(), ServiceError>(())
-    })?;
     if let Some(session) = ctx.session_lock().as_mut() {
         session.locked = true;
     }
+    audit_session_change(ctx, open.user_id, "lock");
     Ok(())
 }
 

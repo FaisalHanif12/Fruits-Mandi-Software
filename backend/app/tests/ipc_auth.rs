@@ -336,6 +336,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("auth_logout", json!({}), true),
         ("auth_lock", json!({}), true),
         ("auth_unlock", json!({ "input": { "password": "y" } }), true),
+        (
+            "auth_change_password",
+            json!({ "input": { "current": "y", "new": "abcdef", "repeat": "abcdef" } }),
+            true,
+        ),
         ("settings_get", json!({}), true),
         (
             "prefs_set",
@@ -1030,4 +1035,111 @@ fn there_is_no_command_that_deletes_a_master() {
             "{name} looks like a delete command"
         );
     }
+}
+
+#[test]
+fn change_password_works_through_the_ipc_and_counts_wrong_tries() {
+    // End-gate review 12: the command calls the sign-in check first, then the service.
+    let h = Harness::new();
+    h.set_up_and_login();
+    let change = |current: &str, new: &str, repeat: &str| json!({ "input": { "current": current, "new": new, "repeat": repeat } });
+    // Field errors name the fields of the input.
+    let error = h
+        .call("auth_change_password", change("", "short", "short"))
+        .unwrap_err();
+    let items = error["errors"].as_array().unwrap();
+    let find = |field: &str| {
+        items
+            .iter()
+            .find(|i| i["field"] == field)
+            .map(|i| i["code"].clone())
+    };
+    assert_eq!(find("current"), Some(json!("ERR_REQUIRED")));
+    assert_eq!(find("new"), Some(json!("ERR_PASSWORD_TOO_SHORT")));
+    let error = h
+        .call(
+            "auth_change_password",
+            change("nope-nope", "brand-new-9", "brand-new-8"),
+        )
+        .unwrap_err();
+    assert_eq!(error["errors"][0]["code"], "ERR_PASSWORDS_DIFFER");
+    assert_eq!(error["errors"][0]["field"], "repeat");
+    // A wrong current password: the field and the tries left.
+    let error = h
+        .call(
+            "auth_change_password",
+            change("nope-nope", "brand-new-9", "brand-new-9"),
+        )
+        .unwrap_err();
+    assert_eq!(
+        error["errors"],
+        json!([{ "code": "ERR_WRONG_PASSWORD", "field": "current", "values": { "tries_left": 4 } }])
+    );
+    // A right one: null, and the new password signs in.
+    assert_eq!(
+        h.ok(
+            "auth_change_password",
+            change(OWNER_PASSWORD, "brand-new-9", "brand-new-9")
+        ),
+        Value::Null
+    );
+    h.ok("auth_logout", json!({}));
+    assert!(h.login("owner", OWNER_PASSWORD).is_err());
+    h.ok_login("owner", "brand-new-9");
+}
+
+#[test]
+fn the_firm_spelling_check_works_through_the_ipc() {
+    // End-gate review 3: the wizard and Settings both take `confirmed_rules_words`.
+    let h = Harness::new();
+    let mut input = first_run();
+    input["firm_name_ur"] = json!("علی قزکس");
+    input["firm_name_en"] = json!("Ali Qzxwv");
+    let error = h
+        .call("setup_first_run", json!({ "input": input.clone() }))
+        .unwrap_err();
+    let items = error["errors"].as_array().unwrap();
+    let got: Vec<(&str, &str, &str)> = items
+        .iter()
+        .map(|i| {
+            (
+                i["code"].as_str().unwrap(),
+                i["field"].as_str().unwrap(),
+                i["values"]["words"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        got,
+        [
+            ("ERR_SPELLING_UNCONFIRMED", "firm_name_ur", "قزکس"),
+            ("ERR_SPELLING_UNCONFIRMED", "firm_name_en", "Qzxwv"),
+        ]
+    );
+    input["confirmed_rules_words"] = json!(["قزکس", "Qzxwv"]);
+    h.ok("setup_first_run", json!({ "input": input }));
+    h.ok_login("owner", OWNER_PASSWORD);
+
+    // Settings: a new rules-only word is refused until it is sent back as confirmed.
+    let mut firm = h.ok("settings_get", json!({}))["firm"].clone();
+    firm["mandi_ur"] = json!("وزبنم منڈی");
+    firm["mandi_en"] = json!("Wvbnm Mandi");
+    let error = h
+        .call("settings_set_firm", json!({ "input": firm.clone() }))
+        .unwrap_err();
+    assert_eq!(error["errors"][0]["code"], "ERR_SPELLING_UNCONFIRMED");
+    assert_eq!(error["errors"][0]["field"], "mandi_ur");
+    assert_eq!(error["errors"][1]["field"], "mandi_en");
+    assert_eq!(
+        h.ok("settings_get", json!({}))["firm"]["mandi_en"],
+        "New Sabzi Mandi Kot Radha Kishan",
+        "nothing saved on error"
+    );
+    firm["confirmed_rules_words"] = json!(["وزبنم", "Wvbnm"]);
+    let saved = h.ok("settings_set_firm", json!({ "input": firm }));
+    assert_eq!(saved["mandi_en"], "Wvbnm Mandi");
+    assert!(
+        saved.get("confirmed_rules_words").is_none(),
+        "an output has no input field"
+    );
 }

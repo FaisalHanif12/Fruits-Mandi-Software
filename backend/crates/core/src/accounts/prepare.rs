@@ -126,6 +126,41 @@ pub fn opening_request(
     closed_up_to: Option<BusinessDate>,
     today: BusinessDate,
 ) -> Result<OpeningRequest, Vec<FieldError>> {
+    opening_request_in_force(
+        prefix,
+        opening_date,
+        opening_dr,
+        opening_cr,
+        is_advance,
+        is_seller,
+        (closed_up_to, today),
+        None,
+    )
+}
+
+/// The same as [`opening_request`], for an account that may already have an opening.
+///
+/// `in_force` is the opening the account has now. When the typed opening is exactly that one
+/// (date, both amounts and the advance tick), nothing will be posted, so its date may lie on a
+/// closed day and only has to be a real date (PRD FR-6.6, FR-10.9). Any change still needs an
+/// open date. Empty fields still mean "clear the opening": there is no new date to check, and
+/// the service refuses the clear when the old entry's day is closed.
+///
+/// # Errors
+/// As [`opening_request`].
+// Eight plain arguments, as above: the day window is one pair.
+#[allow(clippy::too_many_arguments)]
+pub fn opening_request_in_force(
+    prefix: &str,
+    opening_date: &str,
+    opening_dr: &str,
+    opening_cr: &str,
+    is_advance: bool,
+    is_seller: bool,
+    window: (Option<BusinessDate>, BusinessDate),
+    in_force: Option<&OpeningRequest>,
+) -> Result<OpeningRequest, Vec<FieldError>> {
+    let (closed_up_to, today) = window;
     let mut errors = FieldErrors::default();
     let f = |name: &str| format!("{prefix}{name}");
     let dr = errors.take(validate::money_optional(&f("opening_dr"), opening_dr));
@@ -143,17 +178,33 @@ pub fn opening_request(
             &f("opening_is_advance"),
         ));
     }
+    let is_advance = is_advance && has_amount;
     let date = if has_amount {
         if opening_date.trim().is_empty() {
             errors.push(error(ErrorCode::ErrRequired, &f("opening_date")));
             None
         } else {
-            errors.take(validate::posting_date(
-                &f("opening_date"),
-                opening_date,
-                closed_up_to,
-                today,
-            ))
+            let field = f("opening_date");
+            // The date is a real date either way; it must also be open only if it will be posted.
+            let parsed = errors.take(validate::date(&field, opening_date, today));
+            parsed.and_then(|date| {
+                let unchanged = in_force.is_some_and(|have| {
+                    have.date == Some(date)
+                        && have.dr == dr
+                        && have.cr == cr
+                        && have.is_advance == is_advance
+                });
+                if unchanged {
+                    Some(date)
+                } else {
+                    errors.take(validate::posting_date(
+                        &field,
+                        opening_date,
+                        closed_up_to,
+                        today,
+                    ))
+                }
+            })
         }
     } else {
         None
@@ -163,7 +214,7 @@ pub fn opening_request(
         date,
         dr,
         cr,
-        is_advance: is_advance && has_amount,
+        is_advance,
     })
 }
 
@@ -197,7 +248,8 @@ pub fn account_code_for(field: &str, control_code: &str, typed: &str) -> Result<
     Ok(serial)
 }
 
-/// Checks the input of one account.
+/// Checks the input of one account. `opening_in_force` is the opening an edited account has now
+/// (see [`opening_request_in_force`]); `None` for a new account.
 ///
 /// # Errors
 /// Every wrong field, each with its code and path, all together.
@@ -205,6 +257,7 @@ pub fn prepare_account(
     input: &AccountInput,
     closed_up_to: Option<BusinessDate>,
     today: BusinessDate,
+    opening_in_force: Option<&OpeningRequest>,
 ) -> Result<PreparedAccount, Vec<FieldError>> {
     let mut errors = FieldErrors::default();
     let version = match (input.id, input.version) {
@@ -305,15 +358,15 @@ pub fn prepare_account(
     if input.id.is_some() && input.linked_account_id == input.id {
         errors.push(error(ErrorCode::ErrNotFound, "linked_account_id"));
     }
-    let opening = match opening_request(
+    let opening = match opening_request_in_force(
         "",
         &input.opening_date,
         &input.opening_dr,
         &input.opening_cr,
         input.opening_is_advance,
         input.account_type == AccountType::Seller,
-        closed_up_to,
-        today,
+        (closed_up_to, today),
+        opening_in_force,
     ) {
         Ok(opening) => opening,
         Err(found) => {

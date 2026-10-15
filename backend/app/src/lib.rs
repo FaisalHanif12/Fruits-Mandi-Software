@@ -76,6 +76,7 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::auth::auth_lock,
         commands::auth::auth_unlock,
         commands::auth::auth_recover,
+        commands::auth::auth_change_password,
         commands::settings::settings_get,
         commands::settings::settings_set_firm,
         commands::settings::settings_set_security,

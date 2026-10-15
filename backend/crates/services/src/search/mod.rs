@@ -170,6 +170,7 @@ fn usage_json(usage: &Usage) -> Value {
 /// text gives nothing. Only reads.
 ///
 /// # Errors
+/// `ERR_TEXT_TOO_LONG` (`text`, value `max`) for more than [`MAX_QUERY_CHARS`] characters;
 /// `ServiceError::Db`.
 pub fn search(
     ctx: &Context,
@@ -178,6 +179,8 @@ pub fn search(
     text: &str,
     limit: u32,
 ) -> Result<Vec<SearchHit>, ServiceError> {
+    // A huge paste is refused before it is turned into search keys, like the account search.
+    check_text(text)?;
     let index = current(ctx)?;
     let usage = usage_of(ctx, actor, scope)?;
     let limit = usize::try_from(limit).unwrap_or(MAX_HITS);

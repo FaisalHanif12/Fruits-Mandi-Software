@@ -13,6 +13,7 @@ const APP_COMMANDS: &[&str] = &[
     "auth_lock",
     "auth_unlock",
     "auth_recover",
+    "auth_change_password",
     "settings_get",
     "settings_set_firm",
     "settings_set_security",

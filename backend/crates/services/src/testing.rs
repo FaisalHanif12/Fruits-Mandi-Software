@@ -1,14 +1,16 @@
 //! Test helpers: fake parts for a [`Context`] and a ready test environment. Public because the
 //! integration tests of this crate and of the app use them. Never used by the running app.
 
+use std::io;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use chrono::{DateTime, TimeZone, Utc};
 use mandi_db::audit::{AuditKey, MemoryKeyStore};
 use mandi_db::clock::ManualClock;
-use mandi_db::disk::FixedDiskProbe;
+use mandi_db::disk::{DiskProbe, MIN_FREE_DISK_BYTES};
 use mandi_db::{Db, DbOptions};
 
 use crate::context::{Context, Parts};
@@ -75,6 +77,32 @@ pub fn fast_hasher() -> Option<Arc<Argon2Hasher<CountingRandom>>> {
         .map(Arc::new)
 }
 
+/// Free disk space a test can change while the app runs (NFR-REL-10). Starts with plenty.
+#[derive(Debug)]
+pub struct AdjustableDiskProbe(AtomicU64);
+
+impl AdjustableDiskProbe {
+    /// Plenty of space.
+    pub const PLENTY: u64 = 10 * 1024 * 1024 * 1024;
+
+    /// Pretends the disk is full: a save is refused until [`Self::make_room`].
+    pub fn fill_up(&self) {
+        self.0
+            .store(MIN_FREE_DISK_BYTES.saturating_sub(1), Ordering::SeqCst);
+    }
+
+    /// Pretends there is plenty of space again.
+    pub fn make_room(&self) {
+        self.0.store(Self::PLENTY, Ordering::SeqCst);
+    }
+}
+
+impl DiskProbe for AdjustableDiskProbe {
+    fn available_bytes(&self, _path: &Path) -> io::Result<u64> {
+        Ok(self.0.load(Ordering::SeqCst))
+    }
+}
+
 /// A start time for the test clock: 10-10-2026, 09:00 UTC (the PRD worked day).
 pub fn test_start() -> DateTime<Utc> {
     Utc.with_ymd_and_hms(2026, 10, 10, 9, 0, 0)
@@ -90,6 +118,8 @@ pub struct TestEnv {
     pub clock: Arc<ManualClock>,
     /// The monotonic clock.
     pub mono: Arc<ManualMonotonic>,
+    /// The free disk space the database sees.
+    pub disk: Arc<AdjustableDiskProbe>,
 }
 
 impl TestEnv {
@@ -100,9 +130,12 @@ impl TestEnv {
     /// cannot be made.
     pub fn new(dir: &Path) -> Result<Self, ServiceError> {
         let clock = Arc::new(ManualClock::new(test_start()));
+        let disk = Arc::new(AdjustableDiskProbe(AtomicU64::new(
+            AdjustableDiskProbe::PLENTY,
+        )));
         let options = DbOptions {
             backups_dir: dir.join("backups"),
-            disk_probe: Arc::new(FixedDiskProbe(10 * 1024 * 1024 * 1024)),
+            disk_probe: disk.clone(),
             clock: clock.clone(),
             key_store: Arc::new(MemoryKeyStore::new(AuditKey::from_bytes([7; 32]))),
             busy_timeout: Duration::from_millis(500),
@@ -123,6 +156,7 @@ impl TestEnv {
             ctx: Arc::new(ctx),
             clock,
             mono,
+            disk,
         })
     }
 }

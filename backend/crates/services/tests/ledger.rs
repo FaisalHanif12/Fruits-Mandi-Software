@@ -9,7 +9,7 @@ use mandi_services::core::accounts::{
     AccountInput, AccountType, BalanceSide, OpeningLineInput, OpeningsInput,
 };
 use mandi_services::core::dates::BusinessDate;
-use mandi_services::core::error::ErrorCode;
+use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::ids::AccountId;
 use mandi_services::core::money::Paisa;
 use mandi_services::domain::ledger::{
@@ -287,9 +287,16 @@ fn an_unbalanced_entry_never_reaches_the_database() {
         LedgerLine::new(other, Side::Cr, huge),
     ])
     .unwrap_err();
+    // The entry limit (10^12 rupees) has its own code, so its `max` is not mistaken for the
+    // limit of one typed amount (10^10 rupees, end-gate review 14).
+    let refused = ledger::ledger_error(too_large);
+    assert_eq!(refused.code(), ErrorCode::ErrEntryTooLarge);
+    let ServiceError::Rejected(items) = refused else {
+        panic!("not a rejection")
+    };
     assert_eq!(
-        ledger::ledger_error(too_large).code(),
-        ErrorCode::ErrAmountTooLarge
+        items[0].values.get("max"),
+        Some(&ErrorValue::Number(1_000_000_000_000))
     );
 }
 
@@ -581,4 +588,104 @@ fn openings_through_the_grid_chain_with_every_other_entry() {
         0
     );
     assert_chain_ok(&dir);
+}
+
+#[test]
+fn a_new_posting_on_an_inactive_account_is_refused_and_writes_nothing() {
+    // End-gate review 20, PRD FR-10.2: inactive accounts take no new postings. The check is in
+    // `ledger::post`, so every module (vouchers, بکری, openings, month close) has it.
+    let (dir, env, owner) = ready();
+    let akram = buyer_akram(&env, &owner);
+    accounts::set_active(&env.ctx, &owner, akram, false).unwrap();
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+    let lines = count(&dir, "SELECT COUNT(*) FROM journal_lines");
+
+    let error = receipt(&env, &owner, akram, "2026-10-10").unwrap_err();
+    let ServiceError::Rejected(items) = error else {
+        panic!("not a rejection")
+    };
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].code, ErrorCode::ErrAccountInactive);
+    assert_eq!(
+        items[0].values.get("account_id"),
+        Some(&ErrorValue::Number(akram))
+    );
+    // Not even a draft is left behind.
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_lines"), lines);
+
+    // Active again, the same posting works.
+    accounts::set_active(&env.ctx, &owner, akram, true).unwrap();
+    receipt(&env, &owner, akram, "2026-10-10").unwrap();
+    ledger::verify_journal_chain(&env.ctx).unwrap();
+}
+
+#[test]
+fn a_reversal_still_works_on_an_account_made_inactive_after_the_posting() {
+    // The books must always be correctable (PRD FR-6.3): reversing takes an entry back, it does
+    // not add new business on the account.
+    let (dir, env, owner) = ready();
+    let akram = buyer_akram(&env, &owner);
+    let entry_id = receipt(&env, &owner, akram, "2026-10-10").unwrap();
+    accounts::set_active(&env.ctx, &owner, akram, false).unwrap();
+
+    let reversed = env
+        .ctx
+        .db()
+        .write(|tx| ledger::reverse(&env.ctx, tx, owner.user_id, entry_id, "wrong buyer"))
+        .unwrap();
+    assert_eq!(reversed.total, rupees(10_000));
+    // The 10,000 receipt is taken back: Akram owes the full 12,880 again, inactive or not.
+    let balance = ledger::account_balance(&env.ctx, akram).unwrap();
+    assert_eq!(
+        (balance.side, balance.amount_paisa),
+        (BalanceSide::Dr, rupees(12_880))
+    );
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM journal_entries WHERE reverses_entry_id IS NOT NULL"
+        ),
+        1
+    );
+    ledger::verify_journal_chain(&env.ctx).unwrap();
+}
+
+#[test]
+fn one_inactive_account_among_active_ones_refuses_the_whole_entry() {
+    let (dir, env, owner) = ready();
+    let akram = buyer_akram(&env, &owner);
+    let cash = id_of(&env, "01010001");
+    accounts::set_active(&env.ctx, &owner, akram, false).unwrap();
+    let before = count(&dir, "SELECT COUNT(*) FROM journal_lines");
+    // The inactive account is the second of three lines; the others are active.
+    let other = id_of(&env, "04010001");
+    let entry = build_entry(vec![
+        LedgerLine::new(AccountId::new(cash), Side::Dr, rupees(1_000)),
+        LedgerLine::new(AccountId::new(akram), Side::Cr, rupees(400)),
+        LedgerLine::new(AccountId::new(other), Side::Cr, rupees(600)),
+    ])
+    .unwrap();
+    let error = env
+        .ctx
+        .db()
+        .write(|tx| {
+            ledger::post(
+                &env.ctx,
+                tx,
+                owner.user_id,
+                &PostingEvent {
+                    date: date("2026-10-10"),
+                    posting_type: PostingType::Receipt,
+                    source_type: SourceType::Voucher,
+                    source_id: 9,
+                    narration: None,
+                    reverses: None,
+                    entry,
+                },
+            )
+        })
+        .unwrap_err();
+    assert_eq!(error.code(), ErrorCode::ErrAccountInactive);
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_lines"), before);
 }

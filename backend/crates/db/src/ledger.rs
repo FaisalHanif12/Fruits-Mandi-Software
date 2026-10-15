@@ -437,9 +437,63 @@ pub struct Totals {
     pub cr_paisa: i64,
 }
 
+/// The entries a balance leaves out, as a sub-query of ids.
+///
+/// A line is posted unless its entry is a draft, and a draft exists only inside the transaction
+/// that is posting it (B16, `idx_journal_entries_unposted` is empty whenever a balance is read).
+/// A balance for a day (`as_of_param` is the name of the date parameter) also leaves out the
+/// entries dated after it. Asking for the few entries to leave out, not for every entry to keep,
+/// is what lets a balance read `idx_journal_lines_account_amounts` and nothing else
+/// (migration 0002): no lookup of the entry for each line. The result is the same as keeping
+/// the lines whose entry is `posted` and, for a day, dated on or before it.
+fn left_out(as_of_param: Option<&str>) -> String {
+    const NOT_POSTED: &str = "SELECT id FROM journal_entries WHERE status <> 'posted'";
+    match as_of_param {
+        None => NOT_POSTED.to_owned(),
+        Some(param) => format!(
+            "{NOT_POSTED} UNION ALL SELECT id FROM journal_entries WHERE entry_date > {param}"
+        ),
+    }
+}
+
+/// The SQL of [`account_totals`] when an entry may be unposted or a day is asked for. Public so
+/// a test can check its query plan (Code Standards B18).
+#[doc(hidden)]
+pub fn account_totals_sql(with_date: bool) -> String {
+    format!(
+        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE entry_id NOT IN ({})
+         GROUP BY account_id ORDER BY account_id",
+        left_out(with_date.then_some("?1"))
+    )
+}
+
+/// The SQL of [`account_totals`] for all time when no entry is unposted: every line is posted,
+/// so no line needs a check, and the whole journal is one pass over the index.
+#[doc(hidden)]
+pub const ACCOUNT_TOTALS_ALL_POSTED_SQL: &str =
+    "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+     FROM journal_lines GROUP BY account_id ORDER BY account_id";
+
+/// True if some entry is not posted: a draft. A draft exists only inside the transaction that is
+/// posting it (B16), so this is false for every read outside it. It is one look at the empty
+/// partial index `idx_journal_entries_unposted`.
+fn unposted_entries_exist(conn: &Connection) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM journal_entries WHERE status <> 'posted')",
+        [],
+        |r| r.get(0),
+    )
+}
+
 /// The posted debit and credit totals of every account that has lines, up to `as_of`
 /// (`YYYY-MM-DD`, included) or all time. Sums are `SUM()` on the INTEGER columns only
 /// (money agent Section 9); the difference is worked out by the caller with checked maths.
+/// One pass over the index `idx_journal_lines_account_amounts`.
+///
+/// For all time with no unposted entry anywhere, the lines are not checked one by one (about a
+/// third faster over 3.5 million lines). If a draft exists, the same answer is worked out with
+/// the lines of the draft left out.
 ///
 /// # Errors
 /// Any SQLite error (a `SUM` that overflows is an error, never a float).
@@ -447,13 +501,14 @@ pub fn account_totals(
     conn: &Connection,
     as_of: Option<&str>,
 ) -> rusqlite::Result<Vec<(i64, Totals)>> {
-    let mut statement = conn.prepare(
-        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE e.status = 'posted' AND (?1 IS NULL OR e.entry_date <= ?1)
-         GROUP BY l.account_id ORDER BY l.account_id",
-    )?;
-    let rows = statement.query_map([as_of], |r| {
+    let all_posted = as_of.is_none() && !unposted_entries_exist(conn)?;
+    let sql = if all_posted {
+        ACCOUNT_TOTALS_ALL_POSTED_SQL.to_owned()
+    } else {
+        account_totals_sql(as_of.is_some())
+    };
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement.query_map(rusqlite::params_from_iter(as_of.iter()), |r| {
         Ok((
             r.get(0)?,
             Totals {
@@ -463,6 +518,18 @@ pub fn account_totals(
         ))
     })?;
     rows.collect()
+}
+
+/// The SQL of [`totals_for_accounts`] for this many accounts.
+#[doc(hidden)]
+pub fn totals_for_accounts_sql(count: usize) -> String {
+    let marks = vec!["?"; count].join(", ");
+    format!(
+        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE account_id IN ({marks}) AND entry_id NOT IN ({})
+         GROUP BY account_id",
+        left_out(None)
+    )
 }
 
 /// The posted debit and credit totals of the given accounts only (at most 2,000; SQLite allows
@@ -478,13 +545,7 @@ pub fn totals_for_accounts(
     if ids.is_empty() {
         return Ok(std::collections::HashMap::new());
     }
-    let marks = vec!["?"; ids.len()].join(", ");
-    let sql = format!(
-        "SELECT l.account_id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id IN ({marks}) AND e.status = 'posted' GROUP BY l.account_id"
-    );
-    let mut statement = conn.prepare(&sql)?;
+    let mut statement = conn.prepare(&totals_for_accounts_sql(ids.len()))?;
     let rows = statement.query_map(rusqlite::params_from_iter(ids.iter()), |r| {
         Ok((
             r.get::<_, i64>(0)?,
@@ -497,17 +558,41 @@ pub fn totals_for_accounts(
     rows.collect()
 }
 
-/// The date of the last posted entry that has a line on this account (`YYYY-MM-DD`), if any.
+/// How many of an account's newest lines [`last_entry_date`] reads first.
+pub const LAST_DATE_SAMPLE_LINES: i64 = 1_000;
+
+/// The date of the last posted entry that has a line on this account (`YYYY-MM-DD`), if any:
+/// the newest of all the entry dates, a back-dated entry included.
+///
+/// An account with fewer than [`LAST_DATE_SAMPLE_LINES`] lines is read whole. A busier one (the
+/// cash account has half a million lines) is done in two steps that give the same answer:
+/// the newest date among its newest lines, then a look at the entries dated after that date, the
+/// only ones that could be later. That is a few days of entries, not every line of the account.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn last_entry_date(conn: &Connection, account_id: i64) -> rusqlite::Result<Option<String>> {
-    conn.query_row(
-        "SELECT MAX(e.entry_date) FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id = ?1 AND e.status = 'posted'",
-        [account_id],
+    let (lines, newest): (i64, Option<String>) = conn.query_row(
+        "SELECT COUNT(*), MAX(CASE WHEN e.status = 'posted' THEN e.entry_date END)
+         FROM (SELECT entry_id FROM journal_lines WHERE account_id = ?1
+               ORDER BY entry_id DESC LIMIT ?2) AS newest
+         JOIN journal_entries e ON e.id = newest.entry_id",
+        params![account_id, LAST_DATE_SAMPLE_LINES],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    if lines < LAST_DATE_SAMPLE_LINES {
+        return Ok(newest);
+    }
+    // Older lines belong to entries with smaller ids. Such an entry can still have a later date
+    // (it was dated ahead of newer postings), so every entry dated after `newest` is checked.
+    let later: Option<String> = conn.query_row(
+        "SELECT MAX(e.entry_date) FROM journal_entries e
+         WHERE e.status = 'posted' AND e.entry_date > ?2
+           AND EXISTS (SELECT 1 FROM journal_lines l WHERE l.account_id = ?1 AND l.entry_id = e.id)",
+        params![account_id, newest.as_deref().unwrap_or("")],
         |r| r.get(0),
-    )
+    )?;
+    Ok(later.or(newest))
 }
 
 /// What a seller was given as advances, in paisa: the posted debit lines flagged as an advance
@@ -551,8 +636,121 @@ pub fn advance_adjusted(conn: &Connection, account_id: i64) -> rusqlite::Result<
     )
 }
 
+/// The SQL of [`totals_of`] when the entries to leave out are listed (see [`DayMethod::LeftOut`]).
+#[doc(hidden)]
+pub fn totals_of_sql(with_person: bool, with_date: bool) -> String {
+    let person = if with_person {
+        " AND pukhta_person_key = :person"
+    } else {
+        ""
+    };
+    format!(
+        "SELECT COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE account_id = :account{person} AND entry_id NOT IN ({})",
+        left_out(with_date.then_some(":as_of"))
+    )
+}
+
+/// The SQL of [`totals_of`] for a day on a small account (see [`DayMethod::PerLine`]): the entry
+/// of each line is looked up and its status and date are checked.
+#[doc(hidden)]
+pub fn totals_of_per_line_sql(with_person: bool) -> String {
+    let person = if with_person {
+        " AND l.pukhta_person_key = :person"
+    } else {
+        ""
+    };
+    format!(
+        "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE e.status = 'posted' AND l.account_id = :account{person}
+           AND e.entry_date <= :as_of"
+    )
+}
+
+/// An account (or one person of it) with more lines than this is a busy one: a balance for a day
+/// is worked out by leaving out the later entries. With fewer, each line is checked on its own,
+/// which costs about 0.7 microseconds a line (70 ms at the limit) and does not depend on how
+/// many entries the whole journal has. Measured at 3.5 million lines: the busiest buyer (55,000
+/// lines) is cheaper per line, the cash account (514,000 lines) cheaper the other way.
+pub const PER_LINE_UP_TO_LINES: i64 = 100_000;
+
+/// How [`totals_of`] works out a balance for a day. Both give the same answer; only the time
+/// differs, so a test can run each on the same data and compare.
+///
+/// The cost of `LeftOut` grows with the number of entries dated after the day (up to every
+/// entry of the journal: 140 ms for a million), the cost of `PerLine` with the lines of the
+/// account. A busy account (the cash account has half a million lines) is cheaper to do the first
+/// way, a small one the second way. For all time, only drafts are left out, which is always
+/// cheap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DayMethod {
+    /// `entry_id NOT IN (drafts, entries dated after the day)`, summed from the covering index.
+    LeftOut,
+    /// A look at the entry of each line of the account.
+    PerLine,
+}
+
+/// True if the account (or the person) has more than `limit` lines. Reads at most `limit + 1`
+/// index entries.
+fn has_more_lines_than(
+    conn: &Connection,
+    account_id: i64,
+    person: Option<&str>,
+    limit: i64,
+) -> rusqlite::Result<bool> {
+    let counted: i64 = match person {
+        Some(person) => conn.query_row(
+            "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines
+               WHERE account_id = ?1 AND pukhta_person_key = ?2 LIMIT ?3)",
+            params![account_id, person, limit.saturating_add(1)],
+            |r| r.get(0),
+        )?,
+        None => conn.query_row(
+            "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines WHERE account_id = ?1 LIMIT ?2)",
+            params![account_id, limit.saturating_add(1)],
+            |r| r.get(0),
+        )?,
+    };
+    Ok(counted > limit)
+}
+
+/// The method [`totals_of`] uses: `LeftOut` for all time and for a busy account, `PerLine` for a
+/// day on a small account.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn day_method(
+    conn: &Connection,
+    account_id: i64,
+    person: Option<&str>,
+    as_of: Option<&str>,
+) -> rusqlite::Result<DayMethod> {
+    day_method_with(conn, account_id, person, as_of, PER_LINE_UP_TO_LINES)
+}
+
+/// [`day_method`] with the number of lines that makes an account busy given, so a test can reach
+/// both methods without writing twenty thousand lines.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn day_method_with(
+    conn: &Connection,
+    account_id: i64,
+    person: Option<&str>,
+    as_of: Option<&str>,
+    busy_above_lines: i64,
+) -> rusqlite::Result<DayMethod> {
+    if as_of.is_none() || has_more_lines_than(conn, account_id, person, busy_above_lines)? {
+        Ok(DayMethod::LeftOut)
+    } else {
+        Ok(DayMethod::PerLine)
+    }
+}
+
 /// The posted totals of one account. `person` is `None` for the whole account (all persons of a
-/// پختہ کھاتہ account together), `Some(key)` for one person.
+/// پختہ کھاتہ account together), `Some(key)` for one person. [`day_method`] picks the way of
+/// working it out; the answer is the same either way.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -562,19 +760,41 @@ pub fn totals_of(
     person: Option<&str>,
     as_of: Option<&str>,
 ) -> rusqlite::Result<Totals> {
-    conn.query_row(
-        "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE e.status = 'posted' AND l.account_id = ?1 AND (?2 IS NULL OR l.pukhta_person_key = ?2)
-           AND (?3 IS NULL OR e.entry_date <= ?3)",
-        params![account_id, person, as_of],
-        |r| {
-            Ok(Totals {
-                dr_paisa: r.get(0)?,
-                cr_paisa: r.get(1)?,
-            })
-        },
-    )
+    let method = day_method(conn, account_id, person, as_of)?;
+    totals_of_by(conn, method, account_id, person, as_of)
+}
+
+/// [`totals_of`] by a chosen method. `PerLine` needs a day; without one it is the same as
+/// `LeftOut` (all time).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn totals_of_by(
+    conn: &Connection,
+    method: DayMethod,
+    account_id: i64,
+    person: Option<&str>,
+    as_of: Option<&str>,
+) -> rusqlite::Result<Totals> {
+    let per_line = method == DayMethod::PerLine && as_of.is_some();
+    let sql = if per_line {
+        totals_of_per_line_sql(person.is_some())
+    } else {
+        totals_of_sql(person.is_some(), as_of.is_some())
+    };
+    let mut named: Vec<(&str, &dyn rusqlite::ToSql)> = vec![(":account", &account_id)];
+    if let Some(person) = person.as_ref() {
+        named.push((":person", person));
+    }
+    if let Some(as_of) = as_of.as_ref() {
+        named.push((":as_of", as_of));
+    }
+    conn.query_row(&sql, named.as_slice(), |r| {
+        Ok(Totals {
+            dr_paisa: r.get(0)?,
+            cr_paisa: r.get(1)?,
+        })
+    })
 }
 
 /// One posted line of an account's ledger.

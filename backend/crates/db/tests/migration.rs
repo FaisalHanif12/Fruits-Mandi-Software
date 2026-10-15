@@ -15,6 +15,9 @@ use mandi_db::{DbError, seed};
 use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
+/// The schema version of the newest migration (`migrate::migrations()`).
+const LATEST: usize = 2;
+
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
 }
@@ -71,11 +74,11 @@ fn an_empty_file_gets_the_whole_design_and_the_seed_without_a_copy() {
         outcome,
         MigrationOutcome {
             from: 0,
-            to: 1,
+            to: LATEST,
             copy: None
         }
     );
-    assert_eq!(user_version(&conn), 1);
+    assert_eq!(user_version(&conn), LATEST as i64);
     assert!(!backups.exists(), "nothing to copy from an empty file");
     let counts = seed::counts(&conn).unwrap();
     assert_eq!(
@@ -95,8 +98,8 @@ fn running_again_is_a_no_op_and_takes_no_copy() {
     assert_eq!(
         again,
         MigrationOutcome {
-            from: 1,
-            to: 1,
+            from: LATEST,
+            to: LATEST,
             copy: None
         }
     );
@@ -109,8 +112,8 @@ fn running_again_is_a_no_op_and_takes_no_copy() {
     assert_eq!(
         db.migration(),
         &MigrationOutcome {
-            from: 1,
-            to: 1,
+            from: LATEST,
+            to: LATEST,
             copy: None
         }
     );
@@ -269,10 +272,104 @@ fn db_open_on_a_file_at_the_latest_version_takes_no_copy() {
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     {
         let mut conn = connection(&path);
-        migrate::migrate_with(&version_1(), &mut conn, &dir.path().join("none"), &clock()).unwrap();
+        migrate::migrate(&mut conn, &dir.path().join("none"), &clock()).unwrap();
     }
     // Nothing is pending, so no copy is made.
     let db = common::open(dir.path());
     assert_eq!(db.migration().copy, None);
-    assert_eq!(db.migration().to, 1);
+    assert_eq!(db.migration().to, LATEST);
+}
+
+#[test]
+fn migration_2_adds_only_indexes_and_keeps_every_number() {
+    // Plan: balances read the index only (NFR-SPD-13, NFR-SPD-21). A file made at version 1 with
+    // posted entries is upgraded: a copy is taken, three indexes appear, no table or column
+    // changes, and every balance is what it was.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&version_1(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 1);
+    let cash: i64 = conn
+        .query_row("SELECT id FROM accounts WHERE code = '01010001'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    let income: i64 = conn
+        .query_row("SELECT id FROM accounts WHERE code = '04010001'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    for (day, rupees) in [("2026-10-09", 12_880_i64), ("2026-10-10", 10_000)] {
+        conn.execute(
+            "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, total_paisa)
+             VALUES (?1, 'general', 'voucher', 1, ?2)",
+            (day, rupees * 100),
+        )
+        .unwrap();
+        let entry = conn.last_insert_rowid();
+        conn.execute(
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, 0)",
+            (entry, cash, rupees * 100),
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa) VALUES (?1, 2, ?2, 0, ?3)",
+            (entry, income, rupees * 100),
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE journal_entries SET status = 'posted' WHERE id = ?1",
+            [entry],
+        )
+        .unwrap();
+    }
+    let tables = |conn: &Connection| -> Vec<String> {
+        conn.prepare(
+            "SELECT name || ':' || sql FROM sqlite_master WHERE type = 'table' ORDER BY name",
+        )
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let index_names = |conn: &Connection| -> Vec<String> {
+        conn.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name IN ('journal_lines', 'journal_entries') ORDER BY name")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    let before_tables = tables(&conn);
+    let before_indexes = index_names(&conn);
+    let before = mandi_db::ledger::account_totals(&conn, None).unwrap();
+    assert_eq!(before.len(), 2);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (1, LATEST));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), LATEST as i64);
+    // Only indexes were added.
+    assert_eq!(tables(&conn), before_tables);
+    let added: Vec<String> = index_names(&conn)
+        .into_iter()
+        .filter(|n| !before_indexes.contains(n))
+        .collect();
+    assert_eq!(
+        added,
+        [
+            "idx_journal_entries_unposted",
+            "idx_journal_lines_account_amounts",
+            "idx_journal_lines_advance"
+        ]
+    );
+    // The numbers are the same.
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before
+    );
+    let totals = mandi_db::ledger::totals_of(&conn, cash, None, None).unwrap();
+    assert_eq!((totals.dr_paisa, totals.cr_paisa), (2_288_000, 0));
 }

@@ -36,14 +36,15 @@ All commands are `async`, run blocking work on a worker thread, check the role f
 | Command | Role | Input | Output | Errors (field) |
 |---|---|---|---|---|
 | `auth_status` | none | none | `AuthStatus { first_run, session: Option<SessionUser>, locked: bool, login_language: "ur"\|"en", firm: FirmDisplay, app_version }` | |
-| `setup_first_run` | none, only while no user exists | `FirstRunInput { firm_name_ur, firm_name_en, mandi_ur, mandi_en, address, phone, owner_username, owner_display_name, password, password_repeat }` (all text) | `FirstRunDone { recovery_code }` | `ERR_ALREADY_SET_UP`, `ERR_REQUIRED` (each field), `ERR_NAME_UR_SCRIPT` (`firm_name_ur`), `ERR_NAME_EN_SCRIPT` (`firm_name_en`), `ERR_PASSWORD_TOO_SHORT` (`password`, min 6, NFR-SEC-1), `ERR_PASSWORDS_DIFFER` (`password_repeat`), `ERR_USERNAME_INVALID` (`owner_username`: 3 to 32 of `a-z 0-9 . _ -`), `ERR_PHONE_INVALID` |
+| `setup_first_run` | none, only while no user exists | `FirstRunInput { firm_name_ur, firm_name_en, mandi_ur, mandi_en, address, phone, owner_username, owner_display_name, password, password_repeat, confirmed_rules_words }` (text; the last is a list of words the Owner confirmed in the spelling check, FR-7.66) | `FirstRunDone { recovery_code }` | `ERR_ALREADY_SET_UP`, `ERR_REQUIRED` (each field), `ERR_NAME_UR_SCRIPT` (`firm_name_ur`), `ERR_NAME_EN_SCRIPT` (`firm_name_en`), `ERR_PASSWORD_TOO_SHORT` (`password`, min 6, NFR-SEC-1), `ERR_PASSWORDS_DIFFER` (`password_repeat`), `ERR_USERNAME_INVALID` (`owner_username`: 3 to 32 of `a-z 0-9 . _ -`), `ERR_PHONE_INVALID`, `ERR_SPELLING_UNCONFIRMED` (`values.words`, on `firm_name_ur`, `firm_name_en`, `mandi_ur` or `mandi_en`) |
 | `auth_login` | none | `LoginInput { username, password }` | `SessionUser { id, username, display_name, role, language, text_size }` | `ERR_WRONG_PASSWORD { tries_left }` (`password`), `ERR_LOCKED_WAIT { seconds }`, `ERR_USER_INACTIVE` |
 | `auth_logout` | any logged in | none | `()` | |
 | `auth_lock` | any logged in | none | `()` | |
 | `auth_unlock` | the locked user | `{ password }` | `SessionUser` | as login (same lockout counter) |
 | `auth_recover` | none | `{ username, recovery_code, new_password, new_password_repeat }` | `RecoverDone { new_recovery_code }` | `ERR_RECOVERY_CODE_WRONG` (counts as a wrong try), password errors. Owner only. A used code is spent; a new one is shown to print. |
 | `settings_get` | any logged in | none | `Settings { firm: FirmSettings, idle_lock_minutes, default_language, number_grouping }` | |
-| `settings_set_firm` | Owner | `FirmSettings` (text) | `FirmSettings` | name script errors |
+| `settings_set_firm` | Owner | `SetFirmInput` (the six `FirmSettings` fields as text, plus `confirmed_rules_words`) | `FirmSettings` | name script errors; `ERR_SPELLING_UNCONFIRMED` (`values.words`, on `name_ur`, `name_en`, `mandi_ur` or `mandi_en`). Confirmed words are learned in the same transaction. |
+| `auth_change_password` | any logged in | `ChangePasswordInput { current, new, repeat }` (text) | `()` | `ERR_REQUIRED` (`current`), `ERR_PASSWORD_TOO_SHORT` (`new`, min 6), `ERR_PASSWORDS_DIFFER` (`repeat`), `ERR_WRONG_PASSWORD { tries_left }` (`current`), `ERR_LOCKED_WAIT { seconds }`. A wrong current password counts towards the sign-in lockout. |
 | `settings_set_security` | Owner | `{ idle_lock_minutes }` (1 to 120, default 15) | `()` | `ERR_OUT_OF_RANGE` |
 | `settings_set_default_language` | Owner | `{ language }` | `()` | |
 | `prefs_set` | any logged in | `{ key: "language"\|"text_size"\|"last_screen", value }` (text size 80 to 150 in steps of 10) | `()` | `ERR_OUT_OF_RANGE` |
@@ -102,3 +103,5 @@ Accounts and masters (D2), partners and the wizard partners step (D3), backup ke
 ## 9. Open questions
 
 None. Decision recorded here: a used recovery code is spent and a new one is shown, because NFR-SEC-12 says no master password exists anywhere, and a printed code that works forever would be one.
+
+Added 12-10-2026 at the end gate (reviewer finding 12): PRD FR-5.6 lists "change password" in the user menu. Built now: `auth_change_password { current, new, repeat }`, sign-in check first, Argon2id, minimum 6 (NFR-SEC-1), a wrong current password counts towards the lockout like sign-in, audit row without the password (NFR-SEC-5); a dialog from the user menu in both languages.

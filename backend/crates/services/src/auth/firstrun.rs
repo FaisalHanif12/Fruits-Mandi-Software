@@ -16,14 +16,14 @@ use serde_json::{Value, json};
 
 use super::lockout;
 use super::login::{Via, attempt, verify_password};
-use super::{FirstRunRaw, RecoverRaw};
+use super::{Actor, FirstRunRaw, RecoverRaw};
 use crate::audit::Event;
 use crate::context::Context;
-use crate::error::ServiceError;
+use crate::error::{Rejection, ServiceError};
 use crate::secret::Secret;
 use crate::settings::{
     FirmFields, KEY_DEFAULT_LANGUAGE, KEY_FIRM, KEY_IDLE_LOCK, KEY_LOGIN_LANGUAGE,
-    KEY_NUMBER_GROUPING,
+    KEY_NUMBER_GROUPING, spelling_checks,
 };
 use crate::store;
 
@@ -60,14 +60,30 @@ fn stored_recovery(
     }))
 }
 
+/// The first-run wizard with no spelling confirmed: a firm or mandi name with a rules-only word
+/// is refused. See [`first_run_confirmed`].
+///
+/// # Errors
+/// As [`first_run_confirmed`].
+pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceError> {
+    first_run_confirmed(ctx, input, &[])
+}
+
 /// The first-run wizard: creates the firm settings, the Owner and his recovery code, in one
 /// transaction. Only while no user exists. Returns the code to print, as `XXXX-XXXX-XXXX-XXXX`.
+/// The firm and mandi names get the spelling check (PRD FR-7.66); the words in
+/// `confirmed_rules_words` are accepted and learned in the same transaction (PRD FR-7.26).
 ///
 /// # Errors
 /// `ERR_ALREADY_SET_UP`; the field errors named in the plan (`firm_name_ur`, `firm_name_en`,
 /// `mandi_ur`, `mandi_en`, `address`, `phone`, `owner_username`, `owner_display_name`,
-/// `password`, `password_repeat`), all together.
-pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceError> {
+/// `password`, `password_repeat`), all together; `ERR_SPELLING_UNCONFIRMED` (value `words`) on
+/// a name field that has an open word, together with the other field errors.
+pub fn first_run_confirmed(
+    ctx: &Context,
+    input: &FirstRunRaw,
+    confirmed_rules_words: &[String],
+) -> Result<String, ServiceError> {
     // Cheap check first, so a second setup is refused before any hashing.
     if ctx.db.read(store::count_users)? > 0 {
         return Err(ServiceError::reject(ErrorCode::ErrAlreadySetUp));
@@ -94,7 +110,30 @@ pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceEr
         input.password.expose(),
         input.password_repeat.expose(),
     );
-    errors.finish()?;
+    // The spelling check (PRD FR-7.66) needs names that passed the script check. Its answer
+    // joins the field errors, so the screen sees everything at once.
+    let spelling = match &firm {
+        Some(firm) => spelling_checks(ctx, firm, &FirmFields::FIRST_RUN, confirmed_rules_words),
+        None => Ok(Vec::new()),
+    };
+    let mut rejected: Vec<Rejection> = errors
+        .finish()
+        .err()
+        .unwrap_or_default()
+        .into_iter()
+        .map(Rejection::from)
+        .collect();
+    let checks = match spelling {
+        Ok(checks) => checks,
+        Err(ServiceError::Rejected(items)) => {
+            rejected.extend(items);
+            Vec::new()
+        }
+        Err(other) => return Err(other),
+    };
+    if !rejected.is_empty() {
+        return Err(ServiceError::Rejected(rejected));
+    }
     let (Some(firm), Some(username), Some(display_name)) = (firm, username, display_name) else {
         return Err(ServiceError::Data(
             "first run: a checked field is missing".to_owned(),
@@ -106,7 +145,7 @@ pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceEr
     let (code, shown) = new_code(ctx)?;
     let code_hash = ctx.hasher.hash(&code)?;
 
-    ctx.db.write(|tx| {
+    let learned = ctx.db.write(|tx| {
         if store::count_users(tx)? > 0 {
             return Err(ServiceError::reject(ErrorCode::ErrAlreadySetUp));
         }
@@ -148,8 +187,21 @@ pub fn first_run(ctx: &Context, input: &FirstRunRaw) -> Result<String, ServiceEr
                 .new_value(json!({ "firm": firm.to_json(), "first_run": true }))
                 .into_entry(),
         )?;
-        Ok(())
+        // The words the Owner confirmed are learned now, by the Owner who was just made.
+        let actor = Actor {
+            user_id: owner_id,
+            username: username.clone(),
+            display_name: display_name.clone(),
+        };
+        let mut learned = Vec::new();
+        for check in &checks {
+            learned.push(check.learn(ctx, &actor, tx)?);
+        }
+        Ok(learned)
     })?;
+    for learned in learned {
+        learned.after_commit(ctx);
+    }
     Ok(shown)
 }
 

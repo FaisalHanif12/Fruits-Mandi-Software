@@ -28,6 +28,7 @@ pub(super) enum Via {
     Login,
     Unlock,
     Recover,
+    ChangePassword,
 }
 
 impl Via {
@@ -36,12 +37,13 @@ impl Via {
             Via::Login => "login",
             Via::Unlock => "unlock",
             Via::Recover => "recover",
+            Via::ChangePassword => "change_password",
         }
     }
 
     fn wrong_code(self) -> ErrorCode {
         match self {
-            Via::Login | Via::Unlock => ErrorCode::ErrWrongPassword,
+            Via::Login | Via::Unlock | Via::ChangePassword => ErrorCode::ErrWrongPassword,
             Via::Recover => ErrorCode::ErrRecoveryCodeWrong,
         }
     }
@@ -49,6 +51,7 @@ impl Via {
     fn field(self) -> &'static str {
         match self {
             Via::Login | Via::Unlock => "password",
+            Via::ChangePassword => "current",
             Via::Recover => "recovery_code",
         }
     }

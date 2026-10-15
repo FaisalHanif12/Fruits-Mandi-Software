@@ -16,6 +16,6 @@ mod types;
 pub use assist::*;
 pub use prepare::{
     MAX_WEEKDAY, OpeningRequest, PreparedAccount, account_code_for, opening_request,
-    prepare_account,
+    opening_request_in_force, prepare_account,
 };
 pub use types::*;

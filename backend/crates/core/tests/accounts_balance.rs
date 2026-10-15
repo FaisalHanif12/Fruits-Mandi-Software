@@ -27,7 +27,7 @@ fn the_worked_balances_of_the_prd() {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(5_000))]
+    #![proptest_config(ProptestConfig::with_cases(10_000))]
 
     /// For any totals in the allowed range the amount is never negative, the side matches the
     /// sign, and the amount is the exact difference (no rounding anywhere).

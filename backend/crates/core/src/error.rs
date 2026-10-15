@@ -155,11 +155,19 @@ pub enum ErrorCode {
     /// Active partner shares do not total 100% on the posting date (PRD FR-17.1, E9).
     #[serde(rename = "ERR_SHARES_NOT_100")]
     ErrSharesNot100,
+    /// One line of a journal entry, or the total of the entry, is above what one entry may hold
+    /// (10^12 rupees). A single typed amount is held to a lower limit by `ErrAmountTooLarge`, so
+    /// this means the amounts of several lines add up past the limit. Values: `max` (rupees).
+    ErrEntryTooLarge,
+    /// A system account (روکڑ, ابتدائی فرق, commission income, نقدی منڈی, the two پختہ کھاتہ
+    /// accounts ...) cannot be made inactive: the app posts to it by itself (PRD FR-10.4).
+    /// Field `id`. The Active box of such an account is shown ticked and cannot be changed.
+    ErrSystemAccount,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 62] = [
+    pub const ALL: [ErrorCode; 64] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -222,6 +230,8 @@ impl ErrorCode {
         ErrorCode::ErrSpellingUnconfirmed,
         ErrorCode::ErrOverflow,
         ErrorCode::ErrSharesNot100,
+        ErrorCode::ErrEntryTooLarge,
+        ErrorCode::ErrSystemAccount,
     ];
 }
 

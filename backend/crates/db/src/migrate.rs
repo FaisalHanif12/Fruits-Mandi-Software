@@ -22,18 +22,25 @@ use crate::error::DbError;
 /// The first migration: every table, index and trigger of Architecture Section 15.
 pub const INIT_SQL: &str = include_str!("../migrations/0001_init.sql");
 
+/// The second migration: indexes so that balances read the index only. No table, no stored
+/// total (PRD FR-6.1).
+pub const BALANCE_INDEXES_SQL: &str = include_str!("../migrations/0002_balance_indexes.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
 /// All migrations, in order. Migration 1 also seeds the system accounts, in its own
 /// transaction (plan 03 Section 4.4).
 pub fn migrations() -> Migrations<'static> {
-    Migrations::new(vec![M::up_with_hook(INIT_SQL, |tx| {
-        crate::seed::system_accounts(tx).map_err(HookError::from)?;
-        crate::seed::default_rules(tx)
-            .map(|_| ())
-            .map_err(HookError::from)
-    })])
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            crate::seed::system_accounts(tx).map_err(HookError::from)?;
+            crate::seed::default_rules(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+    ])
 }
 
 /// What a call to [`migrate`] did.

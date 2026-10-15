@@ -24,6 +24,7 @@ use ts_rs::{Config, TS};
 const EXPECTED_FILES: &[&str] = &[
     "AppInfo.ts",
     "AuthStatus.ts",
+    "ChangePasswordInput.ts",
     "DataStatus.ts",
     "DayStatus.ts",
     "ErrorCode.ts",
@@ -40,6 +41,7 @@ const EXPECTED_FILES: &[&str] = &[
     "RecoverInput.ts",
     "SessionUser.ts",
     "SetDefaultLanguageInput.ts",
+    "SetFirmInput.ts",
     "SetSecurityInput.ts",
     "Settings.ts",
     "UiError.ts",
@@ -201,8 +203,10 @@ fn export_bindings() {
     auth::UnlockInput::export_all(&cfg).unwrap();
     auth::RecoverInput::export_all(&cfg).unwrap();
     auth::RecoverDone::export_all(&cfg).unwrap();
+    auth::ChangePasswordInput::export_all(&cfg).unwrap();
     settings::Settings::export_all(&cfg).unwrap();
     settings::FirmSettings::export_all(&cfg).unwrap();
+    settings::SetFirmInput::export_all(&cfg).unwrap();
     settings::SetSecurityInput::export_all(&cfg).unwrap();
     settings::SetDefaultLanguageInput::export_all(&cfg).unwrap();
     mandi_services::core::auth::PrefKey::export_all(&cfg).unwrap();
@@ -435,6 +439,7 @@ fn plan_04_contract_shapes() {
             "owner_display_name: string",
             "password: string",
             "password_repeat: string",
+            "confirmed_rules_words: Array<string>",
         ],
     );
     has(auth::FirstRunDone::decl(&cfg), &["recovery_code: string"]);
@@ -455,6 +460,22 @@ fn plan_04_contract_shapes() {
     has(
         auth::RecoverDone::decl(&cfg),
         &["new_recovery_code: string"],
+    );
+    has(
+        auth::ChangePasswordInput::decl(&cfg),
+        &["current: string", "new: string", "repeat: string"],
+    );
+    has(
+        settings::SetFirmInput::decl(&cfg),
+        &[
+            "name_ur: string",
+            "name_en: string",
+            "mandi_ur: string",
+            "mandi_en: string",
+            "address: string",
+            "phone: string",
+            "confirmed_rules_words: Array<string>",
+        ],
     );
     has(
         settings::Settings::decl(&cfg),

@@ -250,3 +250,41 @@ fn the_whole_audit_chain_holds_after_all_of_it() {
     wrong_try(&env, "owner");
     assert_chain_ok(&dir);
 }
+
+#[test]
+fn a_change_of_the_sign_in_language_is_audited_and_a_repeat_writes_nothing() {
+    // End-gate review 22, Code Standards S7: the sign-in language is a setting of this computer.
+    let (dir, env, owner) = owner_ready();
+    let rows = |dir: &TempDir| -> Vec<(String, String)> {
+        let conn = raw(dir);
+        let mut statement = conn
+            .prepare(
+                "SELECT COALESCE(old_json, ''), COALESCE(new_json, '') FROM audit_log
+                 WHERE action = 'edit' AND entity = 'settings' AND new_json LIKE '%login_language%'
+                 ORDER BY id",
+            )
+            .unwrap();
+        statement
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    assert!(rows(&dir).is_empty());
+    settings::set_pref(&env.ctx, &owner, PrefKey::Language, "en").unwrap();
+    assert_eq!(
+        rows(&dir),
+        [(
+            r#"{"login_language":"ur"}"#.to_owned(),
+            r#"{"login_language":"en"}"#.to_owned()
+        )]
+    );
+    assert_eq!(auth::status(&env.ctx).unwrap().login_language, Language::En);
+    // The same choice again changes nothing, so it writes no row.
+    settings::set_pref(&env.ctx, &owner, PrefKey::Language, "en").unwrap();
+    assert_eq!(rows(&dir).len(), 1);
+    // Back to Urdu: a second row.
+    settings::set_pref(&env.ctx, &owner, PrefKey::Language, "ur").unwrap();
+    assert_eq!(rows(&dir).len(), 2);
+    assert_chain_ok(&dir);
+}

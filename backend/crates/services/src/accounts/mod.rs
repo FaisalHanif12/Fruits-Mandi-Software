@@ -200,41 +200,31 @@ pub(crate) fn opening_allowed(facts: &repo::AccountFacts) -> bool {
     can_take_opening(&facts.head_code, &facts.code, facts.is_pukhta_khata)
 }
 
-/// Merges the answers of two spelling checks, so both fields come back together.
+/// Checks the name and the father or firm name together, so both fields come back at once.
 fn spelling_checks(
     ctx: &Context,
     prepared: &mandi_domain::core::accounts::PreparedAccount,
 ) -> Result<Vec<SpellingCheck>, ServiceError> {
-    let names = spelling::check(
+    spelling::check_all(
         ctx,
-        &NamePair {
-            field_ur: prepared.names.field_ur,
-            name_ur: &prepared.names.name_ur,
-            field_en: prepared.names.field_en,
-            name_en: &prepared.names.name_en,
-            kind: Kind::Name,
-        },
+        &[
+            NamePair {
+                field_ur: prepared.names.field_ur,
+                name_ur: &prepared.names.name_ur,
+                field_en: prepared.names.field_en,
+                name_en: &prepared.names.name_en,
+                kind: Kind::Name,
+            },
+            NamePair {
+                field_ur: "father_or_firm_ur",
+                name_ur: &prepared.father.0,
+                field_en: "father_or_firm_en",
+                name_en: &prepared.father.1,
+                kind: Kind::Name,
+            },
+        ],
         &prepared.confirmed_rules_words,
-    );
-    let father = spelling::check(
-        ctx,
-        &NamePair {
-            field_ur: "father_or_firm_ur",
-            name_ur: &prepared.father.0,
-            field_en: "father_or_firm_en",
-            name_en: &prepared.father.1,
-            kind: Kind::Name,
-        },
-        &prepared.confirmed_rules_words,
-    );
-    match (names, father) {
-        (Ok(a), Ok(b)) => Ok(vec![a, b]),
-        (Err(ServiceError::Rejected(mut a)), Err(ServiceError::Rejected(b))) => {
-            a.extend(b);
-            Err(ServiceError::Rejected(a))
-        }
-        (Err(e), _) | (_, Err(e)) => Err(e),
-    }
+    )
 }
 
 fn audit_fields(prepared: &mandi_domain::core::accounts::PreparedAccount, code: &str) -> Value {
@@ -272,7 +262,8 @@ fn audit_fields(prepared: &mandi_domain::core::accounts::PreparedAccount, code: 
 /// The field errors of `mandi_core::accounts::prepare_account` (and the date codes of the
 /// opening date); `ERR_SPELLING_UNCONFIRMED`; `ERR_NOT_FOUND` on `id` or on a record it points
 /// at; `ERR_CODE_TAKEN`, `ERR_CODE_RESERVED`, `ERR_SERIES_FULL` on `code`; `ERR_VERSION_CHANGED`;
-/// `ERR_FORMAT_INVALID` on `account_type` or `code` for an edit that tries to change them.
+/// `ERR_FORMAT_INVALID` on `account_type` or `code` for an edit that tries to change them;
+/// `ERR_SYSTEM_ACCOUNT` on `is_active` for an edit that makes a system account inactive.
 /// Nothing is written when any of them is returned.
 pub fn save(
     ctx: &Context,
@@ -280,7 +271,22 @@ pub fn save(
     input: &AccountInput,
 ) -> Result<AccountRow, ServiceError> {
     let (closed, today) = day::window(ctx)?;
-    let prepared = prepare_account(input, closed, today)?;
+    // An edit that leaves the opening as it is must not trip over a closed opening day.
+    let stored = match input.id {
+        Some(id) => ctx.db.read(|conn| repo::facts(conn, id))?,
+        None => None,
+    };
+    // A system account stays active (PRD FR-10.4), whether the box is changed on the form or by
+    // `set_active`. `is_system` never changes (trigger `accounts_system_fixed`), so reading it
+    // before the write is safe.
+    if !input.is_active && stored.as_ref().is_some_and(|facts| facts.is_system) {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrSystemAccount,
+            "is_active",
+        ));
+    }
+    let in_force = stored.as_ref().map(current_opening).transpose()?;
+    let prepared = prepare_account(input, closed, today, in_force.as_ref())?;
     let checks = spelling_checks(ctx, &prepared)?;
     let (id, learned) = ctx
         .db
@@ -409,8 +415,13 @@ fn write(
 /// Makes an account active or inactive (an account is never deleted, PRD FR-10.6). Asking for
 /// the state it already has changes nothing.
 ///
+/// A system account (PRD FR-10.4: روکڑ, ابتدائی فرق, the income accounts, نقدی منڈی, the two
+/// پختہ کھاتہ accounts ...) cannot be made inactive, because the app posts to it by itself and a
+/// picker would no longer offer it. Making one active again is allowed, so a file where the
+/// state was changed some other way can be put right.
+///
 /// # Errors
-/// `ERR_NOT_FOUND` on `id`.
+/// `ERR_NOT_FOUND` on `id`; `ERR_SYSTEM_ACCOUNT` on `id` when a system account is made inactive.
 pub fn set_active(
     ctx: &Context,
     actor: &Actor,
@@ -420,6 +431,12 @@ pub fn set_active(
     let changed = ctx.db.write(|tx| {
         let old = repo::facts(tx, id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))?;
+        if old.is_system && !is_active {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrSystemAccount,
+                "id",
+            ));
+        }
         if old.is_active == is_active {
             return Ok::<_, ServiceError>(false);
         }

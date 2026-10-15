@@ -18,6 +18,7 @@ Example: `apply_bps(Paisa::from_rupees(12_000)?, Bps::new(600)?)` is 720 rupees.
 - Never: database, files, network, the clock. "Today" is always a parameter.
 - `clippy::arithmetic_side_effects` is denied for the whole crate (Code Standards B11). Use checked maths.
 - No floats and no `as` casts. Widening uses `i128::from`, narrowing uses `try_from`.
+  - **The one exception is `translit`.** Its spelling scoring (letter-pair chances, ranking) uses `f64`. It never touches money: it does not import `money` or use `Paisa`, `Bps`, `Qty` or `Grams`, and it only orders suggestions the user then looks at. `tests/no_floats_in_money.rs` keeps it that way: `money`, `validate`, `dates`, `text`, `urdu_words` and `english_words` have no `f32` or `f64`, no file outside `translit` has one, and `translit` has no money type.
 - Invisible marks have one list, in `text` (`is_zero_width`, `is_direction_mark`, `is_bidi_control`). Number, code and phone text drops the zero-width marks and LRM (`is_ignorable_in_number`) and refuses RLM, ALM and the bidi controls. Search keys drop all of them. Free text refuses the bidi controls (Trojan Source).
 - Search keys are stable: `search_ur(search_ur(x)) == search_ur(x)`, and the same for `search_en`. Marks are removed and text is lower-cased before the last NFC pass. `tests/core_properties.rs` checks every Unicode character and every base letter with two marks.
 - Tests: worked numbers in `tests/money_worked_numbers.rs` and `tests/words_worked_numbers.rs`, property tests (10,000 cases each) in `tests/core_properties.rs`.

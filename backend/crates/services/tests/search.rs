@@ -486,3 +486,25 @@ fn capital(word: &str) -> String {
         .map(|c| c.to_uppercase().chain(chars).collect())
         .unwrap_or_default()
 }
+
+#[test]
+fn a_huge_search_text_is_refused_in_the_master_search_like_in_the_account_search() {
+    // End-gate review 19: a paste of thousands of characters is never turned into keys.
+    use mandi_services::core::error::{ErrorCode, ErrorValue};
+    let (_dir, env, owner) = ready();
+    add(&env, &owner, "", "لاہور", "Lahore");
+    let at_limit = "a".repeat(search::MAX_QUERY_CHARS);
+    search::search(&env.ctx, &owner, SearchScope::City, &at_limit, 10).unwrap();
+    for text in ["a".repeat(search::MAX_QUERY_CHARS + 1), "ا".repeat(10_000)] {
+        let ServiceError::Rejected(items) =
+            search::search(&env.ctx, &owner, SearchScope::City, &text, 10).unwrap_err()
+        else {
+            panic!("not a rejection")
+        };
+        assert_eq!(items[0].code, ErrorCode::ErrTextTooLong);
+        assert_eq!(items[0].field.as_deref(), Some("text"));
+        assert_eq!(items[0].values.get("max"), Some(&ErrorValue::Number(200)));
+    }
+    // `search_recent` takes only the list, so it has no text to check.
+    search::recent(&env.ctx, &owner, SearchScope::City).unwrap();
+}

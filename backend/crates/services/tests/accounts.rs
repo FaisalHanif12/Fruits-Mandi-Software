@@ -364,6 +364,77 @@ fn an_account_is_made_inactive_never_deleted() {
 }
 
 #[test]
+fn a_system_account_cannot_be_made_inactive() {
+    // PRD FR-10.4: the app posts to these by itself (cash, opening difference, the income
+    // accounts, نقدی منڈی, the two پختہ کھاتہ accounts ...), so a picker must always offer them.
+    // The lead decided on 13-10-2026: refused with a code on `id`; the screen shows the Active
+    // box ticked and cannot be changed.
+    let (dir, env, owner) = ready();
+    let system: Vec<(i64, String)> = {
+        let conn = raw(&dir);
+        let mut statement = conn
+            .prepare("SELECT id, code FROM accounts WHERE is_system = 1 ORDER BY code")
+            .unwrap();
+        statement
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    for code in [
+        "01010001",
+        "06019999",
+        "04010001",
+        "03040000",
+        "03049999",
+        "030119999",
+    ] {
+        assert!(
+            system.iter().any(|(_, c)| c == code),
+            "{code} should be a system account"
+        );
+    }
+    let audit_before = audit_total(&dir);
+    for (id, code) in &system {
+        let (error_code, field) =
+            first_error(accounts::set_active(&env.ctx, &owner, *id, false).unwrap_err());
+        assert_eq!(
+            (error_code, field.as_deref()),
+            (ErrorCode::ErrSystemAccount, Some("id")),
+            "account {code}"
+        );
+        assert!(accounts::get(&env.ctx, *id).unwrap().is_active, "{code}");
+        // Asking for active again is a no-op, not an error.
+        assert!(
+            accounts::set_active(&env.ctx, &owner, *id, true)
+                .unwrap()
+                .is_active
+        );
+    }
+    assert_eq!(audit_total(&dir), audit_before, "a refusal writes nothing");
+    // The Active box of the account form is held to the same rule.
+    let cash = accounts::get(&env.ctx, account_id(&env, "01010001")).unwrap();
+    let mut edit = form_of(&cash);
+    edit.is_active = false;
+    let (error_code, field) = first_error(accounts::save(&env.ctx, &owner, &edit).unwrap_err());
+    assert_eq!(
+        (error_code, field.as_deref()),
+        (ErrorCode::ErrSystemAccount, Some("is_active"))
+    );
+    assert!(accounts::get(&env.ctx, cash.id).unwrap().is_active);
+    assert_eq!(audit_total(&dir), audit_before);
+    // An ordinary account is still switched off and on.
+    let row = buyer(&env, &owner, "ناصر", "Nasir");
+    let audit_before = audit_total(&dir);
+    assert!(
+        !accounts::set_active(&env.ctx, &owner, row.id, false)
+            .unwrap()
+            .is_active
+    );
+    assert_eq!(audit_total(&dir), audit_before + 1);
+}
+
+#[test]
 fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
     let (_dir, env, owner) = ready();
     let rahim = seller(&env, &owner, "رحیم", "Rahim");
@@ -1358,4 +1429,251 @@ fn a_line_error_of_the_openings_preview_carries_its_values() {
         items[0].values.get("closed_up_to"),
         Some(&ErrorValue::Text("09-09-2026".into()))
     );
+}
+
+/// Rahim with the 15,000 opening advance of PRD 4.3 on 31-08-2026, and every day up to and
+/// including 09-10-2026 closed. Returns his row.
+fn rahim_on_a_closed_day(dir: &TempDir, env: &TestEnv, owner: &auth::Actor) -> AccountRow {
+    let mut form = input(AccountType::Seller, "", "رحیم", "Rahim");
+    form.opening_date = "31-08-2026".into();
+    form.opening_dr = "15,000".into();
+    form.opening_is_advance = true;
+    let rahim = save(env, owner, form);
+    raw(dir)
+        .execute(
+            "UPDATE day_state SET closed_up_to_date = '2026-10-09' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+    rahim
+}
+
+/// The form as it comes back from the screen: the stored opening, untouched.
+fn form_of(row: &AccountRow) -> AccountInput {
+    let mut form = input(AccountType::Seller, &row.code, "رحیم", "Rahim");
+    form.id = Some(row.id);
+    form.version = Some(row.version);
+    form.opening_date = "31-08-2026".into();
+    form.opening_dr = "15000".into();
+    form.opening_is_advance = true;
+    form
+}
+
+#[test]
+fn an_account_whose_opening_day_is_closed_can_still_be_edited() {
+    // End-gate review 1: phone, name and note do not touch the opening, so a closed opening day
+    // must not stop them, and no new entry is posted.
+    let (dir, env, owner) = ready();
+    let rahim = rahim_on_a_closed_day(&dir, &env, &owner);
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+    let lines = count(&dir, "SELECT COUNT(*) FROM journal_lines");
+
+    let mut edit = form_of(&rahim);
+    edit.phone1 = "0300-1234567".into();
+    edit.note = "نیا نوٹ".into();
+    let saved = save(&env, &owner, edit);
+    assert_eq!(saved.phone1, "03001234567");
+    assert_eq!(saved.version, rahim.version + 1);
+    assert_eq!(saved.opening_date.as_deref(), Some("2026-08-31"));
+    assert_eq!(saved.opening_dr_paisa, rupees(15_000));
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_lines"), lines);
+
+    // A real change of the opening is still refused on the closed day, with nothing written.
+    let mut change = form_of(&saved);
+    change.opening_dr = "16000".into();
+    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &change).unwrap_err());
+    assert_eq!(
+        (code, field.as_deref()),
+        (ErrorCode::ErrDateClosed, Some("opening_date"))
+    );
+
+    // Empty opening fields mean "clear the opening", which reverses the entry on its closed
+    // day: refused.
+    let mut clear = form_of(&saved);
+    clear.opening_date = String::new();
+    clear.opening_dr = String::new();
+    clear.opening_is_advance = false;
+    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &clear).unwrap_err());
+    assert_eq!(
+        (code, field.as_deref()),
+        (ErrorCode::ErrDateClosed, Some("opening_date"))
+    );
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+    assert_eq!(
+        accounts::get(&env.ctx, saved.id).unwrap().opening_dr_paisa,
+        rupees(15_000)
+    );
+    ledger::verify_journal_chain(&env.ctx).unwrap();
+}
+
+#[test]
+fn the_golden_cash_account_can_be_edited_after_its_opening_day_is_closed() {
+    // The PRD 4.3 setup: روکڑ has an opening on 31-08-2026 and the days are closed to 09-10-2026.
+    let (dir, env, owner) = ready();
+    let cash = account_id(&env, "01010001");
+    let capital = account_id(&env, "06010001");
+    accounts::openings_save(
+        &env.ctx,
+        &owner,
+        &OpeningsInput {
+            lines: vec![
+                line(&env, cash, "31-08-2026", "65000", "", false),
+                line(&env, capital, "31-08-2026", "", "65000", false),
+            ],
+        },
+    )
+    .unwrap();
+    raw(&dir)
+        .execute(
+            "UPDATE day_state SET closed_up_to_date = '2026-10-09' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+    let row = accounts::get(&env.ctx, cash).unwrap();
+    let mut edit = input(AccountType::Other, &row.code, &row.name_ur, &row.name_en);
+    edit.id = Some(row.id);
+    edit.version = Some(row.version);
+    edit.control_id = Some(row.control.id);
+    edit.opening_date = "31-08-2026".into();
+    edit.opening_dr = "65000".into();
+    edit.note = "روکڑ کا نوٹ".into();
+    let saved = save(&env, &owner, edit);
+    assert_eq!(saved.version, row.version + 1);
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+}
+
+#[test]
+fn the_openings_preview_and_save_give_the_same_errors_for_a_closed_old_day() {
+    // End-gate review 2: changing an opening reverses the old entry on its own day, so the
+    // PREVIEW must refuse a closed old day too, and every error must name its line.
+    let (dir, env, owner) = ready();
+    let rahim = rahim_on_a_closed_day(&dir, &env, &owner);
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+
+    // The new date is open, the old one (31-08) is closed.
+    let moved = OpeningsInput {
+        lines: vec![line(&env, rahim.id, "10-10-2026", "15000", "", true)],
+    };
+    let preview = accounts::openings_preview(&env.ctx, &moved).unwrap();
+    let preview_errors: Vec<(ErrorCode, String)> = preview.rows[0]
+        .errors
+        .iter()
+        .map(|e| (e.code, e.field.clone()))
+        .collect();
+    assert_eq!(
+        preview_errors,
+        [(ErrorCode::ErrDateClosed, "lines[0].opening_date".to_owned())]
+    );
+    let ServiceError::Rejected(items) =
+        accounts::openings_save(&env.ctx, &owner, &moved).unwrap_err()
+    else {
+        panic!("not a rejection")
+    };
+    let save_errors: Vec<(ErrorCode, String)> = items
+        .iter()
+        .map(|i| (i.code, i.field.clone().unwrap_or_default()))
+        .collect();
+    assert_eq!(save_errors, preview_errors);
+
+    // Clearing the opening is the same.
+    let clear = OpeningsInput {
+        lines: vec![line(&env, rahim.id, "", "", "", false)],
+    };
+    let preview = accounts::openings_preview(&env.ctx, &clear).unwrap();
+    assert_eq!(preview.rows[0].errors.len(), 1);
+    assert_eq!(preview.rows[0].errors[0].code, ErrorCode::ErrDateClosed);
+    assert_eq!(preview.rows[0].errors[0].field, "lines[0].opening_date");
+    assert!(accounts::openings_save(&env.ctx, &owner, &clear).is_err());
+
+    // A line that leaves the opening as it is has no error, whatever day it is on.
+    let same = OpeningsInput {
+        lines: vec![line(&env, rahim.id, "31-08-2026", "15000", "", true)],
+    };
+    let preview = accounts::openings_preview(&env.ctx, &same).unwrap();
+    assert!(preview.rows[0].errors.is_empty());
+    accounts::openings_save(&env.ctx, &owner, &same).unwrap();
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+}
+
+#[test]
+fn an_inactive_account_takes_no_new_opening_but_can_be_edited_and_cleared() {
+    // End-gate review 20, PRD FR-10.2 and FR-10.9: a new opening is a new posting, so it needs an
+    // active account; editing the other fields and taking the opening away do not.
+    let (dir, env, owner) = ready();
+    let mut form = input(AccountType::Seller, "", "رحیم", "Rahim");
+    form.opening_date = "31-08-2026".into();
+    form.opening_dr = "15,000".into();
+    form.opening_is_advance = true;
+    let rahim = save(&env, &owner, form);
+    accounts::set_active(&env.ctx, &owner, rahim.id, false).unwrap();
+    let rahim = accounts::get(&env.ctx, rahim.id).unwrap();
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+
+    // The form with the stored opening back unchanged: the phone can be edited.
+    let mut edit = form_of(&rahim);
+    edit.is_active = false;
+    edit.phone1 = "0300-1234567".into();
+    let saved = save(&env, &owner, edit);
+    assert_eq!(saved.phone1, "03001234567");
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+
+    // A new amount is refused on the amount field, in the form and in the grid, the same way.
+    let mut change = form_of(&saved);
+    change.is_active = false;
+    change.opening_dr = "16000".into();
+    let (code, field) = first_error(accounts::save(&env.ctx, &owner, &change).unwrap_err());
+    assert_eq!(
+        (code, field.as_deref()),
+        (ErrorCode::ErrAccountInactive, Some("opening_dr"))
+    );
+    let grid = OpeningsInput {
+        lines: vec![line(&env, saved.id, "31-08-2026", "16000", "", true)],
+    };
+    let preview = accounts::openings_preview(&env.ctx, &grid).unwrap();
+    let preview_errors: Vec<(ErrorCode, String)> = preview.rows[0]
+        .errors
+        .iter()
+        .map(|e| (e.code, e.field.clone()))
+        .collect();
+    assert_eq!(
+        preview_errors,
+        [(
+            ErrorCode::ErrAccountInactive,
+            "lines[0].opening_dr".to_owned()
+        )]
+    );
+    let ServiceError::Rejected(items) =
+        accounts::openings_save(&env.ctx, &owner, &grid).unwrap_err()
+    else {
+        panic!("not a rejection")
+    };
+    let save_errors: Vec<(ErrorCode, String)> = items
+        .iter()
+        .map(|i| (i.code, i.field.clone().unwrap_or_default()))
+        .collect();
+    assert_eq!(save_errors, preview_errors);
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+
+    // Taking the opening away only reverses the old entry, which is always allowed.
+    let clear = OpeningsInput {
+        lines: vec![line(&env, saved.id, "", "", "", false)],
+    };
+    assert!(
+        accounts::openings_preview(&env.ctx, &clear).unwrap().rows[0]
+            .errors
+            .is_empty()
+    );
+    accounts::openings_save(&env.ctx, &owner, &clear).unwrap();
+    assert_eq!(
+        count(&dir, "SELECT COUNT(*) FROM journal_entries"),
+        entries + 1,
+        "one reversal"
+    );
+    assert_eq!(
+        accounts::get(&env.ctx, saved.id).unwrap().opening_dr_paisa,
+        Paisa::ZERO
+    );
+    ledger::verify_journal_chain(&env.ctx).unwrap();
 }

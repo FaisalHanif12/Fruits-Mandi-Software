@@ -8,6 +8,7 @@
 mod firstrun;
 pub(crate) mod lockout;
 mod login;
+mod password;
 mod session;
 
 use mandi_domain::core::auth::Language;
@@ -15,8 +16,9 @@ use mandi_domain::core::auth::Language;
 use crate::secret::Secret;
 use crate::settings::Firm;
 
-pub use firstrun::{first_run, recover};
+pub use firstrun::{first_run, first_run_confirmed, recover};
 pub use login::{login, unlock};
+pub use password::change_password;
 pub use session::{lock, logout, require, status};
 
 /// The signed-in user who passed `require`. Services use his id for audit rows.
@@ -73,6 +75,17 @@ pub struct FirstRunRaw {
     pub password: Secret,
     /// The password again.
     pub password_repeat: Secret,
+}
+
+/// A change of password from the user menu, as typed.
+#[derive(Debug, Clone)]
+pub struct ChangePasswordRaw {
+    /// The password now.
+    pub current: Secret,
+    /// The new password, at least 6 characters.
+    pub new: Secret,
+    /// The new password again.
+    pub repeat: Secret,
 }
 
 /// A recovery request, as typed.

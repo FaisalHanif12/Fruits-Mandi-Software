@@ -9,6 +9,7 @@ use common::*;
 use mandi_services::auth;
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::translit::{Direction, Kind, Source};
+use mandi_services::settings::{self, Firm};
 use mandi_services::spelling::{self, NamePair};
 use mandi_services::testing::TestEnv;
 use mandi_services::{Rejection, ServiceError, translit};
@@ -288,4 +289,146 @@ fn hostile_names_never_break_the_check() {
         // Whatever the result, no panic.
         let _ = spelling::check(&env.ctx, &names(ur, en), &[]);
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The firm and mandi names (end-gate review 3, PRD FR-7.24, FR-7.66).
+// ---------------------------------------------------------------------------------------------
+
+fn firm_with(name_ur: &str, name_en: &str, mandi_ur: &str, mandi_en: &str) -> Firm {
+    Firm {
+        name_ur: name_ur.into(),
+        name_en: name_en.into(),
+        mandi_ur: mandi_ur.into(),
+        mandi_en: mandi_en.into(),
+        address: "Kot Radha Kishan".into(),
+        phone: "0300-1234567".into(),
+    }
+}
+
+fn learned_pairs(dir: &TempDir) -> Vec<(String, String, String)> {
+    let conn = raw(dir);
+    let mut statement = conn
+        .prepare("SELECT roman, urdu, kind FROM translit_pairs ORDER BY roman")
+        .unwrap();
+    statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+}
+
+#[test]
+fn a_firm_or_mandi_name_with_a_rules_only_word_is_refused_until_confirmed() {
+    let (dir, env, owner) = ready();
+    let before = settings::get(&env.ctx).unwrap().firm;
+    let audit_before = audit_total(&dir);
+    // Both names have a word only the rules could have made: all four fields come back at once.
+    let firm = firm_with("علی قزکس", "Ali Qzxwv", "قزکس منڈی", "Wvbnm Mandi");
+    let items = rejections(settings::set_firm(&env.ctx, &owner, &firm).unwrap_err());
+    let got: Vec<(&str, String)> = items
+        .iter()
+        .map(|i| (i.field.as_deref().unwrap_or(""), words_of(i)))
+        .collect();
+    assert_eq!(
+        got,
+        [
+            ("name_ur", "قزکس".to_owned()),
+            ("name_en", "Qzxwv".to_owned()),
+            ("mandi_ur", "قزکس".to_owned()),
+            ("mandi_en", "Wvbnm".to_owned()),
+        ]
+    );
+    assert!(
+        items
+            .iter()
+            .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed)
+    );
+    // Refused: the firm, the pairs and the audit log are as they were.
+    assert_eq!(settings::get(&env.ctx).unwrap().firm, before);
+    assert_eq!(pair_rows(&dir), 0);
+    assert_eq!(audit_total(&dir), audit_before);
+}
+
+#[test]
+fn confirming_saves_the_firm_and_learns_a_name_pair_and_a_place_pair() {
+    let (dir, env, owner) = ready();
+    let firm = firm_with("علی قزکس", "Ali Qzxwv", "قزکس منڈی", "Qzxwv Mandi");
+    let saved = settings::set_firm_confirmed(&env.ctx, &owner, &firm, &confirm(&["قزکس", "Qzxwv"]))
+        .unwrap();
+    assert_eq!(saved.name_en, "Ali Qzxwv");
+    assert_eq!(settings::get(&env.ctx).unwrap().firm, saved);
+    // The firm name teaches a person-like pair; the same pair from the mandi name is one use
+    // more, not a second row.
+    assert_eq!(
+        learned_pairs(&dir),
+        [("qzxwv".to_owned(), "قزکس".to_owned(), "name".to_owned())]
+    );
+    let uses: i64 = raw(&dir)
+        .query_row("SELECT use_count FROM translit_pairs", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(uses, 2);
+    assert_eq!(audit_count(&dir, "learn"), 2);
+    assert_chain_ok(&dir);
+    // Known now: the plain save works with nothing confirmed.
+    settings::set_firm(&env.ctx, &owner, &firm).unwrap();
+}
+
+#[test]
+fn a_mandi_word_is_learned_as_a_place() {
+    let (dir, env, owner) = ready();
+    let firm = firm_with(
+        "ماہر عدنان اینڈ برادرز",
+        "Maher Adnan and Brothers",
+        "قزکس منڈی",
+        "Qzxwv Mandi",
+    );
+    settings::set_firm_confirmed(&env.ctx, &owner, &firm, &confirm(&["قزکس", "Qzxwv"])).unwrap();
+    assert_eq!(
+        learned_pairs(&dir),
+        [("qzxwv".to_owned(), "قزکس".to_owned(), "place".to_owned())]
+    );
+}
+
+#[test]
+fn the_first_run_wizard_checks_the_spelling_of_the_firm_names_too() {
+    let (dir, env) = env();
+    let mut input = first_run_input();
+    input.firm = firm_with("علی قزکس", "Ali Qzxwv", "نئی سبزی منڈی", "New Sabzi Mandi");
+    // A bad user name and a rules-only word come back together.
+    input.owner_username = "no".into();
+    let items = rejections(auth::first_run(&env.ctx, &input).unwrap_err());
+    let got: Vec<(&str, ErrorCode)> = items
+        .iter()
+        .map(|i| (i.field.as_deref().unwrap_or(""), i.code))
+        .collect();
+    assert!(got.contains(&("owner_username", ErrorCode::ErrUsernameInvalid)));
+    assert!(got.contains(&("firm_name_ur", ErrorCode::ErrSpellingUnconfirmed)));
+    assert!(got.contains(&("firm_name_en", ErrorCode::ErrSpellingUnconfirmed)));
+    input.owner_username = "Owner".into();
+
+    // Nothing is made: no user, no pair, no audit row.
+    let refused = rejections(auth::first_run(&env.ctx, &input).unwrap_err());
+    assert_eq!(refused.len(), 2);
+    assert!(auth::status(&env.ctx).unwrap().first_run);
+    assert_eq!(pair_rows(&dir), 0);
+    assert_eq!(audit_total(&dir), 0);
+
+    // Confirmed: the wizard goes through and the pair is learned, by the Owner just made.
+    let code = auth::first_run_confirmed(&env.ctx, &input, &confirm(&["قزکس", "Qzxwv"])).unwrap();
+    assert_eq!(code.len(), 19);
+    assert!(!auth::status(&env.ctx).unwrap().first_run);
+    assert_eq!(
+        learned_pairs(&dir),
+        [("qzxwv".to_owned(), "قزکس".to_owned(), "name".to_owned())]
+    );
+    let by: Option<i64> = raw(&dir)
+        .query_row(
+            "SELECT user_id FROM audit_log WHERE action = 'learn'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(by, Some(1));
+    assert_chain_ok(&dir);
 }

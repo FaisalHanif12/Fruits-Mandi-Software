@@ -146,25 +146,32 @@ impl AppState {
                     state: StatusName::Ok,
                     reference: None,
                 },
+                // The check thread sets `Failed` a moment before it notes the reference. Asking
+                // here makes the reference at once if it is not there yet, so `failed` never
+                // goes out without a number that is also in the log (NFR-REL-6, NFR-OBS-3).
                 DataState::Failed => DataStatus {
                     state: StatusName::Failed,
-                    reference: self
-                        .check_failure
-                        .lock()
-                        .unwrap_or_else(PoisonError::into_inner)
-                        .clone(),
+                    reference: Some(failure_reference(ctx.db(), &self.check_failure)),
                 },
             },
         }
     }
 }
 
-/// Runs the check. On failure it makes the reference number (and the log line) first, and
-/// only then is the failure visible, so the screen never shows `failed` without a number.
+/// The reference number of the failed check. The first caller makes it (and writes the log
+/// line); every later caller gets the same one.
+fn failure_reference(db: &Db, slot: &Mutex<Option<String>>) -> String {
+    let mut held = slot.lock().unwrap_or_else(PoisonError::into_inner);
+    held.get_or_insert_with(|| {
+        let detail = db.failure_detail().unwrap_or_default();
+        UiError::from(DbError::DataCheckFailed(detail)).reference
+    })
+    .clone()
+}
+
+/// Runs the check. On failure it makes the reference number (and the log line) right away.
 fn check_and_note(db: &Db, slot: &Mutex<Option<String>>) {
     if db.run_quick_check() == DataState::Failed {
-        let detail = db.failure_detail().unwrap_or_default();
-        let error = UiError::from(DbError::DataCheckFailed(detail));
-        *slot.lock().unwrap_or_else(PoisonError::into_inner) = Some(error.reference);
+        failure_reference(db, slot);
     }
 }

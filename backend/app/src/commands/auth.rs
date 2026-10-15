@@ -83,6 +83,11 @@ pub struct FirstRunInput {
     pub password: String,
     /// The password again.
     pub password_repeat: String,
+    /// Words of the firm and mandi names that only the spelling rules made and that the Owner
+    /// confirmed in the spelling check (PRD FR-7.66). A word left out here is refused with
+    /// `ERR_SPELLING_UNCONFIRMED`. Missing means none confirmed.
+    #[serde(default)]
+    pub confirmed_rules_words: Vec<String>,
 }
 
 impl fmt::Debug for FirstRunInput {
@@ -167,6 +172,27 @@ impl fmt::Debug for RecoverInput {
     }
 }
 
+/// A change of password from the user menu (PRD FR-5.6). Same lockout counter as sign-in.
+#[derive(Clone, Deserialize, TS)]
+pub struct ChangePasswordInput {
+    /// The password now.
+    pub current: String,
+    /// The new password, at least 6 characters.
+    pub new: String,
+    /// The new password again.
+    pub repeat: String,
+}
+
+impl fmt::Debug for ChangePasswordInput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChangePasswordInput")
+            .field("current", &Hidden)
+            .field("new", &Hidden)
+            .field("repeat", &Hidden)
+            .finish()
+    }
+}
+
 /// A used recovery code is spent. This is the new one, to print.
 #[derive(Clone, PartialEq, Eq, Serialize, TS)]
 pub struct RecoverDone {
@@ -224,6 +250,16 @@ impl From<FirstRunInput> for auth::FirstRunRaw {
     }
 }
 
+impl From<ChangePasswordInput> for auth::ChangePasswordRaw {
+    fn from(input: ChangePasswordInput) -> Self {
+        Self {
+            current: Secret::new(input.current),
+            new: Secret::new(input.new),
+            repeat: Secret::new(input.repeat),
+        }
+    }
+}
+
 impl From<RecoverInput> for auth::RecoverRaw {
     fn from(input: RecoverInput) -> Self {
         Self {
@@ -262,14 +298,18 @@ pub async fn auth_status<R: tauri::Runtime>(
 /// on `firm_name_ur`, `firm_name_en`, `mandi_ur`, `mandi_en`; `ERR_TEXT_TOO_LONG` (`address`);
 /// `ERR_PHONE_INVALID` (`phone`); `ERR_USERNAME_INVALID` (`owner_username`);
 /// `ERR_REQUIRED` (`owner_display_name`); `ERR_PASSWORD_TOO_SHORT` (`password`);
-/// `ERR_PASSWORDS_DIFFER` (`password_repeat`).
+/// `ERR_PASSWORDS_DIFFER` (`password_repeat`); `ERR_SPELLING_UNCONFIRMED` (value `words`) on
+/// `firm_name_ur`, `firm_name_en`, `mandi_ur` or `mandi_en` for a word the spelling rules made
+/// that is not in `confirmed_rules_words` (PRD FR-7.66).
 #[tauri::command]
 pub async fn setup_first_run<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: FirstRunInput,
 ) -> Result<FirstRunDone, UiError> {
     run(app, "setup_first_run", move |ctx| {
-        let recovery_code = auth::first_run(ctx, &auth::FirstRunRaw::from(input))?;
+        let confirmed = input.confirmed_rules_words.clone();
+        let recovery_code =
+            auth::first_run_confirmed(ctx, &auth::FirstRunRaw::from(input), &confirmed)?;
         Ok(FirstRunDone { recovery_code })
     })
     .await
@@ -323,6 +363,23 @@ pub async fn auth_recover<R: tauri::Runtime>(
     run(app, "auth_recover", move |ctx| {
         let new_recovery_code = auth::recover(ctx, &auth::RecoverRaw::from(input))?;
         Ok(RecoverDone { new_recovery_code })
+    })
+    .await
+}
+
+/// Changes the Owner's password (PRD FR-5.6). The Owner types the current password, the new one
+/// and the new one again. Errors: `ERR_REQUIRED` (`current`); `ERR_PASSWORD_TOO_SHORT` (`new`,
+/// min 6); `ERR_PASSWORDS_DIFFER` (`repeat`); `ERR_WRONG_PASSWORD` (`current`, value
+/// `tries_left`; a wrong current password counts towards the lockout of sign-in);
+/// `ERR_LOCKED_WAIT` (value `seconds`).
+#[tauri::command]
+pub async fn auth_change_password<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ChangePasswordInput,
+) -> Result<(), UiError> {
+    run(app, "auth_change_password", move |ctx| {
+        let actor = auth::require(ctx)?;
+        auth::change_password(ctx, &actor, &auth::ChangePasswordRaw::from(input))
     })
     .await
 }

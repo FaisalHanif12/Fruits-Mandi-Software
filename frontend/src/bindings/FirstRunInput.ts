@@ -44,4 +44,10 @@ export type FirstRunInput = {
    * The password again.
    */
   password_repeat: string;
+  /**
+   * Words of the firm and mandi names that only the spelling rules made and that the Owner
+   * confirmed in the spelling check (PRD FR-7.66). A word left out here is refused with
+   * `ERR_SPELLING_UNCONFIRMED`. Missing means none confirmed.
+   */
+  confirmed_rules_words: Array<string>;
 };

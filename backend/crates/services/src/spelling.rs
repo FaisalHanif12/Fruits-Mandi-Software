@@ -160,6 +160,32 @@ pub fn check(
     Ok(SpellingCheck { to_learn })
 }
 
+/// Checks several name pairs of one record together, so every refused field comes back in one
+/// answer (PRD FR-7.66). The checks are in the order of `pairs`.
+///
+/// # Errors
+/// `ERR_SPELLING_UNCONFIRMED` on every field with an open word, from all the pairs.
+pub fn check_all(
+    ctx: &Context,
+    pairs: &[NamePair<'_>],
+    confirmed_rules_words: &[String],
+) -> Result<Vec<SpellingCheck>, ServiceError> {
+    let mut checks = Vec::new();
+    let mut refused: Vec<Rejection> = Vec::new();
+    for pair in pairs {
+        match check(ctx, pair, confirmed_rules_words) {
+            Ok(found) => checks.push(found),
+            Err(ServiceError::Rejected(items)) => refused.extend(items),
+            Err(other) => return Err(other),
+        }
+    }
+    if refused.is_empty() {
+        Ok(checks)
+    } else {
+        Err(ServiceError::Rejected(refused))
+    }
+}
+
 impl SpellingCheck {
     /// True if confirming these names teaches nothing.
     pub fn is_empty(&self) -> bool {

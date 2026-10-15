@@ -105,6 +105,23 @@ pub fn control_by_id(conn: &Connection, id: i64) -> rusqlite::Result<Option<Cont
     .optional()
 }
 
+/// Which of these accounts are inactive, hidden from pickers (PRD FR-10.2), in id order. One
+/// query for the whole list; the `?` marks are only as many as there are ids.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn inactive_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i64>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let marks = vec!["?"; ids.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT id FROM accounts WHERE is_active = 0 AND id IN ({marks}) ORDER BY id"
+    ))?;
+    let rows = statement.query_map(rusqlite::params_from_iter(ids), |r| r.get(0))?;
+    rows.collect()
+}
+
 /// The facts a rule needs about one account.
 ///
 /// # Errors

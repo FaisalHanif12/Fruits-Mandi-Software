@@ -733,7 +733,6 @@ pub fn percent_text(bps: Bps) -> String {
 
 use crate::dates::BusinessDate;
 use crate::error::{ErrorCode, FieldError};
-use crate::money::parse_bps;
 use crate::validate::{self, FieldErrors};
 
 /// The value of a rule from its text, for the method (Code Standards 4.2): a percent is 0 to 100
@@ -760,9 +759,8 @@ pub fn rule_value(
     text: &str,
 ) -> Result<ChargeValue, FieldError> {
     match method {
-        ChargeMethod::Percent => parse_bps(text)
-            .map(ChargeValue::Percent)
-            .map_err(|c| FieldError::new(c, field)),
+        // `validate::percent` adds the `max` value the message needs (finding 13).
+        ChargeMethod::Percent => validate::percent(field, text).map(ChargeValue::Percent),
         ChargeMethod::PerUnit => validate::money(field, text).map(ChargeValue::PerUnit),
         ChargeMethod::PerLot => validate::money(field, text).map(ChargeValue::PerLot),
     }

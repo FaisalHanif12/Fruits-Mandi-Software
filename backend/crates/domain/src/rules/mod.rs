@@ -117,6 +117,41 @@ struct Shelf {
     default: Vec<usize>,
 }
 
+impl Shelf {
+    /// Files the rule at `index` under what it matches on. Returns false, and files nothing, for
+    /// a rule with no level (an item group together with a party or an item).
+    fn file(&mut self, rule: &Rule, index: usize) -> bool {
+        match (rule.account_id, rule.item_id, rule.item_group) {
+            (Some(party), Some(item), None) => self
+                .party_item
+                .entry((party, item))
+                .or_default()
+                .push(index),
+            (Some(party), None, None) => self.party.entry(party).or_default().push(index),
+            (None, Some(item), None) => self.item.entry(item).or_default().push(index),
+            (None, None, Some(group)) => self.group.entry(group).or_default().push(index),
+            (None, None, None) => self.default.push(index),
+            _ => return false,
+        }
+        true
+    }
+
+    /// The rules filed at one level that could match the query. A value typed on the line is
+    /// never filed, so that level has none.
+    fn candidates(&self, level: RuleLevel, query: &Query) -> Option<&Vec<usize>> {
+        match level {
+            RuleLevel::PartyItem => query
+                .party_id
+                .and_then(|party| self.party_item.get(&(party, query.item_id))),
+            RuleLevel::Party => query.party_id.and_then(|party| self.party.get(&party)),
+            RuleLevel::Item => self.item.get(&query.item_id),
+            RuleLevel::ItemGroup => query.item_group.and_then(|g| self.group.get(&g)),
+            RuleLevel::Default => Some(&self.default),
+            RuleLevel::LineOverride => None,
+        }
+    }
+}
+
 /// All active rules, ready for [`resolve`]. Built once and used for many lookups.
 #[derive(Debug, Default, Clone)]
 pub struct RuleSet {
@@ -134,21 +169,11 @@ impl RuleSet {
             .collect();
         let mut shelves: HashMap<(ChargeSide, ChargeType), Shelf> = HashMap::new();
         for (index, rule) in rules.iter().enumerate() {
-            let shelf = shelves.entry((rule.side, rule.charge)).or_default();
-            match (rule.account_id, rule.item_id, rule.item_group) {
-                (Some(party), Some(item), None) => {
-                    shelf
-                        .party_item
-                        .entry((party, item))
-                        .or_default()
-                        .push(index);
-                }
-                (Some(party), None, None) => shelf.party.entry(party).or_default().push(index),
-                (None, Some(item), None) => shelf.item.entry(item).or_default().push(index),
-                (None, None, Some(group)) => shelf.group.entry(group).or_default().push(index),
-                (None, None, None) => shelf.default.push(index),
-                _ => {}
-            }
+            // A rule with no level was filtered out above, so `file` always takes it here.
+            shelves
+                .entry((rule.side, rule.charge))
+                .or_default()
+                .file(rule, index);
         }
         RuleSet { rules, shelves }
     }
@@ -276,16 +301,7 @@ pub fn resolve(set: &RuleSet, query: &Query) -> Resolution {
                     manual: true,
                 }),
             _ => shelf.and_then(|shelf| {
-                let candidates = match level {
-                    RuleLevel::PartyItem => query
-                        .party_id
-                        .and_then(|party| shelf.party_item.get(&(party, query.item_id))),
-                    RuleLevel::Party => query.party_id.and_then(|party| shelf.party.get(&party)),
-                    RuleLevel::Item => shelf.item.get(&query.item_id),
-                    RuleLevel::ItemGroup => query.item_group.and_then(|g| shelf.group.get(&g)),
-                    RuleLevel::Default => Some(&shelf.default),
-                    RuleLevel::LineOverride => None,
-                };
+                let candidates = shelf.candidates(level, query);
                 set.newest(candidates, query.date).map(|rule| Winner {
                     level,
                     rule_id: Some(rule.id),

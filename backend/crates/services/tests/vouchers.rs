@@ -980,7 +980,8 @@ fn the_voucher_list_filters_by_kind_and_date() {
 
 #[test]
 fn saving_a_voucher_is_fast() {
-    // NFR-SPD-9: under 150 ms on the reference computer. A generous bound in a debug build.
+    // NFR-SPD-9: under 150 ms. Measured about 2 ms in a debug build, so the real target is the
+    // bound here and a slower machine has a wide margin.
     let f = fixture();
     let started = Instant::now();
     for _ in 0..20 {
@@ -988,7 +989,7 @@ fn saving_a_voucher_is_fast() {
     }
     let each = started.elapsed() / 20;
     eprintln!("a voucher saved in {each:?} (debug build)");
-    assert!(each.as_millis() < 300, "{each:?}");
+    assert!(each.as_millis() < 150, "{each:?}");
 }
 
 #[test]

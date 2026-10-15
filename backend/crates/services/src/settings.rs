@@ -9,6 +9,7 @@ use mandi_domain::auth::validate as rules;
 use mandi_domain::core::auth::{Language, PrefKey};
 use mandi_domain::core::error::FieldError;
 use mandi_domain::core::money::Grouping;
+use mandi_domain::core::translit::Kind;
 use mandi_domain::core::validate::{self, FieldErrors};
 use serde_json::{Value, json};
 
@@ -16,6 +17,7 @@ use crate::audit::Event;
 use crate::auth::Actor;
 use crate::context::Context;
 use crate::error::ServiceError;
+use crate::spelling::{self, NamePair, SpellingCheck};
 use crate::store;
 
 /// Setting keys in the `settings` table.
@@ -205,13 +207,67 @@ pub fn get(ctx: &Context) -> Result<Settings, ServiceError> {
     })
 }
 
-/// Saves the firm details (Owner). Both scripts of every name are checked.
+/// Checks the spelling of the firm name and the mandi name (PRD FR-7.24, FR-7.66). A word that
+/// only the spelling rules could have made is refused until the screen sends it in
+/// `confirmed_rules_words`. Both names are checked together, so every open word comes back in
+/// one answer. The firm is a person-like name, the mandi a place.
 ///
 /// # Errors
-/// The field errors on `name_ur`, `name_en`, `mandi_ur`, `mandi_en`, `address`, `phone`.
+/// `ERR_SPELLING_UNCONFIRMED` on the fields in `fields`, with `values.words`.
+pub(crate) fn spelling_checks(
+    ctx: &Context,
+    firm: &Firm,
+    fields: &FirmFields,
+    confirmed_rules_words: &[String],
+) -> Result<Vec<SpellingCheck>, ServiceError> {
+    spelling::check_all(
+        ctx,
+        &[
+            NamePair {
+                field_ur: fields.name_ur,
+                name_ur: &firm.name_ur,
+                field_en: fields.name_en,
+                name_en: &firm.name_en,
+                kind: Kind::Name,
+            },
+            NamePair {
+                field_ur: fields.mandi_ur,
+                name_ur: &firm.mandi_ur,
+                field_en: fields.mandi_en,
+                name_en: &firm.mandi_en,
+                kind: Kind::Place,
+            },
+        ],
+        confirmed_rules_words,
+    )
+}
+
+/// Saves the firm details (Owner) with no spelling confirmed: both scripts of every name are
+/// checked, and a name with a rules-only word is refused. See [`set_firm_confirmed`].
+///
+/// # Errors
+/// The field errors on `name_ur`, `name_en`, `mandi_ur`, `mandi_en`, `address`, `phone`;
+/// `ERR_SPELLING_UNCONFIRMED` on a name field.
 pub fn set_firm(ctx: &Context, actor: &Actor, input: &Firm) -> Result<Firm, ServiceError> {
+    set_firm_confirmed(ctx, actor, input, &[])
+}
+
+/// Saves the firm details (Owner). Both scripts of every name are checked, and so is the
+/// spelling (PRD FR-7.66): the words in `confirmed_rules_words` are accepted and learned as
+/// pairs inside the same transaction (PRD FR-7.26).
+///
+/// # Errors
+/// The field errors on `name_ur`, `name_en`, `mandi_ur`, `mandi_en`, `address`, `phone`;
+/// `ERR_SPELLING_UNCONFIRMED` (value `words`) on a name field that has an open word.
+pub fn set_firm_confirmed(
+    ctx: &Context,
+    actor: &Actor,
+    input: &Firm,
+    confirmed_rules_words: &[String],
+) -> Result<Firm, ServiceError> {
     let firm = input.validated(&FirmFields::SETTINGS)?;
-    ctx.db.write(|tx| {
+    let checks = spelling_checks(ctx, &firm, &FirmFields::SETTINGS, confirmed_rules_words)?;
+    let (saved, learned) = ctx.db.write(|tx| {
         let old = load_firm(tx)?;
         store::set_setting(tx, KEY_FIRM, &firm.to_json(), Some(actor.user_id))?;
         ctx.db.auditor().write(
@@ -221,8 +277,16 @@ pub fn set_firm(ctx: &Context, actor: &Actor, input: &Firm) -> Result<Firm, Serv
                 .new_value(json!({ "firm": firm.to_json() }))
                 .into_entry(),
         )?;
-        Ok(firm.clone())
-    })
+        let mut learned = Vec::new();
+        for check in &checks {
+            learned.push(check.learn(ctx, actor, tx)?);
+        }
+        Ok::<_, ServiceError>((firm.clone(), learned))
+    })?;
+    for learned in learned {
+        learned.after_commit(ctx);
+    }
+    Ok(saved)
 }
 
 /// Saves the idle lock minutes (Owner), typed as text: 1 to 120.
@@ -301,8 +365,21 @@ pub fn set_pref(
     ctx.db.write(|tx| {
         store::set_pref(tx, actor.user_id, key.as_str(), &value)?;
         if key == PrefKey::Language {
+            // The sign-in language is a setting of this computer, so a change of it is audited
+            // in the same transaction (Code Standards S7). A choice that changes nothing writes
+            // no row.
+            let old = load_login_language(tx)?;
             store::set_setting(tx, KEY_LOGIN_LANGUAGE, &value, Some(actor.user_id))?;
+            if value.as_str() != Some(old.as_str()) {
+                ctx.db.auditor().write(
+                    tx,
+                    &Event::new(Some(actor.user_id), "edit", "settings")
+                        .old(json!({ "login_language": old.as_str() }))
+                        .new_value(json!({ "login_language": value }))
+                        .into_entry(),
+                )?;
+            }
         }
-        Ok(())
+        Ok::<(), ServiceError>(())
     })
 }

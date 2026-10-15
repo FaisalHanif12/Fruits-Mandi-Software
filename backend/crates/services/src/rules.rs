@@ -17,7 +17,7 @@ use mandi_db::rules::{self as repo, NewRule};
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{BUYER_CONTROL, SELLER_CONTROL};
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
-use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
+use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::{Paisa, Qty, line_value};
 use mandi_domain::core::rules::{
     ChargeSide, ChargeTest, ChargeType, ChargeValue, ChargesInput, ChargesSettings,
@@ -409,9 +409,8 @@ pub fn test(ctx: &Context, input: &RuleTestInput) -> Result<RuleTest, ServiceErr
     let (_, today) = day::window(ctx)?;
     let mut errors = validate::FieldErrors::default();
     let date = errors.take(validate::date("date", &input.date, today));
-    let qty: Option<Qty> = errors.take(
-        mandi_domain::core::money::parse_sum_qty(&input.qty).map_err(|c| FieldError::new(c, "qty")),
-    );
+    // `validate::qty` adds the `max` value the message needs (finding 13).
+    let qty: Option<Qty> = errors.take(validate::qty("qty", &input.qty));
     let rate = errors.take(validate::rate("rate", &input.rate));
     errors.finish()?;
     let (Some(date), Some(qty), Some(rate)) = (date, qty, rate) else {

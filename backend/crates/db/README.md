@@ -10,6 +10,7 @@ SQLite: the connection, numbered migrations, the transaction wrapper, the seed a
 | Part | What it does |
 |---|---|
 | `migrations/0001_init.sql` | Every table of Architecture 15 (37), STRICT, with `CHECK (x_paisa % 100 = 0)` on every money column, every index of 15.8, and the triggers of B16 and B17. |
+| `migrations/0002_balance_indexes.sql` | Indexes only, no table and no stored total (PRD FR-6.1): a covering index `(account_id, entry_id, dr_paisa, cr_paisa)` so a balance is summed from the index alone, a partial index on the unposted entries (empty outside a posting), and a partial index on the lines flagged as an advance. The two indexes of Architecture 15.8 stay. A balance leaves out the few unposted entries instead of looking up the entry of every line; `tests/balance_queries.rs` keeps the old join as the reference and checks the same numbers and the query plans. A balance for a day on a small account (up to `PER_LINE_UP_TO_LINES` lines) still looks at the entry of each line, because leaving out the entries after an early day would list every entry of the journal; `ledger::day_method` picks the way and both give the same answer. |
 | `Db` (`db.rs`) | One write connection, one read connection. WAL, `foreign_keys = ON`, `synchronous = FULL`, `recursive_triggers = ON`, busy timeout. |
 | `Db::write(\|tx\| ...)` | One user action = one call = one `IMMEDIATE` transaction. Checks the start-up state and 50 MB of free disk first. Commits only if the closure returns `Ok`. |
 | `Db::read(\|conn\| ...)` | Reads on the second connection. |

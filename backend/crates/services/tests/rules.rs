@@ -1471,6 +1471,106 @@ fn rule_changes_are_audited_and_the_test_checks_its_input() {
     assert_eq!(sum.line_value_paisa, rupees(12_000));
 }
 
+/// The first rejection of an error: (code, field, the `max` value).
+fn first_with_max(error: ServiceError) -> (ErrorCode, String, Option<ErrorValue>) {
+    match error {
+        ServiceError::Rejected(items) => (
+            items[0].code,
+            items[0].field.clone().unwrap_or_default(),
+            items[0].values.get("max").cloned(),
+        ),
+        other => panic!("not a rejection: {other:?}"),
+    }
+}
+
+#[test]
+fn the_decimal_and_quantity_errors_of_the_rule_screens_carry_their_maximum() {
+    // End-gate review 13: the messages say "at most { $max } digits" and "the most is { $max }",
+    // so every screen that takes a percent or a quantity must send `max` (the rule form, the
+    // three defaults of Settings, and the "test a rule" box).
+    let f = fixture();
+    let two = ErrorValue::Number(2);
+    let (code, field, max) = first_with_max(
+        rules::save(
+            &f.env.ctx,
+            &f.owner,
+            &form(
+                ChargeSide::Seller,
+                ChargeType::Commission,
+                ChargeMethod::Percent,
+                "2.555",
+            ),
+        )
+        .unwrap_err(),
+    );
+    assert_eq!(
+        (code, field.as_str(), max),
+        (ErrorCode::ErrTooManyDecimals, "value", Some(two.clone()))
+    );
+
+    let before = rules::charges(&f.env.ctx).unwrap();
+    let bad = ChargesInput {
+        seller_commission: DefaultChargeInput {
+            version: before.seller_commission.version,
+            method: ChargeMethod::Percent,
+            value: "6.125".into(),
+        },
+        buyer_commission: DefaultChargeInput {
+            version: before.buyer_commission.version,
+            method: before.buyer_commission.method,
+            value: before.buyer_commission.value_text.clone(),
+        },
+        laga_fruit: DefaultChargeInput {
+            version: before.laga_fruit.version,
+            method: before.laga_fruit.method,
+            value: before.laga_fruit.value_text.clone(),
+        },
+    };
+    let (code, field, max) =
+        first_with_max(rules::set_charges(&f.env.ctx, &f.owner, &bad).unwrap_err());
+    assert_eq!(
+        (code, field.as_str(), max),
+        (
+            ErrorCode::ErrTooManyDecimals,
+            "seller_commission.value",
+            Some(two)
+        )
+    );
+
+    let ask = |qty: &str| {
+        rules::test(
+            &f.env.ctx,
+            &RuleTestInput {
+                seller_id: f.rahim,
+                buyer_id: f.akram,
+                item_id: f.banana,
+                date: "10-10-2026".into(),
+                qty: qty.into(),
+                rate: "600".into(),
+            },
+        )
+        .unwrap_err()
+    };
+    let (code, field, max) = first_with_max(ask("1000001"));
+    assert_eq!(
+        (code, field.as_str(), max),
+        (
+            ErrorCode::ErrQtyTooLarge,
+            "qty",
+            Some(ErrorValue::Number(1_000_000))
+        )
+    );
+    // The same limit holds for a sum that goes over it.
+    let (code, _, max) = first_with_max(ask("999999+2"));
+    assert_eq!(
+        (code, max),
+        (
+            ErrorCode::ErrQtyTooLarge,
+            Some(ErrorValue::Number(1_000_000))
+        )
+    );
+}
+
 #[test]
 fn ten_thousand_rules_are_filed_and_looked_up_fast() {
     // NFR-SCL-6: under 1 ms for a lookup with 10,000 rules. A generous bound for a debug build;

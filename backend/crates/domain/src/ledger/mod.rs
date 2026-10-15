@@ -729,4 +729,98 @@ mod tests {
         let over = Paisa::try_from_paisa(MAX_LINE_PAISA + 100).unwrap();
         assert_eq!(pair(over), Err(LedgerError::TooLarge));
     }
+
+    /// An entry whose lines are each within the limit but whose total is not is refused too (the
+    /// total is what `journal_entries.total_paisa` holds).
+    #[test]
+    fn the_total_of_an_entry_has_a_limit_too() {
+        let big = Paisa::try_from_paisa(MAX_LINE_PAISA / 4 * 3).unwrap();
+        let too_big = build_entry(vec![
+            LedgerLine::new(id(1), Side::Dr, big),
+            LedgerLine::new(id(2), Side::Dr, big),
+            LedgerLine::new(id(3), Side::Cr, big),
+            LedgerLine::new(id(4), Side::Cr, big),
+        ]);
+        assert_eq!(too_big, Err(LedgerError::TooLarge));
+        // Right at the limit in total is fine: two halves of it.
+        let half = Paisa::try_from_paisa(MAX_LINE_PAISA / 2).unwrap();
+        let top = build_entry(vec![
+            LedgerLine::new(id(1), Side::Dr, half),
+            LedgerLine::new(id(2), Side::Dr, half),
+            LedgerLine::new(id(3), Side::Cr, half),
+            LedgerLine::new(id(4), Side::Cr, half),
+        ])
+        .unwrap();
+        assert_eq!(top.total().as_paisa(), MAX_LINE_PAISA);
+    }
+
+    /// The stored form of every posting type and source type reads back to itself, and a word
+    /// that is not stored reads as nothing (`journal_entries.posting_type`, `source_type`).
+    #[test]
+    fn the_stored_words_of_posting_and_source_types_round_trip() {
+        let postings = [
+            (PostingType::BikriFirst, "bikri_first"),
+            (PostingType::BikriLater, "bikri_later"),
+            (PostingType::Reversal, "reversal"),
+            (PostingType::Receipt, "receipt"),
+            (PostingType::Payment, "payment"),
+            (PostingType::Advance, "advance"),
+            (PostingType::ShopExpense, "shop_expense"),
+            (PostingType::PersonalExpense, "personal_expense"),
+            (PostingType::PersonalReturn, "personal_return"),
+            (PostingType::MoneyLent, "money_lent"),
+            (PostingType::MoneyLentReturn, "money_lent_return"),
+            (PostingType::General, "general"),
+            (PostingType::Opening, "opening"),
+            (PostingType::MonthClose, "month_close"),
+        ];
+        for (kind, word) in postings {
+            assert_eq!(kind.as_str(), word);
+            assert_eq!(PostingType::parse(word), Some(kind));
+        }
+        assert_eq!(PostingType::parse("Receipt"), None);
+        assert_eq!(PostingType::parse(""), None);
+        let sources = [
+            (SourceType::Bikri, "bikri"),
+            (SourceType::Voucher, "voucher"),
+            (SourceType::Account, "account"),
+            (SourceType::MonthClose, "month_close"),
+        ];
+        for (kind, word) in sources {
+            assert_eq!(kind.as_str(), word);
+            assert_eq!(SourceType::parse(word), Some(kind));
+        }
+        assert_eq!(SourceType::parse("sale"), None);
+    }
+
+    /// A note and the advance mark are carried on the line, and a money overflow becomes the
+    /// ledger's own overflow error.
+    #[test]
+    fn a_line_can_carry_a_note_and_an_advance_mark_and_an_overflow_has_its_own_error() {
+        let line = LedgerLine::new(id(1), Side::Dr, p(15_000))
+            .as_advance()
+            .with_narration("opening advance");
+        assert!(line.is_advance);
+        assert_eq!(line.narration.as_deref(), Some("opening advance"));
+        let credit = LedgerLine::new(id(2), Side::Cr, p(15_000));
+        let entry = build_entry(vec![line, credit]).unwrap();
+        assert_eq!(
+            entry.lines()[0].narration.as_deref(),
+            Some("opening advance")
+        );
+        assert_eq!(
+            LedgerError::from(MoneyError::Overflow),
+            LedgerError::Overflow
+        );
+        // Each line is held to the limit before any sum is made, so a huge line is `TooLarge`;
+        // `Overflow` comes only from the checked additions of `MoneyError`.
+        let huge = Paisa::try_from_paisa(i64::MAX - i64::MAX % 100).unwrap();
+        assert_eq!(
+            build_entry(vec![
+                LedgerLine::new(id(1), Side::Dr, huge),
+                LedgerLine::new(id(2), Side::Cr, huge),
+            ]),
+            Err(LedgerError::TooLarge)
+        );
+    }
 }
