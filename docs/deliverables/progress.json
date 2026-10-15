@@ -12,7 +12,7 @@
     "02-core": "passed",
     "03-database": "passed",
     "04-shell-and-login": "passed",
-    "05-names-two-scripts": "reviewing",
+    "05-names-two-scripts": "passed",
     "06-masters-and-search": "passed",
     "07-journal-and-accounts": "passed",
     "08-party-card-and-short-codes": "passed",
@@ -45,5 +45,8 @@
     "D2-A15",
     "D2-A17"
   ],
-  "reports": []
+  "reports": [
+    "D1",
+    "D2"
+  ]
 }
