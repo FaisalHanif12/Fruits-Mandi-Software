@@ -1,6 +1,6 @@
 # Deliverables: how the whole build runs
 
-Version 1.3, 15-10-2026 (PRD v1.4: one خرچہ screen, one voucher screen; v1.3: own goods, partner capital, print any day and party; v1.1: one review gate per goal run). Owner: Umar. Kept by `tech-lead`.
+Version 1.4, 15-10-2026 (Mac phase: no CI/CD and no Windows installer until a Windows computer is ready, Section 10; PRD v1.4: one خرچہ screen, one voucher screen; v1.3: own goods, partner capital, print any day and party; v1.1: one review gate per goal run). Owner: Umar. Kept by `tech-lead`.
 
 The whole Mandi Software is built in **five deliverables**. Each one is a file in this folder. You start one deliverable with one `/goal` line. The lead runs the agent team until that deliverable is finished and proven, then stops and reports.
 
@@ -15,6 +15,8 @@ The whole Mandi Software is built in **five deliverables**. Each one is a file i
 Why five: each deliverable ends with something the client could use or see, and each one needs the one before it. D3 cannot save a بکری without the accounts, rules and opening position from D2, and D2 cannot store anything without the database from D1.
 
 These files live in `docs/deliverables/`. Their order replaces the MVP build order list in CLAUDE.md, which now points here.
+
+**Mac phase now.** D3, D4 and D5 are built and tested on the Mac. GitHub CI/CD, pull requests, releases and the Windows installer wait for the Windows phase. Section 10 says what that changes. Where it disagrees with Sections 1 and 4 to 7, Section 10 wins.
 
 **Scope.** PRD Section 26 "Must" and "Should" items are both in scope. "Could" (Phase 2) and "Won't" are not. Every Must and Should item, every E2E test and every NFR group sits in exactly one deliverable. A later deliverable may extend an earlier screen, and says so.
 
@@ -65,19 +67,19 @@ Each line is under the 4,000-character limit. Copy it exactly.
 **D3**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D3-bikri.md fully, then deliver D3 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D3 DONE REPORT" in the README Section 7 format, showing: every acceptance item D3-A1 to D3-A18 ticked, each with the command you ran and its real output; cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-5 and E2E-28 (its بکری part) included and no expected number changed; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a), and the money-calculations agent reviewed all money code; the run's pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D3 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D3-bikri.md fully, then deliver D3 exactly as written, running the agent team as the files say. Work in the Mac phase (README Section 10): locally only, with no GitHub Actions, no pull request, no merge, no release and no Windows installer. The goal is met only when you have posted a message headed "D3 DONE REPORT" in the README Section 7 format, showing: every acceptance item D3-A1 to D3-A18 ticked, each with the command you ran and its real local output, except an item that only Windows can prove, which is marked LOCAL-ONLY with the local evidence you have and listed under Follow-ups (items that name the final main are checked on the run branch); cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-5 and E2E-28 (its بکری part) included and no expected number changed; pnpm lint, pnpm typecheck, pnpm test and pnpm i18n:check exit 0 on the run branch; the full test suite, including every earlier test, passes on the run branch; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a), and the money-calculations agent reviewed all money code; every plan file and fix is committed on the run branch. Also stop if you have posted "D3 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 **D4**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D4-money-in-out.md fully, then deliver D4 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D4 DONE REPORT" in the README Section 7 format, showing: every acceptance item D4-A1 to D4-A28 ticked, each with the command you ran and its real output; cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-10, E2E-12 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38 and the preview numbers of E2E-39, including the trial balance of 85,048 on both sides, and the backend parts of E2E-22 to E2E-27 pass in assist.rs, with no expected number changed; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; the full test suite, including every earlier test, passes on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a), and the money-calculations agent reviewed all money code; the run's pull request is merged and the last Release run on main is green with its version number. Also stop if you have posted "D4 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D4-money-in-out.md fully, then deliver D4 exactly as written, running the agent team as the files say. Work in the Mac phase (README Section 10): locally only, with no GitHub Actions, no pull request, no merge, no release and no Windows installer. The goal is met only when you have posted a message headed "D4 DONE REPORT" in the README Section 7 format, showing: every acceptance item D4-A1 to D4-A28 ticked, each with the command you ran and its real local output, except an item that only Windows can prove, which is marked LOCAL-ONLY with the local evidence you have and listed under Follow-ups (items that name the final main are checked on the run branch); cargo test -p mandi-services --test golden_day passes with E2E-1 to E2E-10, E2E-12 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38 and the preview numbers of E2E-39, including the trial balance of 85,048 on both sides, and the backend parts of E2E-22 to E2E-27 pass in assist.rs, with no expected number changed; pnpm lint, pnpm typecheck, pnpm test and pnpm i18n:check exit 0 on the run branch; the full test suite, including every earlier test, passes on the run branch; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a), and the money-calculations agent reviewed all money code; every plan file and fix is committed on the run branch. Also stop if you have posted "D4 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 **D5**
 
 ```
-/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D5-reports-backup-golive.md fully, then deliver D5 exactly as written, running the agent team as the files say. The goal is met only when you have posted a message headed "D5 DONE REPORT" in the README Section 7 format, showing: every acceptance item D5-A1 to D5-A21 ticked, each with the command you ran and its real output; every E2E test from E2E-1 to E2E-39 passes (golden tests in Rust and the Windows suite in the Windows workflow) with no expected number changed; every NFR Section 2 target is measured and met at its runner threshold in scripts/perf, shown beside the NFR target, as README Section 6 defines; pnpm lint, pnpm test and pnpm i18n:check exit 0 on the final main; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a) and on the final whole-app review; the run's pull request is merged and the first Release run after tauri.conf.json is set to 1.0.0 is green, publishing version 1.0.N. Also stop if you have posted "D5 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
+/goal You are tech-lead. Read docs/deliverables/README.md and docs/deliverables/D5-reports-backup-golive.md fully, then deliver D5 exactly as written, running the agent team as the files say. Work in the Mac phase (README Section 10): locally only, with no GitHub Actions, no pull request, no merge, no release and no Windows installer. The release of version 1.0, the installer and the Windows checks belong to the Windows phase, not to this run. The goal is met only when you have posted a message headed "D5 DONE REPORT" in the README Section 7 format, showing: every acceptance item D5-A1 to D5-A21 ticked, each with the command you ran and its real local output, except an item that only Windows can prove, which is marked LOCAL-ONLY with the local evidence you have and listed under Follow-ups (items that name the final main are checked on the run branch); every E2E test from E2E-1 to E2E-39 passes in the Rust golden tests with no expected number changed, and every Windows suite spec is written and syntax-checked (its run is LOCAL-ONLY); every NFR Section 2 target is measured on the Mac in scripts/perf and shown beside the NFR target, as README Section 10 defines; pnpm lint, pnpm typecheck, pnpm test and pnpm i18n:check exit 0 on the run branch; tauri.conf.json says 1.0.0 on the run branch; reviewer and robustness gave PASS or PASS WITH MINOR in the end-of-run gate (Section 4a) and on the final whole-app review; every plan file and fix is committed on the run branch, and status.md lists every LOCAL-ONLY item for the Windows phase. Also stop if you have posted "D5 BLOCKED" as README Section 8 describes. Never change a golden test number or a requirement document to reach the goal.
 ```
 
 ## 4. How the team works inside a deliverable
@@ -215,3 +217,27 @@ Done so far: <plan files built or merged>   Waiting: <plan files>
 - Requirement documents change only through the `requirement-change` skill, after Umar approves. A goal is never a reason to edit them.
 - Each deliverable keeps every earlier deliverable working. A regression is a FAIL.
 - Words on screen come from Fluent, in both languages. Each DONE REPORT lists the screens with new Urdu text, so the munshi can review them (NFR-URD-4).
+
+## 10. Mac phase and Windows phase (Umar, 15-10-2026)
+
+There is no Windows computer yet. So the app is built and tested on the Mac first. Windows comes later, as its own step, when the laptop is ready. Nothing in the requirement documents changes: the app is still a Windows app. Only the order of the work changes.
+
+**Mac phase (now: D3, D4 and D5).**
+
+- No GitHub CI/CD. The workflows stay in `.github/workflows-disabled/`. No push, no pull request, no merge to `main` and no release.
+- No Windows installer. `pnpm build` and `pnpm e2e` are not run.
+- Each run works on one branch and commits every plan file and fix there. Nothing is merged to `main`, so a new run starts its branch from the last run's branch. Example: D3 starts `feature/bikri` from `feature/db-schema`.
+- Every check that runs on the Mac is run: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`, `golden_day`, `cargo deny check` and `pnpm perf`.
+- An acceptance item that only Windows can prove is marked **LOCAL-ONLY**. Examples: a Windows E2E run, a PDF from the Windows run, Urdu shaping in WebView2, the installer and its install time, the update test, a `windows-verify` report. The lead gives the local evidence it has (the spec written and syntax-checked, unit tests, print data snapshots, headless Chrome screenshots) and lists the item under Follow-ups and in `status.md` under "Waiting for Windows".
+- Screens are compared with the design in headless Chrome on the Mac, in both languages and at the three sizes of Section 5.
+- Speed is measured on the Mac with the runner factor 1.0 already recorded in `scripts/perf/README.md`.
+- In the DONE REPORT, "Final main" is the run branch and its last commit, "Release" is "none (Mac phase)", and the Windows run line says "Windows phase".
+- Section 1 steps 2, 3 and 5 (updater keys, first push, repository rules) wait for the Windows phase.
+
+**Windows phase (when the Windows laptop is ready).** It runs as its own goal after D5. Its goal line is written then. In short:
+
+1. Umar does Section 1 steps 2, 3 and 5.
+2. The workflows move back from `.github/workflows-disabled/` to `.github/workflows/`.
+3. The last run branch is pushed, one pull request is opened, and `Checks (Windows)` and `Windows E2E and speed` run.
+4. Every LOCAL-ONLY item in `status.md` is run on Windows: the Windows E2E suite, Urdu shaping and printing in WebView2, screenshots, the installer and its install time, the update test, and speed on the reference computer.
+5. What fails is fixed, the pull request is merged, and version 1.0 is published (D5 plan 23 and `docs/Release_Pipeline.md`).

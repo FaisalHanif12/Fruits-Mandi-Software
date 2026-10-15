@@ -108,7 +108,7 @@ Then:
 1. Save both review reports to `docs/reviews/<nn>-<feature>.md`.
 2. If the user will see the change, update `docs/release/whats-new.md` (Urdu, then English, plain mandi words).
 3. Commit on the feature branch with a Conventional Commit message. Teammates do not commit; only you do. In a goal run, you commit each built plan and do steps 4 to 6 once, after the final gate.
-4. Push the branch and open the pull request: `gh pr create --base main` with the PRD IDs and how it was tested. Then `gh pr merge --auto --squash`. GitHub merges only when `Checks (Windows)` and `Windows E2E and speed` pass, and the merge publishes a release (`docs/Release_Pipeline.md`). If the branch is behind `main`, run `gh pr update-branch`. If a check fails, read it with `gh run view <run-id> --log-failed` and send the fix to the owner of the failing part.
+4. **Mac phase (now): skip this step.** Do not push, open a pull request or merge; the commits stay on the run branch (`docs/deliverables/README.md` Section 10). In the Windows phase: push the branch and open the pull request: `gh pr create --base main` with the PRD IDs and how it was tested. Then `gh pr merge --auto --squash`. GitHub merges only when `Checks (Windows)` and `Windows E2E and speed` pass, and the merge publishes a release (`docs/Release_Pipeline.md`). If the branch is behind `main`, run `gh pr update-branch`. If a check fails, read it with `gh run view <run-id> --log-failed` and send the fix to the owner of the failing part.
 5. Ask each teammate to shut down.
 6. Report to Umar in plain, short English: what was built, the evidence, the follow-ups, and any open questions.
 
