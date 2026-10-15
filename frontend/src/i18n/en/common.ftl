@@ -55,3 +55,8 @@ common-side-cr = { -jama }
 common-yes = Yes
 # review: pending
 common-no = No
+
+## A percent sign after a percent field (partner shares).
+
+# review: pending
+common-percent-sign = %

@@ -24,11 +24,15 @@ One function and one database transaction per user action (Code Standards B3, CL
 | `ledger` | The journal engine: `post`, `reverse` (also switches off matching rows that rest on the reversed lines), trial balance, account ledger, balances (plan 07). |
 | `assist` | Read-only help: the party card and a seller's open advances (plans 08, 10). Nothing here writes. |
 | `rules` | Commission rules: the six levels, the rule form checks, "test a rule", the three defaults in Settings, the overrides (plan 09). The rules in memory are thrown away after every change. |
+| `partners` | Partners and their shares (plan 11, PRD 17.1 to 17.3): add and edit a partner (his capital account 0602xxxx and drawings account 0603xxxx are made with him, in both scripts), set the shares of all active partners from a day (exactly 100%, never back-dated, history kept), list, read, overview. `partners::rows` is the hook that `ledger::post` calls: it writes the share rows of every posting that touches head 04 or 05, so no module writes share rows itself (FR-6.5). A reversal copies the original rows with the opposite sign. `partners::split_entry` gives the rows a new posting would write; the بکری preview and the save both use it (B5). |
 | `vouchers` | The voucher framework: numbering per type, the common fields, the running list and the پیشگی voucher (plan 10). |
 | `ports` | `Monotonic`, `RandomSource`, `PasswordHasher` (Argon2id) behind traits. |
 | `testing` | Fake parts for tests. Never used by the running app. |
 
 ## Rules to remember
+
+- Partner share rows (`partners::rows`, written by `ledger::post`): for a period, "the sum of the shares = income - shop expenses" (PRD FR-6.5) holds only if the income and expense side of the books leaves out `month_close` entries and their reversals. A month close empties the income and expense balances on purpose and writes no share rows. Plan 17 and D5 must leave those entries out when they check the identity or build a report from the journal.
+- A reversal has the date of the entry it reverses, except the reversal of a month close. `ledger::post` refuses any other (`partners::rows::plan`), because `db::partners::taken_between` and the monthly share sums rely on it.
 
 - Passwords and codes are `Secret`: they print as `Secret([hidden])` and never go into an audit row or a log line.
 - A wrong user name behaves like a wrong password (same error, same counting, same time).

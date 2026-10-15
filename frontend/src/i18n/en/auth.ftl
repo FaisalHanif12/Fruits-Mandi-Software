@@ -64,6 +64,21 @@ auth-wizard-step-owner = Owner password
 auth-wizard-step-code = Recovery code
 
 # review: pending
+auth-wizard-step-partners = Partners
+
+# review: pending
+auth-wizard-partners-title = Add the partners
+
+# review: pending
+auth-wizard-partners-help = Add each partner's name and share. You can also do this later, but until the shares total exactly 100%, a { -bikri } cannot be saved.
+
+# review: pending
+auth-wizard-partners-save = Save and finish
+
+# review: pending
+auth-wizard-partners-later = Do this later
+
+# review: pending
 auth-wizard-firm-title = Tell us about the firm
 
 # review: pending

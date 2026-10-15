@@ -26,6 +26,11 @@ export interface NumberTextInputProps extends FieldControlProps {
   value: string;
   onChange: (text: string) => void;
   placeholder?: string;
+  /**
+   * The name of the field for a screen reader, for a field in a list whose label is the column
+   * heading and not a label of its own. Comes from Fluent.
+   */
+  label?: string;
 }
 
 interface BaseProps extends NumberTextInputProps {
@@ -113,6 +118,7 @@ export function NumberTextInput({
   value,
   onChange,
   placeholder,
+  label,
   grouping,
   inputMode,
   onKeyDown,
@@ -145,6 +151,7 @@ export function NumberTextInput({
       readOnly={readOnly}
       aria-invalid={invalid}
       aria-describedby={describedBy}
+      aria-label={label}
       autoComplete="off"
       spellCheck={false}
       onKeyDown={onKeyDown}

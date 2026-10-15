@@ -16,6 +16,7 @@ pub mod error;
 pub mod ids;
 pub mod masters;
 pub mod money;
+pub mod partners;
 pub mod rules;
 pub mod search;
 pub mod text;

@@ -25,6 +25,7 @@ export { MoneyInput } from './MoneyInput';
 export { NamePair, type NamePairValue } from './NamePair';
 export { Num } from './Num';
 export { PartyCard } from './PartyCard';
+export { PercentInput } from './PercentInput';
 export { PasswordInput } from './PasswordInput';
 export { Picker, type PickerValue } from './Picker';
 export { PickerBase, type PickerBaseProps, type PickerHit } from './PickerBase';

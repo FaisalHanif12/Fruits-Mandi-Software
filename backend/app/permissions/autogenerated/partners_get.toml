@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-get"
+description = "Enables the partners_get command without any pre-configured scope."
+commands.allow = ["partners_get"]
+
+[[permission]]
+identifier = "deny-partners-get"
+description = "Denies the partners_get command without any pre-configured scope."
+commands.deny = ["partners_get"]

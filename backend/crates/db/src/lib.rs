@@ -17,6 +17,7 @@ mod error;
 pub mod ledger;
 pub mod masters;
 pub mod migrate;
+pub mod partners;
 pub mod rules;
 pub mod seed;
 pub mod vouchers;

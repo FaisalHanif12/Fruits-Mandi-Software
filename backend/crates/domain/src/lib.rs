@@ -10,6 +10,7 @@
 
 pub mod auth;
 pub mod ledger;
+pub mod partners;
 pub mod rules;
 
 /// `mandi-core`, re-exported so the crates above reach it through the one allowed path

@@ -22,6 +22,7 @@ use mandi_domain::core::translit::Kind;
 use mandi_domain::core::validate;
 use serde_json::{Map, Value, json};
 
+pub(crate) use openings::apply as apply_opening;
 pub use openings::{openings_preview, openings_save};
 
 use crate::audit::Event;

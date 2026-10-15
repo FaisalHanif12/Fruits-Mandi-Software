@@ -30,6 +30,11 @@ typed_id!(
     /// The id of a journal entry (`journal_entries.id`).
     EntryId
 );
+typed_id!(
+    /// The id of a partner (`partners.id`). A lower id means the partner was created first,
+    /// which is the tie rule of the split leftover (PRD C10).
+    PartnerId
+);
 
 #[cfg(test)]
 mod tests {
@@ -39,6 +44,7 @@ mod tests {
     fn ids_keep_their_number_and_stay_apart() {
         assert_eq!(AccountId::new(7).get(), 7);
         assert_eq!(EntryId::new(7).get(), 7);
+        assert_eq!(PartnerId::new(7).get(), 7);
         assert!(AccountId::new(1) < AccountId::new(2));
     }
 }

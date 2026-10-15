@@ -17,7 +17,7 @@ use mandi_app_lib::commands::{auth, day, settings, translit};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::{accounts, masters, rules, search, vouchers};
+use mandi_services::core::{accounts, masters, partners, rules, search, vouchers};
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -177,6 +177,17 @@ const EXPECTED_FILES: &[&str] = &[
     "DayClosePreview.ts",
     "DayCloseInput.ts",
     "DayReopenInput.ts",
+    "PartnerRow.ts",
+    "ShareHistoryRow.ts",
+    "PartnerDetail.ts",
+    "PartnersGetInput.ts",
+    "PartnerCreateInput.ts",
+    "PartnerUpdateInput.ts",
+    "ShareInput.ts",
+    "PartnersSetSharesInput.ts",
+    "PartnersCheckSharesInput.ts",
+    "SharesCheck.ts",
+    "PartnerOverviewRow.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -277,6 +288,15 @@ fn export_bindings() {
     vouchers::DayClosePreview::export_all(&cfg).unwrap();
     vouchers::DayCloseInput::export_all(&cfg).unwrap();
     vouchers::DayReopenInput::export_all(&cfg).unwrap();
+    partners::PartnerRow::export_all(&cfg).unwrap();
+    partners::PartnerDetail::export_all(&cfg).unwrap();
+    partners::PartnersGetInput::export_all(&cfg).unwrap();
+    partners::PartnerCreateInput::export_all(&cfg).unwrap();
+    partners::PartnerUpdateInput::export_all(&cfg).unwrap();
+    partners::PartnersSetSharesInput::export_all(&cfg).unwrap();
+    partners::PartnersCheckSharesInput::export_all(&cfg).unwrap();
+    partners::SharesCheck::export_all(&cfg).unwrap();
+    partners::PartnerOverviewRow::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();

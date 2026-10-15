@@ -7,6 +7,7 @@ pub mod assist;
 pub mod auth;
 pub mod day;
 pub mod masters;
+pub mod partners;
 pub mod rules;
 pub mod search;
 pub mod settings;

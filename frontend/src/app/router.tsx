@@ -174,6 +174,25 @@ const masterEditRoute = createRoute({
   ),
 });
 
+// شراکت دار: the overview of the partners and their shares, and the setup page (plan 11).
+const partnersRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/partners',
+  component: lazyRouteComponent(
+    () => import('../features/partners/pages/PartnersOverviewPage'),
+    'PartnersOverviewPage',
+  ),
+});
+
+const partnersSetupRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/partners/setup',
+  component: lazyRouteComponent(
+    () => import('../features/partners/pages/PartnerSetupPage'),
+    'PartnerSetupPage',
+  ),
+});
+
 /** A menu item whose module comes in a later plan opens the "coming soon" page (PRD FR-7.46). */
 function comingSoonRoute<Path extends string>(path: Path) {
   return createRoute({
@@ -211,7 +230,8 @@ const appRoutes = [
   comingSoonRoute('/bikri/today'),
   comingSoonRoute('/bikri/stock'),
   comingSoonRoute('/rokar'),
-  comingSoonRoute('/partners'),
+  partnersRoute,
+  partnersSetupRoute,
   comingSoonRoute('/analytics'),
   comingSoonRoute('/reports'),
   comingSoonRoute('/backup'),

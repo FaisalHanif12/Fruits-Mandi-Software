@@ -25,10 +25,22 @@ interface FieldProps {
   error?: ReactNode;
   /** A value the app works out: shown on the page ground, cannot be typed into. */
   readOnly?: boolean;
+  /**
+   * The label is read by a screen reader and not drawn, for a field in a list whose column
+   * heading is its label (the share of each partner). Every field still has a label (F28).
+   */
+  hideLabel?: boolean;
   children: (control: FieldControlProps) => ReactNode;
 }
 
-export function Field({ label, hint, error, readOnly = false, children }: FieldProps) {
+export function Field({
+  label,
+  hint,
+  error,
+  readOnly = false,
+  hideLabel = false,
+  children,
+}: FieldProps) {
   const id = useId();
   const noteId = `${id}-note`;
   const hasError = error !== undefined && error !== null && error !== false;
@@ -36,7 +48,7 @@ export function Field({ label, hint, error, readOnly = false, children }: FieldP
   const note = hasError || hasHint;
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <label htmlFor={id} className="type-label text-ink">
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
         {label}
       </label>
       {children({

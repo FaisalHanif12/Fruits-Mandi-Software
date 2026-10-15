@@ -5,26 +5,36 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../../src/features/auth/api';
+import * as partnersApi from '../../src/features/partners/api';
 import * as settingsApi from '../../src/features/settings/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import * as appApi from '../../src/app/api';
 import { useWizardStore } from '../../src/features/auth/wizard-store';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
+import { fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
 import {
   authState,
   fail,
   healthyBackend,
   leaveAppWindow,
+  press,
   renderApp,
   resetClientState,
+  sessionUser,
 } from '../helpers/app';
+import { fakeMasters } from '../helpers/masters';
+import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
+vi.mock('../../src/features/partners/api');
+vi.mock('../../src/shared/accounts/api');
+vi.mock('../../src/features/masters/api');
+vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
 const FIRM_NAMES = { en: 'Maher Adnan and Brothers', ur: 'مہر عدنان اینڈ برادرز' };
@@ -55,6 +65,9 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
+  fakeAccounts([]);
+  fakeAccountSearch([]);
+  fakeMasters({});
   window.print = printSpy;
 });
 
@@ -76,11 +89,11 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
     return userEvent.setup();
   }
 
-  it('shows three steps, the first current, and the first field has focus', async () => {
+  it('shows four steps, the first current, and the first field has focus', async () => {
     await start();
     const steps = screen.getByRole('list', { name: message(language, 'auth-wizard-steps') });
     const items = steps.querySelectorAll('li');
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
     expect(items[0]).toHaveAttribute('aria-current', 'step');
     // The name to type comes first: Urdu in the Urdu app, English in the English app.
     expect(
@@ -89,8 +102,10 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
     expect(document.documentElement.dir).toBe(language === 'ur' ? 'rtl' : 'ltr');
   });
 
-  it('by keyboard only: firm, Owner, then the recovery code, printed and finished', async () => {
+  it('by keyboard only: firm, Owner, then the recovery code, printed and finished (no sign-in after the setup: it ends at the sign-in screen)', async () => {
     vi.mocked(authApi.setupFirstRun).mockResolvedValue({ recovery_code: '7KQ2M9XD4TPAHW3C' });
+    // The sign-in right after the setup fails, so there is no partners step (plan 11).
+    vi.mocked(authApi.authLogin).mockRejectedValue(fail({ code: 'ERR_INTERNAL' }));
     const user = await start();
     await user.keyboard(firmStep(language));
     await screen.findByRole('heading', { name: message(language, 'auth-wizard-owner-title') });
@@ -111,7 +126,9 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
         confirmed_rules_words: [],
       });
     });
-    // The code is shown once, in groups of four, left to right. The passwords are gone.
+    expect(authApi.authLogin).toHaveBeenCalledWith({ username: 'owner', password: 'secret12' });
+    // The code is shown once, in groups of four, left to right. The passwords are gone, also
+    // when the sign-in failed (plan 11, the lead's condition 1).
     expect(await screen.findByLabelText('7KQ2M9XD4TPAHW3C')).toHaveTextContent(
       '7KQ2-M9XD-4TPA-HW3C',
     );
@@ -136,6 +153,10 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
       await screen.findByRole('heading', { name: message(language, 'auth-login-title') }),
     ).toBeInTheDocument();
     expect(useWizardStore.getState().recoveryCode).toBeNull();
+    // No partners step when the sign-in failed: nothing asked for the partners, and the
+    // wizard ended at the sign-in screen (the partners are set up later at /partners/setup).
+    expect(partnersApi.partnersList).not.toHaveBeenCalled();
+    expect(useWizardStore.getState().signedIn).toBe(false);
   });
 
   it('Esc and Back return to the firm step with everything still typed', async () => {
@@ -431,6 +452,130 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
     expect(
       screen.getByRole('heading', { name: message(language, 'auth-wizard-owner-title') }),
     ).toBeInTheDocument();
+  });
+
+  /** The firm and Owner steps, signed in after the setup, up to the partners step. */
+  async function toPartnersStep() {
+    vi.mocked(authApi.setupFirstRun).mockResolvedValue({ recovery_code: '7KQ2M9XD4TPAHW3C' });
+    vi.mocked(authApi.authLogin).mockResolvedValue(sessionUser({ language }));
+    const store = fakePartners([]);
+    const user = await start();
+    await user.keyboard(firmStep(language));
+    await screen.findByRole('heading', { name: message(language, 'auth-wizard-owner-title') });
+    await user.keyboard(OWNER_STEP);
+    // He is signed in with what he just typed, before the passwords are cleared (plan 11).
+    await waitFor(() => {
+      expect(authApi.authLogin).toHaveBeenCalledWith({ username: 'owner', password: 'secret12' });
+    });
+    await screen.findByLabelText('7KQ2M9XD4TPAHW3C');
+    expect(useWizardStore.getState().values.password).toBe('');
+    // The screen stays on the wizard: the sign-in did not refresh who is signed in.
+    expect(authApi.authStatus).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(
+      screen.getByRole('button', { name: new RegExp(message(language, 'auth-wizard-next')) }),
+    );
+    await screen.findByRole('heading', {
+      name: (name) => visible(name) === message(language, 'auth-wizard-partners-title'),
+    });
+    // The recovery code was shown once: it is gone from the screen and from the store.
+    expect(screen.queryByLabelText('7KQ2M9XD4TPAHW3C')).toBeNull();
+    expect(useWizardStore.getState().recoveryCode).toBeNull();
+    return { user, store };
+  }
+
+  const named = (text: string) => (name: string) => visible(name) === text;
+
+  it('signed in after the setup, the code step goes on to the partners step, which can be left for later', async () => {
+    const { user } = await toPartnersStep();
+    const steps = screen.getByRole('list', { name: message(language, 'auth-wizard-steps') });
+    expect(steps.querySelectorAll('li')[3]).toHaveAttribute('aria-current', 'step');
+    expect(
+      await screen.findByRole('heading', {
+        name: named(message(language, 'partners-setup-empty')),
+      }),
+    ).toBeInTheDocument();
+    // The Owner is signed in: the app opens when the wizard ends, with no sign-in screen between.
+    vi.mocked(authApi.authStatus).mockResolvedValue(
+      authState({ first_run: false, session: sessionUser({ language }), login_language: language }),
+    );
+    await user.click(
+      screen.getByRole('button', {
+        name: new RegExp(message(language, 'auth-wizard-partners-later')),
+      }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('list', { name: message(language, 'auth-wizard-steps') }),
+      ).toBeNull();
+    });
+    expect(partnersApi.partnersSetShares).not.toHaveBeenCalled();
+    expect(useWizardStore.getState().step).toBe(0);
+    expect(useWizardStore.getState().signedIn).toBe(false);
+  });
+
+  it('adds three partners and their shares in the wizard, by keyboard, and ends signed in', async () => {
+    const { user, store } = await toPartnersStep();
+    const names = language === 'ur' ? ['الف', 'ب', 'ج'] : ['Partner A', 'Partner B', 'Partner C'];
+    const urdu = ['الف', 'ب', 'ج'];
+    const english = ['Partner A', 'Partner B', 'Partner C'];
+    for (const index of names.keys()) {
+      press('F2');
+      const dialog = await screen.findByRole('dialog', {
+        name: named(message(language, 'partners-add-title')),
+      });
+      await user.click(
+        await within(dialog).findByLabelText(named(message(language, 'partners-field-name-ur'))),
+      );
+      await user.keyboard(urdu[index] ?? '');
+      await user.click(
+        within(dialog).getByLabelText(named(message(language, 'partners-field-name-en'))),
+      );
+      await user.keyboard(english[index] ?? '');
+      // The last one is saved with F10, which closes the dialog; the others with Ctrl+Enter.
+      press(index === names.length - 1 ? 'F10' : 'Enter', index === 2 ? {} : { ctrlKey: true });
+      await waitFor(() => {
+        expect(store.rows).toHaveLength(index + 1);
+      });
+    }
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    const box = (name: string) =>
+      screen.findByLabelText<HTMLInputElement>(
+        named(message(language, 'partners-share-of', { name })),
+      );
+    expect((await box(names[0] ?? '')).value).toBe('');
+    await user.click(await box(names[0] ?? ''));
+    await user.keyboard('40{Enter}30{Enter}30');
+    const save = screen.getByRole('button', {
+      name: (name) => visible(name).includes(message(language, 'auth-wizard-partners-save')),
+    });
+    await waitFor(() => {
+      expect(save).toBeEnabled();
+    });
+    vi.mocked(authApi.authStatus).mockResolvedValue(
+      authState({ first_run: false, session: sessionUser({ language }), login_language: language }),
+    );
+    await user.click(save);
+    await waitFor(() => {
+      expect(store.setShares).toEqual([
+        {
+          effective_from: '10-10-2026',
+          shares: [
+            { partner_id: 1, share: '40' },
+            { partner_id: 2, share: '30' },
+            { partner_id: 3, share: '30' },
+          ],
+        },
+      ]);
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('list', { name: message(language, 'auth-wizard-steps') }),
+      ).toBeNull();
+    });
+    expect(useWizardStore.getState().step).toBe(0);
   });
 
   it('a command that is not ready shows its message, and nothing is made up', async () => {

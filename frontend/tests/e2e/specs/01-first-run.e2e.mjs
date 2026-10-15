@@ -1,18 +1,25 @@
-// D1 story, step 1 (plan 04 Section 5.6, D1-A14): the first-run wizard by keyboard only. The
-// window opens in Urdu, right to left (PRD FR-7.30). The firm, then the Owner, then the recovery
-// code to print; Finish leads to the sign-in screen. The suite starts on a computer with no app
-// data, so this spec makes the Owner the later specs sign in as (support/credentials.mjs).
+// D1 story, step 1 (plan 04 Section 5.6, D1-A14, plan 11 D3-A2): the first-run wizard by keyboard
+// only. The window opens in Urdu, right to left (PRD FR-7.30). The firm, then the Owner, then the
+// recovery code to print, then the partners (الف, ب, ج with 40, 30 and 30 percent, PRD 4.2). The
+// Owner is signed in right after the setup, so the end of the wizard opens the app; the spec then
+// signs out to see the sign-in screen. The suite starts on a computer with no app data, so this
+// spec makes the Owner the later specs sign in as (support/credentials.mjs) and the partners
+// the later specs split income between.
 // Screenshots of each step are saved in Urdu, and of the sign-in screen in both languages.
 
-import { $, expect } from '@wdio/globals';
-import { FIRM, OWNER } from '../support/credentials.mjs';
+import { $, browser, expect } from '@wdio/globals';
+import { FIRM, OWNER, PARTNERS } from '../support/credentials.mjs';
 import { t } from '../support/messages.mjs';
 import {
   Key,
+  button,
   confirmSpellingIfAsked,
+  press,
+  signOut,
   type,
   switchLanguage,
   waitForHeading,
+  waitForShell,
 } from '../support/page.mjs';
 import { shootScreen } from '../support/screens.mjs';
 import { sinceSessionStart } from '../support/timing.mjs';
@@ -27,13 +34,13 @@ describe('first run (Urdu)', () => {
     expect(sinceSessionStart()).toBeLessThan(30_000);
   });
 
-  it('shows three steps with the first current', async () => {
+  it('shows four steps with the first current', async () => {
     const steps = await $(
       `ol[aria-label="${t('ur', 'auth-wizard-steps')}"], ul[aria-label="${t('ur', 'auth-wizard-steps')}"]`,
     );
     await expect(steps).toBeDisplayed();
     const items = await steps.$$('li');
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
     await expect(items[0]).toHaveAttribute('aria-current', 'step');
   });
 
@@ -67,15 +74,67 @@ describe('first run (Urdu)', () => {
     await shootScreen('wizard-code', 'ur');
   });
 
-  it('Finish needs the tick, then leads to the sign-in screen', async () => {
-    const finish = await $(
-      `//button[contains(normalize-space(.), "${t('ur', 'auth-wizard-finish')}")]`,
-    );
-    await expect(finish).toBeDisabled();
+  it('Next needs the tick, then goes on to the partners step', async () => {
+    const next = await button('ur', 'auth-wizard-next');
+    await expect(next).toBeDisabled();
     await $('input[type="checkbox"]').click();
-    await expect(finish).toBeEnabled();
-    await finish.click();
-    await waitForHeading('ur', 'auth-login-title');
+    await expect(next).toBeEnabled();
+    await next.click();
+    await waitForHeading('ur', 'auth-wizard-partners-title');
+    // The recovery code was shown once: it is not on this screen any more.
+    await expect($('p[aria-label]')).not.toBeExisting();
+    const steps = await $(
+      `ol[aria-label="${t('ur', 'auth-wizard-steps')}"], ul[aria-label="${t('ur', 'auth-wizard-steps')}"]`,
+    );
+    const items = await steps.$$('li');
+    await expect(items[3]).toHaveAttribute('aria-current', 'step');
+    await shootScreen('wizard-partners-empty', 'ur');
+  });
+});
+
+describe('first run: the partners step (Urdu)', () => {
+  it('adds the three partners by keyboard: F2, the names, Ctrl+Enter for the next one', async () => {
+    for (const [index, partner] of PARTNERS.entries()) {
+      await press(Key.F2);
+      await waitForHeading('ur', 'partners-add-title');
+      // The Urdu name has focus first in the Urdu app; Enter goes to the English name.
+      await type(`${partner.nameUr}${Key.Enter}${partner.nameEn}`);
+      await confirmSpellingIfAsked();
+      if (index === PARTNERS.length - 1) {
+        await press(Key.F10);
+      } else {
+        await press([Key.Ctrl, Key.Enter]);
+        // The dialog stays open and is empty again for the next partner.
+        await browser.pause(400);
+      }
+    }
+    await waitForHeading('ur', 'auth-wizard-partners-title');
+    await expect($('[role="dialog"]')).not.toBeDisplayed();
+  });
+
+  it('types the shares with Enter between the boxes; the total turns green at 100', async () => {
+    // Focus went back to the first share box when the dialog closed.
+    await type(PARTNERS.map((partner) => String(partner.share)).join(Key.Enter));
+    const total = await $('[role="status"]');
+    await total.waitForDisplayed();
+    await browser.waitUntil(async () => (await total.getText()).includes('100%'), {
+      timeout: 10_000,
+    });
+    await expect(total).toHaveText(expect.stringContaining(t('ur', 'partners-total-ok')));
+    await shootScreen('wizard-partners-filled', 'ur');
+  });
+
+  it('Save and finish ends the wizard in the app, already signed in', async () => {
+    const save = await button('ur', 'auth-wizard-partners-save');
+    await expect(save).toBeEnabled();
+    await save.click();
+    await waitForShell('ur');
+  });
+});
+
+describe('first run: the sign-in screen after the wizard', () => {
+  it('signing out shows the sign-in screen in Urdu', async () => {
+    await signOut('ur');
   });
 });
 

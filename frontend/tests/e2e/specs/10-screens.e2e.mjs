@@ -1,4 +1,4 @@
-// D1-A16 and D2-A16: a picture of every screen in Urdu and in English at 1024 x 600, 1366 x 768
+// D1-A16, D2-A16 and D3-A2: a picture of every screen in Urdu and in English at 1024 x 600, 1366 x 768
 // and 1920 x 1080 (NFR-USE-15, NFR-USE-17, NFR-USE-28), saved to output/screenshots/ with an
 // index file. It also checks, on each, that nothing scrolls sideways and that the page does not
 // scroll up and down by itself. People look at the pictures; there is no picture comparison yet
@@ -12,7 +12,7 @@ import { SIZES, setContentSize, shootScreen } from '../support/screens.mjs';
 
 const SETTLE_MS = 700;
 
-/** Every screen of D1 and D2 that can be opened by its address. */
+/** Every screen of D1, D2 and the partners (plan 11) that can be opened by its address. */
 const SCREENS = [
   { name: 'dashboard', route: '/' },
   { name: 'settings', route: '/settings' },
@@ -31,6 +31,8 @@ const SCREENS = [
   { name: 'rule-test', route: '/index/rules/test' },
   { name: 'advance', route: '/bikri/advance' },
   { name: 'day', route: '/day' },
+  { name: 'partners', route: '/partners' },
+  { name: 'partners-setup', route: '/partners/setup' },
 ];
 
 describe('every screen, both languages, three sizes', () => {

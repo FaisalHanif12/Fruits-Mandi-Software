@@ -533,6 +533,32 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "date": "10-10-2026", "reason": "x" } }),
             true,
         ),
+        ("partners_list", json!({}), true),
+        ("partners_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "partners_create",
+            json!({ "input": { "name_ur": "الف", "name_en": "Partner A", "opening_capital": null,
+                "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "partners_update",
+            json!({ "input": { "id": 1, "version": 1, "name_ur": "الف", "name_en": "Partner A",
+                "is_active": true, "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "partners_set_shares",
+            json!({ "input": { "effective_from": "10-10-2026",
+                "shares": [{ "partner_id": 1, "share": "100" }] } }),
+            true,
+        ),
+        (
+            "partners_check_shares",
+            json!({ "input": { "shares": [{ "partner_id": 1, "share": "100" }] } }),
+            true,
+        ),
+        ("partners_overview", json!({}), true),
         (
             "settings_set_overrides",
             json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn" } }),
@@ -1142,4 +1168,122 @@ fn the_firm_spelling_check_works_through_the_ipc() {
         saved.get("confirmed_rules_words").is_none(),
         "an output has no input field"
     );
+}
+
+#[test]
+fn the_partners_commands_work_through_the_ipc() {
+    // Plan 11: partners, the shares and the overview, as the screens call them (PRD 17.1).
+    let h = Harness::new();
+    h.set_up_and_login();
+    let create = |ur: &str, en: &str, opening: Value| {
+        h.call(
+            "partners_create",
+            json!({ "input": { "name_ur": ur, "name_en": en, "opening_capital": opening,
+                "confirmed_rules_words": [] } }),
+        )
+    };
+    let a = create("الف", "Partner A", Value::Null).unwrap();
+    assert_eq!(
+        a,
+        json!({ "id": 1, "name_ur": "الف", "name_en": "Partner A", "capital_account_id": a["capital_account_id"],
+                "capital_account_code": "06020001", "drawings_account_id": a["drawings_account_id"],
+                "drawings_account_code": "06030001", "share_bps": 0, "is_active": true, "version": 1 })
+    );
+    let b = create("ب", "Partner B", json!("50,000")).unwrap();
+    let c = create("ج", "Partner C", Value::Null).unwrap();
+    // A bad opening capital names its field.
+    let bad = create("د", "Partner D", json!("1.5")).unwrap_err();
+    assert_eq!(bad["errors"][0]["code"], "ERR_DECIMALS_NOT_ALLOWED");
+    assert_eq!(bad["errors"][0]["field"], "opening_capital");
+
+    let shares = |rows: &[(&Value, &str)]| -> Value {
+        json!(
+            rows.iter()
+                .map(|(p, s)| json!({ "partner_id": p["id"], "share": s }))
+                .collect::<Vec<_>>()
+        )
+    };
+    // The running total comes from the backend (rule 1: the screen never adds percents).
+    let check = h.ok(
+        "partners_check_shares",
+        json!({ "input": { "shares": shares(&[(&a, "40"), (&b, "30"), (&c, "20")]) } }),
+    );
+    assert_eq!(check["total_bps"], 9_000);
+    assert_eq!(check["is_100"], false);
+    assert_eq!(check["errors"][0]["code"], "ERR_SHARES_NOT_100");
+    assert_eq!(check["errors"][0]["field"], "shares");
+    assert_eq!(check["errors"][0]["values"]["total_bps"], 9_000);
+    let good = h.ok(
+        "partners_check_shares",
+        json!({ "input": { "shares": shares(&[(&a, "40"), (&b, "30"), (&c, "30")]) } }),
+    );
+    assert_eq!(
+        (good["total_bps"].as_i64(), good["is_100"].as_bool()),
+        (Some(10_000), Some(true))
+    );
+
+    // Saving the same 90% is refused with the same code; back-dating is refused too.
+    let refused = h
+        .call(
+            "partners_set_shares",
+            json!({ "input": { "effective_from": "10-10-2026",
+                "shares": shares(&[(&a, "40"), (&b, "30"), (&c, "20")]) } }),
+        )
+        .unwrap_err();
+    assert_eq!(refused["errors"][0]["code"], "ERR_SHARES_NOT_100");
+    let early = h
+        .call(
+            "partners_set_shares",
+            json!({ "input": { "effective_from": "09-10-2026",
+                "shares": shares(&[(&a, "40"), (&b, "30"), (&c, "30")]) } }),
+        )
+        .unwrap_err();
+    assert_eq!(early["errors"][0]["code"], "ERR_SHARE_BACKDATED");
+    assert_eq!(early["errors"][0]["field"], "effective_from");
+    assert_eq!(early["errors"][0]["values"]["today"], "10-10-2026");
+
+    let saved = h.ok(
+        "partners_set_shares",
+        json!({ "input": { "effective_from": "10-10-2026",
+            "shares": shares(&[(&a, "40"), (&b, "30"), (&c, "30")]) } }),
+    );
+    let bps: Vec<i64> = saved
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p["share_bps"].as_i64().unwrap())
+        .collect();
+    assert_eq!(bps, [4_000, 3_000, 3_000]);
+    assert_eq!(h.ok("partners_list", json!({})), saved);
+
+    let detail = h.ok("partners_get", json!({ "input": { "id": 1 } }));
+    assert_eq!(detail["row"]["share_bps"], 4_000);
+    assert_eq!(
+        detail["shares"],
+        json!([{ "share_bps": 4_000, "effective_from": "2026-10-10" }])
+    );
+    let missing = h
+        .call("partners_get", json!({ "input": { "id": 99 } }))
+        .unwrap_err();
+    assert_eq!(missing["errors"][0]["code"], "ERR_NOT_FOUND");
+
+    // An edit with a stale version, and the overview with money as plain numbers.
+    let stale = h
+        .call(
+            "partners_update",
+            json!({ "input": { "id": 1, "version": 9, "name_ur": "الف", "name_en": "Partner A",
+                "is_active": true, "confirmed_rules_words": [] } }),
+        )
+        .unwrap_err();
+    assert_eq!(stale["errors"][0]["code"], "ERR_VERSION_CHANGED");
+    let overview = h.ok("partners_overview", json!({}));
+    let rows = overview.as_array().unwrap();
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[1]["partner_id"], 2);
+    assert_eq!(rows[1]["share_bps"], 3_000);
+    assert_eq!(
+        rows[1]["capital_balance_paisa"], 5_000_000,
+        "50,000 rupees in paisa"
+    );
+    assert_eq!(rows[0]["today_income_paisa"], 0);
 }

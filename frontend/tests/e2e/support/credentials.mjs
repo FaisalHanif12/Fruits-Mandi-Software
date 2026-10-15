@@ -17,3 +17,10 @@ export const FIRM = {
   phone: '0300-0000000',
   address: 'Shop 1, Kot Radha Kishan',
 };
+
+/** The partners of the PRD worked day (Section 4.2): الف 40, ب 30, ج 30, with English names. */
+export const PARTNERS = [
+  { nameUr: 'الف', nameEn: 'Partner A', share: 40 },
+  { nameUr: 'ب', nameEn: 'Partner B', share: 30 },
+  { nameUr: 'ج', nameEn: 'Partner C', share: 30 },
+];

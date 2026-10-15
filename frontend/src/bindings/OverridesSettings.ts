@@ -2,11 +2,13 @@
 import type { CreditLimitMode } from './CreditLimitMode';
 
 /**
- * The two switches of Section 21 "Overrides" and "Checks".
+ * The two switches of Section 21 "Overrides" and "Checks". They start as: a typed commission
+ * or لاگا is allowed (PRD FR-11.10 v1.5), and a credit limit warns (A18).
  */
 export type OverridesSettings = {
   /**
-   * Commission and لاگا may be typed on a sale line (saved with the method "دستی").
+   * Commission and لاگا may be typed on a sale line (saved with the method "دستی"). Starts on;
+   * the Owner can turn it off.
    */
   allow_line_override: boolean;
   /**

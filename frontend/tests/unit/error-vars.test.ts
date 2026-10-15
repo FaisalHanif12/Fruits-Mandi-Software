@@ -36,6 +36,21 @@ describe('messageVars', () => {
     });
   });
 
+  it('also gives a rate in basis points as the percent a person reads, from its digits', () => {
+    // ERR_SHARES_NOT_100 sends total_bps (PRD FR-17.1): 9000 is 90%, 9050 is 90.5%, 5 is 0.05%.
+    expect(messageVars({ total_bps: 9000 }, 'international')).toEqual({
+      total_bps: '9,000',
+      total: '90',
+    });
+    expect(messageVars({ total_bps: 9050 }, 'lakh')).toEqual({ total_bps: '9,050', total: '90.5' });
+    expect(messageVars({ total_bps: 5 }, 'international')).toEqual({
+      total_bps: '5',
+      total: '0.05',
+    });
+    // A text value with that ending is not a number and is left alone.
+    expect(messageVars({ note_bps: 'x' }, 'international')).toEqual({ note_bps: 'x' });
+  });
+
   it('gives an empty set for an error with no values', () => {
     expect(messageVars({}, 'international')).toEqual({});
   });

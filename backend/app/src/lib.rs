@@ -129,6 +129,13 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::day::day_close_preview,
         commands::day::day_close,
         commands::day::day_reopen,
+        commands::partners::partners_list,
+        commands::partners::partners_get,
+        commands::partners::partners_create,
+        commands::partners::partners_update,
+        commands::partners::partners_set_shares,
+        commands::partners::partners_check_shares,
+        commands::partners::partners_overview,
     ]
 }
 

@@ -2635,6 +2635,7 @@ dependencies = [
  "getrandom 0.4.3",
  "mandi-db",
  "mandi-domain",
+ "proptest",
  "serde_json",
  "strsim",
  "tempfile",

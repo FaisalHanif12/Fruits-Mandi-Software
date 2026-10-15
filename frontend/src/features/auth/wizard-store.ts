@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import type { SpellingMarks } from '../../shared/urdu/spelling';
+import { usePartnerSetupStore } from '../partners';
 
 export const WIZARD_FIELDS = [
   'firm_name_ur',
@@ -26,7 +27,12 @@ export const STEP_FIELDS: readonly (readonly WizardField[])[] = [
   ['firm_name_en', 'firm_name_ur', 'mandi_en', 'mandi_ur', 'phone', 'address'],
   ['owner_display_name', 'owner_username', 'password', 'password_repeat'],
   [],
+  [],
 ];
+
+/** The steps in order: 0 firm, 1 Owner, 2 recovery code, 3 partners (NFR-INS-2). */
+export const STEP_CODE = 2;
+export const STEP_PARTNERS = 3;
 
 const EMPTY: WizardValues = {
   firm_name_ur: '',
@@ -51,10 +57,17 @@ interface WizardState {
   marks: Partial<Record<WizardNameKey, SpellingMarks>>;
   /** Shown once on step 3. Never saved anywhere else. */
   recoveryCode: string | null;
+  /**
+   * True when the Owner was signed in right after the setup, so the partners step can save
+   * (every partners command needs a signed-in Owner). Without it the wizard ends at sign-in.
+   */
+  signedIn: boolean;
   setStep: (step: number) => void;
   setValue: (field: WizardField, text: string) => void;
   setMarks: (name: WizardNameKey, marks: SpellingMarks | undefined) => void;
-  finishSetup: (recoveryCode: string) => void;
+  finishSetup: (recoveryCode: string, signedIn: boolean) => void;
+  /** On to the partners step. The recovery code is shown once, so it is dropped here. */
+  toPartners: () => void;
   reset: () => void;
 }
 
@@ -63,6 +76,7 @@ export const useWizardStore = create<WizardState>()((set) => ({
   values: EMPTY,
   marks: {},
   recoveryCode: null,
+  signedIn: false,
   setStep: (step) => {
     set({ step });
   },
@@ -72,15 +86,21 @@ export const useWizardStore = create<WizardState>()((set) => ({
   setMarks: (name, marks) => {
     set((state) => ({ marks: { ...state.marks, [name]: marks } }));
   },
-  finishSetup: (recoveryCode) => {
+  finishSetup: (recoveryCode, signedIn) => {
     set((state) => ({
-      step: 2,
+      step: STEP_CODE,
       recoveryCode,
+      signedIn,
       values: { ...state.values, password: '', password_repeat: '' },
     }));
   },
+  toPartners: () => {
+    set({ step: STEP_PARTNERS, recoveryCode: null });
+  },
   reset: () => {
-    set({ step: 0, values: EMPTY, marks: {}, recoveryCode: null });
+    set({ step: 0, values: EMPTY, marks: {}, recoveryCode: null, signedIn: false });
+    // What was typed in the partners step is gone with the wizard.
+    usePartnerSetupStore.getState().clear();
   },
 }));
 

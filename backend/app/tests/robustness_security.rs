@@ -386,6 +386,32 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "date": "10-10-2026", "reason": "x" } }),
             true,
         ),
+        ("partners_list", json!({}), true),
+        ("partners_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "partners_create",
+            json!({ "input": { "name_ur": "الف", "name_en": "Partner A", "opening_capital": null,
+                "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "partners_update",
+            json!({ "input": { "id": 1, "version": 1, "name_ur": "الف", "name_en": "Partner A",
+                "is_active": true, "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "partners_set_shares",
+            json!({ "input": { "effective_from": "10-10-2026",
+                "shares": [{ "partner_id": 1, "share": "100" }] } }),
+            true,
+        ),
+        (
+            "partners_check_shares",
+            json!({ "input": { "shares": [{ "partner_id": 1, "share": "100" }] } }),
+            true,
+        ),
+        ("partners_overview", json!({}), true),
         (
             "settings_set_overrides",
             json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn" } }),

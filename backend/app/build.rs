@@ -66,6 +66,13 @@ const APP_COMMANDS: &[&str] = &[
     "day_close_preview",
     "day_close",
     "day_reopen",
+    "partners_list",
+    "partners_get",
+    "partners_create",
+    "partners_update",
+    "partners_set_shares",
+    "partners_check_shares",
+    "partners_overview",
 ];
 
 fn main() {

@@ -64,6 +64,21 @@ auth-wizard-step-owner = مالک کا پاس ورڈ
 auth-wizard-step-code = ریکوری کوڈ
 
 # review: pending
+auth-wizard-step-partners = { -shirakat-dar }
+
+# review: pending
+auth-wizard-partners-title = { -shirakat-dar } شامل کریں
+
+# review: pending
+auth-wizard-partners-help = ہر { -shirakat-dar } کا نام اور { -hissa } لکھیں۔ یہ کام بعد میں بھی ہو سکتا ہے، مگر جب تک { -hissa } پورے 100 فیصد نہ ہوں، { -bikri } محفوظ نہیں ہو گی۔
+
+# review: pending
+auth-wizard-partners-save = محفوظ کر کے مکمل کریں
+
+# review: pending
+auth-wizard-partners-later = بعد میں کریں
+
+# review: pending
 auth-wizard-firm-title = فرم کے بارے میں بتائیں
 
 # review: pending

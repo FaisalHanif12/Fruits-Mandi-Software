@@ -1,8 +1,15 @@
-// The first-run wizard (PRD NFR-INS-2, boards WizardUr and WizardEn): three steps. 1 the firm
+// The first-run wizard (PRD NFR-INS-2, boards WizardUr and WizardEn): four steps. 1 the firm
 // (names in both scripts, phone, address), 2 the Owner (name, user name, password twice), 3 the
-// recovery code to print. Nothing is saved until step 2 is finished: setup_first_run then makes
-// the firm and the Owner in one action and returns the code. If the backend refuses a field of an
-// earlier step, the wizard goes back to that step and shows the message at the field.
+// recovery code to print, 4 the partners and their shares (plan 11). Nothing is saved until step 2
+// is finished: setup_first_run then makes the firm and the Owner in one action and returns the
+// code. If the backend refuses a field of an earlier step, the wizard goes back to that step and
+// shows the message at the field.
+//
+// The partners commands need a signed-in Owner, and the setup does not sign him in. So right
+// after the setup the wizard signs him in with the name and password he just typed (a call that
+// does not refresh the screen, so the wizard stays). If that fails, the wizard ends at the
+// sign-in screen as before and the partners are set up later (the Partners area). The partners
+// step can always be left with "do this later" (a بکری then asks for the shares first, E9).
 //
 // The firm and mandi names have the spelling check (PRD FR-7.66): a word made only by the spelling
 // rules is marked, and going on from step 1 asks the Owner to confirm or fix it. The words he
@@ -12,6 +19,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { LanguageSwitch } from '../../../app/layout/LanguageSwitch';
 import { uiErrorOf } from '../../../shared/api';
+import { PartnerSetupForm } from '../../partners';
 import { useFocusFirstField, useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation } from '../../../shared/keyboard';
 import {
@@ -26,12 +34,15 @@ import {
   fieldError,
   type NamePairValue,
 } from '../../../shared/ui';
+import { authLogin } from '../api';
 import { RecoveryCodeCard } from '../components/RecoveryCodeCard';
 import { PASSWORD_MIN_LENGTH } from '../format';
 import { useFirstRun, useRefreshAfterSetup } from '../hooks';
 import { firstHintedField, hintFor } from '../wizard-hints';
 import {
+  STEP_CODE,
   STEP_FIELDS,
+  STEP_PARTNERS,
   WIZARD_FIELDS,
   earliestStepWithError,
   useWizardStore,
@@ -45,10 +56,12 @@ export function WizardPage() {
   const values = useWizardStore((state) => state.values);
   const marks = useWizardStore((state) => state.marks);
   const recoveryCode = useWizardStore((state) => state.recoveryCode);
+  const signedIn = useWizardStore((state) => state.signedIn);
   const setStep = useWizardStore((state) => state.setStep);
   const setValue = useWizardStore((state) => state.setValue);
   const setMarks = useWizardStore((state) => state.setMarks);
   const finishSetup = useWizardStore((state) => state.finishSetup);
+  const toPartners = useWizardStore((state) => state.toPartners);
   const reset = useWizardStore((state) => state.reset);
   const setup = useFirstRun();
   const refresh = useRefreshAfterSetup();
@@ -114,8 +127,17 @@ export function WizardPage() {
           confirmed_rules_words: confirmedWords,
         }),
       )
-        .then((done) => {
-          if (done !== undefined) finishSetup(done.recovery_code);
+        .then(async (done) => {
+          if (done === undefined) return;
+          // Sign in with what he just typed, before the passwords are cleared (see the top).
+          const asOwner = await authLogin({
+            username: values.owner_username,
+            password: values.password,
+          }).then(
+            () => true,
+            () => false,
+          );
+          finishSetup(done.recovery_code, asOwner);
         })
         .catch((failure: unknown) => {
           // A field of an earlier step: go back to the earliest one, so each message is at its field.
@@ -154,7 +176,13 @@ export function WizardPage() {
     { id: 'firm', label: <Localized id="auth-wizard-step-firm" /> },
     { id: 'owner', label: <Localized id="auth-wizard-step-owner" /> },
     { id: 'code', label: <Localized id="auth-wizard-step-code" /> },
+    { id: 'partners', label: <Localized id="auth-wizard-step-partners" /> },
   ];
+  // The last step of the wizard: the app (already signed in) or the sign-in screen.
+  const finishWizard = () => {
+    reset();
+    void refresh();
+  };
 
   /** One text field of the wizard: its words, the hint or the backend's message, and its value. */
   const input = (field: WizardField, labelId: string, options: FieldOptions = {}) => {
@@ -223,89 +251,110 @@ export function WizardPage() {
       <div className="print:hidden">
         <Stepper steps={steps} current={step} label={l10n.getString('auth-wizard-steps')} />
       </div>
-      <div className="mx-auto w-full max-w-reading">
-        <Card>
-          {step === 2 && recoveryCode !== null ? (
-            <RecoveryCodeCard
-              code={recoveryCode}
-              titleId="auth-wizard-code-title"
-              helpId="auth-wizard-code-help"
-              finishId="auth-wizard-finish"
-              onFinish={() => {
-                reset();
-                void refresh();
-              }}
-            />
-          ) : (
-            <div ref={firstField} {...navigation} className="flex flex-col gap-4">
-              <Localized id={step === 0 ? 'auth-wizard-firm-title' : 'auth-wizard-owner-title'}>
-                <h2 className="type-section" />
-              </Localized>
-              {error === null ? null : <ErrorNotice error={error} fieldsShown={WIZARD_FIELDS} />}
-              {step === 0 ? (
-                <>
-                  {pair(
-                    'firm',
-                    'firm_name_ur',
-                    'firm_name_en',
-                    'auth-wizard-firm-name-ur',
-                    'auth-wizard-firm-name-en',
-                  )}
-                  {pair(
-                    'mandi',
-                    'mandi_ur',
-                    'mandi_en',
-                    'auth-wizard-mandi-ur',
-                    'auth-wizard-mandi-en',
-                  )}
-                  {input('phone', 'auth-wizard-phone', { lang: 'en' })}
-                  {input('address', 'auth-wizard-address', {
-                    hint: <Localized id="auth-wizard-address-hint" />,
-                  })}
-                </>
-              ) : (
-                <>
-                  {input('owner_display_name', 'auth-wizard-owner-name')}
-                  {input('owner_username', 'auth-login-username', { lang: 'en' })}
-                  {input('password', 'auth-wizard-password', {
-                    password: true,
-                    hint: (
-                      <Localized
-                        id="auth-wizard-password-hint"
-                        vars={{ min: String(PASSWORD_MIN_LENGTH) }}
-                      />
-                    ),
-                  })}
-                  {input('password_repeat', 'auth-wizard-password-repeat', { password: true })}
-                </>
-              )}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                {step === 0 ? (
-                  <Localized id="auth-wizard-later">
-                    <span className="type-body text-ink-muted" />
-                  </Localized>
-                ) : (
-                  <Button
-                    shortcut={SHORTCUTS.back}
-                    onClick={() => {
-                      setStep(0);
-                    }}
-                  >
-                    <Localized id="common-back" />
-                  </Button>
-                )}
-                <Button
-                  variant="primary"
-                  shortcut={SHORTCUTS.confirm}
-                  busy={flight.busy || setup.isPending}
-                  onClick={goOn}
-                >
-                  <Localized id={step === 0 ? 'auth-wizard-next' : 'auth-wizard-create'} />
+      <div className={`mx-auto w-full ${step === STEP_PARTNERS ? 'max-w-form' : 'max-w-reading'}`}>
+        {step === STEP_PARTNERS ? (
+          <div className="flex flex-col gap-4">
+            <Localized id="auth-wizard-partners-title">
+              <h2 className="type-section" />
+            </Localized>
+            <Localized id="auth-wizard-partners-help">
+              <p className="type-body text-ink-muted" />
+            </Localized>
+            <PartnerSetupForm
+              labelId="auth-wizard-partners-save"
+              onSaved={finishWizard}
+              actionsStart={
+                <Button onClick={finishWizard}>
+                  <Localized id="auth-wizard-partners-later" />
                 </Button>
+              }
+            />
+          </div>
+        ) : (
+          <Card>
+            {step === STEP_CODE && recoveryCode !== null ? (
+              <RecoveryCodeCard
+                code={recoveryCode}
+                titleId="auth-wizard-code-title"
+                helpId="auth-wizard-code-help"
+                finishId={signedIn ? 'auth-wizard-next' : 'auth-wizard-finish'}
+                onFinish={() => {
+                  // Signed in: the partners step comes next. Not signed in: the wizard is over.
+                  if (signedIn) toPartners();
+                  else finishWizard();
+                }}
+              />
+            ) : (
+              <div ref={firstField} {...navigation} className="flex flex-col gap-4">
+                <Localized id={step === 0 ? 'auth-wizard-firm-title' : 'auth-wizard-owner-title'}>
+                  <h2 className="type-section" />
+                </Localized>
+                {error === null ? null : <ErrorNotice error={error} fieldsShown={WIZARD_FIELDS} />}
+                {step === 0 ? (
+                  <>
+                    {pair(
+                      'firm',
+                      'firm_name_ur',
+                      'firm_name_en',
+                      'auth-wizard-firm-name-ur',
+                      'auth-wizard-firm-name-en',
+                    )}
+                    {pair(
+                      'mandi',
+                      'mandi_ur',
+                      'mandi_en',
+                      'auth-wizard-mandi-ur',
+                      'auth-wizard-mandi-en',
+                    )}
+                    {input('phone', 'auth-wizard-phone', { lang: 'en' })}
+                    {input('address', 'auth-wizard-address', {
+                      hint: <Localized id="auth-wizard-address-hint" />,
+                    })}
+                  </>
+                ) : (
+                  <>
+                    {input('owner_display_name', 'auth-wizard-owner-name')}
+                    {input('owner_username', 'auth-login-username', { lang: 'en' })}
+                    {input('password', 'auth-wizard-password', {
+                      password: true,
+                      hint: (
+                        <Localized
+                          id="auth-wizard-password-hint"
+                          vars={{ min: String(PASSWORD_MIN_LENGTH) }}
+                        />
+                      ),
+                    })}
+                    {input('password_repeat', 'auth-wizard-password-repeat', { password: true })}
+                  </>
+                )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {step === 0 ? (
+                    <Localized id="auth-wizard-later">
+                      <span className="type-body text-ink-muted" />
+                    </Localized>
+                  ) : (
+                    <Button
+                      shortcut={SHORTCUTS.back}
+                      onClick={() => {
+                        setStep(0);
+                      }}
+                    >
+                      <Localized id="common-back" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="primary"
+                    shortcut={SHORTCUTS.confirm}
+                    busy={flight.busy || setup.isPending}
+                    onClick={goOn}
+                  >
+                    <Localized id={step === 0 ? 'auth-wizard-next' : 'auth-wizard-create'} />
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </Card>
+            )}
+          </Card>
+        )}
       </div>
       {spelling.dialog}
     </div>

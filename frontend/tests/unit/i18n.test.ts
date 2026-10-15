@@ -163,6 +163,7 @@ const PRD_GLOSSARY: readonly (readonly [id: string, ur: string, en: string])[] =
   ['baqi-maal', 'باقی مال', 'Unsold Stock'],
   ['shirakat-dar', 'شراکت دار', 'Partner'],
   ['hissa', 'حصہ', 'Share'],
+  ['sarmaya', 'سرمایہ', 'Capital'],
   ['tajziat', 'تجزیات', 'Analytics'],
   ['roznamcha', 'روزنامچہ', 'Day Book'],
   ['khata', 'کھاتہ', 'Ledger'],

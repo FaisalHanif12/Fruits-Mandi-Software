@@ -233,6 +233,10 @@
 -hissa = حصہ
     .gender = masculine
 
+# Capital: money a partner invests in the shop (PRD Section 3)
+# review: pending
+-sarmaya = سرمایہ
+
 # Analytics
 # review: pending
 -tajziat = تجزیات
@@ -318,6 +322,7 @@ glossary-stock = { -stock }
 glossary-baqi-maal = { -baqi-maal }
 glossary-shirakat-dar = { -shirakat-dar }
 glossary-hissa = { -hissa }
+glossary-sarmaya = { -sarmaya }
 glossary-tajziat = { -tajziat }
 glossary-roznamcha = { -roznamcha }
 glossary-khata = { -khata }

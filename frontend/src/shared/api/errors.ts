@@ -5,6 +5,7 @@ import type { ErrorCode } from '../../bindings/ErrorCode';
 import type { UiError } from '../../bindings/UiError';
 import type { UiErrorItem } from '../../bindings/UiErrorItem';
 import { groupDigits, type Grouping } from '../format/money';
+import { formatBps } from '../format/percent';
 import { CommandError, toUiError } from './invoke';
 
 /** The Fluent message ID for an error code. */
@@ -70,6 +71,8 @@ export function errorsOutsideFields(error: UiError, fields: readonly string[]): 
   return error.errors.filter((item) => !isFieldError(item) || !shown.has(item.field));
 }
 
+const BPS_SUFFIX = '_bps';
+
 /** A whole number as grouped digits, with a minus sign when it is below zero. */
 function groupedNumber(value: number, grouping: Grouping): string {
   if (!Number.isSafeInteger(value)) return String(value);
@@ -82,16 +85,19 @@ function groupedNumber(value: number, grouping: Grouping): string {
  * نگ, kg, characters), never paisa (plan 02 contract 4.6). Whole numbers are grouped with the
  * app's grouping, so 10000000000 reads "10,000,000,000" or "10,00,00,00,000" in both languages
  * and Fluent never formats a number by locale (PRD FR-7.32). Text values, such as a date,
- * pass as they are.
+ * pass as they are. A rate in basis points (`total_bps`, 9000) also arrives as the percent a
+ * person reads, under the same name without `_bps` (`total`, "90"), written from its digits.
  */
 export function messageVars(
   values: UiErrorItem['values'],
   grouping: Grouping,
 ): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      key,
-      typeof value === 'number' ? groupedNumber(value, grouping) : value,
-    ]),
-  );
+  const vars: Record<string, string> = {};
+  for (const [key, value] of Object.entries(values)) {
+    vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : value;
+    if (typeof value === 'number' && key.endsWith(BPS_SUFFIX) && Number.isSafeInteger(value)) {
+      vars[key.slice(0, -BPS_SUFFIX.length)] = formatBps(value);
+    }
+  }
+  return vars;
 }

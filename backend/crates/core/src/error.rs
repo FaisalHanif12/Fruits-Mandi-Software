@@ -163,11 +163,19 @@ pub enum ErrorCode {
     /// accounts ...) cannot be made inactive: the app posts to it by itself (PRD FR-10.4).
     /// Field `id`. The Active box of such an account is shown ticked and cannot be changed.
     ErrSystemAccount,
+    /// A share change dated before today (PRD FR-17.2, E18, A31). Values: `today`.
+    ErrShareBackdated,
+    /// A partner who has a share today or later cannot be made inactive (PRD FR-17.1).
+    ErrPartnerHasShare,
+    /// A set of shares must name every active partner exactly once (PRD FR-17.1). Field `shares`.
+    ErrPartnerNotListed,
+    /// The firm has the most partners it can have (NFR-SCL-5). Values: `max`.
+    ErrTooManyPartners,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 64] = [
+    pub const ALL: [ErrorCode; 68] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -232,6 +240,10 @@ impl ErrorCode {
         ErrorCode::ErrSharesNot100,
         ErrorCode::ErrEntryTooLarge,
         ErrorCode::ErrSystemAccount,
+        ErrorCode::ErrShareBackdated,
+        ErrorCode::ErrPartnerHasShare,
+        ErrorCode::ErrPartnerNotListed,
+        ErrorCode::ErrTooManyPartners,
     ];
 }
 

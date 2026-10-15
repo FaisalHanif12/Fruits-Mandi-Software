@@ -26,6 +26,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 | 08-party-card-and-short-codes | feature/db-schema | | PASS WITH MINOR | PASS WITH MINOR | built (`9d585cd`, fixes `7b1bdfe`, `f9ce265`) |
 | 09-commission-rules | feature/db-schema | | PASS | PASS WITH MINOR | built (`c114967`) |
 | 10-opening-position | feature/db-schema | | PASS WITH MINOR | PASS WITH MINOR | built (`c114967`, fixes `7b1bdfe`) |
+| 11-partners | feature/bikri | | end of run | end of run | built (money review PASS WITH MINOR, fixes done; frontend 1743 and Rust 929 tests passed, golden_day E2E-19, cargo deny, lint, typecheck, i18n:check, perf PASS) |
 
 ## Design
 

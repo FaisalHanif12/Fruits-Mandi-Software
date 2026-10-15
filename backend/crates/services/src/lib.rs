@@ -12,6 +12,7 @@ pub mod day;
 pub mod error;
 pub mod ledger;
 pub mod masters;
+pub mod partners;
 pub mod ports;
 pub mod rules;
 pub mod search;

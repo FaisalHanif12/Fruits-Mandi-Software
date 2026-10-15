@@ -5,9 +5,11 @@
 //! cargo run -p mandi-services --example seed_dev -- <path to mandi.db>
 //! ```
 //!
-//! Steps (PRD 4.3, plan 10): the first-run wizard; the cities, truck stands, packing, items,
-//! expense heads and parties of the worked day, each with an Urdu and an English name; on
-//! 31-08-26 the opening balances of روکڑ and ابتدائی سرمایہ; on 01-09-26 a پیشگی voucher of 15,000
+//! Steps (PRD 4.3, plans 10 and 11): the first-run wizard; the cities, truck stands, packing,
+//! items, expense heads and parties of the worked day, each with an Urdu and an English name;
+//! the partners الف 40%, ب 30%, ج 30% (PRD 4.2) from 31-08-26, so every later posting of the
+//! worked day splits its income and expenses; on 31-08-26 the opening balances of روکڑ and
+//! ابتدائی سرمایہ; on 01-09-26 a پیشگی voucher of 15,000
 //! cash to رحیم; on 10-10-26 the days up to 09-10-26 are closed. The dates are fixed by a clock
 //! that is set for each step, so the data is the same on any day. It then prints the E2E-19
 //! numbers. Running it again on the same file changes nothing; `pnpm seed -- --reset` starts
@@ -35,6 +37,7 @@ use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::masters::{
     AddaInput, CityInput, ExpenseHeadInput, ItemInput, MasterInput, PackingInput,
 };
+use mandi_services::core::partners::{PartnerCreateInput, PartnersSetSharesInput, ShareInput};
 use mandi_services::core::vouchers::{
     AdvanceInput, DayCloseInput, DayClosePreviewInput, VoucherMode,
 };
@@ -43,7 +46,7 @@ use mandi_services::db::clock::ManualClock;
 use mandi_services::db::{Db, DbOptions};
 use mandi_services::settings::Firm;
 use mandi_services::{
-    Context, Secret, ServiceError, accounts, assist, day, ledger, masters, vouchers,
+    Context, Secret, ServiceError, accounts, assist, day, ledger, masters, partners, vouchers,
 };
 
 const OWNER_USER: &str = "owner";
@@ -282,6 +285,44 @@ fn run(path: &Path) -> Result<(), ServiceError> {
     party(AccountType::Buyer, "اکرم ٹول ٹیکس", "Akram Toll Tax")?;
     party(AccountType::Buyer, "ارشد ملتانی", "Arshad Multani")?;
 
+    // The partners of PRD 4.2, "today" 31-08-26: الف 40%, ب 30%, ج 30%, from that day on. They
+    // are made before the first posting, because every posting that touches an income or a shop
+    // expense account is split between them (PRD FR-6.5). The worked day uses the firm's
+    // ابتدائی سرمایہ, so no partner has an opening capital here (PRD 17.1).
+    let mut partner_ids = Vec::new();
+    for (ur, en) in [("الف", "Partner A"), ("ب", "Partner B"), ("ج", "Partner C")] {
+        let row = confirming(|words| {
+            partners::create(
+                &ctx,
+                &owner,
+                &PartnerCreateInput {
+                    name_ur: ur.into(),
+                    name_en: en.into(),
+                    opening_capital: None,
+                    confirmed_rules_words: words.to_vec(),
+                },
+            )
+        })?;
+        partner_ids.push(row.id);
+    }
+    let shares = [(0_usize, "40"), (1, "30"), (2, "30")];
+    partners::set_shares(
+        &ctx,
+        &owner,
+        &PartnersSetSharesInput {
+            effective_from: "31-08-2026".into(),
+            shares: shares
+                .iter()
+                .filter_map(|&(index, share)| {
+                    partner_ids.get(index).map(|&partner_id| ShareInput {
+                        partner_id,
+                        share: share.into(),
+                    })
+                })
+                .collect(),
+        },
+    )?;
+
     // Step 1 of PRD 4.3, "today" 31-08-26: the openings on the account forms.
     let cash = code_id(&ctx, "01010001")?;
     let capital = code_id(&ctx, "06010001")?;
@@ -360,6 +401,8 @@ fn report(ctx: &Context) -> Result<(), ServiceError> {
     let rahim = code_id(ctx, "030110001")?;
     let advances = assist::advances(ctx, rahim)?;
     let status = day::status(ctx)?;
+    let shares: Vec<i32> = partners::list(ctx)?.iter().map(|p| p.share_bps).collect();
+    say(&format!("partners: shares {shares:?} bps"));
     let rupees = |p: mandi_services::core::money::Paisa| p.rupees();
     say(&format!(
         "E2E-19: trial balance {} = {}",
@@ -388,7 +431,8 @@ fn report(ctx: &Context) -> Result<(), ServiceError> {
         && rupees(advances.open_paisa) == 15_000
         && cash.side == BalanceSide::Dr
         && rupees(cash.amount_paisa) == 50_000
-        && closed == "2026-10-09";
+        && closed == "2026-10-09"
+        && shares == [4_000, 3_000, 3_000];
     if right {
         Ok(())
     } else {

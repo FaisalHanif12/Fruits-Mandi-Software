@@ -76,7 +76,24 @@ err-control-chars = This field has a hidden character, such as a tab, a line bre
 err-overflow = The amount has become too large. Check the amounts and try again.
 # PRD FR-17.1, E9.
 # review: pending
-err-shares-not-100 = The { -shirakat-dar } { -hissa } total is not 100%. Ask the Owner to correct it in { -shirakat-dar } setup.
+# $total: the total of the typed shares as a percent, for example 90.
+err-shares-not-100 = The { -shirakat-dar } { -hissa } total is { $total }%, not 100%. Correct it in { -shirakat-dar } setup.
+
+# PRD FR-17.2, E18, A31. $today: today, DD-MM-YYYY.
+# review: pending
+err-share-backdated = The share change cannot start in the past. Enter today ({ $today }) or a later date.
+
+# PRD FR-17.1. A partner with a share cannot be made inactive.
+# review: pending
+err-partner-has-share = This { -shirakat-dar } still has a { -hissa }. Set his { -hissa } to 0 and save the shares first, then make him inactive.
+
+# PRD FR-17.1. The share list must name every active partner once.
+# review: pending
+err-partner-not-listed = The share list must have every active partner once. Open the page again and try again.
+
+# NFR-SCL-5. $max: the most partners.
+# review: pending
+err-too-many-partners = No more than { $max } partners can be added.
 
 ## The data file (plan 03, contract 4.6; NFR-REL-6, NFR-REL-7, NFR-REL-10, NFR-REL-13).
 ## The reference number follows each of these messages (err-reference), so they do not repeat it.

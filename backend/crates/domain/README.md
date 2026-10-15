@@ -12,6 +12,7 @@ Business rules as pure functions (Code Standards B4). Never touches the database
 | Module | What it does |
 |---|---|
 | `rules` | Which charge rule wins (PRD 11.3): `RuleSet`, `resolve`, `charge_amount` with its working, the one `newer_key` order. |
+| `partners` | The partner split (PRD FR-6.5, C9 to C12): `share_bases` takes the income base (head 04) and the expense base (head 05) of an entry, `split_posting` splits each with `split_by_bps` and makes expense parts negative; a negative base is split as a positive and negated. Shares that do not total 10,000 bps give `SharesNot100`. |
 | `ledger` | Journal entries as pure functions: `build_entry`, `build_reversal`, `build_opening` (PRD FR-6.2, FR-6.3, FR-10.9). |
 | `auth::validate` | Sign-in name, password, display name, idle lock minutes, text size, last screen (PRD FR-8, NFR-SEC-1). |
 | `auth::lockout` | The lockout steps: 5 wrong tries lock 60 seconds, 10 lock 300, 15, 20, 25 ... lock 900 (PRD FR-8.2). |

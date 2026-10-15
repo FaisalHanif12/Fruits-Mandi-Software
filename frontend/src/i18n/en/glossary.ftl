@@ -193,6 +193,10 @@
 # review: pending
 -hissa = Share
 
+# Capital: money a partner invests in the shop (PRD Section 3)
+# review: pending
+-sarmaya = Capital
+
 # Analytics
 # review: pending
 -tajziat = Analytics
@@ -275,6 +279,7 @@ glossary-stock = { -stock }
 glossary-baqi-maal = { -baqi-maal }
 glossary-shirakat-dar = { -shirakat-dar }
 glossary-hissa = { -hissa }
+glossary-sarmaya = { -sarmaya }
 glossary-tajziat = { -tajziat }
 glossary-roznamcha = { -roznamcha }
 glossary-khata = { -khata }

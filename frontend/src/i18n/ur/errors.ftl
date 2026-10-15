@@ -74,7 +74,24 @@ err-control-chars = اس خانے میں چھپا ہوا حرف ہے، مثلا�
 err-overflow = رقم بہت بڑی ہو گئی ہے۔ رقمیں دوبارہ دیکھیں اور پھر کوشش کریں۔
 # PRD FR-17.1, E9.
 # review: pending
-err-shares-not-100 = تمام { -shirakat-dar } کا کل { -hissa } 100 فیصد نہیں بنتا۔ مالک سے کہیں کہ { -shirakat-dar } کی ترتیب میں اسے درست کریں۔
+# $total: the total of the typed shares as a percent, for example 90.
+err-shares-not-100 = تمام { -shirakat-dar } کا کل { -hissa } { $total } فیصد ہے، 100 فیصد نہیں۔ { -shirakat-dar } کی ترتیب میں اسے درست کریں۔
+
+# PRD FR-17.2, E18, A31. $today: today, DD-MM-YYYY.
+# review: pending
+err-share-backdated = { -hissa } کی نئی تاریخ پرانی نہیں ہو سکتی۔ آج ({ $today }) یا اس کے بعد کی تاریخ لکھیں۔
+
+# PRD FR-17.1. A partner with a share cannot be made inactive.
+# review: pending
+err-partner-has-share = اس { -shirakat-dar } کا { -hissa } ابھی 0 نہیں ہے۔ پہلے اس کا { -hissa } 0 کر کے محفوظ کریں، پھر اسے غیر فعال کریں۔
+
+# PRD FR-17.1. The share list must name every active partner once.
+# review: pending
+err-partner-not-listed = { -hissa } کی فہرست میں ہر فعال { -shirakat-dar } ایک بار ہونا چاہیے۔ صفحہ دوبارہ کھولیں اور پھر کوشش کریں۔
+
+# NFR-SCL-5. $max: the most partners.
+# review: pending
+err-too-many-partners = { $max } سے زیادہ { -shirakat-dar } شامل نہیں ہو سکتے۔
 
 ## The data file (plan 03, contract 4.6; NFR-REL-6, NFR-REL-7, NFR-REL-10, NFR-REL-13).
 ## The reference number follows each of these messages (err-reference), so they do not repeat it.

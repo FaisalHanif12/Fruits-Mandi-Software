@@ -28,6 +28,7 @@ use mandi_domain::ledger::{
 use crate::context::Context;
 use crate::day;
 use crate::error::{Rejection, ServiceError, money_error};
+use crate::partners::rows as partner_rows;
 
 /// Everything needed to post one entry.
 #[derive(Debug, Clone)]
@@ -164,6 +165,9 @@ pub fn post(
         check_accounts_active(tx, &event.entry)?;
     }
     check_person_keys(tx, &event.entry)?;
+    // PRD FR-6.5: the partner share rows are planned first, so a refusal (shares not 100%)
+    // writes nothing, and written right after the entry is posted, in the same transaction.
+    let shares = partner_rows::plan(tx, event)?;
     let now = ctx.now_text();
     let iso = event.date.to_iso();
     let entry_id = repo::insert_draft(
@@ -216,6 +220,7 @@ pub fn post(
         }
         other => ServiceError::Db(other),
     })?;
+    partner_rows::write(tx, user_id, &now, entry_id, &iso, &shares)?;
     Ok(Posted {
         entry_id,
         total: event.entry.total(),
