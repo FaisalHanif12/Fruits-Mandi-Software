@@ -6,7 +6,7 @@
 | Version | 1.4 (Umar's changes of 14-10-2026 and 15-10-2026) |
 | Date | 15 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.4 (the master), NFR v1.2, Tech Stack v1.2 |
+| Depends on | PRD v1.5 (the master), NFR v1.3, Tech Stack v1.3 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---

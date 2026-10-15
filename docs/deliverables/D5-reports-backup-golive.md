@@ -1,6 +1,6 @@
 # D5. Dashboard, reports, analytics, backup and go-live
 
-Version 1.3, 15-10-2026 (PRD v1.4: E2E-39 in the full run; v1.3: print any day and any party, R33, R34, own goods; v1.2: items in ledgers, the shop's total اگراہی, R32, one user). Deliverable 5 of 5. Read `README.md` in this folder first.
+Version 1.4, 15-10-2026 (NFR v1.3: D5-A22 word list and accuracy gates; PRD v1.4: E2E-39 in the full run; v1.3: print any day and any party, R33, R34, own goods; v1.2: items in ledgers, the shop's total اگراہی, R32, one user). Deliverable 5 of 5. Read `README.md` in this folder first.
 Depends on: D4 done. Plan files: `18-backup-and-restore`, `19-dashboard-and-attention`, `20-reports-and-export`, `21-analytics`, `22-settings-audit-updates`, `23-go-live`.
 At the end, version 1.0 is released and ready for the demo of PRD 27.1. (`tauri.conf.json` says 1.0.0; the pipeline publishes it as 1.0.N, where N is the release run number.)
 
@@ -113,6 +113,7 @@ This plan file adds no new feature. It proves the whole app.
 
 - Writes `docs/demo/demo-checklist.md`: the PRD 27.1 steps with the expected numbers, the PRD 24 assumptions to ask the client about, the user measures to take with the munshi and Owner (NFR-USE-3 to NFR-USE-5), and the BitLocker recommendation for the shop laptop (NFR-SEC-8).
 - Writes `docs/demo/urdu-review.md`: every screen and print with new Urdu text, for the Urdu reviewer and the munshi (NFR-URD-4, NFR-URD-8).
+- Closes the D2-A2 follow-up (D5-A22): `backend` adds the old software's account names and the Urdu reviewer's confirmed rows to the word list, removes the `#[ignore]` from the two gate tests, and runs the accuracy test again. The app information shows the GeoNames credit (Tech Stack 4.4).
 - Updates `docs/release/whats-new.md` for version 1.0 and gives Umar the manual Windows checklist from the `windows-verify` skill (Step 4).
 
 **Done when:** every test passes, every target is met at its runner threshold, and the first release after the 1.0.0 setting is green. The lead adds to Umar's checklist: a no-internet install on a clean Windows computer, and a speed run on the reference hardware of NFR 0.2.
@@ -150,7 +151,7 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 5. **Long run.** 12 hours of mixed work without slowing down or memory growth.
 6. **Everything at once.** The full E2E-1 to E2E-27 run, in Urdu and in English, at 1366 × 768 and 125% scaling.
 
-## 7. Acceptance (D5-A1 to D5-A21)
+## 7. Acceptance (D5-A1 to D5-A22)
 
 | ID | Item | Evidence expected |
 |---|---|---|
@@ -175,6 +176,7 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 | D5-A19 | Final whole-app review PASS or PASS WITH MINOR; `docs/demo/demo-checklist.md` and `docs/demo/urdu-review.md` written | `docs/reviews/final-1.0.md` |
 | D5-A20 | The first release after `tauri.conf.json` is set to 1.0.0 is green (version 1.0.N); installer installs in under 2 minutes on the runner; PRD 27.1 demo steps 1 to 11 run end to end in the Windows suite (step 12 is Umar's, with the client) | Release run ID and version; install time; demo run result |
 | D5-A21 | Print any day and any party (FR-19.10): every report, ledger, register and list screen has the date and party filters, and the print header shows them; E2E-36 passes; R33 shows E2E-34b (purchase −1,940) | Test output; PDFs |
+| D5-A22 | The D2-A2 follow-up is closed: the word list has at least 15,000 reviewed entries; on the 1,000-name list the first suggestion is right for at least 95% and the top 3 for at least 99% of names in the list (NFR-URD-24), and the English name is accepted for at least 90% (NFR-URD-25); the FR-7.66 confirm step is unchanged | `cargo test -p mandi-core --test translit_accuracy -- --include-ignored --nocapture` output and word count |
 
 ## 8. Not in D5 (and not in this build)
 

@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.2 (Umar's changes of 11-10-2026) |
-| Date | 12 October 2026 |
+| Version | 1.3 (Umar's changes of 11-10-2026 and 15-10-2026) |
+| Date | 15 October 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.2, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.5, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -308,8 +308,8 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | NFR-URD-21 | English text is plain, professional English, with one fixed spelling per word (British spelling as used in Pakistan: Labour, Cheque). Mandi words use the PRD glossary's English column only. Reviewed by an English-literate reviewer and the Owner before release. |
 | NFR-URD-22 | Every text key exists in both languages. The build fails if any key is missing, empty or left untranslated in either language. |
 | NFR-URD-23 | Amounts in words are correct English for every whole-rupee amount from 0 to 10,00,00,00,000, in both groupings (PRD FR-19.7). Example: 19,316 = "Nineteen thousand three hundred sixteen rupees only". |
-| NFR-URD-24 | English-to-Urdu accuracy (v1.2). The word list has at least 15,000 reviewed entries (PRD FR-7.27). On a fixed test list of 1,000 names typical of the mandi (people, firms, cities, items): for names in the word list, the correct Urdu spelling is the first suggestion for at least 95% and among the 3 suggestions for at least 99%; for names not in the word list (spelling rules only), the top-3 rate is reported on every build and must not drop below the last release. Every rules-only spelling is marked and confirmed before save (PRD FR-7.66), so a wrong spelling is never saved silently. The test list is kept in the repository and grows with every wrong conversion reported. |
-| NFR-URD-25 | Urdu-to-English accuracy: on the same list, the suggested English name is accepted without change for at least 90%. |
+| NFR-URD-24 | English-to-Urdu accuracy (v1.2). The word list has at least 15,000 reviewed entries (PRD FR-7.27). On a fixed test list of 1,000 names typical of the mandi (people, firms, cities, items): for names in the word list, the correct Urdu spelling is the first suggestion for at least 95% and among the 3 suggestions for at least 99%; for names not in the word list (spelling rules only), the top-3 rate is reported on every build and must not drop below the last release. Every rules-only spelling is marked and confirmed before save (PRD FR-7.66), so a wrong spelling is never saved silently. The test list is kept in the repository and grows with every wrong conversion reported. **When (v1.3, Umar 15-10-2026):** the 15,000 entries and the 95% and 99% gates must be met before go-live (D5), using the old software's account names (about 1,572) and the Urdu reviewer's confirmed rows. Until then every build reports the numbers, and they must not drop. Example: on 13-10-2026 the list had 12,942 entries (8,212 from the team list and checked sources, 4,730 still waiting for review), first suggestion 92.0%, top 3 95.4%; the next build may not report less. |
+| NFR-URD-25 | Urdu-to-English accuracy: on the same list, the suggested English name is accepted without change for at least 90%. Like NFR-URD-24, the gate must be met before go-live (D5); until then the rate is reported on every build and must not drop (72.2% on 13-10-2026). |
 | NFR-URD-26 | A learned word (PRD FR-7.26) is used from the very next word typed, and survives restart, update and restore. |
 | NFR-URD-27 | The English font is installed with the app (works offline), with equal-width digits for number columns, under an open licence. |
 | NFR-URD-28 | Mixed text in English screens and prints keeps its order: an Urdu note inside an English print reads right-to-left, and the numbers around it stay correct. |
@@ -376,3 +376,4 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | 1.0 | 10-10-2026 | Pre-build drafts and reviews: Umar's requirements, analysis of the old software video, research, client review comments and full cross-document reviews. |
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
 | 1.2 | 12-10-2026 | PRD v1.2: one user, no roles (NFR-SEC-4, NFR-SEC-13, Section 11). Urdu accuracy: new NFR-URD-24 targets with a 15,000-word list and the spelling check; new NFR-URD-29. |
+| 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list size and the accuracy gates of NFR-URD-24 and NFR-URD-25 must be met before go-live (D5), not at the end of D2; until then the numbers are reported and must not drop. |

@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.3, 15 October 2026 (PRD v1.3: own goods and cost of goods sold, partner capital). Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
+Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -184,7 +184,7 @@ Worked examples (these MUST be unit tests):
   - Line charges (seller commission, buyer commission, لاگا) use the **line's qty**.
   - Lot charges (مزدوری, منشیانہ, فون) use the lot's **qty received**, and are charged only in the lot's first posting.
   - For weight items, per-unit charges still use the نگ count; percent charges use the value.
-- Per lot: `value`, once per lot, in the first posting only. Seller commission "فی لاٹ" is put on the first sale line of the first posting; other lines get 0 for it.
+- Per lot: `value`, once per lot, in the first posting only. Seller commission "فی لاٹ" is put on the first sale line of the first posting; other lines get 0 for it. v1.5 (PRD FR-11.9): if an edit removes that line, the charge moves with its stored method and value to the first remaining line of that lot in that posting; if none is left, it goes with the removed line. Test: 500 per lot on line 1 of 2; line 1 removed; line 2 carries 500; the lot's seller commission still includes 500 once.
 
 ### 4.4 `avg_rate` (display only)
 
@@ -374,13 +374,15 @@ Example: bills 12,880 (09-10) and 5,000 (10-10); receipt 15,000 → 12,880 to th
 
 ### 8.2 Seller advances
 
-Same algorithm on seller keys: "bills" are debit lines marked `is_advance` (پیشگی vouchers, opening debits marked as advances), and "credits" are seller credit lines from بکری postings whose lot has `adjust_advance = 1` (PRD FR-12.23), and seller receipts (وصولی from a seller, PRD FR-15.12). Payments (ادائیگی) are never advances. A credit from a lot with the tick off never adjusts an advance.
+Same algorithm on seller keys: "bills" are debit lines marked `is_advance` (پیشگی vouchers, opening debits marked as advances), and "credits" are seller credit lines from بکری postings whose lot has `adjust_advance = 1` (PRD FR-12.23), and seller receipts (وصولی from a seller, PRD FR-15.12). Payments (ادائیگی) are never advances. A credit from a lot with the tick off never adjusts an advance. A جنرل line never adjusts an advance, debit or credit (PRD 16.4, v1.5).
 
 Golden: E2E-28 (tick off): رحیم credit 24,316 adjusts nothing; advance open 15,000. E2E-31: receipt 10,000 adjusts 10,000 of the 15,000; بکری 1 then adjusts the last 5,000; open 0.
 
 ### 8.2a Seller payable working (display only, PRD FR-7.59)
 
-For one seller key, at read time: take his credit lines from بکری postings, plus the part of any seller receipt not used against advances, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open minus Σ open advances MUST equal his balance (جمع minus بنام) whenever Σ still open is more than 0; test it. Example E2E-28: 19,316 − 15,000 = 4,316 جمع.
+For one seller key, at read time: take his credit lines from بکری postings, his opening credit (PRD FR-10.9, the oldest, v1.5), his جنرل credit lines (PRD 16.4, v1.5), a supplier's credit from a purchase on credit (PRD FR-12.24), plus the part of any seller receipt not used against advances, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open minus Σ open advances MUST equal his balance (جمع minus بنام) whenever Σ still open is more than 0; test it. Example E2E-28: 19,316 − 15,000 = 4,316 جمع.
+
+Unit test (v1.5): کریم with an opening credit of 10,160 and an ادائیگی of 4,000: credit 10,160, paid 4,000, still open 6,160; balance 6,160 جمع.
 
 Golden: after PRD Event 2, کریم: credit 10,160 (بکری 2), adjusted 0, paid 0, still open 10,160 (E2E-27). After Event 4, رحیم: credit 24,316, adjusted 15,000, paid 5,000 (نقد) + 4,316 (ادائیگی), still open 0.
 

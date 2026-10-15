@@ -1,6 +1,6 @@
 # D2. Accounts, names in two scripts, rules and the opening position
 
-Version 1.1, 12-10-2026 (PRD v1.2: spelling check, 15,000-word list, ادھار رقم accounts, one user). Deliverable 2 of 5. Read `README.md` in this folder first.
+Version 1.2, 15-10-2026 (NFR v1.3: the D2-A2 gates move to go-live, D5-A22; PRD v1.2: spelling check, 15,000-word list, ادھار رقم accounts, one user). Deliverable 2 of 5. Read `README.md` in this folder first.
 Depends on: D1 done. Plan files: `05-names-two-scripts`, `06-masters-and-search`, `07-journal-and-accounts`, `08-party-card-and-short-codes`, `09-commission-rules`, `10-opening-position`.
 Build order step: CLAUDE.md MVP step 4, plus the commission rules and the opening position that every بکری needs.
 
@@ -184,7 +184,7 @@ Plan files run in order (README Section 4), and the order is forced by what each
 | ID | Item | Evidence expected |
 |---|---|---|
 | D2-A1 | `tariq mehmood` gives طارق محمود and "Tariq Mehmood"; the other script fills by itself | Test output and a screenshot |
-| D2-A2 | 1,000-name accuracy meets NFR-URD-24 (v1.2) and NFR-URD-25; the word list has at least 15,000 entries | Accuracy test output and word count |
+| D2-A2 | 1,000-name accuracy is measured and reported for NFR-URD-24 and NFR-URD-25. Umar (15-10-2026): accepted as a follow-up; the 15,000 entries and the 95%, 99% and 90% gates move to D5-A22, before go-live. In every later run the numbers must not drop. | Accuracy test output and word count |
 | D2-A3 | Learned words work from the next word and survive restart (FR-7.26, NFR-URD-26) | Test output |
 | D2-A4 | All three ways to type Urdu work with no Windows setting (FR-7.21) | Windows E2E names |
 | D2-A5 | Every PRD 10.3 master can be added, edited and made inactive, with names in both scripts | Integration and E2E test names |

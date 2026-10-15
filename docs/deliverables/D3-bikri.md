@@ -1,6 +1,6 @@
 # D3. بکری: sale entry, journal, پختہ کھاتہ, partners and prints
 
-Version 1.2, 15-10-2026 (PRD v1.3: opening capital per partner; v1.2: advance tick, one user). Deliverable 3 of 5. Read `README.md` in this folder first.
+Version 1.3, 15-10-2026 (PRD v1.5: commission typed on the line by default, cash warning; PRD v1.3: opening capital per partner; v1.2: advance tick, one user). Deliverable 3 of 5. Read `README.md` in this folder first.
 Depends on: D2 done. Plan files: `11-partners`, `12-bikri-entry`, `13-bikri-save`, `14-bikri-prints`.
 Build order step: CLAUDE.md MVP step 5. Golden tests E2E-1 to E2E-5 pass.
 
@@ -56,6 +56,7 @@ If the power goes off in the middle of typing, the app offers the draft when it 
 - `bikri_preview`: takes the typed draft, returns the full summary (12.5), every line's amounts, the seller summary, the live partner split, and all field errors together.
 - Checks: sold qty never more than received (FR-12.6), negative net shown as a warning (FR-12.7), credit limit warn or block (FR-12.4), پختہ line needs name, and phone when credit (FR-12.5), rate check when its setting is on (FR-7.55).
 - Assistance data: truck memory and same-truck-today (FR-7.49, FR-7.50), seller memory (FR-7.51), remaining qty (FR-7.52), the rate hint as placeholder only (FR-7.53), buyer memory (FR-7.56). Each under NFR-SPD-23 at its runner threshold. Memories read saved بکری, so their tests use fixture data here and the real flow in 13.
+- v1.5 (Umar, 15-10-2026): seller commission, buyer commission and لاگا can be typed on a sale line by default (FR-11.10). The "allow override" setting starts on: today `overrides_from` in `services/src/rules.rs` reads `false` when the setting is missing, so that default changes to `true`. The preview also returns the cash warning of FR-6.7 when a lot's نقد would take روکڑ below 0.
 
 **frontend builds:**
 
@@ -152,7 +153,7 @@ Test the design against NFR-USE-1 and NFR-USE-2: a new user can enter a بکری
 5. **Race.** Fast typing with slow preview answers: an old answer never overwrites a newer one.
 6. **Sign-in.** Before sign-in or while locked, `bikri_save`, `bikri_preview` and the partner commands are refused and write nothing.
 
-## 7. Acceptance (D3-A1 to D3-A18)
+## 7. Acceptance (D3-A1 to D3-A20)
 
 | ID | Item | Evidence expected |
 |---|---|---|
@@ -174,6 +175,8 @@ Test the design against NFR-USE-1 and NFR-USE-2: a new user can enter a بکری
 | D3-A16 | E2E-22 passes on Windows | Windows E2E result |
 | D3-A17 | Speed: NFR-SPD-7, NFR-SPD-8, NFR-SPD-14, NFR-SPD-19, NFR-SPD-23 and NFR-SCL-3 met at their runner thresholds; a scripted 10-line بکری by keyboard in under 90 seconds in the E2E run (NFR-USE-2) | `pnpm perf` and E2E timings |
 | D3-A18 | The full test suite, including every D1 and D2 test, passes on the final main; every D3 screen and print matches the design | Full test run; `windows-verify` report |
+| D3-A19 | With no setting changed, seller commission, buyer commission and لاگا can be typed on a sale line (for example 4% instead of 6%); the value is saved with method دستی and shows in the working; with the setting turned off they are read-only (FR-11.10) | Test output; screenshot |
+| D3-A20 | A lot's نقد that takes روکڑ below 0 shows "روکڑ صفر سے کم ہو جائے گی" in the live summary, and the save still works (FR-6.7) | Test output; screenshot |
 
 ## 8. Not in D3
 

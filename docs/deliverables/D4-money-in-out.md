@@ -1,6 +1,6 @@
 # D4. Money in and out: changes to sales, vouchers, expenses and the full day
 
-Version 1.3, 15-10-2026 (PRD v1.4: one خرچہ screen and one voucher screen; v1.3: own goods and partner capital; v1.2: partner money returns, ادھار رقم, cash lent to buyers, seller advance returns). Deliverable 4 of 5. Read `README.md` in this folder first.
+Version 1.4, 15-10-2026 (PRD v1.5: opening credit payable, cash warning, return-by date, per-lot commission on edit, opening rules; PRD v1.4: one خرچہ screen and one voucher screen; v1.3: own goods and partner capital; v1.2: partner money returns, ادھار رقم, cash lent to buyers, seller advance returns). Deliverable 4 of 5. Read `README.md` in this folder first.
 Depends on: D3 done. Plan files: `15-vouchers`, `16-later-sales-edit-cancel`, `16b-own-goods`, `17-cash-book-and-day-close`.
 Build order step: CLAUDE.md MVP step 6. At the end, the whole PRD worked day (Section 4) runs, and every golden test passes except E2E-11, E2E-18, E2E-33 and E2E-36 (analytics, backup and reports), which come in D5.
 
@@ -41,6 +41,7 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 - Receipts from one-time buyers and payments to one-time sellers through their person key (FR-13.7). "Make regular" creates an account and moves the open balance with a جنرل entry (FR-13.8).
 - Edit (reversal + new posting) and cancel with reason for all three voucher types, including the پیشگی of D2 (FR-15.3). Bank and cheque modes with the bank account and cheque details (15.1).
 - The party card gains the oldest open bill with its age, and the payable postings with the advance already adjusted against them (FR-7.38, FR-7.58, FR-7.59). "پورا بقایا" fills the full open amount. Advances are adjusted at بکری save when the lot's tick is on (FR-15.8, FR-12.23, built in D3) and by a seller's وصولی (FR-15.12); ادائیگی never adjusts them.
+- v1.5 (Umar, 15-10-2026): a seller's opening credit (his oldest) and his جنرل credits are payable postings (FR-7.59, money agent 8.2a), in the party card, the ادائیگی helper, the R24 data and the FR-7.68 note. A جنرل line never adjusts advances (16.4; D2 already builds it this way, keep it). Every cash-out type on the voucher screen shows the FR-6.7 cash warning; it never blocks.
 - The advances query (given, returned, adjusted, open per seller) that E2E-7 checks and that D5 shows as report R26.
 - The receipt slip print data with the amount in words (FR-15.2), with the `print-and-export` skill.
 - `golden_day.rs`: Events 3 and 4, E2E-6, E2E-7, E2E-21, E2E-28 (open payable 19,316; after the payment of 19,316: ledger 15,000 بنام, advance open 15,000, not in بیوپاری کے ذمے), E2E-31, E2E-32 (Σ buyer debit balances 24,564; R20 and the tile are checked in D5). `assist.rs`: the backend part of E2E-27.
@@ -61,6 +62,7 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 - Cancel: reverses every posting of the بکری; every date must be open; a reason is required (FR-12.22, FR-12.11). Receipts matched to its lines become unmatched credit and are matched again to the buyer's next oldest bills (FR-12.22). An edit re-runs the matching the same way.
 - Analytics facts are reversed with their postings (FR-18.7). For E2E-15, the check "analytics excludes سیب" is made on the analytics fact rows (سیب nets to zero). D5 checks the view itself.
 - Undo straight after saving: the same reversal path as cancel, offered in the success message (FR-7.47).
+- v1.5: when an edit removes the line that carries a per-lot seller commission, the charge moves with its stored method and value to the first remaining line of that lot in that posting, so the lot is charged once (FR-11.9, the one exception to FR-12.20).
 - Audit rows for every edit, cancel and write-off.
 - `golden_day.rs`: E2E-13, E2E-13b, E2E-14, E2E-15, E2E-16, E2E-16b.
 
@@ -112,6 +114,7 @@ He can also correct a mistake: edit اکرم's rate from 600 to 610, and every n
 - ادھار رقم (16.5): one account per person under control 0103, made with `F4` (and linked to the staff record when he is staff). Lend: person بنام, cash or bank جمع. Return in cash or bank, or by salary deduction: salary head بنام, person جمع, split as a shop expense (FR-16.4). Open amounts oldest first at read time; overdue loans and partner takes in the attention list data (FR-16.5, FR-7.44). The R32 data query (D5 shows the report).
 - سرمایہ جمع and سرمایہ واپسی on one screen in the شراکت دار area (17.4): cash or bank and the partner's capital account; never split; a warning when more than his capital is taken back (FR-17.7, FR-17.8). The partner overview gains سرمایہ لگایا and کل رقم (C22). The partner statement data: every dated movement with the running کل رقم (FR-17.9); D5 prints it as R31.
 - الگ کھاتہ on one screen in the روکڑ area (16.6): paid out (minus) and received (plus), reason required, list with running signed balance; never split, never in any partner's total (FR-16.6). A الگ کھاتہ can be a lot's seller in بکری: its seller credit goes to the khata, seller-side defaults 0, buyer side as usual (FR-16.7).
+- v1.5 (Umar, 15-10-2026): a return-by date before the entry date is refused for ذاتی خرچہ and ادھار رقم; the same day is allowed (FR-16.9). Every save that would take روکڑ below 0 shows the FR-6.7 cash warning (A52): خرچہ, ادھار رقم, سرمایہ واپسی, الگ کھاتہ رقم دی, خریداری, a جنرل with a cash credit, and an edit, cancel or undo that takes cash back. A partner's drawings opening debit (FR-10.9) shows in his money-taken list and counts in خالص and کل رقم (C20, C22). اپنا مال refuses an opening (FR-10.9).
 - جنرل: lines of account, بنام, جمع, narration (and person for پختہ lines); saves only when the totals match; lines on income or shop expense accounts are split (16.4).
 - The full day close summary of FR-21.1: بکری count, خام بکری, commission, partner shares, cash in hand, trial balance difference, lots with باقی مال.
 - `golden_day.rs`: Event 5 (with its reason) and the whole day, E2E-8, E2E-9, E2E-10, E2E-12, E2E-20, E2E-29, E2E-30, E2E-30b, E2E-35, E2E-37, E2E-38, and the preview numbers of E2E-39 (1,200 / 900 / 900; الف 996 → −1,004). `assist.rs`: the backend part of E2E-24.
@@ -178,7 +181,7 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 8. **Returns.** Random sequences of lends, takes and returns (cash, bank, salary): open amounts always equal the account balance; a return never makes an open amount negative.
 9. **Own goods.** Random purchases, sales (whole, part, several بکری), edits, cancels and write-offs: Σ cost released per purchase equals its total cost when nothing is left; own stock in باقی مال equals bought − sold − written off; profit or loss per purchase equals trading sales − cost released. Selling more than the stock left, or saving an own lot that is not fully sold, is refused. No voucher or جنرل can post to the اپنا مال account.
 
-## 7. Acceptance (D4-A1 to D4-A28)
+## 7. Acceptance (D4-A1 to D4-A31)
 
 | ID | Item | Evidence expected |
 |---|---|---|
@@ -210,6 +213,9 @@ The lead runs `/design` inside `docs/design/design-system.md` for:
 | D4-A26 | E2E-37 passes; the partner total property test passes (Σ کل رقم + ابتدائی سرمایہ = equity); month close leaves کل رقم unchanged | golden_day output; property test output |
 | D4-A27 | E2E-38 passes; a الگ کھاتہ never reaches any partner's total or the partner split | golden_day output; test output |
 | D4-A28 | E2E-39 passes (preview numbers in golden_day, the screen run in the Windows suite); changing the type keeps the shared fields; the FR-7.68 notes show and never switch by themselves | golden_day output; Windows E2E names; screenshots |
+| D4-A29 | A seller's opening credit is payable (FR-7.59): کریم with an opening 10,160 جمع and an ادائیگی of 4,000 shows paid 4,000, still open 6,160, balance 6,160 جمع, and no پیشگی note. A جنرل credit of 1,000 on رحیم (advance 15,000 open) leaves the advance at 15,000 and shows 1,000 payable; Σ still open − Σ open advances = his balance (16.4, money agent 8.2a) | Test output |
+| D4-A30 | Every cash-out entry that takes روکڑ below 0 shows "روکڑ صفر سے کم ہو جائے گی" and still saves (FR-6.7); a return-by date before the entry date is refused and the same day saves (FR-16.9) | Test output |
+| D4-A31 | A per-lot seller commission of 500 sits on line 1 of 2; an edit removes line 1; line 2 now carries 500 with the stored method and value, and the lot's seller commission includes 500 once (FR-11.9). An opening on اپنا مال is refused. A drawings opening of 2,000 for الف, with nothing else posted, gives خالص −2,000 and کل رقم −2,000 (FR-10.9, C20, C22) | Test output |
 
 ## 8. Not in D4
 

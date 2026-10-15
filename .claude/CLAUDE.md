@@ -26,7 +26,7 @@ All requirements live in `docs/`. These six files are final for build.
 - If two documents disagree, or a needed rule is missing, stop and ask Umar. Do not pick one yourself.
 - Items tagged `[A]` in the PRD are assumptions. Build the stated default and make it easy to change. Do not invent other behaviour.
 - Never change an expected number in a golden test. If the code and the test disagree, the code is wrong until Umar changes the PRD.
-- The documents are at versions 1.2 to 1.4 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
+- The documents are at versions 1.3 to 1.5 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
 
 ### Where to read before you start
 
@@ -70,6 +70,8 @@ cargo test --workspace
 cargo test -p mandi-services --test golden_day   # the PRD worked day (golden tests, Code Standards 9.2)
 cargo deny check
 ```
+
+On a Mac, `pnpm seed` may show a Keychain prompt: enter the Mac password and choose Always Allow. `MANDI_SEED_TEST_KEY=1 pnpm seed` uses a throwaway dev key instead; its database cannot be verified by the real app.
 
 Prefer running one test file while you work. Run the full set before you say a task is done.
 

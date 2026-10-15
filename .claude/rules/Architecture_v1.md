@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.4 (Umar's changes of 14-10-2026 and 15-10-2026) |
+| Version | 1.5 (Umar's changes of 14-10-2026 and 15-10-2026, and his answers of 15-10-2026) |
 | Date | 15 October 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.4 (the master), NFR v1.2, Tech Stack v1.2, Code Standards v1.4 |
+| Derived from | PRD v1.5 (the master), NFR v1.3, Tech Stack v1.3, Code Standards v1.4 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -356,7 +356,7 @@ flowchart TD
     PRD 11.2"}
     ALLOW -- no --> NA(["Not possible - the rule screen never offers it"])
     ALLOW -- yes --> P1{"Manual value on the line?
-    only commission and لاگا, only if Owner allows"}
+    only commission and لاگا, allowed by default"}
     P1 -- yes --> USE1["Use manual value, method دستی"]
     P1 -- no --> P2{"Active rule for party + item on the date?"}
     P2 -- yes --> USE2["Use party + item rule"]
@@ -378,7 +378,7 @@ flowchart TD
     PCT & PU & PL --> SNAP["Save method, value, rule id and amount - snapshot"]
 ```
 
-Tie rule: two rules at the same level overlapping in dates, the newer one wins (FR-11.5). Unchanged lines in an edit skip this whole flow and keep their snapshot (FR-12.20).
+Tie rule: two rules at the same level overlapping in dates, the newer one wins (FR-11.5): the later start date, and on the same start date the one saved last. There is no party + item group level: a rule with a party never has an item group (PRD 11.1). Unchanged lines in an edit skip this whole flow and keep their snapshot (FR-12.20).
 
 ---
 
@@ -702,7 +702,7 @@ erDiagram
 
 | Table | Columns |
 |---|---|
-| `charge_rules` | `side` (seller, buyer), `charge_type` (commission, laga, labour, munshiana, phone), `account_id` (null = any), `item_id` (null = any), `item_group` (fruit, vegetable; null = any; only when `item_id` is null), `method` (percent, per_unit, per_lot), `value_bps` (for percent), `value_paisa` (for per_unit and per_lot), `from_date`, `to_date` (null), `is_active`, `note`. CHECK: exactly one of `value_bps`, `value_paisa` is set, matching the method; CHECK: only the combinations in PRD 11.2. |
+| `charge_rules` | `side` (seller, buyer), `charge_type` (commission, laga, labour, munshiana, phone), `account_id` (null = any), `item_id` (null = any), `item_group` (fruit, vegetable; null = any; only when `item_id` and `account_id` are both null, PRD 11.1), `method` (percent, per_unit, per_lot), `value_bps` (for percent), `value_paisa` (for per_unit and per_lot), `from_date`, `to_date` (null), `is_active`, `note`. CHECK: exactly one of `value_bps`, `value_paisa` is set, matching the method; CHECK: only the combinations in PRD 11.2. |
 | `partners` | `name_ur`, `name_en`, `user_id` (always null, not used; partners do not log in), `capital_account_id`, `drawings_account_id`, `is_active` (the "created first" tie rule uses the lowest `id`) |
 | `partner_shares` | `partner_id`, `share_bps`, `effective_from` (not earlier than the day it was entered) |
 | `partner_share_rows` | `journal_entry_id`, `entry_date`, `partner_id`, `kind` (income, expense), `base_paisa`, `share_bps`, `amount_paisa` (signed) |
@@ -734,8 +734,8 @@ erDiagram
 
 | Table | Index on |
 |---|---|
-| `journal_lines` | (`account_id`, `entry_id`), (`account_id`, `pukhta_person_key`) |
-| `journal_entries` | (`entry_date`), (`source_type`, `source_id`) |
+| `journal_lines` | (`account_id`, `entry_id`), (`account_id`, `pukhta_person_key`); migration 0002: `idx_journal_lines_account_amounts` (`account_id`, `entry_id`, `dr_paisa`, `cr_paisa`) for balances, and `idx_journal_lines_advance` (`account_id`, `entry_id`) where `is_advance = 1` |
+| `journal_entries` | (`entry_date`), (`source_type`, `source_id`); migration 0002: `idx_journal_entries_unposted` (`id`) where `status <> 'posted'` |
 | `bikri_sales` | (`lot_id`), (`buyer_account_id`, `entry_date`), (`journal_entry_id`) |
 | `bikri_lots` | (`bikri_id`), (`seller_account_id`, `id`) for seller memory, (`item_id`, `packing_id`) for the rate hint, (`qty_received`, `qty_sold`, `qty_written_off`) for باقی مال |
 | `purchases` | (`entry_date`), (`supplier_account_id`, `entry_date`), (`item_id`), (`qty`, `qty_sold`, `qty_written_off`) for stock left |
@@ -911,3 +911,4 @@ Search order (Tech Stack 4.7): exact code, exact serial (taken on Enter; in an a
 | 1.2 | 12-10-2026 | PRD v1.2: one user (diagrams 1, 2, 5, 7; `users.role`, `users.partner_id` and `partners.user_id` kept but not used). Money lent and partner returns (diagram 6; `vouchers` types, mode, reason, return-by; posting types; read-time working). `bikri_lots` method and value columns and `adjust_advance`; advance matching from seller receipts; `staff.account_id`. |
 | 1.3 | 15-10-2026 | PRD v1.3: own goods (`purchases` table; `bikri_lots.purchase_id`; `bikri_sales.cost_paisa`; `stock_moves.purchase_id`; `analytics_facts.purchase_id` and `cost_paisa`; posting types purchase and own_write_off; diagrams 5, 6 and 15.1). Partner capital (voucher and posting types capital_in, capital_out). الگ کھاتہ (party_type separate, control 0305, voucher and posting types khata_out, khata_in; a lot's seller may be a separate khata). These go in a new numbered migration if 0001 is released by then. |
 | 1.4 | 15-10-2026 | PRD v1.4: one خرچہ screen and one voucher screen (diagrams 5 and 6). No table, column or posting type changed: each type on a shared screen keeps its voucher type and posting type (15.7). |
+| 1.5 | 15-10-2026 | PRD v1.5, approved by Umar: the rule tie and no party + group level (diagram 8); line commission allowed by default (diagram 8). `charge_rules.item_group` only with no item and no party (15.5). Section 15.8 lists the three indexes of migration 0002 (no table or column changed). |
