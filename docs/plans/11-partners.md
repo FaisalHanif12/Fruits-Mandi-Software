@@ -65,6 +65,16 @@ New error codes (added in `core::error`, with `errors.ftl` messages in `ur` and 
 - `SharesCheck = { total_bps, is_100, errors: LineError[] }` with field paths `shares[i].share`.
 - `PartnerOverviewRow` money fields are signed `Paisa`; `capital_balance_paisa` is negative if the capital account stands on the debit side.
 
+### Decision: the wizard's partners step needs a session (16-10-2026, frontend only, no backend change)
+
+`setup_first_run` does not open a session, and every `partners_*` command needs sign-in. So right after `setup_first_run` succeeds the wizard calls `auth_login` itself (a direct api call) with the user name and password it still holds, then clears the password from its store. Step 3 (recovery code, shown once) and step 4 (partners, "later" allowed) then run signed in, and the Owner lands in the app already signed in. If the auto sign-in fails, the wizard skips the partners step and ends at the login screen as before; partners can then be set up at `/partners/setup`. Component tests and the Windows spec cover both paths.
+
+### Decisions from the frontend hand-off of T3 (16-10-2026)
+
+- The wizard and the setup page use one "Add partner" dialog (`F2`, "Save and add another" on `Ctrl+Enter`) instead of three inline empty rows, because `partners_check_shares` and `partners_set_shares` need a real `partner_id` per row and `partners_create` must run first. Focus goes to the first share box after the dialog closes, so typing 40, Enter, 30, Enter, 30 works. Accepted.
+- `ERR_SHARES_NOT_100` carries `total_bps`; the screen turns it into percent text for the message (digits only, no arithmetic).
+- New shared pieces: `shared/ui/PercentInput`, `Field` prop `hideLabel`, the "%" sign from Fluent, glossary term سرمایہ / Capital. Routes live in `app/router.tsx` (no `routes.tsx` or `schemas.ts` in `features/partners`, as in the other modules).
+
 ## 5. Tasks
 
 | # | Task | Owner | Blocked by |
