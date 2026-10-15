@@ -6,6 +6,14 @@
 // Usage: pnpm seed [-- --reset]
 //   --reset   delete the old dev database first
 //
+// The audit key: by default the seed reads the audit key from the real key store (Windows
+// Credential Manager, or the macOS Keychain on a Mac), like the app does. On a Mac a Keychain
+// prompt may appear: the user must enter the Mac password and choose Always Allow. Or run
+// `MANDI_SEED_TEST_KEY=1 pnpm seed` for a throwaway dev key that is never used for real data.
+// That key is a fixed one held in memory (any value of the variable turns it on, even 0). A dev
+// database made with it cannot be verified by the real app on the same keychain: the audit
+// chain check reports a break. Use a database made with the real key for anything the app opens.
+//
 // The project folder has spaces in its name. Paths are built with node:path and cargo is
 // started without a shell, so nothing is split.
 
@@ -24,6 +32,15 @@ if (process.argv.includes('--reset')) {
     rmSync(database + suffix, { force: true });
   }
   rmSync(path.join(devData, 'backups'), { recursive: true, force: true });
+}
+
+// The example turns the test key on when the variable is set to anything, so this checks the same.
+if (!('MANDI_SEED_TEST_KEY' in process.env)) {
+  console.error(
+    'seed: a Mac Keychain prompt may appear. Enter the Mac password and choose Always Allow, ' +
+      'or run `MANDI_SEED_TEST_KEY=1 pnpm seed` for a throwaway dev key that is never used for ' +
+      'real data (a database made with it cannot be verified by the real app).',
+  );
 }
 
 const run = spawnSync(

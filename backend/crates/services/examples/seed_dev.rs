@@ -12,6 +12,14 @@
 //! that is set for each step, so the data is the same on any day. It then prints the E2E-19
 //! numbers. Running it again on the same file changes nothing; `pnpm seed -- --reset` starts
 //! again. The Owner signs in as `owner` with the password `mandi-dev-1`.
+//!
+//! The audit key: by default the seed reads the audit key from the real key store (Windows
+//! Credential Manager, or the macOS Keychain on a Mac), like the app does. On a Mac a Keychain
+//! prompt may appear: the user must enter the Mac password and choose Always Allow. Or run
+//! `MANDI_SEED_TEST_KEY=1 pnpm seed` for a throwaway dev key that is never used for real data.
+//! That key is a fixed one held in memory (any value of the variable turns it on, even `0`). A
+//! dev database made with it cannot be verified by the real app on the same keychain: the audit
+//! chain check reports a break. Use a database made with the real key for anything the app opens.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -91,9 +99,10 @@ fn run(path: &Path) -> Result<(), ServiceError> {
     let mut options = DbOptions::new(backups);
     options.clock = clock.clone();
     // The audit key lives in the Windows Credential Manager (or the macOS keychain), like the
-    // app's own. `MANDI_SEED_TEST_KEY=1` uses a fixed key in memory instead, only so an
-    // automated check can run without touching the keychain; the app cannot verify the audit
-    // chain of a database made that way.
+    // app's own. Any value of `MANDI_SEED_TEST_KEY` (even `0`) uses a fixed key in memory
+    // instead, so a run needs no Keychain prompt. It is a throwaway dev key, never for real
+    // data: the real app on the same keychain cannot verify the audit chain of a database made
+    // that way.
     if std::env::var_os("MANDI_SEED_TEST_KEY").is_some() {
         options.key_store = Arc::new(MemoryKeyStore::new(AuditKey::from_bytes([7; 32])));
     }
