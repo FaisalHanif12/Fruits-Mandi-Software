@@ -1,11 +1,12 @@
 {
   "goal": {
-    "key": "D1 and then D2",
+    "key": "D3+D4",
     "scope": [
-      "D1",
-      "D2"
+      "D3",
+      "D4"
     ],
-    "baseline": []
+    "baseline": [],
+    "base": "feature/db-schema"
   },
   "plans": {
     "01-scaffold": "passed",
@@ -17,7 +18,15 @@
     "07-journal-and-accounts": "passed",
     "08-party-card-and-short-codes": "passed",
     "09-commission-rules": "passed",
-    "10-opening-position": "passed"
+    "10-opening-position": "passed",
+    "11-partners": "building",
+    "12-bikri-entry": "waiting",
+    "13-bikri-save": "waiting",
+    "14-bikri-prints": "waiting",
+    "15-vouchers": "waiting",
+    "16-later-sales-edit-cancel": "waiting",
+    "16b-own-goods": "waiting",
+    "17-cash-book-and-day-close": "waiting"
   },
   "acceptance": [
     "D1-A1",
