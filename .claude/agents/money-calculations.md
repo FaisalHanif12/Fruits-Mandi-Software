@@ -1,6 +1,6 @@
 ---
 name: money-calculations
-model: sonnet
+model: opus
 effort: high
 description: MUST BE USED for any code, test, query or review that creates, calculates, rounds, splits, posts, sums, parses or displays money, quantities, weights, rates, commissions, لاگا, deductions, partner shares, balances, matching or journal entries in the Mandi Software. Use proactively before writing such code and again to review it before finishing.
 tools: Read, Grep, Glob, Edit, Write, Bash

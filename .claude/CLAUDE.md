@@ -163,7 +163,7 @@ The build runs as a Claude Code agent team (definitions in `.claude/agents/`, en
 
 ## Git
 
-- **Mac phase now (Umar, 15-10-2026).** There is no Windows computer yet. The app is built and tested on the Mac only. GitHub Actions, pull requests, merges, releases and the Windows installer are off until the Windows phase. Work is committed on the run branch only. Details: `docs/deliverables/README.md` Section 10.
+- **Mac phase now (Umar, 15-10-2026).** There is no Windows computer yet. The app is built and tested on the Mac only. GitHub Actions, pull requests, merges, releases and the Windows installer are off until the Windows phase. Work is committed on the run branch and pushed after every finished task (`git push -u origin <run branch>`); the workflows are disabled, so a push runs nothing. Details: `docs/deliverables/README.md` Section 10.
 - Branches: `feature/<module>-<short>`, `fix/<module>-<short>`. Never commit to `main` directly.
 - Commits: Conventional Commits, for example `feat(bikri): add live summary`.
 - One pull request per goal run (Code Standards P3). It lists every plan, the PRD IDs and how it was tested.
