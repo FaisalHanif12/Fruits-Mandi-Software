@@ -232,7 +232,78 @@ Action | NFR | Measured | Stat | Mean | Runner threshold | NFR target | Result
 `frontend/tests/robustness/key-latency.test.tsx` measures key press to character (NFR-SPD-4) and arrow key to focus (NFR-SPD-5) in jsdom, for the money and quantity fields and for the entry grid with 30 and 100 lines. It prints one line per case (`key-latency: ... p95 ... ms`). jsdom has no painting, so the numbers are the page's own code only: a guard against a slow handler or a render of too many rows, not proof of the NFR. The arrow-move guard is 100 ms (about three times the target) because AG Grid's focus code costs 13 to 17 ms per move in jsdom on a quiet machine and up to 45 ms on a busy one; it catches a slowdown of an order of magnitude. The real number comes from the Windows end-to-end suite. Typical quiet-machine values (12-10-2026): money and quantity fields p95 2 to 3 ms, grid cell typing p95 7 to 9 ms with 30 or 100 lines, arrow move p95 15 to 23 ms.
 
 
-## 8. Results of the first full D2 run (12-10-2026)
+## 8. Results of the D2 speed runs
+
+Two full runs are kept here. 8.1 is the current one, taken after backend's migration 0002 (covering index for balances, 15-10-2026). 8.2 is the first full run (12-10-2026), kept as history because it is where the eight slow rows were found.
+
+### 8.1 Run of 15-10-2026, after migration 0002 (current)
+
+Command: `pnpm perf` from the repository root. Exit code **0** ("perf: PASS"): no row OVER, install row SKIPPED (Windows only). Data: the NFR-SCL-1 volume of Section 7.2 (20,000 accounts, 3,503,940 journal lines), upgraded to schema version 2 before the run. Runner factor **1.0**, so every runner threshold equals its NFR target. Calibration row: 135.1 us against the expected 228 us, so the factor check is OK on this machine.
+
+Machine: Apple M1 Pro, 8 logical CPUs, 16 GB. Load average (1 minute) 5.68 before the run and 6.15 after, on 8 CPUs, so the machine was not oversubscribed. (It reached 16.7 for about a minute while cargo built the benchmarks, before any timing started.) The reviewer had been told not to run cargo or pnpm until this run ended. No row was over target, so no row was rerun.
+
+| Action | NFR | p95 | Mean | NFR target | Estimate on the reference computer (x 1.65) | Result |
+|---|---|---|---|---|---|---|
+| Calibration (fixed CPU workload) | factor check | 135.1 us | 135.1 us | - | - | OK |
+| apply_bps, one percent charge | NFR-SPD-7 (budget) | 2.5 ns | 2.4 ns | 1.0 us | 4.1 ns | OK |
+| parse_rupees, one money text | NFR-SPD-7 (budget) | 255.8 ns | 156.5 ns | 2.0 us | 422.1 ns | OK |
+| split_by_bps, 3 partners | NFR-SPD-7 (budget) | 82.8 ns | 82.2 ns | 5.0 us | 136.6 ns | OK |
+| split_by_bps, 10 partners | NFR-SPD-7 (budget) | 248.3 ns | 244.7 ns | 10.0 us | 409.7 ns | OK |
+| Preview money maths, 500 lines | NFR-SPD-7 (budget) | 253.2 us | 248.5 us | 10.00 ms | 417.8 us | OK |
+| normalize_urdu, one name | NFR-SPD-6 (budget) | 666.7 ns | 651.0 ns | 5.0 us | 1.1 us | OK |
+| Three search keys, one name | NFR-SPD-6 (budget) | 1.3 us | 1.3 us | 10.0 us | 2.2 us | OK |
+| Three search keys, 100-char name | NFR-SPD-6 (budget) | 4.9 us | 4.9 us | 30.0 us | 8.1 us | OK |
+| Search keys for 20,000 accounts | NFR-SPD-1 (budget) | 22.89 ms | 22.57 ms | 200.00 ms | 37.77 ms | OK |
+| Picker search, English name, exact start | NFR-SPD-6 | 843.8 us | 717.7 us | 50.00 ms | 1.39 ms | OK |
+| Picker search, English name, 1 spelling mistake | NFR-SPD-6 | 3.42 ms | 2.98 ms | 50.00 ms | 5.65 ms | OK |
+| Picker search, English name, 2 spelling mistakes | NFR-SPD-6 | 4.26 ms | 3.86 ms | 50.00 ms | 7.03 ms | OK |
+| Picker search, Urdu name, exact start | NFR-SPD-6 | 1.10 ms | 734.1 us | 50.00 ms | 1.81 ms | OK |
+| Picker search, Urdu name, 1 spelling mistake | NFR-SPD-6 | 6.54 ms | 5.78 ms | 50.00 ms | 10.80 ms | OK |
+| Picker search, Urdu name, 2 spelling mistakes | NFR-SPD-6 | 6.47 ms | 5.57 ms | 50.00 ms | 10.68 ms | OK |
+| Picker search, text that matches nothing | NFR-SPD-6 | 5.76 ms | 5.25 ms | 50.00 ms | 9.50 ms | OK |
+| Picker search, 1 letter typed | NFR-SPD-6 | 1.51 ms | 1.07 ms | 50.00 ms | 2.49 ms | OK |
+| Picker search, 3 letters typed | NFR-SPD-6 | 1.32 ms | 957.1 us | 50.00 ms | 2.18 ms | OK |
+| Buyer picker search, English name, 1 mistake | NFR-SPD-6 | 4.44 ms | 2.82 ms | 50.00 ms | 7.33 ms | OK |
+| Item picker search with a mistake (500 items) | NFR-SPD-6 | 19.7 us | 17.9 us | 50.00 ms | 32.6 us | OK |
+| Search index rebuild, 20,000 accounts and 2,000 masters | NFR-SPD-1 (budget) | 90.09 ms | 84.52 ms | 200.00 ms | 148.66 ms | OK |
+| Rule resolution, 10,000 rules spread over parties and items | NFR-SCL-6 | 255.0 ns | 245.8 ns | 1.00 ms | 420.7 ns | OK |
+| Rule resolution, 10,000 rules for one party and item (worst case) | NFR-SCL-6 | 10.5 us | 9.6 us | 1.00 ms | 17.4 us | OK |
+| Rule resolution, 10,000 dated versions of one default | NFR-SCL-6 | 9.9 us | 9.6 us | 1.00 ms | 16.4 us | OK |
+| Rule resolution, no rule at any of the six levels | NFR-SCL-6 | 51.6 ns | 49.5 ns | 1.00 ms | 85.1 ns | OK |
+| Filing 10,000 rules again after a rule change | NFR-SPD-7 (budget) | 1.69 ms | 890.2 us | 50.00 ms | 2.79 ms | OK |
+| Account list, every account with its balance | NFR-SPD-3 | 283.97 ms | 268.85 ms | 300.00 ms | 468.56 ms | OK |
+| Account list, first page of 200 | NFR-SPD-3 | 56.18 ms | 54.11 ms | 300.00 ms | 92.70 ms | OK |
+| Account list filtered by text (about 2,000 matches) | NFR-SPD-3 | 34.24 ms | 23.10 ms | 300.00 ms | 56.50 ms | OK |
+| Chart of accounts tree with every balance | NFR-SPD-3 | 254.87 ms | 237.79 ms | 300.00 ms | 420.54 ms | OK |
+| Party card, the busiest buyer (about 55,000 lines) | NFR-SPD-21 | 28.47 ms | 7.65 ms | 100.00 ms | 46.97 ms | OK |
+| Party card, the busiest seller (about 49,000 lines) | NFR-SPD-21 | 5.55 ms | 5.00 ms | 100.00 ms | 9.16 ms | OK |
+| Party card, an ordinary buyer (about 90 lines) | NFR-SPD-21 | 120.7 us | 105.7 us | 100.00 ms | 199.1 us | OK |
+| Party card, the cash account (about 514,000 lines) | NFR-SPD-21 | 44.76 ms | 43.17 ms | 100.00 ms | 73.85 ms | OK |
+| Party card, 43 accounts in turn | NFR-SPD-21 | 557.6 us | 476.2 us | 100.00 ms | 920.0 us | OK |
+| Party ledger of the busiest buyer, 10 years | NFR-SPD-11 | 189.84 ms | 170.44 ms | 2.00 s | 313.24 ms | OK |
+| Party ledger of an ordinary buyer, 10 years | NFR-SPD-11 | 156.4 us | 151.7 us | 2.00 s | 258.1 us | OK |
+| Cash book of one day (opening = all before) | NFR-SPD-10 | 386.15 ms | 256.36 ms | 1.00 s | 637.14 ms | OK |
+| Trial balance, 10 years | NFR-SPD-13 | 440.48 ms | 300.68 ms | 2.00 s | 726.79 ms | OK |
+| Save an advance voucher for the busiest seller | NFR-SPD-9 | 12.01 ms | 11.29 ms | 150.00 ms | 19.81 ms | OK |
+| Save an advance voucher for an ordinary seller | NFR-SPD-9 | 3.78 ms | 3.43 ms | 150.00 ms | 6.23 ms | OK |
+| Name suggestions per key press, English letters to Urdu | NFR-SPD-20 | 545.6 us | 353.4 us | 50.00 ms | 900.3 us | OK |
+| Name suggestions for a whole typed name, English letters to Urdu | NFR-SPD-20 | 878.4 us | 616.3 us | 50.00 ms | 1.45 ms | OK |
+| Name suggestions per key press, Urdu letters to English | NFR-SPD-20 | 13.09 ms | 5.92 ms | 50.00 ms | 21.61 ms | OK |
+| Install (NSIS, silent) | NFR-INS-1 | - | - | 120.00 s | - | SKIPPED (Windows only) |
+
+Reading the table:
+
+- The last column multiplies the Mac time by 3,752 / 2,268 = 1.65 (Section 7.3). It is an estimate, not a measurement. The reference computer is the NFR 0.2 minimum (Core i3-7100).
+- Nothing is OVER on this machine. Before migration 0002, eight rows were OVER (8.2). Now the party card is 0.1 to 45 ms against 100 ms, the first page of 200 accounts 56 ms against 300 ms, the trial balance 440 ms against 2 s, and saving an advance for the busiest seller 12 ms against 150 ms.
+- **Two rows are at the target, not under it with room.** They need the balance of every account, which is one pass over all 3.5 million index entries (about 220 ms of CPU on this Mac).
+  - Account list, every account: 284 ms against 300 ms (95% of the target). Estimate on the reference computer 469 ms. Estimate on a GitHub Windows runner (EPYC 7763, PassMark 2,517; Mac 3,752 / 2,517 = 1.49) about 423 ms. The accounts screen asks for every account with `limit 0` (`frontend/src/shared/accounts/api.ts`, `LIST_PAGE_LIMIT`), so this is the real path of the انڈکس screen at 20,000 accounts.
+  - Chart of accounts tree: 255 ms against 300 ms (85%). Estimate on the reference computer 421 ms, on the runner about 380 ms.
+  - Both are under their runner threshold on this Mac, but by less than the 1.49 to 1.65 that the slower machines need. The first Windows run of `pnpm perf` will show the real numbers. If either row reads OVER there, it is a real miss of NFR-SPD-3 at the NFR-SCL-1 volume.
+  - At the shop's real volume (about 350,000 journal lines, one tenth), the same pass is about 22 ms.
+- Run 8.1 is one quiet run. A second quiet run was not taken because the machine was shared again straight after.
+
+### 8.2 First full run of 12-10-2026 (history, before migration 0002)
+
 
 Command: `pnpm perf` from the repository root (cargo bench of the whole workspace, then the table). The data is the NFR-SCL-1 volume of Section 7.2. Runner factor 1.0, so every threshold is the NFR target. The machine is the developer Mac, which is about 1.65 times faster than the reference computer (Section 7.3): multiply a Mac time by 1.65 to estimate the reference time.
 
@@ -289,7 +360,7 @@ Machine: Apple M1 Pro, 8 logical CPUs, 16 GB. Runner factor 1.
 
 `pnpm perf` exit code 1: 8 rows OVER (the first run had 9). Everything else is OK, most of it by a wide margin: picker search 0.6 to 7 ms against 50 ms, rule resolution 0.05 to 10 us against 1 ms, name suggestions 0.4 to 13 ms against 50 ms, party ledger 218 ms against 2 s, voucher save for an ordinary seller 5 ms against 150 ms.
 
-### 8.1 The rows that are OVER
+#### 8.2.1 The rows that were OVER
 
 All eight come from one cause. A balance is worked out when it is asked for: `SUM` over every journal line of the account, joined one line at a time to `journal_entries` to check that the entry is posted (`backend/crates/db/src/ledger.rs`, `totals_for_accounts`; `EXPLAIN QUERY PLAN`: `SEARCH l USING INDEX idx_journal_lines_account_entry (account_id=?)`, then `SEARCH e USING INTEGER PRIMARY KEY (rowid=?)` for each line). The cost grows with the number of lines of the account. Measured with the `sqlite3` tool on the same file, warm cache, CPU time: the busiest buyer (55,658 lines) 105 ms for the balance and 56 ms more for the last entry date; the cash account (513,970 lines) 360 ms for the balance. The party card does both (and a third scan for a seller's open advance), the account list and the chart tree do the balance for every account on the page, and the trial balance does it for all of them.
 
