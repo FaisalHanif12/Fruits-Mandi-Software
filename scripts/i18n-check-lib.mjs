@@ -50,11 +50,16 @@ function patternText(pattern) {
 }
 
 /**
- * True when the text has letters outside its {placeables}.
+ * True when the text has letters outside its {placeables} and its markup tags (`<num>`).
  * @param {string} text
  */
 function hasOwnWords(text) {
-  return /\p{L}/u.test(text.replace(/\{[^}]*\}/g, '').replace(/^\.[\w-]+=/gm, ''));
+  return /\p{L}/u.test(
+    text
+      .replace(/\{[^}]*\}/g, '')
+      .replace(/<\/?[a-z][\w-]*>/g, '')
+      .replace(/^\.[\w-]+=/gm, ''),
+  );
 }
 
 /**
