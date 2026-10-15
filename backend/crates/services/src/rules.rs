@@ -690,12 +690,15 @@ pub fn set_charges(
 
 // ---- Settings: overrides and checks ----
 
+/// Reads the stored switches. A missing value means the starting position of PRD FR-11.10 v1.5:
+/// a typed commission or لاگا is allowed, and a credit limit warns. A value stored as `false`
+/// stays `false` (the Owner turned it off).
 fn overrides_from(value: Option<Value>) -> OverridesSettings {
     let allow = value
         .as_ref()
         .and_then(|v| v.get("allow_line_override"))
         .and_then(Value::as_bool)
-        .unwrap_or(false);
+        .unwrap_or(true);
     let mode = match value
         .as_ref()
         .and_then(|v| v.get("credit_limit_mode"))
@@ -721,7 +724,7 @@ fn overrides_json(settings: &OverridesSettings) -> Value {
 }
 
 /// The switches of Section 21 "Overrides" and "Checks": a typed commission or لاگا on a line is
-/// off, and a credit limit warns, until the Owner changes them (PRD A18).
+/// allowed, and a credit limit warns, until the Owner changes them (PRD FR-11.10 v1.5, A18).
 ///
 /// # Errors
 /// `ServiceError::Db`.

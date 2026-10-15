@@ -1340,18 +1340,18 @@ fn settings_charges_check_every_value_and_name_the_field() {
 }
 
 #[test]
-fn the_overrides_start_off_and_are_kept_with_an_audit_row() {
-    // PRD Section 21 "Overrides", A18: a typed commission is off and a credit limit warns, until
-    // the Owner changes them.
+fn the_overrides_start_on_and_are_kept_with_an_audit_row() {
+    // PRD FR-11.10 v1.5 and Section 21 "Overrides": a typed commission or لاگا is allowed and a
+    // credit limit warns (A18), until the Owner changes them.
     let f = fixture();
     let start = rules::overrides(&f.env.ctx).unwrap();
     assert_eq!(
         (start.allow_line_override, start.credit_limit_mode),
-        (false, CreditLimitMode::Warn)
+        (true, CreditLimitMode::Warn)
     );
     let audits = audit_total(&f.dir);
     let want = OverridesSettings {
-        allow_line_override: true,
+        allow_line_override: false,
         credit_limit_mode: CreditLimitMode::Block,
     };
     assert_eq!(
@@ -1370,9 +1370,23 @@ fn the_overrides_start_off_and_are_kept_with_an_audit_row() {
         .query_row("SELECT old_json, new_json FROM audit_log WHERE entity = 'settings' ORDER BY id DESC LIMIT 1", [], |r| Ok((r.get(0)?, r.get(1)?)))
         .unwrap();
     assert!(
-        old.contains("\"allow_line_override\":false")
+        old.contains("\"allow_line_override\":true")
+            && new.contains("\"allow_line_override\":false")
             && new.contains("\"credit_limit_mode\":\"block\""),
         "{old} {new}"
+    );
+    // A value the Owner stored as false stays false, even when the other key is missing.
+    let changed = raw(&f.dir)
+        .execute(
+            "UPDATE settings SET value_json = '{\"allow_line_override\":false}' WHERE key = 'overrides'",
+            [],
+        )
+        .unwrap();
+    assert_eq!(changed, 1, "the saved setting row exists");
+    let kept = rules::overrides(&f.env.ctx).unwrap();
+    assert_eq!(
+        (kept.allow_line_override, kept.credit_limit_mode),
+        (false, CreditLimitMode::Warn)
     );
 }
 
