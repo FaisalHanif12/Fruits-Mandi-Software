@@ -33,6 +33,7 @@ export { QuickAddAccount } from './QuickAddAccount';
 export { RomanUrduInput, type ConvertedWord } from './RomanUrduInput';
 export { FreeTextInput } from './FreeTextInput';
 export { SaveChangesPrompt } from './SaveChangesPrompt';
+export { ScriptText } from './ScriptText';
 export { SegmentedControl, type SegmentedOption } from './SegmentedControl';
 export { Select, type SelectOption } from './Select';
 export { Stepper, type Step } from './Stepper';

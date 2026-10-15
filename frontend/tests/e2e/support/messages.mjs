@@ -39,7 +39,10 @@ function bundleOf(language) {
 export function t(language, id, vars = {}) {
   const pattern = bundleOf(language).getMessage(id)?.value;
   if (pattern === null || pattern === undefined) throw new Error(`${language}: no message ${id}`);
-  return bundleOf(language).formatPattern(pattern, vars);
+  // The <num> and <name> markup is drawn as a number or a name, so the page text has no tags.
+  return bundleOf(language)
+    .formatPattern(pattern, vars)
+    .replace(/<\/?(num|name)>/g, '');
 }
 
 /** Both languages, Urdu first: the app starts in Urdu (PRD FR-7.30). */

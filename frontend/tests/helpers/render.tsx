@@ -36,6 +36,7 @@ export function message(
   const bundle = bundles[language];
   const pattern = bundle.getMessage(id)?.value;
   if (pattern == null) throw new Error(`${language}: no message ${id}`);
-  // The <num> markup of a message is drawn as a number in the page, so its text is what is compared.
-  return visible(bundle.formatPattern(pattern, args)).replace(/<\/?num>/g, '');
+  // The <num> and <name> markup of a message is drawn as a number or a name in the page, so its
+  // text is what is compared.
+  return visible(bundle.formatPattern(pattern, args)).replace(/<\/?(num|name)>/g, '');
 }

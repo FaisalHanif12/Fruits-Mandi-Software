@@ -134,7 +134,7 @@ auth-lock-title = The app is locked
 auth-lock-help = Type your password. Your work stays as it was.
 
 # review: pending
-auth-lock-user = User: { $name }
+auth-lock-user = User: <name>{ $name }</name>
 
 # review: pending
 auth-lock-unlock = Unlock

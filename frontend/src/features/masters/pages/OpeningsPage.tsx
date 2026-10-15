@@ -72,7 +72,7 @@ const ALL_ACTIVE: AccountFilter = { account_type: null, text: '', include_inacti
 
 const BASE_COLUMNS: readonly EntryColumn[] = [
   { field: 'code', type: 'calc', headerId: 'accounts-col-code' },
-  { field: 'name', type: 'label', headerId: 'accounts-col-name' },
+  { field: 'name', type: 'label', headerId: 'accounts-col-name', grow: true },
   { field: DATE_FIELD, type: 'date', headerId: 'accounts-col-opening-date' },
   { field: DR_FIELD, type: 'money', headerId: 'accounts-col-opening-dr' },
   { field: CR_FIELD, type: 'money', headerId: 'accounts-col-opening-cr' },

@@ -9,7 +9,14 @@ import { uiErrorOf } from '../../../shared/api';
 import { useFormState, useSingleFlight } from '../../../shared/hooks';
 import { useUiLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
-import { Button, ErrorNotice, Field, PasswordInput, fieldError } from '../../../shared/ui';
+import {
+  Button,
+  ErrorNotice,
+  Field,
+  PasswordInput,
+  ScriptText,
+  fieldError,
+} from '../../../shared/ui';
 import { useLogout, useUnlock } from '../hooks';
 import { useLockCountdown } from '../use-lock-countdown';
 
@@ -66,7 +73,7 @@ export function LockOverlay({ userName }: LockOverlayProps) {
           <Localized id="auth-lock-help">
             <p className="type-body text-ink-muted" />
           </Localized>
-          <Localized id="auth-lock-user" vars={{ name: userName }}>
+          <Localized id="auth-lock-user" vars={{ name: userName }} elems={{ name: <ScriptText /> }}>
             <p className="type-body" />
           </Localized>
           <form

@@ -89,7 +89,7 @@ export function GlobalSearch({ onOpenAccount }: GlobalSearchProps) {
               if (event.key === 'Escape') keepKeyForApp(event);
             },
           })}
-          className="type-field min-w-0 flex-1 truncate bg-transparent text-ink placeholder:text-ink-placeholder"
+          className="type-field min-w-0 flex-1 self-stretch truncate bg-transparent text-ink placeholder:text-ink-placeholder"
         />
         <KeyChip shortcut={SHORTCUTS.globalSearch} tone="on-light" />
       </div>

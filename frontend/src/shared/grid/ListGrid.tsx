@@ -16,7 +16,7 @@ import type {
   ValueGetterParams,
 } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { Language } from '../../i18n';
 import { formatPaisa, useGrouping, type Paisa } from '../format';
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
@@ -181,6 +181,12 @@ function GridInner<T>({
     () => shown.map((column) => toColDef(column, l10n.getString(column.headerId), context, total)),
     [shown, l10n, context, total],
   );
+  // The total row and the columns can change together (the "More columns" tick of the account
+  // list). The grid then draws the new total row with the value getters it had before, so the
+  // word in its label cell stayed empty. Drawing the cells again after the change fixes that.
+  useEffect(() => {
+    apiRef.current?.refreshCells({ force: true });
+  }, [columnDefs]);
 
   const onGridReady = (event: GridReadyEvent<T>) => {
     apiRef.current = event.api;

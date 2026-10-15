@@ -4,7 +4,7 @@
 
 import { Localized } from '@fluent/react';
 import { Check, Lock } from 'lucide-react';
-import { Num } from '../../shared/ui';
+import { Num, ScriptText } from '../../shared/ui';
 
 export type DayState = 'open' | 'closed';
 
@@ -23,7 +23,7 @@ interface StatusBarProps {
 export function StatusBar({ userName, date, day, closedUpTo = null, onOpenDay }: StatusBarProps) {
   return (
     <footer className="type-body flex min-h-statusbar shrink-0 items-center gap-5 border-t border-border bg-surface-sunken px-4 text-ink">
-      <Localized id="layout-status-user" vars={{ name: userName }}>
+      <Localized id="layout-status-user" vars={{ name: userName }} elems={{ name: <ScriptText /> }}>
         <span />
       </Localized>
       {date === '' ? null : (
@@ -72,7 +72,7 @@ function DayStatusItem({ day, onOpenDay }: { day: DayState; onOpenDay: (() => vo
     <button
       type="button"
       onClick={onOpenDay}
-      className={`flex items-center gap-1 rounded-1 underline ${tone}`}
+      className={`flex min-h-target items-center gap-1 rounded-1 underline ${tone}`}
     >
       {content}
     </button>

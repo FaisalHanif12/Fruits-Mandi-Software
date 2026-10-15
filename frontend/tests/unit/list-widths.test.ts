@@ -5,7 +5,7 @@
 // to LIST_GROW_MIN_WIDTH.
 
 import { describe, expect, it } from 'vitest';
-import { ACCOUNT_COLUMNS } from '../../src/features/masters/account-columns';
+import { ACCOUNT_COLUMNS, accountColumns } from '../../src/features/masters/account-columns';
 import { MASTER_CONFIGS, columnsOf } from '../../src/features/masters/configs';
 import { RULE_COLUMNS } from '../../src/features/rules/columns';
 import type { ListColumn } from '../../src/shared/grid';
@@ -37,6 +37,21 @@ describe('lists fit the content area', () => {
 
   it.each(STEPS)('account list at the %s step', (step) => {
     expect(leastWidth(ACCOUNT_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step]);
+  });
+
+  // "More columns" adds the opening debit and credit below the wide step (N3). They must fit too.
+  it.each(STEPS)('account list with More columns at the %s step', (step) => {
+    expect(leastWidth(accountColumns(step, true), step)).toBeLessThanOrEqual(ROOM[step]);
+  });
+
+  it('More columns shows the opening debit and credit at every step', () => {
+    for (const step of STEPS) {
+      const fields = accountColumns(step, true)
+        .filter((column) => isFromStep(step, column.from ?? 'compact'))
+        .map((column) => column.field);
+      expect(fields).toContain('opening_dr');
+      expect(fields).toContain('opening_cr');
+    }
   });
 
   it.each(STEPS)('rule list at the %s step', (step) => {

@@ -81,6 +81,10 @@ accounts-filter-label = اس فہرست میں تلاش
 # review: pending
 accounts-show-inactive = غیر فعال بھی دکھائیں
 
+# The tick under the filters on a narrow window (PRD FR-10.5, Code Standards F22): it adds the opening debit and credit.
+# review: pending
+accounts-more-columns = مزید کالم
+
 ## Types and weekdays.
 
 # review: pending

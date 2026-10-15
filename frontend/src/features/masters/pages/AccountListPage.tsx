@@ -10,7 +10,7 @@ import { Landmark, Plus, SearchX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, type ListContext } from '../../../shared/grid';
-import { isFromStep, useFocusFirstField, useLayoutStep } from '../../../shared/hooks';
+import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -23,7 +23,7 @@ import {
   Select,
   TextInput,
 } from '../../../shared/ui';
-import { ACCOUNT_COLUMNS } from '../account-columns';
+import { accountColumns, hasMoreColumns, showsOpeningColumns } from '../account-columns';
 import { useAccountList } from '../../../shared/accounts';
 import type { AccountFilter, AccountRow, AccountType } from '../../../shared/accounts';
 import { useMasterFocus } from '../store';
@@ -38,6 +38,10 @@ export function AccountListPage() {
   const [type, setType] = useState<AccountType | typeof ALL>(ALL);
   const [text, setText] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  // The tick that adds the opening debit and credit below the wide step. It is kept for next time.
+  const [moreColumns, setMoreColumns] = useRememberedFlag('accounts.more_columns', false);
+  const step = useLayoutStep();
+  const columns = useMemo(() => accountColumns(step, moreColumns), [step, moreColumns]);
   const filter = useMemo<AccountFilter>(
     () => ({
       account_type: type === ALL ? null : type,
@@ -71,9 +75,10 @@ export function AccountListPage() {
   );
   const filtering = filter.text !== '' || filter.account_type !== null || filter.include_inactive;
   const data = list.data;
-  // The opening debit and credit columns come with the wide layout; the totals stand under them
-  // there (Code Standards F19), and as a line under the list where the columns are not shown.
-  const totalsUnderColumns = isFromStep(useLayoutStep(), 'wide');
+  // The opening debit and credit columns come with the wide layout, or with "More columns"; the
+  // totals stand under them there (Code Standards F19), and as a line under the list where the
+  // columns are not shown.
+  const totalsUnderColumns = showsOpeningColumns(step, moreColumns);
   // The callback depends on the loaded list, not on the two amounts: a Paisa value must not go
   // into a dependency list (it is typed unknown there, Code Standards F3).
   const totals = useCallback(
@@ -136,7 +141,7 @@ export function AccountListPage() {
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <div className={data.rows.length <= SHORT_LIST_ROWS ? '' : 'min-h-0 flex-1'}>
           <ListGrid<AccountRow>
-            columns={ACCOUNT_COLUMNS}
+            columns={columns}
             rows={data.rows}
             getRowId={(row) => String(row.id)}
             labelId="accounts-title"
@@ -219,6 +224,13 @@ export function AccountListPage() {
           onChange={setShowInactive}
           label={<Localized id="accounts-show-inactive" />}
         />
+        {hasMoreColumns(step) ? (
+          <Checkbox
+            checked={moreColumns}
+            onChange={setMoreColumns}
+            label={<Localized id="accounts-more-columns" />}
+          />
+        ) : null}
       </div>
       <div className="flex min-h-0 flex-1 flex-col">{body}</div>
     </div>

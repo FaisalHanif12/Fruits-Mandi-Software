@@ -74,6 +74,7 @@ function toColDef(
     colId: column.field,
     headerName,
     width: COLUMN_WIDTHS[column.type],
+    ...(column.grow === true ? { flex: 1, minWidth: COLUMN_WIDTHS[column.type] } : {}),
     resizable: false,
     sortable: false,
     suppressMovable: true,

@@ -134,7 +134,7 @@ auth-lock-title = ایپ لاک ہے
 auth-lock-help = اپنا پاس ورڈ لکھیں۔ آپ کا کام جوں کا توں رہے گا۔
 
 # review: pending
-auth-lock-user = صارف: { $name }
+auth-lock-user = صارف: <name>{ $name }</name>
 
 # review: pending
 auth-lock-unlock = کھولیں

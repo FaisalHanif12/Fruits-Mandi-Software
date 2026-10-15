@@ -1,7 +1,7 @@
 ### The dashboard and the parts that are not built yet (plan 04, PRD FR-5.1, FR-7.46).
 
 # review: pending
-dashboard-greeting = السلام علیکم، { $name }
+dashboard-greeting = السلام علیکم، <name>{ $name }</name>
 
 # review: pending
 dashboard-today = آج: <num>{ $date }</num>

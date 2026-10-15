@@ -27,6 +27,12 @@ export interface EntryColumn {
   /** The Fluent message ID of the header. */
   readonly headerId: string;
   /**
+   * The column takes the free width of the grid, and keeps its own type width as the least it
+   * has. Used for the name column of a grid that is narrower than the room it has, so no empty
+   * strip is left at the end of it.
+   */
+  readonly grow?: boolean;
+  /**
    * Can this cell be typed in on this row? Asked per cell, because some cells are open only on
    * some rows (the buyer rate when "ریٹ مختلف" is on). Default: true. A `calc` cell never is.
    */

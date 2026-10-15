@@ -19,6 +19,15 @@ export function scriptHintId(text: string, script: Script): string | null {
   return URDU_LETTER.test(text) ? 'err-name-en-script' : null;
 }
 
+/**
+ * The script a piece of typed text is written in: `ur` when it has any Urdu letter, else `en`.
+ * Used to give a name the right `lang`, so it is drawn in the right font and size on a screen of
+ * the other language (NFR-USE-20, NFR-URD-10). Digits and signs alone count as `en`.
+ */
+export function scriptOf(text: string): Script {
+  return URDU_LETTER.test(text) ? 'ur' : 'en';
+}
+
 /** The ID of the message for an empty required field, else null. Spaces alone are empty. */
 export function requiredHintId(text: string): string | null {
   return text.trim() === '' ? 'err-required' : null;

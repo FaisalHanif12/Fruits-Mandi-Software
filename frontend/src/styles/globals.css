@@ -42,6 +42,36 @@ body {
   display: none;
 }
 
+/*
+ * Urdu words inside an English screen (the owner's name, an Urdu name beside an English one, a
+ * learned Urdu word). The type tokens follow the lang of the element that carries the type class,
+ * so a `lang="ur"` span inside English text used to inherit the Latin size and line height
+ * (16 px, 1.45), which cuts Nastaliq (NFR-USE-20: Urdu at least 18 px; NFR-URD-11: line height at
+ * least 1.8). This gives such a span the Urdu tokens of the same role. It sits in the base layer,
+ * so an element that has its own type class still wins. The Urdu app is not touched: its text is
+ * already Urdu all the way down. (D1+D2 final recheck, N1.)
+ */
+@layer base {
+  :lang(en) [lang='ur'] {
+    font-family: var(--font-text);
+    font-size: var(--text-body);
+    line-height: var(--leading-text);
+  }
+
+  /* Inside a bigger role, the Urdu word takes the same step of the Urdu scale. */
+  :lang(en) .type-title [lang='ur'] {
+    font-size: var(--text-5);
+  }
+
+  :lang(en) .type-lead [lang='ur'] {
+    font-size: var(--text-2);
+  }
+
+  :lang(en) .type-section [lang='ur'] {
+    font-size: var(--text-3);
+  }
+}
+
 /* Design system 7: no motion for people who ask for none. */
 @media (prefers-reduced-motion: reduce) {
   * {

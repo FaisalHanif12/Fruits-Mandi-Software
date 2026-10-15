@@ -57,7 +57,7 @@ layout-user-menu = صارف کا مینو
 ## Status bar (PRD FR-5.5).
 
 # review: pending
-layout-status-user = صارف: { $name }
+layout-status-user = صارف: <name>{ $name }</name>
 # review: pending
 layout-status-date = تاریخ: <num>{ $date }</num>
 # review: pending

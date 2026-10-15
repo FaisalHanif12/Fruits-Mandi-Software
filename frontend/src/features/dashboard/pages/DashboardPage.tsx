@@ -9,7 +9,7 @@ import { useDayStatus } from '../../../app/use-day-status';
 import { useAuthStatus } from '../../auth/hooks';
 import { isoToDisplayDate } from '../../../shared/format';
 import { SHORTCUTS } from '../../../shared/keyboard';
-import { Button, EmptyState, Num } from '../../../shared/ui';
+import { Button, EmptyState, Num, ScriptText } from '../../../shared/ui';
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export function DashboardPage() {
   return (
     <div className="flex h-full flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <Localized id="dashboard-greeting" vars={{ name }}>
+        <Localized id="dashboard-greeting" vars={{ name }} elems={{ name: <ScriptText /> }}>
           <h1 className="type-title" />
         </Localized>
         <p className="type-body flex items-center gap-2 text-ink-muted">

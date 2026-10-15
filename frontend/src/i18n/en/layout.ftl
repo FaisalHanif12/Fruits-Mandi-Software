@@ -57,7 +57,7 @@ layout-user-menu = User menu
 ## Status bar (PRD FR-5.5).
 
 # review: pending
-layout-status-user = User: { $name }
+layout-status-user = User: <name>{ $name }</name>
 # review: pending
 layout-status-date = Date: <num>{ $date }</num>
 # review: pending

@@ -7,6 +7,7 @@ import { KeyRound, Lock, LogOut } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
 import type { Ref } from 'react';
 import { useUiLanguage } from '../../shared/i18n';
+import { scriptOf } from '../../shared/text/scriptHint';
 
 interface UserMenuProps {
   /** The signed-in user's name, shown as typed (a name is not translated, PRD FR-7.25). */
@@ -39,10 +40,18 @@ export function UserMenu({
         title={userName}
         className="flex h-control-compact items-center gap-2 rounded-2 border border-border bg-surface ps-2 pe-3 text-ink"
       >
-        <span className="type-body flex size-5 items-center justify-center rounded-full bg-primary leading-chip text-on-primary">
+        {/* The name and its first letter carry the script they are written in, so an Urdu name
+            in the English app is drawn at the Urdu size and line height (NFR-USE-20, NFR-URD-11). The
+            circle is 26 px, so a Nastaliq letter at that size fits in it. */}
+        <span
+          lang={scriptOf(initial)}
+          className="type-body flex size-icon-lg items-center justify-center rounded-full bg-primary text-on-primary"
+        >
           {initial}
         </span>
-        <span className="type-body">{userName}</span>
+        <span lang={scriptOf(userName)} className="type-body">
+          {userName}
+        </span>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
