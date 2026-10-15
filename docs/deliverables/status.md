@@ -6,7 +6,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 - Goal run: D1 and D2 together (README Section 4a, requirements v1.2 committed as `b0902a6`). Build every plan 01 to 10, mark each "built" and commit it; then one fresh `reviewer` and `robustness` for the whole run; then one pull request and the D1+D2 DONE REPORT.
 - Branch: `feature/db-schema` carries plans 03 onward (stacked on `feature/core-money`, PR #2, on `feature/scaffold-repo`, PR #1). GitHub Actions is off; Windows-workflow items are WAITING-CI.
-- Now (12-10-2026): plans 01 to 10 are all built and committed. Plans 09 and 10, with the 7 follow-ups, checked by the lead: `pnpm lint`, `pnpm typecheck`, `pnpm i18n:check`, `pnpm test` all exit 0 (frontend 1,479 passed; Rust 715 passed, 0 failed, 2 ignored accuracy gates); `cargo deny check` ok; E2E-19 ok. Next: the end gate (README 4a), one fresh reviewer and one fresh robustness for all of D1+D2.
+- Now (15-10-2026): plans 01 to 10 are all built and committed (`c114967`). Umar's requirement documents v1.3 and v1.4 are committed on their own (`4dd2f82`); they need no D1 or D2 code. The end gate resumed locally (no pull request, no GitHub Actions in this run). The first run review was FAIL (10 MAJOR; report in `docs/reviews/d1-d2-run-review.md`). Backend and frontend finished their whole fix lists (backend: Rust 831 passed, money review PASS WITH MINOR; frontend: 1654 tests passed, lint and typecheck exit 0), and backend's balance speed fix (migration 0002, indexes only, no table) brought the party card, account list and save advance under target. Next: commit the fixes, the reviewer recheck, the robustness rerun of `pnpm perf` and the attack lists, the final checks, and the D1+D2 DONE REPORT.
 
 ## Plan files
 
@@ -44,6 +44,11 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Follow-ups (MINOR)
 
+- Speed at the NFR-SCL-1 stress volume (20,000 accounts, 3.5M journal lines; 10 times the shop's real volume), Apple M1 Pro, after migration 0002: two rows are at the target, not under it with room: all 20,000 accounts (p95 289 to 319 ms, target 300) and the chart tree (236 to 273 ms, target 300). Both need every balance of the whole journal, one pass over 3.5M index entries, about 220 ms of CPU on the Mac, about 1.65 times that on the reference computer. At the real volume (about 350k lines) the pass is about 22 ms. The screens that matter are well under target: first page of 200 accounts 64 ms, party card 5 to 60 ms, save advance 12 to 17 ms. Team default: accepted for D1+D2; if Umar wants room at the stress volume, backend can read the journal in 2 to 4 slices on extra read connections (Code Standards B21 allows a second reader). A stored balance table is not built (FR-6.1, Architecture 15).
+- Architecture 15.8 lists the key indexes; migration 0002 adds three: `idx_journal_lines_account_amounts`, `idx_journal_entries_unposted`, `idx_journal_lines_advance`. They add no table and no column. The Architecture document needs a version line for them, through the requirement-change skill (Umar).
+- Radix Select writes one inline style that the production CSP (`style-src 'self'`) refuses; Windows will log a harmless refusal. The look is fixed in `globals.css`. To silence it, add the hash `'sha256-441zG27rExd4/il+NvIqyL8zFx5XmyNQtE381kSkUJk='` (from @radix-ui/react-select 2.3.8) to `style-src` in `backend/app/tauri.conf.json`. Check on Windows first.
+- The opening balances grid has fixed column widths, so there is an empty strip on the right at 1366 wide (frontend, cosmetic).
+- Review items 17 (spelling pairs by position) and 21 (a stronger plan 07 property test) stay open for D3. Review item 24 (the benches) is closed by committing them.
 - 01-M1 and 01-M2: done in plan 02.
 - 02: Windows WebView2 check of the Urdu field text position (design-system 8.4).
 - 02: frontend `shared/` coverage (80%, Code Standards 9.4) is not measured yet; add `@vitest/coverage-v8` when `shared/` grows.
@@ -64,6 +69,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 - An advance larger than the cash in hand is allowed today (cash goes below zero); no PRD rule refuses it. Do you want a warning that does not block, "روکڑ صفر سے کم ہو جائے گی"?
 - Before D3: PRD FR-7.59 works out a seller's payable from his بکری credits and receipts only. A seller with an opening جمع (for example کریم 10,160 جمع from the old books) then takes an advance of 4,000: is his opening credit payable, so the advance is set against it? Today the rule does not count opening credits.
 - PRD FR-10.9 says "changing an opening reverses the old opening posting and posts the new one". The build keeps one opening entry per account (the old one reversed, a new one posted, on each change). Confirm that is what you mean, and that the openings grid saving many accounts at once still gives each account its own opening entry.
+- PRD FR-10.4 says system accounts cannot be deleted and their codes cannot change, but it does not say whether they may be made inactive. Because a new posting now refuses an inactive account, making روکڑ or ابتدائی فرق inactive would stop every voucher and بکری. The build refuses to make a system account inactive (team default, decided 13-10-2026). Umar: confirm, or tell us another rule.
 
 ## Team defaults on Umar's review list (12-10-2026)
 
@@ -75,6 +81,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Urdu words waiting for Umar's review (NFR-URD-4)
 
+- Amounts in words: urdu_words.rs uses تیئس for 23 and اکاون for 51. Both spellings are in use; confirm the shop's spelling (تئیس / اکیاون are the other forms).
 - Plan 02 words in amounts (`core::urdu_words`): the 0 to 99 list, "ایک روپیہ" for exactly one rupee, "ایک سو" for 100.
 - Plan 02 error messages, all `# review: pending` in `frontend/src/i18n/ur/errors.ftl` (25 codes). New or reworded: `err-not-a-number` ("یہاں نمبر لکھیں، مثلاً 12,000۔ حروف اور غلط جگہ پر لگا ہوا کاما نہیں لکھ سکتے۔": check کاما, غلط جگہ پر لگا ہوا, مثلاً), `err-qty-not-whole`, `err-negative-not-allowed`, `err-control-chars` ("اس خانے میں چھپا ہوا حرف ہے، مثلاً ٹیب، نئی سطر یا تحریر کی سمت کا نشان۔ ...": check چھپا ہوا حرف, تحریر کی سمت کا نشان).
 - Plan 03 messages in `errors.ftl` and `common.ftl`: `err-disk-full`, `err-data-check-failed`, `err-migration-failed`, `err-db-busy`, and the title `common-data-check-title` ("ایپ آپ کا ڈیٹا ابھی نہیں کھول سکی").
@@ -93,6 +100,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Notes carried into later plans
 
+- From the D1+D2 run review (12-10-2026): (17) the spelling check pairs Urdu and English words by position; a confirmed rules-only word is asked again on every edit when the two names have a different word count, and a different word order could learn a wrong pair. Rework before the Phase 2 import. (20) `ledger::post` does not refuse an inactive account; decide in D3 where the "active for new postings" check lives (a reversal must still work). (25) The frozen 1,000-name list has 30% names with a word outside the word list (the plan said 40%); 16 "team" rows in the word list have no recorded origin. The GeoNames credit goes on the D5 About screen.
 - D3 and D4 (from plan 10): `ledger::reverse` switches off matching rows on reversed lines but cannot re-match (the matching engine is D3); every reversal caller in D3 re-runs matching in the same transaction, with a test that no seller shows too high an open advance afterwards. A voucher edit must update the voucher row, or `last_advance` must read through `current_entry_id`.
 
 - D3 (بکری, plans 12 and 13), from backend's plan 09 money review: the working, prints and edits of a saved line come only from its snapshot columns (method, value, amount), never from resolving rules again; unchanged lines in an edit copy their snapshot; a typed value (method دستی) stores its percent or per نگ value too. Golden test E2E-13b (change the default, edit another line, the unchanged line keeps 1,044). Per-lot amounts only when `per_lot_due` (first line of the first posting). A restore must call `Context::invalidate_caches`.
