@@ -164,7 +164,7 @@ pub fn add_item(
     }
 }
 
-fn add_packing(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
+pub fn add_packing(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
     let mut input = PackingInput {
         id: None,
         version: None,
@@ -187,7 +187,7 @@ fn add_packing(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
     }
 }
 
-fn new_partner(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
+pub fn new_partner(env: &TestEnv, owner: &Actor, ur: &str, en: &str) -> i64 {
     let mut words: Vec<String> = Vec::new();
     loop {
         let input = PartnerCreateInput {
@@ -219,6 +219,18 @@ pub fn world_with(cash: i64, shares: bool) -> World {
     login_owner(&env);
     let owner = auth::require(&env.ctx).unwrap();
     let rahim = add_account(&env, &owner, AccountType::Seller, "رحیم", "Rahim", true, "");
+    let w = finish_world(dir, env, owner, rahim, shares);
+    if cash != 0 {
+        set_cash(&w, cash);
+    }
+    w
+}
+
+/// The rest of the worked day's world after seller رحیم (030110001) exists and today is
+/// 10-10-2026: the other parties, the items, the packing and the partners with their shares
+/// (effective 10-10-2026). The golden day builds رحیم and the opening position itself and then
+/// calls this.
+pub fn finish_world(dir: TempDir, env: TestEnv, owner: Actor, rahim: i64, shares: bool) -> World {
     let karim = add_account(&env, &owner, AccountType::Seller, "کریم", "Karim", true, "");
     let akram = add_account(
         &env,
@@ -266,7 +278,7 @@ pub fn world_with(cash: i64, shares: bool) -> World {
     let naqdi = id_of(&env, "03040000");
     let pukhta_buyer = id_of(&env, "03049999");
     let pukhta_seller = id_of(&env, "030119999");
-    let w = World {
+    World {
         dir,
         env,
         owner,
@@ -283,11 +295,7 @@ pub fn world_with(cash: i64, shares: bool) -> World {
         weight_fruit,
         box_,
         partners: [a, b, c],
-    };
-    if cash != 0 {
-        set_cash(&w, cash);
     }
-    w
 }
 
 /// Puts cash in hand at `amount` rupees with an opening dated today (PRD FR-10.9). Call it once.
@@ -455,6 +463,40 @@ pub fn calc(lot: &LotPreview, line: usize) -> &LineCalc {
 /// Rupees of a money value.
 pub fn r(value: Paisa) -> i64 {
     value.rupees()
+}
+
+/// The stored totals of a saved بکری or lot (`bikri_get`) are the totals the preview showed, field
+/// by field (PRD 12.5, Code Standards B20): the screen of a saved بکری never adds money. Used by
+/// the save tests, not by the preview tests that share this file.
+#[allow(dead_code)]
+pub fn assert_totals_equal(
+    stored: &mandi_services::core::bikri::SavedTotals,
+    shown: &mandi_services::core::bikri::SummaryTotals,
+    what: &str,
+) {
+    let pairs = [
+        ("gross", stored.gross, shown.gross),
+        ("freight", stored.freight, shown.freight),
+        ("seller_comm", stored.seller_comm, shown.seller_comm),
+        ("labour", stored.labour, shown.labour),
+        ("munshiana", stored.munshiana, shown.munshiana),
+        ("cash_paid", stored.cash_paid, shown.cash_paid),
+        ("store_rent", stored.store_rent, shown.store_rent),
+        ("phone", stored.phone, shown.phone),
+        ("deductions", stored.deductions, shown.deductions),
+        ("net", stored.net, shown.net),
+        ("seller_credit", stored.seller_credit, shown.seller_credit),
+        ("buyer_comm", stored.buyer_comm, shown.buyer_comm),
+        ("laga", stored.laga, shown.laga),
+        ("rate_diff", stored.rate_diff, shown.rate_diff),
+        ("buyer_credit", stored.buyer_credit, shown.buyer_credit),
+        ("buyer_cash", stored.buyer_cash, shown.buyer_cash),
+        ("buyer_total", stored.buyer_total, shown.buyer_total),
+        ("shared_income", stored.shared_income, shown.shared_income),
+    ];
+    for (name, a, b) in pairs {
+        assert_eq!(a, b, "{what}: stored {name} differs from the previewed one");
+    }
 }
 
 pub fn has(list: &[FieldError], code: ErrorCode, field: &str) -> bool {

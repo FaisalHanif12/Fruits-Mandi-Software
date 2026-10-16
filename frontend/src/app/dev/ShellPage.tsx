@@ -79,6 +79,7 @@ function Content() {
       onLock={() => undefined}
       onSignOut={() => undefined}
       onOpenAccount={() => undefined}
+      onOpenBikri={() => undefined}
       date={SAMPLE_DATE}
       day="open"
     >

@@ -40,6 +40,44 @@ describe.each(LANGUAGES)('entry grid (%s)', (language) => {
       expect(rig.focused()).toBe('0:buyer');
     });
 
+    // The app fills another cell of the row a moment after the user started a cell: the remaining
+    // qty arrives with the answer of the preview (PRD FR-7.52). The grid must not close the cell
+    // he is typing in. No timing here: the fill is put into the store while the cell is open.
+    it('a fill that lands in another cell of the row does not close the cell being typed in', async () => {
+      const rig = await renderGrid(language, { rows: [{}] });
+      await rig.focusCell(0, 'buyer');
+      await rig.user.keyboard('7');
+      expect(rig.isEditing()).toBe(true);
+      const rowId = rig.store.getState().rows[0]?.rowId ?? '';
+      act(() => {
+        rig.store.getState().updateTyped(rowId, 'qty', '30');
+      });
+      await waitFor(() => {
+        expect(rig.typed(0, 'qty')).toBe('30');
+      });
+      expect(rig.isEditing()).toBe(true);
+      await rig.user.keyboard('1{Enter}');
+      expect(rig.typed(0, 'buyer')).toBe('71');
+      expect(rig.typed(0, 'qty')).toBe('30');
+    });
+
+    it('a fill that lands in a number cell does not close the number cell being typed in', async () => {
+      const rig = await renderGrid(language, { rows: [{}] });
+      await rig.focusCell(0, 'rate');
+      await rig.user.keyboard('6');
+      expect(rig.isEditing()).toBe(true);
+      const rowId = rig.store.getState().rows[0]?.rowId ?? '';
+      act(() => {
+        rig.store.getState().updateTyped(rowId, 'qty', '30');
+      });
+      await waitFor(() => {
+        expect(rig.typed(0, 'qty')).toBe('30');
+      });
+      expect(rig.isEditing()).toBe(true);
+      await rig.user.keyboard('00{Enter}');
+      expect(rig.typed(0, 'rate')).toBe('600');
+    });
+
     it('a calculated cell cannot be typed in', async () => {
       const rig = await renderGrid(language, { rows: [{ qty: '50' }] });
       await rig.focusCell(0, 'line');

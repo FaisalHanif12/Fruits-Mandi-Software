@@ -1080,6 +1080,66 @@ fn a_one_time_seller_is_paid_his_whole_net_on_the_spot() {
 }
 
 #[test]
+fn the_person_key_is_on_every_journal_line_of_a_one_time_person() {
+    // PRD FR-13.5, money agent point 1: the journal of the preview and of the save carries the
+    // key of the one-time buyer on his debit and his cash credit, and the key of a one-time
+    // seller on his credit and his نقد debit. An ordinary party has no key.
+    let mut shahid = sale(PUKHTA_BUYER, "10", "1,000");
+    shahid.pukhta = Some(PukhtaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: "0300-0000000".into(),
+    });
+    let calc = run(&draft(vec![
+        with(lot(RAHIM, BANANA, "10"), vec![shahid]),
+        with(
+            pukhta_seller_lot(None, "0300-1111111"),
+            vec![sale(AKRAM, "10", "1,200")],
+        ),
+    ]));
+    assert_no_errors(&calc);
+    let first = &calc.journal.lots[0];
+    assert_eq!(first.person_key, None, "an ordinary seller has no key");
+    assert_eq!(
+        first.sales[0].person_key.as_deref(),
+        Some("شاہد|03000000000")
+    );
+    let second = &calc.journal.lots[1];
+    assert_eq!(second.person_key.as_deref(), Some("ناصر|03001111111"));
+    assert_eq!(
+        second.sales[0].person_key, None,
+        "an ordinary buyer has no key"
+    );
+    // In the built entry: shahid's debit and cash credit, nasir's credit and نقد debit.
+    let entry = entry_of(&calc);
+    let keyed = |account: i64, side: crate::ledger::Side| -> Vec<Option<String>> {
+        entry
+            .lines()
+            .iter()
+            .filter(|l| l.account_id == AccountId::new(account) && l.side == side)
+            .map(|l| l.person_key.clone())
+            .collect()
+    };
+    use crate::ledger::Side::{Cr, Dr};
+    assert_eq!(
+        keyed(PUKHTA_BUYER, Dr),
+        [Some("شاہد|03000000000".to_owned())]
+    );
+    assert_eq!(
+        keyed(PUKHTA_BUYER, Cr),
+        [Some("شاہد|03000000000".to_owned())]
+    );
+    assert_eq!(
+        keyed(PUKHTA_SELLER, Cr),
+        [Some("ناصر|03001111111".to_owned())]
+    );
+    assert_eq!(
+        keyed(PUKHTA_SELLER, Dr),
+        [Some("ناصر|03001111111".to_owned())]
+    );
+}
+
+#[test]
 fn the_same_draft_gives_the_same_answer() {
     let draft = event1();
     assert_eq!(run(&draft), run(&draft));

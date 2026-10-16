@@ -472,8 +472,44 @@ pub fn balances(ctx: &Context, ids: &[i64]) -> Result<Vec<AccountBalance>, Servi
         .collect()
 }
 
-/// Global search (`Ctrl+K`, PRD FR-5.4): accounts now, searched like a field that takes any
-/// account. Only reads.
+/// The most truck-number results of the global search (PRD FR-5.4).
+const GLOBAL_TRUCK_HITS: i64 = 5;
+/// A truck number is looked up from this many typed characters, so one letter does not list
+/// every truck.
+const GLOBAL_TRUCK_MIN_CHARS: usize = 2;
+
+/// The بکری that the typed text names (PRD FR-5.4): the one whose number is the typed digits,
+/// then the newest ones whose truck number starts with the text.
+fn bikri_hits(ctx: &Context, text: &str) -> Result<Vec<GlobalHit>, ServiceError> {
+    let typed = text.trim();
+    if typed.is_empty() {
+        return Ok(Vec::new());
+    }
+    ctx.db.read(|conn| {
+        let mut hits: Vec<mandi_domain::core::bikri::BikriHit> = Vec::new();
+        if typed.chars().all(|c| c.is_ascii_digit())
+            && let Ok(number) = typed.parse::<i64>()
+            && let Some(hit) = mandi_db::bikri::saved::hit_by_number(conn, number)?
+        {
+            hits.push(hit);
+        }
+        if typed.chars().count() >= GLOBAL_TRUCK_MIN_CHARS {
+            for hit in mandi_db::bikri::saved::hits_by_truck(conn, typed, GLOBAL_TRUCK_HITS)? {
+                if !hits.iter().any(|h| h.id == hit.id) {
+                    hits.push(hit);
+                }
+            }
+        }
+        Ok(hits
+            .into_iter()
+            .map(|hit| GlobalHit::Bikri { hit })
+            .collect())
+    })
+}
+
+/// Global search (`Ctrl+K`, PRD FR-5.4): accounts, searched like a field that takes any
+/// account, then the بکری whose number is the typed digits, then the newest بکری whose truck
+/// number starts with the text. The whole answer stays within `limit`. Only reads.
 ///
 /// # Errors
 /// As [`search_accounts`].
@@ -482,6 +518,14 @@ pub fn global(
     actor: &Actor,
     input: &SearchGlobalInput,
 ) -> Result<Vec<GlobalHit>, ServiceError> {
+    check_text(&input.text)?;
+    let limit = usize::try_from(input.limit)
+        .unwrap_or(MAX_HITS)
+        .min(MAX_HITS);
+    let mut bikri = bikri_hits(ctx, &input.text)?;
+    // The accounts keep at least one place.
+    bikri.truncate(limit.saturating_sub(1));
+    let account_limit = limit.saturating_sub(bikri.len());
     let hits = search_accounts(
         ctx,
         actor,
@@ -489,11 +533,13 @@ pub fn global(
             scope: AccountScope::Any,
             control_id: None,
             text: input.text.clone(),
-            limit: input.limit,
+            limit: u32::try_from(account_limit).unwrap_or(input.limit),
         },
     )?;
-    Ok(hits
+    let mut out: Vec<GlobalHit> = hits
         .into_iter()
         .map(|hit| GlobalHit::Account { hit })
-        .collect())
+        .collect();
+    out.extend(bikri);
+    Ok(out)
 }

@@ -706,11 +706,12 @@ fn deletes_in(folder: &str) -> Vec<(String, String)> {
 fn there_is_no_way_to_delete_a_master_record() {
     // End-gate review 19, PRD E21 and Code Standards D3: a master in use is made inactive, never
     // deleted. Nothing in the services, the database layer or the commands deletes from a
-    // master table; the only DELETE FROM in the app is a learned word pair (audited).
+    // master table; the only DELETE FROM in the app are a learned word pair (audited) and the
+    // user's own unsaved draft of a screen (plan 13: a draft is scratch work, not a record).
     for folder in ["src", "../db/src", "../../app/src"] {
         for (file, table) in deletes_in(folder) {
-            assert_eq!(
-                table, "translit_pairs",
+            assert!(
+                table == "translit_pairs" || table == "drafts",
                 "{file} deletes from {table}: master records are made inactive, never deleted"
             );
         }

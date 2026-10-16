@@ -8,8 +8,9 @@
 use mandi_db::accounts as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
-    Balance, LineError, OPENING_DIFFERENCE_CODE, OpeningPreviewRow, OpeningRequest, OpeningsInput,
-    OpeningsPreview, OpeningsSaved, RecordRef, SELLER_CONTROL, opening_request_in_force,
+    BUYER_CONTROL, Balance, LineError, OPENING_DIFFERENCE_CODE, OpeningPreviewRow, OpeningRequest,
+    OpeningsInput, OpeningsPreview, OpeningsSaved, RecordRef, SELLER_CONTROL,
+    opening_request_in_force,
 };
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::{ErrorCode, FieldError};
@@ -26,6 +27,7 @@ use crate::context::Context;
 use crate::day;
 use crate::error::{Rejection, ServiceError, money_error};
 use crate::ledger::{self, PostingEvent};
+use crate::matching;
 use crate::search;
 
 fn difference_id(conn: &Connection) -> Result<i64, ServiceError> {
@@ -175,6 +177,16 @@ pub(crate) fn apply(
             )?;
         }
         None => repo::set_opening(tx, facts.id, None, 0, 0, false, None, user_id, now)?,
+    }
+    // An opening is a line of the buyer's key (a bill or a prepayment) or a seller's advance, so
+    // the matching rows are made right again: they stay the canonical ones (plan 13). A one-time
+    // person has no opening (PRD FR-10.9).
+    if !facts.is_pukhta_khata {
+        if facts.control_code == BUYER_CONTROL {
+            matching::rematch(tx, user_id, now, facts.id, None)?;
+        } else if facts.control_code == SELLER_CONTROL {
+            matching::rematch_advances(tx, user_id, now, facts.id)?;
+        }
     }
     Ok(true)
 }

@@ -268,6 +268,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             <PukhtaFields
               store={stores.lots}
               row={row}
+              side="seller"
               keys={{
                 ur: LOT.pukhtaUr,
                 en: LOT.pukhtaEn,

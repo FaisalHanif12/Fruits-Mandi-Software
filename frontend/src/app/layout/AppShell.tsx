@@ -18,6 +18,8 @@ interface AppShellProps {
   onSignOut: () => void;
   /** A result of the top bar's search was chosen: open that account. */
   onOpenAccount: (id: number) => void;
+  /** A result of the top bar's search was chosen: open that بکری. */
+  onOpenBikri: (id: number) => void;
   date: string;
   day: DayState | null;
   /** The last closed day as DD-MM-YYYY, or null (PRD FR-21.1). */
@@ -34,6 +36,7 @@ export function AppShell({
   onLock,
   onSignOut,
   onOpenAccount,
+  onOpenBikri,
   date,
   day,
   closedUpTo = null,
@@ -56,6 +59,7 @@ export function AppShell({
             onLock={onLock}
             onSignOut={onSignOut}
             onOpenAccount={onOpenAccount}
+            onOpenBikri={onOpenBikri}
           />
           {/* `relative` makes the screen the containing block of the hidden native <select> that
               Radix Select keeps beside each drop-down. Without it that element sits against the

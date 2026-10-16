@@ -13,7 +13,7 @@
 // - Codes are Latin and written left to right in both languages (F25).
 
 import { useCombobox } from 'downshift';
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { focusNextField, keepKeyForApp } from '../keyboard';
 import { Code } from './Code';
 import { controlClasses } from './control-classes';
@@ -24,6 +24,16 @@ export interface Suggestion {
   value: string;
   /** A short note beside it, for example the date of its last use. Already formatted. */
   note?: string | undefined;
+  /**
+   * What the row shows instead of the value and the note, for a row that stands for a record with
+   * several fields (a one-time person, PRD FR-7.29).
+   */
+  content?: ReactNode;
+  /**
+   * The row was taken. Without it the value goes into the field; with it the screen fills what
+   * the row stands for, and the field is not changed by the list itself.
+   */
+  onPick?: (() => void) | undefined;
 }
 
 interface SuggestInputProps extends FieldControlProps {
@@ -86,8 +96,12 @@ export function SuggestInput({
     },
     onSelectedItemChange: ({ selectedItem }) => {
       if (selectedItem === null) return;
-      onChange(selectedItem.value);
       setOpen(false);
+      if (selectedItem.onPick !== undefined) {
+        selectedItem.onPick();
+        return;
+      }
+      onChange(selectedItem.value);
       commit(selectedItem.value);
     },
   });
@@ -162,13 +176,19 @@ export function SuggestInput({
                 <li
                   key={suggestion.value}
                   {...getItemProps({ item: suggestion, index })}
-                  className={`flex h-control cursor-pointer items-center justify-between gap-4 whitespace-nowrap rounded-1 px-3 ${index === highlightedIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
+                  className={`flex cursor-pointer items-center justify-between gap-4 rounded-1 px-3 ${suggestion.content === undefined ? 'h-control whitespace-nowrap' : 'min-h-control py-1'} ${index === highlightedIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
                 >
-                  <Code>{suggestion.value}</Code>
-                  {suggestion.note === undefined ? null : (
-                    <span className="type-body text-ink-muted">
-                      <Code>{suggestion.note}</Code>
-                    </span>
+                  {suggestion.content !== undefined ? (
+                    suggestion.content
+                  ) : (
+                    <>
+                      <Code>{suggestion.value}</Code>
+                      {suggestion.note === undefined ? null : (
+                        <span className="type-body text-ink-muted">
+                          <Code>{suggestion.note}</Code>
+                        </span>
+                      )}
+                    </>
                   )}
                 </li>
               ))

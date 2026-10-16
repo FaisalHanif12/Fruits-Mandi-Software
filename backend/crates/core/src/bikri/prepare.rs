@@ -64,6 +64,25 @@ fn optional_money(
     }
 }
 
+/// Reads an optional note into `slot`. False if the note is not clean.
+fn optional_note(
+    issues: &mut Vec<FieldError>,
+    field: &str,
+    text: Option<&String>,
+    slot: &mut Option<String>,
+) -> bool {
+    let Some(text) = text.filter(|t| !is_blank(t)) else {
+        return true;
+    };
+    match take(issues, validate::free_text(field, text)) {
+        Some(clean) => {
+            *slot = Some(clean).filter(|c| !c.is_empty());
+            true
+        }
+        None => false,
+    }
+}
+
 fn pukhta_of(input: Option<&PukhtaInput>) -> PreparedPukhta {
     input.map_or_else(PreparedPukhta::default, |p| PreparedPukhta {
         name_ur: p.name_ur.trim().to_owned(),
@@ -146,6 +165,7 @@ fn prepare_sale(
         seller_comm: None,
         buyer_comm: None,
         laga: None,
+        note: None,
     };
     if is_blank_row {
         return sale;
@@ -190,14 +210,14 @@ fn prepare_sale(
     sale.buyer_comm = buyer_comm;
     sale.laga = laga;
     ok &= ok_a && ok_b && ok_c;
-    // A note is not used by the maths, but it must be a clean note (PRD Section 4.2).
-    ok &= input.note.as_ref().is_none_or(|note| {
-        take(
-            issues,
-            validate::free_text(&sale_field(lot, index, "note"), note),
-        )
-        .is_some()
-    });
+    // A note is not used by the maths, but it must be a clean note (PRD Section 4.2). The save
+    // keeps it.
+    ok &= optional_note(
+        issues,
+        &sale_field(lot, index, "note"),
+        input.note.as_ref(),
+        &mut sale.note,
+    );
     sale.has_errors = !ok;
     sale
 }
@@ -316,20 +336,21 @@ fn prepare_header(
         )
     };
     // These fields are checked now and kept by the save (plan 13).
-    optional_text(issues, &header_field("book"), input.book.as_ref());
+    let book = optional_text(issues, &header_field("book"), input.book.as_ref());
     let truck_no = optional_text(issues, &header_field("truck_no"), input.truck_no.as_ref());
-    optional_text(
+    let driver_name = optional_text(
         issues,
         &header_field("driver_name"),
         input.driver_name.as_ref(),
     );
-    if let Some(phone) = input.driver_phone.as_ref().filter(|p| !is_blank(p)) {
-        take(
+    let driver_phone = match input.driver_phone.as_ref().filter(|p| !is_blank(p)) {
+        Some(phone) => take(
             issues,
             validate::phone(&header_field("driver_phone"), phone),
-        );
-    }
-    optional_text(issues, &header_field("note"), input.note.as_ref());
+        ),
+        None => None,
+    };
+    let note = optional_text(issues, &header_field("note"), input.note.as_ref());
     let total_freight = match input.total_freight.as_ref().filter(|t| !is_blank(t)) {
         Some(t) => take(issues, validate::money(&header_field("total_freight"), t)),
         None => None,
@@ -337,7 +358,11 @@ fn prepare_header(
     PreparedHeader {
         entry_date,
         bill_date,
+        book,
         truck_no,
+        driver_name,
+        driver_phone,
+        note,
         zamindar_account_id: input.zamindar_account_id,
         adda_id: input.adda_id,
         store_id: input.store_id,

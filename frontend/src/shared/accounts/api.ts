@@ -231,18 +231,31 @@ export function assistPartyCard(accountId: number): Promise<PartyCardData> {
 /** The most results of the global search the box shows. */
 const GLOBAL_SEARCH_LIMIT = 20;
 
-/** The global search (Ctrl+K): accounts for now. */
+/** The global search (Ctrl+K): accounts, and a بکری by number or truck (plan 13). */
 export async function searchGlobal(text: string): Promise<GlobalHit[]> {
   const hits = await callCommand<GlobalHitBinding[]>('search_global', {
     input: { text, limit: GLOBAL_SEARCH_LIMIT },
   });
-  return hits.map((item) => ({
-    kind: item.kind,
-    id: item.hit.id,
-    code: item.hit.code,
-    name_ur: item.hit.name_ur,
-    name_en: item.hit.name_en,
-    extra_ur: item.hit.extra_ur,
-    extra_en: item.hit.extra_en,
-  }));
+  return hits.map((item): GlobalHit => {
+    if (item.kind === 'bikri') {
+      return {
+        kind: 'bikri',
+        id: item.hit.id,
+        number: item.hit.number,
+        entry_date: item.hit.entry_date,
+        truck_no: item.hit.truck_no,
+        status: item.hit.status,
+        matched: item.hit.matched,
+      };
+    }
+    return {
+      kind: 'account',
+      id: item.hit.id,
+      code: item.hit.code,
+      name_ur: item.hit.name_ur,
+      name_en: item.hit.name_en,
+      extra_ur: item.hit.extra_ur,
+      extra_en: item.hit.extra_en,
+    };
+  });
 }

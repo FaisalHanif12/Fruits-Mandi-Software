@@ -10,6 +10,7 @@ mandi-domain.workspace = true
 mandi-db.workspace = true
 argon2.workspace = true
 getrandom.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
 thiserror.workspace = true
@@ -39,6 +40,10 @@ harness = false
 
 [[bench]]
 name = "bikri"
+harness = false
+
+[[bench]]
+name = "bikri_save"
 harness = false
 
 [lints]

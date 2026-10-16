@@ -12,7 +12,11 @@
 //   5. The numbers on the screen are the backend's, as in PRD 4.4: 12,880 and 18,684, net
 //      19,316, gross 29,400, deductions 10,084, shared income 3,948, split 1,580 / 1,184 / 1,184.
 //   6. Alt+L: the same numbers in English, with the names in English, and nothing lost.
-// Nothing is saved here: saving the بکری is plan 13. The numbers themselves are proved by the Rust
+//   7. The whole-sale view (PRD FR-12.1): the lines of every lot in one grid with a lot column, and
+//      the numbers strip pinned to the bottom in the compact and normal windows.
+//   8. Leaving the screen with this typed work asks first (PRD FR-7.9); "leave without saving"
+//      throws the draft away, so the next spec starts clean.
+// Nothing is saved here: saving the بکری is spec 13. The numbers themselves are proved by the Rust
 // test `golden_day`; this spec proves the screen shows the same ones. It runs on Windows only
 // (LOCAL-ONLY in the Mac phase: checked with `node --check`).
 
@@ -209,6 +213,47 @@ describe('the sale book, Event 1 by keyboard (Urdu)', () => {
   });
 });
 
+describe('the whole-sale view and the numbers strip (Urdu)', () => {
+  it('9. the lines of every lot are in one grid with the lot first', async () => {
+    const group = t('ur', 'bikri-sales-view-label');
+    const whole = await $(
+      `//*[@role="group"][@aria-label="${group}"]//button[contains(normalize-space(.), "${t('ur', 'bikri-summary-whole')}")]`,
+    );
+    await whole.click();
+    const sales = t('ur', 'bikri-sales-label');
+    const lot = await cell(sales, 0, 'lot');
+    await browser.waitUntil(async () => (await lot.getText()).includes('رحیم'), {
+      timeout: LIST_WAIT_MS,
+      timeoutMsg: 'The lot column of the whole-sale view did not name the seller.',
+    });
+    // Both lines and their totals are there, and nothing scrolls sideways.
+    await waitForNumbers('12,880', '18,684');
+    const overflow = await browser.execute(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(false);
+    await shootScreen('bikri-book-whole', 'ur');
+  });
+
+  it('10. the numbers strip holds the gross, deductions, net and buyers’ bills', async () => {
+    const strip = await $(`[aria-label="${t('ur', 'bikri-strip-label')}"]`);
+    // The strip is for the compact and normal windows; the wide window has the summary beside.
+    if (!(await strip.isExisting())) return;
+    const text = await strip.getText();
+    for (const figure of ['29,400', '10,084', '19,316', '31,564']) expect(text).toContain(figure);
+  });
+
+  it('11. back to the lines of one lot', async () => {
+    const group = t('ur', 'bikri-sales-view-label');
+    const one = await $(
+      `//*[@role="group"][@aria-label="${group}"]//button[contains(normalize-space(.), "${t('ur', 'bikri-summary-lot', { lot: 1 })}")]`,
+    );
+    await one.click();
+    const buyer = await cell(t('ur', 'bikri-sales-label'), 0, 'buyer');
+    await buyer.waitForDisplayed({ timeout: LIST_WAIT_MS });
+  });
+});
+
 describe('the same entry in English', () => {
   it('Alt+L turns the screen to English with the same numbers and nothing lost', async () => {
     await switchLanguage('en');
@@ -224,5 +269,20 @@ describe('the same entry in English', () => {
     await switchLanguage('ur');
     await waitForNumbers('12,880', '18,684', '19,316');
     expect(await pageText()).toContain('اکرم ٹول ٹیکس');
+  });
+});
+
+describe('leaving with typed work (Urdu)', () => {
+  it('12. asks "save changes?"; leaving without saving throws the draft away (PRD FR-7.9)', async () => {
+    await switchLanguage('ur');
+    await openRoute('/');
+    const prompt = await $('[role="alertdialog"]');
+    await prompt.waitForDisplayed({ timeout: LIST_WAIT_MS });
+    const leave = await $(
+      `//*[@role="alertdialog"]//button[contains(normalize-space(.), "${t('ur', 'layout-save-leave')}")]`,
+    );
+    await leave.click();
+    await prompt.waitForDisplayed({ timeout: LIST_WAIT_MS, reverse: true });
+    await waitForText(t('ur', 'dashboard-greeting', { name: OWNER.displayName }));
   });
 });

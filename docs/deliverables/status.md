@@ -28,6 +28,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 | 10-opening-position | feature/db-schema | | PASS WITH MINOR | PASS WITH MINOR | built (`c114967`, fixes `7b1bdfe`) |
 | 11-partners | feature/bikri | | end of run | end of run | built (money review PASS WITH MINOR, fixes done; frontend 1743 and Rust 929 tests passed, golden_day E2E-19, cargo deny, lint, typecheck, i18n:check, perf PASS) |
 | 12-bikri-entry | feature/bikri | | end of run | end of run | built (money review three passes, four defects fixed; Rust 1035 and frontend 1949 tests passed, golden_day, bikri_preview 34, assist 19, cargo deny, lint, typecheck, i18n:check, perf PASS on an idle machine) |
+| 13-bikri-save | feature/bikri | | end of run | end of run | built (money review four passes, blocker and fixes done, the last back-dated advance fix not re-reviewed: reviewer to check `vouchers::post_advance`; Rust 1117 and frontend 2197 tests passed, golden_day 5, bikri_preview 34, bikri_save 55, assist 21, cargo deny, lint, typecheck, i18n:check, perf PASS) |
 
 ## Design
 

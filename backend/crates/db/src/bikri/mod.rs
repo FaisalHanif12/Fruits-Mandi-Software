@@ -1,12 +1,17 @@
-//! Reads for the بکری entry screen (PRD 12, plan 12): the facts of the accounts, items and
-//! masters a draft names, the saved rates behind the rate hint and the rate check, and the
-//! memories of trucks and sellers. Everything here only reads (Code Standards B29). The save
-//! tables are written in plan 13.
+//! The بکری tables (PRD 12, plans 12 and 13).
+//!
+//! This file reads for the entry screen: the facts of the accounts, items and masters a draft
+//! names, the saved rates behind the rate hint and the rate check, and the memories of trucks
+//! and sellers. Everything here only reads (Code Standards B29). `write` adds the rows of a
+//! save (plan 13), `saved` reads saved بکری back, and the پختہ کھاتہ lists.
 //!
 //! Every statement uses parameters (Code Standards B14). A list of ids is read with one
 //! statement that has one `?` for each id (Code Standards B22).
 
 use rusqlite::{Connection, OptionalExtension, params_from_iter};
+
+pub mod saved;
+pub mod write;
 
 /// The facts about an account that the maths and the checks of a بکری need.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,0 +1,69 @@
+{
+  "confirm_cash_below_zero": false,
+  "draft": {
+    "header": {
+      "adda_id": null,
+      "bill_date": "",
+      "book": null,
+      "driver_name": null,
+      "driver_phone": null,
+      "entry_date": "10-10-2026",
+      "note": null,
+      "store_id": null,
+      "total_freight": null,
+      "truck_no": "LHR-0077",
+      "zamindar_account_id": 18
+    },
+    "lots": [
+      {
+        "adjust_advance": true,
+        "cash_paid": null,
+        "freight": "1,000",
+        "freight_paid_by": "firm",
+        "item_id": 2,
+        "key": "lot-1",
+        "labour": {
+          "method": "per_unit",
+          "value": "5"
+        },
+        "marka_id": null,
+        "munshiana": {
+          "method": "manual",
+          "value": "50"
+        },
+        "packing_id": 1,
+        "phone": {
+          "method": "manual",
+          "value": "20"
+        },
+        "pukhta": null,
+        "qty_received": "10",
+        "sales": [
+          {
+            "buyer_account_id": 9,
+            "buyer_comm": null,
+            "buyer_rate": null,
+            "key": "line-1",
+            "laga": null,
+            "note": null,
+            "payment_type": null,
+            "pukhta": {
+              "name_en": "Shahid",
+              "name_ur": "شاہد",
+              "phone": "0300-0000000"
+            },
+            "qty": "10",
+            "rate_differs": false,
+            "seller_comm": null,
+            "seller_rate": "1200",
+            "weight": null
+          }
+        ],
+        "seller_account_id": 18,
+        "store_id": null,
+        "store_rent": null,
+        "weight_received": null
+      }
+    ]
+  }
+}

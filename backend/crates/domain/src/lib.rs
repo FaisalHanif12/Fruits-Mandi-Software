@@ -12,6 +12,7 @@ pub mod auth;
 pub mod bikri;
 pub mod cash;
 pub mod ledger;
+pub mod matching;
 pub mod partners;
 pub mod rules;
 

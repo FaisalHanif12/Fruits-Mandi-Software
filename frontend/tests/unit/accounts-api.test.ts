@@ -207,4 +207,33 @@ describe('searchGlobal', () => {
       },
     ]);
   });
+
+  it('maps a بکری hit to its own kind, keeping the number, truck and how it matched (plan 13)', async () => {
+    backend({
+      search_global: [
+        {
+          kind: 'bikri',
+          hit: {
+            id: 41,
+            number: 1,
+            entry_date: '2026-10-10',
+            truck_no: 'LES-1234',
+            status: 'saved',
+            matched: 'truck',
+          },
+        },
+      ],
+    });
+    expect(await searchGlobal('les')).toEqual([
+      {
+        kind: 'bikri',
+        id: 41,
+        number: 1,
+        entry_date: '2026-10-10',
+        truck_no: 'LES-1234',
+        status: 'saved',
+        matched: 'truck',
+      },
+    ]);
+  });
 });

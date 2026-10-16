@@ -1,13 +1,6 @@
-//! The بکری entry screen (PRD 12, plan 12): the live preview.
-//!
-//! Read-only: nothing here writes (Code Standards B29). The preview reads the facts a draft
-//! names in one go (Code Standards B22), calls `mandi_domain::bikri::calc_posting`, builds the
-//! journal entry with `build_bikri_entry`, splits the income with `partners::split_entry`, and
-//! asks `cash::cash_after_entry` what the entry does to cash. The save of plan 13 calls the same
-//! domain functions (Code Standards B5), so the preview and the saved numbers cannot differ.
-//!
-//! The read connection is not re-entrant, so the rules and switches are fetched before the one
-//! read of the call (see the services README).
+//! What the preview and the save share (Code Standards B5): the facts read for a draft, the one
+//! working out of a draft, and what it does to the books and to cash. Both call [`work_out`], so
+//! the screen and the saved numbers cannot differ.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
@@ -21,24 +14,21 @@ use mandi_domain::bikri::{
 };
 use mandi_domain::cash;
 use mandi_domain::core::accounts::{BUYER_CONTROL, NAQDI_MANDI_CODE, SELLER_CONTROL};
-use mandi_domain::core::bikri::{
-    BikriDraft, BikriPreview, PreparedDraft, SplitPart, prepare_draft,
-};
+use mandi_domain::core::bikri::{BikriPreview, PreparedDraft, SplitPart};
+use mandi_domain::core::cash::CashCheck;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::rules::{CreditLimitMode, ItemGroup, OverridesSettings};
-use mandi_domain::ledger::bikri::{SystemAccounts, build_bikri_entry};
+use mandi_domain::ledger::bikri::{EntryLayout, SystemAccounts, build_bikri_entry_with_layout};
 use mandi_domain::ledger::{BalancedEntry, LedgerError, MAX_LINE_PAISA};
 use mandi_domain::partners::ShareKind;
+use mandi_domain::rules::RuleSet;
 
 use crate::cash as cash_service;
-use crate::context::Context;
-use crate::day;
 use crate::error::{Rejection, ServiceError, money_error};
 use crate::partners::split_entry;
-use crate::rules;
 
 /// The system accounts a بکری posts to (PRD FR-10.4).
 const SELLER_COMMISSION_CODE: &str = "04010001";
@@ -52,20 +42,20 @@ const STORE_RENT_CODE: &str = "02010003";
 const MUNSHIANA_CODE: &str = "02010004";
 /// اپنا مال, the firm as seller (PRD FR-12.26). Plan 16b makes it; until then a lot of it is
 /// refused as a seller.
-const OWN_GOODS_CODE: &str = "030119998";
+pub(super) const OWN_GOODS_CODE: &str = "030119998";
 /// The days of the rate check, ending on the posting day (PRD FR-7.55, an [A] reading).
 const RATE_CHECK_DAYS: u32 = 7;
 
-fn data(message: &str) -> ServiceError {
+pub(super) fn data(message: &str) -> ServiceError {
     ServiceError::Data(message.to_owned())
 }
 
-fn paisa(value: i64) -> Result<Paisa, ServiceError> {
+pub(super) fn paisa(value: i64) -> Result<Paisa, ServiceError> {
     Paisa::try_from_paisa(value).map_err(money_error)
 }
 
 /// A failure of the calculation that is not the user's mistake.
-fn calc_error(error: CalcError) -> ServiceError {
+pub(super) fn calc_error(error: CalcError) -> ServiceError {
     match error {
         CalcError::Money(money) => money_error(money),
         other => {
@@ -76,7 +66,7 @@ fn calc_error(error: CalcError) -> ServiceError {
 }
 
 /// The system accounts of PRD FR-10.4 that a بکری posts to, with their ids.
-fn system_accounts(conn: &Connection) -> Result<SystemAccounts, ServiceError> {
+pub(super) fn system_accounts(conn: &Connection) -> Result<SystemAccounts, ServiceError> {
     let codes = [
         cash_service::CASH_ACCOUNT_CODE,
         SELLER_COMMISSION_CODE,
@@ -251,7 +241,7 @@ fn load_lookups(
     Ok(lookups)
 }
 
-fn switches(settings: &OverridesSettings) -> Switches {
+pub(super) fn switches(settings: &OverridesSettings) -> Switches {
     Switches {
         allow_line_override: settings.allow_line_override,
         credit_limit_blocks: settings.credit_limit_mode == CreditLimitMode::Block,
@@ -326,27 +316,65 @@ fn split_of(
         .collect())
 }
 
+/// A journal entry with the positions of the lines that matter for matching.
+pub(crate) type BuiltEntry = (BalancedEntry, EntryLayout);
+
+/// A draft worked out against the database: everything the preview shows and the save writes.
+#[derive(Debug)]
+pub(crate) struct Worked {
+    /// The typed draft, read.
+    pub prepared: PreparedDraft,
+    /// The one calculation (`calc_posting`).
+    pub calc: PostingCalc,
+    /// Every error that stops a save: those of the calculation and of the books (shares).
+    pub errors: Vec<FieldError>,
+    /// The live partner split of the income.
+    pub split: Vec<SplitPart>,
+    /// The journal entry of the worked rows and where its matching lines are. `None` when
+    /// nothing could be worked out (then `errors` says why).
+    pub entry: Option<BuiltEntry>,
+    /// What the entry does to cash in hand (PRD FR-6.7).
+    pub cash: CashCheck,
+    /// The Owner's switches used.
+    pub switches: Switches,
+}
+
+impl Worked {
+    /// What the live preview sends. The save sends the same value back with its result.
+    pub(crate) fn preview(&self) -> BikriPreview {
+        BikriPreview {
+            lots: self.calc.lots.clone(),
+            summary: self.calc.summary.clone(),
+            split: self.split.clone(),
+            cash: self.cash,
+            allow_line_override: self.switches.allow_line_override,
+            errors: self.errors.clone(),
+            warnings: self.calc.warnings.clone(),
+        }
+    }
+}
+
 /// Builds the entry of the worked rows, splits its income and works out what it does to cash.
-/// Returns the split and the cash change.
+/// Returns the split, the cash change and the entry with its layout.
 fn books_of(
     conn: &Connection,
     prepared: &PreparedDraft,
     calc: &PostingCalc,
+    accounts: &SystemAccounts,
     errors: &mut Vec<FieldError>,
-) -> Result<(Vec<SplitPart>, Paisa), ServiceError> {
+) -> Result<(Vec<SplitPart>, Paisa, Option<BuiltEntry>), ServiceError> {
     let (Some(date), false) = (prepared.header.entry_date, calc.journal.lots.is_empty()) else {
-        return Ok((Vec::new(), Paisa::ZERO));
+        return Ok((Vec::new(), Paisa::ZERO, None));
     };
-    let accounts = system_accounts(conn)?;
-    let entry = match build_bikri_entry(&calc.journal, &accounts) {
-        Ok(entry) => entry,
+    let built = match build_bikri_entry_with_layout(&calc.journal, accounts) {
+        Ok(built) => built,
         Err(LedgerError::TooLarge) => {
             let max = MAX_LINE_PAISA.checked_div(100).unwrap_or(i64::MAX);
             errors.push(
                 FieldError::new(ErrorCode::ErrEntryTooLarge, "lots")
                     .with("max", ErrorValue::Number(max)),
             );
-            return Ok((Vec::new(), Paisa::ZERO));
+            return Ok((Vec::new(), Paisa::ZERO, None));
         }
         Err(LedgerError::Overflow) => return Err(ServiceError::reject(ErrorCode::ErrOverflow)),
         Err(other) => {
@@ -359,41 +387,39 @@ fn books_of(
             }]));
         }
     };
-    let change = cash::net_change(&entry, accounts.cash).map_err(money_error)?;
-    let split = split_of(conn, date, &entry, calc.summary.shared_income, errors)?;
-    Ok((split, change))
+    let change = cash::net_change(&built.0, accounts.cash).map_err(money_error)?;
+    let split = split_of(conn, date, &built.0, calc.summary.shared_income, errors)?;
+    Ok((split, change, Some(built)))
 }
 
-/// Works out a whole typed بکری for the live summary (PRD 12.5, FR-7.5). Nothing is saved.
-///
-/// Example (PRD 4.4): Event 1 gives خام 29,400, کل اخراجات 10,084, صافی 19,316, buyer bills
-/// 12,880 and 18,684, shared income 3,948 split 1,580 / 1,184 / 1,184, and cash 5,000 lower.
+/// Works out a typed draft against the database: reads what it names, calls `calc_posting`,
+/// builds the journal entry, splits the income and asks what the entry does to cash. Used by
+/// the preview (inside a read) and by the save (inside its write transaction), so there is one
+/// path (Code Standards B5). Nothing is written here.
 ///
 /// # Errors
-/// The mistakes in the draft come back inside the preview (`errors`), not as an error here.
-/// `ServiceError::Db`, `ServiceError::Data` or `ERR_OVERFLOW` for a failure the user cannot fix.
-pub fn preview(ctx: &Context, draft: &BikriDraft) -> Result<BikriPreview, ServiceError> {
-    let (closed_up_to, today) = day::window(ctx)?;
-    let prepared = prepare_draft(draft, today, closed_up_to);
-    // Fetched before the read below: the read connection is not re-entrant.
-    let rule_set = rules::rule_set(ctx)?;
-    let settings = rules::overrides(ctx)?;
-    let switches = switches(&settings);
-    ctx.db.read(|conn| {
-        let lookups = load_lookups(conn, &prepared, switches.rate_check_percent.is_some())?;
-        let calc = calc_posting(PostingKind::First, &prepared, &lookups, &rule_set, switches)
-            .map_err(calc_error)?;
-        let mut errors = calc.errors.clone();
-        let (split, change) = books_of(conn, &prepared, &calc, &mut errors)?;
-        let cash = cash_service::cash_after_entry(conn, change)?;
-        Ok(BikriPreview {
-            lots: calc.lots,
-            summary: calc.summary,
-            split,
-            cash,
-            allow_line_override: switches.allow_line_override,
-            errors,
-            warnings: calc.warnings,
-        })
+/// `ServiceError::Db`, `ServiceError::Data` or `ERR_OVERFLOW` for a failure the user cannot
+/// fix. The mistakes in the draft come back in `Worked::errors`.
+pub(crate) fn work_out(
+    conn: &Connection,
+    prepared: PreparedDraft,
+    rules: &RuleSet,
+    switches: Switches,
+) -> Result<Worked, ServiceError> {
+    let lookups = load_lookups(conn, &prepared, switches.rate_check_percent.is_some())?;
+    let calc = calc_posting(PostingKind::First, &prepared, &lookups, rules, switches)
+        .map_err(calc_error)?;
+    let mut errors = calc.errors.clone();
+    let accounts = system_accounts(conn)?;
+    let (split, change, entry) = books_of(conn, &prepared, &calc, &accounts, &mut errors)?;
+    let cash = cash_service::cash_after_entry(conn, change)?;
+    Ok(Worked {
+        prepared,
+        calc,
+        errors,
+        split,
+        entry,
+        cash,
+        switches,
     })
 }

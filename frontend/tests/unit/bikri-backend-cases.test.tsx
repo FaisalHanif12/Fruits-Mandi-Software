@@ -147,6 +147,10 @@ describe.each(LANGUAGES)('the backend’s cases (%s)', (language) => {
       await user.click(
         screen.getByRole('button', { name: named(message(language, 'bikri-shares-open-setup')) }),
       );
+      // The sale has typed work in it, so leaving asks first (PRD FR-7.9); the user leaves.
+      await user.click(
+        await screen.findByRole('button', { name: named(message(language, 'layout-save-leave')) }),
+      );
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/partners/setup');
       });

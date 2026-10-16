@@ -1,13 +1,18 @@
-// Development page /dev/bikri (plan 12): the real بکری بک screen inside the app shell, answered by
-// a stand-in for the backend with the numbers of Event 1 (PRD 4.4), so it can be opened in a plain
-// browser tab and photographed in both languages and at every window size. Never shipped: the route
-// exists only when import.meta.env.DEV is true (app/router.tsx).
+// Development page /dev/bikri (plans 12 and 13): the real بکری screens inside the app shell,
+// answered by a stand-in for the backend with the numbers of Event 1 (PRD 4.4), so they can be
+// opened in a plain browser tab and photographed in both languages and at every window size. The
+// flags in the hash choose the screen: none is the sale book; `?id=41` a saved بکری; `?today` the
+// list; `?pukhta` the register; `?offer` adds the start-up offer. Never shipped: the route exists
+// only when import.meta.env.DEV is true (app/router.tsx).
 
 import { Localized } from '@fluent/react';
 import { useState } from 'react';
 import { devFlag, installDevBridge, seedEvent1 } from '../../../tests/helpers/dev-bridge';
 import { paisaForTest } from '../../../tests/helpers/paisa';
+import { BikriDraftOffer } from '../../features/bikri/draft-offer';
 import { BikriBookPage } from '../../features/bikri/pages/BikriBookPage';
+import { TodayBikriPage } from '../../features/bikri/pages/TodayBikriPage';
+import { PukhtaRegisterPage } from '../../features/pukhta_khata/pages/PukhtaRegisterPage';
 import { useLanguage } from '../../shared/i18n';
 import { Button, CashConfirmDialog } from '../../shared/ui';
 import { AppShell } from '../layout/AppShell';
@@ -31,11 +36,17 @@ export function BikriPage() {
   return (
     <AppShell
       nav={<MainNav current="bikri" onSelect={() => undefined} />}
-      moduleMenu={<ModuleMenu current="bikri-book" onSelect={() => undefined} />}
+      moduleMenu={
+        <ModuleMenu
+          current={devFlag('today') ? 'today' : devFlag('pukhta') ? 'pukhta' : 'bikri-book'}
+          onSelect={() => undefined}
+        />
+      }
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onSignOut={() => undefined}
       onOpenAccount={() => undefined}
+      onOpenBikri={() => undefined}
       date={SAMPLE_DATE}
       day="open"
     >
@@ -60,7 +71,14 @@ export function BikriPage() {
           />
         </div>
       ) : null}
-      <BikriBookPage initialDraft={devFlag('empty') ? undefined : seedEvent1} />
+      {devFlag('offer') ? <BikriDraftOffer /> : null}
+      {devFlag('today') ? (
+        <TodayBikriPage />
+      ) : devFlag('pukhta') ? (
+        <PukhtaRegisterPage />
+      ) : (
+        <BikriBookPage initialDraft={devFlag('empty') ? undefined : seedEvent1} />
+      )}
     </AppShell>
   );
 }

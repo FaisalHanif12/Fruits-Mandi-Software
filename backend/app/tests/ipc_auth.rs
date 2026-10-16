@@ -586,6 +586,50 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "bikri_save",
+            json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] },
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        ("bikri_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "bikri_list",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        ("bikri_find", json!({ "input": { "number": 1 } }), true),
+        (
+            "bikri_navigate",
+            json!({ "input": { "current_id": null, "to": "last" } }),
+            true,
+        ),
+        (
+            "search_pukhta_people",
+            json!({ "input": { "text": "shahid", "side": "buyer" } }),
+            true,
+        ),
+        (
+            "pukhta_register",
+            json!({ "input": { "from": "", "to": "", "side": null, "name": null,
+                "phone": null, "state": null } }),
+            true,
+        ),
+        (
+            "drafts_save",
+            json!({ "input": { "screen": "bikri", "payload_json": "{}" } }),
+            true,
+        ),
+        (
+            "drafts_get",
+            json!({ "input": { "screen": "bikri" } }),
+            true,
+        ),
+        (
+            "drafts_discard",
+            json!({ "input": { "screen": "bikri" } }),
+            true,
+        ),
+        (
             "settings_set_overrides",
             json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn",
                 "rate_check_enabled": true, "rate_check_percent": 30 } }),
@@ -1078,7 +1122,8 @@ fn there_is_no_command_that_deletes_a_master() {
             &"search_accounts",
             &"search_global",
             &"search_accounts_recent",
-            &"search_accounts_touch"
+            &"search_accounts_touch",
+            &"search_pukhta_people"
         ]
     );
     for name in &names {
@@ -1390,7 +1435,7 @@ fn the_bikri_commands_work_through_the_ipc() {
             "cash_paid": "5,000", "store_rent": null, "adjust_advance": true,
             "sales": [sale("s-1", akram, "20", "600"), sale("s-2", arshad, "30", "580")] }]
     } } });
-    let p = h.ok("bikri_preview", event1);
+    let p = h.ok("bikri_preview", event1.clone());
     assert_eq!(p["errors"], json!([]), "{p}");
     assert_eq!(p["warnings"], json!([]));
     assert_eq!(p["allow_line_override"], true);
@@ -1480,4 +1525,101 @@ fn the_bikri_commands_work_through_the_ipc() {
     let overrides = h.ok("settings_get_overrides", json!({}));
     assert_eq!(overrides["rate_check_enabled"], true);
     assert_eq!(overrides["rate_check_percent"], 30);
+
+    // Plan 13: the save, the reads, the drafts and the global search through the IPC.
+    let draft = event1["input"]["draft"].clone();
+    let save_input = |confirm: bool| json!({ "input": { "draft": draft.clone(), "confirm_cash_below_zero": confirm } });
+    // No cash was put in, so Event 1 asks for the confirmation and writes nothing.
+    let asked = h.call("bikri_save", save_input(false)).unwrap_err();
+    assert_eq!(
+        asked["errors"][0]["code"],
+        "ERR_CASH_BELOW_ZERO_NOT_CONFIRMED"
+    );
+    assert_eq!(asked["errors"][0]["values"]["cash_after_paisa"], -500_000);
+    assert_eq!(h.sql::<i64>("SELECT COUNT(*) FROM bikri_entries"), 0);
+    // A draft is kept, then removed by the save.
+    h.ok(
+        "drafts_save",
+        json!({ "input": { "screen": "bikri", "payload_json": "{\"typing\":true}" } }),
+    );
+    let kept = h.ok("drafts_get", json!({ "input": { "screen": "bikri" } }));
+    assert_eq!(kept["payload_json"], "{\"typing\":true}");
+    assert_eq!(
+        h.code(
+            "drafts_save",
+            json!({ "input": { "screen": "bikri", "payload_json": "not json" } })
+        ),
+        "ERR_DRAFT_INVALID"
+    );
+    let saved = h.ok("bikri_save", save_input(true));
+    assert_eq!(saved["number"], 1);
+    assert_eq!(saved["bikri_id"], 1);
+    // The answer carries the numbers that were saved, in paisa.
+    assert_eq!(saved["preview"]["summary"]["net"], 1_931_600);
+    assert_eq!(
+        h.ok("drafts_get", json!({ "input": { "screen": "bikri" } })),
+        Value::Null
+    );
+    // Reads.
+    let detail = h.ok("bikri_get", json!({ "input": { "id": 1 } }));
+    assert_eq!(detail["lots"][0]["net"], 1_931_600);
+    assert_eq!(detail["lots"][0]["sales"][0]["buyer_total"], 1_288_000);
+    assert_eq!(detail["status"], "saved");
+    let listed = h.ok("bikri_list", json!({ "input": { "date": "10-10-2026" } }));
+    assert_eq!(listed[0]["number"], 1);
+    assert_eq!(listed[0]["buyer_total"], 3_156_400);
+    let found = h.ok("bikri_find", json!({ "input": { "truck_no": "les" } }));
+    assert_eq!(found[0]["id"], 1);
+    assert_eq!(
+        h.ok(
+            "bikri_navigate",
+            json!({ "input": { "current_id": null, "to": "last" } })
+        ),
+        json!(1)
+    );
+    assert_eq!(
+        h.ok(
+            "bikri_navigate",
+            json!({ "input": { "current_id": 1, "to": "next" } })
+        ),
+        Value::Null
+    );
+    assert_eq!(
+        h.code("bikri_get", json!({ "input": { "id": 99 } })),
+        "ERR_NOT_FOUND"
+    );
+    let register = h.ok("pukhta_register", json!({ "input": {} }));
+    assert_eq!(register, json!([]));
+    assert_eq!(
+        h.ok(
+            "search_pukhta_people",
+            json!({ "input": { "text": "", "side": "buyer" } })
+        ),
+        json!([])
+    );
+    let hits = h.ok(
+        "search_global",
+        json!({ "input": { "text": "LES-12", "limit": 10 } }),
+    );
+    assert!(
+        hits.as_array()
+            .unwrap()
+            .iter()
+            .any(|hit| hit["kind"] == "bikri" && hit["hit"]["number"] == 1),
+        "{hits}"
+    );
+    // The books balance after the save through the IPC.
+    let (dr, cr): (i64, i64) = {
+        let conn = mandi_services::db::rusqlite::Connection::open(
+            h.dir.path().join("data").join("mandi.db"),
+        )
+        .unwrap();
+        conn.query_row(
+            "SELECT COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0) FROM journal_lines",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap()
+    };
+    assert_eq!((dr, cr), (3_656_400, 3_656_400));
 }

@@ -5,12 +5,17 @@
 
 import { vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
+import * as pukhtaApi from '../../src/features/pukhta_khata/api';
+import * as draftsApi from '../../src/shared/drafts/api';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import type { MasterKind } from '../../src/features/masters/types';
 import * as searchApi from '../../src/shared/search/api';
 import { account, balance, fakeAccountSearch, fakeAccounts, ref } from './accounts';
 import { IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
+import { CommandError } from '../../src/shared/api';
+import { listRow, savedEvent1 } from './bikri-saved';
+import { refusal } from './ui-error';
 import { fakeMasters, record } from './masters';
 
 export const RAHIM = account(IDS.rahim, 'seller', '030110001', 'رحیم', 'Rahim', {
@@ -49,6 +54,10 @@ export interface FakeBikri {
   previews: BikriDraft[];
   /** The latest draft the screen asked the preview for. */
   lastDraft: () => BikriDraft;
+  /** Every save the screen sent, in order: the draft and the confirmation flag. */
+  saves: { draft: BikriDraft; confirm: boolean }[];
+  /** Every draft the screen kept with `drafts_save`, in order, as text. */
+  drafts: string[];
 }
 
 /**
@@ -60,6 +69,8 @@ export function fakeBikri(
 ): FakeBikri {
   const store: FakeBikri = {
     previews: [],
+    saves: [],
+    drafts: [],
     lastDraft: () => {
       const last = store.previews.at(-1);
       if (last === undefined) throw new Error('the screen has not asked for a preview yet');
@@ -99,5 +110,44 @@ export function fakeBikri(
   );
   vi.mocked(bikriApi.assistSellerMemory).mockResolvedValue(SELLER_MEMORY);
   vi.mocked(bikriApi.bikriSplitFreight).mockResolvedValue([]);
+  // The commands of plan 13. A test file mocks the modules it uses with vi.mock; a module that is
+  // not mocked is left alone (its calls fail, and the screen copes, as it must).
+  if (vi.isMockFunction(bikriApi.bikriSave)) {
+    vi.mocked(bikriApi.bikriSave).mockImplementation((draft, confirm) =>
+      Promise.resolve(answer(draft)).then((preview) => {
+        // Like the real backend: an entry that takes cash below zero is refused until the user
+        // has said yes (PRD FR-6.7). Nothing is saved then.
+        if (preview.cash.needs_confirm && !confirm) {
+          throw new CommandError(
+            refusal([
+              {
+                code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED',
+                field: null,
+                values: { cash_after_paisa: -500_000 },
+              },
+            ]),
+          );
+        }
+        store.saves.push({ draft, confirm });
+        return { bikri_id: 41, number: 1, entry_id: 7, preview };
+      }),
+    );
+    vi.mocked(bikriApi.bikriGet).mockResolvedValue(savedEvent1());
+    vi.mocked(bikriApi.bikriList).mockResolvedValue([listRow()]);
+    vi.mocked(bikriApi.bikriFind).mockResolvedValue([listRow()]);
+    vi.mocked(bikriApi.bikriNavigate).mockResolvedValue(null);
+  }
+  if (vi.isMockFunction(draftsApi.draftsSave)) {
+    vi.mocked(draftsApi.draftsSave).mockImplementation((_screen, payload) => {
+      store.drafts.push(payload);
+      return Promise.resolve({ saved_at: '2026-10-10T07:30:00Z' });
+    });
+    vi.mocked(draftsApi.draftsGet).mockResolvedValue(null);
+    vi.mocked(draftsApi.draftsDiscard).mockResolvedValue(null);
+  }
+  if (vi.isMockFunction(pukhtaApi.searchPukhtaPeople)) {
+    vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
+    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue([]);
+  }
   return store;
 }

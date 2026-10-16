@@ -439,6 +439,50 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "bikri_save",
+            json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] },
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        ("bikri_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "bikri_list",
+            json!({ "input": { "date": "10-10-2026" } }),
+            true,
+        ),
+        ("bikri_find", json!({ "input": { "number": 1 } }), true),
+        (
+            "bikri_navigate",
+            json!({ "input": { "current_id": null, "to": "last" } }),
+            true,
+        ),
+        (
+            "search_pukhta_people",
+            json!({ "input": { "text": "shahid", "side": "buyer" } }),
+            true,
+        ),
+        (
+            "pukhta_register",
+            json!({ "input": { "from": "", "to": "", "side": null, "name": null,
+                "phone": null, "state": null } }),
+            true,
+        ),
+        (
+            "drafts_save",
+            json!({ "input": { "screen": "bikri", "payload_json": "{}" } }),
+            true,
+        ),
+        (
+            "drafts_get",
+            json!({ "input": { "screen": "bikri" } }),
+            true,
+        ),
+        (
+            "drafts_discard",
+            json!({ "input": { "screen": "bikri" } }),
+            true,
+        ),
+        (
             "settings_set_overrides",
             json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn",
                 "rate_check_enabled": true, "rate_check_percent": 30 } }),

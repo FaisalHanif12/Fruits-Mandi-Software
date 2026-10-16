@@ -305,3 +305,224 @@ bikri-strip-incomplete = ابھی حساب نہیں ہوا
 # The name of the switch above the sale lines: one lot, or the whole sale (PRD FR-12.1).
 # review: pending
 bikri-sales-view-label = کون سی { -bikri } کی لائنیں دکھائیں
+
+## Saving, moving between بکری and find (PRD FR-12.8, FR-12.13, plan 13).
+
+# review: pending
+bikri-save = محفوظ کریں
+
+# review: pending
+bikri-new = نئی { -bikri }
+
+# After a save the screen opens a new empty بکری (PRD FR-12.8).
+# review: pending
+bikri-saved-toast = { -bikri } { $number } محفوظ ہو گئی
+
+# review: pending
+bikri-last-saved = آخری محفوظ { -bikri }: نمبر { $number }
+
+# review: pending
+bikri-open-failed = { -bikri } کھل نہیں سکی۔ دوبارہ کوشش کریں۔
+
+# review: pending
+bikri-nav-label = { -bikri } کے درمیان جائیں
+
+# review: pending
+bikri-nav-first = پہلی { -bikri }
+
+# review: pending
+bikri-nav-previous = پچھلی { -bikri }
+
+# review: pending
+bikri-nav-next = اگلی { -bikri }
+
+# review: pending
+bikri-nav-last = آخری { -bikri }
+
+# review: pending
+bikri-nav-none = ابھی کوئی { -bikri } محفوظ نہیں۔
+
+# review: pending
+bikri-nav-no-previous = اس سے پچھلی کوئی { -bikri } نہیں۔
+
+# review: pending
+bikri-nav-no-next = اس کے بعد کوئی { -bikri } نہیں۔
+
+# review: pending
+bikri-find-open = تلاش
+
+# review: pending
+bikri-find-title = { -bikri } تلاش کریں
+
+# review: pending
+bikri-find-help = نمبر، ٹرک، { -beopari }، تاریخ یا { -qism-maal } میں سے جو معلوم ہو لکھیں۔
+
+# review: pending
+bikri-find-number = { -bikri } نمبر
+
+# review: pending
+bikri-find-hint = اوپر کوئی ایک بات لکھیں۔ ملتی ہوئی { -bikri } یہاں نظر آئیں گی۔
+
+# review: pending
+bikri-find-failed = تلاش نہیں ہو سکی
+
+# review: pending
+bikri-find-none = کوئی { -bikri } نہیں ملی
+
+# review: pending
+bikri-find-none-help = لکھی ہوئی باتیں جانچیں۔ ساری باتیں ایک ساتھ ملنی چاہییں۔
+
+# review: pending
+bikri-find-results = ملی ہوئی { -bikri }
+
+## One { -bikri } found by the search box at the top (PRD FR-5.4).
+
+# review: pending
+bikri-hit-title = { -bikri } نمبر { $number }
+
+# review: pending
+bikri-status-saved = محفوظ
+
+# review: pending
+bikri-status-cancelled = منسوخ
+
+# review: pending
+bikri-hit-cancelled = { bikri-status-cancelled }
+
+## The unfinished { -bikri } offered at start-up (PRD FR-12.10, NFR-REL-2).
+
+# review: pending
+bikri-draft-title = پچھلی { -bikri } مکمل کریں؟
+
+# review: pending
+bikri-draft-text = ایپ بند ہونے سے پہلے ایک { -bikri } لکھی جا رہی تھی۔ وہ { $time } پر محفوظ کی گئی تھی۔ کیا اسے دوبارہ کھولنا ہے؟
+
+# review: pending
+bikri-draft-later = ابھی نہیں
+
+# review: pending
+bikri-draft-discard = ختم کر دیں
+
+# review: pending
+bikri-draft-restore = مکمل کریں
+
+## A saved { -bikri } opened to look at (PRD FR-12.13). Editing comes later.
+
+# review: pending
+bikri-saved-title = { -bikri } نمبر { $number }
+
+# review: pending
+bikri-saved-readonly = یہ محفوظ شدہ { -bikri } ہے۔ یہاں اسے صرف دیکھا جا سکتا ہے۔
+
+# review: pending
+bikri-saved-cancelled = یہ { -bikri } منسوخ ہو چکی ہے۔
+
+# review: pending
+bikri-saved-cancel-reason = وجہ: { $reason }
+
+# review: pending
+bikri-saved-at = محفوظ ہونے کا وقت
+
+# review: pending
+bikri-saved-failed = { -bikri } کھل نہیں سکی
+
+# review: pending
+bikri-saved-lot-title = { -lot } { $lot }: { $seller }
+
+# review: pending
+bikri-saved-pick-lot = کون سی { -lot } دکھانی ہے
+
+# review: pending
+bikri-saved-qty-sold = فروخت
+
+# review: pending
+bikri-saved-qty-written-off = ضائع
+
+# review: pending
+bikri-split-income = آمدن کا حصہ
+
+# The entries this { -bikri } made in the books.
+# review: pending
+bikri-postings-title = حساب کے اندراج
+
+# review: pending
+bikri-posting-kind = اندراج
+
+# review: pending
+bikri-posting-total = رقم
+
+# review: pending
+bikri-posting-first = پہلا اندراج
+
+# review: pending
+bikri-posting-later = بعد کی فروخت
+
+# review: pending
+bikri-posting-reversal = الٹا اندراج
+
+# review: pending
+bikri-posting-other = اندراج
+
+## The list of { -bikri } (PRD FR-12.7).
+
+# review: pending
+bikri-list-label = { -bikri } کی فہرست
+
+# review: pending
+bikri-list-help = دن، { -beopari } اور { -qism-maal } سے چھانٹیں۔ کھولنے کے لیے Enter دبائیں۔
+
+# review: pending
+bikri-list-failed = فہرست کھل نہیں سکی
+
+# review: pending
+bikri-list-empty = آج کوئی { -bikri } نہیں
+
+# review: pending
+bikri-list-empty-help = نئی { -bikri } کے لیے { $key } دبائیں۔
+
+# review: pending
+bikri-list-no-match = کوئی { -bikri } نہیں ملی
+
+# review: pending
+bikri-list-no-match-help = دن یا باقی چھانٹیاں بدل کر دیکھیں۔
+
+# review: pending
+bikri-list-clear = چھانٹیاں ہٹائیں
+
+# review: pending
+bikri-list-status-all = سب
+
+# Between two names in one cell, for example two sellers of one truck.
+# review: pending
+bikri-list-separator = { "، " }
+
+# review: pending
+bikri-list-col-number = نمبر
+
+# review: pending
+bikri-list-col-when = تاریخ اور وقت
+
+# review: pending
+bikri-list-col-truck = ٹرک
+
+# review: pending
+bikri-list-col-sellers = { -beopari }
+
+# review: pending
+bikri-list-col-items = { -qism-maal }
+
+# review: pending
+bikri-list-col-buyer-total = { -gahak } کی کل رقم
+
+# review: pending
+bikri-list-col-status = حالت
+
+# The نگ of a بکری: sold of received, over all its lots (PRD FR-12.7).
+# review: pending
+bikri-list-col-qty = { -nag } ({ bikri-saved-qty-sold } / { bikri-col-qty-received })
+
+# Cell of that column. A number cell is written left to right, and the header reads right to left
+# ({ bikri-saved-qty-sold } first, on the right), so received comes first here: it stands on the
+# left and sold on the right, under the header. For example 50 / 45.
+# review: pending
+bikri-list-qty = { $received } / { $sold }

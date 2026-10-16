@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pukhta-register"
+description = "Enables the pukhta_register command without any pre-configured scope."
+commands.allow = ["pukhta_register"]
+
+[[permission]]
+identifier = "deny-pukhta-register"
+description = "Denies the pukhta_register command without any pre-configured scope."
+commands.deny = ["pukhta_register"]

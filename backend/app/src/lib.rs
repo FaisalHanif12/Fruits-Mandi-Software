@@ -141,6 +141,16 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::assist::assist_truck_memory,
         commands::assist::assist_seller_memory,
         commands::assist::assist_last_rate,
+        commands::bikri::bikri_save,
+        commands::bikri::bikri_get,
+        commands::bikri::bikri_list,
+        commands::bikri::bikri_find,
+        commands::bikri::bikri_navigate,
+        commands::pukhta::search_pukhta_people,
+        commands::pukhta::pukhta_register,
+        commands::drafts::drafts_save,
+        commands::drafts::drafts_get,
+        commands::drafts::drafts_discard,
     ]
 }
 

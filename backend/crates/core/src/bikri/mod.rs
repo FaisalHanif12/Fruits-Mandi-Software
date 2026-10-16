@@ -22,6 +22,7 @@ mod input;
 mod prepare;
 mod prepared;
 mod preview;
+mod saved;
 #[cfg(test)]
 mod tests;
 
@@ -29,6 +30,7 @@ pub use input::*;
 pub use prepare::{prepare_draft, split_freight};
 pub use prepared::*;
 pub use preview::*;
+pub use saved::*;
 
 /// The most lots in one بکری (NFR-SCL-3).
 pub const MAX_LOTS: usize = 50;

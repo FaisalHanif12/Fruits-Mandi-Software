@@ -84,7 +84,16 @@ export function isNumberLike(type: EntryColumnType): boolean {
  * `name` column is wide enough for a Nastaliq name and the other script's name beside it.
  */
 export type ListColumnType =
-  'code' | 'name' | 'text' | 'choice' | 'number' | 'money' | 'date' | 'status';
+  | 'code'
+  | 'name'
+  | 'text'
+  | 'choice'
+  | 'number'
+  | 'money'
+  | 'date'
+  // A day and a time, DD-MM-YYYY HH:MM (the list of بکری, the audit log).
+  | 'datetime'
+  | 'status';
 
 export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
   code: 120,
@@ -95,6 +104,7 @@ export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
   number: 140,
   money: 140,
   date: 140,
+  datetime: 170,
   status: 120,
 };
 
@@ -107,5 +117,11 @@ export const LIST_GROW_MIN_WIDTH = 160;
 
 /** Codes and numbers are Latin digits, written left to right and set against the right edge. */
 export function isListNumberLike(type: ListColumnType): boolean {
-  return type === 'code' || type === 'number' || type === 'money' || type === 'date';
+  return (
+    type === 'code' ||
+    type === 'number' ||
+    type === 'money' ||
+    type === 'date' ||
+    type === 'datetime'
+  );
 }

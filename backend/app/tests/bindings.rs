@@ -17,7 +17,9 @@ use mandi_app_lib::commands::{auth, day, settings, translit};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::{accounts, bikri, cash, masters, partners, rules, search, vouchers};
+use mandi_services::core::{
+    accounts, bikri, cash, drafts, masters, partners, rules, search, vouchers,
+};
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -228,6 +230,37 @@ const EXPECTED_FILES: &[&str] = &[
     "SellerMemoryInput.ts",
     "SellerMemory.ts",
     "LastRateInput.ts",
+    "BikriSaveInput.ts",
+    "BikriSaved.ts",
+    "BikriStatus.ts",
+    "BikriGetInput.ts",
+    "SavedPukhta.ts",
+    "SavedCharge.ts",
+    "SavedLotCharge.ts",
+    "SavedSale.ts",
+    "SavedLot.ts",
+    "SavedTotals.ts",
+    "SavedPosting.ts",
+    "SavedSplit.ts",
+    "BikriDetail.ts",
+    "BikriListInput.ts",
+    "BikriListRow.ts",
+    "BikriFindInput.ts",
+    "NavigateTo.ts",
+    "BikriNavigateInput.ts",
+    "PukhtaSide.ts",
+    "PukhtaPeopleInput.ts",
+    "PukhtaPerson.ts",
+    "PaidState.ts",
+    "PukhtaRegisterInput.ts",
+    "PukhtaRegisterRow.ts",
+    "BikriMatch.ts",
+    "BikriHit.ts",
+    "DraftSaveInput.ts",
+    "DraftSaved.ts",
+    "DraftGetInput.ts",
+    "DraftDiscardInput.ts",
+    "DraftRow.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -347,6 +380,24 @@ fn export_bindings() {
     bikri::SellerMemory::export_all(&cfg).unwrap();
     bikri::LastRateInput::export_all(&cfg).unwrap();
     bikri::RateHint::export_all(&cfg).unwrap();
+    bikri::BikriSaveInput::export_all(&cfg).unwrap();
+    bikri::BikriSaved::export_all(&cfg).unwrap();
+    bikri::BikriGetInput::export_all(&cfg).unwrap();
+    bikri::BikriDetail::export_all(&cfg).unwrap();
+    bikri::BikriListInput::export_all(&cfg).unwrap();
+    bikri::BikriListRow::export_all(&cfg).unwrap();
+    bikri::BikriFindInput::export_all(&cfg).unwrap();
+    bikri::BikriNavigateInput::export_all(&cfg).unwrap();
+    bikri::PukhtaPeopleInput::export_all(&cfg).unwrap();
+    bikri::PukhtaPerson::export_all(&cfg).unwrap();
+    bikri::PukhtaRegisterInput::export_all(&cfg).unwrap();
+    bikri::PukhtaRegisterRow::export_all(&cfg).unwrap();
+    bikri::BikriHit::export_all(&cfg).unwrap();
+    drafts::DraftSaveInput::export_all(&cfg).unwrap();
+    drafts::DraftSaved::export_all(&cfg).unwrap();
+    drafts::DraftGetInput::export_all(&cfg).unwrap();
+    drafts::DraftDiscardInput::export_all(&cfg).unwrap();
+    drafts::DraftRow::export_all(&cfg).unwrap();
     cash::CashCheck::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();

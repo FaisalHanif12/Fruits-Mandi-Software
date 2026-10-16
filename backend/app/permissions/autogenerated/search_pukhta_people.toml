@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-search-pukhta-people"
+description = "Enables the search_pukhta_people command without any pre-configured scope."
+commands.allow = ["search_pukhta_people"]
+
+[[permission]]
+identifier = "deny-search-pukhta-people"
+description = "Denies the search_pukhta_people command without any pre-configured scope."
+commands.deny = ["search_pukhta_people"]

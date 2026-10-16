@@ -292,3 +292,120 @@ fn nothing_to_post_is_an_error_and_a_huge_entry_is_too_large() {
         LedgerError::TooLarge
     );
 }
+
+#[test]
+fn the_layout_says_where_the_matching_lines_are() {
+    // Event 1: buyers at 0 and 1, the seller credit at 2, the cash part starts at 10 with the
+    // seller's نقد debit.
+    let (entry, layout) = build_bikri_entry_with_layout(
+        &JournalSource {
+            lots: vec![event1_lot()],
+        },
+        &accounts(),
+    )
+    .unwrap();
+    assert_eq!(entry.lines().len(), 12);
+    let lot = &layout.lots[0];
+    assert_eq!(
+        lot.sales.iter().map(|s| s.buyer_debit).collect::<Vec<_>>(),
+        [Some(0), Some(1)]
+    );
+    assert!(lot.sales.iter().all(|s| s.cash_credit.is_none()));
+    assert_eq!((lot.seller_credit, lot.seller_debit), (Some(2), None));
+    assert_eq!(lot.cash_debit, Some(10));
+    assert_eq!(layout.cash_part_start, 10);
+    // The two parts balance on their own (money agent property).
+    let (sale, cash) = entry.lines().split_at(layout.cash_part_start);
+    let total = |lines: &[crate::ledger::LedgerLine], side: Side| -> i64 {
+        lines
+            .iter()
+            .filter(|l| l.side == side)
+            .map(|l| l.amount.rupees())
+            .sum()
+    };
+    assert_eq!((total(sale, Dr), total(sale, Cr)), (31_564, 31_564));
+    assert_eq!((total(cash, Dr), total(cash, Cr)), (5_000, 5_000));
+    // The positions point at the lines they name.
+    assert_eq!(entry.lines()[2].account_id, AccountId::new(RAHIM));
+    assert_eq!(entry.lines()[2].side, Cr);
+    assert_eq!(entry.lines()[10].side, Dr);
+}
+
+#[test]
+fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
+    // Event 2: the one-time buyer's debit at 0, his cash settlement credit is the last line.
+    let lot = JournalLot {
+        seller_account_id: AccountId::new(KARIM),
+        person_key: None,
+        seller_credit: p(10_160),
+        cash_paid: Paisa::ZERO,
+        freight_deducted: p(1_000),
+        labour: p(50),
+        munshiana: p(50),
+        store_rent: Paisa::ZERO,
+        phone: p(20),
+        sales: vec![JournalSale {
+            person_key: Some("شاہد|03000000000".into()),
+            ..sale(PUKHTA_BUYER, 12_800, PaymentType::Cash, 720, 720, 80, 0)
+        }],
+    };
+    let (entry, layout) =
+        build_bikri_entry_with_layout(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
+    assert_eq!(entry.lines().len(), 11);
+    let row = layout.lots[0].sales[0];
+    assert_eq!((row.buyer_debit, row.cash_credit), (Some(0), Some(10)));
+    assert_eq!(layout.lots[0].cash_debit, None);
+    // Both lines carry the person key.
+    assert_eq!(
+        entry.lines()[0].person_key.as_deref(),
+        Some("شاہد|03000000000")
+    );
+    assert_eq!(
+        entry.lines()[10].person_key.as_deref(),
+        Some("شاہد|03000000000")
+    );
+
+    // A negative credit is a debit line: `seller_credit` is None and `seller_debit` is set.
+    let negative = JournalLot {
+        seller_account_id: AccountId::new(RAHIM),
+        person_key: None,
+        seller_credit: p(-2_436),
+        cash_paid: Paisa::ZERO,
+        freight_deducted: p(3_000),
+        labour: Paisa::ZERO,
+        munshiana: Paisa::ZERO,
+        store_rent: Paisa::ZERO,
+        phone: Paisa::ZERO,
+        sales: vec![sale(AKRAM, 644, PaymentType::Credit, 36, 36, 8, 0)],
+    };
+    let (entry, layout) = build_bikri_entry_with_layout(
+        &JournalSource {
+            lots: vec![negative],
+        },
+        &accounts(),
+    )
+    .unwrap();
+    let lot = &layout.lots[0];
+    assert_eq!((lot.seller_credit, lot.seller_debit), (None, Some(1)));
+    assert_eq!(entry.lines()[1].side, Dr);
+    // The same entry as build_bikri_entry makes.
+    let plain = build_bikri_entry(
+        &JournalSource {
+            lots: vec![JournalLot {
+                seller_account_id: AccountId::new(RAHIM),
+                person_key: None,
+                seller_credit: p(-2_436),
+                cash_paid: Paisa::ZERO,
+                freight_deducted: p(3_000),
+                labour: Paisa::ZERO,
+                munshiana: Paisa::ZERO,
+                store_rent: Paisa::ZERO,
+                phone: Paisa::ZERO,
+                sales: vec![sale(AKRAM, 644, PaymentType::Credit, 36, 36, 8, 0)],
+            }],
+        },
+        &accounts(),
+    )
+    .unwrap();
+    assert_eq!(plain, entry);
+}

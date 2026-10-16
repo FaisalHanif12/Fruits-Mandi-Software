@@ -6,9 +6,11 @@
 // the development route imports it.
 
 import { EVENT1, IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
+import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved';
 import { paisaForTest } from './paisa';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
-import type { BikriDraftStores } from '../../src/features/bikri/draft-store';
+import { createBikriDraft, type BikriDraftStores } from '../../src/features/bikri/draft-store';
+import { serialiseDraft } from '../../src/features/bikri/draft-snapshot';
 
 interface Party {
   id: number;
@@ -224,6 +226,49 @@ const handlers: Record<string, Handler> = {
       ? TRUCK_MEMORY
       : { last: null, same_day: null, suggestions: [] },
   assist_seller_memory: () => SELLER_MEMORY,
+  // Plan 13: the saved بکری, the lists, drafts and the one-time people.
+  bikri_save: (input) => ({
+    bikri_id: 41,
+    number: 1,
+    entry_id: 7,
+    preview: previewFor(draftOf(input)),
+  }),
+  bikri_get: () =>
+    savedEvent1({
+      status: devFlag('cancelled') ? 'cancelled' : 'saved',
+      cancel_reason: devFlag('cancelled') ? 'wrong truck' : null,
+    }),
+  bikri_list: () =>
+    devFlag('empty') ? [] : [listRow(), listRow({ id: 42, number: 2, status: 'cancelled' })],
+  bikri_find: () => [listRow(), listRow({ id: 42, number: 2, truck_no: 'LHR-0077' })],
+  bikri_navigate: () => 41,
+  // `#/dev/bikri?offer` shows the start-up offer of an unfinished بکری (PRD FR-12.10).
+  drafts_get: () => {
+    if (!devFlag('offer')) return null;
+    const stores = createBikriDraft('10-10-2026');
+    seedEvent1(stores);
+    return { payload_json: serialiseDraft(stores), saved_at: '2026-10-10T07:30:00Z' };
+  },
+  drafts_save: () => ({ saved_at: '2026-10-10T07:30:00Z' }),
+  drafts_discard: () => null,
+  search_pukhta_people: () => [SHAHID, NASIR],
+  pukhta_register: () =>
+    devFlag('empty')
+      ? []
+      : [
+          registerRow(),
+          registerRow({
+            bikri_id: 43,
+            bikri_number: 3,
+            name_ur: NASIR.name_ur,
+            name_en: NASIR.name_en,
+            phone: NASIR.phone,
+            amount: paisaForTest(200_000),
+            paid: false,
+            open: paisaForTest(200_000),
+          }),
+          registerRow({ bikri_id: 44, bikri_number: 4, cancelled: true, paid: false }),
+        ],
 };
 
 function masterHit(master: Master) {

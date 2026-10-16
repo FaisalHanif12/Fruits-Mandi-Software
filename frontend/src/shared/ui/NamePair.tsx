@@ -37,8 +37,9 @@ import { capitalizeWords, wordsOf, withoutTrailingLatinRun } from '../urdu/text'
 import type { TypingMode } from '../urdu/typing-mode';
 import type { Suggestions } from '../../bindings/Suggestions';
 import { Field } from './Field';
-import { RomanUrduInput, type ConvertedWord } from './RomanUrduInput';
+import { RomanUrduInput, type ConvertedWord, type ListExtra } from './RomanUrduInput';
 import { SpellingMark } from './SpellingMark';
+import { SuggestInput } from './SuggestInput';
 import { TextInput } from './TextInput';
 
 /** The two names, and the words of them that the user has to check (PRD FR-7.66). */
@@ -93,6 +94,13 @@ interface NamePairProps {
    * `F4`): the other name is filled from it once, at open, like after typing.
    */
   fillOnOpen?: boolean | undefined;
+  /**
+   * Records already known that the name may be (the one-time people, PRD FR-7.29). They are rows
+   * at the head of the list of the name typed first: the Urdu field in the Urdu app, the English
+   * field in the English app. Taking one fills both names and whatever else the screen puts in
+   * `onPick`, and the pair then treats both names as typed, so nothing overwrites them.
+   */
+  knownRecords?: readonly ListExtra[] | undefined;
 }
 
 const LATIN_WORD = /^[A-Za-z]+$/;
@@ -107,6 +115,7 @@ export function NamePair({
   kind,
   checkSpelling = true,
   fillOnOpen = false,
+  knownRecords,
 }: NamePairProps) {
   const language = useLanguage();
   // In the English app the English name is the one typed, and the Urdu name fills from it.
@@ -244,6 +253,16 @@ export function NamePair({
     }
   };
 
+  // A known record taken from the list: both names are his, and neither is overwritten again.
+  const knownRows: ListExtra[] | undefined = knownRecords?.map((row) => ({
+    ...row,
+    onPick: () => {
+      typedBy.current = { urdu: true, english: true };
+      request.current += 1;
+      row.onPick();
+    },
+  }));
+
   // The English word being typed is not Urdu yet, so it is not a mistake.
   const urduChecked = pending === '' ? value.urdu : withoutTrailingLatinRun(value.urdu);
   const marks = value.spelling ?? NO_MARKS;
@@ -272,6 +291,7 @@ export function NamePair({
           onWordConverted={converted}
           onPendingChange={setPending}
           marked={marks.urdu}
+          extras={englishFirst ? undefined : knownRows}
         />
       )}
     </Field>
@@ -290,7 +310,21 @@ export function NamePair({
     >
       {(control) => (
         <>
-          <TextInput {...control} value={value.english} onChange={changeEnglish} lang="en" />
+          {/* The same input stays while the list comes and goes, so focus is never lost. */}
+          {englishFirst && knownRows !== undefined ? (
+            <SuggestInput
+              {...control}
+              value={value.english}
+              onChange={changeEnglish}
+              suggestions={knownRows.map((row) => ({
+                value: row.key,
+                content: row.content,
+                onPick: row.onPick,
+              }))}
+            />
+          ) : (
+            <TextInput {...control} value={value.english} onChange={changeEnglish} lang="en" />
+          )}
           <SpellingMark words={wordsStillIn(value.english, marks.english)} lang="en" />
         </>
       )}

@@ -23,7 +23,9 @@ import {
   salesGrid,
   textOf,
   typeHeaderAndLot,
+  typeCodeAndEnter,
   typeTwoLines,
+  waitForLineFill,
 } from '../helpers/bikri-screen';
 import {
   DAY,
@@ -378,7 +380,11 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
   it('the one-time buyer account sends Enter to the name fields of the line', async () => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
-    await user.keyboard('03049999{Enter}');
+    // The quantity the screen fills in is awaited first, and the code is typed step by step (the
+    // helper waits for the editor and for the list). On a very busy computer the grid can still
+    // close a cell editor in the middle of typing; this test is the one that shows it first.
+    await waitForLineFill(language);
+    await typeCodeAndEnter(user, '03049999');
     await waitFor(() => {
       const active = document.activeElement;
       expect(active?.closest('[data-pukhta-for]')).not.toBeNull();

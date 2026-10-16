@@ -122,10 +122,10 @@ describe.each(LANGUAGES)('the sale book screen (%s)', (language) => {
     });
     const box = await notice();
     if (box === undefined) throw new Error('no notice');
-    // Opening the saved sale comes with plan 13: its button waits, dimmed.
+    // Opening the saved sale works since plan 13 (bikri-save.test.tsx follows it to the end).
     expect(
       within(box).getByRole('button', { name: named(message(language, 'bikri-truck-open')) }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     await user.click(
       within(box).getByRole('button', {
         name: named(message(language, 'bikri-truck-continue')),

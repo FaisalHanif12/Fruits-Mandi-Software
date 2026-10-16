@@ -113,7 +113,13 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
     renderIn(
       language,
       <QueryClientProvider client={new QueryClient()}>
-        <TopBar userName={USER_NAME} onLock={vi.fn()} onSignOut={vi.fn()} onOpenAccount={vi.fn()} />
+        <TopBar
+          userName={USER_NAME}
+          onLock={vi.fn()}
+          onSignOut={vi.fn()}
+          onOpenAccount={vi.fn()}
+          onOpenBikri={vi.fn()}
+        />
       </QueryClientProvider>,
     );
     const search = screen.getByRole('combobox', {
@@ -132,7 +138,13 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
     renderIn(
       language,
       <QueryClientProvider client={new QueryClient()}>
-        <TopBar userName={USER_NAME} onLock={vi.fn()} onSignOut={vi.fn()} onOpenAccount={vi.fn()} />
+        <TopBar
+          userName={USER_NAME}
+          onLock={vi.fn()}
+          onSignOut={vi.fn()}
+          onOpenAccount={vi.fn()}
+          onOpenBikri={vi.fn()}
+        />
       </QueryClientProvider>,
     );
     expect(
@@ -332,6 +344,7 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
           onLock={vi.fn()}
           onSignOut={vi.fn()}
           onOpenAccount={vi.fn()}
+          onOpenBikri={vi.fn()}
           date="10-10-2026"
           day="open"
         >

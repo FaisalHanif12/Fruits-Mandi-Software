@@ -72,3 +72,7 @@ common-cash-confirm-text = اس اندراج کے بعد { -rokar } <num>{ $amou
 common-cash-confirm-yes = ہاں، محفوظ کریں
 # review: pending
 common-cash-confirm-no = نہیں، واپس جائیں
+
+# The tick of a list that adds the columns that do not fit beside the others (Code Standards F22).
+# review: pending
+common-more-columns = مزید کالم

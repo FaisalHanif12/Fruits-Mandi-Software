@@ -300,6 +300,12 @@ fn post_advance(
         },
     )?;
     repo::set_current_entry(tx, voucher_id, posted.entry_id, actor.user_id, &now)?;
+    // A credit adjusts only the advances before it (PRD FR-15.8). An advance dated before a
+    // credit that is already saved (a day entered late) is one that credit must now adjust, so
+    // the seller is worked out again. An advance of the newest day is after every credit.
+    if mandi_db::matching::has_later_entry(tx, account.id, None, &voucher.entry_date)? {
+        crate::matching::rematch_advances(tx, actor.user_id, &now, account.id)?;
+    }
     ctx.db.auditor().write(
         tx,
         &Event::new(Some(actor.user_id), "create", "voucher")

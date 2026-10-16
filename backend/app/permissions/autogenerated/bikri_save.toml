@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-save"
+description = "Enables the bikri_save command without any pre-configured scope."
+commands.allow = ["bikri_save"]
+
+[[permission]]
+identifier = "deny-bikri-save"
+description = "Denies the bikri_save command without any pre-configured scope."
+commands.deny = ["bikri_save"]

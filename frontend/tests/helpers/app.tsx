@@ -18,6 +18,7 @@ import * as authApi from '../../src/features/auth/api';
 import * as settingsApi from '../../src/features/settings/api';
 import type { Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
+import { useToastStore } from '../../src/shared/ui';
 import { useTextSizeStore } from '../../src/app/layout/text-size';
 import { useWizardStore } from '../../src/features/auth/wizard-store';
 import { refusal, type RefusalItem } from './ui-error';
@@ -103,6 +104,8 @@ export function resetClientState(language: Language = 'ur') {
     useLanguageStore.setState({ language });
     useTextSizeStore.setState({ chosen: 100 });
     useWizardStore.getState().reset();
+    // A message of an earlier test must not be on the screen of the next one.
+    useToastStore.setState({ toasts: [] });
   });
   document.documentElement.style.zoom = '';
 }

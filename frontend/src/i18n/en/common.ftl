@@ -72,3 +72,7 @@ common-cash-confirm-text = After this entry cash in hand will be <num>{ $amount 
 common-cash-confirm-yes = Yes, save
 # review: pending
 common-cash-confirm-no = No, go back
+
+# The tick of a list that adds the columns that do not fit beside the others (Code Standards F22).
+# review: pending
+common-more-columns = More columns

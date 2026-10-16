@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-get"
+description = "Enables the bikri_get command without any pre-configured scope."
+commands.allow = ["bikri_get"]
+
+[[permission]]
+identifier = "deny-bikri-get"
+description = "Denies the bikri_get command without any pre-configured scope."
+commands.deny = ["bikri_get"]

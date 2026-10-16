@@ -1,0 +1,62 @@
+[
+  {
+    "id": 2,
+    "number": 2,
+    "entry_date": "2026-10-10",
+    "created_at": "2026-10-10T09:00:00.000Z",
+    "truck_no": "LHR-0077",
+    "sellers": [
+      {
+        "id": 18,
+        "code": "030110002",
+        "name_ur": "کریم",
+        "name_en": "Karim"
+      }
+    ],
+    "pukhta_sellers": [],
+    "items": [
+      {
+        "id": 2,
+        "code": "2",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      }
+    ],
+    "qty_received": 10,
+    "qty_sold": 10,
+    "gross": 1200000,
+    "net": 1016000,
+    "buyer_total": 1280000,
+    "status": "saved"
+  },
+  {
+    "id": 1,
+    "number": 1,
+    "entry_date": "2026-10-10",
+    "created_at": "2026-10-10T09:00:00.000Z",
+    "truck_no": "LES-1234",
+    "sellers": [
+      {
+        "id": 17,
+        "code": "030110001",
+        "name_ur": "رحیم",
+        "name_en": "Rahim"
+      }
+    ],
+    "pukhta_sellers": [],
+    "items": [
+      {
+        "id": 1,
+        "code": "1",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      }
+    ],
+    "qty_received": 50,
+    "qty_sold": 50,
+    "gross": 2940000,
+    "net": 1931600,
+    "buyer_total": 3156400,
+    "status": "saved"
+  }
+]

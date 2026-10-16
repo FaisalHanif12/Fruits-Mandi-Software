@@ -1274,3 +1274,180 @@ fn e2e_26_a_new_row_starts_at_the_remaining_qty_with_the_last_rate_as_a_hint() {
         Some(WorkingValue::Money { paisa: rupees(720) })
     );
 }
+
+// ---- Plan 13: E2E-25 and E2E-26 on saved data ----
+
+/// A saved بکری 1 with the truck LES-1234 from سوات اڈا (Event 1), saved through the real save.
+fn saved_event_1_with_adda() -> (bikri_support::World, i64) {
+    use bikri_support::*;
+    use mandi_services::core::masters::{AddaInput, MasterInput};
+    let w = world();
+    let adda = mandi_services::masters::save(
+        &w.env.ctx,
+        &w.owner,
+        &MasterInput::Adda(AddaInput {
+            id: None,
+            version: None,
+            code: String::new(),
+            name_ur: "سوات اڈا".into(),
+            name_en: "Swat Adda".into(),
+            city_id: None,
+            confirmed_rules_words: vec!["سوات".into()],
+        }),
+    )
+    .map(|row| row.id());
+    // The spelling check may ask for the words of the name; confirm them like the screen does.
+    let adda = match adda {
+        Ok(id) => id,
+        Err(ServiceError::Rejected(items)) => {
+            let words: Vec<String> = items
+                .iter()
+                .filter_map(|i| match i.values.get("words") {
+                    Some(mandi_services::core::error::ErrorValue::Text(t)) => Some(t.clone()),
+                    _ => None,
+                })
+                .flat_map(|t| t.split(' ').map(str::to_owned).collect::<Vec<_>>())
+                .collect();
+            mandi_services::masters::save(
+                &w.env.ctx,
+                &w.owner,
+                &MasterInput::Adda(AddaInput {
+                    id: None,
+                    version: None,
+                    code: String::new(),
+                    name_ur: "سوات اڈا".into(),
+                    name_en: "Swat Adda".into(),
+                    city_id: None,
+                    confirmed_rules_words: words,
+                }),
+            )
+            .unwrap()
+            .id()
+        }
+        Err(other) => panic!("{other:?}"),
+    };
+    let mut d = event1(&w);
+    d.header.adda_id = Some(adda);
+    d.header.zamindar_account_id = Some(w.rahim);
+    d.header.driver_name = Some("Aslam".into());
+    mandi_services::bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: d,
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+    (w, adda)
+}
+
+#[test]
+fn e2e_25_after_a_saved_bikri_the_same_truck_is_noticed_and_the_seller_is_remembered() {
+    // PRD E2E-25 (backend part): بکری 1 is saved. A new بکری with the truck LES-1234 gets the
+    // same-truck notice naming بکری 1; continuing fills the اڈا, the زمیندار and the driver; the
+    // lot of رحیم fills کیلا and پیٹی.
+    use mandi_services::core::bikri::TruckMemoryInput;
+    let (w, adda) = saved_event_1_with_adda();
+    let truck = assist::truck_memory(
+        &w.env.ctx,
+        &TruckMemoryInput {
+            truck_no: "LES-1234".into(),
+            date: "10-10-2026".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(truck.same_day.map(|d| d.bikri_number), Some(1));
+    let last = truck.last.expect("the last بکری of the truck");
+    assert_eq!(
+        (
+            last.bikri_number,
+            last.adda_id,
+            last.zamindar_account_id,
+            last.driver_name.as_deref()
+        ),
+        (1, Some(adda), Some(w.rahim), Some("Aslam"))
+    );
+    // A short code `1` in a seller field is رحیم; his lot fills the item and the packing.
+    let memory = assist::seller_memory(&w.env.ctx, w.rahim).unwrap();
+    assert_eq!(
+        (memory.item_id, memory.packing_id, memory.from_last_lot),
+        (Some(w.banana), Some(w.box_), true)
+    );
+    // Another day: no notice, the memory stays.
+    let tomorrow = assist::truck_memory(
+        &w.env.ctx,
+        &TruckMemoryInput {
+            truck_no: "LES-1234".into(),
+            date: "09-10-2026".into(),
+        },
+    )
+    .unwrap();
+    assert!(tomorrow.same_day.is_none() && tomorrow.last.is_some());
+    // The notice's "کھولیں" finds بکری 1 by its number.
+    let found = mandi_services::bikri::find(
+        &w.env.ctx,
+        &mandi_services::core::bikri::BikriFindInput {
+            number: Some(1),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(found.len(), 1);
+}
+
+#[test]
+fn e2e_26_on_saved_data_the_hint_is_the_last_rate_saved_today() {
+    // PRD E2E-26 on saved data: after بکری 1 is saved (اکرم at 600, ارشد at 580), a new لاٹ of the
+    // same item and packing shows today's last saved rate (580) as a grey hint, never as a
+    // value, and the remaining qty of a fresh lot is its whole quantity.
+    use bikri_support::*;
+    use mandi_services::core::bikri::{LastRateInput, RateHintSource};
+    let w = world();
+    mandi_services::bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: event1(&w),
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+    let hint = assist::last_rate(
+        &w.env.ctx,
+        &LastRateInput {
+            item_id: w.banana,
+            packing_id: w.box_,
+            date: "10-10-2026".into(),
+        },
+    )
+    .unwrap()
+    .expect("a saved rate");
+    assert_eq!(
+        (r(hint.rate_paisa), hint.source),
+        (580, RateHintSource::Today)
+    );
+    // The preview of a new بکری shows the same hint on its first row and starts it at 40.
+    let d = draft(vec![with_sales(
+        lot(&w, "lot-1", w.rahim, w.banana, "40"),
+        vec![blank_sale("s-1", "40")],
+    )]);
+    let p = preview(&w, &d);
+    let row = &p.lots[0].lines[0];
+    assert_eq!(row.remaining_qty, 40);
+    let shown = row.rate_hint.as_ref().expect("the hint");
+    assert_eq!(
+        (r(shown.rate_paisa), shown.source),
+        (580, RateHintSource::Today)
+    );
+    assert!(
+        row.calc.is_none(),
+        "the hint is never a rate: nothing is worked out"
+    );
+    // The rate check now has data: 580 and 600 of 50 نگ are near an average of 588.
+    assert!(
+        p.warnings
+            .iter()
+            .all(|w| w.code != ErrorCode::ErrRateFarFromAverage)
+    );
+}

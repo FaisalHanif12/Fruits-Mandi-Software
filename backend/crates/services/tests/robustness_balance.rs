@@ -50,7 +50,17 @@ const INDEXES_OF_0002: [&str; 3] = [
     "idx_journal_lines_advance",
 ];
 const TRIGGER_OF_0003: &str = "accounts_system_stays_active";
-const LATEST_VERSION: i64 = 3;
+/// The triggers of migration 0004 (plan 13: the بکری tables lose no row, a number is final).
+const TRIGGERS_OF_0004: [&str; 7] = [
+    "bikri_entries_no_delete",
+    "bikri_lots_no_delete",
+    "bikri_sales_no_delete",
+    "bikri_entries_number_is_final",
+    "bikri_entries_no_replace",
+    "bikri_lots_no_replace",
+    "bikri_sales_no_replace",
+];
+const LATEST_VERSION: i64 = 4;
 const NOW: &str = "2026-10-10T09:00:00Z";
 
 // ---- small helpers ----
@@ -888,8 +898,8 @@ fn objects(dir: &TempDir) -> Vec<(String, String)> {
         .unwrap()
 }
 
-/// `from_version` is the schema version of the faked old file: 1 (0002 and 0003 both run) or
-/// 2 (only 0003 runs).
+/// `from_version` is the schema version of the faked old file: 1 (0002, 0003 and 0004 run) or
+/// 2 (0003 and 0004 run).
 fn migration_case(with_draft: bool, from_version: i64) {
     assert!(from_version == 1 || from_version == 2);
     let w = world();
@@ -912,8 +922,9 @@ fn migration_case(with_draft: bool, from_version: i64) {
     drop(env);
 
     // Put the file back to an old schema version. The only differences from the latest file are
-    // what the later migrations add: the three indexes of 0002 (gone at version 1 only) and the
-    // trigger `accounts_system_stays_active` of 0003 (gone at versions 1 and 2).
+    // what the later migrations add: the three indexes of 0002 (gone at version 1 only), the
+    // trigger `accounts_system_stays_active` of 0003 and the seven triggers of 0004 (gone at
+    // versions 1 and 2).
     {
         let conn = raw(&dir);
         if from_version == 1 {
@@ -923,6 +934,9 @@ fn migration_case(with_draft: bool, from_version: i64) {
         }
         conn.execute_batch(&format!("DROP TRIGGER {TRIGGER_OF_0003}"))
             .unwrap();
+        for name in TRIGGERS_OF_0004 {
+            conn.execute_batch(&format!("DROP TRIGGER {name}")).unwrap();
+        }
         conn.pragma_update(None, "user_version", from_version)
             .unwrap();
     }
@@ -937,6 +951,12 @@ fn migration_case(with_draft: bool, from_version: i64) {
         !objects(&dir).iter().any(|(_, n)| n == TRIGGER_OF_0003),
         "{TRIGGER_OF_0003} must be gone"
     );
+    for name in TRIGGERS_OF_0004 {
+        assert!(
+            !objects(&dir).iter().any(|(_, n)| n == name),
+            "{name} must be gone"
+        );
+    }
     assert_eq!(
         old_totals(&raw(&dir), p.busy, None),
         busy_total,
@@ -964,7 +984,7 @@ fn migration_case(with_draft: bool, from_version: i64) {
     assert_eq!(
         objects(&dir),
         objects_before,
-        "a table, trigger or view differs from the latest file (0003's trigger must be back)"
+        "a table, trigger or view differs from the latest file (the triggers of 0003 and 0004 must be back)"
     );
     assert_eq!(
         fingerprint(&dir, &["audit_log"]),

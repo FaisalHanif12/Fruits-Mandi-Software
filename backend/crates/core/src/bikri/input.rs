@@ -16,6 +16,25 @@ pub enum FreightPaidBy {
     Seller,
 }
 
+impl FreightPaidBy {
+    /// The stored form (`bikri_lots.freight_paid_by`).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            FreightPaidBy::Firm => "firm",
+            FreightPaidBy::Seller => "seller",
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "firm" => Some(FreightPaidBy::Firm),
+            "seller" => Some(FreightPaidBy::Seller),
+            _ => None,
+        }
+    }
+}
+
 /// How a buyer pays for a line (PRD 12.4 "ادھاری / نقدی").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -24,6 +43,25 @@ pub enum PaymentType {
     Credit,
     /// نقدی: paid at once.
     Cash,
+}
+
+impl PaymentType {
+    /// The stored form (`bikri_sales.payment_type`).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            PaymentType::Credit => "credit",
+            PaymentType::Cash => "cash",
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "credit" => Some(PaymentType::Credit),
+            "cash" => Some(PaymentType::Cash),
+            _ => None,
+        }
+    }
 }
 
 /// How a lot charge (مزدوری, منشیانہ, فون) is typed or worked out.
@@ -36,6 +74,27 @@ pub enum LotChargeMethod {
     PerLot,
     /// The whole amount typed by hand.
     Manual,
+}
+
+impl LotChargeMethod {
+    /// The stored form (`bikri_lots.labour_method` and the like).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            LotChargeMethod::PerUnit => "per_unit",
+            LotChargeMethod::PerLot => "per_lot",
+            LotChargeMethod::Manual => "manual",
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "per_unit" => Some(LotChargeMethod::PerUnit),
+            "per_lot" => Some(LotChargeMethod::PerLot),
+            "manual" => Some(LotChargeMethod::Manual),
+            _ => None,
+        }
+    }
 }
 
 /// How a commission or لاگا typed on a line is meant (PRD FR-11.10).
@@ -61,6 +120,29 @@ pub enum StoredMethod {
     PerLot,
     /// دستی: typed on the line.
     Manual,
+}
+
+impl StoredMethod {
+    /// The stored form (`bikri_sales.seller_comm_method` and the like).
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            StoredMethod::Percent => "percent",
+            StoredMethod::PerUnit => "per_unit",
+            StoredMethod::PerLot => "per_lot",
+            StoredMethod::Manual => "manual",
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "percent" => Some(StoredMethod::Percent),
+            "per_unit" => Some(StoredMethod::PerUnit),
+            "per_lot" => Some(StoredMethod::PerLot),
+            "manual" => Some(StoredMethod::Manual),
+            _ => None,
+        }
+    }
 }
 
 /// Where a charge came from (plan 12 contract).

@@ -16,6 +16,7 @@ use super::checks::{self, Issues, Wanted};
 use super::line::{LineArgs, LotRef, calc_line};
 use super::lookups::{AccountFacts, ItemFacts, Lookups};
 use super::lot::{Acc, LotKey, Scope, lot_charge};
+use super::person::{CleanPerson, clean_person};
 use super::{CalcError, Env, PostingKind};
 use crate::ledger::MAX_LINE_PAISA;
 use crate::ledger::bikri::{JournalLot, JournalSale};
@@ -206,11 +207,32 @@ fn row_parties<'a>(
     }
 }
 
-/// The money of a worked row as the journal needs it.
-fn journal_sale(buyer_id: i64, calc: &mandi_core::bikri::LineCalc) -> JournalSale {
+/// The one-time person of a row or a lot of a پختہ کھاتہ account, cleaned. Its checks passed
+/// before the row was worked out, so a person that cannot be cleaned now is a bug.
+fn person_of(
+    account: &AccountFacts,
+    person: &mandi_core::bikri::PreparedPukhta,
+) -> Result<Option<CleanPerson>, CalcError> {
+    if !account.is_pukhta {
+        return Ok(None);
+    }
+    clean_person(person)
+        .map(Some)
+        .ok_or(CalcError::Inconsistent(
+            "a one-time person passed the checks but could not be cleaned",
+        ))
+}
+
+/// The money of a worked row as the journal needs it. A person of a پختہ کھاتہ account puts his
+/// key on every line of the row (PRD FR-13.5).
+fn journal_sale(
+    buyer_id: i64,
+    person: Option<&CleanPerson>,
+    calc: &mandi_core::bikri::LineCalc,
+) -> JournalSale {
     JournalSale {
         buyer_account_id: AccountId::new(buyer_id),
-        person_key: None,
+        person_key: person.map(|p| p.key.clone()),
         buyer_total: calc.buyer_total,
         payment_type: calc.payment_type,
         seller_comm: calc.seller_comm.amount,
@@ -278,9 +300,11 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                 &line_prefix,
             )?;
         }
-        if let (Some(calc), Some((_, buyer_id, _))) = (&preview.calc, parties) {
+        if let (Some(calc), Some((buyer, buyer_id, _))) = (&preview.calc, parties) {
             rows.acc.add_line(calc)?;
-            rows.sales.push(journal_sale(buyer_id, calc));
+            let person = person_of(buyer, &row.pukhta)?;
+            rows.sales
+                .push(journal_sale(buyer_id, person.as_ref(), calc));
         }
         if let Some(q) = row.qty {
             rows.sold = rows.sold.saturating_add(q.get());
@@ -381,9 +405,13 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
                     &[("net_paisa", totals.net.as_paisa())],
                 );
             }
+            let person = match ctx.facts.seller {
+                Some(seller) => person_of(seller, &lot.pukhta)?,
+                None => None,
+            };
             money.journal = Some(JournalLot {
                 seller_account_id: AccountId::new(lot_ref.seller_id),
-                person_key: None,
+                person_key: person.map(|p| p.key),
                 seller_credit: totals.seller_credit,
                 cash_paid: totals.cash_paid,
                 freight_deducted: totals.freight,

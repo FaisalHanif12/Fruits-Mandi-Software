@@ -41,8 +41,16 @@ pub struct PreparedHeader {
     pub entry_date: Option<BusinessDate>,
     /// The bill day (the posting day when empty).
     pub bill_date: Option<BusinessDate>,
+    /// The second number of the بکری (PRD 12.2 "بک"), trimmed. None if empty.
+    pub book: Option<String>,
     /// The truck number, trimmed. None if empty.
     pub truck_no: Option<String>,
+    /// The driver's name, trimmed. None if empty.
+    pub driver_name: Option<String>,
+    /// The driver's phone as 11 digits. None if empty.
+    pub driver_phone: Option<String>,
+    /// A note, trimmed. None if empty.
+    pub note: Option<String>,
     /// The زمیندار.
     pub zamindar_account_id: Option<i64>,
     /// The truck stand.
@@ -85,6 +93,8 @@ pub struct PreparedSale {
     pub buyer_comm: Option<ChargeValue>,
     /// A لاگا typed on the line.
     pub laga: Option<ChargeValue>,
+    /// A note, trimmed. None if empty.
+    pub note: Option<String>,
 }
 
 /// A lot, read.

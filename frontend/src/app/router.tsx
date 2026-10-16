@@ -100,12 +100,36 @@ const bikriRoute = createRoute({
   beforeLoad: () => redirect({ to: '/bikri/book' }),
 });
 
+// `/bikri/book` is a new بکری; `/bikri/book?id=12` opens a saved one read-only (plan 13).
 const bikriBookRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/book',
+  validateSearch: (search: Record<string, unknown>): { id?: number } => {
+    const id = Number(search['id']);
+    return Number.isSafeInteger(id) && id > 0 ? { id } : {};
+  },
   component: lazyRouteComponent(
     () => import('../features/bikri/pages/BikriBookPage'),
     'BikriBookPage',
+  ),
+});
+
+// آج کی بکری: the list of بکری (PRD FR-12.7). The پختہ کھاتہ register (PRD FR-13.6).
+const todayRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/today',
+  component: lazyRouteComponent(
+    () => import('../features/bikri/pages/TodayBikriPage'),
+    'TodayBikriPage',
+  ),
+});
+
+const pukhtaRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/pukhta',
+  component: lazyRouteComponent(
+    () => import('../features/pukhta_khata/pages/PukhtaRegisterPage'),
+    'PukhtaRegisterPage',
   ),
 });
 
@@ -246,8 +270,8 @@ const appRoutes = [
   comingSoonRoute('/bikri/payment'),
   advanceRoute,
   dayRoute,
-  comingSoonRoute('/bikri/pukhta'),
-  comingSoonRoute('/bikri/today'),
+  pukhtaRoute,
+  todayRoute,
   comingSoonRoute('/bikri/stock'),
   comingSoonRoute('/rokar'),
   partnersRoute,

@@ -266,6 +266,7 @@ export function LineDetails({
         <PukhtaFields
           store={store}
           row={row}
+          side="buyer"
           keys={{
             ur: SALE.pukhtaUr,
             en: SALE.pukhtaEn,

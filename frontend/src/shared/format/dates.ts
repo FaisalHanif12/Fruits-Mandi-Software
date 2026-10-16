@@ -93,6 +93,17 @@ export function utcToLocalDisplay(iso: string): string {
   return `${two(moment.getDate())}-${two(moment.getMonth() + 1)}-${String(moment.getFullYear())} ${two(moment.getHours())}:${two(moment.getMinutes())}`;
 }
 
+/**
+ * The time of day (HH:MM) of a time from the backend (UTC, ISO text), in the computer's own time,
+ * which is Pakistan time on the client's machine (Code Standards G9). Unreadable text is shown as
+ * it is.
+ */
+export function utcToLocalTime(iso: string): string {
+  const moment = new Date(iso);
+  if (Number.isNaN(moment.getTime())) return iso;
+  return `${two(moment.getHours())}:${two(moment.getMinutes())}`;
+}
+
 /** The computer's local date as DD-MM-YYYY, for a new record's date (PRD FR-6.6). */
 export function todayText(today: Date): string {
   return formatDateParts({

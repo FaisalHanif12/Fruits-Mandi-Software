@@ -120,16 +120,16 @@ struct Sums {
 }
 
 /// Puts `amount` on `side` of `account`, or on the other side if it is negative. A zero amount
-/// makes no line.
+/// makes no line. Returns the position of the line it made.
 fn push_signed(
     lines: &mut Vec<LedgerLine>,
     account: AccountId,
     person_key: Option<&str>,
     side: Side,
     amount: Paisa,
-) -> Result<(), MoneyError> {
+) -> Result<Option<usize>, MoneyError> {
     if amount == Paisa::ZERO {
-        return Ok(());
+        return Ok(None);
     }
     let (side, amount) = if amount.is_negative() {
         (side.flip(), amount.checked_neg()?)
@@ -137,11 +137,47 @@ fn push_signed(
         (side, amount)
     };
     let line = LedgerLine::new(account, side, amount);
+    let at = lines.len();
     lines.push(match person_key {
         Some(key) => line.with_person(key),
         None => line,
     });
-    Ok(())
+    Ok(Some(at))
+}
+
+/// Where the lines of one sale line are in the built entry (a position in
+/// `BalancedEntry::lines()`, from 0).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SaleLayout {
+    /// The buyer's debit line: the bill of this line.
+    pub buyer_debit: Option<usize>,
+    /// The buyer's credit line of the cash part: the cash that settles a نقدی line at once.
+    pub cash_credit: Option<usize>,
+}
+
+/// Where the lines of one lot are in the built entry.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LotLayout {
+    /// The seller's credit line (C8). `None` when the credit is 0 or negative.
+    pub seller_credit: Option<usize>,
+    /// The seller's debit line when the credit is negative (the seller owes the firm). It is an
+    /// ordinary debit: never an advance, never matched.
+    pub seller_debit: Option<usize>,
+    /// The seller's debit line of the cash part (نقد).
+    pub cash_debit: Option<usize>,
+    /// The sale lines of the lot, in order.
+    pub sales: Vec<SaleLayout>,
+}
+
+/// Where the lines that matter for matching are in the entry. The save uses it to find the
+/// stored line ids after posting (a line's position plus one is its `line_no`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EntryLayout {
+    /// The lots, in the order of the source.
+    pub lots: Vec<LotLayout>,
+    /// The position of the first line of the cash part: the lines before it are the sale part
+    /// and balance on their own, and so do the lines from here on.
+    pub cash_part_start: usize,
 }
 
 /// Builds the journal entry of a بکری posting: the sale part, then the cash part.
@@ -154,29 +190,67 @@ pub fn build_bikri_entry(
     source: &JournalSource,
     accounts: &SystemAccounts,
 ) -> Result<BalancedEntry, LedgerError> {
+    build_bikri_entry_with_layout(source, accounts).map(|(entry, _)| entry)
+}
+
+/// [`build_bikri_entry`] and where the lines that matter for matching are (PRD FR-15.4, FR-15.8):
+/// each lot's seller line and each sale line's buyer debit and cash settlement credit. The
+/// entry is the same, line for line.
+///
+/// # Errors
+/// As [`build_bikri_entry`].
+pub fn build_bikri_entry_with_layout(
+    source: &JournalSource,
+    accounts: &SystemAccounts,
+) -> Result<(BalancedEntry, EntryLayout), LedgerError> {
     let mut lines = Vec::new();
     let mut sums = Sums::default();
-    for lot in &source.lots {
-        for sale in &lot.sales {
-            push_signed(
+    let mut layout = EntryLayout {
+        lots: source
+            .lots
+            .iter()
+            .map(|lot| LotLayout {
+                sales: vec![SaleLayout::default(); lot.sales.len()],
+                ..LotLayout::default()
+            })
+            .collect(),
+        cash_part_start: 0,
+    };
+    for (lot_index, lot) in source.lots.iter().enumerate() {
+        for (sale_index, sale) in lot.sales.iter().enumerate() {
+            let at = push_signed(
                 &mut lines,
                 sale.buyer_account_id,
                 sale.person_key.as_deref(),
                 Side::Dr,
                 sale.buyer_total,
             )?;
+            if let Some(slot) = layout
+                .lots
+                .get_mut(lot_index)
+                .and_then(|l| l.sales.get_mut(sale_index))
+            {
+                slot.buyer_debit = at;
+            }
             sums.seller_comm = sums.seller_comm.checked_add(sale.seller_comm)?;
             sums.buyer_comm = sums.buyer_comm.checked_add(sale.buyer_comm)?;
             sums.laga = sums.laga.checked_add(sale.laga)?;
             sums.rate_diff = sums.rate_diff.checked_add(sale.rate_diff)?;
         }
-        push_signed(
+        let at = push_signed(
             &mut lines,
             lot.seller_account_id,
             lot.person_key.as_deref(),
             Side::Cr,
             lot.seller_credit,
         )?;
+        if let Some(slot) = layout.lots.get_mut(lot_index) {
+            if lot.seller_credit.is_negative() {
+                slot.seller_debit = at;
+            } else {
+                slot.seller_credit = at;
+            }
+        }
         sums.phone = sums.phone.checked_add(lot.phone)?;
         sums.labour = sums.labour.checked_add(lot.labour)?;
         sums.freight = sums.freight.checked_add(lot.freight_deducted)?;
@@ -197,31 +271,42 @@ pub fn build_bikri_entry(
         push_signed(&mut lines, account, None, Side::Cr, amount)?;
     }
     // The cash part (PRD FR-12.9): نقد given to a seller, and the settlement of each cash line.
-    for lot in &source.lots {
+    layout.cash_part_start = lines.len();
+    for (lot_index, lot) in source.lots.iter().enumerate() {
         if lot.cash_paid > Paisa::ZERO {
-            push_signed(
+            let at = push_signed(
                 &mut lines,
                 lot.seller_account_id,
                 lot.person_key.as_deref(),
                 Side::Dr,
                 lot.cash_paid,
             )?;
+            if let Some(slot) = layout.lots.get_mut(lot_index) {
+                slot.cash_debit = at;
+            }
             push_signed(&mut lines, accounts.cash, None, Side::Cr, lot.cash_paid)?;
         }
-        for sale in &lot.sales {
+        for (sale_index, sale) in lot.sales.iter().enumerate() {
             if sale.payment_type == PaymentType::Cash {
                 push_signed(&mut lines, accounts.cash, None, Side::Dr, sale.buyer_total)?;
-                push_signed(
+                let at = push_signed(
                     &mut lines,
                     sale.buyer_account_id,
                     sale.person_key.as_deref(),
                     Side::Cr,
                     sale.buyer_total,
                 )?;
+                if let Some(slot) = layout
+                    .lots
+                    .get_mut(lot_index)
+                    .and_then(|l| l.sales.get_mut(sale_index))
+                {
+                    slot.cash_credit = at;
+                }
             }
         }
     }
-    build_entry(lines)
+    Ok((build_entry(lines)?, layout))
 }
 
 #[cfg(test)]

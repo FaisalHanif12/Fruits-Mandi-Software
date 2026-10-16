@@ -78,6 +78,16 @@ const APP_COMMANDS: &[&str] = &[
     "assist_truck_memory",
     "assist_seller_memory",
     "assist_last_rate",
+    "bikri_save",
+    "bikri_get",
+    "bikri_list",
+    "bikri_find",
+    "bikri_navigate",
+    "search_pukhta_people",
+    "pukhta_register",
+    "drafts_save",
+    "drafts_get",
+    "drafts_discard",
 ];
 
 fn main() {

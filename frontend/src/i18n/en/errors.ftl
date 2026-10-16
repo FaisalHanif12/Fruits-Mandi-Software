@@ -265,3 +265,9 @@ err-lot-net-negative = The { -safi-bikri } of this lot is below zero ({ $net }).
 # A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
 # review: pending
 err-rate-far-from-average = This rate is more than { $percent }% away from the average of the last 7 days ({ $average }). Check it.
+
+## Drafts (plan 13, PRD FR-12.10).
+
+# $max_bytes: the most the app keeps for one unfinished entry. The number is not shown.
+# review: pending
+err-draft-invalid = Your unfinished work could not be kept for now. Save the entry now. If this happens again, tell us.

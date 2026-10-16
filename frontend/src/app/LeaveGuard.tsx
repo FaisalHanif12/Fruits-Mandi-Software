@@ -11,9 +11,14 @@ interface LeaveGuardProps {
   dirty: boolean;
   /** Saves the form. Resolves true when it was saved and the user may go on. */
   onSave: () => Promise<boolean>;
+  /**
+   * The user chose "leave without saving". A screen that keeps a draft of its own throws it away
+   * here, so the work he gave up is not offered back later (plan 13).
+   */
+  onLeave?: (() => void) | undefined;
 }
 
-export function LeaveGuard({ dirty, onSave }: LeaveGuardProps) {
+export function LeaveGuard({ dirty, onSave, onLeave }: LeaveGuardProps) {
   // True while the form is being saved for the user who chose "save": the prompt closes at once,
   // and that must not cancel the way out he asked for.
   const deciding = useRef(false);
@@ -41,6 +46,7 @@ export function LeaveGuard({ dirty, onSave }: LeaveGuardProps) {
       }}
       onLeave={() => {
         deciding.current = true;
+        onLeave?.();
         if (blocker.status === 'blocked') blocker.proceed();
         deciding.current = false;
       }}

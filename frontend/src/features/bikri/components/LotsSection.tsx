@@ -20,7 +20,7 @@ import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
 import { LOT, SALE } from '../types';
 import { LotMoreToggle } from './LotMore';
-import { focusPukhtaFields } from './PukhtaFields';
+import { focusPukhtaFieldsSoon } from './PukhtaFields';
 
 /** The last cell of a lot row that Enter stops at. */
 const LAST_STOP = LOT.cash;
@@ -59,9 +59,7 @@ export function LotsSection({ view, onCardAccount, moreForced }: LotsSectionProp
         const row = stores.lots.getState().rows.find((candidate) => candidate.rowId === cell.rowId);
         if (cell.field === LOT.seller && row !== undefined && isPukhtaSeller(row)) {
           stores.view.getState().select(cell.rowId);
-          window.setTimeout(() => {
-            focusPukhtaFields(cell.rowId);
-          }, 0);
+          focusPukhtaFieldsSoon(cell.rowId);
           return true;
         }
         if (cell.field !== LAST_STOP) return false;

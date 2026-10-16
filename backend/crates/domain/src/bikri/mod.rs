@@ -56,6 +56,7 @@ mod checks;
 mod line;
 mod lookups;
 mod lot;
+mod person;
 mod process;
 mod working;
 
@@ -75,6 +76,7 @@ use crate::ledger::bikri::JournalSource;
 use crate::rules::RuleSet;
 
 pub use self::lookups::{AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, Switches};
+pub use self::person::{CleanPerson, clean_person};
 pub use self::working::partner_share;
 
 /// Which posting of a بکری this is (PRD FR-12.17). A later sale charges no lot charges and no

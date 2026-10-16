@@ -1,5 +1,5 @@
 // The app after the window opens (plan 04): the start-up checks, the shell with its menus and the
-// dashboard, the بکری area with its "coming soon" items, the keys from anywhere, the idle lock that
+// dashboard, the بکری area with its "coming soon" items (receipt, payment, stock), the keys from anywhere, the idle lock that
 // keeps unsaved work, signing out, and saving the user's language and text size. Urdu and English,
 // by keyboard, against a fake backend.
 
@@ -144,12 +144,33 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       }),
     ).toBeInTheDocument();
     expect(within(side).getAllByRole('button')[3]).toHaveAttribute('aria-current', 'page');
-    // The others still say "coming soon".
+    // The پختہ کھاتہ register and today's بکری are real screens since plan 13.
     await user.click(at(items, 4));
+    // (The first open of a screen loads its code, which can take a moment on a busy machine.)
+    expect(
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: message(language, 'glossary-pukhta-khata') },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    await user.click(at(items, 5));
+    expect(
+      await screen.findByRole(
+        'heading',
+        {
+          level: 1,
+          name: (name) => visible(name) === message(language, 'layout-module-today'),
+        },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    // The others still say "coming soon".
+    await user.click(at(items, 1));
     expect(
       await screen.findByRole('heading', { name: message(language, 'soon-title') }),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[4]).toHaveAttribute('aria-current', 'page');
+    expect(within(side).getAllByRole('button')[1]).toHaveAttribute('aria-current', 'page');
     // The way back is a button, and Esc does the same.
     await user.keyboard('{Escape}');
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();

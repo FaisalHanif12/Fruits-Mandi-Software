@@ -169,3 +169,37 @@ export async function typeEvent1Lot(user: User, language: Language) {
   await user.keyboard('20');
   await user.click(cellOf(salesGrid(language), 0, 'buyer'));
 }
+
+/**
+ * Types a code into the picker cell the cursor is on and presses Enter. The first key opens the
+ * cell's editor; the rest is typed once the editor has the focus, and Enter is pressed once the
+ * list has answered. An Enter that comes before the list is open is the grid's Enter, which closes
+ * the cell without taking the code, so on a busy computer the helper waits for the list, as a
+ * person looking at the screen does.
+ */
+export async function typeCodeAndEnter(user: User, code: string) {
+  await user.keyboard(code.slice(0, 1));
+  await waitFor(
+    () => {
+      expect(document.activeElement?.tagName).toBe('INPUT');
+    },
+    { timeout: 8_000 },
+  );
+  await user.keyboard(code.slice(1));
+  await screen.findAllByRole('option', undefined, { timeout: 8_000 });
+  await user.keyboard('{Enter}');
+}
+
+/**
+ * Waits until the first sale line has its quantity: the screen fills it from the lot's remaining
+ * quantity a moment after the lot is typed (PRD FR-7.52). A cell that is being typed in when that
+ * fill lands is closed by the grid, so a test that types in a cell of the line waits for it first.
+ */
+export async function waitForLineFill(language: Language) {
+  await waitFor(
+    () => {
+      expect(textOf(salesGrid(language), 0, 'qty')).not.toBe('');
+    },
+    { timeout: 8_000 },
+  );
+}

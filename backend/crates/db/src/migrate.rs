@@ -31,6 +31,11 @@ pub const BALANCE_INDEXES_SQL: &str = include_str!("../migrations/0002_balance_i
 pub const SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL: &str =
     include_str!("../migrations/0003_system_accounts_stay_active.sql");
 
+/// The fourth migration: triggers that stop a بکری, a lot or a sale line being deleted and a
+/// بکری changing its number (plan 13). No table, column or index changes and no row is touched.
+pub const BIKRI_RECORDS_ARE_NEVER_DELETED_SQL: &str =
+    include_str!("../migrations/0004_bikri_records_are_never_deleted.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -46,6 +51,7 @@ pub fn migrations() -> Migrations<'static> {
         }),
         M::up(BALANCE_INDEXES_SQL),
         M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
     ])
 }
 

@@ -18,4 +18,5 @@ export {
   shiftDateText,
   todayText,
   utcToLocalDisplay,
+  utcToLocalTime,
 } from './dates';

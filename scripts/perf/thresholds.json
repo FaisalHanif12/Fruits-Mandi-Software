@@ -254,6 +254,15 @@
       "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause that waits for the last key press. D3 plan 12. bikri::preview: read the text, the facts, calc_posting, the journal entry, the partner split and cash. Measured on the NFR-SCL-1 volume with 3 partners added."
     },
     {
+      "id": "bikri/save_30_lines",
+      "action": "Save a بکری with 30 sale lines (server time)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-8",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "300 ms = NFR-SPD-8. D3 plan 13. bikri::save in one transaction: the بکری, lots, lines, journal and its balance check, partner rows, stock, analytics facts, matching, audit, one commit with synchronous = FULL. Measured on the NFR-SCL-1 volume with 3 partners added, 3 lots of 10 lines."
+    },
+    {
       "id": "bikri/preview_500_lines",
       "action": "Live summary of a بکری with 50 lots and 500 sale lines (server time)",
       "kind": "nfr",

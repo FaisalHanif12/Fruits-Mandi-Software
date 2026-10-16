@@ -156,6 +156,21 @@ pub fn search_phonetic(name_en: &str) -> String {
     key
 }
 
+/// The key of a one-time person of the پختہ کھاتہ accounts (PRD FR-13.5): the Urdu name after
+/// Urdu normalisation, a `|`, and the phone digits (empty if there is none). Balances, matching
+/// and aging are kept per key, so one person's payment never settles another's bill.
+///
+/// A name never holds `|` (the name check allows only letters, digits, spaces and `. - ' ( ) / &`),
+/// so the two parts cannot run into each other. The same name with another phone is another
+/// person; the same name and phone with other spelling variants (ي and ی) is the same person.
+///
+/// Example: `person_key("شاہد", "03000000000")` is `"شاہد|03000000000"`;
+/// `person_key(" شاه ", "03000000000")` is the same key as `person_key("شاہ", "03000000000")`.
+pub fn person_key(name_ur: &str, phone: &str) -> String {
+    let digits: String = phone.chars().filter(char::is_ascii_digit).collect();
+    format!("{}|{digits}", normalize_urdu(name_ur))
+}
+
 /// True for a letter of the Urdu (Arabic) script.
 pub fn is_urdu_letter(c: char) -> bool {
     matches!(c, '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' | '\u{FB50}'..='\u{FDFF}' | '\u{FE70}'..='\u{FEFF}')
@@ -287,6 +302,24 @@ mod tests {
         assert_eq!(normalize_urdu("  ارشد \t  ملتانی  "), "ارشد ملتانی");
         // NFC: alef + hamza above becomes one letter and the hamza is kept
         assert_eq!(normalize_urdu("\u{0627}\u{0654}"), "\u{0623}");
+    }
+
+    #[test]
+    fn a_person_key_joins_the_normalised_urdu_name_and_the_phone_digits() {
+        assert_eq!(person_key("شاہد", "03000000000"), "شاہد|03000000000");
+        // Letter variants and spaces do not make another person.
+        assert_eq!(
+            person_key(" شاه ", "03000000000"),
+            person_key("شاہ", "03000000000")
+        );
+        assert_eq!(
+            person_key("اكرم  خان", "0300-0000000"),
+            "اکرم خان|03000000000"
+        );
+        // No phone: the key still names the person.
+        assert_eq!(person_key("ناصر", ""), "ناصر|");
+        // The same name with another phone is another person.
+        assert_ne!(person_key("ناصر", ""), person_key("ناصر", "03001111111"));
     }
 
     #[test]

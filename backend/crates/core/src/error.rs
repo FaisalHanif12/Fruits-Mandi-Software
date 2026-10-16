@@ -215,11 +215,14 @@ pub enum ErrorCode {
     /// Warning only: a rate is far from the item's average of the last 7 days (PRD FR-7.55, E8).
     /// Values: `average_paisa`, `percent`. Field `lots[i].sales[j].seller_rate`.
     ErrRateFarFromAverage,
+    /// A draft payload that is not valid JSON, or is over 1 MB (PRD FR-12.10, NFR-REL-2). Field
+    /// `payload_json`. Values: `max_bytes`.
+    ErrDraftInvalid,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 84] = [
+    pub const ALL: [ErrorCode; 85] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -304,6 +307,7 @@ impl ErrorCode {
         ErrorCode::ErrQtyLeftUnsold,
         ErrorCode::ErrLotNetNegative,
         ErrorCode::ErrRateFarFromAverage,
+        ErrorCode::ErrDraftInvalid,
     ];
 }
 

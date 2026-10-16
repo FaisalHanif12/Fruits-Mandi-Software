@@ -1,5 +1,8 @@
 // The public face of the bikri module (Tech Stack 5.3). Other modules import only from here.
-// The sale book screen is opened by the router. Plan 13 (save, drafts, edit and cancel) adds to
-// this module, and the draft store is exported so the save and the leave guard can read it.
+// The sale book and the list of today's بکری are opened by the router. The start-up offer of an
+// unfinished بکری (draft-offer.tsx) is mounted by the app shell from its own file, so the sale
+// book itself stays a lazy route (Code Standards F36).
 export { BikriBookPage } from './pages/BikriBookPage';
+export { TodayBikriPage } from './pages/TodayBikriPage';
 export { createBikriDraft, useBikriDraft, type BikriDraftStores } from './draft-store';
+export { registerPrintAfterSave, type PrintAfterSave } from './after-save';

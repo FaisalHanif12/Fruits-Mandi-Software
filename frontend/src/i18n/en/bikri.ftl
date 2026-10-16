@@ -305,3 +305,222 @@ bikri-strip-incomplete = Not worked out yet
 # The name of the switch above the sale lines: one lot, or the whole sale (PRD FR-12.1).
 # review: pending
 bikri-sales-view-label = Which sale lines to show
+
+## Saving, moving between sales and find (PRD FR-12.8, FR-12.13, plan 13).
+
+# review: pending
+bikri-save = Save
+
+# review: pending
+bikri-new = New { -bikri }
+
+# After a save the screen opens a new empty sale (PRD FR-12.8).
+# review: pending
+bikri-saved-toast = { -bikri } { $number } saved
+
+# review: pending
+bikri-last-saved = Last saved { -bikri }: number { $number }
+
+# review: pending
+bikri-open-failed = The { -bikri } could not be opened. Please try again.
+
+# review: pending
+bikri-nav-label = Move between sales
+
+# review: pending
+bikri-nav-first = First { -bikri }
+
+# review: pending
+bikri-nav-previous = Previous { -bikri }
+
+# review: pending
+bikri-nav-next = Next { -bikri }
+
+# review: pending
+bikri-nav-last = Last { -bikri }
+
+# review: pending
+bikri-nav-none = No { -bikri } is saved yet.
+
+# review: pending
+bikri-nav-no-previous = There is no { -bikri } before this one.
+
+# review: pending
+bikri-nav-no-next = There is no { -bikri } after this one.
+
+# review: pending
+bikri-find-open = Find
+
+# review: pending
+bikri-find-title = Find a { -bikri }
+
+# review: pending
+bikri-find-help = Type whatever you know: number, truck, { -beopari }, date or { -qism-maal }.
+
+# review: pending
+bikri-find-number = { -bikri } number
+
+# review: pending
+bikri-find-hint = Type at least one thing above. The sales that match will show here.
+
+# review: pending
+bikri-find-failed = The search could not be done
+
+# review: pending
+bikri-find-none = No { -bikri } found
+
+# review: pending
+bikri-find-none-help = Check what you typed. Everything you typed must match together.
+
+# review: pending
+bikri-find-results = Sales found
+
+## One sale found by the search box at the top (PRD FR-5.4).
+
+# review: pending
+bikri-hit-title = { -bikri } number { $number }
+
+# review: pending
+bikri-status-saved = Saved
+
+# review: pending
+bikri-status-cancelled = Cancelled
+
+# review: pending
+bikri-hit-cancelled = { bikri-status-cancelled }
+
+## The unfinished sale offered at start-up (PRD FR-12.10, NFR-REL-2).
+
+# review: pending
+bikri-draft-title = Finish the last { -bikri }?
+
+# review: pending
+bikri-draft-text = A { -bikri } was being typed before the app closed. It was kept at { $time }. Do you want to open it again?
+
+# review: pending
+bikri-draft-later = Not now
+
+# review: pending
+bikri-draft-discard = Discard
+
+# review: pending
+bikri-draft-restore = Finish it
+
+## A saved sale opened to look at (PRD FR-12.13). Editing comes later.
+
+# review: pending
+bikri-saved-title = { -bikri } number { $number }
+
+# review: pending
+bikri-saved-readonly = This { -bikri } is saved. Here it can only be viewed.
+
+# review: pending
+bikri-saved-cancelled = This { -bikri } has been cancelled.
+
+# review: pending
+bikri-saved-cancel-reason = Reason: { $reason }
+
+# review: pending
+bikri-saved-at = Time saved
+
+# review: pending
+bikri-saved-failed = The { -bikri } could not be opened
+
+# review: pending
+bikri-saved-lot-title = { -lot } { $lot }: { $seller }
+
+# review: pending
+bikri-saved-pick-lot = Which { -lot } to show
+
+# review: pending
+bikri-saved-qty-sold = Sold
+
+# review: pending
+bikri-saved-qty-written-off = Written off
+
+# review: pending
+bikri-split-income = Share of income
+
+# The entries this sale made in the books.
+# review: pending
+bikri-postings-title = Entries in the books
+
+# review: pending
+bikri-posting-kind = Entry
+
+# review: pending
+bikri-posting-total = Amount
+
+# review: pending
+bikri-posting-first = First entry
+
+# review: pending
+bikri-posting-later = Later sale
+
+# review: pending
+bikri-posting-reversal = Reversal
+
+# review: pending
+bikri-posting-other = Entry
+
+## The list of sales (PRD FR-12.7).
+
+# review: pending
+bikri-list-label = List of sales
+
+# review: pending
+bikri-list-help = Filter by day, { -beopari } and { -qism-maal }. Press Enter to open one.
+
+# review: pending
+bikri-list-failed = The list could not be opened
+
+# review: pending
+bikri-list-empty = No sales today
+
+# review: pending
+bikri-list-empty-help = Press { $key } for a new { -bikri }.
+
+# review: pending
+bikri-list-no-match = No { -bikri } found
+
+# review: pending
+bikri-list-no-match-help = Try changing the day or the other filters.
+
+# review: pending
+bikri-list-clear = Clear the filters
+
+# review: pending
+bikri-list-status-all = All
+
+# Between two names in one cell, for example two sellers of one truck.
+# review: pending
+bikri-list-separator = { ", " }
+
+# review: pending
+bikri-list-col-number = Number
+
+# review: pending
+bikri-list-col-when = Date and time
+
+# review: pending
+bikri-list-col-truck = Truck
+
+# review: pending
+bikri-list-col-sellers = { -beopari }
+
+# review: pending
+bikri-list-col-items = { -qism-maal }
+
+# review: pending
+bikri-list-col-buyer-total = Buyer total
+
+# review: pending
+bikri-list-col-status = Status
+
+# The Nag of a sale: sold of received, over all its lots (PRD FR-12.7).
+# review: pending
+bikri-list-col-qty = { -nag } ({ bikri-saved-qty-sold } / { bikri-col-qty-received })
+
+# Cell of that column: sold, a slash, received. For example 45 / 50.
+# review: pending
+bikri-list-qty = { $sold } / { $received }

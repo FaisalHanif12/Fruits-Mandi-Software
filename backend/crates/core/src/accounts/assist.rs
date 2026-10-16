@@ -242,7 +242,9 @@ pub struct SearchGlobalInput {
     pub limit: u32,
 }
 
-/// One result of the global search. Accounts now; later deliverables add their own kinds.
+/// One result of the global search. Each result has a `kind`: accounts, and (plan 13) a بکری
+/// found by its number or by the start of its truck number. Later deliverables add voucher
+/// numbers and screens as more kinds.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GlobalHit {
@@ -250,5 +252,11 @@ pub enum GlobalHit {
     Account {
         /// The account.
         hit: AccountHit,
+    },
+    /// A بکری (PRD FR-5.4). The accounts come first, then the بکری with this number, then the
+    /// newest بکری whose truck number starts with the text.
+    Bikri {
+        /// The بکری.
+        hit: crate::bikri::BikriHit,
     },
 }

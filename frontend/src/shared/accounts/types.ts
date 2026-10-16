@@ -8,7 +8,7 @@ import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit'
 import type { AccountScope } from '../../bindings/AccountScope';
 import type { CardWarning } from '../../bindings/CardWarning';
 import type { CardWarningKind } from '../../bindings/CardWarningKind';
-import type { GlobalHit as GlobalHitBinding } from '../../bindings/GlobalHit';
+import type { BikriHit as BikriHitBinding } from '../../bindings/BikriHit';
 import type { PartyCard } from '../../bindings/PartyCard';
 import type { ResolveStatus } from '../../bindings/ResolveStatus';
 import type { AccountNode } from '../../bindings/AccountNode';
@@ -103,9 +103,9 @@ export interface ResolvedCode {
 /** The party card (PRD FR-7.38): everything about a party, read from the books. */
 export type PartyCardData = PartyCard;
 
-/** One result of the global search (Ctrl+K). Accounts now; later modules add their own kinds. */
-export interface GlobalHit {
-  kind: GlobalHitBinding['kind'];
+/** An account found by the global search (Ctrl+K). */
+export interface AccountSearchHit {
+  kind: 'account';
   id: number;
   code: string;
   name_ur: string;
@@ -113,3 +113,21 @@ export interface GlobalHit {
   extra_ur: string;
   extra_en: string;
 }
+
+/**
+ * A بکری found by the global search, by its number or by the start of its truck number (PRD
+ * FR-5.4). Opening it opens the بکری screen on this id (plan 13).
+ */
+export interface BikriSearchHit {
+  kind: 'bikri';
+  id: number;
+  number: number;
+  /** `YYYY-MM-DD`. */
+  entry_date: string;
+  truck_no: string | null;
+  status: BikriHitBinding['status'];
+  matched: BikriHitBinding['matched'];
+}
+
+/** One result of the global search (Ctrl+K): an account or a بکری. Later modules add kinds. */
+export type GlobalHit = AccountSearchHit | BikriSearchHit;

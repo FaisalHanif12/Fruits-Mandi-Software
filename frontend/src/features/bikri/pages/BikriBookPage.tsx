@@ -1,7 +1,12 @@
-// بکری بک (route /bikri/book; PRD 12.1 to 12.5, plan 12): the munshi types the whole بکری and sees
-// every number live. One screen: the header, the lots, the sale lines of the selected lot, the
-// summary (per lot and for the whole بکری), the live partner split, the cash note, and the party
-// card of the party he is on. Nothing is saved here yet (plan 13).
+// بکری بک (route /bikri/book; PRD 12.1 to 12.6, plans 12 and 13): the munshi types the whole بکری
+// and sees every number live. One screen: the header, the lots, the sale lines of the selected lot,
+// the summary (per lot and for the whole بکری), the live partner split, the cash note, and the
+// party card of the party he is on. F10 saves it as one action (useSaveFlow), then a new empty
+// بکری is ready. `/bikri/book?id=12` opens a saved بکری read-only, in the same layout.
+//
+// - The draft is kept safe: every 5 seconds the stores go to the backend (useDraftAutosave), and
+//   after a crash the app offers it back (draft-offer). Leaving with typed work asks first
+//   (LeaveGuard, PRD FR-7.9).
 //
 // - The frontend works out no money. It sends the draft as typed to `bikri_preview` 50 ms after
 //   the last key and shows what comes back (Code Standards F35, CLAUDE.md rule 1). The preview and
@@ -14,22 +19,41 @@
 //   button before anything is typed, and the data.
 
 import { Localized, useLocalization } from '@fluent/react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { FileText } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
+import type { BikriSaved } from '../../../bindings/BikriSaved';
+import type { FieldError } from '../../../bindings/FieldError';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { isFromStep, useLayoutStep } from '../../../shared/hooks';
+import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
+  CashConfirmDialog,
   EmptyState,
+  ErrorNotice,
   ErrorState,
+  LinkButton,
   LoadingState,
   PartyCard,
+  showToast,
   useErrorText,
 } from '../../../shared/ui';
+import { bikriFind } from '../api';
+import { BikriToolbar } from '../components/BikriToolbar';
+import { SavedBikriView } from '../components/saved/SavedBikriView';
+import { usePendingRestore } from '../draft-offer';
+import { BIKRI_DRAFT_SCREEN, applySnapshot } from '../draft-snapshot';
+import { useBikriDetail } from '../hooks/useBikriReads';
+import { useDraftAutosave } from '../hooks/useDraftAutosave';
+import { useSaveFlow } from '../hooks/useSaveFlow';
+import { afterSave } from '../after-save';
 import { CashNote } from '../components/CashNote';
 import { HeaderCard } from '../components/HeaderCard';
 import { LotMore } from '../components/LotMore';
@@ -45,7 +69,7 @@ import {
   useBikriDraft,
   type BikriDraftStores,
 } from '../draft-store';
-import { isPukhtaSeller } from '../draft';
+import { isFilled, isPukhtaSeller } from '../draft';
 import { buildGridViews } from '../grid-views';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
@@ -71,20 +95,90 @@ function errorOf(problems: readonly Problem[]): UiError | null {
     : { ok: false, errors: errors.map((problem) => problem.item), ref: '' };
 }
 
-interface EditorProps {
-  /** Opens the saved بکری of the same truck. Plan 13 gives it; until then the button is dimmed. */
-  onOpenBikri?: ((number: number) => void) | undefined;
+/** The problems of a refusal that point at a field, in the shape of the preview's problems. */
+function refusalErrors(error: UiError | null): FieldError[] {
+  if (error === null) return [];
+  const items: FieldError[] = [];
+  for (const item of error.errors) {
+    if (item.field !== null && item.field !== '') {
+      items.push({ code: item.code, field: item.field, values: item.values });
+    }
+  }
+  return items;
 }
 
-function Editor({ onOpenBikri }: EditorProps) {
+/** The problems of the preview and of the last refusal, each once. */
+function withoutRepeats(items: readonly FieldError[]): FieldError[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${item.code}|${item.field}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+interface EditorProps {
+  /** A بکری was saved. The page opens a new one (and, in plan 14, prints for Ctrl+Enter). */
+  onSaved: (saved: BikriSaved, andNext: boolean) => void;
+  /** Opens a saved بکری by its id (read-only until plan 16). */
+  onOpenSaved: (id: number) => void;
+  /** The بکری saved last, with a way to open it. */
+  lastSaved: { id: number; number: number } | null;
+}
+
+function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   const stores = useBikriDraft();
   const errorText = useErrorText();
   const language = useLanguage();
-  const { query, stale } = useBikriPreview(stores);
+  const { query, stale, draft } = useBikriPreview(stores);
   const preview = query.data;
   useDraftFills(stores, preview, stale);
+
+  // Safety and saving (plan 13). The draft goes to the backend every 5 seconds; a save stops that.
+  const autosave = useDraftAutosave(stores, { enabled: true });
+  const flow = useSaveFlow({
+    stores,
+    draft,
+    preview,
+    current: preview !== undefined && !stale,
+    onSaved: (saved, andNext) => {
+      autosave.stop();
+      onSaved(saved, andNext);
+    },
+  });
+  const [findOpen, setFindOpen] = useState(false);
+  const dialogOpen = flow.ask !== null || findOpen;
+  const dirty = isFilled(draft);
+  useShortcut(SHORTCUTS.save, () => void flow.save(false), { enabled: !dialogOpen });
+  useShortcut(SHORTCUTS.saveAndNext, () => void flow.save(true), { enabled: !dialogOpen });
+  useShortcut(
+    SHORTCUTS.find,
+    () => {
+      setFindOpen(true);
+    },
+    { enabled: !dialogOpen },
+  );
+
+  // The same-truck notice's "open" button: find the saved بکری by its number, then open it.
+  const openByNumber = (number: number) => {
+    void bikriFind({ number, truck_no: null, seller_id: null, date: null, item_id: null })
+      .then((rows) => {
+        const row = rows[0];
+        if (row === undefined) throw new Error('not found');
+        onOpenSaved(row.id);
+      })
+      .catch(() => {
+        showToast(
+          'error',
+          <Localized id="bikri-open-failed">
+            <span />
+          </Localized>,
+        );
+      });
+  };
 
   const lotRows = stores.lots((state) => state.rows);
   const selected = stores.view((state) => state.selectedLot);
@@ -107,9 +201,17 @@ function Editor({ onOpenBikri }: EditorProps) {
     0,
   );
 
+  // The preview's problems, and what the backend refused on the last save. A problem that only
+  // says "this is empty" waits until he tries to save (plan 12 contract).
+  const refused = flow.refusal;
   const problems = useMemo(
-    () => (preview === undefined ? [] : problemsOf(preview.errors, preview.warnings, false)),
-    [preview],
+    () =>
+      problemsOf(
+        withoutRepeats([...(preview?.errors ?? []), ...refusalErrors(refused)]),
+        preview?.warnings ?? [],
+        flow.tried,
+      ),
+    [preview, refused, flow.tried],
   );
   const formError = useMemo(() => errorOf(problems), [problems]);
   const say = useMemo(
@@ -236,6 +338,45 @@ function Editor({ onOpenBikri }: EditorProps) {
 
   return (
     <div ref={rootRef} className="flex flex-col gap-3">
+      <BikriToolbar
+        currentId={null}
+        onOpen={onOpenSaved}
+        findOpen={findOpen}
+        onFindOpenChange={setFindOpen}
+        lastSaved={
+          lastSaved === null ? null : (
+            <span className="flex items-center gap-2 type-body text-ink-muted">
+              <Localized id="bikri-last-saved" vars={{ number: String(lastSaved.number) }}>
+                <span />
+              </Localized>
+              <LinkButton
+                onClick={() => {
+                  onOpenSaved(lastSaved.id);
+                }}
+              >
+                <Localized id="bikri-truck-open" />
+              </LinkButton>
+            </span>
+          )
+        }
+      >
+        <Button
+          variant="primary"
+          shortcut={SHORTCUTS.save}
+          busy={flow.busy}
+          onClick={() => {
+            void flow.save(false);
+          }}
+        >
+          <Localized id="bikri-save" />
+        </Button>
+      </BikriToolbar>
+      {refused === null ? null : (
+        <ErrorNotice
+          error={refused}
+          fieldsShown={refusalErrors(refused).map((item) => item.field)}
+        />
+      )}
       <div className="flex flex-wrap items-baseline gap-x-4">
         {/* The side menu already says where we are, so the heading gives its room to the grids in
             the smallest window (design system 8, plan 12). Screen readers still hear it. */}
@@ -253,7 +394,7 @@ function Editor({ onOpenBikri }: EditorProps) {
       >
         <HeaderCard
           error={formError}
-          onOpenBikri={onOpenBikri}
+          onOpenBikri={openByNumber}
           onDone={() => {
             stores.lots.getState().setPendingFocus({ rowIndex: 0, field: LOT.seller });
           }}
@@ -328,31 +469,146 @@ function Editor({ onOpenBikri }: EditorProps) {
           cash={preview.cash}
         />
       )}
+      {flow.cashAfter === null ? null : (
+        <CashConfirmDialog
+          open={flow.ask !== null}
+          onOpenChange={flow.onCashOpenChange}
+          cashAfter={flow.cashAfter}
+          onConfirm={flow.confirmCash}
+          onCloseFocus={flow.onCashCloseFocus}
+        />
+      )}
+      {/* Leaving with typed work asks first (PRD FR-7.9). "Leave" throws the draft away too. */}
+      <LeaveGuard
+        dirty={dirty}
+        onSave={() => flow.save(false)}
+        onLeave={() => {
+          autosave.stop();
+          void draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
+        }}
+      />
     </div>
   );
 }
 
-interface BikriBookProps extends EditorProps {
-  /** Fills the draft before the screen opens (a saved draft in plan 13, the sample page now). */
+interface BikriBookProps {
+  /** Fills the draft before the screen opens (the sample page). */
   initialDraft?: ((stores: BikriDraftStores) => void) | undefined;
 }
 
-/** The screen with today known: the draft starts empty, with today as its date. */
-function BikriBook({ today, onOpenBikri, initialDraft }: { today: string } & BikriBookProps) {
-  const [stores] = useState(() => {
-    const made = createBikriDraft(isoToDisplayDate(today));
-    initialDraft?.(made);
-    return made;
-  });
+/**
+ * A new draft: today as its date, or the draft the user chose to restore at start-up. The draft is
+ * only read here (this runs again in development); the screen forgets it once it has opened.
+ */
+function newSession(today: string, initialDraft: BikriBookProps['initialDraft']) {
+  const stores = createBikriDraft(isoToDisplayDate(today));
+  const restored = usePendingRestore.getState().snapshot;
+  if (restored !== null) applySnapshot(stores, restored);
+  initialDraft?.(stores);
+  return { stores, key: 0 };
+}
+
+/**
+ * The new, unsaved بکری. After a save it opens another empty one (a new `key` remakes the editor,
+ * so the first field has focus and nothing of the old one is left). The id of the بکری saved last
+ * is kept here: it is the way back to it, and the hook that edit (plan 16) opens it with.
+ */
+function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
+  const navigate = useNavigate();
+  const [session, setSession] = useState(() => newSession(today, initialDraft));
+  const [lastSaved, setLastSaved] = useState<{ id: number; number: number } | null>(null);
+  const openSaved = (id: number) => {
+    void navigate({ to: '/bikri/book', search: { id } });
+  };
+  // The screen has opened on the draft the user chose to restore: it is not waiting any more.
+  useEffect(() => {
+    usePendingRestore.getState().clear();
+  }, []);
+
   return (
-    <BikriDraftProvider value={stores}>
-      <Editor onOpenBikri={onOpenBikri} />
+    <BikriDraftProvider value={session.stores}>
+      <Editor
+        key={session.key}
+        lastSaved={lastSaved}
+        onOpenSaved={openSaved}
+        onSaved={(saved, andNext) => {
+          setLastSaved({ id: saved.bikri_id, number: saved.number });
+          afterSave(saved, andNext);
+          setSession((current) => ({
+            stores: createBikriDraft(isoToDisplayDate(today)),
+            key: current.key + 1,
+          }));
+        }}
+      />
     </BikriDraftProvider>
   );
 }
 
-export function BikriBookPage({ initialDraft }: Pick<BikriBookProps, 'initialDraft'>) {
+/** A saved بکری opened read-only, with the same toolbar as the new one. */
+function SavedBikri({ id }: { id: number }) {
+  const navigate = useNavigate();
+  const detail = useBikriDetail(id);
+  const [findOpen, setFindOpen] = useState(false);
+  useShortcut(
+    SHORTCUTS.find,
+    () => {
+      setFindOpen(true);
+    },
+    { enabled: !findOpen },
+  );
+  const openSaved = (next: number) => {
+    void navigate({ to: '/bikri/book', search: { id: next } });
+  };
+  const openNew = () => {
+    void navigate({ to: '/bikri/book', search: {} });
+  };
+
+  let body;
+  if (detail.isPending) {
+    body = <LoadingState />;
+  } else if (detail.isError) {
+    body = (
+      <ErrorState
+        title={<Localized id="bikri-saved-failed" />}
+        error={uiErrorOf(detail.error)}
+        onRetry={() => {
+          void detail.refetch();
+        }}
+      />
+    );
+  } else {
+    body = <SavedBikriView detail={detail.data} />;
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <BikriToolbar
+        currentId={id}
+        onOpen={openSaved}
+        findOpen={findOpen}
+        onFindOpenChange={setFindOpen}
+      >
+        <Button variant="primary" shortcut={SHORTCUTS.newBikri} onClick={openNew}>
+          <Localized id="bikri-new" />
+        </Button>
+      </BikriToolbar>
+      {body}
+    </div>
+  );
+}
+
+/** The id in the address (`/bikri/book?id=12`), or null for a new بکری. */
+function useSavedId(): number | null {
+  const search = useSearch({ strict: false });
+  const id: unknown = (search as { id?: unknown }).id;
+  return typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+export function BikriBookPage({ initialDraft }: BikriBookProps) {
+  const savedId = useSavedId();
   const day = useDayStatus();
+  // A draft restored at start-up remakes the new بکری, even when it is already open.
+  const restoreTick = usePendingRestore((state) => state.tick);
+  if (savedId !== null) return <SavedBikri id={savedId} />;
   if (day.isPending) return <LoadingState />;
   if (day.isError) {
     return (
@@ -365,5 +621,5 @@ export function BikriBookPage({ initialDraft }: Pick<BikriBookProps, 'initialDra
       />
     );
   }
-  return <BikriBook today={day.data.today} initialDraft={initialDraft} />;
+  return <NewBikri key={restoreTick} today={day.data.today} initialDraft={initialDraft} />;
 }

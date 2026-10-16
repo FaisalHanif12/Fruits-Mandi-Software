@@ -263,3 +263,9 @@ err-lot-net-negative = اس { -lot } کی { -safi-bikri } صفر سے کم ({ $n
 # A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
 # review: pending
 err-rate-far-from-average = یہ ریٹ پچھلے 7 دن کی اوسط ({ $average }) سے { $percent } فیصد سے زیادہ مختلف ہے۔ اسے دیکھ لیں۔
+
+## Drafts (plan 13, PRD FR-12.10).
+
+# $max_bytes: the most the app keeps for one unfinished entry. The word is not shown.
+# review: pending
+err-draft-invalid = لکھا ہوا کام عارضی طور پر محفوظ نہیں ہو سکا۔ اندراج ابھی محفوظ کر لیں۔ بار بار ہو تو مدد کے لیے بتائیں۔

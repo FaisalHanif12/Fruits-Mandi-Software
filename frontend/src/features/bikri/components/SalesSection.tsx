@@ -20,7 +20,7 @@ import { useLayoutStep } from '../../../shared/hooks';
 import { SegmentedControl } from '../../../shared/ui';
 import { allLinesColumns, saleColumns } from '../columns';
 import { useBikriDraft } from '../draft-store';
-import { focusPukhtaFields } from './PukhtaFields';
+import { focusPukhtaFieldsSoon } from './PukhtaFields';
 import { isPukhtaBuyer } from '../draft';
 import type { GridView } from '../grid-views';
 import { LOT, SALE, type BikriPreview } from '../types';
@@ -85,9 +85,7 @@ export function SalesSection({
       onEnter: (cell) => {
         const row = stores.all.getState().rows.find((candidate) => candidate.rowId === cell.rowId);
         if (cell.field !== SALE.buyer || row === undefined || !isPukhtaBuyer(row)) return false;
-        window.setTimeout(() => {
-          focusPukhtaFields(cell.rowId);
-        }, 0);
+        focusPukhtaFieldsSoon(cell.rowId);
         return true;
       },
     }),

@@ -9,14 +9,16 @@ use std::path::PathBuf;
 use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
-use mandi_db::migrate::{self, BALANCE_INDEXES_SQL, INIT_SQL, MigrationOutcome};
+use mandi_db::migrate::{
+    self, BALANCE_INDEXES_SQL, INIT_SQL, MigrationOutcome, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
+};
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
 use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 3;
+const LATEST: usize = 4;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -44,6 +46,69 @@ fn version_2(second: &'static str) -> Migrations<'static> {
 /// The schema as it was released at version 2: migrations 0001 and 0002.
 fn released_version_2() -> Migrations<'static> {
     version_2(BALANCE_INDEXES_SQL)
+}
+
+/// The schema as it was released at version 3: migrations 0001 to 0003.
+fn released_version_3() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+    ])
+}
+
+/// The name and SQL of every object of one kind (`table`, `index`, `trigger`), by name.
+fn schema(conn: &Connection, kind: &str) -> Vec<String> {
+    conn.prepare(
+        "SELECT name || ':' || COALESCE(sql, '') FROM sqlite_master WHERE type = ?1 ORDER BY name",
+    )
+    .unwrap()
+    .query_map([kind], |r| r.get(0))
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+/// Every row of every table, as text, in a fixed order.
+fn all_rows(conn: &Connection) -> Vec<(String, String)> {
+    let names: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    names
+        .into_iter()
+        .map(|name| {
+            let columns: Vec<String> = conn
+                .prepare(&format!(
+                    "SELECT name FROM pragma_table_info('{name}') ORDER BY cid"
+                ))
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            let joined = columns
+                .iter()
+                .map(|c| format!("quote(\"{c}\")"))
+                .collect::<Vec<_>>()
+                .join(" || '|' || ");
+            let rows: Vec<String> = conn
+                .prepare(&format!("SELECT {joined} FROM \"{name}\" ORDER BY rowid"))
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            (name, rows.join("\n"))
+        })
+        .collect()
 }
 
 fn connection(path: &std::path::Path) -> Connection {
@@ -438,51 +503,6 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
     )
     .unwrap();
 
-    let schema = |conn: &Connection, kind: &str| -> Vec<String> {
-        conn.prepare("SELECT name || ':' || COALESCE(sql, '') FROM sqlite_master WHERE type = ?1 ORDER BY name")
-            .unwrap()
-            .query_map([kind], |r| r.get(0))
-            .unwrap()
-            .map(Result::unwrap)
-            .collect()
-    };
-    // Every row of every table, as text, in a fixed order.
-    let all_rows = |conn: &Connection| -> Vec<(String, String)> {
-        let names: Vec<String> = conn
-            .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-            .unwrap()
-            .query_map([], |r| r.get(0))
-            .unwrap()
-            .map(Result::unwrap)
-            .collect();
-        names
-            .into_iter()
-            .map(|name| {
-                let columns: Vec<String> = conn
-                    .prepare(&format!(
-                        "SELECT name FROM pragma_table_info('{name}') ORDER BY cid"
-                    ))
-                    .unwrap()
-                    .query_map([], |r| r.get(0))
-                    .unwrap()
-                    .map(Result::unwrap)
-                    .collect();
-                let joined = columns
-                    .iter()
-                    .map(|c| format!("quote(\"{c}\")"))
-                    .collect::<Vec<_>>()
-                    .join(" || '|' || ");
-                let rows: Vec<String> = conn
-                    .prepare(&format!("SELECT {joined} FROM \"{name}\" ORDER BY rowid"))
-                    .unwrap()
-                    .query_map([], |r| r.get(0))
-                    .unwrap()
-                    .map(Result::unwrap)
-                    .collect();
-                (name, rows.join("\n"))
-            })
-            .collect()
-    };
     let before_tables = schema(&conn, "table");
     let before_indexes = schema(&conn, "index");
     let before_triggers = schema(&conn, "trigger");
@@ -490,7 +510,8 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
     let before = mandi_db::ledger::account_totals(&conn, None).unwrap();
     assert_eq!(before.len(), 2);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_3(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (2, 3));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 3);
@@ -586,6 +607,151 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
     .unwrap();
     conn.execute(
         "UPDATE accounts SET is_active = 1 WHERE code = '03040001'",
+        [],
+    )
+    .unwrap();
+}
+
+#[test]
+fn migration_4_adds_only_triggers_and_keeps_every_row_number_and_balance() {
+    // Plan 13: a file made at version 3 with a بکری, its lot and its line is upgraded: a copy is
+    // taken, seven triggers appear (no table, column or index changes), no row changes, every
+    // بکری keeps its number, and from then on a raw DELETE or a change of a number is refused
+    // while the updates of editing and cancelling (plan 16) still work.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_3(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 3);
+    let f = common::fixture(&conn);
+    // A second بکری, number 2, cancelled later.
+    conn.execute(
+        "INSERT INTO bikri_entries (number, entry_date, bill_date, truck_no) VALUES (2, '2026-10-10', '2026-10-10', 'LHR-0077')",
+        [],
+    )
+    .unwrap();
+    // What version 3 allowed and the new triggers must not take away: a raw delete of a row that
+    // nothing points at.
+    conn.execute("DELETE FROM bikri_entries WHERE number = 2", [])
+        .unwrap();
+    conn.execute(
+        "INSERT INTO bikri_entries (number, entry_date, bill_date, truck_no) VALUES (2, '2026-10-10', '2026-10-10', 'LHR-0077')",
+        [],
+    )
+    .unwrap();
+
+    let before_tables = schema(&conn, "table");
+    let before_indexes = schema(&conn, "index");
+    let before_triggers = schema(&conn, "trigger");
+    let before_rows = all_rows(&conn);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (3, 4));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 4);
+    assert_eq!(schema(&conn, "table"), before_tables);
+    assert_eq!(schema(&conn, "index"), before_indexes);
+    let after_triggers = schema(&conn, "trigger");
+    let mut added: Vec<&str> = after_triggers
+        .iter()
+        .filter(|t| !before_triggers.contains(t))
+        .map(|t| t.split(':').next().unwrap_or(""))
+        .collect();
+    added.sort_unstable();
+    assert_eq!(
+        added,
+        [
+            "bikri_entries_no_delete",
+            "bikri_entries_no_replace",
+            "bikri_entries_number_is_final",
+            "bikri_lots_no_delete",
+            "bikri_lots_no_replace",
+            "bikri_sales_no_delete",
+            "bikri_sales_no_replace",
+        ]
+    );
+    // Every row is what it was, and every بکری keeps its number.
+    assert_eq!(all_rows(&conn), before_rows);
+    let numbers: Vec<i64> = conn
+        .prepare("SELECT number FROM bikri_entries ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(numbers, [1, 2]);
+
+    // The migration also works on the copy: version 3, the old behaviour (a delete still goes).
+    let copy_conn = Connection::open(outcome.copy.unwrap()).unwrap();
+    assert_eq!(user_version(&copy_conn), 3);
+    copy_conn
+        .execute("DELETE FROM bikri_entries WHERE number = 2", [])
+        .unwrap();
+
+    // Now nothing of a بکری can be deleted, and the number is final.
+    let refused = |sql: &str| -> DbError { common::classify(conn.execute(sql, []).unwrap_err()) };
+    for sql in [
+        "DELETE FROM bikri_sales".to_owned(),
+        "DELETE FROM bikri_lots".to_owned(),
+        "DELETE FROM bikri_entries".to_owned(),
+        "DELETE FROM bikri_entries WHERE number = 2".to_owned(),
+        "UPDATE bikri_entries SET number = 9 WHERE number = 2".to_owned(),
+        "UPDATE bikri_entries SET number = number + 10".to_owned(),
+        // INSERT OR REPLACE would delete the old row first.
+        "INSERT OR REPLACE INTO bikri_entries (number, entry_date, bill_date) VALUES (1, '2026-10-10', '2026-10-10')".to_owned(),
+        format!("INSERT OR REPLACE INTO bikri_entries (id, number, entry_date, bill_date) VALUES ({}, 77, '2026-10-10', '2026-10-10')", f.bikri),
+        format!("INSERT OR REPLACE INTO bikri_lots (id, bikri_id, lot_no, seller_account_id, item_id, packing_id, qty_received) VALUES ({}, {}, 5, {}, {}, 1, 5)", f.lot, f.bikri, f.seller, f.item),
+        // A number given twice.
+        "INSERT INTO bikri_entries (number, entry_date, bill_date) VALUES (2, '2026-10-10', '2026-10-10')".to_owned(),
+    ] {
+        assert!(
+            matches!(refused(&sql), DbError::AppendOnly),
+            "not refused as append-only: {sql}"
+        );
+    }
+    assert_eq!(
+        all_rows(&conn),
+        before_rows,
+        "a refused statement changed a row"
+    );
+
+    // What editing and cancelling need still works: the status and its reason, the print count,
+    // the running totals and the written-off quantity of a lot, and the switch-off of a line.
+    conn.execute(
+        "UPDATE bikri_entries SET number = number WHERE number = 2",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_entries SET status = 'cancelled', cancel_reason = 'غلط اندراج',
+             cancelled_at = '2026-10-10T09:00:00Z', print_count = print_count + 1, version = version + 1
+         WHERE number = 2",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_entries SET note = 'x', print_count = 2 WHERE number = 1",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_lots SET qty_sold = 45, qty_written_off = 5 WHERE id = ?1",
+        [f.lot],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_lots SET gross_paisa = 1_000_000, freight_paisa = 1_100_000, deductions_paisa = 1_100_000, net_paisa = -100_000, version = version + 1 WHERE id = ?1",
+        [f.lot],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE bikri_sales SET is_active = 0 WHERE id = ?1",
+        [f.sale],
+    )
+    .unwrap();
+    // A new بکری still takes the next number.
+    conn.execute(
+        "INSERT INTO bikri_entries (number, entry_date, bill_date) VALUES (3, '2026-10-10', '2026-10-10')",
         [],
     )
     .unwrap();

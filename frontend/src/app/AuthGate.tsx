@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { AuthStatus } from '../bindings/AuthStatus';
 import type { SessionUser } from '../bindings/SessionUser';
 import { LockOverlay } from '../features/auth/components/LockOverlay';
+import { BikriDraftOffer } from '../features/bikri/draft-offer';
 import { useAuthStatus, useLock, useLogout, useSavePreferences } from '../features/auth/hooks';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { WizardPage } from '../features/auth/pages/WizardPage';
@@ -105,6 +106,9 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         onOpenAccount={(id) => {
           void navigate({ to: '/index/accounts/$id', params: { id: String(id) } });
         }}
+        onOpenBikri={(id) => {
+          void navigate({ to: '/bikri/book', search: { id } });
+        }}
         onSignOut={() => {
           logout.mutate();
         }}
@@ -117,6 +121,8 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
       >
         <Outlet />
       </AppShell>
+      {/* A بکری that was being typed when the app closed is offered back once (PRD FR-12.10). */}
+      {locked ? null : <BikriDraftOffer />}
       {locked ? <LockOverlay userName={user.display_name} /> : null}
     </>
   );
