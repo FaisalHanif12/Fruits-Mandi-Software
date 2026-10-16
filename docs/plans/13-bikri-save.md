@@ -57,6 +57,19 @@ New error codes (with `errors.ftl` in `ur` and `en`, `# review: pending`): `ERR_
 - Fluent: `bikri.ftl` additions, `pukhta.ftl` (or inside `bikri.ftl` if the module naming says so, Tech Stack 5.2 uses `pukhta_khata`), errors. New Urdu words `# review: pending`.
 - Windows E2E specs (written and syntax-checked, run LOCAL-ONLY): the D3 story by keyboard (Event 1 and Event 2) and E2E-17 (close the app while typing, reopen, the draft is offered and restored).
 
+### Contract as built in T1 (agreed 16-10-2026, recorded by the lead)
+
+New commands, each with one `{ input }` object and sign-in: `bikri_save`, `bikri_get`, `bikri_list`, `bikri_find`, `bikri_navigate`, `search_pukhta_people`, `pukhta_register`, `drafts_save`, `drafts_get`, `drafts_discard`. `search_global` keeps its name and gains a result kind. New code `ERR_DRAFT_INVALID` (field `payload_json`, value `max_bytes`), its ur and en messages written by `frontend`. Matches the plan: `bikri_save { draft, confirm_cash_below_zero }` -> `BikriSaved { bikri_id, number, entry_id, preview }`; `drafts_get` -> `DraftRow | null`; `bikri_navigate` -> number or null; `search_pukhta_people { text, side: seller | buyer }` -> `PukhtaPerson[] { name_ur, name_en, phone, last_date, person_key }`. Details the plan did not fix:
+
+1. `bikri_find` returns `BikriListRow[]` (newest first, at most 50), not ids; `truck_no` is a case-insensitive START match. The same-truck notice has only `bikri_number`, so "کھولیں" = `bikri_find { number }` -> `row.id` -> `bikri_get { id }`.
+2. `bikri_list` and `bikri_find` dates are optional text (null or "" = none; DD-MM-YYYY or a shortcut); `date` wins over `from` and `to`; `status` is `saved` or `cancelled`. `BikriListRow` = id, number, entry_date, created_at (UTC text; the screen shows Pakistan time), truck_no, sellers, pukhta_sellers, items, qty_received, qty_sold, gross, net (can be negative), buyer_total, status.
+3. `bikri_get` returns `BikriDetail` with stored values only (never recalculated): header, zamindar, `lots[]` (`SavedLot` with stored charges: method, value, amount, rule_id; quantities; gross, seller_comm, deductions, net; adjust_advance; first_entry_id; `sales[]` as `SavedSale` with the three charge snapshots, buyer_total, rate_diff, payment_type, is_active), `postings[]` and `split[]` from the saved share rows.
+4. `drafts_save` returns `DraftSaved { saved_at }`. The screen key of the بکری draft is the text `bikri` (a-z 0-9 _ . - up to 40 characters, else `ERR_FORMAT_INVALID` on `screen`). Invalid JSON or over 1 MB is `ERR_DRAFT_INVALID`. No audit row for drafts. Discarding nothing is fine.
+5. `confirm_cash_below_zero` has a serde default of false, but the TypeScript field is required: always send it.
+6. `GlobalHit` gains `{ kind: 'bikri', hit: BikriHit { id, number, entry_date, truck_no, status, matched: 'number' | 'truck' } }`. Order: accounts, then the بکری whose number equals the typed digits, then the newest بکری whose truck starts with the text (2 or more letters, at most 5), all within `limit`. Opening a hit opens the screen on `hit.id`.
+7. `pukhta_register` rows: entry_date, bikri_id, bikri_number, side, name_ur, name_en, phone, person_key, item, qty, amount (a buyer line: buyer total; a seller lot: gross), commission, paid, open (paisa still open), cancelled. A cancelled line has paid false, open 0, cancelled true.
+8. Implementation note: `bikri_lots` has CHECKs tying deductions and net to the lot charges at INSERT time, so the save inserts each lot with its final totals in one write (the same numbers as `calc_posting`); sale rows are written after the journal entry (`journal_entry_id` is NOT NULL). Same effect as "totals in ONE update".
+
 ## 5. Tasks
 
 | # | Task | Owner | Blocked by |
