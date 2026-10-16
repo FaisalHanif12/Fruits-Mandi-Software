@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-settings-set-security"
+description = "Enables the settings_set_security command without any pre-configured scope."
+commands.allow = ["settings_set_security"]
+
+[[permission]]
+identifier = "deny-settings-set-security"
+description = "Denies the settings_set_security command without any pre-configured scope."
+commands.deny = ["settings_set_security"]

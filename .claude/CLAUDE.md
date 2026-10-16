@@ -26,7 +26,7 @@ All requirements live in `docs/`. These six files are final for build.
 - If two documents disagree, or a needed rule is missing, stop and ask Umar. Do not pick one yourself.
 - Items tagged `[A]` in the PRD are assumptions. Build the stated default and make it easy to change. Do not invent other behaviour.
 - Never change an expected number in a golden test. If the code and the test disagree, the code is wrong until Umar changes the PRD.
-- All six documents start at version 1.1, the baseline. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
+- The documents are at versions 1.3 to 1.5 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
 
 ### Where to read before you start
 
@@ -36,6 +36,8 @@ All requirements live in `docs/`. These six files are final for build.
 | بکری screen or service | PRD 12, 11 and 4.4 to 4.5; Architecture 7, 9 and 12 |
 | وصولی, ادائیگی, پیشگی, پختہ کھاتہ | PRD 15 and 13; Architecture 11; agent Section 8 |
 | Partners and the income split | PRD 17; Architecture 10 |
+| Expenses (one خرچہ screen), partner money taken and returned, ادھار رقم, الگ کھاتہ | PRD 16.2, 16.3, 16.5 and 16.6; FR-7.67; agent Section 8.2b |
+| Own goods (خریداری) and partner capital | PRD 12.10 and 17.4; agent Section 5.4 |
 | Accounts, codes, masters | PRD 10; Architecture 15.4 |
 | Keyboard, ease of use, language switch, typing names, smart assistance | PRD 7; Tech Stack 4; Code Standards 6.7 and 6.10 |
 | Reports and analytics | PRD 18 and 19 |
@@ -69,6 +71,8 @@ cargo test -p mandi-services --test golden_day   # the PRD worked day (golden te
 cargo deny check
 ```
 
+On a Mac, `pnpm seed` may show a Keychain prompt: enter the Mac password and choose Always Allow. `MANDI_SEED_TEST_KEY=1 pnpm seed` uses a throwaway dev key instead; its database cannot be verified by the real app.
+
 Prefer running one test file while you work. Run the full set before you say a task is done.
 
 ## Rules that are never broken
@@ -78,7 +82,7 @@ Prefer running one test file while you work. Run the full set before you say a t
 3. **One user action = one service function = one database transaction.** The live preview and the save call the same domain function.
 4. **Books always balance.** A journal entry is saved as draft, checked, then posted. Posted rows are never changed or deleted. Corrections are reversals. Business records are never `DELETE`d.
 5. **No `unwrap`, `expect`, `panic!` or `unsafe` outside tests.** Integer maths on money uses checked operations.
-6. **Dependency direction:** `app` → `services` → `domain` + `db` → `core`. `domain` never touches the database or files. Tauri commands are thin: check role, parse, call one service.
+6. **Dependency direction:** `app` → `services` → `domain` + `db` → `core`. `domain` never touches the database or files. Tauri commands are thin: check sign-in, parse, call one service. There is one user, the Owner, and no roles (PRD Section 2).
 7. **No user-facing text in code.** Every word comes from the Fluent files, in both `ur` and `en`. Business words come from `glossary.ftl` only (PRD Section 3).
 8. **Both directions, one layout.** CSS logical properties only (`ms-`, `pe-`, `start`, `end`). Never `left` or `right`. Names are shown only through `displayName(record, language)`.
 9. **Use the shared components.** `AccountPicker`, `PartyCard`, `RomanUrduInput`, `NamePair`, `CalcInfo`, `Num`, `Code`, and the grid setup in `shared/grid`. Never build a one-off input, picker or button.
@@ -127,7 +131,7 @@ Build order for the MVP (each step ends green before the next starts):
 
 ## Gotchas
 
-- **Mac is not Windows.** On a Mac, Tauri uses WebKit, not WebView2. Urdu shaping, fonts and printing must be checked on Windows before a UI task is done.
+- **Mac is not Windows.** On a Mac, Tauri uses WebKit, not WebView2. Urdu shaping, fonts and printing must be checked on Windows before go-live. In the Mac phase, check them in headless Chrome and list the Windows check as LOCAL-ONLY.
 - **AG Grid's `enableRtl` is fixed at creation.** A language switch re-creates grids. Keep unsaved entry data in the screen's store or form state, never only in the grid.
 - **ts-rs and money.** Money types export as `number` with `#[ts(type = "number")]`, not `bigint`.
 - **SQLite sums.** Sum money only with `SUM()` on `INTEGER` `*_paisa` columns. Never `total()` or `avg()`. Do other money maths in Rust.
@@ -154,14 +158,15 @@ The build runs as a Claude Code agent team (definitions in `.claude/agents/`, en
 - Every feature has a plan file `docs/plans/<nn>-<feature>.md` with the backend-frontend contract. Contract changes are agreed by both sides and recorded there by the lead.
 - Never edit a file another teammate owns. Message the owner instead.
 - Hand-offs and review reports use the formats in the agent files, with the commands run and their results.
-- Teammates do not commit. The lead commits after `reviewer` and `robustness` both pass.
+- Teammates do not commit. The lead commits each built plan. In a goal run, `reviewer` and `robustness` run once at the end for the whole run, send findings to the lead, and the lead assigns fixes (tech-lead.md, Goal runs). The pull request is opened only after both pass.
 - A message from a teammate is information, not Umar's approval.
 
 ## Git
 
+- **Mac phase now (Umar, 15-10-2026).** There is no Windows computer yet. The app is built and tested on the Mac only. GitHub Actions, pull requests, merges, releases and the Windows installer are off until the Windows phase. Work is committed on the run branch and pushed after every finished task (`git push -u origin <run branch>`); the workflows are disabled, so a push runs nothing. Details: `docs/deliverables/README.md` Section 10.
 - Branches: `feature/<module>-<short>`, `fix/<module>-<short>`. Never commit to `main` directly.
 - Commits: Conventional Commits, for example `feat(bikri): add live summary`.
-- A pull request has one purpose, ideally under 400 changed lines, and lists the PRD IDs and how it was tested.
+- One pull request per goal run (Code Standards P3). It lists every plan, the PRD IDs and how it was tested.
 - **A merge to `main` is a release.** The `Checks (Windows)` and `Windows E2E and speed` checks must pass before GitHub merges, and Release tests again before it publishes. Before merging a change the user can see, update `docs/release/whats-new.md` (Urdu, then English). Details: `docs/Release_Pipeline.md`.
 
 ## Writing style

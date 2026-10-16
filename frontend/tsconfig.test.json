@@ -1,0 +1,10 @@
+{
+  // Component and unit tests, and the robustness tests (owned by robustness). They run in Node (Vitest with jsdom), so they also get Node types.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"],
+    "allowJs": true
+  },
+  "include": ["src", "tests/unit", "tests/robustness", "tests/helpers", "tests/setup.ts"],
+  "exclude": ["tests/unit/fixtures"]
+}

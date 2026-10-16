@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-masters-next-code"
+description = "Enables the masters_next_code command without any pre-configured scope."
+commands.allow = ["masters_next_code"]
+
+[[permission]]
+identifier = "deny-masters-next-code"
+description = "Denies the masters_next_code command without any pre-configured scope."
+commands.deny = ["masters_next_code"]

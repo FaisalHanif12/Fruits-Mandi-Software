@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.1 (final baseline for build) |
-| Date | 10 October 2026 |
+| Version | 1.4 (Umar's changes of 14-10-2026 and 15-10-2026) |
+| Date | 15 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.1 (the master), NFR v1.1, Tech Stack v1.1 |
+| Depends on | PRD v1.5 (the master), NFR v1.3, Tech Stack v1.3 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -131,7 +131,7 @@ Shown as: "مقدار باقی مال سے زیادہ ہے: باقی 5 نگ ہی
 | # | Rule |
 |---|---|
 | B1 | Follow the dependency direction: `app` → `services` → `domain` + `db` → `core`. `domain` MUST NOT touch the database, files, clock or network. |
-| B2 | Tauri commands are thin: check the user's role, parse input, call one service function, return the result. No business logic in commands. |
+| B2 | Tauri commands are thin: check that the Owner is signed in, parse input, call one service function, return the result. No business logic in commands. |
 | B3 | One user action = one service function = one database transaction. Save of a بکری writes the بکری, journal, cash entries, partner split, stock, analytics, matching and audit in one transaction (PRD FR-12.8). |
 | B4 | Business rules are pure functions in `domain`: inputs in, results out. This makes them easy to test. |
 | B5 | The "preview" (live summary) and the "save" call the **same** domain function. There is never a second calculation path. |
@@ -189,7 +189,7 @@ Shown as: "مقدار باقی مال سے زیادہ ہے: باقی 5 نگ ہی
 pub async fn bikri_save(state: State<'_, AppState>, input: BikriInput) -> Result<BikriSaved, UiError> {
     // Async command so the window never waits; blocking SQLite work runs on a worker thread.
     let db = state.db.clone();
-    let user = state.require_at_least(Role::Munshi)?;       // role check (NFR-SEC-4); Owner also passes
+    let user = state.require_login()?;                       // signed in and not locked (NFR-SEC-4)
     tauri::async_runtime::spawn_blocking(move || {
         let parsed = BikriDraft::parse(input)?;              // layer 2 validation, text -> Paisa
         services::bikri::save(&db, &user, parsed)            // one transaction
@@ -199,7 +199,7 @@ pub async fn bikri_save(state: State<'_, AppState>, input: BikriInput) -> Result
 }
 ```
 
-Role check: `require_at_least(Role::Munshi)` lets Owner and Munshi through and blocks the view-only Partner role (PRD FR-2.4).
+Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED_IN` / `ERR_SESSION_LOCKED`. There are no roles (PRD Section 2).
 
 ---
 
@@ -297,6 +297,7 @@ Role check: `require_at_least(Role::Munshi)` lets Owner and Munshi through and b
 | F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The پختہ کھاتہ name field shows one merged list (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
 | F42 | Every calculated amount on screen has `CalcInfo`, which shows the backend's `working` (B30). The frontend never builds a working itself. |
 | F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints: the last rate is shown only as placeholder text (PRD FR-7.53). Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
+| F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, mode, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
 
 ---
 
@@ -316,13 +317,13 @@ Role check: `require_at_least(Role::Munshi)` lets Owner and Munshi through and b
 
 | # | Rule |
 |---|---|
-| S1 | Role check is the first line of every command (NFR-SEC-4) |
+| S1 | The sign-in check is the first line of every command, except first run, sign-in, recovery, app info and data status (NFR-SEC-4) |
 | S2 | Passwords: Argon2id only; never logged, never returned to the frontend |
 | S3 | Secrets only in Windows Credential Manager (`keyring`) |
 | S4 | Tauri capabilities allow only our own commands. No shell, no general file access from the screens. |
 | S5 | Content Security Policy: no remote scripts, no inline scripts, no remote fonts |
 | S6 | `cargo deny` and `pnpm audit` run in CI; known vulnerabilities block release |
-| S7 | Every change to money, rules, shares, users or settings writes an audit entry in the same transaction |
+| S7 | Every change to money, rules, shares, the password or settings writes an audit entry in the same transaction |
 
 ---
 
@@ -346,9 +347,10 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 
 | Tests | Where | When |
 |---|---|---|
-| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21 | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, and the preview numbers of E2E-39 | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-33 (ledger with items, R20 total) and E2E-36 (day summary R34, filtered print data) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
-| E2E-17 (draft after closing the app) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
+| E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
 | E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
 | E2E-22 to E2E-27, full screen runs (including the language switch of E2E-22) | Windows end-to-end suite | Before every release |
 
@@ -359,8 +361,10 @@ They MUST pass. Their expected numbers MUST NOT be changed without a PRD change.
 With `proptest`, for thousands of random inputs:
 
 - Partner split parts always add up to the total.
-- For any random sequence of postings, Σ partner share rows = income − shop expenses (PRD FR-6.5).
+- For any random sequence of postings, Σ partner share rows = income − expenses of head 05, including cost of own goods (PRD FR-6.5, FR-17.3).
 - Every built journal entry balances.
+- For any sequence of sales and write-offs of one own goods purchase, the cost released never exceeds its total cost and equals it once nothing is left (PRD C21).
+- For any random sequence of postings, Σ partner کل رقم + ابتدائی سرمایہ = the firm's equity in the trial balance (PRD FR-17.9, C22).
 - Parse then format then parse gives the same paisa.
 - Commission is never negative and never more than the line value for percent rules up to 100%.
 - Reversal of an entry plus the entry gives zero on every account.
@@ -384,7 +388,7 @@ With `proptest`, for thousands of random inputs:
 |---|---|
 | P1 | `main` is always releasable. Work happens on branches (`feature/...`, `fix/...`). |
 | P2 | Commit messages follow Conventional Commits: `feat(bikri): ...`, `fix(partners): ...`, `test(money): ...` |
-| P3 | One pull request = one purpose, ideally under 400 changed lines |
+| P3 | One pull request per goal run (for example D1 and D2 together), opened after the final review and robustness gate passes. It lists every plan in it. Commits inside it stay small: one per plan step, Conventional Commits. |
 | P4 | The pull request description lists the PRD IDs it implements and how it was tested |
 | P5 | CI must be green before merge |
 
@@ -418,3 +422,6 @@ A change is done only when every box is ticked:
 |---|---|---|
 | 1.0 | 10-10-2026 | Pre-build drafts and reviews: Umar's requirements, analysis of the old software video, research, client review comments and full cross-document reviews. |
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
+| 1.2 | 12-10-2026 | PRD v1.2: sign-in check instead of roles (B2, 5.6, S1, S7); golden tests E2E-28 to E2E-33 (9.2); one pull request per goal run (P3). |
+| 1.3 | 15-10-2026 | PRD v1.3: golden tests E2E-34 to E2E-38 (9.2); property tests for the cost of own goods and the partner total (9.3). |
+| 1.4 | 15-10-2026 | PRD v1.4: related entries share one screen (F44); E2E-39 (9.2). |

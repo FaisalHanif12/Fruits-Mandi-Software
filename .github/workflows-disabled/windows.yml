@@ -1,0 +1,120 @@
+# Windows: real installers, the keyboard-only end-to-end suite, screenshots,
+# PDFs and the speed benchmarks (Release_Pipeline.md section 2, windows-verify skill).
+# The job name "Windows E2E and speed" is a required status check on main. Do not rename it.
+name: Windows
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:
+  # On demand for any branch: gh workflow run windows.yml --ref <branch>
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  windows:
+    name: Windows E2E and speed
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm, Node and Rust
+        uses: ./.github/actions/setup
+
+      # NSIS and MSI with the offline WebView2 installer (NFR-INS-1).
+      # Updater files need the signing key, which pull requests from forks do not get,
+      # so this test build turns them off. Release builds them signed.
+      - name: Build the installers
+        id: build
+        run: |
+          conf="$RUNNER_TEMP/test-build.conf.json"
+          echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$conf"
+          pnpm tauri build --ci --config "$conf"
+
+      - name: Rust tests on Windows (including the golden tests)
+        working-directory: backend
+        run: cargo test --workspace
+
+      # tauri-driver needs an Edge driver that matches the WebView2 version on the runner.
+      - name: Install tauri-driver and a matching Edge driver
+        shell: pwsh
+        run: |
+          cargo install tauri-driver --locked
+          cargo install --git https://github.com/chippers/msedgedriver-tool
+          $dir = Join-Path $env:RUNNER_TEMP 'edgedriver'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Push-Location $dir
+          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
+          Pop-Location
+          $dir >> $env:GITHUB_PATH
+
+      # The PRD worked day by keyboard only, E2E-17, E2E-22 to E2E-27, screenshots of
+      # each screen in Urdu and English at every window size, and PDFs of every print.
+      # Writes its report, screenshots and PDFs to frontend/tests/e2e/output/.
+      # Screenshots at 1920 x 1080 need a display at least that big (NFR-USE-15).
+      # The runner starts smaller. Raise it; the e2e spec fails with a clear
+      # message if a size still cannot be reached, so a wrong size is never saved.
+      - name: Raise the display resolution
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          try {
+            Set-DisplayResolution -Width 2560 -Height 1440 -Force -ErrorAction Stop
+          } catch {
+            Write-Host "Set-DisplayResolution not available: $($_.Exception.Message)"
+          }
+          Add-Type -AssemblyName System.Windows.Forms
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          Write-Host "Display is now $($b.Width) x $($b.Height)"
+
+      - name: End-to-end suite
+        id: e2e
+        run: pnpm e2e
+
+      # NFR Section 2 targets, with runner thresholds set in scripts/perf/.
+      # Runs even when the e2e suite fails, so one run shows both results.
+      - name: Speed benchmarks
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: pnpm perf --require-install
+
+      - name: Upload the installers
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: installers
+          path: |
+            backend/target/release/bundle/nsis/*.exe
+            backend/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload the e2e report, screenshots and PDFs
+        if: ${{ !cancelled() && steps.e2e.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-output
+          path: frontend/tests/e2e/output/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload the speed results
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: speed-results
+          path: |
+            backend/target/criterion/
+            backend/target/perf/report.json
+          if-no-files-found: warn
+          retention-days: 14

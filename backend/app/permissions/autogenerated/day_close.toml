@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-day-close"
+description = "Enables the day_close command without any pre-configured scope."
+commands.allow = ["day_close"]
+
+[[permission]]
+identifier = "deny-day-close"
+description = "Denies the day_close command without any pre-configured scope."
+commands.deny = ["day_close"]

@@ -1,0 +1,68 @@
+[package]
+name = "mandi-app"
+description = "Mandi Software: the Tauri app and its thin commands"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+default-run = "mandi-app"
+
+# The library has its own name, so the library and the binary do not share
+# build output names on Windows (a known Cargo issue with lib and bin of one name).
+[lib]
+name = "mandi_app_lib"
+crate-type = ["rlib"]
+
+# Built as backend/target/release/mandi-app.exe on Windows.
+[[bin]]
+name = "mandi-app"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+mandi-services.workspace = true
+mandi-reports.workspace = true
+mandi-backup.workspace = true
+tauri.workspace = true
+tauri-plugin-single-instance.workspace = true
+tauri-plugin-updater.workspace = true
+tauri-plugin-dialog.workspace = true
+tauri-plugin-window-state.workspace = true
+tauri-plugin-process.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+
+# WebView2 settings of Tech Stack 7 (src/webview2.rs). Same versions as Tauri uses.
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39.1"
+windows-core = "0.62.2"
+
+[dev-dependencies]
+tauri = { workspace = true, features = ["test"] }
+tempfile.workspace = true
+
+# The same lints as [workspace.lints] in ../Cargo.toml, with one difference:
+# unsafe_code is "deny" here, not "forbid", so src/webview2.rs alone can allow
+# the WebView2 COM calls of Tech Stack 7. A "forbid" cannot be allowed anywhere.
+# tests/workspace_rules.rs checks that the two lists stay the same.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "forbid"
+expect_used = "forbid"
+panic = "forbid"
+unreachable = "forbid"
+indexing_slicing = "forbid"
+todo = "forbid"
+unimplemented = "forbid"
+dbg_macro = "forbid"
+print_stdout = "forbid"
+print_stderr = "forbid"

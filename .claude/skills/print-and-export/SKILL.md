@@ -1,6 +1,6 @@
 ---
 name: print-and-export
-description: Builds or changes any printed document, PDF or Excel export in the Mandi Software (seller bill, buyer slips, پختہ کھاتہ slip, receipt slip, reports R1 to R31, the daily backup pack) with Urdu or English print language, A4, A5 or 80 mm paper, amounts in words, and numbers that never flip. Use whenever something must be printed, saved as PDF or exported to Excel.
+description: Builds or changes any printed document, PDF or Excel export in the Mandi Software (seller bill, buyer slips, پختہ کھاتہ slip, receipt slip, reports R1 to R34, the daily backup pack) with Urdu or English print language, A4, A5 or 80 mm paper, amounts in words, and numbers that never flip. Use whenever something must be printed, saved as PDF or exported to Excel.
 ---
 
 # Print, PDF and Excel export

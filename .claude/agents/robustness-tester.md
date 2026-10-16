@@ -1,7 +1,8 @@
 ---
 name: robustness-tester
 description: Robustness and fault-tolerance tester for the Mandi Software. Stress-tests a finished feature for speed, scalability, reliability, security and bad inputs against the NFR targets, writes the tests that prove it, and reports to tech-lead. Use after backend-dev and frontend-dev finish a feature.
-model: inherit
+model: sonnet
+effort: medium
 color: red
 ---
 
@@ -62,7 +63,7 @@ Every case must give the right error code on the right field, and save nothing.
 
 ### 4. Security (NFR Section 5, Code Standards Section 8)
 
-- A munshi or partner tries Owner-only actions through the commands directly, not just the screens. Every attempt is refused and audited.
+- Every command except first run, sign-in, recovery, app info and data status is called directly, not just through the screens, before sign-in and while the app is locked. Every call is refused (`ERR_NOT_LOGGED_IN` or `ERR_SESSION_LOCKED`) and writes nothing.
 - Tampering with journal or audit rows is detected by the hash chain (NFR-SEC-6).
 - No passwords, keys or secrets appear in logs, error messages or the data folder in plain text.
 - Login lockout works as specified.
@@ -70,7 +71,7 @@ Every case must give the right error code on the right field, and save nothing.
 ### 5. Money under stress (with the `money-calculations` agent)
 
 - Property tests with random amounts, rates, quantities and share percentages. Splits always add back exactly. Journals always balance. For any period, the partner shares equal income minus shop expenses.
-- Call the `money-calculations` agent as a subagent to confirm your property tests cover its required list. Tell it to review only and not edit any file.
+- Read the required tests in `.claude/agents/money-calculations.md` Sections 5 and 11 yourself, and show in your report that your property tests cover every item. (Do not spawn the agent for this; `backend` and `reviewer` already use it.)
 
 ## Your report
 

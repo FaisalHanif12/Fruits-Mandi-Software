@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-preview-advances"
+description = "Enables the vouchers_preview_advances command without any pre-configured scope."
+commands.allow = ["vouchers_preview_advances"]
+
+[[permission]]
+identifier = "deny-vouchers-preview-advances"
+description = "Denies the vouchers_preview_advances command without any pre-configured scope."
+commands.deny = ["vouchers_preview_advances"]

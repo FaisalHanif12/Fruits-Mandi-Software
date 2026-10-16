@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Grid Urdu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;family=Noto+Naskh+Arabic:wght@400;600&amp;family=Noto+Nastaliq+Urdu:wght@400;600&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Gulzar,"Noto Nastaliq Urdu",serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,"Noto Nastaliq Urdu",serif;line-height:1.9}
+.num{font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+.g{display:grid;grid-template-columns:44px 104px minmax(0,1.6fr) 72px 88px 104px 80px 72px 112px 84px;align-items:stretch}
+.h{display:flex;align-items:center;padding:0 10px;font-size:16px;color:#565C64;background:#EFECE5;height:44px;border-inline-start:1px solid #E1DCD1}
+.c{display:flex;align-items:center;padding:0 10px;height:44px;font-size:18px;border-top:1px solid #E6E1D7;border-inline-start:1px solid #EFEBE3;box-sizing:border-box}
+.n{justify-content:flex-end;direction:ltr;font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;font-size:15px}
+.ro{background:#F8F7F3;color:#3E434A}
+.sumrow{display:flex;justify-content:space-between;align-items:baseline;font-size:18px;padding:2px 0}
+</style>
+</helmet>
+<div dir="rtl" style="width:1366px;height:768px;display:flex;flex-direction:column;background:#F6F4EF;padding:20px 24px;box-sizing:border-box;gap:14px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:baseline;gap:14px"><span class="ur" style="font-size:28px">بکری بک</span><span class="ur" style="font-size:18px;color:#565C64">ٹرک <span class="num" style="font-size:15px">LES-1234</span> · سوات اڈا · لاٹ ۱: رحیم، کیلا، پیٹی، <span class="num" style="font-size:15px">50</span> نگ</span></div>
+    <div style="display:flex;gap:10px">
+      <button style="height:40px;padding:0 14px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF;display:inline-flex;align-items:center;gap:8px"><span class="ur" style="font-size:18px">پوری بکری</span></button>
+      <button style="height:40px;padding:0 16px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:8px"><span class="ur" style="font-size:18px">محفوظ کریں</span><span class="kbd" style="background:#2E5288;color:#FFFFFF">F10</span></button>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;gap:16px;min-height:0">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#FFFFFF;border:1px solid #D9D4C9;border-radius:8px;overflow:hidden">
+      <div role="row" class="g ur">
+        <div class="h">نمبر</div><div class="h">کوڈ گاہک</div><div class="h">گاہک</div><div class="h" style="justify-content:flex-start">تعداد</div><div class="h" style="justify-content:flex-start">ریٹ</div><div class="h" style="justify-content:flex-start">رقم</div><div class="h" style="justify-content:flex-start">کمیشن</div><div class="h" style="justify-content:flex-start">لاگا</div><div class="h" style="justify-content:flex-start">رقم گاہک</div><div class="h">ادائیگی</div>
+      </div>
+      <div role="row" class="g">
+        <div class="c n ro">1</div><div class="c n">03040001</div><div class="c ur ro">اکرم ٹول ٹیکس</div><div class="c n">20</div><div class="c n">600</div><div class="c n ro">12,000</div><div class="c n ro">720</div><div class="c n ro">160</div><div class="c n ro" style="font-weight:600">12,880</div><div class="c ur"><span style="font-size:16px;color:#1D3D6E">ادھاری</span></div>
+      </div>
+      <div role="row" class="g" style="background:#F1F5FB">
+        <div class="c n ro">2</div><div class="c n">03040002</div><div class="c ur ro">ارشد ملتانی</div><div class="c n" style="background:#FFFFFF">30</div>
+        <div class="c n" style="background:#FFFFFF;outline:2px solid #2563C9;outline-offset:-2px;color:#6B6559;font-style:italic">600</div>
+        <div class="c n ro" style="color:#8C8577">·</div><div class="c n ro" style="color:#8C8577">·</div><div class="c n ro" style="color:#8C8577">·</div><div class="c n ro" style="color:#8C8577">·</div><div class="c ur"><span style="font-size:16px;color:#1D3D6E">ادھاری</span></div>
+      </div>
+      <div role="row" class="g">
+        <div class="c ro"></div><div class="c"></div><div class="c ro"></div><div class="c"></div><div class="c"></div><div class="c ro"></div><div class="c ro"></div><div class="c ro"></div><div class="c ro"></div><div class="c"></div>
+      </div>
+      <div style="flex:1"></div>
+      <div role="row" class="g ur" style="background:#EFECE5;border-top:2px solid #D9D4C9">
+        <div class="c" style="border-top:0"></div><div class="c" style="border-top:0;font-size:18px">میزان</div><div class="c" style="border-top:0"></div><div class="c n" style="border-top:0;font-weight:600">20</div><div class="c" style="border-top:0"></div><div class="c n" style="border-top:0;font-weight:600">12,000</div><div class="c n" style="border-top:0;font-weight:600">720</div><div class="c n" style="border-top:0;font-weight:600">160</div><div class="c n" style="border-top:0;font-weight:700">12,880</div><div class="c" style="border-top:0"></div>
+      </div>
+      <div class="ur" style="display:flex;gap:18px;padding:8px 14px;font-size:16px;color:#565C64;border-top:1px solid #E6E1D7;background:#FFFFFF">
+        <span>ریٹ کا خانہ خالی ہے۔ آخری ریٹ <span class="num" style="font-size:14px">600</span> صرف اشارہ ہے</span>
+        <span><span class="kbd" style="background:#EFECE5;color:#1C1F23">Enter</span> اگلا خانہ</span>
+        <span><span class="kbd" style="background:#EFECE5;color:#1C1F23">Ctrl+D</span> اوپر والی قیمت</span>
+        <span><span class="kbd" style="background:#EFECE5;color:#1C1F23">Ctrl+Delete</span> لائن ہٹائیں</span>
+      </div>
+    </div>
+    <aside aria-label="خلاصہ" style="width:300px;background:#FFFFFF;border:1px solid #D9D4C9;border-radius:8px;padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
+      <div class="ur" style="font-size:20px;margin-bottom:6px">لاٹ کا خلاصہ</div>
+      <div class="sumrow ur"><span>خام بکری</span><span class="num" style="font-size:16px">12,000</span></div>
+      <div class="sumrow ur"><span>کرایہ</span><span class="num" style="font-size:16px">3,000</span></div>
+      <div class="sumrow ur"><span>کمیشن</span><span class="num" style="font-size:16px">720</span></div>
+      <div class="sumrow ur"><span>مزدوری</span><span class="num" style="font-size:16px">250</span></div>
+      <div class="sumrow ur"><span>منشیانہ</span><span class="num" style="font-size:16px">50</span></div>
+      <div class="sumrow ur"><span>نقد</span><span class="num" style="font-size:16px">5,000</span></div>
+      <div class="sumrow ur"><span>فون</span><span class="num" style="font-size:16px">20</span></div>
+      <div class="sumrow ur" style="border-top:1px solid #E6E1D7;margin-top:4px;padding-top:6px"><span>کل اخراجات</span><span class="num" style="font-size:16px;font-weight:600">9,040</span></div>
+      <div class="sumrow ur" style="border-top:2px solid #1C1F23;margin-top:4px;padding-top:6px"><span style="font-size:20px">صافی بکری</span><span class="num" style="font-size:22px;font-weight:700">2,960</span></div>
+      <div style="flex:1"></div>
+      <div class="ur" style="display:flex;gap:8px;align-items:center;background:#FDF1DC;border-radius:8px;padding:6px 10px;font-size:16px;color:#8A5300"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A5300" stroke-width="2" aria-hidden="true"><path d="M12 3l9 16H3z"></path><path d="M12 10v4M12 17v.5"></path></svg><span><span class="num" style="font-size:14px">30</span> نگ باقی ہیں</span></div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

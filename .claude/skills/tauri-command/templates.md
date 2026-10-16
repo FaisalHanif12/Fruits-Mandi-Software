@@ -70,7 +70,7 @@ pub async fn vouchers_save_receipt(
     input: ReceiptInput,
 ) -> Result<ReceiptSaved, UiError> {
     let db = state.db.clone();
-    let user = state.require_at_least(Role::Munshi)?; // first line: role check (NFR-SEC-4)
+    let user = state.require_login()?; // first line: sign-in check (NFR-SEC-4)
     tauri::async_runtime::spawn_blocking(move || {
         let day = services::days::open_range(&db)?;
         let draft = ReceiptDraft::parse(input, day.today, day.closed_up_to)?;
@@ -89,7 +89,7 @@ pub async fn vouchers_save_receipt(
     state: State<'_, AppState>,
     _input: ReceiptInput,
 ) -> Result<ReceiptSaved, UiError> {
-    let _user = state.require_at_least(Role::Munshi)?;
+    let _user = state.require_login()?;
     Err(UiError::single(ErrorCode::ErrNotImplemented, None))
 }
 ```
@@ -120,16 +120,16 @@ fn receipt_rejects_decimal_amount() {
 fn receipt_settles_oldest_bill_first() {
     // PRD 4.6: اکرم owes 12,880, pays 10,000, still owes 2,880.
     let db = test_db_with_events(&[Event::Opening, Event::Bikri1]);
-    let saved = services::vouchers::save_receipt(&db, &munshi(), receipt(AKRAM, rupees(10_000))).unwrap();
+    let saved = services::vouchers::save_receipt(&db, &owner(), receipt(AKRAM, rupees(10_000))).unwrap();
     assert_eq!(saved.new_balance_paisa, rupees(2_880));
     assert_trial_balance_balanced(&db);
     assert_audit_written(&db, "voucher", saved.voucher_id);
 }
 
 #[test]
-fn partner_role_cannot_save_receipt() {
-    let result = command_as(Role::Partner, |s| vouchers_save_receipt(s, valid_receipt()));
-    assert_eq!(result.unwrap_err().first_code(), Some(ErrorCode::ErrNotAllowed));
+fn receipt_refused_before_sign_in() {
+    let result = command_signed_out(|s| vouchers_save_receipt(s, valid_receipt()));
+    assert_eq!(result.unwrap_err().first_code(), Some(ErrorCode::ErrNotLoggedIn));
     assert_no_rows_written();
 }
 ```

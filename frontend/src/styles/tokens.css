@@ -1,0 +1,259 @@
+/*
+ * Design tokens: the only place for colours, spacing, font sizes, line heights, weights, radii
+ * and sizes (Code Standards F9). Names and values follow docs/design/design-system.md
+ * ("Calm ledger", version 1.0).
+ *
+ * The @theme block is read by Tailwind CSS. It drops Tailwind's own defaults (--*: initial), so
+ * only these tokens exist as classes. Example: `bg-bg`, `text-primary`, `p-3` (12 px),
+ * `rounded-2` (8 px), `h-control` (44 px), `text-1` (step 1 of the type scale).
+ *
+ * Type steps have one value per script (design system 3). Tailwind's `text-1` reads --text-1,
+ * and --text-1 is 14 px in English and 18 px wherever the language is Urdu, so one class gives
+ * the right size in both, with no code that checks the language (Code Standards F37).
+ */
+
+:root {
+  /* Spacing scale, Code Standards F10: 4, 8, 12, 16, 24, 32, 48 px. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Sizes (design system 4). */
+  --control-h: 44px;
+  --control-h-compact: 40px;
+  --chip-h: 22px;
+  --border-w: 1px;
+
+  /* The smallest height of anything that is clicked (NFR-USE-23: at least 32 x 32 px). A text
+     link or a small button in a bar that is itself 32 px high takes this one. */
+  --target-min: 32px;
+
+  /* Shell sizes (design system 4): the main menu is 224 px, a 64 px icon rail below 1366 px; the
+     side menu of an area is 200 px; the top bar 60 px; the status bar 32 px. */
+  --nav-w: 224px;
+  --rail-w: 64px;
+  --module-menu-w: 200px;
+  --topbar-h: 60px;
+  --statusbar-h: 32px;
+
+  /* Room inside an Urdu typing field for the mode badge, and for the badge plus the key-map
+     button (plan 05). The badge sits at the start of the field, the text after it. */
+  --field-badge-w: 80px;
+  --field-badge-keys-w: 128px;
+
+  /* The list under a picker (plan 06): one row is two lines, so Nastaliq fits; five rows show. */
+  --picker-row-h: 72px;
+  --picker-list-h: 360px;
+
+  /* The popup of a picker in a grid cell (plan 12): wide enough for a name and its code. */
+  --picker-cell-w: 280px;
+
+  /* Room kept under a focused cell so the numbers strip pinned to the bottom never covers it. The
+     strip is about 90 px in Urdu and 115 px in English at 1024 px, and a line taller with the
+     cash note. */
+  --strip-clearance: 160px;
+
+  /* The chart tree always shows at least eight rows (plan 07). */
+  --tree-min-h: 360px;
+  --tree-view-h: 60vh;
+
+  /* Focus outline, always visible (design system 5, NFR-USE-22). */
+  --focus-width: 3px;
+  --focus-offset: 2px;
+
+  /* The double rule an accountant draws under a total (start screen). */
+  --rule-gap: 3px;
+
+  /* Layout steps (design system 4, Code Standards F22): compact 1024 to 1365 px, normal 1366
+     to 1919, wide 1920 and up, where the content stops at 1600 px and is centred. */
+  --page-max-w: 1600px;
+
+  /* The width of a form screen (a master's form) and of a short field in it, such as a code. */
+  --form-max-w: 960px;
+  --field-short-w: 320px;
+
+  /* Toast and dialog sizes (UsersEn, FormEn boards). */
+  --toast-max-w: 480px;
+  --dialog-w: 520px;
+
+  /* Motion (design system 7): colour and opacity only, at most 150 ms. */
+  --motion-fast: 150ms;
+
+  /* Loading skeleton bars (StatesUr board). */
+  --skeleton-h: 14px;
+
+  /* Type scale per script (design system 3, Code Standards F11). */
+  --text-latin-1: 14px;
+  --text-latin-2: 16px;
+  --text-latin-3: 18px;
+  --text-latin-4: 22px;
+  --text-latin-5: 28px;
+  --text-urdu-1: 18px;
+  --text-urdu-2: 20px;
+  --text-urdu-3: 24px;
+  --text-urdu-4: 28px;
+  --text-urdu-5: 34px;
+}
+
+@theme {
+  --*: initial;
+
+  /* Colours (design system 2). One meaning each (NFR-USE-12). */
+  --color-bg: #f6f4ef;
+  --color-surface: #fff;
+  --color-surface-sunken: #efece5;
+  --color-surface-readonly: #f8f7f3;
+  --color-row-current: #f1f5fb;
+  --color-ink: #1c1f23;
+  --color-ink-muted: #565c64;
+  --color-ink-placeholder: #6b6559;
+  --color-on-primary: #fff;
+  --color-border: #d9d4c9;
+  --color-border-control: #8c8577;
+  --color-primary: #1d3d6e;
+  --color-primary-chip: #2e5288;
+  --color-primary-soft: #e6ecf5;
+  --color-nav: #16263f;
+  --color-nav-ink: #d6dde8;
+  --color-nav-active: #24406b;
+  --color-focus: #2563c9;
+  --color-money-in: #17703f;
+  --color-money-in-soft: #e5f3ea;
+  --color-due: #b3261e;
+  --color-due-soft: #fbeae8;
+  --color-warn: #8a5300;
+  --color-warn-soft: #fdf1dc;
+  --color-warn-border: #e9c98f;
+
+  /*
+   * Additions for plan 02 components (reported to tech-lead; design system 6 and the boards).
+   * Scrim behind a dialog: nav colour at 35% (design system 6, "ConfirmDialog").
+   * Skeleton bars of the loading state (StatesUr board).
+   * Icons on the nav-coloured toast ground: a light green and a light red, because
+   * money-in and due are too dark on nav (UsersEn board draws the tick in #5FBF8A).
+   */
+  --color-scrim: rgb(22 38 63 / 35%);
+  --color-skeleton: #ece8e0;
+  --color-money-in-on-nav: #5fbf8a;
+  --color-due-on-nav: #f2a29b;
+
+  /* Layout steps as Tailwind variants: `normal:` and `wide:` (compact is the default). */
+  --breakpoint-normal: 1366px;
+  --breakpoint-wide: 1920px;
+
+  /* Tailwind spacing classes (p-1 ... p-7, h-control) read the scale and sizes above.
+     spacing-0 makes `inset-0`, `p-0` and `gap-0` work after the reset above. */
+  --spacing-0: 0px;
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-5: var(--space-5);
+  --spacing-6: var(--space-6);
+  --spacing-7: var(--space-7);
+  --spacing-control: var(--control-h);
+  --spacing-control-compact: var(--control-h-compact);
+  --spacing-chip: var(--chip-h);
+  --spacing-target: var(--target-min);
+  --spacing-nav: var(--nav-w);
+  --spacing-rail: var(--rail-w);
+  --spacing-module-menu: var(--module-menu-w);
+  --spacing-topbar: var(--topbar-h);
+  --spacing-statusbar: var(--statusbar-h);
+  --spacing-field-badge: var(--field-badge-w);
+  --spacing-field-badge-keys: var(--field-badge-keys-w);
+  --spacing-picker-row: var(--picker-row-h);
+  --spacing-picker-list: var(--picker-list-h);
+  --spacing-picker-cell: var(--picker-cell-w);
+  --spacing-strip: var(--strip-clearance);
+  --spacing-tree: var(--tree-min-h);
+  --spacing-tree-view: var(--tree-view-h);
+
+  /* Icon sizes (Code Standards F13): 16 in grids and field messages, 20 in buttons and
+     toasts, 26 inside the round badge of the empty and error states, badge 56. */
+  --spacing-icon-sm: 16px;
+  --spacing-icon-md: 20px;
+  --spacing-icon-lg: 26px;
+  --spacing-badge: 56px;
+  --spacing-skeleton: var(--skeleton-h);
+
+  /* Shadows of things that float over the page: dialogs and toasts (boards). */
+  --shadow-overlay: 0 12px 40px rgb(22 38 63 / 25%);
+
+  /* Type steps. These are the English (Latin) values; Urdu values are set below. */
+  --text-1: var(--text-latin-1);
+  --text-2: var(--text-latin-2);
+  --text-3: var(--text-latin-3);
+  --text-4: var(--text-latin-4);
+  --text-5: var(--text-latin-5);
+
+  /* Line heights: Nastaliq 1.9 (NFR-URD-11 asks at least 1.8), Latin 1.45. */
+  --leading-urdu: 1.9;
+  --leading-latin: 1.45;
+  --leading-chip: 1;
+
+  /* Letter spacing of a code read aloud or copied by hand, such as the recovery code. */
+  --tracking-code: 0.1em;
+
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+
+  --font-urdu: 'Gulzar', 'Noto Nastaliq Urdu', serif;
+  --font-urdu-dense: 'Noto Naskh Arabic', serif;
+  --font-latin: 'Inter', sans-serif;
+
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 12px;
+
+  /* Widest reading column of the start screen. */
+  --container-reading: 720px;
+  --container-page: var(--page-max-w);
+  --container-dialog: var(--dialog-w);
+  --container-toast: var(--toast-max-w);
+  --container-form: var(--form-max-w);
+  --container-field: var(--field-short-w);
+}
+
+/*
+ * Per-script values. They follow the `lang` of each element, so an English word inside an Urdu
+ * screen (the "English" button) gets the Latin font and size.
+ *
+ * --text-body is the size of running text. Urdu uses step 1 (18 px). English uses step 2
+ * (16 px), because NFR-USE-20 asks for at least 16 px Latin text outside grids, and the NFR wins
+ * over the 14 px of design system 3 (reported to tech-lead).
+ */
+:lang(en) {
+  --text-1: var(--text-latin-1);
+  --text-2: var(--text-latin-2);
+  --text-3: var(--text-latin-3);
+  --text-4: var(--text-latin-4);
+  --text-5: var(--text-latin-5);
+  --text-body: var(--text-latin-2);
+  --text-field: var(--text-latin-2);
+  --font-text: var(--font-latin);
+  --leading-text: var(--leading-latin);
+  --weight-strong: var(--font-weight-semibold);
+}
+
+:lang(ur) {
+  --text-1: var(--text-urdu-1);
+  --text-2: var(--text-urdu-2);
+  --text-3: var(--text-urdu-3);
+  --text-4: var(--text-urdu-4);
+  --text-5: var(--text-urdu-5);
+  --text-body: var(--text-urdu-1);
+
+  /* Text typed into a field. 18 px, as the boards draw it: at 20 px (design system 3, step 2)
+     Gulzar's tall letters reach the border of a 44 px field. Reported to tech-lead. */
+  --text-field: var(--text-urdu-1);
+  --font-text: var(--font-urdu);
+  --leading-text: var(--leading-urdu);
+
+  /* Gulzar has one weight. */
+  --weight-strong: var(--font-weight-normal);
+}

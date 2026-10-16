@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assist-truck-memory"
+description = "Enables the assist_truck_memory command without any pre-configured scope."
+commands.allow = ["assist_truck_memory"]
+
+[[permission]]
+identifier = "deny-assist-truck-memory"
+description = "Denies the assist_truck_memory command without any pre-configured scope."
+commands.deny = ["assist_truck_memory"]

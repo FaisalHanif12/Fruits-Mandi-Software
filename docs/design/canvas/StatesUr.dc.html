@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>States Urdu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gulzar&amp;family=Inter:wght@400;500;600;700&amp;family=Noto+Nastaliq+Urdu:wght@400;600&amp;display=block">
+<style>
+body{margin:0;background:#F6F4EF;color:#1C1F23;font-family:Gulzar,"Noto Nastaliq Urdu",serif}
+a{color:#1D3D6E}a:hover{color:#132A4D}
+.ur{font-family:Gulzar,"Noto Nastaliq Urdu",serif;line-height:1.9}
+.num{font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font:600 12px/1 Inter,sans-serif}
+.card{background:#FFFFFF;border:1px solid #D9D4C9;border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.cap{font-size:13px;font-weight:600;letter-spacing:.06em;color:#565C64;font-family:Inter,sans-serif;padding:10px 16px;border-bottom:1px solid #E6E1D7;direction:ltr;text-align:left}
+.sk{height:14px;border-radius:7px;background:#ECE8E0}
+.r{display:grid;grid-template-columns:110px minmax(0,1fr) 110px;align-items:center;height:48px;padding:0 16px;border-top:1px solid #EFEBE3}
+</style>
+</helmet>
+<div dir="rtl" style="width:1366px;height:768px;box-sizing:border-box;padding:32px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:24px;background:#F6F4EF">
+  <div class="card">
+    <div class="cap">1 · LOADING (after 300 ms only)</div>
+    <div style="padding:8px 0" aria-busy="true">
+      <div class="r"><div class="sk" style="width:80px"></div><div class="sk" style="width:60%"></div><div class="sk" style="width:70px;justify-self:end"></div></div>
+      <div class="r"><div class="sk" style="width:80px"></div><div class="sk" style="width:45%"></div><div class="sk" style="width:60px;justify-self:end"></div></div>
+      <div class="r"><div class="sk" style="width:80px"></div><div class="sk" style="width:52%"></div><div class="sk" style="width:76px;justify-self:end"></div></div>
+      <div class="r"><div class="sk" style="width:80px"></div><div class="sk" style="width:38%"></div><div class="sk" style="width:64px;justify-self:end"></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="cap">2 · EMPTY (says why, offers the next step)</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center">
+      <div style="width:56px;height:56px;border-radius:28px;background:#E6ECF5;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D3D6E" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3 3-5 6-5s6 2 6 5"></path><path d="M18 8v6M15 11h6"></path></svg></div>
+      <div class="ur" style="font-size:22px">ابھی کوئی گاہک نہیں</div>
+      <div class="ur" style="font-size:18px;color:#565C64">پہلا گاہک شامل کریں۔ نام انگریزی حروف میں بھی لکھ سکتے ہیں۔</div>
+      <button style="height:44px;padding:0 16px;border:0;border-radius:8px;background:#1D3D6E;color:#FFFFFF;display:inline-flex;align-items:center;gap:10px"><span class="ur" style="font-size:18px">نیا گاہک</span><span class="kbd" style="background:#2E5288;color:#FFFFFF">F2</span></button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="cap">3 · ERROR (plain words, what to do, reference number)</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center">
+      <div style="width:56px;height:56px;border-radius:28px;background:#FBEAE8;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#B3261E" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16v.5"></path></svg></div>
+      <div class="ur" style="font-size:22px;color:#B3261E">فہرست نہیں کھل سکی</div>
+      <div class="ur" style="font-size:18px;color:#565C64">دوبارہ کوشش کریں۔ مسئلہ رہے تو یہ نمبر بتائیں: <span class="num" style="font-size:15px;color:#1C1F23">E-20261010-0007</span></div>
+      <button style="height:44px;padding:0 16px;border:1px solid #8C8577;border-radius:8px;background:#FFFFFF"><span class="ur" style="font-size:18px">دوبارہ کوشش کریں</span></button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="cap">4 · DATA</div>
+    <div class="r ur" style="background:#EFECE5;border-top:0;height:44px;font-size:16px;color:#565C64"><span>کوڈ</span><span>نام</span><span style="text-align:end;direction:ltr">بقایا</span></div>
+    <div class="r ur" style="font-size:18px"><span class="num" style="font-size:15px;text-align:end">03040001</span><span style="padding-inline-start:12px">اکرم ٹول ٹیکس</span><span class="num" style="font-size:15px;text-align:end;color:#B3261E">2,880 <span class="ur" style="font-size:16px">بنام</span></span></div>
+    <div class="r ur" style="font-size:18px;background:#E6ECF5;outline:2px solid #2563C9;outline-offset:-2px"><span class="num" style="font-size:15px;text-align:end">03040002</span><span style="padding-inline-start:12px">ارشد ملتانی</span><span class="num" style="font-size:15px;text-align:end;color:#B3261E">18,684 <span class="ur" style="font-size:16px">بنام</span></span></div>
+    <div class="r ur" style="font-size:18px"><span class="num" style="font-size:15px;text-align:end">030110002</span><span style="padding-inline-start:12px">کریم</span><span class="num" style="font-size:15px;text-align:end;color:#1C1F23">10,160 <span class="ur" style="font-size:16px">جمع</span></span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":768}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

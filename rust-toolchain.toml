@@ -1,0 +1,5 @@
+# Pinned Rust toolchain (Tech Stack 2, plan 01 T1). rustup reads this file.
+[toolchain]
+channel = "1.99.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

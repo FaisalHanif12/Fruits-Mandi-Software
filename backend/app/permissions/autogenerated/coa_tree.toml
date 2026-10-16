@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-coa-tree"
+description = "Enables the coa_tree command without any pre-configured scope."
+commands.allow = ["coa_tree"]
+
+[[permission]]
+identifier = "deny-coa-tree"
+description = "Denies the coa_tree command without any pre-configured scope."
+commands.deny = ["coa_tree"]

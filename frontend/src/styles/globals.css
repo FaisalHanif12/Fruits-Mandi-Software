@@ -1,0 +1,193 @@
+/*
+ * Global styles. Direction comes from <html dir> only. Every rule uses logical properties
+ * (CLAUDE.md rule 8) and token values only (Code Standards F9). Fonts, sizes and line heights
+ * follow the language of each element through the per-script tokens in tokens.css.
+ */
+
+@import 'tailwindcss';
+@import './tokens.css';
+@import './fonts.css';
+@import '../shared/grid/grid.css';
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  line-height: var(--leading-text);
+}
+
+body {
+  margin: 0;
+  min-block-size: 100vh;
+}
+
+/* Visible focus on every interactive element (design system 5, NFR-USE-22, F28). */
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/*
+ * The list of a drop-down (Radix Select) hides its own scrollbar. Radix writes the same rule into
+ * an inline <style> element, which the production Content Security Policy (style-src 'self')
+ * refuses (D1+D2 review, finding 30). The rule is here instead, so the list looks the same
+ * whether the browser accepts that element or not.
+ */
+[data-radix-select-viewport] {
+  scrollbar-width: none;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Urdu words inside an English screen (the owner's name, an Urdu name beside an English one, a
+ * learned Urdu word). The type tokens follow the lang of the element that carries the type class,
+ * so a `lang="ur"` span inside English text used to inherit the Latin size and line height
+ * (16 px, 1.45), which cuts Nastaliq (NFR-USE-20: Urdu at least 18 px; NFR-URD-11: line height at
+ * least 1.8). This gives such a span the Urdu tokens of the same role. It sits in the base layer,
+ * so an element that has its own type class still wins. The Urdu app is not touched: its text is
+ * already Urdu all the way down. (D1+D2 final recheck, N1.)
+ */
+@layer base {
+  :lang(en) [lang='ur'] {
+    font-family: var(--font-text);
+    font-size: var(--text-body);
+    line-height: var(--leading-text);
+  }
+
+  /* Inside a bigger role, the Urdu word takes the same step of the Urdu scale. */
+  :lang(en) .type-title [lang='ur'] {
+    font-size: var(--text-5);
+  }
+
+  :lang(en) .type-lead [lang='ur'] {
+    font-size: var(--text-2);
+  }
+
+  :lang(en) .type-section [lang='ur'] {
+    font-size: var(--text-3);
+  }
+}
+
+/* Design system 7: no motion for people who ask for none. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0s;
+    animation-duration: 0s;
+  }
+}
+
+/* Type roles (design system 3). One class, the right font and size for each script. */
+@utility type-title {
+  font-family: var(--font-text);
+  font-size: var(--text-5);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+@utility type-lead {
+  font-family: var(--font-text);
+  font-size: var(--text-2);
+  line-height: var(--leading-text);
+}
+
+@utility type-body {
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  line-height: var(--leading-text);
+}
+
+/* Codes, numbers, phones, dates: Inter with equal-width digits (design system 3, F17). */
+@utility type-number {
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-latin-2);
+  line-height: var(--leading-latin);
+}
+
+/* Two thin lines, like the rule drawn under a total in a ledger. */
+@utility ledger-rule {
+  block-size: calc(var(--border-w) * 2 + var(--rule-gap));
+  border-block: var(--border-w) solid var(--color-primary);
+}
+
+/* Text in buttons and other controls: body size, semibold in English (design system 6). */
+@utility type-control {
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/*
+ * Key chip text (design system 6): the name of a key, such as F10 or Ctrl+K. Always Latin, so
+ * always Inter semibold, in both languages. The board draws it at 12 px, but NFR-USE-20 asks for
+ * at least 16 px Latin text outside grids, and the NFR wins, so it uses step 2 (16 px). Reported
+ * to tech-lead.
+ */
+@utility type-key {
+  font-family: var(--font-latin);
+  font-size: var(--text-latin-2);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-chip);
+}
+
+/*
+ * Words in a small label: the typing mode badge, the type of an account, "inactive". They are
+ * words, so they follow the language like all text: Urdu in Gulzar at 18 px with the Nastaliq line
+ * height (NFR-USE-20, NFR-URD-11), English in Inter at 16 px.
+ */
+@utility type-chip {
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/* Field labels (design system 3 and 6): body size; semibold in English, Gulzar's one weight in
+   Urdu. */
+@utility type-label {
+  font-family: var(--font-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/* Text typed into a field: Latin 16 px (design system 3 "Field text"), Urdu 18 px (boards). */
+@utility type-field {
+  font-family: var(--font-text);
+  font-size: var(--text-field);
+  line-height: var(--leading-text);
+}
+
+/* Section, card and dialog titles: step 3. */
+@utility type-section {
+  font-family: var(--font-text);
+  font-size: var(--text-3);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/*
+ * Codes, amounts, quantities and dates typed into a field (design system 6): Inter with
+ * equal-width digits, written left to right and set against the physical right edge
+ * (NFR-USE-19, Code Standards F17). direction: ltr plus text-align: end gives the right edge in
+ * both languages, so no physical keyword is needed.
+ */
+@utility type-number-field {
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-latin-2);
+  line-height: var(--leading-latin);
+  direction: ltr;
+  text-align: end;
+}
+
+/* Only colour and opacity move, at most 150 ms (design system 7). */
+@utility transition-calm {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: var(--motion-fast);
+}

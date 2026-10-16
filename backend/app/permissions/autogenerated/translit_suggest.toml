@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-translit-suggest"
+description = "Enables the translit_suggest command without any pre-configured scope."
+commands.allow = ["translit_suggest"]
+
+[[permission]]
+identifier = "deny-translit-suggest"
+description = "Denies the translit_suggest command without any pre-configured scope."
+commands.deny = ["translit_suggest"]

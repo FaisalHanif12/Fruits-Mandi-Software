@@ -1,0 +1,170 @@
+/*
+ * The entry grid look (design system 5 and 6, boards GridUr and GridEn). AG Grid's own CSS files
+ * are imported by agGridSetup.ts; this file restyles them from our tokens only (Code Standards
+ * F9). It needs two classes (.entry-grid.ag-theme-quartz) so it wins over the grid's file
+ * whichever loads last. Logical properties only (CLAUDE.md rule 8).
+ */
+
+.entry-grid.ag-theme-quartz {
+  --ag-font-family: var(--font-text);
+  --ag-font-size: var(--text-1);
+  --ag-background-color: var(--color-surface);
+  --ag-foreground-color: var(--color-ink);
+  --ag-header-background-color: var(--color-surface-sunken);
+  --ag-header-foreground-color: var(--color-ink-muted);
+  --ag-border-color: var(--color-border);
+  --ag-row-border-color: var(--color-border);
+  --ag-row-height: var(--control-h);
+  --ag-header-height: var(--control-h);
+  --ag-cell-horizontal-padding: var(--space-3);
+  --ag-border-radius: var(--radius-1);
+  --ag-wrapper-border-radius: var(--radius-3);
+  --ag-row-hover-color: transparent;
+  --ag-odd-row-background-color: var(--color-surface);
+  --ag-selected-row-background-color: var(--color-primary-soft);
+  --ag-input-focus-border-color: var(--color-focus);
+  --ag-input-border-color: var(--color-border-control);
+  --ag-auto-height-max-body-height: none;
+
+  /* A grid that is as tall as its rows is not given 150 px when it has one row. */
+  --ag-auto-height-min-body-height: var(--control-h);
+
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-3);
+  overflow: hidden;
+  color: var(--color-ink);
+}
+
+/* Header and cell text follow the language: Gulzar in Urdu, Inter in English. */
+.entry-grid .ag-header-cell-text {
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-text);
+}
+
+/* The grid centres cell text with its own line height (the row height less the border), which
+   also leaves Nastaliq its 1.9 (44 px against 18 px text, NFR-URD-11). */
+.entry-grid .ag-cell {
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+}
+
+/* Numbers, codes and dates: Inter, equal-width digits, written left to right and set against
+   the physical right edge in both languages (NFR-USE-19, F17). */
+.entry-grid .cell-num,
+.entry-grid .cell-num input {
+  direction: ltr;
+  text-align: end;
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-latin-1);
+}
+
+/* The heading of a number column: the same physical right edge as its figures, in both
+   languages, so a heading stands over its column (NFR-USE-19, F17). */
+.entry-grid .header-num .ag-header-cell-label {
+  direction: ltr;
+  justify-content: flex-end;
+}
+
+.entry-grid .header-num .ag-header-cell-text {
+  text-align: end;
+}
+
+/* The total row under the last row: sunken ground, the emphasis a total has (F19). */
+.entry-grid .ag-row-pinned,
+.entry-grid .ag-row-pinned .ag-cell {
+  background-color: var(--color-surface-sunken);
+  font-weight: var(--weight-strong);
+}
+
+/* A cell the app works out: read-only ground (design system 2). */
+.entry-grid .cell-calc {
+  background-color: var(--color-surface-readonly);
+}
+
+/* A cell the backend refused: a red outline inside the cell and the words as the tooltip. The
+   list of errors above the grid carries the words too, so colour is never alone (NFR-USE-12). */
+.entry-grid .cell-error {
+  outline: var(--border-w) solid var(--color-due);
+  outline-offset: calc(-1 * var(--border-w));
+  background-color: var(--color-due-soft);
+}
+
+/* A cell that only warns (a rate far from the average): amber outline, never the only signal
+   because the words are listed too (NFR-USE-12). */
+.entry-grid .cell-warn {
+  outline: var(--border-w) solid var(--color-warn);
+  outline-offset: calc(-1 * var(--border-w));
+  background-color: var(--color-warn-soft);
+}
+
+/* The rate hint, for example the last rate. Never saved (PRD FR-7.53). It is words with a
+   number in them, so it reads in the direction of the language, not like a number cell. */
+.entry-grid .cell-num.cell-hint {
+  direction: inherit;
+  text-align: start;
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+  color: var(--color-ink-placeholder);
+}
+
+/* A hint that is a number (the last rate) stays on the physical right edge like the figures. */
+.entry-grid .cell-num.cell-hint.cell-hint-number {
+  direction: ltr;
+  text-align: end;
+  font-family: var(--font-latin);
+  font-size: var(--text-latin-1);
+}
+
+/* A choice cell (ادھاری / نقدی) changes with Space or a click. */
+.entry-grid .cell-choice {
+  cursor: pointer;
+}
+
+/* A grid that must fit a 1024 px window (the بکری grids): the columns sit closer. */
+.entry-grid.entry-grid-fit.ag-theme-quartz {
+  --ag-cell-horizontal-padding: var(--space-2);
+}
+
+/* The row with focus, and the focused cell: always clearly visible (NFR-USE-22). */
+.entry-grid .ag-row-focus {
+  background-color: var(--color-row-current);
+}
+
+.entry-grid .ag-cell.ag-cell-focus:not(.ag-cell-range-selected) {
+  border: 0;
+  outline: calc(var(--focus-width) - var(--border-w)) solid var(--color-focus);
+  outline-offset: calc(var(--focus-width) * -1 + var(--border-w));
+}
+
+.entry-grid .ag-cell-inline-editing {
+  border: 0;
+  outline: calc(var(--focus-width) - var(--border-w)) solid var(--color-focus);
+  outline-offset: calc(var(--focus-width) * -1 + var(--border-w));
+  padding-inline: 0;
+}
+
+.entry-grid .ag-cell-inline-editing input {
+  padding-inline: var(--ag-cell-horizontal-padding);
+}
+
+/* A read-only list (masters, registers): a row that is switched off reads dimmer, and carries the
+   word "inactive" in its status column as well, so colour is never the only signal (NFR-USE-12). */
+.entry-grid .row-inactive .ag-cell {
+  color: var(--color-ink-muted);
+}
+
+/* A name in the other script (an Urdu name in the English app) reads in its own font and size. */
+.entry-grid .cell-lang {
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+  line-height: var(--leading-text);
+}
+
+/* A list fills the height its parent gives it, with room for a few rows at least. */
+.entry-grid.list-grid-fill {
+  block-size: 100%;
+  min-block-size: calc(var(--control-h) * 5);
+}

@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.1 (final baseline for build) |
-| Date | 10 October 2026 |
+| Version | 1.3 (Umar's changes of 11-10-2026 and 15-10-2026) |
+| Date | 15 October 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.1, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.5, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -188,8 +188,8 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | NFR-SEC-1 | Passwords | Stored only as a strong one-way hash (Argon2id). Minimum 6 characters. Never shown, never logged. |
 | NFR-SEC-2 | Login lockout | As PRD FR-8.2: after 5 wrong tries wait 1 minute, after 5 more wait 5 minutes, then 15 minutes each time |
 | NFR-SEC-3 | Idle lock | Locks after 15 minutes idle (setting). Unsaved work stays. |
-| NFR-SEC-4 | Roles enforced in the backend | Every action is checked against the user's role in the backend. Hiding a button is not enough. |
-| NFR-SEC-5 | Audit trail | Every change to money, rules, shares, users and settings is logged with who, when, old value, new value, reason. The log cannot be edited or deleted from the app. |
+| NFR-SEC-4 | Sign-in enforced in the backend | There is one user, the Owner, and no roles (PRD Section 2). Every command except first run, sign-in, recovery, app info and data status is refused by the backend unless the Owner is signed in and the app is not locked. Hiding a button is not enough. |
+| NFR-SEC-5 | Audit trail | Every change to money, rules, shares, the password and settings is logged with who, when, old value, new value, reason. The log cannot be edited or deleted from the app. |
 | NFR-SEC-6 | Tamper evidence | Each journal entry and each audit entry carries a keyed hash of its own content plus the previous entry's hash (a chain). The key is kept in Windows Credential Manager, not in the data file. If anyone changes journal or audit records outside the app without the key, the chain no longer matches and the app warns the Owner at the next check. Other tables are protected by the journal: every money table can be rebuilt and compared from the journal. |
 | NFR-SEC-7 | Secrets | Cloud keys and the backup encryption key are stored in Windows Credential Manager, never in plain files or the database |
 | NFR-SEC-8 | Data file protection | Recommended: Windows BitLocker on the laptop disk, so a stolen laptop does not expose the data. The app shows this as a setup tip. |
@@ -197,7 +197,7 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | NFR-SEC-10 | App lockdown | The screens can only call the backend commands they are allowed to. No access to files or the system outside what the app needs. |
 | NFR-SEC-11 | Signed updates | Updates are digitally signed. The app refuses an update that is not signed by us. |
 | NFR-SEC-12 | Recovery | Owner recovery code printed at setup. No "master password" exists anywhere. |
-| NFR-SEC-13 | Exports | Excel and PDF exports are allowed only for roles that can see that data |
+| NFR-SEC-13 | Exports | Excel and PDF exports need the signed-in Owner, like every other command (NFR-SEC-4) |
 
 ---
 
@@ -308,11 +308,12 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | NFR-URD-21 | English text is plain, professional English, with one fixed spelling per word (British spelling as used in Pakistan: Labour, Cheque). Mandi words use the PRD glossary's English column only. Reviewed by an English-literate reviewer and the Owner before release. |
 | NFR-URD-22 | Every text key exists in both languages. The build fails if any key is missing, empty or left untranslated in either language. |
 | NFR-URD-23 | Amounts in words are correct English for every whole-rupee amount from 0 to 10,00,00,00,000, in both groupings (PRD FR-19.7). Example: 19,316 = "Nineteen thousand three hundred sixteen rupees only". |
-| NFR-URD-24 | English-to-Urdu accuracy: on a fixed test list of 1,000 names typical of the mandi (people, firms, cities, items), the correct Urdu spelling is the first suggestion for at least 90% and among the 3 suggestions for at least 97%. The list is kept in the repository and grows with every wrong conversion reported. |
-| NFR-URD-25 | Urdu-to-English accuracy: on the same list, the suggested English name is accepted without change for at least 90%. |
+| NFR-URD-24 | English-to-Urdu accuracy (v1.2). The word list has at least 15,000 reviewed entries (PRD FR-7.27). On a fixed test list of 1,000 names typical of the mandi (people, firms, cities, items): for names in the word list, the correct Urdu spelling is the first suggestion for at least 95% and among the 3 suggestions for at least 99%; for names not in the word list (spelling rules only), the top-3 rate is reported on every build and must not drop below the last release. Every rules-only spelling is marked and confirmed before save (PRD FR-7.66), so a wrong spelling is never saved silently. The test list is kept in the repository and grows with every wrong conversion reported. **When (v1.3, Umar 15-10-2026):** the 15,000 entries and the 95% and 99% gates must be met before go-live (D5), using the old software's account names (about 1,572) and the Urdu reviewer's confirmed rows. Until then every build reports the numbers, and they must not drop. Example: on 13-10-2026 the list had 12,942 entries (8,212 from the team list and checked sources, 4,730 still waiting for review), first suggestion 92.0%, top 3 95.4%; the next build may not report less. |
+| NFR-URD-25 | Urdu-to-English accuracy: on the same list, the suggested English name is accepted without change for at least 90%. Like NFR-URD-24, the gate must be met before go-live (D5); until then the rate is reported on every build and must not drop (72.2% on 13-10-2026). |
 | NFR-URD-26 | A learned word (PRD FR-7.26) is used from the very next word typed, and survives restart, update and restore. |
 | NFR-URD-27 | The English font is installed with the app (works offline), with equal-width digits for number columns, under an open licence. |
 | NFR-URD-28 | Mixed text in English screens and prints keeps its order: an Urdu note inside an English print reads right-to-left, and the numbers around it stay correct. |
+| NFR-URD-29 | Urdu says exactly what English says (PRD FR-7.23). Each Urdu message is reviewed against its English message for the same meaning, the same numbers and the same business word from the glossary. Example: "ادھار رقم واپس ہو گئی" for "Money lent returned", never a looser phrase. Each pair records its reviewer (NFR-URD-4). |
 
 ---
 
@@ -361,7 +362,7 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | SCL, SPD | Automated timing tests on the reference hardware with 1,200,000 test sale lines |
 | REL | Pull the power cord during save (in a test machine), kill the app while typing, fill the disk, then check nothing is half-saved and drafts return |
 | BAK | Automated backup and restore round trip; compare all totals; restore on a clean second computer |
-| SEC | Role tests (munshi tries Owner actions), audit chain tamper test, check no plain secrets on disk |
+| SEC | Sign-in tests (every command refused before sign-in and while locked), audit chain tamper test, check no plain secrets on disk |
 | USE | 3 people who never saw the app try the PRD worked example; time them, count errors; test every supported size and scaling combination (NFR-USE-17) in both languages (NFR-USE-28) |
 | URD | Urdu reviewer and munshi read every screen and print; English reviewer and Owner read every English screen and print; automatic tests for amounts in words (both languages), letter-variant search, missing text keys, and the 1,000-name English-to-Urdu list (NFR-URD-24, NFR-URD-25) |
 | MNT | Code checks and coverage report in the build pipeline |
@@ -374,3 +375,5 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 |---|---|---|
 | 1.0 | 10-10-2026 | Pre-build drafts and reviews: Umar's requirements, analysis of the old software video, research, client review comments and full cross-document reviews. |
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
+| 1.2 | 12-10-2026 | PRD v1.2: one user, no roles (NFR-SEC-4, NFR-SEC-13, Section 11). Urdu accuracy: new NFR-URD-24 targets with a 15,000-word list and the spelling check; new NFR-URD-29. |
+| 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list size and the accuracy gates of NFR-URD-24 and NFR-URD-25 must be met before go-live (D5), not at the end of D2; until then the numbers are reported and must not drop. |

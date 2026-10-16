@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-split-freight"
+description = "Enables the bikri_split_freight command without any pre-configured scope."
+commands.allow = ["bikri_split_freight"]
+
+[[permission]]
+identifier = "deny-bikri-split-freight"
+description = "Denies the bikri_split_freight command without any pre-configured scope."
+commands.deny = ["bikri_split_freight"]

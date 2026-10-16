@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-coa-controls-list"
+description = "Enables the coa_controls_list command without any pre-configured scope."
+commands.allow = ["coa_controls_list"]
+
+[[permission]]
+identifier = "deny-coa-controls-list"
+description = "Denies the coa_controls_list command without any pre-configured scope."
+commands.deny = ["coa_controls_list"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-overview"
+description = "Enables the partners_overview command without any pre-configured scope."
+commands.allow = ["partners_overview"]
+
+[[permission]]
+identifier = "deny-partners-overview"
+description = "Denies the partners_overview command without any pre-configured scope."
+commands.deny = ["partners_overview"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-translit-pairs-remove"
+description = "Enables the translit_pairs_remove command without any pre-configured scope."
+commands.allow = ["translit_pairs_remove"]
+
+[[permission]]
+identifier = "deny-translit-pairs-remove"
+description = "Denies the translit_pairs_remove command without any pre-configured scope."
+commands.deny = ["translit_pairs_remove"]
