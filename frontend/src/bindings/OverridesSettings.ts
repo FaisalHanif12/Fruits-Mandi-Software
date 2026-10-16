@@ -2,8 +2,9 @@
 import type { CreditLimitMode } from './CreditLimitMode';
 
 /**
- * The two switches of Section 21 "Overrides" and "Checks". They start as: a typed commission
- * or لاگا is allowed (PRD FR-11.10 v1.5), and a credit limit warns (A18).
+ * The switches of Section 21 "Overrides" and "Checks". They start as: a typed commission or
+ * لاگا is allowed (PRD FR-11.10 v1.5), a credit limit warns (A18), and the rate check is on at
+ * 30% (PRD FR-7.55, E8; plan 12 team default).
  */
 export type OverridesSettings = {
   /**
@@ -15,4 +16,14 @@ export type OverridesSettings = {
    * Warn or block when a buyer is over his credit limit.
    */
   credit_limit_mode: CreditLimitMode;
+  /**
+   * Warn when a rate is far from the item's average of the last 7 days (PRD FR-7.55). Starts
+   * on. The warning never blocks a save.
+   */
+  rate_check_enabled: boolean;
+  /**
+   * How far, in percent, a rate may be above or below the average before the warning shows
+   * (1 to 1,000; starts at 30).
+   */
+  rate_check_percent: number;
 };

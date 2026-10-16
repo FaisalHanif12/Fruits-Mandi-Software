@@ -85,6 +85,18 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   onTyping?: (() => void) | undefined;
   /** Shown under the list's rows, inside the popup. */
   footer?: ReactNode;
+  /**
+   * The field opens with this text already typed and its list open: a picker cell of a grid that
+   * was started by a key (the key is the first letter, PRD FR-7.14).
+   */
+  initialText?: string | undefined;
+  /** The field opens with its full list open, nothing typed (Alt+↓ on a grid cell, FR-7.16). */
+  startOpen?: boolean | undefined;
+  /**
+   * Enter picked a record. Called instead of moving on to the next field of the form. A picker
+   * inside a grid cell uses it to finish the cell and go on to the next Enter stop (FR-7.14).
+   */
+  onEnterPicked?: (() => void) | undefined;
 }
 
 /** The sizes the style sheet gives the list, used when it cannot be read (tests have no CSS). */
@@ -118,14 +130,17 @@ export function PickerBase<H extends PickerHit>({
   resolveOnEnter,
   onTyping,
   footer,
+  initialText,
+  startOpen,
+  onEnterPicked,
 }: PickerBaseProps<H>) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const listId = useId();
   // The list element, kept in state so the scroll effect can read it without touching a ref in render.
   const [listEl, setListEl] = useState<HTMLUListElement | null>(null);
-  const { typed, setTyped: setTypedNow, readTyped } = usePickerText();
-  const [open, setOpen] = useState(false);
+  const { typed, setTyped: setTypedNow, readTyped } = usePickerText(initialText ?? null);
+  const [open, setOpen] = useState(initialText !== undefined || startOpen === true);
   const [focused, setFocused] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [{ rowPx, listPx }] = useState(readListSizes);
@@ -223,6 +238,12 @@ export function PickerBase<H extends PickerHit>({
   const first = Math.max(Math.floor(scrollTop / rowPx) - OVERSCAN_ROWS, 0);
   const last = Math.min(first + visibleRows + 2 * OVERSCAN_ROWS, hits.length);
 
+  // After Enter has picked: the next field of the form, or what the screen says (a grid cell).
+  const advance = (field: HTMLElement) => {
+    if (onEnterPicked !== undefined) onEnterPicked();
+    else focusNextField(field);
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (readOnly === true) return;
     if (matchesShortcut(event.nativeEvent, SHORTCUTS.openList)) {
@@ -274,7 +295,7 @@ export function PickerBase<H extends PickerHit>({
               return;
             }
             pick(best);
-            focusNextField(field);
+            advance(field);
           })
           .catch(() => undefined);
         return;
@@ -287,7 +308,7 @@ export function PickerBase<H extends PickerHit>({
       }
       pick(hit);
       // Enter picks and goes on to the next field, as it does in every field (FR-7.14).
-      focusNextField(event.currentTarget);
+      advance(event.currentTarget);
     }
   };
 

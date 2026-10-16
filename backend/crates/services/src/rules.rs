@@ -21,9 +21,9 @@ use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::{Paisa, Qty, line_value};
 use mandi_domain::core::rules::{
     ChargeSide, ChargeTest, ChargeType, ChargeValue, ChargesInput, ChargesSettings,
-    CreditLimitMode, DefaultCharge, ItemGroup, OverridesSettings, RuleInput, RuleRow, RuleSaved,
-    RuleTest, RuleTestInput, RulesFilter, check_combination, is_default_scope, level_of,
-    prepare_rule, rule_value,
+    CreditLimitMode, DEFAULT_RATE_CHECK_PERCENT, DefaultCharge, ItemGroup, OverridesSettings,
+    RATE_CHECK_PERCENT_RANGE, RuleInput, RuleRow, RuleSaved, RuleTest, RuleTestInput, RulesFilter,
+    check_combination, is_default_scope, level_of, prepare_rule, rule_value,
 };
 use mandi_domain::core::validate;
 use mandi_domain::rules::{Query, Rule, RuleSet, charge_amount, resolve};
@@ -690,15 +690,18 @@ pub fn set_charges(
 
 // ---- Settings: overrides and checks ----
 
-/// Reads the stored switches. A missing value means the starting position of PRD FR-11.10 v1.5:
-/// a typed commission or لاگا is allowed, and a credit limit warns. A value stored as `false`
-/// stays `false` (the Owner turned it off).
+/// Reads the stored switches. A missing value means the starting position of PRD FR-11.10 v1.5
+/// and FR-7.55: a typed commission or لاگا is allowed, a credit limit warns, and the rate check
+/// is on at 30%. A value stored as `false` stays `false` (the Owner turned it off), and a stored
+/// percent in range is kept as stored.
 fn overrides_from(value: Option<Value>) -> OverridesSettings {
-    let allow = value
-        .as_ref()
-        .and_then(|v| v.get("allow_line_override"))
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
+    let flag = |key: &str| {
+        value
+            .as_ref()
+            .and_then(|v| v.get(key))
+            .and_then(Value::as_bool)
+            .unwrap_or(true)
+    };
     let mode = match value
         .as_ref()
         .and_then(|v| v.get("credit_limit_mode"))
@@ -707,9 +710,20 @@ fn overrides_from(value: Option<Value>) -> OverridesSettings {
         Some("block") => CreditLimitMode::Block,
         _ => CreditLimitMode::Warn,
     };
+    let percent = value
+        .as_ref()
+        .and_then(|v| v.get("rate_check_percent"))
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+        // The range is checked when the Owner saves it; a value outside it can only come from
+        // outside the app, so the starting position is used (money agent review, N1).
+        .filter(|n| RATE_CHECK_PERCENT_RANGE.contains(n))
+        .unwrap_or(DEFAULT_RATE_CHECK_PERCENT);
     OverridesSettings {
-        allow_line_override: allow,
+        allow_line_override: flag("allow_line_override"),
         credit_limit_mode: mode,
+        rate_check_enabled: flag("rate_check_enabled"),
+        rate_check_percent: percent,
     }
 }
 
@@ -720,6 +734,8 @@ fn overrides_json(settings: &OverridesSettings) -> Value {
             CreditLimitMode::Warn => "warn",
             CreditLimitMode::Block => "block",
         },
+        "rate_check_enabled": settings.rate_check_enabled,
+        "rate_check_percent": settings.rate_check_percent,
     })
 }
 
@@ -733,16 +749,28 @@ pub fn overrides(ctx: &Context) -> Result<OverridesSettings, ServiceError> {
         .read(|conn| Ok(overrides_from(store::setting(conn, OVERRIDES_KEY)?)))
 }
 
-/// Saves the two switches, with an audit row (old and new value). Asking for the values it has
+/// Saves the switches, with an audit row (old and new value). Asking for the values it has
 /// writes nothing.
 ///
 /// # Errors
+/// `ERR_OUT_OF_RANGE` on `rate_check_percent` (values `min`, `max`) if it is not 1 to 1,000;
 /// `ServiceError::Db`.
 pub fn set_overrides(
     ctx: &Context,
     actor: &Actor,
     input: &OverridesSettings,
 ) -> Result<OverridesSettings, ServiceError> {
+    if !RATE_CHECK_PERCENT_RANGE.contains(&input.rate_check_percent) {
+        let bound = |n: u32| ErrorValue::Number(i64::from(n));
+        return Err(ServiceError::Rejected(vec![Rejection {
+            code: ErrorCode::ErrOutOfRange,
+            field: Some("rate_check_percent".to_owned()),
+            values: std::collections::BTreeMap::from([
+                ("min".to_owned(), bound(*RATE_CHECK_PERCENT_RANGE.start())),
+                ("max".to_owned(), bound(*RATE_CHECK_PERCENT_RANGE.end())),
+            ]),
+        }]));
+    }
     ctx.db.write(|tx| {
         let old = overrides_from(store::setting(tx, OVERRIDES_KEY)?);
         if old != *input {

@@ -8,6 +8,7 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
+  redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
 import { moveDevPathToHash } from './dev/hash-route';
@@ -87,6 +88,24 @@ const openingsRoute = createRoute({
   component: lazyRouteComponent(
     () => import('../features/masters/pages/OpeningsPage'),
     'OpeningsPage',
+  ),
+});
+
+// بکری: the area opens on the sale book (PRD FR-5.3). `/bikri` goes to it, so the main menu item and
+// the side menu item both lead to one screen (plan 12).
+const bikriRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri',
+  // The router's own way to send the user on: `redirect` is thrown from beforeLoad.
+  beforeLoad: () => redirect({ to: '/bikri/book' }),
+});
+
+const bikriBookRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/book',
+  component: lazyRouteComponent(
+    () => import('../features/bikri/pages/BikriBookPage'),
+    'BikriBookPage',
   ),
 });
 
@@ -221,7 +240,8 @@ const appRoutes = [
   masterListRoute,
   masterNewRoute,
   masterEditRoute,
-  comingSoonRoute('/bikri'),
+  bikriRoute,
+  bikriBookRoute,
   comingSoonRoute('/bikri/receipt'),
   comingSoonRoute('/bikri/payment'),
   advanceRoute,
@@ -255,6 +275,11 @@ const devRoutes = import.meta.env.DEV
         getParentRoute: () => rootRoute,
         path: '/dev/grid',
         component: lazyRouteComponent(() => import('./dev/GridPage'), 'GridPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/bikri',
+        component: lazyRouteComponent(() => import('./dev/BikriPage'), 'BikriPage'),
       }),
     ]
   : [];

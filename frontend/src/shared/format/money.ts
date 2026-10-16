@@ -98,3 +98,13 @@ export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string 
   const grouped = groupDigits(rupees, options.grouping);
   return negative ? `-${grouped}` : grouped;
 }
+
+/**
+ * The text of an amount that arrived as a plain JSON number inside the values of a backend error
+ * or warning (a name that ends in `_paisa`, for example `cash_after_paisa`; plan 12 contract 4).
+ * It is the same text as formatPaisa gives for the same amount. It lives here because this file
+ * is the only one that looks inside a Paisa (Code Standards F3).
+ */
+export function formatPaisaValue(value: number, options: FormatPaisaOptions): string {
+  return formatPaisa(value as unknown as Paisa, options);
+}

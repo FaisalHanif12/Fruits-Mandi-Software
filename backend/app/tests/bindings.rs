@@ -17,7 +17,7 @@ use mandi_app_lib::commands::{auth, day, settings, translit};
 use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::{accounts, masters, partners, rules, search, vouchers};
+use mandi_services::core::{accounts, bikri, cash, masters, partners, rules, search, vouchers};
 use ts_rs::{Config, TS};
 
 /// Every file the export must write. A new command type is added here too.
@@ -188,6 +188,46 @@ const EXPECTED_FILES: &[&str] = &[
     "PartnersCheckSharesInput.ts",
     "SharesCheck.ts",
     "PartnerOverviewRow.ts",
+    "BikriPreviewInput.ts",
+    "BikriDraft.ts",
+    "HeaderInput.ts",
+    "LotInput.ts",
+    "SaleInput.ts",
+    "PukhtaInput.ts",
+    "ChargeInput.ts",
+    "LineChargeInput.ts",
+    "FreightPaidBy.ts",
+    "PaymentType.ts",
+    "LotChargeMethod.ts",
+    "LineChargeMethod.ts",
+    "StoredMethod.ts",
+    "ChargeSource.ts",
+    "BikriPreview.ts",
+    "LotPreview.ts",
+    "LinePreview.ts",
+    "LineCalc.ts",
+    "LineCharge.ts",
+    "LotCharge.ts",
+    "LineWorkings.ts",
+    "SummaryTotals.ts",
+    "SummaryWorkings.ts",
+    "SplitPart.ts",
+    "CashCheck.ts",
+    "FieldError.ts",
+    "RuleLabel.ts",
+    "RateHint.ts",
+    "RateHintSource.ts",
+    "SplitFreightInput.ts",
+    "FreightLotInput.ts",
+    "FreightPart.ts",
+    "TruckMemoryInput.ts",
+    "TruckMemory.ts",
+    "TruckLast.ts",
+    "TruckSameDay.ts",
+    "TruckSuggestion.ts",
+    "SellerMemoryInput.ts",
+    "SellerMemory.ts",
+    "LastRateInput.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -297,6 +337,17 @@ fn export_bindings() {
     partners::PartnersCheckSharesInput::export_all(&cfg).unwrap();
     partners::SharesCheck::export_all(&cfg).unwrap();
     partners::PartnerOverviewRow::export_all(&cfg).unwrap();
+    bikri::BikriPreviewInput::export_all(&cfg).unwrap();
+    bikri::BikriPreview::export_all(&cfg).unwrap();
+    bikri::SplitFreightInput::export_all(&cfg).unwrap();
+    bikri::FreightPart::export_all(&cfg).unwrap();
+    bikri::TruckMemoryInput::export_all(&cfg).unwrap();
+    bikri::TruckMemory::export_all(&cfg).unwrap();
+    bikri::SellerMemoryInput::export_all(&cfg).unwrap();
+    bikri::SellerMemory::export_all(&cfg).unwrap();
+    bikri::LastRateInput::export_all(&cfg).unwrap();
+    bikri::RateHint::export_all(&cfg).unwrap();
+    cash::CashCheck::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();

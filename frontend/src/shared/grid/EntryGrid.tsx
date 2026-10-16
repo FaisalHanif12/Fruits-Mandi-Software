@@ -7,9 +7,14 @@
 //   new grid (`enableRtl` is fixed when a grid is created, CLAUDE.md Gotchas) from the store,
 //   and the focused cell is focused again.
 // - Calculated cells show text the screen got from the backend (`calc`). The grid never works
-//   out money (CLAUDE.md rule 1).
+//   out money (CLAUDE.md rule 1). What the backend sent (`calc`, `workings`, `cellErrors`) is read
+//   through a ref and the cells are refreshed, so a new answer never rebuilds the columns or
+//   interrupts a cell being typed in.
 // - Keys: gridKeys.ts. Esc: while a cell is being typed in, the grid answers the `edit` level of
 //   the Esc order (escape.ts).
+// - Picker cells (an account, an item) open the shared picker as a popup (PickerCellEditor).
+//   Choice cells (ادھاری / نقدی) change with Space or a click. A calculated cell can carry the ⓘ
+//   with the backend's working (PRD FR-7.43); Ctrl+I opens the same working from the cell.
 
 import { useLocalization } from '@fluent/react';
 import type {
@@ -21,18 +26,30 @@ import type {
   ValueGetterParams,
   ValueSetterParams,
 } from 'ag-grid-community';
-import { AgGridReact } from 'ag-grid-react';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { AgGridReact, type CustomCellRendererProps } from 'ag-grid-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useGrouping, type Grouping } from '../format';
-import { directionOf, useLanguage } from '../i18n';
+import { useLatest } from '../hooks/useLatest';
+import { directionOf, displayName, useLanguage } from '../i18n';
 import { useEscape } from '../keyboard';
+import { CalcInfo, CalcInfoAt, type Working } from '../ui/CalcInfo';
 import { displayText } from '../ui/NumberTextInput';
 import './agGridSetup';
-import { COLUMN_WIDTHS, isNumberLike } from './columnTypes';
+import { COLUMN_WIDTHS, FIT_MIN_WIDTHS, FIT_WEIGHTS, isNumberLike } from './columnTypes';
 import { isEditable } from './enterOrder';
 import type { EntryStore } from './entryStore';
 import { createGridKeyHandler } from './gridKeys';
-import { isReadOnlyType, type EntryColumn, type EntryRow } from './types';
+import { PickerCellEditor } from './PickerCellEditor';
+import {
+  isReadOnlyType,
+  type CellRef,
+  type EntryColumn,
+  type EntryRow,
+  type GridInterceptors,
+} from './types';
+
+type PerRow<T> = Readonly<Record<string, Readonly<Record<string, T>>>>;
+type KeyHandler = ReturnType<typeof createGridKeyHandler>;
 
 interface EntryGridProps {
   columns: readonly EntryColumn[];
@@ -40,7 +57,7 @@ interface EntryGridProps {
   /** The Fluent message ID of the grid's name, read by screen readers. */
   labelId: string;
   /** Calculated text per row and field, from the backend preview. Shown in `calc` cells. */
-  calc?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  calc?: PerRow<string>;
   /** Ctrl+D copies the cell from the line above (sale-line grids only). */
   copyAbove?: boolean;
   /** Ctrl+I on a calculated cell: show how it was worked out. */
@@ -52,66 +69,220 @@ interface EntryGridProps {
    * error look and the words as its tooltip; the screen lists them too, so colour is never the
    * only signal (NFR-USE-12).
    */
-  cellErrors?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  cellErrors?: PerRow<string>;
+  /** What only warns, per row and field: the amber look and the words as the tooltip. */
+  cellWarnings?: PerRow<string>;
   /**
    * 'fill': the parent gives the grid its height and only visible rows are drawn. 'auto': the
    * grid is as tall as its rows and draws them all (short grids, the development page, tests).
    */
   heightMode?: 'fill' | 'auto';
+  /**
+   * The columns share the free width of the grid down to a least width each, so the grid never
+   * scrolls sideways at the smallest window (NFR-USE-15). Default: fixed widths per type.
+   */
+  fit?: boolean;
+  /** The backend's working of a calculated amount, per row and field. Gives the cell its ⓘ. */
+  workings?: PerRow<Working>;
+  /** What the screen adds to Enter and ↑ (moving between grids and panels). */
+  interceptors?: GridInterceptors;
+  /** The account the screen's party card would show now, while a picker cell is open. */
+  onCardAccount?: (accountId: number | null) => void;
 }
 
-function toColDef(
+/** What the backend sent, read by the cells when they draw. Kept apart from the column setup. */
+interface Live {
+  calc: PerRow<string> | undefined;
+  workings: PerRow<Working> | undefined;
+  cellErrors: PerRow<string> | undefined;
+  cellWarnings: PerRow<string> | undefined;
+}
+
+/** The word of a choice column for a value, or undefined when it has no word. */
+function choiceLabel(
   column: EntryColumn,
-  headerName: string,
-  grouping: Grouping,
-  onCommit: (rowId: string, field: string, text: string) => void,
-  calc: EntryGridProps['calc'],
-  cellErrors: EntryGridProps['cellErrors'],
-): ColDef<EntryRow> {
+  value: string,
+  word: (id: string) => string,
+): string | undefined {
+  const choice = column.choices?.find((candidate) => candidate.value === value);
+  return choice === undefined ? undefined : word(choice.labelId);
+}
+
+interface ColumnEnv {
+  grouping: Grouping;
+  language: ReturnType<typeof useLanguage>;
+  word: (id: string) => string;
+  store: EntryStore;
+  /** The newest answer of the backend, read when a cell draws. */
+  live: () => Live;
+  fit: boolean;
+  getKeyHandler: () => KeyHandler;
+  onCardAccount: ((accountId: number | null) => void) | undefined;
+  cycle: (cell: CellRef) => void;
+}
+
+function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
+  const { grouping, language, word, store, live, fit } = env;
   const numberLike = isNumberLike(column.type);
   const grouped = column.type === 'money' || column.type === 'qty' || column.type === 'rate';
-  return {
+  const readOnly = isReadOnlyType(column.type);
+  const calcOf = (row: EntryRow): string => live().calc?.[row.rowId]?.[column.field] ?? '';
+  const errorOf = (row: EntryRow | undefined): string | undefined =>
+    row === undefined ? undefined : live().cellErrors?.[row.rowId]?.[column.field];
+  const warningOf = (row: EntryRow | undefined): string | undefined =>
+    row === undefined ? undefined : live().cellWarnings?.[row.rowId]?.[column.field];
+  // The grey hint of an empty cell: written in the column, or sent by the backend (the last rate).
+  const hintOf = (row: EntryRow): string | undefined =>
+    column.hintFromCalc === true ? calcOf(row) || undefined : column.placeholder?.(row);
+  const sizes = fit
+    ? {
+        flex: FIT_WEIGHTS[column.type],
+        minWidth: column.minWidth ?? FIT_MIN_WIDTHS[column.type],
+        // A heading that does not fit goes on a second line, and the header grows to hold it.
+        wrapHeaderText: true,
+        autoHeaderHeight: true,
+      }
+    : column.grow === true
+      ? { width: COLUMN_WIDTHS[column.type], flex: 1, minWidth: COLUMN_WIDTHS[column.type] }
+      : { width: COLUMN_WIDTHS[column.type] };
+
+  const base: ColDef<EntryRow> = {
     colId: column.field,
-    headerName,
-    width: COLUMN_WIDTHS[column.type],
-    ...(column.grow === true ? { flex: 1, minWidth: COLUMN_WIDTHS[column.type] } : {}),
+    headerName: word(column.headerId),
+    ...sizes,
     resizable: false,
     sortable: false,
     suppressMovable: true,
     editable: (params) => params.data !== undefined && isEditable(column, params.data),
+    cellClass: numberLike ? ['cell-num'] : [],
+    // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
+    headerClass: numberLike ? ['header-num'] : [],
+    tooltipValueGetter: (params) => {
+      const row = params.data;
+      if (row === undefined) return undefined;
+      const error = errorOf(row) ?? warningOf(row);
+      if (error !== undefined) return error;
+      if ((row.typed[column.field] ?? '') === '' && column.hintTooltipField !== undefined) {
+        return live().calc?.[row.rowId]?.[column.hintTooltipField];
+      }
+      // Words the screen shows can be longer than their cell: the tooltip holds them in full.
+      if (column.type === 'label') return calcOf(row) || undefined;
+      return undefined;
+    },
+    cellClassRules: {
+      'cell-error': (params) => errorOf(params.data) !== undefined,
+      'cell-warn': (params) =>
+        errorOf(params.data) === undefined && warningOf(params.data) !== undefined,
+      'cell-calc': () => readOnly,
+      'cell-hint': (params) =>
+        params.data !== undefined &&
+        (params.value === '' || params.value === undefined) &&
+        hintOf(params.data) !== undefined,
+      'cell-hint-number': () => column.hintIsNumber === true,
+    },
+  };
+
+  if (column.type === 'picker') {
+    const spec = column.picker;
+    return {
+      ...base,
+      valueGetter: (params: ValueGetterParams<EntryRow>) => {
+        const record = params.data?.picked?.[column.field];
+        return record === undefined ? '' : displayName(record, language);
+      },
+      // The editor writes the record to the store itself; the grid has nothing to set.
+      valueSetter: () => false,
+      cellEditor: PickerCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
+      cellEditorParams:
+        spec === undefined
+          ? undefined
+          : {
+              spec,
+              store,
+              field: column.field,
+              getKeyHandler: env.getKeyHandler,
+              onCardAccount: env.onCardAccount,
+            },
+      tooltipValueGetter: (params) => {
+        const error = errorOf(params.data) ?? warningOf(params.data);
+        if (error !== undefined) return error;
+        const record = params.data?.picked?.[column.field];
+        return record === undefined ? undefined : `${record.code} ${displayName(record, language)}`;
+      },
+    };
+  }
+
+  if (column.type === 'choice') {
+    const shown = (row: EntryRow): string => {
+      const typed = row.typed[column.field] ?? '';
+      return typed === '' ? calcOf(row) : typed;
+    };
+    return {
+      ...base,
+      editable: false,
+      valueGetter: (params: ValueGetterParams<EntryRow>) =>
+        params.data === undefined ? '' : shown(params.data),
+      valueFormatter: (params: ValueFormatterParams<EntryRow>) =>
+        choiceLabel(column, typeof params.value === 'string' ? params.value : '', word) ?? '',
+      cellClass: ['cell-choice'],
+      onCellClicked: (event) => {
+        if (event.data === undefined || !isEditable(column, event.data)) return;
+        env.cycle({ rowId: event.data.rowId, field: column.field });
+      },
+    };
+  }
+
+  // A calculated cell, or an editable cell that shows a calculated value while it is empty.
+  const explainable = column.explain === true && (readOnly || column.showsCalc === true);
+  return {
+    ...base,
     valueGetter: (params: ValueGetterParams<EntryRow>) => {
       if (params.data === undefined) return '';
-      if (isReadOnlyType(column.type)) return calc?.[params.data.rowId]?.[column.field] ?? '';
+      if (readOnly) return calcOf(params.data);
       return params.data.typed[column.field] ?? '';
     },
     // The text goes to the store. Returning false tells the grid the value did not change in
     // its own data, so the row is redrawn from the store (the one source of truth).
     valueSetter: (params: ValueSetterParams<EntryRow>) => {
-      onCommit(params.data.rowId, column.field, String(params.newValue ?? ''));
+      store.getState().updateTyped(params.data.rowId, column.field, String(params.newValue ?? ''));
       return false;
     },
     valueFormatter: (params: ValueFormatterParams<EntryRow>) => {
       const value = typeof params.value === 'string' ? params.value : '';
       if (value === '' && params.data !== undefined) {
-        return column.placeholder?.(params.data) ?? '';
+        if (column.showsCalc === true) return calcOf(params.data);
+        return hintOf(params.data) ?? '';
       }
       return grouped ? displayText(value, grouping) : value;
     },
-    cellClass: numberLike ? ['cell-num'] : [],
-    // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
-    headerClass: numberLike ? ['header-num'] : [],
-    tooltipValueGetter: (params) =>
-      params.data === undefined ? undefined : cellErrors?.[params.data.rowId]?.[column.field],
-    cellClassRules: {
-      'cell-error': (params) =>
-        params.data !== undefined && cellErrors?.[params.data.rowId]?.[column.field] !== undefined,
-      'cell-calc': () => isReadOnlyType(column.type),
-      'cell-hint': (params) =>
-        params.data !== undefined &&
-        (params.value === '' || params.value === undefined) &&
-        column.placeholder?.(params.data) !== undefined,
-    },
+    ...(explainable
+      ? {
+          cellRenderer: (params: CustomCellRendererProps<EntryRow>) => {
+            const row = params.data;
+            const working =
+              row === undefined ? undefined : live().workings?.[row.rowId]?.[column.field];
+            const text = params.valueFormatted ?? String(params.value ?? '');
+            return (
+              <span className="flex items-center justify-between gap-1">
+                {working === undefined ? <span /> : <CalcInfo working={working} inCell />}
+                <span>{text}</span>
+              </span>
+            );
+          },
+        }
+      : {}),
   };
+}
+
+/** The element of a cell, found by the row ID and the field, inside one grid. */
+function cellElement(root: HTMLElement | null, cell: CellRef): HTMLElement | null {
+  return (
+    root?.querySelector<HTMLElement>(
+      `.ag-row[row-id="${CSS.escape(cell.rowId)}"] .ag-cell[col-id="${CSS.escape(cell.field)}"]`,
+    ) ?? null
+  );
 }
 
 function GridInner({
@@ -123,7 +294,12 @@ function GridInner({
   onExplain,
   fixedRows,
   cellErrors,
+  cellWarnings,
   heightMode = 'fill',
+  fit = false,
+  workings,
+  interceptors,
+  onCardAccount,
 }: EntryGridProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -131,6 +307,13 @@ function GridInner({
   const grouping = useGrouping();
   const rows = useRowsOf(store);
   const apiRef = useRef<GridApi<EntryRow> | null>(null);
+  // The element of the grid, as state, so the working of a cell can be opened next to its cell.
+  const [root, setRoot] = useState<HTMLDivElement | null>(null);
+  const [ready, setReady] = useState(false);
+  // The cell whose working is open (Ctrl+I), and the element the box opens next to.
+  const [explaining, setExplaining] = useState<{ cell: CellRef; anchor: HTMLElement } | null>(null);
+
+  const live = useLatest<Live>({ calc, workings, cellErrors, cellWarnings });
 
   // Esc while typing in a cell cancels the typing and keeps the old value (PRD FR-7.18).
   useEscape(
@@ -149,6 +332,32 @@ function GridInner({
     [],
   );
 
+  const cycle = useMemo(
+    () => (cell: CellRef) => {
+      const column = columns.find((candidate) => candidate.field === cell.field);
+      const choices = column?.choices;
+      const row = store.getState().rows.find((candidate) => candidate.rowId === cell.rowId);
+      if (choices === undefined || choices.length === 0 || row === undefined) return;
+      const typed = row.typed[cell.field] ?? '';
+      const shown = typed === '' ? (live().calc?.[cell.rowId]?.[cell.field] ?? '') : typed;
+      const at = choices.findIndex((choice) => choice.value === shown);
+      const next = choices[(at + 1) % choices.length];
+      if (next !== undefined) store.getState().updateTyped(cell.rowId, cell.field, next.value);
+    },
+    [columns, store, live],
+  );
+
+  const explain = useMemo(
+    () => (cell: CellRef) => {
+      const anchor = cellElement(root, cell);
+      if (anchor !== null && live().workings?.[cell.rowId]?.[cell.field] !== undefined) {
+        setExplaining({ cell, anchor });
+      }
+      onExplain?.(cell);
+    },
+    [onExplain, root, live],
+  );
+
   const keyHandler = useMemo(
     () =>
       createGridKeyHandler({
@@ -157,24 +366,30 @@ function GridInner({
         direction,
         copyAbove: copyAbove ?? false,
         fixedRows: fixedRows ?? false,
-        ...(onExplain === undefined ? {} : { onExplain }),
+        onExplain: explain,
+        cycleChoice: cycle,
+        ...(interceptors === undefined ? {} : { interceptors }),
       }),
-    [store, columns, direction, copyAbove, onExplain, fixedRows],
+    [store, columns, direction, copyAbove, explain, fixedRows, cycle, interceptors],
   );
+  const getKeyHandler = useLatest(keyHandler);
 
   const columnDefs = useMemo(
     () =>
       columns.map((column) =>
-        toColDef(
-          column,
-          l10n.getString(column.headerId),
+        toColDef(column, {
           grouping,
-          store.getState().updateTyped,
-          calc,
-          cellErrors,
-        ),
+          language,
+          word: (id) => l10n.getString(id),
+          store,
+          live,
+          fit,
+          getKeyHandler,
+          onCardAccount,
+          cycle,
+        }),
       ),
-    [columns, l10n, grouping, store, calc, cellErrors],
+    [columns, l10n, grouping, language, store, fit, onCardAccount, cycle, live, getKeyHandler],
   );
 
   const defaultColDef = useMemo<ColDef<EntryRow>>(
@@ -182,20 +397,28 @@ function GridInner({
     [keyHandler],
   );
 
-  // After a row is added or removed, focus the cell the key asked for, once the rows are drawn.
+  // A new answer from the backend: the cells read it again. Editing is not interrupted.
+  useLayoutEffect(() => {
+    apiRef.current?.refreshCells({ force: true });
+  }, [calc, workings, cellErrors, cellWarnings]);
+
+  // After a key or the screen asked for a cell, focus it once the rows are drawn.
+  const pendingFocus = store((state) => state.pendingFocus);
   useEffect(() => {
-    const pending = store.getState().pendingFocus;
     const api = apiRef.current;
-    if (pending === null || api === null) return;
+    if (pendingFocus === null || api === null) return;
     store.getState().setPendingFocus(null);
     const rowIndex =
-      pending.rowIndex === 'last' ? rows.length - 1 : Math.min(pending.rowIndex, rows.length - 1);
-    api.setFocusedCell(rowIndex, pending.field);
+      pendingFocus.rowIndex === 'last'
+        ? rows.length - 1
+        : Math.min(pendingFocus.rowIndex, rows.length - 1);
+    api.setFocusedCell(rowIndex, pendingFocus.field);
     api.ensureIndexVisible(rowIndex);
-  }, [rows, store]);
+  }, [pendingFocus, rows, store, ready]);
 
   const onGridReady = (event: GridReadyEvent<EntryRow>) => {
     apiRef.current = event.api;
+    setReady(true);
     // A new grid (for example after a language switch) focuses the cell that had focus.
     const focus = store.getState().focus;
     const rowIndex =
@@ -211,12 +434,26 @@ function GridInner({
       store.getState().setFocus({ rowId: row.rowId, field: event.column.getColId() });
   };
 
+  const explainedWorking =
+    explaining === null ? undefined : workings?.[explaining.cell.rowId]?.[explaining.cell.field];
+
   return (
     <div
-      className="entry-grid ag-theme-quartz"
+      ref={setRoot}
+      className={`entry-grid ag-theme-quartz ${fit ? 'entry-grid-fit' : ''}`}
       role="group"
       aria-label={l10n.getString(labelId)}
       dir={direction}
+      // Focus went to another part of the screen (the other grid, a field): this grid no longer
+      // shows a focused cell, so only one thing on the screen looks focused (NFR-USE-22). The cell
+      // is remembered in the store. Focus in the popup of a cell being typed in is not leaving.
+      onBlur={(event) => {
+        const next = event.relatedTarget;
+        if (!(next instanceof Element) || event.currentTarget.contains(next)) return;
+        if (next.closest('.ag-popup') !== null) return;
+        if ((apiRef.current?.getEditingCells().length ?? 0) > 0) return;
+        apiRef.current?.clearFocusedCell();
+      }}
     >
       <AgGridReact<EntryRow>
         theme="legacy"
@@ -231,9 +468,21 @@ function GridInner({
         suppressMovableColumns
         tooltipShowDelay={300}
         stopEditingWhenCellsLoseFocus
+        // The list of a picker cell must be able to hang below a short grid, so popups are drawn
+        // on the page and not inside the grid, which clips what leaves it.
+        popupParent={document.body}
         onGridReady={onGridReady}
         onCellFocused={onCellFocused}
       />
+      {explaining !== null && explainedWorking !== undefined ? (
+        <CalcInfoAt
+          working={explainedWorking}
+          anchor={explaining.anchor}
+          onClose={() => {
+            setExplaining(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

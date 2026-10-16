@@ -2,6 +2,7 @@
 export {
   comparePaisa,
   formatPaisa,
+  formatPaisaValue,
   groupDigits,
   type FormatPaisaOptions,
   type Grouping,

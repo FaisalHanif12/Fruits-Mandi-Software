@@ -18,6 +18,10 @@ interface PickerProps extends FieldControlProps {
   placeholder?: string | undefined;
   /** Called with the typed text on F4 and from the button of an empty result. Leave out to hide both. */
   onAddNew?: ((text: string) => void) | undefined;
+  /** For a picker in a grid cell (see PickerBase). */
+  initialText?: string | undefined;
+  startOpen?: boolean | undefined;
+  onEnterPicked?: (() => void) | undefined;
 }
 
 export function Picker({ scope, ...rest }: PickerProps) {

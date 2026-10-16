@@ -560,8 +560,35 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         ("partners_overview", json!({}), true),
         (
+            "bikri_preview",
+            json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] } } }),
+            true,
+        ),
+        (
+            "bikri_split_freight",
+            json!({ "input": { "total_freight": "1,000",
+                "lots": [{ "key": "a", "qty_received": "30" }, { "key": "b", "qty_received": "20" }] } }),
+            true,
+        ),
+        (
+            "assist_truck_memory",
+            json!({ "input": { "truck_no": "LES", "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "assist_seller_memory",
+            json!({ "input": { "seller_account_id": 1 } }),
+            true,
+        ),
+        (
+            "assist_last_rate",
+            json!({ "input": { "item_id": 1, "packing_id": 1, "date": "10-10-2026" } }),
+            true,
+        ),
+        (
             "settings_set_overrides",
-            json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn" } }),
+            json!({ "input": { "allow_line_override": false, "credit_limit_mode": "warn",
+                "rate_check_enabled": true, "rate_check_percent": 30 } }),
             true,
         ),
         (
@@ -1286,4 +1313,171 @@ fn the_partners_commands_work_through_the_ipc() {
         "50,000 rupees in paisa"
     );
     assert_eq!(rows[0]["today_income_paisa"], 0);
+}
+
+#[test]
+fn the_bikri_commands_work_through_the_ipc() {
+    // Plan 12: Event 1 of PRD 4.4 typed as text, answered in paisa, and the memories.
+    let h = Harness::new();
+    h.set_up_and_login();
+    let master = |kind: &str, ur: &str, en: &str, extra: Value| -> i64 {
+        let mut input = json!({ "kind": kind, "id": null, "version": null, "code": "",
+            "name_ur": ur, "name_en": en, "confirmed_rules_words": [] });
+        for (key, value) in extra.as_object().unwrap() {
+            input[key] = value.clone();
+        }
+        h.ok("masters_save", json!({ "input": input }))["id"]
+            .as_i64()
+            .unwrap()
+    };
+    let account = |kind: &str, ur: &str, en: &str| -> i64 {
+        h.ok(
+            "accounts_save",
+            json!({ "input": { "id": null, "version": null, "account_type": kind, "control_id": null,
+                "code": "", "name_ur": ur, "name_en": en, "confirmed_rules_words": [],
+                "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null, "adda_id": null,
+                "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
+                "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
+                "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
+                "collector_staff_id": null, "collection_weekday": null, "is_active": true,
+                "note": "" } }),
+        )["id"]
+            .as_i64()
+            .unwrap()
+    };
+    let rahim = account("seller", "رحیم", "Rahim");
+    let akram = account("buyer", "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    let arshad = account("buyer", "ارشد ملتانی", "Arshad Multani");
+    let banana = master(
+        "item",
+        "کیلا",
+        "Banana",
+        json!({ "item_group": "fruit", "default_packing_id": null, "sold_by": "unit" }),
+    );
+    let packing = master("packing", "پیٹی", "Box", json!({ "approx_kg": "" }));
+    let mut partner_ids = Vec::new();
+    for (ur, en) in [("الف", "Partner A"), ("ب", "Partner B"), ("ج", "Partner C")] {
+        let row = h.ok(
+            "partners_create",
+            json!({ "input": { "name_ur": ur, "name_en": en, "opening_capital": null,
+                "confirmed_rules_words": [] } }),
+        );
+        partner_ids.push(row["id"].as_i64().unwrap());
+    }
+    h.ok(
+        "partners_set_shares",
+        json!({ "input": { "effective_from": "10-10-2026", "shares": [
+            { "partner_id": partner_ids[0], "share": "40" },
+            { "partner_id": partner_ids[1], "share": "30" },
+            { "partner_id": partner_ids[2], "share": "30" } ] } }),
+    );
+
+    let sale = |key: &str, buyer: i64, qty: &str, rate: &str| {
+        json!({ "key": key, "buyer_account_id": buyer, "pukhta": null, "qty": qty, "weight": null,
+            "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
+            "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
+    };
+    let event1 = json!({ "input": { "draft": {
+        "header": { "entry_date": "10-10-2026", "bill_date": "", "book": null, "truck_no": "LES-1234",
+            "zamindar_account_id": rahim, "adda_id": null, "driver_name": null, "driver_phone": null,
+            "total_freight": null, "store_id": null, "note": null },
+        "lots": [{ "key": "lot-1", "seller_account_id": rahim, "pukhta": null, "item_id": banana,
+            "packing_id": packing, "marka_id": null, "store_id": null, "qty_received": "50",
+            "weight_received": null, "freight": "3,000", "freight_paid_by": "firm",
+            "labour": { "method": "per_unit", "value": "5" },
+            "munshiana": { "method": "manual", "value": "50" },
+            "phone": { "method": "manual", "value": "20" },
+            "cash_paid": "5,000", "store_rent": null, "adjust_advance": true,
+            "sales": [sale("s-1", akram, "20", "600"), sale("s-2", arshad, "30", "580")] }]
+    } } });
+    let p = h.ok("bikri_preview", event1);
+    assert_eq!(p["errors"], json!([]), "{p}");
+    assert_eq!(p["warnings"], json!([]));
+    assert_eq!(p["allow_line_override"], true);
+    // Money is paisa in plain JSON numbers: 19,316 rupees net, 31,564 of buyer bills.
+    assert_eq!(p["summary"]["net"], 1_931_600);
+    assert_eq!(p["summary"]["buyer_credit"], 3_156_400);
+    assert_eq!(p["summary"]["shared_income"], 394_800);
+    let line = &p["lots"][0]["lines"][0];
+    assert_eq!(line["calc"]["buyer_total"], 1_288_000);
+    assert_eq!(
+        line["calc"]["seller_comm"]["working"]["message_id"],
+        "working-percent"
+    );
+    assert_eq!(line["calc"]["seller_comm"]["source"], "default");
+    assert_eq!(
+        p["lots"][0]["lines"][0]["rate_hint"],
+        Value::Null,
+        "the first line has no hint"
+    );
+    assert_eq!(
+        p["lots"][0]["lines"][1]["rate_hint"],
+        json!({ "rate_paisa": 60_000, "source": "this_bikri", "date": "2026-10-10" }),
+        "the second line is shown the rate of the first"
+    );
+    let split: Vec<i64> = p["split"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["income_paisa"].as_i64().unwrap())
+        .collect();
+    assert_eq!(split, [158_000, 118_400, 118_400]);
+    // No cash was put in this database, so Event 1 takes cash below zero and asks.
+    assert_eq!(p["cash"]["cash_after_paisa"], -500_000);
+    assert_eq!(p["cash"]["needs_confirm"], true);
+
+    // The freight split (C17) and its error shape.
+    let parts = h.ok(
+        "bikri_split_freight",
+        json!({ "input": { "total_freight": "1,000",
+            "lots": [{ "key": "a", "qty_received": "30" }, { "key": "b", "qty_received": "20" }] } }),
+    );
+    assert_eq!(
+        parts,
+        json!([{ "key": "a", "freight_paisa": 60_000 }, { "key": "b", "freight_paisa": 40_000 }])
+    );
+    let bad = h
+        .call(
+            "bikri_split_freight",
+            json!({ "input": { "total_freight": "10.5", "lots": [{ "key": "a", "qty_received": "30" }] } }),
+        )
+        .unwrap_err();
+    assert_eq!(bad["errors"][0]["code"], "ERR_DECIMALS_NOT_ALLOWED");
+    assert_eq!(bad["errors"][0]["field"], "total_freight");
+
+    // The memories read nothing yet.
+    let truck = h.ok(
+        "assist_truck_memory",
+        json!({ "input": { "truck_no": "LES", "date": "10-10-2026" } }),
+    );
+    assert_eq!(
+        truck,
+        json!({ "last": null, "same_day": null, "suggestions": [] })
+    );
+    let seller = h.ok(
+        "assist_seller_memory",
+        json!({ "input": { "seller_account_id": rahim } }),
+    );
+    assert_eq!(
+        seller,
+        json!({ "item_id": null, "packing_id": null, "marka_id": null, "from_last_lot": false })
+    );
+    assert_eq!(
+        h.code(
+            "assist_seller_memory",
+            json!({ "input": { "seller_account_id": akram } })
+        ),
+        "ERR_NOT_A_SELLER"
+    );
+    assert_eq!(
+        h.ok(
+            "assist_last_rate",
+            json!({ "input": { "item_id": banana, "packing_id": packing, "date": "10-10-2026" } })
+        ),
+        Value::Null
+    );
+    // The new settings fields start on.
+    let overrides = h.ok("settings_get_overrides", json!({}));
+    assert_eq!(overrides["rate_check_enabled"], true);
+    assert_eq!(overrides["rate_check_percent"], 30);
 }

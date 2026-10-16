@@ -217,3 +217,51 @@ err-nothing-to-close = Every day up to today is already closed, so there is no d
 err-rule-not-allowed = This combination is not allowed for a rule. Choose a charge and a method from the lists, and a group only when no party or { -qism-maal } is chosen. The default rates are changed in Settings, Charges.
 # review: pending
 err-date-range = The last date is before the first date. Enter a last date on or after the first date.
+
+## The sale screen (plan 12). Warnings use the same kind of message.
+
+# PRD FR-12.6. A line sells more than the lot has left.
+# review: pending
+err-qty-exceeds-lot = The quantity is more than the lot has left. Only { $available } { -nag } are left.
+# PRD FR-11.10. The setting is off.
+# review: pending
+err-override-not-allowed = Changing the { -commission } or { -laga } on a line is switched off. The Owner can switch it on in Settings.
+# PRD FR-12.4. $limit and $would_owe are amounts in rupees.
+# review: pending
+err-credit-limit-exceeded = This sale takes the buyer's balance to { $would_owe }, which is over his credit limit of { $limit }.
+# review: pending
+err-seller-required = Choose the seller of this lot.
+# review: pending
+err-buyer-required = Choose the buyer of this line.
+# PRD FR-13.2.
+# review: pending
+err-pukhta-name-required = A name is required for { -pukhta-khata }.
+# PRD FR-13.2.
+# review: pending
+err-pukhta-phone-required = A phone number is required for this { -pukhta-khata } person.
+# PRD FR-12.8.
+# review: pending
+err-no-lots = Add at least one lot.
+# PRD FR-12.8.
+# review: pending
+err-no-sale-lines = Add at least one sale line.
+# PRD E23.
+# review: pending
+err-weight-required = Enter the weight in kilograms. This item is sold by weight.
+# PRD FR-6.7. $cash_after is cash in hand after the entry, in rupees.
+# review: pending
+err-cash-below-zero-not-confirmed = After this entry cash in hand would be { $cash_after }. Confirm the entry to save it.
+# review: pending
+err-not-a-buyer = This is not a { -gahak } account. Choose a buyer.
+# PRD 12.4, 10.2. The buyer's credit is off, or he is the nameless cash buyer.
+# review: pending
+err-credit-not-allowed = Credit is not allowed for this buyer. Change the line to cash.
+# A warning (PRD FR-12.8): the rest goes to باقی مال.
+# review: pending
+err-qty-left-unsold = { $left } { -nag } are left. They will stay in { -baqi-maal }.
+# A warning (PRD FR-12.7): the save is allowed. $net is in rupees.
+# review: pending
+err-lot-net-negative = The { -safi-bikri } of this lot is below zero ({ $net }). The seller owes this amount.
+# A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
+# review: pending
+err-rate-far-from-average = This rate is more than { $percent }% away from the average of the last 7 days ({ $average }). Check it.

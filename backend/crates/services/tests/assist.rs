@@ -4,6 +4,10 @@
 //! add E2E-25 to E2E-27.
 #![cfg(test)]
 
+/// The worked day's parties, items and partners and the draft builders of plan 12.
+#[allow(dead_code)]
+#[path = "bikri_preview/support.rs"]
+mod bikri_support;
 mod common;
 
 use std::time::Instant;
@@ -1218,4 +1222,55 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
     .unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrRequired);
     let _ = karim;
+}
+
+// ---- Plan 12: E2E-26, the backend part ----
+
+#[test]
+fn e2e_26_a_new_row_starts_at_the_remaining_qty_with_the_last_rate_as_a_hint() {
+    // PRD E2E-26: in بکری 1, after اکرم's line (20 of 50), ارشد's line starts at 30, the rate
+    // field is empty with the hint 600, and the commission of line 1 works out as
+    // "12,000 x 6 / 100 = 720". `Ctrl+D` and the keys are the frontend's part.
+    use bikri_support::*;
+    use mandi_services::core::bikri::RateHintSource;
+    use mandi_services::core::rules::WorkingValue;
+    let w = world();
+    let d = draft(vec![with_sales(
+        lot(&w, "lot-1", w.rahim, w.banana, "50"),
+        vec![sale("s-1", w.akram, "20", "600"), blank_sale("s-2", "30")],
+    )]);
+    let p = preview(&w, &d);
+    assert!(p.errors.is_empty(), "{:?}", p.errors);
+    let next = &p.lots[0].lines[1];
+    assert_eq!(next.remaining_qty, 30, "ارشد's line starts at 30");
+    let hint = next.rate_hint.as_ref().expect("the hint");
+    assert_eq!(
+        (r(hint.rate_paisa), hint.source),
+        (600, RateHintSource::ThisBikri)
+    );
+    assert!(
+        next.calc.is_none(),
+        "the rate is empty, so nothing is worked out for it"
+    );
+    // The working of line 1's seller commission, as the screen shows it.
+    let working = &calc(&p.lots[0], 0).seller_comm.working;
+    let money = |name: &str| {
+        working
+            .args
+            .iter()
+            .find(|a| a.name == name)
+            .map(|a| a.value)
+    };
+    assert_eq!(working.message_id, "working-percent");
+    assert_eq!(
+        money("base"),
+        Some(WorkingValue::Money {
+            paisa: rupees(12_000)
+        })
+    );
+    assert_eq!(money("bps"), Some(WorkingValue::Percent { bps: 600 }));
+    assert_eq!(
+        money("result"),
+        Some(WorkingValue::Money { paisa: rupees(720) })
+    );
 }

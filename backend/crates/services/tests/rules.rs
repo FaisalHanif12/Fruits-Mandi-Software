@@ -1349,10 +1349,17 @@ fn the_overrides_start_on_and_are_kept_with_an_audit_row() {
         (start.allow_line_override, start.credit_limit_mode),
         (true, CreditLimitMode::Warn)
     );
+    // Plan 12: the rate check starts on at 30% (PRD FR-7.55, E8).
+    assert_eq!(
+        (start.rate_check_enabled, start.rate_check_percent),
+        (true, 30)
+    );
     let audits = audit_total(&f.dir);
     let want = OverridesSettings {
         allow_line_override: false,
         credit_limit_mode: CreditLimitMode::Block,
+        rate_check_enabled: false,
+        rate_check_percent: 50,
     };
     assert_eq!(
         rules::set_overrides(&f.env.ctx, &f.owner, &want).unwrap(),
@@ -1388,6 +1395,58 @@ fn the_overrides_start_on_and_are_kept_with_an_audit_row() {
         (kept.allow_line_override, kept.credit_limit_mode),
         (false, CreditLimitMode::Warn)
     );
+    // A row saved before plan 12 has no rate check keys: they read as the starting position.
+    assert_eq!(
+        (kept.rate_check_enabled, kept.rate_check_percent),
+        (true, 30)
+    );
+    // A stored `false` and a stored percent are kept as stored.
+    raw(&f.dir)
+        .execute(
+            "UPDATE settings SET value_json = '{\"rate_check_enabled\":false,\"rate_check_percent\":45}' WHERE key = 'overrides'",
+            [],
+        )
+        .unwrap();
+    let kept = rules::overrides(&f.env.ctx).unwrap();
+    assert_eq!(
+        (kept.rate_check_enabled, kept.rate_check_percent),
+        (false, 45)
+    );
+    // A stored percent outside 1 to 1,000 (written outside the app) is not used: the start is.
+    raw(&f.dir)
+        .execute(
+            "UPDATE settings SET value_json = '{\"rate_check_enabled\":true,\"rate_check_percent\":0}' WHERE key = 'overrides'",
+            [],
+        )
+        .unwrap();
+    assert_eq!(rules::overrides(&f.env.ctx).unwrap().rate_check_percent, 30);
+    raw(&f.dir)
+        .execute(
+            "UPDATE settings SET value_json = '{\"rate_check_enabled\":true,\"rate_check_percent\":1001}' WHERE key = 'overrides'",
+            [],
+        )
+        .unwrap();
+    assert_eq!(rules::overrides(&f.env.ctx).unwrap().rate_check_percent, 30);
+    raw(&f.dir)
+        .execute(
+            "UPDATE settings SET value_json = '{\"rate_check_enabled\":false,\"rate_check_percent\":45}' WHERE key = 'overrides'",
+            [],
+        )
+        .unwrap();
+    // A percent outside 1 to 1,000 is refused, and nothing is written.
+    for bad in [0, 1_001] {
+        let refused = rules::set_overrides(
+            &f.env.ctx,
+            &f.owner,
+            &OverridesSettings {
+                rate_check_percent: bad,
+                ..want
+            },
+        )
+        .unwrap_err();
+        assert!(refused.has_code(ErrorCode::ErrOutOfRange), "{bad}");
+    }
+    assert_eq!(rules::overrides(&f.env.ctx).unwrap().rate_check_percent, 45);
 }
 
 #[test]

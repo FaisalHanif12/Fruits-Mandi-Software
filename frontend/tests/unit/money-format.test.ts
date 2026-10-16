@@ -1,7 +1,12 @@
 // formatPaisa mirrors the Rust format_paisa cases (plan 02 contract 4.1 and 4.7, M12).
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatPaisa, groupDigits, type Grouping } from '../../src/shared/format/money';
+import {
+  formatPaisa,
+  formatPaisaValue,
+  groupDigits,
+  type Grouping,
+} from '../../src/shared/format/money';
 import { printDigits, toUrduDigits } from '../../src/shared/format/digits';
 import { paisaForTest } from '../helpers/paisa';
 
@@ -83,5 +88,13 @@ describe('print digits (NFR-URD-14)', () => {
     expect(printDigits('12,000')).toBe('12,000');
     expect(printDigits('12,000', 'latin')).toBe('12,000');
     expect(printDigits('12,000', 'urdu')).toBe('۱۲,۰۰۰');
+  });
+});
+
+describe('formatPaisaValue', () => {
+  // The amounts inside the values of a backend error arrive as plain numbers (plan 12 contract 4).
+  it.each(cases)('%d paisa gives the same text as formatPaisa', (paisa, international, lakh) => {
+    expect(formatPaisaValue(paisa, { grouping: 'international' })).toBe(international);
+    expect(formatPaisaValue(paisa, { grouping: 'lakh' })).toBe(lakh);
   });
 });

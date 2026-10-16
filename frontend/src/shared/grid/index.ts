@@ -5,6 +5,9 @@ export { ListGrid, type ListColumn, type ListContext } from './ListGrid';
 export { createEntryStore, type EntryState, type EntryStore } from './entryStore';
 export {
   COLUMN_WIDTHS,
+  FIT_MIN,
+  FIT_MIN_WIDTHS,
+  FIT_WEIGHTS,
   LIST_COLUMN_WIDTHS,
   isListNumberLike,
   isNumberLike,
@@ -14,7 +17,11 @@ export { isEditable, isEnterStop, nextEnterStop, type EnterStep } from './enterO
 export {
   isReadOnlyType,
   type CellRef,
+  type ChoiceSpec,
   type EntryColumn,
   type EntryColumnType,
   type EntryRow,
+  type GridInterceptors,
+  type PickedRecord,
+  type PickerSpec,
 } from './types';

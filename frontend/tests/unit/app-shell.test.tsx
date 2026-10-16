@@ -117,13 +117,17 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     });
   });
 
-  it('Alt+B opens the بکری area with its seven items; the ones not built yet are "coming soon" pages, not made-up data', async () => {
+  it('Alt+B opens the بکری area on the sale book with its seven items; the ones not built yet are "coming soon" pages, not made-up data', async () => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
     await user.keyboard('{Alt>}b{/Alt}');
+    // The بکری area opens on the sale book (plan 12).
     expect(
-      await screen.findByRole('heading', { name: message(language, 'soon-title') }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: message(language, 'glossary-bikri-book'),
+      }),
     ).toBeInTheDocument();
     const side = screen.getByRole('navigation', {
       name: (name) => visible(name) === message(language, 'layout-module-label'),
@@ -195,7 +199,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     within(nav).getAllByRole('button')[0]?.focus();
     await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/bikri');
+      expect(router.state.location.pathname).toBe('/bikri/book');
     });
     // The side menu is nearest to the screen, and the arrow into the screen leaves it.
     const side = screen.getByRole('navigation', {

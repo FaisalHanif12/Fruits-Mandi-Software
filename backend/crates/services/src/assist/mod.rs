@@ -2,14 +2,21 @@
 //! memories and hints of plans 12 and 13 later. Nothing here writes (Code Standards B29).
 
 use mandi_db::accounts as account_repo;
+use mandi_db::bikri as bikri_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::vouchers as voucher_repo;
 use mandi_domain::core::accounts::{
     AccountRow, AccountType, Balance, BalanceSide, CardWarning, CardWarningKind, PartyCard,
     SELLER_CONTROL,
 };
+use mandi_domain::core::bikri::{
+    LastRateInput, RateHint, RateHintSource, SellerMemory, TruckLast, TruckMemory,
+    TruckMemoryInput, TruckSameDay, TruckSuggestion,
+};
+use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{AdvancesInfo, OpenAdvance};
 
 use crate::context::Context;
@@ -206,4 +213,135 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
             last: voucher_repo::last_advance(conn, seller_id)?,
         })
     })
+}
+
+/// Truck numbers offered under the truck field at most (PRD FR-7.49).
+const TRUCK_SUGGESTIONS: i64 = 8;
+
+/// What the app remembers about a truck number: its last بکری, a بکری of it on the posting day,
+/// and the truck numbers that start with the typed text (PRD FR-7.49, FR-7.50). Only reads.
+///
+/// Example: `LES-1234` was used in بکری 1 on 10-10-2026 for زمیندار رحیم. Typing `les-1234` for a
+/// new بکری of 10-10-2026 gives `last` (بکری 1, with its اڈا, زمیندار and driver) and `same_day`
+/// (بکری 1), so the screen shows "اس ٹرک کی آج بکری نمبر 1 پہلے سے موجود ہے".
+///
+/// # Errors
+/// The date codes on `date`; `ERR_CONTROL_CHARS` or `ERR_TEXT_TOO_LONG` on `truck_no`;
+/// `ServiceError::Db`.
+pub fn truck_memory(ctx: &Context, input: &TruckMemoryInput) -> Result<TruckMemory, ServiceError> {
+    let (_, today) = crate::day::window(ctx)?;
+    let date = validate::date("date", &input.date, today)?;
+    let truck_no = validate::free_text("truck_no", &input.truck_no)?;
+    if truck_no.is_empty() {
+        return Ok(TruckMemory {
+            last: None,
+            same_day: None,
+            suggestions: Vec::new(),
+        });
+    }
+    ctx.db.read(|conn| {
+        let last = bikri_repo::truck_last(conn, &truck_no)?.map(|b| TruckLast {
+            bikri_number: b.number,
+            date: b.entry_date,
+            adda_id: b.adda_id,
+            zamindar_account_id: b.zamindar_account_id,
+            driver_name: b.driver_name,
+            driver_phone: b.driver_phone,
+        });
+        let same_day = bikri_repo::truck_same_day(conn, &truck_no, &date.to_iso())?
+            .map(|bikri_number| TruckSameDay { bikri_number });
+        let suggestions =
+            bikri_repo::truck_numbers_starting_with(conn, &truck_no, TRUCK_SUGGESTIONS)?
+                .into_iter()
+                .map(|t| TruckSuggestion {
+                    truck_no: t.truck_no,
+                    date: t.last_date,
+                })
+                .collect();
+        Ok(TruckMemory {
+            last,
+            same_day,
+            suggestions,
+        })
+    })
+}
+
+/// What the app remembers about a seller: the item and packing of his last lot, and his default
+/// مارکہ, else the مارکہ of his last lot (PRD FR-7.51). The one-time seller account has no
+/// memory (it holds many people). Only reads.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` and `ERR_NOT_A_SELLER` on `seller_account_id`.
+pub fn seller_memory(ctx: &Context, seller_account_id: i64) -> Result<SellerMemory, ServiceError> {
+    ctx.db.read(|conn| {
+        let facts = account_repo::facts(conn, seller_account_id)?.ok_or_else(|| {
+            ServiceError::reject_field(ErrorCode::ErrNotFound, "seller_account_id")
+        })?;
+        if facts.control_code != SELLER_CONTROL {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrNotASeller,
+                "seller_account_id",
+            ));
+        }
+        if facts.is_pukhta_khata {
+            return Ok(SellerMemory {
+                item_id: None,
+                packing_id: None,
+                marka_id: None,
+                from_last_lot: false,
+            });
+        }
+        let last = bikri_repo::seller_last_lot(conn, seller_account_id)?;
+        // His own default مارکہ first, else the one of his last lot (PRD FR-7.51).
+        let marka_id = match bikri_repo::default_marka(conn, seller_account_id)? {
+            Some(marka) => Some(marka),
+            None => last.as_ref().and_then(|l| l.marka_id),
+        };
+        Ok(SellerMemory {
+            item_id: last.as_ref().map(|l| l.item_id),
+            packing_id: last.as_ref().map(|l| l.packing_id),
+            marka_id,
+            from_last_lot: last.is_some(),
+        })
+    })
+}
+
+/// The last saved seller rate of an item and packing on or before a day: the rate of that day
+/// (`today`), else of the last day it sold (`last_day`). Only reads. Used by the rate hint
+/// (PRD FR-7.53) once the lines of the draft itself have no rate for it.
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` for a stored rate that is not a whole rupee.
+pub(crate) fn saved_rate_hint(
+    conn: &mandi_db::rusqlite::Connection,
+    item_id: i64,
+    packing_id: i64,
+    date: BusinessDate,
+) -> Result<Option<RateHint>, ServiceError> {
+    let day = date.to_iso();
+    let Some(saved) = bikri_repo::last_rate(conn, item_id, packing_id, &day)? else {
+        return Ok(None);
+    };
+    let source = if saved.entry_date == day {
+        RateHintSource::Today
+    } else {
+        RateHintSource::LastDay
+    };
+    Ok(Some(RateHint {
+        rate_paisa: paisa(saved.rate_paisa)?,
+        source,
+        date: saved.entry_date,
+    }))
+}
+
+/// The last saved rate of an item and packing, for grey placeholder text only (PRD FR-7.53, Code
+/// Standards B29). `None` if it never sold. Only reads.
+///
+/// # Errors
+/// The date codes on `date`; `ServiceError::Db`.
+pub fn last_rate(ctx: &Context, input: &LastRateInput) -> Result<Option<RateHint>, ServiceError> {
+    let (_, today) = crate::day::window(ctx)?;
+    let date = validate::date("date", &input.date, today)?;
+    ctx.db
+        .read(|conn| saved_rate_hint(conn, input.item_id, input.packing_id, date))
 }

@@ -62,7 +62,7 @@ export function AppShell({
               window, outside this scroll area, and the whole page scrolled (finding 29). */}
           <main
             ref={screen}
-            className="relative min-h-0 flex-1 overflow-auto p-6 wide:mx-auto wide:w-full wide:max-w-page"
+            className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 wide:mx-auto wide:w-full wide:max-w-page"
           >
             {children}
           </main>

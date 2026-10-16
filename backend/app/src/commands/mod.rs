@@ -5,6 +5,7 @@ pub mod accounts;
 pub mod app;
 pub mod assist;
 pub mod auth;
+pub mod bikri;
 pub mod day;
 pub mod masters;
 pub mod partners;

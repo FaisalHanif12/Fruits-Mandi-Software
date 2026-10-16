@@ -36,11 +36,16 @@ function valueText(value: WorkingValue, grouping: Grouping, word: (id: string) =
 
 interface CalcInfoProps {
   working: Working | null;
+  /**
+   * The ⓘ sits inside a grid cell: a 32 px target instead of 40, and out of the Tab order (the
+   * grid has its own keys, and Ctrl+I opens the working from the cell, PRD FR-7.43).
+   */
+  inCell?: boolean;
 }
 
-export function CalcInfo({ working }: CalcInfoProps) {
+/** The Fluent message of a working, the values for it, and whether this build has its words. */
+function useWorkingMessage(working: Working | null) {
   const { l10n } = useLocalization();
-  const { language, direction } = useUiLanguage();
   const grouping = useGrouping();
   if (working === null) return null;
   // A per-نگ charge of a lot names the quantity received, not the quantity of a line.
@@ -54,7 +59,48 @@ export function CalcInfo({ working }: CalcInfoProps) {
   for (const arg of working.args) {
     vars[arg.name] = valueText(arg.value, grouping, (id) => l10n.getString(id));
   }
+  return { messageId, known, vars };
+}
+
+/** The words of a working: the title, the sum with the real numbers, and the level of the rule. */
+function WorkingBody({ working }: { working: Working }) {
+  const message = useWorkingMessage(working);
+  if (message === null) return null;
+  const { messageId, known, vars } = message;
   const level = vars['level'];
+  return (
+    <>
+      <Localized id="calc-info-title">
+        <p className="type-label" />
+      </Localized>
+      {known ? (
+        // dir="auto": a working that is only numbers and signs ("12,000 × 6 ÷ 100 = 720") reads
+        // left to right in Urdu too, and one with words reads in the direction of its words
+        // (NFR-URD-13).
+        <Localized id={messageId} vars={vars} elems={{ num: <Num /> }}>
+          <p dir="auto" className="type-body" />
+        </Localized>
+      ) : (
+        <Localized id="calc-info-unknown">
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      )}
+      {known && level !== undefined ? (
+        <Localized id="calc-info-rule" vars={{ level }}>
+          <p dir="auto" className="type-body text-ink-muted" />
+        </Localized>
+      ) : null}
+    </>
+  );
+}
+
+const CONTENT_CLASSES =
+  'z-30 flex max-w-reading flex-col gap-1 rounded-2 border border-border bg-surface p-3 text-ink shadow-overlay';
+
+export function CalcInfo({ working, inCell = false }: CalcInfoProps) {
+  const { l10n } = useLocalization();
+  const { language, direction } = useUiLanguage();
+  if (working === null) return null;
   const label = l10n.getString('calc-info-label');
   return (
     <Popover.Root>
@@ -68,37 +114,55 @@ export function CalcInfo({ working }: CalcInfoProps) {
             event.currentTarget.click();
           }
         }}
-        className="inline-flex size-control-compact shrink-0 items-center justify-center rounded-1 text-ink-muted transition-calm"
+        tabIndex={inCell ? -1 : undefined}
+        className={`inline-flex shrink-0 items-center justify-center rounded-1 text-ink-muted transition-calm ${inCell ? 'size-target' : 'size-control-compact'}`}
       >
         <Info aria-hidden="true" className="size-icon-sm" />
       </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content lang={language} dir={direction} sideOffset={4} className={CONTENT_CLASSES}>
+          <WorkingBody working={working} />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+interface CalcInfoAtProps {
+  working: Working;
+  /** The cell or field the working is about; the box opens next to it. */
+  anchor: HTMLElement;
+  /** Esc, or a click outside, closes the box. */
+  onClose: () => void;
+}
+
+/**
+ * The same working, opened by a key (Ctrl+I on a calculated grid cell, PRD FR-7.43) next to the
+ * element it is about. The cell is not a button, so the box is opened by the screen and anchored
+ * to the cell. Focus goes back to the cell when it closes.
+ */
+export function CalcInfoAt({ working, anchor, onClose }: CalcInfoAtProps) {
+  const { language, direction } = useUiLanguage();
+  return (
+    <Popover.Root
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <Popover.Anchor virtualRef={{ current: anchor }} />
       <Popover.Portal>
         <Popover.Content
           lang={language}
           dir={direction}
           sideOffset={4}
-          className="z-30 flex max-w-reading flex-col gap-1 rounded-2 border border-border bg-surface p-3 text-ink shadow-overlay"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (anchor.isConnected) anchor.focus();
+          }}
+          className={CONTENT_CLASSES}
         >
-          <Localized id="calc-info-title">
-            <p className="type-label" />
-          </Localized>
-          {known ? (
-            // dir="auto": a working that is only numbers and signs ("12,000 × 6 ÷ 100 = 720") reads
-            // left to right in Urdu too, and one with words reads in the direction of its words
-            // (NFR-URD-13).
-            <Localized id={messageId} vars={vars} elems={{ num: <Num /> }}>
-              <p dir="auto" className="type-body" />
-            </Localized>
-          ) : (
-            <Localized id="calc-info-unknown">
-              <p className="type-body text-ink-muted" />
-            </Localized>
-          )}
-          {known && level !== undefined ? (
-            <Localized id="calc-info-rule" vars={{ level }}>
-              <p dir="auto" className="type-body text-ink-muted" />
-            </Localized>
-          ) : null}
+          <WorkingBody working={working} />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

@@ -116,6 +116,45 @@ describe.each(LANGUAGES)('CalcInfo (%s)', (language) => {
     );
   });
 
+  it('a partner share says its percent of the base, not base × percent ÷ 100 (the largest share also gets the leftover rupees)', async () => {
+    await open({
+      message_id: 'working-partner-share',
+      args: [
+        { name: 'base', value: { kind: 'money', paisa: money(3948) } },
+        { name: 'bps', value: { kind: 'percent', bps: 4000 } },
+        { name: 'result', value: { kind: 'money', paisa: money(1580) } },
+      ],
+      rule_id: null,
+    });
+    const text = visible(document.body.textContent);
+    expect(text).toContain(
+      message(language, 'working-partner-share', { base: '3,948', bps: '40', result: '1,580' }),
+    );
+    expect(text).not.toContain('÷');
+  });
+
+  it('a charge that no rule applies to, and a one-time seller paid on the spot, say so with their number', async () => {
+    await open({
+      message_id: 'working-none-line',
+      args: [{ name: 'result', value: { kind: 'money', paisa: money(0) } }],
+      rule_id: null,
+    });
+    expect(visible(document.body.textContent)).toContain(
+      message(language, 'working-none-line', { result: '0' }),
+    );
+  });
+
+  it('a one-time seller is paid his whole net on the spot (PRD FR-13.10)', async () => {
+    await open({
+      message_id: 'working-cash-pukhta',
+      args: [{ name: 'result', value: { kind: 'money', paisa: money(10160) } }],
+      rule_id: null,
+    });
+    expect(visible(document.body.textContent)).toContain(
+      message(language, 'working-cash-pukhta', { result: '10,160' }),
+    );
+  });
+
   it('the working picks its own direction, so a sum reads left to right in Urdu too (NFR-URD-13)', async () => {
     await open(PERCENT);
     // The numbers are <bdi> children (Num), so the paragraph is found by its whole text.

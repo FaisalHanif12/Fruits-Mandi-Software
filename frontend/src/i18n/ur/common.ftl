@@ -60,3 +60,15 @@ common-no = نہیں
 
 # review: pending
 common-percent-sign = %
+
+## Cash going below zero (PRD FR-6.7).
+
+# PRD FR-6.7. The box that asks before an entry takes cash in hand below zero.
+# review: pending
+common-cash-confirm-title = { -rokar } صفر سے کم ہو جائے گی
+# review: pending
+common-cash-confirm-text = اس اندراج کے بعد { -rokar } <num>{ $amount }</num> ہو جائے گی۔ کیا یہ اندراج درست ہے؟
+# review: pending
+common-cash-confirm-yes = ہاں، محفوظ کریں
+# review: pending
+common-cash-confirm-no = نہیں، واپس جائیں

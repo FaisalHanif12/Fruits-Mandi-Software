@@ -245,6 +245,24 @@
       "$comment": "50 ms = half of the 100 ms the live summary has, because the first preview after a rule change files the rules again."
     },
     {
+      "id": "bikri/preview_30_lines",
+      "action": "Live summary of a بکری with 30 sale lines (server time)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause that waits for the last key press. D3 plan 12. bikri::preview: read the text, the facts, calc_posting, the journal entry, the partner split and cash. Measured on the NFR-SCL-1 volume with 3 partners added."
+    },
+    {
+      "id": "bikri/preview_500_lines",
+      "action": "Live summary of a بکری with 50 lots and 500 sale lines (server time)",
+      "kind": "nfr",
+      "nfr": "NFR-SCL-3",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "NFR-SCL-3 asks for no visible lag at 50 lots and 500 lines; it is held to the 150 ms of NFR-SPD-7. D3 plan 12."
+    },
+    {
       "id": "accounts/list_all_20000",
       "action": "Account list, every account with its balance",
       "kind": "nfr",

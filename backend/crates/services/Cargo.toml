@@ -37,5 +37,9 @@ harness = false
 name = "translit"
 harness = false
 
+[[bench]]
+name = "bikri"
+harness = false
+
 [lints]
 workspace = true

@@ -10,6 +10,7 @@
 
 pub mod accounts;
 pub mod audit;
+pub mod bikri;
 pub mod clock;
 mod db;
 pub mod disk;

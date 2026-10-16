@@ -12,7 +12,7 @@ import { SIZES, setContentSize, shootScreen } from '../support/screens.mjs';
 
 const SETTLE_MS = 700;
 
-/** Every screen of D1, D2 and the partners (plan 11) that can be opened by its address. */
+/** Every screen of D1, D2, the partners (plan 11) and the sale book (plan 12) that can be opened by its address. */
 const SCREENS = [
   { name: 'dashboard', route: '/' },
   { name: 'settings', route: '/settings' },
@@ -29,6 +29,7 @@ const SCREENS = [
   { name: 'rules', route: '/index/rules' },
   { name: 'rule-new', route: '/index/rules/new' },
   { name: 'rule-test', route: '/index/rules/test' },
+  { name: 'bikri-book', route: '/bikri/book' },
   { name: 'advance', route: '/bikri/advance' },
   { name: 'day', route: '/day' },
   { name: 'partners', route: '/partners' },

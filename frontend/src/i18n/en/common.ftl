@@ -60,3 +60,15 @@ common-no = No
 
 # review: pending
 common-percent-sign = %
+
+## Cash going below zero (PRD FR-6.7).
+
+# PRD FR-6.7. The box that asks before an entry takes cash in hand below zero.
+# review: pending
+common-cash-confirm-title = Cash in hand will go below zero
+# review: pending
+common-cash-confirm-text = After this entry cash in hand will be <num>{ $amount }</num>. Is this entry correct?
+# review: pending
+common-cash-confirm-yes = Yes, save
+# review: pending
+common-cash-confirm-no = No, go back

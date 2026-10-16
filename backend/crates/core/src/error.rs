@@ -171,11 +171,55 @@ pub enum ErrorCode {
     ErrPartnerNotListed,
     /// The firm has the most partners it can have (NFR-SCL-5). Values: `max`.
     ErrTooManyPartners,
+    /// Sold quantity of a lot is more than the quantity received (PRD FR-12.6). Field
+    /// `lots[i].sales[j].qty`. Values: `available` (نگ left for this line).
+    ErrQtyExceedsLot,
+    /// A commission or لاگا was typed on a line while the Owner has switched typing off
+    /// (PRD FR-11.10). Field `lots[i].sales[j].seller_comm`, `buyer_comm` or `laga`.
+    ErrOverrideNotAllowed,
+    /// A credit sale takes a buyer over his credit limit (PRD FR-12.4). An error when the Owner's
+    /// setting is "block", a warning otherwise. Values: `limit_paisa`, `would_owe_paisa`.
+    ErrCreditLimitExceeded,
+    /// A lot has no seller (PRD FR-12.3). Field `lots[i].seller_account_id`.
+    ErrSellerRequired,
+    /// A sale line has no buyer (PRD FR-12.4). Field `lots[i].sales[j].buyer_account_id`.
+    ErrBuyerRequired,
+    /// A پختہ کھاتہ line or lot needs the one-time person's name (PRD FR-13.2, FR-12.5). Field
+    /// `...pukhta.name_ur` or `...pukhta.name_en`.
+    ErrPukhtaNameRequired,
+    /// A پختہ کھاتہ credit buyer or a پختہ کھاتہ seller needs a phone (PRD FR-13.2). Field
+    /// `...pukhta.phone`.
+    ErrPukhtaPhoneRequired,
+    /// A بکری with no lot (PRD FR-12.8 check 1). Field `lots`.
+    ErrNoLots,
+    /// A بکری with no sale line (PRD FR-12.8 check 1). Field `lots`.
+    ErrNoSaleLines,
+    /// An item sold by weight needs a weight (PRD E23). Field `lots[i].weight_received` or
+    /// `lots[i].sales[j].weight`.
+    ErrWeightRequired,
+    /// The entry would take cash in hand below 0 and the user did not confirm (PRD FR-6.7).
+    /// Shared by every cash-out save. Values: `cash_after_paisa`.
+    ErrCashBelowZeroNotConfirmed,
+    /// The account is not a buyer (a sale line goes to a buyer, the نقدی منڈی or the
+    /// پختہ کھاتہ buyer account). Field `lots[i].sales[j].buyer_account_id`.
+    ErrNotABuyer,
+    /// A credit sale to a buyer who may only pay cash: the نقدی منڈی account, or a buyer whose
+    /// "ادھار کی اجازت" is off (PRD 12.4, 10.2). Field `lots[i].sales[j].payment_type`.
+    ErrCreditNotAllowed,
+    /// Warning only: a lot is not fully sold (PRD FR-12.8 check 4). Values: `left` (نگ). Field
+    /// `lots[i].qty_received`.
+    ErrQtyLeftUnsold,
+    /// Warning only: a lot's net is below 0, so the seller owes the firm (PRD FR-12.7). Values:
+    /// `net_paisa`. Field `lots[i].seller_account_id`.
+    ErrLotNetNegative,
+    /// Warning only: a rate is far from the item's average of the last 7 days (PRD FR-7.55, E8).
+    /// Values: `average_paisa`, `percent`. Field `lots[i].sales[j].seller_rate`.
+    ErrRateFarFromAverage,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 68] = [
+    pub const ALL: [ErrorCode; 84] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -244,6 +288,22 @@ impl ErrorCode {
         ErrorCode::ErrPartnerHasShare,
         ErrorCode::ErrPartnerNotListed,
         ErrorCode::ErrTooManyPartners,
+        ErrorCode::ErrQtyExceedsLot,
+        ErrorCode::ErrOverrideNotAllowed,
+        ErrorCode::ErrCreditLimitExceeded,
+        ErrorCode::ErrSellerRequired,
+        ErrorCode::ErrBuyerRequired,
+        ErrorCode::ErrPukhtaNameRequired,
+        ErrorCode::ErrPukhtaPhoneRequired,
+        ErrorCode::ErrNoLots,
+        ErrorCode::ErrNoSaleLines,
+        ErrorCode::ErrWeightRequired,
+        ErrorCode::ErrCashBelowZeroNotConfirmed,
+        ErrorCode::ErrNotABuyer,
+        ErrorCode::ErrCreditNotAllowed,
+        ErrorCode::ErrQtyLeftUnsold,
+        ErrorCode::ErrLotNetNegative,
+        ErrorCode::ErrRateFarFromAverage,
     ];
 }
 
@@ -258,13 +318,16 @@ pub enum ErrorValue {
 }
 
 /// One problem with one input field. Same shape as the app's `UiErrorItem` (plan 01 Section 4.2).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+/// The preview of a بکری returns its errors and warnings in this shape (plan 12).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct FieldError {
     /// The error code.
     pub code: ErrorCode,
     /// Path of the field, for example `lots[0].sales[2].qty`.
     pub field: String,
-    /// Values for the message, for example `{"max": 100}`.
+    /// Values for the message, for example `{"max": 100}`. A value whose name ends in `_paisa`
+    /// is money.
+    #[ts(type = "Record<string, string | number>")]
     pub values: BTreeMap<String, ErrorValue>,
 }
 

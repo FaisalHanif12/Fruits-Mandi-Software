@@ -49,6 +49,14 @@
   --picker-row-h: 72px;
   --picker-list-h: 360px;
 
+  /* The popup of a picker in a grid cell (plan 12): wide enough for a name and its code. */
+  --picker-cell-w: 280px;
+
+  /* Room kept under a focused cell so the numbers strip pinned to the bottom never covers it. The
+     strip is about 90 px in Urdu and 115 px in English at 1024 px, and a line taller with the
+     cash note. */
+  --strip-clearance: 160px;
+
   /* The chart tree always shows at least eight rows (plan 07). */
   --tree-min-h: 360px;
   --tree-view-h: 60vh;
@@ -160,6 +168,8 @@
   --spacing-field-badge-keys: var(--field-badge-keys-w);
   --spacing-picker-row: var(--picker-row-h);
   --spacing-picker-list: var(--picker-list-h);
+  --spacing-picker-cell: var(--picker-cell-w);
+  --spacing-strip: var(--strip-clearance);
   --spacing-tree: var(--tree-min-h);
   --spacing-tree-view: var(--tree-view-h);
 

@@ -73,6 +73,11 @@ const APP_COMMANDS: &[&str] = &[
     "partners_set_shares",
     "partners_check_shares",
     "partners_overview",
+    "bikri_preview",
+    "bikri_split_freight",
+    "assist_truck_memory",
+    "assist_seller_memory",
+    "assist_last_rate",
 ];
 
 fn main() {

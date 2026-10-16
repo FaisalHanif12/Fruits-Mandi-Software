@@ -9,6 +9,8 @@
 #![cfg_attr(test, allow(clippy::arithmetic_side_effects))]
 
 pub mod auth;
+pub mod bikri;
+pub mod cash;
 pub mod ledger;
 pub mod partners;
 pub mod rules;

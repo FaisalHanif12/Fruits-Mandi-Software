@@ -13,7 +13,7 @@
 // Pickers never convert English letters to Urdu (F41): the text is searched as typed.
 
 import { Localized } from '@fluent/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   accountSource,
   accountsResolveCode,
@@ -42,6 +42,16 @@ interface AccountPickerProps extends FieldControlProps {
   showCard?: boolean | undefined;
   /** The control whose accounts the field takes, for scope `control` (for example ادھار رقم). */
   controlId?: number | undefined;
+  /**
+   * Which account the party card would show now: the one the list highlights, else the chosen
+   * one. A screen that draws the card itself (the sale lines grid, where the picker is a cell)
+   * turns `showCard` off and reads this.
+   */
+  onCardAccount?: ((accountId: number | null) => void) | undefined;
+  /** For a picker in a grid cell (see PickerBase). */
+  initialText?: string | undefined;
+  startOpen?: boolean | undefined;
+  onEnterPicked?: (() => void) | undefined;
 }
 
 /** What the screen says about a code that did not give one account. */
@@ -86,6 +96,8 @@ export function AccountPicker({
   onChange,
   showCard = true,
   controlId,
+  onCardAccount,
+  onEnterPicked,
   ...field
 }: AccountPickerProps) {
   const language = useLanguage();
@@ -93,20 +105,31 @@ export function AccountPicker({
   const [note, setNote] = useState<CodeNote | null>(null);
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  // True while a code that Enter sent to the backend is being answered: when it is found, the
+  // grid cell goes on to the next cell as it does after any pick by Enter (PRD FR-7.14).
+  const enterPending = useRef(false);
 
   // A code typed and then left (or Enter with no match) is asked of the backend once.
   const resolve = (text: string) => {
-    if (!CODE_TEXT.test(text)) return;
+    if (!CODE_TEXT.test(text)) {
+      enterPending.current = false;
+      return;
+    }
     void accountsResolveCode(scope, controlId ?? null, text)
       .then((result) => {
+        const byEnter = enterPending.current;
+        enterPending.current = false;
         if (result.status === 'found' && result.account !== null) {
           setNote(null);
           onChange(result.account);
+          if (byEnter) onEnterPicked?.();
         } else {
           setNote({ result, text });
         }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        enterPending.current = false;
+      });
   };
 
   const unknown = note?.result.status === 'unknown';
@@ -120,6 +143,13 @@ export function AccountPicker({
   );
 
   const cardId = highlight?.id ?? value?.id ?? null;
+  const cardRef = useRef(onCardAccount);
+  useEffect(() => {
+    cardRef.current = onCardAccount;
+  });
+  useEffect(() => {
+    cardRef.current?.(cardId);
+  }, [cardId]);
   return (
     <div className="flex flex-col gap-2">
       <PickerBase<AccountHit>
@@ -132,10 +162,15 @@ export function AccountPicker({
         }}
         onHighlight={setHighlight}
         onLeave={resolve}
-        onEnterNoMatch={resolve}
+        onEnterNoMatch={(text) => {
+          enterPending.current = true;
+          resolve(text);
+        }}
+        onEnterPicked={onEnterPicked}
         resolveOnEnter={(text) => {
           // A code goes whole to the backend; anything else waits for the answer to its text.
           if (!CODE_TEXT.test(text)) return false;
+          enterPending.current = true;
           resolve(text);
           return true;
         }}

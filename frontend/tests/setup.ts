@@ -27,4 +27,13 @@ if (typeof Element !== 'undefined') {
   }
   // The router scrolls to the top after it opens a page; jsdom prints a notice for that.
   Object.assign(window, { scrollTo: () => undefined });
+  // jsdom has no layout, so `offsetParent` is always null. AG Grid places the popup of a cell
+  // editor (the picker cells of the بکری grids) against it and fails on null. Without layout the
+  // parent element is the nearest thing there is.
+  Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return this.parentElement;
+    },
+  });
 }

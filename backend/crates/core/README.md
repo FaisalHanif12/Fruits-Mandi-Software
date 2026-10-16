@@ -10,7 +10,9 @@ Pure helpers with no business rules and no database (Tech Stack 5.4). Plan 02.
 | `translit` | English letters to Urdu and back for names (PRD 7.4): `suggest_to_urdu`, `suggest_to_english`, `WordList` (the embedded `data/translit_seed.tsv`), `LearnedPair`. Pure: the services pass learned pairs in. |
 | `urdu_words`, `english_words` | Amounts in words, 0 to 10,00,00,00,000 rupees |
 | `validate` | One function per field type of Code Standards 4.2, returning `FieldError`; `FieldErrors` collects several |
-| `error` | `ErrorCode` (the one list, exported to TypeScript), `ErrorValue`, `FieldError` |
+| `error` | `ErrorCode` (the one list, exported to TypeScript), `ErrorValue`, `FieldError` (also exported: the preview returns its errors and warnings in this shape) |
+| `bikri` | The بکری entry screen (plan 12): what the screen sends (`BikriDraft`, `LotInput`, `SaleInput`, all text), what the preview sends back (`BikriPreview`, `LotPreview`, `LinePreview`, `LineCalc`, `SummaryTotals` with a `Working` for each amount, `RateHint`, `TruckMemory`, `SellerMemory`), and `prepare_draft`, which reads the text into numbers and collects every mistake with its field (`lots[0].sales[2].qty`). `split_freight` is C17. At most 50 lots and 500 lines. |
+| `cash` | `CashCheck`: cash in hand before, the change of an entry, after, and whether the user must confirm (PRD FR-6.7). The rule is `mandi_domain::cash::check`. |
 
 Example: `apply_bps(Paisa::from_rupees(12_000)?, Bps::new(600)?)` is 720 rupees.
 

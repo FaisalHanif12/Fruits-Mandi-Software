@@ -1,0 +1,79 @@
+{
+  "draft": {
+    "header": {
+      "adda_id": null,
+      "bill_date": "",
+      "book": null,
+      "driver_name": null,
+      "driver_phone": null,
+      "entry_date": "10-10-2026",
+      "note": null,
+      "store_id": null,
+      "total_freight": null,
+      "truck_no": "LES-1234",
+      "zamindar_account_id": 17
+    },
+    "lots": [
+      {
+        "adjust_advance": true,
+        "cash_paid": "5,000",
+        "freight": "3,000",
+        "freight_paid_by": "firm",
+        "item_id": 1,
+        "key": "lot-1",
+        "labour": {
+          "method": "per_unit",
+          "value": "5"
+        },
+        "marka_id": null,
+        "munshiana": {
+          "method": "manual",
+          "value": "50"
+        },
+        "packing_id": 1,
+        "phone": {
+          "method": "manual",
+          "value": "20"
+        },
+        "pukhta": null,
+        "qty_received": "50",
+        "sales": [
+          {
+            "buyer_account_id": 19,
+            "buyer_comm": null,
+            "buyer_rate": null,
+            "key": "line-1",
+            "laga": null,
+            "note": null,
+            "payment_type": null,
+            "pukhta": null,
+            "qty": "20",
+            "rate_differs": false,
+            "seller_comm": null,
+            "seller_rate": "600",
+            "weight": null
+          },
+          {
+            "buyer_account_id": null,
+            "buyer_comm": null,
+            "buyer_rate": null,
+            "key": "line-2",
+            "laga": null,
+            "note": null,
+            "payment_type": null,
+            "pukhta": null,
+            "qty": "30",
+            "rate_differs": false,
+            "seller_comm": null,
+            "seller_rate": "",
+            "weight": null
+          }
+        ],
+        "seller_account_id": 17,
+        "store_id": null,
+        "store_rent": null,
+        "weight_received": null
+      }
+    ]
+  }
+}

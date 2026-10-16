@@ -4,7 +4,7 @@
 import type { ErrorCode } from '../../bindings/ErrorCode';
 import type { UiError } from '../../bindings/UiError';
 import type { UiErrorItem } from '../../bindings/UiErrorItem';
-import { groupDigits, type Grouping } from '../format/money';
+import { formatPaisaValue, groupDigits, type Grouping } from '../format/money';
 import { formatBps } from '../format/percent';
 import { CommandError, toUiError } from './invoke';
 
@@ -72,6 +72,7 @@ export function errorsOutsideFields(error: UiError, fields: readonly string[]): 
 }
 
 const BPS_SUFFIX = '_bps';
+const PAISA_SUFFIX = '_paisa';
 
 /** A whole number as grouped digits, with a minus sign when it is below zero. */
 function groupedNumber(value: number, grouping: Grouping): string {
@@ -87,6 +88,9 @@ function groupedNumber(value: number, grouping: Grouping): string {
  * and Fluent never formats a number by locale (PRD FR-7.32). Text values, such as a date,
  * pass as they are. A rate in basis points (`total_bps`, 9000) also arrives as the percent a
  * person reads, under the same name without `_bps` (`total`, "90"), written from its digits.
+ * An amount whose name ends in `_paisa` (`cash_after_paisa`, 500000) is money: it is written with
+ * formatPaisa ("5,000"), under its own name and under the name without `_paisa`
+ * (`cash_after`), so a message never shows raw paisa (plan 12 contract 4).
  */
 export function messageVars(
   values: UiErrorItem['values'],
@@ -94,6 +98,12 @@ export function messageVars(
 ): Record<string, string> {
   const vars: Record<string, string> = {};
   for (const [key, value] of Object.entries(values)) {
+    if (typeof value === 'number' && key.endsWith(PAISA_SUFFIX) && Number.isSafeInteger(value)) {
+      const money = formatPaisaValue(value, { grouping });
+      vars[key] = money;
+      vars[key.slice(0, -PAISA_SUFFIX.length)] = money;
+      continue;
+    }
     vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : value;
     if (typeof value === 'number' && key.endsWith(BPS_SUFFIX) && Number.isSafeInteger(value)) {
       vars[key.slice(0, -BPS_SUFFIX.length)] = formatBps(value);

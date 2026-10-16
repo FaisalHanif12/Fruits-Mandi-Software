@@ -8,10 +8,11 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-export function usePickerText() {
-  // What the user is typing, or null while the field shows the chosen name.
-  const [typed, setTypedState] = useState<string | null>(null);
-  const latest = useRef<string | null>(null);
+export function usePickerText(initial: string | null = null) {
+  // What the user is typing, or null while the field shows the chosen name. A picker in a grid
+  // cell starts with the key that opened it already typed.
+  const [typed, setTypedState] = useState<string | null>(initial);
+  const latest = useRef<string | null>(initial);
   const setTyped = useCallback((next: string | null) => {
     latest.current = next;
     setTypedState(next);

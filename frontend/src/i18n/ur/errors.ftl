@@ -215,3 +215,51 @@ err-nothing-to-close = آج تک کے سب دن پہلے ہی بند ہیں، ا
 err-rule-not-allowed = اصول کی یہ ترتیب درست نہیں۔ چارج اور طریقہ فہرست میں سے چنیں، اور گروپ صرف اسی وقت چنیں جب کوئی کھاتہ یا { -qism-maal } نہ چنا ہو۔ عام شرحیں ترتیبات کے چارجز میں بدلتی ہیں۔
 # review: pending
 err-date-range = آخری تاریخ پہلی تاریخ سے پہلے ہے۔ آخری تاریخ پہلی تاریخ کے دن یا اس کے بعد کی لکھیں۔
+
+## The sale screen (plan 12). Warnings use the same kind of message.
+
+# PRD FR-12.6. A line sells more than the lot has left.
+# review: pending
+err-qty-exceeds-lot = تعداد { -lot } کی باقی تعداد سے زیادہ ہے۔ صرف { $available } { -nag } باقی ہیں۔
+# PRD FR-11.10. The setting is off.
+# review: pending
+err-override-not-allowed = لائن پر { -commission } یا { -laga } بدلنا بند ہے۔ مالک اسے ترتیبات میں چالو کر سکتا ہے۔
+# PRD FR-12.4. $limit and $would_owe are amounts in rupees.
+# review: pending
+err-credit-limit-exceeded = اس { -bikri } سے { -gahak } کا بقایا { $would_owe } ہو جائے گا، جو اس کی ادھار کی حد { $limit } سے زیادہ ہے۔
+# review: pending
+err-seller-required = اس { -lot } کا { -beopari } چنیں۔
+# review: pending
+err-buyer-required = اس لائن کا { -gahak } چنیں۔
+# PRD FR-13.2.
+# review: pending
+err-pukhta-name-required = { -pukhta-khata } میں نام لکھنا ضروری ہے۔
+# PRD FR-13.2.
+# review: pending
+err-pukhta-phone-required = اس { -pukhta-khata } والے کا فون نمبر لکھنا ضروری ہے۔
+# PRD FR-12.8.
+# review: pending
+err-no-lots = کم از کم ایک { -lot } لکھیں۔
+# PRD FR-12.8.
+# review: pending
+err-no-sale-lines = کم از کم { -bikri } کی ایک لائن لکھیں۔
+# PRD E23.
+# review: pending
+err-weight-required = وزن کلو میں لکھیں۔ یہ مال وزن کے حساب سے بکتا ہے۔
+# PRD FR-6.7. $cash_after is cash in hand after the entry, in rupees.
+# review: pending
+err-cash-below-zero-not-confirmed = اس اندراج کے بعد { -rokar } { $cash_after } ہو جائے گی۔ محفوظ کرنے کے لیے اندراج کی تصدیق کریں۔
+# review: pending
+err-not-a-buyer = یہ { -gahak } کا کھاتہ نہیں۔ کوئی { -gahak } چنیں۔
+# PRD 12.4, 10.2. The buyer's credit is off, or he is the nameless cash buyer.
+# review: pending
+err-credit-not-allowed = اس { -gahak } کے لیے ادھار کی اجازت نہیں۔ لائن کو { -naqdi } کر دیں۔
+# A warning (PRD FR-12.8): the rest goes to باقی مال.
+# review: pending
+err-qty-left-unsold = { $left } { -nag } باقی ہیں۔ یہ { -baqi-maal } میں رہیں گے۔
+# A warning (PRD FR-12.7): the save is allowed. $net is in rupees.
+# review: pending
+err-lot-net-negative = اس { -lot } کی { -safi-bikri } صفر سے کم ({ $net }) ہے۔ یہ رقم { -beopari } کے ذمے ہے۔
+# A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
+# review: pending
+err-rate-far-from-average = یہ ریٹ پچھلے 7 دن کی اوسط ({ $average }) سے { $percent } فیصد سے زیادہ مختلف ہے۔ اسے دیکھ لیں۔

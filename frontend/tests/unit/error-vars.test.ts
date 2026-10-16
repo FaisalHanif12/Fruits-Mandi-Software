@@ -54,4 +54,23 @@ describe('messageVars', () => {
   it('gives an empty set for an error with no values', () => {
     expect(messageVars({}, 'international')).toEqual({});
   });
+
+  it('writes an amount named *_paisa as money, under both names (plan 12 contract 4)', () => {
+    // ERR_CASH_BELOW_ZERO_NOT_CONFIRMED sends cash_after_paisa; the message uses $cash_after.
+    expect(messageVars({ cash_after_paisa: -500_000 }, 'international')).toEqual({
+      cash_after_paisa: '-5,000',
+      cash_after: '-5,000',
+    });
+    // ERR_CREDIT_LIMIT_EXCEEDED sends would_owe_paisa and limit_paisa.
+    expect(messageVars({ would_owe_paisa: 1_288_000, limit_paisa: 100_000_000 }, 'lakh')).toEqual({
+      would_owe_paisa: '12,880',
+      would_owe: '12,880',
+      limit_paisa: '10,00,000',
+      limit: '10,00,000',
+    });
+  });
+
+  it('a name that merely ends like paisa but holds text is passed as sent', () => {
+    expect(messageVars({ note_paisa: 'x' }, 'lakh')).toEqual({ note_paisa: 'x' });
+  });
 });

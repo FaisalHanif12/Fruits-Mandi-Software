@@ -108,7 +108,12 @@ export function fakeRules(rows: RuleRow[] = seededRules()): FakeRules {
         from_date: '2026-08-31',
       },
     },
-    overrides: { allow_line_override: false, credit_limit_mode: 'warn' },
+    overrides: {
+      allow_line_override: false,
+      credit_limit_mode: 'warn',
+      rate_check_enabled: true,
+      rate_check_percent: 30,
+    },
   };
   let nextId = 100;
 

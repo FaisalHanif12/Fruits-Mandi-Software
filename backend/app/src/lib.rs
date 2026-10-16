@@ -136,6 +136,11 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::partners::partners_set_shares,
         commands::partners::partners_check_shares,
         commands::partners::partners_overview,
+        commands::bikri::bikri_preview,
+        commands::bikri::bikri_split_freight,
+        commands::assist::assist_truck_memory,
+        commands::assist::assist_seller_memory,
+        commands::assist::assist_last_rate,
     ]
 }
 

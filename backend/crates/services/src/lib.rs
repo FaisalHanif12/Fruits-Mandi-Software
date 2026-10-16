@@ -6,6 +6,8 @@ pub mod accounts;
 pub mod assist;
 mod audit;
 pub mod auth;
+pub mod bikri;
+pub mod cash;
 pub mod coa;
 pub mod context;
 pub mod day;

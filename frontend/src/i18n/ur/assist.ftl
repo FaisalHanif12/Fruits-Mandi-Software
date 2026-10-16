@@ -80,3 +80,43 @@ working-manual-per-unit-received = ہاتھ سے لکھا گیا: <num>{ $qty_re
 working-manual-per-lot = ہاتھ سے لکھا گیا: <num>{ $value }</num> فی { -lot } = <num>{ $result }</num>
 # review: pending
 working-per-lot-already-charged = { -lot } کا یہ چارج پہلی { -bikri } میں لگ چکا ہے، اس لیے اب کچھ نہیں لگا۔
+
+## How the amounts of the sale screen were worked out (plan 12, PRD 22). The backend names the message and gives its values.
+
+# C1: the value of a line.
+# review: pending
+working-line-value = <num>{ $qty }</num> × <num>{ $rate }</num> = <num>{ $result }</num>
+# C1 for an item sold by weight: the weight is in grams, the rate is for each kilo.
+# review: pending
+working-weight-value = <num>{ $grams }</num> گرام × <num>{ $rate }</num> فی کلو ÷ <num>1,000</num> = <num>{ $result }</num> (قریب ترین روپے تک)
+# C5: what the buyer pays for a line.
+# review: pending
+working-buyer-total = قیمت <num>{ $value }</num> + { -commission } <num>{ $comm }</num> + { -laga } <num>{ $laga }</num> = <num>{ $result }</num>
+# C19: the rate difference of a line.
+# review: pending
+working-rate-diff = { -gahak } کی قیمت <num>{ $buyer_value }</num> − { -beopari } کی رقم <num>{ $seller_amount }</num> = <num>{ $result }</num>
+# A total of the lines.
+# review: pending
+working-sum = میزان ({ $count } لائن) = <num>{ $result }</num>
+# C6: the deductions of a lot.
+# review: pending
+working-deductions = <num>{ $freight }</num> + <num>{ $comm }</num> + <num>{ $labour }</num> + <num>{ $munshiana }</num> + <num>{ $cash }</num> + <num>{ $store_rent }</num> + <num>{ $phone }</num> = <num>{ $result }</num>
+# C7: the net of a lot.
+# review: pending
+working-net = <num>{ $gross }</num> − <num>{ $deductions }</num> = <num>{ $result }</num>
+# C8: what the posting credits the seller.
+# review: pending
+working-seller-credit = <num>{ $gross }</num> − <num>{ $comm }</num> − <num>{ $freight }</num> − <num>{ $labour }</num> − <num>{ $munshiana }</num> − <num>{ $store_rent }</num> − <num>{ $phone }</num> = <num>{ $result }</num>
+# C9: the income shared between the partners.
+# review: pending
+working-shared-income = <num>{ $seller_comm }</num> + <num>{ $buyer_comm }</num> + <num>{ $laga }</num> + <num>{ $phone }</num> + <num>{ $rate_diff }</num> = <num>{ $result }</num>
+# C10: the share of one partner.
+# The largest share also gets the rupees left over, so this is not base × percent ÷ 100.
+# review: pending
+working-partner-share = { -hissa } <num>{ $bps }</num> فیصد از <num>{ $base }</num> = <num>{ $result }</num>
+# A charge of a line that no rule applies to, for example { -laga } on a vegetable (PRD 11.3).
+# review: pending
+working-none-line = اس لائن پر کوئی اصول نہیں لگا، اس لیے رقم <num>{ $result }</num> ہے۔
+# A one-time seller is paid his whole net at once while { -naqd } is empty (PRD FR-13.10).
+# review: pending
+working-cash-pukhta = { -pukhta-khata } کے بیوپاری کو اس کی پوری { -safi-bikri } اسی وقت دی جاتی ہے: <num>{ $result }</num>

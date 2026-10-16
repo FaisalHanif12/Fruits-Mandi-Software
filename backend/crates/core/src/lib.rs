@@ -10,6 +10,8 @@
 
 pub mod accounts;
 pub mod auth;
+pub mod bikri;
+pub mod cash;
 pub mod dates;
 pub mod english_words;
 pub mod error;

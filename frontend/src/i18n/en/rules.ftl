@@ -417,3 +417,13 @@ rules-default-open-settings = Open Settings
 # An old default rate that ended when a new one started (a change in Settings, Charges).
 # review: pending
 rules-status-default-ended = Default, until { $to }
+
+# PRD FR-7.55, plan 12.
+# review: pending
+settings-overrides-rate-check = Warn when a rate is very different
+# review: pending
+settings-overrides-rate-check-hint = A warning shows on the line when a rate is far above or below the item's average of the last 7 days. It never stops a save.
+# review: pending
+settings-overrides-rate-check-percent = How far apart, in percent
+# review: pending
+settings-overrides-rate-check-percent-hint = Enter a whole number from 1 to 1,000, for example 30.

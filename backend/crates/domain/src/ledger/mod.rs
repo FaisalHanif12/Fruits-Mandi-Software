@@ -23,6 +23,8 @@ use mandi_core::ids::AccountId;
 use mandi_core::money::{MoneyError, Paisa};
 use thiserror::Error;
 
+pub mod bikri;
+
 /// The most one journal line can hold, in paisa (the CHECK of `journal_lines`, 1e12 rupees).
 pub const MAX_LINE_PAISA: i64 = 100_000_000_000_000;
 

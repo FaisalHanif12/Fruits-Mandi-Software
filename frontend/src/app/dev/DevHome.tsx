@@ -32,6 +32,9 @@ export function DevHome() {
           <Localized id="shellpage-title">
             <Link to="/dev/shell" className="text-primary underline" />
           </Localized>
+          <Localized id="bikripage-title">
+            <Link to="/dev/bikri" className="text-primary underline" />
+          </Localized>
         </nav>
       </main>
     </GalleryLocalization>

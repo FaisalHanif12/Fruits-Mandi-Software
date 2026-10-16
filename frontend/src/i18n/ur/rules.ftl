@@ -417,3 +417,13 @@ rules-default-open-settings = ترتیبات کھولیں
 # An old default rate that ended when a new one started (a change in Settings, Charges).
 # review: pending
 rules-status-default-ended = عام، { $to } تک
+
+# PRD FR-7.55, plan 12.
+# review: pending
+settings-overrides-rate-check = ریٹ بہت مختلف ہو تو خبردار کریں
+# review: pending
+settings-overrides-rate-check-hint = ریٹ پچھلے 7 دن کی اوسط سے بہت زیادہ یا کم ہو تو لائن پر تنبیہ آتی ہے۔ یہ محفوظ کرنے سے نہیں روکتی۔
+# review: pending
+settings-overrides-rate-check-percent = کتنے فیصد فرق پر
+# review: pending
+settings-overrides-rate-check-percent-hint = 1 سے 1,000 کے درمیان پورا عدد لکھیں، مثلاً 30۔

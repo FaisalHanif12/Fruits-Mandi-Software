@@ -14,6 +14,8 @@
 //   Ctrl+D      copy the cell from the line above (opt in)
 //   Ctrl+I      explain a calculated cell (opt in)
 //   + and -     in a date cell: next and previous day (PRD FR-7.19)
+//   Space       in a choice cell (ادھاری / نقدی): the next word
+//   Alt+↓       in a picker cell: start typing with the full list open (PRD FR-7.16)
 // Any other letter or digit starts typing in an editable cell, as AG Grid does.
 
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
@@ -27,9 +29,9 @@ import {
   type Side,
 } from '../keyboard';
 import { isNumberLike } from './columnTypes';
-import { nextEnterStop } from './enterOrder';
+import { isEditable, nextEnterStop } from './enterOrder';
 import type { EntryStore } from './entryStore';
-import type { EntryColumn, EntryRow } from './types';
+import type { CellRef, EntryColumn, EntryRow, GridInterceptors } from './types';
 
 export interface GridKeyEnv {
   store: EntryStore;
@@ -45,6 +47,10 @@ export interface GridKeyEnv {
    * row. ↓ on the last row and Enter on the last stop stay where they are.
    */
   fixedRows?: boolean;
+  /** What the screen adds to Enter and ↑ (moving between grids and panels). */
+  interceptors?: GridInterceptors;
+  /** Space or a click on a choice cell: move to the next word. */
+  cycleChoice?: (cell: CellRef) => void;
 }
 
 type KeyParams = SuppressKeyboardEventParams<EntryRow>;
@@ -75,7 +81,11 @@ export function createGridKeyHandler(env: GridKeyEnv) {
 
   const moveVertically = (params: KeyParams, rowIndex: number, field: string, step: 1 | -1) => {
     const target = rowIndex + step;
-    if (target < 0) return;
+    if (target < 0) {
+      const row = store.getState().rows[rowIndex];
+      if (row !== undefined) env.interceptors?.onAboveFirst?.({ rowId: row.rowId, field });
+      return;
+    }
     if (target >= store.getState().rows.length) {
       if (env.fixedRows === true) return;
       store.getState().addRow();
@@ -86,14 +96,24 @@ export function createGridKeyHandler(env: GridKeyEnv) {
   };
 
   const copyFromAbove = (rowIndex: number, field: string) => {
-    const { rows, updateTyped } = store.getState();
+    const { rows, updateTyped, patchRow } = store.getState();
     const above = rows[rowIndex - 1];
     const here = rows[rowIndex];
     if (above === undefined || here === undefined) return;
+    if (columns.find((column) => column.field === field)?.type === 'picker') {
+      // A picker cell holds a record: the line above's record is chosen again.
+      patchRow(here.rowId, { picked: { [field]: above.picked?.[field] ?? null } });
+      return;
+    }
     updateTyped(here.rowId, field, above.typed[field] ?? '');
   };
 
-  return (params: KeyParams): boolean => {
+  /**
+   * `fromEditor` is true when a picker cell's own editor passes on a key it does not use itself
+   * (Enter with the list closed, the arrows). AG Grid also hands every key typed in a popup editor
+   * to this handler; for a picker cell those are left alone here, because the editor answers them.
+   */
+  return (params: KeyParams, fromEditor = false): boolean => {
     const event = params.event;
     if (event.type !== 'keydown') return false;
     const rowIndex = params.node.rowIndex;
@@ -103,6 +123,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     const { rows } = store.getState();
     const row = rows[rowIndex];
     if (row === undefined) return false;
+    if (params.editing && column.type === 'picker' && !fromEditor) return true;
 
     // F2 is "New", never "edit".
     if (event.key === 'F2') return true;
@@ -129,7 +150,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       return true;
     }
     if (matchesShortcut(event, SHORTCUTS.explain)) {
-      if (column.type === 'calc' && env.onExplain !== undefined) {
+      if ((column.type === 'calc' || column.explain === true) && env.onExplain !== undefined) {
         event.preventDefault();
         env.onExplain({ rowId: row.rowId, field });
       }
@@ -141,6 +162,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       if (!NO_MODIFIER(event)) return false;
       event.preventDefault();
       params.api.stopEditing();
+      if (env.interceptors?.onEnter?.({ rowId: row.rowId, field }) === true) return true;
       const step = nextEnterStop(columns, store.getState().rows, { rowIndex, field });
       if (step === null) return true;
       if (step.kind === 'cell') {
@@ -152,7 +174,23 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       return true;
     }
 
+    // Alt+↓ on a picker cell: typing starts with the full list open (PRD FR-7.16).
+    if (column.type === 'picker' && matchesShortcut(event, SHORTCUTS.openList)) {
+      if (params.editing) return false;
+      event.preventDefault();
+      store.getState().setEditHint('open-list');
+      params.api.startEditingCell({ rowIndex, colKey: field });
+      return true;
+    }
+
     if (!NO_MODIFIER(event)) return false;
+
+    // Space on a choice cell that is not being typed in: the next word.
+    if (column.type === 'choice' && event.key === ' ' && !params.editing) {
+      event.preventDefault();
+      if (isEditable(column, row)) env.cycleChoice?.({ rowId: row.rowId, field });
+      return true;
+    }
 
     // + and - in a date cell that is not being typed in.
     if (!params.editing && column.type === 'date' && (event.key === '+' || event.key === '-')) {

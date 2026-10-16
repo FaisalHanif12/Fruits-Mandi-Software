@@ -17,7 +17,7 @@ export const MAIN_ROUTES = {
 } as const satisfies Record<MainNavId, string>;
 
 export const MODULE_ROUTES = {
-  'bikri-book': '/bikri',
+  'bikri-book': '/bikri/book',
   receipt: '/bikri/receipt',
   payment: '/bikri/payment',
   advance: '/bikri/advance',

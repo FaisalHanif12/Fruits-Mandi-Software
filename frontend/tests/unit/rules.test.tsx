@@ -889,6 +889,8 @@ describe.each(LANGUAGES)('the settings Charges and Overrides (%s)', (language) =
       expect(settingsApi.settingsSetOverrides).toHaveBeenCalledWith({
         allow_line_override: true,
         credit_limit_mode: 'block',
+        rate_check_enabled: true,
+        rate_check_percent: 30,
       });
     });
     expect(
