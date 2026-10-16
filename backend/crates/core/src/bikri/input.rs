@@ -109,7 +109,7 @@ pub enum LineChargeMethod {
 
 /// The method kept with a line charge (`bikri_sales.*_method`, Architecture 15.6). A value typed
 /// on the line is `manual` (دستی) and keeps the percent or the amount per نگ that was typed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum StoredMethod {
     /// فیصد.

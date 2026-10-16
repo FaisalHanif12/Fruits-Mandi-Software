@@ -88,6 +88,11 @@ const APP_COMMANDS: &[&str] = &[
     "drafts_save",
     "drafts_get",
     "drafts_discard",
+    "reports_bikri_print_data",
+    "reports_print",
+    "reports_list_printers",
+    "settings_get_printing",
+    "settings_set_printing",
 ];
 
 fn main() {

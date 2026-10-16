@@ -18,7 +18,7 @@ use thiserror::Error;
 
 use crate::error::ErrorCode;
 
-pub use format::{Grouping, format_paisa};
+pub use format::{Grouping, format_count, format_paisa};
 pub use parse::{
     MAX_QTY, MAX_RUPEES, MAX_WEIGHT_GRAMS, parse_bps, parse_qty, parse_rupees, parse_sum_qty,
     parse_sum_rupees, parse_weight,

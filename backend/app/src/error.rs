@@ -111,7 +111,7 @@ impl UiError {
     }
 
     /// An error with one code and no field, whose cause goes to the log (Code Standards B12).
-    fn coded(code: ErrorCode, detail: &dyn std::fmt::Display) -> Self {
+    pub(crate) fn coded(code: ErrorCode, detail: &dyn std::fmt::Display) -> Self {
         let error = Self::build(vec![UiErrorItem {
             code,
             field: None,

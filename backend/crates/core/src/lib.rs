@@ -20,6 +20,7 @@ pub mod ids;
 pub mod masters;
 pub mod money;
 pub mod partners;
+pub mod printing;
 pub mod rules;
 pub mod search;
 pub mod text;

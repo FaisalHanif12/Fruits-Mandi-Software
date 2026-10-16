@@ -85,6 +85,20 @@ the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "
 | `components/BikriToolbar.tsx`, `BikriFindDialog.tsx`, `components/saved/` | The arrows and find, and the saved view |
 | `pages/TodayBikriPage.tsx`, `list-columns.ts` | The list of بکری |
 
+## Prints (plan 14)
+
+The seller bill (A4), the buyer slips (A5 or the 80 mm roll, one for each buyer) and the پختہ slip,
+in Urdu or English (PRD FR-12.12). Layout and styles are in `shared/print`; this folder only picks
+the columns.
+
+| File | What it is |
+|---|---|
+| `print/SellerBillTemplate.tsx`, `BuyerSlipTemplate.tsx`, `PukhtaSlipTemplate.tsx`, `BikriPrintDocument.tsx`, `columns.ts` | The three templates and which goods columns each has. They calculate nothing |
+| `print/BikriPrintPage.tsx`, `params.ts` | The hidden print window's route `#/print?bikri=..&doc=..&language=..&job=..[&buyer=..]`. It reads `reports_bikri_print_data` (the only command it may call), draws the document, waits for the fonts, and says `print-ready-<job>` with `{ height_px }` or `print-error-<job>` with `{ codes }` |
+| `print/BikriPrintView.tsx`, `PrintPreview.tsx` | One document on screen (the window, and the in-app preview where printing is not available) |
+| `print/PrintBox.tsx`, `PrintAction.tsx` | The print box (F9 and the "Print" button of the toolbar): language, documents, one buyer, copies, printer or PDF |
+| `print/usePrintAfterSave.tsx`, `after-save.ts` | `Ctrl+Enter`: save, print the ticked documents, open a new بکری. A failed print never undoes the save |
+
 ## Tests
 
 `tests/unit/bikri-contract.test.tsx` (the draft the screen sends equals the backend's request
@@ -106,3 +120,11 @@ and `bikri_preview_e2e26`, each as `.json` (the answer) and `_request.json` (wha
 sends). They are copied from `backend/crates/services/tests/fixtures/`, never edited. The Windows spec is
 `tests/e2e/specs/12-bikri-entry.e2e.mjs`; plan 13 adds `13-bikri-save.e2e.mjs` (Events 1 and 2 saved
 by keyboard) and `14-bikri-draft.e2e.mjs` (E2E-17).
+
+The prints: `print-layout.test.tsx` (the three templates in both languages, numbers isolated, paper
+class, digits), `print-foundation.test.ts` (the footer text, the print stylesheet, the Fluent ids,
+the commands), `print-route.test.tsx` (the hidden window calls one command and emits its events),
+`print-box.test.tsx`, `print-after-save.test.tsx`, `print-settings.test.tsx` (the Printing tab),
+`print-speed.test.tsx` (15 pages, NFR-SPD-14). Canned data: `tests/helpers/print-data.ts`, which
+follows the generated binding types. The Windows spec is `15-bikri-print.e2e.mjs` (PDFs in both
+languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.

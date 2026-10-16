@@ -97,6 +97,45 @@
   --text-urdu-3: 24px;
   --text-urdu-4: 28px;
   --text-urdu-5: 34px;
+
+  /* Print type scale (plan 14, design system 8 item 17). Paper is read at arm's length, so it
+     has its own five steps per script, in points: Latin 8, 9, 10, 12, 16; Urdu 10, 11, 12, 15,
+     20. Gulzar at 11 pt is as easy to read as Inter at 9 pt. The screen scale above never
+     applies to a printed page. */
+  --print-latin-1: 8pt;
+  --print-latin-2: 9pt;
+  --print-latin-3: 10pt;
+  --print-latin-4: 12pt;
+  --print-latin-5: 16pt;
+  --print-urdu-1: 10pt;
+  --print-urdu-2: 11pt;
+  --print-urdu-3: 12pt;
+  --print-urdu-4: 15pt;
+  --print-urdu-5: 20pt;
+
+  /* Print widths. A sheet on screen (the in-app preview) is as wide as its paper; the 80 mm roll
+     prints 72 mm wide (3 mm margins at 80). */
+  --print-w-a4: 210mm;
+  --print-w-a5: 148mm;
+  --print-w-mm80: 80mm;
+
+  /* The width of the text on each paper: the paper less its side margins (A4 10 mm, A5 8 mm, roll
+     3 mm). The hidden print window lays a sheet out at exactly this width, so the page height it
+     reports for the 80 mm roll is the height the page prints at. */
+  --print-content-w-a4: 190mm;
+  --print-content-w-a5: 132mm;
+  --print-content-w-mm80: 74mm;
+
+  /* Spacing on paper, in millimetres, so a gap is the same on every printer. */
+  --print-gap-1: 1mm;
+  --print-gap-2: 2mm;
+  --print-gap-3: 3mm;
+  --print-gap-4: 5mm;
+  --print-gap-5: 8mm;
+
+  /* The thin rule of a bill (a ledger line) and the heavier rule under a total. */
+  --print-rule: 0.25mm;
+  --print-rule-strong: 0.5mm;
 }
 
 @theme {
@@ -206,6 +245,10 @@
   --font-urdu-dense: 'Noto Naskh Arabic', serif;
   --font-latin: 'Inter', sans-serif;
 
+  /* Numbers on an Urdu print with the Urdu digits setting on: Naskh first, because it has the
+     digits ۰ to ۹ (Tech Stack 4.1, NFR-URD-14). Inter follows for the signs it has. */
+  --font-urdu-digits: 'Noto Naskh Arabic', 'Inter', sans-serif;
+
   --radius-1: 4px;
   --radius-2: 8px;
   --radius-3: 12px;
@@ -235,6 +278,11 @@
   --text-5: var(--text-latin-5);
   --text-body: var(--text-latin-2);
   --text-field: var(--text-latin-2);
+  --print-text-1: var(--print-latin-1);
+  --print-text-2: var(--print-latin-2);
+  --print-text-3: var(--print-latin-3);
+  --print-text-4: var(--print-latin-4);
+  --print-text-5: var(--print-latin-5);
   --font-text: var(--font-latin);
   --leading-text: var(--leading-latin);
   --weight-strong: var(--font-weight-semibold);
@@ -247,6 +295,11 @@
   --text-4: var(--text-urdu-4);
   --text-5: var(--text-urdu-5);
   --text-body: var(--text-urdu-1);
+  --print-text-1: var(--print-urdu-1);
+  --print-text-2: var(--print-urdu-2);
+  --print-text-3: var(--print-urdu-3);
+  --print-text-4: var(--print-urdu-4);
+  --print-text-5: var(--print-urdu-5);
 
   /* Text typed into a field. 18 px, as the boards draw it: at 20 px (design system 3, step 2)
      Gulzar's tall letters reach the border of a 44 px field. Reported to tech-lead. */

@@ -68,3 +68,6 @@ settings-lock-minutes = Auto lock after (minutes)
 
 # review: pending
 settings-lock-hint = The app locks after this many minutes with no key pressed. Your work stays as it was.
+
+# review: pending
+settings-tab-printing = Printing

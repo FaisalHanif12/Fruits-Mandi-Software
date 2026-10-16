@@ -269,3 +269,16 @@ err-rate-far-from-average = یہ ریٹ پچھلے 7 دن کی اوسط ({ $aver
 # $max_bytes: the most the app keeps for one unfinished entry. The word is not shown.
 # review: pending
 err-draft-invalid = لکھا ہوا کام عارضی طور پر محفوظ نہیں ہو سکا۔ اندراج ابھی محفوظ کر لیں۔ بار بار ہو تو مدد کے لیے بتائیں۔
+
+## Printing (plan 14).
+
+# PRD FR-12.12. Printing needs Windows; on other computers the preview shows how it will print.
+# review: pending
+err-print-windows-only = پرنٹنگ صرف ونڈوز پر ہو سکتی ہے۔ اس کمپیوٹر پر پیش منظر میں دیکھ لیں کہ دستاویز کیسے چھپے گی۔
+
+# $printer is the printer name in Settings.
+# review: pending
+err-printer-not-found = پرنٹر { $printer } نہیں ملا۔ دیکھیں کہ وہ آن ہے اور جڑا ہوا ہے، یا ترتیبات میں دوسرا پرنٹر چنیں۔
+
+# review: pending
+err-print-failed = دستاویز پرنٹ نہیں ہو سکی۔ پرنٹر دیکھ لیں اور دوبارہ کوشش کریں۔ بار بار ہو تو مدد کے لیے بتائیں۔

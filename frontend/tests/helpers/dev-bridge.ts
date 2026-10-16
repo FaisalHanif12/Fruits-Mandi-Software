@@ -8,6 +8,8 @@
 import { EVENT1, IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
 import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved';
 import { paisaForTest } from './paisa';
+import { printDataFor } from './print-data';
+import { printingSettings } from './print-settings';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import { createBikriDraft, type BikriDraftStores } from '../../src/features/bikri/draft-store';
 import { serialiseDraft } from '../../src/features/bikri/draft-snapshot';
@@ -252,6 +254,28 @@ const handlers: Record<string, Handler> = {
   drafts_save: () => ({ saved_at: '2026-10-10T07:30:00Z' }),
   drafts_discard: () => null,
   search_pukhta_people: () => [SHAHID, NASIR],
+  // Plan 14: the print box, the preview and the Printing settings. `#/dev/bikri?id=41&windows`
+  // pretends the computer is Windows (the print goes through); without it the answer is the one a
+  // Mac gives, ERR_PRINT_WINDOWS_ONLY, so the preview offer can be photographed.
+  settings_get_printing: () => printingSettings(),
+  settings_set_printing: (input) => ({
+    ...printingSettings(),
+    ...input,
+    copies: Number(input['copies']),
+  }),
+  reports_list_printers: () => (devFlag('noprinters') ? [] : ['HP LaserJet Pro', 'Epson TM-T20']),
+  reports_bikri_print_data: (input) =>
+    printDataFor(input['doc'] as 'seller_bill', {
+      language: input['language'] === 'en' ? 'en' : 'ur',
+    }),
+  reports_print: (input) => {
+    if (!devFlag('windows')) throw windowsOnly();
+    const docs = Array.isArray(input['docs']) ? (input['docs'] as string[]) : [];
+    return {
+      printed: docs,
+      pdf_paths: input['to'] === 'pdf' ? docs.map((doc) => `prints/${doc}-1.pdf`) : null,
+    };
+  },
   pukhta_register: () =>
     devFlag('empty')
       ? []
@@ -305,6 +329,15 @@ function refusal(): Error {
   });
 }
 
+/** What a computer that is not Windows answers to a print (plan 14 contract 8). */
+function windowsOnly(): Error {
+  return Object.assign(new Error('ERR_PRINT_WINDOWS_ONLY'), {
+    ok: false,
+    errors: [{ code: 'ERR_PRINT_WINDOWS_ONLY', field: null, values: {} }],
+    ref: '',
+  });
+}
+
 /** Puts the stand-in where Tauri's `invoke` looks for the bridge. */
 export function installDevBridge(): void {
   Object.defineProperty(window, '__TAURI_INTERNALS__', {
@@ -315,8 +348,15 @@ export function installDevBridge(): void {
         // The delay is the answer time of a real command, so the screen's waiting looks real.
         return new Promise((resolve, reject) => {
           window.setTimeout(() => {
-            if (handler === undefined) reject(refusal());
-            else resolve(handler(command === 'day_status' ? {} : inputOf(args)));
+            if (handler === undefined) {
+              reject(refusal());
+              return;
+            }
+            try {
+              resolve(handler(command === 'day_status' ? {} : inputOf(args)));
+            } catch (failure: unknown) {
+              reject(failure instanceof Error ? failure : refusal());
+            }
           }, 20);
         });
       },

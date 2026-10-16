@@ -271,3 +271,16 @@ err-rate-far-from-average = This rate is more than { $percent }% away from the a
 # $max_bytes: the most the app keeps for one unfinished entry. The number is not shown.
 # review: pending
 err-draft-invalid = Your unfinished work could not be kept for now. Save the entry now. If this happens again, tell us.
+
+## Printing (plan 14).
+
+# PRD FR-12.12. Printing needs Windows; on other computers the preview shows how it will print.
+# review: pending
+err-print-windows-only = Printing works only on Windows. On this computer, use the preview to see how the document will print.
+
+# $printer is the printer name in Settings.
+# review: pending
+err-printer-not-found = The printer { $printer } was not found. Check that it is on and connected, or choose another printer in Settings.
+
+# review: pending
+err-print-failed = The document could not be printed. Check the printer and try again. If it keeps happening, ask for help.

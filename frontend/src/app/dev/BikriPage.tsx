@@ -12,6 +12,7 @@ import { paisaForTest } from '../../../tests/helpers/paisa';
 import { BikriDraftOffer } from '../../features/bikri/draft-offer';
 import { BikriBookPage } from '../../features/bikri/pages/BikriBookPage';
 import { TodayBikriPage } from '../../features/bikri/pages/TodayBikriPage';
+import { PrintingTab } from '../../features/settings/components/PrintingTab';
 import { PukhtaRegisterPage } from '../../features/pukhta_khata/pages/PukhtaRegisterPage';
 import { useLanguage } from '../../shared/i18n';
 import { Button, CashConfirmDialog } from '../../shared/ui';
@@ -72,7 +73,9 @@ export function BikriPage() {
         </div>
       ) : null}
       {devFlag('offer') ? <BikriDraftOffer /> : null}
-      {devFlag('today') ? (
+      {devFlag('printing') ? (
+        <PrintingTab />
+      ) : devFlag('today') ? (
         <TodayBikriPage />
       ) : devFlag('pukhta') ? (
         <PukhtaRegisterPage />

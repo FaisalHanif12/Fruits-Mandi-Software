@@ -514,6 +514,25 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "language": "en" } }),
             true,
         ),
+        (
+            "reports_bikri_print_data",
+            json!({ "input": { "bikri_id": 1, "doc": "seller_bill", "language": "ur", "only_buyer_id": null } }),
+            true,
+        ),
+        (
+            "reports_print",
+            json!({ "input": { "bikri_id": 1, "docs": ["seller_bill"], "language": "ur", "copies": null,
+                "to": "pdf", "only_buyer_id": null } }),
+            true,
+        ),
+        ("reports_list_printers", json!({}), true),
+        ("settings_get_printing", json!({}), true),
+        (
+            "settings_set_printing",
+            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
+                "printer": "", "copies": "1", "urdu_digits": false, "print_after_save": ["seller_bill"] } }),
+            true,
+        ),
     ]
 }
 

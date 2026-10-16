@@ -15,6 +15,18 @@ import { moveDevPathToHash } from './dev/hash-route';
 
 const rootRoute = createRootRoute({ component: Outlet });
 
+// The hidden print window (plan 14): `#/print?bikri=...&doc=...&language=...&job=...`. It sits
+// outside the app shell on purpose: no sign-in screen, no menus, only the document. The backend
+// opens it, waits for its `print-ready-<job>` event and prints it.
+const printRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/print',
+  component: lazyRouteComponent(
+    () => import('../features/bikri/print/BikriPrintPage'),
+    'BikriPrintPage',
+  ),
+});
+
 // Everything a signed-in user reaches sits under one layout route: the start-up data check, the
 // sign-in screens and the app shell come first (plan 04), and the screens render inside the shell.
 const appRoute = createRoute({
@@ -305,10 +317,19 @@ const devRoutes = import.meta.env.DEV
         path: '/dev/bikri',
         component: lazyRouteComponent(() => import('./dev/BikriPage'), 'BikriPage'),
       }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/print',
+        component: lazyRouteComponent(() => import('./dev/PrintPage'), 'PrintPage'),
+      }),
     ]
   : [];
 
-const routeTree = rootRoute.addChildren([appRoute.addChildren(appRoutes), ...devRoutes]);
+const routeTree = rootRoute.addChildren([
+  appRoute.addChildren(appRoutes),
+  printRoute,
+  ...devRoutes,
+]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router
 // reads the address. In a build, DEV is false, so this call and the helper are removed.

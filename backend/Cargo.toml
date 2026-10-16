@@ -78,6 +78,10 @@ getrandom = "0.4.3"
 fs4 = "1.1.0"
 tempfile = "3.27.0"
 
+# Snapshot tests of print data and reports (Tech Stack 2, plan 14). A dev-dependency only; JSON
+# snapshots of serde values, no console colours.
+insta = { version = "1.49.0", default-features = false, features = ["json"] }
+
 # Benchmarks for the NFR speed targets (Code Standards B25). No HTML or plot output.
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 

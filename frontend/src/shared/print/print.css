@@ -1,0 +1,553 @@
+/*
+ * The shared print layout (plan 14, PRD FR-19.3 to FR-19.7, NFR-URD-11 to NFR-URD-16). Every
+ * printed document of the app is laid out with these classes: the seller bill, the buyer slips,
+ * the پختہ slip, later the receipt slip and the reports.
+ *
+ * Rules kept here:
+ *  - ONE literal @page rule per paper class (var() does not work inside @page). It holds the
+ *    paper size, the margins and the page footer (the page number and the print time).
+ *  - The footer text is a custom property `--print-footer`, set by script on the root element
+ *    (shared/print/footer.ts). A <style> element would be refused by the Content Security Policy
+ *    (style-src 'self'), a custom property set through the CSS object model is not.
+ *  - Numbers sit on the physical right edge with equal-width digits (NFR-USE-19). The numbers
+ *    come from <Num> and <Code>; the class `type-number` they carry gets the print size here.
+ *  - Sizes, colours and fonts are tokens (Code Standards F9). Lengths are millimetres.
+ *  - Logical properties only (CLAUDE.md rule 8). The one direction a sheet has is its `dir`
+ *    attribute, which comes from the print language, never from the app language.
+ */
+
+/* One rule per paper class. Margins are two values (block, inline); WebView2 is given the same
+   sizes and margins by the backend (plan 14 contract). */
+@page a4 {
+  size: a4;
+  margin: 14mm 10mm;
+
+  @bottom-center {
+    content: var(--print-footer, '');
+    font-family: var(--font-text);
+    font-size: var(--print-text-1);
+    line-height: var(--leading-text);
+    color: var(--color-ink-muted);
+  }
+}
+
+@page a5 {
+  size: a5;
+  margin: 10mm 8mm;
+
+  @bottom-center {
+    content: var(--print-footer, '');
+    font-family: var(--font-text);
+    font-size: var(--print-text-1);
+    line-height: var(--leading-text);
+    color: var(--color-ink-muted);
+  }
+}
+
+/* The roll has one tall page; its real height is set from the content (PrintToPdf and Print get
+   the measured height). */
+@page r80 {
+  size: 80mm 297mm;
+  margin: 4mm 3mm;
+
+  @bottom-center {
+    content: var(--print-footer, '');
+    font-family: var(--font-text);
+    font-size: var(--print-text-1);
+    line-height: var(--leading-text);
+    color: var(--color-ink-muted);
+  }
+}
+
+/* The paper of the whole page. The `page` property is on the root element, not on the document,
+   because a box whose page name differs from the box next to it forces a page break: the empty
+   box of the toast area beside the document would make a blank second sheet. */
+html:has(.print-doc[data-paper='a4']) {
+  page: a4;
+}
+
+html:has(.print-doc[data-paper='a5']) {
+  page: a5;
+}
+
+html:has(.print-doc[data-paper='mm80']) {
+  page: r80;
+}
+
+/* The page: Urdu in Gulzar with the Nastaliq line height (NFR-URD-11), English in Inter. The
+   font, size steps and line height follow the `lang` of the sheet (tokens.css), which is the
+   print language. */
+.print-doc {
+  --print-num-size: var(--print-latin-3);
+
+  font-family: var(--font-text);
+  font-size: var(--print-text-3);
+  line-height: var(--leading-text);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+}
+
+/* Numbers, codes, dates and phones: Inter, equal-width digits, written left to right
+   (Code Standards F17, F25). A number is Inter, so it takes the LATIN step of the size of the text
+   around it, also in an Urdu print (Inter at step 3 is 10 pt beside Gulzar at 12 pt, which look
+   alike). Every rule below that sets a font size also sets --print-num-size to the same step,
+   because a token rule may not say "inherit". With the Urdu digits setting on, Naskh comes first, because it has the digits
+   (NFR-URD-14, Tech Stack 4.1). */
+.print-doc .type-number {
+  font-family: var(--font-latin);
+  font-size: var(--print-num-size);
+  line-height: var(--leading-latin);
+  font-variant-numeric: tabular-nums;
+}
+
+.print-doc[data-digits='urdu'] .type-number {
+  font-family: var(--font-urdu-digits);
+}
+
+/* One sheet is one party: a seller, a buyer or a one-time buyer. */
+.print-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-4);
+}
+
+/* A sheet of A4 or A5 starts on a new page, and so does each party after the first. The roll has
+   no sheets, only a cut line between slips. */
+.print-doc:not([data-paper='mm80']) .print-sheet + .print-sheet {
+  break-before: page;
+}
+
+.print-doc[data-paper='mm80'] .print-sheet + .print-sheet {
+  margin-block-start: var(--print-gap-5);
+  padding-block-start: var(--print-gap-5);
+  border-block-start: var(--print-rule) dashed var(--color-ink);
+}
+
+/* The header: the firm at the start, the title of the document at the end. */
+.print-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--print-gap-3);
+  padding-block-end: var(--print-gap-3);
+  border-block-end: var(--print-rule-strong) solid var(--color-ink);
+}
+
+.print-firm {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.print-firm-name {
+  --print-num-size: var(--print-latin-4);
+
+  font-size: var(--print-text-4);
+  font-weight: var(--weight-strong);
+}
+
+.print-firm-line {
+  --print-num-size: var(--print-latin-2);
+
+  font-size: var(--print-text-2);
+  color: var(--color-ink-muted);
+}
+
+.print-title {
+  --print-num-size: var(--print-latin-4);
+
+  font-size: var(--print-text-4);
+  font-weight: var(--weight-strong);
+  color: var(--color-primary);
+}
+
+.print-doc[data-paper='mm80'] .print-header {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.print-doc[data-paper='mm80'] .print-firm {
+  align-items: center;
+}
+
+/* The facts under the header: number, date, bill date, truck. */
+.print-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--print-gap-2) var(--print-gap-5);
+  margin: 0;
+}
+
+.print-fact {
+  display: flex;
+  gap: var(--print-gap-2);
+  align-items: baseline;
+}
+
+.print-fact dt {
+  --print-num-size: var(--print-latin-2);
+
+  font-size: var(--print-text-2);
+  color: var(--color-ink-muted);
+}
+
+.print-fact dd {
+  margin: 0;
+  font-weight: var(--weight-strong);
+}
+
+/* Who the page is for. */
+.print-party {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--print-gap-2) var(--print-gap-4);
+  padding: var(--print-gap-2) var(--print-gap-3);
+  border: var(--print-rule) solid var(--color-ink);
+  border-radius: var(--radius-1);
+}
+
+.print-party-role {
+  --print-num-size: var(--print-latin-2);
+
+  font-size: var(--print-text-2);
+  color: var(--color-ink-muted);
+}
+
+.print-party-name {
+  --print-num-size: var(--print-latin-4);
+
+  font-size: var(--print-text-4);
+  font-weight: var(--weight-strong);
+}
+
+.print-party-extra {
+  --print-num-size: var(--print-latin-2);
+
+  font-size: var(--print-text-2);
+  color: var(--color-ink-muted);
+}
+
+/* The goods: the header row repeats on every page, a row never splits (reference.md). */
+.print-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.print-table thead {
+  display: table-header-group;
+}
+
+.print-table tr {
+  break-inside: avoid;
+}
+
+.print-table th {
+  --print-num-size: var(--print-latin-2);
+
+  padding: var(--print-gap-1) var(--print-gap-2);
+  border-block: var(--print-rule) solid var(--color-ink);
+  font-size: var(--print-text-2);
+  font-weight: var(--weight-strong);
+  color: var(--color-ink-muted);
+  text-align: start;
+}
+
+.print-table td {
+  padding: var(--print-gap-1) var(--print-gap-2);
+  border-block-end: var(--print-rule) solid var(--color-border);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+/* A number cell: left to right, on the physical right edge of its cell. The heading above it
+   has the same edge (NFR-USE-19, Code Standards F17). */
+.print-table .print-num,
+.print-amounts .print-num {
+  direction: ltr;
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.print-table .print-col-num {
+  inline-size: 20mm;
+}
+
+.print-table .print-col-qty {
+  inline-size: 14mm;
+}
+
+.print-table .print-col-date {
+  inline-size: 24mm;
+}
+
+/* The 80 mm roll has no room for columns: each line is two rows of text. */
+.print-compact {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.print-compact-line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-1);
+  padding-block: var(--print-gap-2);
+  border-block-end: var(--print-rule) solid var(--color-border);
+  break-inside: avoid;
+}
+
+.print-compact-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--print-gap-2);
+}
+
+.print-compact-name {
+  font-weight: var(--weight-strong);
+}
+
+.print-compact-sub {
+  --print-num-size: var(--print-latin-2);
+
+  font-size: var(--print-text-2);
+  color: var(--color-ink-muted);
+}
+
+/* The amounts under the goods, and the amount in words, are kept in one piece. */
+.print-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-3);
+  break-inside: avoid;
+}
+
+.print-amounts {
+  inline-size: 100%;
+  max-inline-size: 75mm;
+  margin-inline-start: auto;
+  border-collapse: collapse;
+}
+
+.print-doc[data-paper='mm80'] .print-amounts {
+  max-inline-size: none;
+}
+
+/* The amount column has the width of the amount column of the goods table, at the end side, so the
+   figures of the amounts stand under the figures of the goods (NFR-USE-19). */
+.print-amounts .print-num {
+  inline-size: 20mm;
+}
+
+.print-amounts th {
+  padding: var(--print-gap-1) var(--print-gap-2);
+  font-weight: var(--font-weight-normal);
+  text-align: start;
+}
+
+.print-amounts td {
+  padding: var(--print-gap-1) var(--print-gap-2);
+}
+
+.print-amounts tr {
+  break-inside: avoid;
+}
+
+.print-table .print-line-note-cell {
+  --print-num-size: var(--print-latin-1);
+
+  padding-block-start: 0;
+  font-size: var(--print-text-1);
+  color: var(--color-ink-muted);
+}
+
+.print-amount-subtotal th,
+.print-amount-subtotal td {
+  border-block-start: var(--print-rule) solid var(--color-ink);
+  font-weight: var(--weight-strong);
+}
+
+.print-amount-total th,
+.print-amount-total td {
+  --print-num-size: var(--print-latin-4);
+
+  /* A double rule under the total, like the one in a ledger. */
+  border-block-start: var(--print-rule) solid var(--color-ink);
+  border-block-end: var(--print-gap-1) double var(--color-ink);
+  font-size: var(--print-text-4);
+  font-weight: var(--weight-strong);
+}
+
+.print-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--print-gap-2);
+  align-items: baseline;
+  padding-block: var(--print-gap-2);
+  border-block-start: var(--print-rule) solid var(--color-border);
+}
+
+.print-words-label {
+  --print-num-size: var(--print-latin-2);
+
+  font-size: var(--print-text-2);
+  color: var(--color-ink-muted);
+}
+
+.print-words-text {
+  font-weight: var(--weight-strong);
+}
+
+/* How the buyer pays. The words say it; a border, not a colour, marks it, so a black and white
+   printer loses nothing (NFR-USE-12). */
+.print-payment {
+  align-self: flex-start;
+  padding: var(--print-gap-1) var(--print-gap-3);
+  border: var(--print-rule-strong) solid var(--color-ink);
+  border-radius: var(--radius-1);
+  font-weight: var(--weight-strong);
+}
+
+.print-payment[data-paid='false'] {
+  border-style: dashed;
+}
+
+/* A cancelled بکری: the word across the page. */
+.print-stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.print-stamp-text {
+  padding: var(--print-gap-1) var(--print-gap-4);
+  border: var(--print-rule-strong) solid var(--color-due);
+  border-radius: var(--radius-2);
+  font-size: var(--print-text-5);
+  font-weight: var(--weight-strong);
+  color: var(--color-due);
+  rotate: -12deg;
+  opacity: 0.6;
+}
+
+.print-empty {
+  padding: var(--print-gap-5);
+  text-align: center;
+  color: var(--color-ink-muted);
+}
+
+/* On paper the footer is the page margin (above). On screen, in the in-app preview, a line under
+   each sheet says the same. */
+.print-screen-footer {
+  --print-num-size: var(--print-latin-1);
+
+  font-size: var(--print-text-1);
+  color: var(--color-ink-muted);
+}
+
+@media print {
+  /* Paper is white. The page ground and the full-height body of the app would print a tinted
+     sheet and a blank second page (the body is as tall as the window on screen). `:root` raises the
+     specificity above the plain `html` and `body` rules of globals.css, which come later. */
+  html:root,
+  :root body {
+    min-block-size: 0;
+    background-color: var(--color-surface);
+  }
+
+  .print-screen-footer {
+    display: none;
+  }
+
+  .print-doc {
+    background-color: transparent;
+  }
+}
+
+/* The preview and the hidden window show a sheet as wide as its paper, so a line breaks where it
+   will break on paper and the 80 mm roll height measured here is the height it prints at. */
+@media screen {
+  .print-doc {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background-color: var(--color-surface-sunken);
+  }
+
+  .print-sheet {
+    box-sizing: border-box;
+    padding: var(--print-gap-5) var(--print-gap-5);
+    background-color: var(--color-surface);
+    border: var(--border-w) solid var(--color-border);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .print-doc[data-paper='a4'] .print-sheet {
+    inline-size: var(--print-w-a4);
+  }
+
+  .print-doc[data-paper='a5'] .print-sheet {
+    inline-size: var(--print-w-a5);
+  }
+
+  .print-doc[data-paper='mm80'] .print-sheet {
+    inline-size: var(--print-w-mm80);
+    padding: var(--print-gap-3);
+  }
+
+  /* On the roll the slips follow each other on one strip of paper. */
+  .print-doc[data-paper='mm80'] {
+    gap: 0;
+  }
+
+  /*
+   * The hidden print window (data-window) lays the page out exactly as it will print: no ground,
+   * no frame, no padding, and a sheet as wide as the text of the paper. The 80 mm roll takes its
+   * height from this layout (the backend adds the top and bottom margins), so nothing that only
+   * exists on screen may add to it.
+   */
+  .print-doc[data-window] {
+    gap: 0;
+    padding: 0;
+    background-color: transparent;
+  }
+
+  .print-doc[data-window] .print-sheet {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background-color: transparent;
+  }
+
+  .print-doc[data-window][data-paper='a4'] .print-sheet {
+    inline-size: var(--print-content-w-a4);
+  }
+
+  .print-doc[data-window][data-paper='a5'] .print-sheet {
+    inline-size: var(--print-content-w-a5);
+  }
+
+  .print-doc[data-window][data-paper='mm80'] .print-sheet {
+    inline-size: var(--print-content-w-mm80);
+  }
+
+  .print-doc[data-window] .print-screen-footer {
+    display: none;
+  }
+
+  .print-doc[data-paper='mm80']:not([data-window]) .print-sheet + .print-sheet {
+    margin-block-start: 0;
+    padding-block-start: var(--print-gap-5);
+  }
+}

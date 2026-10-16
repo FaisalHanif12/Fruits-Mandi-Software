@@ -11,6 +11,7 @@ pub mod drafts;
 pub mod masters;
 pub mod partners;
 pub mod pukhta;
+pub mod reports;
 pub mod rules;
 pub mod search;
 pub mod settings;

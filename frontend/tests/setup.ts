@@ -36,4 +36,17 @@ if (typeof Element !== 'undefined') {
       return this.parentElement;
     },
   });
+  // jsdom has no layout either, so every element's rectangle is all zeros. AG Grid looks at the
+  // cell of an open popup editor (the picker cells of the بکری grids) every 200 ms and closes the
+  // editor when the cell's rectangle is all zeros, because it takes the cell for one that has left
+  // the page (ag-stack `keepPopupPositionedRelativeTo`). With zeros, a picker cell closed itself
+  // 200 ms after it opened: a code typed in under 200 ms was fine, and on a busy computer the cell
+  // closed in the middle of the code, so the one-time buyer test failed in full parallel runs
+  // (found in plan 14). In a real window a cell has a size and the editor stays open, so nothing
+  // in the app is wrong. Every element gets a small rectangle that is not all zeros.
+  const RECT_WIDTH = 100;
+  const RECT_HEIGHT = 20;
+  Element.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
+    return new DOMRect(0, 0, RECT_WIDTH, RECT_HEIGHT);
+  };
 }

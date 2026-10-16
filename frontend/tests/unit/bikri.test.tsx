@@ -89,9 +89,11 @@ describe.each(LANGUAGES)('the sale book screen (%s)', (language) => {
       screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
     ).toHaveValue(names(language).rahim);
     // The note says where the values came from, so nothing is filled without being seen.
-    expect(pageText()).toContain(
-      message(language, 'bikri-header-filled-from', { number: 1, date: '09-10-2026' }),
-    );
+    await waitFor(() => {
+      expect(pageText()).toContain(
+        message(language, 'bikri-header-filled-from', { number: 1, date: '09-10-2026' }),
+      );
+    });
     // His item and packing, and the seller of the lot, are in the cells as Enter stops.
     await user.keyboard('{Enter}{Enter}{Enter}');
     const lots = lotsGrid(language);
@@ -165,33 +167,33 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
       ]);
     });
     const sales = salesGrid(language);
+    // Every number comes with one answer of the backend for both lines. The answer for the first
+    // line alone arrives earlier, so nothing is read until the answer for both lines is on screen.
     await waitFor(() => {
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
+      expect(textOf(sales, 0, 'amount')).toBe('12,000');
+      expect(textOf(sales, 0, 'sellerComm')).toBe('720');
+      expect(textOf(sales, 1, 'amount')).toBe('17,400');
+      expect(textOf(sales, 1, 'buyerComm')).toBe('1,044');
+      expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
+      expect(textOf(lotsGrid(language), 0, 'net')).toBe('19,316');
+      const summary = screen
+        .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
+        .closest('section');
+      if (summary === null) throw new Error('no summary');
+      expect(rowText(summary, language, 'glossary-kham-bikri')).toContain('29,400');
+      expect(rowText(summary, language, 'bikri-summary-deductions')).toContain('10,084');
+      expect(rowText(summary, language, 'glossary-safi-bikri')).toContain('19,316');
+      expect(rowText(summary, language, 'bikri-summary-buyer-total')).toContain('31,564');
+      const split = screen
+        .getByRole('heading', { name: named(message(language, 'bikri-split-title')) })
+        .closest('section');
+      if (split === null) throw new Error('no split');
+      expect(rowText(split, language, 'bikri-split-shared')).toContain('3,948');
+      const splitText = visible(split.textContent);
+      expect(splitText).toContain('1,580');
+      expect(splitText).toContain('1,184');
     });
-    expect(textOf(sales, 0, 'amount')).toBe('12,000');
-    expect(textOf(sales, 0, 'sellerComm')).toBe('720');
-    expect(textOf(sales, 1, 'amount')).toBe('17,400');
-    expect(textOf(sales, 1, 'buyerComm')).toBe('1,044');
-    expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
-    expect(textOf(lotsGrid(language), 0, 'net')).toBe('19,316');
-
-    const summary = screen
-      .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
-      .closest('section');
-    if (summary === null) throw new Error('no summary');
-    expect(rowText(summary, language, 'glossary-kham-bikri')).toContain('29,400');
-    expect(rowText(summary, language, 'bikri-summary-deductions')).toContain('10,084');
-    expect(rowText(summary, language, 'glossary-safi-bikri')).toContain('19,316');
-    expect(rowText(summary, language, 'bikri-summary-buyer-total')).toContain('31,564');
-
-    const split = screen
-      .getByRole('heading', { name: named(message(language, 'bikri-split-title')) })
-      .closest('section');
-    if (split === null) throw new Error('no split');
-    expect(rowText(split, language, 'bikri-split-shared')).toContain('3,948');
-    const splitText = visible(split.textContent);
-    expect(splitText).toContain('1,580');
-    expect(splitText).toContain('1,184');
   });
 
   it('ⓘ on the seller commission of line 1 shows 12,000 × 6 ÷ 100 = 720, by click and by Ctrl+I', async () => {
@@ -292,7 +294,9 @@ describe.each(LANGUAGES)(
       });
       expect(visible(rate.textContent).trim()).toBe('600');
       await user.keyboard('{Enter}');
-      expect(focusedIn(sales)).toBe('1:rate');
+      await waitFor(() => {
+        expect(focusedIn(sales)).toBe('1:rate');
+      });
       await user.keyboard('{Control>}d{/Control}');
       await waitFor(() => {
         expect(rate).not.toHaveClass('cell-hint');
@@ -383,8 +387,10 @@ describe.each(LANGUAGES)('the summary of a lot and of the whole sale (%s)', (lan
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
+    // Both lines are answered: the whole sale says 29,400 only from then on. The first line alone
+    // is answered earlier, with 12,000.
     await waitFor(() => {
-      expect(textOf(salesGrid(language), 0, 'buyerTotal')).toBe('12,880');
+      expect(textOf(salesGrid(language), 1, 'buyerTotal')).toBe('18,684');
     });
     const summary = screen
       .getByRole('heading', { name: named(message(language, 'bikri-summary-title')) })
@@ -395,7 +401,9 @@ describe.each(LANGUAGES)('the summary of a lot and of the whole sale (%s)', (lan
     });
     expect(whole).toHaveAttribute('aria-pressed', 'false');
     await user.click(whole);
-    expect(whole).toHaveAttribute('aria-pressed', 'true');
-    expect(visible(summary.textContent)).toContain('29,400');
+    await waitFor(() => {
+      expect(whole).toHaveAttribute('aria-pressed', 'true');
+      expect(visible(summary.textContent)).toContain('29,400');
+    });
   });
 });

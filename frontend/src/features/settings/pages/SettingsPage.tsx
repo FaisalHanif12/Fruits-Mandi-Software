@@ -12,10 +12,11 @@ import { FirmTab } from '../components/FirmTab';
 import { LanguageTab } from '../components/LanguageTab';
 import { LockTab } from '../components/LockTab';
 import { OverridesTab } from '../components/OverridesTab';
+import { PrintingTab } from '../components/PrintingTab';
 import { useSettings } from '../hooks';
 
 /** The tabs a link may open (`/settings?tab=charges`). */
-const TAB_IDS = ['firm', 'charges', 'overrides', 'language', 'lock'];
+const TAB_IDS = ['firm', 'charges', 'overrides', 'printing', 'language', 'lock'];
 
 export function SettingsPage() {
   const { l10n } = useLocalization();
@@ -62,6 +63,11 @@ export function SettingsPage() {
             id: 'overrides',
             label: <Localized id="settings-tab-overrides" />,
             content: <OverridesTab />,
+          },
+          {
+            id: 'printing',
+            label: <Localized id="settings-tab-printing" />,
+            content: <PrintingTab />,
           },
           {
             id: 'language',

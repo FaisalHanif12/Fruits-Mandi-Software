@@ -61,6 +61,33 @@ fn words_1_316_040() {
     );
 }
 
+// ---- The printed documents of plan 14 (PRD 4.4, 4.5) ----
+
+#[test]
+fn words_12_800_the_pukhta_slip() {
+    assert_eq!(ur(12_800), "بارہ ہزار آٹھ سو روپے");
+    assert_eq!(intl(12_800), "Twelve thousand eight hundred rupees only");
+    assert_eq!(lakh(12_800), "Twelve thousand eight hundred rupees only");
+}
+
+#[test]
+fn words_of_the_two_buyer_slips() {
+    assert_eq!(ur(12_880), "بارہ ہزار آٹھ سو اسی روپے");
+    assert_eq!(
+        intl(12_880),
+        "Twelve thousand eight hundred eighty rupees only"
+    );
+    assert_eq!(ur(18_684), "اٹھارہ ہزار چھ سو چوراسی روپے");
+    assert_eq!(
+        intl(18_684),
+        "Eighteen thousand six hundred eighty-four rupees only"
+    );
+    assert_eq!(
+        lakh(18_684),
+        "Eighteen thousand six hundred eighty-four rupees only"
+    );
+}
+
 // ---- Boundaries ----
 
 #[test]

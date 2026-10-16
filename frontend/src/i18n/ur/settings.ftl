@@ -68,3 +68,6 @@ settings-lock-minutes = خودکار تالا (منٹ)
 
 # review: pending
 settings-lock-hint = اتنے منٹ کوئی کلید نہ دبانے پر ایپ لاک ہو جائے گی۔ آپ کا کام جوں کا توں رہے گا۔
+
+# review: pending
+settings-tab-printing = پرنٹنگ

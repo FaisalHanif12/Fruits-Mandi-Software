@@ -18,7 +18,7 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, bikri, cash, drafts, masters, partners, rules, search, vouchers,
+    accounts, bikri, cash, drafts, masters, partners, printing, rules, search, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -261,6 +261,24 @@ const EXPECTED_FILES: &[&str] = &[
     "DraftGetInput.ts",
     "DraftDiscardInput.ts",
     "DraftRow.ts",
+    "PrintDoc.ts",
+    "Paper.ts",
+    "PrintTo.ts",
+    "PrintingSettings.ts",
+    "SetPrintingInput.ts",
+    "PrintInput.ts",
+    "PrintOutcome.ts",
+    "BikriPrintDataInput.ts",
+    "TextDir.ts",
+    "PrintFirm.ts",
+    "PrintFact.ts",
+    "PrintParty.ts",
+    "PrintLine.ts",
+    "AmountRole.ts",
+    "PrintAmount.ts",
+    "PrintWords.ts",
+    "PrintPage.ts",
+    "PrintData.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -399,6 +417,12 @@ fn export_bindings() {
     drafts::DraftDiscardInput::export_all(&cfg).unwrap();
     drafts::DraftRow::export_all(&cfg).unwrap();
     cash::CashCheck::export_all(&cfg).unwrap();
+    printing::PrintingSettings::export_all(&cfg).unwrap();
+    printing::SetPrintingInput::export_all(&cfg).unwrap();
+    printing::PrintInput::export_all(&cfg).unwrap();
+    printing::PrintOutcome::export_all(&cfg).unwrap();
+    mandi_reports::print::BikriPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintData::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();

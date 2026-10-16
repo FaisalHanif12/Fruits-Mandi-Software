@@ -207,6 +207,11 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-drafts-save",
             "allow-drafts-get",
             "allow-drafts-discard",
+            "allow-reports-bikri-print-data",
+            "allow-reports-print",
+            "allow-reports-list-printers",
+            "allow-settings-get-printing",
+            "allow-settings-set-printing",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",
@@ -219,6 +224,24 @@ fn capability_allows_only_our_command_and_shell_plugins() {
     );
     assert_eq!(
         conf()["app"]["security"]["capabilities"],
-        json!(["default"])
+        json!(["default", "print"])
+    );
+}
+
+/// The hidden print windows (plan 14) may only read the print data of a document, check the
+/// sign-in state, and use events to say the page is ready (NFR-SEC-10).
+#[test]
+fn print_capability_is_small_and_only_for_print_windows() {
+    let cap: Value = serde_json::from_str(include_str!("../capabilities/print.json")).unwrap();
+    assert_eq!(cap["identifier"], "print");
+    assert_eq!(cap["windows"], json!(["print-*"]));
+    assert_eq!(
+        cap["permissions"],
+        json!([
+            "allow-app-data-status",
+            "allow-auth-status",
+            "allow-reports-bikri-print-data",
+            "core:event:default"
+        ])
     );
 }

@@ -245,3 +245,32 @@ pub async fn settings_set_overrides<R: tauri::Runtime>(
     })
     .await
 }
+
+/// The Printing settings of PRD Section 21: paper per document (starts: seller bill A4, buyer
+/// slips A5, پختہ slip A5), printer (empty = the default printer), copies (1), Urdu digits on
+/// Urdu prints (off), and the list "print after save" of the signed-in user (PRD FR-7.57).
+#[tauri::command]
+pub async fn settings_get_printing<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<mandi_services::core::printing::PrintingSettings, UiError> {
+    run(app, "settings_get_printing", |ctx| {
+        let actor = auth::require(ctx)?;
+        mandi_services::printing::get_settings(ctx, &actor)
+    })
+    .await
+}
+
+/// Saves the Printing settings, with an audit row (old and new value). Errors: the copies codes
+/// on `copies` (`ERR_REQUIRED`, `ERR_NOT_A_NUMBER`, `ERR_OUT_OF_RANGE` with `min` and `max`),
+/// `ERR_TEXT_TOO_LONG` or `ERR_CONTROL_CHARS` on `printer`.
+#[tauri::command]
+pub async fn settings_set_printing<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: mandi_services::core::printing::SetPrintingInput,
+) -> Result<mandi_services::core::printing::PrintingSettings, UiError> {
+    run(app, "settings_set_printing", move |ctx| {
+        let actor = auth::require(ctx)?;
+        mandi_services::printing::set_settings(ctx, &actor, &input)
+    })
+    .await
+}

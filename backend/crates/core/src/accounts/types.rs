@@ -183,7 +183,7 @@ pub struct AccountInput {
 }
 
 /// A small pointer to another record, for the lists and the form.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct RecordRef {
     /// Row id.
     #[ts(type = "number")]

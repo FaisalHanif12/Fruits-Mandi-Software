@@ -218,11 +218,20 @@ pub enum ErrorCode {
     /// A draft payload that is not valid JSON, or is over 1 MB (PRD FR-12.10, NFR-REL-2). Field
     /// `payload_json`. Values: `max_bytes`.
     ErrDraftInvalid,
+    /// Printing and saving a PDF need Windows (WebView2). On any other computer the screen
+    /// offers the PDF preview in the app instead (plan 14, the Mac phase).
+    ErrPrintWindowsOnly,
+    /// The printer in Settings, or the default printer, was not found or is offline (plan 14).
+    /// Values: `printer` (the name looked for, empty for the default printer).
+    ErrPrinterNotFound,
+    /// The print or the PDF failed after it started: the page did not get ready, or the print
+    /// system refused the job. The cause is in the log with the reference number (plan 14).
+    ErrPrintFailed,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 85] = [
+    pub const ALL: [ErrorCode; 88] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -308,6 +317,9 @@ impl ErrorCode {
         ErrorCode::ErrLotNetNegative,
         ErrorCode::ErrRateFarFromAverage,
         ErrorCode::ErrDraftInvalid,
+        ErrorCode::ErrPrintWindowsOnly,
+        ErrorCode::ErrPrinterNotFound,
+        ErrorCode::ErrPrintFailed,
     ];
 }
 

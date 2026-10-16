@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "print",
+  "description": "The hidden print windows (labels print-*). They read the print data of one document and tell the backend the page is ready. Nothing else (NFR-SEC-10, plan 14).",
+  "windows": ["print-*"],
+  "permissions": [
+    "allow-app-data-status",
+    "allow-auth-status",
+    "allow-reports-bikri-print-data",
+    "core:event:default"
+  ]
+}

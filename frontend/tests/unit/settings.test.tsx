@@ -86,10 +86,10 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       expect(router.state.location.pathname).toBe('/settings');
     });
 
-    it('has five tabs, and ← and → move between them in the direction the user sees', async () => {
+    it('has six tabs, and ← and → move between them in the direction the user sees', async () => {
       const { user } = await open();
       const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(5);
+      expect(tabs).toHaveLength(6);
       expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
       tabs[0]?.focus();
       // The next tab is on the left in Urdu and on the right in English.

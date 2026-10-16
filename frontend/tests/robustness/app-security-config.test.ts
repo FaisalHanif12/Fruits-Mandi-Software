@@ -97,8 +97,10 @@ describe('Capability file (NFR-SEC-10, Code Standards S4)', () => {
   const listed = /APP_COMMANDS[^=]*=\s*&\[([^\]]*)\]/.exec(buildRs)?.[1] ?? '';
   const appCommands = [...listed.matchAll(/"([a-z][a-z0-9_]*)"/g)].map((m) => m[1] ?? '');
 
-  it('is the only capability the app loads', () => {
-    expect(conf.app.security.capabilities).toEqual(['default']);
+  // Plan 14 added the capability `print` for the hidden print windows (labels print-*), which may
+  // call one data command and nothing else. A one-line update made by frontend, not robustness.
+  it('loads only the capabilities default and print', () => {
+    expect(conf.app.security.capabilities).toEqual(['default', 'print']);
   });
 
   it('allows no plugin permission outside the allow list', () => {

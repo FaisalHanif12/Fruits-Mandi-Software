@@ -1,0 +1,242 @@
+//! Printing: the Printing settings and the record of a print (plan 14, PRD Section 21
+//! "Printing", FR-7.57, FR-12.2 print count, FR-21.3 audit).
+//!
+//! The print data itself is built by `mandi-reports`; the print call is made by the app. This
+//! module holds what needs the database and the audit: reading and saving the settings, checking
+//! a print request, and raising the print count of a بکری together with its audit row.
+
+use mandi_db::bikri::saved;
+use mandi_db::rusqlite::{Connection, params};
+use mandi_domain::core::auth::Language;
+use mandi_domain::core::error::ErrorCode;
+use mandi_domain::core::printing::{
+    self, MAX_PRINTER_CHARS, PRINT_AFTER_SAVE_PREF, PrintDoc, PrintInput, PrintSetup, PrintTo,
+    PrintingSettings, SETTING_KEY, SetPrintingInput,
+};
+use mandi_domain::core::validate::{self, FieldErrors};
+use serde_json::{Value, json};
+
+use crate::audit::Event;
+use crate::auth::Actor;
+use crate::context::Context;
+use crate::error::ServiceError;
+use crate::store;
+
+/// The stored per-computer setup, or the starting values (A21). A value that cannot be read
+/// never stops a print.
+fn load_setup(conn: &Connection) -> Result<PrintSetup, ServiceError> {
+    Ok(store::setting(conn, SETTING_KEY)?
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_default())
+}
+
+/// The documents ticked in "print after save" for one user, or the starting list.
+fn load_after_save(conn: &Connection, user_id: i64) -> Result<Vec<PrintDoc>, ServiceError> {
+    Ok(store::pref(conn, user_id, PRINT_AFTER_SAVE_PREF)?
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_else(printing::default_print_after_save))
+}
+
+fn load(conn: &Connection, user_id: i64) -> Result<PrintingSettings, ServiceError> {
+    Ok(PrintingSettings::from_parts(
+        load_setup(conn)?,
+        load_after_save(conn, user_id)?,
+    ))
+}
+
+fn settings_json(settings: &PrintingSettings) -> Result<Value, ServiceError> {
+    serde_json::to_value(settings.setup())
+        .map(|mut value| {
+            if let Value::Object(map) = &mut value {
+                map.insert(
+                    "print_after_save".to_owned(),
+                    json!(settings.print_after_save),
+                );
+            }
+            value
+        })
+        .map_err(|error| ServiceError::Data(format!("printing settings: {error}")))
+}
+
+/// The Printing settings of the signed-in user (PRD Section 21).
+///
+/// # Errors
+/// `ServiceError::Db` or `ServiceError::Data`.
+pub fn get_settings(ctx: &Context, actor: &Actor) -> Result<PrintingSettings, ServiceError> {
+    ctx.db.read(|conn| load(conn, actor.user_id))
+}
+
+/// Saves the Printing settings. The paper, printer, copies and Urdu digits belong to this
+/// computer; the list "print after save" belongs to the user (PRD FR-7.57). A change writes an
+/// audit row with the old and the new value in the same transaction (Code Standards S7); asking
+/// for the values it already has writes nothing.
+///
+/// # Errors
+/// `ERR_REQUIRED`, `ERR_NOT_A_NUMBER` or `ERR_OUT_OF_RANGE` (values `min`, `max`) on `copies`;
+/// `ERR_TEXT_TOO_LONG` or `ERR_CONTROL_CHARS` on `printer`.
+pub fn set_settings(
+    ctx: &Context,
+    actor: &Actor,
+    input: &SetPrintingInput,
+) -> Result<PrintingSettings, ServiceError> {
+    let mut errors = FieldErrors::default();
+    let copies = errors.take(printing::parse_copies("copies", &input.copies));
+    let printer = errors.take(printer_name(&input.printer));
+    errors.finish()?;
+    // `finish` returned an error if either failed, so both values are there.
+    let (copies, printer) = (copies.unwrap_or_default(), printer.unwrap_or_default());
+    let new = PrintingSettings {
+        paper_seller_bill: input.paper_seller_bill,
+        paper_buyer_slips: input.paper_buyer_slips,
+        paper_pukhta_slip: input.paper_pukhta_slip,
+        printer,
+        copies,
+        urdu_digits: input.urdu_digits,
+        print_after_save: printing::unique_docs(&input.print_after_save),
+    };
+    ctx.db.write(|tx| {
+        let old = load(tx, actor.user_id)?;
+        if old != new {
+            let setup = serde_json::to_value(new.setup())
+                .map_err(|error| ServiceError::Data(format!("printing settings: {error}")))?;
+            store::set_setting(tx, SETTING_KEY, &setup, Some(actor.user_id))?;
+            store::set_pref(
+                tx,
+                actor.user_id,
+                PRINT_AFTER_SAVE_PREF,
+                &json!(new.print_after_save),
+            )?;
+            ctx.db.auditor().write(
+                tx,
+                &Event::new(Some(actor.user_id), "edit", "settings")
+                    .old(json!({ "printing": settings_json(&old)? }))
+                    .new_value(json!({ "printing": settings_json(&new)? }))
+                    .into_entry(),
+            )?;
+        }
+        Ok::<(), ServiceError>(())
+    })?;
+    Ok(new)
+}
+
+/// A printer name as typed: trimmed, at most 259 characters, no control characters. Empty is
+/// allowed and means the default printer.
+fn printer_name(text: &str) -> Result<String, mandi_domain::core::error::FieldError> {
+    let name = validate::free_text("printer", text)?;
+    if name.chars().count() > MAX_PRINTER_CHARS {
+        return Err(mandi_domain::core::error::FieldError::new(
+            ErrorCode::ErrTextTooLong,
+            "printer",
+        ));
+    }
+    Ok(name)
+}
+
+/// A print request that passed its checks: what the app needs to print.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrintPlan {
+    /// The بکری.
+    pub bikri_id: i64,
+    /// Its number, for the PDF file names.
+    pub number: i64,
+    /// The print language.
+    pub language: Language,
+    /// The documents, each once, in the order asked.
+    pub docs: Vec<PrintDoc>,
+    /// Printer or PDF.
+    pub to: PrintTo,
+    /// Copies of this print.
+    pub copies: u32,
+    /// The Printing settings: printer name and paper per document.
+    pub setup: PrintSetup,
+    /// Only this buyer's slip.
+    pub only_buyer_id: Option<i64>,
+}
+
+/// Checks a print request and reads what it needs (the number of the بکری and the settings).
+/// Nothing is written.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `bikri_id`; `ERR_REQUIRED` on `docs`; the copies codes on `copies`.
+pub fn plan(ctx: &Context, input: &PrintInput) -> Result<PrintPlan, ServiceError> {
+    let mut errors = FieldErrors::default();
+    let docs = printing::unique_docs(&input.docs);
+    if docs.is_empty() {
+        errors.push(mandi_domain::core::error::FieldError::new(
+            ErrorCode::ErrRequired,
+            "docs",
+        ));
+    }
+    let typed_copies = input
+        .copies
+        .as_deref()
+        .map(str::trim)
+        .filter(|text| !text.is_empty());
+    let copies = typed_copies.and_then(|text| errors.take(printing::parse_copies("copies", text)));
+    errors.finish()?;
+    ctx.db.read(|conn| {
+        let number = saved::number_of(conn, input.bikri_id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "bikri_id"))?;
+        let setup = load_setup(conn)?;
+        Ok(PrintPlan {
+            bikri_id: input.bikri_id,
+            number,
+            language: input.language,
+            docs,
+            to: input.to,
+            copies: copies.unwrap_or(setup.copies),
+            setup,
+            only_buyer_id: input.only_buyer_id,
+        })
+    })
+}
+
+/// Records a print that happened: raises the print count of the بکری by one and writes the audit
+/// row, in one transaction (PRD 12.2, Code Standards B3, S7). Returns the new count. One print
+/// action raises the count once, however many documents it printed. The row's `version` is not
+/// bumped: a print changes no business value, and a screen that is editing the بکری must not be
+/// told it changed.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `bikri_id`; `ServiceError::Db`.
+pub fn record(
+    ctx: &Context,
+    actor: &Actor,
+    plan: &PrintPlan,
+    printed: &[PrintDoc],
+) -> Result<i64, ServiceError> {
+    ctx.db.write(|tx| {
+        let changed = tx.execute(
+            "UPDATE bikri_entries SET print_count = print_count + 1,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_by = ?2
+             WHERE id = ?1",
+            params![plan.bikri_id, actor.user_id],
+        )?;
+        if changed == 0 {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrNotFound,
+                "bikri_id",
+            ));
+        }
+        let count: i64 = tx.query_row(
+            "SELECT print_count FROM bikri_entries WHERE id = ?1",
+            [plan.bikri_id],
+            |row| row.get(0),
+        )?;
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "print", "bikri")
+                .entity_id(plan.bikri_id)
+                .new_value(json!({
+                    "number": plan.number,
+                    "docs": printed,
+                    "language": plan.language.as_str(),
+                    "to": plan.to,
+                    "copies": plan.copies,
+                    "print_count": count,
+                }))
+                .into_entry(),
+        )?;
+        Ok(count)
+    })
+}

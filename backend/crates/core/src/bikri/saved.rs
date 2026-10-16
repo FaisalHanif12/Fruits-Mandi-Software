@@ -77,7 +77,7 @@ pub struct BikriGetInput {
 }
 
 /// The one-time person kept on a line or a lot of the پختہ کھاتہ accounts (PRD FR-13.2).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedPukhta {
     /// Urdu name.
     pub name_ur: String,
@@ -90,7 +90,7 @@ pub struct SavedPukhta {
 }
 
 /// A commission or لاگا of a saved sale line: the snapshot of PRD FR-11.6.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedCharge {
     /// The method kept with the line.
     pub method: StoredMethod,
@@ -109,7 +109,7 @@ pub struct SavedCharge {
 }
 
 /// A lot charge of a saved lot (مزدوری, منشیانہ, فون).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedLotCharge {
     /// The method.
     pub method: LotChargeMethod,
@@ -125,7 +125,7 @@ pub struct SavedLotCharge {
 }
 
 /// One saved sale line with its stored values (PRD FR-11.6, Code Standards B20).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedSale {
     /// Row id.
     #[ts(type = "number")]
@@ -186,7 +186,7 @@ pub struct SavedSale {
 ///
 /// Example (PRD 4.4): Event 1 has gross 29,400, deductions 10,084, net 19,316, seller credit
 /// 24,316, buyer commission 1,764, لاگا 400, buyer bills 31,564 and shared income 3,948.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedTotals {
     /// خام بکری.
     #[ts(type = "Paisa")]
@@ -338,7 +338,7 @@ impl SavedTotals {
 }
 
 /// One saved lot with its stored totals and lines.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedLot {
     /// Row id.
     #[ts(type = "number")]
@@ -415,7 +415,7 @@ pub struct SavedLot {
 }
 
 /// A posting of a بکری.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedPosting {
     /// The journal entry.
     #[ts(type = "number")]
@@ -430,7 +430,7 @@ pub struct SavedPosting {
 }
 
 /// One partner's part of the income of a saved بکری, summed over its postings.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedSplit {
     /// The partner.
     #[ts(type = "number")]
@@ -445,7 +445,7 @@ pub struct SavedSplit {
 }
 
 /// A saved بکری as `bikri_get` sends it: the stored values only, never worked out again.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct BikriDetail {
     /// Row id.
     #[ts(type = "number")]

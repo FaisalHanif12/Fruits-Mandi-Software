@@ -3,7 +3,9 @@
 import type { FirmSettings } from '../../bindings/FirmSettings';
 import type { PrefsSetInput } from '../../bindings/PrefsSetInput';
 import type { SetDefaultLanguageInput } from '../../bindings/SetDefaultLanguageInput';
+import type { PrintingSettings } from '../../bindings/PrintingSettings';
 import type { SetFirmInput } from '../../bindings/SetFirmInput';
+import type { SetPrintingInput } from '../../bindings/SetPrintingInput';
 import type { SetSecurityInput } from '../../bindings/SetSecurityInput';
 import type { Settings } from '../../bindings/Settings';
 import { callCommand } from '../../shared/api';
@@ -47,4 +49,14 @@ export function settingsGetOverrides(): Promise<OverridesSettings> {
 
 export function settingsSetOverrides(input: OverridesSettings): Promise<OverridesSettings> {
   return callCommand<OverridesSettings>('settings_set_overrides', { input });
+}
+
+/** The Printing settings: paper per document, printer, copies, Urdu digits, print after save. */
+export function settingsGetPrinting(): Promise<PrintingSettings> {
+  return callCommand<PrintingSettings>('settings_get_printing');
+}
+
+/** Saves the Printing settings. Copies go as typed; the backend checks 1 to 99 (field `copies`). */
+export function settingsSetPrinting(input: SetPrintingInput): Promise<PrintingSettings> {
+  return callCommand<PrintingSettings>('settings_set_printing', { input });
 }

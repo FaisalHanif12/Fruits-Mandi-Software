@@ -138,13 +138,13 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     // Lot 1: Akram, Arshad and the blank line the Enter made; lot 2: its own blank line.
     await waitFor(() => {
       expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
+      expect(textOf(sales, 0, 'buyer')).toBe(names(language).akram);
+      expect(textOf(sales, 1, 'buyer')).toBe(names(language).arshad);
+      expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
+      expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
+      for (const row of [0, 1, 2]) expect(textOf(sales, row, 'lot')).toBe(lotLabel(language, 1));
+      expect(textOf(sales, 3, 'lot')).toBe(lotLabel(language, 2));
     });
-    expect(textOf(sales, 0, 'buyer')).toBe(names(language).akram);
-    expect(textOf(sales, 1, 'buyer')).toBe(names(language).arshad);
-    expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
-    expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
-    for (const row of [0, 1, 2]) expect(textOf(sales, row, 'lot')).toBe(lotLabel(language, 1));
-    expect(textOf(sales, 3, 'lot')).toBe(lotLabel(language, 2));
   });
 
   it('a line typed in the whole view goes to the lot that owns it, and the view of that lot shows it', async () => {
@@ -177,8 +177,8 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
       name: named(message(language, 'bikri-sales-title', { lot: 2 })),
     });
     const one = salesGrid(language);
-    expect(textOf(one, 0, 'buyer')).toBe(names(language).arshad);
     await waitFor(() => {
+      expect(textOf(one, 0, 'buyer')).toBe(names(language).arshad);
       expect(focusedIn(one)).toBe('0:qty');
     });
   });
@@ -213,9 +213,9 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
       expect(textOf(salesGrid(next), 3, 'lot')).toBe(lotLabel(next, 2));
     });
     const sales = salesGrid(next);
-    expect(textOf(sales, 0, 'buyer')).toBe(names(next).akram);
-    expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
     await waitFor(() => {
+      expect(textOf(sales, 0, 'buyer')).toBe(names(next).akram);
+      expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
       expect(focusedIn(sales)).toBe('1:qty');
     });
   });
@@ -270,10 +270,10 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     });
     await waitFor(() => {
       expect(cellOf(sales, 3, 'qty')).toHaveClass('cell-error');
+      expect(cellOf(sales, 0, 'qty')).not.toHaveClass('cell-error');
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'bikri-where-line', { lot: 2, line: 1 }),
+      );
     });
-    expect(cellOf(sales, 0, 'qty')).not.toHaveClass('cell-error');
-    expect(visible(document.body.textContent)).toContain(
-      message(language, 'bikri-where-line', { lot: 2, line: 1 }),
-    );
   });
 });

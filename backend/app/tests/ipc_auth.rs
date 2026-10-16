@@ -661,6 +661,25 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "language": "en" } }),
             true,
         ),
+        (
+            "reports_bikri_print_data",
+            json!({ "input": { "bikri_id": 1, "doc": "seller_bill", "language": "ur", "only_buyer_id": null } }),
+            true,
+        ),
+        (
+            "reports_print",
+            json!({ "input": { "bikri_id": 1, "docs": ["seller_bill"], "language": "ur", "copies": null,
+                "to": "pdf", "only_buyer_id": null } }),
+            true,
+        ),
+        ("reports_list_printers", json!({}), true),
+        ("settings_get_printing", json!({}), true),
+        (
+            "settings_set_printing",
+            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
+                "printer": "", "copies": "1", "urdu_digits": false, "print_after_save": ["seller_bill"] } }),
+            true,
+        ),
     ]
 }
 
@@ -1608,6 +1627,102 @@ fn the_bikri_commands_work_through_the_ipc() {
             .any(|hit| hit["kind"] == "bikri" && hit["hit"]["number"] == 1),
         "{hits}"
     );
+    // Plan 14: the print data, the Printing settings and the print itself through the IPC.
+    let print_data = |doc: &str, language: &str| {
+        h.ok(
+            "reports_bikri_print_data",
+            json!({ "input": { "bikri_id": 1, "doc": doc, "language": language, "only_buyer_id": null } }),
+        )
+    };
+    let bill = print_data("seller_bill", "en");
+    assert_eq!(bill["dir"], "ltr");
+    assert_eq!(bill["paper"], "a4");
+    assert_eq!(bill["firm"]["name"], "Maher Adnan and Brothers");
+    assert_eq!(bill["pages"][0]["amounts"][9]["label_id"], "print-net-sale");
+    assert_eq!(bill["pages"][0]["amounts"][9]["amount"], "19,316");
+    assert_eq!(
+        bill["pages"][0]["words"]["text"],
+        "Nineteen thousand three hundred sixteen rupees only"
+    );
+    let slips = print_data("buyer_slips", "ur");
+    assert_eq!(slips["dir"], "rtl");
+    assert_eq!(slips["paper"], "a5");
+    assert_eq!(slips["pages"].as_array().unwrap().len(), 2);
+    assert_eq!(slips["pages"][1]["amounts"][3]["amount"], "18,684");
+    assert_eq!(print_data("pukhta_slip", "ur")["pages"], json!([]));
+    assert_eq!(
+        h.code(
+            "reports_bikri_print_data",
+            json!({ "input": { "bikri_id": 99, "doc": "seller_bill", "language": "ur", "only_buyer_id": null } })
+        ),
+        "ERR_NOT_FOUND"
+    );
+    // The Printing settings: the starting values (A21), a save, and the codes at their fields.
+    let printing = h.ok("settings_get_printing", json!({}));
+    assert_eq!(
+        printing,
+        json!({ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
+            "printer": "", "copies": 1, "urdu_digits": false,
+            "print_after_save": ["seller_bill", "buyer_slips", "pukhta_slip"] })
+    );
+    let bad = h
+        .call(
+            "settings_set_printing",
+            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "paper_pukhta_slip": "a5",
+                "printer": "", "copies": "0", "urdu_digits": true, "print_after_save": ["seller_bill"] } }),
+        )
+        .unwrap_err();
+    assert_eq!(bad["errors"][0]["code"], "ERR_OUT_OF_RANGE");
+    assert_eq!(bad["errors"][0]["field"], "copies");
+    assert_eq!(bad["errors"][0]["values"]["max"], 99);
+    let saved_printing = h.ok(
+        "settings_set_printing",
+        json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "paper_pukhta_slip": "a5",
+            "printer": "Office Laser", "copies": "2", "urdu_digits": true, "print_after_save": ["seller_bill"] } }),
+    );
+    assert_eq!(saved_printing["copies"], 2);
+    assert_eq!(h.ok("settings_get_printing", json!({})), saved_printing);
+    assert_eq!(print_data("buyer_slips", "ur")["paper"], "mm80");
+    // A print: the checks come first, then the platform. Printing needs Windows, so on any
+    // other computer a good request is answered with ERR_PRINT_WINDOWS_ONLY and nothing is
+    // counted or written.
+    let print = |docs: Value, copies: Value, id: i64| {
+        h.call(
+            "reports_print",
+            json!({ "input": { "bikri_id": id, "docs": docs, "language": "ur", "copies": copies,
+                "to": "pdf", "only_buyer_id": null } }),
+        )
+    };
+    let code_of = |result: Result<Value, Value>| {
+        result.unwrap_err()["errors"][0]["code"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    assert_eq!(code_of(print(json!([]), Value::Null, 1)), "ERR_REQUIRED");
+    assert_eq!(
+        code_of(print(json!(["seller_bill"]), json!("100"), 1)),
+        "ERR_OUT_OF_RANGE"
+    );
+    assert_eq!(
+        code_of(print(json!(["seller_bill"]), Value::Null, 99)),
+        "ERR_NOT_FOUND"
+    );
+    if cfg!(not(windows)) {
+        assert_eq!(
+            code_of(print(json!(["seller_bill", "buyer_slips"]), Value::Null, 1)),
+            "ERR_PRINT_WINDOWS_ONLY"
+        );
+        assert_eq!(h.ok("reports_list_printers", json!({})), json!([]));
+        assert_eq!(
+            h.sql::<i64>("SELECT print_count FROM bikri_entries WHERE id = 1"),
+            0
+        );
+        assert_eq!(
+            h.sql::<i64>("SELECT COUNT(*) FROM audit_log WHERE action = 'print'"),
+            0
+        );
+    }
     // The books balance after the save through the IPC.
     let (dr, cr): (i64, i64) = {
         let conn = mandi_services::db::rusqlite::Connection::open(

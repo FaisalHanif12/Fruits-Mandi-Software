@@ -18,6 +18,7 @@ pub mod masters;
 pub mod matching;
 pub mod partners;
 pub mod ports;
+pub mod printing;
 pub mod rules;
 pub mod search;
 pub mod secret;

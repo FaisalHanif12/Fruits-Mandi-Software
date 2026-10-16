@@ -9,6 +9,9 @@
 //! this module makes the WebView2 COM calls itself. It is the only place in the
 //! app where `unsafe` is allowed (plan 01 T1.6).
 
+#[allow(unsafe_code)]
+pub mod print;
+
 use tauri::WebviewWindow;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
     ICoreWebView2Controller, ICoreWebView2Settings3,

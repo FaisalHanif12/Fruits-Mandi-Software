@@ -36,6 +36,20 @@ pub fn format_paisa(amount: Paisa, grouping: Grouping) -> Result<String, MoneyEr
     })
 }
 
+/// A whole count (نگ, a بکری number) with the same grouping commas as money. Not money: it is
+/// used for quantities on prints, so a big count reads the same way as a big amount.
+///
+/// `1316040` → `"1,316,040"` (international) or `"13,16,040"` (lakh); `20` → `"20"`.
+pub fn format_count(value: i64, grouping: Grouping) -> String {
+    let digits = value.unsigned_abs().to_string();
+    let grouped = group_digits(&digits, grouping);
+    if value < 0 {
+        format!("-{grouped}")
+    } else {
+        grouped
+    }
+}
+
 /// Puts commas into a string of ASCII digits: the last group has 3 digits, the earlier
 /// groups 3 (international) or 2 (lakh).
 fn group_digits(digits: &str, grouping: Grouping) -> String {
@@ -81,6 +95,21 @@ mod tests {
         assert_eq!(fmt(10_000_000_000, L), "10,00,00,00,000");
         assert_eq!(fmt(-1_316_040, I), "-1,316,040");
         assert_eq!(fmt(-5, L), "-5");
+    }
+
+    #[test]
+    fn counts_group_like_money() {
+        assert_eq!(format_count(0, Grouping::International), "0");
+        assert_eq!(format_count(20, Grouping::Lakh), "20");
+        assert_eq!(
+            format_count(1_316_040, Grouping::International),
+            "1,316,040"
+        );
+        assert_eq!(format_count(1_316_040, Grouping::Lakh), "13,16,040");
+        assert_eq!(
+            format_count(i64::MIN, Grouping::International),
+            "-9,223,372,036,854,775,808"
+        );
     }
 
     #[test]

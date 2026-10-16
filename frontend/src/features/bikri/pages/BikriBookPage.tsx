@@ -48,6 +48,8 @@ import {
 import { bikriFind } from '../api';
 import { BikriToolbar } from '../components/BikriToolbar';
 import { SavedBikriView } from '../components/saved/SavedBikriView';
+import { PrintAction } from '../print/PrintAction';
+import { PrintAfterSave } from '../print/PrintAfterSave';
 import { usePendingRestore } from '../draft-offer';
 import { BIKRI_DRAFT_SCREEN, applySnapshot } from '../draft-snapshot';
 import { useBikriDetail } from '../hooks/useBikriReads';
@@ -360,6 +362,7 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
           )
         }
       >
+        <PrintAction target={lastSaved} enabled={!dialogOpen} />
         <Button
           variant="primary"
           shortcut={SHORTCUTS.save}
@@ -587,6 +590,10 @@ function SavedBikri({ id }: { id: number }) {
         findOpen={findOpen}
         onFindOpenChange={setFindOpen}
       >
+        <PrintAction
+          target={detail.data === undefined ? null : { id, number: detail.data.number }}
+          enabled={!findOpen}
+        />
         <Button variant="primary" shortcut={SHORTCUTS.newBikri} onClick={openNew}>
           <Localized id="bikri-new" />
         </Button>
@@ -603,7 +610,7 @@ function useSavedId(): number | null {
   return typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-export function BikriBookPage({ initialDraft }: BikriBookProps) {
+function BikriBookContent({ initialDraft }: BikriBookProps) {
   const savedId = useSavedId();
   const day = useDayStatus();
   // A draft restored at start-up remakes the new بکری, even when it is already open.
@@ -622,4 +629,14 @@ export function BikriBookPage({ initialDraft }: BikriBookProps) {
     );
   }
   return <NewBikri key={restoreTick} today={day.data.today} initialDraft={initialDraft} />;
+}
+
+export function BikriBookPage({ initialDraft }: BikriBookProps) {
+  return (
+    <>
+      {/* Ctrl+Enter saves and prints the documents of "print after save" (PRD FR-7.57, plan 14). */}
+      <PrintAfterSave />
+      <BikriBookContent initialDraft={initialDraft} />
+    </>
+  );
 }

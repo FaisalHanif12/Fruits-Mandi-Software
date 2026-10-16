@@ -3,6 +3,10 @@
 pub mod commands;
 pub mod error;
 pub mod logging;
+pub mod print_job;
+pub mod print_types;
+#[cfg(windows)]
+mod print_windows;
 pub mod refs;
 pub mod runner;
 pub mod state;
@@ -151,6 +155,11 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::drafts::drafts_save,
         commands::drafts::drafts_get,
         commands::drafts::drafts_discard,
+        commands::reports::reports_bikri_print_data,
+        commands::reports::reports_print,
+        commands::reports::reports_list_printers,
+        commands::settings::settings_get_printing,
+        commands::settings::settings_set_printing,
     ]
 }
 

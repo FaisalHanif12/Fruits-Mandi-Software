@@ -8,6 +8,15 @@ publish.workspace = true
 [dependencies]
 mandi-db.workspace = true
 mandi-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ts-rs.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

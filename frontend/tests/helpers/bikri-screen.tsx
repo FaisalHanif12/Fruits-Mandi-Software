@@ -192,8 +192,9 @@ export async function typeCodeAndEnter(user: User, code: string) {
 
 /**
  * Waits until the first sale line has its quantity: the screen fills it from the lot's remaining
- * quantity a moment after the lot is typed (PRD FR-7.52). A cell that is being typed in when that
- * fill lands is closed by the grid, so a test that types in a cell of the line waits for it first.
+ * quantity a moment after the lot is typed (PRD FR-7.52). A test that checks the cells of the line
+ * waits for it first, so it reads the filled value. (A fill that lands while a cell is being typed
+ * in does not close the cell: bikri-fill-while-typing.test.tsx.)
  */
 export async function waitForLineFill(language: Language) {
   await waitFor(
