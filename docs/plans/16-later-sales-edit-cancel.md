@@ -59,6 +59,14 @@ New error codes (`errors.ftl` in `ur` and `en`, `# review: pending`): `ERR_BIKRI
 | T3 | باقی مال, later sale, edit mode, cancel and undo UI against the stubs; Fluent | frontend | T1 |
 | T4 | Wire to the real commands; keyboard run; screenshots | frontend | T2, T3 |
 
+### Carried in from plan 15 (decided by the lead on 17-10-2026, money agent finding 1)
+
+An edit or cancel writes the new posting as a NEW journal entry (higher id). Matching orders postings by date, opening first, then entry id, so a same-day edit moves the posting after a بکری saved later the same day. For advance matching this can refuse an edited seller return (`ERR_RETURN_EXCEEDS_OPEN`) or drop the adjustment of an edited پیشگی. Plan 16 fixes it once, for vouchers and for the بکری edit, cancel and later sale:
+
+- **T1 adds migration `0005_*.sql`** with a stable order key on `journal_entries` (null means the entry's own id; an edit's new posting copies the order key of the posting it replaces, a reversal copies its original's). The matching walks and `seller_credit_lines` order by (date, opening first, order key, entry id). Plan 16b's migration then becomes `0006` and plan 17 refers to `0006` (the lead renumbers both plan files when plan 16 starts).
+- Test: a same-day seller return edited (narration only) after a later same-day ticked بکری stays allowed; an edited پیشگی keeps its adjustment; buyer bill order and every earlier golden number are unchanged. The migration test checks a populated file and the journal chain. Money agent before and after.
+- Every edit or cancel calls the full re-match (never the fast paths) for every affected key, as `vouchers/edit.rs` does; teach `matching::rematch_advances` and `seller_credit_lines` about `bikri_later` credits and their tick; reuse `ledger::reverse`.
+
 ## 6. Acceptance checklist
 
 1. باقی مال lists open lots; write-off with reason and its undo (D4-A1).
