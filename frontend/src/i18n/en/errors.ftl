@@ -284,3 +284,30 @@ err-printer-not-found = The printer { $printer } was not found. Check that it is
 
 # review: pending
 err-print-failed = The document could not be printed. Check the printer and try again. If it keeps happening, ask for help.
+
+## Vouchers (plan 15, PRD 15.1 to 15.4).
+
+# PRD FR-15.11. Money paid to a buyer is cash lent to him.
+# review: pending
+err-payment-to-buyer-needs-reason = Money paid to a { -gahak } is { -naqd-udhar }. Please write the reason.
+
+# PRD FR-15.12, FR-16.2. $open is the most that can be returned, in rupees.
+# review: pending
+err-return-exceeds-open = This is more than can be returned. The most that can be returned is { $open }.
+
+# PRD FR-15.3.
+# review: pending
+err-voucher-cancelled = This voucher is cancelled and cannot be changed.
+
+# PRD FR-13.5, FR-13.7.
+# review: pending
+err-person-required = For { -pukhta-khata }, type the name or phone of the person and pick him from the list.
+
+# PRD 15.1.
+# review: pending
+err-cheque-required = Write the cheque number and the cheque date.
+
+# A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
+# amount is more than it, both in rupees.
+# review: pending
+err-payment-above-payable = This is { $over } more than what is payable to the { -beopari } ({ $payable }). You can still save it. The extra shows as owed by the { -beopari }; it is not an { -peshgi }.

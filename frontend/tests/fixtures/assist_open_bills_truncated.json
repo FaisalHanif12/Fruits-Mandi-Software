@@ -1,0 +1,1819 @@
+{
+  "account": {
+    "id": 20,
+    "code": "03040002",
+    "name_ur": "ارشد ملتانی",
+    "name_en": "Arshad Multani"
+  },
+  "bills": [
+    {
+      "line_id": 8,
+      "entry_date": "2026-10-10",
+      "source": "bikri",
+      "number": 1,
+      "amount_paisa": 1868400,
+      "open_paisa": 1268400,
+      "days": 0
+    },
+    {
+      "line_id": 41,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 3,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 43,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 4,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 45,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 5,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 47,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 6,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 49,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 7,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 51,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 8,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 53,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 9,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 55,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 10,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 57,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 11,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 59,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 12,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 61,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 13,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 63,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 14,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 65,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 15,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 67,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 16,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 69,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 17,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 71,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 18,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 73,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 19,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 75,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 20,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 77,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 21,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 79,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 22,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 81,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 23,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 83,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 24,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 85,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 25,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 87,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 26,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 89,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 27,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 91,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 28,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 93,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 29,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 95,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 30,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 97,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 31,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 99,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 32,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 101,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 33,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 103,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 34,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 105,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 35,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 107,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 36,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 109,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 37,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 111,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 38,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 113,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 39,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 115,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 40,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 117,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 41,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 119,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 42,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 121,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 43,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 123,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 44,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 125,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 45,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 127,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 46,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 129,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 47,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 131,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 48,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 133,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 49,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 135,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 50,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 137,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 51,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 139,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 52,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 141,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 53,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 143,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 54,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 145,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 55,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 147,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 56,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 149,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 57,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 151,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 58,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 153,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 59,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 155,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 60,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 157,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 61,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 159,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 62,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 161,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 63,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 163,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 64,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 165,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 65,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 167,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 66,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 169,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 67,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 171,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 68,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 173,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 69,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 175,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 70,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 177,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 71,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 179,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 72,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 181,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 73,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 183,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 74,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 185,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 75,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 187,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 76,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 189,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 77,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 191,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 78,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 193,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 79,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 195,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 80,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 197,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 81,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 199,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 82,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 201,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 83,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 203,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 84,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 205,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 85,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 207,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 86,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 209,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 87,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 211,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 88,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 213,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 89,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 215,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 90,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 217,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 91,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 219,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 92,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 221,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 93,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 223,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 94,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 225,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 95,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 227,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 96,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 229,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 97,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 231,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 98,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 233,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 99,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 235,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 100,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 237,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 101,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 239,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 102,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 241,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 103,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 243,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 104,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 245,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 105,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 247,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 106,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 249,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 107,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 251,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 108,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 253,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 109,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 255,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 110,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 257,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 111,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 259,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 112,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 261,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 113,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 263,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 114,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 265,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 115,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 267,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 116,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 269,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 117,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 271,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 118,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 273,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 119,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 275,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 120,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 277,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 121,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 279,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 122,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 281,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 123,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 283,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 124,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 285,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 125,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 287,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 126,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 289,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 127,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 291,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 128,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 293,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 129,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 295,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 130,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 297,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 131,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 299,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 132,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 301,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 133,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 303,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 134,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 305,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 135,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 307,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 136,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 309,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 137,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 311,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 138,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 313,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 139,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 315,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 140,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 317,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 141,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 319,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 142,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 321,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 143,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 323,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 144,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 325,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 145,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 327,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 146,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 329,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 147,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 331,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 148,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 333,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 149,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 335,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 150,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 337,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 151,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 339,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 152,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 341,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 153,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 343,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 154,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 345,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 155,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 347,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 156,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 349,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 157,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 351,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 158,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 353,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 159,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 355,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 160,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 357,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 161,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 359,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 162,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 361,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 163,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 363,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 164,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 365,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 165,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 367,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 166,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 369,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 167,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 371,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 168,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 373,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 169,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 375,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 170,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 377,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 171,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 379,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 172,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 381,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 173,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 383,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 174,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 385,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 175,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 387,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 176,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 389,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 177,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 391,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 178,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 393,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 179,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 395,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 180,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 397,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 181,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 399,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 182,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 401,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 183,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 403,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 184,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 405,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 185,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 407,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 186,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 409,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 187,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 411,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 188,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 413,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 189,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 415,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 190,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 417,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 191,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 419,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 192,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 421,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 193,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 423,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 194,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 425,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 195,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 427,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 196,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 429,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 197,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 431,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 198,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 433,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 199,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 435,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 200,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    },
+    {
+      "line_id": 437,
+      "entry_date": "2026-10-10",
+      "source": "cash_lent",
+      "number": 201,
+      "amount_paisa": 10000,
+      "open_paisa": 10000,
+      "days": 0
+    }
+  ],
+  "total_count": 206,
+  "truncated": true,
+  "open_paisa": 3318400,
+  "unmatched_credit_paisa": 0,
+  "balance": {
+    "amount_paisa": 3318400,
+    "side": "dr"
+  },
+  "oldest_days": 0
+}

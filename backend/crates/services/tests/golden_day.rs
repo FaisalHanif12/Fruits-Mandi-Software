@@ -23,7 +23,9 @@ use mandi_services::core::bikri::{BikriDraft, BikriSaved, HeaderInput, PukhtaInp
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
-    AdvanceInput, DayCloseInput, DayClosePreviewInput, VoucherMode, VoucherType, VouchersListInput,
+    AdvanceInput, AdvancesReportInput, DayCloseInput, DayClosePreviewInput, LineSource,
+    OpenBillsInput, OpenPayablesInput, PaymentInput, ReceiptInput, VoucherEntry, VoucherMode,
+    VoucherPreview, VoucherPreviewInput, VoucherType, VouchersListInput,
 };
 use mandi_services::testing::TestEnv;
 use mandi_services::{accounts, assist, auth, bikri, day, ledger, vouchers};
@@ -126,6 +128,7 @@ pub fn opening_position() -> Position {
         &env.ctx,
         &owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "01-09-2026".into(),
             seller_account_id: rahim,
             amount: "15,000".into(),
@@ -286,12 +289,15 @@ fn e2e_19_the_opening_position() {
     let list = vouchers::list(
         &p.env.ctx,
         &VouchersListInput {
+            account_id: None,
+            person_key: None,
             voucher_type: Some(VoucherType::Advance),
             from: String::new(),
             to: String::new(),
         },
     )
-    .unwrap();
+    .unwrap()
+    .rows;
     assert_eq!(list.len(), 1);
     assert_eq!(
         (
@@ -307,6 +313,7 @@ fn e2e_19_the_opening_position() {
         &p.env.ctx,
         &p.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "09-10-2026".into(),
             seller_account_id: p.rahim,
             amount: "100".into(),
@@ -685,4 +692,756 @@ fn the_cash_confirmation_and_a_refused_save_write_nothing() {
     // With the confirmation it saves, and cash is -5,000 + ... (20,000 - 25,000).
     let saved = save_ok(&w, &draft, true);
     assert_eq!(saved.number, 1);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Plan 15: Event 3 and Event 4 (PRD 4.6, 4.7; E2E-6, E2E-7), E2E-21, E2E-28 (payment part),
+// E2E-31 and E2E-32.
+// ---------------------------------------------------------------------------------------------
+
+fn receipt_input(account: i64, amount: &str) -> ReceiptInput {
+    ReceiptInput {
+        date: "10-10-2026".into(),
+        account_id: account,
+        person_key: None,
+        amount: amount.into(),
+        mode: VoucherMode::Cash,
+        bank_account_id: None,
+        cheque_no: String::new(),
+        cheque_date: String::new(),
+        collector_staff_id: None,
+        narration: String::new(),
+    }
+}
+
+fn payment_input(account: i64, amount: &str, reason: &str) -> PaymentInput {
+    PaymentInput {
+        date: "10-10-2026".into(),
+        account_id: account,
+        person_key: None,
+        amount: amount.into(),
+        mode: VoucherMode::Cash,
+        bank_account_id: None,
+        cheque_no: String::new(),
+        cheque_date: String::new(),
+        reason: reason.into(),
+        narration: String::new(),
+        confirm_cash_below_zero: false,
+    }
+}
+
+fn preview_of(w: &support::World, entry: VoucherEntry) -> VoucherPreview {
+    vouchers::preview(
+        &w.env.ctx,
+        &VoucherPreviewInput {
+            entry,
+            replacing_voucher_id: None,
+        },
+    )
+    .unwrap()
+}
+
+fn open_bills_of(w: &support::World, account: i64) -> mandi_services::core::vouchers::OpenBills {
+    vouchers::open_bills(
+        &w.env.ctx,
+        &OpenBillsInput {
+            account_id: account,
+            person_key: None,
+        },
+    )
+    .unwrap()
+}
+
+fn payables_of(w: &support::World, seller: i64) -> mandi_services::core::vouchers::OpenPayables {
+    vouchers::open_payables(
+        &w.env.ctx,
+        &OpenPayablesInput {
+            seller_id: seller,
+            person_key: None,
+            include_settled: true,
+        },
+    )
+    .unwrap()
+}
+
+#[test]
+fn e2e_6_event_3_akram_pays_10000_and_owes_2880() {
+    let w = worked_day();
+    save_ok(&w, &support::event1(&w), false);
+    save_ok(&w, &event2(&w), false);
+
+    // His card before: one open bill, بکری 1 of 10-10-26, 12,880, 0 days (PRD FR-7.58).
+    let bills = open_bills_of(&w, w.akram);
+    assert_eq!(bills.bills.len(), 1);
+    let bill = &bills.bills[0];
+    assert_eq!(
+        (
+            bill.source,
+            bill.number,
+            bill.entry_date.as_str(),
+            bill.amount_paisa.rupees(),
+            bill.open_paisa.rupees(),
+            bill.days
+        ),
+        (LineSource::Bikri, Some(1), "2026-10-10", 12_880, 12_880, 0)
+    );
+    assert_eq!(bills.open_paisa.rupees(), 12_880, "پورا بقایا");
+
+    // The preview: 10,000 settles 10,000 of that bill and leaves 2,880.
+    let input = receipt_input(w.akram, "10,000");
+    let preview = preview_of(&w, VoucherEntry::Receipt(input.clone()));
+    assert!(preview.errors.is_empty() && preview.warnings.is_empty());
+    assert_eq!(preview.bill_effects.len(), 1);
+    assert_eq!(
+        (
+            preview.bill_effects[0].bill.line_id == bill.line_id,
+            preview.bill_effects[0].settled_paisa.rupees(),
+            preview.bill_effects[0].still_open_paisa.rupees()
+        ),
+        (true, 10_000, 2_880)
+    );
+    assert_eq!(preview.extra_credit_paisa, Paisa::ZERO);
+    assert_eq!(
+        (preview.new_balance.side, preview.new_balance.amount_paisa),
+        (BalanceSide::Dr, rupees(2_880))
+    );
+    // A receipt cannot lower cash, so its preview does not read the balance and never asks (PRD
+    // FR-6.7). The books hold the numbers: cash 45,000 + 12,800 = 57,800 now.
+    assert!(!preview.cash.needs_confirm && !preview.cash.lowers_cash);
+    let cash = support::id_of(&w.env, "01010001");
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 57_800));
+
+    // The save is the preview: the same new balance and the same matching row.
+    let saved = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
+    assert_eq!(
+        (saved.voucher_type, saved.number),
+        (VoucherType::Receipt, 1)
+    );
+    assert_eq!(saved.new_balance, preview.new_balance);
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 2_880));
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 67_800));
+    assert_eq!(
+        scalar(
+            &w,
+            "SELECT COALESCE(SUM(amount_paisa), 0) FROM bill_allocations WHERE is_active = 1 AND account_id = (SELECT id FROM accounts WHERE code = '03040001')"
+        ),
+        1_000_000
+    );
+    let journal = entry_lines(&w, saved.entry_id);
+    assert_eq!(
+        journal,
+        lines(&[("01010001", 10_000, 0), ("03040001", 0, 10_000)])
+    );
+
+    // E2E-6: open 2,880 بنام; the oldest open bill is بکری 1 of 10-10-26, 0 days.
+    let bills = open_bills_of(&w, w.akram);
+    assert_eq!(bills.bills.len(), 1);
+    assert_eq!(
+        (
+            bills.bills[0].number,
+            bills.bills[0].open_paisa.rupees(),
+            bills.bills[0].days,
+            bills.oldest_days
+        ),
+        (Some(1), 2_880, 0, Some(0))
+    );
+    assert_eq!(bills.unmatched_credit_paisa, Paisa::ZERO);
+    assert_eq!(
+        (bills.balance.side, bills.balance.amount_paisa),
+        (BalanceSide::Dr, rupees(2_880))
+    );
+    // Cash 57,800 + 10,000, no partner share rows (a receipt touches no income, PRD FR-6.5).
+    assert_eq!(
+        balance(&w, support::id_of(&w.env, "01010001")),
+        (BalanceSide::Dr, 67_800)
+    );
+    assert_eq!(
+        scalar(
+            &w,
+            &format!(
+                "SELECT COUNT(*) FROM partner_share_rows WHERE journal_entry_id = {}",
+                saved.entry_id
+            )
+        ),
+        0
+    );
+    let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
+    assert_eq!(trial.total_dr, trial.total_cr);
+    ledger::verify_journal_chain(&w.env.ctx).unwrap();
+    assert_chain_ok(&w.dir);
+}
+
+#[test]
+fn e2e_7_event_4_rahim_is_paid_4316() {
+    let w = worked_day();
+    save_ok(&w, &support::event1(&w), false);
+    save_ok(&w, &event2(&w), false);
+    vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt_input(w.akram, "10,000")).unwrap();
+
+    // What is payable to رحیم: credit 24,316, advance adjusted 15,000, paid 5,000 (نقد), open
+    // 4,316 (PRD FR-7.59, E2E-7).
+    let payables = payables_of(&w, w.rahim);
+    assert_eq!(payables.postings.len(), 1);
+    let posting = &payables.postings[0];
+    assert_eq!(
+        (
+            posting.source,
+            posting.number,
+            posting.credit_paisa.rupees(),
+            posting.advance_adjusted_paisa.rupees(),
+            posting.paid_paisa.rupees(),
+            posting.still_open_paisa.rupees()
+        ),
+        (LineSource::Bikri, Some(1), 24_316, 15_000, 5_000, 4_316)
+    );
+    assert_eq!(
+        (
+            payables.open_paisa.rupees(),
+            payables.advances_open_paisa.rupees(),
+            payables.owes_firm_paisa.rupees()
+        ),
+        (4_316, 0, 0),
+        "پورا بقایا is 4,316"
+    );
+    assert_eq!(
+        (payables.balance.side, payables.balance.amount_paisa),
+        (BalanceSide::Cr, rupees(4_316))
+    );
+
+    // The preview: payable 4,316, no warning, the new balance is 0 (a seller with something
+    // payable never gets the پیشگی note).
+    let input = payment_input(w.rahim, "4,316", "");
+    let preview = preview_of(&w, VoucherEntry::Payment(input.clone()));
+    assert!(preview.errors.is_empty() && preview.warnings.is_empty());
+    assert_eq!(preview.payable_open_paisa, Some(rupees(4_316)));
+    assert!(!preview.payable_is_zero_for_seller);
+    assert_eq!(preview.new_balance.side, BalanceSide::Zero);
+    assert_eq!(preview.cash.cash_after_paisa, rupees(67_800 - 4_316));
+
+    let saved = vouchers::save_payment(&w.env.ctx, &w.owner, &input).unwrap();
+    assert_eq!(
+        (saved.voucher_type, saved.number),
+        (VoucherType::Payment, 1)
+    );
+    assert_eq!(saved.new_balance, preview.new_balance);
+    assert_eq!(balance(&w, w.rahim).0, BalanceSide::Zero);
+    assert_eq!(
+        entry_lines(&w, saved.entry_id),
+        lines(&[("030110001", 4_316, 0), ("01010001", 0, 4_316)])
+    );
+
+    // After it: nothing payable, nothing owed, and the posting is paid in full.
+    let payables = payables_of(&w, w.rahim);
+    assert_eq!(payables.open_paisa, Paisa::ZERO);
+    assert_eq!(
+        (
+            payables.postings[0].paid_paisa.rupees(),
+            payables.postings[0].still_open_paisa.rupees()
+        ),
+        (9_316, 0)
+    );
+    let shown = vouchers::open_payables(
+        &w.env.ctx,
+        &OpenPayablesInput {
+            seller_id: w.rahim,
+            person_key: None,
+            include_settled: false,
+        },
+    )
+    .unwrap();
+    assert!(shown.postings.is_empty());
+
+    // The پیشگی report: given 15,000, returned 0, adjusted 15,000, open 0 (E2E-7).
+    let report = vouchers::advances_report(
+        &w.env.ctx,
+        &AdvancesReportInput {
+            seller_id: Some(w.rahim),
+            as_of: String::new(),
+        },
+    )
+    .unwrap();
+    assert_eq!(report.rows.len(), 1);
+    let row = &report.rows[0];
+    assert_eq!(
+        (
+            row.given_paisa.rupees(),
+            row.returned_paisa.rupees(),
+            row.adjusted_paisa.rupees(),
+            row.open_paisa.rupees(),
+            row.last_date.as_deref()
+        ),
+        (15_000, 0, 15_000, 0, Some("2026-09-01"))
+    );
+    // Cash: 57,800 + 10,000 - 4,316 = 63,484.
+    assert_eq!(
+        balance(&w, support::id_of(&w.env, "01010001")),
+        (BalanceSide::Dr, 63_484)
+    );
+    let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
+    assert_eq!(trial.total_dr, trial.total_cr);
+}
+
+/// Event 5 of PRD 4.8 as plain journal postings (the خرچہ screen comes in plan 17): electricity
+/// 3,000 as دکان خرچہ, split between the partners by the hook of plan 11, and الف's 2,000 as
+/// ذاتی خرچہ. Cash goes down by 5,000.
+fn event5_direct(w: &support::World) {
+    use mandi_services::core::ids::AccountId;
+    use mandi_services::core::masters::{ExpenseHeadInput, MasterInput};
+    use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
+    use mandi_services::ledger::PostingEvent;
+    let mut words: Vec<String> = Vec::new();
+    loop {
+        let input = ExpenseHeadInput {
+            id: None,
+            version: None,
+            code: String::new(),
+            name_ur: "بجلی".into(),
+            name_en: "Electricity".into(),
+            confirmed_rules_words: words.clone(),
+        };
+        match mandi_services::masters::save(&w.env.ctx, &w.owner, &MasterInput::ExpenseHead(input))
+        {
+            Ok(_) => break,
+            Err(mandi_services::ServiceError::Rejected(items))
+                if items
+                    .iter()
+                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
+            {
+                for item in items {
+                    if let Some(mandi_services::core::error::ErrorValue::Text(text)) =
+                        item.values.get("words")
+                    {
+                        words.extend(text.split(' ').map(str::to_owned));
+                    }
+                }
+            }
+            Err(other) => panic!("{other:?}"),
+        }
+    }
+    let expense = support::id_of(&w.env, "05010001");
+    let drawings = support::id_of(&w.env, "06030001");
+    let cash = support::id_of(&w.env, "01010001");
+    let date = mandi_services::core::dates::BusinessDate::from_ymd(2026, 10, 10).unwrap();
+    let post = |posting_type: PostingType, debit: i64, amount: i64, source_id: i64| {
+        let entry = build_entry(vec![
+            LedgerLine::new(AccountId::new(debit), Side::Dr, rupees(amount)),
+            LedgerLine::new(AccountId::new(cash), Side::Cr, rupees(amount)),
+        ])
+        .unwrap();
+        w.env
+            .ctx
+            .db()
+            .write(|tx| {
+                ledger::post(
+                    &w.env.ctx,
+                    tx,
+                    w.owner.user_id,
+                    &PostingEvent {
+                        date,
+                        posting_type,
+                        source_type: SourceType::Voucher,
+                        source_id,
+                        narration: None,
+                        reverses: None,
+                        entry,
+                    },
+                )
+            })
+            .unwrap();
+    };
+    post(PostingType::ShopExpense, expense, 3_000, 9_001);
+    post(PostingType::PersonalExpense, drawings, 2_000, 9_002);
+}
+
+#[test]
+fn fr_15_5_a_receipt_above_the_bill_stays_as_credit_for_the_next_bill() {
+    let w = worked_day();
+    save_ok(&w, &support::event1(&w), false);
+    // اکرم pays 15,000 against 12,880: 12,880 settled, 2,120 stays as his credit.
+    let input = receipt_input(w.akram, "15,000");
+    let preview = preview_of(&w, VoucherEntry::Receipt(input.clone()));
+    assert_eq!(preview.bill_effects.len(), 1);
+    assert_eq!(preview.bill_effects[0].settled_paisa.rupees(), 12_880);
+    assert_eq!(preview.extra_credit_paisa.rupees(), 2_120);
+    assert_eq!(
+        (preview.new_balance.side, preview.new_balance.amount_paisa),
+        (BalanceSide::Cr, rupees(2_120))
+    );
+    vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
+    let bills = open_bills_of(&w, w.akram);
+    assert!(bills.bills.is_empty());
+    assert_eq!(bills.unmatched_credit_paisa.rupees(), 2_120);
+    assert_eq!(bills.balance.side, BalanceSide::Cr);
+
+    // His next bill (بکری 3, 5 × 600 with no commission or لاگا, 3,000) is settled by the
+    // waiting credit at once: 2,120 of it, so 880 is open.
+    let mut line = support::sale("s-9", w.akram, "5", "600");
+    line.buyer_comm = support::typed(mandi_services::core::bikri::LineChargeMethod::Percent, "0");
+    line.seller_comm = support::typed(mandi_services::core::bikri::LineChargeMethod::Percent, "0");
+    line.laga = support::typed(mandi_services::core::bikri::LineChargeMethod::PerUnit, "0");
+    line.payment_type = Some(mandi_services::core::bikri::PaymentType::Credit);
+    let mut lot = support::bare_lot(&w, "lot-9", w.karim, w.apple, "5");
+    lot.sales = vec![line];
+    let draft = support::draft(vec![lot]);
+    save_ok(&w, &draft, false);
+    let bills = open_bills_of(&w, w.akram);
+    assert_eq!(bills.bills.len(), 1);
+    assert_eq!(
+        (
+            bills.bills[0].amount_paisa.rupees(),
+            bills.bills[0].open_paisa.rupees()
+        ),
+        (3_000, 880)
+    );
+    assert_eq!(bills.unmatched_credit_paisa, Paisa::ZERO);
+    assert_eq!(
+        (bills.balance.side, bills.balance.amount_paisa),
+        (BalanceSide::Dr, rupees(880))
+    );
+}
+
+#[test]
+fn e2e_21_two_one_time_buyers_are_matched_per_person() {
+    use mandi_services::core::bikri::{LineChargeMethod, PaymentType};
+    let w = worked_day();
+    // شاہد buys 1 × 1,000 and ناصر 2 × 1,000, both on credit, with no commission or لاگا.
+    let line = |key: &str, qty: &str, name_ur: &str, name_en: &str, phone: &str| {
+        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
+        l.pukhta = Some(PukhtaInput {
+            name_ur: name_ur.into(),
+            name_en: name_en.into(),
+            phone: phone.into(),
+        });
+        l.payment_type = Some(PaymentType::Credit);
+        l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
+        l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
+        l.laga = support::typed(LineChargeMethod::PerUnit, "0");
+        l
+    };
+    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "3");
+    lot.sales = vec![
+        line("s-1", "1", "شاہد", "Shahid", "0300-0000000"),
+        line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
+    ];
+    save_ok(&w, &support::draft(vec![lot]), false);
+    let shahid = mandi_services::core::text::person_key("شاہد", "0300-0000000");
+    let nasir = mandi_services::core::text::person_key("ناصر", "0300-1111111");
+    let person_balance = |key: &str| {
+        let b = ledger::person_balance(&w.env.ctx, w.pukhta_buyer, key).unwrap();
+        (b.side, b.amount_paisa.rupees())
+    };
+    assert_eq!(person_balance(&shahid), (BalanceSide::Dr, 1_000));
+    assert_eq!(person_balance(&nasir), (BalanceSide::Dr, 2_000));
+
+    // A receipt needs the person (PRD FR-13.5, FR-13.7) and he must be on the books.
+    let mut input = receipt_input(w.pukhta_buyer, "1,000");
+    let refused = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap_err();
+    assert_eq!(refused.code(), ErrorCode::ErrPersonRequired);
+    input.person_key = Some("نامعلوم|03000000000".into());
+    let refused = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap_err();
+    assert_eq!(refused.code(), ErrorCode::ErrNotFound);
+
+    // The bills of one person are his alone.
+    let bills = vouchers::open_bills(
+        &w.env.ctx,
+        &OpenBillsInput {
+            account_id: w.pukhta_buyer,
+            person_key: Some(shahid.clone()),
+        },
+    )
+    .unwrap();
+    assert_eq!(bills.open_paisa.rupees(), 1_000);
+    assert_eq!(bills.bills.len(), 1);
+
+    // E2E-21: the receipt of 1,000 for شاہد: شاہد 0, ناصر 2,000 still due.
+    input.person_key = Some(shahid.clone());
+    let preview = preview_of(&w, VoucherEntry::Receipt(input.clone()));
+    assert_eq!(preview.bill_effects.len(), 1);
+    assert_eq!(preview.bill_effects[0].settled_paisa.rupees(), 1_000);
+    assert_eq!(preview.new_balance.side, BalanceSide::Zero);
+    let saved = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
+    assert_eq!(saved.new_balance.side, BalanceSide::Zero);
+    assert_eq!(person_balance(&shahid).0, BalanceSide::Zero);
+    assert_eq!(person_balance(&nasir), (BalanceSide::Dr, 2_000));
+    let nasir_bills = vouchers::open_bills(
+        &w.env.ctx,
+        &OpenBillsInput {
+            account_id: w.pukhta_buyer,
+            person_key: Some(nasir),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (nasir_bills.open_paisa.rupees(), nasir_bills.bills.len()),
+        (2_000, 1),
+        "شاہد's payment never settles ناصر's bill"
+    );
+    // The voucher keeps the person key, and the list shows him.
+    let row = vouchers::get(&w.env.ctx, saved.voucher_id).unwrap();
+    assert_eq!(
+        row.person.as_ref().map(|p| p.person_key.as_str()),
+        Some(shahid.as_str())
+    );
+    assert_eq!(
+        row.person.as_ref().map(|p| p.name_en.as_str()),
+        Some("Shahid")
+    );
+}
+
+#[test]
+fn e2e_28_payment_part_the_advance_stays_open_after_the_payment() {
+    let w = worked_day();
+    let mut draft = support::event1(&w);
+    draft.lots[0].adjust_advance = false;
+    save_ok(&w, &draft, false);
+
+    // Payable 24,316 - 5,000 = 19,316; advance open 15,000; ledger 4,316 جمع.
+    let p = payables_of(&w, w.rahim);
+    assert_eq!(
+        (
+            p.postings[0].advance_adjusted_paisa.rupees(),
+            p.postings[0].still_open_paisa.rupees(),
+            p.open_paisa.rupees(),
+            p.advances_open_paisa.rupees(),
+            p.owes_firm_paisa.rupees()
+        ),
+        (0, 19_316, 19_316, 15_000, 0)
+    );
+    assert_eq!(
+        (p.balance.side, p.balance.amount_paisa),
+        (BalanceSide::Cr, rupees(4_316))
+    );
+
+    // After paying 19,316: payable 0, ledger 15,000 بنام, advance open 15,000, and he is not in
+    // "بیوپاری کے ذمے".
+    let saved = vouchers::save_payment(&w.env.ctx, &w.owner, &payment_input(w.rahim, "19,316", ""))
+        .unwrap();
+    assert_eq!(
+        (saved.new_balance.side, saved.new_balance.amount_paisa),
+        (BalanceSide::Dr, rupees(15_000))
+    );
+    let p = payables_of(&w, w.rahim);
+    assert_eq!(
+        (
+            p.open_paisa.rupees(),
+            p.advances_open_paisa.rupees(),
+            p.owes_firm_paisa.rupees()
+        ),
+        (0, 15_000, 0)
+    );
+    assert_eq!(
+        assist::advances(&w.env.ctx, w.rahim).unwrap().open_paisa,
+        rupees(15_000)
+    );
+    // A payment never adjusts an advance.
+    assert_eq!(scalar(&w, "SELECT COUNT(*) FROM advance_allocations"), 0);
+    let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
+    assert_eq!(trial.total_dr, trial.total_cr);
+
+    // Paying more than is payable warns in the preview and still saves; the extra is what he
+    // owes the firm, and it is not an advance (PRD FR-15.7).
+    let preview = preview_of(
+        &w,
+        VoucherEntry::Payment(payment_input(w.rahim, "1,000", "")),
+    );
+    assert!(preview.payable_is_zero_for_seller, "PRD FR-7.68");
+    assert_eq!(preview.warnings.len(), 1);
+    assert_eq!(preview.warnings[0].code, ErrorCode::ErrPaymentAbovePayable);
+    assert_eq!(preview.warnings[0].field, "amount");
+}
+
+#[test]
+fn e2e_31_a_seller_returns_10000_of_his_advance() {
+    let w = worked_day();
+    // Before: 15,000 of advance is open. The preview of a return of 10,000.
+    assert_eq!(
+        assist::advances(&w.env.ctx, w.rahim).unwrap().open_paisa,
+        rupees(15_000)
+    );
+    let input = receipt_input(w.rahim, "10,000");
+    let preview = preview_of(&w, VoucherEntry::Receipt(input.clone()));
+    assert!(preview.errors.is_empty());
+    assert_eq!(preview.return_limit_paisa, Some(rupees(15_000)));
+    assert_eq!(preview.advance_effects.len(), 1);
+    assert_eq!(
+        (
+            preview.advance_effects[0].advance.voucher_number,
+            preview.advance_effects[0].adjusted_paisa.rupees(),
+            preview.advance_effects[0].still_open_paisa.rupees()
+        ),
+        (Some(1), 10_000, 5_000)
+    );
+    assert_eq!(preview.owes_settled_paisa, Paisa::ZERO);
+
+    // More than he can return is refused with the open amount (PRD FR-15.12).
+    let refused = vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt_input(w.rahim, "15,001"))
+        .unwrap_err();
+    assert_eq!(
+        code_and_value(&refused, "open_paisa"),
+        (ErrorCode::ErrReturnExceedsOpen, Some(1_500_000))
+    );
+    assert_eq!(
+        scalar(&w, "SELECT COUNT(*) FROM vouchers WHERE type = 'receipt'"),
+        0
+    );
+
+    // After the return: advance open 5,000; cash 60,000.
+    let saved = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
+    assert_eq!(
+        (saved.new_balance.side, saved.new_balance.amount_paisa),
+        (BalanceSide::Dr, rupees(5_000))
+    );
+    assert_eq!(
+        assist::advances(&w.env.ctx, w.rahim).unwrap().open_paisa,
+        rupees(5_000)
+    );
+    assert_eq!(
+        balance(&w, support::id_of(&w.env, "01010001")),
+        (BalanceSide::Dr, 60_000)
+    );
+
+    // Then Event 1: the last 5,000 is adjusted; the report says given 15,000, returned 10,000,
+    // adjusted 5,000, open 0; payable 24,316 - 5,000 - 5,000 = 14,316; ledger 14,316 جمع.
+    save_ok(&w, &support::event1(&w), false);
+    let report = vouchers::advances_report(
+        &w.env.ctx,
+        &AdvancesReportInput {
+            seller_id: None,
+            as_of: String::new(),
+        },
+    )
+    .unwrap();
+    assert_eq!(report.rows.len(), 1);
+    let row = &report.rows[0];
+    assert_eq!(
+        (
+            row.given_paisa.rupees(),
+            row.returned_paisa.rupees(),
+            row.adjusted_paisa.rupees(),
+            row.open_paisa.rupees()
+        ),
+        (15_000, 10_000, 5_000, 0)
+    );
+    assert_eq!(
+        (
+            report.given_paisa.rupees(),
+            report.returned_paisa.rupees(),
+            report.adjusted_paisa.rupees(),
+            report.open_paisa.rupees()
+        ),
+        (15_000, 10_000, 5_000, 0)
+    );
+    let p = payables_of(&w, w.rahim);
+    assert_eq!(
+        (
+            p.open_paisa.rupees(),
+            p.advances_open_paisa.rupees(),
+            p.owes_firm_paisa.rupees()
+        ),
+        (14_316, 0, 0)
+    );
+    assert_eq!(balance(&w, w.rahim), (BalanceSide::Cr, 14_316));
+    // The report as of a day before the return shows the advance as it was.
+    let earlier = vouchers::advances_report(
+        &w.env.ctx,
+        &AdvancesReportInput {
+            seller_id: Some(w.rahim),
+            as_of: "09-10-2026".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (
+            earlier.rows[0].given_paisa.rupees(),
+            earlier.rows[0].returned_paisa.rupees(),
+            earlier.rows[0].adjusted_paisa.rupees(),
+            earlier.rows[0].open_paisa.rupees()
+        ),
+        (15_000, 0, 0, 15_000)
+    );
+    let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
+    assert_eq!(trial.total_dr, trial.total_cr);
+}
+
+#[test]
+fn e2e_32_cash_lent_to_a_buyer_is_one_of_his_bills() {
+    let w = worked_day();
+    // Events 1 to 4, then Event 5 as plain postings: cash is 58,484 (E2E-8).
+    save_ok(&w, &support::event1(&w), false);
+    save_ok(&w, &event2(&w), false);
+    vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt_input(w.akram, "10,000")).unwrap();
+    vouchers::save_payment(&w.env.ctx, &w.owner, &payment_input(w.rahim, "4,316", "")).unwrap();
+    event5_direct(&w);
+    let cash = support::id_of(&w.env, "01010001");
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 58_484));
+
+    // A payment to a buyer needs a reason (PRD FR-15.11), checked at its field.
+    let refused =
+        vouchers::save_payment(&w.env.ctx, &w.owner, &payment_input(w.akram, "3,000", ""))
+            .unwrap_err();
+    assert_eq!(
+        (refused.code(), first_field(&refused)),
+        (
+            ErrorCode::ErrPaymentToBuyerNeedsReason,
+            Some("reason".to_owned())
+        )
+    );
+    let preview = preview_of(
+        &w,
+        VoucherEntry::Payment(payment_input(w.akram, "3,000", "")),
+    );
+    assert_eq!(preview.errors.len(), 1);
+    assert_eq!(
+        preview.errors[0].code,
+        ErrorCode::ErrPaymentToBuyerNeedsReason
+    );
+
+    // ادائیگی of 3,000 cash to اکرم, reason نقد ادھار.
+    let input = payment_input(w.akram, "3,000", "نقد ادھار");
+    let saved = vouchers::save_payment(&w.env.ctx, &w.owner, &input).unwrap();
+    assert_eq!(
+        (saved.new_balance.side, saved.new_balance.amount_paisa),
+        (BalanceSide::Dr, rupees(5_880))
+    );
+    // The 3,000 is a bill dated 10-10-26 after his بکری 1 bill: 2,880 + 3,000 = 5,880.
+    let bills = open_bills_of(&w, w.akram);
+    assert_eq!(bills.bills.len(), 2);
+    assert_eq!(
+        (
+            bills.bills[0].source,
+            bills.bills[0].number,
+            bills.bills[0].open_paisa.rupees()
+        ),
+        (LineSource::Bikri, Some(1), 2_880)
+    );
+    assert_eq!(
+        (
+            bills.bills[1].source,
+            bills.bills[1].number,
+            bills.bills[1].entry_date.as_str(),
+            bills.bills[1].open_paisa.rupees()
+        ),
+        (LineSource::CashLent, Some(2), "2026-10-10", 3_000)
+    );
+    // The loan is payment ا-2 (the payment to رحیم was ا-1).
+    assert_eq!(bills.open_paisa.rupees(), 5_880);
+    // Cash 55,484; Σ buyer debit balances 21,564 + 3,000 = 24,564.
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 55_484));
+    let dues = balance(&w, w.akram).1 + balance(&w, w.arshad).1;
+    assert_eq!(dues, 2_880 + 3_000 + 18_684);
+    assert_eq!(dues, 24_564);
+    // Collected like any bill: a receipt of 2,880 settles the older bill first.
+    let preview = preview_of(&w, VoucherEntry::Receipt(receipt_input(w.akram, "2,880")));
+    assert_eq!(preview.bill_effects.len(), 1);
+    assert_eq!(preview.bill_effects[0].bill.number, Some(1));
+    assert_eq!(preview.bill_effects[0].bill.source, LineSource::Bikri);
+}
+
+fn first_field(error: &mandi_services::ServiceError) -> Option<String> {
+    match error {
+        mandi_services::ServiceError::Rejected(items) => {
+            items.first().and_then(|i| i.field.clone())
+        }
+        _ => None,
+    }
 }

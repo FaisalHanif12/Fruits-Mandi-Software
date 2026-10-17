@@ -10,10 +10,17 @@ import type { Language } from '../../src/bindings/Language';
 import type { Paper } from '../../src/bindings/Paper';
 import type { PrintData } from '../../src/bindings/PrintData';
 import { BikriPrintDocument } from '../../src/features/bikri/print/BikriPrintDocument';
+import { ReceiptSlipTemplate } from '../../src/features/vouchers/print/ReceiptSlipTemplate';
 import { LANGUAGES } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { FOOTER_PROPERTY } from '../../src/shared/print';
-import { DEFAULT_PAPER, printDataFor, toUrduDigits } from '../helpers/print-data';
+import {
+  DEFAULT_PAPER,
+  printDataFor,
+  toUrduDigits,
+  voucherPrintData,
+  type SlipKind,
+} from '../helpers/print-data';
 import { message, visible } from '../helpers/render';
 
 afterEach(() => {
@@ -225,7 +232,12 @@ describe('paper classes', () => {
   });
 
   it('starts every document on the paper Settings gave it (A4 bill, A5 slips)', () => {
-    expect(DEFAULT_PAPER).toEqual({ seller_bill: 'a4', buyer_slips: 'a5', pukhta_slip: 'a5' });
+    expect(DEFAULT_PAPER).toEqual({
+      seller_bill: 'a4',
+      buyer_slips: 'a5',
+      pukhta_slip: 'a5',
+      receipt_slip: 'a5',
+    });
     for (const doc of ['seller_bill', 'buyer_slips', 'pukhta_slip'] as const) {
       const { root, unmount } = show(printDataFor(doc));
       expect(root.dataset['paper']).toBe(DEFAULT_PAPER[doc]);
@@ -374,5 +386,88 @@ describe('what the backend sends is what is shown', () => {
     const { root } = show({ ...data, pages: [] });
     expect(textOf(root)).toContain(message('en', 'print-preview-empty'));
     expect(sheets(root)).toHaveLength(0);
+  });
+});
+
+describe.each(LANGUAGES)('the receipt slip template (%s)', (language: Language) => {
+  const show = (kind: SlipKind, options: Parameters<typeof voucherPrintData>[1] = {}) => {
+    const data = voucherPrintData(kind, { language, ...options });
+    const result = render(<ReceiptSlipTemplate data={data} />);
+    const root = result.container.querySelector<HTMLElement>('.print-doc');
+    if (root === null) throw new Error('no print document');
+    return { ...result, root, data };
+  };
+
+  it('a receipt: the title, the number, the party, one total and the amount in words', () => {
+    const { root } = show('receipt');
+    const text = textOf(root);
+    expect(text).toContain(message(language, 'print-receipt-slip-title'));
+    expect(text).toContain(language === 'ur' ? 'و-1' : 'R-1');
+    expect(text).toContain(message(language, 'print-party-buyer'));
+    expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
+    expect(text).toContain('03040001');
+    expect(text).toContain(message(language, 'print-slip-amount-received'));
+    expect(text).toContain('10,000');
+    expect(text).toContain(language === 'ur' ? 'دس ہزار روپے' : 'Ten thousand rupees only');
+    expect(text).toContain(message(language, 'print-mode-cash'));
+    // A slip has no goods table.
+    expect(root.querySelector('table.print-goods')).toBeNull();
+    expect(root.querySelectorAll('.print-sheet')).toHaveLength(1);
+  });
+
+  it('how the money moved is a solid box: the money has moved, it is not a payment still due', () => {
+    const { root } = show('receipt');
+    const box = root.querySelector('.print-payment');
+    expect(box?.getAttribute('data-paid')).toBe('true');
+    expect(box?.textContent).toBe(message(language, 'print-mode-cash'));
+  });
+
+  it('a payment and an advance have their own title and total label', () => {
+    for (const [kind, title, total, amount] of [
+      ['payment', 'print-payment-slip-title', 'print-slip-amount-paid', '4,316'],
+      ['advance', 'print-advance-slip-title', 'print-slip-amount-advance', '5,000'],
+    ] as const) {
+      const { root, unmount } = show(kind);
+      const text = textOf(root);
+      expect(text).toContain(message(language, title));
+      expect(text).toContain(message(language, total));
+      expect(text).toContain(amount);
+      expect(text).toContain(message(language, 'print-party-seller'));
+      unmount();
+    }
+  });
+
+  it('a cheque shows the bank and the cheque number; the extras show reason, collector and narration', () => {
+    const { root } = show('receipt', { mode: 'cheque', extras: true });
+    const text = textOf(root);
+    expect(text).toContain(message(language, 'print-fact-bank'));
+    expect(text).toContain(message(language, 'print-mode-cheque'));
+    expect(text).toContain('123456');
+    expect(text).toContain(message(language, 'print-fact-collector'));
+    expect(text).toContain(message(language, 'print-fact-reason'));
+    expect(text).toContain(message(language, 'print-fact-narration'));
+  });
+
+  it('the paper class and the direction are on the root; the roll is a slip too', () => {
+    const { root } = show('receipt', { paper: 'mm80' });
+    expect(root.getAttribute('data-paper')).toBe('mm80');
+    expect(root.getAttribute('dir')).toBe(language === 'ur' ? 'rtl' : 'ltr');
+    expect(root.getAttribute('lang')).toBe(language);
+  });
+
+  it('a cancelled voucher is stamped', () => {
+    const { root } = show('receipt', { cancelled: true });
+    expect(textOf(root)).toContain(message(language, 'print-cancelled-stamp'));
+  });
+
+  it('the numbers keep their order inside the sentence (isolated left to right)', () => {
+    const { root } = show('receipt');
+    const amount = within(root)
+      .getAllByText(
+        (_, element) => element?.tagName === 'BDI' && textOf(element as HTMLElement) === '10,000',
+      )
+      .map((element) => element.closest('bdi'));
+    expect(amount.length).toBeGreaterThan(0);
+    expect(amount.every((bdi) => bdi?.getAttribute('dir') === 'ltr')).toBe(true);
   });
 });

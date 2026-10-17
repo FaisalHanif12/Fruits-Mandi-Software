@@ -119,6 +119,7 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
           onSignOut={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
+          onOpenVoucher={vi.fn()}
         />
       </QueryClientProvider>,
     );
@@ -144,6 +145,7 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
           onSignOut={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
+          onOpenVoucher={vi.fn()}
         />
       </QueryClientProvider>,
     );
@@ -345,6 +347,7 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
           onSignOut={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
+          onOpenVoucher={vi.fn()}
           date="10-10-2026"
           day="open"
         >

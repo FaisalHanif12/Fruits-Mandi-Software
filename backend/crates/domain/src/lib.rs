@@ -14,6 +14,7 @@ pub mod cash;
 pub mod ledger;
 pub mod matching;
 pub mod partners;
+pub mod payables;
 pub mod rules;
 
 /// `mandi-core`, re-exported so the crates above reach it through the one allowed path

@@ -283,7 +283,63 @@ print-settings-after-save = Print after save
 
 # $key is the key that saves and prints, for example Ctrl+Enter.
 # review: pending
-print-settings-after-save-hint = { $key } saves the { -bikri } and prints these documents.
+print-settings-after-save-hint = { $key } saves the { -bikri } or the voucher and prints these documents.
 
 # review: pending
 print-settings-load-failed = Printing settings could not be opened
+
+## The receipt slip of a voucher (plan 15, PRD FR-15.2). The backend sends these ids (contract 9).
+
+# review: pending
+print-receipt-slip-title = { -wasooli } slip
+
+# review: pending
+print-payment-slip-title = { -adaigi } slip
+
+# review: pending
+print-advance-slip-title = { -peshgi-khata } slip
+
+# review: pending
+print-fact-voucher-number = No.
+
+# review: pending
+print-fact-bank = Bank
+
+# review: pending
+print-fact-cheque = Cheque
+
+# review: pending
+print-fact-reason = Reason
+
+# review: pending
+print-fact-collector = Collector
+
+# review: pending
+print-fact-narration = Narration
+
+# review: pending
+print-party-onetime-seller = { -pukhta-khata } ({ -beopari })
+
+# review: pending
+print-party-account = Account
+
+# review: pending
+print-mode-cash = Cash
+
+# review: pending
+print-mode-bank = Bank
+
+# review: pending
+print-mode-cheque = Cheque
+
+# review: pending
+print-slip-amount-received = Amount received
+
+# review: pending
+print-slip-amount-paid = Amount paid
+
+# review: pending
+print-slip-amount-advance = { -peshgi } given
+
+# review: pending
+print-doc-receipt-slip = Receipt slip

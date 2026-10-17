@@ -17,13 +17,17 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use mandi_reports::ReportsError;
-use mandi_reports::print::{BikriPrintDataInput, bikri_print_data};
+use mandi_reports::print::{
+    BikriPrintDataInput, VoucherPrintDataInput, bikri_print_data, voucher_print_data,
+};
 use mandi_services::ServiceError;
 use mandi_services::auth::{self, Actor};
 use mandi_services::core::auth::Language;
 use mandi_services::core::error::{ErrorCode, ErrorValue};
-use mandi_services::core::printing::{PrintDoc, PrintInput, PrintOutcome, PrintTo, pdf_file_name};
-use mandi_services::printing::{self, PrintPlan};
+use mandi_services::core::printing::{
+    PrintDoc, PrintInput, PrintOutcome, PrintTo, PrintVoucherInput, pdf_file_name,
+};
+use mandi_services::printing::{self, PrintPlan, VoucherPrintPlan};
 use tauri::Manager;
 
 use crate::error::{UiError, UiErrorItem};
@@ -95,6 +99,94 @@ pub async fn run<R: tauri::Runtime>(
     })
 }
 
+/// Runs the slip print of one voucher (plan 15, PRD FR-15.2): the same hidden window and the same
+/// settings as the بکری documents, one page. A voucher has no print count, so a print that
+/// happened is written to the audit log.
+pub async fn run_voucher<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintVoucherInput,
+) -> Result<PrintOutcome, UiError> {
+    let state = AppState::of(&app)?;
+    let data_dir = app.path().app_data_dir();
+    let (actor, plan, job) = {
+        let state = state.clone();
+        run_blocking("reports_print_voucher", move || {
+            prepare_voucher(&state, &input, data_dir.map(|dir| dir.join(PDF_FOLDER)))
+        })
+        .await?
+    };
+    if !cfg!(windows) {
+        return Err(UiError::single(ErrorCode::ErrPrintWindowsOnly, None));
+    }
+    let executed = execute(&app, std::slice::from_ref(&job)).await;
+    if !executed.printed.is_empty() {
+        let state = state.clone();
+        let plan = plan.clone();
+        run_blocking("reports_print_voucher", move || {
+            let ctx = state.context()?;
+            printing::record_voucher(&ctx, &actor, &plan)?;
+            Ok(())
+        })
+        .await?;
+    }
+    if let Some(error) = executed.error {
+        return Err(error);
+    }
+    Ok(PrintOutcome {
+        printed: executed.printed,
+        pdf_paths: (plan.to == PrintTo::Pdf).then(|| {
+            executed
+                .pdf_paths
+                .iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect()
+        }),
+    })
+}
+
+/// Checks a voucher slip request and makes its one job.
+fn prepare_voucher(
+    state: &AppState,
+    input: &PrintVoucherInput,
+    pdf_dir: tauri::Result<PathBuf>,
+) -> Result<(Actor, VoucherPrintPlan, Job), UiError> {
+    let ctx = state.context()?;
+    let actor = auth::require(&ctx)?;
+    let plan = printing::plan_voucher(&ctx, input)?;
+    let pdf_dir = pdf_dir.map_err(UiError::internal)?;
+    let query = VoucherPrintDataInput {
+        voucher_id: plan.voucher_id,
+        language: plan.language,
+    };
+    let data = voucher_print_data(ctx.db(), &query).map_err(reports_voucher_error)?;
+    let language = match plan.language {
+        Language::Ur => "ur",
+        Language::En => "en",
+    };
+    let job = Job {
+        doc: PrintDoc::ReceiptSlip,
+        paper: data.paper,
+        query: format!(
+            "voucher={}&doc={}&language={language}",
+            plan.voucher_id,
+            PrintDoc::ReceiptSlip.as_str()
+        ),
+        target: match plan.to {
+            PrintTo::Printer => JobTarget::Printer {
+                name: plan.setup.printer.clone(),
+                copies: plan.copies,
+            },
+            // The file is named by the voucher's row id: the numbers of the three series repeat.
+            PrintTo::Pdf => JobTarget::Pdf(pdf_dir.join(pdf_file_name(
+                PrintDoc::ReceiptSlip,
+                plan.voucher_id,
+                plan.language,
+            ))),
+        },
+    };
+    Ok((actor, plan, job))
+}
+
 /// Checks the request and lists the jobs: one for each document that has a page.
 fn prepare(
     state: &AppState,
@@ -162,6 +254,23 @@ pub(crate) fn reports_error(error: ReportsError) -> UiError {
             UiError::coded(error.code(), &error)
         }
         other => UiError::internal(other),
+    }
+}
+
+/// A reports error of a voucher slip as the error the screen sees: a missing voucher is
+/// `ERR_NOT_FOUND` on `voucher_id`.
+pub(crate) fn reports_voucher_error(error: ReportsError) -> UiError {
+    match error {
+        ReportsError::NotFound => UiError::single(ErrorCode::ErrNotFound, Some("voucher_id")),
+        other => reports_error(other),
+    }
+}
+
+/// The same, for a voucher slip inside `commands::run`.
+pub(crate) fn reports_voucher_service_error(error: ReportsError) -> ServiceError {
+    match error {
+        ReportsError::NotFound => ServiceError::reject_field(ErrorCode::ErrNotFound, "voucher_id"),
+        other => reports_service_error(other),
     }
 }
 

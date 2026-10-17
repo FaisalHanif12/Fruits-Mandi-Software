@@ -77,3 +77,14 @@ pukhta-state-due = باقی { $amount }
 
 # review: pending
 pukhta-state-cancelled = منسوخ
+
+## Making a one-time person a regular account (plan 15, PRD FR-13.8).
+
+# review: pending
+pukhta-make-regular-title = باقاعدہ کھاتہ بنائیں
+
+# review: pending
+pukhta-make-regular-help = اس شخص کا نام اور فون یہاں بھر دیا گیا ہے۔ محفوظ کرنے پر اس کا کھلا بقایا نئے کھاتے میں چلا جائے گا۔
+
+# review: pending
+pukhta-make-regular-done = کھاتہ بن گیا اور بقایا اس میں منتقل ہو گیا

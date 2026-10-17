@@ -2,8 +2,8 @@
 // or English name, father or firm, city or phone, in either script, and opens it. `Ctrl+K` focuses
 // it from anywhere. ↑ ↓ move through the results and Enter opens the highlighted one; Esc clears
 // the box. A result is an account, or (plan 13) a بکری found by its number or by the start of its
-// truck number; vouchers come with their module. Like every search, it takes the text as typed and
-// never converts it to Urdu (F41).
+// truck number, or (plan 15) a voucher found by its number. Like every search, it takes the text as
+// typed and never converts it to Urdu (F41).
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useCombobox } from 'downshift';
@@ -14,24 +14,29 @@ import {
   type AccountSearchHit,
   type BikriSearchHit,
   type GlobalHit,
+  type VoucherSearchHit,
 } from '../../shared/accounts';
 import { uiErrorOf } from '../../shared/api';
 import { displayName, otherScriptLang, otherScriptName, useLanguage } from '../../shared/i18n';
 import { SHORTCUTS, keepKeyForApp, useEscape, useShortcut } from '../../shared/keyboard';
-import { isoToDisplayDate } from '../../shared/format';
+import { formatPaisa, isoToDisplayDate, useGrouping } from '../../shared/format';
 import type { Language } from '../../i18n';
-import { Code, ErrorMessage, KeyChip } from '../../shared/ui';
+import { asScreenType } from '../../features/vouchers/screen-type';
+import { Code, ErrorMessage, KeyChip, Num } from '../../shared/ui';
 
 interface GlobalSearchProps {
   /** A result was chosen: open that account. */
   onOpenAccount: (id: number) => void;
   /** A بکری was chosen: open the sale book on that id (read-only until plan 16). */
   onOpenBikri: (id: number) => void;
+  /** A voucher was chosen: open the voucher screen on it (PRD FR-5.4, plan 15). */
+  onOpenVoucher: (hit: VoucherSearchHit) => void;
 }
 
 /** The text a result is known by in the box. */
 function hitText(hit: GlobalHit, language: Language): string {
-  return hit.kind === 'bikri' ? String(hit.number) : displayName(hit, language);
+  if (hit.kind === 'account') return displayName(hit, language);
+  return String(hit.number);
 }
 
 /** An account result: its name in the app language, its code, the other script and the city. */
@@ -76,7 +81,50 @@ function BikriResult({ hit }: { hit: BikriSearchHit }) {
   );
 }
 
-export function GlobalSearch({ onOpenAccount, onOpenBikri }: GlobalSearchProps) {
+/**
+ * A voucher result: its kind and number in the series of the language ("Receipt R-12"), its day,
+ * its account and its amount, and the word "cancelled" when it is (FR-5.4). The number and the
+ * amount are the backend's; nothing is worked out here.
+ */
+function VoucherResult({ hit, language }: { hit: VoucherSearchHit; language: Language }) {
+  const grouping = useGrouping();
+  const type = asScreenType(hit.voucher_type);
+  return (
+    <>
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="type-field flex items-baseline gap-2 truncate">
+          {type === null ? (
+            // A kind that belongs to another screen has its words there; here its number only.
+            <Code>{String(hit.number)}</Code>
+          ) : (
+            <>
+              <Localized id={`vouchers-type-${type}`}>
+                <span />
+              </Localized>
+              <Code>
+                <Localized id={`vouchers-number-${type}`} vars={{ number: String(hit.number) }} />
+              </Code>
+            </>
+          )}
+        </span>
+        <Code>{isoToDisplayDate(hit.entry_date)}</Code>
+      </span>
+      <span className="flex items-baseline gap-2 truncate type-body text-ink-muted">
+        {hit.account === null ? null : (
+          <span className="truncate">{displayName(hit.account, language)}</span>
+        )}
+        <Num>{formatPaisa(hit.amount_paisa, { grouping })}</Num>
+        {hit.status === 'cancelled' ? (
+          <Localized id="vouchers-hit-cancelled">
+            <span className="text-due" />
+          </Localized>
+        ) : null}
+      </span>
+    </>
+  );
+}
+
+export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: GlobalSearchProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const listId = useId();
@@ -117,6 +165,7 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri }: GlobalSearchProps) 
     onSelectedItemChange: ({ selectedItem }) => {
       if (selectedItem === null) return;
       if (selectedItem.kind === 'bikri') onOpenBikri(selectedItem.id);
+      else if (selectedItem.kind === 'voucher') onOpenVoucher(selectedItem);
       else onOpenAccount(selectedItem.id);
       setText('');
       inputEl?.blur();
@@ -171,6 +220,8 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri }: GlobalSearchProps) 
                 >
                   {hit.kind === 'bikri' ? (
                     <BikriResult hit={hit} />
+                  ) : hit.kind === 'voucher' ? (
+                    <VoucherResult hit={hit} language={language} />
                   ) : (
                     <AccountResult hit={hit} language={language} />
                   )}

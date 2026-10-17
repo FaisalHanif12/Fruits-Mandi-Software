@@ -523,6 +523,63 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "vouchers_save_receipt",
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "10,000", "mode": "cash",
+                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" } }),
+            true,
+        ),
+        (
+            "vouchers_save_payment",
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "4,316", "mode": "cash",
+                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "reason": "", "narration": "" } }),
+            true,
+        ),
+        (
+            "vouchers_preview",
+            json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "person_key": null,
+                "amount": "10,000", "mode": "cash", "bank_account_id": null, "cheque_no": "", "cheque_date": "",
+                "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
+            true,
+        ),
+        (
+            "vouchers_edit",
+            json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
+                "account_id": 1, "person_key": null, "amount": "10,000", "mode": "cash", "bank_account_id": null,
+                "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" } } }),
+            true,
+        ),
+        (
+            "vouchers_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        ("vouchers_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "vouchers_save_receipts_batch",
+            json!({ "input": { "rows": [] } }),
+            true,
+        ),
+        (
+            "advances_report",
+            json!({ "input": { "seller_id": null, "as_of": "" } }),
+            true,
+        ),
+        (
+            "assist_open_bills",
+            json!({ "input": { "account_id": 1, "person_key": null } }),
+            true,
+        ),
+        (
+            "assist_open_payables",
+            json!({ "input": { "seller_id": 1, "person_key": null, "include_settled": false } }),
+            true,
+        ),
+        (
+            "assist_collection_list",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null } }),
+            true,
+        ),
+        (
             "day_close_preview",
             json!({ "input": { "up_to": "" } }),
             true,
@@ -670,6 +727,27 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             "reports_print",
             json!({ "input": { "bikri_id": 1, "docs": ["seller_bill"], "language": "ur", "copies": null,
                 "to": "pdf", "only_buyer_id": null } }),
+            true,
+        ),
+        (
+            "reports_voucher_print_data",
+            json!({ "input": { "voucher_id": 1, "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_print_voucher",
+            json!({ "input": { "voucher_id": 1, "language": "ur", "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "pukhta_make_regular",
+            json!({ "input": { "person_key": "x|", "side": "buyer", "account_input": { "id": null, "version": null,
+                "account_type": "buyer", "control_id": null, "code": "", "name_ur": "شاہد", "name_en": "Shahid",
+                "confirmed_rules_words": [], "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null,
+                "adda_id": null, "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
+                "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
+                "credit_allowed": true, "credit_limit": "", "default_marka_id": null, "collector_staff_id": null,
+                "collection_weekday": null, "is_active": true, "note": "" } } }),
             true,
         ),
         ("reports_list_printers", json!({}), true),
@@ -1380,6 +1458,242 @@ fn the_partners_commands_work_through_the_ipc() {
 }
 
 #[test]
+fn the_voucher_commands_work_through_the_ipc() {
+    // Plan 15: cash lent makes a bill, a receipt settles it, the preview says so, edit and cancel
+    // go through the reversal, and the reads and the slip answer in paisa.
+    let h = Harness::new();
+    h.set_up_and_login();
+    let account = |kind: &str, ur: &str, en: &str| -> i64 {
+        h.ok(
+            "accounts_save",
+            json!({ "input": { "id": null, "version": null, "account_type": kind, "control_id": null,
+                "code": "", "name_ur": ur, "name_en": en, "confirmed_rules_words": [],
+                "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null, "adda_id": null,
+                "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
+                "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
+                "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
+                "collector_staff_id": null, "collection_weekday": 5, "is_active": true,
+                "note": "" } }),
+        )["id"]
+            .as_i64()
+            .unwrap()
+    };
+    let rahim = account("seller", "رحیم", "Rahim");
+    let akram = account("buyer", "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    let payment = |account_id: i64, amount: &str, reason: &str, confirm: bool| {
+        json!({ "input": { "date": "10-10-2026", "account_id": account_id, "person_key": null,
+            "amount": amount, "mode": "cash", "bank_account_id": null, "cheque_no": "",
+            "cheque_date": "", "reason": reason, "narration": "", "confirm_cash_below_zero": confirm } })
+    };
+    let receipt = |account_id: i64, amount: &str| {
+        json!({ "date": "10-10-2026", "account_id": account_id, "person_key": null, "amount": amount,
+            "mode": "cash", "bank_account_id": null, "cheque_no": "", "cheque_date": "",
+            "collector_staff_id": null, "narration": "" })
+    };
+
+    // A payment to a buyer needs a reason, and an empty till asks first (PRD FR-6.7).
+    let refused = h
+        .call("vouchers_save_payment", payment(akram, "3,000", "", true))
+        .unwrap_err();
+    assert_eq!(
+        refused["errors"][0]["code"],
+        "ERR_PAYMENT_TO_BUYER_NEEDS_REASON"
+    );
+    assert_eq!(refused["errors"][0]["field"], "reason");
+    let asks = h
+        .call(
+            "vouchers_save_payment",
+            payment(akram, "3,000", "نقد ادھار", false),
+        )
+        .unwrap_err();
+    assert_eq!(
+        asks["errors"][0]["code"],
+        "ERR_CASH_BELOW_ZERO_NOT_CONFIRMED"
+    );
+    assert_eq!(asks["errors"][0]["values"]["cash_after_paisa"], -300_000);
+    let lent = h.ok(
+        "vouchers_save_payment",
+        payment(akram, "3,000", "نقد ادھار", true),
+    );
+    assert_eq!(lent["number"], 1);
+    assert_eq!(lent["voucher_type"], "payment");
+
+    // The bill, the preview of a receipt, and the save.
+    let bills = h.ok(
+        "assist_open_bills",
+        json!({ "input": { "account_id": akram, "person_key": null } }),
+    );
+    assert_eq!(bills["open_paisa"], 300_000);
+    assert_eq!(bills["bills"][0]["source"], "cash_lent");
+    assert_eq!(bills["bills"][0]["days"], 0);
+    let preview = h.ok(
+        "vouchers_preview",
+        json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram,
+            "person_key": null, "amount": "1,000", "mode": "cash", "bank_account_id": null,
+            "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" },
+            "replacing_voucher_id": null } }),
+    );
+    assert_eq!(preview["errors"], json!([]), "{preview}");
+    assert_eq!(preview["bill_effects"][0]["settled_paisa"], 100_000);
+    assert_eq!(preview["bill_effects"][0]["still_open_paisa"], 200_000);
+    assert_eq!(
+        preview["new_balance"],
+        json!({ "amount_paisa": 200_000, "side": "dr" })
+    );
+    let saved = h.ok(
+        "vouchers_save_receipt",
+        json!({ "input": receipt(akram, "1,000") }),
+    );
+    assert_eq!(
+        (saved["number"].clone(), saved["voucher_type"].clone()),
+        (json!(1), json!("receipt"))
+    );
+    let id = saved["voucher_id"].as_i64().unwrap();
+
+    // Read, edit (the version comes from the read), and the stale version is refused.
+    let row = h.ok("vouchers_get", json!({ "input": { "id": id } }));
+    assert_eq!(
+        (row["editable"].clone(), row["status"].clone()),
+        (json!(true), json!("saved"))
+    );
+    let version = row["version"].as_i64().unwrap();
+    let edit = |version: i64, amount: &str| {
+        h.call(
+            "vouchers_edit",
+            json!({ "input": { "id": id, "version": version, "reason": "", "confirm_cash_below_zero": false,
+                "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram, "person_key": null,
+                    "amount": amount, "mode": "cash", "bank_account_id": null, "cheque_no": "",
+                    "cheque_date": "", "collector_staff_id": null, "narration": "" } } }),
+        )
+    };
+    assert_eq!(
+        edit(version + 7, "2,000").unwrap_err()["errors"][0]["code"],
+        "ERR_VERSION_CHANGED"
+    );
+    let edited = edit(version, "2,000").unwrap();
+    assert_eq!(
+        edited["new_balance"],
+        json!({ "amount_paisa": 100_000, "side": "dr" })
+    );
+
+    // The slip answers in paisa-free text, in both languages; printing needs Windows.
+    let slip = h.ok(
+        "reports_voucher_print_data",
+        json!({ "input": { "voucher_id": id, "language": "en" } }),
+    );
+    assert_eq!(slip["doc"], "receipt_slip");
+    assert_eq!(slip["pages"][0]["amounts"][0]["amount"], "2,000");
+    assert_eq!(
+        slip["pages"][0]["words"]["text"],
+        "Two thousand rupees only"
+    );
+    assert_eq!(
+        h.call(
+            "reports_voucher_print_data",
+            json!({ "input": { "voucher_id": 999, "language": "ur" } })
+        )
+        .unwrap_err()["errors"][0]["field"],
+        "voucher_id"
+    );
+
+    // Cancel needs a reason; the voucher keeps its number and is marked cancelled.
+    let row = h.ok("vouchers_get", json!({ "input": { "id": id } }));
+    let no_reason = h
+        .call(
+            "vouchers_cancel",
+            json!({ "input": { "id": id, "version": row["version"], "reason": "", "confirm_cash_below_zero": false } }),
+        )
+        .unwrap_err();
+    assert_eq!(no_reason["errors"][0]["code"], "ERR_REASON_REQUIRED");
+    // Taking the 2,000 back leaves cash at -3,000, so it asks (PRD FR-6.7).
+    let asks = h
+        .call(
+            "vouchers_cancel",
+            json!({ "input": { "id": id, "version": row["version"], "reason": "غلط",
+                "confirm_cash_below_zero": false } }),
+        )
+        .unwrap_err();
+    assert_eq!(
+        asks["errors"][0]["code"],
+        "ERR_CASH_BELOW_ZERO_NOT_CONFIRMED"
+    );
+    assert_eq!(asks["errors"][0]["values"]["cash_after_paisa"], -300_000);
+    let cancelled = h.ok(
+        "vouchers_cancel",
+        json!({ "input": { "id": id, "version": row["version"], "reason": "غلط",
+            "confirm_cash_below_zero": true } }),
+    );
+    assert_eq!(cancelled["number"], 1);
+    assert_eq!(
+        cancelled["new_balance"],
+        json!({ "amount_paisa": 300_000, "side": "dr" })
+    );
+    assert_eq!(
+        h.call(
+            "vouchers_cancel",
+            json!({ "input": { "id": id, "version": row["version"], "reason": "x", "confirm_cash_below_zero": false } })
+        )
+        .unwrap_err()["errors"][0]["code"],
+        "ERR_VOUCHER_CANCELLED"
+    );
+
+    // The collection list (buyers planned on a Saturday), the payables and the advances report.
+    let list = h.ok(
+        "assist_collection_list",
+        json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null } }),
+    );
+    assert_eq!(
+        (list["weekday"].clone(), list["total_paisa"].clone()),
+        (json!(5), json!(300_000))
+    );
+    let payables = h.ok(
+        "assist_open_payables",
+        json!({ "input": { "seller_id": rahim, "person_key": null, "include_settled": false } }),
+    );
+    assert_eq!(payables["postings"], json!([]));
+    let report = h.ok(
+        "advances_report",
+        json!({ "input": { "seller_id": null, "as_of": "" } }),
+    );
+    assert_eq!(report["rows"], json!([]));
+    // The round skips an empty row, and the search finds the voucher by its number.
+    let round = h.ok(
+        "vouchers_save_receipts_batch",
+        json!({ "input": { "rows": [receipt(akram, "0"), receipt(akram, "500")] } }),
+    );
+    assert_eq!(round["rows"][0]["skipped"], true);
+    assert_eq!(round["saved_paisa"], 50_000);
+    let found = h.ok(
+        "search_global",
+        json!({ "input": { "text": "R-2", "limit": 10 } }),
+    );
+    assert!(
+        found
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|hit| hit["kind"] == "voucher")
+    );
+    let listed = h.ok(
+        "vouchers_list",
+        json!({ "input": { "voucher_type": "receipt", "from": "", "to": "", "account_id": akram, "person_key": null } }),
+    );
+    assert_eq!(listed["rows"].as_array().unwrap().len(), 2);
+    // Printing needs Windows.
+    if !cfg!(windows) {
+        let id2 = listed["rows"][1]["id"].as_i64().unwrap();
+        assert_eq!(
+            h.call(
+                "reports_print_voucher",
+                json!({ "input": { "voucher_id": id2, "language": "ur", "copies": null, "to": "pdf" } })
+            )
+            .unwrap_err()["errors"][0]["code"],
+            "ERR_PRINT_WINDOWS_ONLY"
+        );
+    }
+}
+
+#[test]
 fn the_bikri_commands_work_through_the_ipc() {
     // Plan 12: Event 1 of PRD 4.4 typed as text, answered in paisa, and the memories.
     let h = Harness::new();
@@ -1662,7 +1976,7 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(
         printing,
         json!({ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-            "printer": "", "copies": 1, "urdu_digits": false,
+            "paper_receipt_slip": "a5", "printer": "", "copies": 1, "urdu_digits": false,
             "print_after_save": ["seller_bill", "buyer_slips", "pukhta_slip"] })
     );
     let bad = h

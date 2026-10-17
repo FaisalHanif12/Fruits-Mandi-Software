@@ -55,6 +55,34 @@ impl BusinessDate {
     pub fn day(self) -> u32 {
         self.0.day()
     }
+
+    /// The weekday as the account form stores it: 0 is Monday, 6 is Sunday (the
+    /// `collection_weekday` of an account, PRD FR-15.6).
+    ///
+    /// ```
+    /// use mandi_core::dates::BusinessDate;
+    /// // 12-10-2026 is a Monday and 18-10-2026 a Sunday.
+    /// assert_eq!(BusinessDate::from_ymd(2026, 10, 12).unwrap().weekday_from_monday(), 0);
+    /// assert_eq!(BusinessDate::from_ymd(2026, 10, 18).unwrap().weekday_from_monday(), 6);
+    /// ```
+    pub fn weekday_from_monday(self) -> u32 {
+        self.0.weekday().num_days_from_monday()
+    }
+
+    /// How many days `self` is after `earlier`: 0 for the same day, negative if `self` is before
+    /// it. Used for the age of a bill or a payable (PRD C14: today less the bill's day).
+    ///
+    /// ```
+    /// use mandi_core::dates::BusinessDate;
+    /// let bill = BusinessDate::from_ymd(2026, 10, 10).unwrap();
+    /// let today = BusinessDate::from_ymd(2026, 10, 17).unwrap();
+    /// assert_eq!(today.days_after(bill), 7);
+    /// assert_eq!(bill.days_after(bill), 0);
+    /// assert_eq!(bill.days_after(today), -7);
+    /// ```
+    pub fn days_after(self, earlier: BusinessDate) -> i64 {
+        self.0.signed_duration_since(earlier.0).num_days()
+    }
 }
 
 /// Reads a date typed by the user (PRD FR-7.19). Accepts:

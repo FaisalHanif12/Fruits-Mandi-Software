@@ -3,6 +3,7 @@
 // the menu and the screen for the arrow keys (PRD FR-7.17), and mounts the text size keys once.
 
 import type { ReactNode } from 'react';
+import type { VoucherSearchHit } from '../../shared/accounts';
 import { useFocusRegion } from '../../shared/keyboard';
 import { StatusBar, type DayState } from './StatusBar';
 import { TopBar } from './TopBar';
@@ -20,6 +21,8 @@ interface AppShellProps {
   onOpenAccount: (id: number) => void;
   /** A result of the top bar's search was chosen: open that بکری. */
   onOpenBikri: (id: number) => void;
+  /** A result of the top bar's search was chosen: open that voucher. */
+  onOpenVoucher: (hit: VoucherSearchHit) => void;
   date: string;
   day: DayState | null;
   /** The last closed day as DD-MM-YYYY, or null (PRD FR-21.1). */
@@ -37,6 +40,7 @@ export function AppShell({
   onSignOut,
   onOpenAccount,
   onOpenBikri,
+  onOpenVoucher,
   date,
   day,
   closedUpTo = null,
@@ -60,6 +64,7 @@ export function AppShell({
             onSignOut={onSignOut}
             onOpenAccount={onOpenAccount}
             onOpenBikri={onOpenBikri}
+            onOpenVoucher={onOpenVoucher}
           />
           {/* `relative` makes the screen the containing block of the hidden native <select> that
               Radix Select keeps beside each drop-down. Without it that element sits against the

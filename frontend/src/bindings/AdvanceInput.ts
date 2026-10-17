@@ -42,4 +42,10 @@ export type AdvanceInput = {
    * A note, up to 500 characters. Empty if none.
    */
   narration: string;
+  /**
+   * True after the user said yes to "کیا یہ اندراج درست ہے؟". Needed only when the advance
+   * takes روکڑ below 0 (PRD FR-6.7); without it the save is refused with
+   * `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` and nothing is written.
+   */
+  confirm_cash_below_zero: boolean;
 };

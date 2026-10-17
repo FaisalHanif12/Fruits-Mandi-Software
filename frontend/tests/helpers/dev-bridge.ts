@@ -8,9 +8,14 @@
 import { EVENT1, IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
 import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved';
 import { paisaForTest } from './paisa';
-import { printDataFor } from './print-data';
+import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
+import { printDataFor, voucherPrintData } from './print-data';
 import { printingSettings } from './print-settings';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
+import type { AdvanceInput } from '../../src/bindings/AdvanceInput';
+import type { PaymentInput } from '../../src/bindings/PaymentInput';
+import type { ReceiptInput } from '../../src/bindings/ReceiptInput';
+import type { VoucherEntry } from '../../src/features/vouchers/types';
 import { createBikriDraft, type BikriDraftStores } from '../../src/features/bikri/draft-store';
 import { serialiseDraft } from '../../src/features/bikri/draft-snapshot';
 
@@ -25,7 +30,7 @@ interface Party {
   side: 'dr' | 'cr' | 'zero';
 }
 
-const PARTIES: readonly Party[] = [
+const BIKRI_PARTIES: readonly Party[] = [
   {
     id: IDS.rahim,
     code: '030110001',
@@ -82,6 +87,31 @@ const PARTIES: readonly Party[] = [
   },
 ];
 
+// The parties of the voucher pages are the ones of the worked day's books (voucher-books.ts), with
+// their own ids, so the pickers and the helper panels agree.
+const VOUCHER_BALANCE: Record<number, { paisa: number; side: Party['side'] }> = {
+  21: { paisa: 1288000, side: 'dr' },
+  22: { paisa: 1868400, side: 'dr' },
+  31: { paisa: 431600, side: 'cr' },
+  32: { paisa: 1016000, side: 'cr' },
+};
+const VOUCHER_PARTIES: readonly Party[] = BOOK_PARTIES.filter(
+  (party) => party.type !== 'other',
+).map((party) => ({
+  id: party.id,
+  code: party.code,
+  type: party.type === 'seller' ? 'seller' : 'buyer',
+  ur: party.name_ur,
+  en: party.name_en,
+  paisa: VOUCHER_BALANCE[party.id]?.paisa ?? 0,
+  side: VOUCHER_BALANCE[party.id]?.side ?? 'zero',
+}));
+
+/** The parties the pickers offer: the worked day's books on the voucher pages, else the sale book's. */
+function parties(): readonly Party[] {
+  return window.location.hash.startsWith('#/dev/vouchers') ? VOUCHER_PARTIES : BIKRI_PARTIES;
+}
+
 interface Master {
   id: number;
   scope: string;
@@ -132,6 +162,11 @@ export function devFlag(name: string): boolean {
   return new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
 }
 
+/** The value of a flag in the hash, for example `type` in `#/dev/vouchers?type=payment`. */
+export function devValue(name: string): string | null {
+  return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(name);
+}
+
 const CASH_BELOW_ZERO = {
   cash_before_paisa: paisaForTest(200_000),
   change_paisa: paisaForTest(-700_000),
@@ -141,24 +176,64 @@ const CASH_BELOW_ZERO = {
   needs_confirm: true,
 };
 
+// The books of the worked day for the voucher pages. A few saved vouchers are in the list so it is
+// not empty (`?empty` starts with none).
+const books = createBooks();
+if (!new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('empty')) {
+  books.store.rows.push(
+    voucherRow({ id: 501, number: 1 }),
+    voucherRow({
+      id: 503,
+      number: 3,
+      status: 'cancelled',
+      editable: false,
+      cancel_reason: 'wrong buyer',
+    }),
+    voucherRow({ id: 504, number: 4, editable: false }),
+    voucherRow({
+      id: 502,
+      number: 2,
+      voucher_type: 'payment',
+      account: books.preview({
+        type: 'payment',
+        date: '10-10-2026',
+        account_id: 31,
+        person_key: null,
+        amount: '1',
+        mode: 'cash',
+        bank_account_id: null,
+        cheque_no: '',
+        cheque_date: '',
+        reason: '',
+        narration: '',
+        confirm_cash_below_zero: false,
+      }).account,
+    }),
+  );
+}
+
 const handlers: Record<string, Handler> = {
   day_status: () => ({ today: '2026-10-10', closed_up_to: null, today_open: true }),
   search_accounts: (input) =>
-    PARTIES.filter((party) =>
-      partyMatches(party, asText(input['scope']), asText(input['text'])),
-    ).map(accountHit),
+    parties()
+      .filter((party) => partyMatches(party, asText(input['scope']), asText(input['text'])))
+      .map(accountHit),
   search_accounts_recent: (input) =>
-    PARTIES.filter((party) => partyMatches(party, asText(input['scope']), '')).map(accountHit),
+    parties()
+      .filter((party) => partyMatches(party, asText(input['scope']), ''))
+      .map(accountHit),
   search_accounts_touch: () => null,
   accounts_balances: (input) => {
     const ids = Array.isArray(input['ids']) ? input['ids'] : [];
-    return PARTIES.filter((party) => ids.includes(party.id)).map((party) => ({
-      id: party.id,
-      balance: { amount_paisa: party.paisa, side: party.side },
-    }));
+    return parties()
+      .filter((party) => ids.includes(party.id))
+      .map((party) => ({
+        id: party.id,
+        balance: { amount_paisa: party.paisa, side: party.side },
+      }));
   },
   accounts_resolve_code: (input) => {
-    const found = PARTIES.filter(
+    const found = parties().filter(
       (party) =>
         partyMatches(party, asText(input['scope']), asText(input['text'])) &&
         /^\d+$/.test(asText(input['text']).trim()),
@@ -169,13 +244,13 @@ const handlers: Record<string, Handler> = {
       : { status: 'unknown', account: null, candidates: [], suggested_code: null };
   },
   accounts_get: (input) => {
-    const party = PARTIES.find((candidate) => candidate.id === asNumber(input['id']));
+    const party = parties().find((candidate) => candidate.id === asNumber(input['id']));
     return party === undefined
       ? null
       : { id: party.id, code: party.code, name_ur: party.ur, name_en: party.en };
   },
   assist_party_card: (input) => {
-    const party = PARTIES.find((candidate) => candidate.id === asNumber(input['account_id']));
+    const party = parties().find((candidate) => candidate.id === asNumber(input['account_id']));
     if (party === undefined) return null;
     const buyer = party.type === 'buyer';
     return {
@@ -276,6 +351,32 @@ const handlers: Record<string, Handler> = {
       pdf_paths: input['to'] === 'pdf' ? docs.map((doc) => `prints/${doc}-1.pdf`) : null,
     };
   },
+  // Plan 15: the vouchers, answered from the books of the worked day (voucher-books.ts).
+  vouchers_preview: (input) => books.preview(input['entry'] as VoucherEntry),
+  vouchers_save_receipt: (input) => books.save({ type: 'receipt', input: input as ReceiptInput }),
+  vouchers_save_payment: (input) => books.save({ type: 'payment', input: input as PaymentInput }),
+  vouchers_save_advance: (input) => books.save({ type: 'advance', input: input as AdvanceInput }),
+  vouchers_edit: (input) => books.edit(input as never),
+  vouchers_cancel: (input) => books.cancel(input as never),
+  vouchers_get: (input) => books.get(asNumber(input['id'])),
+  vouchers_list: (input) => books.list(input as never),
+  assist_open_bills: (input) => books.openBills({ account_id: asNumber(input['account_id']) }),
+  assist_open_payables: (input) => books.openPayables({ seller_id: asNumber(input['seller_id']) }),
+  assist_advances: (input) => books.advances(asNumber(input['seller_id'])),
+  assist_collection_list: () => collectionList(devFlag('empty') ? 'none' : 'two'),
+  vouchers_save_receipts_batch: (input) => {
+    const rows = Array.isArray(input['rows']) ? (input['rows'] as ReceiptInput[]) : [];
+    return {
+      rows: rows.map((row) => ({
+        saved: books.save({ type: 'receipt', input: row }),
+        skipped: false,
+        errors: [],
+      })),
+      saved_paisa: paisaForTest(0),
+    };
+  },
+  reports_voucher_print_data: (input) =>
+    voucherPrintData('receipt', { language: input['language'] === 'en' ? 'en' : 'ur' }),
   pukhta_register: () =>
     devFlag('empty')
       ? []

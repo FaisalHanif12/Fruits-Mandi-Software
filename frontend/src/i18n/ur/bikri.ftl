@@ -265,12 +265,6 @@ bikri-split-title = شراکت داروں کا { -hissa }
 bikri-split-shared = مشترکہ آمدن
 
 # review: pending
-bikri-cash-note = { -rokar } صفر سے کم ہو جائے گی
-
-# review: pending
-bikri-cash-after = اس اندراج کے بعد { -rokar } <num>{ $amount }</num> ہو جائے گی۔
-
-# review: pending
 bikri-where-lot = { -lot } { $lot }:
 
 # review: pending

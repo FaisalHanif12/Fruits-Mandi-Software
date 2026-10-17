@@ -42,6 +42,12 @@ interface SuggestInputProps extends FieldControlProps {
   suggestions: readonly Suggestion[];
   onCommit?: ((text: string) => void) | undefined;
   placeholder?: string | undefined;
+  /**
+   * The first suggestion is highlighted as soon as the list opens, so Enter takes it. For a field
+   * that must end with one of the suggestions (a known one-time person, PRD FR-13.7), where a
+   * typed name that is not taken means nothing. Default: none highlighted, Enter keeps the text.
+   */
+  highlightFirst?: boolean | undefined;
 }
 
 /**
@@ -71,6 +77,7 @@ export function SuggestInput({
   suggestions,
   onCommit,
   placeholder,
+  highlightFirst = false,
 }: SuggestInputProps) {
   const [open, setOpen] = useState(false);
   const { commit, forget } = useCommitOnce(onCommit);
@@ -82,7 +89,7 @@ export function SuggestInput({
     selectedItem: null,
     inputValue: value,
     isOpen: open && suggestions.length > 0,
-    defaultHighlightedIndex: -1,
+    defaultHighlightedIndex: highlightFirst ? 0 : -1,
     scrollIntoView: () => undefined,
     stateReducer: (state, { type, changes }) => {
       // Leaving the field keeps the text; only a suggestion taken on purpose changes it.

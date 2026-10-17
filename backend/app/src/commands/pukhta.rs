@@ -4,7 +4,8 @@
 use mandi_services::core::bikri::{
     PukhtaPeopleInput, PukhtaPerson, PukhtaRegisterInput, PukhtaRegisterRow,
 };
-use mandi_services::{auth, bikri};
+use mandi_services::core::vouchers::{MadeRegular, MakeRegularInput};
+use mandi_services::{auth, bikri, vouchers};
 
 use super::run;
 use crate::error::UiError;
@@ -37,6 +38,22 @@ pub async fn pukhta_register<R: tauri::Runtime>(
     run(app, "pukhta_register", move |ctx| {
         auth::require(ctx)?;
         bikri::register(ctx, &input)
+    })
+    .await
+}
+
+/// Makes a one-time person a regular account (PRD FR-13.8): creates the account with the rules
+/// of the account form and moves his open balance to it with a جنرل entry, in one transaction,
+/// with an audit row. Errors: every error of the account form (at `account_input.<field>`),
+/// `ERR_NOT_FOUND` (`person_key`), `ERR_FORMAT_INVALID` (`side` against the account type).
+#[tauri::command]
+pub async fn pukhta_make_regular<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: MakeRegularInput,
+) -> Result<MadeRegular, UiError> {
+    run(app, "pukhta_make_regular", move |ctx| {
+        let actor = auth::require(ctx)?;
+        vouchers::make_regular(ctx, &actor, &input)
     })
     .await
 }

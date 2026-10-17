@@ -9,6 +9,7 @@ import type { AccountScope } from '../../bindings/AccountScope';
 import type { CardWarning } from '../../bindings/CardWarning';
 import type { CardWarningKind } from '../../bindings/CardWarningKind';
 import type { BikriHit as BikriHitBinding } from '../../bindings/BikriHit';
+import type { VoucherHit as VoucherHitBinding } from '../../bindings/VoucherHit';
 import type { PartyCard } from '../../bindings/PartyCard';
 import type { ResolveStatus } from '../../bindings/ResolveStatus';
 import type { AccountNode } from '../../bindings/AccountNode';
@@ -129,5 +130,23 @@ export interface BikriSearchHit {
   matched: BikriHitBinding['matched'];
 }
 
-/** One result of the global search (Ctrl+K): an account or a بکری. Later modules add kinds. */
-export type GlobalHit = AccountSearchHit | BikriSearchHit;
+/**
+ * A voucher found by the global search, by its number (PRD FR-5.4, plan 15): the digits find the
+ * voucher with that number in each series, `R-12` or `و-12` finds one series. Opening it opens the
+ * voucher screen on this id.
+ */
+export interface VoucherSearchHit {
+  kind: 'voucher';
+  id: number;
+  voucher_type: VoucherHitBinding['voucher_type'];
+  number: number;
+  /** `YYYY-MM-DD`. */
+  entry_date: string;
+  /** The account of the voucher (both names), or null. */
+  account: VoucherHitBinding['account'];
+  amount_paisa: VoucherHitBinding['amount_paisa'];
+  status: string;
+}
+
+/** One result of the global search (Ctrl+K): an account, a بکری or a voucher. */
+export type GlobalHit = AccountSearchHit | BikriSearchHit | VoucherSearchHit;

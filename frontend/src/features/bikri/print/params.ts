@@ -5,6 +5,9 @@
 import type { BikriPrintDataInput } from '../../../bindings/BikriPrintDataInput';
 import type { PrintDoc } from '../../../bindings/PrintDoc';
 import type { Language } from '../../../i18n';
+import { jobOf, positiveInt } from '../../../shared/print';
+
+export { jobOf };
 
 export interface PrintParams {
   /** The job name; the events are `print-ready-<job>` and `print-error-<job>`. */
@@ -14,20 +17,6 @@ export interface PrintParams {
 
 const DOCS: readonly PrintDoc[] = ['seller_bill', 'buyer_slips', 'pukhta_slip'];
 const LANGUAGE_VALUES: readonly Language[] = ['ur', 'en'];
-/** The job becomes part of an event name, so it is letters, digits, `-` and `_` only. */
-const JOB = /^[A-Za-z0-9_-]{1,64}$/;
-
-function positiveInt(text: string | null): number | null {
-  if (text === null || !/^\d{1,15}$/.test(text)) return null;
-  const value = Number(text);
-  return Number.isSafeInteger(value) && value > 0 ? value : null;
-}
-
-/** The job name of an address, even when the rest of it is wrong, so the failure can be told. */
-export function jobOf(searchStr: string): string | null {
-  const job = new URLSearchParams(searchStr).get('job');
-  return job !== null && JOB.test(job) ? job : null;
-}
 
 /** The parameters of the print window, or null when the address is not a valid print address. */
 export function parsePrintParams(searchStr: string): PrintParams | null {

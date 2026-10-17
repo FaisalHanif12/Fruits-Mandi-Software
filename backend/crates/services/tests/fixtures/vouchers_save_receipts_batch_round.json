@@ -1,0 +1,37 @@
+{
+  "rows": [
+    {
+      "saved": {
+        "voucher_id": 7,
+        "voucher_type": "receipt",
+        "number": 3,
+        "entry_id": 13,
+        "new_balance": {
+          "amount_paisa": 1268400,
+          "side": "dr"
+        }
+      },
+      "skipped": false,
+      "errors": []
+    },
+    {
+      "saved": null,
+      "skipped": true,
+      "errors": []
+    },
+    {
+      "saved": null,
+      "skipped": false,
+      "errors": [
+        {
+          "code": "ERR_RETURN_EXCEEDS_OPEN",
+          "field": "rows[2].amount",
+          "values": {
+            "open_paisa": 0
+          }
+        }
+      ]
+    }
+  ],
+  "saved_paisa": 100000
+}

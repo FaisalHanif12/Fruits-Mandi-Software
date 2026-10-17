@@ -196,6 +196,7 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
         paper_seller_bill: 'a4',
         paper_buyer_slips: 'a5',
         paper_pukhta_slip: 'a5',
+        paper_receipt_slip: 'a5',
         printer: '',
         copies: '1',
         urdu_digits: false,

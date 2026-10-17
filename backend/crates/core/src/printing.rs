@@ -24,7 +24,8 @@ pub const MAX_COPIES: u32 = 99;
 /// limit of what the Settings screen accepts).
 pub const MAX_PRINTER_CHARS: usize = 259;
 
-/// The documents a saved بکری prints (PRD FR-12.12).
+/// The documents the app prints: three of a saved بکری (PRD FR-12.12) and the slip of a voucher
+/// (PRD FR-15.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum PrintDoc {
@@ -34,11 +35,22 @@ pub enum PrintDoc {
     BuyerSlips,
     /// The slip of a one-time buyer of the پختہ کھاتہ (FR-13.1 to FR-13.3).
     PukhtaSlip,
+    /// The slip of a voucher: a وصولی, an ادائیگی or a پیشگی, with the amount in words (PRD
+    /// FR-15.2). One page.
+    ReceiptSlip,
 }
 
 impl PrintDoc {
     /// Every document, in the order the Settings screen lists them.
-    pub const ALL: [PrintDoc; 3] = [
+    pub const ALL: [PrintDoc; 4] = [
+        PrintDoc::SellerBill,
+        PrintDoc::BuyerSlips,
+        PrintDoc::PukhtaSlip,
+        PrintDoc::ReceiptSlip,
+    ];
+
+    /// The documents of a saved بکری. "Print after save" (PRD FR-7.57) chooses among these.
+    pub const BIKRI_DOCS: [PrintDoc; 3] = [
         PrintDoc::SellerBill,
         PrintDoc::BuyerSlips,
         PrintDoc::PukhtaSlip,
@@ -50,6 +62,7 @@ impl PrintDoc {
             PrintDoc::SellerBill => "seller_bill",
             PrintDoc::BuyerSlips => "buyer_slips",
             PrintDoc::PukhtaSlip => "pukhta_slip",
+            PrintDoc::ReceiptSlip => "receipt_slip",
         }
     }
 
@@ -59,6 +72,7 @@ impl PrintDoc {
             PrintDoc::SellerBill => "seller-bill",
             PrintDoc::BuyerSlips => "buyer-slips",
             PrintDoc::PukhtaSlip => "pukhta-slip",
+            PrintDoc::ReceiptSlip => "receipt-slip",
         }
     }
 }
@@ -132,6 +146,8 @@ pub struct PrintSetup {
     pub paper_buyer_slips: Paper,
     /// Paper of the پختہ slip.
     pub paper_pukhta_slip: Paper,
+    /// Paper of the voucher slip (PRD FR-15.2).
+    pub paper_receipt_slip: Paper,
     /// Printer name. Empty means the default printer.
     pub printer: String,
     /// Copies of one print.
@@ -147,6 +163,7 @@ impl Default for PrintSetup {
             paper_seller_bill: Paper::A4,
             paper_buyer_slips: Paper::A5,
             paper_pukhta_slip: Paper::A5,
+            paper_receipt_slip: Paper::A5,
             printer: String::new(),
             copies: MIN_COPIES,
             urdu_digits: false,
@@ -161,14 +178,15 @@ impl PrintSetup {
             PrintDoc::SellerBill => self.paper_seller_bill,
             PrintDoc::BuyerSlips => self.paper_buyer_slips,
             PrintDoc::PukhtaSlip => self.paper_pukhta_slip,
+            PrintDoc::ReceiptSlip => self.paper_receipt_slip,
         }
     }
 }
 
-/// The documents ticked in "print after save" until the Owner changes the list: all three. A
-/// document with nothing to print (no one-time buyer) is skipped without an error.
+/// The documents ticked in "print after save" until the Owner changes the list: the three of a
+/// بکری. A document with nothing to print (no one-time buyer) is skipped without an error.
 pub fn default_print_after_save() -> Vec<PrintDoc> {
-    PrintDoc::ALL.to_vec()
+    PrintDoc::BIKRI_DOCS.to_vec()
 }
 
 /// The Printing settings the Settings screen shows (PRD Section 21): paper per document, the
@@ -181,6 +199,8 @@ pub struct PrintingSettings {
     pub paper_buyer_slips: Paper,
     /// Paper of the پختہ slip (starts as A5).
     pub paper_pukhta_slip: Paper,
+    /// Paper of the voucher slip (starts as A5).
+    pub paper_receipt_slip: Paper,
     /// Printer name. Empty means the default printer.
     pub printer: String,
     /// Copies of one print, 1 to 99 (starts at 1).
@@ -199,6 +219,7 @@ impl PrintingSettings {
             paper_seller_bill: setup.paper_seller_bill,
             paper_buyer_slips: setup.paper_buyer_slips,
             paper_pukhta_slip: setup.paper_pukhta_slip,
+            paper_receipt_slip: setup.paper_receipt_slip,
             printer: setup.printer,
             copies: setup.copies,
             urdu_digits: setup.urdu_digits,
@@ -212,6 +233,7 @@ impl PrintingSettings {
             paper_seller_bill: self.paper_seller_bill,
             paper_buyer_slips: self.paper_buyer_slips,
             paper_pukhta_slip: self.paper_pukhta_slip,
+            paper_receipt_slip: self.paper_receipt_slip,
             printer: self.printer.clone(),
             copies: self.copies,
             urdu_digits: self.urdu_digits,
@@ -229,6 +251,9 @@ pub struct SetPrintingInput {
     pub paper_buyer_slips: Paper,
     /// Paper of the پختہ slip.
     pub paper_pukhta_slip: Paper,
+    /// Paper of the voucher slip. Missing means A5.
+    #[serde(default = "default_receipt_paper")]
+    pub paper_receipt_slip: Paper,
     /// Printer name. Empty means the default printer. At most 259 characters.
     pub printer: String,
     /// Copies as typed, whole number 1 to 99.
@@ -237,6 +262,10 @@ pub struct SetPrintingInput {
     pub urdu_digits: bool,
     /// The documents ticked in "print after save". A repeated document counts once.
     pub print_after_save: Vec<PrintDoc>,
+}
+
+fn default_receipt_paper() -> Paper {
+    PrintSetup::default().paper_receipt_slip
 }
 
 /// Input of `reports_print` (plan 14): print or save as PDF the documents of one saved بکری.
@@ -269,6 +298,22 @@ pub struct PrintOutcome {
     /// The PDF files written, one per document, when the print went to a PDF. Null for a
     /// printer.
     pub pdf_paths: Option<Vec<String>>,
+}
+
+/// Input of `reports_print_voucher` (plan 15): print or save as PDF the slip of one saved voucher
+/// (PRD FR-15.2).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintVoucherInput {
+    /// The voucher.
+    #[ts(type = "number")]
+    pub voucher_id: i64,
+    /// The print language (PRD FR-7.36).
+    pub language: Language,
+    /// Copies for this print, as typed, 1 to 99. Missing or empty means the Settings value.
+    #[serde(default)]
+    pub copies: Option<String>,
+    /// Printer or PDF.
+    pub to: PrintTo,
 }
 
 /// Reads the number of copies as typed: a whole number from [`MIN_COPIES`] to [`MAX_COPIES`].
@@ -338,6 +383,7 @@ mod tests {
         assert_eq!(setup.paper_of(PrintDoc::SellerBill), Paper::A4);
         assert_eq!(setup.paper_of(PrintDoc::BuyerSlips), Paper::A5);
         assert_eq!(setup.paper_of(PrintDoc::PukhtaSlip), Paper::A5);
+        assert_eq!(setup.paper_of(PrintDoc::ReceiptSlip), Paper::A5);
         assert_eq!(setup.copies, 1);
         assert!(!setup.urdu_digits);
         assert!(setup.printer.is_empty());

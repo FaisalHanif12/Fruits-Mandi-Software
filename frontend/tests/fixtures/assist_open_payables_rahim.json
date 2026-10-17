@@ -1,0 +1,29 @@
+{
+  "account": {
+    "id": 17,
+    "code": "030110001",
+    "name_ur": "رحیم",
+    "name_en": "Rahim"
+  },
+  "postings": [
+    {
+      "entry_date": "2026-10-10",
+      "source": "bikri",
+      "number": 1,
+      "credit_paisa": 2431600,
+      "advance_adjusted_paisa": 1500000,
+      "paid_paisa": 500000,
+      "still_open_paisa": 431600,
+      "days": 0
+    }
+  ],
+  "total_count": 1,
+  "truncated": false,
+  "open_paisa": 431600,
+  "advances_open_paisa": 0,
+  "owes_firm_paisa": 0,
+  "balance": {
+    "amount_paisa": 431600,
+    "side": "cr"
+  }
+}

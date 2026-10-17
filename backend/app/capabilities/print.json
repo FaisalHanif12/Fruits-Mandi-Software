@@ -7,6 +7,7 @@
     "allow-app-data-status",
     "allow-auth-status",
     "allow-reports-bikri-print-data",
+    "allow-reports-voucher-print-data",
     "core:event:default"
   ]
 }

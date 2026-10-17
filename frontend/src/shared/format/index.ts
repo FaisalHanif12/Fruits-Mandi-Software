@@ -4,6 +4,7 @@ export {
   formatPaisa,
   formatPaisaValue,
   groupDigits,
+  isPositivePaisa,
   type FormatPaisaOptions,
   type Grouping,
   type Paisa,

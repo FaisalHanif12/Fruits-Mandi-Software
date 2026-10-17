@@ -1451,3 +1451,125 @@ fn e2e_26_on_saved_data_the_hint_is_the_last_rate_saved_today() {
             .all(|w| w.code != ErrorCode::ErrRateFarFromAverage)
     );
 }
+
+#[test]
+fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
+    // PRD E2E-27: after Event 2 the payable postings of کریم show بکری 2, صافی بکری 10,160 and
+    // open 10,160, and "پورا بقایا" gives 10,160. رحیم has his posting of بکری 1 beside it
+    // (PRD FR-7.59, money agent 8.2a).
+    use bikri_support::*;
+    use mandi_services::core::bikri::{PaymentType, PukhtaInput};
+    use mandi_services::core::vouchers::{
+        LineSource, OpenPayablesInput, PaymentInput, VoucherMode,
+    };
+    let w = world();
+    mandi_services::bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: event1(&w),
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+    let mut line = sale("s-1", w.pukhta_buyer, "10", "1200");
+    line.pukhta = Some(PukhtaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: "0300-0000000".into(),
+    });
+    line.payment_type = Some(PaymentType::Cash);
+    let mut lot2 = lot(&w, "lot-2", w.karim, w.apple, "10");
+    lot2.freight = Some("1,000".into());
+    lot2.cash_paid = None;
+    lot2.sales = vec![line];
+    mandi_services::bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: draft(vec![lot2]),
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+
+    let p = mandi_services::vouchers::open_payables(
+        &w.env.ctx,
+        &OpenPayablesInput {
+            seller_id: w.karim,
+            person_key: None,
+            include_settled: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(p.postings.len(), 1);
+    let posting = &p.postings[0];
+    assert_eq!(
+        (
+            posting.source,
+            posting.number,
+            posting.credit_paisa.rupees(),
+            posting.advance_adjusted_paisa.rupees(),
+            posting.paid_paisa.rupees(),
+            posting.still_open_paisa.rupees(),
+            posting.entry_date.as_str()
+        ),
+        (
+            LineSource::Bikri,
+            Some(2),
+            10_160,
+            0,
+            0,
+            10_160,
+            "2026-10-10"
+        )
+    );
+    assert_eq!(p.open_paisa.rupees(), 10_160, "پورا بقایا");
+    assert_eq!(
+        (p.balance.side, p.balance.amount_paisa.rupees()),
+        (BalanceSide::Cr, 10_160)
+    );
+
+    // Pay what the button gave; the payable is gone and the posting is paid.
+    let pay = PaymentInput {
+        date: "10-10-2026".into(),
+        account_id: w.karim,
+        person_key: None,
+        amount: "10,160".into(),
+        mode: VoucherMode::Cash,
+        bank_account_id: None,
+        cheque_no: String::new(),
+        cheque_date: String::new(),
+        reason: String::new(),
+        narration: String::new(),
+        confirm_cash_below_zero: false,
+    };
+    mandi_services::vouchers::save_payment(&w.env.ctx, &w.owner, &pay).unwrap();
+    let p = mandi_services::vouchers::open_payables(
+        &w.env.ctx,
+        &OpenPayablesInput {
+            seller_id: w.karim,
+            person_key: None,
+            include_settled: true,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (p.open_paisa.rupees(), p.postings[0].paid_paisa.rupees()),
+        (0, 10_160)
+    );
+    // The reads refuse a buyer for payables and a seller for bills.
+    assert_eq!(
+        mandi_services::vouchers::open_payables(
+            &w.env.ctx,
+            &OpenPayablesInput {
+                seller_id: w.akram,
+                person_key: None,
+                include_settled: false
+            }
+        )
+        .unwrap_err()
+        .code(),
+        ErrorCode::ErrNotASeller
+    );
+}

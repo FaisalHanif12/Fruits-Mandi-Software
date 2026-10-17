@@ -17,4 +17,12 @@ export type VouchersListInput = {
    * To this day, `DD-MM-YYYY`, or empty for no end.
    */
   to: string;
+  /**
+   * Only this account (for a پختہ کھاتہ account, all its people unless `person_key` is set).
+   */
+  account_id: number | null;
+  /**
+   * Only this one-time person.
+   */
+  person_key: string | null;
 };

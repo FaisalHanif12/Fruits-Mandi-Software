@@ -80,6 +80,7 @@ function Content() {
       onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
+      onOpenVoucher={() => undefined}
       date={SAMPLE_DATE}
       day="open"
     >

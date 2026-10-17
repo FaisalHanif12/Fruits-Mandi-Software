@@ -39,6 +39,7 @@ interface FormValues {
   paper_seller_bill: Paper;
   paper_buyer_slips: Paper;
   paper_pukhta_slip: Paper;
+  paper_receipt_slip: Paper;
   printer: string;
   copies: string;
   urdu_digits: boolean;
@@ -50,6 +51,7 @@ function valuesOf(saved: PrintingSettings): FormValues {
     paper_seller_bill: saved.paper_seller_bill,
     paper_buyer_slips: saved.paper_buyer_slips,
     paper_pukhta_slip: saved.paper_pukhta_slip,
+    paper_receipt_slip: saved.paper_receipt_slip,
     printer: saved.printer,
     copies: String(saved.copies),
     urdu_digits: saved.urdu_digits,
@@ -62,6 +64,7 @@ function sameValues(a: FormValues, b: FormValues): boolean {
     a.paper_seller_bill === b.paper_seller_bill &&
     a.paper_buyer_slips === b.paper_buyer_slips &&
     a.paper_pukhta_slip === b.paper_pukhta_slip &&
+    a.paper_receipt_slip === b.paper_receipt_slip &&
     a.printer === b.printer &&
     a.copies === b.copies &&
     a.urdu_digits === b.urdu_digits &&
@@ -73,6 +76,7 @@ const PAPER_FIELDS = [
   { field: 'paper_seller_bill', doc: 'seller_bill' },
   { field: 'paper_buyer_slips', doc: 'buyer_slips' },
   { field: 'paper_pukhta_slip', doc: 'pukhta_slip' },
+  { field: 'paper_receipt_slip', doc: 'receipt_slip' },
 ] as const;
 
 function PrintingForm({ saved }: { saved: PrintingSettings }) {
@@ -145,8 +149,8 @@ function PrintingForm({ saved }: { saved: PrintingSettings }) {
         <Localized id="print-settings-paper-help">
           <p className="type-body text-ink-muted" />
         </Localized>
-        {/* Three columns, so the tab is short enough for a 1024 x 600 window. */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Two columns in a narrow window and four in a wide one, so the tab stays short. */}
+        <div className="grid grid-cols-2 gap-4 normal:grid-cols-4">
           {PAPER_FIELDS.map(({ field, doc }) => (
             <Field key={field} label={<Localized id={DOC_NAME_ID[doc]} />}>
               {(control) => (

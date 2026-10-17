@@ -7,9 +7,12 @@
 // - The names go through NamePair, and a word made by the spelling rules alone is checked before
 //   the save (useSpellingFlow, PRD FR-7.66), once for each pair.
 // - Keys: F10 saves, Esc closes (the screen under it keeps what was typed there).
+// - The same form makes a one-time person a regular account (PRD FR-13.8, plan 15): the screen
+//   gives the names and the phone to start with (`initial`) and does the saving itself
+//   (`saveWith`), because that save also moves his balance to the new account.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   useAccountNextCode,
   useSaveAccount,
@@ -18,6 +21,7 @@ import {
   type AccountScope,
   type AccountType,
 } from '../accounts';
+import type { UiError } from '../../bindings/UiError';
 import { uiErrorOf } from '../api';
 import { todayText } from '../format';
 import { useSingleFlight, useSpellingFlow } from '../hooks';
@@ -45,6 +49,17 @@ interface QuickAddAccountProps {
   suggestedCode?: string | null;
   /** The saved account, to put in the field. */
   onSaved: (account: AccountRow) => void;
+  /** Names and phone to start with, for example those of a one-time person. */
+  initial?: { names: NamePairValue; phone: string } | undefined;
+  /**
+   * Does the saving instead of the plain save of an account, and says when it is done. The screen
+   * then shows its own message and uses its own result; `onSaved` is not called.
+   */
+  saveWith?:
+    ((draft: AccountDraft, confirmedWords: readonly string[]) => Promise<void>) | undefined;
+  /** Another title and help line than the quick add's. */
+  title?: ReactNode;
+  help?: ReactNode;
 }
 
 const TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
@@ -72,8 +87,12 @@ function QuickAddForm({
   typed,
   suggestedCode,
   onSaved,
+  initial,
+  saveWith,
   onClose,
-}: Omit<QuickAddAccountProps, 'open' | 'onOpenChange'> & { onClose: () => void }) {
+}: Omit<QuickAddAccountProps, 'open' | 'onOpenChange' | 'title' | 'help'> & {
+  onClose: () => void;
+}) {
   const { l10n } = useLocalization();
   const text = typed.trim();
   const digits = /^\d+$/.test(text);
@@ -82,19 +101,22 @@ function QuickAddForm({
     digits && text.length >= FULL_CODE_DIGITS ? text : null,
   );
   const [names, setNames] = useState<NamePairValue>(() =>
-    digits || text === ''
-      ? { urdu: '', english: '' }
-      : URDU_LETTER.test(text)
-        ? { urdu: text, english: '' }
-        : { urdu: '', english: text },
+    initial !== undefined
+      ? initial.names
+      : digits || text === ''
+        ? { urdu: '', english: '' }
+        : URDU_LETTER.test(text)
+          ? { urdu: text, english: '' }
+          : { urdu: '', english: text },
   );
   const [father, setFather] = useState<NamePairValue>({ urdu: '', english: '' });
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(initial?.phone ?? '');
   const [city, setCity] = useState<AccountDraft['city']>(null);
   const save = useSaveAccount();
   const nextCode = useAccountNextCode(type, null, code === null && type !== 'other');
   const spelling = useSpellingFlow();
-  const error = save.error === null ? null : uiErrorOf(save.error);
+  // What the backend refused in the last try, to show at the fields. The next try clears it.
+  const [error, setError] = useState<UiError | null>(null);
 
   // The code shows what the backend suggested, or the next free one, until the user types his own.
   const codeShown =
@@ -131,21 +153,25 @@ function QuickAddForm({
   // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
   const flight = useSingleFlight();
   const submit = async () => {
+    setError(null);
     try {
       const saved = await spelling.guard(names, setNames, (confirmedNames) =>
-        spelling.guard(father, setFather, (confirmedFather) =>
-          save.mutateAsync({
-            draft,
-            confirmedWords: [...new Set([...confirmedNames, ...confirmedFather])],
-          }),
-        ),
+        spelling.guard(father, setFather, (confirmedFather) => {
+          const confirmedWords = [...new Set([...confirmedNames, ...confirmedFather])];
+          return saveWith === undefined
+            ? save.mutateAsync({ draft, confirmedWords })
+            : saveWith(draft, confirmedWords).then(() => null);
+        }),
       );
       if (saved === undefined) return;
-      showToast('success', l10n.getString('accounts-saved'));
-      onSaved(saved);
+      if (saved !== null) {
+        showToast('success', l10n.getString('accounts-saved'));
+        onSaved(saved);
+      }
       onClose();
-    } catch {
+    } catch (failure: unknown) {
       // The refusal is shown in the form by its fields.
+      setError(uiErrorOf(failure));
     }
   };
   const submitNow = () => {
@@ -243,13 +269,19 @@ function QuickAddForm({
   );
 }
 
-export function QuickAddAccount({ open, onOpenChange, ...form }: QuickAddAccountProps) {
+export function QuickAddAccount({
+  open,
+  onOpenChange,
+  title,
+  help,
+  ...form
+}: QuickAddAccountProps) {
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={<Localized id="accountpicker-add-title" />}
-      description={<Localized id="accountpicker-add-help" />}
+      title={title ?? <Localized id="accountpicker-add-title" />}
+      description={help ?? <Localized id="accountpicker-add-help" />}
     >
       {open ? (
         <QuickAddForm

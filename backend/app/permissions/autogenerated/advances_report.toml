@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-advances-report"
+description = "Enables the advances_report command without any pre-configured scope."
+commands.allow = ["advances_report"]
+
+[[permission]]
+identifier = "deny-advances-report"
+description = "Denies the advances_report command without any pre-configured scope."
+commands.deny = ["advances_report"]

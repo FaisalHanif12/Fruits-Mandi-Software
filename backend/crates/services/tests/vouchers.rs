@@ -128,6 +128,7 @@ fn set_opening(env: &TestEnv, owner: &auth::Actor, id: i64, dr: &str, cr: &str, 
 
 fn advance(seller: i64, amount: &str) -> AdvanceInput {
     AdvanceInput {
+        confirm_cash_below_zero: false,
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: amount.into(),
@@ -284,6 +285,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         ),
         (
             AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "31-02-2026".into(),
                 ..advance(f.rahim, "100")
             },
@@ -292,6 +294,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         ),
         (
             AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "11-10-2026".into(),
                 ..advance(f.rahim, "100")
             },
@@ -371,6 +374,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         &f.env.ctx,
         &f.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "x".into(),
             ..advance(buyer, "")
         },
@@ -395,6 +399,7 @@ fn a_closed_day_refuses_a_voucher_until_it_is_reopened() {
             &f.env.ctx,
             &f.owner,
             &AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "09-10-2026".into(),
                 ..advance(f.rahim, "100")
             },
@@ -494,7 +499,7 @@ fn bank_and_cheque_post_to_the_bank_account() {
         first_error(vouchers::save_advance(&f.env.ctx, &f.owner, &cheque).unwrap_err());
     assert_eq!(
         (code, field.as_deref()),
-        (ErrorCode::ErrRequired, Some("cheque_no"))
+        (ErrorCode::ErrChequeRequired, Some("cheque_no"))
     );
     let (code, field) = first_error(
         vouchers::save_advance(
@@ -509,7 +514,7 @@ fn bank_and_cheque_post_to_the_bank_account() {
     );
     assert_eq!(
         (code, field.as_deref()),
-        (ErrorCode::ErrRequired, Some("cheque_date"))
+        (ErrorCode::ErrChequeRequired, Some("cheque_date"))
     );
     let ok = vouchers::save_advance(
         &f.env.ctx,
@@ -687,12 +692,27 @@ fn a_seller_with_a_credit_balance_gets_the_right_side_and_amount() {
     );
 }
 
+/// The same advance, with the user's "yes" to the cash question of PRD FR-6.7.
+fn confirmed(input: AdvanceInput) -> AdvanceInput {
+    AdvanceInput {
+        confirm_cash_below_zero: true,
+        ..input
+    }
+}
+
 #[test]
-fn an_advance_bigger_than_the_cash_in_hand_is_allowed() {
-    // No PRD rule refuses it (FR-15.7 warns only on a payment over the payable): cash 50,000,
-    // advance 60,000 leaves cash 10,000 جمع and the books still balance.
+fn an_advance_bigger_than_the_cash_in_hand_asks_and_is_then_allowed() {
+    // PRD FR-6.7 (v1.5): cash can really go below zero, but the user must confirm it. Cash 50,000,
+    // advance 60,000 leaves cash 10,000 جمع (-10,000); the books still balance.
     let f = fixture();
-    vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "60,000")).unwrap();
+    let refused =
+        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "60,000")).unwrap_err();
+    assert_eq!(
+        code_and_value(&refused, "cash_after_paisa"),
+        (ErrorCode::ErrCashBelowZeroNotConfirmed, Some(-1_000_000))
+    );
+    assert_eq!(balance(&f.env, f.cash), (BalanceSide::Dr, 50_000));
+    vouchers::save_advance(&f.env.ctx, &f.owner, &confirmed(advance(f.rahim, "60,000"))).unwrap();
     assert_eq!(balance(&f.env, f.cash), (BalanceSide::Cr, 10_000));
     let trial = ledger::trial_balance(&f.env.ctx, None).unwrap();
     assert_eq!(trial.total_dr, trial.total_cr);
@@ -703,20 +723,33 @@ fn the_amount_limits() {
     let f = fixture();
     // 10,00,00,00,000 rupees (ten billion, 1,000 crore) is the largest one value (Code Standards
     // 4.2); one more is refused (see the mistakes test). Urdu digits and a simple sum work.
-    let big =
-        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "10,000,000,000")).unwrap();
+    let big = vouchers::save_advance(
+        &f.env.ctx,
+        &f.owner,
+        &confirmed(advance(f.rahim, "10,000,000,000")),
+    )
+    .unwrap();
     assert_eq!(big.new_balance.amount_paisa, rupees(10_000_000_000));
-    let second =
-        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.rahim, "10,000,000,000")).unwrap();
+    let second = vouchers::save_advance(
+        &f.env.ctx,
+        &f.owner,
+        &confirmed(advance(f.rahim, "10,000,000,000")),
+    )
+    .unwrap();
     assert_eq!(
         second.new_balance.amount_paisa,
         rupees(20_000_000_000),
         "sums are checked, not capped"
     );
-    let urdu = vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.karim, "۱۵۰۰۰")).unwrap();
+    let urdu = vouchers::save_advance(&f.env.ctx, &f.owner, &confirmed(advance(f.karim, "۱۵۰۰۰")))
+        .unwrap();
     assert_eq!(urdu.new_balance.amount_paisa, rupees(15_000));
-    let sum =
-        vouchers::save_advance(&f.env.ctx, &f.owner, &advance(f.karim, "10000+5000")).unwrap();
+    let sum = vouchers::save_advance(
+        &f.env.ctx,
+        &f.owner,
+        &confirmed(advance(f.karim, "10000+5000")),
+    )
+    .unwrap();
     assert_eq!(sum.new_balance.amount_paisa, rupees(30_000));
 }
 
@@ -928,6 +961,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
         &f.env.ctx,
         &f.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "01-10-2026".into(),
             ..advance(f.rahim, "1,000")
         },
@@ -938,12 +972,15 @@ fn the_voucher_list_filters_by_kind_and_date() {
         vouchers::list(
             &f.env.ctx,
             &VouchersListInput {
+                account_id: None,
+                person_key: None,
                 voucher_type: kind,
                 from: from.into(),
                 to: to.into(),
             },
         )
         .unwrap()
+        .rows
     };
     assert_eq!(ask(None, "", "").len(), 2);
     assert_eq!(ask(Some(VoucherType::Receipt), "", "").len(), 0);
@@ -965,6 +1002,8 @@ fn the_voucher_list_filters_by_kind_and_date() {
             vouchers::list(
                 &f.env.ctx,
                 &VouchersListInput {
+                    account_id: None,
+                    person_key: None,
                     voucher_type: None,
                     from: "99-99-2026".into(),
                     to: String::new()
@@ -1036,7 +1075,7 @@ fn random_advances_and_reversals_keep_the_books_exact() {
             let saved = vouchers::save_advance(
                 &f.env.ctx,
                 &f.owner,
-                &advance(sellers[who], &amount.to_string()),
+                &confirmed(advance(sellers[who], &amount.to_string())),
             )
             .unwrap();
             saved_numbers += 1;
@@ -1105,6 +1144,7 @@ fn a_refused_line_shows_no_new_balance() {
         lines: vec![
             advance(f.rahim, "1,000"),
             AdvanceInput {
+                confirm_cash_below_zero: false,
                 date: "03-10-2026".into(),
                 ..advance(f.rahim, "2,000")
             },

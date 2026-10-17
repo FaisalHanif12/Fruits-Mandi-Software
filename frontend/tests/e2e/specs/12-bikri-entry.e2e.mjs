@@ -198,7 +198,7 @@ describe('the sale book, Event 1 by keyboard (Urdu)', () => {
     await waitForNumbers('29,400', '10,084', '19,316', '31,564', '3,948', '1,580', '1,184');
     const text = await pageText();
     // The cash note must not show: cash in hand is 50,000, and the lot pays 5,000.
-    expect(text).not.toContain(t('ur', 'bikri-cash-note'));
+    expect(text).not.toContain(t('ur', 'common-cash-confirm-title'));
     await shootScreen('bikri-book-event1', 'ur');
   });
 

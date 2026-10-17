@@ -446,6 +446,7 @@ fn advance_step(w: &mut World) {
         &w.env.ctx,
         &w.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: true,
             date: date.clone(),
             seller_account_id: seller,
             amount: amount.clone(),
@@ -1153,6 +1154,7 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
             &w.env.ctx,
             &w.owner,
             &AdvanceInput {
+                confirm_cash_below_zero: true,
                 date: date.into(),
                 seller_account_id: seller,
                 amount: "100".into(),
@@ -1206,6 +1208,7 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
     // The day after today is refused too, by every path.
     let before = fingerprint(&w.dir);
     let tomorrow = AdvanceInput {
+        confirm_cash_below_zero: true,
         date: "11-10-2026".into(),
         seller_account_id: w.sellers[0],
         amount: "100".into(),
@@ -1226,6 +1229,7 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
         &w.env.ctx,
         &w.owner,
         &AdvanceInput {
+            confirm_cash_below_zero: true,
             date: "06-09-2026".into(),
             ..tomorrow.clone()
         },
@@ -1272,6 +1276,7 @@ fn the_clock_moved_back_never_opens_a_closed_day() {
             &w.env.ctx,
             &w.owner,
             &AdvanceInput {
+                confirm_cash_below_zero: true,
                 date: "09-10-2026".into(),
                 seller_account_id: w.sellers[0],
                 amount: "10".into(),

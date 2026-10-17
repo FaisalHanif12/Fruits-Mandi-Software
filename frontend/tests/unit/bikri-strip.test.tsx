@@ -116,7 +116,7 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
     }));
     await typeHeaderAndLot(user, language);
     const text = visible((await strip(language)).textContent);
-    expect(text).toContain(message(language, 'bikri-cash-after', { amount: '-5,000' }));
+    expect(text).toContain(message(language, 'common-cash-after', { amount: '-5,000' }));
   });
 
   it('says so for a lot that cannot be worked out yet, and still shows the whole sale', async () => {

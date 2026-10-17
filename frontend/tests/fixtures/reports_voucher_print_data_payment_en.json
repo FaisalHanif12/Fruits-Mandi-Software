@@ -1,0 +1,50 @@
+{
+  "doc": "receipt_slip",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a5",
+  "urdu_digits": false,
+  "title_id": "print-payment-slip-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "number": "1",
+  "facts": [
+    {
+      "label_id": "print-fact-voucher-number",
+      "value": "1"
+    },
+    {
+      "label_id": "print-fact-date",
+      "value": "10-10-2026"
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "cancelled": false,
+  "pages": [
+    {
+      "party": {
+        "role_id": "print-party-seller",
+        "code": "030110001",
+        "name": "Rahim",
+        "phone": null
+      },
+      "lines": [],
+      "amounts": [
+        {
+          "label_id": "print-slip-amount-paid",
+          "amount": "4,316",
+          "role": "total"
+        }
+      ],
+      "payment_id": "print-mode-cash",
+      "words": {
+        "label_id": "print-in-words",
+        "text": "Four thousand three hundred sixteen rupees only"
+      }
+    }
+  ]
+}

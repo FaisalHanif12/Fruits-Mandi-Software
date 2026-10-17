@@ -5,6 +5,8 @@ pub(super) const TITLE_SELLER_BILL: &str = "print-seller-bill-title";
 pub(super) const TITLE_BUYER_SLIP: &str = "print-buyer-slip-title";
 pub(super) const TITLE_PUKHTA_SLIP: &str = "print-pukhta-slip-title";
 pub(super) const FACT_NUMBER: &str = "print-fact-number";
+/// The number of a voucher slip. The sale documents use [`FACT_NUMBER`], which reads "Sale No.".
+pub(super) const FACT_VOUCHER_NUMBER: &str = "print-fact-voucher-number";
 pub(super) const FACT_DATE: &str = "print-fact-date";
 pub(super) const FACT_BILL_DATE: &str = "print-fact-bill-date";
 pub(super) const FACT_TRUCK: &str = "print-fact-truck";
@@ -29,3 +31,21 @@ pub(super) const BUYER_PAYS: &str = "print-buyer-pays";
 pub(super) const IN_WORDS: &str = "print-in-words";
 pub(super) const PAYMENT_CASH: &str = "print-payment-cash";
 pub(super) const PAYMENT_CREDIT: &str = "print-payment-credit";
+
+// The slip of a voucher (plan 15, PRD FR-15.2).
+pub(super) const TITLE_RECEIPT_SLIP: &str = "print-receipt-slip-title";
+pub(super) const TITLE_PAYMENT_SLIP: &str = "print-payment-slip-title";
+pub(super) const TITLE_ADVANCE_SLIP: &str = "print-advance-slip-title";
+pub(super) const FACT_BANK: &str = "print-fact-bank";
+pub(super) const FACT_CHEQUE: &str = "print-fact-cheque";
+pub(super) const FACT_REASON: &str = "print-fact-reason";
+pub(super) const FACT_COLLECTOR: &str = "print-fact-collector";
+pub(super) const FACT_NARRATION: &str = "print-fact-narration";
+pub(super) const PARTY_ONETIME_SELLER: &str = "print-party-onetime-seller";
+pub(super) const PARTY_ACCOUNT: &str = "print-party-account";
+pub(super) const MODE_CASH: &str = "print-mode-cash";
+pub(super) const MODE_BANK: &str = "print-mode-bank";
+pub(super) const MODE_CHEQUE: &str = "print-mode-cheque";
+pub(super) const SLIP_AMOUNT_RECEIVED: &str = "print-slip-amount-received";
+pub(super) const SLIP_AMOUNT_PAID: &str = "print-slip-amount-paid";
+pub(super) const SLIP_AMOUNT_ADVANCE: &str = "print-slip-amount-advance";

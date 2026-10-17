@@ -14,6 +14,7 @@ import { useAuthStatus, useLock, useLogout, useSavePreferences } from '../featur
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { WizardPage } from '../features/auth/pages/WizardPage';
 import { useSettings } from '../features/settings/hooks';
+import { asScreenType, screenTypeOf, type ScreenType } from '../features/vouchers/screen-type';
 import { uiErrorOf } from '../shared/api';
 import { isoToDisplayDate } from '../shared/format';
 import { useLanguageStore } from '../shared/i18n';
@@ -39,6 +40,7 @@ function useLoginLanguage(status: AuthStatus | undefined) {
 function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const search = useRouterState({ select: (state) => state.location.search });
   const settings = useSettings();
   const day = useDayStatus();
   const lock = useLock();
@@ -54,18 +56,23 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const goTo = (to: string) => {
     void navigate({ to });
   };
+  // وصولی, ادائیگی and پیشگی are one screen with the type chosen (PRD FR-7.67, FR-15.10). Going to a
+  // type from the voucher screen keeps what was typed, so it is one address with another `type`.
+  const goToVoucher = (type: ScreenType) => {
+    void navigate({ to: '/bikri/voucher', search: { type } });
+  };
   // A key from anywhere (PRD 7.3, NFR-USE-9).
   useShortcut(SHORTCUTS.newBikri, () => {
     goTo(MODULE_ROUTES['bikri-book']);
   });
   useShortcut(SHORTCUTS.newReceipt, () => {
-    goTo(MODULE_ROUTES.receipt);
+    goToVoucher('receipt');
   });
   useShortcut(SHORTCUTS.newPayment, () => {
-    goTo(MODULE_ROUTES.payment);
+    goToVoucher('payment');
   });
   useShortcut(SHORTCUTS.newAdvance, () => {
-    goTo(MODULE_ROUTES.advance);
+    goToVoucher('advance');
   });
   useShortcut(SHORTCUTS.newExpense, () => {
     goTo(MAIN_ROUTES.rokar);
@@ -94,9 +101,11 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         moduleMenu={
           main === 'bikri' ? (
             <ModuleMenu
-              current={moduleMenuOf(pathname)}
+              current={moduleMenuOf(pathname, search)}
               onSelect={(id) => {
-                goTo(MODULE_ROUTES[id]);
+                const type = asScreenType(id);
+                if (type === null) goTo(MODULE_ROUTES[id]);
+                else goToVoucher(type);
               }}
             />
           ) : null
@@ -108,6 +117,13 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         }}
         onOpenBikri={(id) => {
           void navigate({ to: '/bikri/book', search: { id } });
+        }}
+        onOpenVoucher={(hit) => {
+          // A voucher of the three kinds opens on the voucher screen; any other kind belongs to
+          // the روکڑ area (plan 17).
+          const type = screenTypeOf(hit.voucher_type);
+          if (type === null) goTo(MAIN_ROUTES.rokar);
+          else void navigate({ to: '/bikri/voucher', search: { type, id: hit.id } });
         }}
         onSignOut={() => {
           logout.mutate();

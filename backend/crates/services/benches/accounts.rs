@@ -198,6 +198,7 @@ fn voucher_speed(c: &mut Criterion) {
     let (env, actor) = open(copy.path());
     let seller = volume.busy_seller;
     let input = AdvanceInput {
+        confirm_cash_below_zero: false,
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: "1,000".into(),
@@ -226,6 +227,7 @@ fn voucher_speed(c: &mut Criterion) {
         .flatten()
         .unwrap_or(seller);
     let ordinary_input = AdvanceInput {
+        confirm_cash_below_zero: false,
         seller_account_id: ordinary,
         ..input.clone()
     };

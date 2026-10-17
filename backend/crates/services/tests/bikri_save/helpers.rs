@@ -134,6 +134,8 @@ pub fn give_advance_on(w: &World, seller: i64, rupees: &str, date: &str) {
         &w.env.ctx,
         &w.owner,
         &mandi_services::core::vouchers::AdvanceInput {
+            // Set-up: the test world may give an advance bigger than its cash (PRD FR-6.7).
+            confirm_cash_below_zero: true,
             date: date.into(),
             seller_account_id: seller,
             amount: rupees.into(),

@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_CASH_BELOW_ZERO_NOT_CONFIRMED",
+      "field": null,
+      "values": {
+        "cash_after_paisa": -986731600
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

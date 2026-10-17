@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-10",
+  "weekday": 5,
+  "groups": [
+    {
+      "collector": null,
+      "city": null,
+      "buyers": [
+        {
+          "account": {
+            "id": 19,
+            "code": "03040001",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax"
+          },
+          "phone": "",
+          "dues_paisa": 388000,
+          "oldest_bill_date": "2026-10-10",
+          "oldest_days": 0
+        },
+        {
+          "account": {
+            "id": 20,
+            "code": "03040002",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani"
+          },
+          "phone": "",
+          "dues_paisa": 1368400,
+          "oldest_bill_date": "2026-10-10",
+          "oldest_days": 0
+        }
+      ],
+      "total_paisa": 1756400
+    }
+  ],
+  "total_paisa": 1756400
+}

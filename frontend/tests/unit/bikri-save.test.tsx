@@ -217,7 +217,7 @@ describe.each(LANGUAGES)('cash below zero (%s, PRD FR-6.7)', (language) => {
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
     await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'bikri-cash-note'));
+      expect(pageText()).toContain(message(language, 'common-cash-confirm-title'));
     });
     press('F10');
     const box = await dialog();
@@ -243,7 +243,7 @@ describe.each(LANGUAGES)('cash below zero (%s, PRD FR-6.7)', (language) => {
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
     await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'bikri-cash-note'));
+      expect(pageText()).toContain(message(language, 'common-cash-confirm-title'));
     });
     press('F10');
     const box = await dialog();

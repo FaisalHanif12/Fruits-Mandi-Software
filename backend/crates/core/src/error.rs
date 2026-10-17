@@ -227,11 +227,26 @@ pub enum ErrorCode {
     /// The print or the PDF failed after it started: the page did not get ready, or the print
     /// system refused the job. The cause is in the log with the reference number (plan 14).
     ErrPrintFailed,
+    /// A payment to a buyer is cash lent to him and needs a reason (PRD FR-15.11). Field `reason`.
+    ErrPaymentToBuyerNeedsReason,
+    /// A seller's receipt (or a return of money lent) is more than what is open to return: his
+    /// open advances plus what he owes the firm beyond them (PRD FR-15.12). Values: `open_paisa`.
+    ErrReturnExceedsOpen,
+    /// The voucher was cancelled, so it cannot be edited or cancelled again (PRD FR-15.3).
+    ErrVoucherCancelled,
+    /// A voucher on a پختہ کھاتہ account must name the one-time person (PRD FR-13.5, FR-13.7).
+    /// Field `person_key`.
+    ErrPersonRequired,
+    /// A cheque needs its number and its date (PRD 15.1). Field `cheque_no` or `cheque_date`.
+    ErrChequeRequired,
+    /// Warning only: a payment is more than the seller's open payable, so the extra shows as the
+    /// seller owing the firm (PRD FR-15.7). Values: `payable_paisa`, `over_paisa`. Field `amount`.
+    ErrPaymentAbovePayable,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 88] = [
+    pub const ALL: [ErrorCode; 94] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -320,6 +335,12 @@ impl ErrorCode {
         ErrorCode::ErrPrintWindowsOnly,
         ErrorCode::ErrPrinterNotFound,
         ErrorCode::ErrPrintFailed,
+        ErrorCode::ErrPaymentToBuyerNeedsReason,
+        ErrorCode::ErrReturnExceedsOpen,
+        ErrorCode::ErrVoucherCancelled,
+        ErrorCode::ErrPersonRequired,
+        ErrorCode::ErrChequeRequired,
+        ErrorCode::ErrPaymentAbovePayable,
     ];
 }
 

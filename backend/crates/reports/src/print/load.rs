@@ -76,7 +76,7 @@ fn setting(conn: &Connection, key: &str) -> Result<Option<Value>, ReportsError> 
     .transpose()
 }
 
-fn load_firm(conn: &Connection) -> Result<FirmNames, ReportsError> {
+pub(super) fn load_firm(conn: &Connection) -> Result<FirmNames, ReportsError> {
     let value = setting(conn, KEY_FIRM)?;
     let text = |key: &str| {
         value
@@ -96,14 +96,14 @@ fn load_firm(conn: &Connection) -> Result<FirmNames, ReportsError> {
     })
 }
 
-fn load_grouping(conn: &Connection) -> Result<Grouping, ReportsError> {
+pub(super) fn load_grouping(conn: &Connection) -> Result<Grouping, ReportsError> {
     Ok(setting(conn, KEY_NUMBER_GROUPING)?
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or_default())
 }
 
 /// The saved Printing setup, or the starting values (A21). A damaged value never stops a print.
-fn load_setup(conn: &Connection) -> Result<PrintSetup, ReportsError> {
+pub(super) fn load_setup(conn: &Connection) -> Result<PrintSetup, ReportsError> {
     Ok(setting(conn, mandi_core::printing::SETTING_KEY)?
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or_default())

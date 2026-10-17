@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assist-open-bills"
+description = "Enables the assist_open_bills command without any pre-configured scope."
+commands.allow = ["assist_open_bills"]
+
+[[permission]]
+identifier = "deny-assist-open-bills"
+description = "Denies the assist_open_bills command without any pre-configured scope."
+commands.deny = ["assist_open_bills"]

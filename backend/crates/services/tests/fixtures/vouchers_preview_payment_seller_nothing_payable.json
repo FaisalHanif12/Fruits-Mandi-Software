@@ -1,0 +1,43 @@
+{
+  "account": {
+    "id": 18,
+    "code": "030110002",
+    "name_ur": "کریم",
+    "name_en": "Karim"
+  },
+  "amount_paisa": 100000,
+  "current_balance": {
+    "amount_paisa": 0,
+    "side": "zero"
+  },
+  "new_balance": {
+    "amount_paisa": 100000,
+    "side": "dr"
+  },
+  "bill_effects": [],
+  "extra_credit_paisa": 0,
+  "advance_effects": [],
+  "owes_settled_paisa": 0,
+  "return_limit_paisa": null,
+  "payable_open_paisa": 0,
+  "payable_is_zero_for_seller": true,
+  "cash": {
+    "cash_before_paisa": 3268400,
+    "change_paisa": -100000,
+    "cash_after_paisa": 3168400,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "errors": [],
+  "warnings": [
+    {
+      "code": "ERR_PAYMENT_ABOVE_PAYABLE",
+      "field": "amount",
+      "values": {
+        "over_paisa": 100000,
+        "payable_paisa": 0
+      }
+    }
+  ]
+}

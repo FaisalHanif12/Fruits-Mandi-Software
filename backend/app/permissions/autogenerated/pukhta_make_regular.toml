@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pukhta-make-regular"
+description = "Enables the pukhta_make_regular command without any pre-configured scope."
+commands.allow = ["pukhta_make_regular"]
+
+[[permission]]
+identifier = "deny-pukhta-make-regular"
+description = "Denies the pukhta_make_regular command without any pre-configured scope."
+commands.deny = ["pukhta_make_regular"]

@@ -169,12 +169,44 @@ const EXPECTED_FILES: &[&str] = &[
     "AdvancesPreview.ts",
     "AdvanceRowResult.ts",
     "AdvancesSaved.ts",
+    "VouchersList.ts",
     "VouchersListInput.ts",
     "VoucherRow.ts",
     "AssistAdvancesInput.ts",
     "OpenAdvance.ts",
     "LastAdvance.ts",
     "AdvancesInfo.ts",
+    "ReceiptInput.ts",
+    "PaymentInput.ts",
+    "VoucherEntry.ts",
+    "VoucherPreviewInput.ts",
+    "LineSource.ts",
+    "OpenBill.ts",
+    "BillEffect.ts",
+    "AdvanceEffect.ts",
+    "VoucherPreview.ts",
+    "VoucherGetInput.ts",
+    "VoucherEditInput.ts",
+    "VoucherCancelInput.ts",
+    "VoucherCancelled.ts",
+    "OpenBillsInput.ts",
+    "OpenBills.ts",
+    "OpenPayablesInput.ts",
+    "PayablePosting.ts",
+    "OpenPayables.ts",
+    "AdvancesReportInput.ts",
+    "AdvancesReportRow.ts",
+    "AdvancesReport.ts",
+    "CollectionListInput.ts",
+    "CollectionBuyer.ts",
+    "CollectionGroup.ts",
+    "CollectionList.ts",
+    "ReceiptsInput.ts",
+    "ReceiptRowResult.ts",
+    "ReceiptsSaved.ts",
+    "MakeRegularInput.ts",
+    "MadeRegular.ts",
+    "VoucherHit.ts",
     "DayClosePreviewInput.ts",
     "DayClosePreview.ts",
     "DayCloseInput.ts",
@@ -269,6 +301,8 @@ const EXPECTED_FILES: &[&str] = &[
     "PrintInput.ts",
     "PrintOutcome.ts",
     "BikriPrintDataInput.ts",
+    "VoucherPrintDataInput.ts",
+    "PrintVoucherInput.ts",
     "TextDir.ts",
     "PrintFirm.ts",
     "PrintFact.ts",
@@ -372,9 +406,41 @@ fn export_bindings() {
     vouchers::AdvancesPreview::export_all(&cfg).unwrap();
     vouchers::AdvancesSaved::export_all(&cfg).unwrap();
     vouchers::VouchersListInput::export_all(&cfg).unwrap();
+    vouchers::VouchersList::export_all(&cfg).unwrap();
     vouchers::VoucherRow::export_all(&cfg).unwrap();
     vouchers::AssistAdvancesInput::export_all(&cfg).unwrap();
     vouchers::AdvancesInfo::export_all(&cfg).unwrap();
+    vouchers::ReceiptInput::export_all(&cfg).unwrap();
+    vouchers::PaymentInput::export_all(&cfg).unwrap();
+    vouchers::VoucherEntry::export_all(&cfg).unwrap();
+    vouchers::VoucherPreviewInput::export_all(&cfg).unwrap();
+    vouchers::LineSource::export_all(&cfg).unwrap();
+    vouchers::OpenBill::export_all(&cfg).unwrap();
+    vouchers::BillEffect::export_all(&cfg).unwrap();
+    vouchers::AdvanceEffect::export_all(&cfg).unwrap();
+    vouchers::VoucherPreview::export_all(&cfg).unwrap();
+    vouchers::VoucherGetInput::export_all(&cfg).unwrap();
+    vouchers::VoucherEditInput::export_all(&cfg).unwrap();
+    vouchers::VoucherCancelInput::export_all(&cfg).unwrap();
+    vouchers::VoucherCancelled::export_all(&cfg).unwrap();
+    vouchers::OpenBillsInput::export_all(&cfg).unwrap();
+    vouchers::OpenBills::export_all(&cfg).unwrap();
+    vouchers::OpenPayablesInput::export_all(&cfg).unwrap();
+    vouchers::PayablePosting::export_all(&cfg).unwrap();
+    vouchers::OpenPayables::export_all(&cfg).unwrap();
+    vouchers::AdvancesReportInput::export_all(&cfg).unwrap();
+    vouchers::AdvancesReportRow::export_all(&cfg).unwrap();
+    vouchers::AdvancesReport::export_all(&cfg).unwrap();
+    vouchers::CollectionListInput::export_all(&cfg).unwrap();
+    vouchers::CollectionBuyer::export_all(&cfg).unwrap();
+    vouchers::CollectionGroup::export_all(&cfg).unwrap();
+    vouchers::CollectionList::export_all(&cfg).unwrap();
+    vouchers::ReceiptsInput::export_all(&cfg).unwrap();
+    vouchers::ReceiptRowResult::export_all(&cfg).unwrap();
+    vouchers::ReceiptsSaved::export_all(&cfg).unwrap();
+    vouchers::MakeRegularInput::export_all(&cfg).unwrap();
+    vouchers::MadeRegular::export_all(&cfg).unwrap();
+    vouchers::VoucherHit::export_all(&cfg).unwrap();
     vouchers::DayClosePreviewInput::export_all(&cfg).unwrap();
     vouchers::DayClosePreview::export_all(&cfg).unwrap();
     vouchers::DayCloseInput::export_all(&cfg).unwrap();
@@ -422,6 +488,8 @@ fn export_bindings() {
     printing::PrintInput::export_all(&cfg).unwrap();
     printing::PrintOutcome::export_all(&cfg).unwrap();
     mandi_reports::print::BikriPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::print::VoucherPrintDataInput::export_all(&cfg).unwrap();
+    printing::PrintVoucherInput::export_all(&cfg).unwrap();
     mandi_reports::print::PrintData::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();

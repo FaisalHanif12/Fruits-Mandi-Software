@@ -50,6 +50,7 @@ fn seller() -> AccountInput {
 
 fn advance(to: i64, date: &str) -> AdvanceInput {
     AdvanceInput {
+        confirm_cash_below_zero: true,
         date: date.into(),
         seller_account_id: to,
         amount: "100".into(),

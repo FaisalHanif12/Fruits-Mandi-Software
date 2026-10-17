@@ -78,6 +78,12 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
             buyer_pages(&ctx, detail, options.only_buyer_id)?,
         ),
         PrintDoc::PukhtaSlip => (TITLE_PUKHTA_SLIP, pukhta_pages(&ctx, detail)?),
+        // The voucher slip is built from a voucher, not from a بکری (plan 15).
+        PrintDoc::ReceiptSlip => {
+            return Err(ReportsError::Data(
+                "the receipt slip is not a document of a بکری".to_owned(),
+            ));
+        }
     };
     let language = options.language;
     Ok(PrintData {

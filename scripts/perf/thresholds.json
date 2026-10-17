@@ -432,6 +432,96 @@
       "stat": "p95",
       "target_ms": 50,
       "$comment": "D2 plan 05 benchmark: services::translit::suggest with 500 learned pairs and the embedded word list, texts from the frozen 1,000-name list (NFR-URD-24). README Section 7."
+    },
+    {
+      "id": "vouchers/save_receipt_busiest_buyer",
+      "action": "Save a وصولی from the busiest buyer (about 55,000 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. vouchers::save_receipt in one transaction: the voucher, the journal entry, the matching of the oldest open bills, the audit row, one commit with synchronous = FULL. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/save_receipt_ordinary_buyer",
+      "action": "Save a وصولی from an ordinary buyer (about 90 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. The same save as for the busiest buyer, for the buyer the Owner meets all day. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines), so the cash account has about 514,000 lines."
+    },
+    {
+      "id": "vouchers/preview_receipt_ordinary_buyer",
+      "action": "Preview of a وصولی for an ordinary buyer, server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause. D4 plan 15. The same preview as for the busiest buyer, for an ordinary one. It reads cash in hand (a sum over the cash account's lines) because the screen shows cash after the entry."
+    },
+    {
+      "id": "assist/open_bills_ordinary_buyer",
+      "action": "Open bills of an ordinary buyer (about 90 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D4 plan 15. assist_open_bills for a party just picked, next to the party card, for the buyer the Owner meets all day."
+    },
+    {
+      "id": "vouchers/save_payment_busiest_seller",
+      "action": "Save an ادائیگی to the busiest seller (about 49,000 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. vouchers::save_payment in one transaction: the voucher, the journal entry, the cash question, the audit row. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/save_cash_lent_busiest_buyer",
+      "action": "Save cash lent to the busiest buyer (about 55,000 lines), server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-9",
+      "stat": "p95",
+      "target_ms": 150,
+      "$comment": "D4 plan 15. vouchers::save_payment to a buyer: the new bill is matched to any credit he has waiting. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/preview_receipt_busiest_buyer",
+      "action": "Preview of a وصولی for the busiest buyer, server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause that waits for the last key press. D4 plan 15. vouchers::preview reads the open bills only (the same fast path as the save). Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "vouchers/preview_payment_busiest_seller",
+      "action": "Preview of an ادائیگی to the busiest seller, server time",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-7",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "100 ms server time = the 150 ms of NFR-SPD-7 less the 50 ms pause. D4 plan 15. vouchers::preview takes the payable from sums of the seller's lines, not line by line. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "assist/open_bills_busiest_buyer",
+      "action": "Open bills of the busiest buyer (about 55,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D4 plan 15. assist_open_bills for a party just picked, next to the party card. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "assist/open_payables_busiest_seller",
+      "action": "Payable postings of the busiest seller (about 49,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-21",
+      "stat": "p95",
+      "target_ms": 100,
+      "$comment": "D4 plan 15. assist_open_payables for a party just picked: the totals from sums and a walk back from the newest credit. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
     }
   ],
   "install": {

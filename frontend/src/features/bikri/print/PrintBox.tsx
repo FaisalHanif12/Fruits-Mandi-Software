@@ -8,7 +8,7 @@
 // as they would print. The preview is always there, because a bill is worth a look before it is
 // printed. The language switch of the box changes only the print, never the app (PRD FR-7.36).
 
-import { Localized, useLocalization } from '@fluent/react';
+import { Localized } from '@fluent/react';
 import { useState } from 'react';
 import type { Language } from '../../../bindings/Language';
 import type { PrintDoc } from '../../../bindings/PrintDoc';
@@ -20,37 +20,29 @@ import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
-import { DOC_NAME_ID, PRINT_DOCS, stripIsolates } from '../../../shared/print';
+import {
+  BIKRI_PRINT_DOCS,
+  DOC_NAME_ID,
+  PrintLanguageTo,
+  PrintOutcomeNotice,
+} from '../../../shared/print';
 import {
   Button,
   Checkbox,
-  Code,
   ErrorNotice,
   ErrorState,
   Field,
   FormDialog,
   LoadingState,
   QtyInput,
-  SegmentedControl,
   Select,
   fieldError,
-  type SegmentedOption,
 } from '../../../shared/ui';
 import { usePrintDocs } from '../../reports';
 import { usePrintingSettings, useSetPrintingSettings } from '../../settings';
 import { useBikriDetail } from '../hooks/useBikriReads';
 import { buyersOf } from './buyers';
 import { PrintPreview } from './PrintPreview';
-
-const LANGUAGE_OPTIONS: readonly SegmentedOption<Language>[] = [
-  { value: 'ur', lang: 'ur', label: <Localized id="common-language-ur" /> },
-  { value: 'en', lang: 'en', label: <Localized id="common-language-en" /> },
-];
-
-const TO_OPTIONS: readonly SegmentedOption<PrintTo>[] = [
-  { value: 'printer', label: <Localized id="print-box-to-printer" /> },
-  { value: 'pdf', label: <Localized id="print-box-to-pdf" /> },
-];
 
 /** The Select cannot hold an empty value, so "all buyers" is this value in the list. */
 const ALL_BUYERS = 'all';
@@ -68,15 +60,6 @@ interface PrintBoxProps {
   target: PrintTarget;
 }
 
-/** "Seller bill and Buyer slips": the printed documents, joined the way the language joins a list. */
-function useDocNames(): (docs: readonly PrintDoc[], language: Language) => string {
-  const { l10n } = useLocalization();
-  return (docs, language) =>
-    new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(
-      docs.map((doc) => stripIsolates(l10n.getString(DOC_NAME_ID[doc]))),
-    );
-}
-
 function PrintBoxForm({
   target,
   saved,
@@ -86,12 +69,10 @@ function PrintBoxForm({
   saved: PrintingSettings;
   onClose: () => void;
 }) {
-  const { l10n } = useLocalization();
   const appLanguage = useLanguage();
   const detail = useBikriDetail(target.id);
   const saveSettings = useSetPrintingSettings();
   const print = usePrintDocs();
-  const docNames = useDocNames();
 
   const [language, setLanguage] = useState<Language>(appLanguage);
   // Until the settings arrive the list is unknown; the first render of the form waits for them.
@@ -104,29 +85,34 @@ function PrintBoxForm({
   const [error, setError] = useState<UiError | null>(null);
   const flight = useSingleFlight();
 
-  const docs = chosen ?? saved.print_after_save;
+  // The list remembered for "print after save" can hold the receipt slip of a voucher; the sale
+  // book prints only its own documents and keeps the other one in the list as it was.
+  const docs = chosen ?? saved.print_after_save.filter((doc) => BIKRI_PRINT_DOCS.includes(doc));
   const buyers = detail.data === undefined ? [] : buyersOf(detail.data);
   const buyerId = onlyBuyer === ALL_BUYERS ? null : Number(onlyBuyer);
   const onlyBuyerId = docs.includes('buyer_slips') ? buyerId : null;
 
   const toggle = (doc: PrintDoc, on: boolean) => {
     setChosen(
-      PRINT_DOCS.filter((candidate) => (candidate === doc ? on : docs.includes(candidate))),
+      BIKRI_PRINT_DOCS.filter((candidate) => (candidate === doc ? on : docs.includes(candidate))),
     );
     setOutcome(null);
   };
 
   /** Remembers the ticked documents as the "print after save" list (PRD FR-7.57). */
   const remember = async (): Promise<void> => {
-    if (docs.join() === saved.print_after_save.join()) return;
+    const kept = saved.print_after_save.filter((doc) => !BIKRI_PRINT_DOCS.includes(doc));
+    const next = [...docs, ...kept];
+    if (next.join() === saved.print_after_save.join()) return;
     await saveSettings.mutateAsync({
       paper_seller_bill: saved.paper_seller_bill,
       paper_buyer_slips: saved.paper_buyer_slips,
       paper_pukhta_slip: saved.paper_pukhta_slip,
+      paper_receipt_slip: saved.paper_receipt_slip,
       printer: saved.printer,
       copies: String(saved.copies),
       urdu_digits: saved.urdu_digits,
-      print_after_save: docs,
+      print_after_save: next,
     });
   };
 
@@ -196,61 +182,22 @@ function PrintBoxForm({
         <p className="type-body text-ink-muted" />
       </Localized>
       {error === null ? null : <ErrorNotice error={error} fieldsShown={['copies']} />}
-      {outcome === null ? null : (
-        <div role="status" className="type-body flex flex-col gap-1 text-money-in">
-          {outcome.printed.length === 0 ? (
-            <Localized id="print-box-nothing-printed" />
-          ) : outcome.pdf_paths === null ? (
-            <Localized
-              id="print-box-done-printed"
-              vars={{ docs: docNames(outcome.printed, language) }}
-            />
-          ) : (
-            <>
-              <Localized id="print-box-done-pdf" />
-              {outcome.pdf_paths.map((path) => (
-                <Code key={path}>{path}</Code>
-              ))}
-            </>
-          )}
-        </div>
-      )}
-      {/* Two columns, so the whole box fits a 1024 x 600 window with little scrolling. */}
-      <div className="grid grid-cols-2 gap-4">
-        <Field label={<Localized id="print-box-language" />}>
-          {() => (
-            <div>
-              <SegmentedControl
-                options={LANGUAGE_OPTIONS}
-                value={language}
-                groupLabel={l10n.getString('print-box-language')}
-                onChange={(next) => {
-                  setLanguage(next);
-                  setOutcome(null);
-                }}
-              />
-            </div>
-          )}
-        </Field>
-        <Field label={<Localized id="print-box-to" />}>
-          {() => (
-            <div>
-              <SegmentedControl
-                options={TO_OPTIONS}
-                value={to}
-                groupLabel={l10n.getString('print-box-to')}
-                onChange={setTo}
-              />
-            </div>
-          )}
-        </Field>
-      </div>
+      {outcome === null ? null : <PrintOutcomeNotice outcome={outcome} language={language} />}
+      <PrintLanguageTo
+        language={language}
+        onLanguage={(next) => {
+          setLanguage(next);
+          setOutcome(null);
+        }}
+        to={to}
+        onTo={setTo}
+      />
       <fieldset className="flex flex-col">
         <Localized id="print-box-docs">
           <legend className="type-label" />
         </Localized>
         <div className="flex flex-wrap gap-x-6">
-          {PRINT_DOCS.map((doc) => (
+          {BIKRI_PRINT_DOCS.map((doc) => (
             <Checkbox
               key={doc}
               checked={docs.includes(doc)}

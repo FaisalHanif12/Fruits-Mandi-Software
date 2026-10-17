@@ -111,6 +111,7 @@ fn seller_input(ur: &str, en: &str) -> AccountInput {
 
 fn advance(seller: i64, amount: u64) -> AdvanceInput {
     AdvanceInput {
+        confirm_cash_below_zero: true,
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: amount.to_string(),

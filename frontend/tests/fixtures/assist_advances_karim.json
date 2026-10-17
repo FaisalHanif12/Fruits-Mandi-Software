@@ -1,0 +1,18 @@
+{
+  "open": [
+    {
+      "source": "voucher",
+      "voucher_number": 2,
+      "entry_date": "2026-10-10",
+      "given_paisa": 500000,
+      "adjusted_paisa": 0,
+      "open_paisa": 500000
+    }
+  ],
+  "open_paisa": 500000,
+  "last": {
+    "entry_date": "2026-10-10",
+    "amount_paisa": 500000,
+    "voucher_number": 2
+  }
+}

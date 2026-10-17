@@ -1,104 +1,90 @@
-// Test helper: an in-memory fake of the voucher and the day commands (plan 10 contract). The
-// wrappers are mocked in the test file with vi.mock; this sets their answers the way a healthy
-// backend answers. The sums here are the fake backend's (a test double): the screen only shows what
-// comes back and never works out an amount (CLAUDE.md rule 1).
+// Test helper: an in-memory fake of the voucher commands (plans 10 and 15 contract) and of the day
+// commands. The wrappers are mocked in the test file with vi.mock; this sets their answers from the
+// books of voucher-books.ts, the way a healthy backend answers (the same books the development page
+// /dev/vouchers uses). The sums there are a test double's: the screen only shows what comes back and
+// never works out an amount (CLAUDE.md rule 1).
 
-import type { DayStatus } from '../../src/bindings/DayStatus';
 import { vi } from 'vitest';
+import type { DayStatus } from '../../src/bindings/DayStatus';
 import * as appApi from '../../src/app/api';
 import * as dayApi from '../../src/features/day/api';
 import * as vouchersApi from '../../src/features/vouchers/api';
-import type { AdvancePreviewRow } from '../../src/features/vouchers/types';
-import { ZERO, balance, money } from './accounts';
+import { account, ZERO, balance, money } from './accounts';
+import {
+  TODAY_ISO,
+  collectionList,
+  createBooks,
+  voucherRow,
+  type BooksOptions,
+  type VoucherBooks,
+} from './voucher-books';
 
-const rupeesOf = (text: string): number => Number(text.replaceAll(',', '') || '0');
+export { TODAY_ISO, collectionList, voucherRow };
+export type FakeVouchers = VoucherBooks;
 
-/** `DD-MM-YYYY` as `YYYY-MM-DD`. */
 const isoOf = (text: string): string => text.split('-').reverse().join('-');
 
-export interface FakeAdvances {
-  /** The vouchers saved so far, in order. */
-  saved: { seller: number; amount: string }[];
-}
+export const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+  balance: balance(12880, 'dr'),
+});
+export const ARSHAD = account(22, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+  balance: balance(18684, 'dr'),
+});
+export const PUKHTA_BUYER = account(
+  23,
+  'buyer',
+  '03049999',
+  'پختہ کھاتہ (خریدار)',
+  'Pukhta Khata (Buyer)',
+);
+export const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+  balance: balance(4316, 'cr'),
+});
+export const KARIM = account(32, 'seller', '030110002', 'کریم', 'Karim', {
+  balance: balance(10160, 'cr'),
+});
+export const TRANSPORT = account(41, 'other', '02010002', 'کرایہ کھاتہ', 'Freight Payable', {
+  balance: balance(4000, 'cr'),
+});
 
-/**
- * Sets the answers of the advance commands. A seller starts at zero; each saved advance adds to his
- * debit. The preview chains vouchers of one seller in a list, like the real one.
- */
-export function fakeAdvances(): FakeAdvances {
-  const store: FakeAdvances = { saved: [] };
-  const debit = (seller: number) =>
-    store.saved
-      .filter((one) => one.seller === seller)
-      .reduce((t, one) => t + rupeesOf(one.amount), 0);
-
-  vi.mocked(vouchersApi.vouchersPreviewAdvances).mockImplementation((drafts) => {
-    const running = new Map<number, number>();
-    let total = 0;
-    const rows = drafts.map((draft, index): AdvancePreviewRow => {
-      const seller = draft.seller.id;
-      const before = running.get(seller) ?? debit(seller);
-      const amount = rupeesOf(draft.amount);
-      const decimals = draft.amount.includes('.');
-      running.set(seller, before + (decimals ? 0 : amount));
-      if (!decimals) total += amount;
-      return {
-        account: {
-          id: draft.seller.id,
-          code: draft.seller.code ?? '',
-          name_ur: draft.seller.name_ur,
-          name_en: draft.seller.name_en,
-        },
-        // The real answer names the line: `lines[i].<field>`.
-        errors: decimals
-          ? [
-              {
-                code: 'ERR_DECIMALS_NOT_ALLOWED',
-                field: `lines[${String(index)}].amount`,
-                values: {},
-              },
-            ]
-          : [],
-        amount_paisa: money(decimals ? 0 : amount),
-        current_balance: before === 0 ? ZERO : balance(before, 'dr'),
-        new_balance: balance(before + (decimals ? 0 : amount), 'dr'),
-      };
+/** Sets the answers of the voucher commands from fresh books, and returns the books. */
+export function fakeVouchers(options: BooksOptions = {}): FakeVouchers {
+  const books = createBooks(options);
+  // A refusal thrown by the books is a rejection, as `invoke` rejects with the refusal itself.
+  const answer = <T>(make: () => T): Promise<T> =>
+    new Promise<T>((resolve) => {
+      resolve(make());
     });
-    return Promise.resolve({ rows, total_paisa: money(total) });
-  });
-  vi.mocked(vouchersApi.vouchersSaveAdvance).mockImplementation((draft) => {
-    const seller = draft.seller.id;
-    store.saved.push({ seller, amount: draft.amount });
-    return Promise.resolve({
-      voucher_id: 500 + store.saved.length,
-      voucher_type: 'advance',
-      number: store.saved.length,
-      entry_id: 1000 + store.saved.length,
-      new_balance: balance(debit(seller), 'dr'),
-    });
-  });
-  vi.mocked(vouchersApi.assistAdvances).mockImplementation((sellerId) =>
-    Promise.resolve(
-      sellerId === 31
-        ? {
-            open: [
-              {
-                source: 'voucher',
-                voucher_number: 1,
-                entry_date: '2026-09-01',
-                given_paisa: money(15000),
-                adjusted_paisa: money(0),
-                open_paisa: money(15000),
-              },
-            ],
-            open_paisa: money(15000),
-            last: { entry_date: '2026-09-01', amount_paisa: money(15000), voucher_number: 1 },
-          }
-        : { open: [], open_paisa: money(0), last: null },
-    ),
+  vi.mocked(vouchersApi.vouchersPreview).mockImplementation((entry) =>
+    answer(() => books.preview(entry)),
   );
-  return store;
+  vi.mocked(vouchersApi.vouchersSave).mockImplementation((built) =>
+    answer(() => books.save(built)),
+  );
+  vi.mocked(vouchersApi.vouchersEdit).mockImplementation((input) =>
+    answer(() => books.edit(input)),
+  );
+  vi.mocked(vouchersApi.vouchersCancel).mockImplementation((input) =>
+    answer(() => books.cancel(input)),
+  );
+  vi.mocked(vouchersApi.vouchersGet).mockImplementation((id) => answer(() => books.get(id)));
+  vi.mocked(vouchersApi.vouchersList).mockImplementation((input) =>
+    answer(() => books.list(input)),
+  );
+  vi.mocked(vouchersApi.assistOpenBills).mockImplementation((input) =>
+    answer(() => books.openBills(input)),
+  );
+  vi.mocked(vouchersApi.assistOpenPayables).mockImplementation((input) =>
+    answer(() => books.openPayables(input)),
+  );
+  vi.mocked(vouchersApi.assistAdvances).mockImplementation((sellerId) =>
+    answer(() => books.advances(sellerId)),
+  );
+  return books.store;
 }
+
+/** The advance screen's fake, as the first tests of the advance read it. */
+export const fakeAdvances = fakeVouchers;
 
 export interface FakeDay {
   status: DayStatus;

@@ -170,6 +170,7 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
       paper_seller_bill: 'a4',
       paper_buyer_slips: 'mm80',
       paper_pukhta_slip: 'a5',
+      paper_receipt_slip: 'a5',
       printer: 'HP LaserJet',
       copies: '2',
       urdu_digits: true,
@@ -181,6 +182,32 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     // The form starts again from what was saved: nothing left to save.
     await waitFor(() => {
       expect(saveButton()).toBeDisabled();
+    });
+  });
+
+  it('the receipt slip of a voucher has its own paper and its own place in "print after save"', async () => {
+    const printing = fakePrinting({ printers: [] });
+    const { user } = await open();
+    await user.click(
+      await screen.findByRole('combobox', { name: named(language, 'print-doc-receipt-slip') }),
+    );
+    await user.click(
+      await screen.findByRole('option', { name: named(language, 'print-paper-mm80') }),
+    );
+    const after = screen.getByRole('region', {
+      name: named(language, 'print-settings-after-save'),
+    });
+    await user.click(
+      within(after).getByRole('checkbox', { name: named(language, 'print-doc-receipt-slip') }),
+    );
+    press('F10');
+    await waitFor(() => {
+      expect(printing.saves).toHaveLength(1);
+    });
+    expect(printing.saves[0]).toMatchObject({
+      paper_receipt_slip: 'mm80',
+      paper_seller_bill: 'a4',
+      print_after_save: ['seller_bill', 'buyer_slips', 'pukhta_slip', 'receipt_slip'],
     });
   });
 
@@ -260,6 +287,7 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
               paper_seller_bill: 'a4',
               paper_buyer_slips: 'a5',
               paper_pukhta_slip: 'a5',
+              paper_receipt_slip: 'a5',
               printer: '',
               copies: 1,
               urdu_digits: false,

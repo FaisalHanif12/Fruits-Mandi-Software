@@ -1,0 +1,221 @@
+// The vouchers of the type on the form, in a list under it (PRD 15.1, FR-15.3): by default today's,
+// with the day range and the account as filters. ↑ ↓ and Page Up and Page Down move between rows,
+// Enter (or a double click) opens the row to edit it while its day is open, and the buttons above
+// the list edit, cancel or print the row that has focus. A cancelled voucher stays in the list,
+// marked in words. Four states: loading, an error with a retry, nothing to list, and the rows.
+// The amounts are the stored sums and the total under them is the backend's figure.
+
+import { Localized } from '@fluent/react';
+import { FileText, Pencil, Printer, SearchX, Ban } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import type { VouchersListInput } from '../../../bindings/VouchersListInput';
+import { uiErrorOf } from '../../../shared/api';
+import { isoToDisplayDate } from '../../../shared/format';
+import { ListGrid, type ListContext } from '../../../shared/grid';
+import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
+import {
+  AccountPicker,
+  Button,
+  Card,
+  DateInput,
+  EmptyState,
+  ErrorState,
+  Field,
+  LoadingState,
+  type PickerValue,
+} from '../../../shared/ui';
+import { VOUCHER_COLUMNS } from '../list-columns';
+import { useVouchersList } from '../hooks';
+import type { ScreenType } from '../screen-type';
+import type { VoucherRow } from '../types';
+
+/** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
+const SHORT_LIST_ROWS = 30;
+
+interface VoucherListSectionProps {
+  type: ScreenType;
+  /** Today, `YYYY-MM-DD`: the list starts with today's vouchers. */
+  today: string;
+  /** The voucher that has focus in the list, or null. */
+  selectedId: number | null;
+  onSelect: (row: VoucherRow | null) => void;
+  onEdit: (row: VoucherRow) => void;
+  onCancel: (row: VoucherRow) => void;
+  onPrint: (row: VoucherRow) => void;
+}
+
+export function VoucherListSection({
+  type,
+  today,
+  selectedId,
+  onSelect,
+  onEdit,
+  onCancel,
+  onPrint,
+}: VoucherListSectionProps) {
+  const todayText = isoToDisplayDate(today);
+  const [from, setFrom] = useState(todayText);
+  const [to, setTo] = useState(todayText);
+  const [account, setAccount] = useState<PickerValue | null>(null);
+  const input: VouchersListInput = {
+    voucher_type: type,
+    from: from.trim(),
+    to: to.trim(),
+    account_id: account?.id ?? null,
+    person_key: null,
+  };
+  const list = useVouchersList(input);
+  const data = list.data;
+  const rows = data?.rows;
+  const columns = useMemo(() => VOUCHER_COLUMNS, []);
+  // The total under the amount column is the backend's figure for the saved vouchers of the list;
+  // a cancelled voucher is in the rows but not in the total. The backend sends no total (null) for
+  // a list of all types, which this screen never asks for; then only the word shows. The callback
+  // depends on the loaded list, not on the amount: a Paisa value must not go into a dependency
+  // list (Code Standards F3).
+  const totals = useCallback(
+    (context: ListContext) => {
+      const sum = data?.total_paisa ?? null;
+      return {
+        labelField: 'account',
+        values: {
+          account: context.text('glossary-meezan'),
+          ...(sum === null ? {} : { amount: context.money(sum) }),
+        },
+      };
+    },
+    [data],
+  );
+  const selected = rows?.find((row) => row.id === selectedId) ?? null;
+  const onlyToday = from.trim() === todayText && to.trim() === todayText && account === null;
+
+  let body;
+  if (rows === undefined && list.isPending) {
+    body = <LoadingState />;
+  } else if (list.isError && rows === undefined) {
+    body = (
+      <ErrorState
+        title={<Localized id="vouchers-list-failed" />}
+        error={uiErrorOf(list.error)}
+        onRetry={() => {
+          void list.refetch();
+        }}
+      />
+    );
+  } else if (rows?.length === 0) {
+    body = onlyToday ? (
+      <EmptyState
+        icon={FileText}
+        title={<Localized id={`vouchers-list-empty-${type}`} />}
+        help={<Localized id="vouchers-list-empty-help" vars={{ key: SHORTCUTS.save.label }} />}
+      />
+    ) : (
+      <EmptyState
+        icon={SearchX}
+        title={<Localized id="vouchers-list-no-match" />}
+        help={<Localized id="vouchers-list-no-match-help" />}
+        action={
+          <Button
+            onClick={() => {
+              setFrom(todayText);
+              setTo(todayText);
+              setAccount(null);
+            }}
+          >
+            <Localized id="vouchers-list-clear" />
+          </Button>
+        }
+      />
+    );
+  } else if (rows !== undefined) {
+    const long = rows.length > SHORT_LIST_ROWS;
+    body = (
+      <div className={long ? 'h-list-region' : undefined}>
+        <ListGrid<VoucherRow>
+          columns={columns}
+          rows={rows}
+          getRowId={(row) => String(row.id)}
+          labelId="vouchers-list-label"
+          onOpen={(row) => {
+            if (row.editable) onEdit(row);
+            else onSelect(row);
+          }}
+          onFocusRow={(rowId) => {
+            onSelect(rows.find((row) => String(row.id) === rowId) ?? null);
+          }}
+          focusRowId={selectedId === null ? null : String(selectedId)}
+          heightMode={long ? 'fill' : 'auto'}
+          isInactive={(row) => row.status === 'cancelled'}
+          totals={totals}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <Card compact title={<Localized id={`vouchers-list-title-${type}`} />}>
+      <div {...formNavigationProps} className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4">
+        <Field label={<Localized id="vouchers-list-from" />}>
+          {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
+        </Field>
+        <Field label={<Localized id="vouchers-list-to" />}>
+          {(control) => <DateInput {...control} value={to} onChange={setTo} />}
+        </Field>
+        <div className="col-span-2">
+          <Field label={<Localized id="vouchers-list-account" />}>
+            {(control) => (
+              <AccountPicker
+                {...control}
+                scope="any"
+                showCard={false}
+                value={account}
+                onChange={(hit) => {
+                  setAccount(
+                    hit === null
+                      ? null
+                      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
+                  );
+                }}
+              />
+            )}
+          </Field>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          disabled={!selected?.editable}
+          onClick={() => {
+            if (selected !== null) onEdit(selected);
+          }}
+        >
+          <Pencil aria-hidden="true" className="size-icon-md" />
+          <Localized id="vouchers-edit" />
+        </Button>
+        <Button
+          variant="danger"
+          disabled={!selected?.editable}
+          onClick={() => {
+            if (selected !== null) onCancel(selected);
+          }}
+        >
+          <Ban aria-hidden="true" className="size-icon-md" />
+          <Localized id="vouchers-cancel" />
+        </Button>
+        <Button
+          shortcut={SHORTCUTS.print}
+          disabled={selected === null}
+          onClick={() => {
+            if (selected !== null) onPrint(selected);
+          }}
+        >
+          <Printer aria-hidden="true" className="size-icon-md" />
+          <Localized id="vouchers-print" />
+        </Button>
+        <Localized id="vouchers-list-select-help">
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      </div>
+      {body}
+    </Card>
+  );
+}

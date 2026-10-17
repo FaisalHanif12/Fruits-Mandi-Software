@@ -16,6 +16,8 @@ interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
   /** What the group is for, read by screen readers. Comes from Fluent. */
   groupLabel: string;
+  /** The choice cannot be changed now (the type of a voucher that is being edited). */
+  disabled?: boolean | undefined;
 }
 
 export function SegmentedControl<T extends string>({
@@ -23,6 +25,7 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   groupLabel,
+  disabled = false,
 }: SegmentedControlProps<T>) {
   return (
     <div
@@ -38,10 +41,11 @@ export function SegmentedControl<T extends string>({
             type="button"
             lang={option.lang}
             aria-pressed={pressed}
+            disabled={disabled}
             onClick={() => {
               onChange(option.value);
             }}
-            className={`px-3 type-control ${pressed ? 'bg-primary text-on-primary' : 'bg-surface text-ink'}`}
+            className={`px-3 type-control disabled:cursor-default ${pressed ? 'bg-primary text-on-primary' : 'bg-surface text-ink'} ${disabled && !pressed ? 'text-ink-muted' : ''}`}
           >
             {option.label}
           </button>

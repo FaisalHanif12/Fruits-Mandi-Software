@@ -23,7 +23,7 @@ summing in this folder or in `features/bikri/print/`.
 | `PrintSummary.tsx`, `PrintHeader.tsx`, `PrintPartyBlock.tsx` | The parts of a sheet                                                                                                                                                                                                                         |
 | `footer.ts`                                                  | The page footer: "Printed 10-10-2026 17:40 · Page 1 of 2", as a CSS `content` value                                                                                                                                                          |
 | `wait-ready.ts`                                              | Waits for the fonts and the layout, and gives the page height for the 80 mm roll                                                                                                                                                             |
-| `docs.ts`, `types.ts`                                        | The three documents and their names; the types from the generated bindings                                                                                                                                                                   |
+| `docs.ts`, `types.ts`                                        | The documents (seller bill, buyer slips, پختہ slip, receipt slip) and their names; the types from the generated bindings                                                                                                                     |
 
 ## Things that were found the hard way
 
@@ -58,3 +58,12 @@ the PNG of every document in both languages on A4, A5 and the roll to
 `tests/e2e/output/screenshots/plan14/`, and tells the page counts. The page `#/dev/print?doc=
 seller_bill&language=ur&paper=a4` (dev only) shows one document in the browser; `&digits`,
 `&cancelled`, `&long=15` and `&lines=60` show the other cases.
+
+## The receipt slip (plan 15)
+
+The fourth document, `receipt_slip` (PRD FR-15.2), is one voucher on one page: the same sheet, with
+the voucher number (`print-fact-voucher-number`), the party, how the money was paid (mode, bank,
+cheque) in a SOLID box, the amount and the amount in words. The template is
+`features/vouchers/print/ReceiptSlipTemplate.tsx`, the hidden route is
+`?voucher=<id>&doc=receipt_slip&language=..&job=..`, and its paper is `paper_receipt_slip` in the
+Printing tab. The data is `reports_voucher_print_data`; the layout still calculates nothing.

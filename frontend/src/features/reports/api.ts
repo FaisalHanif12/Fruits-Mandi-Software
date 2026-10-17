@@ -1,12 +1,14 @@
 // Typed wrappers around the print commands of the `reports` module (plan 14 contract). Components
 // never call invoke() (Code Standards F4). Every command takes one `{ input }` object. All of
 // them need the signed-in Owner (NFR-SEC-13), except that the hidden print window may call only
-// `reports_bikri_print_data` (its capability allows nothing else).
+// `reports_bikri_print_data` and `reports_voucher_print_data` (its capability allows nothing else).
 
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { PrintData } from '../../bindings/PrintData';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
+import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
+import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput';
 import { callCommand } from '../../shared/api';
 
 /**
@@ -15,6 +17,19 @@ import { callCommand } from '../../shared/api';
  */
 export function reportsBikriPrintData(input: BikriPrintDataInput): Promise<PrintData> {
   return callCommand<PrintData>('reports_bikri_print_data', { input });
+}
+
+/**
+ * Everything the receipt slip of one saved voucher needs, in the print language (PRD FR-15.2): the
+ * party, one total, the amount in words and the facts. The template adds up nothing.
+ */
+export function reportsVoucherPrintData(input: VoucherPrintDataInput): Promise<PrintData> {
+  return callCommand<PrintData>('reports_voucher_print_data', { input });
+}
+
+/** Prints the receipt slip of a saved voucher on the printer, or saves it as a PDF. Windows only. */
+export function reportsPrintVoucher(input: PrintVoucherInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_print_voucher', { input });
 }
 
 /**

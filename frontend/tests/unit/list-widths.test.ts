@@ -9,6 +9,7 @@ import { ACCOUNT_COLUMNS, accountColumns } from '../../src/features/masters/acco
 import { MASTER_CONFIGS, columnsOf } from '../../src/features/masters/configs';
 import { BIKRI_LIST_COLUMNS, bikriListColumns } from '../../src/features/bikri/list-columns';
 import { PUKHTA_COLUMNS, pukhtaColumns } from '../../src/features/pukhta_khata/columns';
+import { VOUCHER_COLUMNS } from '../../src/features/vouchers/list-columns';
 import { RULE_COLUMNS } from '../../src/features/rules/columns';
 import type { ListColumn } from '../../src/shared/grid';
 import { LIST_COLUMN_WIDTHS, LIST_GROW_MIN_WIDTH } from '../../src/shared/grid/columnTypes';
@@ -69,6 +70,10 @@ describe('lists fit the content area', () => {
     });
     it.each(STEPS)('register of the پختہ کھاتہ accounts at the %s step', (step) => {
       expect(leastWidth(PUKHTA_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
+    });
+
+    it.each(STEPS)('list of vouchers under the voucher form at the %s step', (step) => {
+      expect(leastWidth(VOUCHER_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
     });
 
     // "More columns" adds the نگ column of FR-12.7 and FR-13.6, which fits at no step beside the

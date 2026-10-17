@@ -108,6 +108,7 @@ fn give(
         &env.ctx,
         owner,
         &AdvanceInput {
+            confirm_cash_below_zero: true,
             date: date.into(),
             seller_account_id: rahim,
             amount: amount.into(),

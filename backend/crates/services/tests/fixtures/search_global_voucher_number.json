@@ -1,0 +1,176 @@
+[
+  {
+    "kind": "account",
+    "hit": {
+      "id": 19,
+      "code": "03040001",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "buyer",
+      "control_id": 6,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 17,
+      "code": "030110001",
+      "name_ur": "رحیم",
+      "name_en": "Rahim",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "seller",
+      "control_id": 5,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 22,
+      "code": "06030001",
+      "name_ur": "ذاتی خرچہ - الف",
+      "name_en": "Drawings - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 11,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 24,
+      "code": "06030002",
+      "name_ur": "ذاتی خرچہ - ب",
+      "name_en": "Drawings - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 11,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 26,
+      "code": "06030003",
+      "name_ur": "ذاتی خرچہ - ج",
+      "name_en": "Drawings - Partner C",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 11,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 21,
+      "code": "06020001",
+      "name_ur": "سرمایہ - الف",
+      "name_en": "Capital - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 10,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 23,
+      "code": "06020002",
+      "name_ur": "سرمایہ - ب",
+      "name_en": "Capital - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 10,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 25,
+      "code": "06020003",
+      "name_ur": "سرمایہ - ج",
+      "name_en": "Capital - Partner C",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 10,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "bikri",
+    "hit": {
+      "id": 1,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "truck_no": "LES-1234",
+      "status": "saved",
+      "matched": "number"
+    }
+  },
+  {
+    "kind": "voucher",
+    "hit": {
+      "id": 2,
+      "voucher_type": "receipt",
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "account": {
+        "id": 19,
+        "code": "03040001",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax"
+      },
+      "amount_paisa": 900000,
+      "status": "saved"
+    }
+  },
+  {
+    "kind": "voucher",
+    "hit": {
+      "id": 3,
+      "voucher_type": "payment",
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "account": {
+        "id": 17,
+        "code": "030110001",
+        "name_ur": "رحیم",
+        "name_en": "Rahim"
+      },
+      "amount_paisa": 431600,
+      "status": "saved"
+    }
+  },
+  {
+    "kind": "voucher",
+    "hit": {
+      "id": 1,
+      "voucher_type": "advance",
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "account": {
+        "id": 17,
+        "code": "030110001",
+        "name_ur": "رحیم",
+        "name_en": "Rahim"
+      },
+      "amount_paisa": 1500000,
+      "status": "saved"
+    }
+  }
+]

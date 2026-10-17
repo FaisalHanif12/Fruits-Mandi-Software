@@ -14,6 +14,7 @@ import type { BikriSaved } from '../../../bindings/BikriSaved';
 import { FALLBACK_ERROR_MESSAGE_ID, uiErrorOf } from '../../../shared/api';
 import { useLatest } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
+import { BIKRI_PRINT_DOCS } from '../../../shared/print';
 import { showToast, useErrorText } from '../../../shared/ui';
 import { reportsPrint } from '../../reports';
 import { PRINTING_KEY, settingsGetPrinting } from '../../settings';
@@ -38,10 +39,12 @@ export function usePrintAfterSave(): void {
               queryFn: settingsGetPrinting,
               staleTime: Infinity,
             });
-            if (settings.print_after_save.length === 0) return;
+            // The receipt slip of a voucher may be ticked too: it is not a document of a بکری.
+            const docs = settings.print_after_save.filter((doc) => BIKRI_PRINT_DOCS.includes(doc));
+            if (docs.length === 0) return;
             const outcome = await reportsPrint({
               bikri_id: saved.bikri_id,
-              docs: settings.print_after_save,
+              docs,
               language: printLanguage,
               copies: null,
               to: 'printer',

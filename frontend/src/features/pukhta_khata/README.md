@@ -19,3 +19,8 @@ known people in the sale book.
   new name still moves on, and a row is never taken by Space or by leaving the field.
 - The frontend sorts and ranks nothing: the backend gives the people newest first and the register
   rows in order.
+- **Make regular** (plan 15, PRD FR-13.8): `components/MakeRegularDialog.tsx` is `QuickAddAccount` with
+  the names and the phone of the person to start with (`initial`) and its own saving (`saveWith`,
+  command `pukhta_make_regular`). The backend makes the account and moves his open balance with a
+  جنرل entry in one transaction; the voucher screen then puts the new account in the form. The
+  codes of the two one-time accounts are in `codes.ts` (`isPukhtaCode`, `PUKHTA_BUYER_CODE`).

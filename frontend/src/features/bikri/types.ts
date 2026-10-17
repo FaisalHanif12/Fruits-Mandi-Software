@@ -97,9 +97,8 @@ export const SALE = {
   qtyFilled: 'qtyFilled',
 } as const;
 
-/** The codes of the two one-time accounts (PRD FR-13.1). */
-export const PUKHTA_SELLER_CODE = '030119999';
-export const PUKHTA_BUYER_CODE = '03049999';
+/** The codes of the two one-time accounts (PRD FR-13.1) are kept by their own module. */
+export { PUKHTA_BUYER_CODE, PUKHTA_SELLER_CODE } from '../pukhta_khata/codes';
 
 /** The typed value that means "on" in a tick of a row. */
 export const ON = '1';

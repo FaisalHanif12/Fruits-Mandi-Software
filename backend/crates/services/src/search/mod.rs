@@ -507,9 +507,49 @@ fn bikri_hits(ctx: &Context, text: &str) -> Result<Vec<GlobalHit>, ServiceError>
     })
 }
 
+/// Reads a voucher number the way it is typed (PRD FR-5.4, plan 15): the digits alone find the
+/// voucher with that number in every series; a letter first (`R-12`, `P-12`, `A-12`, or `و-12`,
+/// `ا-12`, `پ-12`, with or without the dash and spaces) finds one series.
+fn voucher_query(typed: &str) -> Option<(i64, Option<mandi_domain::core::vouchers::VoucherType>)> {
+    use mandi_domain::core::vouchers::VoucherType;
+    let text = typed.trim();
+    let (series, digits) = match text.chars().next() {
+        Some(first) if first.is_ascii_digit() => (None, text),
+        Some(first) => {
+            let series = match first {
+                'R' | 'r' | 'و' => VoucherType::Receipt,
+                'P' | 'p' | 'ا' => VoucherType::Payment,
+                'A' | 'a' | 'پ' => VoucherType::Advance,
+                _ => return None,
+            };
+            let rest = text.get(first.len_utf8()..)?;
+            (Some(series), rest.trim_start_matches(['-', ' ']).trim())
+        }
+        None => return None,
+    };
+    if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    Some((digits.parse::<i64>().ok()?, series))
+}
+
+/// The vouchers that the typed text names by their number (PRD FR-5.4).
+fn voucher_hits(ctx: &Context, text: &str) -> Result<Vec<GlobalHit>, ServiceError> {
+    let Some((number, series)) = voucher_query(text) else {
+        return Ok(Vec::new());
+    };
+    ctx.db.read(|conn| {
+        Ok(mandi_db::vouchers::hits_by_number(conn, number, series)?
+            .into_iter()
+            .map(|hit| GlobalHit::Voucher { hit })
+            .collect())
+    })
+}
+
 /// Global search (`Ctrl+K`, PRD FR-5.4): accounts, searched like a field that takes any
 /// account, then the بکری whose number is the typed digits, then the newest بکری whose truck
-/// number starts with the text. The whole answer stays within `limit`. Only reads.
+/// number starts with the text, then the vouchers with that number. The whole answer stays
+/// within `limit`. Only reads.
 ///
 /// # Errors
 /// As [`search_accounts`].
@@ -523,6 +563,7 @@ pub fn global(
         .unwrap_or(MAX_HITS)
         .min(MAX_HITS);
     let mut bikri = bikri_hits(ctx, &input.text)?;
+    bikri.extend(voucher_hits(ctx, &input.text)?);
     // The accounts keep at least one place.
     bikri.truncate(limit.saturating_sub(1));
     let account_limit = limit.saturating_sub(bikri.len());

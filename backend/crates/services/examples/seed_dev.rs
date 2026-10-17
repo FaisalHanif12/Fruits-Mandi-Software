@@ -350,6 +350,7 @@ fn run(path: &Path) -> Result<(), ServiceError> {
         &ctx,
         &owner,
         &AdvanceInput {
+            confirm_cash_below_zero: false,
             date: "01-09-2026".into(),
             seller_account_id: rahim,
             amount: "15,000".into(),

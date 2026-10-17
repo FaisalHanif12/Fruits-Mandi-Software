@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reports-print-voucher"
+description = "Enables the reports_print_voucher command without any pre-configured scope."
+commands.allow = ["reports_print_voucher"]
+
+[[permission]]
+identifier = "deny-reports-print-voucher"
+description = "Denies the reports_print_voucher command without any pre-configured scope."
+commands.deny = ["reports_print_voucher"]

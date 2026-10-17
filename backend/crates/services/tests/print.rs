@@ -281,6 +281,7 @@ fn set_input() -> SetPrintingInput {
         paper_seller_bill: Paper::A4,
         paper_buyer_slips: Paper::Mm80,
         paper_pukhta_slip: Paper::A5,
+        paper_receipt_slip: Paper::A5,
         printer: "  Office Laser  ".into(),
         copies: "2".into(),
         urdu_digits: true,
@@ -312,7 +313,8 @@ fn printing_settings_start_with_a21_and_are_saved_with_an_audit_row() {
     assert_eq!(start.copies, 1);
     assert!(!start.urdu_digits);
     assert!(start.printer.is_empty());
-    assert_eq!(start.print_after_save, PrintDoc::ALL.to_vec());
+    assert_eq!(start.paper_receipt_slip, Paper::A5);
+    assert_eq!(start.print_after_save, PrintDoc::BIKRI_DOCS.to_vec());
 
     let edits_before = audit_rows(&w, "edit");
     let saved = printing::set_settings(&w.env.ctx, &w.owner, &set_input()).unwrap();

@@ -30,6 +30,7 @@ mod format;
 mod ids;
 mod load;
 mod pages;
+mod voucher;
 
 use mandi_core::auth::Language;
 use mandi_core::printing::{Paper, PrintDoc};
@@ -38,6 +39,7 @@ use ts_rs::TS;
 
 pub use build::{BuildOptions, build};
 pub use load::{FirmNames, bikri_print_data};
+pub use voucher::voucher_print_data;
 
 /// Input of `reports_bikri_print_data` (plan 14).
 #[derive(Debug, Clone, Deserialize, TS)]
@@ -53,6 +55,16 @@ pub struct BikriPrintDataInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub only_buyer_id: Option<i64>,
+}
+
+/// Input of `reports_voucher_print_data` (plan 15, PRD FR-15.2).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct VoucherPrintDataInput {
+    /// The saved voucher: a وصولی, an ادائیگی or a پیشگی.
+    #[ts(type = "number")]
+    pub voucher_id: i64,
+    /// The print language (PRD FR-7.36): names, words and digits follow it.
+    pub language: Language,
 }
 
 /// Writing direction of the print.

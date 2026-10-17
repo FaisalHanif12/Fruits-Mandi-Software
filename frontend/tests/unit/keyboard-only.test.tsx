@@ -1,8 +1,8 @@
 // The main task of each entry screen, done with the keyboard only (Code Standards F30, NFR-USE-7;
 // D1+D2 review, finding 34). Nothing here clicks: focus starts where the screen puts it, Tab
 // moves between fields, and the text, Enter and F10 do the rest. In the Urdu and in the English
-// app, against a fake backend. Screens covered: a new account, a new rule, an advance, the firm
-// in Settings and the opening balances grid. The login, the wizard, the day close, the master
+// app, against a fake backend. Screens covered: a new account, a new rule, a receipt, several receipts in a
+// list, a payment, an advance, the firm in Settings and the opening balances grid. The login, the wizard, the day close, the master
 // lists and change password have the same kind of test in their own files.
 
 import { screen, waitFor } from '@testing-library/react';
@@ -189,13 +189,130 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     await user.keyboard('5000');
     press('F10');
     await waitFor(() => {
-      expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     });
-    expect(vi.mocked(vouchersApi.vouchersSaveAdvance).mock.calls[0]?.[0]).toMatchObject({
-      amount: '5000',
-      mode: 'cash',
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+      type: 'advance',
+      input: { amount: '5000', mode: 'cash' },
     });
     expect(store.saved).toEqual([{ seller: 31, amount: '5000' }]);
+  });
+
+  it('a receipt: Tab to the buyer, type and Enter, then the amount, F10 saves; the list gets its row', async () => {
+    fakeAccounts([AKRAM, RAHIM]);
+    fakeAccountSearch([AKRAM, RAHIM]);
+    fakeMasters({});
+    const store = fakeAdvances();
+    await renderApp('/bikri/receipt');
+    await screen.findByRole('heading', {
+      level: 1,
+      name: named(message(language, 'vouchers-receipt-title')),
+    });
+    const user = userEvent.setup();
+    const buyer = () =>
+      screen.getByRole('combobox', { name: named(message(language, 'vouchers-field-buyer')) });
+    await tabTo(user, buyer, 'the buyer');
+    await user.keyboard('akram');
+    await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(1);
+      expect(visible(options[0]?.textContent)).toContain('03040001');
+    });
+    await user.keyboard('{Enter}');
+    await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
+    await user.keyboard('10000');
+    press('F10');
+    await waitFor(() => {
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+      type: 'receipt',
+      input: { account_id: 21, amount: '10000', mode: 'cash' },
+    });
+    expect(store.rows).toHaveLength(1);
+    // The next voucher starts at the buyer: the cursor is in the field that always changes.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(buyer());
+    });
+  });
+
+  it('several receipts: type one, F2 puts it in the list, type the next, F10 saves them all', async () => {
+    fakeAccounts([AKRAM, ARSHAD, RAHIM]);
+    fakeAccountSearch([AKRAM, ARSHAD, RAHIM]);
+    fakeMasters({});
+    const store = fakeAdvances();
+    await renderApp('/bikri/receipt');
+    await screen.findByRole('heading', {
+      level: 1,
+      name: named(message(language, 'vouchers-receipt-title')),
+    });
+    const user = userEvent.setup();
+    const buyer = () =>
+      screen.getByRole('combobox', { name: named(message(language, 'vouchers-field-buyer')) });
+    const typeBuyer = async (typed: string, code: string) => {
+      await user.keyboard(typed);
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        expect(options).toHaveLength(1);
+        expect(visible(options[0]?.textContent)).toContain(code);
+      });
+      await user.keyboard('{Enter}');
+    };
+    await tabTo(user, buyer, 'the buyer');
+    await typeBuyer('akram', '03040001');
+    await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
+    await user.keyboard('10000');
+    press('F2');
+    // The cursor is back on the buyer of the next voucher: no mouse and no extra Tab.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(buyer());
+    });
+    await typeBuyer('arshad', '03040002');
+    await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
+    await user.keyboard('5000');
+    press('F10');
+    await waitFor(() => {
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(2);
+    });
+    const sent = vi.mocked(vouchersApi.vouchersSave).mock.calls.map((call) => call[0]);
+    expect(sent).toMatchObject([
+      { type: 'receipt', input: { account_id: 21, amount: '10000' } },
+      { type: 'receipt', input: { account_id: 22, amount: '5000' } },
+    ]);
+    expect(store.rows).toHaveLength(2);
+  });
+
+  it('a payment: Tab to the account, type and Enter, then the amount, F10 saves', async () => {
+    fakeAccounts([AKRAM, RAHIM]);
+    fakeAccountSearch([AKRAM, RAHIM]);
+    fakeMasters({});
+    fakeAdvances();
+    await renderApp('/bikri/payment');
+    await screen.findByRole('heading', {
+      level: 1,
+      name: named(message(language, 'vouchers-payment-title')),
+    });
+    const user = userEvent.setup();
+    const paidTo = () =>
+      screen.getByRole('combobox', { name: named(message(language, 'vouchers-field-paid-to')) });
+    await tabTo(user, paidTo, 'the account');
+    await user.keyboard('rahim');
+    await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(1);
+      expect(visible(options[0]?.textContent)).toContain('030110001');
+    });
+    await user.keyboard('{Enter}');
+    await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
+    await user.keyboard('4316');
+    press('F10');
+    await waitFor(() => {
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+      type: 'payment',
+      input: { account_id: 31, amount: '4316', mode: 'cash' },
+    });
   });
 
   it('the firm in Settings: Tab to the address, type, F10 saves', async () => {

@@ -299,6 +299,28 @@ pub fn save(
     get(ctx, id)
 }
 
+/// Makes a new account inside the caller's transaction, with the same checks as [`save`] (plan
+/// 15, PRD FR-13.8: a one-time person becomes a regular account in the same action that moves his
+/// balance). The caller refreshes the search index and runs the returned learning steps after the
+/// commit.
+///
+/// # Errors
+/// As [`save`] for a new account.
+pub(crate) fn create_in(
+    ctx: &Context,
+    actor: &Actor,
+    tx: &Connection,
+    input: &AccountInput,
+    window: (
+        Option<mandi_domain::core::dates::BusinessDate>,
+        mandi_domain::core::dates::BusinessDate,
+    ),
+) -> Result<(i64, Vec<crate::spelling::Learned>), ServiceError> {
+    let prepared = prepare_account(input, window.0, window.1, None)?;
+    let checks = spelling_checks(ctx, &prepared)?;
+    write(ctx, actor, tx, &prepared, &checks)
+}
+
 fn write(
     ctx: &Context,
     actor: &Actor,

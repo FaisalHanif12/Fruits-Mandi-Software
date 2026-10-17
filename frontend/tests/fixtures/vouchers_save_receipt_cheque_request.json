@@ -1,0 +1,12 @@
+{
+  "account_id": 20,
+  "amount": "5,000",
+  "bank_account_id": 1,
+  "cheque_date": "12-10-2026",
+  "cheque_no": "000123",
+  "collector_staff_id": null,
+  "date": "10-10-2026",
+  "mode": "cheque",
+  "narration": "",
+  "person_key": null
+}

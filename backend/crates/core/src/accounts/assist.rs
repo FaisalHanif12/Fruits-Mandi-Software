@@ -259,4 +259,11 @@ pub enum GlobalHit {
         /// The بکری.
         hit: crate::bikri::BikriHit,
     },
+    /// A voucher found by its number (PRD FR-5.4, plan 15): the digits alone find the voucher
+    /// with that number in each series, `R-12`, `P-12` and `A-12` (or `و-12`, `ا-12`, `پ-12`)
+    /// find one series. They come after the بکری.
+    Voucher {
+        /// The voucher.
+        hit: crate::vouchers::VoucherHit,
+    },
 }

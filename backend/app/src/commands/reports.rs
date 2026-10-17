@@ -2,10 +2,12 @@
 //! PRD FR-12.12, FR-7.36, FR-19.3 to FR-19.7). Every command needs the signed-in Owner
 //! (NFR-SEC-13). The print data only reads (Code Standards B29).
 
-use mandi_reports::print::{BikriPrintDataInput, PrintData, bikri_print_data};
+use mandi_reports::print::{
+    BikriPrintDataInput, PrintData, VoucherPrintDataInput, bikri_print_data, voucher_print_data,
+};
 use mandi_services::ServiceError;
 use mandi_services::auth;
-use mandi_services::core::printing::{PrintInput, PrintOutcome};
+use mandi_services::core::printing::{PrintInput, PrintOutcome, PrintVoucherInput};
 
 use super::run;
 use crate::error::UiError;
@@ -52,4 +54,32 @@ pub async fn reports_list_printers<R: tauri::Runtime>(
         print_job::list_printers().map_err(ServiceError::Data)
     })
     .await
+}
+
+/// The print data of the slip of one voucher (PRD FR-15.2): the firm header, the title and
+/// every label as a Fluent message ID, the party, the amount and its words in the print
+/// language, the mode with the bank and cheque, the paper class, `dir` and `lang`. One page.
+/// Read only. Errors: `ERR_NOT_FOUND` on `voucher_id`.
+#[tauri::command]
+pub async fn reports_voucher_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: VoucherPrintDataInput,
+) -> Result<PrintData, UiError> {
+    run(app, "reports_voucher_print_data", move |ctx| {
+        auth::require(ctx)?;
+        voucher_print_data(ctx.db(), &input).map_err(print_job::reports_voucher_service_error)
+    })
+    .await
+}
+
+/// Prints the slip of a saved voucher on the printer of Settings, or saves it as a PDF named
+/// `receipt-slip-<voucher id>-<language>.pdf` (the numbers of the three series repeat, the row id
+/// does not). The print is written to the audit log (vouchers have no print count). Printing
+/// needs Windows. Errors: as `reports_print`, with `ERR_NOT_FOUND` on `voucher_id`.
+#[tauri::command]
+pub async fn reports_print_voucher<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintVoucherInput,
+) -> Result<PrintOutcome, UiError> {
+    print_job::run_voucher(app, input).await
 }

@@ -1,0 +1,16 @@
+{
+  "entry": {
+    "account_id": 19,
+    "amount": "10,000",
+    "bank_account_id": null,
+    "cheque_date": "",
+    "cheque_no": "",
+    "collector_staff_id": null,
+    "date": "10-10-2026",
+    "mode": "cash",
+    "narration": "",
+    "person_key": null,
+    "type": "receipt"
+  },
+  "replacing_voucher_id": null
+}

@@ -35,6 +35,9 @@ export function DevHome() {
           <Localized id="bikripage-title">
             <Link to="/dev/bikri" className="text-primary underline" />
           </Localized>
+          <Localized id="voucherspage-title">
+            <Link to="/dev/vouchers" className="text-primary underline" />
+          </Localized>
         </nav>
       </main>
     </GalleryLocalization>

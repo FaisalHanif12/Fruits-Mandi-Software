@@ -1,0 +1,34 @@
+{
+  "account": {
+    "id": 17,
+    "code": "030110001",
+    "name_ur": "رحیم",
+    "name_en": "Rahim"
+  },
+  "amount_paisa": 431600,
+  "current_balance": {
+    "amount_paisa": 431600,
+    "side": "cr"
+  },
+  "new_balance": {
+    "amount_paisa": 0,
+    "side": "zero"
+  },
+  "bill_effects": [],
+  "extra_credit_paisa": 0,
+  "advance_effects": [],
+  "owes_settled_paisa": 0,
+  "return_limit_paisa": null,
+  "payable_open_paisa": 431600,
+  "payable_is_zero_for_seller": false,
+  "cash": {
+    "cash_before_paisa": 4000000,
+    "change_paisa": -431600,
+    "cash_after_paisa": 3568400,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "errors": [],
+  "warnings": []
+}

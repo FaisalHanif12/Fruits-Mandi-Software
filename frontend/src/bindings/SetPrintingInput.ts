@@ -20,6 +20,10 @@ export type SetPrintingInput = {
    */
   paper_pukhta_slip: Paper;
   /**
+   * Paper of the voucher slip. Missing means A5.
+   */
+  paper_receipt_slip: Paper;
+  /**
    * Printer name. Empty means the default printer. At most 259 characters.
    */
   printer: string;

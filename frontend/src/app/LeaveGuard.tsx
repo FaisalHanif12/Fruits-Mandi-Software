@@ -16,14 +16,27 @@ interface LeaveGuardProps {
    * here, so the work he gave up is not offered back later (plan 13).
    */
   onLeave?: (() => void) | undefined;
+  /**
+   * A way out that is not leaving: the address the screen is going to is the same screen with
+   * another choice on it (the voucher screen with another type, which keeps what was typed). Asked
+   * with the address the user is going to. True lets him through without the prompt.
+   */
+  allowNavigation?:
+    ((next: { pathname: string; search: Record<string, unknown> }) => boolean) | undefined;
 }
 
-export function LeaveGuard({ dirty, onSave, onLeave }: LeaveGuardProps) {
+export function LeaveGuard({ dirty, onSave, onLeave, allowNavigation }: LeaveGuardProps) {
   // True while the form is being saved for the user who chose "save": the prompt closes at once,
   // and that must not cancel the way out he asked for.
   const deciding = useRef(false);
   const blocker = useBlocker({
-    shouldBlockFn: () => dirty && !deciding.current,
+    shouldBlockFn: ({ next }) =>
+      dirty &&
+      !deciding.current &&
+      allowNavigation?.({
+        pathname: next.pathname,
+        search: next.search as Record<string, unknown>,
+      }) !== true,
     enableBeforeUnload: () => dirty,
     withResolver: true,
   });

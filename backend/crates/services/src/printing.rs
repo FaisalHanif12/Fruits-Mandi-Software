@@ -11,7 +11,7 @@ use mandi_domain::core::auth::Language;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::printing::{
     self, MAX_PRINTER_CHARS, PRINT_AFTER_SAVE_PREF, PrintDoc, PrintInput, PrintSetup, PrintTo,
-    PrintingSettings, SETTING_KEY, SetPrintingInput,
+    PrintVoucherInput, PrintingSettings, SETTING_KEY, SetPrintingInput,
 };
 use mandi_domain::core::validate::{self, FieldErrors};
 use serde_json::{Value, json};
@@ -89,6 +89,7 @@ pub fn set_settings(
         paper_seller_bill: input.paper_seller_bill,
         paper_buyer_slips: input.paper_buyer_slips,
         paper_pukhta_slip: input.paper_pukhta_slip,
+        paper_receipt_slip: input.paper_receipt_slip,
         printer,
         copies,
         urdu_digits: input.urdu_digits,
@@ -238,5 +239,95 @@ pub fn record(
                 .into_entry(),
         )?;
         Ok(count)
+    })
+}
+
+/// A voucher slip print request that passed its checks (plan 15, PRD FR-15.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VoucherPrintPlan {
+    /// The voucher.
+    pub voucher_id: i64,
+    /// Its number in its series, for the audit row.
+    pub number: i64,
+    /// Its kind, as stored, for the audit row.
+    pub voucher_type: String,
+    /// The print language.
+    pub language: Language,
+    /// Printer or PDF.
+    pub to: PrintTo,
+    /// Copies of this print.
+    pub copies: u32,
+    /// The Printing settings: printer name and paper.
+    pub setup: PrintSetup,
+}
+
+/// Checks a voucher slip print request and reads what it needs. Nothing is written.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `voucher_id`; the copies codes on `copies`.
+pub fn plan_voucher(
+    ctx: &Context,
+    input: &PrintVoucherInput,
+) -> Result<VoucherPrintPlan, ServiceError> {
+    let mut errors = FieldErrors::default();
+    let typed_copies = input
+        .copies
+        .as_deref()
+        .map(str::trim)
+        .filter(|text| !text.is_empty());
+    let copies = typed_copies.and_then(|text| errors.take(printing::parse_copies("copies", text)));
+    errors.finish()?;
+    ctx.db.read(|conn| {
+        let (number, voucher_type): (i64, String) = conn
+            .query_row(
+                "SELECT number, type FROM vouchers WHERE id = ?1",
+                [input.voucher_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .map_err(|error| match error {
+                mandi_db::rusqlite::Error::QueryReturnedNoRows => {
+                    ServiceError::reject_field(ErrorCode::ErrNotFound, "voucher_id")
+                }
+                other => ServiceError::from(other),
+            })?;
+        let setup = load_setup(conn)?;
+        Ok(VoucherPrintPlan {
+            voucher_id: input.voucher_id,
+            number,
+            voucher_type,
+            language: input.language,
+            to: input.to,
+            copies: copies.unwrap_or(setup.copies),
+            setup,
+        })
+    })
+}
+
+/// Records a voucher slip that was printed: an audit row (Code Standards S7). A voucher has no
+/// print count, so the audit row is the record of the print (plan 15).
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn record_voucher(
+    ctx: &Context,
+    actor: &Actor,
+    plan: &VoucherPrintPlan,
+) -> Result<(), ServiceError> {
+    ctx.db.write(|tx| {
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "print", "voucher")
+                .entity_id(plan.voucher_id)
+                .new_value(json!({
+                    "type": plan.voucher_type,
+                    "number": plan.number,
+                    "doc": PrintDoc::ReceiptSlip,
+                    "language": plan.language.as_str(),
+                    "to": plan.to,
+                    "copies": plan.copies,
+                }))
+                .into_entry(),
+        )?;
+        Ok(())
     })
 }

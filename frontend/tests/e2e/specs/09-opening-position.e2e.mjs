@@ -104,7 +104,13 @@ describe('the opening position of the worked day (Urdu)', () => {
     await amount.setValue('15000');
     await type(Key.F10);
     await browser.waitUntil(
-      async () => (await pageText()).includes(t('ur', 'vouchers-saved-advance', { number: 1 })),
+      async () =>
+        (await pageText()).includes(
+          t('ur', 'vouchers-saved', {
+            kind: 'advance',
+            number: t('ur', 'vouchers-number-advance', { number: 1 }),
+          }),
+        ),
       { timeoutMsg: 'The first پیشگی was not saved.' },
     );
     // His open advance is 15,000 under his card.

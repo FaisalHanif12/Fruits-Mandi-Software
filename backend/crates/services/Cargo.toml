@@ -49,5 +49,9 @@ harness = false
 name = "bikri_save"
 harness = false
 
+[[bench]]
+name = "vouchers"
+harness = false
+
 [lints]
 workspace = true

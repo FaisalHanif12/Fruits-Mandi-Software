@@ -1,0 +1,10 @@
+{
+  "voucher_id": 4,
+  "voucher_type": "payment",
+  "number": 2,
+  "reversal_entry_id": 12,
+  "new_balance": {
+    "amount_paisa": 388000,
+    "side": "dr"
+  }
+}

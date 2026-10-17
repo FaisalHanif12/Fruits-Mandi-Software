@@ -283,7 +283,63 @@ print-settings-after-save = محفوظ کرنے کے بعد پرنٹ
 
 # $key is the key that saves and prints, for example Ctrl+Enter.
 # review: pending
-print-settings-after-save-hint = { $key } دبانے پر { -bikri } محفوظ ہو کر یہ دستاویزیں پرنٹ ہوں گی۔
+print-settings-after-save-hint = { $key } دبانے پر { -bikri } یا واؤچر محفوظ ہو کر یہ دستاویزیں پرنٹ ہوں گی۔
 
 # review: pending
 print-settings-load-failed = پرنٹنگ کی ترتیبات نہیں کھل سکیں
+
+## The receipt slip of a voucher (plan 15, PRD FR-15.2). The backend sends these ids (contract 9).
+
+# review: pending
+print-receipt-slip-title = { -wasooli } کی رسید
+
+# review: pending
+print-payment-slip-title = { -adaigi } کی رسید
+
+# review: pending
+print-advance-slip-title = { -peshgi-khata } کی رسید
+
+# review: pending
+print-fact-voucher-number = نمبر
+
+# review: pending
+print-fact-bank = بینک
+
+# review: pending
+print-fact-cheque = چیک
+
+# review: pending
+print-fact-reason = وجہ
+
+# review: pending
+print-fact-collector = اگراہی والا
+
+# review: pending
+print-fact-narration = تفصیل
+
+# review: pending
+print-party-onetime-seller = { -pukhta-khata } ({ -beopari })
+
+# review: pending
+print-party-account = کھاتہ
+
+# review: pending
+print-mode-cash = نقد
+
+# review: pending
+print-mode-bank = بینک
+
+# review: pending
+print-mode-cheque = چیک
+
+# review: pending
+print-slip-amount-received = وصول شدہ رقم
+
+# review: pending
+print-slip-amount-paid = ادا کی گئی رقم
+
+# review: pending
+print-slip-amount-advance = دی گئی { -peshgi }
+
+# review: pending
+print-doc-receipt-slip = رقم کی رسید

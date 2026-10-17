@@ -1,0 +1,48 @@
+{
+  "account": {
+    "id": 19,
+    "code": "03040001",
+    "name_ur": "اکرم ٹول ٹیکس",
+    "name_en": "Akram Toll Tax"
+  },
+  "amount_paisa": 1000000,
+  "current_balance": {
+    "amount_paisa": 1288000,
+    "side": "dr"
+  },
+  "new_balance": {
+    "amount_paisa": 288000,
+    "side": "dr"
+  },
+  "bill_effects": [
+    {
+      "bill": {
+        "line_id": 7,
+        "entry_date": "2026-10-10",
+        "source": "bikri",
+        "number": 1,
+        "amount_paisa": 1288000,
+        "open_paisa": 1288000,
+        "days": 0
+      },
+      "settled_paisa": 1000000,
+      "still_open_paisa": 288000
+    }
+  ],
+  "extra_credit_paisa": 0,
+  "advance_effects": [],
+  "owes_settled_paisa": 0,
+  "return_limit_paisa": null,
+  "payable_open_paisa": null,
+  "payable_is_zero_for_seller": false,
+  "cash": {
+    "cash_before_paisa": 0,
+    "change_paisa": 1000000,
+    "cash_after_paisa": 0,
+    "below_zero": false,
+    "lowers_cash": false,
+    "needs_confirm": false
+  },
+  "errors": [],
+  "warnings": []
+}

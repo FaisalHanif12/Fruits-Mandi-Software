@@ -9,11 +9,11 @@ mod entry;
 
 pub use entry::{
     AdvanceEffect, AdvancesReport, AdvancesReportInput, AdvancesReportRow, BillEffect,
-    CollectionBuyer, CollectionGroup, CollectionList, CollectionListInput, LineSource, MadeRegular,
-    MakeRegularInput, OpenBill, OpenBills, OpenBillsInput, OpenPayables, OpenPayablesInput,
-    PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult, ReceiptsInput, ReceiptsSaved,
-    VoucherCancelInput, VoucherCancelled, VoucherEditInput, VoucherEntry, VoucherGetInput,
-    VoucherHit, VoucherPreview, VoucherPreviewInput,
+    CollectionBuyer, CollectionGroup, CollectionList, CollectionListInput, LineSource,
+    MAX_OPEN_ROWS, MadeRegular, MakeRegularInput, OpenBill, OpenBills, OpenBillsInput,
+    OpenPayables, OpenPayablesInput, PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult,
+    ReceiptsInput, ReceiptsSaved, VoucherCancelInput, VoucherCancelled, VoucherEditInput,
+    VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview, VoucherPreviewInput,
 };
 
 use serde::{Deserialize, Serialize};
@@ -234,6 +234,18 @@ pub struct VouchersListInput {
     /// Only this one-time person.
     #[serde(default)]
     pub person_key: Option<String>,
+}
+
+/// The vouchers of a list and their total (PRD FR-15.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct VouchersList {
+    /// The vouchers, by day and number. Cancelled ones are in the list, marked by `status`.
+    pub rows: Vec<VoucherRow>,
+    /// The total of the saved vouchers in `rows`, cancelled ones left out. Null when the list is
+    /// of all types: receipts bring money in and payments and advances send it out, so one sum
+    /// of them means nothing.
+    #[ts(type = "Paisa | null")]
+    pub total_paisa: Option<Paisa>,
 }
 
 /// A voucher in the list.

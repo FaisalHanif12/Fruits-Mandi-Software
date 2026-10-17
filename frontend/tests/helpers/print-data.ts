@@ -219,6 +219,7 @@ const TITLES: Record<PrintDoc, string> = {
   seller_bill: 'print-seller-bill-title',
   buyer_slips: 'print-buyer-slip-title',
   pukhta_slip: 'print-pukhta-slip-title',
+  receipt_slip: 'print-receipt-slip-title',
 };
 
 /** The paper each document has before the Owner changes it (PRD A21). */
@@ -226,6 +227,7 @@ export const DEFAULT_PAPER: Record<PrintDoc, Paper> = {
   seller_bill: 'a4',
   buyer_slips: 'a5',
   pukhta_slip: 'a5',
+  receipt_slip: 'a5',
 };
 
 const FACTS: PrintFact[] = [
@@ -340,4 +342,99 @@ export function manyLinesData(
       ...base.pages.slice(1),
     ],
   };
+}
+
+/** The kinds of voucher the receipt slip prints, as the backend's title ids name them. */
+export type SlipKind = 'receipt' | 'payment' | 'advance';
+
+export interface SlipOptions extends CannedOptions {
+  /** How the money moved: cash (the default), bank, or a cheque. */
+  mode?: 'cash' | 'bank' | 'cheque';
+  /** Reason, collector and narration facts on the slip. */
+  extras?: boolean;
+}
+
+const SLIP_TITLE: Record<SlipKind, string> = {
+  receipt: 'print-receipt-slip-title',
+  payment: 'print-payment-slip-title',
+  advance: 'print-advance-slip-title',
+};
+const SLIP_TOTAL: Record<SlipKind, string> = {
+  receipt: 'print-slip-amount-received',
+  payment: 'print-slip-amount-paid',
+  advance: 'print-slip-amount-advance',
+};
+
+/**
+ * The receipt slip of a voucher (plan 15 contract 9), in the exact shape of the generated types:
+ * one page with the party, no goods, one total, the amount in words and the facts. A receipt of
+ * 10,000 from Akram on 10-10-2026, number R-1 (و-1), or a payment of 4,316 to Rahim, or an advance
+ * of 5,000 to Rahim. The numbers are the PRD's.
+ */
+export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): PrintData {
+  const language = options.language ?? 'ur';
+  const n = NAMES[language];
+  const mode = options.mode ?? 'cash';
+  const amount = kind === 'receipt' ? '10,000' : kind === 'payment' ? '4,316' : '5,000';
+  const words =
+    language === 'ur'
+      ? kind === 'receipt'
+        ? 'دس ہزار روپے'
+        : kind === 'payment'
+          ? 'چار ہزار تین سو سولہ روپے'
+          : 'پانچ ہزار روپے'
+      : kind === 'receipt'
+        ? 'Ten thousand rupees only'
+        : kind === 'payment'
+          ? 'Four thousand three hundred sixteen rupees only'
+          : 'Five thousand rupees only';
+  const number =
+    language === 'ur'
+      ? `${kind === 'receipt' ? 'و' : kind === 'payment' ? 'ا' : 'پ'}-1`
+      : `${kind === 'receipt' ? 'R' : kind === 'payment' ? 'P' : 'A'}-1`;
+  const facts: PrintFact[] = [
+    { label_id: 'print-fact-voucher-number', value: number },
+    { label_id: 'print-fact-date', value: '10-10-2026' },
+    ...(mode === 'bank' || mode === 'cheque'
+      ? [{ label_id: 'print-fact-bank', value: language === 'ur' ? 'بینک الفلاح' : 'Bank Alfalah' }]
+      : []),
+    ...(mode === 'cheque' ? [{ label_id: 'print-fact-cheque', value: '123456' }] : []),
+    ...(options.extras === true
+      ? [
+          { label_id: 'print-fact-collector', value: language === 'ur' ? 'اسلم' : 'Aslam' },
+          {
+            label_id: 'print-fact-reason',
+            value: language === 'ur' ? 'گھریلو ضرورت' : 'Home need',
+          },
+          { label_id: 'print-fact-narration', value: 'x' },
+        ]
+      : []),
+  ];
+  const page: PrintPage = {
+    party: {
+      role_id: kind === 'receipt' ? 'print-party-buyer' : 'print-party-seller',
+      code: kind === 'receipt' ? '03040001' : '030110001',
+      name: kind === 'receipt' ? n.akram : n.rahim,
+      phone: kind === 'receipt' ? '0300-1234567' : null,
+    },
+    lines: [],
+    amounts: [{ label_id: SLIP_TOTAL[kind], amount, role: 'total' }],
+    payment_id: `print-mode-${mode}`,
+    words: { label_id: 'print-in-words', text: words },
+  };
+  const data: PrintData = {
+    doc: 'receipt_slip',
+    language,
+    dir: language === 'ur' ? 'rtl' : 'ltr',
+    paper: options.paper ?? 'a5',
+    urdu_digits: options.urduDigits === true,
+    title_id: SLIP_TITLE[kind],
+    firm: { name: n.firm, mandi: n.mandi, address: 'Kot Radha Kishan', phone: '0300-1112233' },
+    number,
+    facts,
+    printed_at: '10-10-2026 17:40',
+    cancelled: options.cancelled === true,
+    pages: [page],
+  };
+  return options.urduDigits === true ? withUrduDigits(data) : data;
 }

@@ -165,12 +165,30 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    // The others still say "coming soon".
+    // وصولی and ادائیگی are the same voucher screen with their type chosen (plan 15).
     await user.click(at(items, 1));
+    expect(
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: message(language, 'vouchers-receipt-title') },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[1]).toHaveAttribute('aria-current', 'page');
+    await user.click(at(items, 2));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: message(language, 'vouchers-payment-title'),
+      }),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[2]).toHaveAttribute('aria-current', 'page');
+    // The others still say "coming soon".
+    await user.click(at(items, 6));
     expect(
       await screen.findByRole('heading', { name: message(language, 'soon-title') }),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[1]).toHaveAttribute('aria-current', 'page');
+    expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
     // The way back is a button, and Esc does the same.
     await user.keyboard('{Escape}');
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
@@ -185,16 +203,18 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
-    for (const [key, path] of [
-      ['v', '/bikri/receipt'],
-      ['a', '/bikri/payment'],
-      ['p', '/bikri/advance'],
-      ['k', '/rokar'],
+    // وصولی, ادائیگی and پیشگی are one screen with the type chosen (plan 15); Alt+K is plan 17's.
+    for (const [key, path, type] of [
+      ['v', '/bikri/voucher', 'receipt'],
+      ['a', '/bikri/voucher', 'payment'],
+      ['p', '/bikri/voucher', 'advance'],
+      ['k', '/rokar', undefined],
     ] as const) {
       await user.keyboard(`{Alt>}${key}{/Alt}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe(path);
       });
+      if (type !== undefined) expect(router.state.location.search).toMatchObject({ type });
     }
   });
 

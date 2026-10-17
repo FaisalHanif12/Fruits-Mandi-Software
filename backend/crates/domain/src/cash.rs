@@ -63,6 +63,36 @@ pub fn check(before: Paisa, change: Paisa) -> Result<CashCheck, MoneyError> {
     })
 }
 
+/// The check of an entry that cannot lower cash (its `change` is 0 or more), without reading cash
+/// in hand (PRD FR-6.7). Such an entry never needs the user to confirm, whatever the balance is
+/// (`needs_confirm` is `below_zero && lowers_cash`), so the balance is not needed: the answer
+/// has `cash_before_paisa` and `cash_after_paisa` of 0 and everything else false. A preview uses
+/// it to skip the sum over the cash account, which has hundreds of thousands of lines.
+///
+/// ```
+/// use mandi_domain::core::money::Paisa;
+/// use mandi_domain::cash::check_unread;
+/// let c = check_unread(Paisa::from_rupees(10_000).unwrap()).unwrap();
+/// assert!(!c.needs_confirm && !c.lowers_cash);
+/// ```
+///
+/// # Errors
+/// `MoneyError::NegativeValue` if `change` is below 0: an entry that lowers cash needs
+/// [`check`] with the real balance.
+pub fn check_unread(change: Paisa) -> Result<CashCheck, MoneyError> {
+    if change.is_negative() {
+        return Err(MoneyError::NegativeValue);
+    }
+    Ok(CashCheck {
+        cash_before_paisa: Paisa::ZERO,
+        change_paisa: change,
+        cash_after_paisa: Paisa::ZERO,
+        below_zero: false,
+        lowers_cash: false,
+        needs_confirm: false,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,6 +100,22 @@ mod tests {
 
     fn p(rupees: i64) -> Paisa {
         Paisa::from_rupees(rupees).unwrap()
+    }
+
+    #[test]
+    fn an_entry_that_cannot_lower_cash_never_asks_whatever_cash_is() {
+        // check_unread says what check says about the question, without the balance.
+        for before in [-50_000, -1, 0, 1, 20_000] {
+            for change in [0, 1, 25_000] {
+                let read = check(p(before), p(change)).unwrap();
+                let unread = check_unread(p(change)).unwrap();
+                assert!(!read.needs_confirm);
+                assert_eq!(unread.needs_confirm, read.needs_confirm);
+                assert_eq!(unread.lowers_cash, read.lowers_cash);
+                assert_eq!(unread.change_paisa, read.change_paisa);
+            }
+        }
+        assert_eq!(check_unread(p(-1)), Err(MoneyError::NegativeValue));
     }
 
     #[test]

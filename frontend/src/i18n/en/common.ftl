@@ -68,6 +68,9 @@ common-percent-sign = %
 common-cash-confirm-title = Cash in hand will go below zero
 # review: pending
 common-cash-confirm-text = After this entry cash in hand will be <num>{ $amount }</num>. Is this entry correct?
+# The amber note under an entry that would take cash below zero (PRD FR-6.7).
+# review: pending
+common-cash-after = After this entry cash in hand will be <num>{ $amount }</num>.
 # review: pending
 common-cash-confirm-yes = Yes, save
 # review: pending

@@ -20,6 +20,10 @@ export type PrintingSettings = {
    */
   paper_pukhta_slip: Paper;
   /**
+   * Paper of the voucher slip (starts as A5).
+   */
+  paper_receipt_slip: Paper;
+  /**
    * Printer name. Empty means the default printer.
    */
   printer: string;

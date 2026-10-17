@@ -265,12 +265,6 @@ bikri-split-title = Partners' share
 bikri-split-shared = Shared income
 
 # review: pending
-bikri-cash-note = Cash in hand will go below zero
-
-# review: pending
-bikri-cash-after = After this entry cash in hand will be <num>{ $amount }</num>.
-
-# review: pending
 bikri-where-lot = Lot { $lot }:
 
 # review: pending

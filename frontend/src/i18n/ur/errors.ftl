@@ -282,3 +282,30 @@ err-printer-not-found = پرنٹر { $printer } نہیں ملا۔ دیکھیں �
 
 # review: pending
 err-print-failed = دستاویز پرنٹ نہیں ہو سکی۔ پرنٹر دیکھ لیں اور دوبارہ کوشش کریں۔ بار بار ہو تو مدد کے لیے بتائیں۔
+
+## Vouchers (plan 15, PRD 15.1 to 15.4).
+
+# PRD FR-15.11. Money paid to a buyer is cash lent to him.
+# review: pending
+err-payment-to-buyer-needs-reason = { -gahak } کو رقم دینا { -naqd-udhar } ہے۔ اس کی وجہ لکھیں۔
+
+# PRD FR-15.12, FR-16.2. $open is the most that can be returned, in rupees.
+# review: pending
+err-return-exceeds-open = یہ رقم واپس ہونے والی رقم سے زیادہ ہے۔ زیادہ سے زیادہ { $open } واپس ہو سکتے ہیں۔
+
+# PRD FR-15.3.
+# review: pending
+err-voucher-cancelled = یہ واؤچر منسوخ ہو چکا ہے، اس میں تبدیلی نہیں ہو سکتی۔
+
+# PRD FR-13.5, FR-13.7.
+# review: pending
+err-person-required = { -pukhta-khata } کے لیے اس شخص کا نام یا فون لکھ کر اسے فہرست سے چنیں۔
+
+# PRD 15.1.
+# review: pending
+err-cheque-required = چیک کا نمبر اور چیک کی تاریخ لکھیں۔
+
+# A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
+# amount is more than it, both in rupees.
+# review: pending
+err-payment-above-payable = یہ رقم { -beopari } کی قابل ادائیگی رقم ({ $payable }) سے { $over } زیادہ ہے۔ آپ پھر بھی محفوظ کر سکتے ہیں۔ زیادہ رقم { -beopari } کے ذمے دکھائی جائے گی، یہ { -peshgi } نہیں ہوگی۔

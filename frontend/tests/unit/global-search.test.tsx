@@ -10,15 +10,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GlobalSearch } from '../../src/app/layout/GlobalSearch';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as accountApi from '../../src/shared/accounts/api';
-import type { GlobalHit } from '../../src/shared/accounts';
+import type { GlobalHit, VoucherSearchHit } from '../../src/shared/accounts';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { useEscapeDispatcher } from '../../src/shared/keyboard';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fail } from '../helpers/app';
+import { paisaForTest } from '../helpers/paisa';
 import { message, renderIn, visible } from '../helpers/render';
 
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/urdu/api');
+
+const AKRAM_REF = { id: 21, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
 
 const HITS: GlobalHit[] = [
   {
@@ -58,11 +61,33 @@ const HITS: GlobalHit[] = [
     status: 'cancelled',
     matched: 'truck',
   },
+  // Vouchers (plan 15): found by their number, in each series.
+  {
+    kind: 'voucher',
+    id: 501,
+    voucher_type: 'receipt',
+    number: 12,
+    entry_date: '2026-10-10',
+    account: AKRAM_REF,
+    amount_paisa: paisaForTest(1_000_000),
+    status: 'saved',
+  },
+  {
+    kind: 'voucher',
+    id: 502,
+    voucher_type: 'payment',
+    number: 12,
+    entry_date: '2026-10-09',
+    account: { id: 31, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' },
+    amount_paisa: paisaForTest(431_600),
+    status: 'cancelled',
+  },
 ];
 
 /** What the fake search command finds: accounts by code or name, a بکری by number or truck start. */
 function found(hit: GlobalHit, text: string): boolean {
   const needle = text.toLowerCase();
+  if (hit.kind === 'voucher') return String(hit.number) === text;
   return hit.kind === 'bikri'
     ? String(hit.number) === text || (hit.truck_no ?? '').toLowerCase().startsWith(needle)
     : [hit.code, hit.name_ur, hit.name_en].some((part) => part.toLowerCase().includes(needle));
@@ -72,12 +97,20 @@ function found(hit: GlobalHit, text: string): boolean {
 function Shell({
   onOpenAccount,
   onOpenBikri,
+  onOpenVoucher,
 }: {
   onOpenAccount: (id: number) => void;
   onOpenBikri: (id: number) => void;
+  onOpenVoucher: (hit: VoucherSearchHit) => void;
 }) {
   useEscapeDispatcher();
-  return <GlobalSearch onOpenAccount={onOpenAccount} onOpenBikri={onOpenBikri} />;
+  return (
+    <GlobalSearch
+      onOpenAccount={onOpenAccount}
+      onOpenBikri={onOpenBikri}
+      onOpenVoucher={onOpenVoucher}
+    />
+  );
 }
 
 function setup(language: Language) {
@@ -86,16 +119,21 @@ function setup(language: Language) {
   });
   const onOpenAccount = vi.fn();
   const onOpenBikri = vi.fn();
+  const onOpenVoucher = vi.fn();
   renderIn(
     language,
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <Shell onOpenAccount={onOpenAccount} onOpenBikri={onOpenBikri} />
+      <Shell
+        onOpenAccount={onOpenAccount}
+        onOpenBikri={onOpenBikri}
+        onOpenVoucher={onOpenVoucher}
+      />
     </QueryClientProvider>,
   );
   const box = screen.getByRole<HTMLInputElement>('combobox');
-  return { box, onOpenAccount, onOpenBikri, user: userEvent.setup() };
+  return { box, onOpenAccount, onOpenBikri, onOpenVoucher, user: userEvent.setup() };
 }
 
 const options = () => screen.queryAllByRole('option');
@@ -208,6 +246,40 @@ describe.each(LANGUAGES)('GlobalSearch (%s)', (language) => {
     await user.click(first);
     expect(onOpenBikri).toHaveBeenCalledWith(22);
     expect(onOpenAccount).not.toHaveBeenCalled();
+  });
+
+  it('finds a voucher by its number: its kind and number in its series, day, account and amount (FR-5.4)', async () => {
+    const { box, user } = setup(language);
+    await user.click(box);
+    await user.keyboard('12');
+    await waitFor(() => {
+      expect(options()).toHaveLength(2);
+    });
+    const rows = options().map((row) => visible(row.textContent));
+    expect(rows[0]).toContain(message(language, 'vouchers-type-receipt'));
+    expect(rows[0]).toContain(message(language, 'vouchers-number-receipt', { number: 12 }));
+    expect(rows[0]).toContain('10-10-2026');
+    expect(rows[0]).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
+    expect(rows[0]).toContain('10,000');
+    // The same number in the other series is another row, and a cancelled one says so in words.
+    expect(rows[1]).toContain(message(language, 'vouchers-number-payment', { number: 12 }));
+    expect(rows[1]).toContain(message(language, 'vouchers-hit-cancelled'));
+  });
+
+  it('Enter on a voucher result opens that voucher, not an account or a بکری with the same id', async () => {
+    const { box, user, onOpenAccount, onOpenBikri, onOpenVoucher } = setup(language);
+    await user.click(box);
+    await user.keyboard('12');
+    await waitFor(() => {
+      expect(options()).toHaveLength(2);
+    });
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onOpenVoucher).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'voucher', id: 502, voucher_type: 'payment' }),
+    );
+    expect(onOpenAccount).not.toHaveBeenCalled();
+    expect(onOpenBikri).not.toHaveBeenCalled();
+    expect(box.value).toBe('');
   });
 
   it('a failure says so, with the plain message', async () => {

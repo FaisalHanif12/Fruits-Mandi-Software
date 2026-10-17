@@ -11,20 +11,16 @@ import { Localized } from '@fluent/react';
 import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useMemo } from 'react';
 import { emitEvent } from '../../../shared/api';
-import type { PrintReady } from '../../../shared/print';
+import {
+  jobOf,
+  printErrorEvent,
+  printReadyEvent,
+  type PrintFailed,
+  type PrintReady,
+} from '../../../shared/print';
 import { ErrorState } from '../../../shared/ui';
 import { BikriPrintView } from './BikriPrintView';
-import { jobOf, parsePrintParams } from './params';
-
-/** The event the backend waits for. */
-export const printReadyEvent = (job: string): string => `print-ready-${job}`;
-/** The event that says the page could not be made. */
-export const printErrorEvent = (job: string): string => `print-error-${job}`;
-
-/** What a failed print tells the backend: the error codes. */
-interface PrintFailed {
-  codes: string[];
-}
+import { parsePrintParams } from './params';
 
 export function BikriPrintPage() {
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });

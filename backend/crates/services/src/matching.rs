@@ -62,6 +62,7 @@ use mandi_db::matching as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::matching::{Allocation, Open, Ranked, match_before, match_bills};
+use mandi_domain::payables;
 
 use crate::error::{ServiceError, money_error};
 
@@ -121,43 +122,60 @@ pub fn pin_cash_sale(
     Ok(())
 }
 
-/// Works out the canonical matching of a buyer key and makes the active rows equal to it (see
-/// the module text). Only buyer keys are matched; the caller does not pass a seller.
+/// Everything the canonical working of a buyer key reads: its live lines, oldest first, and its
+/// active rows.
+#[derive(Debug, Clone)]
+pub(crate) struct KeyInputs {
+    lines: Vec<repo::KeyLine>,
+    active: Vec<repo::ActiveRow>,
+}
+
+/// Reads the inputs of the canonical working of a buyer key.
 ///
 /// # Errors
-/// `ServiceError::Db`; `ServiceError::Data` if a pinned row is bigger than its line (a bug
-/// signal); `ERR_OVERFLOW`.
-pub fn rematch(
+/// `ServiceError::Db`.
+pub(crate) fn load_key(
     tx: &Connection,
-    user_id: i64,
-    now: &str,
     account_id: i64,
     person_key: Option<&str>,
-) -> Result<Rematched, ServiceError> {
-    let lines = repo::live_key_lines(tx, account_id, person_key)?;
-    let active = repo::active_bill_rows(tx, account_id, person_key)?;
-    let live: std::collections::HashSet<i64> = lines.iter().map(|l| l.line_id).collect();
+) -> Result<KeyInputs, ServiceError> {
+    Ok(KeyInputs {
+        lines: repo::live_key_lines(tx, account_id, person_key)?,
+        active: repo::active_bill_rows(tx, account_id, person_key)?,
+    })
+}
 
+/// What the canonical working says: the rows that must be active, the pinned rows that stay and
+/// the pinned rows that are stale. Pure.
+struct KeyPlan {
+    wanted: Vec<Allocation>,
+    stale: Vec<i64>,
+    /// What the pinned rows that stay take from each line.
+    taken: HashMap<i64, Paisa>,
+}
+
+/// The canonical working of a buyer key (see the module text), steps 1 to 3. Pure: it reads only
+/// `inputs`.
+fn plan_key(inputs: &KeyInputs) -> Result<KeyPlan, ServiceError> {
+    let live: std::collections::HashSet<i64> = inputs.lines.iter().map(|l| l.line_id).collect();
     // Pinned rows take their amounts out of both pools. A pinned row that points at a line that
     // is no longer live is stale and is switched off with the others.
     let mut taken: HashMap<i64, Paisa> = HashMap::new();
-    let mut keep: Vec<repo::ActiveRow> = Vec::new();
     let mut stale: Vec<i64> = Vec::new();
-    for row in &active {
+    for row in &inputs.active {
         if row.pinned && live.contains(&row.bill_line_id) && live.contains(&row.payment_line_id) {
             let amount = paisa(row.amount_paisa)?;
             for line in [row.bill_line_id, row.payment_line_id] {
                 let slot = taken.entry(line).or_insert(Paisa::ZERO);
                 *slot = slot.checked_add(amount).map_err(money_error)?;
             }
-            keep.push(*row);
         } else if row.pinned {
             stale.push(row.id);
         }
     }
     let mut bills: Vec<Open> = Vec::new();
     let mut credits: Vec<Open> = Vec::new();
-    for line in &lines {
+    for line in &inputs.lines {
         let used = taken.get(&line.line_id).copied().unwrap_or(Paisa::ZERO);
         if line.dr_paisa > 0 {
             let open = paisa(line.dr_paisa)?
@@ -190,6 +208,30 @@ pub fn rematch(
         }
     }
     let wanted = match_bills(&bills, &credits).map_err(money_error)?;
+    Ok(KeyPlan {
+        wanted,
+        stale,
+        taken,
+    })
+}
+
+/// Works out the canonical matching of a buyer key and makes the active rows equal to it (see
+/// the module text). Only buyer keys are matched; the caller does not pass a seller.
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` if a pinned row is bigger than its line (a bug
+/// signal); `ERR_OVERFLOW`.
+pub fn rematch(
+    tx: &Connection,
+    user_id: i64,
+    now: &str,
+    account_id: i64,
+    person_key: Option<&str>,
+) -> Result<Rematched, ServiceError> {
+    let inputs = load_key(tx, account_id, person_key)?;
+    let plan = plan_key(&inputs)?;
+    let active = &inputs.active;
+    let wanted = plan.wanted;
 
     // The rows that are not pinned are compared pair by pair with what is wanted.
     let mut wanted_by_pair: BTreeMap<(i64, i64), Allocation> = BTreeMap::new();
@@ -198,7 +240,7 @@ pub fn rematch(
     }
     let mut done = Rematched::default();
     let mut kept_pairs: std::collections::HashSet<(i64, i64)> = std::collections::HashSet::new();
-    let mut to_switch_off: Vec<i64> = stale;
+    let mut to_switch_off: Vec<i64> = plan.stale;
     for row in active.iter().filter(|r| !r.pinned) {
         let pair = (row.bill_line_id, row.payment_line_id);
         let same = wanted_by_pair
@@ -236,6 +278,117 @@ pub fn rematch(
         done.added = done.added.saturating_add(1);
     }
     Ok(done)
+}
+
+/// The line number a what-if line gets; no real line has a negative id.
+pub(crate) const WHAT_IF_LINE: i64 = -1;
+
+/// A change the preview asks about (plan 15, Code Standards B5): an entry taken back (an edit or a
+/// cancel) and a line that would be added (the new voucher).
+#[derive(Debug, Clone, Default)]
+pub(crate) struct KeyChange<'a> {
+    /// The journal entry whose lines are taken out first.
+    pub remove_entry: Option<i64>,
+    /// The new line: its day, and its debit or credit. It is the newest line of its day.
+    pub add: Option<WhatIfLine<'a>>,
+}
+
+/// A line that does not exist yet.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct WhatIfLine<'a> {
+    /// Its day, `YYYY-MM-DD`.
+    pub date: &'a str,
+    /// Debit, paisa.
+    pub dr: Paisa,
+    /// Credit, paisa.
+    pub cr: Paisa,
+}
+
+/// A bill after the canonical working.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct BillState {
+    /// The journal line (`WHAT_IF_LINE` for the line that was asked about).
+    pub line_id: i64,
+    /// The whole bill.
+    pub amount: Paisa,
+    /// What is open on it.
+    pub open: Paisa,
+}
+
+/// The books of a buyer key after the canonical working.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct KeyView {
+    /// Every bill (debit line), oldest first, with what is open on it.
+    pub bills: Vec<BillState>,
+    /// Credit that no bill has used (PRD FR-15.5).
+    pub unmatched_credit: Paisa,
+}
+
+/// The canonical working of a buyer key with a change applied, in memory (Code Standards B5). With
+/// no change it is what the active rows say when they are canonical, which every writer of this
+/// crate keeps true. Pure: it reads only `inputs`.
+///
+/// # Errors
+/// `ServiceError::Data` if a pinned row is bigger than its line; `ERR_OVERFLOW`.
+pub(crate) fn key_view(
+    inputs: &KeyInputs,
+    change: &KeyChange<'_>,
+) -> Result<KeyView, ServiceError> {
+    let mut lines: Vec<repo::KeyLine> = inputs
+        .lines
+        .iter()
+        .filter(|l| Some(l.entry_id) != change.remove_entry)
+        .cloned()
+        .collect();
+    if let Some(add) = change.add {
+        // The new entry has the biggest entry id, so it is the last line of its day.
+        let at = lines.partition_point(|l| l.entry_date.as_str() <= add.date);
+        lines.insert(
+            at,
+            repo::KeyLine {
+                line_id: WHAT_IF_LINE,
+                dr_paisa: add.dr.as_paisa(),
+                cr_paisa: add.cr.as_paisa(),
+                entry_id: WHAT_IF_LINE,
+                entry_date: add.date.to_owned(),
+                is_opening: false,
+            },
+        );
+    }
+    let changed = KeyInputs {
+        lines,
+        active: inputs.active.clone(),
+    };
+    let plan = plan_key(&changed)?;
+    let mut matched: HashMap<i64, Paisa> = plan.taken.clone();
+    for row in &plan.wanted {
+        for line in [row.bill_line_id, row.credit_line_id] {
+            let slot = matched.entry(line).or_insert(Paisa::ZERO);
+            *slot = slot.checked_add(row.amount).map_err(money_error)?;
+        }
+    }
+    let mut bills = Vec::new();
+    let mut unmatched = Paisa::ZERO;
+    for line in &changed.lines {
+        let used = matched.get(&line.line_id).copied().unwrap_or(Paisa::ZERO);
+        if line.dr_paisa > 0 {
+            let amount = paisa(line.dr_paisa)?;
+            bills.push(BillState {
+                line_id: line.line_id,
+                amount,
+                open: amount.checked_sub(used).map_err(money_error)?,
+            });
+        } else if line.cr_paisa > 0 {
+            let left = paisa(line.cr_paisa)?
+                .checked_sub(used)
+                .map_err(money_error)?;
+            unmatched = unmatched.checked_add(left).map_err(money_error)?;
+        }
+    }
+    Ok(KeyView {
+        bills,
+        unmatched_credit: unmatched,
+    })
 }
 
 /// A new line of a key, with its amount.
@@ -304,10 +457,36 @@ pub fn match_new_bills(
     entry_date: &str,
     bills: &[NewLine],
 ) -> Result<Rematched, ServiceError> {
+    match_new_bills_hinted(
+        tx, user_id, now, account_id, person_key, entry_date, bills, None,
+    )
+}
+
+/// [`match_new_bills`] with the total the unmatched credits added up to before the bills were
+/// posted (`expected_unmatched_credit` of the repository): the credits are found by a walk back
+/// from the newest entry. The answer is the same.
+///
+/// # Errors
+/// As [`rematch`].
+#[allow(clippy::too_many_arguments)]
+pub fn match_new_bills_hinted(
+    tx: &Connection,
+    user_id: i64,
+    now: &str,
+    account_id: i64,
+    person_key: Option<&str>,
+    entry_date: &str,
+    bills: &[NewLine],
+    unmatched_credit_hint: Option<i64>,
+) -> Result<Rematched, ServiceError> {
     if repo::has_later_entry(tx, account_id, person_key, entry_date)? {
         return rematch(tx, user_id, now, account_id, person_key);
     }
-    let credits = open_of(repo::open_credits(tx, account_id, person_key)?)?;
+    let found = match unmatched_credit_hint {
+        Some(total) => repo::open_credits_upto(tx, account_id, person_key, total)?,
+        None => repo::open_credits(tx, account_id, person_key)?,
+    };
+    let credits = open_of(found)?;
     if credits.is_empty() {
         return Ok(Rematched::default());
     }
@@ -320,6 +499,52 @@ pub fn match_new_bills(
         .collect();
     let rows = match_bills(&bills, &credits).map_err(money_error)?;
     insert_rows(tx, user_id, now, account_id, person_key, &rows)
+}
+
+/// The rows a new credit of a key would get if it were the newest line of the key, worked out from
+/// the bills that are still open and nothing else (see the module text, "Appending to a key").
+/// `None` when an entry of the key is dated after `entry_date`: the credit is then not the newest
+/// line, and the full [`rematch`] decides. The save of a receipt and its preview both call this,
+/// so what the screen showed is what is written (Code Standards B5).
+///
+/// # Errors
+/// As [`rematch`].
+pub(crate) fn plan_new_credits(
+    conn: &Connection,
+    account_id: i64,
+    person_key: Option<&str>,
+    entry_date: &str,
+    credits: &[NewLine],
+    open_bills_hint: Option<i64>,
+) -> Result<Option<NewCreditPlan>, ServiceError> {
+    if repo::has_later_entry(conn, account_id, person_key, entry_date)? {
+        return Ok(None);
+    }
+    // With the total the open bills add up to (asked before the credit was posted), the bills
+    // are found by a walk back from the newest, not by reading every bill of the buyer.
+    let found = match open_bills_hint {
+        Some(total) => repo::open_bills_upto(conn, account_id, person_key, total)?,
+        None => repo::open_bills(conn, account_id, person_key)?,
+    };
+    let bills = open_of(found)?;
+    let credit_opens: Vec<Open> = credits
+        .iter()
+        .map(|c| Open {
+            line_id: c.line_id,
+            open: c.amount,
+        })
+        .collect();
+    let rows = match_bills(&bills, &credit_opens).map_err(money_error)?;
+    Ok(Some(NewCreditPlan { bills, rows }))
+}
+
+/// What [`plan_new_credits`] found: the open bills before, and the rows the new credits get.
+#[derive(Debug, Clone)]
+pub(crate) struct NewCreditPlan {
+    /// The open bills, oldest first, with what is open on each.
+    pub bills: Vec<Open>,
+    /// The rows the credits get.
+    pub rows: Vec<Allocation>,
 }
 
 /// Matches new credits (credit lines just posted, dated `entry_date`) of a key to the bills that
@@ -337,22 +562,40 @@ pub fn match_new_credits(
     entry_date: &str,
     credits: &[NewLine],
 ) -> Result<Rematched, ServiceError> {
-    if repo::has_later_entry(tx, account_id, person_key, entry_date)? {
-        return rematch(tx, user_id, now, account_id, person_key);
+    match_new_credits_hinted(
+        tx, user_id, now, account_id, person_key, entry_date, credits, None,
+    )
+}
+
+/// [`match_new_credits`] with the total the open bills added up to before the credits were posted
+/// (`expected_open_bills` of the repository): the bills are found by a walk back from the newest
+/// entry. The answer is the same.
+///
+/// # Errors
+/// As [`rematch`].
+#[allow(clippy::too_many_arguments)]
+pub fn match_new_credits_hinted(
+    tx: &Connection,
+    user_id: i64,
+    now: &str,
+    account_id: i64,
+    person_key: Option<&str>,
+    entry_date: &str,
+    credits: &[NewLine],
+    open_bills_hint: Option<i64>,
+) -> Result<Rematched, ServiceError> {
+    match plan_new_credits(
+        tx,
+        account_id,
+        person_key,
+        entry_date,
+        credits,
+        open_bills_hint,
+    )? {
+        None => rematch(tx, user_id, now, account_id, person_key),
+        Some(plan) if plan.bills.is_empty() => Ok(Rematched::default()),
+        Some(plan) => insert_rows(tx, user_id, now, account_id, person_key, &plan.rows),
     }
-    let bills = open_of(repo::open_bills(tx, account_id, person_key)?)?;
-    if bills.is_empty() {
-        return Ok(Rematched::default());
-    }
-    let credits: Vec<Open> = credits
-        .iter()
-        .map(|c| Open {
-            line_id: c.line_id,
-            open: c.amount,
-        })
-        .collect();
-    let rows = match_bills(&bills, &credits).map_err(money_error)?;
-    insert_rows(tx, user_id, now, account_id, person_key, &rows)
 }
 
 /// What the active advance rows take from one credit line, paisa.
@@ -451,38 +694,103 @@ fn first_credit(lot: &repo::FirstLot) -> Result<Paisa, ServiceError> {
         .map_err(money_error)
 }
 
-/// Works out the canonical advance adjustment of a seller and makes the active rows equal to it:
-/// his live advance lines (oldest first) are adjusted, oldest first, by the credit lines that
-/// can adjust (PRD FR-15.8): the seller credit of the first posting of each lot whose tick is on
-/// (PRD FR-12.23), and the credit of a receipt from him (PRD FR-15.12). A row on any other
-/// credit is kept and its amount comes out of the advance first, so a source this working does
-/// not know yet is never switched off.
+/// Everything the canonical advance working of a seller reads.
+#[derive(Debug, Clone)]
+pub(crate) struct AdvInputs {
+    advances: Vec<repo::KeyLine>,
+    credit_lines: Vec<repo::SellerCredit>,
+    /// Every live line of the account, oldest first: the order of the account, and the lines of
+    /// the payable working.
+    lines: Vec<repo::LiveLine>,
+    lots: Vec<repo::FirstLot>,
+    active: Vec<repo::AdvanceRow>,
+}
+
+/// Reads the inputs of the canonical advance working of a seller.
 ///
 /// # Errors
-/// `ServiceError::Db`; `ServiceError::Data` if the credit lines of a posting and the lots stored
-/// for it do not line up (a bug signal); `ERR_OVERFLOW`.
-pub fn rematch_advances(
-    tx: &Connection,
-    user_id: i64,
-    now: &str,
-    account_id: i64,
-) -> Result<Rematched, ServiceError> {
-    let advances = repo::live_advance_lines(tx, account_id)?;
-    let credit_lines = repo::seller_credit_lines(tx, account_id)?;
-    // The place of each line in the order of the account: a credit adjusts only the advances
-    // before it (PRD FR-15.8, "each later seller credit").
-    let rank_of: HashMap<i64, usize> = repo::live_lines(tx, account_id)?
+/// `ServiceError::Db`.
+pub(crate) fn load_adv(tx: &Connection, account_id: i64) -> Result<AdvInputs, ServiceError> {
+    Ok(AdvInputs {
+        advances: repo::live_advance_lines(tx, account_id)?,
+        credit_lines: repo::seller_credit_lines(tx, account_id)?,
+        lines: repo::live_lines(tx, account_id)?,
+        lots: repo::first_lots(tx, account_id)?,
+        active: repo::active_advance_rows(tx, account_id)?,
+    })
+}
+
+/// A change the preview asks about (plan 15, Code Standards B5).
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct AdvChange<'a> {
+    /// The journal entry whose lines are taken out first (an edit or a cancel).
+    pub remove_entry: Option<i64>,
+    /// A receipt from the seller that would be added: its day and amount. It is the newest line of
+    /// its day.
+    pub add_receipt: Option<(&'a str, Paisa)>,
+    /// A payment to the seller that would be added: its day and amount.
+    pub add_payment: Option<(&'a str, Paisa)>,
+}
+
+/// What the canonical advance working says. Pure.
+struct AdvPlan {
+    wanted: Vec<Allocation>,
+    /// The ids of the credit lines this working knows.
+    known: std::collections::HashSet<i64>,
+    /// What advance rows take from each line, at either end: the wanted rows and the rows kept on
+    /// credits this working does not know.
+    matched: HashMap<i64, Paisa>,
+}
+
+fn plan_adv(inputs: &AdvInputs, change: &AdvChange<'_>) -> Result<AdvPlan, ServiceError> {
+    let gone = |entry_id: i64| change.remove_entry == Some(entry_id);
+    let advances: Vec<&repo::KeyLine> = inputs
+        .advances
+        .iter()
+        .filter(|a| !gone(a.entry_id))
+        .collect();
+    let mut credit_lines: Vec<repo::SellerCredit> = inputs
+        .credit_lines
+        .iter()
+        .filter(|c| !gone(c.entry_id))
+        .cloned()
+        .collect();
+    // No live advance means no advance row can exist: nothing to work out. This also keeps the
+    // one-time seller account, which never holds an advance, out of the lot mapping below.
+    if advances.is_empty() {
+        return Ok(AdvPlan {
+            wanted: Vec::new(),
+            known: credit_lines.iter().map(|c| c.line_id).collect(),
+            matched: HashMap::new(),
+        });
+    }
+    // The order of the account, as line ids; the new receipt is the last line of its day.
+    let mut order: Vec<i64> = Vec::new();
+    let mut dates: Vec<&str> = Vec::new();
+    for line in inputs.lines.iter().filter(|l| !gone(l.entry_id)) {
+        order.push(line.line_id);
+        dates.push(line.entry_date.as_str());
+    }
+    if let Some((date, amount)) = change.add_receipt {
+        let at = dates.partition_point(|d| *d <= date);
+        order.insert(at, WHAT_IF_LINE);
+        credit_lines.push(repo::SellerCredit {
+            line_id: WHAT_IF_LINE,
+            amount_paisa: amount.as_paisa(),
+            entry_id: WHAT_IF_LINE,
+            posting_type: "receipt".to_owned(),
+        });
+    }
+    let rank_of: HashMap<i64, usize> = order
         .iter()
         .enumerate()
-        .map(|(rank, line)| (line.line_id, rank))
+        .map(|(rank, id)| (*id, rank))
         .collect();
     let rank = |line_id: i64| -> Result<usize, ServiceError> {
         rank_of.get(&line_id).copied().ok_or_else(|| {
             ServiceError::Data(format!("line {line_id} of an advance is not a live line"))
         })
     };
-    let lots = repo::first_lots(tx, account_id)?;
-    let active = repo::active_advance_rows(tx, account_id)?;
 
     // Which credit line belongs to which lot of its posting: a lot with a credit above 0 has one
     // credit line, and lots and lines are both in lot order (PRD C8).
@@ -497,7 +805,7 @@ pub fn rematch_advances(
     }
     for (entry_id, lines) in &by_entry {
         let mut with_credit: Vec<(&repo::FirstLot, Paisa)> = Vec::new();
-        for lot in lots.iter().filter(|l| l.entry_id == *entry_id) {
+        for lot in inputs.lots.iter().filter(|l| l.entry_id == *entry_id) {
             let credit = first_credit(lot)?;
             if credit > Paisa::ZERO {
                 with_credit.push((lot, credit));
@@ -523,13 +831,29 @@ pub fn rematch_advances(
     // Rows on a credit this working does not know are kept; their amounts come out of the pools.
     let known: std::collections::HashSet<i64> = credit_lines.iter().map(|c| c.line_id).collect();
     let live_advance: std::collections::HashSet<i64> = advances.iter().map(|a| a.line_id).collect();
+    // A row on a line of the entry that is taken out is not "unknown": the line is gone, and so is
+    // the row (a reversal switches it off).
+    let gone_lines: std::collections::HashSet<i64> = inputs
+        .lines
+        .iter()
+        .filter(|l| gone(l.entry_id))
+        .map(|l| l.line_id)
+        .collect();
     let mut taken: HashMap<i64, Paisa> = HashMap::new();
-    for row in active.iter().filter(|r| !known.contains(&r.credit_line_id)) {
+    let mut matched: HashMap<i64, Paisa> = HashMap::new();
+    for row in inputs
+        .active
+        .iter()
+        .filter(|r| !known.contains(&r.credit_line_id) && !gone_lines.contains(&r.credit_line_id))
+    {
         if live_advance.contains(&row.advance_line_id) {
+            let amount = paisa(row.amount_paisa)?;
             let slot = taken.entry(row.advance_line_id).or_insert(Paisa::ZERO);
-            *slot = slot
-                .checked_add(paisa(row.amount_paisa)?)
-                .map_err(money_error)?;
+            *slot = slot.checked_add(amount).map_err(money_error)?;
+            for line in [row.advance_line_id, row.credit_line_id] {
+                let slot = matched.entry(line).or_insert(Paisa::ZERO);
+                *slot = slot.checked_add(amount).map_err(money_error)?;
+            }
         }
     }
     let mut open_advances: Vec<Ranked> = Vec::new();
@@ -551,7 +875,7 @@ pub fn rematch_advances(
             rank: rank(line.line_id)?,
         });
     }
-    let credits: Vec<Ranked> = credit_lines
+    let mut credits: Vec<Ranked> = credit_lines
         .iter()
         .filter(|c| ticked.get(&c.line_id).copied().unwrap_or(false))
         .map(|c| {
@@ -564,7 +888,43 @@ pub fn rematch_advances(
             })
         })
         .collect::<Result<_, ServiceError>>()?;
+    // Oldest first: the what-if credit was added last.
+    credits.sort_by_key(|c| c.rank);
     let wanted = match_before(&open_advances, &credits).map_err(money_error)?;
+    for row in &wanted {
+        for line in [row.bill_line_id, row.credit_line_id] {
+            let slot = matched.entry(line).or_insert(Paisa::ZERO);
+            *slot = slot.checked_add(row.amount).map_err(money_error)?;
+        }
+    }
+    Ok(AdvPlan {
+        wanted,
+        known,
+        matched,
+    })
+}
+
+/// Works out the canonical advance adjustment of a seller and makes the active rows equal to it:
+/// his live advance lines (oldest first) are adjusted, oldest first, by the credit lines that
+/// can adjust (PRD FR-15.8): the seller credit of the first posting of each lot whose tick is on
+/// (PRD FR-12.23), and the credit of a receipt from him (PRD FR-15.12). A row on any other
+/// credit is kept and its amount comes out of the advance first, so a source this working does
+/// not know yet is never switched off.
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` if the credit lines of a posting and the lots stored
+/// for it do not line up (a bug signal); `ERR_OVERFLOW`.
+pub fn rematch_advances(
+    tx: &Connection,
+    user_id: i64,
+    now: &str,
+    account_id: i64,
+) -> Result<Rematched, ServiceError> {
+    let inputs = load_adv(tx, account_id)?;
+    let plan = plan_adv(&inputs, &AdvChange::default())?;
+    let active = &inputs.active;
+    let known = plan.known;
+    let wanted = plan.wanted;
 
     let mut wanted_by_pair: BTreeMap<(i64, i64), Allocation> = BTreeMap::new();
     for row in &wanted {
@@ -609,4 +969,148 @@ pub fn rematch_advances(
         done.added = done.added.saturating_add(1);
     }
     Ok(done)
+}
+
+/// One advance line after the canonical working.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AdvanceState {
+    /// The journal line.
+    pub line_id: i64,
+    /// The day, `YYYY-MM-DD`.
+    pub entry_date: String,
+    /// The entry that holds it.
+    pub entry_id: i64,
+    /// What was given.
+    pub given: Paisa,
+    /// What is open on it.
+    pub open: Paisa,
+    /// What the what-if receipt adjusts on it. 0 when there is none.
+    pub adjusted_by_new: Paisa,
+}
+
+/// A seller after the canonical advance working with a change applied (Code Standards B5): his
+/// advances and what is payable to him.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SellerView {
+    /// The payable working over his lines (PRD FR-7.59), with the change in it.
+    pub work: payables::PayableWork,
+    /// His live advance lines with what is open on each.
+    pub advances: Vec<AdvanceState>,
+    /// What the what-if receipt adjusts, in all.
+    pub receipt_adjusted: Paisa,
+}
+
+/// The seller's lines as the payable working wants them, with the advance rows taken from
+/// `matched`, for one person key (`None` for an ordinary seller).
+fn payable_lines(
+    inputs: &AdvInputs,
+    person_key: Option<&str>,
+    change: &AdvChange<'_>,
+    matched: &HashMap<i64, Paisa>,
+) -> Result<Vec<payables::Line>, ServiceError> {
+    // (day, is an opening credit, line). The days are in order while the what-if lines are put in;
+    // the opening credit is moved to the front at the end.
+    let mut lines: Vec<(String, bool, payables::Line)> = Vec::new();
+    for line in inputs.lines.iter().filter(|l| {
+        change.remove_entry != Some(l.entry_id) && l.person_key.as_deref() == person_key
+    }) {
+        lines.push((
+            line.entry_date.clone(),
+            line.is_opening_credit(),
+            payables::Line {
+                line_id: line.line_id,
+                dr: paisa(line.dr_paisa)?,
+                cr: paisa(line.cr_paisa)?,
+                is_advance: line.is_advance,
+                advance_matched: matched.get(&line.line_id).copied().unwrap_or(Paisa::ZERO),
+            },
+        ));
+    }
+    let mut add = |date: &str, dr: Paisa, cr: Paisa, adjusted: Paisa| {
+        let at = lines.partition_point(|(d, _, _)| d.as_str() <= date);
+        lines.insert(
+            at,
+            (
+                date.to_owned(),
+                false,
+                payables::Line {
+                    line_id: WHAT_IF_LINE,
+                    dr,
+                    cr,
+                    is_advance: false,
+                    advance_matched: adjusted,
+                },
+            ),
+        );
+    };
+    if let Some((date, amount)) = change.add_receipt {
+        add(
+            date,
+            Paisa::ZERO,
+            amount,
+            matched.get(&WHAT_IF_LINE).copied().unwrap_or(Paisa::ZERO),
+        );
+    }
+    if let Some((date, amount)) = change.add_payment {
+        add(date, amount, Paisa::ZERO, Paisa::ZERO);
+    }
+    // PRD FR-7.59 (v1.5, Umar 15-10-2026): a seller's opening credit is his OLDEST payable,
+    // whatever its date, so payments settle it first. Stable, so every other line keeps its place.
+    lines.sort_by_key(|(_, opening, _)| !*opening);
+    Ok(lines.into_iter().map(|(_, _, line)| line).collect())
+}
+
+/// The seller after the canonical advance working with `change` applied, in memory: the same
+/// working the save of a receipt makes (Code Standards B5). With no change it is the books as they
+/// are, when the active rows are canonical, which every writer keeps true.
+///
+/// # Errors
+/// `ServiceError::Data` if the lines and the rows do not line up (a bug signal); `ERR_OVERFLOW`.
+pub(crate) fn seller_view(
+    inputs: &AdvInputs,
+    person_key: Option<&str>,
+    change: &AdvChange<'_>,
+) -> Result<SellerView, ServiceError> {
+    let plan = plan_adv(inputs, change)?;
+    let lines = payable_lines(inputs, person_key, change, &plan.matched)?;
+    let work = payables::work(&lines).map_err(money_error)?;
+    let mut advances = Vec::new();
+    for line in inputs
+        .advances
+        .iter()
+        .filter(|a| change.remove_entry != Some(a.entry_id))
+    {
+        let given = paisa(line.dr_paisa)?;
+        let used = plan
+            .matched
+            .get(&line.line_id)
+            .copied()
+            .unwrap_or(Paisa::ZERO);
+        let mut by_new = Paisa::ZERO;
+        for row in plan
+            .wanted
+            .iter()
+            .filter(|r| r.bill_line_id == line.line_id && r.credit_line_id == WHAT_IF_LINE)
+        {
+            by_new = by_new.checked_add(row.amount).map_err(money_error)?;
+        }
+        advances.push(AdvanceState {
+            line_id: line.line_id,
+            entry_date: line.entry_date.clone(),
+            entry_id: line.entry_id,
+            given,
+            open: given.checked_sub(used).map_err(money_error)?,
+            adjusted_by_new: by_new,
+        });
+    }
+    let receipt_adjusted = plan
+        .matched
+        .get(&WHAT_IF_LINE)
+        .copied()
+        .unwrap_or(Paisa::ZERO);
+    Ok(SellerView {
+        work,
+        advances,
+        receipt_adjusted,
+    })
 }

@@ -74,7 +74,7 @@ the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "
 | File | What it holds |
 |---|---|
 | `pages/BikriBookPage.tsx` | The screen: four states, layout at the three window sizes, which party the card shows |
-| `components/` | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `PukhtaFields`, `SummaryPanel`, `SplitPanel`, `CashNote`, `ProblemList` |
+| `components/` | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `PukhtaFields`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
 | `columns.ts` | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate) |
 | `draft-store.ts`, `draft.ts`, `union-store.ts` | The stores, the lines of all lots as one list for the whole-sale view, and the draft built from them as the backend takes it |
 | `preview-view.ts`, `grid-views.ts`, `problems.ts` | What the answer shows in each cell, and where each problem goes |

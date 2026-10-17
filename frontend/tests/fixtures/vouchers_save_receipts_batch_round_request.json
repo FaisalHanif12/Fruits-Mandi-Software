@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "account_id": 20,
+      "amount": "1,000",
+      "bank_account_id": null,
+      "cheque_date": "",
+      "cheque_no": "",
+      "collector_staff_id": null,
+      "date": "10-10-2026",
+      "mode": "cash",
+      "narration": "",
+      "person_key": null
+    },
+    {
+      "account_id": 19,
+      "amount": "",
+      "bank_account_id": null,
+      "cheque_date": "",
+      "cheque_no": "",
+      "collector_staff_id": null,
+      "date": "10-10-2026",
+      "mode": "cash",
+      "narration": "",
+      "person_key": null
+    },
+    {
+      "account_id": 17,
+      "amount": "1,000",
+      "bank_account_id": null,
+      "cheque_date": "",
+      "cheque_no": "",
+      "collector_staff_id": null,
+      "date": "10-10-2026",
+      "mode": "cash",
+      "narration": "",
+      "person_key": null
+    }
+  ]
+}

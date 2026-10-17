@@ -21,12 +21,17 @@ unmaintained = "all"
 # One targeted exception, and nothing else is relaxed (`yanked` stays "deny").
 # zip 4.6.1: yanked on crates.io, and so is every other 4.x release, so no lock update can
 # fix it. It is reached only through tauri-plugin-updater (2.13.2 and the newer 2.14.0 both
-# need zip 4), on Windows, to unpack legacy `.zip` update bundles. No known vulnerability.
+# need zip 4), on Windows, to unpack legacy `.zip` update bundles. It also has three advisories
+# on `extract()` (RUSTSEC-2026-0367, -0368, -0369, found 17-10-2026). The updater unpacks an
+# update only after its signature check, so an attacker-made archive is not reached.
 # Before go-live: move to an updater release that uses a newer zip (the updater 3.x line is
 # still alpha on 16-10-2026), or build the updater without its `zip` feature, since our
 # release pipeline publishes the installer itself (`createUpdaterArtifacts: true`).
 ignore = [
-    { crate = "zip@4.6.1", reason = "yanked; only through tauri-plugin-updater; no known vulnerability; upgrade the updater before go-live" },
+    { crate = "zip@4.6.1", reason = "yanked; only through tauri-plugin-updater; upgrade the updater before go-live" },
+    { id = "RUSTSEC-2026-0367", reason = "zip 4.6.1 comes only through tauri-plugin-updater, which unpacks an update only after its signature check; remove before go-live by moving the updater off zip 4" },
+    { id = "RUSTSEC-2026-0368", reason = "zip 4.6.1 comes only through tauri-plugin-updater, which unpacks an update only after its signature check; remove before go-live by moving the updater off zip 4" },
+    { id = "RUSTSEC-2026-0369", reason = "zip 4.6.1 comes only through tauri-plugin-updater, which unpacks an update only after its signature check; remove before go-live by moving the updater off zip 4" },
 ]
 
 [licenses]

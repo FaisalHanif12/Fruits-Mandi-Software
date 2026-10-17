@@ -10,11 +10,16 @@ import { emit } from '@tauri-apps/api/event';
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parsePrintParams, jobOf } from '../../src/features/bikri/print/params';
+import {
+  isVoucherAddress,
+  parseVoucherPrintParams,
+} from '../../src/features/vouchers/print/params';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { leaveAppWindow, renderApp, resetClientState } from '../helpers/app';
+import type { Language } from '../../src/bindings/Language';
 import type { UiError } from '../../src/bindings/UiError';
 import { failWith } from '../helpers/print';
-import { printDataFor } from '../helpers/print-data';
+import { printDataFor, voucherPrintData } from '../helpers/print-data';
 import { refusal } from '../helpers/ui-error';
 import { message, visible } from '../helpers/render';
 
@@ -218,5 +223,84 @@ describe('the address of the print window', () => {
   it('keeps the job text exactly, even when it looks like a number', () => {
     expect(jobOf('?job=1e3&bikri=1')).toBe('1e3');
     expect(jobOf('?job=007')).toBe('007');
+  });
+});
+
+const GOOD_VOUCHER = 'voucher=501&doc=receipt_slip&language=en&job=job-1';
+
+describe('the address of the hidden print window for a voucher', () => {
+  it('reads a good address', () => {
+    expect(parseVoucherPrintParams('?voucher=501&doc=receipt_slip&language=ur&job=a_b-1')).toEqual({
+      job: 'a_b-1',
+      input: { voucher_id: 501, language: 'ur' },
+    });
+    expect(isVoucherAddress('?voucher=501&doc=receipt_slip&language=ur&job=a')).toBe(true);
+    expect(isVoucherAddress('?bikri=41&doc=seller_bill&language=ur&job=a')).toBe(false);
+  });
+
+  it.each([
+    ['no voucher', 'doc=receipt_slip&language=en&job=j'],
+    ['a zero voucher', 'voucher=0&doc=receipt_slip&language=en&job=j'],
+    ['a decimal voucher', 'voucher=4.5&doc=receipt_slip&language=en&job=j'],
+    ['another document', 'voucher=1&doc=seller_bill&language=en&job=j'],
+    ['an unknown language', 'voucher=1&doc=receipt_slip&language=fr&job=j'],
+    ['a job with a slash', 'voucher=1&doc=receipt_slip&language=en&job=a/b'],
+    ['no job', 'voucher=1&doc=receipt_slip&language=en'],
+  ])('refuses %s', (_name, query) => {
+    expect(parseVoucherPrintParams(`?${query}`)).toBeNull();
+  });
+});
+
+describe('the print route for a voucher', () => {
+  it('reads the slip with the one command it may call, draws it in the print language and says print-ready once', async () => {
+    bridge((command, args) => {
+      if (command !== 'reports_voucher_print_data') {
+        return new Refused(refusal([{ code: 'ERR_NOT_IMPLEMENTED' }]));
+      }
+      const { input } = args as { input: { language: Language } };
+      return voucherPrintData('receipt', { language: input.language });
+    });
+    await renderApp(`/print?${GOOD_VOUCHER}`);
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain('Ten thousand rupees only');
+    });
+    await waitFor(() => {
+      expect(events()).toHaveLength(1);
+    });
+    expect(calls).toEqual([
+      {
+        command: 'reports_voucher_print_data',
+        args: { input: { voucher_id: 501, language: 'en' } },
+      },
+    ]);
+    expect(events()[0]?.name).toBe('print-ready-job-1');
+    expect(document.documentElement.lang).toBe('en');
+    expect(useLanguageStore.getState().language).toBe('ur');
+    expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
+  it('says print-error with the codes when the data cannot be read', async () => {
+    bridge(() => new Refused(refusal([{ code: 'ERR_NOT_FOUND' }])));
+    await renderApp(`/print?${GOOD_VOUCHER}`);
+    await waitFor(() => {
+      expect(events()).toHaveLength(1);
+    });
+    expect(events()[0]).toEqual({
+      name: 'print-error-job-1',
+      payload: { codes: ['ERR_NOT_FOUND'] },
+    });
+  });
+
+  it('says print-error and calls nothing for an address that is not a voucher address', async () => {
+    bridge(() => voucherPrintData('receipt'));
+    await renderApp('/print?voucher=abc&doc=receipt_slip&language=en&job=job-9');
+    await waitFor(() => {
+      expect(events()).toHaveLength(1);
+    });
+    expect(events()[0]).toEqual({
+      name: 'print-error-job-9',
+      payload: { codes: ['ERR_INTERNAL'] },
+    });
+    expect(calls).toHaveLength(0);
   });
 });

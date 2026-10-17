@@ -5,8 +5,11 @@ use mandi_services::core::accounts::{PartyCard, PartyCardInput};
 use mandi_services::core::bikri::{
     LastRateInput, RateHint, SellerMemory, SellerMemoryInput, TruckMemory, TruckMemoryInput,
 };
-use mandi_services::core::vouchers::{AdvancesInfo, AssistAdvancesInput};
-use mandi_services::{assist, auth};
+use mandi_services::core::vouchers::{
+    AdvancesInfo, AssistAdvancesInput, CollectionList, CollectionListInput, OpenBills,
+    OpenBillsInput, OpenPayables, OpenPayablesInput,
+};
+use mandi_services::{assist, auth, vouchers};
 
 use super::run;
 use crate::error::UiError;
@@ -80,6 +83,53 @@ pub async fn assist_last_rate<R: tauri::Runtime>(
     run(app, "assist_last_rate", move |ctx| {
         auth::require(ctx)?;
         assist::last_rate(ctx, &input)
+    })
+    .await
+}
+
+/// A buyer's open bills, oldest first, with their age, the total, the credit that no bill has
+/// used and his balance (PRD FR-7.58). For the پختہ کھاتہ buyer account the person is named by
+/// `person_key`. The "پورا بقایا" and "پرانا بل" buttons fill the amount from this answer. Read
+/// only. Errors: `ERR_NOT_FOUND` (`account_id`), `ERR_NOT_A_BUYER`, `ERR_PERSON_REQUIRED`.
+#[tauri::command]
+pub async fn assist_open_bills<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: OpenBillsInput,
+) -> Result<OpenBills, UiError> {
+    run(app, "assist_open_bills", move |ctx| {
+        auth::require(ctx)?;
+        vouchers::open_bills(ctx, &input)
+    })
+    .await
+}
+
+/// What is payable to a seller (PRD FR-7.59): his credit postings (بکری, opening credit, جنرل
+/// credits) with the advance already adjusted against each, what was paid, and what is still
+/// open, oldest first, worked out when shown. Also his open advances, what he owes beyond them
+/// and his balance. Read only. Errors: `ERR_NOT_FOUND`, `ERR_NOT_A_SELLER` (`seller_id`),
+/// `ERR_PERSON_REQUIRED`.
+#[tauri::command]
+pub async fn assist_open_payables<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: OpenPayablesInput,
+) -> Result<OpenPayables, UiError> {
+    run(app, "assist_open_payables", move |ctx| {
+        auth::require(ctx)?;
+        vouchers::open_payables(ctx, &input)
+    })
+    .await
+}
+
+/// The اگراہی فہرست (PRD FR-15.6): the buyers planned for a day by their collection weekday,
+/// with their dues, grouped by collector and city. Read only. Errors: the date codes on `date`.
+#[tauri::command]
+pub async fn assist_collection_list<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CollectionListInput,
+) -> Result<CollectionList, UiError> {
+    run(app, "assist_collection_list", move |ctx| {
+        auth::require(ctx)?;
+        vouchers::collection_list(ctx, &input)
     })
     .await
 }

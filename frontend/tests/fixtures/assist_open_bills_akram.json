@@ -1,0 +1,28 @@
+{
+  "account": {
+    "id": 19,
+    "code": "03040001",
+    "name_ur": "اکرم ٹول ٹیکس",
+    "name_en": "Akram Toll Tax"
+  },
+  "bills": [
+    {
+      "line_id": 7,
+      "entry_date": "2026-10-10",
+      "source": "bikri",
+      "number": 1,
+      "amount_paisa": 1288000,
+      "open_paisa": 1288000,
+      "days": 0
+    }
+  ],
+  "total_count": 1,
+  "truncated": false,
+  "open_paisa": 1288000,
+  "unmatched_credit_paisa": 0,
+  "balance": {
+    "amount_paisa": 1288000,
+    "side": "dr"
+  },
+  "oldest_days": 0
+}

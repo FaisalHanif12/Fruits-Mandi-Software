@@ -102,7 +102,13 @@ describe.each(LANGUAGES)('the four states (%s)', (language) => {
     );
     await user.keyboard('LES-1234');
     expect(
-      await screen.findByText(textMatching(message(language, 'bikri-preview-failed'))),
+      // The preview waits 50 ms after the last key and the full suite loads the machine, so this
+      // waits longer than the default for the real condition: the words on screen.
+      await screen.findByText(
+        textMatching(message(language, 'bikri-preview-failed')),
+        {},
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
     expect(pageText()).toContain(message(language, 'err-not-implemented'));
     expect(pageText()).not.toContain('ERR_');
@@ -285,7 +291,7 @@ describe.each(LANGUAGES)('the cash note (%s)', (language) => {
     }));
     await typeHeaderAndLot(user, language);
     await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'bikri-cash-note'));
+      expect(pageText()).toContain(message(language, 'common-cash-confirm-title'));
     });
     expect(pageText()).toMatch(/5,000/);
   });
@@ -294,7 +300,7 @@ describe.each(LANGUAGES)('the cash note (%s)', (language) => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await screen.findByRole('heading', { name: named(message(language, 'bikri-summary-title')) });
-    expect(pageText()).not.toContain(message(language, 'bikri-cash-note'));
+    expect(pageText()).not.toContain(message(language, 'common-cash-confirm-title'));
   });
 });
 

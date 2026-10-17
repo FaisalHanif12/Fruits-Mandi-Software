@@ -68,6 +68,9 @@ common-percent-sign = %
 common-cash-confirm-title = { -rokar } صفر سے کم ہو جائے گی
 # review: pending
 common-cash-confirm-text = اس اندراج کے بعد { -rokar } <num>{ $amount }</num> ہو جائے گی۔ کیا یہ اندراج درست ہے؟
+# The amber note under an entry that would take cash below zero (PRD FR-6.7).
+# review: pending
+common-cash-after = اس اندراج کے بعد { -rokar } <num>{ $amount }</num> ہو جائے گی۔
 # review: pending
 common-cash-confirm-yes = ہاں، محفوظ کریں
 # review: pending

@@ -292,7 +292,7 @@ fn global_search_finds_a_bikri_by_number_and_by_truck() {
         hits.iter()
             .filter_map(|h| match h {
                 GlobalHit::Bikri { hit } => Some((hit.number, hit.matched)),
-                GlobalHit::Account { .. } => None,
+                GlobalHit::Account { .. } | GlobalHit::Voucher { .. } => None,
             })
             .collect()
     };

@@ -11,20 +11,19 @@ import {
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
+import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
 import { moveDevPathToHash } from './dev/hash-route';
 
 const rootRoute = createRootRoute({ component: Outlet });
 
-// The hidden print window (plan 14): `#/print?bikri=...&doc=...&language=...&job=...`. It sits
-// outside the app shell on purpose: no sign-in screen, no menus, only the document. The backend
-// opens it, waits for its `print-ready-<job>` event and prints it.
+// The hidden print window (plans 14 and 15): `#/print?bikri=...&doc=...&language=...&job=...` for a
+// بکری, `#/print?voucher=...&doc=receipt_slip&language=...&job=...` for a voucher. It sits outside
+// the app shell on purpose: no sign-in screen, no menus, only the document. The backend opens it,
+// waits for its `print-ready-<job>` event and prints it.
 const printRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/print',
-  component: lazyRouteComponent(
-    () => import('../features/bikri/print/BikriPrintPage'),
-    'BikriPrintPage',
-  ),
+  component: lazyRouteComponent(() => import('./PrintRoute'), 'PrintRoute'),
 });
 
 // Everything a signed-in user reaches sits under one layout route: the start-up data check, the
@@ -145,12 +144,39 @@ const pukhtaRoute = createRoute({
   ),
 });
 
-const advanceRoute = createRoute({
+// وصولی, ادائیگی and پیشگی are one voucher screen with a type list at the top (PRD FR-7.67,
+// FR-15.10). The three side menu items and Alt+V, Alt+A and Alt+P keep their own addresses, which
+// send the user to that one screen with the type chosen; the screen itself follows `?type=`.
+// `?id=12` opens a saved voucher (edit while its day is open, else read only).
+const voucherRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: '/bikri/advance',
+  path: '/bikri/voucher',
+  validateSearch: parseVoucherSearch,
   component: lazyRouteComponent(
-    () => import('../features/vouchers/pages/AdvancePage'),
-    'AdvancePage',
+    () => import('../features/vouchers/pages/VoucherPage'),
+    'VoucherPage',
+  ),
+});
+
+/** An address of a menu item that opens the voucher screen on a type. */
+function voucherTypeRoute<Path extends string>(path: Path, type: ScreenType) {
+  return createRoute({
+    getParentRoute: () => appRoute,
+    path,
+    beforeLoad: () => redirect({ to: '/bikri/voucher', search: { type }, replace: true }),
+  });
+}
+const receiptRoute = voucherTypeRoute('/bikri/receipt', 'receipt');
+const paymentRoute = voucherTypeRoute('/bikri/payment', 'payment');
+const advanceRoute = voucherTypeRoute('/bikri/advance', 'advance');
+
+// اگراہی فہرست: today's planned collections and the collection round (PRD FR-15.6, FR-7.61).
+const collectionRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/collection',
+  component: lazyRouteComponent(
+    () => import('../features/vouchers/pages/CollectionPage'),
+    'CollectionPage',
   ),
 });
 
@@ -278,9 +304,11 @@ const appRoutes = [
   masterEditRoute,
   bikriRoute,
   bikriBookRoute,
-  comingSoonRoute('/bikri/receipt'),
-  comingSoonRoute('/bikri/payment'),
+  voucherRoute,
+  receiptRoute,
+  paymentRoute,
   advanceRoute,
+  collectionRoute,
   dayRoute,
   pukhtaRoute,
   todayRoute,
@@ -316,6 +344,11 @@ const devRoutes = import.meta.env.DEV
         getParentRoute: () => rootRoute,
         path: '/dev/bikri',
         component: lazyRouteComponent(() => import('./dev/BikriPage'), 'BikriPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/vouchers',
+        component: lazyRouteComponent(() => import('./dev/VouchersPage'), 'VouchersPage'),
       }),
       createRoute({
         getParentRoute: () => rootRoute,

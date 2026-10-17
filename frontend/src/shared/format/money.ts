@@ -38,6 +38,15 @@ export function comparePaisa(a: Paisa, b: Paisa): number {
   return 0;
 }
 
+/**
+ * True when the amount is more than zero. A question about an amount the backend sent (does this
+ * receipt settle anything of this bill?), never arithmetic: the screen marks a row in words and
+ * works nothing out.
+ */
+export function isPositivePaisa(amount: Paisa): boolean {
+  return paisaNumber(amount) > 0;
+}
+
 /** Number grouping on screen (PRD Section 21): 1,316,040 or 13,16,040. */
 export type Grouping = 'international' | 'lakh';
 

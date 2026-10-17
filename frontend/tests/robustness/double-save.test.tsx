@@ -62,8 +62,8 @@ describe('the advance screen when save is pressed again and again', () => {
   async function fillOneVoucher() {
     const store = fakeAdvances();
     // The first call takes 400 ms; every call is counted by the mock.
-    const real = vi.mocked(vouchersApi.vouchersSaveAdvance).getMockImplementation();
-    vi.mocked(vouchersApi.vouchersSaveAdvance).mockImplementation(async (draft) => {
+    const real = vi.mocked(vouchersApi.vouchersSave).getMockImplementation();
+    vi.mocked(vouchersApi.vouchersSave).mockImplementation(async (draft) => {
       await wait(400);
       if (real === undefined) throw new Error('no fake save');
       return real(draft);
@@ -95,7 +95,7 @@ describe('the advance screen when save is pressed again and again', () => {
     press('F10');
     press('F10');
     await wait(900);
-    expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+    expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     expect(store.saved).toHaveLength(1);
   });
 
@@ -109,7 +109,7 @@ describe('the advance screen when save is pressed again and again', () => {
     await user.click(button);
     press('F10');
     await wait(900);
-    expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+    expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     expect(store.saved).toHaveLength(1);
   });
 
@@ -124,7 +124,7 @@ describe('the advance screen when save is pressed again and again', () => {
       }
     });
     await wait(900);
-    expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+    expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     expect(store.saved).toHaveLength(1);
   });
 });

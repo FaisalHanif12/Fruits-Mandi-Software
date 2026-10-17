@@ -1,6 +1,7 @@
 // Which route each menu item opens, and which item a route belongs to (PRD FR-5.2, FR-5.3).
 // Menu items whose module is not built yet open the "coming soon" page.
 
+import { asScreenType } from '../features/vouchers/screen-type';
 import type { MainNavId } from './layout/MainNav';
 import type { ModuleMenuId } from './layout/ModuleMenu';
 
@@ -35,8 +36,14 @@ export function mainNavOf(pathname: string): MainNavId {
   return found ?? 'dashboard';
 }
 
-/** The side menu item of the بکری area a path belongs to. */
-export function moduleMenuOf(pathname: string): ModuleMenuId {
+/**
+ * The side menu item of the بکری area a path belongs to. The voucher screen is one address for three
+ * items; its `type` in the address says which one is current (PRD FR-7.67, FR-15.10). The اگراہی فہرست
+ * belongs to the receipt item.
+ */
+export function moduleMenuOf(pathname: string, search: Record<string, unknown> = {}): ModuleMenuId {
+  if (pathname === '/bikri/voucher') return asScreenType(search['type']) ?? 'receipt';
+  if (pathname === '/bikri/collection') return 'receipt';
   const found = (Object.keys(MODULE_ROUTES) as ModuleMenuId[]).find(
     (id) => id !== 'bikri-book' && MODULE_ROUTES[id] === pathname,
   );

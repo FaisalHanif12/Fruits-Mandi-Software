@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_RETURN_EXCEEDS_OPEN",
+      "field": "amount",
+      "values": {
+        "open_paisa": 0
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

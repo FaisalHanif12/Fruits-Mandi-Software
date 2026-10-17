@@ -77,3 +77,14 @@ pukhta-state-due = Due { $amount }
 
 # review: pending
 pukhta-state-cancelled = Cancelled
+
+## Making a one-time person a regular account (plan 15, PRD FR-13.8).
+
+# review: pending
+pukhta-make-regular-title = Make a regular account
+
+# review: pending
+pukhta-make-regular-help = The name and phone of this person are filled in. When you save, his open balance moves to the new account.
+
+# review: pending
+pukhta-make-regular-done = The account is made and the balance moved to it

@@ -36,6 +36,7 @@ import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
   CashConfirmDialog,
+  CashNote,
   EmptyState,
   ErrorNotice,
   ErrorState,
@@ -56,7 +57,6 @@ import { useBikriDetail } from '../hooks/useBikriReads';
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { useSaveFlow } from '../hooks/useSaveFlow';
 import { afterSave } from '../after-save';
-import { CashNote } from '../components/CashNote';
 import { HeaderCard } from '../components/HeaderCard';
 import { LotMore } from '../components/LotMore';
 import { LotsSection } from '../components/LotsSection';

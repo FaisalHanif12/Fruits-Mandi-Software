@@ -94,7 +94,7 @@ export function NumbersStrip({ lotNumber, lot, whole, cash }: NumbersStripProps)
         <p className="flex items-center gap-2 type-body text-warn">
           <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
           <Localized
-            id="bikri-cash-after"
+            id="common-cash-after"
             vars={{ amount: formatPaisa(cash.cash_after_paisa, { grouping }) }}
             elems={{ num: <Num /> }}
           >

@@ -1,25 +1,20 @@
-// The advance screen (plan 10, PRD 15.1, 15.4, FR-7.60, FR-15.1), in the Urdu and in the English
-// app, by keyboard, against a fake backend: the form with the party card and the seller's advances,
-// the balances from the backend, a lone voucher saved with F10, several vouchers in a list saved
-// together, and a refused one that stays in the list. The screen works out no money.
+// The voucher screen (plans 10 and 15, PRD 15.1 to 15.4, FR-7.58 to FR-7.61, FR-7.67, FR-7.68,
+// FR-6.7), in the Urdu and in the English app, by keyboard, against a fake backend: ONE screen with
+// a type list for وصولی, ادائیگی and پیشگی, the helper panels, the notes under the form, the save
+// with F10, the cash box, and the language switch in the middle of an entry. The screen works out
+// no money: every figure shown is the fake backend's.
 
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vouchersApi from '../../src/features/vouchers/api';
+import * as pukhtaApi from '../../src/features/pukhta_khata/api';
+import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
+import { fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
 import {
-  ZERO,
-  account,
-  balance,
-  fakeAccountSearch,
-  fakeAccounts,
-  money,
-} from '../helpers/accounts';
-import {
-  fail,
   healthyBackend,
   leaveAppWindow,
   press,
@@ -30,21 +25,30 @@ import {
 } from '../helpers/app';
 import { fakeMasters, record } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
-import { at } from '../helpers/sample';
-import { fakeAdvances } from '../helpers/vouchers';
+import {
+  AKRAM,
+  ARSHAD,
+  KARIM,
+  PUKHTA_BUYER,
+  RAHIM,
+  TRANSPORT,
+  fakeVouchers,
+  type FakeVouchers,
+} from '../helpers/vouchers';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
+vi.mock('../../src/features/pukhta_khata/api');
+vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', { balance: balance(4316, 'cr') });
-const KARIM = account(32, 'seller', '030110002', 'کریم', 'Karim');
 const BANK = record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah');
+const STAFF = record('staff', 81, '0001', 'اسلم', 'Aslam');
 
 const named = (text: string) => (name: string) => visible(name) === text;
 
@@ -57,14 +61,17 @@ const dropdown = (language: Language, id: string) =>
 const saveButton = (language: Language) =>
   screen.getByRole('button', { name: new RegExp(message(language, 'layout-save-save')) });
 
-/** Types in the seller picker and takes the first match. */
-async function pickSeller(
+const pageText = () => visible(document.body.textContent);
+
+/** Types in an account picker and takes the only match. */
+async function pick(
   user: ReturnType<typeof userEvent.setup>,
   language: Language,
+  fieldId: string,
   typed: string,
   shown: string,
 ) {
-  await user.click(await dropdown(language, 'vouchers-field-seller'));
+  await user.click(await dropdown(language, fieldId));
   await user.keyboard(typed);
   // The recent list is open before the search answers: wait until the matches are the only rows.
   await waitFor(() => {
@@ -75,34 +82,45 @@ async function pickSeller(
   await user.keyboard('{Enter}');
 }
 
+/** The text of a panel, by the heading of its card. */
+async function panelText(language: Language, titleId: string): Promise<string> {
+  const title = await screen.findByRole('heading', { name: named(message(language, titleId)) });
+  return visible(title.closest('section')?.textContent);
+}
+
+let store: FakeVouchers;
+
 beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
-  fakeAccounts([RAHIM, KARIM]);
-  fakeAccountSearch([RAHIM, KARIM]);
-  fakeMasters({ bank_account: [BANK] });
+  vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
+  const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM, TRANSPORT];
+  fakeAccounts(rows);
+  fakeAccountSearch(rows);
+  fakeMasters({ bank_account: [BANK], staff: [STAFF] });
+  vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
 });
 
 afterEach(() => {
   leaveAppWindow();
 });
 
-describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
+describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
     signedIn(sessionUser({ language }));
+    store = fakeVouchers();
   });
 
-  async function open() {
-    const store = fakeAdvances();
-    const app = await renderApp('/bikri/advance');
+  async function open(type: 'receipt' | 'payment' | 'advance' = 'receipt') {
+    const app = await renderApp(`/bikri/voucher?type=${type}`);
     await screen.findByRole('heading', {
       level: 1,
-      name: message(language, 'vouchers-advance-title'),
+      name: message(language, `vouchers-${type}-title`),
     });
-    return { ...app, store, user: userEvent.setup() };
+    return { ...app, user: userEvent.setup() };
   }
 
   it('starts with today as the date, cash as the mode and nothing to save', async () => {
@@ -117,87 +135,122 @@ describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
     expect(screen.queryByLabelText(named(message(language, 'vouchers-field-bank')))).toBeNull();
   });
 
-  it('a seller shows his party card and his advances: open, last, and each with what is adjusted', async () => {
-    const { user } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
-    const title = await screen.findByRole('heading', {
-      name: named(message(language, 'vouchers-advances-title')),
-    });
-    const panel = visible(title.closest('section')?.textContent);
-    expect(panel).toContain(message(language, 'vouchers-advances-open'));
-    expect(panel).toContain('15,000');
-    expect(panel).toContain(message(language, 'vouchers-advances-last'));
-    expect(panel).toContain('01-09-2026');
-    expect(panel).toContain(message(language, 'vouchers-number-advance', { number: '1' }));
-    // The party card of the seller is there too.
-    expect(await screen.findByText(message(language, 'assist-card-balance'))).toBeInTheDocument();
-  });
-
-  it('a seller with no advance yet says so', async () => {
-    const { user } = await open();
-    await pickSeller(user, language, 'karim', '030110002');
-    await screen.findByRole('heading', {
-      name: named(message(language, 'vouchers-advances-title')),
+  it('the type list has the three types, and the old addresses and menu items lead to it', async () => {
+    const { router } = await open('payment');
+    const group = screen.getByRole('group', { name: message(language, 'vouchers-field-type') });
+    const buttons = within(group).getAllByRole('button');
+    expect(buttons.map((button) => visible(button.textContent))).toEqual([
+      message(language, 'vouchers-type-receipt'),
+      message(language, 'vouchers-type-payment'),
+      message(language, 'vouchers-type-advance'),
+    ]);
+    expect(buttons[1]).toHaveAttribute('aria-pressed', 'true');
+    act(() => {
+      void router.navigate({ to: '/bikri/advance' });
     });
     expect(
-      await screen.findByText(named(message(language, 'vouchers-advances-none'))),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: message(language, 'vouchers-advance-title'),
+      }),
     ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/bikri/voucher');
+    expect(router.state.location.search).toMatchObject({ type: 'advance' });
   });
 
-  it("the amount goes to the preview as typed, and the balances shown are the backend's", async () => {
-    const { user } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
+  it('a receipt from a buyer shows his party card and open bills, and the backend marks what the amount settles', async () => {
+    const { user } = await open('receipt');
+    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    const bills = await panelText(language, 'vouchers-bills-title');
+    expect(bills).toContain('12,880');
+    expect(bills).toContain(message(language, 'vouchers-source-bikri', { number: 1 }));
+    expect(await screen.findByText(message(language, 'assist-card-balance'))).toBeInTheDocument();
     await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('5000');
+    await user.keyboard('10000');
     await waitFor(() => {
-      expect(vouchersApi.vouchersPreviewAdvances).toHaveBeenLastCalledWith([
-        expect.objectContaining({ amount: '5000', mode: 'cash', date: '10-10-2026' }),
-      ]);
+      expect(vouchersApi.vouchersPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          type: 'receipt',
+          account_id: 21,
+          amount: '10000',
+          mode: 'cash',
+          date: '10-10-2026',
+        }),
+        null,
+      );
     });
-    const current = await screen.findByText(named(message(language, 'vouchers-current-balance')));
-    const newer = screen.getByText(named(message(language, 'vouchers-new-balance')));
+    // The bill the amount settles is marked in words and in the backend's figure.
+    await waitFor(async () => {
+      const text = await panelText(language, 'vouchers-bills-title');
+      expect(text).toContain(message(language, 'vouchers-col-settles'));
+      expect(text).toContain('10,000');
+      expect(text).toContain(message(language, 'vouchers-effect-part'));
+    });
+    // The balances under the form are the backend's.
     await waitFor(() => {
-      expect(visible(newer.closest('span')?.textContent)).toContain('5,000');
+      expect(pageText()).toContain(message(language, 'vouchers-new-balance'));
     });
-    expect(visible(newer.parentElement?.textContent)).toContain(
-      message(language, 'common-side-dr'),
+    expect(pageText()).toContain('2,880');
+  });
+
+  it('"full balance" and "oldest bill" put the backend\'s amount into the field', async () => {
+    const { user } = await open('receipt');
+    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    const full = await screen.findByRole('button', {
+      name: (name) => visible(name).startsWith(message(language, 'vouchers-fill-full')),
+    });
+    await user.click(full);
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('12,880');
+    await user.clear(await labelled(language, 'vouchers-field-amount'));
+    await user.click(
+      screen.getByRole('button', {
+        name: (name) => visible(name).startsWith(message(language, 'vouchers-fill-oldest')),
+      }),
     );
-    expect(visible(current.closest('span')?.textContent)).not.toContain('5,000');
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('12,880');
   });
 
-  it('asks nothing of the preview while there is no seller and amount', async () => {
-    const { user } = await open();
+  it('more than all the bills: the extra stays as credit and the screen says so', async () => {
+    const { user } = await open('receipt');
+    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
     await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('5000');
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    expect(vouchersApi.vouchersPreviewAdvances).not.toHaveBeenCalled();
+    await user.keyboard('15000');
+    await waitFor(() => {
+      expect(pageText()).toContain(message(language, 'vouchers-extra-credit-note'));
+    });
+    expect(pageText()).toContain('2,120');
   });
 
-  it('a lone voucher is saved from the form with F10: text sent, message, form ready for the next, voucher listed', async () => {
-    const { user, store } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
+  it('a receipt is saved with F10: the text sent, a message, the form ready for the next, the voucher listed', async () => {
+    const { user } = await open('receipt');
+    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
     await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('5000');
+    await user.keyboard('10000');
     await user.click(await labelled(language, 'vouchers-field-narration'));
     await user.keyboard('x');
     press('F10');
     await waitFor(() => {
-      expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     });
-    const sent = vi.mocked(vouchersApi.vouchersSaveAdvance).mock.calls[0]?.[0];
-    expect(sent?.amount).toBe('5000');
-    expect(sent?.seller.id).toBe(31);
-    expect(sent?.mode).toBe('cash');
-    expect(sent?.date).toBe('10-10-2026');
-    expect(sent?.narration).toBe('x');
-    const toast = message(language, 'vouchers-saved-advance', {
-      number: message(language, 'vouchers-number-advance', { number: '1' }),
+    const sent = vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0];
+    expect(sent?.type).toBe('receipt');
+    expect(sent?.input).toMatchObject({
+      account_id: 21,
+      person_key: null,
+      amount: '10000',
+      mode: 'cash',
+      date: '10-10-2026',
+      narration: 'x',
+      collector_staff_id: null,
+    });
+    const toast = message(language, 'vouchers-saved', {
+      kind: 'receipt',
+      number: message(language, 'vouchers-number-receipt', { number: 1 }),
     });
     expect(
       (await screen.findAllByText((content) => visible(content) === toast)).length,
     ).toBeGreaterThan(0);
-    expect(store.saved).toEqual([{ seller: 31, amount: '5000' }]);
-    // The form is ready for the next: seller and amount empty, the date kept.
+    // The form is ready for the next: account and amount empty, the date kept.
     await waitFor(() => {
       expect(
         screen.getByLabelText<HTMLInputElement>(named(message(language, 'vouchers-field-amount')))
@@ -205,211 +258,198 @@ describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
       ).toBe('');
     });
     expect((await labelled(language, 'vouchers-field-date')).value).toBe('10-10-2026');
-    // The saved voucher shows in the list with its number and the new balance.
-    const list = await screen.findByRole('heading', {
-      name: named(message(language, 'vouchers-list-title')),
-    });
-    const words = visible(list.closest('section')?.textContent);
-    expect(words).toContain(message(language, 'vouchers-state-saved'));
-    expect(words).toContain(message(language, 'vouchers-number-advance', { number: '1' }));
-    expect(words).toContain('5,000');
     expect(saveButton(language)).toBeDisabled();
+    // The saved voucher is in the list under the form, with its number and amount.
+    const list = await screen.findByRole('group', {
+      name: message(language, 'vouchers-list-label'),
+    });
+    await waitFor(() => {
+      const text = visible(list.textContent);
+      expect(text).toContain(message(language, 'vouchers-number-receipt', { number: 1 }));
+      expect(text).toContain('10,000');
+    });
   });
 
-  it('a refused field shows at the field, and nothing typed is lost', async () => {
-    const { user } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
-    const amount = await labelled(language, 'vouchers-field-amount');
-    await user.click(amount);
-    await user.keyboard('50.5');
-    vi.mocked(vouchersApi.vouchersSaveAdvance).mockRejectedValueOnce(
-      fail({ code: 'ERR_DECIMALS_NOT_ALLOWED', field: 'amount' }),
-    );
+  it('a payment to a seller shows what is payable with the advance already adjusted', async () => {
+    const { user } = await open('payment');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
+    const text = await panelText(language, 'vouchers-payables-title');
+    expect(text).toContain('24,316');
+    expect(text).toContain('15,000');
+    expect(text).toContain('4,316');
+    const full = await screen.findByRole('button', {
+      name: (name) => visible(name).startsWith(message(language, 'vouchers-fill-full')),
+    });
+    await user.click(full);
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('4,316');
     press('F10');
     await waitFor(() => {
-      expect(amount).toHaveAttribute('aria-invalid', 'true');
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     });
-    expect(visible(document.body.textContent)).toContain(
-      message(language, 'err-decimals-not-allowed'),
-    );
-    expect(amount.value).toBe('50.5');
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+      type: 'payment',
+      input: { account_id: 31, amount: '4,316', reason: '', confirm_cash_below_zero: false },
+    });
   });
 
-  it('an advance given with the opening balance is listed as that, not as a voucher number', async () => {
-    const { user } = await open();
-    vi.mocked(vouchersApi.assistAdvances).mockResolvedValue({
-      open: [
-        {
-          source: 'opening',
-          voucher_number: null,
-          entry_date: '2026-08-31',
-          given_paisa: money(15000),
-          adjusted_paisa: money(0),
-          open_paisa: money(15000),
-        },
-      ],
-      open_paisa: money(15000),
-      last: null,
-    });
-    await pickSeller(user, language, 'rahim', '030110001');
-    const title = await screen.findByRole('heading', {
-      name: named(message(language, 'vouchers-advances-title')),
-    });
-    const panel = visible(title.closest('section')?.textContent);
-    expect(panel).toContain(message(language, 'vouchers-source-opening'));
-    expect(panel).toContain('31-08-2026');
-    expect(panel).not.toContain(message(language, 'vouchers-number-advance', { number: '0' }));
-  });
-
-  it("a refused date in the preview shows the date of the backend's own values at the date field", async () => {
-    const { user } = await open();
-    vi.mocked(vouchersApi.vouchersPreviewAdvances).mockImplementation((drafts) =>
-      Promise.resolve({
-        rows: drafts.map(() => ({
-          account: null,
-          errors: [
-            {
-              code: 'ERR_DATE_CLOSED' as const,
-              field: 'lines[0].date',
-              values: { closed_up_to: '09-10-2026' },
-            },
-          ],
-          amount_paisa: money(0),
-          current_balance: ZERO,
-          new_balance: ZERO,
-        })),
-        total_paisa: money(0),
-      }),
-    );
-    await pickSeller(user, language, 'rahim', '030110001');
+  it('more than is payable only warns: the extra shows in words and the save still goes', async () => {
+    const { user } = await open('payment');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('5000');
-    const date = await labelled(language, 'vouchers-field-date');
     await waitFor(() => {
-      expect(date).toHaveAttribute('aria-invalid', 'true');
-    });
-    expect(visible(document.body.textContent)).toContain('09-10-2026');
-  });
-
-  it('an amount with no seller is told at the seller field, and the backend is not asked', async () => {
-    const { user } = await open();
-    const seller = await dropdown(language, 'vouchers-field-seller');
-    await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('5000');
-    press('F10');
-    await waitFor(() => {
-      expect(seller).toHaveAttribute('aria-invalid', 'true');
-    });
-    expect(vouchersApi.vouchersSaveAdvance).not.toHaveBeenCalled();
-    expect(vouchersApi.vouchersPreviewAdvances).not.toHaveBeenCalled();
-    // Nothing typed is lost (the field shows its thousands separator).
-    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('5,000');
-  });
-
-  it('the preview points at a bad amount before it is saved', async () => {
-    const { user } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
-    const amount = await labelled(language, 'vouchers-field-amount');
-    await user.click(amount);
-    await user.keyboard('50.5');
-    await waitFor(() => {
-      expect(amount).toHaveAttribute('aria-invalid', 'true');
-    });
-    expect(vouchersApi.vouchersSaveAdvance).not.toHaveBeenCalled();
-  });
-
-  it('F2 puts the voucher in the list and the next one starts with the date and mode; F10 saves them in order', async () => {
-    const { user, store } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
-    await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('5000');
-    press('F2');
-    const list = await screen.findByRole('heading', {
-      name: named(message(language, 'vouchers-list-title')),
-    });
-    // The form is empty again, the date kept.
-    await waitFor(() => {
-      expect(
-        screen.getByLabelText<HTMLInputElement>(named(message(language, 'vouchers-field-amount')))
-          .value,
-      ).toBe('');
-    });
-    expect((await labelled(language, 'vouchers-field-date')).value).toBe('10-10-2026');
-    await pickSeller(user, language, 'rahim', '030110001');
-    await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('2000');
-    // The total of the list is the backend's: both vouchers, listed and on the form.
-    await waitFor(() => {
-      expect(visible(list.closest('section')?.textContent)).toContain('7,000');
-    });
-    press('F10');
-    await waitFor(() => {
-      expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(2);
-    });
-    expect(store.saved).toEqual([
-      { seller: 31, amount: '5000' },
-      { seller: 31, amount: '2000' },
-    ]);
-    const words = visible(list.closest('section')?.textContent);
-    expect(words).toContain(message(language, 'vouchers-number-advance', { number: '1' }));
-    expect(words).toContain(message(language, 'vouchers-number-advance', { number: '2' }));
-    expect(
-      (
-        await screen.findAllByText(
-          (content) =>
-            visible(content) === message(language, 'vouchers-saved-many', { count: '2' }),
-        )
-      ).length,
-    ).toBeGreaterThan(0);
-  });
-
-  it('a voucher the backend refuses stays in the list with its message while the others are saved', async () => {
-    const { user, store } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
-    await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('5000');
-    press('F2');
-    await pickSeller(user, language, 'karim', '030110002');
-    await user.click(await labelled(language, 'vouchers-field-amount'));
-    await user.keyboard('2000');
-    const original = vi.mocked(vouchersApi.vouchersSaveAdvance).getMockImplementation();
-    vi.mocked(vouchersApi.vouchersSaveAdvance).mockImplementation((draft) =>
-      draft.amount === '2000'
-        ? Promise.reject(fail({ code: 'ERR_DATE_CLOSED', values: { closed_up_to: '09-10-2026' } }))
-        : (original?.(draft) ?? Promise.reject(new Error('no fake'))),
-    );
-    press('F10');
-    const list = await screen.findByRole('heading', {
-      name: named(message(language, 'vouchers-list-title')),
-    });
-    await waitFor(() => {
-      expect(visible(list.closest('section')?.textContent)).toContain(
-        message(language, 'err-date-closed', { closed_up_to: '09-10-2026' }),
+      expect(pageText()).toContain(
+        message(language, 'err-payment-above-payable', { payable: '4,316', over: '684' }),
       );
     });
-    // The first was saved, the second is still waiting to be fixed and saved again.
-    expect(store.saved).toEqual([{ seller: 31, amount: '5000' }]);
-    expect(
-      (
-        await screen.findAllByText(
-          (content) =>
-            visible(content) === message(language, 'vouchers-some-refused', { count: 1 }),
-        )
-      ).length,
-    ).toBeGreaterThan(0);
-    expect(saveButton(language)).toBeEnabled();
-    // A row that is not saved can be taken out of the list.
-    const removers = screen.getAllByRole('button', { name: message(language, 'vouchers-remove') });
-    expect(removers).toHaveLength(1);
-    await user.click(at(removers, 0));
+    press('F10');
     await waitFor(() => {
-      expect(saveButton(language)).toBeDisabled();
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('a payment to a seller with nothing payable offers a پیشگی; only the button switches', async () => {
+    store = fakeVouchers({ karimPayable: 0 });
+    const { user, router } = await open('payment');
+    await pick(user, language, 'vouchers-field-paid-to', 'karim', '030110002');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('3000');
+    const hint = message(language, 'vouchers-advance-hint');
+    await waitFor(() => {
+      expect(pageText()).toContain(hint);
+    });
+    // Nothing switched by itself.
+    expect(router.state.location.search).toMatchObject({ type: 'payment' });
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'vouchers-make-advance')) }),
+    );
+    await screen.findByRole('heading', {
+      level: 1,
+      name: message(language, 'vouchers-advance-title'),
+    });
+    // The seller, the amount and the date stay.
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('3,000');
+    expect((await dropdown(language, 'vouchers-field-seller')) as HTMLInputElement).toHaveValue(
+      language === 'ur' ? 'کریم' : 'Karim',
+    );
+    expect(pageText()).not.toContain(hint);
+  });
+
+  it('a payment to a buyer is cash lent: the reason is asked, told at its field, and sent', async () => {
+    const { user } = await open('payment');
+    await pick(user, language, 'vouchers-field-paid-to', '03040001', '03040001');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('3000');
+    const reason = await labelled(language, 'vouchers-field-reason-lent');
+    await waitFor(() => {
+      expect(reason).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(pageText()).toContain(message(language, 'err-payment-to-buyer-needs-reason'));
+    await user.click(reason);
+    await user.keyboard('x');
+    press('F10');
+    await waitFor(() => {
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+      type: 'payment',
+      input: { account_id: 21, amount: '3000', reason: 'x' },
+    });
+  });
+
+  it('a seller returning advance money: the receipt takes the seller side and shows his advances', async () => {
+    const { user } = await open('receipt');
+    await user.click(
+      screen.getByRole('button', { name: message(language, 'vouchers-from-seller') }),
+    );
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
+    const text = await panelText(language, 'vouchers-advances-title');
+    expect(text).toContain('15,000');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('10000');
+    await waitFor(() => {
+      expect(vouchersApi.vouchersPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ type: 'receipt', account_id: 31, amount: '10000' }),
+        null,
+      );
+    });
+    await waitFor(() => {
+      expect(pageText()).toContain(message(language, 'vouchers-return-limit'));
+    });
+  });
+
+  it('an advance goes with the expected goods; cash below zero shows the note and asks before saving', async () => {
+    store = fakeVouchers({ cash: 20000 });
+    const { user } = await open('advance');
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('25000');
+    await user.click(await labelled(language, 'vouchers-field-expected'));
+    await user.keyboard('x');
+    await waitFor(() => {
+      expect(pageText()).toContain(message(language, 'common-cash-after', { amount: '-5,000' }));
+    });
+    press('F10');
+    // The box asks, with focus on "No": nothing is saved.
+    const no = await screen.findByRole('button', {
+      name: new RegExp(message(language, 'common-cash-confirm-no')),
+    });
+    await waitFor(() => {
+      expect(no).toHaveFocus();
+    });
+    expect(store.rows).toHaveLength(0);
+    await userEvent.setup().click(no);
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+    expect(store.rows).toHaveLength(0);
+    // Yes saves with the confirmation.
+    press('F10');
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole('button', { name: message(language, 'common-cash-confirm-yes') }),
+      );
+    await waitFor(() => {
+      expect(store.rows).toHaveLength(1);
+    });
+    // The save that went through carried the confirmation.
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls.at(-1)?.[0]).toMatchObject({
+      type: 'advance',
+      input: {
+        seller_account_id: 31,
+        amount: '25000',
+        expected_goods: 'x',
+        confirm_cash_below_zero: true,
+      },
+    });
+  });
+
+  it('changing the type keeps the date, amount, mode and narration and clears the rest', async () => {
+    const { user } = await open('payment');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
+    await user.click(await labelled(language, 'vouchers-field-amount'));
+    await user.keyboard('3000');
+    await user.click(await labelled(language, 'vouchers-field-narration'));
+    await user.keyboard('n');
+    const group = screen.getByRole('group', { name: message(language, 'vouchers-field-type') });
+    await user.click(
+      within(group).getByRole('button', { name: message(language, 'vouchers-type-receipt') }),
+    );
+    await screen.findByRole('heading', {
+      level: 1,
+      name: message(language, 'vouchers-receipt-title'),
+    });
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('3,000');
+    expect((await labelled(language, 'vouchers-field-narration')).value).toBe('n');
+    expect((await labelled(language, 'vouchers-field-date')).value).toBe('10-10-2026');
+    // The account of the other type is gone.
+    expect(await dropdown(language, 'vouchers-field-buyer')).toHaveValue('');
   });
 
   it('bank and cheque show their fields, cash hides them, and they go to the backend', async () => {
-    const { user } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
+    const { user } = await open('advance');
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('100');
     await user.click(await dropdown(language, 'vouchers-field-mode'));
@@ -429,47 +469,83 @@ describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
     await user.keyboard('15-10-2026');
     press('F10');
     await waitFor(() => {
-      expect(vouchersApi.vouchersSaveAdvance).toHaveBeenCalledTimes(1);
+      expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     });
-    const sent = vi.mocked(vouchersApi.vouchersSaveAdvance).mock.calls[0]?.[0];
-    expect(sent?.mode).toBe('cheque');
-    expect(sent?.bank?.id).toBe(71);
-    expect(sent?.cheque_no).toBe('123456');
-    expect(sent?.cheque_date).toBe('15-10-2026');
+    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+      type: 'advance',
+      input: {
+        mode: 'cheque',
+        bank_account_id: 71,
+        cheque_no: '123456',
+        cheque_date: '15-10-2026',
+      },
+    });
   });
 
-  it('switching the language in the middle of an entry keeps what was typed and the list', async () => {
-    const { user } = await open();
-    await pickSeller(user, language, 'rahim', '030110001');
+  it('a refused field shows at the field, and nothing typed is lost', async () => {
+    const { user } = await open('advance');
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
+    const amount = await labelled(language, 'vouchers-field-amount');
+    await user.click(amount);
+    await user.keyboard('5000');
+    vi.mocked(vouchersApi.vouchersSave).mockRejectedValueOnce(
+      (await import('../helpers/app')).fail({
+        code: 'ERR_DATE_CLOSED',
+        field: 'date',
+        values: { closed_up_to: '09-10-2026' },
+      }),
+    );
+    press('F10');
+    const date = await labelled(language, 'vouchers-field-date');
+    await waitFor(() => {
+      expect(date).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(pageText()).toContain(
+      message(language, 'err-date-closed', { closed_up_to: '09-10-2026' }),
+    );
+    expect(amount.value).toBe('5,000');
+  });
+
+  it('an amount with no account is told at the account field, and the backend is not asked to save', async () => {
+    const { user } = await open('receipt');
+    const buyer = await dropdown(language, 'vouchers-field-buyer');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('5000');
-    press('F2');
-    await pickSeller(user, language, 'karim', '030110002');
+    press('F10');
+    await waitFor(() => {
+      expect(buyer).toHaveAttribute('aria-invalid', 'true');
+    });
+    expect(vouchersApi.vouchersSave).not.toHaveBeenCalled();
+    expect((await labelled(language, 'vouchers-field-amount')).value).toBe('5,000');
+  });
+
+  it('switching the language in the middle of an entry keeps what was typed', async () => {
+    const { user } = await open('payment');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('300');
+    await user.click(await labelled(language, 'vouchers-field-narration'));
+    await user.keyboard('n');
     const other: Language = language === 'ur' ? 'en' : 'ur';
     act(() => {
       useLanguageStore.setState({ language: other });
     });
     expect((await labelled(other, 'vouchers-field-amount')).value).toBe('300');
-    const list = await screen.findByRole('heading', {
-      name: named(message(other, 'vouchers-list-title')),
-    });
-    expect(visible(list.closest('section')?.textContent)).toContain(
+    expect((await labelled(other, 'vouchers-field-narration')).value).toBe('n');
+    expect(await dropdown(other, 'vouchers-field-paid-to')).toHaveValue(
       other === 'ur' ? 'رحیم' : 'Rahim',
     );
+    const group = screen.getByRole('group', { name: message(other, 'vouchers-field-type') });
     expect(
-      within(document.body).getByRole('combobox', {
-        name: named(message(other, 'vouchers-field-seller')),
-      }),
-    ).toHaveValue(other === 'ur' ? 'کریم' : 'Karim');
+      within(group).getByRole('button', { name: message(other, 'vouchers-type-payment') }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('a failed load of today shows the message with a retry that works', async () => {
     const appApi = await import('../../src/app/api');
+    const { fail } = await import('../helpers/app');
     vi.mocked(appApi.dayStatus).mockRejectedValueOnce(fail({ code: 'ERR_NOT_IMPLEMENTED' }));
-    fakeAdvances();
-    await renderApp('/bikri/advance');
+    await renderApp('/bikri/voucher?type=advance');
     const alert = await screen.findByRole('alert');
     expect(visible(alert.textContent)).toContain(message(language, 'err-not-implemented'));
     await userEvent
@@ -483,17 +559,21 @@ describe.each(LANGUAGES)('the advance screen (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('the advance menu item and Alt+P open the screen', async () => {
-    fakeAdvances();
-    const { router } = await renderApp('/');
-    act(() => {
-      void router.navigate({ to: '/bikri/advance' });
-    });
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: message(language, 'vouchers-advance-title'),
-      }),
-    ).toBeInTheDocument();
+  it('an open-bills panel that fails says so with a retry', async () => {
+    const { fail } = await import('../helpers/app');
+    const { user } = await open('receipt');
+    vi.mocked(vouchersApi.assistOpenBills).mockRejectedValueOnce(
+      fail({ code: 'ERR_NOT_IMPLEMENTED' }),
+    );
+    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    await screen.findByText(message(language, 'vouchers-bills-failed'));
+    const failedPanel = (
+      await screen.findByText(message(language, 'vouchers-bills-failed'))
+    ).closest('section');
+    if (failedPanel === null) throw new Error('the failed panel is not a section');
+    await user.click(
+      within(failedPanel).getByRole('button', { name: message(language, 'common-retry') }),
+    );
+    expect(await panelText(language, 'vouchers-bills-title')).toContain('12,880');
   });
 });
