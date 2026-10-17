@@ -39,7 +39,7 @@ New error codes (`errors.ftl` in `ur` and `en`, `# review: pending`): `ERR_OWN_L
 
 ### Backend
 
-- **Migration `0005_*.sql`** (the next numbered file after plan 13's `0004`, which holds only the bikri delete triggers; released migrations are never edited, B19). It is the one migration of D4:
+- **Migration `0006_*.sql`** (the next numbered file after plan 16's `0005` (the order key), which follows plan 13's `0004` (the bikri delete triggers); released migrations are never edited, B19). It is the one migration of D4:
   - rebuilds `journal_entries` (posting types add `purchase`, `own_write_off`, `capital_in`, `capital_out`, `khata_out`, `khata_in`; source types add `purchase`) and `vouchers` (types add `capital_in`, `capital_out`, `khata_out`, `khata_in`; keep every constraint and the money-lent triggers), recreating their triggers and indexes; ids, rows and the keyed `chain_hash` values stay byte for byte the same (a test: `verify_journal_chain` and the golden day numbers are identical before and after, on a copy of a populated file);
   - adds `purchases` (Architecture 15.6: number unique, entry_date, supplier_account_id null, پختہ person columns, item, packing, qty, weight_grams null, rate_paisa, value_paisa, freight_paisa, labour_paisa, other_cost_paisa, total_cost_paisa, payment_type credit|cash|bank, bank_account_id, journal_entry_id, status saved|cancelled, cancel_reason, note, qty_sold, qty_written_off, cost_released_paisa, system columns; money columns multiples of 100) with indexes;
   - adds `bikri_lots.purchase_id`, `bikri_sales.cost_paisa` (default 0, multiple of 100), `stock_moves.purchase_id` (and a nullable `journal_entry_id` where a write-off has none), `analytics_facts.purchase_id` and `cost_paisa`;
@@ -66,7 +66,7 @@ New error codes (`errors.ftl` in `ur` and `en`, `# review: pending`): `ERR_OWN_L
 
 | # | Task | Owner | Blocked by |
 |---|---|---|---|
-| T1 | Contract: migration 0005 with its test, types, stubs, error codes, `pnpm gen:types` | backend | plan 16 built |
+| T1 | Contract: migration 0006 with its test, types, stubs, error codes, `pnpm gen:types` | backend | plan 16 built |
 | T2 | Purchases, own lots in `calc_posting`, cost C21, write-off, stock list, guard, golden tests, money agent | backend | T1 |
 | T3 | خریداری screen, own lot UI, باقی مال marks against the stubs; Fluent | frontend | T1 |
 | T4 | Wire to the real commands; keyboard run; screenshots | frontend | T2, T3 |
@@ -75,7 +75,7 @@ New error codes (`errors.ftl` in `ur` and `en`, `# review: pending`): `ERR_OWN_L
 
 1. E2E-34 and E2E-34b pass with the numbers above (D4-A23; `cargo test -p mandi-services --test golden_day`).
 2. The C21 property test passes (D4-A23).
-3. Migration 0005 keeps every number and the journal chain of a populated file (test output); the Windows-style seed of the new accounts exists.
+3. Migration 0006 keeps every number and the journal chain of a populated file (test output); the Windows-style seed of the new accounts exists.
 4. An opening on اپنا مال is refused (D4-A31, the opening part); no voucher or جنرل can post to it.
 5. خریداری and own lots work by keyboard in both languages; own stock and profit per purchase are shown (D4-A24, screenshots; Windows specs LOCAL-ONLY).
 6. `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` exit 0; every earlier test still passes.
