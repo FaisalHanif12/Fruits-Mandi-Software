@@ -18,6 +18,7 @@
 //! Example: the third line of the first lot has `"abc"` as qty, so the preview returns
 //! `FieldError { code: ErrNotANumber, field: "lots[0].sales[2].qty", .. }`.
 
+mod edit;
 mod input;
 mod prepare;
 mod prepared;
@@ -26,6 +27,7 @@ mod saved;
 #[cfg(test)]
 mod tests;
 
+pub use edit::*;
 pub use input::*;
 pub use prepare::{prepare_draft, split_freight};
 pub use prepared::*;

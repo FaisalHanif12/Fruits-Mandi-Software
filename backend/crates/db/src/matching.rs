@@ -14,16 +14,24 @@
 
 use rusqlite::{Connection, params};
 
+/// The place of a line in the order of its account, oldest first: day, not an opening, order key
+/// of its entry, entry id, line number.
+type AccountOrder = (String, bool, i64, i64, i64);
+
 /// The live-entry condition on `journal_entries e`.
 pub(crate) const LIVE: &str = "e.status = 'posted' AND e.reverses_entry_id IS NULL
     AND NOT EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id AND r.status = 'posted')";
 
 /// The order of the lines of an account, oldest first: by date, an opening balance before the
 /// other entries of its day (it is the balance the day starts with, so a corrected opening that
-/// was saved later is still the oldest line of its day), then by the order of saving. One order
-/// for every matching query, so the canonical working and the fast paths always agree (PRD
-/// FR-10.9, FR-15.4, FR-15.8).
-pub(crate) const ORDER: &str = "e.entry_date, (e.posting_type <> 'opening'), e.id, l.line_no";
+/// was saved later is still the oldest line of its day), then by the order key, then by the order
+/// of saving. The order key (migration 0005) is the entry's own id unless an edit gave the new
+/// posting the key of the posting it replaced, so an edited posting keeps its place in its day
+/// and does not move behind a بکری saved later the same day (plan 16, money agent finding 1 of
+/// plan 15). One order for every matching query, so the canonical working and the fast paths
+/// always agree (PRD FR-10.9, FR-15.4, FR-15.8).
+pub(crate) const ORDER: &str =
+    "e.entry_date, (e.posting_type <> 'opening'), COALESCE(e.order_key, e.id), e.id, l.line_no";
 
 /// A line with the part of it that is already matched, in paisa. The services work out what is
 /// still open.
@@ -60,6 +68,9 @@ pub struct KeyLine {
     pub entry_date: String,
     /// True if its entry is an opening balance, which sorts first on its day.
     pub is_opening: bool,
+    /// The order key of its entry: its own id unless an edit gave it the key of the posting it
+    /// replaced (migration 0005). Lines of one day are in the order of this key, then entry id.
+    pub order_key: i64,
 }
 
 fn read_key_line(r: &rusqlite::Row<'_>) -> rusqlite::Result<KeyLine> {
@@ -70,11 +81,12 @@ fn read_key_line(r: &rusqlite::Row<'_>) -> rusqlite::Result<KeyLine> {
         entry_id: r.get(3)?,
         entry_date: r.get(4)?,
         is_opening: r.get(5)?,
+        order_key: r.get(6)?,
     })
 }
 
 /// Every live line of an account (or one person of a پختہ کھاتہ account), oldest first by
-/// `(entry_date, entry id, line_no)`: the bills (debits) and the credits the canonical matching
+/// `(entry_date, opening first, order key, entry id, line_no)`: the bills (debits) and the credits the canonical matching
 /// works from (PRD FR-15.4).
 ///
 /// # Errors
@@ -85,7 +97,8 @@ pub fn live_key_lines(
     person_key: Option<&str>,
 ) -> rusqlite::Result<Vec<KeyLine>> {
     let mut statement = conn.prepare(&format!(
-        "SELECT l.id, l.dr_paisa, l.cr_paisa, e.id, e.entry_date, e.posting_type = 'opening'
+        "SELECT l.id, l.dr_paisa, l.cr_paisa, e.id, e.entry_date, e.posting_type = 'opening',
+                COALESCE(e.order_key, e.id)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND l.pukhta_person_key IS ?2 AND {LIVE}
          ORDER BY {ORDER}"
@@ -341,7 +354,8 @@ fn open_lines_walk(
     // The newest entry first by the index on (account, entry): no sort, and the rows come one at
     // a time, so stopping early reads nothing more.
     let mut statement = conn.prepare(&format!(
-        "SELECT l.id, l.{side}, e.entry_date, e.posting_type = 'opening', l.entry_id, l.line_no
+        "SELECT l.id, l.{side}, e.entry_date, e.posting_type = 'opening', l.entry_id, l.line_no,
+                COALESCE(e.order_key, e.id)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND l.{side} > 0 {person} AND {LIVE}
          ORDER BY l.entry_id DESC, l.line_no DESC"
@@ -351,8 +365,11 @@ fn open_lines_walk(
          WHERE {link} = ?1 AND is_active = 1"
     ))?;
     let mut rows = statement.query(params![account_id, person_key])?;
-    // (date, not opening, entry id, line no) is the order of the account, oldest first.
-    let mut found: Vec<((String, bool, i64, i64), LineMatch)> = Vec::new();
+    // (date, not opening, order key, entry id, line no) is the order of the account, oldest
+    // first. The walk goes by entry id, which is not that order once an edit has kept the key of
+    // the posting it replaced; it still finds every open line, because it stops only when the
+    // open amounts add up to `expected`, and the sort below puts them in the account's order.
+    let mut found: Vec<(AccountOrder, LineMatch)> = Vec::new();
     let mut total: i64 = 0;
     while let Some(row) = rows.next()? {
         let line_id: i64 = row.get(0)?;
@@ -361,7 +378,13 @@ fn open_lines_walk(
         if amount > matched {
             let is_opening: bool = row.get(3)?;
             found.push((
-                (row.get(2)?, !is_opening, row.get(4)?, row.get(5)?),
+                (
+                    row.get(2)?,
+                    !is_opening,
+                    row.get(6)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ),
                 LineMatch {
                     line_id,
                     amount_paisa: amount,
@@ -441,7 +464,8 @@ pub fn open_advances(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec
 /// Any SQLite error.
 pub fn live_advance_lines(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<KeyLine>> {
     let mut statement = conn.prepare(&format!(
-        "SELECT l.id, l.dr_paisa, l.cr_paisa, e.id, e.entry_date, e.posting_type = 'opening'
+        "SELECT l.id, l.dr_paisa, l.cr_paisa, e.id, e.entry_date, e.posting_type = 'opening',
+                COALESCE(e.order_key, e.id)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND l.is_advance = 1 AND l.dr_paisa > 0 AND {LIVE}
          ORDER BY {ORDER}"
@@ -459,13 +483,13 @@ pub struct SellerCredit {
     pub amount_paisa: i64,
     /// Its entry.
     pub entry_id: i64,
-    /// `bikri_first` or `receipt`.
+    /// `bikri_first`, `bikri_later` or `receipt`.
     pub posting_type: String,
 }
 
 /// The live credit lines of a seller from the postings that can adjust an advance (PRD FR-15.8,
-/// FR-15.12): the first posting of a بکری and a receipt from the seller. Oldest first. A credit
-/// of a later sale (plan 16) is not listed here.
+/// FR-15.12): the first posting of a بکری, a later sale of its leftover goods (plan 16) and a
+/// receipt from the seller. Oldest first.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -477,7 +501,7 @@ pub fn seller_credit_lines(
         "SELECT l.id, l.cr_paisa, e.id, e.posting_type
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND l.cr_paisa > 0 AND {LIVE}
-           AND e.posting_type IN ('bikri_first', 'receipt')
+           AND e.posting_type IN ('bikri_first', 'bikri_later', 'receipt')
          ORDER BY {ORDER}"
     ))?;
     let rows = statement.query_map(params![account_id], |r| {
@@ -491,63 +515,81 @@ pub fn seller_credit_lines(
     rows.collect()
 }
 
-/// A lot of a seller as its first posting stored it, to tell which credit line is its own. The
-/// credit of the first posting (PRD C8) is worked out from the lines of that posting and the lot
-/// charges, which never change after the first posting (PRD FR-12.17); the running totals of the
-/// lot are not used, because a later sale changes them.
+/// A lot of a seller in one of its postings, to tell which credit line is its own. The credit of a
+/// posting (PRD C8) is worked out from the lines of that posting and, for the first posting only,
+/// the lot charges, which never change after the first posting (PRD FR-12.17); the running
+/// totals of the lot are not used, because a later sale changes them. A later sale charges no lot
+/// charge, so its charge columns are 0.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct FirstLot {
-    /// The first posting of the lot.
+pub struct PostingLot {
+    /// The posting.
     pub entry_id: i64,
+    /// The lot.
+    pub lot_id: i64,
+    /// True for the first posting of the lot, false for a later sale.
+    pub is_first: bool,
     /// The tick "پیشگی سے کاٹیں" (PRD FR-12.23).
     pub adjust_advance: bool,
     /// The sum of the seller amounts of the lot's lines in that posting, paisa.
     pub gross_paisa: i64,
     /// The sum of the seller commissions of those lines, paisa.
     pub comm_paisa: i64,
-    /// The freight typed on the lot, paisa.
+    /// The freight typed on the lot, paisa (0 for a later sale).
     pub freight_paisa: i64,
     /// True if the firm paid the driver (the freight is then deducted).
     pub freight_by_firm: bool,
-    /// مزدوری, paisa.
+    /// مزدوری, paisa (0 for a later sale).
     pub labour_paisa: i64,
-    /// منشیانہ, paisa.
+    /// منشیانہ, paisa (0 for a later sale).
     pub munshiana_paisa: i64,
-    /// کرایہ سٹور, paisa.
+    /// کرایہ سٹور, paisa (0 for a later sale).
     pub store_rent_paisa: i64,
-    /// فون, paisa.
+    /// فون, paisa (0 for a later sale).
     pub phone_paisa: i64,
 }
 
-/// The lots of a seller by the posting they were first saved in, in lot order.
+/// The postings of the lots of a seller: the first posting of each lot in lot order, then the later
+/// sales of it by posting. A posting that an edit or a cancel replaced is also listed (its lines
+/// were switched off); the callers use only the postings that are live.
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn first_lots(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<FirstLot>> {
+pub fn posting_lots(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<PostingLot>> {
     let mut statement = conn.prepare(
-        "SELECT l.first_entry_id, l.adjust_advance,
+        "SELECT l.first_entry_id, l.id, 1, l.adjust_advance,
                 COALESCE((SELECT SUM(s.seller_amount_paisa) FROM bikri_sales s
-                          WHERE s.lot_id = l.id AND s.journal_entry_id = l.first_entry_id), 0),
+                          WHERE s.lot_id = l.id AND s.journal_entry_id = l.first_entry_id
+                            AND s.is_active = 1), 0),
                 COALESCE((SELECT SUM(s.seller_comm_paisa) FROM bikri_sales s
-                          WHERE s.lot_id = l.id AND s.journal_entry_id = l.first_entry_id), 0),
+                          WHERE s.lot_id = l.id AND s.journal_entry_id = l.first_entry_id
+                            AND s.is_active = 1), 0),
                 l.freight_paisa, l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa,
-                l.store_rent_paisa, l.phone_paisa
+                l.store_rent_paisa, l.phone_paisa, l.lot_no
          FROM bikri_lots l
          WHERE l.seller_account_id = ?1 AND l.first_entry_id IS NOT NULL
-         ORDER BY l.first_entry_id, l.lot_no",
+         UNION ALL
+         SELECT s.journal_entry_id, l.id, 0, l.adjust_advance,
+                SUM(s.seller_amount_paisa), SUM(s.seller_comm_paisa), 0, 0, 0, 0, 0, 0, l.lot_no
+         FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id
+         WHERE l.seller_account_id = ?1 AND l.first_entry_id IS NOT NULL
+           AND s.journal_entry_id <> l.first_entry_id AND s.is_active = 1
+         GROUP BY s.journal_entry_id, l.id
+         ORDER BY 1, 13",
     )?;
     let rows = statement.query_map(params![account_id], |r| {
-        Ok(FirstLot {
+        Ok(PostingLot {
             entry_id: r.get(0)?,
-            adjust_advance: r.get(1)?,
-            gross_paisa: r.get(2)?,
-            comm_paisa: r.get(3)?,
-            freight_paisa: r.get(4)?,
-            freight_by_firm: r.get(5)?,
-            labour_paisa: r.get(6)?,
-            munshiana_paisa: r.get(7)?,
-            store_rent_paisa: r.get(8)?,
-            phone_paisa: r.get(9)?,
+            lot_id: r.get(1)?,
+            is_first: r.get(2)?,
+            adjust_advance: r.get(3)?,
+            gross_paisa: r.get(4)?,
+            comm_paisa: r.get(5)?,
+            freight_paisa: r.get(6)?,
+            freight_by_firm: r.get(7)?,
+            labour_paisa: r.get(8)?,
+            munshiana_paisa: r.get(9)?,
+            store_rent_paisa: r.get(10)?,
+            phone_paisa: r.get(11)?,
         })
     })?;
     rows.collect()
@@ -643,6 +685,16 @@ pub struct LiveLine {
     pub is_advance: bool,
     /// The sum of its active advance rows (as the advance line or as the credit line).
     pub advance_matched_paisa: i64,
+    /// The order key of its entry: its own id unless an edit gave it the key of the posting it
+    /// replaced (migration 0005).
+    pub order_key: i64,
+}
+
+impl LiveLine {
+    /// True if its entry is an opening balance, which sorts first on its day.
+    pub fn is_opening(&self) -> bool {
+        self.posting_type == "opening"
+    }
 }
 
 /// Every live line of an account (all persons of a پختہ کھاتہ account), oldest first, with the
@@ -660,7 +712,8 @@ pub fn live_lines(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<Li
                 CASE e.source_type
                     WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = e.source_id)
                     WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = e.source_id)
-                END
+                END,
+                COALESCE(e.order_key, e.id)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND {LIVE}
          ORDER BY {ORDER}"
@@ -678,6 +731,7 @@ pub fn live_lines(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<Li
             advance_matched_paisa: r.get(8)?,
             source_type: r.get(9)?,
             number: r.get(10)?,
+            order_key: r.get(11)?,
         })
     })?;
     rows.collect()

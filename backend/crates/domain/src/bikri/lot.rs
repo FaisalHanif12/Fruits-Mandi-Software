@@ -10,6 +10,7 @@ use mandi_core::money::{MoneyError, Paisa, Qty};
 use mandi_core::rules::{ChargeSide, ChargeType, ChargeValue, RuleLevel, Working};
 
 use super::lookups::ItemFacts;
+use super::stored::StoredLotCharge;
 use super::working;
 use super::{CalcError, Env, PostingKind};
 use crate::rules::{Query, Winner, charge_amount, resolve};
@@ -39,8 +40,71 @@ fn not_charged() -> LotCharge {
     }
 }
 
+/// A lot charge the user did not change, as the lot stored it (PRD FR-12.20, FR-11.6): its method,
+/// value and rule stay. A per-نگ charge is worked out again from its stored value and the
+/// quantity received now (C3), which only differs from the stored amount when that quantity was
+/// corrected; a per-lot or typed amount stays as it was.
+fn from_stored(
+    key: &LotKey,
+    kind: ChargeType,
+    stored: &StoredLotCharge,
+) -> Result<LotCharge, CalcError> {
+    let typed_by_hand = stored.rule_id.is_none();
+    let value = match stored.method {
+        LotChargeMethod::Manual => {
+            // Nothing applied, or an amount typed by hand: the amount stays.
+            return Ok(LotCharge {
+                method: LotChargeMethod::Manual,
+                value_paisa: stored.amount,
+                amount: stored.amount,
+                rule_id: None,
+                rule_label: None,
+                source: if stored.amount > Paisa::ZERO {
+                    ChargeSource::Typed
+                } else {
+                    ChargeSource::None
+                },
+                working: working::typed(stored.amount),
+            });
+        }
+        LotChargeMethod::PerUnit => ChargeValue::PerUnit(stored.value),
+        LotChargeMethod::PerLot => ChargeValue::PerLot(stored.value),
+    };
+    let level = if typed_by_hand {
+        RuleLevel::LineOverride
+    } else {
+        stored.level.unwrap_or(RuleLevel::Default)
+    };
+    let winner = Winner {
+        level,
+        rule_id: stored.rule_id,
+        value,
+        manual: typed_by_hand,
+    };
+    let charged = charge_amount(Some(&winner), kind, Paisa::ZERO, key.qty_received, true)?;
+    Ok(LotCharge {
+        method: stored.method,
+        value_paisa: stored.value,
+        amount: charged.amount,
+        rule_id: stored.rule_id,
+        rule_label: (!typed_by_hand).then_some(RuleLabel {
+            level,
+            rule_id: stored.rule_id,
+        }),
+        source: if typed_by_hand {
+            ChargeSource::Typed
+        } else if level == RuleLevel::Default {
+            ChargeSource::Default
+        } else {
+            ChargeSource::Rule
+        },
+        working: charged.working,
+    })
+}
+
 /// The charge of a lot for مزدوری, منشیانہ or فون (PRD 11.2): the value typed on the lot, else
-/// the rule that wins for the lot's seller and item, else nothing. A typed lot charge is always
+/// the rule that wins for the lot's seller and item, else nothing. In an edit, a charge whose
+/// typed value equals what was stored (or both are empty) is the stored charge (PRD FR-12.20). A typed lot charge is always
 /// allowed (PRD FR-11.10 limits only commission and لاگا on a line). A per-نگ charge counts the
 /// نگ received, not the نگ sold (PRD E2E-16).
 ///
@@ -50,9 +114,13 @@ pub(super) fn lot_charge(
     key: &LotKey,
     kind: ChargeType,
     typed: Option<TypedLotCharge>,
+    stored: Option<&StoredLotCharge>,
 ) -> Result<LotCharge, CalcError> {
     if env.kind == PostingKind::Later {
         return Ok(not_charged());
+    }
+    if let Some(stored) = stored.filter(|s| s.typed() == typed) {
+        return from_stored(key, kind, stored);
     }
     if let Some(typed) = typed {
         return Ok(match typed.method {

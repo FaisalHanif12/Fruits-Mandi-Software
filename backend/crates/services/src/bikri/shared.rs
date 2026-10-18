@@ -9,8 +9,8 @@ use mandi_db::ledger as ledger_repo;
 use mandi_db::partners as partner_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::bikri::{
-    AccountFacts, CalcError, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingKind,
-    Switches, calc_posting, partner_share,
+    AccountFacts, CalcError, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingTarget,
+    StoredPosting, Switches, calc_posting, partner_share,
 };
 use mandi_domain::cash;
 use mandi_domain::core::accounts::{BUYER_CONTROL, NAQDI_MANDI_CODE, SELLER_CONTROL};
@@ -148,23 +148,37 @@ fn load_lookups(
     conn: &Connection,
     prepared: &PreparedDraft,
     rate_check: bool,
+    replaces: Option<i64>,
 ) -> Result<Lookups, ServiceError> {
     let n = named(prepared);
     let account_ids: Vec<i64> = n.accounts.iter().copied().collect();
     let found = repo::accounts(conn, &account_ids)?;
-    // A buyer with a credit limit needs his balance now (PRD FR-12.4): one query for all.
+    // A buyer with a credit limit needs his balance now (PRD FR-12.4): one query for all. In an
+    // edit the balance leaves out the posting being replaced, which the new one takes over.
     let limited: Vec<i64> = found
         .iter()
         .filter(|a| a.control_code == BUYER_CONTROL && a.credit_limit_paisa.is_some())
         .map(|a| a.id)
         .collect();
     let totals = ledger_repo::totals_for_accounts(conn, &limited)?;
+    let own = match replaces {
+        Some(entry_id) => ledger_repo::entry_totals_for_accounts(conn, entry_id, &limited)?,
+        None => HashMap::new(),
+    };
     let mut accounts = HashMap::with_capacity(found.len());
     for a in found {
         let balance = match totals.get(&a.id) {
-            Some(t) => paisa(t.dr_paisa)?
-                .checked_sub(paisa(t.cr_paisa)?)
-                .map_err(money_error)?,
+            Some(t) => {
+                let (own_dr, own_cr) = own.get(&a.id).map_or((0, 0), |o| (o.dr_paisa, o.cr_paisa));
+                let dr = t.dr_paisa.checked_sub(own_dr);
+                let cr = t.cr_paisa.checked_sub(own_cr);
+                match (dr, cr) {
+                    (Some(dr), Some(cr)) => {
+                        paisa(dr)?.checked_sub(paisa(cr)?).map_err(money_error)?
+                    }
+                    _ => return Err(data("a balance does not fit")),
+                }
+            }
             None => Paisa::ZERO,
         };
         let kind = match a.control_code.as_str() {
@@ -216,7 +230,9 @@ fn load_lookups(
     // header already has its error and no row is worked out.
     if let Some(date) = prepared.header.entry_date {
         for &(item, packing) in &n.pairs {
-            if let Some(hint) = crate::assist::saved_rate_hint(conn, item, packing, date)? {
+            if let Some(hint) =
+                crate::assist::saved_rate_hint_except(conn, item, packing, date, replaces)?
+            {
                 lookups.saved_hints.insert((item, packing), hint);
             }
         }
@@ -225,8 +241,13 @@ fn load_lookups(
             let from = (1..RATE_CHECK_DAYS).try_fold(date, |d, _| d.previous_day());
             if let Some(from) = from {
                 for &item in &n.items {
-                    let (qty, amount) =
-                        repo::item_sales_between(conn, item, &from.to_iso(), &date.to_iso())?;
+                    let (qty, amount) = repo::item_sales_between_except(
+                        conn,
+                        item,
+                        &from.to_iso(),
+                        &date.to_iso(),
+                        replaces,
+                    )?;
                     lookups.item_sales.insert(
                         item,
                         ItemSales {
@@ -392,6 +413,40 @@ fn books_of(
     Ok((split, change, Some(built)))
 }
 
+/// The posting an edit takes the place of: its entry, and what it did to cash in hand.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Replaced {
+    /// The journal entry being replaced.
+    pub entry_id: i64,
+    /// What that entry did to cash (debit minus credit on روکڑ). The edit's cash question is about
+    /// the difference between the new entry and this (PRD FR-6.7).
+    pub cash_change: Paisa,
+}
+
+/// What a draft is worked out for: a new بکری, a later sale or an edit, with what is stored about
+/// the posting (plan 16). The preview and the save of each pass the same basis (Code Standards
+/// B5).
+#[derive(Debug, Clone)]
+pub(crate) struct Basis {
+    /// What `calc_posting` works out.
+    pub target: PostingTarget,
+    /// What is stored about the posting (empty for a new بکری).
+    pub stored: StoredPosting,
+    /// The posting an edit replaces.
+    pub replaces: Option<Replaced>,
+}
+
+impl Basis {
+    /// A new بکری.
+    pub(crate) fn new_bikri() -> Self {
+        Basis {
+            target: PostingTarget::New,
+            stored: StoredPosting::none(),
+            replaces: None,
+        }
+    }
+}
+
 /// Works out a typed draft against the database: reads what it names, calls `calc_posting`,
 /// builds the journal entry, splits the income and asks what the entry does to cash. Used by
 /// the preview (inside a read) and by the save (inside its write transaction), so there is one
@@ -405,13 +460,32 @@ pub(crate) fn work_out(
     prepared: PreparedDraft,
     rules: &RuleSet,
     switches: Switches,
+    basis: &Basis,
 ) -> Result<Worked, ServiceError> {
-    let lookups = load_lookups(conn, &prepared, switches.rate_check_percent.is_some())?;
-    let calc = calc_posting(PostingKind::First, &prepared, &lookups, rules, switches)
-        .map_err(calc_error)?;
+    let lookups = load_lookups(
+        conn,
+        &prepared,
+        switches.rate_check_percent.is_some(),
+        basis.replaces.map(|r| r.entry_id),
+    )?;
+    let calc = calc_posting(
+        basis.target,
+        &prepared,
+        &lookups,
+        rules,
+        switches,
+        &basis.stored,
+    )
+    .map_err(calc_error)?;
     let mut errors = calc.errors.clone();
     let accounts = system_accounts(conn)?;
     let (split, change, entry) = books_of(conn, &prepared, &calc, &accounts, &mut errors)?;
+    // An edit's cash question is about the difference between the new entry and the one it
+    // replaces: cash now still holds the old posting (PRD FR-6.7).
+    let change = match basis.replaces {
+        Some(old) => change.checked_sub(old.cash_change).map_err(money_error)?,
+        None => change,
+    };
     let cash = cash_service::cash_after_entry(conn, change)?;
     Ok(Worked {
         prepared,

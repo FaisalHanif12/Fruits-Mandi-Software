@@ -85,10 +85,19 @@ function paymentOf(row: EntryRow): PaymentType | null {
   return typed === 'credit' || typed === 'cash' ? typed : null;
 }
 
+/** The id of a saved row kept in a hidden cell, or nothing for a row that is new. */
+function savedId(text: string | undefined): number | null {
+  const id = Number(text ?? '');
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
 export function saleInput(row: EntryRow): SaleInput {
   const buyer = row.picked?.[SALE.buyer];
+  const saleId = savedId(row.typed[SALE.saleId]);
   return {
     key: row.rowId,
+    // A saved line carries its id, so the backend can tell it is unchanged (PRD FR-12.20).
+    ...(saleId === null ? {} : { sale_id: saleId }),
     buyer_account_id: buyer?.id ?? null,
     pukhta: isPukhtaBuyer(row)
       ? pukhtaInput(row, SALE.pukhtaUr, SALE.pukhtaEn, SALE.pukhtaPhone)
@@ -116,8 +125,10 @@ export function saleInput(row: EntryRow): SaleInput {
 
 export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: HeaderState): LotInput {
   const typed = row.typed;
+  const lotId = savedId(typed[LOT.lotId]);
   return {
     key: row.rowId,
+    ...(lotId === null ? {} : { lot_id: lotId }),
     seller_account_id: row.picked?.[LOT.seller]?.id ?? null,
     pukhta: isPukhtaSeller(row)
       ? pukhtaInput(row, LOT.pukhtaUr, LOT.pukhtaEn, LOT.pukhtaPhone)

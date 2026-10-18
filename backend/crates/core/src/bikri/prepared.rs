@@ -67,6 +67,8 @@ pub struct PreparedHeader {
 pub struct PreparedSale {
     /// The screen's key.
     pub key: String,
+    /// The saved line this row is, in an edit (plan 16). `None` for a new line.
+    pub sale_id: Option<i64>,
     /// True for a row with no buyer and no rate (PRD FR-7.52).
     pub is_blank: bool,
     /// True if any value of the row could not be read.
@@ -102,6 +104,8 @@ pub struct PreparedSale {
 pub struct PreparedLot {
     /// The screen's key.
     pub key: String,
+    /// The saved lot this row is, in an edit of the first posting (plan 16). `None` for a new lot.
+    pub lot_id: Option<i64>,
     /// True if a value of the lot itself could not be read.
     pub has_errors: bool,
     /// The seller.

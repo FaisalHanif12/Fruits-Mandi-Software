@@ -242,11 +242,38 @@ pub enum ErrorCode {
     /// Warning only: a payment is more than the seller's open payable, so the extra shows as the
     /// seller owing the firm (PRD FR-15.7). Values: `payable_paisa`, `over_paisa`. Field `amount`.
     ErrPaymentAbovePayable,
+    /// The بکری was cancelled, so it cannot be edited, cancelled again, sold from or written off
+    /// (PRD FR-12.22). Field `id` or `entry_id` or `lot_id`.
+    ErrBikriCancelled,
+    /// The lot asked for does not exist, or does not belong to a بکری that can be sold from.
+    /// Field `lot_id`.
+    ErrLotNotFound,
+    /// A later sale of a lot that has nothing left to sell (PRD FR-12.17). Field `lot_id`.
+    ErrNothingToSell,
+    /// A write-off of more نگ than the lot has left (PRD FR-12.16). Field `qty`. Values:
+    /// `available` (نگ left).
+    ErrWriteOffExceedsBalance,
+    /// A later sale dated before the goods were received (PRD FR-12.17). Field `date`. Values:
+    /// `received_date` (`YYYY-MM-DD`).
+    ErrDateBeforeReceived,
+    /// An edit lowers the quantity received of a lot below what a later sale or a write-off has
+    /// already taken (PRD FR-12.20). Field `lots[i].qty_received`. Values: `sold` (نگ).
+    ErrQtyBelowSold,
+    /// An edit of a بکری posting that the rules do not allow (PRD FR-12.18, FR-12.19, FR-12.20,
+    /// NFR-USE-13). The field is the path of the lot or line concerned. Values: `rule`, a short
+    /// fixed name, one of `day_changed` (`header.entry_date`: the day of a posting cannot change),
+    /// `lot_removed` (`lots`: a lot cannot be taken out), `lot_not_in_posting` (`lots[i].lot_id`:
+    /// not a lot of this بکری, or sent twice), `lot_order_changed` (`lots[i].lot_id`: saved lots
+    /// keep their order and new lots come last), `lot_seller_locked` and `lot_item_locked`
+    /// (`lots[i].seller_account_id`, `lots[i].item_id`: other postings or write-offs rest on the
+    /// lot), `line_not_in_posting` (`lots[i].sales[j].sale_id`: not a line of this posting, or sent
+    /// twice) and `posting_lots_locked` (`lots`: a later posting has only its own lot).
+    ErrEditNotAllowed,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 94] = [
+    pub const ALL: [ErrorCode; 101] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -341,6 +368,13 @@ impl ErrorCode {
         ErrorCode::ErrPersonRequired,
         ErrorCode::ErrChequeRequired,
         ErrorCode::ErrPaymentAbovePayable,
+        ErrorCode::ErrBikriCancelled,
+        ErrorCode::ErrLotNotFound,
+        ErrorCode::ErrNothingToSell,
+        ErrorCode::ErrWriteOffExceedsBalance,
+        ErrorCode::ErrDateBeforeReceived,
+        ErrorCode::ErrQtyBelowSold,
+        ErrorCode::ErrEditNotAllowed,
     ];
 }
 

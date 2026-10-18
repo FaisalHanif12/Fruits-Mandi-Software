@@ -48,6 +48,13 @@ export { Table, type TableColumn, type TableColumnKind } from './Table';
 export { Tabs, type TabItem } from './Tabs';
 export { TextInput } from './TextInput';
 export { TOAST_DURATION_MS, Toaster } from './Toaster';
-export { showToast, useToastStore, type ToastItem, type ToastTone } from './toast-store';
+export {
+  showToast,
+  useToastStore,
+  type ToastAction,
+  type ToastItem,
+  type ToastOptions,
+  type ToastTone,
+} from './toast-store';
 export { SpellingConfirmDialog, type SpellingName } from './SpellingConfirmDialog';
 export { SpellingMark } from './SpellingMark';

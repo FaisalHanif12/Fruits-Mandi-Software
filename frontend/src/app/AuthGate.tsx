@@ -10,6 +10,7 @@ import type { AuthStatus } from '../bindings/AuthStatus';
 import type { SessionUser } from '../bindings/SessionUser';
 import { LockOverlay } from '../features/auth/components/LockOverlay';
 import { BikriDraftOffer } from '../features/bikri/draft-offer';
+import { UndoHost } from '../features/bikri/undo';
 import { useAuthStatus, useLock, useLogout, useSavePreferences } from '../features/auth/hooks';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { WizardPage } from '../features/auth/pages/WizardPage';
@@ -139,6 +140,8 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
       </AppShell>
       {/* A بکری that was being typed when the app closed is offered back once (PRD FR-12.10). */}
       {locked ? null : <BikriDraftOffer />}
+      {/* Undo straight after a save works from any screen (PRD FR-7.47, plan 16). */}
+      {locked ? null : <UndoHost />}
       {locked ? <LockOverlay userName={user.display_name} /> : null}
     </>
   );

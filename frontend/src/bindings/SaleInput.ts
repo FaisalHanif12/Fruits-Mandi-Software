@@ -12,6 +12,13 @@ export type SaleInput = {
    */
   key: string;
   /**
+   * The saved line this row is, when the draft is an edit of a posting (plan 16). `null` for a
+   * new line. A line sent with its `sale_id` is "unchanged" when its buyer, person, quantity,
+   * weight, rates, payment type and typed charges equal the stored ones, and then keeps its
+   * stored charges exactly (PRD FR-12.20, FR-11.6).
+   */
+  sale_id?: number | null;
+  /**
    * The buyer. The پختہ کھاتہ (خریدار) account for a one-time buyer, the نقدی منڈی account for
    * a nameless cash buyer.
    */

@@ -7,15 +7,16 @@
 
 import { Localized } from '@fluent/react';
 import { useQuery } from '@tanstack/react-query';
-import { Ban } from 'lucide-react';
+import { Ban, Pencil } from 'lucide-react';
 import type { BikriDetail } from '../../../../bindings/BikriDetail';
 import { isoToDisplayDate, utcToLocalDisplay } from '../../../../shared/format';
 import { displayName, useLanguage } from '../../../../shared/i18n';
 import { findMaster } from '../../../../shared/search';
-import { Card, Code, Fact, Num, Table, type TableColumn } from '../../../../shared/ui';
+import { Button, Card, Code, Fact, Num, Table, type TableColumn } from '../../../../shared/ui';
 import { useLocalization } from '@fluent/react';
 import type { SavedPosting } from '../../../../bindings/SavedPosting';
 import type { SavedSplit } from '../../../../bindings/SavedSplit';
+import { UNDO_REASON_ID } from '../../types';
 import { SavedLotCard } from './SavedLotCard';
 import { SavedSummary } from './SavedSummary';
 
@@ -37,7 +38,13 @@ function useMasterName(scope: 'adda' | 'store', id: number | null) {
   return query.data === null || query.data === undefined ? null : displayName(query.data, language);
 }
 
-export function SavedBikriView({ detail }: { detail: BikriDetail }) {
+interface SavedBikriViewProps {
+  detail: BikriDetail;
+  /** Opens one posting for edit (plan 16). Without it the entries are only listed. */
+  onEdit?: ((entryId: number) => void) | undefined;
+}
+
+export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
   const language = useLanguage();
   const { l10n } = useLocalization();
   const adda = useMasterName('adda', detail.adda_id);
@@ -75,6 +82,39 @@ export function SavedBikriView({ detail }: { detail: BikriDetail }) {
       kind: 'number',
       cell: (row) => <Num paisa={row.total} />,
     },
+    {
+      // In words: a posting taken back, or on a closed day, is told, never only dimmed (NFR-USE-12).
+      id: 'state',
+      header: l10n.getString('bikri-posting-state'),
+      cell: (row) =>
+        row.reversed
+          ? l10n.getString('bikri-posting-reversed')
+          : row.posting_type === 'reversal'
+            ? ''
+            : row.editable
+              ? l10n.getString('bikri-posting-open')
+              : l10n.getString('bikri-posting-not-editable'),
+    },
+    ...(onEdit === undefined
+      ? []
+      : ([
+          {
+            id: 'edit',
+            header: l10n.getString('bikri-posting-edit'),
+            kind: 'action',
+            cell: (row) =>
+              row.editable ? (
+                <Button
+                  onClick={() => {
+                    onEdit(row.entry_id);
+                  }}
+                >
+                  <Pencil aria-hidden="true" className="size-icon-md" />
+                  <Localized id="bikri-posting-edit" />
+                </Button>
+              ) : null,
+          },
+        ] satisfies readonly TableColumn<SavedPosting>[])),
   ];
 
   return (
@@ -97,7 +137,16 @@ export function SavedBikriView({ detail }: { detail: BikriDetail }) {
             <span className="type-label" />
           </Localized>
           {detail.cancel_reason === null ? null : (
-            <Localized id="bikri-saved-cancel-reason" vars={{ reason: detail.cancel_reason }}>
+            <Localized
+              id="bikri-saved-cancel-reason"
+              // An undo at once stores the Fluent ID of its words (plan 16 contract 9).
+              vars={{
+                reason:
+                  detail.cancel_reason === UNDO_REASON_ID
+                    ? l10n.getString(UNDO_REASON_ID)
+                    : detail.cancel_reason,
+              }}
+            >
               <span className="type-body" />
             </Localized>
           )}
@@ -153,7 +202,7 @@ export function SavedBikriView({ detail }: { detail: BikriDetail }) {
         <SavedLotCard key={lot.id} lot={lot} />
       ))}
       <SavedSummary detail={detail} />
-      <div className="grid grid-cols-1 gap-3 normal:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 wide:grid-cols-2">
         <Card compact title={<Localized id="bikri-split-title" />}>
           <Table
             label={l10n.getString('bikri-split-title')}

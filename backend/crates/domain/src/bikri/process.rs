@@ -9,14 +9,15 @@ use mandi_core::bikri::{
 };
 use mandi_core::error::ErrorCode;
 use mandi_core::ids::AccountId;
-use mandi_core::money::{Paisa, Qty};
+use mandi_core::money::Paisa;
 use mandi_core::rules::ChargeType;
 
 use super::checks::{self, Issues, Wanted};
-use super::line::{LineArgs, LotRef, calc_line};
+use super::line::{LineArgs, LotRef, calc_line, unchanged_stored};
 use super::lookups::{AccountFacts, ItemFacts, Lookups};
 use super::lot::{Acc, LotKey, Scope, lot_charge};
 use super::person::{CleanPerson, clean_person};
+use super::stored::{StoredCharge, StoredLot};
 use super::{CalcError, Env, PostingKind};
 use crate::ledger::MAX_LINE_PAISA;
 use crate::ledger::bikri::{JournalLot, JournalSale};
@@ -47,6 +48,8 @@ struct LotCtx<'a> {
     /// Set only when the lot is complete: then its rows can be worked out.
     lot_ref: Option<LotRef>,
     facts: LotFacts<'a>,
+    /// What is stored about this lot, in an edit or a later sale.
+    stored_lot: Option<&'a StoredLot>,
 }
 
 fn too_large(issues: &mut Issues, field: &str) {
@@ -242,12 +245,53 @@ fn journal_sale(
     }
 }
 
+/// نگ the lot can give this posting: the quantity received less what other postings in force have
+/// sold and what was written off (PRD FR-12.6). For a new بکری it is the quantity received.
+fn available_qty(ctx: &LotCtx<'_>) -> Option<i64> {
+    let elsewhere = ctx.stored_lot.map_or(0, |s| s.elsewhere_qty);
+    ctx.lot
+        .qty_received
+        .map(|r| r.get().saturating_sub(elsewhere).max(0))
+}
+
 /// Goes through the rows of a lot in order: remaining quantity, hint, checks and numbers.
 fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<Rows, CalcError> {
     let lot = ctx.lot;
-    let received = lot.qty_received.map(Qty::get);
+    let received = available_qty(ctx);
+    let elsewhere = ctx.stored_lot.map_or(0, |s| s.elsewhere_qty);
+    if let Some(qty) = lot.qty_received
+        && qty.get() < elsewhere
+    {
+        // An edit cannot take the quantity received below what other postings and write-offs
+        // have already taken from the lot (PRD FR-12.6, FR-12.20).
+        issues.error_with(
+            ErrorCode::ErrQtyBelowSold,
+            &format!("{}.qty_received", ctx.prefix),
+            &[("sold", elsewhere)],
+        );
+    }
     let hint_key = lot.item_id.zip(lot.packing_id);
-    let mut per_lot_charged = false;
+    // The per-lot seller commission is charged once per lot (PRD FR-11.9). If an unchanged line
+    // of an edit still carries it, nothing else may take it.
+    let mut pending_move: Option<StoredCharge> = match (ctx.env, ctx.stored_lot) {
+        (Some(env), Some(stored)) if env.kind == PostingKind::First => stored
+            .carrier
+            .as_ref()
+            .filter(|c| !lot.sales.iter().any(|r| r.sale_id == Some(c.sale_id)))
+            .map(|c| c.charge.clone()),
+        _ => None,
+    };
+    let mut per_lot_charged = match (ctx.env, ctx.lot_ref.as_ref()) {
+        (Some(env), Some(lot_ref)) if env.kind == PostingKind::First => {
+            lot.sales.iter().any(|row| {
+                !row.is_blank
+                    && !row.has_errors
+                    && unchanged_stored(env, lot_ref, row)
+                        .is_some_and(|s| s.seller_comm.carries_per_lot())
+            })
+        }
+        _ => false,
+    };
     let mut rows = Rows {
         lines: Vec::with_capacity(lot.sales.len()),
         acc: Acc::default(),
@@ -295,6 +339,8 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                     buyer_id,
                     buyer,
                     payment,
+                    stored: unchanged_stored(env, lot_ref, row),
+                    pending_move: &mut pending_move,
                 },
                 issues,
                 &line_prefix,
@@ -349,9 +395,28 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         item: lot_ref.item,
         qty_received,
     };
-    let labour = lot_charge(env, &key, ChargeType::Labour, lot.labour)?;
-    let munshiana = lot_charge(env, &key, ChargeType::Munshiana, lot.munshiana)?;
-    let phone = lot_charge(env, &key, ChargeType::Phone, lot.phone)?;
+    let stored_lot = ctx.stored_lot;
+    let labour = lot_charge(
+        env,
+        &key,
+        ChargeType::Labour,
+        lot.labour,
+        stored_lot.and_then(|s| s.labour.as_ref()),
+    )?;
+    let munshiana = lot_charge(
+        env,
+        &key,
+        ChargeType::Munshiana,
+        lot.munshiana,
+        stored_lot.and_then(|s| s.munshiana.as_ref()),
+    )?;
+    let phone = lot_charge(
+        env,
+        &key,
+        ChargeType::Phone,
+        lot.phone,
+        stored_lot.and_then(|s| s.phone.as_ref()),
+    )?;
     for (charge, name) in [
         (&labour, "labour"),
         (&munshiana, "munshiana"),
@@ -377,14 +442,26 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         acc.munshiana = munshiana.amount;
         acc.phone = phone.amount;
         acc.store_rent = if first { lot.store_rent } else { Paisa::ZERO };
-        // نقد: as typed; a one-time seller is paid his whole net on the spot (PRD FR-13.10).
+        // نقد: as typed; a one-time seller is paid his whole net on the spot (PRD FR-13.10). That
+        // is the first posting only: a later sale gives no نقد (it is paid later by an ادائیگی, PRD
+        // FR-13.7), so a typed نقد is refused there (money agent review of plan 16).
         let pays_on_the_spot =
-            lot.cash_paid.is_none() && ctx.facts.seller.is_some_and(|s| s.is_pukhta);
+            first && lot.cash_paid.is_none() && ctx.facts.seller.is_some_and(|s| s.is_pukhta);
         let credit = acc.seller_credit()?;
-        acc.cash_paid = match lot.cash_paid {
-            Some(cash) => cash,
-            None if pays_on_the_spot && credit > Paisa::ZERO => credit,
-            None => Paisa::ZERO,
+        if !first && lot.cash_paid.is_some_and(|cash| cash != Paisa::ZERO) {
+            issues.error(
+                ErrorCode::ErrFormatInvalid,
+                &format!("{}.cash_paid", ctx.prefix),
+            );
+        }
+        acc.cash_paid = if !first {
+            Paisa::ZERO
+        } else {
+            match lot.cash_paid {
+                Some(cash) => cash,
+                None if pays_on_the_spot && credit > Paisa::ZERO => credit,
+                None => Paisa::ZERO,
+            }
         };
         let totals = acc.totals(&Scope::Lot {
             labour: &labour.working,
@@ -443,6 +520,25 @@ pub(super) fn process_lot(
 ) -> Result<LotOutcome, CalcError> {
     let prefix = format!("lots[{index}]");
     let facts = lot_facts(issues, lookups, env.is_some(), &prefix, lot);
+    let found = lot
+        .lot_id
+        .and_then(|id| env.and_then(|e| e.stored.lots.get(&id)));
+    // A lot whose seller, item or one-time seller was changed is worked out as new: the rules of
+    // the old seller or item must not stay on it. Only the quantity taken elsewhere is kept.
+    let identity_changed = found
+        .and_then(|s| s.identity.as_ref())
+        .is_some_and(|stored| {
+            Some(stored.seller_account_id) != lot.seller_account_id
+                || Some(stored.item_id) != lot.item_id
+                // The one-time seller's key counts only for a one-time seller: leftover name text
+                // on an ordinary seller's lot is not a change.
+                || (facts.seller.is_some_and(|s| s.is_pukhta)
+                    && stored.person_key != clean_person(&lot.pukhta).map(|p| p.key))
+        });
+    let stripped = found.map(|s| StoredLot {
+        elsewhere_qty: s.elsewhere_qty,
+        ..StoredLot::default()
+    });
     let lot_ref = match (&facts, lot.seller_account_id, lot.item_id) {
         (
             LotFacts {
@@ -453,9 +549,11 @@ pub(super) fn process_lot(
             Some(seller_id),
             Some(item_id),
         ) => Some(LotRef {
+            lot_id: lot.lot_id,
             seller_id,
             item_id,
             item: *item,
+            identity_changed,
         }),
         _ => None,
     };
@@ -468,11 +566,14 @@ pub(super) fn process_lot(
         lot,
         lot_ref,
         facts,
+        stored_lot: if identity_changed {
+            stripped.as_ref()
+        } else {
+            found
+        },
     };
     let mut rows = process_rows(&ctx, run, issues)?;
-    let balance_qty = lot
-        .qty_received
-        .map(|r| r.get().saturating_sub(rows.sold).max(0));
+    let balance_qty = available_qty(&ctx).map(|r| r.saturating_sub(rows.sold).max(0));
     if let Some(left) = balance_qty
         && left > 0
     {

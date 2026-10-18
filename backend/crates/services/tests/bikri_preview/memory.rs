@@ -257,7 +257,7 @@ fn a_replaced_or_cancelled_sale_does_not_give_a_rate() {
     assert_eq!(r(last_rate(&w, "10-10-2026").unwrap().rate_paisa), 700);
     raw(&w.dir)
         .execute(
-            "UPDATE bikri_sales SET is_active = 0 WHERE id = ?1",
+            "UPDATE bikri_sales SET is_active = 0, ended = 'cancelled' WHERE id = ?1",
             [sale_id],
         )
         .unwrap();

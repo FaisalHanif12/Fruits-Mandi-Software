@@ -520,3 +520,316 @@ bikri-list-col-qty = { -nag } ({ bikri-saved-qty-sold } / { bikri-col-qty-receiv
 # left and sold on the right, under the header. For example 50 / 45.
 # review: pending
 bikri-list-qty = { $received } / { $sold }
+
+## باقی مال، بعد کی فروخت اور ضائع مال (PRD 12.8، FR-12.14 سے FR-12.17، پلان 16)۔
+
+# review: pending
+bikri-stock-help = وہ { -lot } جن کا مال ابھی بکا نہیں۔ بچا ہوا مال بیچنے کے لیے { -lot } پر Enter دبائیں۔
+
+# review: pending
+bikri-stock-label = بچے ہوئے مال والے { -lot }
+
+# review: pending
+bikri-stock-failed = { -baqi-maal } کی فہرست کھل نہیں سکی
+
+# review: pending
+bikri-stock-empty = کوئی مال باقی نہیں
+
+# review: pending
+bikri-stock-empty-help = جو مال آیا وہ سب بک چکا ہے۔ نئی { -bikri } کے لیے { $key } دبائیں۔
+
+# review: pending
+bikri-stock-no-match = کوئی { -lot } نہیں ملا
+
+# review: pending
+bikri-stock-no-match-help = دن، { -beopari } یا { -qism-maal } بدل کر دیکھیں۔
+
+# review: pending
+bikri-stock-from = وصول ہونے کی تاریخ سے
+
+# review: pending
+bikri-stock-to = وصول ہونے کی تاریخ تک
+
+# review: pending
+bikri-stock-include-written-off = وہ { -lot } بھی جن کا سارا مال ضائع ہو چکا ہے، تاکہ ضائع مال واپس کیا جا سکے
+
+# review: pending
+bikri-stock-col-received-date = وصولی کا دن
+
+# review: pending
+bikri-stock-col-item = { -qism-maal } اور { -packing }
+
+# $item: قسم مال۔ $packing: اس کی پیکنگ۔ مثلاً "کیلا، پیٹی"۔
+# review: pending
+bikri-stock-item-packing = { $item }، { $packing }
+
+# review: pending
+bikri-stock-col-written-off = ضائع
+
+# review: pending
+bikri-stock-col-days = انتظار کے دن
+
+# $number: { -bikri } نمبر۔ $lot: اس کے اندر { -lot } نمبر۔
+# review: pending
+bikri-stock-lot-title = { -bikri } { $number }، { -lot } { $lot }
+
+# review: pending
+bikri-stock-sell = بچا ہوا مال بیچیں
+
+# review: pending
+bikri-stock-write-off = ضائع کریں
+
+# review: pending
+bikri-stock-undo-write-off = ضائع مال واپس کریں
+
+# review: pending
+bikri-write-off-title = مال ضائع کریں
+
+# $number: { -bikri } نمبر۔ $seller: اس کا نام۔ $item: قسم مال۔ $balance: کتنے { -nag } باقی ہیں۔
+# review: pending
+bikri-write-off-text = { -bikri } { $number } ({ $seller }، { $item }) کا خراب یا واپس آیا ہوا مال { -lot } سے نکالا جائے گا۔ اب { $balance } { -nag } باقی ہیں۔ یہ صرف مال کا اندراج ہے، کوئی رقم نہیں ہلتی۔
+
+# review: pending
+bikri-write-off-qty = ضائع کرنے والے { -nag }
+
+# review: pending
+bikri-write-off-reason = وجہ (مثلاً خراب، واپس)
+
+# review: pending
+bikri-write-off-confirm = ضائع کریں
+
+# $qty: کتنے { -nag } ضائع ہوئے۔
+# review: pending
+bikri-write-off-done = { $qty } { -nag } ضائع ہو گئے
+
+# review: pending
+bikri-write-off-undo-title = ضائع مال واپس کریں
+
+# review: pending
+bikri-write-off-undo-text = مال بغیر بکے مال کی طرح { -lot } میں واپس آ جائے گا۔ ضائع کا اندراج چنیں اور وجہ لکھیں۔
+
+# review: pending
+bikri-write-off-undo-which = ضائع کا اندراج
+
+# $date: دن۔ $qty: کتنے { -nag }۔ $reason: ضائع کرنے کی وجہ۔
+# review: pending
+bikri-write-off-undo-option = { $date }: { $qty } { -nag } ({ $reason })
+
+# review: pending
+bikri-write-off-undo-confirm = ضائع واپس کریں
+
+# review: pending
+bikri-write-off-undone = ضائع کا اندراج واپس ہو گیا
+
+## بعد کی فروخت کا فارم۔
+
+# $number: { -bikri } نمبر۔
+# review: pending
+bikri-later-title = { -bikri } { $number } کی بعد کی فروخت
+
+# review: pending
+bikri-later-help = بچے ہوئے مال کی نئی لائنیں لکھیں۔ صرف یہی لائنیں نیچے لکھے دن پر لگیں گی۔ پہلا اندراج نہیں چھیڑا جائے گا۔
+
+# review: pending
+bikri-later-lot-title = { -lot }
+
+# review: pending
+bikri-later-no-lot-charges = { -lot } کا کرایہ، { -mazdoori }، { -munshiana } اور باقی خرچے دوبارہ نہیں لگتے۔ { -commission } اور { -laga } اس فروخت کے دن کے اصولوں سے بنتے ہیں۔
+
+# review: pending
+bikri-later-date = اس فروخت کا دن
+
+# review: pending
+bikri-lines-title = فروخت کی نئی لائنیں
+
+# review: pending
+bikri-later-save = فروخت محفوظ کریں
+
+# $number: { -bikri } نمبر۔
+# review: pending
+bikri-later-saved-toast = { -bikri } { $number } کی بعد کی فروخت محفوظ ہو گئی
+
+# review: pending
+bikri-later-to-stock = { -baqi-maal } پر واپس
+
+# review: pending
+bikri-later-no-lot = پہلے { -lot } چنیں
+
+# review: pending
+bikri-later-no-lot-help = بعد کی فروخت بچے ہوئے مال کی فہرست سے شروع ہوتی ہے۔
+
+# review: pending
+bikri-later-failed = { -lot } کھل نہیں سکا
+
+# review: pending
+bikri-later-lot-missing = یہ { -lot } نہیں ملا
+
+# review: pending
+bikri-later-lot-missing-help = ہو سکتا ہے یہ منسوخ ہو چکا ہو۔ بچے ہوئے مال کی فہرست کھول کر دوبارہ چنیں۔
+
+# review: pending
+bikri-later-nothing-left = اس { -lot } میں کچھ باقی نہیں
+
+# review: pending
+bikri-later-nothing-left-help = سارا مال بک چکا ہے یا ضائع ہو چکا ہے۔
+
+## محفوظ { -bikri } کی ترمیم اور منسوخی (PRD 12.9، FR-12.18 سے FR-12.22)۔
+
+# review: pending
+bikri-edit = ترمیم
+
+# review: pending
+bikri-cancel-bikri = { -bikri } منسوخ کریں
+
+# review: pending
+bikri-edit-back = { -bikri } پر واپس
+
+# review: pending
+bikri-edit-save = تبدیلیاں محفوظ کریں
+
+# $number: { -bikri } نمبر۔
+# review: pending
+bikri-edit-title = { -bikri } { $number } میں ترمیم
+
+# $date: جس اندراج کی ترمیم ہو رہی ہے اس کا دن۔
+# review: pending
+bikri-edit-help = آپ { $date } کے اندراج میں ترمیم کر رہے ہیں۔ اس کا دن وہی رہے گا۔ پرانا اندراج الٹ دیا جائے گا اور اس کی جگہ نیا اندراج لگے گا۔
+
+# review: pending
+bikri-edit-help-later = آپ { $date } کی بعد کی فروخت میں ترمیم کر رہے ہیں۔ اس کا دن وہی رہے گا۔ صرف لائنیں بدلی جا سکتی ہیں۔
+
+# review: pending
+bikri-edit-failed = اندراج ترمیم کے لیے کھل نہیں سکا
+
+# $number: { -bikri } نمبر۔
+# review: pending
+bikri-edit-saved-toast = { -bikri } { $number } میں تبدیلی ہو گئی
+
+# review: pending
+bikri-edit-reason-title = یہ اندراج کیوں بدلا جا رہا ہے؟
+
+# $date: اندراج کا دن۔
+# review: pending
+bikri-edit-reason-text = { $date } کا اندراج آج کا نہیں ہے۔ وجہ پرانی اور نئی قدروں کے ساتھ آڈٹ لاگ میں لکھی جائے گی۔
+
+# review: pending
+bikri-edit-reason-label = وجہ
+
+# review: pending
+bikri-edit-reason-confirm = تبدیلیاں محفوظ کریں
+
+# review: pending
+bikri-edit-changes-title = آپ نے کیا بدلا
+
+# review: pending
+bikri-edit-no-changes = ابھی کچھ نہیں بدلا۔
+
+# $where: مثلاً "{ -lot } 1، لائن 2"۔ $field: خانہ۔ $before اور $after: پرانا اور نیا متن۔
+# review: pending
+bikri-edit-change = { $where }: { $field } پہلے { $before } تھا، اب { $after }
+
+# review: pending
+bikri-edit-added = { $where }: نیا { $field } { $after }
+
+# $buyer: ہٹائی گئی لائن کا { -gahak }۔
+# review: pending
+bikri-edit-removed-line = { $where }: لائن ہٹا دی گئی ({ $buyer })
+
+# review: pending
+bikri-edit-where-header = اوپر کی معلومات
+
+# $lot: { -lot } نمبر۔
+# review: pending
+bikri-edit-where-lot = { -lot } { $lot }
+
+# $lot: { -lot } نمبر۔ $line: لائن نمبر۔
+# review: pending
+bikri-edit-where-line = { -lot } { $lot }، لائن { $line }
+
+# review: pending
+bikri-edit-empty = (خالی)
+
+# بدلے ہوئے خانے کا ٹول ٹپ۔ $value: پہلے کیا تھا۔
+# review: pending
+bikri-edit-was = بدلا گیا۔ پہلے یہ تھا: { $value }
+
+# review: pending
+bikri-edit-was-empty = بدلا گیا۔ پہلے یہ خالی تھا۔
+
+# review: pending
+bikri-edit-compare-what = رقم
+
+# review: pending
+bikri-edit-before = پہلے
+
+# review: pending
+bikri-edit-after = بعد میں
+
+# $date: بند دن۔
+# review: pending
+bikri-closed-day = { $date } کا دن بند ہے، اس لیے یہ اندراج بدلا یا منسوخ نہیں ہو سکتا۔ پہلے مالک کو دن کھولنا ہو گا۔
+
+# review: pending
+bikri-closed-day-open = دن کی اسکرین کھولیں
+
+# محفوظ { -bikri } کے اندراجات کی فہرست میں اندراج کی حالت۔
+# review: pending
+bikri-posting-state = حالت
+
+# review: pending
+bikri-posting-reversed = الٹ دیا گیا
+
+# review: pending
+bikri-posting-open = ترمیم ہو سکتی ہے
+
+# review: pending
+bikri-posting-not-editable = دن بند ہے
+
+# review: pending
+bikri-posting-edit = یہ اندراج بدلیں
+
+# $number: { -bikri } نمبر۔
+# review: pending
+bikri-cancel-title = یہ { -bikri } منسوخ کریں؟
+
+# review: pending
+bikri-cancel-text = { -bikri } { $number } منسوخ ہو جائے گی۔ کچھ مٹایا نہیں جاتا: نیچے لکھا ہر اندراج اپنے ہی دن پر الٹ دیا جائے گا، رقم واپس چلی جائے گی، اور { -gahak } کی وصولیاں اس کا جمع بن کر اس کے اگلے پرانے بلوں سے مل جائیں گی۔ یہ نمبر دوبارہ استعمال نہیں ہوگا۔
+
+# review: pending
+bikri-cancel-reverses = یہ اندراج الٹ دیے جائیں گے:
+
+# $before: اب { -rokar }۔ $after: منسوخی کے بعد { -rokar }۔
+# review: pending
+bikri-cancel-cash = { -rokar }: اب <num>{ $before }</num>، منسوخی کے بعد <num>{ $after }</num>۔
+
+# review: pending
+bikri-cancel-reason = وجہ
+
+# review: pending
+bikri-cancel-confirm = { -bikri } منسوخ کریں
+
+# review: pending
+bikri-cancel-preview-failed = منسوخی کا اثر پڑھا نہیں جا سکا۔ یہ ڈبہ بند کر کے دوبارہ کوشش کریں۔
+
+# $number: { -bikri } نمبر۔
+# review: pending
+bikri-cancelled-toast = { -bikri } { $number } منسوخ ہو گئی
+
+## محفوظ کرنے کے فوراً بعد واپسی (PRD FR-7.47)۔
+
+# review: pending
+bikri-undo = واپس لیں
+
+# محفوظ کرنے کے فوراً بعد واپسی پر آڈٹ لاگ میں یہی وجہ لکھی جاتی ہے۔ یہ متن اسی طرح بھیجا جاتا ہے۔
+# review: pending
+bikri-undo-reason = محفوظ کرنے کے فوراً بعد واپس
+
+# $number: واپس لی گئی { -bikri } کا نمبر۔ قدریں نئے اندراج میں آ گئی ہیں۔
+# review: pending
+bikri-undo-done = { -bikri } { $number } واپس لے لی گئی۔ اسے درست کر کے دوبارہ محفوظ کریں۔
+
+# review: pending
+bikri-undo-failed = محفوظ کیا ہوا اندراج واپس نہیں ہو سکا
+
+# review: pending
+bikri-undo-busy = آپ نے دوسری { -bikri } شروع کر دی ہے۔ پہلے اسے مکمل کریں یا صاف کریں، پھر واپس لیں۔

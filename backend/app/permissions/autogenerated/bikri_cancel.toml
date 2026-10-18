@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-cancel"
+description = "Enables the bikri_cancel command without any pre-configured scope."
+commands.allow = ["bikri_cancel"]
+
+[[permission]]
+identifier = "deny-bikri-cancel"
+description = "Denies the bikri_cancel command without any pre-configured scope."
+commands.deny = ["bikri_cancel"]

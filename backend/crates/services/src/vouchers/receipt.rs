@@ -160,19 +160,28 @@ pub(super) struct SellerReceipt {
     pub before: SellerView,
     /// The seller with it.
     pub after: SellerView,
-    /// The most he can return: his open advances plus what he owes beyond them.
+    /// The most he can return: his open advances plus what he owes beyond them. For an edited
+    /// receipt it also counts what the old version already returned.
     pub limit: Paisa,
+    /// What was payable to him with the old version of an edited receipt still in force: the
+    /// edit may not make more payable than that (plan 16). `None` for a new receipt.
+    pub old_open: Option<Paisa>,
 }
 
 impl SellerReceipt {
     /// True if the receipt would make more payable to the seller than before it, which is the
-    /// refusal of PRD FR-15.12.
+    /// refusal of PRD FR-15.12. An edited receipt is compared with its old version, so the same
+    /// return, or a smaller one, stays allowed even when a later entry of its day used the
+    /// advance (plan 16).
     pub fn exceeds(&self) -> bool {
-        self.after.work.open > self.before.work.open
+        self.after.work.open > self.old_open.unwrap_or(self.before.work.open)
     }
 }
 
-/// Works out a seller's receipt. `replacing` is the entry of the voucher being edited.
+/// Works out a seller's receipt. `replacing` is the entry of the voucher being edited, if it is
+/// still in force; `place_like` is the entry whose place among the entries of its day the new
+/// receipt takes (migration 0005): the same entry in a preview, and the entry already reversed in
+/// the save of an edit.
 ///
 /// # Errors
 /// `ServiceError::Db`, `ServiceError::Data`, `ERR_OVERFLOW`.
@@ -182,10 +191,16 @@ pub(super) fn seller_receipt(
     date: BusinessDate,
     amount: Paisa,
     replacing: Option<i64>,
+    place_like: Option<i64>,
 ) -> Result<SellerReceipt, ServiceError> {
     let inputs = matching::load_adv(conn, party.record.id)?;
     let day = date.to_iso();
     let key = party.person_key.as_deref();
+    // An edited receipt keeps the place of the one it replaces among the entries of its day
+    // (migration 0005), so the preview puts it where the save will.
+    let add_order_key = place_like
+        .map(|entry_id| crate::ledger::order_key_of(conn, entry_id))
+        .transpose()?;
     let before = matching::seller_view(
         &inputs,
         key,
@@ -194,6 +209,16 @@ pub(super) fn seller_receipt(
             ..AdvChange::default()
         },
     )?;
+    // An edited receipt: the books with its old version still in force, and the amount that
+    // version holds. The new version may return at most what is free plus what the old one held.
+    let (old_open, old_amount) = match replacing {
+        Some(entry_id) => {
+            let now = matching::seller_view(&inputs, key, &AdvChange::default())?;
+            (Some(now.work.open), inputs.credit_of_entry(entry_id)?)
+        }
+        None => (None, Paisa::ZERO),
+    };
+    let base_open = old_open.unwrap_or(before.work.open);
     let after = matching::seller_view(
         &inputs,
         key,
@@ -201,9 +226,12 @@ pub(super) fn seller_receipt(
             remove_entry: replacing,
             add_receipt: Some((day.as_str(), amount)),
             add_payment: None,
+            add_order_key,
         },
     )?;
     let mut limit = payables::return_limit(before.work.advances_open, before.work.excess_paid)
+        .map_err(money_error)?
+        .checked_add(old_amount)
         .map_err(money_error)?;
     // A receipt dated before later credits takes advances those credits had used, so the open
     // advances of today are not always the most he can return at that date. One look at the limit
@@ -216,9 +244,10 @@ pub(super) fn seller_receipt(
                 remove_entry: replacing,
                 add_receipt: Some((day.as_str(), amount)),
                 add_payment: None,
+                add_order_key,
             },
         )?;
-        Ok(view.work.open > before.work.open)
+        Ok(view.work.open > base_open)
     };
     if limit > Paisa::ZERO && exceeds_at(limit)? {
         limit = largest_allowed(exceeds_at, limit)?;
@@ -227,6 +256,7 @@ pub(super) fn seller_receipt(
         before,
         after,
         limit,
+        old_open,
     })
 }
 
@@ -278,10 +308,11 @@ pub(super) fn check_seller_limit(
     conn: &Connection,
     planned: &PlannedReceipt,
     replacing: Option<i64>,
+    place_like: Option<i64>,
 ) -> Result<(), ServiceError> {
     let (party, date, amount, _) = planned.parts()?;
     if party.role == Role::Seller {
-        let check = seller_receipt(conn, party, date, amount, replacing)?;
+        let check = seller_receipt(conn, party, date, amount, replacing, place_like)?;
         if check.exceeds() {
             return Err(exceeds_error(check.limit));
         }
@@ -322,7 +353,7 @@ fn post_receipt(
     planned: &PlannedReceipt,
 ) -> Result<VoucherSaved, ServiceError> {
     let (party, date, _, _) = planned.parts()?;
-    check_seller_limit(tx, planned, None)?;
+    check_seller_limit(tx, planned, None, None)?;
     let entry = receipt_entry(planned)?;
     let hint = hint_for(tx, party.role, party.record.id, party.person_key.as_deref())?;
     let now = ctx.now_text();

@@ -152,6 +152,7 @@ fn prepare_sale(
         input.buyer_account_id.is_none() && pukhta.is_empty() && is_blank(&input.seller_rate);
     let mut sale = PreparedSale {
         key: input.key.clone(),
+        sale_id: input.sale_id,
         is_blank: is_blank_row,
         has_errors: false,
         buyer_account_id: input.buyer_account_id,
@@ -291,6 +292,7 @@ fn prepare_lot(
     }
     PreparedLot {
         key: input.key.clone(),
+        lot_id: input.lot_id,
         has_errors: !ok,
         seller_account_id: input.seller_account_id,
         pukhta: pukhta_of(input.pukhta.as_ref()),

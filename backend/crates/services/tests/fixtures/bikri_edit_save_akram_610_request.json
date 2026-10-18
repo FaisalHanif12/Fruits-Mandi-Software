@@ -1,0 +1,86 @@
+{
+  "confirm_cash_below_zero": false,
+  "draft": {
+    "header": {
+      "adda_id": null,
+      "bill_date": "10-10-2026",
+      "book": null,
+      "driver_name": null,
+      "driver_phone": null,
+      "entry_date": "10-10-2026",
+      "note": null,
+      "store_id": null,
+      "total_freight": null,
+      "truck_no": "LES-1234",
+      "zamindar_account_id": null
+    },
+    "lots": [
+      {
+        "adjust_advance": true,
+        "cash_paid": "5000",
+        "freight": "3000",
+        "freight_paid_by": "firm",
+        "item_id": 1,
+        "key": "lot:1",
+        "labour": {
+          "method": "per_unit",
+          "value": "5"
+        },
+        "lot_id": 1,
+        "marka_id": null,
+        "munshiana": {
+          "method": "manual",
+          "value": "50"
+        },
+        "packing_id": 1,
+        "phone": {
+          "method": "manual",
+          "value": "20"
+        },
+        "pukhta": null,
+        "qty_received": "50",
+        "sales": [
+          {
+            "buyer_account_id": 19,
+            "buyer_comm": null,
+            "buyer_rate": null,
+            "key": "sale:1",
+            "laga": null,
+            "note": null,
+            "payment_type": "credit",
+            "pukhta": null,
+            "qty": "20",
+            "rate_differs": false,
+            "sale_id": 1,
+            "seller_comm": null,
+            "seller_rate": "610",
+            "weight": null
+          },
+          {
+            "buyer_account_id": 20,
+            "buyer_comm": null,
+            "buyer_rate": null,
+            "key": "sale:2",
+            "laga": null,
+            "note": null,
+            "payment_type": "credit",
+            "pukhta": null,
+            "qty": "25",
+            "rate_differs": false,
+            "sale_id": 2,
+            "seller_comm": null,
+            "seller_rate": "580",
+            "weight": null
+          }
+        ],
+        "seller_account_id": 17,
+        "store_id": null,
+        "store_rent": null,
+        "weight_received": null
+      }
+    ]
+  },
+  "entry_id": 3,
+  "reason": "ریٹ کی درستی",
+  "version": 2
+}

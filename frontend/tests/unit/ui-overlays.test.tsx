@@ -1,12 +1,13 @@
 // Select, Toast and ConfirmDialog in Urdu and English (plan 02 T3, design system 6,
 // PRD FR-7.7 and FR-7.8). These render in a portal, so they set lang and dir themselves.
 
-import { act, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { directionOf } from '../../src/shared/i18n';
+import { SHORTCUTS } from '../../src/shared/keyboard';
 import {
   ConfirmDialog,
   Field,
@@ -116,6 +117,60 @@ describe.each(LANGUAGES)('overlays (%s)', (language) => {
     });
     expect(screen.queryByText(message(language, 'common-back'))).toBeNull();
     expect(useToastStore.getState().toasts).toHaveLength(0);
+  });
+
+  it('a toast with a button: the button and its key run the action once and close it (FR-7.47)', () => {
+    const onAction = vi.fn();
+    renderIn(language, <Toaster />);
+    act(() => {
+      showToast('success', message(language, 'common-back'), {
+        durationMs: 10_000,
+        action: {
+          label: message(language, 'common-retry'),
+          altText: message(language, 'common-retry'),
+          shortcut: SHORTCUTS.undoSave,
+          onAction,
+        },
+      });
+    });
+    const button = screen.getByRole('button', {
+      name: (name) => name.startsWith(message(language, 'common-retry')),
+    });
+    expect(button).toHaveTextContent('Alt+Z');
+    // The key works while the message is on screen, runs the action once and closes the message.
+    act(() => {
+      fireEvent.keyDown(document.body, { code: 'KeyZ', key: 'z', altKey: true });
+    });
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(message(language, 'common-back'))).toBeNull();
+    // Gone with the message: the key does nothing any more.
+    act(() => {
+      fireEvent.keyDown(document.body, { code: 'KeyZ', key: 'z', altKey: true });
+    });
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('a toast with a button stays for the time it asks, not the usual 5 seconds', () => {
+    vi.useFakeTimers();
+    renderIn(language, <Toaster />);
+    act(() => {
+      showToast('success', message(language, 'common-back'), {
+        durationMs: 10_000,
+        action: {
+          label: message(language, 'common-retry'),
+          altText: message(language, 'common-retry'),
+          onAction: vi.fn(),
+        },
+      });
+    });
+    act(() => {
+      vi.advanceTimersByTime(TOAST_DURATION_MS + 500);
+    });
+    expect(screen.queryByText(message(language, 'common-back'))).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TOAST_DURATION_MS + 500);
+    });
+    expect(screen.queryByText(message(language, 'common-back'))).toBeNull();
   });
 
   it('an error toast has the error icon and is announced at once', () => {

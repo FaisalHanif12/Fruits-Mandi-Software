@@ -5,7 +5,7 @@ lines of the selected lot, the live summary (per lot and for the whole sale), th
 split, the cash note and the party card of the party the cursor is on. Plan 13 adds saving (F10),
 the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "آج کی بکری"
 (`/bikri/today`), first / previous / next / last, find, and the one-time people (see
-`../pukhta_khata`). Later sales, edit, cancel and undo are plan 16; printing is plan 14.
+`../pukhta_khata`). Later sales, edit, cancel and undo are plan 16 (see the section below); printing is plan 14.
 
 ## Rules this module keeps
 
@@ -71,19 +71,19 @@ the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "
 
 ## Files
 
-| File | What it holds |
-|---|---|
-| `pages/BikriBookPage.tsx` | The screen: four states, layout at the three window sizes, which party the card shows |
-| `components/` | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `PukhtaFields`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
-| `columns.ts` | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate) |
-| `draft-store.ts`, `draft.ts`, `union-store.ts` | The stores, the lines of all lots as one list for the whole-sale view, and the draft built from them as the backend takes it |
-| `preview-view.ts`, `grid-views.ts`, `problems.ts` | What the answer shows in each cell, and where each problem goes |
-| `hooks/` | `useBikriPreview`, `useDraftFills`, `useTruckMemory`, `useSplitFreight` |
-| `api.ts` | The only file that knows the command shapes |
-| `draft-snapshot.ts`, `draft-offer.tsx`, `after-save.ts` | The draft as text, the start-up offer, the printing hook |
-| `hooks/useSaveFlow.tsx`, `useSaveBikri.ts`, `useDraftAutosave.ts`, `useBikriReads.ts` | The save flow, the call and what it refreshes, the 5 second draft, the reads |
-| `components/BikriToolbar.tsx`, `BikriFindDialog.tsx`, `components/saved/` | The arrows and find, and the saved view |
-| `pages/TodayBikriPage.tsx`, `list-columns.ts` | The list of بکری |
+| File                                                                                  | What it holds                                                                                                                                       |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pages/BikriBookPage.tsx`                                                             | The screen: four states, layout at the three window sizes, which party the card shows                                                               |
+| `components/`                                                                         | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `PukhtaFields`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
+| `columns.ts`                                                                          | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate)                                                             |
+| `draft-store.ts`, `draft.ts`, `union-store.ts`                                        | The stores, the lines of all lots as one list for the whole-sale view, and the draft built from them as the backend takes it                        |
+| `preview-view.ts`, `grid-views.ts`, `problems.ts`                                     | What the answer shows in each cell, and where each problem goes                                                                                     |
+| `hooks/`                                                                              | `useBikriPreview`, `useDraftFills`, `useTruckMemory`, `useSplitFreight`                                                                             |
+| `api.ts`                                                                              | The only file that knows the command shapes                                                                                                         |
+| `draft-snapshot.ts`, `draft-offer.tsx`, `after-save.ts`                               | The draft as text, the start-up offer, the printing hook                                                                                            |
+| `hooks/useSaveFlow.tsx`, `useSaveBikri.ts`, `useDraftAutosave.ts`, `useBikriReads.ts` | The save flow, the call and what it refreshes, the 5 second draft, the reads                                                                        |
+| `components/BikriToolbar.tsx`, `BikriFindDialog.tsx`, `components/saved/`             | The arrows and find, and the saved view                                                                                                             |
+| `pages/TodayBikriPage.tsx`, `list-columns.ts`                                         | The list of بکری                                                                                                                                    |
 
 ## Prints (plan 14)
 
@@ -91,13 +91,13 @@ The seller bill (A4), the buyer slips (A5 or the 80 mm roll, one for each buyer)
 in Urdu or English (PRD FR-12.12). Layout and styles are in `shared/print`; this folder only picks
 the columns.
 
-| File | What it is |
-|---|---|
-| `print/SellerBillTemplate.tsx`, `BuyerSlipTemplate.tsx`, `PukhtaSlipTemplate.tsx`, `BikriPrintDocument.tsx`, `columns.ts` | The three templates and which goods columns each has. They calculate nothing |
-| `print/BikriPrintPage.tsx`, `params.ts` | The hidden print window's route `#/print?bikri=..&doc=..&language=..&job=..[&buyer=..]`. It reads `reports_bikri_print_data` (the only command it may call), draws the document, waits for the fonts, and says `print-ready-<job>` with `{ height_px }` or `print-error-<job>` with `{ codes }` |
-| `print/BikriPrintView.tsx`, `PrintPreview.tsx` | One document on screen (the window, and the in-app preview where printing is not available) |
-| `print/PrintBox.tsx`, `PrintAction.tsx` | The print box (F9 and the "Print" button of the toolbar): language, documents, one buyer, copies, printer or PDF |
-| `print/usePrintAfterSave.tsx`, `after-save.ts` | `Ctrl+Enter`: save, print the ticked documents, open a new بکری. A failed print never undoes the save |
+| File                                                                                                                      | What it is                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print/SellerBillTemplate.tsx`, `BuyerSlipTemplate.tsx`, `PukhtaSlipTemplate.tsx`, `BikriPrintDocument.tsx`, `columns.ts` | The three templates and which goods columns each has. They calculate nothing                                                                                                                                                                                                                    |
+| `print/BikriPrintPage.tsx`, `params.ts`                                                                                   | The hidden print window's route `#/print?bikri=..&doc=..&language=..&job=..[&buyer=..]`. It reads `reports_bikri_print_data` (the only command it may call), draws the document, waits for the fonts, and says `print-ready-<job>` with `{ height_px }` or `print-error-<job>` with `{ codes }` |
+| `print/BikriPrintView.tsx`, `PrintPreview.tsx`                                                                            | One document on screen (the window, and the in-app preview where printing is not available)                                                                                                                                                                                                     |
+| `print/PrintBox.tsx`, `PrintAction.tsx`                                                                                   | The print box (F9 and the "Print" button of the toolbar): language, documents, one buyer, copies, printer or PDF                                                                                                                                                                                |
+| `print/usePrintAfterSave.tsx`, `after-save.ts`                                                                            | `Ctrl+Enter`: save, print the ticked documents, open a new بکری. A failed print never undoes the save                                                                                                                                                                                           |
 
 ## Tests
 
@@ -128,3 +128,35 @@ the commands), `print-route.test.tsx` (the hidden window calls one command and e
 `print-speed.test.tsx` (15 pages, NFR-SPD-14). Canned data: `tests/helpers/print-data.ts`, which
 follows the generated binding types. The Windows spec is `15-bikri-print.e2e.mjs` (PDFs in both
 languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
+
+## Goods left, later sale, edit, cancel, undo (plan 16)
+
+- **باقی مال** (`pages/StockPage.tsx`, `stock-columns.ts`, `components/stock/`): the list of
+  lots with goods left, the card of the lot under it, and the write-off boxes. Enter on a lot starts
+  a later sale (`/bikri/later?lot=40`, `pages/LaterSalePage.tsx`).
+- **One form for sale lines** (`components/LinesForm.tsx`): used by the later sale and by the edit
+  of a later entry (`components/LaterPostingEdit.tsx`). The preview and the save are the
+  backend's later-sale or edit commands (`preview-source.ts`, `hooks/useSaveBikri.ts`); the hooks
+  `useBikriPreview` and `useSaveFlow` are the sale book's, given another source.
+- **Edit mode of the sale book**: `/bikri/book?id=12&edit=57` opens `EditBikri` in
+  `pages/BikriBookPage.tsx`. `hooks/useEditSession.ts` loads the entry (`bikri_open_for_edit`),
+  reads the saved بکری for names, puts the backend's draft into the stores
+  (`draft-load.ts`: ids to records, keys to row ids, the ids of saved lots and lines in hidden
+  cells `LOT.lotId` and `SALE.saleId`) and keeps a copy of every loaded cell (`edit-changes.ts`).
+  The changed cells are marked and listed (`edit-view.ts`, `edit-fields.ts`,
+  `components/EditChangesCard.tsx`). The session is not under the `['bikri']` query key, so a save
+  never remakes the stores under the user's hands. An edit keeps no draft and never touches the
+  draft of a new بکری.
+- **Cancel** (`components/CancelBikriFlow.tsx`): `bikri_cancel_preview` for the entries and cash,
+  the reason, the cash question, `bikri_cancel`. **Undo** (`hooks/useUndoSave.tsx`): the button on
+  the message after a save and Alt+Z for 10 seconds.
+- **Tests**: `bikri-stock.test.tsx`, `bikri-later-sale.test.tsx`, `bikri-edit-cancel.test.tsx` (edit,
+  cancel and undo), `bikri-draft-load.test.ts` (a draft from the backend in the stores and the
+  comparison), the toast button in `ui-overlays.test.tsx`. Canned answers: `tests/helpers/bikri-plan16.ts`
+  (the double) and `bikri-plan16-data.ts`. `bikri-plan16-contract.test.tsx` runs the screens on the
+  backend's own files (`tests/fixtures/bikri_stock_list`, `bikri_write_off_*`, `bikri_later_sale_*`,
+  `bikri_open_for_edit_event1`, `bikri_edit_*_akram_610`, `bikri_cancel_*_event2`,
+  `bikri_undo_event1`, each with its `_request.json`; read through `tests/helpers/bikri-plan16-real.ts`).
+  It checks that the draft an edit loads goes back unchanged, that a changed rate gives exactly the
+  request file, and that the later sale, cancel, write-off and undo send what the backend's tests send.
+  The Windows specs are `18-bikri-later-sale`, `19-bikri-edit`, `20-bikri-cancel`, `21-bikri-undo`.

@@ -87,6 +87,7 @@ pub fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
     let packing = first_id(env, "packings", 0);
     let lot = |n: usize| LotInput {
         key: format!("lot-{n}"),
+        lot_id: None,
         seller_account_id: Some(id_by_code(env, &format!("03011{:04}", 1 + n))),
         pukhta: None,
         item_id: Some(first_id(env, "items", i64::try_from(n % 3).unwrap_or(0))),
@@ -106,6 +107,7 @@ pub fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
         sales: (0..lines)
             .map(|j| SaleInput {
                 key: format!("s-{n}-{j}"),
+                sale_id: None,
                 buyer_account_id: Some(id_by_code(
                     env,
                     &format!("0304{:04}", 1 + (n * lines + j) % 500),

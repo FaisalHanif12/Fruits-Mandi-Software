@@ -13,14 +13,24 @@
 //! The read connection is not re-entrant, so the rules and switches are fetched before the one
 //! read of the call (see the services README).
 
+mod cancel;
+mod edit;
+mod later;
+mod load;
 mod pukhta;
 mod read;
+mod rows;
 mod save;
 mod shared;
+mod stock;
 
+pub use cancel::{cancel, preview as cancel_preview, undo};
+pub use edit::{edit_preview, edit_save, open_for_edit};
+pub use later::{preview as later_sale_preview, save as later_sale_save};
 pub use pukhta::{register, search_people};
 pub use read::{find, get, list, navigate};
 pub use save::save;
+pub use stock::{list as stock_list, write_off, write_off_undo};
 
 pub(crate) use shared::work_out;
 
@@ -46,6 +56,14 @@ pub fn preview(ctx: &Context, draft: &BikriDraft) -> Result<BikriPreview, Servic
     let rule_set = rules::rule_set(ctx)?;
     let settings = rules::overrides(ctx)?;
     let switches = shared::switches(&settings);
-    ctx.db
-        .read(|conn| Ok(work_out(conn, prepared, &rule_set, switches)?.preview()))
+    ctx.db.read(|conn| {
+        Ok(work_out(
+            conn,
+            prepared,
+            &rule_set,
+            switches,
+            &shared::Basis::new_bikri(),
+        )?
+        .preview())
+    })
 }

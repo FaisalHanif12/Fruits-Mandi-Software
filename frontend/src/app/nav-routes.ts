@@ -44,6 +44,8 @@ export function mainNavOf(pathname: string): MainNavId {
 export function moduleMenuOf(pathname: string, search: Record<string, unknown> = {}): ModuleMenuId {
   if (pathname === '/bikri/voucher') return asScreenType(search['type']) ?? 'receipt';
   if (pathname === '/bikri/collection') return 'receipt';
+  // A later sale starts from the list of goods left (plan 16).
+  if (pathname === '/bikri/later') return 'stock';
   const found = (Object.keys(MODULE_ROUTES) as ModuleMenuId[]).find(
     (id) => id !== 'bikri-book' && MODULE_ROUTES[id] === pathname,
   );

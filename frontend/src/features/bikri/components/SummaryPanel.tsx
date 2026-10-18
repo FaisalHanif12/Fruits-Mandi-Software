@@ -26,7 +26,8 @@ interface SummaryPanelProps {
   /** Which part is shown: the selected lot or the whole بکری. */
   whole: boolean;
   lotNumber: number | null;
-  onWholeChange: (whole: boolean) => void;
+  /** Without it there is one lot only (a later sale) and the lot / whole switch is not drawn. */
+  onWholeChange?: ((whole: boolean) => void) | undefined;
   /** The net is below zero: the seller owes the firm (PRD FR-12.7). */
   netIsNegative: boolean;
 }
@@ -122,20 +123,22 @@ export function SummaryPanel({
         <Localized id="bikri-summary-title">
           <h2 id="bikri-summary-heading" className="type-section text-ink" />
         </Localized>
-        <SegmentedControl
-          groupLabel={l10n.getString('bikri-summary-title')}
-          value={whole ? 'whole' : 'lot'}
-          onChange={(next) => {
-            onWholeChange(next === 'whole');
-          }}
-          options={[
-            {
-              value: 'lot',
-              label: l10n.getString('bikri-summary-lot', { lot: String(lotNumber ?? 1) }),
-            },
-            { value: 'whole', label: l10n.getString('bikri-summary-whole') },
-          ]}
-        />
+        {onWholeChange === undefined ? null : (
+          <SegmentedControl
+            groupLabel={l10n.getString('bikri-summary-title')}
+            value={whole ? 'whole' : 'lot'}
+            onChange={(next) => {
+              onWholeChange(next === 'whole');
+            }}
+            options={[
+              {
+                value: 'lot',
+                label: l10n.getString('bikri-summary-lot', { lot: String(lotNumber ?? 1) }),
+              },
+              { value: 'whole', label: l10n.getString('bikri-summary-whole') },
+            ]}
+          />
+        )}
       </div>
       {totals === null ? (
         <Localized id="bikri-summary-incomplete">

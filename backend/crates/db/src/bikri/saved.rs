@@ -10,8 +10,8 @@ use std::collections::HashMap;
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
     BikriDetail, BikriHit, BikriListRow, BikriMatch, BikriStatus, FreightPaidBy, LotChargeMethod,
-    NavigateTo, PaymentType, PukhtaPerson, PukhtaSide, SavedCharge, SavedLot, SavedLotCharge,
-    SavedPosting, SavedPukhta, SavedSale, SavedSplit, SavedTotals, StoredMethod,
+    NavigateTo, PaymentType, PukhtaPerson, PukhtaSide, SaleState, SavedCharge, SavedLot,
+    SavedLotCharge, SavedPosting, SavedPukhta, SavedSale, SavedSplit, SavedTotals, StoredMethod,
 };
 use mandi_core::money::Paisa;
 use rusqlite::types::FromSql;
@@ -154,6 +154,8 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
     let at = c.at;
     let payment: String = c.get()?;
     let is_active: bool = c.get()?;
+    let ended_at = c.at;
+    let ended: Option<String> = c.get()?;
     let note: Option<String> = c.get()?;
     Ok((
         lot_id,
@@ -177,6 +179,8 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
             rate_diff,
             payment_type: PaymentType::parse(&payment).ok_or_else(|| bad(at, "a payment type"))?,
             is_active,
+            state: SaleState::parse(ended.as_deref())
+                .ok_or_else(|| bad(ended_at, "a sale line state"))?,
             note,
         },
     ))
@@ -190,7 +194,7 @@ const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.ent
     s.buyer_rate_paisa, s.buyer_value_paisa,
     s.buyer_comm_method, s.buyer_comm_value_bps, s.buyer_comm_value_paisa, s.buyer_comm_rule_id, s.buyer_comm_paisa,
     s.laga_method, s.laga_value_bps, s.laga_value_paisa, s.laga_rule_id, s.laga_paisa,
-    s.buyer_total_paisa, s.rate_diff_paisa, s.payment_type, s.is_active, s.note";
+    s.buyer_total_paisa, s.rate_diff_paisa, s.payment_type, s.is_active, s.ended, s.note";
 
 fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let id: i64 = c.get()?;
@@ -260,7 +264,7 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
 pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> {
     let head = conn
         .query_row(
-            "SELECT e.id, e.number, e.book, e.entry_date, e.bill_date, e.truck_no, e.adda_id, e.driver_name,
+            "SELECT e.id, e.version, e.number, e.book, e.entry_date, e.bill_date, e.truck_no, e.adda_id, e.driver_name,
                     e.driver_phone, e.total_freight_paisa, e.store_id, e.note, e.status, e.cancel_reason,
                     e.print_count, e.created_at, z.id, z.code, z.name_ur, z.name_en
              FROM bikri_entries e LEFT JOIN accounts z ON z.id = e.zamindar_account_id
@@ -270,6 +274,7 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
                 let mut c = Cols::new(row);
                 Ok(BikriDetail {
                     id: c.get()?,
+                    version: c.get()?,
                     number: c.get()?,
                     book: c.get()?,
                     entry_date: c.get()?,
@@ -341,8 +346,10 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
     detail.totals = whole;
 
     let mut statement = conn.prepare(
-        "SELECT id, posting_type, entry_date, total_paisa FROM journal_entries
-         WHERE source_type = 'bikri' AND source_id = ?1 AND status = 'posted' ORDER BY id",
+        "SELECT e.id, e.posting_type, e.entry_date, e.total_paisa,
+                EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
+         FROM journal_entries e
+         WHERE e.source_type = 'bikri' AND e.source_id = ?1 AND e.status = 'posted' ORDER BY e.id",
     )?;
     let postings = statement.query_map([id], |row| {
         let mut c = Cols::new(row);
@@ -351,6 +358,9 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
             posting_type: c.get()?,
             entry_date: c.get()?,
             total: c.paisa()?,
+            reversed: c.get()?,
+            // Set by the service, which knows the closed-up-to day.
+            editable: false,
         })
     })?;
     detail.postings = postings.collect::<rusqlite::Result<Vec<_>>>()?;

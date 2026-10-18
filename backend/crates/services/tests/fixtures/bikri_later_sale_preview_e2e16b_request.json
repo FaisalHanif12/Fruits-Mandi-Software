@@ -1,0 +1,22 @@
+{
+  "date": "10-10-2026",
+  "lot_id": 1,
+  "sales": [
+    {
+      "buyer_account_id": 20,
+      "buyer_comm": null,
+      "buyer_rate": null,
+      "key": "later-1",
+      "laga": null,
+      "note": null,
+      "payment_type": null,
+      "pukhta": null,
+      "qty": "5",
+      "rate_differs": false,
+      "sale_id": null,
+      "seller_comm": null,
+      "seller_rate": "560",
+      "weight": null
+    }
+  ]
+}

@@ -288,6 +288,28 @@ const EXPECTED_FILES: &[&str] = &[
     "PukhtaRegisterRow.ts",
     "BikriMatch.ts",
     "BikriHit.ts",
+    "StockListInput.ts",
+    "WriteOffRow.ts",
+    "StockRow.ts",
+    "StockList.ts",
+    "LaterSaleInput.ts",
+    "LaterSaleSaveInput.ts",
+    "LaterSaleSaved.ts",
+    "EditOpenInput.ts",
+    "EditableBikri.ts",
+    "EditPreviewInput.ts",
+    "EditSaveInput.ts",
+    "BikriEdited.ts",
+    "CancelPreviewInput.ts",
+    "CancelPreview.ts",
+    "CancelInput.ts",
+    "BikriCancelled.ts",
+    "UndoInput.ts",
+    "UndoResult.ts",
+    "WriteOffInput.ts",
+    "WriteOffDone.ts",
+    "WriteOffUndoInput.ts",
+    "WriteOffUndone.ts",
     "DraftSaveInput.ts",
     "DraftSaved.ts",
     "DraftGetInput.ts",
@@ -477,6 +499,26 @@ fn export_bindings() {
     bikri::PukhtaRegisterInput::export_all(&cfg).unwrap();
     bikri::PukhtaRegisterRow::export_all(&cfg).unwrap();
     bikri::BikriHit::export_all(&cfg).unwrap();
+    bikri::StockListInput::export_all(&cfg).unwrap();
+    bikri::StockList::export_all(&cfg).unwrap();
+    bikri::LaterSaleInput::export_all(&cfg).unwrap();
+    bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();
+    bikri::LaterSaleSaved::export_all(&cfg).unwrap();
+    bikri::EditOpenInput::export_all(&cfg).unwrap();
+    bikri::EditableBikri::export_all(&cfg).unwrap();
+    bikri::EditPreviewInput::export_all(&cfg).unwrap();
+    bikri::EditSaveInput::export_all(&cfg).unwrap();
+    bikri::BikriEdited::export_all(&cfg).unwrap();
+    bikri::CancelPreviewInput::export_all(&cfg).unwrap();
+    bikri::CancelPreview::export_all(&cfg).unwrap();
+    bikri::CancelInput::export_all(&cfg).unwrap();
+    bikri::BikriCancelled::export_all(&cfg).unwrap();
+    bikri::UndoInput::export_all(&cfg).unwrap();
+    bikri::UndoResult::export_all(&cfg).unwrap();
+    bikri::WriteOffInput::export_all(&cfg).unwrap();
+    bikri::WriteOffDone::export_all(&cfg).unwrap();
+    bikri::WriteOffUndoInput::export_all(&cfg).unwrap();
+    bikri::WriteOffUndone::export_all(&cfg).unwrap();
     drafts::DraftSaveInput::export_all(&cfg).unwrap();
     drafts::DraftSaved::export_all(&cfg).unwrap();
     drafts::DraftGetInput::export_all(&cfg).unwrap();

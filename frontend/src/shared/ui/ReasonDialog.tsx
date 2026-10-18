@@ -17,7 +17,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import type { UiError } from '../../bindings/UiError';
 import { useUiLanguage } from '../i18n';
 import { SHORTCUTS, runEscape, useFormNavigation } from '../keyboard';
-import { Button } from './Button';
+import { Button, type ButtonVariant } from './Button';
 import { ErrorNotice } from './ErrorNotice';
 import { Field } from './Field';
 import { FreeTextInput } from './FreeTextInput';
@@ -41,6 +41,16 @@ interface ReasonDialogProps {
   note?: ReactNode;
   /** The action was asked for, with the reason typed (trimmed, never empty). */
   onConfirm: (reason: string) => void;
+  /** Fields the action needs besides the reason, shown above it (for example the quantity). */
+  extra?: ReactNode;
+  /** The field paths `extra` shows its own problems for, so they are not told twice. */
+  extraFields?: readonly string[];
+  /** The look of the action button. Default: danger (a cancel). An edit asks with primary. */
+  confirmVariant?: ButtonVariant;
+  /** The action cannot be taken now (the day is closed): the button stays, dimmed. */
+  confirmDisabled?: boolean;
+  /** What the reason field starts with, for a box that is opened again after a step between. */
+  initialReason?: string;
 }
 
 function ReasonForm({
@@ -51,9 +61,14 @@ function ReasonForm({
   busy,
   note,
   onConfirm,
+  extra,
+  extraFields = [],
+  confirmVariant = 'danger',
+  confirmDisabled = false,
+  initialReason = '',
   onClose,
 }: Omit<ReasonDialogProps, 'open' | 'onOpenChange' | 'title'> & { onClose: () => void }) {
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState(initialReason);
   const [tried, setTried] = useState(false);
   const submit = () => {
     const trimmed = reason.trim();
@@ -76,8 +91,11 @@ function ReasonForm({
       <AlertDialog.Description className="type-body text-ink-muted">
         {description}
       </AlertDialog.Description>
-      {error === null ? null : <ErrorNotice error={error} fieldsShown={['reason']} />}
+      {error === null ? null : (
+        <ErrorNotice error={error} fieldsShown={['reason', ...extraFields]} />
+      )}
       {note === undefined ? null : <Notice tone="warn">{note}</Notice>}
+      {extra}
       <Field
         label={reasonLabel}
         error={
@@ -105,7 +123,7 @@ function ReasonForm({
         <Button shortcut={SHORTCUTS.back} onClick={onClose}>
           <Localized id="common-back" />
         </Button>
-        <Button variant="danger" busy={busy} onClick={submit}>
+        <Button variant={confirmVariant} busy={busy} disabled={confirmDisabled} onClick={submit}>
           {confirmLabel}
         </Button>
       </div>

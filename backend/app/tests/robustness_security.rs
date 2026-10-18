@@ -514,6 +514,67 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "bikri_stock_list",
+            json!({ "input": { "date": null, "from": null, "to": null, "seller_id": null,
+                "item_id": null, "include_written_off": false } }),
+            true,
+        ),
+        (
+            "bikri_later_sale_preview",
+            json!({ "input": { "lot_id": 1, "date": "10-10-2026", "sales": [] } }),
+            true,
+        ),
+        (
+            "bikri_later_sale_save",
+            json!({ "input": { "lot_id": 1, "date": "10-10-2026", "sales": [],
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_open_for_edit",
+            json!({ "input": { "bikri_id": 1, "entry_id": 1 } }),
+            true,
+        ),
+        (
+            "bikri_edit_preview",
+            json!({ "input": { "entry_id": 1,
+                "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] } } }),
+            true,
+        ),
+        (
+            "bikri_edit_save",
+            json!({ "input": { "entry_id": 1, "version": 1, "reason": null,
+                "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] },
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_cancel_preview",
+            json!({ "input": { "id": 1 } }),
+            true,
+        ),
+        (
+            "bikri_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "غلط اندراج",
+                "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_undo",
+            json!({ "input": { "id": 1, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "bikri_write_off",
+            json!({ "input": { "lot_id": 1, "qty": "1", "reason": "خراب" } }),
+            true,
+        ),
+        (
+            "bikri_write_off_undo",
+            json!({ "input": { "move_id": 1, "reason": "غلط" } }),
+            true,
+        ),
+        (
             "search_pukhta_people",
             json!({ "input": { "text": "shahid", "side": "buyer" } }),
             true,

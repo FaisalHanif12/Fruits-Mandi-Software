@@ -89,6 +89,9 @@ pub struct StoredEntry {
     pub source_id: i64,
     /// The reversed entry, if any.
     pub reverses_entry_id: Option<i64>,
+    /// The key that keeps an edited posting in its place for matching (migration 0005). `None`
+    /// means the entry's own id.
+    pub order_key: Option<i64>,
     /// Note.
     pub narration: Option<String>,
     /// `draft` or `posted`.
@@ -101,7 +104,7 @@ pub struct StoredEntry {
     pub lines: Vec<StoredLine>,
 }
 
-/// Inserts an entry as a draft and returns its id.
+/// Inserts an entry as a draft and returns its id. Its order key is its own id.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -111,10 +114,26 @@ pub fn insert_draft(
     user_id: i64,
     now: &str,
 ) -> rusqlite::Result<i64> {
+    insert_draft_ordered(conn, header, None, user_id, now)
+}
+
+/// [`insert_draft`] with an order key (migration 0005): an edit's new posting passes the key of the
+/// posting it replaces, and a reversal passes its original's, so the edited posting keeps its place
+/// in the day for matching. `None` means the entry's own id.
+///
+/// # Errors
+/// Any SQLite error (the key must be more than 0).
+pub fn insert_draft_ordered(
+    conn: &Connection,
+    header: &EntryHeader<'_>,
+    order_key: Option<i64>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO journal_entries (created_at, created_by, updated_at, updated_by, entry_date, posting_type,
-             source_type, source_id, reverses_entry_id, narration, status, total_paisa)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'draft', 0)",
+             source_type, source_id, reverses_entry_id, narration, status, total_paisa, order_key)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'draft', 0, ?9)",
         params![
             now,
             user_id,
@@ -123,10 +142,25 @@ pub fn insert_draft(
             header.source_type,
             header.source_id,
             header.reverses_entry_id,
-            header.narration
+            header.narration,
+            order_key
         ],
     )?;
     Ok(conn.last_insert_rowid())
+}
+
+/// The key that places an entry among the others of its day for matching: its order key, or its
+/// own id when it has none. An edit gives this to the posting that replaces it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn order_key_of(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT COALESCE(order_key, id) FROM journal_entries WHERE id = ?1",
+        [entry_id],
+        |r| r.get(0),
+    )
+    .optional()
 }
 
 /// Inserts one line into a draft entry.
@@ -168,7 +202,7 @@ pub fn get_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<St
     let head = conn
         .query_row(
             "SELECT id, entry_date, posting_type, source_type, source_id, reverses_entry_id, narration, status,
-                    total_paisa, chain_hash
+                    total_paisa, chain_hash, order_key
              FROM journal_entries WHERE id = ?1",
             [entry_id],
             |r| {
@@ -183,6 +217,7 @@ pub fn get_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<St
                     status: r.get(7)?,
                     total_paisa: r.get(8)?,
                     chain_hash: r.get(9)?,
+                    order_key: r.get(10)?,
                     lines: Vec::new(),
                 })
             },
@@ -239,6 +274,12 @@ fn canonical_bytes(previous: &str, entry: &StoredEntry, total_paisa: i64) -> Vec
     put_number(&mut out, entry.reverses_entry_id);
     put_text(&mut out, entry.narration.as_deref());
     put_number(&mut out, Some(total_paisa));
+    // The order key is covered only when it is set (migration 0005), so the hash of every entry
+    // written before that migration, and of every entry without a key, is what it always was.
+    if let Some(key) = entry.order_key {
+        out.push(2);
+        put_number(&mut out, Some(key));
+    }
     put_number(&mut out, i64::try_from(entry.lines.len()).ok());
     for line in &entry.lines {
         put_number(&mut out, Some(line.line_no));
@@ -547,6 +588,40 @@ pub fn totals_for_accounts(
     }
     let mut statement = conn.prepare(&totals_for_accounts_sql(ids.len()))?;
     let rows = statement.query_map(rusqlite::params_from_iter(ids.iter()), |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            Totals {
+                dr_paisa: r.get(1)?,
+                cr_paisa: r.get(2)?,
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
+/// The debit and credit totals that ONE entry has on each of these accounts, in paisa. An account
+/// the entry has no line on is not in the answer. An edit uses it to take its own old posting out
+/// of a balance (the credit limit check, plan 16).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn entry_totals_for_accounts(
+    conn: &Connection,
+    entry_id: i64,
+    ids: &[i64],
+) -> rusqlite::Result<std::collections::HashMap<i64, Totals>> {
+    if ids.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
+    let marks = vec!["?"; ids.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE entry_id = ? AND account_id IN ({marks}) GROUP BY account_id"
+    ))?;
+    let mut args: Vec<i64> = Vec::with_capacity(ids.len().saturating_add(1));
+    args.push(entry_id);
+    args.extend_from_slice(ids);
+    let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
         Ok((
             r.get::<_, i64>(0)?,
             Totals {

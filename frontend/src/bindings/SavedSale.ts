@@ -2,6 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 import type { PaymentType } from './PaymentType';
 import type { RecordRef } from './RecordRef';
+import type { SaleState } from './SaleState';
 import type { SavedCharge } from './SavedCharge';
 import type { SavedPukhta } from './SavedPukhta';
 
@@ -82,9 +83,14 @@ export type SavedSale = {
    */
   payment_type: PaymentType;
   /**
-   * False once an edit or a cancel replaced this line (plan 16).
+   * False once an edit or a cancel ended this line (plan 16). `state` says how.
    */
   is_active: boolean;
+  /**
+   * In force, replaced or removed by an edit, or cancelled with its بکری. A cancelled بکری
+   * shows the lines in state `cancelled`; a saved one shows the lines `in_force`.
+   */
+  state: SaleState;
   /**
    * A note.
    */

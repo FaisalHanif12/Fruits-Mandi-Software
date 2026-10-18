@@ -25,7 +25,7 @@
 //! point 4).
 //!
 //! ```
-//! use mandi_domain::bikri::{Lookups, PostingKind, Switches, calc_posting};
+//! use mandi_domain::bikri::{Lookups, PostingTarget, StoredPosting, Switches, calc_posting};
 //! use mandi_domain::core::bikri::{BikriDraft, HeaderInput, prepare_draft};
 //! use mandi_domain::core::dates::BusinessDate;
 //! use mandi_domain::rules::RuleSet;
@@ -47,7 +47,8 @@
 //!     rate_check_percent: Some(30),
 //! };
 //! let calc = calc_posting(
-//!     PostingKind::First, &prepared, &Lookups::default(), &RuleSet::default(), switches,
+//!     PostingTarget::New, &prepared, &Lookups::default(), &RuleSet::default(), switches,
+//!     &StoredPosting::none(),
 //! ).unwrap();
 //! assert_eq!(calc.errors.len(), 1);
 //! ```
@@ -58,6 +59,7 @@ mod lookups;
 mod lot;
 mod person;
 mod process;
+mod stored;
 mod working;
 
 use std::collections::HashMap;
@@ -77,10 +79,14 @@ use crate::rules::RuleSet;
 
 pub use self::lookups::{AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, Switches};
 pub use self::person::{CleanPerson, clean_person};
+pub use self::stored::{
+    PostingTarget, StoredCarrier, StoredCharge, StoredIdentity, StoredLot, StoredLotCharge,
+    StoredPosting, StoredSale,
+};
 pub use self::working::partner_share;
 
 /// Which posting of a بکری this is (PRD FR-12.17). A later sale charges no lot charges and no
-/// per-lot commission; plan 16 passes `Later`.
+/// per-lot commission. [`PostingTarget`] says which one a call works out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PostingKind {
     /// The first posting of a بکری.
@@ -116,6 +122,8 @@ pub(crate) struct Env<'a> {
     pub lookups: &'a Lookups,
     pub rules: &'a RuleSet,
     pub switches: Switches,
+    /// What is stored about the posting being edited (empty for a new one).
+    pub stored: &'a StoredPosting,
 }
 
 /// The result of working out a draft.
@@ -147,18 +155,30 @@ fn header_checks(issues: &mut Issues, draft: &PreparedDraft, lookups: &Lookups) 
     checks::master_exists(issues, &lookups.stores, h.store_id, "header.store_id");
 }
 
-/// Works out a draft: the one function of the preview and (plan 13) the save.
+/// Works out a draft: the one function of the preview and the save of a new بکری, a later sale
+/// and an edit (Code Standards B5, plan 16).
+///
+/// - `PostingTarget::New`: the first posting; `stored` is empty.
+/// - `PostingTarget::LaterSale`: the draft has one lot, whose `lot_id` is in `stored.lots`; no lot
+///   charge, freight, store rent or per-lot commission is charged again.
+/// - `PostingTarget::Edit`: a line with a `sale_id` in `stored.sales` that the user did not change
+///   keeps its stored charges exactly (PRD FR-12.20); a lot charge the user did not change keeps
+///   its stored method and value. When the edited line carrying a per-lot seller commission is
+///   removed, the charge moves, with its stored method and value, to the first remaining line of
+///   the lot that follows the rule (PRD FR-11.9).
 ///
 /// # Errors
 /// [`CalcError`] only for overflow or broken data; every mistake of the user comes back in
 /// `PostingCalc::errors` with its field.
 pub fn calc_posting(
-    kind: PostingKind,
+    target: PostingTarget,
     draft: &PreparedDraft,
     lookups: &Lookups,
     rules: &RuleSet,
     switches: Switches,
+    stored: &StoredPosting,
 ) -> Result<PostingCalc, CalcError> {
+    let kind = target.kind(stored);
     let mut issues = Issues::default();
     issues.errors.extend(draft.issues.iter().cloned());
     header_checks(&mut issues, draft, lookups);
@@ -179,6 +199,7 @@ pub fn calc_posting(
         lookups,
         rules,
         switches,
+        stored,
     });
     let date_iso = draft
         .header

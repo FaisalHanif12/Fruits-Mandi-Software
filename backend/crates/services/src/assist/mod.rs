@@ -318,8 +318,24 @@ pub(crate) fn saved_rate_hint(
     packing_id: i64,
     date: BusinessDate,
 ) -> Result<Option<RateHint>, ServiceError> {
+    saved_rate_hint_except(conn, item_id, packing_id, date, None)
+}
+
+/// [`saved_rate_hint`] without the lines of one posting: an edit does not take its own old lines
+/// as the last rate (plan 16).
+///
+/// # Errors
+/// As [`saved_rate_hint`].
+pub(crate) fn saved_rate_hint_except(
+    conn: &mandi_db::rusqlite::Connection,
+    item_id: i64,
+    packing_id: i64,
+    date: BusinessDate,
+    except_entry: Option<i64>,
+) -> Result<Option<RateHint>, ServiceError> {
     let day = date.to_iso();
-    let Some(saved) = bikri_repo::last_rate(conn, item_id, packing_id, &day)? else {
+    let Some(saved) = bikri_repo::last_rate_except(conn, item_id, packing_id, &day, except_entry)?
+    else {
         return Ok(None);
     };
     let source = if saved.entry_date == day {

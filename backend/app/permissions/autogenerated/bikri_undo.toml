@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-undo"
+description = "Enables the bikri_undo command without any pre-configured scope."
+commands.allow = ["bikri_undo"]
+
+[[permission]]
+identifier = "deny-bikri-undo"
+description = "Denies the bikri_undo command without any pre-configured scope."
+commands.deny = ["bikri_undo"]

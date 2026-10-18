@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { ACCOUNT_COLUMNS, accountColumns } from '../../src/features/masters/account-columns';
 import { MASTER_CONFIGS, columnsOf } from '../../src/features/masters/configs';
 import { BIKRI_LIST_COLUMNS, bikriListColumns } from '../../src/features/bikri/list-columns';
+import { STOCK_COLUMNS } from '../../src/features/bikri/stock-columns';
 import { PUKHTA_COLUMNS, pukhtaColumns } from '../../src/features/pukhta_khata/columns';
 import { VOUCHER_COLUMNS } from '../../src/features/vouchers/list-columns';
 import { RULE_COLUMNS } from '../../src/features/rules/columns';
@@ -70,6 +71,10 @@ describe('lists fit the content area', () => {
     });
     it.each(STEPS)('register of the پختہ کھاتہ accounts at the %s step', (step) => {
       expect(leastWidth(PUKHTA_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
+    });
+
+    it.each(STEPS)('list of goods left (باقی مال) at the %s step', (step) => {
+      expect(leastWidth(STOCK_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
     });
 
     it.each(STEPS)('list of vouchers under the voucher form at the %s step', (step) => {

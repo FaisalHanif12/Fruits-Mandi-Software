@@ -124,6 +124,44 @@ pub struct SavedLotCharge {
     pub rule_id: Option<i64>,
 }
 
+/// Whether a saved sale line is in force, and if not, how it left (plan 16).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum SaleState {
+    /// In force: it counts in the totals, the books and the stock.
+    InForce,
+    /// An edit wrote a new line in its place (PRD FR-12.19). History only.
+    Replaced,
+    /// An edit took the line out. History only.
+    Removed,
+    /// The whole بکری was cancelled while the line was in force (PRD FR-12.22). The saved view of a
+    /// cancelled بکری shows these lines with the cancelled mark.
+    Cancelled,
+}
+
+impl SaleState {
+    /// The stored form of `bikri_sales.ended`; `None` is in force.
+    pub const fn ended(self) -> Option<&'static str> {
+        match self {
+            SaleState::InForce => None,
+            SaleState::Replaced => Some("replaced"),
+            SaleState::Removed => Some("removed"),
+            SaleState::Cancelled => Some("cancelled"),
+        }
+    }
+
+    /// Reads the stored form.
+    pub fn parse(ended: Option<&str>) -> Option<Self> {
+        match ended {
+            None => Some(SaleState::InForce),
+            Some("replaced") => Some(SaleState::Replaced),
+            Some("removed") => Some(SaleState::Removed),
+            Some("cancelled") => Some(SaleState::Cancelled),
+            Some(_) => None,
+        }
+    }
+}
+
 /// One saved sale line with its stored values (PRD FR-11.6, Code Standards B20).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedSale {
@@ -174,8 +212,11 @@ pub struct SavedSale {
     pub rate_diff: Paisa,
     /// How the buyer pays.
     pub payment_type: PaymentType,
-    /// False once an edit or a cancel replaced this line (plan 16).
+    /// False once an edit or a cancel ended this line (plan 16). `state` says how.
     pub is_active: bool,
+    /// In force, replaced or removed by an edit, or cancelled with its بکری. A cancelled بکری
+    /// shows the lines in state `cancelled`; a saved one shows the lines `in_force`.
+    pub state: SaleState,
     /// A note.
     pub note: Option<String>,
 }
@@ -258,7 +299,13 @@ impl SavedTotals {
         };
         let (mut buyer_comm, mut laga, mut rate_diff) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
         let (mut buyer_credit, mut buyer_cash) = (Paisa::ZERO, Paisa::ZERO);
-        for sale in lot.sales.iter().filter(|s| s.is_active) {
+        // The lines in force; for a cancelled بکری the lines that were in force when it was
+        // cancelled, so its numbers still add up (plan 16).
+        for sale in lot
+            .sales
+            .iter()
+            .filter(|s| s.is_active || s.state == SaleState::Cancelled)
+        {
             buyer_comm = buyer_comm.checked_add(sale.buyer_comm.amount)?;
             laga = laga.checked_add(sale.laga.amount)?;
             rate_diff = rate_diff.checked_add(sale.rate_diff)?;
@@ -427,6 +474,12 @@ pub struct SavedPosting {
     /// The debit total of the entry.
     #[ts(type = "Paisa")]
     pub total: Paisa,
+    /// True once an edit or a cancel took this posting back with a reversal (plan 16). A reversed
+    /// posting is history: it cannot be edited and it holds no stock or money.
+    pub reversed: bool,
+    /// True if this posting can be edited now: a first or later posting that is not reversed, of
+    /// a بکری that is saved, on a day that is still open (PRD FR-12.18). Set by the service.
+    pub editable: bool,
 }
 
 /// One partner's part of the income of a saved بکری, summed over its postings.
@@ -450,6 +503,10 @@ pub struct BikriDetail {
     /// Row id.
     #[ts(type = "number")]
     pub id: i64,
+    /// The version of the row, to send back with an edit or a cancel (`ERR_VERSION_CHANGED` if
+    /// the بکری changed since it was read).
+    #[ts(type = "number")]
+    pub version: i64,
     /// The number.
     #[ts(type = "number")]
     pub number: i64,

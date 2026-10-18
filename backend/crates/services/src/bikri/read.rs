@@ -4,7 +4,7 @@
 
 use mandi_db::bikri::saved::{self as repo, ListFilter};
 use mandi_domain::core::bikri::{
-    BikriDetail, BikriFindInput, BikriListInput, BikriListRow, BikriNavigateInput,
+    BikriDetail, BikriFindInput, BikriListInput, BikriListRow, BikriNavigateInput, BikriStatus,
 };
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
@@ -20,7 +20,7 @@ const LIST_LIMIT: i64 = 2_000;
 const FIND_LIMIT: i64 = 50;
 
 /// A date typed in a filter: empty or missing is no limit.
-fn optional_date(
+pub(super) fn optional_date(
     errors: &mut FieldErrors,
     field: &str,
     text: Option<&String>,
@@ -37,9 +37,27 @@ fn optional_date(
 /// # Errors
 /// `ERR_NOT_FOUND` on `id`.
 pub fn get(ctx: &Context, id: i64) -> Result<BikriDetail, ServiceError> {
-    ctx.db
+    let (closed_up_to, _) = day::window(ctx)?;
+    let mut detail = ctx
+        .db
         .read(|conn| repo::get(conn, id).map_err(ServiceError::from))?
-        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
+        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))?;
+    mark_editable(&mut detail, closed_up_to);
+    Ok(detail)
+}
+
+/// Sets `editable` on the postings of a بکری: a first or later posting that is not reversed, of a
+/// بکری that is saved, on a day after the "closed up to" day (PRD FR-12.18).
+pub(crate) fn mark_editable(detail: &mut BikriDetail, closed_up_to: Option<BusinessDate>) {
+    let saved = detail.status == BikriStatus::Saved;
+    for posting in &mut detail.postings {
+        let open = BusinessDate::parse_iso(&posting.entry_date)
+            .is_some_and(|date| closed_up_to.is_none_or(|closed| date > closed));
+        posting.editable = saved
+            && !posting.reversed
+            && matches!(posting.posting_type.as_str(), "bikri_first" | "bikri_later")
+            && open;
+    }
 }
 
 /// The list of بکری (PRD FR-12.7), newest first. `date` is one day and wins over `from` and

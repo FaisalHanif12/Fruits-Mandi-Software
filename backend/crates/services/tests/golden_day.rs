@@ -1445,3 +1445,7 @@ fn first_field(error: &mandi_services::ServiceError) -> Option<String> {
         _ => None,
     }
 }
+
+// Plan 16: edit, cancel, later sale (E2E-13, E2E-13b, E2E-14, E2E-15, E2E-16, E2E-16b).
+#[path = "golden_day/edit.rs"]
+mod edit;

@@ -358,6 +358,7 @@ pub fn per_unit(value: &str) -> Option<ChargeInput> {
 pub fn lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
         key: key.into(),
+        lot_id: None,
         seller_account_id: Some(seller),
         pukhta: None,
         item_id: Some(item),
@@ -381,6 +382,7 @@ pub fn lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> 
 /// A lot with no charges at all: every charge empty, so the rules decide.
 pub fn bare_lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        lot_id: None,
         freight: None,
         labour: None,
         munshiana: None,
@@ -393,6 +395,7 @@ pub fn bare_lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str
 pub fn sale(key: &str, buyer: i64, qty: &str, rate: &str) -> SaleInput {
     SaleInput {
         key: key.into(),
+        sale_id: None,
         buyer_account_id: Some(buyer),
         pukhta: None,
         qty: qty.into(),
@@ -411,6 +414,7 @@ pub fn sale(key: &str, buyer: i64, qty: &str, rate: &str) -> SaleInput {
 /// A row with only the quantity the screen filled in: no buyer, no rate.
 pub fn blank_sale(key: &str, qty: &str) -> SaleInput {
     SaleInput {
+        sale_id: None,
         buyer_account_id: None,
         ..sale(key, 0, qty, "")
     }

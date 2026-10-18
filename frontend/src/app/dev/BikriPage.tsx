@@ -1,8 +1,9 @@
 // Development page /dev/bikri (plans 12 and 13): the real بکری screens inside the app shell,
 // answered by a stand-in for the backend with the numbers of Event 1 (PRD 4.4), so they can be
 // opened in a plain browser tab and photographed in both languages and at every window size. The
-// flags in the hash choose the screen: none is the sale book; `?id=41` a saved بکری; `?today` the
-// list; `?pukhta` the register; `?offer` adds the start-up offer. Never shipped: the route exists
+// flags in the hash choose the screen: none is the sale book; `?id=41` a saved بکری; `?id=41&edit=7`
+// its first entry open for edit; `?today` the list; `?pukhta` the register; `?stock` the goods left;
+// `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer. Never shipped: the route exists
 // only when import.meta.env.DEV is true (app/router.tsx).
 
 import { Localized } from '@fluent/react';
@@ -11,6 +12,8 @@ import { devFlag, installDevBridge, seedEvent1 } from '../../../tests/helpers/de
 import { paisaForTest } from '../../../tests/helpers/paisa';
 import { BikriDraftOffer } from '../../features/bikri/draft-offer';
 import { BikriBookPage } from '../../features/bikri/pages/BikriBookPage';
+import { LaterSalePage } from '../../features/bikri/pages/LaterSalePage';
+import { StockPage } from '../../features/bikri/pages/StockPage';
 import { TodayBikriPage } from '../../features/bikri/pages/TodayBikriPage';
 import { PrintingTab } from '../../features/settings/components/PrintingTab';
 import { PukhtaRegisterPage } from '../../features/pukhta_khata/pages/PukhtaRegisterPage';
@@ -39,7 +42,15 @@ export function BikriPage() {
       nav={<MainNav current="bikri" onSelect={() => undefined} />}
       moduleMenu={
         <ModuleMenu
-          current={devFlag('today') ? 'today' : devFlag('pukhta') ? 'pukhta' : 'bikri-book'}
+          current={
+            devFlag('today')
+              ? 'today'
+              : devFlag('pukhta')
+                ? 'pukhta'
+                : devFlag('stock') || devFlag('later')
+                  ? 'stock'
+                  : 'bikri-book'
+          }
           onSelect={() => undefined}
         />
       }
@@ -80,6 +91,10 @@ export function BikriPage() {
         <TodayBikriPage />
       ) : devFlag('pukhta') ? (
         <PukhtaRegisterPage />
+      ) : devFlag('stock') ? (
+        <StockPage />
+      ) : devFlag('later') ? (
+        <LaterSalePage />
       ) : (
         <BikriBookPage initialDraft={devFlag('empty') ? undefined : seedEvent1} />
       )}

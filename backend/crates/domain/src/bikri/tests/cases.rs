@@ -123,14 +123,17 @@ fn a_later_posting_charges_no_lot_charge_and_no_per_lot_commission() {
     // first posting. Only the sale itself, its commissions and لاگا are posted again.
     let mut event = lot(RAHIM, BANANA, "50");
     event.store_rent = Some("700".into());
+    // نقد is a lot charge too: the screen of a later sale has none, and the lot is built with 0.
+    event.cash_paid = None;
     event.sales = vec![sale(AKRAM, "20", "600"), sale(ARSHAD, "30", "580")];
     let prepared = mandi_core::bikri::prepare_draft(&draft(vec![event]), today(), None);
     let calc = calc_posting(
-        PostingKind::Later,
+        PostingTarget::LaterSale { lot_id: 1 },
         &prepared,
         &lookups(),
         &RuleSet::build(per_lot_rule()),
         switches(),
+        &StoredPosting::none(),
     )
     .unwrap();
     assert_no_errors(&calc);
@@ -147,12 +150,12 @@ fn a_later_posting_charges_no_lot_charge_and_no_per_lot_commission() {
         (0, 0, 0, 0, 0),
         "no lot charge in a later sale"
     );
-    // Gross 29,400, nothing taken off but نقد as typed; the buyers' commissions and لاگا stay.
+    // Gross 29,400 and nothing taken off at all; the buyers' commissions and لاگا stay.
     assert_eq!(r(t.seller_credit), 29_400);
-    assert_eq!(r(t.net), 24_400);
+    assert_eq!(r(t.net), 29_400);
     assert_eq!(r(t.shared_income), 1_764 + 400);
-    // The entry still balances: 31,564 of buyer bills = 29,400 + 1,764 + 400.
-    assert_eq!(entry_of(&calc).total(), p(31_564 + 5_000));
+    // The entry still balances: 31,564 of buyer bills = 29,400 + 1,764 + 400, and no cash part.
+    assert_eq!(entry_of(&calc).total(), p(31_564));
 }
 
 #[test]
@@ -221,6 +224,7 @@ fn bare_lot_with_freight_and_cash(
     qty: &str,
 ) -> mandi_core::bikri::LotInput {
     mandi_core::bikri::LotInput {
+        lot_id: None,
         labour: None,
         munshiana: None,
         phone: None,

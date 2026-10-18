@@ -518,3 +518,316 @@ bikri-list-col-qty = { -nag } ({ bikri-saved-qty-sold } / { bikri-col-qty-receiv
 # Cell of that column: sold, a slash, received. For example 45 / 50.
 # review: pending
 bikri-list-qty = { $sold } / { $received }
+
+## Goods left (باقی مال), later sales, write-off (PRD 12.8, FR-12.14 to FR-12.17, plan 16).
+
+# review: pending
+bikri-stock-help = Lots with goods that are not sold yet. Press Enter on a lot to sell what is left.
+
+# review: pending
+bikri-stock-label = Lots with goods left
+
+# review: pending
+bikri-stock-failed = The list of { -baqi-maal } could not be opened
+
+# review: pending
+bikri-stock-empty = No goods are waiting
+
+# review: pending
+bikri-stock-empty-help = Everything received has been sold. Press { $key } for a new { -bikri }.
+
+# review: pending
+bikri-stock-no-match = No lot found
+
+# review: pending
+bikri-stock-no-match-help = Try changing the days, the { -beopari } or the { -qism-maal }.
+
+# review: pending
+bikri-stock-from = Received from
+
+# review: pending
+bikri-stock-to = Received up to
+
+# review: pending
+bikri-stock-include-written-off = Also lots that are fully written off, so a write-off can be undone
+
+# review: pending
+bikri-stock-col-received-date = Received on
+
+# review: pending
+bikri-stock-col-item = { -qism-maal } and { -packing }
+
+# $item: the item. $packing: its packing. For example "Banana, Box".
+# review: pending
+bikri-stock-item-packing = { $item }, { $packing }
+
+# review: pending
+bikri-stock-col-written-off = Written off
+
+# review: pending
+bikri-stock-col-days = Days waiting
+
+# $number: the { -bikri } number. $lot: the lot number inside it.
+# review: pending
+bikri-stock-lot-title = { -bikri } { $number }, { -lot } { $lot }
+
+# review: pending
+bikri-stock-sell = Sell what is left
+
+# review: pending
+bikri-stock-write-off = Write off
+
+# review: pending
+bikri-stock-undo-write-off = Undo a write-off
+
+# review: pending
+bikri-write-off-title = Write off goods
+
+# $number: the { -bikri } number. $seller: his name. $item: the item. $balance: how many { -nag } are left.
+# review: pending
+bikri-write-off-text = Goods of { -bikri } { $number } ({ $seller }, { $item }) that are spoiled or came back are taken off the lot. { $balance } { -nag } are left now. This only changes the stock; no money moves.
+
+# review: pending
+bikri-write-off-qty = { -nag } to write off
+
+# review: pending
+bikri-write-off-reason = Reason (for example spoiled, returned)
+
+# review: pending
+bikri-write-off-confirm = Write off
+
+# $qty: how many { -nag } were written off.
+# review: pending
+bikri-write-off-done = { $qty } { -nag } written off
+
+# review: pending
+bikri-write-off-undo-title = Undo a write-off
+
+# review: pending
+bikri-write-off-undo-text = The goods go back to the lot as unsold stock. Choose the write-off and give the reason.
+
+# review: pending
+bikri-write-off-undo-which = Write-off
+
+# $date: the day. $qty: how many { -nag }. $reason: why it was written off.
+# review: pending
+bikri-write-off-undo-option = { $date }: { $qty } { -nag } ({ $reason })
+
+# review: pending
+bikri-write-off-undo-confirm = Undo the write-off
+
+# review: pending
+bikri-write-off-undone = The write-off was undone
+
+## The later sale form.
+
+# $number: the { -bikri } number.
+# review: pending
+bikri-later-title = Later sale of { -bikri } { $number }
+
+# review: pending
+bikri-later-help = Type the new lines for the goods that are left. Only these lines are posted, on the day below. The first entry is not touched.
+
+# review: pending
+bikri-later-lot-title = The lot
+
+# review: pending
+bikri-later-no-lot-charges = Freight, { -mazdoori }, { -munshiana } and the other charges of the lot are not charged again. { -commission } and { -laga } are worked out by the rules of the day of this sale.
+
+# review: pending
+bikri-later-date = Day of this sale
+
+# review: pending
+bikri-lines-title = New sale lines
+
+# review: pending
+bikri-later-save = Save the sale
+
+# $number: the { -bikri } number.
+# review: pending
+bikri-later-saved-toast = Later sale of { -bikri } { $number } saved
+
+# review: pending
+bikri-later-to-stock = Back to { -baqi-maal }
+
+# review: pending
+bikri-later-no-lot = Choose a lot first
+
+# review: pending
+bikri-later-no-lot-help = A later sale starts from the list of goods left.
+
+# review: pending
+bikri-later-failed = The lot could not be opened
+
+# review: pending
+bikri-later-lot-missing = This lot was not found
+
+# review: pending
+bikri-later-lot-missing-help = It may have been cancelled. Open the list of goods left and choose again.
+
+# review: pending
+bikri-later-nothing-left = Nothing is left in this lot
+
+# review: pending
+bikri-later-nothing-left-help = All of it is sold or written off.
+
+## Edit and cancel of a saved sale (PRD 12.9, FR-12.18 to FR-12.22).
+
+# review: pending
+bikri-edit = Edit
+
+# review: pending
+bikri-cancel-bikri = Cancel the { -bikri }
+
+# review: pending
+bikri-edit-back = Back to the { -bikri }
+
+# review: pending
+bikri-edit-save = Save changes
+
+# $number: the { -bikri } number.
+# review: pending
+bikri-edit-title = Edit { -bikri } { $number }
+
+# $date: the day of the entry being edited.
+# review: pending
+bikri-edit-help = You are editing the entry of { $date }. Its day stays the same. The old entry is reversed and the new one is posted in its place.
+
+# review: pending
+bikri-edit-help-later = You are editing the later sale of { $date }. Its day stays the same. Only the lines can be changed.
+
+# review: pending
+bikri-edit-failed = The entry could not be opened for editing
+
+# $number: the { -bikri } number.
+# review: pending
+bikri-edit-saved-toast = { -bikri } { $number } changed
+
+# review: pending
+bikri-edit-reason-title = Why is this entry being changed?
+
+# $date: the day of the entry.
+# review: pending
+bikri-edit-reason-text = The entry of { $date } is not of today. The reason is written to the audit log with the old and the new values.
+
+# review: pending
+bikri-edit-reason-label = Reason
+
+# review: pending
+bikri-edit-reason-confirm = Save changes
+
+# review: pending
+bikri-edit-changes-title = What you changed
+
+# review: pending
+bikri-edit-no-changes = Nothing is changed yet.
+
+# $where: for example "{ -lot } 1, line 2". $field: the cell. $before and $after: the old and the new text.
+# review: pending
+bikri-edit-change = { $where }: { $field } was { $before }, now { $after }
+
+# review: pending
+bikri-edit-added = { $where }: new { $field } { $after }
+
+# $buyer: the buyer of the removed line.
+# review: pending
+bikri-edit-removed-line = { $where }: line removed ({ $buyer })
+
+# review: pending
+bikri-edit-where-header = Header
+
+# $lot: the lot number.
+# review: pending
+bikri-edit-where-lot = { -lot } { $lot }
+
+# $lot: the lot number. $line: the line number.
+# review: pending
+bikri-edit-where-line = { -lot } { $lot }, line { $line }
+
+# review: pending
+bikri-edit-empty = (empty)
+
+# The tooltip of a cell that was changed. $value: what it was.
+# review: pending
+bikri-edit-was = Changed. It was: { $value }
+
+# review: pending
+bikri-edit-was-empty = Changed. It was empty.
+
+# review: pending
+bikri-edit-compare-what = Amount
+
+# review: pending
+bikri-edit-before = Before
+
+# review: pending
+bikri-edit-after = After
+
+# $date: the closed day.
+# review: pending
+bikri-closed-day = The day { $date } is closed, so this entry cannot be changed or cancelled. The Owner must reopen the day first.
+
+# review: pending
+bikri-closed-day-open = Open the day screen
+
+# The state of an entry in the list of entries of a saved sale.
+# review: pending
+bikri-posting-state = State
+
+# review: pending
+bikri-posting-reversed = Taken back
+
+# review: pending
+bikri-posting-open = Open for changes
+
+# review: pending
+bikri-posting-not-editable = Day closed
+
+# review: pending
+bikri-posting-edit = Edit this entry
+
+# $number: the { -bikri } number.
+# review: pending
+bikri-cancel-title = Cancel this { -bikri }?
+
+# review: pending
+bikri-cancel-text = { -bikri } { $number } will be cancelled. Nothing is deleted: every entry below is reversed on its own day, the money goes back, and the receipts of the buyers become their credit again and are matched to their next oldest bills. The number is never used again.
+
+# review: pending
+bikri-cancel-reverses = These entries will be reversed:
+
+# $before: cash in hand now. $after: cash in hand after the cancel.
+# review: pending
+bikri-cancel-cash = { -rokar }: <num>{ $before }</num> now, <num>{ $after }</num> after the cancel.
+
+# review: pending
+bikri-cancel-reason = Reason
+
+# review: pending
+bikri-cancel-confirm = Cancel the { -bikri }
+
+# review: pending
+bikri-cancel-preview-failed = What the cancel would do could not be read. Close this box and try again.
+
+# $number: the { -bikri } number.
+# review: pending
+bikri-cancelled-toast = { -bikri } { $number } cancelled
+
+## Undo straight after a save (PRD FR-7.47).
+
+# review: pending
+bikri-undo = Undo
+
+# The reason written in the audit log when a save is undone at once. It is sent as this text.
+# review: pending
+bikri-undo-reason = Undone straight after saving
+
+# $number: the { -bikri } number that was undone. The values are back in a new entry.
+# review: pending
+bikri-undo-done = { -bikri } { $number } was taken back. Correct it and save again.
+
+# review: pending
+bikri-undo-failed = The save could not be undone
+
+# review: pending
+bikri-undo-busy = You have started another { -bikri }. Finish it or clear it first, then undo.

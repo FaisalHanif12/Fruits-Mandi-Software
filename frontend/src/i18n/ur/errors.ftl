@@ -309,3 +309,40 @@ err-cheque-required = چیک کا نمبر اور چیک کی تاریخ لکھ�
 # amount is more than it, both in rupees.
 # review: pending
 err-payment-above-payable = یہ رقم { -beopari } کی قابل ادائیگی رقم ({ $payable }) سے { $over } زیادہ ہے۔ آپ پھر بھی محفوظ کر سکتے ہیں۔ زیادہ رقم { -beopari } کے ذمے دکھائی جائے گی، یہ { -peshgi } نہیں ہوگی۔
+
+## بعد کی فروخت، ترمیم، منسوخی اور ضائع مال (پلان 16)۔
+
+# review: pending
+err-bikri-cancelled = یہ { -bikri } منسوخ ہو چکی ہے اور بدلی نہیں جا سکتی۔
+
+# review: pending
+err-lot-not-found = یہ { -lot } نہیں ملا۔ { -baqi-maal } کی فہرست کھول کر دوبارہ چنیں۔
+
+# review: pending
+err-nothing-to-sell = اس { -lot } میں بیچنے کے لیے کچھ باقی نہیں۔
+
+# $available: { -lot } میں کتنے { -nag } باقی ہیں۔
+# review: pending
+err-write-off-exceeds-balance = باقی مال سے زیادہ ضائع نہیں ہو سکتا۔ صرف { $available } { -nag } باقی ہیں۔
+
+# review: pending
+err-date-before-received = فروخت کا دن مال وصول ہونے کے دن سے پہلے کا نہیں ہو سکتا۔
+
+# review: pending
+err-qty-below-sold = وصول شدہ تعداد اس { -lot } سے پہلے بکی ہوئی تعداد سے کم نہیں ہو سکتی۔
+
+# PRD FR-12.18 to FR-12.20. The edit rules of a saved { -bikri }. $rule is a fixed name from the
+# backend, one case each: the day, a lot, its order, its seller or item, a line, a later sale's lot.
+# Every case says what to do. The field points at the lot or the line.
+# review: pending
+err-edit-not-allowed = { $rule ->
+    [day_changed] محفوظ شدہ اندراج کا دن ترمیم میں بدلا نہیں جا سکتا۔ پرانا دن واپس لکھیں۔
+    [lot_removed] محفوظ شدہ { -lot } ہٹایا نہیں جا سکتا، کیونکہ اس کی فروخت اور مال اس پر قائم ہیں۔ { -lot } واپس رکھیں۔ پوری { -bikri } واپس لینی ہو تو اسے منسوخ کریں۔
+    [lot_not_in_posting] یہ { -lot } اس اندراج کا حصہ نہیں جس کی ترمیم ہو رہی ہے۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
+    [lot_order_changed] محفوظ شدہ { -lot } اپنی ترتیب میں رہتے ہیں اور نئے { -lot } ان کے بعد آتے ہیں۔ نئے { -lot } کو آخر میں رکھیں۔
+    [lot_seller_locked] اس { -lot } پر بعد کا اندراج یا فروخت قائم ہو چکی ہے، اس لیے { -beopari } نہیں بدلا جا سکتا۔ پرانا { -beopari } واپس چنیں۔
+    [lot_item_locked] اس { -lot } پر بعد کا اندراج یا فروخت قائم ہو چکی ہے، اس لیے { -qism-maal } نہیں بدلی جا سکتی۔ پرانی { -qism-maal } واپس چنیں۔
+    [line_not_in_posting] یہ لائن اس اندراج کا حصہ نہیں جس کی ترمیم ہو رہی ہے۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
+    [posting_lots_locked] بعد کی فروخت میں صرف اس کی اپنی لائنیں بدلی جا سکتی ہیں، { -lot } نہیں۔ { -lot } کی تبدیلی پہلے اندراج میں کریں۔
+   *[other] اس اندراج میں یہ تبدیلی نہیں ہو سکتی۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
+}

@@ -71,6 +71,13 @@ export function problemsOf(
   ];
 }
 
+/**
+ * Parts of a lot or a line that no field on the screen shows: the ids an edit sends back (plan
+ * 16). A problem on one of them, such as `lots[0].lot_id` ("this lot is not part of the entry"),
+ * is always told in the list, with the lot and line it is about, never left unseen.
+ */
+export const SUB_WITHOUT_FIELD: ReadonlySet<string> = new Set(['lot_id', 'sale_id']);
+
 /** The column of the lots grid a lot field belongs to. Fields not listed are in the "more" panel. */
 export const LOT_GRID_FIELD: Readonly<Record<string, string>> = {
   seller_account_id: 'seller',

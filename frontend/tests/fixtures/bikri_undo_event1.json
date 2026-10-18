@@ -1,0 +1,87 @@
+{
+  "bikri_id": 3,
+  "number": 3,
+  "reversal_entry_ids": [
+    10
+  ],
+  "draft": {
+    "header": {
+      "entry_date": "10-10-2026",
+      "bill_date": "10-10-2026",
+      "book": null,
+      "truck_no": "LES-1234",
+      "zamindar_account_id": null,
+      "adda_id": null,
+      "driver_name": null,
+      "driver_phone": null,
+      "total_freight": null,
+      "store_id": null,
+      "note": null
+    },
+    "lots": [
+      {
+        "key": "lot:3",
+        "lot_id": null,
+        "seller_account_id": 17,
+        "pukhta": null,
+        "item_id": 1,
+        "packing_id": 1,
+        "marka_id": null,
+        "store_id": null,
+        "qty_received": "50",
+        "weight_received": null,
+        "freight": "3000",
+        "freight_paid_by": "firm",
+        "labour": {
+          "method": "per_unit",
+          "value": "5"
+        },
+        "munshiana": {
+          "method": "manual",
+          "value": "50"
+        },
+        "phone": {
+          "method": "manual",
+          "value": "20"
+        },
+        "cash_paid": "5000",
+        "store_rent": null,
+        "adjust_advance": true,
+        "sales": [
+          {
+            "key": "sale:7",
+            "sale_id": null,
+            "buyer_account_id": 19,
+            "pukhta": null,
+            "qty": "20",
+            "weight": null,
+            "seller_rate": "600",
+            "rate_differs": false,
+            "buyer_rate": null,
+            "payment_type": "credit",
+            "seller_comm": null,
+            "buyer_comm": null,
+            "laga": null,
+            "note": null
+          },
+          {
+            "key": "sale:8",
+            "sale_id": null,
+            "buyer_account_id": 20,
+            "pukhta": null,
+            "qty": "30",
+            "weight": null,
+            "seller_rate": "580",
+            "rate_differs": false,
+            "buyer_rate": null,
+            "payment_type": "credit",
+            "seller_comm": null,
+            "buyer_comm": null,
+            "laga": null,
+            "note": null
+          }
+        ]
+      }
+    ]
+  }
+}

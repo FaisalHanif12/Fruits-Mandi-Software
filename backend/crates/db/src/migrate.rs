@@ -36,6 +36,12 @@ pub const SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL: &str =
 pub const BIKRI_RECORDS_ARE_NEVER_DELETED_SQL: &str =
     include_str!("../migrations/0004_bikri_records_are_never_deleted.sql");
 
+/// The fifth migration: a stable order key on journal entries, so an edited posting keeps its
+/// place in its day for matching, and a link from a reversal stock move to the move it reverses
+/// (plan 16). Two nullable columns and one index: no row is touched.
+pub const STABLE_POSTING_ORDER_SQL: &str =
+    include_str!("../migrations/0005_stable_posting_order.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -52,6 +58,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(BALANCE_INDEXES_SQL),
         M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
         M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
     ])
 }
 

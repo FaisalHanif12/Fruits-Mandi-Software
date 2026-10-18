@@ -46,6 +46,11 @@ interface HeaderCardProps {
   onOpenBikri?: ((number: number) => void) | undefined;
   /** The Enter on the last header field: the screen moves on to the lots. */
   onDone: () => void;
+  /**
+   * A posting open for edit (plan 16): the day of the posting is kept (PRD FR-12.19), and the
+   * same-truck notice is left out, because the sale it would point at is this one.
+   */
+  editing?: boolean;
 }
 
 function pickedOf(hit: SearchHit | null): PickedRecord | null {
@@ -54,7 +59,7 @@ function pickedOf(hit: SearchHit | null): PickedRecord | null {
     : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
 }
 
-export function HeaderCard({ error, onOpenBikri, onDone }: HeaderCardProps) {
+export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: HeaderCardProps) {
   const stores = useBikriDraft();
   const queryClient = useQueryClient();
   const header = stores.header();
@@ -71,8 +76,8 @@ export function HeaderCard({ error, onOpenBikri, onDone }: HeaderCardProps) {
 
   const truckKey = `${header.truckNo.trim()}|${header.entryDate}`;
   const sameDay = memory.data?.same_day ?? null;
-  const notice = sameDay !== null && continued !== truckKey ? sameDay : null;
-  const last = memory.data?.last ?? null;
+  const notice = !editing && sameDay !== null && continued !== truckKey ? sameDay : null;
+  const last = editing ? null : (memory.data?.last ?? null);
 
   // The truck was taken: fill what the last بکری of this truck knows, into empty fields only.
   const fillFromTruck = async (text: string) => {
@@ -131,6 +136,7 @@ export function HeaderCard({ error, onOpenBikri, onDone }: HeaderCardProps) {
           <Field
             label={<Localized id="bikri-header-date" />}
             error={fieldError(error, 'header.entry_date')}
+            readOnly={editing}
           >
             {(control) => (
               <DateInput
@@ -173,7 +179,8 @@ export function HeaderCard({ error, onOpenBikri, onDone }: HeaderCardProps) {
                   note: isoToDisplayDate(suggestion.date),
                 }))}
                 onCommit={(text) => {
-                  void fillFromTruck(text);
+                  // An entry open for edit is never filled from the truck's last sale.
+                  if (!editing) void fillFromTruck(text);
                 }}
               />
             )}

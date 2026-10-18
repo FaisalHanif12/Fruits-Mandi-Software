@@ -11,7 +11,7 @@
 import { Localized } from '@fluent/react';
 import { Plus } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
-import { EntryGrid, type GridInterceptors } from '../../../shared/grid';
+import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
@@ -30,9 +30,19 @@ interface LotsSectionProps {
   onCardAccount: (accountId: number | null) => void;
   /** The "more" panel of the selected lot cannot be closed now (a problem is on it). */
   moreForced: boolean;
+  /** Cells the user changed in a posting open for edit (plan 16), marked in the grid. */
+  cellChanged?: Record<string, Record<string, string>> | undefined;
+  /** Can Ctrl+Delete remove this lot? A saved lot of an edit cannot be removed. */
+  canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
 }
 
-export function LotsSection({ view, onCardAccount, moreForced }: LotsSectionProps) {
+export function LotsSection({
+  view,
+  onCardAccount,
+  moreForced,
+  cellChanged,
+  canRemoveRow,
+}: LotsSectionProps) {
   const stores = useBikriDraft();
   const step = useLayoutStep();
   const columns = useMemo(() => lotColumns(step), [step]);
@@ -104,6 +114,8 @@ export function LotsSection({ view, onCardAccount, moreForced }: LotsSectionProp
         workings={view.workings}
         cellErrors={view.errors}
         cellWarnings={view.warnings}
+        {...(cellChanged === undefined ? {} : { cellChanged })}
+        {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
         interceptors={interceptors}
         onCardAccount={onCardAccount}
         fit

@@ -15,7 +15,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useMemo, type ReactNode } from 'react';
 import type { UiError } from '../../../bindings/UiError';
-import { EntryGrid, type GridInterceptors } from '../../../shared/grid';
+import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
 import { SegmentedControl } from '../../../shared/ui';
 import { allLinesColumns, saleColumns } from '../columns';
@@ -38,6 +38,15 @@ interface SalesSectionProps {
   onCardAccount: (accountId: number | null) => void;
   /** The party card drawn under the grid (compact and normal windows). Null: it is drawn elsewhere. */
   card?: ReactNode;
+  /**
+   * A later sale or the edit of one has a single lot, so there is nothing to switch between:
+   * the heading says what the lines are and the lot / whole switch is not drawn (plan 16).
+   */
+  single?: { title: ReactNode } | undefined;
+  /** Cells the user changed in a posting open for edit (plan 16). */
+  cellChanged?: Record<string, Record<string, string>> | undefined;
+  /** Can Ctrl+Delete remove this line? Default: yes. */
+  canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
 }
 
 export function SalesSection({
@@ -47,6 +56,9 @@ export function SalesSection({
   view,
   onCardAccount,
   card,
+  single,
+  cellChanged,
+  canRemoveRow,
 }: SalesSectionProps) {
   const { l10n } = useLocalization();
   const stores = useBikriDraft();
@@ -95,7 +107,11 @@ export function SalesSection({
   return (
     <section aria-labelledby="bikri-sales-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {whole ? (
+        {single !== undefined ? (
+          <h2 id="bikri-sales-heading" className="type-section text-ink">
+            {single.title}
+          </h2>
+        ) : whole ? (
           <Localized id="bikri-sales-title-all">
             <h2 id="bikri-sales-heading" className="type-section text-ink" />
           </Localized>
@@ -104,20 +120,22 @@ export function SalesSection({
             <h2 id="bikri-sales-heading" className="type-section text-ink" />
           </Localized>
         )}
-        <SegmentedControl
-          groupLabel={l10n.getString('bikri-sales-view-label')}
-          value={whole ? 'whole' : 'lot'}
-          onChange={(next) => {
-            switchView(next === 'whole');
-          }}
-          options={[
-            {
-              value: 'lot',
-              label: l10n.getString('bikri-summary-lot', { lot: String(lotIndex + 1) }),
-            },
-            { value: 'whole', label: l10n.getString('bikri-summary-whole') },
-          ]}
-        />
+        {single !== undefined ? null : (
+          <SegmentedControl
+            groupLabel={l10n.getString('bikri-sales-view-label')}
+            value={whole ? 'whole' : 'lot'}
+            onChange={(next) => {
+              switchView(next === 'whole');
+            }}
+            options={[
+              {
+                value: 'lot',
+                label: l10n.getString('bikri-summary-lot', { lot: String(lotIndex + 1) }),
+              },
+              { value: 'whole', label: l10n.getString('bikri-summary-whole') },
+            ]}
+          />
+        )}
       </div>
       <div className={rows.length > SHORT_GRID_ROWS ? 'h-tree-view' : undefined}>
         <EntryGrid
@@ -129,6 +147,8 @@ export function SalesSection({
           workings={view.workings}
           cellErrors={view.errors}
           cellWarnings={view.warnings}
+          {...(cellChanged === undefined ? {} : { cellChanged })}
+          {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
           interceptors={interceptors}
           onCardAccount={onCardAccount}
           copyAbove

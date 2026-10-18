@@ -1,6 +1,8 @@
 //! Guards `tauri.conf.json` and the capability file against
 //! Release_Pipeline 3.3, Tech Stack 5.5 and 7, NFR-USE-16, NFR-SEC-9 and NFR-SEC-10.
 #![cfg(test)]
+// The permission list below is one `json!` of more than 200 names.
+#![recursion_limit = "512"]
 
 use serde_json::{Value, json};
 
@@ -214,6 +216,17 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-bikri-list",
             "allow-bikri-find",
             "allow-bikri-navigate",
+            "allow-bikri-stock-list",
+            "allow-bikri-later-sale-preview",
+            "allow-bikri-later-sale-save",
+            "allow-bikri-open-for-edit",
+            "allow-bikri-edit-preview",
+            "allow-bikri-edit-save",
+            "allow-bikri-cancel-preview",
+            "allow-bikri-cancel",
+            "allow-bikri-undo",
+            "allow-bikri-write-off",
+            "allow-bikri-write-off-undo",
             "allow-search-pukhta-people",
             "allow-pukhta-register",
             "allow-drafts-save",

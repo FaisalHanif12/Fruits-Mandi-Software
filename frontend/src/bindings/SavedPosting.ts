@@ -21,4 +21,14 @@ export type SavedPosting = {
    * The debit total of the entry.
    */
   total: Paisa;
+  /**
+   * True once an edit or a cancel took this posting back with a reversal (plan 16). A reversed
+   * posting is history: it cannot be edited and it holds no stock or money.
+   */
+  reversed: boolean;
+  /**
+   * True if this posting can be edited now: a first or later posting that is not reversed, of
+   * a بکری that is saved, on a day that is still open (PRD FR-12.18). Set by the service.
+   */
+  editable: boolean;
 };

@@ -27,7 +27,8 @@ use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::core::vouchers::{
-    VoucherCancelInput, VoucherCancelled, VoucherEditInput, VoucherRow, VoucherSaved, VoucherType,
+    VoucherCancelInput, VoucherCancelled, VoucherEditInput, VoucherEntry, VoucherRow, VoucherSaved,
+    VoucherType,
 };
 use serde_json::{Value, json};
 
@@ -170,6 +171,24 @@ pub fn edit(
         }
         let now = ctx.now_text();
         let old_cash = stored_cash_change(tx, &old.entry)?;
+        let old_key = ledger::order_key_of(tx, old.entry.id)?;
+        // A seller's return is judged against the books with the old version still in force, at
+        // the place the new one keeps (migration 0005, plan 16): the same return, or a smaller
+        // one, stays allowed although a later entry of its day used the advance. It is worked out
+        // here, with the same function as the preview (Code Standards B5), and refused below after
+        // the date and the field checks, so those errors keep coming first.
+        let seller_check = match &input.entry {
+            VoucherEntry::Receipt(_) => {
+                let first = Planned::plan(tx, window, &input.entry)?;
+                match &first {
+                    Planned::Receipt(receipt) if first.errors().is_empty() => {
+                        check_seller_limit(tx, receipt, Some(old.entry.id), Some(old.entry.id))
+                    }
+                    _ => Ok(()),
+                }
+            }
+            _ => Ok(()),
+        };
         // 1. Take the old posting back, on its own day (ERR_DATE_CLOSED if that day is closed).
         ledger::reverse(
             ctx,
@@ -192,15 +211,12 @@ pub fn edit(
         if !planned.errors().is_empty() {
             return Err(planned.errors().to_vec().into());
         }
-        if let Planned::Receipt(receipt) = &planned {
-            check_seller_limit(tx, receipt, None)?;
-        }
+        seller_check?;
         let entry = planned.entry()?;
         let new_cash = super::common::cash_change(tx, &entry)?;
         confirm_cash(tx, old_cash, new_cash, input.confirm_cash_below_zero)?;
         // 3. Post it and update the voucher, which keeps its number.
         let row = planned.row(old.row.number)?;
-        let hint = planned.hint(tx)?;
         let date = planned
             .date()
             .ok_or_else(|| ServiceError::Data("an edited voucher has no date".to_owned()))?;
@@ -215,6 +231,8 @@ pub fn edit(
                 narration: row.narration.clone(),
             },
             entry,
+            // The edited voucher keeps its place among the entries of its day (migration 0005).
+            Some(old_key),
         )?;
         repo::update_for_edit(
             tx,
@@ -237,7 +255,21 @@ pub fn edit(
             actor.user_id,
             &now,
         )?;
-        planned.match_posted(tx, actor.user_id, &now, posted.entry_id, &hint)?;
+        // The edited voucher is not the newest line of its day: it kept its place (migration 0005),
+        // so the fast paths of a new posting do not hold. The full working decides, as for a
+        // cancel (plan 16: a same-day seller return edited after a later same-day ticked بکری
+        // stays allowed, and an edited پیشگی keeps its adjustment).
+        if let (Some(account), Some((role, is_pukhta))) = (planned.account(), planned.role()) {
+            rematch_party(
+                tx,
+                actor.user_id,
+                &now,
+                account.id,
+                planned.person_key(),
+                role,
+                is_pukhta,
+            )?;
+        }
         let mut event = Event::new(Some(actor.user_id), "edit", "voucher")
             .entity_id(old.row.id)
             .old(row_json(&old.row))

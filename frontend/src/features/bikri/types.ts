@@ -64,6 +64,8 @@ export const LOT = {
   // Set once the app has filled the cell itself, so it never fills it again (PRD FR-7.51).
   sellerFilled: 'sellerFilled',
   memoryFilledFor: 'memoryFilledFor',
+  // The saved lot this row is, when a posting is open for edit (plan 16). An id, never shown.
+  lotId: 'lotId',
 } as const;
 
 /** The fields of a sale line (the keys of `typed` and `picked` in the sale lines grid). */
@@ -95,6 +97,8 @@ export const SALE = {
   pukhtaPhone: 'pukhtaPhone',
   // Set once the app has filled the quantity itself (PRD FR-7.52).
   qtyFilled: 'qtyFilled',
+  // The saved line this row is, when a posting is open for edit (plan 16). An id, never shown.
+  saleId: 'saleId',
 } as const;
 
 /** The codes of the two one-time accounts (PRD FR-13.1) are kept by their own module. */
@@ -102,3 +106,9 @@ export { PUKHTA_BUYER_CODE, PUKHTA_SELLER_CODE } from '../pukhta_khata/codes';
 
 /** The typed value that means "on" in a tick of a row. */
 export const ON = '1';
+
+/**
+ * The reason the backend stores when a save is undone at once (PRD FR-7.47). It is the Fluent ID of
+ * the words, so a cancelled بکری shows them in the app language (plan 16 contract 9).
+ */
+export const UNDO_REASON_ID = 'bikri-undo-reason';

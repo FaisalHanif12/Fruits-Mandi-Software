@@ -160,6 +160,33 @@ pub fn post(
     user_id: i64,
     event: &PostingEvent,
 ) -> Result<Posted, ServiceError> {
+    post_ordered(ctx, tx, user_id, event, None)
+}
+
+/// The order key a posting must take to keep the place of the entry it replaces (migration 0005,
+/// plan 16): the key of that entry, or its id if it has none. An edit passes it to [`post_ordered`]
+/// for the new posting, so the edited posting stays where it was among the entries of its day for
+/// matching. Read it before or after the reversal: the reversal does not change it.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `id` if there is no such entry; `ServiceError::Db`.
+pub fn order_key_of(tx: &Connection, entry_id: i64) -> Result<i64, ServiceError> {
+    repo::order_key_of(tx, entry_id)?
+        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
+}
+
+/// [`post`] with an order key (see [`order_key_of`]). `None` is a new posting, which is the newest
+/// of its day: its key is its own id.
+///
+/// # Errors
+/// As [`post`].
+pub fn post_ordered(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    event: &PostingEvent,
+    order_key: Option<i64>,
+) -> Result<Posted, ServiceError> {
     check_posting_date(ctx, event.date)?;
     if event.reverses.is_none() {
         check_accounts_active(tx, &event.entry)?;
@@ -170,7 +197,7 @@ pub fn post(
     let shares = partner_rows::plan(tx, event)?;
     let now = ctx.now_text();
     let iso = event.date.to_iso();
-    let entry_id = repo::insert_draft(
+    let entry_id = repo::insert_draft_ordered(
         tx,
         &repo::EntryHeader {
             entry_date: &iso,
@@ -180,6 +207,7 @@ pub fn post(
             reverses_entry_id: event.reverses.map(EntryId::get),
             narration: event.narration.as_deref(),
         },
+        order_key,
         user_id,
         &now,
     )?;
@@ -287,7 +315,10 @@ pub fn reverse(
         reverses: Some(EntryId::new(entry_id)),
         entry: mirror,
     };
-    let mut posted = post(ctx, tx, user_id, &event)?;
+    // A reversal has no order key: it and the entry it takes back are both left out of matching,
+    // and its hash is the one every reversal had before migration 0005. The NEW posting of an
+    // edit is the one that takes the place of the old one (see `post_ordered`).
+    let mut posted = post_ordered(ctx, tx, user_id, &event, None)?;
     posted.matching_off = matching_off;
     Ok(posted)
 }

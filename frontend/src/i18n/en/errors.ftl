@@ -311,3 +311,40 @@ err-cheque-required = Write the cheque number and the cheque date.
 # amount is more than it, both in rupees.
 # review: pending
 err-payment-above-payable = This is { $over } more than what is payable to the { -beopari } ({ $payable }). You can still save it. The extra shows as owed by the { -beopari }; it is not an { -peshgi }.
+
+## Later sales, edit, cancel and write-off (plan 16).
+
+# review: pending
+err-bikri-cancelled = This { -bikri } is cancelled and cannot be changed.
+
+# review: pending
+err-lot-not-found = This lot was not found. Open the list of { -baqi-maal } and choose again.
+
+# review: pending
+err-nothing-to-sell = Nothing is left in this lot to sell.
+
+# $available: how many { -nag } are left in the lot.
+# review: pending
+err-write-off-exceeds-balance = You cannot write off more than is left. Only { $available } { -nag } are left.
+
+# review: pending
+err-date-before-received = The day of the sale cannot be before the day the goods were received.
+
+# review: pending
+err-qty-below-sold = The quantity received cannot be less than the quantity already sold from this lot.
+
+# PRD FR-12.18 to FR-12.20. The edit rules of a saved { -bikri }. $rule is a fixed name from the
+# backend, one case each: the day, a lot, its order, its seller or item, a line, a later sale's lot.
+# Every case says what to do. The field points at the lot or the line.
+# review: pending
+err-edit-not-allowed = { $rule ->
+    [day_changed] The day of a saved entry cannot be changed in an edit. Write the old day back.
+    [lot_removed] A saved lot cannot be removed, because its sales and its goods rest on it. Put the lot back. To take the whole sale back, cancel it.
+    [lot_not_in_posting] This lot is not part of the entry being edited. Close the edit and open the entry again.
+    [lot_order_changed] Saved lots keep their order, and new lots come after them. Move the new lot to the end.
+    [lot_seller_locked] A later entry or sale already rests on this lot, so its seller cannot be changed. Choose the old seller again.
+    [lot_item_locked] A later entry or sale already rests on this lot, so its item cannot be changed. Choose the old item again.
+    [line_not_in_posting] This line is not part of the entry being edited. Close the edit and open the entry again.
+    [posting_lots_locked] In a later sale only its own lines can be changed, not the lot. Change the lot in the first entry.
+   *[other] This change is not allowed in this entry. Close the edit and open the entry again.
+}

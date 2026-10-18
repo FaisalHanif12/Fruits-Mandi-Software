@@ -13,6 +13,12 @@ export type LotInput = {
    */
   key: string;
   /**
+   * The saved lot this row is, when the draft is an edit of the first posting (plan 16).
+   * `null` for a new lot, which an edit adds after the saved ones. A lot sent with its `lot_id`
+   * keeps its stored lot charges unless they are typed again (PRD FR-12.20).
+   */
+  lot_id?: number | null;
+  /**
    * The seller. The پختہ کھاتہ (بیوپاری) account for a one-time seller.
    */
   seller_account_id: number | null;

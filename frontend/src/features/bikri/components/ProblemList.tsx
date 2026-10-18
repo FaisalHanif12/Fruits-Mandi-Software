@@ -7,34 +7,56 @@ import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { ErrorMessage, LinkButton } from '../../../shared/ui';
-import { LINE_GRID_FIELD, LOT_GRID_FIELD, type Problem } from '../problems';
+import { LINE_GRID_FIELD, LOT_GRID_FIELD, SUB_WITHOUT_FIELD, type Problem } from '../problems';
 
 interface ProblemListProps {
   problems: readonly Problem[];
   /** The lot whose "more" panel is open, and the line whose details are open (indexes). */
   selectedLot: number;
   activeLine: number;
+  /** False on a screen that has no header fields (a later sale), so header problems are listed. */
+  headerShown?: boolean;
 }
 
 /** Is the problem shown by a field with words under it? Then the list leaves it out. */
-function shownByField(problem: Problem, selectedLot: number, activeLine: number): boolean {
+function shownByField(
+  problem: Problem,
+  selectedLot: number,
+  activeLine: number,
+  headerShown: boolean,
+): boolean {
   const { where } = problem;
-  if (where.kind === 'header') return true;
-  if (where.kind === 'lot')
-    return where.lot === selectedLot && LOT_GRID_FIELD[where.sub] === undefined;
+  if (where.kind === 'header') return headerShown;
+  // The day of a later sale is a field of its own with its words under it (plan 16).
+  if (where.kind === 'lots' && where.sub === 'date') return true;
+  if (where.kind === 'lot') {
+    return (
+      where.lot === selectedLot &&
+      LOT_GRID_FIELD[where.sub] === undefined &&
+      !SUB_WITHOUT_FIELD.has(where.sub)
+    );
+  }
   if (where.kind === 'line') {
     return (
       where.lot === selectedLot &&
       where.line === activeLine &&
-      LINE_GRID_FIELD[where.sub] === undefined
+      LINE_GRID_FIELD[where.sub] === undefined &&
+      !SUB_WITHOUT_FIELD.has(where.sub)
     );
   }
   return false;
 }
 
-export function ProblemList({ problems, selectedLot, activeLine }: ProblemListProps) {
+export function ProblemList({
+  problems,
+  selectedLot,
+  activeLine,
+  headerShown = true,
+}: ProblemListProps) {
   const navigate = useNavigate();
-  const listed = problems.filter((problem) => !shownByField(problem, selectedLot, activeLine));
+  const listed = problems.filter(
+    (problem) => !shownByField(problem, selectedLot, activeLine, headerShown),
+  );
   if (listed.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1">

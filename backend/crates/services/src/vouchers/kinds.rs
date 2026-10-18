@@ -13,10 +13,10 @@ use mandi_domain::core::money::Paisa;
 use mandi_domain::core::vouchers::{VoucherEntry, VoucherType};
 use mandi_domain::ledger::{BalancedEntry, PostingType};
 
-use super::advance::{PlannedAdvance, advance_entry, advance_match, advance_row, plan_advance};
+use super::advance::{PlannedAdvance, advance_entry, advance_row, plan_advance};
 use super::common::{Hint, Role, hint_for};
-use super::payment::{PlannedPayment, payment_entry, payment_match, payment_row, plan_payment};
-use super::receipt::{PlannedReceipt, plan_receipt, receipt_entry, receipt_match, receipt_row};
+use super::payment::{PlannedPayment, payment_entry, payment_row, plan_payment};
+use super::receipt::{PlannedReceipt, plan_receipt, receipt_entry, receipt_row};
 use crate::error::ServiceError;
 
 /// A voucher of any type that went through the checks of its form.
@@ -139,25 +139,6 @@ impl Planned {
             Planned::Receipt(p) => p.party.as_ref().map(|p| (p.role, p.is_pukhta)),
             Planned::Payment(p) => p.party.as_ref().map(|p| (p.role, p.is_pukhta)),
             Planned::Advance(p) => p.account.as_ref().map(|_| (Role::Seller, false)),
-        }
-    }
-
-    /// Matches the posted entry (fast path: the rows of the party are canonical).
-    ///
-    /// # Errors
-    /// The errors of the matching.
-    pub fn match_posted(
-        &self,
-        tx: &Connection,
-        user_id: i64,
-        now: &str,
-        entry_id: i64,
-        hint: &Hint,
-    ) -> Result<(), ServiceError> {
-        match self {
-            Planned::Receipt(p) => receipt_match(tx, user_id, now, p, entry_id, hint),
-            Planned::Payment(p) => payment_match(tx, user_id, now, p, entry_id, hint),
-            Planned::Advance(p) => advance_match(tx, user_id, now, p),
         }
     }
 

@@ -215,6 +215,10 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                                         date: &day,
                                         dr: Paisa::ZERO,
                                         cr: amount,
+                                        // An edit keeps the place of the voucher it replaces.
+                                        order_key: remove_entry
+                                            .map(|id| ledger::order_key_of(conn, id))
+                                            .transpose()?,
                                     }),
                                 },
                             )?;
@@ -250,8 +254,14 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                 }
                 // PRD FR-15.12: the advances before the credit, then what he owes.
                 (Planned::Receipt(_), Some((Role::Seller, _))) => {
-                    let check =
-                        seller_receipt(conn, &seller_party(&planned)?, date, amount, remove_entry)?;
+                    let check = seller_receipt(
+                        conn,
+                        &seller_party(&planned)?,
+                        date,
+                        amount,
+                        remove_entry,
+                        remove_entry,
+                    )?;
                     return_limit = Some(check.limit);
                     owes_settled = amount
                         .checked_sub(check.after.receipt_adjusted)

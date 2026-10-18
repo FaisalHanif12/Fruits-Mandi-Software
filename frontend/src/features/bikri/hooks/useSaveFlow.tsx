@@ -18,17 +18,16 @@
 
 import { Localized } from '@fluent/react';
 import { useMemo, useRef, useState } from 'react';
-import type { BikriSaved } from '../../../bindings/BikriSaved';
 import type { CashCheck } from '../../../bindings/CashCheck';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
-import { showToast } from '../../../shared/ui';
+import { showToast, type ToastOptions } from '../../../shared/ui';
 import { bikriPreview } from '../api';
 import { buildDraft } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, type BikriDraft, type BikriPreview } from '../types';
-import { useSaveBikri } from './useSaveBikri';
+import type { SaveBikriInput } from './useSaveBikri';
 
 /** The box that asks about cash below zero: the cash after the entry, from the backend. */
 export interface CashAsk {
@@ -46,7 +45,22 @@ interface Refusal {
   draftText: string;
 }
 
-interface SaveFlowOptions {
+/** The call that saves: a new بکری, a later sale or an edit (plan 16). All answer with a number. */
+export interface SaveMutation<R extends { number: number }> {
+  mutateAsync: (input: SaveBikriInput) => Promise<R>;
+}
+
+interface SaveFlowOptions<R extends { number: number }> {
+  /** The call that saves (`useSaveBikri`, `useSaveLaterSale` or `useSaveEdit`). */
+  mutation: SaveMutation<R>;
+  /** Works the draft out again, for the cash box when the answer on screen is older. */
+  askPreview?: ((draft: BikriDraft) => Promise<BikriPreview>) | undefined;
+  /** The message after a save. Default: the new بکری's. It gets `$number`. */
+  toastId?: string | undefined;
+  /** A button for the message, for example the undo of a new بکری (PRD FR-7.47). */
+  toastOptions?: ((saved: R) => ToastOptions | undefined) | undefined;
+  /** Where the cursor goes after a "no" at the cash box. Default: the نقد cell of a lot. */
+  onCashDeclined?: (() => void) | undefined;
   stores: BikriDraftStores;
   /** The draft as typed now (the same object the preview is asked for). */
   draft: BikriDraft;
@@ -54,11 +68,21 @@ interface SaveFlowOptions {
   preview: BikriPreview | undefined;
   current: boolean;
   /** The بکری was saved: the screen opens a new one. */
-  onSaved: (saved: BikriSaved, andNext: boolean) => void;
+  onSaved: (saved: R, andNext: boolean) => void;
 }
 
-export function useSaveFlow({ stores, draft: typed, preview, current, onSaved }: SaveFlowOptions) {
-  const mutation = useSaveBikri();
+export function useSaveFlow<R extends { number: number }>({
+  stores,
+  draft: typed,
+  preview,
+  current,
+  onSaved,
+  mutation,
+  askPreview = bikriPreview,
+  toastId = 'bikri-saved-toast',
+  toastOptions,
+  onCashDeclined,
+}: SaveFlowOptions<R>) {
   const flight = useSingleFlight();
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [tried, setTried] = useState(false);
@@ -78,9 +102,10 @@ export function useSaveFlow({ stores, draft: typed, preview, current, onSaved }:
         setTried(false);
         showToast(
           'success',
-          <Localized id="bikri-saved-toast" vars={{ number: String(saved.number) }}>
+          <Localized id={toastId} vars={{ number: String(saved.number) }}>
             <span />
           </Localized>,
+          toastOptions?.(saved),
         );
         onSaved(saved, andNext);
         return true;
@@ -88,7 +113,7 @@ export function useSaveFlow({ stores, draft: typed, preview, current, onSaved }:
         const refused = uiErrorOf(error);
         if (refused.errors.some((item) => item.code === 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED')) {
           // The cash changed since the last answer. Ask the question with the numbers as they are.
-          const fresh = await bikriPreview(draft).catch(() => null);
+          const fresh = await askPreview(draft).catch(() => null);
           if (fresh?.cash.needs_confirm === true) {
             setLastCash(fresh.cash);
             setAsk({ cash: fresh.cash, andNext });
@@ -127,6 +152,10 @@ export function useSaveFlow({ stores, draft: typed, preview, current, onSaved }:
       return;
     }
     setAsk(null);
+    if (onCashDeclined !== undefined) {
+      onCashDeclined();
+      return;
+    }
     const rows = stores.lots.getState().rows;
     const first = rows.findIndex((row) => (row.typed[LOT.cash] ?? '').trim() !== '');
     stores.lots.getState().setPendingFocus({ rowIndex: Math.max(first, 0), field: LOT.cash });

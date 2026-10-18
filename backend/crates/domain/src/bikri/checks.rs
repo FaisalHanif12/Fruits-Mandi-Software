@@ -150,12 +150,22 @@ pub(super) fn payment_type(
     chosen: Option<PaymentType>,
     field: &str,
 ) -> Option<PaymentType> {
+    let paid = resolve_payment(buyer, chosen);
+    if paid.is_none() {
+        issues.error(ErrorCode::ErrCreditNotAllowed, field);
+    }
+    paid
+}
+
+/// The payment type of [`payment_type`] without the error: `None` when credit was chosen for a
+/// buyer who may only pay cash.
+pub(super) fn resolve_payment(
+    buyer: &AccountFacts,
+    chosen: Option<PaymentType>,
+) -> Option<PaymentType> {
     let may_credit = !buyer.is_naqdi_mandi && (buyer.is_pukhta || buyer.credit_allowed);
     match chosen {
-        Some(PaymentType::Credit) if !may_credit => {
-            issues.error(ErrorCode::ErrCreditNotAllowed, field);
-            None
-        }
+        Some(PaymentType::Credit) if !may_credit => None,
         Some(kind) => Some(kind),
         None if buyer.is_pukhta || !may_credit => Some(PaymentType::Cash),
         None => Some(PaymentType::Credit),

@@ -205,7 +205,7 @@ pub(super) fn plan_money(
 
 /// What a voucher does with its party.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Role {
+pub(crate) enum Role {
     /// A buyer (control 0304), not the cash buyer.
     Buyer,
     /// A seller (control 03011), not the firm's own goods.
@@ -412,7 +412,9 @@ pub(super) struct PostingSpec {
     pub narration: Option<String>,
 }
 
-/// Posts the entry of a voucher, inside the caller's transaction.
+/// Posts the entry of a voucher, inside the caller's transaction. `order_key` is the key of the
+/// entry an edit replaces, so the voucher keeps its place among the entries of its day for
+/// matching (migration 0005); `None` for a new voucher.
 ///
 /// # Errors
 /// The errors of [`ledger::post`] (a closed date, an inactive account) and `ServiceError::Db`.
@@ -423,8 +425,9 @@ pub(super) fn post_entry(
     voucher_id: i64,
     spec: PostingSpec,
     entry: BalancedEntry,
+    order_key: Option<i64>,
 ) -> Result<Posted, ServiceError> {
-    ledger::post(
+    ledger::post_ordered(
         ctx,
         tx,
         user_id,
@@ -437,6 +440,7 @@ pub(super) fn post_entry(
             reverses: None,
             entry,
         },
+        order_key,
     )
 }
 
@@ -455,7 +459,7 @@ pub(super) fn insert_and_post(
 ) -> Result<(i64, Posted), ServiceError> {
     let now = ctx.now_text();
     let voucher_id = repo::insert(tx, voucher, actor_id, &now)?;
-    let posted = post_entry(ctx, tx, actor_id, voucher_id, spec, entry)?;
+    let posted = post_entry(ctx, tx, actor_id, voucher_id, spec, entry, None)?;
     repo::set_current_entry(tx, voucher_id, posted.entry_id, actor_id, &now)?;
     Ok((voucher_id, posted))
 }
@@ -464,7 +468,7 @@ pub(super) fn insert_and_post(
 ///
 /// # Errors
 /// `ServiceError::Db`; `ERR_OVERFLOW`.
-pub(super) fn stored_cash_change(
+pub(crate) fn stored_cash_change(
     conn: &Connection,
     entry: &mandi_db::ledger::StoredEntry,
 ) -> Result<Paisa, ServiceError> {
@@ -488,7 +492,7 @@ pub(super) fn stored_cash_change(
 ///
 /// # Errors
 /// As [`matching::rematch`] and [`matching::rematch_advances`].
-pub(super) fn rematch_party(
+pub(crate) fn rematch_party(
     tx: &Connection,
     user_id: i64,
     now: &str,
@@ -515,7 +519,7 @@ pub(super) fn rematch_party(
 ///
 /// # Errors
 /// `ServiceError::Db`.
-pub(super) fn role_of_account(
+pub(crate) fn role_of_account(
     conn: &Connection,
     account_id: i64,
 ) -> Result<Option<(Role, bool)>, ServiceError> {

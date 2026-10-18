@@ -10,7 +10,8 @@ use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
-    self, BALANCE_INDEXES_SQL, INIT_SQL, MigrationOutcome, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
+    self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, INIT_SQL, MigrationOutcome,
+    SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -18,7 +19,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 4;
+const LATEST: usize = 5;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -61,6 +62,20 @@ fn released_version_3() -> Migrations<'static> {
     ])
 }
 
+/// The schema as it was released at version 4: migrations 0001 to 0004.
+fn released_version_4() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+    ])
+}
+
 /// The name and SQL of every object of one kind (`table`, `index`, `trigger`), by name.
 fn schema(conn: &Connection, kind: &str) -> Vec<String> {
     conn.prepare(
@@ -75,6 +90,11 @@ fn schema(conn: &Connection, kind: &str) -> Vec<String> {
 
 /// Every row of every table, as text, in a fixed order.
 fn all_rows(conn: &Connection) -> Vec<(String, String)> {
+    all_rows_without(conn, &[])
+}
+
+/// [`all_rows`] without some columns, as `(table, column)`: the columns a migration added.
+fn all_rows_without(conn: &Connection, skip: &[(&str, &str)]) -> Vec<(String, String)> {
     let names: Vec<String> = conn
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
         .unwrap()
@@ -93,6 +113,7 @@ fn all_rows(conn: &Connection) -> Vec<(String, String)> {
                 .query_map([], |r| r.get(0))
                 .unwrap()
                 .map(Result::unwrap)
+                .filter(|c: &String| !skip.iter().any(|(t, s)| *t == name && s == c))
                 .collect();
             let joined = columns
                 .iter()
@@ -417,10 +438,11 @@ fn migration_2_adds_only_indexes_and_keeps_every_number() {
     let before = mandi_db::ledger::account_totals(&conn, None).unwrap();
     assert_eq!(before.len(), 2);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((outcome.from, outcome.to), (1, LATEST));
+    let outcome =
+        migrate::migrate_with(&released_version_2(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (1, 2));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
-    assert_eq!(user_version(&conn), LATEST as i64);
+    assert_eq!(user_version(&conn), 2);
     // Only indexes were added.
     assert_eq!(tables(&conn), before_tables);
     let added: Vec<String> = index_names(&conn)
@@ -645,7 +667,8 @@ fn migration_4_adds_only_triggers_and_keeps_every_row_number_and_balance() {
     let before_triggers = schema(&conn, "trigger");
     let before_rows = all_rows(&conn);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_4(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (3, 4));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 4);
@@ -755,4 +778,375 @@ fn migration_4_adds_only_triggers_and_keeps_every_row_number_and_balance() {
         [],
     )
     .unwrap();
+}
+
+/// Appends bytes the way the hash chain writes a text or a number (type byte, length, bytes).
+fn put(out: &mut Vec<u8>, text: Option<&str>) {
+    match text {
+        None => out.push(0),
+        Some(text) => {
+            out.push(1);
+            out.extend_from_slice(&(text.len() as u64).to_le_bytes());
+            out.extend_from_slice(text.as_bytes());
+        }
+    }
+}
+
+/// Posts a general entry of `rupees` between two accounts on a file of version 4, the way the app
+/// of version 4 did: raw rows, then ONE update that sets the status, the total and the keyed hash
+/// of the chain, and the head record. The bytes that are hashed are copied from the code of
+/// version 4, so a hash that still verifies after the upgrade proves the chain format is the same.
+///
+/// With `existing`, the lines go into that draft entry (its day and total are already set);
+/// otherwise a new entry is made.
+fn legacy_post(
+    conn: &Connection,
+    existing: Option<i64>,
+    day: &str,
+    from: &str,
+    to: &str,
+    rupees: i64,
+) -> i64 {
+    let account = |code: &str| -> i64 {
+        conn.query_row("SELECT id FROM accounts WHERE code = ?1", [code], |r| {
+            r.get(0)
+        })
+        .unwrap()
+    };
+    let entry = match existing {
+        Some(entry) => entry,
+        None => {
+            conn.execute(
+                "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, status, total_paisa)
+                 VALUES (?1, 'general', 'voucher', 1, 'draft', 0)",
+                [day],
+            )
+            .unwrap();
+            conn.last_insert_rowid()
+        }
+    };
+    let lines = [(from, rupees * 100, 0_i64), (to, 0, rupees * 100)];
+    for (index, (code, dr, cr)) in lines.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa) VALUES (?1, ?2, ?3, ?4, ?5)",
+            (entry, i64::try_from(index).unwrap() + 1, account(code), dr, cr),
+        )
+        .unwrap();
+    }
+    let (previous, last): (String, i64) = conn
+        .query_row(
+            "SELECT COALESCE((SELECT chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id DESC LIMIT 1), ?1),
+                    COALESCE((SELECT id FROM journal_entries WHERE status = 'posted' ORDER BY id DESC LIMIT 1), 0)",
+            [mandi_db::audit::GENESIS_HASH],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(last < entry);
+    let mut bytes = Vec::new();
+    put(&mut bytes, Some(&previous));
+    put(&mut bytes, Some(&entry.to_string()));
+    put(&mut bytes, Some(day));
+    put(&mut bytes, Some("general"));
+    put(&mut bytes, Some("voucher"));
+    put(&mut bytes, Some("1"));
+    put(&mut bytes, None);
+    put(&mut bytes, None);
+    put(&mut bytes, Some(&(rupees * 100).to_string()));
+    put(&mut bytes, Some("2"));
+    for (index, (code, dr, cr)) in lines.iter().enumerate() {
+        put(&mut bytes, Some(&(index + 1).to_string()));
+        put(&mut bytes, Some(&account(code).to_string()));
+        put(&mut bytes, None);
+        put(&mut bytes, Some(&dr.to_string()));
+        put(&mut bytes, Some(&cr.to_string()));
+        put(&mut bytes, Some("0"));
+        put(&mut bytes, None);
+    }
+    // The test key of `common::test_key()` is 32 bytes of 7.
+    let hash = blake3::keyed_hash(&[7_u8; 32], &bytes).to_hex().to_string();
+    conn.execute(
+        "UPDATE journal_entries SET status = 'posted', total_paisa = ?1, chain_hash = ?2 WHERE id = ?3",
+        (rupees * 100, &hash, entry),
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO settings (key, value_json) VALUES ('journal_head', ?1)
+         ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+        [format!("{{\"id\":{entry},\"hash\":\"{hash}\"}}")],
+    )
+    .unwrap();
+    entry
+}
+
+/// Posts a general entry on a file of version 5 through the one function the app uses, with an
+/// order key if one is given.
+fn post_chained(
+    conn: &Connection,
+    day: &str,
+    from: &str,
+    to: &str,
+    rupees: i64,
+    key: Option<i64>,
+) -> i64 {
+    let account = |code: &str| -> i64 {
+        conn.query_row("SELECT id FROM accounts WHERE code = ?1", [code], |r| {
+            r.get(0)
+        })
+        .unwrap()
+    };
+    let header = mandi_db::ledger::EntryHeader {
+        entry_date: day,
+        posting_type: "general",
+        source_type: "voucher",
+        source_id: 1,
+        reverses_entry_id: None,
+        narration: None,
+    };
+    let entry =
+        mandi_db::ledger::insert_draft_ordered(conn, &header, key, 1, "2026-10-10T07:30:12.000Z")
+            .unwrap();
+    for (line_no, (code, dr, cr)) in [(from, rupees * 100, 0), (to, 0, rupees * 100)]
+        .into_iter()
+        .enumerate()
+    {
+        mandi_db::ledger::insert_line(
+            conn,
+            entry,
+            &mandi_db::ledger::NewLine {
+                line_no: i64::try_from(line_no).unwrap() + 1,
+                account_id: account(code),
+                person_key: None,
+                dr_paisa: dr,
+                cr_paisa: cr,
+                is_advance: false,
+                narration: None,
+            },
+            1,
+            "2026-10-10T07:30:12.000Z",
+        )
+        .unwrap();
+    }
+    mandi_db::ledger::post(
+        conn,
+        &common::test_key(),
+        entry,
+        rupees * 100,
+        1,
+        "2026-10-10T07:30:12.000Z",
+    )
+    .unwrap();
+    entry
+}
+
+#[test]
+fn migration_5_adds_three_columns_and_keeps_every_row_number_and_hash() {
+    // Plan 16: a populated file made at version 4 (posted entries with their hash chain, a بکری
+    // with a lot, a sale line and stock moves) is upgraded: a copy is taken, `order_key`,
+    // `reverses_move_id` and `ended` appear as empty columns, one index and one trigger are added, no row
+    // changes, every balance and every chain hash is what it was, and the chain still verifies.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_4(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 4);
+    let f = common::fixture(&conn);
+    let cash = common::account_id(&conn, "01010001");
+    // The fixture's draft entry is the posting of its sale line: give it its body and post it first.
+    let first = legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "01010001",
+        "04010001",
+        12_880,
+    );
+    let second = legacy_post(&conn, None, "2026-10-10", "01010001", "04010002", 10_000);
+    let third = legacy_post(&conn, None, "2026-10-10", "01010001", "04010003", 160);
+    for (kind, qty, entry) in [("received", 50_i64, first), ("sold", -20, second)] {
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, journal_entry_id, move_date, kind, qty) VALUES (?1, ?2, '2026-10-10', ?3, ?4)",
+            (f.lot, entry, kind, qty),
+        )
+        .unwrap();
+    }
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 3);
+    let before_tables = schema(&conn, "table");
+    let before_indexes = schema(&conn, "index");
+    let before_triggers = schema(&conn, "trigger");
+    let before_rows = all_rows(&conn);
+    let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (4, 5));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 5);
+
+    // Only these two tables changed, and only by one column each.
+    let after_tables = schema(&conn, "table");
+    let changed: Vec<&str> = after_tables
+        .iter()
+        .filter(|t| !before_tables.contains(t))
+        .map(|t| t.split(':').next().unwrap_or(""))
+        .collect();
+    assert_eq!(changed, ["bikri_sales", "journal_entries", "stock_moves"]);
+    let columns = |table: &str| -> Vec<String> {
+        conn.prepare(&format!(
+            "SELECT name FROM pragma_table_info('{table}') ORDER BY cid"
+        ))
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    assert_eq!(
+        columns("journal_entries").last().map(String::as_str),
+        Some("order_key")
+    );
+    assert_eq!(
+        columns("stock_moves").last().map(String::as_str),
+        Some("reverses_move_id")
+    );
+    assert_eq!(
+        columns("bikri_sales").last().map(String::as_str),
+        Some("ended")
+    );
+    let added_indexes: Vec<String> = schema(&conn, "index")
+        .into_iter()
+        .filter(|i| !before_indexes.contains(i))
+        .map(|i| i.split(':').next().unwrap_or("").to_owned())
+        .collect();
+    assert_eq!(added_indexes, ["idx_stock_moves_reverses"]);
+    let added_triggers: Vec<String> = schema(&conn, "trigger")
+        .into_iter()
+        .filter(|t| !before_triggers.contains(t))
+        .map(|t| t.split(':').next().unwrap_or("").to_owned())
+        .collect();
+    assert_eq!(added_triggers, ["stock_moves_reversal_mirrors"]);
+
+    // Every row is what it was; the new columns are empty; every hash and balance is the same.
+    assert_eq!(
+        all_rows_without(
+            &conn,
+            &[
+                ("journal_entries", "order_key"),
+                ("stock_moves", "reverses_move_id"),
+                ("bikri_sales", "ended")
+            ]
+        ),
+        before_rows
+    );
+    let set: i64 = conn
+        .query_row(
+            "SELECT (SELECT COUNT(*) FROM journal_entries WHERE order_key IS NOT NULL)
+                  + (SELECT COUNT(*) FROM stock_moves WHERE reverses_move_id IS NOT NULL)
+                  + (SELECT COUNT(*) FROM bikri_sales WHERE ended IS NOT NULL)",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(set, 0);
+    assert_eq!(hashes(&conn), before_hashes);
+    mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before_totals
+    );
+    let totals = mandi_db::ledger::totals_of(&conn, cash, None, None).unwrap();
+    assert_eq!((totals.dr_paisa, totals.cr_paisa), (2_304_000, 0));
+
+    // The copy is the version-4 file as it was.
+    let copy_conn = Connection::open(outcome.copy.unwrap()).unwrap();
+    assert_eq!(user_version(&copy_conn), 4);
+    assert!(
+        copy_conn
+            .prepare("SELECT order_key FROM journal_entries")
+            .is_err(),
+        "the copy has no order key"
+    );
+
+    // The key is placed when the entry is a draft, is covered by the hash, and is final once
+    // posted. An entry without a key hashes as before.
+    let replaced = post_chained(
+        &conn,
+        "2026-10-10",
+        "01010001",
+        "04010004",
+        20,
+        Some(second),
+    );
+    mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
+    assert_eq!(
+        mandi_db::ledger::order_key_of(&conn, replaced).unwrap(),
+        Some(second)
+    );
+    assert_eq!(
+        mandi_db::ledger::order_key_of(&conn, third).unwrap(),
+        Some(third)
+    );
+    let refused = |sql: &str| -> DbError { common::classify(conn.execute(sql, []).unwrap_err()) };
+    assert!(matches!(
+        refused(&format!(
+            "UPDATE journal_entries SET order_key = 1 WHERE id = {replaced}"
+        )),
+        DbError::JournalPosted
+    ));
+    assert!(
+        conn.execute(
+            "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, order_key)
+             VALUES ('2026-10-10', 'general', 'voucher', 1, 0)",
+            [],
+        )
+        .is_err(),
+        "a key must be more than 0"
+    );
+    // A changed key breaks the chain (someone edited the file outside the app).
+    conn.execute_batch("DROP TRIGGER journal_entries_posted_is_final;")
+        .unwrap();
+    conn.execute(
+        "UPDATE journal_entries SET order_key = ?1 WHERE id = ?2",
+        (first, replaced),
+    )
+    .unwrap();
+    assert!(mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).is_err());
+
+    // A stock move reversal names the move it reverses, once, as its exact opposite.
+    let sold: i64 = conn
+        .query_row("SELECT id FROM stock_moves WHERE kind = 'sold'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    let reversal = |qty: i64, kind: &str, of: i64| {
+        conn.execute(
+            "INSERT INTO stock_moves (lot_id, journal_entry_id, move_date, kind, qty, reverses_move_id)
+             VALUES (?1, NULL, '2026-10-10', ?2, ?3, ?4)",
+            (f.lot, kind, qty, of),
+        )
+    };
+    assert!(
+        reversal(19, "reversal", sold).is_err(),
+        "not the opposite quantity"
+    );
+    assert!(reversal(20, "sold", sold).is_err(), "not a reversal");
+    reversal(20, "reversal", sold).unwrap();
+    assert!(
+        reversal(20, "reversal", sold).is_err(),
+        "a move is reversed once"
+    );
+    let reversed_reversal: i64 = conn.last_insert_rowid();
+    assert!(
+        reversal(-20, "reversal", reversed_reversal).is_err(),
+        "a reversal is not reversed again"
+    );
 }

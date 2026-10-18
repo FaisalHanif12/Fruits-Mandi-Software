@@ -161,7 +161,7 @@ pub enum ChargeSource {
 
 /// A one-time person of the پختہ کھاتہ accounts (PRD FR-13.2). Both names are required (PRD
 /// FR-7.24); the phone is required for a credit buyer and for a seller.
-#[derive(Debug, Clone, Default, Deserialize, TS)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 pub struct PukhtaInput {
     /// Urdu name.
     #[serde(default)]
@@ -176,7 +176,7 @@ pub struct PukhtaInput {
 
 /// A lot charge typed by hand (PRD 12.3). Empty `value` means nothing was typed, and the rules
 /// may suggest the charge.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct ChargeInput {
     /// What `value` means.
     pub method: LotChargeMethod,
@@ -186,7 +186,7 @@ pub struct ChargeInput {
 
 /// A commission or لاگا typed on a sale line (PRD FR-11.10). Empty `value` means nothing was
 /// typed, and the rule decides.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct LineChargeInput {
     /// What `value` means.
     pub method: LineChargeMethod,
@@ -195,7 +195,7 @@ pub struct LineChargeInput {
 }
 
 /// The header of a بکری (PRD 12.2). Everything is text; the backend checks every value.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct HeaderInput {
     /// The posting day, `DD-MM-YYYY` or a shortcut. Must be an open day (PRD FR-6.6).
     pub entry_date: String,
@@ -235,10 +235,17 @@ pub struct HeaderInput {
 }
 
 /// One sale line (PRD 12.4).
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct SaleInput {
     /// The screen's own key for this row. Echoed back so the screen can match its rows.
     pub key: String,
+    /// The saved line this row is, when the draft is an edit of a posting (plan 16). `null` for a
+    /// new line. A line sent with its `sale_id` is "unchanged" when its buyer, person, quantity,
+    /// weight, rates, payment type and typed charges equal the stored ones, and then keeps its
+    /// stored charges exactly (PRD FR-12.20, FR-11.6).
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub sale_id: Option<i64>,
     /// The buyer. The پختہ کھاتہ (خریدار) account for a one-time buyer, the نقدی منڈی account for
     /// a nameless cash buyer.
     #[serde(default)]
@@ -280,10 +287,16 @@ pub struct SaleInput {
 }
 
 /// One lot (PRD 12.3): one seller's goods of one item.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct LotInput {
     /// The screen's own key for this row. Echoed back.
     pub key: String,
+    /// The saved lot this row is, when the draft is an edit of the first posting (plan 16).
+    /// `null` for a new lot, which an edit adds after the saved ones. A lot sent with its `lot_id`
+    /// keeps its stored lot charges unless they are typed again (PRD FR-12.20).
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub lot_id: Option<i64>,
     /// The seller. The پختہ کھاتہ (بیوپاری) account for a one-time seller.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -341,7 +354,7 @@ pub struct LotInput {
 }
 
 /// A whole بکری as typed.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct BikriDraft {
     /// The header.
     pub header: HeaderInput,

@@ -3,9 +3,12 @@
 //! that writes: one transaction (Code Standards B3). The reads of saved بکری only read.
 
 use mandi_services::core::bikri::{
-    BikriDetail, BikriFindInput, BikriGetInput, BikriListInput, BikriListRow, BikriNavigateInput,
-    BikriPreview, BikriPreviewInput, BikriSaveInput, BikriSaved, FreightPart, SplitFreightInput,
-    split_freight,
+    BikriCancelled, BikriDetail, BikriEdited, BikriFindInput, BikriGetInput, BikriListInput,
+    BikriListRow, BikriNavigateInput, BikriPreview, BikriPreviewInput, BikriSaveInput, BikriSaved,
+    CancelInput, CancelPreview, CancelPreviewInput, EditOpenInput, EditPreviewInput, EditSaveInput,
+    EditableBikri, FreightPart, LaterSaleInput, LaterSaleSaveInput, LaterSaleSaved,
+    SplitFreightInput, StockList, StockListInput, UndoInput, UndoResult, WriteOffDone,
+    WriteOffInput, WriteOffUndoInput, WriteOffUndone, split_freight,
 };
 use mandi_services::{auth, bikri};
 
@@ -117,6 +120,162 @@ pub async fn bikri_navigate<R: tauri::Runtime>(
     run(app, "bikri_navigate", move |ctx| {
         auth::require(ctx)?;
         bikri::navigate(ctx, &input)
+    })
+    .await
+}
+
+// ---- Plan 16: goods left to sell, later sales, edit, cancel, undo, write-off ----
+//
+// Every command needs the signed-in Owner. The types and the codes are the contract
+// (`mandi_core::bikri::edit`); each command is one service call.
+
+/// The lots that still have goods left to sell, with the write-offs that can be undone (PRD
+/// FR-12.14, FR-12.16). Read only.
+#[tauri::command]
+pub async fn bikri_stock_list<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: StockListInput,
+) -> Result<StockList, UiError> {
+    run(app, "bikri_stock_list", move |ctx| {
+        auth::require(ctx)?;
+        bikri::stock_list(ctx, &input)
+    })
+    .await
+}
+
+/// Works out a later sale of the goods left in one lot for the live summary (PRD FR-12.17). It
+/// shares its working with `bikri_later_sale_save`. Nothing is saved.
+#[tauri::command]
+pub async fn bikri_later_sale_preview<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: LaterSaleInput,
+) -> Result<BikriPreview, UiError> {
+    run(app, "bikri_later_sale_preview", move |ctx| {
+        auth::require(ctx)?;
+        bikri::later_sale_preview(ctx, &input)
+    })
+    .await
+}
+
+/// Saves a later sale as a new posting of the lot's بکری, on its own day (PRD FR-12.17): one
+/// transaction, no lot charges again.
+#[tauri::command]
+pub async fn bikri_later_sale_save<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: LaterSaleSaveInput,
+) -> Result<LaterSaleSaved, UiError> {
+    run(app, "bikri_later_sale_save", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::later_sale_save(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Loads one posting of a saved بکری as a draft with its stored values, to edit (PRD FR-12.18).
+/// Read only.
+#[tauri::command]
+pub async fn bikri_open_for_edit<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: EditOpenInput,
+) -> Result<EditableBikri, UiError> {
+    run(app, "bikri_open_for_edit", move |ctx| {
+        auth::require(ctx)?;
+        bikri::open_for_edit(ctx, &input)
+    })
+    .await
+}
+
+/// Works out an edited posting for the live summary (PRD FR-12.20). It shares its working with
+/// `bikri_edit_save`. Nothing is saved.
+#[tauri::command]
+pub async fn bikri_edit_preview<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: EditPreviewInput,
+) -> Result<BikriPreview, UiError> {
+    run(app, "bikri_edit_preview", move |ctx| {
+        auth::require(ctx)?;
+        bikri::edit_preview(ctx, &input)
+    })
+    .await
+}
+
+/// Saves an edit (PRD FR-12.19): a reversal of the posting and a new posting on the same day, in
+/// one transaction. Lines the user did not change keep their stored values exactly.
+#[tauri::command]
+pub async fn bikri_edit_save<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: EditSaveInput,
+) -> Result<BikriEdited, UiError> {
+    run(app, "bikri_edit_save", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::edit_save(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// What a cancel would reverse and do to cash, for the confirm box (PRD FR-7.8). Read only.
+#[tauri::command]
+pub async fn bikri_cancel_preview<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CancelPreviewInput,
+) -> Result<CancelPreview, UiError> {
+    run(app, "bikri_cancel_preview", move |ctx| {
+        auth::require(ctx)?;
+        bikri::cancel_preview(ctx, &input)
+    })
+    .await
+}
+
+/// Cancels a بکری with a reason (PRD FR-12.22): every posting is reversed in one transaction, the
+/// number is kept, and matching is worked out again.
+#[tauri::command]
+pub async fn bikri_cancel<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CancelInput,
+) -> Result<BikriCancelled, UiError> {
+    run(app, "bikri_cancel", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::cancel(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Undoes a بکری straight after its save (PRD FR-7.47): a cancel with a fixed reason, giving back
+/// a draft with the same values.
+#[tauri::command]
+pub async fn bikri_undo<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: UndoInput,
+) -> Result<UndoResult, UiError> {
+    run(app, "bikri_undo", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::undo(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Writes off goods left in a lot with a reason (PRD FR-12.16): a stock move, no journal entry.
+#[tauri::command]
+pub async fn bikri_write_off<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: WriteOffInput,
+) -> Result<WriteOffDone, UiError> {
+    run(app, "bikri_write_off", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::write_off(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Undoes a write-off with a reason (PRD FR-12.16): the opposite stock move is recorded.
+#[tauri::command]
+pub async fn bikri_write_off_undo<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: WriteOffUndoInput,
+) -> Result<WriteOffUndone, UiError> {
+    run(app, "bikri_write_off_undo", move |ctx| {
+        let actor = auth::require(ctx)?;
+        bikri::write_off_undo(ctx, &actor, &input)
     })
     .await
 }

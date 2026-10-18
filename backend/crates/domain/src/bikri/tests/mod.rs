@@ -6,6 +6,7 @@
 //! - `properties`: random drafts keep the books balanced.
 
 mod cases;
+mod edit;
 mod properties;
 mod worked;
 
@@ -21,8 +22,8 @@ use mandi_core::money::{Bps, Paisa};
 use mandi_core::rules::{ChargeSide, ChargeType, ChargeValue, ItemGroup, Working, WorkingValue};
 
 use super::{
-    AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingKind, Switches,
-    calc_posting,
+    AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingTarget,
+    StoredPosting, Switches, calc_posting,
 };
 use crate::ledger::BalancedEntry;
 use crate::ledger::bikri::{SystemAccounts, build_bikri_entry};
@@ -203,6 +204,7 @@ pub fn per_unit(value: &str) -> Option<ChargeInput> {
 pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
         key: format!("lot-{seller}-{item}"),
+        lot_id: None,
         seller_account_id: Some(seller),
         pukhta: None,
         item_id: Some(item),
@@ -226,6 +228,7 @@ pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
 /// A lot with no typed charge at all, so the rules decide.
 pub fn bare_lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        lot_id: None,
         freight: None,
         labour: None,
         munshiana: None,
@@ -238,6 +241,7 @@ pub fn bare_lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
 pub fn sale(buyer: i64, qty: &str, rate: &str) -> SaleInput {
     SaleInput {
         key: format!("s-{buyer}-{qty}-{rate}"),
+        sale_id: None,
         buyer_account_id: Some(buyer),
         pukhta: None,
         qty: qty.into(),
@@ -255,6 +259,7 @@ pub fn sale(buyer: i64, qty: &str, rate: &str) -> SaleInput {
 
 pub fn blank(qty: &str) -> SaleInput {
     SaleInput {
+        sale_id: None,
         buyer_account_id: None,
         ..sale(0, qty, "")
     }
@@ -288,11 +293,12 @@ pub fn run_with(
 ) -> PostingCalc {
     let prepared = prepare_draft(draft, today(), None);
     calc_posting(
-        PostingKind::First,
+        PostingTarget::New,
         &prepared,
         lookups,
         &RuleSet::build(rules),
         switches,
+        &StoredPosting::none(),
     )
     .unwrap()
 }

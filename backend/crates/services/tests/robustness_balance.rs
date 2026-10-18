@@ -60,7 +60,14 @@ const TRIGGERS_OF_0004: [&str; 7] = [
     "bikri_lots_no_replace",
     "bikri_sales_no_replace",
 ];
-const LATEST_VERSION: i64 = 4;
+const LATEST_VERSION: i64 = 5;
+/// The three nullable columns migration 0005 adds (plan 16). A row's numbers do not change when
+/// they appear, so the row fingerprint leaves them out.
+const COLUMNS_OF_0005: [(&str, &str); 3] = [
+    ("journal_entries", "order_key"),
+    ("stock_moves", "reverses_move_id"),
+    ("bikri_sales", "ended"),
+];
 const NOW: &str = "2026-10-10T09:00:00Z";
 
 // ---- small helpers ----
@@ -288,8 +295,24 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
     let mut hasher = DefaultHasher::new();
     for table in tables.iter().filter(|t| !skip.contains(&t.as_str())) {
         table.hash(&mut hasher);
+        let names: Vec<String> = {
+            let mut info = conn
+                .prepare(&format!("PRAGMA table_info(\"{table}\")"))
+                .unwrap();
+            info.query_map([], |r| r.get::<_, String>(1))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
+                .into_iter()
+                .filter(|c| !COLUMNS_OF_0005.contains(&(table.as_str(), c.as_str())))
+                .collect()
+        };
+        let list: Vec<String> = names.iter().map(|c| format!("\"{c}\"")).collect();
         let mut statement = conn
-            .prepare(&format!("SELECT * FROM \"{table}\" ORDER BY rowid"))
+            .prepare(&format!(
+                "SELECT {} FROM \"{table}\" ORDER BY rowid",
+                list.join(", ")
+            ))
             .unwrap();
         let columns = statement.column_count();
         let mut rows = statement.query([]).unwrap();
@@ -938,6 +961,15 @@ fn migration_case(with_draft: bool, from_version: i64) {
         for name in TRIGGERS_OF_0004 {
             conn.execute_batch(&format!("DROP TRIGGER {name}")).unwrap();
         }
+        // What migration 0005 adds (plan 16): one trigger, one index and three nullable columns.
+        conn.execute_batch(
+            "DROP TRIGGER stock_moves_reversal_mirrors;
+             DROP INDEX idx_stock_moves_reverses;
+             ALTER TABLE journal_entries DROP COLUMN order_key;
+             ALTER TABLE stock_moves DROP COLUMN reverses_move_id;
+             ALTER TABLE bikri_sales DROP COLUMN ended;",
+        )
+        .unwrap();
         conn.pragma_update(None, "user_version", from_version)
             .unwrap();
     }

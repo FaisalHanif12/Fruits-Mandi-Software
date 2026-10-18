@@ -1,5 +1,5 @@
 // The app after the window opens (plan 04): the start-up checks, the shell with its menus and the
-// dashboard, the بکری area with its "coming soon" items (receipt, payment, stock), the keys from anywhere, the idle lock that
+// dashboard, the بکری area with its items, a "coming soon" page for a main item not built yet, the keys from anywhere, the idle lock that
 // keeps unsaved work, signing out, and saving the user's language and text size. Urdu and English,
 // by keyboard, against a fake backend.
 
@@ -117,7 +117,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     });
   });
 
-  it('Alt+B opens the بکری area on the sale book with its seven items; the ones not built yet are "coming soon" pages, not made-up data', async () => {
+  it('Alt+B opens the بکری area on the sale book with its seven items, each a real screen; a main item not built yet is a "coming soon" page, not made-up data', async () => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
@@ -183,12 +183,25 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       }),
     ).toBeInTheDocument();
     expect(within(side).getAllByRole('button')[2]).toHaveAttribute('aria-current', 'page');
-    // The others still say "coming soon".
+    // The goods left (باقی مال) is a real screen since plan 16; a later sale starts from it. Every
+    // item of the area is built now (own goods, خریداری, joins in plan 16b).
     await user.click(at(items, 6));
+    expect(
+      await screen.findByRole(
+        'heading',
+        {
+          level: 1,
+          name: (name) => visible(name) === message(language, 'layout-module-stock'),
+        },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
+    // A main item whose module is not built yet (روکڑ, plan 17) still says "coming soon".
+    await user.keyboard('{Alt>}k{/Alt}');
     expect(
       await screen.findByRole('heading', { name: message(language, 'soon-title') }),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
     // The way back is a button, and Esc does the same.
     await user.keyboard('{Escape}');
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();

@@ -76,6 +76,7 @@ export const AKRAM_LINE: SavedSale = {
   rate_diff: money(0),
   payment_type: 'credit',
   is_active: true,
+  state: 'in_force',
   note: null,
 };
 
@@ -122,6 +123,7 @@ export const EVENT1_TOTALS: SavedTotals = {
 export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
   return {
     id: 41,
+    version: 1,
     number: 1,
     book: null,
     entry_date: '2026-10-10',
@@ -172,7 +174,14 @@ export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
     ],
     totals: EVENT1_TOTALS,
     postings: [
-      { entry_id: 7, posting_type: 'bikri_first', entry_date: '2026-10-10', total: money(36_564) },
+      {
+        entry_id: 7,
+        posting_type: 'bikri_first',
+        entry_date: '2026-10-10',
+        total: money(36_564),
+        reversed: false,
+        editable: true,
+      },
     ],
     split: [
       { partner_id: 1, name_ur: 'الف', name_en: 'Partner A', income_paisa: money(1_580) },

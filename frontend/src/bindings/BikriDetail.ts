@@ -16,6 +16,11 @@ export type BikriDetail = {
    */
   id: number;
   /**
+   * The version of the row, to send back with an edit or a cancel (`ERR_VERSION_CHANGED` if
+   * the بکری changed since it was read).
+   */
+  version: number;
+  /**
    * The number.
    */
   number: number;

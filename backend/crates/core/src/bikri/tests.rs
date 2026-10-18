@@ -12,6 +12,7 @@ fn today() -> BusinessDate {
 fn sale(buyer: Option<i64>, qty: &str, rate: &str) -> SaleInput {
     SaleInput {
         key: "s".to_owned(),
+        sale_id: None,
         buyer_account_id: buyer,
         pukhta: None,
         qty: qty.to_owned(),
@@ -30,6 +31,7 @@ fn sale(buyer: Option<i64>, qty: &str, rate: &str) -> SaleInput {
 fn lot(sales: Vec<SaleInput>) -> LotInput {
     LotInput {
         key: "l".to_owned(),
+        lot_id: None,
         seller_account_id: Some(1),
         pukhta: None,
         item_id: Some(1),

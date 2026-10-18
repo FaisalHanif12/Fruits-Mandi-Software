@@ -302,6 +302,9 @@ pub(crate) struct WhatIfLine<'a> {
     pub dr: Paisa,
     /// Credit, paisa.
     pub cr: Paisa,
+    /// The order key it will have: the key of the entry it replaces in an edit (migration 0005),
+    /// or `None` for a new entry, which is the newest of its day.
+    pub order_key: Option<i64>,
 }
 
 /// A bill after the canonical working.
@@ -341,8 +344,12 @@ pub(crate) fn key_view(
         .cloned()
         .collect();
     if let Some(add) = change.add {
-        // The new entry has the biggest entry id, so it is the last line of its day.
-        let at = lines.partition_point(|l| l.entry_date.as_str() <= add.date);
+        // A new entry has the biggest entry id, so it is the last line of its day. An edited
+        // posting keeps the key of the posting it replaces, so it stays where that one was.
+        let key = add.order_key.unwrap_or(i64::MAX);
+        let at = lines.partition_point(|l| {
+            (l.entry_date.as_str(), !l.is_opening, l.order_key) <= (add.date, true, key)
+        });
         lines.insert(
             at,
             repo::KeyLine {
@@ -352,6 +359,7 @@ pub(crate) fn key_view(
                 entry_id: WHAT_IF_LINE,
                 entry_date: add.date.to_owned(),
                 is_opening: false,
+                order_key: key,
             },
         );
     }
@@ -671,9 +679,10 @@ pub fn adjust_advances(
     Ok(total)
 }
 
-/// The credit of a lot's first posting (PRD C8): the seller amounts of its lines less their
-/// commissions and the lot charges that come off the seller's credit. نقد is a separate line.
-fn first_credit(lot: &repo::FirstLot) -> Result<Paisa, ServiceError> {
+/// The credit of a lot in one posting (PRD C8): the seller amounts of its lines less their
+/// commissions and, in the first posting, the lot charges that come off the seller's credit. نقد
+/// is a separate line. A later sale has no lot charge (PRD FR-12.17).
+fn posting_credit(lot: &repo::PostingLot) -> Result<Paisa, ServiceError> {
     let freight = if lot.freight_by_firm {
         paisa(lot.freight_paisa)?
     } else {
@@ -702,8 +711,24 @@ pub(crate) struct AdvInputs {
     /// Every live line of the account, oldest first: the order of the account, and the lines of
     /// the payable working.
     lines: Vec<repo::LiveLine>,
-    lots: Vec<repo::FirstLot>,
+    lots: Vec<repo::PostingLot>,
     active: Vec<repo::AdvanceRow>,
+}
+
+impl AdvInputs {
+    /// The credit one live entry holds on this account, summed over its lines.
+    ///
+    /// # Errors
+    /// `ERR_OVERFLOW` on an amount that does not fit.
+    pub(crate) fn credit_of_entry(&self, entry_id: i64) -> Result<Paisa, ServiceError> {
+        let mut held = Paisa::ZERO;
+        for line in self.lines.iter().filter(|l| l.entry_id == entry_id) {
+            held = held
+                .checked_add(paisa(line.cr_paisa)?)
+                .map_err(money_error)?;
+        }
+        Ok(held)
+    }
 }
 
 /// Reads the inputs of the canonical advance working of a seller.
@@ -715,7 +740,7 @@ pub(crate) fn load_adv(tx: &Connection, account_id: i64) -> Result<AdvInputs, Se
         advances: repo::live_advance_lines(tx, account_id)?,
         credit_lines: repo::seller_credit_lines(tx, account_id)?,
         lines: repo::live_lines(tx, account_id)?,
-        lots: repo::first_lots(tx, account_id)?,
+        lots: repo::posting_lots(tx, account_id)?,
         active: repo::active_advance_rows(tx, account_id)?,
     })
 }
@@ -730,6 +755,9 @@ pub(crate) struct AdvChange<'a> {
     pub add_receipt: Option<(&'a str, Paisa)>,
     /// A payment to the seller that would be added: its day and amount.
     pub add_payment: Option<(&'a str, Paisa)>,
+    /// The order key the added line will have: the key of the entry it replaces in an edit
+    /// (migration 0005), or `None` for a new entry, which is the newest of its day.
+    pub add_order_key: Option<i64>,
 }
 
 /// What the canonical advance working says. Pure.
@@ -764,15 +792,17 @@ fn plan_adv(inputs: &AdvInputs, change: &AdvChange<'_>) -> Result<AdvPlan, Servi
             matched: HashMap::new(),
         });
     }
-    // The order of the account, as line ids; the new receipt is the last line of its day.
+    // The order of the account, as line ids; a new receipt is the last line of its day, an edited
+    // one keeps the place of the one it replaces.
     let mut order: Vec<i64> = Vec::new();
-    let mut dates: Vec<&str> = Vec::new();
+    let mut places: Vec<(&str, bool, i64)> = Vec::new();
     for line in inputs.lines.iter().filter(|l| !gone(l.entry_id)) {
         order.push(line.line_id);
-        dates.push(line.entry_date.as_str());
+        places.push((line.entry_date.as_str(), !line.is_opening(), line.order_key));
     }
     if let Some((date, amount)) = change.add_receipt {
-        let at = dates.partition_point(|d| *d <= date);
+        let key = change.add_order_key.unwrap_or(i64::MAX);
+        let at = places.partition_point(|p| *p <= (date, true, key));
         order.insert(at, WHAT_IF_LINE);
         credit_lines.push(repo::SellerCredit {
             line_id: WHAT_IF_LINE,
@@ -804,9 +834,9 @@ fn plan_adv(inputs: &AdvInputs, change: &AdvChange<'_>) -> Result<AdvPlan, Servi
         }
     }
     for (entry_id, lines) in &by_entry {
-        let mut with_credit: Vec<(&repo::FirstLot, Paisa)> = Vec::new();
+        let mut with_credit: Vec<(&repo::PostingLot, Paisa)> = Vec::new();
         for lot in inputs.lots.iter().filter(|l| l.entry_id == *entry_id) {
-            let credit = first_credit(lot)?;
+            let credit = posting_credit(lot)?;
             if credit > Paisa::ZERO {
                 with_credit.push((lot, credit));
             }
@@ -1008,14 +1038,15 @@ fn payable_lines(
     change: &AdvChange<'_>,
     matched: &HashMap<i64, Paisa>,
 ) -> Result<Vec<payables::Line>, ServiceError> {
-    // (day, is an opening credit, line). The days are in order while the what-if lines are put in;
-    // the opening credit is moved to the front at the end.
-    let mut lines: Vec<(String, bool, payables::Line)> = Vec::new();
+    // (day, order key, is an opening credit, line). The lines are in order while the what-if lines
+    // are put in; the opening credit is moved to the front at the end.
+    let mut lines: Vec<(String, i64, bool, payables::Line)> = Vec::new();
     for line in inputs.lines.iter().filter(|l| {
         change.remove_entry != Some(l.entry_id) && l.person_key.as_deref() == person_key
     }) {
         lines.push((
             line.entry_date.clone(),
+            line.order_key,
             line.is_opening_credit(),
             payables::Line {
                 line_id: line.line_id,
@@ -1026,12 +1057,14 @@ fn payable_lines(
             },
         ));
     }
+    let new_key = change.add_order_key.unwrap_or(i64::MAX);
     let mut add = |date: &str, dr: Paisa, cr: Paisa, adjusted: Paisa| {
-        let at = lines.partition_point(|(d, _, _)| d.as_str() <= date);
+        let at = lines.partition_point(|(d, k, _, _)| (d.as_str(), *k) <= (date, new_key));
         lines.insert(
             at,
             (
                 date.to_owned(),
+                new_key,
                 false,
                 payables::Line {
                     line_id: WHAT_IF_LINE,
@@ -1056,8 +1089,8 @@ fn payable_lines(
     }
     // PRD FR-7.59 (v1.5, Umar 15-10-2026): a seller's opening credit is his OLDEST payable,
     // whatever its date, so payments settle it first. Stable, so every other line keeps its place.
-    lines.sort_by_key(|(_, opening, _)| !*opening);
-    Ok(lines.into_iter().map(|(_, _, line)| line).collect())
+    lines.sort_by_key(|(_, _, opening, _)| !*opening);
+    Ok(lines.into_iter().map(|(_, _, _, line)| line).collect())
 }
 
 /// The seller after the canonical advance working with `change` applied, in memory: the same

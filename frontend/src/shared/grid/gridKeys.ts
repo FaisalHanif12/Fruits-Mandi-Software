@@ -47,6 +47,8 @@ export interface GridKeyEnv {
    * row. ↓ on the last row and Enter on the last stop stay where they are.
    */
   fixedRows?: boolean;
+  /** Can Ctrl+Delete remove this row? A row that cannot be removed swallows the key. */
+  canRemoveRow?: (row: EntryRow) => boolean;
   /** What the screen adds to Enter and ↑ (moving between grids and panels). */
   interceptors?: GridInterceptors;
   /** Space or a click on a choice cell: move to the next word. */
@@ -133,6 +135,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     if (matchesShortcut(event, SHORTCUTS.removeRow)) {
       event.preventDefault();
       if (env.fixedRows === true) return true;
+      if (env.canRemoveRow !== undefined && !env.canRemoveRow(row)) return true;
       params.api.stopEditing(true);
       const remaining = rows.length - 1;
       store.getState().removeRow(row.rowId);

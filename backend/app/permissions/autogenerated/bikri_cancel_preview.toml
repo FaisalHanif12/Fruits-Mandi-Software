@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-cancel-preview"
+description = "Enables the bikri_cancel_preview command without any pre-configured scope."
+commands.allow = ["bikri_cancel_preview"]
+
+[[permission]]
+identifier = "deny-bikri-cancel-preview"
+description = "Denies the bikri_cancel_preview command without any pre-configured scope."
+commands.deny = ["bikri_cancel_preview"]

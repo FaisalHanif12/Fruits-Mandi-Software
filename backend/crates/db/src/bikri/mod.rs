@@ -10,6 +10,7 @@
 
 use rusqlite::{Connection, OptionalExtension, params_from_iter};
 
+pub mod edit;
 pub mod saved;
 pub mod write;
 
@@ -172,13 +173,29 @@ pub fn last_rate(
     packing_id: i64,
     on_or_before: &str,
 ) -> rusqlite::Result<Option<SavedRate>> {
+    last_rate_except(conn, item_id, packing_id, on_or_before, None)
+}
+
+/// [`last_rate`] without the lines of one posting: an edit does not take its own lines as the
+/// last rate (plan 16).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn last_rate_except(
+    conn: &Connection,
+    item_id: i64,
+    packing_id: i64,
+    on_or_before: &str,
+    except_entry: Option<i64>,
+) -> rusqlite::Result<Option<SavedRate>> {
     conn.query_row(
         "SELECT s.seller_rate_paisa, s.entry_date
          FROM bikri_lots l JOIN bikri_sales s ON s.lot_id = l.id
          WHERE l.item_id = ?1 AND l.packing_id = ?2 AND s.is_active = 1 AND s.entry_date <= ?3
+           AND (?4 IS NULL OR s.journal_entry_id <> ?4)
          ORDER BY s.entry_date DESC, s.id DESC
          LIMIT 1",
-        rusqlite::params![item_id, packing_id, on_or_before],
+        rusqlite::params![item_id, packing_id, on_or_before, except_entry],
         |r| {
             Ok(SavedRate {
                 rate_paisa: r.get(0)?,
@@ -202,10 +219,26 @@ pub fn item_sales_between(
     from: &str,
     to: &str,
 ) -> rusqlite::Result<(i64, i64)> {
+    item_sales_between_except(conn, item_id, from, to, None)
+}
+
+/// [`item_sales_between`] without the facts of one posting (and of its reversal): an edit does not
+/// compare its rates with its own old lines (plan 16).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn item_sales_between_except(
+    conn: &Connection,
+    item_id: i64,
+    from: &str,
+    to: &str,
+    except_entry: Option<i64>,
+) -> rusqlite::Result<(i64, i64)> {
     conn.query_row(
         "SELECT COALESCE(SUM(sign * qty), 0), COALESCE(SUM(sign * seller_amount_paisa), 0)
-         FROM analytics_facts WHERE item_id = ?1 AND entry_date BETWEEN ?2 AND ?3",
-        rusqlite::params![item_id, from, to],
+         FROM analytics_facts WHERE item_id = ?1 AND entry_date BETWEEN ?2 AND ?3
+           AND (?4 IS NULL OR journal_entry_id <> ?4)",
+        rusqlite::params![item_id, from, to, except_entry],
         |r| Ok((r.get(0)?, r.get(1)?)),
     )
 }

@@ -276,6 +276,7 @@ fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
         .unwrap();
     let allowed = [
         "is_active",
+        "ended",
         "replaced_by_sale_id",
         "note",
         "created_at",
@@ -315,7 +316,7 @@ fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
     }
     // An edit replaces the line: the old one becomes inactive and points at the new one.
     conn.execute(
-        "UPDATE bikri_sales SET is_active = 0, replaced_by_sale_id = ?2, note = 'edited', version = 2, updated_at = '2026-10-10T08:00:00.000Z' WHERE id = ?1",
+        "UPDATE bikri_sales SET is_active = 0, ended = 'replaced', replaced_by_sale_id = ?2, note = 'edited', version = 2, updated_at = '2026-10-10T08:00:00.000Z' WHERE id = ?1",
         params![f.sale, second],
     )
     .unwrap();

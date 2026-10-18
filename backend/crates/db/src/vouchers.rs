@@ -7,6 +7,11 @@ use mandi_core::money::Paisa;
 use mandi_core::vouchers::{LastAdvance, VoucherMode, VoucherRow, VoucherType};
 use rusqlite::{Connection, OptionalExtension, params};
 
+/// The place of an entry in its account, oldest first: not an opening, day, order key, entry id.
+type EntryOrder = (bool, String, i64, i64);
+/// The same with the line number last.
+type LineOrder = (bool, String, i64, i64, i64);
+
 /// The columns of a new voucher that the user chooses or the framework gives.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewVoucher {
@@ -389,7 +394,7 @@ pub fn advance_lines(conn: &Connection, seller_id: i64) -> rusqlite::Result<Vec<
          WHERE l.account_id = ?1 AND l.is_advance = 1 AND e.status = 'posted'
            AND NOT EXISTS (SELECT 1 FROM journal_entries r
                            WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
-         ORDER BY e.entry_date, e.id, l.line_no",
+         ORDER BY e.entry_date, COALESCE(e.order_key, e.id), e.id, l.line_no",
     )?;
     let rows = statement.query_map([seller_id], |r| {
         Ok(AdvanceLine {
@@ -916,16 +921,21 @@ pub fn payable_credits_oldest_first(
     }
     let mut statement = conn.prepare(&format!(
         "WITH {not_live}
-         SELECT l.id, l.cr_paisa, e.posting_type <> 'opening', e.entry_date, l.entry_id
+         SELECT l.id, l.cr_paisa, e.posting_type <> 'opening', e.entry_date, COALESCE(e.order_key, e.id),
+                l.entry_id
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND l.cr_paisa > 0
            AND l.entry_id NOT IN (SELECT id FROM nonlive)",
         not_live = NOT_LIVE_ENTRIES
     ))?;
-    // (not an opening, day, entry), line id, credit.
-    let mut rows: Vec<((bool, String, i64), i64, i64)> = statement
+    // (not an opening, day, order key, entry), line id, credit.
+    let mut rows: Vec<(EntryOrder, i64, i64)> = statement
         .query_map([account_id], |r| {
-            Ok(((r.get(2)?, r.get(3)?, r.get(4)?), r.get(0)?, r.get(1)?))
+            Ok((
+                (r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?),
+                r.get(0)?,
+                r.get(1)?,
+            ))
         })?
         .collect::<rusqlite::Result<_>>()?;
     rows.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
@@ -971,16 +981,17 @@ fn payable_credits_of_key(
     person_key: Option<&str>,
 ) -> rusqlite::Result<Vec<PayableCredit>> {
     let mut statement = conn.prepare(&format!(
-        "SELECT l.id, l.cr_paisa, e.posting_type <> 'opening', e.entry_date, l.entry_id, l.line_no
+        "SELECT l.id, l.cr_paisa, e.posting_type <> 'opening', e.entry_date, COALESCE(e.order_key, e.id),
+                l.entry_id, l.line_no
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND l.pukhta_person_key IS ?2 AND l.cr_paisa > 0 AND {live}",
         live = crate::matching::LIVE
     ))?;
-    // (not an opening, day, entry, line), credit line, credit.
-    let mut keyed: Vec<((bool, String, i64, i64), PayableCredit)> = statement
+    // (not an opening, day, order key, entry, line), credit line, credit.
+    let mut keyed: Vec<(LineOrder, PayableCredit)> = statement
         .query_map(params![account_id, person_key], |r| {
             Ok((
-                (r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?),
+                (r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?),
                 PayableCredit {
                     line_id: r.get(0)?,
                     credit_paisa: r.get(1)?,

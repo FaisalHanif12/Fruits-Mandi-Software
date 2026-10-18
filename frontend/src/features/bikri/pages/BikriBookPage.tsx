@@ -20,19 +20,23 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { FileText } from 'lucide-react';
+import { Ban, FileText, Pencil } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
+import type { BikriEdited } from '../../../bindings/BikriEdited';
+import type { BikriPreview } from '../../../bindings/BikriPreview';
 import type { BikriSaved } from '../../../bindings/BikriSaved';
+import type { EditableBikri } from '../../../bindings/EditableBikri';
 import type { FieldError } from '../../../bindings/FieldError';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { isFromStep, useLayoutStep } from '../../../shared/hooks';
-import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
+import type { EntryRow } from '../../../shared/grid';
+import { isFromStep, useLayoutStep, useRefusalIntoView } from '../../../shared/hooks';
+import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
   CashConfirmDialog,
@@ -43,6 +47,7 @@ import {
   LinkButton,
   LoadingState,
   PartyCard,
+  ReasonDialog,
   showToast,
   useErrorText,
 } from '../../../shared/ui';
@@ -55,8 +60,20 @@ import { usePendingRestore } from '../draft-offer';
 import { BIKRI_DRAFT_SCREEN, applySnapshot } from '../draft-snapshot';
 import { useBikriDetail } from '../hooks/useBikriReads';
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
-import { useSaveFlow } from '../hooks/useSaveFlow';
+import { useEditDiff } from '../hooks/useEditDiff';
+import { useEditReason, type EditReason } from '../hooks/useEditReason';
+import { useEditSession } from '../hooks/useEditSession';
+import { useSaveFlow, type SaveMutation } from '../hooks/useSaveFlow';
+import { useSaveBikri, useSaveEdit } from '../hooks/useSaveBikri';
+import { UNDO_WINDOW_MS, requestUndo } from '../undo';
 import { afterSave } from '../after-save';
+import { CancelBikriFlow } from '../components/CancelBikriFlow';
+import { ClosedDayNotice } from '../components/ClosedDayNotice';
+import { EditChangesCard } from '../components/EditChangesCard';
+import { LaterPostingEdit } from '../components/LaterPostingEdit';
+import type { Baseline } from '../edit-changes';
+import { changedCellWords } from '../edit-view';
+import { editSource } from '../preview-source';
 import { HeaderCard } from '../components/HeaderCard';
 import { LotMore } from '../components/LotMore';
 import { LotsSection } from '../components/LotsSection';
@@ -71,7 +88,7 @@ import {
   useBikriDraft,
   type BikriDraftStores,
 } from '../draft-store';
-import { isFilled, isPukhtaSeller } from '../draft';
+import { buildDraft, isFilled, isPukhtaSeller } from '../draft';
 import { buildGridViews } from '../grid-views';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
@@ -120,49 +137,149 @@ function withoutRepeats(items: readonly FieldError[]): FieldError[] {
   });
 }
 
-interface EditorProps {
+/** What the editor needs when it edits a posting instead of making a new بکری (plan 16). */
+export interface EditMode {
+  kind: 'edit';
+  entryId: number;
+  editable: EditableBikri;
+  baseline: Baseline;
+  /** The backend's numbers for the entry as loaded (the "before" of the comparison). */
+  before: BikriPreview | null;
+  mutation: SaveMutation<BikriEdited>;
+  /** The reason typed in the box that asks for it. Read when the save is sent. */
+  reason: EditReason;
+  /** The posting is not of today, so a save asks for a reason first (plan 16, open questions). */
+  needsReason: boolean;
+  /** The edit was saved. */
+  onSaved: (edited: BikriEdited) => void;
+  /** The user leaves without saving (Esc, Back). */
+  onBack: () => void;
+  /** True once saved, so the leave guard does not ask. */
+  done: boolean;
+}
+
+/** What the editor needs for a new بکری. */
+export interface NewMode {
+  kind: 'new';
   /** A بکری was saved. The page opens a new one (and, in plan 14, prints for Ctrl+Enter). */
   onSaved: (saved: BikriSaved, andNext: boolean) => void;
-  /** Opens a saved بکری by its id (read-only until plan 16). */
-  onOpenSaved: (id: number) => void;
+  /** The undo button of the message was pressed (PRD FR-7.47). */
+  onUndo: (saved: BikriSaved) => void;
   /** The بکری saved last, with a way to open it. */
   lastSaved: { id: number; number: number } | null;
 }
 
-function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
+interface EditorProps {
+  /** Opens a saved بکری by its id. */
+  onOpenSaved: (id: number) => void;
+  mode: NewMode | EditMode;
+}
+
+/** A saved lot of an edit cannot be removed (plan 16); a lot added in the edit can. */
+function isNewLot(row: EntryRow): boolean {
+  return (row.typed[LOT.lotId] ?? '') === '';
+}
+
+function Editor({ onOpenSaved, mode }: EditorProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   const stores = useBikriDraft();
   const errorText = useErrorText();
   const language = useLanguage();
-  const { query, stale, draft } = useBikriPreview(stores);
+  const edit = mode.kind === 'edit' ? mode : null;
+  const newBikri = mode.kind === 'new' ? mode : null;
+  const lastSaved = newBikri?.lastSaved ?? null;
+  const newMutation = useSaveBikri();
+  const entryId = edit?.entryId;
+  const source = useMemo(
+    () => (entryId === undefined ? undefined : editSource(entryId)),
+    [entryId],
+  );
+  const { query, stale, draft } = useBikriPreview(stores, source);
   const preview = query.data;
   useDraftFills(stores, preview, stale);
 
   // Safety and saving (plan 13). The draft goes to the backend every 5 seconds; a save stops that.
-  const autosave = useDraftAutosave(stores, { enabled: true });
-  const flow = useSaveFlow({
+  // An edit has no draft of its own and never touches the draft of a new بکری (plan 16).
+  const autosave = useDraftAutosave(stores, { enabled: edit === null });
+  const flow = useSaveFlow<BikriSaved | BikriEdited>({
     stores,
     draft,
     preview,
     current: preview !== undefined && !stale,
+    mutation: edit === null ? newMutation : edit.mutation,
+    askPreview: source?.run,
+    toastId: edit === null ? undefined : 'bikri-edit-saved-toast',
+    toastOptions: (saved) =>
+      newBikri === null || 'old_entry_id' in saved
+        ? undefined
+        : {
+            durationMs: UNDO_WINDOW_MS,
+            action: {
+              label: <Localized id="bikri-undo" />,
+              altText: l10n.getString('bikri-undo'),
+              shortcut: SHORTCUTS.undoSave,
+              onAction: () => {
+                newBikri.onUndo(saved);
+              },
+            },
+          },
     onSaved: (saved, andNext) => {
+      if ('old_entry_id' in saved) {
+        edit?.onSaved(saved);
+        return;
+      }
       autosave.stop();
-      onSaved(saved, andNext);
+      newBikri?.onSaved(saved, andNext);
     },
   });
   const [findOpen, setFindOpen] = useState(false);
-  const dialogOpen = flow.ask !== null || findOpen;
-  const dirty = isFilled(draft);
-  useShortcut(SHORTCUTS.save, () => void flow.save(false), { enabled: !dialogOpen });
-  useShortcut(SHORTCUTS.saveAndNext, () => void flow.save(true), { enabled: !dialogOpen });
+  const [askReason, setAskReason] = useState(false);
+  const dialogOpen = flow.ask !== null || findOpen || askReason;
+
+  /** F10: an edit of an earlier day asks for the reason first (plan 16). */
+  const trySave = (andNext: boolean) => {
+    if (edit !== null) {
+      if (!edit.editable.editable) return;
+      if (edit.needsReason && edit.reason.get().trim() === '') {
+        setAskReason(true);
+        return;
+      }
+    }
+    void flow.save(andNext);
+  };
+  useShortcut(
+    SHORTCUTS.save,
+    () => {
+      trySave(false);
+    },
+    { enabled: !dialogOpen },
+  );
+  useShortcut(SHORTCUTS.saveAndNext, () => void flow.save(true), {
+    enabled: !dialogOpen && edit === null,
+  });
   useShortcut(
     SHORTCUTS.find,
     () => {
       setFindOpen(true);
     },
-    { enabled: !dialogOpen },
+    { enabled: !dialogOpen && edit === null },
   );
+  useEscape(
+    'leave',
+    () => {
+      edit?.onBack();
+    },
+    edit !== null,
+  );
+  // The backend asks for a reason although the screen did not: ask now (plan 16).
+  const refusedForReason =
+    flow.refusal?.errors.some((item) => item.code === 'ERR_REASON_REQUIRED') ?? false;
+  const [askedFor, setAskedFor] = useState<UiError | null>(null);
+  if (refusedForReason && flow.refusal !== askedFor) {
+    setAskedFor(flow.refusal);
+    setAskReason(true);
+  }
 
   // The same-truck notice's "open" button: find the saved بکری by its number, then open it.
   const openByNumber = (number: number) => {
@@ -241,6 +358,17 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
     words: (problem) => errorText(problem.item),
   });
 
+  // What the user changed in a posting open for edit: marked in the grids and listed (plan 16).
+  const diff = useEditDiff(stores, edit?.baseline);
+  const lotChanged = useMemo(
+    () => (diff === null ? undefined : changedCellWords(diff.lotCells, 'lot', say, language)),
+    [diff, say, language],
+  );
+  const saleChanged = useMemo(
+    () => (diff === null ? undefined : changedCellWords(diff.saleCells, 'line', say, language)),
+    [diff, say, language],
+  );
+
   // A problem on a field of the "more" panel keeps the panel open; the weight field shows for a
   // lot or line that asks for weight (PRD E23).
   const lotProblems = problems.filter(
@@ -276,6 +404,8 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
           : null);
 
   const rootRef = useRef<HTMLDivElement>(null);
+  // A refusal above the grid he is typing in is brought into view (never left unseen).
+  useRefusalIntoView(rootRef, refused);
   const focusTruck = () => {
     rootRef.current?.querySelector<HTMLInputElement>('input[role="combobox"]')?.focus();
   };
@@ -338,42 +468,72 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
     </>
   );
 
+  // The numbers of the selected lot as the backend worked them out for the entry as loaded, to set
+  // beside the preview's (plan 16).
+  const beforeTotals = edit?.before?.lots.find((lot) => lot.key === lotKey)?.totals ?? null;
+
+  const dirty = edit === null ? isFilled(draft) : !edit.done && !(diff?.unchanged ?? true);
+
   return (
     <div ref={rootRef} className="flex flex-col gap-3">
-      <BikriToolbar
-        currentId={null}
-        onOpen={onOpenSaved}
-        findOpen={findOpen}
-        onFindOpenChange={setFindOpen}
-        lastSaved={
-          lastSaved === null ? null : (
-            <span className="flex items-center gap-2 type-body text-ink-muted">
-              <Localized id="bikri-last-saved" vars={{ number: String(lastSaved.number) }}>
-                <span />
-              </Localized>
-              <LinkButton
-                onClick={() => {
-                  onOpenSaved(lastSaved.id);
-                }}
-              >
-                <Localized id="bikri-truck-open" />
-              </LinkButton>
-            </span>
-          )
-        }
-      >
-        <PrintAction target={lastSaved} enabled={!dialogOpen} />
-        <Button
-          variant="primary"
-          shortcut={SHORTCUTS.save}
-          busy={flow.busy}
-          onClick={() => {
-            void flow.save(false);
-          }}
+      {edit === null ? (
+        <BikriToolbar
+          currentId={null}
+          onOpen={onOpenSaved}
+          findOpen={findOpen}
+          onFindOpenChange={setFindOpen}
+          lastSaved={
+            lastSaved === null ? null : (
+              <span className="flex items-center gap-2 type-body text-ink-muted">
+                <Localized id="bikri-last-saved" vars={{ number: String(lastSaved.number) }}>
+                  <span />
+                </Localized>
+                <LinkButton
+                  onClick={() => {
+                    onOpenSaved(lastSaved.id);
+                  }}
+                >
+                  <Localized id="bikri-truck-open" />
+                </LinkButton>
+              </span>
+            )
+          }
         >
-          <Localized id="bikri-save" />
-        </Button>
-      </BikriToolbar>
+          <PrintAction target={lastSaved} enabled={!dialogOpen} />
+          <Button
+            variant="primary"
+            shortcut={SHORTCUTS.save}
+            busy={flow.busy}
+            onClick={() => {
+              trySave(false);
+            }}
+          >
+            <Localized id="bikri-save" />
+          </Button>
+        </BikriToolbar>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button shortcut={SHORTCUTS.back} onClick={edit.onBack}>
+            <Localized id="bikri-edit-back" />
+          </Button>
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            <Button
+              variant="primary"
+              shortcut={SHORTCUTS.save}
+              busy={flow.busy}
+              disabled={!edit.editable.editable}
+              onClick={() => {
+                trySave(false);
+              }}
+            >
+              <Localized id="bikri-edit-save" />
+            </Button>
+          </div>
+        </div>
+      )}
+      {edit !== null && !edit.editable.editable ? (
+        <ClosedDayNotice date={edit.editable.entry_date} />
+      ) : null}
       {refused === null ? null : (
         <ErrorNotice
           error={refused}
@@ -383,12 +543,28 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
       <div className="flex flex-wrap items-baseline gap-x-4">
         {/* The side menu already says where we are, so the heading gives its room to the grids in
             the smallest window (design system 8, plan 12). Screen readers still hear it. */}
-        <Localized id="glossary-bikri-book">
-          <h1 className="sr-only normal:not-sr-only normal:type-title" />
-        </Localized>
-        <Localized id="bikri-help">
-          <p className="type-body hidden text-ink-muted normal:block" />
-        </Localized>
+        {edit === null ? (
+          <>
+            <Localized id="glossary-bikri-book">
+              <h1 className="sr-only normal:not-sr-only normal:type-title" />
+            </Localized>
+            <Localized id="bikri-help">
+              <p className="type-body hidden text-ink-muted normal:block" />
+            </Localized>
+          </>
+        ) : (
+          <>
+            <Localized id="bikri-edit-title" vars={{ number: String(edit.editable.number) }}>
+              <h1 className="type-title" />
+            </Localized>
+            <Localized
+              id="bikri-edit-help"
+              vars={{ date: isoToDisplayDate(edit.editable.entry_date) }}
+            >
+              <p className="type-body text-ink-muted" />
+            </Localized>
+          </>
+        )}
       </div>
       <div
         onFocusCapture={() => {
@@ -398,6 +574,7 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
         <HeaderCard
           error={formError}
           onOpenBikri={openByNumber}
+          editing={edit !== null}
           onDone={() => {
             stores.lots.getState().setPendingFocus({ rowIndex: 0, field: LOT.seller });
           }}
@@ -416,6 +593,8 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
               view={views.lots}
               onCardAccount={setEditorCard}
               moreForced={lotMoreForced}
+              cellChanged={lotChanged}
+              canRemoveRow={edit === null ? undefined : isNewLot}
             />
             {lotRow === undefined ? null : (
               <LotMore
@@ -439,6 +618,7 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
               view={views.sales}
               onCardAccount={setEditorCard}
               card={wide ? null : card}
+              cellChanged={saleChanged}
             />
           </div>
           {wide ? null : numbers}
@@ -449,6 +629,13 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
             error={formError}
             usesWeight={usesWeight}
           />
+          {diff === null ? null : (
+            <EditChangesCard
+              items={diff.items}
+              before={beforeTotals}
+              after={lotPreview?.totals ?? null}
+            />
+          )}
         </div>
         {wide ? (
           <div className="flex min-w-0 flex-col gap-3">
@@ -481,14 +668,45 @@ function Editor({ onSaved, onOpenSaved, lastSaved }: EditorProps) {
           onCloseFocus={flow.onCashCloseFocus}
         />
       )}
-      {/* Leaving with typed work asks first (PRD FR-7.9). "Leave" throws the draft away too. */}
+      {edit === null ? null : (
+        <ReasonDialog
+          open={askReason}
+          onOpenChange={setAskReason}
+          title={<Localized id="bikri-edit-reason-title" />}
+          description={
+            <Localized
+              id="bikri-edit-reason-text"
+              vars={{ date: isoToDisplayDate(edit.editable.entry_date) }}
+            >
+              <span />
+            </Localized>
+          }
+          reasonLabel={<Localized id="bikri-edit-reason-label" />}
+          confirmLabel={<Localized id="bikri-edit-reason-confirm" />}
+          confirmVariant="primary"
+          error={null}
+          busy={flow.busy}
+          onConfirm={(reason) => {
+            edit.reason.set(reason);
+            setAskReason(false);
+            void flow.save(false);
+          }}
+        />
+      )}
+      {/* Leaving with typed work asks first (PRD FR-7.9). "Leave" throws the draft of a new
+          بکری away too; an edit has no draft, and leaving it never touches the one of a new
+          بکری (plan 16). */}
       <LeaveGuard
         dirty={dirty}
         onSave={() => flow.save(false)}
-        onLeave={() => {
-          autosave.stop();
-          void draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
-        }}
+        {...(edit === null
+          ? {
+              onLeave: () => {
+                autosave.stop();
+                void draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
+              },
+            }
+          : {})}
       />
     </div>
   );
@@ -514,12 +732,19 @@ function newSession(today: string, initialDraft: BikriBookProps['initialDraft'])
 /**
  * The new, unsaved بکری. After a save it opens another empty one (a new `key` remakes the editor,
  * so the first field has focus and nothing of the old one is left). The id of the بکری saved last
- * is kept here: it is the way back to it, and the hook that edit (plan 16) opens it with.
+ * is kept here: it is the way back to it. The message after a save has the undo button for 10
+ * seconds (PRD FR-7.47).
  */
 function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
   const navigate = useNavigate();
   const [session, setSession] = useState(() => newSession(today, initialDraft));
   const [lastSaved, setLastSaved] = useState<{ id: number; number: number } | null>(null);
+  // The undo button outlives the render it was made in: it reads the stores of the entry that is
+  // open when it is pressed.
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  });
   const openSaved = (id: number) => {
     void navigate({ to: '/bikri/book', search: { id } });
   };
@@ -532,32 +757,51 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
     <BikriDraftProvider value={session.stores}>
       <Editor
         key={session.key}
-        lastSaved={lastSaved}
         onOpenSaved={openSaved}
-        onSaved={(saved, andNext) => {
-          setLastSaved({ id: saved.bikri_id, number: saved.number });
-          afterSave(saved, andNext);
-          setSession((current) => ({
-            stores: createBikriDraft(isoToDisplayDate(today)),
-            key: current.key + 1,
-          }));
+        mode={{
+          kind: 'new',
+          lastSaved,
+          onSaved: (saved, andNext) => {
+            setLastSaved({ id: saved.bikri_id, number: saved.number });
+            afterSave(saved, andNext);
+            setSession((current) => ({
+              stores: createBikriDraft(isoToDisplayDate(today)),
+              key: current.key + 1,
+            }));
+          },
+          onUndo: (saved) => {
+            // The undone values replace the entry that is open. If he has already started
+            // another, nothing of his is lost: he is told to finish or clear it first.
+            if (isFilled(buildDraft(sessionRef.current.stores))) {
+              showToast(
+                'error',
+                <Localized id="bikri-undo-busy">
+                  <span />
+                </Localized>,
+              );
+              return;
+            }
+            requestUndo({ id: saved.bikri_id, number: saved.number });
+          },
         }}
       />
     </BikriDraftProvider>
   );
 }
 
-/** A saved بکری opened read-only, with the same toolbar as the new one. */
+/** A saved بکری opened read-only, with the same toolbar as the new one, and edit and cancel. */
 function SavedBikri({ id }: { id: number }) {
   const navigate = useNavigate();
   const detail = useBikriDetail(id);
   const [findOpen, setFindOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const dialogOpen = findOpen || cancelling;
   useShortcut(
     SHORTCUTS.find,
     () => {
       setFindOpen(true);
     },
-    { enabled: !findOpen },
+    { enabled: !dialogOpen },
   );
   const openSaved = (next: number) => {
     void navigate({ to: '/bikri/book', search: { id: next } });
@@ -565,6 +809,13 @@ function SavedBikri({ id }: { id: number }) {
   const openNew = () => {
     void navigate({ to: '/bikri/book', search: {} });
   };
+  const openEdit = (entryId: number) => {
+    void navigate({ to: '/bikri/book', search: { id, edit: entryId } });
+  };
+
+  const saved = detail.data?.status === 'saved';
+  // The first posting that can still be edited; the list of entries offers the others.
+  const firstEditable = detail.data?.postings.find((posting) => posting.editable);
 
   let body;
   if (detail.isPending) {
@@ -580,7 +831,7 @@ function SavedBikri({ id }: { id: number }) {
       />
     );
   } else {
-    body = <SavedBikriView detail={detail.data} />;
+    body = <SavedBikriView detail={detail.data} onEdit={saved ? openEdit : undefined} />;
   }
   return (
     <div className="flex flex-col gap-3">
@@ -592,29 +843,156 @@ function SavedBikri({ id }: { id: number }) {
       >
         <PrintAction
           target={detail.data === undefined ? null : { id, number: detail.data.number }}
-          enabled={!findOpen}
+          enabled={!dialogOpen}
         />
+        {saved ? (
+          <>
+            <Button
+              disabled={firstEditable === undefined}
+              onClick={() => {
+                if (firstEditable !== undefined) openEdit(firstEditable.entry_id);
+              }}
+            >
+              <Pencil aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-edit" />
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setCancelling(true);
+              }}
+            >
+              <Ban aria-hidden="true" className="size-icon-md" />
+              <Localized id="bikri-cancel-bikri" />
+            </Button>
+          </>
+        ) : null}
         <Button variant="primary" shortcut={SHORTCUTS.newBikri} onClick={openNew}>
           <Localized id="bikri-new" />
         </Button>
       </BikriToolbar>
       {body}
+      <CancelBikriFlow
+        target={cancelling && detail.data !== undefined ? { id, number: detail.data.number } : null}
+        onClose={() => {
+          setCancelling(false);
+        }}
+        onCancelled={() => {
+          setCancelling(false);
+        }}
+      />
     </div>
   );
 }
 
-/** The id in the address (`/bikri/book?id=12`), or null for a new بکری. */
-function useSavedId(): number | null {
+/**
+ * One posting of a saved بکری open for edit (`/bikri/book?id=12&edit=57`, PRD FR-12.18). The first
+ * posting is edited in the sale book itself, with its header, lots and lines; a later sale is
+ * edited in the form of its lines. The day of the posting is kept. Saving goes back to the saved
+ * بکری, which shows the new posting.
+ */
+function EditBikri({ bikriId, entryId }: { bikriId: number; entryId: number }) {
+  const navigate = useNavigate();
+  const session = useEditSession(bikriId, entryId);
+  const day = useDayStatus();
+  const reason = useEditReason();
+  const [done, setDone] = useState(false);
+  const version = session.data?.editable.version ?? 0;
+  const mutation = useSaveEdit(entryId, version, () => {
+    const text = reason.get().trim();
+    return text === '' ? null : text;
+  });
+  // After a save the screen goes back to the saved بکری. The guard is told first, so it does not ask.
+  useEffect(() => {
+    if (done) void navigate({ to: '/bikri/book', search: { id: bikriId } });
+  }, [done, navigate, bikriId]);
+  const back = () => {
+    void navigate({ to: '/bikri/book', search: { id: bikriId } });
+  };
+
+  if (session.isError || day.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="bikri-edit-failed" />}
+        error={uiErrorOf(session.isError ? session.error : day.error)}
+        onRetry={() => {
+          void session.refetch();
+          void day.refetch();
+        }}
+      />
+    );
+  }
+  if (!session.isSuccess || !day.isSuccess) return <LoadingState />;
+  const { editable, stores, baseline, before } = session.data;
+  const needsReason = editable.entry_date !== day.data.today;
+  if (editable.posting_type === 'bikri_later') {
+    return (
+      <BikriDraftProvider value={stores}>
+        <LaterPostingEdit
+          editable={editable}
+          baseline={baseline}
+          before={before}
+          mutation={mutation}
+          reason={reason}
+          needsReason={needsReason}
+          done={done}
+          onSaved={() => {
+            setDone(true);
+          }}
+          onBack={back}
+        />
+      </BikriDraftProvider>
+    );
+  }
+  return (
+    <BikriDraftProvider value={stores}>
+      <Editor
+        onOpenSaved={(next) => {
+          void navigate({ to: '/bikri/book', search: { id: next } });
+        }}
+        mode={{
+          kind: 'edit',
+          entryId,
+          editable,
+          baseline,
+          before,
+          mutation,
+          reason,
+          needsReason,
+          done,
+          onSaved: () => {
+            setDone(true);
+          },
+          onBack: back,
+        }}
+      />
+    </BikriDraftProvider>
+  );
+}
+
+/** A whole positive number of the address, or null. */
+function idOf(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+/** The ids in the address: `?id=12` is a saved بکری, `?id=12&edit=57` its posting open for edit. */
+function useSavedIds(): { id: number | null; edit: number | null } {
   const search = useSearch({ strict: false });
   const id: unknown = (search as { id?: unknown }).id;
-  return typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? id : null;
+  const edit: unknown = (search as { edit?: unknown }).edit;
+  return { id: idOf(id), edit: idOf(edit) };
 }
 
 function BikriBookContent({ initialDraft }: BikriBookProps) {
-  const savedId = useSavedId();
+  const { id: savedId, edit: editId } = useSavedIds();
   const day = useDayStatus();
   // A draft restored at start-up remakes the new بکری, even when it is already open.
   const restoreTick = usePendingRestore((state) => state.tick);
+  if (savedId !== null && editId !== null) {
+    return (
+      <EditBikri key={`${String(savedId)}-${String(editId)}`} bikriId={savedId} entryId={editId} />
+    );
+  }
   if (savedId !== null) return <SavedBikri id={savedId} />;
   if (day.isPending) return <LoadingState />;
   if (day.isError) {

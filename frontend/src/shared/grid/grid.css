@@ -100,6 +100,30 @@
   background-color: var(--color-warn-soft);
 }
 
+/* A cell the user changed in a posting open for edit (plan 16): a soft ground and a corner mark on
+   the start side. The corner is a shape, so colour is never the only signal; the words are in the
+   tooltip and in the list "What you changed" (NFR-USE-12). */
+.entry-grid .cell-changed {
+  background-color: var(--color-primary-soft);
+}
+
+.entry-grid .cell-changed::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: var(--spacing-3);
+  block-size: var(--spacing-3);
+  background-color: var(--color-primary);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* The corner follows the direction of the cell itself: a number cell is left to right in both
+   languages (its start is the left), a text cell in Urdu is right to left. */
+.entry-grid .cell-changed:dir(rtl)::after {
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
 /* The rate hint, for example the last rate. Never saved (PRD FR-7.53). It is words with a
    number in them, so it reads in the direction of the language, not like a number cell. */
 .entry-grid .cell-num.cell-hint {

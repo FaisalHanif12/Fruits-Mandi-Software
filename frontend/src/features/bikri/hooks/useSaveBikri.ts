@@ -4,9 +4,9 @@
 // `confirm_cash_below_zero`. After a save, everything that reads what the save wrote is read again
 // (PRD 6.2): the balances on the party cards, the trial balance, the partners' shares, the lists.
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { draftsDiscard } from '../../../shared/drafts';
-import { bikriSave } from '../api';
+import { bikriEditSave, bikriLaterSaleSave, bikriSave } from '../api';
 import { BIKRI_DRAFT_SCREEN } from '../draft-snapshot';
 import type { BikriDraft } from '../types';
 
@@ -27,6 +27,13 @@ const READ_AGAIN: readonly (readonly string[])[] = [
   ['day_status'],
 ];
 
+/** Reads again everything a posting changed (PRD 6.2). Used after a save, an edit, a cancel, an undo. */
+export async function readAgainAfterPosting(queryClient: QueryClient): Promise<void> {
+  await Promise.all(
+    READ_AGAIN.map((queryKey) => queryClient.invalidateQueries({ queryKey: [...queryKey] })),
+  );
+}
+
 export function useSaveBikri() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -36,9 +43,35 @@ export function useSaveBikri() {
       // The backend removed the draft in its transaction. A draft sent a moment before the save
       // may have arrived after it, so the screen asks for it to be thrown away once more.
       await draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
-      await Promise.all(
-        READ_AGAIN.map((queryKey) => queryClient.invalidateQueries({ queryKey: [...queryKey] })),
-      );
+      await readAgainAfterPosting(queryClient);
     },
+  });
+}
+
+/** The save of a later sale of one lot (PRD FR-12.17). The new lines are the first lot's lines. */
+export function useSaveLaterSale(lotId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ draft, confirmCashBelowZero }: SaveBikriInput) =>
+      bikriLaterSaleSave(
+        lotId,
+        draft.header.entry_date,
+        draft.lots[0]?.sales ?? [],
+        confirmCashBelowZero,
+      ),
+    onSuccess: () => readAgainAfterPosting(queryClient),
+  });
+}
+
+/**
+ * The save of an edit of one posting (PRD FR-12.19). `reason` is read when the save is sent, so
+ * the reason typed in the box that asks for it is the one that goes.
+ */
+export function useSaveEdit(entryId: number, version: number, reason: () => string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ draft, confirmCashBelowZero }: SaveBikriInput) =>
+      bikriEditSave(entryId, version, draft, reason(), confirmCashBelowZero),
+    onSuccess: () => readAgainAfterPosting(queryClient),
   });
 }

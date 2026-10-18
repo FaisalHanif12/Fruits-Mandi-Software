@@ -331,6 +331,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "is_active",
                 "replaced_by_sale_id",
                 "note",
+                // Migration 0005 (plan 16): how a sale line left force.
+                "ended",
             ],
         ),
         (
@@ -342,6 +344,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "kind",
                 "qty",
                 "reason",
+                // Migration 0005 (plan 16): the move this one reverses.
+                "reverses_move_id",
             ],
         ),
         (
@@ -408,6 +412,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "status",
                 "total_paisa",
                 "chain_hash",
+                // Migration 0005 (plan 16): keeps an edited posting in its place for matching.
+                "order_key",
             ],
         ),
         (

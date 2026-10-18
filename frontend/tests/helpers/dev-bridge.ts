@@ -6,6 +6,14 @@
 // the development route imports it.
 
 import { EVENT1, IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
+import {
+  cancelPreview,
+  editable,
+  laterSaleAnswer,
+  stockList,
+  stockRow,
+  undoResult,
+} from './bikri-plan16-data';
 import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved';
 import { paisaForTest } from './paisa';
 import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
@@ -13,6 +21,7 @@ import { printDataFor, voucherPrintData } from './print-data';
 import { printingSettings } from './print-settings';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { AdvanceInput } from '../../src/bindings/AdvanceInput';
+import type { SaleInput } from '../../src/bindings/SaleInput';
 import type { PaymentInput } from '../../src/bindings/PaymentInput';
 import type { ReceiptInput } from '../../src/bindings/ReceiptInput';
 import type { VoucherEntry } from '../../src/features/vouchers/types';
@@ -351,6 +360,66 @@ const handlers: Record<string, Handler> = {
       pdf_paths: input['to'] === 'pdf' ? docs.map((doc) => `prints/${doc}-1.pdf`) : null,
     };
   },
+  // Plan 16: goods left, later sale, edit, cancel and undo (bikri-plan16-data.ts). `#/dev/bikri?
+  // closed` is a closed day (the edit and the cancel are refused); `empty` is nothing left.
+  bikri_stock_list: () =>
+    devFlag('empty')
+      ? stockList([])
+      : stockList([
+          stockRow(),
+          stockRow({
+            lot_id: 41,
+            bikri_id: 43,
+            bikri_number: 3,
+            received_date: '2026-10-08',
+            qty_received: 30,
+            qty_sold: 20,
+            balance: 10,
+            days_waiting: 2,
+          }),
+        ]),
+  bikri_later_sale_preview: (input) =>
+    laterSaleAnswer(Array.isArray(input['sales']) ? (input['sales'] as SaleInput[]) : [], 5),
+  bikri_later_sale_save: (input) => ({
+    bikri_id: 41,
+    number: 1,
+    lot_id: asNumber(input['lot_id']),
+    entry_id: 9,
+    preview: laterSaleAnswer([], 5),
+  }),
+  bikri_open_for_edit: () => editable({ editable: !devFlag('closed') }),
+  bikri_edit_preview: (input) => previewFor(draftOf(input)),
+  bikri_edit_save: (input) => {
+    // `#/dev/bikri?id=41&edit=7&rule=lot_item_locked` is the backend refusing the edit by that rule.
+    const rule = devValue('rule');
+    if (rule !== null) throw editNotAllowed(rule);
+    return {
+      bikri_id: 41,
+      number: 1,
+      version: 4,
+      old_entry_id: 7,
+      reversal_entry_id: 10,
+      entry_id: 11,
+      preview: previewFor(draftOf(input)),
+    };
+  },
+  bikri_cancel_preview: () =>
+    cancelPreview(devFlag('closed') ? { closed_dates: ['2026-10-10'], can_cancel: false } : {}),
+  bikri_cancel: () => ({ bikri_id: 41, number: 1, reversal_entry_ids: [10] }),
+  bikri_undo: () => undoResult(),
+  bikri_write_off: (input) => ({
+    lot_id: asNumber(input['lot_id']),
+    move_id: 70,
+    qty: 5,
+    qty_written_off: 5,
+    balance: 0,
+  }),
+  bikri_write_off_undo: () => ({
+    lot_id: 40,
+    reversal_move_id: 71,
+    qty_written_off: 0,
+    balance: 5,
+  }),
   // Plan 15: the vouchers, answered from the books of the worked day (voucher-books.ts).
   vouchers_preview: (input) => books.preview(input['entry'] as VoucherEntry),
   vouchers_save_receipt: (input) => books.save({ type: 'receipt', input: input as ReceiptInput }),
@@ -426,6 +495,29 @@ function refusal(): Error {
   return Object.assign(new Error('ERR_NOT_IMPLEMENTED'), {
     ok: false,
     errors: [{ code: 'ERR_NOT_IMPLEMENTED', field: null, values: {} }],
+    ref: '',
+  });
+}
+
+/** The field each edit rule points to, as the backend sends it (plan 16, ERR_EDIT_NOT_ALLOWED). */
+const EDIT_RULE_FIELDS: Readonly<Record<string, string>> = {
+  day_changed: 'header.entry_date',
+  lot_removed: 'lots',
+  lot_not_in_posting: 'lots[0].lot_id',
+  lot_order_changed: 'lots[0].lot_id',
+  lot_seller_locked: 'lots[0].seller_account_id',
+  lot_item_locked: 'lots[0].item_id',
+  line_not_in_posting: 'lots[0].sales[0].sale_id',
+  posting_lots_locked: 'lots',
+};
+
+/** The backend's refusal of an edit by one rule. */
+function editNotAllowed(rule: string): Error {
+  return Object.assign(new Error('ERR_EDIT_NOT_ALLOWED'), {
+    ok: false,
+    errors: [
+      { code: 'ERR_EDIT_NOT_ALLOWED', field: EDIT_RULE_FIELDS[rule] ?? null, values: { rule } },
+    ],
     ref: '',
   });
 }

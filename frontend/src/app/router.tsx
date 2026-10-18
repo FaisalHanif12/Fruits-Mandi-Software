@@ -111,13 +111,24 @@ const bikriRoute = createRoute({
   beforeLoad: () => redirect({ to: '/bikri/book' }),
 });
 
-// `/bikri/book` is a new بکری; `/bikri/book?id=12` opens a saved one read-only (plan 13).
+/** A positive whole number from the address, or nothing. */
+function positiveId(value: unknown): number | undefined {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+}
+
+// `/bikri/book` is a new بکری; `/bikri/book?id=12` opens a saved one read-only (plan 13);
+// `/bikri/book?id=12&edit=57` opens posting 57 of it for edit (plan 16).
 const bikriBookRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/book',
-  validateSearch: (search: Record<string, unknown>): { id?: number } => {
-    const id = Number(search['id']);
-    return Number.isSafeInteger(id) && id > 0 ? { id } : {};
+  validateSearch: (search: Record<string, unknown>): { id?: number; edit?: number } => {
+    const id = positiveId(search['id']);
+    const edit = positiveId(search['edit']);
+    return {
+      ...(id === undefined ? {} : { id }),
+      ...(id !== undefined && edit !== undefined ? { edit } : {}),
+    };
   },
   component: lazyRouteComponent(
     () => import('../features/bikri/pages/BikriBookPage'),
@@ -132,6 +143,31 @@ const todayRoute = createRoute({
   component: lazyRouteComponent(
     () => import('../features/bikri/pages/TodayBikriPage'),
     'TodayBikriPage',
+  ),
+});
+
+// باقی مال: the lots with goods left (PRD FR-12.14). A later sale of one lot (PRD FR-12.17) opens
+// from it: `/bikri/later?bikri=12&lot=40`.
+const stockRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/stock',
+  component: lazyRouteComponent(() => import('../features/bikri/pages/StockPage'), 'StockPage'),
+});
+
+const laterSaleRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/later',
+  validateSearch: (search: Record<string, unknown>): { bikri?: number; lot?: number } => {
+    const bikri = positiveId(search['bikri']);
+    const lot = positiveId(search['lot']);
+    return {
+      ...(bikri === undefined ? {} : { bikri }),
+      ...(lot === undefined ? {} : { lot }),
+    };
+  },
+  component: lazyRouteComponent(
+    () => import('../features/bikri/pages/LaterSalePage'),
+    'LaterSalePage',
   ),
 });
 
@@ -312,7 +348,8 @@ const appRoutes = [
   dayRoute,
   pukhtaRoute,
   todayRoute,
-  comingSoonRoute('/bikri/stock'),
+  stockRoute,
+  laterSaleRoute,
   comingSoonRoute('/rokar'),
   partnersRoute,
   partnersSetupRoute,
