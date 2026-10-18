@@ -61,7 +61,7 @@ Commands (sign-in needed; stubs return `ERR_NOT_IMPLEMENTED` until T2): `bikri_s
 5. `bikri_stock_list` has `include_written_off`, so a write-off that left nothing can still be undone.
 6. New fields: `SaleInput.sale_id`, `LotInput.lot_id` (optional), `BikriDetail.version`, `SavedPosting.reversed` and `.editable`, `SavedSale.state` (`in_force | replaced | removed | cancelled`).
 7. The undo reason is the Fluent ID `bikri-undo-reason` (the frontend adds the message, ur and en).
-8. **Migration 0005** (stable order key): `journal_entries.order_key` (matching orders by date, opening first, `COALESCE(order_key, id)`, id; an edit's new posting and every reversal copy the key; hashed only when set, so old chains are unchanged), `stock_moves.reverses_move_id` (unique index, mirror trigger), `bikri_sales.ended` (`replaced | removed | cancelled`; null means `is_active = 1`). Plan 16b's migration is therefore `0006`. Vouchers edit now keeps its place through the key and re-matches with the full working.
+8. **Migration 0005** (stable order key): `journal_entries.order_key` (matching orders by date, opening first, `COALESCE(order_key, id)`, id; an edit's new posting copies the key of the posting it replaces; a reversal has no key of its own, which is harmless because matching leaves out both the reversed entry and its reversal; hashed only when set, so old chains are unchanged), `stock_moves.reverses_move_id` (unique index, mirror trigger), `bikri_sales.ended` (`replaced | removed | cancelled`; null means `is_active = 1`). Plan 16b's migration is therefore `0006`. Vouchers edit now keeps its place through the key and re-matches with the full working.
 
 #### Field detail for the frontend (from backend's T1 message; all inputs are `{ input: ... }`)
 
@@ -94,7 +94,7 @@ New error codes (`errors.ftl` ur and en, `# review: pending`): `ERR_BIKRI_CANCEL
 
 An edit or cancel writes the new posting as a NEW journal entry (higher id). Matching orders postings by date, opening first, then entry id, so a same-day edit moves the posting after a بکری saved later the same day. For advance matching this can refuse an edited seller return (`ERR_RETURN_EXCEEDS_OPEN`) or drop the adjustment of an edited پیشگی. Plan 16 fixes it once, for vouchers and for the بکری edit, cancel and later sale:
 
-- **T1 adds migration `0005_*.sql`** with a stable order key on `journal_entries` (null means the entry's own id; an edit's new posting copies the order key of the posting it replaces, a reversal copies its original's). The matching walks and `seller_credit_lines` order by (date, opening first, order key, entry id). Plan 16b's migration then becomes `0006` and plan 17 refers to `0006` (renumbered in both plan files on 17-10-2026).
+- **T1 adds migration `0005_*.sql`** with a stable order key on `journal_entries` (null means the entry's own id; an edit's new posting copies the order key of the posting it replaces; a reversal needs none). The matching walks and `seller_credit_lines` order by (date, opening first, order key, entry id). Plan 16b's migration then becomes `0006` and plan 17 refers to `0006` (renumbered in both plan files on 17-10-2026).
 - Test: a same-day seller return edited (narration only) after a later same-day ticked بکری stays allowed; an edited پیشگی keeps its adjustment; buyer bill order and every earlier golden number are unchanged. The migration test checks a populated file and the journal chain. Money agent before and after.
 - Every edit or cancel calls the full re-match (never the fast paths) for every affected key, as `vouchers/edit.rs` does; teach `matching::rematch_advances` and `seller_credit_lines` about `bikri_later` credits and their tick; reuse `ledger::reverse`.
 
@@ -115,3 +115,10 @@ Own goods lots and their cost (plan 16b); edit and cancel of vouchers (plan 15);
 ## 8. Open questions
 
 None for Umar. Team default: an edit of a posting dated today needs no reason; an edit of an earlier open day asks for one (it is written to the audit log).
+
+## 9. Decisions made during the build (lead, 18-10-2026)
+
+- Edit rules are refused with `ERR_EDIT_NOT_ALLOWED` (field = path of the lot or line, value `rule` = `day_changed`, `lot_removed`, `lot_not_in_posting`, `lot_order_changed`, `lot_seller_locked`, `lot_item_locked`, `line_not_in_posting`, `posting_lots_locked`). The later-sale `lots[0].cash_paid` refusal stays `ERR_FORMAT_INVALID` (an input rule). A lot with a write-off also keeps its seller and item in an edit.
+- FR-11.9 as built (money agent MAJOR, fixed): when the line carrying a per-lot seller commission is removed, the charge moves only to an unchanged line that was saved with the per-lot method, and only while nothing else carries it. A changed or new line looks its rules up again. This departs from the literal "first remaining line" only when a rule changed between saves (an unchanged line with its own percent commission is never overwritten). **For Umar to confirm.**
+- Open for Umar (money agent MINOR 2, not changed): if the carrier line is edited to a typed commission, the lot's per-lot charge is not charged on another line, while a fresh save of the same lines would charge it on the next line (480 against 980). PRD FR-11.9 speaks only of a removed line.
+

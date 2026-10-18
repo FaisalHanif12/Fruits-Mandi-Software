@@ -24,8 +24,8 @@
     "13-bikri-save": "reviewing",
     "14-bikri-prints": "reviewing",
     "15-vouchers": "reviewing",
-    "16-later-sales-edit-cancel": "building",
-    "16b-own-goods": "waiting",
+    "16-later-sales-edit-cancel": "reviewing",
+    "16b-own-goods": "building",
     "17-cash-book-and-day-close": "waiting"
   },
   "acceptance": [
