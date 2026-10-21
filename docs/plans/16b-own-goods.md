@@ -1,111 +1,98 @@
-# Plan 16b: The firm's own goods (خریداری)
+# Plan 16b: Market trips (مارکیٹ سفر) and their goods (اپنا مال)
 
-Deliverable: D4, plan file 16b. Branch: `feature/bikri` (goal run D3+D4). Version 1.0, 15-10-2026.
+Deliverable: D4, plan file 16b. Branch: `feature/bikri` (goal run D3+D4). Version 2.0, 22-10-2026 (reworked to PRD v1.7). The file name stays so every link works. The old v1.0 text (the firm's own goods, a stock account, trading sales, cost of goods sold posted) is replaced: it is in git history (`572eed3`).
 
 ## 1. Goal
 
-The firm can buy goods itself, keep them as its own stock, sell them in a بکری like any lot, and see the profit or loss of every purchase. Commission is still taken. Spoiled goods are written off as a loss. The profit or loss is split between the partners. This plan also carries the one database migration that the rest of D4 needs (own goods, partner capital, الگ کھاتہ).
+Some partners send a person to a bigger market to buy goods. The goods belong to those partners, not to the firm. The shop sells them in بکری (or the partners sell them in another shop) and takes its normal commission, which is firm income. The trip's own profit or loss goes only to the trip's partners, by their %, on the day the goods are sold. This plan also carries the one database migration (0006) that every later plan of D4, D4R and D5 needs.
 
 ## 2. Requirements
 
-PRD 12.10 (FR-12.24 to FR-12.28), C21, FR-12.16 (write-off of own goods), 4.2, FR-7.59 (a purchase on credit is a payable posting), 9.1 (data for the اپنا مال tile), FR-10.4 (accounts 01040001, 030119998, 04010006, 05020001), FR-6.7, E50, E51, E52, A45 to A47, A49. Architecture 6 and 15.6 (`purchases`, `bikri_lots.purchase_id`, `bikri_sales.cost_paisa`, `stock_moves.purchase_id`, `analytics_facts.purchase_id` and `cost_paisa`), 15.7 (new voucher and posting types). Code Standards B19, 9.3. The money-calculations agent Section 5.4 and Section 6 before and after. E2E-34, E2E-34b. Acceptance: D4-A23, D4-A24, D4-A31 (the اپنا مال opening refusal).
+PRD 12.10 (FR-12.24 to FR-12.33), FR-12.29 and FR-12.30 (shares and money sources, shared later with gardens), C21, C22 (the 0604 account), C23, C24, C25, FR-12.16 and FR-12.28 (write-off), FR-5.2 and FR-5.3 (مارکیٹ سفر in the main bar; خریداری leaves the بکری side menu, so it has 7 items), FR-7.67 (one trip screen), 9.1 (data for the مارکیٹ سفر tile), FR-10.4 (030119998, the 0604 accounts), FR-10.9 (no opening on 030119998 or a 0604 account), FR-6.7, FR-19.11, E50 to E52, E61 to E63, E65, E66, A53 to A57, A62 to A64. Architecture 6, 9, 15.4 to 15.8. Code Standards B19, B31, 9.3. The money-calculations agent Sections 5.4 and 5.5, before and after. Acceptance: D4-A23, D4-A24, D4-A32, D4-A34 (the part for this plan), and the opening refusals of D4-A31.
 
-## 3. Worked numbers (the tests use exactly these)
+## 3. Worked numbers (the tests use exactly these; `worked_day.py` gives the same)
 
-Opening position (PRD 4.3); on 10-10-26 the firm buys 20 پیٹی مالٹا (fruit) at 500 for cash, freight 400 paid in cash. A بکری lot with seller اپنا مال sells 15 to اکرم at 600, ادھاری, no lot charges.
+All three runs start from the opening position (PRD 4.3). Partners الف 40, ب 30, ج 30.
+
+**E2E-34.** Trip on 10-10-26, all three partners pay from the shop's cash. Purchase: 20 پیٹی مالٹا (fruit) at 500, freight 400.
 
 | Item | Working | Expected |
 |---|---|---|
-| Purchase cost (E2E-34) | value 20 × 500 = 10,000; plus freight 400 | total cost 10,400 (520 per نگ); cash 50,000 − 10,400 = 39,600; stock بنام 10,400 |
-| Line value | 15 × 600 | 9,000 |
-| Seller commission (default 6%, rule on اپنا مال) | 9,000 × 6 ÷ 100 | 540 |
-| Buyer commission | 9,000 × 6 ÷ 100 | 540 |
-| لاگا | 15 × 8 | 120 |
+| Value, cost | 20 × 500 = 10,000; plus freight 400 | total cost 10,400 (520 per نگ) |
+| Parts paid from the shop (C23) | 10,400 at 40 / 30 / 30 | 4,160 / 3,120 / 3,120; each posts his 0604 بنام, روکڑ جمع; cash 50,000 − 10,400 = 39,600 |
+| Lot of اپنا مال sells 15 to اکرم at 600, ادھاری, no lot charges | value 15 × 600 | 9,000 |
+| Seller comm / buyer comm / لاگا | 9,000 × 6 ÷ 100 each; 15 × 8 | 540 / 540 / 120 |
 | اکرم pays | 9,000 + 540 + 120 | 9,660 |
-| Seller credit (C8) goes to تجارتی فروخت | 9,000 − 540 | 8,460 |
-| Cost of goods sold (C21) | 10,400 × 15 ÷ 20 | 7,800 |
-| Entry | بنام 9,660 + 7,800 = 17,460; جمع 540 + 540 + 120 + 8,460 + 7,800 | 17,460 = 17,460 |
-| Profit on the 15 | trading sales 8,460 − cost 7,800 | 660 |
-| Split of income 9,660 | 3,864 (leftover 0: 3,864 + 2,898 + 2,898 = 9,660) | 3,864 / 2,898 / 2,898 |
-| Split of cost 7,800 | 3,120 / 2,340 / 2,340, negated | −3,120 / −2,340 / −2,340 |
-| Net to partners | 3,864 − 3,120; 2,898 − 2,340 | 744 / 558 / 558 (sum 1,860) |
+| Entry | بنام 9,660; جمع 540 + 540 + 120 + 8,460 | 9,660 = 9,660 |
+| Seller credit (C8) to the trip's partners (C25) | 9,000 − 540 = 8,460 at 40 / 30 / 30 | 3,384 / 2,538 / 2,538 on their 0604 جمع |
+| Shared income (commission only) | 540 + 540 + 120 = 1,200 | 480 / 360 / 360 by the firm's shares |
+| Cost shown, never posted (C21) | 10,400 × 15 ÷ 20 | 7,800 |
+| Result on the 15 | 8,460 − 7,800 | 660 |
+| Partner totals | −4,160 + 480 + 3,384; −3,120 + 360 + 2,538 | −296 / −222 / −222 |
 | Stock left | 20 − 15 | 5 نگ, cost 10,400 − 7,800 = 2,600 |
-| E2E-34b: the last 5 spoil, 11-10-26 | cost of the 5 (the last نگ take all cost left) | loss 2,600, split −1,040 / −780 / −780; purchase profit or loss 660 − 2,600 = −1,940 (R33); own stock 0; the trial balance balances |
-| C21 with a part sale | 10,400 over 20 نگ, 15 sold then the last 5 | 7,800, then 2,600 (never more than 10,400 in all) |
 
-## 4. Contract
+**E2E-34b.** On 11-10-26 the last 5 spoil and are written off: nothing posts. Cost written off 2,600 (the last نگ take all the cost left). Trip result 8,460 − 10,400 = −1,940 (R33), parts −776 / −582 / −582, already in each total (3,384 − 4,160 = −776). Own stock 0; the trip closes. Partner totals still −296 / −222 / −222. Σ −740 + 65,000 = 64,260 = equity. Trial balance 66,200 = 66,200.
 
-New error codes (`errors.ftl` in `ur` and `en`, `# review: pending`): `ERR_OWN_LOT_NOT_FULLY_SOLD` (an own lot must be fully sold in its بکری; values `qty_left`), `ERR_OWN_GOODS_ACCOUNT_RESTRICTED` (اپنا مال is offered only as a lot seller; any other posting to it is refused), `ERR_PURCHASE_HAS_SALES` (cancel refused while anything was sold or written off), `ERR_PURCHASE_CANCELLED`, `ERR_SUPPLIER_REQUIRED` (payment way ادھار needs a supplier). Reused: `ERR_QTY_EXCEEDS_LOT` (selling more than the purchase's stock left), `ERR_OPENING_NOT_ALLOWED` (an opening on اپنا مال, FR-10.9), `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`.
+**E2E-41.** Trip: الف 50% from the shop, ب 50% from his pocket, ج not in it. Purchase 80 پیٹی مالٹا at 1,200 = 96,000: parts 48,000 / 48,000. Truck 4,000 (a trip cost, C24 over the one purchase): parts 2,000 / 2,000. الف paid 50,000 from the shop, so cash 0; ب paid 50,000 himself and posts nothing. Cost 100,000 (1,250 per نگ). A lot of اپنا مال sells all 80 to ارشد at 1,400, ادھاری, no lot charges: value 112,000; seller comm 6,720; buyer comm 6,720; لاگا 640; ارشد pays 119,360. Commission 14,080 → 5,632 / 4,224 / 4,224. The seller credit 112,000 − 6,720 = 105,280 → 52,640 / 52,640 (الف and ب) on their 0604. Trip result 5,280; the trip closes. الف −50,000 + 52,640 = +2,640; ب +52,640 (50,000 back + 2,640). Partner totals 8,272 / 56,864 / 4,224. Trial balance 134,360 = 134,360.
 
-### Backend
+Also tested by hand-made numbers: C24 (1,000 over 30 and 20 نگ = 600 and 400); C21 part sale then last نگ (10,400 over 20 نگ: 7,800 then 2,600, never more than 10,400); a sale in another shop (C25: 8,460 at 40 / 30 / 30 = 3,384 / 2,538 / 2,538).
 
-- **Migration `0006_*.sql`** (the next numbered file after plan 16's `0005` (the order key), which follows plan 13's `0004` (the bikri delete triggers); released migrations are never edited, B19). It is the one migration of D4:
-  - rebuilds `journal_entries` (posting types add `purchase`, `own_write_off`, `capital_in`, `capital_out`, `khata_out`, `khata_in`; source types add `purchase`) and `vouchers` (types add `capital_in`, `capital_out`, `khata_out`, `khata_in`; keep every constraint and the money-lent triggers), recreating their triggers and indexes; ids, rows and the keyed `chain_hash` values stay byte for byte the same (a test: `verify_journal_chain` and the golden day numbers are identical before and after, on a copy of a populated file);
-  - adds `purchases` (Architecture 15.6: number unique, entry_date, supplier_account_id null, پختہ person columns, item, packing, qty, weight_grams null, rate_paisa, value_paisa, freight_paisa, labour_paisa, other_cost_paisa, total_cost_paisa, payment_type credit|cash|bank, bank_account_id, journal_entry_id, status saved|cancelled, cancel_reason, note, qty_sold, qty_written_off, cost_released_paisa, system columns; money columns multiples of 100) with indexes;
-  - adds `bikri_lots.purchase_id`, `bikri_sales.cost_paisa` (default 0, multiple of 100), `stock_moves.purchase_id` (and a nullable `journal_entry_id` where a write-off has none), `analytics_facts.purchase_id` and `cost_paisa`;
-  - seeds the system accounts (cannot be deleted or made inactive, FR-10.4): control 0104 and account 01040001 اپنا مال سٹاک (Own Goods Stock); account 030119998 اپنا مال (Own Goods (Firm), seller side, reserved serial, never holds a balance) with its charge rule rows found by the default rules; 04010006 تجارتی فروخت (Trading Sales); control 0502 and account 05020001 اپنا مال لاگت (Cost of Own Goods Sold); control 0305 الگ کھاتہ (Separate Khatas, party type separate) for plan 17. Urdu and English names follow the glossary and are `# review: pending`.
-  - A test migrates a version-3 file that holds a populated golden day and checks every number. The migration runs after the automatic backup (NFR-REL-13).
-- `purchases_preview` / `purchases_save { date, supplier_account_id?, pukhta?, item_id, packing_id, qty, weight?, rate, freight?, labour?, other_cost?, payment: credit|cash|bank, bank_account_id?, note?, confirm_cash_below_zero }` -> `PurchaseSaved { id, number, entry_id, total_cost }`. Posting (FR-12.24): اپنا مال سٹاک بنام total cost; the supplier جمع the value (ادھار), or cash or bank جمع the value; cash or bank جمع freight, labour and other cost. Numbers in their own series خ-1 (Urdu) and PUR-1 (English, team default). The cost-below-zero check of FR-6.7 uses the shared function. A purchase from a پختہ supplier carries the person key (FR-13.2). A supplier on credit is paid later with a normal ادائیگی, and his credit counts as a payable posting (FR-7.59, plan 15).
-- `purchases_cancel { id, version, reason }` only while `qty_sold = 0` and `qty_written_off = 0` (`ERR_PURCHASE_HAS_SALES`), by reversal; `purchases_list { from, to, supplier_id?, item_id?, state? }`; `purchases_get { id }` -> the purchase with bought, sold, written off, left (نگ), cost left, days waiting and the profit or loss (FR-12.27: trading sales of its sales − cost of goods sold − cost written off; negative shown as a loss). It is the data of R33 for D5.
-- Own lots in `bikri_preview` and `bikri_save` (extends `calc_posting`, FR-12.26): the lot seller is account 030119998 with a `purchase_id`; item and packing come from the purchase; the lot's received qty is taken from the purchase at save and must equal the qty sold in the lot (`ERR_OWN_LOT_NOT_FULLY_SOLD`); selling more than the stock left is `ERR_QTY_EXCEEDS_LOT`; an own lot never has a balance in باقی مال and never a later sale; `cash_paid`, the advance tick and freight stay 0 (a typed freight gives a warning, the cost already holds it). Seller-side commission and lot charges come from the rules on the اپنا مال account (default 6%). The seller credit (C8) posts to تجارتی فروخت (بنام if negative) instead of a seller account. In the same entry, the cost of goods sold posts: اپنا مال لاگت بنام, اپنا مال سٹاک جمع, with C21 worked per sale line in line order (`split_by_qty` of the cost left over [qty taken, qty left]: round down, leftover to the larger qty, tie: the qty taken; the line that takes the last نگ takes all the cost left) and stored on the line (`cost_paisa`). Income and cost both reach the plan 11 hook, so each partner gets his share of the profit or loss. In the preview, the lot summary also returns cost of goods sold and profit, each with its `working`.
-- Edit and cancel of an own lot (plan 16 paths): an unchanged own line keeps its stored cost (FR-12.20); a reversal gives back exactly the stored cost and qty to the purchase (`qty_sold`, `cost_released_paisa`, stock moves), and matching and facts follow as in plan 16.
-- Write-off of own stock (`bikri_write_off` for a purchase, FR-12.28): the cost of the written-off qty (C21) posts اپنا مال لاگت بنام, اپنا مال سٹاک جمع (posting type `own_write_off`), split between partners as a loss; undo reverses it. A write-off needs a reason and cannot exceed the stock left.
-- `bikri_stock_list` (plan 16) now includes purchases with stock left, marked اپنا مال: bought, sold, written off, left, cost left, days waiting (FR-12.25). Data for the dashboard tile اپنا مال (نگ left and cost) is returned by `purchases_summary()`; D5 shows the tile.
-- Account guard: any posting to 030119998 from a voucher, a جنرل entry or a purchase supplier field is refused with `ERR_OWN_GOODS_ACCOUNT_RESTRICTED`; the account picker offers it only in the lot seller field.
-- Analytics: facts of an own-lot line carry `purchase_id` and `cost_paisa`; reversals carry sign −1 (D5 reads them).
-- Tests: `golden_day.rs` gains E2E-34 and E2E-34b with the numbers above; the property test of Code Standards 9.3 (for any sequence of sales and write-offs of one purchase, cost released never exceeds its total cost and equals it once nothing is left; own stock = bought − sold − written off; profit or loss = trading sales − cost released); selling more than the stock left and saving a lot that is not fully sold are refused; no voucher or جنرل can post to اپنا مال; the migration test; sign-in refusal. Money agent before and after.
+## 4. What to keep and what to change in the working tree
 
-### Frontend (features `purchases` and `bikri`)
+The working tree holds plan 16b work from the paused run, written to the v1.3 design (the firm's own goods), uncommitted and never verified as a whole. It is the starting point, not the design. `changes-v1.6.md` Section 3 is the full list; this is the short form.
 
-- The خریداری screen in the بکری side menu (form of PRD 12.10 with the cost lines from the backend, the list below it, stock and profit or loss per purchase with a red loss, cancel with a reason); the supplier picker leaves اپنا مال out; payment way, bank account and cash confirm.
-- In the lot seller field, اپنا مال is offered with a purchase picker (purchases with stock left); an own lot is marked; the lot summary shows the cost and profit lines, each with `CalcInfo`; the lot hides نقد, the advance tick and freight (warning if typed). Own stock rows in باقی مال are marked اپنا مال, with write-off and its undo.
-- Keyboard only, both languages, 1024 × 600, four states, language switch loses nothing. Fluent `purchases.ftl` and additions, errors, `# review: pending`. Design fallback as in plan 12.
-- Windows specs written and syntax-checked: purchase, own lot, write-off by keyboard (run LOCAL-ONLY).
+**Keep** (still fits): the CHECK edit hook (`widen_checks`, edits `sqlite_schema` in place, fails unless each text is found exactly once) and the migration test harness on a populated file; from 0006 `bikri_lots.purchase_id`, `bikri_sales.cost_paisa` with the snapshot trigger that freezes it, `stock_moves.purchase_id` with the nullable `lot_id` and its reversal trigger, `analytics_facts.purchase_id` and `cost_paisa`; the voucher and posting types `capital_in`, `capital_out`, `khata_out`, `khata_in`, party type `separate`, control 0305; C21 (`split_by_qty` of the cost left over [qty taken, qty left], the last نگ takes all), stored on each line and on the purchase; the own lot path in `calc_posting` (purchase picker, qty taken = qty sold, `ERR_OWN_LOT_NOT_FULLY_SOLD`, `ERR_QTY_EXCEEDS_LOT`, hidden نقد and advance tick, the freight warning, edit and cancel giving back exactly the stored qty and cost); the stock list rows, the write-off commands and their undo, the guard `ERR_OWN_GOODS_ACCOUNT_RESTRICTED`, the purchase list and get shape, the خ- and PUR- numbers. Frontend: the purchases feature (form, list, detail, cancel and write-off boxes) and `OwnLotPanel`, moved under مارکیٹ سفر; `purchases.ftl`.
 
-### Contract as built in T1 (agreed 18-10-2026, recorded by the lead)
+**Change:**
 
-All commands need sign-in, input wrapped as `{ input: ... }`; stubs answer `ERR_NOT_IMPLEMENTED` until T2. All money and qty are text in inputs.
+- **Migration 0006** (unreleased, finished in place; a new file name is fine, the number stays 0006): drop controls 0104 and 0502, accounts 01040001, 04010006, 05020001 and posting type `own_write_off`. Add posting types `purchase`, `trip_cost`, `garden_payment`, `venture_receipt`, `garden_close`, `fruit_taken`; source types `purchase`, `venture`, `fruit`; party type `garden`; control 0306 and control 0604 (باغ، سفر اور پھل, head 06); one 0604 account for every existing partner and `partners.venture_account_id`; the tables `ventures`, `venture_partners`, `venture_entries`, `venture_entry_parts`, `fruit_takes` and `purchases` exactly as Architecture 15.5 and 15.6 (a purchase belongs to a trip: `venture_id`, `supplier_text`, `paid_now_paisa`, `trip_cost_paisa`, `total_cost_paisa`; no supplier account, پختہ columns, payment type or bank); the column `bikri_lots.qty_taken` (0) and stock move kind `taken`; `analytics_facts.venture_id`; `accounts.tag` (TEXT, null; D4R plan 17e builds its use). Rename, with their search columns: 030119998 English "Own Goods (Trips)", 01010001 English "Cash". Its test: a populated golden-day file migrates with every number and the journal chain unchanged; `PRAGMA integrity_check` and `foreign_key_check` pass; a new posting type, a new venture row and a 0604 account insert; `accounts.tag` exists and is null on every migrated account (D4-A32).
+- **Partners:** the partner save of plan 11 also makes his 0604 account (code 0604 + serial, English "Gardens, Trips and Fruit, <name>"). An opening on a 0604 account, on 030119998 and on 0306 accounts is refused (FR-10.9).
+- **Purchase posting:** no stock account. Paid now = value + freight + labour + other cost. It is split by the trip's % (C23, `split_by_bps`); a shop part posts his 0604 بنام, روکڑ جمع; a pocket part posts nothing; all-pocket posts no journal entry (`journal_entry_id` null). `PurchaseInput` gets `trip_id`, `supplier_text` and each partner's source for this entry; `supplier_account_id`, `pukhta`, `payment`, `bank_account_id` and `PurchaseNumbers.owed` and `ERR_SUPPLIER_REQUIRED` go; the preview returns each partner's part (shop or pocket) with its working.
+- **Own lot posting:** the seller credit (C8) goes to each trip partner's 0604 جمع his part (C25), بنام if negative, instead of a trading-sales account; no cost lines in the entry; the shared income of the lot is its commission and فون only (1,200 in E2E-34, not 9,660). `SplitPart.cost_paisa` and `net_paisa` and the cost lines of the old `SummaryTotals`/`SavedSplit` no longer apply: the lot preview shows each trip partner's part of the seller credit, the cost (C21) and the result, each with a `working` (CalcInfo). The cost is stored on the line (`bikri_sales.cost_paisa`) and on the purchase, never posted.
+- **Write-off:** `purchases_write_off` and its undo post nothing; `entry_id` is always null; no split. The qty and its C21 cost come off the purchase. The undo gives both back.
+- **Result** (FR-12.27): per purchase, per day and per trip: sales money (the seller credits of its own lots and the money from other shops) − cost released (sold and written off). Rename `trading_sales_paisa` accordingly. `purchases_summary()` becomes `trips_summary()`: open trips' نگ left and cost left (the D5 tile).
+- **New:** ventures (shares, sources, C23, `venture_entry_parts`, the shares lock), trips (create, list, get, closing by itself, opening again), trip costs (C24, `ERR_TRIP_NO_STOCK`), sales in another shop (C25, posting type `venture_receipt`).
 
-- `purchases_preview(PurchaseInput)` -> `PurchasePreview { numbers: PurchaseNumbers | null, cash: CashCheck, errors, warnings }`. `PurchaseNumbers { value, freight, labour, other_cost, total_cost, avg_cost, paid_now, owed (Paisa), workings: PurchaseWorkings { value, total_cost, avg_cost, paid_now: Working } }`.
-- `purchases_save(PurchaseInput)` -> `PurchaseSaved { id, number, version, entry_id, total_cost, preview }`. `PurchaseInput` (flat): `{ date, supplier_account_id?, pukhta?: PukhtaInput, item_id?, packing_id?, qty, weight?, rate, freight?, labour?, other_cost?, payment: 'credit' | 'cash' | 'bank', bank_account_id?, note?, confirm_cash_below_zero }` (the flag is used by save only).
-- `purchases_cancel(PurchaseCancelInput { id, version, reason, confirm_cash_below_zero })` -> `PurchaseCancelled { id, number, reversal_entry_id }`.
-- `purchases_list(PurchasesListInput { from?, to?, supplier_id?, item_id?, state?: 'in_stock' | 'sold_out' | 'cancelled' })` -> `PurchasesList { rows: PurchaseRow[], total_cost_paisa, cost_left_paisa, qty_left, profit_paisa }`. The lot's purchase picker uses `state = 'in_stock'`.
-- `purchases_get({ id })` -> `PurchaseRow` (same type as list rows; `lots: PurchaseLotRef[]` and `write_offs: WriteOffRow[]` are filled only by get). `PurchaseRow`: `id, version, number, entry_date, status ('saved' | 'cancelled'), cancel_reason, supplier: RecordRef | null, pukhta: SavedPukhta | null, item, packing, qty, weight_grams, rate, value, freight, labour, other_cost, total_cost, avg_cost, payment, bank_account_id, note, entry_id, qty_sold, qty_written_off, qty_left, cost_released_paisa, cost_left_paisa, trading_sales_paisa, cost_sold_paisa, cost_written_off_paisa, profit_paisa (negative = loss, shown red), profit_working: Working, days_waiting, can_cancel`.
-- `purchases_summary()` -> `OwnGoodsSummary { purchases_with_stock, qty_left, cost_left_paisa }` (the D5 tile).
-- `purchases_write_off({ purchase_id, qty, reason })` -> `PurchaseWriteOffDone { purchase_id, move_id, entry_id | null, qty, cost_paisa, working, qty_written_off, qty_left, cost_left_paisa }`; `purchases_write_off_undo({ move_id, reason })` -> `PurchaseWriteOffUndone { purchase_id, reversal_move_id, reversal_entry_id | null, qty_written_off, qty_left, cost_left_paisa }`.
+## 5. Contract (the outline; the exact types are recorded in "Contract as built in T1" below)
 
-Changed existing types: `LotInput.purchase_id?` (the seller is the اپنا مال account, code 030119998, a normal seller row marked `is_system`, plus `purchase_id`; item and packing may be empty and are filled from the purchase, different ones are refused; `qty_received` = نگ taken from the purchase and the lines must sell exactly that many). `LotPreview.is_own`; `SummaryTotals.cost_of_goods` and `profit`; `SummaryWorkings.cost_of_goods` and `profit`; `LineCalc.cost_of_goods`; `LineWorkings.cost_of_goods`; `SplitPart.cost_paisa` (<= 0) and `net_paisa` (E2E-34: 744 / 558 / 558); `SummaryTotals.shared_income` of an own lot includes the trading-sales credit (9,660 in E2E-34). Saved view: `SavedSale.cost_paisa`, `SavedLot.purchase: { id, number } | null`, `SavedTotals.cost_of_goods` and `profit`, `SavedSplit.cost_paisa` and `net_paisa`. `bikri_stock_list` returns also `own_rows: OwnStockRow[]` (`purchase_id, number, received_date, supplier | null, pukhta | null, item, packing, qty_bought, qty_sold, qty_written_off, balance, total_cost_paisa, cost_left_paisa, days_waiting, write_offs: WriteOffRow[]`), `own_balance_total`, `own_cost_left_paisa`. Own rows are NOT in `rows`; their write-off is `purchases_write_off` / `purchases_write_off_undo`, not `bikri_write_off`.
+All commands need sign-in; input wrapped as `{ input: ... }`; money and qty are text in inputs; stubs answer `ERR_NOT_IMPLEMENTED` until T2. Module names follow Tech Stack 5.2: `trips_`, `purchases_`, `ventures_` (no screen of its own).
 
-New error codes (ur and en, `# review: pending`): `ERR_OWN_LOT_NOT_FULLY_SOLD` (`lots[i].qty_received`, value `qty_left`), `ERR_OWN_GOODS_ACCOUNT_RESTRICTED` (the account field), `ERR_PURCHASE_HAS_SALES` (`id`; values `qty_sold`, `qty_written_off`), `ERR_PURCHASE_CANCELLED` (`id`, `purchase_id` or `lots[i].purchase_id`), `ERR_SUPPLIER_REQUIRED` (`supplier_account_id`), and the warning `ERR_OWN_LOT_FREIGHT_IN_COST` (`lots[i].freight`). Reused: `ERR_QTY_EXCEEDS_LOT` (`lots[i].qty_received` or `sales[j].qty`, value `available`), `ERR_OPENING_NOT_ALLOWED`, `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`, `ERR_WRITE_OFF_EXCEEDS_BALANCE` (`qty`, value `available`), `ERR_REASON_REQUIRED`, `ERR_DATE_CLOSED`, `ERR_VERSION_CHANGED`.
+- `trips_create`, `trips_list` (paged, FR-19.11), `trips_get`, `trips_defaults` (the partners with the % of the last trip, else the firm's shares; the sources of the last trip, else shop), `trips_summary`.
+- `trips_cost_preview` / `trips_cost_save` / `trips_cost_cancel` (a trip cost, C24).
+- `trips_other_sale_preview` / `trips_other_sale_save` / `trips_other_sale_cancel` (a sale in another shop, C25).
+- `purchases_preview` / `purchases_save` / `purchases_cancel` / `purchases_list` / `purchases_get` / `purchases_write_off` / `purchases_write_off_undo`.
+- Every entry input carries `parts: [{ partner_id, source: shop | pocket }]`, filled from the trip and changeable on that entry (A54); the preview returns the parts with amounts (C23), the cash after the entry and the FR-6.7 note data. Every save takes `confirm_cash_below_zero` and uses the shared cash check (the shop parts count).
+- Lists return `{ rows, total_count, totals }` over the whole filter (B31). Entry numbers: trip سفر-1 / TRP-1, purchase خ-1 / PUR-1; trip costs and other-shop sales have their own series, letters chosen by `backend` and recorded below.
+- Error codes (ur and en, `# review: pending`): `ERR_TRIP_CLOSED`, `ERR_TRIP_NO_STOCK`, `ERR_VENTURE_SHARES_LOCKED`, `ERR_SHARES_NOT_100` (already exists), `ERR_PURCHASE_BEFORE_TRIP`, `ERR_PURCHASE_HAS_SALES`, `ERR_PURCHASE_CANCELLED`, `ERR_TRIP_COST_HAS_SALES`, `ERR_OWN_LOT_NOT_FULLY_SOLD`, `ERR_OWN_GOODS_ACCOUNT_RESTRICTED`, `ERR_PARTNER_IN_OPEN_VENTURE`. Reused: `ERR_QTY_EXCEEDS_LOT`, `ERR_OPENING_NOT_ALLOWED`, `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`, `ERR_WRITE_OFF_EXCEEDS_BALANCE`, `ERR_REASON_REQUIRED`, `ERR_DATE_CLOSED`, `ERR_VERSION_CHANGED`.
+- In بکری: `LotInput.purchase_id?` (seller 030119998 plus the purchase); the lot preview and saved view carry the trip partners' parts, cost and result with workings; `bikri_stock_list` returns trip purchase rows marked اپنا مال with their trip (`own_rows`, paged with the rest).
 
-Working message IDs the frontend defines in Fluent (args by name, Money / Count): `working-cost-of-goods` (cost_left, qty, qty_left, result), `working-cost-of-goods-last` (cost_left, qty, result), `working-own-shared-income` (seller_comm, buyer_comm, laga, phone, rate_diff, trading, result), `working-own-profit` (trading, cost, result), `working-purchase-total-cost` (value, freight, labour, other_cost, result), `working-purchase-avg-cost` (total, qty, result), `working-purchase-paid-now` (value, freight, labour, other_cost, result), `working-purchase-profit` (trading, cost_sold, cost_written_off, result); the purchase value reuses `working-line-value` and `working-weight-value`. A line of a normal lot has cost 0 with `working-none-line`.
-
-Number series: purchases have their own series, Urdu "خ-" + number, English "PUR-" + number (letters from Fluent).
-
-Differences from the plan text (decisions): (1) write-off of own goods is two new commands, not an extension of `bikri_write_off`. (2) Migration 0006 does NOT rebuild `journal_entries` and `vouchers`: SQLite cannot alter a CHECK, so the migration hook edits the CHECK text in `sqlite_schema` in place (the documented method) and raises the schema version; it fails if a text is not found exactly once; no row, id or hash is copied. It also widens `party_type` with `separate` (control 0305 was not allowed by 0001) and makes `stock_moves.lot_id` nullable (purchase moves). Plan 17 needs no further migration. (3) The `bikri_sales` snapshot trigger is recreated so `cost_paisa` is frozen. (4) An opening is refused on 030119998 and 01040001; controls 0104 and 0502 are not offered as "other" account types. (5) Seeded system accounts: controls 0104, 0305 (party type separate), 0502; accounts 01040001, 030119998 (serial 9998), 04010006, 05020001; Urdu names provisional.
-
-## 5. Tasks
+## 6. Tasks
 
 | # | Task | Owner | Blocked by |
 |---|---|---|---|
-| T1 | Contract: migration 0006 with its test, types, stubs, error codes, `pnpm gen:types` | backend | plan 16 built |
-| T2 | Purchases, own lots in `calc_posting`, cost C21, write-off, stock list, guard, golden tests, money agent | backend | T1 |
-| T3 | خریداری screen, own lot UI, باقی مال marks against the stubs; Fluent | frontend | T1 |
-| T4 | Wire to the real commands; keyboard run; screenshots | frontend | T2, T3 |
+| T1 | Contract and migration 0006 (finish in place), types, stubs, error codes, `pnpm gen:types`; message to lead and frontend | backend | plan 16 built |
+| T2a | Money agent first. Ventures, trips, purchases, trip costs, other-shop sales, write-off and undo, the 0604 account on partner save, guards, unit and integration tests | backend | T1 |
+| T2b | Own lot in `calc_posting` (C25 parts, cost, result), edit and cancel of an own lot, stock list rows, `trips_summary`, golden tests E2E-34, E2E-34b, E2E-41, property tests, fixtures, money agent second pass | backend | T2a |
+| T3 | Trip screens against the T1 types: main bar item, trips list, new trip form, one trip screen with the type list, purchase form, write-off boxes, own lot panel; Fluent | frontend | T1 |
+| T4 | Wire to the real commands (trip screens after T2a, own lot and stock after T2b); keyboard run; screenshots; Windows specs | frontend | T2a, T2b, T3 |
 
-## 6. Acceptance checklist
+## 7. Acceptance checklist
 
-1. E2E-34 and E2E-34b pass with the numbers above (D4-A23; `cargo test -p mandi-services --test golden_day`).
-2. The C21 property test passes (D4-A23).
-3. Migration 0006 keeps every number and the journal chain of a populated file (test output); the Windows-style seed of the new accounts exists.
-4. An opening on اپنا مال is refused (D4-A31, the opening part); no voucher or جنرل can post to it.
-5. خریداری and own lots work by keyboard in both languages; own stock and profit per purchase are shown (D4-A24, screenshots; Windows specs LOCAL-ONLY).
-6. `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` exit 0; every earlier test still passes.
+1. E2E-34, E2E-34b and E2E-41 pass with the numbers above, and the trial balances 66,200 and 134,360 (D4-A23; `cargo test -p mandi-services --test golden_day`).
+2. The C21 property test and the trip property test pass: for a trip, Σ parts = payment, Σ shop parts = its روکڑ جمع, money credited = sales money, and once closed Σ over partners of (money credited − shop parts − pocket parts) = its result (D4-A23).
+3. Migration 0006 keeps every number and the journal chain of a populated file; the v1.6 accounts exist (a 0604 account for each partner, control 0306, 030119998 "Own Goods (Trips)", روکڑ "Cash"); 01040001, 04010006 and 05020001 do not exist; `accounts.tag` exists and is null on every migrated account (D4-A32).
+4. Refusals tested: shares not 100, shares locked after the first entry, a purchase or cost on a closed trip, a purchase dated before its trip, selling more than the stock left, an own lot not fully sold, an opening on 030119998 or a 0604 account, a voucher or جنرل posting to 030119998, a partner made inactive while in an open trip, a trip cost with no stock left.
+5. The مارکیٹ سفر section and own lots in بکری work by keyboard in both languages; stock and result per purchase and per trip are shown with each partner's part; no mode, bank or cheque field anywhere; lists page by page (D4-A24, D4-A34; screenshots; Windows specs LOCAL-ONLY).
+6. `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` exit 0; every earlier test still passes with no expected number changed.
 
-## 7. Out of scope
+## 8. Out of scope
 
-Partner capital and الگ کھاتہ screens and postings (plan 17; only the migration and accounts are here); R33 and the dashboard tile (D5); buying from a consignor's lot in the firm's own بکری (A49, open question for the client).
+Gardens (D4R 17c) and fruit taken (D4R 17d): their tables and accounts are in 0006, but there is no code for them here. The partner statement lines and the partner overview columns (plan 17); R33 and the dashboard tile (D5). Buying from a consignor's lot (A49).
 
-## 8. Open questions
+## 9. Open questions
 
-None for Umar. Team defaults: the English purchase number letters are PUR-1; the cost is the purchase's average cost per نگ (A45); profit or loss is shared by the partner shares (A46); freight, labour and other costs are paid at once (A47).
+None for Umar. Team defaults A53 to A57 and A62 to A64 as in `changes-v1.6.md` Section 9; English purchase number letters PUR-1.
+
+## 10. Contract as built in T1
+
+(To be written by the lead from backend's T1 hand-off.)
