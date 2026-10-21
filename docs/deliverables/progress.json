@@ -26,7 +26,11 @@
     "15-vouchers": "reviewing",
     "16-later-sales-edit-cancel": "reviewing",
     "16b-own-goods": "building",
-    "17-cash-book-and-day-close": "waiting"
+    "17-cash-book-and-day-close": "waiting",
+    "17b-refresh-built-screens": "waiting",
+    "17c-gardens": "waiting",
+    "17d-fruit-taken": "waiting",
+    "17e-tag-and-prints": "waiting"
   },
   "acceptance": [
     "D1-A1",
