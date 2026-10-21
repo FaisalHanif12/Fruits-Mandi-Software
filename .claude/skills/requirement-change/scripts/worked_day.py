@@ -2,7 +2,7 @@
 """Recalculates the PRD Section 4 worked day and the money end-to-end tests.
 
 Use it whenever a rate or default changes, so no number in the documents is
-worked out by hand. The defaults reproduce PRD v1.3, including E2E-28 to E2E-38. Change a rate with a flag:
+worked out by hand. The defaults reproduce PRD v1.6, including E2E-28 to E2E-43. Change a rate with a flag:
 
     python3 worked_day.py                    # current PRD numbers
     python3 worked_day.py --buyer-pct 5      # what changes if buyer commission is 5%
@@ -218,27 +218,48 @@ def run(a):
                    "line_total_dr": l0["buyer_pays"], "receipt_cr": receipt,
                    "closing_dr": l0["buyer_pays"] - receipt, "r20_total": eod["buyers_dues"]}
 
-    # E2E-34 (PRD v1.3, 12.10): separate run. The firm buys its own goods: 20 مالٹا at 500 for cash,
-    # freight 400 paid in cash. A بکری lot of اپنا مال sells 15 to Akram at 600, no lot charges.
+    # E2E-34 and E2E-34b (PRD v1.6, 12.10): separate run. A market trip whose partners are A 40%,
+    # B 30%, C 30%, all paying from the shop's cash. It buys 20 مالٹا at 500 with 400 freight. A بکری
+    # lot of اپنا مال sells 15 to Akram at 600, no lot charges. The goods belong to the trip's partners,
+    # not to the firm: the shop's part of each payment comes off each partner's total (C23), the seller
+    # credit goes straight to the trip's partners by the trip's % (C25), and only the commission is
+    # firm income split by the firm's shares. Cost of goods (C21) is shown, never posted.
+    trip_shares = a.shares  # [4000, 3000, 3000]
     q_buy, buy_rate, buy_freight, q_sold, sell_rate = 20, 500, 400, 15, 600
     cost = q_buy * buy_rate + buy_freight
+    paid_parts = split(cost, trip_shares)  # C23, all from the shop's cash
     own = lot([("Akram", q_sold, sell_rate)], a, freight=0, naqd=0, labour_per_nag=0,
               munshiana=0, phone=0, received=q_sold)
-    cogs = split_qty(cost, [q_sold, q_buy - q_sold])[0]  # C21
-    trading_sales = own["seller_credit"]
-    income = own["seller_comm"] + own["buyer_comm"] + own["laga"] + trading_sales
+    cogs = split_qty(cost, [q_sold, q_buy - q_sold])[0]  # C21, display only
+    trip_credit = own["seller_credit"]
+    commission_34 = own["seller_comm"] + own["buyer_comm"] + own["laga"]
+    back_parts = split(trip_credit, trip_shares)  # C25
+    comm_parts = split(commission_34, a.shares)
+    totals_34 = [comm_parts[i] - paid_parts[i] + back_parts[i] for i in range(3)]
     r["e2e_34"] = {"cost": cost, "cost_per_nag": cost // q_buy, "cash_after_purchase": 50000 - cost,
+                   "partner_paid_from_shop": [-x for x in paid_parts],
                    "value": own["gross"], "seller_comm": own["seller_comm"], "buyer_comm": own["buyer_comm"],
-                   "laga": own["laga"], "akram_pays": own["buyer_pays"], "trading_sales": trading_sales,
-                   "cogs": cogs, "profit_on_sold": trading_sales - cogs,
-                   "entry_side": own["buyer_pays"] + cogs,
-                   "income_split": split(income, a.shares), "expense_split": [-x for x in split(cogs, a.shares)],
-                   "net_split": [i - e for i, e in zip(split(income, a.shares), split(cogs, a.shares))],
-                   "stock_left_nag": q_buy - q_sold, "stock_left_cost": cost - cogs}
-    # E2E-34b: next day the last 5 spoil and are written off (C21 takes all remaining cost).
+                   "laga": own["laga"], "akram_pays": own["buyer_pays"], "commission": commission_34,
+                   "commission_split": comm_parts, "trip_credit": trip_credit,
+                   "trip_credit_split": back_parts, "entry_side": own["buyer_pays"],
+                   "cogs_shown": cogs, "result_on_sold_shown": trip_credit - cogs,
+                   "stock_left_nag": q_buy - q_sold, "stock_left_cost": cost - cogs,
+                   "partner_totals": totals_34}
+    # E2E-34b: next day the last 5 spoil and are written off. Nothing is posted: the partners already
+    # paid for them. The trip has nothing left, so it closes with its result.
     left = cost - cogs
-    r["e2e_34b"] = {"write_off_loss": left, "loss_split": [-x for x in split(left, a.shares)],
-                    "purchase_profit": trading_sales - cogs - left}
+    trip_result = trip_credit - cost
+    eq34 = 65000 + commission_34 - sum(paid_parts) + sum(back_parts)
+    r["e2e_34b"] = {"write_off_cost_shown": left, "trip_result": trip_result,
+                    "trip_result_split": [-x for x in split(-trip_result, trip_shares)] if trip_result < 0
+                    else split(trip_result, trip_shares),
+                    "trip_effect_per_partner": [back_parts[i] - paid_parts[i] for i in range(3)],
+                    "partner_totals_unchanged": totals_34,
+                    "tb_each_side": (50000 - cost) + own["buyer_pays"] + 15000
+                    + sum(max(0, paid_parts[i] - back_parts[i]) for i in range(3)),
+                    "tb_credit_side": commission_34 + 65000
+                    + sum(max(0, back_parts[i] - paid_parts[i]) for i in range(3)),
+                    "sum_totals_plus_opening": sum(totals_34) + 65000, "equity_from_books": eq34}
 
     # E2E-35 (FR-17.7): after Events 1 to 5, partner B invests 50,000 cash on 11-10-26.
     inv = 50000
@@ -256,7 +277,7 @@ def run(a):
                    "b_running": [b1["split"][1], b1["split"][1] + b2["split"][1],
                                  profit[1], profit[1] + inv]}
 
-    # E2E-38 (FR-16.6, FR-16.7): separate run. A separate khata باغ (garden), outside the partners.
+    # E2E-38 (FR-16.6, FR-16.7): separate run. A separate khata خاندانی کھاتہ (family khata), outside the partners.
     # 10-10 pay out 10,000 cash; 11-10 get 4,000 back; 11-10 a lot of its own کیلا, 10 sold to Arshad
     # at 900, with no seller-side charges.
     out_amt, back_amt = 10000, 4000
@@ -270,6 +291,108 @@ def run(a):
                    "khata_after_sale": -out_amt + back_amt + g_credit,
                    "shared_income": g_income, "split": split(g_income, a.shares),
                    "entry_side": g["gross"] + g_bc + g_laga}
+
+    # E2E-40 (PRD v1.6, 12.11): separate run. Garden شاہ پور باغ, partners A 60% from the shop's cash,
+    # B 40% from his own pocket, C not in it. Rent 50,000; 30,000 paid now (10-10), 20,000 on 11-10;
+    # labour 5,000 on 11-10. On 12-10 a بکری lot of the garden sells 100 کیلا to Arshad at 600 (normal
+    # seller commission, no lot charges), and 20 پیٹی sold in another shop bring 10,000 cash.
+    # On 13-10 the garden is closed: its money is shared by the garden's % (C26).
+    g_shares = [6000, 4000, 0]
+    g_shop = [True, False, False]
+    pay = [30000, 20000, 5000]
+    pay_parts = [split(x, g_shares) for x in pay]  # C23
+    shop_paid = [sum(pp[i] for pp in pay_parts) if g_shop[i] else 0 for i in range(3)]
+    pocket_paid = [sum(pp[i] for pp in pay_parts) if not g_shop[i] else 0 for i in range(3)]
+    cash40 = 50000 - sum(shop_paid)
+    gl = lot([("Arshad", 100, 600)], a, freight=0, naqd=0, labour_per_nag=0, munshiana=0, phone=0,
+             received=100)
+    g_comm = gl["seller_comm"] + gl["buyer_comm"] + gl["laga"]
+    g_comm_split = split(g_comm, a.shares)
+    other_shop = 10000
+    g_money = gl["seller_credit"] + other_shop
+    g_cost = sum(pay)
+    g_back = split(g_money, g_shares)  # C26
+    g_tot = [g_comm_split[i] - shop_paid[i] + g_back[i] for i in range(3)]
+    cash40_end = cash40 + other_shop
+    dr40 = cash40_end + gl["buyer_pays"] + 15000 + sum(max(0, shop_paid[i] - g_back[i]) for i in range(3))
+    cr40 = g_comm + 65000 + sum(max(0, g_back[i] - shop_paid[i]) for i in range(3))
+    r["e2e_40"] = {"parts_30000": pay_parts[0], "parts_20000": pay_parts[1], "parts_5000": pay_parts[2],
+                   "a_paid_from_shop": shop_paid[0], "b_paid_from_pocket": pocket_paid[1],
+                   "cash_after_payments": cash40, "arshad_pays": gl["buyer_pays"],
+                   "garden_credit_from_bikri": gl["seller_credit"], "commission": g_comm,
+                   "commission_split": g_comm_split, "garden_money": g_money,
+                   "running_balance_before_close": g_money - g_cost, "garden_cost": g_cost,
+                   "profit": g_money - g_cost, "money_back_split": g_back,
+                   "garden_effect_per_partner": [g_back[i] - shop_paid[i] for i in range(3)],
+                   "partner_totals": g_tot, "cash_end": cash40_end,
+                   "tb_debit": dr40, "tb_credit": cr40,
+                   "sum_totals_plus_opening": sum(g_tot) + 65000}
+    # E2E-40b: the same garden, but only the other-shop sale (10,000) comes in: a loss.
+    g_back_b = split(other_shop, g_shares)
+    tot_b = [-shop_paid[i] + g_back_b[i] for i in range(3)]
+    r["e2e_40b"] = {"garden_money": other_shop, "loss": other_shop - g_cost, "money_back_split": g_back_b,
+                    "partner_totals": tot_b, "cash_end": cash40 + other_shop,
+                    "loss_share_check": [-x for x in split(g_cost - other_shop, g_shares)]}
+
+    # E2E-41 (PRD v1.6, 12.10): separate run. A trip with A 50% from the shop's cash and B 50% from his
+    # own pocket (C not in it). It buys 80 مالٹا at 1,200 and pays 4,000 for the truck (a trip cost,
+    # spread over its goods by نگ, C24). All 80 are sold to Arshad at 1,400 in a بکری.
+    t_shares = [5000, 5000, 0]
+    t_shop = [True, False, False]
+    buy, truck = 80 * 1200, 4000
+    parts_buy, parts_truck = split(buy, t_shares), split(truck, t_shares)
+    t_shop_paid = [(parts_buy[i] + parts_truck[i]) if t_shop[i] else 0 for i in range(3)]
+    tl = lot([("Arshad", 80, 1400)], a, freight=0, naqd=0, labour_per_nag=0, munshiana=0, phone=0,
+             received=80)
+    t_comm = tl["seller_comm"] + tl["buyer_comm"] + tl["laga"]
+    t_comm_split = split(t_comm, a.shares)
+    t_back = split(tl["seller_credit"], t_shares)  # C25
+    t_tot = [t_comm_split[i] - t_shop_paid[i] + t_back[i] for i in range(3)]
+    r["e2e_41"] = {"parts_purchase": parts_buy, "parts_truck": parts_truck, "a_paid_from_shop": t_shop_paid[0],
+                   "cash_after": 50000 - sum(t_shop_paid), "cost": buy + truck, "cost_per_nag": (buy + truck) // 80,
+                   "arshad_pays": tl["buyer_pays"], "commission": t_comm, "commission_split": t_comm_split,
+                   "trip_credit": tl["seller_credit"], "trip_credit_split": t_back,
+                   "trip_result": tl["seller_credit"] - (buy + truck),
+                   "trip_effect_per_partner": [t_back[i] - t_shop_paid[i] for i in range(3)],
+                   "partner_totals": t_tot,
+                   "tb_each_side": (50000 - sum(t_shop_paid)) + tl["buyer_pays"] + 15000
+                   + sum(max(0, t_shop_paid[i] - t_back[i]) for i in range(3))}
+
+    # E2E-42 (PRD v1.6, 16.7): separate run, after E2E-16 (5 کیلا left in Rahim's lot). On 10-10 A
+    # takes 2 کیلا home from that lot at 580 (Rahim is credited, no commission); then fruit for the
+    # shop's guests, 3 سیب at 1,000 from another commission agent's shop, owed to him and shared
+    # equally by the three partners (C27).
+    take_a = 2 * 580
+    guest = 3 * 1000
+    guest_parts = split_qty(guest, [1, 1, 1])
+    rahim_credit_16 = e16["seller_credit"]
+    rahim_payable_16 = rahim_credit_16 - rahim_advance - e16["naqd"]
+    cash_16 = 50000 - e16["naqd"]
+    akram_16 = e16["lines"][0]["buyer_pays"]
+    arshad_16 = e16["lines"][1]["buyer_pays"]
+    income_16 = e16["seller_comm"] + e16["buyer_comm"] + e16["laga"] + e16["phone"]
+    dr_16 = cash_16 + akram_16 + arshad_16
+    cr_16 = (rahim_payable_16 + income_16 + e16["labour"] + e16["freight"] + e16["munshiana"] + 65000)
+    fruit_dr = [take_a + guest_parts[0], guest_parts[1], guest_parts[2]]
+    tot_42 = [e16["split"][i] - fruit_dr[i] for i in range(3)]
+    r["e2e_42"] = {"a_home_fruit": take_a, "guest_fruit": guest, "guest_split": guest_parts,
+                   "partner_fruit_total": fruit_dr, "lot_left_after": 5 - 2,
+                   "rahim_payable_before": rahim_payable_16, "rahim_payable_after": rahim_payable_16 + take_a,
+                   "agent_payable": guest, "cash_unchanged": cash_16,
+                   "tb_before": [dr_16, cr_16], "tb_after_each_side": dr_16 + sum(fruit_dr),
+                   "partner_totals": tot_42,
+                   "sum_totals_plus_opening": sum(tot_42) + 65000,
+                   "equity_from_books": 65000 + income_16 - sum(fruit_dr)}
+
+    # E2E-43 (PRD v1.6, FR-19.12, R35): party day sheet of 10-10-26 after Events 1 to 5.
+    # remaining = previous + bought (or sold, for a seller) - paid on the spot - paid that day.
+    r["e2e_43"] = {"akram": [0, akram, 0, receipt, akram - receipt],
+                   "arshad": [0, arshad, 0, 0, arshad],
+                   "shahid_pukhta": [0, b2["buyer_pays"], b2["buyer_pays"], 0, 0],
+                   "buyers_remaining_total": (akram - receipt) + arshad,
+                   "rahim_seller": [-rahim_advance, b1["seller_credit"], b1["naqd"], rahim_payable,
+                                    -rahim_advance + b1["seller_credit"] - b1["naqd"] - rahim_payable],
+                   "karim_seller": [0, b2["seller_credit"], 0, 0, b2["seller_credit"]]}
 
     # E2E-36 (FR-19.10, R34): day summary of 10-10-26.
     r["e2e_36"] = {"cash_opening": 50000, "cash_in": b2["buyer_pays"] + receipt,

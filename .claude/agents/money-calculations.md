@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
+Version 1.5, 19 October 2026 (PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -16,7 +16,7 @@ Work slowly and carefully. Prove every number. When in doubt, stop and ask rathe
 
 Source documents (read the relevant parts before you start; the PRD is the master and wins any conflict):
 
-- `docs/PRD_Mandi_Software_v1.md` (v1.1): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 13 (پختہ کھاتہ), 15 (vouchers and matching), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C19), 23 (edge cases), 27 (end-to-end tests)
+- `docs/PRD_Mandi_Software_v1.md` (v1.7): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 12.10 and 12.11 (market trips and gardens), 13 (پختہ کھاتہ), 15 (vouchers and matching), 16.7 (fruit taken), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C27), 23 (edge cases), 27 (end-to-end tests)
 - `docs/Code_Standards_v1.md`: Section 3 (money rules M1 to M12), Section 4 (validation), Section 5.3 (database), Section 5.5 (B29 hints, B30 working records), Section 9 (tests)
 - `docs/Architecture_v1.md`: Diagrams 7 to 12 and the data dictionary in Section 15
 
@@ -38,7 +38,7 @@ Source documents (read the relevant parts before you start; the PRD is the maste
 11. **Preview and save use the same function.** The live summary and the saved data come from one calculation path.
 12. **The frontend never calculates money.** It formats `Paisa` from the backend for display. That is all.
 13. **Snapshots.** Each sale line and lot stores the method, value, rule ID and amount used. Later rule or share changes never alter saved results, and an unchanged line inside an edit keeps them too. Reports and analytics read stored values, never recalculate.
-14. **Income and expenses always have owners.** Every posting that touches an income account or an expense account (head 05: دکان خرچہ 0501 and اپنا مال لاگت 0502) writes partner share rows in the same save (PRD FR-6.5), so Σ shares = income − shop expenses for any period.
+14. **Income and expenses always have owners.** Every posting that touches an income account or an expense account (head 05: the دکان خرچہ heads 0501; from v1.6 there is no 0502) writes partner share rows in the same save (PRD FR-6.5), so Σ shares = income − shop expenses for any period.
 
 If any task seems to need breaking one of these rules, stop and explain why to the user. Do not break it.
 
@@ -63,7 +63,7 @@ Functions (and no other money arithmetic):
 | `apply_bps(base: Paisa, bps: Bps)` | `Paisa` | percent charge, rounded (Section 4.2) |
 | `per_unit(qty: Qty, value: Paisa)` | `Paisa` | exact |
 | `split_by_bps(amount: Paisa, shares: &[(PartnerId, Bps)])` | `Vec<(PartnerId, Paisa)>` | Section 5.1 and 5.2 |
-| `split_by_qty(amount: Paisa, parts: &[(LotNo, Qty)])` | `Vec<(LotNo, Paisa)>` | Section 5.3 |
+| `split_by_qty<K>(amount: Paisa, parts: &[(K, Qty)])` | `Vec<(K, Paisa)>` | Sections 5.3 to 5.5; the key is a lot, a purchase or a partner |
 | `avg_rate(total: Paisa, qty: Qty)` | `Paisa` | display only (Section 4.4) |
 | `round_to_rupee(numerator: i128, denominator: i128)` | `Paisa` | the one rounding function (Section 4.1); private to `core::money` |
 
@@ -253,7 +253,7 @@ leftover → the lot with the largest qty; tie → lowest lot number
 
 Examples: 1,000 over lots of 30 and 20 نگ → 600 and 400. 1,000 over 3 lots of 1 نگ each → 333 / 333 / 333, leftover 1 → lot 1 → 334 / 333 / 333.
 
-### 5.4 Cost of own goods sold or written off (`split_by_qty`, PRD C21, 12.10)
+### 5.4 Cost of trip goods sold or written off (`split_by_qty`, PRD C21, 12.10)
 
 ```
 cost_left = total_cost − cost_released            // from the purchase row
@@ -263,11 +263,49 @@ qty_left  = qty − qty_sold − qty_written_off
 if qty_taken == qty_left: cost_taken = cost_left   // the last نگ takes all the cost left
 ```
 
+A purchase's total cost = paid now (value + freight + labour + other cost) + its part of the trip costs. A trip cost is spread, when it is saved, over the trip's purchases that still have goods left, with `split_by_qty(cost, [نگ bought of each])` (C24); tie → the earlier purchase. Each part is added to that purchase's total cost and cost left, so Σ cost released still equals total cost once nothing is left. Example E2E-41: truck 4,000 over one purchase of 80 نگ → 4,000; total cost 96,000 + 4,000 = 100,000.
+
+The cost taken (C21) is **stored and shown, never posted** (v1.6). It is written on the sale line (`cost_paisa`), on the purchase (`cost_released_paisa`) and on the other-shop sale, so the trip's result can be shown. No journal line ever carries it. There is no stock account, no trading sales account and no cost of goods sold account.
+
 Golden (E2E-34, 34b): purchase 20 × 500 + 400 freight = 10,400. Sell 15: split_by_qty(10,400, [15, 5]) = 7,800 / 2,600 → cost 7,800. Write off the last 5: cost 2,600. Σ cost released = 10,400 exactly. Property: for any sequence of sales and write-offs of one purchase, Σ cost released = total cost once qty left is 0, and never more before that.
 
-Posting of an own lot (FR-12.26): the seller credit (C8) is a جمع on تجارتی فروخت 04010006, never on a seller account (the اپنا مال account 030119998 never holds a balance); cost of goods sold is اپنا مال لاگت 05020001 بنام, اپنا مال سٹاک 01040001 جمع, in the same entry. Both lines take part in the partner split (income rows and expense rows, C10 and C11), so the net share rows equal the profit or loss split. Golden E2E-34: income 540 + 540 + 120 + 8,460 = 9,660 → 3,864 / 2,898 / 2,898; cost 7,800 → −3,120 / −2,340 / −2,340; entry 17,460 = 17,460.
+### 5.5 Gardens, trips and fruit (PRD 12.10, 12.11, 16.7, C23 to C27)
 
-Purchase (FR-12.24): اپنا مال سٹاک بنام total cost; supplier جمع value (credit) or cash or bank جمع value; cash or bank جمع freight, labour and other cost. Partner capital (FR-17.7): cash بنام, capital 0602 جمع (or the reverse); never split.
+These amounts belong to some partners only. They never go through `partner_share_rows` and never through the firm's shares. Each partner has one account for them, 0604 "باغ، سفر اور پھل". It is in head 06, so it counts in his کل رقم (C22).
+
+| Event | Formula | Posting |
+|---|---|---|
+| A payment (purchase, trip cost, garden installment or cost) | `split_by_bps(amount, venture shares)` (C23) | Each shop part: his 0604 بنام, روکڑ جمع. A pocket part: no line. All parts from pockets: no entry. |
+| Seller credit of a trip's own lot (C8) | `split_by_bps(credit, trip shares)` (C25) | In the بکری entry: each trip partner's 0604 جمع his part (بنام if negative) |
+| Sale of trip goods in another shop | `split_by_bps(money, trip shares)` (C25) | روکڑ بنام money; each trip partner's 0604 جمع his part |
+| Seller credit of a garden lot (C8) | none | The garden's account (0306) جمع |
+| Sale of garden goods in another shop | none | روکڑ بنام, the garden's account جمع |
+| Garden closing | `split_by_bps(garden balance, garden shares)` (C26); a بنام balance is split as positive and negated (C11) | Garden account بنام, each partner's 0604 جمع (the reverse for a بنام balance). The garden account ends at 0. |
+| Fruit for one partner | none | His 0604 بنام value |
+| Fruit for the shop's guests | `split_by_qty(value, [1 for each active partner])` (C27), partners in creation order, so the leftover goes to the first created | Each partner's 0604 بنام his part |
+| Fruit source | none | The lot's seller (or پختہ person, or garden), or the other agent, جمع value. No commission. A payable posting; never adjusts an advance. |
+
+Rules:
+
+- The commission on trip and garden lots is firm income like any lot. It is split by the firm's shares (C10). A partner not in the trip still gets his share of it.
+- `venture_entry_parts` holds one row per partner for every payment, with its source and amount. Σ parts = amount. The journal holds only the shop parts. So Σ shop parts of an entry = the entry's روکڑ جمع.
+- Trip result per purchase = Σ seller credits + Σ other-shop money − Σ cost taken (sold and written off). It is display only. Each trip partner's کل رقم already holds his money: Σ his C25 parts − Σ his shop parts.
+- Garden running balance = Σ money in (seller credits + other-shop money) − Σ payments (shop and pocket). Display only, read at time of view.
+- Write-off of trip goods posts nothing (FR-12.28). It changes only the purchase's qty and cost released.
+- Fruit from our shop: the lot's `qty_taken` goes up; C16 = received − sold − written off − taken.
+
+Golden (all in `golden_day.rs`, numbers from `worked_day.py`):
+
+| Test | Key numbers |
+|---|---|
+| E2E-34 | Shop parts 4,160 / 3,120 / 3,120; cash 39,600; اکرم 9,660; commission 1,200 → 480 / 360 / 360; trip credit 8,460 → 3,384 / 2,538 / 2,538; cost shown 7,800, result 660; totals −296 / −222 / −222 |
+| E2E-34b | Write-off posts nothing; result −1,940 → −776 / −582 / −582; totals unchanged; Σ −740 + 65,000 = 64,260 = equity; trial balance 66,200 |
+| E2E-40 | Parts 18,000 / 12,000, 12,000 / 8,000, 3,000 / 2,000; الف shop 33,000; cash 17,000 then 27,000; garden credit 56,400; commission 8,000 → 3,200 / 2,400 / 2,400; closing 66,400 → 39,840 / 26,560; totals 10,040 / 28,960 / 2,400; trial balance 106,400 |
+| E2E-40b | Closing 10,000 → 6,000 / 4,000; الف −27,000; ب +4,000; cash 27,000 |
+| E2E-41 | Parts 48,000 / 48,000, truck 2,000 / 2,000; cash 0; cost 100,000; ارشد 119,360; commission 14,080 → 5,632 / 4,224 / 4,224; trip credit 105,280 → 52,640 / 52,640; result 5,280; totals 8,272 / 56,864 / 4,224; trial balance 134,360 |
+| E2E-42 | Home fruit 1,160; guest 3,000 → 1,000 each; رحیم payable 2,750; lot balance 3; agent 3,000; cash 45,000; totals −736 / 68 / 68; trial balance 77,610 |
+
+Partner capital (FR-17.7): روکڑ بنام, capital 0602 جمع (or the reverse); never split.
 
 ---
 
@@ -380,7 +418,7 @@ Golden: E2E-28 (tick off): رحیم credit 24,316 adjusts nothing; advance open 
 
 ### 8.2a Seller payable working (display only, PRD FR-7.59)
 
-For one seller key, at read time: take his credit lines from بکری postings, his opening credit (PRD FR-10.9, the oldest, v1.5), his جنرل credit lines (PRD 16.4, v1.5), a supplier's credit from a purchase on credit (PRD FR-12.24), plus the part of any seller receipt not used against advances, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open minus Σ open advances MUST equal his balance (جمع minus بنام) whenever Σ still open is more than 0; test it. Example E2E-28: 19,316 − 15,000 = 4,316 جمع.
+For one seller key, at read time: take his credit lines from بکری postings, his opening credit (PRD FR-10.9, the oldest, v1.5), his جنرل credit lines (PRD 16.4, v1.5), his credits for fruit taken (PRD FR-16.11, v1.6), plus the part of any seller receipt not used against advances, oldest first; reduce each by its active advance allocations; then apply his debit lines that are not advances (ادائیگی, نقد cash-part lines, جنرل debits), oldest first, with the same integer algorithm as 8.1. The result per credit line is: credit, advance adjusted, paid, still open. Nothing is stored. Σ still open minus Σ open advances MUST equal his balance (جمع minus بنام) whenever Σ still open is more than 0; test it. Example E2E-28: 19,316 − 15,000 = 4,316 جمع.
 
 Unit test (v1.5): کریم with an opening credit of 10,160 and an ادائیگی of 4,000: credit 10,160, paid 4,000, still open 6,160; balance 6,160 جمع.
 
@@ -388,13 +426,13 @@ Golden: after PRD Event 2, کریم: credit 10,160 (بکری 2), adjusted 0, pai
 
 ### 8.2b Money lent and partner money (display only, PRD FR-16.2, FR-16.5)
 
-Same integer algorithm as 8.1, at read time, nothing stored. For an ادھار رقم account: "bills" are its debit lines (money lent), "credits" are its credit lines (returns in cash or bank, and salary deductions). For a partner's drawings account: "bills" are money taken, "credits" are money returned. The result per bill: amount, returned, still open, days past `return_by_date`. Σ still open MUST equal the account's بنام balance. A return more than the open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`), so an open amount is never negative.
+Same integer algorithm as 8.1, at read time, nothing stored. For an ادھار رقم account: "bills" are its debit lines (money lent), "credits" are its credit lines (returns in cash, and salary deductions). For a partner's drawings account: "bills" are money taken, "credits" are money returned. The result per bill: amount, returned, still open, days past `return_by_date`. Σ still open MUST equal the account's بنام balance. A return more than the open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`), so an open amount is never negative.
 
 A salary deduction posts the salary head بنام and the person جمع. It is a shop expense, so it is split with C11 like any دکان خرچہ. Partner خالص (C20) = profit share − (taken − returned).
 
 الگ کھاتہ (PRD 16.6, FR-16.7): paid out = khata بنام, cash جمع; received = cash بنام, khata جمع; a lot with a separate khata as seller credits its seller credit (C8) to the khata, with seller-side defaults 0. It is never income or expense, never split, never in C22. Golden E2E-38: −10,000, −6,000, then +9,000 from the sale = +3,000; buyer side 540 + 80 = 620 split 248 / 186 / 186.
 
-Partner کل رقم (C22, PRD FR-17.9): opening capital + invested − taken back + Σ income shares − Σ expense shares − money taken + returned. Read from posted records only; month close never changes it. Property: Σ کل رقم of all partners + ابتدائی سرمایہ = equity (capital + income − expenses − drawings) after any sequence of postings. Golden E2E-37: −1,004 / 50,746 / 746; Σ 50,488 + 65,000 = 115,488.
+Partner کل رقم (C22, PRD FR-17.9): opening capital + invested − taken back + Σ income shares − Σ expense shares − money taken + returned + his 0604 account (جمع − بنام, v1.6). Read from posted records only; month close never changes it. Property: Σ کل رقم of all partners + ابتدائی سرمایہ = equity (capital + income − expenses − drawings, with the 0604 accounts in capital) after any sequence of postings. Golden E2E-37: −1,004 / 50,746 / 746; Σ 50,488 + 65,000 = 115,488.
 
 Golden: E2E-30: lent 5,000, returned 3,000 cash, 2,000 by salary, open 0; salary split −800 / −600 / −600. E2E-29: الف خالص 996 − 2,000 = −1,004; after returning 2,000, net taken 0. E2E-32: اکرم's 3,000 cash loan is a bill; dues 5,880.
 
@@ -438,12 +476,13 @@ Every row in the tables of Sections 3, 4, 5 and 6.5 is a unit test.
 5. `parse_rupees(format_paisa(x)) == x` for all valid whole-rupee `x` (with grouping commas).
 6. Percent charge ≤ base for bps ≤ 10,000; the charge never decreases when the base grows.
 7. Matching: Σ allocations + unmatched == credit; no bill allocated beyond its open amount; keys never mix (one پختہ person never pays another's bill).
-8. For any random sequence of postings (sales, later sales, edits, cancels, expenses, جنرل on income accounts): Σ partner share rows = income − expenses (head 05, including اپنا مال لاگت).
+8. For any random sequence of postings (sales, later sales, edits, cancels, expenses, جنرل on income accounts): Σ partner share rows = income − expenses (head 05).
 9. Every stored money value is a multiple of 100 paisa.
+10. Ventures (v1.6): for any garden or trip and any sequence of its entries, Σ parts of each payment = its amount; Σ shop parts = its روکڑ جمع; a closed garden's account is 0; once a garden or a trip is closed, Σ over its partners of (money credited to 0604 − shop parts − pocket parts) = its result. Guest fruit parts (C27) add up to the value.
 
 ### 11.3 Golden end-to-end tests
 
-`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37 and E2E-38. E2E-33 (ledger with items) and E2E-36 (day summary and filtered print) are in `backend/crates/reports/tests/ledger_items.rs`. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
+`backend/crates/services/tests/golden_day.rs` builds the PRD Section 4.3 opening position exactly as described there, runs Events 1 to 5, and asserts every number in PRD Section 4.9 and tests E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, E2E-40, E2E-40b, E2E-41 and E2E-42. E2E-33 (ledger with items), E2E-36 (day summary and filtered print) and E2E-43 (party day sheet) are in `backend/crates/reports/tests/ledger_items.rs`. The money parts of E2E-22 to E2E-27 (same numbers in English, card balance 2,880, open bills, payable 10,160, working 720) are in `backend/crates/services/tests/assist.rs`. E2E-18 lives in `backend/crates/backup/tests/round_trip.rs`; E2E-17 in the Windows end-to-end suite (Code Standards 9.2). The expected numbers are fixed. Change them only if the PRD changes.
 
 ### 11.4 Edge cases
 
@@ -453,7 +492,7 @@ Decimals rejected; zero quantities rejected; largest allowed values do not overf
 
 ## 12. How you work on a task
 
-1. **Find the requirement.** Name the PRD IDs and formula IDs (C1 to C19) involved.
+1. **Find the requirement.** Name the PRD IDs and formula IDs (C1 to C27) involved.
 2. **Write the worked numbers first.** Before any code, write a small table of inputs and expected outputs, using PRD numbers where they exist. Show the arithmetic.
 3. **Write the tests** from that table.
 4. **Implement** in `core::money` or `domain`, following Sections 1 to 9. Add `// PRD <ID>` comments.

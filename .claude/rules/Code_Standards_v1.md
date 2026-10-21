@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.4 (Umar's changes of 14-10-2026 and 15-10-2026) |
-| Date | 15 October 2026 |
+| Version | 1.6 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026 and 22-10-2026) |
+| Date | 22 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.5 (the master), NFR v1.3, Tech Stack v1.3 |
+| Depends on | PRD v1.7 (the master), NFR v1.4, Tech Stack v1.5 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -101,6 +101,7 @@ Rule V0: the backend MUST treat everything from the frontend as untrusted, even 
 | Account code | Digits only: control code + 4-digit serial (8 digits, or 9 for sellers). 1 to 4 digits are a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller or buyer field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that serial, each with its type. Must exist and be active for new postings. | Inactive accounts in new postings; reserved serials for user accounts (PRD FR-10.3) | `TEXT` |
 | Name (Urdu) | 1 to 100 characters: Urdu letters, digits, spaces and `. - ' ( ) / &`; at least one Urdu letter (PRD FR-7.28) | Empty, only spaces, any Latin letter, control characters | `TEXT` `name_ur` (original) + `search_ur` (normalised) |
 | Name (English) | 1 to 100 characters: Latin letters, digits, spaces and `. - ' ( ) / &`; at least one Latin letter | Empty, only spaces, any Urdu letter, control characters | `TEXT` `name_en` (original) + `search_en` (lower case) + `search_phonetic` |
+| Tag (نشان) | Empty, or 1 to 4 characters: English capital letters A to Z and `.`, at least one letter; lower-case letters are made capital (PRD 10.2) | Urdu letters, digits, spaces, any other sign | `TEXT` `tag` (null), added to `search_en` and `search_phonetic` |
 | Phone | `03XXXXXXXXX` or `03XX-XXXXXXX` | Other lengths | `TEXT` digits only |
 | Free text (notes) | Up to 500 characters | Control characters | `TEXT` trimmed |
 
@@ -170,12 +171,13 @@ Shown as: "مقدار باقی مال سے زیادہ ہے: باقی 5 نگ ہی
 | B23 | Reports and analytics query indexed tables or the `analytics_facts` table, never recalculate from raw lines |
 | B24 | Any command expected to take more than 300 ms runs in a background task and reports progress |
 | B25 | Speed targets from NFR Section 2 have benchmarks in `criterion`; a slower result fails the release check |
+| B31 | A list, ledger, register, report or analytics command takes a page (a key or an offset, and a limit of 100 by default) and returns that page's rows with the row count and the totals over the whole filter, each from one indexed query. A print or export command reads every row, in the background when long (B24). Totals are never summed from a page (PRD FR-19.11, NFR-SPD-24). |
 
 ### 5.5 Names, search and assistance
 
 | # | Rule |
 |---|---|
-| B26 | Every save of a named record validates both names (Section 4.2) and writes `search_ur`, `search_en` and `search_phonetic` in the same transaction. The search keys are built only by `core::text`. |
+| B26 | Every save of a named record validates both names and the tag (Section 4.2) and writes `search_ur`, `search_en` and `search_phonetic` in the same transaction. The search keys are built only by `core::text`. |
 | B27 | The in-memory search index (Tech Stack 4.7) is a speed aid, never a source of truth. It is updated after the transaction commits, rebuilt at start-up and after a restore, and balances on the party card are always read from the database. |
 | B28 | `core::translit` is pure and deterministic: the same word list, learned pairs and input give the same suggestions. It never panics on any input and never changes a saved name. |
 | B29 | `assist_*` and `search_*` commands are read-only. They MUST NOT write anything. A rate or amount they return is a hint and is labelled as such in its type (`RateHint`), so it cannot be passed where an input value is expected. |
@@ -282,7 +284,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 
 | # | Rule |
 |---|---|
-| F34 | Lists over 100 rows are virtualised (AG Grid does this) |
+| F34 | Every list, ledger, register, report and analytics table loads its rows page by page from the backend (B31) and draws only the visible rows (AG Grid does this). Its totals row shows the backend's totals over the whole filter, never a sum of the loaded rows. Print and Excel ask the backend for every row (PRD FR-19.11). |
 | F35 | Live summary calls wait 50 ms after the last key press and cancel the previous call (NFR-SPD-7) |
 | F36 | Screens load their code only when opened (lazy routes) |
 
@@ -291,13 +293,13 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 | # | Rule |
 |---|---|
 | F37 | Every screen works in both directions. Layout comes only from logical properties and the direction provider. MUST NOT write `if (language === 'ur')` for layout. Screenshot tests (F14) run in both languages. |
-| F38 | Names are shown only through `displayName(record, language)`, which picks `name_ur` or `name_en`. MUST NOT read `name_ur` or `name_en` directly in a component. Prints pass the print language. |
+| F38 | Names are shown only through `displayName(record, language)`, which picks `name_ur` or `name_en` and adds the tag after it ("عاشق ظفر K"). MUST NOT read `name_ur` or `name_en` directly in a component. Prints pass the print language. |
 | F39 | Unsaved entry data lives in the screen's store or form state, never only inside a grid, so a language switch (which re-creates grids) loses nothing. Each entry screen has a test that switches language in the middle of an entry. |
 | F40 | Every account field uses `AccountPicker`, which shows `PartyCard`. MUST NOT build a screen's own party lookup. |
 | F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The پختہ کھاتہ name field shows one merged list (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
 | F42 | Every calculated amount on screen has `CalcInfo`, which shows the backend's `working` (B30). The frontend never builds a working itself. |
 | F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints: the last rate is shown only as placeholder text (PRD FR-7.53). Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
-| F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, mode, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
+| F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
 
 ---
 
@@ -347,8 +349,8 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 
 | Tests | Where | When |
 |---|---|---|
-| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, and the preview numbers of E2E-39 | `backend/crates/services/tests/golden_day.rs` | Every commit |
-| E2E-33 (ledger with items, R20 total) and E2E-36 (day summary R34, filtered print data) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
+| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, the preview numbers of E2E-39, E2E-40, E2E-40b, E2E-41 and E2E-42 | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-33 (ledger with items, R20 total), E2E-36 (day summary R34, filtered print data) and E2E-43 (party day sheet R35) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
 | E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
 | E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
@@ -361,9 +363,11 @@ They MUST pass. Their expected numbers MUST NOT be changed without a PRD change.
 With `proptest`, for thousands of random inputs:
 
 - Partner split parts always add up to the total.
-- For any random sequence of postings, Σ partner share rows = income − expenses of head 05, including cost of own goods (PRD FR-6.5, FR-17.3).
+- For any random sequence of postings, Σ partner share rows = income − expenses of head 05 (PRD FR-6.5, FR-17.3).
 - Every built journal entry balances.
-- For any sequence of sales and write-offs of one own goods purchase, the cost released never exceeds its total cost and equals it once nothing is left (PRD C21).
+- For any sequence of sales (in بکری or another shop) and write-offs of one trip purchase, the cost released never exceeds its total cost and equals it once nothing is left (PRD C21).
+- For any garden or trip: the parts of every payment add up to the payment (C23); the money credited to its partners equals its sales money (trip, C25) or its account balance at closing (garden, C26); a garden's account is 0 after closing; once a garden or a trip is closed, Σ over its partners of (money credited − parts paid from the shop − parts paid from pockets) = its result.
+- Guest fruit parts add up to the value, and every part is at least the value ÷ the number of partners, rounded down (C27).
 - For any random sequence of postings, Σ partner کل رقم + ابتدائی سرمایہ = the firm's equity in the trial balance (PRD FR-17.9, C22).
 - Parse then format then parse gives the same paisa.
 - Commission is never negative and never more than the line value for percent rules up to 100%.
@@ -425,3 +429,5 @@ A change is done only when every box is ticked:
 | 1.2 | 12-10-2026 | PRD v1.2: sign-in check instead of roles (B2, 5.6, S1, S7); golden tests E2E-28 to E2E-33 (9.2); one pull request per goal run (P3). |
 | 1.3 | 15-10-2026 | PRD v1.3: golden tests E2E-34 to E2E-38 (9.2); property tests for the cost of own goods and the partner total (9.3). |
 | 1.4 | 15-10-2026 | PRD v1.4: related entries share one screen (F44); E2E-39 (9.2). |
+| 1.5 | 19-10-2026 | Approved by Umar (PRD v1.6): lists page by page (B31, F34); no mode among the shared fields (F44); golden tests E2E-40 to E2E-43 (9.2); property tests for gardens, trips and guest fruit, and the trip purchase cost (9.3). |
+| 1.6 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag field (4.2, B26, F38). |

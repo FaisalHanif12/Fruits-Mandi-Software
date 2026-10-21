@@ -55,7 +55,7 @@ Keep messages short. One idea per sentence. No exclamation marks in success mess
 
 ## English
 
-- Plain, professional English, British spelling as used in Pakistan: Labour, Cheque, Colour.
+- Plain, professional English, British spelling as used in Pakistan: Labour, Colour.
 - Business words from the glossary's English column only: Sale, Sale Book, Receipt, Payment, Advance, Commission, Laga, Munshiana, Pukhta Khata, Adda, Nag, Gross Sale, Net Sale.
 - Sentence case for messages ("Sale 1 saved"), the glossary's capitals for business words.
 - The same meaning as the Urdu. Never shorter or vaguer.

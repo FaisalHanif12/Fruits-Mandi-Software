@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Version | 1.5 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026 and 15-10-2026, and his answers of 15-10-2026) |
-| Date | 15 October 2026 |
+| Version | 1.7 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026 and 22-10-2026, and his answers of 15-10-2026) |
+| Date | 22 October 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
 | Platform | Windows desktop app, one computer, works offline |
@@ -20,14 +20,14 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.5 |
-| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality | v1.3 |
-| 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.3 |
-| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.4 |
-| 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.5 |
-| 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.4 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.7 |
+| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality | v1.4 |
+| 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.5 |
+| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.6 |
+| 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.7 |
+| 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.5 |
 
-**Versions.** All six documents started at version 1.1, the baseline for build. Version 1.2 (12-10-2026) applies Umar's changes of 11-10-2026: one user with no roles, a choice to deduct an advance or not, partner money taken and returned, money lent to staff and others, cash lent to buyers, items in party ledgers, the shop's total اگراہی, and stricter Urdu spelling checks. Version 1.3 (15-10-2026) applies Umar's changes of 14-10-2026: partner capital (the money partners invest), the firm's own goods (bought and sold by the firm for profit or loss), and printing for any day and any party. Version 1.4 (15-10-2026) applies Umar's change of 15-10-2026: one خرچہ screen for shop expenses and a partner's personal spending, and related entries kept on one screen so the app is easy to use. Version 1.5 (15-10-2026) applies Umar's answers to the team's open questions after D1 and D2: commission typed on the بکری line by default, the rule tie, opening balances, a seller's opening credit, the cash warning and return-by dates. From now on, any change to a document raises its version (1.2, 1.3 ...) and adds a line to its change log. If the change affects other documents, they are updated in the same step.
+**Versions.** All six documents started at version 1.1, the baseline for build. Version 1.2 (12-10-2026) applies Umar's changes of 11-10-2026: one user with no roles, a choice to deduct an advance or not, partner money taken and returned, money lent to staff and others, cash lent to buyers, items in party ledgers, the shop's total اگراہی, and stricter Urdu spelling checks. Version 1.3 (15-10-2026) applies Umar's changes of 14-10-2026: partner capital (the money partners invest), the firm's own goods (bought and sold by the firm for profit or loss), and printing for any day and any party. Version 1.4 (15-10-2026) applies Umar's change of 15-10-2026: one خرچہ screen for shop expenses and a partner's personal spending, and related entries kept on one screen so the app is easy to use. Version 1.5 (15-10-2026) applies Umar's answers to the team's open questions after D1 and D2: commission typed on the بکری line by default, the rule tie, opening balances, a seller's opening credit, the cash warning and return-by dates. Version 1.6 (19-10-2026) applies Umar's changes of 18-10-2026 and 19-10-2026: gardens and market trips owned by the partners in them, one cash account with no bank, fruit taken by partners, complete analytics, the party day sheet, page-by-page lists, and dated lines in each partner's statement. Version 1.7 (22-10-2026) applies what Umar settled from the client's own prints of 18-10-2026: the buyer pays commission and لاگا and the seller commission only, three prints in the client's own layout (the buyer's day slip, ادھاری تفصیل and the all-buyers balance sheet), a clear layout for every other print, a short tag (نشان) after a name, and the firm's contact persons and trade mark on every print. From now on, any change to a document raises its version (1.2, 1.3 ...) and adds a line to its change log. If the change affects other documents, they are updated in the same step.
 
 ### 0.2 What we take from the old software
 
@@ -78,7 +78,8 @@ A modern, simple, Urdu-first desktop app that anyone can sit down and use. It co
 - Books that always balance.
 - Automatic local and cloud backups.
 - Urdu and English: one switch changes the whole app, including every name. Names can be typed in English letters and become Urdu by themselves.
-- The firm's own goods: it can also buy goods and sell them itself, with the profit or loss of every purchase.
+- Gardens and market trips: some partners can rent a garden or send a person to a bigger market to buy goods. The shop sells the goods and takes its normal commission; the profit or loss goes only to the partners in that garden or trip, by their %.
+- Fruit taken: fruit a partner takes home, or fruit for the shop's guests, recorded by item and quantity.
 - Partner capital: what each partner invests in the shop and takes back.
 - Smart entry: type a code or a few letters and the app fills the rest (party details, balances, last values), so the user mostly checks rather than types.
 
@@ -146,7 +147,7 @@ Developers must use these exact Urdu words on Urdu screens and these exact Engli
 | نقدی منڈی | Naqdi Mandi | The cash buyer with no name (system account 03040000) | Walk-in buyer who pays at once |
 | ریٹ فرق | Rate Difference | Buyer value − seller amount when the two rates differ; firm income | Buyer rate 610, seller rate 600, 20 نگ: 200 |
 | ادھاری / نقدی | Credit / Cash | Credit sale / cash sale | |
-| روکڑ | Cash Book | Cash book | |
+| روکڑ | Cash Book (the book); Cash (the account) | The shop's one cash account and its book. From v1.6 there is no bank: روکڑ is all the shop's money, in the drawer or in the bank | Cash in hand 58,484 |
 | وصولی | Receipt | Receipt from a buyer | Buyer pays 10,000 |
 | اگراہی | Collection | Collection of dues from credit buyers | The collection round |
 | ادائیگی | Payment | Payment out: mainly to sellers; to a buyer it is cash lent (FR-15.11) | Pay رحیم 4,316 |
@@ -157,12 +158,18 @@ Developers must use these exact Urdu words on Urdu screens and these exact Engli
 | واپسی | Return | Money given back: by a partner, by a person who borrowed, or by a seller returning his advance | اسلم returns 3,000 |
 | نقد ادھار | Cash Lent | Cash the shop lends to a buyer; it is collected with his other dues | اکرم takes 3,000 |
 | خالص | Net | A partner's profit share minus the money he took and has not returned (C20) | الف: 996 − 2,000 = −1,004 |
-| الگ کھاتہ | Separate Khata | An account kept apart from the partners, commission and profit, for example a garden (باغ) khata. Money paid out makes it minus; money in makes it plus. | باغ: −10,000, then +4,000 back |
-| کل رقم | Partner Total | Everything a partner has in the firm: his investment plus his share of all commission and profit, less what he took (C22) | ب: 50,000 + 746 = 50,746 |
+| الگ کھاتہ | Separate Khata | An account kept apart from the partners, commission and profit, for example a family khata (خاندانی کھاتہ). Money paid out makes it minus; money in makes it plus. A garden rented by partners is not a الگ کھاتہ (see باغ). | خاندانی کھاتہ: −10,000, then +4,000 back |
+| کل رقم | Partner Total | Everything a partner has in the firm: his investment plus his share of all commission and profit, plus or minus his gardens, trips and fruit taken, less what he took (C22) | ب: 50,000 + 746 = 50,746 |
 | سرمایہ | Capital | Money a partner invests in the shop, to start and run it | Partner ب invests 50,000 |
-| اپنا مال | Own Goods | Goods the firm buys itself and sells for its own profit or loss | 20 پیٹی مالٹا bought at 500 |
-| خریداری | Purchase | The firm buying its own goods | خریداری خ-1 |
-| تجارتی منافع / نقصان | Trading Profit / Loss | Profit or loss on the firm's own goods | 660 on 15 پیٹی مالٹا |
+| اپنا مال | Own Goods | Goods bought on a market trip. They belong to the trip's partners; the shop sells them like any lot (12.10) | 20 پیٹی مالٹا bought at 500 |
+| خریداری | Purchase | Goods bought on a market trip | خریداری خ-1 |
+| تجارتی منافع / نقصان | Trading Profit / Loss | Profit or loss of a market trip or of one of its purchases | 660 on 15 پیٹی مالٹا |
+| مارکیٹ سفر | Market Trip | A day trip: a person is sent to a bigger market to buy goods for some partners (12.10) | سفر-1: 80 پیٹی مالٹا |
+| باغ / باغات | Garden / Gardens | A garden rented by some partners for a season; its fruit is sold by the shop, and its profit or loss goes only to those partners (12.11) | شاہ پور باغ |
+| ٹھیکہ | Garden Rent | The price of a garden for the season, paid in installments | 50,000 |
+| قسط | Installment | One part of a garden's rent, paid on a date | 20,000 |
+| دکان سے / اپنی جیب سے | From the Shop / Own Pocket | Where a partner's part of a garden or trip payment comes from (FR-12.29) | الف دکان سے، ب اپنی جیب سے |
+| پھل | Fruit Taken | Fruit a partner takes home, or fruit for the shop's guests, recorded by item and qty (16.7) | الف: 2 پیٹی مالٹا @ 1,400 = 2,800 |
 | سٹاک / باقی مال | Unsold Stock | Goods received but not yet sold | 5 پیٹی of کیلا left |
 | شراکت دار / حصہ | Partner / Share | Partner / share | Partner الف, 40% |
 | تجزیات | Analytics | Analytics | Commission by item for October |
@@ -170,6 +177,11 @@ Developers must use these exact Urdu words on Urdu screens and these exact Engli
 | کھاتہ / فرد حساب | Ledger / Statement | Party ledger / statement handed to a party | Printed for a buyer |
 | بنام / جمع | Debit / Credit | Debit / Credit | |
 | میزان | Total | Total | |
+| تازہ بنام | Today's Bill | What a party was charged on one day, on his day slip (FR-19.12) | 25,574 |
+| سابقہ رقم | Previous Balance | A party's balance at the start of the day | 33,287 |
+| ٹوٹل رقم | Total Due | سابقہ رقم + تازہ بنام − وصولی | 58,861 |
+| بقایا | Balance | What is still owed after the day | 11,765 |
+| نشان | Tag | A short tag after a name, in English capital letters, that tells two people with the same name apart (10.2) | عاشق ظفر K |
 | ٹرائل بیلنس | Trial Balance | Trial balance | |
 
 Everyday comparison: the آڑھتی is like a property dealer. The seller is the house owner, the buyer is the purchaser. The dealer takes a fee from both, keeps a record of who owes what, and pays the owner what is left after costs. The dealer's office is owned by three brothers, and every rupee the office earns is split between them by their agreed shares.
@@ -189,8 +201,8 @@ Truck arrives -> بکری بک (truck details + lots + sales + live summary)
                    stock (باقی مال), analytics, dashboard, اگراہی list
 Later         -> sell leftover stock from باقی مال (a new posting event)
               -> بکری side menu: وصولی/اگراہی, ادائیگی, پیشگی کھاتہ
-              -> روکڑ: خرچہ (دکان خرچہ or ذاتی خرچہ), جنرل
-              -> خریداری: the firm buys its own goods, then sells them in بکری like any lot
+              -> روکڑ: خرچہ (دکان خرچہ or ذاتی خرچہ), پھل, جنرل
+              -> باغات, مارکیٹ سفر: the partners' gardens and trips; their goods are sold in بکری like any lot
 Any time      -> تجزیات, رپورٹ, شراکت دار (including partner capital)
 Closing time  -> Day close + automatic cloud backup
 ```
@@ -217,7 +229,8 @@ Which accounts are income and which are payables (FR-10.4, FR-17.3):
 | مزدوری, کرایہ, کرایہ سٹور, منشیانہ | Money the firm collects for others (labour, transporters, store, munshi) | No, they are payables, not income |
 | دکان خرچہ | Firm expense | Yes, every shop expense is split |
 | ذاتی خرچہ | Money one partner takes for himself | Charged to that partner only; money he returns adds back (FR-16.2) |
-| Trading sales and cost of own goods sold | Income and expense of the firm's own goods (12.10) | Yes, so each partner gets his share of the profit or loss |
+| A garden's or trip's money (payments, sales money after commission) | Belongs to the partners in that garden or trip (12.10, 12.11) | Only to them, by its own %. The commission on its goods is firm income, shared as usual. |
+| پھل (fruit taken) | Taken by one partner, or for the shop's guests (16.7) | One partner: his total only. Guests: split equally between the partners, not by the shares. |
 | سرمایہ (partner capital) | A partner's own money in the shop (17.4) | No, it is not income; it stays on his capital account |
 | الگ کھاتہ (separate khata) | Money kept apart from the firm's business (16.6) | No, never income or expense, never in any partner's total |
 
@@ -390,12 +403,14 @@ FR-5.2 [C] Main navigation bar on the start side of the screen: on the right in 
 | 1 | ڈیش بورڈ | Dashboard | 9 |
 | 2 | انڈکس | Masters (accounts, items, commission rules) | 10, 11 |
 | 3 | بکری | Sales area, with its own side menu | 12 to 15 |
-| 4 | روکڑ | Cash book, expenses, journal | 16 |
-| 5 | شراکت دار | Partners | 17 |
-| 6 | تجزیات | Analytics | 18 |
-| 7 | رپورٹ | Reports | 19 |
-| 8 | بیک اپ | Backup | 20 |
-| 9 | ترتیبات | Settings | 21 |
+| 4 | روکڑ | Cash book, expenses, fruit taken, journal | 16 |
+| 5 | باغات | Gardens | 12.11 |
+| 6 | مارکیٹ سفر | Market Trips (with their purchases) | 12.10 |
+| 7 | شراکت دار | Partners | 17 |
+| 8 | تجزیات | Analytics | 18 |
+| 9 | رپورٹ | Reports | 19 |
+| 10 | بیک اپ | Backup | 20 |
+| 11 | ترتیبات | Settings | 21 |
 
 FR-5.3 [C] **The بکری area has its own side menu.** When the user opens بکری, a second menu appears next to the main bar:
 
@@ -408,7 +423,8 @@ FR-5.3 [C] **The بکری area has its own side menu.** When the user opens بک
 | 5 | پختہ کھاتہ | One-time parties register | 13 |
 | 6 | آج کی بکری | List of today's بکری | 12.7 |
 | 7 | باقی مال | Goods not yet sold | 12.8 |
-| 8 | خریداری | The firm's own goods: purchases, stock, profit or loss | 12.10 |
+
+خریداری (purchases) is in the مارکیٹ سفر section from v1.6, because every purchase belongs to a trip (12.10).
 
 Items 2, 3 and 4 open one voucher screen, with that type already chosen (FR-7.67, FR-15.10).
 
@@ -424,7 +440,7 @@ FR-5.6 [A] Top bar: global search box (FR-5.4), attention bell with its count (F
 
 ### 6.1 Posting events
 
-Every action that changes money is a **posting event**. A posting event has one date, one journal entry, and all its side effects, saved together. Types: بکری (first save), later sale (Section 12.9), reversal (for an edit or cancel), وصولی, ادائیگی, پیشگی, دکان خرچہ, ذاتی خرچہ and its واپسی, ادھار رقم and its واپسی, خریداری, سرمایہ جمع and واپسی, الگ کھاتہ entries, جنرل, opening balances, month close.
+Every action that changes money is a **posting event**. A posting event has one date, one journal entry, and all its side effects, saved together. Types: بکری (first save), later sale (Section 12.9), reversal (for an edit or cancel), وصولی, ادائیگی, پیشگی, دکان خرچہ, ذاتی خرچہ and its واپسی, ادھار رقم and its واپسی, a trip purchase or trip cost, a garden installment or cost, a sale of trip or garden goods in another shop, a garden's closing, پھل, سرمایہ جمع and واپسی, الگ کھاتہ entries, جنرل, opening balances, month close.
 
 ### 6.2 What each action updates (all inside one save)
 
@@ -437,17 +453,21 @@ Every action that changes money is a **posting event**. A posting event has one 
 | Later sale from باقی مال | Same as above, for the new lines only (Section 12.9) |
 | Edit a بکری posting (day open) | Reversal of that posting (journal, split, stock, facts, matching), then the new version posted; audit log keeps the old version |
 | Cancel a بکری (all its days open) | Reversal of every posting of that بکری; receipts that were matched to its lines become unmatched credit on the buyer and are re-matched to his next oldest bills |
-| Save وصولی | Buyer ledger, cash or bank, bill matching and aging, اگراہی list, dashboard. From a seller: his ledger and advance matching (FR-15.12) |
-| Save ادائیگی | Account ledger, cash or bank, seller payables, dashboard. To a buyer: his ledger, bill matching and aging, اگراہی list (FR-15.11) |
-| Save پیشگی | Seller ledger (بنام), cash or bank, advance list, پیشگی report, dashboard |
+| Save وصولی | Buyer ledger, cash, bill matching and aging, اگراہی list, dashboard. From a seller: his ledger and advance matching (FR-15.12) |
+| Save ادائیگی | Account ledger, cash, seller payables, dashboard. To a buyer: his ledger, bill matching and aging, اگراہی list (FR-15.11) |
+| Save پیشگی | Seller ledger (بنام), cash, advance list, پیشگی report, dashboard |
 | Save خرچہ as دکان خرچہ | Expense account, cash, partner expense shares, partner profit, dashboard |
 | Save خرچہ as ذاتی خرچہ or its واپسی | That partner's drawings, cash, partner overview and statement, attention list, dashboard |
-| Save ادھار رقم or its واپسی | The person's ادھار رقم account, cash or bank, attention list, R32, dashboard. A salary deduction also posts the تنخواہ shop expense and its partner split (FR-16.4) |
-| Save خریداری | Own goods stock, supplier ledger or cash, the purchase's stock in باقی مال, dashboard |
-| Sell own goods (a بکری lot of اپنا مال) | Everything a بکری save updates, plus cost of goods sold, own goods stock, trading profit or loss and its partner split (FR-12.26) |
-| Write off own goods | Stock move, cost of goods sold as a loss, partner split (FR-12.28) |
-| Save a الگ کھاتہ entry | That khata, cash or bank, its statement, dashboard cash. Nothing for partners (FR-16.6) |
-| Save سرمایہ جمع or واپسی | That partner's capital account, cash or bank, partner overview and statement, dashboard |
+| Save ادھار رقم or its واپسی | The person's ادھار رقم account, cash, attention list, R32, dashboard. A salary deduction also posts the تنخواہ shop expense and its partner split (FR-16.4) |
+| Save a trip purchase or trip cost | The trip and its stock (باقی مال), cash and each partner's total for his part from the shop's cash (FR-12.30), dashboard |
+| Sell trip goods (a بکری lot of اپنا مال) | Everything a بکری save updates, plus the purchase's stock, the trip's result and each trip partner's total (FR-12.26) |
+| Sell trip or garden goods in another shop | Cash, the purchase's stock and each trip partner's total, or the garden's account (FR-12.32, FR-12.36) |
+| Write off trip goods | The purchase's stock and the trip's result. Nothing is posted (FR-12.28) |
+| Save a garden installment or cost | The garden's record and running balance, cash and each partner's total for his part from the shop's cash (FR-12.35) |
+| Close a garden | The garden's account to 0, each garden partner's total and statement line (FR-12.38) |
+| Save پھل | The partner's total (or each partner's, for guests), the lot's seller or the other shop's account, the lot's stock when it comes from our shop, the پھل list (FR-16.10, FR-16.11) |
+| Save a الگ کھاتہ entry | That khata, cash, its statement, dashboard cash. Nothing for partners (FR-16.6) |
+| Save سرمایہ جمع or واپسی | That partner's capital account, cash, partner overview and statement, dashboard |
 | Save جنرل | Every account in the entry; partner shares for any line on an income or shop expense account; bill matching for buyer lines; seller lines count in his payables only, never in advance matching (16.4); trial balance |
 | Day close | Locks the day; starts the cloud backup; dashboard day status |
 | Month close | Moves the month's income and shop expenses into partner capital accounts (FR-17.6) |
@@ -461,7 +481,7 @@ FR-6.3 [C] A posted entry is never changed or deleted. Corrections are made with
 FR-6.4 [C] All money is whole rupees (Section 22). The same rounded number is used on every side: on the bill, in the journal, in the partner split and in analytics.
 FR-6.5 [C] Every posting that touches an income account or a shop expense account writes partner share rows in the same save, whatever module it comes from (including جنرل). So, for any period, the sum of all partner shares equals income minus shop expenses exactly.
 FR-6.6 [A] **Dates and open days.** Days are closed in order. The system keeps one "closed up to" date. A posting can only be dated after that date and no later than today. Reopening is described in FR-21.2.
-FR-6.7 [C] **Cash below zero asks, never blocks.** Umar (15-10-2026): cash in hand can really go below zero, for example when the partners' investment has gone out as advances, buyers have not paid yet, and expenses and partner drawings still go out. So it is allowed, but the user must confirm it, because it is often a typing mistake. It applies to every save that would take روکڑ (cash in hand, 01010001) below 0: پیشگی, ادائیگی, خرچہ, ادھار رقم, سرمایہ واپسی, الگ کھاتہ رقم دی, خریداری, نقد on a بکری lot, a جنرل with a cash credit, and an edit, cancel or undo that takes cash back.
+FR-6.7 [C] **Cash below zero asks, never blocks.** Umar (15-10-2026): cash in hand can really go below zero, for example when the partners' investment has gone out as advances, buyers have not paid yet, and expenses and partner drawings still go out. So it is allowed, but the user must confirm it, because it is often a typing mistake. It applies to every save that would take روکڑ (cash in hand, 01010001) below 0: پیشگی, ادائیگی, خرچہ, ادھار رقم, سرمایہ واپسی, الگ کھاتہ رقم دی, the shop's part of a trip purchase or cost and of a garden installment or cost (FR-12.30), نقد on a بکری lot, a جنرل with a cash credit, and an edit, cancel or undo that takes cash back.
 - While the entry is typed, an amber note shows: "روکڑ صفر سے کم ہو جائے گی" (Cash in hand will go below zero), with the cash in hand after the entry.
 - On save, a confirm box asks: "اس اندراج کے بعد روکڑ −5,000 ہو جائے گی۔ کیا یہ اندراج درست ہے؟" (After this entry cash in hand will be −5,000. Is this entry correct?) with two buttons: "ہاں، محفوظ کریں" (Yes, save) and "نہیں، واپس جائیں" (No, go back). The focus starts on "نہیں، واپس جائیں", so pressing `Enter` out of habit never saves a mistake. Yes saves; No returns to the entry with nothing saved and the amount field selected.
 - Where the save already asks to confirm (a cancel, FR-7.8), the same box shows the cash line. `Ctrl+Enter` (FR-7.57) asks before it saves and prints.
@@ -488,7 +508,7 @@ FR-7.9 [A] Leaving a screen with unsaved work asks "محفوظ کریں؟" with 
 FR-7.10 [A] Pickers search as you type, by code, short code, Urdu name or English name (FR-7.39, FR-7.40). A new account can be added from the picker without leaving the screen.
 FR-7.11 [A] Large, easy click targets and readable text for older users. Text size can be changed with `Ctrl +` / `Ctrl −` (within the limits in NFR-USE-18), and the app remembers it per user.
 FR-7.12 [A] First-run guide: on first login, a 5-step guided tour of the dashboard, انڈکس, بکری بک, وصولی and reports. Can be replayed from the help menu.
-FR-7.67 [C] **Related entries share one screen.** (Numbered after FR-7.66 because it was added in v1.4.) Umar (15-10-2026): the app must not feel like many separate programs. Entries that do the same kind of job are made on one screen. A type list (قسم) at the top says what the entry is. Only the fields for that type show, always in the same places, and the list below the form shows that type's history. Changing the type keeps what the types share (date, amount, mode, narration) and clears the rest. Each type keeps its own number series, its own posting and its own checks, so nothing about the money changes.
+FR-7.67 [C] **Related entries share one screen.** (Numbered after FR-7.66 because it was added in v1.4.) Umar (15-10-2026): the app must not feel like many separate programs. Entries that do the same kind of job are made on one screen. A type list (قسم) at the top says what the entry is. Only the fields for that type show, always in the same places, and the list below the form shows that type's history. Changing the type keeps what the types share (date, amount, narration) and clears the rest. Each type keeps its own number series, its own posting and its own checks, so nothing about the money changes.
 
 | Screen | Types in its list | Section |
 |---|---|---|
@@ -497,8 +517,10 @@ FR-7.67 [C] **Related entries share one screen.** (Numbered after FR-7.66 becaus
 | ادھار رقم | رقم دی, واپسی | 16.5 |
 | الگ کھاتہ | رقم دی, رقم آئی | 16.6 |
 | سرمایہ | سرمایہ جمع, سرمایہ واپسی | 17.4 |
+| باغ (one garden) | قسط, باغ خرچ, دوسری دکان میں فروخت | 12.11 |
+| مارکیٹ سفر (one trip) | خریداری, سفر خرچ, دوسری دکان میں فروخت | 12.10 |
 
-Example: the munshi opens خرچہ with `Alt+K` and types 3,000 نقد as دکان خرچہ for بجلی. Then he remembers it was الف's home bill. He changes the type to ذاتی خرچہ: the date, 3,000 and نقد stay, the expense head is cleared, and the screen asks for the partner and the reason.
+Example: the munshi opens خرچہ with `Alt+K` and types 3,000 as دکان خرچہ for بجلی. Then he remembers it was الف's home bill. He changes the type to ذاتی خرچہ: the date and 3,000 stay, the expense head is cleared, and the screen asks for the partner and the reason.
 
 FR-7.68 [A] **The app points to the right type.** When an entry looks like another type on the same screen, a note under it offers to switch, keeping what was typed. It never switches by itself. Two cases:
 - An ادائیگی to a seller with nothing payable: "اس بیوپاری کا کوئی بقایا نہیں۔ کیا یہ پیشگی ہے؟" with a button پیشگی بنائیں.
@@ -594,13 +616,13 @@ FR-7.24 [C] **Every name has an Urdu and an English name.** This covers accounts
 
 The filled name stays editable. Once the user edits it, it is never overwritten again.
 
-FR-7.25 [A] **What is not translated.** Codes, amounts, dates, phone numbers, truck numbers, cheque numbers, مارکہ text, bank names and bank account titles, and free text (notes, hand-typed narrations, reasons) are stored once, exactly as typed, and look the same in both languages.
+FR-7.25 [A] **What is not translated.** Codes, amounts, dates, phone numbers, truck numbers, tags (نشان), مارکہ text, the market, supplier and other shop typed on a trip, garden or پھل entry, and free text (notes, hand-typed narrations, reasons) are stored once, exactly as typed, and look the same in both languages.
 
 FR-7.26 [A] **The app learns.** When the user picks another suggestion or corrects a converted word, the pair (English spelling → Urdu spelling) is remembered and offered first next time on this computer. The Owner can see and remove learned pairs in ترتیبات. Learned pairs are part of every backup. Learning never changes a name that is already saved.
 
 FR-7.27 [A] **Starting word list.** The app ships with a reviewed word list of at least 15,000 entries (NFR-URD-24): common Pakistani first names, family and firm names, cities and towns of Punjab and Khyber Pakhtunkhwa, fruits, vegetables, packings and the mandi words of the glossary. When Umar exports the old software's account names (about 1,572), they are added after review. Words not in the list are converted by spelling rules and checked by FR-7.66. Everything works offline.
 
-FR-7.28 [A] **Script checks.** An Urdu name must be in Urdu letters. An English name must be in English letters. Digits, spaces and `. - ' ( ) & /` are allowed in both. A wrong script shows "اردو نام اردو حروف میں لکھیں" or "انگریزی نام انگریزی حروف میں لکھیں".
+FR-7.28 [A] **Script checks.** An Urdu name must be in Urdu letters. An English name must be in English letters. Digits, spaces and `. - ' ( ) & /` are allowed in both. A wrong script shows "اردو نام اردو حروف میں لکھیں" or "انگریزی نام انگریزی حروف میں لکھیں". The tag (نشان, 10.2) is the one place English letters go with an Urdu name: it is its own field, not part of the name (v1.7).
 
 FR-7.29 [A] **One-time people.** In a پختہ کھاتہ name or phone field, typing shows **one** list: first the one-time people already recorded (both names, phone, last date), then the Urdu spellings of the typed word (FR-7.22). Picking a person reuses his exact names and phone, so all his entries stay under one person key (FR-13.5). For a new person, the other-script name is filled by FR-7.24.
 
@@ -645,7 +667,7 @@ No extra key is needed: `Enter` moves on as usual.
 FR-7.39 [A] **Short codes.** In a seller or buyer field, the serial alone is enough. In a buyer field `1` (or `0001`) means 03040001; in a seller field `7` means 030110007. The full code always works too. Short codes cover seller and buyer accounts only; other accounts are found by full code or name. In a field that takes any account (جنرل, ledgers), a short code that fits both a seller and a buyer lists both with their type, for example "گاہک 03040001 اکرم ٹول ٹیکس" and "بیوپاری 030110001 رحیم".
 
 FR-7.40 [A] **Smart search in every picker.**
-- Matches code, short code, Urdu name, English name, father or firm, city and phone, in either language.
+- Matches code, short code, Urdu name, English name, tag (نشان), father or firm, city and phone, in either language. Example: "ashiq k" finds عاشق ظفر K.
 - Small spelling mistakes are forgiven: "arshd" finds ارشد ملتانی, and "اکرام" finds اکرم ٹول ٹیکس.
 - Order: exact code first, then names that start with the typed text, then recently and often used, then close matches.
 - Each row shows code, name, father or firm, city and balance, so two people with the same name are easy to tell apart.
@@ -701,7 +723,7 @@ FR-7.57 [A] **Save, print and next in one step.** `Ctrl+Enter` saves, prints the
 
 FR-7.58 [A] **Receipts show what is owed.** After choosing a buyer in وصولی, his open bills show oldest first (date, بکری no, amount, still open, days). Buttons "پورا بقایا" (full balance) and "پرانا بل" (oldest bill) fill the amount. While the amount is typed, the list marks which bills it will settle (FR-15.4).
 
-FR-7.59 [A] **Payments show what is payable.** After choosing a seller in ادائیگی, his payable postings show (date, بکری no, seller credit, advance adjusted, paid, still open), with a "پورا بقایا" button. "Paid" and "still open" are worked out when shown, oldest first: the seller's debits that are not advances (ادائیگی, نقد, جنرل) settle his oldest credits left after advance matching (FR-15.8). Nothing extra is saved. The same working gives the age used in FR-7.44. A supplier's credit from a purchase on credit (FR-12.24) is a payable posting too. So is a seller's opening credit (FR-10.9), as his oldest one [C] (Umar, 15-10-2026), and a جنرل credit on a seller, because it never adjusts his advances (16.4). Example: کریم starts with 10,160 جمع from the old books. A payment of 4,000 to him is an ادائیگی against it and leaves 6,160 payable; the پیشگی note of FR-7.68 does not show, because something is payable.
+FR-7.59 [A] **Payments show what is payable.** After choosing a seller in ادائیگی, his payable postings show (date, بکری no, seller credit, advance adjusted, paid, still open), with a "پورا بقایا" button. "Paid" and "still open" are worked out when shown, oldest first: the seller's debits that are not advances (ادائیگی, نقد, جنرل) settle his oldest credits left after advance matching (FR-15.8). Nothing extra is saved. The same working gives the age used in FR-7.44. A credit for fruit taken from his lot or from his shop (FR-16.11) is a payable posting too. So is a seller's opening credit (FR-10.9), as his oldest one [C] (Umar, 15-10-2026), and a جنرل credit on a seller, because it never adjusts his advances (16.4). Example: کریم starts with 10,160 جمع from the old books. A payment of 4,000 to him is an ادائیگی against it and leaves 6,160 payable; the پیشگی note of FR-7.68 does not show, because something is payable.
 
 FR-7.60 [A] **Advances show history.** In پیشگی, the seller's card shows his open advances and the date and amount of his last advance.
 
@@ -756,7 +778,8 @@ FR-8.6 [A] Every login, failed login and logout is written to the audit log.
 | Sellers payable | ادائیگی باقی | Sum of each seller's open payable (FR-7.59). Open advances are not taken off it; they show in پیشگی باقی. |
 | Advances open | پیشگی باقی | Sum of advances not yet adjusted (FR-15.8) |
 | Goods not sold | باقی مال | Count of نگ in stock and number of lots |
-| Own goods | اپنا مال | نگ of own goods not yet sold, and their cost (FR-12.25) |
+| Market trips | مارکیٹ سفر | Open trips: نگ of their goods not yet sold, and their cost left (FR-12.25) |
+| Gardens | باغات | Open gardens and each one's running balance (FR-12.37) |
 | Money lent open | ادھار رقم باقی | Sum of open ادھار رقم, and how much is past its return-by date (FR-16.4) |
 | Today's expenses | آج کا خرچہ | دکان خرچہ today (0501 heads only) |
 | Last backup | آخری بیک اپ | Green under 24 hours, red above |
@@ -787,7 +810,7 @@ One card per partner: today's share, this month's share, this year's share (from
 
 ```
 Head (مد)            01 Assets | 02 Payables | 03 Parties | 04 Income | 05 Expenses | 06 Capital
-  Control (کنٹرول)    0101 Cash, 0103 Money Lent, 0104 Own Goods Stock, 0201 Payables, 03011 Sellers, 0304 Buyers, 0305 Separate Khatas, 0401 Income ...
+  Control (کنٹرول)    0101 Cash, 0103 Money Lent, 0201 Payables, 03011 Sellers, 0304 Buyers, 0305 Separate Khatas, 0306 Gardens, 0401 Income ...
     Account (کھاتہ)    030110001 رحیم
 ```
 
@@ -807,17 +830,17 @@ FR-10.4 [A] Seeded at install (system accounts, the rows below with a fixed code
 
 | Code | Account | English name | Kind | Partner-shared |
 |---|---|---|---|---|
-| 01010001 | روکڑ (cash in hand) | Cash in Hand | Asset | |
-| 01020001 | بینک (default bank) | Bank | Asset | |
+| 01010001 | روکڑ (the shop's one cash account: all its money, in the drawer or in the bank, v1.6) | Cash | Asset | |
+| 01020001 | بینک (from the first migration; not used from v1.6: never offered, nothing posts to it) | Bank | Asset | |
 | 0103xxxx | One ادھار رقم account per person (staff or anyone else) | Money Lent, <name> | Asset (money to come back) | No |
-| 01040001 | اپنا مال سٹاک | Own Goods Stock | Asset (cost of own goods not yet sold) | No |
 | 02010001 | مزدوری کھاتہ | Labour Payable | Payable to labour | No |
 | 02010002 | کرایہ کھاتہ | Freight Payable | Payable to transporters | No |
 | 02010003 | کرایہ سٹور کھاتہ | Store Rent Payable | Payable to store owners | No |
 | 02010004 | منشیانہ کھاتہ | Munshiana Payable | Payable to the munshi | No |
 | 030119999 | پختہ کھاتہ (بیوپاری) | Pukhta Khata (Seller) | Seller | |
-| 030119998 | اپنا مال (the firm as seller) | Own Goods (Firm) | Seller, used only as the seller of own lots and for their charge rules. It never holds a balance (FR-12.26). | |
-| 0305xxxx | One account per الگ کھاتہ (garden, family or any other) | Separate Khata, <name> | Party, outside the partners (16.6) | No |
+| 030119998 | اپنا مال (the seller of a trip's goods) | Own Goods (Trips) | Seller, used only as the seller of a trip's lots and for their charge rules. It never holds a balance (FR-12.26). | |
+| 0305xxxx | One account per الگ کھاتہ (family or any other) | Separate Khata, <name> | Party, outside the partners (16.6) | No |
+| 0306xxxx | One account per garden (12.11), made with the garden | Garden, <name> | Party: holds the garden's sales money until it is closed | No: its money goes only to the garden's partners (FR-12.38) |
 | 03040000 | نقدی منڈی (cash buyer with no name) | Naqdi Mandi (Cash Buyer) | Buyer | |
 | 03049999 | پختہ کھاتہ (خریدار) | Pukhta Khata (Buyer) | Buyer | |
 | 04010001 | کمیشن آمدن (بیوپاری) | Commission Income (Seller) | Income | Yes |
@@ -825,15 +848,14 @@ FR-10.4 [A] Seeded at install (system accounts, the rows below with a fixed code
 | 04010003 | لاگا آمدن | Laga Income | Income | Yes |
 | 04010004 | فون آمدن | Phone Charge Income | Income | Yes |
 | 04010005 | ریٹ فرق | Rate Difference | Income (can be negative) | Yes |
-| 04010006 | تجارتی فروخت | Trading Sales | Income (own goods; can be negative) | Yes |
 | 0501xxxx | دکان خرچہ heads (بجلی، کرایہ دکان، چائے، مہمان نوازی، تنخواہ ...) | Shop expense heads (Electricity, Shop Rent, Tea, Guests' Food and Drinks, Salaries ...) | Expense | Yes, always split |
-| 05020001 | اپنا مال لاگت | Cost of Own Goods Sold | Expense (own goods, not a دکان خرچہ head) | Yes, always split |
 | 06010001 | ابتدائی سرمایہ | Opening Capital | Capital | |
 | 06019999 | ابتدائی فرق (opening difference) | Opening Difference | Capital | |
 | 0602xxxx | One capital account per partner | Capital, <partner name> | Capital | |
 | 0603xxxx | One drawings account (ذاتی خرچہ) per partner | Drawings, <partner name> | Capital | |
+| 0604xxxx | One garden, trip and fruit account per partner (v1.6) | Gardens, Trips and Fruit, <partner name> | Capital | No: only his own amounts (FR-12.30, FR-16.10) |
 
-Seller and buyer commission go to two income accounts, so analytics and the profit report can show each side. Heads and controls also have English names: Assets, Payables, Parties, Income, Expenses, Capital; Cash, Bank, Money Lent, Own Goods Stock, Payables, Sellers, Buyers, Separate Khatas, Income, Shop Expenses, Cost of Own Goods, Capital, Drawings. All seeded English names follow the glossary (FR-7.37).
+Seller and buyer commission go to two income accounts, so analytics and the profit report can show each side. Heads and controls also have English names: Assets, Payables, Parties, Income, Expenses, Capital; Cash, Bank (not used), Money Lent, Payables, Sellers, Buyers, Separate Khatas, Gardens, Income, Shop Expenses, Capital, Drawings, Gardens Trips and Fruit. All seeded English names follow the glossary (FR-7.37).
 
 ### 10.2 Account (انڈکس) form
 
@@ -845,6 +867,7 @@ Seller and buyer commission go to two income accounts, so analytics and the prof
 | Account code | کوڈ | Text | Yes | Auto (FR-10.3), unique | [S][C] |
 | Urdu name | اردو نام | Text | Yes | Type in Urdu or English letters (FR-7.22); Urdu letters only (FR-7.28) | [S] |
 | English name | انگریزی نام | Text | Yes | Filled by itself from the Urdu name, editable (FR-7.24); English letters only | [S] field, required [C] |
+| Tag | نشان | Text | No | 1 to 4 characters: English capital letters and dots (K, BA, GM, D.P). Shown after the name in both languages and on every print, for example "عاشق ظفر K" and "Ashiq Zafar K". Stored once, as typed (FR-7.25) [C] (Umar, 20-10-2026) | [C] |
 | Father / firm name | ولدیت / فرم | Text, Urdu and English (FR-7.24) | No | Tells apart two people with the same name | [A] hidden |
 | City | شہر | Select | No | From city master | [S] |
 | اڈا | اڈا | Select | No | Sellers usually come from one اڈا | [A] hidden |
@@ -868,16 +891,16 @@ Seller and buyer commission go to two income accounts, so analytics and the prof
 
 FR-10.5 [S] List screen columns: code, Urdu name, English name, city, opening date, opening debit, opening credit, credit allowed, current balance. Footer: total debit, total credit.
 FR-10.6 [A] An account with postings cannot be deleted, only made inactive.
-FR-10.7 [A] Duplicate warning when name and phone match an existing account. Similar names show while typing (FR-7.63).
+FR-10.7 [A] Duplicate warning when name, tag and phone match an existing account. اسلم BA and اسلم are two different people. Similar names show while typing (FR-7.63).
 FR-10.8 [A] Quick add (`F4` or a "+" button in any picker) opens a small form without leaving the current screen.
 FR-10.9 [A] **Opening balances post.** An opening debit or credit posts as an opening entry dated the opening date: the account on its side, and ابتدائی فرق (06019999) on the other side. When all openings are entered correctly, ابتدائی فرق is 0. The trial balance shows it, so a wrong opening is visible. Changing an opening reverses the old opening posting and posts the new one.
 - [C] (Umar, 15-10-2026) Each account has at most one opening balance: one debit or one credit. Changing it reverses that account's opening posting and posts the new one, as above.
-- [C] An opening is refused on income (head 04) and expense (head 05) accounts, ابتدائی فرق, نقدی منڈی, the two پختہ کھاتہ accounts and اپنا مال (030119998, which never holds a balance, FR-12.26).
+- [C] An opening is refused on income (head 04) and expense (head 05) accounts, ابتدائی فرق, نقدی منڈی, the two پختہ کھاتہ accounts and اپنا مال (030119998, which never holds a balance, FR-12.26). From v1.6 it is also refused on بینک (01020001), a garden's account (0306) and a partner's garden, trip and fruit account (0604) [A].
 - [C] A partner's drawings account (0603) can take an opening debit. It counts as money he took (C20, C22), dated the opening date. Example: the app starts in mid-year and partner الف has already taken 2,000 this year.
 
 ### 10.3 Other masters
 
-All have add, edit and inactive, and cannot be deleted once used. Every name is entered once and filled in the other script by itself (FR-7.24).
+All have add, edit and inactive, and cannot be deleted once used. Every name is entered once and filled in the other script by itself (FR-7.24). From v1.6 there is no bank master: all money is روکڑ (Umar, 19-10-2026).
 
 | Master | Urdu | Fields | Source |
 |---|---|---|---|
@@ -890,7 +913,6 @@ All have add, edit and inactive, and cannot be deleted once used. Every name is 
 | Standard narration | تفصیل | Urdu text, English text, used in (voucher types) | [S] |
 | Expense head | خرچہ مد | Code, Urdu name, English name (always a دکان خرچہ account under 0501) | [A] |
 | Staff | عملہ | Urdu name, English name, job (منشی، اگراہی والا، مزدور), phone, linked ادھار رقم account (made by itself the first time he is lent money, FR-16.4) | [A] |
-| Bank account | بینک | Bank name, account title, account number, as typed (FR-7.25), and the Urdu and English names of the account it creates under 0102 (FR-7.24, suggested from the bank name) | [A] |
 
 ---
 
@@ -918,6 +940,8 @@ Umar: commission changes depending on the item, the seller or the buyer.
 
 Only these combinations exist. The rule screen does not offer any other.
 
+[C] Umar (21-10-2026): every buyer's bill carries two charges on each line, commission and لاگا. The seller is charged commission only, never لاگا; his other deductions are the lot charges below (labour, munshiana, phone), which are not commission. The rate of each charge comes from the rules (11.3), and can differ by item: the client's slips of 18-10-26 show, for example, 50 per نگ on سیب and about 5% plus 3 per نگ on کیلا. These rates are set as rules at setup; nothing in the code changes.
+
 | Side | Charge | Methods allowed | Applied to | Posts to |
 |---|---|---|---|---|
 | بیوپاری | کمیشن | فیصد, فی نگ, فی لاٹ | Each sale line (فی لاٹ: once per lot, see FR-11.9) | کمیشن آمدن (بیوپاری) |
@@ -936,7 +960,7 @@ Only these combinations exist. The rule screen does not offer any other.
 | 3 | Party only | رحیم, any item: 4% |
 | 4 | Item only | جاپانی پھل, any seller: 30 per نگ |
 | 5 | Item group (پھل or سبزی) | All fruit: لاگا 8 per نگ |
-| 6 | Global default for that side and charge | Seller 6%, buyer 6%; لاگا 0; مزدوری, منشیانہ, فون 0 (no default). For a lot whose seller is a الگ کھاتہ, every seller-side default is 0 (FR-16.7). |
+| 6 | Global default for that side and charge | Seller 6%, buyer 6%; لاگا 0; مزدوری, منشیانہ, فون 0 (no default). For a lot whose seller is a الگ کھاتہ, every seller-side default is 0 (FR-16.7). A trip's lot (اپنا مال) and a garden's lot use the normal defaults. |
 
 The rule date used is the date of the posting the line belongs to. The party is the seller for seller-side charges and the buyer for buyer-side charges.
 
@@ -1005,11 +1029,11 @@ Fields seen [S]: بزگر code, بزگر name, فون, منشیانہ, نقد, �
 | Field | Urdu | Type | Req | Default / rule | Source |
 |---|---|---|---|---|---|
 | Lot no | لاٹ | Auto (1, 2, 3 ...) | Yes | | [A] system |
-| Seller code | بزگر کوڈ | Seller picker (includes پختہ کھاتہ بیوپاری, اپنا مال and الگ کھاتے) | Yes | Previous lot's seller, else header زمیندار (FR-7.51) | [S] |
+| Seller code | بزگر کوڈ | Seller picker (includes پختہ کھاتہ بیوپاری, اپنا مال, الگ کھاتے and open gardens) | Yes | Previous lot's seller, else header زمیندار (FR-7.51) | [S] |
 | Seller name | بزگر | Read-only, or typed if پختہ کھاتہ | | | [S] |
 | One-time seller name | نام | Text, Urdu and English (FR-7.29) | If پختہ کھاتہ | Suggests known one-time people | [C] |
 | One-time seller phone | فون نمبر | Text | If پختہ کھاتہ | Needed to pay him later | [A] |
-| Own goods purchase | خریداری | Picker of purchases with stock left | If the seller is اپنا مال | Fills item and packing from the purchase (FR-12.26) | [C] |
+| Trip purchase | خریداری | Picker of purchases of open trips with stock left | If the seller is اپنا مال | Fills item and packing from the purchase (FR-12.26) | [C] |
 | Item | قسم مال | Picker | Yes | Seller's last item (FR-7.51) | [A] hidden |
 | Packing | پیکنگ | Picker | Yes | Seller's last packing, else the item's default | [A] hidden |
 | Mark | مارکہ | Picker | No | Seller's default, else his last مارکہ | [A] hidden |
@@ -1027,7 +1051,7 @@ Fields seen [S]: بزگر code, بزگر name, فون, منشیانہ, نقد, �
 | Seller commission | کمیشن | Read-only | | Sum of the lot's line commissions | [C] |
 | Sold qty | فروخت | Read-only | | Sum of this lot's sold qty in all postings | [A] system |
 | Written-off qty | ضائع | Read-only | | FR-12.16 | [A] system |
-| Balance qty | باقی | Read-only | | Received − sold − written off. Red if more than 0. | [A] system |
+| Balance qty | باقی | Read-only | | Received − sold − written off − taken as fruit (C16). Red if more than 0. | [A] system |
 | Lot gross | خام بکری | Read-only | | | [S] |
 | Lot net | صافی بکری | Read-only | | | [S] |
 
@@ -1112,8 +1136,8 @@ Sale part:
 | Account | Side | Amount |
 |---|---|---|
 | Buyer of each line (own account, نقدی منڈی, or پختہ کھاتہ) | بنام | Line buyer total |
-| Seller of each lot (تجارتی فروخت for an own lot, FR-12.26) | جمع (بنام if negative) | Seller credit, C8 |
-| Own lot only: اپنا مال لاگت بنام, اپنا مال سٹاک جمع | | Cost of goods sold, C21 |
+| Seller of each lot (a garden lot: the garden's account, FR-12.36) | جمع (بنام if negative) | Seller credit, C8 |
+| A trip's own lot instead: each trip partner's 0604 account (FR-12.26) | جمع (بنام if negative) | His % of the seller credit, C25 |
 | کمیشن آمدن (بیوپاری) | جمع | Σ seller commission |
 | کمیشن آمدن (گاہک) | جمع | Σ buyer commission |
 | لاگا آمدن | جمع | Σ لاگا |
@@ -1143,9 +1167,9 @@ Columns: بکری no, time, truck, seller(s), items, نگ, خام بکری, صا
 
 The old reports menu has a stock report ("مکمل سٹاک") and an Inventory Reports menu. In a commission business, "stock" means goods received but not yet sold.
 
-FR-12.14 [A] The باقی مال screen lists every lot with balance qty more than 0: date received, بکری no, seller, item, packing, received, sold, written off, balance, days waiting.
+FR-12.14 [A] The باقی مال screen lists every lot with balance qty more than 0: date received, بکری no, seller, item, packing, received, sold, written off, taken as fruit, balance, days waiting.
 FR-12.15 [A] "فروخت کریں" on a row opens a **later sale** for that lot (Section 12.9).
-FR-12.16 [A] A lot balance can be written off with a reason (خراب، واپس). This records a stock move only. It has no money effect unless a جنرل entry is also made, except for own goods (FR-12.28). A write-off can be undone the same way as an edit.
+FR-12.16 [A] A lot balance can be written off with a reason (خراب، واپس). This records a stock move only. It has no money effect unless a جنرل entry is also made. Trip goods are written off on their purchase, also with no posting (FR-12.28). A write-off can be undone the same way as an edit.
 
 ### 12.9 Postings of a بکری: first save, later sales, edits, cancel
 
@@ -1175,35 +1199,105 @@ Example (E2E-16 and E2E-16b): on 10-10-26 only 45 of رحیم's 50 کیلا are 
 
 ---
 
-### 12.10 Own goods (اپنا مال): purchase, sale, profit or loss [C]
+### 12.10 Market trips (مارکیٹ سفر) and their goods (اپنا مال) [C]
 
-Umar (14-10-2026): the work is not only commission. The firm can also buy goods itself (orange, banana, mango or any item), bring them to the shop and sell them. It makes a profit or a loss, depending on when and at what rate it sells. Commission is still taken on its own goods. Every purchase and sale is recorded.
+Umar (14-10-2026, 18-10-2026 and 19-10-2026): some partners send a person to a bigger market for the day. He buys goods (oranges, bananas or any item), and the goods are sold in our shop or in another shop. The goods belong to the partners in that trip, not to the firm. The shop still takes its normal commission when it sells them; that commission is firm income, shared by all partners as usual. The trip's own profit or loss goes only to the trip's partners, by their %, on the day the goods are sold. Trips have their own section in the main bar (FR-5.2), and every purchase belongs to a trip.
+
+| Field | Urdu | Type | Req | Rule |
+|---|---|---|---|---|
+| Trip no | سفر نمبر | Auto at save | Yes | Own series (سفر-1, سفر-2 ...) |
+| Date | تاریخ | Date | Yes | An open date |
+| Market | منڈی | Text | No | Where the goods are bought, as typed (FR-7.25) |
+| Sent | بھیجا گیا | Text | No | Who went, as typed |
+| Partners and shares | شراکت دار اور حصہ | Per active partner: % (up to 2 decimals) and the money source (دکان سے or اپنی جیب سے) | Yes | FR-12.29. Filled from the last trip; the first trip from the firm's shares [A] |
+| Note | نوٹ | Text | No | |
+
+FR-12.29 [C] **Shares and where the money comes from.** (FR-12.29 to FR-12.38 were added in v1.6.) A trip and a garden (12.11) are made with the same questions, in this order:
+1. **Shares.** Which partners are in it, and each one's %. The % of the partners in it total exactly 100%. A partner who is not in it has 0%; he still gets his normal share of the shop's commission on its goods.
+2. **Money source,** for each partner in it: دکان سے (from the shop's cash) or اپنی جیب سے (from his own pocket).
+3. **The details** (the fields above, or the garden's fields in 12.11).
+
+The shares cannot change after the first entry [A]. Each partner's source is filled on every entry and can be changed on that entry [A].
+
+FR-12.30 [C] **Money paid in.** Every payment of a trip or a garden (a purchase, a trip cost, a garden installment, a garden running cost) is split between its partners by its % (C23).
+- A part from the shop's cash posts: that partner's garden, trip and fruit account (0604) بنام, روکڑ جمع. It comes off his کل رقم at once (C22). If it would take روکڑ below 0, the save asks first (FR-6.7).
+- A part from his own pocket posts nothing. The trip or garden records it, and his کل رقم does not change.
+- A payment where every part is from a pocket posts no journal entry.
+
+Example: a purchase of 96,000 with الف 50% from the shop and ب 50% from his pocket: الف's 0604 بنام 48,000, روکڑ جمع 48,000; ب's 48,000 is recorded on the trip only.
 
 | Field | Urdu | Type | Req | Rule |
 |---|---|---|---|---|
 | Purchase no | خریداری نمبر | Auto at save | Yes | Own series (خ-1, خ-2 ...) |
-| Date | تاریخ | Date | Yes | An open date |
-| Supplier | فروخت کنندہ | Seller picker (includes پختہ کھاتہ بیوپاری) | No | Blank = bought in the market for cash |
-| One-time supplier | نام، فون نمبر | Text | If the supplier is پختہ کھاتہ | FR-13.2 |
+| Trip | سفر | Picker of open trips | Yes | Every purchase belongs to a trip |
+| Date | تاریخ | Date | Yes | An open date, not before the trip's date |
+| Supplier | فروخت کنندہ | Text | No | Who the goods were bought from, as typed. Nothing is owed to him: a purchase is paid at once [A] |
 | Item, packing | قسم مال، پیکنگ | Pickers | Yes | |
 | Quantity | تعداد | Whole number | Yes | More than 0 |
 | Weight | وزن (کلو) | Up to 3 decimals | If sold by weight | |
 | Rate | ریٹ | Money | Yes | Per نگ, or per kg for weight items |
 | Value | قیمت | Read-only | | C1 |
-| Freight, labour, other cost | کرایہ، مزدوری، دیگر خرچ | Money | No | Paid at once, in cash or bank; added to the cost |
-| Total cost | کل لاگت | Read-only | | Value + freight + labour + other cost |
-| Payment way | ادائیگی کا طریقہ | Select: ادھار (owed to the supplier), نقد, بینک | Yes | ادھار needs a supplier |
+| Freight, labour, other cost | کرایہ، مزدوری، دیگر خرچ | Money | No | Paid at once with the purchase |
+| Paid now | ادا شدہ | Read-only | | Value + freight + labour + other cost, split by the trip's % (FR-12.30) |
+| Total cost | کل لاگت | Read-only | | Paid now + its part of the trip costs (C24) |
 | Note | نوٹ | Text | No | |
 
-FR-12.24 [C] **Purchase.** Saving posts: اپنا مال سٹاک بنام the total cost; the supplier جمع the value (ادھار) or cash or bank جمع the value; cash or bank جمع the freight, labour and other cost. The supplier is paid later with a normal ادائیگی. A purchase can be cancelled with a reason only while nothing of it has been sold or written off.
+FR-12.24 [C] **Purchase.** Saving records the goods in the trip and posts the paid-now amount as in FR-12.30. Nothing posts to a stock account: the goods are not the firm's. A purchase can be cancelled with a reason only while nothing of it has been sold or written off; the cancel reverses its posting.
 
-FR-12.25 [C] **Own stock.** Each purchase is the firm's own stock until it is sold or written off: bought, sold, written off, left (نگ), cost left, days waiting. It shows in باقی مال marked اپنا مال, and on the dashboard tile اپنا مال.
+FR-12.31 [C] **Trip costs.** A cost of the whole trip (truck, food) is entered on the trip with its amount and reason. It is paid in as in FR-12.30, and spread over the trip's purchases by نگ bought (C24), so each purchase's total cost includes its part. It is spread when it is saved, over the trip's purchases that still have goods left, and its part is added to each one's cost left; a trip with no purchase with goods left takes no cost (`ERR_TRIP_NO_STOCK`) [A]. A trip cost, or a purchase that carries part of one, can be cancelled only while nothing of the purchases it touched has been sold or written off [A]. A closed trip takes no new purchase or cost. Example: truck 4,000 on a trip whose only purchase is 80 نگ for 96,000: total cost 100,000, 1,250 per نگ.
 
-FR-12.26 [C] **Selling own goods.** In بکری, a lot whose seller is اپنا مال takes its goods from one purchase with stock left. Its received qty is taken from the purchase at save and must equal the qty sold in that lot (`ERR_OWN_LOT_NOT_FULLY_SOLD`). An own lot never has a balance in باقی مال and never has a later sale; goods not sold stay in the purchase and are sold in another بکری or written off. Selling more than the purchase's stock left is refused (`ERR_QTY_EXCEEDS_LOT`). On an own lot, نقد and the پیشگی سے کاٹیں tick are hidden and stay 0, and freight starts at 0 with a warning if typed (purchase freight is already in the cost). اپنا مال is offered only in the lot seller field; every other picker (vouchers, جنرل, زمیندار, the خریداری supplier) leaves it out, so its account never holds a balance. Sale lines, the buyer side, لاگا and the live summary work exactly like any lot. Seller-side commission and lot charges are charged as for any seller, by the rules on the اپنا مال account (default 6%) [C]. The seller credit (C8) posts to تجارتی فروخت instead of a seller account. In the same posting, the cost of the goods sold (C21) posts: اپنا مال لاگت بنام, اپنا مال سٹاک جمع. Income and cost are both split between partners (FR-6.5), so each partner gets his share of the profit or loss. In an edit, an unchanged own line keeps its stored cost (FR-12.20); a reversal gives back exactly the stored cost and qty to the purchase. Example E2E-34.
+FR-12.25 [C] **Trip stock.** Each purchase is stock of its trip until it is sold or written off: bought, sold, written off, left (نگ), cost left, days waiting. It shows on the trip, and in باقی مال marked اپنا مال with its trip. The dashboard tile مارکیٹ سفر shows the open trips' نگ left and cost left.
 
-FR-12.27 [C] **Profit or loss per purchase.** Trading sales of its sales − cost of goods sold − cost written off. Shown on the purchase, in report R33 and in analytics. It can be negative (a loss), shown in red.
+FR-12.26 [C] **Selling trip goods in بکری.** In بکری, a lot whose seller is اپنا مال takes its goods from one purchase with stock left.
+- Its received qty is taken from the purchase at save and must equal the qty sold in that lot (`ERR_OWN_LOT_NOT_FULLY_SOLD`). An own lot never has a balance in باقی مال and never has a later sale; goods not sold stay in the purchase and are sold in another بکری, sold in another shop or written off. Selling more than the purchase's stock left is refused (`ERR_QTY_EXCEEDS_LOT`).
+- On an own lot, نقد and the پیشگی سے کاٹیں tick are hidden and stay 0, and freight starts at 0 with a warning if typed (the purchase's costs are already in its cost).
+- اپنا مال is offered only in the lot seller field; every other picker leaves it out, so its account never holds a balance.
+- Sale lines, the buyer side, لاگا and the live summary work like any lot. Seller-side commission and lot charges are charged as for any seller, by the rules on the اپنا مال account (default 6%) [C]. This commission is firm income, split by the firm's shares (FR-6.5).
+- The seller credit (C8) goes, in the same entry, to the trip's partners: each one's 0604 account جمع his % of it (C25). It adds to his کل رقم that day.
+- The cost of the goods sold (C21) is stored on the line and shown with the profit or loss. It is not posted.
+- In an edit, an unchanged own line keeps its stored cost (FR-12.20). A reversal gives back exactly the stored qty and cost to the purchase and reverses the partners' lines. Example E2E-34.
 
-FR-12.28 [C] **Spoiled own goods.** Writing off own stock (FR-12.16) posts the cost of the written-off qty (C21) as اپنا مال لاگت بنام, اپنا مال سٹاک جمع: a loss, split between partners. Undoing the write-off reverses it. Example E2E-34b.
+FR-12.32 [C] **Selling trip goods in another shop.** A sale in another shop is entered on the trip: date, shop (as typed), purchase, qty and the money received. The qty comes off the purchase's stock, with its cost (C21). The money posts: روکڑ بنام, and each trip partner's 0604 جمع his % of it (C25) [A: the money comes into روکڑ].
+
+FR-12.27 [C] **Profit or loss.** Per purchase: its sales money after commission (the seller credits, and money from other shops) − cost of goods sold − cost written off. Per day and per trip: the sum over its purchases. It is shown on the purchase, on the trip, in report R33 and in analytics, with each partner's %, his money in and his money back. It can be negative (a loss), shown in red. Each trip partner's کل رقم already holds his part of it: his share of the sales money minus the part he paid from the shop's cash (E2E-34b).
+
+FR-12.28 [C] **Spoiled trip goods.** Writing off trip stock (FR-12.16) takes the qty off the purchase with its cost (C21) and posts nothing: the partners have paid for the goods already, and no money comes back. The loss shows in the trip's result. Undoing the write-off gives the qty and cost back. Example E2E-34b.
+
+FR-12.33 [C] **A trip closes by itself** when it has at least one purchase and every purchase has nothing left (all sold or written off). A trip with no purchase yet stays open. Goods left over carry to the next day, and the trip stays open. A closed trip opens again if a sale or a write-off of it is reversed. At closing, each trip partner's statement gets a note line with the trip's total cost, sales money, result, his % and his part of the result (FR-17.10).
+
+### 12.11 Gardens (باغات) [C]
+
+Umar (18-10-2026 and 19-10-2026): some partners rent a garden (باغ) for a season. They pay the rent (ٹھیکہ) in installments, and pay its running costs. The fruit comes to our shop and is sold in بکری with the normal commission, or is sold in another shop. When the goods stop coming, the garden is closed, and its money goes to its partners by their %. Gardens have their own section in the main bar (FR-5.2).
+
+| Field | Urdu | Type | Req | Rule |
+|---|---|---|---|---|
+| Garden no | باغ نمبر | Auto at save | Yes | Own series (باغ-1, باغ-2 ...) |
+| Name | نام | Text, Urdu and English (FR-7.24) | Yes | |
+| Date | تاریخ | Date | Yes | An open date |
+| Item | قسم مال | Picker | No | The main fruit |
+| Rent | کل ٹھیکہ | Money | Yes | The full price of the garden for the season |
+| Paid now | پہلی قسط | Money | No | Saved as the first installment (FR-12.35) |
+| Season end | سیزن ختم | Date | No | |
+| Partners and shares | شراکت دار اور حصہ | As for a trip | Yes | FR-12.29. Filled from the firm's shares [A] |
+| Note | نوٹ | Text | No | |
+
+FR-12.34 [C] **Garden made.** A garden is made with the questions of FR-12.29. Saving makes its own account under control 0306 (FR-10.4). The rent still due (rent − installments paid) is shown on the garden. It is owed by the garden's partners, not by the shop, so nothing posts for it.
+
+FR-12.35 [C] **Installments and running costs.** An installment (قسط) or a running cost (labour, spray, transport) is entered on the garden with its date, amount and reason, and paid in as in FR-12.30: split by the garden's %, with each partner's source. Example: rent 10,00,000; الف 60% from the shop, ب 40% from his own pocket. An installment of 6,00,000: الف's 3,60,000 comes from the shop's cash and off his کل رقم; ب pays his 2,40,000 himself, and his total does not change.
+
+FR-12.36 [C] **Sales.**
+- In our shop: a بکری lot can have an open garden as its seller. Seller-side commission and lot charges follow the rules as for any seller (default 6%); this commission is firm income, split by the firm's shares. The seller credit (C8) goes to the garden's account جمع. On a garden lot, نقد and the پیشگی سے کاٹیں tick are hidden and stay 0 [A].
+- In another shop: date, shop (as typed), qty and the money received. The money posts: روکڑ بنام, the garden's account جمع [A: the money comes into روکڑ].
+
+FR-12.37 [C] **Running balance.** The garden screen shows, for every date, its money in (sales money after commission) minus everything paid (installments and costs, from the shop and from pockets), and the rent still due. It starts in minus. Example: rent 50,000 with 30,000 paid: −30,000.
+
+FR-12.38 [C] **Closing.** When the goods stop coming, the Owner closes the garden, after the confirm box of FR-7.8.
+- The garden's account balance (all its money in) goes to its partners by its % (C26): the garden's account بنام, each partner's 0604 جمع. This gives each partner back what he paid, plus or minus his share of the profit or loss. If the balance is بنام (charges were more than sales), it is split the same way and posted on the other sides (C11).
+- The garden's account is then 0, and the garden takes no more entries or lots. A lot of that garden that still has goods left takes no later sale and gives no fruit (FR-16.11) while the garden is closed (`ERR_GARDEN_CLOSED`) [A].
+- Each partner's statement gets the closing line: garden, date, total cost, total sales money, profit or loss, his %, his part of the profit or loss and his money back (FR-17.10).
+- Closing can be undone by reversal while its date is open. Until it is undone, a بکری posting with a lot of that garden cannot be edited or cancelled [A].
+
+Example (E2E-40): money in 66,400, cost 55,000, profit 11,400. الف (60%, paid 33,000 from the shop) gets 39,840, so his total changes by −33,000 + 39,840 = +6,840 = 60% of 11,400. ب (40%, paid 22,000 himself) gets 26,560 = his 22,000 back + 4,560 (40% of 11,400).
 
 ## 13. Module: پختہ کھاتہ (one-time parties) [C]
 
@@ -1247,12 +1341,11 @@ FR-14.2 [A] A transporter is paid with a normal ادائیگی from کرایہ �
 | پختہ کھاتہ person | نام | Picker of open persons | If the account is a پختہ کھاتہ | |
 | Current balance | موجودہ بقایا | Read-only | | Shown as soon as the account is picked |
 | Amount | رقم | Money | Yes | More than 0 |
-| Mode | ذریعہ | Select: نقد، بینک، چیک | Yes | Default نقد |
-| Bank account | بینک | Picker | If بینک or چیک | The money posts to this bank account at once [A] |
-| Cheque no and date | چیک نمبر، تاریخ | Text, date | If چیک | Kept on the voucher and shown in the ledger |
 | Narration | تفصیل | Text + standard narration | No | |
 | New balance | نیا بقایا | Read-only | | After this voucher |
 | System fields | | Auto | | Created/updated by and at, status, cancel reason |
+
+There is no mode field: all money is روکڑ, the shop's one cash account, in the drawer or in the bank (Umar, 19-10-2026). There is no bank account and no cheque.
 
 FR-15.1 [A] Several vouchers can be entered one after another in a list, with a running total, and saved together (each is its own posting event).
 FR-15.2 [A] Print a receipt slip with the amount in words (FR-19.7).
@@ -1265,7 +1358,7 @@ Umar: the buyer took goods but did not pay. The firm collects later (اگراہ�
 Extra field: collector (اگراہی والا) [A].
 
 - Picker shows buyers first, oldest due at the top. After a buyer is picked, his open bills show (FR-7.58).
-- Effect: cash (or bank) بنام, buyer جمع.
+- Effect: روکڑ بنام, buyer جمع.
 - FR-15.4 [A] **Bill matching (oldest first).** A buyer's "bills" are every debit posted to his account (or to his person key in پختہ کھاتہ): sale line totals, opening debits, cash lent (FR-15.11) and جنرل debits. A receipt settles the oldest open bills first. This keeps aging correct.
 - FR-15.5 [A] If a buyer pays more than he owes, the extra stays as his credit and settles his next bills automatically.
 - FR-15.6 [A] "اگراہی فہرست" button: today's planned collections by collector and city, printable.
@@ -1274,10 +1367,10 @@ Extra field: collector (اگراہی والا) [A].
 ### 15.3 ادائیگی (payment) [C]
 
 - Picker shows sellers first, with payable balance. After a seller is picked, his payable postings show (FR-7.59).
-- Effect: account بنام, cash (or bank) جمع.
+- Effect: account بنام, روکڑ جمع.
 - FR-15.7 [A] If the payment is more than the open payable (FR-7.59), a warning shows "یہ رقم بقایا سے زیادہ ہے". The user can still save. The extra shows as the seller owing the firm ("بیوپاری کے ذمے" list). It is not an advance; advances are only made with پیشگی.
 - Example: pay رحیم 4,316. Balance 0.
-- FR-15.11 [C] **Cash lent to a buyer.** An ادائیگی to a buyer is cash lent to him (نقد ادھار). A reason is required. It posts buyer بنام, cash (or bank) جمع. It is one of his bills (FR-15.4): it ages, shows in his اگراہی and is collected with a normal وصولی. His ledger shows it as "نقد ادھار" with the reason. Example E2E-32.
+- FR-15.11 [C] **Cash lent to a buyer.** An ادائیگی to a buyer is cash lent to him (نقد ادھار). A reason is required. It posts buyer بنام, روکڑ جمع. It is one of his bills (FR-15.4): it ages, shows in his اگراہی and is collected with a normal وصولی. His ledger shows it as "نقد ادھار" with the reason. Example E2E-32.
 
 ### 15.4 پیشگی کھاتہ (advance to seller) [C]
 
@@ -1285,11 +1378,11 @@ Umar: the seller takes money in advance, before his goods are sold.
 
 Extra field: expected goods or season (text) [A].
 
-- Effect: seller بنام, cash (or bank) جمع. The voucher is an advance.
+- Effect: seller بنام, روکڑ جمع. The voucher is an advance.
 - FR-15.8 [A] **Advance matching (oldest first).** A seller's advances are his پیشگی vouchers and any opening debit marked as an advance (FR-10.2). Each later seller credit from a بکری posting adjusts his open advances, oldest first, when the lot's "پیشگی سے کاٹیں" tick is on (FR-12.23). A seller's وصولی that returns advance money also adjusts them (FR-15.12). The پیشگی report shows given, returned, adjusted and open; the dashboard tile shows the open total.
 - FR-15.9 [A] If a seller's advances are more than his sales, the rest stays as his open advance (پیشگی باقی) and his balance shows as بنام. The "بیوپاری کے ذمے" list shows only what a seller owes beyond his open advances (for example an overpayment, FR-15.7), so nothing is counted twice.
 - Example: رحیم took 15,000 on 01-09-26. His بکری on 10-10-26 credits 24,316, and he got 5,000 نقد. Advance adjusted 15,000 (fully). Payable 24,316 − 5,000 − 15,000 = 4,316. With the tick off (E2E-28): payable 24,316 − 5,000 = 19,316, advance open 15,000.
-- FR-15.12 [C] **A seller returns advance money.** A وصولی from a seller posts cash (or bank) بنام, seller جمع. It adjusts his open advances, oldest first, then settles what he owes the firm ("بیوپاری کے ذمے"). An amount more than both together is refused (`ERR_RETURN_EXCEEDS_OPEN`, with the open amount). Example E2E-31.
+- FR-15.12 [C] **A seller returns advance money.** A وصولی from a seller posts روکڑ بنام, seller جمع. It adjusts his open advances, oldest first, then settles what he owes the firm ("بیوپاری کے ذمے"). An amount more than both together is refused (`ERR_RETURN_EXCEEDS_OPEN`, with the open amount). Example E2E-31.
 
 FR-15.10 [A] وصولی, ادائیگی and پیشگی are one voucher screen with a type list at the top (FR-7.67). The side menu items, `Alt+V`, `Alt+A` and `Alt+P` open it with that type already chosen. The same screen is also reachable from the روکڑ area. It is one screen, not copies. Each type keeps its own helpers (open bills, payables, open advances), its own number series and its own posting.
 
@@ -1297,13 +1390,13 @@ FR-15.10 [A] وصولی, ادائیگی and پیشگی are one voucher screen wi
 
 ## 16. Module: روکڑ (Cash book, expenses, journal)
 
-The روکڑ area shows: روکڑ بک, خرچہ (دکان خرچہ and ذاتی خرچہ on one screen, 16.2), ادھار رقم, الگ کھاتہ, جنرل, and the voucher screen for وصولی, ادائیگی and پیشگی (FR-15.10). The old software's four-part روکڑ menu (وصولی, پیشگی, ادائیگی, جنرل) is fully covered [S].
+The روکڑ area shows: روکڑ بک, خرچہ (دکان خرچہ and ذاتی خرچہ on one screen, 16.2), پھل (16.7), ادھار رقم, الگ کھاتہ, جنرل, and the voucher screen for وصولی, ادائیگی and پیشگی (FR-15.10). The old software's four-part روکڑ menu (وصولی, پیشگی, ادائیگی, جنرل) is fully covered [S].
 
 ### 16.1 روکڑ بک (cash book)
 
 Opening cash, every cash in and out from all modules, closing cash. Filters: date range.
 
-FR-16.1 [A] Cash count box (کیش گنتی): the munshi types the counted cash and the app shows the difference from the book. It does not post anything.
+FR-16.1 [C] **No cash count.** Umar (19-10-2026): the روکڑ بک shows the book only; there is no box to type the counted cash. روکڑ is the shop's one cash account, in the drawer or in the bank.
 
 ### 16.2 خرچہ: shop expense and a partner's personal spending, one screen [C]
 
@@ -1316,14 +1409,13 @@ Umar (15-10-2026): one screen for all spending. A list at the top says what it i
 | Expense head | خرچہ مد | Picker | دکان خرچہ only |
 | Partner | شراکت دار | Picker | ذاتی خرچہ and واپسی only |
 | Amount | رقم | Money | Yes |
-| Mode | ذریعہ | نقد، بینک | Yes |
 | Paid to | ادا کیا | Text | No. دکان خرچہ only |
 | Reason | وجہ | Text | Yes for ذاتی خرچہ |
 | Return by | واپسی کی تاریخ | Date | No. ذاتی خرچہ only |
 | Taken by | لینے والا | Text | No. ذاتی خرچہ only. The person who took the cash, if not the partner himself (for example his son) |
 | Narration | تفصیل | Text | No |
 
-Effect of دکان خرچہ: expense head بنام, cash (or bank) جمع. Every shop expense is split between partners by their shares on that date (FR-6.5). The effect of ذاتی خرچہ and its واپسی is in 16.3.
+Effect of دکان خرچہ: expense head بنام, روکڑ جمع. Every shop expense is split between partners by their shares on that date (FR-6.5). The effect of ذاتی خرچہ and its واپسی is in 16.3.
 
 FR-16.8 [C] **The screen shows the effect before save.** (Numbered after FR-16.7 because it was added in v1.4.) While the entry is typed, the screen shows what the save will do. The backend works it out with the same function as the save (Code Standards B5), so the screen and the books never differ.
 - دکان خرچہ: each partner's share (C11). Example: بجلی 3,000 shows الف 1,200, ب 900, ج 900.
@@ -1335,13 +1427,13 @@ Below the form: for دکان خرچہ, the day's shop expenses with their heads;
 
 Umar (11-10-2026): a partner taking money and giving it back is recorded with who, date, amount and reason. Both are types on the خرچہ screen (16.2, FR-7.67).
 
-FR-16.2 [C] **Effect.** Taken: that partner's drawings account بنام, cash (or bank) جمع. Returned: cash (or bank) بنام, drawings جمع. Never split. Below the form, the screen lists that partner's money taken: date, amount, reason, taken by, return by, returned, still open. Returns settle his oldest open amounts first. This is worked out when shown; nothing extra is saved. A return more than his open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`, with the open amount). Each entry gets a number in its own series, as in 15.1. An amount past its return-by date shows in the attention list (FR-7.44).
+FR-16.2 [C] **Effect.** Taken: that partner's drawings account بنام, روکڑ جمع. Returned: روکڑ بنام, drawings جمع. Never split. Below the form, the screen lists that partner's money taken: date, amount, reason, taken by, return by, returned, still open. Returns settle his oldest open amounts first. This is worked out when shown; nothing extra is saved. A return more than his open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`, with the open amount). Each entry gets a number in its own series, as in 15.1. An amount past its return-by date shows in the attention list (FR-7.44).
 
 FR-16.3 [C] **Partner's net.** For any period: net taken = taken − returned; خالص (net) = profit share (C12) − net taken (C20). It can be negative. Example E2E-29: on 10-10-26 الف has profit share 996 and took 2,000, so خالص is −1,004; after he returns 2,000 on 11-10-26, net taken is 0 and خالص is 996.
 
 ### 16.4 جنرل (journal) [S]
 
-A list of lines: account, بنام, جمع, narration (and person for پختہ کھاتہ lines). Cannot save unless totals match. Used for corrections, transfers, bank deposits, goods returns. Lines on income or shop expense accounts write partner shares (FR-6.5); lines on buyer accounts take part in bill matching (FR-15.4). [C] A جنرل line on a seller account never adjusts his advances (Umar, 15-10-2026): advances are adjusted only by بکری credits and the seller's وصولی (FR-15.8). A جنرل debit on a seller settles his payables, and a جنرل credit on a seller is a payable posting (FR-7.59). Example: رحیم has 15,000 of advance open and a جنرل correction credits him 1,000. His advance stays 15,000 open, and the 1,000 is payable to him.
+A list of lines: account, بنام, جمع, narration (and person for پختہ کھاتہ lines). Cannot save unless totals match. Used for corrections, transfers and goods returns. Lines on income or shop expense accounts write partner shares (FR-6.5); lines on buyer accounts take part in bill matching (FR-15.4). [C] A جنرل line on a seller account never adjusts his advances (Umar, 15-10-2026): advances are adjusted only by بکری credits and the seller's وصولی (FR-15.8). A جنرل debit on a seller settles his payables, and a جنرل credit on a seller is a payable posting (FR-7.59). Example: رحیم has 15,000 of advance open and a جنرل correction credits him 1,000. His advance stays 15,000 open, and the 1,000 is payable to him.
 
 ### 16.5 ادھار رقم (money lent to staff and others) [C]
 
@@ -1353,13 +1445,13 @@ Umar (11-10-2026): a group for staff and anyone else who borrows money from the 
 | Date | تاریخ | Date | Yes |
 | Person | نام | Picker of ادھار رقم accounts (control 0103). `F4` adds a person: Urdu and English name, phone, staff record if he is staff. | Yes |
 | Amount | رقم | Money | Yes |
-| Mode | ذریعہ | نقد، بینک; for واپسی also تنخواہ سے کٹوتی (deducted from salary) | Yes |
+| Mode | ذریعہ | واپسی only: روکڑ or تنخواہ سے کٹوتی (deducted from salary) | For واپسی |
 | Salary head | خرچہ مد | Expense head picker, default تنخواہ | If تنخواہ سے کٹوتی |
 | Reason | وجہ | Text | Yes, when lent |
 | Return by | واپسی کی تاریخ | Date | No (lent only) |
 | Narration | تفصیل | Text | No |
 
-FR-16.4 [C] **Effect.** Lent: the person's ادھار رقم account بنام, cash (or bank) جمع. Returned in cash or bank: cash (or bank) بنام, person جمع. Deducted from salary: the salary head بنام, person جمع, and no cash moves. That part of the salary is a shop expense, so it is split between partners (FR-6.5); the rest of the salary is paid as a normal دکان خرچہ. Below the form, the screen lists the person's loans: date, amount, reason, return by, returned, still open, days past the return-by date. A return or salary deduction more than the open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`, with the open amount). Each entry gets a number in its own series, as in 15.1.
+FR-16.4 [C] **Effect.** Lent: the person's ادھار رقم account بنام, روکڑ جمع. Returned in cash: روکڑ بنام, person جمع. Deducted from salary: the salary head بنام, person جمع, and no cash moves. That part of the salary is a shop expense, so it is split between partners (FR-6.5); the rest of the salary is paid as a normal دکان خرچہ. Below the form, the screen lists the person's loans: date, amount, reason, return by, returned, still open, days past the return-by date. A return or salary deduction more than the open amount is refused (`ERR_RETURN_EXCEEDS_OPEN`, with the open amount). Each entry gets a number in its own series, as in 15.1.
 
 FR-16.5 [C] **Open amounts.** Returns settle the person's oldest open loans first. This is worked out when shown; nothing extra is saved. A loan past its return-by date shows in the attention list (FR-7.44). Report R32 lists everyone. Example E2E-30.
 
@@ -1367,7 +1459,7 @@ FR-16.9 [C] **Return-by date.** (Numbered after FR-16.8 because it was added in 
 
 ### 16.6 الگ کھاتہ (separate khata) [C]
 
-Umar (15-10-2026): sometimes money has nothing to do with the partners, commission or profit, for example a garden (باغ) khata. Money given out for it is written as minus, money coming back is plus, and goods from it sold in the shop add to it. Every entry has its date and reason.
+Umar (15-10-2026): sometimes money has nothing to do with the partners, commission or profit, for example a family khata (خاندانی کھاتہ). A garden rented by partners is not a الگ کھاتہ: it has its own section (12.11). Money given out for it is written as minus, money coming back is plus, and goods from it sold in the shop add to it. Every entry has its date and reason.
 
 | Field | Urdu | Type | Req |
 |---|---|---|---|
@@ -1375,15 +1467,46 @@ Umar (15-10-2026): sometimes money has nothing to do with the partners, commissi
 | Date | تاریخ | Date | Yes |
 | Khata | کھاتہ | Picker of الگ کھاتے (control 0305). `F4` adds one: Urdu and English name, note. | Yes |
 | Amount | رقم | Money | Yes |
-| Mode | ذریعہ | نقد، بینک | Yes |
 | Reason | وجہ | Text | Yes |
 | Narration | تفصیل | Text | No |
 
-FR-16.6 [C] **Effect.** Paid out: the khata بنام, cash (or bank) جمع. Received: cash (or bank) بنام, the khata جمع. A الگ کھاتہ is never income or expense, is never split, and is never part of any partner's total (C22). Its balance is shown with a sign from the khata's side: plus = the shop holds money for it, minus = it has taken more than it brought. Below the form, the screen lists the khata's entries in date order with reason, amount and running balance; it prints for any date range (FR-19.10). Each entry gets a number in its own series, as in 15.1.
+FR-16.6 [C] **Effect.** Paid out: the khata بنام, روکڑ جمع. Received: روکڑ بنام, the khata جمع. A الگ کھاتہ is never income or expense, is never split, and is never part of any partner's total (C22). Its balance is shown with a sign from the khata's side: plus = the shop holds money for it, minus = it has taken more than it brought. Below the form, the screen lists the khata's entries in date order with reason, amount and running balance; it prints for any date range (FR-19.10). Each entry gets a number in its own series, as in 15.1.
 
-FR-16.7 [C] **Selling its goods.** A بکری lot can have a الگ کھاتہ as its seller (for example the garden's کیلا). Its seller credit (C8) goes to that khata as plus. Seller-side charges (commission, labour, munshiana, phone) are 0 by default; a rule on that khata can set them. The buyer side (buyer commission, لاگا) is charged to the buyer as on any line [A]. Example E2E-38: the garden khata pays out 10,000 (−10,000), gets 4,000 back (−6,000), then sells 10 پیٹی کیلا at 900: 9,000 to the khata, so it shows +3,000.
+FR-16.7 [C] **Selling its goods.** A بکری lot can have a الگ کھاتہ as its seller (for example کیلا from the family's land). Its seller credit (C8) goes to that khata as plus. Seller-side charges (commission, labour, munshiana, phone) are 0 by default; a rule on that khata can set them. The buyer side (buyer commission, لاگا) is charged to the buyer as on any line [A]. Example E2E-38: the family khata pays out 10,000 (−10,000), gets 4,000 back (−6,000), then sells 10 پیٹی کیلا at 900: 9,000 to the khata, so it shows +3,000.
 
 ---
+
+### 16.7 پھل: fruit taken by partners [C]
+
+Umar (19-10-2026): partners take fruit home, and fruit is served to the shop's guests. It is tracked by item and quantity, not only by amount, so it has its own screen in the خرچہ area (a tab next to خرچہ).
+
+| Field | Urdu | Type | Req |
+|---|---|---|---|
+| For | کس کے لیے | Select: one partner (گھر کے لیے), or مہمان (the shop's guests, shared) | Yes |
+| Date | تاریخ | Date | Yes |
+| Source | کہاں سے | Select: اپنی دکان (from a lot in باقی مال), دوسری دکان (another commission agent's shop) | Yes |
+| Lot | لاٹ | Picker of lots with balance | If اپنی دکان |
+| Agent | آڑھتی | Seller picker | If دوسری دکان |
+| Item, packing | قسم مال، پیکنگ | From the lot, or pickers | Yes |
+| Quantity | تعداد | Whole number | Yes |
+| Weight | وزن (کلو) | Up to 3 decimals | If sold by weight |
+| Rate | ریٹ | Money | Yes. Typed; the last rate of the item shows as a hint only (FR-7.53) |
+| Value | قیمت | Read-only | C1, worked out by the backend |
+| Note | نوٹ | Text | No |
+
+FR-16.10 [C] **Effect.** (FR-16.10 to FR-16.12 were added in v1.6.)
+- For one partner: his garden, trip and fruit account (0604) بنام the value. It comes off his کل رقم only; the other partners are not affected.
+- For the shop's guests: the value is split equally between the partners active on that date (C27), not by the commission shares. Each one's 0604 بنام his part.
+- Fruit is never a دکان خرچہ and is never split by the firm's shares. Tea and food for guests stay a دکان خرچہ head (مہمان نوازی, E55).
+
+Example: الف takes 2 پیٹی مالٹا at 1,400: value 2,800, his total −2,800. Guest fruit of 3,000 with three partners: 1,000 each; with two partners: 1,500 each.
+
+FR-16.11 [C] **Source.**
+- From our shop: the fruit comes from a lot with balance. The lot's balance goes down by the qty (C16), and the lot's seller is credited the value (the seller's account, or the پختہ person, or the garden), with no commission [A]. The credit is a payable posting (FR-7.59) and never adjusts an advance. A qty more than the lot's balance is refused (`ERR_QTY_EXCEEDS_LOT`). Trip goods are not offered: they belong to the trip's partners, not to a lot [A].
+- From another commission agent's shop: the agent (kept as a بیوپاری account) is credited the value. The shop pays him later with a normal ادائیگی.
+- No cash moves on the پھل screen.
+
+FR-16.12 [C] **List and print.** Below the form, the screen lists fruit taken: date, for whom, item, qty, rate, value and source. It filters by partner, item and date (one day, a month or a year), and prints and exports (FR-19.10, R37). Each partner's statement shows a line for each, for example "19-10-26 گھر کے لیے پھل: مالٹا 2 پیٹی @ 1,400 = 2,800" (FR-17.10). Each entry has a number in its own series (پھل-1, پھل-2 ...). An entry is edited or cancelled by reversal while its date is open, as in FR-15.3.
 
 ## 17. Module: شراکت دار (Partners and income split) [C]
 
@@ -1396,6 +1519,7 @@ Umar: there are multiple partners. As each sale is done, the commission is divid
 | Partner name | نام | Text, Urdu and English (FR-7.24) | Yes |
 | Capital account | سرمایہ کھاتہ | Auto-created | Yes |
 | Drawings account | ذاتی خرچہ کھاتہ | Auto-created | Yes |
+| Gardens, trips and fruit account | باغ، سفر اور پھل کھاتہ | Auto-created (0604, v1.6) | Yes |
 | Share % | حصہ فیصد | Number, up to 2 decimals | Yes |
 | Opening capital | ابتدائی سرمایہ | Money | No. Posts as the opening of his capital account (FR-10.9). Use either partner opening capitals or the firm's ابتدائی سرمایہ 06010001, not both, or the same money is counted twice. The worked day uses 06010001 only. |
 | Effective from | تاریخ سے | Date | Yes |
@@ -1403,7 +1527,7 @@ Umar: there are multiple partners. As each sale is done, the commission is divid
 
 FR-17.1 [C] Shares of active partners must total exactly 100% for every date. The screen shows the running total and will not save otherwise.
 FR-17.2 [A] A share change takes effect from its effective date, which must be today or later (no back-dating). Share history is kept. Postings already saved keep their split.
-FR-17.3 [A] **What is shared.** All income accounts (head 04) are shared. All shop expense accounts (head 05) are split. Payables (مزدوری, کرایہ, کرایہ سٹور, منشیانہ) are not income and are not shared. So no income or expense is ever left without an owner. Where this document says "shop expense account" for partner shares and month close (FR-6.5, FR-17.4, FR-17.6), it means every head 05 account: the دکان خرچہ heads (0501) and اپنا مال لاگت (0502). Screens and reports about دکان خرچہ (16.2, the آج کا خرچہ tile, R29) show 0501 heads only.
+FR-17.3 [A] **What is shared.** All income accounts (head 04) are shared. All shop expense accounts (head 05) are split. Payables (مزدوری, کرایہ, کرایہ سٹور, منشیانہ) are not income and are not shared. So no income or expense is ever left without an owner. Where this document says "shop expense account" for partner shares and month close (FR-6.5, FR-17.4, FR-17.6), it means every head 05 account; from v1.6 these are the دکان خرچہ heads (0501) only. A garden's or trip's money is never income or a shop expense: it goes only to that garden's or trip's partners (FR-12.30).
 
 ### 17.2 Live split
 
@@ -1427,7 +1551,10 @@ FR-17.6 [A] **Month close (مہینہ بند).** The Owner presses it for a fini
 | خالص | This month: منافع حصہ − (ذاتی خرچہ − واپسی), C20 |
 | سرمایہ لگایا | Capital put in this month, less capital taken back (FR-17.7) |
 | سرمایہ بقایا | Capital balance |
+| باغ، سفر اور پھل | This month's net from his gardens, trips and fruit taken (FR-17.10) |
 | کل رقم | Partner total (C22, FR-17.9): one number for everything he has in the firm |
+
+Under each partner's card: the open gardens and trips he is in, each with his %, his money in so far (from the shop and from his pocket), his money back so far, and the running balance (garden) or result (trip). Each opens its screen (Umar, 18-10-2026).
 
 **Partner statement** (R31, per partner, date range): a dated record of every movement (FR-17.9), with the running کل رقم, printable.
 
@@ -1443,23 +1570,28 @@ Umar (14-10-2026): to start and run the shop, the partners put their own money i
 | Date | تاریخ | Date | Yes |
 | Partner | شراکت دار | Picker | Yes |
 | Amount | رقم | Money | Yes |
-| Mode | ذریعہ | نقد، بینک | Yes |
 | Narration | تفصیل | Text | No |
 
-FR-17.7 [C] **Effect.** Invested: cash (or bank) بنام, that partner's capital account (0602) جمع. Taken back: capital account بنام, cash (or bank) جمع. Capital is never income or expense and is never split. Below the form, the screen shows the partner's capital history and balance. Each entry gets a number in its own series, as in 15.1. Example E2E-35.
+FR-17.7 [C] **Effect.** Invested: روکڑ بنام, that partner's capital account (0602) جمع. Taken back: capital account بنام, روکڑ جمع. Capital is never income or expense and is never split. Below the form, the screen shows the partner's capital history and balance. Each entry gets a number in its own series, as in 15.1. Example E2E-35.
 
 FR-17.8 [A] **Capital and shares.** Capital does not change profit shares; shares stay as set in 17.1. Taking back more than the capital balance shows a warning, and can still be saved. Capital taken back is not the same as ذاتی خرچہ: ذاتی خرچہ is money taken for himself out of his profit share (it lowers خالص); capital taken back is his own investment returned. Example: ب invests 50,000 on 11-10-26 and takes 10,000 back on 20-10-26; his capital is 40,000 (before any month-close profit) and his خالص does not change.
 
-FR-17.9 [C] **Partner total (کل رقم) and its record.** Umar (15-10-2026): a partner owns his investment, his share of the commission and his share of the profit, so the app shows them together as one number, and keeps a dated record of everything that made it. کل رقم (C22) = opening capital + capital invested − capital taken back + all his income shares (commission, لاگا, فون, ریٹ فرق, trading sales) − all his expense shares (shop expenses, cost of own goods) − money taken (ذاتی خرچہ) + money returned. It is live: it changes with every posting, with no need to wait for month close. Month close (FR-17.6) only moves amounts between his accounts, so it never changes کل رقم.
+FR-17.9 [C] **Partner total (کل رقم) and its record.** Umar (15-10-2026): a partner owns his investment, his share of the commission and his share of the profit, so the app shows them together as one number, and keeps a dated record of everything that made it. کل رقم (C22) = opening capital + capital invested − capital taken back + all his income shares (commission, لاگا, فون, ریٹ فرق) − all his expense shares (shop expenses) − money taken (ذاتی خرچہ) + money returned + his garden, trip and fruit account (money credited from gardens and trips, less his parts paid from the shop's cash and the fruit he took, v1.6). It is live: it changes with every posting, with no need to wait for month close. Month close (FR-17.6) only moves amounts between his accounts, so it never changes کل رقم.
 - The partner statement (R31) lists every movement in date order, one line each, with its date, what it was and where it came from, its amount and the running کل رقم:
   - each posting's income share, with its source (for example "10-10-26 بکری 1: کمیشن، لاگا، فون 1,184");
   - each expense share (for example "10-10-26 دکان خرچہ بجلی −900");
   - capital invested and taken back;
   - money taken (with its reason) and returned;
+  - garden, trip and fruit lines (FR-17.10);
   - month close, shown as a note that moves profit into capital and leaves the total the same.
 - Every line comes from posted records (share rows, journal lines, vouchers), so nothing is typed twice and the record can never disagree with the books.
-- Check that always holds: Σ کل رقم of all partners + ابتدائی سرمایہ 06010001 = the firm's equity in the trial balance (capital accounts + income − expenses − drawings).
+- Check that always holds: Σ کل رقم of all partners + ابتدائی سرمایہ 06010001 = the firm's equity in the trial balance (capital accounts, including the garden, trip and fruit accounts, + income − expenses − drawings).
 - Example E2E-37: after Events 1 to 5 and ب's 50,000 on 11-10-26: الف 2,196 − 1,200 − 2,000 = −1,004; ب 50,000 + 1,646 − 900 = 50,746; ج 1,646 − 900 = 746. Σ 50,488 + 65,000 = 115,488 = equity in the books.
+
+FR-17.10 [C] **Statement lines.** (Added in v1.6.) Umar (18-10-2026 and 19-10-2026): every amount that reaches a partner has its own line in his statement (R31), made from posted records and never typed by hand: date, heading (where it came from), reason, amount and the running کل رقم.
+- Headings: بکری (his share of the commission, with the بکری number), خرچہ (his expense share, or money taken with its reason), سرمایہ, باغ (his part paid from the shop's cash; the closing), سفر (his part paid from the shop's cash; the sales money credited to him), پھل (item, qty and rate).
+- Note lines show no amount and leave the running total the same: a month close (FR-17.9), a trip's closing (FR-12.33) and a write-off of trip goods (FR-12.28).
+- Examples: "10-10-26 سفر-1: خریداری خ-1، دکان سے −4,160"; "10-10-26 سفر-1، بکری 1: مالٹا 15 پیٹی، فروخت 8,460، لاگت 7,800، منافع 660، آپ کا 40%: +3,384"; "13-10-26 باغ-1 شاہ پور باغ بند: لاگت 55,000، فروخت 66,400، منافع 11,400، آپ کا 60%: 6,840، واپسی +39,840".
 
 ---
 
@@ -1478,11 +1610,14 @@ Umar: filter by month or year, and see how much commission we got by item (for e
 | Buyer | گاہک | All, or pick (پختہ کھاتہ persons included) |
 | City | شہر | All, or pick |
 | اڈا | اڈا | All, or pick |
-| Partner | شراکت دار | Views F and G only |
+| Garden | باغ | All, or pick (v1.6) |
+| Trip | سفر | All, or pick (v1.6) |
+| Goods | مال | All, consigned goods, trip goods, garden goods (v1.6) |
+| Partner | شراکت دار | Views F, G, I, J and K only |
 | Commission side | جانب | Both, seller only, buyer only |
 | Compare | موازنہ | Off, previous period, same period last year |
 
-FR-18.1 [C] In views A to E and H, item, seller, buyer, city, اڈا, side and period combine freely. Example: "کیلا, seller رحیم, monthly, 2026". The partner filter applies to views F and G, which work on periods (FR-17.5).
+FR-18.1 [C] In views A to E and H, item, seller, buyer, city, اڈا, garden, trip, goods, side and period combine freely. Example: "کیلا, seller رحیم, monthly, 2026". The partner filter applies to views F, G, I, J and K, which work on periods (FR-17.5).
 
 ### 18.2 Views
 
@@ -1493,9 +1628,12 @@ FR-18.1 [C] In views A to E and H, item, seller, buyer, city, اڈا, side and p
 | C. By buyer | گاہک وار | Buyer | نگ, purchase value, buyer comm, لاگا, dues now, avg days to pay |
 | D. Item × month | قسم مال × مہینہ | Item | One column per month, total commission in each |
 | E. Seller × item | بیوپاری × قسم مال | Seller | One column per item |
-| F. Partner | شراکت دار وار | Partner | Income share, expense share, profit share per period |
-| G. Trend | رجحان | Period | خام بکری, commission, shared income, cost of own goods, shop expenses, profit (chart) |
+| F. Partner | شراکت دار وار | Partner | Income share, expense share, profit share per period; and side by side (v1.6): gardens, trips, fruit taken and his net change |
+| G. Trend | رجحان | Period | خام بکری, commission, shared income, shop expenses, profit, gardens' and trips' results (chart) |
 | H. Top 10 | سرفہرست | Top items, sellers, buyers by total commission | |
+| I. Gardens | باغات | Garden | Paid (shop and pockets), sales money (our shop, other shops), commission on its goods, running or closed result, each partner's % and result |
+| J. Trips | مارکیٹ سفر | Trip, purchase or item, day | Bought (نگ, cost), sold (نگ, sales money), commission on its goods, written off, left, result, each partner's % and result |
+| K. Fruit taken | پھل | Partner or guests, item | نگ, value, source; by day, month or year |
 
 Definitions: "total comm" = seller comm + buyer comm + لاگا. "avg rate" = خام بکری ÷ نگ (C18). "% of all commission" = row total comm ÷ grand total comm × 100, 2 decimals. "avg days to pay" = average days from bill date to the date the bill was fully paid, for bills fully paid in the period; empty if none.
 
@@ -1503,10 +1641,11 @@ Definitions: "total comm" = seller comm + buyer comm + لاگا. "avg rate" = خ
 
 FR-18.2 [A] Every number can be opened (click or `Enter`) to see the lines behind it, and from a line, its بکری.
 FR-18.3 [A] Each view has a simple chart above the table.
-FR-18.4 [A] Export to Excel and print.
+FR-18.4 [C] Every view prints and exports to Excel, by day, month or year, with its filters in the print header (Umar, 18-10-2026).
 FR-18.5 [A] Saved views: save a filter set with a name ("کیلا کمیشن ماہانہ") and open it from the dashboard.
 FR-18.6 [C] Sales numbers come from the stored values of each line (analytics facts), never recalculated with today's rules. Expense and profit numbers come from the journal and the partner share ledger.
 FR-18.7 [A] Cancelled postings cancel themselves out (their reversals are included), so a cancelled بکری adds nothing.
+FR-18.8 [C] **Complete and read only.** (Added in v1.6.) Umar (18-10-2026 and 19-10-2026): analytics changes nothing and covers everything: day, month or year; totals, then by item, buyer and seller, then the lines behind any number (FR-18.2). Gardens, trips and fruit taken have their own views (I, J, K), and the partner view (F) shows each partner's money from commission, expenses, gardens, trips and fruit side by side. Every view is Must (Section 26). Long tables load page by page (FR-19.11).
 
 ### 18.4 Example: how to read the views
 
@@ -1561,7 +1700,25 @@ FR-19.6 [C] Numbers never flip next to Urdu text (`(16 @ 900)` stays correct), a
 FR-19.7 [A] Amount in words on bills and statements, in the print language: 19,316 = "انیس ہزار تین سو سولہ روپے" or "Nineteen thousand three hundred sixteen rupees only". Urdu words always use لاکھ, کروڑ and ارب. English words follow the number grouping setting: thousand, million, billion for 1,316,040 style; thousand, lakh, crore for 13,16,040 style.
 FR-19.8 [C] **Items in party ledgers.** Umar (11-10-2026): add the item. In R13 and R14, each sale line on a buyer's ledger shows its item, qty, packing and rate, then commission and لاگا, for example "بکری 1: کیلا 20 پیٹی @ 600 = 12,000، کمیشن 720، لاگا 160" with 12,880 بنام. Each seller credit shows the lot's item, qty, خام بکری and deductions. Cash lent shows "نقد ادھار" and its reason. Example E2E-33.
 FR-19.9 [C] **Each buyer's اگراہی and the shop's total.** R20 has one row per buyer (and per پختہ کھاتہ person). Its میزان row is the shop's total اگراہی and always equals the dashboard tile وصولی باقی. Example: after Events 1 to 5, اکرم 2,880 + ارشد 18,684 = 21,564.
-FR-19.10 [C] **Print any day, any party.** Umar (14-10-2026): everything can be printed for one day or a date range, and for one party where that applies, to share with partners or the party. Every report, ledger, register and list screen (آج کی بکری, باقی مال, خریداری, پختہ کھاتہ register, voucher lists, expenses, partner money, partner capital, ادھار رقم, الگ کھاتے) has the date filter (one day or from and to, with the shortcuts of FR-19.2) and a party filter (buyer, seller, partner, person) where it applies, and the same print, PDF and Excel actions (FR-19.3). Each print shows its filters (dates and party) in its header. Balance lists (R20, R24, R26, R32) take an "as of" date instead of a range; one day's collections are R23 for that day. The partner capital and ادھار رقم list screens print the same way. Examples: one buyer's goods on 10-10-26 (R5, buyer and date); one seller's whole history (R13 from the first date); all sales of one day (R2 and R6 for آج); one day's expenses (R29); one partner's month (R31); the whole day (R34). Example E2E-36.
+FR-19.10 [C] **Print any day, any party.** Umar (14-10-2026): everything can be printed for one day or a date range, and for one party where that applies, to share with partners or the party. Every report, ledger, register and list screen (آج کی بکری, باقی مال, مارکیٹ سفر and خریداری, باغات, پختہ کھاتہ register, voucher lists, expenses, پھل, partner money, partner capital, ادھار رقم, الگ کھاتے) has the date filter (one day or from and to, with the shortcuts of FR-19.2) and a party filter (buyer, seller, partner, person) where it applies, and the same print, PDF and Excel actions (FR-19.3). Each print shows its filters (dates and party) in its header. Balance lists (R20, R24, R26, R32) take an "as of" date instead of a range; one day's collections are R23 for that day. The partner capital and ادھار رقم list screens print the same way. Examples: one buyer's goods on 10-10-26 (R5, buyer and date); one seller's whole history (R13 from the first date); all sales of one day (R2 and R6 for آج); one day's expenses (R29); one partner's month (R31); the whole day (R34). Example E2E-36.
+
+FR-19.11 [C] **Large lists, page by page.** (FR-19.11 and FR-19.12 were added in v1.6.) Umar (18-10-2026): a list, ledger, register, report or analytics table loads its rows from the backend one page at a time (for example 100 rows) and draws only the rows on screen. Its totals come from the backend over the whole filter, never from the rows on screen. Print, PDF and Excel always hold every row. Speed: NFR-SPD-24. Example: a buyer's ledger of 10 years opens with its first 100 rows and its closing balance at once; scrolling loads the next rows.
+
+FR-19.12 [C] **Party day sheet (R35), a compulsory print.** Umar (18-10-2026): the collector takes a slip for each party to the shops. For a chosen day, for each party:
+- Buyers: previous balance (at the start of the day), bought that day (each line: item, qty, rate, amount with commission and لاگا), paid on the spot (نقدی lines), paid that day (وصولی), balance remaining, and an empty column for the collector's note.
+- Sellers: previous balance, sold that day (each lot: item, qty, credit), paid on the spot (نقد), paid that day (ادائیگی), balance remaining.
+- One slip for one party, or all parties with a balance or an entry that day at once. The amounts the collector brings back are entered with the collection round (FR-7.61).
+- [C] (Umar, 20-10-2026) **The client's own layouts.** The client showed his old prints of 18-10-26, and R35 follows them:
+  - **One party's slip** (the buyer's day slip): the print header of FR-19.13; بنام (name with tag) and the date; then one row per line of the day: تعداد, قسم مال (packing and item, for example "لونگر کیلا", "جالی مسمی"), ریٹ, رقم (the line's amount with commission and لاگا, C5); the total نگ; then the footer: تازہ بنام (bought that day), سابقہ رقم (previous balance), موقع پر ادا (paid on the spot, only when not 0), وصولی (paid that day, left blank for the collector when nothing is paid yet), ٹوٹل رقم (سابقہ رقم + تازہ بنام − موقع پر ادا − وصولی).
+  - **All parties as one table** (the all-buyers balance sheet; sellers in a second table): کوڈ (the short code, FR-7.39), پارٹی (name with tag), سابقہ, بنام (everything debited that day), جمع (everything credited that day), بقایا, and a blank column for the collector's note; sorted by Urdu name; a grand total row. Each row holds: سابقہ + بنام − جمع = بقایا. The buyers' total بقایا is the shop's total اگراہی and equals the میزان of R20 (FR-19.9).
+
+Example (E2E-43): اکرم on 10-10-26: previous 0 + bought 12,880 − paid on the spot 0 − paid that day 10,000 = 2,880 remaining. His slip shows one row "20, پیٹی کیلا, 600, 12,880", total نگ 20, تازہ بنام 12,880, سابقہ رقم 0, وصولی 10,000, ٹوٹل رقم 2,880. In the buyers' table: اکرم 0, 12,880, 10,000, 2,880; ارشد 0, 18,684, 0, 18,684; شاہد 0, 12,800, 12,800, 0; total 0 + 44,364 − 22,800 = 21,564 = R20. The client's own slip of 18-10-26 reads the same way: سابقہ رقم 33,287 + تازہ بنام 25,574 = ٹوٹل رقم 58,861, with وصولی blank.
+
+FR-19.13 [C] **Clear prints everywhere.** (Added in v1.7.) Umar (20-10-2026): R5 and R35 follow the client's own layouts (FR-19.12, R5). Every other print (reports, ledgers, statements, expenses, partners, gardens, trips, fruit, analytics) uses our own clearest layout, the same on every print:
+- Header: the firm name, the mandi name, the contact persons with their phones (up to 3) and the trade mark in a box (Section 21), then the print's title, its filters (dates and party, FR-19.10) and the print date and time.
+- Body: every column labelled; a party shown with its short code and its name with tag; numbers on the right edge with equal-width digits (NFR-USE-19); a running balance where the print has one.
+- Footer: a totals row under its columns (FR-19.5), amounts in words where FR-19.7 asks for them, and "Page x of y".
+Example: R29 for October prints "Maher Adnan and Brothers", the three contacts and the trade mark, then "خرچہ رپورٹ، 01-10-26 تا 31-10-26", the heads with their totals, and the میزان.
 
 ### 19.2 Report catalogue
 
@@ -1573,12 +1730,12 @@ FR-19.10 [C] **Print any day, any party.** Umar (14-10-2026): everything can be 
 | R2 | Full sales register | مکمل بکری | بکری no, buyer, city, item, (qty @ rate), amount | [S] |
 | R3 | Cash sales | نقدی | R2, نقدی lines only | [S] |
 | R4 | Credit sales | ادھاری | بکری no, buyer, (qty @ rate), amount | [S] |
-| R5 | Buyer bills | ادھاری تفصیل (Print All) | One row per buyer: items as (item qty @ rate), رقم, رقم بعد لاگا. Print All = one slip per buyer. | [S] |
+| R5 | Buyer bills | ادھاری تفصیل (Print All) | One row per credit buyer, as in the client's print of 18-10-26 (v1.7): serial, party (name with tag), تفصیل with each line written "(item qty . rate)", for example "(سیب 8 . 2600)", رقم (value), رقم بعد لاگا (value + buyer commission + لاگا, C5). Print All = one slip per buyer. | [S][C] |
 | R6 | Seller summary | بکری تفصیل / روزنامچہ بکری | Per lot: بکری no, تعداد, بیوپاری, خام بکری, کل خرچہ, صافی بکری, کرایہ, کمیشن, مزدوری, منشیانہ, نقد, فون | [S] |
-| R7 | Item-wise sales | قسم مال وار بکری | Item, نگ, gross, avg rate | [A] |
+| R7 | Item-wise sales | قسم مال وار بکری | Item, نگ, gross, avg rate, seller comm, buyer comm, لاگا, total comm (as view A) | [C] |
 | R8 | Truck stand report | اڈا رپورٹ | اڈا, trucks, lots, نگ, gross | [S] |
 | R9 | پختہ کھاتہ register | پختہ کھاتہ رپورٹ | Date, side, name, phone, item, نگ, amount, commission, paid / due (per person) | [C] |
-| R10 | Stock | مکمل سٹاک / باقی مال | Lot, date, seller, item, received, sold, written off, balance, days | [S] menu, columns [A] |
+| R10 | Stock | مکمل سٹاک / باقی مال | Lot, date, seller, item, received, sold, written off, taken as fruit, balance, days | [S] menu, columns [A] |
 
 **Accounts**
 
@@ -1601,9 +1758,9 @@ FR-19.10 [C] **Print any day, any party.** Umar (14-10-2026): everything can be 
 | R20 | Buyer dues | وصولی / اگراہی رپورٹ | Buyer (or پختہ person), city, phone, balance, oldest open bill date, days, aging 0-7, 8-30, 31-90, 91+ days; میزان = the shop's total اگراہی (FR-19.9) | [C] |
 | R21 | Collection by city | اگراہی بحساب شہر | R20 grouped by city, with city totals | [S] |
 | R22 | Collection by collector | اگراہی بحساب اگراہی والا | R20 grouped by collector | [S] second menu item (blurry), meaning [A] |
-| R23 | Receipts register | وصولی رجسٹر | Date, voucher, buyer, amount, mode, collector | [A] |
+| R23 | Receipts register | وصولی رجسٹر | Date, voucher, buyer, amount, collector | [A] |
 | R24 | Seller payables | ادائیگی باقی | Seller, open payable (FR-7.59), open advance, ledger balance (open payable − open advance), last بکری date; separate list "بیوپاری کے ذمے" for what sellers owe beyond their open advances (FR-15.9) | [C] |
-| R25 | Payments register | ادائیگی رجسٹر | Date, voucher, account, amount, mode | [A] |
+| R25 | Payments register | ادائیگی رجسٹر | Date, voucher, account, amount | [A] |
 | R26 | Advances | پیشگی کھاتہ | Seller, given, returned, adjusted, open, date | [C][S] |
 | R27 | Bill series | بیجک سیریز | Seller bills (بیجک) in number order for a date range: بکری no, date, seller, خام بکری, کل اخراجات, صافی بکری | [S] menu (shown as "بجک سیریز"), columns [A] |
 
@@ -1613,11 +1770,14 @@ FR-19.10 [C] **Print any day, any party.** Umar (14-10-2026): everything can be 
 |---|---|---|---|
 | R28 | Income report | آمدن رپورٹ | Each income account by day or month |
 | R29 | Expense report | خرچہ رپورٹ | دکان خرچہ by head; ذاتی خرچہ taken and returned by partner |
-| R30 | Profit and partner split | منافع و تقسیم | Income − cost of own goods − shop expenses = profit; each partner's share |
+| R30 | Profit and partner split | منافع و تقسیم | Income − shop expenses = profit; each partner's share |
 | R31 | Partner statement | شراکت دار کھاتہ | Every dated movement and the running کل رقم (FR-17.9), Section 17.3 |
 | R32 | Money lent | ادھار رقم رپورٹ | Person, staff or not, lent, returned (cash, salary), open, oldest open date, return by, days past it; میزان |
-| R33 | Own goods profit or loss | تجارتی منافع / نقصان | Per purchase: date, item, supplier, bought (نگ, cost), sold (نگ, trading sales, commission), cost of goods sold, written off, left (نگ, cost), profit or loss; by item and by month; میزان |
-| R34 | Day summary | روزانہ خلاصہ | For one day (or each day of a range): بکری count, خام بکری, commission, cash opening, cash in, cash out, closing; receipts, payments, advances, expenses, partner money, capital, money lent; own goods bought and sold; partner shares; buyers' dues; lots in باقی مال |
+| R33 | Trip profit or loss | تجارتی منافع / نقصان | Per trip and per purchase: date, item, bought (نگ, cost), sold (نگ, sales money after commission, commission), cost of goods sold, written off, left (نگ, cost), profit or loss; each partner's %, money in and money back; by item, day and month; میزان |
+| R34 | Day summary | روزانہ خلاصہ | For one day (or each day of a range): بکری count, خام بکری, commission, cash opening, cash in, cash out, closing; receipts, payments, advances, expenses, partner money, capital, money lent; trips (bought, sold), gardens (paid, money in), fruit taken; partner shares; buyers' dues; lots in باقی مال |
+| R35 | Party day sheet | پارٹی کی روزانہ پرچی | For one day (FR-19.12): one party's slip in the client's layout, or all parties as one table (code, party, سابقہ, بنام, جمع, بقایا, collector's column) with a grand total |
+| R36 | Gardens | باغات رپورٹ | Per garden: installments and costs (shop and pockets), sales money (our shop, other shops), commission on its goods, running balance, rent still due, closed result; each partner's %, money in and money back |
+| R37 | Fruit taken | پھل رجسٹر | Date, for whom, item, qty, rate, value, source; by partner, item, day, month or year; میزان |
 
 ---
 
@@ -1642,7 +1802,7 @@ FR-20.10 [A] USB and cloud backups are locked with a key that is shown once at s
 
 | Group | Settings |
 |---|---|
-| Firm | Firm name (Urdu, English), mandi name, address, phones, logo |
+| Firm | Firm name (Urdu, English), mandi name, address, phones, logo; up to 3 contact persons for prints, each a name (Urdu and English) and a phone, for example "منشی آصف بھٹی 0300-4058860"; trade mark text (for example "RH"), printed in a box (FR-19.13, v1.7) |
 | Codes | Seller control 03011, buyer control 0304 (fixed after the first account is made) |
 | Charges | Global defaults: seller commission 6%, buyer commission 6%, لاگا 8 per نگ on fruit (as an item-group rule). مزدوری, منشیانہ, فون have no default. The commission agent changes any of them (Section 11). |
 | Overrides | Allow line-level commission and لاگا override (on / off, default on, FR-11.10) |
@@ -1681,13 +1841,18 @@ Money rule: every money input and every stored money result is a **whole number 
 | C13 | Buyer balance = opening + Σ debits − Σ credits | 0 + 12,880 − 10,000 = 2,880 |
 | C14 | Aging days = today − date of the oldest open bill after matching | |
 | C15 | Rounding = nearest whole rupee, half up. Fixed rule. | 337.8 → 338 |
-| C16 | Lot balance qty = received − sold − written off | 50 − 50 − 0 = 0 |
+| C16 | Lot balance qty = received − sold − written off − taken as fruit (FR-16.11) | 50 − 50 − 0 − 0 = 0 |
 | C17 | Header freight split = round down (total × lot qty ÷ all lots' qty); leftover to the lot with the most نگ (tie: lowest lot number) | 1,000 over 30 and 20 نگ → 600 and 400 |
 | C18 | Average rate (display only) = round(خام بکری ÷ نگ) | 29,400 ÷ 50 = 588 |
 | C19 | Rate difference = buyer value − seller amount (can be negative) | |
 | C20 | Partner خالص = profit share − (money taken − money returned) | 996 − (2,000 − 0) = −1,004 |
-| C21 | Cost of own goods sold or written off = `split_by_qty` of the purchase's cost left over [qty taken, qty left]: round each part down, leftover to the larger qty (tie: the qty taken). When the last نگ is taken, all the cost left goes with it. | 10,400 over 20 نگ, 15 sold: 10,400 × 15 ÷ 20 = 7,800; the last 5 take 2,600 |
-| C22 | Partner کل رقم = opening capital + capital invested − capital taken back + Σ his income shares − Σ his expense shares − money taken + money returned | ب after E2E-35: 0 + 50,000 − 0 + 1,646 − 900 − 0 + 0 = 50,746 |
+| C21 | Cost of trip goods sold (in بکری or another shop) or written off = `split_by_qty` of the purchase's cost left over [qty taken, qty left]: round each part down, leftover to the larger qty (tie: the qty taken). When the last نگ is taken, all the cost left goes with it. Stored and shown for the profit or loss; never posted (FR-12.26). | 10,400 over 20 نگ, 15 sold: 10,400 × 15 ÷ 20 = 7,800; the last 5 take 2,600 |
+| C22 | Partner کل رقم = opening capital + capital invested − capital taken back + Σ his income shares − Σ his expense shares − money taken + money returned + his garden, trip and fruit account (جمع − بنام) | ب after E2E-35: 0 + 50,000 − 0 + 1,646 − 900 − 0 + 0 + 0 = 50,746. الف after E2E-40: 3,200 − 33,000 + 39,840 = 10,040 |
+| C23 | A garden or trip payment = `split_by_bps`(amount, its shares). A part from the shop's cash posts on that partner's 0604; a part from his pocket is recorded only (FR-12.30) | 30,000 at 60 / 40: 18,000 / 12,000 |
+| C24 | A trip cost over its purchases with goods left = `split_by_qty`(cost, نگ bought of each), added to each one's total cost and cost left (FR-12.31) | 4,000 over one purchase of 80 نگ: 4,000; 1,000 over 30 and 20 نگ: 600 and 400 |
+| C25 | A trip's sales money to its partners = `split_by_bps`(seller credit of its lot, or money from another shop, its shares) | 8,460 at 40 / 30 / 30: 3,384 / 2,538 / 2,538 |
+| C26 | A garden's closing = `split_by_bps`(the garden account's balance, its shares) | 66,400 at 60 / 40: 39,840 / 26,560 |
+| C27 | Fruit for the shop's guests = `split_by_qty`(value, 1 for each partner active on the date), in the order the partners were created | 3,000 over 3: 1,000 each; 1,000 over 3: 334 / 333 / 333 |
 
 ---
 
@@ -1732,7 +1897,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | E35 | Urdu letters in the English name, or English letters in the Urdu name | Not saved; clear message (FR-7.28) |
 | E36 | A short code that fits a buyer and a seller, in a field that takes any account | Both listed with their type (FR-7.39) |
 | E37 | A code or short code with no account | Message, and `F4` adds an account with that code (FR-7.42) |
-| E38 | Two accounts with the same name | Search rows and the party card show father or firm, city, phone and balance (FR-7.40) |
+| E38 | Two accounts with the same name | The tag tells them apart (اسلم BA and اسلم); search rows and the party card also show father or firm, city, phone and balance (FR-7.40, 10.2) |
 | E39 | The same truck entered twice on one day | Warning with a button to open the first بکری (FR-7.50) |
 | E40 | Print language differs from the app language | Print uses the chosen language and the names in that script; notes print as typed (FR-7.36, FR-7.25) |
 | E41 | A record with only one of its two names (possible only after the Phase 2 import) | Shown with the name it has, marked, and listed in the attention list until fixed (FR-7.44) |
@@ -1744,17 +1909,27 @@ Money rule: every money input and every stored money result is a **whole number 
 | E47 | Buyer borrows cash | ادائیگی to the buyer with a reason; it becomes his bill (FR-15.11) |
 | E48 | Partner returns money he took | ذاتی خرچہ واپسی; adds back to his خالص (FR-16.3) |
 | E49 | A name has a spelling made only by rules | Marked "ہجے دیکھ لیں"; saved only after the user confirms or fixes it (FR-7.66) |
-| E50 | Own goods sold below their cost | Allowed; the loss shows in red on the purchase and in R33 (FR-12.27) |
-| E51 | Own goods spoil | Write off; the cost becomes a loss, split between partners (FR-12.28) |
-| E52 | Own goods partly sold | The rest stays in the purchase's stock for a later بکری (FR-12.26) |
+| E50 | Trip goods sold below their cost | Allowed; the loss shows in red on the purchase, the trip and R33; each trip partner's total already carries his % of it (FR-12.27) |
+| E51 | Trip goods spoil | Write off on the purchase; nothing posts; the trip's result shows the loss (FR-12.28) |
+| E52 | Trip goods partly sold | The rest stays in the purchase's stock for a later بکری or another shop; the trip stays open (FR-12.26, FR-12.33) |
 | E53 | A partner takes back more capital than his balance | Warning; save allowed (FR-17.8) |
 | E54 | A الگ کھاتہ goes minus | Allowed; shown as minus with its entries (FR-16.6) |
 | E55 | A shop expense for guests (tea, food, drinks) | On the خرچہ screen, type دکان خرچہ with a head such as مہمان نوازی; split between partners by share (16.2). A partner's personal spending (a wedding, his home) is type ذاتی خرچہ with that partner, and comes off his total only (16.3, C22). |
-| E56 | An expense saved as the wrong type | Before save: change the type; the date, amount and mode stay (FR-7.67). After save: edit it while its day is open; the old posting is reversed and the right type is posted (FR-15.3). |
+| E56 | An expense saved as the wrong type | Before save: change the type; the date and amount stay (FR-7.67). After save: edit it while its day is open; the old posting is reversed and the right type is posted (FR-15.3). |
 | E57 | An ادائیگی to a seller who has nothing payable | A note offers to make it a پیشگی; nothing changes unless the user presses the button (FR-7.68) |
 | E58 | Any entry that takes cash in hand below zero | Amber note while typing; on save a confirm box ("کیا یہ اندراج درست ہے؟"); Yes saves, No goes back (FR-6.7) |
 | E59 | A return-by date before the entry date | Refused (FR-16.9) |
 | E60 | A seller with an opening credit is paid | It is an ادائیگی against that credit, not a پیشگی (FR-7.59) |
+| E61 | A partner who is not in a garden or trip | 0% of its result; he still gets his normal share of the commission on its goods (FR-12.29) |
+| E62 | A partner pays his part of a garden or trip from his own pocket | Nothing posts and his total does not change; at closing (garden) or on sale (trip) he gets his % of its money: his money back plus or minus his share (FR-12.30, FR-12.38) |
+| E63 | Every part of a payment is from pockets | No journal entry; the payment is recorded on the garden or trip (FR-12.30) |
+| E64 | A garden closed with no sales | Its account is 0; nothing is credited; each shop-cash payer keeps the deduction, so the whole cost is the loss (FR-12.38) |
+| E65 | An entry on a closed garden, or a new purchase or cost on a closed trip | Refused (FR-12.31, FR-12.38) |
+| E66 | Changing a garden's or trip's shares after its first entry | Refused (FR-12.29) |
+| E67 | Fruit taken from a lot is more than its balance | Refused (FR-16.11) |
+| E68 | Guest fruit that does not divide equally | The leftover rupee goes to the partner created first (C27) |
+| E69 | A partner made inactive while in an open garden or trip | Refused until the garden is closed or the trip is closed [A] |
+| E70 | A list of thousands of rows | Loads page by page; totals over the whole filter; prints every row (FR-19.11) |
 
 ---
 
@@ -1764,7 +1939,7 @@ Money rule: every money input and every stored money result is a **whole number 
 |---|---|---|---|
 | A1 | Seller commission is a percent, with rules by seller and item | 6% | Real rates per seller and item? |
 | A2 | لاگا on vegetables | None (fruit only, 8 per نگ) | Is there any لاگا on vegetables? |
-| A3 | Old bills show buyer charges that differ by item (سیب about 99 per نگ, مولی 5%) | Rules per item or group (Section 11) | Which items need their own buyer rate? |
+| A3 | Resolved in v1.7: a buyer pays commission and لاگا on every line; a seller pays commission only; the rate of each is set per item as rules (11.2). The client's real rates are typed in as rules at setup | | |
 | A4 | پختہ کھاتہ on both buyer and seller side | Both | Only for buyers? |
 | A5 | مزدوری, when a rule is made, is per نگ received | No default | On received or sold qty? |
 | A6 | منشیانہ and فون are typed per lot | No default | Usual amounts, so a rule can fill them? |
@@ -1783,7 +1958,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | A19 | Resolved in v1.2: one user (the Owner), no roles (Section 2) | | |
 | A20 | English digits, 1,316,040 style | | Lakh style? |
 | A21 | Bills on A4, slips on A5 or 80 mm | | Printer and paper? |
-| A22 | Resolved in v1.3: the firm also buys and sells its own goods (12.10). "Stock" in the old menus is unsold goods, consigned or own. | | |
+| A22 | Resolved in v1.3, changed in v1.6: goods are bought on market trips by some partners (12.10). "Stock" in the old menus is unsold goods, consigned or bought. | | |
 | A23 | Second اگراہی report = by collector | | What was the second اگراہی report? |
 | A24 | Old KACHA_KHATA table (empty) is not needed | | Was کچا کھاتہ ever used? |
 | A25 | Old "Session End 31-12-2026" | | Does the old software stop then? |
@@ -1791,7 +1966,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | A27 | All money is whole rupees, including rates | | Any rates with paisa (for example per kg)? |
 | A28 | Lot charges are charged once, on the first posting | | Correct? |
 | A29 | Buyer qty always equals seller qty on a line | | Is there ever a quantity difference? |
-| A30 | Cheques post to the bank account at once (no clearing step) | | Do they wait for cheques to clear? |
+| A30 | Resolved in v1.6: there is no bank and no cheque; all money is روکڑ (Umar, 19-10-2026) | | |
 | A31 | Partner shares cannot be back-dated | | OK? |
 | A32 | Weight items: rate per kg, نگ still counted | | Which items are sold by weight? |
 | A33 | English screens use English words, with Roman names for mandi words | Glossary English column (Laga, Munshiana, Pukhta Khata, Adda, Nag) | Who will use English? Are these the words they use? |
@@ -1805,14 +1980,26 @@ Money rule: every money input and every stored money result is a **whole number 
 | A41 | Undo straight after save, as a reversal | 10 seconds | OK? |
 | A43 | A loan deducted from salary is posted as that much تنخواہ shop expense | Expense head تنخواہ | Is that how salary loans are settled? |
 | A44 | A return-by date is optional and only warns | Attention list only | Should overdue loans block new loans? |
-| A45 | The cost of own goods sold is the purchase's average cost per نگ (C21), also for items bought by weight | Average per purchase, by نگ | OK? |
-| A46 | Profit or loss on own goods is shared by the same partner shares | Same shares | Do partners share own trading the same way? |
+| A45 | The cost of trip goods sold is the purchase's average cost per نگ (C21), also for items bought by weight | Average per purchase, by نگ | OK? |
+| A46 | Resolved in v1.6: a trip's result goes only to the trip's partners, by the trip's % (12.10) | | |
 | A47 | Freight, labour and other costs of a purchase are paid at once and added to its cost | Paid at once | Are they ever owed to the supplier? |
 | A48 | Capital does not change profit shares; taking back more than the balance only warns | Warn | Should it block? |
-| A49 | Own goods carry seller commission, so R33 profit is after that commission (E2E-34: margin 1,200 = commission 540 + profit 660), and the 540 also counts as commission on the dashboard | As built | Is that how they want to see own-goods profit? Does the firm also buy from a consignor's lot in its own بکری? |
+| A49 | Resolved in v1.6: trip and garden goods pay the normal commission, which is firm income shared by the firm's shares; their result is after it (E2E-34: margin 1,200 = commission 540 + result 660) | | |
 | A50 | On a lot whose seller is a الگ کھاتہ, the buyer still pays buyer commission and لاگا, which are firm income shared by partners; seller-side charges are 0 | As stated | Should the buyer side also be 0 for the khata's own goods? |
 | A51 | The right-type notes only suggest; the user decides (FR-7.68) | Note with a button | Should a partner's name in "ادا کیا" block the save as دکان خرچہ instead? |
 | A52 | Resolved in v1.5: Umar confirmed the cash check on every entry that takes cash below 0, as a confirm box (FR-6.7) | | |
+| A53 | A trip purchase is paid at once (from the shop or a pocket); nothing is bought on credit | Paid at once | Do trips ever buy on credit? |
+| A54 | Each partner's money source is set when the garden or trip is made, filled on every entry, and can be changed on one entry | As stated | OK? |
+| A55 | A garden's or trip's shares cannot change after its first entry | Fixed | OK? |
+| A56 | The first trip and every garden start with the firm's shares filled in; a later trip starts with the last trip's | As stated | OK? |
+| A57 | Money from a sale in another shop is received into روکڑ | روکڑ | Does it ever stay with a partner? |
+| A58 | Fruit from our shop comes from a lot in باقی مال; the lot's seller is credited qty × the typed rate, with no commission, and it does not adjust his advance; trip goods are not offered | As stated | OK? |
+| A59 | Fruit for the shop's guests is split equally between the active partners | Equal | Should it be a different fixed %? |
+| A60 | Another commission agent's shop is kept as a بیوپاری account, so the fruit money owed to him is paid with ادائیگی | Seller account | OK? |
+| A61 | A garden's lot in بکری pays the normal seller charges; نقد and the advance tick are hidden on it | As stated | OK? |
+| A62 | A trip closes by itself when nothing is left; a garden is closed by the Owner; a garden's closing can be undone only while its date is open; a closed garden's lot takes no later sale and gives no fruit | As stated | OK? |
+| A63 | A partner cannot be made inactive while he is in an open garden or trip | Refused | OK? |
+| A64 | A trip cost is spread when it is saved, over the purchases that still have goods left, and is entered after the goods are bought (FR-12.31) | As stated | Is the truck fare ever known before anything is bought? |
 | A42 | Some old lines (mostly کیلا) have no rate and an amount that is not qty × a whole rate (4 نگ = 2,950) | Weight items (rate per kg) | Is کیلا sold by weight, or is a lump amount typed? |
 
 ---
@@ -1911,8 +2098,8 @@ After Umar's review, every frame of the video was read again. These findings cha
 
 | Priority | Items |
 |---|---|
-| **Must (demo, all connected)** | Login; dashboard with partner strip; انڈکس with seller 03011 and buyer 0304 codes and opening balances; all masters; commission rules; بکری بک with side menu, later sales, edit and cancel; پختہ کھاتہ; باقی مال; وصولی/اگراہی; ادائیگی; پیشگی; one خرچہ screen for دکان خرچہ and ذاتی خرچہ with the effect shown before save (16.2, FR-16.8); related entries on one screen and the right-type notes (FR-7.67, FR-7.68); جنرل; partners with live split; partner capital in and out (17.4); partner total کل رقم and its dated record (FR-17.9); الگ کھاتہ (FR-16.6, FR-16.7); own goods purchase, sale, write-off and profit or loss (12.10); partner money taken and returned (FR-16.2, FR-16.3); ادھار رقم (FR-16.4, FR-16.5); advance tick and advance return (FR-12.23, FR-15.12); cash lent to buyers (FR-15.11); spelling check (FR-7.66); day close and reopen; analytics views A, B, C, F, G; reports R1, R2, R4, R5, R6, R9, R10, R11, R12, R13, R14, R15, R18, R20, R21, R22, R23, R24, R25, R26, R27, R29, R30, R31, R32, R33, R34; print any day and any party (FR-19.10); items in ledgers and the shop's total اگراہی (FR-19.8, FR-19.9); Excel export (needed for the backup pack); arrow-key navigation; Urdu keyboard; language switch with the whole app in English (Section 7.5); names in two scripts with English-to-Urdu typing and learning (Section 7.4); party card, short codes, smart search, recent first, unknown code add (FR-7.38 to FR-7.42); how was this worked out (FR-7.43); attention list and آج کے کام (FR-7.44); helpful empty screens (FR-7.46); truck, seller and buyer memory, same truck warning, remaining qty, rate hint, copy from above, save-print-next (FR-7.49 to FR-7.54, FR-7.56, FR-7.57); receipt, payment and advance helpers (FR-7.58 to FR-7.60); backup and restore; printing in both languages; audit log (written) |
-| **Should (right after demo)** | Analytics views D, E, H and saved views; reports R3, R7, R8, R16, R17, R19, R28; month close; audit log viewer; first-run guide; undo after save (FR-7.47); simple sums (FR-7.48); rate check (FR-7.55); collection round (FR-7.61); repeat last month's expenses (FR-7.62); duplicate check while typing (FR-7.63); remember last screen (FR-7.45); party report buttons (FR-7.65) |
+| **Must (demo, all connected)** | Login; dashboard with partner strip; انڈکس with seller 03011 and buyer 0304 codes and opening balances; all masters; commission rules; بکری بک with side menu, later sales, edit and cancel; پختہ کھاتہ; باقی مال; وصولی/اگراہی; ادائیگی; پیشگی; one خرچہ screen for دکان خرچہ and ذاتی خرچہ with the effect shown before save (16.2, FR-16.8); related entries on one screen and the right-type notes (FR-7.67, FR-7.68); جنرل; partners with live split; partner capital in and out (17.4); partner total کل رقم and its dated record (FR-17.9); الگ کھاتہ (FR-16.6, FR-16.7); market trips with their purchases, costs, sales, write-offs and result (12.10); gardens with installments, costs, sales and closing (12.11); fruit taken (16.7); one cash account with no bank (v1.6); dated statement lines (FR-17.10); partner money taken and returned (FR-16.2, FR-16.3); ادھار رقم (FR-16.4, FR-16.5); advance tick and advance return (FR-12.23, FR-15.12); cash lent to buyers (FR-15.11); spelling check (FR-7.66); day close and reopen; every analytics view A to K, printable by day, month or year (FR-18.4, FR-18.8); reports R1, R2, R4, R5, R6, R7, R9, R10, R11, R12, R13, R14, R15, R18, R20, R21, R22, R23, R24, R25, R26, R27, R29, R30, R31, R32, R33, R34, R35, R36, R37; the party day sheet (FR-19.12) and the collection round (FR-7.61); large lists page by page (FR-19.11); print any day and any party (FR-19.10); items in ledgers and the shop's total اگراہی (FR-19.8, FR-19.9); Excel export (needed for the backup pack); arrow-key navigation; Urdu keyboard; language switch with the whole app in English (Section 7.5); names in two scripts with English-to-Urdu typing and learning (Section 7.4); the tag after a name (10.2); prints in the client's layouts and a clear layout everywhere else, with the firm's contacts and trade mark (FR-19.12, FR-19.13); party card, short codes, smart search, recent first, unknown code add (FR-7.38 to FR-7.42); how was this worked out (FR-7.43); attention list and آج کے کام (FR-7.44); helpful empty screens (FR-7.46); truck, seller and buyer memory, same truck warning, remaining qty, rate hint, copy from above, save-print-next (FR-7.49 to FR-7.54, FR-7.56, FR-7.57); receipt, payment and advance helpers (FR-7.58 to FR-7.60); backup and restore; printing in both languages; audit log (written) |
+| **Should (right after demo)** | Saved analytics views; reports R3, R8, R16, R17, R19, R28; month close; audit log viewer; first-run guide; undo after save (FR-7.47); simple sums (FR-7.48); rate check (FR-7.55); repeat last month's expenses (FR-7.62); duplicate check while typing (FR-7.63); remember last screen (FR-7.45); party report buttons (FR-7.65) |
 | **Could (Phase 2)** | Import of 2018 to 2026 data from the old software; crate (پیٹی) in and out tracking; goods return screen; interest on old dues; daily rate board |
 | **Won't (for now)** | Multi-computer, tax filing |
 
@@ -1929,6 +2116,7 @@ After Umar's review, every frame of the video was read again. These findings cha
 5. Enter بکری 2 with پختہ کھاتہ (Section 4.5). Show the seller memory and the same truck warning.
 6. Record وصولی (open bills, پورا بقایا) and ادائیگی on the voucher screen. Then, on the one خرچہ screen, the electricity bill as دکان خرچہ (show the split before save) and الف's 2,000 as ذاتی خرچہ (Sections 4.6 to 4.8).
 6a. Show the attention bell and آج کے کام. Print a buyer slip in Urdu and in English.
+6b. Show a market trip and a garden (E2E-41, E2E-40), a partner's statement with their dated lines, and الف's پھل. Print the party day sheet (R35) for all buyers.
 7. Dashboard: every tile matches Section 4.9.
 8. Analytics: views A, B, C, F match Section 18.4.
 9. Partner overview matches Section 4.9.
@@ -1978,13 +2166,18 @@ Start from the opening position created as in Section 4.3, then run Events 1 to 
 | E2E-31 | Separate run: opening position; on 10-10-26 رحیم returns 10,000 of his advance in cash (وصولی on his account); then Event 1 | After the return: advance open 5,000; cash 60,000. After بکری 1: advance adjusted 5,000; پیشگی report given 15,000, returned 10,000, adjusted 5,000, open 0; رحیم payable 14,316; ledger 14,316 جمع. |
 | E2E-32 | After Events 1 to 5: ادائیگی of 3,000 cash to اکرم (reason نقد ادھار) | اکرم dues 2,880 + 3,000 = 5,880, the 3,000 is a bill dated 10-10-26 after his بکری 1 bill; cash 55,484; R20 میزان and the dashboard tile 24,564. |
 | E2E-33 | After Events 1 to 5: اکرم's ledger (R13) and R20 | 10-10-26 بکری 1: کیلا 20 پیٹی @ 600 = 12,000، کمیشن 720، لاگا 160, بنام 12,880; وصولی جمع 10,000; closing 2,880 بنام. R20 rows اکرم 2,880 and ارشد 18,684; میزان 21,564 = dashboard وصولی باقی. |
-| E2E-34 | Separate run: opening position (4.3). On 10-10-26 the firm buys 20 پیٹی مالٹا (fruit) at 500 for cash, freight 400 paid in cash. A بکری lot with seller اپنا مال sells 15 to اکرم at 600, ادھاری, no lot charges. | Purchase cost 10,000 + 400 = 10,400 (520 per نگ); cash 50,000 − 10,400 = 39,600. Sale: value 9,000; seller comm 540; buyer comm 540; لاگا 15 × 8 = 120; اکرم pays 9,660; trading sales 9,000 − 540 = 8,460; cost of goods sold 10,400 × 15 ÷ 20 = 7,800; profit on the 15 = 660. Entry: بنام 9,660 + 7,800 = 17,460 = جمع 540 + 540 + 120 + 8,460 + 7,800. Split: income 9,660 → 3,864 / 2,898 / 2,898; cost 7,800 → −3,120 / −2,340 / −2,340; net 744 / 558 / 558 (1,860). Stock left 5 نگ, cost 2,600. |
-| E2E-34b | Continue E2E-34: on 11-10-26 the last 5 spoil and are written off | Loss 2,600, split −1,040 / −780 / −780; the purchase's profit or loss 660 − 2,600 = −1,940 (R33); own stock 0; trial balance balances. |
+| E2E-34 | Separate run: opening position (4.3). On 10-10-26 a market trip (partners الف 40%, ب 30%, ج 30%, all from the shop's cash) buys 20 پیٹی مالٹا (fruit) at 500, freight 400. A بکری lot with seller اپنا مال sells 15 of them to اکرم at 600, ادھاری, no lot charges. | Purchase cost 10,000 + 400 = 10,400 (520 per نگ), paid from the shop's cash 4,160 / 3,120 / 3,120 (each comes off his total); cash 50,000 − 10,400 = 39,600. Sale: value 9,000; seller comm 540; buyer comm 540; لاگا 15 × 8 = 120; اکرم pays 9,660; entry 9,660 = 540 + 540 + 120 + 8,460. Commission 1,200 split by the firm's shares 480 / 360 / 360. The seller credit 9,000 − 540 = 8,460 goes to the trip's partners 3,384 / 2,538 / 2,538. Shown, not posted: cost of goods sold 10,400 × 15 ÷ 20 = 7,800; result on the 15 = 660. Partner totals −4,160 + 480 + 3,384 = −296, −3,120 + 360 + 2,538 = −222, −222. Stock left 5 نگ, cost 2,600. |
+| E2E-34b | Continue E2E-34: on 11-10-26 the last 5 spoil and are written off | Nothing posts. The trip's result 8,460 − 10,400 = −1,940 (R33), each partner's part −776 / −582 / −582, already in his total (3,384 − 4,160 = −776); own stock 0; the trip closes; partner totals still −296 / −222 / −222; Σ −740 + 65,000 = 64,260 = equity; trial balance 66,200 = 66,200. |
 | E2E-35 | After Events 1 to 5, on 11-10-26 partner ب invests 50,000 cash (سرمایہ جمع) | Cash 58,484 + 50,000 = 108,484; ب capital 50,000 جمع; ب profit share still 746; shares unchanged; trial balance 135,048 = 135,048. |
-| E2E-36 | After Events 1 to 5: R34 for 10-10-26, and R5 filtered to اکرم and 10-10-26 | R34: 2 بکری; خام 41,400; commission 5,448; cash opening 50,000, in 12,800 + 10,000 = 22,800, out 5,000 + 4,316 + 3,000 + 2,000 = 14,316, closing 58,484; buyers' dues 21,564. R5 shows only اکرم's slip: کیلا 20 @ 600, 12,880. Both headers show the date and, for R5, the buyer. |
+| E2E-36 | After Events 1 to 5: R34 for 10-10-26, and R5 filtered to اکرم and 10-10-26 | R34: 2 بکری; خام 41,400; commission 5,448; cash opening 50,000, in 12,800 + 10,000 = 22,800, out 5,000 + 4,316 + 3,000 + 2,000 = 14,316, closing 58,484; buyers' dues 21,564. R5 shows only اکرم's row: (کیلا 20 . 600), 12,000, 12,880. Both headers show the date and, for R5, the buyer. |
 | E2E-37 | After Events 1 to 5 and E2E-35: partner totals and R31 for ب | کل رقم الف −1,004, ب 50,746, ج 746; Σ 50,488 + ابتدائی سرمایہ 65,000 = 115,488 = equity in the trial balance (65,000 + 50,000 + 5,488 − 3,000 − 2,000). R31 for ب, in date order: 10-10-26 بکری 1 share 1,184 (running 1,184); بکری 2 share 462 (1,646); دکان خرچہ بجلی −900 (746); 11-10-26 سرمایہ جمع 50,000 (50,746). |
-| E2E-38 | Separate run: opening position. A الگ کھاتہ باغ (Garden). 10-10-26: pays out 10,000 cash (reason باغ کی مزدوری). 11-10-26: gets 4,000 back in cash; then a بکری lot with seller باغ sells 10 پیٹی کیلا to ارشد at 900, ادھاری | After paying out: باغ −10,000, cash 40,000. After 4,000 back: −6,000, cash 44,000. The sale: value 9,000; no seller-side charges; buyer comm 540; لاگا 80; ارشد pays 9,620; entry 9,620 = 9,000 (باغ) + 540 + 80; باغ +3,000. Shared income 620, split 248 / 186 / 186; nothing from باغ's 9,000 goes to any partner. Trial balance balances. |
-| E2E-39 | Event 5 on the one خرچہ screen (`Alt+K`). First entry: بجلی 3,000 نقد as دکان خرچہ. Second entry: 2,000 نقد typed as دکان خرچہ by mistake, then the type changed to ذاتی خرچہ before saving, partner الف, reason گھر کا خرچ | First entry, before save: الف 1,200, ب 900, ج 900. Second entry: changing the type keeps 10-10-26, 2,000 and نقد, clears the expense head and asks for partner and reason; then it shows الف's کل رقم 996 → −1,004 and ب, ج not affected. After both saves: cash 58,484 (E2E-8) and the partner numbers of E2E-9. |
+| E2E-38 | Separate run: opening position. A الگ کھاتہ خاندانی کھاتہ (Family Khata). 10-10-26: pays out 10,000 cash (reason خاندان کا خرچ). 11-10-26: gets 4,000 back in cash; then a بکری lot with seller خاندانی کھاتہ sells 10 پیٹی کیلا to ارشد at 900, ادھاری | After paying out: خاندانی کھاتہ −10,000, cash 40,000. After 4,000 back: −6,000, cash 44,000. The sale: value 9,000; no seller-side charges; buyer comm 540; لاگا 80; ارشد pays 9,620; entry 9,620 = 9,000 (خاندانی کھاتہ) + 540 + 80; خاندانی کھاتہ +3,000. Shared income 620, split 248 / 186 / 186; nothing from its 9,000 goes to any partner. Trial balance balances. |
+| E2E-39 | Event 5 on the one خرچہ screen (`Alt+K`). First entry: بجلی 3,000 as دکان خرچہ. Second entry: 2,000 typed as دکان خرچہ by mistake, then the type changed to ذاتی خرچہ before saving, partner الف, reason گھر کا خرچ | First entry, before save: الف 1,200, ب 900, ج 900. Second entry: changing the type keeps 10-10-26 and 2,000, clears the expense head and asks for partner and reason; then it shows الف's کل رقم 996 → −1,004 and ب, ج not affected. After both saves: cash 58,484 (E2E-8) and the partner numbers of E2E-9. |
+| E2E-40 | Separate run: opening position. A garden شاہ پور باغ (Shahpur Garden): الف 60% from the shop's cash, ب 40% from his own pocket, ج not in it; rent 50,000. 10-10-26: first installment 30,000. 11-10-26: installment 20,000 and labour 5,000. 12-10-26: a بکری lot with seller شاہ پور باغ sells 100 پیٹی کیلا to ارشد at 600, ادھاری, no lot charges; 20 پیٹی sold in another shop bring 10,000 cash. 13-10-26: the garden is closed | Parts 18,000 / 12,000, then 12,000 / 8,000 and 3,000 / 2,000: الف paid 33,000 from the shop (his total −33,000; cash 17,000), ب paid 22,000 himself (his total unchanged). The sale: value 60,000; seller comm 3,600; buyer comm 3,600; لاگا 800; ارشد pays 64,400; the garden's account جمع 56,400; commission 8,000 split by the firm's shares 3,200 / 2,400 / 2,400. Money in 56,400 + 10,000 = 66,400; cash 27,000; running balance 66,400 − 55,000 = 11,400. Closing: 66,400 → 39,840 / 26,560; the garden's account 0. الف −33,000 + 39,840 = +6,840 (60% of 11,400); ب +26,560 (22,000 back + 4,560). Partner totals 10,040 / 28,960 / 2,400; Σ 41,400 + 65,000 = 106,400 = equity; trial balance 106,400 = 106,400. |
+| E2E-40b | Separate run: as E2E-40, but with no بکری sale; only the other shop's 10,000 comes in; then the garden is closed | Loss 10,000 − 55,000 = −45,000. Closing: 10,000 → 6,000 / 4,000. الف −33,000 + 6,000 = −27,000 (60% of the loss); ب +4,000 (his 22,000 back − 18,000, 40% of the loss); cash 27,000. |
+| E2E-41 | Separate run: opening position. A market trip: الف 50% from the shop's cash, ب 50% from his own pocket, ج not in it. It buys 80 پیٹی مالٹا at 1,200 and pays 4,000 for the truck (a trip cost). A بکری lot with seller اپنا مال sells all 80 to ارشد at 1,400, ادھاری, no lot charges | Purchase 96,000: parts 48,000 / 48,000; truck 2,000 / 2,000. الف paid 50,000 from the shop (cash 0); ب paid 50,000 himself. Cost 100,000 (1,250 per نگ). Sale: value 112,000; seller comm 6,720; buyer comm 6,720; لاگا 640; ارشد pays 119,360; commission 14,080 split by the firm's shares 5,632 / 4,224 / 4,224; the trip's 105,280 → 52,640 / 52,640; trip result 5,280; the trip closes. الف −50,000 + 52,640 = +2,640; ب +52,640 (50,000 back + 2,640). Partner totals 8,272 / 56,864 / 4,224; trial balance 134,360 = 134,360. |
+| E2E-42 | Separate run: after E2E-16 (5 کیلا left in رحیم's lot). 10-10-26: الف takes 2 پیٹی کیلا home from that lot at 580; then fruit for the shop's guests: 3 پیٹی سیب at 1,000 from another commission agent's shop (حاجی نذیر, seller 030110003) | Home fruit 2 × 580 = 1,160: الف's total −1,160; رحیم credited 1,160 with no commission, his payable 1,590 + 1,160 = 2,750 and ledger 2,750 جمع; lot balance 3. Guest fruit 3,000 split equally 1,000 / 1,000 / 1,000; حاجی نذیر payable 3,000. Cash unchanged at 45,000. Partner totals 1,424 − 2,160 = −736, 1,068 − 1,000 = 68, 68; Σ −600 + 65,000 = 64,400 = equity; trial balance 77,610 = 77,610. |
+| E2E-43 | After Events 1 to 5: R35 party day sheet for 10-10-26 | Buyers (previous, bought, paid on the spot, paid that day, remaining): اکرم 0, 12,880 (کیلا 20 پیٹی @ 600 = 12,000، کمیشن 720، لاگا 160), 0, 10,000, 2,880; ارشد 0, 18,684, 0, 0, 18,684; شاہد (پختہ کھاتہ) 0, 12,800, 12,800, 0, 0. All buyers remaining 21,564 = R20 میزان. Sellers (previous, sold, نقد, paid that day, remaining): رحیم 15,000 بنام, 24,316, 5,000, 4,316, 0; کریم 0, 10,160, 0, 0, 10,160 جمع. |
 
 E2E-10 expected trial balance (after Events 1 to 5):
 
@@ -2038,3 +2231,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.3 | 15-10-2026 | Umar's changes of 14-10-2026. Partner capital in and out (17.4, FR-17.7, FR-17.8, opening capital in 17.1). The firm's own goods: purchase, sale with commission, cost of goods sold, write-off, profit or loss (12.10, FR-12.24 to FR-12.28, C21, accounts 01040001, 030119998, 04010006, 05020001, R33; A22 resolved; removed from "Won't"). Print any day and any party (FR-19.10) and the day summary R34; R15, R23, R25 and R29 moved to Must. Partner total کل رقم with a dated record of every movement (FR-17.9, C22, R31, partner strip). الگ کھاتہ, outside the partners (16.6, FR-16.6, FR-16.7, control 0305, A50). New tests E2E-34, E2E-34b, E2E-35, E2E-36, E2E-37, E2E-38, numbers from `worked_day.py`. |
 | 1.4 | 15-10-2026 | Umar's change of 15-10-2026, for ease of use. One خرچہ screen with a type list for دکان خرچہ, ذاتی خرچہ and its واپسی, showing the split or the partner's total before save (16.2, 16.3, FR-16.8). Related entries share one screen (FR-7.67): وصولی, ادائیگی and پیشگی are one voucher screen (FR-15.10). The app points to the right type (FR-7.68, A51). New edge cases E56, E57 and test E2E-39. No money rule, posting or test number changed. |
 | 1.5 | 15-10-2026 | Umar's answers of 15-10-2026 to the team's open questions after D1 and D2, approved by Umar. Commission is typed on the بکری line by default (FR-11.10, 12.4, Section 21), and there is no party + group rule level (11.1). "Newer wins" means the later start date (FR-11.5). A removed per-lot commission line moves its charge (FR-11.9). A seller's opening credit and a جنرل credit on a seller are payable (FR-7.59). A جنرل line never adjusts advances (16.4). Cash going below zero asks the user to confirm, on every entry (FR-6.7, A52 resolved). A return-by date cannot be before the entry date (FR-16.9). Opening balance rules (FR-10.9) and system accounts stay active (FR-10.4). New edge cases E58 to E60. No posting or test number changed. |
+| 1.6 | 19-10-2026 | Umar's changes of 18-10-2026 and 19-10-2026, approved by Umar. Market trips (12.10 rewritten, FR-12.29 to FR-12.33): goods bought by some partners, paid from the shop's cash or their own pockets, sold in بکری or another shop; the commission is firm income; the trip's result goes only to its partners by its %, on the day of the sale; خریداری moves into the مارکیٹ سفر section; the accounts 01040001, 04010006 and 05020001 are removed (never in a released migration). Gardens (12.11, FR-12.34 to FR-12.38, control 0306). A garden, trip and fruit account per partner (0604). Fruit taken (16.7, FR-16.10 to FR-16.12). One cash account: no bank, no cheque, no mode (15.1, 16, 17.4, FR-10.4, 10.3); no cash count box (FR-16.1). Analytics complete and printable by day, month or year (FR-18.4, FR-18.8, views I to K, all views Must). Large lists page by page (FR-19.11). Party day sheet R35 (FR-19.12) and the collection round are Must; R7 with commission, R36, R37; R33 is the trip report. Dated statement lines (FR-17.10). E2E-38 renamed (خاندانی کھاتہ). Formulas C16, C21, C22 changed; C23 to C27 new. E2E-34 and E2E-34b numbers changed (approved by Umar); new tests E2E-40, E2E-40b, E2E-41, E2E-42 and E2E-43; edge cases E61 to E70; assumptions A53 to A64. Numbers from `worked_day.py`. The worked day (Section 4) and E2E-1 to E2E-33 and E2E-35 to E2E-39 are unchanged. |
+| 1.7 | 22-10-2026 | Umar's answers of 20-10-2026 and 21-10-2026, from the client's own prints of 18-10-26, approved by Umar. The buyer pays commission and لاگا on every line; the seller pays commission only (11.2, A3 resolved). R35 in the client's two layouts, the day slip and the all-parties table (FR-19.12); R5 lines written "(item qty . rate)"; a clear layout for every other print (FR-19.13). The tag نشان after a name (10.2, FR-7.28, FR-7.40, FR-10.7, E38). The firm's contact persons and trade mark (Section 21). Glossary: تازہ بنام, سابقہ رقم, ٹوٹل رقم, بقایا, نشان. E2E-36 writes R5 the new way (no number changed). Still open: کیلا lines with no rate (A42). No money rule, posting or test number changed. |

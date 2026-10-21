@@ -41,7 +41,7 @@ The same ID must exist in `ur/` and `en/`. `pnpm i18n:check` fails otherwise (NF
    - short, natural mandi Urdu, never word-by-word translation;
    - Urdu punctuation (`۔` `،` `؟`) and English digits.
 3. **Write the English message** for the same ID:
-   - plain, professional English with British spelling as used in Pakistan (Labour, Cheque);
+   - plain, professional English with British spelling as used in Pakistan (Labour, Colour);
    - the glossary's English words (Sale, Receipt, Laga, Munshiana, Pukhta Khata, Nag);
    - sentence case for messages, and the glossary's capitals for business words.
 4. **Values go in as variables, already formatted.** Pass money and numbers as text already made by `formatPaisa` or the number formatter, so both languages show the same digits and grouping (PRD FR-7.32). Pass a raw number only for a plural choice.

@@ -1,11 +1,11 @@
 ---
 name: print-and-export
-description: Builds or changes any printed document, PDF or Excel export in the Mandi Software (seller bill, buyer slips, پختہ کھاتہ slip, receipt slip, reports R1 to R34, the daily backup pack) with Urdu or English print language, A4, A5 or 80 mm paper, amounts in words, and numbers that never flip. Use whenever something must be printed, saved as PDF or exported to Excel.
+description: Builds or changes any printed document, PDF or Excel export in the Mandi Software (seller bill, buyer slips, پختہ کھاتہ slip, receipt slip, reports R1 to R37, the daily backup pack) with Urdu or English print language, A4, A5 or 80 mm paper, amounts in words, and numbers that never flip. Use whenever something must be printed, saved as PDF or exported to Excel.
 ---
 
 # Print, PDF and Excel export
 
-A printed bill is what the seller and buyer take home. It must match the screen to the rupee, read naturally in Urdu or English, and fit the paper. PRD 19.1 (FR-19.3 to FR-19.7), FR-7.36, FR-7.57, FR-12.12, FR-15.2, FR-20.5 and Section 21 "Printing".
+A printed bill is what the seller and buyer take home. It must match the screen to the rupee, read naturally in Urdu or English, and fit the paper. PRD 19.1 (FR-19.3 to FR-19.7, FR-19.12, FR-19.13), FR-7.36, FR-7.57, FR-12.12, FR-15.2, FR-20.5 and Section 21 "Printing".
 
 Code sketches for the WebView2 print call, the print CSS and the Excel writer are in [reference.md](reference.md).
 
@@ -30,6 +30,12 @@ Backend: WebView2 Print (printer) or PrintToPdf (PDF), through with_webview + we
 - **Words follow CLAUDE.md rule 7.** The print data carries Fluent message IDs for titles and labels (for example `print-seller-bill-title`, `bikri-summary-freight`). The template resolves them with the Fluent bundle of the print language. The backend sends values, not sentences. The only words it builds itself are the amounts in words.
 - The hidden print window has its own window label. If it calls any command, add that label to the capability (see the `tauri-command` skill).
 
+## Which layout (PRD v1.7, Umar 20-10-2026)
+
+- **The client's own layouts, for three prints only.** R5 ادھاری تفصیل: serial, party (name with tag), تفصیل with each line written "(item qty . rate)", for example "(سیب 8 . 2600)", رقم, رقم بعد لاگا. R35 one party's day slip: بنام (name with tag) and the date, then rows of تعداد, قسم مال, ریٹ, رقم; total نگ; then تازہ بنام, سابقہ رقم, موقع پر ادا (only when not 0), وصولی, ٹوٹل رقم. R35 all parties as one table: کوڈ, پارٹی, سابقہ, بنام, جمع, بقایا, the collector's blank column, sorted by Urdu name, a grand total (FR-19.12). They still use the shared header and footer below.
+- **Every other print uses our own clear layout (FR-19.13):** the shared header, every column labelled, each party with its short code and name with tag, numbers on the right edge, a running balance where the print has one, a totals row under its columns, amounts in words where FR-19.7 asks, and "Page x of y".
+- Example: R29 for October prints the firm, its three contacts and the trade mark "RH" in a box, then "خرچہ رپورٹ، 01-10-26 تا 31-10-26", the heads with their totals, and the میزان.
+
 ## Before you start
 
 - Find the document in the plan and the PRD: its columns (Section 19.2 for reports), its paper size (Settings "Printing", A21: bills A4, slips A5 or 80 mm), and who receives it.
@@ -38,8 +44,9 @@ Backend: WebView2 Print (printer) or PrintToPdf (PDF), through with_webview + we
 ## Build steps
 
 1. **Print data type** in `mandi-reports` (use the `tauri-command` skill for the command). Include:
-   - the firm header: name in the print language, mandi, address and phones (Settings "Firm");
-   - the title as a Fluent message ID, the date range or document number, and the print time;
+   - the firm header, built once in `mandi-reports` for every print: name in the print language, mandi, up to 3 contact persons (name in the print language and phone) and the trade mark (Settings "Firm", keys `firm_contacts` and `trade_mark`). A contact or trade mark not set is left out, with no empty box;
+   - the title as a Fluent message ID, the filters (dates and party, FR-19.10) or the document number, and the print time;
+   - each party with its short code and its names and tag, so the template shows the name with tag through `displayName` (R5 and R35 keep the client's columns and show no short code, except the کوڈ column of the R35 table);
    - rows with values already formatted for printing;
    - totals (میزان);
    - the amount in words from `core::urdu_words` or `core::english_words`, chosen by print language and number grouping (FR-19.7);
@@ -79,6 +86,7 @@ Backend: WebView2 Print (printer) or PrintToPdf (PDF), through with_webview + we
 ## Done when
 
 - [ ] All values come from the backend print data. The template calculates nothing.
+- [ ] R5 and R35 follow the client's layouts; every other print follows FR-19.13; the header shows the contacts and trade mark.
 - [ ] Print language, names, words, month names and digits follow FR-7.36, FR-19.7 and NFR-URD-14/16.
 - [ ] The paper size matches in CSS and in the print settings. Headers repeat; rows never split.
 - [ ] Printer, paper and copies come from Settings.

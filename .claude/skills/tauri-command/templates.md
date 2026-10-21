@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// What the وصولی screen sends. Everything typed is text. PRD 15.1, 15.2.
+/// All money is روکڑ (PRD v1.6), so there is no mode, bank or cheque field.
 #[derive(Debug, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -19,9 +20,6 @@ pub struct ReceiptInput {
     pub account_id: AccountId,       // picked from AccountPicker
     pub pukhta_person_key: Option<String>,
     pub amount: String,              // "10,000", parsed by core::money::parse_sum
-    pub mode: PaymentMode,           // enum: Cash, Bank, Cheque
-    pub bank_account_id: Option<AccountId>,
-    pub cheque_no: Option<String>,
     pub collector_staff_id: Option<StaffId>,
     pub narration: Option<String>,
 }
@@ -50,9 +48,6 @@ impl ReceiptDraft {
         let entry_date = errors.take("entryDate", validate::parse_posting_date(&input.entry_date, today, closed_up_to));
         let amount = errors.take("amount", validate::parse_sum(&input.amount).and_then(validate::more_than_zero));
         let narration = errors.take("narration", validate::free_text(input.narration.as_deref()));
-        if input.mode != PaymentMode::Cash && input.bank_account_id.is_none() {
-            errors.push("bankAccountId", ErrorCode::ErrRequired, None);
-        }
 
         errors.finish()?; // returns UiError { errors: [...] } if any field failed
         Ok(Self { /* every field, now typed and checked */ })

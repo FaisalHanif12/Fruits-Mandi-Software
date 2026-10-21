@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.3 (Umar's changes of 11-10-2026 and 15-10-2026) |
-| Date | 15 October 2026 |
+| Version | 1.4 (Umar's changes of 11-10-2026, 15-10-2026 and 18-10-2026) |
+| Date | 19 October 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.5, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.7, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -115,6 +115,7 @@ All targets are "95% of the time or better" (p95) on the reference hardware, wit
 | NFR-SPD-21 | Party card after a code is complete (PRD FR-7.38), 10 years of data | Under 100 ms |
 | NFR-SPD-22 | Attention list count (PRD FR-7.44) | Updated within 1 second after any save; the work never slows typing |
 | NFR-SPD-23 | Rate hint and seller or truck memory (PRD FR-7.49 to FR-7.53) | Shown under 100 ms after the field is filled |
+| NFR-SPD-24 | A page of any list, ledger, register, report or analytics table, with 10 years of data (PRD FR-19.11, a page of 100 rows) | First page with the totals over the whole filter under 1 second; each next page under 300 ms. Example: a buyer with 10,000 ledger lines opens his first 100 lines and his closing balance in under 1 second. |
 
 Everyday comparison for SPD-4: a calculator responds the moment you press a key. If typing in the app ever feels slower than that, it fails.
 
@@ -305,7 +306,7 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 
 | ID | Requirement |
 |---|---|
-| NFR-URD-21 | English text is plain, professional English, with one fixed spelling per word (British spelling as used in Pakistan: Labour, Cheque). Mandi words use the PRD glossary's English column only. Reviewed by an English-literate reviewer and the Owner before release. |
+| NFR-URD-21 | English text is plain, professional English, with one fixed spelling per word (British spelling as used in Pakistan: Labour, Colour). Mandi words use the PRD glossary's English column only. Reviewed by an English-literate reviewer and the Owner before release. |
 | NFR-URD-22 | Every text key exists in both languages. The build fails if any key is missing, empty or left untranslated in either language. |
 | NFR-URD-23 | Amounts in words are correct English for every whole-rupee amount from 0 to 10,00,00,00,000, in both groupings (PRD FR-19.7). Example: 19,316 = "Nineteen thousand three hundred sixteen rupees only". |
 | NFR-URD-24 | English-to-Urdu accuracy (v1.2). The word list has at least 15,000 reviewed entries (PRD FR-7.27). On a fixed test list of 1,000 names typical of the mandi (people, firms, cities, items): for names in the word list, the correct Urdu spelling is the first suggestion for at least 95% and among the 3 suggestions for at least 99%; for names not in the word list (spelling rules only), the top-3 rate is reported on every build and must not drop below the last release. Every rules-only spelling is marked and confirmed before save (PRD FR-7.66), so a wrong spelling is never saved silently. The test list is kept in the repository and grows with every wrong conversion reported. **When (v1.3, Umar 15-10-2026):** the 15,000 entries and the 95% and 99% gates must be met before go-live (D5), using the old software's account names (about 1,572) and the Urdu reviewer's confirmed rows. Until then every build reports the numbers, and they must not drop. Example: on 13-10-2026 the list had 12,942 entries (8,212 from the team list and checked sources, 4,730 still waiting for review), first suggestion 92.0%, top 3 95.4%; the next build may not report less. |
@@ -377,3 +378,4 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
 | 1.2 | 12-10-2026 | PRD v1.2: one user, no roles (NFR-SEC-4, NFR-SEC-13, Section 11). Urdu accuracy: new NFR-URD-24 targets with a 15,000-word list and the spelling check; new NFR-URD-29. |
 | 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list size and the accuracy gates of NFR-URD-24 and NFR-URD-25 must be met before go-live (D5), not at the end of D2; until then the numbers are reported and must not drop. |
+| 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): large lists load page by page, with a speed target (NFR-SPD-24); the spelling example in NFR-URD-21 no longer names a cheque. |

@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.3 (Umar's changes of 11-10-2026 and 15-10-2026) |
-| Date | 15 October 2026 |
+| Version | 1.5 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026 and 22-10-2026) |
+| Date | 22 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.5 (the master), NFR v1.3 |
+| Depends on | PRD v1.7 (the master), NFR v1.4 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---
@@ -212,7 +212,7 @@ If long help text is needed, IndicTrans2 (MIT licence, supports Urdu) can produc
 | Piece | Where | How |
 |---|---|---|
 | Party card | Command `assist_party_card(account_id)`; component `shared/ui/PartyCard` | One query on indexed balances and the matching tables; target NFR-SPD-21 |
-| Short codes and smart search | Command `search_accounts(text, scope)`; component `shared/ui/AccountPicker` | Rust index in memory: code, serial, three name keys, father or firm, city, phone. Order: exact code, exact serial (in a seller or buyer field, that type only; in an any-account field, the seller and the buyer with that serial), starts-with, recent and frequent (from `user_prefs`), then close matches by `strsim` Damerau-Levenshtein (at most 1 mistake up to 5 letters, 2 above). Target NFR-SPD-6. |
+| Short codes and smart search | Command `search_accounts(text, scope)`; component `shared/ui/AccountPicker` | Rust index in memory: code, serial, three name keys (the tag included), father or firm, city, phone. Order: exact code, exact serial (in a seller or buyer field, that type only; in an any-account field, the seller and the buyer with that serial), starts-with, recent and frequent (from `user_prefs`), then close matches by `strsim` Damerau-Levenshtein (at most 1 mistake up to 5 letters, 2 above). Target NFR-SPD-6. |
 | How was this worked out | Every preview result from the backend carries a `working` object for each calculated amount (formula, inputs, rule ID); component `shared/ui/CalcInfo` | The frontend never rebuilds the working; it only shows what the backend sent |
 | Attention list | Command `assist_attention()`; components `AttentionBell` (top bar) and the dashboard list | Counts from indexed queries, refreshed after each save event |
 | Memories and hints | Commands `assist_truck_memory`, `assist_seller_memory`, `assist_last_rate`, `assist_open_bills`, `assist_open_payables` | Read-only queries; nothing is saved by them. The rate hint for a lot is returned by `bikri_preview`, which sees the unsaved lines of the screen, and falls back to `assist_last_rate` for saved data (PRD FR-7.53). Open payables use the read-time oldest-first working of PRD FR-7.59 (Money agent 8.2). |
@@ -254,6 +254,11 @@ Each business module has **one name**, used unchanged in the frontend folder, th
 | vouchers | 15, 16 | `features/vouchers` | ... | `vouchers_` | `vouchers.ftl` |
 | cashbook | 16 | `features/cashbook` | ... | `cashbook_` | `cashbook.ftl` |
 | partners | 17 | `features/partners` | ... | `partners_` | `partners.ftl` |
+| trips | 12.10 | `features/trips` | `services/src/trips`, `db/src/trips` | `trips_` | `trips.ftl` |
+| purchases | 12.10 | `features/purchases` (inside the مارکیٹ سفر section) | `core/src/purchases`, `services/src/purchases`, `db/src/purchases` | `purchases_` | `purchases.ftl` |
+| gardens | 12.11 | `features/gardens` | `services/src/gardens`, `db/src/gardens` | `gardens_` | `gardens.ftl` |
+| ventures | 12.10, 12.11 | (no screen of its own: the shares, sources and splits that gardens and trips share) | `domain/src/ventures`, `services/src/ventures`, `db/src/ventures` | `ventures_` | `ventures.ftl` |
+| fruit | 16.7 | `features/fruit` (a tab of the خرچہ area) | `services/src/fruit`, `db/src/fruit` | `fruit_` | `fruit.ftl` |
 | analytics | 18 | `features/analytics` | ... | `analytics_` | `analytics.ftl` |
 | reports | 19 | `features/reports` | `reports/src/...` | `reports_` | `reports.ftl` |
 | backup | 20 | `features/backup` | `backup/src` | `backup_` | `backup.ftl` |
@@ -431,3 +436,5 @@ Urdu words in code: we use simple English transliteration for business terms tha
 | 1.1 | 10-10-2026 | **Final baseline for build.** From the start of development, every change raises the version (1.2, 1.3 ...) and adds a line here. |
 | 1.2 | 12-10-2026 | PRD v1.2: sign-in check instead of roles (5.4); word list of at least 15,000 entries and suggestion source for the spelling check (4.4). |
 | 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list file has six columns (4.4) and its open sources are named and credited (4.4). |
+| 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): module names trips, purchases, gardens, ventures and fruit (5.2). |
+| 1.5 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag is in the search index (4.7). |

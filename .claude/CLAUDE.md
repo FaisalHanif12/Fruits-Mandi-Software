@@ -21,12 +21,12 @@ All requirements live in `docs/`. These six files are final for build.
 | `docs/Architecture_v1.md` | Diagrams and the full data dictionary (Section 15) |
 | `.claude/agents/money-calculations.md` | The specialist for every piece of money code |
 
-- The PRD is about 1,800 lines. Do not read it whole. Read the sections for the task (map below).
+- The PRD is about 2,200 lines. Do not read it whole. Read the sections for the task (map below).
 - Requirement IDs look like `FR-12.8`, `NFR-SPD-7`, `E2E-4`, `C10`, `A27`. Put them in code comments (`// PRD FR-12.8`) and in PR descriptions.
 - If two documents disagree, or a needed rule is missing, stop and ask Umar. Do not pick one yourself.
 - Items tagged `[A]` in the PRD are assumptions. Build the stated default and make it easy to change. Do not invent other behaviour.
 - Never change an expected number in a golden test. If the code and the test disagree, the code is wrong until Umar changes the PRD.
-- The documents are at versions 1.3 to 1.5 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
+- The documents are at versions 1.4 to 1.7 (the PRD document table, Section 0.1, lists each one). The baseline was 1.1. When Umar approves a change, raise that document's version (1.2, 1.3 ...), add a change log line, and update every other document it affects in the same step.
 
 ### Where to read before you start
 
@@ -37,10 +37,10 @@ All requirements live in `docs/`. These six files are final for build.
 | وصولی, ادائیگی, پیشگی, پختہ کھاتہ | PRD 15 and 13; Architecture 11; agent Section 8 |
 | Partners and the income split | PRD 17; Architecture 10 |
 | Expenses (one خرچہ screen), partner money taken and returned, ادھار رقم, الگ کھاتہ | PRD 16.2, 16.3, 16.5 and 16.6; FR-7.67; agent Section 8.2b |
-| Own goods (خریداری) and partner capital | PRD 12.10 and 17.4; agent Section 5.4 |
+| Market trips (خریداری), gardens, fruit taken and partner capital | PRD 12.10, 12.11, 16.7 and 17.4; agent Sections 5.4 and 5.5 |
 | Accounts, codes, masters | PRD 10; Architecture 15.4 |
 | Keyboard, ease of use, language switch, typing names, smart assistance | PRD 7; Tech Stack 4; Code Standards 6.7 and 6.10 |
-| Reports and analytics | PRD 18 and 19 |
+| Reports and analytics, lists page by page | PRD 18 and 19 (FR-19.11); Code Standards B31 |
 | Backup and restore | PRD 20; NFR 4; Architecture 14 |
 | Database tables and migrations | Architecture 15; Code Standards 7 |
 | Tests | PRD 27; Code Standards 9 |
