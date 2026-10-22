@@ -19,6 +19,7 @@ pub mod matching;
 pub mod partners;
 pub mod ports;
 pub mod printing;
+pub mod purchases;
 pub mod rules;
 pub mod search;
 pub mod secret;
@@ -27,6 +28,8 @@ pub mod spelling;
 mod store;
 pub mod testing;
 pub mod translit;
+pub mod trips;
+mod ventures;
 pub mod vouchers;
 
 pub use context::{Context, Parts};

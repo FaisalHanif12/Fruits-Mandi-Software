@@ -38,6 +38,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { IDS } from '../helpers/bikri-data';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -467,8 +468,8 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
     await user.keyboard('600{Enter}2{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales.slice(0, 2)).toMatchObject([
-        { buyer_account_id: 19, qty: '20', seller_rate: '600' },
-        { buyer_account_id: 20 },
+        { buyer_account_id: IDS.akram, qty: '20', seller_rate: '600' },
+        { buyer_account_id: IDS.arshad },
       ]);
     });
     expect(backend.lastDraft().header).toEqual(before?.header);

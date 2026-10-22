@@ -21,4 +21,8 @@ export type LineWorkings = {
    * C19.
    */
   rate_diff: Working;
+  /**
+   * C21: the cost of the trip goods this line sells. A plain line has 0 and a "none" working.
+   */
+  cost_of_goods: Working;
 };

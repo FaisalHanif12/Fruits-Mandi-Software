@@ -143,6 +143,27 @@ fn check_accounts_active(tx: &Connection, entry: &BalancedEntry) -> Result<(), S
     }
 }
 
+/// The اپنا مال account (030119998) never holds a balance: a trip lot credits the trip's partners
+/// and takes its goods out of a purchase instead (PRD FR-12.26, FR-10.4). Any line on it, from a
+/// voucher, a جنرل entry or an opening, is refused, so no screen can put a balance on it.
+fn check_own_goods_account(tx: &Connection, entry: &BalancedEntry) -> Result<(), ServiceError> {
+    let Some(own) = account_repo::id_by_code(tx, mandi_domain::core::accounts::OWN_GOODS_CODE)?
+    else {
+        return Ok(());
+    };
+    if entry.lines().iter().any(|l| l.account_id.get() == own) {
+        return Err(ServiceError::Rejected(vec![Rejection {
+            code: ErrorCode::ErrOwnGoodsAccountRestricted,
+            field: None,
+            values: std::collections::BTreeMap::from([(
+                "account_id".to_owned(),
+                ErrorValue::Number(own),
+            )]),
+        }]));
+    }
+    Ok(())
+}
+
 /// Posts an entry inside the caller's transaction `tx`.
 ///
 /// A new posting is refused if any of its accounts is inactive. A reversal (`event.reverses` is
@@ -188,6 +209,7 @@ pub fn post_ordered(
     order_key: Option<i64>,
 ) -> Result<Posted, ServiceError> {
     check_posting_date(ctx, event.date)?;
+    check_own_goods_account(tx, &event.entry)?;
     if event.reverses.is_none() {
         check_accounts_active(tx, &event.entry)?;
     }

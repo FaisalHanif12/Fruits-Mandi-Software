@@ -7,7 +7,7 @@
   "bill_date": "2026-10-10",
   "truck_no": "LES-1234",
   "zamindar": {
-    "id": 17,
+    "id": 18,
     "code": "030110001",
     "name_ur": "رحیم",
     "name_en": "Rahim"
@@ -27,11 +27,13 @@
       "id": 1,
       "lot_no": 1,
       "seller": {
-        "id": 17,
+        "id": 18,
         "code": "030110001",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
+      "purchase": null,
+      "own": null,
       "pukhta": null,
       "item": {
         "id": 1,
@@ -87,7 +89,7 @@
           "journal_entry_id": 3,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 19,
+            "id": 20,
             "code": "03040001",
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
@@ -122,6 +124,7 @@
           },
           "buyer_total": 1288000,
           "rate_diff": 0,
+          "cost_paisa": 0,
           "payment_type": "credit",
           "is_active": true,
           "state": "in_force",
@@ -133,7 +136,7 @@
           "journal_entry_id": 3,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 20,
+            "id": 21,
             "code": "03040002",
             "name_ur": "ارشد ملتانی",
             "name_en": "Arshad Multani"
@@ -168,6 +171,7 @@
           },
           "buyer_total": 1868400,
           "rate_diff": 0,
+          "cost_paisa": 0,
           "payment_type": "credit",
           "is_active": true,
           "state": "in_force",

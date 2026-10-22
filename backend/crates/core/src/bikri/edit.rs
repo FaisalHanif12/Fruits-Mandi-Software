@@ -29,6 +29,8 @@ use super::preview::BikriPreview;
 use super::saved::{BikriStatus, SavedLot, SavedPosting, SavedPukhta};
 use crate::accounts::RecordRef;
 use crate::cash::CashCheck;
+use crate::money::Paisa;
+use crate::ventures::TripRef;
 
 /// The reason an undo (PRD FR-7.47) writes to the audit log and to `cancel_reason`. It is a Fluent
 /// message ID, not text: the screen turns it into "محفوظ کرنے کے فوراً بعد واپس" or "Undone straight
@@ -125,7 +127,55 @@ pub struct StockRow {
     pub write_offs: Vec<WriteOffRow>,
 }
 
-/// The answer of `bikri_stock_list`. Own goods rows join in plan 16b.
+/// One purchase of a trip with stock left, marked اپنا مال with its trip (PRD FR-12.25): bought,
+/// sold, written off, left, cost left and days waiting. It is not a lot: it has no `lot_id`, and
+/// it is sold by an own lot in a بکری or in another shop. `purchases_write_off` takes its
+/// `purchase_id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct OwnStockRow {
+    /// The purchase.
+    #[ts(type = "number")]
+    pub purchase_id: i64,
+    /// The purchase number (خ-1, PUR-1).
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The day it was bought, `YYYY-MM-DD`.
+    pub received_date: String,
+    /// Its trip.
+    pub trip: TripRef,
+    /// Who it was bought from, as typed.
+    pub supplier: Option<String>,
+    /// The item.
+    pub item: RecordRef,
+    /// The packing.
+    pub packing: RecordRef,
+    /// نگ bought.
+    #[ts(type = "number")]
+    pub qty_bought: i64,
+    /// نگ sold, over the own lots in force.
+    #[ts(type = "number")]
+    pub qty_sold: i64,
+    /// نگ written off.
+    #[ts(type = "number")]
+    pub qty_written_off: i64,
+    /// نگ left: bought less sold less written off. More than 0 in this list.
+    #[ts(type = "number")]
+    pub balance: i64,
+    /// The total cost of the purchase.
+    #[ts(type = "Paisa")]
+    pub total_cost_paisa: Paisa,
+    /// The cost of the نگ left (C21): total cost less the cost already released.
+    #[ts(type = "Paisa")]
+    pub cost_left_paisa: Paisa,
+    /// Whole days from `received_date` to today.
+    #[ts(type = "number")]
+    pub days_waiting: i64,
+    /// The write-offs of this purchase that can still be undone, oldest first
+    /// (`purchases_write_off_undo` takes their `move_id`).
+    pub write_offs: Vec<WriteOffRow>,
+}
+
+/// The answer of `bikri_stock_list`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct StockList {
     /// Oldest received first, then by بکری number and lot number.
@@ -133,6 +183,15 @@ pub struct StockList {
     /// Σ of the `balance` of the rows (نگ).
     #[ts(type = "number")]
     pub balance_total: i64,
+    /// The trip goods with stock left (PRD FR-12.25), oldest first. The `item_id` filter matches the
+    /// item and the dates the day bought. The `seller_id` filter leaves them out unless it is the اپنا مال account.
+    pub own_rows: Vec<OwnStockRow>,
+    /// Σ of the `balance` of the own rows (نگ).
+    #[ts(type = "number")]
+    pub own_balance_total: i64,
+    /// Σ of the `cost_left_paisa` of the own rows.
+    #[ts(type = "Paisa")]
+    pub own_cost_left_paisa: Paisa,
 }
 
 // ---- Later sale (PRD FR-12.17) ----

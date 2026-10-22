@@ -210,6 +210,11 @@ pub struct SavedSale {
     /// C19.
     #[ts(type = "Paisa")]
     pub rate_diff: Paisa,
+    /// C21: the cost of the trip goods this line sold, stored at save and never posted (PRD
+    /// FR-12.26). 0 on a line of any other lot.
+    #[serde(default)]
+    #[ts(type = "Paisa")]
+    pub cost_paisa: Paisa,
     /// How the buyer pays.
     pub payment_type: PaymentType,
     /// False once an edit or a cancel ended this line (plan 16). `state` says how.
@@ -280,7 +285,8 @@ pub struct SavedTotals {
     /// All buyer bills together.
     #[ts(type = "Paisa")]
     pub buyer_total: Paisa,
-    /// The income shared between the partners (C9).
+    /// The income shared between the partners (C9): commission, لاگا and فون only, also for a trip
+    /// lot (PRD FR-12.26).
     #[ts(type = "Paisa")]
     pub shared_income: Paisa,
 }
@@ -327,7 +333,8 @@ impl SavedTotals {
             .gross
             .checked_sub(lot.seller_comm)?
             .checked_sub(charges)?;
-        // C9: the income of the posting.
+        // C9: the income of the posting. The seller credit of a trip lot is not income: it goes to
+        // the trip's partners (PRD FR-12.26).
         let shared_income = lot
             .seller_comm
             .checked_add(buyer_comm)?
@@ -384,6 +391,56 @@ impl SavedTotals {
     }
 }
 
+/// The purchase an own lot took its goods from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct SavedPurchaseRef {
+    /// The purchase.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// Its number (خ-1, PUR-1).
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its trip.
+    #[ts(type = "number")]
+    pub trip_id: i64,
+    /// The trip's number (سفر-1, TRP-1).
+    #[ts(type = "number")]
+    pub trip_number: i64,
+}
+
+/// One trip partner's part of the seller credit of a saved trip lot (PRD C25), read from the lines of
+/// the posting. Positive is credited to his 0604 account, negative is debited.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct SavedCredit {
+    /// The partner. `code` is empty.
+    pub partner: RecordRef,
+    /// His 0604 account.
+    #[ts(type = "number")]
+    pub account_id: i64,
+    /// His share of the trip in bps.
+    pub share_bps: i32,
+    /// His part, signed.
+    #[ts(type = "Paisa")]
+    pub amount_paisa: Paisa,
+}
+
+/// What a saved lot of trip goods shows besides its lines (PRD FR-12.26, FR-12.27): stored values
+/// only, never worked out again.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct SavedOwnLot {
+    /// C21: the cost of the goods the lines in force sold, stored on the lines, never posted.
+    #[ts(type = "Paisa")]
+    pub cost_paisa: Paisa,
+    /// The seller credit of the lot (C8) that went to the trip's partners.
+    #[ts(type = "Paisa")]
+    pub credit_paisa: Paisa,
+    /// The result: the seller credit less the cost.
+    #[ts(type = "Paisa")]
+    pub result_paisa: Paisa,
+    /// Each trip partner's part of the seller credit.
+    pub credits: Vec<SavedCredit>,
+}
+
 /// One saved lot with its stored totals and lines.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedLot {
@@ -393,8 +450,14 @@ pub struct SavedLot {
     /// The lot number, from 1.
     #[ts(type = "number")]
     pub lot_no: i64,
-    /// The seller account.
+    /// The seller account. For an own lot it is the اپنا مال account (030119998).
     pub seller: RecordRef,
+    /// The purchase an own lot took its goods from (PRD FR-12.26). `null` for any other lot.
+    #[serde(default)]
+    pub purchase: Option<SavedPurchaseRef>,
+    /// The cost, the result and the partners' parts of a trip lot. `null` for any other lot.
+    #[serde(default)]
+    pub own: Option<SavedOwnLot>,
     /// The one-time seller, for the پختہ کھاتہ account.
     pub pukhta: Option<SavedPukhta>,
     /// The item.

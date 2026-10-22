@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use rusqlite::backup::Backup;
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{Connection, OpenFlags, Transaction};
 use rusqlite_migration::{HookError, M, Migrations, SchemaVersion};
 
 use crate::clock::Clock;
@@ -42,6 +42,13 @@ pub const BIKRI_RECORDS_ARE_NEVER_DELETED_SQL: &str =
 pub const STABLE_POSTING_ORDER_SQL: &str =
     include_str!("../migrations/0005_stable_posting_order.sql");
 
+/// The sixth migration (plan 16b, PRD v1.7): the tables of the market trips, the gardens and the
+/// fruit taken, the trip goods columns, the 0604 account of each partner, the tag column, and the
+/// wider checks and system accounts that trips, partner capital and the separate khata need. See
+/// the header of the file and [`trips_hook`]. No row is changed and no number moves.
+pub const TRIPS_GARDENS_FRUIT_KHATA_SQL: &str =
+    include_str!("../migrations/0006_trips_gardens_fruit_khata.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -59,7 +66,103 @@ pub fn migrations() -> Migrations<'static> {
         M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
         M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
         M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, trips_hook),
     ])
+}
+
+/// One edit of a table's text in `sqlite_schema`: `from` must occur exactly once in it.
+struct Widen {
+    table: &'static str,
+    from: &'static str,
+    to: &'static str,
+}
+
+/// The CHECK lists that migration 6 widens (Architecture 15.4, 15.6 and 15.7 v1.7). Each `from` is
+/// the text of migrations 1 and 5 as released.
+const WIDEN: [Widen; 7] = [
+    // Posting types of purchases, trip costs, garden payments, sales in another shop, a garden's
+    // closing, fruit taken, partner capital and the separate khata.
+    Widen {
+        table: "journal_entries",
+        from: "'general', 'opening', 'month_close')",
+        to: "'general', 'opening', 'month_close', 'purchase', 'trip_cost', 'garden_payment', 'venture_receipt', 'garden_close', 'fruit_taken', 'capital_in', 'capital_out', 'khata_out', 'khata_in')",
+    },
+    Widen {
+        table: "journal_entries",
+        from: "source_type IN ('bikri', 'voucher', 'account', 'month_close')",
+        to: "source_type IN ('bikri', 'voucher', 'account', 'month_close', 'purchase', 'venture', 'fruit')",
+    },
+    // The voucher types of plan 17.
+    Widen {
+        table: "vouchers",
+        from: "'money_lent_return', 'general')",
+        to: "'money_lent_return', 'general', 'capital_in', 'capital_out', 'khata_out', 'khata_in')",
+    },
+    // The party types `separate` (a separate khata) and `garden` (Architecture 15.4).
+    Widen {
+        table: "account_controls",
+        from: "party_type IN ('seller', 'buyer', 'other')",
+        to: "party_type IN ('seller', 'buyer', 'separate', 'garden', 'other')",
+    },
+    Widen {
+        table: "accounts",
+        from: "party_type IN ('seller', 'buyer', 'other')",
+        to: "party_type IN ('seller', 'buyer', 'separate', 'garden', 'other')",
+    },
+    // Fruit taken from a lot (PRD FR-16.11).
+    Widen {
+        table: "stock_moves",
+        from: "kind IN ('received', 'sold', 'written_off', 'reversal')",
+        to: "kind IN ('received', 'sold', 'written_off', 'taken', 'reversal')",
+    },
+    // A purchase move has no lot.
+    Widen {
+        table: "stock_moves",
+        from: "lot_id INTEGER NOT NULL REFERENCES",
+        to: "lot_id INTEGER REFERENCES",
+    },
+];
+
+/// Widens the CHECK lists in place (see the header of migration 6): edits the text of each table
+/// in `sqlite_schema` and raises the schema version, so this connection and every later one read
+/// the new text. Each edit must find its text exactly once, or the migration fails and the copy
+/// taken before it is put back.
+fn widen_checks(tx: &Connection) -> Result<(), HookError> {
+    let version: i64 = tx.query_row("PRAGMA schema_version", [], |row| row.get(0))?;
+    tx.execute_batch("PRAGMA writable_schema = ON")?;
+    for edit in &WIDEN {
+        let sql: String = tx.query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?1",
+            [edit.table],
+            |row| row.get(0),
+        )?;
+        if sql.matches(edit.from).count() != 1 {
+            return Err(HookError::Hook(format!(
+                "migration 6: the text to widen was not found exactly once in {}",
+                edit.table
+            )));
+        }
+        tx.execute(
+            "UPDATE sqlite_master SET sql = ?1 WHERE type = 'table' AND name = ?2",
+            rusqlite::params![sql.replacen(edit.from, edit.to, 1), edit.table],
+        )?;
+    }
+    let next = version
+        .checked_add(1)
+        .ok_or_else(|| HookError::Hook("migration 6: the schema version is too big".to_owned()))?;
+    tx.execute_batch(&format!("PRAGMA schema_version = {next}"))?;
+    tx.execute_batch("PRAGMA writable_schema = OFF")?;
+    Ok(())
+}
+
+/// After the SQL of migration 6: widen the checks, then seed the new controls and the system
+/// account (the `separate` and `garden` controls need the wider party type check), rename the cash
+/// account in English, and make the 0604 account of every partner that exists.
+fn trips_hook(tx: &Transaction) -> Result<(), HookError> {
+    widen_checks(tx)?;
+    crate::seed::trip_accounts(tx)?;
+    crate::seed::partner_venture_accounts(tx)?;
+    Ok(())
 }
 
 /// What a call to [`migrate`] did.

@@ -10,6 +10,7 @@
 
 import { FIT_MIN, type EntryColumn } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks';
+import { isOwnLot } from './draft';
 import { LOT, SALE } from './types';
 
 export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
@@ -17,21 +18,27 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
     {
       field: LOT.seller,
       type: 'picker',
-      picker: { kind: 'account', scope: 'seller' },
+      // The only account field that offers اپنا مال, the trips' goods (PRD FR-12.26): scope
+      // `lot_seller` is `seller` plus that account, and the backend decides what is offered.
+      picker: { kind: 'account', scope: 'lot_seller' },
       headerId: 'bikri-col-seller',
       minWidth: FIT_MIN.name,
     },
+    // The item and packing of an own goods lot come from its purchase and follow it (PRD FR-12.26),
+    // so on that lot they are shown and not typed.
     {
       field: LOT.item,
       type: 'picker',
       picker: { kind: 'master', scope: 'item' },
       headerId: 'glossary-qism-maal',
+      editable: (row) => !isOwnLot(row),
     },
     {
       field: LOT.packing,
       type: 'picker',
       picker: { kind: 'master', scope: 'packing' },
       headerId: 'glossary-packing',
+      editable: (row) => !isOwnLot(row),
     },
     { field: LOT.qty, type: 'qty', headerId: 'bikri-col-qty-received', minWidth: FIT_MIN.heading },
     { field: LOT.freight, type: 'money', headerId: 'glossary-kiraya' },
@@ -44,7 +51,15 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       minWidth: FIT_MIN.longHeading,
     },
     // A one-time seller's نقد is filled by the backend while empty (FR-13.10), with its working.
-    { field: LOT.cash, type: 'money', headerId: 'glossary-naqd', showsCalc: true, explain: true },
+    // An own goods lot has no نقد: the firm does not give cash to itself (PRD FR-12.26).
+    {
+      field: LOT.cash,
+      type: 'money',
+      headerId: 'glossary-naqd',
+      showsCalc: true,
+      explain: true,
+      editable: (row) => !isOwnLot(row),
+    },
     ...(isFromStep(step, 'normal')
       ? ([
           { field: LOT.net, type: 'calc', headerId: 'glossary-safi-bikri', explain: true },

@@ -711,7 +711,9 @@ fn there_is_no_way_to_delete_a_master_record() {
     for folder in ["src", "../db/src", "../../app/src"] {
         for (file, table) in deletes_in(folder) {
             assert!(
-                table == "translit_pairs" || table == "drafts",
+                // `venture_partners`: a trip's partners are replaced as one set before its first
+                // entry (PRD FR-12.29); a trigger refuses it after that. It is not a master list.
+                table == "translit_pairs" || table == "drafts" || table == "venture_partners",
                 "{file} deletes from {table}: master records are made inactive, never deleted"
             );
         }

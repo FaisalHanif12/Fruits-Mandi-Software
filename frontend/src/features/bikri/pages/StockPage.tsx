@@ -7,6 +7,8 @@
 // - Four states: loading, an error with a retry, nothing left (with a button), and the rows.
 // - The tick "also lots that are written off" lists a lot with nothing left that has a write-off
 //   to undo, so the undo can always be found (contract 5).
+// - The firm's own goods that are not sold yet are listed under the lots, apart and marked with the
+//   number of their purchase (plan 16b, PRD FR-12.25). Their write-off and its undo are there too.
 // - Every figure is the backend's. A save elsewhere reads the list again (PRD 6.2).
 
 import { Localized } from '@fluent/react';
@@ -31,6 +33,7 @@ import {
   Picker,
   type PickerValue,
 } from '../../../shared/ui';
+import { OwnStockSection } from '../components/stock/OwnStockSection';
 import { StockLotCard } from '../components/stock/StockLotCard';
 import { UndoWriteOffDialog, WriteOffDialog } from '../components/stock/WriteOffDialogs';
 import { useStockList } from '../hooks/useBikriReads';
@@ -62,6 +65,7 @@ export function StockPage() {
   };
   const list = useStockList(filter);
   const rows = list.data?.rows;
+  const ownRows = list.data?.own_rows ?? [];
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const noFilter = filter.from === null && filter.to === null && seller === null && item === null;
 
@@ -107,7 +111,7 @@ export function StockPage() {
         }}
       />
     );
-  } else if (rows?.length === 0) {
+  } else if (rows?.length === 0 && ownRows.length === 0) {
     body = noFilter ? (
       <EmptyState
         icon={PackageCheck}
@@ -148,33 +152,40 @@ export function StockPage() {
   } else if (rows !== undefined) {
     body = (
       <>
-        <ListGrid<StockRow>
-          columns={columns}
-          rows={rows}
-          getRowId={(row) => String(row.lot_id)}
-          labelId="bikri-stock-label"
-          onOpen={sell}
-          onFocusRow={(rowId) => {
-            setSelectedId(Number(rowId));
-          }}
-          focusRowId={selectedId === null ? null : String(selectedId)}
-          heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
-          isInactive={(row) => row.balance <= 0}
-          totals={totals}
-        />
-        {selected === null ? null : (
-          <StockLotCard
-            row={selected}
-            onSell={() => {
-              sell(selected);
-            }}
-            onWriteOff={() => {
-              setWriteOffRow(selected);
-            }}
-            onUndoWriteOff={() => {
-              setUndoRow(selected);
-            }}
-          />
+        {rows.length === 0 ? null : (
+          <>
+            <ListGrid<StockRow>
+              columns={columns}
+              rows={rows}
+              getRowId={(row) => String(row.lot_id)}
+              labelId="bikri-stock-label"
+              onOpen={sell}
+              onFocusRow={(rowId) => {
+                setSelectedId(Number(rowId));
+              }}
+              focusRowId={selectedId === null ? null : String(selectedId)}
+              heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
+              isInactive={(row) => row.balance <= 0}
+              totals={totals}
+            />
+            {selected === null ? null : (
+              <StockLotCard
+                row={selected}
+                onSell={() => {
+                  sell(selected);
+                }}
+                onWriteOff={() => {
+                  setWriteOffRow(selected);
+                }}
+                onUndoWriteOff={() => {
+                  setUndoRow(selected);
+                }}
+              />
+            )}
+          </>
+        )}
+        {ownRows.length === 0 || list.data === undefined ? null : (
+          <OwnStockSection rows={ownRows} list={list.data} />
         )}
       </>
     );

@@ -18,7 +18,24 @@ import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved'
 import { paisaForTest } from './paisa';
 import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
 import { printDataFor, voucherPrintData } from './print-data';
+import {
+  createTripBooks,
+  e34Trip,
+  tripRow,
+  TRIP_REF,
+  purchaseEntry,
+  costEntry,
+} from './trips-data';
 import { printingSettings } from './print-settings';
+import * as ownReal from './bikri-own-real';
+import * as tripsReal from './trips-real';
+import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
+import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
+import type { PurchasesListInput } from '../../src/bindings/PurchasesListInput';
+import type { TripCostInput } from '../../src/bindings/TripCostInput';
+import type { TripGetInput } from '../../src/bindings/TripGetInput';
+import type { TripInput } from '../../src/bindings/TripInput';
+import type { TripsListInput } from '../../src/bindings/TripsListInput';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { AdvanceInput } from '../../src/bindings/AdvanceInput';
 import type { SaleInput } from '../../src/bindings/SaleInput';
@@ -38,6 +55,9 @@ interface Party {
   paisa: number;
   side: 'dr' | 'cr' | 'zero';
 }
+
+const OWN_ID = 17;
+const OWN_CODE = '030119998';
 
 const BIKRI_PARTIES: readonly Party[] = [
   {
@@ -64,6 +84,16 @@ const BIKRI_PARTIES: readonly Party[] = [
     type: 'seller',
     ur: 'پختہ کھاتہ (بیوپاری)',
     en: 'Pukhta Khata (Seller)',
+    paisa: 0,
+    side: 'zero',
+  },
+  // اپنا مال: offered only in the seller field of a lot (scope lot_seller, PRD FR-12.26).
+  {
+    id: OWN_ID,
+    code: OWN_CODE,
+    type: 'seller',
+    ur: 'اپنا مال',
+    en: 'Own Goods (Trips)',
     paisa: 0,
     side: 'zero',
   },
@@ -157,7 +187,14 @@ function accountHit(party: Party) {
 }
 
 function partyMatches(party: Party, scope: string, text: string): boolean {
-  if (scope !== 'any' && party.type !== scope) return false;
+  // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
+  if (scope === 'lot_seller') {
+    if (party.type !== 'seller') return false;
+  } else if (scope === 'seller' && party.code === OWN_CODE) {
+    return false;
+  } else if (scope !== 'any' && party.type !== scope) {
+    return false;
+  }
   const wanted = text.trim().toLowerCase();
   if (wanted === '') return true;
   if (/^\d+$/.test(wanted)) {
@@ -221,7 +258,63 @@ if (!new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('empty'))
   );
 }
 
+// The trips of the development page /dev/trips: the worked trip of E2E-34 (a purchase of 20 for
+// 10,400, 15 sold) with one cost; `&closed` shows it closed, `&empty` a list with no trip.
+const tripBooks = createTripBooks({
+  trips: devFlag('empty')
+    ? []
+    : [
+        e34Trip({ id: TRIP_REF.id, status: devFlag('closed') ? 'closed' : 'open' }),
+        tripRow({ id: 2, number: 2 }),
+      ],
+  entries: [costEntry(), purchaseEntry()],
+  cashBefore: devFlag('cash') ? 5_000 : 50_000,
+});
+const tripsDefaults = tripBooks.defaults();
+
+/** The share text of one row sent to partners_check_shares, or an empty text. */
+function shareTextOf(row: unknown): string {
+  if (typeof row !== 'object' || row === null) return '';
+  const share: unknown = Reflect.get(row, 'share');
+  return typeof share === 'string' ? share : '';
+}
+
+/** The running total of the shares (partners_check_shares), read from the typed texts. */
+function sharesCheck(input: Input) {
+  const rows: unknown[] = Array.isArray(input['shares']) ? input['shares'] : [];
+  let total = 0;
+  for (const row of rows) {
+    total += Math.round(Number(shareTextOf(row).replace(',', '.')) * 100) || 0;
+  }
+  return { total_bps: total, is_100: total === 10_000, errors: [] };
+}
+
 const handlers: Record<string, Handler> = {
+  partners_check_shares: (input) => sharesCheck(input),
+  trips_defaults: () => tripsDefaults,
+  trips_list: (input) => tripBooks.list(input as TripsListInput),
+  trips_get: (input) => tripBooks.get(input as TripGetInput),
+  trips_create: (input) => tripBooks.create(input as TripInput),
+  trips_cost_preview: (input) => tripBooks.costPreview(input as TripCostInput),
+  trips_cost_save: (input) => tripBooks.costSave(input as TripCostInput),
+  trips_cost_cancel: () => tripBooks.costCancel(),
+  trips_other_sale_preview: (input) => tripBooks.salePreview(input as OtherSaleInput),
+  trips_other_sale_save: (input) => tripBooks.saleSave(input as OtherSaleInput),
+  trips_other_sale_cancel: () => tripBooks.saleCancel(),
+  purchases_preview: (input) => tripBooks.purchasePreview(input as PurchaseInput),
+  purchases_save: (input) => tripBooks.purchaseSave(input as PurchaseInput),
+  // `?own` answers with the backend's real purchase (id 1) instead of the canned one (id 7).
+  purchases_get: (input) =>
+    devFlag('own')
+      ? tripsReal.PURCHASE_GET_AFTER_SALES
+      : tripBooks.purchaseGet(asNumber(input['id'])),
+  purchases_list: (input) =>
+    devFlag('own')
+      ? { ...tripsReal.PURCHASES_LIST_ALL, rows: [tripsReal.PURCHASE_GET_AFTER_SALES] }
+      : tripBooks.purchaseList(input as PurchasesListInput),
+  purchases_cancel: () => tripBooks.purchaseCancel(),
+  purchases_write_off: () => tripBooks.writeOff(),
+  purchases_write_off_undo: () => tripBooks.writeOffUndo(),
   day_status: () => ({ today: '2026-10-10', closed_up_to: null, today_open: true }),
   search_accounts: (input) =>
     parties()
@@ -296,6 +389,8 @@ const handlers: Record<string, Handler> = {
   translit_suggest: () => ({ items: [] }),
   translit_pairs_list: () => [],
   bikri_preview: (input) => {
+    // `?own` is the lot of trip goods of E2E-34, the backend's real answer.
+    if (devFlag('own')) return fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input));
     const preview = previewFor(draftOf(input));
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
     return devFlag('cash') ? { ...preview, cash: CASH_BELOW_ZERO } : preview;
@@ -320,10 +415,14 @@ const handlers: Record<string, Handler> = {
     preview: previewFor(draftOf(input)),
   }),
   bikri_get: () =>
-    savedEvent1({
-      status: devFlag('cancelled') ? 'cancelled' : 'saved',
-      cancel_reason: devFlag('cancelled') ? 'wrong truck' : null,
-    }),
+    devFlag('own')
+      ? devValue('own') === '41'
+        ? ownReal.OWN_GET_E41
+        : ownReal.OWN_GET_E34
+      : savedEvent1({
+          status: devFlag('cancelled') ? 'cancelled' : 'saved',
+          cancel_reason: devFlag('cancelled') ? 'wrong truck' : null,
+        }),
   bikri_list: () =>
     devFlag('empty') ? [] : [listRow(), listRow({ id: 42, number: 2, status: 'cancelled' })],
   bikri_find: () => [listRow(), listRow({ id: 42, number: 2, truck_no: 'LHR-0077' })],
@@ -363,21 +462,23 @@ const handlers: Record<string, Handler> = {
   // Plan 16: goods left, later sale, edit, cancel and undo (bikri-plan16-data.ts). `#/dev/bikri?
   // closed` is a closed day (the edit and the cancel are refused); `empty` is nothing left.
   bikri_stock_list: () =>
-    devFlag('empty')
-      ? stockList([])
-      : stockList([
-          stockRow(),
-          stockRow({
-            lot_id: 41,
-            bikri_id: 43,
-            bikri_number: 3,
-            received_date: '2026-10-08',
-            qty_received: 30,
-            qty_sold: 20,
-            balance: 10,
-            days_waiting: 2,
-          }),
-        ]),
+    devFlag('own')
+      ? ownReal.STOCK_OWN_ROWS
+      : devFlag('empty')
+        ? stockList([])
+        : stockList([
+            stockRow(),
+            stockRow({
+              lot_id: 41,
+              bikri_id: 43,
+              bikri_number: 3,
+              received_date: '2026-10-08',
+              qty_received: 30,
+              qty_sold: 20,
+              balance: 10,
+              days_waiting: 2,
+            }),
+          ]),
   bikri_later_sale_preview: (input) =>
     laterSaleAnswer(Array.isArray(input['sales']) ? (input['sales'] as SaleInput[]) : [], 5),
   bikri_later_sale_save: (input) => ({
@@ -387,8 +488,12 @@ const handlers: Record<string, Handler> = {
     entry_id: 9,
     preview: laterSaleAnswer([], 5),
   }),
-  bikri_open_for_edit: () => editable({ editable: !devFlag('closed') }),
-  bikri_edit_preview: (input) => previewFor(draftOf(input)),
+  bikri_open_for_edit: () =>
+    devFlag('own') ? ownReal.OWN_OPEN_FOR_EDIT : editable({ editable: !devFlag('closed') }),
+  bikri_edit_preview: (input) =>
+    devFlag('own')
+      ? fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input))
+      : previewFor(draftOf(input)),
   bikri_edit_save: (input) => {
     // `#/dev/bikri?id=41&edit=7&rule=lot_item_locked` is the backend refusing the edit by that rule.
     const rule = devValue('rule');
@@ -476,6 +581,21 @@ function masterHit(master: Master) {
     extra_en: '',
     is_active: true,
   };
+}
+
+/**
+ * The backend's real preview of the own lot, with the keys of the draft it is asked about (the real
+ * preview echoes the key of each lot and line it was given).
+ */
+function fitOwnPreview(real: typeof ownReal.OWN_PREVIEW_E34, draft: BikriDraft) {
+  const preview = structuredClone(real);
+  preview.lots.forEach((lot, lotIndex) => {
+    lot.key = draft.lots[lotIndex]?.key ?? lot.key;
+    lot.lines.forEach((line, lineIndex) => {
+      line.key = draft.lots[lotIndex]?.sales[lineIndex]?.key ?? line.key;
+    });
+  });
+  return preview;
 }
 
 /** The draft inside the input of `bikri_preview`. The screen sends it in the shape of the contract. */
@@ -606,4 +726,34 @@ export function seedEvent1(stores: BikriDraftStores): void {
     typed: { qty: '20', rate: '600', qtyFilled: '1' },
   });
   sales.getState().addRow({ qty: '30', rate: '580', qtyFilled: '1' }, { buyer: arshad });
+}
+
+/** The own lot of E2E-34 typed into the stores, for the sample page `#/dev/bikri?own`. */
+export function seedOwn(stores: BikriDraftStores): void {
+  const { header, lots } = stores;
+  header.getState().patch({ truckNo: 'OWN-1' });
+  const lot = lots.getState().rows[0];
+  if (lot === undefined) return;
+  lots.getState().patchRow(lot.rowId, {
+    picked: {
+      seller: { id: OWN_ID, code: OWN_CODE, name_ur: 'اپنا مال', name_en: 'Own Goods (Trips)' },
+      item: { id: 5, code: '5', name_ur: 'مالٹا', name_en: 'Orange' },
+      packing: { id: 1, code: '1', name_ur: 'پیٹی', name_en: 'Box' },
+    },
+    typed: { qty: '15', purchase: '1', sellerFilled: '1' },
+  });
+  const sales = stores.salesFor(lot.rowId);
+  const first = sales.getState().rows[0];
+  if (first === undefined) return;
+  sales.getState().patchRow(first.rowId, {
+    picked: {
+      buyer: {
+        id: IDS.akram,
+        code: '03040001',
+        name_ur: 'اکرم ٹول ٹیکس',
+        name_en: 'Akram Toll Tax',
+      },
+    },
+    typed: { qty: '15', rate: '600', qtyFilled: '1' },
+  });
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trips-cost-preview"
+description = "Enables the trips_cost_preview command without any pre-configured scope."
+commands.allow = ["trips_cost_preview"]
+
+[[permission]]
+identifier = "deny-trips-cost-preview"
+description = "Denies the trips_cost_preview command without any pre-configured scope."
+commands.deny = ["trips_cost_preview"]

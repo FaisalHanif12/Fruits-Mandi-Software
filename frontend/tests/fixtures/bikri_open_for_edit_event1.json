@@ -24,7 +24,8 @@
       {
         "key": "lot:1",
         "lot_id": 1,
-        "seller_account_id": 17,
+        "seller_account_id": 18,
+        "purchase_id": null,
         "pukhta": null,
         "item_id": 1,
         "packing_id": 1,
@@ -53,7 +54,7 @@
           {
             "key": "sale:1",
             "sale_id": 1,
-            "buyer_account_id": 19,
+            "buyer_account_id": 20,
             "pukhta": null,
             "qty": "20",
             "weight": null,
@@ -69,7 +70,7 @@
           {
             "key": "sale:2",
             "sale_id": 2,
-            "buyer_account_id": 20,
+            "buyer_account_id": 21,
             "pukhta": null,
             "qty": "25",
             "weight": null,
@@ -91,11 +92,13 @@
       "id": 1,
       "lot_no": 1,
       "seller": {
-        "id": 17,
+        "id": 18,
         "code": "030110001",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
+      "purchase": null,
+      "own": null,
       "pukhta": null,
       "item": {
         "id": 1,
@@ -151,7 +154,7 @@
           "journal_entry_id": 3,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 19,
+            "id": 20,
             "code": "03040001",
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
@@ -186,6 +189,7 @@
           },
           "buyer_total": 1288000,
           "rate_diff": 0,
+          "cost_paisa": 0,
           "payment_type": "credit",
           "is_active": true,
           "state": "in_force",
@@ -197,7 +201,7 @@
           "journal_entry_id": 3,
           "entry_date": "2026-10-10",
           "buyer": {
-            "id": 20,
+            "id": 21,
             "code": "03040002",
             "name_ur": "ارشد ملتانی",
             "name_en": "Arshad Multani"
@@ -232,6 +236,7 @@
           },
           "buyer_total": 1557000,
           "rate_diff": 0,
+          "cost_paisa": 0,
           "payment_type": "credit",
           "is_active": true,
           "state": "in_force",

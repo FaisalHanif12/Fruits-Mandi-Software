@@ -3,24 +3,29 @@
 
 use std::collections::HashMap;
 
+use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
-    FreightPaidBy, LinePreview, LotCharge, LotPreview, PaymentType, PreparedLot, PreparedSale,
-    RateHint, RateHintSource, SummaryTotals,
+    FreightPaidBy, LinePreview, LotCharge, LotPreview, OwnLotPreview, PaymentType, PreparedLot,
+    PreparedSale, RateHint, RateHintSource, SummaryTotals,
 };
-use mandi_core::error::ErrorCode;
+use mandi_core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_core::ids::AccountId;
 use mandi_core::money::Paisa;
 use mandi_core::rules::ChargeType;
+use mandi_core::ventures::ShareAmount;
 
 use super::checks::{self, Issues, Wanted};
 use super::line::{LineArgs, LotRef, calc_line, unchanged_stored};
-use super::lookups::{AccountFacts, ItemFacts, Lookups};
+use super::lookups::{AccountFacts, ItemFacts, Lookups, PurchaseFacts};
 use super::lot::{Acc, LotKey, Scope, lot_charge};
+use super::own::{OwnRun, kept_line};
 use super::person::{CleanPerson, clean_person};
 use super::stored::{StoredCharge, StoredLot};
+use super::working;
 use super::{CalcError, Env, PostingKind};
 use crate::ledger::MAX_LINE_PAISA;
 use crate::ledger::bikri::{JournalLot, JournalSale};
+use crate::ventures::credit_parts;
 
 /// State carried from lot to lot.
 pub(super) struct Run {
@@ -28,6 +33,8 @@ pub(super) struct Run {
     pub owed: HashMap<i64, Paisa>,
     /// The last seller rate typed for each (item, packing), for the rate hint.
     pub last_rates: HashMap<(i64, i64), Paisa>,
+    /// What is left of each purchase of own goods, shared by the lots (PRD FR-12.26, C21).
+    pub own: OwnRun,
 }
 
 /// What one lot gives back to the whole.
@@ -81,6 +88,8 @@ struct LotFacts<'a> {
     seller: Option<&'a AccountFacts>,
     item: Option<ItemFacts>,
     complete: bool,
+    /// The purchase of a lot of own goods that can be sold from (PRD FR-12.26).
+    own_purchase: Option<i64>,
 }
 
 fn lot_facts<'a>(
@@ -88,6 +97,7 @@ fn lot_facts<'a>(
     lookups: &'a Lookups,
     env_present: bool,
     prefix: &str,
+    date_iso: &str,
     lot: &PreparedLot,
 ) -> LotFacts<'a> {
     let mut complete = env_present && !lot.has_errors && lot.qty_received.is_some();
@@ -95,7 +105,7 @@ fn lot_facts<'a>(
         issues,
         lookups,
         lot.seller_account_id,
-        Wanted::Seller,
+        Wanted::LotSeller,
         &format!("{prefix}.seller_account_id"),
         Some(ErrorCode::ErrSellerRequired),
     );
@@ -107,6 +117,8 @@ fn lot_facts<'a>(
         Some(_) => {}
         None => complete = false,
     }
+    let own_purchase = own_purchase_checks(issues, lookups, prefix, date_iso, lot, seller);
+    complete &= seller.is_none_or(|s| !s.is_own_goods) || own_purchase.is_some();
     let item = match lot.item_id {
         None => {
             issues.error(ErrorCode::ErrRequired, &format!("{prefix}.item_id"));
@@ -158,7 +170,76 @@ fn lot_facts<'a>(
         seller,
         item,
         complete,
+        own_purchase,
     }
+}
+
+/// The checks of a lot of own goods (PRD FR-12.26): the seller is the اپنا مال account exactly
+/// when a purchase is named, the purchase exists and stands, the posting is not dated before the
+/// purchase (as for a sale in another shop, FR-12.32), and the lot's item and packing are its.
+/// Returns the purchase if the lot can sell from it.
+fn own_purchase_checks(
+    issues: &mut Issues,
+    lookups: &Lookups,
+    prefix: &str,
+    date_iso: &str,
+    lot: &PreparedLot,
+    seller: Option<&AccountFacts>,
+) -> Option<i64> {
+    let seller = seller?;
+    let field = format!("{prefix}.purchase_id");
+    if !seller.is_own_goods {
+        if lot.purchase_id.is_some() {
+            issues.error(ErrorCode::ErrFormatInvalid, &field);
+        }
+        return None;
+    }
+    let Some(id) = lot.purchase_id else {
+        issues.error(ErrorCode::ErrRequired, &field);
+        return None;
+    };
+    let Some(purchase) = lookups.purchases.get(&id) else {
+        issues.error(ErrorCode::ErrNotFound, &field);
+        return None;
+    };
+    if purchase.cancelled {
+        issues.error(ErrorCode::ErrPurchaseCancelled, &field);
+        return None;
+    }
+    let mut same = true;
+    // ISO dates (`YYYY-MM-DD`) compare in date order as text. No date yet (empty) has its own
+    // error on the header.
+    if !date_iso.is_empty() && date_iso < purchase.entry_date.as_str() {
+        issues.errors.push(
+            FieldError::new(ErrorCode::ErrDateBeforeReceived, &field).with(
+                "received_date",
+                ErrorValue::Text(purchase.entry_date.clone()),
+            ),
+        );
+        same = false;
+    }
+    if lot.item_id.is_some_and(|item| item != purchase.item_id) {
+        issues.error(ErrorCode::ErrFormatInvalid, &format!("{prefix}.item_id"));
+        same = false;
+    }
+    if lot
+        .packing_id
+        .is_some_and(|packing| packing != purchase.packing_id)
+    {
+        issues.error(ErrorCode::ErrFormatInvalid, &format!("{prefix}.packing_id"));
+        same = false;
+    }
+    if let Some(qty) = lot.qty_received
+        && qty.get() > purchase.qty_left
+    {
+        issues.error_with(
+            ErrorCode::ErrQtyExceedsLot,
+            &format!("{prefix}.qty_received"),
+            &[("available", purchase.qty_left)],
+        );
+        same = false;
+    }
+    same.then_some(id)
 }
 
 /// The rows of a lot as worked out.
@@ -254,6 +335,59 @@ fn available_qty(ctx: &LotCtx<'_>) -> Option<i64> {
         .map(|r| r.get().saturating_sub(elsewhere).max(0))
 }
 
+/// The cost of one line of an own lot (C21) and how it came about.
+struct OwnTake {
+    purchase_id: i64,
+    qty: i64,
+    cost: Paisa,
+    working: mandi_core::rules::Working,
+    /// True when the line took stock out of the purchase now. False for a line an edit kept: its
+    /// stock was reserved before any line was worked out.
+    fresh: bool,
+}
+
+/// C21 for a line of an own lot (PRD FR-12.26): the stored cost for a line an edit left with its
+/// quantity and purchase, else the cost out of what the purchase has left. `None` for a line of
+/// any other lot, and for a line the purchase cannot cover (then `ERR_QTY_EXCEEDS_LOT` is on it).
+fn own_line_cost(
+    ctx: &LotCtx<'_>,
+    run: &mut Run,
+    issues: &mut Issues,
+    env: &Env<'_>,
+    row: &PreparedSale,
+    line_prefix: &str,
+) -> Result<Option<OwnTake>, CalcError> {
+    let (Some(purchase_id), Some(qty)) = (ctx.facts.own_purchase, row.qty) else {
+        return Ok(None);
+    };
+    if let Some(stored) = kept_line(env, ctx.lot, row)
+        && row.sale_id.is_some_and(|id| run.own.claim_kept(id))
+    {
+        return Ok(Some(OwnTake {
+            purchase_id,
+            qty: qty.get(),
+            cost: stored.cost,
+            working: working::cost_kept(stored.cost),
+            fresh: false,
+        }));
+    }
+    let taken = run.own.take(purchase_id, qty.get())?;
+    if taken.is_none() {
+        issues.error_with(
+            ErrorCode::ErrQtyExceedsLot,
+            &format!("{line_prefix}.qty"),
+            &[("available", run.own.qty_left(purchase_id))],
+        );
+    }
+    Ok(taken.map(|(cost, working)| OwnTake {
+        purchase_id,
+        qty: qty.get(),
+        cost,
+        working,
+        fresh: true,
+    }))
+}
+
 /// Goes through the rows of a lot in order: remaining quantity, hint, checks and numbers.
 fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<Rows, CalcError> {
     let lot = ctx.lot;
@@ -329,6 +463,8 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
         if let (Some(env), Some(lot_ref), Some((buyer, buyer_id, payment)), false) =
             (ctx.env, ctx.lot_ref.as_ref(), parties, row.has_errors)
         {
+            let own = own_line_cost(ctx, run, issues, env, row, &line_prefix)?;
+            let cost = own.as_ref().map(|t| (t.cost, t.working.clone()));
             preview.calc = calc_line(
                 LineArgs {
                     env,
@@ -341,10 +477,18 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                     payment,
                     stored: unchanged_stored(env, lot_ref, row),
                     pending_move: &mut pending_move,
+                    cost,
                 },
                 issues,
                 &line_prefix,
             )?;
+            // A line with a mistake in it takes no stock: the lines after it are worked out
+            // against what the purchase really has left (money review of plan 16b).
+            if preview.calc.is_none()
+                && let Some(take) = own.filter(|t| t.fresh)
+            {
+                run.own.put_back(take.purchase_id, take.qty, take.cost)?;
+            }
         }
         if let (Some(calc), Some((buyer, buyer_id, _))) = (&preview.calc, parties) {
             rows.acc.add_line(calc)?;
@@ -371,6 +515,72 @@ struct Money {
     totals: Option<SummaryTotals>,
     acc: Option<Acc>,
     journal: Option<JournalLot>,
+    /// What a trip lot shows besides its lines (PRD FR-12.26, FR-12.27).
+    own: Option<OwnLotPreview>,
+}
+
+/// The seller credit of an own lot split between the trip's partners (C25), the cost of the goods
+/// (C21) and the result (PRD FR-12.27). One function for the preview and the journal, so they
+/// cannot differ. Returns the parts for the journal and the preview of the lot.
+fn own_money(
+    purchase_id: i64,
+    purchase: &PurchaseFacts,
+    credit: Paisa,
+    sold_qty: i64,
+    acc: &Acc,
+) -> Result<(Vec<(AccountId, Paisa)>, OwnLotPreview), CalcError> {
+    let partners: Vec<_> = purchase.partners.iter().map(|p| p.partner).collect();
+    let parts = credit_parts(credit, &partners)?;
+    // The journal builder treats a lot with no parts as an ordinary lot and would post the credit
+    // on the اپنا مال account, which must never hold a balance. So a trip lot always has parts, and
+    // they add up to the credit (PRD C25, FR-12.26).
+    let mut total = Paisa::ZERO;
+    for part in &parts {
+        total = total.checked_add(part.amount)?;
+    }
+    if parts.is_empty() || total != credit {
+        return Err(CalcError::Inconsistent(
+            "the parts of a trip lot's credit do not add up to the credit",
+        ));
+    }
+    let result = credit.checked_sub(acc.cost)?;
+    let mut credits = Vec::with_capacity(parts.len());
+    for part in &parts {
+        let facts = purchase
+            .partners
+            .iter()
+            .find(|p| p.partner.partner_id == part.partner_id)
+            .ok_or(CalcError::Inconsistent(
+                "a credit part names a partner who is not in the trip",
+            ))?;
+        credits.push(ShareAmount {
+            partner: RecordRef {
+                id: part.partner_id.get(),
+                code: String::new(),
+                name_ur: facts.name_ur.clone(),
+                name_en: facts.name_en.clone(),
+            },
+            share_bps: part.share.get(),
+            amount_paisa: part.amount,
+            working: part.working.clone(),
+        });
+    }
+    let preview = OwnLotPreview {
+        purchase_id,
+        purchase_number: purchase.number,
+        trip: purchase.trip.clone(),
+        cost_paisa: acc.cost,
+        cost_working: working::own_lot_cost(sold_qty, acc.cost),
+        credit_paisa: credit,
+        result_paisa: result,
+        result_working: working::own_lot_result(credit, acc.cost, result),
+        credits,
+    };
+    let journal = parts
+        .iter()
+        .map(|p| (p.account_id, p.amount))
+        .collect::<Vec<_>>();
+    Ok((journal, preview))
 }
 
 /// The lot charges, then (if a row was worked out) the totals C6 to C9 and the journal lot.
@@ -382,6 +592,7 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         totals: None,
         acc: None,
         journal: None,
+        own: None,
     };
     let (Some(env), Some(lot_ref), Some(qty_received)) =
         (ctx.env, ctx.lot_ref.as_ref(), ctx.lot.qty_received)
@@ -434,6 +645,15 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         // Freight, store rent and the lot charges belong to the first posting only (PRD
         // FR-12.17). `lot_charge` already gives 0 for a later sale; so do these two.
         let first = env.kind == PostingKind::First;
+        let own = ctx.facts.own_purchase.is_some();
+        if own && lot.freight > Paisa::ZERO {
+            // The purchase freight is already in the cost (PRD FR-12.26).
+            issues.warn_with(
+                ErrorCode::ErrOwnLotFreightInCost,
+                &format!("{}.freight", ctx.prefix),
+                &[],
+            );
+        }
         acc.freight = match (first, lot.freight_paid_by) {
             (true, FreightPaidBy::Firm) => lot.freight,
             _ => Paisa::ZERO,
@@ -448,13 +668,15 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         let pays_on_the_spot =
             first && lot.cash_paid.is_none() && ctx.facts.seller.is_some_and(|s| s.is_pukhta);
         let credit = acc.seller_credit()?;
-        if !first && lot.cash_paid.is_some_and(|cash| cash != Paisa::ZERO) {
+        // A later sale and an own lot give no نقد.
+        let no_cash = !first || own;
+        if no_cash && lot.cash_paid.is_some_and(|cash| cash != Paisa::ZERO) {
             issues.error(
                 ErrorCode::ErrFormatInvalid,
                 &format!("{}.cash_paid", ctx.prefix),
             );
         }
-        acc.cash_paid = if !first {
+        acc.cash_paid = if no_cash {
             Paisa::ZERO
         } else {
             match lot.cash_paid {
@@ -475,7 +697,7 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         if too_big {
             too_large(issues, &format!("{}.sales", ctx.prefix));
         } else {
-            if totals.net.is_negative() {
+            if totals.net.is_negative() && !own {
                 issues.warn_with(
                     ErrorCode::ErrLotNetNegative,
                     &format!("{}.seller_account_id", ctx.prefix),
@@ -486,8 +708,24 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
                 Some(seller) => person_of(seller, &lot.pukhta)?,
                 None => None,
             };
+            // A lot of trip goods: the seller credit goes to the trip's partners (C25), and the
+            // cost and the result are shown (C21, FR-12.27). The cost is never posted.
+            let own_purchase = ctx
+                .facts
+                .own_purchase
+                .and_then(|id| ctx.lookups.purchases.get(&id).map(|p| (id, p)));
+            let partner_credits = match own_purchase {
+                Some((id, purchase)) => {
+                    let (parts, preview) =
+                        own_money(id, purchase, totals.seller_credit, rows.sold, acc)?;
+                    money.own = Some(preview);
+                    parts
+                }
+                None => Vec::new(),
+            };
             money.journal = Some(JournalLot {
                 seller_account_id: AccountId::new(lot_ref.seller_id),
+                partner_credits,
                 person_key: person.map(|p| p.key),
                 seller_credit: totals.seller_credit,
                 cash_paid: totals.cash_paid,
@@ -519,7 +757,7 @@ pub(super) fn process_lot(
     issues: &mut Issues,
 ) -> Result<LotOutcome, CalcError> {
     let prefix = format!("lots[{index}]");
-    let facts = lot_facts(issues, lookups, env.is_some(), &prefix, lot);
+    let facts = lot_facts(issues, lookups, env.is_some(), &prefix, date_iso, lot);
     let found = lot
         .lot_id
         .and_then(|id| env.and_then(|e| e.stored.lots.get(&id)));
@@ -530,6 +768,7 @@ pub(super) fn process_lot(
         .is_some_and(|stored| {
             Some(stored.seller_account_id) != lot.seller_account_id
                 || Some(stored.item_id) != lot.item_id
+                || stored.purchase_id != lot.purchase_id
                 // The one-time seller's key counts only for a one-time seller: leftover name text
                 // on an ordinary seller's lot is not a change.
                 || (facts.seller.is_some_and(|s| s.is_pukhta)
@@ -577,11 +816,21 @@ pub(super) fn process_lot(
     if let Some(left) = balance_qty
         && left > 0
     {
-        issues.warn_with(
-            ErrorCode::ErrQtyLeftUnsold,
-            &format!("{}.qty_received", ctx.prefix),
-            &[("left", left)],
-        );
+        // A lot of own goods must be sold in full: what is not sold stays in the purchase (PRD
+        // FR-12.26). Any other lot waits in باقی مال with a warning.
+        if ctx.facts.seller.is_some_and(|s| s.is_own_goods) {
+            issues.error_with(
+                ErrorCode::ErrOwnLotNotFullySold,
+                &format!("{}.qty_received", ctx.prefix),
+                &[("qty_left", left)],
+            );
+        } else {
+            issues.warn_with(
+                ErrorCode::ErrQtyLeftUnsold,
+                &format!("{}.qty_received", ctx.prefix),
+                &[("left", left)],
+            );
+        }
     }
     let money = lot_money(&ctx, &mut rows, issues)?;
     let net_is_negative = money.totals.as_ref().is_some_and(|t| t.net.is_negative());
@@ -594,6 +843,8 @@ pub(super) fn process_lot(
             freight: lot.freight,
             freight_paid_by: lot.freight_paid_by,
             sold_by_weight: ctx.facts.item.is_some_and(|item| item.by_weight),
+            is_own: ctx.facts.seller.is_some_and(|s| s.is_own_goods),
+            own: money.own,
             labour: money.labour,
             munshiana: money.munshiana,
             phone: money.phone,

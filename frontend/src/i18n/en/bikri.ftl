@@ -831,3 +831,75 @@ bikri-undo-failed = The save could not be undone
 
 # review: pending
 bikri-undo-busy = You have started another { -bikri }. Finish it or clear it first, then undo.
+
+## Trip goods in the sale book (plan 16b, PRD 12.3, FR-12.26, FR-12.27).
+
+# review: pending
+bikri-own-title = { -apna-maal }: goods of a { -market-safar }
+
+# The choice of the purchase whose goods this lot sells.
+# review: pending
+bikri-own-purchase = { -khareedari }
+
+# review: pending
+bikri-own-purchase-hint = The { -qism-maal }, the { -packing } and the quantity come from the purchase. The lines must sell all of the quantity. Cash paid and the advance tick do not apply to these goods.
+
+# $number: the purchase; $trip: its trip; $qty_left: how many { -nag } it has left.
+# review: pending
+bikri-own-option = { $number } ({ $trip }): { $item }, { $packing } ({ $qty_left } left)
+
+# review: pending
+bikri-own-load-failed = The purchases could not be read. Close this lot and open it again.
+
+# review: pending
+bikri-own-none = No purchase has goods left. Record the purchase first, on a { -market-safar }.
+
+# Shown until the numbers of the lot can be worked out.
+# review: pending
+bikri-own-numbers-pending = Enter the quantity and the lines to see what this lot gives to the partners of the trip.
+
+# The commission of the shop on this lot is income of the firm (PRD FR-12.26).
+# review: pending
+bikri-own-commission = { -commission } (income of the firm)
+
+# The seller credit of the lot (PRD C8), which goes to the partners of the trip by their % (C25).
+# review: pending
+bikri-own-credit = Goes to the partners of the trip
+
+# review: pending
+bikri-saved-own-title = Trip goods
+
+# The cost of the goods sold on a line of trip goods, in a saved { -bikri }.
+# review: pending
+bikri-saved-cost = Cost of goods sold
+
+# The purchase that a lot of trip goods came from, in a saved { -bikri }.
+# review: pending
+bikri-saved-purchase = { -khareedari }
+
+# $number: the purchase; $trip: its trip.
+# review: pending
+bikri-saved-purchase-open = Open { $number } in { $trip }
+
+## Trip goods in the list of { -baqi-maal } (PRD FR-12.25, FR-12.28).
+
+# review: pending
+bikri-stock-own-title = { -apna-maal }
+
+# review: pending
+bikri-stock-own-help = Goods bought on a { -market-safar } and not sold yet. They belong to the partners of the trip. Sell them in a { -bikri }: choose { -apna-maal } as the seller of a lot.
+
+# review: pending
+bikri-stock-own-label = List of trip goods left
+
+# review: pending
+bikri-stock-own-card-title = { -apna-maal }: { $number }, { $item }
+
+# review: pending
+bikri-stock-own-open = Open the trip
+
+# review: pending
+bikri-stock-own-total-cost = Total cost
+
+# review: pending
+bikri-stock-own-trip = { -market-safar }

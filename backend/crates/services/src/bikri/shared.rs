@@ -5,12 +5,14 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use mandi_db::bikri as repo;
+use mandi_db::bikri::edit as edit_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::partners as partner_repo;
+use mandi_db::purchases as purchase_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::bikri::{
     AccountFacts, CalcError, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingTarget,
-    StoredPosting, Switches, calc_posting, partner_share,
+    PurchaseFacts, StoredPosting, Switches, TripPartnerFacts, calc_posting, partner_share,
 };
 use mandi_domain::cash;
 use mandi_domain::core::accounts::{BUYER_CONTROL, NAQDI_MANDI_CODE, SELLER_CONTROL};
@@ -21,6 +23,7 @@ use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::rules::{CreditLimitMode, ItemGroup, OverridesSettings};
+use mandi_domain::core::ventures::TripRef;
 use mandi_domain::ledger::bikri::{EntryLayout, SystemAccounts, build_bikri_entry_with_layout};
 use mandi_domain::ledger::{BalancedEntry, LedgerError, MAX_LINE_PAISA};
 use mandi_domain::partners::ShareKind;
@@ -29,6 +32,7 @@ use mandi_domain::rules::RuleSet;
 use crate::cash as cash_service;
 use crate::error::{Rejection, ServiceError, money_error};
 use crate::partners::split_entry;
+use crate::ventures;
 
 /// The system accounts a بکری posts to (PRD FR-10.4).
 const SELLER_COMMISSION_CODE: &str = "04010001";
@@ -40,8 +44,7 @@ const LABOUR_CODE: &str = "02010001";
 const FREIGHT_CODE: &str = "02010002";
 const STORE_RENT_CODE: &str = "02010003";
 const MUNSHIANA_CODE: &str = "02010004";
-/// اپنا مال, the firm as seller (PRD FR-12.26). Plan 16b makes it; until then a lot of it is
-/// refused as a seller.
+/// اپنا مال, the seller of a trip's goods (PRD FR-12.26).
 pub(super) const OWN_GOODS_CODE: &str = "030119998";
 /// The days of the rate check, ending on the posting day (PRD FR-7.55, an [A] reading).
 const RATE_CHECK_DAYS: u32 = 7;
@@ -141,6 +144,102 @@ fn existing(
 ) -> Result<HashSet<i64>, ServiceError> {
     let ids: Vec<i64> = ids.iter().copied().collect();
     Ok(repo::existing_ids(conn, table, &ids)?.into_iter().collect())
+}
+
+/// What the purchases named by the own lots of a draft can give this posting (PRD FR-12.26): the
+/// item and packing, and the نگ and cost left. In an edit, what the posting being replaced took is
+/// added back, so the posting is worked out against what it could take if it were not saved yet.
+fn load_purchases(
+    conn: &Connection,
+    prepared: &PreparedDraft,
+    replaces: Option<i64>,
+) -> Result<HashMap<i64, PurchaseFacts>, ServiceError> {
+    let ids: BTreeSet<i64> = prepared.lots.iter().filter_map(|l| l.purchase_id).collect();
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let ids: Vec<i64> = ids.into_iter().collect();
+    let mut back: HashMap<i64, (i64, i64)> = HashMap::new();
+    if let Some(entry_id) = replaces {
+        for taken in edit_repo::own_release_of_entry(conn, entry_id)? {
+            back.insert(taken.purchase_id, (taken.qty, taken.cost_paisa));
+        }
+    }
+    let mut out = HashMap::with_capacity(ids.len());
+    for rec in purchase_repo::get_many(conn, &ids)? {
+        let cancelled = rec.status == "cancelled";
+        let (back_qty, back_cost) = back.get(&rec.id).copied().unwrap_or((0, 0));
+        let qty_left = if cancelled {
+            0
+        } else {
+            rec.qty
+                .checked_sub(rec.qty_sold)
+                .and_then(|v| v.checked_sub(rec.qty_written_off))
+                .and_then(|v| v.checked_add(back_qty))
+                .ok_or_else(|| data("the quantity of a purchase does not fit"))?
+        };
+        let cost_left = if cancelled {
+            Paisa::ZERO
+        } else {
+            paisa(
+                rec.total_cost_paisa
+                    .checked_sub(rec.cost_released_paisa)
+                    .and_then(|v| v.checked_add(back_cost))
+                    .ok_or_else(|| data("the cost of a purchase does not fit"))?,
+            )?
+        };
+        let trip = ventures::load(conn, rec.trip_id)?
+            .ok_or_else(|| data("the trip of a purchase is missing"))?;
+        let partners = trip_partners(&trip)?;
+        out.insert(
+            rec.id,
+            PurchaseFacts {
+                number: rec.number,
+                entry_date: rec.entry_date.clone(),
+                trip: TripRef {
+                    id: rec.trip_id,
+                    number: rec.trip_number,
+                    name_ur: rec.trip_name_ur.clone(),
+                    name_en: rec.trip_name_en.clone(),
+                },
+                partners,
+                item_id: rec.item.id,
+                packing_id: rec.packing.id,
+                qty_left,
+                cost_left,
+                cancelled,
+            },
+        );
+    }
+    Ok(out)
+}
+
+/// The partners of a trip with their shares and 0604 accounts, for the split of the seller credit
+/// of an own lot (PRD FR-12.26, C25). The shares were checked to total 100% when the trip was made.
+fn trip_partners(trip: &ventures::Venture) -> Result<Vec<TripPartnerFacts>, ServiceError> {
+    let parts = ventures::credit_partners(trip)?;
+    trip.partners
+        .iter()
+        .zip(parts)
+        .map(|(p, partner)| {
+            Ok(TripPartnerFacts {
+                partner,
+                name_ur: p.name_ur.clone(),
+                name_en: p.name_en.clone(),
+            })
+        })
+        .collect()
+}
+
+/// An own lot with no item or packing takes them from its purchase; the screen shows them as
+/// filled values (PRD FR-12.26, NFR-USE-27). A different one is refused by the domain.
+fn fill_own_lots(prepared: &mut PreparedDraft, purchases: &HashMap<i64, PurchaseFacts>) {
+    for lot in &mut prepared.lots {
+        if let Some(facts) = lot.purchase_id.and_then(|id| purchases.get(&id)) {
+            lot.item_id = lot.item_id.or(Some(facts.item_id));
+            lot.packing_id = lot.packing_id.or(Some(facts.packing_id));
+        }
+    }
 }
 
 /// What the database says about the accounts, items and masters of a draft.
@@ -457,17 +556,20 @@ impl Basis {
 /// fix. The mistakes in the draft come back in `Worked::errors`.
 pub(crate) fn work_out(
     conn: &Connection,
-    prepared: PreparedDraft,
+    mut prepared: PreparedDraft,
     rules: &RuleSet,
     switches: Switches,
     basis: &Basis,
 ) -> Result<Worked, ServiceError> {
-    let lookups = load_lookups(
+    let purchases = load_purchases(conn, &prepared, basis.replaces.map(|r| r.entry_id))?;
+    fill_own_lots(&mut prepared, &purchases);
+    let mut lookups = load_lookups(
         conn,
         &prepared,
         switches.rate_check_percent.is_some(),
         basis.replaces.map(|r| r.entry_id),
     )?;
+    lookups.purchases = purchases;
     let calc = calc_posting(
         basis.target,
         &prepared,

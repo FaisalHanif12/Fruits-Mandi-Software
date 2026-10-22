@@ -372,6 +372,159 @@ pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
     Ok(added)
 }
 
+/// The controls added by migration 6 (plan 16b, PRD FR-10.4 v1.6): the separate khatas (0305, party
+/// type `separate`, for plan 17), the gardens (0306, party type `garden`, for D4R plan 17c) and the
+/// gardens, trips and fruit accounts of the partners (0604, one account for each partner).
+/// provisional, needs Urdu reviewer (NFR-URD-4): FR-10.4 gives only the English names.
+const TRIP_CONTROLS: [Control; 3] = [
+    Control {
+        head_code: "03",
+        code: "0305",
+        name_ur: "الگ کھاتہ",
+        name_en: "Separate Khatas",
+        party_type: "separate",
+    },
+    Control {
+        head_code: "03",
+        code: "0306",
+        name_ur: "باغات",
+        name_en: "Gardens",
+        party_type: "garden",
+    },
+    Control {
+        head_code: "06",
+        code: "0604",
+        name_ur: "باغ سفر اور پھل",
+        name_en: "Gardens Trips and Fruit",
+        party_type: "other",
+    },
+];
+
+/// The system account of migration 6 (PRD FR-10.4, FR-12.26): the seller of a trip's goods, a
+/// reserved serial. It never holds a balance. The gardens' accounts and the 0604 accounts of the
+/// partners are made by the garden and partner saves, not seeded.
+const TRIP_ACCOUNTS: [Account; 1] = [Account {
+    control_code: "03011",
+    serial: 9998,
+    name_ur: "اپنا مال",
+    name_en: "Own Goods (Trips)",
+    party_type: "seller",
+    is_pukhta_khata: false,
+    credit_allowed: true,
+}];
+
+/// The code of the seller of a trip's goods, اپنا مال (PRD FR-12.26).
+pub const OWN_GOODS_ACCOUNT_CODE: &str = "030119998";
+/// The code of the cash account, روکڑ (PRD FR-10.4).
+pub const CASH_ACCOUNT_CODE: &str = "01010001";
+/// The English name of the cash account from v1.6 (PRD FR-10.4).
+const CASH_NAME_EN: &str = "Cash";
+
+fn insert_controls(conn: &Connection, controls: &[Control]) -> rusqlite::Result<usize> {
+    let mut added = 0;
+    for control in controls {
+        added += conn.execute(
+            "INSERT INTO account_controls (head_id, code, name_ur, name_en, party_type)
+             SELECT id, ?2, ?3, ?4, ?5 FROM account_heads WHERE code = ?1
+             ON CONFLICT(code) DO NOTHING",
+            params![
+                control.head_code,
+                control.code,
+                control.name_ur,
+                control.name_en,
+                control.party_type
+            ],
+        )?;
+    }
+    Ok(added)
+}
+
+fn insert_accounts(conn: &Connection, accounts: &[Account]) -> rusqlite::Result<usize> {
+    let mut added = 0;
+    for account in accounts {
+        // PRD FR-10.2: the code is the control code plus the 4-digit serial.
+        let code = format!("{}{:04}", account.control_code, account.serial);
+        added += conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
+                 search_ur, search_en, search_phonetic, is_system, is_pukhta_khata, credit_allowed)
+             SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
+             FROM account_controls WHERE code = ?1
+             ON CONFLICT(code) DO NOTHING",
+            params![
+                account.control_code,
+                code,
+                account.serial,
+                account.party_type,
+                account.name_ur,
+                account.name_en,
+                text::search_ur(account.name_ur),
+                text::search_en(account.name_en),
+                text::search_phonetic(account.name_en),
+                account.is_pukhta_khata,
+                account.credit_allowed,
+            ],
+        )?;
+    }
+    Ok(added)
+}
+
+/// Inserts the controls and the system account of migration 6 that are not there yet, gives the cash
+/// account its v1.6 English name ("Cash") with its search keys, and returns how many rows it added
+/// (0 on a second run). Migration 6 calls it after it has widened the party type checks to accept
+/// `separate` and `garden`. [`system_accounts`] is the seed of migration 1 and stays as it was
+/// released.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn trip_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let controls = insert_controls(conn, &TRIP_CONTROLS)?;
+    let accounts = insert_accounts(conn, &TRIP_ACCOUNTS)?;
+    conn.execute(
+        "UPDATE accounts SET name_en = ?2, search_en = ?3, search_phonetic = ?4,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), version = version + 1
+         WHERE code = ?1 AND name_en <> ?2",
+        params![
+            CASH_ACCOUNT_CODE,
+            CASH_NAME_EN,
+            text::search_en(CASH_NAME_EN),
+            text::search_phonetic(CASH_NAME_EN),
+        ],
+    )?;
+    Ok(controls + accounts)
+}
+
+/// Makes the 0604 account (gardens, trips and fruit) of every partner that has none, and names it in
+/// `partners.venture_account_id`. Migration 6 calls it for the partners that exist; the partner save
+/// (plan 11) makes the account of each new partner with [`mandi_core::partners::venture_account`].
+/// Returns how many accounts it made.
+///
+/// # Errors
+/// Any SQLite error, or `StatementChangedRows` if the 0604 series is full.
+pub fn partner_venture_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let mut statement = conn.prepare(
+        "SELECT id, name_ur, name_en FROM partners WHERE venture_account_id IS NULL ORDER BY id",
+    )?;
+    let partners: Vec<(i64, String, String)> = statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let now: String = conn.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now')", [], |r| {
+        r.get(0)
+    })?;
+    let owner: i64 = conn.query_row("SELECT COALESCE(MIN(id), 0) FROM users", [], |r| r.get(0))?;
+    let mut made = 0;
+    for (partner_id, name_ur, name_en) in partners {
+        let account = mandi_core::partners::venture_account(&name_ur, &name_en);
+        let (account_id, _) = crate::masters::create_account(conn, &account, owner, &now)?
+            .ok_or(rusqlite::Error::StatementChangedRows(0))?;
+        conn.execute(
+            "UPDATE partners SET venture_account_id = ?2 WHERE id = ?1",
+            params![partner_id, account_id],
+        )?;
+        made += 1;
+    }
+    Ok(made)
+}
+
 /// How many heads, controls and accounts a data file holds. `pnpm seed` prints it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SeedCounts {

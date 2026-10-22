@@ -620,13 +620,16 @@ impl Index {
         control_id: Option<i64>,
     ) -> (&[Arc<Entry>], impl Fn(&Entry) -> bool) {
         let list = match scope {
-            AccountScope::Seller => self.entries(SearchScope::Seller),
+            AccountScope::Seller | AccountScope::LotSeller => self.entries(SearchScope::Seller),
             AccountScope::Buyer => self.entries(SearchScope::Buyer),
             AccountScope::Any | AccountScope::Control => self.entries(SearchScope::AnyAccount),
         };
         let narrow = scope == AccountScope::Control;
+        // The اपنا مال account is offered only in the seller field of a lot (PRD FR-12.26).
+        let with_own = scope == AccountScope::LotSeller;
         (list, move |e: &Entry| {
-            !narrow || e.account.map(|a| a.control_id) == control_id
+            (!narrow || e.account.map(|a| a.control_id) == control_id)
+                && (with_own || e.code != mandi_domain::core::accounts::OWN_GOODS_CODE)
         })
     }
 

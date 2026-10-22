@@ -11,11 +11,13 @@ pub mod drafts;
 pub mod masters;
 pub mod partners;
 pub mod pukhta;
+pub mod purchases;
 pub mod reports;
 pub mod rules;
 pub mod search;
 pub mod settings;
 pub mod translit;
+pub mod trips;
 pub mod vouchers;
 
 use std::fmt;

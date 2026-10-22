@@ -97,7 +97,12 @@ pub(super) fn plan_advance(
                 name_ur: row.name_ur,
                 name_en: row.name_en,
             });
-            if facts.control_code != SELLER_CONTROL || facts.is_pukhta_khata {
+            if facts.code == mandi_domain::core::accounts::OWN_GOODS_CODE {
+                errors.push(FieldError::new(
+                    ErrorCode::ErrOwnGoodsAccountRestricted,
+                    "seller_account_id",
+                ));
+            } else if facts.control_code != SELLER_CONTROL || facts.is_pukhta_khata {
                 errors.push(FieldError::new(
                     ErrorCode::ErrNotASeller,
                     "seller_account_id",

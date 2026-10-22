@@ -153,6 +153,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "is_pukhta_khata",
                 "is_active",
                 "note",
+                // Migration 0006 (PRD v1.7): the tag after a name (null for none).
+                "tag",
             ]);
             v
         }),
@@ -207,6 +209,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "user_id",
                 "capital_account_id",
                 "drawings_account_id",
+                // Migration 0006 (plan 16b): his gardens, trips and fruit account (0604).
+                "venture_account_id",
                 "is_active",
             ],
         ),
@@ -289,6 +293,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "seller_comm_paisa",
                 "deductions_paisa",
                 "net_paisa",
+                // Migration 0006 (plan 16b): the purchase a trip lot takes its goods from, and the fruit
+                // taken from the lot (PRD FR-16.11).
+                "purchase_id",
+                "qty_taken",
             ],
         ),
         (
@@ -333,6 +341,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "note",
                 // Migration 0005 (plan 16): how a sale line left force.
                 "ended",
+                // Migration 0006 (plan 16b): the cost of the own goods this line sold (C21).
+                "cost_paisa",
             ],
         ),
         (
@@ -346,6 +356,126 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "reason",
                 // Migration 0005 (plan 16): the move this one reverses.
                 "reverses_move_id",
+                // Migration 0006 (plan 16b): a purchase move has a purchase and no lot, and the cost of
+                // the trip goods it releases (C21).
+                "purchase_id",
+                "cost_paisa",
+            ],
+        ),
+        (
+            "purchases",
+            vec![
+                "number",
+                "venture_id",
+                "entry_date",
+                "supplier_text",
+                "item_id",
+                "packing_id",
+                "qty",
+                "weight_grams",
+                "rate_paisa",
+                "value_paisa",
+                "freight_paisa",
+                "labour_paisa",
+                "other_cost_paisa",
+                "paid_now_paisa",
+                "trip_cost_paisa",
+                "total_cost_paisa",
+                "journal_entry_id",
+                "status",
+                "cancel_reason",
+                "note",
+                "qty_sold",
+                "qty_written_off",
+                "cost_released_paisa",
+            ],
+        ),
+        (
+            "ventures",
+            named(
+                &["kind", "number", "entry_date"],
+                &[
+                    "item_id",
+                    "rent_paisa",
+                    "season_end_date",
+                    "market",
+                    "sent_person",
+                    "account_id",
+                    "status",
+                    "closed_date",
+                    "close_entry_id",
+                    "note",
+                ],
+            ),
+        ),
+        (
+            "venture_partners",
+            vec!["venture_id", "partner_id", "share_bps", "source"],
+        ),
+        (
+            "venture_entries",
+            vec![
+                "venture_id",
+                "kind",
+                "number",
+                "entry_date",
+                "amount_paisa",
+                "reason",
+                "purchase_id",
+                "qty",
+                "shop_name",
+                "cost_paisa",
+                "journal_entry_id",
+                "status",
+                "cancel_reason",
+                "current_entry_id",
+            ],
+        ),
+        (
+            "venture_entry_parts",
+            vec![
+                "entry_id",
+                "partner_id",
+                "share_bps",
+                "source",
+                "amount_paisa",
+            ],
+        ),
+        (
+            "purchase_cost_parts",
+            vec!["entry_id", "purchase_id", "amount_paisa"],
+        ),
+        (
+            "lot_credit_parts",
+            vec![
+                "lot_id",
+                "journal_entry_id",
+                "partner_id",
+                "share_bps",
+                "amount_paisa",
+            ],
+        ),
+        (
+            "fruit_takes",
+            vec![
+                "number",
+                "entry_date",
+                "partner_id",
+                "source",
+                "lot_id",
+                "credit_account_id",
+                "pukhta_person_key",
+                "item_id",
+                "packing_id",
+                "qty",
+                "weight_grams",
+                "rate_paisa",
+                "value_paisa",
+                "note",
+                "journal_entry_id",
+                "status",
+                "cancel_reason",
+                "current_entry_id",
             ],
         ),
         (
@@ -370,6 +500,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "buyer_value_paisa",
                 "buyer_comm_paisa",
                 "laga_paisa",
+                // Migration 0006 (plan 16b): trip goods in the facts.
+                "purchase_id",
+                "venture_id",
+                "cost_paisa",
                 "sign",
             ],
         ),
@@ -486,7 +620,7 @@ fn table_list_equals_architecture_15() {
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
-    assert_eq!(want.len(), 37);
+    assert_eq!(want.len(), 45);
     assert_eq!(tables(&conn), want);
 }
 
@@ -519,7 +653,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 37);
+    assert_eq!(rows.len(), 45);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn
@@ -573,8 +707,11 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     }
     // Counted by hand from Architecture 15: accounts 3, charge_rules 1, partner_share_rows 2,
     // bikri_entries 1, bikri_lots 13, bikri_sales 12, analytics_facts 5, vouchers 1,
-    // journal_entries 1, journal_lines 2, bill_allocations 1, advance_allocations 1.
-    assert_eq!(found, 43);
+    // journal_entries 1, journal_lines 2, bill_allocations 1, advance_allocations 1; and of
+    // migration 6: purchases 9, bikri_sales 1, analytics_facts 1, stock_moves 1, ventures 1,
+    // venture_entries 2, venture_entry_parts 1, purchase_cost_parts 1, lot_credit_parts 1 and
+    // fruit_takes 2 more.
+    assert_eq!(found, 63);
 }
 
 /// Every `*_date` column checks for a real date.

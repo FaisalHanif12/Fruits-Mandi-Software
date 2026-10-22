@@ -12,7 +12,7 @@
       "store_id": null,
       "total_freight": null,
       "truck_no": "LES-1234",
-      "zamindar_account_id": 17
+      "zamindar_account_id": 18
     },
     "lots": [
       {
@@ -40,7 +40,7 @@
         "qty_received": "50",
         "sales": [
           {
-            "buyer_account_id": 19,
+            "buyer_account_id": 20,
             "buyer_comm": null,
             "buyer_rate": null,
             "key": "line-1",
@@ -55,7 +55,7 @@
             "weight": null
           },
           {
-            "buyer_account_id": 20,
+            "buyer_account_id": 21,
             "buyer_comm": null,
             "buyer_rate": null,
             "key": "line-2",
@@ -70,7 +70,7 @@
             "weight": null
           }
         ],
-        "seller_account_id": 17,
+        "seller_account_id": 18,
         "store_id": null,
         "store_rent": null,
         "weight_received": null

@@ -22,7 +22,8 @@
       {
         "key": "lot:3",
         "lot_id": null,
-        "seller_account_id": 17,
+        "seller_account_id": 18,
+        "purchase_id": null,
         "pukhta": null,
         "item_id": 1,
         "packing_id": 1,
@@ -51,7 +52,7 @@
           {
             "key": "sale:7",
             "sale_id": null,
-            "buyer_account_id": 19,
+            "buyer_account_id": 20,
             "pukhta": null,
             "qty": "20",
             "weight": null,
@@ -67,7 +68,7 @@
           {
             "key": "sale:8",
             "sale_id": null,
-            "buyer_account_id": 20,
+            "buyer_account_id": 21,
             "pukhta": null,
             "qty": "30",
             "weight": null,

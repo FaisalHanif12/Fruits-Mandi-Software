@@ -1,0 +1,145 @@
+{
+  "numbers": {
+    "amount": 400000,
+    "parts": {
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "share_bps": 5000,
+          "source": "shop",
+          "amount_paisa": 200000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 400000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 5000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 200000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "share_bps": 5000,
+          "source": "pocket",
+          "amount_paisa": 200000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 400000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 5000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 200000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      ],
+      "shop_total_paisa": 200000,
+      "pocket_total_paisa": 200000
+    },
+    "spread": [
+      {
+        "purchase_id": 1,
+        "purchase_number": 1,
+        "item": {
+          "id": 5,
+          "code": "5",
+          "name_ur": "مالٹا",
+          "name_en": "Orange"
+        },
+        "qty": 80,
+        "amount_paisa": 400000,
+        "working": {
+          "message_id": "working-trip-cost-spread",
+          "args": [
+            {
+              "name": "cost",
+              "value": {
+                "kind": "money",
+                "paisa": 400000
+              }
+            },
+            {
+              "name": "qty",
+              "value": {
+                "kind": "count",
+                "value": 80
+              }
+            },
+            {
+              "name": "total_qty",
+              "value": {
+                "kind": "count",
+                "value": 80
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 400000
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      }
+    ]
+  },
+  "cash": {
+    "cash_before_paisa": 200000,
+    "change_paisa": -200000,
+    "cash_after_paisa": 0,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "errors": [],
+  "warnings": []
+}

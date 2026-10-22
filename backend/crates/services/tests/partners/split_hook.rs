@@ -112,12 +112,13 @@ fn a_negative_income_of_300_gives_minus_120_90_90() {
 }
 
 #[test]
-fn income_and_cost_in_one_entry_are_split_apart_e2e_34() {
-    // E2E-34: income 9,660 and the cost of the goods sold 7,800 in one entry. Each is split on
-    // its own: income 3,864 / 2,898 / 2,898, cost minus 3,120 / 2,340 / 2,340, net 744 / 558 / 558.
-    // The own-goods accounts (تجارتی فروخت, اپنا مال لاگت, اپنا مال سٹاک) come with plan 16b; the
-    // hook looks only at the head of an account, so here an income account, a shop expense head
-    // and the cash account stand in for them.
+fn income_and_expense_in_one_entry_are_split_apart() {
+    // A plain mechanics test with round numbers: income 9,660 and an expense of 7,800 in one entry.
+    // Each is split on its own: income 3,864 / 2,898 / 2,898, expense minus 3,120 / 2,340 / 2,340.
+    // The hook looks only at the head of an account (income 04, shop expense 05), so an income
+    // account, a shop expense head and the cash account are enough. (These were the numbers of the
+    // firm's own goods design before PRD v1.6; trip goods post no cost, so E2E-34 is tested with the
+    // golden day.)
     let (dir, env, owner) = ready();
     let [a, b, c] = three_partners(&env, &owner);
     let cost = expense_head(&env, &owner);

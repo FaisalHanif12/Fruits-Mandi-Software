@@ -46,7 +46,7 @@ function setLanguage(language: Language) {
 }
 
 describe.each(LANGUAGES)('MainNav (%s)', (language) => {
-  it('lists the nine items of PRD FR-5.2 in order, with the current one marked', () => {
+  it('lists the ten items of PRD FR-5.2 in order (باغات joins before the trips later), with the current one marked', () => {
     setLanguage(language);
     renderIn(language, <MainNav current="bikri" onSelect={vi.fn()} />);
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
@@ -59,6 +59,7 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
       'index',
       'bikri',
       'rokar',
+      'trips',
       'partners',
       'analytics',
       'reports',
@@ -89,7 +90,7 @@ describe.each(LANGUAGES)('MainNav (%s)', (language) => {
     await user.keyboard('{Enter}');
     expect(onSelect).toHaveBeenCalledWith('bikri');
     await user.click(at(items, 4));
-    expect(onSelect).toHaveBeenLastCalledWith('partners');
+    expect(onSelect).toHaveBeenLastCalledWith('trips');
     await user.keyboard('{ArrowUp}');
     expect(items[3]).toHaveFocus();
   });

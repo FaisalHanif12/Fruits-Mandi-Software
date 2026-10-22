@@ -254,7 +254,9 @@ pub enum ErrorCode {
     /// `available` (نگ left).
     ErrWriteOffExceedsBalance,
     /// A later sale dated before the goods were received (PRD FR-12.17). Field `date`. Values:
-    /// `received_date` (`YYYY-MM-DD`).
+    /// `received_date` (`YYYY-MM-DD`). Also a sale in another shop dated before its purchase
+    /// (FR-12.32, field `date`), and a بکری with an own lot dated before its purchase (FR-12.26,
+    /// field `lots[i].purchase_id`).
     ErrDateBeforeReceived,
     /// An edit lowers the quantity received of a lot below what a later sale or a write-off has
     /// already taken (PRD FR-12.20). Field `lots[i].qty_received`. Values: `sold` (نگ).
@@ -267,13 +269,56 @@ pub enum ErrorCode {
     /// keep their order and new lots come last), `lot_seller_locked` and `lot_item_locked`
     /// (`lots[i].seller_account_id`, `lots[i].item_id`: other postings or write-offs rest on the
     /// lot), `line_not_in_posting` (`lots[i].sales[j].sale_id`: not a line of this posting, or sent
-    /// twice) and `posting_lots_locked` (`lots`: a later posting has only its own lot).
+    /// twice), `posting_lots_locked` (`lots`: a later posting has only its own lot) and
+    /// `lot_purchase_locked` (`lots[i].purchase_id`: the purchase of an own lot cannot change).
     ErrEditNotAllowed,
+    /// A lot of the firm's own goods (seller اپنا مال) was not sold in full in its بکری (PRD
+    /// FR-12.26). The goods that are not sold stay in the purchase, so the lot takes from the
+    /// purchase only what its lines sell. Field `lots[i].qty_received`. Values: `qty_left` (نگ).
+    ErrOwnLotNotFullySold,
+    /// The اپنا مال account (030119998) is offered only as the seller of a lot. A voucher, a
+    /// جنرل entry, a زمیندار, a purchase supplier or any other posting to it is refused (PRD
+    /// FR-12.26, FR-10.4). Field: the account field.
+    ErrOwnGoodsAccountRestricted,
+    /// A purchase cannot be cancelled once any of it was sold or written off (PRD FR-12.24).
+    /// Field `id`. Values: `qty_sold`, `qty_written_off` (نگ).
+    ErrPurchaseHasSales,
+    /// The purchase is cancelled already (PRD FR-12.24). Field `id`, or `purchase_id`, or the
+    /// `lots[i].purchase_id` of a lot that names it.
+    ErrPurchaseCancelled,
+    /// Warning only: freight typed on a lot of own goods. The purchase freight is already in the
+    /// cost, so a freight typed here is a second cost (PRD FR-12.26). Field
+    /// `lots[i].freight`.
+    ErrOwnLotFreightInCost,
+    /// The trip is closed: it takes no new purchase or cost (PRD FR-12.31, FR-12.33, E65). Field
+    /// `trip_id`.
+    ErrTripClosed,
+    /// A trip cost is spread over the purchases that still have goods left, and the trip has none
+    /// (PRD FR-12.31, A64). Field `trip_id`.
+    ErrTripNoStock,
+    /// The shares of a trip or a garden cannot change after its first entry (PRD FR-12.29, E66).
+    /// Field `partners`.
+    ErrVentureSharesLocked,
+    /// A purchase is dated before its trip (PRD FR-12.24 "not before the trip's date"). Field
+    /// `date`. Values: `trip_date` (`YYYY-MM-DD`).
+    ErrPurchaseBeforeTrip,
+    /// A trip cost cannot be cancelled once any of the purchases it was spread over was sold or
+    /// written off (PRD FR-12.31). Field `id`. Values: `qty_sold`, `qty_written_off` (نگ, over those
+    /// purchases).
+    ErrTripCostHasSales,
+    /// A partner cannot be made inactive while he is in an open garden or trip (PRD A63, E69).
+    /// Field `is_active`.
+    ErrPartnerInOpenVenture,
+    /// A purchase that carries a part of a trip cost cannot be cancelled until that cost is
+    /// cancelled (PRD FR-12.31). Field `id`.
+    ErrPurchaseCarriesTripCost,
+    /// The trip cost or the sale in another shop is cancelled already. Field `id`.
+    ErrTripEntryCancelled,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 101] = [
+    pub const ALL: [ErrorCode; 114] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -375,6 +420,19 @@ impl ErrorCode {
         ErrorCode::ErrDateBeforeReceived,
         ErrorCode::ErrQtyBelowSold,
         ErrorCode::ErrEditNotAllowed,
+        ErrorCode::ErrOwnLotNotFullySold,
+        ErrorCode::ErrOwnGoodsAccountRestricted,
+        ErrorCode::ErrPurchaseHasSales,
+        ErrorCode::ErrPurchaseCancelled,
+        ErrorCode::ErrOwnLotFreightInCost,
+        ErrorCode::ErrTripClosed,
+        ErrorCode::ErrTripNoStock,
+        ErrorCode::ErrVentureSharesLocked,
+        ErrorCode::ErrPurchaseBeforeTrip,
+        ErrorCode::ErrTripCostHasSales,
+        ErrorCode::ErrPartnerInOpenVenture,
+        ErrorCode::ErrPurchaseCarriesTripCost,
+        ErrorCode::ErrTripEntryCancelled,
     ];
 }
 

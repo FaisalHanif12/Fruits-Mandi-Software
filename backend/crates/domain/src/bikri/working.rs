@@ -189,6 +189,64 @@ pub(super) fn shared_income(
     )
 }
 
+/// C21 for a line that does not take the last نگ of the purchase: the cost left times the نگ taken
+/// over the نگ left, the leftover rupees going to the larger part (E2E-34: 10,400 × 15 ÷ 20 = 7,800).
+pub(super) fn cost_of_goods(
+    cost_left: Paisa,
+    qty_taken: i64,
+    qty_left: i64,
+    result: Paisa,
+) -> Working {
+    working(
+        "working-cost-of-goods",
+        vec![
+            money("cost_left", cost_left),
+            count("qty", qty_taken),
+            count("qty_left", qty_left),
+            money("result", result),
+        ],
+    )
+}
+
+/// C21 for the line or write-off that takes the last نگ: it takes all the cost that is left.
+pub(super) fn cost_of_goods_last(cost_left: Paisa, qty_taken: i64) -> Working {
+    working(
+        "working-cost-of-goods-last",
+        vec![
+            money("cost_left", cost_left),
+            count("qty", qty_taken),
+            money("result", cost_left),
+        ],
+    )
+}
+
+/// C21 for a line that an edit left with its quantity and purchase: it keeps its stored cost
+/// (PRD FR-12.20).
+pub(super) fn cost_kept(result: Paisa) -> Working {
+    working("working-cost-of-goods-kept", vec![money("result", result)])
+}
+
+/// C21 for a whole own lot: the sum of the costs its lines took (E2E-34: 15 نگ took 7,800).
+pub(super) fn own_lot_cost(qty: i64, result: Paisa) -> Working {
+    working(
+        "working-own-lot-cost",
+        vec![count("qty", qty), money("result", result)],
+    )
+}
+
+/// The result of an own lot (PRD FR-12.27): the seller credit less the cost of the goods sold.
+/// Can be negative (E2E-34: 8,460 − 7,800 = 660).
+pub(super) fn own_lot_result(credit: Paisa, cost: Paisa, result: Paisa) -> Working {
+    working(
+        "working-own-lot-result",
+        vec![
+            money("credit", credit),
+            money("cost", cost),
+            money("result", result),
+        ],
+    )
+}
+
 /// A partner's part of the shared income (PRD C10). `result` is the part the split gave, which
 /// for the largest share includes the leftover rupees; the message must not claim that
 /// `base × bps` equals it.

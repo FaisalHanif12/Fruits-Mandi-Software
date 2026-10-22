@@ -12,6 +12,8 @@ layout-nav-bikri = { -bikri }
 # review: pending
 layout-nav-rokar = { -rokar }
 # review: pending
+layout-nav-trips = { -market-safar }
+# review: pending
 layout-nav-partners = { -shirakat-dar }
 # review: pending
 layout-nav-analytics = { -tajziat }

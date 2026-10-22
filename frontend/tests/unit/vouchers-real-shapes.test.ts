@@ -225,8 +225,8 @@ function stripType<T extends { type: string }>(entry: T): Omit<T, 'type'> {
 }
 
 describe('the screen builds the request the backend’s own test sent', () => {
-  const buyer = { id: 19, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
-  const seller = { id: 17, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
+  const buyer = { id: 20, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
+  const seller = { id: 18, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
   const bank = { id: 1, code: '0001', name_ur: 'بینک', name_en: 'Bank' };
   const draft = (type: VoucherDraft['type'], changes: Partial<VoucherDraft>): VoucherDraft => ({
     ...newDraft(type, '2026-10-10'),
@@ -246,7 +246,7 @@ describe('the screen builds the request the backend’s own test sent', () => {
   it('a receipt by cheque into a bank account', () => {
     const built = build(
       draft('receipt', {
-        account: { ...buyer, id: 20, code: '03040002' },
+        account: { ...buyer, id: 21, code: '03040002' },
         accountType: 'buyer',
         amount: '5,000',
         mode: 'cheque',

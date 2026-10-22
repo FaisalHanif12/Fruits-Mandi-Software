@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
+import { IDS } from '../helpers/bikri-data';
 import {
   cellOf,
   combo,
@@ -105,8 +106,8 @@ describe.each(LANGUAGES)('the sale book screen (%s)', (language) => {
     await waitFor(() => {
       expect(backend.lastDraft().header).toMatchObject({
         truck_no: 'LES-1234',
-        zamindar_account_id: 17,
-        adda_id: 1,
+        zamindar_account_id: IDS.rahim,
+        adda_id: IDS.swat,
       });
     });
   });
@@ -162,8 +163,8 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
     // started at what the lot has left, and Enter took it.
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales.slice(0, 2)).toMatchObject([
-        { buyer_account_id: 19, qty: '20', seller_rate: '600' },
-        { buyer_account_id: 20, qty: '30', seller_rate: '580' },
+        { buyer_account_id: IDS.akram, qty: '20', seller_rate: '600' },
+        { buyer_account_id: IDS.arshad, qty: '30', seller_rate: '580' },
       ]);
     });
     const sales = salesGrid(language);
@@ -310,7 +311,7 @@ describe.each(LANGUAGES)(
       await user.keyboard('1{Enter}20{Enter}600{Enter}2{Enter}{Enter}');
       await waitFor(() => {
         expect(backend.lastDraft().lots[0]?.sales[1]).toMatchObject({
-          buyer_account_id: 20,
+          buyer_account_id: IDS.arshad,
           qty: '30',
           seller_rate: '',
         });

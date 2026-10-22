@@ -1,0 +1,234 @@
+{
+  "id": 1,
+  "number": 1,
+  "version": 2,
+  "entry_id": 3,
+  "total_cost": 9600000,
+  "preview": {
+    "numbers": {
+      "value": 9600000,
+      "freight": 0,
+      "labour": 0,
+      "other_cost": 0,
+      "paid_now": 9600000,
+      "total_cost": 9600000,
+      "avg_cost": 120000,
+      "parts": {
+        "parts": [
+          {
+            "partner": {
+              "id": 1,
+              "code": "",
+              "name_ur": "الف",
+              "name_en": "Partner A"
+            },
+            "share_bps": 5000,
+            "source": "shop",
+            "amount_paisa": 4800000,
+            "working": {
+              "message_id": "working-venture-part",
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "kind": "money",
+                    "paisa": 9600000
+                  }
+                },
+                {
+                  "name": "bps",
+                  "value": {
+                    "kind": "count",
+                    "value": 5000
+                  }
+                },
+                {
+                  "name": "result",
+                  "value": {
+                    "kind": "money",
+                    "paisa": 4800000
+                  }
+                }
+              ],
+              "rule_id": null
+            }
+          },
+          {
+            "partner": {
+              "id": 2,
+              "code": "",
+              "name_ur": "ب",
+              "name_en": "Partner B"
+            },
+            "share_bps": 5000,
+            "source": "pocket",
+            "amount_paisa": 4800000,
+            "working": {
+              "message_id": "working-venture-part",
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "kind": "money",
+                    "paisa": 9600000
+                  }
+                },
+                {
+                  "name": "bps",
+                  "value": {
+                    "kind": "count",
+                    "value": 5000
+                  }
+                },
+                {
+                  "name": "result",
+                  "value": {
+                    "kind": "money",
+                    "paisa": 4800000
+                  }
+                }
+              ],
+              "rule_id": null
+            }
+          }
+        ],
+        "shop_total_paisa": 4800000,
+        "pocket_total_paisa": 4800000
+      },
+      "workings": {
+        "value": {
+          "message_id": "working-line-value",
+          "args": [
+            {
+              "name": "qty",
+              "value": {
+                "kind": "count",
+                "value": 80
+              }
+            },
+            {
+              "name": "rate",
+              "value": {
+                "kind": "money",
+                "paisa": 120000
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 9600000
+              }
+            }
+          ],
+          "rule_id": null
+        },
+        "paid_now": {
+          "message_id": "working-purchase-paid-now",
+          "args": [
+            {
+              "name": "value",
+              "value": {
+                "kind": "money",
+                "paisa": 9600000
+              }
+            },
+            {
+              "name": "freight",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "labour",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "other_cost",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 9600000
+              }
+            }
+          ],
+          "rule_id": null
+        },
+        "total_cost": {
+          "message_id": "working-purchase-total-cost",
+          "args": [
+            {
+              "name": "paid_now",
+              "value": {
+                "kind": "money",
+                "paisa": 9600000
+              }
+            },
+            {
+              "name": "trip_cost",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 9600000
+              }
+            }
+          ],
+          "rule_id": null
+        },
+        "avg_cost": {
+          "message_id": "working-purchase-avg-cost",
+          "args": [
+            {
+              "name": "total",
+              "value": {
+                "kind": "money",
+                "paisa": 9600000
+              }
+            },
+            {
+              "name": "qty",
+              "value": {
+                "kind": "count",
+                "value": 80
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 120000
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      }
+    },
+    "cash": {
+      "cash_before_paisa": 5000000,
+      "change_paisa": -4800000,
+      "cash_after_paisa": 200000,
+      "below_zero": false,
+      "lowers_cash": true,
+      "needs_confirm": false
+    },
+    "errors": [],
+    "warnings": []
+  }
+}

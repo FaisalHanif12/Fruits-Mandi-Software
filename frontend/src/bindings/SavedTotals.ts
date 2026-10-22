@@ -79,7 +79,8 @@ export type SavedTotals = {
    */
   buyer_total: Paisa;
   /**
-   * The income shared between the partners (C9).
+   * The income shared between the partners (C9): commission, لاگا and فون only, also for a trip
+   * lot (PRD FR-12.26).
    */
   shared_income: Paisa;
 };

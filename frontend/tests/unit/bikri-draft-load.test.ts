@@ -49,10 +49,12 @@ describe('a draft from the backend in the stores', () => {
   });
 
   it('the real draft of an undo (no ids, `null` in the file) builds back to the same values', () => {
-    // The file has `lot_id: null` and `sale_id: null`; the screen leaves an id out when it has none.
+    // The file has `lot_id: null`, `sale_id: null` and `purchase_id: null`; the screen leaves them out
+    // when the lot is not saved yet (the backend reads a missing purchase and null the same).
     const withoutIds = structuredClone(UNDO.draft);
     for (const lot of withoutIds.lots) {
       delete lot.lot_id;
+      delete lot.purchase_id;
       for (const sale of lot.sales) delete sale.sale_id;
     }
     expect(buildDraft(loaded(UNDO.draft))).toEqual(withoutIds);
@@ -137,7 +139,7 @@ describe('what the user changed against the loaded text', () => {
     salesOf(stores).getState().updatePicked('sale:101', SALE.buyer, other);
     const diff = diffEdit(stores, baseline);
     expect(diff.items[0]).toMatchObject({ field: SALE.buyer });
-    expect(diff.items[0]?.beforeRecord?.id).toBe(19);
+    expect(diff.items[0]?.beforeRecord?.id).toBe(20);
     expect(diff.items[0]?.afterRecord?.id).toBe(99);
   });
 

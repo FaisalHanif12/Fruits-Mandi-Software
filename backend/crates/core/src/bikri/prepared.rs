@@ -110,6 +110,8 @@ pub struct PreparedLot {
     pub has_errors: bool,
     /// The seller.
     pub seller_account_id: Option<i64>,
+    /// The purchase an own lot takes its goods from (PRD FR-12.26).
+    pub purchase_id: Option<i64>,
     /// The one-time seller.
     pub pukhta: PreparedPukhta,
     /// The item.

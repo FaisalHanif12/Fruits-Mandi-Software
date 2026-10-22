@@ -16,6 +16,7 @@ pub mod matching;
 pub mod partners;
 pub mod payables;
 pub mod rules;
+pub mod ventures;
 
 /// `mandi-core`, re-exported so the crates above reach it through the one allowed path
 /// (app -> services -> domain -> core).

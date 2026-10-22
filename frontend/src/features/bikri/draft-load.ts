@@ -242,6 +242,10 @@ function lotRow(lot: LotInput, header: HeaderState, records: DraftRecords): Entr
     put(typed, LOT.pukhtaPhone, lot.pukhta.phone);
   }
   if (lot.lot_id !== undefined && lot.lot_id !== null) typed[LOT.lotId] = String(lot.lot_id);
+  // A lot of own goods keeps its purchase (PRD FR-12.26).
+  if (lot.purchase_id !== undefined && lot.purchase_id !== null) {
+    typed[LOT.purchase] = String(lot.purchase_id);
+  }
 
   const picked: Record<string, PickedRecord> = {};
   const seller = records.account(lot.seller_account_id);

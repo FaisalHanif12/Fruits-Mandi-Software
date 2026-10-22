@@ -265,8 +265,16 @@ pub(super) fn resolve_party(
         errors.push(FieldError::new(ErrorCode::ErrNotFound, "account_id"));
         return Ok(None);
     };
+    // اپنا مال is offered only as the seller of a lot (PRD FR-12.26).
+    if facts.code == OWN_GOODS_CODE {
+        errors.push(FieldError::new(
+            ErrorCode::ErrOwnGoodsAccountRestricted,
+            "account_id",
+        ));
+        return Ok(None);
+    }
     let role = match facts.control_code.as_str() {
-        _ if facts.code == NAQDI_MANDI_CODE || facts.code == OWN_GOODS_CODE => None,
+        _ if facts.code == NAQDI_MANDI_CODE => None,
         BUYER_CONTROL => Some(Role::Buyer),
         SELLER_CONTROL => Some(Role::Seller),
         PAYABLE_CONTROL => Some(Role::Payable),

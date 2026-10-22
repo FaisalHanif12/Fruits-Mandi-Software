@@ -11,7 +11,9 @@ use ts_rs::TS;
 
 use crate::accounts::LineError;
 use crate::error::{ErrorCode, ErrorValue, FieldError};
+use crate::masters::AccountToMake;
 use crate::money::{BPS_FULL, Bps, Paisa, parse_bps};
+use crate::text;
 
 /// The most partners the firm can have (NFR-SCL-5).
 pub const MAX_PARTNERS: usize = 10;
@@ -20,6 +22,32 @@ pub const MAX_PARTNERS: usize = 10;
 pub const CAPITAL_CONTROL: &str = "0602";
 /// The control under which the drawings account (ذاتی خرچہ) of a partner goes (0603xxxx).
 pub const DRAWINGS_CONTROL: &str = "0603";
+/// The control under which the gardens, trips and fruit account (باغ، سفر اور پھل) of a partner goes
+/// (0604xxxx, PRD FR-10.4 v1.6, C22).
+pub const VENTURE_CONTROL: &str = "0604";
+/// The words of the name of a partner's 0604 account: `<word> - <name>`, as for his capital and
+/// drawings accounts. No comma, because a comma is not allowed in a name (PRD FR-7.28).
+pub const VENTURE_WORD_UR: &str = "باغ سفر اور پھل";
+/// English word of the name of a partner's 0604 account.
+pub const VENTURE_WORD_EN: &str = "Gardens Trips and Fruit";
+
+/// The 0604 account that a partner's names make, with its search keys. The partner save (plan 11)
+/// and migration 6 (for the partners that exist) both use it, so every partner's account is named
+/// the same way.
+///
+/// Example: partner "Alif" gets "Gardens Trips and Fruit - Alif".
+pub fn venture_account(name_ur: &str, name_en: &str) -> AccountToMake {
+    let ur = format!("{VENTURE_WORD_UR} - {name_ur}");
+    let en = format!("{VENTURE_WORD_EN} - {name_en}");
+    AccountToMake {
+        control_code: VENTURE_CONTROL,
+        search_ur: text::search_ur(&ur),
+        search_en: text::search_en(&en),
+        search_phonetic: text::search_phonetic(&en),
+        name_ur: ur,
+        name_en: en,
+    }
+}
 
 /// One partner as the lists show him (PRD 17.1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -41,6 +69,12 @@ pub struct PartnerRow {
     pub drawings_account_id: i64,
     /// Its code, for example `06030001`.
     pub drawings_account_code: String,
+    /// His gardens, trips and fruit account (control 0604, PRD FR-10.4 v1.6). It holds the money of
+    /// the gardens and trips he is in and the fruit he took; it counts in his کل رقم (C22).
+    #[ts(type = "number")]
+    pub venture_account_id: i64,
+    /// Its code, for example `06040001`.
+    pub venture_account_code: String,
     /// His share on today's date in bps (4000 = 40%). 0 until shares are set.
     pub share_bps: i32,
     /// False once he is made inactive. Inactive partners keep their history.

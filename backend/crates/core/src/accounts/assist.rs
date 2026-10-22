@@ -12,8 +12,12 @@ use crate::money::Paisa;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountScope {
-    /// A seller field (control 03011). A short code is a seller serial.
+    /// A seller field (control 03011). A short code is a seller serial. The اپنا مال account is
+    /// not offered here (PRD FR-12.26).
     Seller,
+    /// The seller field of a lot: the same as `seller`, and also the اپنا مال account (030119998),
+    /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase.
+    LotSeller,
     /// A buyer field (control 0304), including نقدی منڈی and پختہ کھاتہ. A short code is a buyer
     /// serial.
     Buyer,

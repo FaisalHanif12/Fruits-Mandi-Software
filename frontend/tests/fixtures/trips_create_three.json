@@ -1,0 +1,99 @@
+{
+  "id": 1,
+  "version": 1,
+  "number": 1,
+  "name_ur": "سفر-1 10-10-2026",
+  "name_en": "TRP-1 10-10-2026",
+  "entry_date": "2026-10-10",
+  "market": "Lahore",
+  "sent_person": "Aslam",
+  "note": null,
+  "status": "open",
+  "closed_date": null,
+  "shares_locked": false,
+  "partners": [
+    {
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "share_bps": 4000,
+      "source": "shop"
+    },
+    {
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "ب",
+        "name_en": "Partner B"
+      },
+      "share_bps": 3000,
+      "source": "shop"
+    },
+    {
+      "partner": {
+        "id": 3,
+        "code": "",
+        "name_ur": "ج",
+        "name_en": "Partner C"
+      },
+      "share_bps": 3000,
+      "source": "shop"
+    }
+  ],
+  "purchase_count": 0,
+  "qty_bought": 0,
+  "qty_sold": 0,
+  "qty_written_off": 0,
+  "qty_left": 0,
+  "cost_paisa": 0,
+  "cost_left_paisa": 0,
+  "sales_paisa": 0,
+  "other_shop_paisa": 0,
+  "cost_sold_paisa": 0,
+  "cost_written_off_paisa": 0,
+  "result_paisa": 0,
+  "result_working": {
+    "message_id": "working-trip-result",
+    "args": [
+      {
+        "name": "sales",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "other_shop",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "cost_sold",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "cost_written_off",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "result",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      }
+    ],
+    "rule_id": null
+  }
+}

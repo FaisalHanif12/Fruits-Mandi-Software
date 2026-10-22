@@ -34,6 +34,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { fakePrinting } from '../helpers/print';
 import { message, visible } from '../helpers/render';
+import { IDS } from '../helpers/bikri-data';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -230,7 +231,7 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
     await waitFor(() => {
       expect(printing.prints).toHaveLength(1);
     });
-    expect(printing.prints[0]?.only_buyer_id).toBe(20);
+    expect(printing.prints[0]?.only_buyer_id).toBe(IDS.arshad);
   });
 
   it('PDF sends `pdf` and lists the files that were made', async () => {

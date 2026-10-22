@@ -176,9 +176,21 @@ fn cancel_in(
         let reversal = ledger::reverse(ctx, tx, user, posting.entry_id, reason)?;
         edit_repo::reverse_moves(tx, posting.entry_id, reversal.entry_id, user, &now)?;
         edit_repo::reverse_facts(tx, posting.entry_id, reversal.entry_id, user, &now)?;
+        // The trip partners' parts of the seller credit are taken back (PRD FR-12.26, C25).
+        edit_repo::reverse_credit_parts(tx, posting.entry_id, reversal.entry_id, user, &now)?;
+        // The own goods the lines took go back to their purchases, exactly (PRD FR-12.26).
+        crate::purchases::give_back_entry(tx, posting.entry_id, user, &now)?;
         for sale in edit_repo::active_sales_of_entry(tx, posting.entry_id)? {
             edit_repo::end_sale(tx, sale.id, Ended::Cancelled, None, user, &now)?;
         }
+        // A trip whose sale is reversed opens again (PRD FR-12.33).
+        crate::purchases::refresh_trips_of_entry(
+            tx,
+            posting.entry_id,
+            &posting.date.to_iso(),
+            user,
+            &now,
+        )?;
         reversals.push(reversal.entry_id);
     }
     // The write-offs of its lots are taken back too, so the stock of a cancelled lot nets to zero.
@@ -187,7 +199,9 @@ fn cancel_in(
         edit_repo::insert_move(
             tx,
             &edit_repo::NewMove {
-                lot_id: write_off.lot_id,
+                lot_id: Some(write_off.lot_id),
+                purchase_id: None,
+                cost_paisa: 0,
                 entry_id: None,
                 move_date: &write_off.move_date,
                 kind: "reversal",

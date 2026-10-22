@@ -1449,3 +1449,7 @@ fn first_field(error: &mandi_services::ServiceError) -> Option<String> {
 // Plan 16: edit, cancel, later sale (E2E-13, E2E-13b, E2E-14, E2E-15, E2E-16, E2E-16b).
 #[path = "golden_day/edit.rs"]
 mod edit;
+
+// Plan 16b: the goods of a market trip sold by an own lot (E2E-34, E2E-34b, E2E-41).
+#[path = "golden_day/own_goods.rs"]
+mod own_goods;

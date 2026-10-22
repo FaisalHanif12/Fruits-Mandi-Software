@@ -6,6 +6,8 @@
       "freight": 300000,
       "freight_paid_by": "firm",
       "sold_by_weight": false,
+      "is_own": false,
+      "own": null,
       "labour": {
         "method": "per_unit",
         "value_paisa": 500,
@@ -727,6 +729,7 @@
             },
             "buyer_total": 1288000,
             "rate_diff": 0,
+            "cost_of_goods": 0,
             "payment_type": "credit",
             "workings": {
               "seller_amount": {
@@ -834,6 +837,19 @@
                       "paisa": 1200000
                     }
                   },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "cost_of_goods": {
+                "message_id": "working-none-line",
+                "args": [
                   {
                     "name": "result",
                     "value": {

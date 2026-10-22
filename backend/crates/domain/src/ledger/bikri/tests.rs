@@ -74,6 +74,7 @@ fn sale(
 fn event1_lot() -> JournalLot {
     JournalLot {
         seller_account_id: AccountId::new(RAHIM),
+        partner_credits: Vec::new(),
         person_key: None,
         seller_credit: p(24_316),
         cash_paid: p(5_000),
@@ -124,6 +125,7 @@ fn event_2_cash_line_of_a_pukhta_buyer_is_25_600() {
     // PRD 4.5: Karim's 10 apples; the one-time buyer pays 12,800 in cash.
     let lot = JournalLot {
         seller_account_id: AccountId::new(KARIM),
+        partner_credits: Vec::new(),
         person_key: None,
         seller_credit: p(10_160),
         cash_paid: Paisa::ZERO,
@@ -175,6 +177,7 @@ fn a_negative_seller_credit_is_a_debit_on_the_seller() {
     // 600 - 36 - 3,000 = -2,436.
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
+        partner_credits: Vec::new(),
         person_key: None,
         seller_credit: p(-2_436),
         cash_paid: p(5_000),
@@ -198,6 +201,7 @@ fn a_seller_credit_of_exactly_zero_makes_no_seller_line() {
     // Debit 1,068 = credit 60 + 60 + 8 + 940.
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
+        partner_credits: Vec::new(),
         person_key: None,
         seller_credit: Paisa::ZERO,
         cash_paid: Paisa::ZERO,
@@ -224,6 +228,7 @@ fn a_negative_rate_difference_is_a_debit_on_rate_diff() {
     // buyer total 12,668, rate difference -200. No lot charges. Arshad as in Event 1.
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
+        partner_credits: Vec::new(),
         person_key: None,
         // 12,000 + 17,400 - 1,764 = 27,636
         seller_credit: p(27_636),
@@ -277,6 +282,7 @@ fn nothing_to_post_is_an_error_and_a_huge_entry_is_too_large() {
     let huge = crate::ledger::MAX_LINE_PAISA / 100 + 1;
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
+        partner_credits: Vec::new(),
         person_key: None,
         seller_credit: p(huge),
         cash_paid: Paisa::ZERO,
@@ -336,6 +342,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
     // Event 2: the one-time buyer's debit at 0, his cash settlement credit is the last line.
     let lot = JournalLot {
         seller_account_id: AccountId::new(KARIM),
+        partner_credits: Vec::new(),
         person_key: None,
         seller_credit: p(10_160),
         cash_paid: Paisa::ZERO,
@@ -368,6 +375,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
     // A negative credit is a debit line: `seller_credit` is None and `seller_debit` is set.
     let negative = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
+        partner_credits: Vec::new(),
         person_key: None,
         seller_credit: p(-2_436),
         cash_paid: Paisa::ZERO,
@@ -393,6 +401,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
         &JournalSource {
             lots: vec![JournalLot {
                 seller_account_id: AccountId::new(RAHIM),
+                partner_credits: Vec::new(),
                 person_key: None,
                 seller_credit: p(-2_436),
                 cash_paid: Paisa::ZERO,
@@ -408,4 +417,74 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
     )
     .unwrap();
     assert_eq!(plain, entry);
+}
+
+// ---- A trip lot: the seller credit goes to the trip partners (PRD FR-12.26, C25) ----
+
+const TRIP_A: i64 = 201;
+const TRIP_B: i64 = 202;
+const TRIP_C: i64 = 203;
+const OWN_GOODS: i64 = 40;
+
+/// E2E-34: an own lot sells 15 to اکرم. The seller credit 8,460 is not on the اپنا مال account; it is
+/// split 3,384 / 2,538 / 2,538 on the partners' 0604 accounts. The cost of the goods is not here.
+fn trip_lot(credit: i64, parts: [i64; 3], total: i64, comm: i64, laga: i64) -> JournalLot {
+    JournalLot {
+        seller_account_id: AccountId::new(OWN_GOODS),
+        partner_credits: vec![
+            (AccountId::new(TRIP_A), p(parts[0])),
+            (AccountId::new(TRIP_B), p(parts[1])),
+            (AccountId::new(TRIP_C), p(parts[2])),
+        ],
+        person_key: None,
+        seller_credit: p(credit),
+        cash_paid: Paisa::ZERO,
+        freight_deducted: Paisa::ZERO,
+        labour: Paisa::ZERO,
+        munshiana: Paisa::ZERO,
+        store_rent: Paisa::ZERO,
+        phone: Paisa::ZERO,
+        sales: vec![sale(AKRAM, total, PaymentType::Credit, comm, comm, laga, 0)],
+    }
+}
+
+#[test]
+fn e2e_34_the_seller_credit_goes_to_the_trip_partners_and_the_entry_is_9_660() {
+    let lot = trip_lot(8_460, [3_384, 2_538, 2_538], 9_660, 540, 120);
+    let entry = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
+    // 9,660 = 540 + 540 + 120 + 8,460.
+    assert_eq!(entry.total(), p(9_660));
+    assert_eq!(side_sum(&entry, AKRAM, Dr), 9_660);
+    assert_eq!(side_sum(&entry, TRIP_A, Cr), 3_384);
+    assert_eq!(side_sum(&entry, TRIP_B, Cr), 2_538);
+    assert_eq!(side_sum(&entry, TRIP_C, Cr), 2_538);
+    assert_eq!(side_sum(&entry, SELLER_COMM, Cr), 540);
+    assert_eq!(side_sum(&entry, BUYER_COMM, Cr), 540);
+    assert_eq!(side_sum(&entry, LAGA, Cr), 120);
+    // Nothing on the اپنا مال account, and no cash line.
+    assert_eq!(side_sum(&entry, OWN_GOODS, Cr), 0);
+    assert_eq!(side_sum(&entry, OWN_GOODS, Dr), 0);
+    assert_eq!(entry.lines().len(), 1 + 3 + 3);
+}
+
+#[test]
+fn a_loss_on_a_trip_lot_is_a_debit_on_the_partners_never_a_negative_line() {
+    // 1 x 10, labour 50: credit 10 - 1 - 50 = -41, split 17 / 12 / 12. Buyer total 10 + 1 + 8 = 19.
+    let mut lot = trip_lot(-41, [-17, -12, -12], 19, 1, 8);
+    lot.labour = p(50);
+    let entry = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
+    assert_eq!(entry.total(), p(19 + 41));
+    assert_eq!(side_sum(&entry, TRIP_A, Dr), 17);
+    assert_eq!(side_sum(&entry, TRIP_B, Dr), 12);
+    assert_eq!(side_sum(&entry, TRIP_C, Dr), 12);
+    assert_eq!(side_sum(&entry, TRIP_A, Cr), 0);
+    assert_eq!(side_sum(&entry, LABOUR, Cr), 50);
+}
+
+#[test]
+fn parts_that_do_not_add_up_to_the_credit_do_not_balance_and_nothing_is_built() {
+    // One rupee short on one partner: the entry would not balance, so it is refused.
+    let lot = trip_lot(8_460, [3_384, 2_538, 2_537], 9_660, 540, 120);
+    let error = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap_err();
+    assert!(matches!(error, LedgerError::Unbalanced { .. }), "{error:?}");
 }

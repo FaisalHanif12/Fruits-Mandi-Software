@@ -154,6 +154,31 @@ const stockRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/bikri/pages/StockPage'), 'StockPage'),
 });
 
+// مارکیٹ سفر (PRD 12.10, FR-5.2): the trips list, the form of a new trip (shares first, FR-12.29),
+// and one trip with its type list (FR-7.67). `/trips/12?purchase=7` shows purchase 7 of trip 12
+// in the card under its list. Static `new` wins over the `$id` parameter in the router.
+const tripsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/trips',
+  component: lazyRouteComponent(() => import('../features/trips/pages/TripsPage'), 'TripsPage'),
+});
+
+const tripNewRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/trips/new',
+  component: lazyRouteComponent(() => import('../features/trips/pages/NewTripPage'), 'NewTripPage'),
+});
+
+const tripRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/trips/$id',
+  validateSearch: (search: Record<string, unknown>): { purchase?: number } => {
+    const purchase = positiveId(search['purchase']);
+    return purchase === undefined ? {} : { purchase };
+  },
+  component: lazyRouteComponent(() => import('../features/trips/pages/TripPage'), 'TripPage'),
+});
+
 const laterSaleRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/later',
@@ -351,6 +376,9 @@ const appRoutes = [
   stockRoute,
   laterSaleRoute,
   comingSoonRoute('/rokar'),
+  tripsRoute,
+  tripNewRoute,
+  tripRoute,
   partnersRoute,
   partnersSetupRoute,
   comingSoonRoute('/analytics'),
@@ -381,6 +409,11 @@ const devRoutes = import.meta.env.DEV
         getParentRoute: () => rootRoute,
         path: '/dev/bikri',
         component: lazyRouteComponent(() => import('./dev/BikriPage'), 'BikriPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/trips',
+        component: lazyRouteComponent(() => import('./dev/TripsPage'), 'TripsPage'),
       }),
       createRoute({
         getParentRoute: () => rootRoute,

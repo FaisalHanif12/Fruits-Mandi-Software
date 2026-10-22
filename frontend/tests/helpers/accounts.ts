@@ -282,8 +282,15 @@ function hitOf(row: AccountRow): AccountHit {
   };
 }
 
+/** The اپنا مال account: offered only in the seller field of a lot (PRD FR-12.26). */
+const OWN_GOODS_CODE = '030119998';
+
 function inScope(row: AccountRow, scope: AccountScope): boolean {
-  return scope === 'any' || scope === 'control' ? true : row.account_type === scope;
+  if (scope === 'any' || scope === 'control') return true;
+  // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
+  if (scope === 'lot_seller') return row.account_type === 'seller';
+  if (scope === 'seller') return row.account_type === 'seller' && row.code !== OWN_GOODS_CODE;
+  return row.account_type === scope;
 }
 
 /** The serial of an account: the last four digits of its code (PRD FR-10.3). */

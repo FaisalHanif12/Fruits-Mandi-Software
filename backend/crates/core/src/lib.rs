@@ -21,12 +21,15 @@ pub mod masters;
 pub mod money;
 pub mod partners;
 pub mod printing;
+pub mod purchases;
 pub mod rules;
 pub mod search;
 pub mod text;
 pub mod translit;
+pub mod trips;
 pub mod urdu_words;
 pub mod validate;
+pub mod ventures;
 pub mod vouchers;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).

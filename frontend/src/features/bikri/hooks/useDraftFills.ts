@@ -9,11 +9,16 @@
 //   at once, before the buyer is chosen: the line is still blank (no buyer, no rate) until he
 //   types, so the backend and the save ignore it. The screen never works it out.
 // - The rate is never filled. The last rate is grey text in the cell (FR-7.53).
+// - A lot of the firm's own goods (the seller is اپنا مال, PRD FR-12.26) takes its item, packing and
+//   quantity from its purchase, not from a seller's memory, and has no نقد: what the row held from
+//   an earlier seller is cleared once, so no cell is left that cannot be changed.
 
 import { useEffect } from 'react';
+import { isOwnGoods } from '../../../shared/accounts';
 import { findMaster, type SearchHit } from '../../../shared/search';
 import type { PickedRecord } from '../../../shared/grid';
 import { assistSellerMemory } from '../api';
+import { isOwnLot } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, ON, SALE, type BikriPreview } from '../types';
 
@@ -68,7 +73,8 @@ export function useDraftFills(
     lotRows.forEach((row, index) => {
       if (row.picked?.[LOT.seller] !== undefined || row.typed[LOT.sellerFilled] === ON) return;
       const candidate = index === 0 ? zamindar : lotRows[index - 1]?.picked?.[LOT.seller];
-      if (candidate === null || candidate === undefined) return;
+      // The firm's own goods are sold lot by lot from a purchase, never carried to the next lot.
+      if (candidate === null || candidate === undefined || isOwnGoods(candidate)) return;
       stores.lots.getState().patchRow(row.rowId, {
         picked: { [LOT.seller]: candidate },
         typed: { [LOT.sellerFilled]: ON },
@@ -80,11 +86,38 @@ export function useDraftFills(
   useEffect(() => {
     for (const row of lotRows) {
       const seller = row.picked?.[LOT.seller];
-      if (seller === undefined || row.typed[LOT.memoryFilledFor] === String(seller.id)) continue;
+      if (seller === undefined || isOwnLot(row)) continue;
+      if (row.typed[LOT.memoryFilledFor] === String(seller.id)) continue;
       stores.lots
         .getState()
         .patchRow(row.rowId, { typed: { [LOT.memoryFilledFor]: String(seller.id) } });
       void fillFromSellerMemory(stores, row.rowId, seller.id);
+    }
+  }, [lotRows, stores]);
+
+  // A lot became own goods: the item and packing of the seller before him go, the نقد goes. A lot
+  // that is not own goods any more drops the purchase it had. A saved lot of own goods (an edit)
+  // keeps everything it came with, so an edit that changes nothing sends the draft back as it came.
+  useEffect(() => {
+    for (const row of lotRows) {
+      const purchase = row.typed[LOT.purchase] ?? '';
+      if (!isOwnLot(row)) {
+        if (purchase !== '') {
+          stores.lots.getState().patchRow(row.rowId, { typed: { [LOT.purchase]: '' } });
+        }
+        continue;
+      }
+      const typed: Record<string, string> = {};
+      const picked: Record<string, PickedRecord | null> = {};
+      const saved = (row.typed[LOT.lotId] ?? '') !== '';
+      if (!saved && (row.typed[LOT.cash] ?? '') !== '') typed[LOT.cash] = '';
+      if (purchase === '' && !saved) {
+        if (row.picked?.[LOT.item] !== undefined) picked[LOT.item] = null;
+        if (row.picked?.[LOT.packing] !== undefined) picked[LOT.packing] = null;
+      }
+      if (Object.keys(typed).length > 0 || Object.keys(picked).length > 0) {
+        stores.lots.getState().patchRow(row.rowId, { typed, picked });
+      }
     }
   }, [lotRows, stores]);
 

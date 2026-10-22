@@ -229,6 +229,34 @@
 # review: pending
 -trial-balance = Trial Balance
 
+# Goods the firm buys itself and sells for its own profit or loss (PRD Section 3)
+# review: pending
+-apna-maal = Own Goods
+
+# The firm buying its own goods (PRD Section 3)
+# review: pending
+-khareedari = Purchase
+
+# Profit of a market trip or of one of its purchases (PRD Section 3)
+# review: pending
+-tijarati-munafa = Trading Profit
+
+# Loss of a market trip or of one of its purchases (PRD Section 3)
+# review: pending
+-tijarati-nuqsan = Trading Loss
+
+# A day trip to a bigger market to buy goods for some partners (PRD Section 3, 12.10)
+# review: pending
+-market-safar = Market Trip
+
+# Where a partner's part of a payment comes from: the shop's cash (PRD Section 3, FR-12.29)
+# review: pending
+-dukan-se = From the Shop
+
+# Where a partner's part of a payment comes from: his own money (PRD Section 3, FR-12.29)
+# review: pending
+-apni-jeb-se = Own Pocket
+
 ## The words on their own, for labels that show only the word.
 
 glossary-arhti = { -arhti }
@@ -288,3 +316,10 @@ glossary-banaam = { -banaam }
 glossary-jama = { -jama }
 glossary-meezan = { -meezan }
 glossary-trial-balance = { -trial-balance }
+glossary-apna-maal = { -apna-maal }
+glossary-khareedari = { -khareedari }
+glossary-tijarati-munafa = { -tijarati-munafa }
+glossary-tijarati-nuqsan = { -tijarati-nuqsan }
+glossary-market-safar = { -market-safar }
+glossary-dukan-se = { -dukan-se }
+glossary-apni-jeb-se = { -apni-jeb-se }

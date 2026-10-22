@@ -18,7 +18,8 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, bikri, cash, drafts, masters, partners, printing, rules, search, vouchers,
+    accounts, bikri, cash, drafts, masters, partners, printing, purchases, rules, search, trips,
+    ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -292,6 +293,64 @@ const EXPECTED_FILES: &[&str] = &[
     "WriteOffRow.ts",
     "StockRow.ts",
     "StockList.ts",
+    "OwnStockRow.ts",
+    "SavedPurchaseRef.ts",
+    "SavedCredit.ts",
+    "SavedOwnLot.ts",
+    "OwnLotPreview.ts",
+    "MoneySource.ts",
+    "VentureKind.ts",
+    "VentureStatus.ts",
+    "VenturePartnerInput.ts",
+    "VenturePartnerRow.ts",
+    "EntryPartInput.ts",
+    "EntryPart.ts",
+    "EntryParts.ts",
+    "ShareAmount.ts",
+    "TripRef.ts",
+    "PurchaseInput.ts",
+    "PurchasePreview.ts",
+    "PurchaseNumbers.ts",
+    "PurchaseWorkings.ts",
+    "PurchaseSaved.ts",
+    "PurchaseCancelInput.ts",
+    "PurchaseCancelled.ts",
+    "PurchaseGetInput.ts",
+    "PurchasesListInput.ts",
+    "PurchasesList.ts",
+    "PurchasesTotals.ts",
+    "PurchaseRow.ts",
+    "PurchaseLotRef.ts",
+    "PurchaseStatus.ts",
+    "PurchaseStateFilter.ts",
+    "PurchaseWriteOffInput.ts",
+    "PurchaseWriteOffDone.ts",
+    "PurchaseWriteOffUndoInput.ts",
+    "PurchaseWriteOffUndone.ts",
+    "TripInput.ts",
+    "TripSetPartnersInput.ts",
+    "TripDefaults.ts",
+    "TripsListInput.ts",
+    "TripsList.ts",
+    "TripsTotals.ts",
+    "TripRow.ts",
+    "TripGetInput.ts",
+    "TripDetail.ts",
+    "TripEntryRow.ts",
+    "TripEntryKind.ts",
+    "CostSpreadPart.ts",
+    "TripPartnerResult.ts",
+    "TripsSummary.ts",
+    "TripCostInput.ts",
+    "TripCostNumbers.ts",
+    "TripCostPreview.ts",
+    "TripCostSaved.ts",
+    "OtherSaleInput.ts",
+    "OtherSaleNumbers.ts",
+    "OtherSalePreview.ts",
+    "OtherSaleSaved.ts",
+    "TripEntryCancelInput.ts",
+    "TripEntryCancelled.ts",
     "LaterSaleInput.ts",
     "LaterSaleSaveInput.ts",
     "LaterSaleSaved.ts",
@@ -501,6 +560,63 @@ fn export_bindings() {
     bikri::BikriHit::export_all(&cfg).unwrap();
     bikri::StockListInput::export_all(&cfg).unwrap();
     bikri::StockList::export_all(&cfg).unwrap();
+    bikri::OwnStockRow::export_all(&cfg).unwrap();
+    bikri::SavedPurchaseRef::export_all(&cfg).unwrap();
+    bikri::SavedOwnLot::export_all(&cfg).unwrap();
+    bikri::OwnLotPreview::export_all(&cfg).unwrap();
+    ventures::MoneySource::export_all(&cfg).unwrap();
+    ventures::VentureKind::export_all(&cfg).unwrap();
+    ventures::VentureStatus::export_all(&cfg).unwrap();
+    ventures::VenturePartnerInput::export_all(&cfg).unwrap();
+    ventures::VenturePartnerRow::export_all(&cfg).unwrap();
+    ventures::EntryPartInput::export_all(&cfg).unwrap();
+    ventures::EntryPart::export_all(&cfg).unwrap();
+    ventures::EntryParts::export_all(&cfg).unwrap();
+    ventures::ShareAmount::export_all(&cfg).unwrap();
+    ventures::TripRef::export_all(&cfg).unwrap();
+    purchases::PurchaseInput::export_all(&cfg).unwrap();
+    purchases::PurchasePreview::export_all(&cfg).unwrap();
+    purchases::PurchaseNumbers::export_all(&cfg).unwrap();
+    purchases::PurchaseWorkings::export_all(&cfg).unwrap();
+    purchases::PurchaseSaved::export_all(&cfg).unwrap();
+    purchases::PurchaseCancelInput::export_all(&cfg).unwrap();
+    purchases::PurchaseCancelled::export_all(&cfg).unwrap();
+    purchases::PurchaseGetInput::export_all(&cfg).unwrap();
+    purchases::PurchasesListInput::export_all(&cfg).unwrap();
+    purchases::PurchasesList::export_all(&cfg).unwrap();
+    purchases::PurchasesTotals::export_all(&cfg).unwrap();
+    purchases::PurchaseRow::export_all(&cfg).unwrap();
+    purchases::PurchaseLotRef::export_all(&cfg).unwrap();
+    purchases::PurchaseStatus::export_all(&cfg).unwrap();
+    purchases::PurchaseStateFilter::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffInput::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffDone::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffUndoInput::export_all(&cfg).unwrap();
+    purchases::PurchaseWriteOffUndone::export_all(&cfg).unwrap();
+    trips::TripInput::export_all(&cfg).unwrap();
+    trips::TripSetPartnersInput::export_all(&cfg).unwrap();
+    trips::TripDefaults::export_all(&cfg).unwrap();
+    trips::TripsListInput::export_all(&cfg).unwrap();
+    trips::TripsList::export_all(&cfg).unwrap();
+    trips::TripsTotals::export_all(&cfg).unwrap();
+    trips::TripRow::export_all(&cfg).unwrap();
+    trips::TripGetInput::export_all(&cfg).unwrap();
+    trips::TripDetail::export_all(&cfg).unwrap();
+    trips::TripEntryRow::export_all(&cfg).unwrap();
+    trips::TripEntryKind::export_all(&cfg).unwrap();
+    trips::CostSpreadPart::export_all(&cfg).unwrap();
+    trips::TripPartnerResult::export_all(&cfg).unwrap();
+    trips::TripsSummary::export_all(&cfg).unwrap();
+    trips::TripCostInput::export_all(&cfg).unwrap();
+    trips::TripCostNumbers::export_all(&cfg).unwrap();
+    trips::TripCostPreview::export_all(&cfg).unwrap();
+    trips::TripCostSaved::export_all(&cfg).unwrap();
+    trips::OtherSaleInput::export_all(&cfg).unwrap();
+    trips::OtherSaleNumbers::export_all(&cfg).unwrap();
+    trips::OtherSalePreview::export_all(&cfg).unwrap();
+    trips::OtherSaleSaved::export_all(&cfg).unwrap();
+    trips::TripEntryCancelInput::export_all(&cfg).unwrap();
+    trips::TripEntryCancelled::export_all(&cfg).unwrap();
     bikri::LaterSaleInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaved::export_all(&cfg).unwrap();

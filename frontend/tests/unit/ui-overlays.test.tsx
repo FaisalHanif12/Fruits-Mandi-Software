@@ -1,7 +1,7 @@
 // Select, Toast and ConfirmDialog in Urdu and English (plan 02 T3, design system 6,
 // PRD FR-7.7 and FR-7.8). These render in a portal, so they set lang and dir themselves.
 
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -85,6 +85,38 @@ describe.each(LANGUAGES)('overlays (%s)', (language) => {
     expect(list.closest('[dir]')).toHaveAttribute('dir', direction);
     await userEvent.click(screen.getByRole('option', { name: message(language, 'common-retry') }));
     expect(onChange).toHaveBeenCalledWith('bank');
+  });
+
+  it('Select with afterChoose: a choice calls it and focus does not go back to the field; Esc still does', async () => {
+    const afterChoose = vi.fn();
+    const options = [
+      { value: 'cash' as Mode, label: message(language, 'common-back') },
+      { value: 'bank' as Mode, label: message(language, 'common-retry') },
+    ];
+    renderIn(
+      language,
+      <Select value={undefined} onChange={vi.fn()} afterChoose={afterChoose} options={options} />,
+    );
+    const trigger = screen.getByRole('combobox');
+    const user = userEvent.setup();
+    // Closing without a choice gives focus back to the field and does not call it.
+    await user.click(trigger);
+    await screen.findByRole('listbox');
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox')).toBeNull();
+    });
+    expect(trigger).toHaveFocus();
+    expect(afterChoose).not.toHaveBeenCalled();
+    // A choice calls it once the list is closed, and the field does not take focus back.
+    await user.click(trigger);
+    await user.click(
+      await screen.findByRole('option', { name: message(language, 'common-retry') }),
+    );
+    await waitFor(() => {
+      expect(afterChoose).toHaveBeenCalledTimes(1);
+    });
+    expect(trigger).not.toHaveFocus();
   });
 
   it('Select read-only cannot open', () => {

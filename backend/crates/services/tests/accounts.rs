@@ -1278,8 +1278,8 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
         all.rows.len()
     );
     assert!(took.as_millis() < BOUND_MS, "{took:?}");
-    // Every account is there: no cap. 2 x 8,999 and 2,000 made here, and the 16 system accounts.
-    assert_eq!(all.rows.len(), 2 * 8_999 + 2_000 + 16);
+    // Every account is there: no cap. 2 x 8,999 and 2,000 made here, and the 17 system accounts.
+    assert_eq!(all.rows.len(), 2 * 8_999 + 2_000 + 17);
     assert!(all.rows.len() > 20_000);
     assert_eq!(all.count, u32::try_from(all.rows.len()).unwrap());
     let codes: Vec<&str> = all.rows.iter().map(|r| r.code.as_str()).collect();

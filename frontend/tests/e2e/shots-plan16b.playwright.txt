@@ -1,0 +1,115 @@
+// Screenshots of the screens of plan 16b (market trips: the list, a new trip, one trip with its
+// purchase, trip cost and sale in another shop) in both languages at the three window sizes, taken
+// from the development page /dev/trips with the Playwright tool. It is a developer tool: run it
+// with the Vite dev server up (`pnpm --filter frontend dev`). It also measures sideways overflow
+// (NFR-USE-15): the screen area, and every table or grid inside it, must not scroll sideways.
+// Usage with the Playwright MCP tool: browser_run_code_unsafe with `filename` set to this file. (It
+// is a snippet for that tool, not a module, so it is kept as .txt and the linter does not read it.
+// The Windows check is the specs 22 and 23.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/plan16b';
+  const BASE = 'http://localhost:5173/#/dev/trips';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const ONLY = null;
+  const settle = (ms) => page.waitForTimeout(ms);
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type !== 'beforeunload') add(type, ...rest);
+    };
+  });
+  // The inputs of the entry form in the order they are on the screen.
+  const input = (index) => page.locator('main form input').nth(index);
+  const typeButton = (index) => page.locator('main [aria-pressed]').nth(index);
+  const SCENARIOS = {
+    list: { query: '?list', run: async () => settle(800) },
+    'list-empty': { query: '?list&empty', run: async () => settle(800) },
+    new: { query: '?new', run: async () => settle(800) },
+    trip: { query: '?trip', run: async () => settle(1000) },
+    'trip-closed': { query: '?trip&closed', run: async () => settle(1000) },
+    'trip-purchase': {
+      // Cash in hand is 5,000 here, so the amber note and the cash box show.
+      query: '?trip&cash',
+      run: async () => {
+        await settle(1000);
+        await input(2).click();
+        await page.keyboard.type('ban');
+        await settle(400);
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('box');
+        await settle(400);
+        await page.keyboard.press('Enter');
+        await input(4).fill('20');
+        await input(5).fill('500');
+        await input(6).fill('400');
+        await settle(700);
+      },
+    },
+    'trip-cost': {
+      query: '?trip',
+      run: async () => {
+        await settle(1000);
+        await typeButton(1).click();
+        await input(1).fill('4000');
+        await input(2).fill('Truck');
+        await settle(700);
+      },
+    },
+    'trip-sale': {
+      query: '?trip',
+      run: async () => {
+        await settle(1000);
+        await typeButton(2).click();
+        await page.locator('main button[role="combobox"]').first().click();
+        await page.locator('[role="option"]').first().click();
+        await input(2).fill('15');
+        await input(3).fill('8460');
+        await settle(700);
+      },
+    },
+  };
+  const report = [];
+  for (const [name, scenario] of Object.entries(SCENARIOS)) {
+    if (ONLY !== null && !ONLY.includes(name)) continue;
+    for (const language of ['ur', 'en']) {
+      for (const [w, h] of SIZES) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto(`${BASE}${scenario.query}`);
+        await page.reload();
+        await settle(700);
+        if (language === 'en') await page.keyboard.press('Alt+L');
+        await settle(300);
+        try {
+          await scenario.run();
+        } catch (failure) {
+          report.push(`${name} ${language} ${w}x${h} FAILED ${String(failure).slice(0, 120)}`);
+        }
+        const overflow = await page.evaluate(() => {
+          const found = [];
+          const main = document.querySelector('main');
+          if (main && main.scrollWidth > main.clientWidth + 1)
+            found.push(`main ${main.scrollWidth}>${main.clientWidth}`);
+          for (const el of document.querySelectorAll(
+            'main .overflow-x-auto, main .ag-body-viewport, main .ag-center-cols-viewport, main .ag-body-horizontal-scroll-viewport',
+          )) {
+            if (el.scrollWidth > el.clientWidth + 1)
+              found.push(
+                `${el.className.toString().slice(0, 40)} ${el.scrollWidth}>${el.clientWidth}`,
+              );
+          }
+          return found;
+        });
+        await page.screenshot({ path: `${OUT}/${name}__${language}__${w}x${h}.png` });
+        report.push(
+          `${name} ${language} ${w}x${h}${overflow.length ? ' OVERFLOW ' + overflow.join('; ') : ''}`,
+        );
+      }
+    }
+  }
+  return report.join('\n');
+}

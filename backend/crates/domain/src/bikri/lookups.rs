@@ -8,6 +8,9 @@ use std::collections::{HashMap, HashSet};
 use mandi_core::bikri::RateHint;
 use mandi_core::money::Paisa;
 use mandi_core::rules::ItemGroup;
+use mandi_core::ventures::TripRef;
+
+use crate::ventures::VenturePartner;
 
 /// What kind of party an account is (PRD 10.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,8 +32,8 @@ pub struct AccountFacts {
     pub is_pukhta: bool,
     /// True for the nameless cash buyer نقدی منڈی (PRD 10.4): always cash.
     pub is_naqdi_mandi: bool,
-    /// True for the اپنا مال account (PRD FR-12.26). A lot of own goods comes with plan 16b, so a
-    /// بکری of plan 12 refuses it as a seller.
+    /// True for the اپنا مال account (PRD FR-12.26). It is accepted only as the seller of a lot
+    /// with a purchase; anywhere else it is refused with `ERR_OWN_GOODS_ACCOUNT_RESTRICTED`.
     pub is_own_goods: bool,
     /// False when hidden from pickers: a new posting cannot use it (PRD FR-10.2).
     pub is_active: bool,
@@ -64,6 +67,46 @@ pub struct ItemSales {
     pub amount: Paisa,
 }
 
+/// One partner of the trip a purchase belongs to: what the split of the seller credit needs (PRD
+/// FR-12.26, C25) and the names the screen shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TripPartnerFacts {
+    /// His id, 0604 account and share of the trip. The source is not used for money that comes in.
+    pub partner: VenturePartner,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+}
+
+/// What `calc_posting` needs to know about a purchase of own goods (PRD FR-12.26, C21): its item
+/// and packing, and the stock and the cost that the posting being worked out can take. In an
+/// edit these are the figures with the posting's own lines added back, so the posting is worked
+/// out against what it could take if it were not saved yet. It also names the trip and its
+/// partners, because the seller credit of an own lot goes to them (C25).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PurchaseFacts {
+    /// The number of the purchase (خ-1).
+    pub number: i64,
+    /// The day it was bought, `YYYY-MM-DD`. An own lot cannot be sold on an earlier day (PRD
+    /// FR-12.24, FR-12.26).
+    pub entry_date: String,
+    /// Its trip.
+    pub trip: TripRef,
+    /// The partners of the trip with their shares, in the order the partners were created.
+    pub partners: Vec<TripPartnerFacts>,
+    /// The item of the purchase.
+    pub item_id: i64,
+    /// The packing of the purchase.
+    pub packing_id: i64,
+    /// نگ the posting can take: bought less sold less written off.
+    pub qty_left: i64,
+    /// The cost of those نگ: total cost less the cost already released.
+    pub cost_left: Paisa,
+    /// True once the purchase is cancelled: nothing can be sold from it.
+    pub cancelled: bool,
+}
+
 /// The Owner's switches that `calc_posting` obeys (PRD Section 21 "Overrides" and "Checks").
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Switches {
@@ -94,4 +137,6 @@ pub struct Lookups {
     pub saved_hints: HashMap<(i64, i64), RateHint>,
     /// The saved sales of each item the draft uses, for the rate check.
     pub item_sales: HashMap<i64, ItemSales>,
+    /// The purchases the lots of the draft name (PRD FR-12.26).
+    pub purchases: HashMap<i64, PurchaseFacts>,
 }

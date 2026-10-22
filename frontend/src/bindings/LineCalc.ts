@@ -53,11 +53,16 @@ export type LineCalc = {
    */
   rate_diff: Paisa;
   /**
+   * C21: the cost of the trip goods this line sells (PRD FR-12.26), 0 on a line of any other
+   * lot. Stored on the saved line (`cost_paisa`), shown with the result, never posted.
+   */
+  cost_of_goods: Paisa;
+  /**
    * How the buyer pays.
    */
   payment_type: PaymentType;
   /**
-   * The working of the four amounts above.
+   * The working of the amounts above.
    */
   workings: LineWorkings;
 };

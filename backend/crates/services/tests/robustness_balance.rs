@@ -15,9 +15,12 @@
 //!    and on a small account, then posted, then rolled back.
 //! 3. `a_draft_left_in_a_damaged_file_is_never_part_of_any_balance`: a committed draft.
 //! 4. `an_old_file_migrated_to_0002_keeps_every_number` (with and without a left-over draft):
-//!    a populated file is put back to schema version 1 (the three indexes dropped), opened
-//!    again through the real start-up path, and every number, every table row and both hash
-//!    chains are compared. The copy taken before the upgrade is checked.
+//!    a populated file is put back to the shape of an old release (schema version 1 or 2: a new
+//!    file made from the released migration texts of the db crate, with every row copied in),
+//!    opened again through the real start-up path, and every number, every table row and both
+//!    hash chains are compared. The copy taken before the upgrade is checked. Migrations 0002 to
+//!    0006 all run on that file; what 0006 adds (eight tables, ten columns, two controls) is left
+//!    out of the row comparison, and nothing else is.
 //! 5. `a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing`.
 #![cfg(test)]
 
@@ -37,6 +40,7 @@ use mandi_services::core::ids::AccountId;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
 use mandi_services::db::ledger as repo;
+use mandi_services::db::migrate::{BALANCE_INDEXES_SQL, INIT_SQL};
 use mandi_services::db::rusqlite::{Connection, OpenFlags, params, types::Value};
 use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
 use mandi_services::ledger::{self, PostingEvent};
@@ -60,7 +64,37 @@ const TRIGGERS_OF_0004: [&str; 7] = [
     "bikri_lots_no_replace",
     "bikri_sales_no_replace",
 ];
-const LATEST_VERSION: i64 = 5;
+const LATEST_VERSION: i64 = 6;
+/// The tables migration 0006 adds (plan 16b). A file of an old release does not have them, and
+/// they are empty in this test, so the row fingerprint leaves them out.
+const TABLES_OF_0006: [&str; 8] = [
+    "ventures",
+    "venture_partners",
+    "venture_entries",
+    "venture_entry_parts",
+    "purchases",
+    "purchase_cost_parts",
+    "lot_credit_parts",
+    "fruit_takes",
+];
+/// The columns migration 0006 adds to old tables. A row's numbers do not change when they appear,
+/// so the row fingerprint leaves them out.
+const COLUMNS_OF_0006: [(&str, &str); 10] = [
+    ("bikri_lots", "purchase_id"),
+    ("bikri_lots", "qty_taken"),
+    ("bikri_sales", "cost_paisa"),
+    ("stock_moves", "purchase_id"),
+    ("stock_moves", "cost_paisa"),
+    ("analytics_facts", "purchase_id"),
+    ("analytics_facts", "venture_id"),
+    ("analytics_facts", "cost_paisa"),
+    ("partners", "venture_account_id"),
+    ("accounts", "tag"),
+];
+/// The two controls whose party types (separate, garden) the CHECK lists of an old release do not
+/// hold. Migration 0006 seeds them, so they are not copied into the old file and are left out of
+/// the row fingerprint.
+const CONTROLS_OF_0006: [&str; 2] = ["0305", "0306"];
 /// The three nullable columns migration 0005 adds (plan 16). A row's numbers do not change when
 /// they appear, so the row fingerprint leaves them out.
 const COLUMNS_OF_0005: [(&str, &str); 3] = [
@@ -293,7 +327,10 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
             .unwrap()
     };
     let mut hasher = DefaultHasher::new();
-    for table in tables.iter().filter(|t| !skip.contains(&t.as_str())) {
+    for table in tables
+        .iter()
+        .filter(|t| !skip.contains(&t.as_str()) && !TABLES_OF_0006.contains(&t.as_str()))
+    {
         table.hash(&mut hasher);
         let names: Vec<String> = {
             let mut info = conn
@@ -304,13 +341,28 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap()
                 .into_iter()
-                .filter(|c| !COLUMNS_OF_0005.contains(&(table.as_str(), c.as_str())))
+                .filter(|c| {
+                    !COLUMNS_OF_0005.contains(&(table.as_str(), c.as_str()))
+                        && !COLUMNS_OF_0006.contains(&(table.as_str(), c.as_str()))
+                })
                 .collect()
+        };
+        let filter = if table == "account_controls" {
+            format!(
+                "WHERE code NOT IN ({})",
+                CONTROLS_OF_0006
+                    .iter()
+                    .map(|c| format!("'{c}'"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        } else {
+            String::new()
         };
         let list: Vec<String> = names.iter().map(|c| format!("\"{c}\"")).collect();
         let mut statement = conn
             .prepare(&format!(
-                "SELECT {} FROM \"{table}\" ORDER BY rowid",
+                "SELECT {} FROM \"{table}\" {filter} ORDER BY rowid",
                 list.join(", ")
             ))
             .unwrap();
@@ -922,8 +974,128 @@ fn objects(dir: &TempDir) -> Vec<(String, String)> {
         .unwrap()
 }
 
-/// `from_version` is the schema version of the faked old file: 1 (0002, 0003 and 0004 run) or
-/// 2 (0003 and 0004 run).
+/// The names of the columns of a table of an attached database, in table order.
+fn column_names(conn: &Connection, schema: &str, table: &str) -> Vec<String> {
+    conn.prepare("SELECT name FROM pragma_table_info(?1, ?2) ORDER BY cid")
+        .unwrap()
+        .query_map([table, schema], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+}
+
+/// Puts the populated file of `dir` back to the shape of an old release, at schema version
+/// `from_version`: 1 (migrations 0002 to 0006 are still to run) or 2 (0003 to 0006 are).
+///
+/// The old file is made from the released migration texts of the db crate (`INIT_SQL`, and
+/// `BALANCE_INDEXES_SQL` for version 2), so its tables, CHECK lists, triggers and indexes are exactly
+/// those of that release. Then every row of every table of the populated file is copied in, for the
+/// columns the old table has. The journal entries go in as drafts and are posted after their lines,
+/// one by one in id order, the way a save does it (Code Standards B16); every column, also the
+/// keyed hash, is copied as it was. The two controls whose party types the old CHECK lists do not
+/// hold are not copied: migration 0006 seeds them again.
+fn put_back_to_old_release(dir: &TempDir, from_version: i64) {
+    assert!(from_version == 1 || from_version == 2);
+    let live = dir.path().join("data").join("mandi.db");
+    let old = dir.path().join("data").join("old-release.db");
+    {
+        let conn = Connection::open(&old).unwrap();
+        conn.execute_batch(INIT_SQL).unwrap();
+        if from_version == 2 {
+            conn.execute_batch(BALANCE_INDEXES_SQL).unwrap();
+        }
+        conn.pragma_update(None, "foreign_keys", "OFF").unwrap();
+        conn.execute("ATTACH DATABASE ?1 AS latest", [live.to_str().unwrap()])
+            .unwrap();
+        let tables: Vec<String> = conn
+            .prepare(
+                "SELECT name FROM main.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+            )
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        for table in &tables {
+            let in_latest = column_names(&conn, "latest", table);
+            let common: Vec<String> = column_names(&conn, "main", table)
+                .into_iter()
+                .filter(|c| in_latest.contains(c))
+                .collect();
+            let list: Vec<String> = common.iter().map(|c| format!("\"{c}\"")).collect();
+            let select: Vec<String> = common
+                .iter()
+                .map(|c| {
+                    if table == "journal_entries" && c == "status" {
+                        "'draft'".to_owned()
+                    } else {
+                        format!("\"{c}\"")
+                    }
+                })
+                .collect();
+            if table == "day_state" {
+                // The text of migration 0001 itself puts the one row in and the table keeps it (a
+                // trigger refuses a delete): its columns are set to the real row's.
+                let sets: Vec<String> = common
+                    .iter()
+                    .filter(|c| c.as_str() != "id")
+                    .map(|c| {
+                        format!("\"{c}\" = (SELECT \"{c}\" FROM latest.day_state WHERE id = 1)")
+                    })
+                    .collect();
+                conn.execute_batch(&format!("UPDATE main.day_state SET {}", sets.join(", ")))
+                    .unwrap();
+                continue;
+            }
+            let filter = if table == "account_controls" {
+                "WHERE code NOT IN ('0305', '0306')"
+            } else {
+                ""
+            };
+            conn.execute_batch(&format!(
+                "INSERT INTO main.\"{table}\" ({}) SELECT {} FROM latest.\"{table}\" {filter} ORDER BY rowid",
+                list.join(", "),
+                select.join(", ")
+            ))
+            .unwrap_or_else(|e| panic!("copying {table} into the old release failed: {e}"));
+        }
+        let posted: Vec<i64> = conn
+            .prepare("SELECT id FROM latest.journal_entries WHERE status = 'posted' ORDER BY id")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        for id in posted {
+            conn.execute(
+                "UPDATE main.journal_entries SET status = 'posted' WHERE id = ?1",
+                [id],
+            )
+            .unwrap_or_else(|e| panic!("posting entry {id} in the old release failed: {e}"));
+        }
+        let broken: i64 = conn
+            .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(
+            broken, 0,
+            "the copy into the old release broke a foreign key"
+        );
+        conn.execute_batch("DETACH DATABASE latest").unwrap();
+        conn.pragma_update(None, "user_version", from_version)
+            .unwrap();
+    }
+    for suffix in ["", "-wal", "-shm"] {
+        let mut path = live.clone().into_os_string();
+        path.push(suffix);
+        let _ = std::fs::remove_file(path);
+    }
+    std::fs::rename(&old, &live).unwrap();
+}
+
+/// `from_version` is the schema version of the old file: 1 (migrations 0002 to 0006 run) or 2 (0003
+/// to 0006 run).
 fn migration_case(with_draft: bool, from_version: i64) {
     assert!(from_version == 1 || from_version == 2);
     let w = world();
@@ -945,34 +1117,9 @@ fn migration_case(with_draft: bool, from_version: i64) {
     let World { dir, env, .. } = w;
     drop(env);
 
-    // Put the file back to an old schema version. The only differences from the latest file are
-    // what the later migrations add: the three indexes of 0002 (gone at version 1 only), the
-    // trigger `accounts_system_stays_active` of 0003 and the seven triggers of 0004 (gone at
-    // versions 1 and 2).
-    {
-        let conn = raw(&dir);
-        if from_version == 1 {
-            for name in INDEXES_OF_0002 {
-                conn.execute_batch(&format!("DROP INDEX {name}")).unwrap();
-            }
-        }
-        conn.execute_batch(&format!("DROP TRIGGER {TRIGGER_OF_0003}"))
-            .unwrap();
-        for name in TRIGGERS_OF_0004 {
-            conn.execute_batch(&format!("DROP TRIGGER {name}")).unwrap();
-        }
-        // What migration 0005 adds (plan 16): one trigger, one index and three nullable columns.
-        conn.execute_batch(
-            "DROP TRIGGER stock_moves_reversal_mirrors;
-             DROP INDEX idx_stock_moves_reverses;
-             ALTER TABLE journal_entries DROP COLUMN order_key;
-             ALTER TABLE stock_moves DROP COLUMN reverses_move_id;
-             ALTER TABLE bikri_sales DROP COLUMN ended;",
-        )
-        .unwrap();
-        conn.pragma_update(None, "user_version", from_version)
-            .unwrap();
-    }
+    // Put the file back to the shape of an old release (schema version 1 or 2): a new file is made
+    // from the released migration texts, and every row is copied in (see the function).
+    put_back_to_old_release(&dir, from_version);
     for name in INDEXES_OF_0002 {
         assert_eq!(
             index_names(&dir).iter().any(|n| n == name),

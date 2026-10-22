@@ -89,6 +89,7 @@ pub fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
         key: format!("lot-{n}"),
         lot_id: None,
         seller_account_id: Some(id_by_code(env, &format!("03011{:04}", 1 + n))),
+        purchase_id: None,
         pukhta: None,
         item_id: Some(first_id(env, "items", i64::try_from(n % 3).unwrap_or(0))),
         packing_id: Some(packing),

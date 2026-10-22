@@ -53,6 +53,9 @@ pub(super) struct LineArgs<'a> {
     /// The per-lot seller commission of a line that an edit removed, waiting for the first line
     /// that takes it (PRD FR-11.9).
     pub pending_move: &'a mut Option<StoredCharge>,
+    /// C21: the cost of the own goods this line sells and how it was worked out, for a line of an
+    /// own lot (PRD FR-12.26). `None` for a line of any other lot: its cost is 0.
+    pub cost: Option<(Paisa, mandi_core::rules::Working)>,
 }
 
 /// The stored line of a row, if the user did not change it (PRD FR-12.20): the buyer, the
@@ -459,11 +462,16 @@ pub(super) fn calc_line(
         );
         return Ok(None);
     }
+    let (cost_of_goods, cost_working) = args
+        .cost
+        .clone()
+        .unwrap_or_else(|| (Paisa::ZERO, working::none_line()));
     let workings = LineWorkings {
         seller_amount: seller_amount_working,
         buyer_value: buyer_value_working,
         buyer_total: working::buyer_total(buyer_value, buyer_comm.amount, laga.amount, buyer_total),
         rate_diff: working::rate_diff(buyer_value, seller_amount, rate_diff),
+        cost_of_goods: cost_working,
     };
 
     // The checks that need the numbers: credit limit (PRD FR-12.4) and rate check (FR-7.55).
@@ -492,6 +500,7 @@ pub(super) fn calc_line(
         laga,
         buyer_total,
         rate_diff,
+        cost_of_goods,
         payment_type: args.payment,
         workings,
     }))

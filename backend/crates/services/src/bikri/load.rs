@@ -150,6 +150,7 @@ pub(super) fn stored_posting(
                     seller_comm,
                     buyer_comm: stored_charge(conn, &sale.buyer_comm)?,
                     laga: stored_charge(conn, &sale.laga)?,
+                    cost: sale.cost_paisa,
                 },
             );
         }
@@ -161,6 +162,7 @@ pub(super) fn stored_posting(
                     seller_account_id: lot.seller.id,
                     item_id: lot.item.id,
                     person_key: lot.pukhta.as_ref().map(|p| p.person_key.clone()),
+                    purchase_id: lot.purchase.as_ref().map(|p| p.id),
                 }),
                 carrier,
                 elsewhere_qty: elsewhere,
@@ -295,6 +297,7 @@ fn lot_input(lot: &SavedLot, entry_id: i64, keep_ids: bool) -> Result<LotInput, 
         key: format!("lot:{}", lot.id),
         lot_id: keep_ids.then_some(lot.id),
         seller_account_id: Some(lot.seller.id),
+        purchase_id: lot.purchase.as_ref().map(|p| p.id),
         pukhta: lot.pukhta.as_ref().map(pukhta_input),
         item_id: Some(lot.item.id),
         packing_id: Some(lot.packing.id),
@@ -371,6 +374,8 @@ pub(super) fn later_lot_input(state: &LotState, sales: Vec<SaleInput>) -> LotInp
         key: format!("lot:{}", state.id),
         lot_id: Some(state.id),
         seller_account_id: Some(state.seller_account_id),
+        // A lot of own goods never has a later sale (PRD FR-12.26).
+        purchase_id: None,
         pukhta: state
             .pukhta
             .as_ref()

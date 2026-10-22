@@ -44,6 +44,8 @@ export function partnerRow(
     capital_account_code: `0602${code}`,
     drawings_account_id: 200 + id,
     drawings_account_code: `0603${code}`,
+    venture_account_id: 300 + id,
+    venture_account_code: `0604${code}`,
     share_bps,
     is_active: true,
     version: 1,

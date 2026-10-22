@@ -57,6 +57,16 @@ pub const EXPENSE_HEAD: &str = "05";
 /// نقدی منڈی, the cash buyer with no name (PRD FR-10.4): he pays at once, so he never holds a
 /// balance.
 pub const NAQDI_MANDI_CODE: &str = "03040000";
+/// اپنا مال, the seller of a trip's goods (PRD FR-10.4, FR-12.26). It never holds a balance.
+pub const OWN_GOODS_CODE: &str = "030119998";
+/// The control of a partner's gardens, trips and fruit account (PRD FR-10.4 v1.6). A code starts with
+/// it. These accounts are made with the partner and never take an opening balance (PRD FR-10.9).
+pub const VENTURE_CONTROL_CODE: &str = "0604";
+/// The control of a garden's account (PRD FR-10.4 v1.6). The account is made with the garden and
+/// never takes an opening balance (PRD FR-10.9).
+pub const GARDEN_CONTROL_CODE: &str = "0306";
+/// بینک: not used from v1.6, because all money is روکڑ (PRD FR-10.4). Nothing opens on it.
+pub const BANK_ACCOUNT_CODE: &str = "01020001";
 /// Whether an account can take an opening balance (PRD FR-10.9). This is the one named place for
 /// the list, used by the save (`ERR_OPENING_NOT_ALLOWED`) and by `AccountRow::can_take_opening`
 /// for the openings grid. The documents do not say which accounts are left out; the list is the
@@ -82,6 +92,13 @@ pub fn can_take_opening(head_code: &str, code: &str, is_pukhta_khata: bool) -> b
         && head_code != EXPENSE_HEAD
         && code != OPENING_DIFFERENCE_CODE
         && code != NAQDI_MANDI_CODE
+        // اپنا مال never holds a balance (PRD FR-12.26). The 0604 and 0306 accounts hold only the
+        // money of gardens, trips and fruit, which comes from their own entries, and بینک is not
+        // used (PRD FR-10.9 v1.6, D4-A31, D4-A32).
+        && code != OWN_GOODS_CODE
+        && code != BANK_ACCOUNT_CODE
+        && !code.starts_with(VENTURE_CONTROL_CODE)
+        && !code.starts_with(GARDEN_CONTROL_CODE)
         && !is_pukhta_khata
 }
 
@@ -91,9 +108,9 @@ pub struct ControlRule;
 impl ControlRule {
     /// True for a control with party type `other` that is not one of the controls that have
     /// their own way in: 0103 is the type ادھار رقم, 0501 is filled by expense heads and 0102 by
-    /// bank accounts (plan 06).
+    /// bank accounts (plan 06). 0604 (gardens, trips and fruit) is made with each partner (plan 11).
     pub fn allows_other(code: &str, party_type: &str) -> bool {
-        party_type == "other" && !matches!(code, "0103" | "0501" | "0102")
+        party_type == "other" && !matches!(code, "0103" | "0501" | "0102" | "0604")
     }
 }
 

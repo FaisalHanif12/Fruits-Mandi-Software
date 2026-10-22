@@ -24,7 +24,7 @@ import {
   fieldError,
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
-import { isPukhtaSeller } from '../draft';
+import { isOwnLot, isPukhtaSeller } from '../draft';
 import { LOT, ON, type LotPreview } from '../types';
 import { PukhtaFields } from './PukhtaFields';
 
@@ -192,23 +192,25 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
             </Field>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <div className="flex items-center gap-3">
-              <Localized id="bikri-more-freight-paid-by">
-                <span className="type-label" />
-              </Localized>
-              <SegmentedControl
-                groupLabel={l10n.getString('bikri-more-freight-paid-by')}
-                value={typed(LOT.freightPaidBy) === 'seller' ? 'seller' : 'firm'}
-                onChange={(who) => {
-                  setTyped(LOT.freightPaidBy, who);
-                }}
-                options={[
-                  { value: 'firm', label: <Localized id="glossary-arhti" /> },
-                  { value: 'seller', label: <Localized id="glossary-beopari" /> },
-                ]}
-              />
-            </div>
-            {hasAdvance ? (
+            {isOwnLot(row) ? null : (
+              <div className="flex items-center gap-3">
+                <Localized id="bikri-more-freight-paid-by">
+                  <span className="type-label" />
+                </Localized>
+                <SegmentedControl
+                  groupLabel={l10n.getString('bikri-more-freight-paid-by')}
+                  value={typed(LOT.freightPaidBy) === 'seller' ? 'seller' : 'firm'}
+                  onChange={(who) => {
+                    setTyped(LOT.freightPaidBy, who);
+                  }}
+                  options={[
+                    { value: 'firm', label: <Localized id="glossary-arhti" /> },
+                    { value: 'seller', label: <Localized id="glossary-beopari" /> },
+                  ]}
+                />
+              </div>
+            )}
+            {hasAdvance && !isOwnLot(row) ? (
               <div className="flex flex-wrap items-center gap-3">
                 <Checkbox
                   checked={typed(LOT.adjustAdvance) !== '0'}

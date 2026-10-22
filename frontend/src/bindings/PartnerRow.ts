@@ -33,6 +33,15 @@ export type PartnerRow = {
    */
   drawings_account_code: string;
   /**
+   * His gardens, trips and fruit account (control 0604, PRD FR-10.4 v1.6). It holds the money of
+   * the gardens and trips he is in and the fruit he took; it counts in his کل رقم (C22).
+   */
+  venture_account_id: number;
+  /**
+   * Its code, for example `06040001`.
+   */
+  venture_account_code: string;
+  /**
    * His share on today's date in bps (4000 = 40%). 0 until shares are set.
    */
   share_bps: number;

@@ -79,6 +79,11 @@ export type SavedSale = {
    */
   rate_diff: Paisa;
   /**
+   * C21: the cost of the trip goods this line sold, stored at save and never posted (PRD
+   * FR-12.26). 0 on a line of any other lot.
+   */
+  cost_paisa: Paisa;
+  /**
    * How the buyer pays.
    */
   payment_type: PaymentType;

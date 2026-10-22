@@ -6,7 +6,7 @@
 import { useLocalization } from '@fluent/react';
 import { Check, ChevronDown } from 'lucide-react';
 import { Select as RadixSelect } from 'radix-ui';
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { useUiLanguage } from '../i18n';
 import { controlClasses } from './control-classes';
 import type { FieldControlProps } from './Field';
@@ -25,6 +25,12 @@ interface SelectProps<T extends string> extends FieldControlProps {
   options: readonly SelectOption<T>[];
   /** Shown while nothing is chosen. Default: "چنیں" / "Choose". */
   placeholder?: ReactNode;
+  /**
+   * Called after a choice, once the list has closed. Focus does not go back to the field then:
+   * the caller moves it to the next stop (PRD FR-7.14). Closing without a choice (Esc) still
+   * returns focus to the field.
+   */
+  afterChoose?: () => void;
 }
 
 export function Select<T extends string>({
@@ -36,9 +42,11 @@ export function Select<T extends string>({
   onChange,
   options,
   placeholder,
+  afterChoose,
 }: SelectProps<T>) {
   const { l10n } = useLocalization();
   const { language, direction } = useUiLanguage();
+  const chosen = useRef(false);
   return (
     <RadixSelect.Root
       dir={direction}
@@ -47,7 +55,9 @@ export function Select<T extends string>({
       disabled={readOnly === true}
       onValueChange={(next) => {
         const option = options.find((candidate) => candidate.value === next);
-        if (option !== undefined) onChange(option.value);
+        if (option === undefined) return;
+        chosen.current = true;
+        onChange(option.value);
       }}
     >
       <RadixSelect.Trigger
@@ -71,6 +81,13 @@ export function Select<T extends string>({
           dir={direction}
           position="popper"
           sideOffset={LIST_GAP}
+          onCloseAutoFocus={(event) => {
+            const picked = chosen.current;
+            chosen.current = false;
+            if (!picked || afterChoose === undefined) return;
+            event.preventDefault();
+            afterChoose();
+          }}
           className="z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-2 border border-border bg-surface p-1 shadow-overlay"
         >
           <RadixSelect.Viewport>

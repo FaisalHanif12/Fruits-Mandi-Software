@@ -497,6 +497,101 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         ("settings_get_overrides", json!({}), true),
         (
+            "purchases_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1,
+                "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null,
+                "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "purchases_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1,
+                "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null,
+                "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "purchases_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "purchases_list",
+            json!({ "input": { "trip_id": null, "from": null, "to": null, "item_id": null, "state": null,
+                "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        ("purchases_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "purchases_write_off",
+            json!({ "input": { "purchase_id": 1, "qty": "1", "reason": "x" } }),
+            true,
+        ),
+        (
+            "purchases_write_off_undo",
+            json!({ "input": { "move_id": 1, "reason": "x" } }),
+            true,
+        ),
+        ("trips_defaults", json!({}), true),
+        (
+            "trips_create",
+            json!({ "input": { "date": "10-10-2026", "market": null, "sent_person": null, "note": null,
+                "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] } }),
+            true,
+        ),
+        (
+            "trips_set_partners",
+            json!({ "input": { "id": 1, "version": 1,
+                "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] } }),
+            true,
+        ),
+        (
+            "trips_list",
+            json!({ "input": { "from": null, "to": null, "status": null, "partner_id": null, "search": null,
+                "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "trips_get",
+            json!({ "input": { "id": 1, "entries_offset": 0, "entries_limit": 0 } }),
+            true,
+        ),
+        ("trips_summary", json!({}), true),
+        (
+            "trips_cost_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x",
+                "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "trips_cost_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x",
+                "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "trips_cost_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "trips_other_sale_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1,
+                "qty": "5", "amount": "3,000", "note": null } }),
+            true,
+        ),
+        (
+            "trips_other_sale_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1,
+                "qty": "5", "amount": "3,000", "note": null } }),
+            true,
+        ),
+        (
+            "trips_other_sale_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
             "vouchers_save_advance",
             json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "mode": "cash",
                 "bank_account_id": null, "cheque_no": "", "cheque_date": "", "expected_goods": "", "narration": "" } }),
@@ -1417,7 +1512,8 @@ fn the_partners_commands_work_through_the_ipc() {
         a,
         json!({ "id": 1, "name_ur": "الف", "name_en": "Partner A", "capital_account_id": a["capital_account_id"],
                 "capital_account_code": "06020001", "drawings_account_id": a["drawings_account_id"],
-                "drawings_account_code": "06030001", "share_bps": 0, "is_active": true, "version": 1 })
+                "drawings_account_code": "06030001", "venture_account_id": a["venture_account_id"],
+                "venture_account_code": "06040001", "share_bps": 0, "is_active": true, "version": 1 })
     );
     let b = create("ب", "Partner B", json!("50,000")).unwrap();
     let c = create("ج", "Partner C", Value::Null).unwrap();

@@ -36,6 +36,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { IDS } from '../helpers/bikri-data';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -114,8 +115,8 @@ describe.each(LANGUAGES)('saving a بکری (%s)', (language) => {
     expect(sent?.confirm).toBe(false);
     // What is saved is the text typed, line by line (the backend works every number out again).
     expect(sent?.draft.lots[0]?.sales.slice(0, 2)).toMatchObject([
-      { buyer_account_id: 19, qty: '20', seller_rate: '600' },
-      { buyer_account_id: 20, qty: '30', seller_rate: '580' },
+      { buyer_account_id: IDS.akram, qty: '20', seller_rate: '600' },
+      { buyer_account_id: IDS.arshad, qty: '30', seller_rate: '580' },
     ]);
     // The message, with the number the backend gave, and then a new empty بکری is ready.
     await savedToast(language);

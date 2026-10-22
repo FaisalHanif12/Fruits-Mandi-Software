@@ -78,7 +78,7 @@ fn not_found(field: &str) -> ServiceError {
 
 /// An edit the rules do not allow (NFR-USE-13). `rule` is a short fixed name the screen turns
 /// into words: `day_changed`, `lot_removed`, `lot_not_in_posting`, `lot_order_changed`,
-/// `lot_seller_locked`, `lot_item_locked`, `line_not_in_posting`, `posting_lots_locked`.
+/// `lot_seller_locked`, `lot_item_locked`, `lot_purchase_locked`, `line_not_in_posting`, `posting_lots_locked`.
 fn not_allowed(field: &str, rule: &str) -> FieldError {
     FieldError::new(ErrorCode::ErrEditNotAllowed, field)
         .with("rule", ErrorValue::Text(rule.to_owned()))
@@ -201,6 +201,13 @@ fn check_first(
                     errors.push(not_allowed(
                         &format!("lots[{index}].seller_account_id"),
                         "lot_seller_locked",
+                    ));
+                }
+                // The purchase of an own lot never changes: its stock and cost rest on it.
+                if lot.purchase_id != found.purchase.as_ref().map(|p| p.id) {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].purchase_id"),
+                        "lot_purchase_locked",
                     ));
                 }
                 if others && lot.item_id != Some(found.item.id) {
@@ -514,6 +521,10 @@ fn write_edit(
     let reversal = ledger::reverse(ctx, tx, user, old_entry_id, reason.unwrap_or(""))?;
     edit_repo::reverse_moves(tx, old_entry_id, reversal.entry_id, user, &now)?;
     edit_repo::reverse_facts(tx, old_entry_id, reversal.entry_id, user, &now)?;
+    // The trip partners' parts of the seller credit are taken back (PRD FR-12.26, C25).
+    edit_repo::reverse_credit_parts(tx, old_entry_id, reversal.entry_id, user, &now)?;
+    // The own goods the old lines took go back to their purchases, exactly (PRD FR-12.20).
+    crate::purchases::give_back_entry(tx, old_entry_id, user, &now)?;
 
     // 2. The new posting, with the place of the old one.
     let posted = ledger::post_ordered(
@@ -674,6 +685,12 @@ fn write_edit(
         }
     }
     check_shares(tx, new_entry_id, worked.calc.summary.shared_income)?;
+
+    // A trip closes when this took its last goods and opens again when the old posting had (PRD
+    // FR-12.33). The old and the new posting may name different trips.
+    for entry in [old_entry_id, new_entry_id] {
+        crate::purchases::refresh_trips_of_entry(tx, entry, &old_posting.entry_date, user, &now)?;
+    }
 
     // 8. Audit: the old and the new lines, and why.
     let mut event = Event::new(Some(user), "edit", "bikri")

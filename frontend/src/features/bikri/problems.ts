@@ -90,6 +90,12 @@ export const LOT_GRID_FIELD: Readonly<Record<string, string>> = {
   cash_paid: 'cash',
 };
 
+/**
+ * The fields of a lot that the panel of an own goods lot shows (OwnLotPanel), so the "more" panel
+ * does not open for them and the list does not tell them twice (PRD FR-12.26).
+ */
+export const LOT_OWN_FIELD: ReadonlySet<string> = new Set(['purchase_id']);
+
 /** The column of the sale lines grid a line field belongs to. Others are in the line details. */
 export const LINE_GRID_FIELD: Readonly<Record<string, string>> = {
   buyer_account_id: 'buyer',

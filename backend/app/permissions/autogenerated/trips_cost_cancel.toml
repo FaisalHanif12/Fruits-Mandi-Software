@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trips-cost-cancel"
+description = "Enables the trips_cost_cancel command without any pre-configured scope."
+commands.allow = ["trips_cost_cancel"]
+
+[[permission]]
+identifier = "deny-trips-cost-cancel"
+description = "Denies the trips_cost_cancel command without any pre-configured scope."
+commands.deny = ["trips_cost_cancel"]

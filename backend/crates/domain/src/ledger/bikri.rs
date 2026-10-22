@@ -6,6 +6,7 @@
 //! |---|---|---|
 //! | Buyer of each line | بنام | the line's buyer total |
 //! | Seller of each lot | جمع (بنام if negative) | seller credit, C8 |
+//! | Trip lot: each trip partner's 0604 account instead of a seller | جمع (بنام if negative) | his part of the seller credit, C25 |
 //! | 04010001 / 04010002 / 04010003 / 04010004 | جمع | Σ seller commission / buyer commission / لاگا / فون |
 //! | 04010005 ریٹ فرق | جمع (بنام if negative) | Σ rate difference |
 //! | 02010001 / 02010002 / 02010003 / 02010004 | جمع | Σ مزدوری / کرایہ (paid by the firm) / کرایہ سٹور / منشیانہ |
@@ -51,8 +52,14 @@ pub struct JournalSale {
 /// One lot as the journal needs it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JournalLot {
-    /// The seller's account.
+    /// The seller's account. For a trip lot it is the اپنا مال account, which never holds a balance:
+    /// the seller credit goes to the trip partners' 0604 accounts instead (see `partner_credits`).
     pub seller_account_id: AccountId,
+    /// A trip lot's seller credit split between the trip's partners (PRD FR-12.26, C25): each
+    /// partner's 0604 account and his part, in the order the partners were created. Empty for any
+    /// other lot. The parts add up to `seller_credit`; the credit is then not posted to
+    /// `seller_account_id`. The cost of the goods (C21) is never in the journal.
+    pub partner_credits: Vec<(AccountId, Paisa)>,
     /// The person of a پختہ کھاتہ seller account.
     pub person_key: Option<String>,
     /// What the posting credits the seller (C8). Can be negative.
@@ -237,18 +244,27 @@ pub fn build_bikri_entry_with_layout(
             sums.laga = sums.laga.checked_add(sale.laga)?;
             sums.rate_diff = sums.rate_diff.checked_add(sale.rate_diff)?;
         }
-        let at = push_signed(
-            &mut lines,
-            lot.seller_account_id,
-            lot.person_key.as_deref(),
-            Side::Cr,
-            lot.seller_credit,
-        )?;
-        if let Some(slot) = layout.lots.get_mut(lot_index) {
-            if lot.seller_credit.is_negative() {
-                slot.seller_debit = at;
-            } else {
-                slot.seller_credit = at;
+        if lot.partner_credits.is_empty() {
+            let at = push_signed(
+                &mut lines,
+                lot.seller_account_id,
+                lot.person_key.as_deref(),
+                Side::Cr,
+                lot.seller_credit,
+            )?;
+            if let Some(slot) = layout.lots.get_mut(lot_index) {
+                if lot.seller_credit.is_negative() {
+                    slot.seller_debit = at;
+                } else {
+                    slot.seller_credit = at;
+                }
+            }
+        } else {
+            // A trip lot: the seller credit goes to the trip's partners (PRD FR-12.26, C25), each on
+            // his 0604 account (debit if negative). They add up to the credit, or the entry does not
+            // balance and nothing is written. Nothing is matched on these lines.
+            for (account, part) in &lot.partner_credits {
+                push_signed(&mut lines, *account, None, Side::Cr, *part)?;
             }
         }
         sums.phone = sums.phone.checked_add(lot.phone)?;

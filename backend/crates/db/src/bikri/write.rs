@@ -124,6 +124,8 @@ pub struct NewLot<'a> {
     pub lot_no: i64,
     /// The seller account.
     pub seller_account_id: i64,
+    /// The purchase an own lot takes its goods from (PRD FR-12.26).
+    pub purchase_id: Option<i64>,
     /// The one-time seller.
     pub pukhta: Option<PukhtaColumns<'a>>,
     /// The item.
@@ -184,9 +186,9 @@ pub fn insert_lot(
              munshiana_paisa, munshiana_method, munshiana_value_paisa, munshiana_rule_id,
              phone_paisa, phone_method, phone_value_paisa, phone_rule_id,
              cash_paid_paisa, store_rent_paisa, adjust_advance, qty_sold, gross_paisa, seller_comm_paisa,
-             deductions_paisa, net_paisa)
+             deductions_paisa, net_paisa, purchase_id)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
-             ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37)",
+             ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38)",
         params![
             now,
             user_id,
@@ -225,6 +227,7 @@ pub fn insert_lot(
             lot.seller_comm_paisa,
             lot.deductions_paisa,
             lot.net_paisa,
+            lot.purchase_id,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -307,6 +310,8 @@ pub struct NewSale<'a> {
     pub payment_type: &'a str,
     /// A note.
     pub note: Option<&'a str>,
+    /// C21: the cost of the trip goods this line sold, paisa. 0 on a line of any other lot.
+    pub cost_paisa: i64,
 }
 
 /// Adds a sale line and returns its id.
@@ -327,9 +332,9 @@ pub fn insert_sale(
              buyer_rate_paisa, buyer_value_paisa,
              buyer_comm_method, buyer_comm_value_bps, buyer_comm_value_paisa, buyer_comm_rule_id, buyer_comm_paisa,
              laga_method, laga_value_bps, laga_value_paisa, laga_rule_id, laga_paisa,
-             buyer_total_paisa, rate_diff_paisa, payment_type, note)
+             buyer_total_paisa, rate_diff_paisa, payment_type, note, cost_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
-             ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37)",
+             ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38)",
         params![
             now,
             user_id,
@@ -368,6 +373,7 @@ pub fn insert_sale(
             sale.rate_diff_paisa,
             sale.payment_type,
             sale.note,
+            sale.cost_paisa,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -404,6 +410,9 @@ pub struct NewStockMove<'a> {
     pub kind: StockKind,
     /// Signed quantity: received is plus, sold is minus.
     pub qty: i64,
+    /// The purchase the goods came out of, for a sale of an own lot (PRD FR-12.26). The lot's own
+    /// "received" move has none.
+    pub purchase_id: Option<i64>,
 }
 
 /// Adds a stock move (append-only).
@@ -418,8 +427,8 @@ pub fn insert_stock_move(
 ) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO stock_moves (created_at, created_by, updated_at, updated_by, lot_id, journal_entry_id, move_date,
-             kind, qty)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+             kind, qty, purchase_id)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             now,
             user_id,
@@ -427,7 +436,8 @@ pub fn insert_stock_move(
             stock_move.entry_id,
             stock_move.move_date,
             stock_move.kind.as_str(),
-            stock_move.qty
+            stock_move.qty,
+            stock_move.purchase_id
         ],
     )?;
     Ok(())
@@ -477,6 +487,12 @@ pub struct NewFact<'a> {
     pub laga_paisa: i64,
     /// +1, or -1 on a reversal row.
     pub sign: i64,
+    /// The purchase of an own lot line (PRD FR-12.26), else `None`.
+    pub purchase_id: Option<i64>,
+    /// The trip whose goods this line sold (for the analytics filters), else `None`.
+    pub venture_id: Option<i64>,
+    /// C21: the cost of the trip goods this line sold, paisa. 0 for any other line.
+    pub cost_paisa: i64,
 }
 
 /// Adds an analytics fact (append-only).
@@ -493,9 +509,9 @@ pub fn insert_fact(
         "INSERT INTO analytics_facts (created_at, created_by, updated_at, updated_by, journal_entry_id, entry_date,
              year, month, bikri_id, lot_id, sale_id, item_id, seller_account_id, buyer_account_id,
              pukhta_person_key, city_id, adda_id, qty, seller_amount_paisa, seller_comm_paisa, buyer_value_paisa,
-             buyer_comm_paisa, laga_paisa, sign)
+             buyer_comm_paisa, laga_paisa, sign, purchase_id, venture_id, cost_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20,
-             ?21, ?22)",
+             ?21, ?22, ?23, ?24, ?25)",
         params![
             now,
             user_id,
@@ -519,6 +535,52 @@ pub fn insert_fact(
             fact.buyer_comm_paisa,
             fact.laga_paisa,
             fact.sign,
+            fact.purchase_id,
+            fact.venture_id,
+            fact.cost_paisa,
+        ],
+    )?;
+    Ok(())
+}
+
+/// One trip partner's part of the seller credit of a trip lot (PRD FR-12.26, C25).
+#[derive(Debug, Clone, Copy)]
+pub struct NewCreditPart {
+    /// The lot.
+    pub lot_id: i64,
+    /// The posting that credits it.
+    pub journal_entry_id: i64,
+    /// The partner.
+    pub partner_id: i64,
+    /// His share of the trip, in bps.
+    pub share_bps: i64,
+    /// His part, signed like the credit: negative when the lot lost money.
+    pub amount_paisa: i64,
+}
+
+/// Writes one trip partner's part of the seller credit of a trip lot, in the posting that credits
+/// it. The journal lines carry no lot, so the part is kept here too.
+///
+/// # Errors
+/// Any SQLite error (the pair of the posting, the lot and the partner is unique).
+pub fn insert_credit_part(
+    conn: &Connection,
+    part: &NewCreditPart,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO lot_credit_parts (created_at, created_by, updated_at, updated_by, lot_id,
+             journal_entry_id, partner_id, share_bps, amount_paisa)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            now,
+            user_id,
+            part.lot_id,
+            part.journal_entry_id,
+            part.partner_id,
+            part.share_bps,
+            part.amount_paisa
         ],
     )?;
     Ok(())

@@ -264,7 +264,7 @@ fn check_scope(scope: AccountScope, control_id: Option<i64>) -> Result<(), Servi
 /// fields have their own, and each control has its own (`recent.control_<id>`).
 fn account_usage_key(scope: AccountScope, control_id: Option<i64>) -> String {
     match (scope, control_id) {
-        (AccountScope::Seller, _) => pref_key(SearchScope::Seller),
+        (AccountScope::Seller | AccountScope::LotSeller, _) => pref_key(SearchScope::Seller),
         (AccountScope::Buyer, _) => pref_key(SearchScope::Buyer),
         (AccountScope::Control, Some(id)) => format!("recent.control_{id}"),
         (AccountScope::Any | AccountScope::Control, _) => pref_key(SearchScope::AnyAccount),

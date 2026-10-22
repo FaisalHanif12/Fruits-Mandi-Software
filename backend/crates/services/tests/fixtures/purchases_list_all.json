@@ -1,0 +1,107 @@
+{
+  "rows": [
+    {
+      "id": 1,
+      "version": 4,
+      "number": 1,
+      "trip": {
+        "id": 1,
+        "number": 1,
+        "name_ur": "سفر-1 10-10-2026",
+        "name_en": "TRP-1 10-10-2026"
+      },
+      "entry_date": "2026-10-10",
+      "status": "saved",
+      "cancel_reason": null,
+      "supplier": "Orange Traders",
+      "item": {
+        "id": 5,
+        "code": "5",
+        "name_ur": "مالٹا",
+        "name_en": "Orange"
+      },
+      "packing": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 20,
+      "weight_grams": null,
+      "rate_paisa": 50000,
+      "value_paisa": 1000000,
+      "freight_paisa": 40000,
+      "labour_paisa": 0,
+      "other_cost_paisa": 0,
+      "paid_now_paisa": 1040000,
+      "trip_cost_paisa": 0,
+      "total_cost_paisa": 1040000,
+      "avg_cost_paisa": 52000,
+      "note": null,
+      "entry_id": 3,
+      "parts": [],
+      "qty_sold": 18,
+      "qty_written_off": 0,
+      "qty_left": 2,
+      "cost_released_paisa": 936000,
+      "cost_left_paisa": 104000,
+      "sales_paisa": 846000,
+      "other_shop_paisa": 200000,
+      "cost_sold_paisa": 936000,
+      "cost_written_off_paisa": 0,
+      "result_paisa": 110000,
+      "result_working": {
+        "message_id": "working-purchase-result",
+        "args": [
+          {
+            "name": "sales",
+            "value": {
+              "kind": "money",
+              "paisa": 846000
+            }
+          },
+          {
+            "name": "other_shop",
+            "value": {
+              "kind": "money",
+              "paisa": 200000
+            }
+          },
+          {
+            "name": "cost_sold",
+            "value": {
+              "kind": "money",
+              "paisa": 936000
+            }
+          },
+          {
+            "name": "cost_written_off",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 110000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "days_waiting": 0,
+      "can_cancel": false,
+      "lots": [],
+      "write_offs": []
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "total_cost_paisa": 1040000,
+    "cost_left_paisa": 104000,
+    "qty_left": 2,
+    "result_paisa": 110000
+  }
+}

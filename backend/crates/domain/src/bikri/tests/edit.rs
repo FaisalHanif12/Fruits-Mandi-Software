@@ -15,7 +15,7 @@ use crate::bikri::{
     PostingKind, StoredCarrier, StoredCharge, StoredIdentity, StoredLot, StoredSale,
 };
 
-fn percent(amount: i64, bps: i32, rule_id: i64) -> StoredCharge {
+pub(super) fn percent(amount: i64, bps: i32, rule_id: i64) -> StoredCharge {
     StoredCharge {
         method: StoredMethod::Percent,
         value_bps: Some(bps),
@@ -26,7 +26,7 @@ fn percent(amount: i64, bps: i32, rule_id: i64) -> StoredCharge {
     }
 }
 
-fn per_unit_charge(amount: i64, value: i64) -> StoredCharge {
+pub(super) fn per_unit_charge(amount: i64, value: i64) -> StoredCharge {
     StoredCharge {
         method: StoredMethod::PerUnit,
         value_bps: None,
@@ -48,7 +48,7 @@ fn per_lot_charge(amount: i64, value: i64) -> StoredCharge {
     }
 }
 
-fn stored_sale(
+pub(super) fn stored_sale(
     buyer: i64,
     qty: i64,
     rate: i64,
@@ -68,6 +68,7 @@ fn stored_sale(
         seller_comm: seller,
         buyer_comm,
         laga,
+        cost: Paisa::ZERO,
     }
 }
 
@@ -447,6 +448,7 @@ fn a_lot_whose_seller_or_item_changed_keeps_nothing_stored_for_the_old_one() {
                 seller_account_id: RAHIM,
                 item_id: BANANA,
                 person_key: None,
+                purchase_id: None,
             }),
             ..StoredLot::default()
         },
@@ -479,6 +481,7 @@ fn leftover_one_time_name_text_on_an_ordinary_sellers_lot_is_not_a_change() {
                 seller_account_id: RAHIM,
                 item_id: BANANA,
                 person_key: None,
+                purchase_id: None,
             }),
             ..StoredLot::default()
         },

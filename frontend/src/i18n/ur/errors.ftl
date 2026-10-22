@@ -346,3 +346,55 @@ err-edit-not-allowed = { $rule ->
     [posting_lots_locked] بعد کی فروخت میں صرف اس کی اپنی لائنیں بدلی جا سکتی ہیں، { -lot } نہیں۔ { -lot } کی تبدیلی پہلے اندراج میں کریں۔
    *[other] اس اندراج میں یہ تبدیلی نہیں ہو سکتی۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
 }
+
+## Trip goods and trips (plan 16b, PRD 12.10, FR-12.24, FR-12.26, FR-12.29, FR-12.31).
+
+# PRD FR-12.26. $qty_left: how many { -nag } of the quantity taken are not sold on the lines.
+# review: pending
+err-own-lot-not-fully-sold = { -apna-maal } کا یہ { -lot } اسی { -bikri } میں پورا بکنا چاہیے۔ لائنوں میں ابھی { $qty_left } { -nag } نہیں بکے۔ انہیں لائنوں میں بیچیں، یا خریداری سے کم { -nag } لیں۔ جو نہ لیں وہ خریداری میں رہتا ہے۔
+
+# PRD FR-12.26. The account offered only as the seller of a lot.
+# review: pending
+err-own-goods-account-restricted = { -apna-maal } صرف { -bikri } کے { -lot } کا { -beopari } ہو سکتا ہے۔ کوئی اور کھاتہ چنیں۔
+
+# PRD FR-12.24. $qty_sold and $qty_written_off: how many { -nag }.
+# review: pending
+err-purchase-has-sales = یہ خریداری منسوخ نہیں ہو سکتی، کیونکہ { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس لیں۔
+
+# review: pending
+err-purchase-cancelled = یہ خریداری منسوخ ہو چکی ہے۔ کوئی اور خریداری چنیں۔
+
+# A warning, not a refusal (PRD FR-12.26).
+# review: pending
+err-own-lot-freight-in-cost = خریداری کا { -kiraya } اس کی لاگت میں پہلے سے شامل ہے۔ یہاں لکھا ہوا { -kiraya } دوبارہ گنا جائے گا۔ جب تک یہی مقصد نہ ہو، اسے خالی رہنے دیں۔
+
+# PRD FR-12.31, FR-12.33: a closed trip takes no new purchase or cost.
+# review: pending
+err-trip-closed = یہ { -market-safar } بند ہو چکا ہے۔ اس میں نئی خریداری یا نیا خرچ نہیں ہو سکتا۔
+
+# PRD FR-12.31: a trip cost is spread over the purchases that still have goods left.
+# review: pending
+err-trip-no-stock = اس { -market-safar } کی کسی خریداری میں مال باقی نہیں، اس لیے خرچ بانٹنے کو کچھ نہیں۔ پہلے خریداری درج کریں۔
+
+# PRD FR-12.29: the shares are fixed after the first entry.
+# review: pending
+err-venture-shares-locked = اس { -market-safar } میں اندراج ہو چکا ہے، اس لیے شراکت داروں کا { -hissa } اب نہیں بدل سکتا۔
+
+# PRD FR-12.24. $trip_date: the day of the trip.
+# review: pending
+err-purchase-before-trip = تاریخ { -market-safar } کی تاریخ ({ $trip_date }) سے پہلے کی ہے۔ سفر کی تاریخ یا اس کے بعد کی تاریخ چنیں۔
+
+# PRD FR-12.31. $qty_sold and $qty_written_off: how many { -nag } of the purchases it was spread over.
+# review: pending
+err-trip-cost-has-sales = یہ خرچ منسوخ نہیں ہو سکتا، کیونکہ جن خریداریوں پر یہ بانٹا گیا ان کے { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس لیں۔
+
+# PRD A63: a partner cannot be made inactive while he is in an open trip.
+# review: pending
+err-partner-in-open-venture = یہ { -shirakat-dar } ابھی کھلے { -market-safar } میں ہے، اس لیے اسے غیر فعال نہیں کیا جا سکتا۔ پہلے { -market-safar } بند ہونے دیں۔
+
+# PRD FR-12.31: cancel the cost first.
+# review: pending
+err-purchase-carries-trip-cost = اس خریداری میں { -market-safar } کے خرچ کا حصہ شامل ہے، اس لیے یہ منسوخ نہیں ہو سکتی۔ پہلے وہ خرچ منسوخ کریں۔
+
+# review: pending
+err-trip-entry-cancelled = یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔

@@ -29,6 +29,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { IDS } from '../helpers/bikri-data';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -159,11 +160,11 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await user.click(cellOf(sales, 3, 'buyer'));
     await user.keyboard('2{Enter}');
     await waitFor(() => {
-      expect(backend.lastDraft().lots[1]?.sales[0]?.buyer_account_id).toBe(20);
+      expect(backend.lastDraft().lots[1]?.sales[0]?.buyer_account_id).toBe(IDS.arshad);
     });
     // Lot 1 is as it was.
-    expect(backend.lastDraft().lots[0]?.sales[0]?.buyer_account_id).toBe(19);
-    expect(backend.lastDraft().lots[0]?.sales[1]?.buyer_account_id).toBe(20);
+    expect(backend.lastDraft().lots[0]?.sales[0]?.buyer_account_id).toBe(IDS.akram);
+    expect(backend.lastDraft().lots[0]?.sales[1]?.buyer_account_id).toBe(IDS.arshad);
     // The cursor moved on to the quantity of that line, and the details are those of lot 2.
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('3:qty');

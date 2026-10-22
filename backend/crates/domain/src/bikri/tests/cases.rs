@@ -991,7 +991,7 @@ fn the_screen_is_told_which_lots_take_a_weight() {
 #[test]
 fn accounts_must_be_the_right_kind_and_active() {
     let calc = run(&draft(vec![with(
-        lot(OWN_GOODS, BANANA, "50"),
+        lot(AKRAM, BANANA, "50"),
         vec![sale(RAHIM, "20", "600")],
     )]));
     assert!(has(
@@ -1003,6 +1003,25 @@ fn accounts_must_be_the_right_kind_and_active() {
         &calc.errors,
         ErrorCode::ErrNotABuyer,
         "lots[0].sales[0].buyer_account_id"
+    ));
+    // اپنا مال is the seller of a trip's lot only (it then needs its purchase): never a buyer.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "50"),
+        vec![sale(OWN_GOODS, "20", "600")],
+    )]));
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrOwnGoodsAccountRestricted,
+        "lots[0].sales[0].buyer_account_id"
+    ));
+    let calc = run(&draft(vec![with(
+        lot(OWN_GOODS, BANANA, "50"),
+        vec![sale(AKRAM, "20", "600")],
+    )]));
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrRequired,
+        "lots[0].purchase_id"
     ));
     let mut missing_seller = lot(RAHIM, BANANA, "50");
     missing_seller.seller_account_id = None;

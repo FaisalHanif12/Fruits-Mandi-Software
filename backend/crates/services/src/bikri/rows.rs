@@ -7,8 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use mandi_db::bikri::edit::{self as edit_repo, LotSums};
 use mandi_db::bikri::write::{
-    self as repo, LotChargeColumns, NewFact, NewLot, NewSale, NewStockMove, PukhtaColumns,
-    SaleChargeColumns, StockKind,
+    self as repo, LotChargeColumns, NewCreditPart, NewFact, NewLot, NewSale, NewStockMove,
+    PukhtaColumns, SaleChargeColumns, StockKind,
 };
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
@@ -24,6 +24,7 @@ use mandi_domain::ledger::{BalancedEntry, Side};
 use super::shared::{Worked, data};
 use crate::error::{ServiceError, money_error};
 use crate::matching::{self, CashSalePair, NewLine};
+use crate::purchases;
 
 /// One worked sale line with the three views of it that the save needs.
 pub(super) struct RowShape<'a> {
@@ -270,6 +271,8 @@ pub(super) fn lot_columns<'a>(
         bikri_id,
         lot_no,
         seller_account_id: shaped.journal.seller_account_id.get(),
+        // A trip lot names its purchase (PRD FR-12.26).
+        purchase_id: lot.purchase_id,
         pukhta: person_columns(person),
         item_id: lot
             .item_id
@@ -290,7 +293,8 @@ pub(super) fn lot_columns<'a>(
         phone: lot_charge_columns(shaped.preview.phone.as_ref())?,
         cash_paid_paisa: totals.cash_paid.as_paisa(),
         store_rent_paisa: totals.store_rent.as_paisa(),
-        adjust_advance: lot.adjust_advance,
+        // A trip lot adjusts no advance: there is no seller (PRD FR-12.26).
+        adjust_advance: lot.adjust_advance && lot.purchase_id.is_none(),
         qty_sold: running.qty_sold,
         gross_paisa: running.gross_paisa,
         seller_comm_paisa: running.seller_comm_paisa,
@@ -346,12 +350,19 @@ pub(super) fn insert_sales_and_facts(
                     move_date: posting.date_iso,
                     kind: StockKind::Received,
                     qty: qty_received,
+                    // The lot's own "received" move; the purchase gives up its goods when they
+                    // are sold (the sold move names the purchase).
+                    purchase_id: None,
                 },
                 posting.user_id,
                 posting.now,
             )?;
         }
         let first_line = edit_repo::max_line_no(tx, *lot_id)?;
+        let purchase_id = shaped.lot.purchase_id;
+        // The trip of an own lot, kept on every fact for the analytics filters (PRD FR-18.1).
+        let venture_id = shaped.preview.own.as_ref().map(|own| own.trip.id);
+        let (mut own_qty, mut own_cost) = (0_i64, Paisa::ZERO);
         let mut lot_sale_ids = Vec::with_capacity(shaped.rows.len());
         for (index, shaped_row) in shaped.rows.iter().enumerate() {
             let line_no = first_line
@@ -371,6 +382,7 @@ pub(super) fn insert_sales_and_facts(
                         .qty
                         .checked_neg()
                         .ok_or_else(|| data("the quantity does not fit"))?,
+                    purchase_id,
                 },
                 posting.user_id,
                 posting.now,
@@ -402,11 +414,49 @@ pub(super) fn insert_sales_and_facts(
                     buyer_comm_paisa: calc.buyer_comm.amount.as_paisa(),
                     laga_paisa: calc.laga.amount.as_paisa(),
                     sign: 1,
+                    purchase_id,
+                    venture_id,
+                    cost_paisa: calc.cost_of_goods.as_paisa(),
                 },
                 posting.user_id,
                 posting.now,
             )?;
+            own_qty = own_qty
+                .checked_add(calc.qty)
+                .ok_or_else(|| data("the quantity does not fit"))?;
+            own_cost = own_cost
+                .checked_add(calc.cost_of_goods)
+                .map_err(money_error)?;
             lot_sale_ids.push(sale_id);
+        }
+        // The trip's partners are credited the seller credit of the lot (PRD FR-12.26, C25). The
+        // parts are kept here because the journal lines carry no lot.
+        if let Some(own) = &shaped.preview.own {
+            for credit in &own.credits {
+                repo::insert_credit_part(
+                    tx,
+                    &NewCreditPart {
+                        lot_id: *lot_id,
+                        journal_entry_id: posting.entry_id,
+                        partner_id: credit.partner.id,
+                        share_bps: i64::from(credit.share_bps),
+                        amount_paisa: credit.amount_paisa.as_paisa(),
+                    },
+                    posting.user_id,
+                    posting.now,
+                )?;
+            }
+        }
+        // The purchase gives up what the own lot sold: نگ and cost (PRD FR-12.26, C21).
+        if let Some(purchase_id) = purchase_id {
+            purchases::take_sold(
+                tx,
+                purchase_id,
+                own_qty,
+                own_cost,
+                posting.user_id,
+                posting.now,
+            )?;
         }
         ids.push(lot_sale_ids);
     }
@@ -453,6 +503,7 @@ fn insert_sale(
             rate_diff_paisa: calc.rate_diff.as_paisa(),
             payment_type: calc.payment_type.as_str(),
             note: shaped.row.note.as_deref(),
+            cost_paisa: calc.cost_of_goods.as_paisa(),
         },
         posting.user_id,
         posting.now,
@@ -545,7 +596,10 @@ pub(super) fn match_posting(
         let Some(position) = laid.seller_credit else {
             continue;
         };
-        if shaped.lot.adjust_advance && shaped.journal.person_key.is_none() {
+        if shaped.lot.adjust_advance
+            && shaped.journal.person_key.is_none()
+            && shaped.lot.purchase_id.is_none()
+        {
             // The amount adjusted is the credit of the journal line itself: both come from the
             // one calculation, and a drift would be caught here before the database trigger.
             let line = entry

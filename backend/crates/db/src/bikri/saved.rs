@@ -10,8 +10,9 @@ use std::collections::HashMap;
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
     BikriDetail, BikriHit, BikriListRow, BikriMatch, BikriStatus, FreightPaidBy, LotChargeMethod,
-    NavigateTo, PaymentType, PukhtaPerson, PukhtaSide, SaleState, SavedCharge, SavedLot,
-    SavedLotCharge, SavedPosting, SavedPukhta, SavedSale, SavedSplit, SavedTotals, StoredMethod,
+    NavigateTo, PaymentType, PukhtaPerson, PukhtaSide, SaleState, SavedCharge, SavedCredit,
+    SavedLot, SavedLotCharge, SavedOwnLot, SavedPosting, SavedPukhta, SavedPurchaseRef, SavedSale,
+    SavedSplit, SavedTotals, StoredMethod,
 };
 use mandi_core::money::Paisa;
 use rusqlite::types::FromSql;
@@ -157,6 +158,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
     let ended_at = c.at;
     let ended: Option<String> = c.get()?;
     let note: Option<String> = c.get()?;
+    let cost_paisa = c.paisa()?;
     Ok((
         lot_id,
         SavedSale {
@@ -177,6 +179,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
             laga,
             buyer_total,
             rate_diff,
+            cost_paisa,
             payment_type: PaymentType::parse(&payment).ok_or_else(|| bad(at, "a payment type"))?,
             is_active,
             state: SaleState::parse(ended.as_deref())
@@ -194,7 +197,7 @@ const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.ent
     s.buyer_rate_paisa, s.buyer_value_paisa,
     s.buyer_comm_method, s.buyer_comm_value_bps, s.buyer_comm_value_paisa, s.buyer_comm_rule_id, s.buyer_comm_paisa,
     s.laga_method, s.laga_value_bps, s.laga_value_paisa, s.laga_rule_id, s.laga_paisa,
-    s.buyer_total_paisa, s.rate_diff_paisa, s.payment_type, s.is_active, s.ended, s.note";
+    s.buyer_total_paisa, s.rate_diff_paisa, s.payment_type, s.is_active, s.ended, s.note, s.cost_paisa";
 
 fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let id: i64 = c.get()?;
@@ -224,10 +227,25 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let seller_comm = c.paisa()?;
     let deductions = c.paisa()?;
     let net = c.paisa()?;
+    let purchase_id: Option<i64> = c.get()?;
+    let purchase_number: Option<i64> = c.get()?;
+    let trip_id: Option<i64> = c.get()?;
+    let trip_number: Option<i64> = c.get()?;
     Ok(SavedLot {
         id,
         lot_no,
         seller,
+        purchase: match (purchase_id, purchase_number, trip_id, trip_number) {
+            (Some(id), Some(number), Some(trip_id), Some(trip_number)) => Some(SavedPurchaseRef {
+                id,
+                number,
+                trip_id,
+                trip_number,
+            }),
+            _ => None,
+        },
+        // Filled by `fill_own_lots` after the lines are read (PRD FR-12.27).
+        own: None,
         pukhta,
         item,
         packing,
@@ -255,6 +273,59 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
         sales: Vec::new(),
         totals: SavedTotals::default(),
     })
+}
+
+/// Fills what a trip lot shows besides its lines (PRD FR-12.26, FR-12.27): the cost of the goods
+/// its lines in force sold, the seller credit that stands, the result, and each trip partner's part.
+/// Every number is a stored value: the lines' `cost_paisa` and the rows of `lot_credit_parts` (a
+/// reversal's rows are the opposite, so the sums are what stands now).
+fn fill_own_lots(conn: &Connection, lots: &mut [SavedLot]) -> rusqlite::Result<()> {
+    let total_error = |_| bad(0, "a total that does not fit");
+    for lot in lots.iter_mut().filter(|l| l.purchase.is_some()) {
+        let cost: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(cost_paisa), 0) FROM bikri_sales WHERE lot_id = ?1 AND is_active = 1",
+            [lot.id],
+            |r| r.get(0),
+        )?;
+        let mut statement = conn.prepare(
+            "SELECT p.id, p.name_ur, p.name_en, p.venture_account_id, MAX(c.share_bps), SUM(c.amount_paisa)
+             FROM lot_credit_parts c JOIN partners p ON p.id = c.partner_id
+             WHERE c.lot_id = ?1
+             GROUP BY p.id, p.name_ur, p.name_en, p.venture_account_id ORDER BY p.id",
+        )?;
+        let rows = statement.query_map([lot.id], |row| {
+            let mut c = Cols::new(row);
+            let id: i64 = c.get()?;
+            let name_ur: String = c.get()?;
+            let name_en: String = c.get()?;
+            let account_id: Option<i64> = c.get()?;
+            let share_bps: i32 = c.get()?;
+            Ok(SavedCredit {
+                partner: RecordRef {
+                    id,
+                    code: String::new(),
+                    name_ur,
+                    name_en,
+                },
+                account_id: account_id.unwrap_or_default(),
+                share_bps,
+                amount_paisa: c.paisa()?,
+            })
+        })?;
+        let credits = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut credit = Paisa::ZERO;
+        for part in &credits {
+            credit = credit.checked_add(part.amount_paisa).map_err(total_error)?;
+        }
+        let cost = Paisa::try_from_paisa(cost).map_err(total_error)?;
+        lot.own = Some(SavedOwnLot {
+            cost_paisa: cost,
+            credit_paisa: credit,
+            result_paisa: credit.checked_sub(cost).map_err(total_error)?,
+            credits,
+        });
+    }
+    Ok(())
 }
 
 /// One saved بکری with its lots, lines, postings and partner split, or `None`.
@@ -313,8 +384,11 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
                 l.munshiana_paisa, l.munshiana_method, l.munshiana_value_paisa, l.munshiana_rule_id,
                 l.phone_paisa, l.phone_method, l.phone_value_paisa, l.phone_rule_id,
                 l.cash_paid_paisa, l.store_rent_paisa, l.adjust_advance, l.first_entry_id,
-                l.gross_paisa, l.seller_comm_paisa, l.deductions_paisa, l.net_paisa
+                l.gross_paisa, l.seller_comm_paisa, l.deductions_paisa, l.net_paisa,
+                l.purchase_id, pu.number, pu.venture_id, tr.number
          FROM bikri_lots l
+         LEFT JOIN purchases pu ON pu.id = l.purchase_id
+         LEFT JOIN ventures tr ON tr.id = pu.venture_id
          JOIN accounts sa ON sa.id = l.seller_account_id
          JOIN items it ON it.id = l.item_id
          JOIN packings pk ON pk.id = l.packing_id
@@ -335,6 +409,8 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
             lot.sales.push(sale);
         }
     }
+
+    fill_own_lots(conn, &mut detail.lots)?;
 
     // The totals of each lot and of the whole بکری: sums of the stored values (Code Standards B20).
     let total_error = |_| bad(0, "a total that does not fit");

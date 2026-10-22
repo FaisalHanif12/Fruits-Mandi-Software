@@ -160,3 +160,28 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
   It checks that the draft an edit loads goes back unchanged, that a changed rate gives exactly the
   request file, and that the later sale, cancel, write-off and undo send what the backend's tests send.
   The Windows specs are `18-bikri-later-sale`, `19-bikri-edit`, `20-bikri-cancel`, `21-bikri-undo`.
+
+## Trip goods in the sale book (plan 16b, PRD FR-12.26, C21, C25)
+
+- A lot whose seller is اپنا مال (`isOwnLot`, code 030119998; offered only by the lots grid's seller
+  column, scope `lot_seller`) shows `components/OwnLotPanel.tsx` under the lots grid: the choice of
+  the purchase, its facts, and what the backend worked out for the lot (`LotPreview.own`): the
+  commission, the seller credit with each trip partner's part, the cost and the result, each with
+  its working. A saved lot shows the same in `SavedLotCard` (`SavedLot.own` and `purchase`).
+- Keys: after the seller is taken focus goes to the purchase choice; choosing a purchase fills the
+  item, packing and quantity in the visible cells and `Select`'s `afterChoose` moves focus to the
+  quantity (Radix would otherwise give it back to the choice). Enter then never stops at the نقد
+  cell, which does not apply.
+- A new own lot sends no cash and no advance tick (`cash_paid` null, `adjust_advance` false); a
+  saved one (an edit) sends back what the backend gave, so an edit that changes nothing sends the
+  draft as it came (`hooks/useDraftFills.ts` keeps a saved lot's cash).
+- The goods left list shows the trip's purchases apart (`OwnStockSection`, `own-stock-columns.ts`):
+  the card has every figure, the write-off and its undo (nothing is posted), and a way to open the
+  trip.
+- **Tests**: `bikri-own-real-answers.test.tsx` (the panel, the saved view of E2E-34 and E2E-41, the
+  goods left list, write-off and undo and an edit, on the backend's `bikri_*_own_lot_*` and
+  `bikri_stock_list_own_rows` files, read through `tests/helpers/bikri-own-real.ts`),
+  `bikri-own-keyboard.test.tsx` (the whole entry by keyboard with a language switch in the middle),
+  `bikri-own-real-shapes.test.ts` (canned data has the real shape; every working the backend can
+  send has words in both languages). The development page shows it all with `?own`
+  (`/dev/bikri?own`, `&id=1`, `&id=1&edit=4`, `&stock`). The Windows spec is `23-trip-goods-in-bikri`.

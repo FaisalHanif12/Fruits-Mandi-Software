@@ -27,7 +27,7 @@ export type SplitPart = {
    */
   income_paisa: Paisa;
   /**
-   * How it was worked out.
+   * How the income part was worked out.
    */
   working: Working;
 };

@@ -120,3 +120,57 @@ working-none-line = No rule applies to this line, so the amount is <num>{ $resul
 # A one-time seller is paid his whole net at once while { -naqd } is empty (PRD FR-13.10).
 # review: pending
 working-cash-pukhta = A { -pukhta-khata } seller is paid his whole { -safi-bikri } on the spot: <num>{ $result }</num>.
+
+## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
+## The backend names the message and gives its values.
+
+# C21: the cost of the trip goods sold or written off, a part of the cost left (the cost of one
+# { -nag } is the average of the purchase, PRD A45). The leftover rupees of the split go to the
+# larger part, so the message does not claim an exact equation (money review of plan 16b).
+# review: pending
+working-cost-of-goods = Cost left <num>{ $cost_left }</num>, the part for <num>{ $qty }</num> of <num>{ $qty_left }</num> { -nag } (each part is rounded down and the rupees left over go to the larger part): <num>{ $result }</num>
+# C21 when the last { -nag } are taken: all the cost left goes with them.
+# review: pending
+working-cost-of-goods-last = The last <num>{ $qty }</num> { -nag } take all the cost left: <num>{ $result }</num>
+# FR-12.20: a line an edit left as it was keeps the cost it had.
+# review: pending
+working-cost-of-goods-kept = This line was left as it was, so it keeps the cost it had: <num>{ $result }</num>
+# C23: a partner's part of a payment of a trip. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-part = Payment <num>{ $amount }</num>, <num>{ $bps }</num> ÷ 10,000 of it (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
+# C25: a partner's part of money that comes in. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-credit = Money in <num>{ $amount }</num>, <num>{ $bps }</num> ÷ 10,000 of it (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
+# C24: the part of a trip cost that one purchase carries, by the { -nag } bought. The rupees left
+# over go to the larger part, so the message does not claim an exact equation.
+# review: pending
+working-trip-cost-spread = Cost <num>{ $cost }</num>, the part for <num>{ $qty }</num> of <num>{ $total_qty }</num> { -nag } (each part is rounded down and the rupees left over go to the larger part): <num>{ $result }</num>
+# FR-12.27: the result of a trip (sales money and money from other shops, less the cost sold and written off).
+# review: pending
+working-trip-result = Sales money <num>{ $sales }</num> + money from other shops <num>{ $other_shop }</num> − cost of goods sold <num>{ $cost_sold }</num> − cost written off <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.27: what a partner has so far: money back less money in from the shop and from his pocket.
+# review: pending
+working-trip-partner-net = Money back <num>{ $back }</num> − paid from the shop <num>{ $in_shop }</num> − paid from his pocket <num>{ $in_pocket }</num> = <num>{ $result }</num>
+# FR-12.27: the result of one purchase.
+# review: pending
+working-purchase-result = Sales money <num>{ $sales }</num> + money from other shops <num>{ $other_shop }</num> − cost of goods sold <num>{ $cost_sold }</num> − cost written off <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.32: the result of one sale in another shop.
+# review: pending
+working-other-sale-result = Money received <num>{ $amount }</num> − cost of goods sold <num>{ $cost }</num> = <num>{ $result }</num>
+# C21 for a whole lot of trip goods: the cost of the goods its lines took (the sum of the lines).
+# review: pending
+working-own-lot-cost = Cost of the <num>{ $qty }</num> { -nag } sold in this lot, taken from the purchase: <num>{ $result }</num>
+# FR-12.27: the result of a lot of trip goods (the seller credit less the cost of the goods sold).
+# review: pending
+working-own-lot-result = Seller credit <num>{ $credit }</num> − cost of goods sold <num>{ $cost }</num> = <num>{ $result }</num>
+# FR-12.24: the total cost of a purchase: what was paid now and its part of the trip costs.
+# review: pending
+working-purchase-total-cost = Paid now <num>{ $paid_now }</num> + part of the { -market-safar } costs <num>{ $trip_cost }</num> = <num>{ $result }</num>
+# PRD A45: the cost of one { -nag }, worked out for the whole purchase.
+# review: pending
+working-purchase-avg-cost = <num>{ $total }</num> ÷ <num>{ $qty }</num> = <num>{ $result }</num> (to the nearest rupee)
+# FR-12.24: what is paid now. Freight, labour and other cost are always paid at once.
+# review: pending
+working-purchase-paid-now = <num>{ $value }</num> + <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $other_cost }</num> = <num>{ $result }</num>

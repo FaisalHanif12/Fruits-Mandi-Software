@@ -23,7 +23,7 @@ use mandi_domain::core::partners::{
     CAPITAL_CONTROL, DRAWINGS_CONTROL, MAX_PARTNERS, PartnerCreateInput, PartnerDetail,
     PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput,
     PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed, check_shares, not_100,
-    read_shares,
+    read_shares, venture_account,
 };
 use mandi_domain::core::text;
 use mandi_domain::core::translit::Kind;
@@ -66,6 +66,8 @@ fn row_of(record: &repo::PartnerRecord, share_bps: i32) -> PartnerRow {
         capital_account_code: record.capital_account_code.clone(),
         drawings_account_id: record.drawings_account_id,
         drawings_account_code: record.drawings_account_code.clone(),
+        venture_account_id: record.venture_account_id,
+        venture_account_code: record.venture_account_code.clone(),
         share_bps,
         is_active: record.is_active,
         version: record.version,
@@ -240,15 +242,17 @@ pub fn create(
         &input.confirmed_rules_words,
     )?;
     let (_, today) = day::window(ctx)?;
-    let (row, capital_id, drawings_id, learned) = ctx.db.write(|tx| {
+    let (row, account_ids, learned) = ctx.db.write(|tx| {
         if usize::try_from(repo::active_count(tx)?).unwrap_or(usize::MAX) >= MAX_PARTNERS {
             return Err(too_many());
         }
         let now = ctx.now_text();
         let capital = capital_account(&name_ur, &name_en);
         let drawings = drawings_account(&name_ur, &name_en);
+        // PRD FR-10.4 v1.6: his gardens, trips and fruit account (0604) is made with him.
+        let venture = venture_account(&name_ur, &name_en);
         let mut made = Vec::new();
-        for account in [&capital, &drawings] {
+        for account in [&capital, &drawings, &venture] {
             let (id, code) = master_repo::create_account(tx, account, actor.user_id, &now)?
                 .ok_or_else(|| series_full(account.control_code))?;
             ctx.db.auditor().write(
@@ -265,11 +269,11 @@ pub fn create(
             )?;
             made.push(id);
         }
-        let (capital_id, drawings_id) = match made.as_slice() {
-            [c, d] => (*c, *d),
+        let (capital_id, drawings_id, venture_id) = match made.as_slice() {
+            [c, d, v] => (*c, *d, *v),
             _ => {
                 return Err(ServiceError::Data(
-                    "a partner needs two accounts".to_owned(),
+                    "a partner needs three accounts".to_owned(),
                 ));
             }
         };
@@ -280,6 +284,7 @@ pub fn create(
                 name_en: &name_en,
                 capital_account_id: capital_id,
                 drawings_account_id: drawings_id,
+                venture_account_id: venture_id,
             },
             actor.user_id,
             &now,
@@ -297,17 +302,23 @@ pub fn create(
                     "name_en": name_en,
                     "capital_account_id": capital_id,
                     "drawings_account_id": drawings_id,
+                    "venture_account_id": venture_id,
                     "opening_capital_paisa": opening.map(Paisa::as_paisa),
                 }))
                 .into_entry(),
         )?;
         let record = repo::get(tx, id)?
             .ok_or_else(|| ServiceError::Data("the saved partner is missing".to_owned()))?;
-        Ok((row_of(&record, 0), capital_id, drawings_id, learned))
+        Ok((
+            row_of(&record, 0),
+            [capital_id, drawings_id, venture_id],
+            learned,
+        ))
     })?;
     learned.after_commit(ctx);
-    search::refresh_account(ctx, capital_id);
-    search::refresh_account(ctx, drawings_id);
+    for account_id in account_ids {
+        search::refresh_account(ctx, account_id);
+    }
     Ok(row)
 }
 
@@ -398,8 +409,9 @@ fn has_share_from(history: &[repo::ShareRecord], today_iso: &str) -> bool {
 ///
 /// # Errors
 /// The name codes; `ERR_SPELLING_UNCONFIRMED`; `ERR_NOT_FOUND` on `id`; `ERR_VERSION_CHANGED`;
-/// `ERR_PARTNER_HAS_SHARE` on `is_active` (he has a share today or later); `ERR_TOO_MANY_PARTNERS`
-/// when making one active would pass the limit.
+/// `ERR_PARTNER_HAS_SHARE` on `is_active` (he has a share today or later);
+/// `ERR_PARTNER_IN_OPEN_VENTURE` on `is_active` (he is in an open garden or trip, PRD A63);
+/// `ERR_TOO_MANY_PARTNERS` when making one active would pass the limit.
 pub fn update(
     ctx: &Context,
     actor: &Actor,
@@ -437,6 +449,12 @@ pub fn update(
                 ));
             }
         }
+        if old.is_active && !input.is_active && repo::in_open_venture(tx, old.id)? {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrPartnerInOpenVenture,
+                "is_active",
+            ));
+        }
         if !old.is_active
             && input.is_active
             && usize::try_from(repo::active_count(tx)?).unwrap_or(usize::MAX) >= MAX_PARTNERS
@@ -472,6 +490,15 @@ pub fn update(
                 actor.user_id,
                 &now,
             )?;
+            if old.venture_account_id != 0 {
+                master_repo::rename_account(
+                    tx,
+                    old.venture_account_id,
+                    &venture_account(&name_ur, &name_en),
+                    actor.user_id,
+                    &now,
+                )?;
+            }
         }
         let learned = checked.learn(ctx, actor, tx)?;
         ctx.db.auditor().write(
@@ -501,6 +528,9 @@ pub fn update(
     learned.after_commit(ctx);
     search::refresh_account(ctx, row.capital_account_id);
     search::refresh_account(ctx, row.drawings_account_id);
+    if row.venture_account_id != 0 {
+        search::refresh_account(ctx, row.venture_account_id);
+    }
     Ok(row)
 }
 

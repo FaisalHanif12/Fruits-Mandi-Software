@@ -155,6 +155,15 @@ pub fn save(
             .map(Vec::len)
             .sum();
 
+        // A trip whose last goods this sold closes by itself (PRD FR-12.33).
+        crate::purchases::refresh_trips_of_entry(
+            tx,
+            posted.entry_id,
+            &date_iso,
+            actor.user_id,
+            &now,
+        )?;
+
         // 6. Matching.
         match_posting(tx, &posting, &lots, (entry, layout), &line_ids)?;
 

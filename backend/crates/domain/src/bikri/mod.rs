@@ -57,6 +57,7 @@ mod checks;
 mod line;
 mod lookups;
 mod lot;
+mod own;
 mod person;
 mod process;
 mod stored;
@@ -73,11 +74,16 @@ use thiserror::Error;
 
 use self::checks::{Issues, Wanted};
 use self::lot::{Acc, Scope};
+use self::own::OwnRun;
 use self::process::{Run, process_lot};
 use crate::ledger::bikri::JournalSource;
 use crate::rules::RuleSet;
 
-pub use self::lookups::{AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, Switches};
+pub use self::lookups::{
+    AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, PurchaseFacts, Switches,
+    TripPartnerFacts,
+};
+pub use self::own::own_cost;
 pub use self::person::{CleanPerson, clean_person};
 pub use self::stored::{
     PostingTarget, StoredCarrier, StoredCharge, StoredIdentity, StoredLot, StoredLotCharge,
@@ -209,7 +215,12 @@ pub fn calc_posting(
     let mut run = Run {
         owed: HashMap::new(),
         last_rates: HashMap::new(),
+        own: OwnRun::new(lookups),
     };
+    // The lines of an edit that keep their stored cost are taken out of the purchases first.
+    if let Some(env) = &env {
+        run.own.reserve_kept(env, draft)?;
+    }
     let mut whole = Acc::default();
     let mut previews = Vec::with_capacity(draft.lots.len());
     let mut journal = JournalSource::default();

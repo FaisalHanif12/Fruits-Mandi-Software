@@ -3,6 +3,7 @@ import type { Paisa } from '../shared/format/money';
 import type { FreightPaidBy } from './FreightPaidBy';
 import type { LinePreview } from './LinePreview';
 import type { LotCharge } from './LotCharge';
+import type { OwnLotPreview } from './OwnLotPreview';
 import type { SummaryTotals } from './SummaryTotals';
 
 /**
@@ -30,6 +31,18 @@ export type LotPreview = {
    * (PRD E23). False if no item is picked yet or it is sold by نگ.
    */
   sold_by_weight: boolean;
+  /**
+   * True for a lot of trip goods (seller اپنا مال, PRD FR-12.26): the lot hides نقد and the
+   * advance tick, and starts freight at 0 with a warning if typed.
+   */
+  is_own: boolean;
+  /**
+   * What a trip lot shows besides its sale lines (PRD FR-12.26, FR-12.27): the trip, the cost of
+   * the goods (C21), the result, and each trip partner's part of the seller credit (C25), each with
+   * its working. Null for any other lot, and while the purchase is not picked or the lot cannot
+   * work its numbers out.
+   */
+  own: OwnLotPreview | null;
   /**
    * مزدوری as it will be charged, or null while the lot cannot work it out.
    */

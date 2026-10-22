@@ -8,6 +8,7 @@ use crate::cash::CashCheck;
 use crate::error::FieldError;
 use crate::money::Paisa;
 use crate::rules::{RuleLevel, Working};
+use crate::ventures::{ShareAmount, TripRef};
 
 /// Where a rate hint came from (PRD FR-7.53).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
@@ -107,6 +108,8 @@ pub struct LineWorkings {
     pub buyer_total: Working,
     /// C19.
     pub rate_diff: Working,
+    /// C21: the cost of the trip goods this line sells. A plain line has 0 and a "none" working.
+    pub cost_of_goods: Working,
 }
 
 /// The numbers of one sale line that has everything it needs.
@@ -142,9 +145,13 @@ pub struct LineCalc {
     /// C19: the buyer value less the seller amount. Can be negative.
     #[ts(type = "Paisa")]
     pub rate_diff: Paisa,
+    /// C21: the cost of the trip goods this line sells (PRD FR-12.26), 0 on a line of any other
+    /// lot. Stored on the saved line (`cost_paisa`), shown with the result, never posted.
+    #[ts(type = "Paisa")]
+    pub cost_of_goods: Paisa,
     /// How the buyer pays.
     pub payment_type: PaymentType,
-    /// The working of the four amounts above.
+    /// The working of the amounts above.
     pub workings: LineWorkings,
 }
 
@@ -266,11 +273,47 @@ pub struct SummaryTotals {
     /// All buyer bills together.
     #[ts(type = "Paisa")]
     pub buyer_total: Paisa,
-    /// The income shared between the partners (C9).
+    /// The income shared between the partners (C9). It is the commission, لاگا and فون only, also
+    /// for a trip lot: the seller credit of a trip lot goes to the trip's partners, not to the firm
+    /// (PRD FR-12.26). E2E-34 shares 1,200 = 540 + 540 + 120.
     #[ts(type = "Paisa")]
     pub shared_income: Paisa,
     /// The working of each amount.
     pub workings: SummaryWorkings,
+}
+
+/// What a lot of trip goods shows besides its lines (PRD FR-12.26, FR-12.27). Worked out by the same
+/// domain function as the posting, so the screen and the saved entry cannot differ.
+///
+/// Example (E2E-34): 15 of 20 sold at 600. Seller credit (C8) 8,460 goes to the trip's partners as
+/// 3,384 / 2,538 / 2,538 (C25). The cost is 10,400 × 15 ÷ 20 = 7,800 (C21), shown and never posted,
+/// and the result is 8,460 − 7,800 = 660.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct OwnLotPreview {
+    /// The purchase the lot takes its goods from.
+    #[ts(type = "number")]
+    pub purchase_id: i64,
+    /// Its number (خ-1, PUR-1).
+    #[ts(type = "number")]
+    pub purchase_number: i64,
+    /// Its trip.
+    pub trip: TripRef,
+    /// C21: the cost of the goods the lines sell. Stored on the lines, never posted.
+    #[ts(type = "Paisa")]
+    pub cost_paisa: Paisa,
+    /// How the cost was worked out.
+    pub cost_working: Working,
+    /// The seller credit of the lot (C8): the money that goes to the trip's partners.
+    #[ts(type = "Paisa")]
+    pub credit_paisa: Paisa,
+    /// The result of the lot: the seller credit less the cost. Negative is a loss, shown in red.
+    #[ts(type = "Paisa")]
+    pub result_paisa: Paisa,
+    /// How the result was worked out.
+    pub result_working: Working,
+    /// Each trip partner's part of the seller credit (C25): his 0604 account is credited with it
+    /// (debited if the credit is negative).
+    pub credits: Vec<ShareAmount>,
 }
 
 /// One lot of the preview.
@@ -289,6 +332,14 @@ pub struct LotPreview {
     /// True once the picked item is sold by weight: the lot and its rows then take a weight
     /// (PRD E23). False if no item is picked yet or it is sold by نگ.
     pub sold_by_weight: bool,
+    /// True for a lot of trip goods (seller اپنا مال, PRD FR-12.26): the lot hides نقد and the
+    /// advance tick, and starts freight at 0 with a warning if typed.
+    pub is_own: bool,
+    /// What a trip lot shows besides its sale lines (PRD FR-12.26, FR-12.27): the trip, the cost of
+    /// the goods (C21), the result, and each trip partner's part of the seller credit (C25), each with
+    /// its working. Null for any other lot, and while the purchase is not picked or the lot cannot
+    /// work its numbers out.
+    pub own: Option<OwnLotPreview>,
     /// مزدوری as it will be charged, or null while the lot cannot work it out.
     pub labour: Option<LotCharge>,
     /// منشیانہ as it will be charged.
@@ -326,7 +377,7 @@ pub struct SplitPart {
     /// His part of the shared income.
     #[ts(type = "Paisa")]
     pub income_paisa: Paisa,
-    /// How it was worked out.
+    /// How the income part was worked out.
     pub working: Working,
 }
 

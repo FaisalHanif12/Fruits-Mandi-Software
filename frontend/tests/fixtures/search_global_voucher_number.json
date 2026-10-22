@@ -2,7 +2,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 19,
+      "id": 20,
       "code": "03040001",
       "name_ur": "اکرم ٹول ٹیکس",
       "name_en": "Akram Toll Tax",
@@ -16,7 +16,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 17,
+      "id": 18,
       "code": "030110001",
       "name_ur": "رحیم",
       "name_en": "Rahim",
@@ -30,7 +30,49 @@
   {
     "kind": "account",
     "hit": {
-      "id": 22,
+      "id": 24,
+      "code": "06040001",
+      "name_ur": "باغ سفر اور پھل - الف",
+      "name_en": "Gardens Trips and Fruit - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 14,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 27,
+      "code": "06040002",
+      "name_ur": "باغ سفر اور پھل - ب",
+      "name_en": "Gardens Trips and Fruit - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 14,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 30,
+      "code": "06040003",
+      "name_ur": "باغ سفر اور پھل - ج",
+      "name_en": "Gardens Trips and Fruit - Partner C",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 14,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 23,
       "code": "06030001",
       "name_ur": "ذاتی خرچہ - الف",
       "name_en": "Drawings - Partner A",
@@ -44,7 +86,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 24,
+      "id": 26,
       "code": "06030002",
       "name_ur": "ذاتی خرچہ - ب",
       "name_en": "Drawings - Partner B",
@@ -58,7 +100,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 26,
+      "id": 29,
       "code": "06030003",
       "name_ur": "ذاتی خرچہ - ج",
       "name_en": "Drawings - Partner C",
@@ -72,7 +114,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 21,
+      "id": 22,
       "code": "06020001",
       "name_ur": "سرمایہ - الف",
       "name_en": "Capital - Partner A",
@@ -86,7 +128,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 23,
+      "id": 25,
       "code": "06020002",
       "name_ur": "سرمایہ - ب",
       "name_en": "Capital - Partner B",
@@ -100,7 +142,7 @@
   {
     "kind": "account",
     "hit": {
-      "id": 25,
+      "id": 28,
       "code": "06020003",
       "name_ur": "سرمایہ - ج",
       "name_en": "Capital - Partner C",
@@ -130,7 +172,7 @@
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
-        "id": 19,
+        "id": 20,
         "code": "03040001",
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax"
@@ -147,7 +189,7 @@
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
-        "id": 17,
+        "id": 18,
         "code": "030110001",
         "name_ur": "رحیم",
         "name_en": "Rahim"
@@ -164,7 +206,7 @@
       "number": 1,
       "entry_date": "2026-10-10",
       "account": {
-        "id": 17,
+        "id": 18,
         "code": "030110001",
         "name_ur": "رحیم",
         "name_en": "Rahim"

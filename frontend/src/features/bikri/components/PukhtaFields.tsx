@@ -12,23 +12,10 @@
 // The names, the phone and the spelling marks are text on the row, so a language switch keeps
 // them (Code Standards F39). Nothing is saved here.
 
-import { Localized } from '@fluent/react';
-import type { PukhtaPerson } from '../../../bindings/PukhtaPerson';
 import type { PukhtaSide } from '../../../bindings/PukhtaSide';
 import type { UiError } from '../../../bindings/UiError';
 import type { EntryRow, EntryStore } from '../../../shared/grid';
-import { useLanguage } from '../../../shared/i18n';
-import { useFormNavigation } from '../../../shared/keyboard';
-import { NO_MARKS, type SpellingMarks } from '../../../shared/urdu/spelling';
-import {
-  Field,
-  NamePair,
-  SuggestInput,
-  fieldError,
-  type ListExtra,
-  type NamePairValue,
-} from '../../../shared/ui';
-import { PukhtaPersonRow, usePukhtaPeople } from '../../pukhta_khata';
+import { PukhtaPersonFields } from '../../pukhta_khata';
 
 /** The keys of the row that hold the one-time person. */
 export interface PukhtaKeys {
@@ -81,97 +68,28 @@ export function focusPukhtaFieldsSoon(rowId: string): void {
   window.setTimeout(attempt, 0);
 }
 
-function isWords(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((word) => typeof word === 'string');
-}
-
-/** The marks kept on the row as text. Anything that is not marks is no marks. */
-function readMarks(text: string | undefined): SpellingMarks {
-  if (text === undefined || text === '') return NO_MARKS;
-  try {
-    const value: unknown = JSON.parse(text);
-    if (typeof value !== 'object' || value === null) return NO_MARKS;
-    const { urdu, english, confirmed } = value as Record<string, unknown>;
-    return isWords(urdu) && isWords(english) && isWords(confirmed)
-      ? { urdu, english, confirmed }
-      : NO_MARKS;
-  } catch {
-    return NO_MARKS;
-  }
-}
-
 export function PukhtaFields({ store, row, side, keys, paths, error, onDone }: PukhtaFieldsProps) {
-  const navigation = useFormNavigation(onDone);
-  const language = useLanguage();
-  const value: NamePairValue = {
-    urdu: row.typed[keys.ur] ?? '',
-    english: row.typed[keys.en] ?? '',
-    spelling: readMarks(row.typed[keys.marks]),
-  };
-  // The people that fit the name typed first (Urdu in the Urdu app, English in the English app) and
-  // the people that fit the phone. Each is one query of the backend.
-  const nameText = language === 'ur' ? value.urdu : value.english;
-  const phoneText = row.typed[keys.phone] ?? '';
-  const byName = usePukhtaPeople(nameText, side).data ?? [];
-  const byPhone = usePukhtaPeople(phoneText, side).data ?? [];
-  const take = (person: PukhtaPerson) => {
-    store.getState().patchRow(row.rowId, {
-      typed: {
-        [keys.ur]: person.name_ur,
-        [keys.en]: person.name_en,
-        [keys.phone]: person.phone,
-        [keys.marks]: JSON.stringify(NO_MARKS),
-      },
-    });
-  };
-  const rowsOf = (people: readonly PukhtaPerson[]): ListExtra[] =>
-    people.map((person) => ({
-      key: person.person_key,
-      content: <PukhtaPersonRow person={person} />,
-      onPick: () => {
-        take(person);
-      },
-    }));
-  const change = (next: NamePairValue) => {
-    store.getState().patchRow(row.rowId, {
-      typed: {
-        [keys.ur]: next.urdu,
-        [keys.en]: next.english,
-        [keys.marks]: JSON.stringify(next.spelling ?? NO_MARKS),
-      },
-    });
-  };
   return (
-    <div
-      {...navigation}
-      data-pukhta-for={row.rowId}
-      className="grid grid-cols-1 gap-x-4 gap-y-3 normal:grid-cols-3"
-    >
-      <NamePair
-        value={value}
-        onChange={change}
-        urduLabel={<Localized id="bikri-pukhta-name-ur" />}
-        englishLabel={<Localized id="bikri-pukhta-name-en" />}
-        urduError={fieldError(error, paths.ur)}
-        englishError={fieldError(error, paths.en)}
-        knownRecords={rowsOf(nameText.trim() === '' ? [] : byName)}
-      />
-      <Field label={<Localized id="bikri-pukhta-phone" />} error={fieldError(error, paths.phone)}>
-        {(control) => (
-          <SuggestInput
-            {...control}
-            value={phoneText}
-            onChange={(phone) => {
-              store.getState().updateTyped(row.rowId, keys.phone, phone);
-            }}
-            suggestions={rowsOf(phoneText.trim() === '' ? [] : byPhone).map((extra) => ({
-              value: extra.key,
-              content: extra.content,
-              onPick: extra.onPick,
-            }))}
-          />
-        )}
-      </Field>
-    </div>
+    <PukhtaPersonFields
+      anchor={row.rowId}
+      value={{
+        ur: row.typed[keys.ur] ?? '',
+        en: row.typed[keys.en] ?? '',
+        phone: row.typed[keys.phone] ?? '',
+        marks: row.typed[keys.marks] ?? '',
+      }}
+      onChange={(patch) => {
+        const typed: Record<string, string> = {};
+        if (patch.ur !== undefined) typed[keys.ur] = patch.ur;
+        if (patch.en !== undefined) typed[keys.en] = patch.en;
+        if (patch.phone !== undefined) typed[keys.phone] = patch.phone;
+        if (patch.marks !== undefined) typed[keys.marks] = patch.marks;
+        store.getState().patchRow(row.rowId, { typed });
+      }}
+      side={side}
+      paths={paths}
+      error={error}
+      onDone={onDone}
+    />
   );
 }

@@ -42,7 +42,11 @@ fn with_values(code: ErrorCode, field: &str, values: &[(&str, i64)]) -> FieldErr
 /// What kind of party a field wants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Wanted {
+    /// A seller. The اپنا مال account is refused (`ERR_OWN_GOODS_ACCOUNT_RESTRICTED`).
     Seller,
+    /// The seller of a lot: a seller, or the اپنا مال account for a lot of own goods.
+    LotSeller,
+    /// A buyer.
     Buyer,
 }
 
@@ -66,13 +70,18 @@ pub(super) fn account<'a>(
         issues.error(ErrorCode::ErrNotFound, field);
         return None;
     };
+    // The اپنا مال account is offered only as the seller of a lot (PRD FR-12.26, FR-10.4).
+    if facts.is_own_goods && wanted != Wanted::LotSeller {
+        issues.error(ErrorCode::ErrOwnGoodsAccountRestricted, field);
+        return None;
+    }
     let kind_ok = match wanted {
-        Wanted::Seller => facts.kind == PartyKind::Seller && !facts.is_own_goods,
+        Wanted::Seller | Wanted::LotSeller => facts.kind == PartyKind::Seller,
         Wanted::Buyer => facts.kind == PartyKind::Buyer,
     };
     if !kind_ok {
         let code = match wanted {
-            Wanted::Seller => ErrorCode::ErrNotASeller,
+            Wanted::Seller | Wanted::LotSeller => ErrorCode::ErrNotASeller,
             Wanted::Buyer => ErrorCode::ErrNotABuyer,
         };
         issues.error(code, field);

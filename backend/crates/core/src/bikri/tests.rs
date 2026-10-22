@@ -33,6 +33,7 @@ fn lot(sales: Vec<SaleInput>) -> LotInput {
         key: "l".to_owned(),
         lot_id: None,
         seller_account_id: Some(1),
+        purchase_id: None,
         pukhta: None,
         item_id: Some(1),
         packing_id: Some(1),

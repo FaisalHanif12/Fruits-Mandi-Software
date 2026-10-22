@@ -1,4 +1,6 @@
-//! The seeded rows equal PRD FR-10.4, row for row (plan 03 Section 6, item 3).
+//! The seeded rows equal PRD FR-10.4, row for row (plan 03 Section 6, item 3). They are the rows of
+//! migration 1 and of migration 6 (the seller of trip goods, the cash name "Cash" and the controls of
+//! v1.6); the 0604 account of each partner is made with the partner (plan 11), so none exists here.
 //!
 //! `ACCOUNTS` is typed from the FR-10.4 table, not taken from the seed code.
 #![cfg(test)]
@@ -10,8 +12,8 @@ use mandi_db::seed;
 use tempfile::tempdir;
 
 /// (code, Urdu name, English name, party type, is Pukhta Khata), FR-10.4 table order.
-const ACCOUNTS: [(&str, &str, &str, &str, i64); 16] = [
-    ("01010001", "روکڑ", "Cash in Hand", "other", 0),
+const ACCOUNTS: [(&str, &str, &str, &str, i64); 17] = [
+    ("01010001", "روکڑ", "Cash", "other", 0),
     ("01020001", "بینک", "Bank", "other", 0),
     ("02010001", "مزدوری کھاتہ", "Labour Payable", "other", 0),
     ("02010002", "کرایہ کھاتہ", "Freight Payable", "other", 0),
@@ -23,6 +25,7 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 16] = [
         0,
     ),
     ("02010004", "منشیانہ کھاتہ", "Munshiana Payable", "other", 0),
+    ("030119998", "اپنا مال", "Own Goods (Trips)", "seller", 0),
     (
         "030119999",
         "پختہ کھاتہ (بیوپاری)",
@@ -81,7 +84,7 @@ struct Row {
 }
 
 #[test]
-fn the_16_fixed_accounts_match_fr_10_4() {
+fn the_fixed_accounts_match_fr_10_4() {
     let dir = tempdir().unwrap();
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
@@ -109,7 +112,7 @@ fn the_16_fixed_accounts_match_fr_10_4() {
         .collect();
     let mut want = ACCOUNTS.to_vec();
     want.sort_by_key(|row| row.0);
-    assert_eq!(rows.len(), 16);
+    assert_eq!(rows.len(), 17);
     for (row, (code, ur, en, party, pukhta)) in rows.iter().zip(want) {
         assert_eq!(
             (
@@ -177,13 +180,16 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
         ("0201", "Payables", "other", "02"),
         ("03011", "Sellers", "seller", "03"),
         ("0304", "Buyers", "buyer", "03"),
+        ("0305", "Separate Khatas", "separate", "03"),
+        ("0306", "Gardens", "garden", "03"),
         ("0401", "Income", "other", "04"),
         ("0501", "Shop Expenses", "other", "05"),
         ("0601", "Capital", "other", "06"),
         ("0602", "Partner Capital", "other", "06"),
         ("0603", "Drawings", "other", "06"),
+        ("0604", "Gardens Trips and Fruit", "other", "06"),
     ];
-    assert_eq!(controls.len(), 11);
+    assert_eq!(controls.len(), 14);
     for (have, want) in controls.iter().zip(want_controls) {
         assert_eq!(
             (
@@ -214,10 +220,11 @@ fn a_second_run_changes_nothing() {
     let before = seed::counts(&conn).unwrap();
     assert_eq!(
         (before.heads, before.controls, before.accounts),
-        (6, 11, 16)
+        (6, 14, 17)
     );
     let changes_before = conn.total_changes();
     assert_eq!(seed::system_accounts(&conn).unwrap(), 0);
+    assert_eq!(seed::trip_accounts(&conn).unwrap(), 0);
     assert_eq!(conn.total_changes(), changes_before);
     assert_eq!(seed::counts(&conn).unwrap(), before);
 }

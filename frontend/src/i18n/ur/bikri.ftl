@@ -833,3 +833,75 @@ bikri-undo-failed = محفوظ کیا ہوا اندراج واپس نہیں ہو
 
 # review: pending
 bikri-undo-busy = آپ نے دوسری { -bikri } شروع کر دی ہے۔ پہلے اسے مکمل کریں یا صاف کریں، پھر واپس لیں۔
+
+## Trip goods in the sale book (plan 16b, PRD 12.3, FR-12.26, FR-12.27).
+
+# review: pending
+bikri-own-title = { -apna-maal }: { -market-safar } کا مال
+
+# The choice of the purchase whose goods this lot sells.
+# review: pending
+bikri-own-purchase = { -khareedari }
+
+# review: pending
+bikri-own-purchase-hint = { -qism-maal }، { -packing } اور مقدار خریداری سے آتے ہیں۔ لائنوں میں ساری مقدار بکنی چاہیے۔ اس مال پر { -naqd } اور پیشگی کا نشان لاگو نہیں ہوتے۔
+
+# $number: the purchase; $trip: its trip; $qty_left: how many { -nag } it has left.
+# review: pending
+bikri-own-option = { $number } ({ $trip }): { $item }، { $packing } ({ $qty_left } باقی)
+
+# review: pending
+bikri-own-load-failed = خریداریاں پڑھی نہیں جا سکیں۔ یہ { -lot } بند کر کے دوبارہ کھولیں۔
+
+# review: pending
+bikri-own-none = کسی خریداری میں مال باقی نہیں۔ پہلے { -market-safar } میں خریداری درج کریں۔
+
+# Shown until the numbers of the lot can be worked out.
+# review: pending
+bikri-own-numbers-pending = سفر کے شراکت داروں کو اس { -lot } سے کیا ملتا ہے، یہ دیکھنے کے لیے مقدار اور لائنیں لکھیں۔
+
+# The commission of the shop on this lot is income of the firm (PRD FR-12.26).
+# review: pending
+bikri-own-commission = { -commission } (فرم کی آمدن)
+
+# The seller credit of the lot (PRD C8), which goes to the partners of the trip by their % (C25).
+# review: pending
+bikri-own-credit = سفر کے شراکت داروں کو ملتا ہے
+
+# review: pending
+bikri-saved-own-title = سفر کا مال
+
+# The cost of the goods sold on a line of trip goods, in a saved { -bikri }.
+# review: pending
+bikri-saved-cost = بکے ہوئے مال کی لاگت
+
+# The purchase that a lot of trip goods came from, in a saved { -bikri }.
+# review: pending
+bikri-saved-purchase = { -khareedari }
+
+# $number: the purchase; $trip: its trip.
+# review: pending
+bikri-saved-purchase-open = { $trip } میں { $number } کھولیں
+
+## Trip goods in the list of { -baqi-maal } (PRD FR-12.25, FR-12.28).
+
+# review: pending
+bikri-stock-own-title = { -apna-maal }
+
+# review: pending
+bikri-stock-own-help = { -market-safar } میں خریدا ہوا وہ مال جو ابھی بکا نہیں۔ یہ سفر کے شراکت داروں کا ہے۔ اسے { -bikri } میں بیچیں: { -lot } کے بیوپاری کی جگہ { -apna-maal } چنیں۔
+
+# review: pending
+bikri-stock-own-label = سفر کے باقی مال کی فہرست
+
+# review: pending
+bikri-stock-own-card-title = { -apna-maal }: { $number }، { $item }
+
+# review: pending
+bikri-stock-own-open = سفر کھولیں
+
+# review: pending
+bikri-stock-own-total-cost = کل لاگت
+
+# review: pending
+bikri-stock-own-trip = { -market-safar }

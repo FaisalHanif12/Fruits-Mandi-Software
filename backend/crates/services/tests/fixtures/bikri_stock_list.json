@@ -7,7 +7,7 @@
       "bikri_number": 1,
       "received_date": "2026-10-10",
       "seller": {
-        "id": 17,
+        "id": 18,
         "code": "030110001",
         "name_ur": "رحیم",
         "name_en": "Rahim"
@@ -33,5 +33,8 @@
       "write_offs": []
     }
   ],
-  "balance_total": 5
+  "balance_total": 5,
+  "own_rows": [],
+  "own_balance_total": 0,
+  "own_cost_left_paisa": 0
 }

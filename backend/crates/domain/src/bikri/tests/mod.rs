@@ -7,6 +7,7 @@
 
 mod cases;
 mod edit;
+mod own;
 mod properties;
 mod worked;
 
@@ -206,6 +207,7 @@ pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
         key: format!("lot-{seller}-{item}"),
         lot_id: None,
         seller_account_id: Some(seller),
+        purchase_id: None,
         pukhta: None,
         item_id: Some(item),
         packing_id: Some(BOX),

@@ -348,3 +348,55 @@ err-edit-not-allowed = { $rule ->
     [posting_lots_locked] In a later sale only its own lines can be changed, not the lot. Change the lot in the first entry.
    *[other] This change is not allowed in this entry. Close the edit and open the entry again.
 }
+
+## Trip goods and trips (plan 16b, PRD 12.10, FR-12.24, FR-12.26, FR-12.29, FR-12.31).
+
+# PRD FR-12.26. $qty_left: how many { -nag } of the quantity taken are not sold on the lines.
+# review: pending
+err-own-lot-not-fully-sold = This lot of { -apna-maal } must be sold in full in this { -bikri }. { $qty_left } { -nag } are not sold on the lines yet. Sell them on the lines, or take fewer { -nag } from the purchase. What you do not take stays in the purchase.
+
+# PRD FR-12.26. The account offered only as the seller of a lot.
+# review: pending
+err-own-goods-account-restricted = { -apna-maal } can only be the seller of a lot in the { -bikri }. Choose another account.
+
+# PRD FR-12.24. $qty_sold and $qty_written_off: how many { -nag }.
+# review: pending
+err-purchase-has-sales = This purchase cannot be cancelled, because { $qty_sold } { -nag } were sold and { $qty_written_off } { -nag } were written off. Cancel the sales or undo the write-off first.
+
+# review: pending
+err-purchase-cancelled = This purchase is cancelled. Choose another purchase.
+
+# A warning, not a refusal (PRD FR-12.26).
+# review: pending
+err-own-lot-freight-in-cost = The freight of the purchase is already in its cost. A freight typed here is counted a second time. Leave it empty unless that is what you mean.
+
+# PRD FR-12.31, FR-12.33: a closed trip takes no new purchase or cost.
+# review: pending
+err-trip-closed = This { -market-safar } is closed. It takes no new purchase or cost.
+
+# PRD FR-12.31: a trip cost is spread over the purchases that still have goods left.
+# review: pending
+err-trip-no-stock = No purchase of this { -market-safar } has goods left, so there is nothing to spread the cost over. Record the purchase first.
+
+# PRD FR-12.29: the shares are fixed after the first entry.
+# review: pending
+err-venture-shares-locked = This { -market-safar } already has an entry, so the { -hissa } of its partners can no longer be changed.
+
+# PRD FR-12.24. $trip_date: the day of the trip.
+# review: pending
+err-purchase-before-trip = The day is before the day of the { -market-safar } ({ $trip_date }). Choose the day of the trip or a later day.
+
+# PRD FR-12.31. $qty_sold and $qty_written_off: how many { -nag } of the purchases it was spread over.
+# review: pending
+err-trip-cost-has-sales = This cost cannot be cancelled, because { $qty_sold } { -nag } of the purchases it was spread over were sold and { $qty_written_off } { -nag } were written off. Cancel the sales or undo the write-off first.
+
+# PRD A63: a partner cannot be made inactive while he is in an open trip.
+# review: pending
+err-partner-in-open-venture = This { -shirakat-dar } is in an open { -market-safar }, so he cannot be made inactive. Let the { -market-safar } close first.
+
+# PRD FR-12.31: cancel the cost first.
+# review: pending
+err-purchase-carries-trip-cost = This purchase carries a part of a { -market-safar } cost, so it cannot be cancelled. Cancel that cost first.
+
+# review: pending
+err-trip-entry-cancelled = This entry is cancelled already.

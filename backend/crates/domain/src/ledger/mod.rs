@@ -59,6 +59,27 @@ pub enum PostingType {
     Opening,
     /// Month close (PRD FR-17.6).
     MonthClose,
+    /// خریداری: a trip purchase, paid from the shop's cash by the partners' shop parts (PRD
+    /// FR-12.24, FR-12.30, plan 16b).
+    Purchase,
+    /// A cost of a trip, paid in the same way (PRD FR-12.31).
+    TripCost,
+    /// An installment or a running cost of a garden (PRD FR-12.35, D4R plan 17c).
+    GardenPayment,
+    /// Money from a sale of trip or garden goods in another shop (PRD FR-12.32, FR-12.36).
+    VentureReceipt,
+    /// A garden's closing: its balance goes to its partners (PRD FR-12.38, D4R plan 17c).
+    GardenClose,
+    /// Fruit taken by a partner or for the shop's guests (PRD FR-16.10, D4R plan 17d).
+    FruitTaken,
+    /// سرمایہ جمع: a partner invests (PRD FR-17.7, plan 17).
+    CapitalIn,
+    /// سرمایہ واپسی: a partner takes his investment back (PRD FR-17.7, plan 17).
+    CapitalOut,
+    /// الگ کھاتہ: money paid out for a separate khata (PRD FR-16.6, plan 17).
+    KhataOut,
+    /// الگ کھاتہ: money received for a separate khata (PRD FR-16.6, plan 17).
+    KhataIn,
 }
 
 impl PostingType {
@@ -79,6 +100,16 @@ impl PostingType {
             PostingType::General => "general",
             PostingType::Opening => "opening",
             PostingType::MonthClose => "month_close",
+            PostingType::Purchase => "purchase",
+            PostingType::TripCost => "trip_cost",
+            PostingType::GardenPayment => "garden_payment",
+            PostingType::VentureReceipt => "venture_receipt",
+            PostingType::GardenClose => "garden_close",
+            PostingType::FruitTaken => "fruit_taken",
+            PostingType::CapitalIn => "capital_in",
+            PostingType::CapitalOut => "capital_out",
+            PostingType::KhataOut => "khata_out",
+            PostingType::KhataIn => "khata_in",
         }
     }
 
@@ -99,6 +130,16 @@ impl PostingType {
             PostingType::General,
             PostingType::Opening,
             PostingType::MonthClose,
+            PostingType::Purchase,
+            PostingType::TripCost,
+            PostingType::GardenPayment,
+            PostingType::VentureReceipt,
+            PostingType::GardenClose,
+            PostingType::FruitTaken,
+            PostingType::CapitalIn,
+            PostingType::CapitalOut,
+            PostingType::KhataOut,
+            PostingType::KhataIn,
         ]
         .into_iter()
         .find(|t| t.as_str() == text)
@@ -116,6 +157,13 @@ pub enum SourceType {
     Account,
     /// A month close.
     MonthClose,
+    /// A trip purchase (plan 16b).
+    Purchase,
+    /// A garden or trip entry other than a purchase: a cost, an installment, a sale in another
+    /// shop, a closing (plan 16b, D4R).
+    Venture,
+    /// Fruit taken (D4R plan 17d).
+    Fruit,
 }
 
 impl SourceType {
@@ -126,6 +174,9 @@ impl SourceType {
             SourceType::Voucher => "voucher",
             SourceType::Account => "account",
             SourceType::MonthClose => "month_close",
+            SourceType::Purchase => "purchase",
+            SourceType::Venture => "venture",
+            SourceType::Fruit => "fruit",
         }
     }
 
@@ -136,6 +187,9 @@ impl SourceType {
             SourceType::Voucher,
             SourceType::Account,
             SourceType::MonthClose,
+            SourceType::Purchase,
+            SourceType::Venture,
+            SourceType::Fruit,
         ]
         .into_iter()
         .find(|t| t.as_str() == text)
@@ -775,6 +829,16 @@ mod tests {
             (PostingType::General, "general"),
             (PostingType::Opening, "opening"),
             (PostingType::MonthClose, "month_close"),
+            (PostingType::Purchase, "purchase"),
+            (PostingType::TripCost, "trip_cost"),
+            (PostingType::GardenPayment, "garden_payment"),
+            (PostingType::VentureReceipt, "venture_receipt"),
+            (PostingType::GardenClose, "garden_close"),
+            (PostingType::FruitTaken, "fruit_taken"),
+            (PostingType::CapitalIn, "capital_in"),
+            (PostingType::CapitalOut, "capital_out"),
+            (PostingType::KhataOut, "khata_out"),
+            (PostingType::KhataIn, "khata_in"),
         ];
         for (kind, word) in postings {
             assert_eq!(kind.as_str(), word);
@@ -787,6 +851,9 @@ mod tests {
             (SourceType::Voucher, "voucher"),
             (SourceType::Account, "account"),
             (SourceType::MonthClose, "month_close"),
+            (SourceType::Purchase, "purchase"),
+            (SourceType::Venture, "venture"),
+            (SourceType::Fruit, "fruit"),
         ];
         for (kind, word) in sources {
             assert_eq!(kind.as_str(), word);

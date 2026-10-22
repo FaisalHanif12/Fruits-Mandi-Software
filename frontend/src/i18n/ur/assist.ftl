@@ -120,3 +120,57 @@ working-none-line = اس لائن پر کوئی اصول نہیں لگا، اس 
 # A one-time seller is paid his whole net at once while { -naqd } is empty (PRD FR-13.10).
 # review: pending
 working-cash-pukhta = { -pukhta-khata } کے بیوپاری کو اس کی پوری { -safi-bikri } اسی وقت دی جاتی ہے: <num>{ $result }</num>
+
+## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
+## The backend names the message and gives its values.
+
+# C21: the cost of the trip goods sold or written off, a part of the cost left (the cost of one
+# { -nag } is the average of the purchase, PRD A45). The leftover rupees of the split go to the
+# larger part, so the message does not claim an exact equation (money review of plan 16b).
+# review: pending
+working-cost-of-goods = باقی لاگت <num>{ $cost_left }</num>، <num>{ $qty_left }</num> { -nag } میں سے <num>{ $qty }</num> { -nag } کا حصہ (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے بڑے حصے کو): <num>{ $result }</num>
+# C21 when the last { -nag } are taken: all the cost left goes with them.
+# review: pending
+working-cost-of-goods-last = آخری <num>{ $qty }</num> { -nag } کے ساتھ باقی ساری لاگت جاتی ہے: <num>{ $result }</num>
+# FR-12.20: a line an edit left as it was keeps the cost it had.
+# review: pending
+working-cost-of-goods-kept = یہ لائن جیسی تھی ویسی رہی، اس لیے اس کی پرانی لاگت وہی رہتی ہے: <num>{ $result }</num>
+# C23: a partner's part of a payment of a trip. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-part = ادائیگی <num>{ $amount }</num>، اس کا <num>{ $bps }</num> ÷ 10,000 (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے بڑے { -hissa } کو): <num>{ $result }</num>
+# C25: a partner's part of money that comes in. $bps is in basis points: 4000 is 40%. The rupees
+# left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-venture-credit = آنے والی رقم <num>{ $amount }</num>، اس کا <num>{ $bps }</num> ÷ 10,000 (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے بڑے { -hissa } کو): <num>{ $result }</num>
+# C24: the part of a trip cost that one purchase carries, by the { -nag } bought. The rupees left
+# over go to the larger part, so the message does not claim an exact equation.
+# review: pending
+working-trip-cost-spread = خرچ <num>{ $cost }</num>، <num>{ $total_qty }</num> { -nag } میں سے <num>{ $qty }</num> { -nag } کا حصہ (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے بڑے حصے کو): <num>{ $result }</num>
+# FR-12.27: the result of a trip (sales money and money from other shops, less the cost sold and written off).
+# review: pending
+working-trip-result = فروخت کی رقم <num>{ $sales }</num> + دوسری دکانوں کی رقم <num>{ $other_shop }</num> − بکے ہوئے مال کی لاگت <num>{ $cost_sold }</num> − ضائع مال کی لاگت <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.27: what a partner has so far: money back less money in from the shop and from his pocket.
+# review: pending
+working-trip-partner-net = واپس ملا <num>{ $back }</num> − دکان سے لگایا <num>{ $in_shop }</num> − اپنی جیب سے لگایا <num>{ $in_pocket }</num> = <num>{ $result }</num>
+# FR-12.27: the result of one purchase.
+# review: pending
+working-purchase-result = فروخت کی رقم <num>{ $sales }</num> + دوسری دکانوں کی رقم <num>{ $other_shop }</num> − بکے ہوئے مال کی لاگت <num>{ $cost_sold }</num> − ضائع مال کی لاگت <num>{ $cost_written_off }</num> = <num>{ $result }</num>
+# FR-12.32: the result of one sale in another shop.
+# review: pending
+working-other-sale-result = ملی ہوئی رقم <num>{ $amount }</num> − بکے ہوئے مال کی لاگت <num>{ $cost }</num> = <num>{ $result }</num>
+# C21 for a whole lot of trip goods: the cost of the goods its lines took (the sum of the lines).
+# review: pending
+working-own-lot-cost = اس لاٹ کے بکے ہوئے <num>{ $qty }</num> { -nag } کی لاگت، جو خریداری سے لی گئی: <num>{ $result }</num>
+# FR-12.27: the result of a lot of trip goods (the seller credit less the cost of the goods sold).
+# review: pending
+working-own-lot-result = بیوپاری کی جمع <num>{ $credit }</num> − بکے ہوئے مال کی لاگت <num>{ $cost }</num> = <num>{ $result }</num>
+# FR-12.24: the total cost of a purchase: what was paid now and its part of the trip costs.
+# review: pending
+working-purchase-total-cost = ادا شدہ <num>{ $paid_now }</num> + { -market-safar } کے خرچ کا حصہ <num>{ $trip_cost }</num> = <num>{ $result }</num>
+# PRD A45: the cost of one { -nag }, worked out for the whole purchase.
+# review: pending
+working-purchase-avg-cost = <num>{ $total }</num> ÷ <num>{ $qty }</num> = <num>{ $result }</num> (قریب ترین روپے تک)
+# FR-12.24: what is paid now. Freight, labour and other cost are always paid at once.
+# review: pending
+working-purchase-paid-now = <num>{ $value }</num> + <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $other_cost }</num> = <num>{ $result }</num>

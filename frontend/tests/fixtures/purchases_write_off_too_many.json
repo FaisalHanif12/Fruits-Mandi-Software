@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_WRITE_OFF_EXCEEDS_BALANCE",
+      "field": "qty",
+      "values": {
+        "available": 2
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

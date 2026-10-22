@@ -1,0 +1,40 @@
+{
+  "rows": [],
+  "balance_total": 0,
+  "own_rows": [
+    {
+      "purchase_id": 1,
+      "number": 1,
+      "received_date": "2026-10-10",
+      "trip": {
+        "id": 1,
+        "number": 1,
+        "name_ur": "سفر-1 10-10-2026",
+        "name_en": "TRP-1 10-10-2026"
+      },
+      "supplier": "Orange Traders",
+      "item": {
+        "id": 5,
+        "code": "5",
+        "name_ur": "مالٹا",
+        "name_en": "Orange"
+      },
+      "packing": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty_bought": 20,
+      "qty_sold": 15,
+      "qty_written_off": 0,
+      "balance": 5,
+      "total_cost_paisa": 1040000,
+      "cost_left_paisa": 260000,
+      "days_waiting": 0,
+      "write_offs": []
+    }
+  ],
+  "own_balance_total": 5,
+  "own_cost_left_paisa": 260000
+}

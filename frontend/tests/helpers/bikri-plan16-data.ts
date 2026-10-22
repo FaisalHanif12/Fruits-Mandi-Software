@@ -64,7 +64,13 @@ export function stockRow(overrides: Partial<StockRow> = {}): StockRow {
 }
 
 export function stockList(rows: StockRow[] = [stockRow()]): StockList {
-  return { rows, balance_total: rows.reduce((sum, row) => sum + row.balance, 0) };
+  return {
+    rows,
+    balance_total: rows.reduce((sum, row) => sum + row.balance, 0),
+    own_rows: [],
+    own_balance_total: 0,
+    own_cost_left_paisa: paisaForTest(0),
+  };
 }
 
 /** A copy of a draft the way `bikri_open_for_edit` sends it: ids on the lots and the lines. */
@@ -75,6 +81,8 @@ export function withIds(draft: BikriDraft): BikriDraft {
     ...lot,
     key: 'lot:40',
     lot_id: 40,
+    // The backend's own draft of a saved lot says it has no purchase.
+    purchase_id: null,
     sales: lot.sales
       .filter((sale) => sale.buyer_account_id !== null)
       .map((sale, index) => ({

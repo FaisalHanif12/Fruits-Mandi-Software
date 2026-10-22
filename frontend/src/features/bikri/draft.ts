@@ -15,7 +15,15 @@ import type { SaleInput } from '../../bindings/SaleInput';
 import { formatPaisa, type Paisa } from '../../shared/format';
 import type { EntryRow } from '../../shared/grid';
 import type { BikriDraftStores, HeaderState } from './draft-store';
-import { LOT, ON, PUKHTA_BUYER_CODE, PUKHTA_SELLER_CODE, SALE, type BikriDraft } from './types';
+import {
+  LOT,
+  ON,
+  OWN_GOODS_CODE,
+  PUKHTA_BUYER_CODE,
+  PUKHTA_SELLER_CODE,
+  SALE,
+  type BikriDraft,
+} from './types';
 
 /** Text or null: an empty field is sent as nothing, so the backend treats it as not typed. */
 function textOrNull(text: string | undefined): string | null {
@@ -43,6 +51,11 @@ export function headerInput(header: HeaderState): HeaderInput {
 /** Is this the one-time seller account (PRD FR-13.1)? */
 export function isPukhtaSeller(row: EntryRow): boolean {
   return row.picked?.[LOT.seller]?.code === PUKHTA_SELLER_CODE;
+}
+
+/** Is this a lot of the firm's own goods: the seller is the اپنا مال account (PRD FR-12.26)? */
+export function isOwnLot(row: EntryRow): boolean {
+  return row.picked?.[LOT.seller]?.code === OWN_GOODS_CODE;
 }
 
 /** Is this the one-time buyer account (PRD FR-13.1)? */
@@ -126,9 +139,24 @@ export function saleInput(row: EntryRow): SaleInput {
 export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: HeaderState): LotInput {
   const typed = row.typed;
   const lotId = savedId(typed[LOT.lotId]);
+  // A lot of own goods takes its goods from one purchase (PRD FR-12.26). There is no cash for the
+  // firm to give itself and no advance to deduct, so a new lot sends no cash and no advance tick
+  // whatever was typed on the row before the seller became اپنا مال. A saved lot sends back the
+  // cash it came with ("0"), so an edit that changes nothing sends the draft as the backend gave
+  // it. A freight typed here is sent as typed: the purchase's freight is already in its cost, so
+  // the backend warns (ERR_OWN_LOT_FREIGHT_IN_COST) and the cell shows it.
+  const own = isOwnLot(row);
+  const purchaseId = own ? savedId(typed[LOT.purchase]) : null;
   return {
     key: row.rowId,
     ...(lotId === null ? {} : { lot_id: lotId }),
+    // A saved lot says it has no purchase, as the backend's own draft of it does (an edit sends it
+    // back as it came); a new lot leaves the field out.
+    ...(purchaseId !== null
+      ? { purchase_id: purchaseId }
+      : lotId !== null
+        ? { purchase_id: null }
+        : {}),
     seller_account_id: row.picked?.[LOT.seller]?.id ?? null,
     pukhta: isPukhtaSeller(row)
       ? pukhtaInput(row, LOT.pukhtaUr, LOT.pukhtaEn, LOT.pukhtaPhone)
@@ -144,10 +172,11 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
     labour: chargeInput(typed[LOT.labour], typed[LOT.labourMethod]),
     munshiana: chargeInput(typed[LOT.munshiana], typed[LOT.munshianaMethod]),
     phone: chargeInput(typed[LOT.phone], typed[LOT.phoneMethod]),
-    cash_paid: textOrNull(typed[LOT.cash]),
+    cash_paid: own && lotId === null ? null : textOrNull(typed[LOT.cash]),
     store_rent: textOrNull(typed[LOT.storeRent]),
-    // The tick starts on (PRD FR-12.23); only "0" is an untick.
-    adjust_advance: typed[LOT.adjustAdvance] !== '0',
+    // The tick starts on (PRD FR-12.23); only "0" is an untick. Trip goods have no advance to
+    // deduct, and the backend stores and sends back false for them.
+    adjust_advance: own ? false : typed[LOT.adjustAdvance] !== '0',
     sales: sales.map(saleInput),
   };
 }

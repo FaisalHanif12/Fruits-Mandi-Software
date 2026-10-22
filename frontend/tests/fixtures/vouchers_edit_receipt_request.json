@@ -1,7 +1,7 @@
 {
   "confirm_cash_below_zero": false,
   "entry": {
-    "account_id": 19,
+    "account_id": 20,
     "amount": "9,000",
     "bank_account_id": null,
     "cheque_date": "",

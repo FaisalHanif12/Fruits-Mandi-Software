@@ -35,12 +35,12 @@ export const E2E26_REQUEST: BikriPreviewInput = requestOf(e2e26Request);
 
 /** The ids of Event 1 in the backend's test (the request files above). */
 export const IDS = {
-  rahim: 17,
-  karim: 18,
-  akram: 19,
-  arshad: 20,
-  pukhtaBuyer: 21,
-  pukhtaSeller: 22,
+  rahim: 18,
+  karim: 19,
+  akram: 20,
+  arshad: 21,
+  pukhtaBuyer: 22,
+  pukhtaSeller: 23,
   banana: 1,
   apple: 2,
   box: 1,

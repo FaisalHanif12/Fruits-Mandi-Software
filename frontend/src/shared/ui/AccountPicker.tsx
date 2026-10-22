@@ -85,6 +85,8 @@ const CODE_TEXT = /^\d{1,9}$/;
 
 const UNKNOWN_ID: Record<AccountScope, string> = {
   seller: 'accountpicker-unknown-seller',
+  // The seller field of a lot also offers اپنا مال; an unknown code is still an unknown seller.
+  lot_seller: 'accountpicker-unknown-seller',
   buyer: 'accountpicker-unknown-buyer',
   any: 'accountpicker-unknown-any',
   control: 'accountpicker-unknown-any',

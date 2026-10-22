@@ -15,15 +15,18 @@ import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared
 import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
-import { isPukhtaSeller } from '../draft';
+import { isOwnLot, isPukhtaSeller } from '../draft';
 import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
 import { LOT, SALE } from '../types';
 import { LotMoreToggle } from './LotMore';
+import { focusOwnPurchaseSoon } from './OwnLotPanel';
 import { focusPukhtaFieldsSoon } from './PukhtaFields';
 
-/** The last cell of a lot row that Enter stops at. */
-const LAST_STOP = LOT.cash;
+/** The last cell of a lot row that Enter stops at. An own goods lot has no نقد cell to type in. */
+function lastStopOf(row: EntryRow | undefined): string {
+  return row !== undefined && isOwnLot(row) ? LOT.munshiana : LOT.cash;
+}
 
 interface LotsSectionProps {
   view: GridView;
@@ -72,7 +75,19 @@ export function LotsSection({
           focusPukhtaFieldsSoon(cell.rowId);
           return true;
         }
-        if (cell.field !== LAST_STOP) return false;
+        // An own goods lot: Enter goes on to the choice of its purchase until it has one (FR-12.26).
+        if (
+          cell.field === LOT.seller &&
+          row !== undefined &&
+          isOwnLot(row) &&
+          (row.typed[LOT.purchase] ?? '') === '' &&
+          (row.typed[LOT.lotId] ?? '') === ''
+        ) {
+          stores.view.getState().select(cell.rowId);
+          focusOwnPurchaseSoon(cell.rowId);
+          return true;
+        }
+        if (cell.field !== lastStopOf(row)) return false;
         stores.view.getState().select(cell.rowId);
         stores.focusSaleLine(cell.rowId, 0, SALE.buyer);
         return true;

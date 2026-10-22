@@ -28,6 +28,11 @@ pub struct PartnerRecord {
     pub drawings_account_id: i64,
     /// Its code.
     pub drawings_account_code: String,
+    /// His gardens, trips and fruit account (control 0604, PRD FR-10.4 v1.6). 0 only for a partner
+    /// made without one, which the partner save never does.
+    pub venture_account_id: i64,
+    /// Its code (empty if he has none).
+    pub venture_account_code: String,
     /// Active.
     pub is_active: bool,
     /// Version.
@@ -45,13 +50,17 @@ pub struct NewPartner<'a> {
     pub capital_account_id: i64,
     /// His drawings account (already made).
     pub drawings_account_id: i64,
+    /// His gardens, trips and fruit account (already made, control 0604).
+    pub venture_account_id: i64,
 }
 
 const PARTNER_SELECT: &str = "SELECT p.id, p.name_ur, p.name_en, p.capital_account_id, ca.code,
-        p.drawings_account_id, da.code, p.is_active, p.version
+        p.drawings_account_id, da.code, COALESCE(p.venture_account_id, 0), COALESCE(va.code, ''),
+        p.is_active, p.version
      FROM partners p
      JOIN accounts ca ON ca.id = p.capital_account_id
-     JOIN accounts da ON da.id = p.drawings_account_id";
+     JOIN accounts da ON da.id = p.drawings_account_id
+     LEFT JOIN accounts va ON va.id = p.venture_account_id";
 
 fn partner_from(r: &Row<'_>) -> rusqlite::Result<PartnerRecord> {
     Ok(PartnerRecord {
@@ -62,8 +71,10 @@ fn partner_from(r: &Row<'_>) -> rusqlite::Result<PartnerRecord> {
         capital_account_code: r.get(4)?,
         drawings_account_id: r.get(5)?,
         drawings_account_code: r.get(6)?,
-        is_active: r.get(7)?,
-        version: r.get(8)?,
+        venture_account_id: r.get(7)?,
+        venture_account_code: r.get(8)?,
+        is_active: r.get(9)?,
+        version: r.get(10)?,
     })
 }
 
@@ -103,6 +114,20 @@ pub fn active_count(conn: &Connection) -> rusqlite::Result<i64> {
     )
 }
 
+/// True if the partner is in a garden or a trip that is still open (PRD A63: he cannot be made
+/// inactive then).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn in_open_venture(conn: &Connection, partner_id: i64) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM venture_partners vp JOIN ventures v ON v.id = vp.venture_id
+                        WHERE vp.partner_id = ?1 AND v.status = 'open')",
+        [partner_id],
+        |r| r.get(0),
+    )
+}
+
 /// Inserts a partner and returns his id. The partner has no share until `insert_share`.
 ///
 /// # Errors
@@ -115,15 +140,16 @@ pub fn insert(
 ) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO partners (created_at, created_by, updated_at, updated_by, name_ur, name_en,
-             capital_account_id, drawings_account_id, is_active)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, 1)",
+             capital_account_id, drawings_account_id, venture_account_id, is_active)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, 1)",
         params![
             now,
             user_id,
             partner.name_ur,
             partner.name_en,
             partner.capital_account_id,
-            partner.drawings_account_id
+            partner.drawings_account_id,
+            partner.venture_account_id
         ],
     )?;
     Ok(conn.last_insert_rowid())

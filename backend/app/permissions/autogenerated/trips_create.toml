@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-trips-create"
+description = "Enables the trips_create command without any pre-configured scope."
+commands.allow = ["trips_create"]
+
+[[permission]]
+identifier = "deny-trips-create"
+description = "Denies the trips_create command without any pre-configured scope."
+commands.deny = ["trips_create"]

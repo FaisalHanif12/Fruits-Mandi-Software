@@ -248,6 +248,9 @@ pub(super) struct Acc {
     pub buyer_credit: Paisa,
     pub buyer_cash: Paisa,
     pub buyer_total: Paisa,
+    /// C21: the cost of the trip goods sold (sum of the line costs). 0 without trip lots. Shown with
+    /// the result of the lot and never posted (PRD FR-12.26).
+    pub cost: Paisa,
 }
 
 impl Acc {
@@ -268,6 +271,7 @@ impl Acc {
             }
         }
         self.buyer_total = self.buyer_total.checked_add(line.buyer_total)?;
+        self.cost = self.cost.checked_add(line.cost_of_goods)?;
         Ok(())
     }
 
@@ -288,6 +292,7 @@ impl Acc {
         self.buyer_credit = self.buyer_credit.checked_add(lot.buyer_credit)?;
         self.buyer_cash = self.buyer_cash.checked_add(lot.buyer_cash)?;
         self.buyer_total = self.buyer_total.checked_add(lot.buyer_total)?;
+        self.cost = self.cost.checked_add(lot.cost)?;
         Ok(())
     }
 
@@ -320,7 +325,8 @@ impl Acc {
         self.gross.checked_sub(self.deductions()?)
     }
 
-    /// C9: `seller commission + buyer commission + لاگا + فون + rate difference`.
+    /// C9: `seller commission + buyer commission + لاگا + فون + rate difference`. The seller credit
+    /// of a trip lot is not income: it goes to the trip's partners (PRD FR-12.26, E2E-34).
     pub(super) fn shared_income(&self) -> Result<Paisa, MoneyError> {
         self.seller_comm
             .checked_add(self.buyer_comm)?

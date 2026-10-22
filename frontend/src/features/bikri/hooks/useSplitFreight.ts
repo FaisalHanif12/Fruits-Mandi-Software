@@ -4,7 +4,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { bikriSplitFreight } from '../api';
-import { plainRupees } from '../draft';
+import { isOwnLot, plainRupees } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT } from '../types';
 
@@ -16,7 +16,9 @@ interface SplitRequest {
 export function useSplitFreight() {
   return useMutation({
     mutationFn: async ({ stores, totalFreight }: SplitRequest) => {
-      const rows = stores.lots.getState().rows;
+      // The freight of a lot of own goods is already in the cost of its purchase (PRD FR-12.26),
+      // so the header's freight is split over the other lots only.
+      const rows = stores.lots.getState().rows.filter((row) => !isOwnLot(row));
       const parts = await bikriSplitFreight(
         totalFreight.trim(),
         rows.map((row) => ({ key: row.rowId, qty_received: (row.typed[LOT.qty] ?? '').trim() })),

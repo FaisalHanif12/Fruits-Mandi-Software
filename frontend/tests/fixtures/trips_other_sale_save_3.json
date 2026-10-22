@@ -1,0 +1,193 @@
+{
+  "id": 2,
+  "number": 1,
+  "version": 2,
+  "entry_id": 5,
+  "trip_closed": false,
+  "preview": {
+    "numbers": {
+      "amount": 200000,
+      "qty": 3,
+      "cost_paisa": 156000,
+      "cost_working": {
+        "message_id": "working-cost-of-goods",
+        "args": [
+          {
+            "name": "cost_left",
+            "value": {
+              "kind": "money",
+              "paisa": 260000
+            }
+          },
+          {
+            "name": "qty",
+            "value": {
+              "kind": "count",
+              "value": 3
+            }
+          },
+          {
+            "name": "qty_left",
+            "value": {
+              "kind": "count",
+              "value": 5
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 156000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "result_paisa": 44000,
+      "result_working": {
+        "message_id": "working-other-sale-result",
+        "args": [
+          {
+            "name": "amount",
+            "value": {
+              "kind": "money",
+              "paisa": 200000
+            }
+          },
+          {
+            "name": "cost",
+            "value": {
+              "kind": "money",
+              "paisa": 156000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 44000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "credits": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "share_bps": 4000,
+          "amount_paisa": 80000,
+          "working": {
+            "message_id": "working-venture-credit",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 200000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 4000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 80000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "share_bps": 3000,
+          "amount_paisa": 60000,
+          "working": {
+            "message_id": "working-venture-credit",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 200000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 3000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 60000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 3,
+            "code": "",
+            "name_ur": "ج",
+            "name_en": "Partner C"
+          },
+          "share_bps": 3000,
+          "amount_paisa": 60000,
+          "working": {
+            "message_id": "working-venture-credit",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 200000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 3000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 60000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      ],
+      "qty_left_after": 2,
+      "cost_left_after_paisa": 104000
+    },
+    "errors": [],
+    "warnings": []
+  }
+}

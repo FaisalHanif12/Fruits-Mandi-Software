@@ -57,6 +57,8 @@ export const LOT = {
   labourMethod: 'labourMethod',
   munshianaMethod: 'munshianaMethod',
   phoneMethod: 'phoneMethod',
+  // The purchase of an own goods lot (the seller is اپنا مال, PRD FR-12.26): its id, as text.
+  purchase: 'purchase',
   // A one-time seller (the پختہ کھاتہ account).
   pukhtaUr: 'pukhtaUr',
   pukhtaEn: 'pukhtaEn',
@@ -103,6 +105,9 @@ export const SALE = {
 
 /** The codes of the two one-time accounts (PRD FR-13.1) are kept by their own module. */
 export { PUKHTA_BUYER_CODE, PUKHTA_SELLER_CODE } from '../pukhta_khata/codes';
+
+/** The اپنا مال account: the seller of a lot of the firm's own goods (PRD FR-10.4, FR-12.26). */
+export { OWN_GOODS_CODE } from '../../shared/accounts';
 
 /** The typed value that means "on" in a tick of a row. */
 export const ON = '1';

@@ -3,7 +3,9 @@ import type { Paisa } from '../shared/format/money';
 import type { FreightPaidBy } from './FreightPaidBy';
 import type { RecordRef } from './RecordRef';
 import type { SavedLotCharge } from './SavedLotCharge';
+import type { SavedOwnLot } from './SavedOwnLot';
 import type { SavedPukhta } from './SavedPukhta';
+import type { SavedPurchaseRef } from './SavedPurchaseRef';
 import type { SavedSale } from './SavedSale';
 import type { SavedTotals } from './SavedTotals';
 
@@ -20,9 +22,17 @@ export type SavedLot = {
    */
   lot_no: number;
   /**
-   * The seller account.
+   * The seller account. For an own lot it is the اپنا مال account (030119998).
    */
   seller: RecordRef;
+  /**
+   * The purchase an own lot took its goods from (PRD FR-12.26). `null` for any other lot.
+   */
+  purchase: SavedPurchaseRef | null;
+  /**
+   * The cost, the result and the partners' parts of a trip lot. `null` for any other lot.
+   */
+  own: SavedOwnLot | null;
   /**
    * The one-time seller, for the پختہ کھاتہ account.
    */

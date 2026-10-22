@@ -38,10 +38,11 @@
           "value": "20"
         },
         "pukhta": null,
+        "purchase_id": null,
         "qty_received": "50",
         "sales": [
           {
-            "buyer_account_id": 19,
+            "buyer_account_id": 20,
             "buyer_comm": null,
             "buyer_rate": null,
             "key": "sale:1",
@@ -57,7 +58,7 @@
             "weight": null
           },
           {
-            "buyer_account_id": 20,
+            "buyer_account_id": 21,
             "buyer_comm": null,
             "buyer_rate": null,
             "key": "sale:2",
@@ -73,7 +74,7 @@
             "weight": null
           }
         ],
-        "seller_account_id": 17,
+        "seller_account_id": 18,
         "store_id": null,
         "store_rent": null,
         "weight_received": null

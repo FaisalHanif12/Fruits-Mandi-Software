@@ -31,6 +31,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { IDS } from '../helpers/bikri-data';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -126,7 +127,7 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
     // Three Enters on the new line, then the cursor is on the next line's buyer.
     await waitFor(() => {
       expect(plan.laterPreviews.at(-1)?.sales).toEqual([
-        expect.objectContaining({ buyer_account_id: 19, qty: '5', seller_rate: '560' }),
+        expect.objectContaining({ buyer_account_id: IDS.akram, qty: '5', seller_rate: '560' }),
         expect.anything(),
       ]);
     });
@@ -136,7 +137,11 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
     });
     const saved = plan.laterSaves[0];
     expect(saved).toMatchObject({ lotId: 40, date: '10-10-2026', confirm: false });
-    expect(saved?.sales[0]).toMatchObject({ buyer_account_id: 19, qty: '5', seller_rate: '560' });
+    expect(saved?.sales[0]).toMatchObject({
+      buyer_account_id: IDS.akram,
+      qty: '5',
+      seller_rate: '560',
+    });
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/stock');
     });

@@ -2,7 +2,9 @@
 // the selected lot or for the whole بکری ("پوری بکری", FR-12.1). Every line is the backend's
 // number, shown with formatPaisa, and has its ⓘ with the backend's working (FR-7.43, F42). A
 // net below zero is red with "بیوپاری کے ذمے" and is allowed (FR-12.7). The rate difference shows
-// only when it is not 0. Nothing is added up here (CLAUDE.md rule 1).
+// only when it is not 0. The cost, the trip partners' parts and the result of a lot of trip goods
+// are in the panel of that lot (OwnLotPanel), not here (PRD FR-12.26). Nothing is added up here
+// (CLAUDE.md rule 1).
 
 import { Localized } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';

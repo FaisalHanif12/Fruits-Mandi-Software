@@ -47,6 +47,19 @@ export function isPositivePaisa(amount: Paisa): boolean {
   return paisaNumber(amount) > 0;
 }
 
+/**
+ * True when the amount is below zero. A question about an amount the backend sent (is this trip
+ * making a loss?), never arithmetic: the screen colours it red and also says so in words.
+ */
+export function isNegativePaisa(amount: Paisa): boolean {
+  return paisaNumber(amount) < 0;
+}
+
+/** True when the amount is exactly zero: a row or a note that has nothing to say is left out. */
+export function isZeroPaisa(amount: Paisa): boolean {
+  return paisaNumber(amount) === 0;
+}
+
 /** Number grouping on screen (PRD Section 21): 1,316,040 or 13,16,040. */
 export type Grouping = 'international' | 'lakh';
 

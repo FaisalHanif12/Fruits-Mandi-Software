@@ -76,6 +76,7 @@ import { changedCellWords } from '../edit-view';
 import { editSource } from '../preview-source';
 import { HeaderCard } from '../components/HeaderCard';
 import { LotMore } from '../components/LotMore';
+import { OwnLotPanel } from '../components/OwnLotPanel';
 import { LotsSection } from '../components/LotsSection';
 import { ProblemList } from '../components/ProblemList';
 import { ActiveLine, SalesSection } from '../components/SalesSection';
@@ -88,11 +89,11 @@ import {
   useBikriDraft,
   type BikriDraftStores,
 } from '../draft-store';
-import { buildDraft, isFilled, isPukhtaSeller } from '../draft';
+import { buildDraft, isFilled, isOwnLot, isPukhtaSeller } from '../draft';
 import { buildGridViews } from '../grid-views';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
-import { LOT_GRID_FIELD, problemsOf, type Problem } from '../problems';
+import { LOT_GRID_FIELD, LOT_OWN_FIELD, problemsOf, type Problem } from '../problems';
 import { LOT, SALE } from '../types';
 
 /** The parts of the screen the keyboard or the mouse can be in, for the party card. */
@@ -375,7 +376,8 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     (problem) =>
       problem.where.kind === 'lot' &&
       problem.where.lot === lotIndex &&
-      LOT_GRID_FIELD[problem.where.sub] === undefined,
+      LOT_GRID_FIELD[problem.where.sub] === undefined &&
+      !LOT_OWN_FIELD.has(problem.where.sub),
   );
   const usesWeight =
     preview?.lots.find((lot) => lot.key === lotKey)?.sold_by_weight === true ||
@@ -596,6 +598,9 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
               cellChanged={lotChanged}
               canRemoveRow={edit === null ? undefined : isNewLot}
             />
+            {lotRow === undefined || !isOwnLot(lotRow) ? null : (
+              <OwnLotPanel row={lotRow} lotIndex={lotIndex} error={formError} lot={lotPreview} />
+            )}
             {lotRow === undefined ? null : (
               <LotMore
                 row={lotRow}

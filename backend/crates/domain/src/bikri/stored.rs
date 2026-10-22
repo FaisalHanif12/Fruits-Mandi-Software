@@ -140,6 +140,9 @@ pub struct StoredSale {
     pub buyer_comm: StoredCharge,
     /// لاگا.
     pub laga: StoredCharge,
+    /// C21: the cost of the own goods the line sold, kept exactly (PRD FR-12.20). 0 on a line of
+    /// any other lot.
+    pub cost: Paisa,
 }
 
 /// A lot charge (مزدوری, منشیانہ, فون) as the lot stored it.
@@ -198,6 +201,8 @@ pub struct StoredIdentity {
     pub item_id: i64,
     /// The person key of a one-time seller, `None` for any other seller.
     pub person_key: Option<String>,
+    /// The purchase an own lot takes its goods from, `None` for any other lot.
+    pub purchase_id: Option<i64>,
 }
 
 /// A stored lot, as an edit or a later sale needs to know it.

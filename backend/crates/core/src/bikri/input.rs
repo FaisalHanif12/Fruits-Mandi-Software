@@ -297,10 +297,20 @@ pub struct LotInput {
     #[serde(default)]
     #[ts(type = "number | null", optional)]
     pub lot_id: Option<i64>,
-    /// The seller. The پختہ کھاتہ (بیوپاری) account for a one-time seller.
+    /// The seller. The پختہ کھاتہ (بیوپاری) account for a one-time seller, and the اپنا مال account
+    /// (030119998) for a lot of the firm's own goods (PRD FR-12.26).
     #[serde(default)]
     #[ts(type = "number | null")]
     pub seller_account_id: Option<i64>,
+    /// The purchase an own lot takes its goods from (PRD FR-12.26). Required when the seller is
+    /// اپنا مال, and refused (`ERR_FORMAT_INVALID` on `lots[i].purchase_id`) for any other seller.
+    /// Item and packing come from the purchase: an empty item or packing is filled from it, and a
+    /// different one is refused. The lot's `qty_received` is the نگ taken from the purchase, and
+    /// the lines must sell exactly that many (`ERR_OWN_LOT_NOT_FULLY_SOLD`); more than the stock
+    /// left is `ERR_QTY_EXCEEDS_LOT`. نقد and the advance tick stay 0 on an own lot.
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub purchase_id: Option<i64>,
     /// The one-time seller, for the پختہ کھاتہ (بیوپاری) account.
     #[serde(default)]
     pub pukhta: Option<PukhtaInput>,

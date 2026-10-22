@@ -44,6 +44,13 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
         Some(day) => (Some(day.clone()), Some(day)),
         None => (from, to),
     };
+    let own_filter = mandi_db::purchases::ListFilter {
+        trip_id: None,
+        from: from.clone(),
+        to: to.clone(),
+        item_id: input.item_id,
+        state: None,
+    };
     let filter = StockFilter {
         from,
         to,
@@ -102,9 +109,30 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                     .collect(),
             });
         }
+        // The trip goods with stock left, marked اپنا مال with their trip (PRD FR-12.25). A seller
+        // filter leaves them out unless it is the اپنا مال account.
+        let own_account = mandi_db::accounts::id_by_code(conn, super::shared::OWN_GOODS_CODE)?;
+        let own_rows = if input.seller_id.is_none() || input.seller_id == own_account {
+            crate::purchases::stock_rows(conn, &own_filter, today)?
+        } else {
+            Vec::new()
+        };
+        let mut own_balance_total = 0_i64;
+        let mut own_cost_left = mandi_domain::core::money::Paisa::ZERO;
+        for row in &own_rows {
+            own_balance_total = own_balance_total
+                .checked_add(row.balance)
+                .ok_or_else(|| data("the quantity of the stock does not fit"))?;
+            own_cost_left = own_cost_left
+                .checked_add(row.cost_left_paisa)
+                .map_err(crate::error::money_error)?;
+        }
         Ok(StockList {
             rows,
             balance_total,
+            own_rows,
+            own_balance_total,
+            own_cost_left_paisa: own_cost_left,
         })
     })
 }
@@ -186,7 +214,9 @@ pub fn write_off(
         let move_id = edit_repo::insert_move(
             tx,
             &NewMove {
-                lot_id: state.id,
+                lot_id: Some(state.id),
+                purchase_id: None,
+                cost_paisa: 0,
                 entry_id: None,
                 move_date: &today.to_iso(),
                 kind: "written_off",
@@ -262,7 +292,9 @@ pub fn write_off_undo(
         let reversal_move_id = edit_repo::insert_move(
             tx,
             &NewMove {
-                lot_id: state.id,
+                lot_id: Some(state.id),
+                purchase_id: None,
+                cost_paisa: 0,
                 entry_id: None,
                 move_date: &write_off.move_date,
                 kind: "reversal",

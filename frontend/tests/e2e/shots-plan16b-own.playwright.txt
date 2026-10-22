@@ -1,0 +1,115 @@
+// Screenshots of the lot of trip goods in the sale book (plan 16b, T4b): the sale book with the
+// lot of E2E-34 and its panel, the saved view (E2E-34 and E2E-41), the goods left list with the
+// trip purchase, its write-off box and the edit, in both languages at the three window sizes,
+// taken from the development page /dev/bikri?own with the Playwright tool. Every answer is the
+// backend's real file. It is a developer tool: run it with the Vite dev server up
+// (`pnpm --filter frontend dev`). It also measures sideways overflow (NFR-USE-15): the screen
+// area, and every table or grid inside it, must not scroll sideways.
+// Usage with the Playwright MCP tool: browser_run_code_unsafe with `filename` set to this file. (It
+// is a snippet for that tool, not a module, so it is kept as .txt and the linter does not read it.
+// The Windows check is the spec 23.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/plan16b';
+  const BASE = 'http://localhost:5173/#/dev/bikri';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const ONLY = null;
+  const settle = (ms) => page.waitForTimeout(ms);
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type !== 'beforeunload') add(type, ...rest);
+    };
+  });
+  const SCENARIOS = {
+    'own-book': { query: '?own', run: async () => settle(1800) },
+    // The panel of trip goods under the lots grid: its start (the purchase choice and the facts of
+    // the purchase), then its end (the commission, the credit with each partner's part, the cost
+    // and the result).
+    'own-book-panel': {
+      query: '?own',
+      run: async () => {
+        await settle(1800);
+        await page.evaluate(() => {
+          document.querySelector('[data-own-lot-for]')?.closest('section')?.scrollIntoView({ block: 'start' });
+        });
+        await settle(400);
+      },
+    },
+    'own-book-numbers': {
+      query: '?own',
+      run: async () => {
+        await settle(1800);
+        await page.evaluate(() => {
+          document.querySelector('[data-own-lot-for]')?.closest('section')?.scrollIntoView({ block: 'end' });
+        });
+        await settle(400);
+      },
+    },
+    'own-saved': { query: '?own&id=1', run: async () => settle(1500) },
+    'own-saved-e41': { query: '?own=41&id=1', run: async () => settle(1500) },
+    'own-edit': { query: '?own&id=1&edit=4', run: async () => settle(2000) },
+    'own-stock': { query: '?own&stock', run: async () => settle(1200) },
+    'own-stock-card': {
+      query: '?own&stock',
+      run: async () => {
+        await settle(1200);
+        await page.locator('.ag-row[row-id="1"] [col-id="number"]').first().click();
+        await settle(500);
+      },
+    },
+    'own-stock-write-off': {
+      query: '?own&stock',
+      run: async () => {
+        await settle(1200);
+        await page.locator('.ag-row[row-id="1"] [col-id="number"]').first().click();
+        await settle(400);
+        await page.locator('main button:has(svg.lucide-ban)').first().click();
+        await settle(500);
+      },
+    },
+  };
+  const report = [];
+  for (const [name, scenario] of Object.entries(SCENARIOS)) {
+    if (ONLY !== null && !ONLY.includes(name)) continue;
+    for (const language of ['ur', 'en']) {
+      for (const [w, h] of SIZES) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto(`${BASE}${scenario.query}`);
+        await page.reload();
+        await settle(700);
+        if (language === 'en') await page.keyboard.press('Alt+L');
+        await settle(300);
+        try {
+          await scenario.run();
+        } catch (failure) {
+          report.push(`${name} ${language} ${w}x${h} FAILED ${String(failure).slice(0, 120)}`);
+        }
+        const overflow = await page.evaluate(() => {
+          const found = [];
+          const main = document.querySelector('main');
+          if (main && main.scrollWidth > main.clientWidth + 1)
+            found.push(`main ${main.scrollWidth}>${main.clientWidth}`);
+          for (const el of document.querySelectorAll(
+            'main .overflow-x-auto, main .ag-body-viewport, main .ag-center-cols-viewport, main .ag-body-horizontal-scroll-viewport',
+          )) {
+            if (el.scrollWidth > el.clientWidth + 1)
+              found.push(
+                `${el.className.toString().slice(0, 40)} ${el.scrollWidth}>${el.clientWidth}`,
+              );
+          }
+          return found;
+        });
+        await page.screenshot({ path: `${OUT}/${name}__${language}__${w}x${h}.png` });
+        report.push(
+          `${name} ${language} ${w}x${h}${overflow.length ? ' OVERFLOW ' + overflow.join('; ') : ''}`,
+        );
+      }
+    }
+  }
+  return report.join('\n');
+}
