@@ -43,6 +43,11 @@ impl NumberStyle {
         self.digits(format_count(value, self.grouping))
     }
 
+    /// A whole number with no grouping commas, for a year: `2026`, not `2,026`.
+    pub(crate) fn plain(self, value: i64) -> String {
+        self.digits(value.to_string())
+    }
+
     /// A day `YYYY-MM-DD` as `DD-MM-YYYY` (NFR-URD-16).
     pub(crate) fn date(self, iso: &str) -> Result<String, ReportsError> {
         let day = BusinessDate::parse_iso(iso)

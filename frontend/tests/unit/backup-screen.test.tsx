@@ -193,6 +193,7 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
               at: '2026-10-10T09:02:00.000Z',
               check_failed: true,
               file: 'mandi-20261010T090100000Z.mbk',
+              reason: null,
             },
           ],
         },
@@ -333,12 +334,36 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
             size_bytes: 0,
             queued: false,
             code: 'ERR_BACKUP_USB_NOT_PRESENT',
+            reason: null,
           },
         ],
       });
       await user.click(button('backup-now'));
       expect(
         await screen.findByText(named(message(language, 'err-backup-usb-not-present'))),
+      ).toBeInTheDocument();
+    });
+    it('a cloud copy that failed shows the real reason of the failure', async () => {
+      const { user } = await open();
+      vi.mocked(backupApi.backupNow).mockResolvedValueOnce({
+        ...NOW_QUEUED,
+        results: [
+          {
+            kind: 'cloud',
+            ok: false,
+            file: null,
+            size_bytes: 0,
+            queued: false,
+            code: 'ERR_BACKUP_CLOUD_FAILED',
+            reason: 'refused',
+          },
+        ],
+      });
+      await user.click(button('backup-now'));
+      expect(
+        await screen.findByText(
+          named(message(language, 'err-backup-cloud-failed', { reason: 'refused' })),
+        ),
       ).toBeInTheDocument();
     });
   });

@@ -57,6 +57,17 @@ export type ReportCell =
       iso: string;
     }
   | {
+      type: 'month';
+      /**
+       * The year, for example 2026.
+       */
+      year: number;
+      /**
+       * The month, 1 to 12.
+       */
+      month: number;
+    }
+  | {
       type: 'party';
       /**
        * The account.

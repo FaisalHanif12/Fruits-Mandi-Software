@@ -20,6 +20,85 @@ pub(crate) const COL_CITY: &str = "report-col-city";
 pub(crate) const COL_HEAD: &str = "report-col-head";
 pub(crate) const COL_OPENING_DATE: &str = "report-col-opening-date";
 
+// Column headings of the Sales, Collections and Business groups (plan 20, step B3).
+pub(crate) const COL_BUYER: &str = "report-col-buyer";
+pub(crate) const COL_SELLER: &str = "report-col-seller";
+pub(crate) const COL_ITEM: &str = "report-col-item";
+pub(crate) const COL_QTY: &str = "report-col-qty";
+pub(crate) const COL_RATE: &str = "report-col-rate";
+pub(crate) const COL_VALUE: &str = "report-col-value";
+pub(crate) const COL_BUYER_TOTAL: &str = "report-col-buyer-total";
+pub(crate) const COL_GROSS: &str = "report-col-gross";
+pub(crate) const COL_FREIGHT: &str = "report-col-freight";
+pub(crate) const COL_COMMISSION: &str = "report-col-commission";
+pub(crate) const COL_LABOUR: &str = "report-col-labour";
+pub(crate) const COL_MUNSHIANA: &str = "report-col-munshiana";
+pub(crate) const COL_CASH_PAID: &str = "report-col-cash-paid";
+pub(crate) const COL_STORE_RENT: &str = "report-col-store-rent";
+pub(crate) const COL_PHONE_CHARGE: &str = "report-col-phone-charge";
+pub(crate) const COL_DEDUCTIONS: &str = "report-col-deductions";
+pub(crate) const COL_NET: &str = "report-col-net";
+pub(crate) const COL_AVG_RATE: &str = "report-col-avg-rate";
+pub(crate) const COL_SELLER_COMM: &str = "report-col-seller-comm";
+pub(crate) const COL_BUYER_COMM: &str = "report-col-buyer-comm";
+pub(crate) const COL_LAGA: &str = "report-col-laga";
+pub(crate) const COL_TOTAL_COMM: &str = "report-col-total-comm";
+pub(crate) const COL_ADDA: &str = "report-col-adda";
+pub(crate) const COL_TRUCKS: &str = "report-col-trucks";
+pub(crate) const COL_LOTS: &str = "report-col-lots";
+pub(crate) const COL_SIDE: &str = "report-col-side";
+pub(crate) const COL_PERSON: &str = "report-col-person";
+pub(crate) const COL_PHONE: &str = "report-col-phone";
+pub(crate) const COL_OLDEST_DATE: &str = "report-col-oldest-date";
+pub(crate) const COL_DAYS: &str = "report-col-days";
+pub(crate) const COL_AGE_0_7: &str = "report-col-age-0-7";
+pub(crate) const COL_AGE_8_30: &str = "report-col-age-8-30";
+pub(crate) const COL_AGE_31_90: &str = "report-col-age-31-90";
+pub(crate) const COL_AGE_91: &str = "report-col-age-91";
+pub(crate) const COL_COLLECTOR: &str = "report-col-collector";
+pub(crate) const COL_SECTION: &str = "report-col-section";
+pub(crate) const COL_PAYABLE: &str = "report-col-payable";
+pub(crate) const COL_ADVANCE_OPEN: &str = "report-col-advance-open";
+pub(crate) const COL_OWES_FIRM: &str = "report-col-owes-firm";
+pub(crate) const COL_LAST_DATE: &str = "report-col-last-date";
+pub(crate) const COL_GIVEN: &str = "report-col-given";
+pub(crate) const COL_RETURNED: &str = "report-col-returned";
+pub(crate) const COL_ADJUSTED: &str = "report-col-adjusted";
+pub(crate) const COL_OPEN: &str = "report-col-open";
+pub(crate) const COL_BILL_DATE: &str = "report-col-bill-date";
+pub(crate) const COL_PERIOD: &str = "report-col-period";
+pub(crate) const COL_AMOUNT: &str = "report-col-amount";
+pub(crate) const COL_INCOME_SHARE: &str = "report-col-income-share";
+pub(crate) const COL_EXPENSE_SHARE: &str = "report-col-expense-share";
+pub(crate) const COL_PROFIT_SHARE: &str = "report-col-profit-share";
+pub(crate) const COL_TAKEN: &str = "report-col-taken";
+pub(crate) const COL_PARTNER_NET: &str = "report-col-partner-net";
+pub(crate) const COL_PARTNER: &str = "report-col-partner";
+
+pub(crate) const COL_STATUS: &str = "report-col-status";
+
+// The state of a line of R9.
+pub(crate) const STATUS_PAID: &str = "report-status-paid";
+pub(crate) const STATUS_DUE: &str = "report-status-due";
+pub(crate) const STATUS_CANCELLED: &str = "report-status-cancelled";
+
+// Labels of the lines of R9 and the sections of R24.
+pub(crate) const SIDE_BUYER: &str = "report-side-buyer";
+pub(crate) const SIDE_SELLER: &str = "report-side-seller";
+pub(crate) const SECTION_PAYABLE: &str = "report-section-payable";
+pub(crate) const SECTION_OWES_FIRM: &str = "report-section-owes-firm";
+
+// Summary lines of R30.
+pub(crate) const R30_INCOME: &str = "report-r30-income";
+pub(crate) const R30_EXPENSES: &str = "report-r30-expenses";
+pub(crate) const R30_PROFIT: &str = "report-r30-profit";
+
+// Filters echoed in a print header, shown as the label alone.
+pub(crate) const FILTER_PAID: &str = "report-filter-paid";
+pub(crate) const FILTER_DUE: &str = "report-filter-due";
+pub(crate) const FILTER_BY_DAY: &str = "report-filter-by-day";
+pub(crate) const FILTER_BY_MONTH: &str = "report-filter-by-month";
+
 // Labels of summary and total lines.
 pub(crate) const TOTAL: &str = "report-total";
 pub(crate) const OPENING_BALANCE: &str = "report-opening-balance";

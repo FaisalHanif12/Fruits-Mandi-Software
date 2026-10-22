@@ -54,6 +54,17 @@ export type ReportPrintCell =
       text: string;
     }
   | {
+      type: 'month';
+      /**
+       * The year as printed.
+       */
+      year: string;
+      /**
+       * The month, 1 to 12.
+       */
+      month: number;
+    }
+  | {
       type: 'party';
       /**
        * The account.

@@ -3,7 +3,10 @@
     {
       "code": "ERR_OUT_OF_RANGE",
       "field": "closing_time",
-      "values": {}
+      "values": {
+        "max": "23:59",
+        "min": "00:00"
+      }
     },
     {
       "code": "ERR_REQUIRED",

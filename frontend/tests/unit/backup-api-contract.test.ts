@@ -158,7 +158,15 @@ describe('the answers carry exactly the fields of the generated types', () => {
     for (const report of [NOW_ALL_OK, NOW_QUEUED]) {
       expect(keysOf(report)).toEqual(['check_ms', 'results', 'snapshot_ms', 'started_at']);
       for (const result of report.results) {
-        expect(keysOf(result)).toEqual(['code', 'file', 'kind', 'ok', 'queued', 'size_bytes']);
+        expect(keysOf(result)).toEqual([
+          'code',
+          'file',
+          'kind',
+          'ok',
+          'queued',
+          'reason',
+          'size_bytes',
+        ]);
       }
     }
   });

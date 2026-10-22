@@ -4,4 +4,14 @@
  * Which filter boxes a report shows (PRD FR-19.1, FR-19.10).
  */
 export type ReportFilterKind =
-  'date_range' | 'as_of' | 'party' | 'seller' | 'zamindar' | 'item' | 'city' | 'adda' | 'detail';
+  | 'date_range'
+  | 'as_of'
+  | 'party'
+  | 'seller'
+  | 'zamindar'
+  | 'item'
+  | 'city'
+  | 'adda'
+  | 'detail'
+  | 'status'
+  | 'group_by';

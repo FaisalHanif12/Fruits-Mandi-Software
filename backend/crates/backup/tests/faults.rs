@@ -212,9 +212,28 @@ fn no_internet_queues_the_cloud_copy_and_it_catches_up_when_the_internet_is_back
         .unwrap();
     assert!(!cloud.ok && cloud.queued);
     assert_eq!(cloud.code, Some(BackupCode::ErrBackupCloudFailed));
+    // The screen picks its words from the reason (offline here), not from a guess.
+    assert_eq!(cloud.reason, Some(mandi_backup::CloudReason::Offline));
     assert!(first_ok(&report, BackupKind::Local) && first_ok(&report, BackupKind::Usb));
     let status = rig.service.status().unwrap();
     assert_eq!(status.queue_len, 1);
+    let cloud_problem = status
+        .errors
+        .iter()
+        .find(|e| e.kind == BackupKind::Cloud)
+        .unwrap();
+    assert_eq!(
+        cloud_problem.reason,
+        Some(mandi_backup::CloudReason::Offline)
+    );
+    assert!(
+        report
+            .results
+            .iter()
+            .filter(|r| r.kind != BackupKind::Cloud)
+            .all(|r| r.reason.is_none()),
+        "only a cloud failure has a reason"
+    );
     assert_eq!(status.cloud_level, CloudLevel::Red, "never uploaded");
     assert_eq!(
         files_under(&rig.backups.join("outbox")).len(),

@@ -61,6 +61,10 @@
      past the thirtieth scroll inside it and only the rows in view are drawn (Code Standards F34). */
   --list-region-h: 360px;
 
+  /* The slot after a figure that holds its short word (a balance's side): figures keep one right
+     edge whatever the word is (plan 20, NFR-USE-19). */
+  --unit-slot: 56px;
+
   /* The chart tree always shows at least eight rows (plan 07). */
   --tree-min-h: 360px;
   --tree-view-h: 60vh;
@@ -140,6 +144,9 @@
   /* The thin rule of a bill (a ledger line) and the heavier rule under a total. */
   --print-rule: 0.25mm;
   --print-rule-strong: 0.5mm;
+
+  /* The slot after a printed figure that holds the side word of a balance (plan 20). */
+  --print-unit-slot: 12mm;
 }
 
 @theme {

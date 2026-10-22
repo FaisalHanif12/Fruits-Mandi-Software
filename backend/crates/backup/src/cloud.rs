@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 
-use crate::error::{BackupCode, BackupError};
+use crate::error::{BackupCode, BackupError, CloudReason};
 use crate::io::{CHUNK, IoHook, copy_atomic, partial_path, remove_quietly};
 use crate::model::BackupKind;
 use crate::secrets::{SecretName, SecretStore};
@@ -34,13 +34,13 @@ impl CloudError {
     /// The error for the screen, with a short `reason` value.
     pub fn into_backup_error(self) -> BackupError {
         let (reason, detail) = match &self {
-            CloudError::Offline(d) => ("offline", d.clone()),
-            CloudError::Refused(d) => ("refused", d.clone()),
-            CloudError::NotFound => ("not_found", "not found".to_owned()),
+            CloudError::Offline(d) => (CloudReason::Offline, d.clone()),
+            CloudError::Refused(d) => (CloudReason::Refused, d.clone()),
+            CloudError::NotFound => (CloudReason::NotFound, "not found".to_owned()),
         };
         BackupError::new(BackupCode::ErrBackupCloudFailed, detail).with(
             "reason",
-            mandi_core::error::ErrorValue::Text(reason.to_owned()),
+            mandi_core::error::ErrorValue::Text(reason.as_text().to_owned()),
         )
     }
 }

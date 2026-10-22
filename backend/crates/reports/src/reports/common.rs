@@ -7,9 +7,10 @@ use chrono::{DateTime, Duration, Utc};
 use mandi_core::accounts::{Balance, BalanceSide};
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::{MoneyError, Paisa};
+use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
-use super::model::{Cell, Names, PartyRef, RowSource, SourceKind};
+use super::model::{Cell, Column, ColumnKind, Names, PartyRef, RowSource, SourceKind};
 use crate::error::ReportsError;
 
 /// Pakistan time is UTC+5 all year (Code Standards G9).
@@ -206,4 +207,145 @@ pub(crate) fn source_of(source_type: &str, source_id: i64, entry_id: i64) -> Row
         _ => (SourceKind::Entry, entry_id),
     };
     RowSource { kind, id }
+}
+
+/// The live-entry condition on `journal_entries e` (a posted entry that is not a reversal and is
+/// not reversed). The same predicate as `mandi_db::matching`, kept here because that constant is
+/// private to the db crate. A reversed entry and its reversal cancel each other, so neither is a
+/// real posting.
+pub(crate) const LIVE: &str = "e.status = 'posted' AND e.reverses_entry_id IS NULL
+    AND NOT EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id AND r.status = 'posted')";
+
+/// A column of a report.
+pub(crate) fn col(key: &str, title: &str, kind: ColumnKind) -> Column {
+    Column {
+        key: key.to_owned(),
+        title_id: title.to_owned(),
+        kind,
+    }
+}
+
+/// A count of rows as the `i64` of the contract.
+pub(crate) fn count_of(len: usize) -> i64 {
+    i64::try_from(len).unwrap_or(i64::MAX)
+}
+
+/// A name cell from two stored names, or an empty cell when the record has none.
+pub(crate) fn names_cell(ur: Option<String>, en: Option<String>) -> Cell {
+    let ur = ur.unwrap_or_default();
+    let en = en.unwrap_or_default();
+    if ur.trim().is_empty() && en.trim().is_empty() {
+        Cell::Empty
+    } else {
+        Cell::Names {
+            names: Names { ur, en },
+        }
+    }
+}
+
+/// A text cell, or an empty cell for a blank text.
+pub(crate) fn text_cell(text: Option<String>) -> Cell {
+    match text.map(|t| t.trim().to_owned()).filter(|t| !t.is_empty()) {
+        Some(text) => Cell::Text { text },
+        None => Cell::Empty,
+    }
+}
+
+/// A date cell from a stored `YYYY-MM-DD`, or an empty cell.
+pub(crate) fn date_cell(iso: Option<String>) -> Cell {
+    iso.map_or(Cell::Empty, |iso| Cell::Date { iso })
+}
+
+/// A one-time person inside a پختہ کھاتہ account shows with his own names, the account's code,
+/// no short code (the serial 9999 is reserved) and his person key (PRD FR-13.5, FR-19.13). A
+/// line that names nobody keeps the account's names.
+pub(crate) fn pukhta_party(
+    mut party: PartyRef,
+    person_key: Option<String>,
+    name_ur: Option<&str>,
+    name_en: Option<&str>,
+) -> PartyRef {
+    if person_key.is_none() {
+        return party;
+    }
+    party.person_key = person_key;
+    party.short_code = None;
+    let ur = name_ur.map(str::trim).filter(|t| !t.is_empty());
+    let en = name_en.map(str::trim).filter(|t| !t.is_empty());
+    if ur.is_some() || en.is_some() {
+        party.name_ur = ur.or(en).unwrap_or_default().to_owned();
+        party.name_en = en.or(ur).unwrap_or_default().to_owned();
+    }
+    party
+}
+
+/// Adds money with a check. A sum that does not fit is `ERR_OVERFLOW`, never a wrap-around.
+pub(crate) fn add(total: &mut Paisa, amount: Paisa) -> Result<(), MoneyError> {
+    *total = total.checked_add(amount)?;
+    Ok(())
+}
+
+/// A WHERE clause made of fixed fragments and bound values, with a fragment only for the filters
+/// that are set. A fragment such as `(?1 IS NULL OR col >= ?1)` hides the column from the query
+/// planner, so a date range would scan every row; leaving the fragment out lets the planner use
+/// the index of the column (Code Standards B18). Every fragment is a constant of this crate; a
+/// value from the screen is only ever bound as a parameter (Code Standards B14).
+#[derive(Debug, Default, Clone)]
+pub struct Conds {
+    parts: Vec<&'static str>,
+    args: Vec<Value>,
+}
+
+impl Conds {
+    /// An empty clause.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// A fragment with no value, for example `s.is_active = 1`.
+    pub fn always(&mut self, fragment: &'static str) -> &mut Self {
+        self.parts.push(fragment);
+        self
+    }
+
+    /// A fragment with one `?`, only when the filter is set.
+    pub fn id(&mut self, fragment: &'static str, value: Option<i64>) -> &mut Self {
+        if let Some(value) = value {
+            self.parts.push(fragment);
+            self.args.push(Value::Integer(value));
+        }
+        self
+    }
+
+    /// A fragment with one `?`, only when the text is set.
+    pub fn text(&mut self, fragment: &'static str, value: Option<&str>) -> &mut Self {
+        if let Some(value) = value {
+            self.parts.push(fragment);
+            self.args.push(Value::Text(value.to_owned()));
+        }
+        self
+    }
+
+    /// The fragments joined with `AND`; `1` when there are none.
+    pub fn sql(&self) -> String {
+        if self.parts.is_empty() {
+            "1".to_owned()
+        } else {
+            self.parts.join(" AND ")
+        }
+    }
+
+    /// The values to bind, in order.
+    pub fn args(&self) -> &[Value] {
+        &self.args
+    }
+
+    /// The values followed by a limit and an offset, for a page query that ends with
+    /// `LIMIT ? OFFSET ?`.
+    pub fn page_args(&self, limit: i64, offset: i64) -> Vec<Value> {
+        let mut all = self.args.clone();
+        all.push(Value::Integer(limit));
+        all.push(Value::Integer(offset));
+        all
+    }
 }

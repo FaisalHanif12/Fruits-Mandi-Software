@@ -4,4 +4,14 @@
  * What kind of value a column holds. The screen picks the grid column type from it.
  */
 export type ReportColumnKind =
-  'text' | 'label' | 'doc' | 'number' | 'money' | 'balance' | 'date' | 'party' | 'names' | 'detail';
+  | 'text'
+  | 'label'
+  | 'doc'
+  | 'number'
+  | 'money'
+  | 'balance'
+  | 'date'
+  | 'month'
+  | 'party'
+  | 'names'
+  | 'detail';

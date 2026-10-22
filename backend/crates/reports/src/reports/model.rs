@@ -16,6 +16,27 @@ use ts_rs::TS;
 /// The reports of the engine. The PRD IDs of 19.2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 pub enum ReportId {
+    /// Full sales register, مکمل بکری.
+    #[serde(rename = "R2")]
+    R2,
+    /// Cash sales, نقدی.
+    #[serde(rename = "R3")]
+    R3,
+    /// Credit sales, ادھاری.
+    #[serde(rename = "R4")]
+    R4,
+    /// Seller summary, بکری تفصیل / روزنامچہ بکری.
+    #[serde(rename = "R6")]
+    R6,
+    /// Item-wise sales, قسم مال وار بکری.
+    #[serde(rename = "R7")]
+    R7,
+    /// Truck stand report, اڈا رپورٹ.
+    #[serde(rename = "R8")]
+    R8,
+    /// One-time parties register, پختہ کھاتہ رپورٹ.
+    #[serde(rename = "R9")]
+    R9,
     /// Daily journal, روزنامچہ.
     #[serde(rename = "R11")]
     R11,
@@ -37,12 +58,43 @@ pub enum ReportId {
     /// Opening trial, اوپن ٹرائل.
     #[serde(rename = "R19")]
     R19,
+    /// Buyer dues, وصولی / اگراہی رپورٹ.
+    #[serde(rename = "R20")]
+    R20,
+    /// Buyer dues by city, اگراہی بحساب شہر.
+    #[serde(rename = "R21")]
+    R21,
+    /// Buyer dues by collector, اگراہی بحساب اگراہی والا.
+    #[serde(rename = "R22")]
+    R22,
+    /// Seller payables, ادائیگی باقی.
+    #[serde(rename = "R24")]
+    R24,
+    /// Advances, پیشگی کھاتہ.
+    #[serde(rename = "R26")]
+    R26,
+    /// Bill series, بیجک سیریز.
+    #[serde(rename = "R27")]
+    R27,
+    /// Income report, آمدن رپورٹ.
+    #[serde(rename = "R28")]
+    R28,
+    /// Profit and partner split, منافع و تقسیم.
+    #[serde(rename = "R30")]
+    R30,
 }
 
 impl ReportId {
     /// The PRD ID as text: `R11`.
     pub const fn code(self) -> &'static str {
         match self {
+            ReportId::R2 => "R2",
+            ReportId::R3 => "R3",
+            ReportId::R4 => "R4",
+            ReportId::R6 => "R6",
+            ReportId::R7 => "R7",
+            ReportId::R8 => "R8",
+            ReportId::R9 => "R9",
             ReportId::R11 => "R11",
             ReportId::R13 => "R13",
             ReportId::R14 => "R14",
@@ -50,6 +102,14 @@ impl ReportId {
             ReportId::R17 => "R17",
             ReportId::R18 => "R18",
             ReportId::R19 => "R19",
+            ReportId::R20 => "R20",
+            ReportId::R21 => "R21",
+            ReportId::R22 => "R22",
+            ReportId::R24 => "R24",
+            ReportId::R26 => "R26",
+            ReportId::R27 => "R27",
+            ReportId::R28 => "R28",
+            ReportId::R30 => "R30",
         }
     }
 
@@ -96,6 +156,10 @@ pub enum FilterKind {
     Adda,
     /// The "with detail" switch of the statement (R14): off shows balances only.
     Detail,
+    /// Paid or due lines only (R9).
+    Status,
+    /// Group by day or by month (R28).
+    GroupBy,
 }
 
 /// One report in the catalogue.
@@ -145,6 +209,29 @@ pub struct PartyFilter {
     pub person_key: Option<String>,
 }
 
+/// How the income report groups its lines (R28, PRD 19.2: "by day or month").
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(rename = "ReportGroupBy")]
+pub enum GroupBy {
+    /// One period for each day.
+    Day,
+    /// One period for each month.
+    #[default]
+    Month,
+}
+
+/// The paid or due filter of the one-time parties register (R9, PRD FR-13.6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(rename = "ReportPaidFilter")]
+pub enum PaidFilter {
+    /// Lines with nothing left to pay or collect.
+    Paid,
+    /// Lines with something left to pay or collect.
+    Due,
+}
+
 /// What the user typed or picked in the filter boxes. Dates are text as typed
 /// (`DD-MM-YYYY`, `10`, `10-9`, or the stored form `YYYY-MM-DD`); the backend reads them.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, TS)]
@@ -177,6 +264,12 @@ pub struct ReportFilters {
     pub adda_id: Option<i64>,
     /// The statement with its detail lines (R14). Off shows balances only.
     pub detail: bool,
+    /// The income report by day or by month (R28). Missing means month.
+    #[ts(optional)]
+    pub group_by: Option<GroupBy>,
+    /// Paid or due lines only (R9). Missing means all lines.
+    #[ts(optional)]
+    pub status: Option<PaidFilter>,
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
@@ -236,6 +329,14 @@ pub struct ResolvedFilters {
     pub adda: Option<Names>,
     /// The statement with its detail lines.
     pub detail: bool,
+    /// The grouping of R28. Missing for any other report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub group_by: Option<GroupBy>,
+    /// The paid or due filter of R9. Missing for all lines.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub status: Option<PaidFilter>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.
@@ -257,6 +358,8 @@ pub enum ColumnKind {
     Balance,
     /// A date.
     Date,
+    /// A month of a year (the grouping of R28).
+    Month,
     /// An account.
     Party,
     /// A name in both scripts.
@@ -380,6 +483,16 @@ pub enum Cell {
     Date {
         /// The date.
         iso: String,
+    },
+    /// A month of a year, for a report grouped by month. The screen and the print name the
+    /// month from Fluent in the language they show.
+    Month {
+        /// The year, for example 2026.
+        #[ts(type = "number")]
+        year: i64,
+        /// The month, 1 to 12.
+        #[ts(type = "number")]
+        month: i64,
     },
     /// An account.
     Party {

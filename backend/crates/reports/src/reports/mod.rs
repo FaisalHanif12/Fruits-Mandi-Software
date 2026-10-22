@@ -12,33 +12,78 @@
 //! row is a stored value; every total is a `SUM()` of stored `INTEGER` paisa columns or a
 //! checked sum of such sums (money agent Section 9).
 //!
-//! The Accounts group is built: R11 روزنامچہ, R13 کھاتہ, R14 فرد حساب, R16 انڈکس, R17 مدوں
-//! بیلنس, R18 ٹرائل بیلنس and R19 اوپن ٹرائل. The other groups join the same catalogue in the
-//! next steps.
+//! Built so far (plan 20): the Accounts group R11 روزنامچہ, R13 کھاتہ, R14 فرد حساب, R16 انڈکس,
+//! R17 مدوں بیلنس, R18 ٹرائل بیلنس and R19 اوپن ٹرائل; the Sales group R2 مکمل بکری, R3 نقدی, R4
+//! ادھاری, R6 بکری تفصیل, R7 قسم مال وار بکری, R8 اڈا رپورٹ and R9 پختہ کھاتہ رپورٹ; the Collections
+//! group R20 وصولی / اگراہی, R21 بحساب شہر, R22 بحساب اگراہی والا, R24 ادائیگی باقی, R26 پیشگی کھاتہ
+//! and R27 بیجک سیریز; the Business group R28 آمدن رپورٹ and R30 منافع و تقسیم. The other reports
+//! join the same catalogue in the later plans.
 
 mod accounts;
+mod business;
+mod collections;
 mod common;
 mod filters;
 mod ids;
 mod model;
 mod print_data;
+mod sales;
+#[doc(hidden)]
+pub mod workings;
 
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::printing::Paper;
 use mandi_db::Db;
 use mandi_db::rusqlite::Connection;
 
-/// The SQL of the paged reports, for the query plan test (Code Standards B18).
+/// The SQL of the paged reports, for the query plan test (Code Standards B18). Each function
+/// gives the query a report runs for a date range, with the values to bind.
 #[doc(hidden)]
 pub mod plans {
     pub use super::accounts::{R11_PAGE_SQL, R11_TOTALS_SQL, R13_PAGE_SQL, R13_TOTALS_SQL};
+    use super::filters::Typed;
+    use mandi_db::rusqlite::types::Value;
+
+    fn dates(from: Option<&str>, to: Option<&str>) -> Typed {
+        Typed {
+            from: from.map(str::to_owned),
+            to: to.map(str::to_owned),
+            ..Typed::default()
+        }
+    }
+
+    /// The page query of R2 for a date range.
+    pub fn r2_page(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
+        super::sales::register_page_query(&dates(from, to), None, 100, 0)
+    }
+
+    /// The totals query of R2 for a date range.
+    pub fn r2_totals(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
+        super::sales::register_totals_query(&dates(from, to), None)
+    }
+
+    /// The page query of R6 for a date range.
+    pub fn r6_page(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
+        super::sales::r6_page_query(&dates(from, to), 100, 0)
+    }
+
+    /// The query of R7 for a date range.
+    pub fn r7(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
+        super::sales::r7_query(&dates(from, to))
+    }
+
+    /// The page query of R28 for a date range.
+    pub fn r28_page(from: Option<&str>, to: Option<&str>) -> (String, Vec<Value>) {
+        super::business::r28_page_query(&dates(from, to), 100, 0)
+    }
 }
 
 pub use ids::posting_types;
 pub use model::{
-    CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind, Names,
-    PartyFilter, PartyRef, ReportFilters, ReportGroup, ReportId, ReportPage, ReportPrintInput,
-    ReportRunInput, ResolvedFilters, Row, RowKind, RowSource, SourceKind, SummaryLine,
+    CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind, GroupBy, Names,
+    PaidFilter, PartyFilter, PartyRef, ReportFilters, ReportGroup, ReportId, ReportPage,
+    ReportPrintInput, ReportRunInput, ResolvedFilters, Row, RowKind, RowSource, SourceKind,
+    SummaryLine,
 };
 pub use print_data::{
     PrintCell, PrintDetailPart, PrintOptions, PrintReportColumn, PrintReportParty, PrintReportRow,
@@ -64,50 +109,149 @@ struct Spec {
     party_required: bool,
 }
 
-/// The reports of the engine, in catalogue order (PRD 19.2).
+/// The filters of the three sales registers: dates, the buyer, and the seller, زمیندار, item,
+/// the buyer's city and اڈا (PRD FR-19.1).
+const REGISTER_FILTERS: &[FilterKind] = &[
+    FilterKind::DateRange,
+    FilterKind::Party,
+    FilterKind::Seller,
+    FilterKind::Zamindar,
+    FilterKind::Item,
+    FilterKind::City,
+    FilterKind::Adda,
+];
+
+/// The filters of the seller side reports R6 and R27.
+const SELLER_SIDE_FILTERS: &[FilterKind] = &[
+    FilterKind::DateRange,
+    FilterKind::Seller,
+    FilterKind::Zamindar,
+    FilterKind::Item,
+    FilterKind::Adda,
+];
+
+/// The filters of the buyer dues reports R20 to R22.
+const DUES_FILTERS: &[FilterKind] = &[FilterKind::AsOf, FilterKind::Party, FilterKind::City];
+
+const fn spec(
+    id: ReportId,
+    group: ReportGroup,
+    filters: &'static [FilterKind],
+    party_required: bool,
+) -> Spec {
+    Spec {
+        id,
+        group,
+        filters,
+        party_required,
+    }
+}
+
+/// The reports of the engine, in catalogue order (PRD 19.2): by group, then by number.
 const SPECS: &[Spec] = &[
-    Spec {
-        id: ReportId::R11,
-        group: ReportGroup::Accounts,
-        filters: &[FilterKind::DateRange, FilterKind::Party],
-        party_required: false,
-    },
-    Spec {
-        id: ReportId::R13,
-        group: ReportGroup::Accounts,
-        filters: &[FilterKind::DateRange, FilterKind::Party],
-        party_required: true,
-    },
-    Spec {
-        id: ReportId::R14,
-        group: ReportGroup::Accounts,
-        filters: &[FilterKind::DateRange, FilterKind::Party, FilterKind::Detail],
-        party_required: true,
-    },
-    Spec {
-        id: ReportId::R16,
-        group: ReportGroup::Accounts,
-        filters: &[FilterKind::AsOf, FilterKind::City],
-        party_required: false,
-    },
-    Spec {
-        id: ReportId::R17,
-        group: ReportGroup::Accounts,
-        filters: &[FilterKind::AsOf],
-        party_required: false,
-    },
-    Spec {
-        id: ReportId::R18,
-        group: ReportGroup::Accounts,
-        filters: &[FilterKind::AsOf],
-        party_required: false,
-    },
-    Spec {
-        id: ReportId::R19,
-        group: ReportGroup::Accounts,
-        filters: &[],
-        party_required: false,
-    },
+    spec(ReportId::R2, ReportGroup::Sales, REGISTER_FILTERS, false),
+    spec(ReportId::R3, ReportGroup::Sales, REGISTER_FILTERS, false),
+    spec(ReportId::R4, ReportGroup::Sales, REGISTER_FILTERS, false),
+    spec(ReportId::R6, ReportGroup::Sales, SELLER_SIDE_FILTERS, false),
+    spec(
+        ReportId::R7,
+        ReportGroup::Sales,
+        &[
+            FilterKind::DateRange,
+            FilterKind::Party,
+            FilterKind::Seller,
+            FilterKind::Item,
+            FilterKind::City,
+            FilterKind::Adda,
+        ],
+        false,
+    ),
+    spec(
+        ReportId::R8,
+        ReportGroup::Sales,
+        &[FilterKind::DateRange, FilterKind::Adda],
+        false,
+    ),
+    spec(
+        ReportId::R9,
+        ReportGroup::Sales,
+        &[FilterKind::DateRange, FilterKind::Party, FilterKind::Status],
+        false,
+    ),
+    spec(
+        ReportId::R11,
+        ReportGroup::Accounts,
+        &[FilterKind::DateRange, FilterKind::Party],
+        false,
+    ),
+    spec(
+        ReportId::R13,
+        ReportGroup::Accounts,
+        &[FilterKind::DateRange, FilterKind::Party],
+        true,
+    ),
+    spec(
+        ReportId::R14,
+        ReportGroup::Accounts,
+        &[FilterKind::DateRange, FilterKind::Party, FilterKind::Detail],
+        true,
+    ),
+    spec(
+        ReportId::R16,
+        ReportGroup::Accounts,
+        &[FilterKind::AsOf, FilterKind::City],
+        false,
+    ),
+    spec(
+        ReportId::R17,
+        ReportGroup::Accounts,
+        &[FilterKind::AsOf],
+        false,
+    ),
+    spec(
+        ReportId::R18,
+        ReportGroup::Accounts,
+        &[FilterKind::AsOf],
+        false,
+    ),
+    spec(ReportId::R19, ReportGroup::Accounts, &[], false),
+    spec(ReportId::R20, ReportGroup::Collections, DUES_FILTERS, false),
+    spec(ReportId::R21, ReportGroup::Collections, DUES_FILTERS, false),
+    spec(ReportId::R22, ReportGroup::Collections, DUES_FILTERS, false),
+    spec(
+        ReportId::R24,
+        ReportGroup::Collections,
+        &[FilterKind::AsOf, FilterKind::Party],
+        false,
+    ),
+    spec(
+        ReportId::R26,
+        ReportGroup::Collections,
+        &[FilterKind::AsOf, FilterKind::Seller],
+        false,
+    ),
+    spec(
+        ReportId::R27,
+        ReportGroup::Collections,
+        SELLER_SIDE_FILTERS,
+        false,
+    ),
+    spec(
+        ReportId::R28,
+        ReportGroup::Business,
+        &[
+            FilterKind::DateRange,
+            FilterKind::Party,
+            FilterKind::GroupBy,
+        ],
+        false,
+    ),
+    spec(
+        ReportId::R30,
+        ReportGroup::Business,
+        &[FilterKind::DateRange],
+        false,
+    ),
 ];
 
 fn spec_of(id: ReportId) -> Result<&'static Spec, ReportsError> {
@@ -179,6 +323,23 @@ fn build(
         input_filters,
     )?;
     match id {
+        ReportId::R2 => sales::run_register(conn, &typed, spec, sales::RegisterKind::All),
+        ReportId::R3 => sales::run_register(conn, &typed, spec, sales::RegisterKind::Cash),
+        ReportId::R4 => sales::run_register(conn, &typed, spec, sales::RegisterKind::Credit),
+        ReportId::R6 => sales::run_r6(conn, &typed, spec),
+        ReportId::R7 => sales::run_r7(conn, &typed, spec),
+        ReportId::R8 => sales::run_r8(conn, &typed, spec),
+        ReportId::R9 => sales::run_r9(conn, &typed, spec),
+        ReportId::R20 => collections::run_dues(conn, &typed, spec, collections::DuesLayout::Flat),
+        ReportId::R21 => collections::run_dues(conn, &typed, spec, collections::DuesLayout::ByCity),
+        ReportId::R22 => {
+            collections::run_dues(conn, &typed, spec, collections::DuesLayout::ByCollector)
+        }
+        ReportId::R24 => collections::run_r24(conn, &typed, spec),
+        ReportId::R26 => collections::run_r26(conn, &typed, spec),
+        ReportId::R27 => sales::run_r27(conn, &typed, spec),
+        ReportId::R28 => business::run_r28(conn, &typed, spec),
+        ReportId::R30 => business::run_r30(conn, &typed, spec),
         ReportId::R11 => accounts::run_r11(conn, &typed, spec),
         ReportId::R13 => accounts::run_r13(conn, &typed, spec),
         ReportId::R14 => accounts::run_r14(conn, &typed, spec),

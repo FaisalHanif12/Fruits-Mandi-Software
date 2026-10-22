@@ -83,6 +83,41 @@ pub enum BackupCode {
     ErrBackupRestoreFailed,
 }
 
+/// Why a cloud copy failed. It travels with `ERR_BACKUP_CLOUD_FAILED` as the value `reason`, and
+/// in `TargetResult.reason` and `StatusError.reason`, so the screen can choose the words
+/// (PRD FR-20.6, NFR-BAK-9).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum CloudReason {
+    /// No internet, a timeout or a server error. The copy waits and is tried again.
+    Offline,
+    /// The cloud answered and said no (wrong keys, no right to write).
+    Refused,
+    /// The bucket or the object was not found.
+    NotFound,
+}
+
+impl CloudReason {
+    /// The text sent as the value `reason`: `offline`, `refused` or `not_found`.
+    pub const fn as_text(self) -> &'static str {
+        match self {
+            CloudReason::Offline => "offline",
+            CloudReason::Refused => "refused",
+            CloudReason::NotFound => "not_found",
+        }
+    }
+
+    /// Reads the text of a `reason` value.
+    pub fn from_text(text: &str) -> Option<Self> {
+        match text {
+            "offline" => Some(CloudReason::Offline),
+            "refused" => Some(CloudReason::Refused),
+            "not_found" => Some(CloudReason::NotFound),
+            _ => None,
+        }
+    }
+}
+
 /// A failure of the backup crate: a code, the field it belongs to, values for the message, and
 /// the cause for the log.
 #[derive(Debug, Error)]
@@ -136,6 +171,14 @@ impl BackupError {
     pub fn on_field(mut self, field: &str) -> Self {
         self.field = Some(field.to_owned());
         self
+    }
+
+    /// Why a cloud copy failed, when this error says so (the value `reason`).
+    pub fn cloud_reason(&self) -> Option<CloudReason> {
+        match self.values.get("reason") {
+            Some(ErrorValue::Text(text)) => CloudReason::from_text(text),
+            _ => None,
+        }
     }
 
     /// The same error, with one more value for the message.
@@ -197,6 +240,26 @@ mod tests {
         assert_eq!(text, "\"ERR_BACKUP_KEY_WRONG\"");
         let text = serde_json::to_string(&BackupCode::ErrDiskFull).unwrap();
         assert_eq!(text, "\"ERR_DISK_FULL\"", "same text as the core code");
+    }
+
+    #[test]
+    fn a_cloud_reason_round_trips_through_the_error_value() {
+        for reason in [
+            CloudReason::Offline,
+            CloudReason::Refused,
+            CloudReason::NotFound,
+        ] {
+            let error = BackupError::new(BackupCode::ErrBackupCloudFailed, "x")
+                .with("reason", ErrorValue::Text(reason.as_text().into()));
+            assert_eq!(error.cloud_reason(), Some(reason));
+        }
+        let other = BackupError::new(BackupCode::ErrBackupCorrupt, "x")
+            .with("reason", ErrorValue::Text("checksum".into()));
+        assert_eq!(other.cloud_reason(), None);
+        assert_eq!(
+            serde_json::to_string(&CloudReason::NotFound).unwrap(),
+            "\"not_found\""
+        );
     }
 
     #[test]

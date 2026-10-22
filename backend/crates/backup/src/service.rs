@@ -422,6 +422,7 @@ impl BackupService {
                     at: f.at.clone(),
                     check_failed: f.check_failed,
                     file: f.file.clone(),
+                    reason: f.reason,
                 })
                 .collect(),
             last_test_restore_at: state.last_test_restore_at.clone(),

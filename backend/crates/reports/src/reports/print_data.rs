@@ -26,7 +26,8 @@ use ts_rs::TS;
 
 use super::ids;
 use super::model::{
-    Cell, ColumnKind, DetailPart, Names, PartyRef, ReportId, ReportPage, ResolvedFilters, RowKind,
+    Cell, ColumnKind, DetailPart, GroupBy, Names, PaidFilter, PartyRef, ReportId, ReportPage,
+    ResolvedFilters, RowKind,
 };
 use crate::error::ReportsError;
 use crate::print::format::NumberStyle;
@@ -140,6 +141,14 @@ pub enum PrintCell {
     Date {
         /// The date as printed.
         text: String,
+    },
+    /// A month of a year. The template names the month from Fluent in the print language.
+    Month {
+        /// The year as printed.
+        year: String,
+        /// The month, 1 to 12.
+        #[ts(type = "number")]
+        month: i64,
     },
     /// An account.
     Party {
@@ -354,6 +363,10 @@ impl Fmt {
             Cell::Date { iso } => PrintCell::Date {
                 text: self.style.date(iso)?,
             },
+            Cell::Month { year, month } => PrintCell::Month {
+                year: self.style.plain(*year),
+                month: *month,
+            },
             Cell::Party { party } => PrintCell::Party {
                 party: self.party(party),
             },
@@ -448,6 +461,22 @@ fn filter_facts(
     }
     // The statement says whether it is balances only or with its lines. The label is the whole
     // fact, so the value is empty.
+    // R9 says whether it lists only paid or only due lines; R28 how it groups. The label is the
+    // whole fact, so the value is empty.
+    if let Some(status) = filters.status {
+        let label = match status {
+            PaidFilter::Paid => ids::FILTER_PAID,
+            PaidFilter::Due => ids::FILTER_DUE,
+        };
+        facts.push(fact(label, String::new()));
+    }
+    if let Some(group_by) = filters.group_by {
+        let label = match group_by {
+            GroupBy::Day => ids::FILTER_BY_DAY,
+            GroupBy::Month => ids::FILTER_BY_MONTH,
+        };
+        facts.push(fact(label, String::new()));
+    }
     if id == ReportId::R14 {
         let label = if filters.detail {
             ids::FILTER_DETAIL

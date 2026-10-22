@@ -271,7 +271,9 @@ fn detail_of_line(
     let mut qty: i64 = 0;
     let mut gross = Paisa::ZERO;
     for sale in &of_lot {
-        qty = qty.saturating_add(sale.qty);
+        qty = qty
+            .checked_add(sale.qty)
+            .ok_or_else(|| ReportsError::Data("the lot quantity does not fit".to_owned()))?;
         gross = gross.checked_add(paisa(sale.seller_amount)?)?;
     }
     let credit = paisa(line.cr)?;

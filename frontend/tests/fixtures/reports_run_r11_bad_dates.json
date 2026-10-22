@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DATE_INVALID",
+      "field": "filters.to",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

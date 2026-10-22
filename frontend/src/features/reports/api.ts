@@ -1,13 +1,20 @@
-// Typed wrappers around the print commands of the `reports` module (plan 14 contract). Components
-// never call invoke() (Code Standards F4). Every command takes one `{ input }` object. All of
-// them need the signed-in Owner (NFR-SEC-13), except that the hidden print window may call only
-// `reports_bikri_print_data` and `reports_voucher_print_data` (its capability allows nothing else).
+// Typed wrappers around the commands of the `reports` module: the print commands of plan 14 and the
+// report engine of plan 20 (`reports_catalog`, `reports_run`, `reports_print_data`). Components
+// never call invoke() (Code Standards F4). Every command takes one `{ input }` object, except
+// `reports_catalog`, which takes none. All of them need the signed-in Owner (NFR-SEC-13), except
+// that the hidden print window may call only `reports_bikri_print_data`,
+// `reports_voucher_print_data` and `reports_print_data` (its capability allows nothing else).
 
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { PrintData } from '../../bindings/PrintData';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
+import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
+import type { ReportPage } from '../../bindings/ReportPage';
+import type { ReportPrintData } from '../../bindings/ReportPrintData';
+import type { ReportPrintInput } from '../../bindings/ReportPrintInput';
+import type { ReportRunInput } from '../../bindings/ReportRunInput';
 import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput';
 import { callCommand } from '../../shared/api';
 
@@ -43,4 +50,24 @@ export function reportsPrint(input: PrintInput): Promise<PrintOutcome> {
 /** The names of the printers of this computer. Empty when the list is not available. */
 export function reportsListPrinters(): Promise<string[]> {
   return callCommand<string[]>('reports_list_printers');
+}
+
+// ---- Plan 20: the report engine (PRD 19, Code Standards B31). Run B, D5 early track. ----
+
+/** Every report that is built, with its group and the filter boxes it takes (PRD 19.2). */
+export function reportsCatalog(): Promise<ReportCatalogEntry[]> {
+  return callCommand<ReportCatalogEntry[]>('reports_catalog');
+}
+
+/**
+ * One page of a report, with the totals over the whole filter (PRD FR-19.11). Send every key of
+ * the filters; the backend refuses a filter the report does not take, if it is filled.
+ */
+export function reportsRun(input: ReportRunInput): Promise<ReportPage> {
+  return callCommand<ReportPage>('reports_run', { input });
+}
+
+/** Everything a print of a report needs, with every row, in the print language (PRD FR-19.3). */
+export function reportsPrintData(input: ReportPrintInput): Promise<ReportPrintData> {
+  return callCommand<ReportPrintData>('reports_print_data', { input });
 }

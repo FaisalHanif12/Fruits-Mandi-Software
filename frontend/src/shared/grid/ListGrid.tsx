@@ -62,6 +62,17 @@ export interface ListColumn<T> {
    * (down to `LIST_GROW_MIN_WIDTH`). Several columns can grow; they share the free width.
    */
   readonly grow?: boolean | undefined;
+  /**
+   * A long text (the goods behind a ledger line) wraps onto more lines and the row grows with it,
+   * instead of being cut off. Used by report columns; short columns never wrap.
+   */
+  readonly wrap?: boolean | undefined;
+  /**
+   * A short word set after the figure in a slot of fixed width, so figures keep one right edge
+   * whatever the word is (a balance's side, بنام or جمع; NFR-USE-19). The total row asks for the
+   * word of this column under the key `<field>:unit` of the totals values.
+   */
+  readonly unit?: ((row: T, context: ListContext) => string) | undefined;
 }
 
 interface ListGridProps<T> {
@@ -75,6 +86,8 @@ interface ListGridProps<T> {
   onOpen: (row: T) => void;
   /** A row that is switched off reads dimmer. */
   isInactive?: ((row: T) => boolean) | undefined;
+  /** A row that heads a group (a head in a list of heads) reads stronger. */
+  isGroup?: ((row: T) => boolean) | undefined;
   /** The row to focus when the grid is first drawn, for example the one just edited. */
   focusRowId?: string | null | undefined;
   /** Asked when the grid is drawn: the row that had focus before a rebuild (see ListGrid). */
@@ -103,6 +116,7 @@ function toColDef<T>(
   context: ListContext,
   total: Record<string, string> | undefined,
 ): ColDef<T> {
+  const unitOf = column.unit;
   return {
     colId: column.field,
     headerName,
@@ -121,9 +135,17 @@ function toColDef<T>(
         : params.data === undefined
           ? ''
           : column.value(params.data, context),
-    cellClass: isListNumberLike(column.type) ? ['cell-num'] : [],
+    cellClass: [
+      ...(isListNumberLike(column.type) ? ['cell-num'] : []),
+      ...(column.wrap === true ? ['cell-wrap'] : []),
+    ],
+    ...(column.wrap === true ? { wrapText: true, autoHeight: true } : {}),
     // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
-    headerClass: isListNumberLike(column.type) ? ['header-num'] : [],
+    headerClass: [
+      ...(isListNumberLike(column.type) ? ['header-num'] : []),
+      // The figure is set back from the edge by the slot of its word, so its heading is too.
+      ...(column.unit === undefined ? [] : ['header-unit']),
+    ],
     ...(column.script === undefined
       ? {}
       : {
@@ -132,6 +154,26 @@ function toColDef<T>(
               {typeof params.value === 'string' ? params.value : ''}
             </span>
           ),
+        }),
+    ...(unitOf === undefined
+      ? {}
+      : {
+          cellRenderer: (params: ICellRendererParams<T>) => {
+            const unit =
+              params.node.rowPinned === 'bottom'
+                ? (total?.[`${column.field}:unit`] ?? '')
+                : params.data === undefined
+                  ? ''
+                  : unitOf(params.data, context);
+            return (
+              <span className="cell-with-unit">
+                <span>{typeof params.value === 'string' ? params.value : ''}</span>
+                <span className="cell-unit" dir="auto">
+                  {unit}
+                </span>
+              </span>
+            );
+          },
         }),
   };
 }
@@ -143,6 +185,7 @@ function GridInner<T>({
   labelId,
   onOpen,
   isInactive,
+  isGroup,
   focusRowId,
   readFocusRow,
   onFocusRow,
@@ -233,8 +276,15 @@ function GridInner<T>({
         tabToNextCell={() => false}
         tabToNextHeader={() => false}
         rowClassRules={{
+          // The totals row is a pinned row with no record behind it: no class rule reads it.
           'row-inactive': (params) =>
-            params.data !== undefined && isInactive?.(params.data) === true,
+            params.data !== undefined &&
+            !params.node.isRowPinned() &&
+            isInactive?.(params.data) === true,
+          'row-group': (params) =>
+            params.data !== undefined &&
+            !params.node.isRowPinned() &&
+            isGroup?.(params.data) === true,
         }}
         onGridReady={onGridReady}
         onCellKeyDown={onCellKeyDown}

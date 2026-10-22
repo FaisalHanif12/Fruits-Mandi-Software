@@ -20,7 +20,7 @@ pub mod settings;
 pub mod snapshot;
 pub mod state;
 
-pub use error::{BackupCode, BackupError};
+pub use error::{BackupCode, BackupError, CloudReason};
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

@@ -193,7 +193,9 @@ pub fn read_totals(conn: &Connection) -> Result<BackupTotals, BackupError> {
     let money = |paisa: i64| Paisa::try_from_paisa(paisa).map_err(corrupt);
     let (debit, credit): (i64, i64) = conn
         .query_row(
-            "SELECT COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0) FROM journal_lines",
+            "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0) \
+             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id \
+             WHERE e.status = 'posted'",
             [],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
@@ -201,7 +203,9 @@ pub fn read_totals(conn: &Connection) -> Result<BackupTotals, BackupError> {
     let (cash_dr, cash_cr): (i64, i64) = conn
         .query_row(
             "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0) \
-             FROM journal_lines l JOIN accounts a ON a.id = l.account_id WHERE a.code = ?1",
+             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id \
+             JOIN accounts a ON a.id = l.account_id \
+             WHERE e.status = 'posted' AND a.code = ?1",
             [CASH_CODE],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )

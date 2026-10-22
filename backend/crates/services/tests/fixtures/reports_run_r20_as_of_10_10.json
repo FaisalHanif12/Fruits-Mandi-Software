@@ -1,0 +1,218 @@
+{
+  "id": "R20",
+  "title_id": "report-r20-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": "2026-10-10",
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party"
+    },
+    {
+      "key": "city",
+      "title_id": "report-col-city",
+      "kind": "names"
+    },
+    {
+      "key": "phone",
+      "title_id": "report-col-phone",
+      "kind": "text"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance",
+      "kind": "money"
+    },
+    {
+      "key": "oldest_date",
+      "title_id": "report-col-oldest-date",
+      "kind": "date"
+    },
+    {
+      "key": "days",
+      "title_id": "report-col-days",
+      "kind": "number"
+    },
+    {
+      "key": "age_0_7",
+      "title_id": "report-col-age-0-7",
+      "kind": "money"
+    },
+    {
+      "key": "age_8_30",
+      "title_id": "report-col-age-8-30",
+      "kind": "money"
+    },
+    {
+      "key": "age_31_90",
+      "title_id": "report-col-age-31-90",
+      "kind": "money"
+    },
+    {
+      "key": "age_91",
+      "title_id": "report-col-age-91",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کوٹ رادھا کشن",
+            "en": "Kot Radha Kishan"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 288000
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 288000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 20
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 21,
+            "code": "03040002",
+            "short_code": "2",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1868400
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 1868400
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 21
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 2156400
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 2156400
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": []
+}

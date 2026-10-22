@@ -105,7 +105,9 @@ export function StatusCard({ status, onTest }: StatusCardProps) {
             <Localized id={kindId(problem.kind)}>
               <span className="type-label" />
             </Localized>
-            <ErrorMessage item={{ code: problem.code, values: { reason: 'other' } }}>
+            <ErrorMessage
+              item={{ code: problem.code, values: { reason: problem.reason ?? 'other' } }}
+            >
               <span />
             </ErrorMessage>
             <Num>{utcToLocalDisplay(problem.at)}</Num>

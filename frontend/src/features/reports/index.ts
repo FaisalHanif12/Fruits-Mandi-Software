@@ -13,3 +13,8 @@ export {
   usePrinters,
   useVoucherPrintData,
 } from './hooks';
+
+// ---- Plan 20: the report engine. ----
+export { reportsCatalog, reportsPrintData, reportsRun } from './api';
+export { REPORT_PAGE_SIZE, useReportCatalog, useReportPages, useReportPrintData } from './hooks';
+export { parseReportSearch, type ReportSearch } from './search';

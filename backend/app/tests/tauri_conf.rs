@@ -273,6 +273,7 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-reports-catalog",
             "allow-reports-run",
             "allow-reports-print-data",
+            "allow-reports-find-people",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",

@@ -46,6 +46,7 @@ function status(): BackupStatus {
           at: '2026-10-10T09:02:00.000Z',
           check_failed: false,
           file: null,
+          reason: 'offline',
         },
       ],
     };

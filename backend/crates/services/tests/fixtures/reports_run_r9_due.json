@@ -1,0 +1,120 @@
+{
+  "id": "R9",
+  "title_id": "report-r9-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false,
+    "status": "due"
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "side",
+      "title_id": "report-col-side",
+      "kind": "label"
+    },
+    {
+      "key": "person",
+      "title_id": "report-col-person",
+      "kind": "party"
+    },
+    {
+      "key": "phone",
+      "title_id": "report-col-phone",
+      "kind": "text"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    },
+    {
+      "key": "commission",
+      "title_id": "report-col-commission",
+      "kind": "money"
+    },
+    {
+      "key": "status",
+      "title_id": "report-col-status",
+      "kind": "label"
+    },
+    {
+      "key": "open",
+      "title_id": "report-col-open",
+      "kind": "money"
+    }
+  ],
+  "rows": [],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 0,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    }
+  ],
+  "summary": []
+}

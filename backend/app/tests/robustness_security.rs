@@ -820,6 +820,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "id": "R18", "filters": {}, "language": "en" } }),
             true,
         ),
+        // Run B, plan 20, step B3 (append-only block).
+        (
+            "reports_find_people",
+            json!({ "input": { "text": "shahid", "limit": 10 } }),
+            true,
+        ),
     ]
 }
 

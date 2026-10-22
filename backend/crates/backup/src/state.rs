@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{BackupCode, BackupError};
+use crate::error::{BackupCode, BackupError, CloudReason};
 use crate::io::write_atomic;
 use crate::model::BackupKind;
 
@@ -52,6 +52,9 @@ pub struct Failure {
     pub check_failed: bool,
     /// The file that failed its check, if any.
     pub file: Option<String>,
+    /// For a failed cloud copy: why. A state file written before this field existed has none.
+    #[serde(default)]
+    pub reason: Option<CloudReason>,
 }
 
 /// Everything remembered.
@@ -179,6 +182,7 @@ mod tests {
                 at: format!("t{i}"),
                 check_failed: false,
                 file: None,
+                reason: None,
             });
         }
         // Same place and code twice is one line.

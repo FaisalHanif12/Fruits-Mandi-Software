@@ -11,6 +11,7 @@ import {
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
+import { parseReportSearch } from '../features/reports/search';
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
 import { moveDevPathToHash } from './dev/hash-route';
 
@@ -353,6 +354,25 @@ const backupRoute = createRoute({
   path: '/backup',
   component: lazyRouteComponent(() => import('../features/backup/pages/BackupPage'), 'BackupPage'),
 });
+
+// ---- Run B, plan 20 (D5 early track): رپورٹ. Replaces the "coming soon" page of /reports. The
+// catalogue is /reports; one report is /reports/R18, with its filters optionally in the address
+// (`?party=20&from=01-10-2026`, PRD FR-7.65). ----
+const reportsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/reports',
+  component: lazyRouteComponent(
+    () => import('../features/reports/pages/ReportsHomePage'),
+    'ReportsHomePage',
+  ),
+});
+
+const reportRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/reports/$id',
+  validateSearch: parseReportSearch,
+  component: lazyRouteComponent(() => import('../features/reports/pages/ReportPage'), 'ReportPage'),
+});
 // ---- end of Run B block ----
 
 const appRoutes = [
@@ -390,8 +410,9 @@ const appRoutes = [
   partnersRoute,
   partnersSetupRoute,
   comingSoonRoute('/analytics'),
-  comingSoonRoute('/reports'),
   backupRoute,
+  reportsRoute,
+  reportRoute,
 ];
 
 // The component gallery exists only in development (plan 02 T3). In a build, DEV is false, so
@@ -448,11 +469,29 @@ const backupDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Run B, plan 20: the development pages of the report screens (dev only, like the others). ----
+const reportsDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/reports',
+        component: lazyRouteComponent(() => import('./dev/ReportsPage'), 'ReportsPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/reports/$id',
+        component: lazyRouteComponent(() => import('./dev/ReportsPage'), 'ReportsPage'),
+      }),
+    ]
+  : [];
+// ---- end of Run B block ----
+
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren(appRoutes),
   printRoute,
   ...devRoutes,
   ...backupDevRoutes,
+  ...reportsDevRoutes,
 ]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router

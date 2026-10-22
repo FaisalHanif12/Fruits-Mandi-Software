@@ -1,0 +1,307 @@
+{
+  "id": "R16",
+  "title_id": "report-r16-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "city",
+      "title_id": "report-col-city",
+      "kind": "names"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 1,
+            "code": "01010001",
+            "short_code": null,
+            "name_ur": "روکڑ",
+            "name_en": "Cash",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 5848400
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 2,
+            "code": "01020001",
+            "short_code": null,
+            "name_ur": "بینک",
+            "name_en": "Bank",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 2
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 3,
+            "code": "02010001",
+            "short_code": null,
+            "name_ur": "مزدوری کھاتہ",
+            "name_en": "Labour Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 30000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 3
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 4,
+            "code": "02010002",
+            "short_code": null,
+            "name_ur": "کرایہ کھاتہ",
+            "name_en": "Freight Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 400000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 4
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 5,
+            "code": "02010003",
+            "short_code": null,
+            "name_ur": "کرایہ سٹور کھاتہ",
+            "name_en": "Store Rent Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 5
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 6,
+            "code": "02010004",
+            "short_code": null,
+            "name_ur": "منشیانہ کھاتہ",
+            "name_en": "Munshiana Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 10000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 6
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 18
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "030110002",
+            "short_code": "2",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1016000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 19
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 8,
+  "total_count": 31,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 8504800
+    },
+    {
+      "type": "money",
+      "paisa": 8504800
+    }
+  ],
+  "summary": []
+}

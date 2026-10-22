@@ -150,6 +150,7 @@
     "allow-reports-catalog",
     "allow-reports-run",
     "allow-reports-print-data",
+    "allow-reports-find-people",
     "core:event:default",
     "window-state:default",
     "updater:allow-check",

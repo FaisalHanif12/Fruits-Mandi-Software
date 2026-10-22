@@ -1,0 +1,126 @@
+{
+  "id": "R8",
+  "title_id": "report-r8-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "adda",
+      "title_id": "report-col-adda",
+      "kind": "names"
+    },
+    {
+      "key": "trucks",
+      "title_id": "report-col-trucks",
+      "kind": "number"
+    },
+    {
+      "key": "lots",
+      "title_id": "report-col-lots",
+      "kind": "number"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "سوات اڈا",
+            "en": "Swat Adda"
+          }
+        },
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "money",
+          "paisa": 2940000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "number",
+          "value": 10
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 2
+    },
+    {
+      "type": "number",
+      "value": 2
+    },
+    {
+      "type": "number",
+      "value": 60
+    },
+    {
+      "type": "money",
+      "paisa": 4140000
+    }
+  ],
+  "summary": []
+}

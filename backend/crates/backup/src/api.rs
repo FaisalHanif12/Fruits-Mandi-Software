@@ -7,7 +7,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::error::BackupCode;
+use crate::error::{BackupCode, CloudReason};
 use crate::model::{BackupKind, BackupTotals};
 use crate::settings::BackupSettings;
 
@@ -50,6 +50,9 @@ pub struct StatusError {
     pub check_failed: bool,
     /// The file that failed its check.
     pub file: Option<String>,
+    /// For a failed cloud copy: why (offline, refused, not found), so the screen picks the
+    /// words. Null for any other problem.
+    pub reason: Option<CloudReason>,
 }
 
 /// The state of the backups, for the status bar, the dashboard and the backup screen.
@@ -167,6 +170,8 @@ pub struct TargetResult {
     pub queued: bool,
     /// Why it failed.
     pub code: Option<BackupCode>,
+    /// For a failed cloud copy: why (offline, refused, not found). Null for any other result.
+    pub reason: Option<CloudReason>,
 }
 
 /// What a backup run did (FR-20.8 "backup now").

@@ -241,3 +241,48 @@ fn rig_for_fresh(first: &Rig) -> Rig {
     ));
     fresh
 }
+
+/// The totals of a backup count posted lines only, as `model.rs` says. A draft entry that was
+/// never posted (a crash in the middle of a save leaves none in a committed file, but a copy of
+/// an older file may hold one) must not change the debit, credit or cash totals.
+#[test]
+fn backup_totals_count_posted_lines_only() {
+    let rig = worked_day();
+    let conn = raw(&rig);
+    let before = mandi_backup::snapshot::read_totals(&conn).unwrap();
+    assert!(before.debit_paisa.as_paisa() > 0);
+    assert_eq!(before.debit_paisa, before.credit_paisa);
+
+    let cash: i64 = conn
+        .query_row("SELECT id FROM accounts WHERE code = '01010001'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    conn.execute(
+        "INSERT INTO journal_entries (created_at, created_by, updated_at, updated_by, entry_date,
+             posting_type, source_type, source_id, narration, status, total_paisa)
+         VALUES ('2026-10-10T00:00:00Z', 1, '2026-10-10T00:00:00Z', 1, '2026-10-10',
+             'general', 'voucher', 0, NULL, 'draft', 0)",
+        [],
+    )
+    .unwrap();
+    let draft = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO journal_lines (created_at, created_by, updated_at, updated_by, entry_id, line_no,
+             account_id, dr_paisa, cr_paisa, is_advance)
+         VALUES ('2026-10-10T00:00:00Z', 1, '2026-10-10T00:00:00Z', 1, ?1, 1, ?2, 700000, 0, 0)",
+        [draft, cash],
+    )
+    .unwrap();
+
+    let after = mandi_backup::snapshot::read_totals(&conn).unwrap();
+    assert_eq!(
+        after.debit_paisa, before.debit_paisa,
+        "a draft line is not counted"
+    );
+    assert_eq!(after.credit_paisa, before.credit_paisa);
+    assert_eq!(
+        after.cash_paisa, before.cash_paisa,
+        "a draft line is not in cash"
+    );
+}

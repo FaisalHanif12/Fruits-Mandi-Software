@@ -28,9 +28,11 @@ export function RunReportNotices({ report }: { report: RunReport }) {
               <span />
             </Localized>
             {result.ok ? <Num>{sizeText(result.size_bytes, say)}</Num> : null}
-            {/* The reason of a failure is not part of the answer, so the general words are used. */}
+            {/* A failed cloud copy carries its reason; the general words are used when it has none. */}
             {!result.ok && !result.queued && result.code !== null ? (
-              <ErrorMessage item={{ code: result.code, values: { reason: 'other' } }}>
+              <ErrorMessage
+                item={{ code: result.code, values: { reason: result.reason ?? 'other' } }}
+              >
                 <span className="text-ink-muted" />
               </ErrorMessage>
             ) : null}

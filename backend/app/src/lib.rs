@@ -223,6 +223,8 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::reports_engine::reports_catalog,
         commands::reports_engine::reports_run,
         commands::reports_engine::reports_print_data,
+        // Run B, plan 20, step B3 (append-only block).
+        commands::reports_people::reports_find_people,
     ]
 }
 

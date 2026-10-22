@@ -1,0 +1,159 @@
+{
+  "id": "R2",
+  "title_id": "report-r2-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party"
+    },
+    {
+      "key": "city",
+      "title_id": "report-col-city",
+      "kind": "names"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_total",
+      "title_id": "report-col-buyer-total",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 2
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 9,
+            "code": "03049999",
+            "short_code": null,
+            "name_ur": "شاہد",
+            "name_en": "Shahid",
+            "tag": null,
+            "person_key": "شاہد|03000000000"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "سیب",
+            "en": "Apple"
+          }
+        },
+        {
+          "type": "number",
+          "value": 10
+        },
+        {
+          "type": "money",
+          "paisa": 120000
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 1280000
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 2
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 2,
+  "limit": 2,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 60
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 4140000
+    },
+    {
+      "type": "money",
+      "paisa": 4436400
+    }
+  ],
+  "summary": []
+}

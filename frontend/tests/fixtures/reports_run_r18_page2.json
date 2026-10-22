@@ -1,0 +1,258 @@
+{
+  "id": "R18",
+  "title_id": "report-r18-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 11,
+            "code": "04010002",
+            "short_code": null,
+            "name_ur": "کمیشن آمدن (گاہک)",
+            "name_en": "Commission Income (Buyer)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 248400
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 11
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 12,
+            "code": "04010003",
+            "short_code": null,
+            "name_ur": "لاگا آمدن",
+            "name_en": "Laga Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 48000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 12
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 13,
+            "code": "04010004",
+            "short_code": null,
+            "name_ur": "فون آمدن",
+            "name_en": "Phone Charge Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 4000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 13
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 31,
+            "code": "05010001",
+            "short_code": null,
+            "name_ur": "بجلی",
+            "name_en": "Electricity",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 31
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 15,
+            "code": "06010001",
+            "short_code": null,
+            "name_ur": "ابتدائی سرمایہ",
+            "name_en": "Opening Capital",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 6500000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 15
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 16,
+            "code": "06019999",
+            "short_code": null,
+            "name_ur": "ابتدائی فرق",
+            "name_en": "Opening Difference",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 16
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 23,
+            "code": "06030001",
+            "short_code": null,
+            "name_ur": "ذاتی خرچہ - الف",
+            "name_en": "Drawings - Partner A",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 200000
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 23
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 10,
+  "limit": 10,
+  "total_count": 17,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 8504800
+    },
+    {
+      "type": "money",
+      "paisa": 8504800
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-difference",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    }
+  ]
+}

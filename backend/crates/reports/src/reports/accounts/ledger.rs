@@ -24,7 +24,7 @@ use mandi_db::rusqlite::{Connection, OptionalExtension, params};
 use super::PageSpec;
 use super::ledger_items::{DetailQuery, load};
 use crate::error::ReportsError;
-use crate::reports::common::{amount_or_empty, balance_cell, paisa, source_of};
+use crate::reports::common::{LIVE, amount_or_empty, balance_cell, paisa, source_of};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
@@ -81,6 +81,20 @@ pub const TOTALS_SQL: &str =
          WHERE e.status = 'posted' AND l.account_id = ?1
            AND (?2 IS NULL OR l.pukhta_person_key = ?2)
            AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)";
+
+/// The sums of the live lines only, for the "bought or sold" and "paid" lines of R14. An entry
+/// that was reversed and the reversal itself cancel each other, so neither counts as bought, sold
+/// or paid (PRD FR-18.7 in spirit, C13). The closing balance still uses [`TOTALS_SQL`]: the pair
+/// has the same date and nets to zero there.
+fn live_totals_sql() -> String {
+    format!(
+        "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE {LIVE} AND l.account_id = ?1
+           AND (?2 IS NULL OR l.pukhta_person_key = ?2)
+           AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)"
+    )
+}
 
 /// One page of the ledger with the running sums (public for the query plan test).
 #[doc(hidden)]
@@ -186,7 +200,14 @@ fn run(
     if id == ReportId::R14 {
         // Bought or sold, then paid (PRD 19.2): a buyer is debited for what he bought and
         // credited for what he paid; a seller is credited for what he sold and debited for what
-        // was paid to him.
+        // was paid to him. Only live entries count: an edited or cancelled bill and its reversal
+        // are left out, so the lines read what is really owed (E2E-13: bought 13,092, not 25,972).
+        let (live_dr, live_cr): (i64, i64) = conn.query_row(
+            &live_totals_sql(),
+            params![account_id, person, from, to],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?;
+        let (total_dr, total_cr) = (paisa(live_dr)?, paisa(live_cr)?);
         let (first, first_label, second, second_label) = match party_type.as_str() {
             "buyer" => (
                 total_dr,

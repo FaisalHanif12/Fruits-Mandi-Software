@@ -93,7 +93,9 @@ export type ListColumnType =
   | 'date'
   // A day and a time, DD-MM-YYYY HH:MM (the list of بکری, the audit log).
   | 'datetime'
-  | 'status';
+  | 'status'
+  // A balance: a figure and the side word in a slot after it (reports, `unit` of ListColumn).
+  | 'balance';
 
 export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
   code: 120,
@@ -106,6 +108,8 @@ export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
   date: 140,
   datetime: 170,
   status: 120,
+  // The figure keeps the width of a money column and the side word has its own slot after it.
+  balance: 180,
 };
 
 /**
@@ -122,6 +126,7 @@ export function isListNumberLike(type: ListColumnType): boolean {
     type === 'number' ||
     type === 'money' ||
     type === 'date' ||
-    type === 'datetime'
+    type === 'datetime' ||
+    type === 'balance'
   );
 }

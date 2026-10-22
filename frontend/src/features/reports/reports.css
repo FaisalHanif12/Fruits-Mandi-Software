@@ -1,0 +1,49 @@
+/* The printed report (plan 20, PRD FR-19.13). It builds on print.css: the sheet, the header and the
+   table are the shared ones. Only what a report adds is here: the totals row at the end of the
+   table, a head that heads a group, and the side word of a balance in a slot after its figure. */
+
+/* The totals row is drawn once, under the last row, not repeated at the foot of every page. */
+.print-report .print-table tfoot {
+  display: table-row-group;
+}
+
+.print-report .print-table tfoot td {
+  border-block-start: var(--print-rule-strong) solid var(--color-ink);
+  font-weight: var(--weight-strong);
+}
+
+.print-report .print-table tr[data-row='group'] td {
+  background-color: var(--color-surface-sunken);
+  font-weight: var(--weight-strong);
+}
+
+/* A balance: the figure on the physical right edge, its side word in a slot of fixed width after
+   it, so the figures of the column keep one edge whatever the word is (NFR-USE-19). */
+.print-report .print-balance {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--print-gap-2);
+}
+
+.print-report .print-balance-side {
+  inline-size: var(--print-unit-slot);
+  text-align: start;
+}
+
+.print-report .print-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-1);
+}
+
+.print-report .print-summary-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--print-gap-3) var(--print-gap-5);
+}
+
+/* A date and the kind of an entry ("Receipt 1") are short and are never broken across two lines. */
+.print-report .print-table td.print-nowrap {
+  white-space: nowrap;
+}

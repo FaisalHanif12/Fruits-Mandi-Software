@@ -257,6 +257,14 @@ fn the_backup_story_through_the_real_commands_matches_the_fixtures() {
     ] {
         assert!(fields.contains(&field), "{field} in {fields:?}");
     }
+    // The closing time carries its bounds, because its message says "between min and max".
+    let time = refused["errors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["field"] == "closing_time")
+        .unwrap();
+    assert_eq!(time["values"], json!({ "min": "00:00", "max": "23:59" }));
     let mut good = settings(&usb_real, json!({}));
     good["usb_folder"] = json!(usb_real.display().to_string());
     let input = json!({ "settings": good, "cloud_access_key_id": "AKIA-EXAMPLE", "cloud_secret_access_key": "example-secret" });

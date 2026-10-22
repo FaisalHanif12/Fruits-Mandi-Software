@@ -3,6 +3,7 @@
 //! row in the same transaction (Code Standards S7). The cloud keys are secrets and live only in
 //! the Credential Manager (`secrets`).
 
+use mandi_core::error::ErrorValue;
 use mandi_db::Db;
 use mandi_db::audit::AuditEntry;
 use mandi_db::rusqlite::{Connection, OptionalExtension, params};
@@ -16,6 +17,10 @@ use crate::error::{BackupCode, BackupError};
 pub const SETTINGS_KEY: &str = "backup";
 /// When the cloud copy is made each day if the Owner set nothing (FR-20.3).
 pub const DEFAULT_CLOSING_TIME: &str = "21:00";
+/// The earliest closing time, sent as `min` with `ERR_OUT_OF_RANGE` on `closing_time`.
+pub const CLOSING_TIME_MIN: &str = "00:00";
+/// The latest closing time, sent as `max` with `ERR_OUT_OF_RANGE` on `closing_time`.
+pub const CLOSING_TIME_MAX: &str = "23:59";
 
 /// The backup settings that are not secret.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -90,7 +95,12 @@ impl BackupSettings {
     pub fn validate(&self) -> Result<(), BackupError> {
         let mut problems = Vec::new();
         if closing_minutes(&self.closing_time).is_none() {
-            problems.push(out_of_range("closing_time", "closing time is not HH:MM"));
+            // The message says "between { $min } and { $max }", so both bounds travel with it.
+            problems.push(
+                out_of_range("closing_time", "closing time is not HH:MM")
+                    .with("min", ErrorValue::Text(CLOSING_TIME_MIN.to_owned()))
+                    .with("max", ErrorValue::Text(CLOSING_TIME_MAX.to_owned())),
+            );
         }
         if self.local_dir.chars().any(char::is_control) || self.local_dir.len() > 260 {
             problems.push(out_of_range("local_dir", "local folder"));
@@ -230,8 +240,20 @@ mod tests {
             ..BackupSettings::default()
         };
         let error = settings.validate().unwrap_err();
-        let found: std::collections::BTreeSet<(String, BackupCode)> = error
-            .all()
+        let items = error.all();
+        let time = items
+            .iter()
+            .find(|e| e.field.as_deref() == Some("closing_time"))
+            .unwrap();
+        assert_eq!(
+            time.values.get("min"),
+            Some(&ErrorValue::Text("00:00".into()))
+        );
+        assert_eq!(
+            time.values.get("max"),
+            Some(&ErrorValue::Text("23:59".into()))
+        );
+        let found: std::collections::BTreeSet<(String, BackupCode)> = items
             .into_iter()
             .map(|e| (e.field.unwrap_or_default(), e.code))
             .collect();

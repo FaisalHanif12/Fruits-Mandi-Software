@@ -9,12 +9,14 @@ use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::Connection;
 
 use super::common::{MasterTable, load_party, names_of};
-use super::model::{DateShortcut, FilterKind, ReportFilters, ResolvedFilters};
+use super::model::{DateShortcut, FilterKind, GroupBy, PaidFilter, ReportFilters, ResolvedFilters};
 use crate::error::ReportsError;
 
 /// The filters of a run, read and checked. `resolved` is echoed back to the screen.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Typed {
+    /// Today in Pakistan, from the database clock. Ages and "up to now" use it.
+    pub(crate) today: Option<BusinessDate>,
     /// First day, included, `YYYY-MM-DD`.
     pub(crate) from: Option<String>,
     /// Last day, included, `YYYY-MM-DD`.
@@ -27,6 +29,18 @@ pub(crate) struct Typed {
     pub(crate) person_key: Option<String>,
     /// The picked city.
     pub(crate) city_id: Option<i64>,
+    /// The picked seller.
+    pub(crate) seller_id: Option<i64>,
+    /// The picked زمیندار.
+    pub(crate) zamindar_id: Option<i64>,
+    /// The picked item.
+    pub(crate) item_id: Option<i64>,
+    /// The picked اڈا.
+    pub(crate) adda_id: Option<i64>,
+    /// How R28 groups its lines. Month when the screen sent nothing.
+    pub(crate) group_by: GroupBy,
+    /// The paid or due filter of R9.
+    pub(crate) status: Option<PaidFilter>,
     /// The statement with its detail lines.
     pub(crate) detail: bool,
     /// What goes back to the screen.
@@ -99,7 +113,10 @@ pub(crate) fn resolve(
     input: &ReportFilters,
 ) -> Result<Typed, ReportsError> {
     let mut problems: Vec<FieldError> = Vec::new();
-    let mut typed = Typed::default();
+    let mut typed = Typed {
+        today: Some(today),
+        ..Typed::default()
+    };
 
     // A filter that was filled but is not one of this report's filters.
     let mut refuse_unless = |kind: FilterKind, filled: bool, field: &str| {
@@ -132,6 +149,12 @@ pub(crate) fn resolve(
     refuse_unless(FilterKind::City, input.city_id.is_some(), "filters.city_id");
     refuse_unless(FilterKind::Adda, input.adda_id.is_some(), "filters.adda_id");
     refuse_unless(FilterKind::Detail, input.detail, "filters.detail");
+    refuse_unless(
+        FilterKind::GroupBy,
+        input.group_by.is_some(),
+        "filters.group_by",
+    );
+    refuse_unless(FilterKind::Status, input.status.is_some(), "filters.status");
 
     // Dates. A shortcut wins over typed dates.
     if takes.has(FilterKind::DateRange) {
@@ -212,6 +235,9 @@ pub(crate) fn resolve(
     if takes.has(FilterKind::Seller) {
         typed.resolved.seller =
             picked_party(conn, input.seller_id, "filters.seller_id", &mut problems)?;
+        if typed.resolved.seller.is_some() {
+            typed.seller_id = input.seller_id;
+        }
     }
     if takes.has(FilterKind::Zamindar) {
         typed.resolved.zamindar = picked_party(
@@ -220,6 +246,9 @@ pub(crate) fn resolve(
             "filters.zamindar_id",
             &mut problems,
         )?;
+        if typed.resolved.zamindar.is_some() {
+            typed.zamindar_id = input.zamindar_id;
+        }
     }
     if takes.has(FilterKind::Item) {
         typed.resolved.item = picked_names(
@@ -229,6 +258,9 @@ pub(crate) fn resolve(
             "filters.item_id",
             &mut problems,
         )?;
+        if typed.resolved.item.is_some() {
+            typed.item_id = input.item_id;
+        }
     }
     if takes.has(FilterKind::City) {
         typed.resolved.city = picked_names(
@@ -250,8 +282,19 @@ pub(crate) fn resolve(
             "filters.adda_id",
             &mut problems,
         )?;
+        if typed.resolved.adda.is_some() {
+            typed.adda_id = input.adda_id;
+        }
     }
     typed.detail = takes.has(FilterKind::Detail) && input.detail;
+    if takes.has(FilterKind::GroupBy) {
+        typed.group_by = input.group_by.unwrap_or(GroupBy::Month);
+        typed.resolved.group_by = Some(typed.group_by);
+    }
+    if takes.has(FilterKind::Status) {
+        typed.status = input.status;
+        typed.resolved.status = input.status;
+    }
 
     if !problems.is_empty() {
         return Err(ReportsError::Rejected(problems));

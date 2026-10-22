@@ -23,6 +23,8 @@ pub mod vouchers;
 pub mod backup;
 // Run B, plan 20 (append-only block).
 pub mod reports_engine;
+// Run B, plan 20, step B3 (append-only block).
+pub mod reports_people;
 
 use std::fmt;
 

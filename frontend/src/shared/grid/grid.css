@@ -192,3 +192,41 @@
   block-size: 100%;
   min-block-size: calc(var(--control-h) * 5);
 }
+
+/* A row that heads a group (a head above its controls in the list of head balances) reads stronger
+   and sits on the sunken ground, with a word or a code as well, so style is never the only signal. */
+.entry-grid .row-group .ag-cell {
+  background-color: var(--color-surface-sunken);
+  font-weight: var(--weight-strong);
+}
+
+/* A long text in a read-only list wraps, in the script of the app, with room for Nastaliq lines. */
+.entry-grid .cell-wrap {
+  white-space: normal;
+  line-height: var(--leading-text);
+  padding-block: var(--space-2);
+}
+
+/* A figure with a short word after it in a slot of fixed width: the figures keep one right edge
+   whatever the word is (NFR-USE-19). The cell is left to right and set against the right edge, so
+   the slot sits on the physical right edge in both languages. */
+.entry-grid .cell-with-unit {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  inline-size: 100%;
+}
+
+.entry-grid .cell-unit {
+  flex: none;
+  inline-size: var(--unit-slot);
+  text-align: start;
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+}
+
+/* The heading of a figure that has a word after it stands over the figure, not over the word. */
+.entry-grid .header-unit .ag-header-cell-label {
+  padding-inline-end: calc(var(--unit-slot) + var(--space-2));
+}

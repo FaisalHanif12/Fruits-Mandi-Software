@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "ERR_OUT_OF_RANGE",
+      "field": "filters.party",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

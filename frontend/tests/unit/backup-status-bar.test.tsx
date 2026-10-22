@@ -83,6 +83,7 @@ describe('which words the status bar shows', () => {
       at: '2026-10-10T09:02:00.000Z',
       check_failed: true,
       file: 'x',
+      reason: null,
     };
     expect(statusBarWords({ ...STATUS_AFTER, errors: [failed] })).toEqual({
       tone: 'bad',

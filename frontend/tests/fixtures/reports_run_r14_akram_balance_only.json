@@ -1,0 +1,126 @@
+{
+  "id": "R14",
+  "title_id": "report-r14-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": {
+      "account_id": 20,
+      "code": "03040001",
+      "short_code": "1",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": null,
+      "person_key": null
+    },
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "detail",
+      "title_id": "report-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "narration",
+      "title_id": "report-col-narration",
+      "kind": "text"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance",
+      "kind": "balance"
+    }
+  ],
+  "rows": [],
+  "offset": 0,
+  "limit": 0,
+  "total_count": 0,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 1288000
+    },
+    {
+      "type": "money",
+      "paisa": 1000000
+    },
+    {
+      "type": "balance",
+      "paisa": 288000,
+      "side": "dr"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-opening-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    },
+    {
+      "label_id": "report-statement-bought",
+      "cell": {
+        "type": "money",
+        "paisa": 1288000
+      }
+    },
+    {
+      "label_id": "report-statement-paid",
+      "cell": {
+        "type": "money",
+        "paisa": 1000000
+      }
+    },
+    {
+      "label_id": "report-closing-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 288000,
+        "side": "dr"
+      }
+    }
+  ]
+}

@@ -397,6 +397,7 @@ const EXPECTED_FILES: &[&str] = &[
     // Run B, plan 18 (append-only block).
     "BackupRef.ts",
     "CloudLevel.ts",
+    "CloudReason.ts",
     "StatusError.ts",
     "BackupStatus.ts",
     "BackupListInput.ts",
@@ -456,6 +457,12 @@ const EXPECTED_FILES: &[&str] = &[
     "PrintReportRow.ts",
     "ReportPrintSummaryLine.ts",
     "ReportPrintData.ts",
+    // Run B, plan 20, step B3 (append-only block).
+    "ReportGroupBy.ts",
+    "ReportPaidFilter.ts",
+    "FindPeopleInput.ts",
+    "PukhtaPersonAccount.ts",
+    "PukhtaPersonHit.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -738,6 +745,9 @@ fn export_bindings() {
     mandi_reports::reports::ReportPrintInput::export_all(&cfg).unwrap();
     mandi_reports::reports::ReportPage::export_all(&cfg).unwrap();
     mandi_reports::reports::ReportPrintData::export_all(&cfg).unwrap();
+    // Run B, plan 20, step B3 (append-only block).
+    mandi_reports::people::FindPeopleInput::export_all(&cfg).unwrap();
+    mandi_reports::people::PersonHit::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

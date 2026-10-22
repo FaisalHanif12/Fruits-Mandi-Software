@@ -19,7 +19,7 @@ use mandi_db::rusqlite::params;
 use crate::api::{RunReport, TargetResult};
 use crate::cloud::CloudError;
 use crate::daily_pack::seal_file;
-use crate::error::{BackupCode, BackupError};
+use crate::error::{BackupCode, BackupError, CloudReason};
 use crate::io::{copy_atomic, hash_file, remove_quietly, require_room, write_atomic, write_error};
 use crate::model::{BackupKind, Embedded, InnerManifest, MANIFEST_FORMAT, Manifest};
 use crate::names::{bundle_name, is_copy_name, local_name, manifest_name, stamp};
@@ -94,6 +94,7 @@ fn target(kind: BackupKind) -> TargetResult {
         size_bytes: 0,
         queued: false,
         code: None,
+        reason: None,
     }
 }
 
@@ -101,6 +102,14 @@ fn failed(kind: BackupKind, code: BackupCode) -> TargetResult {
     TargetResult {
         code: Some(code),
         ..target(kind)
+    }
+}
+
+/// A failed result that also says why a cloud copy failed (offline, refused, not found).
+fn failed_with(kind: BackupKind, error: &BackupError) -> TargetResult {
+    TargetResult {
+        reason: error.cloud_reason(),
+        ..failed(kind, error.code)
     }
 }
 
@@ -155,6 +164,18 @@ impl BackupService {
         check_failed: bool,
         file: Option<String>,
     ) {
+        self.record_failure_why(kind, code, check_failed, file, None);
+    }
+
+    /// As `record_failure`, with the reason of a failed cloud copy.
+    fn record_failure_why(
+        &self,
+        kind: BackupKind,
+        code: BackupCode,
+        check_failed: bool,
+        file: Option<String>,
+        reason: Option<CloudReason>,
+    ) {
         let at = self.now_text();
         self.update_state(|s| {
             s.add_failure(Failure {
@@ -163,6 +184,7 @@ impl BackupService {
                 at,
                 check_failed,
                 file,
+                reason,
             });
         });
     }
@@ -584,7 +606,7 @@ impl BackupService {
                 file: Some(bundle.name.clone()),
                 size_bytes: bundle.sealed.bundle_size,
                 queued: true,
-                ..failed(kind, error.code)
+                ..failed_with(kind, &error)
             },
         }
     }
@@ -607,7 +629,7 @@ impl BackupService {
                     results.push(TargetResult {
                         file: Some(item.file),
                         queued: true,
-                        ..failed(BackupKind::Cloud, error.code)
+                        ..failed_with(BackupKind::Cloud, &error)
                     });
                     break;
                 }
@@ -699,7 +721,13 @@ impl BackupService {
                     item.last_reason = reason;
                 }
             });
-            self.record_failure(kind, error.code, check_failed, Some(name.to_owned()));
+            self.record_failure_why(
+                kind,
+                error.code,
+                check_failed,
+                Some(name.to_owned()),
+                error.cloud_reason(),
+            );
         }
         outcome
     }
