@@ -398,3 +398,68 @@ err-purchase-carries-trip-cost = اس خریداری میں { -market-safar } ک
 
 # review: pending
 err-trip-entry-cancelled = یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔
+
+## بیک اپ اور بحالی (plan 18, PRD Section 20)۔ `BackupCode` کے وہ کوڈ جو core میں ابھی نہیں ہیں۔
+## جو سات core میں پہلے سے ہیں (ڈسک بھر گئی، اندرونی، ڈیٹا کی جانچ، مصروف، ضروری، حد سے باہر،
+## ڈیٹا اپ ڈیٹ) ان کے الفاظ اوپر والے ہی ہیں۔
+
+# review: pending
+err-backup-not-found = یہ کاپی نہیں ملی۔ ہو سکتا ہے ہٹا دی گئی ہو۔ فہرست دوبارہ کھولیں اور پھر کوشش کریں۔
+
+# review: pending
+err-backup-key-not-set = اس کمپیوٹر پر ابھی بیک اپ کی چابی نہیں ہے۔ پہلے چابی بنائیں۔
+
+# review: pending
+err-backup-key-already-set = بیک اپ کی چابی پہلے سے استعمال میں ہے، اس لیے نئی نہیں بن سکتی۔
+
+# review: pending
+err-backup-key-format = چابی صحیح طرح نہیں لکھی گئی۔ اس میں چار چار حرفوں اور ہندسوں کے چھ حصے ہوتے ہیں، جن کے درمیان ڈیش ہوتی ہے۔
+
+# review: pending
+err-backup-key-wrong = یہ درست چابی نہیں ہے۔ پرنٹ کی ہوئی پرچی دیکھیں اور دوبارہ کوشش کریں۔ کچھ نہیں بدلا۔
+
+# review: pending
+err-backup-key-required = یہ کاپی بیک اپ کی چابی سے بند ہے۔ پرنٹ کی ہوئی پرچی سے چابی لکھیں۔
+
+# review: pending
+err-backup-corrupt = یہ کاپی خراب ہے اور استعمال نہیں ہو سکتی۔ کچھ نہیں بدلا۔ کوئی اور کاپی استعمال کریں۔
+
+# review: pending
+err-backup-check-failed = کاپی بن گئی لیکن جانچ میں پوری نہیں اتری، اس لیے اس پر بھروسا نہیں کیا جا سکتا۔ نئی کاپی بنائیں۔
+
+# review: pending
+err-backup-cloud-not-configured = کلاؤڈ کاپی ابھی ترتیب نہیں دی گئی۔ بیک اپ کی ترتیبات میں کلاؤڈ کی تفصیل بھریں۔
+
+# $reason: offline، refused یا not_found۔
+# review: pending
+err-backup-cloud-failed =
+    { $reason ->
+        [offline] کلاؤڈ تک رسائی نہیں ہو سکی۔ انٹرنیٹ دیکھیں۔ کاپی انتظار میں رہتی ہے اور خود بخود دوبارہ بھیجی جاتی ہے۔
+        [refused] کلاؤڈ نے کاپی قبول نہیں کی۔ بیک اپ کی ترتیبات میں کلاؤڈ کی چابیاں دیکھیں۔
+        [not_found] کلاؤڈ کا بکٹ یا کاپی نہیں ملی۔ بیک اپ کی ترتیبات میں بکٹ کا نام دیکھیں۔
+       *[other] کلاؤڈ کاپی نہیں بن سکی۔ کچھ دیر بعد دوبارہ کوشش کریں۔
+    }
+
+# review: pending
+err-backup-usb-not-present = یو ایس بی ڈرائیو لگی ہوئی نہیں۔ اسے لگائیں، یا بیک اپ کی ترتیبات میں یو ایس بی کاپی بند کر دیں۔
+
+# review: pending
+err-backup-usb-failed = یو ایس بی ڈرائیو پر کاپی نہیں بن سکی۔ ڈرائیو اور فولڈر دیکھیں۔
+
+# review: pending
+err-backup-local-failed = اس کمپیوٹر پر کاپی نہیں بن سکی۔ بیک اپ کی ترتیبات میں فولڈر اور ڈسک کی خالی جگہ دیکھیں۔
+
+# review: pending
+err-backup-busy = بیک اپ یا بحالی پہلے سے چل رہی ہے۔ اس کے مکمل ہونے تک انتظار کریں۔
+
+# review: pending
+err-backup-not-confirmed = بحالی شروع ہونے سے پہلے تصدیق کریں۔ کچھ نہیں بدلا۔
+
+# review: pending
+err-backup-newer-than-app = یہ کاپی اس کمپیوٹر کی ایپ سے نئے ورژن کی ہے۔ پہلے ایپ اپ ڈیٹ کریں۔
+
+# review: pending
+err-backup-not-started = بیک اپ کی سروس ابھی چل نہیں رہی۔ ذرا انتظار کریں اور دوبارہ کوشش کریں۔
+
+# review: pending
+err-backup-restore-failed = بحالی مکمل نہیں ہو سکی۔ ایپ بند کر کے دوبارہ کھولیں۔ اگر کھاتے غلط لگیں تو مدد کے لیے رابطہ کریں: بحالی سے پہلے حفاظتی کاپی بنائی گئی تھی۔

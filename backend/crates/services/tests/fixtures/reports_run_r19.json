@@ -1,0 +1,165 @@
+{
+  "id": "R19",
+  "title_id": "report-r19-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "opening_date",
+      "title_id": "report-col-opening-date",
+      "kind": "date"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 1,
+            "code": "01010001",
+            "short_code": null,
+            "name_ur": "روکڑ",
+            "name_en": "Cash",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "date",
+          "iso": "2026-08-31"
+        },
+        {
+          "type": "money",
+          "paisa": 6500000
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 15,
+            "code": "06010001",
+            "short_code": null,
+            "name_ur": "ابتدائی سرمایہ",
+            "name_en": "Opening Capital",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "date",
+          "iso": "2026-08-31"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 6500000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 15
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 16,
+            "code": "06019999",
+            "short_code": null,
+            "name_ur": "ابتدائی فرق",
+            "name_en": "Opening Difference",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 16
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 6500000
+    },
+    {
+      "type": "money",
+      "paisa": 6500000
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-difference",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    }
+  ]
+}

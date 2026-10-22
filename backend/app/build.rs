@@ -148,6 +148,10 @@ const APP_COMMANDS: &[&str] = &[
     "backup_settings_set",
     "backup_key_setup",
     "backup_key_confirm",
+    // Run B, plan 20 (append-only block).
+    "reports_catalog",
+    "reports_run",
+    "reports_print_data",
 ];
 
 fn main() {

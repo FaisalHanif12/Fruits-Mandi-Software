@@ -4,6 +4,7 @@
 
 import { Localized } from '@fluent/react';
 import { Check, Lock } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Num, ScriptText } from '../../shared/ui';
 
 export type DayState = 'open' | 'closed';
@@ -18,9 +19,21 @@ interface StatusBarProps {
   closedUpTo?: string | null;
   /** The day state opens the screen where days are closed and reopened. */
   onOpenDay?: () => void;
+  /**
+   * The last good cloud backup, drawn by the backup module (PRD FR-20.6, NFR-BAK-10). Without it
+   * (a screen with no backend, the component gallery) the bar says the backup is not set up.
+   */
+  backup?: ReactNode;
 }
 
-export function StatusBar({ userName, date, day, closedUpTo = null, onOpenDay }: StatusBarProps) {
+export function StatusBar({
+  userName,
+  date,
+  day,
+  closedUpTo = null,
+  onOpenDay,
+  backup,
+}: StatusBarProps) {
   return (
     <footer className="type-body flex min-h-statusbar shrink-0 items-center gap-5 border-t border-border bg-surface-sunken px-4 text-ink">
       <Localized id="layout-status-user" vars={{ name: userName }} elems={{ name: <ScriptText /> }}>
@@ -42,10 +55,12 @@ export function StatusBar({ userName, date, day, closedUpTo = null, onOpenDay }:
         </Localized>
       )}
       <span className="flex-1" />
-      <span className="flex items-center gap-2">
-        <span aria-hidden="true" className="size-2 rounded-full bg-border-control" />
-        <Localized id="layout-status-backup-none" />
-      </span>
+      {backup ?? (
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="size-2 rounded-full bg-border-control" />
+          <Localized id="layout-status-backup-none" />
+        </span>
+      )}
     </footer>
   );
 }

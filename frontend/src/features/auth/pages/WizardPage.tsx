@@ -19,6 +19,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { LanguageSwitch } from '../../../app/layout/LanguageSwitch';
 import { uiErrorOf } from '../../../shared/api';
+import { BackupKeyCard } from '../../backup';
 import { PartnerSetupForm } from '../../partners';
 import { useFocusFirstField, useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation } from '../../../shared/keyboard';
@@ -42,6 +43,7 @@ import { firstHintedField, hintFor } from '../wizard-hints';
 import {
   STEP_CODE,
   STEP_FIELDS,
+  STEP_KEY,
   STEP_PARTNERS,
   WIZARD_FIELDS,
   earliestStepWithError,
@@ -61,6 +63,7 @@ export function WizardPage() {
   const setValue = useWizardStore((state) => state.setValue);
   const setMarks = useWizardStore((state) => state.setMarks);
   const finishSetup = useWizardStore((state) => state.finishSetup);
+  const toKey = useWizardStore((state) => state.toKey);
   const toPartners = useWizardStore((state) => state.toPartners);
   const reset = useWizardStore((state) => state.reset);
   const setup = useFirstRun();
@@ -176,6 +179,7 @@ export function WizardPage() {
     { id: 'firm', label: <Localized id="auth-wizard-step-firm" /> },
     { id: 'owner', label: <Localized id="auth-wizard-step-owner" /> },
     { id: 'code', label: <Localized id="auth-wizard-step-code" /> },
+    { id: 'key', label: <Localized id="backup-wizard-step-key" /> },
     { id: 'partners', label: <Localized id="auth-wizard-step-partners" /> },
   ];
   // The last step of the wizard: the app (already signed in) or the sign-in screen.
@@ -252,7 +256,16 @@ export function WizardPage() {
         <Stepper steps={steps} current={step} label={l10n.getString('auth-wizard-steps')} />
       </div>
       <div className={`mx-auto w-full ${step === STEP_PARTNERS ? 'max-w-form' : 'max-w-reading'}`}>
-        {step === STEP_PARTNERS ? (
+        {step === STEP_KEY ? (
+          <Card>
+            <div className="flex flex-col gap-4">
+              <Localized id="backup-wizard-key-title">
+                <h2 className="type-section print:text-ink" />
+              </Localized>
+              <BackupKeyCard onDone={toPartners} />
+            </div>
+          </Card>
+        ) : step === STEP_PARTNERS ? (
           <div className="flex flex-col gap-4">
             <Localized id="auth-wizard-partners-title">
               <h2 className="type-section" />
@@ -279,8 +292,9 @@ export function WizardPage() {
                 helpId="auth-wizard-code-help"
                 finishId={signedIn ? 'auth-wizard-next' : 'auth-wizard-finish'}
                 onFinish={() => {
-                  // Signed in: the partners step comes next. Not signed in: the wizard is over.
-                  if (signedIn) toPartners();
+                  // Signed in: the backup key step comes next. Not signed in: the wizard is over
+                  // (the key and the partners are set up later, from the backup and partners areas).
+                  if (signedIn) toKey();
                   else finishWizard();
                 }}
               />

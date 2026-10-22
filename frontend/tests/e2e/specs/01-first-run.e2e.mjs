@@ -1,6 +1,7 @@
 // D1 story, step 1 (plan 04 Section 5.6, D1-A14, plan 11 D3-A2): the first-run wizard by keyboard
 // only. The window opens in Urdu, right to left (PRD FR-7.30). The firm, then the Owner, then the
-// recovery code to print, then the partners (الف, ب, ج with 40, 30 and 30 percent, PRD 4.2). The
+// recovery code to print, then the backup key to print and type back (plan 18, PRD FR-20.10,
+// NFR-BAK-7), then the partners (الف, ب, ج with 40, 30 and 30 percent, PRD 4.2). The
 // Owner is signed in right after the setup, so the end of the wizard opens the app; the spec then
 // signs out to see the sign-in screen. The suite starts on a computer with no app data, so this
 // spec makes the Owner the later specs sign in as (support/credentials.mjs) and the partners
@@ -8,6 +9,7 @@
 // Screenshots of each step are saved in Urdu, and of the sign-in screen in both languages.
 
 import { $, browser, expect } from '@wdio/globals';
+import { rememberKey } from '../support/backup-key.mjs';
 import { FIRM, OWNER, PARTNERS } from '../support/credentials.mjs';
 import { t } from '../support/messages.mjs';
 import {
@@ -34,13 +36,13 @@ describe('first run (Urdu)', () => {
     expect(sinceSessionStart()).toBeLessThan(30_000);
   });
 
-  it('shows four steps with the first current', async () => {
+  it('shows five steps with the first current', async () => {
     const steps = await $(
       `ol[aria-label="${t('ur', 'auth-wizard-steps')}"], ul[aria-label="${t('ur', 'auth-wizard-steps')}"]`,
     );
     await expect(steps).toBeDisplayed();
     const items = await steps.$$('li');
-    expect(items).toHaveLength(4);
+    expect(items).toHaveLength(5);
     await expect(items[0]).toHaveAttribute('aria-current', 'step');
   });
 
@@ -74,20 +76,61 @@ describe('first run (Urdu)', () => {
     await shootScreen('wizard-code', 'ur');
   });
 
-  it('Next needs the tick, then goes on to the partners step', async () => {
+  it('Next needs the tick, then goes on to the backup key step', async () => {
     const next = await button('ur', 'auth-wizard-next');
     await expect(next).toBeDisabled();
     await $('input[type="checkbox"]').click();
     await expect(next).toBeEnabled();
     await next.click();
-    await waitForHeading('ur', 'auth-wizard-partners-title');
-    // The recovery code was shown once: it is not on this screen any more.
-    await expect($('p[aria-label]')).not.toBeExisting();
+    await waitForHeading('ur', 'backup-wizard-key-title');
+    // The recovery code was shown once: the key is the only code on this screen.
     const steps = await $(
       `ol[aria-label="${t('ur', 'auth-wizard-steps')}"], ul[aria-label="${t('ur', 'auth-wizard-steps')}"]`,
     );
     const items = await steps.$$('li');
     await expect(items[3]).toHaveAttribute('aria-current', 'step');
+  });
+});
+
+describe('first run: the backup key step (Urdu)', () => {
+  /** @type {string} */
+  let key = '';
+
+  it('shows the backup key once, in six groups of four, left to right', async () => {
+    const shown = await $('p[aria-label]');
+    await shown.waitForDisplayed();
+    key = (await shown.getAttribute('aria-label')) ?? '';
+    expect(key).toMatch(/^[A-Z0-9]{4}(-[A-Z0-9]{4}){5}$/);
+    rememberKey(key);
+    await shootScreen('wizard-key', 'ur');
+  });
+
+  it('confirming the key needs the tick that it was printed', async () => {
+    const confirm = await button('ur', 'backup-key-confirm');
+    await expect(confirm).toBeDisabled();
+    await $('input[type="checkbox"]').click();
+    await expect(confirm).toBeDisabled();
+  });
+
+  it('typing a wrong key is refused at its field; the right key goes on to the partners', async () => {
+    const typed = await $(`input[lang="en"]`);
+    await typed.click();
+    await type(`ABCD-EFGH-JKLM-NPQR-STUV-WXYZ${Key.Enter}`);
+    await browser.waitUntil(async () => (await typed.getAttribute('aria-invalid')) === 'true', {
+      timeout: 10_000,
+    });
+    await shootScreen('wizard-key-wrong', 'ur');
+    await typed.click();
+    await press([Key.Ctrl, 'a']);
+    await type(`${key}${Key.Enter}`);
+    await waitForHeading('ur', 'auth-wizard-partners-title');
+    // The key was shown once: it is not on this screen any more.
+    await expect($('p[aria-label]')).not.toBeExisting();
+    const steps = await $(
+      `ol[aria-label="${t('ur', 'auth-wizard-steps')}"], ul[aria-label="${t('ur', 'auth-wizard-steps')}"]`,
+    );
+    const items = await steps.$$('li');
+    await expect(items[4]).toHaveAttribute('aria-current', 'step');
     await shootScreen('wizard-partners-empty', 'ur');
   });
 });

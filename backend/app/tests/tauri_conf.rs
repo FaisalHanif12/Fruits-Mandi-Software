@@ -269,6 +269,10 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-backup-settings-set",
             "allow-backup-key-setup",
             "allow-backup-key-confirm",
+            // Run B, plan 20 (append-only block).
+            "allow-reports-catalog",
+            "allow-reports-run",
+            "allow-reports-print-data",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",
@@ -299,6 +303,7 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "allow-auth-status",
             "allow-reports-bikri-print-data",
             "allow-reports-voucher-print-data",
+            "allow-reports-print-data",
             "core:event:default"
         ])
     );

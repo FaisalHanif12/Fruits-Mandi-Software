@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import type { SpellingMarks } from '../../shared/urdu/spelling';
+import { useBackupKeyStore } from '../backup';
 import { usePartnerSetupStore } from '../partners';
 
 export const WIZARD_FIELDS = [
@@ -28,11 +29,17 @@ export const STEP_FIELDS: readonly (readonly WizardField[])[] = [
   ['owner_display_name', 'owner_username', 'password', 'password_repeat'],
   [],
   [],
+  [],
 ];
 
-/** The steps in order: 0 firm, 1 Owner, 2 recovery code, 3 partners (NFR-INS-2). */
+/**
+ * The steps in order: 0 firm, 1 Owner, 2 recovery code, 3 backup key, 4 partners (NFR-INS-2).
+ * The backup key step (plan 18, PRD FR-20.10) needs the signed-in Owner, so it comes after the
+ * recovery code, like the partners step.
+ */
 export const STEP_CODE = 2;
-export const STEP_PARTNERS = 3;
+export const STEP_KEY = 3;
+export const STEP_PARTNERS = 4;
 
 const EMPTY: WizardValues = {
   firm_name_ur: '',
@@ -66,7 +73,9 @@ interface WizardState {
   setValue: (field: WizardField, text: string) => void;
   setMarks: (name: WizardNameKey, marks: SpellingMarks | undefined) => void;
   finishSetup: (recoveryCode: string, signedIn: boolean) => void;
-  /** On to the partners step. The recovery code is shown once, so it is dropped here. */
+  /** On to the backup key step. The recovery code is shown once, so it is dropped here. */
+  toKey: () => void;
+  /** On to the partners step. The backup key is shown once, so the key step is over. */
   toPartners: () => void;
   reset: () => void;
 }
@@ -94,13 +103,18 @@ export const useWizardStore = create<WizardState>()((set) => ({
       values: { ...state.values, password: '', password_repeat: '' },
     }));
   },
+  toKey: () => {
+    set({ step: STEP_KEY, recoveryCode: null });
+  },
   toPartners: () => {
     set({ step: STEP_PARTNERS, recoveryCode: null });
   },
   reset: () => {
     set({ step: 0, values: EMPTY, marks: {}, recoveryCode: null, signedIn: false });
-    // What was typed in the partners step is gone with the wizard.
+    // What was typed in the partners step is gone with the wizard, and so is the backup key
+    // (it is shown once; the backup screen can make a new one).
     usePartnerSetupStore.getState().clear();
+    useBackupKeyStore.getState().clear();
   },
 }));
 

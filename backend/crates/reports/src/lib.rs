@@ -1,12 +1,15 @@
 //! `mandi-reports`: report queries, print data and Excel export (PRD 19).
 //! Depends on `mandi-db` and `mandi-core`.
 //!
+//! - [`reports`]: the report engine (catalogue, filters, pages with totals, print data) and the
+//!   Accounts group R11, R13, R14, R16 to R19 (plan 20, PRD 19).
 //! - [`print`]: the print data of a saved بکری: the seller bill, the buyer slips and the
 //!   پختہ slip (plan 14, PRD FR-12.12, FR-19.3 to FR-19.7). Read only; every number is a stored
 //!   value, never worked out again (Code Standards B20).
 
 pub mod error;
 pub mod print;
+pub mod reports;
 
 pub use error::ReportsError;
 

@@ -1,7 +1,7 @@
 //! The one error type of `mandi-reports` (Code Standards B9). The app turns it into an error
 //! code for the screen. No error text for the user is written here (CLAUDE.md rule 7).
 
-use mandi_core::error::ErrorCode;
+use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::MoneyError;
 use mandi_core::urdu_words::WordsError;
 use mandi_db::DbError;
@@ -25,6 +25,10 @@ pub enum ReportsError {
     /// Stored data is not in the shape this code wrote.
     #[error("stored data is wrong: {0}")]
     Data(String),
+    /// The filters or the page asked for are not allowed. Every problem is listed with its
+    /// field, so the screen can show them together (Code Standards 4.3).
+    #[error("rejected: {0:?}")]
+    Rejected(Vec<FieldError>),
 }
 
 impl ReportsError {
@@ -39,6 +43,9 @@ impl ReportsError {
             ReportsError::Money(error) => error.code(),
             ReportsError::Words(_) => ErrorCode::ErrOverflow,
             ReportsError::Data(_) => ErrorCode::ErrInternal,
+            ReportsError::Rejected(items) => items
+                .first()
+                .map_or(ErrorCode::ErrInternal, |item| item.code),
         }
     }
 }

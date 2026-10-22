@@ -14,14 +14,14 @@ const PAKISTAN_OFFSET_HOURS: i64 = 5;
 
 /// How numbers are written on one print: the grouping, and whether the digits are Urdu.
 #[derive(Debug, Clone, Copy)]
-pub(super) struct NumberStyle {
+pub(crate) struct NumberStyle {
     grouping: Grouping,
     urdu_digits: bool,
 }
 
 impl NumberStyle {
     /// Urdu digits are used only on an Urdu print with the setting on (NFR-URD-14).
-    pub(super) fn new(language: Language, grouping: Grouping, urdu_digits_setting: bool) -> Self {
+    pub(crate) fn new(language: Language, grouping: Grouping, urdu_digits_setting: bool) -> Self {
         Self {
             grouping,
             urdu_digits: urdu_digits_setting && language == Language::Ur,
@@ -29,36 +29,36 @@ impl NumberStyle {
     }
 
     /// True when this print uses Urdu digits.
-    pub(super) fn urdu_digits(self) -> bool {
+    pub(crate) fn urdu_digits(self) -> bool {
         self.urdu_digits
     }
 
     /// Whole rupees with grouping commas.
-    pub(super) fn money(self, amount: Paisa) -> Result<String, ReportsError> {
+    pub(crate) fn money(self, amount: Paisa) -> Result<String, ReportsError> {
         Ok(self.digits(format_paisa(amount, self.grouping)?))
     }
 
     /// A whole count, grouped like money.
-    pub(super) fn count(self, value: i64) -> String {
+    pub(crate) fn count(self, value: i64) -> String {
         self.digits(format_count(value, self.grouping))
     }
 
     /// A day `YYYY-MM-DD` as `DD-MM-YYYY` (NFR-URD-16).
-    pub(super) fn date(self, iso: &str) -> Result<String, ReportsError> {
+    pub(crate) fn date(self, iso: &str) -> Result<String, ReportsError> {
         let day = BusinessDate::parse_iso(iso)
             .ok_or_else(|| ReportsError::Data(format!("a stored date is not a date: {iso}")))?;
         Ok(self.digits(format_ddmmyyyy(day)))
     }
 
     /// The time of the print in Pakistan time, `DD-MM-YYYY HH:MM`.
-    pub(super) fn printed_at(self, now_utc: DateTime<Utc>) -> String {
+    pub(crate) fn printed_at(self, now_utc: DateTime<Utc>) -> String {
         let local = now_utc + Duration::hours(PAKISTAN_OFFSET_HOURS);
         self.digits(local.format("%d-%m-%Y %H:%M").to_string())
     }
 
     /// A weight in grams as kg with up to 3 decimals and no trailing zeros: 12,345 → `12.345`,
     /// 12,500 → `12.5`, 12,000 → `12`.
-    pub(super) fn kilos(self, grams: i64) -> String {
+    pub(crate) fn kilos(self, grams: i64) -> String {
         let sign = if grams < 0 { "-" } else { "" };
         let grams = grams.unsigned_abs();
         let whole = grams / 1_000;
@@ -84,7 +84,7 @@ impl NumberStyle {
 }
 
 /// `0123456789` → `۰۱۲۳۴۵۶۷۸۹` (U+06F0 to U+06F9, the digits of the Urdu font).
-pub(super) fn to_urdu_digits(text: &str) -> String {
+pub(crate) fn to_urdu_digits(text: &str) -> String {
     text.chars()
         .map(|c| {
             c.to_digit(10)

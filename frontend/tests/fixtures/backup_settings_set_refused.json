@@ -1,0 +1,26 @@
+{
+  "errors": [
+    {
+      "code": "ERR_OUT_OF_RANGE",
+      "field": "closing_time",
+      "values": {}
+    },
+    {
+      "code": "ERR_REQUIRED",
+      "field": "usb_folder",
+      "values": {}
+    },
+    {
+      "code": "ERR_OUT_OF_RANGE",
+      "field": "cloud_endpoint",
+      "values": {}
+    },
+    {
+      "code": "ERR_REQUIRED",
+      "field": "cloud_bucket",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-00000000-0000"
+}

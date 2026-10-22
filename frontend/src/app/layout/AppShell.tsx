@@ -29,6 +29,8 @@ interface AppShellProps {
   closedUpTo?: string | null;
   /** The state of the day opens the screen where days are closed and reopened. */
   onOpenDay?: () => void;
+  /** The last good cloud backup for the status bar (PRD NFR-BAK-10). */
+  backup?: ReactNode;
   children: ReactNode;
 }
 
@@ -45,6 +47,7 @@ export function AppShell({
   day,
   closedUpTo = null,
   onOpenDay,
+  backup,
   children,
 }: AppShellProps) {
   useTextSize();
@@ -83,6 +86,7 @@ export function AppShell({
         day={day}
         closedUpTo={closedUpTo}
         {...(onOpenDay === undefined ? {} : { onOpenDay })}
+        backup={backup}
       />
     </div>
   );

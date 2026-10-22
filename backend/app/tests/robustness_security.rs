@@ -808,6 +808,18 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
             true,
         ),
+        // Run B, plan 20 (append-only block).
+        ("reports_catalog", json!({}), true),
+        (
+            "reports_run",
+            json!({ "input": { "id": "R18", "filters": {}, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "reports_print_data",
+            json!({ "input": { "id": "R18", "filters": {}, "language": "en" } }),
+            true,
+        ),
     ]
 }
 

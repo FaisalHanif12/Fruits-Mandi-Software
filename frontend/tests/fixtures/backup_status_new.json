@@ -1,0 +1,20 @@
+{
+  "cloud_age_hours": null,
+  "cloud_enabled": true,
+  "cloud_level": "red",
+  "cloud_ready": true,
+  "errors": [],
+  "key_confirm_due": false,
+  "key_confirmed": false,
+  "key_set": false,
+  "last_cloud_at": null,
+  "last_local_at": null,
+  "last_test_restore_at": null,
+  "last_usb_at": null,
+  "pack_pending": true,
+  "queue_len": 0,
+  "running": false,
+  "test_restore_due": false,
+  "usb_enabled": true,
+  "usb_present": true
+}

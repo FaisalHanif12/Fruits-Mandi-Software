@@ -1,15 +1,18 @@
 // Turns backend error codes into Fluent message IDs (Code Standards 4.3, NFR-USE-14).
 // ERR_QTY_EXCEEDS_LOT becomes err-qty-exceeds-lot. The message lives in i18n/<lang>/errors.ftl.
 
-import type { ErrorCode } from '../../bindings/ErrorCode';
+import type { WireCode } from '../../bindings/WireCode';
 import type { UiError } from '../../bindings/UiError';
 import type { UiErrorItem } from '../../bindings/UiErrorItem';
 import { formatPaisaValue, groupDigits, type Grouping } from '../format/money';
 import { formatBps } from '../format/percent';
 import { CommandError, toUiError } from './invoke';
 
-/** The Fluent message ID for an error code. */
-export function errorMessageId(code: ErrorCode): string {
+/**
+ * The Fluent message ID for an error code. A backup command may also send a code of its own
+ * (`BackupCode`, plan 18); both kinds are the text `ERR_...` and are read the same way.
+ */
+export function errorMessageId(code: WireCode): string {
   return `err-${code.replace(/^ERR_/, '').toLowerCase().replaceAll('_', '-')}`;
 }
 

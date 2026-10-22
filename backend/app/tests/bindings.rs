@@ -426,6 +426,36 @@ const EXPECTED_FILES: &[&str] = &[
     "WireCode.ts",
     "BackupErrorItem.ts",
     "BackupWireError.ts",
+    // Run B, plan 20 (append-only block).
+    "ReportId.ts",
+    "ReportGroup.ts",
+    "ReportFilterKind.ts",
+    "ReportCatalogEntry.ts",
+    "ReportDateShortcut.ts",
+    "ReportPartyFilter.ts",
+    "ReportFilters.ts",
+    "ReportNames.ts",
+    "ReportParty.ts",
+    "ReportResolvedFilters.ts",
+    "ReportColumnKind.ts",
+    "ReportColumn.ts",
+    "ReportDetailPart.ts",
+    "ReportCell.ts",
+    "ReportSourceKind.ts",
+    "ReportRowSource.ts",
+    "ReportRowKind.ts",
+    "ReportRow.ts",
+    "ReportSummaryLine.ts",
+    "ReportPage.ts",
+    "ReportRunInput.ts",
+    "ReportPrintInput.ts",
+    "PrintReportParty.ts",
+    "ReportPrintDetailPart.ts",
+    "ReportPrintCell.ts",
+    "PrintReportColumn.ts",
+    "PrintReportRow.ts",
+    "ReportPrintSummaryLine.ts",
+    "ReportPrintData.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -702,6 +732,12 @@ fn export_bindings() {
     mandi_backup::api::BackupSettingsInput::export_all(&cfg).unwrap();
     mandi_backup::BackupCode::export_all(&cfg).unwrap();
     mandi_app_lib::commands::backup::BackupWireError::export_all(&cfg).unwrap();
+    // Run B, plan 20 (append-only block).
+    mandi_reports::reports::CatalogEntry::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportRunInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportPage::export_all(&cfg).unwrap();
+    mandi_reports::reports::ReportPrintData::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

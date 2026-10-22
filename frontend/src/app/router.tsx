@@ -347,6 +347,14 @@ function comingSoonRoute<Path extends string>(path: Path) {
   });
 }
 
+// ---- Run B, plan 18 (D5 early track): بیک اپ. Replaces the "coming soon" page of /backup. ----
+const backupRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/backup',
+  component: lazyRouteComponent(() => import('../features/backup/pages/BackupPage'), 'BackupPage'),
+});
+// ---- end of Run B block ----
+
 const appRoutes = [
   dashboardRoute,
   settingsRoute,
@@ -383,7 +391,7 @@ const appRoutes = [
   partnersSetupRoute,
   comingSoonRoute('/analytics'),
   comingSoonRoute('/reports'),
-  comingSoonRoute('/backup'),
+  backupRoute,
 ];
 
 // The component gallery exists only in development (plan 02 T3). In a build, DEV is false, so
@@ -428,10 +436,23 @@ const devRoutes = import.meta.env.DEV
     ]
   : [];
 
+// ---- Run B, plan 18: the development page of the backup screen (dev only, like the others). ----
+const backupDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/backup',
+        component: lazyRouteComponent(() => import('./dev/BackupPage'), 'BackupPage'),
+      }),
+    ]
+  : [];
+// ---- end of Run B block ----
+
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren(appRoutes),
   printRoute,
   ...devRoutes,
+  ...backupDevRoutes,
 ]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router

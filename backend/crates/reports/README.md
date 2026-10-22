@@ -21,3 +21,26 @@ Tests: `tests/print_data.rs` (snapshots in `tests/snapshots`, written with `INST
 ## `print::voucher_print_data`: the slip of a voucher (plan 15, PRD FR-15.2)
 
 `voucher_print_data(db, input)` reads a saved وصولی, ادائیگی or پیشگی and builds the same generic `PrintData` with doc `receipt_slip`: one page, the party (the one-time person by his own names), no lines, one `Total` amount (`print-slip-amount-received`, `-paid` or `-advance`), the amount in words, the way the money moved in `payment_id` (`print-mode-cash`, `-bank`, `-cheque`), and facts for the number, the day, the bank, the cheque, the reason, the collector and the note. The title is `print-receipt-slip-title`, `print-payment-slip-title` or `print-advance-slip-title`. A cancelled voucher is flagged `cancelled`. Paper: `paper_receipt_slip` of the Printing settings (starts as A5).
+
+## `reports`: the report engine and the Accounts group (plan 20, PRD 19)
+
+One engine serves every report, so one screen can show them all (`reports::catalog`, `run`, `print_data`).
+
+- **Catalogue** (`catalog()`): each report has its PRD ID, group, title ID and the filters it takes (`date_range`, `as_of`, `party`, `seller`, `zamindar`, `item`, `city`, `adda`, `detail`).
+- **Run** (`run(db, ReportRunInput)`): reads and checks the filters, then returns one page: typed columns, typed rows (text, label, number, money, balance with side, date, account, names, document, items), `total_count`, the `totals` row over the whole filter, the filters as read, lines above the table (`summary`), and for each row the record it opens. A total is never a sum of the page. A filter the report does not take, a bad date, an unknown record and a bad page are refused together, each with its field (`filters.from`, `filters.party.account_id`, `offset`, `limit`).
+- **Print data** (`print_data(db, ReportPrintInput)`): the same report with every row, formatted for the print language (grouping, digits, `DD-MM-YYYY`), with the firm header, the filters of the run, the totals row and, for R13 and R14, the closing balance in words. The template calculates nothing; "Page x of y" is drawn by the shared print layout.
+- **Reads posted records only and writes nothing** (PRD FR-6.1, FR-18.8). A total is a `SUM()` of stored `INTEGER` paisa columns, or a checked sum of such sums. A balance is `Σ debit − Σ credit`, worked out in Rust with checked maths (`Balance::from_totals`). The running balance of a ledger page comes from `SUM() OVER` on the same columns.
+
+| Report | Rows | Total row |
+|---|---|---|
+| R11 روزنامچہ | posted journal lines in the range, in the order `(entry_date, entry id, line no)` | Σ بنام, Σ جمع |
+| R13 کھاتہ | the lines of one account (or one person of a پختہ کھاتہ account) with their items (FR-19.8) and the balance after each | Σ بنام, Σ جمع, closing balance; opening balance above |
+| R14 فرد حساب | balance only: no lines; with `detail`: the lines of R13 | as R13; above: opening, bought or sold, paid, closing |
+| R16 انڈکس | every account with its city and balance, by code | Σ of the debit balances, Σ of the credit balances |
+| R17 مدوں بیلنس | each head with its controls, net of all their lines | Σ of the heads on each side |
+| R18 ٹرائل بیلنس | every account with posted lines | Σ بنام, Σ جمع (equal); difference above |
+| R19 اوپن ٹرائل | the opening balances, and ابتدائی فرق as the other side | Σ بنام, Σ جمع |
+
+**Items on a ledger line** (`accounts/ledger_items.rs`): the journal line does not store the sale line it came from. The entry builder writes one buyer debit per sale line in `(lot, line)` order and one credit per lot, so the n-th debit of a buyer in the entry is his n-th sale line. The pairing is checked against the stored buyer total, and a line that does not match is shown with no items, never with wrong ones. A reversal is paired through the entry it reverses.
+
+Tests: `crates/services/tests/reports_accounts.rs` on the PRD worked day (R18 is the E2E-10 table, R13 for اکرم is E2E-33, every account's ledger closes on the services balance, pages add up to the whole, a report writes nothing, query plans use indexes) and writes the fixtures of the commands in `crates/services/tests/fixtures/reports_*.json` (`MANDI_WRITE_FIXTURES=1` writes them again).

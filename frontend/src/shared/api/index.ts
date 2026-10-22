@@ -1,5 +1,5 @@
 export { CommandError, callCommand, hasAppBridge, isUiError, toUiError } from './invoke';
-export { emitEvent } from './events';
+export { emitEvent, listenEvent } from './events';
 export {
   FALLBACK_ERROR_MESSAGE_ID,
   errorMessageId,

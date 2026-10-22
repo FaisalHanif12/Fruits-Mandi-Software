@@ -1,0 +1,341 @@
+{
+  "id": "R18",
+  "title_id": "report-r18-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 1,
+            "code": "01010001",
+            "short_code": null,
+            "name_ur": "روکڑ",
+            "name_en": "Cash",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 5848400
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 3,
+            "code": "02010001",
+            "short_code": null,
+            "name_ur": "مزدوری کھاتہ",
+            "name_en": "Labour Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 30000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 3
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 4,
+            "code": "02010002",
+            "short_code": null,
+            "name_ur": "کرایہ کھاتہ",
+            "name_en": "Freight Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 400000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 4
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 6,
+            "code": "02010004",
+            "short_code": null,
+            "name_ur": "منشیانہ کھاتہ",
+            "name_en": "Munshiana Payable",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 10000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 6
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 18
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "030110002",
+            "short_code": "2",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1016000
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 19
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 288000
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 20
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 21,
+            "code": "03040002",
+            "short_code": "2",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 1868400
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 21
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 9,
+            "code": "03049999",
+            "short_code": "9999",
+            "name_ur": "پختہ کھاتہ (خریدار)",
+            "name_en": "Pukhta Khata (Buyer)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 9
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 10,
+            "code": "04010001",
+            "short_code": null,
+            "name_ur": "کمیشن آمدن (بیوپاری)",
+            "name_en": "Commission Income (Seller)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 248400
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 10
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 10,
+  "total_count": 17,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 8504800
+    },
+    {
+      "type": "money",
+      "paisa": 8504800
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-difference",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    }
+  ]
+}

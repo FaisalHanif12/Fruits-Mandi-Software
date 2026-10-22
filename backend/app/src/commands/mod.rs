@@ -21,6 +21,8 @@ pub mod trips;
 pub mod vouchers;
 // Run B, plan 18 (append-only block).
 pub mod backup;
+// Run B, plan 20 (append-only block).
+pub mod reports_engine;
 
 use std::fmt;
 

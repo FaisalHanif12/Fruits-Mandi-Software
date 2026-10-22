@@ -1,0 +1,22 @@
+/* The printed sheet of the backup key (PRD FR-20.10, NFR-BAK-7). On paper only the sheet shows:
+   everything else on the page is hidden, and the sheet is fixed to the top of the page, so the
+   same sheet prints from the wizard and from the backup screen. On screen it is not drawn. */
+@media print {
+  body:has([data-key-sheet]) * {
+    visibility: hidden;
+  }
+
+  [data-key-sheet] {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    padding: var(--space-6);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  body:has([data-key-sheet]) [data-key-sheet],
+  body:has([data-key-sheet]) [data-key-sheet] * {
+    visibility: visible;
+  }
+}

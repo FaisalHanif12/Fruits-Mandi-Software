@@ -26,9 +26,9 @@
 //! "انیس ہزار تین سو سولہ روپے".
 
 mod build;
-mod format;
+pub(crate) mod format;
 mod ids;
-mod load;
+pub(crate) mod load;
 mod pages;
 mod voucher;
 

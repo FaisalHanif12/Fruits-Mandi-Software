@@ -5,6 +5,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../../src/features/auth/api';
+import * as backupApi from '../../src/features/backup/api';
 import * as partnersApi from '../../src/features/partners/api';
 import * as settingsApi from '../../src/features/settings/api';
 import * as urduApi from '../../src/shared/urdu/api';
@@ -24,6 +25,7 @@ import {
   sessionUser,
 } from '../helpers/app';
 import { fakeMasters } from '../helpers/masters';
+import { KEY_SETUP } from '../helpers/backup-real';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
@@ -32,6 +34,7 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/partners/api');
+vi.mock('../../src/features/backup/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
@@ -65,6 +68,8 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
+  vi.mocked(backupApi.backupKeySetup).mockResolvedValue(KEY_SETUP);
+  vi.mocked(backupApi.backupKeyConfirm).mockResolvedValue(null);
   fakeAccounts([]);
   fakeAccountSearch([]);
   fakeMasters({});
@@ -89,11 +94,11 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
     return userEvent.setup();
   }
 
-  it('shows four steps, the first current, and the first field has focus', async () => {
+  it('shows five steps, the first current, and the first field has focus', async () => {
     await start();
     const steps = screen.getByRole('list', { name: message(language, 'auth-wizard-steps') });
     const items = steps.querySelectorAll('li');
-    expect(items).toHaveLength(4);
+    expect(items).toHaveLength(5);
     expect(items[0]).toHaveAttribute('aria-current', 'step');
     // The name to type comes first: Urdu in the Urdu app, English in the English app.
     expect(
@@ -475,6 +480,14 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
     await user.click(
       screen.getByRole('button', { name: new RegExp(message(language, 'auth-wizard-next')) }),
     );
+    // The backup key step comes between the recovery code and the partners (plan 18). Leaving it
+    // for later goes on; the key step has its own tests in backup-wizard-key.test.tsx.
+    await screen.findByRole('heading', {
+      name: (name) => visible(name) === message(language, 'backup-wizard-key-title'),
+    });
+    await user.click(
+      await screen.findByRole('button', { name: message(language, 'backup-key-later') }),
+    );
     await screen.findByRole('heading', {
       name: (name) => visible(name) === message(language, 'auth-wizard-partners-title'),
     });
@@ -489,7 +502,7 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
   it('signed in after the setup, the code step goes on to the partners step, which can be left for later', async () => {
     const { user } = await toPartnersStep();
     const steps = screen.getByRole('list', { name: message(language, 'auth-wizard-steps') });
-    expect(steps.querySelectorAll('li')[3]).toHaveAttribute('aria-current', 'step');
+    expect(steps.querySelectorAll('li')[4]).toHaveAttribute('aria-current', 'step');
     expect(
       await screen.findByRole('heading', {
         name: named(message(language, 'partners-setup-empty')),

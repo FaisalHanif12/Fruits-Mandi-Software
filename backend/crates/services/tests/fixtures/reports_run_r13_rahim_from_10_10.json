@@ -1,0 +1,238 @@
+{
+  "id": "R13",
+  "title_id": "report-r13-title",
+  "filters": {
+    "shortcut": null,
+    "from": "2026-10-10",
+    "to": null,
+    "as_of": null,
+    "party": {
+      "account_id": 18,
+      "code": "030110001",
+      "short_code": "1",
+      "name_ur": "رحیم",
+      "name_en": "Rahim",
+      "tag": null,
+      "person_key": null
+    },
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "detail",
+      "title_id": "report-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "narration",
+      "title_id": "report-col-narration",
+      "kind": "text"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance",
+      "kind": "balance"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "lot",
+              "bikri_number": 1,
+              "item": {
+                "ur": "کیلا",
+                "en": "Banana"
+              },
+              "packing": {
+                "ur": "پیٹی",
+                "en": "Box"
+              },
+              "qty": 50,
+              "gross_paisa": 2940000,
+              "deductions_paisa": 508400
+            }
+          ]
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 2431600
+        },
+        {
+          "type": "balance",
+          "paisa": 931600,
+          "side": "cr"
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 500000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 431600,
+          "side": "cr"
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-payment",
+          "number": 1
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 431600
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 0,
+          "side": "zero"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 3
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 931600
+    },
+    {
+      "type": "money",
+      "paisa": 2431600
+    },
+    {
+      "type": "balance",
+      "paisa": 0,
+      "side": "zero"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-opening-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 1500000,
+        "side": "dr"
+      }
+    },
+    {
+      "label_id": "report-closing-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    }
+  ]
+}

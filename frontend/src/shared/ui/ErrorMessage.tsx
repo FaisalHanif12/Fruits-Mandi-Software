@@ -4,12 +4,21 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useCallback, type ReactElement } from 'react';
-import type { UiErrorItem } from '../../bindings/UiErrorItem';
+import type { WireCode } from '../../bindings/WireCode';
 import { FALLBACK_ERROR_MESSAGE_ID, errorMessageId, messageVars } from '../api';
 import { useGrouping } from '../format';
 
+/**
+ * What is needed to say an error in words: its code and its values. A `UiErrorItem` fits, and so
+ * does a problem a backup command reports (its codes are wider, `WireCode`).
+ */
+export interface ErrorLike {
+  code: WireCode;
+  values: Record<string, string | number>;
+}
+
 interface ErrorMessageProps {
-  item: UiErrorItem;
+  item: ErrorLike;
   /** The element that holds the words, for example <p className="..." />. */
   children: ReactElement;
 }
@@ -33,7 +42,7 @@ export function ErrorMessage({ item, children }: ErrorMessageProps) {
  * element: the tooltip of a grid cell. Same words as ErrorMessage, and the same plain fallback
  * for a code this build has no words for (Code Standards 4.3, NFR-USE-14).
  */
-export function useErrorText(): (item: UiErrorItem) => string {
+export function useErrorText(): (item: ErrorLike) => string {
   const grouping = useGrouping();
   const { l10n } = useLocalization();
   // The same function until the language or the grouping changes, so a screen can depend on it.

@@ -1,0 +1,544 @@
+//! The print data of a report (plan 20, PRD FR-19.3 to FR-19.7, FR-19.10, FR-19.13).
+//!
+//! It is the same page the screen shows, with every row, formatted for the print language. The
+//! template lays it out and calculates nothing:
+//!
+//! - every number is formatted here: grouping by the number grouping setting, English digits
+//!   unless the Urdu digits setting is on and the print language is Urdu (NFR-URD-14);
+//! - titles, column headings and labels are Fluent message IDs; names are already in the print
+//!   language; the only sentences built here are the amounts in words (FR-19.7);
+//! - the header is the shared one of the other prints (`PrintFirm`), and the filters of the run
+//!   are listed in it (FR-19.10). The footer "Page x of y" is drawn by the shared print layout;
+//!   its message ID is in `footer_id`.
+//!
+//! Example (R18 after the worked day, English): the totals row reads `85,048` and `85,048`, the
+//! difference line reads `0`.
+
+use chrono::{DateTime, Utc};
+use mandi_core::accounts::BalanceSide;
+use mandi_core::auth::Language;
+use mandi_core::english_words::english_words;
+use mandi_core::money::{Grouping, Paisa};
+use mandi_core::printing::Paper;
+use mandi_core::urdu_words::urdu_words;
+use serde::Serialize;
+use ts_rs::TS;
+
+use super::ids;
+use super::model::{
+    Cell, ColumnKind, DetailPart, Names, PartyRef, ReportId, ReportPage, ResolvedFilters, RowKind,
+};
+use crate::error::ReportsError;
+use crate::print::format::NumberStyle;
+use crate::print::load::FirmNames;
+use crate::print::{PrintFact, PrintFirm, PrintWords, TextDir};
+
+/// The ID of the label of an amount in words, shared with the other prints.
+const IN_WORDS: &str = "print-in-words";
+
+/// An account in a print: short code and name with tag (FR-19.13).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PrintReportParty {
+    /// The short code of a seller or buyer. Null for other accounts.
+    pub short_code: Option<String>,
+    /// The full code.
+    pub code: String,
+    /// The name in the print language.
+    pub name: String,
+    /// The tag after the name. Null for none.
+    pub tag: Option<String>,
+    /// The person inside a پختہ کھاتہ account, as stored. Null for any other line.
+    pub person_key: Option<String>,
+}
+
+/// The goods or reason behind a ledger line, formatted for print.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+#[ts(rename = "ReportPrintDetailPart")]
+pub enum PrintDetailPart {
+    /// A sale line: "کیلا 20 پیٹی @ 600 = 12,000، کمیشن 720، لاگا 160".
+    Sale {
+        /// The بکری number.
+        bikri_number: String,
+        /// The item in the print language.
+        item: String,
+        /// The packing in the print language.
+        packing: String,
+        /// The quantity.
+        qty: String,
+        /// The rate.
+        rate: String,
+        /// The value.
+        value: String,
+        /// The buyer commission.
+        commission: String,
+        /// لاگا.
+        laga: String,
+    },
+    /// A seller credit.
+    Lot {
+        /// The بکری number.
+        bikri_number: String,
+        /// The item in the print language.
+        item: String,
+        /// The packing in the print language.
+        packing: String,
+        /// The quantity.
+        qty: String,
+        /// خام بکری.
+        gross: String,
+        /// The deductions.
+        deductions: String,
+    },
+    /// Cash lent to a buyer.
+    CashLent {
+        /// The reason as typed.
+        reason: String,
+    },
+    /// A note as typed.
+    Text {
+        /// The text.
+        text: String,
+    },
+}
+
+/// One printed cell.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[ts(rename = "ReportPrintCell")]
+pub enum PrintCell {
+    /// Nothing.
+    Empty,
+    /// Text as typed.
+    Text {
+        /// The text.
+        text: String,
+    },
+    /// A Fluent message ID.
+    Label {
+        /// The ID.
+        id: String,
+    },
+    /// A whole number.
+    Number {
+        /// The number as printed.
+        text: String,
+    },
+    /// Money in whole rupees.
+    Money {
+        /// The amount as printed.
+        text: String,
+    },
+    /// Money with a side.
+    Balance {
+        /// The amount as printed.
+        text: String,
+        /// Fluent message ID of the side (بنام, جمع).
+        side_id: String,
+    },
+    /// A date, `DD-MM-YYYY`.
+    Date {
+        /// The date as printed.
+        text: String,
+    },
+    /// An account.
+    Party {
+        /// The account.
+        party: PrintReportParty,
+    },
+    /// A name in the print language.
+    Names {
+        /// The name.
+        text: String,
+    },
+    /// A document.
+    Doc {
+        /// Fluent message ID of the kind.
+        type_id: String,
+        /// The number as printed. Null if the source has none.
+        number: Option<String>,
+    },
+    /// The goods or reason behind a ledger line.
+    Detail {
+        /// The parts, in order.
+        parts: Vec<PrintDetailPart>,
+    },
+}
+
+/// One printed column.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PrintReportColumn {
+    /// A stable key.
+    pub key: String,
+    /// Fluent message ID of the heading.
+    pub title_id: String,
+    /// What it holds. The template aligns numbers and money to the right edge.
+    pub kind: ColumnKind,
+}
+
+/// One printed row.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PrintReportRow {
+    /// One cell for each column.
+    pub cells: Vec<PrintCell>,
+    /// How it is drawn.
+    pub kind: RowKind,
+}
+
+/// A line above the table.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(rename = "ReportPrintSummaryLine")]
+pub struct PrintSummaryLine {
+    /// Fluent message ID of the label.
+    pub label_id: String,
+    /// The value.
+    pub cell: PrintCell,
+}
+
+/// Everything a template needs to print one report with every row.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ReportPrintData {
+    /// The report.
+    pub report: ReportId,
+    /// The print language.
+    pub language: Language,
+    /// The writing direction.
+    pub dir: TextDir,
+    /// The paper class.
+    pub paper: Paper,
+    /// True when Urdu digits are used on this print.
+    pub urdu_digits: bool,
+    /// Fluent message ID of the title.
+    pub title_id: String,
+    /// The firm header.
+    pub firm: PrintFirm,
+    /// The filters of the run, for the header: dates and party (FR-19.10).
+    pub filters: Vec<PrintFact>,
+    /// The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
+    pub printed_at: String,
+    /// The columns.
+    pub columns: Vec<PrintReportColumn>,
+    /// Lines above the table (opening balance and so on).
+    pub summary: Vec<PrintSummaryLine>,
+    /// Every row of the filter.
+    pub rows: Vec<PrintReportRow>,
+    /// How many rows there are, as printed.
+    pub row_count: String,
+    /// Fluent message ID of the totals row label.
+    pub totals_label_id: String,
+    /// The totals row, one cell for each column.
+    pub totals: Vec<PrintCell>,
+    /// The closing balance of a ledger or statement in words (FR-19.7). Null otherwise.
+    pub words: Option<PrintWords>,
+    /// Fluent message ID of the words used for "Page x of y" in the shared layout.
+    pub footer_id: String,
+}
+
+/// What a print needs besides the report page.
+#[derive(Debug, Clone)]
+pub struct PrintOptions {
+    /// The print language.
+    pub language: Language,
+    /// The number grouping setting (PRD FR-19.7).
+    pub grouping: Grouping,
+    /// The Urdu digits switch of the Printing settings.
+    pub urdu_digits_setting: bool,
+    /// The paper class.
+    pub paper: Paper,
+    /// The firm header.
+    pub firm: FirmNames,
+    /// The time of the print.
+    pub now_utc: DateTime<Utc>,
+}
+
+struct Fmt {
+    language: Language,
+    grouping: Grouping,
+    style: NumberStyle,
+}
+
+impl Fmt {
+    fn name(&self, ur: &str, en: &str) -> String {
+        let (first, second) = match self.language {
+            Language::Ur => (ur, en),
+            Language::En => (en, ur),
+        };
+        if first.trim().is_empty() {
+            second.to_owned()
+        } else {
+            first.to_owned()
+        }
+    }
+
+    fn party(&self, party: &PartyRef) -> PrintReportParty {
+        PrintReportParty {
+            short_code: party.short_code.clone(),
+            code: party.code.clone(),
+            name: self.name(&party.name_ur, &party.name_en),
+            tag: party.tag.clone(),
+            person_key: party.person_key.clone(),
+        }
+    }
+
+    fn names(&self, names: &Names) -> String {
+        self.name(&names.ur, &names.en)
+    }
+
+    fn side_id(side: BalanceSide) -> String {
+        match side {
+            BalanceSide::Dr => ids::SIDE_DR,
+            BalanceSide::Cr => ids::SIDE_CR,
+            BalanceSide::Zero => ids::SIDE_ZERO,
+        }
+        .to_owned()
+    }
+
+    fn detail(&self, part: &DetailPart) -> Result<PrintDetailPart, ReportsError> {
+        Ok(match part {
+            DetailPart::Sale {
+                bikri_number,
+                item,
+                packing,
+                qty,
+                rate_paisa,
+                value_paisa,
+                commission_paisa,
+                laga_paisa,
+            } => PrintDetailPart::Sale {
+                bikri_number: self.style.count(*bikri_number),
+                item: self.names(item),
+                packing: self.names(packing),
+                qty: self.style.count(*qty),
+                rate: self.style.money(*rate_paisa)?,
+                value: self.style.money(*value_paisa)?,
+                commission: self.style.money(*commission_paisa)?,
+                laga: self.style.money(*laga_paisa)?,
+            },
+            DetailPart::Lot {
+                bikri_number,
+                item,
+                packing,
+                qty,
+                gross_paisa,
+                deductions_paisa,
+            } => PrintDetailPart::Lot {
+                bikri_number: self.style.count(*bikri_number),
+                item: self.names(item),
+                packing: self.names(packing),
+                qty: self.style.count(*qty),
+                gross: self.style.money(*gross_paisa)?,
+                deductions: self.style.money(*deductions_paisa)?,
+            },
+            DetailPart::CashLent { reason } => PrintDetailPart::CashLent {
+                reason: reason.clone(),
+            },
+            DetailPart::Text { text } => PrintDetailPart::Text { text: text.clone() },
+        })
+    }
+
+    fn cell(&self, cell: &Cell) -> Result<PrintCell, ReportsError> {
+        Ok(match cell {
+            Cell::Empty => PrintCell::Empty,
+            Cell::Text { text } => PrintCell::Text { text: text.clone() },
+            Cell::Label { id } => PrintCell::Label { id: id.clone() },
+            Cell::Number { value } => PrintCell::Number {
+                text: self.style.count(*value),
+            },
+            Cell::Money { paisa } => PrintCell::Money {
+                text: self.style.money(*paisa)?,
+            },
+            Cell::Balance { paisa, side } => PrintCell::Balance {
+                text: self.style.money(*paisa)?,
+                side_id: Self::side_id(*side),
+            },
+            Cell::Date { iso } => PrintCell::Date {
+                text: self.style.date(iso)?,
+            },
+            Cell::Party { party } => PrintCell::Party {
+                party: self.party(party),
+            },
+            Cell::Names { names } => PrintCell::Names {
+                text: self.names(names),
+            },
+            Cell::Doc { type_id, number } => PrintCell::Doc {
+                type_id: type_id.clone(),
+                number: number.map(|n| self.style.count(n)),
+            },
+            Cell::Detail { parts } => PrintCell::Detail {
+                parts: parts
+                    .iter()
+                    .map(|p| self.detail(p))
+                    .collect::<Result<Vec<_>, _>>()?,
+            },
+        })
+    }
+
+    fn cells(&self, cells: &[Cell]) -> Result<Vec<PrintCell>, ReportsError> {
+        cells.iter().map(|c| self.cell(c)).collect()
+    }
+
+    fn words(&self, amount: Paisa) -> Result<PrintWords, ReportsError> {
+        let text = match self.language {
+            Language::Ur => urdu_words(amount)?,
+            Language::En => english_words(amount, self.grouping)?,
+        };
+        Ok(PrintWords {
+            label_id: IN_WORDS.to_owned(),
+            text,
+        })
+    }
+}
+
+fn fact(label: &str, value: String) -> PrintFact {
+    PrintFact {
+        label_id: label.to_owned(),
+        value,
+    }
+}
+
+/// The filters of the run as header facts: dates and party first (FR-19.10).
+fn filter_facts(
+    fmt: &Fmt,
+    id: ReportId,
+    filters: &ResolvedFilters,
+) -> Result<Vec<PrintFact>, ReportsError> {
+    let mut facts = Vec::new();
+    if let Some(from) = &filters.from {
+        facts.push(fact(ids::FILTER_FROM, fmt.style.date(from)?));
+    }
+    if let Some(to) = &filters.to {
+        facts.push(fact(ids::FILTER_TO, fmt.style.date(to)?));
+    }
+    if let Some(as_of) = &filters.as_of {
+        facts.push(fact(ids::FILTER_AS_OF, fmt.style.date(as_of)?));
+    }
+    let party_text = |p: &PartyRef| {
+        let mut text = String::new();
+        if let Some(short) = &p.short_code {
+            text.push_str(short);
+            text.push(' ');
+        } else {
+            text.push_str(&p.code);
+            text.push(' ');
+        }
+        text.push_str(&fmt.name(&p.name_ur, &p.name_en));
+        if let Some(tag) = &p.tag {
+            text.push(' ');
+            text.push_str(tag);
+        }
+        text
+    };
+    if let Some(party) = &filters.party {
+        facts.push(fact(ids::FILTER_PARTY, party_text(party)));
+    }
+    if let Some(party) = &filters.seller {
+        facts.push(fact(ids::FILTER_SELLER, party_text(party)));
+    }
+    if let Some(party) = &filters.zamindar {
+        facts.push(fact(ids::FILTER_ZAMINDAR, party_text(party)));
+    }
+    if let Some(names) = &filters.item {
+        facts.push(fact(ids::FILTER_ITEM, fmt.names(names)));
+    }
+    if let Some(names) = &filters.city {
+        facts.push(fact(ids::FILTER_CITY, fmt.names(names)));
+    }
+    if let Some(names) = &filters.adda {
+        facts.push(fact(ids::FILTER_ADDA, fmt.names(names)));
+    }
+    // The statement says whether it is balances only or with its lines. The label is the whole
+    // fact, so the value is empty.
+    if id == ReportId::R14 {
+        let label = if filters.detail {
+            ids::FILTER_DETAIL
+        } else {
+            ids::FILTER_BALANCE_ONLY
+        };
+        facts.push(fact(label, String::new()));
+    }
+    Ok(facts)
+}
+
+/// Builds the print data from a page that holds every row. Pure: it reads nothing else.
+///
+/// # Errors
+/// `ReportsError::Money` for an amount that does not fit, `ReportsError::Words` for a closing
+/// balance that cannot be written in words, `ReportsError::Data` for a stored date that is not
+/// a date.
+pub fn build_print(
+    page: &ReportPage,
+    options: &PrintOptions,
+) -> Result<ReportPrintData, ReportsError> {
+    let fmt = Fmt {
+        language: options.language,
+        grouping: options.grouping,
+        style: NumberStyle::new(
+            options.language,
+            options.grouping,
+            options.urdu_digits_setting,
+        ),
+    };
+    let language = options.language;
+
+    // A ledger or a statement is signed off with its closing balance in words (FR-19.7).
+    let words = if matches!(page.id, ReportId::R13 | ReportId::R14) {
+        let closing = page
+            .summary
+            .iter()
+            .find(|s| s.label_id == ids::CLOSING_BALANCE)
+            .and_then(|s| match &s.cell {
+                Cell::Balance { paisa, side } if *side != BalanceSide::Zero => Some(*paisa),
+                _ => None,
+            });
+        closing.map(|amount| fmt.words(amount)).transpose()?
+    } else {
+        None
+    };
+
+    let mut rows = Vec::with_capacity(page.rows.len());
+    for row in &page.rows {
+        rows.push(PrintReportRow {
+            cells: fmt.cells(&row.cells)?,
+            kind: row.kind,
+        });
+    }
+    let mut summary = Vec::with_capacity(page.summary.len());
+    for line in &page.summary {
+        summary.push(PrintSummaryLine {
+            label_id: line.label_id.clone(),
+            cell: fmt.cell(&line.cell)?,
+        });
+    }
+    Ok(ReportPrintData {
+        report: page.id,
+        language,
+        dir: TextDir::of(language),
+        paper: options.paper,
+        urdu_digits: fmt.style.urdu_digits(),
+        title_id: page.title_id.clone(),
+        firm: PrintFirm {
+            name: fmt.name(&options.firm.name_ur, &options.firm.name_en),
+            mandi: fmt.name(&options.firm.mandi_ur, &options.firm.mandi_en),
+            address: options.firm.address.clone(),
+            phone: options.firm.phone.clone(),
+        },
+        filters: filter_facts(&fmt, page.id, &page.filters)?,
+        printed_at: fmt.style.printed_at(options.now_utc),
+        columns: page
+            .columns
+            .iter()
+            .map(|c| PrintReportColumn {
+                key: c.key.clone(),
+                title_id: c.title_id.clone(),
+                kind: c.kind,
+            })
+            .collect(),
+        summary,
+        rows,
+        row_count: fmt.style.count(page.total_count),
+        totals_label_id: page.totals_label_id.clone(),
+        totals: fmt.cells(&page.totals)?,
+        words,
+        footer_id: ids::PAGE_FOOTER.to_owned(),
+    })
+}

@@ -219,6 +219,10 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::backup::backup_settings_set,
         commands::backup::backup_key_setup,
         commands::backup::backup_key_confirm,
+        // Run B, plan 20 (append-only block).
+        commands::reports_engine::reports_catalog,
+        commands::reports_engine::reports_run,
+        commands::reports_engine::reports_print_data,
     ]
 }
 

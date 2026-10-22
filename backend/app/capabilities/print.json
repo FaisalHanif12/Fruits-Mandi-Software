@@ -8,6 +8,7 @@
     "allow-auth-status",
     "allow-reports-bikri-print-data",
     "allow-reports-voucher-print-data",
+    "allow-reports-print-data",
     "core:event:default"
   ]
 }

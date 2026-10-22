@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { AuthStatus } from '../bindings/AuthStatus';
 import type { SessionUser } from '../bindings/SessionUser';
 import { LockOverlay } from '../features/auth/components/LockOverlay';
+import { BackupStatusItem } from '../features/backup';
 import { BikriDraftOffer } from '../features/bikri/draft-offer';
 import { UndoHost } from '../features/bikri/undo';
 import { useAuthStatus, useLock, useLogout, useSavePreferences } from '../features/auth/hooks';
@@ -135,6 +136,13 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         onOpenDay={() => {
           goTo('/day');
         }}
+        backup={
+          <BackupStatusItem
+            onOpen={() => {
+              goTo(MAIN_ROUTES.backup);
+            }}
+          />
+        }
       >
         <Outlet />
       </AppShell>

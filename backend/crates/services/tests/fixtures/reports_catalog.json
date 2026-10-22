@@ -1,0 +1,75 @@
+[
+  {
+    "id": "R11",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r11-title",
+    "filters": [
+      "date_range",
+      "party"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R13",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r13-title",
+    "filters": [
+      "date_range",
+      "party"
+    ],
+    "party_required": true
+  },
+  {
+    "id": "R14",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r14-title",
+    "filters": [
+      "date_range",
+      "party",
+      "detail"
+    ],
+    "party_required": true
+  },
+  {
+    "id": "R16",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r16-title",
+    "filters": [
+      "as_of",
+      "city"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R17",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r17-title",
+    "filters": [
+      "as_of"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R18",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r18-title",
+    "filters": [
+      "as_of"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R19",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r19-title",
+    "filters": [],
+    "party_required": false
+  }
+]

@@ -400,3 +400,68 @@ err-purchase-carries-trip-cost = This purchase carries a part of a { -market-saf
 
 # review: pending
 err-trip-entry-cancelled = This entry is cancelled already.
+
+## Backup and restore (plan 18, PRD Section 20). The codes of `BackupCode` that core has not got yet.
+## The seven that core has already (disk full, internal, data check, busy, required, out of range,
+## migration) share the messages above.
+
+# review: pending
+err-backup-not-found = This copy was not found. It may have been removed. Refresh the list and try again.
+
+# review: pending
+err-backup-key-not-set = There is no backup key on this computer yet. Make the key first.
+
+# review: pending
+err-backup-key-already-set = A backup key is in use already, so a new one cannot be made.
+
+# review: pending
+err-backup-key-format = The key is not written the right way. It has six groups of four letters and numbers, with dashes between them.
+
+# review: pending
+err-backup-key-wrong = This is not the right key. Check the printed sheet and try again. Nothing was changed.
+
+# review: pending
+err-backup-key-required = This copy is locked with the backup key. Type the key from your printed sheet.
+
+# review: pending
+err-backup-corrupt = This copy is damaged and cannot be used. Nothing was changed. Use another copy.
+
+# review: pending
+err-backup-check-failed = The copy was made but did not pass its check, so it cannot be trusted. Make a new copy.
+
+# review: pending
+err-backup-cloud-not-configured = The cloud copy is not set up. Fill in the cloud details in the backup settings.
+
+# $reason is offline, refused or not_found.
+# review: pending
+err-backup-cloud-failed =
+    { $reason ->
+        [offline] The cloud could not be reached. Check the internet. The copy waits and is sent again by itself.
+        [refused] The cloud refused the copy. Check the cloud keys in the backup settings.
+        [not_found] The cloud bucket or the copy was not found. Check the bucket name in the backup settings.
+       *[other] The cloud copy failed. Try again later.
+    }
+
+# review: pending
+err-backup-usb-not-present = The USB drive is not plugged in. Plug it in, or switch the USB copy off in the backup settings.
+
+# review: pending
+err-backup-usb-failed = The copy to the USB drive failed. Check the drive and the folder.
+
+# review: pending
+err-backup-local-failed = The copy on this computer failed. Check the folder in the backup settings and the free space on the disk.
+
+# review: pending
+err-backup-busy = A backup or restore is running already. Wait until it is done.
+
+# review: pending
+err-backup-not-confirmed = Please confirm before the restore starts. Nothing was changed.
+
+# review: pending
+err-backup-newer-than-app = This copy is from a newer version of the app than the one on this computer. Update the app first.
+
+# review: pending
+err-backup-not-started = The backup service is not running yet. Wait a moment and try again.
+
+# review: pending
+err-backup-restore-failed = The restore could not be finished. Close the app and open it again. If your books look wrong, contact support: a safety copy was made before the restore.
