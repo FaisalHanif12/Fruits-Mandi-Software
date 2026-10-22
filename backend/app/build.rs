@@ -137,6 +137,17 @@ const APP_COMMANDS: &[&str] = &[
     "reports_list_printers",
     "settings_get_printing",
     "settings_set_printing",
+    // Run B, plan 18 (append-only block).
+    "backup_status",
+    "backup_list",
+    "backup_now",
+    "backup_restore_preview",
+    "backup_restore",
+    "backup_test_restore",
+    "backup_settings_get",
+    "backup_settings_set",
+    "backup_key_setup",
+    "backup_key_confirm",
 ];
 
 fn main() {

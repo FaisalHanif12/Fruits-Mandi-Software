@@ -1,5 +1,6 @@
 //! The Mandi Software Tauri app: window, plugins and thin commands (Tech Stack 5.4).
 
+pub mod backup_runtime;
 pub mod commands;
 pub mod error;
 pub mod logging;
@@ -41,6 +42,9 @@ pub fn run() -> tauri::Result<()> {
             // Never fails: a damaged or unupgradable data file is kept in the state, and the
             // screen learns of it through app_data_status (NFR-REL-6, NFR-REL-7).
             app.manage(state::AppState::start(&data_dir));
+            // Run B, plan 18 (append-only block): the backup service, its scheduler and the copy
+            // at exit.
+            start_backup(app);
             Ok(())
         })
         .invoke_handler(handler())
@@ -204,7 +208,39 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::reports::reports_list_printers,
         commands::settings::settings_get_printing,
         commands::settings::settings_set_printing,
+        // Run B, plan 18 (append-only block).
+        commands::backup::backup_status,
+        commands::backup::backup_list,
+        commands::backup::backup_now,
+        commands::backup::backup_restore_preview,
+        commands::backup::backup_restore,
+        commands::backup::backup_test_restore,
+        commands::backup::backup_settings_get,
+        commands::backup::backup_settings_set,
+        commands::backup::backup_key_setup,
+        commands::backup::backup_key_confirm,
     ]
+}
+
+/// Starts the backup service when the data file opened: the scheduler thread (15-minute and daily
+/// copies, retry of the cloud queue) and the copy at exit (plan 18, PRD FR-20.2 to FR-20.6). If the
+/// data file did not open there is nothing to back up and the backup commands answer
+/// `ERR_INTERNAL`.
+fn start_backup<R: tauri::Runtime>(app: &tauri::App<R>) {
+    let Ok(state) = state::AppState::of(app.handle()) else {
+        return;
+    };
+    let version = app.package_info().version.to_string();
+    match backup_runtime::BackupRuntime::real(&state, &version) {
+        Ok(runtime) => {
+            runtime.start_scheduler();
+            app.manage(runtime);
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+                backup_runtime::hold_close_for_backup(app.handle(), &window);
+            }
+        }
+        Err(error) => tracing::warn!("the backup is not started: {error:?}"),
+    }
 }
 
 /// Shows, restores and focuses the main window. Used when a second copy of the

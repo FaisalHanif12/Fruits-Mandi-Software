@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-backup-key-confirm"
+description = "Enables the backup_key_confirm command without any pre-configured scope."
+commands.allow = ["backup_key_confirm"]
+
+[[permission]]
+identifier = "deny-backup-key-confirm"
+description = "Denies the backup_key_confirm command without any pre-configured scope."
+commands.deny = ["backup_key_confirm"]

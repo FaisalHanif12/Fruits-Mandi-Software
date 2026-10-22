@@ -19,6 +19,8 @@ pub mod settings;
 pub mod translit;
 pub mod trips;
 pub mod vouchers;
+// Run B, plan 18 (append-only block).
+pub mod backup;
 
 use std::fmt;
 

@@ -85,6 +85,14 @@ insta = { version = "1.49.0", default-features = false, features = ["json"] }
 # Benchmarks for the NFR speed targets (Code Standards B25). No HTML or plot output.
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 
+# Backup (Tech Stack 2, plan 18, run B). age encrypts, zstd compresses, object_store talks S3
+# (Cloudflare R2). zstd stays on the 0.13 line the tree already has (one libzstd, `links`).
+# tokio is only what object_store needs: a small runtime to call its async API from a worker thread.
+age = "0.12.1"
+zstd = "0.13.3"
+object_store = { version = "0.14.2", default-features = false, features = ["aws"] }
+tokio = { version = "1.53.2", default-features = false, features = ["rt"] }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
@@ -107,6 +115,14 @@ print_stderr = "forbid"
 [profile.dev.package.argon2]
 opt-level = 3
 [profile.dev.package.blake2]
+opt-level = 3
+# The backup key is stretched with scrypt on every encrypted copy and every restore. Optimised, a
+# copy in a test takes milliseconds, not a second.
+[profile.dev.package.scrypt]
+opt-level = 3
+[profile.dev.package.salsa20]
+opt-level = 3
+[profile.dev.package.zstd-sys]
 opt-level = 3
 # The transliteration engine trains on 4,500 word pairs on first use and searches many
 # spellings per key press. Unoptimised it is about 30 times slower, which makes tests crawl.

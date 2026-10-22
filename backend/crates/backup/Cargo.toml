@@ -8,6 +8,26 @@ publish.workspace = true
 [dependencies]
 mandi-db.workspace = true
 mandi-core.workspace = true
+age.workspace = true
+zstd.workspace = true
+object_store.workspace = true
+tokio.workspace = true
+blake3.workspace = true
+keyring.workspace = true
+getrandom.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+ts-rs.workspace = true
+
+[dev-dependencies]
+# The tests build the PRD worked day through the real services. A dev-dependency only, so the
+# shipped direction stays backup -> db + core (the workspace rules test reads normal dependencies).
+mandi-services.workspace = true
+age.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

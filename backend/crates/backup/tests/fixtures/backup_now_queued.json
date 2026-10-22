@@ -1,0 +1,23 @@
+{
+  "check_ms": 0,
+  "results": [
+    {
+      "code": null,
+      "file": "mandi-local-20261010T090000000Z.db",
+      "kind": "local",
+      "ok": true,
+      "queued": false,
+      "size_bytes": 0
+    },
+    {
+      "code": "ERR_BACKUP_CLOUD_FAILED",
+      "file": "mandi-20261010T090000000Z.mbk",
+      "kind": "cloud",
+      "ok": false,
+      "queued": true,
+      "size_bytes": 0
+    }
+  ],
+  "snapshot_ms": 0,
+  "started_at": "2026-10-10T09:00:00.000Z"
+}

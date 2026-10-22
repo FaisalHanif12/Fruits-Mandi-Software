@@ -1,0 +1,16 @@
+{
+  "restored_from": "2026-10-10T09:01:00.000Z",
+  "safety_copy": "mandi-local-20261010T090100000Z.db",
+  "totals": {
+    "accounts": 17,
+    "audit_rows": 8,
+    "bikri_entries": 0,
+    "cash_paisa": 0,
+    "credit_paisa": 0,
+    "debit_paisa": 0,
+    "journal_entries": 0,
+    "last_entry_date": null,
+    "vouchers": 0
+  },
+  "upgraded_from": null
+}

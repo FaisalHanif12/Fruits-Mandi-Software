@@ -1,0 +1,16 @@
+{
+  "cloud_access_key_set": false,
+  "cloud_secret_set": false,
+  "local_dir_effective": "<app data>/backups/local",
+  "settings": {
+    "closing_time": "21:00",
+    "cloud_bucket": "",
+    "cloud_enabled": false,
+    "cloud_endpoint": "",
+    "cloud_prefix": "mandi",
+    "cloud_region": "auto",
+    "local_dir": "",
+    "usb_enabled": false,
+    "usb_folder": ""
+  }
+}

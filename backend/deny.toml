@@ -28,6 +28,11 @@ unmaintained = "all"
 # still alpha on 16-10-2026), or build the updater without its `zip` feature, since our
 # release pipeline publishes the installer itself (`createUpdaterArtifacts: true`).
 ignore = [
+    # Run B, plan 18: age (the backup encryption the Tech Stack names) pulls i18n-embed-fl, which
+    # reads its own message files at build time with basic-toml. Unmaintained, no vulnerability,
+    # build time only (a proc macro), never in the running app's code path. Remove when age moves
+    # off it or the lead picks another encryption crate.
+    { id = "RUSTSEC-2026-0374", reason = "basic-toml is unmaintained (no vulnerability); build-time only through age -> i18n-embed-fl" },
     { crate = "zip@4.6.1", reason = "yanked; only through tauri-plugin-updater; upgrade the updater before go-live" },
     { id = "RUSTSEC-2026-0367", reason = "zip 4.6.1 comes only through tauri-plugin-updater, which unpacks an update only after its signature check; remove before go-live by moving the updater off zip 4" },
     { id = "RUSTSEC-2026-0368", reason = "zip 4.6.1 comes only through tauri-plugin-updater, which unpacks an update only after its signature check; remove before go-live by moving the updater off zip 4" },

@@ -326,4 +326,61 @@ impl Db {
         let conn = lock(&self.reader);
         action(&conn)
     }
+
+    /// Replaces the whole content of the data file with the content of `source`, a complete and
+    /// already checked SQLite file, while the app keeps its connections (PRD FR-20.9, plan 18).
+    ///
+    /// The copy is the SQLite online backup API run in one step into the write connection, so
+    /// it is all or nothing: if it fails, the data file is as it was. Both connections are held
+    /// for the time of the copy, so no save and no read sees half of it. The data file stays in
+    /// WAL mode. The caller checks and upgrades `source` first, and throws away what the
+    /// services keep in memory afterwards (`Context::invalidate_caches`).
+    ///
+    /// # Errors
+    /// `DataCheckFailed` when `source` is not a database or the file fails its check after the
+    /// copy; `Busy`; an I/O error; any other SQLite error.
+    pub fn replace_contents_from(&self, source: &Path) -> Result<(), DbError> {
+        let from = Connection::open_with_flags(
+            source,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        {
+            let mut writer = lock(&self.writer);
+            let _reader = lock(&self.reader);
+            let copy = rusqlite::backup::Backup::new(&from, &mut writer)?;
+            // One step with every page (-1): the data file changes in one transaction. A step
+            // that finds a lock is tried again a moment later.
+            let mut tries = 0_u32;
+            loop {
+                match copy.step(-1)? {
+                    rusqlite::backup::StepResult::Done => break,
+                    rusqlite::backup::StepResult::More => {}
+                    _ => {
+                        tries += 1;
+                        if tries > 400 {
+                            return Err(DbError::Busy);
+                        }
+                        std::thread::sleep(Duration::from_millis(25));
+                    }
+                }
+            }
+        }
+        match self.run_quick_check() {
+            DataState::Ok => Ok(()),
+            _ => Err(DbError::DataCheckFailed(
+                self.failure_detail().unwrap_or_default(),
+            )),
+        }
+    }
+
+    /// The data version of the file as the read connection sees it. It changes whenever the
+    /// write connection (or another process) commits, so a scheduler can tell that the data
+    /// changed without reading any table.
+    ///
+    /// # Errors
+    /// Any SQLite error.
+    pub fn data_version(&self) -> Result<i64, DbError> {
+        let conn = lock(&self.reader);
+        Ok(conn.query_row("PRAGMA data_version", [], |row| row.get(0))?)
+    }
 }

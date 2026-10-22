@@ -394,6 +394,38 @@ const EXPECTED_FILES: &[&str] = &[
     "PrintWords.ts",
     "PrintPage.ts",
     "PrintData.ts",
+    // Run B, plan 18 (append-only block).
+    "BackupRef.ts",
+    "CloudLevel.ts",
+    "StatusError.ts",
+    "BackupStatus.ts",
+    "BackupListInput.ts",
+    "RowStatus.ts",
+    "BackupRow.ts",
+    "BackupList.ts",
+    "TargetResult.ts",
+    "RunReport.ts",
+    "RestorePreviewInput.ts",
+    "LostWork.ts",
+    "RestorePreview.ts",
+    "RestoreInput.ts",
+    "RestoreDone.ts",
+    "TestRestoreInput.ts",
+    "TestCheckName.ts",
+    "TestCheck.ts",
+    "TestRestoreResult.ts",
+    "KeyCreated.ts",
+    "KeyConfirmInput.ts",
+    "BackupSettingsView.ts",
+    "BackupSettingsInput.ts",
+    "BackupNowInput.ts",
+    "BackupKind.ts",
+    "BackupTotals.ts",
+    "BackupSettings.ts",
+    "BackupCode.ts",
+    "WireCode.ts",
+    "BackupErrorItem.ts",
+    "BackupWireError.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -652,6 +684,24 @@ fn export_bindings() {
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();
+    // Run B, plan 18 (append-only block).
+    mandi_backup::api::BackupStatus::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupListInput::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupList::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupNowInput::export_all(&cfg).unwrap();
+    mandi_backup::api::RunReport::export_all(&cfg).unwrap();
+    mandi_backup::api::RestorePreviewInput::export_all(&cfg).unwrap();
+    mandi_backup::api::RestorePreview::export_all(&cfg).unwrap();
+    mandi_backup::api::RestoreInput::export_all(&cfg).unwrap();
+    mandi_backup::api::RestoreDone::export_all(&cfg).unwrap();
+    mandi_backup::api::TestRestoreInput::export_all(&cfg).unwrap();
+    mandi_backup::api::TestRestoreResult::export_all(&cfg).unwrap();
+    mandi_backup::api::KeyCreated::export_all(&cfg).unwrap();
+    mandi_backup::api::KeyConfirmInput::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupSettingsView::export_all(&cfg).unwrap();
+    mandi_backup::api::BackupSettingsInput::export_all(&cfg).unwrap();
+    mandi_backup::BackupCode::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::backup::BackupWireError::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

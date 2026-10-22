@@ -1,0 +1,38 @@
+{
+  "app_schema_version": 6,
+  "backup": {
+    "kind": "cloud",
+    "name": "mandi-20261010T090100000Z.mbk"
+  },
+  "created_at": "2026-10-10T09:01:00.000Z",
+  "current": {
+    "accounts": 17,
+    "audit_rows": 7,
+    "bikri_entries": 0,
+    "cash_paisa": 0,
+    "credit_paisa": 0,
+    "debit_paisa": 0,
+    "journal_entries": 0,
+    "last_entry_date": null,
+    "vouchers": 0
+  },
+  "lost": {
+    "bikri_entries": 0,
+    "journal_entries": 0,
+    "vouchers": 0
+  },
+  "needs_upgrade": false,
+  "schema_version": 6,
+  "size_bytes": 0,
+  "totals": {
+    "accounts": 17,
+    "audit_rows": 7,
+    "bikri_entries": 0,
+    "cash_paisa": 0,
+    "credit_paisa": 0,
+    "debit_paisa": 0,
+    "journal_entries": 0,
+    "last_entry_date": null,
+    "vouchers": 0
+  }
+}

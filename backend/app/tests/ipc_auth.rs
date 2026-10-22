@@ -914,6 +914,47 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "printer": "", "copies": "1", "urdu_digits": false, "print_after_save": ["seller_bill"] } }),
             true,
         ),
+        // Run B, plan 18 (append-only block).
+        ("backup_status", json!({}), true),
+        (
+            "backup_list",
+            json!({ "input": { "kind": null, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "backup_now",
+            json!({ "input": { "local": true, "usb": false, "cloud": false } }),
+            true,
+        ),
+        (
+            "backup_restore_preview",
+            json!({ "input": { "backup": { "kind": "local", "name": "mandi-local-20200101T000000000Z.db" }, "key": null } }),
+            true,
+        ),
+        (
+            "backup_restore",
+            json!({ "input": { "backup": { "kind": "local", "name": "mandi-local-20200101T000000000Z.db" }, "key": null, "confirmed": false } }),
+            true,
+        ),
+        (
+            "backup_test_restore",
+            json!({ "input": { "backup": null, "key": null } }),
+            true,
+        ),
+        ("backup_settings_get", json!({}), true),
+        (
+            "backup_settings_set",
+            json!({ "input": { "settings": { "local_dir": "", "usb_enabled": false, "usb_folder": "", "cloud_enabled": false,
+                "cloud_endpoint": "", "cloud_bucket": "", "cloud_region": "auto", "cloud_prefix": "mandi", "closing_time": "21:00" },
+                "cloud_access_key_id": null, "cloud_secret_access_key": null } }),
+            true,
+        ),
+        ("backup_key_setup", json!({}), true),
+        (
+            "backup_key_confirm",
+            json!({ "input": { "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            true,
+        ),
     ]
 }
 

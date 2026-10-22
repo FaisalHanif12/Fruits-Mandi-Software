@@ -1,0 +1,15 @@
+{
+  "cloud_access_key_id": null,
+  "cloud_secret_access_key": null,
+  "settings": {
+    "closing_time": "9pm",
+    "cloud_bucket": "",
+    "cloud_enabled": true,
+    "cloud_endpoint": "http://nope",
+    "cloud_prefix": "mandi",
+    "cloud_region": "auto",
+    "local_dir": "",
+    "usb_enabled": true,
+    "usb_folder": ""
+  }
+}
