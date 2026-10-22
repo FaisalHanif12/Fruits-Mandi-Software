@@ -61,5 +61,14 @@
   "reports": [
     "D1",
     "D2"
-  ]
+  ],
+  "d5_early": {
+    "branch": "feature/d5-early",
+    "plans": {
+      "18-backup-and-restore": "waiting",
+      "20-reports-early": "waiting",
+      "21-analytics-early": "waiting",
+      "22-settings-audit-updates-early": "waiting"
+    }
+  }
 }
