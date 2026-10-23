@@ -690,7 +690,7 @@ impl BackupService {
             if let Err(error) = self.prune_cloud(store.as_ref()) {
                 tracing::warn!("cannot prune the cloud copies: {error}");
             }
-            self.upload_pack(store.as_ref(), &manifest.created_at);
+            self.upload_pack(store.as_ref(), &manifest.created_at, &bundle_path);
             remove_quietly(&bundle_path);
             remove_quietly(&manifest_path);
             let stamp = Stamp {
@@ -754,9 +754,11 @@ impl BackupService {
         Ok(())
     }
 
-    /// Builds the readable pack once a day and uploads it encrypted (FR-20.5). It never stops
-    /// or fails the backup.
-    fn upload_pack(&self, store: &dyn crate::cloud::CloudStore, created_at: &str) {
+    /// Builds the readable pack once a day and uploads it encrypted (FR-20.5). The pack is built
+    /// from the snapshot inside `bundle`, the very copy that was just uploaded, so it holds the
+    /// numbers of that backup even if the live books changed meanwhile (a copy that waited in the
+    /// queue, or a save during the upload). It never stops or fails the backup.
+    fn upload_pack(&self, store: &dyn crate::cloud::CloudStore, created_at: &str, bundle: &Path) {
         let Some(day) = DateTime::parse_from_rfc3339(created_at)
             .ok()
             .map(|t| shop_day(t.with_timezone(&Utc)))
@@ -772,7 +774,16 @@ impl BackupService {
             };
             let work = self.tmp_dir().join("pack");
             fs::create_dir_all(&work).map_err(|e| BackupError::io("pack", &e))?;
-            let files = self.parts.pack.build(&day, &work)?;
+            // The snapshot is unpacked for the pack only and goes away with it, whatever happens.
+            let snapshot = work.join("pack-snapshot.db");
+            let built = open(bundle, &key, &snapshot)
+                .and_then(|_| self.parts.pack.build(&day, &snapshot, &work));
+            remove_quietly(&snapshot);
+            // SQLite may have made its side files while the snapshot was open.
+            for side in ["pack-snapshot.db-wal", "pack-snapshot.db-shm"] {
+                remove_quietly(&work.join(side));
+            }
+            let files = built?;
             if files.is_empty() {
                 return Ok(false);
             }

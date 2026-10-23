@@ -949,6 +949,7 @@ impl mandi_backup::daily_pack::PackSource for OnePdf {
     fn build(
         &self,
         day: &str,
+        _snapshot: &Path,
         out_dir: &Path,
     ) -> Result<Vec<mandi_backup::daily_pack::PackFile>, mandi_backup::BackupError> {
         let path = out_dir.join(format!("journal-{day}.pdf"));
@@ -1003,4 +1004,121 @@ fn the_readable_pack_goes_to_the_cloud_encrypted_once_a_day() {
     let mut text = Vec::new();
     reader.read_to_end(&mut text).unwrap();
     assert_eq!(text, b"%PDF-1.7 journal");
+}
+
+/// A pack source that writes one number it reads from the SNAPSHOT it is given (the sum of all
+/// debits of the journal), like the sheets read their numbers.
+struct DebitsFromSnapshot;
+
+impl mandi_backup::daily_pack::PackSource for DebitsFromSnapshot {
+    fn build(
+        &self,
+        day: &str,
+        snapshot: &Path,
+        out_dir: &Path,
+    ) -> Result<Vec<mandi_backup::daily_pack::PackFile>, mandi_backup::BackupError> {
+        let conn = mandi_services::db::rusqlite::Connection::open_with_flags(
+            snapshot,
+            mandi_services::db::rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let debits: i64 = conn
+            .query_row(
+                "SELECT COALESCE(SUM(dr_paisa), 0) FROM journal_lines",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let path = out_dir.join(format!("debits-{day}.txt"));
+        fs::write(&path, debits.to_string()).unwrap();
+        Ok(vec![mandi_backup::daily_pack::PackFile {
+            part: mandi_backup::daily_pack::PackPart::Sheet,
+            name: format!("debits-{day}.txt"),
+            path,
+        }])
+    }
+
+    fn pending(&self) -> bool {
+        false
+    }
+}
+
+fn read_pack_text(path: &Path, printed_key: &str) -> String {
+    use std::io::Read;
+    let key = mandi_backup::key::BackupKey::parse(printed_key).unwrap();
+    let decryptor =
+        age::Decryptor::new(std::io::BufReader::new(fs::File::open(path).unwrap())).unwrap();
+    let identity = age::scrypt::Identity::new(age::secrecy::SecretString::from(
+        key.display().replace('-', ""),
+    ));
+    let mut reader = decryptor
+        .decrypt(std::iter::once(&identity as &dyn age::Identity))
+        .unwrap();
+    let mut text = String::new();
+    reader.read_to_string(&mut text).unwrap();
+    text
+}
+
+#[test]
+fn the_pack_holds_the_numbers_of_the_copy_it_travels_with_not_of_the_live_books() {
+    let rig = small_world();
+    let printed = switch_everything_on(&rig);
+    let service = Arc::new(mandi_backup::service::BackupService::new(
+        Arc::clone(rig.w.env.ctx.db()),
+        mandi_backup::service::BackupConfig {
+            backups_dir: rig.backups.clone(),
+            app_version: "t".into(),
+        },
+        mandi_backup::service::BackupParts {
+            secrets: rig.secrets.clone(),
+            cloud: Arc::new(mandi_backup::cloud::FixedCloud(Arc::new(rig.cloud.clone()))),
+            disk: rig.disk.clone(),
+            hook: rig.fault.clone(),
+            pack: Arc::new(DebitsFromSnapshot),
+        },
+    ));
+    let debits_now = || -> i64 {
+        raw(&rig)
+            .query_row(
+                "SELECT COALESCE(SUM(dr_paisa), 0) FROM journal_lines",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap()
+    };
+    // No internet: the copy is taken and waits in the queue.
+    rig.cloud.set_offline(true);
+    let at_the_copy = debits_now();
+    let report = service.run(Scope::ALL).unwrap();
+    assert!(
+        report
+            .results
+            .iter()
+            .any(|r| r.kind == BackupKind::Cloud && r.queued)
+    );
+    assert!(files_under(&rig.root.path().join("cloud").join("pack")).is_empty());
+    // The books change while the copy waits.
+    vouchers::save_receipt(
+        &rig.w.env.ctx,
+        &rig.w.owner,
+        &rupees_input(rig.w.akram, "100"),
+    )
+    .unwrap();
+    assert_ne!(debits_now(), at_the_copy, "the live books moved on");
+    // The internet is back: the copy goes up and the pack is made from that copy.
+    rig.cloud.set_offline(false);
+    advance(&rig, 11 * 60);
+    service.tick().unwrap();
+    let packed = files_under(&rig.root.path().join("cloud").join("pack"));
+    assert_eq!(packed.len(), 1, "{packed:?}");
+    assert_eq!(
+        read_pack_text(&packed[0], &printed),
+        at_the_copy.to_string()
+    );
+    // Nothing of the snapshot is left behind in the work folder.
+    let leftovers: Vec<_> = files_under(&rig.backups.join("tmp"))
+        .into_iter()
+        .filter(|p| p.to_string_lossy().contains("pack-snapshot"))
+        .collect();
+    assert!(leftovers.is_empty(), "{leftovers:?}");
 }

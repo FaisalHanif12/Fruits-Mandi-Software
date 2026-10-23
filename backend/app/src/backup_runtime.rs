@@ -66,7 +66,7 @@ impl BackupRuntime {
         };
         // The readable pack gets its spreadsheets from the report engine (PRD FR-20.5).
         let parts = BackupParts {
-            pack: Arc::new(crate::sheet_pack::SheetPack::new(Arc::clone(&db))),
+            pack: Arc::new(crate::sheet_pack::SheetPack::new(Arc::clone(db.clock()))),
             ..BackupParts::real()
         };
         Ok(Self::new(Arc::new(BackupService::new(db, config, parts))))

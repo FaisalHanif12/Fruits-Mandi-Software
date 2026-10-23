@@ -808,6 +808,103 @@ fn the_pack_listing_query_uses_the_indexes() {
 }
 
 #[test]
+fn the_pack_holds_the_snapshot_numbers_even_when_the_live_books_change_afterwards() {
+    use mandi_services::core::ids::AccountId;
+    use mandi_services::db::rusqlite::{Connection, backup::Backup};
+    use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
+    use mandi_services::ledger::{PostingEvent, post};
+    let w = full_day();
+    // The snapshot: a consistent copy of the books as they are now (what a backup takes).
+    let dir = tempfile::tempdir().unwrap();
+    let snapshot = dir.path().join("snapshot.db");
+    {
+        let live = raw(&w.dir);
+        let mut copy = Connection::open(&snapshot).unwrap();
+        Backup::new(&live, &mut copy)
+            .unwrap()
+            .run_to_completion(64, std::time::Duration::ZERO, None)
+            .unwrap();
+    }
+    // The books move on: Akram pays 1,000 and a 700 shop expense is posted.
+    mandi_services::vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.akram, "1,000"))
+        .unwrap();
+    let expense = support::id_of(&w.env, "05010001");
+    let cash = support::id_of(&w.env, "01010001");
+    let entry = build_entry(vec![
+        LedgerLine::new(AccountId::new(expense), Side::Dr, rupees(700)),
+        LedgerLine::new(AccountId::new(cash), Side::Cr, rupees(700)),
+    ])
+    .unwrap();
+    let date = mandi_services::core::dates::BusinessDate::from_ymd(2026, 10, 10).unwrap();
+    w.env
+        .ctx
+        .db()
+        .write(|tx| {
+            post(
+                &w.env.ctx,
+                tx,
+                w.owner.user_id,
+                &PostingEvent {
+                    date,
+                    posting_type: PostingType::ShopExpense,
+                    source_type: SourceType::Voucher,
+                    source_id: 9_005,
+                    narration: None,
+                    reverses: None,
+                    entry,
+                },
+            )
+        })
+        .unwrap();
+    let before = std::fs::read(&snapshot).unwrap();
+    let from_snapshot = tempfile::tempdir().unwrap();
+    let files = pack::build_sheets_from_snapshot(
+        &snapshot,
+        w.env.ctx.db().clock().clone(),
+        "2026-10-10",
+        from_snapshot.path(),
+    )
+    .unwrap();
+    // The sheets hold the numbers of the snapshot: buyers 21,564, shop expenses 3,000.
+    let (_, buyers) = pack_numbers(&files[0].path);
+    assert!(
+        buyers.contains(&"21564".to_owned()) && !buyers.contains(&"20564".to_owned()),
+        "{buyers:?}"
+    );
+    let (_, shop) = pack_numbers(&files[2].path);
+    assert_eq!(shop.iter().filter(|n| *n == "3000").count(), 2, "{shop:?}");
+    assert!(
+        !shop.contains(&"700".to_owned()) && !shop.contains(&"3700".to_owned()),
+        "{shop:?}"
+    );
+    let (_, cash_sellers) = pack_numbers(&files[1].path);
+    assert!(cash_sellers.contains(&"10160".to_owned()));
+    // The snapshot file itself was only read.
+    assert_eq!(std::fs::read(&snapshot).unwrap(), before);
+    // The live books really are different: the same pack from them shows 20,564 and 3,700.
+    let from_live = tempfile::tempdir().unwrap();
+    let live = pack::build_sheets(w.env.ctx.db(), "2026-10-10", from_live.path()).unwrap();
+    let (_, buyers_now) = pack_numbers(&live[0].path);
+    assert!(buyers_now.contains(&"20564".to_owned()), "{buyers_now:?}");
+    let (_, shop_now) = pack_numbers(&live[2].path);
+    assert!(shop_now.contains(&"3700".to_owned()), "{shop_now:?}");
+    // A file that is not this app's database gives no pack.
+    let junk = dir.path().join("junk.db");
+    std::fs::write(&junk, b"not a database").unwrap();
+    let none = tempfile::tempdir().unwrap();
+    assert!(
+        pack::build_sheets_from_snapshot(
+            &junk,
+            w.env.ctx.db().clock().clone(),
+            "2026-10-10",
+            none.path()
+        )
+        .is_err()
+    );
+    assert!(std::fs::read_dir(none.path()).unwrap().next().is_none());
+}
+
+#[test]
 fn a_pack_for_a_bad_day_is_refused() {
     let w = full_day();
     let out = tempfile::tempdir().unwrap();

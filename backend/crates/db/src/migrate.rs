@@ -257,6 +257,41 @@ pub fn migrate_with(
     }
 }
 
+/// Checks that a file has exactly this app's schema, and changes nothing. A snapshot opened for
+/// reading only (the readable pack) must not be upgraded, and cannot be read right if it is
+/// older.
+///
+/// # Errors
+/// `DbError::MigrationFailed` when the file has no schema, an older one (migrations are
+/// pending) or a newer one than this app.
+pub fn ensure_current(conn: &Connection) -> Result<usize, DbError> {
+    let failed = |what: &str, error: &dyn std::fmt::Display| {
+        DbError::MigrationFailed(format!("{what}: {error}"))
+    };
+    let migrations = migrations();
+    let version = match migrations
+        .current_version(conn)
+        .map_err(|e| failed("cannot read the schema version", &e))?
+    {
+        SchemaVersion::NoneSet => 0,
+        SchemaVersion::Inside(v) => v.get(),
+        SchemaVersion::Outside(v) => {
+            return Err(DbError::MigrationFailed(format!(
+                "the file has schema version {v}, newer than this app"
+            )));
+        }
+    };
+    let pending = migrations
+        .pending_migrations(conn)
+        .map_err(|e| failed("cannot count pending migrations", &e))?;
+    if version == 0 || pending > 0 {
+        return Err(DbError::MigrationFailed(format!(
+            "the file has schema version {version}, older than this app"
+        )));
+    }
+    Ok(version)
+}
+
 /// Foreign keys and the page structure must be sound after an upgrade.
 fn check_after_upgrade(conn: &Connection) -> Result<(), DbError> {
     let bad_keys: i64 =

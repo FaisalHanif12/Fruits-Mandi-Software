@@ -20,11 +20,13 @@
 mod lists;
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use mandi_core::auth::Language;
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::Grouping;
-use mandi_db::Db;
+use mandi_db::clock::Clock;
+use mandi_db::{Db, DbOptions};
 
 use crate::error::ReportsError;
 use crate::export::cells::{CellContext, date_cell};
@@ -179,6 +181,28 @@ fn read_data(db: &Db, today: BusinessDate) -> Result<PackData, ReportsError> {
             })
         })
     })
+}
+
+/// Makes the five spreadsheets from a SNAPSHOT file, opened for reading only. The pack travels
+/// with a backup, so it must hold the numbers of that backup and not of the live books, which
+/// may have changed since (PRD FR-20.5, NFR-BAK-13). `clock` gives the time written on the
+/// sheets; the snapshot is never written, upgraded or locked for writing.
+///
+/// # Errors
+/// As [`build_sheets`]; `ReportsError::Db` when the snapshot is not a database of this app's
+/// schema.
+pub fn build_sheets_from_snapshot(
+    snapshot: &Path,
+    clock: Arc<dyn Clock>,
+    day: &str,
+    out_dir: &Path,
+) -> Result<Vec<PackSheetFile>, ReportsError> {
+    let options = DbOptions {
+        clock,
+        ..DbOptions::new(out_dir)
+    };
+    let db = Db::open_read_only(snapshot, options)?;
+    build_sheets(&db, day, out_dir)
 }
 
 /// Makes the five spreadsheets of the pack for one shop day in `out_dir`.

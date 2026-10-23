@@ -165,6 +165,49 @@ impl Db {
         })
     }
 
+    /// Opens a data file for READING ONLY: a snapshot taken by the backup, for the readable pack
+    /// (PRD FR-20.5). Nothing is created, upgraded or written: both connections are read-only,
+    /// every save fails, and the journal mode is left as it is. The file must already have this
+    /// app's schema (a snapshot made by this version does).
+    ///
+    /// # Errors
+    /// `DataCheckFailed` when the file is not a database; `MigrationFailed` when its schema is
+    /// not this app's; an I/O error.
+    pub fn open_read_only(path: &Path, options: DbOptions) -> Result<Db, DbError> {
+        let open = || -> Result<Connection, DbError> {
+            let conn = Connection::open_with_flags(
+                path,
+                OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
+            conn.busy_timeout(options.busy_timeout)?;
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+            conn.pragma_update(None, "query_only", "ON")?;
+            Ok(conn)
+        };
+        let reader = open()?;
+        let version = migrate::ensure_current(&reader)?;
+        let writer = open()?;
+        Ok(Db {
+            path: path.to_owned(),
+            writer: Mutex::new(writer),
+            reader: Mutex::new(reader),
+            health: Health {
+                state: Mutex::new((DataState::Ok, None)),
+                changed: Condvar::new(),
+            },
+            disk_probe: options.disk_probe,
+            auditor: Auditor::new(options.key_store, Arc::clone(&options.clock)),
+            clock: options.clock,
+            migration: MigrationOutcome {
+                from: version,
+                to: version,
+                copy: None,
+            },
+            busy_timeout: options.busy_timeout,
+            check_wait: options.check_wait,
+        })
+    }
+
     /// [`Db::open`] followed by the start-up check on this thread. For tools and tests.
     ///
     /// # Errors

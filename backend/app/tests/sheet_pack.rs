@@ -1,6 +1,7 @@
 //! The readable pack through the backup service (plan 22 round 10, PRD FR-20.5, NFR-BAK-13):
 //! the app's `SheetPack` hands the five spreadsheets to the service, which encrypts each with
-//! the backup key and uploads it once a day. The sheets themselves are checked cell by cell in
+//! the backup key and uploads it once a day. The sheets are built from the SNAPSHOT of the copy
+//! they travel with. The sheets themselves are checked cell by cell in
 //! `crates/services/tests/excel_export.rs`; this file checks the hand-over.
 #![cfg(test)]
 
@@ -39,10 +40,23 @@ fn files_under(dir: &Path) -> Vec<PathBuf> {
 fn the_sheet_source_hands_over_five_spreadsheets_and_says_the_pdf_is_still_to_come() {
     let dir = tempfile::tempdir().unwrap();
     let env = TestEnv::new(dir.path()).unwrap();
-    let source = SheetPack::new(Arc::clone(env.ctx.db()));
+    let source = SheetPack::new(Arc::clone(env.ctx.db().clock()));
+    // A consistent copy of the books, as a backup takes it.
+    let snapshot = dir.path().join("snapshot.db");
+    {
+        let live = mandi_services::db::rusqlite::Connection::open(
+            dir.path().join("data").join("mandi.db"),
+        )
+        .unwrap();
+        let mut copy = mandi_services::db::rusqlite::Connection::open(&snapshot).unwrap();
+        mandi_services::db::rusqlite::backup::Backup::new(&live, &mut copy)
+            .unwrap()
+            .run_to_completion(64, std::time::Duration::ZERO, None)
+            .unwrap();
+    }
     assert!(source.pending(), "the PDF part waits for Windows printing");
     let out = tempfile::tempdir().unwrap();
-    let files = source.build("2026-10-10", out.path()).unwrap();
+    let files = source.build("2026-10-10", &snapshot, out.path()).unwrap();
     let names: Vec<&str> = files.iter().map(|f| f.name.as_str()).collect();
     assert_eq!(
         names,
@@ -60,7 +74,13 @@ fn the_sheet_source_hands_over_five_spreadsheets_and_says_the_pdf_is_still_to_co
         assert_eq!(&bytes[..2], b"PK", "{} is a real .xlsx", file.name);
     }
     // A day that is not a date is an error, and the backup itself is not stopped by it.
-    assert!(source.build("not-a-day", out.path()).is_err());
+    assert!(source.build("not-a-day", &snapshot, out.path()).is_err());
+    // A snapshot that is not there gives no pack.
+    assert!(
+        source
+            .build("2026-10-10", &dir.path().join("none.db"), out.path())
+            .is_err()
+    );
 }
 
 #[test]
@@ -80,7 +100,7 @@ fn the_service_uploads_the_five_sheets_encrypted_once_a_day() {
             cloud: Arc::new(FixedCloud(Arc::new(cloud))),
             disk: Arc::new(FixedDiskProbe(10 * 1024 * 1024 * 1024)),
             hook: Arc::new(NoHook),
-            pack: Arc::new(SheetPack::new(Arc::clone(env.ctx.db()))),
+            pack: Arc::new(SheetPack::new(Arc::clone(env.ctx.db().clock()))),
         },
     ));
     service

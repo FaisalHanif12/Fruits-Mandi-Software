@@ -5,8 +5,9 @@
 //! [`PackSource`]:
 //! - the روزنامچہ PDF needs the report engine (plan 20, R11) and WebView2 printing, which live in
 //!   the app crate, so the app gives a source that hands over a PDF;
-//! - the spreadsheets wait for D5-Q1 (Excel). The slot for them is the `sheets` part of
-//!   [`PackPart`].
+//! - the spreadsheets come from the report engine too. They are built from the snapshot of the
+//!   very copy the pack travels with (see [`PackSource::build`]), so the pack and the backup
+//!   always hold the same numbers.
 //!
 //! Until a source exists, [`PendingPack`] hands over nothing and the status says
 //! `pack_pending`. Pack files are encrypted with the backup key like every cloud object (NFR-BAK-6);
@@ -30,7 +31,7 @@ use crate::pack::WORK_FACTOR;
 pub enum PackPart {
     /// The روزنامچہ PDF of the day (R11).
     JournalPdf,
-    /// A spreadsheet (buyers, sellers, دکان خرچہ, ذاتی خرچہ, partner shares). Waits for D5-Q1.
+    /// A spreadsheet (buyers, sellers, دکان خرچہ, ذاتی خرچہ, partner shares).
     Sheet,
 }
 
@@ -47,11 +48,19 @@ pub struct PackFile {
 
 /// Makes the files of the pack for one day.
 pub trait PackSource: Send + Sync {
-    /// Writes the files for `day` (`YYYY-MM-DD`) into `out_dir` and lists them.
+    /// Writes the files for `day` (`YYYY-MM-DD`) into `out_dir` and lists them. `snapshot` is
+    /// the SQLite file of the backup copy the pack travels with, unpacked for this call and
+    /// removed after it: build every number from it, never from the live books, which may have
+    /// changed since the copy was taken. Open it read-only.
     ///
     /// # Errors
     /// Any failure. A pack that cannot be built never stops the backup itself.
-    fn build(&self, day: &str, out_dir: &Path) -> Result<Vec<PackFile>, BackupError>;
+    fn build(
+        &self,
+        day: &str,
+        snapshot: &Path,
+        out_dir: &Path,
+    ) -> Result<Vec<PackFile>, BackupError>;
 
     /// True while the source cannot build the whole pack yet.
     fn pending(&self) -> bool;
@@ -62,7 +71,12 @@ pub trait PackSource: Send + Sync {
 pub struct PendingPack;
 
 impl PackSource for PendingPack {
-    fn build(&self, _day: &str, _out_dir: &Path) -> Result<Vec<PackFile>, BackupError> {
+    fn build(
+        &self,
+        _day: &str,
+        _snapshot: &Path,
+        _out_dir: &Path,
+    ) -> Result<Vec<PackFile>, BackupError> {
         Ok(Vec::new())
     }
 
@@ -151,7 +165,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         assert!(
             PendingPack
-                .build("2026-10-10", dir.path())
+                .build("2026-10-10", &dir.path().join("snapshot.db"), dir.path())
                 .unwrap()
                 .is_empty()
         );
