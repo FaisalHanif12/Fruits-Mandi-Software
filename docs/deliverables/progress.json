@@ -67,15 +67,15 @@
     "plans": {
       "18-backup-and-restore": "built (committed ccb35fd, 617c0cb)",
       "20-reports-early": "engine and Accounts reports committed; round 3 reports built, not committed",
-      "21-analytics-early": "waiting",
-      "22-settings-audit-updates-early": "waiting"
+      "21-analytics-early": "backend built and committed (a7fb278); F4 screens coded, unverified",
+      "22-settings-audit-updates-early": "B5 backend built (uncommitted); F5 waiting"
     }
   },
   "paused": {
     "by": "Umar",
-    "at": "2026-10-23T03:45+05:00",
-    "run_a": "plan 17: T1, T2a, T2b, F1, F3, F4 done; T2c and F5 to do; nothing committed",
-    "run_b": "round 3 built, not committed; money fixes pending; PAUSE file in place"
+    "at": "2026-10-23T06:55+05:00",
+    "run_a": "feature/refresh-v16 at e09e93e: D4R 17b: backend T1 half done (types, then gen:types must be re-run to the end), frontend F1 done; plan 17 committed",
+    "run_b": "feature/d5-early at a7fb278: B5 finished uncommitted; F4 analytics screens coded, unverified; no PAUSE file"
   },
   "order": {
     "decided_by": "Umar",
@@ -85,7 +85,7 @@
   "d4r": {
     "branch": "feature/refresh-v16 (from feature/bikri after plan 17 is committed)",
     "plans": {
-      "17b-refresh-built-screens": "waiting",
+      "17b-refresh-built-screens": "in progress (T1 half done, F1 done)",
       "17c-gardens": "waiting",
       "17d-fruit-taken": "waiting",
       "17e-tag-and-prints": "waiting"
