@@ -130,3 +130,12 @@ export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string 
 export function formatPaisaValue(value: number, options: FormatPaisaOptions): string {
   return formatPaisa(value as unknown as Paisa, options);
 }
+
+/**
+ * The height of a bar in a chart (plan 21, PRD FR-18.3): a number for the drawing only. It is never
+ * added, shown or sent anywhere; every label on a chart is the text of `formatPaisa`. It lives here
+ * because this file is the only one that looks inside a Paisa (Code Standards F3).
+ */
+export function chartValueOfPaisa(amount: Paisa): number {
+  return paisaNumber(amount);
+}

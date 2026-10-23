@@ -1,0 +1,87 @@
+[
+  {
+    "id": "A",
+    "title_id": "analytics-view-a-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "compare"
+    ]
+  },
+  {
+    "id": "B",
+    "title_id": "analytics-view-b-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "compare"
+    ]
+  },
+  {
+    "id": "C",
+    "title_id": "analytics-view-c-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "compare"
+    ]
+  },
+  {
+    "id": "D",
+    "title_id": "analytics-view-d-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "compare",
+      "group_by"
+    ]
+  },
+  {
+    "id": "E",
+    "title_id": "analytics-view-e-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "compare"
+    ]
+  },
+  {
+    "id": "H",
+    "title_id": "analytics-view-h-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "compare"
+    ]
+  }
+]

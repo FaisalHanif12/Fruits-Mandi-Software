@@ -1,0 +1,432 @@
+{
+  "view": "H",
+  "title_id": "analytics-view-h-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null
+  },
+  "columns": [
+    {
+      "key": "rank",
+      "title_id": "analytics-col-rank",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "name",
+      "title_id": "analytics-col-name",
+      "kind": "party",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "total_comm",
+      "title_id": "report-col-total-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "share",
+      "title_id": "analytics-col-share",
+      "kind": "percent",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "analytics-top-items"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "key": null,
+      "kind": "group"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        },
+        {
+          "type": "percent",
+          "hundredths": 7210
+        }
+      ],
+      "key": {
+        "item_id": 1,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 2
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "سیب",
+            "en": "Apple"
+          }
+        },
+        {
+          "type": "number",
+          "value": 10
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        },
+        {
+          "type": "percent",
+          "hundredths": 2790
+        }
+      ],
+      "key": {
+        "item_id": 2,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "analytics-top-sellers"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "key": null,
+      "kind": "group"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        },
+        {
+          "type": "percent",
+          "hundredths": 7210
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 18,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 2
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "030110002",
+            "short_code": "2",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 10
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        },
+        {
+          "type": "percent",
+          "hundredths": 2790
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 19,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "analytics-top-buyers"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "key": null,
+      "kind": "group"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 21,
+            "code": "03040002",
+            "short_code": "2",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 30
+        },
+        {
+          "type": "money",
+          "paisa": 232800
+        },
+        {
+          "type": "percent",
+          "hundredths": 4273
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": 21,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 2
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 20
+        },
+        {
+          "type": "money",
+          "paisa": 160000
+        },
+        {
+          "type": "percent",
+          "hundredths": 2937
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": 20,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 3
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 9,
+            "code": "03049999",
+            "short_code": null,
+            "name_ur": "شاہد",
+            "name_en": "Shahid",
+            "tag": null,
+            "person_key": "شاہد|03000000000"
+          }
+        },
+        {
+          "type": "number",
+          "value": 10
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        },
+        {
+          "type": "percent",
+          "hundredths": 2790
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": 9,
+        "person_key": "شاہد|03000000000",
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 10,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 60
+    },
+    {
+      "type": "money",
+      "paisa": 544800
+    },
+    {
+      "type": "percent",
+      "hundredths": 10000
+    }
+  ]
+}

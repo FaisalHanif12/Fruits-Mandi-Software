@@ -7,9 +7,16 @@
 
 import { useLocalization } from '@fluent/react';
 import { useEffect, type Ref } from 'react';
-import type { PrintReportColumn } from '../../../bindings/PrintReportColumn';
 import type { ReportPrintCell } from '../../../bindings/ReportPrintCell';
-import type { ReportPrintData } from '../../../bindings/ReportPrintData';
+import type { Language } from '../../../bindings/Language';
+import type { Paper } from '../../../bindings/Paper';
+import type { PrintFact } from '../../../bindings/PrintFact';
+import type { PrintFirm } from '../../../bindings/PrintFirm';
+import type { ReportColumnKind } from '../../../bindings/ReportColumnKind';
+import type { ReportId } from '../../../bindings/ReportId';
+import type { ReportPrintSummaryLine } from '../../../bindings/ReportPrintSummaryLine';
+import type { ReportRowKind } from '../../../bindings/ReportRowKind';
+import type { TextDir } from '../../../bindings/TextDir';
 import type { ReportPrintDetailPart } from '../../../bindings/ReportPrintDetailPart';
 import {
   FOOTER_LABEL_IDS,
@@ -23,7 +30,7 @@ import { ScriptText } from '../../../shared/ui/ScriptText';
 import { emptyNameMessageId, monthMessageId } from '../cells';
 
 /** The column kinds that hold figures: they sit on the physical right edge (NFR-USE-19). */
-const FIGURE_KINDS: ReadonlySet<PrintReportColumn['kind']> = new Set([
+const FIGURE_KINDS: ReadonlySet<ReportColumnKind> = new Set([
   'number',
   'money',
   'balance',
@@ -137,8 +144,26 @@ function Cell({ cell }: { cell: ReportPrintCell }) {
   }
 }
 
+/** The heading of a column: its message, or the day, month or item it stands for. */
+function ColumnHeading({ heading, titleId }: { heading: PrintHeading | null; titleId: string }) {
+  const { l10n } = useLocalization();
+  if (heading === null) return <>{l10n.getString(titleId)}</>;
+  switch (heading.kind) {
+    case 'text':
+      return <ScriptText>{heading.text}</ScriptText>;
+    case 'month':
+      return (
+        <>
+          {l10n.getString(monthMessageId(heading.month))} <Num>{heading.year}</Num>
+        </>
+      );
+    case 'other_items':
+      return <>{l10n.getString('analytics-col-other-items')}</>;
+  }
+}
+
 /** Figures sit on the right edge; a date and the kind of an entry stay on one line. */
-function cellClass(kind: PrintReportColumn['kind']): string {
+function cellClass(kind: ReportColumnKind): string {
   if (FIGURE_KINDS.has(kind)) return 'print-num';
   if (kind === 'date' || kind === 'month') return 'print-col-date print-nowrap';
   if (kind === 'doc') return 'print-nowrap';
@@ -146,12 +171,45 @@ function cellClass(kind: PrintReportColumn['kind']): string {
 }
 
 /** The class of the cell at a column: a column the data does not name is plain text. */
-function columnClass(data: ReportPrintData, position: number): string {
+function columnClass(data: PrintTable, position: number): string {
   return cellClass(data.columns[position]?.kind ?? 'text');
 }
 
+/** The heading of a column that is not one message: a day, a month or an item (analytics, plan 21). */
+export type PrintHeading =
+  | { kind: 'text'; text: string }
+  | { kind: 'month'; year: string; month: number }
+  | { kind: 'other_items' };
+
+/**
+ * What the printed table is drawn from: the print data of a report, or of an analytics view (which
+ * has no lines above the table and no amount in words, and headed columns). Every figure and date is
+ * already written by the backend in the print language; the page adds up nothing.
+ */
+export interface PrintTable {
+  language: Language;
+  dir: TextDir;
+  paper: Paper;
+  urdu_digits: boolean;
+  title_id: string;
+  firm: PrintFirm;
+  filters: PrintFact[];
+  printed_at: string;
+  columns: { key: string; title_id: string; kind: ReportColumnKind }[];
+  /** The heading of each column when it is not its message (same order as `columns`). */
+  headings?: readonly (PrintHeading | null)[];
+  rows: { cells: ReportPrintCell[]; kind: ReportRowKind }[];
+  row_count: string;
+  totals_label_id: string;
+  totals: ReportPrintCell[];
+  summary?: ReportPrintSummaryLine[];
+  words?: { label_id: string; text: string } | null;
+  /** Which report it is, for the words of an empty name in a few reports. */
+  report?: ReportId;
+}
+
 interface ReportPrintDocumentProps {
-  data: ReportPrintData;
+  data: PrintTable;
   /**
    * True in the hidden print window: the root element then takes the print language, direction and
    * footer, so the page margin boxes are right. False in the in-app preview, which must not change
@@ -218,9 +276,9 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
             </dd>
           </div>
         </dl>
-        {data.summary.length === 0 ? null : (
+        {(data.summary ?? []).length === 0 ? null : (
           <dl className="print-facts print-summary-lines">
-            {data.summary.map((line) => (
+            {(data.summary ?? []).map((line) => (
               <div key={line.label_id} className="print-fact">
                 <dt>{l10n.getString(line.label_id)}</dt>
                 <dd>
@@ -233,9 +291,12 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
         <table className="print-table">
           <thead>
             <tr>
-              {data.columns.map((column) => (
+              {data.columns.map((column, position) => (
                 <th key={column.key} scope="col" className={cellClass(column.kind)}>
-                  {l10n.getString(column.title_id)}
+                  <ColumnHeading
+                    heading={data.headings?.[position] ?? null}
+                    titleId={column.title_id}
+                  />
                 </th>
               ))}
             </tr>
@@ -246,7 +307,7 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
                 {row.cells.map((cell, position) => {
                   // A name left empty on purpose (no city, no collector, no اڈا) is said in words.
                   const none =
-                    position === 0 && cell.type === 'empty'
+                    position === 0 && cell.type === 'empty' && data.report !== undefined
                       ? emptyNameMessageId(data.report, row.kind)
                       : null;
                   return (
@@ -272,7 +333,7 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
             </tr>
           </tfoot>
         </table>
-        {data.words === null ? null : (
+        {data.words === null || data.words === undefined ? null : (
           <p className="print-words">
             <span className="print-words-label">{l10n.getString(data.words.label_id)}</span>
             <span className="print-words-text">{data.words.text}</span>

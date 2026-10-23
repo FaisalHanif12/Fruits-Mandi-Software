@@ -1,0 +1,204 @@
+{
+  "view": "A",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "analytics-view-a-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "10-10-2026"
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names",
+      "heading": null
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number",
+      "heading": null
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "avg_rate",
+      "title_id": "report-col-avg-rate",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "seller_comm",
+      "title_id": "report-col-seller-comm",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "buyer_comm",
+      "title_id": "report-col-buyer-comm",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "laga",
+      "title_id": "report-col-laga",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "total_comm",
+      "title_id": "report-col-total-comm",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "share",
+      "title_id": "analytics-col-share",
+      "kind": "percent",
+      "heading": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Banana"
+        },
+        {
+          "type": "number",
+          "text": "50"
+        },
+        {
+          "type": "money",
+          "text": "29,400"
+        },
+        {
+          "type": "money",
+          "text": "588"
+        },
+        {
+          "type": "money",
+          "text": "1,764"
+        },
+        {
+          "type": "money",
+          "text": "1,764"
+        },
+        {
+          "type": "money",
+          "text": "400"
+        },
+        {
+          "type": "money",
+          "text": "3,928"
+        },
+        {
+          "type": "percent",
+          "text": "72.10"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Apple"
+        },
+        {
+          "type": "number",
+          "text": "10"
+        },
+        {
+          "type": "money",
+          "text": "12,000"
+        },
+        {
+          "type": "money",
+          "text": "1,200"
+        },
+        {
+          "type": "money",
+          "text": "720"
+        },
+        {
+          "type": "money",
+          "text": "720"
+        },
+        {
+          "type": "money",
+          "text": "80"
+        },
+        {
+          "type": "money",
+          "text": "1,520"
+        },
+        {
+          "type": "percent",
+          "text": "27.90"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "text": "60"
+    },
+    {
+      "type": "money",
+      "text": "41,400"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "2,484"
+    },
+    {
+      "type": "money",
+      "text": "2,484"
+    },
+    {
+      "type": "money",
+      "text": "480"
+    },
+    {
+      "type": "money",
+      "text": "5,448"
+    },
+    {
+      "type": "percent",
+      "text": "100.00"
+    }
+  ],
+  "footer_id": "print-page-label"
+}

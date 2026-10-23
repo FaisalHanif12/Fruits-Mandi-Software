@@ -1,0 +1,86 @@
+// Screenshots of the تجزیات screens of plan 21 (views A, B, C, D, E and H) in both languages at the
+// three window sizes, taken from the development pages /dev/analytics/A ... H with the Playwright
+// tool. It is a developer tool: run it with the Vite dev server up on a free port
+// (`pnpm --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`), once for each size
+// (change SIZES). It also measures sideways overflow (NFR-USE-15): the page and every grid inside it
+// must not scroll sideways, and no cell may be cut. The tool's own screenshot action may only write
+// inside the folder it was started in, and a relative path there can land in another team's folder,
+// so this snippet writes with an absolute path from inside the page code. Paste it into
+// `browser_run_code_unsafe`. (It is a snippet for that tool, not a module, so it is kept as .txt and
+// the linter does not read it. The Windows check is the spec 43.)
+//
+// The same dev pages take flags in the hash: `?wide` (views D and E with more columns than fit),
+// `?empty`, `?many` (230 rows), `?down` (the backend fails, so the list of views fails first). A
+// comparison with no dates is refused as the backend refuses it. The dev page has no print data in
+// Urdu for view A, so its preview is in English in both languages.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan21';
+  const BASE = 'http://127.0.0.1:5188/#/dev/analytics/';
+  const SIZES = [[1366, 768]];
+  // [view, hash flags, name of the shot].
+  const SHOTS = [
+    ['A', '', 'A'],
+    ['B', '', 'B'],
+    ['C', '', 'C'],
+    ['D', '', 'D'],
+    ['D', '?wide', 'D-wide'],
+    ['E', '', 'E'],
+    ['E', '?wide', 'E-wide'],
+    ['H', '', 'H'],
+    ['A', '?empty', 'A-empty'],
+  ];
+  const LANGS = ['ur', 'en'];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [view, flags, name] of SHOTS) {
+      for (const lang of LANGS) {
+        try {
+          await page.goto(`${BASE}${view}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          // The empty state has no role to wait for, so it gets a fixed wait.
+          if (flags === '?empty') await page.waitForTimeout(1500);
+          else
+            await page.waitForSelector('.ag-row, [role="status"], [role="alert"]', {
+              timeout: 45000,
+            });
+          await page.waitForTimeout(700);
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
+            const main = document.querySelector('main');
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            return [
+              root.lang,
+              root.dir,
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'clipped=' + clipped,
+              'cols=' + document.querySelectorAll('.ag-header-cell').length,
+              'charts=' + document.querySelectorAll('[data-chart="bar"] svg').length,
+              location.host + location.hash.slice(0, 26),
+            ].join(' | ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 120)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

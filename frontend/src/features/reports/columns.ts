@@ -9,6 +9,7 @@ import type { ReportCell } from '../../bindings/ReportCell';
 import type { ReportColumn } from '../../bindings/ReportColumn';
 import type { ReportId } from '../../bindings/ReportId';
 import type { ReportRow } from '../../bindings/ReportRow';
+import type { ReportRowKind } from '../../bindings/ReportRowKind';
 import type { ListColumn, ListContext } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks/useLayoutStep';
 import { cellText, emptyNameMessageId, sideText } from './cells';
@@ -98,13 +99,26 @@ function shownAt(id: ReportId, key: string, step: LayoutStep): boolean {
   return isFromStep(step, range.from ?? 'compact') && isFromStep(range.until ?? 'wide', step);
 }
 
-function gridColumn(id: ReportId, column: ReportColumn, index: number): ListColumn<ReportRowView> {
-  const cell = (view: ReportRowView, context: ListContext) => {
+/** What a column needs of a row of the grid: its cells and what kind of row it is. */
+export interface RowLike {
+  row: { cells: readonly ReportCell[]; kind: ReportRowKind };
+}
+
+/**
+ * One column of a table of cells as the list grid wants it, by the kind of the backend's column. The
+ * reports and the analytics views draw their tables the same way (NFR-USE-10). `emptyName` gives the
+ * words for a first cell the backend left empty on purpose (no city, no collector, no اڈا).
+ */
+export function listColumnOf<V extends RowLike>(
+  column: Pick<ReportColumn, 'key' | 'title_id' | 'kind'>,
+  index: number,
+  emptyName: (rowKind: ReportRowKind) => string | null = () => null,
+): ListColumn<V> {
+  const cell = (view: V, context: ListContext) => {
     const found = view.row.cells[index];
     if (found === undefined) return '';
-    // A name left empty on purpose (no city, no collector, no اڈا): say what it is.
-    const none =
-      index === 0 && found.type === 'empty' ? emptyNameMessageId(id, view.row.kind) : null;
+    // A name left empty on purpose: say what it is.
+    const none = index === 0 && found.type === 'empty' ? emptyName(view.row.kind) : null;
     return none === null ? cellText(found, context) : context.text(none);
   };
   const base = { field: column.key, headerId: column.title_id, value: cell };
@@ -123,7 +137,7 @@ function gridColumn(id: ReportId, column: ReportColumn, index: number): ListColu
       return {
         ...base,
         type: 'balance',
-        unit: (view, context) => {
+        unit: (view: V, context: ListContext) => {
           const found = view.row.cells[index];
           return found === undefined ? '' : sideText(found, context);
         },
@@ -162,7 +176,9 @@ export function reportColumns(
   step: LayoutStep,
 ): ListColumn<ReportRowView>[] {
   return columns.flatMap((column, index) =>
-    shownAt(id, column.key, step) ? [gridColumn(id, column, index)] : [],
+    shownAt(id, column.key, step)
+      ? [listColumnOf<ReportRowView>(column, index, (rowKind) => emptyNameMessageId(id, rowKind))]
+      : [],
   );
 }
 

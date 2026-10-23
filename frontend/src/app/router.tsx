@@ -375,6 +375,27 @@ const reportRoute = createRoute({
 });
 // ---- end of Run B block ----
 
+// ---- Run B, plan 21 (D5 early track): تجزیات. Replaces the "coming soon" page of /analytics. The
+// area opens on view A; one view is /analytics/B (A to E and H). ----
+const analyticsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/analytics',
+  component: lazyRouteComponent(
+    () => import('../features/analytics/pages/AnalyticsPage'),
+    'AnalyticsPage',
+  ),
+});
+
+const analyticsViewRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/analytics/$view',
+  component: lazyRouteComponent(
+    () => import('../features/analytics/pages/AnalyticsPage'),
+    'AnalyticsPage',
+  ),
+});
+// ---- end of Run B block ----
+
 const appRoutes = [
   dashboardRoute,
   settingsRoute,
@@ -409,7 +430,8 @@ const appRoutes = [
   tripRoute,
   partnersRoute,
   partnersSetupRoute,
-  comingSoonRoute('/analytics'),
+  analyticsRoute,
+  analyticsViewRoute,
   backupRoute,
   reportsRoute,
   reportRoute,
@@ -486,12 +508,30 @@ const reportsDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Run B, plan 21: the development pages of the analytics screens (dev only, like the others). ----
+const analyticsDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/analytics',
+        component: lazyRouteComponent(() => import('./dev/AnalyticsDevPage'), 'AnalyticsDevPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/analytics/$view',
+        component: lazyRouteComponent(() => import('./dev/AnalyticsDevPage'), 'AnalyticsDevPage'),
+      }),
+    ]
+  : [];
+// ---- end of Run B block ----
+
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren(appRoutes),
   printRoute,
   ...devRoutes,
   ...backupDevRoutes,
   ...reportsDevRoutes,
+  ...analyticsDevRoutes,
 ]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router

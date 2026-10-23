@@ -49,4 +49,8 @@ if (typeof Element !== 'undefined') {
   Element.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
     return new DOMRect(0, 0, RECT_WIDTH, RECT_HEIGHT);
   };
+  // jsdom has no canvas. ECharts (the analytics charts) asks for a 2D context to measure text, and
+  // jsdom answers null and prints "Not implemented" for each call, which buried the real test
+  // output. The answer stays null (the chart copes with it); only the notice is gone.
+  Object.assign(HTMLCanvasElement.prototype, { getContext: () => null });
 }

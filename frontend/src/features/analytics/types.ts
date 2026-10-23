@@ -1,0 +1,21 @@
+// The types of the analytics module (plan 21). They are the generated bindings (Code Standards F2);
+// this file only gives the screens one place to import them from.
+export type { AnalyticsCatalogEntry } from '../../bindings/AnalyticsCatalogEntry';
+export type { AnalyticsColumn } from '../../bindings/AnalyticsColumn';
+export type { AnalyticsCompare } from '../../bindings/AnalyticsCompare';
+export type { AnalyticsFilterKind } from '../../bindings/AnalyticsFilterKind';
+export type { AnalyticsFilters } from '../../bindings/AnalyticsFilters';
+export type { AnalyticsGroupBy } from '../../bindings/AnalyticsGroupBy';
+export type { AnalyticsHeading } from '../../bindings/AnalyticsHeading';
+export type { AnalyticsKey } from '../../bindings/AnalyticsKey';
+export type { AnalyticsLinesInput } from '../../bindings/AnalyticsLinesInput';
+export type { AnalyticsLinesPage } from '../../bindings/AnalyticsLinesPage';
+export type { AnalyticsPage } from '../../bindings/AnalyticsPage';
+export type { AnalyticsPeriod } from '../../bindings/AnalyticsPeriod';
+export type { AnalyticsPrintData } from '../../bindings/AnalyticsPrintData';
+export type { AnalyticsPrintInput } from '../../bindings/AnalyticsPrintInput';
+export type { AnalyticsRow } from '../../bindings/AnalyticsRow';
+export type { AnalyticsRunInput } from '../../bindings/AnalyticsRunInput';
+export type { AnalyticsSavedView } from '../../bindings/AnalyticsSavedView';
+export type { AnalyticsSide } from '../../bindings/AnalyticsSide';
+export type { AnalyticsView } from '../../bindings/AnalyticsView';

@@ -61,6 +61,9 @@
      past the thirtieth scroll inside it and only the rows in view are drawn (Code Standards F34). */
   --list-region-h: 360px;
 
+  /* The height of the chart above an analytics table (plan 21). */
+  --chart-h: 224px;
+
   /* The slot after a figure that holds its short word (a balance's side): figures keep one right
      edge whatever the word is (plan 20, NFR-USE-19). */
   --unit-slot: 56px;
@@ -321,4 +324,20 @@
 
   /* Gulzar has one weight. */
   --weight-strong: var(--font-weight-normal);
+}
+
+/* Run B, plan 21 (analytics): the chart above each table. One height (`--chart-h`, in the first :root
+   block), and a palette for the series.
+   The hues keep clear of the meanings of green, red and amber (NFR-USE-12); a chart is never read by
+   colour alone: every bar has its figure and every series its name. A chart reads its colours from
+   the page at run time, not through a class, so they are `static`: always written out. */
+@theme static {
+  --spacing-chart: var(--chart-h);
+
+  --color-chart-1: #1d3d6e;
+  --color-chart-2: #2a8c82;
+  --color-chart-3: #b8860b;
+  --color-chart-4: #7a4b8f;
+  --color-chart-5: #5d6b7a;
+  --color-chart-6: #a0522d;
 }

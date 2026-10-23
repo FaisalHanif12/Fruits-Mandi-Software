@@ -5,7 +5,7 @@
 // overflow (NFR-USE-15): the page and every grid inside it must not scroll sideways. Usage with the
 // Playwright MCP tool: browser_run_code_unsafe with `filename` set to this file. (It is a snippet
 // for that tool, not a module, so it is kept as .txt and the linter does not read it. The Windows
-// check is the spec 26.)
+// check is the spec 42.)
 async (page) => {
   const OUT =
     '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan20-f3';

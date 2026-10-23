@@ -44,6 +44,11 @@ export interface ListColumn<T> {
   readonly type: ListColumnType;
   /** The Fluent message ID of the header. */
   readonly headerId: string;
+  /**
+   * The words of the header when they are not one message: the heading of a column that stands for
+   * a day, a month or an item (analytics, plan 21). Names go through `displayName` (F38).
+   */
+  readonly headerText?: ((context: ListContext) => string) | undefined;
   /** The text of the cell, already for display. Names go through `displayName` (F38). */
   readonly value: (row: T, context: ListContext) => string;
   /**
@@ -82,8 +87,16 @@ interface ListGridProps<T> {
   getRowId: (row: T) => string;
   /** The Fluent message ID of the list's name, read by screen readers. */
   labelId: string;
-  /** Enter or a double click on a row. */
-  onOpen: (row: T) => void;
+  /**
+   * Enter or a double click on a row. `column` is the column of the cell that had focus or was
+   * clicked, for a list whose cells open different records (the lines behind an analytics number).
+   */
+  onOpen: (row: T, column?: string) => void;
+  /**
+   * Enter or a double click on the pinned totals row, with the column of the cell. Without it the
+   * totals row opens nothing.
+   */
+  onOpenTotals?: ((column: string) => void) | undefined;
   /** A row that is switched off reads dimmer. */
   isInactive?: ((row: T) => boolean) | undefined;
   /** A row that heads a group (a head in a list of heads) reads stronger. */
@@ -184,6 +197,7 @@ function GridInner<T>({
   getRowId,
   labelId,
   onOpen,
+  onOpenTotals,
   isInactive,
   isGroup,
   focusRowId,
@@ -221,7 +235,15 @@ function GridInner<T>({
       : undefined;
   }, [totals, context, shown]);
   const columnDefs = useMemo(
-    () => shown.map((column) => toColDef(column, l10n.getString(column.headerId), context, total)),
+    () =>
+      shown.map((column) =>
+        toColDef(
+          column,
+          column.headerText?.(context) ?? l10n.getString(column.headerId),
+          context,
+          total,
+        ),
+      ),
     [shown, l10n, context, total],
   );
   // The total row and the columns can change together (the "More columns" tick of the account
@@ -250,7 +272,13 @@ function GridInner<T>({
     const key = event.event;
     if (!(key instanceof KeyboardEvent) || key.key !== 'Enter' || event.data === undefined) return;
     key.preventDefault();
-    onOpen(event.data);
+    const column = event.column.getColId();
+    // The totals row is pinned and has no record behind it: it opens only what the screen offers.
+    if (event.node.isRowPinned()) {
+      onOpenTotals?.(column);
+      return;
+    }
+    onOpen(event.data, column);
   };
 
   return (
@@ -288,8 +316,14 @@ function GridInner<T>({
         }}
         onGridReady={onGridReady}
         onCellKeyDown={onCellKeyDown}
-        onRowDoubleClicked={(event) => {
-          if (event.data !== undefined) onOpen(event.data);
+        onCellDoubleClicked={(event) => {
+          if (event.data === undefined) return;
+          const column = event.column.getColId();
+          if (event.node.isRowPinned()) {
+            onOpenTotals?.(column);
+            return;
+          }
+          onOpen(event.data, column);
         }}
         onCellFocused={(event) => {
           if (event.rowIndex === null || onFocusRow === undefined) return;

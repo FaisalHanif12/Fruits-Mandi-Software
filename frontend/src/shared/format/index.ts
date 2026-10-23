@@ -1,5 +1,6 @@
 // Display-only formatting (Tech Stack 5.3). Nothing here calculates money (CLAUDE.md rule 1).
 export {
+  chartValueOfPaisa,
   comparePaisa,
   formatPaisa,
   formatPaisaValue,

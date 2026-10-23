@@ -1,0 +1,174 @@
+{
+  "view": "E",
+  "title_id": "analytics-view-e-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null
+  },
+  "columns": [
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "i_1",
+      "title_id": "analytics-col-item-column",
+      "kind": "money",
+      "heading": {
+        "kind": "item",
+        "names": {
+          "ur": "کیلا",
+          "en": "Banana"
+        }
+      },
+      "drill": {
+        "item_id": 1,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      }
+    },
+    {
+      "key": "i_2",
+      "title_id": "analytics-col-item-column",
+      "kind": "money",
+      "heading": {
+        "kind": "item",
+        "names": {
+          "ur": "سیب",
+          "en": "Apple"
+        }
+      },
+      "drill": {
+        "item_id": 2,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      }
+    },
+    {
+      "key": "total_comm",
+      "title_id": "analytics-col-row-total",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 18,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "030110002",
+            "short_code": "2",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 19,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 392800
+    },
+    {
+      "type": "money",
+      "paisa": 152000
+    },
+    {
+      "type": "money",
+      "paisa": 544800
+    }
+  ]
+}

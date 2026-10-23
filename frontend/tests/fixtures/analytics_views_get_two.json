@@ -1,0 +1,36 @@
+[
+  {
+    "name": "کیلا کمیشن ماہانہ",
+    "view": "D",
+    "filters": {
+      "period": null,
+      "from": "01-01-2026",
+      "to": "31-12-2026",
+      "group_by": null,
+      "item_id": 1,
+      "seller_id": null,
+      "buyer": null,
+      "city_id": null,
+      "adda_id": null,
+      "side": "both",
+      "compare": "off"
+    }
+  },
+  {
+    "name": "Top 10",
+    "view": "H",
+    "filters": {
+      "period": null,
+      "from": "",
+      "to": "",
+      "group_by": null,
+      "item_id": null,
+      "seller_id": null,
+      "buyer": null,
+      "city_id": null,
+      "adda_id": null,
+      "side": "both",
+      "compare": "off"
+    }
+  }
+]
