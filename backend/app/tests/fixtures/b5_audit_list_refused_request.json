@@ -1,0 +1,13 @@
+{
+  "filters": {
+    "action": "",
+    "entity": "",
+    "entity_id": null,
+    "from": "abc",
+    "text": "",
+    "to": "",
+    "user_id": 9999
+  },
+  "limit": 0,
+  "offset": 0
+}

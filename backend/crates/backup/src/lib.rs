@@ -4,6 +4,7 @@
 pub mod api;
 pub mod cloud;
 pub mod daily_pack;
+pub mod day_settings;
 pub mod error;
 pub mod io;
 pub mod key;

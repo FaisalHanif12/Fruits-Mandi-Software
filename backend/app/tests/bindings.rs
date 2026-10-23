@@ -488,6 +488,29 @@ const EXPECTED_FILES: &[&str] = &[
     "AnalyticsPrintData.ts",
     "AnalyticsSavedView.ts",
     "AnalyticsViewsSaveInput.ts",
+    // Run B, plan 22 (append-only block).
+    "DaySettings.ts",
+    "AuditFilters.ts",
+    "AuditListInput.ts",
+    "AuditUser.ts",
+    "AuditValue.ts",
+    "AuditChange.ts",
+    "AuditRow.ts",
+    "AuditResolvedFilters.ts",
+    "AuditPage.ts",
+    "AuditOptions.ts",
+    "ChainHealth.ts",
+    "BooksHealth.ts",
+    "DataHealthState.ts",
+    "DataHealth.ts",
+    "BackupHealth.ts",
+    "DailyHealth.ts",
+    "SetNumberGroupingInput.ts",
+    "SupportInfoInput.ts",
+    "SupportInfoSaved.ts",
+    "UpdateCheck.ts",
+    "UpdateInstallInput.ts",
+    "UpdateInstalled.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -783,6 +806,18 @@ fn export_bindings() {
     mandi_reports::analytics::AnalyticsPrintData::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsSavedView::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsViewsSaveInput::export_all(&cfg).unwrap();
+    // Run B, plan 22 (append-only block).
+    mandi_backup::day_settings::DaySettings::export_all(&cfg).unwrap();
+    mandi_reports::audit::AuditListInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::AuditPage::export_all(&cfg).unwrap();
+    mandi_reports::audit::AuditOptions::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::health::DailyHealth::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::settings_day::SetNumberGroupingInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::support::SupportInfoInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::support::SupportInfoSaved::export_all(&cfg).unwrap();
+    mandi_app_lib::updates::UpdateCheck::export_all(&cfg).unwrap();
+    mandi_app_lib::updates::UpdateInstallInput::export_all(&cfg).unwrap();
+    mandi_app_lib::updates::UpdateInstalled::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

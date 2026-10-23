@@ -1,0 +1,20 @@
+{
+  "actions": [
+    "create",
+    "edit",
+    "login"
+  ],
+  "entities": [
+    "backup_settings",
+    "day_settings",
+    "settings",
+    "user"
+  ],
+  "users": [
+    {
+      "display_name": "Owner",
+      "id": 0,
+      "username": "owner"
+    }
+  ]
+}

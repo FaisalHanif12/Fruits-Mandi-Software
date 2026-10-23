@@ -147,7 +147,7 @@ impl From<CmdError> for BackupWireError {
 
 /// Runs one command body on a worker thread with the services context, like `run`, but with the
 /// backup error shape. The body does the sign-in check first (`auth::require`).
-async fn run_backup<R, T, F>(
+pub(crate) async fn run_backup<R, T, F>(
     app: tauri::AppHandle<R>,
     name: &'static str,
     body: F,
@@ -174,7 +174,7 @@ where
     }
 }
 
-fn service_of<R: tauri::Runtime>(
+pub(crate) fn service_of<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
 ) -> Result<std::sync::Arc<mandi_backup::service::BackupService>, CmdError> {
     BackupRuntime::of(app)

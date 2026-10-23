@@ -281,6 +281,17 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-analytics-print-data",
             "allow-analytics-views-get",
             "allow-analytics-views-save",
+            // Run B, plan 22 (append-only block).
+            "allow-settings-day-get",
+            "allow-settings-day-set",
+            "allow-settings-set-number-grouping",
+            "allow-audit-list",
+            "allow-audit-options",
+            "allow-health-run",
+            "allow-health-last",
+            "allow-support-info-save",
+            "allow-updates-check",
+            "allow-updates-install",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",
@@ -288,7 +299,8 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "process:allow-exit",
             "dialog:allow-message",
             "dialog:allow-ask",
-            "dialog:allow-confirm"
+            "dialog:allow-confirm",
+            "dialog:allow-save"
         ])
     );
     assert_eq!(
@@ -316,4 +328,73 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "core:event:default"
         ])
     );
+}
+
+/// NFR-INS-5 (plan 22 early): uninstall never deletes the data folder or the backups.
+///
+/// The data file is in the app data folder of the identifier (`%APPDATA%\pk.mandisoftware.app\`
+/// on Windows, Tech Stack 7) and the backups are next to it. The installers are the two
+/// standard ones of the Release Pipeline, with no custom template and no hook, so the standard
+/// behaviour stays: the program files are removed, and the data folder is only removed if the
+/// Owner himself ticks "delete the application data" in the NSIS uninstaller (unticked by
+/// default, and not offered in a silent or update run). Any custom NSIS or WiX file in the
+/// project would need the same check, so this test fails if one appears.
+#[test]
+fn the_installer_config_never_removes_the_data_folder_or_the_backups() {
+    let conf = conf();
+    assert_eq!(conf["identifier"], "pk.mandisoftware.app");
+    let bundle = &conf["bundle"];
+    assert_eq!(bundle["targets"], json!(["nsis", "msi"]));
+    let windows = &bundle["windows"];
+    // No custom installer template or hook, in either installer.
+    for (installer, keys) in [
+        (
+            "nsis",
+            ["template", "installerHooks", "customLanguageFiles"],
+        ),
+        ("wix", ["template", "fragmentPaths", "componentRefs"]),
+    ] {
+        for key in keys {
+            assert!(
+                windows[installer].get(key).is_none(),
+                "bundle.windows.{installer}.{key} would change what an uninstall removes"
+            );
+        }
+    }
+    // No resource of the bundle lands in the data folder.
+    assert!(
+        bundle.get("resources").is_none(),
+        "bundle resources need the same check"
+    );
+    // The updater runs the installer in its update mode (a passive install), which keeps the
+    // data folder and the backups.
+    assert_eq!(
+        conf["plugins"]["updater"]["windows"]["installMode"],
+        "passive"
+    );
+    // The app's own folder holds no installer script that could remove data.
+    let app_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut stack = vec![app_dir.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if path.is_dir() {
+                if name != "target" && name != "gen" {
+                    stack.push(path);
+                }
+                continue;
+            }
+            let extension = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            assert!(
+                !["nsi", "nsh", "wxs", "wxi"].contains(&extension.as_str()),
+                "{} is an installer script: check what an uninstall removes",
+                path.display()
+            );
+        }
+    }
 }

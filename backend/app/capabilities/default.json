@@ -157,6 +157,16 @@
     "allow-analytics-print-data",
     "allow-analytics-views-get",
     "allow-analytics-views-save",
+    "allow-settings-day-get",
+    "allow-settings-day-set",
+    "allow-settings-set-number-grouping",
+    "allow-audit-list",
+    "allow-audit-options",
+    "allow-health-run",
+    "allow-health-last",
+    "allow-support-info-save",
+    "allow-updates-check",
+    "allow-updates-install",
     "core:event:default",
     "window-state:default",
     "updater:allow-check",
@@ -164,6 +174,7 @@
     "process:allow-exit",
     "dialog:allow-message",
     "dialog:allow-ask",
-    "dialog:allow-confirm"
+    "dialog:allow-confirm",
+    "dialog:allow-save"
   ]
 }

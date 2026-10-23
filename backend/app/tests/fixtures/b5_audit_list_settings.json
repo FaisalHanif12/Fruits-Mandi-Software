@@ -1,0 +1,137 @@
+{
+  "filters": {
+    "action": null,
+    "entity": "settings",
+    "entity_id": null,
+    "from": null,
+    "text": null,
+    "to": null,
+    "user": null
+  },
+  "limit": 100,
+  "offset": 0,
+  "rows": [
+    {
+      "action": "edit",
+      "at": "<time>",
+      "changes": [
+        {
+          "new": {
+            "kind": "text",
+            "text": "lakh"
+          },
+          "old": {
+            "kind": "text",
+            "text": "international"
+          },
+          "path": "number_grouping"
+        }
+      ],
+      "changes_truncated": false,
+      "date": "<time>",
+      "entity": "settings",
+      "entity_id": null,
+      "id": 0,
+      "new_json": "{\"number_grouping\":\"lakh\"}",
+      "old_json": "{\"number_grouping\":\"international\"}",
+      "reason": null,
+      "time": "<time>",
+      "user": {
+        "display_name": "Owner",
+        "id": 0,
+        "username": "owner"
+      }
+    },
+    {
+      "action": "edit",
+      "at": "<time>",
+      "changes": [
+        {
+          "new": {
+            "kind": "text",
+            "text": ""
+          },
+          "old": {
+            "kind": "null"
+          },
+          "path": "firm.address"
+        },
+        {
+          "new": {
+            "kind": "text",
+            "text": "New Sabzi Mandi"
+          },
+          "old": {
+            "kind": "null"
+          },
+          "path": "firm.mandi_en"
+        },
+        {
+          "new": {
+            "kind": "text",
+            "text": "نئی سبزی منڈی"
+          },
+          "old": {
+            "kind": "null"
+          },
+          "path": "firm.mandi_ur"
+        },
+        {
+          "new": {
+            "kind": "text",
+            "text": "Maher Adnan and Brothers"
+          },
+          "old": {
+            "kind": "null"
+          },
+          "path": "firm.name_en"
+        },
+        {
+          "new": {
+            "kind": "text",
+            "text": "ماہر عدنان اینڈ برادرز"
+          },
+          "old": {
+            "kind": "null"
+          },
+          "path": "firm.name_ur"
+        },
+        {
+          "new": {
+            "kind": "text",
+            "text": ""
+          },
+          "old": {
+            "kind": "null"
+          },
+          "path": "firm.phone"
+        },
+        {
+          "new": {
+            "kind": "bool",
+            "value": true
+          },
+          "old": {
+            "kind": "null"
+          },
+          "path": "first_run"
+        }
+      ],
+      "changes_truncated": false,
+      "date": "<time>",
+      "entity": "settings",
+      "entity_id": null,
+      "id": 0,
+      "new_json": "{\"firm\":{\"address\":\"\",\"mandi_en\":\"New Sabzi Mandi\",\"mandi_ur\":\"نئی سبزی منڈی\",\"name_en\":\"Maher Adnan and Brothers\",\"name_ur\":\"ماہر عدنان اینڈ برادرز\",\"phone\":\"\"},\"first_run\":true}",
+      "old_json": null,
+      "reason": null,
+      "time": "<time>",
+      "user": {
+        "display_name": "Owner",
+        "id": 0,
+        "username": "owner"
+      }
+    }
+  ],
+  "total_count": 2
+}

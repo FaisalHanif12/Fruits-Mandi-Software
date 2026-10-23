@@ -75,6 +75,20 @@ pub fn closing_minutes(text: &str) -> Option<u32> {
     (hours < 24 && minutes < 60).then_some(hours * 60 + minutes)
 }
 
+/// The problem with a closing time, if any (`ERR_OUT_OF_RANGE` on `closing_time` with `min` and
+/// `max`). Shared with the Day settings group.
+pub(crate) fn closing_time_problem(text: &str) -> Option<BackupError> {
+    if closing_minutes(text).is_some() {
+        return None;
+    }
+    // The message says "between { $min } and { $max }", so both bounds travel with it.
+    Some(
+        out_of_range("closing_time", "closing time is not HH:MM")
+            .with("min", ErrorValue::Text(CLOSING_TIME_MIN.to_owned()))
+            .with("max", ErrorValue::Text(CLOSING_TIME_MAX.to_owned())),
+    )
+}
+
 fn out_of_range(field: &str, detail: &str) -> BackupError {
     BackupError::new(BackupCode::ErrOutOfRange, detail).on_field(field)
 }
@@ -94,14 +108,7 @@ impl BackupSettings {
     /// `ERR_REQUIRED` and `ERR_OUT_OF_RANGE`, each on its field.
     pub fn validate(&self) -> Result<(), BackupError> {
         let mut problems = Vec::new();
-        if closing_minutes(&self.closing_time).is_none() {
-            // The message says "between { $min } and { $max }", so both bounds travel with it.
-            problems.push(
-                out_of_range("closing_time", "closing time is not HH:MM")
-                    .with("min", ErrorValue::Text(CLOSING_TIME_MIN.to_owned()))
-                    .with("max", ErrorValue::Text(CLOSING_TIME_MAX.to_owned())),
-            );
-        }
+        problems.extend(closing_time_problem(&self.closing_time));
         if self.local_dir.chars().any(char::is_control) || self.local_dir.len() > 260 {
             problems.push(out_of_range("local_dir", "local folder"));
         } else if !self.local_dir.is_empty() && !is_full_path(&self.local_dir) {
@@ -182,32 +189,41 @@ pub fn load(conn: &Connection) -> Result<BackupSettings, BackupError> {
 /// database codes.
 pub fn save(db: &Db, user_id: Option<i64>, new: &BackupSettings) -> Result<(), BackupError> {
     new.validate()?;
+    db.write(|tx| save_in(db, tx, user_id, new))
+}
+
+/// Writes the settings row and its audit row inside the caller's transaction. The caller has
+/// checked the values.
+pub(crate) fn save_in(
+    db: &Db,
+    tx: &Connection,
+    user_id: Option<i64>,
+    new: &BackupSettings,
+) -> Result<(), BackupError> {
     let value = serde_json::to_string(new)?;
-    db.write(|tx| {
-        let old = load(tx)?;
-        tx.execute(
-            "INSERT INTO settings (key, value_json, created_by, updated_by) VALUES (?1, ?2, ?3, ?3) \
-             ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, \
-             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_by = excluded.updated_by, \
-             version = version + 1",
-            params![SETTINGS_KEY, value, user_id],
+    let old = load(tx)?;
+    tx.execute(
+        "INSERT INTO settings (key, value_json, created_by, updated_by) VALUES (?1, ?2, ?3, ?3) \
+         ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, \
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_by = excluded.updated_by, \
+         version = version + 1",
+        params![SETTINGS_KEY, value, user_id],
+    )?;
+    if old != *new {
+        db.auditor().write(
+            tx,
+            &AuditEntry {
+                user_id,
+                action: "edit".to_owned(),
+                entity: "backup_settings".to_owned(),
+                entity_id: None,
+                old_json: Some(json!(old)),
+                new_json: Some(json!(new)),
+                reason: None,
+            },
         )?;
-        if old != *new {
-            db.auditor().write(
-                tx,
-                &AuditEntry {
-                    user_id,
-                    action: "edit".to_owned(),
-                    entity: "backup_settings".to_owned(),
-                    entity_id: None,
-                    old_json: Some(json!(old)),
-                    new_json: Some(json!(new)),
-                    reason: None,
-                },
-            )?;
-        }
-        Ok::<(), BackupError>(())
-    })
+    }
+    Ok(())
 }
 
 #[cfg(test)]

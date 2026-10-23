@@ -81,6 +81,24 @@ pub enum BackupCode {
     /// The restore failed after the safety copy. The data file is as it was. The safety copy
     /// is kept.
     ErrBackupRestoreFailed,
+    /// The update server could not be asked: no internet, or it answered with something that is
+    /// not an update (plan 22, NFR-INS-3). Nothing was changed. Try later.
+    ErrUpdateCheckFailed,
+    /// The update is not signed by us, or was changed on the way. It is refused and nothing is
+    /// installed (NFR-SEC-11).
+    ErrUpdateNotSigned,
+    /// The Owner is in the middle of work: an entry is not saved yet. An update is never
+    /// installed during work (NFR-INS-3). Value `drafts`.
+    ErrUpdateDuringWork,
+    /// The Owner did not agree: `confirmed` is not true (NFR-INS-3). Field `confirmed`.
+    ErrUpdateNotConfirmed,
+    /// The copy of the books before the update failed, so nothing is installed (NFR-REL-13).
+    ErrUpdateBackupFailed,
+    /// The update on offer is not the version the Owner saw. Check again. Field
+    /// `expected_version`.
+    ErrUpdateChanged,
+    /// There is no newer version to install.
+    ErrUpdateNone,
 }
 
 /// Why a cloud copy failed. It travels with `ERR_BACKUP_CLOUD_FAILED` as the value `reason`, and

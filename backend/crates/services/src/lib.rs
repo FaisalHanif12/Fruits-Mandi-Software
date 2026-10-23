@@ -24,6 +24,9 @@ pub mod rules;
 pub mod search;
 pub mod secret;
 pub mod settings;
+// Run B, plan 22 (append-only block).
+pub mod health;
+pub mod settings_ext;
 pub mod spelling;
 mod store;
 pub mod testing;

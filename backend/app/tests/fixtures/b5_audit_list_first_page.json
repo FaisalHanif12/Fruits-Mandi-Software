@@ -1,0 +1,78 @@
+{
+  "filters": {
+    "action": "edit",
+    "entity": null,
+    "entity_id": null,
+    "from": null,
+    "text": null,
+    "to": null,
+    "user": null
+  },
+  "limit": 2,
+  "offset": 0,
+  "rows": [
+    {
+      "action": "edit",
+      "at": "<time>",
+      "changes": [
+        {
+          "new": {
+            "kind": "bool",
+            "value": true
+          },
+          "old": {
+            "kind": "bool",
+            "value": false
+          },
+          "path": "auto_day_close"
+        }
+      ],
+      "changes_truncated": false,
+      "date": "<time>",
+      "entity": "day_settings",
+      "entity_id": null,
+      "id": 0,
+      "new_json": "{\"auto_day_close\":true}",
+      "old_json": "{\"auto_day_close\":false}",
+      "reason": null,
+      "time": "<time>",
+      "user": {
+        "display_name": "Owner",
+        "id": 0,
+        "username": "owner"
+      }
+    },
+    {
+      "action": "edit",
+      "at": "<time>",
+      "changes": [
+        {
+          "new": {
+            "kind": "text",
+            "text": "20:15"
+          },
+          "old": {
+            "kind": "text",
+            "text": "21:00"
+          },
+          "path": "closing_time"
+        }
+      ],
+      "changes_truncated": false,
+      "date": "<time>",
+      "entity": "backup_settings",
+      "entity_id": null,
+      "id": 0,
+      "new_json": "{\"closing_time\":\"20:15\",\"cloud_bucket\":\"\",\"cloud_enabled\":false,\"cloud_endpoint\":\"\",\"cloud_prefix\":\"mandi\",\"cloud_region\":\"auto\",\"local_dir\":\"\",\"usb_enabled\":false,\"usb_folder\":\"\"}",
+      "old_json": "{\"closing_time\":\"21:00\",\"cloud_bucket\":\"\",\"cloud_enabled\":false,\"cloud_endpoint\":\"\",\"cloud_prefix\":\"mandi\",\"cloud_region\":\"auto\",\"local_dir\":\"\",\"usb_enabled\":false,\"usb_folder\":\"\"}",
+      "reason": null,
+      "time": "<time>",
+      "user": {
+        "display_name": "Owner",
+        "id": 0,
+        "username": "owner"
+      }
+    }
+  ],
+  "total_count": 4
+}

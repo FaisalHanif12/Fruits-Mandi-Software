@@ -848,6 +848,36 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             "analytics_views_save",
             json!({ "input": { "views": [] } }),
             true,
+        ), // Run B, plan 22 (append-only block).
+        ("settings_day_get", json!({}), true),
+        (
+            "settings_day_set",
+            json!({ "input": { "closing_time": "21:00", "auto_day_close": false } }),
+            true,
+        ),
+        (
+            "settings_set_number_grouping",
+            json!({ "input": { "grouping": "lakh" } }),
+            true,
+        ),
+        (
+            "audit_list",
+            json!({ "input": { "filters": {}, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        ("audit_options", json!({}), true),
+        ("health_run", json!({}), true),
+        ("health_last", json!({}), true),
+        (
+            "support_info_save",
+            json!({ "input": { "path": null } }),
+            true,
+        ),
+        ("updates_check", json!({}), true),
+        (
+            "updates_install",
+            json!({ "input": { "expected_version": "99.0.0", "confirmed": true } }),
+            true,
         ),
     ]
 }

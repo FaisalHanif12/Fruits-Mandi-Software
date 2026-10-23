@@ -11,6 +11,8 @@ mod print_windows;
 pub mod refs;
 pub mod runner;
 pub mod state;
+pub mod support_info;
+pub mod updates;
 #[cfg(windows)]
 mod webview2;
 
@@ -45,6 +47,8 @@ pub fn run() -> tauri::Result<()> {
             // Run B, plan 18 (append-only block): the backup service, its scheduler and the copy
             // at exit.
             start_backup(app);
+            // Run B, plan 22 (append-only block): the daily health check.
+            commands::health::start_daily(app.handle());
             Ok(())
         })
         .invoke_handler(handler())
@@ -232,6 +236,17 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::analytics::analytics_print_data,
         commands::analytics::analytics_views_get,
         commands::analytics::analytics_views_save,
+        // Run B, plan 22 (append-only block).
+        commands::settings_day::settings_day_get,
+        commands::settings_day::settings_day_set,
+        commands::settings_day::settings_set_number_grouping,
+        commands::audit::audit_list,
+        commands::audit::audit_options,
+        commands::health::health_run,
+        commands::health::health_last,
+        commands::support::support_info_save,
+        commands::updates::updates_check,
+        commands::updates::updates_install,
     ]
 }
 

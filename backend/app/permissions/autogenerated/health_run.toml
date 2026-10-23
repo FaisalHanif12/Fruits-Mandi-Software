@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-health-run"
+description = "Enables the health_run command without any pre-configured scope."
+commands.allow = ["health_run"]
+
+[[permission]]
+identifier = "deny-health-run"
+description = "Denies the health_run command without any pre-configured scope."
+commands.deny = ["health_run"]

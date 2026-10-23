@@ -161,6 +161,17 @@ const APP_COMMANDS: &[&str] = &[
     "analytics_print_data",
     "analytics_views_get",
     "analytics_views_save",
+    // Run B, plan 22 (append-only block).
+    "settings_day_get",
+    "settings_day_set",
+    "settings_set_number_grouping",
+    "audit_list",
+    "audit_options",
+    "health_run",
+    "health_last",
+    "support_info_save",
+    "updates_check",
+    "updates_install",
 ];
 
 fn main() {

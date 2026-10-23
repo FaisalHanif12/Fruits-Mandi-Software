@@ -19,7 +19,7 @@ use crate::error::UiError;
 
 /// A reports error as the error the screen sees. A problem with the filters keeps its field; an
 /// unknown report is `ERR_NOT_FOUND` on `id`; the rest keep their cause for the log.
-fn engine_error(error: ReportsError) -> ServiceError {
+pub(crate) fn engine_error(error: ReportsError) -> ServiceError {
     match error {
         ReportsError::Rejected(items) => ServiceError::from(items),
         ReportsError::NotFound => ServiceError::reject_field(ErrorCode::ErrNotFound, "id"),

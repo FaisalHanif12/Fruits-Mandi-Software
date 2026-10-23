@@ -27,6 +27,12 @@ pub mod reports_engine;
 pub mod reports_people;
 // Run B, plan 21 (append-only block).
 pub mod analytics;
+// Run B, plan 22 (append-only block).
+pub mod audit;
+pub mod health;
+pub mod settings_day;
+pub mod support;
+pub mod updates;
 
 use std::fmt;
 
