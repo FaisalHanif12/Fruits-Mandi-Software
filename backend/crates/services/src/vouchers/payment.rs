@@ -10,7 +10,7 @@
 //! PRD FR-6.7.
 
 use mandi_db::rusqlite::Connection;
-use mandi_db::vouchers::{self as repo, NewVoucher};
+use mandi_db::vouchers::{self as repo, NewVoucher, VoucherExtra};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::ids::AccountId;
@@ -152,6 +152,7 @@ pub(super) fn payment_row(
         person_key: party.person_key.clone(),
         collector_staff_id: None,
         reason: planned.reason.clone(),
+        extra: VoucherExtra::default(),
     })
 }
 

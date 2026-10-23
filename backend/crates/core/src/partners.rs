@@ -184,8 +184,8 @@ pub struct SharesCheck {
     pub errors: Vec<LineError>,
 }
 
-/// One partner on the overview (PRD 17.3). The returned, خالص, capital invested and کل رقم
-/// columns come in plan 17.
+/// One partner on the overview (PRD 17.3). The returned, خالص, capital invested, ventures and
+/// کل رقم columns are new in plan 17; in T1 they are 0 and T2b fills them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PartnerOverviewRow {
     /// The partner.
@@ -219,6 +219,25 @@ pub struct PartnerOverviewRow {
     /// debit side.
     #[ts(type = "Paisa")]
     pub capital_balance_paisa: Paisa,
+    /// Money he returned this month (واپسی): the credits of his drawings account from ذاتی خرچہ
+    /// returns (PRD FR-16.2).
+    #[ts(type = "Paisa")]
+    pub month_returned_paisa: Paisa,
+    /// His خالص this month: `month_profit_paisa` less (taken less returned), PRD C20. Can be
+    /// negative.
+    #[ts(type = "Paisa")]
+    pub month_net_paisa: Paisa,
+    /// Capital put in this month, less capital taken back (سرمایہ لگایا, PRD FR-17.7). Can be
+    /// negative.
+    #[ts(type = "Paisa")]
+    pub month_capital_in_paisa: Paisa,
+    /// This month's net change of his gardens, trips and fruit account (باغ، سفر اور پھل, PRD
+    /// FR-17.10). Can be negative.
+    #[ts(type = "Paisa")]
+    pub month_ventures_paisa: Paisa,
+    /// His کل رقم now (PRD C22, FR-17.9): everything he has in the firm. Can be negative.
+    #[ts(type = "Paisa")]
+    pub total_paisa: Paisa,
 }
 
 /// The shares as typed, read one by one (PRD FR-17.1). Rows that cannot be read are left out of

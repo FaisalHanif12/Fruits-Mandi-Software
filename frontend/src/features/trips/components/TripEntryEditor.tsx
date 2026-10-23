@@ -24,7 +24,7 @@ import type { CashCheck } from '../../../bindings/CashCheck';
 import type { FieldError } from '../../../bindings/FieldError';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField, useRefusalIntoView } from '../../../shared/hooks';
+import { useEntrySaveFlow, useFocusFirstField, useRefusalIntoView } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -66,7 +66,6 @@ import {
   nextEntryDraft,
 } from '../draft';
 import { useCostPreview, useOtherSalePreview, useSaveCost, useSaveOtherSale } from '../hooks';
-import { useEntrySaveFlow } from '../useEntrySaveFlow';
 import { ENTRY_TYPES, type EntryDraft, type EntryType, type TripRow } from '../types';
 import { CostFieldsForm } from './CostFieldsForm';
 import { CostNumbersCard } from './CostNumbersCard';

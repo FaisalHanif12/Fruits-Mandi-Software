@@ -76,7 +76,9 @@ pub(super) fn account<'a>(
         return None;
     }
     let kind_ok = match wanted {
-        Wanted::Seller | Wanted::LotSeller => facts.kind == PartyKind::Seller,
+        Wanted::Seller => facts.kind == PartyKind::Seller,
+        // A separate khata can sell its goods through a lot (PRD FR-16.7).
+        Wanted::LotSeller => matches!(facts.kind, PartyKind::Seller | PartyKind::Khata),
         Wanted::Buyer => facts.kind == PartyKind::Buyer,
     };
     if !kind_ok {

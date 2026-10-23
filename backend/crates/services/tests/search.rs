@@ -4,6 +4,9 @@
 #![cfg(test)]
 
 mod common;
+#[allow(dead_code)]
+#[path = "bikri_preview/support.rs"]
+mod support;
 
 use std::time::Instant;
 
@@ -507,4 +510,136 @@ fn a_huge_search_text_is_refused_in_the_master_search_like_in_the_account_search
     }
     // `search_recent` takes only the list, so it has no text to check.
     search::recent(&env.ctx, &owner, SearchScope::City).unwrap();
+}
+
+/// PRD 12.3, FR-16.7, E2E-38: the seller field of a lot offers the separate khatas (control 0305)
+/// besides the sellers and اپنا مال. No other field offers a khata as a seller or a buyer, and a
+/// short code still means a seller serial.
+#[test]
+fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_field() {
+    use mandi_services::core::accounts::{
+        AccountScope, ResolveCodeInput, ResolveStatus, SearchAccountsInput,
+    };
+    use mandi_services::core::error::{ErrorCode, ErrorValue};
+    use mandi_services::core::khata::KhataCreateInput;
+    let w = support::world();
+    let find = |scope: AccountScope, text: &str| -> Vec<String> {
+        search::search_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &SearchAccountsInput {
+                scope,
+                control_id: None,
+                text: text.into(),
+                limit: 10,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.name_en)
+        .collect()
+    };
+    // The index is built by this first search, so the khata below reaches it by a save.
+    assert_eq!(find(AccountScope::LotSeller, "rahim"), vec!["Rahim"]);
+    assert!(find(AccountScope::LotSeller, "family").is_empty());
+
+    let mut words: Vec<String> = Vec::new();
+    let khata = loop {
+        match mandi_services::khata::create(
+            &w.env.ctx,
+            &w.owner,
+            &KhataCreateInput {
+                name_ur: "خاندانی کھاتہ".into(),
+                name_en: "Family Khata".into(),
+                note: None,
+                confirmed_rules_words: words.clone(),
+            },
+        ) {
+            Ok(done) => break done,
+            Err(ServiceError::Rejected(items))
+                if items
+                    .iter()
+                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
+            {
+                for item in items {
+                    if let Some(ErrorValue::Text(t)) = item.values.get("words") {
+                        words.extend(t.split(' ').map(str::to_owned));
+                    }
+                }
+            }
+            Err(other) => panic!("{other:?}"),
+        }
+    };
+    assert!(
+        khata.account.code.starts_with("0305"),
+        "{}",
+        khata.account.code
+    );
+
+    // The seller field of a lot finds it by either name, and still finds sellers and اپنا مال.
+    assert_eq!(
+        find(AccountScope::LotSeller, "family"),
+        vec!["Family Khata"]
+    );
+    assert_eq!(
+        find(AccountScope::LotSeller, "خاندانی"),
+        vec!["Family Khata"]
+    );
+    assert_eq!(find(AccountScope::LotSeller, "rahim"), vec!["Rahim"]);
+    assert!(
+        !find(AccountScope::LotSeller, "own").is_empty(),
+        "اپنا مال is offered in a lot"
+    );
+    // A seller field, a buyer field and the account lists of other screens do not offer it as a
+    // seller or a buyer; a field that takes any account does.
+    assert!(find(AccountScope::Seller, "family").is_empty());
+    assert!(find(AccountScope::Buyer, "family").is_empty());
+    assert_eq!(find(AccountScope::Any, "family"), vec!["Family Khata"]);
+    assert!(
+        find(AccountScope::Seller, "own").is_empty(),
+        "اپنا مال only in a lot"
+    );
+
+    // The picker list (Alt+Down) of the lot field has it; the seller field's does not.
+    let recent = |scope: AccountScope| -> Vec<String> {
+        search::recent_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &mandi_services::core::accounts::AccountsRecentInput {
+                scope,
+                control_id: None,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.name_en)
+        .collect()
+    };
+    assert!(recent(AccountScope::LotSeller).contains(&"Family Khata".to_owned()));
+    assert!(!recent(AccountScope::Seller).contains(&"Family Khata".to_owned()));
+
+    // A short code still means a seller serial: `1` in a lot field is Rahim, never the khata.
+    let resolved = search::resolve_code(
+        &w.env.ctx,
+        &ResolveCodeInput {
+            scope: AccountScope::LotSeller,
+            control_id: None,
+            text: "1".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(resolved.status, ResolveStatus::Found);
+    assert_eq!(resolved.account.unwrap().name_en, "Rahim");
+    // Its full code works in the lot field (the code is taken as typed).
+    let by_code = search::resolve_code(
+        &w.env.ctx,
+        &ResolveCodeInput {
+            scope: AccountScope::LotSeller,
+            control_id: None,
+            text: khata.account.code.clone(),
+        },
+    )
+    .unwrap();
+    assert_eq!(by_code.status, ResolveStatus::Found);
+    assert_eq!(by_code.account.unwrap().id, khata.account.id);
 }

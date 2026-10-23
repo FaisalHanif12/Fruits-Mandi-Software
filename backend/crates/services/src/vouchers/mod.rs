@@ -8,10 +8,16 @@
 //! cancelled by a reversal, never by changing a posted row (PRD FR-6.3, FR-15.3).
 
 mod advance;
+mod capital_kinds;
+mod cash_kinds;
 mod common;
 mod edit;
+mod expense_reads;
+mod general_kind;
+mod khata_kinds;
 mod kinds;
 mod payment;
+mod posting_type;
 mod preview;
 mod reads;
 mod receipt;
@@ -24,8 +30,16 @@ use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{VoucherRow, VouchersList, VouchersListInput};
 
 pub use advance::{preview_advances, save_advance, save_advances};
+pub use capital_kinds::{save_capital_in, save_capital_out};
+pub use cash_kinds::{
+    save_money_lent, save_money_lent_return, save_personal_expense, save_personal_return,
+    save_shop_expense,
+};
 pub(crate) use common::{rematch_party, role_of_account, stored_cash_change};
 pub use edit::{cancel, edit, get};
+pub use expense_reads::{preview_expense, repeat_last_month_preview};
+pub use general_kind::{general_preview, general_save};
+pub use khata_kinds::{save_khata_in, save_khata_out};
 pub use payment::save_payment;
 pub use preview::preview;
 pub use reads::{advances_report, collection_list, open_bills, open_payables};

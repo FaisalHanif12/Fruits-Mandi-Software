@@ -11,7 +11,7 @@ purchase). The main bar item sits after روکڑ; D4R adds باغات before it.
   and changeable (A54). The parts, the spread of a cost, the credits and the cash after the entry
   all come from the backend's preview (the same function as the save); the screen adds nothing
   (CLAUDE.md rule 1). A shop part comes off the partner's total, a pocket part is only recorded.
-- `useEntrySaveFlow` is the one save for the three types: the cash question (FR-6.7) comes first,
+- `useEntrySaveFlow` (in `shared/hooks`, also used by the cash book area) is the one save for the three types: the cash question (FR-6.7) comes first,
   one save runs at a time, a refusal shows at its field and nothing typed is lost.
 - Lists load page by page (FR-19.11): `useTripsList` and `useTrip` (the history) are infinite
   queries; the totals under a list are the backend's over the whole filter.

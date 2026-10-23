@@ -114,6 +114,18 @@ working-shared-income = <num>{ $seller_comm }</num> + <num>{ $buyer_comm }</num>
 # The largest share also gets the rupees left over, so this is not base × percent ÷ 100.
 # review: pending
 working-partner-share = { -hissa } <num>{ $bps }</num>% of <num>{ $base }</num> = <num>{ $result }</num>
+# C11: one partner's part of a shop expense (PRD 16.2, FR-16.8). $bps is a percent: 40 is 40%.
+# The rupees left over go to the largest share, so the message does not claim an exact equation.
+# review: pending
+working-expense-share = { -dukan-kharcha } <num>{ $amount }</num>, { -hissa } <num>{ $bps }</num>% (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
+# C22: the partner total before and after one entry of the { -zati-kharcha } screen (PRD FR-16.8).
+# The same message is used for money taken and for money returned, so it does not say plus or minus.
+# review: pending
+working-partner-total = { -kul-raqam } before <num>{ $before }</num>, this entry <num>{ $amount }</num>, after <num>{ $after }</num>
+# C10, C11: one partner's part of the income and shop expense lines of a { -general } entry (PRD FR-6.5, 16.4).
+# The part is the net of all such lines: expense is positive, income is negative. The rupees left over go to the largest share.
+# review: pending
+working-general-share = Net of the income and { -dukan-kharcha } lines of this entry, { -hissa } <num>{ $bps }</num>% (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
 # A charge of a line that no rule applies to, for example { -laga } on a vegetable (PRD 11.3).
 # review: pending
 working-none-line = No rule applies to this line, so the amount is <num>{ $result }</num>.

@@ -24,8 +24,16 @@ import { SHORTCUTS, useEscape, useShortcut } from '../shared/keyboard';
 import { ErrorState, LoadingState } from '../shared/ui';
 import { AppShell } from './layout/AppShell';
 import { MainNav } from './layout/MainNav';
-import { ModuleMenu } from './layout/ModuleMenu';
-import { MAIN_ROUTES, MODULE_ROUTES, mainNavOf, moduleMenuOf } from './nav-routes';
+import { ModuleMenu, RokarMenu } from './layout/ModuleMenu';
+import {
+  MAIN_ROUTES,
+  MODULE_ROUTES,
+  ROKAR_ROUTES,
+  mainNavOf,
+  moduleMenuOf,
+  rokarAddressOf,
+  rokarMenuOf,
+} from './nav-routes';
 import { useDayStatus } from './use-day-status';
 import { useIdleLock } from './use-idle-lock';
 
@@ -76,8 +84,9 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   useShortcut(SHORTCUTS.newAdvance, () => {
     goToVoucher('advance');
   });
+  // Alt+K opens the خرچہ screen as دکان خرچہ (PRD 7.3, 16.2).
   useShortcut(SHORTCUTS.newExpense, () => {
-    goTo(MAIN_ROUTES.rokar);
+    void navigate({ to: '/rokar/expense', search: { type: 'shop_expense' } });
   });
   // Esc, when nothing else wants it, leaves the screen for the dashboard (PRD FR-7.18).
   useEscape(
@@ -110,6 +119,15 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
                 else goToVoucher(type);
               }}
             />
+          ) : main === 'rokar' ? (
+            <RokarMenu
+              current={rokarMenuOf(pathname)}
+              onSelect={(id) => {
+                // The last item is the voucher screen of the بکری area (PRD FR-15.10).
+                if (id === 'voucher') goToVoucher('receipt');
+                else goTo(ROKAR_ROUTES[id]);
+              }}
+            />
           ) : null
         }
         userName={user.display_name}
@@ -122,10 +140,10 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         }}
         onOpenVoucher={(hit) => {
           // A voucher of the three kinds opens on the voucher screen; any other kind belongs to
-          // the روکڑ area (plan 17).
+          // the screen of its own in the روکڑ area (plan 17).
           const type = screenTypeOf(hit.voucher_type);
-          if (type === null) goTo(MAIN_ROUTES.rokar);
-          else void navigate({ to: '/bikri/voucher', search: { type, id: hit.id } });
+          if (type !== null) void navigate({ to: '/bikri/voucher', search: { type, id: hit.id } });
+          else goTo(rokarAddressOf(hit.voucher_type));
         }}
         onSignOut={() => {
           logout.mutate();

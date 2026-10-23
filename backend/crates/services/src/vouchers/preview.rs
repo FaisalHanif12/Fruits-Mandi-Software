@@ -9,8 +9,9 @@
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_db::vouchers as repo;
+use mandi_domain::capital::capital_excess;
 use mandi_domain::cash;
-use mandi_domain::core::accounts::Balance;
+use mandi_domain::core::accounts::{Balance, BalanceSide};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::money::Paisa;
@@ -27,6 +28,7 @@ use crate::cash::cash_in_hand;
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
+use crate::floor::preview_refusal;
 use crate::ledger;
 use crate::matching::{self, KeyChange, WHAT_IF_LINE, WhatIfLine};
 
@@ -39,10 +41,24 @@ struct Replacing {
 /// What the old posting did to the signed balance of its party (debit positive): a receipt put a
 /// credit on it, a payment and an advance a debit.
 fn old_effect(old: &VoucherRow) -> Result<Paisa, ServiceError> {
-    match old.voucher_type {
-        VoucherType::Receipt => old.amount_paisa.checked_neg().map_err(money_error),
-        _ => Ok(old.amount_paisa),
+    if credits_party(old.voucher_type) {
+        old.amount_paisa.checked_neg().map_err(money_error)
+    } else {
+        Ok(old.amount_paisa)
     }
+}
+
+/// True for the kinds that put a credit on their account: a receipt, a return of money taken or
+/// lent, capital invested and money received for a khata. The others put a debit on it.
+fn credits_party(kind: VoucherType) -> bool {
+    matches!(
+        kind,
+        VoucherType::Receipt
+            | VoucherType::PersonalReturn
+            | VoucherType::MoneyLentReturn
+            | VoucherType::CapitalIn
+            | VoucherType::KhataIn
+    )
 }
 
 fn find_replacing(
@@ -102,10 +118,37 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
     let window = day::window(ctx)?;
     let today = window.1;
     ctx.db.read(|conn| {
-        let planned = Planned::plan(conn, window, &input.entry)?;
+        // The voucher an edit replaces is found first, so a return is judged on the books without
+        // it, as the edit does (it posts the reversal before it plans; Code Standards B5).
+        let mut replacing_errors: Vec<FieldError> = Vec::new();
+        let replacing = find_replacing(conn, input, &mut replacing_errors)?;
+        let planned = Planned::plan(
+            conn,
+            window,
+            &input.entry,
+            replacing.as_ref().map(|r| &r.entry),
+        )?;
         let mut errors: Vec<FieldError> = planned.errors().to_vec();
+        errors.extend(replacing_errors);
         let mut warnings: Vec<FieldError> = Vec::new();
-        let replacing = find_replacing(conn, input, &mut errors)?;
+        // A take or a loan that an edit would leave with returns above it says so now, like the
+        // edit does; the old account is checked too (money agent, plan 17).
+        if errors.is_empty()
+            && let (Some(account), Some(date), Some(amount)) =
+                (planned.account(), planned.date(), planned.amount())
+        {
+            let old = replacing
+                .as_ref()
+                .and_then(|r| r.row.account.as_ref().map(|a| (a.id, &r.entry)));
+            if let Some(refusal) = preview_refusal(
+                conn,
+                planned.voucher_type(),
+                old,
+                Some((account.id, &date.to_iso(), amount)),
+            )? {
+                errors.push(refusal);
+            }
+        }
         let remove_entry = replacing.as_ref().map(|r| r.entry.id);
         let clean = errors.is_empty();
 
@@ -132,9 +175,10 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                     _ => now,
                 };
                 let after = if clean && amount != Paisa::ZERO {
-                    match planned.voucher_type() {
-                        VoucherType::Receipt => base.checked_sub(amount).map_err(money_error)?,
-                        _ => base.checked_add(amount).map_err(money_error)?,
+                    if credits_party(planned.voucher_type()) {
+                        base.checked_sub(amount).map_err(money_error)?
+                    } else {
+                        base.checked_add(amount).map_err(money_error)?
                     }
                 } else {
                     base
@@ -346,6 +390,17 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                         );
                     }
                 }
+                // PRD FR-17.8: taking back more than his capital balance warns and still saves.
+                (Planned::CapitalOut(_), _) => {
+                    let balance = capital_credit(current_balance)?;
+                    if let Some(over) = capital_excess(balance, amount).map_err(money_error)? {
+                        warnings.push(
+                            FieldError::new(ErrorCode::ErrCapitalExceedsBalance, "amount")
+                                .with("balance_paisa", ErrorValue::Number(balance.as_paisa()))
+                                .with("over_paisa", ErrorValue::Number(over.as_paisa())),
+                        );
+                    }
+                }
                 _ => {}
             }
         }
@@ -387,6 +442,16 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
             warnings,
         })
     })
+}
+
+/// The credit balance of a capital account from its balance with a side: plus when it stands on
+/// the credit side (the partner has capital in the shop), minus on the debit side.
+fn capital_credit(balance: Balance) -> Result<Paisa, ServiceError> {
+    match balance.side {
+        BalanceSide::Cr => Ok(balance.amount_paisa),
+        BalanceSide::Dr => balance.amount_paisa.checked_neg().map_err(money_error),
+        BalanceSide::Zero => Ok(Paisa::ZERO),
+    }
 }
 
 /// The party of a planned receipt.

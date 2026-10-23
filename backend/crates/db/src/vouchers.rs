@@ -12,6 +12,52 @@ type EntryOrder = (bool, String, i64, i64);
 /// The same with the line number last.
 type LineOrder = (bool, String, i64, i64, i64);
 
+/// The columns only the vouchers of plan 17 use (PRD 16.2, 16.3, 16.5): the partner, the expense
+/// head, the return-by day, who took the cash, and the salary mode. All empty for a وصولی, an
+/// ادائیگی and a پیشگی.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct VoucherExtra {
+    /// The partner of a ذاتی خرچہ and its واپسی (`partners.id`).
+    pub partner_id: Option<i64>,
+    /// The expense head of a دکان خرچہ, or the salary head of a salary deduction
+    /// (`expense_heads.id`).
+    pub expense_head_id: Option<i64>,
+    /// The return-by day, `YYYY-MM-DD`, of money taken or lent.
+    pub return_by_date: Option<String>,
+    /// The person who took the cash, if not the partner himself.
+    pub taken_by: Option<String>,
+    /// True for a salary deduction: the stored mode is `salary` and no cash moves.
+    pub salary: bool,
+}
+
+impl VoucherExtra {
+    /// The stored mode: `salary` for a salary deduction, else the mode as given.
+    fn mode_text(&self, mode: VoucherMode) -> &'static str {
+        if self.salary { "salary" } else { mode.as_str() }
+    }
+}
+
+/// The extra columns of a stored voucher.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn extras(conn: &Connection, voucher_id: i64) -> rusqlite::Result<VoucherExtra> {
+    conn.query_row(
+        "SELECT partner_id, expense_head_id, return_by_date, taken_by, mode = 'salary'
+         FROM vouchers WHERE id = ?1",
+        [voucher_id],
+        |r| {
+            Ok(VoucherExtra {
+                partner_id: r.get(0)?,
+                expense_head_id: r.get(1)?,
+                return_by_date: r.get(2)?,
+                taken_by: r.get(3)?,
+                salary: r.get(4)?,
+            })
+        },
+    )
+}
+
 /// The columns of a new voucher that the user chooses or the framework gives.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewVoucher {
@@ -43,6 +89,8 @@ pub struct NewVoucher {
     pub collector_staff_id: Option<i64>,
     /// Why, for a payment to a buyer (PRD FR-15.11).
     pub reason: Option<String>,
+    /// The columns of the vouchers of plan 17 (empty for the three of plan 15).
+    pub extra: VoucherExtra,
 }
 
 /// The next number of a series: the biggest number ever given plus one. Cancelled vouchers keep
@@ -72,8 +120,10 @@ pub fn insert(
     conn.execute(
         "INSERT INTO vouchers (created_at, created_by, updated_at, updated_by, type, number, entry_date,
              account_id, amount_paisa, mode, bank_account_id, cheque_no, cheque_date, expected_goods, narration,
-             pukhta_person_key, collector_staff_id, reason)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+             pukhta_person_key, collector_staff_id, reason, partner_id, expense_head_id, return_by_date,
+             taken_by)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
+                 ?17, ?18, ?19, ?20)",
         params![
             now,
             user_id,
@@ -82,7 +132,7 @@ pub fn insert(
             voucher.entry_date,
             voucher.account_id,
             voucher.amount_paisa,
-            voucher.mode.as_str(),
+            voucher.extra.mode_text(voucher.mode),
             voucher.bank_account_id,
             voucher.cheque_no,
             voucher.cheque_date,
@@ -91,6 +141,10 @@ pub fn insert(
             voucher.person_key,
             voucher.collector_staff_id,
             voucher.reason,
+            voucher.extra.partner_id,
+            voucher.extra.expense_head_id,
+            voucher.extra.return_by_date,
+            voucher.extra.taken_by,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -186,7 +240,12 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<(VoucherRow, Option<Strin
                 .unwrap_or_default(),
         }),
         amount_paisa: Paisa::try_from_paisa(r.get(8)?).map_err(|_| bad(8, "amount"))?,
-        mode: VoucherMode::parse(&r.get::<_, String>(9)?).ok_or_else(|| bad(9, "mode"))?,
+        // A salary deduction (plan 17) is stored as `salary`; as a row it reads as cash because it
+        // moves no money outside the books. `extras` tells it apart.
+        mode: match r.get::<_, String>(9)?.as_str() {
+            "salary" => VoucherMode::Cash,
+            other => VoucherMode::parse(other).ok_or_else(|| bad(9, "mode"))?,
+        },
         bank_account_id: r.get(10)?,
         cheque_no: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
         cheque_date: r.get(12)?,
@@ -435,6 +494,8 @@ pub struct EditedVoucher {
     pub expected_goods: Option<String>,
     /// The note.
     pub narration: Option<String>,
+    /// The columns of the vouchers of plan 17 (empty for the three of plan 15).
+    pub extra: VoucherExtra,
     /// The live posting after the edit.
     pub current_entry_id: i64,
 }
@@ -455,7 +516,8 @@ pub fn update_for_edit(
         "UPDATE vouchers SET entry_date = ?2, account_id = ?3, pukhta_person_key = ?4, amount_paisa = ?5,
              mode = ?6, bank_account_id = ?7, cheque_no = ?8, cheque_date = ?9, collector_staff_id = ?10,
              reason = ?11, expected_goods = ?12, narration = ?13, current_entry_id = ?14,
-             updated_at = ?15, updated_by = ?16, version = version + 1
+             updated_at = ?15, updated_by = ?16, partner_id = ?17, expense_head_id = ?18,
+             return_by_date = ?19, taken_by = ?20, version = version + 1
          WHERE id = ?1 AND status = 'saved'",
         params![
             id,
@@ -463,7 +525,7 @@ pub fn update_for_edit(
             edited.account_id,
             edited.person_key,
             edited.amount_paisa,
-            edited.mode.as_str(),
+            edited.extra.mode_text(edited.mode),
             edited.bank_account_id,
             edited.cheque_no,
             edited.cheque_date,
@@ -473,7 +535,11 @@ pub fn update_for_edit(
             edited.narration,
             edited.current_entry_id,
             now,
-            user_id
+            user_id,
+            edited.extra.partner_id,
+            edited.extra.expense_head_id,
+            edited.extra.return_by_date,
+            edited.extra.taken_by,
         ],
     )?;
     Ok(changed > 0)
@@ -525,8 +591,9 @@ pub fn hits_by_number(
         "SELECT v.id, v.type, v.number, v.entry_date, v.account_id, a.code, a.name_ur, a.name_en,
                 v.amount_paisa, v.status
          FROM vouchers v LEFT JOIN accounts a ON a.id = v.account_id
-         WHERE v.number = ?1 AND (?2 IS NULL OR v.type = ?2) AND v.type IN ('receipt', 'payment', 'advance')
-         ORDER BY CASE v.type WHEN 'receipt' THEN 0 WHEN 'payment' THEN 1 ELSE 2 END",
+         WHERE v.number = ?1 AND (?2 IS NULL OR v.type = ?2)
+         ORDER BY CASE v.type WHEN 'receipt' THEN 0 WHEN 'payment' THEN 1 WHEN 'advance' THEN 2
+                  ELSE 3 END, v.type",
     )?;
     let rows = statement.query_map(
         params![number, voucher_type.map(VoucherType::as_str)],
@@ -1445,5 +1512,81 @@ pub fn month_closed_from(conn: &Connection, month: &str) -> rusqlite::Result<boo
         "SELECT EXISTS (SELECT 1 FROM month_closes WHERE is_active = 1 AND month >= ?1)",
         [month],
         |r| r.get(0),
+    )
+}
+
+/// What the sales of a range of days came to, as stored (PRD FR-21.1, 4.9): the sums of
+/// `analytics_facts` with `sign` applied, so a cancelled or edited بکری counts once.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SalesOfDays {
+    /// بکری with sales in the range, after the reversals (a بکری that nets to nothing is left out).
+    pub bikri_count: i64,
+    /// `SUM(sign * seller_amount_paisa)`: خام بکری.
+    pub gross_paisa: i64,
+    /// `SUM(sign * seller_comm_paisa)`.
+    pub seller_comm_paisa: i64,
+    /// `SUM(sign * buyer_comm_paisa)`.
+    pub buyer_comm_paisa: i64,
+    /// `SUM(sign * laga_paisa)`.
+    pub laga_paisa: i64,
+}
+
+/// The sales of the days from `from` to `to`, both included (`YYYY-MM-DD`). Two indexed reads of
+/// `analytics_facts`; only `SUM()` on INTEGER columns is used.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn sales_of_days(conn: &Connection, from: &str, to: &str) -> rusqlite::Result<SalesOfDays> {
+    let (gross, seller, buyer, laga) = conn.query_row(
+        "SELECT COALESCE(SUM(sign * seller_amount_paisa), 0), COALESCE(SUM(sign * seller_comm_paisa), 0),
+                COALESCE(SUM(sign * buyer_comm_paisa), 0), COALESCE(SUM(sign * laga_paisa), 0)
+         FROM analytics_facts WHERE entry_date >= ?1 AND entry_date <= ?2",
+        params![from, to],
+        |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+                r.get::<_, i64>(3)?,
+            ))
+        },
+    )?;
+    let bikri_count = conn.query_row(
+        "SELECT COUNT(*) FROM (SELECT bikri_id FROM analytics_facts
+                               WHERE entry_date >= ?1 AND entry_date <= ?2
+                               GROUP BY bikri_id HAVING SUM(sign) > 0)",
+        params![from, to],
+        |r| r.get::<_, i64>(0),
+    )?;
+    Ok(SalesOfDays {
+        bikri_count,
+        gross_paisa: gross,
+        seller_comm_paisa: seller,
+        buyer_comm_paisa: buyer,
+        laga_paisa: laga,
+    })
+}
+
+/// The lots of saved (not cancelled) بکری with goods left in باقی مال AS OF the end of the day
+/// `to` (`YYYY-MM-DD`; PRD C16, FR-12.14, FR-21.1): how many lots, and their نگ in all. The
+/// balance of a lot on that day is the sum of its stock moves dated on or before it (received is
+/// plus; sold, written off and taken as fruit are minus; a reversal carries the date of the move
+/// it takes back). So a day-close preview made after a later sale still shows what was left on
+/// the day itself: 5 نگ on 10-10-26 even when the last 5 were sold on 11-10-26 (PRD E2E-16, 16b).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn open_stock(conn: &Connection, to: &str) -> rusqlite::Result<(i64, i64)> {
+    conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(left_qty), 0)
+         FROM (SELECT SUM(m.qty) AS left_qty
+               FROM stock_moves m
+               JOIN bikri_lots l ON l.id = m.lot_id
+               JOIN bikri_entries e ON e.id = l.bikri_id
+               WHERE m.move_date <= ?1 AND e.status = 'saved'
+               GROUP BY m.lot_id
+               HAVING SUM(m.qty) > 0)",
+        [to],
+        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
     )
 }

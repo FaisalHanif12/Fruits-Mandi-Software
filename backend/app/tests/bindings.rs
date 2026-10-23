@@ -18,8 +18,8 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, bikri, cash, drafts, masters, partners, printing, purchases, rules, search, trips,
-    ventures, vouchers,
+    accounts, bikri, capital, cash, cashbook, drafts, expenses, general, khata, lent, masters,
+    partners, printing, purchases, rules, search, statement, trips, ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -223,6 +223,40 @@ const EXPECTED_FILES: &[&str] = &[
     "PartnersCheckSharesInput.ts",
     "SharesCheck.ts",
     "PartnerOverviewRow.ts",
+    "CashbookInput.ts",
+    "Cashbook.ts",
+    "CashbookRow.ts",
+    "ShopExpenseInput.ts",
+    "PersonalExpenseInput.ts",
+    "PersonalReturnInput.ts",
+    "ExpenseEntry.ts",
+    "ExpensePreviewInput.ts",
+    "ExpensePreview.ts",
+    "PartnerTakes.ts",
+    "RepeatLastMonth.ts",
+    "ExpenseHeadUse.ts",
+    "ExpenseHeads.ts",
+    "MoneyLentInput.ts",
+    "MoneyLentReturnInput.ts",
+    "LentPersonCreateInput.ts",
+    "LentPerson.ts",
+    "LentList.ts",
+    "LentReport.ts",
+    "AttentionOverdue.ts",
+    "CapitalInput.ts",
+    "CapitalHistory.ts",
+    "KhataCreateInput.ts",
+    "KhataAccount.ts",
+    "KhataOutInput.ts",
+    "KhataInInput.ts",
+    "KhataStatement.ts",
+    "GeneralInput.ts",
+    "GeneralPreviewInput.ts",
+    "GeneralPreview.ts",
+    "PartnersStatementInput.ts",
+    "PartnerStatement.ts",
+    "StatementLine.ts",
+    "DayCloseSummary.ts",
     "BikriPreviewInput.ts",
     "BikriDraft.ts",
     "HeaderInput.ts",
@@ -657,6 +691,72 @@ fn export_bindings() {
     partners::PartnersCheckSharesInput::export_all(&cfg).unwrap();
     partners::SharesCheck::export_all(&cfg).unwrap();
     partners::PartnerOverviewRow::export_all(&cfg).unwrap();
+    cashbook::CashbookInput::export_all(&cfg).unwrap();
+    cashbook::CashbookRow::export_all(&cfg).unwrap();
+    cashbook::CashbookTotals::export_all(&cfg).unwrap();
+    cashbook::Cashbook::export_all(&cfg).unwrap();
+    expenses::ShopExpenseInput::export_all(&cfg).unwrap();
+    expenses::PersonalExpenseInput::export_all(&cfg).unwrap();
+    expenses::PersonalReturnInput::export_all(&cfg).unwrap();
+    expenses::ExpenseEntry::export_all(&cfg).unwrap();
+    expenses::ExpensePreviewInput::export_all(&cfg).unwrap();
+    expenses::ExpenseShare::export_all(&cfg).unwrap();
+    expenses::PartnerTotalEffect::export_all(&cfg).unwrap();
+    expenses::ExpensePreview::export_all(&cfg).unwrap();
+    expenses::PartnerTakesInput::export_all(&cfg).unwrap();
+    expenses::TakeSource::export_all(&cfg).unwrap();
+    expenses::TakeRow::export_all(&cfg).unwrap();
+    expenses::TakesTotals::export_all(&cfg).unwrap();
+    expenses::PartnerTakes::export_all(&cfg).unwrap();
+    expenses::RepeatLastMonthInput::export_all(&cfg).unwrap();
+    expenses::RepeatedExpense::export_all(&cfg).unwrap();
+    expenses::RepeatLastMonth::export_all(&cfg).unwrap();
+    expenses::ExpenseHeadUse::export_all(&cfg).unwrap();
+    expenses::ExpenseHeads::export_all(&cfg).unwrap();
+    lent::MoneyLentInput::export_all(&cfg).unwrap();
+    lent::LentReturnMode::export_all(&cfg).unwrap();
+    lent::MoneyLentReturnInput::export_all(&cfg).unwrap();
+    lent::LentPersonCreateInput::export_all(&cfg).unwrap();
+    lent::LentPerson::export_all(&cfg).unwrap();
+    lent::LentListInput::export_all(&cfg).unwrap();
+    lent::LentRow::export_all(&cfg).unwrap();
+    lent::LentTotals::export_all(&cfg).unwrap();
+    lent::LentList::export_all(&cfg).unwrap();
+    lent::LentReportInput::export_all(&cfg).unwrap();
+    lent::LentReportRow::export_all(&cfg).unwrap();
+    lent::LentReportTotals::export_all(&cfg).unwrap();
+    lent::LentReport::export_all(&cfg).unwrap();
+    lent::OverdueKind::export_all(&cfg).unwrap();
+    lent::OverdueItem::export_all(&cfg).unwrap();
+    lent::AttentionOverdue::export_all(&cfg).unwrap();
+    capital::CapitalInput::export_all(&cfg).unwrap();
+    capital::CapitalHistoryInput::export_all(&cfg).unwrap();
+    capital::CapitalRowKind::export_all(&cfg).unwrap();
+    capital::CapitalRow::export_all(&cfg).unwrap();
+    capital::CapitalTotals::export_all(&cfg).unwrap();
+    capital::CapitalHistory::export_all(&cfg).unwrap();
+    khata::KhataCreateInput::export_all(&cfg).unwrap();
+    khata::KhataAccount::export_all(&cfg).unwrap();
+    khata::KhataOutInput::export_all(&cfg).unwrap();
+    khata::KhataInInput::export_all(&cfg).unwrap();
+    khata::KhataStatementInput::export_all(&cfg).unwrap();
+    khata::KhataRowKind::export_all(&cfg).unwrap();
+    khata::KhataEntryRow::export_all(&cfg).unwrap();
+    khata::KhataTotals::export_all(&cfg).unwrap();
+    khata::KhataStatement::export_all(&cfg).unwrap();
+    general::GeneralLineInput::export_all(&cfg).unwrap();
+    general::GeneralInput::export_all(&cfg).unwrap();
+    general::GeneralPreviewInput::export_all(&cfg).unwrap();
+    general::GeneralLinePreview::export_all(&cfg).unwrap();
+    general::GeneralPreview::export_all(&cfg).unwrap();
+    statement::PartnersStatementInput::export_all(&cfg).unwrap();
+    statement::StatementHeading::export_all(&cfg).unwrap();
+    statement::StatementDetail::export_all(&cfg).unwrap();
+    statement::StatementLine::export_all(&cfg).unwrap();
+    statement::StatementTotals::export_all(&cfg).unwrap();
+    statement::PartnerStatement::export_all(&cfg).unwrap();
+    vouchers::DayClosePartner::export_all(&cfg).unwrap();
+    vouchers::DayCloseSummary::export_all(&cfg).unwrap();
     bikri::BikriPreviewInput::export_all(&cfg).unwrap();
     bikri::BikriPreview::export_all(&cfg).unwrap();
     bikri::SplitFreightInput::export_all(&cfg).unwrap();

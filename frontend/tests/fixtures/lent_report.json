@@ -1,0 +1,29 @@
+{
+  "as_of": "2026-10-11",
+  "rows": [
+    {
+      "person": {
+        "id": 33,
+        "code": "01030001",
+        "name_ur": "اسلم",
+        "name_en": "Aslam"
+      },
+      "is_staff": false,
+      "lent_paisa": 500000,
+      "returned_cash_paisa": 300000,
+      "returned_salary_paisa": 0,
+      "open_paisa": 200000,
+      "oldest_open_date": "2026-10-10",
+      "return_by": "2026-10-15",
+      "days_past_return_by": null
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "lent_paisa": 500000,
+    "returned_cash_paisa": 300000,
+    "returned_salary_paisa": 0,
+    "open_paisa": 200000,
+    "overdue_paisa": 0
+  }
+}

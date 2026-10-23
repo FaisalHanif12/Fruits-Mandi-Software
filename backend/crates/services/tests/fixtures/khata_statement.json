@@ -1,0 +1,43 @@
+{
+  "khata": {
+    "account": {
+      "id": 32,
+      "code": "03050001",
+      "name_ur": "خاندانی کھاتہ",
+      "name_en": "Family Khata"
+    },
+    "note": "family",
+    "balance_paisa": -600000
+  },
+  "opening_paisa": 0,
+  "closing_paisa": -600000,
+  "rows": [
+    {
+      "kind": "paid_out",
+      "entry_id": 7,
+      "voucher_id": 4,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "reason": "خاندان کا خرچ",
+      "narration": "",
+      "amount_paisa": -1000000,
+      "running_paisa": -1000000
+    },
+    {
+      "kind": "received",
+      "entry_id": 8,
+      "voucher_id": 5,
+      "number": 1,
+      "entry_date": "2026-10-11",
+      "reason": "واپس آئے",
+      "narration": "",
+      "amount_paisa": 400000,
+      "running_paisa": -600000
+    }
+  ],
+  "total_count": 2,
+  "totals": {
+    "paid_out_paisa": 1000000,
+    "received_paisa": 400000
+  }
+}

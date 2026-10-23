@@ -103,7 +103,7 @@ export interface VoucherBooks {
   rows: VoucherRow[];
   /** What was sent to each command. */
   saves: BuiltVoucher[];
-  edits: { id: number; version: number; entry: VoucherEntry; reason: string; confirm: boolean }[];
+  edits: { id: number; version: number; entry: BookEntry; reason: string; confirm: boolean }[];
   cancels: { id: number; version: number; reason: string; confirm: boolean }[];
   /** The advances saved so far: the shape the first advance tests read. */
   saved: { seller: number; amount: string }[];
@@ -125,6 +125,16 @@ function cashCheck(cash: number, change: number): CashCheck {
     lowers_cash: change < 0,
     needs_confirm: after < 0 && change < 0,
   };
+}
+
+/** The three kinds these books know. A kind of the روکڑ area (plan 17) has its own books. */
+type BookEntry = Extract<VoucherEntry, { type: 'receipt' | 'payment' | 'advance' }>;
+
+function bookEntry(entry: VoucherEntry): BookEntry {
+  if (entry.type === 'receipt' || entry.type === 'payment' || entry.type === 'advance') {
+    return entry;
+  }
+  throw refused('ERR_NOT_IMPLEMENTED', null);
 }
 
 function refused(code: string, field: string | null, values: Record<string, string | number> = {}) {
@@ -152,10 +162,11 @@ export function createBooks(options: BooksOptions = {}) {
   const counters: Record<ScreenType, number> = { receipt: 0, payment: 0, advance: 0 };
   const openBillsOf = (id: number) => store.bills.get(id) ?? [];
   const dueOf = (id: number) => openBillsOf(id).reduce((total, one) => total + one.open, 0);
-  const accountOf = (entry: VoucherEntry | BuiltVoucher['input']) =>
+  const accountOf = (entry: BookEntry | BuiltVoucher['input']) =>
     'seller_account_id' in entry ? entry.seller_account_id : entry.account_id;
 
-  function preview(entry: VoucherEntry): VoucherPreview {
+  function preview(asked: VoucherEntry): VoucherPreview {
+    const entry = bookEntry(asked);
     const id = accountOf(entry);
     const party = partyOf(id);
     const amountText = entry.amount.replaceAll(',', '');
@@ -294,12 +305,15 @@ export function createBooks(options: BooksOptions = {}) {
     };
   }
 
-  function edit(input: VoucherBooks['edits'][number]): VoucherSaved {
-    store.edits.push(input);
+  function edit(
+    input: Omit<VoucherBooks['edits'][number], 'entry'> & { entry: VoucherEntry },
+  ): VoucherSaved {
+    const entry = bookEntry(input.entry);
+    store.edits.push({ ...input, entry });
     const row = store.rows.find((one) => one.id === input.id);
     if (row === undefined) throw refused('ERR_NOT_FOUND', null);
     row.version += 1;
-    row.amount_paisa = money(rupeesOf(input.entry.amount));
+    row.amount_paisa = money(rupeesOf(entry.amount));
     return {
       voucher_id: row.id,
       voucher_type: row.voucher_type,

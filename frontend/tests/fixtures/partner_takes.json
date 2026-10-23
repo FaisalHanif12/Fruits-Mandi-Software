@@ -1,0 +1,29 @@
+{
+  "partner": {
+    "id": 1,
+    "code": "",
+    "name_ur": "الف",
+    "name_en": "Partner A"
+  },
+  "rows": [
+    {
+      "source": "voucher",
+      "voucher_id": 3,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "amount_paisa": 200000,
+      "reason": "گھر کا خرچ",
+      "taken_by": "",
+      "return_by": "2026-10-20",
+      "returned_paisa": 0,
+      "open_paisa": 200000,
+      "days_past_return_by": null
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "taken_paisa": 200000,
+    "returned_paisa": 0,
+    "open_paisa": 200000
+  }
+}

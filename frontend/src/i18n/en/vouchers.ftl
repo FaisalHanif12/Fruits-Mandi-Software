@@ -562,3 +562,35 @@ vouchers-some-refused = { $count ->
     [one] One voucher could not be saved. See the reason in the list.
    *[other] { $count } vouchers could not be saved. See the reason in the list.
 }
+
+## The number of a voucher of the روکڑ area (plan 17): its series letters and its number.
+
+# review: pending
+vouchers-number-shop-expense = E-{ $number }
+
+# review: pending
+vouchers-number-personal-expense = D-{ $number }
+
+# review: pending
+vouchers-number-personal-return = DR-{ $number }
+
+# review: pending
+vouchers-number-money-lent = L-{ $number }
+
+# review: pending
+vouchers-number-money-lent-return = LR-{ $number }
+
+# review: pending
+vouchers-number-capital-in = CI-{ $number }
+
+# review: pending
+vouchers-number-capital-out = CO-{ $number }
+
+# review: pending
+vouchers-number-khata-out = KO-{ $number }
+
+# review: pending
+vouchers-number-khata-in = KI-{ $number }
+
+# review: pending
+vouchers-number-general = G-{ $number }

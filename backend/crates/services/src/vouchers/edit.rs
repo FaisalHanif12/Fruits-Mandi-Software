@@ -21,8 +21,9 @@
 
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
-use mandi_db::vouchers::{self as repo, EditedVoucher};
+use mandi_db::vouchers::{self as repo, EditedVoucher, VoucherExtra};
 use mandi_domain::cash;
+use mandi_domain::core::accounts::Balance;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -35,6 +36,7 @@ use serde_json::{Value, json};
 use super::common::{
     PostingSpec, Role, post_entry, rematch_party, role_of_account, stored_cash_change,
 };
+use super::general_kind::rematch_buyers;
 use super::kinds::Planned;
 use super::receipt::check_seller_limit;
 use crate::audit::Event;
@@ -43,16 +45,21 @@ use crate::cash::{cash_in_hand, require_confirmed};
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
+use crate::floor::{AMOUNT_FIELD, check_after, floor_before};
 use crate::ledger;
 
 /// A voucher read for an edit or a cancel, with what its old posting touched.
 struct Old {
     row: VoucherRow,
     entry: ledger_repo::StoredEntry,
-    account_id: i64,
+    /// The account the voucher is on. None for a voucher with no single account (جنرل).
+    account_id: Option<i64>,
     person_key: Option<String>,
-    role: Role,
-    is_pukhta: bool,
+    /// Its matching role, for a buyer or a seller. None for every other account: the خرچہ,
+    /// ادھار رقم, سرمایہ and الگ کھاتہ kinds have no matching.
+    role: Option<(Role, bool)>,
+    /// The columns only the vouchers of plan 17 use.
+    extra: VoucherExtra,
 }
 
 /// Reads the voucher and checks it can be changed: it exists, it is not cancelled, and the screen
@@ -60,17 +67,6 @@ struct Old {
 fn load(tx: &Connection, id: i64, version: i64) -> Result<Old, ServiceError> {
     let row = repo::get(tx, id)?
         .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))?;
-    // The other types of PRD FR-7.67 (خرچہ, ادھار رقم, ...) are edited and cancelled by their own
-    // plans; this one knows the posting of a وصولی, an ادائیگی and a پیشگی only.
-    if !matches!(
-        row.voucher_type,
-        VoucherType::Receipt | VoucherType::Payment | VoucherType::Advance
-    ) {
-        return Err(ServiceError::reject_field(
-            ErrorCode::ErrFormatInvalid,
-            "id",
-        ));
-    }
     if row.status != "saved" {
         return Err(ServiceError::reject_field(
             ErrorCode::ErrVoucherCancelled,
@@ -88,26 +84,47 @@ fn load(tx: &Connection, id: i64, version: i64) -> Result<Old, ServiceError> {
         .ok_or_else(|| ServiceError::Data(format!("voucher {id} has no posting")))?;
     let entry = ledger_repo::get_entry(tx, entry_id)?
         .ok_or_else(|| ServiceError::Data(format!("the posting of voucher {id} is missing")))?;
-    let account_id = row
-        .account
-        .as_ref()
-        .map(|a| a.id)
-        .ok_or_else(|| ServiceError::Data(format!("voucher {id} has no account")))?;
-    let (role, is_pukhta) = role_of_account(tx, account_id)?
-        .ok_or_else(|| ServiceError::Data(format!("voucher {id}: account {account_id}")))?;
+    let account_id = row.account.as_ref().map(|a| a.id);
+    let role = match account_id {
+        Some(account_id) => role_of_account(tx, account_id)?,
+        None => None,
+    };
+    // A receipt, a payment and a پیشگی are on a buyer, a seller or a payable account.
+    if matches!(
+        row.voucher_type,
+        VoucherType::Receipt | VoucherType::Payment | VoucherType::Advance
+    ) && role.is_none()
+    {
+        return Err(ServiceError::Data(format!(
+            "voucher {id}: account {account_id:?}"
+        )));
+    }
     Ok(Old {
         person_key: row.person.as_ref().map(|p| p.person_key.clone()),
+        extra: repo::extras(tx, id)?,
         row,
         entry,
         account_id,
         role,
-        is_pukhta,
     })
 }
 
+/// The accounts and people the lines of the old posting touched, for a جنرل. The other kinds have
+/// one account, which `rematch_party` handles.
+fn old_general_lines(old: &Old) -> Vec<(i64, Option<String>)> {
+    if old.row.voucher_type != VoucherType::General {
+        return Vec::new();
+    }
+    old.entry
+        .lines
+        .iter()
+        .map(|l| (l.account_id, l.person_key.clone()))
+        .collect()
+}
+
 /// A voucher as the audit log keeps it, from its stored row.
-fn row_json(row: &VoucherRow) -> Value {
-    json!({
+fn row_json(row: &VoucherRow, extra: &VoucherExtra) -> Value {
+    let mut value = json!({
         "type": row.voucher_type.as_str(),
         "number": row.number,
         "entry_date": row.entry_date,
@@ -123,7 +140,9 @@ fn row_json(row: &VoucherRow) -> Value {
         "expected_goods": row.expected_goods,
         "narration": row.narration,
         "status": row.status,
-    })
+    });
+    super::common::add_extra_json(&mut value, extra);
+    value
 }
 
 /// Asks the cash question for the whole action. `old_cash` is what the old posting did to cash;
@@ -172,6 +191,10 @@ pub fn edit(
         let now = ctx.now_text();
         let old_cash = stored_cash_change(tx, &old.entry)?;
         let old_key = ledger::order_key_of(tx, old.entry.id)?;
+        // A take or a loan: the lowest day-end balance of its account before the edit, so the
+        // edit is refused only if it makes returns stand above what was taken or lent (PRD
+        // FR-16.2, FR-16.5). See `crate::floor`.
+        let old_floor = floor_before(tx, old.row.voucher_type, old.account_id)?;
         // A seller's return is judged against the books with the old version still in force, at
         // the place the new one keeps (migration 0005, plan 16): the same return, or a smaller
         // one, stays allowed although a later entry of its day used the advance. It is worked out
@@ -179,7 +202,7 @@ pub fn edit(
         // the date and the field checks, so those errors keep coming first.
         let seller_check = match &input.entry {
             VoucherEntry::Receipt(_) => {
-                let first = Planned::plan(tx, window, &input.entry)?;
+                let first = Planned::plan(tx, window, &input.entry, None)?;
                 match &first {
                     Planned::Receipt(receipt) if first.errors().is_empty() => {
                         check_seller_limit(tx, receipt, Some(old.entry.id), Some(old.entry.id))
@@ -197,17 +220,20 @@ pub fn edit(
             old.entry.id,
             note.as_deref().unwrap_or(""),
         )?;
-        rematch_party(
-            tx,
-            actor.user_id,
-            &now,
-            old.account_id,
-            old.person_key.as_deref(),
-            old.role,
-            old.is_pukhta,
-        )?;
+        if let (Some(account_id), Some((role, is_pukhta))) = (old.account_id, old.role) {
+            rematch_party(
+                tx,
+                actor.user_id,
+                &now,
+                account_id,
+                old.person_key.as_deref(),
+                role,
+                is_pukhta,
+            )?;
+        }
+        rematch_buyers(tx, actor.user_id, &now, &old_general_lines(&old))?;
         // 2. Check the new version against the books without the old one.
-        let planned = Planned::plan(tx, window, &input.entry)?;
+        let planned = Planned::plan(tx, window, &input.entry, None)?;
         if !planned.errors().is_empty() {
             return Err(planned.errors().to_vec().into());
         }
@@ -215,6 +241,14 @@ pub fn edit(
         let entry = planned.entry()?;
         let new_cash = super::common::cash_change(tx, &entry)?;
         confirm_cash(tx, old_cash, new_cash, input.confirm_cash_below_zero)?;
+        // An edit that moves a take or a loan to another partner or person must check that
+        // account too; the reversal does not touch it, so it is read now.
+        let new_account = planned.account().map(|a| a.id);
+        let new_floor = if new_account == old.account_id {
+            None
+        } else {
+            floor_before(tx, old.row.voucher_type, new_account)?
+        };
         // 3. Post it and update the voucher, which keeps its number.
         let row = planned.row(old.row.number)?;
         let date = planned
@@ -250,6 +284,7 @@ pub fn edit(
                 reason: row.reason.clone(),
                 expected_goods: row.expected_goods.clone(),
                 narration: row.narration.clone(),
+                extra: row.extra.clone(),
                 current_entry_id: posted.entry_id,
             },
             actor.user_id,
@@ -270,27 +305,38 @@ pub fn edit(
                 is_pukhta,
             )?;
         }
+        rematch_buyers(tx, actor.user_id, &now, &planned.general_lines())?;
+        // A take or a loan that was returned in part cannot be made smaller than its returns,
+        // moved to a later day than its returns, or moved to another partner or person while
+        // returns stand on it: the OLD account is checked too (money agent, plan 17: الف took
+        // 2,000 and returned 2,000; the take edited to ب would leave الف's drawings 2,000 on the
+        // credit side).
+        check_after(tx, old_floor, AMOUNT_FIELD)?;
+        check_after(tx, new_floor, AMOUNT_FIELD)?;
+        let mut new_value =
+            super::common::voucher_json(old.row.number, old.row.voucher_type.as_str(), &row);
+        if let (Some(lines), Some(map)) = (planned.general_lines_json(), new_value.as_object_mut())
+        {
+            map.insert("lines".to_owned(), lines);
+        }
         let mut event = Event::new(Some(actor.user_id), "edit", "voucher")
             .entity_id(old.row.id)
-            .old(row_json(&old.row))
-            .new_value(super::common::voucher_json(
-                old.row.number,
-                old.row.voucher_type.as_str(),
-                &row,
-            ));
+            .old(row_json(&old.row, &old.extra))
+            .new_value(new_value);
         if let Some(note) = &note {
             event = event.reason(note);
         }
         ctx.db.auditor().write(tx, &event.into_entry())?;
-        let account = planned
-            .account()
-            .ok_or_else(|| ServiceError::Data("an edited voucher has no account".to_owned()))?;
+        let new_balance = match planned.account() {
+            Some(account) => ledger::balance_in(tx, account.id, planned.person_key(), None)?,
+            None => Balance::ZERO,
+        };
         Ok(VoucherSaved {
             voucher_id: old.row.id,
             voucher_type: old.row.voucher_type,
             number: old.row.number,
             entry_id: posted.entry_id,
-            new_balance: ledger::balance_in(tx, account.id, planned.person_key(), None)?,
+            new_balance,
         })
     })
 }
@@ -322,27 +368,39 @@ pub fn cancel(
         let old = load(tx, input.id, input.version)?;
         let now = ctx.now_text();
         let old_cash = stored_cash_change(tx, &old.entry)?;
+        let old_floor = floor_before(tx, old.row.voucher_type, old.account_id)?;
         let reversal = ledger::reverse(ctx, tx, actor.user_id, old.entry.id, &reason)?;
-        rematch_party(
-            tx,
-            actor.user_id,
-            &now,
-            old.account_id,
-            old.person_key.as_deref(),
-            old.role,
-            old.is_pukhta,
-        )?;
+        if let (Some(account_id), Some((role, is_pukhta))) = (old.account_id, old.role) {
+            rematch_party(
+                tx,
+                actor.user_id,
+                &now,
+                account_id,
+                old.person_key.as_deref(),
+                role,
+                is_pukhta,
+            )?;
+        }
+        rematch_buyers(tx, actor.user_id, &now, &old_general_lines(&old))?;
+        // A take or a loan that was returned in part cannot be cancelled: its returns would be
+        // more than what is open.
+        check_after(tx, old_floor, AMOUNT_FIELD)?;
         confirm_cash(tx, old_cash, Paisa::ZERO, input.confirm_cash_below_zero)?;
         repo::mark_cancelled(tx, old.row.id, &reason, actor.user_id, &now)?;
         ctx.db.auditor().write(
             tx,
             &Event::new(Some(actor.user_id), "cancel", "voucher")
                 .entity_id(old.row.id)
-                .old(row_json(&old.row))
+                .old(row_json(&old.row, &old.extra))
                 .reason(&reason)
                 .into_entry(),
         )?;
-        let balance = ledger::balance_in(tx, old.account_id, old.person_key.as_deref(), None)?;
+        let balance = match old.account_id {
+            Some(account_id) => {
+                ledger::balance_in(tx, account_id, old.person_key.as_deref(), None)?
+            }
+            None => Balance::ZERO,
+        };
         Ok(VoucherCancelled {
             voucher_id: old.row.id,
             voucher_type: old.row.voucher_type,

@@ -5,6 +5,7 @@ use mandi_services::core::partners::{
     PartnerCreateInput, PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput,
     PartnersCheckSharesInput, PartnersGetInput, PartnersSetSharesInput, SharesCheck,
 };
+use mandi_services::core::statement::{PartnerStatement, PartnersStatementInput};
 use mandi_services::{auth, partners};
 
 use super::run;
@@ -102,6 +103,21 @@ pub async fn partners_overview<R: tauri::Runtime>(
     run(app, "partners_overview", move |ctx| {
         auth::require(ctx)?;
         partners::overview(ctx)
+    })
+    .await
+}
+
+/// A partner's statement (PRD FR-17.9, FR-17.10): one dated line for every amount that reaches him,
+/// with the running کل رقم, one page. Read only. Errors: `ERR_NOT_FOUND` on `partner_id`; the date
+/// codes on `from` and `to`.
+#[tauri::command]
+pub async fn partners_statement<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PartnersStatementInput,
+) -> Result<PartnerStatement, UiError> {
+    run(app, "partners_statement", move |ctx| {
+        auth::require(ctx)?;
+        partners::statement(ctx, &input)
     })
     .await
 }

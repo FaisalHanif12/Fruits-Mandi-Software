@@ -562,3 +562,35 @@ vouchers-some-refused = { $count ->
     [one] ایک واؤچر محفوظ نہیں ہو سکا۔ فہرست میں وجہ دیکھیں۔
    *[other] { $count } واؤچر محفوظ نہیں ہو سکے۔ فہرست میں وجہ دیکھیں۔
 }
+
+## The number of a voucher of the روکڑ area (plan 17): its series letters and its number.
+
+# review: pending
+vouchers-number-shop-expense = خ-{ $number }
+
+# review: pending
+vouchers-number-personal-expense = ذ-{ $number }
+
+# review: pending
+vouchers-number-personal-return = ذو-{ $number }
+
+# review: pending
+vouchers-number-money-lent = ر-{ $number }
+
+# review: pending
+vouchers-number-money-lent-return = رو-{ $number }
+
+# review: pending
+vouchers-number-capital-in = س-{ $number }
+
+# review: pending
+vouchers-number-capital-out = سو-{ $number }
+
+# review: pending
+vouchers-number-khata-out = کد-{ $number }
+
+# review: pending
+vouchers-number-khata-in = کا-{ $number }
+
+# review: pending
+vouchers-number-general = ج-{ $number }

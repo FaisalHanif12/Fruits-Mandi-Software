@@ -26,6 +26,7 @@ use crate::auth::Actor;
 use crate::context::Context;
 use crate::day;
 use crate::error::{Rejection, ServiceError, money_error};
+use crate::floor::{self, check_after, is_returnable_control};
 use crate::ledger::{self, PostingEvent};
 use crate::matching;
 use crate::search;
@@ -114,6 +115,21 @@ pub(crate) fn apply(
             amount_field,
         ));
     }
+    // Money taken by a partner (0603) and money lent (0103) can only start with a debit: an
+    // opening credit would be a return with nothing taken (PRD FR-10.9, FR-16.2, FR-16.5).
+    if wanted.cr != Paisa::ZERO && is_returnable_control(&facts.control_code) {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrOpeningNotAllowed,
+            &amount_field.replacen("opening_dr", "opening_cr", 1),
+        ));
+    }
+    // The lowest day-end balance of such an account before the change: a change or a removal of
+    // an opening may not leave returns above what was taken or lent (money agent, plan 17).
+    let floor_before = if is_returnable_control(&facts.control_code) {
+        Some(floor::floor_of(tx, facts.id)?)
+    } else {
+        None
+    };
     // A new opening entry is a new posting, so the account must be active (PRD FR-10.2). Taking
     // an opening away (no amount wanted) only reverses the old entry, which is always allowed.
     if wanted.has_amount() && !facts.is_active {
@@ -178,6 +194,7 @@ pub(crate) fn apply(
         }
         None => repo::set_opening(tx, facts.id, None, 0, 0, false, None, user_id, now)?,
     }
+    check_after(tx, floor_before, amount_field)?;
     // An opening is a line of the buyer's key (a bill or a prepayment) or a seller's advance, so
     // the matching rows are made right again: they stay the canonical ones (plan 13). A one-time
     // person has no opening (PRD FR-10.9).
@@ -288,6 +305,40 @@ fn plan(
                                 field: e.field,
                                 values: e.values,
                             });
+                        }
+                        // Money taken (0603) and money lent (0103): only a debit opening, and a
+                        // change may not leave returns above it. Says what the save will say (B5).
+                        if is_returnable_control(&facts.control_code)
+                            && !same_opening(&have, &found)
+                        {
+                            if found.cr != Paisa::ZERO {
+                                errors.push(line_error(
+                                    ErrorCode::ErrOpeningNotAllowed,
+                                    format!("{prefix}opening_cr"),
+                                ));
+                            } else {
+                                let old_entry =
+                                    match facts.opening_entry_id.filter(|_| have.has_amount()) {
+                                        Some(id) => mandi_db::ledger::get_entry(conn, id)?,
+                                        None => None,
+                                    };
+                                let day = found
+                                    .date
+                                    .filter(|_| found.has_amount())
+                                    .map(|d| d.to_iso());
+                                if let Some(e) = floor::what_if(
+                                    conn,
+                                    old_entry.as_ref().map(|entry| (facts.id, entry)),
+                                    day.as_deref().map(|d| (facts.id, d, found.dr)),
+                                    &format!("{prefix}opening_dr"),
+                                )? {
+                                    errors.push(LineError {
+                                        code: e.code,
+                                        field: e.field,
+                                        values: e.values,
+                                    });
+                                }
+                            }
                         }
                         request = Some(found);
                     }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-lent-report"
+description = "Enables the lent_report command without any pre-configured scope."
+commands.allow = ["lent_report"]
+
+[[permission]]
+identifier = "deny-lent-report"
+description = "Denies the lent_report command without any pre-configured scope."
+commands.deny = ["lent_report"]

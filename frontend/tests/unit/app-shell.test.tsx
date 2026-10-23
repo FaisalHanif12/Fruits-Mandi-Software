@@ -197,8 +197,12 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       ),
     ).toBeInTheDocument();
     expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
-    // A main item whose module is not built yet (روکڑ, plan 17) still says "coming soon".
-    await user.keyboard('{Alt>}k{/Alt}');
+    // A main item whose module is not built yet (تجزیات, plan 18) still says "coming soon".
+    await user.click(
+      within(
+        screen.getByRole('navigation', { name: message(language, 'layout-nav-label') }),
+      ).getByRole('button', { name: message(language, 'layout-nav-analytics') }),
+    );
     expect(
       await screen.findByRole('heading', { name: message(language, 'soon-title') }),
     ).toBeInTheDocument();
@@ -216,18 +220,18 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
-    // وصولی, ادائیگی and پیشگی are one screen with the type chosen (plan 15); Alt+K is plan 17's.
+    // وصولی, ادائیگی and پیشگی are one screen with the type chosen (plan 15); Alt+K is plan 17's: the خرچہ screen as دکان خرچہ.
     for (const [key, path, type] of [
       ['v', '/bikri/voucher', 'receipt'],
       ['a', '/bikri/voucher', 'payment'],
       ['p', '/bikri/voucher', 'advance'],
-      ['k', '/rokar', undefined],
+      ['k', '/rokar/expense', 'shop_expense'],
     ] as const) {
       await user.keyboard(`{Alt>}${key}{/Alt}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe(path);
       });
-      if (type !== undefined) expect(router.state.location.search).toMatchObject({ type });
+      expect(router.state.location.search).toMatchObject({ type });
     }
   });
 

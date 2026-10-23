@@ -10,7 +10,11 @@
 
 pub mod auth;
 pub mod bikri;
+pub mod capital;
 pub mod cash;
+pub mod expenses;
+pub mod general;
+pub mod khata;
 pub mod ledger;
 pub mod matching;
 pub mod partners;

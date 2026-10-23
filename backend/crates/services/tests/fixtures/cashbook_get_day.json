@@ -1,0 +1,86 @@
+{
+  "opening_paisa": -280000,
+  "closing_paisa": 3270000,
+  "rows": [
+    {
+      "entry_id": 1,
+      "entry_date": "2026-10-10",
+      "posting_type": "opening",
+      "number": null,
+      "account": {
+        "id": 16,
+        "code": "06019999",
+        "name_ur": "ابتدائی فرق",
+        "name_en": "Opening Difference"
+      },
+      "narration": "",
+      "in_paisa": 5000000,
+      "out_paisa": 0,
+      "running_paisa": 4720000
+    },
+    {
+      "entry_id": 4,
+      "entry_date": "2026-10-10",
+      "posting_type": "bikri_first",
+      "number": 1,
+      "account": null,
+      "narration": "",
+      "in_paisa": 0,
+      "out_paisa": 500000,
+      "running_paisa": 4220000
+    },
+    {
+      "entry_id": 5,
+      "entry_date": "2026-10-10",
+      "posting_type": "shop_expense",
+      "number": 2,
+      "account": {
+        "id": 31,
+        "code": "05010001",
+        "name_ur": "بجلی",
+        "name_en": "Electricity"
+      },
+      "narration": "Partner A",
+      "in_paisa": 0,
+      "out_paisa": 300000,
+      "running_paisa": 3920000
+    },
+    {
+      "entry_id": 6,
+      "entry_date": "2026-10-10",
+      "posting_type": "personal_expense",
+      "number": 1,
+      "account": {
+        "id": 23,
+        "code": "06030001",
+        "name_ur": "ذاتی خرچہ - الف",
+        "name_en": "Drawings - Partner A"
+      },
+      "narration": "گھر کا خرچ",
+      "in_paisa": 0,
+      "out_paisa": 200000,
+      "running_paisa": 3720000
+    },
+    {
+      "entry_id": 7,
+      "entry_date": "2026-10-10",
+      "posting_type": "personal_return",
+      "number": 1,
+      "account": {
+        "id": 23,
+        "code": "06030001",
+        "name_ur": "ذاتی خرچہ - الف",
+        "name_en": "Drawings - Partner A"
+      },
+      "narration": "first part",
+      "in_paisa": 50000,
+      "out_paisa": 0,
+      "running_paisa": 3770000
+    }
+  ],
+  "total_count": 6,
+  "totals": {
+    "in_paisa": 5050000,
+    "out_paisa": 1500000
+  }
+}

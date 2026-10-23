@@ -370,7 +370,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     expect((await labelled(language, 'vouchers-field-amount')).value).toBe('10,000');
   });
 
-  it('a voucher of a kind that belongs to another screen goes to the cash book area', async () => {
+  it('a voucher of a kind that belongs to another screen goes to its own screen in the cash book area', async () => {
     vi.mocked(accountApi.searchGlobal).mockResolvedValue([
       {
         kind: 'voucher',
@@ -389,7 +389,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     await user.keyboard('3');
     await user.click(await screen.findByRole('option'));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/rokar');
+      expect(router.state.location.pathname).toBe('/rokar/expense');
     });
   });
 

@@ -3,16 +3,19 @@
 use std::collections::HashMap;
 
 use chrono::NaiveDate;
+use mandi_db::partners as partner_repo;
 use mandi_db::rusqlite::{Connection, OptionalExtension};
 use mandi_db::vouchers as repo;
-use mandi_domain::core::accounts::{Balance, BalanceSide};
+use mandi_domain::core::accounts::{Balance, BalanceSide, RecordRef};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{
-    DayCloseInput, DayClosePreview, DayClosePreviewInput, DayReopenInput,
+    DayCloseInput, DayClosePartner, DayClosePreview, DayClosePreviewInput, DayCloseSummary,
+    DayReopenInput,
 };
+use mandi_domain::partners::ShareKind;
 use serde_json::json;
 
 use crate::audit::Event;
@@ -192,9 +195,76 @@ fn close_summary(
             trial_difference: difference,
             cash_in_hand: cash,
             entries: repo::entries_between(conn, &from.to_iso(), &to.to_iso())?,
+            summary: day_summary(conn, from, to)?,
         },
         balanced,
     ))
+}
+
+/// The sales, shares and stock of the days from `from` to `to` (PRD FR-21.1, 4.9). Every number
+/// is read from stored records (analytics facts, partner share rows, lots), never worked out
+/// again: for 10-10-26 it is 2 بکری, خام 41,400, commission 5,448, shared income 5,488, shares
+/// 996 / 746 / 746 and no lots left.
+fn day_summary(
+    conn: &Connection,
+    from: BusinessDate,
+    to: BusinessDate,
+) -> Result<DayCloseSummary, ServiceError> {
+    let (from_iso, to_iso) = (from.to_iso(), to.to_iso());
+    let paisa = |value: i64| Paisa::try_from_paisa(value).map_err(money_error);
+    let sales = repo::sales_of_days(conn, &from_iso, &to_iso)?;
+    // PRD 4.9 "commission": seller commission + buyer commission + لاگا.
+    let commission = paisa(sales.seller_comm_paisa)?
+        .checked_add(paisa(sales.buyer_comm_paisa)?)
+        .map_err(money_error)?
+        .checked_add(paisa(sales.laga_paisa)?)
+        .map_err(money_error)?;
+    let sums = partner_repo::share_sums(conn, &from_iso, &to_iso)?;
+    let mut partners = Vec::new();
+    let mut shared = Paisa::ZERO;
+    let mut records = partner_repo::list(conn)?;
+    // The order the partners were created (PRD C10 tie rule).
+    records.sort_by_key(|r| r.id);
+    for record in &records {
+        let sum_of = |kind: &str| -> Result<Paisa, ServiceError> {
+            sums.iter()
+                .filter(|s| s.partner_id == record.id && s.kind == kind)
+                .try_fold(Paisa::ZERO, |acc, s| {
+                    acc.checked_add(paisa(s.total_paisa)?).map_err(money_error)
+                })
+        };
+        let income = sum_of(ShareKind::Income.as_str())?;
+        // Expense rows are stored negative; the summary shows the expense as a positive number.
+        let expense = sum_of(ShareKind::Expense.as_str())?
+            .checked_neg()
+            .map_err(money_error)?;
+        // An inactive partner is shown only if he has a number in these days.
+        if !record.is_active && income == Paisa::ZERO && expense == Paisa::ZERO {
+            continue;
+        }
+        shared = shared.checked_add(income).map_err(money_error)?;
+        partners.push(DayClosePartner {
+            partner: RecordRef {
+                id: record.id,
+                code: String::new(),
+                name_ur: record.name_ur.clone(),
+                name_en: record.name_en.clone(),
+            },
+            income_paisa: income,
+            expense_paisa: expense,
+            profit_paisa: income.checked_sub(expense).map_err(money_error)?,
+        });
+    }
+    let (open_lots, open_qty) = repo::open_stock(conn, &to_iso)?;
+    Ok(DayCloseSummary {
+        bikri_count: sales.bikri_count,
+        gross_paisa: paisa(sales.gross_paisa)?,
+        commission_paisa: commission,
+        shared_income_paisa: shared,
+        partners,
+        open_lots,
+        open_qty,
+    })
 }
 
 /// The numbers of one closed day: the trial balance and the cash in hand at the end of that

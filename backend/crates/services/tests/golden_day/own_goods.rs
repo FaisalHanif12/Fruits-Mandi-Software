@@ -1549,3 +1549,220 @@ fn undo_after_the_save_of_an_own_lot_opens_the_trip_and_the_draft_can_be_saved_a
     );
     trial(&w);
 }
+
+/// D4-A33: the statement of partner الف on the E2E-34 run (PRD FR-17.10). Every amount that
+/// reaches him has a line of its own, from posted records: -4,160 (his shop part of purchase خ-1),
+/// +480 (his part of the commission 1,200), +3,384 (his 40% of the seller credit 8,460), ending at
+/// -296. After E2E-34b the write-off and the closing of the trip are note lines with no amount, and
+/// the running total stays.
+#[test]
+fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
+    use mandi_services::core::error::ErrorValue;
+    use mandi_services::core::statement::{
+        PartnersStatementInput, StatementDetail, StatementHeading,
+    };
+    let w = worked_day();
+    let s = sale_34(&w);
+    let a = w.partners[0];
+    let statement_of = |w: &support::World| {
+        partners::statement(
+            &w.env.ctx,
+            &PartnersStatementInput {
+                partner_id: a,
+                from: None,
+                to: None,
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    let st = statement_of(&w);
+    let rows: Vec<_> = st
+        .lines
+        .iter()
+        .map(|l| {
+            (
+                l.heading,
+                l.detail,
+                l.number,
+                l.secondary_number,
+                l.amount_paisa.map(|p| p.rupees()),
+                l.running_paisa.rupees(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            (
+                StatementHeading::Trip,
+                StatementDetail::TripPaid,
+                Some(1),
+                Some(1),
+                Some(-4_160),
+                -4_160
+            ),
+            (
+                StatementHeading::Bikri,
+                StatementDetail::IncomeShare,
+                Some(1),
+                None,
+                Some(480),
+                -3_680
+            ),
+            (
+                StatementHeading::Trip,
+                StatementDetail::TripCredit,
+                Some(1),
+                Some(1),
+                Some(3_384),
+                -296
+            ),
+        ]
+    );
+    // The lines carry what the words need: a purchase, and the figures of the sale (PRD C21, C25).
+    assert_eq!(
+        st.lines[0].values.get("kind"),
+        Some(&ErrorValue::Text("purchase".into()))
+    );
+    let credit = &st.lines[2];
+    let number = |name: &str| match credit.values.get(name) {
+        Some(ErrorValue::Number(n)) => *n,
+        other => panic!("{name}: {other:?}"),
+    };
+    assert_eq!(
+        (
+            number("qty"),
+            number("sales_paisa") / 100,
+            number("cost_paisa") / 100,
+            number("result_paisa") / 100,
+            number("share_bps")
+        ),
+        (15, 8_460, 7_800, 660, 4_000)
+    );
+    assert_eq!(
+        credit.subject.as_ref().map(|r| r.name_en.as_str()),
+        Some("Orange")
+    );
+    assert_eq!(
+        (
+            st.opening_total_paisa.rupees(),
+            st.closing_total_paisa.rupees()
+        ),
+        (0, -296)
+    );
+    // His total on the overview is the same number.
+    assert_eq!(
+        partners::overview(&w.env.ctx)
+            .unwrap()
+            .iter()
+            .find(|r| r.partner_id == a)
+            .map(|r| (r.total_paisa.rupees(), r.month_ventures_paisa.rupees())),
+        Some((-296, -4_160 + 3_384))
+    );
+
+    // E2E-34b: the last 5 spoil on 11-10-26 and the trip closes. Two note lines, no amount.
+    set_today(&w.env, 2026, 10, 11);
+    write_off(&w, s.purchase, "5");
+    let st = statement_of(&w);
+    assert_eq!(st.lines.len(), 5);
+    let notes: Vec<_> = st.lines[3..]
+        .iter()
+        .map(|l| {
+            (
+                l.entry_date.as_str(),
+                l.detail,
+                l.amount_paisa,
+                l.running_paisa.rupees(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        notes,
+        vec![
+            ("2026-10-11", StatementDetail::TripWriteOff, None, -296),
+            ("2026-10-11", StatementDetail::TripClosed, None, -296),
+        ]
+    );
+    let closed = &st.lines[4];
+    let figure = |name: &str| match closed.values.get(name) {
+        Some(ErrorValue::Number(n)) => *n / 100,
+        other => panic!("{name}: {other:?}"),
+    };
+    // Cost 10,400, sales 8,460, result -1,940, his 40% and his net: money back 3,384 less money in
+    // 4,160 = -776 (money agent, plan 16b finding 3).
+    assert_eq!(
+        (
+            figure("cost_paisa"),
+            figure("sales_paisa"),
+            figure("result_paisa"),
+            figure("net_paisa")
+        ),
+        (10_400, 8_460, -1_940, -776)
+    );
+    assert_eq!(
+        closed.values.get("share_bps"),
+        Some(&ErrorValue::Number(4_000))
+    );
+    assert_eq!(st.closing_total_paisa.rupees(), -296);
+    assert_eq!(
+        (
+            st.totals.plus_paisa.rupees(),
+            st.totals.minus_paisa.rupees()
+        ),
+        (3_864, 4_160)
+    );
+
+    // A range starting on 11-10-26 opens at -296 and holds only the two notes.
+    let ranged = partners::statement(
+        &w.env.ctx,
+        &PartnersStatementInput {
+            partner_id: a,
+            from: Some("11-10-2026".into()),
+            to: None,
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (
+            ranged.opening_total_paisa.rupees(),
+            ranged.lines.len(),
+            ranged.closing_total_paisa.rupees()
+        ),
+        (-296, 2, -296)
+    );
+}
+
+/// The sale of E2E-34 cancelled: its reversal gives lines of its own, the amounts cancel, and the
+/// statement still ends at the total of the books.
+#[test]
+fn the_statement_of_a_cancelled_trip_sale_nets_to_the_total_of_the_books() {
+    use mandi_services::core::statement::PartnersStatementInput;
+    let w = worked_day();
+    let s = sale_34(&w);
+    cancel_bikri(&w, s.saved.bikri_id);
+    for (index, partner) in w.partners.iter().enumerate() {
+        let st = partners::statement(
+            &w.env.ctx,
+            &PartnersStatementInput {
+                partner_id: *partner,
+                from: None,
+                to: None,
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap();
+        let total = partner_total(&w, index);
+        assert_eq!(st.closing_total_paisa.rupees(), total);
+        assert_eq!(
+            st.lines.last().map(|l| l.running_paisa.rupees()),
+            Some(total)
+        );
+        // Only the purchase part is left: -4,160 / -3,120 / -3,120.
+        assert_eq!(total, [-4_160, -3_120, -3_120][index]);
+    }
+}

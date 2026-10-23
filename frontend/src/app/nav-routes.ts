@@ -3,7 +3,7 @@
 
 import { asScreenType } from '../features/vouchers/screen-type';
 import type { MainNavId } from './layout/MainNav';
-import type { ModuleMenuId } from './layout/ModuleMenu';
+import type { ModuleMenuId, RokarMenuId } from './layout/ModuleMenu';
 
 export const MAIN_ROUTES = {
   dashboard: '/',
@@ -27,6 +27,61 @@ export const MODULE_ROUTES = {
   today: '/bikri/today',
   stock: '/bikri/stock',
 } as const satisfies Record<ModuleMenuId, string>;
+
+/**
+ * The addresses of the روکڑ side menu (PRD 5, plan 17). The last item is the voucher screen of the
+ * بکری area (PRD FR-15.10), opened as وصولی; it is a link, not a screen of this area.
+ */
+export const ROKAR_ROUTES = {
+  cashbook: '/rokar',
+  expense: '/rokar/expense',
+  lent: '/rokar/lent',
+  khata: '/rokar/khata',
+  general: '/rokar/general',
+  voucher: '/bikri/voucher',
+} as const satisfies Record<RokarMenuId, string>;
+
+/** The screens of the partners area besides the overview (PRD 17.3, 17.4). */
+export const PARTNERS_ROUTES = {
+  setup: '/partners/setup',
+  capital: '/partners/capital',
+  statement: '/partners/statement',
+} as const;
+
+/** The روکڑ side menu item a path belongs to. */
+export function rokarMenuOf(pathname: string): RokarMenuId {
+  const found = (Object.keys(ROKAR_ROUTES) as RokarMenuId[]).find(
+    (id) => id !== 'cashbook' && ROKAR_ROUTES[id] === pathname,
+  );
+  return found ?? 'cashbook';
+}
+
+/**
+ * The address of the screen a voucher kind belongs to, for a search result (PRD FR-5.4). Expenses,
+ * money lent and the khata have their own screens in the روکڑ area; the rest open the cash book.
+ */
+export function rokarAddressOf(voucherType: string): string {
+  switch (voucherType) {
+    case 'shop_expense':
+    case 'personal_expense':
+    case 'personal_return':
+      return ROKAR_ROUTES.expense;
+    case 'money_lent':
+    case 'money_lent_return':
+      return ROKAR_ROUTES.lent;
+    case 'khata_out':
+    case 'khata_in':
+      return ROKAR_ROUTES.khata;
+    case 'general':
+      return ROKAR_ROUTES.general;
+    // The capital screen is in the partners area (PRD 17.4).
+    case 'capital_in':
+    case 'capital_out':
+      return PARTNERS_ROUTES.capital;
+    default:
+      return ROKAR_ROUTES.cashbook;
+  }
+}
 
 /** The main menu item a path belongs to. */
 export function mainNavOf(pathname: string): MainNavId {

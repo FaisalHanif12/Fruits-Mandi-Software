@@ -113,3 +113,21 @@ layout-search-searching = تلاش جاری ہے…
 layout-search-none = کوئی کھاتہ نہیں ملا۔
 # review: pending
 layout-search-failed = تلاش نہیں ہو سکی۔
+
+## The side menu of the { -rokar } area (PRD 5, plan 17).
+
+# review: pending
+layout-rokar-label = { -rokar } کا مینو
+# review: pending
+layout-rokar-cashbook = { -rokar }
+# review: pending
+layout-rokar-expense = { -kharcha }
+# review: pending
+layout-rokar-lent = { -adhar-raqam }
+# review: pending
+layout-rokar-khata = { -alag-khata }
+# review: pending
+layout-rokar-voucher = { -wasooli } / { -adaigi } / { -peshgi-khata }
+
+# review: pending
+layout-rokar-general = { -general }

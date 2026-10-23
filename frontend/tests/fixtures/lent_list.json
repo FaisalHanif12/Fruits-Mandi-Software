@@ -1,0 +1,35 @@
+{
+  "person": {
+    "account": {
+      "id": 33,
+      "code": "01030001",
+      "name_ur": "اسلم",
+      "name_en": "Aslam"
+    },
+    "staff": null,
+    "phone": "03001234567"
+  },
+  "balance": {
+    "amount_paisa": 200000,
+    "side": "dr"
+  },
+  "rows": [
+    {
+      "voucher_id": 5,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "amount_paisa": 500000,
+      "reason": "گھریلو ضرورت",
+      "return_by": "2026-10-15",
+      "returned_paisa": 300000,
+      "open_paisa": 200000,
+      "days_past_return_by": null
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "lent_paisa": 500000,
+    "returned_paisa": 300000,
+    "open_paisa": 200000
+  }
+}

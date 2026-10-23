@@ -1573,3 +1573,93 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
         ErrorCode::ErrNotASeller
     );
 }
+
+#[test]
+fn e2e_24_after_the_worked_day_the_code_1_brings_akram_his_card_and_his_open_bill() {
+    // PRD E2E-24, backend part (plan 17): after Events 1 to 5, `1` in a buyer field is 03040001
+    // اکرم ٹول ٹیکس; the card shows 2,880 بنام; his oldest open bill is بکری 1 of 10-10-26, 0
+    // days old, and "پورا بقایا" is 2,880. In a field for any account `1` lists both the buyer
+    // 03040001 and the seller 030110001. Events 2, 4 and 5 do not touch Akram's account, so
+    // Events 1 and 3 are enough to build his side of the day.
+    use bikri_support::*;
+    use mandi_services::core::vouchers::{LineSource, OpenBillsInput, ReceiptInput, VoucherMode};
+    let w = world();
+    mandi_services::bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: event1(&w),
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+    mandi_services::vouchers::save_receipt(
+        &w.env.ctx,
+        &w.owner,
+        &ReceiptInput {
+            date: "10-10-2026".into(),
+            account_id: w.akram,
+            person_key: None,
+            amount: "10,000".into(),
+            mode: VoucherMode::Cash,
+            bank_account_id: None,
+            cheque_no: String::new(),
+            cheque_date: String::new(),
+            collector_staff_id: None,
+            narration: String::new(),
+        },
+    )
+    .unwrap();
+
+    // `1` in a buyer field, taken on Enter.
+    let found = resolve(&w.env, AccountScope::Buyer, "1");
+    assert_eq!(found.status, ResolveStatus::Found);
+    let account = found.account.unwrap();
+    assert_eq!(
+        (account.id, account.code.as_str(), account.name_ur.as_str()),
+        (w.akram, "03040001", "اکرم ٹول ٹیکس")
+    );
+
+    // The card: 2,880 بنام.
+    let card = assist::party_card(&w.env.ctx, account.id).unwrap();
+    assert_eq!(
+        (card.balance.side, card.balance.amount_paisa),
+        (BalanceSide::Dr, rupees(2_880))
+    );
+    assert_eq!(card.last_entry_date.as_deref(), Some("2026-10-10"));
+
+    // The oldest open bill: بکری 1 of 10-10-26, 0 days; "پورا بقایا" is 2,880.
+    let bills = mandi_services::vouchers::open_bills(
+        &w.env.ctx,
+        &OpenBillsInput {
+            account_id: account.id,
+            person_key: None,
+        },
+    )
+    .unwrap();
+    let bill = &bills.bills[0];
+    assert_eq!(
+        (
+            bill.source,
+            bill.number,
+            bill.entry_date.as_str(),
+            bill.days,
+            bill.open_paisa.rupees()
+        ),
+        (LineSource::Bikri, Some(1), "2026-10-10", 0, 2_880)
+    );
+    assert_eq!(bills.open_paisa.rupees(), 2_880);
+    assert_eq!(bills.oldest_days, Some(0));
+
+    // In a جنرل line (any account) `1` lists the buyer and the seller with their types.
+    let several = resolve(&w.env, AccountScope::Any, "1");
+    assert_eq!(several.status, ResolveStatus::Several);
+    let listed: Vec<(i64, AccountType, &str)> = several
+        .candidates
+        .iter()
+        .map(|c| (c.id, c.account_type, c.code.as_str()))
+        .collect();
+    assert_eq!(listed.len(), 2);
+    assert!(listed.contains(&(w.akram, AccountType::Buyer, "03040001")));
+    assert!(listed.contains(&(w.rahim, AccountType::Seller, "030110001")));
+}

@@ -61,5 +61,46 @@
   "reports": [
     "D1",
     "D2"
-  ]
+  ],
+  "d5_early": {
+    "branch": "feature/d5-early",
+    "plans": {
+      "18-backup-and-restore": "built (committed ccb35fd, 617c0cb)",
+      "20-reports-early": "engine and Accounts reports committed; round 3 reports built, not committed",
+      "21-analytics-early": "backend built and committed (a7fb278); F4 screens coded, unverified",
+      "22-settings-audit-updates-early": "B5 backend built (uncommitted); F5 waiting"
+    }
+  },
+  "paused": {
+    "by": "Umar",
+    "at": "2026-10-23T06:55+05:00",
+    "run_a": "feature/refresh-v16 at e09e93e: D4R 17b: backend T1 half done (types, then gen:types must be re-run to the end), frontend F1 done; plan 17 committed",
+    "run_b": "feature/d5-early at a7fb278: B5 finished uncommitted; F4 analytics screens coded, unverified; no PAUSE file"
+  },
+  "order": {
+    "decided_by": "Umar",
+    "at": "2026-10-23",
+    "text": "Build everything missing from v1.6 and v1.7 first (plan 17, D4R 17b to 17e, D5 early and late), then ONE reviewer and robustness gate over all of it."
+  },
+  "d4r": {
+    "branch": "feature/refresh-v16 (from feature/bikri after plan 17 is committed)",
+    "plans": {
+      "17b-refresh-built-screens": "in progress (T1 half done, F1 done)",
+      "17c-gardens": "waiting",
+      "17d-fruit-taken": "waiting",
+      "17e-tag-and-prints": "waiting"
+    }
+  },
+  "d5_late": {
+    "branch": "feature/d5-early",
+    "plan": "docs/plans/d5-late.md (on feature/d5-early)",
+    "rounds": {
+      "7 month close, R12 R29 R31 R32": "waiting",
+      "8 R33 R34 R15 R23 R25 R10": "waiting",
+      "9 dashboard (plan 19)": "waiting",
+      "10 Excel and backup pack": "waiting",
+      "11 R35 R36 R37, analytics F G I J K, prints, after D4R": "waiting",
+      "12 go-live parts on the Mac": "waiting"
+    }
+  }
 }

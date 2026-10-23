@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-khata-create"
+description = "Enables the khata_create command without any pre-configured scope."
+commands.allow = ["khata_create"]
+
+[[permission]]
+identifier = "deny-khata-create"
+description = "Denies the khata_create command without any pre-configured scope."
+commands.deny = ["khata_create"]

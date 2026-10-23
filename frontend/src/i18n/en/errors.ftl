@@ -178,9 +178,9 @@ err-opening-both-sides = Enter an opening Debit or an opening Credit, not both.
 # review: pending
 err-advance-not-seller = An opening Advance can only be set on the opening Debit of a Seller.
 
-# PRD FR-10.9, FR-6.5, FR-13.5. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one.
+# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
 # review: pending
-err-opening-not-allowed = This account cannot have an opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -pukhta-khata } and Opening Difference cannot take one.
+err-opening-not-allowed = This account cannot take this opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -pukhta-khata } and Opening Difference cannot take one. A partner's { -zati-kharcha } account and a { -adhar-raqam } account can take an opening debit only.
 
 ## Advances and closing days (plan 10).
 
@@ -465,3 +465,32 @@ err-backup-not-started = The backup service is not running yet. Wait a moment an
 
 # review: pending
 err-backup-restore-failed = The restore could not be finished. Close the app and open it again. If your books look wrong, contact support: a safety copy was made before the restore.
+
+## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
+
+# PRD FR-16.9. The same day is allowed.
+# review: pending
+err-return-by-before-entry = The return-by date cannot be before the entry date.
+
+# review: pending
+err-partner-required = Choose the { -shirakat-dar }.
+
+# review: pending
+err-expense-head-required = Choose the expense head.
+
+# review: pending
+err-lent-person-required = Choose the person.
+
+# review: pending
+err-khata-required = Choose the { -alag-khata }.
+
+# PRD 16.4. Nothing is saved. $dr and $cr are the two totals in rupees.
+# review: pending
+err-general-not-balanced = The { -banaam } total is { $dr } and the { -jama } total is { $cr }. They must be equal before the entry can be saved.
+
+# review: pending
+err-general-too-few-lines = A { -general } entry needs at least two lines.
+
+# PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
+# review: pending
+err-capital-exceeds-balance = This is more than the partner's { -sarmaya } balance of { $balance }, by { $over }. You can still save it.

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-cashbook-get"
+description = "Enables the cashbook_get command without any pre-configured scope."
+commands.allow = ["cashbook_get"]
+
+[[permission]]
+identifier = "deny-cashbook-get"
+description = "Denies the cashbook_get command without any pre-configured scope."
+commands.deny = ["cashbook_get"]

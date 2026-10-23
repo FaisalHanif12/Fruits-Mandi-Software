@@ -1184,3 +1184,35 @@ fn an_incomplete_lot_works_out_no_rows() {
     assert!(calc.journal.lots.is_empty());
     assert_eq!(calc.summary.gross, Paisa::ZERO);
 }
+
+#[test]
+fn a_separate_khata_can_sell_its_goods_with_seller_defaults_of_zero() {
+    // PRD FR-16.7, E2E-38: a lot of the family khata sells 10 at 900. The seller-side defaults
+    // are 0, so no seller commission; the buyer pays commission and لاگا as usual.
+    let calc = run(&draft(vec![with(
+        lot(KHATA, BANANA, "10"),
+        vec![sale(ARSHAD, "10", "900")],
+    )]));
+    assert_no_errors(&calc);
+    let l = line(&calc, 0, 0);
+    assert_eq!(r(l.seller_comm.amount), 0);
+    assert_eq!(r(l.buyer_comm.amount), 540);
+    assert_eq!(r(l.laga.amount), 80);
+    assert_eq!(r(l.buyer_total), 9_620);
+    // An ordinary seller of the same goods still pays the default 6%.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "10"),
+        vec![sale(ARSHAD, "10", "900")],
+    )]));
+    assert_eq!(r(line(&calc, 0, 0).seller_comm.amount), 540);
+    // A khata is a seller of lots only: as a buyer it is refused.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, BANANA, "10"),
+        vec![sale(KHATA, "10", "900")],
+    )]));
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrNotABuyer,
+        "lots[0].sales[0].buyer_account_id"
+    ));
+}

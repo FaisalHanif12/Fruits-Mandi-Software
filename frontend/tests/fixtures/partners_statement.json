@@ -1,0 +1,65 @@
+{
+  "partner": {
+    "id": 2,
+    "code": "",
+    "name_ur": "ب",
+    "name_en": "Partner B"
+  },
+  "opening_total_paisa": 0,
+  "closing_total_paisa": 5028400,
+  "lines": [
+    {
+      "entry_date": "2026-10-10",
+      "heading": "bikri",
+      "detail": "income_share",
+      "entry_id": 3,
+      "number": 1,
+      "secondary_number": null,
+      "subject": null,
+      "reason": "",
+      "amount_paisa": 118400,
+      "running_paisa": 118400,
+      "values": {}
+    },
+    {
+      "entry_date": "2026-10-10",
+      "heading": "expense",
+      "detail": "expense_share",
+      "entry_id": 4,
+      "number": 1,
+      "secondary_number": null,
+      "subject": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "بجلی",
+        "name_en": "Electricity"
+      },
+      "reason": "",
+      "amount_paisa": -90000,
+      "running_paisa": 28400,
+      "values": {
+        "kind": "shop_expense"
+      }
+    },
+    {
+      "entry_date": "2026-10-11",
+      "heading": "capital",
+      "detail": "capital_in",
+      "entry_id": 6,
+      "number": 1,
+      "secondary_number": null,
+      "subject": null,
+      "reason": "",
+      "amount_paisa": 5000000,
+      "running_paisa": 5028400,
+      "values": {
+        "kind": "capital_in"
+      }
+    }
+  ],
+  "total_count": 3,
+  "totals": {
+    "plus_paisa": 5118400,
+    "minus_paisa": 90000
+  }
+}

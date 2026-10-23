@@ -15,7 +15,7 @@ use std::sync::Arc;
 use mandi_db::accounts as account_repo;
 use mandi_db::rules::{self as repo, NewRule};
 use mandi_db::rusqlite::Connection;
-use mandi_domain::core::accounts::{BUYER_CONTROL, SELLER_CONTROL};
+use mandi_domain::core::accounts::{BUYER_CONTROL, KHATA_CONTROL, SELLER_CONTROL};
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::{Paisa, Qty, line_value};
@@ -215,7 +215,8 @@ fn row_json(row: &RuleRow) -> Value {
 }
 
 /// A party must be on the rule's side (PRD 11.3): a seller on the seller side, a buyer on the
-/// buyer side. The پختہ کھاتہ accounts count (PRD FR-11.7).
+/// buyer side. The پختہ کھاتہ accounts count (PRD FR-11.7). A separate khata can be the party of a
+/// seller-side rule, because it can be the seller of a lot (PRD FR-16.7).
 fn check_party(conn: &Connection, side: ChargeSide, account_id: i64) -> Result<(), ServiceError> {
     let facts = account_repo::facts(conn, account_id)?
         .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "account_id"))?;
@@ -223,7 +224,9 @@ fn check_party(conn: &Connection, side: ChargeSide, account_id: i64) -> Result<(
         ChargeSide::Seller => SELLER_CONTROL,
         ChargeSide::Buyer => BUYER_CONTROL,
     };
-    if facts.control_code == wanted {
+    if facts.control_code == wanted
+        || (side == ChargeSide::Seller && facts.control_code == KHATA_CONTROL)
+    {
         Ok(())
     } else {
         Err(not_allowed("account_id"))

@@ -31,7 +31,12 @@ use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::partners::ShareKind;
 use serde_json::{Value, json};
 
+pub(crate) mod money;
 pub(crate) mod rows;
+mod statement;
+
+pub use money::{capital_history, takes};
+pub use statement::statement;
 
 pub use rows::split_entry;
 
@@ -668,6 +673,22 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
         let capitals: Vec<i64> = partners.iter().map(|p| p.capital_account_id).collect();
         let taken = repo::taken_between(conn, &drawings, &month_start, &today_iso)?;
         let capital_totals = mandi_db::ledger::totals_for_accounts(conn, &capitals)?;
+        // This month's capital put in and the net of his gardens, trips and fruit account, with
+        // the entries of month close left out (PRD FR-17.6, FR-17.7, FR-17.10).
+        let ventures: Vec<i64> = partners
+            .iter()
+            .map(|p| p.venture_account_id)
+            .filter(|id| *id != 0)
+            .collect();
+        let capital_month = repo::net_between(conn, &capitals, &month_start, &today_iso)?;
+        let venture_month = repo::net_between(conn, &ventures, &month_start, &today_iso)?;
+        let net_of = |sums: Option<&repo::NetSums>| -> Result<Paisa, ServiceError> {
+            let (dr, cr) = sums.map_or((0, 0), |s| (s.dr, s.cr));
+            Paisa::try_from_paisa(cr)
+                .map_err(money_error)?
+                .checked_sub(Paisa::try_from_paisa(dr).map_err(money_error)?)
+                .map_err(money_error)
+        };
         let mut out = Vec::with_capacity(partners.len());
         for partner in &partners {
             let id = partner.id;
@@ -683,13 +704,34 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 .map_err(money_error)?;
             // Money taken: ordinary debits on his drawings account, less the takes that were
             // cancelled or edited (reversal credits), in checked Paisa maths.
-            let (debits, reversed) = taken
-                .get(&partner.drawings_account_id)
-                .map_or((0, 0), |t| (t.debits, t.reversed_credits));
+            let sums = taken.get(&partner.drawings_account_id);
+            let (debits, reversed) = sums.map_or((0, 0), |t| (t.debits, t.reversed_credits));
             let month_taken = Paisa::try_from_paisa(debits)
                 .map_err(money_error)?
                 .checked_sub(Paisa::try_from_paisa(reversed).map_err(money_error)?)
                 .map_err(money_error)?;
+            // Money returned (PRD FR-16.2): the credits of ordinary entries, less the returns that
+            // were cancelled or edited (their reversals debit the account).
+            let (credits, reversed_debits) =
+                sums.map_or((0, 0), |t| (t.credits, t.reversed_debits));
+            let month_returned = Paisa::try_from_paisa(credits)
+                .map_err(money_error)?
+                .checked_sub(Paisa::try_from_paisa(reversed_debits).map_err(money_error)?)
+                .map_err(money_error)?;
+            // PRD C20: خالص = profit share - (money taken - money returned).
+            let month_net = month_profit
+                .checked_sub(
+                    month_taken
+                        .checked_sub(month_returned)
+                        .map_err(money_error)?,
+                )
+                .map_err(money_error)?;
+            let month_capital_in = net_of(capital_month.get(&partner.capital_account_id))?;
+            let month_ventures = net_of(venture_month.get(&partner.venture_account_id))?;
+            // PRD C22, FR-17.9: everything he has in the firm, from the posted records.
+            let record = repo::get(conn, id)?
+                .ok_or_else(|| ServiceError::Data("a partner of the list is missing".to_owned()))?;
+            let total = money::total_of(conn, &record, None)?;
             // The credit balance of his capital account; negative if it stands on the debit side.
             let capital = match capital_totals.get(&partner.capital_account_id) {
                 Some(totals) => ledger::signed(ledger::balance_of(*totals)?)?
@@ -705,6 +747,10 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 month_profit,
                 month_taken,
                 capital,
+                month_returned,
+                month_capital_in,
+                month_ventures,
+                total,
             ];
             if !partner.is_active && numbers.iter().all(|n| *n == Paisa::ZERO) {
                 continue;
@@ -721,6 +767,11 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 month_profit_paisa: month_profit,
                 month_taken_paisa: month_taken,
                 capital_balance_paisa: capital,
+                month_returned_paisa: month_returned,
+                month_net_paisa: month_net,
+                month_capital_in_paisa: month_capital_in,
+                month_ventures_paisa: month_ventures,
+                total_paisa: total,
             });
         }
         Ok(out)

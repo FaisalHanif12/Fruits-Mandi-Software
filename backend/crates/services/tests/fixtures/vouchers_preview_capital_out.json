@@ -1,0 +1,43 @@
+{
+  "account": {
+    "id": 25,
+    "code": "06020002",
+    "name_ur": "سرمایہ - ب",
+    "name_en": "Capital - Partner B"
+  },
+  "amount_paisa": 6000000,
+  "current_balance": {
+    "amount_paisa": 5000000,
+    "side": "cr"
+  },
+  "new_balance": {
+    "amount_paisa": 1000000,
+    "side": "dr"
+  },
+  "bill_effects": [],
+  "extra_credit_paisa": 0,
+  "advance_effects": [],
+  "owes_settled_paisa": 0,
+  "return_limit_paisa": null,
+  "payable_open_paisa": null,
+  "payable_is_zero_for_seller": false,
+  "cash": {
+    "cash_before_paisa": 9000000,
+    "change_paisa": -6000000,
+    "cash_after_paisa": 3000000,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "errors": [],
+  "warnings": [
+    {
+      "code": "ERR_CAPITAL_EXCEEDS_BALANCE",
+      "field": "amount",
+      "values": {
+        "balance_paisa": 5000000,
+        "over_paisa": 1000000
+      }
+    }
+  ]
+}

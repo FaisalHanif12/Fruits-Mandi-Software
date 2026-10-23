@@ -170,3 +170,212 @@ partners-history-row = From <num>{ $date }</num>: <num>{ $share }</num>%
 
 # review: pending
 partners-history-empty = No share has been set yet.
+
+## Plan 17: the extra columns of the overview, the capital screen and the statement.
+
+# review: pending
+partners-metric-returned = { -wapsi }, this month
+
+# review: pending
+partners-metric-net = { -khalis }, this month
+
+# review: pending
+partners-metric-capital-in = { -sarmaya } put in, this month
+
+# review: pending
+partners-metric-ventures = { -bagh }, { -safar } and { -phal }, this month
+
+# review: pending
+partners-metric-total = { -kul-raqam }
+
+# review: pending
+partners-open-statement = { -fard-hisab }
+
+# $name: the partner's name.
+# review: pending
+partners-open-statement-of = { -fard-hisab } of { $name }
+
+# review: pending
+partners-open-capital = { -sarmaya }
+
+# $name: the partner's name.
+# review: pending
+partners-open-capital-of = { -sarmaya } of { $name }
+
+# review: pending
+partners-capital-open = { -sarmaya }
+
+## The capital screen (route /partners/capital, PRD 17.4).
+
+# review: pending
+partners-capital-screen-title = { -sarmaya }
+
+# review: pending
+partners-capital-screen-help = Money a partner puts into the shop, and money he takes back. It is never income or expense and is never split.
+
+# review: pending
+partners-capital-type = Kind of { -sarmaya } entry
+
+# review: pending
+partners-capital-history-title = { -sarmaya } history
+
+# review: pending
+partners-capital-pick = Choose a partner
+
+# review: pending
+partners-capital-pick-help = His { -sarmaya } history and balance show here.
+
+# review: pending
+partners-capital-balance = { -sarmaya } balance
+
+# review: pending
+partners-capital-invested = Total put in
+
+# review: pending
+partners-capital-taken-back = Total taken back
+
+# review: pending
+partners-capital-label = { -sarmaya } history of the partner
+
+# review: pending
+partners-capital-failed = The { -sarmaya } history could not be opened
+
+# review: pending
+partners-capital-empty = No { -sarmaya } entries yet
+
+# review: pending
+partners-capital-empty-help = Type the first amount above and save it.
+
+# review: pending
+partners-capital-col-balance = { -sarmaya } balance
+
+# review: pending
+partners-capital-kind-opening = Opening { -sarmaya }
+
+# review: pending
+partners-capital-kind-invested = Put in
+
+# review: pending
+partners-capital-kind-taken-back = Taken back
+
+# review: pending
+partners-capital-kind-month-close = Month close: profit moved into { -sarmaya }
+
+## The partner statement (route /partners/statement, PRD FR-17.9, FR-17.10).
+
+# review: pending
+partners-statement-title = { -shirakat-dar } statement
+
+# review: pending
+partners-statement-help = Every amount that reaches the partner, in date order, with his running { -kul-raqam }.
+
+# review: pending
+partners-statement-opening = { -kul-raqam } at the start
+
+# review: pending
+partners-statement-closing = { -kul-raqam } at the end
+
+# review: pending
+partners-statement-plus = Added
+
+# review: pending
+partners-statement-minus = Taken away
+
+# review: pending
+partners-statement-pick = Choose a partner
+
+# review: pending
+partners-statement-pick-help = His statement shows here.
+
+# review: pending
+partners-statement-empty = Nothing in these days
+
+# review: pending
+partners-statement-empty-help = Choose other days, or clear the dates.
+
+# review: pending
+partners-statement-label = Lines of the partner statement
+
+# review: pending
+partners-statement-failed = The statement could not be opened
+
+# review: pending
+partners-statement-col-heading = From
+
+# review: pending
+partners-statement-col-detail = What it was
+
+# review: pending
+partners-statement-col-running = { -kul-raqam }
+
+# review: pending
+partners-statement-heading-bikri = { -bikri }
+
+# review: pending
+partners-statement-heading-expense = { -kharcha }
+
+# review: pending
+partners-statement-heading-capital = { -sarmaya }
+
+# review: pending
+partners-statement-heading-drawings = { -kharcha }
+
+# review: pending
+partners-statement-heading-trip = { -market-safar }
+
+# review: pending
+partners-statement-heading-other = Other
+
+# $number: the number of the sale.
+# review: pending
+partners-statement-detail-income-share = { -bikri } { $number }: { -commission }, { -laga } and { -phone }
+
+# $voucher: the number of the expense; $subject: the expense head.
+# review: pending
+partners-statement-detail-expense-share = { -dukan-kharcha } { $voucher }: { $subject }
+
+# review: pending
+partners-statement-detail-capital-opening = Opening { -sarmaya }
+
+# review: pending
+partners-statement-detail-capital-in = { -sarmaya } put in { $voucher }
+
+# review: pending
+partners-statement-detail-capital-out = { -sarmaya } taken back { $voucher }
+
+# review: pending
+partners-statement-detail-month-close = Month close: profit moved into { -sarmaya }. The total stays the same.
+
+# $reason: why the money was taken, as typed.
+# review: pending
+partners-statement-detail-taken = { -zati-kharcha } { $voucher }: { $reason }
+
+# review: pending
+partners-statement-detail-returned = { -zati-kharcha } { -wapsi } { $voucher }
+
+# review: pending
+partners-statement-detail-drawings-opening = Opening money taken
+
+# $trip: the trip number; $secondary: the purchase or cost number; $kind: purchase, cost or other.
+# review: pending
+partners-statement-detail-trip-paid = { $kind ->
+    [purchase] { -market-safar } { $trip }: { -khareedari } { $secondary }, { -dukan-se }
+    [cost] { -market-safar } { $trip }: trip cost { $secondary }, { -dukan-se }
+   *[other] { -market-safar } { $trip }: { $secondary }, { -dukan-se }
+}
+
+# $source: bikri for a sale in the sale book, other for a sale in another shop.
+# review: pending
+partners-statement-detail-trip-credit = { $source ->
+    [bikri] { -market-safar } { $trip }, { -bikri } { $secondary }: { $subject } { $qty }, sales { $sales }, cost { $cost }, result { $result }, your { $share }%
+   *[other] { -market-safar } { $trip }, sale in another shop: { $subject } { $qty }, money { $sales }, cost { $cost }, result { $result }, your { $share }%
+}
+
+# review: pending
+partners-statement-detail-trip-write-off = { -market-safar } { $trip }: trip goods written off. Nothing is posted; the loss shows in the result of the trip.
+
+# review: pending
+partners-statement-detail-trip-closed = { -market-safar } { $trip } closed: cost { $cost }, sales { $sales }, result { $result }, your { $share }%, your { -khalis } { $net }
+
+# review: pending
+partners-statement-detail-other = { $reason }

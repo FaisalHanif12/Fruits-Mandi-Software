@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Version | 1.6 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026 and 22-10-2026) |
-| Date | 22 October 2026 |
+| Version | 1.8 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026 and 23-10-2026) |
+| Date | 23 October 2026 |
 | Status | Final for build |
 | Depends on | PRD v1.7 (the master), NFR v1.4, Tech Stack v1.5 |
 | Applies to | Every line of code, written by people or by Claude Code |
@@ -60,7 +60,7 @@ This is the most important section. The business is commission on sales, split b
 |---|---|---|
 | M1 | Every business amount is a **whole rupee** (PRD Section 22). Inside the code, money is a 64-bit integer number of paisa (`Paisa(i64)` in Rust), always a multiple of 100. Never a float. | 1,050 rupees = `Paisa(105000)` |
 | M2 | Percent rates are **basis points** in an integer (`Bps(i32)`, 1% = 100 bps) | 6% = `Bps(600)`, 2.5% = `Bps(250)` |
-| M3 | MUST NOT use `f32`, `f64`, JavaScript `Number` arithmetic, `parseFloat`, `toFixed`, `Math.round` or SQL `REAL` for money | |
+| M3 | MUST NOT use `f32`, `f64`, JavaScript `Number` arithmetic, `parseFloat`, `toFixed`, `Math.round` or SQL `REAL` for money. The one approved exception is the Excel export boundary (M13). | |
 | M4 | Multiply first, divide last, in `i128`, then round once with the shared rounding function | 12,000 × 6%: 1,200,000 paisa × 600 ÷ 10,000 = 72,000 paisa = 720 rupees |
 | M5 | Rounding happens in exactly one function, `core::money::round_to_rupee` (nearest rupee, half up; a fixed rule, not a setting). It is called only by `apply_bps`, `weight_value` and `avg_rate`. Splits use `split_by_bps` and `split_by_qty`. | 337.8 → 338 |
 | M6 | A rounded amount is calculated once and the same value is posted to every side | Never round commission separately for the buyer bill and for the journal |
@@ -70,6 +70,7 @@ This is the most important section. The business is commission on sales, split b
 | M10 | Every journal entry MUST balance before it is written, and the database rejects it if not (B16) | |
 | M11 | Every money function has unit tests with the PRD worked numbers and property tests (Section 9) | |
 | M12 | The frontend MUST NOT calculate money. It formats paisa received from the backend, nothing else. | `formatPaisa(1200000)` → `"12,000"` |
+| M13 | **Excel export exception (Umar, 23-10-2026, D5-Q1).** Excel stores every number as floating point, so money is written to a spreadsheet through ONE function, `rupees_as_f64`, in one file, `numbers.rs`, of the export code of `mandi-reports`. It divides whole paisa by 100 with integer division first, refuses a value of 2^53 or more (so the conversion is exact), and only then converts. A whole-number quantity (a نگ count) goes through its twin `count_as_f64` in the same file, with the same limit (Umar, 23-10-2026, second answer). A unit test covers the largest allowed amount (10,00,00,00,000 rupees) and the refusal. An Excel value is never read back into the app and never added up by our code, and no other code may use `f64` for money or quantities. A percent is written as text from the integer formatter, never as a float. | 12,000 rupees = `Paisa(1200000)` → cell `12000` |
 
 ---
 
@@ -431,3 +432,5 @@ A change is done only when every box is ticked:
 | 1.4 | 15-10-2026 | PRD v1.4: related entries share one screen (F44); E2E-39 (9.2). |
 | 1.5 | 19-10-2026 | Approved by Umar (PRD v1.6): lists page by page (B31, F34); no mode among the shared fields (F44); golden tests E2E-40 to E2E-43 (9.2); property tests for gardens, trips and guest fruit, and the trip purchase cost (9.3). |
 | 1.6 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag field (4.2, B26, F38). |
+| 1.7 | 23-10-2026 | Approved by Umar (D5-Q1): one exception to the no-float rule, at the Excel export boundary only (M3, M13). |
+| 1.8 | 23-10-2026 | Approved by Umar: the same exception also covers whole-number quantities, through `count_as_f64` in the same file (M13). |

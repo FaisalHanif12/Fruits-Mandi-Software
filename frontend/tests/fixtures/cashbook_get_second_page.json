@@ -1,0 +1,43 @@
+{
+  "opening_paisa": -280000,
+  "closing_paisa": 3570000,
+  "rows": [
+    {
+      "entry_id": 8,
+      "entry_date": "2026-10-10",
+      "posting_type": "money_lent",
+      "number": 1,
+      "account": {
+        "id": 33,
+        "code": "01030001",
+        "name_ur": "اسلم",
+        "name_en": "Aslam"
+      },
+      "narration": "گھریلو ضرورت",
+      "in_paisa": 0,
+      "out_paisa": 500000,
+      "running_paisa": 3270000
+    },
+    {
+      "entry_id": 9,
+      "entry_date": "2026-10-11",
+      "posting_type": "money_lent_return",
+      "number": 1,
+      "account": {
+        "id": 33,
+        "code": "01030001",
+        "name_ur": "اسلم",
+        "name_en": "Aslam"
+      },
+      "narration": "",
+      "in_paisa": 300000,
+      "out_paisa": 0,
+      "running_paisa": 3570000
+    }
+  ],
+  "total_count": 7,
+  "totals": {
+    "in_paisa": 5350000,
+    "out_paisa": 1500000
+  }
+}

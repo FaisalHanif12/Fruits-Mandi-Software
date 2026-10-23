@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-masters-expense-heads"
+description = "Enables the masters_expense_heads command without any pre-configured scope."
+commands.allow = ["masters_expense_heads"]
+
+[[permission]]
+identifier = "deny-masters-expense-heads"
+description = "Denies the masters_expense_heads command without any pre-configured scope."
+commands.deny = ["masters_expense_heads"]

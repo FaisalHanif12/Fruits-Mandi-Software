@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-capital-history"
+description = "Enables the capital_history command without any pre-configured scope."
+commands.allow = ["capital_history"]
+
+[[permission]]
+identifier = "deny-capital-history"
+description = "Denies the capital_history command without any pre-configured scope."
+commands.deny = ["capital_history"]

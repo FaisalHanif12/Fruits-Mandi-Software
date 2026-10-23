@@ -5,6 +5,7 @@
 // never works out an amount (CLAUDE.md rule 1).
 
 import { vi } from 'vitest';
+import type { DayCloseSummary } from '../../src/bindings/DayCloseSummary';
 import type { DayStatus } from '../../src/bindings/DayStatus';
 import * as appApi from '../../src/app/api';
 import * as dayApi from '../../src/features/day/api';
@@ -92,7 +93,45 @@ export interface FakeDay {
   days: number;
   /** The trial balance difference the preview says. */
   trial: ReturnType<typeof balance>;
+  /** The full summary of the days to close (PRD FR-21.1). Default: the worked day of PRD 4.9. */
+  summary: DayCloseSummary;
 }
+
+const PARTNER_REFS = [
+  { id: 1, code: '', name_ur: 'الف', name_en: 'Partner A' },
+  { id: 2, code: '', name_ur: 'ب', name_en: 'Partner B' },
+  { id: 3, code: '', name_ur: 'ج', name_en: 'Partner C' },
+] as const;
+
+/** PRD 4.9: 2 بکری, خام 41,400, commission 5,448, shared income 5,488, shares 996 / 746 / 746. */
+export const WORKED_DAY_SUMMARY: DayCloseSummary = {
+  bikri_count: 2,
+  gross_paisa: money(41400),
+  commission_paisa: money(5448),
+  shared_income_paisa: money(5488),
+  partners: [
+    {
+      partner: PARTNER_REFS[0],
+      income_paisa: money(2196),
+      expense_paisa: money(1200),
+      profit_paisa: money(996),
+    },
+    {
+      partner: PARTNER_REFS[1],
+      income_paisa: money(1646),
+      expense_paisa: money(900),
+      profit_paisa: money(746),
+    },
+    {
+      partner: PARTNER_REFS[2],
+      income_paisa: money(1646),
+      expense_paisa: money(900),
+      profit_paisa: money(746),
+    },
+  ],
+  open_lots: 0,
+  open_qty: 0,
+};
 
 /** Sets the answers of the day commands. A close and a reopen change the day status the app reads. */
 export function fakeDay(options: Partial<FakeDay> = {}): FakeDay {
@@ -100,6 +139,7 @@ export function fakeDay(options: Partial<FakeDay> = {}): FakeDay {
     status: { today: '2026-10-10', closed_up_to: '2026-09-30', today_open: true },
     days: 10,
     trial: ZERO,
+    summary: WORKED_DAY_SUMMARY,
     ...options,
   };
   const reading = () => ({
@@ -119,6 +159,7 @@ export function fakeDay(options: Partial<FakeDay> = {}): FakeDay {
       trial_difference: store.trial,
       cash_in_hand: balance(58484, 'dr'),
       entries: 12,
+      summary: store.summary,
     }),
   );
   vi.mocked(dayApi.dayClose).mockImplementation((upTo) => {
