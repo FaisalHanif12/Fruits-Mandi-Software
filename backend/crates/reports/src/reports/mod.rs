@@ -309,8 +309,18 @@ pub(crate) fn page_spec(offset: i64, limit: i64) -> Result<PageSpec, ReportsErro
     })
 }
 
-/// Reads and checks the filters, then builds the report.
+/// Reads and checks the filters, then builds the report, all from one snapshot of the books.
 fn build(
+    conn: &Connection,
+    db: &Db,
+    id: ReportId,
+    input_filters: &ReportFilters,
+    spec: PageSpec,
+) -> Result<ReportPage, ReportsError> {
+    common::in_snapshot(conn, |conn| build_in(conn, db, id, input_filters, spec))
+}
+
+fn build_in(
     conn: &Connection,
     db: &Db,
     id: ReportId,
@@ -393,6 +403,56 @@ pub fn print_data(db: &Db, input: &ReportPrintInput) -> Result<ReportPrintData, 
             paper: input.paper.unwrap_or(Paper::A4),
             firm,
             now_utc: db.clock().now_utc(),
+        },
+    )
+}
+
+/// Every row of a report with the firm header names and the number grouping, for the Excel
+/// export and the readable pack. Reads only; one database read.
+///
+/// # Errors
+/// As [`run`].
+pub(crate) fn export_page(
+    db: &Db,
+    id: ReportId,
+    filters: &ReportFilters,
+) -> Result<
+    (
+        ReportPage,
+        crate::print::load::FirmNames,
+        mandi_core::money::Grouping,
+    ),
+    ReportsError,
+> {
+    let all = PageSpec {
+        offset: 0,
+        limit: None,
+    };
+    db.read(|conn| {
+        let page = build(conn, db, id, filters, all)?;
+        Ok::<_, ReportsError>((page, load_firm(conn)?, load_grouping(conn)?))
+    })
+}
+
+/// Every row of a report, read on a connection the caller holds, so several pages can come from
+/// one read (the readable pack).
+///
+/// # Errors
+/// As [`run`].
+pub(crate) fn page_in(
+    conn: &Connection,
+    db: &Db,
+    id: ReportId,
+    filters: &ReportFilters,
+) -> Result<ReportPage, ReportsError> {
+    build(
+        conn,
+        db,
+        id,
+        filters,
+        PageSpec {
+            offset: 0,
+            limit: None,
         },
     )
 }

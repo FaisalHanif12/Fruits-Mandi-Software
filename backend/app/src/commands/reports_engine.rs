@@ -28,6 +28,10 @@ pub(crate) fn engine_error(error: ReportsError) -> ServiceError {
             tracing::warn!(cause = %error, "a report total could not be made");
             ServiceError::reject(error.code())
         }
+        ReportsError::File { full: true, detail } => {
+            tracing::warn!(cause = %detail, "the export file could not be written: disk full");
+            ServiceError::reject(ErrorCode::ErrDiskFull)
+        }
         other => ServiceError::Data(other.to_string()),
     }
 }

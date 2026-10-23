@@ -24,6 +24,7 @@ mandi-reports.workspace = true
 tempfile.workspace = true
 criterion.workspace = true
 proptest.workspace = true
+zip.workspace = true
 
 [[bench]]
 name = "search"

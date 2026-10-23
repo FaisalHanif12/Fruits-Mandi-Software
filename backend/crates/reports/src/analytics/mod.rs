@@ -27,7 +27,7 @@ mod item;
 mod lines;
 mod matrix;
 mod model;
-mod print;
+pub(crate) mod print;
 mod seller;
 mod store;
 mod table;
@@ -97,8 +97,18 @@ pub fn catalog() -> Vec<AnalyticsCatalogEntry> {
         .collect()
 }
 
-/// Reads and checks the filters, then builds the view.
+/// Reads and checks the filters, then builds the view, all from one snapshot of the books.
 fn build(
+    conn: &Connection,
+    db: &Db,
+    view: AnalyticsView,
+    input: &AnalyticsFilters,
+    spec: PageSpec,
+) -> Result<(Typed, Table), ReportsError> {
+    crate::reports::common::in_snapshot(conn, |conn| build_in(conn, db, view, input, spec))
+}
+
+fn build_in(
     conn: &Connection,
     db: &Db,
     view: AnalyticsView,
@@ -157,6 +167,37 @@ pub fn lines(db: &Db, input: &AnalyticsLinesInput) -> Result<AnalyticsLinesPage,
         let now = today(db.clock().now_utc())?;
         let typed = resolve(conn, now, input.view, &input.filters)?;
         lines::run(conn, &typed, input, spec)
+    })
+}
+
+/// Every row of a view with the firm header names and the number grouping, for the Excel
+/// export. Reads only; one database read.
+///
+/// # Errors
+/// As [`run`].
+pub(crate) fn export_page(
+    db: &Db,
+    view: AnalyticsView,
+    filters: &AnalyticsFilters,
+) -> Result<
+    (
+        AnalyticsPage,
+        crate::print::load::FirmNames,
+        mandi_core::money::Grouping,
+    ),
+    ReportsError,
+> {
+    let all = PageSpec {
+        offset: 0,
+        limit: None,
+    };
+    db.read(|conn| {
+        let (typed, table) = build(conn, db, view, filters, all)?;
+        Ok::<_, ReportsError>((
+            page_of(view, &typed, table, all),
+            load_firm(conn)?,
+            load_grouping(conn)?,
+        ))
     })
 }
 

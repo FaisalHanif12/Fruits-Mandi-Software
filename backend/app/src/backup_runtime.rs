@@ -64,11 +64,12 @@ impl BackupRuntime {
             backups_dir,
             app_version: app_version.to_owned(),
         };
-        Ok(Self::new(Arc::new(BackupService::new(
-            db,
-            config,
-            BackupParts::real(),
-        ))))
+        // The readable pack gets its spreadsheets from the report engine (PRD FR-20.5).
+        let parts = BackupParts {
+            pack: Arc::new(crate::sheet_pack::SheetPack::new(Arc::clone(&db))),
+            ..BackupParts::real()
+        };
+        Ok(Self::new(Arc::new(BackupService::new(db, config, parts))))
     }
 
     /// The runtime the app manages.

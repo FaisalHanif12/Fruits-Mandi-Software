@@ -93,6 +93,16 @@ zstd = "0.13.3"
 object_store = { version = "0.14.2", default-features = false, features = ["aws"] }
 tokio = { version = "1.53.2", default-features = false, features = ["rt"] }
 
+# Excel export and the readable pack (Tech Stack 2, plan 22 round 10, D5-Q1). rust_xlsxwriter
+# writes the sheets; fluent-bundle gives them the same words as the screens, from the same
+# .ftl files embedded at build time. Money reaches a sheet only through rupees_as_f64 (M13).
+rust_xlsxwriter = "0.99.1"
+fluent-bundle = "0.16.0"
+unic-langid = "0.9.6"
+# Test only: reads the sheets the export wrote, to check every number (MIT, already in the tree
+# as the library under rust_xlsxwriter). No xlsx reader is part of the app.
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 

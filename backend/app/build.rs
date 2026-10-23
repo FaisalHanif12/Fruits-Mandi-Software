@@ -172,6 +172,8 @@ const APP_COMMANDS: &[&str] = &[
     "support_info_save",
     "updates_check",
     "updates_install",
+    "reports_export_excel",
+    "analytics_export_excel",
 ];
 
 fn main() {

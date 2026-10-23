@@ -363,3 +363,60 @@ impl Conds {
         all
     }
 }
+
+/// Runs `action` inside one read transaction, so every statement of a report sees the same saved
+/// books: the rows and the totals of a page, or the five sheets of the pack, can never come
+/// from two different moments (Code Standards B20, money agent Section 9). Inside a
+/// transaction already, it just runs the action.
+///
+/// # Errors
+/// What `action` returns; a database error when the transaction cannot start.
+pub(crate) fn in_snapshot<T>(
+    conn: &Connection,
+    action: impl FnOnce(&Connection) -> Result<T, ReportsError>,
+) -> Result<T, ReportsError> {
+    if !conn.is_autocommit() {
+        return action(conn);
+    }
+    let tx = conn.unchecked_transaction()?;
+    let result = action(&tx);
+    // Nothing was written, so ending the transaction is a rollback.
+    drop(tx);
+    result
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::*;
+
+    #[test]
+    fn a_save_during_a_read_is_not_seen_until_the_next_read() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("snapshot.db");
+        let reader = Connection::open(&path).unwrap();
+        reader
+            .execute_batch(
+                "PRAGMA journal_mode = WAL; CREATE TABLE t (n INTEGER); INSERT INTO t VALUES (1);",
+            )
+            .unwrap();
+        let writer = Connection::open(&path).unwrap();
+        let count = |c: &Connection| -> i64 {
+            c.query_row("SELECT COUNT(*) FROM t", [], |r| r.get(0))
+                .unwrap()
+        };
+        let (first, second) = in_snapshot(&reader, |conn| {
+            let first = count(conn);
+            writer.execute("INSERT INTO t VALUES (2)", []).unwrap();
+            // A nested call joins the same snapshot.
+            let second = in_snapshot(conn, |inner| Ok(count(inner)))?;
+            Ok((first, second))
+        })
+        .unwrap();
+        assert_eq!(
+            (first, second),
+            (1, 1),
+            "both reads see the books as they were"
+        );
+        assert_eq!(count(&reader), 2, "the next read sees the save");
+    }
+}

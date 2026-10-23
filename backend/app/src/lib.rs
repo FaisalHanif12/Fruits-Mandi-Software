@@ -10,6 +10,7 @@ pub mod print_types;
 mod print_windows;
 pub mod refs;
 pub mod runner;
+pub mod sheet_pack;
 pub mod state;
 pub mod support_info;
 pub mod updates;
@@ -247,6 +248,8 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::support::support_info_save,
         commands::updates::updates_check,
         commands::updates::updates_install,
+        commands::export::reports_export_excel,
+        commands::export::analytics_export_excel,
     ]
 }
 

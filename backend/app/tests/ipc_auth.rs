@@ -1026,6 +1026,16 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "expected_version": "99.0.0", "confirmed": true } }),
             true,
         ),
+        (
+            "reports_export_excel",
+            json!({ "input": { "job_id": "j1", "id": "R18", "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
+            true,
+        ),
+        (
+            "analytics_export_excel",
+            json!({ "input": { "job_id": "j1", "view": "A", "filters": {}, "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
+            true,
+        ),
     ]
 }
 

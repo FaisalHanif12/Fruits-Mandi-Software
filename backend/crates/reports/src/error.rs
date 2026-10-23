@@ -25,6 +25,14 @@ pub enum ReportsError {
     /// Stored data is not in the shape this code wrote.
     #[error("stored data is wrong: {0}")]
     Data(String),
+    /// A file could not be written (the Excel export). `full` is true when the disk is full.
+    #[error("file: {detail}")]
+    File {
+        /// True for a full disk (`ERR_DISK_FULL`).
+        full: bool,
+        /// The cause, for the log only.
+        detail: String,
+    },
     /// The filters or the page asked for are not allowed. Every problem is listed with its
     /// field, so the screen can show them together (Code Standards 4.3).
     #[error("rejected: {0:?}")]
@@ -43,6 +51,8 @@ impl ReportsError {
             ReportsError::Money(error) => error.code(),
             ReportsError::Words(_) => ErrorCode::ErrOverflow,
             ReportsError::Data(_) => ErrorCode::ErrInternal,
+            ReportsError::File { full: true, .. } => ErrorCode::ErrDiskFull,
+            ReportsError::File { full: false, .. } => ErrorCode::ErrInternal,
             ReportsError::Rejected(items) => items
                 .first()
                 .map_or(ErrorCode::ErrInternal, |item| item.code),

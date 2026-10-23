@@ -29,6 +29,7 @@ pub mod reports_people;
 pub mod analytics;
 // Run B, plan 22 (append-only block).
 pub mod audit;
+pub mod export;
 pub mod health;
 pub mod settings_day;
 pub mod support;

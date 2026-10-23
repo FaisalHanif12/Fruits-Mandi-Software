@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reports-export-excel"
+description = "Enables the reports_export_excel command without any pre-configured scope."
+commands.allow = ["reports_export_excel"]
+
+[[permission]]
+identifier = "deny-reports-export-excel"
+description = "Denies the reports_export_excel command without any pre-configured scope."
+commands.deny = ["reports_export_excel"]

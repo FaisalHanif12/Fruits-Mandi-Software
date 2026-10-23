@@ -96,6 +96,18 @@ pub(crate) fn load_firm(conn: &Connection) -> Result<FirmNames, ReportsError> {
     })
 }
 
+/// The language of the readable backup pack: the saved default language, else Urdu (PRD
+/// Section 21, FR-7.30).
+pub(crate) fn load_default_language(
+    conn: &Connection,
+) -> Result<mandi_core::auth::Language, ReportsError> {
+    Ok(setting(conn, "default_language")?
+        .as_ref()
+        .and_then(Value::as_str)
+        .and_then(mandi_core::auth::Language::parse)
+        .unwrap_or(mandi_core::auth::Language::Ur))
+}
+
 pub(crate) fn load_grouping(conn: &Connection) -> Result<Grouping, ReportsError> {
     Ok(setting(conn, KEY_NUMBER_GROUPING)?
         .and_then(|v| serde_json::from_value(v).ok())

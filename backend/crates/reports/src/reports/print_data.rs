@@ -339,7 +339,7 @@ impl Fmt {
         .to_owned()
     }
 
-    fn detail(&self, part: &DetailPart) -> Result<PrintDetailPart, ReportsError> {
+    pub(crate) fn detail(&self, part: &DetailPart) -> Result<PrintDetailPart, ReportsError> {
         Ok(match part {
             DetailPart::Sale {
                 bikri_number,
@@ -450,7 +450,7 @@ pub(crate) fn fact(label: &str, value: String) -> PrintFact {
 }
 
 /// The filters of the run as header facts: dates and party first (FR-19.10).
-fn filter_facts(
+pub(crate) fn filter_facts(
     fmt: &Fmt,
     id: ReportId,
     filters: &ResolvedFilters,

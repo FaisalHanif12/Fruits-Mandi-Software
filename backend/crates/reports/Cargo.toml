@@ -13,6 +13,9 @@ serde_json.workspace = true
 thiserror.workspace = true
 ts-rs.workspace = true
 chrono.workspace = true
+rust_xlsxwriter.workspace = true
+fluent-bundle.workspace = true
+unic-langid.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

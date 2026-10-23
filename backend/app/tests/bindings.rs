@@ -494,6 +494,11 @@ const EXPECTED_FILES: &[&str] = &[
     "AuditListInput.ts",
     "AuditUser.ts",
     "AuditValue.ts",
+    "ExcelExported.ts",
+    "ExportProgressEvent.ts",
+    "ExportStage.ts",
+    "ReportsExportRequest.ts",
+    "AnalyticsExportRequest.ts",
     "AuditChange.ts",
     "AuditRow.ts",
     "AuditResolvedFilters.ts",
@@ -818,6 +823,10 @@ fn export_bindings() {
     mandi_app_lib::updates::UpdateCheck::export_all(&cfg).unwrap();
     mandi_app_lib::updates::UpdateInstallInput::export_all(&cfg).unwrap();
     mandi_app_lib::updates::UpdateInstalled::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::ReportsExportRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::AnalyticsExportRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::ExportProgressEvent::export_all(&cfg).unwrap();
+    mandi_reports::export::ExcelExported::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

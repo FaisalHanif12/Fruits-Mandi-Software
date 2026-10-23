@@ -292,6 +292,8 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-support-info-save",
             "allow-updates-check",
             "allow-updates-install",
+            "allow-reports-export-excel",
+            "allow-analytics-export-excel",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",

@@ -44,7 +44,7 @@ fn heading(fmt: &Fmt, heading: &AnalyticsHeading) -> Result<AnalyticsPrintHeadin
 
 /// The filters of the run as header facts (PRD FR-18.4, FR-19.10): dates and picked records
 /// first, then the side, the grouping and the compared period.
-fn filter_facts(
+pub(crate) fn filter_facts(
     fmt: &Fmt,
     filters: &AnalyticsResolvedFilters,
 ) -> Result<Vec<PrintFact>, ReportsError> {
