@@ -6,7 +6,7 @@
 | Version | 1.7 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026 and 22-10-2026, and his answers of 15-10-2026) |
 | Date | 22 October 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.7 (the master), NFR v1.4, Tech Stack v1.5, Code Standards v1.6 |
+| Derived from | PRD v1.7 (the master), NFR v1.4, Tech Stack v1.5, Code Standards v1.7 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---

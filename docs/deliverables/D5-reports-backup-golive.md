@@ -10,11 +10,11 @@ This is the largest deliverable, with six plan files run in order.
 
 | ID | Question | Recommended | Umar's answer |
 |---|---|---|---|
-| D5-Q1 | May money be written to Excel as numbers? Excel stores numbers as floating point, so this needs one approved exception to the no-float rule at the export boundary (see the `print-and-export` skill, reference.md). | Yes. One function, `rupees_as_f64`, exact below 2^53, tested at the maximum, never read back. Umar runs `/requirement-change` to record it in Code Standards and the money agent before D5 starts. | (waiting) |
+| D5-Q1 | May money be written to Excel as numbers? Excel stores numbers as floating point, so this needs one approved exception to the no-float rule at the export boundary (see the `print-and-export` skill, reference.md). | Yes. One function, `rupees_as_f64`, exact below 2^53, tested at the maximum, never read back. Umar runs `/requirement-change` to record it in Code Standards and the money agent before D5 starts. | Yes (Umar, 23-10-2026). Recorded in Code Standards 1.7 (M13) and the money agent 1.6. |
 | D5-Q2 | Which cloud account do the backup tests use? | Automated tests use a local stand-in for the cloud. Umar creates a Cloudflare R2 test bucket and keys for one real upload and restore check, kept separate from the client's bucket. | (waiting) |
 | D5-Q3 | Buy a Windows code-signing certificate before go-live (Tech Stack 7)? | Yes, so Windows SmartScreen does not warn the client on install. Umar adds it as the two GitHub secrets in `docs/Release_Pipeline.md` 3.2. | (waiting) |
 
-Answer D5-Q1 before starting D5. Excel export and the daily backup pack (FR-20.5) are Must items, so without the answer D5 can only end in BLOCKED. Until D5-Q2 is answered, plan file 18 runs against the local stand-in only. D5-Q3 does not block the build; without it, the release is unsigned for Windows and the DONE REPORT says so.
+D5-Q1 is answered (yes, 23-10-2026). Excel export and the daily backup pack (FR-20.5) are Must items, so without the answer D5 can only end in BLOCKED. Until D5-Q2 is answered, plan file 18 runs against the local stand-in only. D5-Q3 does not block the build; without it, the release is unsigned for Windows and the DONE REPORT says so.
 
 ## 1. What Umar can do at the end
 

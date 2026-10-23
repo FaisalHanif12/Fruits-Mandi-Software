@@ -78,7 +78,7 @@ Prefer running one test file while you work. Run the full set before you say a t
 ## Rules that are never broken
 
 1. **The backend owns all money.** The frontend sends what the user typed, as text, and shows what the backend returns. It never adds, multiplies, rounds or splits money.
-2. **IMPORTANT: Money is whole rupees, stored as `Paisa(i64)`, always a multiple of 100.** No floats anywhere in the money path. Rounding only through `core::money::round_to_rupee`. Splits only through `split_by_bps` and `split_by_qty`. Use the money-calculations agent before writing money code and again to review it.
+2. **IMPORTANT: Money is whole rupees, stored as `Paisa(i64)`, always a multiple of 100.** No floats anywhere in the money path (one approved exception: `rupees_as_f64` at the Excel export boundary, Code Standards M13). Rounding only through `core::money::round_to_rupee`. Splits only through `split_by_bps` and `split_by_qty`. Use the money-calculations agent before writing money code and again to review it.
 3. **One user action = one service function = one database transaction.** The live preview and the save call the same domain function.
 4. **Books always balance.** A journal entry is saved as draft, checked, then posted. Posted rows are never changed or deleted. Corrections are reversals. Business records are never `DELETE`d.
 5. **No `unwrap`, `expect`, `panic!` or `unsafe` outside tests.** Integer maths on money uses checked operations.
