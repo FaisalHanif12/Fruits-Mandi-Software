@@ -6,7 +6,8 @@
 //
 // Sending the page to a printer and saving it as a PDF need the print job for reports, which is not
 // in the backend yet (the print data is). The two buttons are there, dimmed, with a plain line that
-// says so, so the way the screen will work is already visible and nothing is faked.
+// says so, so the way the screen will work is already visible and nothing is faked. The Excel button
+// (D5-Q1) works: it saves every row of the report as a file, in the language chosen here.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Printer } from 'lucide-react';
@@ -37,6 +38,11 @@ interface PrintPreviewFrameProps {
   onLanguageChange: (language: Language) => void;
   onPaperChange: (paper: Paper) => void;
   onBack: () => void;
+  /**
+   * The Excel button, when the screen has one: it sits with the other actions and takes the print
+   * language chosen in this frame for the sheet (D5-Q1).
+   */
+  excel?: ReactNode;
   /** The page, or its loading, error or empty state. */
   children: ReactNode;
 }
@@ -47,6 +53,7 @@ export function PrintPreviewFrame({
   onLanguageChange,
   onPaperChange,
   onBack,
+  excel,
   children,
 }: PrintPreviewFrameProps) {
   const { l10n } = useLocalization();
@@ -90,6 +97,7 @@ export function PrintPreviewFrame({
         <Button onClick={onBack}>
           <Localized id="common-back" />
         </Button>
+        {excel}
         <Button disabled onClick={noop}>
           <Localized id="report-print-pdf" />
         </Button>

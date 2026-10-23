@@ -10,6 +10,7 @@ import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
 import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
+import { ExcelExportButton, type ExcelExporter } from '../../../shared/export';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { PrintPreviewFrame, ReportPrintDocument } from '../../reports';
 import { useAnalyticsPrintData } from '../hooks';
@@ -20,9 +21,11 @@ interface AnalyticsPreviewProps {
   view: AnalyticsView;
   filters: AnalyticsFilters;
   onBack: () => void;
+  /** The Excel export of the screen: its button sits in the frame, with the language chosen here. */
+  exporter: ExcelExporter;
 }
 
-export function AnalyticsPreview({ view, filters, onBack }: AnalyticsPreviewProps) {
+export function AnalyticsPreview({ view, filters, onBack, exporter }: AnalyticsPreviewProps) {
   const appLanguage = useLanguage();
   const [language, setLanguage] = useState<Language>(appLanguage);
   const [paper, setPaper] = useState<Paper>('a4');
@@ -60,6 +63,7 @@ export function AnalyticsPreview({ view, filters, onBack }: AnalyticsPreviewProp
       onLanguageChange={setLanguage}
       onPaperChange={setPaper}
       onBack={onBack}
+      excel={<ExcelExportButton exporter={exporter} language={language} />}
     >
       {body}
     </PrintPreviewFrame>

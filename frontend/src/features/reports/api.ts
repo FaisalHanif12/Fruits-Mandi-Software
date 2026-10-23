@@ -12,11 +12,13 @@ import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
 import type { PukhtaPersonHit } from '../../bindings/PukhtaPersonHit';
+import type { ExcelExported } from '../../bindings/ExcelExported';
 import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
 import type { ReportPage } from '../../bindings/ReportPage';
 import type { ReportPrintData } from '../../bindings/ReportPrintData';
 import type { ReportPrintInput } from '../../bindings/ReportPrintInput';
 import type { ReportRunInput } from '../../bindings/ReportRunInput';
+import type { ReportsExportRequest } from '../../bindings/ReportsExportRequest';
 import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput';
 import { callCommand } from '../../shared/api';
 
@@ -81,4 +83,12 @@ export function reportsPrintData(input: ReportPrintInput): Promise<ReportPrintDa
  */
 export function reportsFindPeople(input: FindPeopleInput): Promise<PukhtaPersonHit[]> {
   return callCommand<PukhtaPersonHit[]>('reports_find_people', { input });
+}
+
+/**
+ * Saves EVERY row of a report as an Excel file at `path` (D5-Q1), with the sheet in `language`. The
+ * progress comes by the event `export-progress` for `job_id`. The file is never opened or read back.
+ */
+export function reportsExportExcel(input: ReportsExportRequest): Promise<ExcelExported> {
+  return callCommand<ExcelExported>('reports_export_excel', { input });
 }

@@ -14,7 +14,9 @@ import type {
   AnalyticsRunInput,
   AnalyticsSavedView,
 } from './types';
+import type { AnalyticsExportRequest } from '../../bindings/AnalyticsExportRequest';
 import type { AnalyticsViewsSaveInput } from '../../bindings/AnalyticsViewsSaveInput';
+import type { ExcelExported } from '../../bindings/ExcelExported';
 
 /** The views that are built, with the filter boxes each takes. */
 export function analyticsCatalog(): Promise<AnalyticsCatalogEntry[]> {
@@ -47,4 +49,12 @@ export function analyticsViewsGet(): Promise<AnalyticsSavedView[]> {
 /** Replaces the whole list of saved views (at most 50) and returns what is kept. */
 export function analyticsViewsSave(input: AnalyticsViewsSaveInput): Promise<AnalyticsSavedView[]> {
   return callCommand<AnalyticsSavedView[]>('analytics_views_save', { input });
+}
+
+/**
+ * Saves EVERY row of an analytics view as an Excel file at `path` (D5-Q1), with the sheet in
+ * `language`. The progress comes by the event `export-progress` for `job_id`.
+ */
+export function analyticsExportExcel(input: AnalyticsExportRequest): Promise<ExcelExported> {
+  return callCommand<ExcelExported>('analytics_export_excel', { input });
 }

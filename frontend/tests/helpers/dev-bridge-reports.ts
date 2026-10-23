@@ -14,6 +14,7 @@ import type { ReportId } from '../../src/bindings/ReportId';
 import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
 import { devFlag } from './dev-bridge';
+import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import {
   CATALOG,
   PRINT_R13_AKRAM_UR,
@@ -113,6 +114,7 @@ function page(input: Input): ReportPage {
 }
 
 const handlers: Record<string, (input: Input) => unknown> = {
+  reports_export_excel: (input) => devExport(input),
   reports_catalog: () => catalog(),
   reports_run: (input) => page(input),
   reports_print_data: (input) => PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN,
@@ -139,9 +141,15 @@ export function installReportsDevBridge(): void {
   Object.defineProperty(window, '__TAURI_INTERNALS__', {
     configurable: true,
     value: {
+      transformCallback,
       invoke: (command: string, args: unknown): Promise<unknown> =>
         new Promise((resolve, reject) => {
           window.setTimeout(() => {
+            const plugin = exportPluginCommand(command, args);
+            if (plugin.handled) {
+              resolve(plugin.value);
+              return;
+            }
             const handler = handlers[command];
             if (handler === undefined) {
               reject(refusal('ERR_NOT_IMPLEMENTED'));

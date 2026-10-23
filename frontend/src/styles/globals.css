@@ -12,6 +12,7 @@
 
 /* Run B, plan 20: the printed report (the totals row, a balance with its side word). */
 @import '../features/reports/reports.css';
+@import '../shared/export/export.css';
 
 html {
   background-color: var(--color-bg);

@@ -8,6 +8,8 @@
 // - A filter change asks the backend once, 250 ms after the last key (Code Standards F35). A date
 //   that is half typed is refused under its own box and the rows already on screen stay.
 // - F9 or the button shows the print preview; Esc leaves it, then leaves the report.
+// - The Excel button (D5-Q1) saves every row of the filters as they are in the boxes, in the app
+//   language (in the preview: the language chosen there), with its progress shown under the title.
 //
 // Four states: loading, an error with a retry (also for a report that does not exist), nothing
 // found (with a way out), and the rows.
@@ -21,7 +23,14 @@ import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import type { ReportPage as ReportPageData } from '../../../bindings/ReportPage';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import {
+  ExcelExportButton,
+  ExcelExportNotices,
+  exportFileName,
+  useExcelExport,
+} from '../../../shared/export';
 import { useDebouncedValue, useFocusFirstField } from '../../../shared/hooks';
+import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { ReportFilterBar } from '../components/ReportFilterBar';
@@ -35,6 +44,7 @@ import {
   isUnfiltered,
   type ReportFilterState,
 } from '../filters';
+import { reportsExportExcel } from '../api';
 import { useReportCatalog, useReportPages } from '../hooks';
 import { parseReportSearch, stateFromSearch } from '../search';
 
@@ -99,6 +109,21 @@ function ReportBody({
   );
   const query = useReportPages(entry.id, wire);
   const open = useOpenSource(catalog);
+  const language = useLanguage();
+  // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
+  const exporter = useExcelExport({
+    defaultName: () => exportFileName(entry.id, new Date()),
+    run: ({ path, jobId, language: sheet }) =>
+      canRun(state, entry)
+        ? reportsExportExcel({
+            job_id: jobId,
+            id: entry.id,
+            filters: filtersToWire(state, entry.filters),
+            language: sheet,
+            path,
+          })
+        : Promise.reject(new Error('the report cannot run before its filters are filled')),
+  });
 
   // The pages last shown, kept while a half-typed filter is refused (they stay under the box). They
   // are state set while rendering, which React allows when the value really changed.
@@ -152,6 +177,7 @@ function ReportBody({
         onBack={() => {
           setView('table');
         }}
+        exporter={exporter}
       />
     );
   } else if (needsParty) {
@@ -206,8 +232,17 @@ function ReportBody({
             <Printer aria-hidden="true" className="size-icon-md" />
             <Localized id="report-preview" />
           </Button>
+          {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
+          {view === 'preview' ? null : (
+            <ExcelExportButton
+              exporter={exporter}
+              language={language}
+              disabled={!canRun(state, entry)}
+            />
+          )}
         </div>
       </div>
+      <ExcelExportNotices exporter={exporter} />
       {view === 'preview' ? null : (
         <ReportFilterBar
           entry={entry}

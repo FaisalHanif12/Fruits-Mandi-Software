@@ -1,7 +1,7 @@
 // The تجزیات area (routes /analytics and /analytics/$view; PRD 18, FR-18.1 to FR-18.8): the views A to
 // E and H on one screen, in tabs. Each view has its filter boxes (the catalogue says which), a chart,
-// a table page by page with the backend's totals, drill-down on any figure, saved views and a print
-// preview. It works out nothing (CLAUDE.md rule 1) and writes nothing but the saved views (FR-18.8).
+// a table page by page with the backend's totals, drill-down on any figure, saved views, a print
+// preview and the Excel export (every row of the filters, with its progress under the title). It works out nothing (CLAUDE.md rule 1) and writes nothing but the saved views (FR-18.8).
 //
 // - The filters are kept above the screen (store.ts), so they stay between views and through a
 //   language switch (which builds the grid and the chart again), and the focused row is focused again
@@ -22,7 +22,14 @@ import type { AnalyticsCatalogEntry } from '../../../bindings/AnalyticsCatalogEn
 import type { AnalyticsPage as AnalyticsPageData } from '../../../bindings/AnalyticsPage';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import {
+  ExcelExportButton,
+  ExcelExportNotices,
+  exportFileName,
+  useExcelExport,
+} from '../../../shared/export';
 import { useDebouncedValue } from '../../../shared/hooks';
+import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import type { PickerValue } from '../../../shared/ui';
 import { Button, EmptyState, ErrorState, LoadingState, Tabs } from '../../../shared/ui';
@@ -38,6 +45,7 @@ import {
   stateFromWire,
   type AnalyticsFilterState,
 } from '../filters';
+import { analyticsExportExcel } from '../api';
 import { useAnalyticsCatalog, useAnalyticsPages, type LinesRequest } from '../hooks';
 import { useAnalyticsStore } from '../store';
 import type { AnalyticsKey, AnalyticsSavedView, AnalyticsView } from '../types';
@@ -93,6 +101,19 @@ function AnalyticsBody({
   const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
   const wire = useMemo(() => filtersToWire(settled, entry.filters), [settled, entry]);
   const query = useAnalyticsPages(entry.id, wire);
+  const language = useLanguage();
+  // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
+  const exporter = useExcelExport({
+    defaultName: () => exportFileName(`analytics-${entry.id}`, new Date()),
+    run: ({ path, jobId, language: sheet }) =>
+      analyticsExportExcel({
+        job_id: jobId,
+        view: entry.id,
+        filters: filtersToWire(filters, entry.filters),
+        language: sheet,
+        path,
+      }),
+  });
 
   // The pages last shown, kept while a half-typed filter is refused (they stay under the box). They
   // are state set while rendering, which React allows when the value really changed.
@@ -178,6 +199,7 @@ function AnalyticsBody({
         onBack={() => {
           setMode('table');
         }}
+        exporter={exporter}
       />
     );
   } else {
@@ -247,8 +269,13 @@ function AnalyticsBody({
             <Printer aria-hidden="true" className="size-icon-md" />
             <Localized id="report-preview" />
           </Button>
+          {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
+          {mode === 'preview' ? null : (
+            <ExcelExportButton exporter={exporter} language={language} disabled={drill !== null} />
+          )}
         </div>
       </div>
+      <ExcelExportNotices exporter={exporter} />
       <Tabs
         label={l10n.getString('analytics-views-label')}
         value={entry.id}

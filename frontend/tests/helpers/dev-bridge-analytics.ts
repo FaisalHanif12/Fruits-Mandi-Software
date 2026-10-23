@@ -17,6 +17,7 @@ import type { AnalyticsSavedView } from '../../src/bindings/AnalyticsSavedView';
 import type { AnalyticsView } from '../../src/bindings/AnalyticsView';
 import type { ReportCell } from '../../src/bindings/ReportCell';
 import { devFlag } from './dev-bridge';
+import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import {
   ANALYTICS_CATALOG,
   ANALYTICS_LINES_A_BANANA,
@@ -107,6 +108,7 @@ function page(input: Input): AnalyticsPage {
 let saved: AnalyticsSavedView[] = [...VIEWS_GET_TWO];
 
 const handlers: Record<string, (input: Input) => unknown> = {
+  analytics_export_excel: (input) => devExport(input),
   analytics_catalog: () => ANALYTICS_CATALOG,
   analytics_run: (input) => page(input),
   analytics_lines: (input) => {
@@ -148,9 +150,15 @@ export function installAnalyticsDevBridge(): void {
   Object.defineProperty(window, '__TAURI_INTERNALS__', {
     configurable: true,
     value: {
+      transformCallback,
       invoke: (command: string, args: unknown): Promise<unknown> =>
         new Promise((resolve, reject) => {
           window.setTimeout(() => {
+            const plugin = exportPluginCommand(command, args);
+            if (plugin.handled) {
+              resolve(plugin.value);
+              return;
+            }
             const handler = handlers[command];
             if (handler === undefined) {
               reject(refusal('ERR_NOT_IMPLEMENTED'));
