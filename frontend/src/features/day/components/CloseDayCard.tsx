@@ -2,7 +2,8 @@
 // (the days, the entries in them, whether the books balance, the cash in hand), and a confirm box
 // that says exactly what will happen (FR-7.8). The numbers are the backend's. A day is closed in
 // order, so the backend refuses a date that is closed already, a date after today and a trial
-// balance that does not balance; each problem shows next to the date or as a notice.
+// balance that does not balance; each problem shows next to the date or as a notice. The full
+// summary of the days (PRD FR-21.1, 4.9) is DaySummary.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
@@ -24,6 +25,7 @@ import {
   showToast,
 } from '../../../shared/ui';
 import { useCloseDays, useDayClosePreview } from '../hooks';
+import { DaySummary } from './DaySummary';
 
 const FIELD_PATHS = ['up_to'];
 
@@ -158,6 +160,9 @@ export function CloseDayCard({ todayOpen }: CloseDayCardProps) {
             </dd>
           </div>
         </dl>
+      )}
+      {data === undefined || preview.isError || nothingToClose ? null : (
+        <DaySummary summary={data.summary} />
       )}
       {nothingToClose ? (
         <Localized id="day-close-nothing">

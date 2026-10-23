@@ -100,3 +100,51 @@ day-reopen-none-title = ابھی کوئی دن بند نہیں
 
 # review: pending
 day-reopen-none-help = جب آپ کوئی دن بند کریں گے تو اسے یہاں دوبارہ کھول سکیں گے۔
+
+## The full summary of the days to close (PRD FR-21.1, 4.9).
+
+# review: pending
+day-summary-title = ان دنوں کا حاصل
+
+# review: pending
+day-summary-bikri-count = { -bikri } کی تعداد
+
+# review: pending
+day-summary-gross = { -kham-bikri }
+
+# review: pending
+day-summary-commission = { -commission } اور { -laga }، دونوں طرف
+
+# review: pending
+day-summary-shared-income = مشترکہ آمدن
+
+# review: pending
+day-summary-open-lots = { -baqi-maal } میں لاٹ
+
+# review: pending
+day-summary-open-qty = { -baqi-maal } میں { -nag }
+
+# $lots: lots with a balance left. $qty: their nag. A reminder only: the day can still be closed.
+# review: pending
+day-summary-stock-left-note = { $lots ->
+    [one] <num>{ $lots }</num> لاٹ کے <num>{ $qty }</num> { -nag } ابھی { -baqi-maal } میں ہیں۔ دن پھر بھی بند ہو سکتا ہے، یہ مال بعد میں بک سکتا ہے۔
+   *[other] <num>{ $lots }</num> لاٹ کے <num>{ $qty }</num> { -nag } ابھی { -baqi-maal } میں ہیں۔ دن پھر بھی بند ہو سکتا ہے، یہ مال بعد میں بک سکتا ہے۔
+}
+
+# review: pending
+day-summary-no-partners = دکھانے کے لیے { -shirakat-dar } کا کوئی حصہ نہیں۔
+
+# review: pending
+day-summary-partners-label = ان دنوں میں ہر { -shirakat-dar } کا حصہ
+
+# review: pending
+day-summary-col-partner = { -shirakat-dar }
+
+# review: pending
+day-summary-col-income = آمدن کا { -hissa }
+
+# review: pending
+day-summary-col-expense = { -kharcha } کا { -hissa }
+
+# review: pending
+day-summary-col-profit = منافع کا { -hissa }

@@ -15,7 +15,9 @@ use mandi_domain::bikri::{
     PurchaseFacts, StoredPosting, Switches, TripPartnerFacts, calc_posting, partner_share,
 };
 use mandi_domain::cash;
-use mandi_domain::core::accounts::{BUYER_CONTROL, NAQDI_MANDI_CODE, SELLER_CONTROL};
+use mandi_domain::core::accounts::{
+    BUYER_CONTROL, KHATA_CONTROL, NAQDI_MANDI_CODE, SELLER_CONTROL,
+};
 use mandi_domain::core::bikri::{BikriPreview, PreparedDraft, SplitPart};
 use mandi_domain::core::cash::CashCheck;
 use mandi_domain::core::dates::BusinessDate;
@@ -283,6 +285,7 @@ fn load_lookups(
         let kind = match a.control_code.as_str() {
             SELLER_CONTROL => PartyKind::Seller,
             BUYER_CONTROL => PartyKind::Buyer,
+            KHATA_CONTROL => PartyKind::Khata,
             _ => PartyKind::Other,
         };
         accounts.insert(

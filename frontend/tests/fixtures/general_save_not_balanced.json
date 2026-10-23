@@ -1,0 +1,14 @@
+{
+  "errors": [
+    {
+      "code": "ERR_GENERAL_NOT_BALANCED",
+      "field": "lines",
+      "values": {
+        "cr_paisa": 90000,
+        "dr_paisa": 100000
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

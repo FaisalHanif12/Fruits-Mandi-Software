@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-repeat-last-month-preview"
+description = "Enables the vouchers_repeat_last_month_preview command without any pre-configured scope."
+commands.allow = ["vouchers_repeat_last_month_preview"]
+
+[[permission]]
+identifier = "deny-vouchers-repeat-last-month-preview"
+description = "Denies the vouchers_repeat_last_month_preview command without any pre-configured scope."
+commands.deny = ["vouchers_repeat_last_month_preview"]

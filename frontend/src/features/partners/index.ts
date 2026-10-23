@@ -7,3 +7,6 @@ export { usePartnerSetupStore } from './setup-store';
 export { SharesTotal, type TotalState } from './components/SharesTotal';
 export { useSharesCheck } from './hooks';
 export type { ShareInput, SharesCheck } from './types';
+// The list of partners, for the pickers of the entry screens (plan 17: the خرچہ screen).
+export { PARTNERS_KEY, usePartnerList } from './hooks';
+export type { PartnerRow } from './types';

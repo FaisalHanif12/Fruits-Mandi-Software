@@ -1,0 +1,10 @@
+{
+  "amount": "2,000",
+  "confirm_cash_below_zero": false,
+  "date": "10-10-2026",
+  "narration": null,
+  "partner_id": 1,
+  "reason": "گھر کا خرچ",
+  "return_by": "20-10-2026",
+  "taken_by": null
+}

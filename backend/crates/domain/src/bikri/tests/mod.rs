@@ -39,6 +39,7 @@ pub const PUKHTA_BUYER: i64 = 6;
 pub const PUKHTA_SELLER: i64 = 7;
 pub const OWN_GOODS: i64 = 8;
 pub const CASH_ONLY_BUYER: i64 = 9;
+pub const KHATA: i64 = 10;
 pub const BANANA: i64 = 1;
 pub const APPLE: i64 = 2;
 pub const MOOLI: i64 = 3;
@@ -133,6 +134,13 @@ pub fn lookups() -> Lookups {
             AccountFacts {
                 is_own_goods: true,
                 ..seller()
+            },
+        ),
+        (
+            KHATA,
+            AccountFacts {
+                kind: PartyKind::Khata,
+                ..account(PartyKind::Seller)
             },
         ),
         (

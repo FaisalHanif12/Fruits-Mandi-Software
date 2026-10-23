@@ -1,0 +1,63 @@
+{
+  "voucher_type": "personal_expense",
+  "amount_paisa": 200000,
+  "head": null,
+  "partner": {
+    "id": 1,
+    "code": "",
+    "name_ur": "الف",
+    "name_en": "Partner A"
+  },
+  "shares": [],
+  "partner_effect": {
+    "partner": {
+      "id": 1,
+      "code": "",
+      "name_ur": "الف",
+      "name_en": "Partner A"
+    },
+    "total_before_paisa": -74000,
+    "total_after_paisa": -274000,
+    "open_before_paisa": 0,
+    "open_after_paisa": 200000,
+    "working": {
+      "message_id": "working-partner-total",
+      "args": [
+        {
+          "name": "before",
+          "value": {
+            "kind": "money",
+            "paisa": -74000
+          }
+        },
+        {
+          "name": "amount",
+          "value": {
+            "kind": "money",
+            "paisa": 200000
+          }
+        },
+        {
+          "name": "after",
+          "value": {
+            "kind": "money",
+            "paisa": -274000
+          }
+        }
+      ],
+      "rule_id": null
+    }
+  },
+  "others_not_affected": true,
+  "paid_to_partner": null,
+  "cash": {
+    "cash_before_paisa": 3920000,
+    "change_paisa": -200000,
+    "cash_after_paisa": 3720000,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "errors": [],
+  "warnings": []
+}

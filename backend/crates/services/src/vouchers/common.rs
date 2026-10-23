@@ -7,7 +7,7 @@
 
 use mandi_db::accounts as account_repo;
 use mandi_db::rusqlite::Connection;
-use mandi_db::vouchers::{self as repo, NewVoucher};
+use mandi_db::vouchers::{self as repo, NewVoucher, VoucherExtra};
 use mandi_domain::cash;
 use mandi_domain::core::accounts::{BUYER_CONTROL, Balance, RecordRef, SELLER_CONTROL};
 use mandi_domain::core::cash::CashCheck;
@@ -367,9 +367,23 @@ pub(super) fn stored_line(
         })
 }
 
+/// Adds the columns of the vouchers of plan 17 to an audit value, when there are any.
+pub(super) fn add_extra_json(value: &mut Value, extra: &VoucherExtra) {
+    if *extra == VoucherExtra::default() {
+        return;
+    }
+    if let Some(map) = value.as_object_mut() {
+        map.insert("partner_id".to_owned(), json!(extra.partner_id));
+        map.insert("expense_head_id".to_owned(), json!(extra.expense_head_id));
+        map.insert("return_by_date".to_owned(), json!(extra.return_by_date));
+        map.insert("taken_by".to_owned(), json!(extra.taken_by));
+        map.insert("salary".to_owned(), json!(extra.salary));
+    }
+}
+
 /// A voucher as the audit log keeps it (Code Standards S7).
 pub(super) fn voucher_json(number: i64, voucher_type: &str, v: &NewVoucher) -> Value {
-    json!({
+    let mut value = json!({
         "type": voucher_type,
         "number": number,
         "entry_date": v.entry_date,
@@ -384,7 +398,9 @@ pub(super) fn voucher_json(number: i64, voucher_type: &str, v: &NewVoucher) -> V
         "reason": v.reason,
         "expected_goods": v.expected_goods,
         "narration": v.narration,
-    })
+    });
+    add_extra_json(&mut value, &v.extra);
+    value
 }
 
 /// Checks that a collector (a staff member) exists and is active.

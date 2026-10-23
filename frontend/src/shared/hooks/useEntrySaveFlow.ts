@@ -20,8 +20,8 @@
 import { useMemo, useRef, useState } from 'react';
 import type { CashCheck } from '../../bindings/CashCheck';
 import type { UiError } from '../../bindings/UiError';
-import { uiErrorOf } from '../../shared/api';
-import { useSingleFlight } from '../../shared/hooks';
+import { uiErrorOf } from '../api';
+import { useSingleFlight } from './useSingleFlight';
 
 interface Refusal {
   error: UiError;

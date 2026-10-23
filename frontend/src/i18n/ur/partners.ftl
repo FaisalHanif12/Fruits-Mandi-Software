@@ -170,3 +170,212 @@ partners-history-row = <num>{ $date }</num> سے <num>{ $share }</num> فیصد
 
 # review: pending
 partners-history-empty = ابھی کوئی { -hissa } مقرر نہیں ہوا۔
+
+## Plan 17: the extra columns of the overview, the capital screen and the statement.
+
+# review: pending
+partners-metric-returned = { -wapsi }، اس مہینے
+
+# review: pending
+partners-metric-net = { -khalis }، اس مہینے
+
+# review: pending
+partners-metric-capital-in = { -sarmaya } لگایا، اس مہینے
+
+# review: pending
+partners-metric-ventures = { -bagh }، { -safar } اور { -phal }، اس مہینے
+
+# review: pending
+partners-metric-total = { -kul-raqam }
+
+# review: pending
+partners-open-statement = { -fard-hisab }
+
+# $name: the partner's name.
+# review: pending
+partners-open-statement-of = { $name } کی { -fard-hisab }
+
+# review: pending
+partners-open-capital = { -sarmaya }
+
+# $name: the partner's name.
+# review: pending
+partners-open-capital-of = { $name } کا { -sarmaya }
+
+# review: pending
+partners-capital-open = { -sarmaya }
+
+## The capital screen (route /partners/capital, PRD 17.4).
+
+# review: pending
+partners-capital-screen-title = { -sarmaya }
+
+# review: pending
+partners-capital-screen-help = { -shirakat-dar } جو رقم دکان میں لگاتا ہے اور جو واپس لیتا ہے۔ یہ نہ آمدن ہے نہ خرچہ، اور کبھی تقسیم نہیں ہوتی۔
+
+# review: pending
+partners-capital-type = { -sarmaya } اندراج کی قسم
+
+# review: pending
+partners-capital-history-title = { -sarmaya } کی تاریخ
+
+# review: pending
+partners-capital-pick = { -shirakat-dar } چنیں
+
+# review: pending
+partners-capital-pick-help = اس کے { -sarmaya } کی تاریخ اور بقایا یہاں نظر آئے گا۔
+
+# review: pending
+partners-capital-balance = { -sarmaya } بقایا
+
+# review: pending
+partners-capital-invested = کل { -sarmaya } جمع
+
+# review: pending
+partners-capital-taken-back = کل { -sarmaya } واپسی
+
+# review: pending
+partners-capital-label = { -shirakat-dar } کے { -sarmaya } کی تاریخ
+
+# review: pending
+partners-capital-failed = { -sarmaya } کی تاریخ نہیں کھل سکی
+
+# review: pending
+partners-capital-empty = ابھی کوئی { -sarmaya } اندراج نہیں
+
+# review: pending
+partners-capital-empty-help = اوپر پہلی رقم لکھیں اور محفوظ کریں۔
+
+# review: pending
+partners-capital-col-balance = { -sarmaya } بقایا
+
+# review: pending
+partners-capital-kind-opening = ابتدائی { -sarmaya }
+
+# review: pending
+partners-capital-kind-invested = { -sarmaya } جمع
+
+# review: pending
+partners-capital-kind-taken-back = { -sarmaya } واپسی
+
+# review: pending
+partners-capital-kind-month-close = مہینہ بند: منافع { -sarmaya } میں منتقل ہوا
+
+## The partner statement (route /partners/statement, PRD FR-17.9, FR-17.10).
+
+# review: pending
+partners-statement-title = { -shirakat-dar } { -khata }
+
+# review: pending
+partners-statement-help = { -shirakat-dar } تک پہنچنے والی ہر رقم، تاریخ وار، چلتے ہوئے { -kul-raqam } کے ساتھ۔
+
+# review: pending
+partners-statement-opening = شروع میں { -kul-raqam }
+
+# review: pending
+partners-statement-closing = آخر میں { -kul-raqam }
+
+# review: pending
+partners-statement-plus = اضافہ
+
+# review: pending
+partners-statement-minus = کمی
+
+# review: pending
+partners-statement-pick = { -shirakat-dar } چنیں
+
+# review: pending
+partners-statement-pick-help = اس کی تفصیل یہاں نظر آئے گی۔
+
+# review: pending
+partners-statement-empty = ان دنوں میں کچھ نہیں
+
+# review: pending
+partners-statement-empty-help = دوسرے دن چنیں، یا تاریخیں مٹا دیں۔
+
+# review: pending
+partners-statement-label = { -shirakat-dar } { -khata } کی سطریں
+
+# review: pending
+partners-statement-failed = { -khata } نہیں کھل سکا
+
+# review: pending
+partners-statement-col-heading = ذریعہ
+
+# review: pending
+partners-statement-col-detail = کیا تھا
+
+# review: pending
+partners-statement-col-running = { -kul-raqam }
+
+# review: pending
+partners-statement-heading-bikri = { -bikri }
+
+# review: pending
+partners-statement-heading-expense = { -kharcha }
+
+# review: pending
+partners-statement-heading-capital = { -sarmaya }
+
+# review: pending
+partners-statement-heading-drawings = { -kharcha }
+
+# review: pending
+partners-statement-heading-trip = { -market-safar }
+
+# review: pending
+partners-statement-heading-other = دیگر
+
+# $number: the number of the sale.
+# review: pending
+partners-statement-detail-income-share = { -bikri } { $number }: { -commission }، { -laga } اور { -phone }
+
+# $voucher: the number of the expense; $subject: the expense head.
+# review: pending
+partners-statement-detail-expense-share = { -dukan-kharcha } { $voucher }: { $subject }
+
+# review: pending
+partners-statement-detail-capital-opening = ابتدائی { -sarmaya }
+
+# review: pending
+partners-statement-detail-capital-in = { -sarmaya } لگایا { $voucher }
+
+# review: pending
+partners-statement-detail-capital-out = { -sarmaya } واپس لیا { $voucher }
+
+# review: pending
+partners-statement-detail-month-close = مہینہ بند: منافع { -sarmaya } میں منتقل ہوا۔ { -kul-raqam } وہی رہتا ہے۔
+
+# $reason: why the money was taken, as typed.
+# review: pending
+partners-statement-detail-taken = { -zati-kharcha } { $voucher }: { $reason }
+
+# review: pending
+partners-statement-detail-returned = { -zati-kharcha } { -wapsi } { $voucher }
+
+# review: pending
+partners-statement-detail-drawings-opening = ابتدائی لی ہوئی رقم
+
+# $trip: the trip number; $secondary: the purchase or cost number; $kind: purchase, cost or other.
+# review: pending
+partners-statement-detail-trip-paid = { $kind ->
+    [purchase] { -market-safar } { $trip }: { -khareedari } { $secondary }، { -dukan-se }
+    [cost] { -market-safar } { $trip }: سفر کا خرچ { $secondary }، { -dukan-se }
+   *[other] { -market-safar } { $trip }: { $secondary }، { -dukan-se }
+}
+
+# $source: bikri for a sale in the sale book, other for a sale in another shop.
+# review: pending
+partners-statement-detail-trip-credit = { $source ->
+    [bikri] { -market-safar } { $trip }، { -bikri } { $secondary }: { $subject } { $qty }، فروخت { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد
+   *[other] { -market-safar } { $trip }، دوسری دکان میں فروخت: { $subject } { $qty }، رقم { $sales }، لاگت { $cost }، نتیجہ { $result }، آپ کا { $share } فیصد
+}
+
+# review: pending
+partners-statement-detail-trip-write-off = { -market-safar } { $trip }: سفر کا مال ضائع کیا گیا۔ کوئی اندراج نہیں ہوا؛ نقصان سفر کے نتیجے میں نظر آتا ہے۔
+
+# review: pending
+partners-statement-detail-trip-closed = { -market-safar } { $trip } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد، آپ کا { -khalis } { $net }
+
+# review: pending
+partners-statement-detail-other = { $reason }

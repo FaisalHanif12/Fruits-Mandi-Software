@@ -4,15 +4,21 @@
 
 import { callCommand } from '../../shared/api';
 import type {
+  CapitalHistory,
+  CapitalHistoryInput,
+  CapitalInput,
   PartnerCreateInput,
   PartnerDetail,
   PartnerOverviewRow,
   PartnerRow,
+  PartnerStatement,
   PartnerUpdateInput,
   PartnersSetSharesInput,
+  PartnersStatementInput,
   ShareInput,
   SharesCheck,
 } from './types';
+import type { VoucherSaved } from '../vouchers';
 
 /** Every partner, active ones first. `share_bps` is the share on today's date. */
 export function partnersList(): Promise<PartnerRow[]> {
@@ -50,4 +56,27 @@ export function partnersCheckShares(shares: readonly ShareInput[]): Promise<Shar
 /** One row per active partner for the overview page (PRD 17.3). */
 export function partnersOverview(): Promise<PartnerOverviewRow[]> {
   return callCommand<PartnerOverviewRow[]>('partners_overview');
+}
+
+/** A partner puts money into the shop: cash comes in, his capital grows (PRD 17.4, E2E-35). */
+export function saveCapitalIn(input: CapitalInput): Promise<VoucherSaved> {
+  return callCommand<VoucherSaved>('vouchers_save_capital_in', { input });
+}
+
+/** A partner takes capital back: cash goes out, his capital goes down (PRD 17.4, FR-17.8). */
+export function saveCapitalOut(input: CapitalInput): Promise<VoucherSaved> {
+  return callCommand<VoucherSaved>('vouchers_save_capital_out', { input });
+}
+
+/** One partner's capital history, oldest first, page by page, with his balance (PRD 17.4). */
+export function capitalHistory(input: CapitalHistoryInput): Promise<CapitalHistory> {
+  return callCommand<CapitalHistory>('capital_history', { input });
+}
+
+/**
+ * One partner's statement, page by page: a dated line for every amount that reaches him, with the
+ * running کل رقم, and the totals over the whole range (PRD FR-17.9, FR-17.10, FR-19.11).
+ */
+export function partnersStatement(input: PartnersStatementInput): Promise<PartnerStatement> {
+  return callCommand<PartnerStatement>('partners_statement', { input });
 }

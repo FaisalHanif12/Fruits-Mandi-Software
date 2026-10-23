@@ -565,6 +565,118 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         ("partners_overview", json!({}), true),
         (
+            "cashbook_get",
+            json!({ "input": { "from": null, "to": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "vouchers_save_shop_expense",
+            json!({ "input": { "date": "10-10-2026", "expense_head_id": 1, "amount": "3,000", "paid_to": null, "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_personal_expense",
+            json!({ "input": { "date": "10-10-2026", "partner_id": 1, "amount": "2,000", "reason": "x", "return_by": null, "taken_by": null, "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_personal_return",
+            json!({ "input": { "date": "11-10-2026", "partner_id": 1, "amount": "2,000", "narration": null } }),
+            true,
+        ),
+        (
+            "vouchers_preview_expense",
+            json!({ "input": { "entry": { "type": "shop_expense", "date": "10-10-2026", "expense_head_id": 1, "amount": "3,000", "paid_to": null, "narration": null, "confirm_cash_below_zero": false }, "replacing_voucher_id": null } }),
+            true,
+        ),
+        (
+            "partner_takes",
+            json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "vouchers_repeat_last_month_preview",
+            json!({ "input": { "month": "2026-10" } }),
+            true,
+        ),
+        ("masters_expense_heads", json!({}), true),
+        (
+            "vouchers_save_money_lent",
+            json!({ "input": { "date": "10-10-2026", "person_account_id": 1, "amount": "5,000", "reason": "x", "return_by": null, "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_money_lent_return",
+            json!({ "input": { "date": "11-10-2026", "person_account_id": 1, "amount": "3,000", "mode": "cash", "salary_head_id": null, "narration": null } }),
+            true,
+        ),
+        (
+            "lent_person_create",
+            json!({ "input": { "name_ur": "اسلم", "name_en": "Aslam", "phone": null, "staff_id": null, "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "lent_list",
+            json!({ "input": { "person_id": 1, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "lent_report",
+            json!({ "input": { "as_of": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        ("assist_attention_overdue", json!({}), true),
+        (
+            "vouchers_save_capital_in",
+            json!({ "input": { "date": "11-10-2026", "partner_id": 1, "amount": "50,000", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_capital_out",
+            json!({ "input": { "date": "20-10-2026", "partner_id": 1, "amount": "10,000", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "capital_history",
+            json!({ "input": { "partner_id": 1, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "partners_statement",
+            json!({ "input": { "partner_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "khata_create",
+            json!({ "input": { "name_ur": "خاندانی کھاتہ", "name_en": "Family Khata", "note": null, "confirmed_rules_words": [] } }),
+            true,
+        ),
+        (
+            "vouchers_save_khata_out",
+            json!({ "input": { "date": "10-10-2026", "khata_account_id": 1, "amount": "10,000", "reason": "x", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "vouchers_save_khata_in",
+            json!({ "input": { "date": "11-10-2026", "khata_account_id": 1, "amount": "4,000", "reason": "x", "narration": null, "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "khata_statement",
+            json!({ "input": { "khata_account_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "general_preview",
+            json!({ "input": { "date": "10-10-2026", "lines": [{ "account_id": 1, "person_key": null, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "person_key": null, "dr": "", "cr": "100", "narration": null }] } }),
+            true,
+        ),
+        (
+            "general_save",
+            json!({ "input": { "date": "10-10-2026", "narration": null, "lines": [{ "account_id": 1, "person_key": null, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "person_key": null, "dr": "", "cr": "100", "narration": null }], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
             "bikri_preview",
             json!({ "input": { "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] } } }),
             true,

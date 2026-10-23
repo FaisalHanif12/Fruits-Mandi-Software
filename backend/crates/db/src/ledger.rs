@@ -928,6 +928,45 @@ pub fn totals_of_by(
     })
 }
 
+/// The posted debits and credits of one account on one day (see [`day_totals`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DayTotals {
+    /// The day, `YYYY-MM-DD`.
+    pub day: String,
+    /// `SUM(dr_paisa)` of the posted lines of that day.
+    pub dr_paisa: i64,
+    /// `SUM(cr_paisa)` of the posted lines of that day.
+    pub cr_paisa: i64,
+}
+
+/// The posted debits and credits of one account for each day it has lines on, oldest day first.
+/// Only `SUM()` on INTEGER columns is used; the running balance is worked out by the caller with
+/// checked maths. A reversal carries the date of the entry it takes back, so a taken-back posting
+/// leaves no trace on any day.
+///
+/// It is used for money taken by a partner and money lent (PRD FR-16.2, FR-16.5): returns must
+/// never be more than what was taken or lent, on any day (money agent, plan 17). Those accounts
+/// have few lines, so the whole history is read.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn day_totals(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<DayTotals>> {
+    let mut statement = conn.prepare(
+        "SELECT e.entry_date, SUM(l.dr_paisa), SUM(l.cr_paisa)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE e.status = 'posted' AND l.account_id = ?1
+         GROUP BY e.entry_date ORDER BY e.entry_date",
+    )?;
+    let rows = statement.query_map([account_id], |r| {
+        Ok(DayTotals {
+            day: r.get(0)?,
+            dr_paisa: r.get(1)?,
+            cr_paisa: r.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
 /// One posted line of an account's ledger.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LedgerRow {

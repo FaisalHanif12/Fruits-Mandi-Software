@@ -1,0 +1,59 @@
+{
+  "from_date": "2026-10-10",
+  "up_to": "2026-10-10",
+  "days": 1,
+  "trial_dr_paisa": 7656400,
+  "trial_cr_paisa": 7656400,
+  "trial_difference": {
+    "amount_paisa": 0,
+    "side": "zero"
+  },
+  "cash_in_hand": {
+    "amount_paisa": 4200000,
+    "side": "dr"
+  },
+  "entries": 4,
+  "summary": {
+    "bikri_count": 1,
+    "gross_paisa": 2940000,
+    "commission_paisa": 392800,
+    "shared_income_paisa": 394800,
+    "partners": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "income_paisa": 158000,
+        "expense_paisa": 120000,
+        "profit_paisa": 38000
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "income_paisa": 118400,
+        "expense_paisa": 90000,
+        "profit_paisa": 28400
+      },
+      {
+        "partner": {
+          "id": 3,
+          "code": "",
+          "name_ur": "ج",
+          "name_en": "Partner C"
+        },
+        "income_paisa": 118400,
+        "expense_paisa": 90000,
+        "profit_paisa": 28400
+      }
+    ],
+    "open_lots": 0,
+    "open_qty": 0
+  }
+}

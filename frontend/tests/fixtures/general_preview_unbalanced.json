@@ -1,0 +1,59 @@
+{
+  "lines": [
+    {
+      "account": {
+        "id": 20,
+        "code": "03040001",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax"
+      },
+      "dr_paisa": 100000,
+      "cr_paisa": 0,
+      "balance_after": {
+        "amount_paisa": 1388000,
+        "side": "dr"
+      },
+      "errors": []
+    },
+    {
+      "account": {
+        "id": 1,
+        "code": "01010001",
+        "name_ur": "روکڑ",
+        "name_en": "Cash"
+      },
+      "dr_paisa": 0,
+      "cr_paisa": 90000,
+      "balance_after": {
+        "amount_paisa": 8310000,
+        "side": "dr"
+      },
+      "errors": []
+    }
+  ],
+  "total_dr_paisa": 100000,
+  "total_cr_paisa": 90000,
+  "difference_paisa": 10000,
+  "is_balanced": false,
+  "can_save": false,
+  "split": [],
+  "cash": {
+    "cash_before_paisa": 8400000,
+    "change_paisa": -90000,
+    "cash_after_paisa": 8310000,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "errors": [
+    {
+      "code": "ERR_GENERAL_NOT_BALANCED",
+      "field": "lines",
+      "values": {
+        "cr_paisa": 90000,
+        "dr_paisa": 100000
+      }
+    }
+  ],
+  "warnings": []
+}

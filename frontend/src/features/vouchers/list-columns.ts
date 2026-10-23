@@ -9,17 +9,18 @@ import type { VoucherRow } from '../../bindings/VoucherRow';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
-import { asScreenType } from './screen-type';
 
-/** The number of a voucher in its series: "R-12" or "و-12". Types of other screens: the digits. */
+/**
+ * The number of a voucher in its series: "R-12" or "و-12". Every kind has its own letters in
+ * Fluent (`vouchers-number-<kind>`, the kind written with hyphens), also the kinds of the روکڑ area.
+ */
 export function voucherNumberText(
   row: Pick<VoucherRow, 'voucher_type' | 'number'>,
   text: (id: string, vars?: Record<string, string>) => string,
 ): string {
-  const type = asScreenType(row.voucher_type);
-  return type === null
-    ? String(row.number)
-    : text(`vouchers-number-${type}`, { number: String(row.number) });
+  return text(`vouchers-number-${row.voucher_type.replaceAll('_', '-')}`, {
+    number: String(row.number),
+  });
 }
 
 export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [

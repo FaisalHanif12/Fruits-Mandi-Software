@@ -1,0 +1,25 @@
+{
+  "partner": {
+    "id": 2,
+    "code": "06020002",
+    "name_ur": "ب",
+    "name_en": "Partner B"
+  },
+  "balance_paisa": 5000000,
+  "rows": [
+    {
+      "kind": "invested",
+      "voucher_id": 3,
+      "number": 1,
+      "entry_date": "2026-10-11",
+      "amount_paisa": 5000000,
+      "narration": "start",
+      "running_paisa": 5000000
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "invested_paisa": 5000000,
+    "taken_back_paisa": 0
+  }
+}

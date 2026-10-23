@@ -10,8 +10,13 @@ use ts_rs::TS;
 
 use super::{AdvanceInput, OpenAdvance, VoucherMode, VoucherSaved, VoucherType};
 use crate::accounts::{Balance, LineError, RecordRef};
+use crate::capital::CapitalInput;
 use crate::cash::CashCheck;
 use crate::error::FieldError;
+use crate::expenses::{PersonalExpenseInput, PersonalReturnInput, ShopExpenseInput};
+use crate::general::GeneralInput;
+use crate::khata::{KhataInInput, KhataOutInput};
+use crate::lent::{MoneyLentInput, MoneyLentReturnInput};
 use crate::money::Paisa;
 
 /// A وصولی as typed (PRD 15.2, FR-15.12): money from a buyer, or a seller returning advance
@@ -81,7 +86,8 @@ pub struct PaymentInput {
     pub confirm_cash_below_zero: bool,
 }
 
-/// Any one of the three voucher types, for the preview and the edit (PRD FR-7.67).
+/// Any one voucher type, for the preview and the edit (PRD FR-7.67). Plan 17 adds the nine other
+/// kinds; each is also saved by its own command.
 #[derive(Debug, Clone, Deserialize, TS)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum VoucherEntry {
@@ -91,6 +97,26 @@ pub enum VoucherEntry {
     Payment(PaymentInput),
     /// پیشگی.
     Advance(AdvanceInput),
+    /// دکان خرچہ (plan 17).
+    ShopExpense(ShopExpenseInput),
+    /// ذاتی خرچہ.
+    PersonalExpense(PersonalExpenseInput),
+    /// ذاتی خرچہ واپسی.
+    PersonalReturn(PersonalReturnInput),
+    /// ادھار رقم دی.
+    MoneyLent(MoneyLentInput),
+    /// ادھار رقم واپسی.
+    MoneyLentReturn(MoneyLentReturnInput),
+    /// سرمایہ جمع.
+    CapitalIn(CapitalInput),
+    /// سرمایہ واپسی.
+    CapitalOut(CapitalInput),
+    /// الگ کھاتہ رقم دی.
+    KhataOut(KhataOutInput),
+    /// الگ کھاتہ رقم آئی.
+    KhataIn(KhataInInput),
+    /// جنرل.
+    General(GeneralInput),
 }
 
 impl VoucherEntry {
@@ -100,6 +126,16 @@ impl VoucherEntry {
             VoucherEntry::Receipt(_) => VoucherType::Receipt,
             VoucherEntry::Payment(_) => VoucherType::Payment,
             VoucherEntry::Advance(_) => VoucherType::Advance,
+            VoucherEntry::ShopExpense(_) => VoucherType::ShopExpense,
+            VoucherEntry::PersonalExpense(_) => VoucherType::PersonalExpense,
+            VoucherEntry::PersonalReturn(_) => VoucherType::PersonalReturn,
+            VoucherEntry::MoneyLent(_) => VoucherType::MoneyLent,
+            VoucherEntry::MoneyLentReturn(_) => VoucherType::MoneyLentReturn,
+            VoucherEntry::CapitalIn(_) => VoucherType::CapitalIn,
+            VoucherEntry::CapitalOut(_) => VoucherType::CapitalOut,
+            VoucherEntry::KhataOut(_) => VoucherType::KhataOut,
+            VoucherEntry::KhataIn(_) => VoucherType::KhataIn,
+            VoucherEntry::General(_) => VoucherType::General,
         }
     }
 }

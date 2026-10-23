@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "kind": "loan",
+      "who": {
+        "id": 33,
+        "code": "01030001",
+        "name_ur": "اسلم",
+        "name_en": "Aslam"
+      },
+      "voucher_id": 5,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "return_by": "2026-10-15",
+      "open_paisa": 200000,
+      "days_past": 1
+    }
+  ],
+  "total_count": 1,
+  "truncated": false
+}

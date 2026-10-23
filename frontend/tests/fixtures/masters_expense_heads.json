@@ -1,0 +1,28 @@
+{
+  "rows": [
+    {
+      "id": 1,
+      "head": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "بجلی",
+        "name_en": "Electricity"
+      },
+      "account_id": 31,
+      "use_count": 1,
+      "last_used_date": "2026-09-05"
+    },
+    {
+      "id": 2,
+      "head": {
+        "id": 2,
+        "code": "2",
+        "name_ur": "تنخواہ",
+        "name_en": "Salaries"
+      },
+      "account_id": 32,
+      "use_count": 0,
+      "last_used_date": null
+    }
+  ]
+}

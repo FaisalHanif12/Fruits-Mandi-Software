@@ -176,9 +176,9 @@ err-opening-both-sides = ابتدائی { -banaam } یا ابتدائی { -jama 
 # review: pending
 err-advance-not-seller = ابتدائی { -peshgi } صرف { -beopari } کے ابتدائی { -banaam } پر لگ سکتی ہے۔
 
-# PRD FR-10.9, FR-6.5, FR-13.5. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one.
+# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
 # review: pending
-err-opening-not-allowed = اس کھاتے میں ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -pukhta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔
+err-opening-not-allowed = اس کھاتے میں یہ ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -pukhta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔ { -shirakat-dar } کے { -zati-kharcha } کھاتے اور { -adhar-raqam } کے کھاتے میں صرف ابتدائی { -banaam } لگ سکتا ہے۔
 
 ## Advances and closing days (plan 10).
 
@@ -398,3 +398,32 @@ err-purchase-carries-trip-cost = اس خریداری میں { -market-safar } ک
 
 # review: pending
 err-trip-entry-cancelled = یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔
+
+## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
+
+# PRD FR-16.9. The same day is allowed.
+# review: pending
+err-return-by-before-entry = واپسی کی تاریخ اندراج کی تاریخ سے پہلے نہیں ہو سکتی۔
+
+# review: pending
+err-partner-required = { -shirakat-dar } چنیں۔
+
+# review: pending
+err-expense-head-required = خرچہ مد چنیں۔
+
+# review: pending
+err-lent-person-required = شخص چنیں۔
+
+# review: pending
+err-khata-required = { -alag-khata } چنیں۔
+
+# PRD 16.4. Nothing is saved. $dr and $cr are the two totals in rupees.
+# review: pending
+err-general-not-balanced = { -banaam } کا میزان { $dr } اور { -jama } کا میزان { $cr } ہے۔ اندراج محفوظ کرنے سے پہلے دونوں برابر ہونے چاہییں۔
+
+# review: pending
+err-general-too-few-lines = { -general } اندراج میں کم از کم دو لائنیں ہونی چاہییں۔
+
+# PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
+# review: pending
+err-capital-exceeds-balance = یہ شراکت دار کے { -sarmaya } بقایا { $balance } سے { $over } زیادہ ہے۔ پھر بھی محفوظ کیا جا سکتا ہے۔

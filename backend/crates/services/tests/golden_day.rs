@@ -1453,3 +1453,17 @@ mod edit;
 // Plan 16b: the goods of a market trip sold by an own lot (E2E-34, E2E-34b, E2E-41).
 #[path = "golden_day/own_goods.rs"]
 mod own_goods;
+
+// Plan 17: the cash book, the one خرچہ screen and ادھار رقم on the worked day (E2E-8, E2E-9,
+// E2E-10, E2E-12, E2E-20, E2E-29, E2E-30, E2E-30b, E2E-39 preview).
+#[path = "golden_day/day_money.rs"]
+mod day_money;
+
+// Plan 17: partner capital, the partner total and its statement, الگ کھاتہ and the drawings
+// opening (E2E-35, E2E-37, E2E-38, D4-A31).
+#[path = "golden_day/partner_money.rs"]
+mod partner_money;
+
+// Plan 17: the full day close summary (FR-21.1, PRD 4.9).
+#[path = "golden_day/day_close.rs"]
+mod day_close;

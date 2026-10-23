@@ -314,11 +314,29 @@ pub enum ErrorCode {
     ErrPurchaseCarriesTripCost,
     /// The trip cost or the sale in another shop is cancelled already. Field `id`.
     ErrTripEntryCancelled,
+    /// A return-by day is before the entry's day (PRD FR-16.9). Field `return_by`.
+    ErrReturnByBeforeEntry,
+    /// A ذاتی خرچہ, its return or a سرمایہ entry has no partner (plan 17). Field `partner_id`.
+    ErrPartnerRequired,
+    /// A دکان خرچہ has no expense head (PRD 16.2). Field `expense_head_id`.
+    ErrExpenseHeadRequired,
+    /// An ادھار رقم entry has no person (PRD 16.5). Field `person_account_id`.
+    ErrLentPersonRequired,
+    /// An الگ کھاتہ entry has no khata (PRD 16.6). Field `khata_account_id`.
+    ErrKhataRequired,
+    /// A جنرل entry whose بنام total is not its جمع total; nothing is written (PRD FR-6.2, 16.4).
+    /// Field `lines`. Values: `dr_paisa`, `cr_paisa`.
+    ErrGeneralNotBalanced,
+    /// A جنرل entry with fewer than two lines (PRD 16.4). Field `lines`.
+    ErrGeneralTooFewLines,
+    /// Warning only: capital taken back is more than the partner's capital balance; the save is
+    /// still allowed (PRD FR-17.8). Field `amount`. Values: `balance_paisa`, `over_paisa`.
+    ErrCapitalExceedsBalance,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 114] = [
+    pub const ALL: [ErrorCode; 122] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -433,6 +451,14 @@ impl ErrorCode {
         ErrorCode::ErrPartnerInOpenVenture,
         ErrorCode::ErrPurchaseCarriesTripCost,
         ErrorCode::ErrTripEntryCancelled,
+        ErrorCode::ErrReturnByBeforeEntry,
+        ErrorCode::ErrPartnerRequired,
+        ErrorCode::ErrExpenseHeadRequired,
+        ErrorCode::ErrLentPersonRequired,
+        ErrorCode::ErrKhataRequired,
+        ErrorCode::ErrGeneralNotBalanced,
+        ErrorCode::ErrGeneralTooFewLines,
+        ErrorCode::ErrCapitalExceedsBalance,
     ];
 }
 

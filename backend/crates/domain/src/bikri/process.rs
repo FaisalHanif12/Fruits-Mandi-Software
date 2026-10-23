@@ -602,6 +602,7 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
     let lot = ctx.lot;
     let key = LotKey {
         seller_id: lot_ref.seller_id,
+        seller_is_khata: lot_ref.seller_is_khata,
         item_id: lot_ref.item_id,
         item: lot_ref.item,
         qty_received,
@@ -790,6 +791,9 @@ pub(super) fn process_lot(
         ) => Some(LotRef {
             lot_id: lot.lot_id,
             seller_id,
+            seller_is_khata: facts
+                .seller
+                .is_some_and(|s| s.kind == super::lookups::PartyKind::Khata),
             item_id,
             item: *item,
             identity_changed,

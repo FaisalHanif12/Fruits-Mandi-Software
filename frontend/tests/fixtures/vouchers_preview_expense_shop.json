@@ -1,0 +1,142 @@
+{
+  "voucher_type": "shop_expense",
+  "amount_paisa": 300000,
+  "head": {
+    "id": 1,
+    "code": "1",
+    "name_ur": "بجلی",
+    "name_en": "Electricity"
+  },
+  "partner": null,
+  "shares": [
+    {
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "share_bps": 4000,
+      "amount_paisa": 120000,
+      "working": {
+        "message_id": "working-expense-share",
+        "args": [
+          {
+            "name": "amount",
+            "value": {
+              "kind": "money",
+              "paisa": 300000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "percent",
+              "bps": 4000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 120000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "ب",
+        "name_en": "Partner B"
+      },
+      "share_bps": 3000,
+      "amount_paisa": 90000,
+      "working": {
+        "message_id": "working-expense-share",
+        "args": [
+          {
+            "name": "amount",
+            "value": {
+              "kind": "money",
+              "paisa": 300000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "percent",
+              "bps": 3000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 90000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner": {
+        "id": 3,
+        "code": "",
+        "name_ur": "ج",
+        "name_en": "Partner C"
+      },
+      "share_bps": 3000,
+      "amount_paisa": 90000,
+      "working": {
+        "message_id": "working-expense-share",
+        "args": [
+          {
+            "name": "amount",
+            "value": {
+              "kind": "money",
+              "paisa": 300000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "percent",
+              "bps": 3000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 90000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
+  "partner_effect": null,
+  "others_not_affected": false,
+  "paid_to_partner": {
+    "id": 1,
+    "code": "",
+    "name_ur": "الف",
+    "name_en": "Partner A"
+  },
+  "cash": {
+    "cash_before_paisa": 4220000,
+    "change_paisa": -300000,
+    "cash_after_paisa": 3920000,
+    "below_zero": false,
+    "lowers_cash": true,
+    "needs_confirm": false
+  },
+  "errors": [],
+  "warnings": []
+}

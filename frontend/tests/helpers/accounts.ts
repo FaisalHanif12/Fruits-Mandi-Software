@@ -285,10 +285,14 @@ function hitOf(row: AccountRow): AccountHit {
 /** The اپنا مال account: offered only in the seller field of a lot (PRD FR-12.26). */
 const OWN_GOODS_CODE = '030119998';
 
+/** A الگ کھاتہ (control 0305): the seller of a lot may be one (PRD FR-16.7), but no other field. */
+const isKhata = (row: AccountRow) => row.account_type === 'other' && row.code.startsWith('0305');
+
 function inScope(row: AccountRow, scope: AccountScope): boolean {
   if (scope === 'any' || scope === 'control') return true;
-  // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
-  if (scope === 'lot_seller') return row.account_type === 'seller';
+  // The seller of a lot may be any seller, اپنا مال and a separate khata; every other seller field,
+  // and every buyer field, leaves اپنا مال and the khatas out.
+  if (scope === 'lot_seller') return row.account_type === 'seller' || isKhata(row);
   if (scope === 'seller') return row.account_type === 'seller' && row.code !== OWN_GOODS_CODE;
   return row.account_type === scope;
 }
@@ -314,7 +318,8 @@ export function fakeAccountSearch(
       const exact = scoped.filter((row) => row.code === wanted);
       if (exact.length > 0) return exact;
       if (wanted.length <= SERIAL_LENGTH) {
-        const bySerial = scoped.filter((row) => serialOf(row) === Number(wanted));
+        // A khata has no short code: its full code works, a serial does not (backend, plan 17).
+        const bySerial = scoped.filter((row) => !isKhata(row) && serialOf(row) === Number(wanted));
         if (bySerial.length > 0) return bySerial;
       }
     }

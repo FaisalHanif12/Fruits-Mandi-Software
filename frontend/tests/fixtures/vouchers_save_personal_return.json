@@ -1,0 +1,10 @@
+{
+  "voucher_id": 4,
+  "voucher_type": "personal_return",
+  "number": 1,
+  "entry_id": 7,
+  "new_balance": {
+    "amount_paisa": 150000,
+    "side": "dr"
+  }
+}

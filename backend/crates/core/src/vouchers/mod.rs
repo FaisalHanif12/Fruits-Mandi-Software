@@ -45,6 +45,14 @@ pub enum VoucherType {
     MoneyLentReturn,
     /// جنرل.
     General,
+    /// سرمایہ جمع: a partner invests (PRD FR-17.7, plan 17).
+    CapitalIn,
+    /// سرمایہ واپسی: a partner takes his investment back.
+    CapitalOut,
+    /// الگ کھاتہ رقم دی: money paid out for a separate khata (PRD FR-16.6).
+    KhataOut,
+    /// الگ کھاتہ رقم آئی: money received for a separate khata.
+    KhataIn,
 }
 
 impl VoucherType {
@@ -60,6 +68,10 @@ impl VoucherType {
             VoucherType::MoneyLent => "money_lent",
             VoucherType::MoneyLentReturn => "money_lent_return",
             VoucherType::General => "general",
+            VoucherType::CapitalIn => "capital_in",
+            VoucherType::CapitalOut => "capital_out",
+            VoucherType::KhataOut => "khata_out",
+            VoucherType::KhataIn => "khata_in",
         }
     }
 
@@ -75,6 +87,10 @@ impl VoucherType {
             VoucherType::MoneyLent,
             VoucherType::MoneyLentReturn,
             VoucherType::General,
+            VoucherType::CapitalIn,
+            VoucherType::CapitalOut,
+            VoucherType::KhataOut,
+            VoucherType::KhataIn,
         ]
         .into_iter()
         .find(|t| t.as_str() == text)
@@ -386,6 +402,66 @@ pub struct DayClosePreview {
     /// How many journal entries are dated in these days.
     #[ts(type = "number")]
     pub entries: i64,
+    /// The full summary of the days that would be closed (PRD FR-21.1, 4.9).
+    pub summary: DayCloseSummary,
+}
+
+/// One partner's share of the days that would be closed (PRD FR-21.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DayClosePartner {
+    /// The partner. `code` is empty.
+    pub partner: RecordRef,
+    /// His income share (commission, لاگا, فون, ریٹ فرق).
+    #[ts(type = "Paisa")]
+    pub income_paisa: Paisa,
+    /// His expense share as a positive number.
+    #[ts(type = "Paisa")]
+    pub expense_paisa: Paisa,
+    /// Income less expense (PRD C12).
+    #[ts(type = "Paisa")]
+    pub profit_paisa: Paisa,
+}
+
+/// What the days to close came to (PRD FR-21.1, the values of PRD 4.9). Every number comes from
+/// stored records. For the worked day 10-10-26: 2 بکری, خام 41,400, commission 5,448, shared
+/// income 5,488, shares 996 / 746 / 746, no lots left.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DayCloseSummary {
+    /// How many بکری were saved in these days (cancelled ones left out).
+    #[ts(type = "number")]
+    pub bikri_count: i64,
+    /// Σ خام بکری.
+    #[ts(type = "Paisa")]
+    pub gross_paisa: Paisa,
+    /// Seller commission + buyer commission + لاگا.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+    /// Shared income: commission + لاگا + فون + ریٹ فرق.
+    #[ts(type = "Paisa")]
+    pub shared_income_paisa: Paisa,
+    /// Each active partner's share, in the order the partners were created.
+    pub partners: Vec<DayClosePartner>,
+    /// Lots with a balance left in باقی مال at the end of the last day.
+    #[ts(type = "number")]
+    pub open_lots: i64,
+    /// Their نگ.
+    #[ts(type = "number")]
+    pub open_qty: i64,
+}
+
+impl DayCloseSummary {
+    /// The summary of no days at all: every number 0 and no partners.
+    pub fn empty() -> DayCloseSummary {
+        DayCloseSummary {
+            bikri_count: 0,
+            gross_paisa: Paisa::ZERO,
+            commission_paisa: Paisa::ZERO,
+            shared_income_paisa: Paisa::ZERO,
+            partners: Vec::new(),
+            open_lots: 0,
+            open_qty: 0,
+        }
+    }
 }
 
 /// Close the days up to a day.

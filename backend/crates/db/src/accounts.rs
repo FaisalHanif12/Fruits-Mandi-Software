@@ -747,3 +747,22 @@ pub fn search_sources(
     })?;
     rows.collect()
 }
+
+/// Gives an account its note (the note of a separate khata).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn set_account_note(
+    conn: &Connection,
+    account_id: i64,
+    note: &str,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE accounts SET note = ?2, updated_at = ?3, updated_by = ?4, version = version + 1
+         WHERE id = ?1",
+        params![account_id, note, now, user_id],
+    )?;
+    Ok(())
+}

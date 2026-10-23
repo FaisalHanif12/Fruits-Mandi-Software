@@ -215,6 +215,11 @@
 -zati-kharcha = ذاتی خرچہ
     .gender = masculine
 
+# An account kept apart from the partners, commission and profit (PRD Section 3, 16.6)
+# review: pending
+-alag-khata = الگ کھاتہ
+    .gender = masculine
+
 # Goods received but not yet sold
 # review: pending
 -stock = سٹاک
@@ -303,6 +308,22 @@
 
 ## The words on their own, for labels that show only the word.
 
+# A partner's total in the firm: his investment plus his share of commission and profit, less what he took (PRD Section 3, C22)
+# review: pending
+-kul-raqam = کل رقم
+
+# A garden rented by some partners for a season (PRD Section 3, 12.11)
+# review: pending
+-bagh = باغ
+
+# A market trip, by its number (PRD Section 3, 12.10)
+# review: pending
+-safar = سفر
+
+# Fruit a partner takes home, or fruit for the shop's guests (PRD Section 3, 16.7)
+# review: pending
+-phal = پھل
+
 glossary-arhti = { -arhti }
 glossary-index = { -index }
 glossary-beopari = { -beopari }
@@ -347,6 +368,7 @@ glossary-general = { -general }
 glossary-kharcha = { -kharcha }
 glossary-dukan-kharcha = { -dukan-kharcha }
 glossary-zati-kharcha = { -zati-kharcha }
+glossary-alag-khata = { -alag-khata }
 glossary-stock = { -stock }
 glossary-baqi-maal = { -baqi-maal }
 glossary-shirakat-dar = { -shirakat-dar }
@@ -367,3 +389,7 @@ glossary-tijarati-nuqsan = { -tijarati-nuqsan }
 glossary-market-safar = { -market-safar }
 glossary-dukan-se = { -dukan-se }
 glossary-apni-jeb-se = { -apni-jeb-se }
+glossary-kul-raqam = { -kul-raqam }
+glossary-bagh = { -bagh }
+glossary-safar = { -safar }
+glossary-phal = { -phal }

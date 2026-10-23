@@ -507,25 +507,46 @@ fn bikri_hits(ctx: &Context, text: &str) -> Result<Vec<GlobalHit>, ServiceError>
     })
 }
 
-/// Reads a voucher number the way it is typed (PRD FR-5.4, plan 15): the digits alone find the
-/// voucher with that number in every series; a letter first (`R-12`, `P-12`, `A-12`, or `و-12`,
-/// `ا-12`, `پ-12`, with or without the dash and spaces) finds one series.
+/// The series letters of the voucher kinds, Urdu and English (the same letters as the Fluent
+/// messages `vouchers-number-<kind>`), for the search by number.
+const SERIES_LETTERS: [(&str, &str, mandi_domain::core::vouchers::VoucherType); 13] = {
+    use mandi_domain::core::vouchers::VoucherType as T;
+    [
+        ("و", "R", T::Receipt),
+        ("ا", "P", T::Payment),
+        ("پ", "A", T::Advance),
+        ("خ", "E", T::ShopExpense),
+        ("ذ", "D", T::PersonalExpense),
+        ("ذو", "DR", T::PersonalReturn),
+        ("ر", "L", T::MoneyLent),
+        ("رو", "LR", T::MoneyLentReturn),
+        ("س", "CI", T::CapitalIn),
+        ("سو", "CO", T::CapitalOut),
+        ("کد", "KO", T::KhataOut),
+        ("کا", "KI", T::KhataIn),
+        ("ج", "G", T::General),
+    ]
+};
+
+/// Reads a voucher number the way it is typed (PRD FR-5.4, plans 15 and 17): the digits alone find
+/// the voucher with that number in every series; the series letters first (`R-12`, `DR-3`, `و-12`,
+/// `ذو-3`, with or without the dash and spaces) find one series.
 fn voucher_query(typed: &str) -> Option<(i64, Option<mandi_domain::core::vouchers::VoucherType>)> {
-    use mandi_domain::core::vouchers::VoucherType;
     let text = typed.trim();
-    let (series, digits) = match text.chars().next() {
-        Some(first) if first.is_ascii_digit() => (None, text),
-        Some(first) => {
-            let series = match first {
-                'R' | 'r' | 'و' => VoucherType::Receipt,
-                'P' | 'p' | 'ا' => VoucherType::Payment,
-                'A' | 'a' | 'پ' => VoucherType::Advance,
-                _ => return None,
-            };
-            let rest = text.get(first.len_utf8()..)?;
-            (Some(series), rest.trim_start_matches(['-', ' ']).trim())
-        }
-        None => return None,
+    let first = text.chars().next()?;
+    let (series, digits) = if first.is_ascii_digit() {
+        (None, text)
+    } else {
+        let letters_end = text
+            .find(|c: char| c.is_ascii_digit() || c == '-' || c.is_whitespace())
+            .unwrap_or(text.len());
+        let letters = text.get(..letters_end)?;
+        let kind = SERIES_LETTERS
+            .iter()
+            .find(|(ur, en, _)| letters == *ur || letters.eq_ignore_ascii_case(en))
+            .map(|(_, _, kind)| *kind)?;
+        let rest = text.get(letters_end..)?;
+        (Some(kind), rest.trim_start_matches(['-', ' ']).trim())
     };
     if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit()) {
         return None;

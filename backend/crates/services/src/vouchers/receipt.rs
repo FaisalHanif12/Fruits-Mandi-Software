@@ -12,7 +12,7 @@
 //! One receipt is one posting event in one transaction (Code Standards B3).
 
 use mandi_db::rusqlite::Connection;
-use mandi_db::vouchers::{self as repo, NewVoucher};
+use mandi_db::vouchers::{self as repo, NewVoucher, VoucherExtra};
 use mandi_domain::core::accounts::LineError;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
@@ -149,6 +149,7 @@ pub(super) fn receipt_row(
         person_key: party.person_key.clone(),
         collector_staff_id: planned.collector,
         reason: None,
+        extra: VoucherExtra::default(),
     })
 }
 

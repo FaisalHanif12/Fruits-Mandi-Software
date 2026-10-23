@@ -1,0 +1,10 @@
+{
+  "voucher_id": 4,
+  "voucher_type": "khata_out",
+  "number": 1,
+  "entry_id": 7,
+  "new_balance": {
+    "amount_paisa": 1000000,
+    "side": "dr"
+  }
+}

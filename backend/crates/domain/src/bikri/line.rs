@@ -26,6 +26,8 @@ pub(super) struct LotRef {
     pub lot_id: Option<i64>,
     /// The seller (the party of the seller-side charges).
     pub seller_id: i64,
+    /// True if the seller is a separate khata: its seller-side defaults are 0 (PRD FR-16.7).
+    pub seller_is_khata: bool,
     /// The item.
     pub item_id: i64,
     /// The item's facts.
@@ -174,8 +176,17 @@ fn charge(
             line_override,
         },
     );
-    let Some(winner) = found.winner else {
-        if kind == ChargeType::Commission {
+    // PRD FR-16.7: for the goods of a separate khata every seller-side default is 0, so a seller
+    // commission with no rule of the khata's own is 0, not broken data.
+    let khata_default = side == ChargeSide::Seller
+        && args.lot.seller_is_khata
+        && found
+            .winner
+            .as_ref()
+            .is_some_and(|w| w.level == RuleLevel::Default);
+    let winner = found.winner.filter(|_| !khata_default);
+    let Some(winner) = winner else {
+        if kind == ChargeType::Commission && !khata_default {
             return Err(CalcError::NoRule { side, charge: kind });
         }
         return Ok(no_charge());

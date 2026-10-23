@@ -5,6 +5,10 @@
 //! audit row are written together or not at all. The search index is updated after the commit
 //! (Code Standards B27). Nothing is ever deleted (PRD E21).
 
+mod expense_heads;
+
+pub use expense_heads::expense_heads;
+
 use mandi_db::masters as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::error::ErrorCode;

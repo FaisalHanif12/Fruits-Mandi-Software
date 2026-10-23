@@ -9,6 +9,7 @@ export { CashConfirmDialog } from './CashConfirmDialog';
 export { CashNote } from './CashNote';
 export { Checkbox } from './Checkbox';
 export { Code } from './Code';
+export { ControlAccountPicker } from './ControlAccountPicker';
 export { CodeInput } from './CodeInput';
 export { ConfirmDialog, type ConfirmTone } from './ConfirmDialog';
 export { DataCheckFailedState } from './DataCheckFailedState';

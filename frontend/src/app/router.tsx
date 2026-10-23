@@ -11,6 +11,12 @@ import {
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
+import {
+  parseExpenseSearch,
+  parseKhataSearch,
+  parseLentSearch,
+} from '../features/cashbook/screen-type';
+import { parseCapitalSearch, parseStatementSearch } from '../features/partners/screen-type';
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
 import { moveDevPathToHash } from './dev/hash-route';
 
@@ -335,6 +341,72 @@ const partnersSetupRoute = createRoute({
   ),
 });
 
+// سرمایہ and the partner statement (PRD 17.4, FR-17.9, plan 17): in the partners area.
+const partnersCapitalRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/partners/capital',
+  validateSearch: parseCapitalSearch,
+  component: lazyRouteComponent(
+    () => import('../features/partners/pages/CapitalPage'),
+    'CapitalPage',
+  ),
+});
+
+const partnersStatementRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/partners/statement',
+  validateSearch: parseStatementSearch,
+  component: lazyRouteComponent(
+    () => import('../features/partners/pages/StatementPage'),
+    'StatementPage',
+  ),
+});
+
+// روکڑ (PRD 5, 16, plan 17): the cash book, and the entry screens of the area. Each entry screen is
+// ONE screen with a type list (PRD FR-7.67); `?type=` chooses the type. Alt+K opens the خرچہ screen
+// as دکان خرچہ.
+const rokarRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/rokar',
+  component: lazyRouteComponent(
+    () => import('../features/cashbook/pages/CashbookPage'),
+    'CashbookPage',
+  ),
+});
+
+const expenseRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/rokar/expense',
+  validateSearch: parseExpenseSearch,
+  component: lazyRouteComponent(
+    () => import('../features/cashbook/pages/ExpensePage'),
+    'ExpensePage',
+  ),
+});
+
+const lentRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/rokar/lent',
+  validateSearch: parseLentSearch,
+  component: lazyRouteComponent(() => import('../features/cashbook/pages/LentPage'), 'LentPage'),
+});
+
+const generalRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/rokar/general',
+  component: lazyRouteComponent(
+    () => import('../features/cashbook/pages/GeneralPage'),
+    'GeneralPage',
+  ),
+});
+
+const khataRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/rokar/khata',
+  validateSearch: parseKhataSearch,
+  component: lazyRouteComponent(() => import('../features/cashbook/pages/KhataPage'), 'KhataPage'),
+});
+
 /** A menu item whose module comes in a later plan opens the "coming soon" page (PRD FR-7.46). */
 function comingSoonRoute<Path extends string>(path: Path) {
   return createRoute({
@@ -375,12 +447,18 @@ const appRoutes = [
   todayRoute,
   stockRoute,
   laterSaleRoute,
-  comingSoonRoute('/rokar'),
+  rokarRoute,
+  expenseRoute,
+  lentRoute,
+  khataRoute,
+  generalRoute,
   tripsRoute,
   tripNewRoute,
   tripRoute,
   partnersRoute,
   partnersSetupRoute,
+  partnersCapitalRoute,
+  partnersStatementRoute,
   comingSoonRoute('/analytics'),
   comingSoonRoute('/reports'),
   comingSoonRoute('/backup'),
@@ -419,6 +497,11 @@ const devRoutes = import.meta.env.DEV
         getParentRoute: () => rootRoute,
         path: '/dev/vouchers',
         component: lazyRouteComponent(() => import('./dev/VouchersPage'), 'VouchersPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/rokar',
+        component: lazyRouteComponent(() => import('./dev/RokarPage'), 'RokarPage'),
       }),
       createRoute({
         getParentRoute: () => rootRoute,

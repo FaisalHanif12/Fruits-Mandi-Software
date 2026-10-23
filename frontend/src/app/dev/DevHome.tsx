@@ -41,6 +41,9 @@ export function DevHome() {
           <Localized id="trippage-title">
             <Link to="/dev/trips" className="text-primary underline" />
           </Localized>
+          <Localized id="rokarpage-title">
+            <Link to="/dev/rokar" className="text-primary underline" />
+          </Localized>
         </nav>
       </main>
     </GalleryLocalization>

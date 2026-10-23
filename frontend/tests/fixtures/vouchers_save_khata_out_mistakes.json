@@ -1,0 +1,21 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DECIMALS_NOT_ALLOWED",
+      "field": "amount",
+      "values": {}
+    },
+    {
+      "code": "ERR_KHATA_REQUIRED",
+      "field": "khata_account_id",
+      "values": {}
+    },
+    {
+      "code": "ERR_REASON_REQUIRED",
+      "field": "reason",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

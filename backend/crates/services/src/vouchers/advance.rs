@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use mandi_db::accounts as account_repo;
 use mandi_db::rusqlite::Connection;
-use mandi_db::vouchers::{self as repo, NewVoucher};
+use mandi_db::vouchers::{self as repo, NewVoucher, VoucherExtra};
 use mandi_domain::core::accounts::{LineError, RecordRef, SELLER_CONTROL};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, FieldError};
@@ -283,6 +283,7 @@ pub(super) fn advance_row(
         person_key: None,
         collector_staff_id: None,
         reason: None,
+        extra: VoucherExtra::default(),
     })
 }
 

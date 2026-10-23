@@ -1,11 +1,12 @@
 // The partner overview (route /partners; PRD 17.3): one card per active partner with his share
 // and his income, expense, profit, money taken and capital. Every number comes from the backend
 // (partners_overview). A button opens the setup page. Four states: loading, error with a retry,
-// empty with a button, and the cards. The returned, خالص and کل رقم columns come in D4.
+// empty with a button, and the cards. Each card also shows the returned, خالص, capital and کل رقم
+// columns of plan 17 and opens the partner's statement and capital.
 
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { Settings2, Users } from 'lucide-react';
+import { Landmark, Settings2, Users } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
 import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
@@ -67,10 +68,20 @@ export function PartnersOverviewPage() {
             <p className="type-body text-ink-muted" />
           </Localized>
         </div>
-        <Button onClick={openSetup}>
-          <Settings2 aria-hidden="true" className="size-icon-md" />
-          <Localized id="partners-setup-open" />
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => {
+              void navigate({ to: '/partners/capital' });
+            }}
+          >
+            <Landmark aria-hidden="true" className="size-icon-md" />
+            <Localized id="partners-capital-open" />
+          </Button>
+          <Button onClick={openSetup}>
+            <Settings2 aria-hidden="true" className="size-icon-md" />
+            <Localized id="partners-setup-open" />
+          </Button>
+        </div>
       </div>
       {body}
     </div>

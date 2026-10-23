@@ -46,6 +46,9 @@ impl AccountType {
 pub const SELLER_CONTROL: &str = "03011";
 /// The control of buyers (PRD FR-10.2).
 pub const BUYER_CONTROL: &str = "0304";
+/// The control of separate khatas (PRD FR-10.4, 16.6). A khata is never income or expense and is
+/// never in a partner's total; it can be the seller of a lot (PRD FR-16.7).
+pub const KHATA_CONTROL: &str = "0305";
 /// The control of people who borrow money (PRD FR-10.4 v1.2).
 pub const MONEY_LENT_CONTROL: &str = "0103";
 /// The system account that takes the other side of every opening (PRD FR-10.9).

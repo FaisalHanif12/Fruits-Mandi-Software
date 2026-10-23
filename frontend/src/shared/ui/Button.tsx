@@ -18,6 +18,11 @@ interface ButtonProps {
   disabled?: boolean;
   /** The action is running (for example a save). The button cannot be pressed again. */
   busy?: boolean;
+  /**
+   * The full name for a screen reader when several buttons with the same words are on one screen,
+   * for example "Statement of Partner A". The words on the button stay the short ones.
+   */
+  accessibleName?: string;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -34,6 +39,7 @@ export function Button({
   shortcut,
   disabled = false,
   busy = false,
+  accessibleName,
   ref,
 }: ButtonProps) {
   return (
@@ -43,6 +49,7 @@ export function Button({
       onClick={onClick}
       disabled={disabled || busy}
       aria-busy={busy}
+      aria-label={accessibleName}
       className={`inline-flex h-control shrink-0 items-center gap-2 rounded-2 border px-4 type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT_CLASSES[variant]}`}
     >
       {children}

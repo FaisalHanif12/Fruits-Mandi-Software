@@ -1,0 +1,10 @@
+{
+  "voucher_id": 2,
+  "voucher_type": "shop_expense",
+  "number": 2,
+  "entry_id": 5,
+  "new_balance": {
+    "amount_paisa": 580000,
+    "side": "dr"
+  }
+}

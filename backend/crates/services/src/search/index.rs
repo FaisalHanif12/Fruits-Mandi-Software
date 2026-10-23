@@ -54,6 +54,14 @@ struct AccountFacts {
     control_id: i64,
 }
 
+/// True for the account of a separate khata: under control 0305, of type "other" (PRD 16.6).
+fn is_khata(source: &SearchSource) -> bool {
+    source.account_type == Some(AccountType::Other)
+        && source
+            .code
+            .starts_with(mandi_domain::core::accounts::KHATA_CONTROL)
+}
+
 /// The serial of a seller or buyer code: its last four digits.
 fn serial_of(code: &str) -> Option<u32> {
     let digits = code.get(code.len().checked_sub(4)?..)?;
@@ -130,6 +138,11 @@ impl Entry {
 #[derive(Debug, Default, Clone)]
 pub struct Index {
     scopes: BTreeMap<SearchScope, Vec<Arc<Entry>>>,
+    /// The accounts the seller field of a lot offers besides the sellers themselves: the separate
+    /// khatas (control 0305, PRD 12.3, FR-16.7). Held with the sellers in id order, so the lot
+    /// field searches one list. اپنا مال is a seller account and stays in the seller list (it is
+    /// left out of every field but this one by `account_list`).
+    lot_sellers: Vec<Arc<Entry>>,
 }
 
 impl Index {
@@ -159,12 +172,14 @@ impl Index {
         ] {
             self.scopes.insert(scope, Vec::new());
         }
+        self.lot_sellers.clear();
         for source in sources {
             self.add_account(source);
         }
         for list in self.scopes.values_mut() {
             list.sort_by_key(|e| e.id);
         }
+        self.lot_sellers.sort_by_key(|e| e.id);
     }
 
     fn add_account(&mut self, source: SearchSource) {
@@ -178,9 +193,14 @@ impl Index {
             .or_default()
             .push(Arc::new(Entry::from_source(kind, source.clone())));
         if kind != SearchScope::AnyAccount {
-            self.scopes
-                .entry(kind)
-                .or_default()
+            let entry = Arc::new(Entry::from_source(kind, source));
+            self.scopes.entry(kind).or_default().push(entry.clone());
+            if kind == SearchScope::Seller {
+                self.lot_sellers.push(entry);
+            }
+        } else if is_khata(&source) {
+            // A separate khata can be the seller of a lot (PRD 12.3, FR-16.7).
+            self.lot_sellers
                 .push(Arc::new(Entry::from_source(kind, source)));
         }
     }
@@ -198,11 +218,15 @@ impl Index {
                 list.remove(at);
             }
         }
+        if let Ok(at) = self.lot_sellers.binary_search_by_key(&id, |e| e.id) {
+            self.lot_sellers.remove(at);
+        }
         if let Some(source) = source {
             self.add_account(source);
             for list in self.scopes.values_mut() {
                 list.sort_by_key(|e| e.id);
             }
+            self.lot_sellers.sort_by_key(|e| e.id);
         }
     }
 
@@ -620,7 +644,9 @@ impl Index {
         control_id: Option<i64>,
     ) -> (&[Arc<Entry>], impl Fn(&Entry) -> bool) {
         let list = match scope {
-            AccountScope::Seller | AccountScope::LotSeller => self.entries(SearchScope::Seller),
+            AccountScope::Seller => self.entries(SearchScope::Seller),
+            // Sellers, اپنا مال and the separate khatas (PRD 12.3, FR-12.26, FR-16.7).
+            AccountScope::LotSeller => self.lot_sellers.as_slice(),
             AccountScope::Buyer => self.entries(SearchScope::Buyer),
             AccountScope::Any | AccountScope::Control => self.entries(SearchScope::AnyAccount),
         };

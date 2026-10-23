@@ -1,0 +1,10 @@
+{
+  "account": {
+    "id": 32,
+    "code": "03050001",
+    "name_ur": "خاندانی کھاتہ",
+    "name_en": "Family Khata"
+  },
+  "note": "family",
+  "balance_paisa": 0
+}

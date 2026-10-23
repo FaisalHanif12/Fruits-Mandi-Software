@@ -19,6 +19,9 @@ pub enum PartyKind {
     Seller,
     /// A buyer (control 0304).
     Buyer,
+    /// A separate khata (control 0305, PRD FR-16.7). It is accepted only as the seller of a lot,
+    /// and every seller-side default is 0 for such a lot.
+    Khata,
     /// Any other account.
     Other,
 }

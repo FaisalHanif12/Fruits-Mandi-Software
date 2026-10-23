@@ -18,6 +18,8 @@ use crate::rules::{Query, Winner, charge_amount, resolve};
 /// What a lot charge is looked up for.
 pub(super) struct LotKey {
     pub seller_id: i64,
+    /// True if the seller is a separate khata: no default applies (PRD FR-16.7).
+    pub seller_is_khata: bool,
     pub item_id: i64,
     pub item: ItemFacts,
     pub qty_received: Qty,
@@ -171,7 +173,12 @@ pub(super) fn lot_charge(
             line_override: None,
         },
     );
-    let Some(winner) = found.winner else {
+    // PRD FR-16.7: for the goods of a separate khata every seller-side default is 0; only a rule
+    // on the khata itself (or on its item) can set a charge.
+    let winner = found
+        .winner
+        .filter(|w| !(key.seller_is_khata && w.level == RuleLevel::Default));
+    let Some(winner) = winner else {
         let charged = charge_amount(None, kind, Paisa::ZERO, key.qty_received, true)?;
         return Ok(LotCharge {
             method: LotChargeMethod::Manual,

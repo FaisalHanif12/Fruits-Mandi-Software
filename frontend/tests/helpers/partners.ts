@@ -76,6 +76,12 @@ export function overviewRow(
     month_profit_paisa: money(0),
     month_taken_paisa: money(0),
     capital_balance_paisa: money(0),
+    // The columns of plan 17 (returned, خالص, capital in, trips and fruit, کل رقم): zero until T2b.
+    month_returned_paisa: money(0),
+    month_net_paisa: money(0),
+    month_capital_in_paisa: money(0),
+    month_ventures_paisa: money(0),
+    total_paisa: money(0),
     ...numbers,
   };
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-khata-statement"
+description = "Enables the khata_statement command without any pre-configured scope."
+commands.allow = ["khata_statement"]
+
+[[permission]]
+identifier = "deny-khata-statement"
+description = "Denies the khata_statement command without any pre-configured scope."
+commands.deny = ["khata_statement"]
