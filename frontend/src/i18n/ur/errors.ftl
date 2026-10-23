@@ -492,3 +492,27 @@ err-general-too-few-lines = { -general } اندراج میں کم از کم دو
 # PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
 # review: pending
 err-capital-exceeds-balance = یہ شراکت دار کے { -sarmaya } بقایا { $balance } سے { $over } زیادہ ہے۔ پھر بھی محفوظ کیا جا سکتا ہے۔
+
+## Plan 22: updates and the support file (PRD NFR-INS-3, NFR-INS-4, NFR-SEC-11, NFR-OBS-4).
+
+# review: pending
+err-update-check-failed = ایپ نیا ورژن نہیں دیکھ سکی۔ انٹرنیٹ دیکھیں اور دوبارہ کوشش کریں۔ آپ کا کام محفوظ ہے۔
+
+# review: pending
+err-update-not-signed = یہ اپڈیٹ ہماری طرف سے دستخط شدہ نہیں، اس لیے انسٹال نہیں ہوئی۔ کچھ نہیں بدلا اور کوئی کاپی نہیں بنی۔ یہ اپڈیٹ استعمال نہ کریں۔
+
+# $drafts is the number of unsaved entries.
+# review: pending
+err-update-during-work = غیر محفوظ اندراجات ہیں ({ $drafts })۔ انہیں محفوظ کریں یا چھوڑ دیں، پھر اپڈیٹ کریں۔ کچھ انسٹال نہیں ہوا۔
+
+# review: pending
+err-update-not-confirmed = اپڈیٹ کی تصدیق نہیں ہوئی، اس لیے کچھ انسٹال نہیں ہوا۔ اپڈیٹ کا بٹن دبائیں اور سوال کا جواب دیں۔
+
+# review: pending
+err-update-backup-failed = اپڈیٹ سے پہلے حفاظتی کاپی نہیں بن سکی، اس لیے کچھ انسٹال نہیں ہوا۔ بیک اپ کی سکرین دیکھیں اور دوبارہ کوشش کریں۔
+
+# review: pending
+err-update-changed = اب کوئی اور ورژن دستیاب ہے۔ نیا ورژن دوبارہ دیکھیں اور اپڈیٹ سے پہلے نیا کیا ہے پڑھ لیں۔
+
+# review: pending
+err-update-none = کوئی نیا ورژن نہیں ہے۔ ایپ تازہ ترین ہے۔

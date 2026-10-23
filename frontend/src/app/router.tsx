@@ -408,18 +408,6 @@ const khataRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/cashbook/pages/KhataPage'), 'KhataPage'),
 });
 
-/** A menu item whose module comes in a later plan opens the "coming soon" page (PRD FR-7.46). */
-function comingSoonRoute<Path extends string>(path: Path) {
-  return createRoute({
-    getParentRoute: () => appRoute,
-    path,
-    component: lazyRouteComponent(
-      () => import('../features/dashboard/pages/ComingSoonPage'),
-      'ComingSoonPage',
-    ),
-  });
-}
-
 // ---- Run B, plan 18 (D5 early track): بیک اپ. Replaces the "coming soon" page of /backup. ----
 const backupRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -608,6 +596,18 @@ const analyticsDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Run B, plan 22: the development page of the new Settings tabs (dev only, like the others). ----
+const settingsDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/settings',
+        component: lazyRouteComponent(() => import('./dev/SettingsDevPage'), 'SettingsDevPage'),
+      }),
+    ]
+  : [];
+// ---- end of Run B block ----
+
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren(appRoutes),
   printRoute,
@@ -615,6 +615,7 @@ const routeTree = rootRoute.addChildren([
   ...backupDevRoutes,
   ...reportsDevRoutes,
   ...analyticsDevRoutes,
+  ...settingsDevRoutes,
 ]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router

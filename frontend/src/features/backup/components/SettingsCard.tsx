@@ -166,7 +166,9 @@ export function SettingsCard() {
               id="backup-set-local-dir-hint"
               vars={{ folder: data.local_dir_effective }}
               elems={{ code: <Code /> }}
-            />
+            >
+              <span />
+            </Localized>
           }
           error={fieldError(error, 'local_dir')}
         >

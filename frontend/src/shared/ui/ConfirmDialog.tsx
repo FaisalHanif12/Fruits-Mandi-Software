@@ -24,6 +24,12 @@ interface ConfirmDialogProps {
   confirmLabel: ReactNode;
   onConfirm: () => void;
   tone?: ConfirmTone;
+  /**
+   * Which button has focus when the dialog opens. By default the action, except for a danger
+   * action. An action that is not destructive but should not happen by a stray Enter (an app
+   * update) asks for `back`.
+   */
+  initialFocus?: 'action' | 'back';
   confirmShortcut?: Shortcut;
   /**
    * Called when the dialog has closed and focus is about to go back to where it was. A screen that
@@ -41,6 +47,7 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   tone = 'primary',
+  initialFocus,
   confirmShortcut,
   onCloseFocus,
 }: ConfirmDialogProps) {
@@ -59,7 +66,8 @@ export function ConfirmDialog({
             event.preventDefault();
             const before = document.activeElement;
             returnFocusRef.current = before instanceof HTMLElement ? before : null;
-            (tone === 'danger' ? backRef : confirmRef).current?.focus();
+            const toBack = initialFocus === undefined ? tone === 'danger' : initialFocus === 'back';
+            (toBack ? backRef : confirmRef).current?.focus();
           }}
           onCloseAutoFocus={(event) => {
             onCloseFocus?.(event);

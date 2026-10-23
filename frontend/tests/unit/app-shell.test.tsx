@@ -117,8 +117,8 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     });
   });
 
-  it('Alt+B opens the بکری area on the sale book with its seven items, each a real screen; a main item not built yet is a "coming soon" page, not made-up data', async () => {
-    await renderApp();
+  it('Alt+B opens the بکری area on the sale book with its seven items, each a real screen; a main item built later opens its own screen, not made-up data', async () => {
+    const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
     await user.keyboard('{Alt>}b{/Alt}');
@@ -197,17 +197,21 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       ),
     ).toBeInTheDocument();
     expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
-    // A main item whose module is not built yet (تجزیات, plan 18) still says "coming soon".
+    // A main item built later (تجزیات, plan 21) opens its own screen, never a made-up page.
+    const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     await user.click(
-      within(
-        screen.getByRole('navigation', { name: message(language, 'layout-nav-label') }),
-      ).getByRole('button', { name: message(language, 'layout-nav-analytics') }),
+      within(nav).getByRole('button', { name: message(language, 'layout-nav-analytics') }),
     );
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/analytics');
+    });
     expect(
-      await screen.findByRole('heading', { name: message(language, 'soon-title') }),
-    ).toBeInTheDocument();
-    // The way back is a button, and Esc does the same.
-    await user.keyboard('{Escape}');
+      screen.queryByRole('heading', { name: message(language, 'soon-title') }),
+    ).not.toBeInTheDocument();
+    // The way back is the dashboard item of the main bar.
+    await user.click(
+      within(nav).getByRole('button', { name: message(language, 'layout-nav-dashboard') }),
+    );
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
     expect(
       screen.queryByRole('navigation', {

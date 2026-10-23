@@ -1,4 +1,5 @@
-// Settings (PRD Section 21): firm, language and text, auto lock. The Owner is the only user, so
+// Settings (PRD Section 21): firm, charges, checks, printing, language and text, auto lock, the day and
+// the books check, the audit log, and the app (updates, support file). The Owner is the only user, so
 // he sees and changes everything (PRD Section 2). The four states: it loads, it fails with a message and a retry, and it has
 // data. Unsaved text in a tab is guarded by LeaveGuard when the user leaves.
 
@@ -7,7 +8,10 @@ import { useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ErrorState, LoadingState, Tabs } from '../../../shared/ui';
+import { AuditLog } from '../../audit';
+import { AppTab } from '../components/AppTab';
 import { ChargesTab } from '../components/ChargesTab';
+import { DayTab } from '../components/DayTab';
 import { FirmTab } from '../components/FirmTab';
 import { LanguageTab } from '../components/LanguageTab';
 import { LockTab } from '../components/LockTab';
@@ -16,7 +20,17 @@ import { PrintingTab } from '../components/PrintingTab';
 import { useSettings } from '../hooks';
 
 /** The tabs a link may open (`/settings?tab=charges`). */
-const TAB_IDS = ['firm', 'charges', 'overrides', 'printing', 'language', 'lock'];
+const TAB_IDS = [
+  'firm',
+  'charges',
+  'overrides',
+  'printing',
+  'language',
+  'lock',
+  'day',
+  'audit',
+  'app',
+];
 
 export function SettingsPage() {
   const { l10n } = useLocalization();
@@ -72,12 +86,32 @@ export function SettingsPage() {
           {
             id: 'language',
             label: <Localized id="settings-tab-language" />,
-            content: <LanguageTab defaultLanguage={data.default_language} />,
+            content: (
+              <LanguageTab
+                defaultLanguage={data.default_language}
+                numberGrouping={data.number_grouping}
+              />
+            ),
           },
           {
             id: 'lock',
             label: <Localized id="settings-tab-lock" />,
             content: <LockTab minutes={data.idle_lock_minutes} />,
+          },
+          {
+            id: 'day',
+            label: <Localized id="settings-tab-day" />,
+            content: <DayTab />,
+          },
+          {
+            id: 'audit',
+            label: <Localized id="settings-tab-audit" />,
+            content: <AuditLog />,
+          },
+          {
+            id: 'app',
+            label: <Localized id="settings-tab-app" />,
+            content: <AppTab />,
           },
         ]}
       />

@@ -1,0 +1,81 @@
+// Screenshots of the new Settings tabs of plan 22 (Day and check, the number grouping in Language,
+// the Audit log, App and updates) in both languages at the three window sizes, taken from the
+// development page /dev/settings with the Playwright tool. It is a developer tool: run it with the
+// Vite dev server up on a free port
+// (`pnpm --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`), once for each size
+// (change SIZES). It also measures sideways overflow (NFR-USE-15): the page, the main area and every
+// grid must not scroll sideways, no cell may be cut, and no raw markup may show in a message. The
+// tool's own screenshot action may only write inside the folder it was started in, and a relative
+// path there can land in another team's folder, so this snippet writes with an absolute path from
+// inside the page code. Paste it into `browser_run_code_unsafe`. (It is a snippet for that tool, not
+// a module, so it is kept as .txt and the linter does not read it. The Windows check is spec 44.)
+//
+// The flags in the hash (tests/helpers/dev-bridge-settings.ts): `tab=day|audit|app|language`, `none`
+// (no check yet, no update on offer, an empty log), `bad` (the books check finds problems), `failed`
+// (the update server cannot be reached), `drafts` (unsaved entries: no install), `many` (230 log
+// entries), `installing` (the install never answers), `down` (every command fails).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan22';
+  const BASE = 'http://127.0.0.1:5188/#/dev/settings?tab=';
+  const SIZES = [[1366, 768]];
+  // [tab, hash flags, name of the shot].
+  const SHOTS = [
+    ['day', '', 'day'],
+    ['day', '&bad', 'day-bad'],
+    ['day', '&none', 'day-none'],
+    ['language', '', 'language'],
+    ['audit', '', 'audit'],
+    ['audit', '&many', 'audit-many'],
+    ['audit', '&none', 'audit-none'],
+    ['app', '', 'app'],
+    ['app', '&none', 'app-none'],
+    ['app', '&failed', 'app-failed'],
+    ['app', '&drafts', 'app-drafts'],
+  ];
+  const LANGS = ['ur', 'en'];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [tab, flags, name] of SHOTS) {
+      for (const lang of LANGS) {
+        try {
+          await page.goto(`${BASE}${tab}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          await page.waitForTimeout(1600);
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
+            const main = document.querySelector('main');
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            const raw = /<(num|code)>/.test(document.body.textContent || '');
+            return [
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'clipped=' + clipped,
+              'raw=' + raw,
+              location.host,
+            ].join(' ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 120)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

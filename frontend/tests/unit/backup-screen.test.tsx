@@ -834,6 +834,8 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
     it('shows what is stored, and the cloud fields only while the cloud copy is on', async () => {
       const { user } = await open();
       expect((await label('backup-set-closing-time')).value).toBe('21:00');
+      // The folder in the hint is set apart as a code, never written out as raw markup.
+      expect(document.body.textContent).not.toMatch(/<code>/);
       expect(screen.queryByLabelText(named(message(language, 'backup-set-bucket')))).toBeNull();
       await user.click(
         await screen.findByRole('checkbox', {

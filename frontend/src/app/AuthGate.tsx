@@ -16,6 +16,7 @@ import { useAuthStatus, useLock, useLogout, useSavePreferences } from '../featur
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { WizardPage } from '../features/auth/pages/WizardPage';
 import { useSettings } from '../features/settings/hooks';
+import { useApplyNumberGrouping } from '../features/settings/maintenance-hooks';
 import { asScreenType, screenTypeOf, type ScreenType } from '../features/vouchers/screen-type';
 import { uiErrorOf } from '../shared/api';
 import { isoToDisplayDate } from '../shared/format';
@@ -52,6 +53,8 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const search = useRouterState({ select: (state) => state.location.search });
   const settings = useSettings();
+  // The saved number grouping (PRD 21, Language) is the one every amount follows from the first screen.
+  useApplyNumberGrouping(settings.data?.number_grouping);
   const day = useDayStatus();
   const lock = useLock();
   const logout = useLogout();

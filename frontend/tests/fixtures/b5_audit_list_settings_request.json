@@ -1,0 +1,13 @@
+{
+  "filters": {
+    "action": "",
+    "entity": "settings",
+    "entity_id": null,
+    "from": "",
+    "text": "",
+    "to": "",
+    "user_id": null
+  },
+  "limit": 0,
+  "offset": 0
+}

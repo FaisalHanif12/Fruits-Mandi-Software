@@ -494,3 +494,27 @@ err-general-too-few-lines = A { -general } entry needs at least two lines.
 # PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
 # review: pending
 err-capital-exceeds-balance = This is more than the partner's { -sarmaya } balance of { $balance }, by { $over }. You can still save it.
+
+## Plan 22: updates and the support file (PRD NFR-INS-3, NFR-INS-4, NFR-SEC-11, NFR-OBS-4).
+
+# review: pending
+err-update-check-failed = The app could not look for a new version. Check the internet connection and try again. Your work is not affected.
+
+# review: pending
+err-update-not-signed = This update is not signed by us, so it was not installed. Nothing was changed and no copy was made. Do not use this update.
+
+# $drafts is the number of unsaved entries.
+# review: pending
+err-update-during-work = There are unsaved entries ({ $drafts }). Save them or throw them away, then update. Nothing was installed.
+
+# review: pending
+err-update-not-confirmed = The update was not confirmed, so nothing was installed. Press the update button and answer the question.
+
+# review: pending
+err-update-backup-failed = The safety copy before the update could not be made, so nothing was installed. Look at the backup screen and try again.
+
+# review: pending
+err-update-changed = A different version is on offer now. Look for the new version again and read what is new before you update.
+
+# review: pending
+err-update-none = There is no newer version. The app is up to date.
