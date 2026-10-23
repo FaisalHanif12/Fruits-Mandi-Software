@@ -142,6 +142,11 @@ pub enum PrintCell {
         /// The date as printed.
         text: String,
     },
+    /// A share of a total, for example `72.10`. The template adds the percent sign.
+    Percent {
+        /// The share as printed.
+        text: String,
+    },
     /// A month of a year. The template names the month from Fluent in the print language.
     Month {
         /// The year as printed.
@@ -260,14 +265,46 @@ pub struct PrintOptions {
     pub now_utc: DateTime<Utc>,
 }
 
-struct Fmt {
-    language: Language,
+/// The formatting of one print: names in the print language, numbers by the grouping and digits
+/// setting. Shared with the analytics print (`crate::analytics`).
+pub(crate) struct Fmt {
+    pub(crate) language: Language,
     grouping: Grouping,
-    style: NumberStyle,
+    pub(crate) style: NumberStyle,
 }
 
 impl Fmt {
-    fn name(&self, ur: &str, en: &str) -> String {
+    /// The formatting a print with these options uses.
+    pub(crate) fn new(options: &PrintOptions) -> Self {
+        Self {
+            language: options.language,
+            grouping: options.grouping,
+            style: NumberStyle::new(
+                options.language,
+                options.grouping,
+                options.urdu_digits_setting,
+            ),
+        }
+    }
+
+    /// An account for a header fact: short code (or code), name and tag.
+    pub(crate) fn party_text(&self, p: &PartyRef) -> String {
+        let mut text = String::new();
+        if let Some(short) = &p.short_code {
+            text.push_str(short);
+        } else {
+            text.push_str(&p.code);
+        }
+        text.push(' ');
+        text.push_str(&self.name(&p.name_ur, &p.name_en));
+        if let Some(tag) = &p.tag {
+            text.push(' ');
+            text.push_str(tag);
+        }
+        text
+    }
+
+    pub(crate) fn name(&self, ur: &str, en: &str) -> String {
         let (first, second) = match self.language {
             Language::Ur => (ur, en),
             Language::En => (en, ur),
@@ -289,7 +326,7 @@ impl Fmt {
         }
     }
 
-    fn names(&self, names: &Names) -> String {
+    pub(crate) fn names(&self, names: &Names) -> String {
         self.name(&names.ur, &names.en)
     }
 
@@ -345,7 +382,7 @@ impl Fmt {
         })
     }
 
-    fn cell(&self, cell: &Cell) -> Result<PrintCell, ReportsError> {
+    pub(crate) fn cell(&self, cell: &Cell) -> Result<PrintCell, ReportsError> {
         Ok(match cell {
             Cell::Empty => PrintCell::Empty,
             Cell::Text { text } => PrintCell::Text { text: text.clone() },
@@ -362,6 +399,9 @@ impl Fmt {
             },
             Cell::Date { iso } => PrintCell::Date {
                 text: self.style.date(iso)?,
+            },
+            Cell::Percent { hundredths } => PrintCell::Percent {
+                text: self.style.hundredths(*hundredths),
             },
             Cell::Month { year, month } => PrintCell::Month {
                 year: self.style.plain(*year),
@@ -386,7 +426,7 @@ impl Fmt {
         })
     }
 
-    fn cells(&self, cells: &[Cell]) -> Result<Vec<PrintCell>, ReportsError> {
+    pub(crate) fn cells(&self, cells: &[Cell]) -> Result<Vec<PrintCell>, ReportsError> {
         cells.iter().map(|c| self.cell(c)).collect()
     }
 
@@ -402,7 +442,7 @@ impl Fmt {
     }
 }
 
-fn fact(label: &str, value: String) -> PrintFact {
+pub(crate) fn fact(label: &str, value: String) -> PrintFact {
     PrintFact {
         label_id: label.to_owned(),
         value,
@@ -425,22 +465,7 @@ fn filter_facts(
     if let Some(as_of) = &filters.as_of {
         facts.push(fact(ids::FILTER_AS_OF, fmt.style.date(as_of)?));
     }
-    let party_text = |p: &PartyRef| {
-        let mut text = String::new();
-        if let Some(short) = &p.short_code {
-            text.push_str(short);
-            text.push(' ');
-        } else {
-            text.push_str(&p.code);
-            text.push(' ');
-        }
-        text.push_str(&fmt.name(&p.name_ur, &p.name_en));
-        if let Some(tag) = &p.tag {
-            text.push(' ');
-            text.push_str(tag);
-        }
-        text
-    };
+    let party_text = |p: &PartyRef| fmt.party_text(p);
     if let Some(party) = &filters.party {
         facts.push(fact(ids::FILTER_PARTY, party_text(party)));
     }
@@ -498,15 +523,7 @@ pub fn build_print(
     page: &ReportPage,
     options: &PrintOptions,
 ) -> Result<ReportPrintData, ReportsError> {
-    let fmt = Fmt {
-        language: options.language,
-        grouping: options.grouping,
-        style: NumberStyle::new(
-            options.language,
-            options.grouping,
-            options.urdu_digits_setting,
-        ),
-    };
+    let fmt = Fmt::new(options);
     let language = options.language;
 
     // A ledger or a statement is signed off with its closing balance in words (FR-19.7).

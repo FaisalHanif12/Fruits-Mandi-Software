@@ -94,9 +94,7 @@ describe('backup (Urdu)', () => {
   });
 
   it('4. the test restore of the newest copy runs and every check passes', async () => {
-    const test = await $(
-      `//button[contains(normalize-space(.), "${t('ur', 'backup-test-now')}")]`,
-    );
+    const test = await $(`//button[contains(normalize-space(.), "${t('ur', 'backup-test-now')}")]`);
     await test.click();
     await waitForText(t('ur', 'backup-test-ok'));
     const passed = await $$(

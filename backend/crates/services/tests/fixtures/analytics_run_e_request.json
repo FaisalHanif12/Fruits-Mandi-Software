@@ -1,0 +1,18 @@
+{
+  "filters": {
+    "adda_id": null,
+    "buyer": null,
+    "city_id": null,
+    "compare": "off",
+    "from": "",
+    "group_by": null,
+    "item_id": null,
+    "period": null,
+    "seller_id": null,
+    "side": "both",
+    "to": ""
+  },
+  "limit": 0,
+  "offset": 0,
+  "view": "E"
+}

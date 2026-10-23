@@ -973,6 +973,29 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "text": "shahid", "limit": 10 } }),
             true,
         ),
+        // Run B, plan 21 (append-only block).
+        ("analytics_catalog", json!({}), true),
+        (
+            "analytics_run",
+            json!({ "input": { "view": "A", "filters": {}, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "analytics_lines",
+            json!({ "input": { "view": "A", "filters": {}, "row_key": {}, "column_key": null, "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
+            "analytics_print_data",
+            json!({ "input": { "view": "A", "filters": {}, "language": "en" } }),
+            true,
+        ),
+        ("analytics_views_get", json!({}), true),
+        (
+            "analytics_views_save",
+            json!({ "input": { "views": [] } }),
+            true,
+        ),
     ]
 }
 

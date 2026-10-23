@@ -8,8 +8,10 @@
 
 mod advances;
 mod dues;
+mod grouped;
 mod payables;
 
 pub(super) use advances::run as run_r26;
 pub(super) use dues::{Layout as DuesLayout, run as run_dues};
+pub use grouped::{KeySums, SellerSums, payable_sums, pukhta_names};
 pub(super) use payables::run as run_r24;

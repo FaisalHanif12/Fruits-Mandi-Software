@@ -5,6 +5,7 @@
 // (`CommandError`), the way `invoke` fails.
 
 import { vi } from 'vitest';
+import type { PukhtaPersonHit } from '../../src/bindings/PukhtaPersonHit';
 import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
 import type { ReportId } from '../../src/bindings/ReportId';
 import type { ReportPage } from '../../src/bindings/ReportPage';
@@ -26,6 +27,24 @@ import {
   R18_AS_OF,
   R18_FULL,
   R19,
+  R2_ALL,
+  R20_DUES,
+  R21_BY_CITY,
+  R22_BY_COLLECTOR,
+  R24_PAYABLES,
+  R26_ADVANCES,
+  R27_SERIES,
+  R28_BY_DAY,
+  R28_BY_MONTH,
+  R3_CASH,
+  R30_PROFIT,
+  R4_CREDIT,
+  R6_LOTS,
+  R7_ITEMS,
+  R8_ADDA,
+  R9_ALL,
+  R9_DUE,
+  PEOPLE_SHAHID,
 } from './reports-real';
 
 export * from './reports-real';
@@ -42,6 +61,8 @@ export interface ReportsOptions {
   /** Called for every `reports_run`; return a refusal to refuse that run. */
   refuse?: (input: Parameters<typeof reportsApi.reportsRun>[0]) => UiError | null;
   print?: ReportPrintData;
+  /** What the people search answers; the default is the backend's own answer for "shahid". */
+  people?: readonly PukhtaPersonHit[];
 }
 
 const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
@@ -52,6 +73,21 @@ const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
   R17,
   R18: R18_FULL,
   R19,
+  R2: R2_ALL,
+  R3: R3_CASH,
+  R4: R4_CREDIT,
+  R6: R6_LOTS,
+  R7: R7_ITEMS,
+  R8: R8_ADDA,
+  R9: R9_ALL,
+  R20: R20_DUES,
+  R21: R21_BY_CITY,
+  R22: R22_BY_COLLECTOR,
+  R24: R24_PAYABLES,
+  R26: R26_ADVANCES,
+  R27: R27_SERIES,
+  R28: R28_BY_MONTH,
+  R30: R30_PROFIT,
 };
 
 function slice(page: ReportPage, offset: number, limit: number): ReportPage {
@@ -89,9 +125,15 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     // The as-of day of the backend's fixture is the 9th: a filled as-of box answers with it.
     const base = input.id === 'R18' && input.filters.as_of !== '' ? R18_AS_OF : page;
     // R14 answers with its lines only when the detail box is ticked.
-    const answer = input.id === 'R14' && input.filters.detail ? R14_DETAIL : base;
+    let answer = input.id === 'R14' && input.filters.detail ? R14_DETAIL : base;
+    // R9 answers with the due lines only when asked for them, and R28 by day when asked by day.
+    if (input.id === 'R9' && input.filters.status === 'due') answer = R9_DUE;
+    if (input.id === 'R28' && input.filters.group_by === 'day') answer = R28_BY_DAY;
     return Promise.resolve(slice(answer, input.offset, input.limit));
   });
+  vi.mocked(reportsApi.reportsFindPeople).mockImplementation(() =>
+    Promise.resolve([...(options.people ?? PEOPLE_SHAHID)]),
+  );
   vi.mocked(reportsApi.reportsPrintData).mockImplementation((input) =>
     Promise.resolve(options.print ?? (input.id === 'R13' ? PRINT_R13_AKRAM_UR : PRINT_R18_EN)),
   );

@@ -1,0 +1,84 @@
+// Screenshots of the Sales, Collections and Business report screens of plan 20 (step F3) in both
+// languages at the three window sizes, taken from the development pages /dev/reports/R2 ... R30
+// with the Playwright tool. It is a developer tool: run it with the Vite dev server up on a free
+// port (`pnpm --filter frontend exec vite --port 5192 --strictPort`). It also measures sideways
+// overflow (NFR-USE-15): the page and every grid inside it must not scroll sideways. Usage with the
+// Playwright MCP tool: browser_run_code_unsafe with `filename` set to this file. (It is a snippet
+// for that tool, not a module, so it is kept as .txt and the linter does not read it. The Windows
+// check is the spec 26.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan20-f3';
+  const BASE = 'http://127.0.0.1:5192/#/dev/reports/';
+  const ALL_SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const ALL_REPORTS = [
+    'R2',
+    'R3',
+    'R4',
+    'R6',
+    'R7',
+    'R8',
+    'R9',
+    'R20',
+    'R21',
+    'R22',
+    'R24',
+    'R26',
+    'R27',
+    'R28',
+    'R30',
+  ];
+  // Set to a list to take a few only, for example ['R9'] or sizes [[1024, 600]].
+  const ONLY = { reports: ['R2', 'R9'], sizes: [[1024, 600]] };
+  const SIZES = ONLY?.sizes ?? ALL_SIZES;
+  const REPORTS = ONLY?.reports ?? ALL_REPORTS;
+  const LANGS = ONLY?.langs ?? ['ur', 'en'];
+  const SUFFIX = ONLY?.suffix ?? '';
+  const settle = (ms) => page.waitForTimeout(ms);
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const id of REPORTS) {
+      for (const lang of LANGS) {
+        await page.goto(`${BASE}${id}${SUFFIX}`);
+        await page.reload();
+        await page.waitForSelector('h1', { timeout: 15000 });
+        // Alt+L turns the app to the other language until the page says the one asked for.
+        for (let step = 0; step < 2; step += 1) {
+          const now = await page.evaluate(() => document.documentElement.lang);
+          if (now === lang) break;
+          await page.keyboard.press('Alt+l');
+          await settle(300);
+        }
+        await page.waitForSelector('.ag-row, [role="status"], [role="alert"]', {
+          timeout: 15000,
+        });
+        await settle(700);
+        const overflow = await page.evaluate(() => {
+          const root = document.documentElement;
+          const grids = Array.from(
+            document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+          ).map((node) => node.scrollWidth - node.clientWidth);
+          return {
+            lang: root.lang,
+            dir: root.dir,
+            page: root.scrollWidth - window.innerWidth,
+            grids,
+            main: (() => {
+              const main = document.querySelector('main');
+              return main === null ? 0 : main.scrollWidth - main.clientWidth;
+            })(),
+            url: window.location.href,
+          };
+        });
+        await page.screenshot({ path: `${OUT}/${id}-${lang}-${width}x${height}${SUFFIX.replace(/[^a-z]/g, '')}.png` });
+        results.push(`${id} ${lang} ${width}x${height} ${JSON.stringify(overflow)}`);
+      }
+    }
+  }
+  return results.join('\n');
+};

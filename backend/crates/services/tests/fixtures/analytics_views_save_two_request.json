@@ -1,0 +1,38 @@
+{
+  "views": [
+    {
+      "filters": {
+        "adda_id": null,
+        "buyer": null,
+        "city_id": null,
+        "compare": "off",
+        "from": "01-01-2026",
+        "group_by": null,
+        "item_id": 1,
+        "period": null,
+        "seller_id": null,
+        "side": "both",
+        "to": "31-12-2026"
+      },
+      "name": "کیلا کمیشن ماہانہ",
+      "view": "D"
+    },
+    {
+      "filters": {
+        "adda_id": null,
+        "buyer": null,
+        "city_id": null,
+        "compare": "off",
+        "from": "",
+        "group_by": null,
+        "item_id": null,
+        "period": null,
+        "seller_id": null,
+        "side": "both",
+        "to": ""
+      },
+      "name": "Top 10",
+      "view": "H"
+    }
+  ]
+}

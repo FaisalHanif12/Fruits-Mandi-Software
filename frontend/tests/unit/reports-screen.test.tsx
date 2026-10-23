@@ -119,9 +119,9 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     it('lists the reports of each group, as the backend sent them, with a line about each', async () => {
       await open('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
-      // Only the Accounts group has reports so far; empty groups are not drawn.
-      const group = await groupRegion('report-group-accounts');
+      expect(CATALOG).toHaveLength(22);
       for (const entry of CATALOG) {
+        const group = await groupRegion(entry.group_title_id);
         const link = within(group)
           .getAllByRole('link')
           .find(
@@ -131,27 +131,27 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         expect(visible(link?.textContent)).toContain(m(entry.title_id));
         expect(visible(link?.textContent)).toContain(m(entry.title_id.replace('-title', '-help')));
       }
-      expect(screen.queryByRole('region', { name: groupName('report-group-sales') })).toBeNull();
     });
 
     it('shows the groups in the order of PRD 19.2 and each group’s reports in PRD order', async () => {
-      const first = CATALOG[0];
-      if (first === undefined) throw new Error('no catalogue');
-      const sales = {
-        ...first,
-        id: 'R2' as never,
-        group: 'sales' as const,
-        group_title_id: 'report-group-sales',
-        title_id: 'report-r11-title',
-      };
-      await open('/reports', { catalog: [...CATALOG, sales] });
+      // The list arrives in any order; the screen puts it in the PRD's order.
+      await open('/reports', { catalog: [...CATALOG].reverse() });
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
       const headings = (await screen.findAllByRole('heading', { level: 2 })).map((heading) =>
         visible(heading.textContent),
       );
-      expect(headings).toEqual([m('report-group-sales'), m('report-group-accounts')]);
-      const links = within(await groupRegion('report-group-accounts')).getAllByRole('link');
-      expect(links.map((link) => link.getAttribute('href')?.split('/').at(-1))).toEqual([
+      expect(headings).toEqual([
+        m('report-group-sales'),
+        m('report-group-accounts'),
+        m('report-group-collections'),
+        m('report-group-business'),
+      ]);
+      const idsOf = async (group: string) =>
+        within(await groupRegion(group))
+          .getAllByRole('link')
+          .map((link) => link.getAttribute('href')?.split('/').at(-1));
+      expect(await idsOf('report-group-sales')).toEqual(['R2', 'R3', 'R4', 'R6', 'R7', 'R8', 'R9']);
+      expect(await idsOf('report-group-accounts')).toEqual([
         'R11',
         'R13',
         'R14',
@@ -160,6 +160,15 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         'R18',
         'R19',
       ]);
+      expect(await idsOf('report-group-collections')).toEqual([
+        'R20',
+        'R21',
+        'R22',
+        'R24',
+        'R26',
+        'R27',
+      ]);
+      expect(await idsOf('report-group-business')).toEqual(['R28', 'R30']);
     });
 
     it('says so when the list could not be read, and tries again', async () => {
@@ -692,11 +701,12 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     it('the list, a report, a filter, the grid and a row open, then Esc back, without the mouse', async () => {
       const { router, user } = await open('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
-      // The first report has focus. ↓ five times is R18 (R11, R13, R14, R16, R17, R18).
+      // The first report (R2, the first of Sales) has focus. ↓ twelve times is R18: the seven
+      // Sales reports, then R11, R13, R14, R16, R17 and R18.
       await waitFor(() => {
-        expect(document.activeElement?.getAttribute('href')).toMatch(/R11$/);
+        expect(document.activeElement?.getAttribute('href')).toMatch(/R2$/);
       }, SLOW_MS);
-      await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
+      await user.keyboard(`${'{ArrowDown}'.repeat(12)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R18');
       }, SLOW_MS);

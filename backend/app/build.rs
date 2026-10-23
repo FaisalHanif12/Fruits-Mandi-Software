@@ -154,6 +154,13 @@ const APP_COMMANDS: &[&str] = &[
     "reports_print_data",
     // Run B, plan 20, step B3 (append-only block).
     "reports_find_people",
+    // Run B, plan 21 (append-only block).
+    "analytics_catalog",
+    "analytics_run",
+    "analytics_lines",
+    "analytics_print_data",
+    "analytics_views_get",
+    "analytics_views_save",
 ];
 
 fn main() {

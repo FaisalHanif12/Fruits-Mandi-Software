@@ -23,6 +23,18 @@ import { formatPaisa, isoToDisplayDate, useGrouping } from '../../shared/format'
 import type { Language } from '../../i18n';
 import { asScreenType } from '../../features/vouchers/screen-type';
 import { Code, ErrorMessage, KeyChip, Num } from '../../shared/ui';
+// ---- Run B, plan 20 (FR-5.4): one-time people and screens join the list. ----
+import {
+  ExtraResult,
+  extraText,
+  useExtraSearch,
+  useOpenExtra,
+  type ExtraRow,
+} from './global-search-extras';
+
+/** A row of the list: what the backend found, or what the frame adds (Run B). */
+type SearchRow = GlobalHit | ExtraRow;
+// ---- end of Run B block ----
 
 interface GlobalSearchProps {
   /** A result was chosen: open that account. */
@@ -34,7 +46,8 @@ interface GlobalSearchProps {
 }
 
 /** The text a result is known by in the box. */
-function hitText(hit: GlobalHit, language: Language): string {
+function hitText(hit: SearchRow, language: Language): string {
+  if (hit.kind === 'person' || hit.kind === 'screen') return extraText(hit, language); // Run B
   if (hit.kind === 'account') return displayName(hit, language);
   return String(hit.number);
 }
@@ -134,7 +147,10 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
   const [focused, setFocused] = useState(false);
   const query = useGlobalSearch(text);
   const typed = text.trim() !== '';
-  const hits = typed ? (query.data ?? []) : [];
+  // Run B (plan 20, FR-5.4): the frame adds one-time people and screens after the backend's rows.
+  const openExtra = useOpenExtra();
+  const extras = useExtraSearch(text, openExtra !== null);
+  const hits: SearchRow[] = typed ? [...(query.data ?? []), ...extras] : [];
   const open = focused && typed;
 
   useShortcut(SHORTCUTS.globalSearch, () => {
@@ -150,7 +166,7 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
     () => focused && text !== '',
   );
 
-  const { highlightedIndex, getInputProps, getItemProps, getMenuProps } = useCombobox<GlobalHit>({
+  const { highlightedIndex, getInputProps, getItemProps, getMenuProps } = useCombobox<SearchRow>({
     items: hits,
     menuId: listId,
     itemToString: (hit) => (hit === null ? '' : hitText(hit, language)),
@@ -164,7 +180,9 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
     },
     onSelectedItemChange: ({ selectedItem }) => {
       if (selectedItem === null) return;
-      if (selectedItem.kind === 'bikri') onOpenBikri(selectedItem.id);
+      if (selectedItem.kind === 'person' || selectedItem.kind === 'screen') {
+        openExtra?.(selectedItem); // Run B
+      } else if (selectedItem.kind === 'bikri') onOpenBikri(selectedItem.id);
       else if (selectedItem.kind === 'voucher') onOpenVoucher(selectedItem);
       else onOpenAccount(selectedItem.id);
       setText('');
@@ -218,7 +236,9 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
                   {...getItemProps({ item: hit, index })}
                   className={`flex min-h-control cursor-pointer flex-col justify-center rounded-1 px-3 ${index === highlightedIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
                 >
-                  {hit.kind === 'bikri' ? (
+                  {hit.kind === 'person' || hit.kind === 'screen' ? (
+                    <ExtraResult row={hit} />
+                  ) : hit.kind === 'bikri' ? (
                     <BikriResult hit={hit} />
                   ) : hit.kind === 'voucher' ? (
                     <VoucherResult hit={hit} language={language} />

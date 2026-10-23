@@ -12,6 +12,7 @@ import type { ReportFilterKind } from '../../../bindings/ReportFilterKind';
 import type { ReportPage } from '../../../bindings/ReportPage';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid } from '../../../shared/grid';
+import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, Notice } from '../../../shared/ui';
 import { reportColumns, totalsFor, type ReportRowView } from '../columns';
 import { ReportRange } from './ReportRange';
@@ -58,7 +59,11 @@ export function ReportResults({
       ),
     [pages],
   );
-  const columns = useMemo(() => (last === undefined ? [] : reportColumns(last.columns)), [last]);
+  const step = useLayoutStep();
+  const columns = useMemo(
+    () => (last === undefined ? [] : reportColumns(last.id, last.columns, step)),
+    [last, step],
+  );
 
   if (last === undefined || rows === undefined) {
     if (query.isError) {

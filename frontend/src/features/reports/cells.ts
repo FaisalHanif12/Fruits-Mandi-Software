@@ -5,15 +5,44 @@
 
 import type { ReportCell } from '../../bindings/ReportCell';
 import type { ReportDetailPart } from '../../bindings/ReportDetailPart';
+import type { ReportId } from '../../bindings/ReportId';
 import type { ReportParty } from '../../bindings/ReportParty';
 import type { Language } from '../../i18n';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListContext } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 
-/** A month as MM-YYYY (R28 by month). The month names of a print come with the report screens of step F3. */
-export function monthText(year: number, month: number): string {
-  return `${String(month).padStart(2, '0')}-${String(year)}`;
+/**
+ * A share the backend sends in hundredths of a percent (0 to 10,000) as text with two decimals and
+ * the sign: 7210 is "72.10%" (PRD 18.2: percentages to two decimals). Only the digits are put
+ * together as text; nothing is worked out (CLAUDE.md rule 1).
+ */
+export function percentText(hundredths: number): string {
+  const whole = Math.trunc(hundredths / 100);
+  const part = String(hundredths % 100).padStart(2, '0');
+  return `${String(whole)}.${part}%`;
+}
+
+/** The Fluent message of a month's name: `report-month-1` is January (PRD 19.2: R28 by month). */
+export function monthMessageId(month: number): string {
+  return `report-month-${String(month)}`;
+}
+
+/** A month as its name and the year ("October 2026", "اکتوبر 2026"), the way R28 by month shows it. */
+export function monthText(text: (id: string) => string, year: number, month: number): string {
+  return `${text(monthMessageId(month))} ${String(year)}`;
+}
+
+/**
+ * The words for a name the backend left empty on purpose (PRD 19.2): the heading of the buyers with
+ * no city (R21) or no collector (R22), and the sales with no اڈا (R8). Shown as an empty name, they
+ * would look like a mistake. Null for any other empty cell.
+ */
+export function emptyNameMessageId(id: ReportId, rowKind: 'normal' | 'group'): string | null {
+  if (id === 'R21' && rowKind === 'group') return 'report-group-no-city';
+  if (id === 'R22' && rowKind === 'group') return 'report-group-no-collector';
+  if (id === 'R8') return 'report-adda-none';
+  return null;
 }
 
 /** The tag follows the name after a space ("عاشق ظفر K", PRD 10.2, Code Standards F38). */
@@ -88,7 +117,9 @@ export function cellText(cell: ReportCell, context: ListContext): string {
     case 'date':
       return isoToDisplayDate(cell.iso);
     case 'month':
-      return monthText(cell.year, cell.month);
+      return monthText(context.text, cell.year, cell.month);
+    case 'percent':
+      return percentText(cell.hundredths);
     case 'party':
       return partyText(cell.party, context.language);
     case 'names':

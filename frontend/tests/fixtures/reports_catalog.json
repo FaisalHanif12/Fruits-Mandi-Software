@@ -1,5 +1,105 @@
 [
   {
+    "id": "R2",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r2-title",
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R3",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r3-title",
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R4",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r4-title",
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R6",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r6-title",
+    "filters": [
+      "date_range",
+      "seller",
+      "zamindar",
+      "item",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R7",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r7-title",
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "item",
+      "city",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R8",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r8-title",
+    "filters": [
+      "date_range",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R9",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r9-title",
+    "filters": [
+      "date_range",
+      "party",
+      "status"
+    ],
+    "party_required": false
+  },
+  {
     "id": "R11",
     "group": "accounts",
     "group_title_id": "report-group-accounts",
@@ -70,6 +170,100 @@
     "group_title_id": "report-group-accounts",
     "title_id": "report-r19-title",
     "filters": [],
+    "party_required": false
+  },
+  {
+    "id": "R20",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r20-title",
+    "filters": [
+      "as_of",
+      "party",
+      "city"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R21",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r21-title",
+    "filters": [
+      "as_of",
+      "party",
+      "city"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R22",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r22-title",
+    "filters": [
+      "as_of",
+      "party",
+      "city"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R24",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r24-title",
+    "filters": [
+      "as_of",
+      "party"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R26",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r26-title",
+    "filters": [
+      "as_of",
+      "seller"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R27",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r27-title",
+    "filters": [
+      "date_range",
+      "seller",
+      "zamindar",
+      "item",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R28",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r28-title",
+    "filters": [
+      "date_range",
+      "party",
+      "group_by"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R30",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r30-title",
+    "filters": [
+      "date_range"
+    ],
     "party_required": false
   }
 ]

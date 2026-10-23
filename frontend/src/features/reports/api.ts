@@ -6,10 +6,12 @@
 // `reports_voucher_print_data` and `reports_print_data` (its capability allows nothing else).
 
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
+import type { FindPeopleInput } from '../../bindings/FindPeopleInput';
 import type { PrintData } from '../../bindings/PrintData';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
+import type { PukhtaPersonHit } from '../../bindings/PukhtaPersonHit';
 import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
 import type { ReportPage } from '../../bindings/ReportPage';
 import type { ReportPrintData } from '../../bindings/ReportPrintData';
@@ -70,4 +72,13 @@ export function reportsRun(input: ReportRunInput): Promise<ReportPage> {
 /** Everything a print of a report needs, with every row, in the print language (PRD FR-19.3). */
 export function reportsPrintData(input: ReportPrintInput): Promise<ReportPrintData> {
   return callCommand<ReportPrintData>('reports_print_data', { input });
+}
+
+/**
+ * The one-time (پختہ کھاتہ) people whose name or phone matches the text, newest first (PRD FR-5.4,
+ * FR-13.9). The report filters of R9, R20 and the global search use it. The text is sent as typed.
+ * `limit` 0 means 10.
+ */
+export function reportsFindPeople(input: FindPeopleInput): Promise<PukhtaPersonHit[]> {
+  return callCommand<PukhtaPersonHit[]>('reports_find_people', { input });
 }

@@ -11,7 +11,14 @@ import { ReportPrintDocument } from '../../src/features/reports/print/ReportPrin
 import { useLanguageStore } from '../../src/shared/i18n';
 import { FOOTER_PROPERTY } from '../../src/shared/print';
 import { message, visible } from '../helpers/render';
-import { PRINT_R13_AKRAM_UR, PRINT_R18_EN } from '../helpers/reports-real';
+import {
+  PRINT_R13_AKRAM_UR,
+  PRINT_R18_EN,
+  PRINT_R20_UR,
+  PRINT_R28_MONTH_EN,
+  PRINT_R7_EN,
+  PRINT_R9_DUE_EN,
+} from '../helpers/reports-real';
 
 afterEach(() => {
   useLanguageStore.setState({ language: 'ur' });
@@ -179,6 +186,67 @@ describe('the ledger of اکرم in Urdu (R13)', () => {
     expect(document.documentElement.style.getPropertyValue(FOOTER_PROPERTY)).toContain(
       'counter(page)',
     );
+  });
+});
+
+describe('the reports of round 4 in print (R7, R9, R20, R28)', () => {
+  it('R7 in English: the item rows and the totals row of E2E-11 (5,448 of commission)', () => {
+    const { root } = show(PRINT_R7_EN);
+    expect(root.getAttribute('lang')).toBe('en');
+    const first = must(root.querySelector('tbody tr'));
+    expect(textOf(first.querySelectorAll('td')[0])).toBe('Banana');
+    const totals = Array.from(must(root.querySelector('tfoot tr')).querySelectorAll('td')).map(
+      textOf,
+    );
+    expect(totals).toContain('5,448');
+    expect(totals).toContain('41,400');
+  });
+
+  it('R20 in Urdu: every column, the print language is its own, and the total is the shop’s', () => {
+    const { root } = show(PRINT_R20_UR);
+    expect(root.getAttribute('lang')).toBe('ur');
+    expect(root.getAttribute('dir')).toBe('rtl');
+    // The print has every column the backend sent: the screen folds some, the paper does not.
+    expect(root.querySelectorAll('thead th')).toHaveLength(PRINT_R20_UR.columns.length);
+    expect(textOf(must(root.querySelector('tfoot tr')))).toContain('21,564');
+  });
+
+  it('R28 by month in English: the month is named from Fluent and the year is a number', () => {
+    const { root } = show(PRINT_R28_MONTH_EN);
+    const first = must(root.querySelector('tbody tr'));
+    expect(textOf(first.querySelectorAll('td')[0])).toBe(
+      `${message('en', 'report-month-10')} 2026`,
+    );
+    expect(isolated(root, '2026')).toBe(true);
+  });
+
+  it('R9 for the due lines only: the filter is named in the header', () => {
+    const { root } = show(PRINT_R9_DUE_EN);
+    expect(textOf(root.querySelector('.print-facts'))).toContain(
+      message('en', 'report-filter-due'),
+    );
+  });
+
+  it('names the heading of the buyers with no city, and the sales with no اڈا, in words', () => {
+    const group = { ...PRINT_R20_UR, report: 'R21' as const };
+    const row = group.rows[0];
+    if (row === undefined) throw new Error('no row');
+    const empty = {
+      ...row,
+      kind: 'group' as const,
+      cells: [{ type: 'empty' as const }, ...row.cells.slice(1)],
+    };
+    const city = show({ ...group, rows: [empty] });
+    expect(textOf(city.root.querySelector('tbody tr td'))).toBe(
+      message('ur', 'report-group-no-city'),
+    );
+    city.unmount();
+    const adda = show({
+      ...group,
+      report: 'R8' as const,
+      rows: [{ ...empty, kind: 'normal' as const }],
+    });
+    expect(textOf(adda.root.querySelector('tbody tr td'))).toBe(message('ur', 'report-adda-none'));
   });
 });
 

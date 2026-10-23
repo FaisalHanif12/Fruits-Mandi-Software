@@ -390,3 +390,417 @@ report-print-job-later = پرنٹر پر بھیجنا اور PDF محفوظ کر
 
 # review: pending
 report-print-close = بند کریں
+
+## Round 4 (plan 20, step F3): the Sales, Collections and Business reports, the person box, the month names, global search and the party card buttons.
+
+## The reports: a title and one line that says what it shows (PRD 19.2).
+
+# review: pending
+report-r2-title = مکمل { -bikri }
+
+# review: pending
+report-r2-help = چنے ہوئے دنوں کی ہر بکری، { -gahak } کی ہر لائن الگ: قسم مال، تعداد، ریٹ اور گاہک کی رقم۔
+
+# review: pending
+report-r3-title = { -naqdi }
+
+# review: pending
+report-r3-help = چنے ہوئے دنوں کی صرف { -naqdi } بکری۔
+
+# review: pending
+report-r4-title = { -udhari }
+
+# review: pending
+report-r4-help = چنے ہوئے دنوں کی صرف { -udhari } بکری۔
+
+# review: pending
+report-r6-title = { -bikri } تفصیل
+
+# review: pending
+report-r6-help = چنے ہوئے دنوں کا ہر لاٹ، { -kham-bikri }، کل اخراجات اور { -safi-bikri } کے ساتھ۔
+
+# review: pending
+report-r7-title = قسم مال وار { -bikri }
+
+# review: pending
+report-r7-help = قسم مال کے حساب سے بکری: تعداد، { -kham-bikri }، اوسط ریٹ اور دونوں طرف کا { -commission }۔
+
+# review: pending
+report-r8-title = { -adda } رپورٹ
+
+# review: pending
+report-r8-help = ہر { -adda } کے ٹرک، لاٹ، تعداد اور { -kham-bikri }۔
+
+# review: pending
+report-r9-title = { -pukhta-khata } رپورٹ
+
+# review: pending
+report-r9-help = { -pukhta-khata } کے ایک بار آنے والے لوگوں کی ہر لائن، ادا اور باقی کے ساتھ۔
+
+# review: pending
+report-r20-title = { -agrahi } رپورٹ
+
+# review: pending
+report-r20-help = ہر { -gahak } کا بقایا اور اس کے کھلے بلوں کی عمر۔ { -meezan } دکان کی کل { -agrahi } ہے۔
+
+# review: pending
+report-r21-title = { -agrahi } بحساب شہر
+
+# review: pending
+report-r21-help = یہی بقایا، شہر کے حساب سے، ہر شہر کے { -meezan } کے ساتھ۔
+
+# review: pending
+report-r22-title = { -agrahi } بحساب اگراہی والا
+
+# review: pending
+report-r22-help = یہی بقایا، اگراہی والے کے حساب سے، ہر ایک کے { -meezan } کے ساتھ۔
+
+# review: pending
+report-r24-title = { -adaigi } باقی
+
+# review: pending
+report-r24-help = دکان کے ذمے ہر { -beopari } کا بقایا، اس کی کھلی { -peshgi } اور جو وہ اس سے زیادہ دکان کا دینا ہے۔
+
+# review: pending
+report-r26-title = { -peshgi-khata }
+
+# review: pending
+report-r26-help = ہر { -beopari } کی { -peshgi }: دی گئی، واپس، ایڈجسٹ اور ابھی باقی۔
+
+# review: pending
+report-r27-title = بیجک سیریز
+
+# review: pending
+report-r27-help = بیوپاریوں کے بل نمبر کی ترتیب میں، { -kham-bikri }، کل اخراجات اور { -safi-bikri } کے ساتھ۔
+
+# review: pending
+report-r28-title = آمدن رپورٹ
+
+# review: pending
+report-r28-help = ہر آمدن کھاتہ مہینے یا دن کے حساب سے۔ { -meezan } خالص آمدن ہے۔
+
+# review: pending
+report-r30-title = منافع و تقسیم
+
+# review: pending
+report-r30-help = آمدن منفی دکان خرچہ، اور ہر { -shirakat-dar } کا { -hissa }، لی گئی رقم اور { -khalis }۔
+
+## The columns of these reports.
+
+# review: pending
+report-col-buyer = { -gahak }
+
+# review: pending
+report-col-seller = { -beopari }
+
+# review: pending
+report-col-item = { -qism-maal }
+
+# review: pending
+report-col-qty = تعداد
+
+# review: pending
+report-col-rate = ریٹ
+
+# review: pending
+report-col-value = قیمت
+
+# review: pending
+report-col-buyer-total = رقم گاہک
+
+# review: pending
+report-col-gross = { -kham-bikri }
+
+# review: pending
+report-col-freight = { -kiraya }
+
+# review: pending
+report-col-commission = { -commission }
+
+# review: pending
+report-col-labour = { -mazdoori }
+
+# review: pending
+report-col-munshiana = { -munshiana }
+
+# review: pending
+report-col-cash-paid = { -naqd }
+
+# review: pending
+report-col-store-rent = { -kiraya-store }
+
+# review: pending
+report-col-phone-charge = { -phone }
+
+# review: pending
+report-col-deductions = { print-total-deductions }
+
+# review: pending
+report-col-net = { -safi-bikri }
+
+# review: pending
+report-col-avg-rate = اوسط ریٹ
+
+# review: pending
+report-col-seller-comm = { -commission } بیوپاری
+
+# review: pending
+report-col-buyer-comm = { -commission } گاہک
+
+# review: pending
+report-col-laga = { -laga }
+
+# review: pending
+report-col-total-comm = کل { -commission }
+
+# review: pending
+report-col-adda = { -adda }
+
+# review: pending
+report-col-trucks = ٹرک
+
+# review: pending
+report-col-lots = لاٹ
+
+# review: pending
+report-col-side = جانب
+
+# review: pending
+report-col-person = نام
+
+# review: pending
+report-col-phone = فون
+
+# review: pending
+report-col-status = حالت
+
+# review: pending
+report-col-oldest-date = پرانا بل
+
+# review: pending
+report-col-days = دن
+
+# An RTL isolate keeps the digits and the words in reading order inside a number column's left-to-right header.
+# review: pending
+report-col-age-0-7 = ⁧0 تا 7 دن⁩
+
+# review: pending
+report-col-age-8-30 = ⁧8 تا 30 دن⁩
+
+# review: pending
+report-col-age-31-90 = ⁧31 تا 90 دن⁩
+
+# review: pending
+report-col-age-91 = ⁧90 دن سے زیادہ⁩
+
+# review: pending
+report-col-collector = اگراہی والا
+
+# review: pending
+report-col-section = فہرست
+
+# review: pending
+report-col-payable = { -adaigi } باقی
+
+# review: pending
+report-col-advance-open = { -peshgi } باقی
+
+# review: pending
+report-col-owes-firm = دکان کا دینا
+
+# review: pending
+report-col-last-date = آخری تاریخ
+
+# review: pending
+report-col-given = دی گئی
+
+# review: pending
+report-col-returned = واپس
+
+# review: pending
+report-col-adjusted = ایڈجسٹ
+
+# review: pending
+report-col-open = باقی
+
+# review: pending
+report-col-bill-date = تاریخ بل
+
+# review: pending
+report-col-period = مدت
+
+# review: pending
+report-col-amount = رقم
+
+# review: pending
+report-col-income-share = آمدن { -hissa }
+
+# review: pending
+report-col-expense-share = خرچہ { -hissa }
+
+# review: pending
+report-col-profit-share = منافع { -hissa }
+
+# review: pending
+report-col-taken = { -zati-kharcha }
+
+# review: pending
+report-col-partner-net = { -khalis }
+
+# review: pending
+report-col-partner = { -shirakat-dar }
+
+## The words inside the rows and above the table.
+
+# review: pending
+report-side-buyer = { -gahak }
+
+# review: pending
+report-side-seller = { -beopari }
+
+# review: pending
+report-section-payable = بیوپاریوں کو دینا
+
+# review: pending
+report-section-owes-firm = وہ بیوپاری جن کے ذمے دکان کی رقم ہے
+
+# review: pending
+report-status-all = تمام لائنیں
+
+# review: pending
+report-status-paid = ادا
+
+# review: pending
+report-status-due = باقی
+
+# review: pending
+report-status-cancelled = منسوخ
+
+# review: pending
+report-r30-income = کل آمدن
+
+# review: pending
+report-r30-expenses = کل دکان خرچہ
+
+# review: pending
+report-r30-profit = منافع
+
+# review: pending
+report-filter-paid = صرف ادا شدہ لائنیں
+
+# review: pending
+report-filter-due = صرف باقی لائنیں
+
+# review: pending
+report-filter-by-day = دن کے حساب سے
+
+# review: pending
+report-filter-by-month = مہینے کے حساب سے
+
+## The new filter boxes.
+
+# review: pending
+report-filter-person = ایک بار آنے والا فرد
+
+# review: pending
+report-filter-person-hint = نام یا فون نمبر لکھیں
+
+# review: pending
+report-filter-status = دکھائیں
+
+# review: pending
+report-filter-group-by = ترتیب
+
+# review: pending
+report-group-by-month = مہینہ
+
+# review: pending
+report-group-by-day = دن
+
+## The names of the months (R28 by month; PRD 19.2, NFR-URD-16).
+
+# review: pending
+report-month-1 = جنوری
+
+# review: pending
+report-month-2 = فروری
+
+# review: pending
+report-month-3 = مارچ
+
+# review: pending
+report-month-4 = اپریل
+
+# review: pending
+report-month-5 = مئی
+
+# review: pending
+report-month-6 = جون
+
+# review: pending
+report-month-7 = جولائی
+
+# review: pending
+report-month-8 = اگست
+
+# review: pending
+report-month-9 = ستمبر
+
+# review: pending
+report-month-10 = اکتوبر
+
+# review: pending
+report-month-11 = نومبر
+
+# review: pending
+report-month-12 = دسمبر
+
+## The party card buttons (PRD FR-7.65).
+
+# review: pending
+report-card-ledger = { -khata }
+
+# review: pending
+report-card-statement = { -fard-hisab }
+
+# review: pending
+report-card-open-ledger = اس کھاتے کا { -khata } کھولیں
+
+# review: pending
+report-card-open-statement = اس کھاتے کا { -fard-hisab } کھولیں
+
+# review: pending
+report-card-reports-label = اس کھاتے کی رپورٹیں
+
+## Global search: one-time people and screens (PRD FR-5.4).
+
+# review: pending
+report-search-person = ایک بار آنے والا فرد
+
+# review: pending
+report-search-person-last = آخری { $date }
+
+# review: pending
+report-search-screen = اسکرین
+
+# review: pending
+report-search-report = رپورٹ
+
+## The fold of the filter boxes in a compact window (Code Standards F22).
+
+# review: pending
+report-filters-more = مزید فلٹر
+
+# review: pending
+report-filters-fewer = کم فلٹر
+
+## The heading of the buyers with no city or no collector (R21, R22).
+
+# review: pending
+report-group-no-city = شہر کے بغیر
+
+# review: pending
+report-group-no-collector = اگراہی والے کے بغیر
+
+# review: pending
+report-adda-none = اڈا کے بغیر

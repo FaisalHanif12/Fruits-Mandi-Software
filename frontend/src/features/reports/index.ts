@@ -16,5 +16,16 @@ export {
 
 // ---- Plan 20: the report engine. ----
 export { reportsCatalog, reportsPrintData, reportsRun } from './api';
-export { REPORT_PAGE_SIZE, useReportCatalog, useReportPages, useReportPrintData } from './hooks';
+export {
+  PEOPLE_RESULT_LIMIT,
+  REPORT_PAGE_SIZE,
+  useReportCatalog,
+  useReportPages,
+  useReportPrintData,
+  usePeopleSearch,
+} from './hooks';
+export { reportsFindPeople } from './api';
+export { PartyReportLinks } from './components/PartyReportLinks';
+export { useOpenReport, partyReportSearch, type OpenReport } from './open-report';
 export { parseReportSearch, type ReportSearch } from './search';
+export { personFromHit, type ReportPerson } from './filters';

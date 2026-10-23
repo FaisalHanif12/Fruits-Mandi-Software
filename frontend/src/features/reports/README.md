@@ -33,12 +33,40 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - Filters live in the page's state, above the grid, so a language switch loses nothing.
 - A row opens its record (Enter): بکری, voucher, or the ledger of an account.
 
+## Round 4 (plan 20, step F3): the other early reports, search and the party card
+
+- The Sales (R2, R3, R4, R6, R7, R8, R9), Collections (R20, R21, R22, R24, R26, R27) and Business
+  (R28, R30) reports use the same one screen. Nothing was added to `ReportPage`: the catalogue lists
+  them and the filters come from it.
+- `columns.ts` holds `COLUMN_STEPS`: a report has more columns than a 1024 px window holds, and a
+  table never scrolls sideways (NFR-USE-15), so the less used columns wait for the normal or the
+  wide step (F22). The print has every column. Checked at 1024, 1366 and 1920 in both languages with
+  no sideways scroll and no cut cell. A name or a code with a name wraps instead of being cut.
+- Filter boxes (`components/ReportFilterBar.tsx`): a report with more than five boxes folds its
+  record pickers behind "More filters" in a compact window; from the normal width every box shows.
+  New boxes: paid or due (R9), by month or by day (R28), and the person box.
+- The person box (`ReportPersonPicker`, `reports_find_people`, PRD FR-13.9): R9 is for one-time
+  people only, so its party box IS the person box. On any other report it appears when the party
+  picked is a پختہ کھاتہ account, and narrows the report to one person inside it (`party.person_key`).
+  The text is searched as typed and never turned into Urdu. A person can come in the address
+  (`?person={...}`), whole or not at all.
+- Money cells use the grid type `figure` (120 px) and counts the type `count`; a phone is `short`.
+- R28 names the month from Fluent (`report-month-1` ... `12`, `monthText`). R21, R22 and R8 name the
+  rows the backend leaves with an empty name (no city, no collector, no اڈا, `emptyNameMessageId`).
+  R30 shows a minus sign where the backend sends a negative amount.
+- Party card buttons (FR-7.65): `PartyReportLinks` (in `AppShell`) gives the shared `PartyCard` a
+  function that opens R13 or R14 for the account on the card (`open-report.ts`, `partyReportSearch`).
+  The range is the whole history: an empty `from` is the first day of data. Change it in one place.
+- Global search (FR-5.4): `app/layout/global-search-extras.tsx` adds the one-time people and the
+  screens and reports (found by their name in either language, or a report by its number) to the
+  backend's accounts, بکری and vouchers. `GlobalSearch.tsx` has a few lines marked "Run B".
+
 ## Not built yet
 
 - Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB
   needs a generic report document in the plan 14 print path (`PrintDoc::Report`, plan 17e). The two
   buttons of the preview are dimmed and say so.
-- Excel (D5-Q1), the Sales, Collections and Business reports (plan 20 step B3).
+- Excel (D5-Q1).
 
 ## Older notes (plan 14)
 

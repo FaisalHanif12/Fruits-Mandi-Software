@@ -94,6 +94,12 @@ export type ListColumnType =
   // A day and a time, DD-MM-YYYY HH:MM (the list of بکری, the audit log).
   | 'datetime'
   | 'status'
+  // A whole number such as a quantity, a count of days or of trucks (reports, dense tables).
+  | 'count'
+  // An amount in a dense table, such as a report with many money columns (up to 9 digits).
+  | 'figure'
+  // A short text such as a phone number (11 digits), an item or a city in a dense table.
+  | 'short'
   // A balance: a figure and the side word in a slot after it (reports, `unit` of ListColumn).
   | 'balance';
 
@@ -108,6 +114,9 @@ export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
   date: 140,
   datetime: 170,
   status: 120,
+  count: 100,
+  figure: 120,
+  short: 140,
   // The figure keeps the width of a money column and the side word has its own slot after it.
   balance: 180,
 };
@@ -124,6 +133,8 @@ export function isListNumberLike(type: ListColumnType): boolean {
   return (
     type === 'code' ||
     type === 'number' ||
+    type === 'count' ||
+    type === 'figure' ||
     type === 'money' ||
     type === 'date' ||
     type === 'datetime' ||

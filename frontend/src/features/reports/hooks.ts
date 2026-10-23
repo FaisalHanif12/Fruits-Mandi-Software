@@ -1,6 +1,7 @@
 // The print commands as hooks (Code Standards F6).
 
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
+import { useDebouncedValue } from '../../shared/hooks';
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
@@ -11,6 +12,7 @@ import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput
 import {
   reportsBikriPrintData,
   reportsCatalog,
+  reportsFindPeople,
   reportsListPrinters,
   reportsPrint,
   reportsPrintData,
@@ -68,11 +70,12 @@ export function usePrintVoucher() {
 export const REPORT_PAGE_SIZE = 100;
 
 /** The catalogue changes only with a new version of the app, so it is read once. */
-export function useReportCatalog() {
+export function useReportCatalog(enabled = true) {
   return useQuery({
     queryKey: ['reports_catalog'],
     queryFn: reportsCatalog,
     staleTime: Infinity,
+    enabled,
   });
 }
 
@@ -109,6 +112,29 @@ export function useReportPrintData(input: ReportPrintInput | null) {
     },
     enabled: input !== null,
     staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+/** How long the text of a person search rests before the backend is asked (Code Standards F35). */
+export const PEOPLE_SEARCH_DELAY_MS = 120;
+
+/** How many one-time people a search lists. The list is short on purpose: type more to narrow. */
+export const PEOPLE_RESULT_LIMIT = 10;
+
+/**
+ * The one-time people that match the typed text (PRD FR-5.4, FR-13.9). Nothing is asked for empty
+ * text, and the list stays on screen while the next answer is on its way, so it never flashes empty.
+ * The text is sent as typed; a search never converts it to Urdu (Code Standards F41).
+ */
+export function usePeopleSearch(text: string, enabled = true) {
+  const settled = useDebouncedValue(text.trim(), PEOPLE_SEARCH_DELAY_MS);
+  return useQuery({
+    queryKey: ['reports_find_people', settled],
+    queryFn: () => reportsFindPeople({ text: settled, limit: PEOPLE_RESULT_LIMIT }),
+    enabled: enabled && settled !== '',
+    placeholderData: keepPreviousData,
+    staleTime: 0,
     gcTime: 0,
   });
 }

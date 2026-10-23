@@ -1,6 +1,6 @@
 // A stand-in for the Tauri bridge for the development pages /dev/reports (plan 20) only. In a plain
 // browser tab there is no backend, so the report screens cannot be looked at. This answers the
-// three report commands with the backend's own fixtures (reports-real.ts), so the screens can be
+// report commands (and the people search) with the backend's own fixtures (reports-real.ts), so the screens can be
 // opened in a browser and photographed in both languages and at every window size. It answers
 // nothing else: any other command is refused with ERR_NOT_IMPLEMENTED. Never part of a build: only
 // the development route imports it.
@@ -8,11 +8,11 @@
 // Flags in the hash, for example `#/dev/reports/R18?many`:
 //   empty   the report has no rows        many   230 rows (page by page)
 //   down    the backend fails             rahim  the ledger of a seller (party 18)
-//   catalog the catalogue also lists a Sales report (shows the grouping)
 
 import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
 import type { ReportId } from '../../src/bindings/ReportId';
 import type { ReportPage } from '../../src/bindings/ReportPage';
+import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
 import { devFlag } from './dev-bridge';
 import {
   CATALOG,
@@ -28,6 +28,28 @@ import {
   R18_AS_OF,
   R18_FULL,
   R19,
+  PEOPLE_SHAHID,
+  PRINT_R20_UR,
+  PRINT_R28_MONTH_EN,
+  PRINT_R7_EN,
+  PRINT_R9_DUE_EN,
+  R2_ALL,
+  R20_DUES,
+  R21_BY_CITY,
+  R22_BY_COLLECTOR,
+  R24_PAYABLES,
+  R26_ADVANCES,
+  R27_SERIES,
+  R28_BY_DAY,
+  R28_BY_MONTH,
+  R3_CASH,
+  R30_PROFIT,
+  R4_CREDIT,
+  R6_LOTS,
+  R7_ITEMS,
+  R8_ADDA,
+  R9_ALL,
+  R9_DUE,
 } from './reports-real';
 
 type Input = Record<string, unknown>;
@@ -40,16 +62,32 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R17,
   R18: R18_FULL,
   R19,
+  R2: R2_ALL,
+  R3: R3_CASH,
+  R4: R4_CREDIT,
+  R6: R6_LOTS,
+  R7: R7_ITEMS,
+  R8: R8_ADDA,
+  R9: R9_ALL,
+  R20: R20_DUES,
+  R21: R21_BY_CITY,
+  R22: R22_BY_COLLECTOR,
+  R24: R24_PAYABLES,
+  R26: R26_ADVANCES,
+  R27: R27_SERIES,
+  R28: R28_BY_MONTH,
+  R30: R30_PROFIT,
+};
+
+const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
+  R7: PRINT_R7_EN,
+  R9: PRINT_R9_DUE_EN,
+  R13: PRINT_R13_AKRAM_UR,
+  R20: PRINT_R20_UR,
+  R28: PRINT_R28_MONTH_EN,
 };
 
 function catalog(): ReportCatalogEntry[] {
-  const first = CATALOG[0];
-  if (devFlag('catalog') && first !== undefined) {
-    return [
-      ...CATALOG,
-      { ...first, id: 'R2', group: 'sales', group_title_id: 'report-group-sales' },
-    ];
-  }
   return CATALOG;
 }
 
@@ -62,6 +100,8 @@ function page(input: Input): ReportPage {
   if (id === 'R13' && party?.account_id === 18) base = R13_RAHIM;
   if (id === 'R14' && filters['detail'] === true) base = R14_DETAIL;
   if (id === 'R18' && filters['as_of'] !== '') base = R18_AS_OF;
+  if (id === 'R9' && filters['status'] === 'due') base = R9_DUE;
+  if (id === 'R28' && filters['group_by'] === 'day') base = R28_BY_DAY;
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {
     base = { ...base, rows: Array.from({ length: 230 }, () => firstRow), total_count: 230 };
@@ -75,7 +115,8 @@ function page(input: Input): ReportPage {
 const handlers: Record<string, (input: Input) => unknown> = {
   reports_catalog: () => catalog(),
   reports_run: (input) => page(input),
-  reports_print_data: (input) => (input['id'] === 'R13' ? PRINT_R13_AKRAM_UR : PRINT_R18_EN),
+  reports_print_data: (input) => PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN,
+  reports_find_people: () => PEOPLE_SHAHID,
 };
 
 /** What Tauri rejects with for a command this page does not answer, or for the `down` flag. */

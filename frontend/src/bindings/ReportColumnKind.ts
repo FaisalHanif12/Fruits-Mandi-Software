@@ -12,6 +12,7 @@ export type ReportColumnKind =
   | 'balance'
   | 'date'
   | 'month'
+  | 'percent'
   | 'party'
   | 'names'
   | 'detail';

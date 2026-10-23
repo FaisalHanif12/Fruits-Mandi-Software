@@ -68,6 +68,13 @@ export type ReportCell =
       month: number;
     }
   | {
+      type: 'percent';
+      /**
+       * Hundredths of a percent, 0 to 10,000.
+       */
+      hundredths: number;
+    }
+  | {
       type: 'party';
       /**
        * The account.

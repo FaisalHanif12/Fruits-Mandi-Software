@@ -463,6 +463,31 @@ const EXPECTED_FILES: &[&str] = &[
     "FindPeopleInput.ts",
     "PukhtaPersonAccount.ts",
     "PukhtaPersonHit.ts",
+    // Run B, plan 21 (append-only block).
+    "AnalyticsView.ts",
+    "AnalyticsPeriod.ts",
+    "AnalyticsGroupBy.ts",
+    "AnalyticsSide.ts",
+    "AnalyticsCompare.ts",
+    "AnalyticsFilterKind.ts",
+    "AnalyticsCatalogEntry.ts",
+    "AnalyticsFilters.ts",
+    "AnalyticsResolvedFilters.ts",
+    "AnalyticsKey.ts",
+    "AnalyticsHeading.ts",
+    "AnalyticsColumn.ts",
+    "AnalyticsRow.ts",
+    "AnalyticsRunInput.ts",
+    "AnalyticsPage.ts",
+    "AnalyticsLinesInput.ts",
+    "AnalyticsLinesPage.ts",
+    "AnalyticsPrintInput.ts",
+    "AnalyticsPrintHeading.ts",
+    "AnalyticsPrintColumn.ts",
+    "AnalyticsPrintRow.ts",
+    "AnalyticsPrintData.ts",
+    "AnalyticsSavedView.ts",
+    "AnalyticsViewsSaveInput.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -748,6 +773,16 @@ fn export_bindings() {
     // Run B, plan 20, step B3 (append-only block).
     mandi_reports::people::FindPeopleInput::export_all(&cfg).unwrap();
     mandi_reports::people::PersonHit::export_all(&cfg).unwrap();
+    // Run B, plan 21 (append-only block).
+    mandi_reports::analytics::AnalyticsCatalogEntry::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsRunInput::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsPage::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsLinesInput::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsLinesPage::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsPrintData::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsSavedView::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsViewsSaveInput::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

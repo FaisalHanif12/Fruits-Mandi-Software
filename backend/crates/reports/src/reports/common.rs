@@ -1,6 +1,7 @@
 //! Small read helpers shared by the reports: today, accounts by id, names of masters, the row
 //! source of a journal entry. Read only (PRD FR-18.8: reports write nothing).
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, Utc};
@@ -292,7 +293,7 @@ pub(crate) fn add(total: &mut Paisa, amount: Paisa) -> Result<(), MoneyError> {
 /// value from the screen is only ever bound as a parameter (Code Standards B14).
 #[derive(Debug, Default, Clone)]
 pub struct Conds {
-    parts: Vec<&'static str>,
+    parts: Vec<Cow<'static, str>>,
     args: Vec<Value>,
 }
 
@@ -304,14 +305,27 @@ impl Conds {
 
     /// A fragment with no value, for example `s.is_active = 1`.
     pub fn always(&mut self, fragment: &'static str) -> &mut Self {
-        self.parts.push(fragment);
+        self.parts.push(Cow::Borrowed(fragment));
+        self
+    }
+
+    /// `column NOT IN (?, ?, ...)` for a list of ids; nothing for an empty list. The column is
+    /// a constant of this crate and the ids are bound values (Code Standards B14).
+    pub fn not_in(&mut self, column: &'static str, ids: &[i64]) -> &mut Self {
+        if !ids.is_empty() {
+            self.parts.push(Cow::Owned(format!(
+                "{column} NOT IN ({})",
+                placeholders(ids.len())
+            )));
+            self.args.extend(ids.iter().map(|id| Value::Integer(*id)));
+        }
         self
     }
 
     /// A fragment with one `?`, only when the filter is set.
     pub fn id(&mut self, fragment: &'static str, value: Option<i64>) -> &mut Self {
         if let Some(value) = value {
-            self.parts.push(fragment);
+            self.parts.push(Cow::Borrowed(fragment));
             self.args.push(Value::Integer(value));
         }
         self
@@ -320,7 +334,7 @@ impl Conds {
     /// A fragment with one `?`, only when the text is set.
     pub fn text(&mut self, fragment: &'static str, value: Option<&str>) -> &mut Self {
         if let Some(value) = value {
-            self.parts.push(fragment);
+            self.parts.push(Cow::Borrowed(fragment));
             self.args.push(Value::Text(value.to_owned()));
         }
         self

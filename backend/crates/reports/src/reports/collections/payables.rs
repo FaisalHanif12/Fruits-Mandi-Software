@@ -25,9 +25,10 @@ use mandi_core::accounts::{Balance, BalanceSide};
 use mandi_core::money::Paisa;
 use mandi_db::ledger::{Totals, account_totals, totals_of};
 use mandi_db::rusqlite::{Connection, params};
-use mandi_db::vouchers::{advance_totals, payable_totals, pukhta_person};
+use mandi_db::vouchers::advance_totals;
 
 use super::super::PageSpec;
+use super::grouped::{SellerSums, payable_sums, pukhta_names};
 use crate::error::ReportsError;
 use crate::reports::common::{
     add, amount_or_empty, balance_cell, col, count_of, date_cell, load_parties, paisa, pukhta_party,
@@ -97,6 +98,19 @@ fn candidates(
     };
     let ids: Vec<i64> = accounts.iter().map(|(id, _)| *id).collect();
     let parties = load_parties(conn, &ids)?;
+    // The payable sums of every seller key and the names of the one-time people, each from a few
+    // grouped queries and not one set of queries for each seller (Code Standards B22).
+    let sums = if current {
+        Some(payable_sums(conn, typed.party_id)?)
+    } else {
+        None
+    };
+    let pukhta_ids: Vec<i64> = accounts
+        .iter()
+        .filter(|(_, pukhta)| *pukhta)
+        .map(|(id, _)| *id)
+        .collect();
+    let names = pukhta_names(conn, &pukhta_ids)?;
     let totals: HashMap<i64, Totals> = if typed.party_id.is_some() {
         HashMap::new()
     } else {
@@ -144,18 +158,14 @@ fn candidates(
                     continue;
                 }
                 let balance = Balance::from_totals(paisa(dr)?, paisa(cr)?)?;
-                let (name_ur, name_en) = match key.as_deref().map(|k| pukhta_person(conn, k)) {
-                    Some(person) => match person? {
-                        Some(p) => (Some(p.name_ur), Some(p.name_en)),
-                        None => (None, None),
-                    },
+                let (name_ur, name_en) = match key.as_deref().and_then(|k| names.get(k)) {
+                    Some(p) => (Some(p.name_ur.clone()), Some(p.name_en.clone())),
                     None => (None, None),
                 };
-                let working = if current {
-                    Some(working_of(conn, id, key.as_deref())?)
-                } else {
-                    None
-                };
+                let working = sums
+                    .as_ref()
+                    .map(|s| working_of(s, id, key.as_deref()))
+                    .transpose()?;
                 if !worth_a_row(balance, working) {
                     continue;
                 }
@@ -185,11 +195,7 @@ fn candidates(
             if balance.side == BalanceSide::Zero && !has_advance {
                 continue;
             }
-            let working = if current {
-                Some(working_of(conn, id, None)?)
-            } else {
-                None
-            };
+            let working = sums.as_ref().map(|s| working_of(s, id, None)).transpose()?;
             if !worth_a_row(balance, working) {
                 continue;
             }
@@ -213,19 +219,19 @@ fn worth_a_row(balance: Balance, working: Option<Working>) -> bool {
     })
 }
 
-/// The payable working of one seller key from sums of his live lines (PRD FR-7.59).
+/// The payable working of one seller key from the grouped sums of his live lines (PRD FR-7.59).
 fn working_of(
-    conn: &Connection,
+    sums: &SellerSums,
     account_id: i64,
     person_key: Option<&str>,
 ) -> Result<Working, ReportsError> {
-    let t = payable_totals(conn, account_id, person_key)?;
+    let t = sums.of(account_id, person_key);
     let totals = payable_totals_from(
-        paisa(t.credit_paisa)?,
-        paisa(t.payments_paisa)?,
-        paisa(t.advances_given_paisa)?,
-        paisa(t.adjusted_on_credits_paisa)?,
-        paisa(t.adjusted_on_advances_paisa)?,
+        paisa(t.credit)?,
+        paisa(t.payments)?,
+        paisa(t.advances_given)?,
+        paisa(t.adjusted_on_credits)?,
+        paisa(t.adjusted_on_advances)?,
     )?;
     Ok(Working {
         open: totals.open,

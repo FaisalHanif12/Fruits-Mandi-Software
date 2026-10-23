@@ -10,6 +10,9 @@
 @import '../shared/grid/grid.css';
 @import '../shared/print/print.css';
 
+/* Run B, plan 20: the printed report (the totals row, a balance with its side word). */
+@import '../features/reports/reports.css';
+
 html {
   background-color: var(--color-bg);
   color: var(--color-ink);

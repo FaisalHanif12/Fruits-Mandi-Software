@@ -1,0 +1,219 @@
+{
+  "id": "R2",
+  "title_id": "report-r2-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party"
+    },
+    {
+      "key": "city",
+      "title_id": "report-col-city",
+      "kind": "names"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_total",
+      "title_id": "report-col-buyer-total",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کوٹ رادھا کشن",
+            "en": "Kot Radha Kishan"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "number",
+          "value": 20
+        },
+        {
+          "type": "money",
+          "paisa": 60000
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 1288000
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 21,
+            "code": "03040002",
+            "short_code": "2",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "number",
+          "value": 30
+        },
+        {
+          "type": "money",
+          "paisa": 58000
+        },
+        {
+          "type": "money",
+          "paisa": 1740000
+        },
+        {
+          "type": "money",
+          "paisa": 1868400
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 2,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 60
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 4140000
+    },
+    {
+      "type": "money",
+      "paisa": 4436400
+    }
+  ],
+  "summary": []
+}

@@ -3,6 +3,7 @@
 // the menu and the screen for the arrow keys (PRD FR-7.17), and mounts the text size keys once.
 
 import type { ReactNode } from 'react';
+import { PartyReportLinks } from '../../features/reports';
 import type { VoucherSearchHit } from '../../shared/accounts';
 import { useFocusRegion } from '../../shared/keyboard';
 import { StatusBar, type DayState } from './StatusBar';
@@ -76,7 +77,8 @@ export function AppShell({
             ref={screen}
             className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 wide:mx-auto wide:w-full wide:max-w-page"
           >
-            {children}
+            {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
+            <PartyReportLinks>{children}</PartyReportLinks>
           </main>
         </div>
       </div>

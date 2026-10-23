@@ -1,0 +1,158 @@
+{
+  "report": "R28",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r28-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-by-month",
+      "value": ""
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "period",
+      "title_id": "report-col-period",
+      "kind": "month"
+    },
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "balance"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "month",
+          "year": "2026",
+          "month": 10
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010001",
+            "name": "Commission Income (Seller)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "text": "2,484",
+          "side_id": "report-side-cr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "month",
+          "year": "2026",
+          "month": 10
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010002",
+            "name": "Commission Income (Buyer)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "text": "2,484",
+          "side_id": "report-side-cr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "month",
+          "year": "2026",
+          "month": 10
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010003",
+            "name": "Laga Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "text": "480",
+          "side_id": "report-side-cr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "month",
+          "year": "2026",
+          "month": 10
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "04010004",
+            "name": "Phone Charge Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "text": "40",
+          "side_id": "report-side-cr"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "4",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "balance",
+      "text": "5,488",
+      "side_id": "report-side-cr"
+    }
+  ],
+  "words": null,
+  "footer_id": "print-page-label"
+}

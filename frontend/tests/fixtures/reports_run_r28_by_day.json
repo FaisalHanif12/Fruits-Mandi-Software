@@ -1,0 +1,163 @@
+{
+  "id": "R28",
+  "title_id": "report-r28-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false,
+    "group_by": "day"
+  },
+  "columns": [
+    {
+      "key": "period",
+      "title_id": "report-col-period",
+      "kind": "date"
+    },
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "balance"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 10,
+            "code": "04010001",
+            "short_code": null,
+            "name_ur": "کمیشن آمدن (بیوپاری)",
+            "name_en": "Commission Income (Seller)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "paisa": 248400,
+          "side": "cr"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 11,
+            "code": "04010002",
+            "short_code": null,
+            "name_ur": "کمیشن آمدن (گاہک)",
+            "name_en": "Commission Income (Buyer)",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "paisa": 248400,
+          "side": "cr"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 12,
+            "code": "04010003",
+            "short_code": null,
+            "name_ur": "لاگا آمدن",
+            "name_en": "Laga Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "paisa": 48000,
+          "side": "cr"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 13,
+            "code": "04010004",
+            "short_code": null,
+            "name_ur": "فون آمدن",
+            "name_en": "Phone Charge Income",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "balance",
+          "paisa": 4000,
+          "side": "cr"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 4,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "balance",
+      "paisa": 548800,
+      "side": "cr"
+    }
+  ],
+  "summary": []
+}

@@ -6,7 +6,7 @@
 // worked out here, and a card is never reused from an earlier look (balances change with every
 // posting).
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { usePartyCard, type CardWarningKind, type PartyCardData } from '../accounts';
 import { uiErrorOf } from '../api';
@@ -15,7 +15,9 @@ import { displayName, useLanguage } from '../i18n';
 import { Balance } from './Balance';
 import { Code } from './Code';
 import { ErrorMessage } from './ErrorMessage';
+import { LinkButton } from './LinkButton';
 import { Num } from './Num';
+import { usePartyCardLinks } from './party-card-links';
 
 interface PartyCardProps {
   /** The account to show, or null for nothing. */
@@ -43,6 +45,39 @@ function Fact({ labelId, children }: { labelId: string; children: React.ReactNod
       </Localized>
       {children}
     </span>
+  );
+}
+
+/**
+ * The ledger and the statement of this account, one press away (PRD FR-7.65). The range is filled
+ * by the report that opens: the whole history, from the first day of data. Shown only where the app
+ * frame can open a report.
+ */
+function ReportButtons({ accountId }: { accountId: number }) {
+  const open = usePartyCardLinks();
+  const { l10n } = useLocalization();
+  if (open === null) return null;
+  return (
+    <div
+      role="group"
+      aria-label={l10n.getString('report-card-reports-label')}
+      className="flex flex-wrap items-center gap-x-5"
+    >
+      <LinkButton
+        onClick={() => {
+          open('R13', accountId);
+        }}
+      >
+        <Localized id="report-card-ledger" />
+      </LinkButton>
+      <LinkButton
+        onClick={() => {
+          open('R14', accountId);
+        }}
+      >
+        <Localized id="report-card-statement" />
+      </LinkButton>
+    </div>
   );
 }
 
@@ -114,6 +149,7 @@ function CardBody({ card }: { card: PartyCardData }) {
           ))}
         </ul>
       )}
+      <ReportButtons accountId={card.id} />
     </>
   );
 }

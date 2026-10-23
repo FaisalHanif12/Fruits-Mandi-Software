@@ -1,0 +1,161 @@
+{
+  "id": "R24",
+  "title_id": "report-r24-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "section",
+      "title_id": "report-col-section",
+      "kind": "label"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "payable",
+      "title_id": "report-col-payable",
+      "kind": "money"
+    },
+    {
+      "key": "advance_open",
+      "title_id": "report-col-advance-open",
+      "kind": "money"
+    },
+    {
+      "key": "owes_firm",
+      "title_id": "report-col-owes-firm",
+      "kind": "money"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance",
+      "kind": "balance"
+    },
+    {
+      "key": "last_date",
+      "title_id": "report-col-last-date",
+      "kind": "date"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "report-section-payable"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1016000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "group"
+    },
+    {
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "030110002",
+            "short_code": "2",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 1016000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 1016000,
+          "side": "cr"
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 19
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 1016000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "balance",
+      "paisa": 1016000,
+      "side": "cr"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": []
+}

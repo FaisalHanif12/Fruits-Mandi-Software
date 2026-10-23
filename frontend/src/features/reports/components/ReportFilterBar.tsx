@@ -6,13 +6,16 @@
 // filters, not an entry, and the table is the answer.
 
 import { Localized, useLocalization } from '@fluent/react';
-import type { ReactNode, Ref } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import type { ReportFilterKind } from '../../../bindings/ReportFilterKind';
+import type { ReportGroupBy } from '../../../bindings/ReportGroupBy';
 import type { UiError } from '../../../bindings/UiError';
+import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { formNavigationProps } from '../../../shared/keyboard';
 import {
   AccountPicker,
+  Button,
   Checkbox,
   DateInput,
   Field,
@@ -21,12 +24,21 @@ import {
   fieldError,
   type PickerValue,
 } from '../../../shared/ui';
+import { isPukhtaCode } from '../../pukhta_khata';
+import { partyBoxOf } from '../catalog';
 import {
+  GROUP_BY_CHOICES,
+  PAID_CHOICES,
   PERIOD_CHOICES,
   periodMessageId,
+  type PaidChoice,
   type PeriodChoice,
   type ReportFilterState,
 } from '../filters';
+import { ReportPersonPicker } from './ReportPersonPicker';
+
+/** A report with more boxes than this folds its record pickers behind "More filters" when compact. */
+const FOLD_AFTER = 5;
 
 interface ReportFilterBarProps {
   entry: ReportCatalogEntry;
@@ -58,6 +70,11 @@ export function ReportFilterBar({
   const custom = state.period === 'custom';
 
   const boxes: ReactNode[] = [];
+  // The pickers of records (seller, زمیندار, item, city, اڈا). A report with many boxes folds most of
+  // them behind "More filters" in a compact window, where the rows would push the table out of view
+  // (Code Standards F22). From the normal width up every box shows. A folded box is not drawn at
+  // all, so the arrow keys never try to enter a box that cannot be seen.
+  const pickers: ReactNode[] = [];
   if (takes('date_range')) {
     boxes.push(
       <Field
@@ -135,29 +152,68 @@ export function ReportFilterBar({
     );
   }
   if (takes('party')) {
-    boxes.push(
+    const box = partyBoxOf(entry.id);
+    const personBox = (accountId: number | null) => (
       <Field
-        key="party"
-        label={<Localized id="report-filter-party" />}
-        error={fieldError(error, 'filters.party') ?? fieldError(error, 'filters.party.account_id')}
+        key="person"
+        label={<Localized id="report-filter-person" />}
+        error={
+          fieldError(error, 'filters.party.person_key') ??
+          fieldError(error, 'filters.party.account_id') ??
+          fieldError(error, 'filters.party')
+        }
       >
         {(control) => (
-          <AccountPicker
+          <ReportPersonPicker
             {...control}
-            scope="any"
-            showCard={false}
-            value={state.party}
-            onChange={(hit) => {
-              onChange({ party: valueOf(hit) });
+            person={state.person}
+            text={state.personText}
+            accountId={accountId}
+            onTextChange={(personText) => {
+              onChange({ person: null, personText });
+            }}
+            onPick={(person) => {
+              onChange({ person, personText: '' });
             }}
           />
         )}
-      </Field>,
+      </Field>
     );
+    if (box === 'one_time') {
+      // The register of one-time people takes no other account: the box is the person himself.
+      boxes.push(personBox(null));
+    } else {
+      boxes.push(
+        <Field
+          key="party"
+          label={<Localized id="report-filter-party" />}
+          error={
+            fieldError(error, 'filters.party') ?? fieldError(error, 'filters.party.account_id')
+          }
+        >
+          {(control) => (
+            <AccountPicker
+              {...control}
+              scope={box}
+              showCard={false}
+              value={state.party}
+              onChange={(hit) => {
+                // Another account has other people, so the person of the last one is let go.
+                onChange({ party: valueOf(hit), person: null, personText: '' });
+              }}
+            />
+          )}
+        </Field>,
+      );
+      // A one-time account keeps its lines per person: one of them can be picked (FR-13.5).
+      if (state.party !== null && isPukhtaCode(state.party.code)) {
+        boxes.push(personBox(state.party.id));
+      }
+    }
   }
   for (const kind of ['seller', 'zamindar'] as const) {
     if (!takes(kind)) continue;
-    boxes.push(
+    pickers.push(
       <Field
         key={kind}
         label={<Localized id={`report-filter-${kind}`} />}
@@ -179,7 +235,7 @@ export function ReportFilterBar({
   }
   for (const kind of ['item', 'city', 'adda'] as const) {
     if (!takes(kind)) continue;
-    boxes.push(
+    pickers.push(
       <Field
         key={kind}
         label={<Localized id={`report-filter-${kind}`} />}
@@ -212,16 +268,86 @@ export function ReportFilterBar({
     );
   }
 
-  if (boxes.length === 0) return null;
+  if (takes('status')) {
+    boxes.push(
+      <Field key="status" label={<Localized id="report-filter-status" />}>
+        {(control) => (
+          <Select<PaidChoice>
+            {...control}
+            value={state.paid}
+            onChange={(paid) => {
+              onChange({ paid });
+            }}
+            options={PAID_CHOICES.map((choice) => ({
+              value: choice,
+              label: l10n.getString(`report-status-${choice}`),
+            }))}
+          />
+        )}
+      </Field>,
+    );
+  }
+  if (takes('group_by')) {
+    boxes.push(
+      <Field key="group_by" label={<Localized id="report-filter-group-by" />}>
+        {(control) => (
+          <Select<ReportGroupBy>
+            {...control}
+            value={state.groupBy}
+            onChange={(groupBy) => {
+              onChange({ groupBy });
+            }}
+            options={GROUP_BY_CHOICES.map((choice) => ({
+              value: choice,
+              label: l10n.getString(`report-group-by-${choice}`),
+            }))}
+          />
+        )}
+      </Field>,
+    );
+  }
+
+  // A report with more than FOLD_AFTER boxes keeps its first picker in view when it has no party box
+  // (the seller of R6) and folds the rest.
+  const fold = boxes.length + pickers.length > FOLD_AFTER;
+  const kept = fold ? (takes('party') ? 0 : 1) : pickers.length;
+  const folded = pickers.slice(kept);
+  const anyFolded = folded.length > 0;
+  const folderFilled =
+    state.seller !== null ||
+    state.zamindar !== null ||
+    state.item !== null ||
+    state.city !== null ||
+    state.adda !== null;
+  // Open from the start when the address already filled one of the folded boxes.
+  const [more, setMore] = useState(folderFilled);
+  const shownMore = more || folderFilled;
+  const compact = useLayoutStep() === 'compact';
+
+  const visibleBoxes = [...boxes, ...pickers.slice(0, kept)];
+  if (visibleBoxes.length === 0 && !anyFolded) return null;
   return (
     <div
       ref={containerRef}
       role="group"
       aria-label={l10n.getString('report-filters-label')}
       {...formNavigationProps}
-      className="grid grid-cols-4 items-end gap-4"
+      className="grid grid-cols-5 items-end gap-4"
     >
-      {boxes}
+      {visibleBoxes}
+      {anyFolded && compact ? (
+        <div key="more" className="flex items-end">
+          <Button
+            disabled={folderFilled}
+            onClick={() => {
+              setMore(!more);
+            }}
+          >
+            <Localized id={shownMore ? 'report-filters-fewer' : 'report-filters-more'} />
+          </Button>
+        </div>
+      ) : null}
+      {anyFolded && (!compact || shownMore) ? folded : null}
     </div>
   );
 }

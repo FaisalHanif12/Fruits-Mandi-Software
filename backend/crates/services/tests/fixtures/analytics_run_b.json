@@ -1,0 +1,224 @@
+{
+  "view": "B",
+  "title_id": "analytics-view-b-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null
+  },
+  "columns": [
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "bikri_count",
+      "title_id": "analytics-col-bikri-count",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "seller_comm",
+      "title_id": "report-col-seller-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "buyer_comm",
+      "title_id": "report-col-buyer-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "total_comm",
+      "title_id": "report-col-total-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "net",
+      "title_id": "report-col-net",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "money",
+          "paisa": 2940000
+        },
+        {
+          "type": "money",
+          "paisa": 176400
+        },
+        {
+          "type": "money",
+          "paisa": 176400
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        },
+        {
+          "type": "money",
+          "paisa": 1931600
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 18,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "030110002",
+            "short_code": "2",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "number",
+          "value": 10
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 72000
+        },
+        {
+          "type": "money",
+          "paisa": 72000
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        },
+        {
+          "type": "money",
+          "paisa": 1016000
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": 19,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 2
+    },
+    {
+      "type": "number",
+      "value": 60
+    },
+    {
+      "type": "money",
+      "paisa": 4140000
+    },
+    {
+      "type": "money",
+      "paisa": 248400
+    },
+    {
+      "type": "money",
+      "paisa": 248400
+    },
+    {
+      "type": "money",
+      "paisa": 544800
+    },
+    {
+      "type": "money",
+      "paisa": 2947600
+    }
+  ]
+}

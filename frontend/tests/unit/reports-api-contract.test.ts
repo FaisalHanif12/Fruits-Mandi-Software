@@ -14,6 +14,10 @@ import { bundles, LANGUAGES } from '../../src/i18n';
 import * as invoke from '../../src/shared/api/invoke';
 import {
   CATALOG,
+  PEOPLE_LIMIT_TOO_BIG,
+  PEOPLE_NONE,
+  PEOPLE_SHAHID,
+  PEOPLE_SHAHID_REQUEST,
   PRINT_R13_AKRAM_UR,
   PRINT_R13_AKRAM_UR_REQUEST,
   PRINT_R18_EN,
@@ -28,6 +32,27 @@ import {
   R18_PAGE1,
   R18_PAGE1_REQUEST,
   R19,
+  R2_ALL,
+  R20_DUES,
+  R21_BY_CITY,
+  R22_BY_COLLECTOR,
+  R24_PAYABLES,
+  R26_ADVANCES,
+  R27_SERIES,
+  R28_BY_DAY,
+  R28_BY_MONTH,
+  R3_CASH,
+  R30_PROFIT,
+  R4_CREDIT,
+  R6_LOTS,
+  R7_ITEMS,
+  R8_ADDA,
+  R9_ALL,
+  R9_DUE,
+  PRINT_R20_UR,
+  PRINT_R28_MONTH_EN,
+  PRINT_R7_EN,
+  PRINT_R9_DUE_EN,
 } from '../helpers/reports-real';
 
 vi.mock('../../src/shared/api/invoke');
@@ -40,6 +65,10 @@ beforeEach(() => {
 });
 
 const BACKEND_FILE = path.resolve(__dirname, '../../../backend/app/src/commands/reports_engine.rs');
+const BACKEND_PEOPLE_FILE = path.resolve(
+  __dirname,
+  '../../../backend/app/src/commands/reports_people.rs',
+);
 const BACKEND_FIXTURES = path.resolve(__dirname, '../../../backend/crates/services/tests/fixtures');
 const FRONTEND_FIXTURES = path.resolve(__dirname, '../fixtures');
 
@@ -48,6 +77,7 @@ const isEngineFixture = (name: string) =>
   name.endsWith('.json') &&
   (name === 'reports_catalog.json' ||
     name.startsWith('reports_run_') ||
+    name.startsWith('reports_find_people_') ||
     name.startsWith('reports_print_data_r'));
 
 describe('the commands the screens call are the ones the backend declares', () => {
@@ -57,6 +87,12 @@ describe('the commands the screens call are the ones the backend declares', () =
     for (const name of ['reports_catalog', 'reports_run', 'reports_print_data']) {
       expect(declared).toContain(name);
     }
+  });
+
+  it('the people search used in api.ts exists in the backend’s people file', () => {
+    const text = readFileSync(BACKEND_PEOPLE_FILE, 'utf8');
+    const declared = [...text.matchAll(/pub async fn (\w+)</g)].map((match) => match[1] ?? '');
+    expect(declared).toContain('reports_find_people');
   });
 });
 
@@ -71,28 +107,32 @@ describe('each wrapper sends the command and `{ input }`', () => {
     await api.reportsRun(R13_AKRAM_REQUEST);
     await api.reportsPrintData(PRINT_R18_EN_REQUEST);
     await api.reportsPrintData(PRINT_R13_AKRAM_UR_REQUEST);
+    await api.reportsFindPeople(PEOPLE_SHAHID_REQUEST);
     expect(call.mock.calls).toEqual([
       ['reports_run', { input: R18_PAGE1_REQUEST }],
       ['reports_run', { input: R13_AKRAM_REQUEST }],
       ['reports_print_data', { input: PRINT_R18_EN_REQUEST }],
       ['reports_print_data', { input: PRINT_R13_AKRAM_UR_REQUEST }],
+      ['reports_find_people', { input: PEOPLE_SHAHID_REQUEST }],
     ]);
   });
 });
 
 describe('the fixtures are the backend’s own', () => {
   it('every report engine fixture is the same text as the backend’s file', () => {
-    // The catalogue grows with each step of plan 20 (the backend adds reports to the same list), so
-    // it is compared entry by entry below; every other fixture is one answer and must be identical.
-    const names = readdirSync(FRONTEND_FIXTURES)
-      .filter(isEngineFixture)
-      .filter((name) => name !== 'reports_catalog.json');
-    expect(names.length).toBeGreaterThan(30);
+    // The catalogue too: it holds all 22 reports of the early track now, as the backend lists them.
+    const names = readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture);
+    expect(names.length).toBeGreaterThan(90);
     for (const name of names) {
       expect(readFileSync(path.join(FRONTEND_FIXTURES, name), 'utf8'), name).toBe(
         readFileSync(path.join(BACKEND_FIXTURES, name), 'utf8'),
       );
     }
+  });
+
+  it('has every report the backend’s fixture folder has, none more, none less', () => {
+    const names = (dir: string) => readdirSync(dir).filter(isEngineFixture).sort();
+    expect(names(FRONTEND_FIXTURES)).toEqual(names(BACKEND_FIXTURES));
   });
 
   it('every report of the copied catalogue is, unchanged, in the backend’s catalogue', () => {
@@ -134,6 +174,23 @@ describe('the answers carry exactly the fields of the generated types', () => {
       R17,
       R18_PAGE1,
       R19,
+      R2_ALL,
+      R3_CASH,
+      R4_CREDIT,
+      R6_LOTS,
+      R7_ITEMS,
+      R8_ADDA,
+      R9_ALL,
+      R9_DUE,
+      R20_DUES,
+      R21_BY_CITY,
+      R22_BY_COLLECTOR,
+      R24_PAYABLES,
+      R26_ADVANCES,
+      R27_SERIES,
+      R28_BY_DAY,
+      R28_BY_MONTH,
+      R30_PROFIT,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -148,7 +205,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'totals',
         'totals_label_id',
       ]);
-      expect(keysOf(page.filters)).toEqual([
+      // `group_by` and `status` are in the echo only when the report was asked with them.
+      expect(keysOf(page.filters).filter((key) => key !== 'group_by' && key !== 'status')).toEqual([
         'adda',
         'as_of',
         'city',
@@ -186,8 +244,31 @@ describe('the answers carry exactly the fields of the generated types', () => {
     ]);
   });
 
+  it('PukhtaPersonHit', () => {
+    for (const hit of PEOPLE_SHAHID) {
+      expect(keysOf(hit)).toEqual([
+        'accounts',
+        'last_date',
+        'name_en',
+        'name_ur',
+        'person_key',
+        'phone',
+      ]);
+      for (const account of hit.accounts) expect(keysOf(account)).toEqual(['account_id', 'side']);
+    }
+    expect(PEOPLE_NONE).toEqual([]);
+    expect(PEOPLE_LIMIT_TOO_BIG).toMatchObject({ ok: false });
+  });
+
   it('ReportPrintData', () => {
-    for (const data of [PRINT_R18_EN, PRINT_R13_AKRAM_UR]) {
+    for (const data of [
+      PRINT_R18_EN,
+      PRINT_R13_AKRAM_UR,
+      PRINT_R7_EN,
+      PRINT_R20_UR,
+      PRINT_R28_MONTH_EN,
+      PRINT_R9_DUE_EN,
+    ]) {
       expect(keysOf(data)).toEqual([
         'columns',
         'dir',
@@ -249,7 +330,7 @@ describe('every message ID the backend sends has words in both languages', () =>
       if (name.endsWith('_request.json')) continue;
       idsIn(JSON.parse(readFileSync(path.join(FRONTEND_FIXTURES, name), 'utf8')), found);
     }
-    expect(found.size).toBeGreaterThan(25);
+    expect(found.size).toBeGreaterThan(100);
     for (const id of found) {
       for (const language of LANGUAGES) {
         expect(bundles[language].hasMessage(id), `${language} ${id}`).toBe(true);

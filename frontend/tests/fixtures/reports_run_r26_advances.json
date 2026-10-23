@@ -1,0 +1,121 @@
+{
+  "id": "R26",
+  "title_id": "report-r26-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "given",
+      "title_id": "report-col-given",
+      "kind": "money"
+    },
+    {
+      "key": "returned",
+      "title_id": "report-col-returned",
+      "kind": "money"
+    },
+    {
+      "key": "adjusted",
+      "title_id": "report-col-adjusted",
+      "kind": "money"
+    },
+    {
+      "key": "open",
+      "title_id": "report-col-open",
+      "kind": "money"
+    },
+    {
+      "key": "last_date",
+      "title_id": "report-col-last-date",
+      "kind": "date"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 1500000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 1500000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "date",
+          "iso": "2026-09-01"
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 18
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 1500000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 1500000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": []
+}

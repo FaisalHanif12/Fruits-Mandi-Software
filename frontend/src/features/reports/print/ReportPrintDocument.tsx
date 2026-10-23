@@ -20,14 +20,14 @@ import {
 import { Code } from '../../../shared/ui/Code';
 import { Num } from '../../../shared/ui/Num';
 import { ScriptText } from '../../../shared/ui/ScriptText';
-import { monthText } from '../cells';
-import '../reports.css';
+import { emptyNameMessageId, monthMessageId } from '../cells';
 
 /** The column kinds that hold figures: they sit on the physical right edge (NFR-USE-19). */
 const FIGURE_KINDS: ReadonlySet<PrintReportColumn['kind']> = new Set([
   'number',
   'money',
   'balance',
+  'percent',
 ]);
 
 /** The message of a zero balance's side: a nil balance has no side word. */
@@ -86,10 +86,15 @@ function Cell({ cell }: { cell: ReportPrintCell }) {
       return <>{l10n.getString(cell.id)}</>;
     case 'number':
     case 'money':
+    case 'percent':
     case 'date':
       return <Num>{cell.text}</Num>;
     case 'month':
-      return <Num>{monthText(Number(cell.year), cell.month)}</Num>;
+      return (
+        <>
+          {l10n.getString(monthMessageId(cell.month))} <Num>{cell.year}</Num>
+        </>
+      );
     case 'balance':
       return (
         <span className="print-balance">
@@ -138,6 +143,11 @@ function cellClass(kind: PrintReportColumn['kind']): string {
   if (kind === 'date' || kind === 'month') return 'print-col-date print-nowrap';
   if (kind === 'doc') return 'print-nowrap';
   return '';
+}
+
+/** The class of the cell at a column: a column the data does not name is plain text. */
+function columnClass(data: ReportPrintData, position: number): string {
+  return cellClass(data.columns[position]?.kind ?? 'text');
 }
 
 interface ReportPrintDocumentProps {
@@ -233,18 +243,25 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
           <tbody>
             {data.rows.map((row, index) => (
               <tr key={index} data-row={row.kind}>
-                {row.cells.map((cell, position) => (
-                  <td key={position} className={cellClass(data.columns[position]?.kind ?? 'text')}>
-                    <Cell cell={cell} />
-                  </td>
-                ))}
+                {row.cells.map((cell, position) => {
+                  // A name left empty on purpose (no city, no collector, no اڈا) is said in words.
+                  const none =
+                    position === 0 && cell.type === 'empty'
+                      ? emptyNameMessageId(data.report, row.kind)
+                      : null;
+                  return (
+                    <td key={position} className={columnClass(data, position)}>
+                      {none === null ? <Cell cell={cell} /> : l10n.getString(none)}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               {data.totals.map((cell, position) => (
-                <td key={position} className={cellClass(data.columns[position]?.kind ?? 'text')}>
+                <td key={position} className={columnClass(data, position)}>
                   {position === 0 && cell.type === 'empty' ? (
                     l10n.getString(data.totals_label_id)
                   ) : (

@@ -1,0 +1,18 @@
+{
+  "filters": {
+    "adda_id": null,
+    "buyer": null,
+    "city_id": null,
+    "compare": "previous",
+    "from": "10-10-2026",
+    "group_by": null,
+    "item_id": null,
+    "period": null,
+    "seller_id": null,
+    "side": "both",
+    "to": "10-10-2026"
+  },
+  "limit": 0,
+  "offset": 0,
+  "view": "A"
+}

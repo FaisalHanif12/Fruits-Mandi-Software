@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-analytics-views-get"
+description = "Enables the analytics_views_get command without any pre-configured scope."
+commands.allow = ["analytics_views_get"]
+
+[[permission]]
+identifier = "deny-analytics-views-get"
+description = "Denies the analytics_views_get command without any pre-configured scope."
+commands.deny = ["analytics_views_get"]

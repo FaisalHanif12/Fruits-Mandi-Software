@@ -198,7 +198,7 @@ pub enum DateShortcut {
 }
 
 /// The party filter: one account, and for a پختہ کھاتہ account one person (PRD FR-13.5).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(rename = "ReportPartyFilter")]
 pub struct PartyFilter {
     /// The account the user picked.
@@ -360,6 +360,8 @@ pub enum ColumnKind {
     Date,
     /// A month of a year (the grouping of R28).
     Month,
+    /// A share in hundredths of a percent (analytics, PRD 18.2): 7210 is 72.10%.
+    Percent,
     /// An account.
     Party,
     /// A name in both scripts.
@@ -493,6 +495,14 @@ pub enum Cell {
         /// The month, 1 to 12.
         #[ts(type = "number")]
         month: i64,
+    },
+    /// A share of a total in hundredths of a percent, for display only (analytics, PRD 18.2,
+    /// money agent Section 9): 7210 is 72.10%. The screen writes it as `72.10` with the sign
+    /// `%`; it never works anything out from it.
+    Percent {
+        /// Hundredths of a percent, 0 to 10,000.
+        #[ts(type = "number")]
+        hundredths: i64,
     },
     /// An account.
     Party {

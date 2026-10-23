@@ -274,6 +274,13 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-reports-run",
             "allow-reports-print-data",
             "allow-reports-find-people",
+            // Run B, plan 21 (append-only block).
+            "allow-analytics-catalog",
+            "allow-analytics-run",
+            "allow-analytics-lines",
+            "allow-analytics-print-data",
+            "allow-analytics-views-get",
+            "allow-analytics-views-save",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",
@@ -305,6 +312,7 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "allow-reports-bikri-print-data",
             "allow-reports-voucher-print-data",
             "allow-reports-print-data",
+            "allow-analytics-print-data",
             "core:event:default"
         ])
     );

@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "code": "ERR_REQUIRED",
+      "field": "filters.from",
+      "values": {}
+    },
+    {
+      "code": "ERR_REQUIRED",
+      "field": "filters.to",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

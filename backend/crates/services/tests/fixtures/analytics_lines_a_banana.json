@@ -1,0 +1,286 @@
+{
+  "view": "A",
+  "title_id": "analytics-lines-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_value",
+      "title_id": "analytics-col-purchase-value",
+      "kind": "money"
+    },
+    {
+      "key": "seller_comm",
+      "title_id": "report-col-seller-comm",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_comm",
+      "title_id": "report-col-buyer-comm",
+      "kind": "money"
+    },
+    {
+      "key": "laga",
+      "title_id": "report-col-laga",
+      "kind": "money"
+    },
+    {
+      "key": "total_comm",
+      "title_id": "report-col-total-comm",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "number",
+          "value": 20
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 72000
+        },
+        {
+          "type": "money",
+          "paisa": 72000
+        },
+        {
+          "type": "money",
+          "paisa": 16000
+        },
+        {
+          "type": "money",
+          "paisa": 160000
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 21,
+            "code": "03040002",
+            "short_code": "2",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "number",
+          "value": 30
+        },
+        {
+          "type": "money",
+          "paisa": 1740000
+        },
+        {
+          "type": "money",
+          "paisa": 1740000
+        },
+        {
+          "type": "money",
+          "paisa": 104400
+        },
+        {
+          "type": "money",
+          "paisa": 104400
+        },
+        {
+          "type": "money",
+          "paisa": 24000
+        },
+        {
+          "type": "money",
+          "paisa": 232800
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 50
+    },
+    {
+      "type": "money",
+      "paisa": 2940000
+    },
+    {
+      "type": "money",
+      "paisa": 2940000
+    },
+    {
+      "type": "money",
+      "paisa": 176400
+    },
+    {
+      "type": "money",
+      "paisa": 176400
+    },
+    {
+      "type": "money",
+      "paisa": 40000
+    },
+    {
+      "type": "money",
+      "paisa": 392800
+    }
+  ]
+}

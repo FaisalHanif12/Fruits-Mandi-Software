@@ -1,0 +1,179 @@
+{
+  "id": "R27",
+  "title_id": "report-r27-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "bill_date",
+      "title_id": "report-col-bill-date",
+      "kind": "date"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money"
+    },
+    {
+      "key": "deductions",
+      "title_id": "report-col-deductions",
+      "kind": "money"
+    },
+    {
+      "key": "net",
+      "title_id": "report-col-net",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 2940000
+        },
+        {
+          "type": "money",
+          "paisa": 1008400
+        },
+        {
+          "type": "money",
+          "paisa": 1931600
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 2
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 19,
+            "code": "030110002",
+            "short_code": "2",
+            "name_ur": "کریم",
+            "name_en": "Karim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 184000
+        },
+        {
+          "type": "money",
+          "paisa": 1016000
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 2
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 4140000
+    },
+    {
+      "type": "money",
+      "paisa": 1192400
+    },
+    {
+      "type": "money",
+      "paisa": 2947600
+    }
+  ],
+  "summary": []
+}

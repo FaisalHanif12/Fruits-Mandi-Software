@@ -25,6 +25,8 @@ pub mod backup;
 pub mod reports_engine;
 // Run B, plan 20, step B3 (append-only block).
 pub mod reports_people;
+// Run B, plan 21 (append-only block).
+pub mod analytics;
 
 use std::fmt;
 

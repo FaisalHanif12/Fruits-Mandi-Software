@@ -390,3 +390,416 @@ report-print-job-later = Sending to the printer and saving as PDF come in a late
 
 # review: pending
 report-print-close = Close
+
+## Round 4 (plan 20, step F3): the Sales, Collections and Business reports, the person box, the month names, global search and the party card buttons.
+
+## The reports: a title and one line that says what it shows (PRD 19.2).
+
+# review: pending
+report-r2-title = Full Sales Register
+
+# review: pending
+report-r2-help = Every sale of the days you choose, one row for each { -gahak } line: item, quantity, rate and what the buyer pays.
+
+# review: pending
+report-r3-title = { -naqdi } Sales
+
+# review: pending
+report-r3-help = Only the { -naqdi } sales of the days you choose.
+
+# review: pending
+report-r4-title = { -udhari } Sales
+
+# review: pending
+report-r4-help = Only the { -udhari } sales of the days you choose.
+
+# review: pending
+report-r6-title = { -bikri } Details
+
+# review: pending
+report-r6-help = Every lot of the days you choose, with the { -kham-bikri }, the deductions and the { -safi-bikri }.
+
+# review: pending
+report-r7-title = Item-wise Sales
+
+# review: pending
+report-r7-help = Sales by item: quantity, { -kham-bikri }, average rate and the { -commission } of both sides.
+
+# review: pending
+report-r8-title = { -adda } Report
+
+# review: pending
+report-r8-help = Trucks, lots, quantity and { -kham-bikri } for each { -adda }.
+
+# review: pending
+report-r9-title = { -pukhta-khata } Register
+
+# review: pending
+report-r9-help = Every line of the one-time people of { -pukhta-khata }, with what is paid and what is due.
+
+# review: pending
+report-r20-title = { -gahak } Dues
+
+# review: pending
+report-r20-help = Each buyer's balance with the age of his open bills. The { -meezan } is the shop's total { -agrahi }.
+
+# review: pending
+report-r21-title = { -agrahi } by City
+
+# review: pending
+report-r21-help = The same dues, grouped by city, with the total of each city.
+
+# review: pending
+report-r22-title = { -agrahi } by Collector
+
+# review: pending
+report-r22-help = The same dues, grouped by collector, with the total of each collector.
+
+# review: pending
+report-r24-title = Seller Payables
+
+# review: pending
+report-r24-help = What the shop owes each seller, his open { -peshgi } and what he owes beyond it.
+
+# review: pending
+report-r26-title = { -peshgi-khata }
+
+# review: pending
+report-r26-help = For each seller: { -peshgi } given, returned, adjusted and still open.
+
+# review: pending
+report-r27-title = Bill Series
+
+# review: pending
+report-r27-help = The sellers' bills in number order, with the { -kham-bikri }, the deductions and the { -safi-bikri }.
+
+# review: pending
+report-r28-title = Income Report
+
+# review: pending
+report-r28-help = Every income account by month or by day. The { -meezan } is the net income.
+
+# review: pending
+report-r30-title = Profit and Partner Split
+
+# review: pending
+report-r30-help = Income less shop expenses, and each partner's { -hissa }, money taken and net.
+
+## The columns of these reports.
+
+# review: pending
+report-col-buyer = { -gahak }
+
+# review: pending
+report-col-seller = { -beopari }
+
+# review: pending
+report-col-item = { -qism-maal }
+
+# review: pending
+report-col-qty = Quantity
+
+# review: pending
+report-col-rate = Rate
+
+# review: pending
+report-col-value = Value
+
+# review: pending
+report-col-buyer-total = Buyer total
+
+# review: pending
+report-col-gross = { -kham-bikri }
+
+# review: pending
+report-col-freight = { -kiraya }
+
+# review: pending
+report-col-commission = { -commission }
+
+# review: pending
+report-col-labour = { -mazdoori }
+
+# review: pending
+report-col-munshiana = { -munshiana }
+
+# review: pending
+report-col-cash-paid = { -naqd }
+
+# review: pending
+report-col-store-rent = { -kiraya-store }
+
+# review: pending
+report-col-phone-charge = { -phone }
+
+# review: pending
+report-col-deductions = { print-total-deductions }
+
+# review: pending
+report-col-net = { -safi-bikri }
+
+# review: pending
+report-col-avg-rate = Average rate
+
+# review: pending
+report-col-seller-comm = Seller { -commission }
+
+# review: pending
+report-col-buyer-comm = Buyer { -commission }
+
+# review: pending
+report-col-laga = { -laga }
+
+# review: pending
+report-col-total-comm = Total { -commission }
+
+# review: pending
+report-col-adda = { -adda }
+
+# review: pending
+report-col-trucks = Trucks
+
+# review: pending
+report-col-lots = Lots
+
+# review: pending
+report-col-side = Side
+
+# review: pending
+report-col-person = Name
+
+# review: pending
+report-col-phone = Phone
+
+# review: pending
+report-col-status = Status
+
+# review: pending
+report-col-oldest-date = Oldest bill
+
+# review: pending
+report-col-days = Days
+
+# review: pending
+report-col-age-0-7 = 0-7 days
+
+# review: pending
+report-col-age-8-30 = 8-30 days
+
+# review: pending
+report-col-age-31-90 = 31-90 days
+
+# review: pending
+report-col-age-91 = Over 90 days
+
+# review: pending
+report-col-collector = Collector
+
+# review: pending
+report-col-section = List
+
+# review: pending
+report-col-payable = Payable
+
+# review: pending
+report-col-advance-open = Open { -peshgi }
+
+# review: pending
+report-col-owes-firm = Owes the shop
+
+# review: pending
+report-col-last-date = Last date
+
+# review: pending
+report-col-given = Given
+
+# review: pending
+report-col-returned = Returned
+
+# review: pending
+report-col-adjusted = Adjusted
+
+# review: pending
+report-col-open = Open
+
+# review: pending
+report-col-bill-date = Bill date
+
+# review: pending
+report-col-period = Period
+
+# review: pending
+report-col-amount = Amount
+
+# review: pending
+report-col-income-share = Income { -hissa }
+
+# review: pending
+report-col-expense-share = Expense { -hissa }
+
+# review: pending
+report-col-profit-share = Profit { -hissa }
+
+# review: pending
+report-col-taken = { -zati-kharcha }
+
+# review: pending
+report-col-partner-net = { -khalis }
+
+# review: pending
+report-col-partner = { -shirakat-dar }
+
+## The words inside the rows and above the table.
+
+# review: pending
+report-side-buyer = { -gahak }
+
+# review: pending
+report-side-seller = { -beopari }
+
+# review: pending
+report-section-payable = Payable to sellers
+
+# review: pending
+report-section-owes-firm = Sellers who owe the shop
+
+# review: pending
+report-status-all = All lines
+
+# review: pending
+report-status-paid = Paid
+
+# review: pending
+report-status-due = Due
+
+# review: pending
+report-status-cancelled = Cancelled
+
+# review: pending
+report-r30-income = Total income
+
+# review: pending
+report-r30-expenses = Total shop expenses
+
+# review: pending
+report-r30-profit = Profit
+
+# review: pending
+report-filter-paid = Paid lines only
+
+# review: pending
+report-filter-due = Due lines only
+
+# review: pending
+report-filter-by-day = By day
+
+# review: pending
+report-filter-by-month = By month
+
+## The new filter boxes.
+
+# review: pending
+report-filter-person = One-time person
+
+# review: pending
+report-filter-person-hint = Type a name or a phone number
+
+# review: pending
+report-filter-status = Show
+
+# review: pending
+report-filter-group-by = Group by
+
+# review: pending
+report-group-by-month = Month
+
+# review: pending
+report-group-by-day = Day
+
+## The names of the months (R28 by month; PRD 19.2, NFR-URD-16).
+
+# review: pending
+report-month-1 = January
+
+# review: pending
+report-month-2 = February
+
+# review: pending
+report-month-3 = March
+
+# review: pending
+report-month-4 = April
+
+# review: pending
+report-month-5 = May
+
+# review: pending
+report-month-6 = June
+
+# review: pending
+report-month-7 = July
+
+# review: pending
+report-month-8 = August
+
+# review: pending
+report-month-9 = September
+
+# review: pending
+report-month-10 = October
+
+# review: pending
+report-month-11 = November
+
+# review: pending
+report-month-12 = December
+
+## The party card buttons (PRD FR-7.65).
+
+# review: pending
+report-card-ledger = { -khata }
+
+# review: pending
+report-card-statement = { -fard-hisab }
+
+# review: pending
+report-card-open-ledger = Open the { -khata } of this account
+
+# review: pending
+report-card-open-statement = Open the { -fard-hisab } of this account
+
+# review: pending
+report-card-reports-label = Reports of this account
+
+## Global search: one-time people and screens (PRD FR-5.4).
+
+# review: pending
+report-search-person = One-time person
+
+# review: pending
+report-search-person-last = Last { $date }
+
+# review: pending
+report-search-screen = Screen
+
+# review: pending
+report-search-report = Report
+
+## The fold of the filter boxes in a compact window (Code Standards F22).
+
+# review: pending
+report-filters-more = More filters
+
+# review: pending
+report-filters-fewer = Fewer filters
+
+## The heading of the buyers with no city or no collector (R21, R22).
+
+# review: pending
+report-group-no-city = No city
+
+# review: pending
+report-group-no-collector = No collector
+
+# review: pending
+report-adda-none = No Adda

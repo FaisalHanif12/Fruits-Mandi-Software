@@ -1,0 +1,97 @@
+{
+  "view": "D",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "analytics-view-d-title",
+  "firm": {
+    "name": "ماہر عدنان اینڈ برادرز",
+    "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-by-month",
+      "value": ""
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names",
+      "heading": null
+    },
+    {
+      "key": "p_2026_10",
+      "title_id": "analytics-col-period",
+      "kind": "money",
+      "heading": {
+        "kind": "month",
+        "year": "2026",
+        "month": 10
+      }
+    },
+    {
+      "key": "total_comm",
+      "title_id": "analytics-col-row-total",
+      "kind": "money",
+      "heading": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "کیلا"
+        },
+        {
+          "type": "money",
+          "text": "3,928"
+        },
+        {
+          "type": "money",
+          "text": "3,928"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "سیب"
+        },
+        {
+          "type": "money",
+          "text": "1,520"
+        },
+        {
+          "type": "money",
+          "text": "1,520"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "5,448"
+    },
+    {
+      "type": "money",
+      "text": "5,448"
+    }
+  ],
+  "footer_id": "print-page-label"
+}

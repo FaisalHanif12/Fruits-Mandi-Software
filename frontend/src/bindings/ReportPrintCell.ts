@@ -54,6 +54,13 @@ export type ReportPrintCell =
       text: string;
     }
   | {
+      type: 'percent';
+      /**
+       * The share as printed.
+       */
+      text: string;
+    }
+  | {
       type: 'month';
       /**
        * The year as printed.

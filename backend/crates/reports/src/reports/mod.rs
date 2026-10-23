@@ -22,11 +22,11 @@
 mod accounts;
 mod business;
 mod collections;
-mod common;
+pub(crate) mod common;
 mod filters;
-mod ids;
+pub(crate) mod ids;
 mod model;
-mod print_data;
+pub(crate) mod print_data;
 mod sales;
 #[doc(hidden)]
 pub mod workings;
@@ -78,6 +78,12 @@ pub mod plans {
     }
 }
 
+/// The grouped payable sums of R24, for the parity and query count tests (Code Standards B22).
+#[doc(hidden)]
+pub mod grouped_sums {
+    pub use super::collections::{KeySums, SellerSums, payable_sums, pukhta_names};
+}
+
 pub use ids::posting_types;
 pub use model::{
     CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind, GroupBy, Names,
@@ -90,7 +96,7 @@ pub use print_data::{
     PrintSummaryLine, ReportPrintData, build_print,
 };
 
-use accounts::PageSpec;
+pub(crate) use accounts::PageSpec;
 use filters::{Takes, Typed, resolve};
 
 use crate::error::ReportsError;
@@ -286,7 +292,7 @@ pub fn catalog() -> Vec<CatalogEntry> {
 }
 
 /// Checks the page asked for and gives the rows to read (Code Standards 4.3, B31).
-fn page_spec(offset: i64, limit: i64) -> Result<PageSpec, ReportsError> {
+pub(crate) fn page_spec(offset: i64, limit: i64) -> Result<PageSpec, ReportsError> {
     let mut problems = Vec::new();
     if offset < 0 {
         problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "offset"));

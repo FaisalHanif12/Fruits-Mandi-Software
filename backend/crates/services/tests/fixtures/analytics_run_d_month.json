@@ -1,0 +1,131 @@
+{
+  "view": "D",
+  "title_id": "analytics-view-d-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": "month",
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null
+  },
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "p_2026_10",
+      "title_id": "analytics-col-period",
+      "kind": "money",
+      "heading": {
+        "kind": "month",
+        "year": 2026,
+        "month": 10
+      },
+      "drill": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": "2026-10-01",
+        "to": "2026-10-31",
+        "not_item_ids": []
+      }
+    },
+    {
+      "key": "total_comm",
+      "title_id": "analytics-col-row-total",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        },
+        {
+          "type": "money",
+          "paisa": 392800
+        }
+      ],
+      "key": {
+        "item_id": 1,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "سیب",
+            "en": "Apple"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        },
+        {
+          "type": "money",
+          "paisa": 152000
+        }
+      ],
+      "key": {
+        "item_id": 2,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 544800
+    },
+    {
+      "type": "money",
+      "paisa": 544800
+    }
+  ]
+}

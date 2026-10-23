@@ -28,9 +28,9 @@ use mandi_core::dates::BusinessDate;
 use mandi_core::money::Paisa;
 use mandi_db::ledger::{Totals, account_totals, totals_of};
 use mandi_db::rusqlite::{Connection, params, params_from_iter};
-use mandi_db::vouchers::pukhta_person;
 
 use super::super::PageSpec;
+use super::grouped::pukhta_names;
 use crate::error::ReportsError;
 use crate::reports::common::{
     IN_CHUNK, LIVE, add, amount_or_empty, col, count_of, date_cell, load_parties, paisa,
@@ -123,6 +123,9 @@ fn owing(
     } else {
         account_totals(conn, as_of)?.into_iter().collect()
     };
+    // The names of the one-time people, from one query and not one for each person (B22).
+    let pukhta_ids: Vec<i64> = accounts.iter().filter(|a| a.pukhta).map(|a| a.id).collect();
+    let names = pukhta_names(conn, &pukhta_ids)?;
     let mut found = Vec::new();
     for account in accounts {
         let party = parties.get(&account.id).cloned().ok_or_else(|| {
@@ -147,11 +150,12 @@ fn owing(
                 if balance <= Paisa::ZERO {
                     continue;
                 }
-                let (name_ur, name_en, phone) = match &key {
-                    Some(k) => match pukhta_person(conn, k)? {
-                        Some(p) => (Some(p.name_ur), Some(p.name_en), Some(p.phone)),
-                        None => (None, None, None),
-                    },
+                let (name_ur, name_en, phone) = match key.as_ref().and_then(|k| names.get(k)) {
+                    Some(p) => (
+                        Some(p.name_ur.clone()),
+                        Some(p.name_en.clone()),
+                        Some(p.phone.clone()),
+                    ),
                     None => (None, None, None),
                 };
                 found.push(Buyer {

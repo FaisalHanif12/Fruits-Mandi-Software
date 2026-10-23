@@ -61,6 +61,13 @@ impl NumberStyle {
         self.digits(local.format("%d-%m-%Y %H:%M").to_string())
     }
 
+    /// A share in hundredths of a percent as `72.10` (analytics, PRD 18.2). Display only.
+    pub(crate) fn hundredths(self, value: i64) -> String {
+        let sign = if value < 0 { "-" } else { "" };
+        let value = value.unsigned_abs();
+        self.digits(format!("{sign}{}.{:02}", value / 100, value % 100))
+    }
+
     /// A weight in grams as kg with up to 3 decimals and no trailing zeros: 12,345 → `12.345`,
     /// 12,500 → `12.5`, 12,000 → `12`.
     pub(crate) fn kilos(self, grams: i64) -> String {

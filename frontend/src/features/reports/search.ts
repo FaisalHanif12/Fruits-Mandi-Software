@@ -2,7 +2,7 @@
 // opens the ledger of account 20 with the dates already filled, the way the party card's buttons
 // do. Everything is optional, and anything that does not read is left out.
 
-import type { PeriodChoice, ReportFilterState } from './filters';
+import type { PeriodChoice, ReportFilterState, ReportPerson } from './filters';
 import { EMPTY_FILTERS, PERIOD_CHOICES } from './filters';
 
 export interface ReportSearch {
@@ -11,10 +11,38 @@ export interface ReportSearch {
   to?: string;
   as_of?: string;
   party?: number;
+  /** A one-time person (PRD FR-13.5): the global search opens his register this way. */
+  person?: ReportPerson;
 }
 
 function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+}
+
+/** A person in the address, whole or not at all: a half-read person would ask for the wrong lines. */
+function readPerson(value: unknown): ReportPerson | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const found = value as Record<string, unknown>;
+  const accountId = found['accountId'];
+  const personKey = found['personKey'];
+  const nameUr = found['name_ur'];
+  const nameEn = found['name_en'];
+  const phone = found['phone'];
+  const lastDate = found['last_date'];
+  if (
+    typeof accountId !== 'number' ||
+    !Number.isSafeInteger(accountId) ||
+    accountId <= 0 ||
+    typeof personKey !== 'string' ||
+    personKey === '' ||
+    typeof nameUr !== 'string' ||
+    typeof nameEn !== 'string' ||
+    typeof phone !== 'string' ||
+    typeof lastDate !== 'string'
+  ) {
+    return undefined;
+  }
+  return { accountId, personKey, name_ur: nameUr, name_en: nameEn, phone, last_date: lastDate };
 }
 
 /** Reads the address. A period must be one the screen knows; a party must be a positive whole number. */
@@ -24,12 +52,14 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   const to = text(search['to']);
   const asOf = text(search['as_of']);
   const party = Number(search['party']);
+  const person = readPerson(search['person']);
   return {
     ...(period === undefined ? {} : { period }),
     ...(from === undefined ? {} : { from }),
     ...(to === undefined ? {} : { to }),
     ...(asOf === undefined ? {} : { as_of: asOf }),
     ...(Number.isSafeInteger(party) && party > 0 ? { party } : {}),
+    ...(person === undefined ? {} : { person }),
   };
 }
 
@@ -45,5 +75,6 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
       search.party === undefined
         ? null
         : { id: search.party, name_ur: '', name_en: '', code: undefined },
+    person: search.person ?? null,
   };
 }

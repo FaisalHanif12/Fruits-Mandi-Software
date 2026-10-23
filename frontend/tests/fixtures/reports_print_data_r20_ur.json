@@ -1,0 +1,202 @@
+{
+  "report": "R20",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r20-title",
+  "firm": {
+    "name": "ماہر عدنان اینڈ برادرز",
+    "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party"
+    },
+    {
+      "key": "city",
+      "title_id": "report-col-city",
+      "kind": "names"
+    },
+    {
+      "key": "phone",
+      "title_id": "report-col-phone",
+      "kind": "text"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance",
+      "kind": "money"
+    },
+    {
+      "key": "oldest_date",
+      "title_id": "report-col-oldest-date",
+      "kind": "date"
+    },
+    {
+      "key": "days",
+      "title_id": "report-col-days",
+      "kind": "number"
+    },
+    {
+      "key": "age_0_7",
+      "title_id": "report-col-age-0-7",
+      "kind": "money"
+    },
+    {
+      "key": "age_8_30",
+      "title_id": "report-col-age-8-30",
+      "kind": "money"
+    },
+    {
+      "key": "age_31_90",
+      "title_id": "report-col-age-31-90",
+      "kind": "money"
+    },
+    {
+      "key": "age_91",
+      "title_id": "report-col-age-91",
+      "kind": "money"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "1",
+            "code": "03040001",
+            "name": "اکرم ٹول ٹیکس",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "text": "کوٹ رادھا کشن"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,880"
+        },
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "2,880"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "short_code": "2",
+            "code": "03040002",
+            "name": "ارشد ملتانی",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        },
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "21,564"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "21,564"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null,
+  "footer_id": "print-page-label"
+}

@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "code": "ERR_REQUIRED",
+      "field": "views[0].name",
+      "values": {}
+    },
+    {
+      "code": "ERR_NOT_FOUND",
+      "field": "views[0].filters.item_id",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

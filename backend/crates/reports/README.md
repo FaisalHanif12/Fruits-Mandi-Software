@@ -44,3 +44,17 @@ One engine serves every report, so one screen can show them all (`reports::catal
 **Items on a ledger line** (`accounts/ledger_items.rs`): the journal line does not store the sale line it came from. The entry builder writes one buyer debit per sale line in `(lot, line)` order and one credit per lot, so the n-th debit of a buyer in the entry is his n-th sale line. The pairing is checked against the stored buyer total, and a line that does not match is shown with no items, never with wrong ones. A reversal is paired through the entry it reverses.
 
 Tests: `crates/services/tests/reports_accounts.rs` on the PRD worked day (R18 is the E2E-10 table, R13 for اکرم is E2E-33, every account's ledger closes on the services balance, pages add up to the whole, a report writes nothing, query plans use indexes) and writes the fixtures of the commands in `crates/services/tests/fixtures/reports_*.json` (`MANDI_WRITE_FIXTURES=1` writes them again).
+
+## `analytics`: the views A to E and H (plan 21, PRD 18)
+
+`analytics::catalog`, `run`, `lines`, `print_data`, `views_get` and `views_save`.
+
+- **Source.** Every sales figure is a stored value of a sale line, summed from `analytics_facts` (FR-18.6). A fact has a sign: +1 for a saved line, −1 for the row a reversal writes, with the same date and dimensions. Each column is summed twice in SQL (`SUM(CASE WHEN sign = 1 ...)`, `SUM(CASE WHEN sign = -1 ...)`), and the net is worked out in Rust with checked maths. A net below 0 is an error, never shown. A group with nothing left has no row, so a cancelled or edited-away sale adds nothing (FR-18.7).
+- **Total commission** is seller commission + buyer commission + لاگا, or the side asked for. The percent of PRD 18.2 is `(part × 10,000 + total / 2) / total` in `i128` (hundredths of a percent, `calc.rs`); it is display only.
+- **Views.** A by item (with the average rate and the share), B by seller (بکری count, and صافی بکری = facts less the charges of the saved lots dated in the period), C by buyer (dues now, and average days to pay), D item by period (day, month or year, at most 36 columns), E seller by item (at most 24 columns, the rest in one "other items" column), H top 10 items, sellers and buyers.
+- **Filters** (FR-18.1): period shortcut or dates, item, seller, buyer (and person), the buyer's city, اڈا, side, compare (previous period or the same dates last year, needs both dates). Garden, trip, goods and partner filters wait for the later plans.
+- **Lines behind a number** (FR-18.2): `lines` returns each fact row, a reversal row negative, so the lines add up to the number that was opened; each opens its بکری.
+- **Saved views** (FR-18.5): the whole list of the signed-in user in the `user_prefs` row `analytics.views`. They keep filters only, never a figure.
+- **Writes nothing** of the books (FR-18.8). The reports of the Collections group use `reports/collections/grouped.rs` for their sums of all sellers at once (Code Standards B22).
+
+Tests: `crates/services/tests/analytics.rs` (PRD 18.4, E2E-11, E2E-13, E2E-15, E2E-16b, the journal reconciliation, random sequences), `analytics_fixtures.rs` (the fixtures `analytics_*.json`; `MANDI_WRITE_FIXTURES=1` writes them again), `reports_grouped.rs`.

@@ -1,0 +1,254 @@
+{
+  "view": "C",
+  "title_id": "analytics-view-c-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null
+  },
+  "columns": [
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "purchase_value",
+      "title_id": "analytics-col-purchase-value",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "buyer_comm",
+      "title_id": "report-col-buyer-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "laga",
+      "title_id": "report-col-laga",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "dues_now",
+      "title_id": "analytics-col-dues-now",
+      "kind": "balance",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "avg_days",
+      "title_id": "analytics-col-avg-days-to-pay",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 21,
+            "code": "03040002",
+            "short_code": "2",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 30
+        },
+        {
+          "type": "money",
+          "paisa": 1740000
+        },
+        {
+          "type": "money",
+          "paisa": 104400
+        },
+        {
+          "type": "money",
+          "paisa": 24000
+        },
+        {
+          "type": "balance",
+          "paisa": 1868400,
+          "side": "dr"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": 21,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "number",
+          "value": 20
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 72000
+        },
+        {
+          "type": "money",
+          "paisa": 16000
+        },
+        {
+          "type": "balance",
+          "paisa": 288000,
+          "side": "dr"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": 20,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 9,
+            "code": "03049999",
+            "short_code": null,
+            "name_ur": "شاہد",
+            "name_en": "Shahid",
+            "tag": null,
+            "person_key": "شاہد|03000000000"
+          }
+        },
+        {
+          "type": "number",
+          "value": 10
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 72000
+        },
+        {
+          "type": "money",
+          "paisa": 8000
+        },
+        {
+          "type": "balance",
+          "paisa": 0,
+          "side": "zero"
+        },
+        {
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": 9,
+        "person_key": "شاہد|03000000000",
+        "from": null,
+        "to": null,
+        "not_item_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 60
+    },
+    {
+      "type": "money",
+      "paisa": 4140000
+    },
+    {
+      "type": "money",
+      "paisa": 248400
+    },
+    {
+      "type": "money",
+      "paisa": 48000
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ]
+}
