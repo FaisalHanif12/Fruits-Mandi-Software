@@ -40,6 +40,7 @@ fn the_catalogue_lists_the_accounts_group_with_its_filters() {
         ids,
         vec![
             ReportId::R11,
+            ReportId::R12,
             ReportId::R13,
             ReportId::R14,
             ReportId::R16,

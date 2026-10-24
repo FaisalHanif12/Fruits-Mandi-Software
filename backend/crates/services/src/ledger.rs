@@ -210,7 +210,9 @@ pub fn post_ordered(
 ) -> Result<Posted, ServiceError> {
     check_posting_date(ctx, event.date)?;
     check_own_goods_account(tx, &event.entry)?;
-    if event.reverses.is_none() {
+    // PRD FR-17.6: a month close only moves balances that are already posted, so it may touch an
+    // expense head that was made inactive after the month (like a reversal, it skips this check).
+    if event.reverses.is_none() && event.posting_type != PostingType::MonthClose {
         check_accounts_active(tx, &event.entry)?;
     }
     check_person_keys(tx, &event.entry)?;

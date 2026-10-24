@@ -1148,6 +1148,22 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "job_id": "j1", "view": "A", "filters": {}, "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
             true,
         ),
+        ("month_list", json!({}), true),
+        (
+            "month_close_preview",
+            json!({ "input": { "month": "2026-10" } }),
+            true,
+        ),
+        (
+            "month_close_save",
+            json!({ "input": { "month": "2026-10" } }),
+            true,
+        ),
+        (
+            "month_close_reverse",
+            json!({ "input": { "month": "2026-10", "reason": "check" } }),
+            true,
+        ),
     ]
 }
 

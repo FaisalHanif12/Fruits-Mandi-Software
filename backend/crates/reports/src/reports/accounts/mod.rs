@@ -8,11 +8,13 @@
 //! again from a rule.
 
 mod balances;
+mod cash;
 mod journal;
 mod ledger;
 mod ledger_items;
 
 pub(super) use balances::{run_r16, run_r17, run_r18, run_r19};
+pub(super) use cash::run as run_r12;
 pub(super) use journal::run_r11;
 #[doc(hidden)]
 pub use journal::{PAGE_SQL as R11_PAGE_SQL, TOTALS_SQL as R11_TOTALS_SQL};

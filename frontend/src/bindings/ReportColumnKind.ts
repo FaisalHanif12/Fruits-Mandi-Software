@@ -15,4 +15,5 @@ export type ReportColumnKind =
   | 'percent'
   | 'party'
   | 'names'
-  | 'detail';
+  | 'detail'
+  | 'message';

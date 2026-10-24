@@ -14,4 +14,5 @@ export type ReportFilterKind =
   | 'adda'
   | 'detail'
   | 'status'
-  | 'group_by';
+  | 'group_by'
+  | 'partner';

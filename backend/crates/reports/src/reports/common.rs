@@ -182,6 +182,8 @@ pub(crate) enum MasterTable {
     Cities,
     /// `addas`.
     Addas,
+    /// `partners`.
+    Partners,
 }
 
 impl MasterTable {
@@ -190,6 +192,7 @@ impl MasterTable {
             MasterTable::Items => "items",
             MasterTable::Cities => "cities",
             MasterTable::Addas => "addas",
+            MasterTable::Partners => "partners",
         }
     }
 }

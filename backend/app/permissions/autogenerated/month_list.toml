@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-month-list"
+description = "Enables the month_list command without any pre-configured scope."
+commands.allow = ["month_list"]
+
+[[permission]]
+identifier = "deny-month-list"
+description = "Denies the month_list command without any pre-configured scope."
+commands.deny = ["month_list"]

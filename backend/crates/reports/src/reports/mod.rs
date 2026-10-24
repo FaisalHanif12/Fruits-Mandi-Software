@@ -16,8 +16,10 @@
 //! R17 مدوں بیلنس, R18 ٹرائل بیلنس and R19 اوپن ٹرائل; the Sales group R2 مکمل بکری, R3 نقدی, R4
 //! ادھاری, R6 بکری تفصیل, R7 قسم مال وار بکری, R8 اڈا رپورٹ and R9 پختہ کھاتہ رپورٹ; the Collections
 //! group R20 وصولی / اگراہی, R21 بحساب شہر, R22 بحساب اگراہی والا, R24 ادائیگی باقی, R26 پیشگی کھاتہ
-//! and R27 بیجک سیریز; the Business group R28 آمدن رپورٹ and R30 منافع و تقسیم. The other reports
-//! join the same catalogue in the later plans.
+//! and R27 بیجک سیریز; the Business group R28 آمدن رپورٹ, R29 خرچہ رپورٹ, R30 منافع و تقسیم, R31
+//! شراکت دار کھاتہ and R32 ادھار رقم رپورٹ; the Accounts group also has R12 روکڑ. R31 is built from the
+//! statement of the services (see [`statement`]). The other reports join the same catalogue in
+//! the later plans.
 
 mod accounts;
 mod business;
@@ -28,6 +30,7 @@ pub(crate) mod ids;
 mod model;
 pub(crate) mod print_data;
 mod sales;
+pub mod statement;
 #[doc(hidden)]
 pub mod workings;
 
@@ -86,15 +89,16 @@ pub mod grouped_sums {
 
 pub use ids::posting_types;
 pub use model::{
-    CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind, GroupBy, Names,
-    PaidFilter, PartyFilter, PartyRef, ReportFilters, ReportGroup, ReportId, ReportPage,
-    ReportPrintInput, ReportRunInput, ResolvedFilters, Row, RowKind, RowSource, SourceKind,
-    SummaryLine,
+    ArgValue, CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind,
+    GroupBy, MessageArg, Names, PaidFilter, PartyFilter, PartyRef, ReportFilters, ReportGroup,
+    ReportId, ReportPage, ReportPrintInput, ReportRunInput, ResolvedFilters, Row, RowKind,
+    RowSource, SourceKind, SummaryLine,
 };
 pub use print_data::{
-    PrintCell, PrintDetailPart, PrintOptions, PrintReportColumn, PrintReportParty, PrintReportRow,
-    PrintSummaryLine, ReportPrintData, build_print,
+    PrintArgValue, PrintCell, PrintDetailPart, PrintMessageArg, PrintOptions, PrintReportColumn,
+    PrintReportParty, PrintReportRow, PrintSummaryLine, ReportPrintData, build_print,
 };
+pub use statement::{StatementRequest, statement_page, statement_paging, statement_request};
 
 pub(crate) use accounts::PageSpec;
 use filters::{Takes, Typed, resolve};
@@ -191,6 +195,12 @@ const SPECS: &[Spec] = &[
         false,
     ),
     spec(
+        ReportId::R12,
+        ReportGroup::Accounts,
+        &[FilterKind::DateRange],
+        false,
+    ),
+    spec(
         ReportId::R13,
         ReportGroup::Accounts,
         &[FilterKind::DateRange, FilterKind::Party],
@@ -253,9 +263,28 @@ const SPECS: &[Spec] = &[
         false,
     ),
     spec(
+        ReportId::R29,
+        ReportGroup::Business,
+        &[FilterKind::DateRange, FilterKind::Partner],
+        false,
+    ),
+    spec(
         ReportId::R30,
         ReportGroup::Business,
         &[FilterKind::DateRange],
+        false,
+    ),
+    // The partner is required: the statement is one partner's (the "party" of this report).
+    spec(
+        ReportId::R31,
+        ReportGroup::Business,
+        &[FilterKind::DateRange, FilterKind::Partner],
+        true,
+    ),
+    spec(
+        ReportId::R32,
+        ReportGroup::Business,
+        &[FilterKind::AsOf, FilterKind::Party],
         false,
     ),
 ];
@@ -355,8 +384,16 @@ fn build_in(
         ReportId::R26 => collections::run_r26(conn, &typed, spec),
         ReportId::R27 => sales::run_r27(conn, &typed, spec),
         ReportId::R28 => business::run_r28(conn, &typed, spec),
+        ReportId::R29 => business::run_r29(conn, &typed, spec),
         ReportId::R30 => business::run_r30(conn, &typed, spec),
+        ReportId::R32 => business::run_r32(conn, &typed, spec),
+        // R31 is the statement of a partner: its lines are put together by the services, so the
+        // app builds it with `statement_request` and `statement_page` and never comes here.
+        ReportId::R31 => Err(ReportsError::Data(
+            "R31 is built from the statement of the services".to_owned(),
+        )),
         ReportId::R11 => accounts::run_r11(conn, &typed, spec),
+        ReportId::R12 => accounts::run_r12(conn, &typed, spec),
         ReportId::R13 => accounts::run_r13(conn, &typed, spec),
         ReportId::R14 => accounts::run_r14(conn, &typed, spec),
         ReportId::R16 => accounts::run_r16(conn, &typed, spec),
@@ -385,17 +422,26 @@ pub fn print_data(db: &Db, input: &ReportPrintInput) -> Result<ReportPrintData, 
         offset: 0,
         limit: None,
     };
-    let (page, firm, grouping, setup) = db.read(|conn| {
-        let page = build(conn, db, input.id, &input.filters, all)?;
-        Ok::<_, ReportsError>((
-            page,
-            load_firm(conn)?,
-            load_grouping(conn)?,
-            load_setup(conn)?,
-        ))
+    let page = db.read(|conn| build(conn, db, input.id, &input.filters, all))?;
+    print_data_for_page(db, &page, input)
+}
+
+/// The print data of a page that already holds every row, for a report the engine does not read
+/// itself (R31, whose lines come from the services). Only the firm, the number grouping and the
+/// print setup are read; the page is formatted as [`print_data`] formats its own.
+///
+/// # Errors
+/// A database error; a stored amount that cannot be written in words.
+pub fn print_data_for_page(
+    db: &Db,
+    page: &ReportPage,
+    input: &ReportPrintInput,
+) -> Result<ReportPrintData, ReportsError> {
+    let (firm, grouping, setup) = db.read(|conn| {
+        Ok::<_, ReportsError>((load_firm(conn)?, load_grouping(conn)?, load_setup(conn)?))
     })?;
     build_print(
-        &page,
+        page,
         &PrintOptions {
             language: input.language,
             grouping,

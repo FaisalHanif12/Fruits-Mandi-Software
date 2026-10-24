@@ -107,7 +107,7 @@ pub fn page(
                 END,
                 r.narration,
                 CASE r.source_type
-                    WHEN 'voucher' THEN (SELECT COALESCE(v.reason, '') FROM vouchers v WHERE v.id = r.source_id)
+                    WHEN 'voucher' THEN COALESCE((SELECT v.reason FROM vouchers v WHERE v.id = r.source_id), '')
                     ELSE ''
                 END
          FROM running r

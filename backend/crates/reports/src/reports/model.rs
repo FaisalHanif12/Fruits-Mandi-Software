@@ -40,6 +40,9 @@ pub enum ReportId {
     /// Daily journal, روزنامچہ.
     #[serde(rename = "R11")]
     R11,
+    /// Cash book, روکڑ.
+    #[serde(rename = "R12")]
+    R12,
     /// Party ledger, کھاتہ.
     #[serde(rename = "R13")]
     R13,
@@ -79,9 +82,18 @@ pub enum ReportId {
     /// Income report, آمدن رپورٹ.
     #[serde(rename = "R28")]
     R28,
+    /// Expense report, خرچہ رپورٹ.
+    #[serde(rename = "R29")]
+    R29,
     /// Profit and partner split, منافع و تقسیم.
     #[serde(rename = "R30")]
     R30,
+    /// Partner statement, شراکت دار کھاتہ.
+    #[serde(rename = "R31")]
+    R31,
+    /// Money lent, ادھار رقم رپورٹ.
+    #[serde(rename = "R32")]
+    R32,
 }
 
 impl ReportId {
@@ -96,6 +108,7 @@ impl ReportId {
             ReportId::R8 => "R8",
             ReportId::R9 => "R9",
             ReportId::R11 => "R11",
+            ReportId::R12 => "R12",
             ReportId::R13 => "R13",
             ReportId::R14 => "R14",
             ReportId::R16 => "R16",
@@ -109,7 +122,10 @@ impl ReportId {
             ReportId::R26 => "R26",
             ReportId::R27 => "R27",
             ReportId::R28 => "R28",
+            ReportId::R29 => "R29",
             ReportId::R30 => "R30",
+            ReportId::R31 => "R31",
+            ReportId::R32 => "R32",
         }
     }
 
@@ -160,6 +176,8 @@ pub enum FilterKind {
     Status,
     /// Group by day or by month (R28).
     GroupBy,
+    /// One partner (R31).
+    Partner,
 }
 
 /// One report in the catalogue.
@@ -270,6 +288,9 @@ pub struct ReportFilters {
     /// Paid or due lines only (R9). Missing means all lines.
     #[ts(optional)]
     pub status: Option<PaidFilter>,
+    /// The partner of a partner statement (R31).
+    #[ts(type = "number | null")]
+    pub partner_id: Option<i64>,
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
@@ -327,6 +348,8 @@ pub struct ResolvedFilters {
     pub city: Option<Names>,
     /// The اڈا.
     pub adda: Option<Names>,
+    /// The partner of a partner statement (R31).
+    pub partner: Option<Names>,
     /// The statement with its detail lines.
     pub detail: bool,
     /// The grouping of R28. Missing for any other report.
@@ -368,6 +391,8 @@ pub enum ColumnKind {
     Names,
     /// The items of a line.
     Detail,
+    /// A sentence written from a Fluent message and its arguments (a partner statement line).
+    Message,
 }
 
 /// One column.
@@ -526,6 +551,67 @@ pub enum Cell {
     Detail {
         /// The parts, in order.
         parts: Vec<DetailPart>,
+    },
+    /// A sentence the screen or the print writes from a Fluent message and its arguments, for
+    /// lines whose words depend on what happened (a partner statement line, PRD FR-17.10).
+    Message {
+        /// The Fluent message ID.
+        id: String,
+        /// Its arguments.
+        args: Vec<MessageArg>,
+    },
+}
+
+/// One argument of a [`Cell::Message`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(rename = "ReportMessageArg")]
+pub struct MessageArg {
+    /// The variable name in the message, for example `number` or `share`.
+    pub name: String,
+    /// Its value.
+    pub value: ArgValue,
+}
+
+/// The value of a message argument. The screen and the print write numbers and money with the
+/// number grouping setting, and a name in the language they are in.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[ts(rename = "ReportArgValue")]
+pub enum ArgValue {
+    /// Text as it is (a reason, a date, a kind word).
+    Text {
+        /// The text.
+        text: String,
+    },
+    /// A whole number (a count, a document number).
+    Number {
+        /// The number.
+        #[ts(type = "number")]
+        value: i64,
+    },
+    /// Money in whole rupees.
+    Money {
+        /// The amount.
+        #[ts(type = "Paisa")]
+        paisa: Paisa,
+    },
+    /// A rate in hundredths of a percent as the percent a person reads (`3750` is `37.5`).
+    Percent {
+        /// Hundredths of a percent.
+        #[ts(type = "number")]
+        hundredths: i64,
+    },
+    /// A name in both scripts.
+    Names {
+        /// The names.
+        names: Names,
+    },
+    /// Another message, for a word such as a number series (`E-5`) that has its own message.
+    Message {
+        /// The Fluent message ID.
+        id: String,
+        /// Its arguments.
+        args: Vec<MessageArg>,
     },
 }
 

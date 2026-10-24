@@ -198,6 +198,10 @@ const APP_COMMANDS: &[&str] = &[
     "updates_install",
     "reports_export_excel",
     "analytics_export_excel",
+    "month_list",
+    "month_close_preview",
+    "month_close_save",
+    "month_close_reverse",
 ];
 
 fn main() {

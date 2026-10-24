@@ -1,0 +1,108 @@
+{
+  "month": "2026-10",
+  "first_day": "2026-10-01",
+  "last_day": "2026-10-31",
+  "entry_date": "2026-11-02",
+  "lines": [
+    {
+      "account": {
+        "id": 10,
+        "code": "04010001",
+        "name_ur": "کمیشن آمدن (بیوپاری)",
+        "name_en": "Commission Income (Seller)"
+      },
+      "kind": "income",
+      "partner_id": null,
+      "dr_paisa": 248400,
+      "cr_paisa": 0
+    },
+    {
+      "account": {
+        "id": 11,
+        "code": "04010002",
+        "name_ur": "کمیشن آمدن (گاہک)",
+        "name_en": "Commission Income (Buyer)"
+      },
+      "kind": "income",
+      "partner_id": null,
+      "dr_paisa": 248400,
+      "cr_paisa": 0
+    },
+    {
+      "account": {
+        "id": 12,
+        "code": "04010003",
+        "name_ur": "لاگا آمدن",
+        "name_en": "Laga Income"
+      },
+      "kind": "income",
+      "partner_id": null,
+      "dr_paisa": 48000,
+      "cr_paisa": 0
+    },
+    {
+      "account": {
+        "id": 13,
+        "code": "04010004",
+        "name_ur": "فون آمدن",
+        "name_en": "Phone Charge Income"
+      },
+      "kind": "income",
+      "partner_id": null,
+      "dr_paisa": 4000,
+      "cr_paisa": 0
+    },
+    {
+      "account": {
+        "id": 31,
+        "code": "05010001",
+        "name_ur": "بجلی",
+        "name_en": "Electricity"
+      },
+      "kind": "expense",
+      "partner_id": null,
+      "dr_paisa": 0,
+      "cr_paisa": 300000
+    },
+    {
+      "account": {
+        "id": 22,
+        "code": "06020001",
+        "name_ur": "سرمایہ - الف",
+        "name_en": "Capital - Partner A"
+      },
+      "kind": "partner_capital",
+      "partner_id": 1,
+      "dr_paisa": 0,
+      "cr_paisa": 99600
+    },
+    {
+      "account": {
+        "id": 25,
+        "code": "06020002",
+        "name_ur": "سرمایہ - ب",
+        "name_en": "Capital - Partner B"
+      },
+      "kind": "partner_capital",
+      "partner_id": 2,
+      "dr_paisa": 0,
+      "cr_paisa": 74600
+    },
+    {
+      "account": {
+        "id": 28,
+        "code": "06020003",
+        "name_ur": "سرمایہ - ج",
+        "name_en": "Capital - Partner C"
+      },
+      "kind": "partner_capital",
+      "partner_id": 3,
+      "dr_paisa": 0,
+      "cr_paisa": 74600
+    }
+  ],
+  "income_paisa": 548800,
+  "expense_paisa": 300000,
+  "profit_paisa": 248800,
+  "total_paisa": 548800
+}

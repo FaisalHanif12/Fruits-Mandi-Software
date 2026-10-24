@@ -529,6 +529,16 @@ const EXPECTED_FILES: &[&str] = &[
     "AuditUser.ts",
     "AuditValue.ts",
     "ExcelExported.ts",
+    "MonthInput.ts",
+    "MonthReverseInput.ts",
+    "MonthPreview.ts",
+    "MonthLine.ts",
+    "MonthLineKind.ts",
+    "MonthClosed.ts",
+    "MonthReversed.ts",
+    "MonthList.ts",
+    "MonthRow.ts",
+    "MonthState.ts",
     "ExportProgressEvent.ts",
     "ExportStage.ts",
     "ReportsExportRequest.ts",
@@ -927,6 +937,12 @@ fn export_bindings() {
     mandi_app_lib::commands::export::AnalyticsExportRequest::export_all(&cfg).unwrap();
     mandi_app_lib::commands::export::ExportProgressEvent::export_all(&cfg).unwrap();
     mandi_reports::export::ExcelExported::export_all(&cfg).unwrap();
+    mandi_services::month::MonthInput::export_all(&cfg).unwrap();
+    mandi_services::month::MonthReverseInput::export_all(&cfg).unwrap();
+    mandi_services::month::MonthPreview::export_all(&cfg).unwrap();
+    mandi_services::month::MonthClosed::export_all(&cfg).unwrap();
+    mandi_services::month::MonthReversed::export_all(&cfg).unwrap();
+    mandi_services::month::MonthList::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

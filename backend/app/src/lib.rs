@@ -274,6 +274,10 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::updates::updates_install,
         commands::export::reports_export_excel,
         commands::export::analytics_export_excel,
+        commands::month::month_list,
+        commands::month::month_close_preview,
+        commands::month::month_close_save,
+        commands::month::month_close_reverse,
     ]
 }
 

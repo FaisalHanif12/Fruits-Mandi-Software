@@ -37,6 +37,8 @@ pub(crate) struct Typed {
     pub(crate) item_id: Option<i64>,
     /// The picked اڈا.
     pub(crate) adda_id: Option<i64>,
+    /// The picked partner.
+    pub(crate) partner_id: Option<i64>,
     /// How R28 groups its lines. Month when the screen sent nothing.
     pub(crate) group_by: GroupBy,
     /// The paid or due filter of R9.
@@ -52,7 +54,8 @@ pub(crate) struct Typed {
 pub(crate) struct Takes<'a> {
     /// The filters it shows.
     pub(crate) kinds: &'a [FilterKind],
-    /// True when the party must be filled.
+    /// True when the party must be filled. For a report that takes a partner and no party
+    /// (R31), it is the partner that must be filled.
     pub(crate) party_required: bool,
 }
 
@@ -148,6 +151,11 @@ pub(crate) fn resolve(
     refuse_unless(FilterKind::Item, input.item_id.is_some(), "filters.item_id");
     refuse_unless(FilterKind::City, input.city_id.is_some(), "filters.city_id");
     refuse_unless(FilterKind::Adda, input.adda_id.is_some(), "filters.adda_id");
+    refuse_unless(
+        FilterKind::Partner,
+        input.partner_id.is_some(),
+        "filters.partner_id",
+    );
     refuse_unless(FilterKind::Detail, input.detail, "filters.detail");
     refuse_unless(
         FilterKind::GroupBy,
@@ -284,6 +292,26 @@ pub(crate) fn resolve(
         )?;
         if typed.resolved.adda.is_some() {
             typed.adda_id = input.adda_id;
+        }
+    }
+    if takes.has(FilterKind::Partner) {
+        typed.resolved.partner = picked_names(
+            conn,
+            MasterTable::Partners,
+            input.partner_id,
+            "filters.partner_id",
+            &mut problems,
+        )?;
+        if typed.resolved.partner.is_some() {
+            typed.partner_id = input.partner_id;
+        } else if input.partner_id.is_none()
+            && takes.party_required
+            && !takes.has(FilterKind::Party)
+        {
+            problems.push(FieldError::new(
+                ErrorCode::ErrRequired,
+                "filters.partner_id",
+            ));
         }
     }
     typed.detail = takes.has(FilterKind::Detail) && input.detail;

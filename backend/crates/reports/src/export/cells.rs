@@ -11,7 +11,7 @@ use super::model::{ColumnShape, XCell};
 use super::writer::signed_balance;
 use crate::error::ReportsError;
 use crate::reports::print_data::Fmt;
-use crate::reports::{Cell, ColumnKind, DetailPart};
+use crate::reports::{ArgValue, Cell, ColumnKind, DetailPart, MessageArg};
 
 /// What the cells of a sheet need: the formatter (names, account text, date text) and the words.
 pub(crate) struct CellContext<'a> {
@@ -44,7 +44,8 @@ pub(crate) fn shape_of(kind: ColumnKind) -> ColumnShape {
         | ColumnKind::Percent
         | ColumnKind::Party
         | ColumnKind::Names
-        | ColumnKind::Detail => ColumnShape::Text,
+        | ColumnKind::Detail
+        | ColumnKind::Message => ColumnShape::Text,
     }
 }
 
@@ -138,7 +139,30 @@ impl CellContext<'_> {
                     .collect::<Result<Vec<_>, _>>()?;
                 XCell::Text(texts.join("; "))
             }
+            Cell::Message { id, args } => XCell::Text(self.message_text(id, args)?),
         })
+    }
+
+    /// A message written out: each argument is formatted as the sheet formats it, then the
+    /// message is read from Fluent in the sheet language.
+    fn message_text(&self, id: &str, args: &[MessageArg]) -> Result<String, ReportsError> {
+        let mut texts: Vec<(String, String)> = Vec::with_capacity(args.len());
+        for arg in args {
+            let text = match &arg.value {
+                ArgValue::Text { text } => text.clone(),
+                ArgValue::Number { value } => self.fmt.style.count(*value),
+                ArgValue::Money { paisa } => self.fmt.style.money(*paisa)?,
+                ArgValue::Percent { hundredths } => self.fmt.style.bps_text(*hundredths),
+                ArgValue::Names { names } => self.fmt.names(names),
+                ArgValue::Message { id, args } => self.message_text(id, args)?,
+            };
+            texts.push((arg.name.clone(), text));
+        }
+        let pairs: Vec<(&str, &str)> = texts
+            .iter()
+            .map(|(name, text)| (name.as_str(), text.as_str()))
+            .collect();
+        Ok(self.l10n.text_with(id, &pairs))
     }
 
     pub(crate) fn cells(&self, cells: &[Cell]) -> Result<Vec<XCell>, ReportsError> {

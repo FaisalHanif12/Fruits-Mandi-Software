@@ -50,6 +50,10 @@ export type ReportResolvedFilters = {
    */
   adda: ReportNames | null;
   /**
+   * The partner of a partner statement (R31).
+   */
+  partner: ReportNames | null;
+  /**
    * The statement with its detail lines.
    */
   detail: boolean;

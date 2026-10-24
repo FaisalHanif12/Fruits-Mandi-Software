@@ -1,11 +1,14 @@
-//! The reports keep two small copies of domain workings (`mandi_reports::reports::workings`):
-//! oldest-first matching and the totals of a seller's payable. `mandi-reports` may not depend on
+//! The reports keep small copies of domain workings (`mandi_reports::reports::workings`):
+//! oldest-first matching, the totals of a seller's payable and the open amounts of money lent
+//! (with the days past a return-by day). `mandi-reports` may not depend on
 //! `mandi-domain` (Architecture 3), so the copies are pure functions of their own, and this test
 //! runs both versions on random inputs and requires the same answer, errors included (money agent
 //! Section 9, Code Standards G6). If the domain working ever changes, this fails first.
 #![cfg(test)]
 
+use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::{MoneyError, Paisa};
+use mandi_domain::expenses as domain_expenses;
 use mandi_domain::matching as domain_matching;
 use mandi_domain::payables as domain_payables;
 use mandi_reports::reports::workings as copy;
@@ -123,5 +126,48 @@ proptest! {
             (Err(d), Err(o)) => prop_assert_eq!(d, o),
             (d, o) => prop_assert!(false, "different answers: {:?} and {:?}", d, o),
         }
+    }
+
+    #[test]
+    fn the_copy_of_open_amounts_gives_the_domain_answer(
+        bills in proptest::collection::vec(amount(), 0..8),
+        credits in proptest::collection::vec(amount(), 0..8),
+    ) {
+        let bills = lines(bills, 1);
+        let credits = lines(credits, 100);
+        let domain = domain_expenses::open_amounts(&bills, &credits);
+        let ours = copy::open_amounts(&bills, &credits);
+        match (domain, ours) {
+            (Ok(d), Ok(o)) => {
+                prop_assert_eq!(d.len(), o.len());
+                for (d, o) in d.iter().zip(&o) {
+                    prop_assert_eq!((d.line_id, d.returned, d.open), (o.line_id, o.returned, o.open));
+                }
+                // Σ open is the bills less the credits, never below 0 (money agent 8.2b).
+                let open = o.iter().try_fold(Paisa::ZERO, |sum, x| sum.checked_add(x.open)).unwrap();
+                let owed = bills.iter().try_fold(Paisa::ZERO, |sum, x| sum.checked_add(x.1)).unwrap();
+                let paid = credits.iter().try_fold(Paisa::ZERO, |sum, x| sum.checked_add(x.1)).unwrap();
+                let want = owed.checked_sub(paid).unwrap();
+                prop_assert_eq!(open, if want.is_negative() { Paisa::ZERO } else { want });
+            }
+            (Err(d), Err(o)) => prop_assert_eq!(d, o),
+            (d, o) => prop_assert!(false, "different answers: {:?} and {:?}", d, o),
+        }
+    }
+
+    #[test]
+    fn the_copy_of_the_days_past_gives_the_domain_answer(
+        open in amount(),
+        return_by in proptest::option::of(0_u32..60),
+        today in 0_u32..60,
+    ) {
+        let base = BusinessDate::from_ymd(2026, 9, 1).unwrap();
+        let day = |n: u32| (0..n).fold(base, |d, _| d.next_day().unwrap());
+        let return_by = return_by.map(day);
+        let today = day(today);
+        prop_assert_eq!(
+            domain_expenses::days_past_return_by(open, return_by, today),
+            copy::days_past_return_by(open, return_by, today)
+        );
     }
 }

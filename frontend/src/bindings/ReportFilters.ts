@@ -61,4 +61,8 @@ export type ReportFilters = {
    * Paid or due lines only (R9). Missing means all lines.
    */
   status?: ReportPaidFilter;
+  /**
+   * The partner of a partner statement (R31).
+   */
+  partner_id: number | null;
 };

@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DAY_NOT_CLOSED",
+      "field": "month",
+      "values": {
+        "closed_up_to": "2026-10-09"
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261102-0001"
+}

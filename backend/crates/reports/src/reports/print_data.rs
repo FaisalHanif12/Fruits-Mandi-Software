@@ -26,8 +26,8 @@ use ts_rs::TS;
 
 use super::ids;
 use super::model::{
-    Cell, ColumnKind, DetailPart, GroupBy, Names, PaidFilter, PartyRef, ReportId, ReportPage,
-    ResolvedFilters, RowKind,
+    ArgValue, Cell, ColumnKind, DetailPart, GroupBy, MessageArg, Names, PaidFilter, PartyRef,
+    ReportId, ReportPage, ResolvedFilters, RowKind,
 };
 use crate::error::ReportsError;
 use crate::print::format::NumberStyle;
@@ -176,6 +176,44 @@ pub enum PrintCell {
     Detail {
         /// The parts, in order.
         parts: Vec<PrintDetailPart>,
+    },
+    /// A sentence the template writes from a Fluent message and its arguments, already
+    /// formatted (a partner statement line, PRD FR-17.10).
+    Message {
+        /// The Fluent message ID.
+        id: String,
+        /// Its arguments.
+        args: Vec<PrintMessageArg>,
+    },
+}
+
+/// One argument of a [`PrintCell::Message`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(rename = "ReportPrintMessageArg")]
+pub struct PrintMessageArg {
+    /// The variable name in the message.
+    pub name: String,
+    /// Its value.
+    pub value: PrintArgValue,
+}
+
+/// The value of a print message argument. Numbers, money, rates and names are already text in
+/// the print language and number style.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[ts(rename = "ReportPrintArgValue")]
+pub enum PrintArgValue {
+    /// Text as it is.
+    Text {
+        /// The text.
+        text: String,
+    },
+    /// Another message (a word such as a number series).
+    Message {
+        /// The Fluent message ID.
+        id: String,
+        /// Its arguments.
+        args: Vec<PrintMessageArg>,
     },
 }
 
@@ -423,7 +461,41 @@ impl Fmt {
                     .map(|p| self.detail(p))
                     .collect::<Result<Vec<_>, _>>()?,
             },
+            Cell::Message { id, args } => PrintCell::Message {
+                id: id.clone(),
+                args: self.message_args(args)?,
+            },
         })
+    }
+
+    /// The arguments of a message, each written the way the print writes it.
+    fn message_args(&self, args: &[MessageArg]) -> Result<Vec<PrintMessageArg>, ReportsError> {
+        args.iter()
+            .map(|arg| {
+                Ok(PrintMessageArg {
+                    name: arg.name.clone(),
+                    value: match &arg.value {
+                        ArgValue::Text { text } => PrintArgValue::Text { text: text.clone() },
+                        ArgValue::Number { value } => PrintArgValue::Text {
+                            text: self.style.count(*value),
+                        },
+                        ArgValue::Money { paisa } => PrintArgValue::Text {
+                            text: self.style.money(*paisa)?,
+                        },
+                        ArgValue::Percent { hundredths } => PrintArgValue::Text {
+                            text: self.style.bps_text(*hundredths),
+                        },
+                        ArgValue::Names { names } => PrintArgValue::Text {
+                            text: self.names(names),
+                        },
+                        ArgValue::Message { id, args } => PrintArgValue::Message {
+                            id: id.clone(),
+                            args: self.message_args(args)?,
+                        },
+                    },
+                })
+            })
+            .collect()
     }
 
     pub(crate) fn cells(&self, cells: &[Cell]) -> Result<Vec<PrintCell>, ReportsError> {
@@ -483,6 +555,9 @@ pub(crate) fn filter_facts(
     }
     if let Some(names) = &filters.adda {
         facts.push(fact(ids::FILTER_ADDA, fmt.names(names)));
+    }
+    if let Some(names) = &filters.partner {
+        facts.push(fact(ids::FILTER_PARTNER, fmt.names(names)));
     }
     // The statement says whether it is balances only or with its lines. The label is the whole
     // fact, so the value is empty.

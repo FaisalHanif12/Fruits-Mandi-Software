@@ -51,7 +51,13 @@ fn the_business_group_is_in_the_catalogue_with_its_filters() {
         .collect();
     assert_eq!(
         entries.iter().map(|e| e.id).collect::<Vec<_>>(),
-        vec![ReportId::R28, ReportId::R30]
+        vec![
+            ReportId::R28,
+            ReportId::R29,
+            ReportId::R30,
+            ReportId::R31,
+            ReportId::R32
+        ]
     );
     assert_eq!(
         entries[0].filters,
@@ -61,7 +67,12 @@ fn the_business_group_is_in_the_catalogue_with_its_filters() {
             FilterKind::GroupBy
         ]
     );
-    assert_eq!(entries[1].filters, vec![FilterKind::DateRange]);
+    // R29 takes the dates and an optional partner; R30 only the dates.
+    assert_eq!(
+        entries[1].filters,
+        vec![FilterKind::DateRange, FilterKind::Partner]
+    );
+    assert_eq!(entries[2].filters, vec![FilterKind::DateRange]);
     assert_eq!(entries[0].group_title_id, "report-group-business");
 }
 

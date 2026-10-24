@@ -12,6 +12,7 @@
     "item": null,
     "city": null,
     "adda": null,
+    "partner": null,
     "detail": false,
     "group_by": "day"
   },

@@ -2,6 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 import type { BalanceSide } from './BalanceSide';
 import type { ReportDetailPart } from './ReportDetailPart';
+import type { ReportMessageArg } from './ReportMessageArg';
 import type { ReportNames } from './ReportNames';
 import type { ReportParty } from './ReportParty';
 
@@ -105,4 +106,15 @@ export type ReportCell =
        * The parts, in order.
        */
       parts: Array<ReportDetailPart>;
+    }
+  | {
+      type: 'message';
+      /**
+       * The Fluent message ID.
+       */
+      id: string;
+      /**
+       * Its arguments.
+       */
+      args: Array<ReportMessageArg>;
     };

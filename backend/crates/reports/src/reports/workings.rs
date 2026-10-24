@@ -1,14 +1,16 @@
-//! The two read-time workings the Collections and Sales reports need: oldest-first matching
-//! (PRD FR-15.4, money agent 8.1) and the totals of a seller's payable (PRD FR-7.59, money agent
-//! 8.2a).
+//! The read-time workings the Collections, Sales and Business reports need: oldest-first matching
+//! (PRD FR-15.4, money agent 8.1), the totals of a seller's payable (PRD FR-7.59, money agent
+//! 8.2a) and the open amounts of money lent (PRD FR-16.5, money agent 8.2b).
 //!
-//! These are copies of `mandi_domain::matching::match_bills` and
-//! `mandi_domain::payables::from_totals`, kept here because `mandi-reports` may depend only on
+//! These are copies of `mandi_domain::matching::match_bills`,
+//! `mandi_domain::payables::from_totals`, `mandi_domain::expenses::open_amounts` and
+//! `mandi_domain::expenses::days_past_return_by`, kept here because `mandi-reports` may depend only on
 //! `mandi-db` and `mandi-core` (Architecture 3, `workspace_rules.rs`). They are pure, they write
 //! nothing, and they are never used to post anything: the services keep the working that decides
 //! what is saved. A parity test (`services/tests/reports_parity.rs`) runs both versions on
 //! thousands of random inputs and requires the same answer, so the copy cannot drift.
 
+use mandi_core::dates::BusinessDate;
 use mandi_core::money::{MoneyError, Paisa};
 
 /// A line and the part of it that is still open, in whole rupees.
@@ -118,4 +120,72 @@ pub fn payable_totals_from(
         advances_open,
         excess_paid,
     })
+}
+
+/// What is still open on one bill (money lent).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OpenAmount {
+    /// The bill's journal line.
+    pub line_id: i64,
+    /// What returns have settled of it, oldest first.
+    pub returned: Paisa,
+    /// What is still open.
+    pub open: Paisa,
+}
+
+/// The open amount of each bill when the credits settle the oldest bills first (PRD FR-16.5,
+/// money agent 8.2b). `bills` and `credits` are `(line id, amount)`, oldest first. Done at read
+/// time; nothing is stored. Σ open is `max(0, Σ bills - Σ credits)`.
+///
+/// ```
+/// use mandi_core::money::Paisa;
+/// use mandi_reports::reports::workings::open_amounts;
+/// let p = |rupees| Paisa::from_rupees(rupees).unwrap();
+/// // E2E-30: 5,000 lent, 3,000 returned in cash and 2,000 from salary.
+/// let open = open_amounts(&[(1, p(5_000))], &[(2, p(3_000)), (3, p(2_000))]).unwrap();
+/// assert_eq!((open[0].returned, open[0].open), (p(5_000), p(0)));
+/// ```
+///
+/// # Errors
+/// `MoneyError::NegativeValue` for an amount below 0, `MoneyError::Overflow`.
+pub fn open_amounts(
+    bills: &[(i64, Paisa)],
+    credits: &[(i64, Paisa)],
+) -> Result<Vec<OpenAmount>, MoneyError> {
+    let as_open = |lines: &[(i64, Paisa)]| -> Vec<Open> {
+        lines
+            .iter()
+            .map(|&(line_id, open)| Open { line_id, open })
+            .collect()
+    };
+    let rows = match_bills(&as_open(bills), &as_open(credits))?;
+    bills
+        .iter()
+        .map(|&(line_id, amount)| {
+            let mut returned = Paisa::ZERO;
+            for row in rows.iter().filter(|r| r.bill_line_id == line_id) {
+                returned = returned.checked_add(row.amount)?;
+            }
+            Ok(OpenAmount {
+                line_id,
+                returned,
+                open: amount.checked_sub(returned)?,
+            })
+        })
+        .collect()
+}
+
+/// How many days `today` is after the return-by day, if the amount is still open and the day has
+/// passed (PRD FR-7.44, E2E-30b: return by 15-10-26 and today 16-10-26 is 1). `None` when nothing
+/// is open, there is no return-by day, or it has not passed.
+pub fn days_past_return_by(
+    open: Paisa,
+    return_by: Option<BusinessDate>,
+    today: BusinessDate,
+) -> Option<i64> {
+    let day = return_by?;
+    if open <= Paisa::ZERO || today <= day {
+        return None;
+    }
+    Some(today.days_after(day))
 }

@@ -1,0 +1,172 @@
+{
+  "id": "R29",
+  "title_id": "report-r29-title",
+  "filters": {
+    "shortcut": null,
+    "from": "2026-10-10",
+    "to": "2026-10-10",
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "section",
+      "title_id": "report-col-section",
+      "kind": "label"
+    },
+    {
+      "key": "name",
+      "title_id": "report-col-name",
+      "kind": "names"
+    },
+    {
+      "key": "expense",
+      "title_id": "report-col-expense",
+      "kind": "money"
+    },
+    {
+      "key": "taken",
+      "title_id": "report-col-taken",
+      "kind": "money"
+    },
+    {
+      "key": "returned",
+      "title_id": "report-col-returned",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "report-section-shop-expenses"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "group"
+    },
+    {
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "بجلی",
+            "en": "Electricity"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "report-section-partner-money"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 200000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "group"
+    },
+    {
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 200000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 4,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 300000
+    },
+    {
+      "type": "money",
+      "paisa": 200000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    }
+  ],
+  "summary": []
+}

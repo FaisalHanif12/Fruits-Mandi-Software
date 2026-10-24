@@ -22,6 +22,7 @@ pub mod ledger;
 pub mod masters;
 pub mod matching;
 pub mod migrate;
+pub mod month;
 pub mod open_lines;
 pub mod partners;
 pub mod purchases;

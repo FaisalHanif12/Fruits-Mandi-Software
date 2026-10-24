@@ -106,7 +106,13 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
     );
     assert_eq!(
         of(ReportGroup::Business),
-        vec![ReportId::R28, ReportId::R30]
+        vec![
+            ReportId::R28,
+            ReportId::R29,
+            ReportId::R30,
+            ReportId::R31,
+            ReportId::R32
+        ]
     );
     let r2 = entries.iter().find(|e| e.id == ReportId::R2).unwrap();
     assert_eq!(

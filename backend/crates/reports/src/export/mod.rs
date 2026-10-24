@@ -141,12 +141,52 @@ pub fn export_report(
         total: 0,
     });
     let (page, firm, grouping) = crate::reports::export_page(db, input.id, &input.filters)?;
+    write_report_page(db, &page, &firm, grouping, input, &path, progress)
+}
+
+/// Exports a page that already holds every row, for a report the engine does not read itself
+/// (R31, whose lines come from the services). The path is checked and the firm and the number
+/// grouping are read here; `input.id` and `input.filters` are not used.
+///
+/// # Errors
+/// As [`export_report`], except for the filters.
+pub fn export_report_page(
+    db: &Db,
+    page: &crate::reports::ReportPage,
+    input: &ReportExportInput,
+    progress: &mut dyn FnMut(ExportProgress),
+) -> Result<ExcelExported, ReportsError> {
+    let path = check_path(&input.path)?;
+    progress(ExportProgress {
+        stage: ExportStage::Reading,
+        done: 0,
+        total: 0,
+    });
+    let (firm, grouping) = db.read(|conn| {
+        Ok::<_, ReportsError>((
+            crate::print::load::load_firm(conn)?,
+            crate::print::load::load_grouping(conn)?,
+        ))
+    })?;
+    write_report_page(db, page, &firm, grouping, input, &path, progress)
+}
+
+/// Builds the sheet of a page and writes the workbook.
+fn write_report_page(
+    db: &Db,
+    page: &crate::reports::ReportPage,
+    firm: &FirmNames,
+    grouping: Grouping,
+    input: &ReportExportInput,
+    path: &std::path::Path,
+    progress: &mut dyn FnMut(ExportProgress),
+) -> Result<ExcelExported, ReportsError> {
     let now = db.clock().now_utc();
     let l10n = L10n::new(input.language)?;
-    let fmt = fmt_of(input.language, grouping, &firm, now);
-    let header = header_of(&fmt, &firm, input.language, now);
+    let fmt = fmt_of(input.language, grouping, firm, now);
+    let header = header_of(&fmt, firm, input.language, now);
     let sheet = report::sheet(
-        &page,
+        page,
         &CellContext {
             fmt: &fmt,
             l10n: &l10n,
@@ -154,7 +194,7 @@ pub fn export_report(
         &header,
     )?;
     let rows = u64::try_from(sheet.rows.len()).unwrap_or(0);
-    let size_bytes = write_workbook(&[sheet], &path, progress)?;
+    let size_bytes = write_workbook(&[sheet], path, progress)?;
     Ok(ExcelExported {
         path: path.display().to_string(),
         size_bytes,

@@ -12,6 +12,7 @@ export type ReportId =
   | 'R8'
   | 'R9'
   | 'R11'
+  | 'R12'
   | 'R13'
   | 'R14'
   | 'R16'
@@ -25,4 +26,7 @@ export type ReportId =
   | 'R26'
   | 'R27'
   | 'R28'
-  | 'R30';
+  | 'R29'
+  | 'R30'
+  | 'R31'
+  | 'R32';

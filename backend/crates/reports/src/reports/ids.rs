@@ -75,6 +75,22 @@ pub(crate) const COL_TAKEN: &str = "report-col-taken";
 pub(crate) const COL_PARTNER_NET: &str = "report-col-partner-net";
 pub(crate) const COL_PARTNER: &str = "report-col-partner";
 
+// Column headings and sections of R12, R29 and R32 (plan d5-late, round 7).
+pub(crate) const COL_CASH_IN: &str = "report-col-cash-in";
+pub(crate) const COL_CASH_OUT: &str = "report-col-cash-out";
+pub(crate) const COL_NAME: &str = "report-col-name";
+pub(crate) const COL_EXPENSE: &str = "report-col-expense";
+pub(crate) const COL_STAFF: &str = "report-col-staff";
+pub(crate) const COL_LENT: &str = "report-col-lent";
+pub(crate) const COL_RETURNED_CASH: &str = "report-col-returned-cash";
+pub(crate) const COL_RETURNED_SALARY: &str = "report-col-returned-salary";
+pub(crate) const COL_RETURN_BY: &str = "report-col-return-by";
+pub(crate) const COL_DAYS_PAST: &str = "report-col-days-past";
+pub(crate) const STAFF_YES: &str = "report-staff-yes";
+pub(crate) const R32_OVERDUE: &str = "report-r32-overdue";
+pub(crate) const SECTION_SHOP_EXPENSES: &str = "report-section-shop-expenses";
+pub(crate) const SECTION_PARTNER_MONEY: &str = "report-section-partner-money";
+
 pub(crate) const COL_STATUS: &str = "report-col-status";
 
 // The state of a line of R9.
@@ -125,6 +141,7 @@ pub(crate) const FILTER_ZAMINDAR: &str = "report-filter-zamindar";
 pub(crate) const FILTER_ITEM: &str = "report-filter-item";
 pub(crate) const FILTER_CITY: &str = "report-filter-city";
 pub(crate) const FILTER_ADDA: &str = "report-filter-adda";
+pub(crate) const FILTER_PARTNER: &str = "report-filter-partner";
 pub(crate) const FILTER_DETAIL: &str = "report-filter-detail";
 pub(crate) const FILTER_BALANCE_ONLY: &str = "report-filter-balance-only";
 

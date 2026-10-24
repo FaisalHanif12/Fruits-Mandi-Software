@@ -291,6 +291,8 @@ pub(crate) fn resolve(
                     typed.adda_id = Some(id);
                     typed.resolved.adda = Some(names);
                 }
+                // The list above holds no partner; the partner views come with D4R.
+                MasterTable::Partners => {}
             },
             None => problems.push(FieldError::new(ErrorCode::ErrNotFound, field)),
         }

@@ -14,8 +14,9 @@
 
 use mandi_reports::export::{
     AnalyticsExportInput, ExcelExported, ExportProgress, ExportStage, ReportExportInput,
-    export_analytics, export_report,
+    export_analytics, export_report, export_report_page,
 };
+use mandi_reports::reports::ReportId;
 use mandi_services::ServiceError;
 use mandi_services::auth;
 use mandi_services::core::error::ErrorCode;
@@ -23,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use ts_rs::TS;
 
-use super::reports_engine::engine_error;
+use super::reports_engine::{engine_error, statement_all};
 use super::run;
 use crate::error::UiError;
 
@@ -110,6 +111,14 @@ pub async fn reports_export_excel<R: tauri::Runtime>(
         auth::require(ctx)?;
         check_job_id(&input.job_id)?;
         let job = input.job_id.clone();
+        // R31, the partner statement, is put together by the services (see `reports_engine`).
+        if input.export.id == ReportId::R31 {
+            let page = statement_all(ctx, &input.export.filters)?;
+            return export_report_page(ctx.db(), &page, &input.export, &mut |p| {
+                emit(&handle, &job, p);
+            })
+            .map_err(engine_error);
+        }
         export_report(ctx.db(), &input.export, &mut |p| emit(&handle, &job, p))
             .map_err(engine_error)
     })

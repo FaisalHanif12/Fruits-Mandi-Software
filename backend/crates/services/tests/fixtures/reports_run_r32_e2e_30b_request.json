@@ -1,0 +1,19 @@
+{
+  "filters": {
+    "adda_id": null,
+    "as_of": "16-10-2026",
+    "city_id": null,
+    "detail": false,
+    "from": "",
+    "item_id": null,
+    "partner_id": null,
+    "party": null,
+    "seller_id": null,
+    "shortcut": null,
+    "to": "",
+    "zamindar_id": null
+  },
+  "id": "R32",
+  "limit": 100,
+  "offset": 0
+}

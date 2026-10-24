@@ -68,6 +68,22 @@ impl NumberStyle {
         self.digits(format!("{sign}{}.{:02}", value / 100, value % 100))
     }
 
+    /// A rate in basis points as the percent a person writes, with no trailing zeros: 4,000 →
+    /// `40`, 3,750 → `37.5`, 5 → `0.05` (as the screen's `formatBps`). Display only; it works on
+    /// the digits and never divides.
+    pub(crate) fn bps_text(self, bps: i64) -> String {
+        let sign = if bps < 0 { "-" } else { "" };
+        let bps = bps.unsigned_abs();
+        let (whole, fraction) = (bps / 100, bps % 100);
+        let text = if fraction == 0 {
+            format!("{sign}{whole}")
+        } else {
+            let fraction = format!("{fraction:02}");
+            format!("{sign}{whole}.{}", fraction.trim_end_matches('0'))
+        };
+        self.digits(text)
+    }
+
     /// A weight in grams as kg with up to 3 decimals and no trailing zeros: 12,345 → `12.345`,
     /// 12,500 → `12.5`, 12,000 → `12`.
     pub(crate) fn kilos(self, grams: i64) -> String {
@@ -117,6 +133,20 @@ mod tests {
 
     fn rupees(n: i64) -> Paisa {
         Paisa::from_rupees(n).unwrap()
+    }
+
+    #[test]
+    fn a_rate_in_basis_points_reads_as_the_percent_a_person_writes() {
+        let en = style(Language::En, false);
+        assert_eq!(en.bps_text(4_000), "40");
+        assert_eq!(en.bps_text(3_750), "37.5");
+        assert_eq!(en.bps_text(5), "0.05");
+        assert_eq!(en.bps_text(250), "2.5");
+        assert_eq!(en.bps_text(0), "0");
+        assert_eq!(en.bps_text(10_000), "100");
+        assert_eq!(en.bps_text(-600), "-6");
+        // Urdu digits follow the print setting, as for every other number.
+        assert_eq!(style(Language::Ur, true).bps_text(3_750), "۳۷.۵");
     }
 
     #[test]

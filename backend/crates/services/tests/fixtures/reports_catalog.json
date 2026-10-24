@@ -111,6 +111,16 @@
     "party_required": false
   },
   {
+    "id": "R12",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r12-title",
+    "filters": [
+      "date_range"
+    ],
+    "party_required": false
+  },
+  {
     "id": "R13",
     "group": "accounts",
     "group_title_id": "report-group-accounts",
@@ -257,12 +267,45 @@
     "party_required": false
   },
   {
+    "id": "R29",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r29-title",
+    "filters": [
+      "date_range",
+      "partner"
+    ],
+    "party_required": false
+  },
+  {
     "id": "R30",
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r30-title",
     "filters": [
       "date_range"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R31",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r31-title",
+    "filters": [
+      "date_range",
+      "partner"
+    ],
+    "party_required": true
+  },
+  {
+    "id": "R32",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r32-title",
+    "filters": [
+      "as_of",
+      "party"
     ],
     "party_required": false
   }

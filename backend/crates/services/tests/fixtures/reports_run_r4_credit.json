@@ -15,6 +15,7 @@
     },
     "city": null,
     "adda": null,
+    "partner": null,
     "detail": false
   },
   "columns": [

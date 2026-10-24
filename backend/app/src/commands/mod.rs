@@ -37,6 +37,7 @@ pub mod analytics;
 pub mod audit;
 pub mod export;
 pub mod health;
+pub mod month;
 pub mod settings_day;
 pub mod support;
 pub mod updates;

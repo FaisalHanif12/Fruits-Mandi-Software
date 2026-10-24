@@ -16,6 +16,7 @@ chrono.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 strsim.workspace = true
+ts-rs.workspace = true
 
 [dev-dependencies]
 # Print data is built by mandi-reports; the print tests save a real بکری and compare. A
