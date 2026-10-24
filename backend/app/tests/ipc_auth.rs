@@ -358,7 +358,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "roman": "xyz", "urdu": "زیڈ", "kind": "word" } }),
             true,
         ),
-        ("translit_pairs_list", json!({}), true),
+        ("translit_pairs_list", json!({ "input": {} }), true),
         (
             "masters_list",
             json!({ "input": { "kind": "city", "include_inactive": true } }),
@@ -593,8 +593,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "vouchers_save_advance",
-            json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "mode": "cash",
-                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "expected_goods": "", "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "expected_goods": "", "narration": "" } }),
             true,
         ),
         (
@@ -619,28 +618,24 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "vouchers_save_receipt",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "10,000", "mode": "cash",
-                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } }),
             true,
         ),
         (
             "vouchers_save_payment",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "4,316", "mode": "cash",
-                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "reason": "", "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "4,316", "reason": "", "narration": "" } }),
             true,
         ),
         (
             "vouchers_preview",
             json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "person_key": null,
-                "amount": "10,000", "mode": "cash", "bank_account_id": null, "cheque_no": "", "cheque_date": "",
-                "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
+                "amount": "10,000", "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
             true,
         ),
         (
             "vouchers_edit",
             json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
-                "account_id": 1, "person_key": null, "amount": "10,000", "mode": "cash", "bank_account_id": null,
-                "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" } } }),
+                "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
             true,
         ),
         (
@@ -1295,9 +1290,16 @@ fn the_translit_commands_work_through_the_ipc() {
     );
     assert_eq!(up("xyz")["items"][0]["text"], "زیڈ");
     assert_eq!(up("xyz")["items"][0]["source"], "learned");
-    let list = h.ok("translit_pairs_list", json!({}));
-    assert_eq!(list.as_array().unwrap().len(), 1);
-    let row = &list[0];
+    let list = h.ok("translit_pairs_list", json!({ "input": {} }));
+    assert_eq!(list["rows"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        (
+            list["total_count"].as_i64(),
+            list["totals"]["use_count"].as_i64()
+        ),
+        (Some(1), Some(1))
+    );
+    let row = &list["rows"][0];
     assert_eq!(
         (
             row["roman"].as_str(),
@@ -1338,7 +1340,10 @@ fn the_translit_commands_work_through_the_ipc() {
         "ERR_NOT_FOUND"
     );
     assert_ne!(up("xyz")["items"][0]["text"], "زیڈ");
-    assert_eq!(h.ok("translit_pairs_list", json!({})), json!([]));
+    assert_eq!(
+        h.ok("translit_pairs_list", json!({ "input": {} }))["rows"],
+        json!([])
+    );
 }
 
 #[test]
@@ -1401,7 +1406,8 @@ fn the_masters_and_search_commands_work_through_the_ipc() {
         "masters_list",
         json!({ "input": { "kind": "city", "include_inactive": false } }),
     );
-    assert_eq!(list.as_array().unwrap().len(), 2);
+    assert_eq!(list["rows"].as_array().unwrap().len(), 2);
+    assert_eq!(list["total_count"], 2);
     let off = h.ok(
         "masters_set_active",
         json!({ "input": { "kind": "city", "id": 1, "is_active": false } }),
@@ -1411,10 +1417,10 @@ fn the_masters_and_search_commands_work_through_the_ipc() {
         h.ok(
             "masters_list",
             json!({ "input": { "kind": "city", "include_inactive": false } })
-        )
-        .as_array()
-        .unwrap()
-        .len(),
+        )["rows"]
+            .as_array()
+            .unwrap()
+            .len(),
         1
     );
     // Search: the shape the Picker reads, in both scripts; an inactive record is not offered.
@@ -1752,12 +1758,10 @@ fn the_voucher_commands_work_through_the_ipc() {
     let akram = account("buyer", "اکرم ٹول ٹیکس", "Akram Toll Tax");
     let payment = |account_id: i64, amount: &str, reason: &str, confirm: bool| {
         json!({ "input": { "date": "10-10-2026", "account_id": account_id, "person_key": null,
-            "amount": amount, "mode": "cash", "bank_account_id": null, "cheque_no": "",
-            "cheque_date": "", "reason": reason, "narration": "", "confirm_cash_below_zero": confirm } })
+            "amount": amount, "reason": reason, "narration": "", "confirm_cash_below_zero": confirm } })
     };
     let receipt = |account_id: i64, amount: &str| {
         json!({ "date": "10-10-2026", "account_id": account_id, "person_key": null, "amount": amount,
-            "mode": "cash", "bank_account_id": null, "cheque_no": "", "cheque_date": "",
             "collector_staff_id": null, "narration": "" })
     };
 
@@ -1799,8 +1803,7 @@ fn the_voucher_commands_work_through_the_ipc() {
     let preview = h.ok(
         "vouchers_preview",
         json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram,
-            "person_key": null, "amount": "1,000", "mode": "cash", "bank_account_id": null,
-            "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" },
+            "person_key": null, "amount": "1,000", "collector_staff_id": null, "narration": "" },
             "replacing_voucher_id": null } }),
     );
     assert_eq!(preview["errors"], json!([]), "{preview}");
@@ -1832,8 +1835,7 @@ fn the_voucher_commands_work_through_the_ipc() {
             "vouchers_edit",
             json!({ "input": { "id": id, "version": version, "reason": "", "confirm_cash_below_zero": false,
                 "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram, "person_key": null,
-                    "amount": amount, "mode": "cash", "bank_account_id": null, "cheque_no": "",
-                    "cheque_date": "", "collector_staff_id": null, "narration": "" } } }),
+                    "amount": amount, "collector_staff_id": null, "narration": "" } } }),
         )
     };
     assert_eq!(
@@ -2169,8 +2171,10 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(detail["lots"][0]["sales"][0]["buyer_total"], 1_288_000);
     assert_eq!(detail["status"], "saved");
     let listed = h.ok("bikri_list", json!({ "input": { "date": "10-10-2026" } }));
-    assert_eq!(listed[0]["number"], 1);
-    assert_eq!(listed[0]["buyer_total"], 3_156_400);
+    assert_eq!(listed["rows"][0]["number"], 1);
+    assert_eq!(listed["rows"][0]["buyer_total"], 3_156_400);
+    assert_eq!(listed["total_count"], 1);
+    assert_eq!(listed["totals"]["buyer_total"], 3_156_400);
     let found = h.ok("bikri_find", json!({ "input": { "truck_no": "les" } }));
     assert_eq!(found[0]["id"], 1);
     assert_eq!(
@@ -2192,7 +2196,8 @@ fn the_bikri_commands_work_through_the_ipc() {
         "ERR_NOT_FOUND"
     );
     let register = h.ok("pukhta_register", json!({ "input": {} }));
-    assert_eq!(register, json!([]));
+    assert_eq!(register["rows"], json!([]));
+    assert_eq!(register["total_count"], 0);
     assert_eq!(
         h.ok(
             "search_pukhta_people",

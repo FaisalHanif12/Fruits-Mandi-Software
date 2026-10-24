@@ -409,17 +409,17 @@ describe.each(LANGUAGES)('the receipt slip template (%s)', (language: Language) 
     expect(text).toContain(message(language, 'print-slip-amount-received'));
     expect(text).toContain('10,000');
     expect(text).toContain(language === 'ur' ? 'دس ہزار روپے' : 'Ten thousand rupees only');
-    expect(text).toContain(message(language, 'print-mode-cash'));
     // A slip has no goods table.
     expect(root.querySelector('table.print-goods')).toBeNull();
     expect(root.querySelectorAll('.print-sheet')).toHaveLength(1);
   });
 
-  it('how the money moved is a solid box: the money has moved, it is not a payment still due', () => {
-    const { root } = show('receipt');
-    const box = root.querySelector('.print-payment');
-    expect(box?.getAttribute('data-paid')).toBe('true');
-    expect(box?.textContent).toBe(message(language, 'print-mode-cash'));
+  it('has no line about how it was paid: all money is روکڑ (PRD 15.1)', () => {
+    for (const kind of ['receipt', 'payment', 'advance'] as const) {
+      const { root, unmount } = show(kind);
+      expect(root.querySelector('.print-payment')).toBeNull();
+      unmount();
+    }
   });
 
   it('a payment and an advance have their own title and total label', () => {
@@ -437,12 +437,9 @@ describe.each(LANGUAGES)('the receipt slip template (%s)', (language: Language) 
     }
   });
 
-  it('a cheque shows the bank and the cheque number; the extras show reason, collector and narration', () => {
-    const { root } = show('receipt', { mode: 'cheque', extras: true });
+  it('the extras show reason, collector and narration', () => {
+    const { root } = show('receipt', { extras: true });
     const text = textOf(root);
-    expect(text).toContain(message(language, 'print-fact-bank'));
-    expect(text).toContain(message(language, 'print-mode-cheque'));
-    expect(text).toContain('123456');
     expect(text).toContain(message(language, 'print-fact-collector'));
     expect(text).toContain(message(language, 'print-fact-reason'));
     expect(text).toContain(message(language, 'print-fact-narration'));

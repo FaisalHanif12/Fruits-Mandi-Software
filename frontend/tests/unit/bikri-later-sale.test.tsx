@@ -32,6 +32,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { IDS } from '../helpers/bikri-data';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -50,7 +51,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -93,6 +94,23 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
     });
     await user.keyboard('{Enter}560{Enter}');
   };
+
+  it('asks the backend for the one lot by its id, never for the pages of the stock list before it', async () => {
+    // 150 lots; the one asked for (lot 40) is the last of them, so it would be on the second page.
+    const others = Array.from({ length: 149 }, (_, index) =>
+      stockRow({ lot_id: 500 + index, lot_no: index + 2, bikri_number: index + 2 }),
+    );
+    fakePlan16({ rows: [...others, stockRow({ lot_id: 40 })] });
+    await open();
+    const card = await screen.findByRole('heading', {
+      name: named(message(language, 'bikri-later-lot-title')),
+    });
+    expect(visible(card.closest('section')?.textContent)).toContain(names.rahim);
+    // One call, for lot 40 alone, also when it has nothing left; no second page was read.
+    const calls = vi.mocked(bikriApi.bikriStockList).mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0]).toMatchObject({ lot_id: 40, include_written_off: true, offset: 0 });
+  });
 
   it('shows the lot read-only and asks the backend about it on the day of today', async () => {
     const plan = fakePlan16();

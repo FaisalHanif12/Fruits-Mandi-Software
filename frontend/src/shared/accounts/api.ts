@@ -49,15 +49,16 @@ export function accountsGet(id: number): Promise<AccountRow> {
 }
 
 /**
- * 0 asks for every matching account: the backend returns up to 50,000 (2.5 times the 20,000
- * accounts of NFR-SCL-1), and the grid draws only the rows in view. The screen sets no cap.
+ * One page of the accounts for the filter, with the count of the whole filter and the opening
+ * totals over all of it (PRD FR-10.5, FR-19.11, Code Standards B31). A page is `limit` rows from
+ * `offset`; 0 means the default page of 100.
  */
-const LIST_PAGE_LIMIT = 0;
-
-export function accountsList(filter: AccountFilter, offset = 0): Promise<AccountList> {
-  return callCommand<AccountList>('accounts_list', {
-    input: { filter, offset, limit: LIST_PAGE_LIMIT },
-  });
+export function accountsList(
+  filter: AccountFilter,
+  offset: number,
+  limit: number,
+): Promise<AccountList> {
+  return callCommand<AccountList>('accounts_list', { input: { filter, offset, limit } });
 }
 
 /** The next free code for a type (and a control, for "other"), to fill the code field. */

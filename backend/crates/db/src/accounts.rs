@@ -719,32 +719,36 @@ pub fn search_sources(
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
-         WHERE ?1 IS NULL OR a.id = ?1"
+         WHERE (?1 IS NULL OR a.id = ?1) AND a.code <> ?2"
     );
     let mut statement = conn.prepare(&sql)?;
-    let rows = statement.query_map([only_id], |r| {
-        let kind: String = r.get(11)?;
-        Ok(SearchSource {
-            id: r.get(0)?,
-            code: r.get(1)?,
-            name_ur: r.get(2)?,
-            name_en: r.get(3)?,
-            extra_ur: r.get(4)?,
-            extra_en: r.get(5)?,
-            more_keys: r.get(6)?,
-            search_ur: r.get(7)?,
-            search_en: r.get(8)?,
-            search_phonetic: r.get(9)?,
-            is_active: r.get(10)?,
-            account_type: Some(match kind.as_str() {
-                "seller" => AccountType::Seller,
-                "buyer" => AccountType::Buyer,
-                "money_lent" => AccountType::MoneyLent,
-                _ => AccountType::Other,
-            }),
-            control_id: Some(r.get(12)?),
-        })
-    })?;
+    // بینک is never offered in a picker or a search: all money is روکڑ (PRD FR-10.4, v1.6).
+    let rows = statement.query_map(
+        params![only_id, mandi_core::accounts::BANK_ACCOUNT_CODE],
+        |r| {
+            let kind: String = r.get(11)?;
+            Ok(SearchSource {
+                id: r.get(0)?,
+                code: r.get(1)?,
+                name_ur: r.get(2)?,
+                name_en: r.get(3)?,
+                extra_ur: r.get(4)?,
+                extra_en: r.get(5)?,
+                more_keys: r.get(6)?,
+                search_ur: r.get(7)?,
+                search_en: r.get(8)?,
+                search_phonetic: r.get(9)?,
+                is_active: r.get(10)?,
+                account_type: Some(match kind.as_str() {
+                    "seller" => AccountType::Seller,
+                    "buyer" => AccountType::Buyer,
+                    "money_lent" => AccountType::MoneyLent,
+                    _ => AccountType::Other,
+                }),
+                control_id: Some(r.get(12)?),
+            })
+        },
+    )?;
     rows.collect()
 }
 

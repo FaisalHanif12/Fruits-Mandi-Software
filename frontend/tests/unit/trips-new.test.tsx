@@ -25,6 +25,7 @@ import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { fakeTrips, tripPartners } from '../helpers/trips';
 import { refusal } from '../helpers/ui-error';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -43,7 +44,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners(THREE_PARTNERS);
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {

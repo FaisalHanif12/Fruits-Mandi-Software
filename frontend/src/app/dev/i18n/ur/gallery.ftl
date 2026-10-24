@@ -47,13 +47,13 @@ gallery-field-code-hint = { -gahak } کا کوڈ یا مختصر کوڈ لکھی
 # review: pending
 gallery-field-total = { -meezan }
 # review: pending
-gallery-field-mode = ذریعہ
+gallery-field-type = قسم
 # review: pending
-gallery-mode-cash = نقد
+gallery-type-receipt = { -wasooli }
 # review: pending
-gallery-mode-bank = بینک
+gallery-type-payment = { -adaigi }
 # review: pending
-gallery-mode-cheque = چیک
+gallery-type-advance = { -peshgi-khata }
 # review: pending
 gallery-numbers-gross = { -kham-bikri }: <num>{ $amount }</num> روپے
 # review: pending

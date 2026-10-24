@@ -1,6 +1,6 @@
 // What a saved voucher needs besides its own row to be opened for an edit (PRD FR-15.3): the voucher
-// holds its bank account and its collector only by id, and the kind of its account (a seller or a
-// buyer) is not on it. The form needs their names and the kind, so they are read once, together.
+// holds its collector only by id, and the kind of its account (a seller or a buyer) is not on it.
+// The form needs the name and the kind, so they are read once, together.
 // Nothing here works out money.
 
 import { useQuery } from '@tanstack/react-query';
@@ -26,12 +26,11 @@ export function useEditSeed(row: VoucherRow | null) {
     queryKey: [...VOUCHERS_KEY, 'seed', row?.id, row?.version],
     queryFn: async (): Promise<RowExtras> => {
       if (row === null) throw new Error('no voucher');
-      const [account, bank, collector] = await Promise.all([
+      const [account, collector] = await Promise.all([
         row.account === null ? Promise.resolve(null) : accountsGet(row.account.id),
-        pickerValueOf('bank_account', row.bank_account_id),
         pickerValueOf('staff', row.collector_staff_id),
       ]);
-      return { accountType: account?.account_type ?? null, bank, collector };
+      return { accountType: account?.account_type ?? null, collector };
     },
     enabled: row !== null,
     staleTime: 0,

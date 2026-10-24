@@ -541,6 +541,32 @@ pub struct RulesFilter {
 pub struct RulesListInput {
     /// The filter.
     pub filter: RulesFilter,
+    /// How many rows to skip. 0 for the first page (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One page of the rule list with the counts over the whole filter (PRD FR-19.11, B31).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct RulesList {
+    /// This page, in the order the rules are listed.
+    pub rows: Vec<RuleRow>,
+    /// How many rules match the filter.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The counts over every matching rule.
+    pub totals: RulesTotals,
+}
+
+/// The counts of the rule list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct RulesTotals {
+    /// How many of the matching rules are active.
+    #[ts(type = "number")]
+    pub active_count: i64,
 }
 
 /// Ask for one rule.

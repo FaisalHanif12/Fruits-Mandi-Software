@@ -31,7 +31,8 @@ import {
   Num,
   Select,
 } from '../../../shared/ui';
-import { PagedList, SignedNum } from '../../cashbook';
+import { SignedNum } from '../../cashbook';
+import { PagedList } from '../../../shared/grid';
 import { usePartnerList } from '../hooks';
 import { usePartnerStatement } from '../money-hooks';
 import { parseStatementSearch } from '../screen-type';

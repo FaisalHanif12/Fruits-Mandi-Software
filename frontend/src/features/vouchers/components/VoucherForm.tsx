@@ -43,7 +43,6 @@ import {
 } from '../draft';
 import { useMakeRegular, useOpenBills, useOpenPayables } from '../hooks';
 import type { FromSide, VoucherDraft } from '../types';
-import { PaymentModeFields } from './PaymentModeFields';
 
 interface VoucherFormProps {
   draft: VoucherDraft;
@@ -259,7 +258,6 @@ export function VoucherForm({
           </span>
         )}
       </div>
-      <PaymentModeFields value={draft} error={error} onChange={onChange} />
       {draft.type === 'receipt' ? (
         <Field
           label={<Localized id="vouchers-field-collector" />}

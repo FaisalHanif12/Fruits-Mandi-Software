@@ -4,18 +4,18 @@
 
 use mandi_db::bikri::saved::{self as repo, ListFilter};
 use mandi_domain::core::bikri::{
-    BikriDetail, BikriFindInput, BikriListInput, BikriListRow, BikriNavigateInput, BikriStatus,
+    BikriDetail, BikriFindInput, BikriList, BikriListInput, BikriListRow, BikriListTotals,
+    BikriNavigateInput, BikriStatus,
 };
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
+use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
 
 use crate::context::Context;
 use crate::day;
 use crate::error::ServiceError;
 
-/// The most rows of a list (NFR-SCL-2: 500 بکری in one day).
-const LIST_LIMIT: i64 = 2_000;
 /// The most rows of a find.
 const FIND_LIMIT: i64 = 50;
 
@@ -65,7 +65,7 @@ pub(crate) fn mark_editable(detail: &mut BikriDetail, closed_up_to: Option<Busin
 ///
 /// # Errors
 /// The date codes on `date`, `from` and `to`.
-pub fn list(ctx: &Context, input: &BikriListInput) -> Result<Vec<BikriListRow>, ServiceError> {
+pub fn list(ctx: &Context, input: &BikriListInput) -> Result<BikriList, ServiceError> {
     let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
     let date = optional_date(&mut errors, "date", input.date.as_ref(), today);
@@ -84,10 +84,26 @@ pub fn list(ctx: &Context, input: &BikriListInput) -> Result<Vec<BikriListRow>, 
         status: input.status,
         number: None,
         truck_prefix: None,
-        limit: LIST_LIMIT,
+        limit: crate::page::limit_of(input.limit),
+        offset: i64::from(input.offset),
     };
-    ctx.db
-        .read(|conn| repo::list(conn, &filter).map_err(ServiceError::from))
+    // One page and the totals over the whole filter, each from indexed queries (PRD FR-19.11, B31).
+    ctx.db.read(|conn| {
+        let totals = repo::list_totals(conn, &filter)?;
+        let rows = repo::list(conn, &filter)?;
+        let paisa = |value: i64| Paisa::try_from_paisa(value).map_err(crate::error::money_error);
+        Ok(BikriList {
+            rows,
+            total_count: totals.count,
+            totals: BikriListTotals {
+                qty_received: totals.qty_received,
+                qty_sold: totals.qty_sold,
+                gross: paisa(totals.gross_paisa)?,
+                net: paisa(totals.net_paisa)?,
+                buyer_total: paisa(totals.buyer_total_paisa)?,
+            },
+        })
+    })
 }
 
 /// Finds بکری by number, the start of the truck number, seller, day or item (PRD FR-12.13,
@@ -115,6 +131,7 @@ pub fn find(ctx: &Context, input: &BikriFindInput) -> Result<Vec<BikriListRow>, 
         number: input.number,
         truck_prefix,
         limit: FIND_LIMIT,
+        offset: 0,
     };
     ctx.db
         .read(|conn| repo::list(conn, &filter).map_err(ServiceError::from))

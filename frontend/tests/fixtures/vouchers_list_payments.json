@@ -55,5 +55,9 @@
       "editable": false
     }
   ],
-  "total_paisa": 431600
+  "total_count": 2,
+  "totals": {
+    "cancelled_count": 1,
+    "total_paisa": 431600
+  }
 }

@@ -459,6 +459,8 @@ fn the_overview_has_returned_net_and_total_and_a_return_adds_back() {
             to: String::new(),
             account_id: None,
             person_key: None,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -623,6 +625,8 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
             to: String::new(),
             account_id: None,
             person_key: None,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap()
@@ -933,10 +937,7 @@ fn a_general_on_a_buyer_is_a_bill_and_a_seller_advance_is_never_adjusted() {
             date: "10-10-2026".into(),
             seller_account_id: w.rahim,
             amount: "15,000".into(),
-            mode: mandi_services::core::vouchers::VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },

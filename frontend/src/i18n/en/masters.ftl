@@ -1,4 +1,4 @@
-### The انڈکس menu and the ten master lists (plan 06, PRD 10.3). Every Urdu line says what its English line says (NFR-URD-29).
+### The انڈکس menu and the nine master lists (plan 06, PRD 10.3). Every Urdu line says what its English line says (NFR-URD-29).
 
 ## The انڈکس menu and the master lists (plan 06, PRD 10.3, FR-7.46).
 
@@ -17,7 +17,7 @@ masters-unknown-title = This list does not exist
 # review: pending
 masters-unknown-help = Pick a list from the { -index }.
 
-## The ten lists: title, what it is for, the button for a new one, and the empty state.
+## The nine lists: title, what it is for, the button for a new one, and the empty state.
 
 # review: pending
 masters-city-title = City list
@@ -127,18 +127,6 @@ masters-staff-new = New staff member
 # review: pending
 masters-staff-empty = { masters-staff-title } is empty
 
-# review: pending
-masters-bank-title = Bank account list
-
-# review: pending
-masters-bank-help = The shop's bank accounts.
-
-# review: pending
-masters-bank-new = New bank account
-
-# review: pending
-masters-bank-empty = { masters-bank-title } is empty
-
 ## A list: search, columns, states.
 
 # review: pending
@@ -214,12 +202,6 @@ masters-narration-text-ur = Urdu text
 
 # review: pending
 masters-narration-text-en = English text
-
-# review: pending
-masters-bank-name-ur = Urdu name of the account
-
-# review: pending
-masters-bank-name-en = English name of the account
 
 # review: pending
 masters-account-code = Account code
@@ -336,12 +318,3 @@ masters-staff-account = { -adhar-raqam } account
 
 # review: pending
 masters-staff-account-hint = This account is made by itself the first time money is lent to this person.
-
-# review: pending
-masters-bank-bank = Bank name
-
-# review: pending
-masters-bank-title-field = Account title
-
-# review: pending
-masters-bank-number = Account number

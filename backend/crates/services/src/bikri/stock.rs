@@ -56,6 +56,7 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
         to,
         seller_id: input.seller_id,
         item_id: input.item_id,
+        lot_id: input.lot_id,
         include_written_off: input.include_written_off,
     };
     ctx.db.read(|conn| {
@@ -112,7 +113,10 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
         // The trip goods with stock left, marked اپنا مال with their trip (PRD FR-12.25). A seller
         // filter leaves them out unless it is the اپنا مال account.
         let own_account = mandi_db::accounts::id_by_code(conn, super::shared::OWN_GOODS_CODE)?;
-        let own_rows = if input.seller_id.is_none() || input.seller_id == own_account {
+        // One lot asked for: the trip goods are not lots, so none of them is listed.
+        let own_rows = if input.lot_id.is_some() {
+            Vec::new()
+        } else if input.seller_id.is_none() || input.seller_id == own_account {
             crate::purchases::stock_rows(conn, &own_filter, today)?
         } else {
             Vec::new()
@@ -127,7 +131,14 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 .checked_add(row.cost_left_paisa)
                 .map_err(crate::error::money_error)?;
         }
+        // One page over the lots first, then the trip goods; the totals above are over every
+        // matching row, never the page (PRD FR-19.11, B31).
+        let lots = i64::try_from(rows.len()).map_err(|_| data("too many rows"))?;
+        let own = i64::try_from(own_rows.len()).map_err(|_| data("too many rows"))?;
+        let total_count = lots.checked_add(own).ok_or_else(|| data("too many rows"))?;
+        let (rows, own_rows) = crate::page::slice_two(rows, own_rows, input.offset, input.limit);
         Ok(StockList {
+            total_count,
             rows,
             balance_total,
             own_rows,

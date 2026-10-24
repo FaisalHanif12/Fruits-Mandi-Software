@@ -29,6 +29,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -43,7 +44,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {

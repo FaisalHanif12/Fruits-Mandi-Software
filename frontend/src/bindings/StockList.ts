@@ -8,6 +8,11 @@ import type { StockRow } from './StockRow';
  */
 export type StockList = {
   /**
+   * How many rows match the filter: lots and trip goods together. A page holds the lots
+   * first, then the trip goods, so `rows.len() + own_rows.len()` is at most the page size.
+   */
+  total_count: number;
+  /**
    * Oldest received first, then by بکری number and lot number.
    */
   rows: Array<StockRow>;

@@ -47,13 +47,13 @@ gallery-field-code-hint = Enter the { -gahak } code or short code.
 # review: pending
 gallery-field-total = { -meezan }
 # review: pending
-gallery-field-mode = Mode
+gallery-field-type = Type
 # review: pending
-gallery-mode-cash = Cash
+gallery-type-receipt = { -wasooli }
 # review: pending
-gallery-mode-bank = Bank
+gallery-type-payment = { -adaigi }
 # review: pending
-gallery-mode-cheque = Cheque
+gallery-type-advance = { -peshgi-khata }
 # review: pending
 gallery-numbers-gross = { -kham-bikri }: Rs <num>{ $amount }</num>
 # review: pending

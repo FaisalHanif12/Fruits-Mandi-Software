@@ -23,7 +23,8 @@ use mandi_domain::core::rules::{
     ChargeSide, ChargeTest, ChargeType, ChargeValue, ChargesInput, ChargesSettings,
     CreditLimitMode, DEFAULT_RATE_CHECK_PERCENT, DefaultCharge, ItemGroup, OverridesSettings,
     RATE_CHECK_PERCENT_RANGE, RuleInput, RuleRow, RuleSaved, RuleTest, RuleTestInput, RulesFilter,
-    check_combination, is_default_scope, level_of, prepare_rule, rule_value,
+    RulesList, RulesListInput, RulesTotals, check_combination, is_default_scope, level_of,
+    prepare_rule, rule_value,
 };
 use mandi_domain::core::validate;
 use mandi_domain::rules::{Query, Rule, RuleSet, charge_amount, resolve};
@@ -149,6 +150,25 @@ pub fn list(ctx: &Context, filter: &RulesFilter) -> Result<Vec<RuleRow>, Service
         let mut rows = repo::list(conn, filter)?;
         mark_defaults(conn, &mut rows)?;
         Ok(rows)
+    })
+}
+
+/// One page of the rules that match a filter, in the order of [`list`], with the counts over every
+/// matching rule (PRD FR-19.11, B31). The order depends on the level of each rule, which is worked
+/// out for all of them (at most 10,000, NFR-SCL-6) before the page is cut.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn list_page(ctx: &Context, input: &RulesListInput) -> Result<RulesList, ServiceError> {
+    let rows = list(ctx, &input.filter)?;
+    let count =
+        |n: usize| i64::try_from(n).map_err(|_| ServiceError::Data("too many rows".to_owned()));
+    let total_count = count(rows.len())?;
+    let active_count = count(rows.iter().filter(|r| r.is_active).count())?;
+    Ok(RulesList {
+        rows: crate::page::slice(rows, input.offset, input.limit),
+        total_count,
+        totals: RulesTotals { active_count },
     })
 }
 

@@ -1,12 +1,8 @@
 {
   "amount": "15,000",
-  "bank_account_id": null,
-  "cheque_date": "",
-  "cheque_no": "",
   "confirm_cash_below_zero": false,
   "date": "10-10-2026",
   "expected_goods": "",
-  "mode": "cash",
   "narration": "",
   "seller_account_id": 18
 }

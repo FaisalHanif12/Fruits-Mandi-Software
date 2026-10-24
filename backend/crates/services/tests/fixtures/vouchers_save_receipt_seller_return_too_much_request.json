@@ -1,12 +1,8 @@
 {
   "account_id": 18,
   "amount": "1,000",
-  "bank_account_id": null,
-  "cheque_date": "",
-  "cheque_no": "",
   "collector_staff_id": null,
   "date": "10-10-2026",
-  "mode": "cash",
   "narration": "",
   "person_key": null
 }

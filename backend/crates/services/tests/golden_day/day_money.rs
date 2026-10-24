@@ -181,11 +181,17 @@ fn e2e_8_9_10_12_event_5_on_the_khercha_screen_completes_the_day() {
             to: String::new(),
             account_id: None,
             person_key: None,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
     assert_eq!(
-        (list.rows.len(), list.rows[0].number, list.total_paisa),
+        (
+            list.rows.len(),
+            list.rows[0].number,
+            list.totals.total_paisa
+        ),
         (1, 1, Some(rupees(3_000)))
     );
     ledger::verify_journal_chain(&w.env.ctx).unwrap();

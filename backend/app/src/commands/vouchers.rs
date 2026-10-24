@@ -13,11 +13,12 @@ use mandi_services::{auth, vouchers};
 use super::run;
 use crate::error::UiError;
 
-/// Gives an advance to a seller (PRD 15.4): seller بنام (an advance line), cash or bank جمع.
+/// Gives an advance to a seller (PRD 15.4): seller بنام (an advance line), روکڑ جمع.
 /// One transaction: the voucher, its journal entry, the audit row. Errors: the validate codes
-/// (`date`, `amount`, `cheque_no`, `cheque_date`), `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE`
-/// (`date`), `ERR_NOT_A_SELLER`, `ERR_ACCOUNT_INACTIVE`, `ERR_NOT_FOUND` (`seller_account_id`,
-/// `bank_account_id`), `ERR_REQUIRED` (`bank_account_id` for bank and cheque).
+/// (`date`, `amount`), `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE` (`date`), `ERR_NOT_A_SELLER`,
+/// `ERR_ACCOUNT_INACTIVE`, `ERR_NOT_FOUND` (`seller_account_id`), `ERR_FIELD_NOT_ALLOWED` (an
+/// old client that still sends `mode`, `bank_account_id`, `cheque_no` or `cheque_date`; the field
+/// is the name sent and nothing is posted).
 #[tauri::command]
 pub async fn vouchers_save_advance<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -72,14 +73,14 @@ pub async fn vouchers_list<R: tauri::Runtime>(
     .await
 }
 
-/// Receives money (PRD 15.2): cash or bank بنام, the account جمع. From a buyer it settles his
+/// Receives money (PRD 15.2): روکڑ بنام, the account جمع. From a buyer it settles his
 /// oldest open bills first and the extra stays as his credit (FR-15.4, FR-15.5); for a
 /// پختہ کھاتہ buyer it names the one-time person (FR-13.7). From a seller it is an advance
 /// returned (FR-15.12): it adjusts his open advances, oldest first, then settles what he owes.
 /// One transaction: the voucher, its journal entry, the matching rows and the audit row. Errors:
-/// the validate codes (`date`, `amount`, `cheque_no`, `cheque_date`), `ERR_DATE_CLOSED`,
-/// `ERR_DATE_IN_FUTURE` (`date`), `ERR_NOT_FOUND`, `ERR_ACCOUNT_INACTIVE`, `ERR_NOT_A_BUYER`
-/// (`account_id`), `ERR_PERSON_REQUIRED` (`person_key`), `ERR_CHEQUE_REQUIRED`,
+/// the validate codes (`date`, `amount`), `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE` (`date`),
+/// `ERR_NOT_FOUND`, `ERR_ACCOUNT_INACTIVE`, `ERR_NOT_A_BUYER` (`account_id`),
+/// `ERR_PERSON_REQUIRED` (`person_key`), `ERR_FIELD_NOT_ALLOWED` (a removed field was sent),
 /// `ERR_RETURN_EXCEEDS_OPEN` (value `open_paisa`, field `amount`, a seller only).
 #[tauri::command]
 pub async fn vouchers_save_receipt<R: tauri::Runtime>(
@@ -93,7 +94,7 @@ pub async fn vouchers_save_receipt<R: tauri::Runtime>(
     .await
 }
 
-/// Pays money out (PRD 15.3): the account بنام, cash or bank جمع. To a seller above his open
+/// Pays money out (PRD 15.3): the account بنام, روکڑ جمع. To a seller above his open
 /// payable it saves with a warning and the extra shows as "بیوپاری کے ذمے" (FR-15.7). To a
 /// buyer it is cash lent: a reason is required and it becomes one of his bills (FR-15.11). A
 /// payment never adjusts advances. Errors: as `vouchers_save_receipt`, plus

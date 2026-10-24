@@ -5,7 +5,8 @@
 use mandi_core::accounts::RecordRef;
 use mandi_core::money::Paisa;
 use mandi_core::vouchers::{LastAdvance, VoucherMode, VoucherRow, VoucherType};
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::types::Value;
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 
 /// The place of an entry in its account, oldest first: not an opening, day, order key, entry id.
 type EntryOrder = (bool, String, i64, i64);
@@ -167,33 +168,6 @@ pub fn set_current_entry(
         params![voucher_id, entry_id, now, user_id],
     )?;
     Ok(())
-}
-
-/// A bank account row as a voucher needs it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BankFacts {
-    /// The ledger account that holds its money (under control 0102).
-    pub account_id: i64,
-    /// False when hidden from pickers.
-    pub is_active: bool,
-}
-
-/// A bank account (`bank_accounts.id`), if there is one.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn bank_account(conn: &Connection, id: i64) -> rusqlite::Result<Option<BankFacts>> {
-    conn.query_row(
-        "SELECT account_id, is_active FROM bank_accounts WHERE id = ?1",
-        [id],
-        |r| {
-            Ok(BankFacts {
-                account_id: r.get(0)?,
-                is_active: r.get(1)?,
-            })
-        },
-    )
-    .optional()
 }
 
 fn bad(column: usize, what: &str) -> rusqlite::Error {
@@ -363,6 +337,120 @@ pub fn list(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<Vec<
             ],
             read_row,
         )?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    fill_people(conn, rows)
+}
+
+/// The counts and the total over every voucher a filter matches (PRD FR-19.11, B31).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ListTotals {
+    /// How many vouchers match, cancelled ones too.
+    pub count: i64,
+    /// How many of them are cancelled.
+    pub cancelled: i64,
+    /// `SUM(amount_paisa)` of the saved ones: a cancelled voucher no longer moves money.
+    pub saved_paisa: i64,
+}
+
+/// The `WHERE` of the list and the values it binds, in order. Only the conditions the filter
+/// really sets are written, so SQLite can search `idx_vouchers_date` and `idx_vouchers_account`
+/// instead of reading every voucher (Code Standards B18, NFR-SPD-24).
+fn list_where(filter: &ListFilter<'_>) -> (String, Vec<Value>) {
+    let mut conditions: Vec<&str> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
+    if let Some(kind) = filter.voucher_type {
+        conditions.push("v.type = ?");
+        binds.push(Value::Text(kind.as_str().to_owned()));
+    }
+    if let Some(from) = filter.from {
+        conditions.push("v.entry_date >= ?");
+        binds.push(Value::Text(from.to_owned()));
+    }
+    if let Some(to) = filter.to {
+        conditions.push("v.entry_date <= ?");
+        binds.push(Value::Text(to.to_owned()));
+    }
+    if let Some(account) = filter.account_id {
+        conditions.push("v.account_id = ?");
+        binds.push(Value::Integer(account));
+    }
+    if let Some(key) = filter.person_key {
+        conditions.push("v.pukhta_person_key = ?");
+        binds.push(Value::Text(key.to_owned()));
+    }
+    if conditions.is_empty() {
+        (String::new(), binds)
+    } else {
+        (format!(" WHERE {}", conditions.join(" AND ")), binds)
+    }
+}
+
+/// The totals query of [`list_totals`] and the values it binds, so a test can read its plan
+/// (Code Standards B18).
+pub fn list_totals_query(filter: &ListFilter<'_>) -> (String, Vec<Value>) {
+    let (condition, binds) = list_where(filter);
+    (
+        format!(
+            "SELECT COUNT(*), COALESCE(SUM(v.status = 'cancelled'), 0),
+                    COALESCE(SUM(CASE WHEN v.status = 'saved' THEN v.amount_paisa ELSE 0 END), 0)
+             FROM vouchers v{condition}"
+        ),
+        binds,
+    )
+}
+
+/// The totals over the whole filter, from one query. Only `SUM()` on INTEGER columns is used.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_totals(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<ListTotals> {
+    let (sql, binds) = list_totals_query(filter);
+    conn.query_row(&sql, params_from_iter(binds.iter()), |r| {
+        Ok(ListTotals {
+            count: r.get(0)?,
+            cancelled: r.get(1)?,
+            saved_paisa: r.get(2)?,
+        })
+    })
+}
+
+/// The page query of [`list_page`] and the values it binds, so a test can read its plan (Code
+/// Standards B18). The order is the date, then the number, then the id.
+pub fn list_page_query(filter: &ListFilter<'_>, offset: i64, limit: i64) -> (String, Vec<Value>) {
+    let (condition, mut binds) = list_where(filter);
+    binds.push(Value::Integer(limit));
+    binds.push(Value::Integer(offset));
+    // With no condition SQLite would pick any index and sort every voucher; the date index gives
+    // the order of the first term, so only the voucher numbers of one day are sorted.
+    let table = if condition.is_empty() {
+        "vouchers v INDEXED BY idx_vouchers_date"
+    } else {
+        "vouchers v"
+    };
+    (
+        format!(
+            "SELECT {ROW_COLUMNS}
+             FROM {table} LEFT JOIN accounts a ON a.id = v.account_id{condition}
+             ORDER BY v.entry_date, v.number, v.id LIMIT ? OFFSET ?"
+        ),
+        binds,
+    )
+}
+
+/// One page of [`list`]: the same order, `limit` rows from `offset`.
+///
+/// # Errors
+/// Any SQLite error, or a row whose text is not one of the known words.
+pub fn list_page(
+    conn: &Connection,
+    filter: &ListFilter<'_>,
+    offset: i64,
+    limit: i64,
+) -> rusqlite::Result<Vec<VoucherRow>> {
+    let (sql, binds) = list_page_query(filter, offset, limit);
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement
+        .query_map(params_from_iter(binds.iter()), read_row)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     fill_people(conn, rows)
 }
@@ -629,22 +717,6 @@ pub fn hits_by_number(
         },
     )?;
     rows.collect()
-}
-
-/// The bank, title and number of a bank account row, as typed (PRD FR-7.25).
-///
-/// # Errors
-/// Any SQLite error.
-pub fn bank_account_label(
-    conn: &Connection,
-    id: i64,
-) -> rusqlite::Result<Option<(String, String, String)>> {
-    conn.query_row(
-        "SELECT bank_name, title, number FROM bank_accounts WHERE id = ?1",
-        [id],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )
-    .optional()
 }
 
 /// The Urdu and English names of a staff member.

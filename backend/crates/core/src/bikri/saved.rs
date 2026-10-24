@@ -642,6 +642,44 @@ pub struct BikriListInput {
     /// Only this status.
     #[serde(default)]
     pub status: Option<BikriStatus>,
+    /// How many rows to skip. 0 for the first page (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One page of the list of بکری with the totals over the whole filter (PRD FR-19.11, B31).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct BikriList {
+    /// This page, newest first.
+    pub rows: Vec<BikriListRow>,
+    /// How many بکری match the filter, cancelled ones too.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The sums over every matching بکری that is not cancelled, never over the page.
+    pub totals: BikriListTotals,
+}
+
+/// The totals of the list of بکری: sums of stored values, cancelled بکری left out.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct BikriListTotals {
+    /// نگ received.
+    #[ts(type = "number")]
+    pub qty_received: i64,
+    /// نگ sold.
+    #[ts(type = "number")]
+    pub qty_sold: i64,
+    /// Σ خام بکری.
+    #[ts(type = "Paisa")]
+    pub gross: Paisa,
+    /// Σ صافی بکری.
+    #[ts(type = "Paisa")]
+    pub net: Paisa,
+    /// Σ what the buyers pay.
+    #[ts(type = "Paisa")]
+    pub buyer_total: Paisa,
 }
 
 /// One row of the list of بکری (PRD FR-12.7: number, time, truck, sellers, items, نگ, خام, صافی,
@@ -802,6 +840,44 @@ pub struct PukhtaRegisterInput {
     /// Only paid or only due lines.
     #[serde(default)]
     pub state: Option<PaidState>,
+    /// How many rows to skip. 0 for the first page (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One page of the پختہ کھاتہ register with the totals over the whole filter (PRD FR-19.11).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PukhtaRegister {
+    /// This page, by day and number.
+    pub rows: Vec<PukhtaRegisterRow>,
+    /// How many lines match the filter, cancelled ones too.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The sums over every matching line that is not cancelled, never over the page.
+    pub totals: PukhtaRegisterTotals,
+}
+
+/// The totals of the register over the whole filter. They are given only when one side is chosen:
+/// the buyers' lines (what they owe the firm) and the sellers' lines (what the firm owes them)
+/// are different things, so a sum over both means nothing and every total is null (the same rule
+/// as the voucher list, which has no total for all types together).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PukhtaRegisterTotals {
+    /// نگ, or null when no side is chosen.
+    #[ts(type = "number | null")]
+    pub qty: Option<i64>,
+    /// Σ amount, or null when no side is chosen.
+    #[ts(type = "Paisa | null")]
+    pub amount: Option<Paisa>,
+    /// Σ commission, or null when no side is chosen.
+    #[ts(type = "Paisa | null")]
+    pub commission: Option<Paisa>,
+    /// Σ still open (due), or null when no side is chosen.
+    #[ts(type = "Paisa | null")]
+    pub open: Option<Paisa>,
 }
 
 /// One line of the پختہ کھاتہ register (PRD FR-13.6).

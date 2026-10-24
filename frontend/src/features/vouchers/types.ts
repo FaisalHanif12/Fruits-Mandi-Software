@@ -22,7 +22,6 @@ import type { ReceiptsSaved } from '../../bindings/ReceiptsSaved';
 import type { SavedPukhta } from '../../bindings/SavedPukhta';
 import type { VoucherCancelled } from '../../bindings/VoucherCancelled';
 import type { VoucherEntry } from '../../bindings/VoucherEntry';
-import type { VoucherMode } from '../../bindings/VoucherMode';
 import type { VoucherPreview } from '../../bindings/VoucherPreview';
 import type { VoucherRow } from '../../bindings/VoucherRow';
 import type { VoucherSaved } from '../../bindings/VoucherSaved';
@@ -53,7 +52,6 @@ export type {
   SavedPukhta,
   VoucherCancelled,
   VoucherEntry,
-  VoucherMode,
   VoucherPreview,
   VoucherRow,
   VoucherSaved,
@@ -81,11 +79,6 @@ export interface VoucherDraft {
   personText: string;
   /** Whole rupees as typed. A simple sum such as `5000+2000` is read by the backend (FR-7.48). */
   amount: string;
-  mode: VoucherMode;
-  bank: PickerValue | null;
-  cheque_no: string;
-  /** `DD-MM-YYYY` as typed. */
-  cheque_date: string;
   /** Receipt only: the collector (اگراہی والا), a staff member. */
   collector: PickerValue | null;
   /** Payment to a buyer only: why the cash is lent (PRD FR-15.11). */

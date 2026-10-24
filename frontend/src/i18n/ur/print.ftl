@@ -303,12 +303,6 @@ print-advance-slip-title = { -peshgi-khata } کی رسید
 print-fact-voucher-number = نمبر
 
 # review: pending
-print-fact-bank = بینک
-
-# review: pending
-print-fact-cheque = چیک
-
-# review: pending
 print-fact-reason = وجہ
 
 # review: pending
@@ -322,15 +316,6 @@ print-party-onetime-seller = { -pukhta-khata } ({ -beopari })
 
 # review: pending
 print-party-account = کھاتہ
-
-# review: pending
-print-mode-cash = نقد
-
-# review: pending
-print-mode-bank = بینک
-
-# review: pending
-print-mode-cheque = چیک
 
 # review: pending
 print-slip-amount-received = وصول شدہ رقم

@@ -54,19 +54,6 @@ export function SavedVoucherView({ row }: { row: VoucherRow }) {
           <Fact label={<Localized id="vouchers-field-amount" />}>
             <Num paisa={row.amount_paisa} />
           </Fact>
-          <Fact label={<Localized id="vouchers-field-mode" />}>
-            <Localized id={`vouchers-mode-${row.mode}`} />
-          </Fact>
-          {row.cheque_no === '' ? null : (
-            <Fact label={<Localized id="vouchers-field-cheque-no" />}>
-              <Code>{row.cheque_no}</Code>
-            </Fact>
-          )}
-          {row.cheque_date === null ? null : (
-            <Fact label={<Localized id="vouchers-field-cheque-date" />}>
-              <Code>{isoToDisplayDate(row.cheque_date)}</Code>
-            </Fact>
-          )}
           {row.reason === '' ? null : (
             <Fact label={<Localized id="vouchers-field-reason-lent" />}>{row.reason}</Fact>
           )}

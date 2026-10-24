@@ -16,6 +16,7 @@ import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
+import { PagedList } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
 import {
   Button,
@@ -27,7 +28,6 @@ import {
   Field,
   LoadingState,
 } from '../../../shared/ui';
-import { PagedList } from '../components/PagedList';
 import { SignedNum } from '../components/SignedNum';
 import { useCashbook } from '../hooks';
 import { CASHBOOK_COLUMNS } from '../list-columns';

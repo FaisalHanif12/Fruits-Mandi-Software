@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::{AdvanceInput, OpenAdvance, VoucherMode, VoucherSaved, VoucherType};
+use super::{AdvanceInput, OpenAdvance, RemovedPaymentFields, VoucherSaved, VoucherType};
 use crate::accounts::{Balance, LineError, RecordRef};
 use crate::capital::CapitalInput;
 use crate::cash::CashCheck;
@@ -33,16 +33,12 @@ pub struct ReceiptInput {
     pub person_key: Option<String>,
     /// Whole rupees, more than 0.
     pub amount: String,
-    /// How the money moves.
-    pub mode: VoucherMode,
-    /// The bank account, for mode `bank` and `cheque`. Null for cash.
-    #[serde(default)]
-    #[ts(type = "number | null")]
-    pub bank_account_id: Option<i64>,
-    /// The cheque number, for mode `cheque`. Empty otherwise.
-    pub cheque_no: String,
-    /// The cheque date, `DD-MM-YYYY`, for mode `cheque`. Empty otherwise.
-    pub cheque_date: String,
+    /// The payment mode, bank and cheque fields were taken out in v1.6: all money is روکڑ
+    /// (PRD 15.1). An old client that still sends one gets `ERR_FIELD_NOT_ALLOWED` at its name
+    /// and nothing is posted. Not in the generated TypeScript.
+    #[serde(flatten)]
+    #[ts(skip)]
+    pub removed: RemovedPaymentFields,
     /// The collector (اگراہی والا), a staff member. Null if none.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -65,16 +61,12 @@ pub struct PaymentInput {
     pub person_key: Option<String>,
     /// Whole rupees, more than 0.
     pub amount: String,
-    /// How the money moves.
-    pub mode: VoucherMode,
-    /// The bank account, for mode `bank` and `cheque`. Null for cash.
-    #[serde(default)]
-    #[ts(type = "number | null")]
-    pub bank_account_id: Option<i64>,
-    /// The cheque number, for mode `cheque`. Empty otherwise.
-    pub cheque_no: String,
-    /// The cheque date, `DD-MM-YYYY`, for mode `cheque`. Empty otherwise.
-    pub cheque_date: String,
+    /// The payment mode, bank and cheque fields were taken out in v1.6: all money is روکڑ
+    /// (PRD 15.1). An old client that still sends one gets `ERR_FIELD_NOT_ALLOWED` at its name
+    /// and nothing is posted. Not in the generated TypeScript.
+    #[serde(flatten)]
+    #[ts(skip)]
+    pub removed: RemovedPaymentFields,
     /// Why. Required when the account is a buyer (cash lent, PRD FR-15.11). Empty otherwise.
     pub reason: String,
     /// A note, up to 500 characters. Empty if none.

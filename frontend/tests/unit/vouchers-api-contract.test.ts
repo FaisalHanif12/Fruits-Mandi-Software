@@ -35,10 +35,6 @@ const RECEIPT: ReceiptInput = {
   account_id: 21,
   person_key: null,
   amount: '10000',
-  mode: 'cash',
-  bank_account_id: null,
-  cheque_no: '',
-  cheque_date: '',
   collector_staff_id: null,
   narration: '',
 };
@@ -47,10 +43,6 @@ const PAYMENT: PaymentInput = {
   account_id: 31,
   person_key: null,
   amount: '4316',
-  mode: 'bank',
-  bank_account_id: 71,
-  cheque_no: '',
-  cheque_date: '',
   reason: '',
   narration: 'x',
   confirm_cash_below_zero: false,
@@ -59,10 +51,6 @@ const ADVANCE: AdvanceInput = {
   date: '10-10-2026',
   seller_account_id: 31,
   amount: '15000',
-  mode: 'cheque',
-  bank_account_id: 71,
-  cheque_no: '778',
-  cheque_date: '12-10-2026',
   expected_goods: 'mango',
   narration: '',
   confirm_cash_below_zero: true,
@@ -136,6 +124,8 @@ describe('each wrapper sends the command and the input of the backend', () => {
       to: '10-10-2026',
       account_id: null,
       person_key: null,
+      offset: 0,
+      limit: 0,
     };
     await api.vouchersList(list);
     expect(call).toHaveBeenLastCalledWith('vouchers_list', { input: list });
@@ -221,10 +211,6 @@ describe('each wrapper sends exactly the request the backend’s own test sent',
     await api.vouchersSave({ type: 'receipt', input: real.REQUEST_SAVE_RECEIPT });
     expect(call).toHaveBeenLastCalledWith('vouchers_save_receipt', {
       input: real.REQUEST_SAVE_RECEIPT,
-    });
-    await api.vouchersSave({ type: 'receipt', input: real.REQUEST_SAVE_RECEIPT_CHEQUE });
-    expect(call).toHaveBeenLastCalledWith('vouchers_save_receipt', {
-      input: real.REQUEST_SAVE_RECEIPT_CHEQUE,
     });
     await api.vouchersSave({ type: 'payment', input: real.REQUEST_SAVE_CASH_LENT });
     expect(call).toHaveBeenLastCalledWith('vouchers_save_payment', {

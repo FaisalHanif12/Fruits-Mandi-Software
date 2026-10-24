@@ -1,5 +1,5 @@
 //! What the three voucher types share (plan 15, PRD 15.1): the date, the amount, the way the
-//! money moves (cash, bank, cheque), the note, the party and its person key, and the cash check.
+//! money moves (always روکڑ, PRD 15.1 v1.6), the note, the party and its person key, and the cash check.
 //!
 //! Every function here is a check or a read. The writes are in `receipt`, `payment` and
 //! `advance`, each one transaction (Code Standards B3). The preview and the save call the same
@@ -16,7 +16,7 @@ use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
-use mandi_domain::core::vouchers::VoucherMode;
+use mandi_domain::core::vouchers::RemovedPaymentFields;
 use mandi_domain::ledger::{BalancedEntry, PostingType, SourceType};
 use serde_json::{Value, json};
 
@@ -90,11 +90,9 @@ pub(super) fn balance_of_net(net: Paisa) -> Result<Balance, ServiceError> {
 pub(super) struct MoneyText<'a> {
     pub date: &'a str,
     pub amount: &'a str,
-    pub mode: VoucherMode,
-    pub bank_account_id: Option<i64>,
-    pub cheque_no: &'a str,
-    pub cheque_date: &'a str,
     pub narration: &'a str,
+    /// The fields that no longer exist (mode, bank, cheque): any that carry a value is refused.
+    pub removed: &'a RemovedPaymentFields,
 }
 
 /// The same fields once checked. A field with a mistake is `None` and its error is in the list.
@@ -103,16 +101,14 @@ pub(super) struct Money {
     pub date: Option<BusinessDate>,
     /// Whole rupees, more than 0.
     pub amount: Option<Paisa>,
-    pub mode: VoucherMode,
-    /// The ledger account the money moves through: cash, or the bank's account.
+    /// The ledger account the money moves through: always روکڑ (PRD 15.1, FR-10.4, v1.6).
     pub pay_account: Option<i64>,
-    pub bank_account_id: Option<i64>,
-    pub cheque_no: Option<String>,
-    pub cheque_date: Option<BusinessDate>,
     pub narration: Option<String>,
 }
 
-/// Checks the common fields (PRD 15.1): an open date, an amount above 0, the bank and the cheque.
+/// Checks the common fields (PRD 15.1): an open date, an amount above 0, and that none of the
+/// removed fields (mode, bank, cheque) was sent. Every voucher moves روکڑ, the shop's one cash
+/// account; nothing is ever posted to the bank (PRD FR-10.4).
 ///
 /// # Errors
 /// `ServiceError::Db` only; the user's mistakes are pushed to `errors`.
@@ -135,70 +131,15 @@ pub(super) fn plan_money(
             }
         });
     let narration = optional_text(errors, "narration", text.narration);
-
-    // Where the money moves (PRD 15.1): cash, or a bank account (a cheque posts to the bank at
-    // once, A30).
-    let mut pay_account = None;
-    let mut bank_account_id = None;
-    let mut cheque_no = None;
-    let mut cheque_date = None;
-    match text.mode {
-        VoucherMode::Cash => {
-            if text.bank_account_id.is_some() {
-                errors.push(FieldError::new(
-                    ErrorCode::ErrFormatInvalid,
-                    "bank_account_id",
-                ));
-            }
-            pay_account = Some(cash_account(conn)?);
-        }
-        VoucherMode::Bank | VoucherMode::Cheque => {
-            match text.bank_account_id {
-                None => errors.push(FieldError::new(ErrorCode::ErrRequired, "bank_account_id")),
-                Some(id) => match repo::bank_account(conn, id)? {
-                    None => errors.push(FieldError::new(ErrorCode::ErrNotFound, "bank_account_id")),
-                    Some(bank) if !bank.is_active => errors.push(FieldError::new(
-                        ErrorCode::ErrAccountInactive,
-                        "bank_account_id",
-                    )),
-                    Some(bank) => {
-                        pay_account = Some(bank.account_id);
-                        bank_account_id = Some(id);
-                    }
-                },
-            }
-            if text.mode == VoucherMode::Cheque {
-                // PRD 15.1: a cheque needs its number and its date.
-                cheque_no = errors
-                    .take(validate::free_text("cheque_no", text.cheque_no))
-                    .and_then(|n| {
-                        if n.is_empty() {
-                            errors.push(FieldError::new(ErrorCode::ErrChequeRequired, "cheque_no"));
-                            None
-                        } else {
-                            Some(n)
-                        }
-                    });
-                if validate::free_text("cheque_date", text.cheque_date)
-                    .map(|t| t.is_empty())
-                    .unwrap_or(false)
-                {
-                    errors.push(FieldError::new(ErrorCode::ErrChequeRequired, "cheque_date"));
-                } else {
-                    cheque_date =
-                        errors.take(validate::date("cheque_date", text.cheque_date, today));
-                }
-            }
-        }
+    // PRD 15.1 (v1.6): an old client that still sends a mode, a bank account or a cheque is told
+    // at the name it sent, and nothing is posted.
+    for name in text.removed.names_sent() {
+        errors.push(FieldError::new(ErrorCode::ErrFieldNotAllowed, name));
     }
     Ok(Money {
         date,
         amount,
-        mode: text.mode,
-        pay_account,
-        bank_account_id,
-        cheque_no,
-        cheque_date,
+        pay_account: Some(cash_account(conn)?),
         narration,
     })
 }

@@ -34,6 +34,7 @@ import {
   voucherRow,
   type FakeVouchers,
 } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -66,7 +67,7 @@ describe.each(LANGUAGES)('printing a voucher from the screen (%s)', (language) =
     resetClientState(language);
     signedIn(sessionUser({ language }));
     vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-    vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+    vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
     vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
     const rows = [AKRAM, RAHIM, KARIM];
     fakeAccounts(rows);

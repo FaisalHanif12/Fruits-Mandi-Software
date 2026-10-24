@@ -348,8 +348,6 @@ export function manyLinesData(
 export type SlipKind = 'receipt' | 'payment' | 'advance';
 
 export interface SlipOptions extends CannedOptions {
-  /** How the money moved: cash (the default), bank, or a cheque. */
-  mode?: 'cash' | 'bank' | 'cheque';
   /** Reason, collector and narration facts on the slip. */
   extras?: boolean;
 }
@@ -374,7 +372,6 @@ const SLIP_TOTAL: Record<SlipKind, string> = {
 export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): PrintData {
   const language = options.language ?? 'ur';
   const n = NAMES[language];
-  const mode = options.mode ?? 'cash';
   const amount = kind === 'receipt' ? '10,000' : kind === 'payment' ? '4,316' : '5,000';
   const words =
     language === 'ur'
@@ -395,10 +392,6 @@ export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): Pri
   const facts: PrintFact[] = [
     { label_id: 'print-fact-voucher-number', value: number },
     { label_id: 'print-fact-date', value: '10-10-2026' },
-    ...(mode === 'bank' || mode === 'cheque'
-      ? [{ label_id: 'print-fact-bank', value: language === 'ur' ? 'بینک الفلاح' : 'Bank Alfalah' }]
-      : []),
-    ...(mode === 'cheque' ? [{ label_id: 'print-fact-cheque', value: '123456' }] : []),
     ...(options.extras === true
       ? [
           { label_id: 'print-fact-collector', value: language === 'ur' ? 'اسلم' : 'Aslam' },
@@ -419,7 +412,8 @@ export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): Pri
     },
     lines: [],
     amounts: [{ label_id: SLIP_TOTAL[kind], amount, role: 'total' }],
-    payment_id: `print-mode-${mode}`,
+    // All money is روکڑ: a slip has no line about how it was paid (PRD 15.1).
+    payment_id: null,
     words: { label_id: 'print-in-words', text: words },
   };
   const data: PrintData = {

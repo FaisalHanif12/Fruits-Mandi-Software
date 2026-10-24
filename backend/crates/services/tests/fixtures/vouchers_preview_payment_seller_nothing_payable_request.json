@@ -2,12 +2,8 @@
   "entry": {
     "account_id": 19,
     "amount": "1,000",
-    "bank_account_id": null,
-    "cheque_date": "",
-    "cheque_no": "",
     "confirm_cash_below_zero": false,
     "date": "10-10-2026",
-    "mode": "cash",
     "narration": "",
     "person_key": null,
     "reason": "",

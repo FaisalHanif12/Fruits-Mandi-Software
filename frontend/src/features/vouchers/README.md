@@ -10,11 +10,11 @@ only).
 ## What the screen does
 
 - **Form** (`components/VoucherForm.tsx`): type list, date, account (`AccountPicker` with
-  `PartyCard`), the one-time person (the merged list of PRD FR-7.29), amount, mode (cash, bank,
-  cheque), collector (receipt), reason (payment to a buyer is cash lent), expected goods
+  `PartyCard`), the one-time person (the merged list of PRD FR-7.29), amount, collector (receipt),
+  reason (payment to a buyer is cash lent), expected goods
   (advance), narration. Current and new balance come from the preview.
 - **Waiting list** (PRD FR-15.1, `components/WaitingList.tsx`, `useSaveList.ts`): `F2` puts the form in
-  the list and starts the next voucher (type, date, mode and bank stay); `F10` (or `Ctrl+Enter`)
+  the list and starts the next voucher (type and date stay); `F10` (or `Ctrl+Enter`)
   saves the list one voucher at a time, each with its own save command and its own transaction,
   in the order of the list; the form joins the list if it is filled. A saved voucher leaves the
   list (it is in the list of the day under the form, with the backend's total). One the backend
@@ -52,7 +52,8 @@ only).
   the marks and the cash after the entry come from `vouchers_preview` (the same function as the
   save). Only `isPositivePaisa` and `comparePaisa` touch a `Paisa`.
 - What is typed lives in the screen's state (`VoucherDraft`), so a language switch loses nothing
-  (F39). A type change keeps date, amount, mode, bank, cheque and narration (`changeType`).
+  (F39). A type change keeps date, amount and narration (`changeType`). All money is روکڑ: there is no
+  mode, bank or cheque field and none is sent (PRD 15.1, plan 17b).
 - Every save sends `confirm_cash_below_zero`; the confirm box only asks (`useSaveFlow.ts`).
 - The voucher number is made in Fluent (`vouchers-number-<type>`): و-1 / ا-1 / پ-1 in Urdu,
   R-1 / P-1 / A-1 in English. The English letters are for Umar to confirm.
@@ -63,4 +64,3 @@ only).
 `VoucherDraft`), `draft.ts` (pure helpers, unit tested in `tests/unit/voucher-draft.test.ts`),
 `api.ts` (the only file that knows the command shapes; tests mock it), `hooks.ts` (queries and the
 preview hook), `useSaveFlow.ts`, `useEditSeed.ts`, `collection.ts`, `list-columns.ts`.
-`PaymentModeFields` is also used by other modules; they import it from `index.ts` only.

@@ -300,9 +300,9 @@ describe.each(LANGUAGES)('the partner statement with the real answers (%s)', (la
     await waitFor(() => {
       expect(rows()).toBe(2);
     });
-    expect(pageText()).toContain(message(language, 'cashbook-list-count', { shown: 2, total: 3 }));
+    expect(pageText()).toContain(message(language, 'common-list-count', { shown: 2, total: 3 }));
     await user.click(
-      screen.getByRole('button', { name: startsWith(message(language, 'cashbook-list-more')) }),
+      screen.getByRole('button', { name: startsWith(message(language, 'common-list-more')) }),
     );
     await waitFor(() => {
       expect(partnersApi.partnersStatement).toHaveBeenLastCalledWith(

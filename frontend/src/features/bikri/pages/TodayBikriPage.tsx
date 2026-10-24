@@ -14,7 +14,7 @@ import type { BikriListRow } from '../../../bindings/BikriListRow';
 import type { BikriStatus } from '../../../bindings/BikriStatus';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { ListGrid } from '../../../shared/grid';
+import { PagedList } from '../../../shared/grid';
 import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
 import {
@@ -23,9 +23,7 @@ import {
   Checkbox,
   DateInput,
   EmptyState,
-  ErrorState,
   Field,
-  LoadingState,
   Picker,
   Select,
   type PickerValue,
@@ -35,9 +33,6 @@ import { bikriListColumns } from '../list-columns';
 
 const ALL = 'all';
 type StatusChoice = BikriStatus | typeof ALL;
-
-/** A list with more rows than this fills the room and scrolls inside; shorter ones are as tall as their rows. */
-const SHORT_LIST_ROWS = 30;
 
 export function TodayBikriPage() {
   const navigate = useNavigate();
@@ -49,7 +44,7 @@ export function TodayBikriPage() {
   const [seller, setSeller] = useState<PickerValue | null>(null);
   const [item, setItem] = useState<PickerValue | null>(null);
   const [status, setStatus] = useState<StatusChoice>(ALL);
-  const filter: BikriListInput = {
+  const filter: Omit<BikriListInput, 'offset' | 'limit'> = {
     date: date.trim() === '' ? null : date.trim(),
     from: null,
     to: null,
@@ -78,63 +73,78 @@ export function TodayBikriPage() {
       <Localized id="bikri-new" />
     </Button>
   );
-  const rows = list.data;
-
-  let body;
-  if (rows === undefined && list.isPending) {
-    body = <LoadingState />;
-  } else if (list.isError) {
-    body = (
-      <ErrorState
-        title={<Localized id="bikri-list-failed" />}
-        error={uiErrorOf(list.error)}
-        onRetry={() => {
-          void list.refetch();
-        }}
-      />
-    );
-  } else if (rows?.length === 0) {
-    body = onlyToday ? (
-      <EmptyState
-        icon={FileText}
-        title={<Localized id="bikri-list-empty" />}
-        help={<Localized id="bikri-list-empty-help" vars={{ key: SHORTCUTS.newBikri.label }} />}
-        action={newButton}
-      />
-    ) : (
-      <EmptyState
-        icon={SearchX}
-        title={<Localized id="bikri-list-no-match" />}
-        help={<Localized id="bikri-list-no-match-help" />}
-        action={
-          <Button
-            onClick={() => {
-              setDayText(today);
-              setSeller(null);
-              setItem(null);
-              setStatus(ALL);
-            }}
-          >
-            <Localized id="bikri-list-clear" />
-          </Button>
-        }
-      />
-    );
-  } else if (rows !== undefined) {
-    body = (
-      <ListGrid<BikriListRow>
-        columns={columns}
-        rows={rows}
-        getRowId={(row) => String(row.id)}
-        labelId="bikri-list-label"
-        onOpen={(row) => {
-          void navigate({ to: '/bikri/book', search: { id: row.id } });
-        }}
-        heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
-        isInactive={(row) => row.status === 'cancelled'}
-      />
-    );
-  }
+  const first = list.data?.pages[0];
+  // A refusal shows as the state, not as the rows of the filter before it.
+  const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
+  const empty = onlyToday ? (
+    <EmptyState
+      icon={FileText}
+      title={<Localized id="bikri-list-empty" />}
+      help={<Localized id="bikri-list-empty-help" vars={{ key: SHORTCUTS.newBikri.label }} />}
+      action={newButton}
+    />
+  ) : (
+    <EmptyState
+      icon={SearchX}
+      title={<Localized id="bikri-list-no-match" />}
+      help={<Localized id="bikri-list-no-match-help" />}
+      action={
+        <Button
+          onClick={() => {
+            setDayText(today);
+            setSeller(null);
+            setItem(null);
+            setStatus(ALL);
+          }}
+        >
+          <Localized id="bikri-list-clear" />
+        </Button>
+      }
+    />
+  );
+  // The four states and the paging are the shared list's; the totals row is the backend's, over the
+  // whole filter and not over the rows loaded (PRD FR-19.11).
+  const body = (
+    <PagedList<BikriListRow>
+      columns={columns}
+      rows={rows}
+      totalCount={first?.total_count}
+      getRowId={(row) => String(row.id)}
+      labelId="bikri-list-label"
+      failedId="bikri-list-failed"
+      error={list.isError ? uiErrorOf(list.error) : null}
+      onRetry={() => {
+        void list.refetch();
+      }}
+      hasMore={list.hasNextPage}
+      loadingMore={list.isFetchingNextPage}
+      onLoadMore={() => {
+        void list.fetchNextPage();
+      }}
+      empty={empty}
+      onOpen={(row) => {
+        void navigate({ to: '/bikri/book', search: { id: row.id } });
+      }}
+      isInactive={(row) => row.status === 'cancelled'}
+      totals={
+        first === undefined
+          ? undefined
+          : (context) => ({
+              labelField: 'sellers',
+              values: {
+                sellers: context.text('glossary-meezan'),
+                qty: context.text('bikri-list-qty', {
+                  sold: String(first.totals.qty_sold),
+                  received: String(first.totals.qty_received),
+                }),
+                gross: context.money(first.totals.gross),
+                net: context.money(first.totals.net),
+                buyer_total: context.money(first.totals.buyer_total),
+              },
+            })
+      }
+    />
+  );
 
   return (
     <div className="flex h-full flex-col gap-4">

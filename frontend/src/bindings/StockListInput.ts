@@ -27,8 +27,23 @@ export type StockListInput = {
    */
   item_id: number | null;
   /**
+   * Only this lot, for a screen that works on one lot (a later sale). The answer has the same
+   * shape: its count and totals are over this one lot, and the list is empty if nothing is
+   * left to sell of it.
+   */
+  lot_id: number | null;
+  /**
    * Also list a lot that has a write-off you can undo even when nothing is left of it, so the
    * undo can be found. Its `balance` is then 0.
    */
   include_written_off: boolean;
+  /**
+   * How many rows to skip. 0 for the first page. The page runs over the lots first, then the
+   * trip goods (PRD FR-19.11).
+   */
+  offset: number;
+  /**
+   * How many rows to return. 0 gives a page of 100 (Code Standards B31).
+   */
+  limit: number;
 };

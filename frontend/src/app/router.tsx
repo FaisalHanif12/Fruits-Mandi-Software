@@ -61,7 +61,7 @@ const settingsRoute = createRoute({
   ),
 });
 
-// انڈکس: the menu of the ten master lists, one list, and the form to add or change one (plan 06).
+// انڈکس: the menu of the nine master lists, one list, and the form to add or change one (plan 06).
 // Static `new` wins over the `$id` parameter in the router.
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,

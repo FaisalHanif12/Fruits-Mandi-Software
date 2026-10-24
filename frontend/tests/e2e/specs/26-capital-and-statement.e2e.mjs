@@ -29,6 +29,9 @@ import {
 } from '../support/page.mjs';
 import { shootScreen } from '../support/screens.mjs';
 
+// The label of the field that was taken out in plan 17b (it read "ذریعہ", how the money moves).
+const FORMER_MODE_LABEL = 'ذریعہ';
+
 const WAIT_MS = 15_000;
 
 /**
@@ -84,7 +87,7 @@ describe('سرمایہ, the partner overview and the partner statement by keyboa
       '50,000',
     );
     // No bank, cheque or count field (PRD v1.6).
-    expect(await pageText()).not.toContain(t('ur', 'vouchers-field-mode'));
+    expect(await pageText()).not.toContain(FORMER_MODE_LABEL);
   });
 
   it('2. the type list keeps the partner and the amount; more than the balance warns and still saves', async () => {

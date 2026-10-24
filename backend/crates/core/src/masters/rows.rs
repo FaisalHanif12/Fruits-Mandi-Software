@@ -28,8 +28,6 @@ pub enum MasterRow {
     ExpenseHead(ExpenseHeadRow),
     /// عملہ.
     Staff(StaffRow),
-    /// بینک.
-    BankAccount(BankAccountRow),
 }
 
 impl MasterRow {
@@ -45,7 +43,6 @@ impl MasterRow {
             MasterRow::Narration(_) => MasterKind::Narration,
             MasterRow::ExpenseHead(_) => MasterKind::ExpenseHead,
             MasterRow::Staff(_) => MasterKind::Staff,
-            MasterRow::BankAccount(_) => MasterKind::BankAccount,
         }
     }
 
@@ -61,7 +58,6 @@ impl MasterRow {
             MasterRow::Narration(r) => r.id,
             MasterRow::ExpenseHead(r) => r.id,
             MasterRow::Staff(r) => r.id,
-            MasterRow::BankAccount(r) => r.id,
         }
     }
 
@@ -77,7 +73,6 @@ impl MasterRow {
             MasterRow::Narration(r) => r.version,
             MasterRow::ExpenseHead(r) => r.version,
             MasterRow::Staff(r) => r.version,
-            MasterRow::BankAccount(r) => r.version,
         }
     }
 
@@ -93,7 +88,6 @@ impl MasterRow {
             MasterRow::Narration(r) => r.is_active,
             MasterRow::ExpenseHead(r) => r.is_active,
             MasterRow::Staff(r) => r.is_active,
-            MasterRow::BankAccount(r) => r.is_active,
         }
     }
 }
@@ -304,34 +298,6 @@ pub struct StaffRow {
     pub account_id: Option<i64>,
     /// The code of that account.
     pub account_code: Option<String>,
-    /// False when made inactive.
-    pub is_active: bool,
-}
-
-/// A bank account.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct BankAccountRow {
-    /// Row id.
-    #[ts(type = "number")]
-    pub id: i64,
-    /// Version, to send back with an edit.
-    #[ts(type = "number")]
-    pub version: i64,
-    /// The bank, as typed.
-    pub bank_name: String,
-    /// The account title, as typed.
-    pub title: String,
-    /// The account number, as typed.
-    pub number: String,
-    /// The account it made (control 0102).
-    #[ts(type = "number")]
-    pub account_id: i64,
-    /// The code of that account, for example `01020002`.
-    pub account_code: String,
-    /// Urdu name of that account.
-    pub name_ur: String,
-    /// English name of that account.
-    pub name_en: String,
     /// False when made inactive.
     pub is_active: bool,
 }

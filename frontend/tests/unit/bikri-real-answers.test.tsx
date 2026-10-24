@@ -4,7 +4,7 @@
 // screen here shows those numbers, in the Urdu and in the English app, and the save screen sends
 // the draft of the backend's file. Money in the files is paisa; the screen shows whole rupees.
 
-import { screen, waitFor } from '@testing-library/react';
+import { cleanup, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import * as bikriApi from '../../src/features/bikri/api';
@@ -19,6 +19,7 @@ import {
   GET_EVENT2,
   LIST_DAY,
   REGISTER_DAY,
+  REGISTER_DAY_BUYERS,
   SAVED_EVENT1,
   SAVE_EVENT1_REQUEST,
 } from '../helpers/bikri-real';
@@ -34,6 +35,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -54,7 +56,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -165,6 +167,28 @@ describe.each(LANGUAGES)(
       expect(cell('2', 'net')).toBe('10,160');
       expect(cell('2', 'sellers')).toBe(language === 'ur' ? 'کریم' : 'Karim');
       expect(cell('1', 'status')).toBe(message(language, 'bikri-status-saved'));
+    });
+
+    it('the register of the buyers shows the backend’s totals; with no side only the word shows', async () => {
+      vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(REGISTER_DAY);
+      await renderApp('/bikri/pukhta');
+      await waitFor(() => {
+        expect(cell('0', 'bikri')).toBe('2');
+      });
+      // No side: every sum is null, so the totals row has only its word.
+      const pinned = () => document.querySelector('.ag-row-pinned');
+      expect(visible(pinned()?.textContent)).toBe(message(language, 'glossary-meezan'));
+      cleanup();
+      vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(REGISTER_DAY_BUYERS);
+      await renderApp('/bikri/pukhta');
+      await waitFor(() => {
+        expect(
+          visible(document.querySelector('.ag-row-pinned [col-id="amount"]')?.textContent),
+        ).toBe('12,800');
+      });
+      expect(visible(pinned()?.querySelector('[col-id="state"]')?.textContent)).toBe(
+        message(language, 'pukhta-state-due', { amount: '0' }),
+      );
     });
 
     it('the register shows Shahid’s line as paid, 12,800', async () => {

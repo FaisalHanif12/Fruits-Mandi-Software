@@ -1,5 +1,6 @@
 //! The slip of a voucher (plan 15, PRD FR-15.2): a وصولی, an ادائیگی or a پیشگی on one page, with
-//! the party, the amount, the way the money moved and the amount in words.
+//! the party, the amount and the amount in words. There is no line about how the money moved:
+//! all money is روکڑ (PRD 15.1, v1.6).
 //!
 //! The same generic [`PrintData`] as the بکری documents: the template lays out what it receives.
 //! Every number is a stored value of the voucher. Titles and labels are Fluent message IDs; the
@@ -12,7 +13,7 @@ use mandi_core::english_words::english_words;
 use mandi_core::money::Grouping;
 use mandi_core::printing::{PrintDoc, PrintSetup};
 use mandi_core::urdu_words::urdu_words;
-use mandi_core::vouchers::{VoucherMode, VoucherRow, VoucherType};
+use mandi_core::vouchers::{VoucherRow, VoucherType};
 use mandi_db::Db;
 use mandi_db::accounts as account_repo;
 use mandi_db::rusqlite::Connection;
@@ -52,10 +53,6 @@ pub fn voucher_print_data(
         let row = voucher_repo::get(conn, input.voucher_id)?.ok_or(ReportsError::NotFound)?;
         Ok::<_, ReportsError>(Loaded {
             party_kind: party_kind(conn, &row)?,
-            bank: match row.bank_account_id {
-                Some(id) => voucher_repo::bank_account_label(conn, id)?,
-                None => None,
-            },
             collector: match row.collector_staff_id {
                 Some(id) => voucher_repo::staff_names(conn, id)?,
                 None => None,
@@ -74,7 +71,6 @@ struct Loaded {
     row: VoucherRow,
     /// `buyer`, `seller` or `other`, with whether the account is a پختہ کھاتہ one.
     party_kind: (PartyKind, bool),
-    bank: Option<(String, String, String)>,
     collector: Option<(String, String)>,
     firm: FirmNames,
     grouping: Grouping,
@@ -160,23 +156,6 @@ fn build_slip(
             value: style.date(&row.entry_date)?,
         },
     ];
-    // The bank and the cheque are as typed (PRD FR-7.25).
-    if let Some((bank, title, number)) = &loaded.bank {
-        facts.push(PrintFact {
-            label_id: FACT_BANK.to_owned(),
-            value: format!("{bank} - {title} - {number}"),
-        });
-    }
-    if !row.cheque_no.is_empty() {
-        let date = match &row.cheque_date {
-            Some(date) => format!(" / {}", style.date(date)?),
-            None => String::new(),
-        };
-        facts.push(PrintFact {
-            label_id: FACT_CHEQUE.to_owned(),
-            value: format!("{}{date}", row.cheque_no),
-        });
-    }
     if !row.reason.is_empty() {
         facts.push(PrintFact {
             label_id: FACT_REASON.to_owned(),
@@ -209,14 +188,9 @@ fn build_slip(
             amount: style.money(row.amount_paisa)?,
             role: AmountRole::Total,
         }],
-        payment_id: Some(
-            match row.mode {
-                VoucherMode::Cash => MODE_CASH,
-                VoucherMode::Bank => MODE_BANK,
-                VoucherMode::Cheque => MODE_CHEQUE,
-            }
-            .to_owned(),
-        ),
+        // All money is روکڑ (PRD 15.1, v1.6): a slip has no line about how it was paid, and an
+        // old bank or cheque row prints the same way.
+        payment_id: None,
         words: Some(PrintWords {
             label_id: IN_WORDS.to_owned(),
             text: words,

@@ -130,6 +130,60 @@ impl VoucherMode {
     }
 }
 
+/// The payment fields that no longer exist (PRD 15.1, v1.6: all money is روکڑ, one cash account,
+/// no bank and no cheque). A voucher input still has a place for them only so an old client that
+/// sends one is told, with a field error at the name it sent, instead of being posted to the bank:
+/// `ERR_FIELD_NOT_ALLOWED`. They are not in the generated TypeScript.
+///
+/// ```
+/// use mandi_core::vouchers::RemovedPaymentFields;
+/// let sent: RemovedPaymentFields =
+///     serde_json::from_str(r#"{"mode":"cash","cheque_no":"","bank_account_id":null}"#).unwrap();
+/// assert_eq!(sent.names_sent(), vec!["mode"]);
+/// ```
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct RemovedPaymentFields {
+    /// The old mode (`cash`, `bank` or `cheque`). Any value is refused.
+    #[serde(default)]
+    pub mode: Option<serde_json::Value>,
+    /// The old bank account. Any value but null is refused.
+    #[serde(default)]
+    pub bank_account_id: Option<serde_json::Value>,
+    /// The old cheque number. Refused unless it is null or empty text.
+    #[serde(default)]
+    pub cheque_no: Option<serde_json::Value>,
+    /// The old cheque date. Refused unless it is null or empty text.
+    #[serde(default)]
+    pub cheque_date: Option<serde_json::Value>,
+}
+
+impl RemovedPaymentFields {
+    /// The names of the removed fields that carry a value, in the order `mode`, `bank_account_id`,
+    /// `cheque_no`, `cheque_date`. An empty text for a cheque number or date names no cheque
+    /// (the old screens always sent them), so it is not counted.
+    pub fn names_sent(&self) -> Vec<&'static str> {
+        let blank = |v: &Option<serde_json::Value>| match v {
+            None | Some(serde_json::Value::Null) => true,
+            Some(serde_json::Value::String(text)) => text.trim().is_empty(),
+            Some(_) => false,
+        };
+        let mut names = Vec::new();
+        if !matches!(self.mode, None | Some(serde_json::Value::Null)) {
+            names.push("mode");
+        }
+        if !matches!(self.bank_account_id, None | Some(serde_json::Value::Null)) {
+            names.push("bank_account_id");
+        }
+        if !blank(&self.cheque_no) {
+            names.push("cheque_no");
+        }
+        if !blank(&self.cheque_date) {
+            names.push("cheque_date");
+        }
+        names
+    }
+}
+
 /// A پیشگی voucher as typed (PRD 15.1, 15.4): money given to a seller before his goods are sold.
 /// All values are text; the backend checks every one.
 #[derive(Debug, Clone, Deserialize, TS)]
@@ -141,16 +195,12 @@ pub struct AdvanceInput {
     pub seller_account_id: i64,
     /// Whole rupees, more than 0.
     pub amount: String,
-    /// How the money moves.
-    pub mode: VoucherMode,
-    /// The bank account, for mode `bank` and `cheque`. Null for cash.
-    #[serde(default)]
-    #[ts(type = "number | null")]
-    pub bank_account_id: Option<i64>,
-    /// The cheque number, for mode `cheque`. Empty otherwise.
-    pub cheque_no: String,
-    /// The cheque date, `DD-MM-YYYY`, for mode `cheque`. Empty otherwise.
-    pub cheque_date: String,
+    /// The payment mode, bank and cheque fields were taken out in v1.6: all money is روکڑ
+    /// (PRD 15.1). An old client that still sends one gets `ERR_FIELD_NOT_ALLOWED` at its name
+    /// and nothing is posted. Not in the generated TypeScript.
+    #[serde(flatten)]
+    #[ts(skip)]
+    pub removed: RemovedPaymentFields,
     /// The goods or season he is expected to send (PRD 15.4). Empty if none.
     pub expected_goods: String,
     /// A note, up to 500 characters. Empty if none.
@@ -250,16 +300,35 @@ pub struct VouchersListInput {
     /// Only this one-time person.
     #[serde(default)]
     pub person_key: Option<String>,
+    /// How many rows to skip. 0 for the first page (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
 }
 
-/// The vouchers of a list and their total (PRD FR-15.1).
+/// One page of vouchers with the totals over the whole filter (PRD FR-15.1, FR-19.11, B31).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct VouchersList {
-    /// The vouchers, by day and number. Cancelled ones are in the list, marked by `status`.
+    /// This page, by day and number. Cancelled ones are in the list, marked by `status`.
     pub rows: Vec<VoucherRow>,
-    /// The total of the saved vouchers in `rows`, cancelled ones left out. Null when the list is
-    /// of all types: receipts bring money in and payments and advances send it out, so one sum
-    /// of them means nothing.
+    /// How many vouchers match the filter, cancelled ones too.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The totals over every matching voucher, never over the page.
+    pub totals: VouchersTotals,
+}
+
+/// The totals of the voucher list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct VouchersTotals {
+    /// How many of the matching vouchers are cancelled.
+    #[ts(type = "number")]
+    pub cancelled_count: i64,
+    /// The total of the saved vouchers, cancelled ones left out. Null when the list is of all
+    /// types: receipts bring money in and payments and advances send it out, so one sum of them
+    /// means nothing.
     #[ts(type = "Paisa | null")]
     pub total_paisa: Option<Paisa>,
 }

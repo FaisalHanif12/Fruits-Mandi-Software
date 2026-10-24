@@ -36,12 +36,12 @@ import {
   SAMPLE_TRUCK,
 } from './sample';
 
-type Mode = 'cash' | 'bank' | 'cheque';
+type SampleType = 'receipt' | 'payment' | 'advance';
 
-const MODES: readonly SelectOption<Mode>[] = [
-  { value: 'cash', label: <Localized id="gallery-mode-cash" /> },
-  { value: 'bank', label: <Localized id="gallery-mode-bank" /> },
-  { value: 'cheque', label: <Localized id="gallery-mode-cheque" /> },
+const SAMPLE_TYPES: readonly SelectOption<SampleType>[] = [
+  { value: 'receipt', label: <Localized id="gallery-type-receipt" /> },
+  { value: 'payment', label: <Localized id="gallery-type-payment" /> },
+  { value: 'advance', label: <Localized id="gallery-type-advance" /> },
 ];
 
 const SAMPLE_ERROR: UiError = {
@@ -89,7 +89,7 @@ export function FieldsSection() {
   const [qty, setQty] = useState('50');
   const [date, setDate] = useState('10-10-2026');
   const [code, setCode] = useState('1');
-  const [mode, setMode] = useState<Mode | undefined>('cash');
+  const [sampleType, setSampleType] = useState<SampleType | undefined>('receipt');
   // A layer-1 hint only (Code Standards 4.1): the backend says the same with
   // ERR_DECIMALS_NOT_ALLOWED and has the final word.
   const amountError = amount.includes(DECIMAL_POINT) ? (
@@ -134,8 +134,15 @@ export function FieldsSection() {
         >
           {(control) => <CodeInput {...control} value={code} onChange={setCode} />}
         </Field>
-        <Field label={<Label id="gallery-field-mode" />}>
-          {(control) => <Select {...control} value={mode} onChange={setMode} options={MODES} />}
+        <Field label={<Label id="gallery-field-type" />}>
+          {(control) => (
+            <Select
+              {...control}
+              value={sampleType}
+              onChange={setSampleType}
+              options={SAMPLE_TYPES}
+            />
+          )}
         </Field>
         <Field label={<Label id="gallery-field-total" />} readOnly>
           {(control) => <MoneyInput {...control} value="12880" onChange={() => undefined} />}

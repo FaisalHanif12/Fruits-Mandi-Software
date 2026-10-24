@@ -36,13 +36,6 @@ cashbook-empty-help = Choose other days, or enter an expense.
 # review: pending
 cashbook-load-failed = The { -rokar } could not be opened
 
-# $shown: how many are on screen; $total: how many the whole filter has.
-# review: pending
-cashbook-list-count = Showing { $shown } of { $total }
-
-# review: pending
-cashbook-list-more = Show more
-
 ## Columns of the lists.
 
 # review: pending

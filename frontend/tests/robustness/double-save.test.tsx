@@ -24,8 +24,9 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { fakeMasters, record } from '../helpers/masters';
+import { fakeMasters } from '../helpers/masters';
 import { fakeAdvances } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -37,7 +38,6 @@ vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
 const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', { balance: balance(4316, 'cr') });
-const BANK = record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah');
 
 const named = (text: string) => (name: string) => visible(name) === text;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,10 +46,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   fakeAccounts([RAHIM]);
   fakeAccountSearch([RAHIM]);
-  fakeMasters({ bank_account: [BANK] });
+  fakeMasters({});
   resetClientState('ur');
   signedIn(sessionUser({ language: 'ur' }));
 });

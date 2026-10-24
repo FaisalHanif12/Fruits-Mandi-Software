@@ -237,8 +237,6 @@ pub enum ErrorCode {
     /// A voucher on a پختہ کھاتہ account must name the one-time person (PRD FR-13.5, FR-13.7).
     /// Field `person_key`.
     ErrPersonRequired,
-    /// A cheque needs its number and its date (PRD 15.1). Field `cheque_no` or `cheque_date`.
-    ErrChequeRequired,
     /// Warning only: a payment is more than the seller's open payable, so the extra shows as the
     /// seller owing the firm (PRD FR-15.7). Values: `payable_paisa`, `over_paisa`. Field `amount`.
     ErrPaymentAbovePayable,
@@ -332,6 +330,10 @@ pub enum ErrorCode {
     /// Warning only: capital taken back is more than the partner's capital balance; the save is
     /// still allowed (PRD FR-17.8). Field `amount`. Values: `balance_paisa`, `over_paisa`.
     ErrCapitalExceedsBalance,
+    /// A field that no longer exists was sent: the payment mode, the bank account or a cheque of a
+    /// voucher (PRD 15.1, v1.6: all money is روکڑ). Nothing is posted. The field is the name sent
+    /// (`mode`, `bank_account_id`, `cheque_no` or `cheque_date`).
+    ErrFieldNotAllowed,
 }
 
 impl ErrorCode {
@@ -429,7 +431,6 @@ impl ErrorCode {
         ErrorCode::ErrReturnExceedsOpen,
         ErrorCode::ErrVoucherCancelled,
         ErrorCode::ErrPersonRequired,
-        ErrorCode::ErrChequeRequired,
         ErrorCode::ErrPaymentAbovePayable,
         ErrorCode::ErrBikriCancelled,
         ErrorCode::ErrLotNotFound,
@@ -459,6 +460,7 @@ impl ErrorCode {
         ErrorCode::ErrGeneralNotBalanced,
         ErrorCode::ErrGeneralTooFewLines,
         ErrorCode::ErrCapitalExceedsBalance,
+        ErrorCode::ErrFieldNotAllowed,
     ];
 }
 

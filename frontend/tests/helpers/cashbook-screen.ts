@@ -22,6 +22,7 @@ import { healthyBackend, resetClientState, sessionUser, signedIn } from './app';
 import { fakePartners, THREE_PARTNERS } from './partners';
 import { fakeMasters, record } from './masters';
 import { message, visible } from './render';
+import { EMPTY_PAIRS } from './paged';
 
 type AccountRow = ReturnType<typeof account>;
 
@@ -35,7 +36,7 @@ export function prepareCashbook(
   resetClientState(language);
   signedIn(sessionUser({ language }));
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
   fakeAccounts(rows, cashbookTree());

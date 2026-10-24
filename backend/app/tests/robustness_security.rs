@@ -211,7 +211,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "roman": "xyz", "urdu": "زیڈ", "kind": "word" } }),
             true,
         ),
-        ("translit_pairs_list", json!({}), true),
+        ("translit_pairs_list", json!({ "input": {} }), true),
         (
             "masters_list",
             json!({ "input": { "kind": "city", "include_inactive": true } }),
@@ -446,8 +446,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "vouchers_save_advance",
-            json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "mode": "cash",
-                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "expected_goods": "", "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "expected_goods": "", "narration": "" } }),
             true,
         ),
         (
@@ -472,28 +471,24 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "vouchers_save_receipt",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "10,000", "mode": "cash",
-                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } }),
             true,
         ),
         (
             "vouchers_save_payment",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "4,316", "mode": "cash",
-                "bank_account_id": null, "cheque_no": "", "cheque_date": "", "reason": "", "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "4,316", "reason": "", "narration": "" } }),
             true,
         ),
         (
             "vouchers_preview",
             json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "person_key": null,
-                "amount": "10,000", "mode": "cash", "bank_account_id": null, "cheque_no": "", "cheque_date": "",
-                "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
+                "amount": "10,000", "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
             true,
         ),
         (
             "vouchers_edit",
             json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
-                "account_id": 1, "person_key": null, "amount": "10,000", "mode": "cash", "bank_account_id": null,
-                "cheque_no": "", "cheque_date": "", "collector_staff_id": null, "narration": "" } } }),
+                "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
             true,
         ),
         (

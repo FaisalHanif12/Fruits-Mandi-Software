@@ -17,6 +17,7 @@ import type {
 } from '../../src/shared/accounts';
 import { formatPaisa } from '../../src/shared/format';
 import { paisaForTest } from './paisa';
+import { sliceOf } from './paged';
 
 export const ZERO: Balance = { amount_paisa: paisaForTest(0), side: 'zero' };
 
@@ -208,7 +209,7 @@ export function fakeAccounts(
       })),
     ),
   );
-  vi.mocked(accountApi.accountsList).mockImplementation((filter) => {
+  vi.mocked(accountApi.accountsList).mockImplementation((filter, offset, limit) => {
     const wanted = filter.text.toLowerCase();
     const found = store.rows.filter(
       (row) =>
@@ -217,8 +218,9 @@ export function fakeAccounts(
         (wanted === '' ||
           [row.code, row.name_ur, row.name_en].some((part) => part.toLowerCase().includes(wanted))),
     );
+    // A page of the rows, with the count and the opening totals of the whole filter.
     return Promise.resolve({
-      rows: found,
+      rows: sliceOf(found, offset, limit),
       count: found.length,
       total_dr_paisa: money(65000),
       total_cr_paisa: money(65000),

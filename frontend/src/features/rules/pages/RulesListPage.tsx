@@ -8,7 +8,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { FlaskConical, Plus, Scale, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
+import { PagedList } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
@@ -16,9 +16,7 @@ import {
   Button,
   Checkbox,
   EmptyState,
-  ErrorState,
   Field,
-  LoadingState,
   Picker,
   Select,
   type PickerValue,
@@ -28,7 +26,6 @@ import { RULE_COLUMNS } from '../columns';
 import { useRuleList } from '../hooks';
 import type { ChargeType, RuleFilter, RuleRow, RuleSide } from '../types';
 
-const SHORT_LIST_ROWS = 30;
 const ALL = 'all';
 
 export function RulesListPage() {
@@ -71,64 +68,60 @@ export function RulesListPage() {
       <Localized id="rules-new" />
     </Button>
   );
-  const data = list.data;
-
-  let body;
-  if (data === undefined && list.isPending) {
-    body = <LoadingState />;
-  } else if (list.isError) {
-    body = (
-      <ErrorState
-        title={<Localized id="rules-load-failed" />}
-        error={uiErrorOf(list.error)}
-        onRetry={() => {
-          void list.refetch();
-        }}
-      />
-    );
-  } else if (data?.length === 0) {
-    body = filtering ? (
-      <EmptyState
-        icon={SearchX}
-        title={<Localized id="rules-no-match-title" />}
-        help={<Localized id="rules-no-match-help" />}
-        action={
-          <Button
-            onClick={() => {
-              setSide(ALL);
-              setCharge(ALL);
-              setParty(null);
-              setItem(null);
-              setShowInactive(true);
-            }}
-          >
-            <Localized id="rules-no-match-clear" />
-          </Button>
-        }
-      />
-    ) : (
-      <EmptyState
-        icon={Scale}
-        title={<Localized id="rules-empty" />}
-        help={<Localized id="rules-empty-help" vars={{ key: SHORTCUTS.newEntry.label }} />}
-        action={newButton}
-      />
-    );
-  } else if (data !== undefined) {
-    body = (
-      <ListGrid<RuleRow>
-        columns={RULE_COLUMNS}
-        rows={data}
-        getRowId={(row) => String(row.id)}
-        labelId="rules-title"
-        onOpen={(row) => {
-          void navigate({ to: '/index/rules/$id', params: { id: String(row.id) } });
-        }}
-        heightMode={data.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
-        isInactive={(row) => !row.is_active}
-      />
-    );
-  }
+  const first = list.data?.pages[0];
+  // A refusal shows as the state, not as the rows of the filter before it.
+  const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
+  const empty = filtering ? (
+    <EmptyState
+      icon={SearchX}
+      title={<Localized id="rules-no-match-title" />}
+      help={<Localized id="rules-no-match-help" />}
+      action={
+        <Button
+          onClick={() => {
+            setSide(ALL);
+            setCharge(ALL);
+            setParty(null);
+            setItem(null);
+            setShowInactive(true);
+          }}
+        >
+          <Localized id="rules-no-match-clear" />
+        </Button>
+      }
+    />
+  ) : (
+    <EmptyState
+      icon={Scale}
+      title={<Localized id="rules-empty" />}
+      help={<Localized id="rules-empty-help" vars={{ key: SHORTCUTS.newEntry.label }} />}
+      action={newButton}
+    />
+  );
+  const body = (
+    <PagedList<RuleRow>
+      columns={RULE_COLUMNS}
+      rows={rows}
+      totalCount={first?.total_count}
+      getRowId={(row) => String(row.id)}
+      labelId="rules-title"
+      failedId="rules-load-failed"
+      error={list.isError ? uiErrorOf(list.error) : null}
+      onRetry={() => {
+        void list.refetch();
+      }}
+      hasMore={list.hasNextPage}
+      loadingMore={list.isFetchingNextPage}
+      onLoadMore={() => {
+        void list.fetchNextPage();
+      }}
+      empty={empty}
+      onOpen={(row) => {
+        void navigate({ to: '/index/rules/$id', params: { id: String(row.id) } });
+      }}
+      isInactive={(row) => !row.is_active}
+    />
+  );
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -150,7 +143,7 @@ export function RulesListPage() {
             <FlaskConical aria-hidden="true" className="size-icon-md" />
             <Localized id="rules-test-open" />
           </Button>
-          {data === undefined || data.length === 0 ? null : newButton}
+          {rows === undefined || rows.length === 0 ? null : newButton}
         </div>
       </div>
       <div

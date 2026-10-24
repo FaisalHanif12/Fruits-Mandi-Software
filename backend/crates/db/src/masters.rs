@@ -6,8 +6,8 @@
 //! ever deleted here (PRD E21, Code Standards D3).
 
 use mandi_core::masters::{
-    AccountToMake, AddaRow, BankAccountRow, CityRow, ColValue, ExpenseHeadRow, ItemRow, MarkaRow,
-    MasterKind, MasterRow, NarrationRow, PackingRow, StaffRow, StoreRow, format_kg,
+    AccountToMake, AddaRow, CityRow, ColValue, ExpenseHeadRow, ItemRow, MarkaRow, MasterKind,
+    MasterRow, NarrationRow, PackingRow, StaffRow, StoreRow, format_kg,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
@@ -100,10 +100,6 @@ fn select(kind: MasterKind) -> &'static str {
         MasterKind::Staff => {
             "SELECT m.id, m.version, m.name_ur, m.name_en, m.role, m.phone, m.account_id, a.code, m.is_active
              FROM staff m LEFT JOIN accounts a ON a.id = m.account_id"
-        }
-        MasterKind::BankAccount => {
-            "SELECT m.id, m.version, m.bank_name, m.title, m.number, m.account_id, a.code, a.name_ur, a.name_en, m.is_active
-             FROM bank_accounts m JOIN accounts a ON a.id = m.account_id"
         }
     }
 }
@@ -202,18 +198,6 @@ fn row_from(kind: MasterKind, r: &Row<'_>) -> rusqlite::Result<MasterRow> {
             account_code: r.get(7)?,
             is_active: r.get(8)?,
         }),
-        MasterKind::BankAccount => MasterRow::BankAccount(BankAccountRow {
-            id: r.get(0)?,
-            version: r.get(1)?,
-            bank_name: r.get(2)?,
-            title: r.get(3)?,
-            number: r.get(4)?,
-            account_id: r.get(5)?,
-            account_code: r.get(6)?,
-            name_ur: r.get(7)?,
-            name_en: r.get(8)?,
-            is_active: r.get(9)?,
-        }),
     })
 }
 
@@ -240,6 +224,50 @@ pub fn list(
     let mut statement = conn.prepare(&format!("{}{filter}{order}", select(kind)))?;
     let rows = statement.query_map([], |r| row_from(kind, r))?;
     rows.collect()
+}
+
+/// One page of the masters of a kind, as [`list`] orders them, with how many match and how many
+/// of those are active, counted over the whole filter in one query (PRD FR-19.11, B31).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_page(
+    conn: &Connection,
+    kind: MasterKind,
+    include_inactive: bool,
+    id: Option<i64>,
+    offset: i64,
+    limit: i64,
+) -> rusqlite::Result<(Vec<MasterRow>, i64, i64)> {
+    // `:id` is the one record asked for, or null for no record in particular.
+    let filter = if include_inactive {
+        " WHERE (:id IS NULL OR m.id = :id)"
+    } else {
+        " WHERE m.is_active = 1 AND (:id IS NULL OR m.id = :id)"
+    };
+    // `kind.table()` is one of a fixed list of names, never input.
+    let (count, active): (i64, i64) = conn.query_row(
+        &format!(
+            "SELECT COUNT(*), COALESCE(SUM(m.is_active), 0) FROM {} m{filter}",
+            kind.table()
+        ),
+        rusqlite::named_params! { ":id": id },
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let order = if kind.has_code() {
+        " ORDER BY CAST(m.code AS INTEGER), m.code, m.id"
+    } else {
+        " ORDER BY m.id"
+    };
+    let mut statement = conn.prepare(&format!(
+        "{}{filter}{order} LIMIT :limit OFFSET :offset",
+        select(kind)
+    ))?;
+    let rows = statement.query_map(
+        rusqlite::named_params! { ":id": id, ":limit": limit, ":offset": offset },
+        |r| row_from(kind, r),
+    )?;
+    Ok((rows.collect::<rusqlite::Result<Vec<_>>>()?, count, active))
 }
 
 /// One master by id.
@@ -560,7 +588,6 @@ pub fn set_account_active(
 pub fn account_of(conn: &Connection, kind: MasterKind, id: i64) -> rusqlite::Result<Option<i64>> {
     let sql = match kind {
         MasterKind::ExpenseHead => "SELECT account_id FROM expense_heads WHERE id = ?1",
-        MasterKind::BankAccount => "SELECT account_id FROM bank_accounts WHERE id = ?1",
         _ => return Ok(None),
     };
     conn.query_row(sql, [id], |r| r.get(0)).optional()
@@ -626,11 +653,6 @@ pub fn search_sources(
         }
         MasterKind::Staff => {
             "SELECT m.id, NULL, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM staff m"
-        }
-        MasterKind::BankAccount => {
-            "SELECT m.id, NULL, a.name_ur, a.name_en, m.bank_name || ' - ' || m.title, m.bank_name || ' - ' || m.title,
-                    m.bank_name || ' ' || m.title || ' ' || m.number, a.search_ur, a.search_en, a.search_phonetic, m.is_active
-             FROM bank_accounts m JOIN accounts a ON a.id = m.account_id"
         }
     };
     let sql = if only_id.is_some() {

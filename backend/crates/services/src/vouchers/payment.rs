@@ -1,6 +1,6 @@
 //! The ادائیگی voucher (PRD 15.3, FR-15.7, FR-15.11, FR-14.2, FR-13.7, plan 15): money paid out.
 //!
-//! - **Seller**: the seller بنام, cash or bank جمع. A payment above his payable is allowed with a
+//! - **Seller**: the seller بنام, روکڑ جمع. A payment above his payable is allowed with a
 //!   warning; the extra shows as what he owes the firm, and it is not an advance (PRD FR-15.7).
 //! - **Buyer**: cash lent to him (PRD FR-15.11). A reason is required. It becomes one of his
 //!   bills for matching, aging and اگراہی, and a credit he has waiting settles it at once.
@@ -16,7 +16,7 @@ use mandi_domain::core::error::{ErrorCode, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::FieldErrors;
-use mandi_domain::core::vouchers::{PaymentInput, VoucherSaved, VoucherType};
+use mandi_domain::core::vouchers::{PaymentInput, VoucherMode, VoucherSaved, VoucherType};
 use mandi_domain::ledger::{BalancedEntry, LedgerLine, PostingType, Side, build_entry};
 
 use super::common::{
@@ -79,11 +79,8 @@ pub(super) fn plan_payment(
         &MoneyText {
             date: &input.date,
             amount: &input.amount,
-            mode: input.mode,
-            bank_account_id: input.bank_account_id,
-            cheque_no: &input.cheque_no,
-            cheque_date: &input.cheque_date,
             narration: &input.narration,
+            removed: &input.removed,
         },
     )?;
     let reason = optional_text(&mut errors, "reason", &input.reason);
@@ -116,7 +113,7 @@ pub(super) fn plan_payment(
     })
 }
 
-/// The journal entry of a payment (PRD 15.3): the party بنام, cash or the bank جمع.
+/// The journal entry of a payment (PRD 15.3): the party بنام, روکڑ جمع.
 ///
 /// # Errors
 /// `ServiceError::Data` if the plan has a mistake; the ledger errors of the entry.
@@ -143,10 +140,11 @@ pub(super) fn payment_row(
         entry_date: date.to_iso(),
         account_id: Some(party.record.id),
         amount_paisa: amount.as_paisa(),
-        mode: planned.money.mode,
-        bank_account_id: planned.money.bank_account_id,
-        cheque_no: planned.money.cheque_no.clone(),
-        cheque_date: planned.money.cheque_date.map(BusinessDate::to_iso),
+        // Every voucher moves روکڑ (PRD 15.1, v1.6); the columns stay for the old rows.
+        mode: VoucherMode::Cash,
+        bank_account_id: None,
+        cheque_no: None,
+        cheque_date: None,
         expected_goods: None,
         narration: planned.money.narration.clone(),
         person_key: party.person_key.clone(),

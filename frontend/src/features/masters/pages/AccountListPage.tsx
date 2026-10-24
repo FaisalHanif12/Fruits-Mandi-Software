@@ -9,8 +9,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { Landmark, Plus, SearchX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, type ListContext } from '../../../shared/grid';
-import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
+import { ListGrid, PagedFooter, type ListContext } from '../../../shared/grid';
+import {
+  useFocusFirstField,
+  useLayoutStep,
+  useLoadRest,
+  useRememberedFlag,
+} from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -30,6 +35,12 @@ import { useMasterFocus } from '../store';
 
 /** A list of this many rows or fewer is as tall as its rows; a longer one fills the screen. */
 const SHORT_LIST_ROWS = 30;
+/**
+ * How many pages (100 accounts each) are read to find the row last opened. It may be on no page of
+ * this list (inactive, or not in this filter), and the list can have 20,000 accounts, so the
+ * search stops here and the focus starts on the first row.
+ */
+const REMEMBERED_ROW_PAGES = 10;
 const ALL = 'all';
 const TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
 
@@ -74,7 +85,19 @@ export function AccountListPage() {
     </Button>
   );
   const filtering = filter.text !== '' || filter.account_type !== null || filter.include_inactive;
-  const data = list.data;
+  // Every page loaded so far. The first page carries the count and the opening totals of the whole
+  // filter, which are the ones shown (PRD FR-19.11).
+  const first = list.data?.pages[0];
+  const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
+  // The grid puts the focus back on the account last opened or saved when it is drawn, so that row
+  // must be loaded first: while it is on a later page, the pages are read until it is (no filter).
+  const findingRow =
+    focusRowId !== undefined &&
+    !filtering &&
+    list.hasNextPage &&
+    (list.data?.pages.length ?? 0) < REMEMBERED_ROW_PAGES &&
+    !list.data?.pages.some((page) => page.rows.some((row) => row.id === focusRowId));
+  useLoadRest(list, findingRow);
   // The opening debit and credit columns come with the wide layout, or with "More columns"; the
   // totals stand under them there (Code Standards F19), and as a line under the list where the
   // columns are not shown.
@@ -86,19 +109,19 @@ export function AccountListPage() {
       labelField: 'name',
       values: {
         name: context.text('glossary-meezan'),
-        ...(data === undefined
+        ...(first === undefined
           ? {}
           : {
-              opening_dr: context.money(data.total_dr_paisa),
-              opening_cr: context.money(data.total_cr_paisa),
+              opening_dr: context.money(first.total_dr_paisa),
+              opening_cr: context.money(first.total_cr_paisa),
             }),
       },
     }),
-    [data],
+    [first],
   );
 
   let body;
-  if (data === undefined && list.isPending) {
+  if ((rows === undefined && list.isPending) || findingRow) {
     body = <LoadingState />;
   } else if (list.isError) {
     body = (
@@ -110,7 +133,7 @@ export function AccountListPage() {
         }}
       />
     );
-  } else if (data?.rows.length === 0) {
+  } else if (rows?.length === 0) {
     body = filtering ? (
       <EmptyState
         icon={SearchX}
@@ -136,17 +159,17 @@ export function AccountListPage() {
         action={newButton}
       />
     );
-  } else if (data !== undefined) {
+  } else if (rows !== undefined && first !== undefined) {
     body = (
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <div className={data.rows.length <= SHORT_LIST_ROWS ? '' : 'min-h-0 flex-1'}>
+        <div className={rows.length <= SHORT_LIST_ROWS ? '' : 'min-h-0 flex-1'}>
           <ListGrid<AccountRow>
             columns={columns}
-            rows={data.rows}
+            rows={rows}
             getRowId={(row) => String(row.id)}
             labelId="accounts-title"
             onOpen={open}
-            heightMode={data.rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
+            heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
             isInactive={(row) => !row.is_active}
             totals={totalsUnderColumns ? totals : undefined}
             focusRowId={focusRowId === undefined ? null : String(focusRowId)}
@@ -159,14 +182,23 @@ export function AccountListPage() {
           <div className="flex flex-wrap gap-x-6 gap-y-1 type-body text-ink">
             <span className="flex items-baseline gap-2">
               <Localized id="accounts-total-dr" />
-              <Num paisa={data.total_dr_paisa} />
+              <Num paisa={first.total_dr_paisa} />
             </span>
             <span className="flex items-baseline gap-2">
               <Localized id="accounts-total-cr" />
-              <Num paisa={data.total_cr_paisa} />
+              <Num paisa={first.total_cr_paisa} />
             </span>
           </div>
         )}
+        <PagedFooter
+          shown={rows.length}
+          total={first.count}
+          hasMore={list.hasNextPage}
+          loadingMore={list.isFetchingNextPage}
+          onLoadMore={() => {
+            void list.fetchNextPage();
+          }}
+        />
       </div>
     );
   }
@@ -182,7 +214,7 @@ export function AccountListPage() {
             <p className="type-body text-ink-muted" />
           </Localized>
         </div>
-        {data === undefined || data.rows.length === 0 ? null : (
+        {rows === undefined || rows.length === 0 ? null : (
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => {

@@ -16,8 +16,8 @@ import openPayablesTruncated from '../fixtures/assist_open_payables_truncated.js
 import makeRegular from '../fixtures/pukhta_make_regular_shahid.json';
 import makeRegularRequest from '../fixtures/pukhta_make_regular_shahid_request.json';
 import slipAdvanceUr from '../fixtures/reports_voucher_print_data_advance_ur.json';
-import slipChequeEn from '../fixtures/reports_voucher_print_data_cheque_en.json';
 import slipPaymentEn from '../fixtures/reports_voucher_print_data_payment_en.json';
+import slipReceiptEn from '../fixtures/reports_voucher_print_data_receipt_en.json';
 import slipReceiptUr from '../fixtures/reports_voucher_print_data_receipt_ur.json';
 import searchVoucherNumber from '../fixtures/search_global_voucher_number.json';
 import cancelCashLent from '../fixtures/vouchers_cancel_cash_lent.json';
@@ -48,10 +48,12 @@ import savePaymentCashBelowZero from '../fixtures/vouchers_save_payment_cash_bel
 import savePaymentCashLent from '../fixtures/vouchers_save_payment_cash_lent.json';
 import savePaymentCashLentRequest from '../fixtures/vouchers_save_payment_cash_lent_request.json';
 import savePaymentNeedsReason from '../fixtures/vouchers_save_payment_to_buyer_needs_reason.json';
+import saveReceiptArshad from '../fixtures/vouchers_save_receipt_arshad.json';
+import saveReceiptArshadRequest from '../fixtures/vouchers_save_receipt_arshad_request.json';
+import saveReceiptOldFields from '../fixtures/vouchers_save_receipt_old_payment_fields.json';
+import saveReceiptOldFieldsRequest from '../fixtures/vouchers_save_receipt_old_payment_fields_request.json';
 import saveReceipt from '../fixtures/vouchers_save_receipt.json';
 import saveReceiptRequest from '../fixtures/vouchers_save_receipt_request.json';
-import saveReceiptCheque from '../fixtures/vouchers_save_receipt_cheque.json';
-import saveReceiptChequeRequest from '../fixtures/vouchers_save_receipt_cheque_request.json';
 import saveReceiptReturnTooMuch from '../fixtures/vouchers_save_receipt_seller_return_too_much.json';
 import saveReceiptsBatch from '../fixtures/vouchers_save_receipts_batch_round.json';
 import saveReceiptsBatchRequest from '../fixtures/vouchers_save_receipts_batch_round_request.json';
@@ -180,10 +182,11 @@ export const PREVIEW_RECEIPT_SELLER_RETURN: VoucherPreview = readVoucherPreview(
 );
 export const PREVIEW_RECEIPT_EDIT: VoucherPreview = readVoucherPreview(previewReceiptEdit);
 export const SAVED_RECEIPT: VoucherSaved = readVoucherSaved(saveReceipt);
+/** The plain cash receipt of 5,000 from Arshad, which replaces the old cheque receipt. */
+export const SAVED_RECEIPT_ARSHAD: VoucherSaved = readVoucherSaved(saveReceiptArshad);
 export const SAVED_PAYMENT: VoucherSaved = readVoucherSaved(savePayment);
 export const SAVED_ADVANCE: VoucherSaved = readVoucherSaved(saveAdvance);
 export const SAVED_CASH_LENT: VoucherSaved = readVoucherSaved(savePaymentCashLent);
-export const SAVED_CHEQUE: VoucherSaved = readVoucherSaved(saveReceiptCheque);
 export const EDITED_RECEIPT: VoucherSaved = readVoucherSaved(editReceipt);
 export const CANCELLED_CASH_LENT: VoucherCancelled = readVoucherCancelled(cancelCashLent);
 export const GOT_RECEIPT: VoucherRow = readVoucherRow(getReceipt);
@@ -199,18 +202,22 @@ export const RECEIPTS_BATCH: ReceiptsSaved = readReceiptsSaved(saveReceiptsBatch
 export const MADE_REGULAR: MadeRegular = readMadeRegular(makeRegular);
 export const SLIP_RECEIPT_UR: PrintData = readPrintData(slipReceiptUr);
 export const SLIP_PAYMENT_EN: PrintData = readPrintData(slipPaymentEn);
+export const SLIP_RECEIPT_EN: PrintData = readPrintData(slipReceiptEn);
 export const SLIP_ADVANCE_UR: PrintData = readPrintData(slipAdvanceUr);
-export const SLIP_CHEQUE_EN: PrintData = readPrintData(slipChequeEn);
 export const GLOBAL_VOUCHER_NUMBER: GlobalHit[] = readListGlobalHit(searchVoucherNumber);
 
 // Refusals, as `{ ok: false, errors, ref }`
 export const REFUSED_NEEDS_REASON: UiError = readUiError(savePaymentNeedsReason);
+/** An old client sent a mode, a bank and a cheque: four ERR_FIELD_NOT_ALLOWED, one per name. */
+export const REFUSED_OLD_PAYMENT_FIELDS: UiError = readUiError(saveReceiptOldFields);
 export const REFUSED_RETURN_TOO_MUCH: UiError = readUiError(saveReceiptReturnTooMuch);
 export const REFUSED_CASH_BELOW_ZERO: UiError = readUiError(savePaymentCashBelowZero);
 
 // Requests: exactly the `input` each command took
 export const REQUEST_SAVE_RECEIPT: ReceiptInput = readReceiptInput(saveReceiptRequest);
-export const REQUEST_SAVE_RECEIPT_CHEQUE: ReceiptInput = readReceiptInput(saveReceiptChequeRequest);
+export const REQUEST_SAVE_RECEIPT_ARSHAD: ReceiptInput = readReceiptInput(saveReceiptArshadRequest);
+/** What an old client sent: it still has mode, bank_account_id, cheque_no and cheque_date. */
+export const REQUEST_OLD_PAYMENT_FIELDS: Record<string, unknown> = saveReceiptOldFieldsRequest;
 export const REQUEST_SAVE_PAYMENT: PaymentInput = readPaymentInput(savePaymentRequest);
 export const REQUEST_SAVE_CASH_LENT: PaymentInput = readPaymentInput(savePaymentCashLentRequest);
 export const REQUEST_SAVE_ADVANCE: AdvanceInput = readAdvanceInput(saveAdvanceRequest);

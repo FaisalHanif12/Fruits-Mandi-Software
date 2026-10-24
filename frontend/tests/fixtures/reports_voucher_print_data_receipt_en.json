@@ -20,14 +20,6 @@
     {
       "label_id": "print-fact-date",
       "value": "10-10-2026"
-    },
-    {
-      "label_id": "print-fact-bank",
-      "value": "HBL - Maher Adnan and Brothers - 0123456789"
-    },
-    {
-      "label_id": "print-fact-cheque",
-      "value": "000123 / 12-10-2026"
     }
   ],
   "printed_at": "10-10-2026 14:00",
@@ -48,7 +40,7 @@
           "role": "total"
         }
       ],
-      "payment_id": "print-mode-cheque",
+      "payment_id": null,
       "words": {
         "label_id": "print-in-words",
         "text": "Five thousand rupees only"

@@ -17,6 +17,7 @@ import type { RuleTestInput } from '../../src/bindings/RuleTestInput';
 import type { ChargesSettings, OverridesSettings } from '../../src/features/settings/types';
 import type { RecordRef } from '../../src/bindings/RecordRef';
 import { money } from './accounts';
+import { rulesListOf } from './paged';
 
 /** The basis points of a percent typed as text ("2.5" is 250). A test double: the backend's job. */
 const bpsOf = (text: string): number => Math.round(Number(text) * 100);
@@ -117,15 +118,19 @@ export function fakeRules(rows: RuleRow[] = seededRules()): FakeRules {
   };
   let nextId = 100;
 
-  vi.mocked(rulesApi.rulesList).mockImplementation((filter) =>
+  vi.mocked(rulesApi.rulesList).mockImplementation((filter, offset, limit) =>
     Promise.resolve(
-      store.rows.filter(
-        (row) =>
-          (filter.include_inactive || row.is_active) &&
-          (filter.side === null || row.side === filter.side) &&
-          (filter.charge_type === null || row.charge_type === filter.charge_type) &&
-          (filter.account_id === null || row.account?.id === filter.account_id) &&
-          (filter.item_id === null || row.item?.id === filter.item_id),
+      rulesListOf(
+        store.rows.filter(
+          (row) =>
+            (filter.include_inactive || row.is_active) &&
+            (filter.side === null || row.side === filter.side) &&
+            (filter.charge_type === null || row.charge_type === filter.charge_type) &&
+            (filter.account_id === null || row.account?.id === filter.account_id) &&
+            (filter.item_id === null || row.item?.id === filter.item_id),
+        ),
+        offset,
+        limit,
       ),
     ),
   );

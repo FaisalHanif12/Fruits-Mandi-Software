@@ -7,6 +7,7 @@ import type { BikriDetail } from '../../bindings/BikriDetail';
 import type { BikriEdited } from '../../bindings/BikriEdited';
 import type { BikriFindInput } from '../../bindings/BikriFindInput';
 import type { BikriGetInput } from '../../bindings/BikriGetInput';
+import type { BikriList } from '../../bindings/BikriList';
 import type { BikriListInput } from '../../bindings/BikriListInput';
 import type { BikriListRow } from '../../bindings/BikriListRow';
 import type { BikriNavigateInput } from '../../bindings/BikriNavigateInput';
@@ -89,9 +90,12 @@ export function bikriGet(id: number): Promise<BikriDetail> {
   return callCommand<BikriDetail>('bikri_get', { input });
 }
 
-/** The list of بکری (PRD FR-12.7). Dates are text as typed; empty means no limit. */
-export function bikriList(input: BikriListInput): Promise<BikriListRow[]> {
-  return callCommand<BikriListRow[]>('bikri_list', { input });
+/**
+ * One page of the list of بکری with the count and the totals of the whole filter (PRD FR-12.7,
+ * FR-19.11). Dates are text as typed; empty means no limit.
+ */
+export function bikriList(input: BikriListInput): Promise<BikriList> {
+  return callCommand<BikriList>('bikri_list', { input });
 }
 
 /** Finds بکری by number, truck, seller, day or item (PRD FR-12.13). Newest first, at most 50. */

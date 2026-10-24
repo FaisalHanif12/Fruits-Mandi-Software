@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use common::*;
 use mandi_services::core::accounts::{AccountInput, AccountType, OpeningLineInput, OpeningsInput};
 use mandi_services::core::error::ErrorCode;
-use mandi_services::core::vouchers::{AdvanceInput, AdvancesInput, VoucherMode};
+use mandi_services::core::vouchers::{AdvanceInput, AdvancesInput};
 use mandi_services::db::audit::{AuditKey, MemoryKeyStore};
 use mandi_services::db::clock::ManualClock;
 use mandi_services::db::disk::DiskProbe;
@@ -115,10 +115,7 @@ fn advance(seller: i64, amount: u64) -> AdvanceInput {
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: amount.to_string(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
     }

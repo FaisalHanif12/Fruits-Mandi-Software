@@ -239,7 +239,7 @@ fn trip_fixtures_of_e2e_34_and_34b() {
     );
     pair(
         "bikri_stock_list_own_rows",
-        &json!({}),
+        &json!({ "offset": 0, "limit": 0 }),
         &bikri::stock_list(ctx, &StockListInput::default()).unwrap(),
     );
     let open_request = json!({ "bikri_id": saved.bikri_id, "entry_id": saved.entry_id });

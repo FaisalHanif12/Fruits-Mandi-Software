@@ -319,8 +319,8 @@ fn the_index_built_again_gives_the_same_answers_after_a_simulated_restore() {
 }
 
 #[test]
-fn masters_without_search_columns_and_the_bank_text_are_found() {
-    use mandi_services::core::masters::{BankAccountInput, MarkaInput, NarrationInput};
+fn masters_without_search_columns_are_found() {
+    use mandi_services::core::masters::{MarkaInput, NarrationInput};
     let (_dir, env, owner) = ready();
     masters::save(
         &env.ctx,
@@ -346,21 +346,6 @@ fn masters_without_search_columns_and_the_bank_text_are_found() {
         }),
     )
     .unwrap();
-    let mut bank = BankAccountInput {
-        id: None,
-        version: None,
-        bank_name: "Habib Bank".into(),
-        title: "Maher Adnan".into(),
-        number: "0001-234567".into(),
-        name_ur: "حبیب بینک".into(),
-        name_en: "Habib Bank".into(),
-        confirmed_rules_words: Vec::new(),
-    };
-    if masters::save(&env.ctx, &owner, &MasterInput::BankAccount(bank.clone())).is_err() {
-        bank.confirmed_rules_words =
-            vec!["Habib".into(), "حبیب".into(), "Bank".into(), "بینک".into()];
-        masters::save(&env.ctx, &owner, &MasterInput::BankAccount(bank)).unwrap();
-    }
     let s =
         |scope: SearchScope, text: &str| search::search(&env.ctx, &owner, scope, text, 10).unwrap();
     assert_eq!(s(SearchScope::Marka, "ar")[0].name_en, "AR");
@@ -371,15 +356,6 @@ fn masters_without_search_columns_and_the_bank_text_are_found() {
     assert_eq!(
         s(SearchScope::Narration, "بجلی")[0].name_en,
         "Electricity bill"
-    );
-    // The bank account is found by its account name, and by the bank, title and number as typed.
-    for typed in ["habib", "حبیب", "maher", "0001"] {
-        assert_eq!(s(SearchScope::BankAccount, typed).len(), 1, "{typed}");
-    }
-    assert!(
-        s(SearchScope::BankAccount, "habib")[0]
-            .extra_en
-            .contains("Maher Adnan")
     );
 }
 
@@ -642,4 +618,57 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
     .unwrap();
     assert_eq!(by_code.status, ResolveStatus::Found);
     assert_eq!(by_code.account.unwrap().id, khata.account.id);
+}
+
+#[test]
+fn the_bank_account_is_offered_in_no_picker_and_no_search() {
+    // PRD FR-10.4 (v1.6): all money is روکڑ. بینک 01020001 stays in the chart, but no picker, code,
+    // short code or global search offers it, so nothing can be posted to it by mistake.
+    use mandi_services::core::accounts::SearchGlobalInput;
+    use mandi_services::core::accounts::{AccountScope, GlobalHit, SearchAccountsInput};
+    let w = support::world();
+    let find = |scope: AccountScope, text: &str| -> Vec<String> {
+        search::search_accounts(
+            &w.env.ctx,
+            &w.owner,
+            &SearchAccountsInput {
+                scope,
+                control_id: None,
+                text: text.into(),
+                limit: 10,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|hit| hit.code)
+        .collect()
+    };
+    // The cash account is still found: the exclusion is the bank's alone.
+    assert_eq!(find(AccountScope::Any, "01010001"), vec!["01010001"]);
+    for scope in [
+        AccountScope::Any,
+        AccountScope::Seller,
+        AccountScope::Buyer,
+        AccountScope::LotSeller,
+    ] {
+        for text in ["01020001", "bank", "بینک", "1"] {
+            assert!(
+                !find(scope, text).iter().any(|code| code == "01020001"),
+                "{text} in {scope:?}"
+            );
+        }
+    }
+    let hits = search::global(
+        &w.env.ctx,
+        &w.owner,
+        &SearchGlobalInput {
+            text: "bank".into(),
+            limit: 20,
+        },
+    )
+    .unwrap();
+    assert!(
+        hits.iter()
+            .all(|hit| !matches!(hit, GlobalHit::Account { hit } if hit.code == "01020001"))
+    );
 }

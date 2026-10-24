@@ -1,0 +1,50 @@
+{
+  "rows": [
+    {
+      "kind": "item",
+      "id": 1,
+      "version": 1,
+      "code": "1",
+      "name_ur": "کیلا",
+      "name_en": "Banana",
+      "item_group": "fruit",
+      "default_packing_id": null,
+      "default_packing_name_ur": null,
+      "default_packing_name_en": null,
+      "sold_by": "unit",
+      "is_active": true
+    },
+    {
+      "kind": "item",
+      "id": 2,
+      "version": 1,
+      "code": "2",
+      "name_ur": "سیب",
+      "name_en": "Apple",
+      "item_group": "fruit",
+      "default_packing_id": null,
+      "default_packing_name_ur": null,
+      "default_packing_name_en": null,
+      "sold_by": "unit",
+      "is_active": true
+    },
+    {
+      "kind": "item",
+      "id": 4,
+      "version": 1,
+      "code": "4",
+      "name_ur": "انگور",
+      "name_en": "Grapes",
+      "item_group": "fruit",
+      "default_packing_id": null,
+      "default_packing_name_ur": null,
+      "default_packing_name_en": null,
+      "sold_by": "weight",
+      "is_active": true
+    }
+  ],
+  "total_count": 3,
+  "totals": {
+    "active_count": 3
+  }
+}

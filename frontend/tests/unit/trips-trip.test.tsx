@@ -34,6 +34,7 @@ import {
   fakeTrips,
   purchaseEntry,
 } from '../helpers/trips';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -53,7 +54,7 @@ beforeEach(() => {
   fakePartners(THREE_PARTNERS);
   fakeItemPickers();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {

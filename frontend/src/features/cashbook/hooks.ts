@@ -4,14 +4,8 @@
 // the new numbers. Lists load page by page with the backend's totals over the whole filter
 // (PRD FR-19.11, Code Standards F34, B31).
 
-import {
-  keepPreviousData,
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import { usePreviewQuery } from '../../shared/hooks';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { VOUCHERS_KEY, vouchersPreview } from '../vouchers';
 import {
   cashbookGet,
@@ -47,8 +41,6 @@ import type {
 } from './types';
 
 export const CASHBOOK_KEY = ['cashbook'] as const;
-/** The size of one page of a list (PRD FR-19.11, B31). */
-export const PAGE_SIZE = 100;
 
 /** Everything a saved entry changes, to read again (PRD 6.2). */
 const READ_AGAIN: readonly (readonly string[])[] = [
@@ -70,25 +62,14 @@ export function useReadAgain() {
     );
 }
 
-/** A page after page loader: the next page starts where the loaded rows end. */
-function nextOffset(loaded: number, total: number, lastPageRows: number): number | undefined {
-  return loaded < total && lastPageRows > 0 ? loaded : undefined;
-}
-
 /** The cash book of a range, page by page, with the totals over the whole range (PRD 16.1). */
 export function useCashbook(range: { from: string | null; to: string | null }) {
-  return useInfiniteQuery({
+  return usePagedQuery({
     queryKey: [...CASHBOOK_KEY, 'book', range],
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => cashbookGet({ ...range, offset: pageParam, limit: PAGE_SIZE }),
-    getNextPageParam: (last, pages) =>
-      nextOffset(
-        pages.reduce((sum, page) => sum + page.rows.length, 0),
-        last.total_count,
-        last.rows.length,
-      ),
-    placeholderData: keepPreviousData,
-    staleTime: 0,
+    fetchPage: (offset, limit) => cashbookGet({ ...range, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }
 
@@ -136,19 +117,12 @@ export interface TaggedPreview {
 
 /** One partner's money taken, page by page (PRD FR-16.2). Never kept: a save changes it. */
 export function usePartnerTakes(partnerId: number | null) {
-  return useInfiniteQuery({
+  return usePagedQuery({
     queryKey: [...CASHBOOK_KEY, 'takes', partnerId],
-    initialPageParam: 0,
     enabled: partnerId !== null,
-    queryFn: ({ pageParam }) =>
-      partnerTakes({ partner_id: partnerId ?? 0, offset: pageParam, limit: PAGE_SIZE }),
-    getNextPageParam: (last, pages) =>
-      nextOffset(
-        pages.reduce((sum, page) => sum + page.rows.length, 0),
-        last.total_count,
-        last.rows.length,
-      ),
-    staleTime: 0,
+    fetchPage: (offset, limit) => partnerTakes({ partner_id: partnerId ?? 0, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
   });
 }
 
@@ -164,43 +138,24 @@ export function useRepeatLastMonth(month: string, enabled: boolean) {
 
 /** One person's loans, page by page (PRD FR-16.5). */
 export function useLentList(personId: number | null) {
-  return useInfiniteQuery({
+  return usePagedQuery({
     queryKey: [...CASHBOOK_KEY, 'lent', personId],
-    initialPageParam: 0,
     enabled: personId !== null,
-    queryFn: ({ pageParam }) =>
-      lentList({ person_id: personId ?? 0, offset: pageParam, limit: PAGE_SIZE }),
-    getNextPageParam: (last, pages) =>
-      nextOffset(
-        pages.reduce((sum, page) => sum + page.rows.length, 0),
-        last.total_count,
-        last.rows.length,
-      ),
-    staleTime: 0,
+    fetchPage: (offset, limit) => lentList({ person_id: personId ?? 0, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
   });
 }
 
 /** A khata's entries with the running balance, page by page (PRD FR-16.6). */
 export function useKhataStatement(khataId: number | null) {
-  return useInfiniteQuery({
+  return usePagedQuery({
     queryKey: [...CASHBOOK_KEY, 'khata', khataId],
-    initialPageParam: 0,
     enabled: khataId !== null,
-    queryFn: ({ pageParam }) =>
-      khataStatement({
-        khata_account_id: khataId ?? 0,
-        from: null,
-        to: null,
-        offset: pageParam,
-        limit: PAGE_SIZE,
-      }),
-    getNextPageParam: (last, pages) =>
-      nextOffset(
-        pages.reduce((sum, page) => sum + page.rows.length, 0),
-        last.total_count,
-        last.rows.length,
-      ),
-    staleTime: 0,
+    fetchPage: (offset, limit) =>
+      khataStatement({ khata_account_id: khataId ?? 0, from: null, to: null, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
   });
 }
 

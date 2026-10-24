@@ -30,6 +30,7 @@ import { fakeMasters, record } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { AKRAM, ARSHAD, KARIM, PUKHTA_BUYER, RAHIM, fakeVouchers } from '../helpers/vouchers';
 import * as real from '../helpers/vouchers-real';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -75,14 +76,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
   const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
   fakeMasters({
-    bank_account: [record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah')],
     staff: [record('staff', 81, '0001', 'اسلم', 'Aslam')],
   });
 });
@@ -450,7 +450,7 @@ describe.each(LANGUAGES)('the receipt slips of the backend (%s)', (language) => 
       'Four thousand three hundred sixteen rupees only',
     ],
     ['an advance in Urdu', real.SLIP_ADVANCE_UR, '15,000', 'پندرہ ہزار روپے'],
-    ['a cheque in English', real.SLIP_CHEQUE_EN, '5,000', 'Five thousand rupees only'],
+    ['a receipt in English', real.SLIP_RECEIPT_EN, '5,000', 'Five thousand rupees only'],
   ] as const;
 
   it.each(slips)(
@@ -467,8 +467,11 @@ describe.each(LANGUAGES)('the receipt slips of the backend (%s)', (language) => 
       for (const id of ids) {
         for (const other of LANGUAGES) expect(() => message(other, id)).not.toThrow();
       }
+      // All money is روکڑ: the slip has no line about how it was paid, for any voucher.
+      expect(data.pages.every((page) => page.payment_id === null)).toBe(true);
       const { container } = render(<ReceiptSlipTemplate data={data} />);
       const root = container.querySelector<HTMLElement>('.print-doc');
+      expect(root?.querySelector('.print-payment')).toBeNull();
       if (root === null) throw new Error('no print document');
       const text = visible(root.textContent);
       expect(text).toContain(message(data.language, data.title_id));

@@ -152,21 +152,36 @@ fn the_real_answers_of_the_plan_13_commands_are_the_fixtures() {
     }
 
     // bikri_list: the day, newest first.
-    let list_request = json!({ "date": "10-10-2026" });
+    let list_request = json!({ "date": "10-10-2026", "offset": 0, "limit": 0 });
     let rows = bikri::list(&w.env.ctx, &typed::<BikriListInput>(&list_request)).unwrap();
     assert_eq!(
-        rows.iter().map(|r| r.number).collect::<Vec<_>>(),
+        rows.rows.iter().map(|r| r.number).collect::<Vec<_>>(),
         [2, 1],
         "the list is newest first"
     );
     pair("bikri_list_day", &list_request, &rows);
 
     // pukhta_register and search_pukhta_people: Shahid, paid.
-    let register_request = json!({ "from": "10-10-2026", "to": "10-10-2026" });
+    let register_request =
+        json!({ "from": "10-10-2026", "to": "10-10-2026", "offset": 0, "limit": 0 });
     let register =
         bikri::register(&w.env.ctx, &typed::<PukhtaRegisterInput>(&register_request)).unwrap();
-    assert_eq!(register.len(), 1, "only Shahid's line is a one-time person");
+    assert_eq!(
+        register.rows.len(),
+        1,
+        "only Shahid's line is a one-time person"
+    );
+    // No side chosen: the rows of buyers and sellers are mixed, so the totals are all null.
+    assert!(register.totals.open.is_none() && register.totals.qty.is_none());
     pair("pukhta_register_day", &register_request, &register);
+    // The buyers alone: the totals are given, over every line of the filter.
+    let buyers_request = json!({ "from": "10-10-2026", "to": "10-10-2026", "side": "buyer",
+        "offset": 0, "limit": 0 });
+    let buyers =
+        bikri::register(&w.env.ctx, &typed::<PukhtaRegisterInput>(&buyers_request)).unwrap();
+    assert_eq!(buyers.total_count, 1);
+    assert!(buyers.totals.open.is_some() && buyers.totals.qty == Some(10));
+    pair("pukhta_register_day_buyers", &buyers_request, &buyers);
     let people_request = json!({ "text": "shahid", "side": "buyer" });
     let people =
         bikri::search_people(&w.env.ctx, &typed::<PukhtaPeopleInput>(&people_request)).unwrap();

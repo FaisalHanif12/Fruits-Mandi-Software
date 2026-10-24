@@ -46,12 +46,8 @@ pub(super) struct PlannedAdvance {
     pub(super) errors: Vec<FieldError>,
     pub(super) amount: Paisa,
     pub(super) date: Option<BusinessDate>,
-    pub(super) mode: VoucherMode,
-    /// The ledger account the money comes from: cash, or the bank's account.
+    /// The ledger account the money comes from: always روکڑ.
     pub(super) pay_account: Option<i64>,
-    pub(super) bank_account_id: Option<i64>,
-    pub(super) cheque_no: Option<String>,
-    pub(super) cheque_date: Option<BusinessDate>,
     pub(super) expected_goods: Option<String>,
     pub(super) narration: Option<String>,
     /// The seller's balance before and after, as signed amounts (debit positive).
@@ -76,11 +72,8 @@ pub(super) fn plan_advance(
         &MoneyText {
             date: &input.date,
             amount: &input.amount,
-            mode: input.mode,
-            bank_account_id: input.bank_account_id,
-            cheque_no: &input.cheque_no,
-            cheque_date: &input.cheque_date,
             narration: &input.narration,
+            removed: &input.removed,
         },
     )?;
     let expected_goods = optional_text(&mut errors, "expected_goods", &input.expected_goods);
@@ -142,11 +135,7 @@ pub(super) fn plan_advance(
         errors,
         amount: money.amount.unwrap_or(Paisa::ZERO),
         date: money.date,
-        mode: input.mode,
         pay_account: money.pay_account,
-        bank_account_id: money.bank_account_id,
-        cheque_no: money.cheque_no,
-        cheque_date: money.cheque_date,
         expected_goods,
         narration: money.narration,
         before,
@@ -162,7 +151,7 @@ pub(super) fn plan_advance(
 }
 
 /// Gives an advance to a seller (PRD 15.4): the seller is debited (an advance line, PRD FR-15.8)
-/// and cash or the bank is credited. One transaction: the voucher, its journal entry and its
+/// and روکڑ is credited. One transaction: the voucher, its journal entry and its
 /// audit row. The number is given here and never used again.
 ///
 /// # Errors
@@ -274,10 +263,11 @@ pub(super) fn advance_row(
         entry_date: date.to_iso(),
         account_id: Some(account.id),
         amount_paisa: planned.amount.as_paisa(),
-        mode: planned.mode,
-        bank_account_id: planned.bank_account_id,
-        cheque_no: planned.cheque_no.clone(),
-        cheque_date: planned.cheque_date.map(BusinessDate::to_iso),
+        // Every voucher moves روکڑ (PRD 15.1, v1.6); the columns stay for the old rows.
+        mode: VoucherMode::Cash,
+        bank_account_id: None,
+        cheque_no: None,
+        cheque_date: None,
         expected_goods: planned.expected_goods.clone(),
         narration: planned.narration.clone(),
         person_key: None,

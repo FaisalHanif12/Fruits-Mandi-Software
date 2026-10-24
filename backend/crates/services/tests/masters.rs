@@ -1,5 +1,5 @@
 //! The master lists of PRD 10.3 (plan 06, acceptance D2-A5): add, edit, make inactive, with both
-//! names, search columns, accounts of expense heads and bank accounts, the spelling check and
+//! names, search columns, accounts of expense heads, the spelling check and
 //! the audit trail.
 #![cfg(test)]
 
@@ -8,8 +8,8 @@ mod common;
 use common::*;
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::masters::{
-    AddaInput, BankAccountInput, CityInput, ExpenseHeadInput, ItemInput, MarkaInput, MasterInput,
-    MasterKind, MasterRow, NarrationInput, PackingInput, StaffInput, StoreInput,
+    AddaInput, CityInput, ExpenseHeadInput, ItemInput, MarkaInput, MasterInput, MasterKind,
+    MasterRow, NarrationInput, PackingInput, StaffInput, StoreInput,
 };
 use mandi_services::testing::TestEnv;
 use mandi_services::{Rejection, ServiceError, auth, masters};
@@ -144,11 +144,7 @@ fn codes_are_suggested_taken_and_unique() {
     );
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM cities"), 2);
     // Kinds without a code give an empty suggestion.
-    for kind in [
-        MasterKind::Narration,
-        MasterKind::Staff,
-        MasterKind::BankAccount,
-    ] {
+    for kind in [MasterKind::Narration, MasterKind::Staff] {
         assert_eq!(masters::next_code(&env.ctx, kind).unwrap(), "");
     }
     // Each list has its own codes.
@@ -347,7 +343,7 @@ fn the_rows_every_kind_needs_can_be_added_edited_and_made_inactive() {
         let all = masters::list(&env.ctx, kind, true).unwrap();
         let before = masters::list(&env.ctx, kind, false).unwrap();
         if all.is_empty() {
-            continue; // expense heads and bank accounts are in the next test
+            continue; // expense heads are in the next test
         }
         assert_eq!(all.len(), before.len());
         let target = all[0].id();
@@ -371,7 +367,7 @@ fn the_rows_every_kind_needs_can_be_added_edited_and_made_inactive() {
 }
 
 #[test]
-fn an_expense_head_makes_its_account_under_0501_and_a_bank_account_under_0102() {
+fn an_expense_head_makes_its_account_under_0501() {
     let (dir, env, owner) = ready();
     let head = |code: &str, ur: &str, en: &str| {
         MasterInput::ExpenseHead(ExpenseHeadInput {
@@ -463,32 +459,8 @@ fn an_expense_head_makes_its_account_under_0501_and_a_bank_account_under_0102() 
         )
         .unwrap();
     assert_eq!(active, 0);
-    // A bank account: the seeded default bank is 01020001, so the next is 01020002.
-    let bank = masters::save(
-        &env.ctx,
-        &owner,
-        &MasterInput::BankAccount(BankAccountInput {
-            id: None,
-            version: None,
-            bank_name: "HBL".into(),
-            title: "Maher Adnan and Brothers".into(),
-            number: "PK36-SCBL-0000001123456702".into(),
-            name_ur: "ایچ بی ایل".into(),
-            name_en: "HBL".into(),
-            confirmed_rules_words: vec!["ایچ".into(), "بی".into(), "ایل".into(), "HBL".into()],
-        }),
-    )
-    .unwrap();
-    let MasterRow::BankAccount(bank) = bank else {
-        panic!()
-    };
-    assert_eq!(bank.account_code, "01020002");
-    assert_eq!(
-        (bank.bank_name.as_str(), bank.number.as_str()),
-        ("HBL", "PK36-SCBL-0000001123456702")
-    );
     // The accounts and the masters were each audited.
-    assert!(audit_count_for(&dir, "create", "account") >= 3);
+    assert!(audit_count_for(&dir, "create", "account") >= 2);
     assert_chain_ok(&dir);
 }
 

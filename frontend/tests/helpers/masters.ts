@@ -9,6 +9,7 @@ import * as mastersApi from '../../src/features/masters/api';
 import type { MasterKind, MasterRecord } from '../../src/features/masters/types';
 import * as searchApi from '../../src/shared/search/api';
 import type { SearchHit } from '../../src/shared/search';
+import { mastersPageOf } from './paged';
 
 export interface FakeMasters {
   /** The rows of every kind now, as the backend would list them. */
@@ -25,7 +26,6 @@ const KINDS: readonly MasterKind[] = [
   'narration',
   'expense_head',
   'staff',
-  'bank_account',
 ];
 
 export function record(
@@ -86,8 +86,17 @@ export function fakeMasters(
   };
   let nextId = 1000;
 
-  vi.mocked(mastersApi.mastersList).mockImplementation((kind, includeInactive) =>
-    Promise.resolve(store.rows[kind].filter((row) => includeInactive || row.is_active)),
+  vi.mocked(mastersApi.mastersList).mockImplementation((kind, includeInactive, offset, limit) =>
+    Promise.resolve(
+      mastersPageOf(
+        store.rows[kind].filter((row) => includeInactive || row.is_active),
+        offset,
+        limit,
+      ),
+    ),
+  );
+  vi.mocked(mastersApi.mastersGetOne).mockImplementation((kind, id) =>
+    Promise.resolve(store.rows[kind].find((row) => row.id === id) ?? null),
   );
   vi.mocked(mastersApi.mastersNextCode).mockImplementation((kind) => {
     const highest = Math.max(0, ...store.rows[kind].map((row) => Number(row.code) || 0));

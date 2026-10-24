@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use criterion::{Criterion, SamplingMode, criterion_group, criterion_main};
 use mandi_services::core::vouchers::{
-    OpenBillsInput, OpenPayablesInput, PaymentInput, ReceiptInput, VoucherEntry, VoucherMode,
+    OpenBillsInput, OpenPayablesInput, PaymentInput, ReceiptInput, VoucherEntry,
     VoucherPreviewInput,
 };
 use mandi_services::vouchers;
@@ -45,10 +45,7 @@ fn receipt(account: i64) -> ReceiptInput {
         account_id: account,
         person_key: None,
         amount: "1,000".into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
         narration: String::new(),
     }
@@ -60,10 +57,7 @@ fn payment(account: i64, reason: &str) -> PaymentInput {
         account_id: account,
         person_key: None,
         amount: "1,000".into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
         narration: String::new(),
         // The volume has little cash; the question is part of the save, not of the speed.

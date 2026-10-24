@@ -136,27 +136,6 @@ vouchers-fill-full = Full balance
 vouchers-fill-oldest = Oldest bill
 
 # review: pending
-vouchers-field-mode = Mode
-
-# review: pending
-vouchers-mode-cash = Cash
-
-# review: pending
-vouchers-mode-bank = Bank
-
-# review: pending
-vouchers-mode-cheque = Cheque
-
-# review: pending
-vouchers-field-bank = Bank account
-
-# review: pending
-vouchers-field-cheque-no = Cheque number
-
-# review: pending
-vouchers-field-cheque-date = Cheque date
-
-# review: pending
 vouchers-field-collector = Collector
 
 # review: pending
@@ -420,13 +399,13 @@ vouchers-other-screen-open = Open { -rokar }
 vouchers-cancel-title = Cancel this voucher?
 
 # review: pending
-vouchers-cancel-text-receipt = { -wasooli } { $number } (<num>{ $amount }</num>, { $name }) will be cancelled. { -rokar } (or the bank) and his account go back as they were, and the bills it settled are open again.
+vouchers-cancel-text-receipt = { -wasooli } { $number } (<num>{ $amount }</num>, { $name }) will be cancelled. { -rokar } and his account go back as they were, and the bills it settled are open again.
 
 # review: pending
-vouchers-cancel-text-payment = { -adaigi } { $number } (<num>{ $amount }</num>, { $name }) will be cancelled. { -rokar } (or the bank) and the account go back as they were. If it was { -naqd-udhar } to a { -gahak }, that bill is removed too.
+vouchers-cancel-text-payment = { -adaigi } { $number } (<num>{ $amount }</num>, { $name }) will be cancelled. { -rokar } and the account go back as they were. If it was { -naqd-udhar } to a { -gahak }, that bill is removed too.
 
 # review: pending
-vouchers-cancel-text-advance = { -peshgi-khata } { $number } (<num>{ $amount }</num>, { $name }) will be cancelled. { -rokar } (or the bank) and his account go back as they were, and what was adjusted against this { -peshgi } becomes payable to the { -beopari } again.
+vouchers-cancel-text-advance = { -peshgi-khata } { $number } (<num>{ $amount }</num>, { $name }) will be cancelled. { -rokar } and his account go back as they were, and what was adjusted against this { -peshgi } becomes payable to the { -beopari } again.
 
 # review: pending
 vouchers-cancel-reason = Reason

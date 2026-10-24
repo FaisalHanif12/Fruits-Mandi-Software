@@ -14,16 +14,18 @@ import listDayRequest from '../fixtures/bikri_list_day_request.json';
 import draftsGet from '../fixtures/drafts_get_bikri.json';
 import searchGlobalTruck from '../fixtures/search_global_bikri_truck.json';
 import registerDay from '../fixtures/pukhta_register_day.json';
+import registerDayBuyers from '../fixtures/pukhta_register_day_buyers.json';
+import registerDayBuyersRequest from '../fixtures/pukhta_register_day_buyers_request.json';
 import registerDayRequest from '../fixtures/pukhta_register_day_request.json';
 import peopleShahid from '../fixtures/search_pukhta_people_shahid.json';
 import type { BikriDetail } from '../../src/bindings/BikriDetail';
-import type { BikriListRow } from '../../src/bindings/BikriListRow';
+import type { BikriList } from '../../src/bindings/BikriList';
 import type { BikriSaveInput } from '../../src/bindings/BikriSaveInput';
 import type { BikriSaved } from '../../src/bindings/BikriSaved';
 import type { DraftRow } from '../../src/bindings/DraftRow';
 import type { GlobalHit } from '../../src/bindings/GlobalHit';
 import type { PukhtaPerson } from '../../src/bindings/PukhtaPerson';
-import type { PukhtaRegisterRow } from '../../src/bindings/PukhtaRegisterRow';
+import type { PukhtaRegister } from '../../src/bindings/PukhtaRegister';
 
 /** The fixture files are the backend's own JSON; their text is read as the generated types. */
 function savedOf(value: unknown): BikriSaved {
@@ -35,8 +37,8 @@ function saveInputOf(value: unknown): BikriSaveInput {
 function detailOf(value: unknown): BikriDetail {
   return value as BikriDetail;
 }
-function listOf(value: unknown): BikriListRow[] {
-  return value as BikriListRow[];
+function listOf(value: unknown): BikriList {
+  return value as BikriList;
 }
 function draftOf(value: unknown): DraftRow {
   return value as DraftRow;
@@ -44,8 +46,8 @@ function draftOf(value: unknown): DraftRow {
 function hitsOf(value: unknown): GlobalHit[] {
   return value as GlobalHit[];
 }
-function registerOf(value: unknown): PukhtaRegisterRow[] {
-  return value as PukhtaRegisterRow[];
+function registerOf(value: unknown): PukhtaRegister {
+  return value as PukhtaRegister;
 }
 function peopleOf(value: unknown): PukhtaPerson[] {
   return value as PukhtaPerson[];
@@ -60,10 +62,13 @@ export const SAVE_EVENT2_REQUEST: BikriSaveInput = saveInputOf(saveEvent2Request
 export const GET_EVENT1: BikriDetail = detailOf(getEvent1);
 export const GET_EVENT2: BikriDetail = detailOf(getEvent2);
 /** The list of 10-10-2026: Event 2 first (number 2), then Event 1, newest first. */
-export const LIST_DAY: BikriListRow[] = listOf(listDay);
+export const LIST_DAY: BikriList = listOf(listDay);
 export const LIST_DAY_REQUEST: Record<string, unknown> = listDayRequest;
 export const DRAFT_ROW: DraftRow = draftOf(draftsGet);
 export const GLOBAL_TRUCK: GlobalHit[] = hitsOf(searchGlobalTruck);
-export const REGISTER_DAY: PukhtaRegisterRow[] = registerOf(registerDay);
+export const REGISTER_DAY: PukhtaRegister = registerOf(registerDay);
 export const REGISTER_DAY_REQUEST: Record<string, unknown> = registerDayRequest;
+/** The register of the buyers only: with a side chosen the totals are given (PRD FR-19.11). */
+export const REGISTER_DAY_BUYERS: PukhtaRegister = registerOf(registerDayBuyers);
+export const REGISTER_DAY_BUYERS_REQUEST: Record<string, unknown> = registerDayBuyersRequest;
 export const PEOPLE_SHAHID: PukhtaPerson[] = peopleOf(peopleShahid);

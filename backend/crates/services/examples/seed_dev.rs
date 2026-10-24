@@ -38,9 +38,7 @@ use mandi_services::core::masters::{
     AddaInput, CityInput, ExpenseHeadInput, ItemInput, MasterInput, PackingInput,
 };
 use mandi_services::core::partners::{PartnerCreateInput, PartnersSetSharesInput, ShareInput};
-use mandi_services::core::vouchers::{
-    AdvanceInput, DayCloseInput, DayClosePreviewInput, VoucherMode,
-};
+use mandi_services::core::vouchers::{AdvanceInput, DayCloseInput, DayClosePreviewInput};
 use mandi_services::db::audit::{AuditKey, MemoryKeyStore};
 use mandi_services::db::clock::ManualClock;
 use mandi_services::db::{Db, DbOptions};
@@ -354,10 +352,7 @@ fn run(path: &Path) -> Result<(), ServiceError> {
             date: "01-09-2026".into(),
             seller_account_id: rahim,
             amount: "15,000".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },

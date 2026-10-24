@@ -22,7 +22,7 @@ fn event1_truck(w: &World, truck: &str) -> mandi_services::core::bikri::BikriDra
 }
 
 fn list(w: &World, input: BikriListInput) -> Vec<mandi_services::core::bikri::BikriListRow> {
-    bikri::list(&w.env.ctx, &input).unwrap()
+    bikri::list(&w.env.ctx, &input).unwrap().rows
 }
 
 #[test]
@@ -408,7 +408,7 @@ fn the_register_shows_paid_and_due_with_what_is_open() {
     let w = world();
     three_people(&w);
     let all = bikri::register(&w.env.ctx, &PukhtaRegisterInput::default()).unwrap();
-    let find = |name: &str| all.iter().find(|r| r.name_en == name).unwrap();
+    let find = |name: &str| all.rows.iter().find(|r| r.name_en == name).unwrap();
     // شاہد bought for cash: paid at once.
     let shahid = find("Shahid");
     assert_eq!(
@@ -439,12 +439,13 @@ fn the_register_shows_paid_and_due_with_what_is_open() {
     assert!(!bashir.paid);
     assert_eq!(bashir.amount.rupees(), 12_000);
     assert_eq!(bashir.commission.rupees(), 720);
-    assert_eq!(all.len(), 3);
+    assert_eq!(all.rows.len(), 3);
 
     // Filters.
     let reg = |input: PukhtaRegisterInput| -> Vec<String> {
         bikri::register(&w.env.ctx, &input)
             .unwrap()
+            .rows
             .iter()
             .map(|r| r.name_en.clone())
             .collect()
@@ -524,6 +525,7 @@ fn two_lots_of_one_one_time_seller_are_each_paid_or_due_on_their_own() {
     save_ok(&w, &draft(vec![a, b]));
     let rows = bikri::register(&w.env.ctx, &PukhtaRegisterInput::default()).unwrap();
     let seller_rows: Vec<(i64, bool)> = rows
+        .rows
         .iter()
         .filter(|r| r.side == PukhtaSide::Seller)
         .map(|r| (r.open.rupees(), r.paid))
@@ -557,6 +559,7 @@ fn a_lot_with_a_negative_net_is_set_against_the_same_persons_other_lots() {
     );
     let rows = bikri::register(&w.env.ctx, &PukhtaRegisterInput::default()).unwrap();
     let sellers: Vec<(i64, bool)> = rows
+        .rows
         .iter()
         .filter(|r| r.side == PukhtaSide::Seller)
         .map(|r| (r.open.rupees(), r.paid))

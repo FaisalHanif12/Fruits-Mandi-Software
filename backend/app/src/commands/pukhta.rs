@@ -2,7 +2,7 @@
 //! plan 13). Read only (Code Standards B29).
 
 use mandi_services::core::bikri::{
-    PukhtaPeopleInput, PukhtaPerson, PukhtaRegisterInput, PukhtaRegisterRow,
+    PukhtaPeopleInput, PukhtaPerson, PukhtaRegister, PukhtaRegisterInput,
 };
 use mandi_services::core::vouchers::{MadeRegular, MakeRegularInput};
 use mandi_services::{auth, bikri, vouchers};
@@ -34,7 +34,7 @@ pub async fn search_pukhta_people<R: tauri::Runtime>(
 pub async fn pukhta_register<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: PukhtaRegisterInput,
-) -> Result<Vec<PukhtaRegisterRow>, UiError> {
+) -> Result<PukhtaRegister, UiError> {
     run(app, "pukhta_register", move |ctx| {
         auth::require(ctx)?;
         bikri::register(ctx, &input)

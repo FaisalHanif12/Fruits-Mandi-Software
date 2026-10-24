@@ -287,6 +287,28 @@ pub fn list(ctx: &Context) -> Result<Vec<LearnedRow>, ServiceError> {
     ctx.db.read(load_all)
 }
 
+/// One page of the learned pairs, the most used first, with how many there are and how many times
+/// they were all used (PRD FR-19.11, B31).
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn list_page(
+    ctx: &Context,
+    offset: u32,
+    limit: u32,
+) -> Result<(Vec<LearnedRow>, i64, i64), ServiceError> {
+    let all = list(ctx)?;
+    let total_count =
+        i64::try_from(all.len()).map_err(|_| ServiceError::Data("too many rows".to_owned()))?;
+    let mut uses = 0_i64;
+    for row in &all {
+        uses = uses
+            .checked_add(i64::from(row.use_count))
+            .ok_or_else(|| ServiceError::reject(ErrorCode::ErrOverflow))?;
+    }
+    Ok((crate::page::slice(all, offset, limit), total_count, uses))
+}
+
 /// Removes one learned pair (PRD FR-7.26, Owner). Names already saved are not touched.
 ///
 /// # Errors

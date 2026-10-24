@@ -13,7 +13,7 @@ use chrono::{TimeZone, Utc};
 use common::*;
 use mandi_services::core::accounts::{AccountInput, AccountType};
 use mandi_services::core::error::ErrorCode;
-use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
+use mandi_services::core::vouchers::AdvanceInput;
 use mandi_services::{accounts, auth, vouchers};
 
 fn seller() -> AccountInput {
@@ -54,10 +54,7 @@ fn advance(to: i64, date: &str) -> AdvanceInput {
         date: date.into(),
         seller_account_id: to,
         amount: "100".into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
     }

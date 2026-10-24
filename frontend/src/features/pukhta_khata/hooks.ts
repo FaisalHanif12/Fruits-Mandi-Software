@@ -4,7 +4,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { PukhtaRegisterInput } from '../../bindings/PukhtaRegisterInput';
 import type { PukhtaSide } from '../../bindings/PukhtaSide';
-import { useDebouncedValue } from '../../shared/hooks';
+import { useDebouncedValue, usePagedQuery } from '../../shared/hooks';
 import { pukhtaRegister, searchPukhtaPeople } from './api';
 
 /** A short pause so a burst of key presses asks once. */
@@ -28,14 +28,17 @@ export function usePukhtaPeople(text: string, side: PukhtaSide) {
 
 const FILTER_DELAY_MS = 150;
 
-/** The register for the filters (PRD FR-13.6). */
-export function usePukhtaRegister(filter: PukhtaRegisterInput) {
+/**
+ * The register for the filters, page by page, with the count and the totals of the whole filter
+ * (PRD FR-13.6, FR-19.11).
+ */
+export function usePukhtaRegister(filter: Omit<PukhtaRegisterInput, 'offset' | 'limit'>) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return useQuery({
+  return usePagedQuery({
     queryKey: ['pukhta', 'register', settled],
-    queryFn: () => pukhtaRegister(settled),
-    placeholderData: keepPreviousData,
-    staleTime: 0,
-    gcTime: 0,
+    fetchPage: (offset, limit) => pukhtaRegister({ ...settled, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }

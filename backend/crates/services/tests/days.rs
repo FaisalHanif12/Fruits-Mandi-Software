@@ -10,7 +10,7 @@ use mandi_services::core::accounts::{
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
-    AdvanceInput, DayCloseInput, DayClosePreviewInput, DayReopenInput, VoucherMode,
+    AdvanceInput, DayCloseInput, DayClosePreviewInput, DayReopenInput,
 };
 use mandi_services::testing::TestEnv;
 use mandi_services::{ServiceError, accounts, auth, day, vouchers};
@@ -112,10 +112,7 @@ fn give(
             date: date.into(),
             seller_account_id: rahim,
             amount: amount.into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },

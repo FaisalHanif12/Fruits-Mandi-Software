@@ -51,10 +51,3 @@ export const LAYOUT_IDS = {
 
 /** The payment message that means the buyer has paid (contract 6). */
 export const PAYMENT_PAID_ID = 'print-payment-cash';
-
-/**
- * The messages that say how a voucher was paid (`print-mode-cash`, `print-mode-bank`,
- * `print-mode-cheque`, plan 15 contract 9). On a slip the money has moved, so the box is drawn as
- * paid (solid), not as a payment still due (dashed).
- */
-export const MODE_ID_PREFIX = 'print-mode-';

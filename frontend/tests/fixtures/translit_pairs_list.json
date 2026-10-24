@@ -1,0 +1,48 @@
+{
+  "rows": [
+    {
+      "id": 1,
+      "kind": "name",
+      "last_used_at": "2026-10-10T09:00:00.000Z",
+      "roman": "ali",
+      "urdu": "علی",
+      "use_count": 2
+    },
+    {
+      "id": 2,
+      "kind": "name",
+      "last_used_at": "2026-10-10T09:00:00.000Z",
+      "roman": "ahmed",
+      "urdu": "احمد",
+      "use_count": 1
+    },
+    {
+      "id": 3,
+      "kind": "name",
+      "last_used_at": "2026-10-10T09:00:00.000Z",
+      "roman": "bilal",
+      "urdu": "بلال",
+      "use_count": 1
+    },
+    {
+      "id": 4,
+      "kind": "name",
+      "last_used_at": "2026-10-10T09:00:00.000Z",
+      "roman": "chand",
+      "urdu": "چاند",
+      "use_count": 1
+    },
+    {
+      "id": 5,
+      "kind": "name",
+      "last_used_at": "2026-10-10T09:00:00.000Z",
+      "roman": "dawood",
+      "urdu": "داؤد",
+      "use_count": 1
+    }
+  ],
+  "total_count": 5,
+  "totals": {
+    "use_count": 6
+  }
+}

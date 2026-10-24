@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use criterion::{Criterion, SamplingMode, criterion_group, criterion_main};
 use mandi_services::core::accounts::{AccountFilter, AccountsListInput};
-use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
+use mandi_services::core::vouchers::AdvanceInput;
 use mandi_services::{assist, coa, ledger, vouchers};
 use support::{Rng, ensure_volume, fail, open};
 
@@ -202,10 +202,7 @@ fn voucher_speed(c: &mut Criterion) {
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: "1,000".into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
     };

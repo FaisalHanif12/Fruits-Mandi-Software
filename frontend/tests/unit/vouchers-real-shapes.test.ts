@@ -59,10 +59,6 @@ const RECEIPT_ENTRY = (accountId: number, amount: string) => ({
   account_id: accountId,
   person_key: null,
   amount,
-  mode: 'cash' as const,
-  bank_account_id: null,
-  cheque_no: '',
-  cheque_date: '',
   collector_staff_id: null,
   narration: '',
 });
@@ -87,10 +83,6 @@ describe('the canned data of the component tests has the real shape', () => {
       account_id: accountId,
       person_key: null,
       amount: '4316',
-      mode: 'cash' as const,
-      bank_account_id: null,
-      cheque_no: '',
-      cheque_date: '',
       reason: accountId === 21 ? 'x' : '',
       narration: '',
       confirm_cash_below_zero: false,
@@ -105,10 +97,6 @@ describe('the canned data of the component tests has the real shape', () => {
           date: '10-10-2026',
           seller_account_id: 31,
           amount: '15000',
-          mode: 'cash',
-          bank_account_id: null,
-          cheque_no: '',
-          cheque_date: '',
           expected_goods: '',
           narration: '',
           confirm_cash_below_zero: false,
@@ -143,9 +131,9 @@ describe('the canned data of the component tests has the real shape', () => {
     expect(same(real.SAVED_RECEIPT, saved)).toBeNull();
     for (const one of [
       real.SAVED_PAYMENT,
+      real.SAVED_RECEIPT_ARSHAD,
       real.SAVED_ADVANCE,
       real.SAVED_CASH_LENT,
-      real.SAVED_CHEQUE,
       real.EDITED_RECEIPT,
     ]) {
       expect(same(real.SAVED_RECEIPT, one)).toBeNull();
@@ -167,9 +155,11 @@ describe('the canned data of the component tests has the real shape', () => {
       to: '',
       account_id: null,
       person_key: null,
+      offset: 0,
+      limit: 0,
     });
     expect(same(real.LIST_PAYMENTS, list)).toBeNull();
-    expect(same(real.LIST_ALL, { rows: list.rows, total_paisa: list.total_paisa })).toBeNull();
+    expect(same(real.LIST_ALL, list)).toBeNull();
   });
 
   it('the open bills, the payables and the advances of a seller', () => {
@@ -199,13 +189,10 @@ describe('the canned data of the component tests has the real shape', () => {
     expect(same(real.MADE_REGULAR, canned)).toBeNull();
   });
 
-  it('the receipt slip: a receipt, a payment, an advance, a cheque', () => {
+  it('the receipt slip: a receipt, a payment, an advance', () => {
     expect(same(real.SLIP_RECEIPT_UR, voucherPrintData('receipt', { language: 'ur' }))).toBeNull();
     expect(same(real.SLIP_PAYMENT_EN, voucherPrintData('payment', { language: 'en' }))).toBeNull();
     expect(same(real.SLIP_ADVANCE_UR, voucherPrintData('advance', { language: 'ur' }))).toBeNull();
-    expect(
-      same(real.SLIP_CHEQUE_EN, voucherPrintData('receipt', { language: 'en', mode: 'cheque' })),
-    ).toBeNull();
   });
 
   it('a voucher found by global search', () => {
@@ -227,7 +214,6 @@ function stripType<T extends { type: string }>(entry: T): Omit<T, 'type'> {
 describe('the screen builds the request the backend’s own test sent', () => {
   const buyer = { id: 20, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
   const seller = { id: 18, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
-  const bank = { id: 1, code: '0001', name_ur: 'بینک', name_en: 'Bank' };
   const draft = (type: VoucherDraft['type'], changes: Partial<VoucherDraft>): VoucherDraft => ({
     ...newDraft(type, '2026-10-10'),
     ...changes,
@@ -243,20 +229,31 @@ describe('the screen builds the request the backend’s own test sent', () => {
     expect(entryOf(built)).toEqual(real.REQUEST_PREVIEW_RECEIPT_BUYER.entry);
   });
 
-  it('a receipt by cheque into a bank account', () => {
+  it('a plain cash receipt for another buyer has the same request, and never a mode, bank or cheque', () => {
     const built = build(
       draft('receipt', {
         account: { ...buyer, id: 21, code: '03040002' },
         accountType: 'buyer',
         amount: '5,000',
-        mode: 'cheque',
-        bank,
-        cheque_no: '000123',
-        cheque_date: '12-10-2026',
       }),
       false,
     );
-    expect(built).toEqual({ type: 'receipt', input: real.REQUEST_SAVE_RECEIPT_CHEQUE });
+    expect(built).toEqual({ type: 'receipt', input: real.REQUEST_SAVE_RECEIPT_ARSHAD });
+    for (const gone of ['mode', 'bank_account_id', 'cheque_no', 'cheque_date']) {
+      expect(real.REQUEST_SAVE_RECEIPT_ARSHAD).not.toHaveProperty(gone);
+    }
+  });
+
+  it('an old client that still sends them is refused field by field, and nothing is posted', () => {
+    expect(Object.keys(real.REQUEST_OLD_PAYMENT_FIELDS)).toEqual(
+      expect.arrayContaining(['mode', 'bank_account_id', 'cheque_no', 'cheque_date']),
+    );
+    expect(real.REFUSED_OLD_PAYMENT_FIELDS.errors.map((item) => [item.code, item.field])).toEqual([
+      ['ERR_FIELD_NOT_ALLOWED', 'mode'],
+      ['ERR_FIELD_NOT_ALLOWED', 'bank_account_id'],
+      ['ERR_FIELD_NOT_ALLOWED', 'cheque_no'],
+      ['ERR_FIELD_NOT_ALLOWED', 'cheque_date'],
+    ]);
   });
 
   it('cash lent to a buyer carries the reason', () => {

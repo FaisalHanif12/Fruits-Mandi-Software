@@ -25,6 +25,7 @@ import {
 import { fakeMasters } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { AKRAM, KARIM, PUKHTA_BUYER, RAHIM, fakeVouchers } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -47,7 +48,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
   vi.mocked(pukhtaApi.searchPukhtaPeople).mockImplementation((text) => {
     const needle = text.toLowerCase();

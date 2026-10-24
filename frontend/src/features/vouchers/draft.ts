@@ -22,7 +22,7 @@ import type {
   VoucherSaved,
 } from './types';
 
-/** A new voucher: today as the date, cash as the mode, everything else empty (PRD 15.1). */
+/** A new voucher: today as the date, everything else empty. All money is روکڑ (PRD 15.1). */
 export function newDraft(type: ScreenType, today: string): VoucherDraft {
   return {
     type,
@@ -33,10 +33,6 @@ export function newDraft(type: ScreenType, today: string): VoucherDraft {
     person: null,
     personText: '',
     amount: '',
-    mode: 'cash',
-    bank: null,
-    cheque_no: '',
-    cheque_date: '',
     collector: null,
     reason: '',
     expected_goods: '',
@@ -45,10 +41,10 @@ export function newDraft(type: ScreenType, today: string): VoucherDraft {
 }
 
 /**
- * The same screen with another type (PRD FR-7.67): what the types share stays (date, amount, how
- * the money moves and the narration), the rest is cleared, because an account, a person or a reason
- * of one type means nothing to another. Example: 3,000 typed as a payment to Rahim, then the type
- * list changed to receipt: 3,000 and cash stay, Rahim goes.
+ * The same screen with another type (PRD FR-7.67): what the types share stays (date, amount and
+ * narration), the rest is cleared, because an account, a person or a reason of one type means
+ * nothing to another. Example: 3,000 typed as a payment to Rahim, then the type list changed to
+ * receipt: 3,000 stays, Rahim goes.
  */
 export function changeType(draft: VoucherDraft, type: ScreenType): VoucherDraft {
   if (draft.type === type) return draft;
@@ -56,25 +52,18 @@ export function changeType(draft: VoucherDraft, type: ScreenType): VoucherDraft 
     ...newDraft(type, ''),
     date: draft.date,
     amount: draft.amount,
-    mode: draft.mode,
-    bank: draft.bank,
-    cheque_no: draft.cheque_no,
-    cheque_date: draft.cheque_date,
     narration: draft.narration,
   };
 }
 
 /**
- * The next voucher after one was saved: the type, the date and how the money moves stay, as the
- * user is likely to enter several of one kind in one sitting; the account, the amount and the
- * notes start again.
+ * The next voucher after one was saved: the type and the date stay, as the user is likely to enter
+ * several of one kind in one sitting; the account, the amount and the notes start again.
  */
 export function nextDraft(previous: VoucherDraft): VoucherDraft {
   return {
     ...newDraft(previous.type, ''),
     date: previous.date,
-    mode: previous.mode,
-    bank: previous.bank,
   };
 }
 
@@ -124,15 +113,9 @@ export type BuiltVoucher =
 export function build(draft: VoucherDraft, confirmCash: boolean): BuiltVoucher | null {
   const { account } = draft;
   if (account === null) return null;
-  const bank = draft.mode !== 'cash';
-  const cheque = draft.mode === 'cheque';
   const common = {
     date: draft.date,
     amount: draft.amount,
-    mode: draft.mode,
-    bank_account_id: bank ? (draft.bank?.id ?? null) : null,
-    cheque_no: cheque ? draft.cheque_no : '',
-    cheque_date: cheque ? draft.cheque_date : '',
     narration: draft.narration,
   };
   switch (draft.type) {
@@ -182,10 +165,9 @@ export function entryOf(built: BuiltVoucher): VoucherEntry {
   }
 }
 
-/** The names of the records a saved voucher points at by id only (the bank, the collector). */
+/** The names of the records a saved voucher points at by id only (the collector). */
 export interface RowExtras {
   accountType: AccountType | null;
-  bank: PickerValue | null;
   collector: PickerValue | null;
 }
 
@@ -210,10 +192,6 @@ export function draftOfRow(
     person,
     personText: person === null ? '' : displayName(person, language),
     amount: formatPaisa(row.amount_paisa, { grouping }),
-    mode: row.mode,
-    bank: extras.bank,
-    cheque_no: row.cheque_no,
-    cheque_date: row.cheque_date === null ? '' : isoToDisplayDate(row.cheque_date),
     collector: extras.collector,
     reason: row.reason,
     expected_goods: row.expected_goods,

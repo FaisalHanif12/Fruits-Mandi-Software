@@ -1,4 +1,4 @@
-// The list of one master (route /index/<kind>), the same screen for all ten (plan 06): a filter box
+// The list of one master (route /index/<kind>), the same screen for all nine (plan 06): a filter box
 // that searches both scripts, a "show inactive" tick, the rows in a grid, and one button for a new
 // one. Keys (PRD FR-7.17): F2 new, ↑ ↓ and Page Up / Page Down between rows, Enter opens the row,
 // Esc goes back to the menu. Four states: loading, error with a retry, empty with a button, rows.
@@ -8,29 +8,18 @@ import { useNavigate, useParams } from '@tanstack/react-router';
 import { Plus, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField } from '../../../shared/hooks';
-import { ListGrid } from '../../../shared/grid';
+import { useFocusFirstField, useLoadRest } from '../../../shared/hooks';
+import { PagedList } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
-import {
-  Button,
-  Checkbox,
-  EmptyState,
-  ErrorState,
-  Field,
-  LoadingState,
-  TextInput,
-} from '../../../shared/ui';
+import { Button, Checkbox, EmptyState, ErrorState, Field, TextInput } from '../../../shared/ui';
 import { columnsOf, configOfPath, type MasterConfig } from '../configs';
 import { useMasterFilter, useMasterList } from '../hooks';
 import { useMasterFocus } from '../store';
 import type { MasterRecord } from '../types';
 import { UnknownMasterPage } from './UnknownMasterPage';
 
-/**
- * A list of this many rows or fewer is as tall as its rows and draws them all. A longer one fills
- * the height of the screen and draws only the rows in view (NFR-SPD-18).
- */
-const SHORT_LIST_ROWS = 30;
+/** How many pages (100 masters each) are read to find the row last opened; then the focus starts on the first row. */
+const REMEMBERED_ROW_PAGES = 20;
 
 export function MasterListPage() {
   const params = useParams({ strict: false });
@@ -42,12 +31,23 @@ export function MasterListPage() {
 function MasterList({ config }: { config: MasterConfig }) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
-  const list = useMasterList(config.kind);
   const [filterText, setFilterText] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  // The list holds the inactive masters too; the tick only shows or hides them, with no new call.
+  const list = useMasterList(config.kind, true);
   const filter = useMasterFilter(config.kind, filterText);
   const remember = useMasterFocus((state) => state.remember);
   const focusRowId = useMasterFocus((state) => state.rows[config.kind]);
+  // The grid puts the focus back on the row last opened or saved when it is drawn, so that row must
+  // be loaded first: while it is on a later page, the pages are read until it is (no filter typed).
+  const findingRow =
+    focusRowId !== undefined &&
+    filter.ids === null &&
+    list.hasNextPage &&
+    (list.data?.pages.length ?? 0) < REMEMBERED_ROW_PAGES &&
+    !list.data?.pages.some((page) => page.rows.some((record) => record.id === focusRowId));
+  // A typed filter is matched against the rows, so while it is typed the rest of the pages load.
+  useLoadRest(list, filter.ids !== null || findingRow);
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const columns = useMemo(() => columnsOf(config), [config]);
 
@@ -63,14 +63,17 @@ function MasterList({ config }: { config: MasterConfig }) {
     void navigate({ to: '/index' });
   });
 
-  const all = list.data;
+  const first = list.data?.pages[0];
   const rows = useMemo(() => {
-    if (all === undefined) return [];
-    const visible = showInactive ? all : all.filter((record) => record.is_active);
-    if (filter.ids === null) return visible;
-    const byId = new Map(visible.map((record) => [record.id, record]));
+    const all = list.data?.pages.flatMap((page) => page.rows);
+    if (all === undefined) return undefined;
+    const loaded = showInactive ? all : all.filter((record) => record.is_active);
+    if (filter.ids === null) return loaded;
+    const byId = new Map(loaded.map((record) => [record.id, record]));
     return filter.ids.flatMap((id) => byId.get(id) ?? []);
-  }, [all, showInactive, filter.ids]);
+  }, [list.data, showInactive, filter.ids]);
+  // While the filter is on its way, or the rest of the pages it needs, there is nothing to say yet.
+  const settling = filter.isPending || (filter.ids !== null && list.hasNextPage);
 
   const newButton = (
     <Button variant="primary" shortcut={SHORTCUTS.newEntry} onClick={openNew}>
@@ -79,73 +82,73 @@ function MasterList({ config }: { config: MasterConfig }) {
     </Button>
   );
 
-  let body;
-  if (list.isPending) {
-    body = <LoadingState />;
-  } else if (list.isError) {
-    body = (
-      <ErrorState
-        title={<Localized id="masters-load-failed" />}
-        error={uiErrorOf(list.error)}
-        onRetry={() => {
-          void list.refetch();
-        }}
-      />
-    );
-  } else if (filter.isError) {
-    body = (
-      <ErrorState
-        title={<Localized id="masters-filter-failed" />}
-        error={uiErrorOf(filter.error)}
-        onRetry={() => {
-          void filter.refetch();
-        }}
-      />
-    );
-  } else if (list.data.length === 0) {
-    body = (
-      <EmptyState
-        icon={config.icon}
-        title={<Localized id={config.emptyId} />}
-        help={<Localized id="masters-empty-help" vars={{ key: SHORTCUTS.newEntry.label }} />}
-        action={newButton}
-      />
-    );
-  } else if (rows.length === 0 && !filter.isPending) {
-    body = (
-      <EmptyState
-        icon={SearchX}
-        title={<Localized id="masters-no-match-title" />}
-        help={<Localized id="masters-no-match-help" />}
-        action={
-          <Button
-            onClick={() => {
-              setFilterText('');
-              setShowInactive(true);
-            }}
-          >
-            <Localized id="masters-no-match-clear" />
-          </Button>
-        }
-      />
-    );
-  } else {
-    body = (
-      <ListGrid<MasterRecord>
-        columns={columns}
-        rows={rows}
-        getRowId={(record) => String(record.id)}
-        labelId={config.titleId}
-        onOpen={open}
-        heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
-        isInactive={(record) => !record.is_active}
-        focusRowId={focusRowId === undefined ? null : String(focusRowId)}
-        onFocusRow={(rowId) => {
-          remember(config.kind, Number(rowId));
-        }}
-      />
-    );
-  }
+  // No master at all (the list with the inactive ones is empty) or no match for what is typed.
+  const nothingAtAll = first?.total_count === 0 && filter.ids === null;
+  const empty = nothingAtAll ? (
+    <EmptyState
+      icon={config.icon}
+      title={<Localized id={config.emptyId} />}
+      help={<Localized id="masters-empty-help" vars={{ key: SHORTCUTS.newEntry.label }} />}
+      action={newButton}
+    />
+  ) : (
+    <EmptyState
+      icon={SearchX}
+      title={<Localized id="masters-no-match-title" />}
+      help={<Localized id="masters-no-match-help" />}
+      action={
+        <Button
+          onClick={() => {
+            setFilterText('');
+            setShowInactive(true);
+          }}
+        >
+          <Localized id="masters-no-match-clear" />
+        </Button>
+      }
+    />
+  );
+  const body = filter.isError ? (
+    <ErrorState
+      title={<Localized id="masters-filter-failed" />}
+      error={uiErrorOf(filter.error)}
+      onRetry={() => {
+        void filter.refetch();
+      }}
+    />
+  ) : (
+    <PagedList<MasterRecord>
+      columns={columns}
+      // Nothing is drawn while the filter settles, so "no match" never flashes.
+      rows={list.isError || findingRow || (settling && rows?.length === 0) ? undefined : rows}
+      totalCount={
+        filter.ids !== null
+          ? rows?.length
+          : showInactive
+            ? first?.total_count
+            : first?.totals.active_count
+      }
+      getRowId={(record) => String(record.id)}
+      labelId={config.titleId}
+      failedId="masters-load-failed"
+      error={list.isError ? uiErrorOf(list.error) : null}
+      onRetry={() => {
+        void list.refetch();
+      }}
+      hasMore={list.hasNextPage && filter.ids === null}
+      loadingMore={list.isFetchingNextPage}
+      onLoadMore={() => {
+        void list.fetchNextPage();
+      }}
+      empty={empty}
+      onOpen={open}
+      isInactive={(record) => !record.is_active}
+      focusRowId={focusRowId === undefined ? null : String(focusRowId)}
+      onFocusRow={(rowId) => {
+        remember(config.kind, Number(rowId));
+      }}
+    />
+  );
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -159,7 +162,7 @@ function MasterList({ config }: { config: MasterConfig }) {
           </Localized>
         </div>
         {/* An empty list has the same button in its empty state. */}
-        {list.data === undefined || list.data.length === 0 ? null : newButton}
+        {first === undefined || first.total_count === 0 ? null : newButton}
       </div>
       <div ref={containerRef} {...formNavigationProps} className="flex flex-wrap items-end gap-4">
         <div className="min-w-0 flex-1 basis-field">

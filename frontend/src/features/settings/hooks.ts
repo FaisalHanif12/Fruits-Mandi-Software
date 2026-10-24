@@ -6,6 +6,7 @@ import type { SetFirmInput } from '../../bindings/SetFirmInput';
 import type { SetPrintingInput } from '../../bindings/SetPrintingInput';
 import type { SetSecurityInput } from '../../bindings/SetSecurityInput';
 import type { RemovePairInput } from '../../bindings/RemovePairInput';
+import { usePagedQuery } from '../../shared/hooks';
 import { translitPairsList, translitPairsRemove } from '../../shared/urdu/api';
 import type { ChargesInput, OverridesSettings } from './types';
 import {
@@ -57,7 +58,12 @@ export const TRANSLIT_PAIRS_KEY = ['translit_pairs'] as const;
 
 /** The words the app has learned (PRD FR-7.26). Owner only. */
 export function useLearnedPairs() {
-  return useQuery({ queryKey: TRANSLIT_PAIRS_KEY, queryFn: translitPairsList });
+  return usePagedQuery({
+    queryKey: [...TRANSLIT_PAIRS_KEY, 'list'],
+    fetchPage: (offset, limit) => translitPairsList(offset, limit),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+  });
 }
 
 export function useRemoveLearnedPair() {

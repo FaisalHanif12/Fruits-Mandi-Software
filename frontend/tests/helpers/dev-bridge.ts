@@ -30,6 +30,7 @@ import { printingSettings } from './print-settings';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
+import { EMPTY_PAIRS, bikriListOf, pukhtaRegisterOf } from './paged';
 import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
 import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
 import type { PurchasesListInput } from '../../src/bindings/PurchasesListInput';
@@ -247,10 +248,6 @@ if (!new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('empty'))
         account_id: 31,
         person_key: null,
         amount: '1',
-        mode: 'cash',
-        bank_account_id: null,
-        cheque_no: '',
-        cheque_date: '',
         reason: '',
         narration: '',
         confirm_cash_below_zero: false,
@@ -388,7 +385,7 @@ const handlers: Record<string, Handler> = {
     MASTERS.filter((master) => master.scope === asText(input['scope'])).map(masterHit),
   search_touch: () => null,
   translit_suggest: () => ({ items: [] }),
-  translit_pairs_list: () => [],
+  translit_pairs_list: () => EMPTY_PAIRS,
   bikri_preview: (input) => {
     // `?own` is the lot of trip goods of E2E-34, the backend's real answer.
     if (devFlag('own')) return fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input));
@@ -425,7 +422,21 @@ const handlers: Record<string, Handler> = {
           cancel_reason: devFlag('cancelled') ? 'wrong truck' : null,
         }),
   bikri_list: () =>
-    devFlag('empty') ? [] : [listRow(), listRow({ id: 42, number: 2, status: 'cancelled' })],
+    bikriListOf(
+      devFlag('empty') ? [] : [listRow(), listRow({ id: 42, number: 2, status: 'cancelled' })],
+      0,
+      0,
+      // The sums of the saved one: the cancelled posting is left out of them (PRD 12.9).
+      devFlag('empty')
+        ? {}
+        : {
+            qty_received: 50,
+            qty_sold: 50,
+            gross: paisaForTest(2_940_000),
+            net: paisaForTest(1_931_600),
+            buyer_total: paisaForTest(3_156_400),
+          },
+    ),
   bikri_find: () => [listRow(), listRow({ id: 42, number: 2, truck_no: 'LHR-0077' })],
   bikri_navigate: () => 41,
   // `#/dev/bikri?offer` shows the start-up offer of an unfinished بکری (PRD FR-12.10).
@@ -552,23 +563,36 @@ const handlers: Record<string, Handler> = {
   },
   reports_voucher_print_data: (input) =>
     voucherPrintData('receipt', { language: input['language'] === 'en' ? 'en' : 'ur' }),
-  pukhta_register: () =>
-    devFlag('empty')
-      ? []
-      : [
-          registerRow(),
-          registerRow({
-            bikri_id: 43,
-            bikri_number: 3,
-            name_ur: NASIR.name_ur,
-            name_en: NASIR.name_en,
-            phone: NASIR.phone,
-            amount: paisaForTest(200_000),
-            paid: false,
+  pukhta_register: (input) =>
+    pukhtaRegisterOf(
+      devFlag('empty')
+        ? []
+        : [
+            registerRow(),
+            registerRow({
+              bikri_id: 43,
+              bikri_number: 3,
+              name_ur: NASIR.name_ur,
+              name_en: NASIR.name_en,
+              phone: NASIR.phone,
+              amount: paisaForTest(200_000),
+              paid: false,
+              open: paisaForTest(200_000),
+            }),
+            registerRow({ bikri_id: 44, bikri_number: 4, cancelled: true, paid: false }),
+          ],
+      0,
+      0,
+      // As the backend: the sums are given only when a side is chosen (they are null otherwise).
+      devFlag('empty') || input['side'] === null || input['side'] === undefined
+        ? {}
+        : {
+            qty: 20,
+            amount: paisaForTest(1_480_000),
+            commission: paisaForTest(144_000),
             open: paisaForTest(200_000),
-          }),
-          registerRow({ bikri_id: 44, bikri_number: 4, cancelled: true, paid: false }),
-        ],
+          },
+    ),
 };
 
 function masterHit(master: Master) {

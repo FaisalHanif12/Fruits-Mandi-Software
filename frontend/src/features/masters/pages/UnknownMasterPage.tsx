@@ -1,4 +1,4 @@
-// An address under /index that is not one of the ten masters: says so and offers the way back.
+// An address under /index that is not one of the nine masters: says so and offers the way back.
 
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';

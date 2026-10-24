@@ -9,7 +9,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useDebouncedValue } from '../../shared/hooks';
+import { useDebouncedValue, usePagedQuery } from '../../shared/hooks';
 import {
   assistAdvances,
   assistCollectionList,
@@ -151,13 +151,17 @@ export function useVoucher(id: number | null) {
   });
 }
 
-/** The vouchers of a kind in a date range (the list under the form). */
-export function useVouchersList(input: VouchersListInput) {
-  return useQuery({
+/**
+ * The vouchers of a kind in a date range (the list under the form), page by page, with the count
+ * and the totals of the whole filter (PRD FR-19.11).
+ */
+export function useVouchersList(input: Omit<VouchersListInput, 'offset' | 'limit'>) {
+  return usePagedQuery({
     queryKey: [...VOUCHERS_KEY, 'list', input],
-    queryFn: () => vouchersList(input),
-    placeholderData: keepPreviousData,
-    staleTime: 0,
+    fetchPage: (offset, limit) => vouchersList({ ...input, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }
 

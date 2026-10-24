@@ -61,10 +61,23 @@ pub struct StockListInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub item_id: Option<i64>,
+    /// Only this lot, for a screen that works on one lot (a later sale). The answer has the same
+    /// shape: its count and totals are over this one lot, and the list is empty if nothing is
+    /// left to sell of it.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub lot_id: Option<i64>,
     /// Also list a lot that has a write-off you can undo even when nothing is left of it, so the
     /// undo can be found. Its `balance` is then 0.
     #[serde(default)]
     pub include_written_off: bool,
+    /// How many rows to skip. 0 for the first page. The page runs over the lots first, then the
+    /// trip goods (PRD FR-19.11).
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
 }
 
 /// A write-off of a lot that has not been undone (PRD FR-12.16).
@@ -178,6 +191,10 @@ pub struct OwnStockRow {
 /// The answer of `bikri_stock_list`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct StockList {
+    /// How many rows match the filter: lots and trip goods together. A page holds the lots
+    /// first, then the trip goods, so `rows.len() + own_rows.len()` is at most the page size.
+    #[ts(type = "number")]
+    pub total_count: i64,
     /// Oldest received first, then by بکری number and lot number.
     pub rows: Vec<StockRow>,
     /// Σ of the `balance` of the rows (نگ).

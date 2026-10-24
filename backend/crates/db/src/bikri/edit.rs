@@ -828,6 +828,8 @@ pub struct StockFilter {
     pub seller_id: Option<i64>,
     /// Only lots of this item.
     pub item_id: Option<i64>,
+    /// Only this lot.
+    pub lot_id: Option<i64>,
     /// Also lots with a write-off that can be undone, even with nothing left.
     pub include_written_off: bool,
 }
@@ -879,6 +881,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
          WHERE e.status = 'saved'
            AND (?1 IS NULL OR e.entry_date >= ?1) AND (?2 IS NULL OR e.entry_date <= ?2)
            AND (?3 IS NULL OR l.seller_account_id = ?3) AND (?4 IS NULL OR l.item_id = ?4)
+           AND (?6 IS NULL OR l.id = ?6)
            AND (l.qty_received - l.qty_sold - l.qty_written_off > 0
                 OR (?5 = 1 AND EXISTS (SELECT 1 FROM stock_moves m
                                        WHERE m.lot_id = l.id AND m.kind = 'written_off'
@@ -892,7 +895,8 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
             filter.to,
             filter.seller_id,
             filter.item_id,
-            filter.include_written_off
+            filter.include_written_off,
+            filter.lot_id
         ],
         |r| {
             let record = |at: usize| -> rusqlite::Result<RecordRef> {

@@ -7,10 +7,10 @@
 import { Localized } from '@fluent/react';
 import { Wallet } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
+import { PagedList } from '../../../shared/grid';
 import { Card, EmptyState, Fact } from '../../../shared/ui';
 import { useKhataStatement } from '../hooks';
 import { KHATA_COLUMNS } from '../list-columns';
-import { PagedList } from './PagedList';
 import { SignedNum } from './SignedNum';
 
 export function KhataListSection({ khataId }: { khataId: number | null }) {

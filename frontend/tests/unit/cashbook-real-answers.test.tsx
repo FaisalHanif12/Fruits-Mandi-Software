@@ -94,7 +94,7 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
     const { user } = { user: userEvent.setup() };
     await renderApp('/rokar');
     const more = await screen.findByRole('button', {
-      name: startsWith(message(language, 'cashbook-list-more')),
+      name: startsWith(message(language, 'common-list-more')),
     });
     await user.click(more);
     await waitFor(() => {

@@ -36,13 +36,6 @@ cashbook-empty-help = دوسرے دن چنیں، یا کوئی خرچہ درج �
 # review: pending
 cashbook-load-failed = { -rokar } کھل نہیں سکی
 
-# $shown: how many are on screen; $total: how many the whole filter has.
-# review: pending
-cashbook-list-count = { $total } میں سے { $shown } نظر آ رہے ہیں
-
-# review: pending
-cashbook-list-more = مزید دکھائیں
-
 ## Columns of the lists.
 
 # review: pending

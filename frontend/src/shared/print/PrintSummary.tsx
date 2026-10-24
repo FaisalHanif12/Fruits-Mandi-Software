@@ -5,7 +5,7 @@
 
 import { useLocalization } from '@fluent/react';
 import { Num } from '../ui/Num';
-import { MODE_ID_PREFIX, PAYMENT_PAID_ID, type PrintAmount, type PrintPage } from './types';
+import { PAYMENT_PAID_ID, type PrintAmount, type PrintPage } from './types';
 
 const ROW_CLASS = {
   line: '',
@@ -32,12 +32,7 @@ export function PrintSummary({ page }: { page: PrintPage }) {
         </table>
       )}
       {page.payment_id === null ? null : (
-        <p
-          className="print-payment"
-          data-paid={
-            page.payment_id === PAYMENT_PAID_ID || page.payment_id.startsWith(MODE_ID_PREFIX)
-          }
-        >
+        <p className="print-payment" data-paid={page.payment_id === PAYMENT_PAID_ID}>
           {l10n.getString(page.payment_id)}
         </p>
       )}

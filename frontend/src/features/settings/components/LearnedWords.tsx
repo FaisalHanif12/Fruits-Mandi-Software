@@ -9,6 +9,7 @@ import { useState } from 'react';
 import type { PairRow } from '../../../bindings/PairRow';
 import { uiErrorOf } from '../../../shared/api';
 import { utcToLocalDisplay } from '../../../shared/format';
+import { PagedFooter } from '../../../shared/grid';
 import {
   Button,
   Code,
@@ -50,7 +51,8 @@ export function LearnedWords() {
         />
       );
     }
-    if (pairs.data.length === 0) {
+    const rows = pairs.data.pages.flatMap((page) => page.rows);
+    if (rows.length === 0) {
       return (
         <EmptyState
           icon={Languages}
@@ -103,14 +105,25 @@ export function LearnedWords() {
       },
     ];
     return (
-      <div className="rounded-3 border border-border bg-surface">
-        <Table
-          label={l10n.getString('translit-words-table')}
-          columns={columns}
-          rows={pairs.data}
-          rowKey={(pair) => String(pair.id)}
+      <>
+        <div className="rounded-3 border border-border bg-surface">
+          <Table
+            label={l10n.getString('translit-words-table')}
+            columns={columns}
+            rows={rows}
+            rowKey={(pair) => String(pair.id)}
+          />
+        </div>
+        <PagedFooter
+          shown={rows.length}
+          total={pairs.data.pages[0]?.total_count ?? rows.length}
+          hasMore={pairs.hasNextPage}
+          loadingMore={pairs.isFetchingNextPage}
+          onLoadMore={() => {
+            void pairs.fetchNextPage();
+          }}
         />
-      </div>
+      </>
     );
   };
 

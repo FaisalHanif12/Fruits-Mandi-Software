@@ -31,4 +31,12 @@ export type PukhtaRegisterInput = {
    * Only paid or only due lines.
    */
   state: PaidState | null;
+  /**
+   * How many rows to skip. 0 for the first page (PRD FR-19.11).
+   */
+  offset: number;
+  /**
+   * How many rows to return. 0 gives a page of 100 (Code Standards B31).
+   */
+  limit: number;
 };

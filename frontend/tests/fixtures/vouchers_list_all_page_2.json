@@ -1,0 +1,63 @@
+{
+  "rows": [
+    {
+      "id": 3,
+      "voucher_type": "payment",
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "account": {
+        "id": 18,
+        "code": "030110001",
+        "name_ur": "رحیم",
+        "name_en": "Rahim"
+      },
+      "amount_paisa": 431600,
+      "mode": "cash",
+      "bank_account_id": null,
+      "cheque_no": "",
+      "cheque_date": null,
+      "expected_goods": "",
+      "narration": "",
+      "status": "saved",
+      "version": 2,
+      "person": null,
+      "collector_staff_id": null,
+      "reason": "",
+      "cancel_reason": "",
+      "entry_id": 6,
+      "editable": true
+    },
+    {
+      "id": 4,
+      "voucher_type": "payment",
+      "number": 2,
+      "entry_date": "2026-10-10",
+      "account": {
+        "id": 20,
+        "code": "03040001",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax"
+      },
+      "amount_paisa": 300000,
+      "mode": "cash",
+      "bank_account_id": null,
+      "cheque_no": "",
+      "cheque_date": null,
+      "expected_goods": "",
+      "narration": "",
+      "status": "cancelled",
+      "version": 3,
+      "person": null,
+      "collector_staff_id": null,
+      "reason": "نقد ادھار",
+      "cancel_reason": "غلط اندراج",
+      "entry_id": 7,
+      "editable": false
+    }
+  ],
+  "total_count": 6,
+  "totals": {
+    "cancelled_count": 1,
+    "total_paisa": null
+  }
+}

@@ -13,7 +13,9 @@
 //! diff, and tell `frontend`.
 //!
 //! The story is the worked day of the PRD: an advance to رحیم, Event 1, then the receipt, the
-//! payment and the cash lent of Events 3, 4 and E2E-32, and the rest of plan 15.
+//! payment and the cash lent of Events 3, 4 and E2E-32, and the rest of plan 15. From plan 17b
+//! (PRD 15.1, v1.6) a voucher has no mode, bank or cheque: all money is روکڑ, and a request that
+//! still carries one of them is a refusal fixture.
 #![cfg(test)]
 
 mod common;
@@ -26,7 +28,6 @@ use std::path::{Path, PathBuf};
 use mandi_services::core::accounts::{AccountInput, SearchGlobalInput};
 use mandi_services::core::bikri::{BikriSaveInput, LineChargeMethod, PaymentType, PukhtaInput};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
-use mandi_services::core::masters::{BankAccountInput, MasterInput};
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesReportInput, AssistAdvancesInput, CollectionListInput, MakeRegularInput,
     OpenBillsInput, OpenPayablesInput, PaymentInput, ReceiptInput, ReceiptsInput,
@@ -132,7 +133,6 @@ fn confirming<T>(
 fn receipt_json(account: i64, amount: &str) -> Value {
     json!({
         "date": "10-10-2026", "account_id": account, "person_key": null, "amount": amount,
-        "mode": "cash", "bank_account_id": null, "cheque_no": "", "cheque_date": "",
         "collector_staff_id": null, "narration": ""
     })
 }
@@ -140,16 +140,14 @@ fn receipt_json(account: i64, amount: &str) -> Value {
 fn payment_json(account: i64, amount: &str, reason: &str) -> Value {
     json!({
         "date": "10-10-2026", "account_id": account, "person_key": null, "amount": amount,
-        "mode": "cash", "bank_account_id": null, "cheque_no": "", "cheque_date": "",
         "reason": reason, "narration": "", "confirm_cash_below_zero": false
     })
 }
 
 fn advance_json(seller: i64, amount: &str) -> Value {
     json!({
-        "date": "10-10-2026", "seller_account_id": seller, "amount": amount, "mode": "cash",
-        "bank_account_id": null, "cheque_no": "", "cheque_date": "", "expected_goods": "",
-        "narration": "", "confirm_cash_below_zero": false
+        "date": "10-10-2026", "seller_account_id": seller, "amount": amount,
+        "expected_goods": "", "narration": "", "confirm_cash_below_zero": false
     })
 }
 
@@ -359,30 +357,41 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     assert!(answer.errors.is_empty());
     pair("vouchers_preview_receipt_seller_return", &request, &answer);
 
-    // 8. A cheque receipt from ارشد into a bank account (PRD 15.1).
-    let (bank, _) = confirming(|words| {
-        mandi_services::masters::save(
-            ctx,
-            owner,
-            &MasterInput::BankAccount(BankAccountInput {
-                id: None,
-                version: None,
-                bank_name: "HBL".into(),
-                title: "Maher Adnan and Brothers".into(),
-                number: "0123456789".into(),
-                name_ur: "ایچ بی ایل".into(),
-                name_en: "HBL".into(),
-                confirmed_rules_words: words.to_vec(),
-            }),
-        )
-    });
-    let mut cheque = receipt_json(w.arshad, "5,000");
-    cheque["mode"] = json!("cheque");
-    cheque["bank_account_id"] = json!(bank.id());
-    cheque["cheque_no"] = json!("000123");
-    cheque["cheque_date"] = json!("12-10-2026");
-    let cheque_saved = vouchers::save_receipt(ctx, owner, &typed::<ReceiptInput>(&cheque)).unwrap();
-    pair("vouchers_save_receipt_cheque", &cheque, &cheque_saved);
+    // 8. A receipt from ارشد, and an old client that still sends a mode, a bank account and a
+    // cheque (PRD 15.1, v1.6): refused at each name it sent, and nothing is posted.
+    let arshad_receipt = receipt_json(w.arshad, "5,000");
+    let arshad_saved =
+        vouchers::save_receipt(ctx, owner, &typed::<ReceiptInput>(&arshad_receipt)).unwrap();
+    pair(
+        "vouchers_save_receipt_arshad",
+        &arshad_receipt,
+        &arshad_saved,
+    );
+    let entries_before = journal_entry_count(&w);
+    let mut old_fields = receipt_json(w.arshad, "5,000");
+    old_fields["mode"] = json!("cheque");
+    old_fields["bank_account_id"] = json!(5);
+    old_fields["cheque_no"] = json!("000123");
+    old_fields["cheque_date"] = json!("12-10-2026");
+    let error =
+        vouchers::save_receipt(ctx, owner, &typed::<ReceiptInput>(&old_fields)).unwrap_err();
+    let ServiceError::Rejected(items) = &error else {
+        panic!("not a refusal: {error:?}");
+    };
+    assert_eq!(
+        items
+            .iter()
+            .map(|i| i.field.as_deref().unwrap_or(""))
+            .collect::<Vec<_>>(),
+        ["mode", "bank_account_id", "cheque_no", "cheque_date"]
+    );
+    refusal(
+        "vouchers_save_receipt_old_payment_fields",
+        &old_fields,
+        &error,
+        ErrorCode::ErrFieldNotAllowed,
+    );
+    assert_eq!(journal_entry_count(&w), entries_before, "nothing is posted");
 
     // 9. The slips, in both languages (PRD FR-15.2).
     for (name, voucher_id, language) in [
@@ -402,8 +411,8 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
             "ur",
         ),
         (
-            "reports_voucher_print_data_cheque_en",
-            cheque_saved.voucher_id,
+            "reports_voucher_print_data_receipt_en",
+            arshad_saved.voucher_id,
             "en",
         ),
     ] {
@@ -441,18 +450,33 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
 
     // 11. The lists: payments (one cancelled, so the total leaves it out), and all types (no total).
     let list_request = json!({
-        "voucher_type": "payment", "from": "", "to": "", "account_id": null, "person_key": null
+        "voucher_type": "payment", "from": "", "to": "", "account_id": null, "person_key": null,
+        "offset": 0, "limit": 0
     });
     let list = vouchers::list(ctx, &typed::<VouchersListInput>(&list_request)).unwrap();
     assert_eq!(list.rows.len(), 2);
-    assert_eq!(list.total_paisa.map(|t| t.rupees()), Some(4_316));
+    assert_eq!(list.total_count, 2);
+    assert_eq!(list.totals.cancelled_count, 1);
+    assert_eq!(list.totals.total_paisa.map(|t| t.rupees()), Some(4_316));
     pair("vouchers_list_payments", &list_request, &list);
     let all_request = json!({
-        "voucher_type": null, "from": "", "to": "", "account_id": null, "person_key": null
+        "voucher_type": null, "from": "", "to": "", "account_id": null, "person_key": null,
+        "offset": 0, "limit": 0
     });
     let all = vouchers::list(ctx, &typed::<VouchersListInput>(&all_request)).unwrap();
-    assert_eq!(all.total_paisa, None);
+    assert_eq!(all.totals.total_paisa, None);
     pair("vouchers_list_all", &all_request, &all);
+    // The second page of two rows: the count and the totals are still over the whole filter.
+    let page_request = json!({
+        "voucher_type": null, "from": "", "to": "", "account_id": null, "person_key": null,
+        "offset": 2, "limit": 2
+    });
+    let page = vouchers::list(ctx, &typed::<VouchersListInput>(&page_request)).unwrap();
+    assert_eq!(page.rows.len(), 2);
+    assert_eq!(page.total_count, all.total_count);
+    assert_eq!(page.totals, all.totals);
+    assert_eq!(page.rows, all.rows[2..4].to_vec());
+    pair("vouchers_list_all_page_2", &page_request, &page);
 
     // 12. The advances report (R26 data).
     let report_request = json!({ "seller_id": null, "as_of": "" });
@@ -540,6 +564,18 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     let truncated = vouchers::open_payables(ctx, &typed::<OpenPayablesInput>(&request)).unwrap();
     assert_eq!((truncated.postings.len(), truncated.truncated), (200, true));
     pair("assist_open_payables_truncated", &request, &truncated);
+}
+
+/// How many journal entries there are, to prove that a refusal posted nothing.
+fn journal_entry_count(w: &World) -> i64 {
+    w.env
+        .ctx
+        .db()
+        .read(|conn| {
+            conn.query_row("SELECT COUNT(*) FROM journal_entries", [], |r| r.get(0))
+                .map_err(mandi_services::ServiceError::from)
+        })
+        .unwrap()
 }
 
 /// `count` جنرل credits of 1,000 on کریم, each against cash (so he is owed 1,000 more each time).

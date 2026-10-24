@@ -22,6 +22,7 @@ import {
   typeAmount,
   startsWith,
 } from '../helpers/cashbook-screen';
+import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import type { FakeCashbook } from '../helpers/cashbook';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
 import { message, visible } from '../helpers/render';
@@ -95,8 +96,8 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     expect(buttons[0]).toHaveAttribute('aria-pressed', 'true');
     expect((await labelled(language, 'cashbook-field-date')).value).toBe('10-10-2026');
     expect(saveButton()).toBeDisabled();
-    for (const gone of ['vouchers-field-mode', 'vouchers-field-bank', 'vouchers-field-cheque-no']) {
-      expect(screen.queryByLabelText(named(message(language, gone)))).toBeNull();
+    for (const gone of FORMER_PAYMENT_LABELS[language]) {
+      expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
     }
     // The side menu of the روکڑ area is next to the main menu.
     expect(
