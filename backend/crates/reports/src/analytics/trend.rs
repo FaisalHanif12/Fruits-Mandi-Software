@@ -36,10 +36,9 @@ use super::facts::{self, conds, run_range};
 use super::filters::Typed;
 use super::ids;
 use super::model::{AnalyticsGoods, AnalyticsGroupBy, AnalyticsKey};
-use super::partner::trips_net;
 use super::table::{Table, col, count_of, row};
 use crate::error::ReportsError;
-use crate::reports::common::{Conds, LIVE, add, paisa};
+use crate::reports::common::{Conds, add, paisa};
 use crate::reports::{Cell, ColumnKind, PageSpec};
 
 /// The first and the last day the period may have, when it is open.
@@ -56,7 +55,7 @@ fn bucket_len(group_by: AnalyticsGroupBy) -> usize {
 }
 
 /// The SQL that cuts a date column down to its bucket. The column is a constant of this crate.
-fn bucket_sql(group_by: AnalyticsGroupBy, column: &str) -> String {
+pub(super) fn bucket_sql(group_by: AnalyticsGroupBy, column: &str) -> String {
     format!("substr({column}, 1, {})", bucket_len(group_by))
 }
 
@@ -367,34 +366,17 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     if let Some(partner_id) = typed.partner_id {
         // His money from trips by period: only when no sale filter narrows it.
         if plain && let Some(partner) = mandi_db::partners::get(conn, partner_id)? {
+            // One query for all periods (Code Standards B22): the credits less the debits of his
+            // trip lines, by the same bucket as the other columns. A period with sales and no
+            // trip line of his shows 0.
+            for slot in periods.values_mut() {
+                slot.trips = Some(Paisa::ZERO);
+            }
             let first = typed.from.as_deref().unwrap_or(FIRST_DAY);
             let last = typed.to.as_deref().unwrap_or(LAST_DAY);
-            let buckets: Vec<String> = periods.keys().cloned().collect();
-            let mut seen = buckets;
-            // Buckets the other columns do not have still need their trips figure: read the
-            // days his trip lines are on.
-            let day = bucket_sql(group_by, "e.entry_date");
-            let sql = format!(
-                "SELECT DISTINCT {day} FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-                 WHERE l.account_id = ?1 AND {LIVE} AND e.source_type <> 'month_close'
-                   AND e.entry_date >= ?2 AND e.entry_date <= ?3 AND {}",
-                super::partner::TRIP_POSTINGS
-            );
-            let mut statement = conn.prepare(&sql)?;
-            let extra = statement
-                .query_map(
-                    mandi_db::rusqlite::params![partner.venture_account_id, first, last],
-                    |r| r.get::<_, String>(0),
-                )?
-                .collect::<Result<Vec<_>, _>>()?;
-            seen.extend(extra);
-            seen.sort();
-            seen.dedup();
-            for bucket in seen {
-                let (from, to) = bucket_days(group_by, &bucket)?;
-                let from = from.max(first.to_owned());
-                let to = to.min(last.to_owned());
-                let amount = trips_net(conn, &partner, &from, &to)?;
+            for (bucket, amount) in
+                super::partner::trips_net_by_bucket(conn, &partner, first, last, group_by)?
+            {
                 periods.entry(bucket).or_default().trips = Some(amount);
             }
         }

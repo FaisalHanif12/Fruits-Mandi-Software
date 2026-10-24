@@ -4,7 +4,7 @@
 //! text, ids are looked up, a filter the view does not take is refused, and all problems are
 //! returned together with their fields (Code Standards 4.3).
 
-use mandi_core::dates::{BusinessDate, parse_ddmmyyyy};
+use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::Connection;
 
@@ -13,7 +13,7 @@ use super::model::{
     AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView, AnalyticsView,
 };
 use crate::error::ReportsError;
-use crate::reports::common::{MasterTable, load_party, names_of};
+use crate::reports::common::{MasterTable, load_party, names_of, parse_day};
 
 /// The filters of a run, read and checked.
 #[derive(Debug, Clone)]
@@ -50,16 +50,6 @@ pub(crate) struct Typed {
     pub(crate) compare: Option<(String, String)>,
     /// What goes back to the screen.
     pub(crate) resolved: AnalyticsResolvedFilters,
-}
-
-/// Reads a date typed by the user: the stored form `YYYY-MM-DD` or `DD-MM-YYYY` with the
-/// shortcuts of PRD FR-7.19.
-fn parse_day(text: &str, today: BusinessDate) -> Result<BusinessDate, ErrorCode> {
-    let text = text.trim();
-    if let Some(day) = BusinessDate::parse_iso(text) {
-        return Ok(day);
-    }
-    parse_ddmmyyyy(text, today)
 }
 
 fn first_of_month(day: BusinessDate) -> Option<BusinessDate> {

@@ -17,7 +17,7 @@ mod flatten;
 mod model;
 
 use chrono::{DateTime, Duration, NaiveDate, Utc};
-use mandi_core::dates::{BusinessDate, parse_ddmmyyyy};
+use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::Db;
 use mandi_db::rusqlite::types::Value as SqlValue;
@@ -25,7 +25,7 @@ use mandi_db::rusqlite::{Connection, OptionalExtension, params_from_iter};
 use serde_json::Value;
 
 use crate::error::ReportsError;
-use crate::reports::common::{Conds, today};
+use crate::reports::common::{Conds, parse_day, today};
 use crate::reports::page_spec;
 
 pub use model::{
@@ -52,12 +52,6 @@ fn user_of(conn: &Connection, id: i64) -> Result<Option<AuditUser>, ReportsError
             },
         )
         .optional()?)
-}
-
-/// A day typed by the user: `YYYY-MM-DD`, or `DD-MM-YYYY` with the shortcuts of PRD FR-7.19.
-fn parse_day(text: &str, today: BusinessDate) -> Result<BusinessDate, ErrorCode> {
-    let text = text.trim();
-    BusinessDate::parse_iso(text).map_or_else(|| parse_ddmmyyyy(text, today), Ok)
 }
 
 /// The UTC time text at which a day starts in Pakistan time, `YYYY-MM-DDTHH:MM:SS`.

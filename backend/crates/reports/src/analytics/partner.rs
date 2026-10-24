@@ -126,15 +126,42 @@ fn venture_net(
     ))
 }
 
-/// The money of the trips of one partner in the period (also the "trips" column of view G with a
-/// partner picked, so the two always agree).
-pub(crate) fn trips_net(
+/// The money of the trips of one partner by period, in one query: the credits less the debits of
+/// his trip lines inside the period, grouped by `bucket_sql` of the entry date. Used by view G
+/// with a partner picked, so each bucket is the same number view F gives for that bucket's days.
+pub(crate) fn trips_net_by_bucket(
     conn: &Connection,
     partner: &PartnerRecord,
     from: &str,
     to: &str,
-) -> Result<Paisa, ReportsError> {
-    Ok(venture_net(conn, partner, from, to)?.0)
+    group_by: super::model::AnalyticsGroupBy,
+) -> Result<Vec<(String, Paisa)>, ReportsError> {
+    if partner.venture_account_id == 0 {
+        return Ok(Vec::new());
+    }
+    let bucket = super::trend::bucket_sql(group_by, "e.entry_date");
+    let sql = format!(
+        "SELECT {bucket}, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id = ?1 AND {LIVE} AND e.source_type <> 'month_close'
+           AND e.entry_date >= ?2 AND e.entry_date <= ?3 AND {TRIP_POSTINGS}
+         GROUP BY 1 ORDER BY 1"
+    );
+    let rows = conn
+        .prepare(&sql)?
+        .query_map(params![partner.venture_account_id, from, to], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut out = Vec::with_capacity(rows.len());
+    for (bucket, debit, credit) in rows {
+        out.push((bucket, paisa(credit)?.checked_sub(paisa(debit)?)?));
+    }
+    Ok(out)
 }
 
 /// Builds view F.

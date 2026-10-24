@@ -179,6 +179,11 @@ fn buy(w: &World, trip: i64, item: i64, qty: &str, rate: &str, freight: &str) ->
 }
 
 fn sell_own(w: &World, purchase: i64, qty: &str, buyer: i64, rate: &str) -> i64 {
+    sell_own_on(w, "10-10-2026", purchase, qty, buyer, rate)
+}
+
+/// The same sale on a given day (the header of the support draft is dated 10-10-26).
+fn sell_own_on(w: &World, date: &str, purchase: i64, qty: &str, buyer: i64, rate: &str) -> i64 {
     let lot = mandi_services::core::bikri::LotInput {
         seller_account_id: Some(support::id_of(&w.env, "030119998")),
         purchase_id: Some(purchase),
@@ -187,10 +192,11 @@ fn sell_own(w: &World, purchase: i64, qty: &str, buyer: i64, rate: &str) -> i64 
         adjust_advance: false,
         ..support::bare_lot(w, "own-1", w.rahim, w.banana, qty)
     };
-    let draft = support::draft(vec![support::with_sales(
+    let mut draft = support::draft(vec![support::with_sales(
         lot,
         vec![support::sale("s-1", buyer, qty, rate)],
     )]);
+    draft.header.entry_date = date.into();
     bikri::save(
         &w.env.ctx,
         &w.owner,
@@ -965,7 +971,7 @@ fn the_lines_behind_a_trip_row_add_up_to_its_commission_even_when_the_sale_is_af
     let trip = new_trip(&w, vec![shop(a, "40"), shop(b, "30"), shop(c, "30")]);
     let purchase = buy(&w, trip, item, "20", "500", "400");
     set_today(&w.env, 2026, 10, 11);
-    sell_own(&w, purchase, "15", w.akram, "600");
+    sell_own_on(&w, "11-10-2026", purchase, "15", w.akram, "600");
     let only_10 = AnalyticsFilters {
         from: "10-10-2026".into(),
         to: "10-10-2026".into(),
@@ -1055,4 +1061,35 @@ fn two_purchase_sets_in_a_row_and_a_column_key_are_intersected() {
     .unwrap();
     assert_eq!(behind.total_count, 1);
     assert_eq!(n(behind.totals.last().unwrap()), 480);
+}
+
+#[test]
+fn view_g_with_a_partner_by_day_has_his_money_on_the_day_it_moved() {
+    // Bought on 10-10 (the shop pays: -4,160 for الف), sold on 11-10 (+3,384): one query for all
+    // the days, and the days add up to view F's trips column.
+    let w = worked_day();
+    let item = orange(&w);
+    let [a, b, c] = w.partners;
+    let trip = new_trip(&w, vec![shop(a, "40"), shop(b, "30"), shop(c, "30")]);
+    let purchase = buy(&w, trip, item, "20", "500", "400");
+    set_today(&w.env, 2026, 10, 11);
+    sell_own_on(&w, "11-10-2026", purchase, "15", w.akram, "600");
+    let page = view(
+        &w,
+        AnalyticsView::G,
+        AnalyticsFilters {
+            partner_id: Some(a),
+            group_by: Some(AnalyticsGroupBy::Day),
+            ..filters()
+        },
+    );
+    let trips = column(&page, "trips_result");
+    let by_day: Vec<i64> = data_rows(&page)
+        .iter()
+        .map(|r| n(&r.cells[trips]))
+        .collect();
+    assert_eq!(by_day, vec![-4_160, 3_384]);
+    let f = view(&w, AnalyticsView::F, by(a));
+    assert_eq!(n(&page.totals[trips]), n(&f.totals[column(&f, "trips")]));
+    assert_eq!(n(&page.totals[trips]), -776);
 }

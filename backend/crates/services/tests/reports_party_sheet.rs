@@ -503,6 +503,34 @@ fn the_collection_line_of_the_table_is_the_total_of_r20() {
         21_564
     );
     assert_eq!(money(&r20.totals[3]), 21_564);
+    // The sellers' table has its own total in the footer: credit 34,476 (رحیم 24,316 and کریم
+    // 10,160), debit 9,316 (the نقد and the payment), remaining 10,160 جمع.
+    assert_eq!(
+        money(&summary_of(&page, "report-r35-sellers-credit").unwrap()),
+        34_476
+    );
+    assert_eq!(
+        money(&summary_of(&page, "report-r35-sellers-debit").unwrap()),
+        9_316
+    );
+    assert_eq!(
+        signed(&summary_of(&page, "report-r35-sellers-remaining").unwrap()),
+        -10_160
+    );
+}
+
+#[test]
+fn a_table_with_no_sellers_has_no_sellers_total() {
+    // Before the first posting nobody is listed: no sellers' section, so no sellers' total, and
+    // the collection line is 0.
+    let w = worked_day();
+    let page = report(&w, ReportId::R35, sheet("01-08-2026", None), 0, 0);
+    assert!(page.rows.is_empty());
+    assert!(summary_of(&page, "report-r35-sellers-credit").is_none());
+    assert_eq!(
+        money(&summary_of(&page, "report-r35-collection").unwrap()),
+        0
+    );
 }
 
 #[test]

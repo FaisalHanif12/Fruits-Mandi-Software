@@ -392,6 +392,28 @@
         "type": "money",
         "paisa": 2156400
       }
+    },
+    {
+      "label_id": "report-r35-sellers-credit",
+      "cell": {
+        "type": "money",
+        "paisa": 3447600
+      }
+    },
+    {
+      "label_id": "report-r35-sellers-debit",
+      "cell": {
+        "type": "money",
+        "paisa": 931600
+      }
+    },
+    {
+      "label_id": "report-r35-sellers-remaining",
+      "cell": {
+        "type": "balance",
+        "paisa": 1016000,
+        "side": "cr"
+      }
     }
   ]
 }

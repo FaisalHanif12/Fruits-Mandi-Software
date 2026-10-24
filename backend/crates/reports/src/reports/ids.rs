@@ -128,6 +128,9 @@ pub(crate) const R35_CASH_GIVEN: &str = "report-r35-cash-given";
 pub(crate) const R35_PAID: &str = "report-r35-paid";
 pub(crate) const R35_REMAINING: &str = "report-r35-remaining";
 pub(crate) const R35_COLLECTION: &str = "report-r35-collection";
+pub(crate) const R35_SELLERS_CREDIT: &str = "report-r35-sellers-credit";
+pub(crate) const R35_SELLERS_DEBIT: &str = "report-r35-sellers-debit";
+pub(crate) const R35_SELLERS_REMAINING: &str = "report-r35-sellers-remaining";
 
 // The rows of R34, the day summary.
 pub(crate) const R34_BIKRI: &str = "report-r34-bikri";

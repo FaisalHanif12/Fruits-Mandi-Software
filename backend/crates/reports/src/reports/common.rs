@@ -229,6 +229,21 @@ pub(crate) fn col(key: &str, title: &str, kind: ColumnKind) -> Column {
     }
 }
 
+/// Reads a date typed by the user: the stored form `YYYY-MM-DD` or `DD-MM-YYYY` with the
+/// shortcuts of PRD FR-7.19 (`10`, `10-9`). One copy for the reports, the analytics and the
+/// audit viewer.
+///
+/// # Errors
+/// `ERR_DATE_INVALID` (or the code of the shortcut) when the text is not a day.
+pub(crate) fn parse_day(
+    text: &str,
+    today: mandi_core::dates::BusinessDate,
+) -> Result<mandi_core::dates::BusinessDate, mandi_core::error::ErrorCode> {
+    let text = text.trim();
+    mandi_core::dates::BusinessDate::parse_iso(text)
+        .map_or_else(|| mandi_core::dates::parse_ddmmyyyy(text, today), Ok)
+}
+
 /// A count of rows as the `i64` of the contract.
 pub(crate) fn count_of(len: usize) -> i64 {
     i64::try_from(len).unwrap_or(i64::MAX)

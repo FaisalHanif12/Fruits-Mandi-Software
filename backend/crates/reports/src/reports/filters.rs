@@ -4,11 +4,11 @@
 //! text, ids are looked up, and a filter the report does not take is refused. All problems are
 //! returned together, each with its field (Code Standards 4.3).
 
-use mandi_core::dates::{BusinessDate, parse_ddmmyyyy};
+use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::Connection;
 
-use super::common::{MasterTable, load_party, names_of};
+use super::common::{MasterTable, load_party, names_of, parse_day};
 use super::model::{
     DateShortcut, FilterKind, GroupBy, PaidFilter, ReportFilters, ResolvedFilters, TripView,
 };
@@ -69,16 +69,6 @@ impl Takes<'_> {
     fn has(&self, kind: FilterKind) -> bool {
         self.kinds.contains(&kind)
     }
-}
-
-/// Reads a date typed by the user: the stored form `YYYY-MM-DD` or `DD-MM-YYYY` with the
-/// shortcuts of PRD FR-7.19 (`10`, `10-9`).
-fn parse_day(text: &str, today: BusinessDate) -> Result<BusinessDate, ErrorCode> {
-    let text = text.trim();
-    if let Some(day) = BusinessDate::parse_iso(text) {
-        return Ok(day);
-    }
-    parse_ddmmyyyy(text, today)
 }
 
 /// The first day of the month of `day`.

@@ -112,10 +112,7 @@ pub(crate) fn percent_cell(part: Paisa, total: Paisa) -> Result<Cell, ReportsErr
         .map_or(Cell::Empty, |hundredths| Cell::Percent { hundredths }))
 }
 
-/// A row count as the `i64` of the contract.
-pub(crate) fn count_of(len: usize) -> i64 {
-    i64::try_from(len).unwrap_or(i64::MAX)
-}
+pub(crate) use crate::reports::common::count_of;
 
 /// An item with its code (to order ties) and names.
 #[derive(Debug, Clone)]
