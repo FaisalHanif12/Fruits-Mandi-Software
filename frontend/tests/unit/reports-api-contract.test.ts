@@ -54,8 +54,34 @@ import {
   PRINT_R28_MONTH_EN,
   PRINT_R7_EN,
   PRINT_R9_DUE_EN,
-  ROUND_8_PENDING,
+  PENDING_REPORTS,
 } from '../helpers/reports-real';
+import {
+  PRINT_R33_PARTNER_EN,
+  PRINT_R33_PARTNER_EN_REQUEST,
+  PRINT_R34_EN,
+  PRINT_R34_EN_REQUEST,
+  R10_STOCK,
+  R10_STOCK_REQUEST,
+  R15_ALL,
+  R15_ALL_REQUEST,
+  R15_PAYMENTS,
+  R15_PAYMENTS_REQUEST,
+  R23_DAY,
+  R23_DAY_REQUEST,
+  R25_DAY,
+  R25_DAY_REQUEST,
+  R33_ITEM,
+  R33_ITEM_REQUEST,
+  R33_MONTH,
+  R33_MONTH_REQUEST,
+  R33_PARTNER,
+  R33_PARTNER_REQUEST,
+  R33_TRIP,
+  R33_TRIP_REQUEST,
+  R34_DAY,
+  R34_DAY_REQUEST,
+} from '../helpers/reports-stock-real';
 import {
   PRINT_R31_BAY_EN,
   PRINT_R31_BAY_EN_REQUEST,
@@ -138,7 +164,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
 
 describe('the fixtures are the backend’s own', () => {
   it('every report engine fixture is the same text as the backend’s file', () => {
-    // The catalogue too: it holds all 26 reports of the early track now, as the backend lists them.
+    // The catalogue too: it holds all 32 reports of the early track now, as the backend lists them.
     const names = readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture);
     expect(names.length).toBeGreaterThan(100);
     for (const name of names) {
@@ -153,12 +179,12 @@ describe('the fixtures are the backend’s own', () => {
     expect(names(FRONTEND_FIXTURES)).toEqual(names(BACKEND_FIXTURES));
   });
 
-  it('the backend’s catalogue is the reports of this build and those waiting for round 8, no other', () => {
+  it('the backend’s catalogue is the reports of this build and those waiting for their round, no other', () => {
     const backend = BACKEND_CATALOG.map((entry) => entry.id).sort();
-    const ours = [...CATALOG.map((entry) => entry.id), ...ROUND_8_PENDING].sort();
+    const ours = [...CATALOG.map((entry) => entry.id), ...PENDING_REPORTS].sort();
     expect(backend).toEqual(ours);
-    // The ids of round 8 are still the backend's, so the list does not hold an id it never sent.
-    for (const id of ROUND_8_PENDING) {
+    // The ids waiting are still the backend's, so the list does not hold an id it never sent.
+    for (const id of PENDING_REPORTS) {
       expect(
         BACKEND_CATALOG.some((entry) => entry.id === id),
         id,
@@ -227,6 +253,16 @@ describe('the answers carry exactly the fields of the generated types', () => {
       R29_DAY,
       R31_BAY,
       R32_E2E_30B,
+      R10_STOCK,
+      R15_ALL,
+      R15_PAYMENTS,
+      R23_DAY,
+      R25_DAY,
+      R33_TRIP,
+      R33_PARTNER,
+      R33_ITEM,
+      R33_MONTH,
+      R34_DAY,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -241,8 +277,10 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'totals',
         'totals_label_id',
       ]);
-      // `group_by` and `status` are in the echo only when the report was asked with them.
-      expect(keysOf(page.filters).filter((key) => key !== 'group_by' && key !== 'status')).toEqual([
+      // `group_by`, `status`, `voucher_type` and `trip_view` are in the echo only when the report
+      // was asked with them.
+      const optionalKeys = new Set(['group_by', 'status', 'voucher_type', 'trip_view']);
+      expect(keysOf(page.filters).filter((key) => !optionalKeys.has(key))).toEqual([
         'adda',
         'as_of',
         'city',
@@ -306,6 +344,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
       PRINT_R28_MONTH_EN,
       PRINT_R9_DUE_EN,
       PRINT_R31_BAY_EN,
+      PRINT_R33_PARTNER_EN,
+      PRINT_R34_EN,
     ]) {
       expect(keysOf(data)).toEqual([
         'columns',
@@ -334,8 +374,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
 describe('round 7: the cash book, the expense report, the partner statement and money lent', () => {
   const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
 
-  it('the catalogue lists 26 reports, the four new ones with the boxes the backend says', () => {
-    expect(CATALOG).toHaveLength(26);
+  it('the catalogue lists 32 reports, with the boxes the backend says for the newer ones', () => {
+    expect(CATALOG).toHaveLength(32);
     expect(entryOf('R12')).toMatchObject({ filters: ['date_range'], party_required: false });
     expect(entryOf('R29')).toMatchObject({
       filters: ['date_range', 'partner'],
@@ -384,6 +424,141 @@ describe('round 7: the cash book, the expense report, the partner statement and 
   });
 });
 
+describe('round 8: stock, vouchers, registers, trip profit or loss and the day summary', () => {
+  const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
+
+  it('the catalogue lists the six new reports with the boxes the backend says', () => {
+    expect(entryOf('R10')).toMatchObject({
+      group: 'sales',
+      filters: ['date_range', 'seller', 'item'],
+    });
+    expect(entryOf('R15')).toMatchObject({
+      group: 'accounts',
+      filters: ['date_range', 'party', 'voucher_type'],
+    });
+    expect(entryOf('R23')).toMatchObject({
+      group: 'collections',
+      filters: ['date_range', 'party'],
+    });
+    expect(entryOf('R25')).toMatchObject({
+      group: 'collections',
+      filters: ['date_range', 'party'],
+    });
+    expect(entryOf('R33')).toMatchObject({
+      group: 'business',
+      filters: ['date_range', 'item', 'trip_view'],
+    });
+    expect(entryOf('R34')).toMatchObject({ group: 'business', filters: ['date_range'] });
+    // None of them needs a party or a partner before it can run.
+    for (const id of ['R10', 'R15', 'R23', 'R25', 'R33', 'R34']) {
+      expect(entryOf(id)?.party_required, id).toBe(false);
+    }
+  });
+
+  it('sends the exact requests the backend wrote for the six reports', async () => {
+    const requests = [
+      R10_STOCK_REQUEST,
+      R15_ALL_REQUEST,
+      R15_PAYMENTS_REQUEST,
+      R23_DAY_REQUEST,
+      R25_DAY_REQUEST,
+      R33_TRIP_REQUEST,
+      R33_PARTNER_REQUEST,
+      R33_ITEM_REQUEST,
+      R33_MONTH_REQUEST,
+      R34_DAY_REQUEST,
+    ];
+    for (const request of requests) await api.reportsRun(request);
+    await api.reportsPrintData(PRINT_R33_PARTNER_EN_REQUEST);
+    await api.reportsPrintData(PRINT_R34_EN_REQUEST);
+    expect(call.mock.calls).toEqual([
+      ...requests.map((request) => ['reports_run', { input: request }]),
+      ['reports_print_data', { input: PRINT_R33_PARTNER_EN_REQUEST }],
+      ['reports_print_data', { input: PRINT_R34_EN_REQUEST }],
+    ]);
+  });
+
+  it('R15 with no kind has empty totals and one summary line per kind; with a kind, one total', () => {
+    expect(R15_ALL.totals.every((cell) => cell.type === 'empty')).toBe(true);
+    expect(R15_ALL.summary.map((line) => line.label_id)).toEqual([
+      'report-doc-advance',
+      'report-doc-payment',
+      'report-doc-receipt',
+    ]);
+    expect(R15_PAYMENTS.summary).toEqual([]);
+    expect(R15_PAYMENTS.totals.some((cell) => cell.type === 'money')).toBe(true);
+  });
+
+  it('R33 trip and partner layouts have group rows for the trips, and every layout ends in one result', () => {
+    for (const page of [R33_TRIP, R33_PARTNER]) {
+      expect(page.rows.some((row) => row.kind === 'group')).toBe(true);
+    }
+    expect(R33_TRIP.columns).toHaveLength(15);
+    expect(R33_PARTNER.columns.map((column) => column.key)).toEqual([
+      'trip',
+      'partner',
+      'share',
+      'money_in_shop',
+      'money_in_pocket',
+      'money_back',
+      'net',
+      'cost_left',
+    ]);
+    // The share is a percent cell, in hundredths of a percent (4000 is 40%).
+    expect(R33_PARTNER.rows[1]?.cells[2]).toEqual({ type: 'percent', hundredths: 4000 });
+    for (const page of [R33_ITEM, R33_MONTH]) expect(page.columns).toHaveLength(12);
+  });
+
+  it('R34 is a flat list of date, line, count and amount with no totals', () => {
+    expect(R34_DAY.columns.map((column) => column.key)).toEqual([
+      'date',
+      'item',
+      'count',
+      'amount',
+    ]);
+    expect(R34_DAY.totals.every((cell) => cell.type === 'empty')).toBe(true);
+    // The heading row of the partners' shares comes right before the partner rows.
+    const labels = R34_DAY.rows.map((row) => {
+      const cell = row.cells[1];
+      return cell?.type === 'label' ? cell.id : cell?.type;
+    });
+    const at = labels.indexOf('report-r34-partner-shares');
+    expect(at).toBeGreaterThan(0);
+    expect(labels.slice(at + 1, at + 4)).toEqual(['names', 'names', 'names']);
+  });
+
+  it('every message of the six reports can be written in both languages with no hole', () => {
+    const found = new Set<string>(['report-result-profit', 'report-result-loss']);
+    for (const page of [
+      R10_STOCK,
+      R15_ALL,
+      R15_PAYMENTS,
+      R23_DAY,
+      R25_DAY,
+      R33_TRIP,
+      R33_PARTNER,
+      R33_ITEM,
+      R33_MONTH,
+      R34_DAY,
+    ]) {
+      idsIn(page, found);
+      found.add(page.title_id.replace(/-title$/, '-help'));
+    }
+    for (const id of found) {
+      for (const language of LANGUAGES) {
+        const pattern = bundles[language].getMessage(id)?.value;
+        expect(pattern, `${language} ${id}`).toBeTruthy();
+        const errors: Error[] = [];
+        if (pattern !== null && pattern !== undefined) {
+          const text = bundles[language].formatPattern(pattern, {}, errors);
+          expect(errors, `${language} ${id}`).toEqual([]);
+          expect(text.trim(), `${language} ${id}`).not.toBe('');
+        }
+      }
+    }
+  });
+});
+
 /** Every Fluent message ID the backend names in an answer. */
 function idsIn(value: unknown, found: Set<string>): void {
   if (Array.isArray(value)) {
@@ -417,14 +592,15 @@ function idsIn(value: unknown, found: Set<string>): void {
 describe('every message ID the backend sends has words in both languages', () => {
   it('titles, groups, columns, labels, kinds of entry and sides', () => {
     const found = new Set<string>();
-    // The reports waiting for round 8 have no words yet: their fixtures (named `..._r33_...`) and
-    // their entries in the catalogue are left out until their round lands (ROUND_8_PENDING).
-    const pending = new RegExp(
-      `_(${[...ROUND_8_PENDING].map((id) => id.toLowerCase()).join('|')})_`,
-    );
+    // A report waiting for its round has no words yet: its fixtures (named `..._r35_...`) and its
+    // entry in the catalogue are left out until it lands (PENDING_REPORTS, empty now).
+    const waiting =
+      PENDING_REPORTS.size === 0
+        ? null
+        : new RegExp(`_(${[...PENDING_REPORTS].map((id) => id.toLowerCase()).join('|')})_`);
     for (const name of readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture)) {
       if (name.endsWith('_request.json') || name === 'reports_catalog.json') continue;
-      if (pending.test(name)) continue;
+      if (waiting?.test(name) === true) continue;
       idsIn(JSON.parse(readFileSync(path.join(FRONTEND_FIXTURES, name), 'utf8')), found);
     }
     idsIn(CATALOG, found);

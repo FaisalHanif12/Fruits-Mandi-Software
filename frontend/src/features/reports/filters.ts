@@ -9,6 +9,8 @@ import type { PukhtaPersonHit } from '../../bindings/PukhtaPersonHit';
 import type { ReportFilters } from '../../bindings/ReportFilters';
 import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
 import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
+import type { ReportTripView } from '../../bindings/ReportTripView';
+import type { VoucherType } from '../../bindings/VoucherType';
 import type { PickerValue } from '../../shared/ui';
 
 /** The period box: a shortcut of FR-19.2, or the two dates the user types. */
@@ -32,6 +34,46 @@ export function periodMessageId(choice: PeriodChoice): string {
 export type PaidChoice = ReportPaidFilter | 'all';
 
 export const PAID_CHOICES: readonly PaidChoice[] = ['all', 'paid', 'due'];
+
+/** The vouchers list (R15) takes one kind of voucher, or `all` for every kind (no filter). */
+export type VoucherChoice = VoucherType | 'all';
+
+/** In the order of the voucher kinds of PRD 15 and 16. Each has a `report-doc-<kind>` message. */
+export const VOUCHER_CHOICES: readonly VoucherChoice[] = [
+  'all',
+  'receipt',
+  'payment',
+  'advance',
+  'shop_expense',
+  'personal_expense',
+  'personal_return',
+  'money_lent',
+  'money_lent_return',
+  'capital_in',
+  'capital_out',
+  'khata_out',
+  'khata_in',
+  'general',
+];
+
+/** The Fluent message of a voucher kind: `report-doc-shop-expense` for `shop_expense`. */
+export function voucherMessageId(kind: VoucherType): string {
+  return `report-doc-${kind.replaceAll('_', '-')}`;
+}
+
+/** The trip profit or loss (R33) is laid out by trip (the default), item, day, month or partner. */
+export const TRIP_VIEW_CHOICES: readonly ReportTripView[] = [
+  'trip',
+  'item',
+  'day',
+  'month',
+  'partner',
+];
+
+/** The Fluent message of a trip layout: `report-filter-trip-by-partner`. */
+export function tripViewMessageId(view: ReportTripView): string {
+  return `report-filter-trip-by-${view}`;
+}
 
 /** The income report groups its lines by month or by day (R28). */
 export const GROUP_BY_CHOICES: readonly ReportGroupBy[] = ['month', 'day'];
@@ -98,6 +140,10 @@ export interface ReportFilterState {
   personText: string;
   /** The partner of a partner statement (R31, required) or of the expense report (R29, optional). */
   partner: number | null;
+  /** One kind of voucher in the vouchers list (R15); `all` is no filter. */
+  voucherType: VoucherChoice;
+  /** How the trip profit or loss is laid out (R33). It is a layout, not a filter to clear. */
+  tripView: ReportTripView;
 }
 
 export const EMPTY_FILTERS: ReportFilterState = {
@@ -117,6 +163,8 @@ export const EMPTY_FILTERS: ReportFilterState = {
   person: null,
   personText: '',
   partner: null,
+  voucherType: 'all',
+  tripView: 'trip',
 };
 
 /**
@@ -156,6 +204,12 @@ export function filtersToWire(
     // The two newer keys are sent only when they are set; the backend reads a missing key as its
     // default (all lines; by month), so an old request stays valid.
     ...(has('status') && state.paid !== 'all' ? { status: state.paid } : {}),
+    // A kind of voucher is sent only when one is picked (the backend reads a missing key as every
+    // kind). The trip layout is sent whenever the report takes it, the default included.
+    ...(has('voucher_type') && state.voucherType !== 'all'
+      ? { voucher_type: state.voucherType }
+      : {}),
+    ...(has('trip_view') ? { trip_view: state.tripView } : {}),
     ...(has('group_by') && state.groupBy !== 'month' ? { group_by: state.groupBy } : {}),
   };
 }
@@ -179,7 +233,8 @@ export function isUnfiltered(
     wire.adda_id === null &&
     wire.partner_id === null &&
     !wire.detail &&
-    wire.status === undefined
+    wire.status === undefined &&
+    wire.voucher_type === undefined
   );
 }
 

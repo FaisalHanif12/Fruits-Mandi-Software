@@ -8,6 +8,7 @@
 
 import { useLocalization } from '@fluent/react';
 import type {
+  CellClassParams,
   CellKeyDownEvent,
   ColDef,
   GridApi,
@@ -22,6 +23,7 @@ import { formatPaisa, useGrouping, type Paisa } from '../format';
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
 import { directionOf, useLanguage } from '../i18n';
 import './agGridSetup';
+import { NumberRunsCell, hasNumberRun } from './NumberRuns';
 import {
   LIST_COLUMN_WIDTHS,
   LIST_GROW_MIN_WIDTH,
@@ -78,6 +80,12 @@ export interface ListColumn<T> {
    * word of this column under the key `<field>:unit` of the totals values.
    */
   readonly unit?: ((row: T, context: ListContext) => string) | undefined;
+  /**
+   * A figure that reads as a loss is set in the due colour (R33: a trip that lost money). Colour is
+   * never the only signal (NFR-USE-12): the minus sign is there, and a column with a word in `unit`
+   * says "Loss". The total row asks for the tone under the key `<field>:tone`.
+   */
+  readonly tone?: ((row: T, context: ListContext) => 'due' | undefined) | undefined;
 }
 
 interface ListGridProps<T> {
@@ -152,6 +160,16 @@ function toColDef<T>(
       ...(isListNumberLike(column.type) ? ['cell-num'] : []),
       ...(column.wrap === true ? ['cell-wrap'] : []),
     ],
+    ...(column.tone === undefined
+      ? {}
+      : {
+          cellClassRules: {
+            'cell-tone-due': (params: CellClassParams<T>) =>
+              params.node.rowPinned === 'bottom'
+                ? total?.[`${column.field}:tone`] === 'due'
+                : params.data !== undefined && column.tone?.(params.data, context) === 'due',
+          },
+        }),
     ...(column.wrap === true ? { wrapText: true, autoHeight: true } : {}),
     // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
     headerClass: [
@@ -168,6 +186,14 @@ function toColDef<T>(
             </span>
           ),
         }),
+    // A text cell with a date or a range inside keeps its digits in order in Urdu (F25). Only a cell
+    // that holds such a run gets the renderer; every other cell is drawn by the grid as before.
+    ...(column.script === undefined && unitOf === undefined && !isListNumberLike(column.type)
+      ? {
+          cellRendererSelector: (params: ICellRendererParams<T>) =>
+            hasNumberRun(params.value) ? { component: NumberRunsCell } : undefined,
+        }
+      : {}),
     ...(unitOf === undefined
       ? {}
       : {

@@ -11,6 +11,7 @@ import type { ReportId } from '../../bindings/ReportId';
 import type { ReportRow } from '../../bindings/ReportRow';
 import type { ReportRowKind } from '../../bindings/ReportRowKind';
 import type { ListColumn, ListContext } from '../../shared/grid';
+import { isNegativePaisa, isPositivePaisa } from '../../shared/format';
 import { isFromStep, type LayoutStep } from '../../shared/hooks/useLayoutStep';
 import { cellText, emptyNameMessageId, sideText } from './cells';
 
@@ -99,7 +100,70 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
     returned_salary: { from: 'normal' },
     oldest_open: { from: 'wide' },
   },
+  // Stock (R10): the date, who sent it, the item, what came, what is left and for how long always;
+  // the document and what was sold wait for the normal step, the packing and the write-offs for the
+  // wide step.
+  R10: {
+    doc: { from: 'normal' },
+    sold: { from: 'normal' },
+    packing: { from: 'wide' },
+    written_off: { from: 'wide' },
+  },
+  // The receipts register (R23) has a collector the payments register does not: it comes with the
+  // normal step. (R15 and R25 fit at every step; their narration waits for the wide step like any
+  // narration.)
+  R23: { collector: { from: 'normal' } },
+  // Trip profit or loss (R33) has up to 15 columns and a table never scrolls sideways, so the most
+  // used come first and the rest wait for a wider step. Keys that two layouts share are one entry
+  // here: the trip layout (trip, purchase, date, item and the figures), the item, day and month
+  // layouts (the same figures), and the partner layout (trip, partner, share and his money). The
+  // print holds every column.
+  R33: {
+    purchase: { from: 'normal' },
+    sold_qty: { from: 'normal' },
+    money_back: { from: 'normal' },
+    commission: { from: 'wide' },
+    cost_sold: { from: 'wide' },
+    left_cost: { from: 'wide' },
+    money_in_pocket: { from: 'wide' },
+    date: NEVER,
+    bought_qty: NEVER,
+    written_off_qty: NEVER,
+    written_off_cost: NEVER,
+  },
 };
+
+/**
+ * The columns whose figure can be a loss, by report: they get a red tone, a sign and a word ("Loss",
+ * "Profit"), never colour alone (NFR-USE-12, PRD E50). In R33 these are the result of a trip or a
+ * purchase, and his part of it so far in the partner layout. Other reports keep a plain figure.
+ */
+const SIGNED_COLUMNS: Partial<Record<ReportId, ReadonlySet<string>>> = {
+  R33: new Set(['result', 'net']),
+};
+
+/** The columns of a report that carry a loss word, for the totals row too. */
+export function signedColumnsOf(id: ReportId): ReadonlySet<string> {
+  return SIGNED_COLUMNS[id] ?? NO_KEYS;
+}
+
+const NO_KEYS: ReadonlySet<string> = new Set();
+
+/** The words of a result: "Loss" under zero, "Profit" over zero, nothing at zero. */
+function resultWord(cell: ReportCell, context: ListContext): string {
+  if (cell.type !== 'money') return '';
+  if (isNegativePaisa(cell.paisa)) return context.text('report-result-loss');
+  if (isPositivePaisa(cell.paisa)) return context.text('report-result-profit');
+  return '';
+}
+
+/** A result that is a loss is red. */
+function resultTone(cell: ReportCell): 'due' | undefined {
+  return cell.type === 'money' && isNegativePaisa(cell.paisa) ? 'due' : undefined;
+}
+
+/** The label columns that hold one short word (a state, a side, a mark, the kind of an entry). */
+const SHORT_LABEL_KEYS: ReadonlySet<string> = new Set(['status', 'side', 'staff', 'heading']);
 
 /** True when the column of this report is shown at the step. */
 function shownAt(id: ReportId, key: string, step: LayoutStep): boolean {
@@ -122,6 +186,7 @@ export function listColumnOf<V extends RowLike>(
   column: Pick<ReportColumn, 'key' | 'title_id' | 'kind'>,
   index: number,
   emptyName: (rowKind: ReportRowKind) => string | null = () => null,
+  signed = false,
 ): ListColumn<V> {
   const cell = (view: V, context: ListContext) => {
     const found = view.row.cells[index];
@@ -139,6 +204,21 @@ export function listColumnOf<V extends RowLike>(
       return { ...base, type: 'text' };
     case 'money':
     case 'percent':
+      // A result can be a loss: the figure is red, with its sign and a word after it (PRD E50).
+      if (signed && column.kind === 'money') {
+        return {
+          ...base,
+          type: 'balance',
+          unit: (view: V, context: ListContext) => {
+            const found = view.row.cells[index];
+            return found === undefined ? '' : resultWord(found, context);
+          },
+          tone: (view: V) => {
+            const found = view.row.cells[index];
+            return found === undefined ? undefined : resultTone(found);
+          },
+        };
+      }
       return { ...base, type: 'figure' };
     case 'number':
       return { ...base, type: 'count' };
@@ -164,10 +244,12 @@ export function listColumnOf<V extends RowLike>(
       // A sentence from a message (a partner statement line, PRD FR-17.10) is as long as its words.
       return { ...base, type: 'text', grow: true, wrap: true };
     case 'label':
-      // The heading of a list in R24 is a sentence and may take two lines; a status is one word.
-      return column.key === 'section'
-        ? { ...base, type: 'name', grow: true, wrap: true }
-        : { ...base, type: 'status' };
+      // A status, a side, a staff mark or a kind of line is one short word; any other label (the
+      // heading of a list in R24, the name of a line of the day summary in R34) is a sentence that
+      // takes the free width and may take two lines.
+      return SHORT_LABEL_KEYS.has(column.key)
+        ? { ...base, type: 'status' }
+        : { ...base, type: 'name', grow: true, wrap: true };
     case 'text':
       // The narration is long and less used: it comes with the wider windows. A code and a phone
       // number are short.
@@ -186,9 +268,17 @@ export function reportColumns(
   columns: readonly ReportColumn[],
   step: LayoutStep,
 ): ListColumn<ReportRowView>[] {
+  const signed = signedColumnsOf(id);
   return columns.flatMap((column, index) =>
     shownAt(id, column.key, step)
-      ? [listColumnOf<ReportRowView>(column, index, (rowKind) => emptyNameMessageId(id, rowKind))]
+      ? [
+          listColumnOf<ReportRowView>(
+            column,
+            index,
+            (rowKind) => emptyNameMessageId(id, rowKind),
+            signed.has(column.key),
+          ),
+        ]
       : [],
   );
 }
@@ -201,6 +291,7 @@ export function totalsFor(
   columns: readonly ReportColumn[],
   totals: ReportTotals,
   context: ListContext,
+  signed: ReadonlySet<string> = NO_KEYS,
 ): { labelField: string; values: Record<string, string> } {
   const values: Record<string, string> = {};
   columns.forEach((column, index) => {
@@ -208,8 +299,16 @@ export function totalsFor(
     if (cell === undefined || cell.type === 'empty') return;
     values[column.key] = cellText(cell, context);
     if (cell.type === 'balance') values[`${column.key}:unit`] = sideText(cell, context);
+    if (signed.has(column.key)) {
+      values[`${column.key}:unit`] = resultWord(cell, context);
+      const tone = resultTone(cell);
+      if (tone !== undefined) values[`${column.key}:tone`] = tone;
+    }
   });
   const first = columns[0]?.key ?? '';
+  // A report with nothing to total (the day summary R34, the vouchers list R15 with no kind
+  // picked) has no totals row: a row that says "Total" over empty places would be wrong.
+  if (Object.keys(values).length === 0) return { labelField: first, values };
   values[first] = values[first] ?? context.text(totals.labelId);
   return { labelField: first, values };
 }

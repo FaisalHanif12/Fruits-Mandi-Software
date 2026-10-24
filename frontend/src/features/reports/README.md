@@ -75,10 +75,35 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   (`printMessageText`). R31 lines are such sentences, so a line reads the same in both languages and
   on paper (PRD FR-17.10).
 - `scripts/copy-backend-fixtures.mjs` copies the backend's fixtures byte for byte; run it again when
-  the backend changes a type or a fixture. `ROUND_8_PENDING` (tests/helpers/reports-real.ts) names the
-  reports the backend lists that have no screen or words here yet.
+  the backend changes a type or a fixture. `PENDING_REPORTS` (tests/helpers/reports-real.ts) names the
+  reports the backend lists that have no screen or words here yet. It is empty now: all 32 reports
+  of the catalogue have a screen, words and a test.
 - Tests: `reports-screens-round7.test.tsx`, plus the contract and filter tests. Windows spec:
   `46-reports-month.e2e.mjs`.
+
+## Round 8: R10, R15, R23, R25, R33, R34
+
+- **R10 stock** has no fruit column yet (round 11). **R23** and **R25** have no mode, bank or cheque
+  column; a cancelled voucher is listed with its status and left out of the money.
+- **R15 vouchers** has the kind box (`ReportVoucherTypeSelect`, filter `voucher_type`). With no kind
+  picked the totals row is empty and the backend sends `summary` lines, the saved money of each
+  kind. They are drawn above the table (`ReportSummary`) and never added up here. With a kind picked
+  there is one total and no summary.
+- **R33 trip profit or loss** has the layout box (`ReportTripViewSelect`, filter `trip_view`): trip
+  (the default), item, day, month or partner. A trip heading is a group row. The layout is sent every
+  time and is not a filter to clear. The partner layout shows the share as a percent (`percentText`)
+  and the money columns. A result can be negative: `result` and `net` are signed columns
+  (`SIGNED_COLUMNS` in `columns.ts`). They draw as a balance, with the sign, the word (loss or
+  profit, `report-result-*`) in the unit slot and red for a loss (`tone`, see `shared/grid`). A loss
+  is never shown by colour alone.
+- **R34 day summary** is a flat list of rows [date, label, count, amount]: one block for each day.
+  A heading row (`report-r34-partner-shares`) comes before the partner rows. It has no totals row:
+  `totalsFor` returns no row when every total cell is empty, and the print draws no `tfoot` then.
+- A text cell that holds a date or a range ("سفر-1 10-10-2026", the heading of a trip) keeps its
+  digits in order in Urdu: `shared/grid/NumberRuns` puts each run in its own isolate, on screen and
+  on paper.
+- Tests: `reports-screens-round8.test.tsx`, `number-runs.test.tsx`, plus the contract and filter
+  tests. Windows spec: `47-reports-round8.e2e.mjs`. Screenshot snippet: `shots-plan25.playwright.txt`.
 
 ## Not built yet
 

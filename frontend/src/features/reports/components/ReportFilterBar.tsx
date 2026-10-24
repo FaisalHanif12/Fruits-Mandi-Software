@@ -38,6 +38,8 @@ import {
 } from '../filters';
 import { ReportPartnerSelect } from './ReportPartnerSelect';
 import { ReportPersonPicker } from './ReportPersonPicker';
+import { ReportTripViewSelect } from './ReportTripViewSelect';
+import { ReportVoucherTypeSelect } from './ReportVoucherTypeSelect';
 
 /** A report with more boxes than this folds its record pickers behind "More filters" when compact. */
 const FOLD_AFTER = 5;
@@ -284,6 +286,30 @@ export function ReportFilterBar({
         error={fieldError(error, 'filters.partner_id')}
         onChange={(partner) => {
           onChange({ partner });
+        }}
+      />,
+    );
+  }
+  if (takes('voucher_type')) {
+    boxes.push(
+      <ReportVoucherTypeSelect
+        key="voucher_type"
+        value={state.voucherType}
+        error={fieldError(error, 'filters.voucher_type')}
+        onChange={(voucherType) => {
+          onChange({ voucherType });
+        }}
+      />,
+    );
+  }
+  if (takes('trip_view')) {
+    boxes.push(
+      <ReportTripViewSelect
+        key="trip_view"
+        value={state.tripView}
+        error={fieldError(error, 'filters.trip_view')}
+        onChange={(tripView) => {
+          onChange({ tripView });
         }}
       />,
     );

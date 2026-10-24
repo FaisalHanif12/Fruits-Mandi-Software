@@ -19,3 +19,13 @@ The totals row is pinned under the last row and carries the backend's figures.
 money columns, up to 9 digits) and `short` (140 px, a phone number or a short name). A report picks
 them by the kind of the backend's column (`features/reports/columns.ts`). The older `number` and
 `money` types are unchanged.
+
+## Tone and number runs (plan 25)
+
+- `ListColumn.tone(row, context)` may return `'due'`: the cell is drawn in the due colour
+  (`cell-tone-due`). The totals row asks for it under the key `<field>:tone`. It is never the only
+  signal: a signed figure also has its sign, and its word in the unit slot (a loss of a trip).
+- A text cell with digits joined by `-` or `/` (a date, a range) is drawn with each run in a
+  left-to-right isolate (`NumberRuns`), so the date of a trip heading reads "10-10-2026" and not
+  "2026-10-10" in Urdu (F25, NFR-URD-13). Only a cell that holds such a run gets the renderer; the
+  text is the same.

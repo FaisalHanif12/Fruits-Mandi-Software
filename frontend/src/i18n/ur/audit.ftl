@@ -179,3 +179,114 @@ audit-entity-day = دن
 
 # review: pending
 audit-entity-month = مہینہ
+
+# review: pending
+audit-action-unlock = لاک کھولا گیا
+
+# review: pending
+audit-action-lock = لاک کیا گیا
+
+# review: pending
+audit-action-recover = پاس ورڈ نیا بنایا گیا
+
+# review: pending
+audit-action-change-password = پاس ورڈ بدلا گیا
+
+# review: pending
+audit-action-make-regular = مستقل کھاتہ بنایا گیا
+
+# review: pending
+audit-action-update = تبدیل کیا گیا
+
+# review: pending
+audit-action-learn = سیکھا گیا
+
+# review: pending
+audit-action-remove = ہٹایا گیا
+
+# review: pending
+audit-action-set-shares = { -hissa } بدلا گیا
+
+# review: pending
+audit-action-later-sale = بعد کی { -bikri }
+
+# review: pending
+audit-action-print = پرنٹ کیا گیا
+
+# review: pending
+audit-action-write-off = ضائع کیا گیا
+
+# review: pending
+audit-action-write-off-undo = ضائع واپس لیا گیا
+
+# review: pending
+audit-action-confirm = تصدیق کی گئی
+
+# review: pending
+audit-action-check-failed = جانچ ناکام ہوئی
+
+# review: pending
+audit-action-restore = بحال کیا گیا
+
+# review: pending
+audit-entity-backup-cloud-keys = کلاؤڈ بیک اپ کی کنجیاں
+
+# review: pending
+audit-entity-backup-key = بیک اپ کی
+
+# review: pending
+audit-entity-backup = بیک اپ
+
+# review: pending
+audit-entity-health = حساب کی جانچ
+
+# review: pending
+audit-entity-staff = عملہ
+
+# review: pending
+audit-entity-city = شہر
+
+# review: pending
+audit-entity-item = { -qism-maal }
+
+# review: pending
+audit-entity-packing = { -packing }
+
+# review: pending
+audit-entity-adda = { -adda }
+
+# review: pending
+audit-entity-marka = { -marka }
+
+# review: pending
+audit-entity-store = سٹور
+
+# review: pending
+audit-entity-narration = تفصیل
+
+# review: pending
+audit-entity-expense-head = خرچہ مد
+
+# review: pending
+audit-entity-bank-account = بینک اکاؤنٹ
+
+# review: pending
+audit-entity-charge-rule = کمیشن اصول
+
+# review: pending
+audit-entity-translit-pair = سیکھا ہوا لفظ
+
+# review: pending
+audit-entity-bikri-lot = { -lot }
+
+# review: pending
+audit-entity-trip = { -market-safar }
+
+# review: pending
+audit-entity-purchase = { -khareedari }
+
+# review: pending
+audit-entity-trip-cost = { -safar } خرچ
+
+# review: pending
+audit-entity-trip-other-sale = دوسری دکان میں فروخت

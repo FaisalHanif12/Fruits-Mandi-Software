@@ -132,22 +132,15 @@ function readFindInput(value: unknown): FindPeopleInput {
 
 /**
  * Reports the backend already lists (and has fixtures for) that this build has no screen or words
- * for yet: round 8 (R10 stock, R15 vouchers, R23 receipts, R25 payments, R33 trips, R34 day summary).
- * The tests use the reports this build has built, so a report without words never shows its raw
- * message ID on the reports home. When a round lands, its ids are removed from this list, and the
- * tests that guard it (the catalogue and the words) start to cover it.
+ * for yet. Empty now: all 32 reports of the catalogue are built (round 8 landed R10, R15, R23, R25,
+ * R33 and R34). When the backend lists a report before its screen is built (round 11: R35 to R37),
+ * its id goes here, so a report without words never shows its raw message ID on the reports home
+ * and the guard test names what is waiting. Remove the id when its round lands.
  */
-export const ROUND_8_PENDING: ReadonlySet<string> = new Set([
-  'R10',
-  'R15',
-  'R23',
-  'R25',
-  'R33',
-  'R34',
-]);
+export const PENDING_REPORTS: ReadonlySet<string> = new Set<string>();
 
 /** The catalogue as the backend sent it, with only the reports this build has built. */
-export const CATALOG = readCatalog(catalog).filter((entry) => !ROUND_8_PENDING.has(entry.id));
+export const CATALOG = readCatalog(catalog).filter((entry) => !PENDING_REPORTS.has(entry.id));
 
 /** The whole catalogue the backend sent, built or not (for the guard that nothing slips in). */
 export const BACKEND_CATALOG = readCatalog(catalog);

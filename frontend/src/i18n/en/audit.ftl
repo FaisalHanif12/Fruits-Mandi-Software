@@ -179,3 +179,114 @@ audit-entity-day = Day
 
 # review: pending
 audit-entity-month = Month
+
+# review: pending
+audit-action-unlock = Unlocked
+
+# review: pending
+audit-action-lock = Locked
+
+# review: pending
+audit-action-recover = Password reset
+
+# review: pending
+audit-action-change-password = Password changed
+
+# review: pending
+audit-action-make-regular = Made a regular account
+
+# review: pending
+audit-action-update = Updated
+
+# review: pending
+audit-action-learn = Learned
+
+# review: pending
+audit-action-remove = Removed
+
+# review: pending
+audit-action-set-shares = Share changed
+
+# review: pending
+audit-action-later-sale = Later { -bikri }
+
+# review: pending
+audit-action-print = Printed
+
+# review: pending
+audit-action-write-off = Written off
+
+# review: pending
+audit-action-write-off-undo = Write-off undone
+
+# review: pending
+audit-action-confirm = Confirmed
+
+# review: pending
+audit-action-check-failed = Check failed
+
+# review: pending
+audit-action-restore = Restored
+
+# review: pending
+audit-entity-backup-cloud-keys = Cloud backup keys
+
+# review: pending
+audit-entity-backup-key = Backup key
+
+# review: pending
+audit-entity-backup = Backup
+
+# review: pending
+audit-entity-health = Books check
+
+# review: pending
+audit-entity-staff = Staff
+
+# review: pending
+audit-entity-city = City
+
+# review: pending
+audit-entity-item = { -qism-maal }
+
+# review: pending
+audit-entity-packing = { -packing }
+
+# review: pending
+audit-entity-adda = { -adda }
+
+# review: pending
+audit-entity-marka = { -marka }
+
+# review: pending
+audit-entity-store = Store
+
+# review: pending
+audit-entity-narration = Narration
+
+# review: pending
+audit-entity-expense-head = Expense head
+
+# review: pending
+audit-entity-bank-account = Bank account
+
+# review: pending
+audit-entity-charge-rule = Commission rule
+
+# review: pending
+audit-entity-translit-pair = Learned word
+
+# review: pending
+audit-entity-bikri-lot = { -lot }
+
+# review: pending
+audit-entity-trip = { -market-safar }
+
+# review: pending
+audit-entity-purchase = { -khareedari }
+
+# review: pending
+audit-entity-trip-cost = Trip cost
+
+# review: pending
+audit-entity-trip-other-sale = Sale in another shop

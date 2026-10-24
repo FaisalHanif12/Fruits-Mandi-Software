@@ -55,8 +55,24 @@ import {
   R32_E2E_30B,
 } from './reports-business-real';
 
+import {
+  PRINT_R33_PARTNER_EN,
+  PRINT_R34_EN,
+  R10_STOCK,
+  R15_ALL,
+  R15_PAYMENTS,
+  R23_DAY,
+  R25_DAY,
+  R33_ITEM,
+  R33_MONTH,
+  R33_PARTNER,
+  R33_TRIP,
+  R34_DAY,
+} from './reports-stock-real';
+
 export * from './reports-real';
 export * from './reports-business-real';
+export * from './reports-stock-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -103,6 +119,14 @@ const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
   R29: R29_DAY,
   R31: R31_BAY,
   R32: R32_E2E_30B,
+  // Round 8: stock, the vouchers list with no kind picked, the two registers, the trip profit or
+  // loss by trip and the day summary of E2E-36.
+  R10: R10_STOCK,
+  R15: R15_ALL,
+  R23: R23_DAY,
+  R25: R25_DAY,
+  R33: R33_TRIP,
+  R34: R34_DAY,
 };
 
 function slice(page: ReportPage, offset: number, limit: number): ReportPage {
@@ -115,6 +139,8 @@ function slice(page: ReportPage, offset: number, limit: number): ReportPage {
 function printOf(id: ReportId): ReportPrintData {
   if (id === 'R13') return PRINT_R13_AKRAM_UR;
   if (id === 'R31') return PRINT_R31_BAY_EN;
+  if (id === 'R33') return PRINT_R33_PARTNER_EN;
+  if (id === 'R34') return PRINT_R34_EN;
   return PRINT_R18_EN;
 }
 
@@ -153,6 +179,19 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     if (input.id === 'R28' && input.filters.group_by === 'day') answer = R28_BY_DAY;
     // R29 for one partner answers with his lines only.
     if (input.id === 'R29' && input.filters.partner_id !== null) answer = R29_ALIF;
+    // R15 for one kind of voucher answers with that kind (the payments), with one total.
+    if (input.id === 'R15' && input.filters.voucher_type !== undefined) answer = R15_PAYMENTS;
+    // R33 answers in the layout asked for (unless the test brought a page of its own).
+    if (input.id === 'R33' && options.pages?.R33 === undefined) {
+      const layouts = {
+        trip: R33_TRIP,
+        item: R33_ITEM,
+        month: R33_MONTH,
+        partner: R33_PARTNER,
+      } as const;
+      const view = input.filters.trip_view ?? 'trip';
+      answer = view === 'day' ? R33_MONTH : layouts[view];
+    }
     return Promise.resolve(slice(answer, input.offset, input.limit));
   });
   vi.mocked(reportsApi.reportsFindPeople).mockImplementation(() =>

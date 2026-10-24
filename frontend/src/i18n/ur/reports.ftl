@@ -887,3 +887,209 @@ report-pick-partner = پہلے شراکت دار چنیں
 
 # review: pending
 report-pick-partner-help = یہ کھاتہ ایک شراکت دار کا ہوتا ہے۔ اسے اوپر سے چنیں۔
+
+## Round 8: stock (R10), vouchers (R15), receipts (R23), payments (R25), trip profit or loss (R33) and the day summary (R34).
+
+# review: pending
+report-r10-title = { -baqi-maal }
+
+# review: pending
+report-r10-help = وصول ہوا مال جو ابھی بکا نہیں: کتنا آیا، کتنا بکا، کتنا باقی ہے اور کتنے دن سے۔
+
+# review: pending
+report-r15-title = واؤچر
+
+# review: pending
+report-r15-help = ہر واؤچر قسم اور تاریخ کے حساب سے۔ قسم نہ چنیں تو ہر قسم کی رقم جدول کے اوپر دکھائی جاتی ہے۔ منسوخ واؤچر فہرست میں رہتا ہے مگر رقم میں شمار نہیں ہوتا۔
+
+# review: pending
+report-r23-title = { -wasooli } رجسٹر
+
+# review: pending
+report-r23-help = ہر وصولی خریدار، رقم اور اگراہی والے کے ساتھ۔ پیشگی واپس کرنے والا بیوپاری بھی یہاں ہے۔ منسوخ وصولی فہرست میں رہتی ہے مگر رقم میں شمار نہیں ہوتی۔
+
+# review: pending
+report-r25-title = { -adaigi } رجسٹر
+
+# review: pending
+report-r25-help = ہر ادائیگی کھاتے اور رقم کے ساتھ۔ منسوخ ادائیگی فہرست میں رہتی ہے مگر رقم میں شمار نہیں ہوتی۔
+
+# review: pending
+report-r33-title = تجارتی منافع / نقصان
+
+# review: pending
+report-r33-help = مارکیٹ سفر نے کیا خریدا، بیچا، ضائع کیا اور کیا باقی ہے، اور ہر سفر کا منافع یا نقصان، سفر، قسم مال، دن، مہینے یا شراکت دار کے حساب سے۔
+
+# review: pending
+report-r34-title = روزانہ خلاصہ
+
+# review: pending
+report-r34-help = ہر دن کا ایک حصہ: بکری، روکڑ، وصولی، ادائیگی، خرچہ، شراکت داروں کی رقم، سفر اور جو ابھی لینا ہے۔
+
+## The columns of these reports.
+
+# review: pending
+report-col-packing = { -packing }
+
+# review: pending
+report-col-received = آیا
+
+# review: pending
+report-col-sold = بکا
+
+# review: pending
+report-col-written-off = ضائع
+
+# review: pending
+report-col-balance-qty = باقی
+
+# review: pending
+report-col-days-waiting = انتظار کے دن
+
+# review: pending
+report-col-trip = { -safar }
+
+# review: pending
+report-col-purchase = { -khareedari }
+
+# review: pending
+report-col-bought-qty = خریدی گئی تعداد
+
+# review: pending
+report-col-bought-cost = خریداری کی لاگت
+
+# review: pending
+report-col-sales-money = بکری کی رقم
+
+# review: pending
+report-col-cost-sold = بکے مال کی لاگت
+
+# review: pending
+report-col-written-off-cost = ضائع کی لاگت
+
+# review: pending
+report-col-left-qty = بچا
+
+# review: pending
+report-col-left-cost = بچی ہوئی لاگت
+
+# review: pending
+report-col-result = نتیجہ
+
+# review: pending
+report-col-share = { -hissa }
+
+# review: pending
+report-col-money-in-shop = ادا: { -dukan-se }
+
+# review: pending
+report-col-money-in-pocket = ادا: { -apni-jeb-se }
+
+# review: pending
+report-col-money-back = واپس ملا
+
+# review: pending
+report-col-part-of-result = اب تک کا حصہ
+
+# review: pending
+report-col-line = تفصیل
+
+# review: pending
+report-col-count = تعداد
+
+## The words of a result, the new filter boxes and the print facts.
+
+# review: pending
+report-result-profit = منافع
+
+# review: pending
+report-result-loss = نقصان
+
+# review: pending
+report-filter-voucher-type = قسم
+
+# review: pending
+report-voucher-type-all = تمام اقسام
+
+# review: pending
+report-filter-trip-view = ترتیب
+
+# review: pending
+report-filter-trip-by-trip = سفر وار
+
+# review: pending
+report-filter-trip-by-item = قسم مال وار
+
+# review: pending
+report-filter-trip-by-day = دن وار
+
+# review: pending
+report-filter-trip-by-month = مہینہ وار
+
+# review: pending
+report-filter-trip-by-partner = شراکت دار وار
+
+## The lines of the day summary (R34).
+
+# review: pending
+report-r34-bikri = { -kham-bikri }
+
+# review: pending
+report-r34-commission = { -commission } اور { -laga }
+
+# review: pending
+report-r34-cash-opening = ابتدائی روکڑ
+
+# review: pending
+report-r34-cash-in = رقم آئی
+
+# review: pending
+report-r34-cash-out = رقم دی
+
+# review: pending
+report-r34-cash-closing = آخری روکڑ
+
+# review: pending
+report-r34-receipts = { -wasooli }
+
+# review: pending
+report-r34-payments = { -adaigi }
+
+# review: pending
+report-r34-advances = { -peshgi }
+
+# review: pending
+report-r34-expenses = { -dukan-kharcha }
+
+# review: pending
+report-r34-partner-taken = { -zati-kharcha }
+
+# review: pending
+report-r34-partner-returned = { -zati-kharcha } { -wapsi }
+
+# review: pending
+report-r34-capital = { -sarmaya }
+
+# review: pending
+report-r34-money-lent = { -adhar-raqam }
+
+# review: pending
+report-r34-money-lent-back = { -adhar-raqam } { -wapsi }
+
+# review: pending
+report-r34-trips-bought = { -market-safar }: { -khareedari }
+
+# review: pending
+report-r34-trips-sold = { -market-safar }: { -bikri }
+
+# review: pending
+report-r34-partner-shares = { -shirakat-dar } کا { -hissa }
+
+# review: pending
+report-r34-buyers-dues = وصولی باقی
+
+# review: pending
+report-r34-open-lots = باقی { -lot }
+
+# review: pending
+report-r34-open-qty = باقی { -nag }

@@ -17,6 +17,20 @@ import { devFlag } from './dev-bridge';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import { rokarHandlers } from './dev-bridge-rokar';
 import {
+  PRINT_R33_PARTNER_EN,
+  PRINT_R34_EN,
+  R10_STOCK,
+  R15_ALL,
+  R15_PAYMENTS,
+  R23_DAY,
+  R25_DAY,
+  R33_ITEM,
+  R33_MONTH,
+  R33_PARTNER,
+  R33_TRIP,
+  R34_DAY,
+} from './reports-stock-real';
+import {
   PRINT_R31_BAY_EN,
   R12_DAY,
   R29_ALIF,
@@ -92,6 +106,12 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R29: R29_DAY,
   R31: R31_BAY,
   R32: R32_E2E_30B,
+  R10: R10_STOCK,
+  R15: R15_ALL,
+  R23: R23_DAY,
+  R25: R25_DAY,
+  R33: R33_TRIP,
+  R34: R34_DAY,
 };
 
 const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
@@ -101,6 +121,8 @@ const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R20: PRINT_R20_UR,
   R28: PRINT_R28_MONTH_EN,
   R31: PRINT_R31_BAY_EN,
+  R33: PRINT_R33_PARTNER_EN,
+  R34: PRINT_R34_EN,
 };
 
 function catalog(): ReportCatalogEntry[] {
@@ -123,6 +145,15 @@ function page(input: Input): ReportPage {
     throw Object.assign(new Error('ERR_REQUIRED'), R31_PARTNER_REQUIRED);
   }
   if (id === 'R29' && (filters['partner_id'] ?? null) !== null) base = R29_ALIF;
+  // R15 for one kind of voucher answers with that kind, with one total.
+  if (id === 'R15' && (filters['voucher_type'] ?? null) !== null) base = R15_PAYMENTS;
+  // R33 answers in the layout asked for (the day layout has no fixture of its own: the month one).
+  if (id === 'R33') {
+    const view = filters['trip_view'];
+    if (view === 'item') base = R33_ITEM;
+    else if (view === 'partner') base = R33_PARTNER;
+    else if (view === 'month' || view === 'day') base = R33_MONTH;
+  }
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {
     base = { ...base, rows: Array.from({ length: 230 }, () => firstRow), total_count: 230 };

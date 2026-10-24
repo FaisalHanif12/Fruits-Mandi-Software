@@ -1,0 +1,103 @@
+// Screenshots of round 8: stock (R10), the vouchers list (R15, with no kind and with the payments),
+// the receipts and payments registers (R23, R25), the trip profit or loss (R33 by trip, partner, item
+// and month) and the day summary (R34), in both languages at the three window sizes, taken from the
+// development page /dev/reports/$id with the Playwright tool. It is a developer tool: run it with the
+// Vite dev server up on a free port (`pnpm --filter frontend exec vite --port 5188 --strictPort --host
+// 127.0.0.1`), once for each size (change SIZES). It also measures sideways overflow (NFR-USE-15): the
+// page, the main area and every grid must not scroll sideways, no cell may be cut, and no raw markup,
+// message ID or error code may show. The tool's own screenshot action may only write inside the folder
+// it was started in, so this snippet writes with an absolute path from inside the page code. Paste it
+// into `browser_run_code_unsafe`. (A snippet for that tool, not a module, so it is kept as .txt. The
+// Windows check is spec 47.)
+//
+// The flags in the hash (tests/helpers/dev-bridge-reports.ts): `empty`, `many`, `down`. A shot with an
+// `act` first picks a value in a drop-down box: `type-payment` (R15), `view-partner`, `view-item`,
+// `view-month` (R33).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan25';
+  const BASE = 'http://127.0.0.1:5188/#';
+  const SIZES = [[1366, 768]];
+  // The label of a box and the word of the option, by language (reports.ftl).
+  const ACT = {
+    'type-payment': {
+      ur: ['قسم', 'ادائیگی'],
+      en: ['Type', 'Payment'],
+    },
+    'view-partner': { ur: ['ترتیب', 'شراکت دار وار'], en: ['Show by', 'By partner'] },
+    'view-item': { ur: ['ترتیب', 'قسم مال وار'], en: ['Show by', 'By item'] },
+    'view-month': { ur: ['ترتیب', 'مہینہ وار'], en: ['Show by', 'By month'] },
+  };
+  // [path and flags, name of the shot, act (or null)].
+  const SHOTS = [
+    ['/dev/reports/R10', 'r10', null],
+    ['/dev/reports/R10?many', 'r10-many', null],
+    ['/dev/reports/R10?empty', 'r10-empty', null],
+    ['/dev/reports/R15', 'r15', null],
+    ['/dev/reports/R15', 'r15-payments', 'type-payment'],
+    ['/dev/reports/R23', 'r23', null],
+    ['/dev/reports/R25', 'r25', null],
+    ['/dev/reports/R33', 'r33-trip', null],
+    ['/dev/reports/R33', 'r33-partner', 'view-partner'],
+    ['/dev/reports/R33', 'r33-item', 'view-item'],
+    ['/dev/reports/R33', 'r33-month', 'view-month'],
+    ['/dev/reports/R33?empty', 'r33-empty', null],
+    ['/dev/reports/R34', 'r34', null],
+    ['/dev/reports/R34?down', 'r34-down', null],
+  ];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [path, name, act] of SHOTS) {
+      for (const lang of ['ur', 'en']) {
+        try {
+          await page.goto(`${BASE}${path}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1, [role="alert"]', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          await page.waitForTimeout(1600);
+          if (act !== null) {
+            const [label, option] = ACT[act][lang];
+            await page.getByRole('combobox', { name: label, exact: true }).click();
+            await page.getByRole('option', { name: option, exact: true }).click();
+            await page.waitForTimeout(1200);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
+            const main = document.querySelector('main');
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            const text = document.body.textContent || '';
+            const raw = /<(num|code)>|ERR_|report-col-|report-r\d+-|report-doc-|report-result-/.test(
+              text,
+            );
+            const a = document.activeElement;
+            const focus = a ? a.tagName + ':' + (a.getAttribute('aria-label') || a.id || '') : '-';
+            return [
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'clipped=' + clipped,
+              'raw=' + raw,
+              'focus=' + focus,
+            ].join(' ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 140)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

@@ -26,6 +26,8 @@ import {
   footerContent,
 } from '../../../shared/print';
 import { Code } from '../../../shared/ui/Code';
+import { NumberRuns } from '../../../shared/grid/NumberRuns';
+import { scriptOf } from '../../../shared/text/scriptHint';
 import { Num } from '../../../shared/ui/Num';
 import { ScriptText } from '../../../shared/ui/ScriptText';
 import { emptyNameMessageId, monthMessageId } from '../cells';
@@ -77,7 +79,9 @@ function DetailLine({ part }: { part: ReportPrintDetailPart }) {
     case 'text':
       return (
         <p>
-          <bdi dir="auto">{part.text}</bdi>
+          <bdi dir="auto">
+            <NumberRuns text={part.text} />
+          </bdi>
         </p>
       );
   }
@@ -108,7 +112,11 @@ function Cell({ cell }: { cell: ReportPrintCell }) {
     case 'empty':
       return null;
     case 'text':
-      return <bdi dir="auto">{cell.text}</bdi>;
+      return (
+        <bdi dir="auto">
+          <NumberRuns text={cell.text} />
+        </bdi>
+      );
     case 'label':
       return <>{l10n.getString(cell.id)}</>;
     case 'number':
@@ -142,7 +150,12 @@ function Cell({ cell }: { cell: ReportPrintCell }) {
       );
     }
     case 'names':
-      return <ScriptText>{cell.text}</ScriptText>;
+      // The script of the whole name; a date inside it keeps its digit order (F25).
+      return (
+        <bdi lang={scriptOf(cell.text)}>
+          <NumberRuns text={cell.text} />
+        </bdi>
+      );
     case 'doc': {
       const kind = l10n.getString(cell.type_id);
       return cell.number === null ? (
@@ -343,19 +356,22 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
               </tr>
             ))}
           </tbody>
-          <tfoot>
-            <tr>
-              {data.totals.map((cell, position) => (
-                <td key={position} className={columnClass(data, position)}>
-                  {position === 0 && cell.type === 'empty' ? (
-                    l10n.getString(data.totals_label_id)
-                  ) : (
-                    <Cell cell={cell} />
-                  )}
-                </td>
-              ))}
-            </tr>
-          </tfoot>
+          {/* A report with nothing to total (the day summary) has no totals row. */}
+          {data.totals.every((cell) => cell.type === 'empty') ? null : (
+            <tfoot>
+              <tr>
+                {data.totals.map((cell, position) => (
+                  <td key={position} className={columnClass(data, position)}>
+                    {position === 0 && cell.type === 'empty' ? (
+                      l10n.getString(data.totals_label_id)
+                    ) : (
+                      <Cell cell={cell} />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
         </table>
         {data.words === null || data.words === undefined ? null : (
           <p className="print-words">

@@ -886,3 +886,209 @@ report-pick-partner = Pick a partner first
 
 # review: pending
 report-pick-partner-help = This statement is for one partner. Choose him above.
+
+## Round 8: stock (R10), vouchers (R15), receipts (R23), payments (R25), trip profit or loss (R33) and the day summary (R34).
+
+# review: pending
+report-r10-title = { -baqi-maal }
+
+# review: pending
+report-r10-help = Goods received and not yet sold: what came, what was sold, what is left and for how many days.
+
+# review: pending
+report-r15-title = Vouchers
+
+# review: pending
+report-r15-help = Every voucher by kind and date. With no kind picked, the money of each kind is shown above the table. A cancelled voucher is listed and not counted.
+
+# review: pending
+report-r23-title = { -wasooli } Register
+
+# review: pending
+report-r23-help = Every receipt with the buyer, the amount and the collector. A seller returning his advance is here too. A cancelled receipt is listed and not counted.
+
+# review: pending
+report-r25-title = { -adaigi } Register
+
+# review: pending
+report-r25-help = Every payment with the account and the amount. A cancelled payment is listed and not counted.
+
+# review: pending
+report-r33-title = Trading Profit / Loss
+
+# review: pending
+report-r33-help = What the market trips bought, sold, wrote off and still hold, and the profit or loss of each trip, by trip, item, day, month or partner.
+
+# review: pending
+report-r34-title = Day Summary
+
+# review: pending
+report-r34-help = One block for each day: sales, cash, receipts, payments, expenses, the partners' money, trips and what is still owed.
+
+## The columns of these reports.
+
+# review: pending
+report-col-packing = { -packing }
+
+# review: pending
+report-col-received = Received
+
+# review: pending
+report-col-sold = Sold
+
+# review: pending
+report-col-written-off = Written Off
+
+# review: pending
+report-col-balance-qty = Balance
+
+# review: pending
+report-col-days-waiting = Days Waiting
+
+# review: pending
+report-col-trip = { -safar }
+
+# review: pending
+report-col-purchase = { -khareedari }
+
+# review: pending
+report-col-bought-qty = Quantity Bought
+
+# review: pending
+report-col-bought-cost = Bought Cost
+
+# review: pending
+report-col-sales-money = Sales Money
+
+# review: pending
+report-col-cost-sold = Cost of Goods Sold
+
+# review: pending
+report-col-written-off-cost = Written-off Cost
+
+# review: pending
+report-col-left-qty = Left
+
+# review: pending
+report-col-left-cost = Cost Left
+
+# review: pending
+report-col-result = Result
+
+# review: pending
+report-col-share = { -hissa }
+
+# review: pending
+report-col-money-in-shop = Paid: { -dukan-se }
+
+# review: pending
+report-col-money-in-pocket = Paid: { -apni-jeb-se }
+
+# review: pending
+report-col-money-back = Money Back
+
+# review: pending
+report-col-part-of-result = Part So Far
+
+# review: pending
+report-col-line = Detail
+
+# review: pending
+report-col-count = Count
+
+## The words of a result, the new filter boxes and the print facts.
+
+# review: pending
+report-result-profit = Profit
+
+# review: pending
+report-result-loss = Loss
+
+# review: pending
+report-filter-voucher-type = Type
+
+# review: pending
+report-voucher-type-all = All kinds
+
+# review: pending
+report-filter-trip-view = Show by
+
+# review: pending
+report-filter-trip-by-trip = By trip
+
+# review: pending
+report-filter-trip-by-item = By item
+
+# review: pending
+report-filter-trip-by-day = By day
+
+# review: pending
+report-filter-trip-by-month = By month
+
+# review: pending
+report-filter-trip-by-partner = By partner
+
+## The lines of the day summary (R34).
+
+# review: pending
+report-r34-bikri = { -kham-bikri }
+
+# review: pending
+report-r34-commission = { -commission } and { -laga }
+
+# review: pending
+report-r34-cash-opening = Cash Opening
+
+# review: pending
+report-r34-cash-in = Cash In
+
+# review: pending
+report-r34-cash-out = Cash Out
+
+# review: pending
+report-r34-cash-closing = Cash Closing
+
+# review: pending
+report-r34-receipts = { -wasooli }
+
+# review: pending
+report-r34-payments = { -adaigi }
+
+# review: pending
+report-r34-advances = { -peshgi }
+
+# review: pending
+report-r34-expenses = { -dukan-kharcha }
+
+# review: pending
+report-r34-partner-taken = { -zati-kharcha }
+
+# review: pending
+report-r34-partner-returned = { -zati-kharcha } { -wapsi }
+
+# review: pending
+report-r34-capital = { -sarmaya }
+
+# review: pending
+report-r34-money-lent = { -adhar-raqam }
+
+# review: pending
+report-r34-money-lent-back = { -adhar-raqam } { -wapsi }
+
+# review: pending
+report-r34-trips-bought = { -market-safar }: { -khareedari }
+
+# review: pending
+report-r34-trips-sold = { -market-safar }: { -bikri }
+
+# review: pending
+report-r34-partner-shares = Partners' { -hissa }
+
+# review: pending
+report-r34-buyers-dues = Buyers' Dues
+
+# review: pending
+report-r34-open-lots = Unsold { -lot }
+
+# review: pending
+report-r34-open-qty = { -nag } Left

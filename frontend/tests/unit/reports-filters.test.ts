@@ -14,6 +14,10 @@ import {
   isUnfiltered,
   periodMessageId,
   personFromHit,
+  tripViewMessageId,
+  voucherMessageId,
+  TRIP_VIEW_CHOICES,
+  VOUCHER_CHOICES,
   type ReportFilterState,
 } from '../../src/features/reports/filters';
 import {
@@ -44,6 +48,19 @@ import {
   R9_DUE_REQUEST,
   R9_NOT_A_ONE_TIME_ACCOUNT_REQUEST,
 } from '../helpers/reports-real';
+import {
+  PRINT_R33_PARTNER_EN_REQUEST,
+  R10_STOCK_REQUEST,
+  R15_ALL_REQUEST,
+  R15_PAYMENTS_REQUEST,
+  R23_DAY_REQUEST,
+  R25_DAY_REQUEST,
+  R33_ITEM_REQUEST,
+  R33_MONTH_REQUEST,
+  R33_PARTNER_REQUEST,
+  R33_TRIP_REQUEST,
+  R34_DAY_REQUEST,
+} from '../helpers/reports-stock-real';
 import {
   PRINT_R31_BAY_EN_REQUEST,
   R12_DAY_REQUEST,
@@ -274,9 +291,22 @@ describe('the catalogue', () => {
  * which the backend reads the same way (its default), so null and missing are one thing here.
  */
 function wireOf(request: ReportRunInput): ReportFilters {
-  const { group_by: groupBy, status, partner_id: partnerId, ...rest } = request.filters;
+  const {
+    group_by: groupBy,
+    status,
+    partner_id: partnerId,
+    voucher_type: voucherType,
+    trip_view: tripView,
+    ...rest
+  } = request.filters;
   return {
     ...rest,
+    // The round 8 requests carry the two newest keys as null where the report does not take them;
+    // the screen leaves them out (the backend reads a missing key as every kind, and as the trip).
+    ...(voucherType === undefined || (voucherType as unknown) === null
+      ? {}
+      : { voucher_type: voucherType }),
+    ...(tripView === undefined || (tripView as unknown) === null ? {} : { trip_view: tripView }),
     // The requests the backend wrote before round 7 have no `partner_id`; it reads a missing key as
     // none, and the screen always sends it (null when the report takes no partner box).
     partner_id: partnerId ?? null,
@@ -363,6 +393,65 @@ describe('the requests the screen builds are the ones the backend wrote (round 7
   it('R32 takes its person from the people who can borrow, the others from the accounts', () => {
     expect(partyBoxOf('R32')).toBe('lent');
     expect(partyBoxOf('R13')).toBe('any');
+  });
+});
+
+describe('the requests the screen builds are the ones the backend wrote (round 8 reports)', () => {
+  const cases: [string, ReportRunInput, Partial<ReportFilterState>][] = [
+    ['R10 with nothing filled', R10_STOCK_REQUEST, {}],
+    ['R15 with no kind picked', R15_ALL_REQUEST, {}],
+    ['R15 for the payments', R15_PAYMENTS_REQUEST, { voucherType: 'payment' }],
+    ['R23 for one day', R23_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R25 for one day', R25_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R33 by trip', R33_TRIP_REQUEST, { tripView: 'trip' }],
+    ['R33 by partner', R33_PARTNER_REQUEST, { tripView: 'partner' }],
+    ['R33 by item', R33_ITEM_REQUEST, { tripView: 'item' }],
+    ['R33 by month', R33_MONTH_REQUEST, { tripView: 'month' }],
+    ['R34 for one day', R34_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+  ];
+  it.each(cases)('%s', (_name, request, part) => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, ...part };
+    expect(filtersToWire(state, entryOf(request.id).filters)).toEqual(wireOf(request));
+  });
+
+  it('is exactly the print request of the trip result by partner', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, tripView: 'partner' };
+    expect(filtersToWire(state, entryOf('R33').filters)).toEqual(
+      wireOf(PRINT_R33_PARTNER_EN_REQUEST as unknown as ReportRunInput),
+    );
+  });
+
+  it('sends a kind of voucher only when one is picked, and only to the report that takes it', () => {
+    const picked: ReportFilterState = { ...EMPTY_FILTERS, voucherType: 'shop_expense' };
+    expect(filtersToWire(picked, entryOf('R15').filters).voucher_type).toBe('shop_expense');
+    expect(filtersToWire(picked, entryOf('R25').filters)).not.toHaveProperty('voucher_type');
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R15').filters)).not.toHaveProperty('voucher_type');
+  });
+
+  it('sends the trip layout to R33 always, the default included, and to no other report', () => {
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R33').filters).trip_view).toBe('trip');
+    expect(
+      filtersToWire({ ...EMPTY_FILTERS, tripView: 'day' }, entryOf('R33').filters).trip_view,
+    ).toBe('day');
+    expect(
+      filtersToWire({ ...EMPTY_FILTERS, tripView: 'day' }, entryOf('R34').filters),
+    ).not.toHaveProperty('trip_view');
+  });
+
+  it('a kind of voucher is a filter to clear for R15; the trip layout is not one for R33', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, voucherType: 'payment' }, entryOf('R15').filters)).toBe(
+      false,
+    );
+    expect(isUnfiltered({ ...EMPTY_FILTERS, tripView: 'partner' }, entryOf('R33').filters)).toBe(
+      true,
+    );
+  });
+
+  it('every voucher kind and every layout has a message', () => {
+    expect(voucherMessageId('shop_expense')).toBe('report-doc-shop-expense');
+    expect(VOUCHER_CHOICES).toHaveLength(14);
+    expect(tripViewMessageId('partner')).toBe('report-filter-trip-by-partner');
+    expect(TRIP_VIEW_CHOICES).toEqual(['trip', 'item', 'day', 'month', 'partner']);
   });
 });
 

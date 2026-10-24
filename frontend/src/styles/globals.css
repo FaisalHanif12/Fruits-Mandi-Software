@@ -113,6 +113,12 @@ body {
   line-height: var(--leading-latin);
 }
 
+/* A date or a range inside a line of words: Inter with equal-width digits, at the size of the words around it. */
+@utility number-run {
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Two thin lines, like the rule drawn under a total in a ledger. */
 @utility ledger-rule {
   block-size: calc(var(--border-w) * 2 + var(--rule-gap));

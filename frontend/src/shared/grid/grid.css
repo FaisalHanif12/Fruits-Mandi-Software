@@ -218,6 +218,12 @@
   inline-size: 100%;
 }
 
+/* A figure that reads as a loss (a trip that lost money). The word after it and the minus sign
+   say the same, so the colour is never the only signal (NFR-USE-12). */
+.entry-grid .cell-tone-due {
+  color: var(--color-due);
+}
+
 .entry-grid .cell-unit {
   flex: none;
   inline-size: var(--unit-slot);
