@@ -2,6 +2,8 @@
 // columns and a row store; they never write key handlers.
 export { EntryGrid } from './EntryGrid';
 export { ListGrid, type ListColumn, type ListContext } from './ListGrid';
+export { PagedFooter } from './PagedFooter';
+export { PagedList } from './PagedList';
 export { columnsWithMore, type MoreColumnsPlan } from './moreColumns';
 export { createEntryStore, type EntryState, type EntryStore } from './entryStore';
 export {

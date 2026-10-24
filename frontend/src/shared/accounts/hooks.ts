@@ -3,6 +3,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { usePagedQuery } from '../hooks';
 import {
   accountsGet,
   assistPartyCard,
@@ -35,11 +36,17 @@ const COA_KEY = ['coa'] as const;
 /** A short pause so a burst of key presses asks once. */
 const SIMILAR_DELAY_MS = 300;
 
+/**
+ * The accounts for the filter, page by page, with the count of the whole filter and the opening
+ * totals over all of it (PRD FR-10.5, FR-19.11).
+ */
 export function useAccountList(filter: AccountFilter) {
-  return useQuery({
+  return usePagedQuery({
     queryKey: [...ACCOUNTS_KEY, 'list', filter],
-    queryFn: () => accountsList(filter),
-    placeholderData: keepPreviousData,
+    fetchPage: (offset, limit) => accountsList(filter, offset, limit),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.count,
+    keepPrevious: true,
   });
 }
 

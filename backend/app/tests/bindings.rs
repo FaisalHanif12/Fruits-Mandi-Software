@@ -18,8 +18,8 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, bikri, capital, cash, cashbook, drafts, expenses, general, khata, lent, masters,
-    partners, printing, purchases, rules, search, statement, trips, ventures, vouchers,
+    accounts, bikri, capital, cash, cashbook, drafts, expenses, gardens, general, khata, lent,
+    masters, partners, printing, purchases, rules, search, statement, trips, ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -54,6 +54,9 @@ const EXPECTED_FILES: &[&str] = &[
     "Suggestions.ts",
     "LearnInput.ts",
     "PairRow.ts",
+    "PairsListInput.ts",
+    "PairsList.ts",
+    "PairsTotals.ts",
     "RemovePairInput.ts",
     "Direction.ts",
     "Kind.ts",
@@ -95,8 +98,9 @@ const EXPECTED_FILES: &[&str] = &[
     "NarrationInput.ts",
     "ExpenseHeadInput.ts",
     "StaffInput.ts",
-    "BankAccountInput.ts",
     "MastersListInput.ts",
+    "MastersList.ts",
+    "MastersTotals.ts",
     "MastersSetActiveInput.ts",
     "MastersNextCodeInput.ts",
     "MasterRow.ts",
@@ -109,7 +113,6 @@ const EXPECTED_FILES: &[&str] = &[
     "NarrationRow.ts",
     "ExpenseHeadRow.ts",
     "StaffRow.ts",
-    "BankAccountRow.ts",
     "SearchScope.ts",
     "SearchHit.ts",
     "SearchMastersInput.ts",
@@ -148,6 +151,8 @@ const EXPECTED_FILES: &[&str] = &[
     "RuleRow.ts",
     "RulesFilter.ts",
     "RulesListInput.ts",
+    "RulesList.ts",
+    "RulesTotals.ts",
     "RulesGetInput.ts",
     "RulesSetActiveInput.ts",
     "RuleOverlap.ts",
@@ -171,6 +176,7 @@ const EXPECTED_FILES: &[&str] = &[
     "AdvanceRowResult.ts",
     "AdvancesSaved.ts",
     "VouchersList.ts",
+    "VouchersTotals.ts",
     "VouchersListInput.ts",
     "VoucherRow.ts",
     "AssistAdvancesInput.ts",
@@ -312,6 +318,8 @@ const EXPECTED_FILES: &[&str] = &[
     "BikriDetail.ts",
     "BikriListInput.ts",
     "BikriListRow.ts",
+    "BikriList.ts",
+    "BikriListTotals.ts",
     "BikriFindInput.ts",
     "NavigateTo.ts",
     "BikriNavigateInput.ts",
@@ -321,6 +329,8 @@ const EXPECTED_FILES: &[&str] = &[
     "PaidState.ts",
     "PukhtaRegisterInput.ts",
     "PukhtaRegisterRow.ts",
+    "PukhtaRegister.ts",
+    "PukhtaRegisterTotals.ts",
     "BikriMatch.ts",
     "BikriHit.ts",
     "StockListInput.ts",
@@ -385,6 +395,37 @@ const EXPECTED_FILES: &[&str] = &[
     "OtherSaleSaved.ts",
     "TripEntryCancelInput.ts",
     "TripEntryCancelled.ts",
+    "GardenInput.ts",
+    "GardenSetPartnersInput.ts",
+    "GardenDefaults.ts",
+    "GardenCreatePreview.ts",
+    "GardenCreated.ts",
+    "GardensTotals.ts",
+    "GardensListInput.ts",
+    "GardenRow.ts",
+    "GardensList.ts",
+    "GardenGetInput.ts",
+    "GardenHistoryKind.ts",
+    "GardenHistoryRow.ts",
+    "GardenPartnerResult.ts",
+    "GardenDetail.ts",
+    "GardenSummaryRow.ts",
+    "GardensSummary.ts",
+    "GardenPaymentInput.ts",
+    "GardenOtherSaleInput.ts",
+    "GardenEntryInput.ts",
+    "GardenEntryNumbers.ts",
+    "GardenEntryPreview.ts",
+    "GardenEntrySaved.ts",
+    "GardenEntryCancelInput.ts",
+    "GardenEntryCancelled.ts",
+    "GardenCloseInput.ts",
+    "GardenCloseNumbers.ts",
+    "GardenClosePreview.ts",
+    "GardenClosed.ts",
+    "GardenReopenInput.ts",
+    "GardenReopened.ts",
+    "PartnerVentureCard.ts",
     "LaterSaleInput.ts",
     "LaterSaleSaveInput.ts",
     "LaterSaleSaved.ts",
@@ -615,11 +656,16 @@ fn export_bindings() {
     translit::Suggestions::export_all(&cfg).unwrap();
     translit::LearnInput::export_all(&cfg).unwrap();
     translit::PairRow::export_all(&cfg).unwrap();
+    translit::PairsListInput::export_all(&cfg).unwrap();
+    translit::PairsList::export_all(&cfg).unwrap();
+    translit::PairsTotals::export_all(&cfg).unwrap();
     translit::RemovePairInput::export_all(&cfg).unwrap();
     masters::MasterInput::export_all(&cfg).unwrap();
     masters::MasterRow::export_all(&cfg).unwrap();
     masters::MasterKind::export_all(&cfg).unwrap();
     masters::MastersListInput::export_all(&cfg).unwrap();
+    masters::MastersList::export_all(&cfg).unwrap();
+    masters::MastersTotals::export_all(&cfg).unwrap();
     masters::MastersSetActiveInput::export_all(&cfg).unwrap();
     masters::MastersNextCodeInput::export_all(&cfg).unwrap();
     search::SearchScope::export_all(&cfg).unwrap();
@@ -656,6 +702,8 @@ fn export_bindings() {
     rules::RuleInput::export_all(&cfg).unwrap();
     rules::RuleSaved::export_all(&cfg).unwrap();
     rules::RulesListInput::export_all(&cfg).unwrap();
+    rules::RulesList::export_all(&cfg).unwrap();
+    rules::RulesTotals::export_all(&cfg).unwrap();
     rules::RulesGetInput::export_all(&cfg).unwrap();
     rules::RulesSetActiveInput::export_all(&cfg).unwrap();
     rules::RuleTestInput::export_all(&cfg).unwrap();
@@ -670,6 +718,7 @@ fn export_bindings() {
     vouchers::AdvancesSaved::export_all(&cfg).unwrap();
     vouchers::VouchersListInput::export_all(&cfg).unwrap();
     vouchers::VouchersList::export_all(&cfg).unwrap();
+    vouchers::VouchersTotals::export_all(&cfg).unwrap();
     vouchers::VoucherRow::export_all(&cfg).unwrap();
     vouchers::AssistAdvancesInput::export_all(&cfg).unwrap();
     vouchers::AdvancesInfo::export_all(&cfg).unwrap();
@@ -799,12 +848,16 @@ fn export_bindings() {
     bikri::BikriDetail::export_all(&cfg).unwrap();
     bikri::BikriListInput::export_all(&cfg).unwrap();
     bikri::BikriListRow::export_all(&cfg).unwrap();
+    bikri::BikriList::export_all(&cfg).unwrap();
+    bikri::BikriListTotals::export_all(&cfg).unwrap();
     bikri::BikriFindInput::export_all(&cfg).unwrap();
     bikri::BikriNavigateInput::export_all(&cfg).unwrap();
     bikri::PukhtaPeopleInput::export_all(&cfg).unwrap();
     bikri::PukhtaPerson::export_all(&cfg).unwrap();
     bikri::PukhtaRegisterInput::export_all(&cfg).unwrap();
     bikri::PukhtaRegisterRow::export_all(&cfg).unwrap();
+    bikri::PukhtaRegister::export_all(&cfg).unwrap();
+    bikri::PukhtaRegisterTotals::export_all(&cfg).unwrap();
     bikri::BikriHit::export_all(&cfg).unwrap();
     bikri::StockListInput::export_all(&cfg).unwrap();
     bikri::StockList::export_all(&cfg).unwrap();
@@ -865,6 +918,37 @@ fn export_bindings() {
     trips::OtherSaleSaved::export_all(&cfg).unwrap();
     trips::TripEntryCancelInput::export_all(&cfg).unwrap();
     trips::TripEntryCancelled::export_all(&cfg).unwrap();
+    gardens::GardenInput::export_all(&cfg).unwrap();
+    gardens::GardenSetPartnersInput::export_all(&cfg).unwrap();
+    gardens::GardenDefaults::export_all(&cfg).unwrap();
+    gardens::GardenCreatePreview::export_all(&cfg).unwrap();
+    gardens::GardenCreated::export_all(&cfg).unwrap();
+    gardens::GardensTotals::export_all(&cfg).unwrap();
+    gardens::GardensListInput::export_all(&cfg).unwrap();
+    gardens::GardenRow::export_all(&cfg).unwrap();
+    gardens::GardensList::export_all(&cfg).unwrap();
+    gardens::GardenGetInput::export_all(&cfg).unwrap();
+    gardens::GardenHistoryKind::export_all(&cfg).unwrap();
+    gardens::GardenHistoryRow::export_all(&cfg).unwrap();
+    gardens::GardenPartnerResult::export_all(&cfg).unwrap();
+    gardens::GardenDetail::export_all(&cfg).unwrap();
+    gardens::GardenSummaryRow::export_all(&cfg).unwrap();
+    gardens::GardensSummary::export_all(&cfg).unwrap();
+    gardens::GardenPaymentInput::export_all(&cfg).unwrap();
+    gardens::GardenOtherSaleInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryNumbers::export_all(&cfg).unwrap();
+    gardens::GardenEntryPreview::export_all(&cfg).unwrap();
+    gardens::GardenEntrySaved::export_all(&cfg).unwrap();
+    gardens::GardenEntryCancelInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryCancelled::export_all(&cfg).unwrap();
+    gardens::GardenCloseInput::export_all(&cfg).unwrap();
+    gardens::GardenCloseNumbers::export_all(&cfg).unwrap();
+    gardens::GardenClosePreview::export_all(&cfg).unwrap();
+    gardens::GardenClosed::export_all(&cfg).unwrap();
+    gardens::GardenReopenInput::export_all(&cfg).unwrap();
+    gardens::GardenReopened::export_all(&cfg).unwrap();
+    partners::PartnerVentureCard::export_all(&cfg).unwrap();
     bikri::LaterSaleInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaved::export_all(&cfg).unwrap();

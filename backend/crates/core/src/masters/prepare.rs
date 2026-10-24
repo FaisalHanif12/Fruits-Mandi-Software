@@ -6,8 +6,8 @@
 //! spelling is confirmed are checked by `services::masters` with these results.
 
 use super::{
-    AddaInput, BankAccountInput, ExpenseHeadInput, ItemInput, MarkaInput, MasterInput, MasterKind,
-    NarrationInput, PackingInput, StaffInput,
+    AddaInput, ExpenseHeadInput, ItemInput, MarkaInput, MasterInput, MasterKind, NarrationInput,
+    PackingInput, StaffInput,
 };
 use crate::error::{ErrorCode, FieldError};
 use crate::text;
@@ -15,8 +15,6 @@ use crate::validate::{self, FieldErrors};
 
 /// The longest master code, in digits.
 pub const MAX_CODE_DIGITS: usize = 10;
-/// The longest bank account number, in characters (an IBAN has up to 34).
-pub const MAX_BANK_NUMBER_CHARS: usize = 34;
 /// The voucher types a standard narration can be offered in (Architecture 15.7 `vouchers.type`).
 pub const NARRATION_USED_IN: [&str; 9] = [
     "receipt",
@@ -31,8 +29,6 @@ pub const NARRATION_USED_IN: [&str; 9] = [
 ];
 /// The control under which expense heads make their accounts (PRD FR-10.4, 0501xxxx).
 pub const EXPENSE_CONTROL: &str = "0501";
-/// The control under which bank accounts make their accounts (PRD FR-10.4, 0102xxxx).
-pub const BANK_CONTROL: &str = "0102";
 
 /// One value to write to a column.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -222,29 +218,6 @@ fn narration_text(
     }
 }
 
-/// The bank account number: letters, digits and hyphens, no spaces, up to 34.
-fn bank_number(errors: &mut FieldErrors, input: &str) -> Option<String> {
-    let cleaned: String = input
-        .trim()
-        .chars()
-        .filter(|c| !text::is_invisible(*c))
-        .collect();
-    if cleaned.is_empty() {
-        errors.push(error(ErrorCode::ErrRequired, "number"));
-        return None;
-    }
-    let ok = cleaned.chars().count() <= MAX_BANK_NUMBER_CHARS
-        && cleaned
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-');
-    if ok {
-        Some(cleaned)
-    } else {
-        errors.push(error(ErrorCode::ErrFormatInvalid, "number"));
-        None
-    }
-}
-
 /// An id that points at another record. Must be a real (positive) id.
 fn reference(
     errors: &mut FieldErrors,
@@ -309,7 +282,6 @@ pub fn prepare(input: &MasterInput) -> Result<Prepared, Vec<FieldError>> {
         MasterInput::Narration(i) => narration(&mut errors, i),
         MasterInput::ExpenseHead(i) => expense_head(&mut errors, i),
         MasterInput::Staff(i) => staff(&mut errors, i),
-        MasterInput::BankAccount(i) => bank_account(&mut errors, i),
     };
     errors.finish()?;
     prepared.ok_or_else(|| vec![error(ErrorCode::ErrInternal, "kind")])
@@ -550,34 +522,6 @@ fn staff(errors: &mut FieldErrors, i: &StaffInput) -> Option<Prepared> {
     })
 }
 
-fn bank_account(errors: &mut FieldErrors, i: &BankAccountInput) -> Option<Prepared> {
-    let version = edit_version(errors, i.id, i.version);
-    let bank = errors.take(validate::person_name("bank_name", &i.bank_name));
-    let title = errors.take(validate::person_name("title", &i.title));
-    let number = bank_number(errors, &i.number);
-    let (ur, en) = names(errors, &i.name_ur, &i.name_en)?;
-    Some(Prepared {
-        kind: MasterKind::BankAccount,
-        id: i.id,
-        version,
-        code: None,
-        fields: vec![
-            ("bank_name", ColValue::Text(bank?)),
-            ("title", ColValue::Text(title?)),
-            ("number", ColValue::Text(number?)),
-        ],
-        names: Some(NameTexts {
-            field_ur: "name_ur",
-            name_ur: ur.clone(),
-            field_en: "name_en",
-            name_en: en.clone(),
-        }),
-        confirmed_rules_words: i.confirmed_rules_words.clone(),
-        references: Vec::new(),
-        account: Some(AccountToMake::new(BANK_CONTROL, &ur, &en)),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::CityInput;
@@ -786,28 +730,6 @@ mod tests {
             ("بجلی", "Electricity")
         );
         assert_eq!(account.search_en, "electricity");
-    }
-
-    #[test]
-    fn a_bank_account_keeps_its_text_as_typed_and_names_the_account_under_0102() {
-        let input = |number: &str| {
-            MasterInput::BankAccount(BankAccountInput {
-                id: None,
-                version: None,
-                bank_name: "HBL".into(),
-                title: "Maher Adnan and Brothers".into(),
-                number: number.into(),
-                name_ur: "ایچ بی ایل".into(),
-                name_en: "HBL".into(),
-                confirmed_rules_words: Vec::new(),
-            })
-        };
-        let p = prepare(&input("PK36-SCBL-0000001123456702")).unwrap();
-        assert_eq!(p.account.as_ref().unwrap().control_code, "0102");
-        assert!(fields(&p).contains(&("number", &ColValue::text("PK36-SCBL-0000001123456702"))));
-        assert!(prepare(&input("0001 0002")).is_err(), "no spaces");
-        assert!(prepare(&input(&"1".repeat(35))).is_err());
-        assert!(prepare(&input("")).is_err());
     }
 
     #[test]

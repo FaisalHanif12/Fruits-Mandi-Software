@@ -377,5 +377,45 @@ partners-statement-detail-trip-write-off = { -market-safar } { $trip }: trip goo
 # review: pending
 partners-statement-detail-trip-closed = { -market-safar } { $trip } closed: cost { $cost }, sales { $sales }, result { $result }, your { $share }%, your { -khalis } { $net }
 
+# A garden's line in a partner's statement (PRD FR-17.10, plan 17c).
+# review: pending
+partners-statement-heading-garden = { -bagh }
+
+# $garden: the garden number; $reason: why it was paid, as typed.
+# review: pending
+partners-statement-detail-garden-paid = { $garden }: { $reason }, { -dukan-se }
+
+# $garden: the garden number; $cost, $sales, $result: the garden's figures; $share: his %; $part: his part of the result; $back: his money back.
+# review: pending
+partners-statement-detail-garden-closed = { $garden } closed: cost { $cost }, sales { $sales }, result { $result }, your { $share }%: { $part }, { -wapsi } { $back }
+
 # review: pending
 partners-statement-detail-other = { $reason }
+
+## The open gardens and trips under a partner's card (PRD 17.3, plan 17c).
+
+# review: pending
+partners-ventures-title = Open { -bagh } / { -safar }
+
+# $name: the partner's name.
+# review: pending
+partners-ventures-label = Open { -bagh } / { -safar } of { $name }
+
+# review: pending
+partners-ventures-col-venture = { -bagh } / { -safar }
+
+# review: pending
+partners-ventures-col-kind = Kind
+
+# review: pending
+partners-ventures-col-shop = Paid from the shop
+
+# review: pending
+partners-ventures-col-pocket = Paid from his pocket
+
+# review: pending
+partners-ventures-col-back = Money back
+
+# The running balance of a garden, or the result of a trip.
+# review: pending
+partners-ventures-col-balance = Balance or result

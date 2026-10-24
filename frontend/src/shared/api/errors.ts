@@ -4,6 +4,7 @@
 import type { WireCode } from '../../bindings/WireCode';
 import type { UiError } from '../../bindings/UiError';
 import type { UiErrorItem } from '../../bindings/UiErrorItem';
+import { isoDayToDisplay } from '../format/dates';
 import { formatPaisaValue, groupDigits, type Grouping } from '../format/money';
 import { formatBps } from '../format/percent';
 import { CommandError, toUiError } from './invoke';
@@ -89,7 +90,7 @@ function groupedNumber(value: number, grouping: Grouping): string {
  * نگ, kg, characters), never paisa (plan 02 contract 4.6). Whole numbers are grouped with the
  * app's grouping, so 10000000000 reads "10,000,000,000" or "10,00,00,00,000" in both languages
  * and Fluent never formats a number by locale (PRD FR-7.32). Text values, such as a date,
- * pass as they are. A rate in basis points (`total_bps`, 9000) also arrives as the percent a
+ * pass as they are, except a date written YYYY-MM-DD, which is shown as DD-MM-YYYY. A rate in basis points (`total_bps`, 9000) also arrives as the percent a
  * person reads, under the same name without `_bps` (`total`, "90"), written from its digits.
  * An amount whose name ends in `_paisa` (`cash_after_paisa`, 500000) is money: it is written with
  * formatPaisa ("5,000"), under its own name and under the name without `_paisa`
@@ -107,7 +108,9 @@ export function messageVars(
       vars[key.slice(0, -PAISA_SUFFIX.length)] = money;
       continue;
     }
-    vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : value;
+    // A value that is exactly a real day, YYYY-MM-DD, is shown as DD-MM-YYYY (Code Standards G9);
+    // any other text passes as it is.
+    vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : isoDayToDisplay(value);
     if (typeof value === 'number' && key.endsWith(BPS_SUFFIX) && Number.isSafeInteger(value)) {
       vars[key.slice(0, -BPS_SUFFIX.length)] = formatBps(value);
     }

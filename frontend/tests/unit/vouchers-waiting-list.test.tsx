@@ -25,7 +25,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { fakeMasters, record } from '../helpers/masters';
+import { fakeMasters } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import {
   AKRAM,
@@ -36,6 +36,7 @@ import {
   fakeVouchers,
   type FakeVouchers,
 } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -110,14 +111,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
-  fakeMasters({
-    bank_account: [record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah')],
-  });
+  fakeMasters({});
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
 });
 
@@ -141,7 +140,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
     return { ...app, user: userEvent.setup() };
   }
 
-  it('F2 puts the form in the list and starts the next: the type, date and mode stay, the rest starts again', async () => {
+  it('F2 puts the form in the list and starts the next: the type and date stay, the rest starts again', async () => {
     const { user } = await open('receipt');
     expect(noWaitingList(language)).toBeNull();
     await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');

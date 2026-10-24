@@ -27,6 +27,7 @@ import { fakeMasters } from '../helpers/masters';
 import { fakePartners, overviewRow, partnerRow, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { at } from '../helpers/sample';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -82,7 +83,7 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   fakeAccounts([]);
   fakeAccountSearch([]);
   fakeMasters({});

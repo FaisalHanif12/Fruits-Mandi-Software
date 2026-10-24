@@ -15,6 +15,7 @@ import { named, pageText, startsWith } from '../helpers/cashbook-screen';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
 import { preparePartnerMoney, type PartnerMoney } from '../helpers/partner-money';
 import { message, visible } from '../helpers/render';
+import { settlePreview } from '../helpers/preview-settled';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -232,6 +233,7 @@ describe.each(LANGUAGES)('the جنرل screen (%s)', (language) => {
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'common-cash-after', { amount: '-2,500' }));
     });
+    await settlePreview();
     press('F10');
     const no = await screen.findByRole('button', {
       name: startsWith(message(language, 'common-cash-confirm-no')),

@@ -136,27 +136,6 @@ vouchers-fill-full = پورا بقایا
 vouchers-fill-oldest = پرانا بل
 
 # review: pending
-vouchers-field-mode = ذریعہ
-
-# review: pending
-vouchers-mode-cash = نقد
-
-# review: pending
-vouchers-mode-bank = بینک
-
-# review: pending
-vouchers-mode-cheque = چیک
-
-# review: pending
-vouchers-field-bank = بینک کھاتہ
-
-# review: pending
-vouchers-field-cheque-no = چیک نمبر
-
-# review: pending
-vouchers-field-cheque-date = چیک کی تاریخ
-
-# review: pending
 vouchers-field-collector = اگراہی والا
 
 # review: pending
@@ -420,13 +399,13 @@ vouchers-other-screen-open = { -rokar } کھولیں
 vouchers-cancel-title = واؤچر منسوخ کریں؟
 
 # review: pending
-vouchers-cancel-text-receipt = { -wasooli } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گی۔ { -rokar } (یا بینک) اور اس کا کھاتہ پہلے جیسے ہو جائیں گے، اور جو بل اس سے نمٹے تھے وہ دوبارہ کھل جائیں گے۔
+vouchers-cancel-text-receipt = { -wasooli } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گی۔ { -rokar } اور اس کا کھاتہ پہلے جیسے ہو جائیں گے، اور جو بل اس سے نمٹے تھے وہ دوبارہ کھل جائیں گے۔
 
 # review: pending
-vouchers-cancel-text-payment = { -adaigi } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گی۔ { -rokar } (یا بینک) اور اس کا کھاتہ پہلے جیسے ہو جائیں گے۔ اگر یہ { -gahak } کو { -naqd-udhar } تھا تو اس کا بل بھی ختم ہو جائے گا۔
+vouchers-cancel-text-payment = { -adaigi } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گی۔ { -rokar } اور اس کا کھاتہ پہلے جیسے ہو جائیں گے۔ اگر یہ { -gahak } کو { -naqd-udhar } تھا تو اس کا بل بھی ختم ہو جائے گا۔
 
 # review: pending
-vouchers-cancel-text-advance = { -peshgi-khata } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گا۔ { -rokar } (یا بینک) اور اس کا کھاتہ پہلے جیسے ہو جائیں گے، اور جو رقم اس { -peshgi } سے منہا ہو چکی تھی وہ دوبارہ { -beopari } کو قابل ادائیگی ہو جائے گی۔
+vouchers-cancel-text-advance = { -peshgi-khata } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گا۔ { -rokar } اور اس کا کھاتہ پہلے جیسے ہو جائیں گے، اور جو رقم اس { -peshgi } سے منہا ہو چکی تھی وہ دوبارہ { -beopari } کو قابل ادائیگی ہو جائے گی۔
 
 # review: pending
 vouchers-cancel-reason = وجہ

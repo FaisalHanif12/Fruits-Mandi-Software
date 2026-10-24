@@ -13,7 +13,7 @@ import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
-import { fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
+import { fakeAccountSearch, fakeAccounts, money } from '../helpers/accounts';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -23,6 +23,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import { fakeMasters, record } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import {
@@ -35,6 +36,8 @@ import {
   fakeVouchers,
   type FakeVouchers,
 } from '../helpers/vouchers';
+import { EMPTY_PAIRS, sliceOf } from '../helpers/paged';
+import { voucherRow } from '../helpers/voucher-books';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -47,7 +50,6 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const BANK = record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah');
 const STAFF = record('staff', 81, '0001', 'اسلم', 'Aslam');
 
 const named = (text: string) => (name: string) => visible(name) === text;
@@ -94,12 +96,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM, TRANSPORT];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
-  fakeMasters({ bank_account: [BANK], staff: [STAFF] });
+  fakeMasters({ staff: [STAFF] });
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
 });
 
@@ -123,16 +125,15 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     return { ...app, user: userEvent.setup() };
   }
 
-  it('starts with today as the date, cash as the mode and nothing to save', async () => {
+  it('starts with today as the date and nothing to save, and has no mode, bank or cheque field', async () => {
     await open();
     expect((await labelled(language, 'vouchers-field-date')).value).toBe('10-10-2026');
-    expect((await dropdown(language, 'vouchers-field-mode')).textContent).toContain(
-      message(language, 'vouchers-mode-cash'),
-    );
     expect((await labelled(language, 'vouchers-field-amount')).value).toBe('');
     expect(saveButton(language)).toBeDisabled();
-    // The bank fields are for bank and cheque only.
-    expect(screen.queryByLabelText(named(message(language, 'vouchers-field-bank')))).toBeNull();
+    // All money is روکڑ: the form never asks how it moves (PRD 15.1).
+    for (const gone of FORMER_PAYMENT_LABELS[language]) {
+      expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
+    }
   });
 
   it('the type list has the three types, and the old addresses and menu items lead to it', async () => {
@@ -173,7 +174,6 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
           type: 'receipt',
           account_id: 21,
           amount: '10000',
-          mode: 'cash',
           date: '10-10-2026',
         }),
         null,
@@ -238,11 +238,14 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
       account_id: 21,
       person_key: null,
       amount: '10000',
-      mode: 'cash',
       date: '10-10-2026',
       narration: 'x',
       collector_staff_id: null,
     });
+    // Nothing about how it was paid goes to the backend.
+    for (const gone of ['mode', 'bank_account_id', 'cheque_no', 'cheque_date']) {
+      expect(sent?.input).not.toHaveProperty(gone);
+    }
     const toast = message(language, 'vouchers-saved', {
       kind: 'receipt',
       number: message(language, 'vouchers-number-receipt', { number: 1 }),
@@ -268,6 +271,45 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
       expect(text).toContain(message(language, 'vouchers-number-receipt', { number: 1 }));
       expect(text).toContain('10,000');
     });
+  });
+
+  it('150 vouchers come page by page: 100 at once, the count and the total are the backend’s, Show more loads the rest', async () => {
+    const all = Array.from({ length: 150 }, (_, index) =>
+      voucherRow({ id: 700 + index, number: index + 1 }),
+    );
+    vi.mocked(vouchersApi.vouchersList).mockImplementation((input) =>
+      Promise.resolve({
+        rows: sliceOf(all, input.offset, input.limit),
+        total_count: all.length,
+        // The total of the whole filter, not the sum of the rows on screen.
+        totals: { cancelled_count: 0, total_paisa: money(1_500_000) },
+      }),
+    );
+    const { user } = await open();
+    const showing = (shown: number) =>
+      message(language, 'common-list-count', { shown: String(shown), total: '150' });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(100));
+    });
+    await waitFor(() => {
+      expect(visible(document.querySelector('.ag-row-pinned [col-id="amount"]')?.textContent)).toBe(
+        '1,500,000',
+      );
+    });
+    expect(vouchersApi.vouchersList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ voucher_type: 'receipt', offset: 0, limit: 100 }),
+    );
+    await user.click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    );
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(150));
+    });
+    expect(vouchersApi.vouchersList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 100, limit: 100 }),
+    );
   });
 
   it('a payment to a seller shows what is payable with the advance already adjusted', async () => {
@@ -425,7 +467,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     });
   });
 
-  it('changing the type keeps the date, amount, mode and narration and clears the rest', async () => {
+  it('changing the type keeps the date, amount and narration and clears the rest', async () => {
     const { user } = await open('payment');
     await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
     await user.click(await labelled(language, 'vouchers-field-amount'));
@@ -447,39 +489,23 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     expect(await dropdown(language, 'vouchers-field-buyer')).toHaveValue('');
   });
 
-  it('bank and cheque show their fields, cash hides them, and they go to the backend', async () => {
+  it('an advance goes to the backend with its date, amount and seller only, and Enter walks the fields', async () => {
     const { user } = await open('advance');
     await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('100');
-    await user.click(await dropdown(language, 'vouchers-field-mode'));
-    await user.click(
-      await screen.findByRole('option', { name: named(message(language, 'vouchers-mode-cheque')) }),
-    );
-    expect(await dropdown(language, 'vouchers-field-bank')).toBeInTheDocument();
-    await user.click(await dropdown(language, 'vouchers-field-bank'));
-    await user.keyboard('alfalah');
-    await screen.findByRole('option', {
-      name: (name) => visible(name).includes('Alfalah') || visible(name).includes('الفلاح'),
-    });
-    await user.keyboard('{Enter}');
-    await user.click(await labelled(language, 'vouchers-field-cheque-no'));
-    await user.keyboard('123456');
-    await user.click(await labelled(language, 'vouchers-field-cheque-date'));
-    await user.keyboard('15-10-2026');
     press('F10');
     await waitFor(() => {
       expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(1);
     });
-    expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
+    const sent = vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0];
+    expect(sent).toMatchObject({
       type: 'advance',
-      input: {
-        mode: 'cheque',
-        bank_account_id: 71,
-        cheque_no: '123456',
-        cheque_date: '15-10-2026',
-      },
+      input: { seller_account_id: RAHIM.id, amount: '100', date: '10-10-2026' },
     });
+    for (const gone of ['mode', 'bank_account_id', 'cheque_no', 'cheque_date']) {
+      expect(sent?.input).not.toHaveProperty(gone);
+    }
   });
 
   it('a refused field shows at the field, and nothing typed is lost', async () => {

@@ -3,7 +3,7 @@
 // by Urdu text fields, never by pickers or search boxes (F41).
 
 import type { LearnInput } from '../../bindings/LearnInput';
-import type { PairRow } from '../../bindings/PairRow';
+import type { PairsList } from '../../bindings/PairsList';
 import type { RemovePairInput } from '../../bindings/RemovePairInput';
 import type { SuggestInput } from '../../bindings/SuggestInput';
 import type { Suggestions } from '../../bindings/Suggestions';
@@ -22,9 +22,12 @@ export function translitLearn(input: LearnInput): Promise<null> {
   return callCommand<null>('translit_learn', { input });
 }
 
-/** The learned pairs, most used first. Owner only. */
-export function translitPairsList(): Promise<PairRow[]> {
-  return callCommand<PairRow[]>('translit_pairs_list');
+/**
+ * One page of the learned pairs, most used first, with the count and the totals of the whole list
+ * (PRD FR-7.26, FR-19.11). Owner only.
+ */
+export function translitPairsList(offset: number, limit: number): Promise<PairsList> {
+  return callCommand<PairsList>('translit_pairs_list', { input: { offset, limit } });
 }
 
 export function translitPairsRemove(input: RemovePairInput): Promise<null> {

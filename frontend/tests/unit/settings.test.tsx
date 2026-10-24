@@ -23,6 +23,7 @@ import {
 import { message, visible } from '../helpers/render';
 import { at } from '../helpers/sample';
 import { suggestionsFor } from '../helpers/translit';
+import { EMPTY_PAIRS, pairsOf } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -48,7 +49,7 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -389,7 +390,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
     }
 
     it('lists each pair with its kind and how often it was used', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       await openWords();
       const table = await screen.findByRole('table', {
         name: message(language, 'translit-words-table'),
@@ -408,8 +409,38 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       );
     });
 
+    it('150 pairs come page by page: 100 at once with the count of the backend, Show more loads the rest', async () => {
+      const many = Array.from({ length: 150 }, (_, index) => ({
+        id: 100 + index,
+        roman: `word${String(index)}`,
+        urdu: 'لفظ',
+        kind: 'word' as const,
+        use_count: 1,
+        last_used_at: null,
+      }));
+      vi.mocked(urduApi.translitPairsList).mockImplementation((offset, limit) =>
+        Promise.resolve(pairsOf(many, offset, limit)),
+      );
+      const { user } = await openWords();
+      const showing = (shown: number) =>
+        message(language, 'common-list-count', { shown: String(shown), total: '150' });
+      await waitFor(() => {
+        expect(visible(document.body.textContent)).toContain(showing(100));
+      });
+      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(0, 100);
+      await user.click(
+        await screen.findByRole('button', {
+          name: (name) => visible(name) === message(language, 'common-list-more'),
+        }),
+      );
+      await waitFor(() => {
+        expect(visible(document.body.textContent)).toContain(showing(150));
+      });
+      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(100, 100);
+    });
+
     it('Remove asks first, says what will happen, and then removes only that pair', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       vi.mocked(urduApi.translitPairsRemove).mockResolvedValue(null);
       const { user } = await openWords();
       await screen.findByRole('table');
@@ -428,7 +459,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       expect(
         within(dialog).getByRole('button', { name: new RegExp(message(language, 'common-back')) }),
       ).toHaveFocus();
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue([at(pairs, 1)]);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf([at(pairs, 1)]));
       await user.click(
         within(dialog).getByRole('button', { name: message(language, 'translit-words-remove') }),
       );
@@ -444,7 +475,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
     });
 
     it('Esc keeps the word', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       const { user } = await openWords();
       await screen.findByRole('table');
       await user.click(
@@ -473,7 +504,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       const { user } = await openWords();
       const alert = await screen.findByRole('alert');
       expect(visible(alert.textContent)).toContain(message(language, 'err-db-busy'));
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       await user.click(
         within(alert).getByRole('button', { name: message(language, 'common-retry') }),
       );
@@ -481,7 +512,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
     });
 
     it('a failed removal is told, and the list stays', async () => {
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairs);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(pairsOf(pairs));
       vi.mocked(urduApi.translitPairsRemove).mockRejectedValue(fail({ code: 'ERR_NOT_FOUND' }));
       const { user } = await openWords();
       await screen.findByRole('table');

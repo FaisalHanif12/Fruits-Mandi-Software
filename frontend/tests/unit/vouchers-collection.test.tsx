@@ -25,6 +25,7 @@ import { fakeMasters, record } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { refusedReceiptRow, savedReceiptRow, skippedReceiptRow } from '../helpers/voucher-books';
 import { AKRAM, ARSHAD, collectionList, fakeVouchers } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -59,7 +60,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   fakeAccounts([AKRAM, ARSHAD]);
   fakeAccountSearch([AKRAM, ARSHAD]);
   fakeMasters({
@@ -153,10 +154,6 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
         account_id: 21,
         person_key: null,
         amount: '2880',
-        mode: 'cash',
-        bank_account_id: null,
-        cheque_no: '',
-        cheque_date: '',
         collector_staff_id: 81,
         narration: '',
       },

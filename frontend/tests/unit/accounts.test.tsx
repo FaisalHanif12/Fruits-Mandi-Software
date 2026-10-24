@@ -24,6 +24,7 @@ import {
 import { fakeMasters } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
+import { useMasterFocus } from '../../src/features/masters/store';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -150,6 +151,40 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
     }
   });
 
+  it('150 accounts come page by page: 100 at once with the count and the totals of the backend, Show more loads the rest', async () => {
+    // The list remembers the row it last focused; an earlier test may have left one.
+    useMasterFocus.setState({ rows: {} });
+    fakeAccounts(
+      Array.from({ length: 150 }, (_, index) =>
+        account(
+          1000 + index,
+          'buyer',
+          `0304${String(index + 1).padStart(4, '0')}`,
+          `خریدار ${String(index + 1)}`,
+          `Buyer ${String(index + 1)}`,
+        ),
+      ),
+    );
+    await renderApp('/index/accounts');
+    const showing = (shown: number) =>
+      message(language, 'common-list-count', { shown: String(shown), total: '150' });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(100));
+    });
+    // The opening totals are the backend's for all 150, shown once, not summed from a page.
+    expect(visible(document.body.textContent)).toContain('65,000');
+    expect(accountApi.accountsList).toHaveBeenLastCalledWith(expect.anything(), 0, 100);
+    await userEvent.setup().click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    );
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(150));
+    });
+    expect(accountApi.accountsList).toHaveBeenLastCalledWith(expect.anything(), 100, 100);
+  });
+
   it('the type, the search and the inactive tick go to the backend filter', async () => {
     fakeAccounts([AKRAM, RAHIM, OLD]);
     await renderApp('/index/accounts');
@@ -163,11 +198,11 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
     await waitFor(() => {
       expect(rowIds()).toEqual(['21', '31', '41']);
     });
-    expect(accountApi.accountsList).toHaveBeenLastCalledWith({
-      account_type: null,
-      text: '',
-      include_inactive: true,
-    });
+    expect(accountApi.accountsList).toHaveBeenLastCalledWith(
+      { account_type: null, text: '', include_inactive: true },
+      0,
+      100,
+    );
     expect(document.querySelector('[row-id="41"]')).toHaveClass('row-inactive');
     // Dimmed is not enough (NFR-USE-12): the name says "inactive" in words, in the app language.
     expect(cell(41, 'name')).toContain(message(language, 'masters-status-inactive'));

@@ -1,4 +1,4 @@
-// D1 story, step 3: the shell. The main menu on the start side with nine items, the dashboard, the
+// D1 story, step 3: the shell. The main menu on the start side with eleven items, the dashboard, the
 // menu by keyboard (arrows, Home, End, Enter), Alt+L in both directions, the text size keys, and
 // Settings by keyboard. Timed: opening a screen from the menu (NFR-SPD-3) and the
 // language switch (NFR-SPD-19), 20 times each, p95. Screenshots of the shell in both languages.
@@ -23,7 +23,8 @@ import { shootScreen } from '../support/screens.mjs';
 import { RUNS, armTimer, readTimer, recordTiming } from '../support/timing.mjs';
 
 const MENU_ITEMS = 'nav [data-nav-item]';
-const MENU_COUNT = 9;
+// The items of PRD FR-5.2 (باغات and مارکیٹ سفر included).
+const MENU_COUNT = 11;
 
 /** @param {string} name @param {string} action @param {number[]} samples */
 function check(name, action, samples) {
@@ -39,7 +40,7 @@ describe('the shell (Urdu)', () => {
     await startSignedIn('ur', OWNER);
   });
 
-  it('shows the main menu with nine items, and the dashboard with its quick actions', async () => {
+  it('shows the main menu with eleven items, and the dashboard with its quick actions', async () => {
     expect(await $$(MENU_ITEMS)).toHaveLength(MENU_COUNT);
     const text = await pageText();
     expect(text).toContain(t('ur', 'dashboard-greeting', { name: OWNER.displayName }));

@@ -6,8 +6,8 @@ import type { MadeRegular } from '../../bindings/MadeRegular';
 import type { MakeRegularInput } from '../../bindings/MakeRegularInput';
 import type { PukhtaPeopleInput } from '../../bindings/PukhtaPeopleInput';
 import type { PukhtaPerson } from '../../bindings/PukhtaPerson';
+import type { PukhtaRegister } from '../../bindings/PukhtaRegister';
 import type { PukhtaRegisterInput } from '../../bindings/PukhtaRegisterInput';
-import type { PukhtaRegisterRow } from '../../bindings/PukhtaRegisterRow';
 import type { PukhtaSide } from '../../bindings/PukhtaSide';
 import { callCommand } from '../../shared/api';
 
@@ -20,9 +20,12 @@ export function searchPukhtaPeople(text: string, side: PukhtaSide): Promise<Pukh
   return callCommand<PukhtaPerson[]>('search_pukhta_people', { input });
 }
 
-/** The register of the one-time accounts (PRD FR-13.6, R9). Empty dates mean no limit. */
-export function pukhtaRegister(input: PukhtaRegisterInput): Promise<PukhtaRegisterRow[]> {
-  return callCommand<PukhtaRegisterRow[]>('pukhta_register', { input });
+/**
+ * One page of the register of the one-time accounts, with the count and the totals of the whole
+ * filter (PRD FR-13.6, FR-19.11, R9). Empty dates mean no limit.
+ */
+export function pukhtaRegister(input: PukhtaRegisterInput): Promise<PukhtaRegister> {
+  return callCommand<PukhtaRegister>('pukhta_register', { input });
 }
 
 /**

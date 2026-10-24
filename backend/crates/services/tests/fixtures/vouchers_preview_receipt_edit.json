@@ -36,9 +36,9 @@
   "payable_open_paisa": null,
   "payable_is_zero_for_seller": false,
   "cash": {
-    "cash_before_paisa": 2768400,
+    "cash_before_paisa": 3268400,
     "change_paisa": -100000,
-    "cash_after_paisa": 2668400,
+    "cash_after_paisa": 3168400,
     "below_zero": false,
     "lowers_cash": true,
     "needs_confirm": false

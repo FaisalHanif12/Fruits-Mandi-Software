@@ -31,6 +31,9 @@ import {
 } from '../support/page.mjs';
 import { shootScreen } from '../support/screens.mjs';
 
+// The label of the field that was taken out in plan 17b (it read "ذریعہ", how the money moves).
+const FORMER_MODE_LABEL = 'ذریعہ';
+
 const WAIT_MS = 15_000;
 
 /**
@@ -96,7 +99,7 @@ describe('ادھار رقم and الگ کھاتہ by keyboard (Urdu)', () => {
     await waitForAll(t('ur', 'cashbook-lent-title'), '5,000');
     // No bank, cheque or count field: the form has only its own fields.
     const text = await pageText();
-    expect(text).not.toContain(t('ur', 'vouchers-field-mode'));
+    expect(text).not.toContain(FORMER_MODE_LABEL);
   });
 
   it('2. the type list keeps the person and the amount; a return in cash, then from the salary', async () => {

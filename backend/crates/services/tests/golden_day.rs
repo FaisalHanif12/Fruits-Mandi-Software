@@ -24,8 +24,8 @@ use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesReportInput, DayCloseInput, DayClosePreviewInput, LineSource,
-    OpenBillsInput, OpenPayablesInput, PaymentInput, ReceiptInput, VoucherEntry, VoucherMode,
-    VoucherPreview, VoucherPreviewInput, VoucherType, VouchersListInput,
+    OpenBillsInput, OpenPayablesInput, PaymentInput, ReceiptInput, VoucherEntry, VoucherPreview,
+    VoucherPreviewInput, VoucherType, VouchersListInput,
 };
 use mandi_services::testing::TestEnv;
 use mandi_services::{accounts, assist, auth, bikri, day, ledger, vouchers};
@@ -132,10 +132,7 @@ pub fn opening_position() -> Position {
             date: "01-09-2026".into(),
             seller_account_id: rahim,
             amount: "15,000".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },
@@ -294,6 +291,8 @@ fn e2e_19_the_opening_position() {
             voucher_type: Some(VoucherType::Advance),
             from: String::new(),
             to: String::new(),
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap()
@@ -317,10 +316,7 @@ fn e2e_19_the_opening_position() {
             date: "09-10-2026".into(),
             seller_account_id: p.rahim,
             amount: "100".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },
@@ -628,8 +624,8 @@ fn e2e_5_event_2_with_the_one_time_buyer_is_saved_and_paid() {
         1
     );
     let register = bikri::register(&w.env.ctx, &Default::default()).unwrap();
-    assert_eq!(register.len(), 1);
-    let row = &register[0];
+    assert_eq!(register.rows.len(), 1);
+    let row = &register.rows[0];
     assert_eq!(
         (
             row.name_en.as_str(),
@@ -705,10 +701,7 @@ fn receipt_input(account: i64, amount: &str) -> ReceiptInput {
         account_id: account,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
         narration: String::new(),
     }
@@ -720,10 +713,7 @@ fn payment_input(account: i64, amount: &str, reason: &str) -> PaymentInput {
         account_id: account,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
         narration: String::new(),
         confirm_cash_below_zero: false,
@@ -1467,3 +1457,7 @@ mod partner_money;
 // Plan 17: the full day close summary (FR-21.1, PRD 4.9).
 #[path = "golden_day/day_close.rs"]
 mod day_close;
+
+// Plan 17c: gardens (E2E-40, E2E-40b) and their refusals.
+#[path = "golden_day/gardens.rs"]
+mod gardens;

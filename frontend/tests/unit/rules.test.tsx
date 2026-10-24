@@ -25,6 +25,7 @@ import {
 import { fakeMasters, record } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { fakeRuleTest, fakeRules, pointer, rule, testResult } from '../helpers/rules';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -81,7 +82,7 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   fakeMasters({ item: [BANANA, APPLE] });
   fakeAccounts([AKRAM, RAHIM]);
   fakeAccountSearch([AKRAM, RAHIM]);
@@ -213,6 +214,26 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
     }
   });
 
+  it('150 rules come page by page: 100 at once with the count of the backend, Show more loads the rest', async () => {
+    fakeRules(Array.from({ length: 150 }, (_, index) => rule(index + 1)));
+    await renderApp('/index/rules');
+    const showing = (shown: number) =>
+      message(language, 'common-list-count', { shown: String(shown), total: '150' });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(100));
+    });
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, 100);
+    await userEvent.setup().click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    );
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(150));
+    });
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 100, 100);
+  });
+
   it('the side, the charge and the inactive tick go to the backend filter', async () => {
     fakeRules([...fakeRulesRows(), rule(9, { is_active: false, value: '3' })]);
     await renderApp('/index/rules');
@@ -229,19 +250,25 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
     await waitFor(() => {
       expect(rowIds()).toEqual(['2', '3']);
     });
-    expect(rulesApi.rulesList).toHaveBeenLastCalledWith({
-      side: 'buyer',
-      charge_type: null,
-      account_id: null,
-      item_id: null,
-      include_inactive: false,
-    });
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(
+      {
+        side: 'buyer',
+        charge_type: null,
+        account_id: null,
+        item_id: null,
+        include_inactive: false,
+      },
+      0,
+      100,
+    );
     await user.click(
       screen.getByRole('checkbox', { name: message(language, 'rules-show-inactive') }),
     );
     await waitFor(() => {
       expect(rulesApi.rulesList).toHaveBeenLastCalledWith(
         expect.objectContaining({ include_inactive: true }),
+        0,
+        100,
       );
     });
   });

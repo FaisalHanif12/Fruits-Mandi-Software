@@ -6,7 +6,7 @@ import type { MasterKind } from './MasterKind';
  */
 export type MastersNextCodeInput = {
   /**
-   * Which master. Kinds without a code (narration, staff, bank account) give an empty text.
+   * Which master. Kinds without a code (narration, staff) give an empty text.
    */
   kind: MasterKind;
 };

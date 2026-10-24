@@ -22,6 +22,7 @@ import {
   typeAmount,
   startsWith,
 } from '../helpers/cashbook-screen';
+import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import { ASLAM_ROW, type FakeCashbook } from '../helpers/cashbook';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
 import { message, visible } from '../helpers/render';
@@ -98,7 +99,9 @@ describe.each(LANGUAGES)('the ادھار رقم screen (%s)', (language) => {
     expect(await dropdown(language, 'cashbook-field-person')).toBeInTheDocument();
     expect(await labelled(language, 'cashbook-field-reason')).toBeInTheDocument();
     expect(screen.queryByLabelText(named(message(language, 'cashbook-field-mode')))).toBeNull();
-    expect(screen.queryByLabelText(named(message(language, 'vouchers-field-bank')))).toBeNull();
+    for (const gone of FORMER_PAYMENT_LABELS[language]) {
+      expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
+    }
     // Without a person the list says to choose one.
     expect(await screen.findByText(message(language, 'cashbook-lent-pick'))).toBeInTheDocument();
   });

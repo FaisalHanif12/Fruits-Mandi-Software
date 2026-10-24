@@ -2,6 +2,7 @@
 // per kind (bindings/); `wire.ts` turns them into these and back (Code Standards F2).
 
 import type { MasterKind } from '../../bindings/MasterKind';
+import type { MastersTotals } from '../../bindings/MastersTotals';
 import type { Named } from '../../shared/i18n';
 import type { PickerValue } from '../../shared/ui';
 
@@ -13,7 +14,7 @@ export interface MasterRecord {
   id: number;
   /** Checked when an edit is saved: a stale row is refused (ERR_VERSION_CHANGED). */
   version: number;
-  /** Empty for a master with no code (narration, staff, bank account). */
+  /** Empty for a master with no code (narration, staff). */
   code: string;
   is_active: boolean;
   /** The Urdu and English name. Null for a master with no name (marka). */
@@ -26,6 +27,13 @@ export interface MasterRecord {
   shown: Readonly<Record<string, string>>;
   /** Lists the form does not edit but must send back unchanged (the "used in" of a narration). */
   lists: Readonly<Record<string, readonly string[]>>;
+}
+
+/** One page of a master list: the records, the count and the totals of the whole filter (FR-19.11). */
+export interface MasterPage {
+  rows: MasterRecord[];
+  total_count: number;
+  totals: MastersTotals;
 }
 
 /** What the form holds for one master being added or edited. Everything is text, as typed. */

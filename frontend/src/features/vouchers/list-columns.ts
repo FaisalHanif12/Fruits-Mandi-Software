@@ -56,13 +56,6 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     value: (row, { money }) => money(row.amount_paisa),
   },
   {
-    field: 'mode',
-    type: 'status',
-    headerId: 'vouchers-field-mode',
-    from: 'wide',
-    value: (row, { text }) => text(`vouchers-mode-${row.mode}`),
-  },
-  {
     field: 'status',
     type: 'status',
     headerId: 'vouchers-col-state',

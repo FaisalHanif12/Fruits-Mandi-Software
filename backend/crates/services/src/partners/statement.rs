@@ -248,6 +248,7 @@ struct Facts {
     sold: HashMap<(i64, i64), (i64, i64)>,
     credit_totals: HashMap<(i64, i64), i64>,
     part_shares: HashMap<i64, i64>,
+    garden_closes: HashMap<i64, read::GardenCloseFigures>,
 }
 
 fn named(n: &read::Named) -> RecordRef {
@@ -327,6 +328,14 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
             .collect(),
     );
     let part_shares = read::entry_part_shares(conn, partner_id, &part_entries)?;
+    let close_entries = sorted(
+        venture_entries
+            .values()
+            .filter(|v| v.kind == "close")
+            .map(|v| v.id)
+            .collect(),
+    );
+    let garden_closes = read::garden_close_figures(conn, partner_id, &close_entries)?;
     Ok(Facts {
         entries,
         vouchers,
@@ -339,6 +348,7 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
         sold,
         credit_totals,
         part_shares,
+        garden_closes,
     })
 }
 
@@ -614,6 +624,32 @@ fn venture_draft(
             draft.number = entry
                 .and_then(|e| facts.ventures.get(&e.venture_id))
                 .map(|v| v.0);
+            // The numbers of his closing line (PRD FR-17.10), from stored rows only: the total
+            // cost, the sales money (the closing parts together), the result, his %, his part of
+            // the result (his money back less what he paid) and his money back. A reversal line
+            // shows them with the opposite sign.
+            if let Some(figures) = entry.and_then(|e| facts.garden_closes.get(&e.id)) {
+                let signed = |value: i64| -> Result<i64, ServiceError> {
+                    value
+                        .checked_mul(sign)
+                        .ok_or_else(|| data("a figure does not fit"))
+                };
+                let result = figures
+                    .sales_paisa
+                    .checked_sub(figures.cost_paisa)
+                    .ok_or_else(|| data("a figure does not fit"))?;
+                let part = figures
+                    .back_paisa
+                    .checked_sub(figures.paid_paisa)
+                    .ok_or_else(|| data("a figure does not fit"))?;
+                draft = draft
+                    .number_value("cost_paisa", signed(figures.cost_paisa)?)
+                    .number_value("sales_paisa", signed(figures.sales_paisa)?)
+                    .number_value("result_paisa", signed(result)?)
+                    .number_value("share_bps", figures.share_bps)
+                    .number_value("part_paisa", signed(part)?)
+                    .number_value("back_paisa", signed(figures.back_paisa)?);
+            }
             draft
         }
         Some("fruit_taken") => {

@@ -15,7 +15,8 @@
     "month_net_paisa": -162000,
     "month_capital_in_paisa": 0,
     "month_ventures_paisa": 0,
-    "total_paisa": -162000
+    "total_paisa": -162000,
+    "open_ventures": []
   },
   {
     "partner_id": 2,
@@ -33,7 +34,8 @@
     "month_net_paisa": 28400,
     "month_capital_in_paisa": 5000000,
     "month_ventures_paisa": 0,
-    "total_paisa": 5028400
+    "total_paisa": 5028400,
+    "open_ventures": []
   },
   {
     "partner_id": 3,
@@ -51,6 +53,7 @@
     "month_net_paisa": 28400,
     "month_capital_in_paisa": 0,
     "month_ventures_paisa": 0,
-    "total_paisa": 28400
+    "total_paisa": 28400,
+    "open_ventures": []
   }
 ]

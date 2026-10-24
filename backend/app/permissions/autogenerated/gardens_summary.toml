@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-summary"
+description = "Enables the gardens_summary command without any pre-configured scope."
+commands.allow = ["gardens_summary"]
+
+[[permission]]
+identifier = "deny-gardens-summary"
+description = "Denies the gardens_summary command without any pre-configured scope."
+commands.deny = ["gardens_summary"]

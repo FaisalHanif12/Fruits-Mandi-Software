@@ -13,4 +13,17 @@ export type MastersListInput = {
    * True to include the inactive ones too.
    */
   include_inactive: boolean;
+  /**
+   * Only this record, for a form that edits one. The answer has the same shape: its count and
+   * totals are over this one record (none if it is inactive and `include_inactive` is false).
+   */
+  id: number | null;
+  /**
+   * How many rows to skip. 0 for the first page (PRD FR-19.11).
+   */
+  offset: number;
+  /**
+   * How many rows to return. 0 gives a page of 100 (Code Standards B31).
+   */
+  limit: number;
 };

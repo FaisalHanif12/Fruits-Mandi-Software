@@ -11,7 +11,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { useDebouncedValue } from '../../shared/hooks';
+import { PAGE_SIZE, useDebouncedValue, usePagedQuery } from '../../shared/hooks';
 import { readAgainAfterPurchase } from '../purchases';
 import {
   tripsCostCancel,
@@ -40,8 +40,6 @@ export const TRIPS_KEY = ['trips'] as const;
 const PREVIEW_DELAY_MS = 50;
 /** A pause so a burst of key presses in a filter asks once. */
 const FILTER_DELAY_MS = 150;
-/** The size of one page of a list or a trip's history (PRD FR-19.11, B31). */
-export const TRIP_PAGE_SIZE = 100;
 
 /** Reads again what a trip entry or a cancel changed. The purchase hooks read the same set. */
 export function readAgainAfterTrip(queryClient: QueryClient): Promise<unknown> {
@@ -73,16 +71,12 @@ export function useCreateTrip() {
  */
 export function useTripsList(filter: Omit<TripsListInput, 'offset' | 'limit'>) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return useInfiniteQuery({
+  return usePagedQuery({
     queryKey: [...TRIPS_KEY, 'list', settled],
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => tripsList({ ...settled, offset: pageParam, limit: TRIP_PAGE_SIZE }),
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((sum, page) => sum + page.rows.length, 0);
-      return loaded < last.total_count && last.rows.length > 0 ? loaded : undefined;
-    },
-    placeholderData: keepPreviousData,
-    staleTime: 0,
+    fetchPage: (offset, limit) => tripsList({ ...settled, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }
 
@@ -103,7 +97,7 @@ export function useTrip(id: number | null) {
     initialPageParam: 0,
     enabled: id !== null,
     queryFn: ({ pageParam }) =>
-      tripsGet({ id: id ?? 0, entries_offset: pageParam, entries_limit: TRIP_PAGE_SIZE }),
+      tripsGet({ id: id ?? 0, entries_offset: pageParam, entries_limit: PAGE_SIZE }),
     getNextPageParam: (last, pages) => {
       const loaded = pages.reduce((sum, page) => sum + page.entries.length, 0);
       return loaded < last.entries_count && last.entries.length > 0 ? loaded : undefined;

@@ -176,6 +176,10 @@ err-opening-both-sides = ابتدائی { -banaam } یا ابتدائی { -jama 
 # review: pending
 err-advance-not-seller = ابتدائی { -peshgi } صرف { -beopari } کے ابتدائی { -banaam } پر لگ سکتی ہے۔
 
+# plan 17b: an old client sent a mode, a bank or a cheque; the screens never do (PRD 15.1).
+# review: pending
+err-field-not-allowed = یہ خانہ اب استعمال نہیں ہوتا۔ اسے چھوڑ دیں۔
+
 # PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
 # review: pending
 err-opening-not-allowed = اس کھاتے میں یہ ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -pukhta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔ { -shirakat-dar } کے { -zati-kharcha } کھاتے اور { -adhar-raqam } کے کھاتے میں صرف ابتدائی { -banaam } لگ سکتا ہے۔
@@ -300,10 +304,6 @@ err-voucher-cancelled = یہ واؤچر منسوخ ہو چکا ہے، اس می�
 # PRD FR-13.5, FR-13.7.
 # review: pending
 err-person-required = { -pukhta-khata } کے لیے اس شخص کا نام یا فون لکھ کر اسے فہرست سے چنیں۔
-
-# PRD 15.1.
-# review: pending
-err-cheque-required = چیک کا نمبر اور چیک کی تاریخ لکھیں۔
 
 # A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
 # amount is more than it, both in rupees.
@@ -516,3 +516,25 @@ err-update-changed = اب کوئی اور ورژن دستیاب ہے۔ نیا و
 
 # review: pending
 err-update-none = کوئی نیا ورژن نہیں ہے۔ ایپ تازہ ترین ہے۔
+
+## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
+
+# PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
+# review: pending
+err-garden-closed = یہ { -bagh } بند ہے، اس لیے اس میں نیا اندراج، نیا لاٹ یا پھل نہیں لیا جا سکتا۔ پہلے اس کی بندش واپس لیں۔
+
+# PRD FR-12.38. The garden is open, so there is no closing to undo.
+# review: pending
+err-garden-not-closed = یہ { -bagh } کھلا ہے، اس لیے واپس لینے کے لیے کوئی بندش نہیں۔
+
+# PRD FR-12.34. $garden_date: the day of the garden.
+# review: pending
+err-date-before-garden = تاریخ { -bagh } کی تاریخ ({ $garden_date }) سے پہلے کی ہے۔ باغ کی تاریخ یا اس کے بعد کی تاریخ چنیں۔
+
+# Plan 17c. $last_date: the day of the latest entry or lot of the garden.
+# review: pending
+err-close-before-last-entry = { -bagh } اپنے آخری اندراج یا لاٹ ({ $last_date }) سے پہلے بند نہیں ہو سکتا۔ وہی دن یا اس کے بعد کا دن چنیں۔
+
+# Plan 17c. The entry of the garden was cancelled already.
+# review: pending
+err-garden-entry-cancelled = { -bagh } کا یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔

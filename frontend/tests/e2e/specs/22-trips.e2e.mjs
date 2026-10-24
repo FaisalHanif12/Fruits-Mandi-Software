@@ -49,7 +49,9 @@ describe('E2E-34: a market trip (Urdu)', () => {
       ),
     );
     const after = labels.indexOf(t('ur', 'layout-nav-rokar'));
-    expect(labels[after + 1]).toBe(t('ur', 'layout-nav-trips'));
+    // باغات comes right after روکڑ and مارکیٹ سفر right after باغات (PRD FR-5.2).
+    expect(labels[after + 1]).toBe(t('ur', 'layout-nav-gardens'));
+    expect(labels[after + 2]).toBe(t('ur', 'layout-nav-trips'));
     await (await navItem('layout-nav-trips')).click();
     await waitForHeading('ur', 'trips-title');
     await waitForText(t('ur', 'trips-list-empty'));

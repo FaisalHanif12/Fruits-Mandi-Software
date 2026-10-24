@@ -78,7 +78,11 @@ pub(super) fn account<'a>(
     let kind_ok = match wanted {
         Wanted::Seller => facts.kind == PartyKind::Seller,
         // A separate khata can sell its goods through a lot (PRD FR-16.7).
-        Wanted::LotSeller => matches!(facts.kind, PartyKind::Seller | PartyKind::Khata),
+        // A garden sells its goods through a lot too (PRD FR-12.36).
+        Wanted::LotSeller => matches!(
+            facts.kind,
+            PartyKind::Seller | PartyKind::Khata | PartyKind::Garden
+        ),
         Wanted::Buyer => facts.kind == PartyKind::Buyer,
     };
     if !kind_ok {
@@ -87,6 +91,10 @@ pub(super) fn account<'a>(
             Wanted::Buyer => ErrorCode::ErrNotABuyer,
         };
         issues.error(code, field);
+        return None;
+    }
+    if facts.kind == PartyKind::Garden && facts.garden_closed {
+        issues.error(ErrorCode::ErrGardenClosed, field);
         return None;
     }
     if !facts.is_active {

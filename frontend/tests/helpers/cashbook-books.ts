@@ -41,6 +41,7 @@ import { CommandError } from '../../src/shared/api';
 import { paisaForTest } from './paisa';
 import { refusal } from './ui-error';
 import { voucherRow } from './voucher-books';
+import { sliceOf } from './paged';
 
 export const TODAY_ISO = '2026-10-10';
 
@@ -705,9 +706,14 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
     const total = found
       .filter(({ row }) => row.status !== 'cancelled')
       .reduce((sum, one) => sum + one.amount, 0);
+    const all = found.map(({ row }) => row);
     return {
-      rows: found.map(({ row }) => row),
-      total_paisa: found.length === 0 ? null : money(total),
+      rows: sliceOf(all, input.offset, input.limit),
+      total_count: all.length,
+      totals: {
+        cancelled_count: all.filter((row) => row.status === 'cancelled').length,
+        total_paisa: found.length === 0 ? null : money(total),
+      },
     };
   }
 

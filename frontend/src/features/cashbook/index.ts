@@ -4,8 +4,7 @@
 export { EntryBalances } from './components/EntryBalances';
 export { EntryFrame } from './components/EntryFrame';
 export { EntryNotes } from './components/EntryNotes';
-export { PagedList } from './components/PagedList';
 export { SignedNum } from './components/SignedNum';
 export { previewRefusal, useFollowType } from './entry-support';
-export { CASHBOOK_KEY, PAGE_SIZE, useEntryPreview, useReadAgain } from './hooks';
+export { CASHBOOK_KEY, useEntryPreview, useReadAgain } from './hooks';
 export { kindId } from './list-columns';

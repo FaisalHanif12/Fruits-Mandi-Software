@@ -22,9 +22,11 @@ use std::collections::{BTreeMap, HashMap};
 use mandi_db::bikri::saved::{self as repo, BillLine, RegisterLine};
 use mandi_db::matching as matching_repo;
 use mandi_domain::core::bikri::{
-    PaidState, PukhtaPeopleInput, PukhtaPerson, PukhtaRegisterInput, PukhtaRegisterRow, PukhtaSide,
+    PaidState, PukhtaPeopleInput, PukhtaPerson, PukhtaRegister, PukhtaRegisterInput,
+    PukhtaRegisterRow, PukhtaRegisterTotals, PukhtaSide,
 };
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::text;
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -234,7 +236,7 @@ fn buyer_open(
 pub fn register(
     ctx: &Context,
     input: &PukhtaRegisterInput,
-) -> Result<Vec<PukhtaRegisterRow>, ServiceError> {
+) -> Result<PukhtaRegister, ServiceError> {
     let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
     let bound = |errors: &mut FieldErrors, field: &str, text: &str| {
@@ -323,6 +325,34 @@ pub fn register(
                 cancelled: line.cancelled,
             });
         }
-        Ok(out)
+        // The totals are over every matching line, cancelled ones left out; the page is cut
+        // after (PRD FR-19.11, B31). With no side chosen the lines of buyers and sellers are
+        // mixed, so there is no total (see `PukhtaRegisterTotals`).
+        let mut qty = 0_i64;
+        let (mut amount, mut commission, mut open) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+        for row in out.iter().filter(|row| !row.cancelled) {
+            qty = qty
+                .checked_add(row.qty)
+                .ok_or_else(|| ServiceError::reject(ErrorCode::ErrOverflow))?;
+            amount = amount.checked_add(row.amount).map_err(money_error)?;
+            commission = commission
+                .checked_add(row.commission)
+                .map_err(money_error)?;
+            open = open.checked_add(row.open).map_err(money_error)?;
+        }
+        let one_side = input.side.is_some();
+        let totals = PukhtaRegisterTotals {
+            qty: one_side.then_some(qty),
+            amount: one_side.then_some(amount),
+            commission: one_side.then_some(commission),
+            open: one_side.then_some(open),
+        };
+        let total_count =
+            i64::try_from(out.len()).map_err(|_| ServiceError::Data("too many rows".to_owned()))?;
+        Ok(PukhtaRegister {
+            rows: crate::page::slice(out, input.offset, input.limit),
+            total_count,
+            totals,
+        })
     })
 }

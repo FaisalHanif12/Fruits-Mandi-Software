@@ -11,3 +11,4 @@ export { useLatest } from './useLatest';
 export { useRefusalIntoView } from './useRefusalIntoView';
 export { useEntrySaveFlow } from './useEntrySaveFlow';
 export { PREVIEW_DELAY_MS, usePreviewQuery } from './usePreviewQuery';
+export { PAGE_SIZE, nextOffset, useLoadRest, usePagedQuery } from './usePagedQuery';

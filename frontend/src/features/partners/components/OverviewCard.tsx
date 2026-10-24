@@ -15,6 +15,7 @@ import { displayName, otherScriptLang, otherScriptName, useLanguage } from '../.
 import { Button, Card, Num } from '../../../shared/ui';
 import { SignedNum } from '../../cashbook';
 import type { PartnerOverviewRow } from '../types';
+import { OpenVentures } from './OpenVentures';
 
 interface MetricProps {
   labelId: string;
@@ -93,6 +94,7 @@ export function OverviewCard({ row }: { row: PartnerOverviewRow }) {
           <SignedNum paisa={row.total_paisa} />
         </Metric>
       </dl>
+      <OpenVentures ventures={row.open_ventures} partnerName={name} />
       <div className="flex flex-wrap gap-2">
         <Button
           accessibleName={l10n.getString('partners-open-statement-of', { name })}

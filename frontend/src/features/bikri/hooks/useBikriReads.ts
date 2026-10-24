@@ -3,7 +3,7 @@
 // them all, and a save invalidates the `['bikri']` queries (useSaveBikri).
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useDebouncedValue } from '../../../shared/hooks';
+import { useDebouncedValue, usePagedQuery } from '../../../shared/hooks';
 import { bikriCancelPreview, bikriFind, bikriGet, bikriList, bikriStockList } from '../api';
 import type { BikriFindInput } from '../../../bindings/BikriFindInput';
 import type { BikriListInput } from '../../../bindings/BikriListInput';
@@ -22,15 +22,18 @@ export function useBikriDetail(id: number | null) {
   });
 }
 
-/** The list of بکری for the filters (PRD FR-12.7). The last answer stays while the next comes. */
-export function useBikriList(filter: BikriListInput) {
+/**
+ * The list of بکری for the filters, page by page, with the count and the totals of the whole filter
+ * (PRD FR-12.7, FR-19.11). The last answer stays while the next comes.
+ */
+export function useBikriList(filter: Omit<BikriListInput, 'offset' | 'limit'>) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return useQuery({
+  return usePagedQuery({
     queryKey: ['bikri', 'list', settled],
-    queryFn: () => bikriList(settled),
-    placeholderData: keepPreviousData,
-    staleTime: 0,
-    gcTime: 0,
+    fetchPage: (offset, limit) => bikriList({ ...settled, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }
 
@@ -58,15 +61,20 @@ export function useBikriFind(input: BikriFindInput, enabled: boolean) {
   });
 }
 
-/** The lots with goods left for the filters (PRD FR-12.14). The last answer stays while the next comes. */
-export function useStockList(filter: StockListInput) {
+/**
+ * The lots with goods left for the filters, page by page (PRD FR-12.14, FR-19.11): the lots first,
+ * then the firm's own goods, counted together. The first page has the totals of the whole filter.
+ * The last answer stays while the next comes.
+ */
+export function useStockList(filter: Omit<StockListInput, 'offset' | 'limit'>, enabled = true) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return useQuery({
+  return usePagedQuery({
     queryKey: ['bikri', 'stock', settled],
-    queryFn: () => bikriStockList(settled),
-    placeholderData: keepPreviousData,
-    staleTime: 0,
-    gcTime: 0,
+    enabled,
+    fetchPage: (offset, limit) => bikriStockList({ ...settled, offset, limit }),
+    rowsIn: (page) => page.rows.length + page.own_rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }
 

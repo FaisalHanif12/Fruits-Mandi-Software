@@ -147,10 +147,10 @@
         "name_en": "Arshad Multani"
       },
       "amount_paisa": 500000,
-      "mode": "cheque",
-      "bank_account_id": 1,
-      "cheque_no": "000123",
-      "cheque_date": "2026-10-12",
+      "mode": "cash",
+      "bank_account_id": null,
+      "cheque_no": "",
+      "cheque_date": null,
       "expected_goods": "",
       "narration": "",
       "status": "saved",
@@ -163,5 +163,9 @@
       "editable": true
     }
   ],
-  "total_paisa": null
+  "total_count": 6,
+  "totals": {
+    "cancelled_count": 1,
+    "total_paisa": null
+  }
 }

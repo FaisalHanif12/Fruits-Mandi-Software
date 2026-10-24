@@ -1,0 +1,184 @@
+{
+  "numbers": {
+    "balance_paisa": 0,
+    "total_cost_paisa": 0,
+    "money_in_paisa": 0,
+    "result_paisa": 0,
+    "credits": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "share_bps": 5000,
+        "amount_paisa": 0,
+        "working": {
+          "message_id": "working-venture-credit",
+          "args": [
+            {
+              "name": "amount",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "bps",
+              "value": {
+                "kind": "count",
+                "value": 5000
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "share_bps": 5000,
+        "amount_paisa": 0,
+        "working": {
+          "message_id": "working-venture-credit",
+          "args": [
+            {
+              "name": "amount",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "bps",
+              "value": {
+                "kind": "count",
+                "value": 5000
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      }
+    ],
+    "partner_results": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "share_bps": 5000,
+        "paid_shop_paisa": 0,
+        "paid_pocket_paisa": 0,
+        "money_back_paisa": 0,
+        "net_paisa": 0,
+        "working": {
+          "message_id": "working-trip-partner-net",
+          "args": [
+            {
+              "name": "in_shop",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "in_pocket",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "back",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "share_bps": 5000,
+        "paid_shop_paisa": 0,
+        "paid_pocket_paisa": 0,
+        "money_back_paisa": 0,
+        "net_paisa": 0,
+        "working": {
+          "message_id": "working-trip-partner-net",
+          "args": [
+            {
+              "name": "in_shop",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "in_pocket",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "back",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            },
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      }
+    ],
+    "posts_entry": false
+  },
+  "earliest_date": "2026-10-10",
+  "errors": [],
+  "warnings": []
+}

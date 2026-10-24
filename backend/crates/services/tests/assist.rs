@@ -1459,9 +1459,7 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
     // (PRD FR-7.59, money agent 8.2a).
     use bikri_support::*;
     use mandi_services::core::bikri::{PaymentType, PukhtaInput};
-    use mandi_services::core::vouchers::{
-        LineSource, OpenPayablesInput, PaymentInput, VoucherMode,
-    };
+    use mandi_services::core::vouchers::{LineSource, OpenPayablesInput, PaymentInput};
     let w = world();
     mandi_services::bikri::save(
         &w.env.ctx,
@@ -1536,10 +1534,7 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
         account_id: w.karim,
         person_key: None,
         amount: "10,160".into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: String::new(),
         narration: String::new(),
         confirm_cash_below_zero: false,
@@ -1582,7 +1577,7 @@ fn e2e_24_after_the_worked_day_the_code_1_brings_akram_his_card_and_his_open_bil
     // 03040001 and the seller 030110001. Events 2, 4 and 5 do not touch Akram's account, so
     // Events 1 and 3 are enough to build his side of the day.
     use bikri_support::*;
-    use mandi_services::core::vouchers::{LineSource, OpenBillsInput, ReceiptInput, VoucherMode};
+    use mandi_services::core::vouchers::{LineSource, OpenBillsInput, ReceiptInput};
     let w = world();
     mandi_services::bikri::save(
         &w.env.ctx,
@@ -1601,10 +1596,7 @@ fn e2e_24_after_the_worked_day_the_code_1_brings_akram_his_card_and_his_open_bil
             account_id: w.akram,
             person_key: None,
             amount: "10,000".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             collector_staff_id: None,
             narration: String::new(),
         },

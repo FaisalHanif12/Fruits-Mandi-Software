@@ -7,11 +7,11 @@
 
 import { Localized } from '@fluent/react';
 import { FileText, Pencil, Printer, SearchX, Ban } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { VouchersListInput } from '../../../bindings/VouchersListInput';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { ListGrid, type ListContext } from '../../../shared/grid';
+import { PagedList } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
 import {
   AccountPicker,
@@ -19,18 +19,13 @@ import {
   Card,
   DateInput,
   EmptyState,
-  ErrorState,
   Field,
-  LoadingState,
   type PickerValue,
 } from '../../../shared/ui';
 import { VOUCHER_COLUMNS } from '../list-columns';
 import { useVouchersList } from '../hooks';
 import type { ScreenType } from '../screen-type';
 import type { VoucherRow } from '../types';
-
-/** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
-const SHORT_LIST_ROWS = 30;
 
 interface VoucherListSectionProps {
   type: ScreenType;
@@ -57,7 +52,7 @@ export function VoucherListSection({
   const [from, setFrom] = useState(todayText);
   const [to, setTo] = useState(todayText);
   const [account, setAccount] = useState<PickerValue | null>(null);
-  const input: VouchersListInput = {
+  const input: Omit<VouchersListInput, 'offset' | 'limit'> = {
     voucher_type: type,
     from: from.trim(),
     to: to.trim(),
@@ -65,92 +60,82 @@ export function VoucherListSection({
     person_key: null,
   };
   const list = useVouchersList(input);
-  const data = list.data;
-  const rows = data?.rows;
+  const first = list.data?.pages[0];
+  // A refusal shows as the state, not as the rows of the filter before it.
+  const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
   const columns = useMemo(() => VOUCHER_COLUMNS, []);
-  // The total under the amount column is the backend's figure for the saved vouchers of the list;
-  // a cancelled voucher is in the rows but not in the total. The backend sends no total (null) for
-  // a list of all types, which this screen never asks for; then only the word shows. The callback
-  // depends on the loaded list, not on the amount: a Paisa value must not go into a dependency
-  // list (Code Standards F3).
-  const totals = useCallback(
-    (context: ListContext) => {
-      const sum = data?.total_paisa ?? null;
-      return {
-        labelField: 'account',
-        values: {
-          account: context.text('glossary-meezan'),
-          ...(sum === null ? {} : { amount: context.money(sum) }),
-        },
-      };
-    },
-    [data],
-  );
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
   const onlyToday = from.trim() === todayText && to.trim() === todayText && account === null;
 
-  let body;
-  if (rows === undefined && list.isPending) {
-    body = <LoadingState />;
-  } else if (list.isError && rows === undefined) {
-    body = (
-      <ErrorState
-        title={<Localized id="vouchers-list-failed" />}
-        error={uiErrorOf(list.error)}
-        onRetry={() => {
-          void list.refetch();
-        }}
-      />
-    );
-  } else if (rows?.length === 0) {
-    body = onlyToday ? (
-      <EmptyState
-        icon={FileText}
-        title={<Localized id={`vouchers-list-empty-${type}`} />}
-        help={<Localized id="vouchers-list-empty-help" vars={{ key: SHORTCUTS.save.label }} />}
-      />
-    ) : (
-      <EmptyState
-        icon={SearchX}
-        title={<Localized id="vouchers-list-no-match" />}
-        help={<Localized id="vouchers-list-no-match-help" />}
-        action={
-          <Button
-            onClick={() => {
-              setFrom(todayText);
-              setTo(todayText);
-              setAccount(null);
-            }}
-          >
-            <Localized id="vouchers-list-clear" />
-          </Button>
-        }
-      />
-    );
-  } else if (rows !== undefined) {
-    const long = rows.length > SHORT_LIST_ROWS;
-    body = (
-      <div className={long ? 'h-list-region' : undefined}>
-        <ListGrid<VoucherRow>
-          columns={columns}
-          rows={rows}
-          getRowId={(row) => String(row.id)}
-          labelId="vouchers-list-label"
-          onOpen={(row) => {
-            if (row.editable) onEdit(row);
-            else onSelect(row);
+  const empty = onlyToday ? (
+    <EmptyState
+      icon={FileText}
+      title={<Localized id={`vouchers-list-empty-${type}`} />}
+      help={<Localized id="vouchers-list-empty-help" vars={{ key: SHORTCUTS.save.label }} />}
+    />
+  ) : (
+    <EmptyState
+      icon={SearchX}
+      title={<Localized id="vouchers-list-no-match" />}
+      help={<Localized id="vouchers-list-no-match-help" />}
+      action={
+        <Button
+          onClick={() => {
+            setFrom(todayText);
+            setTo(todayText);
+            setAccount(null);
           }}
-          onFocusRow={(rowId) => {
-            onSelect(rows.find((row) => String(row.id) === rowId) ?? null);
-          }}
-          focusRowId={selectedId === null ? null : String(selectedId)}
-          heightMode={long ? 'fill' : 'auto'}
-          isInactive={(row) => row.status === 'cancelled'}
-          totals={totals}
-        />
-      </div>
-    );
-  }
+        >
+          <Localized id="vouchers-list-clear" />
+        </Button>
+      }
+    />
+  );
+  // The total under the amount column is the backend's figure for the saved vouchers of the whole
+  // filter; a cancelled voucher is in the rows but not in the total. The backend sends no total
+  // (null) for a list of all types, which this screen never asks for; then only the word shows.
+  const body = (
+    <PagedList<VoucherRow>
+      columns={columns}
+      rows={rows}
+      totalCount={first?.total_count}
+      getRowId={(row) => String(row.id)}
+      labelId="vouchers-list-label"
+      failedId="vouchers-list-failed"
+      error={list.isError ? uiErrorOf(list.error) : null}
+      onRetry={() => {
+        void list.refetch();
+      }}
+      hasMore={list.hasNextPage}
+      loadingMore={list.isFetchingNextPage}
+      onLoadMore={() => {
+        void list.fetchNextPage();
+      }}
+      empty={empty}
+      onOpen={(row) => {
+        if (row.editable) onEdit(row);
+        else onSelect(row);
+      }}
+      onFocusRow={(rowId) => {
+        onSelect(rows?.find((row) => String(row.id) === rowId) ?? null);
+      }}
+      focusRowId={selectedId === null ? null : String(selectedId)}
+      isInactive={(row) => row.status === 'cancelled'}
+      totals={
+        first === undefined
+          ? undefined
+          : (context) => ({
+              labelField: 'account',
+              values: {
+                account: context.text('glossary-meezan'),
+                ...(first.totals.total_paisa === null
+                  ? {}
+                  : { amount: context.money(first.totals.total_paisa) }),
+              },
+            })
+      }
+    />
+  );
 
   return (
     <Card compact title={<Localized id={`vouchers-list-title-${type}`} />}>

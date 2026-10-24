@@ -58,6 +58,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -81,7 +82,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   resetClientState(language);
   signedIn(sessionUser({ language }));
   fakeBikri();
@@ -136,6 +137,9 @@ describe('goods left against the backend files', () => {
       seller_id: null,
       item_id: null,
       include_written_off: false,
+      lot_id: null,
+      offset: 0,
+      limit: 100,
     });
   });
 

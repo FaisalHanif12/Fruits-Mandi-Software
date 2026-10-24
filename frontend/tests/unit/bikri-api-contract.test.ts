@@ -85,6 +85,8 @@ describe('each wrapper sends the command and the input of the backend’s file',
       seller_id: null,
       item_id: null,
       status: null,
+      offset: 0,
+      limit: 0,
     });
     expect(call).toHaveBeenCalledTimes(1);
     expect(call.mock.calls[0]?.[0]).toBe('bikri_list');
@@ -103,6 +105,8 @@ describe('each wrapper sends the command and the input of the backend’s file',
       name: null,
       phone: null,
       state: null,
+      offset: 0,
+      limit: 0,
     });
     expect(call.mock.calls.at(-1)?.[0]).toBe('pukhta_register');
     expect(call.mock.calls.at(-1)?.[1]).toMatchObject({ input: REGISTER_DAY_REQUEST });
@@ -196,11 +200,26 @@ describe('the canned data of the component tests has the real shape', () => {
   });
 
   it('a list row', () => {
-    expect(firstDifference(shapeOf(LIST_DAY[0]), shapeOf(listRow()))).toBeNull();
+    expect(firstDifference(shapeOf(LIST_DAY.rows[0]), shapeOf(listRow()))).toBeNull();
+    // A page: the rows, the count of the whole filter, and the totals over all of it.
+    expect(Object.keys(LIST_DAY).sort()).toEqual(['rows', 'total_count', 'totals']);
+    expect(Object.keys(LIST_DAY.totals).sort()).toEqual([
+      'buyer_total',
+      'gross',
+      'net',
+      'qty_received',
+      'qty_sold',
+    ]);
   });
 
   it('a register row and a one-time person', () => {
-    expect(firstDifference(shapeOf(REGISTER_DAY[0]), shapeOf(registerRow()))).toBeNull();
+    expect(firstDifference(shapeOf(REGISTER_DAY.rows[0]), shapeOf(registerRow()))).toBeNull();
+    expect(Object.keys(REGISTER_DAY.totals).sort()).toEqual([
+      'amount',
+      'commission',
+      'open',
+      'qty',
+    ]);
     expect(firstDifference(shapeOf(PEOPLE_SHAHID[0]), shapeOf(SHAHID))).toBeNull();
   });
 
@@ -220,6 +239,7 @@ describe('what the real answers say, read as the screen reads them', () => {
   });
 
   it('the list is newest first: number 2, then number 1', () => {
-    expect(LIST_DAY.map((row) => row.number)).toEqual([2, 1]);
+    expect(LIST_DAY.rows.map((row) => row.number)).toEqual([2, 1]);
+    expect(LIST_DAY.total_count).toBe(2);
   });
 });

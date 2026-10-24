@@ -334,8 +334,8 @@ fn e2e_15_cancel_bikri_2_reverses_everything_and_keeps_the_books_balanced() {
     assert_eq!((done.number, done.reversal_entry_ids.len()), (2, 1));
     // The register shows شاہد's line cancelled.
     let register = bikri::register(&w.env.ctx, &Default::default()).unwrap();
-    assert_eq!(register.len(), 1);
-    assert!(register[0].cancelled && register[0].bikri_number == 2);
+    assert_eq!(register.rows.len(), 1);
+    assert!(register.rows[0].cancelled && register.rows[0].bikri_number == 2);
     // The سیب facts net to zero (and Event 1's stay): analytics excludes it.
     let apple = scalar(
         &w,

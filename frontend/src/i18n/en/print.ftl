@@ -303,12 +303,6 @@ print-advance-slip-title = { -peshgi-khata } slip
 print-fact-voucher-number = No.
 
 # review: pending
-print-fact-bank = Bank
-
-# review: pending
-print-fact-cheque = Cheque
-
-# review: pending
 print-fact-reason = Reason
 
 # review: pending
@@ -322,15 +316,6 @@ print-party-onetime-seller = { -pukhta-khata } ({ -beopari })
 
 # review: pending
 print-party-account = Account
-
-# review: pending
-print-mode-cash = Cash
-
-# review: pending
-print-mode-bank = Bank
-
-# review: pending
-print-mode-cheque = Cheque
 
 # review: pending
 print-slip-amount-received = Amount received

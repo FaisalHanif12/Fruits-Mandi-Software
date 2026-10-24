@@ -361,7 +361,12 @@ pub(super) fn insert_sales_and_facts(
         let first_line = edit_repo::max_line_no(tx, *lot_id)?;
         let purchase_id = shaped.lot.purchase_id;
         // The trip of an own lot, kept on every fact for the analytics filters (PRD FR-18.1).
-        let venture_id = shaped.preview.own.as_ref().map(|own| own.trip.id);
+        let venture_id = match shaped.preview.own.as_ref() {
+            Some(own) => Some(own.trip.id),
+            // A garden's lot: the garden, for the analytics filters (plan 17c, view I).
+            None => mandi_db::gardens::of_account(tx, shaped.journal.seller_account_id.get())?
+                .map(|(garden_id, _)| garden_id),
+        };
         let (mut own_qty, mut own_cost) = (0_i64, Paisa::ZERO);
         let mut lot_sale_ids = Vec::with_capacity(shaped.rows.len());
         for (index, shaped_row) in shaped.rows.iter().enumerate() {

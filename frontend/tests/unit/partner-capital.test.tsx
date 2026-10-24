@@ -18,10 +18,12 @@ import {
   startsWith,
   typeAmount,
 } from '../helpers/cashbook-screen';
+import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import { dropdown } from '../helpers/cashbook-screen';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
 import { preparePartnerMoney, type PartnerMoney } from '../helpers/partner-money';
 import { message, visible } from '../helpers/render';
+import { settlePreview } from '../helpers/preview-settled';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -78,7 +80,9 @@ describe.each(LANGUAGES)('the سرمایہ screen (%s)', (language) => {
     ]);
     expect((await labelled(language, 'cashbook-field-date')).value).toBe('10-10-2026');
     expect(await dropdown(language, 'cashbook-field-partner')).toBeInTheDocument();
-    expect(screen.queryByLabelText(named(message(language, 'vouchers-field-mode')))).toBeNull();
+    for (const gone of FORMER_PAYMENT_LABELS[language]) {
+      expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
+    }
     // Without a partner the history says to choose one.
     expect(
       await screen.findByText(named(message(language, 'partners-capital-pick'))),
@@ -145,6 +149,7 @@ describe.each(LANGUAGES)('the سرمایہ screen (%s)', (language) => {
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'common-cash-after', { amount: '-500' }));
     });
+    await settlePreview();
     press('F10');
     const no = await screen.findByRole('button', {
       name: startsWith(message(language, 'common-cash-confirm-no')),

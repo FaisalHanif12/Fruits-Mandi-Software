@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { StockListInput } from '../../../bindings/StockListInput';
 import type { StockRow } from '../../../bindings/StockRow';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, type ListContext } from '../../../shared/grid';
+import { ListGrid, PagedFooter, type ListContext } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
@@ -66,17 +66,21 @@ function StockBody({ saved, remember }: MemoryProps) {
   useEffect(() => {
     remember(stockChoicesText({ from, to, seller, item, includeWrittenOff }));
   }, [from, to, seller, item, includeWrittenOff, remember]);
-  const filter: StockListInput = {
+  const filter: Omit<StockListInput, 'offset' | 'limit'> = {
     date: null,
     from: textOrNull(from),
     to: textOrNull(to),
     seller_id: seller?.id ?? null,
     item_id: item?.id ?? null,
     include_written_off: includeWrittenOff,
+    lot_id: null,
   };
   const list = useStockList(filter);
-  const rows = list.data?.rows;
-  const ownRows = list.data?.own_rows ?? [];
+  // Every page loaded so far: the lots, then the firm's own goods. The first page carries the
+  // count and the totals of the whole filter (PRD FR-19.11).
+  const first = list.data?.pages[0];
+  const rows = list.data?.pages.flatMap((page) => page.rows);
+  const ownRows = list.data?.pages.flatMap((page) => page.own_rows) ?? [];
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const noFilter = filter.from === null && filter.to === null && seller === null && item === null;
 
@@ -96,7 +100,7 @@ function StockBody({ saved, remember }: MemoryProps) {
 
   // The total under the balance column is the backend's figure (Code Standards F19). It is a
   // count of نگ, not an amount, so it is passed as text.
-  const total = list.data?.balance_total;
+  const total = first?.balance_total;
   const totals = useCallback(
     (context: ListContext) => ({
       labelField: 'seller',
@@ -195,9 +199,18 @@ function StockBody({ saved, remember }: MemoryProps) {
             )}
           </>
         )}
-        {ownRows.length === 0 || list.data === undefined ? null : (
-          <OwnStockSection rows={ownRows} list={list.data} />
+        {ownRows.length === 0 || first === undefined ? null : (
+          <OwnStockSection rows={ownRows} list={first} />
         )}
+        <PagedFooter
+          shown={rows.length + ownRows.length}
+          total={first?.total_count ?? rows.length + ownRows.length}
+          hasMore={list.hasNextPage}
+          loadingMore={list.isFetchingNextPage}
+          onLoadMore={() => {
+            void list.fetchNextPage();
+          }}
+        />
       </>
     );
   }

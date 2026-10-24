@@ -4,23 +4,24 @@
 //! is no delete command: a master can only be made inactive (PRD E21).
 
 use mandi_services::core::masters::{
-    MasterInput, MasterRow, MastersListInput, MastersNextCodeInput, MastersSetActiveInput,
+    MasterInput, MasterRow, MastersList, MastersListInput, MastersNextCodeInput,
+    MastersSetActiveInput,
 };
 use mandi_services::{auth, masters};
 
 use super::run;
 use crate::error::UiError;
 
-/// Every master of one kind, by code (names for kinds without a code). Inactive ones only when
-/// asked.
+/// One page of the masters of one kind, by code (names for kinds without a code), with the counts
+/// over the whole list (PRD FR-19.11). Inactive ones only when asked.
 #[tauri::command]
 pub async fn masters_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: MastersListInput,
-) -> Result<Vec<MasterRow>, UiError> {
+) -> Result<MastersList, UiError> {
     run(app, "masters_list", move |ctx| {
         auth::require(ctx)?;
-        masters::list(ctx, input.kind, input.include_inactive)
+        masters::list_page(ctx, &input)
     })
     .await
 }

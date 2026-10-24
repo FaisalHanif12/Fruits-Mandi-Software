@@ -1,4 +1,4 @@
-// The ten masters of PRD 10.3 as configuration for one generic screen (plan 06). A master adds
+// The nine masters of PRD 10.3 as configuration for one generic screen (plan 06). A master adds
 // only what is special about it: which extra fields its form has and which extra columns its list
 // has. The code, the names, the four states, the keys and the leave guard are the screen's. Words
 // are Fluent message IDs (masters.ftl), never text. Names go through `displayName` (F38).
@@ -7,7 +7,6 @@ import {
   Apple,
   Boxes,
   Container,
-  Landmark,
   MapPin,
   MessageSquareText,
   Receipt,
@@ -31,7 +30,7 @@ export interface ChoiceOption {
 /** What a form field is. Everything is text, as typed (CLAUDE.md rule 1). */
 export type FieldControl =
   | { type: 'text' }
-  /** Latin letters and digits written left to right: a phone, a bank account number, a weight. */
+  /** Latin letters and digits written left to right: a phone, a weight. */
   | { type: 'latin' }
   | { type: 'select'; options: readonly ChoiceOption[] }
   /** A record of another master, found by a Picker. */
@@ -72,7 +71,7 @@ export interface MasterConfig {
   newId: string;
   /** The empty state: "No cities yet". */
   emptyId: string;
-  /** Does this master have a code of its own? Narration, staff and bank account do not. */
+  /** Does this master have a code of its own? Narration and staff do not. */
   hasCode: boolean;
   /** The two names, or null for a master with none (mark). */
   names: { urduLabelId: string; englishLabelId: string; spelling: boolean } | null;
@@ -366,38 +365,6 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
       choiceColumn('job', 'masters-staff-job', 'masters-staff-job'),
       latinColumn('phone', 'masters-staff-phone'),
       shownColumn('account_code', 'masters-staff-account'),
-    ],
-  },
-  {
-    kind: 'bank_account',
-    path: 'bank-accounts',
-    icon: Landmark,
-    titleId: 'masters-bank-title',
-    helpId: 'masters-bank-help',
-    newId: 'masters-bank-new',
-    emptyId: 'masters-bank-empty',
-    hasCode: false,
-    names: {
-      urduLabelId: 'masters-bank-name-ur',
-      englishLabelId: 'masters-bank-name-en',
-      spelling: true,
-    },
-    fields: [
-      { key: 'bank_name', labelId: 'masters-bank-bank', control: { type: 'text' } },
-      { key: 'title', labelId: 'masters-bank-title-field', control: { type: 'text' } },
-      { key: 'number', labelId: 'masters-bank-number', control: { type: 'latin' } },
-    ],
-    shown: [
-      {
-        key: 'account_code',
-        labelId: 'masters-account-code',
-        emptyHintId: 'masters-account-code-hint',
-      },
-    ],
-    extraColumns: [
-      textColumn('bank_name', 'masters-bank-bank'),
-      latinColumn('number', 'masters-bank-number'),
-      shownColumn('account_code', 'masters-account-code'),
     ],
   },
 ];

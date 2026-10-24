@@ -22,7 +22,8 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
-import { ref } from '../helpers/accounts';
+import { money, ref } from '../helpers/accounts';
+import { EMPTY_PAIRS, bikriListOf } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -43,7 +44,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -83,6 +84,8 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
         seller_id: null,
         item_id: null,
         status: null,
+        offset: 0,
+        limit: 100,
       });
     });
   });
@@ -99,17 +102,19 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
   });
 
   it('two sellers of one truck are in one cell, and a one-time seller is shown by his own name', async () => {
-    vi.mocked(bikriApi.bikriList).mockResolvedValue([
-      listRow({
-        sellers: [
-          ref(17, '030110001', 'رحیم', 'Rahim'),
-          ref(22, '030119999', 'پختہ کھاتہ (بیوپاری)', 'Pukhta Khata (Seller)'),
-        ],
-        pukhta_sellers: [
-          { name_ur: 'شاہد', name_en: 'Shahid', phone: '03000000000', person_key: 'shahid|0300' },
-        ],
-      }),
-    ]);
+    vi.mocked(bikriApi.bikriList).mockResolvedValue(
+      bikriListOf([
+        listRow({
+          sellers: [
+            ref(17, '030110001', 'رحیم', 'Rahim'),
+            ref(22, '030119999', 'پختہ کھاتہ (بیوپاری)', 'Pukhta Khata (Seller)'),
+          ],
+          pukhta_sellers: [
+            { name_ur: 'شاہد', name_en: 'Shahid', phone: '03000000000', person_key: 'shahid|0300' },
+          ],
+        }),
+      ]),
+    );
     await open();
     await waitFor(() => {
       expect(cell(41, 'sellers')).toBe(language === 'ur' ? 'رحیم، شاہد' : 'Rahim, Shahid');
@@ -117,7 +122,9 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
   });
 
   it('a cancelled بکری says so in words', async () => {
-    vi.mocked(bikriApi.bikriList).mockResolvedValue([listRow({ status: 'cancelled' })]);
+    vi.mocked(bikriApi.bikriList).mockResolvedValue(
+      bikriListOf([listRow({ status: 'cancelled' })]),
+    );
     await open();
     await waitFor(() => {
       expect(cell(41, 'status')).toBe(message(language, 'bikri-status-cancelled'));
@@ -141,7 +148,7 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
   });
 
   it('a day with no بکری says why and what to do, with the key on the button', async () => {
-    vi.mocked(bikriApi.bikriList).mockResolvedValue([]);
+    vi.mocked(bikriApi.bikriList).mockResolvedValue(bikriListOf([]));
     const { router } = await open();
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'bikri-list-empty'));
@@ -159,7 +166,7 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
   });
 
   it('another day sends the day as typed; nothing found offers to clear the filters', async () => {
-    vi.mocked(bikriApi.bikriList).mockResolvedValue([]);
+    vi.mocked(bikriApi.bikriList).mockResolvedValue(bikriListOf([]));
     await open();
     const user = userEvent.setup();
     const day = await screen.findByRole('textbox', {
@@ -231,5 +238,59 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/today');
     });
+  });
+
+  it('150 بکری come page by page: 100 at once, the count and the totals are the backend’s, Show more loads the rest', async () => {
+    const all = Array.from({ length: 150 }, (_, index) =>
+      listRow({ id: 1000 + index, number: index + 1 }),
+    );
+    vi.mocked(bikriApi.bikriList).mockImplementation((input) =>
+      Promise.resolve({
+        ...bikriListOf(all, input.offset, input.limit),
+        // The totals of the whole filter, not the sum of the rows on screen.
+        totals: {
+          qty_received: 7_500,
+          qty_sold: 7_400,
+          gross: money(4_410_000),
+          net: money(2_897_400),
+          buyer_total: money(4_734_600),
+        },
+      }),
+    );
+    await open();
+    const showing = (shown: number) =>
+      message(language, 'common-list-count', { shown: String(shown), total: '150' });
+    // The day is known a moment after the screen opens, and then the list asks for that day.
+    await waitFor(() => {
+      expect(vi.mocked(bikriApi.bikriList).mock.calls.at(-1)?.[0].date).toBe('10-10-2026');
+    });
+    await waitFor(() => {
+      expect(pageText()).toContain(showing(100));
+    });
+    const pinned = (colId: string) =>
+      visible(document.querySelector(`.ag-row-pinned [col-id="${colId}"]`)?.textContent);
+    await waitFor(() => {
+      expect(pinned('gross')).toBe('4,410,000');
+    });
+    expect(pinned('net')).toBe('2,897,400');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    );
+    await waitFor(() => {
+      expect(pageText()).toContain(showing(150));
+    });
+    expect(vi.mocked(bikriApi.bikriList).mock.calls.at(-1)?.[0]).toMatchObject({
+      date: '10-10-2026',
+      offset: 100,
+      limit: 100,
+    });
+    expect(
+      screen.queryByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    ).toBeNull();
   });
 });

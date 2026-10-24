@@ -1,0 +1,36 @@
+{
+  "rows": [
+    {
+      "kind": "item",
+      "id": 3,
+      "version": 2,
+      "code": "3",
+      "name_ur": "مولی",
+      "name_en": "Radish",
+      "item_group": "vegetable",
+      "default_packing_id": null,
+      "default_packing_name_ur": null,
+      "default_packing_name_en": null,
+      "sold_by": "unit",
+      "is_active": false
+    },
+    {
+      "kind": "item",
+      "id": 4,
+      "version": 1,
+      "code": "4",
+      "name_ur": "انگور",
+      "name_en": "Grapes",
+      "item_group": "fruit",
+      "default_packing_id": null,
+      "default_packing_name_ur": null,
+      "default_packing_name_en": null,
+      "sold_by": "weight",
+      "is_active": true
+    }
+  ],
+  "total_count": 4,
+  "totals": {
+    "active_count": 3
+  }
+}

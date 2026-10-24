@@ -11,6 +11,7 @@ import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { fakePlan16, refused, stockRow } from '../helpers/bikri-plan16';
+import { stockList } from '../helpers/bikri-plan16-data';
 import { named } from '../helpers/bikri-screen';
 import {
   healthyBackend,
@@ -22,6 +23,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS, sliceOf } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -40,7 +42,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -102,6 +104,9 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
       seller_id: null,
       item_id: null,
       include_written_off: false,
+      lot_id: null,
+      offset: 0,
+      limit: 100,
     });
   });
 
@@ -290,5 +295,46 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     await waitFor(() => {
       expect(plan.writeOffUndos).toEqual([{ moveId: 70, reason: 'found it' }]);
     });
+  });
+
+  it('150 lots come page by page: 100 at once, the count and the total are the backend’s, Show more loads the rest', async () => {
+    fakePlan16();
+    const all = Array.from({ length: 150 }, (_, index) =>
+      stockRow({ lot_id: 3000 + index, lot_no: index + 1, bikri_number: index + 1 }),
+    );
+    vi.mocked(bikriApi.bikriStockList).mockImplementation((input) =>
+      Promise.resolve({
+        ...stockList(all),
+        rows: sliceOf(all, input.offset, input.limit),
+        // The balance of the whole filter, not the sum of the rows on screen.
+        balance_total: 777,
+      }),
+    );
+    await open();
+    const showing = (shown: number) =>
+      message(language, 'common-list-count', { shown: String(shown), total: '150' });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(100));
+    });
+    await waitFor(() => {
+      expect(
+        visible(document.querySelector('.ag-row-pinned [col-id="balance"]')?.textContent),
+      ).toBe('777');
+    });
+    expect(bikriApi.bikriStockList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 0, limit: 100 }),
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    );
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(150));
+    });
+    expect(bikriApi.bikriStockList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 100, limit: 100 }),
+    );
   });
 });

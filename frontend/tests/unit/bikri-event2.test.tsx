@@ -23,6 +23,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -50,7 +51,7 @@ beforeEach(() => {
   vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
     Promise.resolve(suggestionsFor(NAMES, text, direction)),
   );
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
 });
 

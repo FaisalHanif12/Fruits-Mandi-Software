@@ -17,6 +17,7 @@ import { CommandError } from '../../src/shared/api';
 import { listRow, savedEvent1 } from './bikri-saved';
 import { refusal } from './ui-error';
 import { fakeMasters, record } from './masters';
+import { bikriListOf, pukhtaRegisterOf } from './paged';
 
 export const RAHIM = account(IDS.rahim, 'seller', '030110001', 'رحیم', 'Rahim', {
   balance: balance(4316, 'cr'),
@@ -133,7 +134,9 @@ export function fakeBikri(
       }),
     );
     vi.mocked(bikriApi.bikriGet).mockResolvedValue(savedEvent1());
-    vi.mocked(bikriApi.bikriList).mockResolvedValue([listRow()]);
+    vi.mocked(bikriApi.bikriList).mockImplementation((input) =>
+      Promise.resolve(bikriListOf([listRow()], input.offset, input.limit)),
+    );
     vi.mocked(bikriApi.bikriFind).mockResolvedValue([listRow()]);
     vi.mocked(bikriApi.bikriNavigate).mockResolvedValue(null);
   }
@@ -147,7 +150,7 @@ export function fakeBikri(
   }
   if (vi.isMockFunction(pukhtaApi.searchPukhtaPeople)) {
     vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
-    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue([]);
+    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(pukhtaRegisterOf([]));
   }
   return store;
 }

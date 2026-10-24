@@ -82,6 +82,8 @@ export function overviewRow(
     month_capital_in_paisa: money(0),
     month_ventures_paisa: money(0),
     total_paisa: money(0),
+    // The open gardens and trips he is in (plan 17c): none until a test gives some.
+    open_ventures: [],
     ...numbers,
   };
 }

@@ -146,12 +146,12 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     const count = (shown: number) =>
       screen.findByText(
         (content) =>
-          visible(content) === message(language, 'cashbook-list-count', { shown, total: 154 }),
+          visible(content) === message(language, 'common-list-count', { shown, total: 154 }),
       );
     expect(await count(100)).toBeInTheDocument();
     // The totals do not come from the 100 rows on screen: they are those of all 154.
     await user.click(
-      screen.getByRole('button', { name: startsWith(message(language, 'cashbook-list-more')) }),
+      screen.getByRole('button', { name: startsWith(message(language, 'common-list-more')) }),
     );
     expect(await count(154)).toBeInTheDocument();
     expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(

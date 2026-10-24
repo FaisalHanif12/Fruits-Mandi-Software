@@ -1,4 +1,4 @@
-// The انڈکس menu (PRD FR-5.2, 10.3): the ten master lists, one big card each. ↑ ↓ move between
+// The انڈکس menu (PRD FR-5.2, 10.3): the nine master lists, one big card each. ↑ ↓ move between
 // them, Enter opens one. The accounts and the commission rules join it in plans 07 and 09.
 
 import { Localized } from '@fluent/react';
@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
 import { useRovingKeys } from '../../../shared/keyboard';
 import { MASTER_CONFIGS } from '../configs';
 
-/** The lists that are not one of the ten masters: the accounts, the chart and the rules (plans 07, 09). */
+/** The lists that are not one of the nine masters: the accounts, the chart and the rules (plans 07, 09). */
 const STATIC_ENTRIES = [
   {
     to: '/index/accounts',

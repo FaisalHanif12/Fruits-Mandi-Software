@@ -9,12 +9,13 @@ import { LANGUAGES } from '../../src/i18n';
 import { Notice, ReasonDialog, SegmentedControl } from '../../src/shared/ui';
 import * as urduApi from '../../src/shared/urdu/api';
 import { message, renderIn, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/shared/urdu/api');
 
 beforeEach(() => {
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 const named = (text: string) => (name: string) => visible(name) === text;
@@ -29,8 +30,8 @@ const TITLE = message('en', 'vouchers-cancel-title');
 const REASON = message('en', 'vouchers-cancel-reason');
 const CONFIRM = message('en', 'vouchers-cancel-confirm');
 const NOTE = message('en', 'common-cash-confirm-no');
-const ONE = message('en', 'vouchers-mode-cash');
-const TWO = message('en', 'vouchers-mode-bank');
+const ONE = message('en', 'vouchers-type-receipt');
+const TWO = message('en', 'vouchers-type-payment');
 
 describe('Notice', () => {
   it('is a status for a warning and an alert for an error, with its action', async () => {

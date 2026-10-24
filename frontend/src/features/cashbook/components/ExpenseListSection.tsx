@@ -7,13 +7,12 @@
 import { Localized } from '@fluent/react';
 import { HandCoins, ReceiptText } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, type ListContext } from '../../../shared/grid';
-import { Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { PagedList } from '../../../shared/grid';
+import { Card, EmptyState } from '../../../shared/ui';
 import { useVouchersList } from '../../vouchers';
 import { EXPENSE_DAY_COLUMNS, TAKE_COLUMNS } from '../list-columns';
 import { usePartnerTakes } from '../hooks';
 import type { ExpenseType } from '../screen-type';
-import { PagedList } from './PagedList';
 
 interface ExpenseListSectionProps {
   type: ExpenseType;
@@ -31,44 +30,46 @@ function ShopDay({ day }: { day: string }) {
     account_id: null,
     person_key: null,
   });
-  if (list.isPending) return <LoadingState rows={2} />;
-  if (list.isError) {
-    return (
-      <ErrorState
-        title={<Localized id="cashbook-day-failed" />}
-        error={uiErrorOf(list.error)}
-        onRetry={() => {
-          void list.refetch();
-        }}
-      />
-    );
-  }
-  if (list.data.rows.length === 0) {
-    return (
-      <EmptyState
-        icon={ReceiptText}
-        title={<Localized id="cashbook-day-empty" />}
-        help={<Localized id="cashbook-day-empty-help" />}
-      />
-    );
-  }
-  const total = list.data.total_paisa;
+  const first = list.data?.pages[0];
+  const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
   return (
-    <ListGrid
+    <PagedList
       columns={EXPENSE_DAY_COLUMNS}
-      rows={list.data.rows}
+      rows={rows}
+      totalCount={first?.total_count}
       getRowId={(row) => String(row.id)}
       labelId="cashbook-day-label"
-      onOpen={() => undefined}
-      heightMode="auto"
+      failedId="cashbook-day-failed"
+      error={list.isError ? uiErrorOf(list.error) : null}
+      onRetry={() => {
+        void list.refetch();
+      }}
+      hasMore={list.hasNextPage}
+      loadingMore={list.isFetchingNextPage}
+      onLoadMore={() => {
+        void list.fetchNextPage();
+      }}
+      empty={
+        <EmptyState
+          icon={ReceiptText}
+          title={<Localized id="cashbook-day-empty" />}
+          help={<Localized id="cashbook-day-empty-help" />}
+        />
+      }
       isInactive={(row) => row.status === 'cancelled'}
-      totals={(context: ListContext) => ({
-        labelField: 'head',
-        values: {
-          head: context.text('glossary-meezan'),
-          ...(total === null ? {} : { amount: context.money(total) }),
-        },
-      })}
+      totals={
+        first === undefined
+          ? undefined
+          : (context) => ({
+              labelField: 'head',
+              values: {
+                head: context.text('glossary-meezan'),
+                ...(first.totals.total_paisa === null
+                  ? {}
+                  : { amount: context.money(first.totals.total_paisa) }),
+              },
+            })
+      }
     />
   );
 }

@@ -1,7 +1,7 @@
 //! The master lists of PRD 10.3 (plan 06): add, edit, make inactive, list, next code.
 //!
 //! One user action is one transaction (CLAUDE.md rule 3): the master, the account it makes
-//! (expense head, bank account), the pairs the user confirmed in the spelling check, and the
+//! (expense head), the pairs the user confirmed in the spelling check, and the
 //! audit row are written together or not at all. The search index is updated after the commit
 //! (Code Standards B27). Nothing is ever deleted (PRD E21).
 
@@ -12,7 +12,10 @@ pub use expense_heads::expense_heads;
 use mandi_db::masters as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::error::ErrorCode;
-use mandi_domain::core::masters::{self, ColValue, MasterInput, MasterKind, MasterRow, Prepared};
+use mandi_domain::core::masters::{
+    self, ColValue, MasterInput, MasterKind, MasterRow, MastersList, MastersListInput,
+    MastersTotals, Prepared,
+};
 use mandi_domain::core::translit::Kind;
 use serde_json::{Map, Value, json};
 
@@ -29,9 +32,7 @@ fn learned_kind(kind: MasterKind) -> Kind {
         MasterKind::City | MasterKind::Adda => Kind::Place,
         MasterKind::Item | MasterKind::Packing => Kind::Item,
         MasterKind::Store | MasterKind::ExpenseHead => Kind::Word,
-        MasterKind::Staff | MasterKind::BankAccount | MasterKind::Marka | MasterKind::Narration => {
-            Kind::Name
-        }
+        MasterKind::Staff | MasterKind::Marka | MasterKind::Narration => Kind::Name,
     }
 }
 
@@ -47,6 +48,28 @@ pub fn list(
 ) -> Result<Vec<MasterRow>, ServiceError> {
     ctx.db
         .read(|conn| repo::list(conn, kind, include_inactive).map_err(ServiceError::from))
+}
+
+/// One page of the masters of a kind with the counts over the whole list (PRD FR-19.11, B31).
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn list_page(ctx: &Context, input: &MastersListInput) -> Result<MastersList, ServiceError> {
+    ctx.db.read(|conn| {
+        let (rows, total_count, active_count) = repo::list_page(
+            conn,
+            input.kind,
+            input.include_inactive,
+            input.id,
+            i64::from(input.offset),
+            crate::page::limit_of(input.limit),
+        )?;
+        Ok(MastersList {
+            rows,
+            total_count,
+            totals: MastersTotals { active_count },
+        })
+    })
 }
 
 /// The next free code of a kind, empty for kinds without a code.
@@ -118,11 +141,9 @@ pub fn save(ctx: &Context, actor: &Actor, input: &MasterInput) -> Result<MasterR
         learned.after_commit(ctx);
     }
     search::refresh(ctx, kind, row.id());
-    // The account an expense head or a bank account made is searchable too (plan 07).
-    match &row {
-        MasterRow::ExpenseHead(r) => search::refresh_account(ctx, r.account_id),
-        MasterRow::BankAccount(r) => search::refresh_account(ctx, r.account_id),
-        _ => {}
+    // The account an expense head made is searchable too (plan 07).
+    if let MasterRow::ExpenseHead(r) = &row {
+        search::refresh_account(ctx, r.account_id);
     }
     Ok(row)
 }
@@ -296,10 +317,8 @@ pub fn set_active(
     })?;
     if changed {
         search::refresh(ctx, kind, id);
-        match &row {
-            MasterRow::ExpenseHead(r) => search::refresh_account(ctx, r.account_id),
-            MasterRow::BankAccount(r) => search::refresh_account(ctx, r.account_id),
-            _ => {}
+        if let MasterRow::ExpenseHead(r) = &row {
+            search::refresh_account(ctx, r.account_id);
         }
     }
     Ok(row)

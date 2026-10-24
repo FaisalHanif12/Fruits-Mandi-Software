@@ -23,6 +23,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS, bikriListOf, pukhtaRegisterOf } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -74,7 +75,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -92,7 +93,9 @@ describe.each(LANGUAGES)('the list of بکری, More columns (%s)', (language) =
     signedIn(sessionUser({ language }));
     fakeBikri();
     // 45 of 50 sold: the cell says both, from the numbers the backend sent.
-    vi.mocked(bikriApi.bikriList).mockResolvedValue([listRow({ qty_sold: 45, qty_received: 50 })]);
+    vi.mocked(bikriApi.bikriList).mockResolvedValue(
+      bikriListOf([listRow({ qty_sold: 45, qty_received: 50 })]),
+    );
   });
 
   const open = async (step: 'compact' | 'normal' | 'wide') => {
@@ -187,7 +190,9 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register, More columns (%s)', 
     resetClientState(language);
     signedIn(sessionUser({ language }));
     fakeBikri();
-    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue([registerRow({ qty: 10 })]);
+    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(
+      pukhtaRegisterOf([registerRow({ qty: 10 })]),
+    );
     vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   });
 

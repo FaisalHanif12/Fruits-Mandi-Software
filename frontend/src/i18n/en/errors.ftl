@@ -178,6 +178,10 @@ err-opening-both-sides = Enter an opening Debit or an opening Credit, not both.
 # review: pending
 err-advance-not-seller = An opening Advance can only be set on the opening Debit of a Seller.
 
+# plan 17b: an old client sent a mode, a bank or a cheque; the screens never do (PRD 15.1).
+# review: pending
+err-field-not-allowed = This field is no longer used. Leave it out.
+
 # PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
 # review: pending
 err-opening-not-allowed = This account cannot take this opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -pukhta-khata } and Opening Difference cannot take one. A partner's { -zati-kharcha } account and a { -adhar-raqam } account can take an opening debit only.
@@ -302,10 +306,6 @@ err-voucher-cancelled = This voucher is cancelled and cannot be changed.
 # PRD FR-13.5, FR-13.7.
 # review: pending
 err-person-required = For { -pukhta-khata }, type the name or phone of the person and pick him from the list.
-
-# PRD 15.1.
-# review: pending
-err-cheque-required = Write the cheque number and the cheque date.
 
 # A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
 # amount is more than it, both in rupees.
@@ -518,3 +518,25 @@ err-update-changed = A different version is on offer now. Look for the new versi
 
 # review: pending
 err-update-none = There is no newer version. The app is up to date.
+
+## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
+
+# PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
+# review: pending
+err-garden-closed = This { -bagh } is closed, so it takes no new entry, no lot and no fruit. Undo its closing first.
+
+# PRD FR-12.38. The garden is open, so there is no closing to undo.
+# review: pending
+err-garden-not-closed = This { -bagh } is open, so there is no closing to undo.
+
+# PRD FR-12.34. $garden_date: the day of the garden.
+# review: pending
+err-date-before-garden = The day is before the day of the { -bagh } ({ $garden_date }). Choose the day of the garden or a later day.
+
+# Plan 17c. $last_date: the day of the latest entry or lot of the garden.
+# review: pending
+err-close-before-last-entry = The { -bagh } cannot be closed before its latest entry or lot ({ $last_date }). Choose that day or a later day.
+
+# Plan 17c. The entry of the garden was cancelled already.
+# review: pending
+err-garden-entry-cancelled = This entry of the { -bagh } is cancelled already.

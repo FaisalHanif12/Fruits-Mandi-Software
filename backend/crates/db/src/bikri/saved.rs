@@ -15,8 +15,8 @@ use mandi_core::bikri::{
     SavedSplit, SavedTotals, StoredMethod,
 };
 use mandi_core::money::Paisa;
-use rusqlite::types::FromSql;
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use rusqlite::types::{FromSql, Value};
+use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
 /// Reads the columns of a row one after the other, so a long SELECT has no index to count.
 struct Cols<'a> {
@@ -481,6 +481,8 @@ pub struct ListFilter {
     pub truck_prefix: Option<String>,
     /// The most rows.
     pub limit: i64,
+    /// How many rows to skip (0 for the first page).
+    pub offset: i64,
 }
 
 /// Escapes `%`, `_` and `\` so typed text is taken as plain characters in a `LIKE`.
@@ -496,6 +498,74 @@ fn like_prefix(text: &str) -> String {
     out
 }
 
+/// The `WHERE` of the list of بکری and the values it binds, in order. Only the conditions the
+/// filter really sets are written, so SQLite can search `idx_bikri_entries_date` instead of
+/// reading every بکری (Code Standards B18, NFR-SPD-24). The text is empty for no condition.
+fn list_where(filter: &ListFilter) -> (String, Vec<Value>) {
+    let mut conditions: Vec<&str> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
+    if let Some(from) = &filter.from {
+        conditions.push("e.entry_date >= ?");
+        binds.push(Value::Text(from.clone()));
+    }
+    if let Some(to) = &filter.to {
+        conditions.push("e.entry_date <= ?");
+        binds.push(Value::Text(to.clone()));
+    }
+    if let Some(seller) = filter.seller_id {
+        conditions.push(
+            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.seller_account_id = ?)",
+        );
+        binds.push(Value::Integer(seller));
+    }
+    if let Some(item) = filter.item_id {
+        conditions.push(
+            "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.item_id = ?)",
+        );
+        binds.push(Value::Integer(item));
+    }
+    if let Some(status) = filter.status {
+        conditions.push("e.status = ?");
+        binds.push(Value::Text(status.as_str().to_owned()));
+    }
+    if let Some(number) = filter.number {
+        conditions.push("e.number = ?");
+        binds.push(Value::Integer(number));
+    }
+    if let Some(prefix) = &filter.truck_prefix {
+        conditions.push("e.truck_no LIKE ? ESCAPE '\\'");
+        binds.push(Value::Text(like_prefix(prefix)));
+    }
+    if conditions.is_empty() {
+        (String::new(), binds)
+    } else {
+        (format!(" WHERE {}", conditions.join(" AND ")), binds)
+    }
+}
+
+/// The page query of [`list`] and the values it binds, so a test can read its plan (Code
+/// Standards B18). Newest first: the day, then the number.
+pub fn list_query(filter: &ListFilter) -> (String, Vec<Value>) {
+    let (condition, mut binds) = list_where(filter);
+    binds.push(Value::Integer(filter.limit));
+    binds.push(Value::Integer(filter.offset));
+    (
+        format!(
+            "SELECT e.id, e.number, e.entry_date, e.created_at, e.truck_no, e.status,
+                (SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
+                (SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
+                (SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
+                (SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
+                (SELECT COALESCE(SUM(s.buyer_total_paisa), 0) FROM bikri_sales s
+                   WHERE s.bikri_id = e.id AND s.is_active = 1)
+             FROM bikri_entries e{condition}
+             ORDER BY e.entry_date DESC, e.number DESC
+             LIMIT ? OFFSET ?"
+        ),
+        binds,
+    )
+}
+
 /// The rows of the list of بکری (PRD FR-12.7), newest first (day, then number). Sums are
 /// `SUM()` of stored columns. The sellers and items are read with one more statement for all
 /// the rows (Code Standards B22).
@@ -503,60 +573,111 @@ fn like_prefix(text: &str) -> String {
 /// # Errors
 /// Any SQLite error.
 pub fn list(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<BikriListRow>> {
-    let truck = filter.truck_prefix.as_deref().map(like_prefix);
-    let status = filter.status.map(BikriStatus::as_str);
-    let mut statement = conn.prepare(
-        "SELECT e.id, e.number, e.entry_date, e.created_at, e.truck_no, e.status,
-                (SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
-                (SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
-                (SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
-                (SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id),
-                (SELECT COALESCE(SUM(s.buyer_total_paisa), 0) FROM bikri_sales s
-                   WHERE s.bikri_id = e.id AND s.is_active = 1)
-         FROM bikri_entries e
-         WHERE (?1 IS NULL OR e.entry_date >= ?1) AND (?2 IS NULL OR e.entry_date <= ?2)
-           AND (?3 IS NULL OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.bikri_id = e.id AND l.seller_account_id = ?3))
-           AND (?4 IS NULL OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.bikri_id = e.id AND l.item_id = ?4))
-           AND (?5 IS NULL OR e.status = ?5)
-           AND (?6 IS NULL OR e.number = ?6)
-           AND (?7 IS NULL OR e.truck_no LIKE ?7 ESCAPE '\\')
-         ORDER BY e.entry_date DESC, e.number DESC
-         LIMIT ?8",
-    )?;
-    let rows = statement.query_map(
-        params![
-            filter.from,
-            filter.to,
-            filter.seller_id,
-            filter.item_id,
-            status,
-            filter.number,
-            truck,
-            filter.limit
-        ],
-        |row| {
-            let mut c = Cols::new(row);
-            Ok(BikriListRow {
-                id: c.get()?,
-                number: c.get()?,
-                entry_date: c.get()?,
-                created_at: c.get()?,
-                truck_no: c.get()?,
-                status: c.status()?,
-                qty_received: c.get()?,
-                qty_sold: c.get()?,
-                gross: c.paisa()?,
-                net: c.paisa()?,
-                buyer_total: c.paisa()?,
-                sellers: Vec::new(),
-                pukhta_sellers: Vec::new(),
-                items: Vec::new(),
-            })
-        },
-    )?;
+    let (sql, binds) = list_query(filter);
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |row| {
+        let mut c = Cols::new(row);
+        Ok(BikriListRow {
+            id: c.get()?,
+            number: c.get()?,
+            entry_date: c.get()?,
+            created_at: c.get()?,
+            truck_no: c.get()?,
+            status: c.status()?,
+            qty_received: c.get()?,
+            qty_sold: c.get()?,
+            gross: c.paisa()?,
+            net: c.paisa()?,
+            buyer_total: c.paisa()?,
+            sellers: Vec::new(),
+            pukhta_sellers: Vec::new(),
+            items: Vec::new(),
+        })
+    })?;
     let mut out = rows.collect::<rusqlite::Result<Vec<_>>>()?;
     fill_sellers_and_items(conn, &mut out)?;
     Ok(out)
+}
+
+/// The count and the sums over every بکری a filter matches, not only one page (PRD FR-19.11,
+/// B31). The sums leave out cancelled بکری, like the totals of the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ListTotals {
+    /// How many بکری match, cancelled ones too.
+    pub count: i64,
+    /// `SUM(qty_received)` of the saved ones.
+    pub qty_received: i64,
+    /// `SUM(qty_sold)`.
+    pub qty_sold: i64,
+    /// `SUM(gross_paisa)`.
+    pub gross_paisa: i64,
+    /// `SUM(net_paisa)`.
+    pub net_paisa: i64,
+    /// `SUM(buyer_total_paisa)` of the live sale lines.
+    pub buyer_total_paisa: i64,
+}
+
+/// The three totals queries of [`list_totals`] (the count, the lot sums and the sale sums), each
+/// with the values it binds, so a test can read their plans (Code Standards B18).
+pub fn list_totals_queries(filter: &ListFilter) -> [(String, Vec<Value>); 3] {
+    let (condition, binds) = list_where(filter);
+    // The same conditions after `AND`, for the queries that already have a `WHERE`.
+    let and = condition.replacen(" WHERE ", " AND ", 1);
+    [
+        (
+            format!("SELECT COUNT(*) FROM bikri_entries e{condition}"),
+            binds.clone(),
+        ),
+        (
+            format!(
+                "SELECT COALESCE(SUM(l.qty_received), 0), COALESCE(SUM(l.qty_sold), 0),
+                        COALESCE(SUM(l.gross_paisa), 0), COALESCE(SUM(l.net_paisa), 0)
+                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id
+                 WHERE e.status = 'saved'{and}"
+            ),
+            binds.clone(),
+        ),
+        (
+            format!(
+                "SELECT COALESCE(SUM(s.buyer_total_paisa), 0)
+                 FROM bikri_entries e JOIN bikri_sales s ON s.bikri_id = e.id
+                 WHERE e.status = 'saved' AND s.is_active = 1{and}"
+            ),
+            binds,
+        ),
+    ]
+}
+
+/// The totals of [`list`]'s filter, from three queries on indexed columns. Only `SUM()` on INTEGER
+/// columns is used.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<ListTotals> {
+    let [
+        (count_sql, count_binds),
+        (lots_sql, lots_binds),
+        (sales_sql, sales_binds),
+    ] = list_totals_queries(filter);
+    let count: i64 = conn.query_row(&count_sql, params_from_iter(count_binds.iter()), |r| {
+        r.get(0)
+    })?;
+    let (qty_received, qty_sold, gross_paisa, net_paisa): (i64, i64, i64, i64) =
+        conn.query_row(&lots_sql, params_from_iter(lots_binds.iter()), |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })?;
+    let buyer_total_paisa: i64 =
+        conn.query_row(&sales_sql, params_from_iter(sales_binds.iter()), |r| {
+            r.get(0)
+        })?;
+    Ok(ListTotals {
+        count,
+        qty_received,
+        qty_sold,
+        gross_paisa,
+        net_paisa,
+        buyer_total_paisa,
+    })
 }
 
 /// Adds the sellers (each once, in lot order) and the items of each row, from one statement.

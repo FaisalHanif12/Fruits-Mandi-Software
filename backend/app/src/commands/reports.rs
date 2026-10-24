@@ -58,7 +58,7 @@ pub async fn reports_list_printers<R: tauri::Runtime>(
 
 /// The print data of the slip of one voucher (PRD FR-15.2): the firm header, the title and
 /// every label as a Fluent message ID, the party, the amount and its words in the print
-/// language, the mode with the bank and cheque, the paper class, `dir` and `lang`. One page.
+/// language, the paper class, `dir` and `lang`. One page. No line about how it was paid.
 /// Read only. Errors: `ERR_NOT_FOUND` on `voucher_id`.
 #[tauri::command]
 pub async fn reports_voucher_print_data<R: tauri::Runtime>(

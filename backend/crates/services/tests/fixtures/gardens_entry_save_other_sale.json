@@ -1,0 +1,53 @@
+{
+  "id": 4,
+  "number": 1,
+  "version": 2,
+  "journal_entry_id": 7,
+  "preview": {
+    "kind": "other_sale",
+    "numbers": {
+      "amount": 1000000,
+      "parts": null,
+      "balance_before_paisa": 140000,
+      "balance_after_paisa": 1140000,
+      "rent_due_after_paisa": 0,
+      "balance_working": {
+        "message_id": "working-garden-balance",
+        "args": [
+          {
+            "name": "money_in",
+            "value": {
+              "kind": "money",
+              "paisa": 6640000
+            }
+          },
+          {
+            "name": "paid",
+            "value": {
+              "kind": "money",
+              "paisa": 5500000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 1140000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    "cash": {
+      "cash_before_paisa": 1700000,
+      "change_paisa": 1000000,
+      "cash_after_paisa": 2700000,
+      "below_zero": false,
+      "lowers_cash": false,
+      "needs_confirm": false
+    },
+    "errors": [],
+    "warnings": []
+  }
+}

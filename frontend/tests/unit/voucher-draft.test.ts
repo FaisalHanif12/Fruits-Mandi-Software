@@ -37,7 +37,6 @@ const PUKHTA_SELLER = {
   name_en: 'Pukhta Khata (Seller)',
 };
 const SHAHID = { name_ur: 'شاہد', name_en: 'Shahid', phone: '03000000000', person_key: 'k-shahid' };
-const BANK = { id: 51, code: '01020001', name_ur: 'بینک', name_en: 'Bank' };
 const COLLECTOR = { id: 61, code: '', name_ur: 'اسلم', name_en: 'Aslam' };
 
 const TODAY = '2026-10-10';
@@ -47,16 +46,19 @@ function draft(type: VoucherDraft['type'], changes: Partial<VoucherDraft> = {}):
 }
 
 describe('newDraft', () => {
-  it('starts with today as DD-MM-YYYY, cash and everything else empty', () => {
+  it('starts with today as DD-MM-YYYY and everything else empty', () => {
     const created = newDraft('receipt', TODAY);
     expect(created).toMatchObject({
       type: 'receipt',
       date: '10-10-2026',
       account: null,
       amount: '',
-      mode: 'cash',
       from: 'buyer',
     });
+    // No mode, bank or cheque: all money is روکڑ (PRD 15.1).
+    for (const gone of ['mode', 'bank', 'cheque_no', 'cheque_date']) {
+      expect(created).not.toHaveProperty(gone);
+    }
     expect(isFilled(created)).toBe(false);
   });
 
@@ -68,15 +70,11 @@ describe('newDraft', () => {
 });
 
 describe('changeType (PRD FR-7.67)', () => {
-  it('keeps the date, amount, mode, bank, cheque and narration, and clears the rest', () => {
+  it('keeps the date, amount and narration, and clears the rest', () => {
     const before = draft('payment', {
       account: RAHIM,
       accountType: 'seller',
       amount: '3000',
-      mode: 'cheque',
-      bank: BANK,
-      cheque_no: '778',
-      cheque_date: '12-10-2026',
       narration: 'season',
       reason: 'cash for rent',
       collector: COLLECTOR,
@@ -88,10 +86,6 @@ describe('changeType (PRD FR-7.67)', () => {
       type: 'receipt',
       date: '10-10-2026',
       amount: '3000',
-      mode: 'cheque',
-      bank: BANK,
-      cheque_no: '778',
-      cheque_date: '12-10-2026',
       narration: 'season',
       account: null,
       accountType: null,
@@ -110,21 +104,17 @@ describe('changeType (PRD FR-7.67)', () => {
 });
 
 describe('nextDraft', () => {
-  it('keeps the type, the date, the mode and the bank, and starts the rest again', () => {
+  it('keeps the type and the date, and starts the rest again', () => {
     const next = nextDraft(
       draft('receipt', {
         account: AKRAM,
         amount: '10000',
-        mode: 'bank',
-        bank: BANK,
         narration: 'x',
       }),
     );
     expect(next).toMatchObject({
       type: 'receipt',
       date: '10-10-2026',
-      mode: 'bank',
-      bank: BANK,
       account: null,
       amount: '',
       narration: '',
@@ -166,14 +156,12 @@ describe('build', () => {
     expect(build(draft('receipt'), false)).toBeNull();
   });
 
-  it('sends a receipt as the text typed, with the collector and no bank for cash', () => {
+  it('sends a receipt as the text typed, with the collector and nothing about how it was paid', () => {
     const built = build(
       draft('receipt', {
         account: AKRAM,
         accountType: 'buyer',
         amount: '10,000',
-        bank: BANK,
-        cheque_no: '9',
         collector: COLLECTOR,
         narration: 'part',
       }),
@@ -184,10 +172,6 @@ describe('build', () => {
       input: {
         date: '10-10-2026',
         amount: '10,000',
-        mode: 'cash',
-        bank_account_id: null,
-        cheque_no: '',
-        cheque_date: '',
         narration: 'part',
         account_id: 21,
         person_key: null,
@@ -196,27 +180,16 @@ describe('build', () => {
     });
   });
 
-  it('sends the bank for a bank mode and the cheque for a cheque', () => {
-    const bank = build(
-      draft('receipt', { account: AKRAM, mode: 'bank', bank: BANK, cheque_no: '9' }),
-      false,
-    );
-    expect(bank?.input).toMatchObject({ bank_account_id: 51, cheque_no: '' });
-    const cheque = build(
-      draft('receipt', {
-        account: AKRAM,
-        mode: 'cheque',
-        bank: BANK,
-        cheque_no: '9',
-        cheque_date: '11-10-2026',
-      }),
-      false,
-    );
-    expect(cheque?.input).toMatchObject({
-      bank_account_id: 51,
-      cheque_no: '9',
-      cheque_date: '11-10-2026',
-    });
+  it('never sends a mode, a bank or a cheque, for any of the three types', () => {
+    for (const type of ['receipt', 'payment', 'advance'] as const) {
+      const built = build(
+        draft(type, { account: AKRAM, accountType: 'buyer', amount: '5' }),
+        false,
+      );
+      for (const gone of ['mode', 'bank_account_id', 'cheque_no', 'cheque_date']) {
+        expect(built?.input, `${type} ${gone}`).not.toHaveProperty(gone);
+      }
+    }
   });
 
   it('sends the person key only for a one-time account', () => {
@@ -333,9 +306,6 @@ describe('draftOfRow (PRD FR-15.3)', () => {
     const row = voucherRow({
       voucher_type: 'receipt',
       entry_date: '2026-10-09',
-      mode: 'cheque',
-      cheque_no: '778',
-      cheque_date: '2026-10-12',
       narration: 'part',
       person: SHAHID,
       reason: '',
@@ -343,7 +313,7 @@ describe('draftOfRow (PRD FR-15.3)', () => {
     const loaded = draftOfRow(
       row,
       'receipt',
-      { accountType: 'buyer', bank: BANK, collector: COLLECTOR },
+      { accountType: 'buyer', collector: COLLECTOR },
       'international',
       'en',
     );
@@ -351,13 +321,9 @@ describe('draftOfRow (PRD FR-15.3)', () => {
       type: 'receipt',
       date: '09-10-2026',
       amount: '10,000',
-      mode: 'cheque',
-      cheque_no: '778',
-      cheque_date: '12-10-2026',
       narration: 'part',
       person: SHAHID,
       personText: 'Shahid',
-      bank: BANK,
       collector: COLLECTOR,
       from: 'buyer',
     });
@@ -368,7 +334,7 @@ describe('draftOfRow (PRD FR-15.3)', () => {
     const loaded = draftOfRow(
       row,
       'receipt',
-      { accountType: 'seller', bank: null, collector: null },
+      { accountType: 'seller', collector: null },
       'international',
       'ur',
     );

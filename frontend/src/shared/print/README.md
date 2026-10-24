@@ -62,8 +62,8 @@ seller_bill&language=ur&paper=a4` (dev only) shows one document in the browser; 
 ## The receipt slip (plan 15)
 
 The fourth document, `receipt_slip` (PRD FR-15.2), is one voucher on one page: the same sheet, with
-the voucher number (`print-fact-voucher-number`), the party, how the money was paid (mode, bank,
-cheque) in a SOLID box, the amount and the amount in words. The template is
+the voucher number (`print-fact-voucher-number`), the party, the amount and the amount in words.
+There is no line about how it was paid: all money is روکڑ (PRD 15.1). The template is
 `features/vouchers/print/ReceiptSlipTemplate.tsx`, the hidden route is
 `?voucher=<id>&doc=receipt_slip&language=..&job=..`, and its paper is `paper_receipt_slip` in the
 Printing tab. The data is `reports_voucher_print_data`; the layout still calculates nothing.

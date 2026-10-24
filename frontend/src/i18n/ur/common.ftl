@@ -79,3 +79,12 @@ common-cash-confirm-no = نہیں، واپس جائیں
 # The tick of a list that adds the columns that do not fit beside the others (Code Standards F22).
 # review: pending
 common-more-columns = مزید کالم
+
+## Lists that load page by page (PRD FR-19.11, Code Standards F34).
+
+# $shown: how many are on screen; $total: how many the whole filter has.
+# review: pending
+common-list-count = { $total } میں سے { $shown } نظر آ رہے ہیں
+
+# review: pending
+common-list-more = مزید دکھائیں

@@ -295,6 +295,30 @@
 # review: pending
 -phal = Fruit Taken
 
+# The gardens as one word: the main bar item and the list title (PRD FR-5.2, 12.11)
+# review: pending
+-baghat = Gardens
+
+# The price of a garden for the season, paid in installments (PRD Section 3, 12.11)
+# review: pending
+-thaika = Garden Rent
+
+# One part of a garden's rent, paid on a date (PRD Section 3, 12.11)
+# review: pending
+-qist = Installment
+
+# Where fruit comes from: a lot of our own shop, in باقی مال (PRD 16.7)
+# review: pending
+-apni-dukan = Our Shop
+
+# Where fruit comes from: another commission agent's shop (PRD 16.7)
+# review: pending
+-dusri-dukan = Another Shop
+
+# The shop's guests, who share the fruit served to them equally (PRD 16.7, C27)
+# review: pending
+-mehman = Guests
+
 glossary-arhti = { -arhti }
 glossary-index = { -index }
 glossary-beopari = { -beopari }
@@ -368,3 +392,10 @@ glossary-taza-banam = { -taza-banam }
 glossary-sabiqa-raqam = { -sabiqa-raqam }
 glossary-total-raqam = { -total-raqam }
 glossary-baqaya = { -baqaya }
+
+glossary-baghat = { -baghat }
+glossary-thaika = { -thaika }
+glossary-qist = { -qist }
+glossary-apni-dukan = { -apni-dukan }
+glossary-dusri-dukan = { -dusri-dukan }
+glossary-mehman = { -mehman }

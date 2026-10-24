@@ -31,8 +31,6 @@ pub enum SearchScope {
     ExpenseHead,
     /// عملہ.
     Staff,
-    /// بینک.
-    BankAccount,
     /// بیوپاری accounts (control 03011). Plan 07 (account search), plan 08 (short codes).
     Seller,
     /// گاہک accounts (control 0304).
@@ -54,7 +52,6 @@ impl SearchScope {
             MasterKind::Narration => SearchScope::Narration,
             MasterKind::ExpenseHead => SearchScope::ExpenseHead,
             MasterKind::Staff => SearchScope::Staff,
-            MasterKind::BankAccount => SearchScope::BankAccount,
         }
     }
 
@@ -71,7 +68,6 @@ impl SearchScope {
             SearchScope::Narration => MasterKind::Narration,
             SearchScope::ExpenseHead => MasterKind::ExpenseHead,
             SearchScope::Staff => MasterKind::Staff,
-            SearchScope::BankAccount => MasterKind::BankAccount,
         })
     }
 

@@ -1,0 +1,26 @@
+{
+  "errors": [
+    {
+      "code": "ERR_FIELD_NOT_ALLOWED",
+      "field": "mode",
+      "values": {}
+    },
+    {
+      "code": "ERR_FIELD_NOT_ALLOWED",
+      "field": "bank_account_id",
+      "values": {}
+    },
+    {
+      "code": "ERR_FIELD_NOT_ALLOWED",
+      "field": "cheque_no",
+      "values": {}
+    },
+    {
+      "code": "ERR_FIELD_NOT_ALLOWED",
+      "field": "cheque_date",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

@@ -62,7 +62,7 @@ function seriesOf(line: StatementLine): string | undefined {
   return VOUCHER_SERIES[line.detail];
 }
 
-/** The word of the group a line belongs to (the heading). Garden and fruit come in D4R. */
+/** The word of the group a line belongs to (the heading). Fruit comes with its own plan (D4R). */
 export function headingText(line: StatementLine, say: StatementSay): string {
   const id = `partners-statement-heading-${idPart(line.heading)}`;
   return say.exists(id) ? say.text(id) : say.text('partners-statement-heading-other');
@@ -98,6 +98,10 @@ export function detailText(line: StatementLine, say: StatementSay): string {
     series === undefined || line.number === null
       ? number
       : say.text(`vouchers-number-${series}`, { number });
+  if (line.heading === 'garden') {
+    // `number` is the garden's number in its own series (PRD FR-12.11).
+    vars['garden'] = line.number === null ? '' : say.text('gardens-number', { number });
+  }
   if (line.heading === 'trip') {
     vars['trip'] = line.number === null ? '' : say.text('trips-number', { number });
     vars['secondary'] = secondaryText(line, say);

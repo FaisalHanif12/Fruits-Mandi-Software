@@ -1,4 +1,4 @@
-### The انڈکس menu and the ten master lists (plan 06, PRD 10.3). Every Urdu line says what its English line says (NFR-URD-29).
+### The انڈکس menu and the nine master lists (plan 06, PRD 10.3). Every Urdu line says what its English line says (NFR-URD-29).
 
 ## The انڈکس menu and the master lists (plan 06, PRD 10.3, FR-7.46).
 
@@ -17,7 +17,7 @@ masters-unknown-title = یہ فہرست موجود نہیں
 # review: pending
 masters-unknown-help = { -index } سے فہرست چنیں۔
 
-## The ten lists: title, what it is for, the button for a new one, and the empty state.
+## The nine lists: title, what it is for, the button for a new one, and the empty state.
 
 # review: pending
 masters-city-title = شہروں کی فہرست
@@ -127,18 +127,6 @@ masters-staff-new = عملے کا نیا فرد
 # review: pending
 masters-staff-empty = { masters-staff-title } ابھی خالی ہے
 
-# review: pending
-masters-bank-title = بینک کھاتوں کی فہرست
-
-# review: pending
-masters-bank-help = دکان کے بینک کھاتے۔
-
-# review: pending
-masters-bank-new = نیا بینک کھاتہ
-
-# review: pending
-masters-bank-empty = { masters-bank-title } ابھی خالی ہے
-
 ## A list: search, columns, states.
 
 # review: pending
@@ -214,12 +202,6 @@ masters-narration-text-ur = اردو متن
 
 # review: pending
 masters-narration-text-en = انگریزی متن
-
-# review: pending
-masters-bank-name-ur = کھاتے کا اردو نام
-
-# review: pending
-masters-bank-name-en = کھاتے کا انگریزی نام
 
 # review: pending
 masters-account-code = کھاتے کا کوڈ
@@ -336,12 +318,3 @@ masters-staff-account = { -adhar-raqam } کا کھاتہ
 
 # review: pending
 masters-staff-account-hint = جب اسے پہلی بار { -adhar-raqam } دی جائے گی تو یہ کھاتہ خود بن جائے گا۔
-
-# review: pending
-masters-bank-bank = بینک کا نام
-
-# review: pending
-masters-bank-title-field = کھاتے کا عنوان
-
-# review: pending
-masters-bank-number = کھاتہ نمبر

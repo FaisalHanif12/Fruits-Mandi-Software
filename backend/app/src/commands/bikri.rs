@@ -3,12 +3,12 @@
 //! that writes: one transaction (Code Standards B3). The reads of saved بکری only read.
 
 use mandi_services::core::bikri::{
-    BikriCancelled, BikriDetail, BikriEdited, BikriFindInput, BikriGetInput, BikriListInput,
-    BikriListRow, BikriNavigateInput, BikriPreview, BikriPreviewInput, BikriSaveInput, BikriSaved,
-    CancelInput, CancelPreview, CancelPreviewInput, EditOpenInput, EditPreviewInput, EditSaveInput,
-    EditableBikri, FreightPart, LaterSaleInput, LaterSaleSaveInput, LaterSaleSaved,
-    SplitFreightInput, StockList, StockListInput, UndoInput, UndoResult, WriteOffDone,
-    WriteOffInput, WriteOffUndoInput, WriteOffUndone, split_freight,
+    BikriCancelled, BikriDetail, BikriEdited, BikriFindInput, BikriGetInput, BikriList,
+    BikriListInput, BikriListRow, BikriNavigateInput, BikriPreview, BikriPreviewInput,
+    BikriSaveInput, BikriSaved, CancelInput, CancelPreview, CancelPreviewInput, EditOpenInput,
+    EditPreviewInput, EditSaveInput, EditableBikri, FreightPart, LaterSaleInput,
+    LaterSaleSaveInput, LaterSaleSaved, SplitFreightInput, StockList, StockListInput, UndoInput,
+    UndoResult, WriteOffDone, WriteOffInput, WriteOffUndoInput, WriteOffUndone, split_freight,
 };
 use mandi_services::{auth, bikri};
 
@@ -82,13 +82,14 @@ pub async fn bikri_get<R: tauri::Runtime>(
     .await
 }
 
-/// The list of بکری of a day or a range, with its filters (PRD FR-12.7, آج کی بکری). Read only.
+/// One page of the list of بکری of a day or a range, with its filters and the totals over the
+/// whole filter (PRD FR-12.7, FR-19.11, آج کی بکری). Read only.
 /// Errors: the date codes on `date`, `from`, `to`.
 #[tauri::command]
 pub async fn bikri_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: BikriListInput,
-) -> Result<Vec<BikriListRow>, UiError> {
+) -> Result<BikriList, UiError> {
     run(app, "bikri_list", move |ctx| {
         auth::require(ctx)?;
         bikri::list(ctx, &input)

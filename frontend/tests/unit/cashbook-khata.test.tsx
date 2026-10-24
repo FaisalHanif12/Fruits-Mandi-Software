@@ -20,6 +20,7 @@ import {
   typeAmount,
   startsWith,
 } from '../helpers/cashbook-screen';
+import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import { KHATA_ROW, type FakeCashbook } from '../helpers/cashbook';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
 import { message, visible } from '../helpers/render';
@@ -89,7 +90,9 @@ describe.each(LANGUAGES)('the الگ کھاتہ screen (%s)', (language) => {
     expect((await labelled(language, 'cashbook-field-date')).value).toBe('10-10-2026');
     expect(await dropdown(language, 'cashbook-field-khata')).toBeInTheDocument();
     expect(await labelled(language, 'cashbook-field-reason')).toBeInTheDocument();
-    expect(screen.queryByLabelText(named(message(language, 'vouchers-field-mode')))).toBeNull();
+    for (const gone of FORMER_PAYMENT_LABELS[language]) {
+      expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
+    }
     expect(await screen.findByText(message(language, 'cashbook-khata-pick'))).toBeInTheDocument();
   });
 

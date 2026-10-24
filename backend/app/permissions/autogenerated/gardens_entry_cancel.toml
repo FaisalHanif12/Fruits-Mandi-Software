@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-entry-cancel"
+description = "Enables the gardens_entry_cancel command without any pre-configured scope."
+commands.allow = ["gardens_entry_cancel"]
+
+[[permission]]
+identifier = "deny-gardens-entry-cancel"
+description = "Denies the gardens_entry_cancel command without any pre-configured scope."
+commands.deny = ["gardens_entry_cancel"]

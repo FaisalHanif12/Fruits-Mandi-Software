@@ -59,6 +59,37 @@ pub struct PairRow {
     pub last_used_at: Option<String>,
 }
 
+/// The page of learned pairs to list.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PairsListInput {
+    /// How many rows to skip. 0 for the first page.
+    #[serde(default)]
+    pub offset: u32,
+    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One page of learned pairs with the totals over every pair.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PairsList {
+    /// This page, most used first.
+    pub rows: Vec<PairRow>,
+    /// How many pairs there are.
+    #[ts(type = "number")]
+    pub total_count: i64,
+    /// The totals over every pair.
+    pub totals: PairsTotals,
+}
+
+/// The totals of the learned pairs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PairsTotals {
+    /// How many times all the pairs were chosen.
+    #[ts(type = "number")]
+    pub use_count: i64,
+}
+
 /// Which learned pair to remove.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct RemovePairInput {
@@ -114,17 +145,21 @@ pub async fn translit_learn<R: tauri::Runtime>(
     .await
 }
 
-/// All learned pairs, most used first.
+/// One page of the learned pairs, most used first, with how many there are and how many times
+/// they were all used (PRD FR-19.11).
 #[tauri::command]
 pub async fn translit_pairs_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-) -> Result<Vec<PairRow>, UiError> {
-    run(app, "translit_pairs_list", |ctx| {
+    input: PairsListInput,
+) -> Result<PairsList, UiError> {
+    run(app, "translit_pairs_list", move |ctx| {
         auth::require(ctx)?;
-        Ok(translit::list(ctx)?
-            .into_iter()
-            .map(PairRow::from)
-            .collect())
+        let (rows, total_count, use_count) = translit::list_page(ctx, input.offset, input.limit)?;
+        Ok(PairsList {
+            rows: rows.into_iter().map(PairRow::from).collect(),
+            total_count,
+            totals: PairsTotals { use_count },
+        })
     })
     .await
 }

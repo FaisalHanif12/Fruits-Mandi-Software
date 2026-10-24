@@ -343,6 +343,83 @@ pub fn spread_cost(cost: Paisa, purchases: &[(i64, i64)]) -> Result<Vec<SpreadPa
         .collect()
 }
 
+/// C26: a garden's closing. The garden account's balance `balance` (credit positive) is split by the
+/// garden's shares with `split_by_bps`. A negative balance is split as a positive amount and every
+/// part is made negative (PRD C11): the leftover rupees go to the partner with the largest share (a
+/// tie: the partner created first, who comes first in `partners`). The parts add up to `balance`.
+///
+/// Example (E2E-40): 66,400 at 60 / 40 gives 39,840 / 26,560. Example (E2E-40b): 10,000 gives
+/// 6,000 / 4,000.
+///
+/// # Errors
+/// `MoneyError::SharesNot100` if the shares do not total 100%; `MoneyError::Overflow`.
+pub fn close_parts(
+    balance: Paisa,
+    partners: &[VenturePartner],
+) -> Result<Vec<CreditPart>, MoneyError> {
+    // The split keeps the sign of the money, so a loss is split as a positive amount and made
+    // negative; the same message as any money that comes in explains each part.
+    credit_parts(balance, partners)
+}
+
+/// The journal entry of a garden's closing (PRD FR-12.38): the garden's account against the partners'
+/// 0604 accounts.
+///
+/// - A profit (`balance` above 0): the garden account بنام the balance, each partner's 0604 account
+///   جمع his part.
+/// - A loss (`balance` below 0): the other sides: the garden account جمع the balance without its sign,
+///   each partner's 0604 account بنام his part without its sign (PRD C11).
+/// - A part of 0 makes no line. A balance of 0 makes no entry: `None` (PRD E64).
+///
+/// The entry balances because the parts add up to the balance. It is not `receipt_entry`, which keeps
+/// only parts above 0 and would lose the parts of a loss.
+///
+/// # Errors
+/// `LedgerError` if the parts do not add up to the balance (the entry would not balance), or if the
+/// amounts do not fit.
+pub fn close_entry(
+    garden: AccountId,
+    balance: Paisa,
+    parts: &[CreditPart],
+) -> Result<Option<BalancedEntry>, LedgerError> {
+    if balance == Paisa::ZERO {
+        return Ok(None);
+    }
+    let profit = balance > Paisa::ZERO;
+    let (garden_side, partner_side, other_side) = if profit {
+        (Side::Dr, Side::Cr, Side::Dr)
+    } else {
+        (Side::Cr, Side::Dr, Side::Cr)
+    };
+    let magnitude = |amount: Paisa| -> Result<Paisa, LedgerError> {
+        if amount.is_negative() {
+            Ok(amount.checked_neg()?)
+        } else {
+            Ok(amount)
+        }
+    };
+    let mut lines = vec![LedgerLine::new(garden, garden_side, magnitude(balance)?)];
+    for part in parts {
+        if part.amount == Paisa::ZERO {
+            continue;
+        }
+        // A part with the sign of the balance goes on the partner's side. A part of the other sign
+        // goes on the other side, next to the garden's line. `split_by_bps` never gives mixed signs,
+        // and the entry balances whenever the parts add up to the balance.
+        let side = if (part.amount > Paisa::ZERO) == profit {
+            partner_side
+        } else {
+            other_side
+        };
+        lines.push(LedgerLine::new(
+            part.account_id,
+            side,
+            magnitude(part.amount)?,
+        ));
+    }
+    build_entry(lines).map(Some)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -617,6 +694,190 @@ mod tests {
             let sum = parts.iter().try_fold(Paisa::ZERO, |s, x| s.checked_add(x.amount)).unwrap();
             prop_assert_eq!(sum, p(cost));
             prop_assert!(parts.iter().all(|x| x.amount >= Paisa::ZERO));
+        }
+    }
+
+    // ---- Gardens: the closing (C26, PRD E2E-40, E2E-40b) ----
+
+    fn garden_partners(bps: [i32; 2]) -> Vec<VenturePartner> {
+        vec![
+            partner(1, bps[0], MoneySource::Shop),
+            partner(2, bps[1], MoneySource::Pocket),
+        ]
+    }
+
+    fn amounts(parts: &[CreditPart]) -> Vec<i64> {
+        parts.iter().map(|part| part.amount.rupees()).collect()
+    }
+
+    #[test]
+    fn e2e_40_the_closing_gives_39840_and_26560_and_the_garden_account_to_zero() {
+        // PRD E2E-40: the garden's account holds 56,400 + 10,000 = 66,400; الف 60%, ب 40%.
+        let partners = garden_partners([6_000, 4_000]);
+        let parts = close_parts(p(66_400), &partners).unwrap();
+        assert_eq!(amounts(&parts), vec![39_840, 26_560]);
+        let entry = close_entry(AccountId::new(9), p(66_400), &parts)
+            .unwrap()
+            .unwrap();
+        assert_eq!(entry.total(), p(66_400));
+        // The garden account بنام the balance, each partner جمع his part.
+        let garden: Vec<_> = entry
+            .lines()
+            .iter()
+            .filter(|l| l.account_id == AccountId::new(9))
+            .collect();
+        assert_eq!((garden.len(), garden[0].side), (1, Side::Dr));
+        assert_eq!(garden[0].amount, p(66_400));
+        let credits: Vec<i64> = entry
+            .lines()
+            .iter()
+            .filter(|l| l.side == Side::Cr)
+            .map(|l| l.amount.rupees())
+            .collect();
+        assert_eq!(credits, vec![39_840, 26_560]);
+        // Σ parts = the balance exactly.
+        let total = parts
+            .iter()
+            .try_fold(Paisa::ZERO, |sum, part| sum.checked_add(part.amount))
+            .unwrap();
+        assert_eq!(total, p(66_400));
+    }
+
+    #[test]
+    fn e2e_40b_the_closing_gives_6000_and_4000() {
+        let parts = close_parts(p(10_000), &garden_partners([6_000, 4_000])).unwrap();
+        assert_eq!(amounts(&parts), vec![6_000, 4_000]);
+    }
+
+    #[test]
+    fn a_profit_with_a_leftover_rupee_gives_it_to_the_partner_created_first() {
+        // Shares 40 / 40 / 20 and 10,003: floors 4,001 / 4,001 / 2,000, leftover 1. The two largest
+        // shares tie, so the rupee goes to the first partner: 4,002 / 4,001 / 2,000.
+        let partners = vec![
+            partner(1, 4_000, MoneySource::Shop),
+            partner(2, 4_000, MoneySource::Shop),
+            partner(3, 2_000, MoneySource::Shop),
+        ];
+        let parts = close_parts(p(10_003), &partners).unwrap();
+        assert_eq!(amounts(&parts), vec![4_002, 4_001, 2_000]);
+    }
+
+    #[test]
+    fn a_loss_is_split_as_a_positive_amount_and_posted_on_the_other_sides() {
+        // C11: -10,003 gives -4,002 / -4,001 / -2,000. The garden account جمع 10,003, each 0604
+        // بنام his part. The entry balances.
+        let partners = vec![
+            partner(1, 4_000, MoneySource::Shop),
+            partner(2, 4_000, MoneySource::Shop),
+            partner(3, 2_000, MoneySource::Shop),
+        ];
+        let parts = close_parts(p(-10_003), &partners).unwrap();
+        assert_eq!(amounts(&parts), vec![-4_002, -4_001, -2_000]);
+        let entry = close_entry(AccountId::new(9), p(-10_003), &parts)
+            .unwrap()
+            .unwrap();
+        assert_eq!(entry.total(), p(10_003));
+        let garden: Vec<_> = entry
+            .lines()
+            .iter()
+            .filter(|l| l.account_id == AccountId::new(9))
+            .collect();
+        assert_eq!((garden.len(), garden[0].side), (1, Side::Cr));
+        let debits: Vec<i64> = entry
+            .lines()
+            .iter()
+            .filter(|l| l.side == Side::Dr)
+            .map(|l| l.amount.rupees())
+            .collect();
+        assert_eq!(debits, vec![4_002, 4_001, 2_000]);
+    }
+
+    #[test]
+    fn a_balance_of_zero_makes_no_entry() {
+        // PRD E64: a garden closed with no sales: nothing to post.
+        let partners = garden_partners([6_000, 4_000]);
+        let parts = close_parts(Paisa::ZERO, &partners).unwrap();
+        assert_eq!(amounts(&parts), vec![0, 0]);
+        assert!(
+            close_entry(AccountId::new(9), Paisa::ZERO, &parts)
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_closing_with_shares_that_do_not_total_100_is_refused() {
+        let partners = garden_partners([6_000, 3_000]);
+        assert_eq!(
+            close_parts(p(1_000), &partners).unwrap_err(),
+            MoneyError::SharesNot100
+        );
+    }
+
+    #[test]
+    fn parts_that_do_not_add_up_to_the_balance_do_not_make_an_entry() {
+        let partners = garden_partners([6_000, 4_000]);
+        let mut parts = close_parts(p(10_000), &partners).unwrap();
+        parts[0].amount = p(5_900);
+        assert!(close_entry(AccountId::new(9), p(10_000), &parts).is_err());
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10_000))]
+
+        /// Code Standards 9.3, PRD C26 and C11: the parts of a closing add up to the balance, each
+        /// has the sign of the balance, and the entry balances for a profit, a loss and a balance of 0.
+        #[test]
+        fn the_closing_adds_up_for_a_profit_a_loss_and_zero(
+            balance in -5_000_000_i64..5_000_000,
+            weights in proptest::collection::vec(1_u32..1_000, 1..10),
+        ) {
+            let shares = shares_of(&weights);
+            let partners: Vec<VenturePartner> = shares
+                .iter()
+                .enumerate()
+                .map(|(i, bps)| partner(i64::try_from(i).unwrap() + 1, *bps, MoneySource::Shop))
+                .filter(|p| p.share.get() > 0)
+                .collect();
+            let total_bps: i32 = partners.iter().map(|p| p.share.get()).sum();
+            prop_assume!(total_bps == 10_000);
+            let balance = p(balance);
+            let parts = close_parts(balance, &partners).unwrap();
+            let sum = parts.iter().try_fold(Paisa::ZERO, |s, x| s.checked_add(x.amount)).unwrap();
+            prop_assert_eq!(sum, balance);
+            // A part has the sign of the balance (or is 0) and is never more than the balance.
+            for part in &parts {
+                prop_assert!(part.amount == Paisa::ZERO || (part.amount > Paisa::ZERO) == (balance > Paisa::ZERO));
+                prop_assert!(part.amount.rupees().abs() <= balance.rupees().abs());
+            }
+            let entry = close_entry(AccountId::new(999), balance, &parts).unwrap();
+            if balance == Paisa::ZERO {
+                prop_assert!(entry.is_none());
+            } else {
+                let entry = entry.unwrap();
+                let magnitude = Paisa::from_rupees(balance.rupees().abs()).unwrap();
+                prop_assert_eq!(entry.total(), magnitude);
+                let garden: Vec<_> = entry
+                    .lines()
+                    .iter()
+                    .filter(|l| l.account_id == AccountId::new(999))
+                    .collect();
+                prop_assert_eq!(garden.len(), 1);
+                prop_assert_eq!(garden[0].amount, magnitude);
+                // A profit takes the garden's account بنام; a loss puts it جمع.
+                prop_assert_eq!(garden[0].side, if balance > Paisa::ZERO { Side::Dr } else { Side::Cr });
+                // A part of 0 makes no line; every other part makes one, on the other side.
+                let nonzero = parts.iter().filter(|x| x.amount != Paisa::ZERO).count();
+                prop_assert_eq!(entry.lines().len(), nonzero + 1);
+                let partner_side = if balance > Paisa::ZERO { Side::Cr } else { Side::Dr };
+                prop_assert!(
+                    entry
+                        .lines()
+                        .iter()
+                        .filter(|l| l.account_id != AccountId::new(999))
+                        .all(|l| l.side == partner_side)
+                );
+            }
         }
     }
 }

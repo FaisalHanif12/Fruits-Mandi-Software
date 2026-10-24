@@ -1,4 +1,4 @@
-// The ten master lists (plan 06, PRD 10.3, FR-7.17, FR-7.24, FR-7.66): the انڈکس menu, one list,
+// The nine master lists (plan 06, PRD 10.3, FR-7.17, FR-7.24, FR-7.66): the انڈکس menu, one list,
 // and the form to add, change and make inactive, in the Urdu and in the English app, by keyboard,
 // against a fake backend. One generic screen, so city, item, packing, expense head and the rest
 // share these flows.
@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as mastersApi from '../../src/features/masters/api';
 import { MASTER_CONFIGS } from '../../src/features/masters/configs';
+import { useMasterFocus } from '../../src/features/masters/store';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as searchApi from '../../src/shared/search/api';
@@ -100,7 +101,7 @@ describe.each(LANGUAGES)('the انڈکس menu (%s)', (language) => {
     fakeMasters();
   });
 
-  it('lists the accounts, the chart, the rules and the ten lists in order, and ↓ then Enter opens one', async () => {
+  it('lists the accounts, the chart, the rules and the nine lists in order, and ↓ then Enter opens one', async () => {
     const { router } = await renderApp('/index');
     const heading = await screen.findByRole('heading', {
       level: 1,
@@ -129,7 +130,7 @@ describe.each(LANGUAGES)('the انڈکس menu (%s)', (language) => {
     });
   });
 
-  it('an address that is not one of the ten lists says so, with the way back', async () => {
+  it('an address that is not one of the nine lists says so, with the way back', async () => {
     const { router } = await renderApp('/index/nothing');
     expect(
       await screen.findByRole('heading', { name: message(language, 'masters-unknown-title') }),
@@ -206,6 +207,89 @@ describe.each(LANGUAGES)('a master list (%s)', (language) => {
     await waitFor(() => {
       expect(rowIds()).toEqual(['1', '2']);
     });
+  });
+
+  it('150 cities come page by page: 100 at once with the count of the backend, Show more loads the rest', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    fakeMasters({ city: cities });
+    await renderApp('/index/cities');
+    await screen.findByRole('heading', { level: 1, name: message(language, 'masters-city-title') });
+    const showing = (shown: number) =>
+      message(language, 'common-list-count', { shown: String(shown), total: '150' });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(100));
+    });
+    expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 0, 100);
+    await userEvent.setup().click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    );
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(showing(150));
+    });
+    expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 100, 100);
+  });
+
+  it('the row last opened is on a later page: the pages are read until it is loaded, so the list comes back to it', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    fakeMasters({ city: cities });
+    useMasterFocus.setState({ rows: { city: 140 } });
+    await renderApp('/index/cities');
+    await waitFor(
+      () => {
+        expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 100, 100);
+      },
+      { timeout: 15_000 },
+    );
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'common-list-count', { shown: '150', total: '150' }),
+      );
+    });
+  });
+
+  it('a search finds a city that is on a later page: the rest of the pages load for it', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    cities[139] = record('city', 140, '0140', 'ظفروال', 'Zafarwal');
+    // The list remembers the row it last focused; a run before this one may have left one.
+    useMasterFocus.setState({ rows: {} });
+    fakeMasters({ city: cities });
+    await renderApp('/index/cities');
+    const box = await screen.findByLabelText(message(language, 'masters-filter-label'));
+    await userEvent.setup().type(box, 'zafar');
+    await waitFor(
+      () => {
+        expect(rowIds()).toEqual(['140']);
+      },
+      { timeout: 15_000 },
+    );
+    // Both pages were read: the match was on the second.
+    expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 100, 100);
   });
 
   it('with nothing in it, says why and offers the key for a new one', async () => {
@@ -420,6 +504,24 @@ describe.each(LANGUAGES)('adding and changing a master (%s)', (language) => {
     await waitFor(() => {
       expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('city', 3, true);
     });
+  });
+
+  it('the form asks for the one master by its id, so a city far down a long list opens at once', async () => {
+    const cities = Array.from({ length: 150 }, (_, index) =>
+      record(
+        'city',
+        index + 1,
+        String(index + 1).padStart(4, '0'),
+        `شہر ${String(index + 1)}`,
+        `City ${String(index + 1)}`,
+      ),
+    );
+    fakeMasters({ city: cities });
+    await renderApp('/index/cities/140');
+    expect(await screen.findByDisplayValue('City 140')).toBeInTheDocument();
+    expect(mastersApi.mastersGetOne).toHaveBeenCalledWith('city', 140);
+    // No page of the list was read to find it.
+    expect(mastersApi.mastersList).not.toHaveBeenCalled();
   });
 
   it('a master that is gone says so instead of showing an empty form', async () => {

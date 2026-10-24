@@ -162,7 +162,12 @@ fn read_line(
                         ErrorCode::ErrOwnGoodsAccountRestricted,
                         &field,
                     ));
-                } else if facts.code == NAQDI_MANDI_CODE || facts.code == BANK_CODE {
+                } else if facts.code == NAQDI_MANDI_CODE
+                    || facts.code == BANK_CODE
+                    // A garden's money moves only by its own entries and its closing (PRD FR-12.34 to
+                    // FR-12.38), never by a جنرل line.
+                    || facts.control_code == mandi_domain::core::accounts::GARDEN_CONTROL_CODE
+                {
                     errors.push(FieldError::new(ErrorCode::ErrFormatInvalid, &field));
                 } else if !facts.is_active {
                     errors.push(FieldError::new(ErrorCode::ErrAccountInactive, &field));

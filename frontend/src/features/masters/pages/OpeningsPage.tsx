@@ -26,7 +26,7 @@ import type { UiError } from '../../../bindings/UiError';
 import type { UiErrorItem } from '../../../bindings/UiErrorItem';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { EntryGrid, createEntryStore, type EntryColumn, type EntryRow } from '../../../shared/grid';
-import { useDebouncedValue, useSingleFlight } from '../../../shared/hooks';
+import { useDebouncedValue, useLoadRest, useSingleFlight } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
@@ -391,8 +391,12 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
 export function OpeningsPage() {
   const navigate = useNavigate();
   const list = useAccountList(ALL_ACTIVE);
+  // The openings are typed against every active account, so the rest of the pages is read at once.
+  useLoadRest(list, true);
   const day = useDayStatus();
-  if ((list.data === undefined && list.isPending) || day.isPending) return <LoadingState />;
+  if ((list.data === undefined && list.isPending) || list.hasNextPage || day.isPending) {
+    return <LoadingState />;
+  }
   if (list.isError || day.isError) {
     return (
       <ErrorState
@@ -404,7 +408,7 @@ export function OpeningsPage() {
       />
     );
   }
-  const accounts = list.data.rows;
+  const accounts = list.data.pages.flatMap((page) => page.rows);
   if (accounts.length === 0) {
     return (
       <EmptyState

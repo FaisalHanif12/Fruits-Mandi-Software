@@ -17,6 +17,7 @@ import type {
 } from '../../src/shared/accounts';
 import { formatPaisa } from '../../src/shared/format';
 import { paisaForTest } from './paisa';
+import { sliceOf } from './paged';
 
 export const ZERO: Balance = { amount_paisa: paisaForTest(0), side: 'zero' };
 
@@ -208,7 +209,7 @@ export function fakeAccounts(
       })),
     ),
   );
-  vi.mocked(accountApi.accountsList).mockImplementation((filter) => {
+  vi.mocked(accountApi.accountsList).mockImplementation((filter, offset, limit) => {
     const wanted = filter.text.toLowerCase();
     const found = store.rows.filter(
       (row) =>
@@ -217,8 +218,9 @@ export function fakeAccounts(
         (wanted === '' ||
           [row.code, row.name_ur, row.name_en].some((part) => part.toLowerCase().includes(wanted))),
     );
+    // A page of the rows, with the count and the opening totals of the whole filter.
     return Promise.resolve({
-      rows: found,
+      rows: sliceOf(found, offset, limit),
       count: found.length,
       total_dr_paisa: money(65000),
       total_cr_paisa: money(65000),
@@ -287,12 +289,14 @@ const OWN_GOODS_CODE = '030119998';
 
 /** A الگ کھاتہ (control 0305): the seller of a lot may be one (PRD FR-16.7), but no other field. */
 const isKhata = (row: AccountRow) => row.account_type === 'other' && row.code.startsWith('0305');
+/** A garden's account (control 0306, PRD 12.11): offered like a khata, only as the seller of a lot. */
+const isGarden = (row: AccountRow) => row.account_type === 'other' && row.code.startsWith('0306');
 
 function inScope(row: AccountRow, scope: AccountScope): boolean {
   if (scope === 'any' || scope === 'control') return true;
-  // The seller of a lot may be any seller, اپنا مال and a separate khata; every other seller field,
-  // and every buyer field, leaves اپنا مال and the khatas out.
-  if (scope === 'lot_seller') return row.account_type === 'seller' || isKhata(row);
+  // The seller of a lot may be any seller, اپنا مال, a separate khata and an open garden; every
+  // other seller field, and every buyer field, leaves اپنا مال, the khatas and the gardens out.
+  if (scope === 'lot_seller') return row.account_type === 'seller' || isKhata(row) || isGarden(row);
   if (scope === 'seller') return row.account_type === 'seller' && row.code !== OWN_GOODS_CODE;
   return row.account_type === scope;
 }
@@ -318,8 +322,10 @@ export function fakeAccountSearch(
       const exact = scoped.filter((row) => row.code === wanted);
       if (exact.length > 0) return exact;
       if (wanted.length <= SERIAL_LENGTH) {
-        // A khata has no short code: its full code works, a serial does not (backend, plan 17).
-        const bySerial = scoped.filter((row) => !isKhata(row) && serialOf(row) === Number(wanted));
+        // A khata and a garden have no short code: their full code works, a serial does not.
+        const bySerial = scoped.filter(
+          (row) => !isKhata(row) && !isGarden(row) && serialOf(row) === Number(wanted),
+        );
         if (bySerial.length > 0) return bySerial;
       }
     }

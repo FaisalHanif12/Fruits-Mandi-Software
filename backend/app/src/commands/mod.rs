@@ -11,6 +11,7 @@ pub mod cashbook;
 pub mod day;
 pub mod drafts;
 pub mod expenses;
+pub mod gardens;
 pub mod general;
 pub mod khata;
 pub mod lent;

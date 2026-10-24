@@ -78,6 +78,18 @@ export function isoToDisplayDate(iso: string): string {
   return match ? `${match[3] ?? ''}-${match[2] ?? ''}-${match[1] ?? ''}` : iso;
 }
 
+/**
+ * Text that is exactly a real calendar day, YYYY-MM-DD, shown as DD-MM-YYYY. Anything else (other
+ * text, 2026-02-30, 2026-10, a reference such as E-20261010-0001) comes back unchanged. For the
+ * values of a backend error, which can be any text.
+ */
+export function isoDayToDisplay(text: string): string {
+  const match = ISO.exec(text);
+  if (!match) return text;
+  const day = realDate(Number(match[3]), Number(match[2]), Number(match[1]));
+  return day === null ? text : formatDateParts(day);
+}
+
 function two(value: number): string {
   return String(value).padStart(2, '0');
 }

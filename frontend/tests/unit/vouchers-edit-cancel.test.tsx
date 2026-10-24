@@ -25,7 +25,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { fakeMasters, record } from '../helpers/masters';
+import { fakeMasters } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import {
   AKRAM,
@@ -37,6 +37,7 @@ import {
   voucherRow,
   type FakeVouchers,
 } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -77,15 +78,13 @@ beforeEach(() => {
   vi.resetAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
   const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
-  fakeMasters({
-    bank_account: [record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah')],
-  });
+  fakeMasters({});
 });
 
 afterEach(() => {
@@ -120,6 +119,8 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       to: '10-10-2026',
       account_id: null,
       person_key: null,
+      offset: 0,
+      limit: 100,
     });
   });
 
@@ -139,7 +140,11 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
 
   it('shows only the word under the list when the backend sends no total (a list of all types)', async () => {
     const real = store.rows.map((row) => ({ ...row }));
-    vi.mocked(vouchersApi.vouchersList).mockResolvedValue({ rows: real, total_paisa: null });
+    vi.mocked(vouchersApi.vouchersList).mockResolvedValue({
+      rows: real,
+      total_count: real.length,
+      totals: { cancelled_count: 0, total_paisa: null },
+    });
     await open();
     await waitFor(() => {
       expect(cell(501, 'number')).toBe(message(language, 'vouchers-number-receipt', { number: 1 }));
@@ -221,7 +226,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       version: 1,
       reason: 'r',
       confirm: false,
-      entry: { type: 'receipt', account_id: 21, amount: '9000', mode: 'cash' },
+      entry: { type: 'receipt', account_id: 21, amount: '9000' },
     });
     const toast = message(language, 'vouchers-edited', {
       kind: 'receipt',

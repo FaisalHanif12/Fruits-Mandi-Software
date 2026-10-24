@@ -15,7 +15,7 @@ import type { PukhtaRegisterInput } from '../../../bindings/PukhtaRegisterInput'
 import type { PukhtaRegisterRow } from '../../../bindings/PukhtaRegisterRow';
 import type { PukhtaSide } from '../../../bindings/PukhtaSide';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
+import { PagedList } from '../../../shared/grid';
 import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { formNavigationProps, useEscape } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
@@ -24,9 +24,7 @@ import {
   Checkbox,
   DateInput,
   EmptyState,
-  ErrorState,
   Field,
-  LoadingState,
   Select,
   TextInput,
 } from '../../../shared/ui';
@@ -35,7 +33,6 @@ import { usePukhtaRegister } from '../hooks';
 import { PUKHTA_REGISTER_SCREEN, registerChoicesFrom, registerChoicesText } from '../remember';
 
 const ALL = 'all';
-const SHORT_LIST_ROWS = 30;
 
 /** A register row has no id of its own (two equal lines are possible), so its place is its key. */
 type KeyedRow = PukhtaRegisterRow & { key: string };
@@ -61,7 +58,7 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
   useEffect(() => {
     remember(registerChoicesText({ from, to, side, name, phone, state }));
   }, [from, to, side, name, phone, state, remember]);
-  const filter: PukhtaRegisterInput = {
+  const filter: Omit<PukhtaRegisterInput, 'offset' | 'limit'> = {
     from: from.trim(),
     to: to.trim(),
     side: side === ALL ? null : side,
@@ -94,54 +91,83 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
     setState(ALL);
   };
 
-  const rows = list.data;
-  let body;
-  if (rows === undefined && list.isPending) {
-    body = <LoadingState />;
-  } else if (list.isError) {
-    body = (
-      <ErrorState
-        title={<Localized id="pukhta-load-failed" />}
-        error={uiErrorOf(list.error)}
-        onRetry={() => {
-          void list.refetch();
-        }}
-      />
-    );
-  } else if (rows?.length === 0) {
-    body = filtering ? (
-      <EmptyState
-        icon={SearchX}
-        title={<Localized id="pukhta-no-match" />}
-        help={<Localized id="pukhta-no-match-help" />}
-        action={
-          <Button onClick={clear}>
-            <Localized id="pukhta-clear" />
-          </Button>
-        }
-      />
-    ) : (
-      <EmptyState
-        icon={UsersRound}
-        title={<Localized id="pukhta-empty" />}
-        help={<Localized id="pukhta-empty-help" />}
-      />
-    );
-  } else if (rows !== undefined) {
-    body = (
-      <ListGrid<KeyedRow>
-        columns={columns}
-        rows={rows.map((row, index) => ({ ...row, key: String(index) }))}
-        getRowId={(row) => row.key}
-        labelId="pukhta-register-label"
-        onOpen={(row) => {
-          void navigate({ to: '/bikri/book', search: { id: row.bikri_id } });
-        }}
-        heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
-        isInactive={(row) => row.cancelled}
-      />
-    );
-  }
+  const first = list.data?.pages[0];
+  // A refusal shows as the state, not as the rows of the filter before it. A register row has no id
+  // of its own, so its place in the whole list is its key; the next page continues the count.
+  const rows: KeyedRow[] | undefined = list.isError
+    ? undefined
+    : list.data?.pages
+        .flatMap((page) => page.rows)
+        .map((row, index) => ({ ...row, key: String(index) }));
+  // The sums are over the whole filter and only mean something for one side: with no side chosen the
+  // backend sends them all null (buyers and sellers would be added together), and then there is no
+  // totals row at all.
+  const sums = first?.totals;
+  const noSums =
+    sums !== undefined &&
+    [sums.qty, sums.amount, sums.commission, sums.open].every((sum) => sum === null);
+  const empty = filtering ? (
+    <EmptyState
+      icon={SearchX}
+      title={<Localized id="pukhta-no-match" />}
+      help={<Localized id="pukhta-no-match-help" />}
+      action={
+        <Button onClick={clear}>
+          <Localized id="pukhta-clear" />
+        </Button>
+      }
+    />
+  ) : (
+    <EmptyState
+      icon={UsersRound}
+      title={<Localized id="pukhta-empty" />}
+      help={<Localized id="pukhta-empty-help" />}
+    />
+  );
+  // The totals row is the backend's, over every line of the filter and not over the rows loaded.
+  const body = (
+    <PagedList<KeyedRow>
+      columns={columns}
+      rows={rows}
+      totalCount={first?.total_count}
+      getRowId={(row) => row.key}
+      labelId="pukhta-register-label"
+      failedId="pukhta-load-failed"
+      error={list.isError ? uiErrorOf(list.error) : null}
+      onRetry={() => {
+        void list.refetch();
+      }}
+      hasMore={list.hasNextPage}
+      loadingMore={list.isFetchingNextPage}
+      onLoadMore={() => {
+        void list.fetchNextPage();
+      }}
+      empty={empty}
+      onOpen={(row) => {
+        void navigate({ to: '/bikri/book', search: { id: row.bikri_id } });
+      }}
+      isInactive={(row) => row.cancelled}
+      totals={
+        first === undefined || noSums
+          ? undefined
+          : (context) => {
+              const { qty, amount, commission, open } = first.totals;
+              return {
+                labelField: 'name',
+                values: {
+                  name: context.text('glossary-meezan'),
+                  ...(qty === null ? {} : { qty: String(qty) }),
+                  ...(amount === null ? {} : { amount: context.money(amount) }),
+                  ...(commission === null ? {} : { commission: context.money(commission) }),
+                  ...(open === null
+                    ? {}
+                    : { state: context.text('pukhta-state-due', { amount: context.money(open) }) }),
+                },
+              };
+            }
+      }
+    />
+  );
 
   return (
     <div className="flex h-full flex-col gap-4">

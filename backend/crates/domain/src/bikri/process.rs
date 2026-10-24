@@ -669,8 +669,12 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         let pays_on_the_spot =
             first && lot.cash_paid.is_none() && ctx.facts.seller.is_some_and(|s| s.is_pukhta);
         let credit = acc.seller_credit()?;
-        // A later sale and an own lot give no نقد.
-        let no_cash = !first || own;
+        // A later sale, an own lot and a garden's lot give no نقد (PRD FR-12.26, FR-12.36).
+        let garden = ctx
+            .facts
+            .seller
+            .is_some_and(|s| s.kind == super::lookups::PartyKind::Garden);
+        let no_cash = !first || own || garden;
         if no_cash && lot.cash_paid.is_some_and(|cash| cash != Paisa::ZERO) {
             issues.error(
                 ErrorCode::ErrFormatInvalid,

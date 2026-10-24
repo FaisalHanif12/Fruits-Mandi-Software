@@ -106,6 +106,15 @@ fn load_posting(
             "entry_id",
         ));
     }
+    // PRD FR-12.38: a بکری that sold the goods of a closed garden is not edited until the closing is
+    // undone. Changing a lot's seller here would take the money back from the garden's account
+    // after it was paid out to the partners.
+    if mandi_db::gardens::bikri_has_closed_garden_lot(conn, bikri_id)? {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrGardenClosed,
+            "entry_id",
+        ));
+    }
     let posting = edit_repo::posting_in_force(conn, bikri_id, entry_id)?
         .ok_or_else(|| not_found("entry_id"))?;
     Ok((detail, posting))

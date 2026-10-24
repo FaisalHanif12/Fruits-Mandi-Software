@@ -523,3 +523,44 @@ pub(super) fn get(ctx: &Context, input: &TripGetInput) -> Result<TripDetail, Ser
         })
     })
 }
+
+/// The open trips a partner is in, as the cards under his name (PRD 17.3): his %, what he paid so
+/// far from the shop and from his pocket, what he got back, and the result of the trip so far.
+///
+/// # Errors
+/// `ServiceError::Db` or `ServiceError::Data`.
+pub(crate) fn cards_of_partner(
+    conn: &Connection,
+    partner_id: i64,
+) -> Result<Vec<mandi_domain::core::partners::PartnerVentureCard>, ServiceError> {
+    let filter = repo::ListFilter {
+        kind: "trip".to_owned(),
+        status: Some("open".to_owned()),
+        partner_id: Some(partner_id),
+        ..repo::ListFilter::default()
+    };
+    let mut ids = repo::ids_of(conn, &filter)?;
+    ids.sort_unstable();
+    let mut cards = Vec::with_capacity(ids.len());
+    for id in ids {
+        let venture = ventures::load(conn, id)?.ok_or_else(|| not_found("id"))?;
+        let row = row_by_id(conn, id)?;
+        let mine = partner_results(conn, &venture)?
+            .into_iter()
+            .find(|r| r.partner.id == partner_id)
+            .ok_or_else(|| data("a partner of a trip lost his row"))?;
+        cards.push(mandi_domain::core::partners::PartnerVentureCard {
+            venture_id: id,
+            kind: mandi_domain::core::ventures::VentureKind::Trip,
+            number: row.number,
+            name_ur: row.name_ur.clone(),
+            name_en: row.name_en.clone(),
+            share_bps: mine.share_bps,
+            paid_shop_paisa: mine.money_in_shop_paisa,
+            paid_pocket_paisa: mine.money_in_pocket_paisa,
+            money_back_paisa: mine.money_back_paisa,
+            balance_paisa: row.result_paisa,
+        });
+    }
+    Ok(cards)
+}

@@ -1,0 +1,33 @@
+{
+  "rows": [
+    {
+      "entry_date": "2026-10-10",
+      "bikri_id": 2,
+      "bikri_number": 2,
+      "side": "buyer",
+      "name_ur": "شاہد",
+      "name_en": "Shahid",
+      "phone": "03000000000",
+      "person_key": "شاہد|03000000000",
+      "item": {
+        "id": 2,
+        "code": "2",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      },
+      "qty": 10,
+      "amount": 1280000,
+      "commission": 72000,
+      "paid": true,
+      "open": 0,
+      "cancelled": false
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "qty": 10,
+    "amount": 1280000,
+    "commission": 72000,
+    "open": 0
+  }
+}

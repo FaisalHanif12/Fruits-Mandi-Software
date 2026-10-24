@@ -6,10 +6,10 @@
 import { Localized } from '@fluent/react';
 import { HandCoins } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
+import { PagedList } from '../../../shared/grid';
 import { Balance, Card, EmptyState } from '../../../shared/ui';
 import { useLentList } from '../hooks';
 import { LENT_COLUMNS } from '../list-columns';
-import { PagedList } from './PagedList';
 
 export function LentListSection({ personId }: { personId: number | null }) {
   const lent = useLentList(personId);

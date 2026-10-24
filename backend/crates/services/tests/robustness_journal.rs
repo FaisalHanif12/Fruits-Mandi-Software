@@ -30,7 +30,7 @@ use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::ids::AccountId;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::vouchers::{AdvanceInput, DayCloseInput, DayReopenInput, VoucherMode};
+use mandi_services::core::vouchers::{AdvanceInput, DayCloseInput, DayReopenInput};
 use mandi_services::db::rusqlite::{Connection, types::Value};
 use mandi_services::domain::ledger::{
     LedgerError, LedgerLine, PostingType, Side, SourceType, build_entry,
@@ -450,10 +450,7 @@ fn advance_step(w: &mut World) {
             date: date.clone(),
             seller_account_id: seller,
             amount: amount.clone(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },
@@ -1158,10 +1155,7 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
                 date: date.into(),
                 seller_account_id: seller,
                 amount: "100".into(),
-                mode: VoucherMode::Cash,
-                bank_account_id: None,
-                cheque_no: String::new(),
-                cheque_date: String::new(),
+                removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
                 expected_goods: String::new(),
                 narration: String::new(),
             },
@@ -1212,10 +1206,7 @@ fn every_posting_path_refuses_a_closed_date_and_the_day_after_today() {
         date: "11-10-2026".into(),
         seller_account_id: w.sellers[0],
         amount: "100".into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
     };
@@ -1280,10 +1271,7 @@ fn the_clock_moved_back_never_opens_a_closed_day() {
                 date: "09-10-2026".into(),
                 seller_account_id: w.sellers[0],
                 amount: "10".into(),
-                mode: VoucherMode::Cash,
-                bank_account_id: None,
-                cheque_no: String::new(),
-                cheque_date: String::new(),
+                removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
                 expected_goods: String::new(),
                 narration: String::new(),
             },

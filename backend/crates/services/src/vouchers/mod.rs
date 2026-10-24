@@ -27,7 +27,7 @@ use mandi_db::vouchers as repo;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
-use mandi_domain::core::vouchers::{VoucherRow, VouchersList, VouchersListInput};
+use mandi_domain::core::vouchers::{VoucherRow, VouchersList, VouchersListInput, VouchersTotals};
 
 pub use advance::{preview_advances, save_advance, save_advances};
 pub use capital_kinds::{save_capital_in, save_capital_out};
@@ -73,31 +73,35 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
     let from = bound(&mut errors, "from", &input.from);
     let to = bound(&mut errors, "to", &input.to);
     errors.finish()?;
-    let mut rows = ctx.db.read(|conn| {
-        repo::list(
+    let filter = repo::ListFilter {
+        voucher_type: input.voucher_type,
+        from: from.as_deref(),
+        to: to.as_deref(),
+        account_id: input.account_id,
+        person_key: input.person_key.as_deref(),
+    };
+    // One page and the totals over the whole filter, each from one query (PRD FR-19.11, B31).
+    let (mut rows, totals) = ctx.db.read(|conn| {
+        let totals = repo::list_totals(conn, &filter)?;
+        let rows = repo::list_page(
             conn,
-            &repo::ListFilter {
-                voucher_type: input.voucher_type,
-                from: from.as_deref(),
-                to: to.as_deref(),
-                account_id: input.account_id,
-                person_key: input.person_key.as_deref(),
-            },
-        )
-        .map_err(ServiceError::from)
+            &filter,
+            i64::from(input.offset),
+            crate::page::limit_of(input.limit),
+        )?;
+        Ok::<_, ServiceError>((rows, totals))
     })?;
     mark_editable(&mut rows, closed);
     // The total is of what is saved: a cancelled voucher no longer moves money. It is given only
     // for one type (PRD FR-15.1).
-    let mut total_paisa = Paisa::ZERO;
-    for row in rows.iter().filter(|row| row.status == "saved") {
-        total_paisa = total_paisa
-            .checked_add(row.amount_paisa)
-            .map_err(money_error)?;
-    }
+    let saved = Paisa::try_from_paisa(totals.saved_paisa).map_err(money_error)?;
     Ok(VouchersList {
         rows,
-        total_paisa: input.voucher_type.map(|_| total_paisa),
+        total_count: totals.count,
+        totals: VouchersTotals {
+            cancelled_count: totals.cancelled,
+            total_paisa: input.voucher_type.map(|_| saved),
+        },
     })
 }
 

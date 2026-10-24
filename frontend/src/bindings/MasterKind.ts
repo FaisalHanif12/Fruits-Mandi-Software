@@ -2,16 +2,7 @@
 
 /**
  * The kind of a master list. Serialised as `city`, `item`, `packing`, `adda`, `marka`, `store`,
- * `narration`, `expense_head`, `staff`, `bank_account` (also the audit entity names).
+ * `narration`, `expense_head`, `staff` (also the audit entity names).
  */
 export type MasterKind =
-  | 'city'
-  | 'item'
-  | 'packing'
-  | 'adda'
-  | 'marka'
-  | 'store'
-  | 'narration'
-  | 'expense_head'
-  | 'staff'
-  | 'bank_account';
+  'city' | 'item' | 'packing' | 'adda' | 'marka' | 'store' | 'narration' | 'expense_head' | 'staff';

@@ -1,6 +1,8 @@
 {
   "account_id": null,
   "from": "",
+  "limit": 0,
+  "offset": 0,
   "person_key": null,
   "to": "",
   "voucher_type": "payment"

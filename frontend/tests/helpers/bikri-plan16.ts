@@ -21,6 +21,7 @@ import {
   undoResult,
   withIds,
 } from './bikri-plan16-data';
+import { sliceOf } from './paged';
 import { refusal } from './ui-error';
 
 export * from './bikri-plan16-data';
@@ -73,18 +74,20 @@ export function fakePlan16(
     writeOffUndos: [],
   };
   const rows = options.rows ?? [stockRow()];
-  vi.mocked(bikriApi.bikriStockList).mockImplementation((input) =>
-    Promise.resolve(
-      stockList(
-        rows.filter(
-          (row) =>
-            (input.seller_id === null || row.seller.id === input.seller_id) &&
-            (input.item_id === null || row.item.id === input.item_id) &&
-            (row.balance > 0 || input.include_written_off),
-        ),
-      ),
-    ),
-  );
+  vi.mocked(bikriApi.bikriStockList).mockImplementation((input) => {
+    const matching = rows.filter(
+      (row) =>
+        (input.lot_id === null || row.lot_id === input.lot_id) &&
+        (input.seller_id === null || row.seller.id === input.seller_id) &&
+        (input.item_id === null || row.item.id === input.item_id) &&
+        (row.balance > 0 || input.include_written_off),
+    );
+    // A page of the lots, with the count and the balance of the whole filter (PRD FR-19.11).
+    return Promise.resolve({
+      ...stockList(matching),
+      rows: sliceOf(matching, input.offset, input.limit),
+    });
+  });
   vi.mocked(bikriApi.bikriLaterSalePreview).mockImplementation((lotId, date, sales) => {
     store.laterPreviews.push({ lotId, date, sales: [...sales] });
     return Promise.resolve(laterSaleAnswer(sales, rows[0]?.balance ?? 0));

@@ -87,7 +87,7 @@ fn the_real_answers_of_the_plan_16_commands_are_the_fixtures() {
     let lot_id = bikri::get(&w.env.ctx, one.bikri_id).unwrap().lots[0].id;
 
     // bikri_stock_list: lot 1 has 5 left; the cash sale of Event 2 sold all its goods.
-    let request = json!({});
+    let request = json!({ "offset": 0, "limit": 0 });
     let list = bikri::stock_list(&w.env.ctx, &typed::<StockListInput>(&request)).unwrap();
     assert_eq!((list.rows.len(), list.balance_total), (1, 5));
     pair("bikri_stock_list", &request, &list);

@@ -22,9 +22,11 @@ import {
   typeAmount,
   startsWith,
 } from '../helpers/cashbook-screen';
+import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import type { FakeCashbook } from '../helpers/cashbook';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { settlePreview } from '../helpers/preview-settled';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -95,8 +97,8 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     expect(buttons[0]).toHaveAttribute('aria-pressed', 'true');
     expect((await labelled(language, 'cashbook-field-date')).value).toBe('10-10-2026');
     expect(saveButton()).toBeDisabled();
-    for (const gone of ['vouchers-field-mode', 'vouchers-field-bank', 'vouchers-field-cheque-no']) {
-      expect(screen.queryByLabelText(named(message(language, gone)))).toBeNull();
+    for (const gone of FORMER_PAYMENT_LABELS[language]) {
+      expect(screen.queryByLabelText(labelIs(gone))).toBeNull();
     }
     // The side menu of the روکڑ area is next to the main menu.
     expect(
@@ -333,6 +335,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
       expect(pageText()).toContain(message(language, 'common-cash-confirm-title'));
     });
     expect(pageText()).toContain(message(language, 'common-cash-after', { amount: '-2,000' }));
+    await settlePreview();
     press('F10');
     const no = await screen.findByRole('button', {
       name: startsWith(message(language, 'common-cash-confirm-no')),

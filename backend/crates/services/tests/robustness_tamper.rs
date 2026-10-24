@@ -21,7 +21,7 @@ mod common;
 
 use common::*;
 use mandi_services::core::accounts::{AccountInput, AccountType};
-use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
+use mandi_services::core::vouchers::AdvanceInput;
 use mandi_services::db::audit::{AuditKey, verify_audit_chain};
 use mandi_services::db::rusqlite::Connection;
 use mandi_services::testing::TestEnv;
@@ -66,10 +66,7 @@ fn advance(to: i64, amount: u32) -> AdvanceInput {
         date: "10-10-2026".into(),
         seller_account_id: to,
         amount: amount.to_string(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: "first".into(),
     }

@@ -1,18 +1,22 @@
 // The rules as hooks (Code Standards F6). A save or a change of active state refreshes the list;
 // a change of the global defaults refreshes both the settings and the list (the defaults are rules).
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePagedQuery } from '../../shared/hooks';
 import { rulesGet, rulesList, rulesSave, rulesSetActive, rulesTest } from './api';
 import type { RuleTestInput } from '../../bindings/RuleTestInput';
 import type { RuleDraft, RuleFilter } from './types';
 
 const RULES_KEY = ['rules'] as const;
 
+/** The rules for the filter, page by page, with the count and the totals of the whole filter. */
 export function useRuleList(filter: RuleFilter) {
-  return useQuery({
+  return usePagedQuery({
     queryKey: [...RULES_KEY, 'list', filter],
-    queryFn: () => rulesList(filter),
-    placeholderData: keepPreviousData,
+    fetchPage: (offset, limit) => rulesList(filter, offset, limit),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }
 

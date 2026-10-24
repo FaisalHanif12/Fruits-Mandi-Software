@@ -23,8 +23,8 @@ use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesReportInput, OpenBillsInput, OpenPayablesInput, PaymentInput,
-    ReceiptInput, VoucherCancelInput, VoucherEditInput, VoucherEntry, VoucherMode,
-    VoucherPreviewInput, VoucherType,
+    ReceiptInput, VoucherCancelInput, VoucherEditInput, VoucherEntry, VoucherPreviewInput,
+    VoucherType,
 };
 use mandi_services::{ServiceError, bikri, ledger, vouchers};
 use proptest::prelude::*;
@@ -44,10 +44,7 @@ fn receipt(account: i64, date: &str, amount: i64) -> ReceiptInput {
         account_id: account,
         person_key: None,
         amount: amount.to_string(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
         narration: String::new(),
     }
@@ -59,10 +56,7 @@ fn payment(account: i64, date: &str, amount: i64, reason: &str) -> PaymentInput 
         account_id: account,
         person_key: None,
         amount: amount.to_string(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
         narration: String::new(),
         confirm_cash_below_zero: true,
@@ -74,10 +68,7 @@ fn advance(seller: i64, date: &str, amount: i64) -> AdvanceInput {
         date: date.into(),
         seller_account_id: seller,
         amount: amount.to_string(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
         confirm_cash_below_zero: true,
@@ -124,6 +115,8 @@ fn live_vouchers(w: &World, kinds: &[VoucherType]) -> Vec<(i64, VoucherType)> {
             to: String::new(),
             account_id: None,
             person_key: None,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap()

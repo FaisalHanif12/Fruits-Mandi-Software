@@ -12,7 +12,7 @@ mod support;
 use common::*;
 use mandi_services::core::accounts::{AccountInput, AccountType, BalanceSide};
 use mandi_services::core::error::ErrorCode;
-use mandi_services::core::masters::{BankAccountInput, MasterInput, StaffInput};
+use mandi_services::core::masters::{MasterInput, StaffInput};
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
     AdvanceInput, CollectionListInput, LineSource, MakeRegularInput, OpenBillsInput,
@@ -32,10 +32,7 @@ fn receipt(account: i64, amount: &str) -> ReceiptInput {
         account_id: account,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
         narration: String::new(),
     }
@@ -47,10 +44,7 @@ fn payment(account: i64, amount: &str, reason: &str) -> PaymentInput {
         account_id: account,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
         narration: String::new(),
         confirm_cash_below_zero: false,
@@ -62,10 +56,7 @@ fn advance(seller: i64, amount: &str) -> AdvanceInput {
         date: "10-10-2026".into(),
         seller_account_id: seller,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         expected_goods: String::new(),
         narration: String::new(),
         confirm_cash_below_zero: false,
@@ -347,6 +338,8 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
             to: String::new(),
             account_id: Some(w.akram),
             person_key: None,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -358,7 +351,7 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
         [(1, "cancelled"), (2, "saved")]
     );
     // The total is of the saved one only (PRD FR-15.1).
-    assert_eq!(list.total_paisa, Some(rupees(1_000)));
+    assert_eq!(list.totals.total_paisa, Some(rupees(1_000)));
 }
 
 #[test]
@@ -568,93 +561,59 @@ fn edit_of_an_advance_moves_the_adjustment() {
     assert_eq!(advances_changes(&w, w.rahim), (0, 0));
 }
 
+/// The removed fields as an old client sends them.
+fn old_fields(json: serde_json::Value) -> mandi_services::core::vouchers::RemovedPaymentFields {
+    serde_json::from_value(json).unwrap()
+}
+
 #[test]
-fn bank_and_cheque_modes_post_to_the_bank_and_keep_their_details() {
+fn every_voucher_posts_cash_and_its_slip_has_no_mode_bank_or_cheque_line() {
+    // PRD 15.1, FR-10.4, FR-15.2 (v1.6): all money is روکڑ. An old client that sends a cheque, a
+    // bank account or a mode is refused at each name, and nothing is posted.
     let w = support::world();
     event1_saved(&w);
-    let mut words: Vec<String> = Vec::new();
-    let bank_row = loop {
-        let input = BankAccountInput {
-            id: None,
-            version: None,
-            bank_name: "HBL".into(),
-            title: "Maher Adnan and Brothers".into(),
-            number: "0123456789".into(),
-            name_ur: "ایچ بی ایل".into(),
-            name_en: "HBL".into(),
-            confirmed_rules_words: words.clone(),
-        };
-        match mandi_services::masters::save(&w.env.ctx, &w.owner, &MasterInput::BankAccount(input))
-        {
-            Ok(row) => break row,
-            Err(ServiceError::Rejected(items))
-                if items
-                    .iter()
-                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
-            {
-                for item in items {
-                    if let Some(mandi_services::core::error::ErrorValue::Text(t)) =
-                        item.values.get("words")
-                    {
-                        words.extend(t.split(' ').map(str::to_owned));
-                    }
-                }
-            }
-            Err(other) => panic!("{other:?}"),
-        }
-    };
-    let bank_id = bank_row.id();
-    let bank_account = raw(&w.dir)
-        .query_row(
-            "SELECT account_id FROM bank_accounts WHERE id = ?1",
-            [bank_id],
-            |r| r.get::<_, i64>(0),
+    let bank = id_of_code(&w, "01020001");
+    let cash_before = balance(&w, cash_id(&w));
+    assert_eq!(cash_before, (BalanceSide::Dr, 45_000));
+    let sent = serde_json::json!({ "mode": "cheque", "bank_account_id": 2,
+        "cheque_no": "000123", "cheque_date": "12-10-2026" });
+    let mut cheque = receipt(w.akram, "5,000");
+    cheque.removed = old_fields(sent.clone());
+    let refused = vouchers::save_receipt(&w.env.ctx, &w.owner, &cheque).unwrap_err();
+    assert_eq!(refused.code(), ErrorCode::ErrFieldNotAllowed);
+    let mut by_bank = payment(w.rahim, "1,000", "");
+    by_bank.removed = old_fields(sent);
+    let refused = vouchers::save_payment(&w.env.ctx, &w.owner, &by_bank).unwrap_err();
+    assert_eq!(refused.code(), ErrorCode::ErrFieldNotAllowed);
+    assert_eq!(balance(&w, cash_id(&w)), cash_before, "nothing was posted");
+    assert_eq!(balance(&w, bank), (BalanceSide::Zero, 0));
+
+    // The same receipt without them posts to روکڑ and never to the bank.
+    let saved = vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.akram, "5,000")).unwrap();
+    assert_eq!(balance(&w, cash_id(&w)), (BalanceSide::Dr, 50_000));
+    assert_eq!(balance(&w, bank), (BalanceSide::Zero, 0));
+    // A row saved before v1.6 as a cheque shows as saved, and its slip is the same plain slip.
+    // A bank row of the old days: the table stays, nothing writes to it any more.
+    raw(&w.dir)
+        .execute(
+            "INSERT INTO bank_accounts (bank_name, title, number, account_id)
+             SELECT 'HBL', 'Maher Adnan', '0001', id FROM accounts WHERE code = '01020001'",
+            [],
         )
         .unwrap();
-
-    // A cheque needs its number and its date (PRD 15.1).
-    let mut cheque = receipt(w.akram, "5,000");
-    cheque.mode = VoucherMode::Cheque;
-    cheque.bank_account_id = Some(bank_id);
-    let refused = vouchers::save_receipt(&w.env.ctx, &w.owner, &cheque).unwrap_err();
-    assert_eq!(refused.code(), ErrorCode::ErrChequeRequired);
-    cheque.cheque_no = "000123".into();
-    cheque.cheque_date = "12-10-2026".into();
-    let saved = vouchers::save_receipt(&w.env.ctx, &w.owner, &cheque).unwrap();
-    // The money posts to the bank account at once; cash does not move (PRD A30).
-    assert_eq!(balance(&w, bank_account), (BalanceSide::Dr, 5_000));
-    // Cash is 50,000 less the نقد of بکری 1.
-    assert_eq!(balance(&w, cash_id(&w)), (BalanceSide::Dr, 45_000));
+    raw(&w.dir)
+        .execute(
+            "UPDATE vouchers SET mode = 'cheque', cheque_no = '000123', cheque_date = '2026-10-12',
+                    bank_account_id = (SELECT id FROM bank_accounts)
+             WHERE id = ?1",
+            [saved.voucher_id],
+        )
+        .unwrap();
     let row = vouchers::get(&w.env.ctx, saved.voucher_id).unwrap();
     assert_eq!(
-        (
-            row.mode,
-            row.bank_account_id,
-            row.cheque_no.as_str(),
-            row.cheque_date.as_deref()
-        ),
-        (
-            VoucherMode::Cheque,
-            Some(bank_id),
-            "000123",
-            Some("2026-10-12")
-        )
+        (row.mode, row.cheque_no.as_str(), row.cheque_date.as_deref()),
+        (VoucherMode::Cheque, "000123", Some("2026-10-12"))
     );
-    // A bank payment to a seller: bank جمع; and cash mode with a bank id is refused.
-    let mut by_bank = payment(w.rahim, "1,000", "");
-    by_bank.mode = VoucherMode::Bank;
-    by_bank.bank_account_id = Some(bank_id);
-    vouchers::save_payment(&w.env.ctx, &w.owner, &by_bank).unwrap();
-    assert_eq!(balance(&w, bank_account), (BalanceSide::Dr, 4_000));
-    let mut cash_with_bank = payment(w.rahim, "1,000", "");
-    cash_with_bank.bank_account_id = Some(bank_id);
-    assert_eq!(
-        vouchers::save_payment(&w.env.ctx, &w.owner, &cash_with_bank)
-            .unwrap_err()
-            .code(),
-        ErrorCode::ErrFormatInvalid
-    );
-    // The bank slip carries the bank and the cheque (PRD FR-15.2), in both languages.
     for language in [
         mandi_services::core::auth::Language::Ur,
         mandi_services::core::auth::Language::En,
@@ -667,19 +626,55 @@ fn bank_and_cheque_modes_post_to_the_bank_and_keep_their_details() {
             },
         )
         .unwrap();
-        assert_eq!(slip.payment_id_of_first_page(), Some("print-mode-cheque"));
+        assert_eq!(
+            slip.pages.first().map(|p| p.payment_id.as_deref()),
+            Some(None)
+        );
+        assert!(
+            slip.facts
+                .iter()
+                .all(|f| !f.label_id.contains("bank") && !f.label_id.contains("cheque")),
+            "{:?}",
+            slip.facts
+        );
     }
+    // Editing that old row posts the new version to روکڑ and writes it as a plain cash row.
+    let before_edit = balance(&w, cash_id(&w));
+    assert_eq!(before_edit, (BalanceSide::Dr, 50_000));
+    let edited = vouchers::edit(
+        &w.env.ctx,
+        &w.owner,
+        &VoucherEditInput {
+            id: saved.voucher_id,
+            version: row.version,
+            entry: VoucherEntry::Receipt(receipt(w.akram, "4,000")),
+            reason: "رقم درست کی".into(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(balance(&w, cash_id(&w)), (BalanceSide::Dr, 49_000));
+    assert_eq!(balance(&w, bank), (BalanceSide::Zero, 0));
+    let now = vouchers::get(&w.env.ctx, edited.voucher_id).unwrap();
+    assert_eq!(
+        (
+            now.mode,
+            now.bank_account_id,
+            now.cheque_no.as_str(),
+            now.cheque_date
+        ),
+        (VoucherMode::Cash, None, "", None)
+    );
 }
 
-/// Reads the mode id of the first page of a slip.
-trait SlipExt {
-    fn payment_id_of_first_page(&self) -> Option<&str>;
-}
-
-impl SlipExt for mandi_reports::print::PrintData {
-    fn payment_id_of_first_page(&self) -> Option<&str> {
-        self.pages.first().and_then(|p| p.payment_id.as_deref())
-    }
+/// The row id of an account by its code.
+fn id_of_code(w: &World, code: &str) -> i64 {
+    w.env
+        .ctx
+        .db()
+        .read(|c| mandi_services::db::accounts::id_by_code(c, code))
+        .unwrap()
+        .unwrap_or_else(|| panic!("no account {code}"))
 }
 
 #[test]
@@ -1972,7 +1967,8 @@ fn the_slip_has_the_party_the_amount_and_the_words_in_both_languages() {
         Some("دس ہزار روپے")
     );
     assert_eq!(ur.pages[0].party.name, "اکرم ٹول ٹیکس");
-    assert_eq!(page.payment_id.as_deref(), Some("print-mode-cash"));
+    // All money is روکڑ (PRD 15.1, v1.6): the slip has no line about how it was paid.
+    assert_eq!(page.payment_id, None);
     assert!(!en.cancelled);
     // A payment and an advance have their own titles; a cancelled voucher is stamped.
     let paid =
@@ -2112,6 +2108,7 @@ fn a_one_time_seller_is_paid_by_his_person_and_the_register_agrees_in_total() {
     // The register nets each lot inside itself: lot 1 open 10,000, lot 2 paid. The totals agree.
     let register = bikri::register(&w.env.ctx, &Default::default()).unwrap();
     let register_open: i64 = register
+        .rows
         .iter()
         .filter(|row| row.person_key == key)
         .map(|row| row.open.rupees())
@@ -2133,6 +2130,7 @@ fn a_one_time_seller_is_paid_by_his_person_and_the_register_agrees_in_total() {
     let register = bikri::register(&w.env.ctx, &Default::default()).unwrap();
     assert_eq!(
         register
+            .rows
             .iter()
             .filter(|row| row.person_key == key)
             .map(|row| row.open.rupees())

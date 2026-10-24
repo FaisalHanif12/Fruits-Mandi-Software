@@ -3,19 +3,38 @@
 // (bindings/); `wire.ts` turns them into the `MasterRecord` and `MasterDraft` the screens use.
 
 import type { MasterRow } from '../../bindings/MasterRow';
+import type { MastersList } from '../../bindings/MastersList';
 import { callCommand } from '../../shared/api';
-import type { MasterDraft, MasterKind, MasterRecord } from './types';
+import type { MasterDraft, MasterKind, MasterPage, MasterRecord } from './types';
 import { draftToInput, rowToRecord } from './wire';
 
-/** Every master of a kind, in the backend's order. Inactive ones only when asked for. */
+/**
+ * One page of the masters of a kind, in the backend's order, with the count and the totals of the
+ * whole filter (PRD FR-19.11). Inactive ones only when asked for.
+ */
 export async function mastersList(
   kind: MasterKind,
   includeInactive: boolean,
-): Promise<MasterRecord[]> {
-  const rows = await callCommand<MasterRow[]>('masters_list', {
-    input: { kind, include_inactive: includeInactive },
+  offset: number,
+  limit: number,
+): Promise<MasterPage> {
+  const page = await callCommand<MastersList>('masters_list', {
+    input: { kind, include_inactive: includeInactive, id: null, offset, limit },
   });
-  return rows.map(rowToRecord);
+  return { rows: page.rows.map(rowToRecord), total_count: page.total_count, totals: page.totals };
+}
+
+/**
+ * One master of a kind by its id, for its form (PRD 10.3): the same list command with the id filter,
+ * so one record comes back and not the pages before it. Null when there is no such master. The
+ * inactive ones are asked for, because a form opens a master that was switched off too.
+ */
+export async function mastersGetOne(kind: MasterKind, id: number): Promise<MasterRecord | null> {
+  const page = await callCommand<MastersList>('masters_list', {
+    input: { kind, include_inactive: true, id, offset: 0, limit: 0 },
+  });
+  const row = page.rows[0];
+  return row === undefined ? null : rowToRecord(row);
 }
 
 /**

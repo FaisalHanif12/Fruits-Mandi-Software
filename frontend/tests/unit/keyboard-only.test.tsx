@@ -25,11 +25,12 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { fakeMasters, record } from '../helpers/masters';
+import { fakeMasters } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
 import { fakeRules } from '../helpers/rules';
 import { suggestionsFor } from '../helpers/translit';
 import { fakeAdvances } from '../helpers/vouchers';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -88,7 +89,7 @@ function fakeTranslit() {
     ),
   );
   vi.mocked(urduApi.translitLearn).mockResolvedValue(null);
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 }
 
 beforeEach(() => {
@@ -165,9 +166,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
   it('an advance: Tab to the seller, type and Enter, then the amount, F10 saves', async () => {
     fakeAccounts([RAHIM]);
     fakeAccountSearch([RAHIM]);
-    fakeMasters({
-      bank_account: [record('bank_account', 71, '0001', 'بینک الفلاح', 'Bank Alfalah')],
-    });
+    fakeMasters({});
     const store = fakeAdvances();
     await renderApp('/bikri/advance');
     await screen.findByRole('heading', {
@@ -193,7 +192,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     });
     expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
       type: 'advance',
-      input: { amount: '5000', mode: 'cash' },
+      input: { amount: '5000' },
     });
     expect(store.saved).toEqual([{ seller: 31, amount: '5000' }]);
   });
@@ -227,7 +226,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     });
     expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
       type: 'receipt',
-      input: { account_id: 21, amount: '10000', mode: 'cash' },
+      input: { account_id: 21, amount: '10000' },
     });
     expect(store.rows).toHaveLength(1);
     // The next voucher starts at the buyer: the cursor is in the field that always changes.
@@ -311,7 +310,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     });
     expect(vi.mocked(vouchersApi.vouchersSave).mock.calls[0]?.[0]).toMatchObject({
       type: 'payment',
-      input: { account_id: 31, amount: '4316', mode: 'cash' },
+      input: { account_id: 31, amount: '4316' },
     });
   });
 

@@ -33,6 +33,7 @@ import type {
 } from '../../src/features/vouchers/types';
 import { paisaForTest } from './paisa';
 import { refusal } from './ui-error';
+import { sliceOf } from './paged';
 
 export const TODAY_ISO = '2026-10-10';
 
@@ -280,10 +281,11 @@ export function createBooks(options: BooksOptions = {}) {
       entry_date: isoOf(input.date),
       account: refOf(id),
       amount_paisa: money(amount),
-      mode: input.mode,
-      bank_account_id: input.bank_account_id,
-      cheque_no: input.cheque_no,
-      cheque_date: input.cheque_date === '' ? null : isoOf(input.cheque_date),
+      // The columns of an old row stay on the row; a new voucher never writes them (PRD 15.1).
+      mode: 'cash',
+      bank_account_id: null,
+      cheque_no: '',
+      cheque_date: null,
       expected_goods: built.type === 'advance' ? built.input.expected_goods : '',
       narration: input.narration,
       status: 'saved',
@@ -365,8 +367,16 @@ export function createBooks(options: BooksOptions = {}) {
         (sum, row) => sum + rupeesOf(formatPaisa(row.amount_paisa, { grouping: 'international' })),
         0,
       );
-    // As the backend: a list of all types has no total (null).
-    return { rows, total_paisa: input.voucher_type === null ? null : money(total) };
+    // As the backend: a list of all types has no total (null). A page, with the count and the
+    // totals of the whole filter (PRD FR-19.11).
+    return {
+      rows: sliceOf(rows, input.offset, input.limit),
+      total_count: rows.length,
+      totals: {
+        cancelled_count: rows.filter((row) => row.status === 'cancelled').length,
+        total_paisa: input.voucher_type === null ? null : money(total),
+      },
+    };
   }
 
   function openBills(input: { account_id: number }): OpenBills {

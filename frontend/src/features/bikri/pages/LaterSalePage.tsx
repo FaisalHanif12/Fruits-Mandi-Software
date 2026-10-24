@@ -33,15 +33,22 @@ import { useSaveLaterSale } from '../hooks/useSaveBikri';
 import { laterSaleSource } from '../preview-source';
 import { LOT, ON } from '../types';
 
-/** All the lots, also the ones with nothing left, so a lot that was sold out meanwhile is found. */
-const ANY_LOT = {
-  date: null,
-  from: null,
-  to: null,
-  seller_id: null,
-  item_id: null,
-  include_written_off: true,
-} as const;
+/**
+ * The one lot, asked for by its id (PRD FR-12.15), also when it has nothing left, so a lot that was
+ * sold out meanwhile is found and the page can say so. The backend answers that lot alone, never
+ * the pages of the stock list before it.
+ */
+function oneLot(lotId: number | null) {
+  return {
+    date: null,
+    from: null,
+    to: null,
+    seller_id: null,
+    item_id: null,
+    include_written_off: true,
+    lot_id: lotId,
+  } as const;
+}
 
 /** The key of the one lot row. The preview's answer is matched to it by place. */
 function lotKeyOf(lotId: number): string {
@@ -139,11 +146,11 @@ export function LaterSalePage() {
   const search = useSearch({ strict: false });
   const lotId = (search as { lot?: number }).lot ?? null;
   const day = useDayStatus();
-  const list = useStockList(ANY_LOT);
+  const list = useStockList(oneLot(lotId), lotId !== null);
   // The lot as it was when the form opened. A save reads the list again and the lot may be gone
   // from it; the form must not turn into "nothing left" before it has gone back (plan 16).
   const [kept, setKept] = useState<StockRow | null>(null);
-  const found = list.data?.rows.find((candidate) => candidate.lot_id === lotId);
+  const found = list.data?.pages[0]?.rows.find((candidate) => candidate.lot_id === lotId);
   if (kept === null && found !== undefined && found.balance > 0) setKept(found);
 
   const toList = (

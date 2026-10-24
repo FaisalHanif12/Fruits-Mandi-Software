@@ -66,6 +66,7 @@ export function stockRow(overrides: Partial<StockRow> = {}): StockRow {
 export function stockList(rows: StockRow[] = [stockRow()]): StockList {
   return {
     rows,
+    total_count: rows.length,
     balance_total: rows.reduce((sum, row) => sum + row.balance, 0),
     own_rows: [],
     own_balance_total: 0,

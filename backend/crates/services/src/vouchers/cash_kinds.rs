@@ -25,7 +25,7 @@ use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::lent::{LentReturnMode, MoneyLentInput, MoneyLentReturnInput};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
-use mandi_domain::core::vouchers::{VoucherMode, VoucherSaved, VoucherType};
+use mandi_domain::core::vouchers::{RemovedPaymentFields, VoucherMode, VoucherSaved, VoucherType};
 use mandi_domain::expenses as rules;
 use mandi_domain::ledger::BalancedEntry;
 
@@ -171,10 +171,7 @@ pub(super) fn common_fields(
         &MoneyText {
             date,
             amount,
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: "",
-            cheque_date: "",
+            removed: &RemovedPaymentFields::default(),
             narration: narration.unwrap_or(""),
         },
     )

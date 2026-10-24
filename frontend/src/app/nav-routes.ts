@@ -10,6 +10,7 @@ export const MAIN_ROUTES = {
   index: '/index',
   bikri: '/bikri',
   rokar: '/rokar',
+  gardens: '/gardens',
   trips: '/trips',
   partners: '/partners',
   analytics: '/analytics',

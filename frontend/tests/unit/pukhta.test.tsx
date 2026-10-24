@@ -24,6 +24,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS, pukhtaRegisterOf } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -47,7 +48,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
 });
 
 afterEach(() => {
@@ -198,20 +199,28 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
     resetClientState(language);
     signedIn(sessionUser({ language }));
     fakeBikri();
-    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue([
-      registerRow(),
-      registerRow({
-        bikri_id: 43,
-        bikri_number: 3,
-        name_ur: NASIR.name_ur,
-        name_en: NASIR.name_en,
-        phone: NASIR.phone,
-        amount: money(2_000),
-        paid: false,
-        open: money(2_000),
-      }),
-      registerRow({ bikri_id: 44, bikri_number: 4, cancelled: true, paid: false, open: money(0) }),
-    ]);
+    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(
+      pukhtaRegisterOf([
+        registerRow(),
+        registerRow({
+          bikri_id: 43,
+          bikri_number: 3,
+          name_ur: NASIR.name_ur,
+          name_en: NASIR.name_en,
+          phone: NASIR.phone,
+          amount: money(2_000),
+          paid: false,
+          open: money(2_000),
+        }),
+        registerRow({
+          bikri_id: 44,
+          bikri_number: 4,
+          cancelled: true,
+          paid: false,
+          open: money(0),
+        }),
+      ]),
+    );
   });
 
   const open = async () => {
@@ -237,6 +246,8 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
         name: null,
         phone: null,
         state: null,
+        offset: 0,
+        limit: 100,
       });
     });
   });
@@ -330,7 +341,7 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
   });
 
   it('with no line it says why; with a filter and no match it offers to clear the filters', async () => {
-    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue([]);
+    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(pukhtaRegisterOf([]));
     await open();
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'pukhta-empty'));
@@ -380,5 +391,68 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/pukhta');
     });
+  });
+
+  it('150 lines come page by page: 100 at once, the count and the totals are the backend’s, Show more loads the rest', async () => {
+    const all = Array.from({ length: 150 }, (_, index) =>
+      registerRow({ bikri_id: 500 + index, bikri_number: index + 1 }),
+    );
+    vi.mocked(pukhtaApi.pukhtaRegister).mockImplementation((input) =>
+      Promise.resolve(
+        pukhtaRegisterOf(
+          all,
+          input.offset,
+          input.limit,
+          // As the backend: the sums are given only when a side is chosen, over the whole filter
+          // and not over the rows on screen.
+          input.side === null
+            ? {}
+            : {
+                qty: 900,
+                amount: money(1_800_000),
+                commission: money(216_000),
+                open: money(65_000),
+              },
+        ),
+      ),
+    );
+    await open();
+    const showing = (shown: number) =>
+      message(language, 'common-list-count', { shown: String(shown), total: '150' });
+    await waitFor(() => {
+      expect(pageText()).toContain(showing(100));
+    });
+    // With no side chosen there are no sums, so there is no totals row at all.
+    expect(document.querySelector('.ag-row-pinned')).toBeNull();
+    // Choosing a side gives them, over the whole filter.
+    const picker = userEvent.setup();
+    await picker.click(
+      await screen.findByRole('combobox', { name: named(message(language, 'pukhta-col-side')) }),
+    );
+    await picker.click(
+      await screen.findByRole('option', { name: named(message(language, 'pukhta-side-buyer')) }),
+    );
+    await waitFor(() => {
+      expect(visible(document.querySelector('.ag-row-pinned [col-id="amount"]')?.textContent)).toBe(
+        '1,800,000',
+      );
+    });
+    expect(visible(document.querySelector('.ag-row-pinned [col-id="state"]')?.textContent)).toBe(
+      message(language, 'pukhta-state-due', { amount: '65,000' }),
+    );
+    expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 0, limit: 100 }),
+    );
+    await userEvent.setup().click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name) === message(language, 'common-list-more'),
+      }),
+    );
+    await waitFor(() => {
+      expect(pageText()).toContain(showing(150));
+    });
+    expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 100, limit: 100 }),
+    );
   });
 });

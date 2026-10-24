@@ -38,7 +38,7 @@ use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::ids::AccountId;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
+use mandi_services::core::vouchers::AdvanceInput;
 use mandi_services::db::ledger as repo;
 use mandi_services::db::migrate::{BALANCE_INDEXES_SQL, INIT_SQL};
 use mandi_services::db::rusqlite::{Connection, OpenFlags, params, types::Value};
@@ -870,10 +870,7 @@ fn vouchers_advance(w: &World, seller: i64, amount: &str, date: &str) {
             date: date.into(),
             seller_account_id: seller,
             amount: amount.into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },

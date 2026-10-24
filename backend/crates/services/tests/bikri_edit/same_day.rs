@@ -5,9 +5,7 @@
 //! Before plan 16 an edited voucher was placed after every entry of its day, which could refuse a
 //! return that was fine or leave an advance unadjusted.
 
-use mandi_services::core::vouchers::{
-    AdvanceInput, ReceiptInput, VoucherEditInput, VoucherEntry, VoucherMode,
-};
+use mandi_services::core::vouchers::{AdvanceInput, ReceiptInput, VoucherEditInput, VoucherEntry};
 use mandi_services::vouchers;
 
 use crate::helpers::*;
@@ -24,10 +22,7 @@ fn seller_return(date: &str, seller: i64, amount: &str) -> ReceiptInput {
         account_id: seller,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
         narration: String::new(),
     }
@@ -138,10 +133,7 @@ fn an_edited_advance_keeps_the_adjustment_the_bikri_made() {
             date: "10-10-2026".into(),
             seller_account_id: w.rahim,
             amount: amount.into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             expected_goods: String::new(),
             narration: String::new(),
         })
