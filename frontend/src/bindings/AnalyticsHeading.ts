@@ -37,4 +37,11 @@ export type AnalyticsHeading =
        */
       names: ReportNames;
     }
-  | { kind: 'other_items' };
+  | { kind: 'other_items' }
+  | {
+      kind: 'partner';
+      /**
+       * The names.
+       */
+      names: ReportNames;
+    };

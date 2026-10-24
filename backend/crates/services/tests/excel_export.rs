@@ -46,13 +46,16 @@ fn all_reports() -> Vec<ReportId> {
     ids
 }
 
-const ALL_VIEWS: [AnalyticsView; 6] = [
+const ALL_VIEWS: [AnalyticsView; 9] = [
     AnalyticsView::A,
     AnalyticsView::B,
     AnalyticsView::C,
     AnalyticsView::D,
     AnalyticsView::E,
+    AnalyticsView::F,
+    AnalyticsView::G,
     AnalyticsView::H,
+    AnalyticsView::J,
 ];
 
 fn day_filters(w: &support::World, id: ReportId) -> ReportFilters {
@@ -247,6 +250,49 @@ const PENDING_IDS: &[&str] = &[
     "report-r34-buyers-dues",
     "report-r34-open-lots",
     "report-r34-open-qty",
+    // Round 11: R35 and the analytics views F, G and J.
+    "analytics-col-fruit",
+    "analytics-col-gardens",
+    "analytics-col-net-change",
+    "analytics-col-other-money",
+    "analytics-col-partner-part",
+    "analytics-col-partner-share",
+    "analytics-col-profit",
+    "analytics-col-share-amount",
+    "analytics-col-share-base",
+    "analytics-col-share-kind",
+    "analytics-col-shared-income",
+    "analytics-col-shop-expenses",
+    "analytics-col-trips",
+    "analytics-col-trips-result",
+    "analytics-filter-goods-consigned",
+    "analytics-filter-goods-garden",
+    "analytics-filter-goods-trip",
+    "analytics-filter-trip",
+    "analytics-filter-trip-by-purchase",
+    "analytics-view-f-title",
+    "analytics-view-g-title",
+    "analytics-view-j-title",
+    "report-col-code",
+    "report-col-expense-share",
+    "report-col-income-share",
+    "report-col-partner",
+    "report-col-previous",
+    "report-col-profit-share",
+    "report-r35-bought",
+    "report-r35-buyers",
+    "report-r35-cash-given",
+    "report-r35-collection",
+    "report-r35-on-spot",
+    "report-r35-other-credits",
+    "report-r35-other-debits",
+    "report-r35-paid",
+    "report-r35-previous",
+    "report-r35-remaining",
+    "report-r35-sellers",
+    "report-r35-sold",
+    "report-r35-title",
+    "report-r35-total-qty",
 ];
 
 /// The row of the heading: the one whose texts are exactly the column titles.

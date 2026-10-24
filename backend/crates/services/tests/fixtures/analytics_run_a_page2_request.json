@@ -5,12 +5,16 @@
     "city_id": null,
     "compare": "off",
     "from": "",
+    "goods": "all",
     "group_by": null,
     "item_id": null,
+    "partner_id": null,
     "period": null,
     "seller_id": null,
     "side": "both",
-    "to": ""
+    "to": "",
+    "trip_id": null,
+    "trip_view": null
   },
   "limit": 1,
   "offset": 1,

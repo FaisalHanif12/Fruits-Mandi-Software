@@ -34,4 +34,12 @@ export type AnalyticsKey = {
    * Every item except these (the "other items" column of view E).
    */
   not_item_ids: Array<number>;
+  /**
+   * One partner (the share rows behind a number of view F).
+   */
+  partner_id: number | null;
+  /**
+   * The trip purchases whose sales are meant (the lines behind a row of view J).
+   */
+  purchase_ids: Array<number>;
 };

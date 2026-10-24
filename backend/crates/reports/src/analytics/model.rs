@@ -14,8 +14,7 @@ use crate::reports::{
     Cell, Column, ColumnKind, Names, PartyFilter, PartyRef, PrintCell, Row, RowKind,
 };
 
-/// The views of PRD 18.2 that exist so far. F, G, I, J and K wait for the partner, trip and
-/// garden plans.
+/// The views of PRD 18.2 that exist so far. I (gardens) and K (fruit taken) come with D4R.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 pub enum AnalyticsView {
     /// By item, قسم مال وار.
@@ -33,9 +32,18 @@ pub enum AnalyticsView {
     /// Seller by item, بیوپاری × قسم مال.
     #[serde(rename = "E")]
     E,
+    /// Partners, شراکت دار وار.
+    #[serde(rename = "F")]
+    F,
+    /// Trend, رجحان.
+    #[serde(rename = "G")]
+    G,
     /// Top 10, سرفہرست.
     #[serde(rename = "H")]
     H,
+    /// Trips, مارکیٹ سفر.
+    #[serde(rename = "J")]
+    J,
 }
 
 impl AnalyticsView {
@@ -47,7 +55,10 @@ impl AnalyticsView {
             AnalyticsView::C => "C",
             AnalyticsView::D => "D",
             AnalyticsView::E => "E",
+            AnalyticsView::F => "F",
+            AnalyticsView::G => "G",
             AnalyticsView::H => "H",
+            AnalyticsView::J => "J",
         }
     }
 }
@@ -108,6 +119,36 @@ pub enum AnalyticsCompare {
     LastYear,
 }
 
+/// Which goods are counted (PRD 18.1 "goods").
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AnalyticsGoods {
+    /// All goods.
+    #[default]
+    All,
+    /// Consigned goods: sold for a seller who sent them.
+    Consigned,
+    /// The goods of market trips.
+    Trip,
+    /// The goods of gardens.
+    Garden,
+}
+
+/// How view J lays out its rows (PRD 18.2 "trip, purchase or item, day").
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AnalyticsTripView {
+    /// One row for each trip (the default).
+    #[default]
+    Trip,
+    /// One row for each purchase.
+    Purchase,
+    /// One row for each item.
+    Item,
+    /// One row for each day the goods were bought.
+    Day,
+}
+
 /// Which filter boxes a view shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -128,8 +169,16 @@ pub enum AnalyticsFilterKind {
     Side,
     /// The comparison.
     Compare,
-    /// Day, month or year columns (view D only).
+    /// Day, month or year columns (views D and G).
     GroupBy,
+    /// A partner (views F, G and J).
+    Partner,
+    /// A market trip (views A to E, G, H and J).
+    Trip,
+    /// Which goods (views A to E, G, H and J).
+    Goods,
+    /// How view J lays out its rows.
+    TripView,
 }
 
 /// One view in the catalogue.
@@ -154,7 +203,7 @@ pub struct AnalyticsFilters {
     pub from: String,
     /// Last day.
     pub to: String,
-    /// The columns of view D. Month when left out; refused for the other views.
+    /// The columns of views D and G. Month when left out; refused for the other views.
     pub group_by: Option<AnalyticsGroupBy>,
     /// An item.
     #[ts(type = "number | null")]
@@ -174,6 +223,16 @@ pub struct AnalyticsFilters {
     pub side: AnalyticsSide,
     /// The comparison. It needs a from date and a to date.
     pub compare: AnalyticsCompare,
+    /// A partner (views F, G and J).
+    #[ts(type = "number | null")]
+    pub partner_id: Option<i64>,
+    /// A market trip.
+    #[ts(type = "number | null")]
+    pub trip_id: Option<i64>,
+    /// Which goods are counted.
+    pub goods: AnalyticsGoods,
+    /// How view J lays out its rows. Trip when left out; refused for the other views.
+    pub trip_view: Option<AnalyticsTripView>,
 }
 
 impl Default for AnalyticsFilters {
@@ -190,6 +249,10 @@ impl Default for AnalyticsFilters {
             adda_id: None,
             side: AnalyticsSide::Both,
             compare: AnalyticsCompare::Off,
+            partner_id: None,
+            trip_id: None,
+            goods: AnalyticsGoods::All,
+            trip_view: None,
         }
     }
 }
@@ -223,6 +286,14 @@ pub struct AnalyticsResolvedFilters {
     pub compare_from: Option<String>,
     /// Last day of the compared period, `YYYY-MM-DD`.
     pub compare_to: Option<String>,
+    /// The partner.
+    pub partner: Option<Names>,
+    /// The trip.
+    pub trip: Option<Names>,
+    /// Which goods are counted.
+    pub goods: AnalyticsGoods,
+    /// How view J lays out its rows.
+    pub trip_view: Option<AnalyticsTripView>,
 }
 
 /// Which lines a row or a column stands for. It is what the screen sends back to open the lines
@@ -249,6 +320,12 @@ pub struct AnalyticsKey {
     /// Every item except these (the "other items" column of view E).
     #[ts(type = "Array<number>")]
     pub not_item_ids: Vec<i64>,
+    /// One partner (the share rows behind a number of view F).
+    #[ts(type = "number | null")]
+    pub partner_id: Option<i64>,
+    /// The trip purchases whose sales are meant (the lines behind a row of view J).
+    #[ts(type = "Array<number>")]
+    pub purchase_ids: Vec<i64>,
 }
 
 /// What a dynamic column is called. The screen names a month from Fluent.
@@ -282,6 +359,11 @@ pub enum AnalyticsHeading {
     },
     /// All the items that have no column of their own.
     OtherItems,
+    /// A partner (the columns of view J that follow each partner's share).
+    Partner {
+        /// The names.
+        names: Names,
+    },
 }
 
 /// One column of a view.
@@ -444,6 +526,11 @@ pub enum AnalyticsPrintHeading {
     },
     /// All the items that have no column of their own.
     OtherItems,
+    /// A partner in the print language.
+    Partner {
+        /// The name.
+        text: String,
+    },
 }
 
 /// One printed column.

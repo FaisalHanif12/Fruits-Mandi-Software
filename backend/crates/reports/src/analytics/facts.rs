@@ -20,7 +20,7 @@ use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
 use super::filters::Typed;
-use super::model::{AnalyticsKey, AnalyticsSide};
+use super::model::{AnalyticsGoods, AnalyticsKey, AnalyticsSide};
 use crate::error::ReportsError;
 use crate::reports::common::{Conds, add, paisa};
 
@@ -172,8 +172,44 @@ pub(crate) fn conds(
         .text("f.pukhta_person_key = ?", typed.person_key.as_deref())
         .text("f.pukhta_person_key = ?", key.person_key.as_deref())
         .id("f.city_id = ?", typed.city_id)
-        .id("f.adda_id = ?", typed.adda_id);
+        .id("f.adda_id = ?", typed.adda_id)
+        .id("f.venture_id = ?", typed.trip_id)
+        .in_list("f.purchase_id", &key.purchase_ids);
+    match typed.goods {
+        AnalyticsGoods::All => {}
+        // Consigned goods have no venture and are not a garden's (PRD 18.1).
+        AnalyticsGoods::Consigned => {
+            c.always(
+                "f.venture_id IS NULL AND f.seller_account_id NOT IN
+                 (SELECT account_id FROM ventures WHERE kind = 'garden' AND account_id IS NOT NULL)",
+            );
+        }
+        AnalyticsGoods::Trip => {
+            c.always("f.venture_id IN (SELECT id FROM ventures WHERE kind = 'trip')");
+        }
+        AnalyticsGoods::Garden => {
+            c.always(
+                "(f.venture_id IN (SELECT id FROM ventures WHERE kind = 'garden')
+                  OR f.seller_account_id IN
+                     (SELECT account_id FROM ventures WHERE kind = 'garden' AND account_id IS NOT NULL))",
+            );
+        }
+    }
     c
+}
+
+/// The date range view J reads its commission in: none. J picks a purchase by the day it was
+/// bought, and its sales can fall on any later day (R33 reads them the same way).
+pub(crate) const TRIPS_RANGE: (Option<&str>, Option<&str>) = (None, None);
+
+/// The filters view J reads the sale facts of its purchases under, and the lines behind a row of
+/// J open them under: the run's filters without the item. The item picks the purchases; the
+/// commission of a purchase is of all its sales (money agent M1, M2).
+pub(crate) fn for_trips(typed: &Typed) -> Typed {
+    Typed {
+        item_id: None,
+        ..typed.clone()
+    }
 }
 
 /// The conditions of a date range alone, found through the date index of the facts (Code

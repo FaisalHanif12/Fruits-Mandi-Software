@@ -325,6 +325,19 @@ impl Conds {
         self
     }
 
+    /// `column IN (?, ?, ...)` for a list of ids; nothing for an empty list (no narrowing). The
+    /// column is a constant of this crate and the ids are bound values (Code Standards B14).
+    pub fn in_list(&mut self, column: &'static str, ids: &[i64]) -> &mut Self {
+        if !ids.is_empty() {
+            self.parts.push(Cow::Owned(format!(
+                "{column} IN ({})",
+                placeholders(ids.len())
+            )));
+            self.args.extend(ids.iter().map(|id| Value::Integer(*id)));
+        }
+        self
+    }
+
     /// A fragment with one `?`, only when the filter is set.
     pub fn id(&mut self, fragment: &'static str, value: Option<i64>) -> &mut Self {
         if let Some(value) = value {

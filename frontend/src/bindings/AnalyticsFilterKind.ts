@@ -4,4 +4,16 @@
  * Which filter boxes a view shows.
  */
 export type AnalyticsFilterKind =
-  'period' | 'item' | 'seller' | 'buyer' | 'city' | 'adda' | 'side' | 'compare' | 'group_by';
+  | 'period'
+  | 'item'
+  | 'seller'
+  | 'buyer'
+  | 'city'
+  | 'adda'
+  | 'side'
+  | 'compare'
+  | 'group_by'
+  | 'partner'
+  | 'trip'
+  | 'goods'
+  | 'trip_view';

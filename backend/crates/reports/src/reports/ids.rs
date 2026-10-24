@@ -112,6 +112,23 @@ pub(crate) const COL_MONEY_BACK: &str = "report-col-money-back";
 pub(crate) const COL_PART_OF_RESULT: &str = "report-col-part-of-result";
 pub(crate) const COL_LINE: &str = "report-col-line";
 pub(crate) const COL_COUNT: &str = "report-col-count";
+// R35, the party day sheet (PRD FR-19.12): column headings, the two tables and the footer lines.
+pub(crate) const COL_CODE: &str = "report-col-code";
+pub(crate) const COL_PREVIOUS: &str = "report-col-previous";
+pub(crate) const R35_BUYERS: &str = "report-r35-buyers";
+pub(crate) const R35_SELLERS: &str = "report-r35-sellers";
+pub(crate) const R35_TOTAL_QTY: &str = "report-r35-total-qty";
+pub(crate) const R35_PREVIOUS: &str = "report-r35-previous";
+pub(crate) const R35_BOUGHT: &str = "report-r35-bought";
+pub(crate) const R35_SOLD: &str = "report-r35-sold";
+pub(crate) const R35_OTHER_DEBITS: &str = "report-r35-other-debits";
+pub(crate) const R35_OTHER_CREDITS: &str = "report-r35-other-credits";
+pub(crate) const R35_ON_SPOT: &str = "report-r35-on-spot";
+pub(crate) const R35_CASH_GIVEN: &str = "report-r35-cash-given";
+pub(crate) const R35_PAID: &str = "report-r35-paid";
+pub(crate) const R35_REMAINING: &str = "report-r35-remaining";
+pub(crate) const R35_COLLECTION: &str = "report-r35-collection";
+
 // The rows of R34, the day summary.
 pub(crate) const R34_BIKRI: &str = "report-r34-bikri";
 pub(crate) const R34_COMMISSION: &str = "report-r34-commission";

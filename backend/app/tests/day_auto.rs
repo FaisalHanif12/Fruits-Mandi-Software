@@ -136,6 +136,24 @@ fn it_closes_today_at_the_closing_time_and_not_twice() {
         })
         .unwrap();
     assert_eq!(audited, 1, "the close wrote its audit row");
+    // And one row says it was automatic, with the day.
+    let automatic: Vec<String> = env
+        .ctx
+        .db()
+        .read(|conn| {
+            let mut statement = conn.prepare(
+                "SELECT new_json FROM audit_log
+                 WHERE action = 'day_auto_close' AND entity = 'day_settings'",
+            )?;
+            statement
+                .query_map([], |r| r.get(0))?
+                .collect::<Result<_, _>>()
+        })
+        .unwrap();
+    assert_eq!(
+        automatic,
+        vec!["{\"closed_up_to\":\"2026-10-10\"}".to_owned()]
+    );
 
     // Five minutes later: today is closed, nothing to do.
     shop_time(&env, 21, 5);
@@ -186,4 +204,18 @@ fn it_waits_while_the_owner_has_an_unsaved_draft() {
         run_once(&env.ctx, &mut memory),
         Outcome::Closed("2026-10-10".to_owned())
     );
+}
+
+#[test]
+fn the_switch_is_off_until_the_owner_turns_it_on() {
+    let (_dir, env) = world();
+    let settings = env.ctx.db().read(day_settings::load).unwrap();
+    assert!(!settings.auto_day_close);
+    assert_eq!(settings.closing_time, "21:00");
+    // A fresh book at 22:00 with a day to close still does nothing.
+    shop_time(&env, 12, 0);
+    post_something(&env);
+    shop_time(&env, 22, 0);
+    assert_eq!(run_once(&env.ctx, &mut Memory::default()), Outcome::NotDue);
+    assert_eq!(closed_up_to(&env), None);
 }

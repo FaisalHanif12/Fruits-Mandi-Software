@@ -14,7 +14,11 @@
     "side": "both",
     "compare": "off",
     "compare_from": null,
-    "compare_to": null
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "goods": "all",
+    "trip_view": null
   },
   "columns": [
     {
@@ -114,7 +118,9 @@
         "person_key": null,
         "from": null,
         "to": null,
-        "not_item_ids": []
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
       },
       "kind": "normal"
     },
@@ -164,7 +170,9 @@
         "person_key": null,
         "from": null,
         "to": null,
-        "not_item_ids": []
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
       },
       "kind": "normal"
     },
@@ -215,7 +223,9 @@
         "person_key": "شاہد|03000000000",
         "from": null,
         "to": null,
-        "not_item_ids": []
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
       },
       "kind": "normal"
     }

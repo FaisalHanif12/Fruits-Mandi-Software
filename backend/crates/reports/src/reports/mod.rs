@@ -332,6 +332,13 @@ const SPECS: &[Spec] = &[
         &[FilterKind::DateRange],
         false,
     ),
+    // One day (the "as of" day, today when empty) and, for one party's slip, the party.
+    spec(
+        ReportId::R35,
+        ReportGroup::Business,
+        &[FilterKind::AsOf, FilterKind::Party],
+        false,
+    ),
 ];
 
 fn spec_of(id: ReportId) -> Result<&'static Spec, ReportsError> {
@@ -434,6 +441,7 @@ fn build_in(
         ReportId::R32 => business::run_r32(conn, &typed, spec),
         ReportId::R33 => business::run_r33(conn, &typed, spec),
         ReportId::R34 => business::run_r34(conn, &typed, spec),
+        ReportId::R35 => business::run_r35(conn, &typed, spec),
         ReportId::R10 => sales::run_r10(conn, &typed, spec),
         ReportId::R15 => vouchers::run(conn, &typed, spec, vouchers::Layout::All),
         ReportId::R23 => vouchers::run(conn, &typed, spec, vouchers::Layout::Receipts),

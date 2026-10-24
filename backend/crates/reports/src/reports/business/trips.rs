@@ -53,18 +53,18 @@ use crate::reports::model::{
 
 /// The figures of one purchase, or the sum of several.
 #[derive(Debug, Clone, Copy, Default)]
-struct Figures {
-    bought_qty: i64,
-    bought_cost: Paisa,
-    sold_qty: i64,
-    sales_money: Paisa,
-    commission: Paisa,
-    cost_sold: Paisa,
-    written_off_qty: i64,
-    written_off_cost: Paisa,
-    left_qty: i64,
-    left_cost: Paisa,
-    result: Paisa,
+pub(crate) struct Figures {
+    pub(crate) bought_qty: i64,
+    pub(crate) bought_cost: Paisa,
+    pub(crate) sold_qty: i64,
+    pub(crate) sales_money: Paisa,
+    pub(crate) commission: Paisa,
+    pub(crate) cost_sold: Paisa,
+    pub(crate) written_off_qty: i64,
+    pub(crate) written_off_cost: Paisa,
+    pub(crate) left_qty: i64,
+    pub(crate) left_cost: Paisa,
+    pub(crate) result: Paisa,
 }
 
 fn add_qty(total: &mut i64, amount: i64) -> Result<(), ReportsError> {
@@ -76,7 +76,7 @@ fn add_qty(total: &mut i64, amount: i64) -> Result<(), ReportsError> {
 
 impl Figures {
     /// Adds another purchase's figures with checked maths.
-    fn add(&mut self, other: &Figures) -> Result<(), ReportsError> {
+    pub(crate) fn add(&mut self, other: &Figures) -> Result<(), ReportsError> {
         add_qty(&mut self.bought_qty, other.bought_qty)?;
         add(&mut self.bought_cost, other.bought_cost)?;
         add_qty(&mut self.sold_qty, other.sold_qty)?;
@@ -92,7 +92,7 @@ impl Figures {
     }
 
     /// The eleven cells of the figures, in the order of the columns.
-    fn cells(&self) -> Vec<Cell> {
+    pub(crate) fn cells(&self) -> Vec<Cell> {
         let money = |paisa| Cell::Money { paisa };
         let qty = |value| Cell::Number { value };
         vec![
@@ -112,7 +112,7 @@ impl Figures {
 }
 
 /// The figures of one saved purchase: sales money, cost sold, written off, left and the result.
-fn figures_of(
+pub(crate) fn figures_of(
     purchase: &PurchaseRec,
     sold: SoldFigures,
     commission: Paisa,

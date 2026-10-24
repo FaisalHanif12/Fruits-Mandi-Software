@@ -18,6 +18,7 @@ fn heading_text(ctx: &CellContext<'_>, heading: &AnalyticsHeading) -> Result<Str
         AnalyticsHeading::Year { year } => ctx.fmt.style.plain(*year),
         AnalyticsHeading::Item { names } => ctx.fmt.names(names),
         AnalyticsHeading::OtherItems => ctx.l10n.text("analytics-col-other-items"),
+        AnalyticsHeading::Partner { names } => ctx.fmt.names(names),
     })
 }
 

@@ -15,9 +15,9 @@ use mandi_core::auth::Language;
 
 use super::ids;
 use super::model::{
-    AnalyticsCompare, AnalyticsGroupBy, AnalyticsHeading, AnalyticsPage, AnalyticsPrintColumn,
-    AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintRow, AnalyticsResolvedFilters,
-    AnalyticsSide,
+    AnalyticsCompare, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading, AnalyticsPage,
+    AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintRow,
+    AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView,
 };
 use crate::error::ReportsError;
 use crate::print::{PrintFact, PrintFirm, TextDir};
@@ -39,6 +39,9 @@ fn heading(fmt: &Fmt, heading: &AnalyticsHeading) -> Result<AnalyticsPrintHeadin
             text: fmt.names(names),
         },
         AnalyticsHeading::OtherItems => AnalyticsPrintHeading::OtherItems,
+        AnalyticsHeading::Partner { names } => AnalyticsPrintHeading::Partner {
+            text: fmt.names(names),
+        },
     })
 }
 
@@ -69,6 +72,28 @@ pub(crate) fn filter_facts(
     }
     if let Some(adda) = &filters.adda {
         facts.push(fact(ids::FILTER_ADDA, fmt.names(adda)));
+    }
+    if let Some(partner) = &filters.partner {
+        facts.push(fact(ids::FILTER_PARTNER, fmt.names(partner)));
+    }
+    if let Some(trip) = &filters.trip {
+        facts.push(fact(ids::FILTER_TRIP, fmt.names(trip)));
+    }
+    // The goods and the layout say it all in their label, so their value is empty.
+    match filters.goods {
+        AnalyticsGoods::All => {}
+        AnalyticsGoods::Consigned => facts.push(fact(ids::FILTER_GOODS_CONSIGNED, String::new())),
+        AnalyticsGoods::Trip => facts.push(fact(ids::FILTER_GOODS_TRIP, String::new())),
+        AnalyticsGoods::Garden => facts.push(fact(ids::FILTER_GOODS_GARDEN, String::new())),
+    }
+    if let Some(view) = filters.trip_view {
+        let label = match view {
+            AnalyticsTripView::Trip => ids::FILTER_TRIP_BY_TRIP,
+            AnalyticsTripView::Purchase => ids::FILTER_TRIP_BY_PURCHASE,
+            AnalyticsTripView::Item => ids::FILTER_TRIP_BY_ITEM,
+            AnalyticsTripView::Day => ids::FILTER_TRIP_BY_DAY,
+        };
+        facts.push(fact(label, String::new()));
     }
     // The side and the grouping say it all in their label, so their value is empty.
     match filters.side {

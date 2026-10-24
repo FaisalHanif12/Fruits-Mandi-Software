@@ -36,4 +36,11 @@ export type AnalyticsPrintHeading =
        */
       text: string;
     }
-  | { kind: 'other_items' };
+  | { kind: 'other_items' }
+  | {
+      kind: 'partner';
+      /**
+       * The name.
+       */
+      text: string;
+    };

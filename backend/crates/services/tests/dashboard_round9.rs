@@ -1011,6 +1011,179 @@ fn e2e_30b_the_loan_past_its_return_by_day_is_on_the_tile_and_the_bell() {
 }
 
 #[test]
+fn a_month_close_changes_no_tile_and_no_partner_total() {
+    // The month close of October is dated 02-11-26 and moves income and expenses into the
+    // partners' capital accounts. Today's expenses, the strip's shares, the partner totals and the
+    // cash do not move because of it (PRD FR-17.6, FR-17.9).
+    let w = full_day();
+    let before = dash(&w);
+    set_today(&w.env, 2026, 11, 2);
+    mandi_services::day::close(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::vouchers::DayCloseInput {
+            up_to: "31-10-2026".into(),
+        },
+    )
+    .unwrap();
+    mandi_services::month::close(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::month::MonthInput {
+            month: "2026-10".into(),
+        },
+    )
+    .unwrap();
+    let after = dash(&w);
+    assert_eq!(rupees(after.tiles.expenses_today_paisa), 0);
+    assert_eq!(
+        (
+            rupees(after.tiles.sales_gross_paisa),
+            after.tiles.sales_count
+        ),
+        (0, 0)
+    );
+    assert_eq!(
+        after.tiles.cash_in_hand_paisa,
+        before.tiles.cash_in_hand_paisa
+    );
+    assert_eq!(
+        after.tiles.buyers_dues_paisa,
+        before.tiles.buyers_dues_paisa
+    );
+    let totals =
+        |d: &Dashboard| -> Vec<i64> { d.partners.iter().map(|p| rupees(p.total_paisa)).collect() };
+    assert_eq!(totals(&after), totals(&before));
+    // October's shares are still October's: the month column on 02-11 is November's.
+    assert!(after.partners.iter().all(|p| rupees(p.today_paisa) == 0));
+    assert!(after.partners.iter().all(|p| rupees(p.month_paisa) == 0));
+    assert!(after.partners.iter().all(|p| rupees(p.year_paisa) > 0));
+}
+
+#[test]
+fn every_kind_of_the_bell_appears_once_the_count_is_the_list_and_the_overdue_agree() {
+    // A book where all ten kinds of PRD FR-7.44 are true at once, on 15-11-26.
+    let w = worked_day();
+    let mut draft = support::event1(&w);
+    draft.lots[0].sales[1].qty = "25".into();
+    save(&w, &draft);
+    save(&w, &event2(&w));
+    let person = aslam(&w);
+    vouchers::save_money_lent(
+        &w.env.ctx,
+        &w.owner,
+        &MoneyLentInput {
+            date: "10-10-2026".into(),
+            person_account_id: Some(person),
+            amount: "5,000".into(),
+            reason: "گھریلو ضرورت".into(),
+            return_by: Some("15-10-2026".into()),
+            narration: None,
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    vouchers::save_personal_expense(
+        &w.env.ctx,
+        &w.owner,
+        &PersonalExpenseInput {
+            date: "10-10-2026".into(),
+            partner_id: Some(w.partners[1]),
+            amount: "1,000".into(),
+            reason: "گھر کا خرچ".into(),
+            return_by: Some("12-10-2026".into()),
+            taken_by: None,
+            narration: None,
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    drafts::save(
+        &w.env.ctx,
+        &w.owner,
+        &DraftSaveInput {
+            screen: "bikri".into(),
+            payload_json: "{}".into(),
+        },
+    )
+    .unwrap();
+    sql(
+        &w,
+        "UPDATE accounts SET credit_limit_paisa = 200000 WHERE id = ?1",
+        w.akram,
+    );
+    w.env
+        .ctx
+        .db()
+        .write(|tx| {
+            tx.execute_batch(&format!(
+                "PRAGMA ignore_check_constraints = ON;
+                 UPDATE accounts SET name_en = '' WHERE id = {};
+                 PRAGMA ignore_check_constraints = OFF;",
+                w.rahim
+            ))
+            .map_err(mandi_services::db::DbError::from)
+        })
+        .unwrap();
+    set_today(&w.env, 2026, 11, 15);
+    let backup = BackupFacts {
+        cloud_on: true,
+        cloud_age_hours: Some(80),
+    };
+    let list = bell(&w, backup);
+    // Every kind once, in the order of the list, and the bell number is the sum of the counts.
+    let found: Vec<AttentionKind> = list.items.iter().map(|i| i.kind).collect();
+    assert_eq!(found, AttentionKind::ALL.to_vec());
+    assert!(list.items.iter().all(|i| i.count > 0));
+    assert_eq!(
+        list.total_count,
+        list.items.iter().map(|i| i.count).sum::<i64>()
+    );
+    // The dashboard carries the same list.
+    assert_eq!(
+        dashboard::get(w.env.ctx.db(), backup).unwrap().attention,
+        list
+    );
+
+    // The overdue loans and takes are the ones of `assist_attention_overdue`: the same count, the
+    // same open money and the same days past.
+    let overdue = lent::attention_overdue(&w.env.ctx).unwrap();
+    for (kind, overdue_kind) in [
+        (
+            AttentionKind::LoansOverdue,
+            mandi_services::core::lent::OverdueKind::Loan,
+        ),
+        (
+            AttentionKind::TakesOverdue,
+            mandi_services::core::lent::OverdueKind::Take,
+        ),
+    ] {
+        let mine = item(&list, kind);
+        let theirs: Vec<_> = overdue
+            .items
+            .iter()
+            .filter(|i| i.kind == overdue_kind)
+            .collect();
+        assert_eq!(mine.count, i64::try_from(theirs.len()).unwrap(), "{kind:?}");
+        assert_eq!(
+            mine.amount_paisa.map(rupees),
+            Some(theirs.iter().map(|i| rupees(i.open_paisa)).sum::<i64>()),
+            "{kind:?}"
+        );
+        assert_eq!(
+            mine.days,
+            theirs.iter().map(|i| i.days_past).max(),
+            "{kind:?}"
+        );
+    }
+    assert_eq!(
+        overdue.total_count,
+        item(&list, AttentionKind::LoansOverdue).count
+            + item(&list, AttentionKind::TakesOverdue).count
+    );
+}
+
+#[test]
 fn a_partner_take_with_a_return_by_day_is_overdue_and_one_without_is_not() {
     let w = full_day();
     // الف's 2,000 of Event 5 has no return-by day. A second take has one.

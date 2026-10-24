@@ -1,0 +1,143 @@
+{
+  "id": "R35",
+  "title_id": "report-r35-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": "2026-10-10",
+    "party": {
+      "account_id": 18,
+      "code": "030110001",
+      "short_code": "1",
+      "name_ur": "رحیم",
+      "name_en": "Rahim",
+      "tag": null,
+      "person_key": null
+    },
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "پیٹی کیلا",
+            "en": "Box Banana"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 2431600
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "number",
+      "value": 50
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 2431600
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-r35-total-qty",
+      "cell": {
+        "type": "number",
+        "value": 50
+      }
+    },
+    {
+      "label_id": "report-r35-previous",
+      "cell": {
+        "type": "balance",
+        "paisa": 1500000,
+        "side": "dr"
+      }
+    },
+    {
+      "label_id": "report-r35-sold",
+      "cell": {
+        "type": "money",
+        "paisa": 2431600
+      }
+    },
+    {
+      "label_id": "report-r35-cash-given",
+      "cell": {
+        "type": "money",
+        "paisa": 500000
+      }
+    },
+    {
+      "label_id": "report-r35-paid",
+      "cell": {
+        "type": "money",
+        "paisa": 431600
+      }
+    },
+    {
+      "label_id": "report-r35-remaining",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    }
+  ]
+}

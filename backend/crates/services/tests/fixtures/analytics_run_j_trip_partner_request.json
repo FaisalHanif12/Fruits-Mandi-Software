@@ -1,0 +1,22 @@
+{
+  "filters": {
+    "adda_id": null,
+    "buyer": null,
+    "city_id": null,
+    "compare": "off",
+    "from": "",
+    "goods": "all",
+    "group_by": null,
+    "item_id": null,
+    "partner_id": 1,
+    "period": null,
+    "seller_id": null,
+    "side": "both",
+    "to": "",
+    "trip_id": null,
+    "trip_view": null
+  },
+  "limit": 0,
+  "offset": 0,
+  "view": "J"
+}

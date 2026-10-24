@@ -1501,6 +1501,27 @@ mod fixtures {
             "reports_run_r19",
             json!({ "id": "R19", "filters": filters(json!({})), "offset": 0, "limit": 0 }),
         );
+        // Round 11: the party day sheet (R35), the table of all parties and two slips.
+        run_pair(
+            &w,
+            "reports_run_r35_table",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026" })), "offset": 0, "limit": 0 }),
+        );
+        run_pair(
+            &w,
+            "reports_run_r35_slip_akram",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.akram) })), "offset": 0, "limit": 0 }),
+        );
+        run_pair(
+            &w,
+            "reports_run_r35_slip_rahim",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.rahim) })), "offset": 0, "limit": 0 }),
+        );
+        print_pair(
+            &w,
+            "reports_print_data_r35_slip_akram_en",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.akram) })), "language": "en", "paper": null }),
+        );
         refusal_pair(
             &w,
             "reports_run_r13_no_party",

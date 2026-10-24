@@ -9,8 +9,8 @@ use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::Connection;
 
 use super::model::{
-    AnalyticsCompare, AnalyticsFilters, AnalyticsGroupBy, AnalyticsPeriod,
-    AnalyticsResolvedFilters, AnalyticsSide, AnalyticsView,
+    AnalyticsCompare, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsPeriod,
+    AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView, AnalyticsView,
 };
 use crate::error::ReportsError;
 use crate::reports::common::{MasterTable, load_party, names_of};
@@ -38,6 +38,14 @@ pub(crate) struct Typed {
     pub(crate) adda_id: Option<i64>,
     /// Which commission is counted.
     pub(crate) side: AnalyticsSide,
+    /// The picked partner (views F, G and J).
+    pub(crate) partner_id: Option<i64>,
+    /// The picked market trip.
+    pub(crate) trip_id: Option<i64>,
+    /// Which goods are counted.
+    pub(crate) goods: AnalyticsGoods,
+    /// How view J lays out its rows.
+    pub(crate) trip_view: AnalyticsTripView,
     /// The compared period, if a comparison was asked for.
     pub(crate) compare: Option<(String, String)>,
     /// What goes back to the screen.
@@ -154,22 +162,84 @@ pub(crate) fn resolve(
         city_id: None,
         adda_id: None,
         side: input.side,
+        partner_id: None,
+        trip_id: None,
+        goods: input.goods,
+        trip_view: AnalyticsTripView::Trip,
         compare: None,
         resolved: AnalyticsResolvedFilters {
             side: input.side,
             compare: input.compare,
+            goods: input.goods,
             ..AnalyticsResolvedFilters::default()
         },
     };
 
-    // The grouping belongs to view D only.
-    if view == AnalyticsView::D {
+    // The grouping belongs to views D and G.
+    if matches!(view, AnalyticsView::D | AnalyticsView::G) {
         typed.group_by = input.group_by.unwrap_or(AnalyticsGroupBy::Month);
         typed.resolved.group_by = Some(typed.group_by);
     } else if input.group_by.is_some() {
         problems.push(FieldError::new(
             ErrorCode::ErrOutOfRange,
             "filters.group_by",
+        ));
+    }
+    // The layout of the rows belongs to view J only.
+    if view == AnalyticsView::J {
+        typed.trip_view = input.trip_view.unwrap_or_default();
+        typed.resolved.trip_view = Some(typed.trip_view);
+    } else if input.trip_view.is_some() {
+        problems.push(FieldError::new(
+            ErrorCode::ErrOutOfRange,
+            "filters.trip_view",
+        ));
+    }
+    // Views F, G and J work on periods and take no comparison; view F counts no sales, so it
+    // takes none of the sale filters either (PRD 18.1).
+    if matches!(view, AnalyticsView::F | AnalyticsView::G | AnalyticsView::J)
+        && input.compare != AnalyticsCompare::Off
+    {
+        problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "filters.compare"));
+    }
+    if view == AnalyticsView::F {
+        let sale_filters = [
+            (input.item_id.is_some(), "filters.item_id"),
+            (input.seller_id.is_some(), "filters.seller_id"),
+            (input.buyer.is_some(), "filters.buyer"),
+            (input.city_id.is_some(), "filters.city_id"),
+            (input.adda_id.is_some(), "filters.adda_id"),
+            (input.trip_id.is_some(), "filters.trip_id"),
+            (input.goods != AnalyticsGoods::All, "filters.goods"),
+            (input.side != AnalyticsSide::Both, "filters.side"),
+        ];
+        for (set, field) in sale_filters {
+            if set {
+                problems.push(FieldError::new(ErrorCode::ErrOutOfRange, field));
+            }
+        }
+    }
+    // View J counts purchases, which have no seller, buyer, city or اڈا.
+    if view == AnalyticsView::J {
+        let sale_filters = [
+            (input.seller_id.is_some(), "filters.seller_id"),
+            (input.buyer.is_some(), "filters.buyer"),
+            (input.city_id.is_some(), "filters.city_id"),
+            (input.adda_id.is_some(), "filters.adda_id"),
+        ];
+        for (set, field) in sale_filters {
+            if set {
+                problems.push(FieldError::new(ErrorCode::ErrOutOfRange, field));
+            }
+        }
+    }
+    // The partner belongs to views F, G and J; the trip and goods to every view but F.
+    if input.partner_id.is_some()
+        && !matches!(view, AnalyticsView::F | AnalyticsView::G | AnalyticsView::J)
+    {
+        problems.push(FieldError::new(
+            ErrorCode::ErrOutOfRange,
+            "filters.partner_id",
         ));
     }
 
@@ -271,6 +341,39 @@ pub(crate) fn resolve(
             None => problems.push(FieldError::new(ErrorCode::ErrNotFound, "filters.seller_id")),
         }
     }
+    if let Some(id) = input.partner_id {
+        match names_of(conn, MasterTable::Partners, id)? {
+            Some(names) => {
+                typed.partner_id = Some(id);
+                typed.resolved.partner = Some(names);
+            }
+            None => problems.push(FieldError::new(
+                ErrorCode::ErrNotFound,
+                "filters.partner_id",
+            )),
+        }
+    }
+    if let Some(id) = input.trip_id {
+        let names = conn
+            .query_row(
+                "SELECT name_ur, name_en FROM ventures WHERE id = ?1 AND kind = 'trip'",
+                [id],
+                |r| {
+                    Ok(crate::reports::Names {
+                        ur: r.get(0)?,
+                        en: r.get(1)?,
+                    })
+                },
+            )
+            .ok();
+        match names {
+            Some(names) => {
+                typed.trip_id = Some(id);
+                typed.resolved.trip = Some(names);
+            }
+            None => problems.push(FieldError::new(ErrorCode::ErrNotFound, "filters.trip_id")),
+        }
+    }
     for (id, table, field) in [
         (input.item_id, MasterTable::Items, "filters.item_id"),
         (input.city_id, MasterTable::Cities, "filters.city_id"),
@@ -291,7 +394,7 @@ pub(crate) fn resolve(
                     typed.adda_id = Some(id);
                     typed.resolved.adda = Some(names);
                 }
-                // The list above holds no partner; the partner views come with D4R.
+                // The partner is read above.
                 MasterTable::Partners => {}
             },
             None => problems.push(FieldError::new(ErrorCode::ErrNotFound, field)),

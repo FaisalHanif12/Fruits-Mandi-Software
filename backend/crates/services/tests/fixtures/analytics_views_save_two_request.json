@@ -7,12 +7,16 @@
         "city_id": null,
         "compare": "off",
         "from": "01-01-2026",
+        "goods": "all",
         "group_by": null,
         "item_id": 1,
+        "partner_id": null,
         "period": null,
         "seller_id": null,
         "side": "both",
-        "to": "31-12-2026"
+        "to": "31-12-2026",
+        "trip_id": null,
+        "trip_view": null
       },
       "name": "کیلا کمیشن ماہانہ",
       "view": "D"
@@ -24,12 +28,16 @@
         "city_id": null,
         "compare": "off",
         "from": "",
+        "goods": "all",
         "group_by": null,
         "item_id": null,
+        "partner_id": null,
         "period": null,
         "seller_id": null,
         "side": "both",
-        "to": ""
+        "to": "",
+        "trip_id": null,
+        "trip_view": null
       },
       "name": "Top 10",
       "view": "H"

@@ -1,0 +1,212 @@
+//! View F, by partner, شراکت دار وار (PRD 18.2, FR-17.5, FR-17.9, FR-17.10, C12, C22).
+//!
+//! One row for each partner who has a number in the period: his income share, his expense share
+//! (shown as a positive number), his profit share (C12, income less expense), and side by side
+//! his money from trips and his net change.
+//!
+//! * **Shares.** The sums of his share rows (`partner_share_rows`) dated in the period: income
+//!   rows are positive, expense rows negative, a reversal row is the opposite of the row it takes
+//!   back and carries its date, so a cancelled sale takes itself out of its own day.
+//! * **Trips.** The credits less the debits on his gardens, trips and fruit account (0604) made by
+//!   trip postings in the period: the shop's part of a purchase and of a trip cost (a debit), his
+//!   part of the seller credit of an own lot and of the money of a sale in another shop (a
+//!   credit). A pocket part posts nothing, so it is not here. Entries of a month close and
+//!   entries that were reversed, with their reversal, are left out (the live entries).
+//! * **Gardens and fruit.** The two columns exist and stay empty until gardens and fruit taken
+//!   are merged (D4R).
+//! * **Other.** Whatever else is on his 0604 account in the period (a جنرل line, and until D4R a
+//!   garden or a fruit line), so the columns always add up to his whole 0604 net.
+//! * **Net change.** Profit share plus the whole 0604 net: what his کل رقم changed by in the
+//!   period (C22), without capital and without money taken.
+//!
+//! The totals row adds the rows. A row opens the share rows behind it (FR-18.2).
+//!
+//! Example (E2E-34 after the sale, 10-10-26): الف profit share 480 and trips −4,160 + 3,384 = −776,
+//! so his net change is −296, as his partner total in the PRD.
+
+use mandi_core::money::Paisa;
+use mandi_db::partners::{PartnerRecord, share_sums};
+use mandi_db::rusqlite::{Connection, params};
+
+use super::filters::Typed;
+use super::ids;
+use super::model::AnalyticsKey;
+use super::table::{Table, col, count_of, row};
+use crate::error::ReportsError;
+use crate::reports::common::{LIVE, add, paisa};
+use crate::reports::{Cell, ColumnKind, Names, PageSpec};
+
+/// The first and the last day the period may have, when it is open.
+const FIRST_DAY: &str = "0000-01-01";
+const LAST_DAY: &str = "9999-12-31";
+
+/// The entries that move a partner's money for a trip (PRD FR-12.30, FR-12.31, FR-12.32,
+/// FR-12.26), by where they came from: a purchase, a بکری (whose own-lot credits go to the
+/// partners' 0604 accounts), and an entry of a venture that is a trip (a trip cost, a sale in
+/// another shop). The text is a constant of this crate (Code Standards B14).
+pub(crate) const TRIP_POSTINGS: &str = "(e.source_type IN ('purchase', 'bikri')
+     OR (e.source_type = 'venture' AND EXISTS (
+            SELECT 1 FROM venture_entries x JOIN ventures v ON v.id = x.venture_id
+            WHERE x.id = e.source_id AND v.kind = 'trip')))";
+
+/// One partner's figures.
+#[derive(Debug, Clone, Copy, Default)]
+struct Figures {
+    income: Paisa,
+    expense: Paisa,
+    profit: Paisa,
+    trips: Paisa,
+    other: Paisa,
+    net: Paisa,
+}
+
+impl Figures {
+    fn is_zero(&self) -> bool {
+        self.income == Paisa::ZERO
+            && self.expense == Paisa::ZERO
+            && self.trips == Paisa::ZERO
+            && self.other == Paisa::ZERO
+            && self.net == Paisa::ZERO
+    }
+
+    fn add(&mut self, other: &Figures) -> Result<(), ReportsError> {
+        add(&mut self.income, other.income)?;
+        add(&mut self.expense, other.expense)?;
+        add(&mut self.profit, other.profit)?;
+        add(&mut self.trips, other.trips)?;
+        add(&mut self.other, other.other)?;
+        add(&mut self.net, other.net)?;
+        Ok(())
+    }
+
+    fn cells(&self, lead: Cell) -> Vec<Cell> {
+        let money = |paisa| Cell::Money { paisa };
+        vec![
+            lead,
+            money(self.income),
+            money(self.expense),
+            money(self.profit),
+            // Gardens: with D4R.
+            Cell::Empty,
+            money(self.trips),
+            // Fruit taken: with D4R.
+            Cell::Empty,
+            money(self.other),
+            money(self.net),
+        ]
+    }
+}
+
+/// The credits less the debits on a partner's 0604 account in the period, on the live entries and
+/// not of a month close: the trip entries, and the whole account. Returns (trips, whole).
+fn venture_net(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    from: &str,
+    to: &str,
+) -> Result<(Paisa, Paisa), ReportsError> {
+    if partner.venture_account_id == 0 {
+        return Ok((Paisa::ZERO, Paisa::ZERO));
+    }
+    let sql = format!(
+        "SELECT COALESCE(SUM(CASE WHEN {TRIP_POSTINGS} THEN l.dr_paisa END), 0),
+                COALESCE(SUM(CASE WHEN {TRIP_POSTINGS} THEN l.cr_paisa END), 0),
+                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id = ?1 AND {LIVE} AND e.source_type <> 'month_close'
+           AND e.entry_date >= ?2 AND e.entry_date <= ?3"
+    );
+    let (trip_dr, trip_cr, all_dr, all_cr): (i64, i64, i64, i64) =
+        conn.query_row(&sql, params![partner.venture_account_id, from, to], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })?;
+    Ok((
+        paisa(trip_cr)?.checked_sub(paisa(trip_dr)?)?,
+        paisa(all_cr)?.checked_sub(paisa(all_dr)?)?,
+    ))
+}
+
+/// The money of the trips of one partner in the period (also the "trips" column of view G with a
+/// partner picked, so the two always agree).
+pub(crate) fn trips_net(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    from: &str,
+    to: &str,
+) -> Result<Paisa, ReportsError> {
+    Ok(venture_net(conn, partner, from, to)?.0)
+}
+
+/// Builds view F.
+///
+/// # Errors
+/// A database error; `ReportsError::Money`.
+pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Table, ReportsError> {
+    let from = typed.from.as_deref().unwrap_or(FIRST_DAY);
+    let to = typed.to.as_deref().unwrap_or(LAST_DAY);
+    let sums = share_sums(conn, from, to)?;
+    let mut entries: Vec<(PartnerRecord, Figures)> = Vec::new();
+    for partner in mandi_db::partners::list(conn)? {
+        if typed.partner_id.is_some_and(|id| id != partner.id) {
+            continue;
+        }
+        let (mut income, mut expense_rows, mut profit) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+        for s in sums.iter().filter(|s| s.partner_id == partner.id) {
+            let amount = paisa(s.total_paisa)?;
+            add(&mut profit, amount)?;
+            match s.kind.as_str() {
+                "income" => add(&mut income, amount)?,
+                _ => add(&mut expense_rows, amount)?,
+            }
+        }
+        // Expense rows are negative; the view shows the expense as a positive number.
+        let expense = Paisa::ZERO.checked_sub(expense_rows)?;
+        let (trips, whole) = venture_net(conn, &partner, from, to)?;
+        let figures = Figures {
+            income,
+            expense,
+            profit,
+            trips,
+            other: whole.checked_sub(trips)?,
+            net: profit.checked_add(whole)?,
+        };
+        if partner.is_active || !figures.is_zero() {
+            entries.push((partner, figures));
+        }
+    }
+
+    let columns = vec![
+        col("partner", ids::COL_PARTNER, ColumnKind::Names),
+        col("income_share", ids::COL_INCOME_SHARE, ColumnKind::Money),
+        col("expense_share", ids::COL_EXPENSE_SHARE, ColumnKind::Money),
+        col("profit_share", ids::COL_PROFIT_SHARE, ColumnKind::Money),
+        col("gardens", ids::COL_GARDENS, ColumnKind::Money),
+        col("trips", ids::COL_TRIPS, ColumnKind::Money),
+        col("fruit", ids::COL_FRUIT, ColumnKind::Money),
+        col("other", ids::COL_OTHER_MONEY, ColumnKind::Money),
+        col("net_change", ids::COL_NET_CHANGE, ColumnKind::Money),
+    ];
+    let mut grand = Figures::default();
+    let mut all_rows = Vec::with_capacity(entries.len());
+    for (partner, figures) in &entries {
+        grand.add(figures)?;
+        all_rows.push(row(
+            figures.cells(Cell::Names {
+                names: Names {
+                    ur: partner.name_ur.clone(),
+                    en: partner.name_en.clone(),
+                },
+            }),
+            AnalyticsKey {
+                partner_id: Some(partner.id),
+                ..AnalyticsKey::default()
+            },
+        ));
+    }
+    Ok(Table {
+        columns,
+        total_count: count_of(all_rows.len()),
+        rows: spec.slice(&all_rows),
+        totals: grand.cells(Cell::Empty),
+    })
+}

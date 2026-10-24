@@ -277,7 +277,7 @@ fn assert_consistent(w: &support::World) {
 // ---- Catalogue ---------------------------------------------------------------------------
 
 #[test]
-fn the_catalogue_lists_the_six_views_and_only_d_takes_the_grouping() {
+fn the_catalogue_lists_the_nine_views_and_only_d_and_g_take_the_grouping() {
     use mandi_reports::analytics::AnalyticsFilterKind::GroupBy;
     let entries = catalog();
     let ids: Vec<AnalyticsView> = entries.iter().map(|e| e.id).collect();
@@ -289,13 +289,16 @@ fn the_catalogue_lists_the_six_views_and_only_d_takes_the_grouping() {
             AnalyticsView::C,
             AnalyticsView::D,
             AnalyticsView::E,
-            AnalyticsView::H
+            AnalyticsView::F,
+            AnalyticsView::G,
+            AnalyticsView::H,
+            AnalyticsView::J
         ]
     );
     for entry in &entries {
         assert_eq!(
             entry.filters.contains(&GroupBy),
-            entry.id == AnalyticsView::D,
+            matches!(entry.id, AnalyticsView::D | AnalyticsView::G),
             "{:?}",
             entry.id
         );

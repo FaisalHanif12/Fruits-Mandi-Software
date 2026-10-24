@@ -112,6 +112,9 @@ pub enum ReportId {
     /// Day summary, روزانہ خلاصہ.
     #[serde(rename = "R34")]
     R34,
+    /// Party day sheet, پارٹی کی روزانہ پرچی.
+    #[serde(rename = "R35")]
+    R35,
 }
 
 impl ReportId {
@@ -150,6 +153,7 @@ impl ReportId {
             ReportId::R32 => "R32",
             ReportId::R33 => "R33",
             ReportId::R34 => "R34",
+            ReportId::R35 => "R35",
         }
     }
 

@@ -1,0 +1,151 @@
+{
+  "view": "G",
+  "title_id": "analytics-view-g-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": "day",
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "goods": "all",
+    "trip_view": null
+  },
+  "columns": [
+    {
+      "key": "period",
+      "title_id": "analytics-col-period",
+      "kind": "date",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "commission",
+      "title_id": "report-col-total-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "shared_income",
+      "title_id": "analytics-col-shared-income",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "shop_expenses",
+      "title_id": "analytics-col-shop-expenses",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "profit",
+      "title_id": "analytics-col-profit",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "trips_result",
+      "title_id": "analytics-col-trips-result",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "money",
+          "paisa": 4140000
+        },
+        {
+          "type": "money",
+          "paisa": 544800
+        },
+        {
+          "type": "money",
+          "paisa": 548800
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "money",
+          "paisa": 248800
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": "2026-10-10",
+        "to": "2026-10-10",
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 4140000
+    },
+    {
+      "type": "money",
+      "paisa": 544800
+    },
+    {
+      "type": "money",
+      "paisa": 548800
+    },
+    {
+      "type": "money",
+      "paisa": 300000
+    },
+    {
+      "type": "money",
+      "paisa": 248800
+    },
+    {
+      "type": "empty"
+    }
+  ]
+}

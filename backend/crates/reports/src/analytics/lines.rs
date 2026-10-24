@@ -32,6 +32,10 @@ use crate::reports::{PageSpec, common::pukhta_party};
 /// Most items a key may leave out (the "other items" column of view E has fewer than 24).
 const MAX_EXCLUDED_ITEMS: usize = 50;
 
+/// Most purchases a key may name (the row of a trip with the most purchases is far below it; the
+/// limit keeps the bound values of the query below the limit of SQLite).
+const MAX_PURCHASES: usize = 1_000;
+
 fn column(key: &str, title: &str, kind: ColumnKind) -> Column {
     Column {
         key: key.to_owned(),
@@ -92,6 +96,14 @@ pub(crate) fn merge(
             ));
         }
     }
+    for (key, field) in [(row_key, "row_key"), (&other, "column_key")] {
+        if key.purchase_ids.len() > MAX_PURCHASES {
+            problems.push(FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                &format!("{field}.purchase_ids"),
+            ));
+        }
+    }
     let mut conflicts: Vec<&str> = Vec::new();
     let item_id = merge_id(
         row_key.item_id,
@@ -109,6 +121,12 @@ pub(crate) fn merge(
         row_key.buyer_id,
         other.buyer_id,
         "column_key.buyer_id",
+        &mut conflicts,
+    );
+    let partner_id = merge_id(
+        row_key.partner_id,
+        other.partner_id,
+        "column_key.partner_id",
         &mut conflicts,
     );
     for field in conflicts {
@@ -142,6 +160,22 @@ pub(crate) fn merge(
     not_item_ids.extend(other.not_item_ids.iter().copied());
     not_item_ids.sort_unstable();
     not_item_ids.dedup();
+    // Both name purchases: only those both name; one names none: the other's (money agent S6).
+    let mut purchase_ids: Vec<i64> = match (
+        row_key.purchase_ids.is_empty(),
+        other.purchase_ids.is_empty(),
+    ) {
+        (false, false) => row_key
+            .purchase_ids
+            .iter()
+            .copied()
+            .filter(|id| other.purchase_ids.contains(id))
+            .collect(),
+        (true, _) => other.purchase_ids.clone(),
+        (_, true) => row_key.purchase_ids.clone(),
+    };
+    purchase_ids.sort_unstable();
+    purchase_ids.dedup();
     Ok(AnalyticsKey {
         item_id,
         seller_id,
@@ -150,6 +184,8 @@ pub(crate) fn merge(
         from,
         to,
         not_item_ids,
+        partner_id,
+        purchase_ids,
     })
 }
 
@@ -194,7 +230,18 @@ pub(crate) fn run(
     spec: PageSpec,
 ) -> Result<AnalyticsLinesPage, ReportsError> {
     let key = merge(&input.row_key, input.column_key.as_ref())?;
-    let conds = facts::conds(typed, run_range(typed), &key);
+    // View F opens the share rows of a partner, not sale facts.
+    if input.view == super::model::AnalyticsView::F {
+        return super::partner_lines::run(conn, typed, &key, input, spec);
+    }
+    // The lines behind a row of view J are the sale facts its commission was made from: under the
+    // same filters, in no date range (money agent M2), so they add up to the number opened.
+    let for_j = (input.view == super::model::AnalyticsView::J).then(|| facts::for_trips(typed));
+    let (typed, range) = match &for_j {
+        Some(j) => (j, facts::TRIPS_RANGE),
+        None => (typed, run_range(typed)),
+    };
+    let conds = facts::conds(typed, range, &key);
 
     let total_count: i64 = {
         let sql = format!(

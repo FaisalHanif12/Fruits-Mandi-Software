@@ -1,0 +1,288 @@
+{
+  "view": "F",
+  "title_id": "analytics-view-f-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "goods": "all",
+    "trip_view": null
+  },
+  "columns": [
+    {
+      "key": "partner",
+      "title_id": "report-col-partner",
+      "kind": "names",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "income_share",
+      "title_id": "report-col-income-share",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "expense_share",
+      "title_id": "report-col-expense-share",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "profit_share",
+      "title_id": "report-col-profit-share",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "gardens",
+      "title_id": "analytics-col-gardens",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "trips",
+      "title_id": "analytics-col-trips",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "fruit",
+      "title_id": "analytics-col-fruit",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "other",
+      "title_id": "analytics-col-other-money",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "net_change",
+      "title_id": "analytics-col-net-change",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 219600
+        },
+        {
+          "type": "money",
+          "paisa": 120000
+        },
+        {
+          "type": "money",
+          "paisa": 99600
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 99600
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": 1,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "ب",
+            "en": "Partner B"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 164600
+        },
+        {
+          "type": "money",
+          "paisa": 90000
+        },
+        {
+          "type": "money",
+          "paisa": 74600
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 74600
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": 2,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "ج",
+            "en": "Partner C"
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 164600
+        },
+        {
+          "type": "money",
+          "paisa": 90000
+        },
+        {
+          "type": "money",
+          "paisa": 74600
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 74600
+        }
+      ],
+      "key": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": 3,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 548800
+    },
+    {
+      "type": "money",
+      "paisa": 300000
+    },
+    {
+      "type": "money",
+      "paisa": 248800
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 248800
+    }
+  ]
+}

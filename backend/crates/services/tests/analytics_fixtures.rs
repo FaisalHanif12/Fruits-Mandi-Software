@@ -16,6 +16,7 @@ mod reports_world;
 #[path = "bikri_preview/support.rs"]
 mod support;
 
+use common::*;
 use mandi_reports::analytics::{
     AnalyticsLinesInput, AnalyticsPrintInput, AnalyticsRunInput, AnalyticsViewsSaveInput, catalog,
     lines, print_data, run, views_get, views_save,
@@ -77,7 +78,8 @@ fn filters(extra: Value) -> Value {
     let mut base = json!({
         "period": null, "from": "", "to": "", "group_by": null, "item_id": null,
         "seller_id": null, "buyer": null, "city_id": null, "adda_id": null,
-        "side": "both", "compare": "off"
+        "side": "both", "compare": "off", "partner_id": null, "trip_id": null,
+        "goods": "all", "trip_view": null
     });
     if let (Some(base), Some(extra)) = (base.as_object_mut(), extra.as_object()) {
         for (k, v) in extra {
@@ -159,6 +161,16 @@ fn fixtures_are_the_real_answers() {
     run_pair(&w, "run_d_day", page("D", json!({ "group_by": "day" })));
     run_pair(&w, "run_e", page("E", json!({})));
     run_pair(&w, "run_h", page("H", json!({})));
+    // Round 11: the partner table, the trend and the trips on the worked day (no trip yet).
+    run_pair(&w, "run_f", page("F", json!({})));
+    run_pair(&w, "run_g_month", page("G", json!({})));
+    run_pair(&w, "run_g_day", page("G", json!({ "group_by": "day" })));
+    run_pair(&w, "run_j_empty", page("J", json!({})));
+    run_pair(
+        &w,
+        "run_a_goods_trip",
+        page("A", json!({ "goods": "trip" })),
+    );
     run_pair(
         &w,
         "run_a_page2",
@@ -183,6 +195,13 @@ fn fixtures_are_the_real_answers() {
         "lines_e_rahim_banana",
         json!({ "view": "E", "filters": filters(json!({})), "row_key": { "seller_id": w.rahim },
                 "column_key": { "item_id": w.banana }, "offset": 0, "limit": 0 }),
+    );
+
+    lines_pair(
+        &w,
+        "lines_f_partner_a",
+        json!({ "view": "F", "filters": filters(json!({})), "row_key": { "partner_id": w.partners[0] },
+                "column_key": null, "offset": 0, "limit": 0 }),
     );
 
     print_pair(
@@ -230,7 +249,19 @@ fn fixtures_are_the_real_answers() {
         ErrorCode::ErrRequired,
     );
 
+    // Round 11: a trip on its own world (E2E-34 after the sale of 15, then the 5 written off).
+    trip_fixtures();
+
     // Refusals.
+    refusal_run(
+        &w,
+        "run_f_compare_refused",
+        page(
+            "F",
+            json!({ "from": "01-10-2026", "to": "31-10-2026", "compare": "previous" }),
+        ),
+        ErrorCode::ErrOutOfRange,
+    );
     refusal_run(
         &w,
         "run_a_group_by_refused",
@@ -249,4 +280,67 @@ fn fixtures_are_the_real_answers() {
         page("A", json!({ "item_id": 9999 })),
         ErrorCode::ErrNotFound,
     );
+}
+
+/// The trip views on the trip of E2E-34. The frontend copies these to draw the trip layouts.
+fn trip_fixtures() {
+    let (w, _trip, purchase, _sale) = trip_34_world();
+    let page = |view: &str, extra: Value| json!({ "view": view, "filters": filters(extra), "offset": 0, "limit": 0 });
+    run_pair(&w, "run_f_trip", page("F", json!({})));
+    run_pair(
+        &w,
+        "run_g_trip_day",
+        page("G", json!({ "group_by": "day" })),
+    );
+    run_pair(&w, "run_j_trip", page("J", json!({})));
+    run_pair(
+        &w,
+        "run_j_trip_by_purchase",
+        page("J", json!({ "trip_view": "purchase" })),
+    );
+    run_pair(
+        &w,
+        "run_j_trip_partner",
+        page("J", json!({ "partner_id": w.partners[0] })),
+    );
+    run_pair(
+        &w,
+        "run_a_goods_consigned",
+        page("A", json!({ "goods": "consigned" })),
+    );
+    let first = run(
+        w.env.ctx.db(),
+        &typed::<AnalyticsRunInput>(&page("J", json!({}))),
+    )
+    .unwrap();
+    let key = first.rows[0].key.clone().unwrap();
+    lines_pair(
+        &w,
+        "lines_j_trip",
+        json!({ "view": "J", "filters": filters(json!({})), "row_key": key,
+                "column_key": null, "offset": 0, "limit": 0 }),
+    );
+    print_pair(
+        &w,
+        "print_data_j_en",
+        json!({ "view": "J", "filters": filters(json!({})), "language": "en", "paper": null }),
+    );
+    // The five that are left spoil on 11-10-26: the loss shows on its own day.
+    set_today(&w.env, 2026, 10, 11);
+    mandi_services::purchases::write_off(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::purchases::PurchaseWriteOffInput {
+            purchase_id: purchase,
+            qty: "5".into(),
+            reason: "خراب".into(),
+        },
+    )
+    .unwrap();
+    run_pair(
+        &w,
+        "run_g_trip_written_off",
+        page("G", json!({ "group_by": "day" })),
+    );
+    run_pair(&w, "run_j_trip_written_off", page("J", json!({})));
 }

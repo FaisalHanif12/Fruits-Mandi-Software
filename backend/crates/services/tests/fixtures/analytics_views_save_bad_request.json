@@ -7,12 +7,16 @@
         "city_id": null,
         "compare": "off",
         "from": "",
+        "goods": "all",
         "group_by": null,
         "item_id": 9999,
+        "partner_id": null,
         "period": null,
         "seller_id": null,
         "side": "both",
-        "to": ""
+        "to": "",
+        "trip_id": null,
+        "trip_view": null
       },
       "name": "  ",
       "view": "A"

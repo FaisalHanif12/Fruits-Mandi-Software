@@ -14,7 +14,11 @@
     "side": "both",
     "compare": "off",
     "compare_from": null,
-    "compare_to": null
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "goods": "all",
+    "trip_view": null
   },
   "columns": [
     {

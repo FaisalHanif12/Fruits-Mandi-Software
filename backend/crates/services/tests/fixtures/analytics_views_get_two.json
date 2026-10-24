@@ -13,7 +13,11 @@
       "city_id": null,
       "adda_id": null,
       "side": "both",
-      "compare": "off"
+      "compare": "off",
+      "partner_id": null,
+      "trip_id": null,
+      "goods": "all",
+      "trip_view": null
     }
   },
   {
@@ -30,7 +34,11 @@
       "city_id": null,
       "adda_id": null,
       "side": "both",
-      "compare": "off"
+      "compare": "off",
+      "partner_id": null,
+      "trip_id": null,
+      "goods": "all",
+      "trip_view": null
     }
   }
 ]

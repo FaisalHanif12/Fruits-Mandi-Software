@@ -13,10 +13,18 @@
 //! 5. there are no unsaved drafts: the Owner is still typing something, so nothing is closed
 //!    under his hands. This is checked again at the next tick.
 //!
-//! The close itself refuses a trial balance that does not balance (`ERR_TRIAL_NOT_BALANCED`) or a
-//! day that cannot be closed; then nothing changes, the reason goes to the log, and the earlier
-//! open days show on the attention list the next morning (FR-7.44). The close is written to the
-//! audit log under the Owner, like one made on the screen.
+//! Before it closes, a run asks for the same preview the screen shows. A preview that fails, or a
+//! trial balance difference that is not 0, stops the run with a warning in the log (no amount is
+//! logged). The close itself would refuse such a day too (`ERR_TRIAL_NOT_BALANCED`); then nothing
+//! changes, and the earlier open days show on the attention list the next morning (FR-7.44).
+//!
+//! The close is written to the audit log under the Owner, like one made on the screen, and one
+//! more row says it was automatic: action `day_auto_close`, entity `day_settings`, with the day.
+//! The switch is OFF until the Owner turns it on (`day_settings::load` gives `false` when the
+//! row is missing, and the first run writes none).
+//!
+//! Closing today means no more entries can be dated today unless the Owner reopens the day with a
+//! reason (FR-21.2).
 //!
 //! Example: closing time 21:00, auto close on, today 10-10-26 open, no drafts. At 21:05 shop time
 //! the run closes up to 10-10-26. At 21:10 it finds today closed and does nothing.
@@ -29,8 +37,11 @@ use mandi_backup::day_settings;
 use mandi_backup::settings::closing_minutes;
 use mandi_services::auth::Actor;
 use mandi_services::core::dates::{BusinessDate, format_ddmmyyyy};
-use mandi_services::core::vouchers::DayCloseInput;
+use mandi_services::core::money::Paisa;
+use mandi_services::core::vouchers::{DayCloseInput, DayClosePreviewInput};
+use mandi_services::db::audit::AuditEntry;
 use mandi_services::{Context, ServiceError, day};
+use serde_json::json;
 
 use crate::state::AppState;
 
@@ -161,18 +172,60 @@ fn try_run(ctx: &Context, memory: &mut Memory) -> Result<Outcome, ServiceError> 
     };
     let today = BusinessDate::parse_iso(&status.today)
         .ok_or_else(|| ServiceError::Data(format!("today {}", status.today)))?;
-    let input = DayCloseInput {
-        up_to: format_ddmmyyyy(today),
-    };
-    match day::close(ctx, &actor, &input) {
+    let up_to = format_ddmmyyyy(today);
+    // The same preview the screen shows: a failure or a trial balance that does not balance stops
+    // the run (the reason is for the log only, and holds no amount).
+    match day::close_preview(
+        ctx,
+        &DayClosePreviewInput {
+            up_to: up_to.clone(),
+        },
+    ) {
+        Err(error) => {
+            memory.note_failure(&status.today, now);
+            return Ok(Outcome::Failed(format!("the preview failed: {error}")));
+        }
+        Ok(preview) if preview.trial_difference.amount_paisa != Paisa::ZERO => {
+            memory.note_failure(&status.today, now);
+            return Ok(Outcome::Failed(
+                "the trial balance does not balance".to_owned(),
+            ));
+        }
+        Ok(_) => {}
+    }
+    match day::close(ctx, &actor, &DayCloseInput { up_to }) {
         Ok(_) => {
             memory.failed = None;
+            note_automatic(ctx, &actor, &status.today);
             Ok(Outcome::Closed(status.today))
         }
         Err(error) => {
             memory.note_failure(&status.today, now);
             Ok(Outcome::Failed(error.to_string()))
         }
+    }
+}
+
+/// Writes the audit row that says the close was automatic. The close has its own row already; if
+/// this one cannot be written the close still stands and the reason goes to the log.
+fn note_automatic(ctx: &Context, actor: &Actor, day_iso: &str) {
+    let entry = AuditEntry {
+        user_id: Some(actor.user_id),
+        action: "day_auto_close".to_owned(),
+        entity: "day_settings".to_owned(),
+        entity_id: None,
+        old_json: None,
+        new_json: Some(json!({ "closed_up_to": day_iso })),
+        reason: None,
+    };
+    let written = ctx.db().write(|tx| {
+        ctx.db()
+            .auditor()
+            .write(tx, &entry)
+            .map_err(ServiceError::from)
+    });
+    if let Err(error) = written {
+        tracing::warn!("the automatic close could not write its audit row: {error}");
     }
 }
 

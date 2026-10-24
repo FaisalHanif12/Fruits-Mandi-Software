@@ -304,3 +304,70 @@ pub fn code_of(cell: &Cell) -> String {
         other => panic!("not a party: {other:?}"),
     }
 }
+
+/// E2E-34: a trip of the three partners at 40 / 30 / 30 paying from the shop's cash; 20 پیٹی
+/// مالٹا at 500 with freight 400; an own lot sells 15 of them to اکرم at 600 on credit. Returns
+/// the world, the trip, the purchase and the id of the بکری of the sale. Used by the fixtures of
+/// the trip views, so the frontend sees real answers for a trip.
+pub fn trip_34_world() -> (support::World, i64, i64, i64) {
+    use mandi_services::core::purchases::PurchaseInput;
+    use mandi_services::core::trips::TripInput;
+    use mandi_services::core::ventures::{EntryPartInput, MoneySource, VenturePartnerInput};
+    let w = worked_day();
+    let item = support::add_item(&w.env, &w.owner, "مالٹا", "Orange", "fruit", "unit");
+    let [a, b, c] = w.partners;
+    let shop = |partner_id: i64, share: &str| VenturePartnerInput {
+        partner_id,
+        share: share.into(),
+        source: MoneySource::Shop,
+    };
+    let trip = mandi_services::trips::create(
+        &w.env.ctx,
+        &w.owner,
+        &TripInput {
+            date: "10-10-2026".into(),
+            market: Some("Lahore".into()),
+            sent_person: None,
+            note: None,
+            partners: vec![shop(a, "40"), shop(b, "30"), shop(c, "30")],
+        },
+    )
+    .unwrap()
+    .id;
+    let purchase = mandi_services::purchases::save(
+        &w.env.ctx,
+        &w.owner,
+        &PurchaseInput {
+            trip_id: Some(trip),
+            date: "10-10-2026".into(),
+            supplier: Some("Orange Traders".into()),
+            item_id: Some(item),
+            packing_id: Some(w.box_),
+            qty: "20".into(),
+            weight: None,
+            rate: "500".into(),
+            freight: Some("400".into()),
+            labour: None,
+            other_cost: None,
+            note: None,
+            parts: Vec::<EntryPartInput>::new(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap()
+    .id;
+    let lot = mandi_services::core::bikri::LotInput {
+        seller_account_id: Some(support::id_of(&w.env, "030119998")),
+        purchase_id: Some(purchase),
+        item_id: None,
+        packing_id: None,
+        adjust_advance: false,
+        ..support::bare_lot(&w, "own-1", w.rahim, w.banana, "15")
+    };
+    let draft = support::draft(vec![support::with_sales(
+        lot,
+        vec![support::sale("s-1", w.akram, "15", "600")],
+    )]);
+    let sale = save(&w, &draft).bikri_id;
+    (w, trip, purchase, sale)
+}

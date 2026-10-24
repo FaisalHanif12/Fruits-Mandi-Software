@@ -27,11 +27,15 @@ mod item;
 mod lines;
 mod matrix;
 mod model;
+mod partner;
+mod partner_lines;
 pub(crate) mod print;
 mod seller;
 mod store;
 mod table;
 mod top;
+mod trend;
+mod trips;
 
 use mandi_core::printing::Paper;
 use mandi_db::Db;
@@ -46,29 +50,37 @@ use crate::reports::{PageSpec, page_spec};
 pub use calc::{average_days, share_hundredths};
 pub use model::{
     AnalyticsCatalogEntry, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind,
-    AnalyticsFilters, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey, AnalyticsLinesInput,
-    AnalyticsLinesPage, AnalyticsPage, AnalyticsPeriod, AnalyticsPrintColumn, AnalyticsPrintData,
-    AnalyticsPrintHeading, AnalyticsPrintInput, AnalyticsPrintRow, AnalyticsResolvedFilters,
-    AnalyticsRow, AnalyticsRunInput, AnalyticsSavedView, AnalyticsSide, AnalyticsView,
-    AnalyticsViewsSaveInput,
+    AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey,
+    AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsPage, AnalyticsPeriod, AnalyticsPrintColumn,
+    AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintInput, AnalyticsPrintRow,
+    AnalyticsResolvedFilters, AnalyticsRow, AnalyticsRunInput, AnalyticsSavedView, AnalyticsSide,
+    AnalyticsTripView, AnalyticsView, AnalyticsViewsSaveInput,
 };
 pub use store::{MAX_NAME_LETTERS, MAX_VIEWS, PREF_KEY, views_get, views_save};
 
 use filters::{Typed, resolve};
 use table::Table;
 
-/// The views of the catalogue, in order.
-const VIEWS: [AnalyticsView; 6] = [
+/// The views of the catalogue, in order. I (gardens) and K (fruit taken) come with D4R.
+const VIEWS: [AnalyticsView; 9] = [
     AnalyticsView::A,
     AnalyticsView::B,
     AnalyticsView::C,
     AnalyticsView::D,
     AnalyticsView::E,
+    AnalyticsView::F,
+    AnalyticsView::G,
     AnalyticsView::H,
+    AnalyticsView::J,
 ];
 
-/// The filters a view takes (PRD 18.1). View D alone takes the grouping.
+/// The filters a view takes (PRD 18.1). Views D and G take the grouping, view J the layout of its
+/// rows. Partners work on periods: F takes the period and the partner only; G and J take the sale
+/// filters, the partner, the trip and the goods, and no comparison.
 fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
+    if view == AnalyticsView::F {
+        return vec![AnalyticsFilterKind::Period, AnalyticsFilterKind::Partner];
+    }
     let mut kinds = vec![
         AnalyticsFilterKind::Period,
         AnalyticsFilterKind::Item,
@@ -77,10 +89,20 @@ fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
         AnalyticsFilterKind::City,
         AnalyticsFilterKind::Adda,
         AnalyticsFilterKind::Side,
-        AnalyticsFilterKind::Compare,
+        AnalyticsFilterKind::Trip,
+        AnalyticsFilterKind::Goods,
     ];
-    if view == AnalyticsView::D {
+    if !matches!(view, AnalyticsView::G | AnalyticsView::J) {
+        kinds.push(AnalyticsFilterKind::Compare);
+    }
+    if matches!(view, AnalyticsView::D | AnalyticsView::G) {
         kinds.push(AnalyticsFilterKind::GroupBy);
+    }
+    if matches!(view, AnalyticsView::G | AnalyticsView::J) {
+        kinds.push(AnalyticsFilterKind::Partner);
+    }
+    if view == AnalyticsView::J {
+        kinds.push(AnalyticsFilterKind::TripView);
     }
     kinds
 }
@@ -123,7 +145,10 @@ fn build_in(
         AnalyticsView::C => buyer::run(conn, &typed, spec)?,
         AnalyticsView::D => matrix::run_d(conn, &typed, spec)?,
         AnalyticsView::E => matrix::run_e(conn, &typed, spec)?,
+        AnalyticsView::F => partner::run(conn, &typed, spec)?,
+        AnalyticsView::G => trend::run(conn, &typed, spec)?,
         AnalyticsView::H => top::run(conn, &typed, spec)?,
+        AnalyticsView::J => trips::run(conn, &typed, spec)?,
     };
     Ok((typed, table))
 }
