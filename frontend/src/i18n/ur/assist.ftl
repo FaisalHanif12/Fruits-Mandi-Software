@@ -186,3 +186,80 @@ working-purchase-avg-cost = <num>{ $total }</num> ÷ <num>{ $qty }</num> = <num>
 # FR-12.24: what is paid now. Freight, labour and other cost are always paid at once.
 # review: pending
 working-purchase-paid-now = <num>{ $value }</num> + <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $other_cost }</num> = <num>{ $result }</num>
+
+## The attention list and the bell (plan 19, PRD FR-7.44). Every Urdu line says what its English line says (NFR-URD-29).
+
+# review: pending
+attention-bell-label = توجہ طلب: { $count }
+
+# review: pending
+attention-title = توجہ طلب
+
+# review: pending
+attention-empty-title = کسی کام پر توجہ کی ضرورت نہیں
+
+# review: pending
+attention-empty-help = جب کوئی کام باقی ہو گا تو یہاں نظر آئے گا۔
+
+# review: pending
+attention-load-failed = فہرست کھل نہیں سکی
+
+# review: pending
+attention-update = نیا ورژن <num>{ $version }</num> تیار ہے۔ دن ختم کر کے ترتیبات سے لگائیں۔
+
+# review: pending
+attention-open-first = سب سے ضروری: <name>{ $name }</name>
+
+# review: pending
+attention-drafts = { $count ->
+    [one] <num>{ $count }</num> غیر محفوظ مسودہ
+   *[other] <num>{ $count }</num> غیر محفوظ مسودے
+}
+
+# review: pending
+attention-open-days = { $count ->
+    [one] <num>{ $count }</num> پچھلا دن بند نہیں ہوا
+   *[other] <num>{ $count }</num> پچھلے دن بند نہیں ہوئے
+}
+
+# review: pending
+attention-stock-waiting = { -baqi-maal } میں <num>{ $count }</num> { -lot } انتظار میں ہیں، کل <num>{ $qty }</num> { -nag }
+
+# review: pending
+attention-stock-waiting-aged = { -baqi-maal } میں <num>{ $count }</num> { -lot } انتظار میں ہیں، کل <num>{ $qty }</num> { -nag }، سب سے پرانا <num>{ $days }</num> دن سے
+
+# review: pending
+attention-over-credit-limit = <num>{ $count }</num> { -gahak } ادھار کی حد سے آگے ہیں
+
+# review: pending
+attention-dues-old = <num>{ $count }</num> { -gahak } کے پرانے بقایا: <num>{ $amount }</num>
+
+# review: pending
+attention-dues-old-aged = <num>{ $count }</num> { -gahak } کے پرانے بقایا: <num>{ $amount }</num>، سب سے پرانا بل <num>{ $days }</num> دن پرانا ہے
+
+# review: pending
+attention-payables-old = <num>{ $count }</num> { -beopari } کی ادائیگی باقی ہے: <num>{ $amount }</num>
+
+# review: pending
+attention-payables-old-aged = <num>{ $count }</num> { -beopari } کی ادائیگی باقی ہے: <num>{ $amount }</num>، سب سے پرانی <num>{ $days }</num> دن سے
+
+# review: pending
+attention-backup-old = آخری کلاؤڈ بیک اپ <num>{ $days }</num> دن پرانا ہے
+
+# review: pending
+attention-backup-never = ابھی تک کلاؤڈ بیک اپ نہیں بنا
+
+# review: pending
+attention-loans-overdue = <num>{ $count }</num> { -adhar-raqam } کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+
+# review: pending
+attention-loans-overdue-aged = <num>{ $count }</num> { -adhar-raqam } کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+
+# review: pending
+attention-takes-overdue = شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+
+# review: pending
+attention-takes-overdue-aged = شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+
+# review: pending
+attention-names-missing = <num>{ $count }</num> ریکارڈ میں دو ناموں میں سے ایک ہی نام ہے

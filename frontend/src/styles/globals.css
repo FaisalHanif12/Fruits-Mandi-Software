@@ -113,6 +113,15 @@ body {
   line-height: var(--leading-latin);
 }
 
+/* The big figure of a dashboard tile: Inter with equal-width digits, step 4 (22 px). */
+@utility type-figure {
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-latin-4);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-latin);
+}
+
 /* A date or a range inside a line of words: Inter with equal-width digits, at the size of the words around it. */
 @utility number-run {
   font-family: var(--font-latin);

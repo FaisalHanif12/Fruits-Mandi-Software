@@ -38,5 +38,5 @@ export function message(
   if (pattern == null) throw new Error(`${language}: no message ${id}`);
   // The <num> and <name> markup of a message is drawn as a number or a name in the page, so its
   // text is what is compared.
-  return visible(bundle.formatPattern(pattern, args)).replace(/<\/?(num|name)>/g, '');
+  return visible(bundle.formatPattern(pattern, args)).replace(/<\/?(num|name|money|key)>/g, '');
 }

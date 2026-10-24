@@ -633,6 +633,18 @@ const monthDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Run B, round 9: the development page of the dashboard and the bell (dev only, like the others). ----
+const dashboardDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/dashboard',
+        component: lazyRouteComponent(() => import('./dev/DashboardDevPage'), 'DashboardDevPage'),
+      }),
+    ]
+  : [];
+// ---- end of Run B block ----
+
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren(appRoutes),
   printRoute,
@@ -642,6 +654,7 @@ const routeTree = rootRoute.addChildren([
   ...analyticsDevRoutes,
   ...settingsDevRoutes,
   ...monthDevRoutes,
+  ...dashboardDevRoutes,
 ]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router

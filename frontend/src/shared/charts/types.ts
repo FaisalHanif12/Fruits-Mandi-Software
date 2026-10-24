@@ -18,6 +18,11 @@ export interface BarChartData {
   series: readonly BarSeries[];
   /** One stack of bars for each category (the parts of a total), or bars side by side. */
   stacked: boolean;
+  /**
+   * Many thin bars (the days of a month): the figures are not written on the bars and the axis shows
+   * only the names that fit. The tooltip still has every figure. Default: false.
+   */
+  dense?: boolean | undefined;
 }
 
 /** The look of a chart, read from the design tokens at the time it is drawn (Code Standards F9). */

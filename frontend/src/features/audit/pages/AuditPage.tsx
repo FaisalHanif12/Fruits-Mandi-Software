@@ -8,17 +8,20 @@
 
 import { Localized } from '@fluent/react';
 import type { InfiniteData } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AuditPage } from '../../../bindings/AuditPage';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { useDebouncedValue } from '../../../shared/hooks';
 import { useEscape } from '../../../shared/keyboard';
+import { useScreenMemory } from '../../../shared/screen-state';
+import { LoadingState } from '../../../shared/ui';
 import { AuditDetail } from '../components/AuditDetail';
 import { AuditFilterBar } from '../components/AuditFilterBar';
 import { AuditResults } from '../components/AuditResults';
 import { filtersToWire, isUnfiltered } from '../filters';
 import { useAuditOptions, useAuditPages } from '../hooks';
+import { AUDIT_SCREEN, auditFromRemembered, rememberedAudit } from '../remember';
 import { useAuditStore } from '../store';
 
 /** How long the filters rest before the backend is asked (Code Standards F35). */
@@ -34,7 +37,33 @@ function isFilterRefusal(error: UiError): boolean {
   );
 }
 
+/**
+ * The filters the Owner last used are put back once when the log first opens, and each change is
+ * kept (PRD FR-7.45). The log is drawn once they are back, so it never flashes empty boxes.
+ */
+function RememberedAuditFilters({ children }: { children: ReactNode }) {
+  const { ready, saved, remember } = useScreenMemory(AUDIT_SCREEN);
+  const hydrated = useAuditStore((now) => now.hydrated);
+  const filters = useAuditStore((now) => now.filters);
+  useEffect(() => {
+    if (ready) useAuditStore.getState().hydrate(auditFromRemembered(saved));
+  }, [ready, saved]);
+  useEffect(() => {
+    if (hydrated) remember(rememberedAudit(filters));
+  }, [hydrated, filters, remember]);
+  if (!hydrated) return <LoadingState />;
+  return <>{children}</>;
+}
+
 export function AuditLog() {
+  return (
+    <RememberedAuditFilters>
+      <AuditLogBody />
+    </RememberedAuditFilters>
+  );
+}
+
+function AuditLogBody() {
   const filters = useAuditStore((now) => now.filters);
   const opened = useAuditStore((now) => now.opened);
   const focusRowId = useAuditStore((now) => now.focusRowId);

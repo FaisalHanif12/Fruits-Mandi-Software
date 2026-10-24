@@ -29,6 +29,7 @@ export function ReportsPage() {
       moduleMenu={null}
       userName={SAMPLE_USER}
       onLock={() => undefined}
+      onGuide={() => undefined}
       onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}

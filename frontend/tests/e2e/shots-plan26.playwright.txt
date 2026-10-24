@@ -1,0 +1,82 @@
+// Screenshots of round 9: the dashboard (normal, full, a new book, a failed call, cash below zero, a new
+// version), the attention bell open (with tasks, and with none), and the first-run guide, in both
+// languages at the three window sizes, taken from the development page /dev/dashboard with the
+// Playwright tool. It is a developer tool: run it with the Vite dev server up on a free port (`pnpm
+// --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`). It also measures sideways
+// overflow (NFR-USE-15): the page and the main area must not scroll sideways, no tile may cut its
+// words, and no raw markup, message ID or error code may show. The tool's own screenshot action may
+// only write inside the folder it was started in, so this snippet writes with an absolute path from
+// inside the page code. Paste it into `browser_run_code_unsafe`; or, when that browser is in use by
+// another session, run it in its own headless Chrome with a throwaway profile (a small Node runner
+// that evaluates this text with playwright-core). A snippet for that tool, not a module, so it is kept
+// as .txt. The Windows check is spec 48.
+//
+// The flags in the hash (tests/helpers/dev-bridge-dashboard.ts): `many`, `empty`, `down`, `quiet`,
+// `cashneg`, `lent`, `update`, `bad`, `none`, `fresh`, `cloudold`, `guide`. A shot with `bell` first
+// opens the bell.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan26';
+  const BASE = 'http://127.0.0.1:5188/#/dev/dashboard';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  // [flags in the hash, name of the shot, act (or null)].
+  const SHOTS = [
+    ['', 'dashboard', null],
+    ['?many', 'dashboard-many', null],
+    ['?empty', 'dashboard-empty', null],
+    ['?down', 'dashboard-down', null],
+    ['?cashneg&update&bad', 'dashboard-warnings', null],
+    ['?many', 'bell-many', 'bell'],
+    ['?quiet', 'bell-quiet', 'bell'],
+    ['?update', 'bell-update', 'bell'],
+    ['?fresh&guide', 'guide', null],
+  ];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [flags, name, act] of SHOTS) {
+      for (const lang of ['ur', 'en']) {
+        try {
+          await page.goto(`${BASE}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1, [role="alert"]', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          await page.waitForTimeout(1800);
+          if (act === 'bell') {
+            await page.locator('[data-attention-count]').click();
+            await page.waitForTimeout(800);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const main = document.querySelector('main');
+            const cut = Array.from(document.querySelectorAll('main button[data-nav-field]')).filter(
+              (tile) => tile.scrollWidth > tile.clientWidth + 1,
+            ).length;
+            const text = document.body.textContent || '';
+            const raw = /<(num|code|key|money|unit|name)>|ERR_|dashboard-|attention-|guide-/.test(text);
+            return [
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'cutTiles=' + cut,
+              'raw=' + raw,
+            ].join(' ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 140)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

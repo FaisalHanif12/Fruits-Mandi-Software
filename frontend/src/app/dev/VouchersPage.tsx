@@ -30,6 +30,7 @@ export function VouchersPage() {
       moduleMenu={<ModuleMenu current={type} onSelect={() => undefined} />}
       userName={SAMPLE_USER}
       onLock={() => undefined}
+      onGuide={() => undefined}
       onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}

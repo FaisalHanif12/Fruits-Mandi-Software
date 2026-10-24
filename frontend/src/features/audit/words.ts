@@ -16,6 +16,7 @@ export const KNOWN_ACTIONS = [
   'logout',
   // The day close and the month close (PRD FR-21.1, FR-21.2, FR-17.6).
   'day_close',
+  'day_auto_close',
   'day_reopen',
   'month_close',
   'month_close_reverse',

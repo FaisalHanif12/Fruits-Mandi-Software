@@ -102,6 +102,25 @@ export function useUpdateCheck() {
   });
 }
 
+/** The start-up check of the app's own: asked once while the app runs, only to show a note. */
+export const STARTUP_UPDATE_KEY = ['updates', 'startup'] as const;
+
+/**
+ * Whether a newer version is on offer, asked once when the app starts (plan 19, NFR-INS-3). It is only
+ * a note on the dashboard and in the bell; installing stays in Settings. A check that cannot reach the
+ * network is not shown as a problem: there is simply no note.
+ */
+export function useStartupUpdateCheck(enabled: boolean) {
+  return useQuery({
+    queryKey: STARTUP_UPDATE_KEY,
+    queryFn: updatesCheck,
+    enabled,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  });
+}
+
 export function useInstallUpdate() {
   return useMutation({ mutationFn: (input: UpdateInstallInput) => updatesInstall(input) });
 }

@@ -186,3 +186,149 @@ working-purchase-avg-cost = <num>{ $total }</num> ÷ <num>{ $qty }</num> = <num>
 # FR-12.24: what is paid now. Freight, labour and other cost are always paid at once.
 # review: pending
 working-purchase-paid-now = <num>{ $value }</num> + <num>{ $freight }</num> + <num>{ $labour }</num> + <num>{ $other_cost }</num> = <num>{ $result }</num>
+
+## The attention list and the bell (plan 19, PRD FR-7.44). Every Urdu line says what its English line says (NFR-URD-29).
+
+# review: pending
+attention-bell-label = Needs attention: { $count }
+
+# review: pending
+attention-title = Needs your attention
+
+# review: pending
+attention-empty-title = Nothing needs your attention
+
+# review: pending
+attention-empty-help = When something needs doing, it shows here.
+
+# review: pending
+attention-load-failed = The list could not be opened
+
+# review: pending
+attention-update = A new version <num>{ $version }</num> is ready. Install it from Settings when the day is done.
+
+# review: pending
+attention-open-first = Most urgent: <name>{ $name }</name>
+
+# review: pending
+attention-drafts = { $count ->
+    [one] <num>{ $count }</num> unsaved draft
+   *[other] <num>{ $count }</num> unsaved drafts
+}
+
+# review: pending
+attention-open-days = { $count ->
+    [one] <num>{ $count }</num> earlier day is not closed
+   *[other] <num>{ $count }</num> earlier days are not closed
+}
+
+# review: pending
+attention-stock-waiting = { $count ->
+    [one] <num>{ $count }</num> { -lot } is waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all
+   *[other] <num>{ $count }</num> { -lot }s are waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all
+}
+
+# review: pending
+attention-stock-waiting-aged = { $count ->
+    [one] <num>{ $count }</num> { -lot } is waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all, the oldest for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+   *[other] <num>{ $count }</num> { -lot }s are waiting in { -baqi-maal }, <num>{ $qty }</num> { -nag } in all, the oldest for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+}
+
+# review: pending
+attention-over-credit-limit = { $count ->
+    [one] <num>{ $count }</num> { -gahak } is over the credit limit
+   *[other] <num>{ $count }</num> { -gahak }s are over the credit limit
+}
+
+# review: pending
+attention-dues-old = { $count ->
+    [one] <num>{ $count }</num> { -gahak } has an old due: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -gahak }s have old dues: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-dues-old-aged = { $count ->
+    [one] <num>{ $count }</num> { -gahak } has an old due: <num>{ $amount }</num>, the bill is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } old
+   *[other] <num>{ $count }</num> { -gahak }s have old dues: <num>{ $amount }</num>, the oldest bill is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } old
+}
+
+# review: pending
+attention-payables-old = { $count ->
+    [one] <num>{ $count }</num> { -beopari } has waited for payment: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -beopari }s have waited for payment: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-payables-old-aged = { $count ->
+    [one] <num>{ $count }</num> { -beopari } has waited for payment: <num>{ $amount }</num>, for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+   *[other] <num>{ $count }</num> { -beopari }s have waited for payment: <num>{ $amount }</num>, the longest for <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }
+}
+
+# review: pending
+attention-backup-old = The last cloud backup is <num>{ $days }</num> { $days ->
+        [one] day
+       *[other] days
+    } old
+
+# review: pending
+attention-backup-never = No cloud backup has been made yet
+
+# review: pending
+attention-loans-overdue = { $count ->
+    [one] <num>{ $count }</num> { -adhar-raqam } entry is past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -adhar-raqam } entries are past their return-by date: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-loans-overdue-aged = { $count ->
+    [one] <num>{ $count }</num> { -adhar-raqam } entry is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> { -adhar-raqam } entries are past their return-by date, up to <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-takes-overdue = { $count ->
+    [one] <num>{ $count }</num> amount taken by a partner is past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> amounts taken by partners are past their return-by date: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-takes-overdue-aged = { $count ->
+    [one] <num>{ $count }</num> amount taken by a partner is <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        } past its return-by date: <num>{ $amount }</num>
+   *[other] <num>{ $count }</num> amounts taken by partners are past their return-by date, up to <num>{ $days }</num> { $days ->
+            [one] day
+           *[other] days
+        }: <num>{ $amount }</num>
+}
+
+# review: pending
+attention-names-missing = { $count ->
+    [one] <num>{ $count }</num> record has only one of its two names
+   *[other] <num>{ $count }</num> records have only one of their two names
+}

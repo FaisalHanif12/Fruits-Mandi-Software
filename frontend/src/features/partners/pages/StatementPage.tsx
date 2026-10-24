@@ -15,11 +15,12 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { ScrollText } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
+import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
   Card,
@@ -34,6 +35,7 @@ import {
 import { PagedList, SignedNum } from '../../cashbook';
 import { usePartnerList } from '../hooks';
 import { usePartnerStatement } from '../money-hooks';
+import { STATEMENT_SCREEN, statementChoicesFrom, statementChoicesText } from '../remember';
 import { parseStatementSearch } from '../screen-type';
 import { statementColumns, type StatementRow } from '../statement-columns';
 
@@ -43,7 +45,14 @@ function textOrNull(text: string): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
+/** The statement starts as the Owner left it: the partner and the days (PRD FR-7.45). */
 export function StatementPage() {
+  return (
+    <Remembered screen={STATEMENT_SCREEN}>{(memory) => <StatementBody {...memory} />}</Remembered>
+  );
+}
+
+function StatementBody({ saved, remember }: MemoryProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const grouping = useGrouping();
@@ -51,11 +60,25 @@ export function StatementPage() {
   const rawSearch: Record<string, unknown> = useSearch({ strict: false });
   const search = parseStatementSearch(rawSearch);
   const partners = usePartnerList();
-  const [partnerId, setPartnerId] = useState(
-    search.partner === undefined ? '' : String(search.partner),
+  // An address with a partner or days in it (the dashboard's partner card) wins over what was kept.
+  const fromAddress =
+    search.partner !== undefined || search.from !== undefined || search.to !== undefined;
+  // What the screen starts with is read once, when it opens.
+  const [start] = useState(() =>
+    fromAddress
+      ? {
+          partnerId: search.partner === undefined ? '' : String(search.partner),
+          from: search.from ?? '',
+          to: search.to ?? '',
+        }
+      : statementChoicesFrom(saved),
   );
-  const [from, setFrom] = useState(search.from ?? '');
-  const [to, setTo] = useState(search.to ?? '');
+  const [partnerId, setPartnerId] = useState(start.partnerId);
+  const [from, setFrom] = useState(start.from);
+  const [to, setTo] = useState(start.to);
+  useEffect(() => {
+    remember(statementChoicesText({ partnerId, from, to }));
+  }, [partnerId, from, to, remember]);
   useEscape('leave', () => {
     void navigate({ to: '/partners' });
   });

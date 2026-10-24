@@ -10,10 +10,11 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { Plus, Route, SearchX } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, type ListContext } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps, useShortcut } from '../../../shared/keyboard';
+import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
   Card,
@@ -27,6 +28,7 @@ import {
 } from '../../../shared/ui';
 import { useTripsList } from '../hooks';
 import { TRIP_COLUMNS } from '../list-columns';
+import { TRIPS_SCREEN, tripChoicesFrom, tripChoicesText } from '../remember';
 import type { TripRow, VentureStatus } from '../types';
 
 /** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
@@ -41,12 +43,21 @@ function textOrNull(text: string): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
+/** The trips list starts as the Owner left its filters (PRD FR-7.45). */
 export function TripsPage() {
+  return <Remembered screen={TRIPS_SCREEN}>{(memory) => <TripsBody {...memory} />}</Remembered>;
+}
+
+function TripsBody({ saved, remember }: MemoryProps) {
   const navigate = useNavigate();
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [status, setStatus] = useState<StatusChoice>('all');
-  const [search, setSearch] = useState('');
+  const start = useMemo(() => tripChoicesFrom(saved), [saved]);
+  const [from, setFrom] = useState(start.from);
+  const [to, setTo] = useState(start.to);
+  const [status, setStatus] = useState<StatusChoice>(start.status);
+  const [search, setSearch] = useState(start.search);
+  useEffect(() => {
+    remember(tripChoicesText({ from, to, status, search }));
+  }, [from, to, status, search, remember]);
   const [focusId, setFocusId] = useState<string | null>(null);
   const filter = useMemo(
     () => ({

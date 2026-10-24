@@ -50,10 +50,6 @@ layout-search-label = Search
 # review: pending
 layout-search-placeholder = Search by code, name, { -bikri } number or truck
 # review: pending
-layout-coming-soon = This is coming soon.
-# review: pending
-layout-attention-label = Needs attention
-# review: pending
 layout-user-menu = User menu
 
 ## Status bar (PRD FR-5.5).
@@ -131,3 +127,53 @@ layout-rokar-voucher = { -wasooli } / { -adaigi } / { -peshgi-khata }
 
 # review: pending
 layout-rokar-general = { -general }
+
+# review: pending
+layout-user-guide = Show the guide
+
+## The first-run guide (plan 19, PRD FR-7.12).
+
+# review: pending
+guide-progress = Step <num>{ $step }</num> of <num>{ $total }</num>
+
+# review: pending
+guide-next = Next
+
+# review: pending
+guide-back = Back
+
+# review: pending
+guide-skip = Skip the guide
+
+# review: pending
+guide-done = Done
+
+# review: pending
+guide-step-dashboard-title = The dashboard
+
+# review: pending
+guide-step-dashboard-body = Today at a glance: sales, cash, dues, partners and what needs your attention. Press any tile to open the screen behind it.
+
+# review: pending
+guide-step-index-title = { -index }
+
+# review: pending
+guide-step-index-body = Add your sellers, buyers, items and cities here. Every account has a code. Type a code, or a few letters of a name, anywhere to bring up the party.
+
+# review: pending
+guide-step-bikri-title = { -bikri-book }
+
+# review: pending
+guide-step-bikri-body = Enter a truck: its lots, then each buyer with the quantity and the rate. The summary and the partners' shares change as you type. Save with <key>{ $key }</key>.
+
+# review: pending
+guide-step-receipt-title = { -wasooli }
+
+# review: pending
+guide-step-receipt-body = Record the money a buyer pays. His open bills show, the oldest first, and the money settles the oldest bill first.
+
+# review: pending
+guide-step-reports-title = Reports
+
+# review: pending
+guide-step-reports-body = Every report has dates and party filters, and can be printed or saved to Excel.

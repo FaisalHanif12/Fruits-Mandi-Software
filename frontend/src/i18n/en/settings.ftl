@@ -96,7 +96,10 @@ settings-day-closing-time-hint = Hours and minutes in 24-hour time, for example 
 settings-day-auto-close = Close the day by itself at closing time
 
 # review: pending
-settings-day-auto-close-note = This is only remembered for now: the app does not close the day by itself yet. Close the day yourself, as before.
+settings-day-auto-close-help = When this is on, the app closes today by itself at the closing time. After that, no more entries can be made for today unless you reopen the day with a reason. It waits while a draft is not saved.
+
+# review: pending
+settings-day-auto-close-off-note = Off: you close the day yourself from the day close screen.
 
 # review: pending
 settings-grouping-title = Number grouping

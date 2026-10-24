@@ -14,13 +14,14 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { PackageCheck, Plus, SearchX } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { StockListInput } from '../../../bindings/StockListInput';
 import type { StockRow } from '../../../bindings/StockRow';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, type ListContext } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
+import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   AccountPicker,
   Button,
@@ -37,6 +38,7 @@ import { OwnStockSection } from '../components/stock/OwnStockSection';
 import { StockLotCard } from '../components/stock/StockLotCard';
 import { UndoWriteOffDialog, WriteOffDialog } from '../components/stock/WriteOffDialogs';
 import { useStockList } from '../hooks/useBikriReads';
+import { STOCK_SCREEN, stockChoicesFrom, stockChoicesText } from '../remember';
 import { STOCK_COLUMNS } from '../stock-columns';
 
 /** A list with more rows than this fills the room and scrolls inside; shorter ones are as tall as their rows. */
@@ -48,13 +50,22 @@ function textOrNull(text: string): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
+/** باقی مال starts as the Owner left the filters (PRD FR-7.45). */
 export function StockPage() {
+  return <Remembered screen={STOCK_SCREEN}>{(memory) => <StockBody {...memory} />}</Remembered>;
+}
+
+function StockBody({ saved, remember }: MemoryProps) {
   const navigate = useNavigate();
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [seller, setSeller] = useState<PickerValue | null>(null);
-  const [item, setItem] = useState<PickerValue | null>(null);
-  const [includeWrittenOff, setIncludeWrittenOff] = useState(false);
+  const start = useMemo(() => stockChoicesFrom(saved), [saved]);
+  const [from, setFrom] = useState(start.from);
+  const [to, setTo] = useState(start.to);
+  const [seller, setSeller] = useState<PickerValue | null>(start.seller);
+  const [item, setItem] = useState<PickerValue | null>(start.item);
+  const [includeWrittenOff, setIncludeWrittenOff] = useState(start.includeWrittenOff);
+  useEffect(() => {
+    remember(stockChoicesText({ from, to, seller, item, includeWrittenOff }));
+  }, [from, to, seller, item, includeWrittenOff, remember]);
   const filter: StockListInput = {
     date: null,
     from: textOrNull(from),

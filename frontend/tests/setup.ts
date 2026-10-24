@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 // A test waits for what the screen shows with waitFor and findBy. The default one second is
 // enough on a quiet machine and not on a loaded one: 49 files run at the same time, and the
@@ -12,6 +12,20 @@ configure({ asyncUtilTimeout: ASYNC_UTIL_TIMEOUT_MS });
 afterEach(() => {
   cleanup();
 });
+
+// What a screen remembers (PRD FR-7.45) is read from the backend when a screen opens. In a test there
+// is no backend and nothing is kept: every screen starts as a first visit, at once. The one exception
+// is the first-run guide (PRD FR-7.12), which counts as seen, so it does not open over every test of
+// the whole app and take its first Esc. A test about the remembering or the guide mocks this module
+// itself and says what was kept.
+vi.mock('../src/shared/screen-state/api', () => ({
+  prefsScreenGet: vi.fn(({ screen }: { screen: string }) =>
+    Promise.resolve({ screen, value: screen === 'app.guide' ? '{"done":true}' : null }),
+  ),
+  prefsScreenSet: vi.fn(({ screen, value }: { screen: string; value: string }) =>
+    Promise.resolve({ screen, value: value === '' ? null : value }),
+  ),
+}));
 
 // jsdom lacks the pointer-capture and scrolling methods Radix Select calls when it opens.
 // Some test files run in plain Node (no DOM), where there is nothing to add.

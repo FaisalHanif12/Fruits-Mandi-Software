@@ -18,6 +18,8 @@ interface AppShellProps {
   userName: string;
   onLock: () => void;
   onSignOut: () => void;
+  /** The user menu's "show the guide" (PRD FR-7.12). */
+  onGuide: () => void;
   /** A result of the top bar's search was chosen: open that account. */
   onOpenAccount: (id: number) => void;
   /** A result of the top bar's search was chosen: open that بکری. */
@@ -41,6 +43,7 @@ export function AppShell({
   userName,
   onLock,
   onSignOut,
+  onGuide,
   onOpenAccount,
   onOpenBikri,
   onOpenVoucher,
@@ -66,6 +69,7 @@ export function AppShell({
             userName={userName}
             onLock={onLock}
             onSignOut={onSignOut}
+            onGuide={onGuide}
             onOpenAccount={onOpenAccount}
             onOpenBikri={onOpenBikri}
             onOpenVoucher={onOpenVoucher}

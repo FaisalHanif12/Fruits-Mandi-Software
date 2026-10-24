@@ -166,6 +166,9 @@ audit-entity-partner = شراکت دار
 audit-action-day-close = دن بند کیا
 
 # review: pending
+audit-action-day-auto-close = دن خود بخود بند ہوا
+
+# review: pending
 audit-action-day-reopen = دن کھولا
 
 # review: pending

@@ -13,6 +13,7 @@ import { rememberKey } from '../support/backup-key.mjs';
 import { FIRM, OWNER, PARTNERS } from '../support/credentials.mjs';
 import { t } from '../support/messages.mjs';
 import {
+  closeGuide,
   Key,
   button,
   confirmSpellingIfAsked,
@@ -172,6 +173,9 @@ describe('first run: the partners step (Urdu)', () => {
     await expect(save).toBeEnabled();
     await save.click();
     await waitForShell('ur');
+    // The first-run guide opens by itself the first time (PRD FR-7.12); it is closed here, and it
+    // keeps the mark that it was seen, so it never opens over a later spec.
+    await closeGuide();
   });
 });
 

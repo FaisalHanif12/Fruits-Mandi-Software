@@ -70,7 +70,8 @@ export function buildBarOption(data: BarChartData, style: ChartStyle): EChartsCo
         fontSize: AXIS_LABEL_SIZE,
         width: AXIS_LABEL_WIDTH,
         overflow: 'truncate',
-        interval: 0,
+        // Every name is shown, unless the bars are many and thin: then only the names that fit.
+        interval: data.dense === true ? 'auto' : 0,
       },
     },
     yAxis: {
@@ -92,18 +93,19 @@ export function buildBarOption(data: BarChartData, style: ChartStyle): EChartsCo
         // The written figure of this bar, carried with it so the label never has to be worked out.
         label: series.labels[position] ?? '',
       })),
-      // A stack of parts has no figure on each part (they would not fit): the tooltip and the
-      // table under the chart have them. A single bar shows its figure above it.
-      label: data.stacked
-        ? { show: false }
-        : {
-            show: true,
-            position: 'top',
-            color: style.ink,
-            fontFamily: style.fontFamily,
-            fontSize: LABEL_SIZE,
-            formatter: (params: { data?: { label?: string } }) => params.data?.label ?? '',
-          },
+      // A stack of parts, or many thin bars, have no figure on each bar (they would not fit): the
+      // tooltip and the table under the chart have them. A single bar shows its figure above it.
+      label:
+        data.stacked || data.dense === true
+          ? { show: false }
+          : {
+              show: true,
+              position: 'top',
+              color: style.ink,
+              fontFamily: style.fontFamily,
+              fontSize: LABEL_SIZE,
+              formatter: (params: { data?: { label?: string } }) => params.data?.label ?? '',
+            },
       itemStyle: { color: style.colors[index % Math.max(style.colors.length, 1)] ?? style.ink },
     })),
   };

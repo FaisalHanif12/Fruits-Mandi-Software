@@ -6,11 +6,12 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { FlaskConical, Plus, Scale, SearchX } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
+import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   AccountPicker,
   Button,
@@ -26,18 +27,28 @@ import {
 import { ALL_CHARGES, SIDES } from '../allowed';
 import { RULE_COLUMNS } from '../columns';
 import { useRuleList } from '../hooks';
+import { RULES_SCREEN, ruleChoicesFrom, ruleChoicesText } from '../remember';
 import type { ChargeType, RuleFilter, RuleRow, RuleSide } from '../types';
 
 const SHORT_LIST_ROWS = 30;
 const ALL = 'all';
 
+/** The rule list starts as the Owner left its filters (PRD FR-7.45). */
 export function RulesListPage() {
+  return <Remembered screen={RULES_SCREEN}>{(memory) => <RulesBody {...memory} />}</Remembered>;
+}
+
+function RulesBody({ saved, remember }: MemoryProps) {
   const navigate = useNavigate();
-  const [side, setSide] = useState<RuleSide | typeof ALL>(ALL);
-  const [charge, setCharge] = useState<ChargeType | typeof ALL>(ALL);
-  const [party, setParty] = useState<PickerValue | null>(null);
-  const [item, setItem] = useState<PickerValue | null>(null);
-  const [showInactive, setShowInactive] = useState(false);
+  const start = useMemo(() => ruleChoicesFrom(saved), [saved]);
+  const [side, setSide] = useState<RuleSide | typeof ALL>(start.side);
+  const [charge, setCharge] = useState<ChargeType | typeof ALL>(start.charge);
+  const [party, setParty] = useState<PickerValue | null>(start.party);
+  const [item, setItem] = useState<PickerValue | null>(start.item);
+  const [showInactive, setShowInactive] = useState(start.showInactive);
+  useEffect(() => {
+    remember(ruleChoicesText({ side, charge, party, item, showInactive }));
+  }, [side, charge, party, item, showInactive, remember]);
   const filter = useMemo<RuleFilter>(
     () => ({
       side: side === ALL ? null : side,

@@ -67,6 +67,7 @@ export function RokarPage() {
       moduleMenu={id === null ? null : <RokarMenu current={id} onSelect={() => undefined} />}
       userName={SAMPLE_USER}
       onLock={() => undefined}
+      onGuide={() => undefined}
       onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}

@@ -1,6 +1,6 @@
-// D1 story, step 3: the shell. The main menu on the start side with nine items, the empty
-// dashboard, the menu by keyboard (arrows, Home, End, Enter), Alt+L in both directions, the text
-// size keys, and Settings by keyboard. Timed: opening a screen from the menu (NFR-SPD-3) and the
+// D1 story, step 3: the shell. The main menu on the start side with nine items, the dashboard, the
+// menu by keyboard (arrows, Home, End, Enter), Alt+L in both directions, the text size keys, and
+// Settings by keyboard. Timed: opening a screen from the menu (NFR-SPD-3) and the
 // language switch (NFR-SPD-19), 20 times each, p95. Screenshots of the shell in both languages.
 
 import { $, $$, browser, expect } from '@wdio/globals';
@@ -39,11 +39,12 @@ describe('the shell (Urdu)', () => {
     await startSignedIn('ur', OWNER);
   });
 
-  it('shows the main menu with nine items, and the empty dashboard with what to do', async () => {
+  it('shows the main menu with nine items, and the dashboard with its quick actions', async () => {
     expect(await $$(MENU_ITEMS)).toHaveLength(MENU_COUNT);
     const text = await pageText();
     expect(text).toContain(t('ur', 'dashboard-greeting', { name: OWNER.displayName }));
-    expect(text).toContain(t('ur', 'dashboard-empty-title'));
+    // The dashboard has its quick actions at once, before its figures come (PRD Section 9, NFR-USE-9).
+    expect(text).toContain(t('ur', 'dashboard-quick-title'));
     // The menu is on the start side: on the right in Urdu (PRD FR-5.2).
     const nav = await $('nav');
     const box = await browser.execute((el) => el.getBoundingClientRect().left, nav);

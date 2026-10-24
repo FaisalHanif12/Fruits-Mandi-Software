@@ -105,6 +105,14 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - Tests: `reports-screens-round8.test.tsx`, `number-runs.test.tsx`, plus the contract and filter
   tests. Windows spec: `47-reports-round8.e2e.mjs`. Screenshot snippet: `shots-plan25.playwright.txt`.
 
+## Remembered filters (round 9, PRD FR-7.45)
+
+- Each report keeps the filters the Owner last used, under the screen name `report.<id>` (for example
+  `report.r20`), through `shared/screen-state`. `remember.ts` says what is kept (never the one-time
+  person or any money) and reads it back, leaving out what can no longer be read. An address with
+  filters in it (the party card's buttons, the dashboard's partner card) wins over what was kept.
+  Clearing the filters forgets them. Tests: `remembered-filters.test.tsx`.
+
 ## Not built yet
 
 - Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB

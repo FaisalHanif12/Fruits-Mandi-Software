@@ -51,6 +51,7 @@ export { Stepper, type Step } from './Stepper';
 export { SuggestInput, type Suggestion } from './SuggestInput';
 export { Table, type TableColumn, type TableColumnKind } from './Table';
 export { Tabs, type TabItem } from './Tabs';
+export { Tile, type TileTone } from './Tile';
 export { TextInput } from './TextInput';
 export { TOAST_DURATION_MS, Toaster } from './Toaster';
 export {

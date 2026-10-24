@@ -9,7 +9,7 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { SearchX, UsersRound } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { PaidState } from '../../../bindings/PaidState';
 import type { PukhtaRegisterInput } from '../../../bindings/PukhtaRegisterInput';
 import type { PukhtaRegisterRow } from '../../../bindings/PukhtaRegisterRow';
@@ -18,6 +18,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { ListGrid } from '../../../shared/grid';
 import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { formNavigationProps, useEscape } from '../../../shared/keyboard';
+import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
   Checkbox,
@@ -31,6 +32,7 @@ import {
 } from '../../../shared/ui';
 import { pukhtaColumns } from '../columns';
 import { usePukhtaRegister } from '../hooks';
+import { PUKHTA_REGISTER_SCREEN, registerChoicesFrom, registerChoicesText } from '../remember';
 
 const ALL = 'all';
 const SHORT_LIST_ROWS = 30;
@@ -38,14 +40,27 @@ const SHORT_LIST_ROWS = 30;
 /** A register row has no id of its own (two equal lines are possible), so its place is its key. */
 type KeyedRow = PukhtaRegisterRow & { key: string };
 
+/** The register starts as the Owner left its filters (PRD FR-7.45). */
 export function PukhtaRegisterPage() {
+  return (
+    <Remembered screen={PUKHTA_REGISTER_SCREEN}>
+      {(memory) => <PukhtaRegisterBody {...memory} />}
+    </Remembered>
+  );
+}
+
+function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
   const navigate = useNavigate();
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [side, setSide] = useState<PukhtaSide | typeof ALL>(ALL);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [state, setState] = useState<PaidState | typeof ALL>(ALL);
+  const start = useMemo(() => registerChoicesFrom(saved), [saved]);
+  const [from, setFrom] = useState(start.from);
+  const [to, setTo] = useState(start.to);
+  const [side, setSide] = useState<PukhtaSide | typeof ALL>(start.side);
+  const [name, setName] = useState(start.name);
+  const [phone, setPhone] = useState(start.phone);
+  const [state, setState] = useState<PaidState | typeof ALL>(start.state);
+  useEffect(() => {
+    remember(registerChoicesText({ from, to, side, name, phone, state }));
+  }, [from, to, side, name, phone, state, remember]);
   const filter: PukhtaRegisterInput = {
     from: from.trim(),
     to: to.trim(),

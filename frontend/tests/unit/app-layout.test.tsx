@@ -109,7 +109,7 @@ describe.each(LANGUAGES)('ModuleMenu (%s)', (language) => {
 });
 
 describe.each(LANGUAGES)('TopBar (%s)', (language) => {
-  it('Ctrl+K focuses the search box; the bell says "coming soon"', async () => {
+  it('Ctrl+K focuses the search box; the bell says how many things need attention', async () => {
     setLanguage(language);
     renderIn(
       language,
@@ -118,6 +118,7 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
           userName={USER_NAME}
           onLock={vi.fn()}
           onSignOut={vi.fn()}
+          onGuide={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
           onOpenVoucher={vi.fn()}
@@ -130,9 +131,13 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
     expect(search).not.toHaveFocus();
     await userEvent.setup().keyboard('{Control>}k{/Control}');
     expect(search).toHaveFocus();
+    // With nothing read yet the bell says 0 things need attention (the real count comes from the
+    // backend, tests in dashboard-bell.test.tsx).
     expect(
-      screen.getByRole('button', { name: message(language, 'layout-attention-label') }),
-    ).toHaveAttribute('title', message(language, 'layout-coming-soon'));
+      screen.getByRole('button', {
+        name: (name) => visible(name) === message(language, 'attention-bell-label', { count: '0' }),
+      }),
+    ).toBeInTheDocument();
   });
 
   it('has the language switch and the user, shown as typed', () => {
@@ -144,6 +149,7 @@ describe.each(LANGUAGES)('TopBar (%s)', (language) => {
           userName={USER_NAME}
           onLock={vi.fn()}
           onSignOut={vi.fn()}
+          onGuide={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
           onOpenVoucher={vi.fn()}
@@ -346,6 +352,7 @@ describe.each(LANGUAGES)('AppShell (%s)', (language) => {
           userName={USER_NAME}
           onLock={vi.fn()}
           onSignOut={vi.fn()}
+          onGuide={vi.fn()}
           onOpenAccount={vi.fn()}
           onOpenBikri={vi.fn()}
           onOpenVoucher={vi.fn()}

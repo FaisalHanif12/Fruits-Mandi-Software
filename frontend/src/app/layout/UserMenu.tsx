@@ -1,9 +1,9 @@
 // The user in the top bar (PRD FR-5.6, design system 6): his name opens a small menu with "change
-// password", "lock the app" and "sign out". Built on Radix DropdownMenu, so arrows, Enter and Esc work, and focus goes
+// password", "show the guide" (the help of the first-run guide, PRD FR-7.12), "lock the app" and "sign out". Built on Radix DropdownMenu, so arrows, Enter and Esc work, and focus goes
 // back to the button when it closes.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { KeyRound, Lock, LogOut } from 'lucide-react';
+import { CircleHelp, KeyRound, Lock, LogOut } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
 import type { Ref } from 'react';
 import { useUiLanguage } from '../../shared/i18n';
@@ -15,6 +15,8 @@ interface UserMenuProps {
   /** The button, so a dialog opened from the menu can give focus back to it. */
   buttonRef?: Ref<HTMLButtonElement> | undefined;
   onChangePassword: () => void;
+  /** Shows the first-run guide again (PRD FR-7.12). */
+  onGuide: () => void;
   onLock: () => void;
   onSignOut: () => void;
 }
@@ -26,6 +28,7 @@ export function UserMenu({
   userName,
   buttonRef,
   onChangePassword,
+  onGuide,
   onLock,
   onSignOut,
 }: UserMenuProps) {
@@ -63,6 +66,10 @@ export function UserMenu({
           <DropdownMenu.Item className={ITEM_CLASSES} onSelect={onChangePassword}>
             <KeyRound aria-hidden="true" className="size-icon-md" />
             <Localized id="layout-user-change-password" />
+          </DropdownMenu.Item>
+          <DropdownMenu.Item className={ITEM_CLASSES} onSelect={onGuide}>
+            <CircleHelp aria-hidden="true" className="size-icon-md" />
+            <Localized id="layout-user-guide" />
           </DropdownMenu.Item>
           <DropdownMenu.Item className={ITEM_CLASSES} onSelect={onLock}>
             <Lock aria-hidden="true" className="size-icon-md" />

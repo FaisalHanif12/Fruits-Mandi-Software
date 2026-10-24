@@ -166,6 +166,9 @@ audit-entity-partner = Partner
 audit-action-day-close = Day closed
 
 # review: pending
+audit-action-day-auto-close = Day closed automatically
+
+# review: pending
 audit-action-day-reopen = Day reopened
 
 # review: pending

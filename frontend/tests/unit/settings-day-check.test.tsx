@@ -96,7 +96,7 @@ describe.each(LANGUAGES)('Settings, Day and check (%s)', (language) => {
   }
 
   describe('the closing time and the automatic close', () => {
-    it('shows what is saved, and says the automatic close is only remembered for now', async () => {
+    it('shows what is saved, and says what the automatic close does and what off means', async () => {
       await openTab('settings-tab-day');
       const time = await screen.findByLabelText<HTMLInputElement>(
         named(language, 'settings-day-closing-time'),
@@ -105,11 +105,21 @@ describe.each(LANGUAGES)('Settings, Day and check (%s)', (language) => {
       expect(
         screen.getByRole('checkbox', { name: m('settings-day-auto-close') }),
       ).not.toBeChecked();
-      expect(screen.getByText(m('settings-day-auto-close-note'))).toBeInTheDocument();
+      // It says what the switch does and, while it is off, what off means. It never says the
+      // switch is only stored.
+      expect(screen.getByText(m('settings-day-auto-close-help'))).toBeInTheDocument();
+      expect(screen.getByText(m('settings-day-auto-close-off-note'))).toBeInTheDocument();
       // Nothing is changed yet, so there is nothing to save.
       expect(
         screen.getByRole('button', { name: keyed(language, 'layout-save-save') }),
       ).toBeDisabled();
+    });
+
+    it('says the day is closed by itself when the switch is on, and drops the off note', async () => {
+      const { user } = await openTab('settings-tab-day');
+      await user.click(await screen.findByRole('checkbox', { name: m('settings-day-auto-close') }));
+      expect(screen.getByText(m('settings-day-auto-close-help'))).toBeInTheDocument();
+      expect(screen.queryByText(m('settings-day-auto-close-off-note'))).not.toBeInTheDocument();
     });
 
     it('sends the time as typed and the tick, exactly as the backend wrote its request', async () => {

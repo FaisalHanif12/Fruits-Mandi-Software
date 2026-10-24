@@ -8,12 +8,16 @@ import type { AuditRow } from './types';
 
 interface AuditStore {
   filters: AuditFilterState;
+  /** True once the filters the Owner last used have been put back (PRD FR-7.45): done once per run. */
+  hydrated: boolean;
   /** The entry whose changed fields are shown, or null for the list. */
   opened: AuditRow | null;
   /** The row that had focus in the list, so it is focused again when the grid is built again. */
   focusRowId: string | null;
   change: (part: Partial<AuditFilterState>) => void;
   clear: () => void;
+  /** Puts back the filters kept from last time (null: none kept), once. */
+  hydrate: (filters: AuditFilterState | null) => void;
   open: (row: AuditRow | null) => void;
   setFocusRowId: (id: string) => void;
   reset: () => void;
@@ -21,6 +25,7 @@ interface AuditStore {
 
 export const useAuditStore = create<AuditStore>((set) => ({
   filters: EMPTY_AUDIT_FILTERS,
+  hydrated: false,
   opened: null,
   focusRowId: null,
   change: (part) => {
@@ -29,6 +34,11 @@ export const useAuditStore = create<AuditStore>((set) => ({
   clear: () => {
     set({ filters: EMPTY_AUDIT_FILTERS });
   },
+  hydrate: (filters) => {
+    set((now) =>
+      now.hydrated ? now : { hydrated: true, ...(filters === null ? {} : { filters }) },
+    );
+  },
   open: (opened) => {
     set({ opened });
   },
@@ -36,6 +46,6 @@ export const useAuditStore = create<AuditStore>((set) => ({
     set({ focusRowId });
   },
   reset: () => {
-    set({ filters: EMPTY_AUDIT_FILTERS, opened: null, focusRowId: null });
+    set({ filters: EMPTY_AUDIT_FILTERS, hydrated: false, opened: null, focusRowId: null });
   },
 }));

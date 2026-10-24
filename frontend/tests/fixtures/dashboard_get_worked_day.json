@@ -1,0 +1,281 @@
+{
+  "today": "2026-10-10",
+  "tiles": {
+    "sales_gross_paisa": 4140000,
+    "sales_count": 2,
+    "commission_paisa": 544800,
+    "cash_in_hand_paisa": 5848400,
+    "buyers_dues_paisa": 2156400,
+    "sellers_payable_paisa": 1016000,
+    "advances_open_paisa": 0,
+    "stock_lots": 0,
+    "stock_qty": 0,
+    "trips_open": 0,
+    "trips_purchases_with_stock": 0,
+    "trips_qty_left": 0,
+    "trips_cost_left_paisa": 0,
+    "lent_open_paisa": 0,
+    "lent_overdue_paisa": 0,
+    "expenses_today_paisa": 300000
+  },
+  "partners": [
+    {
+      "partner_id": 1,
+      "name_ur": "الف",
+      "name_en": "Partner A",
+      "today_paisa": 99600,
+      "month_paisa": 99600,
+      "year_paisa": 99600,
+      "total_paisa": -100400
+    },
+    {
+      "partner_id": 2,
+      "name_ur": "ب",
+      "name_en": "Partner B",
+      "today_paisa": 74600,
+      "month_paisa": 74600,
+      "year_paisa": 74600,
+      "total_paisa": 74600
+    },
+    {
+      "partner_id": 3,
+      "name_ur": "ج",
+      "name_en": "Partner C",
+      "today_paisa": 74600,
+      "month_paisa": 74600,
+      "year_paisa": 74600,
+      "total_paisa": 74600
+    }
+  ],
+  "bikri_today": [
+    {
+      "bikri_id": 1,
+      "number": 1,
+      "truck_no": "LES-1234",
+      "seller": {
+        "ur": "رحیم",
+        "en": "Rahim"
+      },
+      "seller_count": 1,
+      "gross_paisa": 2940000,
+      "net_paisa": 1931600,
+      "cancelled": false
+    },
+    {
+      "bikri_id": 2,
+      "number": 2,
+      "truck_no": "LHR-0077",
+      "seller": {
+        "ur": "کریم",
+        "en": "Karim"
+      },
+      "seller_count": 1,
+      "gross_paisa": 1200000,
+      "net_paisa": 1016000,
+      "cancelled": false
+    }
+  ],
+  "bikri_today_count": 2,
+  "oldest_dues": [
+    {
+      "party": {
+        "account_id": 21,
+        "code": "03040002",
+        "short_code": "2",
+        "name_ur": "ارشد ملتانی",
+        "name_en": "Arshad Multani",
+        "tag": null,
+        "person_key": null
+      },
+      "city": null,
+      "balance_paisa": 1868400,
+      "oldest_date": "2026-10-10",
+      "days": 0
+    },
+    {
+      "party": {
+        "account_id": 20,
+        "code": "03040001",
+        "short_code": "1",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax",
+        "tag": null,
+        "person_key": null
+      },
+      "city": null,
+      "balance_paisa": 288000,
+      "oldest_date": "2026-10-10",
+      "days": 0
+    }
+  ],
+  "chart_days": [
+    {
+      "date": "2026-09-11",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-12",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-13",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-14",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-15",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-16",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-17",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-18",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-19",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-20",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-21",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-22",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-23",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-24",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-25",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-26",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-27",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-28",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-29",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-30",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-01",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-02",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-03",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-04",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-05",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-06",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-07",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-08",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-09",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-10",
+      "gross_paisa": 4140000,
+      "commission_paisa": 544800
+    }
+  ],
+  "chart_items": [
+    {
+      "item_id": 1,
+      "name_ur": "کیلا",
+      "name_en": "Banana",
+      "commission_paisa": 392800
+    },
+    {
+      "item_id": 2,
+      "name_ur": "سیب",
+      "name_en": "Apple",
+      "commission_paisa": 152000
+    }
+  ],
+  "attention": {
+    "items": [],
+    "total_count": 0
+  }
+}

@@ -58,6 +58,7 @@ export function BikriPage() {
       }
       userName={SAMPLE_USER}
       onLock={() => undefined}
+      onGuide={() => undefined}
       onSignOut={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}

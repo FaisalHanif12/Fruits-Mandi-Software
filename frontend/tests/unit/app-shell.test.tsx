@@ -25,15 +25,18 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { fakeDashboard } from '../helpers/dashboard';
 import { at } from '../helpers/sample';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
+vi.mock('../../src/features/dashboard/api');
 vi.mock('../../src/features/settings/api');
 
 beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
+  fakeDashboard();
 });
 
 afterEach(() => {
@@ -99,12 +102,13 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       message(language, 'layout-status-day-open'),
     );
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    // The empty dashboard says why and what to do (PRD FR-7.46).
+    // The dashboard shows what the backend sent: today's sales and the cash of the worked day, and
+    // the quick actions, each with its key (PRD Section 9, FR-9.1).
     expect(
-      screen.getByRole('heading', {
-        name: (name) => visible(name) === message(language, 'dashboard-empty-title'),
-      }),
+      await screen.findByRole('group', { name: message(language, 'dashboard-quick-title') }),
     ).toBeInTheDocument();
+    expect(await screen.findByText('41,400')).toBeInTheDocument();
+    expect(screen.getByText('58,484')).toBeInTheDocument();
   });
 
   it('a closed day is said in words', async () => {
@@ -239,17 +243,18 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     }
   });
 
-  it('the dashboard buttons lead to the Index and to a new بکری', async () => {
+  it("the dashboard buttons lead to a new بکری and to a tile's report", async () => {
     const { router } = await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const user = userEvent.setup();
+    // The buyers' dues tile opens R20, the buyers' dues report (FR-9.1).
     await user.click(
-      screen.getByRole('button', {
-        name: (name) => visible(name) === message(language, 'dashboard-open-index'),
+      await screen.findByRole('button', {
+        name: (name) => visible(name).startsWith(message(language, 'dashboard-tile-dues')),
       }),
     );
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/index');
+      expect(router.state.location.pathname).toBe('/reports/R20');
     });
   });
 

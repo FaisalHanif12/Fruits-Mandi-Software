@@ -96,7 +96,10 @@ settings-day-closing-time-hint = 24 گھنٹے کے وقت میں گھنٹے ا�
 settings-day-auto-close = بندش کے وقت دن خود بند ہو جائے
 
 # review: pending
-settings-day-auto-close-note = ابھی صرف یاد رکھا جاتا ہے: ایپ دن خود بند نہیں کرتی۔ دن پہلے کی طرح خود بند کریں۔
+settings-day-auto-close-help = یہ آن ہو تو ایپ بند کرنے کے وقت پر آج کا دن خود بند کر دیتی ہے۔ اس کے بعد آج کی تاریخ میں کوئی اندراج نہیں ہو سکتا جب تک آپ وجہ لکھ کر دن دوبارہ نہ کھولیں۔ اگر کوئی مسودہ محفوظ نہ ہو تو یہ انتظار کرتی ہے۔
+
+# review: pending
+settings-day-auto-close-off-note = بند: آپ دن خود «دن بند کریں» اسکرین سے بند کرتے ہیں۔
 
 # review: pending
 settings-grouping-title = ہندسوں کی ترتیب

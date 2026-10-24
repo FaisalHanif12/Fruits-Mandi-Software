@@ -7,11 +7,12 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { Landmark, Plus, SearchX } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid, type ListContext } from '../../../shared/grid';
 import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
+import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
   Checkbox,
@@ -26,6 +27,7 @@ import {
 import { accountColumns, hasMoreColumns, showsOpeningColumns } from '../account-columns';
 import { useAccountList } from '../../../shared/accounts';
 import type { AccountFilter, AccountRow, AccountType } from '../../../shared/accounts';
+import { ACCOUNTS_SCREEN, accountChoicesFrom, accountChoicesText } from '../remember';
 import { useMasterFocus } from '../store';
 
 /** A list of this many rows or fewer is as tall as its rows; a longer one fills the screen. */
@@ -33,11 +35,22 @@ const SHORT_LIST_ROWS = 30;
 const ALL = 'all';
 const TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
 
+/** The account list starts as the Owner left it: the kind and the inactive tick (PRD FR-7.45). */
 export function AccountListPage() {
+  return (
+    <Remembered screen={ACCOUNTS_SCREEN}>{(memory) => <AccountListBody {...memory} />}</Remembered>
+  );
+}
+
+function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
   const navigate = useNavigate();
-  const [type, setType] = useState<AccountType | typeof ALL>(ALL);
+  const start = useMemo(() => accountChoicesFrom(saved), [saved]);
+  const [type, setType] = useState<AccountType | typeof ALL>(start.type);
   const [text, setText] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [showInactive, setShowInactive] = useState(start.showInactive);
+  useEffect(() => {
+    keepChoices(accountChoicesText({ type, showInactive }));
+  }, [type, showInactive, keepChoices]);
   // The tick that adds the opening debit and credit below the wide step. It is kept for next time.
   const [moreColumns, setMoreColumns] = useRememberedFlag('accounts.more_columns', false);
   const step = useLayoutStep();

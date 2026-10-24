@@ -7,6 +7,8 @@ import { EMPTY_ANALYTICS_FILTERS, type AnalyticsFilterState } from './filters';
 
 interface AnalyticsStore {
   filters: AnalyticsFilterState;
+  /** True once the filters the Owner last used have been put back (PRD FR-7.45): done once per run. */
+  hydrated: boolean;
   /** The first period column shown in views D and E, when they have more than fit (see columns.ts). */
   windowStart: number;
   /** The user asked for the columns that do not fit the window by default (see columns.ts). */
@@ -15,6 +17,8 @@ interface AnalyticsStore {
   savedName: string | null;
   change: (part: Partial<AnalyticsFilterState>) => void;
   replace: (filters: AnalyticsFilterState, savedName?: string | null) => void;
+  /** Puts back the filters kept from last time (null: none kept), once. */
+  hydrate: (filters: AnalyticsFilterState | null) => void;
   setWindowStart: (start: number) => void;
   setOtherColumns: (other: boolean) => void;
   setSavedName: (name: string | null) => void;
@@ -23,6 +27,7 @@ interface AnalyticsStore {
 
 export const useAnalyticsStore = create<AnalyticsStore>((set) => ({
   filters: EMPTY_ANALYTICS_FILTERS,
+  hydrated: false,
   windowStart: 0,
   otherColumns: false,
   savedName: null,
@@ -32,6 +37,11 @@ export const useAnalyticsStore = create<AnalyticsStore>((set) => ({
   },
   replace: (filters, savedName = null) => {
     set({ filters, windowStart: 0, savedName });
+  },
+  hydrate: (filters) => {
+    set((now) =>
+      now.hydrated ? now : { hydrated: true, ...(filters === null ? {} : { filters }) },
+    );
   },
   setWindowStart: (start) => {
     set({ windowStart: start });
@@ -45,6 +55,7 @@ export const useAnalyticsStore = create<AnalyticsStore>((set) => ({
   reset: () => {
     set({
       filters: EMPTY_ANALYTICS_FILTERS,
+      hydrated: false,
       windowStart: 0,
       otherColumns: false,
       savedName: null,

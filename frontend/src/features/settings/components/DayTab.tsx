@@ -1,8 +1,9 @@
 // The Day group of Settings (PRD Section 21, FR-21.1): the closing time and the automatic close, and
 // under them the daily books check (NFR-OBS-5). The closing time is the same value as on the backup
-// screen (the daily cloud and USB copy runs at it). The automatic close is only stored for now: the
-// app does not close the day by itself yet, and the screen says so. The time is sent as typed; the
-// backend checks it (ERR_OUT_OF_RANGE with 00:00 and 23:59) and is the final word.
+// screen (the daily cloud and USB copy runs at it). With the automatic close on, the app closes the
+// day by itself at the closing time and waits while a draft is unsaved (FR-21.1); the screen says so,
+// and says what off means. The time is sent as typed; the backend checks it (ERR_OUT_OF_RANGE with
+// 00:00 and 23:59) and is the final word.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
@@ -84,7 +85,14 @@ function DayForm({ saved }: { saved: DaySettings }) {
         label={<Localized id="settings-day-auto-close" />}
       />
       <Notice tone="info">
-        <Localized id="settings-day-auto-close-note" />
+        <span className="block">
+          <Localized id="settings-day-auto-close-help" />
+        </span>
+        {autoClose ? null : (
+          <span className="block">
+            <Localized id="settings-day-auto-close-off-note" />
+          </span>
+        )}
       </Notice>
       <div>
         <Button

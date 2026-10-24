@@ -6,6 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { AUTH_STATUS_KEY } from '../features/auth/hooks';
 import { uiErrorOf } from '../shared/api';
 import { I18nProvider } from '../shared/i18n';
+import { makeRefreshAfterSave } from './refresh-after-save';
 import { Toaster } from '../shared/ui';
 
 /** A new data cache. Backend errors are final answers, so queries do not retry by themselves. */
@@ -19,14 +20,19 @@ export function createQueryClient(): QueryClient {
       void client.invalidateQueries({ queryKey: AUTH_STATUS_KEY });
     }
   };
+  // After any save the dashboard and the bell read again (PRD FR-7.44, NFR-SPD-22).
+  const refresh = () => {
+    refreshAfterSave();
+  };
   const client: QueryClient = new QueryClient({
     queryCache: new QueryCache({ onError: sessionChanged }),
-    mutationCache: new MutationCache({ onError: sessionChanged }),
+    mutationCache: new MutationCache({ onError: sessionChanged, onSuccess: refresh }),
     defaultOptions: {
       queries: { retry: false, refetchOnWindowFocus: false },
       mutations: { retry: false },
     },
   });
+  const refreshAfterSave = makeRefreshAfterSave(client);
   return client;
 }
 

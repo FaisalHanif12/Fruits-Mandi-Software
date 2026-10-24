@@ -37,6 +37,9 @@ import {
 } from './nav-routes';
 import { useDayStatus } from './use-day-status';
 import { useIdleLock } from './use-idle-lock';
+import { GuideCard } from './guide/GuideCard';
+import { useGuide } from './guide/use-guide';
+import { useLastScreen } from './use-last-screen';
 
 /** Before anyone has signed in, the screen is in the language last used on this computer. */
 function useLoginLanguage(status: AuthStatus | undefined) {
@@ -59,6 +62,10 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const lock = useLock();
   const logout = useLogout();
   useSavePreferences(user);
+  // Start where he left off (PRD FR-7.45), and keep the screen that is open.
+  useLastScreen(!locked);
+  // The first-run guide opens once; the user menu opens it again (PRD FR-7.12).
+  const guide = useGuide(!locked);
 
   const { mutate: lockApp } = lock;
   const lockNow = useCallback(() => {
@@ -135,6 +142,7 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
         }
         userName={user.display_name}
         onLock={lockNow}
+        onGuide={guide.replay}
         onOpenAccount={(id) => {
           void navigate({ to: '/index/accounts/$id', params: { id: String(id) } });
         }}
@@ -171,6 +179,7 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
       {locked ? null : <BikriDraftOffer />}
       {/* Undo straight after a save works from any screen (PRD FR-7.47, plan 16). */}
       {locked ? null : <UndoHost />}
+      {locked ? null : <GuideCard />}
       {locked ? <LockOverlay userName={user.display_name} /> : null}
     </>
   );

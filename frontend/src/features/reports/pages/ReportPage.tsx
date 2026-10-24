@@ -18,7 +18,7 @@ import { Localized } from '@fluent/react';
 import type { InfiniteData } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, FileX, Printer } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import type { ReportPage as ReportPageData } from '../../../bindings/ReportPage';
 import type { UiError } from '../../../bindings/UiError';
@@ -32,6 +32,7 @@ import {
 import { useDebouncedValue, useFocusFirstField } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
+import { Remembered, type ScreenMemory } from '../../../shared/screen-state';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { ReportFilterBar } from '../components/ReportFilterBar';
 import { ReportPreview } from '../components/ReportPreview';
@@ -46,6 +47,7 @@ import {
 } from '../filters';
 import { reportsExportExcel } from '../api';
 import { useReportCatalog, useReportPages } from '../hooks';
+import { filtersFromRemembered, reportScreen, rememberedFilters } from '../remember';
 import { parseReportSearch, stateFromSearch } from '../search';
 
 /** How long the filters rest before the backend is asked (Code Standards F35). */
@@ -93,13 +95,27 @@ function useOpenSource(catalog: readonly ReportCatalogEntry[]) {
 function ReportBody({
   entry,
   catalog,
+  saved,
+  remember,
 }: {
   entry: ReportCatalogEntry;
   catalog: readonly ReportCatalogEntry[];
+  /** What the report kept last time, as it was written (PRD FR-7.45). */
+  saved: unknown;
+  remember: ScreenMemory['remember'];
 }) {
   const navigate = useNavigate();
   const search = parseReportSearch(useSearch({ strict: false }));
-  const [state, setState] = useState<ReportFilterState>(() => stateFromSearch(search));
+  // An address with filters in it (the party card's buttons) wins; otherwise the report starts as it
+  // was left (PRD FR-7.45).
+  const [state, setState] = useState<ReportFilterState>(() =>
+    Object.keys(search).length > 0
+      ? stateFromSearch(search)
+      : (filtersFromRemembered(saved) ?? stateFromSearch(search)),
+  );
+  useEffect(() => {
+    remember(rememberedFilters(state));
+  }, [state, remember]);
   const [view, setView] = useState<'table' | 'preview'>('table');
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const settled = useDebouncedValue(state, FILTER_SETTLE_MS);
@@ -298,5 +314,11 @@ export function ReportPage() {
     );
   }
   // A key per report: moving from one report to another starts with clean filters.
-  return <ReportBody key={entry.id} entry={entry} catalog={catalog.data} />;
+  return (
+    <Remembered key={entry.id} screen={reportScreen(entry.id)}>
+      {({ saved, remember }) => (
+        <ReportBody entry={entry} catalog={catalog.data} saved={saved} remember={remember} />
+      )}
+    </Remembered>
+  );
 }

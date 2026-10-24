@@ -53,6 +53,13 @@ const SLOW_MS = { timeout: 8_000 };
 const named = (language: Language, id: string) => (name: string) =>
   visible(name) === message(language, id);
 
+/**
+ * The app asks once for a new version when it starts (plan 19, a note on the dashboard and in the
+ * bell), before the Owner opens the area of Settings that asks for itself. So the first answer of
+ * the fake goes to the start-up check, and the count of asks has that one in it.
+ */
+const START_UP_CHECKS = 1;
+
 /** A button whose name is the message, followed by its key chip when it has one. */
 const keyed = (language: Language, id: string) => (name: string) =>
   visible(name).startsWith(message(language, id));
@@ -97,7 +104,7 @@ describe.each(LANGUAGES)('Settings, app and updates (%s)', (language: Language) 
       expect(
         screen.getByText(leaf(m('settings-app-version', { version: '0.1.0' }))),
       ).toBeInTheDocument();
-      expect(maintenance.updatesCheck).toHaveBeenCalledTimes(1);
+      expect(maintenance.updatesCheck).toHaveBeenCalledTimes(1 + START_UP_CHECKS);
       // Nothing is on offer, so there is nothing to install.
       expect(
         screen.queryByRole('button', { name: named(language, 'settings-update-install') }),
@@ -106,7 +113,7 @@ describe.each(LANGUAGES)('Settings, app and updates (%s)', (language: Language) 
         screen.getByRole('button', { name: named(language, 'settings-update-check-again') }),
       );
       await waitFor(() => {
-        expect(maintenance.updatesCheck).toHaveBeenCalledTimes(2);
+        expect(maintenance.updatesCheck).toHaveBeenCalledTimes(2 + START_UP_CHECKS);
       });
     });
 
@@ -118,6 +125,7 @@ describe.each(LANGUAGES)('Settings, app and updates (%s)', (language: Language) 
 
     it('when the server cannot be reached, says so in words and offers to try again', async () => {
       vi.mocked(maintenance.updatesCheck)
+        .mockResolvedValueOnce(UPDATE_NONE)
         .mockRejectedValueOnce(new CommandError(UPDATE_FAILED))
         .mockResolvedValue(UPDATE_NONE);
       const { user } = await openApp();
@@ -204,7 +212,7 @@ describe.each(LANGUAGES)('Settings, app and updates (%s)', (language: Language) 
       expect(Array.from(document.querySelectorAll('li')).map((li) => li.textContent)).toEqual(
         expected,
       );
-      expect(maintenance.updatesCheck).toHaveBeenCalledTimes(1);
+      expect(maintenance.updatesCheck).toHaveBeenCalledTimes(1 + START_UP_CHECKS);
     });
   });
 
@@ -358,6 +366,7 @@ describe.each(LANGUAGES)('Settings, app and updates (%s)', (language: Language) 
       vi.mocked(maintenance.updatesInstall).mockRejectedValue(new CommandError(INSTALL_CHANGED));
       vi.mocked(maintenance.updatesCheck)
         .mockResolvedValueOnce(UPDATE_AVAILABLE)
+        .mockResolvedValueOnce(UPDATE_AVAILABLE)
         .mockResolvedValue({ ...UPDATE_AVAILABLE, version: '99.1.0' });
       const { user, box } = await askToInstall();
       await user.click(
@@ -367,7 +376,7 @@ describe.each(LANGUAGES)('Settings, app and updates (%s)', (language: Language) 
       expect(
         await screen.findByText(leaf(m('settings-update-available', { version: '99.1.0' }))),
       ).toBeInTheDocument();
-      expect(maintenance.updatesCheck).toHaveBeenCalledTimes(2);
+      expect(maintenance.updatesCheck).toHaveBeenCalledTimes(2 + START_UP_CHECKS);
     });
   });
 

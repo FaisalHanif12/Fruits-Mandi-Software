@@ -17,7 +17,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import type { InfiniteData } from '@tanstack/react-query';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { FileX, Printer, Rows3 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AnalyticsCatalogEntry } from '../../../bindings/AnalyticsCatalogEntry';
 import type { AnalyticsPage as AnalyticsPageData } from '../../../bindings/AnalyticsPage';
 import type { UiError } from '../../../bindings/UiError';
@@ -31,6 +31,7 @@ import {
 import { useDebouncedValue } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
+import { useScreenMemory } from '../../../shared/screen-state';
 import type { PickerValue } from '../../../shared/ui';
 import { Button, EmptyState, ErrorState, LoadingState, Tabs } from '../../../shared/ui';
 import { AnalyticsFilterBar } from '../components/AnalyticsFilterBar';
@@ -47,6 +48,7 @@ import {
 } from '../filters';
 import { analyticsExportExcel } from '../api';
 import { useAnalyticsCatalog, useAnalyticsPages, type LinesRequest } from '../hooks';
+import { ANALYTICS_SCREEN, analyticsFromRemembered, rememberedAnalytics } from '../remember';
 import { useAnalyticsStore } from '../store';
 import type { AnalyticsKey, AnalyticsSavedView, AnalyticsView } from '../types';
 
@@ -295,6 +297,26 @@ function AnalyticsBody({
   );
 }
 
+/**
+ * The filters the Owner last used are put back once when the area first opens, and each change is
+ * kept (PRD FR-7.45). The area is drawn once they are back, so it never flashes empty boxes and then
+ * jumps. The filters stay in the store between views, so this runs once for the whole run.
+ */
+function RememberedFilters({ children }: { children: ReactNode }) {
+  const memory = useScreenMemory(ANALYTICS_SCREEN);
+  const hydrated = useAnalyticsStore((now) => now.hydrated);
+  const filters = useAnalyticsStore((now) => now.filters);
+  const { ready, saved, remember } = memory;
+  useEffect(() => {
+    if (ready) useAnalyticsStore.getState().hydrate(analyticsFromRemembered(saved));
+  }, [ready, saved]);
+  useEffect(() => {
+    if (hydrated) remember(rememberedAnalytics(filters));
+  }, [hydrated, filters, remember]);
+  if (!hydrated) return <LoadingState />;
+  return <>{children}</>;
+}
+
 export function AnalyticsPage() {
   const { view } = useParams({ strict: false });
   const catalog = useAnalyticsCatalog();
@@ -333,5 +355,9 @@ export function AnalyticsPage() {
     );
   }
   // A key per view: moving from one view to another starts with its own table (the filters stay).
-  return <AnalyticsBody key={entry.id} entry={entry} catalog={catalog.data} />;
+  return (
+    <RememberedFilters>
+      <AnalyticsBody key={entry.id} entry={entry} catalog={catalog.data} />
+    </RememberedFilters>
+  );
 }
