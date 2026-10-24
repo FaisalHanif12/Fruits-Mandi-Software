@@ -376,5 +376,16 @@
       "date_range"
     ],
     "party_required": false
+  },
+  {
+    "id": "R35",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r35-title",
+    "filters": [
+      "as_of",
+      "party"
+    ],
+    "party_required": false
   }
 ]

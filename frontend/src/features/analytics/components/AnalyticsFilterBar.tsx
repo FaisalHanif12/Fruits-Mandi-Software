@@ -1,6 +1,7 @@
 // The filter boxes of an analytics view (PRD 18.1, FR-18.1): the period with its shortcuts and the two
-// dates, the grouping of view D, the item, seller, buyer (and one person inside a one-time buyer
-// account), city, اڈا, the side (both, seller, buyer) and the comparison. They combine freely. Each
+// dates, the grouping of views D and G, the partner (F, G, J), the layout of the trips (J), the item,
+// seller, buyer (and one person inside a one-time buyer account), city, اڈا, the side (both, seller,
+// buyer), the trip, the goods (all, consigned, trip, garden) and the comparison. They combine freely. Each
 // view shows the boxes the catalogue says it takes. The boxes are plain fields of the shared kit:
 // arrows move between them, a picker searches both scripts and never converts English letters
 // (Code Standards F40, F41).
@@ -8,7 +9,7 @@
 // Something refused by the backend shows under its own box (PRD FR-7.6). A comparison needs both
 // dates (ERR_REQUIRED on `filters.from` and `filters.to`); with a shortcut chosen those two boxes are
 // not drawn, so the refusal shows under the comparison box instead. In a compact window the boxes
-// that are used less (buyer, city, اڈا, side, comparison) wait behind "More filters", and open by
+// that are used less (buyer, city, اڈا, side, trip, goods, comparison) wait behind "More filters", and open by
 // themselves when one of them holds a value or a refusal (Code Standards F22).
 
 import { Localized, useLocalization } from '@fluent/react';
@@ -27,22 +28,28 @@ import {
   type PickerValue,
 } from '../../../shared/ui';
 import { isPukhtaCode } from '../../pukhta_khata';
-import { ReportPersonPicker } from '../../reports';
+import { ReportPartnerSelect, ReportPersonPicker } from '../../reports';
 import {
   COMPARE_CHOICES,
+  GOODS_CHOICES,
   GROUP_BY_CHOICES,
   PERIOD_CHOICES,
   SIDE_CHOICES,
+  TRIP_VIEW_CHOICES,
   periodMessageId,
+  tripViewMessageId,
   type AnalyticsFilterState,
   type PeriodChoice,
 } from '../filters';
 import type {
   AnalyticsCompare,
   AnalyticsFilterKind,
+  AnalyticsGoods,
   AnalyticsGroupBy,
   AnalyticsSide,
+  AnalyticsTripView,
 } from '../types';
+import { AnalyticsTripSelect } from './AnalyticsTripSelect';
 
 interface AnalyticsFilterBarProps {
   takes: readonly AnalyticsFilterKind[];
@@ -68,6 +75,8 @@ const FOLDED_FIELDS = [
   'filters.city_id',
   'filters.adda_id',
   'filters.side',
+  'filters.trip_id',
+  'filters.goods',
   'filters.compare',
 ];
 
@@ -81,7 +90,12 @@ export function AnalyticsFilterBar({
   const { l10n } = useLocalization();
   const has = (kind: AnalyticsFilterKind) => takes.includes(kind);
   const custom = state.period === 'custom';
-  const compact = useLayoutStep() === 'compact';
+  const step = useLayoutStep();
+  // The trend (G) and the trips (J) take thirteen boxes: at the normal step they would push the chart
+  // and the table below the fold, so the less used ones wait behind "More filters" there too. The
+  // other views fold only in the compact step (Code Standards F22).
+  const crowded = has('partner') && has('item');
+  const compact = step === 'compact' || (step === 'normal' && crowded);
 
   const primary: ReactNode[] = [];
   const folded: ReactNode[] = [];
@@ -164,6 +178,58 @@ export function AnalyticsFilterBar({
           />
         )}
       </Field>,
+    );
+  }
+  if (has('partner')) {
+    // Views F, G and J: one partner or all of them (his money, his part of a trip).
+    primary.push(
+      <ReportPartnerSelect
+        key="partner"
+        partner={state.partner}
+        required={false}
+        error={fieldError(error, 'filters.partner_id')}
+        onChange={(partner) => {
+          onChange({ partner });
+        }}
+      />,
+    );
+  }
+  if (has('trip_view')) {
+    // View J: one row for each trip, purchase, item or day. It changes the rows, not the figures.
+    primary.push(
+      <Field
+        key="trip_view"
+        label={<Localized id="report-filter-trip-view" />}
+        error={fieldError(error, 'filters.trip_view')}
+      >
+        {(control) => (
+          <Select<AnalyticsTripView>
+            {...control}
+            value={state.tripView}
+            onChange={(tripView) => {
+              onChange({ tripView });
+            }}
+            options={TRIP_VIEW_CHOICES.map((choice) => ({
+              value: choice,
+              label: l10n.getString(tripViewMessageId(choice)),
+            }))}
+          />
+        )}
+      </Field>,
+    );
+  }
+  if (has('trip') && has('trip_view')) {
+    // The trips view is about trips, so its trip box stays in view; elsewhere it is one of the
+    // boxes that wait behind "More filters".
+    primary.push(
+      <AnalyticsTripSelect
+        key="trip"
+        trip={state.trip}
+        error={fieldError(error, 'filters.trip_id')}
+        onChange={(trip) => {
+          onChange({ trip });
+        }}
+      />,
     );
   }
   if (has('item')) {
@@ -314,6 +380,41 @@ export function AnalyticsFilterBar({
       </Field>,
     );
   }
+  if (has('trip') && !has('trip_view')) {
+    folded.push(
+      <AnalyticsTripSelect
+        key="trip"
+        trip={state.trip}
+        error={fieldError(error, 'filters.trip_id')}
+        onChange={(trip) => {
+          onChange({ trip });
+        }}
+      />,
+    );
+  }
+  if (has('goods')) {
+    folded.push(
+      <Field
+        key="goods"
+        label={<Localized id="analytics-filter-goods" />}
+        error={fieldError(error, 'filters.goods')}
+      >
+        {(control) => (
+          <Select<AnalyticsGoods>
+            {...control}
+            value={state.goods}
+            onChange={(goods) => {
+              onChange({ goods });
+            }}
+            options={GOODS_CHOICES.map((choice) => ({
+              value: choice,
+              label: l10n.getString(`analytics-goods-${choice}`),
+            }))}
+          />
+        )}
+      </Field>,
+    );
+  }
   if (has('compare')) {
     // A comparison needs both dates. With a shortcut the two date boxes are not drawn, so their
     // refusal shows here.
@@ -348,6 +449,8 @@ export function AnalyticsFilterBar({
     state.city !== null ||
     state.adda !== null ||
     state.side !== 'both' ||
+    (state.trip !== null && !has('trip_view')) ||
+    state.goods !== 'all' ||
     state.compare !== 'off';
   // `fieldError` gives nothing (undefined) for a field with no refusal.
   const refused = FOLDED_FIELDS.some((field) => {

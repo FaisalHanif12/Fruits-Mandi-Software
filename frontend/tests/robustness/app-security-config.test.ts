@@ -48,6 +48,10 @@ const PLUGIN_PERMISSIONS = new Set([
   'dialog:allow-message',
   'dialog:allow-ask',
   'dialog:allow-confirm',
+  // The save dialog only returns a path. The backend checks it (absolute, .xlsx or .txt, an existing
+  // folder) and writes the file itself: the Excel export and the support file. A one-line update
+  // made by frontend at the lead's word, not by robustness.
+  'dialog:allow-save',
 ]);
 
 /** The five plugins of Tech Stack 2. */

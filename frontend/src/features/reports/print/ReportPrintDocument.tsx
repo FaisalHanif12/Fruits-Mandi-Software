@@ -196,6 +196,16 @@ function ColumnHeading({ heading, titleId }: { heading: PrintHeading | null; tit
       );
     case 'other_items':
       return <>{l10n.getString('analytics-col-other-items')}</>;
+    case 'partner':
+      // A trip has the same two columns for each partner: whose they are, then what they hold.
+      return (
+        <>
+          {l10n.getString('analytics-col-partner-heading', {
+            name: heading.text,
+            title: l10n.getString(titleId),
+          })}
+        </>
+      );
   }
 }
 
@@ -216,7 +226,8 @@ function columnClass(data: PrintTable, position: number): string {
 export type PrintHeading =
   | { kind: 'text'; text: string }
   | { kind: 'month'; year: string; month: number }
-  | { kind: 'other_items' };
+  | { kind: 'other_items' }
+  | { kind: 'partner'; text: string };
 
 /**
  * What the printed table is drawn from: the print data of a report, or of an analytics view (which
@@ -269,6 +280,22 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
     return applyPrintRoot({ language: data.language, dir: data.dir, footer });
   }, [applyRoot, data.language, data.dir, footer]);
 
+  // The party day sheet (R35) is the client's own slip: its lines first, what the day comes to
+  // underneath (PRD FR-19.12). The other reports have their figures above the table.
+  const sheet = data.report === 'R35';
+  const summaryLines =
+    (data.summary ?? []).length === 0 ? null : (
+      <dl className="print-facts print-summary-lines">
+        {(data.summary ?? []).map((line) => (
+          <div key={line.label_id} className="print-fact">
+            <dt>{l10n.getString(line.label_id)}</dt>
+            <dd>
+              <Cell cell={line.cell} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
   const { firm } = data;
   const contact = [firm.address, firm.phone].filter((part) => part.trim() !== '');
   return (
@@ -302,7 +329,14 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
         <dl className="print-facts">
           {data.filters.map((fact) => (
             <div key={fact.label_id} className="print-fact">
-              <dt>{l10n.getString(fact.label_id)}</dt>
+              {/* The day sheet is for one day: its box says "Day", not "As of". */}
+              <dt>
+                {l10n.getString(
+                  sheet && fact.label_id === 'report-filter-as-of'
+                    ? 'report-filter-day'
+                    : fact.label_id,
+                )}
+              </dt>
               <dd>{fact.value === '' ? null : <bdi dir="auto">{fact.value}</bdi>}</dd>
             </div>
           ))}
@@ -313,18 +347,7 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
             </dd>
           </div>
         </dl>
-        {(data.summary ?? []).length === 0 ? null : (
-          <dl className="print-facts print-summary-lines">
-            {(data.summary ?? []).map((line) => (
-              <div key={line.label_id} className="print-fact">
-                <dt>{l10n.getString(line.label_id)}</dt>
-                <dd>
-                  <Cell cell={line.cell} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
+        {sheet ? null : summaryLines}
         <table className="print-table">
           <thead>
             <tr>
@@ -373,6 +396,7 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
             </tfoot>
           )}
         </table>
+        {sheet ? summaryLines : null}
         {data.words === null || data.words === undefined ? null : (
           <p className="print-words">
             <span className="print-words-label">{l10n.getString(data.words.label_id)}</span>

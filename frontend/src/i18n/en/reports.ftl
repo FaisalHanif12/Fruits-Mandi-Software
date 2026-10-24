@@ -1092,3 +1092,77 @@ report-r34-open-lots = Unsold { -lot }
 
 # review: pending
 report-r34-open-qty = { -nag } Left
+
+## R35, the party day sheet (plan 27, PRD FR-19.12): the table of every party and the slip of one party.
+
+# review: pending
+report-r35-title = Party Day Sheet
+
+# review: pending
+report-r35-help = For one day: what each party owed at the start, what was debited and credited, and what is left. Pick a party to see his slip.
+
+# review: pending
+report-col-code = Code
+
+# review: pending
+report-col-previous = { -sabiqa-raqam }
+
+# review: pending
+report-r35-buyers = Buyers
+
+# review: pending
+report-r35-sellers = Sellers
+
+# review: pending
+report-r35-total-qty = Total { -nag }
+
+# review: pending
+report-r35-previous = { -sabiqa-raqam }
+
+# review: pending
+report-r35-bought = { -taza-banam }
+
+# review: pending
+report-r35-sold = Sold That Day
+
+# review: pending
+report-r35-other-debits = Other { -banaam }
+
+# review: pending
+report-r35-other-credits = Other { -jama }
+
+# review: pending
+report-r35-on-spot = Paid on the Spot
+
+# review: pending
+report-r35-cash-given = { -naqd }
+
+# review: pending
+report-r35-paid = Paid That Day
+
+# review: pending
+report-r35-remaining = { -total-raqam }
+
+# review: pending
+report-r35-collection = Total { -agrahi }
+
+# review: pending
+report-r35-sellers-credit = Sellers' { -jama }
+
+# review: pending
+report-r35-sellers-debit = Sellers' { -banaam }
+
+# review: pending
+report-r35-sellers-remaining = Sellers' { -baqaya }
+
+# review: pending
+report-filter-day = Day
+
+# review: pending
+report-day-shown = Sheet for { $date }
+
+# review: pending
+report-day-now = Sheet for today
+
+# review: pending
+report-r35-all-parties = All parties

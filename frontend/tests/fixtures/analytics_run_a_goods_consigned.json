@@ -1,0 +1,128 @@
+{
+  "view": "A",
+  "title_id": "analytics-view-a-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "goods": "consigned",
+    "trip_view": null
+  },
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "avg_rate",
+      "title_id": "report-col-avg-rate",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "seller_comm",
+      "title_id": "report-col-seller-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "buyer_comm",
+      "title_id": "report-col-buyer-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "laga",
+      "title_id": "report-col-laga",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "total_comm",
+      "title_id": "report-col-total-comm",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "share",
+      "title_id": "analytics-col-share",
+      "kind": "percent",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 0,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "empty"
+    }
+  ]
+}

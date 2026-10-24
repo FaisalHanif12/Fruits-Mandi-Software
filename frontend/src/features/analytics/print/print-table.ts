@@ -17,6 +17,8 @@ function headingOf(heading: AnalyticsPrintHeading | null): PrintHeading | null {
       return { kind: 'month', year: heading.year, month: heading.month };
     case 'other_items':
       return { kind: 'other_items' };
+    case 'partner':
+      return { kind: 'partner', text: heading.text };
   }
 }
 

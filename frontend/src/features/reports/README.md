@@ -113,6 +113,23 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   filters in it (the party card's buttons, the dashboard's partner card) wins over what was kept.
   Clearing the filters forgets them. Tests: `remembered-filters.test.tsx`.
 
+## R35, the party day sheet (round 11, plan 27, PRD FR-19.12, E2E-43)
+
+- One report, two layouts, both on the generic screen. With no party it is the table of every party
+  of the day: a group row for the buyers and one for the sellers (each with its own figures), a blank
+  column for the collector's note (the wide step and the print), and under the table the shop's total
+  اگراہی and the sellers' credit, debit and balance. With a party it is his slip: the lines of his day
+  and, right under them, the footer lines in the order the backend sends.
+- Enter on a party of the table opens his slip (a one-time person with his key, so the slip is his and
+  not the whole account's); "All parties" goes back with the day still typed. The day box is called
+  "Day" and the line under the boxes says "Sheet for 10-10-2026" (not "Balances as of").
+- The footer is under the lines, like the client's own slip, on screen (`ReportResults`) and in the
+  print (`ReportPrintDocument`, `data.report === 'R35'`); every other report has its lines above the
+  table. The words of the footer are backend message IDs; the glossary has the four terms the client's
+  slip uses (تازہ بنام, سابقہ رقم, ٹوٹل رقم, بقایا).
+- Tests: `reports-screens-round11.test.tsx`, the round 11 block of `reports-api-contract.test.ts`.
+  Windows spec: `49-party-sheet-analytics-round11.e2e.mjs`.
+
 ## Not built yet
 
 - Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB

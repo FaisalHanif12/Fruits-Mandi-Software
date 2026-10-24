@@ -40,7 +40,47 @@ export function headingText(heading: AnalyticsHeading, context: ListContext): st
       );
     case 'other_items':
       return context.text('analytics-col-other-items');
+    case 'partner':
+      return displayName(
+        { name_ur: heading.names.ur, name_en: heading.names.en },
+        context.language,
+      );
   }
+}
+
+/**
+ * The heading of a headed column as the grid shows it. A month, a day or an item stands for the
+ * column by itself; a partner's column needs whose it is and then what it holds ("Partner A: Share"),
+ * because a trip has the same two columns for each partner (J).
+ */
+function headerOf(
+  column: AnalyticsColumn,
+  heading: AnalyticsHeading,
+  context: ListContext,
+): string {
+  const name = headingText(heading, context);
+  return heading.kind === 'partner'
+    ? context.text('analytics-col-partner-heading', { name, title: context.text(column.title_id) })
+    : name;
+}
+
+/**
+ * True when the figure of this column can be a loss: a trip's result and each partner's part of it
+ * (J), and the trips' result of a day, month or year (G). It is red, with its sign and a word
+ * ("Loss", "Profit"), never colour alone (NFR-USE-12, PRD E50). Other figures keep a plain sign.
+ */
+function isSigned(view: AnalyticsView, column: AnalyticsColumn): boolean {
+  if (column.kind !== 'money') return false;
+  if (view === 'J') return column.key === 'result' || column.heading?.kind === 'partner';
+  return view === 'G' && column.key === 'trips_result';
+}
+
+/** The keys of the columns of a page that can be a loss, for the totals row. */
+export function signedKeysOf(
+  view: AnalyticsView,
+  columns: readonly AnalyticsColumn[],
+): ReadonlySet<string> {
+  return new Set(columns.filter((column) => isSigned(view, column)).map((column) => column.key));
 }
 
 /**
@@ -86,7 +126,38 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
   ],
   D: [],
   E: [],
+  // Partners (F): his profit and what he gained or lost in all, then where it came from. The
+  // garden and fruit columns have no figure until those parts of the app are built (D4R).
+  F: [
+    'partner',
+    'profit_share',
+    'net_change',
+    'income_share',
+    'expense_share',
+    'trips',
+    'other',
+    'gardens',
+    'fruit',
+  ],
+  // Trend (G): the period and the profit first, then what the profit is made of.
+  G: ['period', 'profit', 'commission', 'gross', 'shared_income', 'shop_expenses', 'trips_result'],
   H: ['rank', 'name', 'total_comm', 'share', 'qty', 'compare', 'change'],
+  // Trips (J): the name, the result and where it came from. The partner columns are inserted
+  // from the page itself (`priorityOf`), because a trip has one pair for each partner.
+  J: [
+    'group',
+    'result',
+    'sales_money',
+    'commission',
+    'bought_cost',
+    'sold_qty',
+    'left_qty',
+    'cost_sold',
+    'bought_qty',
+    'written_off_qty',
+    'written_off_cost',
+    'left_cost',
+  ],
 };
 
 /**
@@ -99,8 +170,37 @@ const ANCHORS: Readonly<Record<AnalyticsView, readonly string[]>> = {
   C: ['buyer'],
   D: [],
   E: [],
+  F: ['partner'],
+  G: ['period'],
   H: ['rank', 'name'],
+  J: ['group'],
 };
+
+/** The views whose columns are one for each period or item: a window of them is shown (D and E). */
+const WINDOWED: ReadonlySet<AnalyticsView> = new Set<AnalyticsView>(['D', 'E']);
+
+/**
+ * The columns of a view, most useful first, for this page. View J has a pair of columns for each
+ * partner of the trips (his percent and his part of the result): his part comes right after the
+ * result and his percent after the quantity sold, so the partners show before the least used
+ * columns at the wide step.
+ */
+function priorityOf(view: AnalyticsView, columns: readonly AnalyticsColumn[]): readonly string[] {
+  const base = PRIORITY[view];
+  if (view !== 'J') return base;
+  const partner = columns.filter((column) => column.heading?.kind === 'partner');
+  const parts = partner.filter((column) => column.kind === 'money').map((column) => column.key);
+  const shares = partner.filter((column) => column.kind !== 'money').map((column) => column.key);
+  const result = base.indexOf('result') + 1;
+  const sold = base.indexOf('sold_qty') + 1;
+  return [
+    ...base.slice(0, result),
+    ...parts,
+    ...base.slice(result, sold),
+    ...shares,
+    ...base.slice(sold),
+  ];
+}
 
 export interface ColumnPlan {
   /** The columns shown, by their place in the backend's list (a cell is read at that place). */
@@ -133,12 +233,12 @@ export function planColumns(
 ): ColumnPlan {
   const room = STEP_ROOM[step];
   const headed = columns.flatMap((column, index) => (column.heading === null ? [] : [index]));
-  if (headed.length > 0) {
+  if (headed.length > 0 && WINDOWED.has(view)) {
     const fixed = columns.flatMap((column, index) =>
       column.heading === null ? [{ column, index }] : [],
     );
     const fixedWidth = fixed.reduce(
-      (sum, { column }) => sum + columnWidth(column.kind, column.key),
+      (sum, { column }) => sum + columnWidth(column.kind, column.key, isSigned(view, column)),
       0,
     );
     const window = windowOf(
@@ -157,9 +257,9 @@ export function planColumns(
   }
   const items = columns.map((column) => ({
     key: column.key,
-    width: columnWidth(column.kind, column.key),
+    width: columnWidth(column.kind, column.key, isSigned(view, column)),
   }));
-  const priority = PRIORITY[view];
+  const priority = priorityOf(view, columns);
   const byDefault = fitColumns(items, priority, room);
   const waiting = columns.map((column) => column.key).filter((key) => !byDefault.has(key));
   let keep = byDefault;
@@ -186,12 +286,13 @@ export function planColumns(
 
 /** The grid's columns for the columns of the plan, in the backend's order. */
 export function analyticsColumns(
+  view: AnalyticsView,
   columns: readonly AnalyticsColumn[],
   plan: ColumnPlan,
 ): ListColumn<AnalyticsRowView>[] {
   return columns.flatMap((column, index) => {
     if (!plan.visible.has(index)) return [];
-    const base = listColumnOf<AnalyticsRowView>(column, index);
+    const base = listColumnOf<AnalyticsRowView>(column, index, undefined, isSigned(view, column));
     const heading = column.heading;
     // The rank of H shares its column with the headings of the three lists, which are words.
     const named: ListColumn<AnalyticsRowView> =
@@ -201,7 +302,7 @@ export function analyticsColumns(
         ? named
         : {
             ...named,
-            headerText: (context: ListContext) => headingText(heading, context),
+            headerText: (context: ListContext) => headerOf(column, heading, context),
           },
     ];
   });
@@ -212,9 +313,13 @@ const LINES_PRIORITY: readonly string[] = [
   'date',
   'buyer',
   'item',
+  'kind',
   'qty',
   'total_comm',
+  'amount',
   'doc',
+  'share',
+  'base',
   'gross',
   'seller',
   'seller_comm',

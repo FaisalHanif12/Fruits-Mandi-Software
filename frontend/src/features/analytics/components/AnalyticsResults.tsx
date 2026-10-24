@@ -20,7 +20,13 @@ import { ListGrid } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { cellText, totalsFor } from '../../reports';
-import { analyticsColumns, headingText, planColumns, type AnalyticsRowView } from '../columns';
+import {
+  analyticsColumns,
+  headingText,
+  planColumns,
+  signedKeysOf,
+  type AnalyticsRowView,
+} from '../columns';
 import { useListContext } from '../list-context';
 import type { AnalyticsView } from '../types';
 import { AnalyticsChart } from './AnalyticsChart';
@@ -38,6 +44,8 @@ export const WHOLE_FILTER_KEY: AnalyticsKey = {
   from: null,
   to: null,
   not_item_ids: [],
+  partner_id: null,
+  purchase_ids: [],
 };
 
 interface AnalyticsResultsProps {
@@ -95,8 +103,8 @@ export function AnalyticsResults({
     [view, last, step, windowStart, otherColumns],
   );
   const columns = useMemo(
-    () => (last === undefined || plan === null ? [] : analyticsColumns(last.columns, plan)),
-    [last, plan],
+    () => (last === undefined || plan === null ? [] : analyticsColumns(view, last.columns, plan)),
+    [view, last, plan],
   );
 
   if (last === undefined || rows === undefined || plan === null) {
@@ -228,7 +236,12 @@ export function AnalyticsResults({
             heightMode={long ? 'fill' : 'auto'}
             isGroup={(item) => item.row.kind === 'group'}
             totals={(ctx) =>
-              totalsFor(last.columns, { labelId: last.totals_label_id, cells: last.totals }, ctx)
+              totalsFor(
+                last.columns,
+                { labelId: last.totals_label_id, cells: last.totals },
+                ctx,
+                signedKeysOf(view, last.columns),
+              )
             }
           />
         </div>

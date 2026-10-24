@@ -37,8 +37,23 @@ import {
   VIEWS_GET_EMPTY,
   VIEWS_SAVE_BAD,
 } from './analytics-real';
+import {
+  ANALYTICS_LINES_F_PARTNER_A,
+  ANALYTICS_LINES_J_TRIP,
+  ANALYTICS_PRINT_DATA_J_EN,
+  ANALYTICS_RUN_A_GOODS_CONSIGNED,
+  ANALYTICS_RUN_A_GOODS_TRIP,
+  ANALYTICS_RUN_F,
+  ANALYTICS_RUN_F_COMPARE_REFUSED,
+  ANALYTICS_RUN_G_DAY,
+  ANALYTICS_RUN_G_MONTH,
+  ANALYTICS_RUN_J_TRIP,
+  ANALYTICS_RUN_J_TRIP_BY_PURCHASE,
+  ANALYTICS_RUN_J_TRIP_PARTNER,
+} from './analytics-trips-real';
 
 export * from './analytics-real';
+export * from './analytics-trips-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -63,8 +78,16 @@ const DEFAULT_PAGES: Record<AnalyticsView, AnalyticsPage> = {
   C: ANALYTICS_RUN_C,
   D: ANALYTICS_RUN_D_MONTH,
   E: ANALYTICS_RUN_E,
+  F: ANALYTICS_RUN_F,
+  G: ANALYTICS_RUN_G_MONTH,
   H: ANALYTICS_RUN_H,
+  J: ANALYTICS_RUN_J_TRIP,
 };
+
+/** The views that have no comparison (the catalogue says so): the backend refuses one. */
+const NO_COMPARE: readonly AnalyticsView[] = ['F', 'G', 'J'];
+/** The views that take a grouping. */
+const GROUPED: readonly AnalyticsView[] = ['D', 'G'];
 
 function slice(page: AnalyticsPage, offset: number, limit: number): AnalyticsPage {
   const size = limit > 0 ? limit : 100;
@@ -91,8 +114,11 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
     const { filters, view } = input;
     // The refusals of the backend's own fixtures: a grouping on a view that has none, an unknown
     // item, and a comparison without both dates.
-    if (view !== 'D' && filters.group_by !== null) {
+    if (!GROUPED.includes(view) && filters.group_by !== null) {
       return Promise.reject(refusedWith(ANALYTICS_RUN_A_GROUP_BY_REFUSED));
+    }
+    if (NO_COMPARE.includes(view) && filters.compare !== 'off') {
+      return Promise.reject(refusedWith(ANALYTICS_RUN_F_COMPARE_REFUSED));
     }
     if (filters.item_id === 9999) {
       return Promise.reject(refusedWith(ANALYTICS_RUN_A_UNKNOWN_ITEM));
@@ -107,7 +133,14 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
     let answer = pages[view];
     if (view === 'A' && filters.compare !== 'off') answer = ANALYTICS_RUN_A_COMPARE;
     if (view === 'A' && filters.side === 'seller') answer = ANALYTICS_RUN_A_SELLER_SIDE;
+    if (view === 'A' && filters.goods === 'consigned') answer = ANALYTICS_RUN_A_GOODS_CONSIGNED;
+    if (view === 'A' && filters.goods === 'trip') answer = ANALYTICS_RUN_A_GOODS_TRIP;
     if (view === 'D' && filters.group_by === 'day') answer = ANALYTICS_RUN_D_DAY;
+    if (view === 'G' && filters.group_by === 'day') answer = ANALYTICS_RUN_G_DAY;
+    if (view === 'J' && filters.trip_view === 'purchase') {
+      answer = ANALYTICS_RUN_J_TRIP_BY_PURCHASE;
+    }
+    if (view === 'J' && filters.partner_id !== null) answer = ANALYTICS_RUN_J_TRIP_PARTNER;
     return Promise.resolve(slice(answer, input.offset, input.limit));
   });
   vi.mocked(analyticsApi.analyticsLines).mockImplementation((input) => {
@@ -118,7 +151,11 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
         ? ANALYTICS_LINES_D_BANANA_OCTOBER
         : input.view === 'E'
           ? ANALYTICS_LINES_E_RAHIM_BANANA
-          : ANALYTICS_LINES_A_BANANA);
+          : input.view === 'F'
+            ? ANALYTICS_LINES_F_PARTNER_A
+            : input.view === 'J'
+              ? ANALYTICS_LINES_J_TRIP
+              : ANALYTICS_LINES_A_BANANA);
     const size = input.limit > 0 ? input.limit : 100;
     return Promise.resolve({
       ...page,
@@ -129,7 +166,12 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
   });
   vi.mocked(analyticsApi.analyticsPrintData).mockImplementation((input) =>
     Promise.resolve(
-      options.print ?? (input.view === 'D' ? ANALYTICS_PRINT_DATA_D_UR : ANALYTICS_PRINT_DATA_A_EN),
+      options.print ??
+        (input.view === 'D'
+          ? ANALYTICS_PRINT_DATA_D_UR
+          : input.view === 'J'
+            ? ANALYTICS_PRINT_DATA_J_EN
+            : ANALYTICS_PRINT_DATA_A_EN),
     ),
   );
   vi.mocked(analyticsApi.analyticsViewsGet).mockImplementation(() =>

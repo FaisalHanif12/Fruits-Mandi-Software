@@ -56,6 +56,12 @@ import {
 } from './reports-business-real';
 
 import {
+  PRINT_R35_SLIP_AKRAM_EN,
+  R35_SLIP_AKRAM,
+  R35_SLIP_RAHIM,
+  R35_TABLE,
+} from './reports-party-real';
+import {
   PRINT_R33_PARTNER_EN,
   PRINT_R34_EN,
   R10_STOCK,
@@ -73,6 +79,7 @@ import {
 export * from './reports-real';
 export * from './reports-business-real';
 export * from './reports-stock-real';
+export * from './reports-party-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -127,6 +134,8 @@ const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
   R25: R25_DAY,
   R33: R33_TRIP,
   R34: R34_DAY,
+  // Round 11: the party day sheet, the table of every party (a slip is answered for a party picked).
+  R35: R35_TABLE,
 };
 
 function slice(page: ReportPage, offset: number, limit: number): ReportPage {
@@ -141,6 +150,7 @@ function printOf(id: ReportId): ReportPrintData {
   if (id === 'R31') return PRINT_R31_BAY_EN;
   if (id === 'R33') return PRINT_R33_PARTNER_EN;
   if (id === 'R34') return PRINT_R34_EN;
+  if (id === 'R35') return PRINT_R35_SLIP_AKRAM_EN;
   return PRINT_R18_EN;
 }
 
@@ -181,6 +191,12 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     if (input.id === 'R29' && input.filters.partner_id !== null) answer = R29_ALIF;
     // R15 for one kind of voucher answers with that kind (the payments), with one total.
     if (input.id === 'R15' && input.filters.voucher_type !== undefined) answer = R15_PAYMENTS;
+    // R35 for one party answers with his slip: the seller's slip for a seller's account (the worked
+    // day's ids: رحیم is 18 and کریم 19), the buyer's slip for any other (unless the test brought a
+    // page of its own).
+    if (input.id === 'R35' && input.filters.party !== null && options.pages?.R35 === undefined) {
+      answer = input.filters.party.account_id === 18 ? R35_SLIP_RAHIM : R35_SLIP_AKRAM;
+    }
     // R33 answers in the layout asked for (unless the test brought a page of its own).
     if (input.id === 'R33' && options.pages?.R33 === undefined) {
       const layouts = {

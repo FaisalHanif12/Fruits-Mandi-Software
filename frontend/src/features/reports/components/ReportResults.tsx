@@ -81,6 +81,10 @@ export function ReportResults({
   }
 
   const long = rows.length > SHORT_LIST_ROWS;
+  // The party day sheet (R35) is laid out like the client's own slip: its lines first, and what the
+  // day comes to underneath, right under them (PRD FR-19.12). Every other report has its figures
+  // above the table.
+  const sheet = last.id === 'R35';
   let body;
   if (rows.length === 0) {
     body = balanceOnly ? (
@@ -125,6 +129,8 @@ export function ReportResults({
             }
           />
         </div>
+        {/* The slip's footer sits right under its lines, like the client's own (PRD FR-19.12). */}
+        {sheet ? <ReportSummary lines={last.summary} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Localized
             id="report-count"
@@ -153,8 +159,8 @@ export function ReportResults({
 
   return (
     <div className="flex flex-col gap-4" aria-busy={query.isFetching}>
-      <ReportRange filters={last.filters} takes={takes} />
-      <ReportSummary lines={last.summary} />
+      <ReportRange filters={last.filters} takes={takes} day={sheet} />
+      {sheet ? null : <ReportSummary lines={last.summary} />}
       {body}
     </div>
   );

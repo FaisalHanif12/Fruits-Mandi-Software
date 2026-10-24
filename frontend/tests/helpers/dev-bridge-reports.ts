@@ -8,6 +8,7 @@
 // Flags in the hash, for example `#/dev/reports/R18?many`:
 //   empty   the report has no rows        many   230 rows (page by page)
 //   down    the backend fails             rahim  the ledger of a seller (party 18)
+//   R35 asks for the table of every party; a party picked (or Enter on a row) gives his slip.
 
 import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
 import type { ReportId } from '../../src/bindings/ReportId';
@@ -16,6 +17,12 @@ import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
 import { devFlag } from './dev-bridge';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import { rokarHandlers } from './dev-bridge-rokar';
+import {
+  PRINT_R35_SLIP_AKRAM_EN,
+  R35_SLIP_AKRAM,
+  R35_SLIP_RAHIM,
+  R35_TABLE,
+} from './reports-party-real';
 import {
   PRINT_R33_PARTNER_EN,
   PRINT_R34_EN,
@@ -112,6 +119,7 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R25: R25_DAY,
   R33: R33_TRIP,
   R34: R34_DAY,
+  R35: R35_TABLE,
 };
 
 const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
@@ -123,6 +131,7 @@ const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R31: PRINT_R31_BAY_EN,
   R33: PRINT_R33_PARTNER_EN,
   R34: PRINT_R34_EN,
+  R35: PRINT_R35_SLIP_AKRAM_EN,
 };
 
 function catalog(): ReportCatalogEntry[] {
@@ -153,6 +162,11 @@ function page(input: Input): ReportPage {
     if (view === 'item') base = R33_ITEM;
     else if (view === 'partner') base = R33_PARTNER;
     else if (view === 'month' || view === 'day') base = R33_MONTH;
+  }
+  // R35 for one party answers with his slip: the seller's for a seller (رحیم is 18), the buyer's
+  // for any other account.
+  if (id === 'R35' && party?.account_id !== undefined) {
+    base = party.account_id === 18 ? R35_SLIP_RAHIM : R35_SLIP_AKRAM;
   }
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {

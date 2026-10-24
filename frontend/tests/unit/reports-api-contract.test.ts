@@ -13,6 +13,16 @@ import * as api from '../../src/features/reports/api';
 import { bundles, LANGUAGES } from '../../src/i18n';
 import * as invoke from '../../src/shared/api/invoke';
 import {
+  PRINT_R35_SLIP_AKRAM_EN,
+  PRINT_R35_SLIP_AKRAM_EN_REQUEST,
+  R35_SLIP_AKRAM,
+  R35_SLIP_AKRAM_REQUEST,
+  R35_SLIP_RAHIM,
+  R35_SLIP_RAHIM_REQUEST,
+  R35_TABLE,
+  R35_TABLE_REQUEST,
+} from '../helpers/reports-party-real';
+import {
   BACKEND_CATALOG,
   CATALOG,
   PEOPLE_LIMIT_TOO_BIG,
@@ -164,7 +174,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
 
 describe('the fixtures are the backend’s own', () => {
   it('every report engine fixture is the same text as the backend’s file', () => {
-    // The catalogue too: it holds all 32 reports of the early track now, as the backend lists them.
+    // The catalogue too: it holds all 33 reports of the early track now, as the backend lists them.
     const names = readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture);
     expect(names.length).toBeGreaterThan(100);
     for (const name of names) {
@@ -374,8 +384,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
 describe('round 7: the cash book, the expense report, the partner statement and money lent', () => {
   const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
 
-  it('the catalogue lists 32 reports, with the boxes the backend says for the newer ones', () => {
-    expect(CATALOG).toHaveLength(32);
+  it('the catalogue lists 33 reports, with the boxes the backend says for the newer ones', () => {
+    expect(CATALOG).toHaveLength(33);
     expect(entryOf('R12')).toMatchObject({ filters: ['date_range'], party_required: false });
     expect(entryOf('R29')).toMatchObject({
       filters: ['date_range', 'partner'],
@@ -588,6 +598,92 @@ function idsIn(value: unknown, found: Set<string>): void {
     }
   }
 }
+
+describe('round 11: the party day sheet (R35)', () => {
+  const entry = CATALOG.find((candidate) => candidate.id === 'R35');
+  const lines = (page: { summary: readonly { label_id: string }[] }) =>
+    page.summary.map((line) => line.label_id);
+
+  it('is in the business group with a day box and a party box, and runs with no party', () => {
+    expect(entry).toMatchObject({
+      group: 'business',
+      title_id: 'report-r35-title',
+      filters: ['as_of', 'party'],
+      party_required: false,
+    });
+  });
+
+  it('sends the exact requests the backend wrote: the table, two slips and the print', async () => {
+    const requests = [R35_TABLE_REQUEST, R35_SLIP_AKRAM_REQUEST, R35_SLIP_RAHIM_REQUEST];
+    for (const request of requests) await api.reportsRun(request);
+    await api.reportsPrintData(PRINT_R35_SLIP_AKRAM_EN_REQUEST);
+    expect(call.mock.calls).toEqual([
+      ...requests.map((request) => ['reports_run', { input: request }]),
+      ['reports_print_data', { input: PRINT_R35_SLIP_AKRAM_EN_REQUEST }],
+    ]);
+    // The table is for no party; a slip is for one account, with no person for an ordinary one.
+    expect(R35_TABLE_REQUEST.filters.party).toBeNull();
+    expect(R35_SLIP_AKRAM_REQUEST.filters.party).toEqual({ account_id: 20, person_key: null });
+  });
+
+  it('the table: a group row for the buyers and one for the sellers, with a blank collector column', () => {
+    expect(R35_TABLE.columns.map((column) => column.key)).toEqual([
+      'code',
+      'party',
+      'previous',
+      'debit',
+      'credit',
+      'remaining',
+      'collector',
+    ]);
+    const groups = R35_TABLE.rows.filter((row) => row.kind === 'group');
+    expect(groups.map((row) => row.cells[0])).toEqual([
+      { type: 'label', id: 'report-r35-buyers' },
+      { type: 'label', id: 'report-r35-sellers' },
+    ]);
+    // The collector writes in the last column by hand: the backend leaves it empty on every row.
+    for (const row of R35_TABLE.rows) expect(row.cells[6]).toEqual({ type: 'empty' });
+    // A one-time buyer comes with his person key, so his slip is his own.
+    const people = R35_TABLE.rows.flatMap((row) =>
+      row.cells.flatMap((cell) => (cell.type === 'party' ? [cell.party] : [])),
+    );
+    expect(people.find((party) => party.code === '03049999')?.person_key).toBe('شاہد|03000000000');
+  });
+
+  it('the footer lines come in the order the screen and the print show them', () => {
+    expect(lines(R35_TABLE)).toEqual([
+      'report-r35-collection',
+      'report-r35-sellers-credit',
+      'report-r35-sellers-debit',
+      'report-r35-sellers-remaining',
+    ]);
+    expect(lines(R35_SLIP_AKRAM)).toEqual([
+      'report-r35-total-qty',
+      'report-r35-previous',
+      'report-r35-bought',
+      'report-r35-paid',
+      'report-r35-remaining',
+    ]);
+    expect(lines(R35_SLIP_RAHIM)).toEqual([
+      'report-r35-total-qty',
+      'report-r35-previous',
+      'report-r35-sold',
+      'report-r35-cash-given',
+      'report-r35-paid',
+      'report-r35-remaining',
+    ]);
+    expect(PRINT_R35_SLIP_AKRAM_EN.summary.map((line) => line.label_id)).toEqual(
+      lines(R35_SLIP_AKRAM),
+    );
+  });
+
+  it('a slip has the quantity, the item, the rate and the amount of each line, and each opens its بکری', () => {
+    for (const slip of [R35_SLIP_AKRAM, R35_SLIP_RAHIM]) {
+      expect(slip.columns.map((column) => column.key)).toEqual(['qty', 'item', 'rate', 'amount']);
+      expect(slip.rows[0]?.source).toMatchObject({ kind: 'bikri' });
+    }
+  });
+});
 
 describe('every message ID the backend sends has words in both languages', () => {
   it('titles, groups, columns, labels, kinds of entry and sides', () => {

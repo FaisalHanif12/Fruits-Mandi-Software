@@ -3,13 +3,15 @@
 // one view to another, so one value is kept for all of them. A value that cannot be read any more is
 // left out and the box starts empty. The one-time person is not kept. Nothing about money is kept.
 
-import { choiceOr, isRecord, pickedOrNull, pickedText } from '../../shared/screen-state';
+import { choiceOr, idOrNull, isRecord, pickedOrNull, pickedText } from '../../shared/screen-state';
 import {
   COMPARE_CHOICES,
   EMPTY_ANALYTICS_FILTERS,
+  GOODS_CHOICES,
   GROUP_BY_CHOICES,
   PERIOD_CHOICES,
   SIDE_CHOICES,
+  TRIP_VIEW_CHOICES,
   type AnalyticsFilterState,
 } from './filters';
 
@@ -34,6 +36,10 @@ export function rememberedAnalytics(state: AnalyticsFilterState): Record<string,
   }
   if (state.side !== base.side) kept['side'] = state.side;
   if (state.compare !== base.compare) kept['compare'] = state.compare;
+  if (state.partner !== null) kept['partner'] = state.partner;
+  if (state.trip !== null) kept['trip'] = state.trip;
+  if (state.goods !== base.goods) kept['goods'] = state.goods;
+  if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
   return Object.keys(kept).length === 0 ? null : kept;
 }
 
@@ -54,5 +60,9 @@ export function analyticsFromRemembered(raw: unknown): AnalyticsFilterState | nu
     adda: pickedOrNull(raw['adda']),
     side: choiceOr(raw['side'], SIDE_CHOICES, base.side),
     compare: choiceOr(raw['compare'], COMPARE_CHOICES, base.compare),
+    partner: idOrNull(raw['partner']),
+    trip: idOrNull(raw['trip']),
+    goods: choiceOr(raw['goods'], GOODS_CHOICES, base.goods),
+    tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
   };
 }

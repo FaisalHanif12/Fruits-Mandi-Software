@@ -33,6 +33,26 @@ import {
   VIEWS_GET_TWO,
   VIEWS_SAVE_TWO_REQUEST,
 } from '../helpers/analytics-real';
+import {
+  ANALYTICS_LINES_F_PARTNER_A,
+  ANALYTICS_LINES_J_TRIP,
+  ANALYTICS_PRINT_DATA_J_EN,
+  ANALYTICS_RUN_A_GOODS_CONSIGNED,
+  ANALYTICS_RUN_A_GOODS_TRIP,
+  ANALYTICS_RUN_F,
+  ANALYTICS_RUN_F_COMPARE_REFUSED,
+  ANALYTICS_RUN_F_COMPARE_REFUSED_REQUEST,
+  ANALYTICS_RUN_F_TRIP,
+  ANALYTICS_RUN_G_DAY,
+  ANALYTICS_RUN_G_MONTH,
+  ANALYTICS_RUN_G_TRIP_DAY,
+  ANALYTICS_RUN_G_TRIP_WRITTEN_OFF,
+  ANALYTICS_RUN_J_EMPTY,
+  ANALYTICS_RUN_J_TRIP,
+  ANALYTICS_RUN_J_TRIP_BY_PURCHASE,
+  ANALYTICS_RUN_J_TRIP_PARTNER,
+  ANALYTICS_RUN_J_TRIP_WRITTEN_OFF,
+} from '../helpers/analytics-trips-real';
 
 vi.mock('../../src/shared/api/invoke');
 
@@ -104,12 +124,28 @@ describe('the fixtures are the backend’s own', () => {
 const keysOf = (value: object) => Object.keys(value).sort();
 
 describe('the answers carry exactly the fields of the generated types', () => {
-  it('AnalyticsCatalogEntry: the six views, each with the filters it takes', () => {
-    expect(ANALYTICS_CATALOG.map((entry) => entry.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'H']);
+  it('AnalyticsCatalogEntry: the nine views, each with the filters it takes', () => {
+    // Views I (gardens) and K (fruit taken) come with D4R.
+    expect(ANALYTICS_CATALOG.map((entry) => entry.id)).toEqual([
+      'A',
+      'B',
+      'C',
+      'D',
+      'E',
+      'F',
+      'G',
+      'H',
+      'J',
+    ]);
     for (const entry of ANALYTICS_CATALOG) {
       expect(keysOf(entry)).toEqual(['filters', 'id', 'title_id']);
-      // Only view D takes a grouping.
-      expect(entry.filters.includes('group_by')).toBe(entry.id === 'D');
+      // Only views D and G take a grouping.
+      expect(entry.filters.includes('group_by')).toBe(entry.id === 'D' || entry.id === 'G');
+      // The comparison is refused on the partner, trend and trips views, so they do not offer it.
+      expect(entry.filters.includes('compare')).toBe(!['F', 'G', 'J'].includes(entry.id));
+      // The partner box is on F, G and J only; the trip layout on J only.
+      expect(entry.filters.includes('partner')).toBe(['F', 'G', 'J'].includes(entry.id));
+      expect(entry.filters.includes('trip_view')).toBe(entry.id === 'J');
     }
   });
 
@@ -123,6 +159,19 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_RUN_D_DAY,
       ANALYTICS_RUN_E,
       ANALYTICS_RUN_H,
+      ANALYTICS_RUN_A_GOODS_CONSIGNED,
+      ANALYTICS_RUN_A_GOODS_TRIP,
+      ANALYTICS_RUN_F,
+      ANALYTICS_RUN_F_TRIP,
+      ANALYTICS_RUN_G_DAY,
+      ANALYTICS_RUN_G_MONTH,
+      ANALYTICS_RUN_G_TRIP_DAY,
+      ANALYTICS_RUN_G_TRIP_WRITTEN_OFF,
+      ANALYTICS_RUN_J_EMPTY,
+      ANALYTICS_RUN_J_TRIP,
+      ANALYTICS_RUN_J_TRIP_BY_PURCHASE,
+      ANALYTICS_RUN_J_TRIP_PARTNER,
+      ANALYTICS_RUN_J_TRIP_WRITTEN_OFF,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -144,12 +193,16 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'compare_from',
         'compare_to',
         'from',
+        'goods',
         'group_by',
         'item',
+        'partner',
         'period',
         'seller',
         'side',
         'to',
+        'trip',
+        'trip_view',
       ]);
       for (const column of page.columns) {
         expect(keysOf(column)).toEqual(['drill', 'heading', 'key', 'kind', 'title_id']);
@@ -163,7 +216,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
     }
   });
 
-  it('AnalyticsKey carries the six filters and the items left out', () => {
+  it('AnalyticsKey carries the filters of a row, the items left out, the partner and the purchases', () => {
     const key = ANALYTICS_RUN_A.rows[0]?.key;
     expect(key).not.toBeNull();
     expect(keysOf(key ?? {})).toEqual([
@@ -171,10 +224,51 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'from',
       'item_id',
       'not_item_ids',
+      'partner_id',
       'person_key',
+      'purchase_ids',
       'seller_id',
       'to',
     ]);
+  });
+
+  it('a partner row of F opens his share rows; a trip row of J opens its purchases', () => {
+    expect(ANALYTICS_RUN_F.rows.map((row) => row.key?.partner_id)).toEqual([1, 2, 3]);
+    expect(ANALYTICS_RUN_J_TRIP.rows[0]?.key?.purchase_ids).toEqual([1]);
+  });
+
+  it('the partner columns of J are a percent and a part of the result for each partner', () => {
+    const partner = ANALYTICS_RUN_J_TRIP.columns.filter(
+      (column) => column.heading?.kind === 'partner',
+    );
+    expect(partner.map((column) => column.kind)).toEqual([
+      'percent',
+      'money',
+      'percent',
+      'money',
+      'percent',
+      'money',
+    ]);
+    expect(partner.map((column) => column.title_id)).toEqual([
+      'analytics-col-partner-share',
+      'analytics-col-partner-part',
+      'analytics-col-partner-share',
+      'analytics-col-partner-part',
+      'analytics-col-partner-share',
+      'analytics-col-partner-part',
+    ]);
+    // A trip with no purchase has none of them.
+    expect(
+      ANALYTICS_RUN_J_EMPTY.columns.filter((column) => column.heading?.kind === 'partner'),
+    ).toHaveLength(0);
+  });
+
+  it('the comparison on F is refused with ERR_OUT_OF_RANGE on its own field', () => {
+    expect(ANALYTICS_RUN_F_COMPARE_REFUSED.errors[0]).toMatchObject({
+      code: 'ERR_OUT_OF_RANGE',
+      field: 'filters.compare',
+    });
+    expect(ANALYTICS_RUN_F_COMPARE_REFUSED_REQUEST.filters.compare).toBe('previous');
   });
 
   it('the headings of the columns of D and E say what each column stands for', () => {
@@ -192,6 +286,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_LINES_A_BANANA,
       ANALYTICS_LINES_D_BANANA_OCTOBER,
       ANALYTICS_LINES_E_RAHIM_BANANA,
+      ANALYTICS_LINES_F_PARTNER_A,
+      ANALYTICS_LINES_J_TRIP,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -207,13 +303,18 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ]);
       for (const row of page.rows) {
         expect(keysOf(row)).toEqual(['cells', 'kind', 'source']);
-        expect(row.source).toMatchObject({ kind: 'bikri' });
+        // A line is a بکری, or (the expense shares of F) a voucher.
+        expect(['bikri', 'voucher']).toContain(row.source?.kind);
       }
     }
   });
 
   it('AnalyticsPrintData', () => {
-    for (const data of [ANALYTICS_PRINT_DATA_A_EN, ANALYTICS_PRINT_DATA_D_UR]) {
+    for (const data of [
+      ANALYTICS_PRINT_DATA_A_EN,
+      ANALYTICS_PRINT_DATA_D_UR,
+      ANALYTICS_PRINT_DATA_J_EN,
+    ]) {
       expect(keysOf(data)).toEqual([
         'columns',
         'dir',
@@ -246,12 +347,16 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'city_id',
         'compare',
         'from',
+        'goods',
         'group_by',
         'item_id',
+        'partner_id',
         'period',
         'seller_id',
         'side',
         'to',
+        'trip_id',
+        'trip_view',
       ]);
     }
   });

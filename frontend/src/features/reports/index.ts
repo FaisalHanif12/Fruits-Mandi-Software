@@ -33,6 +33,7 @@ export { personFromHit, type ReportPerson } from './filters';
 // ---- Plan 21: what the analytics module borrows (cells of a report are cells of a view). ----
 export { cellText, monthText, nameWithTag, partyText, sideText } from './cells';
 export { ReportPersonPicker } from './components/ReportPersonPicker';
+export { ReportPartnerSelect } from './components/ReportPartnerSelect';
 export { PrintPreviewFrame } from './components/PrintPreviewFrame';
 export {
   ReportPrintDocument,

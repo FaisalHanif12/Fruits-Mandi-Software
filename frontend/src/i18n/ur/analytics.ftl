@@ -1,4 +1,4 @@
-### Analytics (plan 21, PRD 18; views A, B, C, D, E and H).
+### Analytics (plan 21 and plan 27, PRD 18; views A to H and J).
 ### Every message here is `# review: pending` until the Urdu and English reviewers have read it (NFR-URD-4).
 
 ## The area: its views and the lines above the table.
@@ -305,3 +305,109 @@ analytics-saved-delete-title = یہ محفوظ تجزیہ ہٹائیں؟
 
 # review: pending
 analytics-saved-delete-body = "{ $name }" آپ کے محفوظ تجزیوں سے ہٹ جائے گا۔ آپ کی رقمیں متاثر نہیں ہوں گی۔
+
+## Views F, G and J (plan 27, PRD 18.2): partners, trend and trips. The columns that are report columns
+## (the partner, the shares, the trip, the purchase and the quantities of a trip) are in reports.ftl.
+
+# review: pending
+analytics-view-f-title = شراکت دار وار
+
+# review: pending
+analytics-view-f-help = ہر { -shirakat-dar }: آمدن کا حصہ، خرچہ کا حصہ، منافع حصہ، سفر سے تبدیلی اور اس کی { -kul-raqam } میں خالص تبدیلی۔
+
+# review: pending
+analytics-view-g-title = رجحان
+
+# review: pending
+analytics-view-g-help = ہر دن، مہینے یا سال کا: { -kham-bikri }، { -commission }، مشترکہ آمدن، دکان خرچہ، منافع اور سفر کا نتیجہ۔
+
+# review: pending
+analytics-view-j-title = { -market-safar }
+
+# review: pending
+analytics-view-j-help = ہر سفر، خریداری، قسم مال یا دن کا: کیا خریدا اور بیچا گیا، لاگت، نتیجہ اور ہر { -shirakat-dar } کا حصہ۔
+
+# review: pending
+analytics-col-gardens = { -bagh }
+
+# review: pending
+analytics-col-trips = { -safar }
+
+# review: pending
+analytics-col-fruit = { -phal }
+
+# review: pending
+analytics-col-other-money = دیگر
+
+# review: pending
+analytics-col-net-change = خالص تبدیلی
+
+# review: pending
+analytics-col-shared-income = مشترکہ آمدن
+
+# review: pending
+analytics-col-shop-expenses = { -dukan-kharcha }
+
+# review: pending
+analytics-col-profit = منافع
+
+# review: pending
+analytics-col-trips-result = { -safar } کا نتیجہ
+
+# review: pending
+analytics-col-partner-share = { -hissa }
+
+# review: pending
+analytics-col-partner-heading = { $name }: { $title }
+
+# review: pending
+analytics-col-partner-part = نتیجے میں حصہ
+
+# review: pending
+analytics-col-share-kind = قسم
+
+# review: pending
+analytics-col-share-base = تقسیم ہونے والی رقم
+
+# review: pending
+analytics-col-share-amount = اس کا حصہ
+
+## The boxes of these views: the trip, the goods and the layout of the trips.
+
+# review: pending
+analytics-filter-trip = { -safar }
+
+# review: pending
+analytics-trip-all = تمام سفر
+
+# review: pending
+analytics-trip-failed = سفروں کی فہرست نہیں کھل سکی
+
+# review: pending
+analytics-filter-goods = مال
+
+# review: pending
+analytics-goods-all = تمام مال
+
+# review: pending
+analytics-goods-consigned = بیوپاری کا مال
+
+# review: pending
+analytics-goods-trip = سفر کا مال
+
+# review: pending
+analytics-goods-garden = باغ کا مال
+
+# review: pending
+analytics-filter-trip-by-purchase = خریداری وار
+
+## The charts of these views.
+
+# review: pending
+analytics-chart-f = ہر { -shirakat-dar } کا منافع حصہ اور خالص تبدیلی
+
+# review: pending
+analytics-chart-g = ہر مدت کا { -commission }، مشترکہ آمدن، دکان خرچہ، منافع اور سفر کا نتیجہ
+
+# review: pending
+analytics-chart-j = فروخت کی رقم اور نتیجہ

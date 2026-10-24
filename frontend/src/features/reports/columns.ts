@@ -90,6 +90,10 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
   },
   R24: { last_date: { from: 'normal' } },
   R27: { bill_date: { from: 'normal' } },
+  // The party day sheet (R35): the short code, party, balance at the start, the day's debit and
+  // credit and what is left always. The collector's blank column is for the print and the widest
+  // step. The slip of one party (quantity, item, rate, amount) fits at every step.
+  R35: { collector: { from: 'wide' } },
   R30: { returned: { from: 'normal' } },
   // Money lent (R32): the person, what is lent, what is still open, the return-by day and the days
   // past it always; the two ways of returning wait for the normal step, the job and the oldest open

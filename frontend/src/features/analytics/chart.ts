@@ -5,8 +5,10 @@
 //
 // What each view draws: A the total commission of each item, B of each seller, C the purchase value
 // of each buyer, D one stack for each period with a part for each item, E one stack for each seller
-// with a part for each item, H the top items. A chart shows the first rows (the backend sends the
-// biggest first) and says how many it left out.
+// with a part for each item, F each partner's profit share and his net change side by side, G the
+// money columns of each period side by side (many thin bars for the days of a month), H the top
+// items, J the result of each trip, purchase, item or day. A chart shows the first rows (the backend
+// sends the biggest first) and says how many it left out.
 
 import type { AnalyticsColumn } from '../../bindings/AnalyticsColumn';
 import type { AnalyticsPage } from '../../bindings/AnalyticsPage';
@@ -179,6 +181,61 @@ function matrix(page: AnalyticsPage, view: 'D' | 'E', context: ListContext): Cha
   };
 }
 
+/** True for a cell with no figure in it: the backend left it empty on purpose. */
+function isNoFigure(cell: ReportCell | undefined): boolean {
+  return cell === undefined || cell.type === 'empty';
+}
+
+/**
+ * One group of bars for each row, with a bar for each of these columns, side by side (F, G, J). A
+ * column whose cells are all empty has no bar (the garden and fruit columns of F have no figure
+ * until D4R): a legend entry with no bar would only confuse. A loss is a bar below the line.
+ */
+function sideBySide(
+  page: AnalyticsPage,
+  rows: readonly AnalyticsRow[],
+  nameKey: string,
+  valueKeys: readonly string[],
+  labelId: string,
+  context: ListContext,
+  dense = false,
+): ChartPlan | null {
+  const name = indexOfKey(page.columns, nameKey);
+  if (name < 0 || rows.length === 0) return null;
+  const shown = dense ? rows : rows.slice(0, MAX_CHART_ROWS);
+  const series = valueKeys.flatMap((key) => {
+    const at = indexOfKey(page.columns, key);
+    const column = page.columns[at];
+    if (column === undefined) return [];
+    if (shown.every((row) => isNoFigure(row.cells[at]))) return [];
+    return [
+      seriesOf(
+        context.text(column.title_id),
+        shown.map((row) => row.cells[at]),
+        context,
+      ),
+    ];
+  });
+  if (series.length === 0) return null;
+  return {
+    data: {
+      categories: shown.map((row) => categoryText(row.cells[name], context)),
+      series: series.slice(0, MAX_CHART_SERIES),
+      stacked: false,
+      dense,
+    },
+    labelId,
+    shown: shown.length,
+    total: rows.length,
+  };
+}
+
+/** The first column of J holds the trip, the purchase, the item or the day. */
+const J_NAME_KEY = 'group';
+
+/** More days than this are drawn as many thin bars (the days of a month). */
+const DENSE_AFTER = 12;
+
 /** What a view draws above its table, or null when there is nothing to draw. */
 export function chartFor(
   view: AnalyticsView,
@@ -219,6 +276,27 @@ export function chartFor(
     case 'D':
     case 'E':
       return matrix(page, view, context);
+    case 'F':
+      return sideBySide(
+        page,
+        recordRows(page.rows),
+        'partner',
+        ['profit_share', 'net_change'],
+        'analytics-chart-f',
+        context,
+      );
+    case 'G': {
+      const rows = recordRows(page.rows);
+      return sideBySide(
+        page,
+        rows,
+        'period',
+        ['commission', 'shared_income', 'shop_expenses', 'profit', 'trips_result'],
+        'analytics-chart-g',
+        context,
+        rows.length > DENSE_AFTER,
+      );
+    }
     case 'H':
       return simple(
         page,
@@ -227,6 +305,15 @@ export function chartFor(
         'total_comm',
         'report-col-total-comm',
         'analytics-chart-h',
+        context,
+      );
+    case 'J':
+      return sideBySide(
+        page,
+        recordRows(page.rows),
+        J_NAME_KEY,
+        ['sales_money', 'result'],
+        'analytics-chart-j',
         context,
       );
   }

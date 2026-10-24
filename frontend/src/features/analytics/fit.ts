@@ -15,8 +15,12 @@ export const STEP_ROOM: Readonly<Record<LayoutStep, number>> = {
   wide: 1500,
 };
 
-/** The width a column of this kind takes in the grid (a growing name column starts at its least). */
-export function columnWidth(kind: ReportColumnKind, key: string): number {
+/**
+ * The width a column of this kind takes in the grid (a growing name column starts at its least). A
+ * figure that can be a loss (`signed`) has a slot after it for its word, like a balance.
+ */
+export function columnWidth(kind: ReportColumnKind, key: string, signed = false): number {
+  if (signed && kind === 'money') return LIST_COLUMN_WIDTHS.balance;
   switch (kind) {
     case 'party':
     case 'names':

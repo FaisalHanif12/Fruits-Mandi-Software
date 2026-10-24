@@ -10,11 +10,20 @@ import { isoToDisplayDate } from '../../../shared/format';
 interface ReportRangeProps {
   filters: ReportResolvedFilters;
   takes: readonly ReportFilterKind[];
+  /** The one day is a day sheet (R35), not the day balances are read at: the words say so. */
+  day?: boolean;
 }
 
-export function ReportRange({ filters, takes }: ReportRangeProps) {
+export function ReportRange({ filters, takes, day = false }: ReportRangeProps) {
   let line;
-  if (takes.includes('as_of')) {
+  if (takes.includes('as_of') && day) {
+    line =
+      filters.as_of === null ? (
+        <Localized id="report-day-now" />
+      ) : (
+        <Localized id="report-day-shown" vars={{ date: isoToDisplayDate(filters.as_of) }} />
+      );
+  } else if (takes.includes('as_of')) {
     line =
       filters.as_of === null ? (
         <Localized id="report-as-of-now" />

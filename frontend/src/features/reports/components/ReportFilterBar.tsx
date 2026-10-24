@@ -143,7 +143,8 @@ export function ReportFilterBar({
     boxes.push(
       <Field
         key="as_of"
-        label={<Localized id="report-filter-as-of" />}
+        // The party day sheet (R35) is for one day; the balance lists are read as of a day.
+        label={<Localized id={entry.id === 'R35' ? 'report-filter-day' : 'report-filter-as-of'} />}
         error={fieldError(error, 'filters.as_of')}
       >
         {(control) => (

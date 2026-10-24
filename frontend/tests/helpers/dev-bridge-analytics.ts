@@ -16,8 +16,11 @@ import type { AnalyticsPage } from '../../src/bindings/AnalyticsPage';
 import type { AnalyticsSavedView } from '../../src/bindings/AnalyticsSavedView';
 import type { AnalyticsView } from '../../src/bindings/AnalyticsView';
 import type { ReportCell } from '../../src/bindings/ReportCell';
+import type { TripsListInput } from '../../src/bindings/TripsListInput';
 import { devFlag } from './dev-bridge';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
+import { rokarHandlers } from './dev-bridge-rokar';
+import { createTripBooks } from './trips-data';
 import {
   ANALYTICS_CATALOG,
   ANALYTICS_LINES_A_BANANA,
@@ -34,6 +37,14 @@ import {
   ANALYTICS_RUN_H,
   VIEWS_GET_TWO,
 } from './analytics-real';
+import {
+  ANALYTICS_PRINT_DATA_J_EN,
+  ANALYTICS_RUN_F,
+  ANALYTICS_RUN_G_DAY,
+  ANALYTICS_RUN_G_MONTH,
+  ANALYTICS_RUN_J_TRIP,
+  ANALYTICS_RUN_J_TRIP_BY_PURCHASE,
+} from './analytics-trips-real';
 
 type Input = Record<string, unknown>;
 
@@ -43,7 +54,10 @@ const PAGES: Record<AnalyticsView, AnalyticsPage> = {
   C: ANALYTICS_RUN_C,
   D: ANALYTICS_RUN_D_MONTH,
   E: ANALYTICS_RUN_E,
+  F: ANALYTICS_RUN_F,
+  G: ANALYTICS_RUN_G_MONTH,
   H: ANALYTICS_RUN_H,
+  J: ANALYTICS_RUN_J_TRIP,
 };
 
 /** Views D and E with more columns than a window holds, to show the window and its buttons. */
@@ -94,6 +108,8 @@ function page(input: Input): AnalyticsPage {
   let base = PAGES[view];
   if (view === 'A' && compared) base = ANALYTICS_RUN_A_COMPARE;
   if (view === 'D' && filters['group_by'] === 'day') base = ANALYTICS_RUN_D_DAY;
+  if (view === 'G' && filters['group_by'] === 'day') base = ANALYTICS_RUN_G_DAY;
+  if (view === 'J' && filters['trip_view'] === 'purchase') base = ANALYTICS_RUN_J_TRIP_BY_PURCHASE;
   if (devFlag('wide')) base = wide(base);
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {
@@ -106,6 +122,9 @@ function page(input: Input): AnalyticsPage {
 }
 
 let saved: AnalyticsSavedView[] = [...VIEWS_GET_TWO];
+
+/** The trips of the trip box (view J, the trip filter): the worked trip of the trips module's books. */
+const tripBooks = createTripBooks();
 
 const handlers: Record<string, (input: Input) => unknown> = {
   analytics_export_excel: (input) => devExport(input),
@@ -122,7 +141,14 @@ const handlers: Record<string, (input: Input) => unknown> = {
     };
   },
   analytics_print_data: (input) =>
-    input['view'] === 'D' ? ANALYTICS_PRINT_DATA_D_UR : ANALYTICS_PRINT_DATA_A_EN,
+    input['view'] === 'D'
+      ? ANALYTICS_PRINT_DATA_D_UR
+      : input['view'] === 'J'
+        ? ANALYTICS_PRINT_DATA_J_EN
+        : ANALYTICS_PRINT_DATA_A_EN,
+  // The partner box (F, G, J) and the trip box read these, so the boxes work in the browser.
+  partners_list: (input) => rokarHandlers['partners_list']?.(input),
+  trips_list: (input) => tripBooks.list(input as TripsListInput),
   analytics_views_get: () => saved,
   analytics_views_save: (input) => {
     saved = (input['views'] ?? []) as AnalyticsSavedView[];

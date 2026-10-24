@@ -1,4 +1,4 @@
-### Analytics (plan 21, PRD 18; views A, B, C, D, E and H).
+### Analytics (plan 21 and plan 27, PRD 18; views A to H and J).
 ### Every message here is `# review: pending` until the Urdu and English reviewers have read it (NFR-URD-4).
 
 ## The area: its views and the lines above the table.
@@ -305,3 +305,109 @@ analytics-saved-delete-title = Delete this saved view?
 
 # review: pending
 analytics-saved-delete-body = "{ $name }" will be removed from your saved views. Your figures are not affected.
+
+## Views F, G and J (plan 27, PRD 18.2): partners, trend and trips. The columns that are report columns
+## (the partner, the shares, the trip, the purchase and the quantities of a trip) are in reports.ftl.
+
+# review: pending
+analytics-view-f-title = By Partner
+
+# review: pending
+analytics-view-f-help = Each { -shirakat-dar }: income share, expense share, profit share, what his trips changed and the net change of his { -kul-raqam }.
+
+# review: pending
+analytics-view-g-title = Trend
+
+# review: pending
+analytics-view-g-help = Each day, month or year: { -kham-bikri }, { -commission }, shared income, shop expenses, profit and the result of the trips.
+
+# review: pending
+analytics-view-j-title = { -market-safar }
+
+# review: pending
+analytics-view-j-help = Each trip, purchase, item or day: what was bought and sold, the cost, the result and the part of each { -shirakat-dar }.
+
+# review: pending
+analytics-col-gardens = { -bagh }
+
+# review: pending
+analytics-col-trips = { -safar }
+
+# review: pending
+analytics-col-fruit = { -phal }
+
+# review: pending
+analytics-col-other-money = Other
+
+# review: pending
+analytics-col-net-change = Net Change
+
+# review: pending
+analytics-col-shared-income = Shared Income
+
+# review: pending
+analytics-col-shop-expenses = { -dukan-kharcha }
+
+# review: pending
+analytics-col-profit = Profit
+
+# review: pending
+analytics-col-trips-result = { -safar } Result
+
+# review: pending
+analytics-col-partner-share = { -hissa }
+
+# review: pending
+analytics-col-partner-heading = { $name }: { $title }
+
+# review: pending
+analytics-col-partner-part = Part of Result
+
+# review: pending
+analytics-col-share-kind = Kind
+
+# review: pending
+analytics-col-share-base = Amount Shared
+
+# review: pending
+analytics-col-share-amount = His Share
+
+## The boxes of these views: the trip, the goods and the layout of the trips.
+
+# review: pending
+analytics-filter-trip = { -safar }
+
+# review: pending
+analytics-trip-all = All trips
+
+# review: pending
+analytics-trip-failed = The list of trips could not be read
+
+# review: pending
+analytics-filter-goods = Goods
+
+# review: pending
+analytics-goods-all = All goods
+
+# review: pending
+analytics-goods-consigned = Consigned goods
+
+# review: pending
+analytics-goods-trip = Trip goods
+
+# review: pending
+analytics-goods-garden = Garden goods
+
+# review: pending
+analytics-filter-trip-by-purchase = By purchase
+
+## The charts of these views.
+
+# review: pending
+analytics-chart-f = Profit share and net change of each { -shirakat-dar }
+
+# review: pending
+analytics-chart-g = Each period: { -commission }, shared income, shop expenses, profit and the result of the trips
+
+# review: pending
+analytics-chart-j = Sales money and result

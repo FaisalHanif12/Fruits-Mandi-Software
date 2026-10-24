@@ -1,0 +1,184 @@
+{
+  "view": "F",
+  "title_id": "analytics-lines-title",
+  "filters": {
+    "period": null,
+    "from": null,
+    "to": null,
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "goods": "all",
+    "trip_view": null
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "kind",
+      "title_id": "analytics-col-share-kind",
+      "kind": "label"
+    },
+    {
+      "key": "base",
+      "title_id": "analytics-col-share-base",
+      "kind": "money"
+    },
+    {
+      "key": "share",
+      "title_id": "analytics-col-share",
+      "kind": "percent"
+    },
+    {
+      "key": "amount",
+      "title_id": "analytics-col-share-amount",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "label",
+          "id": "report-col-income-share"
+        },
+        {
+          "type": "money",
+          "paisa": 394800
+        },
+        {
+          "type": "percent",
+          "hundredths": 4000
+        },
+        {
+          "type": "money",
+          "paisa": 158000
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 2
+        },
+        {
+          "type": "label",
+          "id": "report-col-income-share"
+        },
+        {
+          "type": "money",
+          "paisa": 154000
+        },
+        {
+          "type": "percent",
+          "hundredths": 4000
+        },
+        {
+          "type": "money",
+          "paisa": 61600
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 2
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-shop-expense",
+          "number": null
+        },
+        {
+          "type": "label",
+          "id": "report-col-expense-share"
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "percent",
+          "hundredths": 4000
+        },
+        {
+          "type": "money",
+          "paisa": -120000
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 9001
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 99600
+    }
+  ]
+}

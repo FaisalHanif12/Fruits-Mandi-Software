@@ -1093,3 +1093,77 @@ report-r34-open-lots = باقی { -lot }
 
 # review: pending
 report-r34-open-qty = باقی { -nag }
+
+## R35, the party day sheet (plan 27, PRD FR-19.12): the table of every party and the slip of one party.
+
+# review: pending
+report-r35-title = پارٹی کی روزانہ پرچی
+
+# review: pending
+report-r35-help = ایک دن کا: ہر پارٹی کا شروع کا بقایا، اس دن کا بنام اور جمع، اور جو باقی ہے۔ پرچی دیکھنے کے لیے پارٹی چنیں۔
+
+# review: pending
+report-col-code = کوڈ
+
+# review: pending
+report-col-previous = { -sabiqa-raqam }
+
+# review: pending
+report-r35-buyers = گاہک
+
+# review: pending
+report-r35-sellers = بیوپاری
+
+# review: pending
+report-r35-total-qty = کل { -nag }
+
+# review: pending
+report-r35-previous = { -sabiqa-raqam }
+
+# review: pending
+report-r35-bought = { -taza-banam }
+
+# review: pending
+report-r35-sold = اس دن کی { -bikri }
+
+# review: pending
+report-r35-other-debits = دیگر { -banaam }
+
+# review: pending
+report-r35-other-credits = دیگر { -jama }
+
+# review: pending
+report-r35-on-spot = موقع پر ادا
+
+# review: pending
+report-r35-cash-given = { -naqd }
+
+# review: pending
+report-r35-paid = اس دن ادا
+
+# review: pending
+report-r35-remaining = { -total-raqam }
+
+# review: pending
+report-r35-collection = کل { -agrahi }
+
+# review: pending
+report-r35-sellers-credit = بیوپاریوں کا { -jama }
+
+# review: pending
+report-r35-sellers-debit = بیوپاریوں کا { -banaam }
+
+# review: pending
+report-r35-sellers-remaining = بیوپاریوں کا { -baqaya }
+
+# review: pending
+report-filter-day = دن
+
+# review: pending
+report-day-shown = { $date } کی پرچی
+
+# review: pending
+report-day-now = آج کی پرچی
+
+# review: pending
+report-r35-all-parties = تمام پارٹیاں

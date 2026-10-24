@@ -124,7 +124,7 @@ function ReportBody({
     [settled, entry],
   );
   const query = useReportPages(entry.id, wire);
-  const open = useOpenSource(catalog);
+  const openSource = useOpenSource(catalog);
   const language = useLanguage();
   // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
   const exporter = useExcelExport({
@@ -179,6 +179,37 @@ function ReportBody({
 
   const change = (part: Partial<ReportFilterState>) => {
     setState((now) => ({ ...now, ...part }));
+  };
+  // The party day sheet (R35): Enter on a party of the table opens his slip, the same sheet for one
+  // party (PRD FR-19.12), where every other report opens the record behind a row. A one-time person
+  // is picked with his key, so the slip is his and not the whole account's (FR-13.5).
+  const open = (view: ReportRowView) => {
+    const cell = view.row.cells.find((candidate) => candidate.type === 'party');
+    if (entry.id === 'R35' && state.party === null && cell?.type === 'party') {
+      const picked = cell.party;
+      change({
+        party: {
+          id: picked.account_id,
+          name_ur: picked.name_ur,
+          name_en: picked.name_en,
+          code: picked.code,
+        },
+        person:
+          picked.person_key === null
+            ? null
+            : {
+                accountId: picked.account_id,
+                personKey: picked.person_key,
+                name_ur: picked.name_ur,
+                name_en: picked.name_en,
+                phone: '',
+                last_date: '',
+              },
+        personText: '',
+      });
+      return;
+    }
+    openSource(view);
   };
   // R13 and R14 wait for an account, R31 for a partner (the catalogue says which box it takes).
   const needsPick = !canRun(state, entry);
@@ -272,6 +303,18 @@ function ReportBody({
           containerRef={containerRef}
         />
       )}
+      {entry.id === 'R35' && state.party !== null && view === 'table' ? (
+        <div>
+          <Button
+            onClick={() => {
+              change({ party: null, person: null, personText: '' });
+            }}
+          >
+            <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
+            <Localized id="report-r35-all-parties" />
+          </Button>
+        </div>
+      ) : null}
       {body}
     </div>
   );

@@ -10,6 +10,8 @@
       "city",
       "adda",
       "side",
+      "trip",
+      "goods",
       "compare"
     ]
   },
@@ -24,6 +26,8 @@
       "city",
       "adda",
       "side",
+      "trip",
+      "goods",
       "compare"
     ]
   },
@@ -38,6 +42,8 @@
       "city",
       "adda",
       "side",
+      "trip",
+      "goods",
       "compare"
     ]
   },
@@ -52,6 +58,8 @@
       "city",
       "adda",
       "side",
+      "trip",
+      "goods",
       "compare",
       "group_by"
     ]
@@ -67,7 +75,34 @@
       "city",
       "adda",
       "side",
+      "trip",
+      "goods",
       "compare"
+    ]
+  },
+  {
+    "id": "F",
+    "title_id": "analytics-view-f-title",
+    "filters": [
+      "period",
+      "partner"
+    ]
+  },
+  {
+    "id": "G",
+    "title_id": "analytics-view-g-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "trip",
+      "goods",
+      "group_by",
+      "partner"
     ]
   },
   {
@@ -81,7 +116,26 @@
       "city",
       "adda",
       "side",
+      "trip",
+      "goods",
       "compare"
+    ]
+  },
+  {
+    "id": "J",
+    "title_id": "analytics-view-j-title",
+    "filters": [
+      "period",
+      "item",
+      "seller",
+      "buyer",
+      "city",
+      "adda",
+      "side",
+      "trip",
+      "goods",
+      "partner",
+      "trip_view"
     ]
   }
 ]

@@ -306,6 +306,22 @@
 # review: pending
 -apni-jeb-se = اپنی جیب سے
 
+# What a party was charged on one day, on his day slip (PRD Section 3, FR-19.12)
+# review: pending
+-taza-banam = تازہ بنام
+
+# A party's balance at the start of the day (PRD Section 3, FR-19.12)
+# review: pending
+-sabiqa-raqam = سابقہ رقم
+
+# Previous balance plus today's bill less what was paid (PRD Section 3, FR-19.12)
+# review: pending
+-total-raqam = ٹوٹل رقم
+
+# What is still owed after the day (PRD Section 3, FR-19.12)
+# review: pending
+-baqaya = بقایا
+
 ## The words on their own, for labels that show only the word.
 
 # A partner's total in the firm: his investment plus his share of commission and profit, less what he took (PRD Section 3, C22)
@@ -393,3 +409,7 @@ glossary-kul-raqam = { -kul-raqam }
 glossary-bagh = { -bagh }
 glossary-safar = { -safar }
 glossary-phal = { -phal }
+glossary-taza-banam = { -taza-banam }
+glossary-sabiqa-raqam = { -sabiqa-raqam }
+glossary-total-raqam = { -total-raqam }
+glossary-baqaya = { -baqaya }

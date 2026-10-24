@@ -9,9 +9,11 @@ import type {
   AnalyticsCompare,
   AnalyticsFilterKind,
   AnalyticsFilters,
+  AnalyticsGoods,
   AnalyticsGroupBy,
   AnalyticsPeriod,
   AnalyticsSide,
+  AnalyticsTripView,
 } from './types';
 
 /** The period box: a shortcut of PRD 18.1, or the two dates the user types. */
@@ -30,6 +32,20 @@ export const PERIOD_CHOICES: readonly PeriodChoice[] = [
 export const GROUP_BY_CHOICES: readonly AnalyticsGroupBy[] = ['month', 'day', 'year'];
 export const SIDE_CHOICES: readonly AnalyticsSide[] = ['both', 'seller', 'buyer'];
 export const COMPARE_CHOICES: readonly AnalyticsCompare[] = ['off', 'previous', 'last_year'];
+/** Which goods: all of them, those consigned to the shop, the trips' goods or the gardens' (PRD 18.1). */
+export const GOODS_CHOICES: readonly AnalyticsGoods[] = ['all', 'consigned', 'trip', 'garden'];
+/** How the trips view (J) is laid out: by trip (the first), purchase, item or day (PRD 18.2). */
+export const TRIP_VIEW_CHOICES: readonly AnalyticsTripView[] = ['trip', 'purchase', 'item', 'day'];
+
+/**
+ * The Fluent message of a trip layout: the report words where they exist (by trip, item, day), else
+ * the analytics one (by purchase).
+ */
+export function tripViewMessageId(view: AnalyticsTripView): string {
+  return view === 'purchase'
+    ? 'analytics-filter-trip-by-purchase'
+    : `report-filter-trip-by-${view}`;
+}
 
 /** The Fluent message of a period choice: the report words where they exist, else the analytics ones. */
 export function periodMessageId(choice: PeriodChoice): string {
@@ -57,6 +73,13 @@ export interface AnalyticsFilterState {
   adda: PickerValue | null;
   side: AnalyticsSide;
   compare: AnalyticsCompare;
+  /** One partner (views F, G, J), or all of them (null). */
+  partner: number | null;
+  /** One trip (views that take it), or all (null). */
+  trip: number | null;
+  goods: AnalyticsGoods;
+  /** The layout of view J. */
+  tripView: AnalyticsTripView;
 }
 
 export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
@@ -73,6 +96,10 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
   adda: null,
   side: 'both',
   compare: 'off',
+  partner: null,
+  trip: null,
+  goods: 'all',
+  tripView: 'trip',
 };
 
 /**
@@ -107,6 +134,11 @@ export function filtersToWire(
     adda_id: has('adda') ? (state.adda?.id ?? null) : null,
     side: has('side') ? state.side : 'both',
     compare: has('compare') ? state.compare : 'off',
+    partner_id: has('partner') ? state.partner : null,
+    trip_id: has('trip') ? state.trip : null,
+    goods: has('goods') ? state.goods : 'all',
+    // The first layout is the backend's default, so it is left null, like the month of group_by.
+    trip_view: has('trip_view') && state.tripView !== 'trip' ? state.tripView : null,
   };
 }
 
@@ -144,6 +176,10 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
     adda: bare(filters.adda_id),
     side: filters.side,
     compare: filters.compare,
+    partner: filters.partner_id,
+    trip: filters.trip_id,
+    goods: filters.goods,
+    tripView: filters.trip_view ?? 'trip',
   };
 }
 
@@ -163,6 +199,9 @@ export function isUnfiltered(
     wire.city_id === null &&
     wire.adda_id === null &&
     wire.side === 'both' &&
-    wire.compare === 'off'
+    wire.compare === 'off' &&
+    wire.partner_id === null &&
+    wire.trip_id === null &&
+    wire.goods === 'all'
   );
 }
