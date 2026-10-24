@@ -7,9 +7,9 @@
 //! (PRD FR-19.9); the total of the payable column of R24 equals the tile ادائیگی باقی.
 
 mod advances;
-mod dues;
+pub(crate) mod dues;
 mod grouped;
-mod payables;
+pub(crate) mod payables;
 
 pub(super) use advances::run as run_r26;
 pub(super) use dues::{Layout as DuesLayout, run as run_dues};

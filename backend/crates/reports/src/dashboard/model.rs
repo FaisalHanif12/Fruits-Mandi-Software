@@ -46,7 +46,9 @@ pub struct DashboardTiles {
     /// آج کی بکری: Σ خام بکری of today's postings (reversals take out cancelled ones).
     #[ts(type = "Paisa")]
     pub sales_gross_paisa: Paisa,
-    /// How many بکری have sales today.
+    /// How many بکری have sales today. A later sale today of an older بکری counts here, but that
+    /// بکری is not in today's list, which holds the بکری dated today. The two can differ on
+    /// purpose; do not make one match the other.
     #[ts(type = "number")]
     pub sales_count: i64,
     /// آج کا کمیشن: seller + buyer commission + لاگا today.

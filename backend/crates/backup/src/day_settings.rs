@@ -4,8 +4,9 @@
 //! - **Closing time** is the time of the daily USB and cloud copy, one value with the backup
 //!   settings (`BackupSettings::closing_time`); this group reads and writes that same field, so
 //!   there is one source and one check (`HH:MM`, `ERR_OUT_OF_RANGE` with `min` and `max`).
-//! - **Auto day close** is stored only: the `settings` row `auto_day_close` holds `true` or
-//!   `false`, starting `false`. Nothing acts on it yet; the day close of plan 17 reads it later.
+//! - **Auto day close**: the `settings` row `auto_day_close` holds `true` or `false`, starting
+//!   `false`. When it is `true`, the app closes today by itself at the closing time (the thread
+//!   of `app/src/day_auto.rs`, plan 19), through the same close the screen uses.
 //!
 //! A change writes an audit row with the old and the new value in the same transaction (Code
 //! Standards S7), and asking for the values it has writes nothing.
@@ -31,7 +32,8 @@ pub struct DaySettings {
     /// The time of day (Pakistan time, `HH:MM`) when the daily copy is made. Shared with the
     /// backup settings.
     pub closing_time: String,
-    /// True when the day is closed by itself at the closing time. Stored only for now.
+    /// True when the day is closed by itself at the closing time (plan 19: the app does it, but
+    /// never while the Owner has an unsaved draft).
     pub auto_day_close: bool,
 }
 

@@ -1,0 +1,35 @@
+{
+  "items": [
+    {
+      "kind": "open_days",
+      "count": 8,
+      "amount_paisa": null,
+      "qty": null,
+      "days": 8,
+      "first": null
+    },
+    {
+      "kind": "payables_old",
+      "count": 1,
+      "amount_paisa": 1016000,
+      "qty": null,
+      "days": null,
+      "first": {
+        "target": "account",
+        "id": 19,
+        "person_key": null,
+        "name_ur": "کریم",
+        "name_en": "Karim"
+      }
+    },
+    {
+      "kind": "backup_old",
+      "count": 1,
+      "amount_paisa": null,
+      "qty": null,
+      "days": 1,
+      "first": null
+    }
+  ],
+  "total_count": 10
+}

@@ -12,9 +12,10 @@
 //! `set_pref`, `print_after_save` through the printing settings), so they are not repeated here.
 //!
 //! Example: the screen `report.r20` saves `{"city_id":3}`; after a restart the same call with the
-//! screen `report.r20` gives the same text back.
+//! screen `report.r20` gives the same JSON back (written compactly, so the spaces of the text that
+//! was saved may differ).
 
-use mandi_db::rusqlite::params;
+use mandi_db::rusqlite::{OptionalExtension, params};
 use mandi_domain::core::error::ErrorCode;
 use serde_json::Value;
 
@@ -58,12 +59,13 @@ fn key_of(screen: &str) -> Result<String, ServiceError> {
 pub fn get(ctx: &Context, user_id: i64, screen: &str) -> Result<Option<String>, ServiceError> {
     let key = key_of(screen)?;
     ctx.db
-        .read(|conn| Ok::<_, ServiceError>(store::pref(conn, user_id, &key)?))
+        .read(|conn| store::pref(conn, user_id, &key))
         .map(|value| value.filter(|v| !v.is_null()).map(|v| v.to_string()))
 }
 
-/// Saves what a screen wants to remember. An empty `value_text` forgets it (the row is kept with
-/// `null`, so the count of screens only grows by a new screen name).
+/// Saves what a screen wants to remember. An empty `value_text` forgets it: the row is kept with
+/// `null` and no longer counts toward [`MAX_SCREENS`], and forgetting a screen that was never
+/// saved does nothing.
 ///
 /// # Errors
 /// `ERR_OUT_OF_RANGE` on `screen`, or on `value` for text that is not JSON or is longer than
@@ -89,14 +91,22 @@ pub fn set(
             .map_err(|_| ServiceError::reject_field(ErrorCode::ErrOutOfRange, "value"))?
     };
     ctx.db.write(|tx| {
-        let known: bool = tx.query_row(
-            "SELECT EXISTS (SELECT 1 FROM user_prefs WHERE user_id = ?1 AND key = ?2)",
-            params![user_id, key],
-            |r| r.get(0),
-        )?;
-        if !known {
+        // A screen counts toward the limit while it holds a value (not `null`).
+        let existing: Option<String> = tx
+            .query_row(
+                "SELECT value_json FROM user_prefs WHERE user_id = ?1 AND key = ?2",
+                params![user_id, key],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let holds_value = existing.as_deref().is_some_and(|text| text != "null");
+        if value.is_null() && existing.is_none() {
+            return Ok(());
+        }
+        if !value.is_null() && !holds_value {
             let kept: i64 = tx.query_row(
-                "SELECT COUNT(*) FROM user_prefs WHERE user_id = ?1 AND key LIKE 'filters.%'",
+                "SELECT COUNT(*) FROM user_prefs
+                 WHERE user_id = ?1 AND key LIKE 'filters.%' AND value_json <> 'null'",
                 [user_id],
                 |r| r.get(0),
             )?;

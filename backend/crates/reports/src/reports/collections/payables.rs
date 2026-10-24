@@ -60,17 +60,21 @@ const LAST_DATE_SQL: &str = "SELECT l.seller_account_id, l.pukhta_person_key, MA
 
 /// What the working gives for one seller key.
 #[derive(Debug, Clone, Copy)]
-struct Working {
-    open: Paisa,
-    advances_open: Paisa,
-    owes_firm: Paisa,
+pub(crate) struct Working {
+    /// What is payable to him (PRD FR-7.59).
+    pub(crate) open: Paisa,
+    /// His open advances (PRD FR-15.8).
+    pub(crate) advances_open: Paisa,
+    /// What he owes the firm beyond his advances (PRD FR-15.9).
+    pub(crate) owes_firm: Paisa,
 }
 
-struct Seller {
-    party: PartyRef,
-    balance: Balance,
-    working: Option<Working>,
-    last_date: Option<String>,
+/// One seller key (an account, or a person inside a پختہ کھاتہ account).
+pub(crate) struct Seller {
+    pub(crate) party: PartyRef,
+    pub(crate) balance: Balance,
+    pub(crate) working: Option<Working>,
+    pub(crate) last_date: Option<String>,
 }
 
 impl Seller {
@@ -81,12 +85,12 @@ impl Seller {
 }
 
 /// The sellers worth a row: a balance, or an advance, or something payable or owed.
-fn candidates(
+pub(crate) fn candidates(
     conn: &Connection,
     typed: &Typed,
     today_iso: &str,
     current: bool,
-) -> Result<Vec<Seller>, ReportsError> {
+) -> Result<(Vec<Seller>, Option<SellerSums>), ReportsError> {
     let as_of = typed.as_of.as_deref();
     let accounts = {
         let mut statement = conn.prepare(SELLERS_SQL)?;
@@ -207,7 +211,7 @@ fn candidates(
             });
         }
     }
-    Ok(found)
+    Ok((found, sums))
 }
 
 fn worth_a_row(balance: Balance, working: Option<Working>) -> bool {
@@ -314,7 +318,7 @@ pub(crate) fn run(
         .as_of
         .as_deref()
         .is_none_or(|as_of| as_of >= today_iso.as_str());
-    let sellers = candidates(conn, typed, &today_iso, current)?;
+    let (sellers, _) = candidates(conn, typed, &today_iso, current)?;
 
     // Totals over the whole filter.
     let (mut open, mut advance, mut owes) = (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);

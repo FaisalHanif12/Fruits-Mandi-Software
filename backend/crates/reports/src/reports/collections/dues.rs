@@ -68,20 +68,23 @@ impl Layout {
 const BAND_ENDS: [i64; 3] = [7, 30, 90];
 
 /// One buyer (or one one-time person) who owes.
-struct Buyer {
-    party: PartyRef,
-    city_id: Option<i64>,
+pub(crate) struct Buyer {
+    pub(crate) party: PartyRef,
+    pub(crate) city_id: Option<i64>,
     collector_id: Option<i64>,
     phone: Option<String>,
-    balance: Paisa,
+    pub(crate) balance: Paisa,
     /// The date of the oldest open bill and the open amounts in the four bands. `None` when the
     /// report is for an earlier day.
-    ages: Option<Ages>,
+    pub(crate) ages: Option<Ages>,
 }
 
-struct Ages {
-    oldest: Option<(String, i64)>,
-    bands: [Paisa; 4],
+/// The ages of a buyer's open bills.
+pub(crate) struct Ages {
+    /// The day of the oldest open bill and its age in days.
+    pub(crate) oldest: Option<(String, i64)>,
+    /// The open amounts in the four age bands (0 to 7, 8 to 30, 31 to 90, 91 and more days).
+    pub(crate) bands: [Paisa; 4],
 }
 
 /// The buyer accounts. Parameters: city, account.
@@ -381,6 +384,30 @@ pub(crate) fn run(
     spec: PageSpec,
     layout: Layout,
 ) -> Result<ReportPage, ReportsError> {
+    let (buyers, as_of_is_now) = load_buyers(conn, typed)?;
+    page_of(conn, typed, spec, layout, buyers, as_of_is_now)
+}
+
+/// The buyers who owe the firm today, each with the ages of his open bills: exactly the rows of
+/// R20 for no filter. The dashboard reads its tile, its list of the oldest dues and the attention
+/// item for old dues from these rows, so they can never differ from R20 (PRD FR-19.9).
+///
+/// # Errors
+/// A database error; `ReportsError::Money` if a stored amount is not whole rupees.
+pub(crate) fn buyers_owing_now(
+    conn: &Connection,
+    today: BusinessDate,
+) -> Result<Vec<Buyer>, ReportsError> {
+    let typed = Typed {
+        today: Some(today),
+        ..Typed::default()
+    };
+    Ok(load_buyers(conn, &typed)?.0)
+}
+
+/// The buyers who owe under these filters, with their ages when the day is today or later, and
+/// whether the ages were worked out.
+fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), ReportsError> {
     let accounts = {
         let mut statement = conn.prepare(BUYERS_SQL)?;
         statement
@@ -410,7 +437,18 @@ pub(crate) fn run(
     if as_of_is_now {
         put_ages(conn, today, &mut buyers)?;
     }
+    Ok((buyers, as_of_is_now))
+}
 
+/// The page of R20, R21 or R22 from the buyers who owe.
+fn page_of(
+    conn: &Connection,
+    typed: &Typed,
+    spec: PageSpec,
+    layout: Layout,
+    buyers: Vec<Buyer>,
+    as_of_is_now: bool,
+) -> Result<ReportPage, ReportsError> {
     // Totals over the whole filter.
     let mut total_balance = Paisa::ZERO;
     let mut total_bands = [Paisa::ZERO; 4];

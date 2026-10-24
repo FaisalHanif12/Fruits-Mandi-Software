@@ -5,10 +5,10 @@
 //! partner share rows that every posting wrote (PRD FR-6.5, FR-17.4). They write nothing
 //! (PRD FR-18.8).
 
-mod day;
+pub(crate) mod day;
 mod expenses;
 mod income;
-mod lent;
+pub(crate) mod lent;
 mod profit;
 mod trips;
 

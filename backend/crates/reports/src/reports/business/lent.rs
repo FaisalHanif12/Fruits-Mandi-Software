@@ -33,16 +33,16 @@ use crate::reports::model::{
 use crate::reports::workings::{OpenAmount, days_past_return_by, open_amounts};
 
 /// A loan (or an opening debit), with what was returned of it.
-struct Loan<'a> {
-    line: &'a LiveLine,
-    figures: OpenAmount,
-    return_by: Option<BusinessDate>,
+pub(crate) struct Loan<'a> {
+    pub(crate) line: &'a LiveLine,
+    pub(crate) figures: OpenAmount,
+    pub(crate) return_by: Option<BusinessDate>,
 }
 
 /// One account's loans with what its credits returned, split into cash and salary.
-struct Loans<'a> {
+pub(crate) struct Loans<'a> {
     /// The loans, oldest first.
-    loans: Vec<Loan<'a>>,
+    pub(crate) loans: Vec<Loan<'a>>,
     /// Σ credits that are not salary deductions.
     returned_cash: Paisa,
     /// Σ credits that are salary deductions.
@@ -51,7 +51,7 @@ struct Loans<'a> {
 
 /// The loans of each person with their open amounts, oldest first. `as_of` (`YYYY-MM-DD`,
 /// included) leaves out the lines dated after it.
-fn loans_by_person<'a>(
+pub(crate) fn loans_by_person<'a>(
     lines: &'a [LiveLine],
     as_of: &str,
 ) -> Result<HashMap<i64, Loans<'a>>, ReportsError> {

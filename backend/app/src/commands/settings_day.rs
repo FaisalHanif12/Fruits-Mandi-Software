@@ -17,7 +17,7 @@ use super::run;
 use crate::error::UiError;
 
 /// The Day group: the closing time (`HH:MM`, Pakistan time, shared with the backup settings) and
-/// whether the day closes by itself (stored only for now). Read only.
+/// whether the day closes by itself at that time (plan 19, `day_auto`). Read only.
 #[tauri::command]
 pub async fn settings_day_get<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

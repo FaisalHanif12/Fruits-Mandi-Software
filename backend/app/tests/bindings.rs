@@ -560,6 +560,22 @@ const EXPECTED_FILES: &[&str] = &[
     "UpdateCheck.ts",
     "UpdateInstallInput.ts",
     "UpdateInstalled.ts",
+    // Run B, plan 19 (append-only block).
+    "Dashboard.ts",
+    "DashboardTiles.ts",
+    "DashboardPartner.ts",
+    "DashboardBikri.ts",
+    "DashboardDue.ts",
+    "DashboardChartDay.ts",
+    "DashboardChartItem.ts",
+    "AttentionKind.ts",
+    "AttentionTarget.ts",
+    "AttentionFirst.ts",
+    "AttentionItem.ts",
+    "AttentionList.ts",
+    "ScreenStateGetInput.ts",
+    "ScreenStateSetInput.ts",
+    "ScreenState.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -943,6 +959,12 @@ fn export_bindings() {
     mandi_services::month::MonthClosed::export_all(&cfg).unwrap();
     mandi_services::month::MonthReversed::export_all(&cfg).unwrap();
     mandi_services::month::MonthList::export_all(&cfg).unwrap();
+    // Run B, plan 19 (append-only block).
+    mandi_reports::dashboard::Dashboard::export_all(&cfg).unwrap();
+    mandi_reports::dashboard::AttentionList::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::screen_prefs::ScreenStateGetInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::screen_prefs::ScreenStateSetInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::screen_prefs::ScreenState::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

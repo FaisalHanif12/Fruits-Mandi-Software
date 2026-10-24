@@ -2,6 +2,7 @@
 
 pub mod backup_runtime;
 pub mod commands;
+pub mod day_auto;
 pub mod error;
 pub mod logging;
 pub mod print_job;
@@ -50,6 +51,8 @@ pub fn run() -> tauri::Result<()> {
             start_backup(app);
             // Run B, plan 22 (append-only block): the daily health check.
             commands::health::start_daily(app.handle());
+            // Run B, plan 19 (append-only block): the automatic day close at the closing time.
+            day_auto::start(app.handle());
             Ok(())
         })
         .invoke_handler(handler())

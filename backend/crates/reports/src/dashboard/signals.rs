@@ -7,7 +7,6 @@
 //! The same book on 20-10-26 with nothing closed since: 10 earlier days are not closed.
 
 use mandi_core::dates::BusinessDate;
-use mandi_db::bikri::edit::{StockFilter, stock_lots};
 use mandi_db::purchases::{ListFilter, StateFilter};
 use mandi_db::rusqlite::{Connection, OptionalExtension};
 
@@ -18,7 +17,7 @@ use super::model::{
 use crate::error::ReportsError;
 
 /// An item that only counts.
-fn counted(kind: AttentionKind, count: i64) -> AttentionItem {
+pub(super) fn counted(kind: AttentionKind, count: i64) -> AttentionItem {
     AttentionItem {
         kind,
         count,
@@ -36,8 +35,9 @@ pub(crate) fn drafts(conn: &Connection) -> Result<Option<AttentionItem>, Reports
 }
 
 /// Earlier days that are not closed: the calendar days after the "closed up to" day and before
-/// today. If no day was ever closed, they start on the first day with a posting (an opening
-/// balance is not a day of work). `days` is the age of the oldest of them.
+/// today. If no day was ever closed, they start on the first day with any posted entry, an
+/// opening balance included: that is the rule of the day close, so the bell and the day close
+/// always agree (`mandi_db::vouchers::first_posting_date`). `days` is the age of the oldest.
 pub(crate) fn open_days(
     conn: &Connection,
     today: BusinessDate,
@@ -54,19 +54,10 @@ pub(crate) fn open_days(
         Some(text) => BusinessDate::parse_iso(&text)
             .ok_or_else(|| ReportsError::Data(format!("closed_up_to_date {text}")))?
             .next_day(),
-        None => {
-            let first: Option<String> = conn.query_row(
-                "SELECT MIN(entry_date) FROM journal_entries
-                 WHERE status = 'posted' AND source_type NOT IN ('month_close', 'account')
-                   AND posting_type <> 'opening'",
-                [],
-                |r| r.get(0),
-            )?;
-            match first {
-                Some(text) => BusinessDate::parse_iso(&text),
-                None => return Ok(None),
-            }
-        }
+        None => match mandi_db::vouchers::first_posting_date(conn)? {
+            Some(text) => BusinessDate::parse_iso(&text),
+            None => return Ok(None),
+        },
     };
     let Some(first_open) = first_open else {
         return Ok(None);
@@ -81,7 +72,8 @@ pub(crate) fn open_days(
 }
 
 /// Lots waiting in باقی مال for more than [`STOCK_WAIT_DAYS`] days, the lots of بکری and the
-/// purchases of trips both, as the باقی مال screen lists them (PRD FR-12.14, FR-12.25).
+/// purchases of trips both, as the باقی مال screen lists them (PRD FR-12.14, FR-12.25). The lots
+/// are worked from the stock moves, like the tile.
 /// `qty` is their نگ left, `days` the age of the oldest, `first` the oldest one.
 pub(crate) fn stock_waiting(
     conn: &Connection,
@@ -92,24 +84,41 @@ pub(crate) fn stock_waiting(
     let age = |received: &str| -> i64 {
         BusinessDate::parse_iso(received).map_or(0, |day| today.days_after(day).max(0))
     };
-    for lot in stock_lots(conn, &StockFilter::default())? {
-        let balance = lot
-            .qty_received
-            .checked_sub(lot.qty_sold)
-            .and_then(|v| v.checked_sub(lot.qty_written_off))
-            .ok_or_else(|| ReportsError::Data("the quantity of a lot does not fit".to_owned()))?;
-        let days = age(&lot.received_date);
-        if balance > 0 && days > STOCK_WAIT_DAYS {
-            let (name_ur, name_en) = match &lot.pukhta {
-                Some((ur, en, _, _)) => (ur.clone(), en.clone()),
-                None => (lot.seller.name_ur.clone(), lot.seller.name_en.clone()),
-            };
+    // The lots of saved بکری with goods left, from the stock moves up to today, the same method as
+    // the goods-not-sold tile and the day close (C16): a fruit take is a `taken` move, so a lot
+    // that fruit emptied is not listed. The day a lot was received is its بکری's day.
+    let mut statement = conn.prepare(
+        "SELECT e.id, e.entry_date, COALESCE(l.pukhta_name_ur, a.name_ur),
+                COALESCE(l.pukhta_name_en, a.name_en), SUM(m.qty)
+         FROM stock_moves m
+         JOIN bikri_lots l ON l.id = m.lot_id
+         JOIN bikri_entries e ON e.id = l.bikri_id
+         JOIN accounts a ON a.id = l.seller_account_id
+         WHERE m.move_date <= ?1 AND e.status = 'saved'
+         GROUP BY m.lot_id, e.id, e.entry_date, l.pukhta_name_ur, l.pukhta_name_en, a.name_ur,
+                  a.name_en
+         HAVING SUM(m.qty) > 0",
+    )?;
+    let lots = statement
+        .query_map([today.to_iso()], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, i64>(4)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (bikri_id, received, name_ur, name_en, balance) in lots {
+        let days = age(&received);
+        if days > STOCK_WAIT_DAYS {
             waiting.push((
                 days,
                 balance,
                 AttentionFirst {
                     target: AttentionTarget::Bikri,
-                    id: lot.bikri_id,
+                    id: bikri_id,
                     person_key: None,
                     name_ur: Some(name_ur),
                     name_en: Some(name_en),
@@ -207,9 +216,7 @@ pub(crate) fn names_missing(conn: &Connection) -> Result<Option<AttentionItem>, 
     for table in TABLES {
         // The table name is one of the constants above (Code Standards B14).
         let found: i64 = conn.query_row(
-            &format!(
-                "SELECT COUNT(*) FROM {table} WHERE trim(name_ur) = '' OR trim(name_en) = ''"
-            ),
+            &format!("SELECT COUNT(*) FROM {table} WHERE trim(name_ur) = '' OR trim(name_en) = ''"),
             [],
             |r| r.get(0),
         )?;

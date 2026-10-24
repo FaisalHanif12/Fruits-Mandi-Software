@@ -63,11 +63,7 @@ fn values(from: &str, to: &str) -> Vec<Value> {
 }
 
 /// Runs a query that gives (day, first, second) and keeps the rows by day.
-pub(crate) fn by_day(
-    conn: &Connection,
-    sql: &str,
-    args: &[Value],
-) -> Result<ByDay, ReportsError> {
+pub(crate) fn by_day(conn: &Connection, sql: &str, args: &[Value]) -> Result<ByDay, ReportsError> {
     let mut statement = conn.prepare(sql)?;
     let rows = statement.query_map(params_from_iter(args.iter()), |r| {
         Ok((
@@ -79,7 +75,7 @@ pub(crate) fn by_day(
 }
 
 /// The paisa pair of a day, or zeros.
-fn pair(map: &ByDay, day: &str) -> Result<(Paisa, Paisa), ReportsError> {
+pub(crate) fn pair(map: &ByDay, day: &str) -> Result<(Paisa, Paisa), ReportsError> {
     let (a, b) = map.get(day).copied().unwrap_or((0, 0));
     Ok((paisa(a)?, paisa(b)?))
 }
@@ -95,6 +91,25 @@ fn live_lines(conn: &Connection, join: &str, from: &str, to: &str) -> Result<ByD
          GROUP BY e.entry_date"
     );
     by_day(conn, &sql, &values(from, to))
+}
+
+/// The shop expenses by day: Σ debit and Σ credit of the head 05 accounts on posted entries, a
+/// month close left out (the dashboard reads the same sums, PRD 9.1).
+pub(crate) fn expenses_by_day(
+    conn: &Connection,
+    from: &str,
+    to: &str,
+) -> Result<ByDay, ReportsError> {
+    by_day(
+        conn,
+        "SELECT e.entry_date, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         JOIN accounts a ON a.id = l.account_id JOIN account_controls k ON k.id = a.control_id
+         JOIN account_heads h ON h.id = k.head_id
+         WHERE e.status = 'posted' AND e.source_type <> 'month_close' AND h.code = '05'
+           AND e.entry_date >= ?1 AND e.entry_date <= ?2 GROUP BY e.entry_date",
+        &values(from, to),
+    )
 }
 
 /// The days of the range on which anything happened.
@@ -476,16 +491,7 @@ pub(crate) fn run(
     let receipts = vouchers_by_day(conn, "receipt", &from, &to)?;
     let payments = vouchers_by_day(conn, "payment", &from, &to)?;
     let advances = vouchers_by_day(conn, "advance", &from, &to)?;
-    let expenses = by_day(
-        conn,
-        "SELECT e.entry_date, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         JOIN accounts a ON a.id = l.account_id JOIN account_controls k ON k.id = a.control_id
-         JOIN account_heads h ON h.id = k.head_id
-         WHERE e.status = 'posted' AND e.source_type <> 'month_close' AND h.code = '05'
-           AND e.entry_date >= ?1 AND e.entry_date <= ?2 GROUP BY e.entry_date",
-        &values(&from, &to),
-    )?;
+    let expenses = expenses_by_day(conn, &from, &to)?;
     let drawings = live_lines(
         conn,
         "JOIN partners p ON p.drawings_account_id = l.account_id",

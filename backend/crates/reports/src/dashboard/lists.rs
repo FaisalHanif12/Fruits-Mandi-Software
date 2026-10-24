@@ -9,9 +9,10 @@ use std::collections::HashMap;
 
 use mandi_db::rusqlite::{Connection, params, params_from_iter};
 
-use super::model::{DashboardBikri, MAX_TODAY_ROWS};
+use super::model::{DashboardBikri, DashboardDue, MAX_TODAY_ROWS, OLDEST_DUES};
 use crate::error::ReportsError;
 use crate::reports::Names;
+use crate::reports::collections::dues::Buyer;
 use crate::reports::common::{IN_CHUNK, paisa, placeholders};
 
 /// The first seller of a بکری, by its first lot.
@@ -97,4 +98,68 @@ pub(crate) fn bikri_today(
         });
     }
     Ok((rows, count))
+}
+
+/// The names of the cities, by id.
+fn city_names(conn: &Connection) -> Result<HashMap<i64, Names>, ReportsError> {
+    let mut statement = conn.prepare("SELECT id, name_ur, name_en FROM cities")?;
+    let rows = statement.query_map([], |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            Names {
+                ur: r.get(1)?,
+                en: r.get(2)?,
+            },
+        ))
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// The [`OLDEST_DUES`] oldest buyer dues (PRD 9.3), from the rows of R20: the oldest open bill
+/// first; on the same day the bigger balance; then the account code and the person key, so the
+/// order is always the same. A buyer who owes but has no open bill (only possible if the matching
+/// rows are broken) goes last. Days are today less the day of the oldest bill, at least 0.
+///
+/// # Errors
+/// A database error.
+pub(crate) fn oldest_dues(
+    conn: &Connection,
+    buyers: &[Buyer],
+) -> Result<Vec<DashboardDue>, ReportsError> {
+    let mut ordered: Vec<&Buyer> = buyers.iter().collect();
+    let oldest_of = |b: &Buyer| -> Option<String> {
+        b.ages
+            .as_ref()
+            .and_then(|a| a.oldest.as_ref())
+            .map(|(date, _)| date.clone())
+    };
+    ordered.sort_by(|a, b| {
+        let (da, db) = (oldest_of(a), oldest_of(b));
+        // `None` (no open bill) sorts after every date.
+        let by_date = match (&da, &db) {
+            (Some(x), Some(y)) => x.cmp(y),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        };
+        by_date
+            .then(b.balance.cmp(&a.balance))
+            .then(a.party.code.cmp(&b.party.code))
+            .then(a.party.person_key.cmp(&b.party.person_key))
+    });
+    ordered.truncate(OLDEST_DUES);
+    let cities = city_names(conn)?;
+    Ok(ordered
+        .into_iter()
+        .map(|b| {
+            let oldest = b.ages.as_ref().and_then(|a| a.oldest.clone());
+            DashboardDue {
+                party: b.party.clone(),
+                city: b.city_id.and_then(|id| cities.get(&id).cloned()),
+                balance_paisa: b.balance,
+                oldest_date: oldest.as_ref().map(|(date, _)| date.clone()),
+                days: oldest.map(|(_, days)| days),
+            }
+        })
+        .collect())
 }

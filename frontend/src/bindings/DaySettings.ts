@@ -10,7 +10,8 @@ export type DaySettings = {
    */
   closing_time: string;
   /**
-   * True when the day is closed by itself at the closing time. Stored only for now.
+   * True when the day is closed by itself at the closing time (plan 19: the app does it, but
+   * never while the Owner has an unsaved draft).
    */
   auto_day_close: boolean;
 };
