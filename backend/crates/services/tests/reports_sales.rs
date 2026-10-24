@@ -90,7 +90,8 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             ReportId::R6,
             ReportId::R7,
             ReportId::R8,
-            ReportId::R9
+            ReportId::R9,
+            ReportId::R10
         ]
     );
     assert_eq!(
@@ -99,7 +100,9 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             ReportId::R20,
             ReportId::R21,
             ReportId::R22,
+            ReportId::R23,
             ReportId::R24,
+            ReportId::R25,
             ReportId::R26,
             ReportId::R27
         ]
@@ -111,7 +114,9 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             ReportId::R29,
             ReportId::R30,
             ReportId::R31,
-            ReportId::R32
+            ReportId::R32,
+            ReportId::R33,
+            ReportId::R34
         ]
     );
     let r2 = entries.iter().find(|e| e.id == ReportId::R2).unwrap();

@@ -5,12 +5,16 @@
 //! partner share rows that every posting wrote (PRD FR-6.5, FR-17.4). They write nothing
 //! (PRD FR-18.8).
 
+mod day;
 mod expenses;
 mod income;
 mod lent;
 mod profit;
+mod trips;
 
+pub(super) use day::run as run_r34;
 pub(super) use expenses::run as run_r29;
 pub(super) use income::{page_query as r28_page_query, run as run_r28};
 pub(super) use lent::run as run_r32;
 pub(super) use profit::run as run_r30;
+pub(super) use trips::run as run_r33;

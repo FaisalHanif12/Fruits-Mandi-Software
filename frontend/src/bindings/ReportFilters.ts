@@ -3,6 +3,8 @@ import type { ReportDateShortcut } from './ReportDateShortcut';
 import type { ReportGroupBy } from './ReportGroupBy';
 import type { ReportPaidFilter } from './ReportPaidFilter';
 import type { ReportPartyFilter } from './ReportPartyFilter';
+import type { ReportTripView } from './ReportTripView';
+import type { VoucherType } from './VoucherType';
 
 /**
  * What the user typed or picked in the filter boxes. Dates are text as typed
@@ -62,7 +64,15 @@ export type ReportFilters = {
    */
   status?: ReportPaidFilter;
   /**
-   * The partner of a partner statement (R31).
+   * The partner of a partner statement (R31), or of the expense report (R29).
    */
   partner_id: number | null;
+  /**
+   * One kind of voucher (R15). Missing means every kind.
+   */
+  voucher_type?: VoucherType;
+  /**
+   * The layout of the trip report (R33). Missing means by trip.
+   */
+  trip_view?: ReportTripView;
 };

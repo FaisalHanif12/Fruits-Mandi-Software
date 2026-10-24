@@ -96,6 +96,8 @@ export interface ReportFilterState {
   person: ReportPerson | null;
   /** What is typed in the person box, kept here so a language switch loses nothing. */
   personText: string;
+  /** The partner of a partner statement (R31, required) or of the expense report (R29, optional). */
+  partner: number | null;
 }
 
 export const EMPTY_FILTERS: ReportFilterState = {
@@ -114,6 +116,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   groupBy: 'month',
   person: null,
   personText: '',
+  partner: null,
 };
 
 /**
@@ -148,6 +151,7 @@ export function filtersToWire(
     item_id: has('item') ? (state.item?.id ?? null) : null,
     city_id: has('city') ? (state.city?.id ?? null) : null,
     adda_id: has('adda') ? (state.adda?.id ?? null) : null,
+    partner_id: has('partner') ? state.partner : null,
     detail: has('detail') && state.detail,
     // The two newer keys are sent only when they are set; the backend reads a missing key as its
     // default (all lines; by month), so an old request stays valid.
@@ -173,15 +177,20 @@ export function isUnfiltered(
     wire.item_id === null &&
     wire.city_id === null &&
     wire.adda_id === null &&
+    wire.partner_id === null &&
     !wire.detail &&
     wire.status === undefined
   );
 }
 
-/** A report that needs a party cannot run until one is picked (R13, R14). */
+/**
+ * A report that needs a party or a partner cannot run until one is picked: R13 and R14 need an
+ * account, R31 needs a partner (the catalogue says which box by the filters the report takes).
+ */
 export function canRun(
   state: ReportFilterState,
   entry: { filters: readonly ReportFilterKind[]; party_required: boolean },
 ): boolean {
-  return !entry.party_required || state.party !== null;
+  if (!entry.party_required) return true;
+  return entry.filters.includes('partner') ? state.partner !== null : state.party !== null;
 }

@@ -15,4 +15,6 @@ export type ReportFilterKind =
   | 'detail'
   | 'status'
   | 'group_by'
-  | 'partner';
+  | 'partner'
+  | 'voucher_type'
+  | 'trip_view';

@@ -41,6 +41,9 @@ pub mod month;
 pub mod settings_day;
 pub mod support;
 pub mod updates;
+// Run B, plan 19 (append-only block).
+pub mod dashboard;
+pub mod screen_prefs;
 
 use std::fmt;
 

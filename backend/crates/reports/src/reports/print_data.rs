@@ -27,7 +27,7 @@ use ts_rs::TS;
 use super::ids;
 use super::model::{
     ArgValue, Cell, ColumnKind, DetailPart, GroupBy, MessageArg, Names, PaidFilter, PartyRef,
-    ReportId, ReportPage, ResolvedFilters, RowKind,
+    ReportId, ReportPage, ResolvedFilters, RowKind, TripView,
 };
 use crate::error::ReportsError;
 use crate::print::format::NumberStyle;
@@ -574,6 +574,20 @@ pub(crate) fn filter_facts(
         let label = match group_by {
             GroupBy::Day => ids::FILTER_BY_DAY,
             GroupBy::Month => ids::FILTER_BY_MONTH,
+        };
+        facts.push(fact(label, String::new()));
+    }
+    // R15 says which kind of voucher it lists; R33 how it is laid out. The label is the whole fact.
+    if let Some(kind) = filters.voucher_type {
+        facts.push(fact(&ids::doc_id(kind.as_str()), String::new()));
+    }
+    if let Some(view) = filters.trip_view {
+        let label = match view {
+            TripView::Trip => ids::FILTER_TRIP_BY_TRIP,
+            TripView::Item => ids::FILTER_TRIP_BY_ITEM,
+            TripView::Day => ids::FILTER_TRIP_BY_DAY,
+            TripView::Month => ids::FILTER_TRIP_BY_MONTH,
+            TripView::Partner => ids::FILTER_TRIP_BY_PARTNER,
         };
         facts.push(fact(label, String::new()));
     }

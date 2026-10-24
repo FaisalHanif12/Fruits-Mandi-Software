@@ -5,9 +5,10 @@
 // by the backend in the print language; this file lays them out and adds up nothing (CLAUDE.md
 // rule 1). The in-app preview and the hidden print window (later) draw this same page.
 
-import { useLocalization } from '@fluent/react';
+import { useLocalization, type ReactLocalization } from '@fluent/react';
 import { useEffect, type Ref } from 'react';
 import type { ReportPrintCell } from '../../../bindings/ReportPrintCell';
+import type { ReportPrintMessageArg } from '../../../bindings/ReportPrintMessageArg';
 import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
 import type { PrintFact } from '../../../bindings/PrintFact';
@@ -82,6 +83,25 @@ function DetailLine({ part }: { part: ReportPrintDetailPart }) {
   }
 }
 
+/**
+ * A Fluent message with the arguments of a print `message` cell. An argument is a text the backend
+ * already wrote, or another message that is worked out first (a voucher number inside a sentence).
+ */
+function printMessageText(
+  l10n: ReactLocalization,
+  id: string,
+  args: readonly ReportPrintMessageArg[],
+): string {
+  const vars: Record<string, string> = {};
+  for (const arg of args) {
+    vars[arg.name] =
+      arg.value.type === 'text'
+        ? arg.value.text
+        : printMessageText(l10n, arg.value.id, arg.value.args);
+  }
+  return l10n.getString(id, vars);
+}
+
 function Cell({ cell }: { cell: ReportPrintCell }) {
   const { l10n } = useLocalization();
   switch (cell.type) {
@@ -141,6 +161,10 @@ function Cell({ cell }: { cell: ReportPrintCell }) {
           ))}
         </div>
       );
+    case 'message':
+      // A sentence of a partner statement line: the backend wrote every figure in the print
+      // language, so the message only puts the words around them (PRD FR-17.10).
+      return <>{printMessageText(l10n, cell.id, cell.args)}</>;
   }
 }
 

@@ -46,8 +46,17 @@ import {
   R9_DUE,
   PEOPLE_SHAHID,
 } from './reports-real';
+import {
+  PRINT_R31_BAY_EN,
+  R12_DAY,
+  R29_ALIF,
+  R29_DAY,
+  R31_BAY,
+  R32_E2E_30B,
+} from './reports-business-real';
 
 export * from './reports-real';
+export * from './reports-business-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -88,12 +97,25 @@ const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
   R27: R27_SERIES,
   R28: R28_BY_MONTH,
   R30: R30_PROFIT,
+  // Round 7: the cash book, the expense report (all partners, one day), the statement of partner ب
+  // and the money lent report.
+  R12: R12_DAY,
+  R29: R29_DAY,
+  R31: R31_BAY,
+  R32: R32_E2E_30B,
 };
 
 function slice(page: ReportPage, offset: number, limit: number): ReportPage {
   const size = limit > 0 ? limit : 100;
   const rows: ReportRow[] = page.rows.slice(offset, offset + size);
   return { ...page, rows, offset, limit };
+}
+
+/** The print the backend wrote for a report; the one of R18 for any report it wrote none for. */
+function printOf(id: ReportId): ReportPrintData {
+  if (id === 'R13') return PRINT_R13_AKRAM_UR;
+  if (id === 'R31') return PRINT_R31_BAY_EN;
+  return PRINT_R18_EN;
 }
 
 export interface FakeReports {
@@ -129,13 +151,15 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     // R9 answers with the due lines only when asked for them, and R28 by day when asked by day.
     if (input.id === 'R9' && input.filters.status === 'due') answer = R9_DUE;
     if (input.id === 'R28' && input.filters.group_by === 'day') answer = R28_BY_DAY;
+    // R29 for one partner answers with his lines only.
+    if (input.id === 'R29' && input.filters.partner_id !== null) answer = R29_ALIF;
     return Promise.resolve(slice(answer, input.offset, input.limit));
   });
   vi.mocked(reportsApi.reportsFindPeople).mockImplementation(() =>
     Promise.resolve([...(options.people ?? PEOPLE_SHAHID)]),
   );
   vi.mocked(reportsApi.reportsPrintData).mockImplementation((input) =>
-    Promise.resolve(options.print ?? (input.id === 'R13' ? PRINT_R13_AKRAM_UR : PRINT_R18_EN)),
+    Promise.resolve(options.print ?? printOf(input.id)),
   );
   return { pages };
 }

@@ -804,3 +804,86 @@ report-group-no-collector = اگراہی والے کے بغیر
 
 # review: pending
 report-adda-none = اڈا کے بغیر
+
+## The cash book, the expense report, the partner statement and money lent (round 7, R12, R29, R31, R32).
+
+# review: pending
+report-r12-title = { -rokar }
+
+# review: pending
+report-r12-help = چنی ہوئی تاریخوں کی ابتدائی روکڑ، ہر رقم جو آئی اور دی گئی، اور آخری روکڑ، چلتے بقایا کے ساتھ۔
+
+# review: pending
+report-r29-title = { -kharcha } رپورٹ
+
+# review: pending
+report-r29-help = { -dukan-kharcha } مد کے حساب سے، اور ہر { -shirakat-dar } کا لیا اور واپس کیا ہوا { -zati-kharcha }۔
+
+# review: pending
+report-r31-title = { -shirakat-dar } کھاتہ
+
+# review: pending
+report-r31-help = ایک { -shirakat-dar } کی ہر تاریخ وار حرکت، اس کی چلتی { -kul-raqam } کے ساتھ۔
+
+# review: pending
+report-r32-title = { -adhar-raqam } رپورٹ
+
+# review: pending
+report-r32-help = دکان سے ادھار لینے والا ہر شخص: دی ہوئی، واپس ہوئی اور کھلی رقم، اور واپسی کی تاریخ کے بعد گزرے دن۔
+
+# review: pending
+report-col-cash-in = رقم آئی
+
+# review: pending
+report-col-cash-out = رقم دی
+
+# review: pending
+report-col-name = نام
+
+# review: pending
+report-col-expense = { -kharcha }
+
+# review: pending
+report-col-staff = عملہ
+
+# review: pending
+report-col-lent = رقم دی
+
+# review: pending
+report-col-returned-cash = { -wapsi } (نقد)
+
+# review: pending
+report-col-returned-salary = تنخواہ سے کٹوتی
+
+# review: pending
+report-col-return-by = واپسی کی تاریخ
+
+# review: pending
+report-col-days-past = تاخیر کے دن
+
+# review: pending
+report-staff-yes = ہاں
+
+# review: pending
+report-r32-overdue = واپسی کی تاریخ کے بعد بھی کھلی رقم
+
+# review: pending
+report-section-shop-expenses = { -dukan-kharcha }
+
+# review: pending
+report-section-partner-money = { -zati-kharcha }
+
+# review: pending
+report-filter-partner = { -shirakat-dar }
+
+# review: pending
+report-filter-borrower = ادھار لینے والا
+
+# review: pending
+report-partner-all = تمام شراکت دار
+
+# review: pending
+report-pick-partner = پہلے شراکت دار چنیں
+
+# review: pending
+report-pick-partner-help = یہ کھاتہ ایک شراکت دار کا ہوتا ہے۔ اسے اوپر سے چنیں۔

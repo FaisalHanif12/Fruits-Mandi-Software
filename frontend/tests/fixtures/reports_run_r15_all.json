@@ -1,0 +1,219 @@
+{
+  "id": "R15",
+  "title_id": "report-r15-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    },
+    {
+      "key": "narration",
+      "title_id": "report-col-narration",
+      "kind": "text"
+    },
+    {
+      "key": "status",
+      "title_id": "report-col-status",
+      "kind": "label"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-09-01"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-advance",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 1500000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-payment",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 431600
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 3
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-receipt",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 1000000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 2
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-doc-advance",
+      "cell": {
+        "type": "money",
+        "paisa": 1500000
+      }
+    },
+    {
+      "label_id": "report-doc-payment",
+      "cell": {
+        "type": "money",
+        "paisa": 431600
+      }
+    },
+    {
+      "label_id": "report-doc-receipt",
+      "cell": {
+        "type": "money",
+        "paisa": 1000000
+      }
+    }
+  ]
+}

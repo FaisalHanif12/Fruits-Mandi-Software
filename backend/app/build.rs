@@ -202,6 +202,11 @@ const APP_COMMANDS: &[&str] = &[
     "month_close_preview",
     "month_close_save",
     "month_close_reverse",
+    // Run B, plan 19 (append-only block).
+    "dashboard_get",
+    "assist_attention",
+    "prefs_screen_get",
+    "prefs_screen_set",
 ];
 
 fn main() {

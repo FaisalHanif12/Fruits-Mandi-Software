@@ -11,6 +11,7 @@ mod items;
 mod lots;
 mod pukhta;
 mod register;
+mod stock;
 
 pub(super) use adda::run as run_r8;
 pub(super) use items::{query as r7_query, run as run_r7};
@@ -20,3 +21,4 @@ pub(super) use register::{
     Kind as RegisterKind, page_query as register_page_query, run as run_register,
     totals_query as register_totals_query,
 };
+pub(super) use stock::run as run_r10;

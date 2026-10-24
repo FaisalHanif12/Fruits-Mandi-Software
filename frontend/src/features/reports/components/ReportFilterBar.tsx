@@ -17,6 +17,7 @@ import {
   AccountPicker,
   Button,
   Checkbox,
+  ControlAccountPicker,
   DateInput,
   Field,
   Picker,
@@ -35,10 +36,14 @@ import {
   type PeriodChoice,
   type ReportFilterState,
 } from '../filters';
+import { ReportPartnerSelect } from './ReportPartnerSelect';
 import { ReportPersonPicker } from './ReportPersonPicker';
 
 /** A report with more boxes than this folds its record pickers behind "More filters" when compact. */
 const FOLD_AFTER = 5;
+
+/** The control of the people who can borrow from the shop (PRD 16.5, FR-10.4): the party of R32. */
+const LENT_CONTROL_CODE = '0103';
 
 interface ReportFilterBarProps {
   entry: ReportCatalogEntry;
@@ -186,23 +191,38 @@ export function ReportFilterBar({
       boxes.push(
         <Field
           key="party"
-          label={<Localized id="report-filter-party" />}
+          label={
+            <Localized id={box === 'lent' ? 'report-filter-borrower' : 'report-filter-party'} />
+          }
           error={
             fieldError(error, 'filters.party') ?? fieldError(error, 'filters.party.account_id')
           }
         >
-          {(control) => (
-            <AccountPicker
-              {...control}
-              scope={box}
-              showCard={false}
-              value={state.party}
-              onChange={(hit) => {
-                // Another account has other people, so the person of the last one is let go.
-                onChange({ party: valueOf(hit), person: null, personText: '' });
-              }}
-            />
-          )}
+          {(control) =>
+            box === 'lent' ? (
+              // The people who can borrow are the accounts of control 0103 (PRD 16.5, R32).
+              <ControlAccountPicker
+                {...control}
+                controlCode={LENT_CONTROL_CODE}
+                showCard={false}
+                value={state.party}
+                onChange={(hit) => {
+                  onChange({ party: valueOf(hit), person: null, personText: '' });
+                }}
+              />
+            ) : (
+              <AccountPicker
+                {...control}
+                scope={box}
+                showCard={false}
+                value={state.party}
+                onChange={(hit) => {
+                  // Another account has other people, so the person of the last one is let go.
+                  onChange({ party: valueOf(hit), person: null, personText: '' });
+                }}
+              />
+            )
+          }
         </Field>,
       );
       // A one-time account keeps its lines per person: one of them can be picked (FR-13.5).
@@ -252,6 +272,20 @@ export function ReportFilterBar({
           />
         )}
       </Field>,
+    );
+  }
+  if (takes('partner')) {
+    // R31 cannot run without a partner (the catalogue says so); R29 takes one or all.
+    boxes.push(
+      <ReportPartnerSelect
+        key="partner"
+        partner={state.partner}
+        required={entry.party_required}
+        error={fieldError(error, 'filters.partner_id')}
+        onChange={(partner) => {
+          onChange({ partner });
+        }}
+      />,
     );
   }
   if (takes('detail')) {

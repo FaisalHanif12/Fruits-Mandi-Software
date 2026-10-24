@@ -100,6 +100,18 @@
     "party_required": false
   },
   {
+    "id": "R10",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r10-title",
+    "filters": [
+      "date_range",
+      "seller",
+      "item"
+    ],
+    "party_required": false
+  },
+  {
     "id": "R11",
     "group": "accounts",
     "group_title_id": "report-group-accounts",
@@ -107,6 +119,16 @@
     "filters": [
       "date_range",
       "party"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R12",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r12-title",
+    "filters": [
+      "date_range"
     ],
     "party_required": false
   },
@@ -132,6 +154,18 @@
       "detail"
     ],
     "party_required": true
+  },
+  {
+    "id": "R15",
+    "group": "accounts",
+    "group_title_id": "report-group-accounts",
+    "title_id": "report-r15-title",
+    "filters": [
+      "date_range",
+      "party",
+      "voucher_type"
+    ],
+    "party_required": false
   },
   {
     "id": "R16",
@@ -209,12 +243,34 @@
     "party_required": false
   },
   {
+    "id": "R23",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r23-title",
+    "filters": [
+      "date_range",
+      "party"
+    ],
+    "party_required": false
+  },
+  {
     "id": "R24",
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r24-title",
     "filters": [
       "as_of",
+      "party"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R25",
+    "group": "collections",
+    "group_title_id": "report-group-collections",
+    "title_id": "report-r25-title",
+    "filters": [
+      "date_range",
       "party"
     ],
     "party_required": false
@@ -257,10 +313,65 @@
     "party_required": false
   },
   {
+    "id": "R29",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r29-title",
+    "filters": [
+      "date_range",
+      "partner"
+    ],
+    "party_required": false
+  },
+  {
     "id": "R30",
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r30-title",
+    "filters": [
+      "date_range"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R31",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r31-title",
+    "filters": [
+      "date_range",
+      "partner"
+    ],
+    "party_required": true
+  },
+  {
+    "id": "R32",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r32-title",
+    "filters": [
+      "as_of",
+      "party"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R33",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r33-title",
+    "filters": [
+      "date_range",
+      "item",
+      "trip_view"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R34",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r34-title",
     "filters": [
       "date_range"
     ],

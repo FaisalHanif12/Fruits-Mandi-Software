@@ -15,6 +15,16 @@ import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
 import { devFlag } from './dev-bridge';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
+import { rokarHandlers } from './dev-bridge-rokar';
+import {
+  PRINT_R31_BAY_EN,
+  R12_DAY,
+  R29_ALIF,
+  R29_DAY,
+  R31_BAY,
+  R31_PARTNER_REQUIRED,
+  R32_E2E_30B,
+} from './reports-business-real';
 import {
   CATALOG,
   PRINT_R13_AKRAM_UR,
@@ -78,6 +88,10 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R27: R27_SERIES,
   R28: R28_BY_MONTH,
   R30: R30_PROFIT,
+  R12: R12_DAY,
+  R29: R29_DAY,
+  R31: R31_BAY,
+  R32: R32_E2E_30B,
 };
 
 const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
@@ -86,6 +100,7 @@ const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R13: PRINT_R13_AKRAM_UR,
   R20: PRINT_R20_UR,
   R28: PRINT_R28_MONTH_EN,
+  R31: PRINT_R31_BAY_EN,
 };
 
 function catalog(): ReportCatalogEntry[] {
@@ -103,6 +118,11 @@ function page(input: Input): ReportPage {
   if (id === 'R18' && filters['as_of'] !== '') base = R18_AS_OF;
   if (id === 'R9' && filters['status'] === 'due') base = R9_DUE;
   if (id === 'R28' && filters['group_by'] === 'day') base = R28_BY_DAY;
+  // The partner statement cannot run without a partner, as the backend refuses it.
+  if (id === 'R31' && (filters['partner_id'] ?? null) === null) {
+    throw Object.assign(new Error('ERR_REQUIRED'), R31_PARTNER_REQUIRED);
+  }
+  if (id === 'R29' && (filters['partner_id'] ?? null) !== null) base = R29_ALIF;
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {
     base = { ...base, rows: Array.from({ length: 230 }, () => firstRow), total_count: 230 };
@@ -119,6 +139,13 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_run: (input) => page(input),
   reports_print_data: (input) => PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN,
   reports_find_people: () => PEOPLE_SHAHID,
+  // The partner box (R29, R31) and the person box of R32 (the people who can borrow) read these
+  // from the cash book stand-in, so the filter boxes of the new reports work in the browser.
+  partners_list: (input) => rokarHandlers['partners_list']?.(input),
+  coa_controls_list: (input) => rokarHandlers['coa_controls_list']?.(input),
+  search_accounts: (input) => rokarHandlers['search_accounts']?.(input),
+  search_accounts_recent: (input) => rokarHandlers['search_accounts_recent']?.(input),
+  search_accounts_touch: () => null,
 };
 
 /** What Tauri rejects with for a command this page does not answer, or for the `down` flag. */

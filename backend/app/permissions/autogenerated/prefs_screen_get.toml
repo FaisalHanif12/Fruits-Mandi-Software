@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-prefs-screen-get"
+description = "Enables the prefs_screen_get command without any pre-configured scope."
+commands.allow = ["prefs_screen_get"]
+
+[[permission]]
+identifier = "deny-prefs-screen-get"
+description = "Denies the prefs_screen_get command without any pre-configured scope."
+commands.deny = ["prefs_screen_get"]

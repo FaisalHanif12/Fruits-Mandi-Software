@@ -13,6 +13,7 @@ import * as api from '../../src/features/reports/api';
 import { bundles, LANGUAGES } from '../../src/i18n';
 import * as invoke from '../../src/shared/api/invoke';
 import {
+  BACKEND_CATALOG,
   CATALOG,
   PEOPLE_LIMIT_TOO_BIG,
   PEOPLE_NONE,
@@ -53,7 +54,24 @@ import {
   PRINT_R28_MONTH_EN,
   PRINT_R7_EN,
   PRINT_R9_DUE_EN,
+  ROUND_8_PENDING,
 } from '../helpers/reports-real';
+import {
+  PRINT_R31_BAY_EN,
+  PRINT_R31_BAY_EN_REQUEST,
+  R12_DAY,
+  R12_DAY_REQUEST,
+  R29_ALIF,
+  R29_ALIF_REQUEST,
+  R29_DAY,
+  R29_DAY_REQUEST,
+  R31_BAY,
+  R31_BAY_REQUEST,
+  R31_PARTNER_REQUIRED,
+  R31_PARTNER_REQUIRED_REQUEST,
+  R32_E2E_30B,
+  R32_E2E_30B_REQUEST,
+} from '../helpers/reports-business-real';
 
 vi.mock('../../src/shared/api/invoke');
 
@@ -120,9 +138,9 @@ describe('each wrapper sends the command and `{ input }`', () => {
 
 describe('the fixtures are the backend’s own', () => {
   it('every report engine fixture is the same text as the backend’s file', () => {
-    // The catalogue too: it holds all 22 reports of the early track now, as the backend lists them.
+    // The catalogue too: it holds all 26 reports of the early track now, as the backend lists them.
     const names = readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture);
-    expect(names.length).toBeGreaterThan(90);
+    expect(names.length).toBeGreaterThan(100);
     for (const name of names) {
       expect(readFileSync(path.join(FRONTEND_FIXTURES, name), 'utf8'), name).toBe(
         readFileSync(path.join(BACKEND_FIXTURES, name), 'utf8'),
@@ -133,6 +151,19 @@ describe('the fixtures are the backend’s own', () => {
   it('has every report the backend’s fixture folder has, none more, none less', () => {
     const names = (dir: string) => readdirSync(dir).filter(isEngineFixture).sort();
     expect(names(FRONTEND_FIXTURES)).toEqual(names(BACKEND_FIXTURES));
+  });
+
+  it('the backend’s catalogue is the reports of this build and those waiting for round 8, no other', () => {
+    const backend = BACKEND_CATALOG.map((entry) => entry.id).sort();
+    const ours = [...CATALOG.map((entry) => entry.id), ...ROUND_8_PENDING].sort();
+    expect(backend).toEqual(ours);
+    // The ids of round 8 are still the backend's, so the list does not hold an id it never sent.
+    for (const id of ROUND_8_PENDING) {
+      expect(
+        BACKEND_CATALOG.some((entry) => entry.id === id),
+        id,
+      ).toBe(true);
+    }
   });
 
   it('every report of the copied catalogue is, unchanged, in the backend’s catalogue', () => {
@@ -191,6 +222,11 @@ describe('the answers carry exactly the fields of the generated types', () => {
       R28_BY_DAY,
       R28_BY_MONTH,
       R30_PROFIT,
+      R12_DAY,
+      R29_ALIF,
+      R29_DAY,
+      R31_BAY,
+      R32_E2E_30B,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -213,6 +249,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'detail',
         'from',
         'item',
+        'partner',
         'party',
         'seller',
         'shortcut',
@@ -268,6 +305,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       PRINT_R20_UR,
       PRINT_R28_MONTH_EN,
       PRINT_R9_DUE_EN,
+      PRINT_R31_BAY_EN,
     ]) {
       expect(keysOf(data)).toEqual([
         'columns',
@@ -290,6 +328,59 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ]);
       expect(keysOf(data.firm)).toEqual(['address', 'mandi', 'name', 'phone']);
     }
+  });
+});
+
+describe('round 7: the cash book, the expense report, the partner statement and money lent', () => {
+  const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
+
+  it('the catalogue lists 26 reports, the four new ones with the boxes the backend says', () => {
+    expect(CATALOG).toHaveLength(26);
+    expect(entryOf('R12')).toMatchObject({ filters: ['date_range'], party_required: false });
+    expect(entryOf('R29')).toMatchObject({
+      filters: ['date_range', 'partner'],
+      party_required: false,
+    });
+    // R31 cannot run without its partner: the catalogue says so with `party_required`.
+    expect(entryOf('R31')).toMatchObject({
+      filters: ['date_range', 'partner'],
+      party_required: true,
+    });
+    expect(entryOf('R32')).toMatchObject({ filters: ['as_of', 'party'], party_required: false });
+  });
+
+  it('sends the exact requests the backend wrote for the four reports', async () => {
+    const requests = [
+      R12_DAY_REQUEST,
+      R29_ALIF_REQUEST,
+      R29_DAY_REQUEST,
+      R31_BAY_REQUEST,
+      R31_PARTNER_REQUIRED_REQUEST,
+      R32_E2E_30B_REQUEST,
+    ];
+    for (const request of requests) await api.reportsRun(request);
+    await api.reportsPrintData(PRINT_R31_BAY_EN_REQUEST);
+    expect(call.mock.calls).toEqual([
+      ...requests.map((request) => ['reports_run', { input: request }]),
+      ['reports_print_data', { input: PRINT_R31_BAY_EN_REQUEST }],
+    ]);
+  });
+
+  it('refuses R31 with no partner under the partner box', () => {
+    expect(R31_PARTNER_REQUIRED).toMatchObject({
+      ok: false,
+      errors: [{ code: 'ERR_REQUIRED', field: 'filters.partner_id' }],
+    });
+    expect(R31_PARTNER_REQUIRED_REQUEST.filters.partner_id).toBeNull();
+  });
+
+  it('R31 lines are message cells, in the screen answer and in the print', () => {
+    const kinds = R31_BAY.columns.map((column) => column.kind);
+    expect(kinds).toEqual(['date', 'label', 'message', 'money', 'money']);
+    const screen = R31_BAY.rows.map((row) => row.cells[2]?.type);
+    expect(screen.every((type) => type === 'message')).toBe(true);
+    const printed = PRINT_R31_BAY_EN.rows.map((row) => row.cells[2]?.type);
+    expect(printed.every((type) => type === 'message')).toBe(true);
   });
 });
 
@@ -326,10 +417,17 @@ function idsIn(value: unknown, found: Set<string>): void {
 describe('every message ID the backend sends has words in both languages', () => {
   it('titles, groups, columns, labels, kinds of entry and sides', () => {
     const found = new Set<string>();
+    // The reports waiting for round 8 have no words yet: their fixtures (named `..._r33_...`) and
+    // their entries in the catalogue are left out until their round lands (ROUND_8_PENDING).
+    const pending = new RegExp(
+      `_(${[...ROUND_8_PENDING].map((id) => id.toLowerCase()).join('|')})_`,
+    );
     for (const name of readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture)) {
-      if (name.endsWith('_request.json')) continue;
+      if (name.endsWith('_request.json') || name === 'reports_catalog.json') continue;
+      if (pending.test(name)) continue;
       idsIn(JSON.parse(readFileSync(path.join(FRONTEND_FIXTURES, name), 'utf8')), found);
     }
+    idsIn(CATALOG, found);
     expect(found.size).toBeGreaterThan(100);
     for (const id of found) {
       for (const language of LANGUAGES) {

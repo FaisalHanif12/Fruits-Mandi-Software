@@ -11,6 +11,8 @@ export interface ReportSearch {
   to?: string;
   as_of?: string;
   party?: number;
+  /** A partner (R29, R31): the partner screens open his statement this way. */
+  partner?: number;
   /** A one-time person (PRD FR-13.5): the global search opens his register this way. */
   person?: ReportPerson;
 }
@@ -52,6 +54,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   const to = text(search['to']);
   const asOf = text(search['as_of']);
   const party = Number(search['party']);
+  const partner = Number(search['partner']);
   const person = readPerson(search['person']);
   return {
     ...(period === undefined ? {} : { period }),
@@ -59,6 +62,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
     ...(to === undefined ? {} : { to }),
     ...(asOf === undefined ? {} : { as_of: asOf }),
     ...(Number.isSafeInteger(party) && party > 0 ? { party } : {}),
+    ...(Number.isSafeInteger(partner) && partner > 0 ? { partner } : {}),
     ...(person === undefined ? {} : { person }),
   };
 }
@@ -76,5 +80,6 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
         ? null
         : { id: search.party, name_ur: '', name_en: '', code: undefined },
     person: search.person ?? null,
+    partner: search.partner ?? null,
   };
 }

@@ -43,6 +43,7 @@ async function open(address) {
 /**
  * Answers the save box with `chosen` from now on (the one plugin call WebDriver cannot drive). It is a
  * script text, because the window of the app has properties no type knows.
+ * @param {string | null} chosen The path the box returns, or null for a box closed with Esc.
  */
 async function answerSaveBox(chosen) {
   await browser.execute(

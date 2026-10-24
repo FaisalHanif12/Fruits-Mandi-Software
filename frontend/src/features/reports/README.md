@@ -61,12 +61,31 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   screens and reports (found by their name in either language, or a report by its number) to the
   backend's accounts, بکری and vouchers. `GlobalSearch.tsx` has a few lines marked "Run B".
 
+## Round 7: R12, R29, R31, R32
+
+- R12 (cash book), R29 (expenses), R31 (partner statement) and R32 (money lent) are the same one
+  screen. The catalogue says what each takes: a new filter kind `partner` (`ReportFilters.partner_id`)
+  and `party_required` meaning the partner for R31 (`canRun` in `filters.ts`). R29 has an "all partners"
+  choice, R31 does not and says "pick a partner first" until one is chosen.
+- The partner box is `ReportPartnerSelect` (the short list of partners, `usePartnerList`). R32's party
+  box is the people who can borrow (control 0103, `ControlAccountPicker`, `partyBoxOf` returns `lent`).
+- A new cell and column kind `message` (a Fluent ID with arguments the backend names): `cellText`
+  works the arguments out (text, number, money, percent like `formatBps`, names through `displayName`,
+  and a message inside a message) and the print writes the same sentence in the print language
+  (`printMessageText`). R31 lines are such sentences, so a line reads the same in both languages and
+  on paper (PRD FR-17.10).
+- `scripts/copy-backend-fixtures.mjs` copies the backend's fixtures byte for byte; run it again when
+  the backend changes a type or a fixture. `ROUND_8_PENDING` (tests/helpers/reports-real.ts) names the
+  reports the backend lists that have no screen or words here yet.
+- Tests: `reports-screens-round7.test.tsx`, plus the contract and filter tests. Windows spec:
+  `46-reports-month.e2e.mjs`.
+
 ## Not built yet
 
 - Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB
   needs a generic report document in the plan 14 print path (`PrintDoc::Report`, plan 17e). The two
   buttons of the preview are dimmed and say so.
-- Excel (D5-Q1).
+- (Excel is built: the buttons are `shared/export`.)
 
 ## Older notes (plan 14)
 

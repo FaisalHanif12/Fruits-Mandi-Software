@@ -4,6 +4,8 @@ import type { ReportGroupBy } from './ReportGroupBy';
 import type { ReportNames } from './ReportNames';
 import type { ReportPaidFilter } from './ReportPaidFilter';
 import type { ReportParty } from './ReportParty';
+import type { ReportTripView } from './ReportTripView';
+import type { VoucherType } from './VoucherType';
 
 /**
  * The filters as the backend read them, echoed back (PRD FR-19.10). Dates are `YYYY-MM-DD`.
@@ -65,4 +67,12 @@ export type ReportResolvedFilters = {
    * The paid or due filter of R9. Missing for all lines.
    */
   status?: ReportPaidFilter;
+  /**
+   * The kind of voucher of R15. Missing for every kind.
+   */
+  voucher_type?: VoucherType;
+  /**
+   * The layout of R33. Missing for any other report.
+   */
+  trip_view?: ReportTripView;
 };

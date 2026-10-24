@@ -278,6 +278,11 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::month::month_close_preview,
         commands::month::month_close_save,
         commands::month::month_close_reverse,
+        // Run B, plan 19 (append-only block).
+        commands::dashboard::dashboard_get,
+        commands::dashboard::assist_attention,
+        commands::screen_prefs::prefs_screen_get,
+        commands::screen_prefs::prefs_screen_set,
     ]
 }
 

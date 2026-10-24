@@ -164,7 +164,9 @@ function ReportBody({
   const change = (part: Partial<ReportFilterState>) => {
     setState((now) => ({ ...now, ...part }));
   };
-  const needsParty = entry.party_required && state.party === null;
+  // R13 and R14 wait for an account, R31 for a partner (the catalogue says which box it takes).
+  const needsPick = !canRun(state, entry);
+  const pickingPartner = entry.filters.includes('partner');
   const balanceOnly = entry.filters.includes('detail') && !settled.detail;
   const filtering = !isUnfiltered(state, entry.filters);
 
@@ -180,12 +182,14 @@ function ReportBody({
         exporter={exporter}
       />
     );
-  } else if (needsParty) {
+  } else if (needsPick) {
     body = (
       <EmptyState
         icon={FileX}
-        title={<Localized id="report-pick-party" />}
-        help={<Localized id="report-pick-party-help" />}
+        title={<Localized id={pickingPartner ? 'report-pick-partner' : 'report-pick-party'} />}
+        help={
+          <Localized id={pickingPartner ? 'report-pick-partner-help' : 'report-pick-party-help'} />
+        }
       />
     );
   } else {

@@ -1,0 +1,32 @@
+{
+  "rows": [
+    {
+      "month": "2026-11",
+      "state": "not_finished",
+      "closed_on": null,
+      "closed_entry_id": null,
+      "reversed_count": 0
+    },
+    {
+      "month": "2026-10",
+      "state": "closed",
+      "closed_on": "2026-11-02",
+      "closed_entry_id": 10,
+      "reversed_count": 0
+    },
+    {
+      "month": "2026-09",
+      "state": "ready",
+      "closed_on": null,
+      "closed_entry_id": null,
+      "reversed_count": 0
+    },
+    {
+      "month": "2026-08",
+      "state": "ready",
+      "closed_on": null,
+      "closed_entry_id": null,
+      "reversed_count": 0
+    }
+  ]
+}

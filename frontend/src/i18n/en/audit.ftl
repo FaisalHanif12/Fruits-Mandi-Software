@@ -161,3 +161,21 @@ audit-entity-rule = Commission rule
 
 # review: pending
 audit-entity-partner = Partner
+
+# review: pending
+audit-action-day-close = Day closed
+
+# review: pending
+audit-action-day-reopen = Day reopened
+
+# review: pending
+audit-action-month-close = Month closed
+
+# review: pending
+audit-action-month-close-reverse = Month close reversed
+
+# review: pending
+audit-entity-day = Day
+
+# review: pending
+audit-entity-month = Month

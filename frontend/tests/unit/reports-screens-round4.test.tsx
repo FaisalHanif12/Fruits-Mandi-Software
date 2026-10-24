@@ -115,9 +115,11 @@ function drawnColumns(): string[] {
  * the backend's requests as null when unset and are left out by the screen (same meaning).
  */
 function sentLike(request: ReportRunInput) {
-  const { group_by: groupBy, status, ...rest } = request.filters;
+  const { group_by: groupBy, status, partner_id: partnerId, ...rest } = request.filters;
   return {
     ...rest,
+    // The requests the backend wrote before round 7 have no `partner_id`; the screen always sends it.
+    partner_id: partnerId ?? null,
     ...(groupBy === undefined || (groupBy as unknown) === null ? {} : { group_by: groupBy }),
     ...(status === undefined || (status as unknown) === null ? {} : { status }),
   };
@@ -739,11 +741,11 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       const { router } = await renderApp('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
       const user = userEvent.setup();
-      // R2 R3 R4 R6 R7 R8 R9 R11 R13 R14 R16 R17 R18 R19 are in front of R20: fourteen steps down.
+      // R2 R3 R4 R6 R7 R8 R9 R11 R12 R13 R14 R16 R17 R18 R19 are in front of R20: fifteen steps down.
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R2$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(14)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(15)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R20');
       }, SLOW_MS);

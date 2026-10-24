@@ -3,12 +3,14 @@
 // `formatPaisa` (the list context's `money`), names through `displayName` (Code Standards F38), and
 // the words around the goods of a ledger line from Fluent. It adds up nothing (CLAUDE.md rule 1).
 
+import type { ReportArgValue } from '../../bindings/ReportArgValue';
 import type { ReportCell } from '../../bindings/ReportCell';
 import type { ReportDetailPart } from '../../bindings/ReportDetailPart';
 import type { ReportId } from '../../bindings/ReportId';
+import type { ReportMessageArg } from '../../bindings/ReportMessageArg';
 import type { ReportParty } from '../../bindings/ReportParty';
 import type { Language } from '../../i18n';
-import { isoToDisplayDate } from '../../shared/format';
+import { formatBps, isoToDisplayDate } from '../../shared/format';
 import type { ListContext } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 
@@ -100,6 +102,39 @@ function detailPartText(part: ReportDetailPart, context: ListContext): string {
   }
 }
 
+/**
+ * One argument of a message cell as the words of the screen (plan 24, R31 and the partner lines).
+ * Money is written with the app's grouping, a name in the app language, a percent as the reader
+ * writes it (40, 33.33), and a message inside a message is worked out first. Nothing is added up.
+ */
+function argText(value: ReportArgValue, context: ListContext): string {
+  switch (value.type) {
+    case 'text':
+      return value.text;
+    case 'number':
+      return String(value.value);
+    case 'money':
+      return context.money(value.paisa);
+    case 'percent':
+      return formatBps(value.hundredths);
+    case 'names':
+      return displayName({ name_ur: value.names.ur, name_en: value.names.en }, context.language);
+    case 'message':
+      return messageText(value.id, value.args, context);
+  }
+}
+
+/** A Fluent message with the arguments the backend named (a `message` cell, PRD FR-17.10). */
+export function messageText(
+  id: string,
+  args: readonly ReportMessageArg[],
+  context: ListContext,
+): string {
+  const vars: Record<string, string> = {};
+  for (const arg of args) vars[arg.name] = argText(arg.value, context);
+  return context.text(id, vars);
+}
+
 /** The text of one cell. A balance's side word is `sideText`, shown in its own slot. */
 export function cellText(cell: ReportCell, context: ListContext): string {
   switch (cell.type) {
@@ -132,5 +167,7 @@ export function cellText(cell: ReportCell, context: ListContext): string {
     }
     case 'detail':
       return cell.parts.map((part) => detailPartText(part, context)).join(' · ');
+    case 'message':
+      return messageText(cell.id, cell.args, context);
   }
 }

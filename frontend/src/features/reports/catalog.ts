@@ -50,16 +50,18 @@ export function helpIdOf(entry: ReportCatalogEntry): string {
  * What the party box of a report takes (PRD 19.2). The catalogue says only that a report has a party
  * box; which accounts it can be is part of the report: R2, R3, R4, R7 and the dues reports R20 to R22
  * are about a buyer, R24 about a seller, R9 about one-time people only (it takes no other account),
- * and the rest about any account.
+ * R32 about the people who can borrow (control 0103, PRD 16.5), and the rest about any account.
  */
-export type PartyBox = 'any' | 'buyer' | 'seller' | 'one_time';
+export type PartyBox = 'any' | 'buyer' | 'seller' | 'one_time' | 'lent';
 
 const BUYER_REPORTS: ReadonlySet<ReportId> = new Set(['R2', 'R3', 'R4', 'R7', 'R20', 'R21', 'R22']);
 const SELLER_REPORTS: ReadonlySet<ReportId> = new Set(['R24']);
 const ONE_TIME_REPORTS: ReadonlySet<ReportId> = new Set(['R9']);
+const LENT_REPORTS: ReadonlySet<ReportId> = new Set(['R32']);
 
 export function partyBoxOf(id: ReportId): PartyBox {
   if (ONE_TIME_REPORTS.has(id)) return 'one_time';
+  if (LENT_REPORTS.has(id)) return 'lent';
   if (BUYER_REPORTS.has(id)) return 'buyer';
   if (SELLER_REPORTS.has(id)) return 'seller';
   return 'any';

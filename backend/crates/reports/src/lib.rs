@@ -5,6 +5,8 @@
 //!   Accounts group R11, R13, R14, R16 to R19 (plan 20, PRD 19).
 //! - [`analytics`]: the analytics views A to E and H over the sale facts (plan 21, PRD 18).
 //! - [`audit`]: the audit viewer, a read-only paged list of the audit log (plan 22, PRD FR-21.3).
+//! - [`dashboard`]: the dashboard tiles, lists, charts and the attention list (plan 19, PRD 9,
+//!   FR-7.44).
 //! - [`people`]: the one-time people of the global search (PRD FR-5.4).
 //! - [`print`]: the print data of a saved بکری: the seller bill, the buyer slips and the
 //!   پختہ slip (plan 14, PRD FR-12.12, FR-19.3 to FR-19.7). Read only; every number is a stored
@@ -12,6 +14,7 @@
 
 pub mod analytics;
 pub mod audit;
+pub mod dashboard;
 pub mod error;
 pub mod export;
 pub mod pack;

@@ -12,6 +12,7 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { parseReportSearch } from '../features/reports/search';
+import { parseMonthSearch } from '../features/month';
 import {
   parseExpenseSearch,
   parseKhataSearch,
@@ -363,6 +364,17 @@ const partnersStatementRoute = createRoute({
   ),
 });
 
+// مہینہ بند, the month close (PRD FR-17.6, FR-21.2, round 7): reached from the partners overview.
+const monthRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/month',
+  validateSearch: parseMonthSearch,
+  component: lazyRouteComponent(
+    () => import('../features/month/pages/MonthClosePage'),
+    'MonthClosePage',
+  ),
+});
+
 // روکڑ (PRD 5, 16, plan 17): the cash book, and the entry screens of the area. Each entry screen is
 // ONE screen with a type list (PRD FR-7.67); `?type=` chooses the type. Alt+K opens the خرچہ screen
 // as دکان خرچہ.
@@ -496,6 +508,7 @@ const appRoutes = [
   partnersSetupRoute,
   partnersCapitalRoute,
   partnersStatementRoute,
+  monthRoute,
   analyticsRoute,
   analyticsViewRoute,
   backupRoute,
@@ -608,6 +621,18 @@ const settingsDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Run B, round 7: the development page of the month close screen (dev only, like the others). ----
+const monthDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/month',
+        component: lazyRouteComponent(() => import('./dev/MonthDevPage'), 'MonthDevPage'),
+      }),
+    ]
+  : [];
+// ---- end of Run B block ----
+
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren(appRoutes),
   printRoute,
@@ -616,6 +641,7 @@ const routeTree = rootRoute.addChildren([
   ...reportsDevRoutes,
   ...analyticsDevRoutes,
   ...settingsDevRoutes,
+  ...monthDevRoutes,
 ]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router

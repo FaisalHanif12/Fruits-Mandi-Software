@@ -6,7 +6,7 @@
 
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { Landmark, Settings2, Users } from 'lucide-react';
+import { CalendarCheck, Landmark, Settings2, Users } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
 import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
@@ -76,6 +76,15 @@ export function PartnersOverviewPage() {
           >
             <Landmark aria-hidden="true" className="size-icon-md" />
             <Localized id="partners-capital-open" />
+          </Button>
+          {/* The month close moves the month's income and expenses into the partners' capital (FR-17.6). */}
+          <Button
+            onClick={() => {
+              void navigate({ to: '/month' });
+            }}
+          >
+            <CalendarCheck aria-hidden="true" className="size-icon-md" />
+            <Localized id="month-open" />
           </Button>
           <Button onClick={openSetup}>
             <Settings2 aria-hidden="true" className="size-icon-md" />

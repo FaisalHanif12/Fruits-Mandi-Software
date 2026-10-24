@@ -1,0 +1,360 @@
+{
+  "id": "R12",
+  "title_id": "report-r12-title",
+  "filters": {
+    "shortcut": null,
+    "from": "2026-10-10",
+    "to": "2026-10-10",
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "narration",
+      "title_id": "report-col-narration",
+      "kind": "text"
+    },
+    {
+      "key": "cash_in",
+      "title_id": "report-col-cash-in",
+      "kind": "money"
+    },
+    {
+      "key": "cash_out",
+      "title_id": "report-col-cash-out",
+      "kind": "money"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance",
+      "kind": "balance"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 500000
+        },
+        {
+          "type": "balance",
+          "paisa": 4500000,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 2
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1280000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 5780000,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 2
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-receipt",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "03040001",
+            "short_code": "1",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1000000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 6780000,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 2
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-payment",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 431600
+        },
+        {
+          "type": "balance",
+          "paisa": 6348400,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 3
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-shop-expense",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 31,
+            "code": "05010001",
+            "short_code": null,
+            "name_ur": "بجلی",
+            "name_en": "Electricity",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "text",
+          "text": "WAPDA"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "balance",
+          "paisa": 6048400,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 4
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-personal-expense",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 23,
+            "code": "06030001",
+            "short_code": null,
+            "name_ur": "ذاتی خرچہ - الف",
+            "name_en": "Drawings - Partner A",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "text",
+          "text": "گھر کا خرچ"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 200000
+        },
+        {
+          "type": "balance",
+          "paisa": 5848400,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 5
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 6,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 2280000
+    },
+    {
+      "type": "money",
+      "paisa": 1431600
+    },
+    {
+      "type": "balance",
+      "paisa": 5848400,
+      "side": "dr"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-opening-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 5000000,
+        "side": "dr"
+      }
+    },
+    {
+      "label_id": "report-closing-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 5848400,
+        "side": "dr"
+      }
+    }
+  ]
+}

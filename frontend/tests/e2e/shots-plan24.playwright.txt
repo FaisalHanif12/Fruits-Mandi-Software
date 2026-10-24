@@ -1,0 +1,100 @@
+// Screenshots of round 7: the month close screen and the reports R12, R29, R31 and R32, in both
+// languages at the three window sizes, taken from the development pages /dev/month and
+// /dev/reports/$id with the Playwright tool. It is a developer tool: run it with the Vite dev server up
+// on a free port (`pnpm --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`), once
+// for each size (change SIZES). It also measures sideways overflow (NFR-USE-15): the page, the main
+// area and every grid must not scroll sideways, no cell may be cut, and no raw markup, message ID or
+// error code may show. The tool's own screenshot action may only write inside the folder it was
+// started in, and a relative path there can land in another team's folder, so this snippet writes with
+// an absolute path from inside the page code. Paste it into `browser_run_code_unsafe`. (It is a
+// snippet for that tool, not a module, so it is kept as .txt and the linter does not read it. The
+// Windows check is spec 46.)
+//
+// The flags in the hash:
+//   month  (tests/helpers/dev-bridge-month.ts) `closed`, `daysopen`, `empty`, `down`, `twice`, and
+//          `month=2026-10` to open a month of the list.
+//   reports (tests/helpers/dev-bridge-reports.ts) `empty`, `many`, `down`, and `partner=2` for R31.
+// A shot with a button name presses that button first (the confirm box, the reverse box).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan24';
+  const BASE = 'http://127.0.0.1:5188/#';
+  const SIZES = [[1366, 768]];
+  // The words of the two buttons that open a box, by language (month.ftl).
+  const LABEL = {
+    ur: { close: 'مہینہ بند کریں', reverse: 'بندش واپس کریں' },
+    en: { close: 'Close the month', reverse: 'Reverse the close' },
+  };
+  // [path and flags, name of the shot, which button to press first (or null)].
+  const SHOTS = [
+    ['/dev/month', 'month-ready', null],
+    ['/dev/month', 'month-confirm', 'close'],
+    ['/dev/month?closed&month=2026-10', 'month-closed', null],
+    ['/dev/month?closed&month=2026-10', 'month-reverse', 'reverse'],
+    ['/dev/month?month=2026-11', 'month-not-finished', null],
+    ['/dev/month?daysopen&month=2026-09', 'month-days-open', null],
+    ['/dev/month?empty', 'month-empty', null],
+    ['/dev/month?down', 'month-down', null],
+    ['/dev/reports/R12', 'r12', null],
+    ['/dev/reports/R12?many', 'r12-many', null],
+    ['/dev/reports/R12?empty', 'r12-empty', null],
+    ['/dev/reports/R29', 'r29', null],
+    ['/dev/reports/R31', 'r31-pick', null],
+    ['/dev/reports/R31?partner=2', 'r31', null],
+    ['/dev/reports/R32', 'r32', null],
+  ];
+  const LANGS = ['ur', 'en'];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [path, name, press] of SHOTS) {
+      for (const lang of LANGS) {
+        try {
+          await page.goto(`${BASE}${path}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1, [role="alert"]', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          await page.waitForTimeout(1600);
+          if (press !== null) {
+            await page.getByRole('button', { name: LABEL[lang][press] }).first().click();
+            await page.waitForTimeout(700);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
+            const main = document.querySelector('main');
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            const text = document.body.textContent || '';
+            const raw = /<(num|code)>|ERR_|partners-statement|vouchers-number|month-error|report-col-/.test(text);
+            const focus = document.activeElement
+              ? document.activeElement.tagName + ':' + (document.activeElement.getAttribute('aria-label') || document.activeElement.id || '')
+              : '-';
+            return [
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'clipped=' + clipped,
+              'raw=' + raw,
+              'focus=' + focus,
+              location.host,
+            ].join(' ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 140)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

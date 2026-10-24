@@ -425,6 +425,12 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
       }, SLOW_MS);
       await user.type(screen.getByLabelText(named(language, 'audit-filter-text')), 'lakh');
       await user.type(screen.getByLabelText(named(language, 'report-filter-from')), '01-10-2026');
+      // The filters settle 250 ms after the last key (Code Standards F35): wait until the backend has
+      // been asked with them, so the count below is the count after the last request, even on a
+      // busy machine.
+      await waitFor(() => {
+        expect(lastRequest()?.filters).toMatchObject({ text: 'lakh', from: '01-10-2026' });
+      }, SLOW_MS);
       const before = vi.mocked(auditApi.auditList).mock.calls.length;
       const other: Language = language === 'ur' ? 'en' : 'ur';
       act(() => {

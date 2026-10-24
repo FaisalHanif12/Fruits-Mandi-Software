@@ -1,0 +1,255 @@
+{
+  "id": "R33",
+  "title_id": "report-r33-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false,
+    "trip_view": "partner"
+  },
+  "columns": [
+    {
+      "key": "trip",
+      "title_id": "report-col-trip",
+      "kind": "names"
+    },
+    {
+      "key": "partner",
+      "title_id": "report-col-partner",
+      "kind": "names"
+    },
+    {
+      "key": "share",
+      "title_id": "report-col-share",
+      "kind": "percent"
+    },
+    {
+      "key": "money_in_shop",
+      "title_id": "report-col-money-in-shop",
+      "kind": "money"
+    },
+    {
+      "key": "money_in_pocket",
+      "title_id": "report-col-money-in-pocket",
+      "kind": "money"
+    },
+    {
+      "key": "money_back",
+      "title_id": "report-col-money-back",
+      "kind": "money"
+    },
+    {
+      "key": "net",
+      "title_id": "report-col-part-of-result",
+      "kind": "money"
+    },
+    {
+      "key": "cost_left",
+      "title_id": "report-col-left-cost",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "سفر-1 10-10-2026",
+            "en": "TRP-1 10-10-2026"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1040000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 846000
+        },
+        {
+          "type": "money",
+          "paisa": -194000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "group"
+    },
+    {
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "percent",
+          "hundredths": 4000
+        },
+        {
+          "type": "money",
+          "paisa": 416000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 338400
+        },
+        {
+          "type": "money",
+          "paisa": -77600
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "ب",
+            "en": "Partner B"
+          }
+        },
+        {
+          "type": "percent",
+          "hundredths": 3000
+        },
+        {
+          "type": "money",
+          "paisa": 312000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 253800
+        },
+        {
+          "type": "money",
+          "paisa": -58200
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "ج",
+            "en": "Partner C"
+          }
+        },
+        {
+          "type": "percent",
+          "hundredths": 3000
+        },
+        {
+          "type": "money",
+          "paisa": 312000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 253800
+        },
+        {
+          "type": "money",
+          "paisa": -58200
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 4,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 1040000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 846000
+    },
+    {
+      "type": "money",
+      "paisa": -194000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    }
+  ],
+  "summary": []
+}

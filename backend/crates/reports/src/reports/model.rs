@@ -37,6 +37,9 @@ pub enum ReportId {
     /// One-time parties register, پختہ کھاتہ رپورٹ.
     #[serde(rename = "R9")]
     R9,
+    /// Stock, مکمل سٹاک / باقی مال.
+    #[serde(rename = "R10")]
+    R10,
     /// Daily journal, روزنامچہ.
     #[serde(rename = "R11")]
     R11,
@@ -49,6 +52,9 @@ pub enum ReportId {
     /// Party statement, فرد حساب.
     #[serde(rename = "R14")]
     R14,
+    /// Vouchers list, ووچر.
+    #[serde(rename = "R15")]
+    R15,
     /// Account index, انڈکس.
     #[serde(rename = "R16")]
     R16,
@@ -70,9 +76,15 @@ pub enum ReportId {
     /// Buyer dues by collector, اگراہی بحساب اگراہی والا.
     #[serde(rename = "R22")]
     R22,
+    /// Receipts register, وصولی رجسٹر.
+    #[serde(rename = "R23")]
+    R23,
     /// Seller payables, ادائیگی باقی.
     #[serde(rename = "R24")]
     R24,
+    /// Payments register, ادائیگی رجسٹر.
+    #[serde(rename = "R25")]
+    R25,
     /// Advances, پیشگی کھاتہ.
     #[serde(rename = "R26")]
     R26,
@@ -94,6 +106,12 @@ pub enum ReportId {
     /// Money lent, ادھار رقم رپورٹ.
     #[serde(rename = "R32")]
     R32,
+    /// Trip profit or loss, تجارتی منافع / نقصان.
+    #[serde(rename = "R33")]
+    R33,
+    /// Day summary, روزانہ خلاصہ.
+    #[serde(rename = "R34")]
+    R34,
 }
 
 impl ReportId {
@@ -107,10 +125,12 @@ impl ReportId {
             ReportId::R7 => "R7",
             ReportId::R8 => "R8",
             ReportId::R9 => "R9",
+            ReportId::R10 => "R10",
             ReportId::R11 => "R11",
             ReportId::R12 => "R12",
             ReportId::R13 => "R13",
             ReportId::R14 => "R14",
+            ReportId::R15 => "R15",
             ReportId::R16 => "R16",
             ReportId::R17 => "R17",
             ReportId::R18 => "R18",
@@ -118,7 +138,9 @@ impl ReportId {
             ReportId::R20 => "R20",
             ReportId::R21 => "R21",
             ReportId::R22 => "R22",
+            ReportId::R23 => "R23",
             ReportId::R24 => "R24",
+            ReportId::R25 => "R25",
             ReportId::R26 => "R26",
             ReportId::R27 => "R27",
             ReportId::R28 => "R28",
@@ -126,6 +148,8 @@ impl ReportId {
             ReportId::R30 => "R30",
             ReportId::R31 => "R31",
             ReportId::R32 => "R32",
+            ReportId::R33 => "R33",
+            ReportId::R34 => "R34",
         }
     }
 
@@ -178,6 +202,10 @@ pub enum FilterKind {
     GroupBy,
     /// One partner (R31).
     Partner,
+    /// One kind of voucher (R15).
+    VoucherType,
+    /// How R33 lays out the trips: by trip, item, day, month, or by partner.
+    TripView,
 }
 
 /// One report in the catalogue.
@@ -239,6 +267,25 @@ pub enum GroupBy {
     Month,
 }
 
+/// How R33 lays out the trips (PRD 19.2 R33: per trip and per purchase; by item, day and month;
+/// each trip partner's money). Every layout except the partner one groups the same purchase rows.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(rename = "ReportTripView")]
+pub enum TripView {
+    /// A heading for each trip with its purchases under it.
+    #[default]
+    Trip,
+    /// One row for each item.
+    Item,
+    /// One row for each day of purchase.
+    Day,
+    /// One row for each month of purchase.
+    Month,
+    /// One row for each partner of each trip: his %, money in and money back.
+    Partner,
+}
+
 /// The paid or due filter of the one-time parties register (R9, PRD FR-13.6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -288,9 +335,15 @@ pub struct ReportFilters {
     /// Paid or due lines only (R9). Missing means all lines.
     #[ts(optional)]
     pub status: Option<PaidFilter>,
-    /// The partner of a partner statement (R31).
+    /// The partner of a partner statement (R31), or of the expense report (R29).
     #[ts(type = "number | null")]
     pub partner_id: Option<i64>,
+    /// One kind of voucher (R15). Missing means every kind.
+    #[ts(optional)]
+    pub voucher_type: Option<mandi_core::vouchers::VoucherType>,
+    /// The layout of the trip report (R33). Missing means by trip.
+    #[ts(optional)]
+    pub trip_view: Option<TripView>,
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
@@ -360,6 +413,14 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub status: Option<PaidFilter>,
+    /// The kind of voucher of R15. Missing for every kind.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub voucher_type: Option<mandi_core::vouchers::VoucherType>,
+    /// The layout of R33. Missing for any other report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub trip_view: Option<TripView>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.

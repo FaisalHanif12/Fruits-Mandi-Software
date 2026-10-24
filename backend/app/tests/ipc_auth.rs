@@ -1164,6 +1164,19 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "month": "2026-10", "reason": "check" } }),
             true,
         ),
+        // Run B, plan 19 (append-only block).
+        ("dashboard_get", json!({}), true),
+        ("assist_attention", json!({}), true),
+        (
+            "prefs_screen_get",
+            json!({ "input": { "screen": "report.r20" } }),
+            true,
+        ),
+        (
+            "prefs_screen_set",
+            json!({ "input": { "screen": "report.r20", "value": "{\"city_id\":3}" } }),
+            true,
+        ),
     ]
 }
 

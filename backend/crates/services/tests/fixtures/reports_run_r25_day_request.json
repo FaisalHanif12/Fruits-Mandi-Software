@@ -1,0 +1,21 @@
+{
+  "filters": {
+    "adda_id": null,
+    "as_of": "",
+    "city_id": null,
+    "detail": false,
+    "from": "10-10-2026",
+    "item_id": null,
+    "partner_id": null,
+    "party": null,
+    "seller_id": null,
+    "shortcut": null,
+    "to": "10-10-2026",
+    "trip_view": null,
+    "voucher_type": null,
+    "zamindar_id": null
+  },
+  "id": "R25",
+  "limit": 100,
+  "offset": 0
+}

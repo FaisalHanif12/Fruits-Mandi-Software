@@ -9,7 +9,9 @@ use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::Connection;
 
 use super::common::{MasterTable, load_party, names_of};
-use super::model::{DateShortcut, FilterKind, GroupBy, PaidFilter, ReportFilters, ResolvedFilters};
+use super::model::{
+    DateShortcut, FilterKind, GroupBy, PaidFilter, ReportFilters, ResolvedFilters, TripView,
+};
 use crate::error::ReportsError;
 
 /// The filters of a run, read and checked. `resolved` is echoed back to the screen.
@@ -39,6 +41,10 @@ pub(crate) struct Typed {
     pub(crate) adda_id: Option<i64>,
     /// The picked partner.
     pub(crate) partner_id: Option<i64>,
+    /// The kind of voucher of R15.
+    pub(crate) voucher_type: Option<mandi_core::vouchers::VoucherType>,
+    /// The layout of R33. By trip when the screen sent nothing.
+    pub(crate) trip_view: TripView,
     /// How R28 groups its lines. Month when the screen sent nothing.
     pub(crate) group_by: GroupBy,
     /// The paid or due filter of R9.
@@ -155,6 +161,16 @@ pub(crate) fn resolve(
         FilterKind::Partner,
         input.partner_id.is_some(),
         "filters.partner_id",
+    );
+    refuse_unless(
+        FilterKind::VoucherType,
+        input.voucher_type.is_some(),
+        "filters.voucher_type",
+    );
+    refuse_unless(
+        FilterKind::TripView,
+        input.trip_view.is_some(),
+        "filters.trip_view",
     );
     refuse_unless(FilterKind::Detail, input.detail, "filters.detail");
     refuse_unless(
@@ -313,6 +329,14 @@ pub(crate) fn resolve(
                 "filters.partner_id",
             ));
         }
+    }
+    if takes.has(FilterKind::VoucherType) {
+        typed.voucher_type = input.voucher_type;
+        typed.resolved.voucher_type = input.voucher_type;
+    }
+    if takes.has(FilterKind::TripView) {
+        typed.trip_view = input.trip_view.unwrap_or_default();
+        typed.resolved.trip_view = Some(typed.trip_view);
     }
     typed.detail = takes.has(FilterKind::Detail) && input.detail;
     if takes.has(FilterKind::GroupBy) {

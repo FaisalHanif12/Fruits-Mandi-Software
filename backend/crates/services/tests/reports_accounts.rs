@@ -43,6 +43,7 @@ fn the_catalogue_lists_the_accounts_group_with_its_filters() {
             ReportId::R12,
             ReportId::R13,
             ReportId::R14,
+            ReportId::R15,
             ReportId::R16,
             ReportId::R17,
             ReportId::R18,

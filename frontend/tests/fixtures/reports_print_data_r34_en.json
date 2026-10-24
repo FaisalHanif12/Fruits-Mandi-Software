@@ -1,0 +1,552 @@
+{
+  "report": "R34",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r34-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "10-10-2026"
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-line",
+      "kind": "label"
+    },
+    {
+      "key": "count",
+      "title_id": "report-col-count",
+      "kind": "number"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-bikri"
+        },
+        {
+          "type": "number",
+          "text": "2"
+        },
+        {
+          "type": "money",
+          "text": "41,400"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "5,448"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-opening"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "50,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-in"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "22,800"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-out"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "14,316"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-closing"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "58,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-receipts"
+        },
+        {
+          "type": "number",
+          "text": "1"
+        },
+        {
+          "type": "money",
+          "text": "10,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-payments"
+        },
+        {
+          "type": "number",
+          "text": "1"
+        },
+        {
+          "type": "money",
+          "text": "4,316"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-advances"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-expenses"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "3,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-taken"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-returned"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-capital"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-money-lent"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-money-lent-back"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-trips-bought"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-trips-sold"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-shares"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "names",
+          "text": "Partner A"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "996"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "names",
+          "text": "Partner B"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "746"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "names",
+          "text": "Partner C"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "746"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-dues"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "21,564"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-open-lots"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-open-qty"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "24",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null,
+  "footer_id": "print-page-label"
+}

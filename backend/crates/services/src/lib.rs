@@ -32,6 +32,7 @@ pub mod settings;
 // Run B, plan 22 (append-only block).
 pub mod health;
 pub mod month;
+pub mod screen_prefs;
 pub mod settings_ext;
 pub mod spelling;
 mod store;

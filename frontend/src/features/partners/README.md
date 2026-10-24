@@ -20,3 +20,5 @@ The partners and their shares (PRD 17.1 to 17.3): the overview at `/partners` an
   and the partners are set up later.
 - `api.ts` is the only file that knows the command shapes. Tests mock `api.ts`
   (`tests/helpers/partners.ts` is the fake backend).
+- The overview has a "Month Close" button that opens the month close screen (`features/month`, route
+  `/month`; PRD FR-17.6). A close and a reversal ask the partner queries again (`PARTNERS_KEY`).

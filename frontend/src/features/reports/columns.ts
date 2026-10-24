@@ -90,6 +90,15 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
   R24: { last_date: { from: 'normal' } },
   R27: { bill_date: { from: 'normal' } },
   R30: { returned: { from: 'normal' } },
+  // Money lent (R32): the person, what is lent, what is still open, the return-by day and the days
+  // past it always; the two ways of returning wait for the normal step, the job and the oldest open
+  // day for the wide step. The print holds every column.
+  R32: {
+    staff: { from: 'wide' },
+    returned_cash: { from: 'normal' },
+    returned_salary: { from: 'normal' },
+    oldest_open: { from: 'wide' },
+  },
 };
 
 /** True when the column of this report is shown at the step. */
@@ -151,6 +160,8 @@ export function listColumnOf<V extends RowLike>(
       // A kind and a number ("Personal Drawing Return 12") may be longer than the column.
       return { ...base, type: 'status', wrap: true };
     case 'detail':
+    case 'message':
+      // A sentence from a message (a partner statement line, PRD FR-17.10) is as long as its words.
       return { ...base, type: 'text', grow: true, wrap: true };
     case 'label':
       // The heading of a list in R24 is a sentence and may take two lines; a status is one word.

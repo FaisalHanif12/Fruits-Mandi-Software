@@ -803,3 +803,86 @@ report-group-no-collector = No collector
 
 # review: pending
 report-adda-none = No Adda
+
+## The cash book, the expense report, the partner statement and money lent (round 7, R12, R29, R31, R32).
+
+# review: pending
+report-r12-title = { -rokar }
+
+# review: pending
+report-r12-help = The opening cash, every cash in and out of the days chosen, and the closing cash, with the running balance.
+
+# review: pending
+report-r29-title = { -kharcha } Report
+
+# review: pending
+report-r29-help = { -dukan-kharcha } by head, and the { -zati-kharcha } each partner took and returned.
+
+# review: pending
+report-r31-title = { -shirakat-dar } Statement
+
+# review: pending
+report-r31-help = Every dated movement of one partner, with his running { -kul-raqam }.
+
+# review: pending
+report-r32-title = { -adhar-raqam } Report
+
+# review: pending
+report-r32-help = Everyone who borrowed from the shop: lent, returned, still open, and the days past the return-by date.
+
+# review: pending
+report-col-cash-in = Cash In
+
+# review: pending
+report-col-cash-out = Cash Out
+
+# review: pending
+report-col-name = Name
+
+# review: pending
+report-col-expense = { -kharcha }
+
+# review: pending
+report-col-staff = Staff
+
+# review: pending
+report-col-lent = Lent
+
+# review: pending
+report-col-returned-cash = { -wapsi } (Cash)
+
+# review: pending
+report-col-returned-salary = Salary Deduction
+
+# review: pending
+report-col-return-by = Return By
+
+# review: pending
+report-col-days-past = Days Late
+
+# review: pending
+report-staff-yes = Yes
+
+# review: pending
+report-r32-overdue = Open past the return-by date
+
+# review: pending
+report-section-shop-expenses = { -dukan-kharcha }
+
+# review: pending
+report-section-partner-money = { -zati-kharcha }
+
+# review: pending
+report-filter-partner = { -shirakat-dar }
+
+# review: pending
+report-filter-borrower = Borrower
+
+# review: pending
+report-partner-all = All partners
+
+# review: pending
+report-pick-partner = Pick a partner first
+
+# review: pending
+report-pick-partner-help = This statement is for one partner. Choose him above.

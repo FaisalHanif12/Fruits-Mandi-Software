@@ -161,3 +161,21 @@ audit-entity-rule = کمیشن اصول
 
 # review: pending
 audit-entity-partner = شراکت دار
+
+# review: pending
+audit-action-day-close = دن بند کیا
+
+# review: pending
+audit-action-day-reopen = دن کھولا
+
+# review: pending
+audit-action-month-close = مہینہ بند کیا
+
+# review: pending
+audit-action-month-close-reverse = مہینے کی بندش واپس کی
+
+# review: pending
+audit-entity-day = دن
+
+# review: pending
+audit-entity-month = مہینہ

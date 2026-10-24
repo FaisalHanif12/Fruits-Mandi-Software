@@ -1,0 +1,119 @@
+{
+  "id": "R15",
+  "title_id": "report-r15-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false,
+    "voucher_type": "payment"
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "account",
+      "title_id": "report-col-account",
+      "kind": "party"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    },
+    {
+      "key": "narration",
+      "title_id": "report-col-narration",
+      "kind": "text"
+    },
+    {
+      "key": "status",
+      "title_id": "report-col-status",
+      "kind": "label"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-payment",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "money",
+          "paisa": 431600
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": {
+        "kind": "voucher",
+        "id": 3
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 431600
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": []
+}

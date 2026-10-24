@@ -1,0 +1,165 @@
+{
+  "id": "R32",
+  "title_id": "report-r32-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": "2026-10-16",
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "person",
+      "title_id": "report-col-person",
+      "kind": "party"
+    },
+    {
+      "key": "staff",
+      "title_id": "report-col-staff",
+      "kind": "label"
+    },
+    {
+      "key": "lent",
+      "title_id": "report-col-lent",
+      "kind": "money"
+    },
+    {
+      "key": "returned_cash",
+      "title_id": "report-col-returned-cash",
+      "kind": "money"
+    },
+    {
+      "key": "returned_salary",
+      "title_id": "report-col-returned-salary",
+      "kind": "money"
+    },
+    {
+      "key": "open",
+      "title_id": "report-col-open",
+      "kind": "money"
+    },
+    {
+      "key": "oldest_open",
+      "title_id": "report-col-oldest-date",
+      "kind": "date"
+    },
+    {
+      "key": "return_by",
+      "title_id": "report-col-return-by",
+      "kind": "date"
+    },
+    {
+      "key": "days_past",
+      "title_id": "report-col-days-past",
+      "kind": "number"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "party",
+          "party": {
+            "account_id": 32,
+            "code": "01030001",
+            "short_code": null,
+            "name_ur": "اسلم",
+            "name_en": "Aslam",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 500000
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 200000
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "date",
+          "iso": "2026-10-15"
+        },
+        {
+          "type": "number",
+          "value": 1
+        }
+      ],
+      "source": {
+        "kind": "account",
+        "id": 32
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 500000
+    },
+    {
+      "type": "money",
+      "paisa": 300000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 200000
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-r32-overdue",
+      "cell": {
+        "type": "money",
+        "paisa": 200000
+      }
+    }
+  ]
+}

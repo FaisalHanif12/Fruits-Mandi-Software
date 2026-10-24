@@ -1,0 +1,194 @@
+{
+  "id": "R33",
+  "title_id": "report-r33-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false,
+    "trip_view": "item"
+  },
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "bought_qty",
+      "title_id": "report-col-bought-qty",
+      "kind": "number"
+    },
+    {
+      "key": "bought_cost",
+      "title_id": "report-col-bought-cost",
+      "kind": "money"
+    },
+    {
+      "key": "sold_qty",
+      "title_id": "report-col-sold",
+      "kind": "number"
+    },
+    {
+      "key": "sales_money",
+      "title_id": "report-col-sales-money",
+      "kind": "money"
+    },
+    {
+      "key": "commission",
+      "title_id": "report-col-commission",
+      "kind": "money"
+    },
+    {
+      "key": "cost_sold",
+      "title_id": "report-col-cost-sold",
+      "kind": "money"
+    },
+    {
+      "key": "written_off_qty",
+      "title_id": "report-col-written-off",
+      "kind": "number"
+    },
+    {
+      "key": "written_off_cost",
+      "title_id": "report-col-written-off-cost",
+      "kind": "money"
+    },
+    {
+      "key": "left_qty",
+      "title_id": "report-col-left-qty",
+      "kind": "number"
+    },
+    {
+      "key": "left_cost",
+      "title_id": "report-col-left-cost",
+      "kind": "money"
+    },
+    {
+      "key": "result",
+      "title_id": "report-col-result",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "مالٹا",
+            "en": "Orange"
+          }
+        },
+        {
+          "type": "number",
+          "value": 20
+        },
+        {
+          "type": "money",
+          "paisa": 1040000
+        },
+        {
+          "type": "number",
+          "value": 15
+        },
+        {
+          "type": "money",
+          "paisa": 846000
+        },
+        {
+          "type": "money",
+          "paisa": 54000
+        },
+        {
+          "type": "money",
+          "paisa": 780000
+        },
+        {
+          "type": "number",
+          "value": 5
+        },
+        {
+          "type": "money",
+          "paisa": 260000
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": -194000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 20
+    },
+    {
+      "type": "money",
+      "paisa": 1040000
+    },
+    {
+      "type": "number",
+      "value": 15
+    },
+    {
+      "type": "money",
+      "paisa": 846000
+    },
+    {
+      "type": "money",
+      "paisa": 54000
+    },
+    {
+      "type": "money",
+      "paisa": 780000
+    },
+    {
+      "type": "number",
+      "value": 5
+    },
+    {
+      "type": "money",
+      "paisa": 260000
+    },
+    {
+      "type": "number",
+      "value": 0
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": -194000
+    }
+  ],
+  "summary": []
+}

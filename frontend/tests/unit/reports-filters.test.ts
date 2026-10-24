@@ -44,6 +44,15 @@ import {
   R9_DUE_REQUEST,
   R9_NOT_A_ONE_TIME_ACCOUNT_REQUEST,
 } from '../helpers/reports-real';
+import {
+  PRINT_R31_BAY_EN_REQUEST,
+  R12_DAY_REQUEST,
+  R29_ALIF_REQUEST,
+  R29_DAY_REQUEST,
+  R31_BAY_REQUEST,
+  R31_PARTNER_REQUIRED_REQUEST,
+  R32_E2E_30B_REQUEST,
+} from '../helpers/reports-business-real';
 
 const PARTY = { id: 20, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '03040001' };
 const entryOf = (id: string) => {
@@ -65,23 +74,24 @@ describe('filtersToWire', () => {
       item_id: null,
       city_id: null,
       adda_id: null,
+      partner_id: null,
       detail: false,
     });
   });
 
   it('is exactly the request the backend wrote for the day book of today', () => {
     const state: ReportFilterState = { ...EMPTY_FILTERS, period: 'today' };
-    expect(filtersToWire(state, entryOf('R11').filters)).toEqual(R11_TODAY_REQUEST.filters);
+    expect(filtersToWire(state, entryOf('R11').filters)).toEqual(wireOf(R11_TODAY_REQUEST));
   });
 
   it('is exactly the request the backend wrote for the as-of day of R18', () => {
     const state: ReportFilterState = { ...EMPTY_FILTERS, asOf: '09-10-2026' };
-    expect(filtersToWire(state, entryOf('R18').filters)).toEqual(R18_AS_OF_REQUEST.filters);
+    expect(filtersToWire(state, entryOf('R18').filters)).toEqual(wireOf(R18_AS_OF_REQUEST));
   });
 
   it('is exactly the request the backend wrote for the ledger of اکرم', () => {
     const state: ReportFilterState = { ...EMPTY_FILTERS, party: PARTY };
-    expect(filtersToWire(state, entryOf('R13').filters)).toEqual(R13_AKRAM_REQUEST.filters);
+    expect(filtersToWire(state, entryOf('R13').filters)).toEqual(wireOf(R13_AKRAM_REQUEST));
   });
 
   it('a shortcut wins over the dates, and the dates are not sent with it', () => {
@@ -129,6 +139,7 @@ describe('filtersToWire', () => {
       item_id: null,
       city_id: null,
       adda_id: null,
+      partner_id: null,
       detail: false,
     });
     // R18 takes only the day.
@@ -160,6 +171,24 @@ describe('canRun and isUnfiltered', () => {
     expect(canRun(EMPTY_FILTERS, entryOf('R14'))).toBe(false);
     expect(canRun({ ...EMPTY_FILTERS, party: PARTY }, entryOf('R13'))).toBe(true);
     expect(canRun(EMPTY_FILTERS, entryOf('R18'))).toBe(true);
+  });
+
+  it('the partner statement needs a partner, not an account (R31); the expense report runs at once', () => {
+    expect(canRun(EMPTY_FILTERS, entryOf('R31'))).toBe(false);
+    // An account in the party box does not stand in for the partner.
+    expect(canRun({ ...EMPTY_FILTERS, party: PARTY }, entryOf('R31'))).toBe(false);
+    expect(canRun({ ...EMPTY_FILTERS, partner: 2 }, entryOf('R31'))).toBe(true);
+    expect(canRun(EMPTY_FILTERS, entryOf('R29'))).toBe(true);
+    expect(canRun(EMPTY_FILTERS, entryOf('R12'))).toBe(true);
+    expect(canRun(EMPTY_FILTERS, entryOf('R32'))).toBe(true);
+  });
+
+  it('a partner counts as a filter to clear for the reports that take the box', () => {
+    const r29 = entryOf('R29').filters;
+    expect(isUnfiltered(EMPTY_FILTERS, r29)).toBe(true);
+    expect(isUnfiltered({ ...EMPTY_FILTERS, partner: 1 }, r29)).toBe(false);
+    // R12 has no partner box: a left-over partner is not a filter there.
+    expect(isUnfiltered({ ...EMPTY_FILTERS, partner: 1 }, entryOf('R12').filters)).toBe(true);
   });
 
   it('only a box the report takes counts as a filter to clear', () => {
@@ -245,9 +274,12 @@ describe('the catalogue', () => {
  * which the backend reads the same way (its default), so null and missing are one thing here.
  */
 function wireOf(request: ReportRunInput): ReportFilters {
-  const { group_by: groupBy, status, ...rest } = request.filters;
+  const { group_by: groupBy, status, partner_id: partnerId, ...rest } = request.filters;
   return {
     ...rest,
+    // The requests the backend wrote before round 7 have no `partner_id`; it reads a missing key as
+    // none, and the screen always sends it (null when the report takes no partner box).
+    partner_id: partnerId ?? null,
     ...(groupBy === undefined || (groupBy as unknown) === null ? {} : { group_by: groupBy }),
     ...(status === undefined || (status as unknown) === null ? {} : { status }),
   };
@@ -286,11 +318,51 @@ describe('the requests the screen builds are the ones the backend wrote (round 4
     );
   });
 
+  it('never sends a partner to a report that has no partner box', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, partner: 2 };
+    expect(filtersToWire(state, entryOf('R11').filters).partner_id).toBeNull();
+    expect(filtersToWire(state, entryOf('R31').filters).partner_id).toBe(2);
+  });
+
   it('never sends the two newer keys to a report that does not take them', () => {
     const state: ReportFilterState = { ...EMPTY_FILTERS, paid: 'due', groupBy: 'day' };
     const wire = filtersToWire(state, entryOf('R11').filters);
     expect(wire).not.toHaveProperty('status');
     expect(wire).not.toHaveProperty('group_by');
+  });
+});
+
+describe('the requests the screen builds are the ones the backend wrote (round 7 reports)', () => {
+  const cases: [string, ReportRunInput, Partial<ReportFilterState>][] = [
+    ['R12 for one day', R12_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R29 for one partner', R29_ALIF_REQUEST, { partner: 1 }],
+    ['R29 for one day, all partners', R29_DAY_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
+    ['R31 for partner ب', R31_BAY_REQUEST, { partner: 2 }],
+    // The screen never asks without a partner (canRun), but the wire for it is the same.
+    ['R31 with no partner', R31_PARTNER_REQUIRED_REQUEST, {}],
+    ['R32 as of one day', R32_E2E_30B_REQUEST, { asOf: '16-10-2026' }],
+  ];
+  it.each(cases)('%s', (_name, request, part) => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, ...part };
+    expect(filtersToWire(state, entryOf(request.id).filters)).toEqual(wireOf(request));
+  });
+
+  it('is exactly the print request of the statement of partner ب', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, partner: 2 };
+    expect(filtersToWire(state, entryOf('R31').filters)).toEqual(PRINT_R31_BAY_EN_REQUEST.filters);
+  });
+
+  it('the address can carry a partner: a whole number above 0, nothing else', () => {
+    expect(parseReportSearch({ partner: '2' })).toEqual({ partner: 2 });
+    expect(parseReportSearch({ partner: 0 })).toEqual({});
+    expect(parseReportSearch({ partner: 'x' })).toEqual({});
+    expect(stateFromSearch({ partner: 2 }).partner).toBe(2);
+    expect(stateFromSearch({}).partner).toBeNull();
+  });
+
+  it('R32 takes its person from the people who can borrow, the others from the accounts', () => {
+    expect(partyBoxOf('R32')).toBe('lent');
+    expect(partyBoxOf('R13')).toBe('any');
   });
 });
 

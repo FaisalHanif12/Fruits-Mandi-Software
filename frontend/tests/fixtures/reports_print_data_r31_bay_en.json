@@ -1,0 +1,355 @@
+{
+  "report": "R31",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r31-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-partner",
+      "value": "Partner B"
+    }
+  ],
+  "printed_at": "11-10-2026 14:00",
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "heading",
+      "title_id": "partners-statement-col-heading",
+      "kind": "label"
+    },
+    {
+      "key": "detail",
+      "title_id": "partners-statement-col-detail",
+      "kind": "message"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    },
+    {
+      "key": "running",
+      "title_id": "partners-statement-col-running",
+      "kind": "money"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "partners-statement-opening",
+      "cell": {
+        "type": "money",
+        "text": "0"
+      }
+    },
+    {
+      "label_id": "partners-statement-plus",
+      "cell": {
+        "type": "money",
+        "text": "51,646"
+      }
+    },
+    {
+      "label_id": "partners-statement-minus",
+      "cell": {
+        "type": "money",
+        "text": "900"
+      }
+    },
+    {
+      "label_id": "partners-statement-closing",
+      "cell": {
+        "type": "money",
+        "text": "50,746"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-bikri"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-income-share",
+          "args": [
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "1,184"
+        },
+        {
+          "type": "money",
+          "text": "1,184"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-bikri"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-income-share",
+          "args": [
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "2"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "text",
+                "text": "2"
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "462"
+        },
+        {
+          "type": "money",
+          "text": "1,646"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-expense"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-expense-share",
+          "args": [
+            {
+              "name": "kind",
+              "value": {
+                "type": "text",
+                "text": "shop_expense"
+              }
+            },
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": "WAPDA"
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": "Electricity"
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "message",
+                "id": "vouchers-number-shop-expense",
+                "args": [
+                  {
+                    "name": "number",
+                    "value": {
+                      "type": "text",
+                      "text": "1"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "-900"
+        },
+        {
+          "type": "money",
+          "text": "746"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "11-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-capital"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-capital-in",
+          "args": [
+            {
+              "name": "kind",
+              "value": {
+                "type": "text",
+                "text": "capital_in"
+              }
+            },
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "message",
+                "id": "vouchers-number-capital-in",
+                "args": [
+                  {
+                    "name": "number",
+                    "value": {
+                      "type": "text",
+                      "text": "1"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "50,000"
+        },
+        {
+          "type": "money",
+          "text": "50,746"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "4",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "50,746"
+    },
+    {
+      "type": "money",
+      "text": "50,746"
+    }
+  ],
+  "words": null,
+  "footer_id": "print-page-label"
+}

@@ -31,6 +31,7 @@ mod model;
 pub(crate) mod print_data;
 mod sales;
 pub mod statement;
+mod vouchers;
 #[doc(hidden)]
 pub mod workings;
 
@@ -92,7 +93,7 @@ pub use model::{
     ArgValue, CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind,
     GroupBy, MessageArg, Names, PaidFilter, PartyFilter, PartyRef, ReportFilters, ReportGroup,
     ReportId, ReportPage, ReportPrintInput, ReportRunInput, ResolvedFilters, Row, RowKind,
-    RowSource, SourceKind, SummaryLine,
+    RowSource, SourceKind, SummaryLine, TripView,
 };
 pub use print_data::{
     PrintArgValue, PrintCell, PrintDetailPart, PrintMessageArg, PrintOptions, PrintReportColumn,
@@ -189,6 +190,12 @@ const SPECS: &[Spec] = &[
         false,
     ),
     spec(
+        ReportId::R10,
+        ReportGroup::Sales,
+        &[FilterKind::DateRange, FilterKind::Seller, FilterKind::Item],
+        false,
+    ),
+    spec(
         ReportId::R11,
         ReportGroup::Accounts,
         &[FilterKind::DateRange, FilterKind::Party],
@@ -213,6 +220,16 @@ const SPECS: &[Spec] = &[
         true,
     ),
     spec(
+        ReportId::R15,
+        ReportGroup::Accounts,
+        &[
+            FilterKind::DateRange,
+            FilterKind::Party,
+            FilterKind::VoucherType,
+        ],
+        false,
+    ),
+    spec(
         ReportId::R16,
         ReportGroup::Accounts,
         &[FilterKind::AsOf, FilterKind::City],
@@ -235,9 +252,21 @@ const SPECS: &[Spec] = &[
     spec(ReportId::R21, ReportGroup::Collections, DUES_FILTERS, false),
     spec(ReportId::R22, ReportGroup::Collections, DUES_FILTERS, false),
     spec(
+        ReportId::R23,
+        ReportGroup::Collections,
+        &[FilterKind::DateRange, FilterKind::Party],
+        false,
+    ),
+    spec(
         ReportId::R24,
         ReportGroup::Collections,
         &[FilterKind::AsOf, FilterKind::Party],
+        false,
+    ),
+    spec(
+        ReportId::R25,
+        ReportGroup::Collections,
+        &[FilterKind::DateRange, FilterKind::Party],
         false,
     ),
     spec(
@@ -285,6 +314,22 @@ const SPECS: &[Spec] = &[
         ReportId::R32,
         ReportGroup::Business,
         &[FilterKind::AsOf, FilterKind::Party],
+        false,
+    ),
+    spec(
+        ReportId::R33,
+        ReportGroup::Business,
+        &[
+            FilterKind::DateRange,
+            FilterKind::Item,
+            FilterKind::TripView,
+        ],
+        false,
+    ),
+    spec(
+        ReportId::R34,
+        ReportGroup::Business,
+        &[FilterKind::DateRange],
         false,
     ),
 ];
@@ -387,6 +432,12 @@ fn build_in(
         ReportId::R29 => business::run_r29(conn, &typed, spec),
         ReportId::R30 => business::run_r30(conn, &typed, spec),
         ReportId::R32 => business::run_r32(conn, &typed, spec),
+        ReportId::R33 => business::run_r33(conn, &typed, spec),
+        ReportId::R34 => business::run_r34(conn, &typed, spec),
+        ReportId::R10 => sales::run_r10(conn, &typed, spec),
+        ReportId::R15 => vouchers::run(conn, &typed, spec, vouchers::Layout::All),
+        ReportId::R23 => vouchers::run(conn, &typed, spec, vouchers::Layout::Receipts),
+        ReportId::R25 => vouchers::run(conn, &typed, spec, vouchers::Layout::Payments),
         // R31 is the statement of a partner: its lines are put together by the services, so the
         // app builds it with `statement_request` and `statement_page` and never comes here.
         ReportId::R31 => Err(ReportsError::Data(

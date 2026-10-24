@@ -14,6 +14,11 @@ export const KNOWN_ACTIONS = [
   'login',
   'login_failed',
   'logout',
+  // The day close and the month close (PRD FR-21.1, FR-21.2, FR-17.6).
+  'day_close',
+  'day_reopen',
+  'month_close',
+  'month_close_reverse',
 ] as const;
 
 /** The areas that have words (audit.ftl `audit-entity-<code>`). */
@@ -27,6 +32,8 @@ export const KNOWN_ENTITIES = [
   'voucher',
   'rule',
   'partner',
+  'day',
+  'month',
 ] as const;
 
 /** The Fluent message ID of a code: `login_failed` is `login-failed`. */

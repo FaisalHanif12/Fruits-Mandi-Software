@@ -119,7 +119,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     it('lists the reports of each group, as the backend sent them, with a line about each', async () => {
       await open('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
-      expect(CATALOG).toHaveLength(22);
+      expect(CATALOG).toHaveLength(26);
       for (const entry of CATALOG) {
         const group = await groupRegion(entry.group_title_id);
         const link = within(group)
@@ -153,6 +153,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
       expect(await idsOf('report-group-sales')).toEqual(['R2', 'R3', 'R4', 'R6', 'R7', 'R8', 'R9']);
       expect(await idsOf('report-group-accounts')).toEqual([
         'R11',
+        'R12',
         'R13',
         'R14',
         'R16',
@@ -168,7 +169,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         'R26',
         'R27',
       ]);
-      expect(await idsOf('report-group-business')).toEqual(['R28', 'R30']);
+      expect(await idsOf('report-group-business')).toEqual(['R28', 'R29', 'R30', 'R31', 'R32']);
     });
 
     it('says so when the list could not be read, and tries again', async () => {
@@ -204,6 +205,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
           item_id: null,
           city_id: null,
           adda_id: null,
+          partner_id: null,
           detail: false,
         },
         offset: 0,
@@ -701,12 +703,12 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     it('the list, a report, a filter, the grid and a row open, then Esc back, without the mouse', async () => {
       const { router, user } = await open('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
-      // The first report (R2, the first of Sales) has focus. ↓ twelve times is R18: the seven
-      // Sales reports, then R11, R13, R14, R16, R17 and R18.
+      // The first report (R2, the first of Sales) has focus. ↓ thirteen times is R18: the seven
+      // Sales reports, then R11, R12, R13, R14, R16, R17 and R18.
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R2$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(12)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(13)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R18');
       }, SLOW_MS);

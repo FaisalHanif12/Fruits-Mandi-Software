@@ -56,7 +56,9 @@ fn the_business_group_is_in_the_catalogue_with_its_filters() {
             ReportId::R29,
             ReportId::R30,
             ReportId::R31,
-            ReportId::R32
+            ReportId::R32,
+            ReportId::R33,
+            ReportId::R34
         ]
     );
     assert_eq!(

@@ -130,7 +130,27 @@ function readFindInput(value: unknown): FindPeopleInput {
   return value as FindPeopleInput;
 }
 
-export const CATALOG = readCatalog(catalog);
+/**
+ * Reports the backend already lists (and has fixtures for) that this build has no screen or words
+ * for yet: round 8 (R10 stock, R15 vouchers, R23 receipts, R25 payments, R33 trips, R34 day summary).
+ * The tests use the reports this build has built, so a report without words never shows its raw
+ * message ID on the reports home. When a round lands, its ids are removed from this list, and the
+ * tests that guard it (the catalogue and the words) start to cover it.
+ */
+export const ROUND_8_PENDING: ReadonlySet<string> = new Set([
+  'R10',
+  'R15',
+  'R23',
+  'R25',
+  'R33',
+  'R34',
+]);
+
+/** The catalogue as the backend sent it, with only the reports this build has built. */
+export const CATALOG = readCatalog(catalog).filter((entry) => !ROUND_8_PENDING.has(entry.id));
+
+/** The whole catalogue the backend sent, built or not (for the guard that nothing slips in). */
+export const BACKEND_CATALOG = readCatalog(catalog);
 
 export const R11_TODAY = readPage(r11Today);
 export const R11_TODAY_REQUEST = readRunInput(r11TodayRequest);

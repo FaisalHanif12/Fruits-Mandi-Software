@@ -1,0 +1,374 @@
+{
+  "id": "R31",
+  "title_id": "report-r31-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": {
+      "ur": "ب",
+      "en": "Partner B"
+    },
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "heading",
+      "title_id": "partners-statement-col-heading",
+      "kind": "label"
+    },
+    {
+      "key": "detail",
+      "title_id": "partners-statement-col-detail",
+      "kind": "message"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    },
+    {
+      "key": "running",
+      "title_id": "partners-statement-col-running",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-bikri"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-income-share",
+          "args": [
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "paisa": 118400
+        },
+        {
+          "type": "money",
+          "paisa": 118400
+        }
+      ],
+      "source": {
+        "kind": "entry",
+        "id": 4
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-bikri"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-income-share",
+          "args": [
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "2"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "text",
+                "text": "2"
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "paisa": 46200
+        },
+        {
+          "type": "money",
+          "paisa": 164600
+        }
+      ],
+      "source": {
+        "kind": "entry",
+        "id": 5
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-expense"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-expense-share",
+          "args": [
+            {
+              "name": "kind",
+              "value": {
+                "type": "text",
+                "text": "shop_expense"
+              }
+            },
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": "WAPDA"
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "names",
+                "names": {
+                  "ur": "بجلی",
+                  "en": "Electricity"
+                }
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "message",
+                "id": "vouchers-number-shop-expense",
+                "args": [
+                  {
+                    "name": "number",
+                    "value": {
+                      "type": "text",
+                      "text": "1"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "paisa": -90000
+        },
+        {
+          "type": "money",
+          "paisa": 74600
+        }
+      ],
+      "source": {
+        "kind": "entry",
+        "id": 8
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-11"
+        },
+        {
+          "type": "label",
+          "id": "partners-statement-heading-capital"
+        },
+        {
+          "type": "message",
+          "id": "partners-statement-detail-capital-in",
+          "args": [
+            {
+              "name": "kind",
+              "value": {
+                "type": "text",
+                "text": "capital_in"
+              }
+            },
+            {
+              "name": "number",
+              "value": {
+                "type": "text",
+                "text": "1"
+              }
+            },
+            {
+              "name": "reason",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "voucher",
+              "value": {
+                "type": "message",
+                "id": "vouchers-number-capital-in",
+                "args": [
+                  {
+                    "name": "number",
+                    "value": {
+                      "type": "text",
+                      "text": "1"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "paisa": 5000000
+        },
+        {
+          "type": "money",
+          "paisa": 5074600
+        }
+      ],
+      "source": {
+        "kind": "entry",
+        "id": 10
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 4,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 5074600
+    },
+    {
+      "type": "money",
+      "paisa": 5074600
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "partners-statement-opening",
+      "cell": {
+        "type": "money",
+        "paisa": 0
+      }
+    },
+    {
+      "label_id": "partners-statement-plus",
+      "cell": {
+        "type": "money",
+        "paisa": 5164600
+      }
+    },
+    {
+      "label_id": "partners-statement-minus",
+      "cell": {
+        "type": "money",
+        "paisa": 90000
+      }
+    },
+    {
+      "label_id": "partners-statement-closing",
+      "cell": {
+        "type": "money",
+        "paisa": 5074600
+      }
+    }
+  ]
+}
