@@ -6,7 +6,7 @@
 //! Nothing here rounds. A user action is one service function in one transaction: the callers
 //! (`trips`, `purchases`) own the transaction and call these helpers inside it.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 
 use mandi_db::accounts as account_repo;
 use mandi_db::rusqlite::Connection;
@@ -16,10 +16,11 @@ use mandi_domain::core::cash::CashCheck;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::ids::{AccountId, PartnerId};
-use mandi_domain::core::money::{Bps, MoneyError, Paisa};
+use mandi_domain::core::money::{BPS_FULL, Bps, MoneyError, Paisa};
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::core::ventures::{
-    EntryPart, EntryPartInput, EntryParts, MoneySource, ShareAmount, VenturePartnerRow,
+    EntryPart, EntryPartInput, EntryParts, MoneySource, ShareAmount, VenturePartnerInput,
+    VenturePartnerRow,
 };
 use mandi_domain::ledger::{BalancedEntry, PostingType, SourceType};
 use mandi_domain::ventures::{
@@ -31,6 +32,7 @@ use crate::context::Context;
 use crate::day;
 use crate::error::{Rejection, ServiceError, money_error};
 use crate::ledger::{self, PostingEvent};
+use serde_json::json;
 
 fn data(message: &str) -> ServiceError {
     ServiceError::Data(message.to_owned())
@@ -167,19 +169,29 @@ pub(crate) fn resolve_sources(
     chosen: &[EntryPartInput],
     errors: &mut FieldErrors,
 ) -> Result<Option<Vec<VenturePartner>>, ServiceError> {
-    let mut by_id: Vec<(i64, MoneySource)> = Vec::with_capacity(venture.partners.len());
+    resolve_sources_of(&venture.partners, chosen, errors)
+}
+
+/// As [`resolve_sources`], for the partners of a venture that is not saved yet (a new garden with
+/// its first installment).
+///
+/// # Errors
+/// `ServiceError::Data` if a stored share, source or account is not valid.
+pub(crate) fn resolve_sources_of(
+    partners: &[PartnerShare],
+    chosen: &[EntryPartInput],
+    errors: &mut FieldErrors,
+) -> Result<Option<Vec<VenturePartner>>, ServiceError> {
+    let mut by_id: Vec<(i64, MoneySource)> = Vec::with_capacity(partners.len());
     if chosen.is_empty() {
-        for p in &venture.partners {
+        for p in partners {
             by_id.push((p.partner_id, stored_source(&p.source)?));
         }
     } else {
         let mut seen = BTreeSet::new();
         let mut ok = true;
         for (index, row) in chosen.iter().enumerate() {
-            let in_venture = venture
-                .partners
-                .iter()
-                .any(|p| p.partner_id == row.partner_id);
+            let in_venture = partners.iter().any(|p| p.partner_id == row.partner_id);
             if !in_venture || !seen.insert(row.partner_id) {
                 errors.push(FieldError::new(
                     ErrorCode::ErrPartnerNotListed,
@@ -189,7 +201,7 @@ pub(crate) fn resolve_sources(
             }
             by_id.push((row.partner_id, row.source));
         }
-        if seen.len() != venture.partners.len() && ok {
+        if seen.len() != partners.len() && ok {
             errors.push(FieldError::new(ErrorCode::ErrPartnerNotListed, "parts"));
             ok = false;
         }
@@ -197,8 +209,8 @@ pub(crate) fn resolve_sources(
             return Ok(None);
         }
     }
-    let mut out = Vec::with_capacity(venture.partners.len());
-    for p in &venture.partners {
+    let mut out = Vec::with_capacity(partners.len());
+    for p in partners {
         let source = by_id
             .iter()
             .find(|(id, _)| *id == p.partner_id)
@@ -215,6 +227,97 @@ pub(crate) fn resolve_sources(
         });
     }
     Ok(Some(out))
+}
+
+/// A partner of a new trip or garden after the checks.
+pub(crate) struct Parsed {
+    /// The partner.
+    pub(crate) partner_id: i64,
+    /// His share.
+    pub(crate) share: Bps,
+    /// His default source.
+    pub(crate) source: MoneySource,
+}
+
+/// Reads the partners of a trip or a garden as typed (PRD FR-12.29): each share with the percent reader, rows with
+/// a share of 0 skipped, every other partner active and listed once, and the shares totalling exactly
+/// 100%. The mistakes go to `errors`, each at its field.
+pub(crate) fn read_partners(
+    conn: &Connection,
+    errors: &mut Vec<FieldError>,
+    rows: &[VenturePartnerInput],
+) -> Result<Vec<Parsed>, ServiceError> {
+    let active: HashSet<i64> = repo::active_partner_ids(conn)?.into_iter().collect();
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::with_capacity(rows.len());
+    let mut total: i64 = 0;
+    for (index, row) in rows.iter().enumerate() {
+        let share = match validate::percent(&format!("partners[{index}].share"), &row.share) {
+            Ok(share) => share,
+            Err(error) => {
+                errors.push(error);
+                continue;
+            }
+        };
+        if share.get() == 0 {
+            continue;
+        }
+        if !active.contains(&row.partner_id) || !seen.insert(row.partner_id) {
+            errors.push(FieldError::new(
+                ErrorCode::ErrPartnerNotListed,
+                &format!("partners[{index}].partner_id"),
+            ));
+            continue;
+        }
+        total = total.saturating_add(i64::from(share.get()));
+        out.push(Parsed {
+            partner_id: row.partner_id,
+            share,
+            source: row.source,
+        });
+    }
+    if total != i64::from(BPS_FULL) {
+        errors.push(
+            FieldError::new(ErrorCode::ErrSharesNot100, "partners")
+                .with("total_bps", ErrorValue::Number(total)),
+        );
+    }
+    out.sort_by_key(|p| p.partner_id);
+    Ok(out)
+}
+
+pub(crate) fn write_partners(
+    tx: &Connection,
+    trip_id: i64,
+    partners: &[Parsed],
+    user_id: i64,
+    now: &str,
+) -> Result<(), ServiceError> {
+    for p in partners {
+        repo::insert_partner(
+            tx,
+            trip_id,
+            p.partner_id,
+            i64::from(p.share.get()),
+            p.source.as_str(),
+            user_id,
+            now,
+        )?;
+    }
+    Ok(())
+}
+
+pub(crate) fn partners_json(partners: &[Parsed]) -> serde_json::Value {
+    json!(
+        partners
+            .iter()
+            .map(|p| json!({
+                "partner_id": p.partner_id,
+                "share_bps": p.share.get(),
+                "source": p.source.as_str(),
+            }))
+            .collect::<Vec<_>>()
+    )
 }
 
 /// The partners as the money functions need them, with every source set to `shop`: for money that
@@ -281,10 +384,20 @@ pub(crate) fn parts_view(
     venture: &Venture,
     parts: &[PaymentPart],
 ) -> Result<EntryParts, ServiceError> {
+    parts_view_of(&venture.partners, parts)
+}
+
+/// As [`parts_view`], for the partners of a venture that is not saved yet.
+///
+/// # Errors
+/// `ServiceError::Data` if a part has no partner row; `ERR_OVERFLOW`.
+pub(crate) fn parts_view_of(
+    partners: &[PartnerShare],
+    parts: &[PaymentPart],
+) -> Result<EntryParts, ServiceError> {
     let mut out = Vec::with_capacity(parts.len());
     for part in parts {
-        let partner = venture
-            .partners
+        let partner = partners
             .iter()
             .find(|p| p.partner_id == part.partner_id.get())
             .ok_or_else(|| data("a part names a partner who is not in the venture"))?;

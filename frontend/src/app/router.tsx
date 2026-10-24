@@ -160,6 +160,32 @@ const stockRoute = createRoute({
   component: lazyRouteComponent(() => import('../features/bikri/pages/StockPage'), 'StockPage'),
 });
 
+// باغات (PRD 12.11, FR-5.2): the gardens list, the form of a new garden (shares first, FR-12.29),
+// and one garden with its type list (FR-7.67). Static `new` wins over the `$id` parameter.
+const gardensRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/gardens',
+  component: lazyRouteComponent(
+    () => import('../features/gardens/pages/GardensPage'),
+    'GardensPage',
+  ),
+});
+
+const gardenNewRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/gardens/new',
+  component: lazyRouteComponent(
+    () => import('../features/gardens/pages/NewGardenPage'),
+    'NewGardenPage',
+  ),
+});
+
+const gardenRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/gardens/$id',
+  component: lazyRouteComponent(() => import('../features/gardens/pages/GardenPage'), 'GardenPage'),
+});
+
 // مارکیٹ سفر (PRD 12.10, FR-5.2): the trips list, the form of a new trip (shares first, FR-12.29),
 // and one trip with its type list (FR-7.67). `/trips/12?purchase=7` shows purchase 7 of trip 12
 // in the card under its list. Static `new` wins over the `$id` parameter in the router.
@@ -452,6 +478,9 @@ const appRoutes = [
   lentRoute,
   khataRoute,
   generalRoute,
+  gardensRoute,
+  gardenNewRoute,
+  gardenRoute,
   tripsRoute,
   tripNewRoute,
   tripRoute,
@@ -487,6 +516,11 @@ const devRoutes = import.meta.env.DEV
         getParentRoute: () => rootRoute,
         path: '/dev/bikri',
         component: lazyRouteComponent(() => import('./dev/BikriPage'), 'BikriPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/gardens',
+        component: lazyRouteComponent(() => import('./dev/GardensPage'), 'GardensPage'),
       }),
       createRoute({
         getParentRoute: () => rootRoute,

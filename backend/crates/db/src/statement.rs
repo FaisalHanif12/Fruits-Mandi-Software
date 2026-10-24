@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{Connection, params, params_from_iter};
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 
 /// The `?` marks for a list of ids.
 fn marks(count: usize) -> String {
@@ -518,6 +518,85 @@ pub fn entry_part_shares(
     for row in rows {
         let (id, share) = row?;
         out.insert(id, share);
+    }
+    Ok(out)
+}
+
+/// The stored figures of a garden's closing as one partner's statement words it (PRD FR-17.10).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GardenCloseFigures {
+    /// Σ of the garden's live installments and costs: the total cost, paisa.
+    pub cost_paisa: i64,
+    /// Σ of the closing's parts, signed: the money the garden brought in, paisa.
+    pub sales_paisa: i64,
+    /// What the partner paid into the garden, from the shop and from his pocket, paisa.
+    pub paid_paisa: i64,
+    /// His share, bps.
+    pub share_bps: i64,
+    /// His part of the closing, signed: his money back, paisa.
+    pub back_paisa: i64,
+}
+
+/// The figures of these closings for one partner, read from stored rows only. A closing the partner
+/// has no part in is left out.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn garden_close_figures(
+    conn: &Connection,
+    partner_id: i64,
+    close_entry_ids: &[i64],
+) -> rusqlite::Result<HashMap<i64, GardenCloseFigures>> {
+    let mut out = HashMap::new();
+    for id in close_entry_ids {
+        let Some((garden_id, share_bps, back)) = conn
+            .query_row(
+                "SELECT x.venture_id, p.share_bps, p.amount_paisa
+                 FROM venture_entries x JOIN venture_entry_parts p ON p.entry_id = x.id
+                 WHERE x.id = ?1 AND x.kind = 'close' AND p.partner_id = ?2",
+                params![id, partner_id],
+                |r| {
+                    Ok((
+                        r.get::<_, i64>(0)?,
+                        r.get::<_, i64>(1)?,
+                        r.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .optional()?
+        else {
+            continue;
+        };
+        let cost: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(amount_paisa), 0) FROM venture_entries
+             WHERE venture_id = ?1 AND status = 'saved' AND kind IN ('installment', 'cost')",
+            [garden_id],
+            |r| r.get(0),
+        )?;
+        let sales: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(amount_paisa), 0) FROM venture_entry_parts WHERE entry_id = ?1",
+            [id],
+            |r| r.get(0),
+        )?;
+        // What he paid is read by the kind of the entry, never by the source alone.
+        let paid: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(p.amount_paisa), 0)
+             FROM venture_entry_parts p JOIN venture_entries x ON x.id = p.entry_id
+             WHERE x.venture_id = ?1 AND x.status = 'saved' AND x.kind IN ('installment', 'cost')
+               AND p.partner_id = ?2",
+            params![garden_id, partner_id],
+            |r| r.get(0),
+        )?;
+        out.insert(
+            *id,
+            GardenCloseFigures {
+                cost_paisa: cost,
+                sales_paisa: sales,
+                paid_paisa: paid,
+                share_bps,
+                back_paisa: back,
+            },
+        );
     }
     Ok(out)
 }

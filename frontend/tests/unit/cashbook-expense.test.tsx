@@ -26,6 +26,7 @@ import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels
 import type { FakeCashbook } from '../helpers/cashbook';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
 import { message, visible } from '../helpers/render';
+import { settlePreview } from '../helpers/preview-settled';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -334,6 +335,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
       expect(pageText()).toContain(message(language, 'common-cash-confirm-title'));
     });
     expect(pageText()).toContain(message(language, 'common-cash-after', { amount: '-2,000' }));
+    await settlePreview();
     press('F10');
     const no = await screen.findByRole('button', {
       name: startsWith(message(language, 'common-cash-confirm-no')),

@@ -1,0 +1,89 @@
+{
+  "row": {
+    "id": 1,
+    "version": 3,
+    "number": 1,
+    "name_ur": "شاہ پور باغ",
+    "name_en": "Shahpur Garden",
+    "account": {
+      "id": 31,
+      "code": "03060001",
+      "name_ur": "شاہ پور باغ",
+      "name_en": "Shahpur Garden"
+    },
+    "entry_date": "2026-10-10",
+    "item": {
+      "id": 1,
+      "code": "1",
+      "name_ur": "کیلا",
+      "name_en": "Banana"
+    },
+    "rent_paisa": 5000000,
+    "season_end_date": null,
+    "note": null,
+    "status": "open",
+    "closed_date": null,
+    "shares_locked": true,
+    "partners": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "share_bps": 6000,
+        "source": "shop"
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "share_bps": 4000,
+        "source": "pocket"
+      }
+    ],
+    "installments_paisa": 5000000,
+    "costs_paisa": 500000,
+    "paid_paisa": 5500000,
+    "paid_shop_paisa": 3300000,
+    "paid_pocket_paisa": 2200000,
+    "rent_due_paisa": 0,
+    "money_in_paisa": 6640000,
+    "other_shop_paisa": 1000000,
+    "balance_paisa": 1140000,
+    "balance_working": {
+      "message_id": "working-garden-balance",
+      "args": [
+        {
+          "name": "money_in",
+          "value": {
+            "kind": "money",
+            "paisa": 6640000
+          }
+        },
+        {
+          "name": "paid",
+          "value": {
+            "kind": "money",
+            "paisa": 5500000
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 1140000
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "account_balance_paisa": 6640000,
+    "last_date": "2026-10-12"
+  },
+  "reversal_entry_id": 9
+}

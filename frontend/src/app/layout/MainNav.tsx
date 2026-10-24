@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Route,
   Settings,
+  Trees,
   Truck,
   Users,
   Wallet,
@@ -24,6 +25,7 @@ export type MainNavId =
   | 'index'
   | 'bikri'
   | 'rokar'
+  | 'gardens'
   | 'trips'
   | 'partners'
   | 'analytics'
@@ -43,7 +45,8 @@ export const MAIN_NAV: readonly NavEntry[] = [
   { id: 'index', labelId: 'layout-nav-index', icon: BookOpen },
   { id: 'bikri', labelId: 'layout-nav-bikri', icon: Truck },
   { id: 'rokar', labelId: 'layout-nav-rokar', icon: Wallet },
-  // مارکیٹ سفر is item 6 of PRD FR-5.2. باغات (item 5) comes in before it with plan 17c.
+  // باغات is item 5 and مارکیٹ سفر item 6 of PRD FR-5.2.
+  { id: 'gardens', labelId: 'layout-nav-gardens', icon: Trees },
   { id: 'trips', labelId: 'layout-nav-trips', icon: Route },
   { id: 'partners', labelId: 'layout-nav-partners', icon: Users },
   { id: 'analytics', labelId: 'layout-nav-analytics', icon: BarChart3 },

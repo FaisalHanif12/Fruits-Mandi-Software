@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-set-partners"
+description = "Enables the gardens_set_partners command without any pre-configured scope."
+commands.allow = ["gardens_set_partners"]
+
+[[permission]]
+identifier = "deny-gardens-set-partners"
+description = "Denies the gardens_set_partners command without any pre-configured scope."
+commands.deny = ["gardens_set_partners"]

@@ -18,8 +18,8 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, bikri, capital, cash, cashbook, drafts, expenses, general, khata, lent, masters,
-    partners, printing, purchases, rules, search, statement, trips, ventures, vouchers,
+    accounts, bikri, capital, cash, cashbook, drafts, expenses, gardens, general, khata, lent,
+    masters, partners, printing, purchases, rules, search, statement, trips, ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -395,6 +395,37 @@ const EXPECTED_FILES: &[&str] = &[
     "OtherSaleSaved.ts",
     "TripEntryCancelInput.ts",
     "TripEntryCancelled.ts",
+    "GardenInput.ts",
+    "GardenSetPartnersInput.ts",
+    "GardenDefaults.ts",
+    "GardenCreatePreview.ts",
+    "GardenCreated.ts",
+    "GardensTotals.ts",
+    "GardensListInput.ts",
+    "GardenRow.ts",
+    "GardensList.ts",
+    "GardenGetInput.ts",
+    "GardenHistoryKind.ts",
+    "GardenHistoryRow.ts",
+    "GardenPartnerResult.ts",
+    "GardenDetail.ts",
+    "GardenSummaryRow.ts",
+    "GardensSummary.ts",
+    "GardenPaymentInput.ts",
+    "GardenOtherSaleInput.ts",
+    "GardenEntryInput.ts",
+    "GardenEntryNumbers.ts",
+    "GardenEntryPreview.ts",
+    "GardenEntrySaved.ts",
+    "GardenEntryCancelInput.ts",
+    "GardenEntryCancelled.ts",
+    "GardenCloseInput.ts",
+    "GardenCloseNumbers.ts",
+    "GardenClosePreview.ts",
+    "GardenClosed.ts",
+    "GardenReopenInput.ts",
+    "GardenReopened.ts",
+    "PartnerVentureCard.ts",
     "LaterSaleInput.ts",
     "LaterSaleSaveInput.ts",
     "LaterSaleSaved.ts",
@@ -739,6 +770,37 @@ fn export_bindings() {
     trips::OtherSaleSaved::export_all(&cfg).unwrap();
     trips::TripEntryCancelInput::export_all(&cfg).unwrap();
     trips::TripEntryCancelled::export_all(&cfg).unwrap();
+    gardens::GardenInput::export_all(&cfg).unwrap();
+    gardens::GardenSetPartnersInput::export_all(&cfg).unwrap();
+    gardens::GardenDefaults::export_all(&cfg).unwrap();
+    gardens::GardenCreatePreview::export_all(&cfg).unwrap();
+    gardens::GardenCreated::export_all(&cfg).unwrap();
+    gardens::GardensTotals::export_all(&cfg).unwrap();
+    gardens::GardensListInput::export_all(&cfg).unwrap();
+    gardens::GardenRow::export_all(&cfg).unwrap();
+    gardens::GardensList::export_all(&cfg).unwrap();
+    gardens::GardenGetInput::export_all(&cfg).unwrap();
+    gardens::GardenHistoryKind::export_all(&cfg).unwrap();
+    gardens::GardenHistoryRow::export_all(&cfg).unwrap();
+    gardens::GardenPartnerResult::export_all(&cfg).unwrap();
+    gardens::GardenDetail::export_all(&cfg).unwrap();
+    gardens::GardenSummaryRow::export_all(&cfg).unwrap();
+    gardens::GardensSummary::export_all(&cfg).unwrap();
+    gardens::GardenPaymentInput::export_all(&cfg).unwrap();
+    gardens::GardenOtherSaleInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryNumbers::export_all(&cfg).unwrap();
+    gardens::GardenEntryPreview::export_all(&cfg).unwrap();
+    gardens::GardenEntrySaved::export_all(&cfg).unwrap();
+    gardens::GardenEntryCancelInput::export_all(&cfg).unwrap();
+    gardens::GardenEntryCancelled::export_all(&cfg).unwrap();
+    gardens::GardenCloseInput::export_all(&cfg).unwrap();
+    gardens::GardenCloseNumbers::export_all(&cfg).unwrap();
+    gardens::GardenClosePreview::export_all(&cfg).unwrap();
+    gardens::GardenClosed::export_all(&cfg).unwrap();
+    gardens::GardenReopenInput::export_all(&cfg).unwrap();
+    gardens::GardenReopened::export_all(&cfg).unwrap();
+    partners::PartnerVentureCard::export_all(&cfg).unwrap();
     bikri::LaterSaleInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaved::export_all(&cfg).unwrap();

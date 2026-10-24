@@ -104,6 +104,18 @@ fn closed_error(day: BusinessDate, field: &str) -> ServiceError {
     }])
 }
 
+/// A بکری with a lot of a closed garden is not cancelled until the closing is undone (PRD FR-12.38):
+/// the closing was worked out with its money.
+///
+/// # Errors
+/// `ERR_GARDEN_CLOSED` on `id`.
+fn refuse_closed_garden(conn: &Connection, bikri_id: i64) -> Result<(), ServiceError> {
+    if mandi_db::gardens::bikri_has_closed_garden_lot(conn, bikri_id)? {
+        return Err(ServiceError::reject_field(ErrorCode::ErrGardenClosed, "id"));
+    }
+    Ok(())
+}
+
 /// What a cancel would do, for the confirm box (PRD FR-7.8). Read only.
 ///
 /// # Errors
@@ -112,6 +124,7 @@ pub fn preview(ctx: &Context, input: &CancelPreviewInput) -> Result<CancelPrevie
     let (closed_up_to, _) = day::window(ctx)?;
     ctx.db.read(|conn| {
         let mut detail = detail_of(conn, input.id, "id")?;
+        refuse_closed_garden(conn, detail.id)?;
         mark_editable(&mut detail, closed_up_to);
         let live = live_postings(conn, detail.id)?;
         let closed = closed_days(&live, closed_up_to);
@@ -279,6 +292,7 @@ pub fn cancel(
                 "id",
             ));
         }
+        refuse_closed_garden(tx, detail.id)?;
         if detail.version != input.version {
             return Err(ServiceError::reject_field(
                 ErrorCode::ErrVersionChanged,
@@ -310,6 +324,7 @@ pub fn cancel(
 pub fn undo(ctx: &Context, actor: &Actor, input: &UndoInput) -> Result<UndoResult, ServiceError> {
     ctx.db.write(|tx| {
         let detail = detail_of(tx, input.id, "id")?;
+        refuse_closed_garden(tx, detail.id)?;
         // The values to give back are those of the first posting.
         let first = edit_repo::postings_in_force(tx, detail.id)?
             .into_iter()

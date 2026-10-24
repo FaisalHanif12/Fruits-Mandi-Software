@@ -1,0 +1,85 @@
+[
+  {
+    "partner_id": 1,
+    "name_ur": "الف",
+    "name_en": "Partner A",
+    "share_bps": 4000,
+    "today_income_paisa": 320000,
+    "month_income_paisa": 320000,
+    "year_income_paisa": 320000,
+    "month_expense_paisa": 0,
+    "month_profit_paisa": 320000,
+    "month_taken_paisa": 0,
+    "capital_balance_paisa": 0,
+    "month_returned_paisa": 0,
+    "month_net_paisa": 320000,
+    "month_capital_in_paisa": 0,
+    "month_ventures_paisa": -3300000,
+    "total_paisa": -2980000,
+    "open_ventures": [
+      {
+        "venture_id": 1,
+        "kind": "garden",
+        "number": 1,
+        "name_ur": "شاہ پور باغ",
+        "name_en": "Shahpur Garden",
+        "share_bps": 6000,
+        "paid_shop_paisa": 3300000,
+        "paid_pocket_paisa": 0,
+        "money_back_paisa": 0,
+        "balance_paisa": 1140000
+      }
+    ]
+  },
+  {
+    "partner_id": 2,
+    "name_ur": "ب",
+    "name_en": "Partner B",
+    "share_bps": 3000,
+    "today_income_paisa": 240000,
+    "month_income_paisa": 240000,
+    "year_income_paisa": 240000,
+    "month_expense_paisa": 0,
+    "month_profit_paisa": 240000,
+    "month_taken_paisa": 0,
+    "capital_balance_paisa": 0,
+    "month_returned_paisa": 0,
+    "month_net_paisa": 240000,
+    "month_capital_in_paisa": 0,
+    "month_ventures_paisa": 0,
+    "total_paisa": 240000,
+    "open_ventures": [
+      {
+        "venture_id": 1,
+        "kind": "garden",
+        "number": 1,
+        "name_ur": "شاہ پور باغ",
+        "name_en": "Shahpur Garden",
+        "share_bps": 4000,
+        "paid_shop_paisa": 0,
+        "paid_pocket_paisa": 2200000,
+        "money_back_paisa": 0,
+        "balance_paisa": 1140000
+      }
+    ]
+  },
+  {
+    "partner_id": 3,
+    "name_ur": "ج",
+    "name_en": "Partner C",
+    "share_bps": 3000,
+    "today_income_paisa": 240000,
+    "month_income_paisa": 240000,
+    "year_income_paisa": 240000,
+    "month_expense_paisa": 0,
+    "month_profit_paisa": 240000,
+    "month_taken_paisa": 0,
+    "capital_balance_paisa": 0,
+    "month_returned_paisa": 0,
+    "month_net_paisa": 240000,
+    "month_capital_in_paisa": 0,
+    "month_ventures_paisa": 0,
+    "total_paisa": 240000,
+    "open_ventures": []
+  }
+]

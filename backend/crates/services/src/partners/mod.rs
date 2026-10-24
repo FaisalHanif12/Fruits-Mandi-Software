@@ -772,6 +772,12 @@ pub fn overview(ctx: &Context) -> Result<Vec<PartnerOverviewRow>, ServiceError> 
                 month_capital_in_paisa: month_capital_in,
                 month_ventures_paisa: month_ventures,
                 total_paisa: total,
+                // The open gardens and trips under his card (PRD 17.3): gardens first, then trips.
+                open_ventures: {
+                    let mut cards = crate::gardens::cards_of_partner(conn, id)?;
+                    cards.extend(crate::trips::cards_of_partner(conn, id)?);
+                    cards
+                },
             });
         }
         Ok(out)

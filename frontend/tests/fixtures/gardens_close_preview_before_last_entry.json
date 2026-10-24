@@ -1,0 +1,14 @@
+{
+  "numbers": null,
+  "earliest_date": "2026-10-12",
+  "errors": [
+    {
+      "code": "ERR_CLOSE_BEFORE_LAST_ENTRY",
+      "field": "date",
+      "values": {
+        "last_date": "2026-10-12"
+      }
+    }
+  ],
+  "warnings": []
+}

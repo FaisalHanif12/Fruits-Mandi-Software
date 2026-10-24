@@ -1,0 +1,89 @@
+{
+  "partner": {
+    "id": 1,
+    "code": "",
+    "name_ur": "الف",
+    "name_en": "Partner A"
+  },
+  "opening_total_paisa": 0,
+  "closing_total_paisa": 1004000,
+  "lines": [
+    {
+      "entry_date": "2026-10-10",
+      "heading": "garden",
+      "detail": "garden_paid",
+      "entry_id": 3,
+      "number": 1,
+      "secondary_number": 1,
+      "subject": null,
+      "reason": "first installment",
+      "amount_paisa": -1800000,
+      "running_paisa": -1800000,
+      "values": {}
+    },
+    {
+      "entry_date": "2026-10-11",
+      "heading": "garden",
+      "detail": "garden_paid",
+      "entry_id": 4,
+      "number": 1,
+      "secondary_number": 2,
+      "subject": null,
+      "reason": "second installment",
+      "amount_paisa": -1200000,
+      "running_paisa": -3000000,
+      "values": {}
+    },
+    {
+      "entry_date": "2026-10-11",
+      "heading": "garden",
+      "detail": "garden_paid",
+      "entry_id": 5,
+      "number": 1,
+      "secondary_number": 1,
+      "subject": null,
+      "reason": "labour",
+      "amount_paisa": -300000,
+      "running_paisa": -3300000,
+      "values": {}
+    },
+    {
+      "entry_date": "2026-10-12",
+      "heading": "bikri",
+      "detail": "income_share",
+      "entry_id": 6,
+      "number": 1,
+      "secondary_number": null,
+      "subject": null,
+      "reason": "",
+      "amount_paisa": 320000,
+      "running_paisa": -2980000,
+      "values": {}
+    },
+    {
+      "entry_date": "2026-10-13",
+      "heading": "garden",
+      "detail": "garden_closed",
+      "entry_id": 8,
+      "number": 1,
+      "secondary_number": null,
+      "subject": null,
+      "reason": "",
+      "amount_paisa": 3984000,
+      "running_paisa": 1004000,
+      "values": {
+        "back_paisa": 3984000,
+        "cost_paisa": 5500000,
+        "part_paisa": 684000,
+        "result_paisa": 1140000,
+        "sales_paisa": 6640000,
+        "share_bps": 6000
+      }
+    }
+  ],
+  "total_count": 5,
+  "totals": {
+    "plus_paisa": 4304000,
+    "minus_paisa": 3300000
+  }
+}

@@ -429,3 +429,25 @@ err-general-too-few-lines = A { -general } entry needs at least two lines.
 # PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
 # review: pending
 err-capital-exceeds-balance = This is more than the partner's { -sarmaya } balance of { $balance }, by { $over }. You can still save it.
+
+## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
+
+# PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
+# review: pending
+err-garden-closed = This { -bagh } is closed, so it takes no new entry, no lot and no fruit. Undo its closing first.
+
+# PRD FR-12.38. The garden is open, so there is no closing to undo.
+# review: pending
+err-garden-not-closed = This { -bagh } is open, so there is no closing to undo.
+
+# PRD FR-12.34. $garden_date: the day of the garden.
+# review: pending
+err-date-before-garden = The day is before the day of the { -bagh } ({ $garden_date }). Choose the day of the garden or a later day.
+
+# Plan 17c. $last_date: the day of the latest entry or lot of the garden.
+# review: pending
+err-close-before-last-entry = The { -bagh } cannot be closed before its latest entry or lot ({ $last_date }). Choose that day or a later day.
+
+# Plan 17c. The entry of the garden was cancelled already.
+# review: pending
+err-garden-entry-cancelled = This entry of the { -bagh } is cancelled already.

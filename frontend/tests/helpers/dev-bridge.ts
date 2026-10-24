@@ -27,6 +27,7 @@ import {
   costEntry,
 } from './trips-data';
 import { printingSettings } from './print-settings';
+import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
@@ -682,8 +683,13 @@ export function installDevBridge(): void {
     configurable: true,
     value: {
       invoke: (command: string, args: unknown): Promise<unknown> => {
-        // The page of the روکڑ area answers its own commands first (dev-bridge-rokar.ts).
-        const handler = (isRokarPage() ? rokarHandlers[command] : undefined) ?? handlers[command];
+        // The pages of the روکڑ area and of the gardens answer their own commands first.
+        const own = isRokarPage()
+          ? rokarHandlers[command]
+          : isGardensPage()
+            ? gardensHandlers[command]
+            : undefined;
+        const handler = own ?? handlers[command];
         // The delay is the answer time of a real command, so the screen's waiting looks real.
         return new Promise((resolve, reject) => {
           window.setTimeout(() => {

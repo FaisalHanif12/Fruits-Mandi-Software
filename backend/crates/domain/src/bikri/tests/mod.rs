@@ -93,6 +93,7 @@ fn account(kind: PartyKind) -> AccountFacts {
         is_pukhta: false,
         is_naqdi_mandi: false,
         is_own_goods: false,
+        garden_closed: false,
         is_active: true,
         credit_allowed: true,
         credit_limit: None,
@@ -133,6 +134,7 @@ pub fn lookups() -> Lookups {
             OWN_GOODS,
             AccountFacts {
                 is_own_goods: true,
+                garden_closed: false,
                 ..seller()
             },
         ),

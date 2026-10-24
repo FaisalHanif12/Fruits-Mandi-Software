@@ -22,7 +22,7 @@ use mandi_services::{partners, purchases, trips};
 
 use super::*;
 
-fn shop(partner_id: i64, share: &str) -> VenturePartnerInput {
+pub(super) fn shop(partner_id: i64, share: &str) -> VenturePartnerInput {
     VenturePartnerInput {
         partner_id,
         share: share.into(),
@@ -30,7 +30,7 @@ fn shop(partner_id: i64, share: &str) -> VenturePartnerInput {
     }
 }
 
-fn pocket(partner_id: i64, share: &str) -> VenturePartnerInput {
+pub(super) fn pocket(partner_id: i64, share: &str) -> VenturePartnerInput {
     VenturePartnerInput {
         partner_id,
         share: share.into(),
@@ -133,7 +133,7 @@ fn shares_by_kind(w: &support::World, entry_id: i64, kind: &str) -> Vec<i64> {
         .collect()
 }
 
-fn venture_account(w: &support::World, partner_id: i64) -> i64 {
+pub(super) fn venture_account(w: &support::World, partner_id: i64) -> i64 {
     partners::get(&w.env.ctx, partner_id)
         .unwrap()
         .row
@@ -148,7 +148,7 @@ fn venture_code(w: &support::World, partner_id: i64) -> String {
 }
 
 /// Σ credit − Σ debit of an account, in rupees.
-fn credit_balance(w: &support::World, account_id: i64) -> i64 {
+pub(super) fn credit_balance(w: &support::World, account_id: i64) -> i64 {
     let (dr, cr): (i64, i64) = raw(&w.dir)
         .query_row(
             "SELECT COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0) FROM journal_lines
@@ -162,7 +162,7 @@ fn credit_balance(w: &support::World, account_id: i64) -> i64 {
 
 /// What a partner has from commission and trips so far (PRD C22, without capital and drawings):
 /// his income and expense shares plus his gardens, trips and fruit account.
-fn partner_total(w: &support::World, index: usize) -> i64 {
+pub(super) fn partner_total(w: &support::World, index: usize) -> i64 {
     let partner = w.partners[index];
     let shares = scalar(
         w,
@@ -174,7 +174,7 @@ fn partner_total(w: &support::World, index: usize) -> i64 {
     shares + credit_balance(w, venture_account(w, partner))
 }
 
-fn totals_of_three(w: &support::World) -> Vec<i64> {
+pub(super) fn totals_of_three(w: &support::World) -> Vec<i64> {
     (0..3).map(|i| partner_total(w, i)).collect()
 }
 
@@ -182,7 +182,7 @@ fn totals_of_three(w: &support::World) -> Vec<i64> {
 /// income (04), expense (05) and capital (06) account, which holds the partners' capital, drawings,
 /// and gardens, trips and fruit accounts. It does not use the share rows, so it is a separate proof
 /// of the partner totals.
-fn equity(w: &support::World) -> i64 {
+pub(super) fn equity(w: &support::World) -> i64 {
     scalar(
         w,
         "SELECT COALESCE(SUM(l.cr_paisa - l.dr_paisa), 0) / 100 FROM journal_lines l
@@ -192,14 +192,14 @@ fn equity(w: &support::World) -> i64 {
 }
 
 /// Σ of the partners' totals + the firm's opening capital 65,000 is the equity in the books.
-fn assert_equity_is_the_partner_totals(w: &support::World, expected: i64) {
+pub(super) fn assert_equity_is_the_partner_totals(w: &support::World, expected: i64) {
     let sum: i64 = totals_of_three(w).iter().sum();
     assert_eq!(sum + 65_000, expected, "the partner totals add up");
     assert_eq!(equity(w), expected, "the equity worked out from the books");
 }
 
 /// The trial balance totals in rupees. The books balance: both sides are equal.
-fn trial(w: &support::World) -> i64 {
+pub(super) fn trial(w: &support::World) -> i64 {
     let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
     assert_eq!(trial.total_dr, trial.total_cr, "the books balance");
     trial.total_dr.rupees()
@@ -294,7 +294,7 @@ fn line_costs(w: &support::World) -> Vec<i64> {
         .collect()
 }
 
-fn cash_balance(w: &support::World) -> i64 {
+pub(super) fn cash_balance(w: &support::World) -> i64 {
     balance(w, support::id_of(&w.env, "01010001")).1
 }
 

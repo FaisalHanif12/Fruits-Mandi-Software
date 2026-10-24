@@ -1,0 +1,184 @@
+{
+  "row": {
+    "id": 1,
+    "version": 1,
+    "number": 1,
+    "name_ur": "شاہ پور باغ",
+    "name_en": "Shahpur Garden",
+    "account": {
+      "id": 31,
+      "code": "03060001",
+      "name_ur": "شاہ پور باغ",
+      "name_en": "Shahpur Garden"
+    },
+    "entry_date": "2026-10-10",
+    "item": {
+      "id": 1,
+      "code": "1",
+      "name_ur": "کیلا",
+      "name_en": "Banana"
+    },
+    "rent_paisa": 5000000,
+    "season_end_date": null,
+    "note": null,
+    "status": "open",
+    "closed_date": null,
+    "shares_locked": true,
+    "partners": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "share_bps": 6000,
+        "source": "shop"
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "share_bps": 4000,
+        "source": "pocket"
+      }
+    ],
+    "installments_paisa": 3000000,
+    "costs_paisa": 0,
+    "paid_paisa": 3000000,
+    "paid_shop_paisa": 1800000,
+    "paid_pocket_paisa": 1200000,
+    "rent_due_paisa": 2000000,
+    "money_in_paisa": 0,
+    "other_shop_paisa": 0,
+    "balance_paisa": -3000000,
+    "balance_working": {
+      "message_id": "working-garden-balance",
+      "args": [
+        {
+          "name": "money_in",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        },
+        {
+          "name": "paid",
+          "value": {
+            "kind": "money",
+            "paisa": 3000000
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": -3000000
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "account_balance_paisa": 0,
+    "last_date": "2026-10-10"
+  },
+  "first_entry_id": 1,
+  "journal_entry_id": 3,
+  "preview": {
+    "first_installment": {
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "share_bps": 6000,
+          "source": "shop",
+          "amount_paisa": 1800000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 3000000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 6000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1800000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "share_bps": 4000,
+          "source": "pocket",
+          "amount_paisa": 1200000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 3000000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 4000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1200000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      ],
+      "shop_total_paisa": 1800000,
+      "pocket_total_paisa": 1200000
+    },
+    "cash": {
+      "cash_before_paisa": 5000000,
+      "change_paisa": -1800000,
+      "cash_after_paisa": 3200000,
+      "below_zero": false,
+      "lowers_cash": true,
+      "needs_confirm": false
+    },
+    "errors": [],
+    "warnings": []
+  }
+}

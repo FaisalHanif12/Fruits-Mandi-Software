@@ -377,5 +377,45 @@ partners-statement-detail-trip-write-off = { -market-safar } { $trip }: سفر �
 # review: pending
 partners-statement-detail-trip-closed = { -market-safar } { $trip } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد، آپ کا { -khalis } { $net }
 
+# A garden's line in a partner's statement (PRD FR-17.10, plan 17c).
+# review: pending
+partners-statement-heading-garden = { -bagh }
+
+# $garden: the garden number; $reason: why it was paid, as typed.
+# review: pending
+partners-statement-detail-garden-paid = { $garden }: { $reason }، { -dukan-se }
+
+# $garden: the garden number; $cost, $sales, $result: the garden's figures; $share: his %; $part: his part of the result; $back: his money back.
+# review: pending
+partners-statement-detail-garden-closed = { $garden } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }، { -wapsi } { $back }
+
 # review: pending
 partners-statement-detail-other = { $reason }
+
+## The open gardens and trips under a partner's card (PRD 17.3, plan 17c).
+
+# review: pending
+partners-ventures-title = کھلے { -bagh } / { -safar }
+
+# $name: the partner's name.
+# review: pending
+partners-ventures-label = { $name } کے کھلے { -bagh } / { -safar }
+
+# review: pending
+partners-ventures-col-venture = { -bagh } / { -safar }
+
+# review: pending
+partners-ventures-col-kind = قسم
+
+# review: pending
+partners-ventures-col-shop = دکان سے ادا
+
+# review: pending
+partners-ventures-col-pocket = اپنی جیب سے ادا
+
+# review: pending
+partners-ventures-col-back = واپس ملنے والی رقم
+
+# The running balance of a garden, or the result of a trip.
+# review: pending
+partners-ventures-col-balance = چلتا حساب یا نتیجہ

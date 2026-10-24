@@ -715,7 +715,11 @@ pub fn search_sources(
                 TRIM(COALESCE(a.father_or_firm_ur, '') || ' ' || COALESCE(a.father_or_firm_en, '') || ' ' ||
                      COALESCE(ci.name_ur, '') || ' ' || COALESCE(ci.name_en, '') || ' ' ||
                      COALESCE(a.phone1, '') || ' ' || COALESCE(a.phone2, '')),
-                a.search_ur, a.search_en, a.search_phonetic, a.is_active, {TYPE_SQL}, a.control_id
+                a.search_ur, a.search_en, a.search_phonetic,
+                -- The account of a closed garden is offered in no picker and no search (PRD FR-12.38).
+                (a.is_active = 1 AND NOT EXISTS (SELECT 1 FROM ventures g WHERE g.account_id = a.id
+                                                 AND g.kind = 'garden' AND g.status = 'closed')),
+                {TYPE_SQL}, a.control_id
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id

@@ -62,6 +62,15 @@ fn is_khata(source: &SearchSource) -> bool {
             .starts_with(mandi_domain::core::accounts::KHATA_CONTROL)
 }
 
+/// True for the account of a garden: under control 0306, of type "other" (PRD FR-12.34). The
+/// account of a closed garden is not in the index at all (its source is inactive).
+fn is_garden(source: &SearchSource) -> bool {
+    source.account_type == Some(AccountType::Other)
+        && source
+            .code
+            .starts_with(mandi_domain::core::accounts::GARDEN_CONTROL_CODE)
+}
+
 /// The serial of a seller or buyer code: its last four digits.
 fn serial_of(code: &str) -> Option<u32> {
     let digits = code.get(code.len().checked_sub(4)?..)?;
@@ -198,8 +207,9 @@ impl Index {
             if kind == SearchScope::Seller {
                 self.lot_sellers.push(entry);
             }
-        } else if is_khata(&source) {
-            // A separate khata can be the seller of a lot (PRD 12.3, FR-16.7).
+        } else if is_khata(&source) || is_garden(&source) {
+            // A separate khata and an open garden can be the seller of a lot (PRD 12.3, FR-16.7,
+            // FR-12.36).
             self.lot_sellers
                 .push(Arc::new(Entry::from_source(kind, source)));
         }

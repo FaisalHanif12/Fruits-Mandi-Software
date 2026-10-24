@@ -1,0 +1,103 @@
+{
+  "row": {
+    "id": 1,
+    "version": 1,
+    "number": 1,
+    "name_ur": "شاہ پور باغ",
+    "name_en": "Shahpur Garden",
+    "account": {
+      "id": 31,
+      "code": "03060001",
+      "name_ur": "شاہ پور باغ",
+      "name_en": "Shahpur Garden"
+    },
+    "entry_date": "2026-10-10",
+    "item": {
+      "id": 1,
+      "code": "1",
+      "name_ur": "کیلا",
+      "name_en": "Banana"
+    },
+    "rent_paisa": 5000000,
+    "season_end_date": null,
+    "note": null,
+    "status": "open",
+    "closed_date": null,
+    "shares_locked": false,
+    "partners": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "share_bps": 6000,
+        "source": "shop"
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "share_bps": 4000,
+        "source": "pocket"
+      }
+    ],
+    "installments_paisa": 0,
+    "costs_paisa": 0,
+    "paid_paisa": 0,
+    "paid_shop_paisa": 0,
+    "paid_pocket_paisa": 0,
+    "rent_due_paisa": 5000000,
+    "money_in_paisa": 0,
+    "other_shop_paisa": 0,
+    "balance_paisa": 0,
+    "balance_working": {
+      "message_id": "working-garden-balance",
+      "args": [
+        {
+          "name": "money_in",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        },
+        {
+          "name": "paid",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "account_balance_paisa": 0,
+    "last_date": "2026-10-10"
+  },
+  "first_entry_id": null,
+  "journal_entry_id": null,
+  "preview": {
+    "first_installment": null,
+    "cash": {
+      "cash_before_paisa": 5000000,
+      "change_paisa": 0,
+      "cash_after_paisa": 5000000,
+      "below_zero": false,
+      "lowers_cash": false,
+      "needs_confirm": false
+    },
+    "errors": [],
+    "warnings": []
+  }
+}

@@ -444,6 +444,55 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
             true,
         ),
+        ("gardens_defaults", json!({}), true),
+        (
+            "gardens_create_preview",
+            json!({ "input": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_create",
+            json!({ "input": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_set_partners",
+            json!({ "input": { "id": 1, "version": 1, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] } }),
+            true,
+        ),
+        ("gardens_list", json!({ "input": {} }), true),
+        ("gardens_get", json!({ "input": { "id": 1 } }), true),
+        ("gardens_summary", json!({}), true),
+        (
+            "gardens_entry_preview",
+            json!({ "input": { "type": "installment", "garden_id": 1, "date": "10-10-2026", "amount": "30,000", "reason": "x", "parts": [], "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_entry_save",
+            json!({ "input": { "type": "other_sale", "garden_id": 1, "date": "10-10-2026", "shop": null, "qty": "20", "amount": "10,000", "note": null } }),
+            true,
+        ),
+        (
+            "gardens_entry_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "confirm_cash_below_zero": false } }),
+            true,
+        ),
+        (
+            "gardens_close_preview",
+            json!({ "input": { "id": 1, "version": 1, "date": "13-10-2026" } }),
+            true,
+        ),
+        (
+            "gardens_close",
+            json!({ "input": { "id": 1, "version": 1, "date": "13-10-2026" } }),
+            true,
+        ),
+        (
+            "gardens_reopen",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
         (
             "vouchers_save_advance",
             json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "expected_goods": "", "narration": "" } }),

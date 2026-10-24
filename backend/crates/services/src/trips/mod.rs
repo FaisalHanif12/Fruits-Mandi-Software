@@ -17,6 +17,8 @@ mod make;
 mod read;
 mod sale;
 
+pub(crate) use read::cards_of_partner;
+
 use mandi_domain::core::trips::{
     OtherSaleInput, OtherSalePreview, OtherSaleSaved, TripCostInput, TripCostPreview,
     TripCostSaved, TripDefaults, TripDetail, TripEntryCancelInput, TripEntryCancelled,

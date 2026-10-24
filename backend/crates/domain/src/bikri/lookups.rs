@@ -22,6 +22,10 @@ pub enum PartyKind {
     /// A separate khata (control 0305, PRD FR-16.7). It is accepted only as the seller of a lot,
     /// and every seller-side default is 0 for such a lot.
     Khata,
+    /// A garden's own account (control 0306, PRD FR-12.36). It is accepted only as the seller of a
+    /// lot, and only while the garden is open (`ERR_GARDEN_CLOSED`). The normal seller-side defaults
+    /// apply, and the lot has no نقد.
+    Garden,
     /// Any other account.
     Other,
 }
@@ -38,6 +42,8 @@ pub struct AccountFacts {
     /// True for the اپنا مال account (PRD FR-12.26). It is accepted only as the seller of a lot
     /// with a purchase; anywhere else it is refused with `ERR_OWN_GOODS_ACCOUNT_RESTRICTED`.
     pub is_own_goods: bool,
+    /// True for the account of a closed garden (PRD FR-12.38): it takes no lot and no later sale.
+    pub garden_closed: bool,
     /// False when hidden from pickers: a new posting cannot use it (PRD FR-10.2).
     pub is_active: bool,
     /// False means cash only (PRD 10.2 "ادھار کی اجازت").

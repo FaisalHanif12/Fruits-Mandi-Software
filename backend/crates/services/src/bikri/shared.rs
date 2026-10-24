@@ -16,7 +16,7 @@ use mandi_domain::bikri::{
 };
 use mandi_domain::cash;
 use mandi_domain::core::accounts::{
-    BUYER_CONTROL, KHATA_CONTROL, NAQDI_MANDI_CODE, SELLER_CONTROL,
+    BUYER_CONTROL, GARDEN_CONTROL_CODE, KHATA_CONTROL, NAQDI_MANDI_CODE, SELLER_CONTROL,
 };
 use mandi_domain::core::bikri::{BikriPreview, PreparedDraft, SplitPart};
 use mandi_domain::core::cash::CashCheck;
@@ -286,8 +286,12 @@ fn load_lookups(
             SELLER_CONTROL => PartyKind::Seller,
             BUYER_CONTROL => PartyKind::Buyer,
             KHATA_CONTROL => PartyKind::Khata,
+            GARDEN_CONTROL_CODE => PartyKind::Garden,
             _ => PartyKind::Other,
         };
+        // A garden takes lots only while it is open (PRD FR-12.38).
+        let garden_closed =
+            kind == PartyKind::Garden && mandi_db::gardens::account_is_closed(conn, a.id)?;
         accounts.insert(
             a.id,
             AccountFacts {
@@ -295,6 +299,7 @@ fn load_lookups(
                 is_pukhta: a.is_pukhta_khata,
                 is_naqdi_mandi: a.code == NAQDI_MANDI_CODE,
                 is_own_goods: a.code == OWN_GOODS_CODE,
+                garden_closed,
                 is_active: a.is_active,
                 credit_allowed: a.credit_allowed,
                 credit_limit: a.credit_limit_paisa.map(paisa).transpose()?,

@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_SHARES_NOT_100",
+      "field": "partners",
+      "values": {
+        "total_bps": 8000
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

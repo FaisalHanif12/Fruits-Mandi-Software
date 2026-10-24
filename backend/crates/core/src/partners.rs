@@ -14,6 +14,7 @@ use crate::error::{ErrorCode, ErrorValue, FieldError};
 use crate::masters::AccountToMake;
 use crate::money::{BPS_FULL, Bps, Paisa, parse_bps};
 use crate::text;
+use crate::ventures::VentureKind;
 
 /// The most partners the firm can have (NFR-SCL-5).
 pub const MAX_PARTNERS: usize = 10;
@@ -184,6 +185,40 @@ pub struct SharesCheck {
     pub errors: Vec<LineError>,
 }
 
+/// An open garden or trip the partner is in, shown under his card (PRD 17.3, Umar 18-10-2026): his
+/// %, his money in so far (from the shop and from his pocket), his money back so far, and the
+/// running balance of the garden or the result of the trip.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartnerVentureCard {
+    /// The garden or the trip (`ventures.id`).
+    #[ts(type = "number")]
+    pub venture_id: i64,
+    /// A garden or a trip. `gardens_get` or `trips_get` opens it.
+    pub kind: VentureKind,
+    /// Its number (باغ-1, GDN-1, سفر-1, TRP-1).
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// His share in it, in bps.
+    pub share_bps: i32,
+    /// What he paid from the shop's cash so far.
+    #[ts(type = "Paisa")]
+    pub paid_shop_paisa: Paisa,
+    /// What he paid from his own pocket so far.
+    #[ts(type = "Paisa")]
+    pub paid_pocket_paisa: Paisa,
+    /// What he got back so far: his parts of a trip's seller credits and other-shop money (C25).
+    /// 0 for a garden, which pays its partners only when it is closed (C26).
+    #[ts(type = "Paisa")]
+    pub money_back_paisa: Paisa,
+    /// A garden's running balance (FR-12.37), or a trip's result so far (FR-12.27). Signed.
+    #[ts(type = "Paisa")]
+    pub balance_paisa: Paisa,
+}
+
 /// One partner on the overview (PRD 17.3). The returned, خالص, capital invested, ventures and
 /// کل رقم columns are new in plan 17; in T1 they are 0 and T2b fills them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -238,6 +273,9 @@ pub struct PartnerOverviewRow {
     /// His کل رقم now (PRD C22, FR-17.9): everything he has in the firm. Can be negative.
     #[ts(type = "Paisa")]
     pub total_paisa: Paisa,
+    /// The open gardens and trips he is in, with his %, his money in and back and the running
+    /// balance or result of each (plan 17c). Gardens first, then trips, by number. Empty if none.
+    pub open_ventures: Vec<PartnerVentureCard>,
 }
 
 /// The shares as typed, read one by one (PRD FR-17.1). Rows that cannot be read are left out of

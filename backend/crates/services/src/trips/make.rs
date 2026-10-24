@@ -2,17 +2,12 @@
 //! partners and their shares first, then the money source of each, then the details. One action is
 //! one transaction with its audit row (Code Standards B3, S7).
 
-use std::collections::{BTreeSet, HashSet};
-
-use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as repo, NewVenture};
 use mandi_domain::core::dates::format_ddmmyyyy;
-use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
-use mandi_domain::core::money::{BPS_FULL, Bps};
+use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::text;
 use mandi_domain::core::trips::{TripInput, TripRow, TripSetPartnersInput};
 use mandi_domain::core::validate::{self, FieldErrors};
-use mandi_domain::core::ventures::{MoneySource, VenturePartnerInput};
 use serde_json::json;
 
 use super::read::row_by_id;
@@ -21,14 +16,7 @@ use crate::auth::Actor;
 use crate::context::Context;
 use crate::day;
 use crate::error::ServiceError;
-use crate::ventures::not_found;
-
-/// A partner of a new trip after the checks.
-struct Parsed {
-    partner_id: i64,
-    share: Bps,
-    source: MoneySource,
-}
+use crate::ventures::{not_found, partners_json, read_partners, write_partners};
 
 /// An optional free text: empty is none.
 fn optional_text(errors: &mut FieldErrors, field: &str, text: Option<&str>) -> Option<String> {
@@ -36,87 +24,6 @@ fn optional_text(errors: &mut FieldErrors, field: &str, text: Option<&str>) -> O
     errors
         .take(validate::free_text(field, text))
         .filter(|t| !t.is_empty())
-}
-
-/// Reads the partners of a trip as typed (PRD FR-12.29): each share with the percent reader, rows with
-/// a share of 0 skipped, every other partner active and listed once, and the shares totalling exactly
-/// 100%. The mistakes go to `errors`, each at its field.
-fn read_partners(
-    conn: &Connection,
-    errors: &mut Vec<FieldError>,
-    rows: &[VenturePartnerInput],
-) -> Result<Vec<Parsed>, ServiceError> {
-    let active: HashSet<i64> = repo::active_partner_ids(conn)?.into_iter().collect();
-    let mut seen = BTreeSet::new();
-    let mut out = Vec::with_capacity(rows.len());
-    let mut total: i64 = 0;
-    for (index, row) in rows.iter().enumerate() {
-        let share = match validate::percent(&format!("partners[{index}].share"), &row.share) {
-            Ok(share) => share,
-            Err(error) => {
-                errors.push(error);
-                continue;
-            }
-        };
-        if share.get() == 0 {
-            continue;
-        }
-        if !active.contains(&row.partner_id) || !seen.insert(row.partner_id) {
-            errors.push(FieldError::new(
-                ErrorCode::ErrPartnerNotListed,
-                &format!("partners[{index}].partner_id"),
-            ));
-            continue;
-        }
-        total = total.saturating_add(i64::from(share.get()));
-        out.push(Parsed {
-            partner_id: row.partner_id,
-            share,
-            source: row.source,
-        });
-    }
-    if total != i64::from(BPS_FULL) {
-        errors.push(
-            FieldError::new(ErrorCode::ErrSharesNot100, "partners")
-                .with("total_bps", ErrorValue::Number(total)),
-        );
-    }
-    out.sort_by_key(|p| p.partner_id);
-    Ok(out)
-}
-
-fn write_partners(
-    tx: &Connection,
-    trip_id: i64,
-    partners: &[Parsed],
-    user_id: i64,
-    now: &str,
-) -> Result<(), ServiceError> {
-    for p in partners {
-        repo::insert_partner(
-            tx,
-            trip_id,
-            p.partner_id,
-            i64::from(p.share.get()),
-            p.source.as_str(),
-            user_id,
-            now,
-        )?;
-    }
-    Ok(())
-}
-
-fn partners_json(partners: &[Parsed]) -> serde_json::Value {
-    json!(
-        partners
-            .iter()
-            .map(|p| json!({
-                "partner_id": p.partner_id,
-                "share_bps": p.share.get(),
-                "source": p.source.as_str(),
-            }))
-            .collect::<Vec<_>>()
-    )
 }
 
 /// Makes a trip with its partners, shares and default sources (PRD FR-12.29). The trip gets the next

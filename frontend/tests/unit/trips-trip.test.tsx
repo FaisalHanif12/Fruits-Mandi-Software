@@ -35,6 +35,7 @@ import {
   purchaseEntry,
 } from '../helpers/trips';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { settlePreview } from '../helpers/preview-settled';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -319,6 +320,7 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await act(async () => {
       await vi.mocked(purchasesApi.purchasesPreview).mock.results.at(-1)?.value;
     });
+    await settlePreview();
     press('F10');
     const startsWith = (id: string) => (name: string) =>
       visible(name).startsWith(message(language, id));

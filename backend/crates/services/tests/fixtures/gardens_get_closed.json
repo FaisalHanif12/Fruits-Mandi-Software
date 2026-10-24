@@ -1,0 +1,613 @@
+{
+  "row": {
+    "id": 1,
+    "version": 2,
+    "number": 1,
+    "name_ur": "شاہ پور باغ",
+    "name_en": "Shahpur Garden",
+    "account": {
+      "id": 31,
+      "code": "03060001",
+      "name_ur": "شاہ پور باغ",
+      "name_en": "Shahpur Garden"
+    },
+    "entry_date": "2026-10-10",
+    "item": {
+      "id": 1,
+      "code": "1",
+      "name_ur": "کیلا",
+      "name_en": "Banana"
+    },
+    "rent_paisa": 5000000,
+    "season_end_date": null,
+    "note": null,
+    "status": "closed",
+    "closed_date": "2026-10-13",
+    "shares_locked": true,
+    "partners": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "share_bps": 6000,
+        "source": "shop"
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "share_bps": 4000,
+        "source": "pocket"
+      }
+    ],
+    "installments_paisa": 5000000,
+    "costs_paisa": 500000,
+    "paid_paisa": 5500000,
+    "paid_shop_paisa": 3300000,
+    "paid_pocket_paisa": 2200000,
+    "rent_due_paisa": 0,
+    "money_in_paisa": 6640000,
+    "other_shop_paisa": 1000000,
+    "balance_paisa": 1140000,
+    "balance_working": {
+      "message_id": "working-garden-balance",
+      "args": [
+        {
+          "name": "money_in",
+          "value": {
+            "kind": "money",
+            "paisa": 6640000
+          }
+        },
+        {
+          "name": "paid",
+          "value": {
+            "kind": "money",
+            "paisa": 5500000
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 1140000
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "account_balance_paisa": 0,
+    "last_date": "2026-10-12"
+  },
+  "history": [
+    {
+      "entry_date": "2026-10-10",
+      "kind": "installment",
+      "entry_id": 1,
+      "version": 2,
+      "bikri_id": null,
+      "bikri_number": null,
+      "amount_paisa": 3000000,
+      "effect_paisa": -3000000,
+      "running_balance_paisa": -3000000,
+      "reason": "first installment",
+      "shop_name": null,
+      "qty": null,
+      "journal_entry_id": 3,
+      "cancelled": false,
+      "cancel_reason": null,
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "share_bps": 6000,
+          "source": "shop",
+          "amount_paisa": 1800000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 3000000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 6000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1800000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "share_bps": 4000,
+          "source": "pocket",
+          "amount_paisa": 1200000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 3000000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 4000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1200000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      ],
+      "credits": [],
+      "can_cancel": false
+    },
+    {
+      "entry_date": "2026-10-11",
+      "kind": "installment",
+      "entry_id": 2,
+      "version": 2,
+      "bikri_id": null,
+      "bikri_number": null,
+      "amount_paisa": 2000000,
+      "effect_paisa": -2000000,
+      "running_balance_paisa": -5000000,
+      "reason": "second installment",
+      "shop_name": null,
+      "qty": null,
+      "journal_entry_id": 4,
+      "cancelled": false,
+      "cancel_reason": null,
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "share_bps": 6000,
+          "source": "shop",
+          "amount_paisa": 1200000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 2000000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 6000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1200000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "share_bps": 4000,
+          "source": "pocket",
+          "amount_paisa": 800000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 2000000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 4000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 800000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      ],
+      "credits": [],
+      "can_cancel": false
+    },
+    {
+      "entry_date": "2026-10-11",
+      "kind": "cost",
+      "entry_id": 3,
+      "version": 2,
+      "bikri_id": null,
+      "bikri_number": null,
+      "amount_paisa": 500000,
+      "effect_paisa": -500000,
+      "running_balance_paisa": -5500000,
+      "reason": "labour",
+      "shop_name": null,
+      "qty": null,
+      "journal_entry_id": 5,
+      "cancelled": false,
+      "cancel_reason": null,
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "share_bps": 6000,
+          "source": "shop",
+          "amount_paisa": 300000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 500000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 6000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 300000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "share_bps": 4000,
+          "source": "pocket",
+          "amount_paisa": 200000,
+          "working": {
+            "message_id": "working-venture-part",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 500000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 4000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 200000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      ],
+      "credits": [],
+      "can_cancel": false
+    },
+    {
+      "entry_date": "2026-10-12",
+      "kind": "sale",
+      "entry_id": null,
+      "version": null,
+      "bikri_id": 1,
+      "bikri_number": 1,
+      "amount_paisa": 5640000,
+      "effect_paisa": 5640000,
+      "running_balance_paisa": 140000,
+      "reason": null,
+      "shop_name": null,
+      "qty": null,
+      "journal_entry_id": 6,
+      "cancelled": false,
+      "cancel_reason": null,
+      "parts": [],
+      "credits": [],
+      "can_cancel": false
+    },
+    {
+      "entry_date": "2026-10-12",
+      "kind": "other_sale",
+      "entry_id": 4,
+      "version": 2,
+      "bikri_id": null,
+      "bikri_number": null,
+      "amount_paisa": 1000000,
+      "effect_paisa": 1000000,
+      "running_balance_paisa": 1140000,
+      "reason": null,
+      "shop_name": "Haji Traders",
+      "qty": 20,
+      "journal_entry_id": 7,
+      "cancelled": false,
+      "cancel_reason": null,
+      "parts": [],
+      "credits": [],
+      "can_cancel": false
+    },
+    {
+      "entry_date": "2026-10-13",
+      "kind": "close",
+      "entry_id": 5,
+      "version": 2,
+      "bikri_id": null,
+      "bikri_number": null,
+      "amount_paisa": 6640000,
+      "effect_paisa": 0,
+      "running_balance_paisa": 1140000,
+      "reason": null,
+      "shop_name": null,
+      "qty": null,
+      "journal_entry_id": 8,
+      "cancelled": false,
+      "cancel_reason": null,
+      "parts": [],
+      "credits": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "share_bps": 6000,
+          "amount_paisa": 3984000,
+          "working": {
+            "message_id": "working-venture-credit",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 6640000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 6000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 3984000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "share_bps": 4000,
+          "amount_paisa": 2656000,
+          "working": {
+            "message_id": "working-venture-credit",
+            "args": [
+              {
+                "name": "amount",
+                "value": {
+                  "kind": "money",
+                  "paisa": 6640000
+                }
+              },
+              {
+                "name": "bps",
+                "value": {
+                  "kind": "count",
+                  "value": 4000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 2656000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      ],
+      "can_cancel": false
+    }
+  ],
+  "history_count": 6,
+  "partner_results": [
+    {
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "share_bps": 6000,
+      "paid_shop_paisa": 3300000,
+      "paid_pocket_paisa": 0,
+      "money_back_paisa": 3984000,
+      "net_paisa": 684000,
+      "working": {
+        "message_id": "working-trip-partner-net",
+        "args": [
+          {
+            "name": "in_shop",
+            "value": {
+              "kind": "money",
+              "paisa": 3300000
+            }
+          },
+          {
+            "name": "in_pocket",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "back",
+            "value": {
+              "kind": "money",
+              "paisa": 3984000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 684000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "ب",
+        "name_en": "Partner B"
+      },
+      "share_bps": 4000,
+      "paid_shop_paisa": 0,
+      "paid_pocket_paisa": 2200000,
+      "money_back_paisa": 2656000,
+      "net_paisa": 456000,
+      "working": {
+        "message_id": "working-trip-partner-net",
+        "args": [
+          {
+            "name": "in_shop",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "in_pocket",
+            "value": {
+              "kind": "money",
+              "paisa": 2200000
+            }
+          },
+          {
+            "name": "back",
+            "value": {
+              "kind": "money",
+              "paisa": 2656000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 456000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ]
+}

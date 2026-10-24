@@ -28,6 +28,7 @@ import { message, visible } from '../helpers/render';
 import { fakeItemPickers, fakeTrips } from '../helpers/trips';
 import * as real from '../helpers/trips-real';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { settlePreview } from '../helpers/preview-settled';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -227,6 +228,7 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     await act(async () => {
       await vi.mocked(purchasesApi.purchasesPreview).mock.results.at(-1)?.value;
     });
+    await settlePreview();
     press('F10');
     const startsWith = (id: string) => (name: string) =>
       visible(name).startsWith(message(language, id));

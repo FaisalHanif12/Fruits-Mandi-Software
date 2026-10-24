@@ -75,7 +75,8 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     const item = within(nav).getByRole('button', { name: message(language, 'layout-nav-trips') });
     expect(item).toHaveAttribute('aria-current', 'page');
-    // The side menu of the بکری area is not here, and the item sits after روکڑ, before the partners.
+    // The side menu of the بکری area is not here, and the item sits after باغات, which sits after
+    // روکڑ, before the partners (PRD FR-5.2).
     expect(
       screen.queryByRole('navigation', { name: message(language, 'layout-module-label') }),
     ).toBeNull();
@@ -83,6 +84,9 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label'));
     expect(labels.indexOf(message(language, 'layout-nav-trips'))).toBe(
+      labels.indexOf(message(language, 'layout-nav-gardens')) + 1,
+    );
+    expect(labels.indexOf(message(language, 'layout-nav-gardens'))).toBe(
       labels.indexOf(message(language, 'layout-nav-rokar')) + 1,
     );
     await user.click(

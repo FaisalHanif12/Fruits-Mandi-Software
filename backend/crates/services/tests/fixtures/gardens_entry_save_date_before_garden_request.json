@@ -1,0 +1,9 @@
+{
+  "amount": "100",
+  "confirm_cash_below_zero": false,
+  "date": "09-10-2026",
+  "garden_id": 1,
+  "parts": [],
+  "reason": "too early",
+  "type": "cost"
+}

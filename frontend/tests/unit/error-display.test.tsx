@@ -85,6 +85,27 @@ describe.each(LANGUAGES)('showing a backend error (%s)', (language) => {
     expect(ref).toHaveTextContent(TEST_REFERENCE);
   });
 
+  it('a day sent as YYYY-MM-DD reads as DD-MM-YYYY in the words of ERR_CLOSE_BEFORE_LAST_ENTRY and ERR_DATE_BEFORE_GARDEN', () => {
+    renderIn(
+      language,
+      <ErrorNotice
+        error={refusal([
+          { code: 'ERR_CLOSE_BEFORE_LAST_ENTRY', values: { last_date: '2026-10-12' } },
+          { code: 'ERR_DATE_BEFORE_GARDEN', values: { garden_date: '2026-10-10' } },
+        ])}
+      />,
+    );
+    const text = visible(screen.getByRole('alert').textContent);
+    expect(text).toContain(
+      message(language, 'err-close-before-last-entry', { last_date: '12-10-2026' }),
+    );
+    expect(text).toContain(
+      message(language, 'err-date-before-garden', { garden_date: '10-10-2026' }),
+    );
+    expect(text).not.toContain('2026-10-12');
+    expect(text).not.toContain('2026-10-10');
+  });
+
   it('shows no reference line when the backend sent none', () => {
     renderIn(language, <ErrorNotice error={refusal([{ code: 'ERR_REQUIRED' }], '')} />);
     expect(visible(screen.getByRole('alert').textContent)).toBe(message(language, 'err-required'));

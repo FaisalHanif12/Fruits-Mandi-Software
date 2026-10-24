@@ -90,7 +90,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await renderApp();
     expect(await screen.findByRole('heading', { level: 1, name: /Adnan/ })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
-    expect(within(nav).getAllByRole('button')).toHaveLength(10);
+    expect(within(nav).getAllByRole('button')).toHaveLength(11);
     expect(within(nav).getAllByRole('button')[0]).toHaveAttribute('aria-current', 'page');
     await waitFor(() => {
       expect(visible(screen.getByRole('contentinfo').textContent)).toContain('10-10-2026');
@@ -272,7 +272,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     await renderApp();
     await screen.findByRole('heading', { level: 1, name: /Adnan/ });
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
-    expect(within(nav).getAllByRole('button')).toHaveLength(10);
+    expect(within(nav).getAllByRole('button')).toHaveLength(11);
     expect(
       within(nav).getByRole('button', { name: message(language, 'layout-nav-settings') }),
     ).toBeInTheDocument();

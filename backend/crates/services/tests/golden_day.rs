@@ -1457,3 +1457,7 @@ mod partner_money;
 // Plan 17: the full day close summary (FR-21.1, PRD 4.9).
 #[path = "golden_day/day_close.rs"]
 mod day_close;
+
+// Plan 17c: gardens (E2E-40, E2E-40b) and their refusals.
+#[path = "golden_day/gardens.rs"]
+mod gardens;

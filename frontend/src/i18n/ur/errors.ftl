@@ -427,3 +427,25 @@ err-general-too-few-lines = { -general } اندراج میں کم از کم دو
 # PRD FR-17.8. A warning only: the entry can still be saved. $balance is the capital balance and $over is the part above it, in rupees.
 # review: pending
 err-capital-exceeds-balance = یہ شراکت دار کے { -sarmaya } بقایا { $balance } سے { $over } زیادہ ہے۔ پھر بھی محفوظ کیا جا سکتا ہے۔
+
+## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
+
+# PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
+# review: pending
+err-garden-closed = یہ { -bagh } بند ہے، اس لیے اس میں نیا اندراج، نیا لاٹ یا پھل نہیں لیا جا سکتا۔ پہلے اس کی بندش واپس لیں۔
+
+# PRD FR-12.38. The garden is open, so there is no closing to undo.
+# review: pending
+err-garden-not-closed = یہ { -bagh } کھلا ہے، اس لیے واپس لینے کے لیے کوئی بندش نہیں۔
+
+# PRD FR-12.34. $garden_date: the day of the garden.
+# review: pending
+err-date-before-garden = تاریخ { -bagh } کی تاریخ ({ $garden_date }) سے پہلے کی ہے۔ باغ کی تاریخ یا اس کے بعد کی تاریخ چنیں۔
+
+# Plan 17c. $last_date: the day of the latest entry or lot of the garden.
+# review: pending
+err-close-before-last-entry = { -bagh } اپنے آخری اندراج یا لاٹ ({ $last_date }) سے پہلے بند نہیں ہو سکتا۔ وہی دن یا اس کے بعد کا دن چنیں۔
+
+# Plan 17c. The entry of the garden was cancelled already.
+# review: pending
+err-garden-entry-cancelled = { -bagh } کا یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔
