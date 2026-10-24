@@ -84,6 +84,13 @@ export function PukhtaRegisterPage() {
     : list.data?.pages
         .flatMap((page) => page.rows)
         .map((row, index) => ({ ...row, key: String(index) }));
+  // The sums are over the whole filter and only mean something for one side: with no side chosen the
+  // backend sends them all null (buyers and sellers would be added together), and then there is no
+  // totals row at all.
+  const sums = first?.totals;
+  const noSums =
+    sums !== undefined &&
+    [sums.qty, sums.amount, sums.commission, sums.open].every((sum) => sum === null);
   const empty = filtering ? (
     <EmptyState
       icon={SearchX}
@@ -126,13 +133,10 @@ export function PukhtaRegisterPage() {
       }}
       isInactive={(row) => row.cancelled}
       totals={
-        first === undefined
+        first === undefined || noSums
           ? undefined
           : (context) => {
               const { qty, amount, commission, open } = first.totals;
-              // The sums are over the whole filter and only mean something for one side: with no
-              // side chosen the backend sends null (buyers and sellers would be added together),
-              // and then only the word shows, as under the voucher list of all types.
               return {
                 labelField: 'name',
                 values: {

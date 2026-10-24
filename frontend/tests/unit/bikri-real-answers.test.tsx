@@ -169,15 +169,15 @@ describe.each(LANGUAGES)(
       expect(cell('1', 'status')).toBe(message(language, 'bikri-status-saved'));
     });
 
-    it('the register of the buyers shows the backend’s totals; with no side only the word shows', async () => {
+    it('the register of the buyers shows the backend’s totals; with no side there is no totals row', async () => {
       vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(REGISTER_DAY);
       await renderApp('/bikri/pukhta');
       await waitFor(() => {
         expect(cell('0', 'bikri')).toBe('2');
       });
-      // No side: every sum is null, so the totals row has only its word.
+      // No side: every sum is null, so there is no totals row.
       const pinned = () => document.querySelector('.ag-row-pinned');
-      expect(visible(pinned()?.textContent)).toBe(message(language, 'glossary-meezan'));
+      expect(pinned()).toBeNull();
       cleanup();
       vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(REGISTER_DAY_BUYERS);
       await renderApp('/bikri/pukhta');

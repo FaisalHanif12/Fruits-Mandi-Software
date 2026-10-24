@@ -422,12 +422,8 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
     await waitFor(() => {
       expect(pageText()).toContain(showing(100));
     });
-    // With no side chosen there are no sums: only the word shows in the totals row.
-    await waitFor(() => {
-      expect(visible(document.querySelector('.ag-row-pinned')?.textContent)).toBe(
-        message(language, 'glossary-meezan'),
-      );
-    });
+    // With no side chosen there are no sums, so there is no totals row at all.
+    expect(document.querySelector('.ag-row-pinned')).toBeNull();
     // Choosing a side gives them, over the whole filter.
     const picker = userEvent.setup();
     await picker.click(
