@@ -33,9 +33,15 @@ export type StatementLine = {
    */
   secondary_number: number | null;
   /**
-   * What the line is about: the expense head, or the item of a trip sale. Null if none.
+   * What the line is about: the expense head, or the item of a trip sale or of fruit taken. Null
+   * if none.
    */
   subject: RecordRef | null;
+  /**
+   * The packing of the item, for a fruit line (PRD FR-17.10): "2 پیٹی مالٹا @ 1,400". Null for
+   * any other line.
+   */
+  packing: RecordRef | null;
   /**
    * The user's reason. Empty if none.
    */

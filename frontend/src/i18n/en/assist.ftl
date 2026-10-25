@@ -165,6 +165,10 @@ working-trip-result = Sales money <num>{ $sales }</num> + money from other shops
 # FR-12.27: what a partner has so far: money back less money in from the shop and from his pocket.
 # review: pending
 working-trip-partner-net = Money back <num>{ $back }</num> − paid from the shop <num>{ $in_shop }</num> − paid from his pocket <num>{ $in_pocket }</num> = <num>{ $result }</num>
+# FR-12.37: the running balance of a garden: its money in less everything paid in (installments and
+# costs, from the shop and from pockets). It starts in minus.
+# review: pending
+working-garden-balance = Money in <num>{ $money_in }</num> − everything paid (installments and costs, from the shop and from pockets) <num>{ $paid }</num> = <num>{ $result }</num>
 # FR-12.27: the result of one purchase.
 # review: pending
 working-purchase-result = Sales money <num>{ $sales }</num> + money from other shops <num>{ $other_shop }</num> − cost of goods sold <num>{ $cost_sold }</num> − cost written off <num>{ $cost_written_off }</num> = <num>{ $result }</num>

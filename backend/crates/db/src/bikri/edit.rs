@@ -223,6 +223,8 @@ pub struct LotState {
     pub qty_sold: i64,
     /// نگ written off.
     pub qty_written_off: i64,
+    /// نگ taken as fruit (PRD FR-16.11).
+    pub qty_taken: i64,
     /// The tick "پیشگی سے کاٹیں".
     pub adjust_advance: bool,
     /// The truck stand of the بکری.
@@ -260,7 +262,8 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 l.qty_written_off, l.adjust_advance, l.pukhta_name_ur, l.pukhta_name_en,
                 l.pukhta_phone, l.pukhta_person_key, l.first_entry_id, l.freight_paisa,
                 l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa, l.phone_paisa,
-                l.cash_paid_paisa, l.store_rent_paisa, l.weight_received_grams, e.adda_id, l.purchase_id
+                l.cash_paid_paisa, l.store_rent_paisa, l.weight_received_grams, e.adda_id, l.purchase_id,
+                l.qty_taken
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
          WHERE l.id = ?1",
         [lot_id],
@@ -304,6 +307,7 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 weight_received_grams: r.get(27)?,
                 adda_id: r.get(28)?,
                 purchase_id: r.get(29)?,
+                qty_taken: r.get(30)?,
             })
         },
     )
@@ -861,6 +865,8 @@ pub struct StockLot {
     pub qty_sold: i64,
     /// نگ written off.
     pub qty_written_off: i64,
+    /// نگ taken as fruit (PRD FR-16.11).
+    pub qty_taken: i64,
 }
 
 /// The lots of saved (not cancelled) بکری with goods left, oldest received first (PRD FR-12.14).
@@ -872,7 +878,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
         "SELECT l.id, l.lot_no, e.id, e.number, e.entry_date, sa.id, sa.code, sa.name_ur, sa.name_en,
                 l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
-                l.qty_received, l.qty_sold, l.qty_written_off
+                l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken
          FROM bikri_lots l
          JOIN bikri_entries e ON e.id = l.bikri_id
          JOIN accounts sa ON sa.id = l.seller_account_id
@@ -882,7 +888,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
            AND (?1 IS NULL OR e.entry_date >= ?1) AND (?2 IS NULL OR e.entry_date <= ?2)
            AND (?3 IS NULL OR l.seller_account_id = ?3) AND (?4 IS NULL OR l.item_id = ?4)
            AND (?6 IS NULL OR l.id = ?6)
-           AND (l.qty_received - l.qty_sold - l.qty_written_off > 0
+           AND (l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken > 0
                 OR (?5 = 1 AND EXISTS (SELECT 1 FROM stock_moves m
                                        WHERE m.lot_id = l.id AND m.kind = 'written_off'
                                          AND NOT EXISTS (SELECT 1 FROM stock_moves r
@@ -931,6 +937,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
                 qty_received: r.get(21)?,
                 qty_sold: r.get(22)?,
                 qty_written_off: r.get(23)?,
+                qty_taken: r.get(24)?,
             })
         },
     )?;

@@ -181,7 +181,7 @@ gardens-figures-title = باغ کے اعداد
 # review: pending
 gardens-partners-title = شراکت دار
 # review: pending
-gardens-shares-locked = اس باغ میں اندراج ہو چکا ہے، اس لیے حصے اب طے ہیں۔
+gardens-shares-locked = اس باغ میں اندراج یا بکری ہو چکی ہے، اس لیے حصے اب طے ہیں۔
 # review: pending
 gardens-fact-rent = { -thaika }
 # review: pending

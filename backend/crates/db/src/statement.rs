@@ -219,6 +219,39 @@ pub fn closed_trip_notes(conn: &Connection, partner_id: i64) -> rusqlite::Result
     rows.collect()
 }
 
+/// The garden closings that posted nothing for this partner: a balance of 0, or a part of his that
+/// came to 0, so the closing has no line on his 0604 account (PRD FR-17.10, E64). They become note
+/// lines with no amount, so the statement still shows the garden's cost, sales, result and his
+/// share. `id` is the closing's venture entry, `venture_id` the garden. A closing that was undone is
+/// left out.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn unposted_garden_close_notes(
+    conn: &Connection,
+    partner_id: i64,
+) -> rusqlite::Result<Vec<NoteEvent>> {
+    let mut statement = conn.prepare(
+        "SELECT x.id, x.entry_date, x.venture_id
+         FROM venture_entries x
+         JOIN venture_entry_parts p ON p.entry_id = x.id AND p.partner_id = ?1
+         JOIN partners pa ON pa.id = ?1
+         WHERE x.kind = 'close' AND x.status = 'saved'
+           AND NOT EXISTS (SELECT 1 FROM journal_lines l
+                           WHERE l.entry_id = x.journal_entry_id
+                             AND l.account_id = pa.venture_account_id)
+         ORDER BY x.entry_date, x.id",
+    )?;
+    let rows = statement.query_map([partner_id], |r| {
+        Ok(NoteEvent {
+            id: r.get(0)?,
+            date: r.get(1)?,
+            venture_id: r.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
 // ---- The facts that word the lines of one page ----
 
 /// A named record.

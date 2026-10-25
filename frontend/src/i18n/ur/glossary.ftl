@@ -348,6 +348,14 @@
 # review: pending
 -mehman = مہمان
 
+# A short tag after a name, in English capital letters, that tells two people with the same name apart (PRD Section 3, 10.2)
+# review: pending
+-nishan = نشان
+
+# The firm's trade mark, printed in a box in every print header (PRD Section 21, FR-19.13)
+# review: pending
+-trade-mark = ٹریڈ مارک
+
 glossary-arhti = { -arhti }
 glossary-index = { -index }
 glossary-beopari = { -beopari }
@@ -423,3 +431,5 @@ glossary-qist = { -qist }
 glossary-apni-dukan = { -apni-dukan }
 glossary-dusri-dukan = { -dusri-dukan }
 glossary-mehman = { -mehman }
+glossary-nishan = { -nishan }
+glossary-trade-mark = { -trade-mark }

@@ -481,6 +481,10 @@ pub struct SavedLot {
     /// Quantity written off.
     #[ts(type = "number")]
     pub qty_written_off: i64,
+    /// نگ taken as fruit by a partner or for the shop's guests (PRD FR-16.11, C16). The lot's balance
+    /// is received less sold, written off and taken.
+    #[ts(type = "number")]
+    pub qty_taken: i64,
     /// Weight received, in grams.
     #[ts(type = "number | null")]
     pub weight_received_grams: Option<i64>,

@@ -24,7 +24,7 @@ import {
   fieldError,
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
-import { isOwnLot, isPukhtaSeller } from '../draft';
+import { isGardenLot, isOwnLot, isPukhtaSeller } from '../draft';
 import { LOT, ON, type LotPreview } from '../types';
 import { PukhtaFields } from './PukhtaFields';
 
@@ -210,7 +210,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
                 />
               </div>
             )}
-            {hasAdvance && !isOwnLot(row) ? (
+            {hasAdvance && !isOwnLot(row) && !isGardenLot(row) ? (
               <div className="flex flex-wrap items-center gap-3">
                 <Checkbox
                   checked={typed(LOT.adjustAdvance) !== '0'}

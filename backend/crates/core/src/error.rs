@@ -349,11 +349,13 @@ pub enum ErrorCode {
     ErrCloseBeforeLastEntry,
     /// The entry of the garden was cancelled already (plan 17c). Field `id`.
     ErrGardenEntryCancelled,
+    /// The fruit entry was cancelled already (plan 17d). Field `id`.
+    ErrFruitCancelled,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 127] = [
+    pub const ALL: [ErrorCode; 128] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -481,6 +483,7 @@ impl ErrorCode {
         ErrorCode::ErrDateBeforeGarden,
         ErrorCode::ErrCloseBeforeLastEntry,
         ErrorCode::ErrGardenEntryCancelled,
+        ErrorCode::ErrFruitCancelled,
     ];
 }
 

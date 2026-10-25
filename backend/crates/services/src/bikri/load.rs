@@ -126,6 +126,7 @@ pub(super) fn stored_posting(
             .filter(|s| s.is_active && s.journal_entry_id != entry_id)
             .try_fold(0_i64, |total, s| total.checked_add(s.qty))
             .and_then(|total| total.checked_add(lot.qty_written_off))
+            .and_then(|total| total.checked_add(lot.qty_taken))
             .ok_or_else(|| data("the quantity of a lot does not fit"))?;
         let mut carrier = None;
         for sale in lines_of(lot, entry_id) {

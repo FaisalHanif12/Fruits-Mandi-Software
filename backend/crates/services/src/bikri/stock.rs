@@ -70,6 +70,7 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 .qty_received
                 .checked_sub(lot.qty_sold)
                 .and_then(|v| v.checked_sub(lot.qty_written_off))
+                .and_then(|v| v.checked_sub(lot.qty_taken))
                 .ok_or_else(|| data("the quantity of a lot does not fit"))?;
             balance_total = balance_total
                 .checked_add(balance)
@@ -96,6 +97,7 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 qty_received: lot.qty_received,
                 qty_sold: lot.qty_sold,
                 qty_written_off: lot.qty_written_off,
+                qty_taken: lot.qty_taken,
                 balance,
                 days_waiting,
                 write_offs: write_offs
@@ -210,6 +212,7 @@ pub fn write_off(
             .qty_received
             .checked_sub(state.qty_sold)
             .and_then(|v| v.checked_sub(state.qty_written_off))
+            .and_then(|v| v.checked_sub(state.qty_taken))
             .ok_or_else(|| data("the quantity of a lot does not fit"))?;
         if qty.get() > available {
             return Err(ServiceError::Rejected(vec![Rejection {
@@ -343,6 +346,7 @@ pub fn write_off_undo(
             .qty_received
             .checked_sub(state.qty_sold)
             .and_then(|v| v.checked_sub(written_off))
+            .and_then(|v| v.checked_sub(state.qty_taken))
             .ok_or_else(|| data("the quantity of a lot does not fit"))?;
         Ok(WriteOffUndone {
             lot_id: state.id,

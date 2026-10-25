@@ -12,6 +12,7 @@ import type { LotInput } from '../../bindings/LotInput';
 import type { PaymentType } from '../../bindings/PaymentType';
 import type { PukhtaInput } from '../../bindings/PukhtaInput';
 import type { SaleInput } from '../../bindings/SaleInput';
+import { isGardenAccount } from '../../shared/accounts';
 import { formatPaisa, type Paisa } from '../../shared/format';
 import type { EntryRow } from '../../shared/grid';
 import type { BikriDraftStores, HeaderState } from './draft-store';
@@ -56,6 +57,14 @@ export function isPukhtaSeller(row: EntryRow): boolean {
 /** Is this a lot of the firm's own goods: the seller is the اپنا مال account (PRD FR-12.26)? */
 export function isOwnLot(row: EntryRow): boolean {
   return row.picked?.[LOT.seller]?.code === OWN_GOODS_CODE;
+}
+
+/**
+ * Is this a lot of a garden: the seller is a garden's account (PRD FR-12.36)? Like an own goods
+ * lot it gives no نقد and has no advance tick to deduct, so those cells do not apply to it.
+ */
+export function isGardenLot(row: EntryRow): boolean {
+  return isGardenAccount(row.picked?.[LOT.seller]);
 }
 
 /** Is this the one-time buyer account (PRD FR-13.1)? */
@@ -146,6 +155,9 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
   // it. A freight typed here is sent as typed: the purchase's freight is already in its cost, so
   // the backend warns (ERR_OWN_LOT_FREIGHT_IN_COST) and the cell shows it.
   const own = isOwnLot(row);
+  // A garden's lot is the same: no نقد and no advance tick (PRD FR-12.36). The backend refuses a
+  // typed نقد on it, so a new lot sends none whatever was typed before the seller became a garden.
+  const noCash = own || isGardenLot(row);
   const purchaseId = own ? savedId(typed[LOT.purchase]) : null;
   return {
     key: row.rowId,
@@ -172,11 +184,11 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
     labour: chargeInput(typed[LOT.labour], typed[LOT.labourMethod]),
     munshiana: chargeInput(typed[LOT.munshiana], typed[LOT.munshianaMethod]),
     phone: chargeInput(typed[LOT.phone], typed[LOT.phoneMethod]),
-    cash_paid: own && lotId === null ? null : textOrNull(typed[LOT.cash]),
+    cash_paid: noCash && lotId === null ? null : textOrNull(typed[LOT.cash]),
     store_rent: textOrNull(typed[LOT.storeRent]),
     // The tick starts on (PRD FR-12.23); only "0" is an untick. Trip goods have no advance to
     // deduct, and the backend stores and sends back false for them.
-    adjust_advance: own ? false : typed[LOT.adjustAdvance] !== '0',
+    adjust_advance: noCash ? false : typed[LOT.adjustAdvance] !== '0',
     sales: sales.map(saleInput),
   };
 }

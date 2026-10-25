@@ -63,6 +63,10 @@ err-name-ur-script = Write the Urdu name in Urdu letters.
 # PRD FR-7.28.
 # review: pending
 err-name-en-script = Write the English name in English letters.
+# PRD 10.2, Code Standards 4.2 (Tag). The code name is the backend's (plan 17e T1).
+# review: pending
+err-tag-invalid = The tag must be 1 to 4 English capital letters or dots, with at least one letter. For example K, BA or D.P.
+
 # review: pending
 err-name-too-long = The name is too long. Use at most { $max } characters.
 # review: pending

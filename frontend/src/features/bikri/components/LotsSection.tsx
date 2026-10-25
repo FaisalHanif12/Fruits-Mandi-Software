@@ -15,7 +15,7 @@ import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared
 import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
-import { isOwnLot, isPukhtaSeller } from '../draft';
+import { isGardenLot, isOwnLot, isPukhtaSeller } from '../draft';
 import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
 import { LOT, SALE } from '../types';
@@ -23,9 +23,12 @@ import { LotMoreToggle } from './LotMore';
 import { focusOwnPurchaseSoon } from './OwnLotPanel';
 import { focusPukhtaFieldsSoon } from './PukhtaFields';
 
-/** The last cell of a lot row that Enter stops at. An own goods lot has no نقد cell to type in. */
+/**
+ * The last cell of a lot row that Enter stops at. An own goods lot and a garden's lot have no نقد
+ * cell to type in.
+ */
 function lastStopOf(row: EntryRow | undefined): string {
-  return row !== undefined && isOwnLot(row) ? LOT.munshiana : LOT.cash;
+  return row !== undefined && (isOwnLot(row) || isGardenLot(row)) ? LOT.munshiana : LOT.cash;
 }
 
 interface LotsSectionProps {

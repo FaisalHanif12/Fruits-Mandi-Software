@@ -1002,3 +1002,180 @@ fn an_edit_of_a_bikri_of_a_closed_garden_is_refused_even_with_the_seller_changed
     assert_eq!(credit_balance(&w, garden.account.id), 0);
     assert_eq!(totals_of_three(&w), before);
 }
+
+fn value_of(line: &mandi_services::core::statement::StatementLine, name: &str) -> i64 {
+    match line.values.get(name) {
+        Some(mandi_services::core::error::ErrorValue::Number(n)) => *n,
+        other => panic!("{name}: {other:?}"),
+    }
+}
+
+#[test]
+fn the_shares_are_also_locked_once_a_lot_sale_has_credited_the_garden() {
+    // Umar (25-10-2026): E66 counts a lot sold into the garden as its first entry too.
+    let w = worked_day();
+    let garden = create(&w, None);
+    let [a, b, c] = w.partners;
+    assert!(!detail(&w, garden.id).row.shares_locked);
+    set_today(&w.env, 2026, 10, 12);
+    sell_a_garden_lot(&w, &garden);
+    let now = detail(&w, garden.id).row;
+    assert!(now.shares_locked, "a lot sale locks the shares");
+    // The garden has no entry of its own, yet the shares are refused.
+    assert_eq!(scalar(&w, "SELECT COUNT(*) FROM venture_entries"), 0);
+    let error = gardens::set_partners(
+        &w.env.ctx,
+        &w.owner,
+        &GardenSetPartnersInput {
+            id: garden.id,
+            version: now.version,
+            partners: vec![shop(a, "50"), shop(b, "30"), shop(c, "20")],
+        },
+    )
+    .unwrap_err();
+    code_at(error, ErrorCode::ErrVentureSharesLocked, "partners");
+}
+
+#[test]
+fn a_garden_lot_gets_no_cash_and_no_advance_deduction_whatever_the_screen_sends() {
+    // PRD FR-12.36: the backend forces both off, like an own lot (FR-12.26).
+    let w = worked_day();
+    let garden = create(&w, None);
+    set_today(&w.env, 2026, 10, 12);
+    let lot_with = |cash: Option<&str>| {
+        let mut lot = support::with_sales(
+            support::bare_lot(&w, "garden-1", garden.account.id, w.banana, "10"),
+            vec![support::sale("s-1", w.arshad, "10", "600")],
+        );
+        lot.adjust_advance = true;
+        lot.cash_paid = cash.map(str::to_owned);
+        let mut draft = support::draft(vec![lot]);
+        draft.header.entry_date = "12-10-2026".into();
+        draft
+    };
+    // A typed نقد is refused at its field.
+    let refused = bikri::preview(&w.env.ctx, &lot_with(Some("500"))).unwrap();
+    assert!(
+        refused
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrFormatInvalid && e.field == "lots[0].cash_paid"),
+        "{:?}",
+        refused.errors
+    );
+    // With the advance tick on, the lot is saved with the tick off and no cash given.
+    let cash_before = cash_balance(&w);
+    save_ok(&w, &lot_with(None), false);
+    assert_eq!(
+        scalar(
+            &w,
+            "SELECT adjust_advance FROM bikri_lots WHERE seller_account_id = (SELECT account_id FROM ventures WHERE kind = 'garden')"
+        ),
+        0
+    );
+    assert_eq!(
+        scalar(
+            &w,
+            "SELECT cash_paid_paisa FROM bikri_lots WHERE seller_account_id = (SELECT account_id FROM ventures WHERE kind = 'garden')"
+        ),
+        0
+    );
+    assert_eq!(cash_balance(&w), cash_before);
+}
+
+#[test]
+fn a_closing_that_posts_nothing_still_gives_each_partner_a_note_line() {
+    // PRD FR-17.10, E64: no sale at all, so the balance is 0 and nothing is posted. Each partner of
+    // the garden still gets a closing line with no amount: the cost, the sales, his % and his part.
+    use mandi_services::core::statement::StatementDetail;
+    let w = worked_day();
+    let garden = pay_the_garden(&w);
+    set_today(&w.env, 2026, 10, 13);
+    gardens::close(
+        &w.env.ctx,
+        &w.owner,
+        &close_input(&w, garden.id, "13-10-2026"),
+    )
+    .unwrap();
+    let [a, b, c] = w.partners;
+
+    let alif = statement_of(&w, a);
+    let notes: Vec<_> = alif
+        .lines
+        .iter()
+        .filter(|l| l.detail == StatementDetail::GardenClosed)
+        .collect();
+    assert_eq!(notes.len(), 1);
+    let note = notes[0];
+    assert_eq!(note.amount_paisa, None, "a note has no amount");
+    assert_eq!(note.running_paisa.rupees(), -33_000, "and leaves the total");
+    assert_eq!(alif.closing_total_paisa.rupees(), -33_000);
+    assert_eq!(
+        (
+            value_of(note, "cost_paisa") / 100,
+            value_of(note, "sales_paisa") / 100,
+            value_of(note, "result_paisa") / 100,
+            value_of(note, "share_bps"),
+            value_of(note, "part_paisa") / 100,
+            value_of(note, "back_paisa") / 100
+        ),
+        (55_000, 0, -55_000, 6_000, -33_000, 0)
+    );
+    // ب paid from his pocket: nothing posted for him at all, the note is his only line.
+    let bob = statement_of(&w, b);
+    assert_eq!(bob.lines.len(), 1);
+    assert_eq!(bob.lines[0].detail, StatementDetail::GardenClosed);
+    assert_eq!(bob.lines[0].amount_paisa, None);
+    assert_eq!(bob.closing_total_paisa.rupees(), 0);
+    assert_eq!(value_of(&bob.lines[0], "part_paisa") / 100, -22_000);
+    // ج is not in the garden: no line.
+    assert!(statement_of(&w, c).lines.is_empty());
+    // Undo the closing: the notes go (the closing is not in force any more).
+    gardens::reopen(
+        &w.env.ctx,
+        &w.owner,
+        &GardenReopenInput {
+            id: garden.id,
+            version: detail(&w, garden.id).row.version,
+            reason: "wrong".into(),
+        },
+    )
+    .unwrap();
+    assert!(statement_of(&w, b).lines.is_empty());
+}
+
+#[test]
+fn a_partner_whose_part_comes_to_zero_gets_a_note_and_the_other_gets_the_line() {
+    // 1 rupee in, split 60 / 40: the leftover goes to the larger share, so ب's part is 0.
+    use mandi_services::core::statement::StatementDetail;
+    let w = worked_day();
+    let garden = create(&w, None);
+    gardens::entry_save(
+        &w.env.ctx,
+        &w.owner,
+        &other_sale(garden.id, "10-10-2026", "1", "1"),
+    )
+    .unwrap();
+    gardens::close(
+        &w.env.ctx,
+        &w.owner,
+        &close_input(&w, garden.id, "10-10-2026"),
+    )
+    .unwrap();
+    let [a, b, _] = w.partners;
+    let alif = statement_of(&w, a);
+    let closing = alif
+        .lines
+        .iter()
+        .find(|l| l.detail == StatementDetail::GardenClosed)
+        .unwrap();
+    assert_eq!(closing.amount_paisa.unwrap().rupees(), 1, "his 1 rupee");
+    assert_eq!(alif.closing_total_paisa.rupees(), 1);
+    let bob = statement_of(&w, b);
+    assert_eq!(bob.lines.len(), 1);
+    assert_eq!(bob.lines[0].detail, StatementDetail::GardenClosed);
+    assert_eq!(bob.lines[0].amount_paisa, None);
+    assert_eq!(value_of(&bob.lines[0], "back_paisa"), 0);
+    assert_eq!(value_of(&bob.lines[0], "share_bps"), 4_000);
+    assert_eq!(bob.closing_total_paisa.rupees(), 0);
+}

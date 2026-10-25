@@ -202,6 +202,7 @@ fn check_first(
                 last_lot_no = found.lot_no;
                 // A lot that other postings or write-offs rest on keeps its seller and item.
                 let others = found.qty_written_off > 0
+                    || found.qty_taken > 0
                     || found
                         .sales
                         .iter()
@@ -576,8 +577,14 @@ fn write_edit(
                     &LotCharges::of_totals(shaped.totals),
                     posting_sums(shaped)?,
                 )?;
-                let columns =
-                    lot_columns(detail.id, next_lot_no, shaped, person.as_ref(), &running)?;
+                let columns = lot_columns(
+                    tx,
+                    detail.id,
+                    next_lot_no,
+                    shaped,
+                    person.as_ref(),
+                    &running,
+                )?;
                 lot_ids.push(repo::insert_lot(tx, &columns, user, &now)?);
                 next_lot_no = next_lot_no
                     .checked_add(1)
@@ -638,7 +645,8 @@ fn write_edit(
                     .find(|l| Some(l.id) == shaped.lot.lot_id)
                     .map(|l| l.lot_no)
                     .ok_or_else(|| data("a lot of an edit is not in its بکری"))?;
-                let columns = lot_columns(detail.id, lot_no, shaped, person.as_ref(), &running)?;
+                let columns =
+                    lot_columns(tx, detail.id, lot_no, shaped, person.as_ref(), &running)?;
                 edit_repo::update_lot(tx, *lot_id, &columns, user, &now)?;
             }
             repo::set_lot_first_entry(tx, *lot_id, new_entry_id, user, &now)?;

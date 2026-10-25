@@ -641,6 +641,29 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "fruit_preview",
+            json!({ "input": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } }),
+            true,
+        ),
+        (
+            "fruit_save",
+            json!({ "input": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } }),
+            true,
+        ),
+        (
+            "fruit_edit",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "entry": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } } }),
+            true,
+        ),
+        (
+            "fruit_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        ("fruit_get", json!({ "input": { "id": 1 } }), true),
+        ("fruit_list", json!({ "input": {} }), true),
+        ("fruit_lots", json!({ "input": {} }), true),
+        (
             "vouchers_save_advance",
             json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "expected_goods": "", "narration": "" } }),
             true,

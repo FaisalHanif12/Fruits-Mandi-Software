@@ -492,7 +492,9 @@ pub(super) fn set_partners(
                 "version",
             ));
         }
-        if vrepo::has_entries(tx, garden.rec.id)? {
+        // Locked by an entry of the garden or by any posted line on its account, for example the
+        // seller credit of a lot sold into it (PRD E66).
+        if repo::shares_locked(tx, garden.rec.id)? {
             return Err(ServiceError::reject_field(
                 ErrorCode::ErrVentureSharesLocked,
                 "partners",

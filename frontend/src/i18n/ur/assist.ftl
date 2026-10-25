@@ -165,6 +165,10 @@ working-trip-result = فروخت کی رقم <num>{ $sales }</num> + دوسری 
 # FR-12.27: what a partner has so far: money back less money in from the shop and from his pocket.
 # review: pending
 working-trip-partner-net = واپس ملا <num>{ $back }</num> − دکان سے لگایا <num>{ $in_shop }</num> − اپنی جیب سے لگایا <num>{ $in_pocket }</num> = <num>{ $result }</num>
+# FR-12.37: the running balance of a garden: its money in less everything paid in (installments and
+# costs, from the shop and from pockets). It starts in minus.
+# review: pending
+working-garden-balance = آنے والی رقم <num>{ $money_in }</num> − ادا کی گئی ہر رقم (قسطیں اور باغ کے خرچ، دکان سے اور اپنی جیب سے) <num>{ $paid }</num> = <num>{ $result }</num>
 # FR-12.27: the result of one purchase.
 # review: pending
 working-purchase-result = فروخت کی رقم <num>{ $sales }</num> + دوسری دکانوں کی رقم <num>{ $other_shop }</num> − بکے ہوئے مال کی لاگت <num>{ $cost_sold }</num> − ضائع مال کی لاگت <num>{ $cost_written_off }</num> = <num>{ $result }</num>

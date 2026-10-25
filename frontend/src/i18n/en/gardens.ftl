@@ -181,7 +181,7 @@ gardens-figures-title = The garden in figures
 # review: pending
 gardens-partners-title = Partners
 # review: pending
-gardens-shares-locked = This garden has an entry, so the shares are fixed now.
+gardens-shares-locked = This garden has an entry or a sale, so the shares are fixed now.
 # review: pending
 gardens-fact-rent = { -thaika }
 # review: pending

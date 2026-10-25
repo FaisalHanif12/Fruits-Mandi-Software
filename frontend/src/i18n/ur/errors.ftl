@@ -61,6 +61,10 @@ err-name-ur-script = اردو نام اردو حروف میں لکھیں۔
 # PRD FR-7.28.
 # review: pending
 err-name-en-script = انگریزی نام انگریزی حروف میں لکھیں۔
+# PRD 10.2, Code Standards 4.2 (Tag). The code name is the backend's (plan 17e T1).
+# review: pending
+err-tag-invalid = نشان 1 سے 4 انگریزی بڑے حروف یا نقطوں کا ہونا چاہیے، جن میں کم از کم ایک حرف ہو۔ مثلاً K، BA یا D.P۔
+
 # review: pending
 err-name-too-long = نام بہت لمبا ہے۔ زیادہ سے زیادہ { $max } حروف لکھیں۔
 # review: pending

@@ -41,4 +41,13 @@ None (A58 to A60 are built as their defaults).
 
 ## 10. Contract as built in T1
 
-(To be written by the lead from the backend T1 hand-off.)
+Written by the lead from the backend T1 hand-off of 25-10-2026 (`pnpm gen:types` wrote 500 files, 23 new Fruit types). Module `core/src/fruit.rs`, `services/src/fruit.rs` (stubs answer `ERR_NOT_IMPLEMENTED` until T2), `app/src/commands/fruit.rs`. No migration (the `fruit_takes` table is in migration 0006). 7 commands:
+
+- `fruit_preview(FruitInput)` gives `FruitPreview`; `fruit_save(FruitInput)` gives `FruitSaved`; `fruit_edit(FruitEditInput)` gives `FruitEdited`; `fruit_cancel(FruitCancelInput)` gives `FruitCancelled` (edit and cancel by reversal, with id, version and reason); `fruit_get(FruitGetInput)` gives `FruitRow`; `fruit_list(FruitListInput)` gives `FruitList {rows, total_count, totals {qty, value}}` (paged, B31); `fruit_lots(FruitLotsInput)` gives `FruitLots` (the lot picker: balance above 0, no trip goods, no closed-garden lots).
+- `FruitInput`: `for_guests`, `partner_id`, `date`, `source` (`shop` or `other_shop`), `lot_id`, `agent_account_id`, `item_id` and `packing_id` (other_shop only; a shop take reads them from the lot), `qty`, `weight`, `rate`, `note`.
+- `FruitPreview`: `numbers {item, packing, qty, weight_grams, rate, value, value_working, parts[] with each partner's total before and after, parts_working (C27), credit {account, pukhta}, lot {balance_before, balance_after}}`, `errors`, `warnings`, `rate_hint` (placeholder only, F43).
+- New error code `ERR_FRUIT_CANCELLED` (ALL = 128). Reused: `ERR_QTY_EXCEEDS_LOT` on `qty`, `ERR_GARDEN_CLOSED` on `lot_id`.
+- Statement: `StatementLine` gains `packing` (RecordRef or null). The fruit line (T2) has heading `fruit`, detail `fruit_taken`, subject = the item, values `qty`, `rate_paisa`, `value_paisa`, and `for` = `home` or `guests`.
+- `fruit_takes` has no parts table, so a saved entry's parts are read from the journal lines (0604 debit) of its posting.
+- Carry from 17b (C16): `qty_taken` now counts in the stock list SQL and balance, `lot_state`, the later sale (available quantity and the post-check), the write-off and its undo, the edit check "lot rests on others" and the stored elsewhere quantity. `SavedLot` and `StockRow` have `qty_taken`. Test `a_lot_balance_subtracts_the_fruit_taken_in_every_place_c16` passes. Eleven existing fixture files changed only by `"packing": null` or `"qty_taken": N`.
+- 17c follow-ups done in the same step (no type or fixture change): shares also lock when any posted line is on the garden's account (a lot sale); a no-amount closing note line in the partner statement when a closing posts nothing for a partner; a garden lot refuses typed cash (`ERR_FORMAT_INVALID` at `lots[i].cash_paid`) and forces cash 0 and `adjust_advance` false in the backend. `golden_day` is 72 passed (68 plus 4 new).

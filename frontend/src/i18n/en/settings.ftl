@@ -39,6 +39,49 @@ settings-firm-phone = Phone
 # review: pending
 settings-firm-address = Address
 
+# Plan 17e, PRD Section 21 (Firm), FR-19.13.
+# review: pending
+settings-firm-contacts-title = Contact persons for prints
+
+# review: pending
+settings-firm-contacts-help = Up to 3 people. Each name and phone prints under the firm name on every print, for example "Munshi Asif Bhatti 0300-4058860".
+
+# review: pending
+settings-firm-contacts-empty = No contact person yet. The print header shows no contact line.
+
+# $number: 1 to 3.
+# review: pending
+settings-firm-contact-title = Contact person { $number }
+
+# review: pending
+settings-firm-contact-name-ur = Name (Urdu)
+
+# review: pending
+settings-firm-contact-name-en = Name (English)
+
+# review: pending
+settings-firm-contact-phone = Phone
+
+# review: pending
+settings-firm-contact-add = Add a contact person
+
+# review: pending
+settings-firm-contact-remove = Remove
+
+# Read by a screen reader. $number: 1 to 3.
+# review: pending
+settings-firm-contact-remove-label = Remove contact person { $number }
+
+# review: pending
+settings-firm-contacts-full = Three contact persons are the most. Remove one to add another.
+
+# Plan 17e, PRD Section 21 (Firm).
+# review: pending
+settings-firm-trade-mark = { -trade-mark }
+
+# review: pending
+settings-firm-trade-mark-hint = Printed in a box in every print header, for example RH. It is the same in both languages. Leave it empty for no box.
+
 # review: pending
 settings-language-default = Default language
 

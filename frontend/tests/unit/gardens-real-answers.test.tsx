@@ -128,6 +128,22 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     expect(pageText()).toContain('10,000');
   });
 
+  it('the working of the running balance reads in words with the real numbers (working-garden-balance)', async () => {
+    vi.mocked(gardensApi.gardensGet).mockResolvedValue(real.GARDENS_GET_OPEN);
+    const { user } = await open();
+    const balance = screen.getAllByText(said(message(language, 'gardens-balance')))[0];
+    const info = within(balance?.closest('div') ?? document.body).getByRole('button', {
+      name: startsWith('calc-info-label'),
+    });
+    await user.click(info);
+    const working = await screen.findByRole('dialog');
+    const words = visible(working.textContent);
+    // Money in 66,400 less everything paid 55,000 is 11,400; the id of the message is never shown.
+    for (const figure of ['66,400', '55,000', '11,400']) expect(words).toContain(figure);
+    expect(words).not.toContain('working-garden-balance');
+    expect(words).not.toContain('calc-info-unknown');
+  });
+
   it('the history shows the running balance after each real row', async () => {
     vi.mocked(gardensApi.gardensGet).mockResolvedValue(real.GARDENS_GET_OPEN);
     await open();

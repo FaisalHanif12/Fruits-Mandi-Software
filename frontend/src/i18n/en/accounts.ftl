@@ -199,6 +199,13 @@ accounts-field-name-ur = Urdu name
 # review: pending
 accounts-field-name-en = English name
 
+# PRD 10.2, FR-7.25: English capital letters, never converted to Urdu.
+# review: pending
+accounts-field-tag = { -nishan }
+
+# review: pending
+accounts-field-tag-hint = Optional. 1 to 4 English capital letters, for example K or BA. It is shown after the name and tells two people with the same name apart.
+
 # review: pending
 accounts-field-father-ur = Father or firm name, Urdu
 
@@ -258,6 +265,10 @@ accounts-field-note = Note
 
 # review: pending
 accounts-similar-title = Similar accounts already exist
+
+# PRD FR-10.7, E38.
+# review: pending
+accounts-similar-tag-help = Two people with the same name are told apart by the tag, for example Aslam BA and Aslam. Only the same name, tag and phone is a duplicate.
 
 ## The chart of accounts (PRD FR-10.1).
 

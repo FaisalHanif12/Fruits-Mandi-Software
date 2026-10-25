@@ -224,6 +224,7 @@ fn insert_lot(
         return Err(data("the stored totals of a lot differ from its preview"));
     }
     let columns = lot_columns(
+        tx,
         bikri_id,
         one_based(index)?,
         shaped,

@@ -102,6 +102,7 @@ fn plan_later(
     let taken = state
         .qty_sold
         .checked_add(state.qty_written_off)
+        .and_then(|v| v.checked_add(state.qty_taken))
         .ok_or_else(|| data("the quantity of a lot does not fit"))?;
     // A lot of own goods is sold in full in its بکری and never has a later sale (PRD FR-12.26).
     if state.qty_received <= taken || state.purchase_id.is_some() {
@@ -265,7 +266,12 @@ pub fn save(
         let sums = edit_repo::lot_sums(tx, state.id, None)?;
         let running = lot_running_totals(&lot_charges_of(&state)?, sums)?;
         edit_repo::update_lot_totals(tx, state.id, &running, user, &now)?;
-        if running.qty_sold.checked_add(state.qty_written_off) > Some(state.qty_received) {
+        if running
+            .qty_sold
+            .checked_add(state.qty_written_off)
+            .and_then(|v| v.checked_add(state.qty_taken))
+            > Some(state.qty_received)
+        {
             return Err(data("a lot sold more than it received"));
         }
 

@@ -57,7 +57,11 @@ export type StockRow = {
    */
   qty_written_off: number;
   /**
-   * نگ left: received less sold less written off.
+   * نگ taken as fruit (PRD FR-16.11, C16).
+   */
+  qty_taken: number;
+  /**
+   * نگ left: received less sold, written off and taken (C16).
    */
   balance: number;
   /**
