@@ -33,6 +33,7 @@ export function GardensPage() {
       userName={SAMPLE_USER}
       onLock={() => undefined}
       onSignOut={() => undefined}
+      onGuide={() => undefined}
       onOpenAccount={() => undefined}
       onOpenBikri={() => undefined}
       onOpenVoucher={() => undefined}

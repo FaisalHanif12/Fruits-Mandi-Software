@@ -1,0 +1,70 @@
+// Screenshots of the garden slice of round 11 (plan 27): the gardens tile of the dashboard (one open
+// garden, none open, a full dashboard, a failed call), in both languages at the three window sizes,
+// taken from the development page /dev/dashboard. R36 and view I are added to this file when their
+// contract is in. Run it the way shots-plan26.playwright.txt says (own headless Chrome, Vite on a free
+// port). It measures sideways overflow (NFR-USE-15): the page and the main area must not scroll
+// sideways, no tile may cut its words, and no raw markup, message ID or error code may show. The
+// Windows check is spec 50.
+//
+// The flags in the hash (tests/helpers/dev-bridge-dashboard.ts): `nogardens` makes no garden open.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan27';
+  const BASE = 'http://127.0.0.1:5188/#/dev/dashboard';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  // [flags in the hash, name of the shot, act (or null)].
+  const SHOTS = [
+    ['', 'dashboard-gardens', null],
+    ['?nogardens', 'dashboard-gardens-none', null],
+    ['?many', 'dashboard-gardens-many', null],
+    ['?down', 'dashboard-gardens-down', null],
+  ];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [flags, name, act] of SHOTS) {
+      for (const lang of ['ur', 'en']) {
+        try {
+          await page.goto(`${BASE}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1, [role="alert"]', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          await page.waitForTimeout(1800);
+          if (act === 'bell') {
+            await page.locator('[data-attention-count]').click();
+            await page.waitForTimeout(800);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const main = document.querySelector('main');
+            const cut = Array.from(document.querySelectorAll('main button[data-nav-field]')).filter(
+              (tile) => tile.scrollWidth > tile.clientWidth + 1,
+            ).length;
+            const text = document.body.textContent || '';
+            const raw = /<(num|code|key|money|unit|name)>|ERR_|dashboard-|attention-|guide-/.test(text);
+            return [
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'cutTiles=' + cut,
+              'raw=' + raw,
+            ].join(' ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 140)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};
