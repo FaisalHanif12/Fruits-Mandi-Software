@@ -12,7 +12,7 @@
 //   cashneg   cash in hand is below zero                 lent      money lent is past its return-by date
 //   update    a new version is ready                     bad       the books check found a problem
 //   fresh     the first-run guide has not been seen      none      no books check has been run yet
-//   cloudold  the last cloud backup is old
+//   cloudold  the last cloud backup is old       nogardens  no garden is open (the tile says so)
 
 import type { AttentionItem } from '../../src/bindings/AttentionItem';
 import type { AttentionList } from '../../src/bindings/AttentionList';
@@ -25,6 +25,7 @@ import { HEALTH_LAST, UPDATE_AVAILABLE, UPDATE_NONE } from './b5-real';
 import { STATUS_AFTER } from './backup-real';
 import { ATTENTION_18_10, DASHBOARD_WORKED_DAY } from './dashboard-real';
 import { devFlag } from './dev-bridge';
+import { GARDENS_SUMMARY_AFTER_CLOSE, GARDENS_SUMMARY_OPEN } from './gardens-real';
 import { paisaForTest } from './paisa';
 
 type Input = Record<string, unknown>;
@@ -251,6 +252,9 @@ const handlers: Record<string, (input: Input) => unknown> = {
       ? { ...STATUS_AFTER, cloud_level: 'red' as const, cloud_age_hours: 60 }
       : STATUS_AFTER,
   health_last: () => health(),
+  // The gardens tile (round 11): one open garden (E2E-40), or none after its closing.
+  gardens_summary: () =>
+    devFlag('nogardens') ? GARDENS_SUMMARY_AFTER_CLOSE : GARDENS_SUMMARY_OPEN,
   updates_check: () => (devFlag('update') ? UPDATE_AVAILABLE : UPDATE_NONE),
   prefs_screen_get: (input) => stateOf(screenOf(input)),
   prefs_screen_set: (input) => {

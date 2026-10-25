@@ -43,7 +43,7 @@
     },
     {
       "key": "share",
-      "title_id": "analytics-col-share",
+      "title_id": "analytics-col-share-percent",
       "kind": "percent"
     },
     {

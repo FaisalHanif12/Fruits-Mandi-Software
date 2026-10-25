@@ -24,7 +24,7 @@ use mandi_services::core::auth::Language;
 use mandi_services::core::bikri::{CancelInput, EditOpenInput, EditSaveInput};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::general::{GeneralInput, GeneralLineInput};
-use mandi_services::core::vouchers::{AdvanceInput, VoucherMode};
+use mandi_services::core::vouchers::AdvanceInput;
 use mandi_services::{accounts, bikri, ledger, vouchers};
 use reports_world::*;
 use support::World;
@@ -182,18 +182,12 @@ fn e2e_43_the_table_of_all_parties_for_the_worked_day() {
     assert_eq!(figures(&page.rows[0]), (0, 44_364, 22_800, 21_564));
     let r20 = report(&w, ReportId::R20, ReportFilters::default(), 0, 0);
     assert_eq!(money(&r20.totals[3]), 21_564);
-    // The sellers' heading. The totals row is the buyers' table, not buyers plus sellers: what is
-    // owed to the shop and what the shop owes are not added together (E2E-43).
+    // The sellers' heading. The page has no pinned totals row: what is owed to the shop (the
+    // buyers' heading row and the collection line) and what the shop owes (the sellers' lines)
+    // are never added together (E2E-43).
     assert_eq!(figures(&page.rows[4]), (15_000, 9_316, 34_476, -10_160));
-    assert_eq!(
-        (
-            signed(&page.totals[2]),
-            money(&page.totals[3]),
-            money(&page.totals[4]),
-            signed(&page.totals[5])
-        ),
-        (0, 44_364, 22_800, 21_564)
-    );
+    assert_eq!(page.totals.len(), page.columns.len());
+    assert!(page.totals.iter().all(|c| matches!(c, Cell::Empty)));
     // The blank column for the collector's note, and the short code of each party.
     assert!(page.rows.iter().all(|r| matches!(&r.cells[6], Cell::Empty)));
     assert_eq!(text(&page.rows[1].cells[0]), "2");
@@ -238,7 +232,7 @@ fn e2e_43_the_buyers_slip_of_akram() {
         12_880
     );
     assert_eq!(
-        money(&summary_of(&page, "report-r35-paid").unwrap()),
+        money(&summary_of(&page, "report-r35-received").unwrap()),
         10_000
     );
     assert_eq!(
@@ -283,7 +277,7 @@ fn a_one_time_buyer_who_paid_on_the_spot_has_nothing_to_collect() {
         12_800
     );
     assert!(matches!(
-        summary_of(&page, "report-r35-paid"),
+        summary_of(&page, "report-r35-received"),
         Some(Cell::Empty)
     ));
     assert_eq!(
@@ -800,7 +794,7 @@ fn a_credit_that_is_not_a_receipt_is_not_paid_that_day() {
         0,
         0,
     );
-    assert_eq!(line_of(&slip, "report-r35-paid"), 10_000);
+    assert_eq!(line_of(&slip, "report-r35-received"), 10_000);
     assert_eq!(line_of(&slip, "report-r35-other-credits"), 500);
     assert_eq!(line_of(&slip, "report-r35-remaining"), 2_380);
     assert_eq!(line_of(&slip, "report-r35-remaining"), book(&w, w.akram));
@@ -824,10 +818,7 @@ fn an_advance_given_to_a_seller_is_not_a_payment() {
             date: "10-10-2026".into(),
             seller_account_id: w.rahim,
             amount: "2,000".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },

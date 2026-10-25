@@ -12,9 +12,7 @@ use mandi_services::core::accounts::{BalanceSide, OpeningLineInput, OpeningsInpu
 use mandi_services::core::bikri::{BikriDraft, BikriSaveInput, HeaderInput, PukhtaInput};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
-use mandi_services::core::vouchers::{
-    AdvanceInput, DayCloseInput, PaymentInput, ReceiptInput, VoucherMode,
-};
+use mandi_services::core::vouchers::{AdvanceInput, DayCloseInput, PaymentInput, ReceiptInput};
 use mandi_services::{accounts, bikri, day, ledger, vouchers};
 
 pub fn rupees(value: i64) -> Paisa {
@@ -64,10 +62,7 @@ pub fn worked_day() -> support::World {
             date: "01-09-2026".into(),
             seller_account_id: rahim,
             amount: "15,000".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: Default::default(),
             expected_goods: String::new(),
             narration: String::new(),
         },
@@ -123,10 +118,7 @@ pub fn receipt(account: i64, amount: &str) -> ReceiptInput {
         account_id: account,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: Default::default(),
         collector_staff_id: None,
         narration: String::new(),
     }
@@ -138,10 +130,7 @@ pub fn payment(account: i64, amount: &str) -> PaymentInput {
         account_id: account,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: Default::default(),
         reason: String::new(),
         narration: String::new(),
         confirm_cash_below_zero: false,

@@ -37,6 +37,7 @@ import {
 } from '../helpers/b5-real';
 import { paisaForTest } from '../helpers/paisa';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -64,7 +65,7 @@ const leaf = (expected: string) => (_content: string, element: Element | null) =
 beforeEach(() => {
   vi.resetAllMocks();
   healthyBackend();
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(maintenance.settingsDayGet).mockResolvedValue(DAY_GET);
   vi.mocked(maintenance.healthLast).mockResolvedValue(null);
   act(() => {

@@ -111,7 +111,6 @@ pub(super) fn table(
     });
 
     let mut rows = Vec::new();
-    let mut grand = Sums::default();
     // The shop's total اگراہی (PRD FR-19.9): what the buyers owe, a buyer who is in credit not
     // taken off. R20 lists the same amounts, so this line always equals its میزان.
     let mut collection = Paisa::ZERO;
@@ -138,11 +137,10 @@ pub(super) fn table(
                 .ok_or_else(|| ReportsError::Data("a party of the sheet is missing".to_owned()))?;
             section_rows.push(party_row(item, party)?);
         }
-        // The totals row is the buyers' table: what is owed to the shop. The sellers' total is
-        // what the shop owes; the two are not added together (PRD E2E-43, money agent S1).
-        if buyers {
-            grand = sums;
-        } else {
+        // The buyers' total stays in the heading row of their section and in the collection
+        // line; the sellers' total in its summary lines. The two are never added together
+        // (PRD E2E-43, money agent S1), so the page has no pinned totals row of its own.
+        if !buyers {
             sellers_total = Some(sums);
         }
         rows.push(Row {
@@ -184,7 +182,8 @@ pub(super) fn table(
         offset: spec.offset,
         limit: spec.reported_limit(),
         totals_label_id: ids::TOTAL.to_owned(),
-        totals: grand.cells(Cell::Empty)?,
+        // No pinned totals row, as R34 (a row of empty cells, one for each column).
+        totals: vec![Cell::Empty; 7],
         summary,
     })
 }

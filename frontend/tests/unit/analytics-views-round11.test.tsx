@@ -243,6 +243,9 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(3);
       }, SLOW_MS);
+      // The percent of each line is headed "Share", not "Share of Commission": it is his share of an
+      // expense too.
+      expect(headerText('share')).toBe(m('analytics-col-share-percent'));
       // His share of a posting, from a شراکت دار row: the first line opens its بکری.
       await user.click(pick('.ag-row[row-id="0"] [col-id="date"]'));
       await user.keyboard('{Enter}');

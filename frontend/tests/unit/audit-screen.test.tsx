@@ -29,6 +29,7 @@ import {
 import { AUDIT_FIRST_PAGE, AUDIT_OPTIONS, AUDIT_REFUSED, AUDIT_SETTINGS } from '../helpers/b5-real';
 import { paisaForTest } from '../helpers/paisa';
 import { message, visible } from '../helpers/render';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -108,7 +109,7 @@ const DETAIL_ROW: AuditRow = {
 beforeEach(() => {
   vi.resetAllMocks();
   healthyBackend();
-  vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+  vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
   vi.mocked(auditApi.auditOptions).mockResolvedValue(AUDIT_OPTIONS);
   vi.mocked(auditApi.auditList).mockImplementation(({ offset, limit }) =>
     Promise.resolve(pageOf(offset, limit)),

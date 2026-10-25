@@ -746,8 +746,9 @@ fn r9_lists_the_one_time_line_as_paid_with_the_numbers_of_prd_4_5() {
 fn assert_r9_equals_the_screen(w: &support::World) {
     let screen = bikri::register(&w.env.ctx, &PukhtaRegisterInput::default()).unwrap();
     let page = report(w, ReportId::R9, ReportFilters::default(), 0, 0);
-    assert_eq!(page.rows.len(), screen.len());
-    for (row, line) in page.rows.iter().zip(&screen) {
+    assert_eq!(page.rows.len(), screen.rows.len());
+    assert_eq!(i64::try_from(page.rows.len()).unwrap(), screen.total_count);
+    for (row, line) in page.rows.iter().zip(&screen.rows) {
         let cells = &row.cells;
         assert_eq!(number(&cells[6]), line.qty);
         assert_eq!(money(&cells[7]), line.amount.rupees());

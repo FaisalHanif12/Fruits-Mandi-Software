@@ -1139,7 +1139,10 @@ report-r35-on-spot = موقع پر ادا
 report-r35-cash-given = { -naqd }
 
 # review: pending
-report-r35-paid = اس دن ادا
+report-r35-received = { -wasooli }
+
+# review: pending
+report-r35-paid = { -adaigi }
 
 # review: pending
 report-r35-remaining = { -total-raqam }

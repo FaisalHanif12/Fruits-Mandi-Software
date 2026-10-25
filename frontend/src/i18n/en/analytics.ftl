@@ -367,6 +367,9 @@ analytics-col-partner-part = Part of Result
 analytics-col-share-kind = Kind
 
 # review: pending
+analytics-col-share-percent = { -hissa }
+
+# review: pending
 analytics-col-share-base = Amount Shared
 
 # review: pending

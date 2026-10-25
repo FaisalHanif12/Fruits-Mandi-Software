@@ -251,6 +251,8 @@ const PENDING_IDS: &[&str] = &[
     "report-r34-open-lots",
     "report-r34-open-qty",
     // Round 11: R35 and the analytics views F, G and J.
+    "report-r35-received",
+    "analytics-col-share-percent",
     "report-r35-sellers-credit",
     "report-r35-sellers-debit",
     "report-r35-sellers-remaining",

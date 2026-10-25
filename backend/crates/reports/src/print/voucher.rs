@@ -10,6 +10,7 @@ use chrono::{DateTime, Utc};
 use mandi_core::accounts::BUYER_CONTROL;
 use mandi_core::auth::Language;
 use mandi_core::english_words::english_words;
+use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::Grouping;
 use mandi_core::printing::{PrintDoc, PrintSetup};
 use mandi_core::urdu_words::urdu_words;
@@ -109,19 +110,24 @@ fn build_slip(
         VoucherType::Receipt => (TITLE_RECEIPT_SLIP, SLIP_AMOUNT_RECEIVED),
         VoucherType::Payment => (TITLE_PAYMENT_SLIP, SLIP_AMOUNT_PAID),
         VoucherType::Advance => (TITLE_ADVANCE_SLIP, SLIP_AMOUNT_ADVANCE),
-        other => {
-            return Err(ReportsError::Data(format!(
-                "the slip of a {} voucher is not built",
-                other.as_str()
-            )));
+        // Only a receipt, a payment and an advance have a slip. Any other voucher (an expense, a
+        // loan, a جنرل) is a request the screen never makes: it is refused with a code at the
+        // field, not reported as an internal error.
+        _ => {
+            return Err(ReportsError::Rejected(vec![FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                "voucher_id",
+            )]));
         }
     };
     // The party: the one-time person by his own names, else the account (PRD FR-13.2).
     let (kind, is_pukhta) = loaded.party_kind;
-    let account = row
-        .account
-        .as_ref()
-        .ok_or_else(|| ReportsError::Data("a voucher names no account".to_owned()))?;
+    let account = row.account.as_ref().ok_or_else(|| {
+        ReportsError::Rejected(vec![FieldError::new(
+            ErrorCode::ErrOutOfRange,
+            "voucher_id",
+        )])
+    })?;
     let party = match (&row.person, is_pukhta) {
         (Some(person), true) => PrintParty {
             role_id: match kind {

@@ -137,7 +137,7 @@ pub(super) fn slip(
         if on_spot != Paisa::ZERO {
             summary.push(line(ids::R35_ON_SPOT, Cell::Money { paisa: on_spot }));
         }
-        summary.push(line(ids::R35_PAID, blank_if_zero(paid)));
+        summary.push(line(ids::R35_RECEIVED, blank_if_zero(paid)));
         if other_credits != Paisa::ZERO {
             summary.push(line(
                 ids::R35_OTHER_CREDITS,

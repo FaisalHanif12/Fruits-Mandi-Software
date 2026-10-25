@@ -364,22 +364,16 @@
       "type": "empty"
     },
     {
-      "type": "balance",
-      "paisa": 0,
-      "side": "zero"
+      "type": "empty"
     },
     {
-      "type": "money",
-      "paisa": 4436400
+      "type": "empty"
     },
     {
-      "type": "money",
-      "paisa": 2280000
+      "type": "empty"
     },
     {
-      "type": "balance",
-      "paisa": 2156400,
-      "side": "dr"
+      "type": "empty"
     },
     {
       "type": "empty"

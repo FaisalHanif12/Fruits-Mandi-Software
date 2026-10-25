@@ -30,7 +30,7 @@ fn columns() -> Vec<Column> {
         column("doc", ids::COL_DOC, ColumnKind::Doc),
         column("kind", ids::COL_SHARE_KIND, ColumnKind::Label),
         column("base", ids::COL_SHARE_BASE, ColumnKind::Money),
-        column("share", ids::COL_SHARE, ColumnKind::Percent),
+        column("share", ids::COL_SHARE_PERCENT, ColumnKind::Percent),
         column("amount", ids::COL_SHARE_AMOUNT, ColumnKind::Money),
     ]
 }

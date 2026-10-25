@@ -16,7 +16,7 @@ use mandi_backup::service::{BackupConfig, BackupParts, BackupService};
 use mandi_backup::settings::BackupSettings;
 use mandi_db::disk::DiskProbe;
 use mandi_services::core::bikri::{BikriDraft, HeaderInput, PukhtaInput};
-use mandi_services::core::vouchers::{PaymentInput, ReceiptInput, VoucherMode};
+use mandi_services::core::vouchers::{PaymentInput, ReceiptInput};
 use mandi_services::db::rusqlite::Connection;
 use mandi_services::{bikri, vouchers};
 use tempfile::TempDir;
@@ -175,10 +175,7 @@ pub fn rupees_input(account: i64, amount: &str) -> ReceiptInput {
         account_id: account,
         person_key: None,
         amount: amount.into(),
-        mode: VoucherMode::Cash,
-        bank_account_id: None,
-        cheque_no: String::new(),
-        cheque_date: String::new(),
+        removed: Default::default(),
         collector_staff_id: None,
         narration: String::new(),
     }
@@ -231,10 +228,7 @@ pub fn worked_day() -> Rig {
             account_id: w.rahim,
             person_key: None,
             amount: "4,316".into(),
-            mode: VoucherMode::Cash,
-            bank_account_id: None,
-            cheque_no: String::new(),
-            cheque_date: String::new(),
+            removed: Default::default(),
             reason: String::new(),
             narration: String::new(),
             confirm_cash_below_zero: false,

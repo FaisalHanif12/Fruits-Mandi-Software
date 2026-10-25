@@ -75,6 +75,15 @@ dashboard-tile-trips = { -market-safar }
 dashboard-tile-trips-note = <num>{ $open }</num> کھلے، باقی لاگت <money></money>
 
 # review: pending
+dashboard-tile-gardens = { -baghat }
+
+# review: pending
+dashboard-tile-gardens-note = <num>{ $open }</num> کھلے
+
+# review: pending
+dashboard-tile-gardens-none = کوئی باغ کھلا نہیں
+
+# review: pending
 dashboard-tile-lent = { -adhar-raqam } باقی
 
 # review: pending

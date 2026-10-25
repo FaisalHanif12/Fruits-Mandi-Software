@@ -63,6 +63,7 @@ pub(crate) fn run(
             to: typed.to.clone(),
             seller_id: typed.seller_id,
             item_id: typed.item_id,
+            lot_id: None,
             include_written_off: false,
         },
     )?;

@@ -118,7 +118,9 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - One report, two layouts, both on the generic screen. With no party it is the table of every party
   of the day: a group row for the buyers and one for the sellers (each with its own figures), a blank
   column for the collector's note (the wide step and the print), and under the table the shop's total
-  اگراہی and the sellers' credit, debit and balance. With a party it is his slip: the lines of his day
+  اگراہی and the sellers' credit, debit and balance. The table has no pinned totals row (the backend
+  sends all its totals empty, like R34): a row under both sections would read as the total of all of
+  them. The buyers' total is in their group row and in the line under the table. With a party it is his slip: the lines of his day
   and, right under them, the footer lines in the order the backend sends.
 - Enter on a party of the table opens his slip (a one-time person with his key, so the slip is his and
   not the whole account's); "All parties" goes back with the day still typed. The day box is called
@@ -126,7 +128,8 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - The footer is under the lines, like the client's own slip, on screen (`ReportResults`) and in the
   print (`ReportPrintDocument`, `data.report === 'R35'`); every other report has its lines above the
   table. The words of the footer are backend message IDs; the glossary has the four terms the client's
-  slip uses (تازہ بنام, سابقہ رقم, ٹوٹل رقم, بقایا).
+  slip uses (تازہ بنام, سابقہ رقم, ٹوٹل رقم, بقایا). A buyer's slip says "Receipt" (وصولی,
+  `report-r35-received`), a seller's says "Payment" (ادائیگی, `report-r35-paid`).
 - Tests: `reports-screens-round11.test.tsx`, the round 11 block of `reports-api-contract.test.ts`.
   Windows spec: `49-party-sheet-analytics-round11.e2e.mjs`.
 

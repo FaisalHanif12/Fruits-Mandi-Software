@@ -15,6 +15,7 @@ export type Destination =
   | { kind: 'stock' }
   | { kind: 'cashbook' }
   | { kind: 'trips' }
+  | { kind: 'gardens' }
   | { kind: 'backup' }
   | { kind: 'index' }
   | { kind: 'analytics' }
@@ -124,6 +125,9 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'trips':
         void navigate({ to: '/trips' });
+        return;
+      case 'gardens':
+        void navigate({ to: '/gardens' });
         return;
       case 'backup':
         void navigate({ to: '/backup' });

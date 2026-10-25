@@ -1138,7 +1138,10 @@ report-r35-on-spot = Paid on the Spot
 report-r35-cash-given = { -naqd }
 
 # review: pending
-report-r35-paid = Paid That Day
+report-r35-received = { -wasooli }
+
+# review: pending
+report-r35-paid = { -adaigi }
 
 # review: pending
 report-r35-remaining = { -total-raqam }

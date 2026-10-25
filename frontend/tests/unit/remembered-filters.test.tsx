@@ -70,6 +70,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { fakeReports } from '../helpers/reports';
+import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -283,7 +284,7 @@ describe.each(LANGUAGES)(
       healthyBackend();
       fakePartners([]);
       vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
-      vi.mocked(urduApi.translitPairsList).mockResolvedValue([]);
+      vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
       resetClientState(language);
       signedIn(sessionUser({ language }));
       set.mockImplementation(({ screen: name, value }) =>

@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Dashboard } from '../../src/bindings/Dashboard';
 import * as backupApi from '../../src/features/backup/api';
+import * as gardensApi from '../../src/features/gardens/api';
 import * as maintenanceApi from '../../src/features/settings/maintenance-api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -23,6 +24,7 @@ import {
 import { HEALTH_LAST, UPDATE_AVAILABLE, UPDATE_FAILED, UPDATE_NONE } from '../helpers/b5-real';
 import { STATUS_AFTER } from '../helpers/backup-real';
 import { DASHBOARD_WORKED_DAY, fakeDashboard } from '../helpers/dashboard';
+import { GARDENS_SUMMARY_AFTER_CLOSE, GARDENS_SUMMARY_OPEN } from '../helpers/gardens-real';
 import { message, visible } from '../helpers/render';
 import { must } from '../helpers/must';
 import { CommandError } from '../../src/shared/api';
@@ -33,6 +35,7 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/dashboard/api');
 vi.mock('../../src/features/backup/api');
+vi.mock('../../src/features/gardens/api');
 vi.mock('../../src/features/settings/maintenance-api');
 
 const money = (value: number) => value as unknown as Dashboard['tiles']['cash_in_hand_paisa'];
@@ -45,6 +48,7 @@ beforeEach(() => {
   healthyBackend();
   fakeDashboard();
   vi.mocked(backupApi.backupStatus).mockResolvedValue(STATUS_AFTER);
+  vi.mocked(gardensApi.gardensSummary).mockResolvedValue(GARDENS_SUMMARY_OPEN);
   vi.mocked(maintenanceApi.healthLast).mockResolvedValue(HEALTH);
   vi.mocked(maintenanceApi.updatesCheck).mockResolvedValue(UPDATE_NONE);
 });
@@ -206,6 +210,7 @@ describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (la
     ['dashboard-tile-advances', '/reports/R26'],
     ['dashboard-tile-stock', '/bikri/stock'],
     ['dashboard-tile-trips', '/trips'],
+    ['dashboard-tile-gardens', '/gardens'],
     ['dashboard-tile-lent', '/reports/R32'],
     ['dashboard-tile-expenses', '/reports/R29'],
     ['dashboard-tile-backup', '/backup'],
@@ -318,6 +323,48 @@ describe.each(LANGUAGES)('the states of the dashboard (%s)', (language) => {
       .setup()
       .click(within(alert).getByRole('button', { name: message(language, 'common-retry') }));
     await whenLoaded(language);
+    expect(tileText(language, 'dashboard-tile-cash')).toContain('58,484');
+  });
+
+  it('the gardens tile shows the running balance of the open gardens and how many are open', async () => {
+    await openDashboard(language);
+    await whenLoaded(language);
+    await waitFor(() => {
+      expect(tileText(language, 'dashboard-tile-gardens')).toContain('11,400');
+    });
+    expect(tileText(language, 'dashboard-tile-gardens')).toContain(
+      message(language, 'dashboard-tile-gardens-note', { open: 1 }),
+    );
+    expect(gardensApi.gardensSummary).toHaveBeenCalled();
+  });
+
+  it('with no open garden the tile says so, and a click opens the list where one is made', async () => {
+    vi.mocked(gardensApi.gardensSummary).mockResolvedValue(GARDENS_SUMMARY_AFTER_CLOSE);
+    const { router } = await openDashboard(language);
+    await whenLoaded(language);
+    await waitFor(() => {
+      expect(tileText(language, 'dashboard-tile-gardens')).toContain(
+        message(language, 'dashboard-tile-gardens-none'),
+      );
+    });
+    expect(tileText(language, 'dashboard-tile-gardens')).toContain('0');
+    await userEvent.setup().click(tile(language, 'dashboard-tile-gardens'));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/gardens');
+    });
+  });
+
+  it('a garden list that cannot be read is said on its own tile, and the other tiles stay', async () => {
+    vi.mocked(gardensApi.gardensSummary).mockRejectedValue(
+      new CommandError(refusal([{ code: 'ERR_INTERNAL' }])),
+    );
+    await openDashboard(language);
+    await whenLoaded(language);
+    await waitFor(() => {
+      expect(tileText(language, 'dashboard-tile-gardens')).toContain(
+        message(language, 'dashboard-tile-unknown'),
+      );
+    });
     expect(tileText(language, 'dashboard-tile-cash')).toContain('58,484');
   });
 

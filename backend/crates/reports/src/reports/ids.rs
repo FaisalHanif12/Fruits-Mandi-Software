@@ -126,6 +126,7 @@ pub(crate) const R35_OTHER_CREDITS: &str = "report-r35-other-credits";
 pub(crate) const R35_ON_SPOT: &str = "report-r35-on-spot";
 pub(crate) const R35_CASH_GIVEN: &str = "report-r35-cash-given";
 pub(crate) const R35_PAID: &str = "report-r35-paid";
+pub(crate) const R35_RECEIVED: &str = "report-r35-received";
 pub(crate) const R35_REMAINING: &str = "report-r35-remaining";
 pub(crate) const R35_COLLECTION: &str = "report-r35-collection";
 pub(crate) const R35_SELLERS_CREDIT: &str = "report-r35-sellers-credit";

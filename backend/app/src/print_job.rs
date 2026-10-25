@@ -262,6 +262,9 @@ pub(crate) fn reports_error(error: ReportsError) -> UiError {
 pub(crate) fn reports_voucher_error(error: ReportsError) -> UiError {
     match error {
         ReportsError::NotFound => UiError::single(ErrorCode::ErrNotFound, Some("voucher_id")),
+        // A voucher that has no slip (an expense, a loan, a جنرل) is refused with a code at the
+        // field, not an internal error.
+        ReportsError::Rejected(items) => UiError::from(ServiceError::from(items)),
         other => reports_error(other),
     }
 }
@@ -270,6 +273,7 @@ pub(crate) fn reports_voucher_error(error: ReportsError) -> UiError {
 pub(crate) fn reports_voucher_service_error(error: ReportsError) -> ServiceError {
     match error {
         ReportsError::NotFound => ServiceError::reject_field(ErrorCode::ErrNotFound, "voucher_id"),
+        ReportsError::Rejected(items) => ServiceError::from(items),
         other => reports_service_error(other),
     }
 }

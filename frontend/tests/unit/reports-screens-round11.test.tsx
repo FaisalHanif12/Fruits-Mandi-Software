@@ -198,14 +198,15 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(cell('6', 'remaining')).toContain(m('report-side-cr'));
     });
 
-    it('has the buyers’ total in the totals row, and no other total of its own', async () => {
+    it('has no totals row of its own: the buyers’ total is in their group row and in the line under the table', async () => {
       await openSheet();
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(7);
       }, SLOW_MS);
-      expect(totalsCell('debit')).toBe('44,364');
-      expect(totalsCell('credit')).toBe('22,800');
-      expect(totalsCell('remaining')).toContain('21,564');
+      // A pinned row under both sections would be read as the total of all of them.
+      expect(document.querySelector('.ag-row-pinned')).toBeNull();
+      expect(cell('0', 'remaining')).toContain('21,564');
+      expect(footerLines()[0]).toContain('21,564');
     });
 
     it('draws the columns that fit, and leaves the collector’s blank column for the wide step and the print', async () => {
@@ -280,7 +281,8 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(lines[1]).toContain(m('report-r35-previous'));
       expect(lines[2]).toContain(m('report-r35-bought'));
       expect(lines[2]).toContain('12,880');
-      expect(lines[3]).toContain(m('report-r35-paid'));
+      // A buyer's slip says what was received (the client's وصولی), not what was paid.
+      expect(lines[3]).toContain(m('report-r35-received'));
       expect(lines[3]).toContain('10,000');
       expect(lines[4]).toContain(m('report-r35-remaining'));
       expect(lines[4]).toContain('2,880');

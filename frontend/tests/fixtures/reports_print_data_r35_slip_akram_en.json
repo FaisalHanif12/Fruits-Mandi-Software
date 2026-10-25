@@ -68,7 +68,7 @@
       }
     },
     {
-      "label_id": "report-r35-paid",
+      "label_id": "report-r35-received",
       "cell": {
         "type": "money",
         "text": "10,000"

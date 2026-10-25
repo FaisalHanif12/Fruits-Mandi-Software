@@ -23,7 +23,7 @@ use mandi_reports::reports::{
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::auth::Language;
 use mandi_services::core::error::ErrorCode;
-use mandi_services::core::vouchers::{OpenPayablesInput, VoucherMode};
+use mandi_services::core::vouchers::OpenPayablesInput;
 use mandi_services::{ledger, vouchers};
 
 use reports_world::*;
@@ -668,8 +668,7 @@ fn r26_shows_rahims_advance_fully_adjusted_e2e_7() {
 fn r26_after_a_cash_return_shows_given_returned_adjusted_open_e2e_31() {
     // E2E-31: رحیم returns 10,000 of his advance, then بکری 1 adjusts the last 5,000.
     let w = worked_day();
-    let mut back = receipt(w.rahim, "10,000");
-    back.mode = VoucherMode::Cash;
+    let back = receipt(w.rahim, "10,000");
     vouchers::save_receipt(&w.env.ctx, &w.owner, &back).unwrap();
     let mid = report(&w, ReportId::R26, ReportFilters::default(), 0, 0);
     assert_eq!(

@@ -32,6 +32,7 @@ pub(crate) const COL_NET: &str = "report-col-net";
 pub(crate) const COL_DATE: &str = "report-col-date";
 pub(crate) const COL_DOC: &str = "report-col-doc";
 pub(crate) const COL_SHARE: &str = "analytics-col-share";
+pub(crate) const COL_SHARE_PERCENT: &str = "analytics-col-share-percent";
 pub(crate) const COL_SHARE_KIND: &str = "analytics-col-share-kind";
 pub(crate) const COL_SHARE_BASE: &str = "analytics-col-share-base";
 pub(crate) const COL_SHARE_AMOUNT: &str = "analytics-col-share-amount";

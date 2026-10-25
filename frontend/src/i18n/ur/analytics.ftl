@@ -367,6 +367,9 @@ analytics-col-partner-part = نتیجے میں حصہ
 analytics-col-share-kind = قسم
 
 # review: pending
+analytics-col-share-percent = { -hissa }
+
+# review: pending
 analytics-col-share-base = تقسیم ہونے والی رقم
 
 # review: pending

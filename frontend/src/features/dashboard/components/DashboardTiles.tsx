@@ -1,13 +1,13 @@
 // The tiles of the dashboard (PRD 9.1, FR-9.1): today's sales and commission, cash in hand, the
-// shop's dues, payables and advances, stock, market trips, money lent and today's expenses. Every
+// shop's dues, payables and advances, stock, market trips, gardens, money lent and today's expenses. Every
 // tile is one button that opens the screen or report behind it. The figures are the backend's, shown
 // by `Num` and `formatPaisa`; nothing is added up here (CLAUDE.md rule 1). A figure that is below
 // zero or past its date also says so in words, never by colour alone (NFR-USE-12). ↑ ↓ ← → move
 // between tiles the way the user sees them (PRD FR-7.13).
 //
-// The garden tile (PRD 9.1) comes with the gardens in round 11: it is one more tile in `TileGrid`,
-// after the market trips tile. The backup and the books check tiles are drawn by `StatusTiles` and
-// come in as `children`, so one tile that cannot be read never hides the others.
+// The gardens tile (PRD 9.1) asks the gardens module for itself (`GardenTile`), so a garden list that
+// cannot be read never hides the others. The backup and the books check tiles are drawn by
+// `StatusTiles` and come in as `children` for the same reason.
 
 import { Localized } from '@fluent/react';
 import type { ReactNode } from 'react';
@@ -16,6 +16,7 @@ import { isNegativePaisa, isPositivePaisa } from '../../../shared/format';
 import { formNavigationProps } from '../../../shared/keyboard';
 import { Num, Tile } from '../../../shared/ui';
 import { useOpenDestination } from '../destinations';
+import { GardenTile } from './GardenTile';
 
 interface DashboardTilesProps {
   tiles: DashboardTilesData;
@@ -139,7 +140,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
           <span />
         </Localized>
       </Tile>
-      {/* The garden tile goes here in round 11 (PRD 9.1). */}
+      <GardenTile />
       <Tile
         label={<Localized id="dashboard-tile-lent" />}
         tone={lentOverdue ? 'warn' : 'neutral'}

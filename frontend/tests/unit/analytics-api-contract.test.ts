@@ -232,6 +232,12 @@ describe('the answers carry exactly the fields of the generated types', () => {
     ]);
   });
 
+  it('the lines behind F head the percent "Share", not the "Share of Commission" of the other views', () => {
+    const percent = ANALYTICS_LINES_F_PARTNER_A.columns.find((column) => column.key === 'share');
+    expect(percent?.title_id).toBe('analytics-col-share-percent');
+    expect(percent?.kind).toBe('percent');
+  });
+
   it('a partner row of F opens his share rows; a trip row of J opens its purchases', () => {
     expect(ANALYTICS_RUN_F.rows.map((row) => row.key?.partner_id)).toEqual([1, 2, 3]);
     expect(ANALYTICS_RUN_J_TRIP.rows[0]?.key?.purchase_ids).toEqual([1]);
