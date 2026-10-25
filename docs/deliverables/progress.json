@@ -102,5 +102,10 @@
       "11 R35 R36 R37, analytics F G I J K, prints, after D4R": "waiting",
       "12 go-live parts on the Mac": "waiting"
     }
+  },
+  "gate_approval": {
+    "decided_by": "Umar",
+    "at": "2026-10-25",
+    "text": "Review gate (reviewer and robustness) starts only after Umar says continue. Finish all build work first, then stop all agents and wait for his approval."
   }
 }
