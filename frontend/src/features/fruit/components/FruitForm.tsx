@@ -36,7 +36,11 @@ import { FOR_GUESTS, type FruitDraft, type FruitPreview, type FruitSource } from
 
 interface FruitFormProps {
   draft: FruitDraft;
-  onChange: (next: FruitDraft) => void;
+  /**
+   * Changes the draft from the draft as it is NOW, not as this render saw it: two picks that come
+   * before the next render (a slow machine) cannot undo each other.
+   */
+  onChange: (change: (current: FruitDraft) => FruitDraft) => void;
   /** What the backend refused, to show next to the field it points at. */
   error: UiError | null;
   /** The backend's answer for the form as it is, for the last rate and the lot's balance. */
@@ -52,7 +56,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
   const partners = usePartnerList();
   const shop = draft.source === 'shop';
   const patch = (next: Partial<FruitDraft>) => {
-    onChange({ ...draft, ...next });
+    onChange((current) => ({ ...current, ...next }));
   };
 
   // The last rate is grey text only; it is never filled into the field (PRD FR-7.53).
@@ -117,7 +121,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
         groupLabel={l10n.getString('fruit-field-source')}
         value={draft.source}
         onChange={(source) => {
-          onChange(changeSource(draft, source));
+          onChange((current) => changeSource(current, source));
         }}
         options={[
           { value: 'shop', label: <Localized id="fruit-source-own" /> },

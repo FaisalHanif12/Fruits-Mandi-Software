@@ -77,8 +77,8 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
   const read = useReadFruit();
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
 
-  const change = (next: FruitDraft) => {
-    setDraft(next);
+  const change = (update: (current: FruitDraft) => FruitDraft) => {
+    setDraft(update);
     setTried(false);
   };
   const filled = fruitIsFilled(draft);

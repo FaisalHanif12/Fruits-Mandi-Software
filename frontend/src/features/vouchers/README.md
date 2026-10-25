@@ -68,5 +68,9 @@ preview hook), `useSaveFlow.ts`, `useEditSeed.ts`, `collection.ts`, `list-column
 Plan 17e: the collection list can be printed (`print/CollectionListTemplate.tsx`, the 5th document,
 `print/CollectionPrintView.tsx` for the preview and the hidden window, `print/CollectionPrintBox.tsx`
 for the language, printer or PDF, copies and preview). The day and the filters are the collection
-screen's own. The total on paper is the total OF THIS LIST (not the shop's total اگراہی). The print
-button on the collection screen is wired in F2, with the hidden window's address.
+screen's own. The total on paper is the total OF THIS LIST (not the shop's total اگراہی). The Print
+button (and F9) of the collection screen opens the box. The hidden print window is
+`print/CollectionPrintPage.tsx`, the address `#/print?collection=<YYYY-MM-DD>&doc=collection_list&
+language=<ur|en>[&collector=<id>][&city=<id>]&job=<job>` (`print/collection-params.ts` reads it; the day
+goes to the command as `DD-MM-YYYY`). It may call `reports_collection_print_data` only. An empty day
+shows the words for nothing to print.

@@ -26,7 +26,12 @@ import {
   voucherPrintData,
   type CannedOptions,
 } from '../helpers/print-data';
-import { REAL_SNAPSHOTS, realPrintData } from '../helpers/print-real';
+import {
+  REAL_COLLECTION_SNAPSHOTS,
+  REAL_SNAPSHOTS,
+  realCollectionData,
+  realPrintData,
+} from '../helpers/print-real';
 import * as realVouchers from '../helpers/vouchers-real';
 import { visible } from '../helpers/render';
 
@@ -40,6 +45,7 @@ const URDU_DIGIT = /[۰-۹]/;
 const ASCII_DIGIT = /[0-9]/;
 /** The shapes of an amount or a count ("2,880", "۲,۸۸۰", "20") and of a date ("10-10-2026"). */
 const AMOUNT_OR_DATE = /^[0-9۰-۹]{1,3}(,[0-9۰-۹]{3})*$|^[0-9۰-۹]{2}-[0-9۰-۹]{2}-[0-9۰-۹]{4}$/;
+const DATE = /^[0-9۰-۹]{2}-[0-9۰-۹]{2}-[0-9۰-۹]{4}$/;
 /** A phone number ("0300-4058860"): never converted. */
 const PHONE = /^0[0-9۰-۹]{3}-[0-9۰-۹]{6,7}$/;
 
@@ -124,12 +130,11 @@ describe.each(TEMPLATES)('the $name print', ({ draw }) => {
       const cells = [...root.querySelectorAll('.type-number')];
       const numbers = cells.map((item) => item.textContent);
       expect(numbers.length).toBeGreaterThan(0);
-      // An amount, a count and a date have Urdu digits only: no 0-9 is left in them. The short code
-      // of the collection list is not one of them, in the table column or in the first place of the
-      // line under a name on 80 mm paper: a code is never converted.
+      // An amount, a count and a date have Urdu digits only: no 0-9 is left in them. A code (the
+      // `Code` component marks it) is never converted, even with the setting on, unless it is a
+      // date in the facts of the header.
       const figures = cells
-        .filter((item) => item.closest('.print-col-code') === null)
-        .filter((item) => !item.matches('.print-compact-sub > :first-child'))
+        .filter((item) => item.getAttribute('data-kind') !== 'code' || DATE.test(item.textContent))
         .map((item) => item.textContent)
         .filter((text) => AMOUNT_OR_DATE.test(text));
       expect(figures.length).toBeGreaterThan(0);
@@ -175,6 +180,36 @@ describe("the backend's real answers are written with the digits 0-9 only", () =
     expect(oddDigits(text)).toEqual([]);
     expect(oddDigits(footerOf())).toEqual([]);
   });
+});
+
+describe('the real collection lists of the backend', () => {
+  it.each(REAL_COLLECTION_SNAPSHOTS)(
+    '$name',
+    (snapshot: (typeof REAL_COLLECTION_SNAPSHOTS)[number]) => {
+      const data = realCollectionData(snapshot);
+      expect(data.urdu_digits).toBe(snapshot.urduDigits);
+      const { container } = render(<CollectionListTemplate data={data} applyRoot />);
+      const root = theSheet(container);
+      const text = visible(root.textContent);
+      if (!snapshot.urduDigits) {
+        // The default: 0-9 only, in the sheet and in the footer.
+        expect(text).toMatch(ASCII_DIGIT);
+        expect(oddDigits(text)).toEqual([]);
+        expect(oddDigits(footerOf())).toEqual([]);
+        expect(root.dataset['digits']).toBe('latin');
+        return;
+      }
+      // The one real answer with the setting on: amounts, dates and serials have ۰-۹, a phone and a
+      // code stay 0-9 (backend, 26-10-2026).
+      expect(root.dataset['digits']).toBe('urdu');
+      expect(text).toMatch(URDU_DIGIT);
+      expect(text).toContain('۲۱,۵۶۴');
+      expect(text).toContain('0300-1234567');
+      expect(footerOf()).toContain('persian');
+      const codes = [...root.querySelectorAll('.print-col-code .type-number')];
+      expect(codes.map((item) => item.textContent)).toEqual(['1', '2']);
+    },
+  );
 });
 
 describe('the default of the canned data is the English digits', () => {

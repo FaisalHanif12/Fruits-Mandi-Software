@@ -5,6 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import type { CollectionPrintData } from '../../src/bindings/CollectionPrintData';
 import type { Language } from '../../src/bindings/Language';
 import type { PrintData } from '../../src/bindings/PrintData';
 import type { PrintDoc } from '../../src/bindings/PrintDoc';
@@ -60,4 +61,28 @@ export function shapeOf(value: unknown): unknown {
     );
   }
   return typeof value;
+}
+
+/**
+ * The real print data of the collection list (plan 17e): the backend's own `insta` snapshots of
+ * `mandi-reports` (`collection_print__snapshot_*.snap`), copied here, never edited. `golden` is the
+ * PRD worked day (Akram 2,880 and Arshad 18,684, total 21,564), `grouped_with_contacts_...` has two
+ * collectors and cities, the contacts, the trade mark and the filters in the header facts, and
+ * `golden_urdu_with_urdu_digits` is the ONE real answer with the Urdu digits setting on.
+ */
+export const REAL_COLLECTION_SNAPSHOTS = [
+  { name: 'golden_urdu', language: 'ur', urduDigits: false },
+  { name: 'golden_english', language: 'en', urduDigits: false },
+  { name: 'grouped_english', language: 'en', urduDigits: false },
+  { name: 'grouped_with_contacts_trade_mark_and_filters_urdu', language: 'ur', urduDigits: false },
+  { name: 'golden_urdu_with_urdu_digits', language: 'ur', urduDigits: true },
+] as const satisfies readonly { name: string; language: Language; urduDigits: boolean }[];
+
+export type RealCollectionSnapshot = (typeof REAL_COLLECTION_SNAPSHOTS)[number];
+
+/** The print data of one real collection list. */
+export function realCollectionData(snapshot: RealCollectionSnapshot): CollectionPrintData {
+  const file = path.join(FOLDER, `collection_print__snapshot_${snapshot.name}.snap`);
+  const body = fs.readFileSync(file, 'utf8').split('---\n').slice(2).join('---\n');
+  return JSON.parse(body) as CollectionPrintData;
 }

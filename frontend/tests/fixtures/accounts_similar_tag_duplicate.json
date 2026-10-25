@@ -1,0 +1,16 @@
+[
+  {
+    "id": 20,
+    "code": "03040001",
+    "name_ur": "اکرم ٹول ٹیکس",
+    "name_en": "Akram Toll Tax",
+    "tag": "K",
+    "father_or_firm_ur": "",
+    "father_or_firm_en": "",
+    "city_ur": "",
+    "city_en": "",
+    "phone1": "",
+    "account_type": "buyer",
+    "is_duplicate": true
+  }
+]

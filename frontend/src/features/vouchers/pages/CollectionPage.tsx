@@ -14,7 +14,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Printer } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
@@ -56,6 +56,7 @@ import {
   type CollectionRow,
 } from '../collection';
 import { useCollectionList, useSaveReceiptsBatch } from '../hooks';
+import { CollectionPrintBox } from '../print/CollectionPrintBox';
 import type { CollectionList, ReceiptsSaved } from '../types';
 
 /** A grid of this many rows or fewer is as tall as its rows; a longer one fills the screen. */
@@ -270,6 +271,8 @@ export function CollectionPage() {
   const [dayText, setDayText] = useState<string | null>(null);
   const [collector, setCollector] = useState<PickerValue | null>(null);
   const [city, setCity] = useState<PickerValue | null>(null);
+  // The print box of the list (PRD FR-15.6): it prints the day and the filters typed here.
+  const [printOpen, setPrintOpen] = useState(false);
   // A new round is built when the list is read again after a save; the refused amounts carry over.
   const [round, setRound] = useState<{ n: number; carried: ReadonlyMap<number, Refused> }>({
     n: 0,
@@ -283,6 +286,13 @@ export function CollectionPage() {
       : { date: date.trim(), collector_staff_id: collector?.id ?? null, city_id: city?.id ?? null };
   const list = useCollectionList(input);
   const total = list.data;
+  useShortcut(
+    SHORTCUTS.print,
+    () => {
+      setPrintOpen(true);
+    },
+    { enabled: !printOpen && input !== null },
+  );
 
   let body;
   if (day.isPending || (list.isPending && input !== null)) {
@@ -339,14 +349,26 @@ export function CollectionPage() {
             <p className="type-body text-ink-muted" />
           </Localized>
         </div>
-        <Button
-          shortcut={SHORTCUTS.back}
-          onClick={() => {
-            void navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });
-          }}
-        >
-          <Localized id="vouchers-collection-back" />
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            shortcut={SHORTCUTS.print}
+            disabled={input === null}
+            onClick={() => {
+              setPrintOpen(true);
+            }}
+          >
+            <Printer aria-hidden="true" className="size-icon-md" />
+            <Localized id="vouchers-print" />
+          </Button>
+          <Button
+            shortcut={SHORTCUTS.back}
+            onClick={() => {
+              void navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });
+            }}
+          >
+            <Localized id="vouchers-collection-back" />
+          </Button>
+        </div>
       </div>
       <Card compact>
         <div className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4">
@@ -386,6 +408,17 @@ export function CollectionPage() {
         </div>
       </Card>
       {body}
+      {input === null ? null : (
+        <CollectionPrintBox
+          open={printOpen}
+          onOpenChange={setPrintOpen}
+          target={{
+            date: input.date,
+            collectorStaffId: input.collector_staff_id,
+            cityId: input.city_id,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint --max-warnings 0 . && stylelint \"src/**/*.css\"",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.node.json",
-    "test": "vitest run"
+    "test": "vitest run --project main && vitest run --project sensitive"
   },
   "dependencies": {
     "@fluent/bundle": "0.19.1",

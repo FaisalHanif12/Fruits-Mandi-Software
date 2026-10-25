@@ -29,6 +29,7 @@ import {
 import { printingSettings } from './print-settings';
 import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
 import { indexHandlers, isIndexPage } from './dev-bridge-index';
+import * as tagReal from './tag-real';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
@@ -562,6 +563,18 @@ const handlers: Record<string, Handler> = {
       })),
       saved_paisa: paisaForTest(0),
     };
+  },
+  // The collection list on paper (plan 17e): the backend's own real answers, in the language asked;
+  // `?empty` is a day with nobody on the list. Printing itself is refused, as on a Mac.
+  reports_collection_print_data: (input) =>
+    devFlag('empty')
+      ? tagReal.COLLECTION_EMPTY
+      : input['language'] === 'en'
+        ? tagReal.COLLECTION_EN
+        : tagReal.COLLECTION_UR,
+  reports_print_collection: () => {
+    if (!devFlag('windows')) throw windowsOnly();
+    return { printed: ['collection_list'], pdf_paths: null };
   },
   reports_voucher_print_data: (input) =>
     voucherPrintData('receipt', { language: input['language'] === 'en' ? 'en' : 'ur' }),

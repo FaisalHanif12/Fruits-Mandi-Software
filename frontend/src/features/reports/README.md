@@ -220,7 +220,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   `elems={RUNNING_NUMBER}`, and in prints through `PrintCell.tsx`. The guard test
   `tests/unit/running-text-numbers.test.tsx` draws 14 screens and 8 prints in both languages and fails
   on any digit outside one (`tests/helpers/bare-digits.ts`; titles and tabs are names and are the only
-  exception, and `.print-firm-line` of the shared header is a known gap, reported). The print digits are
+  exception; the firm line of the shared header is checked too since Run A fixed it). The print digits are
   0-9 in both languages (the Urdu-digits setting stays off by default).
 
 ## The print job: printer and PDF (round 14, 17e)

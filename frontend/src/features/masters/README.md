@@ -31,3 +31,9 @@ never converted to Urdu). It is sent as typed; the backend makes it capital and 
 account list, the chart tree and the similar-accounts panel carry it without any code of their own.
 A record a screen keeps from a picker is made by `pickedOf` (`shared/accounts/picked.ts`), which
 keeps the tag; a screen never builds the record by hand.
+
+The duplicate check (PRD FR-10.7, E38): the form sends the typed names, phone AND tag to
+`accounts_similar`, and the backend marks the account whose name, tag and phone all equal them
+(`is_duplicate`). `SimilarAccounts` shows that row with a word chip and changes the title of the panel; the
+frontend never decides it. It only warns, and the save is never blocked. A contact person of the firm
+(`features/settings/components/FirmTab`) has the same spelling check as the firm's names.

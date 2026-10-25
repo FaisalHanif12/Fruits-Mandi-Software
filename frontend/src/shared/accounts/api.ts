@@ -242,6 +242,7 @@ export async function searchGlobal(text: string): Promise<GlobalHit[]> {
       code: item.hit.code,
       name_ur: item.hit.name_ur,
       name_en: item.hit.name_en,
+      ...(item.hit.tag === undefined ? {} : { tag: item.hit.tag }),
       extra_ur: item.hit.extra_ur,
       extra_en: item.hit.extra_en,
     };

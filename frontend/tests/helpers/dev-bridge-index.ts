@@ -2,10 +2,11 @@
 // for looking at the tag (نشان) field, the similar accounts with their tags, and the contact persons
 // and trade mark of the firm in a plain browser tab. dev-bridge.ts asks this table first while the
 // address is /dev/index. Flags in the hash: `?screen=account|firm`, `&similar` (two people with the
-// same name, one with a tag), `&contacts` (the firm has three contact persons and a trade mark).
+// same name, one with a tag), `&duplicate` (the one with the tag is a duplicate), `&contacts` (the firm has three contact persons and a trade mark).
 // Never part of a build: only the development route imports it.
 
 import type { AccountMatch } from '../../src/shared/accounts';
+import { SEARCH_GLOBAL_TAG } from './tag-real';
 
 type Input = Record<string, unknown>;
 type Handler = (input: Input) => unknown;
@@ -50,12 +51,20 @@ const flag = (name: string): boolean =>
 
 export const indexHandlers: Record<string, Handler> = {
   accounts_next_code: () => '03040063',
-  accounts_similar: () => (flag('similar') ? SIMILAR : []),
+  // `&duplicate`: the first one has the name, the tag and the phone typed (the backend's mark).
+  accounts_similar: () =>
+    flag('duplicate')
+      ? SIMILAR.map((match, index) => ({ ...match, is_duplicate: index === 0 }))
+      : flag('similar')
+        ? SIMILAR
+        : [],
   coa_heads_list: () => [],
   coa_controls_list: () => [],
   search_masters: () => [],
   search_recent: () => [],
   search_touch: () => null,
+  // The global search: the backend's own real answer, Akram Toll Tax with the tag K.
+  search_global: () => SEARCH_GLOBAL_TAG,
   settings_set_firm: (input) => input,
 };
 
