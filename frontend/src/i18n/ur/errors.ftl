@@ -149,7 +149,7 @@ err-not-logged-in = پہلے لاگ ان کریں۔
 # review: pending
 err-session-locked = ایپ لاک ہے۔ پاس ورڈ لکھ کر کھولیں۔
 # review: pending
-err-not-found = یہ چیز نہیں ملی۔ فہرست دوبارہ کھولیں۔
+err-not-found = یہ نہیں ملا۔ صفحہ دوبارہ کھولیں اور دوبارہ چنیں۔
 # PRD FR-7.66, E49.
 # review: pending
 err-spelling-unconfirmed = ان لفظوں کے ہجے کی تصدیق نہیں ہوئی: { $words }۔ ہجے دیکھیں، پھر تصدیق کریں یا درست کریں۔
@@ -330,7 +330,7 @@ err-nothing-to-sell = اس { -lot } میں بیچنے کے لیے کچھ باق�
 err-write-off-exceeds-balance = باقی مال سے زیادہ ضائع نہیں ہو سکتا۔ صرف { $available } { -nag } باقی ہیں۔
 
 # review: pending
-err-date-before-received = فروخت کا دن مال وصول ہونے کے دن سے پہلے کا نہیں ہو سکتا۔
+err-date-before-received = دن مال وصول ہونے کے دن سے پہلے کا نہیں ہو سکتا۔
 
 # review: pending
 err-qty-below-sold = وصول شدہ تعداد اس { -lot } سے پہلے بکی ہوئی تعداد سے کم نہیں ہو سکتی۔
@@ -437,6 +437,11 @@ err-capital-exceeds-balance = یہ شراکت دار کے { -sarmaya } بقای�
 # PRD FR-16.12: the fruit entry was cancelled already (it cannot be changed or cancelled again).
 # review: pending
 err-fruit-cancelled = یہ { -phal } کا اندراج پہلے ہی منسوخ ہو چکا ہے، اس لیے اس میں تبدیلی نہیں ہو سکتی۔
+
+# PRD 16.11, FR-12.22: fruit was taken from a lot of this sale, so the sale cannot be cancelled or undone.
+# $qty_taken: the نگ taken from its lots.
+# review: pending
+err-bikri-has-fruit = اس { -bikri } کے { -lot } سے { $qty_taken } { -nag } { -phal } لیا گیا ہے، اس لیے یہ منسوخ نہیں ہو سکتی۔ پہلے { -phal } کا اندراج منسوخ کریں۔
 
 # PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
 # review: pending

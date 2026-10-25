@@ -151,9 +151,13 @@ export function createFruitBooks(options: FruitOptions = {}) {
       if (input.packing_id === null) errors.push(problem('ERR_REQUIRED', 'packing_id'));
     }
     const qty = digits(input.qty);
+    // An entry that is being edited gives its quantity back to its lot first.
+    const own = store.rows.find((row) => row.id === input.editing_id);
+    const available =
+      lot === null ? 0 : lot.balance + (own?.lot?.lot_id === lot.lot_id ? own.qty : 0);
     if (input.qty.trim() === '') errors.push(problem('ERR_REQUIRED', 'qty'));
-    else if (lot !== null && qty > lot.balance) {
-      errors.push(problem('ERR_QTY_EXCEEDS_LOT', 'qty', { available: lot.balance }));
+    else if (lot !== null && qty > available) {
+      errors.push(problem('ERR_QTY_EXCEEDS_LOT', 'qty', { available }));
     }
     const rate = digits(input.rate);
     if (input.rate.trim() === '') errors.push(problem('ERR_REQUIRED', 'rate'));
@@ -171,13 +175,21 @@ export function createFruitBooks(options: FruitOptions = {}) {
     }
     const value = qty * rate;
     const amounts = guests ? guestParts(value) : [value];
+    // A part of 0 is left out of the parts (the backend does not save it).
     const parts: FruitPart[] = guests
-      ? PARTNERS.map((partner, index) => ({
-          partner: partner.ref,
-          amount_paisa: money(amounts[index] ?? 0),
-          total_before_paisa: money(partner.total),
-          total_after_paisa: money(partner.total - (amounts[index] ?? 0)),
-        }))
+      ? PARTNERS.flatMap((partner, index) => {
+          const amount = amounts[index] ?? 0;
+          return amount === 0
+            ? []
+            : [
+                {
+                  partner: partner.ref,
+                  amount_paisa: money(amount),
+                  total_before_paisa: money(partner.total),
+                  total_after_paisa: money(partner.total - amount),
+                },
+              ];
+        })
       : PARTNERS.filter((partner) => partner.ref.id === input.partner_id).map((partner) => ({
           partner: partner.ref,
           amount_paisa: money(value),
@@ -211,7 +223,7 @@ export function createFruitBooks(options: FruitOptions = {}) {
       lot:
         lot === null
           ? null
-          : { lot_id: lot.lot_id, balance_before: lot.balance, balance_after: lot.balance - qty },
+          : { lot_id: lot.lot_id, balance_before: available, balance_after: available - qty },
     };
     return { numbers, errors: [], warnings: [], rate_hint };
   };
@@ -291,9 +303,11 @@ export function createFruitBooks(options: FruitOptions = {}) {
       if (old.status === 'cancelled') return refuse([{ code: 'ERR_FRUIT_CANCELLED', field: 'id' }]);
       if (input.reason.trim() === '')
         return refuse([{ code: 'ERR_REASON_REQUIRED', field: 'reason' }]);
-      // Put the old quantity back, then take the new one: a reversal and a new posting.
-      takeFromLot(old.lot?.lot_id ?? null, -old.qty);
+      // The new values are checked with the old quantity given back (the preview does that for
+      // `editing_id`); then the old quantity goes back and the new one is taken: a reversal and a
+      // new posting.
       const row = rowFrom(old.id, old.version + 1, input.entry);
+      takeFromLot(old.lot?.lot_id ?? null, -old.qty);
       takeFromLot(input.entry.lot_id, row.qty);
       rupees.set(row.id, digits(input.entry.qty) * digits(input.entry.rate));
       store.rows[index] = row;

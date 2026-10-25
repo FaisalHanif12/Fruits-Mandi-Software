@@ -4,4 +4,4 @@
  * Where a bill, an advance or a payable posting came from.
  */
 export type LineSource =
-  'bikri' | 'opening' | 'cash_lent' | 'receipt' | 'general' | 'purchase' | 'other';
+  'bikri' | 'opening' | 'cash_lent' | 'receipt' | 'general' | 'purchase' | 'fruit' | 'other';

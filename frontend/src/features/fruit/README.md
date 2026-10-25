@@ -41,6 +41,21 @@ two tabs) and one route in `app/router.tsx`. The side menu of the روکڑ area 
   and `partners.ftl`): "2 Box Orange @ 1,400 = 2,800", or his equal part of the guests' fruit.
 - باقی مال and the lot cards show `qty_taken` next to written-off; the balance is the backend's (C16).
 
+## Real answers (task F2)
+
+- The backend's fixtures (`tests/fixtures/fruit_*.json`, `partners_statement_fruit_alif.json`,
+  `bikri_cancel_has_fruit.json`, copied byte for byte) are read as the generated types in
+  `tests/helpers/fruit-real.ts`.
+- `fruit-real-shapes.test.ts`: the canned books have the real shape; the screen builds the request the
+  backend's own test sent (home, guests, one rupee, a weight item, the edit with `editing_id`); every
+  word the refusals need exists in both languages; the numbers of E2E-42 are in the answers.
+- `fruit-real-answers.test.tsx`: the screen with the real answers (figures, workings, refusals at their
+  fields, list totals, edit and cancel). `fruit-statement.test.tsx`: the real statement lines.
+- While an entry is edited, its id goes with every preview (`editing_id`), so the lot's quantity and the
+  partner's part come back in the numbers and the form says how much the lot has for this entry.
+- A statement fruit line with no details (an earlier posting of a changed entry, or its reversal) reads
+  as "an earlier posting" (`partners-statement-detail-fruit-earlier`), never as a sentence with holes.
+
 ## Files
 
 `api.ts` (the only file that knows the command shapes; tests mock it), `hooks.ts`, `types.ts`,

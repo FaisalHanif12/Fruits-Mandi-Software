@@ -213,6 +213,22 @@ fn check_first(
                         "lot_seller_locked",
                     ));
                 }
+                // The one-time seller of a lot that fruit was taken from keeps his name and phone:
+                // the fruit credit rests on his person key (plan 17d).
+                if found.qty_taken > 0
+                    && let Some(stored_person) = found.pukhta.as_ref()
+                {
+                    // The key is made the way the save makes it (names and phone cleaned first); a
+                    // person who cannot be cleaned is left to the normal name checks.
+                    let same = mandi_domain::bikri::clean_person(&lot.pukhta)
+                        .is_none_or(|clean| clean.key == stored_person.person_key);
+                    if !same {
+                        errors.push(not_allowed(
+                            &format!("lots[{index}].pukhta"),
+                            "lot_seller_locked",
+                        ));
+                    }
+                }
                 // The purchase of an own lot never changes: its stock and cost rest on it.
                 if lot.purchase_id != found.purchase.as_ref().map(|p| p.id) {
                     errors.push(not_allowed(

@@ -1,0 +1,18 @@
+{
+  "numbers": null,
+  "errors": [
+    {
+      "code": "ERR_QTY_EXCEEDS_LOT",
+      "field": "qty",
+      "values": {
+        "available": 5
+      }
+    }
+  ],
+  "warnings": [],
+  "rate_hint": {
+    "rate_paisa": 58000,
+    "source": "today",
+    "date": "2026-10-10"
+  }
+}

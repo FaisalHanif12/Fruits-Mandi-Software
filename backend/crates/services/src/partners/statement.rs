@@ -259,7 +259,7 @@ struct Facts {
     entries: HashMap<i64, read::EntryInfo>,
     vouchers: HashMap<i64, read::VoucherInfo>,
     bikri: HashMap<i64, i64>,
-    fruit: HashMap<i64, i64>,
+    fruit: HashMap<i64, read::FruitInfo>,
     purchases: HashMap<i64, read::PurchaseInfo>,
     venture_entries: HashMap<i64, read::VentureEntryInfo>,
     ventures: HashMap<i64, (i64, String)>,
@@ -305,7 +305,7 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
     };
     let vouchers = read::voucher_infos(conn, &by_source("voucher"))?;
     let bikri = read::bikri_numbers(conn, &by_source("bikri"))?;
-    let fruit = read::fruit_numbers(conn, &by_source("fruit"))?;
+    let fruit = read::fruit_infos(conn, &by_source("fruit"))?;
     let venture_entries = read::venture_entry_infos(conn, &by_source("venture"))?;
     let lot_ids = sorted(
         page.iter()
@@ -412,6 +412,12 @@ impl Draft {
     fn kind(mut self, kind: &str) -> Draft {
         self.values
             .insert("kind".to_owned(), ErrorValue::Text(kind.to_owned()));
+        self
+    }
+
+    fn text_value(mut self, name: &str, text: &str) -> Draft {
+        self.values
+            .insert(name.to_owned(), ErrorValue::Text(text.to_owned()));
         self
     }
 
@@ -709,7 +715,26 @@ fn venture_draft(
             draft
         }
         Some("fruit_taken") => {
-            Draft::new(H::Fruit, D::FruitTaken).number(facts.fruit.get(&info.source_id).copied())
+            let fruit = facts.fruit.get(&info.source_id);
+            let mut draft = Draft::new(H::Fruit, D::FruitTaken).number(fruit.map(|f| f.number));
+            // The details are those of the entry as it stands. An edit updates the entry, so an older
+            // posting of an edited entry (and its reversal) gets the number only.
+            let effective = info.reverses_entry_id.unwrap_or(info.entry_id);
+            if let Some(f) = fruit.filter(|f| f.current_entry_id == Some(effective)) {
+                let signed = |value: i64| -> Result<i64, ServiceError> {
+                    value
+                        .checked_mul(sign)
+                        .ok_or_else(|| data("a figure does not fit"))
+                };
+                draft.subject = Some(named(&f.item));
+                draft.packing = Some(named(&f.packing));
+                draft = draft
+                    .number_value("qty", signed(f.qty)?)
+                    .number_value("rate_paisa", f.rate_paisa)
+                    .number_value("value_paisa", signed(f.value_paisa)?)
+                    .text_value("for", if f.guests { "guests" } else { "home" });
+            }
+            draft
         }
         other => {
             // A جنرل (or anything else) on the account: worded by its sign.

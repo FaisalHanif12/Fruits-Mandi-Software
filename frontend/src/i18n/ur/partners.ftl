@@ -402,6 +402,10 @@ partners-statement-detail-fruit-taken = { $for ->
    *[home] گھر کے لیے { -phal }: { $subject } { $qty } { $packing } @ { $rate } = { $value }
 }
 
+# $fruit: the entry's number. The details of an entry are shown only for the posting in force.
+# review: pending
+partners-statement-detail-fruit-earlier = { -phal } { $fruit }: ایسے اندراج کی پرانی پوسٹنگ جو بعد میں بدلا یا منسوخ ہوا، یا اس کی الٹ
+
 # review: pending
 partners-statement-detail-other = { $reason }
 

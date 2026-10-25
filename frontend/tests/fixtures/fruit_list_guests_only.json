@@ -1,0 +1,75 @@
+{
+  "rows": [
+    {
+      "id": 2,
+      "version": 2,
+      "number": 2,
+      "entry_date": "2026-10-10",
+      "partner": null,
+      "source": "other_shop",
+      "lot": null,
+      "credit_account": {
+        "id": 31,
+        "code": "030110003",
+        "name_ur": "حاجی نذیر",
+        "name_en": "Haji Nazeer"
+      },
+      "pukhta": null,
+      "item": {
+        "id": 2,
+        "code": "2",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      },
+      "packing": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 3,
+      "weight_grams": null,
+      "rate_paisa": 100000,
+      "value_paisa": 300000,
+      "note": null,
+      "status": "saved",
+      "cancel_reason": null,
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "amount_paisa": 100000
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "amount_paisa": 100000
+        },
+        {
+          "partner": {
+            "id": 3,
+            "code": "",
+            "name_ur": "ج",
+            "name_en": "Partner C"
+          },
+          "amount_paisa": 100000
+        }
+      ],
+      "journal_entry_id": 5,
+      "can_change": true
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "qty": 3,
+    "value_paisa": 300000
+  }
+}

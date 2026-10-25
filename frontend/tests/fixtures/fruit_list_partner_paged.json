@@ -1,0 +1,67 @@
+{
+  "rows": [
+    {
+      "id": 1,
+      "version": 2,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "source": "shop",
+      "lot": {
+        "lot_id": 1,
+        "lot_no": 1,
+        "bikri_id": 1,
+        "bikri_number": 1
+      },
+      "credit_account": {
+        "id": 18,
+        "code": "030110001",
+        "name_ur": "رحیم",
+        "name_en": "Rahim"
+      },
+      "pukhta": null,
+      "item": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 2,
+      "weight_grams": null,
+      "rate_paisa": 58000,
+      "value_paisa": 116000,
+      "note": null,
+      "status": "saved",
+      "cancel_reason": null,
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "amount_paisa": 116000
+        }
+      ],
+      "journal_entry_id": 4,
+      "can_change": true
+    }
+  ],
+  "total_count": 1,
+  "totals": {
+    "qty": 2,
+    "value_paisa": 116000
+  }
+}

@@ -401,7 +401,7 @@ fn e2e_15_cancel_bikri_2_reverses_everything_and_keeps_the_books_balanced() {
 }
 
 /// Event 1 with only 45 of 50 sold: اکرم 20 at 600, ارشد 25 at 580 (E2E-16).
-fn event1_part_sold(w: &support::World) -> BikriDraft {
+pub(super) fn event1_part_sold(w: &support::World) -> BikriDraft {
     let mut draft = support::event1(w);
     draft.lots[0].sales[1].qty = "25".into();
     draft

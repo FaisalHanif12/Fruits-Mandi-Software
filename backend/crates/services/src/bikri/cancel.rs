@@ -116,6 +116,26 @@ fn refuse_closed_garden(conn: &Connection, bikri_id: i64) -> Result<(), ServiceE
     Ok(())
 }
 
+/// A بکری with fruit taken from one of its lots cannot be cancelled: the seller was credited that
+/// fruit, so cancel those entries first (plan 17d).
+///
+/// # Errors
+/// `ERR_BIKRI_HAS_FRUIT` on `id` (value `qty_taken`).
+fn refuse_fruit_taken(conn: &Connection, bikri_id: i64) -> Result<(), ServiceError> {
+    let taken = mandi_db::fruit::bikri_qty_taken(conn, bikri_id)?;
+    if taken > 0 {
+        return Err(ServiceError::Rejected(vec![Rejection {
+            code: ErrorCode::ErrBikriHasFruit,
+            field: Some("id".to_owned()),
+            values: std::collections::BTreeMap::from([(
+                "qty_taken".to_owned(),
+                ErrorValue::Number(taken),
+            )]),
+        }]));
+    }
+    Ok(())
+}
+
 /// What a cancel would do, for the confirm box (PRD FR-7.8). Read only.
 ///
 /// # Errors
@@ -125,6 +145,7 @@ pub fn preview(ctx: &Context, input: &CancelPreviewInput) -> Result<CancelPrevie
     ctx.db.read(|conn| {
         let mut detail = detail_of(conn, input.id, "id")?;
         refuse_closed_garden(conn, detail.id)?;
+        refuse_fruit_taken(conn, detail.id)?;
         mark_editable(&mut detail, closed_up_to);
         let live = live_postings(conn, detail.id)?;
         let closed = closed_days(&live, closed_up_to);
@@ -293,6 +314,7 @@ pub fn cancel(
             ));
         }
         refuse_closed_garden(tx, detail.id)?;
+        refuse_fruit_taken(tx, detail.id)?;
         if detail.version != input.version {
             return Err(ServiceError::reject_field(
                 ErrorCode::ErrVersionChanged,
@@ -325,6 +347,7 @@ pub fn undo(ctx: &Context, actor: &Actor, input: &UndoInput) -> Result<UndoResul
     ctx.db.write(|tx| {
         let detail = detail_of(tx, input.id, "id")?;
         refuse_closed_garden(tx, detail.id)?;
+        refuse_fruit_taken(tx, detail.id)?;
         // The values to give back are those of the first posting.
         let first = edit_repo::postings_in_force(tx, detail.id)?
             .into_iter()

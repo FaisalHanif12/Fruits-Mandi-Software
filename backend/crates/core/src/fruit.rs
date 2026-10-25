@@ -48,6 +48,10 @@
 //!
 //! Field paths in errors on `FruitInput`: `partner_id`, `date`, `source`, `lot_id`,
 //! `agent_account_id`, `item_id`, `packing_id`, `qty`, `weight`, `rate`, `note`.
+//!
+//! A part of 0 (1 rupee over three partners) makes no journal line and is left out of the preview
+//! and of the saved entry alike. When an edit changes none of for whom, the day and the value, the
+//! saved split is kept as it was (money agent rule 13), even if a partner was added since.
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -129,8 +133,8 @@ pub struct FruitInput {
     #[serde(default)]
     pub for_guests: bool,
     /// The partner who takes the fruit home. Required when `for_guests` is false:
-    /// `ERR_PARTNER_REQUIRED` on `partner_id`; `ERR_NOT_FOUND` or `ERR_PARTNER_NOT_LISTED` if he is
-    /// not an active partner. With `for_guests` it must be null: `ERR_FORMAT_INVALID`.
+    /// `ERR_PARTNER_REQUIRED` on `partner_id`; `ERR_NOT_FOUND` if he is unknown or not an active
+    /// partner. With `for_guests` it must be null: `ERR_FORMAT_INVALID`.
     #[serde(default)]
     #[ts(type = "number | null")]
     pub partner_id: Option<i64>,
@@ -167,6 +171,12 @@ pub struct FruitInput {
     /// A note, up to 500 characters.
     #[serde(default)]
     pub note: Option<String>,
+    /// The saved entry that is being edited, so the preview gives its quantity back to the lot and
+    /// its part back to the partner's کل رقم. Null for a new entry. `fruit_edit` takes the entry
+    /// from its own `id` and ignores this.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub editing_id: Option<i64>,
 }
 
 /// One partner's part of the value, as the preview shows it.

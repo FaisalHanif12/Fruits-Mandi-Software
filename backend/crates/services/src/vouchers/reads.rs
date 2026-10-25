@@ -49,6 +49,7 @@ pub(super) fn line_source(posting_type: &str, source_type: &str) -> LineSource {
         ("receipt", _) => LineSource::Receipt,
         ("general", _) => LineSource::General,
         ("purchase", _) => LineSource::Purchase,
+        ("fruit_taken", _) | (_, "fruit") => LineSource::Fruit,
         _ => LineSource::Other,
     }
 }

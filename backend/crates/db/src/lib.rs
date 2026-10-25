@@ -18,6 +18,7 @@ pub mod disk;
 pub mod drafts;
 mod error;
 pub mod expense_heads;
+pub mod fruit;
 pub mod gardens;
 pub mod ledger;
 pub mod masters;

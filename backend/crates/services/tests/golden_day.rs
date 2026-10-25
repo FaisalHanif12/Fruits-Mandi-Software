@@ -1461,3 +1461,7 @@ mod day_close;
 // Plan 17c: gardens (E2E-40, E2E-40b) and their refusals.
 #[path = "golden_day/gardens.rs"]
 mod gardens;
+
+// Plan 17d: fruit taken (E2E-42, C27) and its refusals.
+#[path = "golden_day/fruit.rs"]
+mod fruit_taken;

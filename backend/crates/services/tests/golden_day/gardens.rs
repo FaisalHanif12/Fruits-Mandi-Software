@@ -1179,3 +1179,110 @@ fn a_partner_whose_part_comes_to_zero_gets_a_note_and_the_other_gets_the_line() 
     assert_eq!(value_of(&bob.lines[0], "share_bps"), 4_000);
     assert_eq!(bob.closing_total_paisa.rupees(), 0);
 }
+
+#[test]
+fn fruit_taken_from_a_garden_lot_goes_to_the_garden_and_a_closed_garden_refuses_it() {
+    // PRD FR-16.11, FR-12.38: the fruit value is credited to the garden's account (money in), the
+    // partner who took it pays with his 0604 account, and once the garden is closed the entry can
+    // no longer be saved, edited or cancelled until the closing is undone.
+    use mandi_services::core::fruit::{FruitCancelInput, FruitInput, FruitLotsInput, FruitSource};
+    let w = worked_day();
+    let garden = create(&w, Some("30,000"));
+    set_today(&w.env, 2026, 10, 12);
+    // 100 received, 90 sold at 600 to ارشد: 10 left for fruit.
+    let mut lot = support::with_sales(
+        support::bare_lot(&w, "garden-1", garden.account.id, w.banana, "100"),
+        vec![support::sale("s-1", w.arshad, "90", "600")],
+    );
+    lot.adjust_advance = false;
+    let mut draft = support::draft(vec![lot]);
+    draft.header.entry_date = "12-10-2026".into();
+    save_ok(&w, &draft, false);
+    let lot_id = scalar(
+        &w,
+        &format!(
+            "SELECT id FROM bikri_lots WHERE seller_account_id = {}",
+            garden.account.id
+        ),
+    );
+    let fruit_input = |qty: &str| FruitInput {
+        for_guests: false,
+        partner_id: Some(w.partners[2]),
+        date: "12-10-2026".into(),
+        source: FruitSource::Shop,
+        lot_id: Some(lot_id),
+        agent_account_id: None,
+        item_id: None,
+        packing_id: None,
+        qty: qty.into(),
+        weight: None,
+        rate: "600".into(),
+        note: None,
+        editing_id: None,
+    };
+    let money_in_before = detail(&w, garden.id).row.money_in_paisa.rupees();
+    let total_before = partner_total(&w, 2);
+    let taken = mandi_services::fruit::save(&w.env.ctx, &w.owner, &fruit_input("1")).unwrap();
+    // The garden's money in goes up by the 600; ج paid it.
+    assert_eq!(
+        detail(&w, garden.id).row.money_in_paisa.rupees(),
+        money_in_before + 600
+    );
+    assert_eq!(partner_total(&w, 2), total_before - 600);
+    // Fruit is not a closing split: closing 12-10 gives every rupee of the account to the partners.
+    set_today(&w.env, 2026, 10, 13);
+    gardens::close(
+        &w.env.ctx,
+        &w.owner,
+        &close_input(&w, garden.id, "13-10-2026"),
+    )
+    .unwrap();
+    assert_eq!(credit_balance(&w, garden.account.id), 0);
+    let sum: i64 = totals_of_three(&w).iter().sum();
+    assert_eq!(
+        sum + 65_000,
+        super::own_goods::equity(&w),
+        "the totals add up to the equity"
+    );
+    // A closed garden: its lot is not offered, and the entry cannot be saved, edited or cancelled.
+    assert_eq!(
+        mandi_services::fruit::lots(&w.env.ctx, &FruitLotsInput::default())
+            .unwrap()
+            .total_count,
+        0
+    );
+    let refused = mandi_services::fruit::save(&w.env.ctx, &w.owner, &fruit_input("1")).unwrap_err();
+    code_at(refused, ErrorCode::ErrGardenClosed, "lot_id");
+    let row = mandi_services::fruit::get(
+        &w.env.ctx,
+        &mandi_services::core::fruit::FruitGetInput { id: taken.id },
+    )
+    .unwrap();
+    assert!(!row.can_change);
+    let cancel = FruitCancelInput {
+        id: taken.id,
+        version: row.version,
+        reason: "x".into(),
+    };
+    code_at(
+        mandi_services::fruit::cancel(&w.env.ctx, &w.owner, &cancel).unwrap_err(),
+        ErrorCode::ErrGardenClosed,
+        "id",
+    );
+    // Undo the closing: the entry can be cancelled again, and the garden account is empty of it.
+    gardens::reopen(
+        &w.env.ctx,
+        &w.owner,
+        &GardenReopenInput {
+            id: garden.id,
+            version: detail(&w, garden.id).row.version,
+            reason: "wrong".into(),
+        },
+    )
+    .unwrap();
+    mandi_services::fruit::cancel(&w.env.ctx, &w.owner, &cancel).unwrap();
+    assert_eq!(
+        detail(&w, garden.id).row.money_in_paisa.rupees(),
+        money_in_before
+    );
+}

@@ -162,6 +162,8 @@ pub enum LineSource {
     General,
     /// The firm's own purchase on credit (PRD FR-12.24).
     Purchase,
+    /// Fruit taken from the seller's lot (PRD FR-16.11, plan 17d). `number` is the پھل number.
+    Fruit,
     /// Anything else.
     Other,
 }

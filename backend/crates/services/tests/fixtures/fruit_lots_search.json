@@ -1,0 +1,33 @@
+{
+  "rows": [
+    {
+      "lot_id": 1,
+      "lot_no": 1,
+      "bikri_id": 1,
+      "bikri_number": 1,
+      "received_date": "2026-10-10",
+      "seller": {
+        "id": 18,
+        "code": "030110001",
+        "name_ur": "رحیم",
+        "name_en": "Rahim"
+      },
+      "pukhta": null,
+      "item": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "sold_by_weight": false,
+      "balance": 5
+    }
+  ],
+  "total_count": 1
+}

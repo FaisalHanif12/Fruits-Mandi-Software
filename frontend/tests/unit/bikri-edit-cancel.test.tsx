@@ -10,9 +10,11 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
+import { CommandError } from '../../src/shared/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { cancelPreview, cash, editable, editableLater, fakePlan16 } from '../helpers/bikri-plan16';
+import { BIKRI_CANCEL_HAS_FRUIT } from '../helpers/fruit-real';
 import {
   cellOf,
   focusedIn,
@@ -581,6 +583,29 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       expect(
         await screen.findByText(said(message(language, 'bikri-cancelled-toast', { number: 1 }))),
       ).toBeInTheDocument();
+    });
+
+    it('fruit taken from a lot of the بکری refuses the cancel in words, with the quantity taken (plan 17d)', async () => {
+      fakePlan16();
+      vi.mocked(bikriApi.bikriCancel).mockRejectedValue(new CommandError(BIKRI_CANCEL_HAS_FRUIT));
+      const { dialog, user } = await openCancel();
+      await waitFor(() => {
+        expect(visible(dialog.textContent)).toContain('36,564');
+      });
+      await user.type(reasonField(dialog), 'wrong');
+      await user.click(
+        within(dialog).getByRole('button', {
+          name: starts(message(language, 'bikri-cancel-confirm')),
+        }),
+      );
+      await waitFor(() => {
+        expect(visible(screen.getByRole('alertdialog').textContent)).toContain(
+          message(language, 'err-bikri-has-fruit', { qty_taken: '3' }),
+        );
+      });
+      // What was typed stays, so he can cancel the fruit entry first and try again.
+      expect(vi.mocked(bikriApi.bikriCancel)).toHaveBeenCalledTimes(1);
+      expect(reasonField(screen.getByRole('alertdialog'))).toHaveValue('wrong');
     });
 
     it('shows the cash line when cash changes', async () => {

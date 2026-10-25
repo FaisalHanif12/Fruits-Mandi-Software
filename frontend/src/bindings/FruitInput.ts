@@ -11,8 +11,8 @@ export type FruitInput = {
   for_guests: boolean;
   /**
    * The partner who takes the fruit home. Required when `for_guests` is false:
-   * `ERR_PARTNER_REQUIRED` on `partner_id`; `ERR_NOT_FOUND` or `ERR_PARTNER_NOT_LISTED` if he is
-   * not an active partner. With `for_guests` it must be null: `ERR_FORMAT_INVALID`.
+   * `ERR_PARTNER_REQUIRED` on `partner_id`; `ERR_NOT_FOUND` if he is unknown or not an active
+   * partner. With `for_guests` it must be null: `ERR_FORMAT_INVALID`.
    */
   partner_id: number | null;
   /**
@@ -58,4 +58,10 @@ export type FruitInput = {
    * A note, up to 500 characters.
    */
   note: string | null;
+  /**
+   * The saved entry that is being edited, so the preview gives its quantity back to the lot and
+   * its part back to the partner's کل رقم. Null for a new entry. `fruit_edit` takes the entry
+   * from its own `id` and ignores this.
+   */
+  editing_id: number | null;
 };

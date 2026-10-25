@@ -12,6 +12,7 @@ const SOURCE_ID: Record<LineSource, string> = {
   receipt: 'vouchers-source-receipt',
   general: 'vouchers-source-general',
   purchase: 'vouchers-source-purchase',
+  fruit: 'vouchers-source-fruit',
   other: 'vouchers-source-other',
 };
 

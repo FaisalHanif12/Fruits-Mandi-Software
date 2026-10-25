@@ -69,7 +69,10 @@ function FruitEditor({ today }: FruitEditorProps) {
 
   // The backend is asked as soon as the item is known, so the last rate can show as a hint before
   // the rate is typed (PRD FR-7.53); what is still empty is told only when the user tries to save.
-  const entry = useMemo(() => (readyToAsk(draft) ? buildFruit(draft) : null), [draft]);
+  const entry = useMemo(
+    () => (readyToAsk(draft) ? buildFruit(draft, editing === null ? null : editing.id) : null),
+    [draft, editing],
+  );
   const { query, current } = useFruitPreview(entry);
   const preview = entry === null ? undefined : query.data;
   const warnings: readonly FieldError[] = preview?.warnings ?? [];

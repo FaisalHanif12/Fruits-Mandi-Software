@@ -139,9 +139,11 @@ function partnerOf(draft: FruitDraft): number | null {
 
 /**
  * What goes to the backend. The item and packing of fruit from our shop come from the lot (the
- * backend ignores them), so only fruit from another shop sends them.
+ * backend ignores them), so only fruit from another shop sends them. While an entry is edited its id
+ * goes too, so the preview gives the entry's quantity back to the lot and its part back to the
+ * partner's total (`fruit_edit` takes the entry from its own id).
  */
-export function buildFruit(draft: FruitDraft): FruitInput {
+export function buildFruit(draft: FruitDraft, editingId: number | null = null): FruitInput {
   const guests = draft.forWhom === FOR_GUESTS;
   const shop = draft.source === 'shop';
   return {
@@ -157,6 +159,7 @@ export function buildFruit(draft: FruitDraft): FruitInput {
     weight: textOrNull(draft.weight),
     rate: draft.rate.trim(),
     note: textOrNull(draft.note),
+    editing_id: editingId,
   };
 }
 
@@ -166,7 +169,7 @@ export function buildSaveRequest(
   editing: EditingFruit | null,
 ): FruitSaveRequest {
   return {
-    entry: buildFruit(draft),
+    entry: buildFruit(draft, editing === null ? null : editing.id),
     edit:
       editing === null
         ? null

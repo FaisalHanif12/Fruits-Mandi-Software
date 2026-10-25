@@ -155,6 +155,17 @@ working-venture-part = ادائیگی <num>{ $amount }</num>، اس کا <num>{ 
 # left over go to the largest share, so the message does not claim an exact equation.
 # review: pending
 working-venture-credit = آنے والی رقم <num>{ $amount }</num>، اس کا <num>{ $bps }</num> ÷ 10,000 (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے بڑے { -hissa } کو): <num>{ $result }</num>
+# PRD 16.7, C1: the value of the fruit taken (qty × rate).
+# review: pending
+working-fruit-value = <num>{ $qty }</num> × <num>{ $rate }</num> = <num>{ $result }</num>
+# PRD 16.7, C1 for fruit of an item sold by weight: the weight is in grams, the rate is for each kilo.
+# review: pending
+working-fruit-value-weight = <num>{ $grams }</num> گرام × <num>{ $rate }</num> فی کلو ÷ <num>1,000</num> = <num>{ $result }</num> (قریب ترین روپے تک)
+# PRD 16.7, C27: fruit for the shop's guests is shared equally between the partners who have a share
+# on the day. Each part is rounded down and the rupees left over go to the partner made first, so
+# $result is the first partner's part and the message does not claim an exact equation.
+# review: pending
+working-fruit-guests = قیمت <num>{ $value }</num> کو <num>{ $count }</num> { -shirakat-dar } میں برابر بانٹا (ہر حصہ نیچے کے پورے روپے تک، اور بچے ہوئے روپے سب سے پہلے بنائے گئے { -shirakat-dar } کو): پہلا حصہ <num>{ $result }</num>
 # C24: the part of a trip cost that one purchase carries, by the { -nag } bought. The rupees left
 # over go to the larger part, so the message does not claim an exact equation.
 # review: pending

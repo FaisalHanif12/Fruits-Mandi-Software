@@ -185,6 +185,7 @@ if (!flag('empty')) {
     weight: null,
     rate: '580',
     note: null,
+    editing_id: null,
   });
   fruitBooks.save({
     for_guests: true,
@@ -199,6 +200,7 @@ if (!flag('empty')) {
     weight: null,
     rate: '1000',
     note: null,
+    editing_id: null,
   });
 }
 

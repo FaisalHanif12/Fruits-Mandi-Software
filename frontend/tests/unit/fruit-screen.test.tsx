@@ -234,6 +234,9 @@ describe.each(LANGUAGES)('the fruit screen (%s)', (language) => {
     await user.click(agent);
     await user.type(agent, 'nazir');
     await user.click(await screen.findByRole('option'));
+    await waitFor(() => {
+      expect(agent).not.toHaveValue('nazir');
+    });
     const item = field('glossary-qism-maal');
     await user.click(item);
     await user.type(item, 'app');
@@ -242,10 +245,16 @@ describe.each(LANGUAGES)('the fruit screen (%s)', (language) => {
         name: (text) => visible(text).includes(language === 'ur' ? 'سیب' : 'Apple'),
       }),
     );
+    await waitFor(() => {
+      expect(item).not.toHaveValue('app');
+    });
     const packing = field('glossary-packing');
     await user.click(packing);
     await user.type(packing, 'box');
     await user.click(await screen.findByRole('option'));
+    await waitFor(() => {
+      expect(packing).not.toHaveValue('box');
+    });
     await previewSettled('1000');
     press('F10');
     await waitFor(() => {
@@ -403,6 +412,23 @@ describe.each(LANGUAGES)('the fruit screen (%s)', (language) => {
       qty: '2',
       rate: '580',
     });
+  });
+
+  it('a partner the backend does not know is told at the partner field in plain words', async () => {
+    const fake = fakeFruit();
+    fake.refuse.save = [{ code: 'ERR_NOT_FOUND', field: 'partner_id' }];
+    const { user } = await open();
+    await choose(user, 'fruit-field-for', partnerA);
+    await pickLot(user);
+    await user.type(field('fruit-field-qty'), '2');
+    await user.type(field('fruit-field-rate'), '580');
+    await previewSettled('580');
+    press('F10');
+    await waitFor(() => {
+      expect(pageText()).toContain(message(language, 'err-not-found'));
+    });
+    expect(fake.saved.entries).toHaveLength(0);
+    expect(field('fruit-field-qty')).toHaveValue('2');
   });
 
   it('a list that cannot be opened says so with a retry that asks again', async () => {

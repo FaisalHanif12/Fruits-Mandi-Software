@@ -402,6 +402,10 @@ partners-statement-detail-fruit-taken = { $for ->
    *[home] { -phal } for home: { $subject } { $qty } { $packing } @ { $rate } = { $value }
 }
 
+# $fruit: the entry's number. The details of an entry are shown only for the posting in force.
+# review: pending
+partners-statement-detail-fruit-earlier = { -phal } { $fruit }: an earlier posting of an entry that was changed or cancelled, or its reversal
+
 # review: pending
 partners-statement-detail-other = { $reason }
 

@@ -27,7 +27,7 @@ pub async fn fruit_preview<R: tauri::Runtime>(
 }
 
 /// Saves a fruit entry (PRD FR-16.10, FR-16.11). Errors: `ERR_PARTNER_REQUIRED` and
-/// `ERR_PARTNER_NOT_LISTED` on `partner_id`; the date codes on `date`; `ERR_REQUIRED` and
+/// `ERR_NOT_FOUND` on `partner_id`; the date codes on `date`; `ERR_REQUIRED` and
 /// `ERR_LOT_NOT_FOUND` on `lot_id`; `ERR_GARDEN_CLOSED` on `lot_id`; `ERR_REQUIRED` on
 /// `agent_account_id`; the quantity codes on `qty`; `ERR_QTY_EXCEEDS_LOT` on `qty` (value
 /// `available`); `ERR_MUST_BE_MORE_THAN_ZERO` on `rate`.
