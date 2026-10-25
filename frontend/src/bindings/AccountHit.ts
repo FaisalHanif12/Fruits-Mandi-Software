@@ -23,6 +23,10 @@ export type AccountHit = {
    */
   name_en: string;
   /**
+   * The tag (نشان), or absent if none (PRD 10.2, FR-7.40).
+   */
+  tag?: string;
+  /**
    * Second line in Urdu: father or firm and city.
    */
   extra_ur: string;

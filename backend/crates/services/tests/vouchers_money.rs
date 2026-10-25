@@ -631,11 +631,12 @@ fn every_voucher_posts_cash_and_its_slip_has_no_mode_bank_or_cheque_line() {
             Some(None)
         );
         assert!(
-            slip.facts
+            slip.header
+                .facts
                 .iter()
                 .all(|f| !f.label_id.contains("bank") && !f.label_id.contains("cheque")),
             "{:?}",
-            slip.facts
+            slip.header.facts
         );
     }
     // Editing that old row posts the new version to روکڑ and writes it as a plain cash row.
@@ -1557,6 +1558,7 @@ fn account_form(w: &World, id: i64) -> AccountInput {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -1937,7 +1939,7 @@ fn the_slip_has_the_party_the_amount_and_the_words_in_both_languages() {
     };
     let ur = slip(Language::Ur);
     let en = slip(Language::En);
-    assert_eq!(ur.title_id, "print-receipt-slip-title");
+    assert_eq!(ur.header.title_id, "print-receipt-slip-title");
     assert_eq!(
         (ur.dir, en.dir, ur.paper, ur.number.as_str()),
         (
@@ -1981,7 +1983,7 @@ fn the_slip_has_the_party_the_amount_and_the_words_in_both_languages() {
         },
     )
     .unwrap();
-    assert_eq!(paid_slip.title_id, "print-payment-slip-title");
+    assert_eq!(paid_slip.header.title_id, "print-payment-slip-title");
     assert_eq!(
         paid_slip.pages[0].amounts[0].label_id,
         "print-slip-amount-paid"

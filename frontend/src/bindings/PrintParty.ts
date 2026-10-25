@@ -17,6 +17,11 @@ export type PrintParty = {
    */
   name: string;
   /**
+   * The tag (نشان) of the account, printed after the name. Absent if none, and always absent
+   * for a one-time person (PRD 10.2).
+   */
+  tag?: string;
+  /**
    * The phone as typed. Null if none.
    */
   phone: string | null;

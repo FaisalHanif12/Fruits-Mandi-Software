@@ -8,6 +8,9 @@ use mandi_db::rusqlite::Connection;
 use mandi_domain::auth::validate as rules;
 use mandi_domain::core::auth::{Language, PrefKey};
 use mandi_domain::core::error::FieldError;
+use mandi_domain::core::firm::{
+    FirmContact, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_TRADE_MARK,
+};
 use mandi_domain::core::money::Grouping;
 use mandi_domain::core::translit::Kind;
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -287,6 +290,83 @@ pub fn set_firm_confirmed(
         learned.after_commit(ctx);
     }
     Ok(saved)
+}
+
+/// The contact persons and the trade mark that print in the header of every print (PRD
+/// Section 21 "Firm", FR-19.13, plan 17e). They live under their own settings keys, apart from
+/// the firm details.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct FirmPrintInfo {
+    /// The contact persons, 0 to 3 (`firm_contacts`).
+    pub firm_contacts: Vec<FirmContact>,
+    /// The trade mark text as typed, or empty (`trade_mark`).
+    pub trade_mark: String,
+}
+
+impl FirmPrintInfo {
+    /// True when no contact and no trade mark is set.
+    pub fn is_empty(&self) -> bool {
+        self.firm_contacts.is_empty() && self.trade_mark.trim().is_empty()
+    }
+}
+
+/// The saved contact persons and trade mark. Empty before the Owner sets them. A damaged value
+/// gives none, so a screen or a print is never stopped by it.
+fn load_print_info(conn: &Connection) -> Result<FirmPrintInfo, ServiceError> {
+    let mut firm_contacts: Vec<FirmContact> = store::setting(conn, SETTING_KEY_CONTACTS)?
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default();
+    firm_contacts.truncate(MAX_CONTACTS);
+    let trade_mark = store::setting(conn, SETTING_KEY_TRADE_MARK)?
+        .as_ref()
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    Ok(FirmPrintInfo {
+        firm_contacts,
+        trade_mark,
+    })
+}
+
+/// The contact persons and the trade mark for the Settings screen. Read only.
+///
+/// # Errors
+/// `ServiceError::Db` or `ServiceError::Data`.
+pub fn get_print_info(ctx: &Context) -> Result<FirmPrintInfo, ServiceError> {
+    ctx.db.read(load_print_info)
+}
+
+/// Saves the firm details together with the contact persons and the trade mark (Owner): one user
+/// action, one transaction, one audit entry per change (Code Standards B3, S7).
+///
+/// Plan 17e T1: the contacts and the trade mark are in the contract but are not stored yet. A
+/// request that carries either is refused, so a save never drops them silently; one that carries
+/// neither saves the firm exactly as `set_firm_confirmed` does. T2 stores them, checks each
+/// contact (names in their own script, phone, at most 3) and writes the audit entry.
+///
+/// # Errors
+/// As `set_firm_confirmed`; `ERR_NOT_IMPLEMENTED` on `firm_contacts` or `trade_mark` until T2.
+pub fn set_firm_with_print_info(
+    ctx: &Context,
+    actor: &Actor,
+    firm: &Firm,
+    info: &FirmPrintInfo,
+    confirmed_rules_words: &[String],
+) -> Result<(Firm, FirmPrintInfo), ServiceError> {
+    if !info.firm_contacts.is_empty() {
+        return Err(ServiceError::reject_field(
+            mandi_domain::core::error::ErrorCode::ErrNotImplemented,
+            "firm_contacts",
+        ));
+    }
+    if !info.trade_mark.trim().is_empty() {
+        return Err(ServiceError::reject_field(
+            mandi_domain::core::error::ErrorCode::ErrNotImplemented,
+            "trade_mark",
+        ));
+    }
+    let saved = set_firm_confirmed(ctx, actor, firm, confirmed_rules_words)?;
+    Ok((saved, get_print_info(ctx)?))
 }
 
 /// Saves the idle lock minutes (Owner), typed as text: 1 to 120.

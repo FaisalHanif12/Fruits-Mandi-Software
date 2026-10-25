@@ -87,6 +87,7 @@ fn seller_rahim(env: &TestEnv, owner: &auth::Actor) -> i64 {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     };
     accounts::save(&env.ctx, owner, &input).unwrap().id
 }

@@ -207,6 +207,7 @@ pub fn capital_history(
                 code: partner.capital_account_code.clone(),
                 name_ur: partner.name_ur.clone(),
                 name_en: partner.name_en.clone(),
+                tag: None,
             },
             balance_paisa: balance,
             rows: page::slice(rows, input.offset, input.limit),

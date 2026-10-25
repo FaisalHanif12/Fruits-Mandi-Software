@@ -118,6 +118,7 @@ pub fn add_account(
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     };
     loop {
         match accounts::save(&env.ctx, owner, &input) {

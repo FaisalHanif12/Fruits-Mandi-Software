@@ -528,6 +528,7 @@ fn account_hit(entry: &Entry) -> Option<AccountHit> {
         account_type: facts.account_type,
         control_id: facts.control_id,
         is_active: entry.hit.is_active,
+        tag: None,
     })
 }
 

@@ -271,6 +271,15 @@ pub fn save(
     actor: &Actor,
     input: &AccountInput,
 ) -> Result<AccountRow, ServiceError> {
+    // Plan 17e T1: the tag is in the contract but is not stored yet. A typed tag is refused, so a
+    // save never drops it silently. T2 replaces this check with the tag rules
+    // (`ERR_TAG_INVALID`) and the storage.
+    if !input.tag.trim().is_empty() {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrNotImplemented,
+            "tag",
+        ));
+    }
     let (closed, today) = day::window(ctx)?;
     // An edit that leaves the opening as it is must not trip over a closed opening day.
     let stored = match input.id {

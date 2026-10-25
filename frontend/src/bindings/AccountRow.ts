@@ -41,6 +41,10 @@ export type AccountRow = {
    */
   name_en: string;
   /**
+   * The tag (نشان), or absent if none (PRD 10.2).
+   */
+  tag?: string;
+  /**
    * Father or firm name in Urdu. Empty if none.
    */
   father_or_firm_ur: string;

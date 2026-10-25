@@ -240,12 +240,14 @@ fn optional_ref(
             code: r.get(first + 1)?,
             name_ur: r.get(first + 2)?,
             name_en: r.get(first + 3)?,
+            tag: None,
         },
         None => RecordRef {
             id,
             code: String::new(),
             name_ur: r.get(first + 1)?,
             name_en: r.get(first + 2)?,
+            tag: None,
         },
     }))
 }
@@ -276,6 +278,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
             code: control_code,
             name_ur: r.get(6)?,
             name_en: r.get(7)?,
+            tag: None,
         },
         name_ur: r.get(8)?,
         name_en: r.get(9)?,
@@ -306,6 +309,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         is_active: r.get(42)?,
         note: r.get::<_, Option<String>>(43)?.unwrap_or_default(),
         balance: Balance::ZERO,
+        tag: None,
     })
 }
 
@@ -321,6 +325,7 @@ fn marka_ref(r: &Row<'_>) -> rusqlite::Result<Option<RecordRef>> {
         code: r.get(34)?,
         name_ur: text.clone(),
         name_en: text,
+        tag: None,
     }))
 }
 
@@ -605,6 +610,7 @@ pub fn similar_by_ids(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<Si
                     .unwrap_or_default(),
                 phone1: row.phone1,
                 account_type: row.account_type,
+                tag: None,
             });
         }
     }

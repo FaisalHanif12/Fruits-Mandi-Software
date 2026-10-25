@@ -911,6 +911,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
                     code: r.get(at + 1)?,
                     name_ur: r.get(at + 2)?,
                     name_en: r.get(at + 3)?,
+                    tag: None,
                 })
             };
             let ur: Option<String> = r.get(9)?;

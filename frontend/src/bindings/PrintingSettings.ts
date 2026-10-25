@@ -24,6 +24,10 @@ export type PrintingSettings = {
    */
   paper_receipt_slip: Paper;
   /**
+   * Paper of the collection list (starts as A4: it is a list of rows, PRD FR-15.6).
+   */
+  paper_collection_list: Paper;
+  /**
    * Printer name. Empty means the default printer.
    */
   printer: string;

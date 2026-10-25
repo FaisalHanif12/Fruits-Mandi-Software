@@ -9,6 +9,11 @@ import type { PrintWords } from './PrintWords';
  */
 export type PrintPage = {
   /**
+   * The row number of this page's party in the document: 1, 2, 3 ... (the serial column of
+   * R5, PRD 19.2), formatted for print.
+   */
+  serial: string;
+  /**
    * Who the page is for.
    */
   party: PrintParty;

@@ -212,6 +212,7 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<(VoucherRow, Option<Strin
                 .ok()
                 .flatten()
                 .unwrap_or_default(),
+            tag: None,
         }),
         amount_paisa: Paisa::try_from_paisa(r.get(8)?).map_err(|_| bad(8, "amount"))?,
         // A salary deduction (plan 17) is stored as `salary`; as a row it reads as cash because it
@@ -710,6 +711,7 @@ pub fn hits_by_number(
                         .ok()
                         .flatten()
                         .unwrap_or_default(),
+                    tag: None,
                 }),
                 amount_paisa: Paisa::try_from_paisa(r.get(8)?).map_err(|_| bad(8, "amount"))?,
                 status: r.get(9)?,
@@ -1384,6 +1386,7 @@ pub fn collection_candidates(
                 code: r.get(1)?,
                 name_ur: r.get(2)?,
                 name_en: r.get(3)?,
+                tag: None,
             },
             phone: r.get(4)?,
             collector: collector_id
@@ -1393,6 +1396,7 @@ pub fn collection_candidates(
                         code: String::new(),
                         name_ur: r.get(6)?,
                         name_en: r.get(7)?,
+                        tag: None,
                     })
                 })
                 .transpose()?,
@@ -1403,6 +1407,7 @@ pub fn collection_candidates(
                         code: r.get::<_, Option<String>>(9)?.unwrap_or_default(),
                         name_ur: r.get(10)?,
                         name_en: r.get(11)?,
+                        tag: None,
                     })
                 })
                 .transpose()?,

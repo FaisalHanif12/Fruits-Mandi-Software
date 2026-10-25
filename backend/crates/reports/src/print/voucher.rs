@@ -20,26 +20,14 @@ use mandi_db::rusqlite::Connection;
 use mandi_db::vouchers as voucher_repo;
 
 use super::format::NumberStyle;
+use super::header::{footer, header, pick};
 use super::ids::*;
 use super::load::{FirmNames, load_firm, load_grouping, load_setup};
 use super::{
-    AmountRole, PrintAmount, PrintData, PrintFact, PrintFirm, PrintPage, PrintParty, PrintWords,
-    TextDir, VoucherPrintDataInput,
+    AmountRole, PrintAmount, PrintData, PrintFact, PrintPage, PrintParty, PrintWords, TextDir,
+    VoucherPrintDataInput,
 };
 use crate::error::ReportsError;
-
-/// The name in the print language; the other script if that one is empty.
-fn pick(language: Language, name_ur: &str, name_en: &str) -> String {
-    let (first, second) = match language {
-        Language::Ur => (name_ur, name_en),
-        Language::En => (name_en, name_ur),
-    };
-    if first.trim().is_empty() {
-        second.to_owned()
-    } else {
-        first.to_owned()
-    }
-}
 
 /// Reads the voucher and the settings, and builds its slip.
 ///
@@ -131,6 +119,7 @@ fn build_slip(
             .to_owned(),
             code: None,
             name: pick(language, &person.name_ur, &person.name_en),
+            tag: None,
             phone: Some(person.phone.trim().to_owned()).filter(|p| !p.is_empty()),
         },
         _ => PrintParty {
@@ -142,6 +131,7 @@ fn build_slip(
             .to_owned(),
             code: Some(account.code.clone()),
             name: pick(language, &account.name_ur, &account.name_en),
+            tag: account.tag.clone(),
             phone: None,
         },
     };
@@ -181,6 +171,7 @@ fn build_slip(
         Language::En => english_words(row.amount_paisa, loaded.grouping)?,
     };
     let page = PrintPage {
+        serial: style.count(1),
         party,
         lines: Vec::new(),
         amounts: vec![PrintAmount {
@@ -202,16 +193,9 @@ fn build_slip(
         dir: TextDir::of(language),
         paper: loaded.setup.paper_of(PrintDoc::ReceiptSlip),
         urdu_digits: style.urdu_digits(),
-        title_id: title_id.to_owned(),
-        firm: PrintFirm {
-            name: pick(language, &loaded.firm.name_ur, &loaded.firm.name_en),
-            mandi: pick(language, &loaded.firm.mandi_ur, &loaded.firm.mandi_en),
-            address: loaded.firm.address.clone(),
-            phone: loaded.firm.phone.clone(),
-        },
+        header: header(language, &loaded.firm, title_id, facts),
+        footer: footer(style.printed_at(now_utc)),
         number: style.count(row.number),
-        facts,
-        printed_at: style.printed_at(now_utc),
         cancelled: row.status == "cancelled",
         pages: vec![page],
     })

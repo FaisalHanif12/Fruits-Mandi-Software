@@ -89,6 +89,7 @@ pub(super) fn plan_advance(
                 code: row.code,
                 name_ur: row.name_ur,
                 name_en: row.name_en,
+                tag: None,
             });
             if facts.code == mandi_domain::core::accounts::OWN_GOODS_CODE {
                 errors.push(FieldError::new(

@@ -193,6 +193,7 @@ fn account_form(w: &World, id: i64) -> AccountInput {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 

@@ -16,6 +16,7 @@ import {
   parseKhataSearch,
   parseLentSearch,
 } from '../features/cashbook/screen-type';
+import { parseFruitSearch } from '../features/fruit/screen-search';
 import { parseCapitalSearch, parseStatementSearch } from '../features/partners/screen-type';
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
 import { moveDevPathToHash } from './dev/hash-route';
@@ -414,6 +415,7 @@ const expenseRoute = createRoute({
 const fruitRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/rokar/fruit',
+  validateSearch: parseFruitSearch,
   component: lazyRouteComponent(() => import('../features/fruit/pages/FruitPage'), 'FruitPage'),
 });
 

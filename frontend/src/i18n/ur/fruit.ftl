@@ -124,6 +124,20 @@ fruit-cancel-confirm = اندراج منسوخ کریں
 # review: pending
 fruit-cancelled-toast = { $number } منسوخ ہو گیا
 
+## One entry in its saved view, opened by its address (PRD FR-19.4).
+# $number: the entry number, written with fruit-number.
+# review: pending
+fruit-entry-title = اندراج { $number }
+# review: pending
+fruit-entry-failed = یہ اندراج نہیں کھل سکا
+# review: pending
+fruit-entry-close = بند کریں
+# review: pending
+fruit-entry-parts = حصے
+# $reason: why it was cancelled, as typed.
+# review: pending
+fruit-entry-cancelled = یہ اندراج منسوخ ہو چکا ہے۔ وجہ: { $reason }
+
 ## The list under the form (PRD FR-16.12, FR-19.11).
 # review: pending
 fruit-list-title = { -phal }

@@ -63,6 +63,7 @@ fn account_input(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 

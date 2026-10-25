@@ -35,6 +35,11 @@ const EVERYONE = 'everyone';
 interface FruitListSectionProps {
   /** Today, `YYYY-MM-DD`: the list starts with today's entries. */
   today: string;
+  /**
+   * The day the list starts with, `YYYY-MM-DD`: the day of the entry the address opened, so that
+   * entry is in the list. Default: today.
+   */
+  day?: string | undefined;
   /** The entry that has focus in the list, or null. */
   selectedId: number | null;
   onSelect: (row: FruitRow | null) => void;
@@ -52,6 +57,7 @@ function yearStart(today: string): string {
 
 export function FruitListSection({
   today,
+  day,
   selectedId,
   onSelect,
   onEdit,
@@ -61,8 +67,9 @@ export function FruitListSection({
   const language = useLanguage();
   const partners = usePartnerList();
   const todayText = isoToDisplayDate(today);
-  const [from, setFrom] = useState(todayText);
-  const [to, setTo] = useState(todayText);
+  const startText = day === undefined ? todayText : isoToDisplayDate(day);
+  const [from, setFrom] = useState(startText);
+  const [to, setTo] = useState(startText);
   const [forWhom, setForWhom] = useState(EVERYONE);
   const [item, setItem] = useState<PickerValue | null>(null);
   const partnerId = forWhom === EVERYONE || forWhom === FOR_GUESTS ? null : Number(forWhom);
@@ -83,6 +90,8 @@ export function FruitListSection({
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
   const onlyToday =
     from.trim() === todayText && to.trim() === todayText && forWhom === EVERYONE && item === null;
+  // The list the address opened starts on the entry's day; "nothing yet" is still the plain empty
+  // message only for today.
   const period = (nextFrom: string, nextTo: string) => {
     setFrom(nextFrom);
     setTo(nextTo);

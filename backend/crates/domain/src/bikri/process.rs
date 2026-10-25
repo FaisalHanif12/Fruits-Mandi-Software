@@ -559,6 +559,7 @@ fn own_money(
                 code: String::new(),
                 name_ur: facts.name_ur.clone(),
                 name_en: facts.name_en.clone(),
+                tag: None,
             },
             share_bps: part.share.get(),
             amount_paisa: part.amount,

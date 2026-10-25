@@ -46,6 +46,7 @@ fn record(row: &AccountRow) -> RecordRef {
         code: row.code.clone(),
         name_ur: row.name_ur.clone(),
         name_en: row.name_en.clone(),
+        tag: None,
     }
 }
 

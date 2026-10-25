@@ -22,6 +22,10 @@ export type SimilarAccount = {
    */
   name_en: string;
   /**
+   * The tag (نشان), or absent if none (PRD 10.2, E38).
+   */
+  tag?: string;
+  /**
    * Father or firm name in Urdu.
    */
   father_or_firm_ur: string;

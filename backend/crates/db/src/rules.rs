@@ -42,6 +42,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
             code: r.get::<_, Option<String>>(5)?.unwrap_or_default(),
             name_ur: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
             name_en: r.get::<_, Option<String>>(7)?.unwrap_or_default(),
+            tag: None,
         }),
         None => None,
     };
@@ -52,6 +53,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
             code: r.get::<_, Option<String>>(9)?.unwrap_or_default(),
             name_ur: r.get::<_, Option<String>>(10)?.unwrap_or_default(),
             name_en: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
+            tag: None,
         }),
         None => None,
     };

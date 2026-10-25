@@ -35,6 +35,13 @@ export type AccountInput = {
    */
   name_en: string;
   /**
+   * The tag (نشان, PRD 10.2): empty, or 1 to 4 English capital letters and dots with at least
+   * one letter, for example `K`, `BA`, `D.P`. A lower-case letter is made capital (`k` is
+   * saved as `K`). Never converted to Urdu (PRD FR-7.25). Missing means no tag. Errors:
+   * `ERR_TAG_INVALID` on `tag`.
+   */
+  tag: string;
+  /**
    * Words the user confirmed in the spelling check (PRD FR-7.66). The father or firm name is
    * checked with the names.
    */

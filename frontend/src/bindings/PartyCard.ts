@@ -30,6 +30,10 @@ export type PartyCard = {
    */
   name_en: string;
   /**
+   * The tag (نشان), or absent if none (PRD 10.2, FR-7.38).
+   */
+  tag?: string;
+  /**
    * Father or firm in Urdu. Empty if none.
    */
   father_or_firm_ur: string;

@@ -10,6 +10,7 @@
 use chrono::{TimeZone, Utc};
 use mandi_core::auth::Language;
 use mandi_core::bikri::BikriDetail;
+use mandi_core::firm::FirmContact;
 use mandi_core::money::Grouping;
 use mandi_core::printing::{Paper, PrintDoc, PrintSetup};
 use mandi_reports::print::{
@@ -31,6 +32,8 @@ fn firm() -> FirmNames {
         mandi_en: "New Sabzi Mandi, Kot Radha Kishan".into(),
         address: "Kot Radha Kishan".into(),
         phone: "03001234567".into(),
+        contacts: Vec::new(),
+        trade_mark: String::new(),
     }
 }
 
@@ -168,15 +171,16 @@ fn seller_bill_names_follow_the_print_language() {
     );
     assert_eq!(en_page.lines.first().unwrap().item, "Banana");
     assert_eq!(en_page.lines.first().unwrap().packing, "Box");
-    assert_eq!(ur.firm.name, "ماہر عدنان اینڈ برادرز");
-    assert_eq!(en.firm.name, "Maher Adnan and Brothers");
-    assert_eq!(en.firm.mandi, "New Sabzi Mandi, Kot Radha Kishan");
+    assert_eq!(ur.header.firm.name, "ماہر عدنان اینڈ برادرز");
+    assert_eq!(en.header.firm.name, "Maher Adnan and Brothers");
+    assert_eq!(en.header.firm.mandi, "New Sabzi Mandi, Kot Radha Kishan");
 }
 
 #[test]
 fn header_facts_and_dates_follow_the_plan() {
     let data = print(EVENT1, PrintDoc::SellerBill, Language::En);
     let facts: Vec<_> = data
+        .header
         .facts
         .iter()
         .map(|f| (f.label_id.as_str(), f.value.as_str()))
@@ -190,8 +194,8 @@ fn header_facts_and_dates_follow_the_plan() {
             ("print-fact-truck", "LES-1234"),
         ]
     );
-    assert_eq!(data.printed_at, "10-10-2026 14:00");
-    assert_eq!(data.title_id, "print-seller-bill-title");
+    assert_eq!(data.footer.printed_at, "10-10-2026 14:00");
+    assert_eq!(data.header.title_id, "print-seller-bill-title");
     assert!(!data.cancelled);
     assert_eq!(
         data.pages.first().unwrap().lines.first().unwrap().date,
@@ -201,7 +205,12 @@ fn header_facts_and_dates_follow_the_plan() {
     let mut later = detail(EVENT1);
     later.bill_date = "2026-10-12".into();
     let data = build(&later, &options(PrintDoc::SellerBill, Language::En)).unwrap();
-    let ids: Vec<_> = data.facts.iter().map(|f| f.label_id.as_str()).collect();
+    let ids: Vec<_> = data
+        .header
+        .facts
+        .iter()
+        .map(|f| f.label_id.as_str())
+        .collect();
     assert_eq!(
         ids,
         vec![
@@ -211,7 +220,7 @@ fn header_facts_and_dates_follow_the_plan() {
             "print-fact-truck"
         ]
     );
-    assert_eq!(data.facts.get(2).unwrap().value, "12-10-2026");
+    assert_eq!(data.header.facts.get(2).unwrap().value, "12-10-2026");
 }
 
 #[test]
@@ -262,7 +271,7 @@ fn buyer_slips_print_all_gives_one_page_per_buyer() {
         assert_eq!(akram.payment_id.as_deref(), Some("print-payment-credit"));
         // The slips of buyers on credit are on A5 by default (A21).
         assert_eq!(data.paper, Paper::A5);
-        assert_eq!(data.title_id, "print-buyer-slip-title");
+        assert_eq!(data.header.title_id, "print-buyer-slip-title");
     }
 }
 
@@ -340,7 +349,7 @@ fn pukhta_slip_of_event2_shows_12800_paid_and_its_words() {
             (line.qty.as_str(), line.rate.as_str(), line.amount.as_str()),
             ("10", "1,200", "12,000")
         );
-        assert_eq!(data.title_id, "print-pukhta-slip-title");
+        assert_eq!(data.header.title_id, "print-pukhta-slip-title");
     }
 }
 
@@ -461,12 +470,12 @@ fn urdu_digits_only_on_an_urdu_print_with_the_setting_on() {
     let ur = build(&detail(EVENT1), &opts).unwrap();
     assert!(ur.urdu_digits);
     assert_eq!(ur.number, "۱");
-    assert_eq!(ur.printed_at, "۱۰-۱۰-۲۰۲۶ ۱۴:۰۰");
+    assert_eq!(ur.footer.printed_at, "۱۰-۱۰-۲۰۲۶ ۱۴:۰۰");
     let page = ur.pages.first().unwrap();
     assert_eq!(amounts(page).first().unwrap().1, "۲۹,۴۰۰");
     assert_eq!(page.lines.first().unwrap().qty, "۲۰");
     // The truck number and the code stay as typed.
-    assert_eq!(ur.facts.last().unwrap().value, "LES-1234");
+    assert_eq!(ur.header.facts.last().unwrap().value, "LES-1234");
     assert_eq!(page.party.code.as_deref(), Some("030110001"));
     // The setting does nothing on an English print.
     opts.language = Language::En;
@@ -530,9 +539,117 @@ fn the_print_data_json_has_the_snake_case_shape_the_template_reads() {
     assert_eq!(json["language"], "en");
     assert_eq!(json["dir"], "ltr");
     assert_eq!(json["paper"], "a5");
-    assert_eq!(json["title_id"], "print-buyer-slip-title");
+    // Plan 17e: the title, the facts and the firm sit in the shared header, the print time and the
+    // "Page x of y" labels in the shared footer.
+    assert_eq!(json["header"]["title_id"], "print-buyer-slip-title");
+    assert_eq!(json["header"]["firm"]["name"], "Maher Adnan and Brothers");
+    assert_eq!(json["header"]["contacts"], serde_json::json!([]));
+    assert_eq!(json["header"]["trade_mark"], serde_json::Value::Null);
+    assert_eq!(json["footer"]["printed_label_id"], "print-printed-at");
+    assert_eq!(json["footer"]["printed_at"], "10-10-2026 14:00");
+    assert_eq!(json["footer"]["page_label_id"], "print-page-label");
+    assert_eq!(json["footer"]["of_label_id"], "print-page-of");
+    assert!(json.get("title_id").is_none() && json.get("firm").is_none());
+    assert_eq!(json["pages"][0]["serial"], "1");
     assert_eq!(json["pages"][0]["amounts"][3]["role"], "total");
     assert_eq!(json["pages"][0]["words"]["label_id"], "print-in-words");
+}
+
+// ---- Plan 17e: the shared header and footer, the tag and the R5 line text ----
+
+#[test]
+fn contacts_and_the_trade_mark_print_in_the_header_and_none_means_no_empty_box() {
+    let contact = FirmContact {
+        name_ur: "منشی آصف بھٹی".into(),
+        name_en: "Munshi Asif Bhatti".into(),
+        phone: "0300-4058860".into(),
+    };
+    for doc in [PrintDoc::SellerBill, PrintDoc::BuyerSlips] {
+        let mut set = options(doc, Language::Ur);
+        set.firm.contacts = vec![contact.clone()];
+        set.firm.trade_mark = "RH".into();
+        let with = build(&detail(EVENT1), &set).unwrap();
+        assert_eq!(with.header.contacts.len(), 1, "{doc:?}");
+        assert_eq!(with.header.contacts[0].name, "منشی آصف بھٹی");
+        assert_eq!(with.header.contacts[0].phone, "0300-4058860");
+        assert_eq!(with.header.trade_mark.as_deref(), Some("RH"));
+        set.language = Language::En;
+        let en = build(&detail(EVENT1), &set).unwrap();
+        assert_eq!(en.header.contacts[0].name, "Munshi Asif Bhatti");
+
+        let none = print(EVENT1, doc, Language::Ur);
+        assert!(none.header.contacts.is_empty(), "{doc:?}");
+        assert_eq!(none.header.trade_mark, None);
+    }
+}
+
+#[test]
+fn the_tag_of_an_account_prints_after_its_name_and_a_one_time_buyer_has_none() {
+    let mut d = detail(EVENT1);
+    for lot in &mut d.lots {
+        lot.seller.tag = Some("S".into());
+        for sale in &mut lot.sales {
+            if sale.buyer.code == "03040001" {
+                sale.buyer.tag = Some("K".into());
+            }
+        }
+    }
+    let options = options(PrintDoc::SellerBill, Language::En);
+    let bill = build(&d, &options).unwrap();
+    let page = bill.pages.first().unwrap();
+    assert_eq!(page.party.tag.as_deref(), Some("S"));
+    let tags: Vec<_> = page.lines.iter().map(|l| l.name_tag.as_deref()).collect();
+    assert_eq!(tags, vec![Some("K"), None]);
+
+    let slips = build(
+        &d,
+        &BuildOptions {
+            doc: PrintDoc::BuyerSlips,
+            ..options
+        },
+    )
+    .unwrap();
+    let akram = slips.pages.first().unwrap();
+    assert_eq!(akram.party.name, "Akram Toll Tax");
+    assert_eq!(akram.party.tag.as_deref(), Some("K"));
+    assert_eq!(slips.pages.get(1).unwrap().party.tag, None);
+    // The tag is its own field: the name never contains it.
+    assert!(!akram.party.name.contains('K'));
+
+    // No tag means no key in the JSON at all.
+    let json = serde_json::to_value(&slips).unwrap();
+    assert_eq!(json["pages"][0]["party"]["tag"], "K");
+    assert!(json["pages"][1]["party"].get("tag").is_none());
+}
+
+#[test]
+fn r5_lines_are_written_the_clients_way_and_pages_are_numbered() {
+    let ur = print(EVENT1, PrintDoc::BuyerSlips, Language::Ur);
+    let details: Vec<_> = ur
+        .pages
+        .iter()
+        .flat_map(|p| p.lines.iter().map(|l| l.detail.as_str()))
+        .collect();
+    assert_eq!(details, vec!["(کیلا 20 . 600)", "(کیلا 30 . 580)"]);
+    let serials: Vec<_> = ur.pages.iter().map(|p| p.serial.as_str()).collect();
+    assert_eq!(serials, vec!["1", "2"]);
+
+    let en = print(EVENT1, PrintDoc::BuyerSlips, Language::En);
+    let details: Vec<_> = en
+        .pages
+        .iter()
+        .flat_map(|p| p.lines.iter().map(|l| l.detail.as_str()))
+        .collect();
+    assert_eq!(details, vec!["(Banana 20 . 600)", "(Banana 30 . 580)"]);
+    // The columns of R5: the value and the amount after لاگا are the stored sums (PRD C5).
+    assert_eq!(
+        amounts(en.pages.first().unwrap())
+            .iter()
+            .filter(|(id, _, _)| matches!(*id, "print-items-value" | "print-buyer-pays"))
+            .map(|(_, amount, _)| *amount)
+            .collect::<Vec<_>>(),
+        vec!["12,000", "12,880"]
+    );
 }
 
 // ---- Stored totals that do not add up stop the print ----

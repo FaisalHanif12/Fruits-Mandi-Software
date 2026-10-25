@@ -29,6 +29,13 @@ fn phone_of(person: Option<&SavedPukhta>) -> Option<String> {
         .map(str::to_owned)
 }
 
+/// A line written the client's way for R5 and the buyer slips: `(item qty . rate)`, for example
+/// `(کیلا 20 . 600)` (PRD R5, plan 17e). Text only: the quantity and the rate are the formatted
+/// stored values, so nothing is worked out here.
+fn line_detail(item: &str, qty: &str, rate: &str) -> String {
+    format!("({item} {qty} . {rate})")
+}
+
 /// One goods line. `seller_side` picks the seller rate and amount (seller bill); otherwise the
 /// buyer rate and value (slips).
 fn line(
@@ -42,14 +49,24 @@ fn line(
     } else {
         (sale.buyer_rate, sale.buyer_value)
     };
+    let item = ctx.name(&lot.item.name_ur, &lot.item.name_en);
+    let qty = ctx.style.count(sale.qty);
+    let rate_text = ctx.money(rate)?;
     Ok(PrintLine {
         date: ctx.style.date(&sale.entry_date)?,
         name: seller_side.then(|| buyer_name(ctx, sale)),
-        item: ctx.name(&lot.item.name_ur, &lot.item.name_en),
+        // A one-time buyer is a person, not an account: he has no tag (PRD 10.2).
+        name_tag: if seller_side && sale.pukhta.is_none() {
+            sale.buyer.tag.clone()
+        } else {
+            None
+        },
+        detail: line_detail(&item, &qty, &rate_text),
+        item,
         packing: ctx.name(&lot.packing.name_ur, &lot.packing.name_en),
-        qty: ctx.style.count(sale.qty),
+        qty,
         weight_kg: sale.weight_grams.map(|grams| ctx.style.kilos(grams)),
-        rate: ctx.money(rate)?,
+        rate: rate_text,
         amount: ctx.money(amount)?,
         note: sale
             .note
@@ -83,11 +100,18 @@ pub(super) fn seller_pages(
     }
     groups
         .into_iter()
-        .map(|(_, lots)| seller_page(ctx, &lots))
+        .enumerate()
+        .map(|(index, (_, lots))| seller_page(ctx, serial(ctx, index), &lots))
         .collect()
 }
 
-fn seller_page(ctx: &Ctx, lots: &[&SavedLot]) -> Result<PrintPage, ReportsError> {
+/// The row number of a page in its document: 1, 2, 3 ... formatted for print.
+fn serial(ctx: &Ctx, index: usize) -> String {
+    ctx.style
+        .count(i64::try_from(index.saturating_add(1)).unwrap_or(i64::MAX))
+}
+
+fn seller_page(ctx: &Ctx, serial: String, lots: &[&SavedLot]) -> Result<PrintPage, ReportsError> {
     let first = lots
         .first()
         .ok_or_else(|| ReportsError::Data("a seller without a lot".to_owned()))?;
@@ -106,12 +130,14 @@ fn seller_page(ctx: &Ctx, lots: &[&SavedLot]) -> Result<PrintPage, ReportsError>
             role_id: PARTY_SELLER.to_owned(),
             code: None,
             name: ctx.name(&person.name_ur, &person.name_en),
+            tag: None,
             phone: phone_of(Some(person)),
         },
         None => PrintParty {
             role_id: PARTY_SELLER.to_owned(),
             code: Some(first.seller.code.clone()),
             name: ctx.name(&first.seller.name_ur, &first.seller.name_en),
+            tag: first.seller.tag.clone(),
             phone: None,
         },
     };
@@ -138,6 +164,7 @@ fn seller_page(ctx: &Ctx, lots: &[&SavedLot]) -> Result<PrintPage, ReportsError>
     };
     amounts.push(ctx.amount(net_label, net_shown, AmountRole::Total)?);
     Ok(PrintPage {
+        serial,
         party,
         lines,
         amounts,
@@ -195,7 +222,8 @@ pub(super) fn buyer_pages(
     }
     groups
         .into_iter()
-        .map(|(_, sales)| {
+        .enumerate()
+        .map(|(index, (_, sales))| {
             let buyer = sales
                 .first()
                 .map(|(_, sale)| &sale.buyer)
@@ -204,9 +232,10 @@ pub(super) fn buyer_pages(
                 role_id: PARTY_BUYER.to_owned(),
                 code: Some(buyer.code.clone()),
                 name: ctx.name(&buyer.name_ur, &buyer.name_en),
+                tag: buyer.tag.clone(),
                 phone: None,
             };
-            slip_page(ctx, party, &sales)
+            slip_page(ctx, serial(ctx, index), party, &sales)
         })
         .collect()
 }
@@ -232,14 +261,16 @@ pub(super) fn pukhta_pages(
     }
     groups
         .into_iter()
-        .map(|(_, person, sales)| {
+        .enumerate()
+        .map(|(index, (_, person, sales))| {
             let party = PrintParty {
                 role_id: PARTY_ONETIME_BUYER.to_owned(),
                 code: None,
                 name: ctx.name(&person.name_ur, &person.name_en),
+                tag: None,
                 phone: phone_of(Some(person)),
             };
-            slip_page(ctx, party, &sales)
+            slip_page(ctx, serial(ctx, index), party, &sales)
         })
         .collect()
 }
@@ -248,6 +279,7 @@ pub(super) fn pukhta_pages(
 /// what he pays (PRD C5), all stored amounts and their sums.
 fn slip_page(
     ctx: &Ctx,
+    serial: String,
     party: PrintParty,
     sales: &[SaleRef<'_>],
 ) -> Result<PrintPage, ReportsError> {
@@ -290,6 +322,7 @@ fn slip_page(
         ctx.amount(BUYER_PAYS, total, AmountRole::Total)?,
     ];
     Ok(PrintPage {
+        serial,
         party,
         lines,
         amounts,

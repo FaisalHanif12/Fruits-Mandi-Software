@@ -146,6 +146,12 @@ pub struct AccountInput {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان, PRD 10.2): empty, or 1 to 4 English capital letters and dots with at least
+    /// one letter, for example `K`, `BA`, `D.P`. A lower-case letter is made capital (`k` is
+    /// saved as `K`). Never converted to Urdu (PRD FR-7.25). Missing means no tag. Errors:
+    /// `ERR_TAG_INVALID` on `tag`.
+    #[serde(default)]
+    pub tag: String,
     /// Words the user confirmed in the spelling check (PRD FR-7.66). The father or firm name is
     /// checked with the names.
     #[serde(default)]
@@ -214,6 +220,12 @@ pub struct RecordRef {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان) of an account, shown after its name through `displayName` (PRD 10.2,
+    /// Code Standards F38). Null when the account has none, and always null for a record that is
+    /// not an account (a city, an item, a packing, a staff member).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
 }
 
 /// Which side a balance stands on.
@@ -303,6 +315,10 @@ pub struct AccountRow {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Father or firm name in Urdu. Empty if none.
     pub father_or_firm_ur: String,
     /// Father or firm name in English. Empty if none.
@@ -453,6 +469,10 @@ pub struct SimilarAccount {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2, E38).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Father or firm name in Urdu.
     pub father_or_firm_ur: String,
     /// Father or firm name in English.
@@ -604,6 +624,10 @@ pub struct AccountNode {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// The balance now.
     pub balance: Balance,
     /// False when hidden from pickers.

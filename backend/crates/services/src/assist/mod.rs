@@ -150,6 +150,7 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             credit_used,
             advance_open,
             warnings,
+            tag: None,
         })
     })
 }

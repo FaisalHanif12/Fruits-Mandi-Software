@@ -65,6 +65,7 @@ impl<'a> Cols<'a> {
             code: self.get()?,
             name_ur: self.get()?,
             name_en: self.get()?,
+            tag: None,
         })
     }
 
@@ -79,6 +80,7 @@ impl<'a> Cols<'a> {
             code: code.unwrap_or_default(),
             name_ur: name_ur.unwrap_or_default(),
             name_en: name_en.unwrap_or_default(),
+            tag: None,
         }))
     }
 
@@ -308,6 +310,7 @@ fn fill_own_lots(conn: &Connection, lots: &mut [SavedLot]) -> rusqlite::Result<(
                     code: String::new(),
                     name_ur,
                     name_en,
+                    tag: None,
                 },
                 account_id: account_id.unwrap_or_default(),
                 share_bps,

@@ -324,6 +324,7 @@ pub fn preview_expense(
                 code: h.code.clone(),
                 name_ur: h.name_ur.clone(),
                 name_en: h.name_en.clone(),
+                tag: None,
             }),
             partner: planned
                 .partner
@@ -415,6 +416,7 @@ pub fn repeat_last_month_preview(
                     code: head.code.clone(),
                     name_ur: head.name_ur.clone(),
                     name_en: head.name_en.clone(),
+                    tag: None,
                 },
                 expense_head_id: head.id,
                 amount_paisa: amount,

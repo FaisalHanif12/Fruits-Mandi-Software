@@ -486,6 +486,17 @@ const EXPECTED_FILES: &[&str] = &[
     "TextDir.ts",
     "PrintFirm.ts",
     "PrintFact.ts",
+    "PrintContact.ts",
+    "PrintHeader.ts",
+    "PrintFooter.ts",
+    "PrintFrameInput.ts",
+    "PrintFrame.ts",
+    "CollectionPrintDataInput.ts",
+    "CollectionPrintRow.ts",
+    "CollectionPrintGroup.ts",
+    "CollectionPrintData.ts",
+    "PrintCollectionInput.ts",
+    "FirmContact.ts",
     "PrintParty.ts",
     "PrintLine.ts",
     "AmountRole.ts",
@@ -880,6 +891,12 @@ fn export_bindings() {
     mandi_reports::print::VoucherPrintDataInput::export_all(&cfg).unwrap();
     printing::PrintVoucherInput::export_all(&cfg).unwrap();
     mandi_reports::print::PrintData::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintFrameInput::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintFrame::export_all(&cfg).unwrap();
+    mandi_reports::print::CollectionPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::print::CollectionPrintData::export_all(&cfg).unwrap();
+    printing::PrintCollectionInput::export_all(&cfg).unwrap();
+    mandi_services::core::firm::FirmContact::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();
@@ -1077,6 +1094,8 @@ fn plan_04_contract_shapes() {
             "mandi_en: string",
             "address: string",
             "phone: string",
+            "firm_contacts: Array<FirmContact>",
+            "trade_mark: string",
             "confirmed_rules_words: Array<string>",
         ],
     );

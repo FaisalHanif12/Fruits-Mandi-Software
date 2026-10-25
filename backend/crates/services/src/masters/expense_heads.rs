@@ -24,6 +24,7 @@ pub fn expense_heads(ctx: &Context) -> Result<ExpenseHeads, ServiceError> {
                     code: used.head.code.clone(),
                     name_ur: used.head.name_ur.clone(),
                     name_en: used.head.name_en.clone(),
+                    tag: None,
                 },
                 account_id: used.head.account_id,
                 use_count: used.use_count,

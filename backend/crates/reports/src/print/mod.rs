@@ -26,7 +26,10 @@
 //! "انیس ہزار تین سو سولہ روپے".
 
 mod build;
+mod collection;
 mod format;
+mod frame;
+mod header;
 mod ids;
 mod load;
 mod pages;
@@ -38,6 +41,11 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 pub use build::{BuildOptions, build};
+pub use collection::{
+    CollectionPrintData, CollectionPrintDataInput, CollectionPrintGroup, CollectionPrintRow,
+};
+pub use frame::{PrintFrame, PrintFrameInput, print_frame};
+pub use header::{PrintContact, PrintFooter, PrintHeader};
 pub use load::{FirmNames, bikri_print_data};
 pub use voucher::voucher_print_data;
 
@@ -101,7 +109,7 @@ pub struct PrintFirm {
 }
 
 /// One fact in the header: a label ID and its value, for example the بکری number or the date.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct PrintFact {
     /// Fluent message ID of the label.
     pub label_id: String,
@@ -118,6 +126,11 @@ pub struct PrintParty {
     pub code: Option<String>,
     /// The name in the print language.
     pub name: String,
+    /// The tag (نشان) of the account, printed after the name. Absent if none, and always absent
+    /// for a one-time person (PRD 10.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// The phone as typed. Null if none.
     pub phone: Option<String>,
 }
@@ -129,6 +142,11 @@ pub struct PrintLine {
     pub date: String,
     /// The buyer's name, on the seller bill. Null on a slip (the page is the buyer).
     pub name: Option<String>,
+    /// The tag (نشان) of that buyer, printed after his name. Absent if none, on a slip, and for
+    /// a one-time buyer (PRD 10.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub name_tag: Option<String>,
     /// The item in the print language.
     pub item: String,
     /// The packing in the print language.
@@ -141,6 +159,10 @@ pub struct PrintLine {
     pub rate: String,
     /// The amount: the seller amount on the seller bill, the buyer value on a slip.
     pub amount: String,
+    /// The line written the client's way for R5 and the buyer slips: `(item qty . rate)`, for
+    /// example `(کیلا 20 . 600)` (PRD R5, plan 17e). Built here from the item name in the print
+    /// language and the formatted quantity and rate, so the template only lays it out.
+    pub detail: String,
     /// The line note as typed. Null if none.
     pub note: Option<String>,
 }
@@ -181,6 +203,9 @@ pub struct PrintWords {
 /// One page of a document: one seller, one buyer or one one-time buyer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PrintPage {
+    /// The row number of this page's party in the document: 1, 2, 3 ... (the serial column of
+    /// R5, PRD 19.2), formatted for print.
+    pub serial: String,
     /// Who the page is for.
     pub party: PrintParty,
     /// The lines of goods, in order.
@@ -209,16 +234,15 @@ pub struct PrintData {
     /// True when Urdu digits are used on this print (an Urdu print with the setting on), so the
     /// template puts the Naskh font first for numbers (Tech Stack 4.1).
     pub urdu_digits: bool,
-    /// Fluent message ID of the title.
-    pub title_id: String,
-    /// The firm header.
-    pub firm: PrintFirm,
-    /// The بکری number, formatted for print.
+    /// The header: the firm, its contacts and trade mark, the title and the facts (number, date,
+    /// bill date when it differs, truck). Plan 17e moved these here from the top level
+    /// (`firm`, `title_id`, `facts`).
+    pub header: PrintHeader,
+    /// The footer: the print time and the labels of "Page x of y". Plan 17e moved `printed_at`
+    /// here.
+    pub footer: PrintFooter,
+    /// The بکری or voucher number, formatted for print.
     pub number: String,
-    /// The facts of the header, in order: number, date, bill date (when it differs), truck.
-    pub facts: Vec<PrintFact>,
-    /// The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-    pub printed_at: String,
     /// True for a cancelled بکری; the template stamps the pages.
     pub cancelled: bool,
     /// The pages. Empty when there is nothing to print (no one-time buyer for the پختہ slip).

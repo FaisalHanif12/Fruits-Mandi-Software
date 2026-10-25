@@ -384,6 +384,7 @@ pub fn advances_report(
                     code: row.code,
                     name_ur: row.name_ur,
                     name_en: row.name_en,
+                    tag: None,
                 })
                 .ok_or_else(|| ServiceError::Data("an advance names no account".to_owned()))?;
             let (g, r, a) = (

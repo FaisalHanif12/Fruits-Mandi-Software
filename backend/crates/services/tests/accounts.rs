@@ -59,6 +59,7 @@ fn input(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -129,6 +130,34 @@ fn difference(env: &TestEnv) -> (BalanceSide, Paisa) {
     let id = account_id(env, "06019999");
     let balance = ledger::account_balance(&env.ctx, id).unwrap();
     (balance.side, balance.amount_paisa)
+}
+
+#[test]
+fn plan_17e_t1_a_typed_tag_is_refused_until_t2_and_no_tag_saves_as_before() {
+    let (dir, env, owner) = ready();
+    let mut with_tag = input(AccountType::Buyer, "", "عاشق ظفر", "Ashiq Zafar");
+    with_tag.tag = "K".into();
+    // The tag is in the contract but is not stored yet: the save is refused at `tag`, so it never
+    // drops the tag silently, and nothing is written.
+    assert_eq!(
+        first_error(accounts::save(&env.ctx, &owner, &with_tag).unwrap_err()),
+        (ErrorCode::ErrNotImplemented, Some("tag".to_owned()))
+    );
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM accounts WHERE name_en = 'Ashiq Zafar'"
+        ),
+        0
+    );
+    // An account with no tag saves exactly as before, and its row has no tag.
+    let saved = save(
+        &env,
+        &owner,
+        input(AccountType::Buyer, "", "عاشق ظفر", "Ashiq Zafar"),
+    );
+    assert_eq!(saved.tag, None);
+    assert!(serde_json::to_value(&saved).unwrap().get("tag").is_none());
 }
 
 #[test]

@@ -8,7 +8,8 @@ mod common;
 use common::*;
 use mandi_services::core::auth::{Language, PrefKey};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
-use mandi_services::settings::{self, Firm};
+use mandi_services::core::firm::FirmContact;
+use mandi_services::settings::{self, Firm, FirmPrintInfo};
 use mandi_services::testing::TestEnv;
 use mandi_services::{Secret, ServiceError, auth, day};
 use tempfile::TempDir;
@@ -66,6 +67,49 @@ fn settings_have_the_plan_defaults() {
         "\"international\""
     );
     assert_eq!(all.firm.mandi_en, "New Sabzi Mandi Kot Radha Kishan");
+}
+
+#[test]
+fn plan_17e_t1_contacts_and_trade_mark_are_refused_until_t2_and_an_empty_save_is_as_before() {
+    let (_dir, env, owner) = owner_ready();
+    assert_eq!(
+        settings::get_print_info(&env.ctx).unwrap(),
+        FirmPrintInfo::default()
+    );
+    let firm = settings::get(&env.ctx).unwrap().firm;
+    let contact = FirmContact {
+        name_ur: "منشی آصف بھٹی".into(),
+        name_en: "Munshi Asif Bhatti".into(),
+        phone: "0300-4058860".into(),
+    };
+    let with_contact = FirmPrintInfo {
+        firm_contacts: vec![contact],
+        trade_mark: String::new(),
+    };
+    assert_eq!(
+        rejected(
+            settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &with_contact, &[])
+                .unwrap_err()
+        ),
+        vec![("firm_contacts".to_owned(), ErrorCode::ErrNotImplemented)]
+    );
+    let with_mark = FirmPrintInfo {
+        firm_contacts: Vec::new(),
+        trade_mark: "RH".into(),
+    };
+    assert_eq!(
+        rejected(
+            settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &with_mark, &[])
+                .unwrap_err()
+        ),
+        vec![("trade_mark".to_owned(), ErrorCode::ErrNotImplemented)]
+    );
+    // Neither set: the firm is saved exactly as `set_firm` saves it, and the answer is empty.
+    let (saved, info) =
+        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &FirmPrintInfo::default(), &[])
+            .unwrap();
+    assert_eq!(saved, firm);
+    assert!(info.is_empty());
 }
 
 #[test]

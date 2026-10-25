@@ -133,6 +133,7 @@ fn read(r: &Row<'_>) -> rusqlite::Result<GardenRec> {
             code: r.get(7)?,
             name_ur: r.get(8)?,
             name_en: r.get(9)?,
+            tag: None,
         }),
         None => None,
     };
@@ -155,6 +156,7 @@ fn read(r: &Row<'_>) -> rusqlite::Result<GardenRec> {
             code: r.get(17)?,
             name_ur: r.get(18)?,
             name_en: r.get(19)?,
+            tag: None,
         },
     })
 }

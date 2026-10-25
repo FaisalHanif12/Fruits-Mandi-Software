@@ -8,32 +8,42 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
   "dir": "rtl",
   "paper": "a4",
   "urdu_digits": false,
-  "title_id": "print-seller-bill-title",
-  "firm": {
-    "name": "ماہر عدنان اینڈ برادرز",
-    "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
-    "address": "Kot Radha Kishan",
-    "phone": "03001234567"
+  "header": {
+    "firm": {
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-seller-bill-title",
+    "facts": [
+      {
+        "label_id": "print-fact-number",
+        "value": "1"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      },
+      {
+        "label_id": "print-fact-truck",
+        "value": "LES-1234"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
   },
   "number": "1",
-  "facts": [
-    {
-      "label_id": "print-fact-number",
-      "value": "1"
-    },
-    {
-      "label_id": "print-fact-date",
-      "value": "10-10-2026"
-    },
-    {
-      "label_id": "print-fact-truck",
-      "value": "LES-1234"
-    }
-  ],
-  "printed_at": "10-10-2026 14:00",
   "cancelled": false,
   "pages": [
     {
+      "serial": "1",
       "party": {
         "role_id": "print-party-seller",
         "code": "030110001",
@@ -50,6 +60,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
           "weight_kg": null,
           "rate": "600",
           "amount": "12,000",
+          "detail": "(کیلا 20 . 600)",
           "note": null
         },
         {
@@ -61,6 +72,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
           "weight_kg": null,
           "rate": "580",
           "amount": "17,400",
+          "detail": "(کیلا 30 . 580)",
           "note": null
         }
       ],

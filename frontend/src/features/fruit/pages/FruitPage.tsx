@@ -15,6 +15,7 @@
 //   the list below.
 
 import { Localized, useLocalization } from '@fluent/react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import type { FieldError } from '../../../bindings/FieldError';
 import { useDayStatus } from '../../../app/use-day-status';
@@ -24,6 +25,7 @@ import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { ErrorState, LoadingState, Notice, showToast } from '../../../shared/ui';
 import { EntryFrame, EntryNotes, ExpenseTabs, previewRefusal } from '../../cashbook';
 import { CancelFruitDialog } from '../components/CancelFruitDialog';
+import { FruitEntryView } from '../components/FruitEntryView';
 import { FruitForm } from '../components/FruitForm';
 import { FruitListSection } from '../components/FruitListSection';
 import { FruitPreviewCard } from '../components/FruitPreviewCard';
@@ -37,8 +39,9 @@ import {
   nextFruitDraft,
   readyToAsk,
 } from '../draft';
-import { useFruitPreview, useReadFruit, useSaveFruit } from '../hooks';
+import { useFruitEntry, useFruitPreview, useReadFruit, useSaveFruit } from '../hooks';
 import { fruitNumberText } from '../list-columns';
+import { parseFruitSearch, type FruitSearch } from '../screen-search';
 import { FOR_GUESTS, type EditingFruit, type FruitDraft, type FruitRow } from '../types';
 
 /** The address of this screen: a tab of the خرچہ area (expense-tabs.ts). */
@@ -47,16 +50,29 @@ const FRUIT_PATH = '/rokar/fruit';
 interface FruitEditorProps {
   /** Today, `YYYY-MM-DD`, from the day status. */
   today: string;
+  /** The entry the address opens in its saved view (`?entry=7`), a bad id, or nothing. */
+  entry: FruitSearch['entry'];
 }
 
-function FruitEditor({ today }: FruitEditorProps) {
+function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
+  const navigate = useNavigate();
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   const formRef = useFocusFirstField<HTMLFormElement>();
   const [draft, setDraft] = useState<FruitDraft>(() => newFruitDraft(today));
   const [editing, setEditing] = useState<EditingFruit | null>(null);
   const [tried, setTried] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(
+    typeof openEntry === 'number' ? openEntry : null,
+  );
+  // The address can open another entry while the screen is up: the list follows it (the form is not
+  // touched, so nothing typed is lost).
+  const [seenEntry, setSeenEntry] = useState(openEntry);
+  if (seenEntry !== openEntry) {
+    setSeenEntry(openEntry);
+    if (typeof openEntry === 'number') setSelectedId(openEntry);
+  }
+  const opened = useFruitEntry(typeof openEntry === 'number' ? openEntry : null);
   const [cancelRow, setCancelRow] = useState<FruitRow | null>(null);
   const read = useReadFruit();
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
@@ -132,6 +148,16 @@ function FruitEditor({ today }: FruitEditorProps) {
   return (
     <div className="flex max-w-page flex-col gap-4">
       <ExpenseTabs />
+      {openEntry === undefined ? null : (
+        <FruitEntryView
+          entry={openEntry}
+          onEdit={startEdit}
+          onCancel={setCancelRow}
+          onClose={() => {
+            void navigate({ to: FRUIT_PATH, search: {}, replace: true });
+          }}
+        />
+      )}
       <EntryFrame<string>
         titleId="fruit-title"
         helpId="fruit-help"
@@ -147,7 +173,9 @@ function FruitEditor({ today }: FruitEditorProps) {
         below={
           <>
             <FruitListSection
+              key={opened.data?.entry_date ?? today}
               today={today}
+              day={opened.data?.entry_date}
               selectedId={selectedId}
               onSelect={(row) => {
                 setSelectedId(row === null ? null : row.id);
@@ -208,6 +236,8 @@ function FruitEditor({ today }: FruitEditorProps) {
 /** The route's page: it waits for today, then opens the form. */
 export function FruitPage() {
   const day = useDayStatus();
+  const rawSearch: Record<string, unknown> = useSearch({ strict: false });
+  const search = parseFruitSearch(rawSearch);
   if (day.isPending) return <LoadingState />;
   if (day.isError) {
     return (
@@ -220,5 +250,5 @@ export function FruitPage() {
       />
     );
   }
-  return <FruitEditor key="new" today={day.data.today} />;
+  return <FruitEditor key="new" today={day.data.today} entry={search.entry} />;
 }

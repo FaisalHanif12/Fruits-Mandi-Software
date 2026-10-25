@@ -68,6 +68,7 @@ fn add_account(env: &TestEnv, owner: &auth::Actor, kind: AccountType, ur: &str, 
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     };
     loop {
         match accounts::save(&env.ctx, owner, &input) {

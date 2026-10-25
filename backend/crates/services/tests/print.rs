@@ -252,10 +252,10 @@ fn the_firm_header_comes_from_settings_in_the_print_language() {
     let id = save_event1(&w);
     let ur = data(&w, id, PrintDoc::SellerBill, Language::Ur);
     let en = data(&w, id, PrintDoc::SellerBill, Language::En);
-    assert_eq!(ur.firm.name, "ماہر عدنان اینڈ برادرز");
-    assert_eq!(en.firm.name, "Maher Adnan and Brothers");
-    assert_eq!(en.firm.mandi, "New Sabzi Mandi Kot Radha Kishan");
-    assert_eq!(ur.printed_at, "10-10-2026 14:00");
+    assert_eq!(ur.header.firm.name, "ماہر عدنان اینڈ برادرز");
+    assert_eq!(en.header.firm.name, "Maher Adnan and Brothers");
+    assert_eq!(en.header.firm.mandi, "New Sabzi Mandi Kot Radha Kishan");
+    assert_eq!(ur.footer.printed_at, "10-10-2026 14:00");
 }
 
 #[test]
@@ -282,6 +282,7 @@ fn set_input() -> SetPrintingInput {
         paper_buyer_slips: Paper::Mm80,
         paper_pukhta_slip: Paper::A5,
         paper_receipt_slip: Paper::A5,
+        paper_collection_list: Paper::A4,
         printer: "  Office Laser  ".into(),
         copies: "2".into(),
         urdu_digits: true,
@@ -314,6 +315,7 @@ fn printing_settings_start_with_a21_and_are_saved_with_an_audit_row() {
     assert!(!start.urdu_digits);
     assert!(start.printer.is_empty());
     assert_eq!(start.paper_receipt_slip, Paper::A5);
+    assert_eq!(start.paper_collection_list, Paper::A4);
     assert_eq!(start.print_after_save, PrintDoc::BIKRI_DOCS.to_vec());
 
     let edits_before = audit_rows(&w, "edit");

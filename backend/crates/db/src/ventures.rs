@@ -716,6 +716,7 @@ pub fn parts_of(conn: &Connection, entry_ids: &[i64]) -> rusqlite::Result<Vec<Pa
                 code: String::new(),
                 name_ur: r.get(2)?,
                 name_en: r.get(3)?,
+                tag: None,
             },
             share_bps: r.get(4)?,
             source: r.get(5)?,

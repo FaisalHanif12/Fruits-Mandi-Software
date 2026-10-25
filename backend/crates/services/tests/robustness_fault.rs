@@ -95,6 +95,7 @@ fn buyer_input(n: u64) -> AccountInput {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 

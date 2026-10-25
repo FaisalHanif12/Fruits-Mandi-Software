@@ -928,6 +928,22 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "reports_print_header",
+            json!({ "input": { "language": "ur", "title_id": "print-collection-list-title", "facts": [] } }),
+            true,
+        ),
+        (
+            "reports_collection_print_data",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_print_collection",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur",
+                "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        (
             "pukhta_make_regular",
             json!({ "input": { "person_key": "x|", "side": "buyer", "account_input": { "id": null, "version": null,
                 "account_type": "buyer", "control_id": null, "code": "", "name_ur": "شاہد", "name_en": "Shahid",

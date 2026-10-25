@@ -1075,6 +1075,22 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "reports_print_header",
+            json!({ "input": { "language": "ur", "title_id": "print-collection-list-title", "facts": [] } }),
+            true,
+        ),
+        (
+            "reports_collection_print_data",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_print_collection",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur",
+                "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        (
             "pukhta_make_regular",
             json!({ "input": { "person_key": "x|", "side": "buyer", "account_input": { "id": null, "version": null,
                 "account_type": "buyer", "control_id": null, "code": "", "name_ur": "شاہد", "name_en": "Shahid",
@@ -2298,7 +2314,7 @@ fn the_bikri_commands_work_through_the_ipc() {
     let bill = print_data("seller_bill", "en");
     assert_eq!(bill["dir"], "ltr");
     assert_eq!(bill["paper"], "a4");
-    assert_eq!(bill["firm"]["name"], "Maher Adnan and Brothers");
+    assert_eq!(bill["header"]["firm"]["name"], "Maher Adnan and Brothers");
     assert_eq!(bill["pages"][0]["amounts"][9]["label_id"], "print-net-sale");
     assert_eq!(bill["pages"][0]["amounts"][9]["amount"], "19,316");
     assert_eq!(
@@ -2323,7 +2339,8 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(
         printing,
         json!({ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-            "paper_receipt_slip": "a5", "printer": "", "copies": 1, "urdu_digits": false,
+            "paper_receipt_slip": "a5", "paper_collection_list": "a4", "printer": "", "copies": 1,
+            "urdu_digits": false,
             "print_after_save": ["seller_bill", "buyer_slips", "pukhta_slip"] })
     );
     let bad = h

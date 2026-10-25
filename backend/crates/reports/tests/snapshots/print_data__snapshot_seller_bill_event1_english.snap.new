@@ -1,0 +1,139 @@
+---
+source: crates/reports/tests/print_data.rs
+assertion_line: 82
+expression: "print(EVENT1, PrintDoc::SellerBill, Language::En)"
+---
+{
+  "doc": "seller_bill",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "header": {
+    "firm": {
+      "name": "Maher Adnan and Brothers",
+      "mandi": "New Sabzi Mandi, Kot Radha Kishan",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-seller-bill-title",
+    "facts": [
+      {
+        "label_id": "print-fact-number",
+        "value": "1"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      },
+      {
+        "label_id": "print-fact-truck",
+        "value": "LES-1234"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
+  },
+  "number": "1",
+  "cancelled": false,
+  "pages": [
+    {
+      "serial": "1",
+      "party": {
+        "role_id": "print-party-seller",
+        "code": "030110001",
+        "name": "Rahim",
+        "phone": null
+      },
+      "lines": [
+        {
+          "date": "10-10-2026",
+          "name": "Akram Toll Tax",
+          "item": "Banana",
+          "packing": "Box",
+          "qty": "20",
+          "weight_kg": null,
+          "rate": "600",
+          "amount": "12,000",
+          "detail": "(Banana 20 . 600)",
+          "note": null
+        },
+        {
+          "date": "10-10-2026",
+          "name": "Arshad Multani",
+          "item": "Banana",
+          "packing": "Box",
+          "qty": "30",
+          "weight_kg": null,
+          "rate": "580",
+          "amount": "17,400",
+          "detail": "(Banana 30 . 580)",
+          "note": null
+        }
+      ],
+      "amounts": [
+        {
+          "label_id": "print-gross-sale",
+          "amount": "29,400",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-freight",
+          "amount": "3,000",
+          "role": "line"
+        },
+        {
+          "label_id": "print-commission",
+          "amount": "1,764",
+          "role": "line"
+        },
+        {
+          "label_id": "print-labour",
+          "amount": "250",
+          "role": "line"
+        },
+        {
+          "label_id": "print-munshiana",
+          "amount": "50",
+          "role": "line"
+        },
+        {
+          "label_id": "print-cash-paid",
+          "amount": "5,000",
+          "role": "line"
+        },
+        {
+          "label_id": "print-store-rent",
+          "amount": "0",
+          "role": "line"
+        },
+        {
+          "label_id": "print-phone-charge",
+          "amount": "20",
+          "role": "line"
+        },
+        {
+          "label_id": "print-total-deductions",
+          "amount": "10,084",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-net-sale",
+          "amount": "19,316",
+          "role": "total"
+        }
+      ],
+      "payment_id": null,
+      "words": {
+        "label_id": "print-in-words",
+        "text": "Nineteen thousand three hundred sixteen rupees only"
+      }
+    }
+  ]
+}

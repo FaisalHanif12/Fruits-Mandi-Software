@@ -44,3 +44,9 @@ pub(super) const PARTY_ACCOUNT: &str = "print-party-account";
 pub(super) const SLIP_AMOUNT_RECEIVED: &str = "print-slip-amount-received";
 pub(super) const SLIP_AMOUNT_PAID: &str = "print-slip-amount-paid";
 pub(super) const SLIP_AMOUNT_ADVANCE: &str = "print-slip-amount-advance";
+
+// The footer of every print (PRD FR-19.13): the print time and "Page x of y". Defined in
+// `print.ftl` of the frontend.
+pub(super) const FOOTER_PRINTED: &str = "print-printed-at";
+pub(super) const FOOTER_PAGE: &str = "print-page-label";
+pub(super) const FOOTER_PAGE_OF: &str = "print-page-of";
