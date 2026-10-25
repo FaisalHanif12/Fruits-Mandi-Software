@@ -195,14 +195,7 @@ fn expect_cell(sheet: &Sheet, row: u32, col: u32, cell: &Cell, l10n: &L10n, what
 /// lacks it, so once the frontend adds a message the sheet must use it. The list is empty now:
 /// every ID is in both languages (frontend-d5, round 12). A new report adds its IDs here until the
 /// frontend has written them.
-const PENDING_IDS: &[&str] = &[
-    // Fruit taken (plan d5-late, after D4R 17d): R37, the R10 and R34 additions and view K. The
-    // frontend writes these.
-    "report-r37-title",
-    "report-col-fruit-taken",
-    "report-r34-fruit-taken",
-    "analytics-view-k-title",
-];
+const PENDING_IDS: &[&str] = &[];
 
 /// The row of the heading: the one whose texts are exactly the column titles.
 fn header_row(sheet: &Sheet, titles: &[String]) -> u32 {
