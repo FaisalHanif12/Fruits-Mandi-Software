@@ -109,7 +109,10 @@ describe.each(LANGUAGES)('the seller bill (%s)', (language: Language) => {
     expect(text).toContain(data.header.firm.mandi);
     expect(text).toContain('LES-1234');
     expect(text).toContain('10-10-2026');
-    expect(text).toContain('030110001');
+    // The seller shows his short code (PRD FR-19.13), not the long one.
+    expect(textOf(must(root.querySelector<HTMLElement>('.print-party')))).toContain(
+      `${message(language, 'print-party-code')} 1`,
+    );
     expect(text).toContain(language === 'ur' ? 'رحیم' : 'Rahim');
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     expect(text).toContain(language === 'ur' ? 'ارشد ملتانی' : 'Arshad Multani');
@@ -133,7 +136,7 @@ describe.each(LANGUAGES)('the seller bill (%s)', (language: Language) => {
       '17,400',
       '10-10-2026',
       'LES-1234',
-      '030110001',
+      '1',
     ]) {
       expect(isolated(root, value), `${value} is isolated`).toBe(true);
     }
@@ -208,7 +211,7 @@ describe.each(LANGUAGES)('the پختہ slip (%s)', (language: Language) => {
     expect(sheets(root)).toHaveLength(1);
     const text = textOf(root);
     expect(text).toContain(language === 'ur' ? 'شاہد' : 'Shahid');
-    expect(text).toContain('03000000000');
+    expect(text).toContain('0300-0000000');
     expect(text).toContain(message(language, 'print-party-onetime-buyer'));
     expect(text).toContain('12,000');
     expect(text).toContain('720');
@@ -220,7 +223,7 @@ describe.each(LANGUAGES)('the پختہ slip (%s)', (language: Language) => {
     );
     // A one-time buyer has no code.
     expect(root.querySelector('.print-party-extra')?.textContent).not.toContain('0304');
-    expect(isolated(root, '03000000000')).toBe(true);
+    expect(isolated(root, '0300-0000000')).toBe(true);
   });
 });
 
@@ -387,7 +390,8 @@ describe.each(LANGUAGES)('the receipt slip template (%s)', (language: Language) 
     expect(text).toContain(language === 'ur' ? 'و-1' : 'R-1');
     expect(text).toContain(message(language, 'print-party-buyer'));
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
-    expect(text).toContain('03040001');
+    // The buyer shows his short code.
+    expect(text).toContain(`${message(language, 'print-party-code')} 1`);
     expect(text).toContain(message(language, 'print-slip-amount-received'));
     expect(text).toContain('10,000');
     expect(text).toContain(language === 'ur' ? 'دس ہزار روپے' : 'Ten thousand rupees only');

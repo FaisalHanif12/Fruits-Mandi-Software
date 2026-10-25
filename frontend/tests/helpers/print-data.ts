@@ -26,6 +26,11 @@ export interface CannedOptions {
   /** The firm's contact persons (up to three) and the trade mark are set in Settings (PRD 21). */
   contacts?: boolean;
   tradeMark?: string | null;
+  /**
+   * The first buyer (or the first line's buyer on a seller bill) has the tag K, as the backend sends
+   * an account with a tag (PRD 10.2): `party.tag` or `line.name_tag`.
+   */
+  tagged?: boolean;
 }
 
 /** `0` to `9` as the Urdu digits `۰` to `۹` (what the backend's number formatter does). */
@@ -154,7 +159,13 @@ function sellerPage(language: Language): PrintPage {
   });
   return {
     serial: '1',
-    party: { role_id: 'print-party-seller', code: '030110001', name: n.rahim, phone: null },
+    party: {
+      role_id: 'print-party-seller',
+      code: '030110001',
+      short_code: '1',
+      name: n.rahim,
+      phone: null,
+    },
     lines: [line(n.akram, '20', '600', '12,000'), line(n.arshad, '30', '580', '17,400')],
     amounts: [
       amount('print-gross-sale', '29,400', 'subtotal'),
@@ -193,7 +204,14 @@ function slipPage(language: Language, spec: SlipSpec, serial = '1'): PrintPage {
   const n = NAMES[language];
   return {
     serial,
-    party: { role_id: spec.role, code: spec.code, name: spec.name, phone: spec.phone },
+    party: {
+      role_id: spec.role,
+      code: spec.code,
+      // A seller or buyer has a short code (PRD FR-7.39); a one-time person has no code at all.
+      ...(spec.code === null ? {} : { short_code: String(Number(spec.code.slice(-4))) }),
+      name: spec.name,
+      phone: spec.phone,
+    },
     lines: [
       {
         date: '10-10-2026',
@@ -267,7 +285,7 @@ function pukhtaPages(language: Language): PrintPage[] {
       role: 'print-party-onetime-buyer',
       code: null,
       name: n.shahid,
-      phone: '03000000000',
+      phone: '0300-0000000',
       item: n.apple,
       qty: '10',
       rate: '1,200',
@@ -329,9 +347,24 @@ export function printDataFor(doc: PrintDoc, options: CannedOptions = {}): PrintD
     ...frameOf(language, TITLES[doc], doc === 'pukhta_slip' ? FACTS_BIKRI_2 : FACTS, options),
     number: doc === 'pukhta_slip' ? '2' : '1',
     cancelled: options.cancelled === true,
-    pages,
+    pages: options.tagged === true ? withTag(pages, doc) : pages,
   };
   return options.urduDigits === true ? withUrduDigits(data) : data;
+}
+
+/** The first buyer of the buyer slips, or the first line's buyer of the seller bill, has the tag K. */
+function withTag(pages: PrintPage[], doc: PrintDoc): PrintPage[] {
+  return pages.map((page, index) => {
+    if (index !== 0) return page;
+    if (doc === 'buyer_slips') return { ...page, party: { ...page.party, tag: 'K' } };
+    if (doc === 'seller_bill') {
+      return {
+        ...page,
+        lines: page.lines.map((line, at) => (at === 0 ? { ...line, name_tag: 'K' } : line)),
+      };
+    }
+    return page;
+  });
 }
 
 /**
@@ -473,7 +506,9 @@ export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): Pri
     party: {
       role_id: kind === 'receipt' ? 'print-party-buyer' : 'print-party-seller',
       code: kind === 'receipt' ? '03040001' : '030110001',
+      short_code: '1',
       name: kind === 'receipt' ? n.akram : n.rahim,
+      ...(options.tagged === true && kind === 'receipt' ? { tag: 'K' } : {}),
       phone: kind === 'receipt' ? '0300-1234567' : null,
     },
     lines: [],
@@ -545,7 +580,15 @@ export function collectionPrintData(options: CannedOptions = {}): CollectionPrin
         collector: ur ? 'اسلم' : 'Aslam',
         city: ur ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan',
         rows: [
-          row('1', '1', ur ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax', '2,880', '10-10-2026', '0', 'K'),
+          row(
+            '1',
+            '1',
+            ur ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax',
+            '2,880',
+            '10-10-2026',
+            '0',
+            options.tagged === true ? 'K' : undefined,
+          ),
           row('2', '2', ur ? 'ارشد ملتانی' : 'Arshad Multani', '18,684', '10-10-2026', '0'),
         ],
         total: '21,564',

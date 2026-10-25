@@ -10,7 +10,7 @@ interface CodeProps {
 
 export function Code({ children }: CodeProps) {
   return (
-    <bdi dir="ltr" className="type-number">
+    <bdi dir="ltr" className="type-number" data-kind="code">
       {children}
     </bdi>
   );

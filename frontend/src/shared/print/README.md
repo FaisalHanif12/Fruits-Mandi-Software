@@ -90,3 +90,12 @@ Printing tab. The data is `reports_voucher_print_data`; the layout still calcula
   data is `CollectionPrintData`, not `PrintData`, but it sits in the same `PrintRoot` with the same
   `PrintHeader`. `PrintView` is generic: the module gives the `describe` function that says whether the
   document is empty and gives a sample for the fonts. The total of the list is the total OF THIS LIST.
+
+## The digits of a print (plan 17e, PRD FR-7.32, NFR-URD-14)
+
+Every number of a print is written with the digits 0-9 in both languages. The Urdu digits (۰-۹) come
+only from the Printing setting, which is OFF by default; the backend then converts amounts, dates,
+serials and counts, but never a phone, a code or a short code. Inside the page the ten ASCII digits are
+Inter first (`--font-digits`, the `Mandi Digits` face of `fonts.css`), so a digit that is not in `<Num>`
+or `<Code>` never takes an Urdu digit shape. `tests/unit/print-digits.test.tsx` walks every template and
+the backend's real answers; it is the ONE place that turns the setting on.

@@ -1,0 +1,23 @@
+{
+  "id": 20,
+  "code": "03040001",
+  "account_type": "buyer",
+  "name_ur": "اکرم ٹول ٹیکس",
+  "name_en": "Akram Toll Tax",
+  "tag": "K",
+  "father_or_firm_ur": "",
+  "father_or_firm_en": "",
+  "city_ur": "",
+  "city_en": "",
+  "phone": "",
+  "is_active": true,
+  "balance": {
+    "amount_paisa": 288000,
+    "side": "dr"
+  },
+  "last_entry_date": "2026-10-10",
+  "credit_limit": null,
+  "credit_used": 288000,
+  "advance_open": null,
+  "warnings": []
+}

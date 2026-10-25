@@ -1,8 +1,8 @@
 // The firm's names, mandi, address and phone (PRD Section 21 "Firm", plan 04), up to three contact
 // persons and the trade mark that every print shows in its header (plan 17e, FR-19.13). Both names of
 // the firm, the mandi and each contact person are kept, one per script (PRD FR-7.24). A word of the
-// firm's and the mandi's names made only by the spelling rules is checked before the save (PRD
-// FR-7.66). A contact row left empty is not sent. The trade mark is text as typed, in one script,
+// firm's, the mandi's and each contact person's names made only by the spelling rules is checked
+// before the save (PRD FR-7.66, as the backend checks it too). A contact row left empty is not sent. The trade mark is text as typed, in one script,
 // never turned into Urdu (FR-7.25). Leaving with unsaved changes asks "Save changes?" (PRD FR-7.9).
 
 import { Localized } from '@fluent/react';
@@ -95,10 +95,17 @@ export function FirmTab({ firm }: FirmTabProps) {
     forFirm: FirmSettings;
     firm?: SpellingMarks | undefined;
     mandi?: SpellingMarks | undefined;
+    /** The marks of each contact person's names, by his place in the list. */
+    contacts?: (SpellingMarks | undefined)[] | undefined;
   }>({ forFirm: firm });
   const marks = marksOf.forFirm === firm ? marksOf : { forFirm: firm };
   const rememberMarks = (name: 'firm' | 'mandi') => (next: NamePairValue) => {
     setMarksOf({ ...marks, [name]: next.spelling });
+  };
+  const rememberContactMarks = (index: number) => (next: NamePairValue) => {
+    const list = [...(marks.contacts ?? [])];
+    list[index] = next.spelling;
+    setMarksOf({ ...marks, contacts: list });
   };
   const formRef = useRef<HTMLFormElement>(null);
   const spelling = useSpellingFlow({
@@ -137,6 +144,27 @@ export function FirmTab({ firm }: FirmTabProps) {
     spelling: marks.mandi,
   };
 
+  /** Checks the names of each contact person in turn (the spelling check), then saves. */
+  const saveAfterContacts = (
+    index: number,
+    words: readonly string[],
+  ): Promise<FirmSettings | undefined> => {
+    const contact = contacts[index];
+    if (index >= contacts.length) {
+      return save.mutateAsync({
+        ...values,
+        firm_contacts: contacts.filter(filled),
+        confirmed_rules_words: [...new Set(words)],
+      });
+    }
+    if (contact === undefined || !filled(contact)) return saveAfterContacts(index + 1, words);
+    return spelling.guard(
+      { urdu: contact.name_ur, english: contact.name_en, spelling: marks.contacts?.[index] },
+      rememberContactMarks(index),
+      (more) => saveAfterContacts(index + 1, [...words, ...more]),
+    );
+  };
+
   const submitOnce = (): Promise<boolean> =>
     spelling
       .guard(
@@ -150,12 +178,7 @@ export function FirmTab({ firm }: FirmTabProps) {
             (next) => {
               rememberMarks('mandi')(next);
             },
-            (mandiWords) =>
-              save.mutateAsync({
-                ...values,
-                firm_contacts: contacts.filter(filled),
-                confirmed_rules_words: [...new Set([...firmWords, ...mandiWords])],
-              }),
+            (mandiWords) => saveAfterContacts(0, [...firmWords, ...mandiWords]),
           ),
       )
       .then((saved) => {
@@ -257,6 +280,10 @@ export function FirmTab({ firm }: FirmTabProps) {
                 <Button
                   onClick={() => {
                     setContacts((current) => current.filter((_, place) => place !== index));
+                    setMarksOf({
+                      ...marks,
+                      contacts: (marks.contacts ?? []).filter((_, place) => place !== index),
+                    });
                   }}
                   accessibleName={l10n.getString('settings-firm-contact-remove-label', {
                     number: String(index + 1),
@@ -268,15 +295,19 @@ export function FirmTab({ firm }: FirmTabProps) {
               </div>
               <div className="grid grid-cols-1 gap-3 normal:grid-cols-2">
                 <NamePair
-                  value={{ urdu: contact.name_ur, english: contact.name_en }}
+                  value={{
+                    urdu: contact.name_ur,
+                    english: contact.name_en,
+                    spelling: marks.contacts?.[index],
+                  }}
                   onChange={(next) => {
                     changeContact(index, { name_ur: next.urdu, name_en: next.english });
+                    rememberContactMarks(index)(next);
                   }}
                   urduLabel={<Localized id="settings-firm-contact-name-ur" />}
                   englishLabel={<Localized id="settings-firm-contact-name-en" />}
                   urduError={fieldError(error, `firm_contacts[${String(index)}].name_ur`)}
                   englishError={fieldError(error, `firm_contacts[${String(index)}].name_en`)}
-                  checkSpelling={false}
                 />
                 <Field
                   label={<Localized id="settings-firm-contact-phone" />}

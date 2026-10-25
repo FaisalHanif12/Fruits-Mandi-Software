@@ -1,0 +1,144 @@
+[
+  {
+    "kind": "account",
+    "hit": {
+      "id": 20,
+      "code": "03040001",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": "K",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "buyer",
+      "control_id": 6,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 18,
+      "code": "030110001",
+      "name_ur": "رحیم",
+      "name_en": "Rahim",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "seller",
+      "control_id": 5,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 24,
+      "code": "06040001",
+      "name_ur": "باغ سفر اور پھل - الف",
+      "name_en": "Gardens Trips and Fruit - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 14,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 27,
+      "code": "06040002",
+      "name_ur": "باغ سفر اور پھل - ب",
+      "name_en": "Gardens Trips and Fruit - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 14,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 30,
+      "code": "06040003",
+      "name_ur": "باغ سفر اور پھل - ج",
+      "name_en": "Gardens Trips and Fruit - Partner C",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 14,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 23,
+      "code": "06030001",
+      "name_ur": "ذاتی خرچہ - الف",
+      "name_en": "Drawings - Partner A",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 11,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 26,
+      "code": "06030002",
+      "name_ur": "ذاتی خرچہ - ب",
+      "name_en": "Drawings - Partner B",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 11,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 29,
+      "code": "06030003",
+      "name_ur": "ذاتی خرچہ - ج",
+      "name_en": "Drawings - Partner C",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "other",
+      "control_id": 11,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "bikri",
+    "hit": {
+      "id": 1,
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "truck_no": "LES-1234",
+      "status": "saved",
+      "matched": "number"
+    }
+  },
+  {
+    "kind": "voucher",
+    "hit": {
+      "id": 1,
+      "voucher_type": "receipt",
+      "number": 1,
+      "entry_date": "2026-10-10",
+      "account": {
+        "id": 20,
+        "code": "03040001",
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax",
+        "tag": "K"
+      },
+      "amount_paisa": 1000000,
+      "status": "saved"
+    }
+  }
+]

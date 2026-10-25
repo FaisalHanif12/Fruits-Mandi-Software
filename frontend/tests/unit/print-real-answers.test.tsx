@@ -77,7 +77,7 @@ const EXPECTED: Record<string, { figures: string[]; words: string[]; sheets: num
     sheets: 2,
   },
   'pukhta_slip-event2': {
-    figures: ['12,800', '12,000', '720', '80', '03000000000'],
+    figures: ['12,800', '12,000', '720', '80', '0300-0000000'],
     words: ['بارہ ہزار آٹھ سو روپے', 'Twelve thousand eight hundred rupees only'],
     sheets: 1,
   },

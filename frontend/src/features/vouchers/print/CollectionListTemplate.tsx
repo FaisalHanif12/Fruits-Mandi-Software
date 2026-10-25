@@ -94,7 +94,7 @@ function GroupTable({ group }: { group: CollectionPrintGroup }) {
                 <Num>{row.serial}</Num>
               </td>
               <td className="print-num print-col-code">
-                <Num>{row.code}</Num>
+                <Code>{row.code}</Code>
               </td>
               <td>
                 <BuyerName row={row} />
@@ -149,7 +149,7 @@ function GroupCompact({ group }: { group: CollectionPrintGroup }) {
               <Num>{row.dues}</Num>
             </div>
             <div className="print-compact-sub">
-              <Num>{row.code}</Num>
+              <Code>{row.code}</Code>
               {row.phone === '' ? null : (
                 <>
                   {' · '}

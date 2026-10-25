@@ -267,15 +267,15 @@ describe.each(LANGUAGES)('the party of a print shows the short code (%s)', (lang
   it('a seller or buyer shows the short code the backend sent, an account without one its full code, a one-time person none', () => {
     const data = printDataFor('seller_bill', { language });
     const page = must(data.pages[0]);
-    const withShort = show({
-      ...data,
-      pages: [{ ...page, party: { ...page.party, short_code: '1' } }],
-    });
+    const withShort = show(data);
     const block = must(withShort.root.querySelector<HTMLElement>('.print-party'));
     expect(textOf(block)).toContain(`${message(language, 'print-party-code')} 1`);
     expect(textOf(block)).not.toContain('030110001');
     withShort.unmount();
-    const full = show(data);
+    // An account that has no short code shows its full code.
+    const bare = { ...page.party };
+    delete bare.short_code;
+    const full = show({ ...data, pages: [{ ...page, party: bare }] });
     expect(textOf(must(full.root.querySelector<HTMLElement>('.print-party')))).toContain(
       '030110001',
     );

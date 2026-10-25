@@ -1,0 +1,37 @@
+{
+  "dir": "rtl",
+  "footer": {
+    "of_label_id": "print-page-of",
+    "page_label_id": "print-page-label",
+    "printed_at": "10-10-2026 14:00",
+    "printed_label_id": "print-printed-at"
+  },
+  "header": {
+    "contacts": [
+      {
+        "name": "منشی آصف بھٹی",
+        "phone": "0300-4058860"
+      },
+      {
+        "name": "اکرم",
+        "phone": "0321-1234567"
+      }
+    ],
+    "facts": [
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      }
+    ],
+    "firm": {
+      "address": "Kot Radha Kishan",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+      "name": "ماہر عدنان اینڈ برادرز",
+      "phone": "0300-1234567"
+    },
+    "title_id": "print-collection-list-title",
+    "trade_mark": "RH"
+  },
+  "language": "ur",
+  "urdu_digits": false
+}

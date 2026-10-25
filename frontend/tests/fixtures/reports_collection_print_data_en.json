@@ -1,0 +1,73 @@
+{
+  "doc": "collection_list",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "header": {
+    "firm": {
+      "name": "Maher Adnan and Brothers",
+      "mandi": "New Sabzi Mandi Kot Radha Kishan",
+      "address": "Kot Radha Kishan",
+      "phone": "0300-1234567"
+    },
+    "contacts": [
+      {
+        "name": "Munshi Asif Bhatti",
+        "phone": "0300-4058860"
+      },
+      {
+        "name": "Akram",
+        "phone": "0321-1234567"
+      }
+    ],
+    "trade_mark": "RH",
+    "title_id": "print-collection-list-title",
+    "facts": [
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
+  },
+  "groups": [
+    {
+      "collector": null,
+      "city": null,
+      "rows": [
+        {
+          "serial": "1",
+          "code": "1",
+          "name": "Akram Toll Tax",
+          "tag": "K",
+          "phone": "",
+          "dues": "2,880",
+          "oldest_bill_date": "10-10-2026",
+          "oldest_days": "0"
+        },
+        {
+          "serial": "2",
+          "code": "2",
+          "name": "Arshad Multani",
+          "phone": "",
+          "dues": "18,684",
+          "oldest_bill_date": "10-10-2026",
+          "oldest_days": "0"
+        }
+      ],
+      "total": "21,564"
+    }
+  ],
+  "total": {
+    "label_id": "print-collection-total",
+    "amount": "21,564",
+    "role": "total"
+  },
+  "buyer_count": "2"
+}

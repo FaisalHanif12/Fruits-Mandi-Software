@@ -13,7 +13,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::En)"
       "name": "Maher Adnan and Brothers",
       "mandi": "New Sabzi Mandi, Kot Radha Kishan",
       "address": "Kot Radha Kishan",
-      "phone": "03001234567"
+      "phone": "0300-1234567"
     },
     "contacts": [],
     "trade_mark": null,
@@ -47,6 +47,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::En)"
       "party": {
         "role_id": "print-party-seller",
         "code": "030110001",
+        "short_code": "1",
         "name": "Rahim",
         "phone": null
       },

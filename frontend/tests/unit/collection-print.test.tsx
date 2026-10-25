@@ -69,7 +69,7 @@ describe.each(LANGUAGES)('the collection list template (%s)', (language: Languag
   });
 
   it('labels every column, and each row has its serial, short code, name with tag, phone, dues, oldest bill and days', () => {
-    const { root } = show(collectionPrintData({ language }));
+    const { root } = show(collectionPrintData({ language, tagged: true }));
     const first = must(root.querySelector<HTMLTableElement>('table.print-collection'));
     const heads = [...first.querySelectorAll('thead th')].map((cell) =>
       textOf(cell as HTMLElement),

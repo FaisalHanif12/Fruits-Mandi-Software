@@ -116,6 +116,8 @@ export interface AccountSearchHit {
   code: string;
   name_ur: string;
   name_en: string;
+  /** The tag (نشان) after the name, shown by `displayName`. Absent when there is none. */
+  tag?: string;
   extra_ur: string;
   extra_en: string;
 }

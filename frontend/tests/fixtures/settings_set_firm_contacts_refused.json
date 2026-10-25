@@ -1,0 +1,14 @@
+{
+  "errors": [
+    {
+      "code": "ERR_OUT_OF_RANGE",
+      "field": "firm_contacts",
+      "values": {
+        "max": 3,
+        "min": 0
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}
