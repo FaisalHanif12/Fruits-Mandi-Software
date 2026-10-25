@@ -16,6 +16,9 @@ use ts_rs::TS;
 /// The reports of the engine. The PRD IDs of 19.2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 pub enum ReportId {
+    /// Sale book, بکری بک: one بکری in full (the seller bill).
+    #[serde(rename = "R1")]
+    R1,
     /// Full sales register, مکمل بکری.
     #[serde(rename = "R2")]
     R2,
@@ -25,6 +28,9 @@ pub enum ReportId {
     /// Credit sales, ادھاری.
     #[serde(rename = "R4")]
     R4,
+    /// Buyer bills, ادھاری تفصیل: one row for each credit buyer (the client's print).
+    #[serde(rename = "R5")]
+    R5,
     /// Seller summary, بکری تفصیل / روزنامچہ بکری.
     #[serde(rename = "R6")]
     R6,
@@ -124,9 +130,11 @@ impl ReportId {
     /// The PRD ID as text: `R11`.
     pub const fn code(self) -> &'static str {
         match self {
+            ReportId::R1 => "R1",
             ReportId::R2 => "R2",
             ReportId::R3 => "R3",
             ReportId::R4 => "R4",
+            ReportId::R5 => "R5",
             ReportId::R6 => "R6",
             ReportId::R7 => "R7",
             ReportId::R8 => "R8",
@@ -218,6 +226,8 @@ pub enum FilterKind {
     Garden,
     /// How R36 lays out the gardens: by garden or by partner.
     GardenView,
+    /// One بکری (R1).
+    Bikri,
 }
 
 /// One report in the catalogue.
@@ -374,6 +384,9 @@ pub struct ReportFilters {
     /// The layout of the gardens report (R36). Missing means by garden.
     #[ts(optional)]
     pub garden_view: Option<GardenView>,
+    /// One بکری (R1, the sale book). Required there.
+    #[ts(type = "number | null")]
+    pub bikri_id: Option<i64>,
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
@@ -459,6 +472,10 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub garden_view: Option<GardenView>,
+    /// The number of the بکری picked (R1).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "number | null", optional)]
+    pub bikri_number: Option<i64>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.

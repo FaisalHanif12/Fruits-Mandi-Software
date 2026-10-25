@@ -59,13 +59,31 @@ const ALL_VIEWS: [AnalyticsView; 10] = [
     AnalyticsView::J,
 ];
 
+fn first_bikri(w: &support::World) -> i64 {
+    w.env
+        .ctx
+        .db()
+        .read(|conn| {
+            conn.query_row("SELECT id FROM bikri_entries WHERE number = 1", [], |r| {
+                r.get(0)
+            })
+        })
+        .unwrap()
+}
+
 fn day_filters(w: &support::World, id: ReportId) -> ReportFilters {
     let entry = mandi_reports::reports::catalog()
         .into_iter()
         .find(|e| e.id == id)
         .unwrap();
     // A ledger or a statement needs its account; Akram has lines on the worked day.
-    let mut filters = if entry.party_required {
+    let mut filters = if id == ReportId::R1 {
+        // The sale book is one بکری: the first of the worked day.
+        ReportFilters {
+            bikri_id: Some(first_bikri(w)),
+            ..ReportFilters::default()
+        }
+    } else if entry.party_required {
         party(w.akram)
     } else {
         ReportFilters::default()
@@ -176,161 +194,14 @@ fn expect_cell(sheet: &Sheet, row: u32, col: u32, cell: &Cell, l10n: &L10n, what
 /// below lets an ID through only while the bundle really lacks it, so once the frontend adds the
 /// message the sheet must use it, and this list can be emptied.
 const PENDING_IDS: &[&str] = &[
-    "report-r12-title",
-    "report-r29-title",
-    "report-r31-title",
-    "report-r32-title",
-    "report-col-cash-in",
-    "report-col-cash-out",
-    "report-col-name",
-    "report-col-expense",
-    "report-col-staff",
-    "report-col-lent",
-    "report-col-returned-cash",
-    "report-col-returned-salary",
-    "report-col-return-by",
-    "report-col-days-past",
-    "report-staff-yes",
-    "report-r32-overdue",
-    "report-section-shop-expenses",
-    "report-section-partner-money",
-    "report-filter-partner",
-    // Round 8: R10, R15, R23, R25, R33 and R34.
-    "report-r10-title",
-    "report-r15-title",
-    "report-r23-title",
-    "report-r25-title",
-    "report-r33-title",
-    "report-r34-title",
-    "report-col-packing",
-    "report-col-received",
-    "report-col-sold",
-    "report-col-written-off",
-    "report-col-balance-qty",
-    "report-col-days-waiting",
-    "report-col-trip",
-    "report-col-purchase",
-    "report-col-bought-qty",
-    "report-col-bought-cost",
-    "report-col-sales-money",
-    "report-col-cost-sold",
-    "report-col-written-off-cost",
-    "report-col-left-qty",
-    "report-col-left-cost",
-    "report-col-result",
-    "report-col-share",
-    "report-col-money-in-shop",
-    "report-col-money-in-pocket",
-    "report-col-money-back",
-    "report-col-part-of-result",
-    "report-col-line",
-    "report-col-count",
-    "report-filter-trip-by-trip",
-    "report-filter-trip-by-item",
-    "report-filter-trip-by-day",
-    "report-filter-trip-by-month",
-    "report-filter-trip-by-partner",
-    "report-r34-bikri",
-    "report-r34-commission",
-    "report-r34-cash-opening",
-    "report-r34-cash-in",
-    "report-r34-cash-out",
-    "report-r34-cash-closing",
-    "report-r34-receipts",
-    "report-r34-payments",
-    "report-r34-advances",
-    "report-r34-expenses",
-    "report-r34-partner-taken",
-    "report-r34-partner-returned",
-    "report-r34-capital",
-    "report-r34-money-lent",
-    "report-r34-money-lent-back",
-    "report-r34-trips-bought",
-    "report-r34-trips-sold",
-    "report-r34-partner-shares",
-    "report-r34-buyers-dues",
-    "report-r34-open-lots",
-    "report-r34-open-qty",
-    // Round 11: R35 and the analytics views F, G and J.
-    "report-r35-received",
-    "analytics-col-share-percent",
-    "report-r35-sellers-credit",
-    "report-r35-sellers-debit",
-    "report-r35-sellers-remaining",
-    "analytics-col-fruit",
-    "analytics-col-gardens",
-    "analytics-col-net-change",
-    "analytics-col-other-money",
-    "analytics-col-partner-part",
-    "analytics-col-partner-share",
-    "analytics-col-profit",
-    "analytics-col-share-amount",
-    "analytics-col-share-base",
-    "analytics-col-share-kind",
-    "analytics-col-shared-income",
-    "analytics-col-shop-expenses",
-    "analytics-col-trips",
-    "analytics-col-trips-result",
+    // R1 and R5 (round 12): the frontend writes these.
+    "report-r1-title",
+    "report-r5-title",
+    "report-col-serial",
+    "report-filter-bikri",
     "analytics-filter-goods-consigned",
     "analytics-filter-goods-garden",
     "analytics-filter-goods-trip",
-    "analytics-filter-trip",
-    "analytics-filter-trip-by-purchase",
-    "analytics-view-f-title",
-    "analytics-view-g-title",
-    "analytics-view-j-title",
-    "report-col-code",
-    "report-col-expense-share",
-    "report-col-income-share",
-    "report-col-partner",
-    "report-col-previous",
-    "report-col-profit-share",
-    "report-r35-bought",
-    "report-r35-buyers",
-    "report-r35-cash-given",
-    "report-r35-collection",
-    "report-r35-on-spot",
-    "report-r35-other-credits",
-    "report-r35-other-debits",
-    "report-r35-paid",
-    "report-r35-previous",
-    "report-r35-remaining",
-    "report-r35-sellers",
-    "report-r35-sold",
-    "report-r35-title",
-    "report-r35-total-qty",
-    // Round 11, gardens: R36, view I, the gardens columns and the R34 rows.
-    "report-r36-title",
-    "analytics-view-i-title",
-    "analytics-col-garden",
-    "analytics-col-garden-result",
-    "analytics-col-garden-status",
-    "analytics-col-gardens-result",
-    "analytics-col-other-in",
-    "analytics-col-paid-pocket",
-    "analytics-col-paid-shop",
-    "analytics-col-partner-result",
-    "analytics-col-sales-other-shops",
-    "analytics-col-sales-our-shop",
-    "analytics-filter-garden",
-    "report-col-garden",
-    "report-col-garden-costs",
-    "report-col-installments",
-    "report-col-money-in",
-    "report-col-other-in",
-    "report-col-rent",
-    "report-col-rent-due",
-    "report-col-running-balance",
-    "report-col-sales-other-shops",
-    "report-col-sales-our-shop",
-    "report-col-store-rent",
-    "report-filter-garden",
-    "report-filter-garden-by-garden",
-    "report-filter-garden-by-partner",
-    "report-garden-closed",
-    "report-garden-open",
-    "report-r34-gardens-in",
-    "report-r34-gardens-paid",
 ];
 
 /// The row of the heading: the one whose texts are exactly the column titles.

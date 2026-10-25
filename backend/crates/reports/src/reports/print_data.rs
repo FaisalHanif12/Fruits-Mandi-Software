@@ -591,6 +591,10 @@ pub(crate) fn filter_facts(
         };
         facts.push(fact(label, String::new()));
     }
+    // R1: the بکری picked, by its number.
+    if let Some(number) = filters.bikri_number {
+        facts.push(fact(ids::FILTER_BIKRI, number.to_string()));
+    }
     // R36: the garden picked, and how the gardens are laid out. The label is the whole fact.
     if let Some(names) = &filters.garden {
         facts.push(fact(ids::FILTER_GARDEN, fmt.names(names)));

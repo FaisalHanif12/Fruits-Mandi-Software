@@ -84,4 +84,8 @@ export type ReportResolvedFilters = {
    * The layout of R36. Missing for any other report.
    */
   garden_view?: ReportGardenView;
+  /**
+   * The number of the بکری picked (R1).
+   */
+  bikri_number?: number | null;
 };

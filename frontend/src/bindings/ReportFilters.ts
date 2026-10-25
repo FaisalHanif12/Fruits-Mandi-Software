@@ -84,4 +84,8 @@ export type ReportFilters = {
    * The layout of the gardens report (R36). Missing means by garden.
    */
   garden_view?: ReportGardenView;
+  /**
+   * One بکری (R1, the sale book). Required there.
+   */
+  bikri_id: number | null;
 };

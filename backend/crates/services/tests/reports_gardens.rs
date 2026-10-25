@@ -656,3 +656,51 @@ fn r36_prints_in_both_languages_with_the_filters_in_the_header() {
         assert!(data.filters.len() >= 2, "{language:?}");
     }
 }
+
+// ---- R31, the statement of a partner, with the garden lines (D4R-A8) ---------------------------------
+
+#[test]
+fn r31_of_alif_after_e2e_40_has_the_garden_lines_and_ends_at_his_total_10040() {
+    use mandi_reports::reports::{statement_page, statement_request};
+    use mandi_services::core::statement::PartnersStatementInput;
+    let (w, garden) = garden_40();
+    set_today(&w.env, 2026, 10, 13);
+    garden_close(&w, garden.id, "13-10-2026");
+    let [a, _, _] = w.partners;
+    let filters = ReportFilters {
+        partner_id: Some(a),
+        ..ReportFilters::default()
+    };
+    let request = statement_request(w.env.ctx.db(), &filters).unwrap();
+    let statement = mandi_services::partners::statement(
+        &w.env.ctx,
+        &PartnersStatementInput {
+            partner_id: request.partner_id,
+            from: None,
+            to: None,
+            offset: 0,
+            limit: 100,
+        },
+    )
+    .unwrap();
+    let page = statement_page(&request, &statement, 0, 100).unwrap();
+    // The lines with an amount: -18,000 (the installment of 10-10), -12,000 and -3,000 (11-10), his
+    // share of the commission +3,200 (12-10) and the closing +39,840 (13-10); the running total
+    // ends at his کل رقم 10,040 (C22).
+    let lines: Vec<(i64, i64)> = page
+        .rows
+        .iter()
+        .filter(|r| !matches!(&r.cells[3], Cell::Empty))
+        .map(|r| (money(&r.cells[3]), money(&r.cells[4])))
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            (-18_000, -18_000),
+            (-12_000, -30_000),
+            (-3_000, -33_000),
+            (3_200, -29_800),
+            (39_840, 10_040)
+        ]
+    );
+}

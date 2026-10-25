@@ -19,4 +19,5 @@ export type ReportFilterKind =
   | 'voucher_type'
   | 'trip_view'
   | 'garden'
-  | 'garden_view';
+  | 'garden_view'
+  | 'bikri';

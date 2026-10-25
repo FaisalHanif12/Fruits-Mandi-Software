@@ -7,6 +7,7 @@
 //! out again from a rule, so a report can never disagree with the bills that were printed.
 
 mod adda;
+mod buyer_bills;
 mod items;
 mod lots;
 mod pukhta;
@@ -14,8 +15,9 @@ mod register;
 mod stock;
 
 pub(super) use adda::run as run_r8;
+pub(super) use buyer_bills::run as run_r5;
 pub(super) use items::{query as r7_query, run as run_r7};
-pub(super) use lots::{r6_page_query, run_r6, run_r27};
+pub(super) use lots::{r6_page_query, run_r1, run_r6, run_r27};
 pub(super) use pukhta::run as run_r9;
 pub(super) use register::{
     Kind as RegisterKind, page_query as register_page_query, run as run_register,

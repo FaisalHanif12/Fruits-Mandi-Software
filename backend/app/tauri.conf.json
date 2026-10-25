@@ -1,6 +1,6 @@
 {
   "productName": "Mandi Software",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "pk.mandisoftware.app",
   "build": {
     "beforeDevCommand": "pnpm --filter frontend dev",

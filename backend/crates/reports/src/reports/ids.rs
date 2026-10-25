@@ -111,6 +111,8 @@ pub(crate) const COL_MONEY_IN_POCKET: &str = "report-col-money-in-pocket";
 pub(crate) const COL_MONEY_BACK: &str = "report-col-money-back";
 pub(crate) const COL_PART_OF_RESULT: &str = "report-col-part-of-result";
 // Column headings and labels of R36, the gardens report (plan d5-late, round 11).
+pub(crate) const COL_SERIAL: &str = "report-col-serial";
+pub(crate) const FILTER_BIKRI: &str = "report-filter-bikri";
 pub(crate) const COL_GARDEN: &str = "report-col-garden";
 pub(crate) const COL_RENT: &str = "report-col-rent";
 pub(crate) const COL_INSTALLMENTS: &str = "report-col-installments";

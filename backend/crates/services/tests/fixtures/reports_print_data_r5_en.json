@@ -1,0 +1,164 @@
+{
+  "report": "R5",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r5-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "10-10-2026"
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "serial",
+      "title_id": "report-col-serial",
+      "kind": "number"
+    },
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party"
+    },
+    {
+      "key": "detail",
+      "title_id": "report-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_total",
+      "title_id": "report-col-buyer-total",
+      "kind": "money"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "number",
+          "text": "1"
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": "2",
+            "code": "03040002",
+            "name": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": "1",
+              "item": "Banana",
+              "packing": "Box",
+              "qty": "30",
+              "rate": "580",
+              "value": "17,400",
+              "commission": "1,044",
+              "laga": "240"
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "17,400"
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "text": "2"
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": "1",
+            "code": "03040001",
+            "name": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": "1",
+              "item": "Banana",
+              "packing": "Box",
+              "qty": "20",
+              "rate": "600",
+              "value": "12,000",
+              "commission": "720",
+              "laga": "160"
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "12,000"
+        },
+        {
+          "type": "money",
+          "text": "12,880"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "29,400"
+    },
+    {
+      "type": "money",
+      "text": "31,564"
+    }
+  ],
+  "words": null,
+  "footer_id": "print-page-label"
+}

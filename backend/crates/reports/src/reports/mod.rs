@@ -160,9 +160,12 @@ const fn spec(
 
 /// The reports of the engine, in catalogue order (PRD 19.2): by group, then by number.
 const SPECS: &[Spec] = &[
+    // The sale book is one بکری, so the بکری must be picked (it is the "required" filter here).
+    spec(ReportId::R1, ReportGroup::Sales, &[FilterKind::Bikri], true),
     spec(ReportId::R2, ReportGroup::Sales, REGISTER_FILTERS, false),
     spec(ReportId::R3, ReportGroup::Sales, REGISTER_FILTERS, false),
     spec(ReportId::R4, ReportGroup::Sales, REGISTER_FILTERS, false),
+    spec(ReportId::R5, ReportGroup::Sales, REGISTER_FILTERS, false),
     spec(ReportId::R6, ReportGroup::Sales, SELLER_SIDE_FILTERS, false),
     spec(
         ReportId::R7,
@@ -436,6 +439,8 @@ fn build_in(
         ReportId::R2 => sales::run_register(conn, &typed, spec, sales::RegisterKind::All),
         ReportId::R3 => sales::run_register(conn, &typed, spec, sales::RegisterKind::Cash),
         ReportId::R4 => sales::run_register(conn, &typed, spec, sales::RegisterKind::Credit),
+        ReportId::R1 => sales::run_r1(conn, &typed, spec),
+        ReportId::R5 => sales::run_r5(conn, &typed, spec),
         ReportId::R6 => sales::run_r6(conn, &typed, spec),
         ReportId::R7 => sales::run_r7(conn, &typed, spec),
         ReportId::R8 => sales::run_r8(conn, &typed, spec),

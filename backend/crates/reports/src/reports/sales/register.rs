@@ -59,7 +59,7 @@ impl Kind {
 /// The conditions shared by the page and the totals, so the two queries can never differ. Only
 /// the filters that are set are in the clause, so a date range is found through the date index
 /// of the journal entry (Code Standards B18).
-fn conds(typed: &Typed, payment: Option<&'static str>) -> Conds {
+pub(super) fn conds(typed: &Typed, payment: Option<&'static str>) -> Conds {
     let mut c = Conds::new();
     c.always("s.is_active = 1")
         .always("je.status = 'posted'")

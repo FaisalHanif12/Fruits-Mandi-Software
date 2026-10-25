@@ -356,7 +356,9 @@ fn the_check_says_what_is_new_in_both_languages_and_fails_clearly_without_a_serv
     let found = tauri::async_runtime::block_on(check(rig.app.handle(), &rig.env.ctx)).unwrap();
     assert!(found.available);
     assert_eq!(found.version.as_deref(), Some("99.0.0"));
-    assert_eq!(found.current_version, "0.1.0");
+    // The version the app says it is comes from `tauri.conf.json`, so the test follows it.
+    let conf: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    assert_eq!(found.current_version, conf["version"].as_str().unwrap());
     assert_eq!(found.date.as_deref(), Some("2026-10-23T09:00:00Z"));
     assert_eq!(found.notes, NOTES);
     assert_eq!(found.notes_ur, "- ایک\n- دو");

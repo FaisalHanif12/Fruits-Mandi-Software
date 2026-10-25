@@ -84,9 +84,11 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
     assert_eq!(
         of(ReportGroup::Sales),
         vec![
+            ReportId::R1,
             ReportId::R2,
             ReportId::R3,
             ReportId::R4,
+            ReportId::R5,
             ReportId::R6,
             ReportId::R7,
             ReportId::R8,
@@ -1115,5 +1117,462 @@ fn the_filters_a_sales_report_does_not_take_are_refused_together() {
             (ErrorCode::ErrNotFound, "filters.item_id".to_owned()),
             (ErrorCode::ErrNotFound, "filters.adda_id".to_owned()),
         ]
+    );
+}
+
+// ---- R1 the sale book and R5 the buyer bills (plan d5-late, round 12) ------------------------------
+
+fn first_bikri_id(w: &support::World) -> i64 {
+    w.env
+        .ctx
+        .db()
+        .read(|conn| {
+            conn.query_row("SELECT id FROM bikri_entries WHERE number = 1", [], |r| {
+                r.get(0)
+            })
+        })
+        .unwrap()
+}
+
+#[test]
+fn r1_is_the_seller_bill_of_one_bikri_as_the_lots_of_r6() {
+    let w = full_day();
+    let id = first_bikri_id(&w);
+    let page = report(
+        &w,
+        ReportId::R1,
+        ReportFilters {
+            bikri_id: Some(id),
+            ..ReportFilters::default()
+        },
+        0,
+        0,
+    );
+    // بکری 1 has one lot, رحیم's: خام 29,400, کل اخراجات 10,084, صافی 19,316 (E2E-1).
+    assert_eq!(page.rows.len(), 1);
+    assert_eq!(page.id, ReportId::R1);
+    assert_eq!(page.title_id, "report-r1-title");
+    let r6 = report(&w, ReportId::R6, ReportFilters::default(), 0, 0);
+    // The same lot, the same cells as R6 shows for it.
+    assert_eq!(page.rows[0].cells, r6.rows[0].cells);
+    let last = page.totals.len();
+    assert_eq!(money(&page.totals[last - 2]), 10_084);
+    assert_eq!(money(&page.totals[last - 1]), 19_316);
+    // The number of the بکری is in the header filters.
+    assert_eq!(page.filters.bikri_number, Some(1));
+    // بکری 2 is another bill.
+    let second: i64 = w
+        .env
+        .ctx
+        .db()
+        .read(|conn| {
+            conn.query_row("SELECT id FROM bikri_entries WHERE number = 2", [], |r| {
+                r.get(0)
+            })
+        })
+        .unwrap();
+    let other = report(
+        &w,
+        ReportId::R1,
+        ReportFilters {
+            bikri_id: Some(second),
+            ..ReportFilters::default()
+        },
+        0,
+        0,
+    );
+    assert_eq!(other.rows.len(), 1);
+    assert_eq!(money(&other.totals[other.totals.len() - 1]), 10_160);
+}
+
+#[test]
+fn r1_needs_a_bikri_and_refuses_an_unknown_one() {
+    let w = full_day();
+    assert_eq!(
+        rejected(&w, ReportId::R1, ReportFilters::default(), 0, 0),
+        vec![(ErrorCode::ErrRequired, "filters.bikri_id".to_owned())]
+    );
+    assert_eq!(
+        rejected(
+            &w,
+            ReportId::R1,
+            ReportFilters {
+                bikri_id: Some(9_999),
+                ..ReportFilters::default()
+            },
+            0,
+            0
+        ),
+        vec![(ErrorCode::ErrNotFound, "filters.bikri_id".to_owned())]
+    );
+    // The other reports do not take it.
+    assert_eq!(
+        rejected(
+            &w,
+            ReportId::R2,
+            ReportFilters {
+                bikri_id: Some(1),
+                ..ReportFilters::default()
+            },
+            0,
+            0
+        ),
+        vec![(ErrorCode::ErrOutOfRange, "filters.bikri_id".to_owned())]
+    );
+}
+
+#[test]
+fn r5_is_one_row_for_each_credit_buyer_with_his_lines_and_the_totals_of_r4() {
+    let w = full_day();
+    let page = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
+    // اکرم and ارشد bought on credit; شاہد paid on the spot (نقدی), so he is not here. Urdu
+    // order: ارشد before اکرم.
+    assert_eq!(page.rows.len(), 2);
+    let name = |i: usize| match &page.rows[i].cells[1] {
+        Cell::Party { party } => party.name_en.clone(),
+        other => panic!("not a party: {other:?}"),
+    };
+    assert_eq!(
+        (name(0), name(1)),
+        ("Arshad Multani".to_owned(), "Akram Toll Tax".to_owned())
+    );
+    let serial = |i: usize| match &page.rows[i].cells[0] {
+        Cell::Number { value } => *value,
+        other => panic!("not a number: {other:?}"),
+    };
+    assert_eq!((serial(0), serial(1)), (1, 2));
+    // اکرم: one line, 20 پیٹی کیلا at 600, value 12,000, after commission 720 and لاگا 160: 12,880.
+    match &page.rows[1].cells[2] {
+        Cell::Detail { parts } => {
+            assert_eq!(parts.len(), 1);
+            match &parts[0] {
+                mandi_reports::reports::DetailPart::Sale {
+                    qty,
+                    rate_paisa,
+                    value_paisa,
+                    commission_paisa,
+                    laga_paisa,
+                    item,
+                    ..
+                } => {
+                    assert_eq!(item.en, "Banana");
+                    assert_eq!(
+                        (
+                            *qty,
+                            rate_paisa.rupees(),
+                            value_paisa.rupees(),
+                            commission_paisa.rupees(),
+                            laga_paisa.rupees()
+                        ),
+                        (20, 600, 12_000, 720, 160)
+                    );
+                }
+                other => panic!("not a sale: {other:?}"),
+            }
+        }
+        other => panic!("not a detail: {other:?}"),
+    }
+    assert_eq!(
+        (money(&page.rows[1].cells[3]), money(&page.rows[1].cells[4])),
+        (12_000, 12_880)
+    );
+    assert_eq!(
+        (money(&page.rows[0].cells[3]), money(&page.rows[0].cells[4])),
+        (17_400, 18_684)
+    );
+    // The totals are those of R4 (the credit register): 29,400 and 31,564.
+    let r4 = report(&w, ReportId::R4, ReportFilters::default(), 0, 0);
+    assert_eq!(money(&page.totals[3]), money(&r4.totals[7]));
+    assert_eq!(money(&page.totals[4]), money(&r4.totals[8]));
+    assert_eq!(
+        (money(&page.totals[3]), money(&page.totals[4])),
+        (29_400, 31_564)
+    );
+}
+
+#[test]
+fn r5_filtered_to_akram_and_the_day_shows_only_his_row_e2e_36() {
+    let w = full_day();
+    let page = report(
+        &w,
+        ReportId::R5,
+        ReportFilters {
+            from: "10-10-2026".into(),
+            to: "10-10-2026".into(),
+            party: Some(mandi_reports::reports::PartyFilter {
+                account_id: w.akram,
+                person_key: None,
+            }),
+            ..ReportFilters::default()
+        },
+        0,
+        0,
+    );
+    assert_eq!(page.rows.len(), 1);
+    assert_eq!(money(&page.totals[4]), 12_880);
+    // A day with no credit sale has no row.
+    let none = report(
+        &w,
+        ReportId::R5,
+        ReportFilters {
+            from: "09-10-2026".into(),
+            to: "09-10-2026".into(),
+            ..ReportFilters::default()
+        },
+        0,
+        0,
+    );
+    assert_eq!(none.rows.len(), 0);
+    assert_eq!(money(&none.totals[4]), 0);
+}
+
+#[test]
+fn r5_pages_with_the_totals_of_the_whole_filter_and_a_cancelled_bill_is_not_in_it() {
+    let w = full_day();
+    let all = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
+    let second = report(&w, ReportId::R5, ReportFilters::default(), 1, 1);
+    assert_eq!(second.rows.len(), 1);
+    assert_eq!(second.total_count, 2);
+    assert_eq!(second.totals, all.totals);
+    // The serial continues on the second page.
+    assert!(matches!(
+        &second.rows[0].cells[0],
+        Cell::Number { value: 2 }
+    ));
+    // Cancelling بکری 1 takes both credit buyers out.
+    let detail = bikri::get(&w.env.ctx, first_bikri_id(&w)).unwrap();
+    bikri::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::CancelInput {
+            id: detail.id,
+            version: detail.version,
+            reason: "x".into(),
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+    let after = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
+    assert_eq!(after.rows.len(), 0);
+}
+
+#[test]
+fn r1_has_the_numbers_of_the_seller_bill_of_the_same_bikri() {
+    // There is no second working: R1 reads the stored lot values and the bill prints the same
+    // stored values; the ten amounts of R1 are the ten amounts of the bill, for every بکری.
+    use mandi_reports::print::{BikriPrintDataInput, bikri_print_data};
+    use mandi_services::core::printing::PrintDoc;
+    let w = full_day();
+    for number in [1_i64, 2] {
+        let id: i64 = w
+            .env
+            .ctx
+            .db()
+            .read(|conn| {
+                conn.query_row(
+                    "SELECT id FROM bikri_entries WHERE number = ?1",
+                    [number],
+                    |r| r.get(0),
+                )
+            })
+            .unwrap();
+        let page = report(
+            &w,
+            ReportId::R1,
+            ReportFilters {
+                bikri_id: Some(id),
+                ..ReportFilters::default()
+            },
+            0,
+            0,
+        );
+        let bill = bikri_print_data(
+            w.env.ctx.db(),
+            &BikriPrintDataInput {
+                bikri_id: id,
+                doc: PrintDoc::SellerBill,
+                language: mandi_services::core::auth::Language::En,
+                only_buyer_id: None,
+            },
+        )
+        .unwrap();
+        let printed = |label: &str| -> i64 {
+            bill.pages[0]
+                .amounts
+                .iter()
+                .find(|a| a.label_id == label)
+                .unwrap_or_else(|| panic!("no {label}"))
+                .amount
+                .replace(',', "")
+                .parse()
+                .unwrap()
+        };
+        let last = page.totals.len();
+        let ours: Vec<i64> = page.totals[last - 10..].iter().map(money).collect();
+        let theirs = [
+            "print-gross-sale",
+            "print-freight",
+            "print-commission",
+            "print-labour",
+            "print-munshiana",
+            "print-cash-paid",
+            "print-store-rent",
+            "print-phone-charge",
+            "print-total-deductions",
+            "print-net-sale",
+        ]
+        .map(printed);
+        assert_eq!(ours, theirs, "بکری {number}");
+    }
+}
+
+#[test]
+fn r1_of_a_cancelled_bikri_is_refused_with_its_reason() {
+    let w = full_day();
+    let id = first_bikri_id(&w);
+    let detail = bikri::get(&w.env.ctx, id).unwrap();
+    bikri::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::CancelInput {
+            id,
+            version: detail.version,
+            reason: "x".into(),
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        rejected(
+            &w,
+            ReportId::R1,
+            ReportFilters {
+                bikri_id: Some(id),
+                ..ReportFilters::default()
+            },
+            0,
+            0
+        ),
+        vec![(ErrorCode::ErrBikriCancelled, "filters.bikri_id".to_owned())]
+    );
+}
+
+/// E2E-21 on credit: شاہد 1 × 1,000 and ناصر 2 × 1,000, both under the one-time account.
+fn two_one_time_credit_buyers() -> support::World {
+    use mandi_services::core::bikri::{LineChargeMethod, PaymentType, PukhtaInput};
+    let w = worked_day();
+    let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
+        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
+        l.pukhta = Some(PukhtaInput {
+            name_ur: ur.into(),
+            name_en: en.into(),
+            phone: phone.into(),
+        });
+        l.payment_type = Some(PaymentType::Credit);
+        l.buyer_comm = support::typed(LineChargeMethod::Percent, "6");
+        l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
+        l.laga = support::typed(LineChargeMethod::PerUnit, "0");
+        l
+    };
+    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "3");
+    lot.sales = vec![
+        line("s-1", "1", "شاہد", "Shahid", "0300-0000000"),
+        line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
+    ];
+    save(&w, &support::draft(vec![lot]));
+    w
+}
+
+#[test]
+fn r5_has_a_row_for_each_one_time_person_and_his_lines_add_up_to_his_row() {
+    let w = two_one_time_credit_buyers();
+    let page = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
+    assert_eq!(page.rows.len(), 2);
+    for row in &page.rows {
+        let Cell::Detail { parts } = &row.cells[2] else {
+            panic!("not a detail");
+        };
+        // The parts of the row add up to the row: value and value after commission (C5).
+        let (mut value, mut total) = (0_i64, 0_i64);
+        for part in parts {
+            let mandi_reports::reports::DetailPart::Sale {
+                value_paisa,
+                commission_paisa,
+                laga_paisa,
+                ..
+            } = part
+            else {
+                panic!("not a sale");
+            };
+            value += value_paisa.rupees();
+            total += value_paisa.rupees() + commission_paisa.rupees() + laga_paisa.rupees();
+        }
+        assert_eq!(value, money(&row.cells[3]));
+        assert_eq!(total, money(&row.cells[4]));
+    }
+    // شاہد 1,000 + 60 = 1,060; ناصر 2,000 + 120 = 2,120; each person has his own row.
+    let mut totals: Vec<(i64, i64)> = page
+        .rows
+        .iter()
+        .map(|r| (money(&r.cells[3]), money(&r.cells[4])))
+        .collect();
+    totals.sort_unstable();
+    assert_eq!(totals, [(1_000, 1_060), (2_000, 2_120)]);
+    assert_eq!(money(&page.totals[4]), 3_180);
+}
+
+#[test]
+fn r5_after_an_edit_has_the_new_rate_and_not_the_old_one() {
+    use mandi_services::core::bikri::{EditOpenInput, EditSaveInput};
+    let w = full_day();
+    let one = first_bikri_id(&w);
+    let entry: i64 = w
+        .env
+        .ctx
+        .db()
+        .read(|conn| {
+            conn.query_row(
+                "SELECT id FROM journal_entries WHERE source_type = 'bikri' AND source_id = ?1
+                 AND posting_type = 'bikri_first' ORDER BY id LIMIT 1",
+                [one],
+                |r| r.get(0),
+            )
+        })
+        .unwrap();
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: one,
+            entry_id: entry,
+        },
+    )
+    .unwrap();
+    let mut draft = opened.draft.clone();
+    draft.lots[0].sales[0].seller_rate = "610".into();
+    bikri::edit_save(
+        &w.env.ctx,
+        &w.owner,
+        &EditSaveInput {
+            entry_id: opened.entry_id,
+            version: opened.version,
+            draft,
+            reason: Some("rate".into()),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let page = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
+    // اکرم is the second row (Urdu order): 20 at 610 = 12,200, with 732 and 160: 13,092 (E2E-13).
+    let Cell::Detail { parts } = &page.rows[1].cells[2] else {
+        panic!("not a detail");
+    };
+    assert_eq!(parts.len(), 1);
+    let mandi_reports::reports::DetailPart::Sale { rate_paisa, .. } = &parts[0] else {
+        panic!("not a sale");
+    };
+    assert_eq!(rate_paisa.rupees(), 610);
+    assert_eq!(
+        (money(&page.rows[1].cells[3]), money(&page.rows[1].cells[4])),
+        (12_200, 13_092)
     );
 }

@@ -1550,6 +1550,38 @@ mod fixtures {
             "reports_print_data_r35_slip_akram_en",
             json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.akram) })), "language": "en", "paper": null }),
         );
+        // Round 12: the sale book of بکری 1 and the buyer bills of the day.
+        let first: i64 = w
+            .env
+            .ctx
+            .db()
+            .read(|conn| {
+                conn.query_row("SELECT id FROM bikri_entries WHERE number = 1", [], |r| {
+                    r.get(0)
+                })
+            })
+            .unwrap();
+        run_pair(
+            &w,
+            "reports_run_r1_bikri_1",
+            json!({ "id": "R1", "filters": filters(json!({ "bikri_id": first })), "offset": 0, "limit": 0 }),
+        );
+        run_pair(
+            &w,
+            "reports_run_r5_credit_buyers",
+            json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026" })), "offset": 0, "limit": 0 }),
+        );
+        print_pair(
+            &w,
+            "reports_print_data_r5_en",
+            json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026" })), "language": "en", "paper": null }),
+        );
+        refusal_pair(
+            &w,
+            "reports_run_r1_needs_a_bikri",
+            json!({ "id": "R1", "filters": filters(json!({})), "offset": 0, "limit": 0 }),
+            ErrorCode::ErrRequired,
+        );
         // Round 11: the gardens report and the day summary on the garden of E2E-40 (closed).
         garden_fixtures();
         refusal_pair(

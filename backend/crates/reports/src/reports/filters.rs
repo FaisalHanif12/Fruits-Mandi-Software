@@ -50,6 +50,8 @@ pub(crate) struct Typed {
     pub(crate) garden_id: Option<i64>,
     /// The layout of R36. By garden when the screen sent nothing.
     pub(crate) garden_view: GardenView,
+    /// The picked بکری (R1).
+    pub(crate) bikri_id: Option<i64>,
     /// How R28 groups its lines. Month when the screen sent nothing.
     pub(crate) group_by: GroupBy,
     /// The paid or due filter of R9.
@@ -166,6 +168,11 @@ pub(crate) fn resolve(
         FilterKind::TripView,
         input.trip_view.is_some(),
         "filters.trip_view",
+    );
+    refuse_unless(
+        FilterKind::Bikri,
+        input.bikri_id.is_some(),
+        "filters.bikri_id",
     );
     refuse_unless(
         FilterKind::Garden,
@@ -342,6 +349,38 @@ pub(crate) fn resolve(
     if takes.has(FilterKind::TripView) {
         typed.trip_view = input.trip_view.unwrap_or_default();
         typed.resolved.trip_view = Some(typed.trip_view);
+    }
+    if takes.has(FilterKind::Bikri) {
+        match input.bikri_id {
+            Some(id) => {
+                let found: Option<(i64, String)> = conn
+                    .query_row(
+                        "SELECT number, status FROM bikri_entries WHERE id = ?1",
+                        [id],
+                        |r| Ok((r.get(0)?, r.get(1)?)),
+                    )
+                    .optional()?;
+                match found {
+                    // A cancelled بکری has no sale book: say so, not an empty sheet.
+                    Some((_, status)) if status != "saved" => problems.push(FieldError::new(
+                        ErrorCode::ErrBikriCancelled,
+                        "filters.bikri_id",
+                    )),
+                    Some((number, _)) => {
+                        typed.bikri_id = Some(id);
+                        typed.resolved.bikri_number = Some(number);
+                    }
+                    None => {
+                        problems.push(FieldError::new(ErrorCode::ErrNotFound, "filters.bikri_id"))
+                    }
+                }
+            }
+            // The sale book is one بکری: without it there is nothing to show.
+            None if takes.party_required => {
+                problems.push(FieldError::new(ErrorCode::ErrRequired, "filters.bikri_id"));
+            }
+            None => {}
+        }
     }
     if takes.has(FilterKind::GardenView) {
         typed.garden_view = input.garden_view.unwrap_or_default();

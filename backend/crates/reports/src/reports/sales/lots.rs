@@ -34,6 +34,7 @@ fn conds(typed: &Typed) -> Conds {
         .text("b.entry_date >= ?", typed.from.as_deref())
         .text("b.entry_date <= ?", typed.to.as_deref())
         .id("l.seller_account_id = ?", typed.seller_id)
+        .id("b.id = ?", typed.bikri_id)
         .id("b.zamindar_account_id = ?", typed.zamindar_id)
         .id("l.item_id = ?", typed.item_id)
         .id("b.adda_id = ?", typed.adda_id);
@@ -146,6 +147,29 @@ pub(crate) fn run_r6(
     typed: &Typed,
     spec: PageSpec,
 ) -> Result<ReportPage, ReportsError> {
+    run_lots(conn, typed, spec, ReportId::R6)
+}
+
+/// Builds R1, the sale book: the lots of one بکری with their charges, deductions and net, which is
+/// the seller bill in table form. It is R6 for the one بکری picked (PRD 19.2 R1); the bill itself
+/// is printed from the بکری screen.
+///
+/// # Errors
+/// As [`run_r6`].
+pub(crate) fn run_r1(
+    conn: &Connection,
+    typed: &Typed,
+    spec: PageSpec,
+) -> Result<ReportPage, ReportsError> {
+    run_lots(conn, typed, spec, ReportId::R1)
+}
+
+fn run_lots(
+    conn: &Connection,
+    typed: &Typed,
+    spec: PageSpec,
+    id: ReportId,
+) -> Result<ReportPage, ReportsError> {
     let (totals_sql, totals_args) = r6_totals_query(typed);
     let (count, qty, totals): (i64, i64, [i64; 10]) =
         conn.query_row(&totals_sql, params_from_iter(totals_args.iter()), |r| {
@@ -232,8 +256,8 @@ pub(crate) fn run_r6(
         });
     }
     Ok(ReportPage {
-        id: ReportId::R6,
-        title_id: ids::title_id("R6"),
+        id,
+        title_id: ids::title_id(id.code()),
         filters: typed.resolved.clone(),
         columns: vec![
             col("date", ids::COL_DATE, ColumnKind::Date),
