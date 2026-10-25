@@ -313,7 +313,7 @@ analytics-saved-delete-body = "{ $name }" آپ کے محفوظ تجزیوں سے
 analytics-view-f-title = شراکت دار وار
 
 # review: pending
-analytics-view-f-help = ہر { -shirakat-dar }: آمدن کا حصہ، خرچہ کا حصہ، منافع حصہ، سفر سے تبدیلی اور اس کی { -kul-raqam } میں خالص تبدیلی۔
+analytics-view-f-help = ہر { -shirakat-dar }: آمدن کا حصہ، خرچہ کا حصہ، منافع حصہ، { -baghat }، سفر اور { -phal } سے تبدیلی اور اس کی { -kul-raqam } میں خالص تبدیلی۔
 
 # review: pending
 analytics-view-g-title = رجحان
@@ -475,3 +475,14 @@ analytics-filter-goods-trip = { analytics-goods-trip }
 
 # review: pending
 analytics-filter-goods-garden = { analytics-goods-garden }
+
+## View K: the fruit taken (PRD 18.2 K, 16.7).
+
+# review: pending
+analytics-view-k-title = { -phal }
+
+# review: pending
+analytics-view-k-help = ہر شراکت دار (یا دکان کے { -mehman }) اور { -qism-maal } کا لیا گیا پھل: تعداد اور قیمت، ہماری دکان سے اور دوسری دکانوں سے۔
+
+# review: pending
+analytics-chart-k = ہماری دکان اور دوسری دکانوں سے لیا گیا پھل

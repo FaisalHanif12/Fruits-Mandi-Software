@@ -137,18 +137,19 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
   ],
   D: [],
   E: [],
-  // Partners (F): his profit and what he gained or lost in all, then where it came from. The
-  // garden and fruit columns have no figure until those parts of the app are built (D4R).
+  // Partners (F): his profit and what he gained or lost in all, then where it came from: the shares of
+  // the commission and the expenses, then his gardens, trips and fruit side by side (PRD 18.2 F), which
+  // open the lines behind them (`drill`). What is left over (`other`) comes last.
   F: [
     'partner',
     'profit_share',
     'net_change',
     'income_share',
     'expense_share',
-    'trips',
-    'other',
     'gardens',
+    'trips',
     'fruit',
+    'other',
   ],
   // Trend (G): the period and the profit first, then what the profit is made of.
   G: ['period', 'profit', 'commission', 'gross', 'shared_income', 'shop_expenses', 'trips_result'],
@@ -182,6 +183,8 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
     'written_off_cost',
     'left_cost',
   ],
+  // Fruit taken (K): who it was for and the item, the value and the quantity, then where it came from.
+  K: ['for', 'item', 'value', 'qty', 'own_shop', 'other_shops'],
 };
 
 /**
@@ -199,6 +202,7 @@ const ANCHORS: Readonly<Record<AnalyticsView, readonly string[]>> = {
   H: ['rank', 'name'],
   I: ['group'],
   J: ['group'],
+  K: ['for', 'item'],
 };
 
 /** The views whose columns are one for each period or item: a window of them is shown (D and E). */
@@ -343,16 +347,24 @@ export function analyticsColumns(
   });
 }
 
-/** The columns of the lines behind a number, most useful first (the grid is not windowed). */
+/**
+ * The columns of the lines behind a number, most useful first (the grid is not windowed). The fruit
+ * lines (view K) are the columns of the fruit register: who it was for and the value come early, the
+ * rate and where it came from after the document.
+ */
 const LINES_PRIORITY: readonly string[] = [
   'date',
   'buyer',
+  'for',
   'item',
   'kind',
   'qty',
+  'value',
   'total_comm',
   'amount',
   'doc',
+  'rate',
+  'source',
   'share',
   'base',
   'gross',

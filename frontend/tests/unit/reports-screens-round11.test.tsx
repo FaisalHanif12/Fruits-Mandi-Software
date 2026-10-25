@@ -850,14 +850,14 @@ describe.each(LANGUAGES)(
         // The part of the day with the trips and the gardens, as a short list that is drawn whole.
         const block: ReportPage = {
           ...R34_GARDEN_DAY,
-          rows: R34_GARDEN_DAY.rows.slice(15, 21),
-          total_count: 6,
+          rows: R34_GARDEN_DAY.rows.slice(15, 22),
+          total_count: 7,
         };
         fakeReports({ pages: { R34: block } });
         await renderApp('/reports/R34');
         await screen.findByRole('heading', { level: 1, name: named(m('report-r34-title')) });
         await waitFor(() => {
-          expect(drawnRows()).toHaveLength(6);
+          expect(drawnRows()).toHaveLength(7);
         }, SLOW_MS);
         expect(cell('1', 'item')).toBe(m('report-r34-trips-sold'));
         expect(cell('2', 'item')).toBe(m('report-r34-gardens-paid'));
@@ -867,7 +867,9 @@ describe.each(LANGUAGES)(
         // The money that came into the gardens' accounts on 12-10-26: the sale in our shop and the other shop.
         expect(cell('3', 'amount')).toBe('66,400');
         expect(cell('3', 'count')).toBe('');
-        expect(cell('4', 'item')).toBe(m('report-r34-partner-shares'));
+        // The fruit row (D4R 17d) comes right after the gardens' two, before the partners' shares.
+        expect(cell('4', 'item')).toBe(m('report-r34-fruit-taken'));
+        expect(cell('5', 'item')).toBe(m('report-r34-partner-shares'));
       });
     });
   },

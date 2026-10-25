@@ -35,7 +35,7 @@ import {
   CATALOG,
   PRINT_R33_PARTNER_EN,
   PRINT_R34_EN,
-  R10_STOCK,
+  R10_FRUIT,
   R15_ALL,
   R15_ALL_REQUEST,
   R15_PAYMENTS_REQUEST,
@@ -48,6 +48,7 @@ import {
   R33_TRIP,
   R33_TRIP_REQUEST,
   R34_DAY,
+  R34_FRUIT,
   fakeReports,
 } from '../helpers/reports';
 
@@ -187,33 +188,85 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
       expect(cell('0', 'received')).toBe('50');
       expect(cell('0', 'sold')).toBe('20');
+      // No fruit was taken from this lot (the fruit lot of E2E-42 is another test).
+      expect(cell('0', 'fruit_taken')).toBe('0');
       expect(cell('0', 'balance')).toBe('30');
       expect(cell('0', 'days')).toBe('0');
-      expect(cell('0', 'doc')).toBe(
-        m('report-doc-number', { kind: m('report-doc-bikri-first'), number: '1' }),
-      );
       // The backend's totals under the figures. The packing and the write-offs wait for the wide step.
       expect(totalsCell('received')).toBe('50');
       expect(totalsCell('sold')).toBe('20');
       expect(totalsCell('balance')).toBe('30');
       expect(drawnColumns()).toEqual([
         'date',
-        'doc',
         'seller',
         'item',
         'received',
         'sold',
+        'fruit_taken',
         'balance',
         'days',
       ]);
     });
 
-    it('has the days, a seller and an item to filter by, and no fruit column yet', async () => {
+    it('draws the document, the packing and the write-offs at the wide step', async () => {
+      vi.mocked(useLayoutStep).mockReturnValue('wide');
+      await openReport('R10');
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+      expect(drawnColumns()).toEqual([
+        'date',
+        'doc',
+        'seller',
+        'item',
+        'packing',
+        'received',
+        'sold',
+        'written_off',
+        'fruit_taken',
+        'balance',
+        'days',
+      ]);
+      expect(cell('0', 'doc')).toBe(
+        m('report-doc-number', { kind: m('report-doc-bikri-first'), number: '1' }),
+      );
+    });
+
+    it('has the days, a seller and an item to filter by', async () => {
       await openReport('R10');
       expect(screen.getByLabelText(m('report-filter-from'))).toBeInTheDocument();
       expect(screen.getByRole('combobox', { name: m('report-filter-seller') })).toBeInTheDocument();
       expect(screen.getByRole('combobox', { name: m('report-filter-item') })).toBeInTheDocument();
-      expect(R10_STOCK.columns.map((column) => column.key)).not.toContain('taken');
+    });
+
+    it('has a fruit column between the write-offs and the balance, and writes what the backend sent', async () => {
+      expect(R10_FRUIT.columns.map((column) => column.key)).toEqual([
+        'date',
+        'doc',
+        'seller',
+        'item',
+        'packing',
+        'received',
+        'sold',
+        'written_off',
+        'fruit_taken',
+        'balance',
+        'days',
+      ]);
+      await openReport('R10', { pages: { R10: R10_FRUIT } });
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+      // 50 came, 45 were sold, 2 were taken as fruit: 3 are left (the backend works the balance out).
+      expect(cell('0', 'received')).toBe('50');
+      expect(cell('0', 'sold')).toBe('45');
+      expect(cell('0', 'fruit_taken')).toBe('2');
+      expect(cell('0', 'balance')).toBe('3');
+      expect(totalsCell('fruit_taken')).toBe('2');
+      // The heading is the word of the glossary, in either language.
+      expect(
+        document.querySelector('.ag-header-cell[col-id="fruit_taken"]')?.textContent,
+      ).toContain(m('report-col-fruit-taken'));
     });
 
     it('opens the بکری behind a row with Enter', async () => {
@@ -569,17 +622,33 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('5', 'item')).toBe(m('report-r34-cash-closing'));
       expect(cell('5', 'amount')).toBe('58,484');
       expect(drawnColumns()).toEqual(['date', 'item', 'count', 'amount']);
-      // The page says how many lines the backend has: all 26 of the day.
+      // The page says how many lines the backend has: all 27 of the day.
       expect(
-        await screen.findByText(named(m('report-count', { shown: 26, total: 26 }))),
+        await screen.findByText(named(m('report-count', { shown: 27, total: 27 }))),
       ).toBeInTheDocument();
+    });
+
+    it('has a fruit row after the gardens: the count is نگ and the amount the value', async () => {
+      // The block that holds the fruit row, drawn whole.
+      const block: ReportPage = {
+        ...R34_FRUIT,
+        rows: R34_FRUIT.rows.slice(17, 21),
+        total_count: 4,
+      };
+      await openReport('R34', { pages: { R34: block } });
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(4);
+      }, SLOW_MS);
+      expect(cell('2', 'item')).toBe(m('report-r34-fruit-taken'));
+      expect(cell('2', 'count')).toBe('5');
+      expect(cell('2', 'amount')).toBe('4,160');
     });
 
     it('has a heading row for the partners’ shares and the partners under it by name', async () => {
       // The block of the partners and what follows it, as a short list that is drawn whole.
       const block: ReportPage = {
         ...R34_DAY,
-        rows: R34_DAY.rows.slice(18, 24),
+        rows: R34_DAY.rows.slice(19, 25),
         total_count: 6,
       };
       await openReport('R34', { pages: { R34: block } });
@@ -625,7 +694,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
       await screen.findByText(PRINT_R34_EN.firm.name, undefined, SLOW_MS);
-      expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(26);
+      expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(27);
       expect(document.querySelector('.print-report tfoot')).toBeNull();
       expect(visible(document.querySelector('.print-report tbody')?.textContent)).toContain(
         '58,484',

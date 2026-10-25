@@ -230,6 +230,51 @@ function sideBySide(
   };
 }
 
+/**
+ * One stack for each row of the fruit taken (K): who it was for and the item, with the value taken
+ * from our shop and from other shops as its two parts, so the height is the value of the row.
+ */
+function fruitChart(
+  page: AnalyticsPage,
+  rows: readonly AnalyticsRow[],
+  labelId: string,
+  context: ListContext,
+): ChartPlan | null {
+  const forColumn = indexOfKey(page.columns, 'for');
+  const itemColumn = indexOfKey(page.columns, 'item');
+  if (forColumn < 0 || itemColumn < 0 || rows.length === 0) return null;
+  const shown = rows.slice(0, MAX_CHART_ROWS);
+  const parts = ['own_shop', 'other_shops'].flatMap((key) => {
+    const at = indexOfKey(page.columns, key);
+    const column = page.columns[at];
+    if (column === undefined) return [];
+    if (shown.every((row) => isNoFigure(row.cells[at]))) return [];
+    return [
+      seriesOf(
+        context.text(column.title_id),
+        shown.map((row) => row.cells[at]),
+        context,
+      ),
+    ];
+  });
+  if (parts.length === 0) return null;
+  return {
+    data: {
+      // The partner (or the guests) and the item, as the table reads them in its first two columns.
+      categories: shown.map((row) =>
+        [categoryText(row.cells[forColumn], context), categoryText(row.cells[itemColumn], context)]
+          .filter((part) => part !== '')
+          .join(' · '),
+      ),
+      series: parts,
+      stacked: true,
+    },
+    labelId,
+    shown: shown.length,
+    total: rows.length,
+  };
+}
+
 /** The first column of J holds the trip, the purchase, the item or the day. */
 const J_NAME_KEY = 'group';
 
@@ -332,5 +377,7 @@ export function chartFor(
         'analytics-chart-j',
         context,
       );
+    case 'K':
+      return fruitChart(page, recordRows(page.rows), 'analytics-chart-k', context);
   }
 }

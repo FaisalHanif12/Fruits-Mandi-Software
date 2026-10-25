@@ -57,6 +57,7 @@ import {
 } from './reports-business-real';
 
 import { PRINT_R36_PARTNER_EN, R36_GARDEN, R36_PARTNER } from './reports-gardens-real';
+import { PRINT_R37_EN, R37_FRUIT, R37_GUESTS } from './reports-fruit-real';
 import {
   BUYER_BILLS_EN,
   BUYER_BILLS_UR,
@@ -92,6 +93,7 @@ export * from './reports-stock-real';
 export * from './reports-party-real';
 export * from './reports-gardens-real';
 export * from './reports-sales-real';
+export * from './reports-fruit-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -155,6 +157,8 @@ const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
   // Round 12: the sale book of بکری 1 (it needs a بکری picked) and the credit buyers' details.
   R1: R1_BIKRI_1,
   R5: R5_CREDIT_BUYERS,
+  // The fruit slice: the fruit register of E2E-42 (the guests' line only when the box says guests).
+  R37: R37_FRUIT,
 };
 
 function slice(page: ReportPage, offset: number, limit: number): ReportPage {
@@ -172,6 +176,7 @@ function printOf(id: ReportId): ReportPrintData {
   if (id === 'R35') return PRINT_R35_SLIP_AKRAM_EN;
   if (id === 'R36') return PRINT_R36_PARTNER_EN;
   if (id === 'R5') return PRINT_R5_EN;
+  if (id === 'R37') return PRINT_R37_EN;
   return PRINT_R18_EN;
 }
 
@@ -219,6 +224,14 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     // R36 answers in the layout asked for (unless the test brought a page of its own).
     if (input.id === 'R36' && options.pages?.R36 === undefined) {
       answer = input.filters.garden_view === 'partner' ? R36_PARTNER : R36_GARDEN;
+    }
+    // R37 for the guests only answers with their line (unless the test brought a page of its own).
+    if (
+      input.id === 'R37' &&
+      options.pages?.R37 === undefined &&
+      input.filters.guests_only === true
+    ) {
+      answer = R37_GUESTS;
     }
     // R35 for one party answers with his slip: the seller's slip for a seller's account (the worked
     // day's ids: رحیم is 18 and کریم 19), the buyer's slip for any other (unless the test brought a

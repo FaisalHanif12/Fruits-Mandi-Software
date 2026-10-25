@@ -39,6 +39,7 @@ import {
   ANALYTICS_RUN_H,
   VIEWS_GET_TWO,
 } from './analytics-real';
+import { ANALYTICS_RUN_F_FRUIT, ANALYTICS_RUN_K_FRUIT } from './analytics-fruit-real';
 import {
   ANALYTICS_PRINT_DATA_I_EN,
   ANALYTICS_RUN_I_GARDEN,
@@ -66,6 +67,7 @@ const PAGES: Record<AnalyticsView, AnalyticsPage> = {
   H: ANALYTICS_RUN_H,
   I: ANALYTICS_RUN_I_GARDEN,
   J: ANALYTICS_RUN_J_TRIP,
+  K: ANALYTICS_RUN_K_FRUIT,
 };
 
 /** Views D and E with more columns than a window holds, to show the window and its buttons. */
@@ -119,6 +121,8 @@ function page(input: Input): AnalyticsPage {
   if (view === 'G' && filters['group_by'] === 'day') base = ANALYTICS_RUN_G_DAY;
   if (view === 'J' && filters['trip_view'] === 'purchase') base = ANALYTICS_RUN_J_TRIP_BY_PURCHASE;
   if (view === 'I' && filters['side'] === 'seller') base = ANALYTICS_RUN_I_GARDEN_SELLER_SIDE;
+  // View F shows the fruit world of E2E-42 with the `fruit` flag.
+  if (view === 'F' && devFlag('fruit')) base = ANALYTICS_RUN_F_FRUIT;
   if (devFlag('wide')) base = wide(base);
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {

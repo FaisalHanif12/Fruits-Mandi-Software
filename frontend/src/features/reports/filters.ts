@@ -157,6 +157,8 @@ export interface ReportFilterState {
   personText: string;
   /** The partner of a partner statement (R31, required) or of the expense report (R29, optional). */
   partner: number | null;
+  /** The fruit register (R37) for the shop's guests only; never together with a partner. */
+  guestsOnly: boolean;
   /** One kind of voucher in the vouchers list (R15); `all` is no filter. */
   voucherType: VoucherChoice;
   /** How the trip profit or loss is laid out (R33). It is a layout, not a filter to clear. */
@@ -188,6 +190,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   person: null,
   personText: '',
   partner: null,
+  guestsOnly: false,
   voucherType: 'all',
   tripView: 'trip',
   garden: null,
@@ -241,6 +244,9 @@ export function filtersToWire(
       ? { voucher_type: state.voucherType }
       : {}),
     ...(has('trip_view') ? { trip_view: state.tripView } : {}),
+    // The guests choice of the fruit register is sent only when it is set (the backend reads a
+    // missing key as every line) and never with a partner, which it refuses.
+    ...(has('guests') && state.guestsOnly && state.partner === null ? { guests_only: true } : {}),
     // The gardens layout is sent only when it is not the first, like the grouping of R28.
     ...(has('garden_view') && state.gardenView !== 'garden'
       ? { garden_view: state.gardenView }
@@ -271,7 +277,8 @@ export function isUnfiltered(
     wire.bikri_id === null &&
     !wire.detail &&
     wire.status === undefined &&
-    wire.voucher_type === undefined
+    wire.voucher_type === undefined &&
+    wire.guests_only === undefined
   );
 }
 

@@ -20,6 +20,7 @@ import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-
 import { rokarHandlers } from './dev-bridge-rokar';
 import { listRow } from './bikri-saved';
 import { createGardenBooks } from './gardens-data';
+import { PRINT_R37_EN, R10_FRUIT, R34_FRUIT, R37_FRUIT, R37_GUESTS } from './reports-fruit-real';
 import {
   BUYER_BILLS_EN,
   BUYER_BILLS_UR,
@@ -143,6 +144,7 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R36: R36_GARDEN,
   R1: R1_BIKRI_1,
   R5: R5_CREDIT_BUYERS,
+  R37: R37_FRUIT,
 };
 
 const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
@@ -157,6 +159,7 @@ const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R35: PRINT_R35_SLIP_AKRAM_EN,
   R36: PRINT_R36_PARTNER_EN,
   R5: PRINT_R5_EN,
+  R37: PRINT_R37_EN,
 };
 
 function catalog(): ReportCatalogEntry[] {
@@ -195,6 +198,11 @@ function page(input: Input): ReportPage {
   // R36 answers in the layout asked for; the day summary shows the garden world with the `garden` flag.
   if (id === 'R36' && filters['garden_view'] === 'partner') base = R36_PARTNER;
   if (id === 'R34' && devFlag('garden')) base = R34_GARDEN_DAY;
+  // The stock and the day summary show the fruit world of E2E-42 with the `fruit` flag.
+  if (id === 'R10' && devFlag('fruit')) base = R10_FRUIT;
+  if (id === 'R34' && devFlag('fruit')) base = R34_FRUIT;
+  // The fruit register for the guests only answers with their line.
+  if (id === 'R37' && filters['guests_only'] === true) base = R37_GUESTS;
   // R35 for one party answers with his slip: the seller's for a seller (رحیم is 18), the buyer's
   // for any other account.
   if (id === 'R35' && party?.account_id !== undefined) {

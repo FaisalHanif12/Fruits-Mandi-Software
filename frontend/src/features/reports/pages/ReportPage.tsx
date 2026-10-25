@@ -84,6 +84,10 @@ function useOpenSource(catalog: readonly ReportCatalogEntry[], reportId: ReportC
           void navigate({ to: '/gardens/$id', params: { id: String(source.id) } });
         }
         return;
+      case 'fruit':
+        // A row of the fruit register is one fruit entry: its screen lists it with the others.
+        void navigate({ to: '/rokar/fruit' });
+        return;
       case 'account':
         // The ledger of the account is the most useful record behind it (R13), when it is built.
         if (catalog.some((entry) => entry.id === 'R13')) {

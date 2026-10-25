@@ -1272,3 +1272,17 @@ report-print-all = تمام پرچیاں پرنٹ کریں
 
 # review: pending
 report-buyer-bills-slips = پرچیاں
+
+## The fruit register (R37), the fruit column of the stock (R10) and the fruit row of the day summary (R34), PRD 16.7 and 19.2.
+
+# review: pending
+report-r37-title = { -phal } رجسٹر
+
+# review: pending
+report-r37-help = شراکت داروں کا گھر لے جایا گیا پھل اور دکان کے { -mehman } کے لیے پھل: تاریخ، کس کے لیے، لاٹ کا بیوپاری، { -qism-maal }، تعداد، ریٹ اور قیمت۔ شراکت دار، { -mehman }، { -qism-maal } یا دن کے حساب سے۔
+
+# review: pending
+report-col-fruit-taken = { -phal }
+
+# review: pending
+report-r34-fruit-taken = { -phal }

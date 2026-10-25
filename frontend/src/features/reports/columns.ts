@@ -157,13 +157,26 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
     oldest_open: { from: 'wide' },
   },
   // Stock (R10): the date, who sent it, the item, what came, what is left and for how long always;
-  // the document and what was sold wait for the normal step, the packing and the write-offs for the
-  // wide step.
+  // what was sold and what was taken as fruit wait for the normal step, the document, the packing and
+  // the write-offs for the wide step (the balance is what came less all four, so the two that are
+  // used most come first).
   R10: {
-    doc: { from: 'normal' },
     sold: { from: 'normal' },
+    fruit_taken: { from: 'normal' },
+    doc: { from: 'wide' },
     packing: { from: 'wide' },
     written_off: { from: 'wide' },
+  },
+  // The fruit register (R37): the date, who it was for, the item, the quantity and the value always;
+  // the document, the rate and where it came from at the normal step; the seller of the lot, the
+  // packing and the weight (only for items sold by weight) at the wide step.
+  R37: {
+    doc: { from: 'normal' },
+    rate: { from: 'normal' },
+    source: { from: 'normal' },
+    seller: { from: 'wide' },
+    packing: { from: 'wide' },
+    weight: { from: 'wide' },
   },
   // The receipts register (R23) has a collector the payments register does not: it comes with the
   // normal step. (R15 and R25 fit at every step; their narration waits for the wide step like any
@@ -243,7 +256,13 @@ function resultTone(cell: ReportCell): 'due' | undefined {
 }
 
 /** The label columns that hold one short word (a state, a side, a mark, the kind of an entry). */
-const SHORT_LABEL_KEYS: ReadonlySet<string> = new Set(['status', 'side', 'staff', 'heading']);
+const SHORT_LABEL_KEYS: ReadonlySet<string> = new Set([
+  'status',
+  'side',
+  'staff',
+  'heading',
+  'source',
+]);
 
 /** True when the column of this report is shown at the step. */
 function shownAt(
@@ -342,6 +361,8 @@ export function listColumnOf<V extends RowLike>(
       // number are short.
       if (column.key === 'code') return { ...base, type: 'code' };
       if (column.key === 'phone') return { ...base, type: 'short' };
+      // The weight of fruit sold by weight (R37) is a short figure in kg, and empty for most lines.
+      if (column.key === 'weight') return { ...base, type: 'short' };
       return { ...base, type: 'text', from: 'wide' };
   }
 }

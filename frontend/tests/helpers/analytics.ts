@@ -46,6 +46,13 @@ import {
   ANALYTICS_RUN_I_GARDEN_SELLER_SIDE,
 } from './analytics-gardens-real';
 import {
+  ANALYTICS_LINES_F_FRUIT_ALIF,
+  ANALYTICS_LINES_K_GUESTS,
+  ANALYTICS_PRINT_DATA_K_EN,
+  ANALYTICS_RUN_F_FRUIT,
+  ANALYTICS_RUN_K_FRUIT,
+} from './analytics-fruit-real';
+import {
   ANALYTICS_LINES_F_PARTNER_A,
   ANALYTICS_LINES_J_TRIP,
   ANALYTICS_PRINT_DATA_J_EN,
@@ -63,6 +70,7 @@ import {
 export * from './analytics-real';
 export * from './analytics-trips-real';
 export * from './analytics-gardens-real';
+export * from './analytics-fruit-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -79,6 +87,8 @@ export interface AnalyticsOptions {
   /** The saved views to start with. */
   saved?: AnalyticsSavedView[] | Error;
   lines?: AnalyticsLinesPage | Error;
+  /** View F answers with the fruit column filled (the fruit world of E2E-42). */
+  fruitInF?: boolean;
 }
 
 const DEFAULT_PAGES: Record<AnalyticsView, AnalyticsPage> = {
@@ -92,10 +102,11 @@ const DEFAULT_PAGES: Record<AnalyticsView, AnalyticsPage> = {
   H: ANALYTICS_RUN_H,
   I: ANALYTICS_RUN_I_GARDEN,
   J: ANALYTICS_RUN_J_TRIP,
+  K: ANALYTICS_RUN_K_FRUIT,
 };
 
 /** The views that have no comparison (the catalogue says so): the backend refuses one. */
-const NO_COMPARE: readonly AnalyticsView[] = ['F', 'G', 'I', 'J'];
+const NO_COMPARE: readonly AnalyticsView[] = ['F', 'G', 'I', 'J', 'K'];
 /** The views that refuse a garden: the backend answers ERR_OUT_OF_RANGE on `filters.garden_id`. */
 const NO_GARDEN: readonly AnalyticsView[] = ['F', 'J'];
 /** The views that take a grouping. */
@@ -166,6 +177,8 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
       answer = ANALYTICS_RUN_J_TRIP_BY_PURCHASE;
     }
     if (view === 'J' && filters.partner_id !== null) answer = ANALYTICS_RUN_J_TRIP_PARTNER;
+    // View F with the fruit of E2E-42 answers when the test asks for it by the fruit option.
+    if (view === 'F' && options.fruitInF === true) answer = ANALYTICS_RUN_F_FRUIT;
     return Promise.resolve(slice(answer, input.offset, input.limit));
   });
   vi.mocked(analyticsApi.analyticsLines).mockImplementation((input) => {
@@ -177,12 +190,16 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
         : input.view === 'E'
           ? ANALYTICS_LINES_E_RAHIM_BANANA
           : input.view === 'F'
-            ? ANALYTICS_LINES_F_PARTNER_A
+            ? input.column_key?.money === 'fruit'
+              ? ANALYTICS_LINES_F_FRUIT_ALIF
+              : ANALYTICS_LINES_F_PARTNER_A
             : input.view === 'J'
               ? ANALYTICS_LINES_J_TRIP
               : input.view === 'I'
                 ? ANALYTICS_LINES_I_GARDEN
-                : ANALYTICS_LINES_A_BANANA);
+                : input.view === 'K'
+                  ? ANALYTICS_LINES_K_GUESTS
+                  : ANALYTICS_LINES_A_BANANA);
     const size = input.limit > 0 ? input.limit : 100;
     return Promise.resolve({
       ...page,
@@ -200,7 +217,9 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
             ? ANALYTICS_PRINT_DATA_J_EN
             : input.view === 'I'
               ? ANALYTICS_PRINT_DATA_I_EN
-              : ANALYTICS_PRINT_DATA_A_EN),
+              : input.view === 'K'
+                ? ANALYTICS_PRINT_DATA_K_EN
+                : ANALYTICS_PRINT_DATA_A_EN),
     ),
   );
   vi.mocked(analyticsApi.analyticsViewsGet).mockImplementation(() =>

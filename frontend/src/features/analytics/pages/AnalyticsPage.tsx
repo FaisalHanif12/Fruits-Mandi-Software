@@ -214,6 +214,7 @@ function AnalyticsBody({
           onSaved={setSavedName}
         />
         <AnalyticsFilterBar
+          view={entry.id}
           takes={entry.filters}
           state={shown}
           onChange={change}

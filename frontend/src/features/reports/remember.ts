@@ -52,6 +52,7 @@ export function rememberedFilters(state: ReportFilterState): Record<string, unkn
   if (state.paid !== base.paid) kept['paid'] = state.paid;
   if (state.groupBy !== base.groupBy) kept['groupBy'] = state.groupBy;
   if (state.partner !== null) kept['partner'] = state.partner;
+  if (state.guestsOnly) kept['guestsOnly'] = true;
   if (state.voucherType !== base.voucherType) kept['voucherType'] = state.voucherType;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
   if (state.garden !== null) kept['garden'] = state.garden;
@@ -79,6 +80,7 @@ export function filtersFromRemembered(raw: unknown): ReportFilterState | null {
     paid: choiceOr(raw['paid'], PAID_CHOICES, base.paid),
     groupBy: choiceOr(raw['groupBy'], GROUP_BY_CHOICES, base.groupBy),
     partner: idOrNull(raw['partner']),
+    guestsOnly: flagOf(raw['guestsOnly']),
     voucherType: choiceOr(raw['voucherType'], VOUCHER_CHOICES, base.voucherType),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
     garden: idOrNull(raw['garden']),

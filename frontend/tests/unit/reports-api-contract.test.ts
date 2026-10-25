@@ -197,7 +197,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
 
 describe('the fixtures are the backend’s own', () => {
   it('every report engine fixture is the same text as the backend’s file', () => {
-    // The catalogue too: it holds all 36 reports of the early track now, as the backend lists them.
+    // The catalogue too: it holds all 37 reports of the early track now, as the backend lists them.
     const names = readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture);
     expect(names.length).toBeGreaterThan(100);
     for (const name of names) {
@@ -407,8 +407,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
 describe('round 7: the cash book, the expense report, the partner statement and money lent', () => {
   const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
 
-  it('the catalogue lists 36 reports, with the boxes the backend says for the newer ones', () => {
-    expect(CATALOG).toHaveLength(36);
+  it('the catalogue lists 37 reports, with the boxes the backend says for the newer ones', () => {
+    expect(CATALOG).toHaveLength(37);
     expect(entryOf('R12')).toMatchObject({ filters: ['date_range'], party_required: false });
     expect(entryOf('R29')).toMatchObject({
       filters: ['date_range', 'partner'],

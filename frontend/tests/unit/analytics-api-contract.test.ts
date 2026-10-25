@@ -11,6 +11,7 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as api from '../../src/features/analytics/api';
 import { bundles, LANGUAGES } from '../../src/i18n';
+import { paisaForTest } from '../helpers/paisa';
 import * as invoke from '../../src/shared/api/invoke';
 import {
   ANALYTICS_CATALOG,
@@ -62,6 +63,17 @@ import {
   ANALYTICS_RUN_I_GARDEN,
   ANALYTICS_RUN_I_GARDEN_SELLER_SIDE,
 } from '../helpers/analytics-gardens-real';
+import {
+  ANALYTICS_LINES_F_FRUIT_ALIF,
+  ANALYTICS_LINES_F_FRUIT_ALIF_REQUEST,
+  ANALYTICS_LINES_K_GUESTS,
+  ANALYTICS_LINES_K_GUESTS_REQUEST,
+  ANALYTICS_PRINT_DATA_K_EN,
+  ANALYTICS_PRINT_DATA_K_EN_REQUEST,
+  ANALYTICS_RUN_F_FRUIT,
+  ANALYTICS_RUN_K_FRUIT,
+  ANALYTICS_RUN_K_FRUIT_REQUEST,
+} from '../helpers/analytics-fruit-real';
 
 vi.mock('../../src/shared/api/invoke');
 
@@ -133,8 +145,7 @@ describe('the fixtures are the backend’s own', () => {
 const keysOf = (value: object) => Object.keys(value).sort();
 
 describe('the answers carry exactly the fields of the generated types', () => {
-  it('AnalyticsCatalogEntry: the ten views, each with the filters it takes', () => {
-    // View K (fruit taken) comes with D4R 17d.
+  it('AnalyticsCatalogEntry: the eleven views, each with the filters it takes', () => {
     expect(ANALYTICS_CATALOG.map((entry) => entry.id)).toEqual([
       'A',
       'B',
@@ -146,15 +157,16 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'H',
       'I',
       'J',
+      'K',
     ]);
     for (const entry of ANALYTICS_CATALOG) {
       expect(keysOf(entry)).toEqual(['filters', 'id', 'title_id']);
       // Only views D and G take a grouping.
       expect(entry.filters.includes('group_by')).toBe(entry.id === 'D' || entry.id === 'G');
-      // The comparison is refused on the partner, trend, gardens and trips views: they do not offer it.
-      expect(entry.filters.includes('compare')).toBe(!['F', 'G', 'I', 'J'].includes(entry.id));
-      // The partner box is on F, G, I and J only; the trip layout on J only.
-      expect(entry.filters.includes('partner')).toBe(['F', 'G', 'I', 'J'].includes(entry.id));
+      // The comparison is refused on the partner, trend, gardens, trips and fruit views: they do not offer it.
+      expect(entry.filters.includes('compare')).toBe(!['F', 'G', 'I', 'J', 'K'].includes(entry.id));
+      // The partner box is on F, G, I, J and K only; the trip layout on J only.
+      expect(entry.filters.includes('partner')).toBe(['F', 'G', 'I', 'J', 'K'].includes(entry.id));
       expect(entry.filters.includes('trip_view')).toBe(entry.id === 'J');
       // The garden box is on every view but F and J, which refuse a garden.
       expect(entry.filters.includes('garden')).toBe(!['F', 'J'].includes(entry.id));
@@ -189,6 +201,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_RUN_F_GARDEN,
       ANALYTICS_RUN_G_GARDEN_DAY,
       ANALYTICS_RUN_A_GARDEN_GOODS,
+      ANALYTICS_RUN_K_FRUIT,
+      ANALYTICS_RUN_F_FRUIT,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -273,7 +287,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
     expect(ANALYTICS_RUN_I_GARDEN_SELLER_SIDE.filters.side).toBe('seller');
   });
 
-  it('F has money in its gardens column now, and its fruit column is still empty', () => {
+  it('F has money in its gardens column in the garden world, and none in its fruit column', () => {
     const gardens = ANALYTICS_RUN_F_GARDEN.columns.findIndex((column) => column.key === 'gardens');
     const fruit = ANALYTICS_RUN_F_GARDEN.columns.findIndex((column) => column.key === 'fruit');
     expect(ANALYTICS_RUN_F_GARDEN.rows.map((row) => row.cells[gardens]?.type)).toEqual([
@@ -281,9 +295,72 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'money',
       'money',
     ]);
-    expect(ANALYTICS_RUN_F_GARDEN.rows.every((row) => row.cells[fruit]?.type === 'empty')).toBe(
+    // No fruit was taken in the garden world: the cells are money, and nothing in them.
+    expect(ANALYTICS_RUN_F_GARDEN.rows.every((row) => row.cells[fruit]?.type === 'money')).toBe(
       true,
     );
+  });
+
+  it('F has the fruit of E2E-42 in its fruit column, and the three money columns open their lines', () => {
+    const fruit = ANALYTICS_RUN_F_FRUIT.columns.findIndex((column) => column.key === 'fruit');
+    // الف took 2 پیٹی (1,160) and has his third of the guests' 3,000: 2,160 off his total; ب and ج 1,000.
+    expect(ANALYTICS_RUN_F_FRUIT.rows.map((row) => row.cells[fruit])).toEqual([
+      { type: 'money', paisa: paisaForTest(-216_000) },
+      { type: 'money', paisa: paisaForTest(-100_000) },
+      { type: 'money', paisa: paisaForTest(-100_000) },
+    ]);
+    // The garden, trip and fruit columns name the money they hold, so a number opens its lines.
+    const drills = Object.fromEntries(
+      ANALYTICS_RUN_F_FRUIT.columns
+        .filter((column) => column.drill !== null)
+        .map((column) => [column.key, column.drill?.money]),
+    );
+    expect(drills).toEqual({ gardens: 'gardens', trips: 'trips', fruit: 'fruit' });
+    // The request for the lines behind a fruit number carries that money, and the row's partner.
+    expect(ANALYTICS_LINES_F_FRUIT_ALIF_REQUEST.column_key?.money).toBe('fruit');
+    expect(ANALYTICS_LINES_F_FRUIT_ALIF_REQUEST.row_key.partner_id).toBe(1);
+    expect(ANALYTICS_LINES_F_FRUIT_ALIF.columns.map((column) => column.key)).toEqual([
+      'date',
+      'doc',
+      'partner',
+      'amount',
+    ]);
+  });
+
+  it('K is the fruit taken: who it was for, the item, the quantity and the value, with where it came from', () => {
+    expect(ANALYTICS_RUN_K_FRUIT.columns.map((column) => column.key)).toEqual([
+      'for',
+      'item',
+      'qty',
+      'value',
+      'own_shop',
+      'other_shops',
+    ]);
+    expect(ANALYTICS_RUN_K_FRUIT.title_id).toBe('analytics-view-k-title');
+    // A partner's row names him; the guests' row says guests and has no partner.
+    expect(ANALYTICS_RUN_K_FRUIT.rows.map((row) => row.key?.partner_id ?? null)).toEqual([1, null]);
+    expect(ANALYTICS_RUN_K_FRUIT.rows.map((row) => row.key?.guests ?? false)).toEqual([
+      false,
+      true,
+    ]);
+    // The lines behind the guests' row are the lines of the fruit register R37.
+    expect(ANALYTICS_LINES_K_GUESTS_REQUEST.row_key).toMatchObject({ guests: true, item_id: 2 });
+    expect(ANALYTICS_LINES_K_GUESTS.columns.map((column) => column.key)).toContain('source');
+    expect(ANALYTICS_RUN_K_FRUIT_REQUEST.view).toBe('K');
+  });
+
+  it('sends the exact requests the backend wrote for view K, the fruit lines and the print', async () => {
+    await api.analyticsRun(ANALYTICS_RUN_K_FRUIT_REQUEST);
+    await api.analyticsLines(ANALYTICS_LINES_K_GUESTS_REQUEST);
+    await api.analyticsLines(ANALYTICS_LINES_F_FRUIT_ALIF_REQUEST);
+    await api.analyticsPrintData(ANALYTICS_PRINT_DATA_K_EN_REQUEST);
+    expect(call.mock.calls).toEqual([
+      ['analytics_run', { input: ANALYTICS_RUN_K_FRUIT_REQUEST }],
+      ['analytics_lines', { input: ANALYTICS_LINES_K_GUESTS_REQUEST }],
+      ['analytics_lines', { input: ANALYTICS_LINES_F_FRUIT_ALIF_REQUEST }],
+      ['analytics_print_data', { input: ANALYTICS_PRINT_DATA_K_EN_REQUEST }],
+    ]);
+    expect(ANALYTICS_PRINT_DATA_K_EN.view).toBe('K');
   });
 
   it('G has a column for the movement of the garden balances, after the trips', () => {

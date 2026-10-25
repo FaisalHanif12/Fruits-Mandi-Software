@@ -187,9 +187,9 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       expect(cell('1', 'profit_share')).toBe('746');
       expect(totalsCell('income_share')).toBe('5,488');
       expect(totalsCell('profit_share')).toBe('2,488');
-      // The garden column has money now (0 before any garden); the fruit column has no figure yet.
+      // The garden and fruit columns have money (0 before any garden, and no fruit on the worked day).
       expect(cell('0', 'gardens')).toBe('0');
-      expect(cell('0', 'fruit')).toBe('');
+      expect(cell('0', 'fruit')).toBe('0');
     });
 
     it('draws a chart labelled for a screen reader, in the direction of the app', async () => {

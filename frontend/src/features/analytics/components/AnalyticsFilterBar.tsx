@@ -49,10 +49,13 @@ import type {
   AnalyticsGroupBy,
   AnalyticsSide,
   AnalyticsTripView,
+  AnalyticsView,
 } from '../types';
 import { AnalyticsTripSelect } from './AnalyticsTripSelect';
 
 interface AnalyticsFilterBarProps {
+  /** The view: the fruit taken (K) has no trip goods, so its goods box does not offer them. */
+  view: AnalyticsView;
   takes: readonly AnalyticsFilterKind[];
   state: AnalyticsFilterState;
   onChange: (change: Partial<AnalyticsFilterState>) => void;
@@ -83,6 +86,7 @@ const FOLDED_FIELDS = [
 ];
 
 export function AnalyticsFilterBar({
+  view,
   takes,
   state,
   onChange,
@@ -437,10 +441,12 @@ export function AnalyticsFilterBar({
             onChange={(goods) => {
               onChange({ goods });
             }}
-            options={GOODS_CHOICES.map((choice) => ({
-              value: choice,
-              label: l10n.getString(`analytics-goods-${choice}`),
-            }))}
+            options={GOODS_CHOICES.filter((choice) => view !== 'K' || choice !== 'trip').map(
+              (choice) => ({
+                value: choice,
+                label: l10n.getString(`analytics-goods-${choice}`),
+              }),
+            )}
           />
         )}
       </Field>,

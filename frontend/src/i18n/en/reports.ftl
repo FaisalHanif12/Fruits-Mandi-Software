@@ -1271,3 +1271,17 @@ report-print-all = Print all slips
 
 # review: pending
 report-buyer-bills-slips = Slips
+
+## The fruit register (R37), the fruit column of the stock (R10) and the fruit row of the day summary (R34), PRD 16.7 and 19.2.
+
+# review: pending
+report-r37-title = { -phal } Register
+
+# review: pending
+report-r37-help = The fruit partners took home and the fruit served to the shop's { -mehman }: the date, who it was for, the seller of the lot, the item, the quantity, the rate and the value. By partner, { -mehman }, item and day.
+
+# review: pending
+report-col-fruit-taken = { -phal }
+
+# review: pending
+report-r34-fruit-taken = { -phal }

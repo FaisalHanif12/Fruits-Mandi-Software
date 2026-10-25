@@ -71,8 +71,25 @@ nothing (FR-18.8) except the user's list of saved views.
   box of view I and one of the "More filters" boxes of A to E, G and H (it narrows the sales to that
   garden's goods). F and J refuse a garden, so the catalogue does not list it there and none is sent.
   The comparison is not offered on I either.
-- F has money in its gardens column now (the fruit column is still empty until D4R 17d). G has the
-  movement of the garden balances after the trips' result (a day of payments is below the line).
+- F has money in its gardens, trips and fruit columns. G has the movement of the garden balances after
+  the trips' result (a day of payments is below the line).
 - `columns.ts`: view I and J share `PARTNER_PLACES` (a partner's result right after the garden's or
   trip's result, his percent after the first sales column). The state of a garden ranks right after
   its name and is sized as one short word.
+
+## View K, the fruit taken, and the fruit of view F (round 13, PRD 18.2 K, 16.7)
+
+- View K is one row for each partner (or the shop's guests) and item: the quantity, the value, and the
+  value from our shop and from other shops (`for`, `item`, `qty`, `value`, `own_shop`, `other_shops`).
+  The `for` cell is the partner's name, or the word `fruit-for-guests`. The row key is a partner or
+  `guests: true`, with the item, sent back to `analytics_lines`; the lines behind a row are the
+  columns of the fruit register R37, so `LINES_PRIORITY` in `columns.ts` lists `for`, `value`, `rate`
+  and `source` early. The chart (`fruitChart` in `chart.ts`) is one stack for each row, from our shop
+  and from other shops. Its boxes are the days, the item, the partner, the garden and the goods; the
+  goods box (`AnalyticsFilterBar`, prop `view`) does not offer trip goods on K, which the backend would
+  refuse. There is no comparison and no side.
+- The garden, trip and fruit columns of F carry `drill` (the kind of money, `AnalyticsKey.money`):
+  `AnalyticsResults` sends it as `column_key` with the row's key, or with the whole filter for the
+  totals row, so a number opens the lines behind it (date, document, partner, amount). Nothing else
+  changed for them: the screen opens any figure that way. F lists its garden, trip and fruit columns
+  before the leftover `other` column.

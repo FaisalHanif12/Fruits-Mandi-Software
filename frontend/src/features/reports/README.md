@@ -175,6 +175,24 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   own print. Tests: `reports-screens-round12.test.tsx`, the R1 and R5 blocks of
   `reports-api-contract.test.ts`, `money-format.test.ts`.
 
+## R37, the fruit register, and the fruit parts of R10, R34 and R31 (round 13, PRD 16.7, 19.2 R37)
+
+- R37 is on the generic screen. Its boxes are the days, "Partner or guests", the item and the garden.
+  The partner box (`ReportPartnerSelect`, props `guests` and `guestsOnly`) is labelled
+  `fruit-filter-for` and also offers the shop's guests: a partner OR the guests, never both. The
+  choice is kept in `guestsOnly` (remembered like the other boxes) and sent as `guests_only: true`
+  only when it is set and no partner is chosen (`filtersToWire`); the backend refuses both together.
+  The columns are the date, the document (FRT-n), who it was for (a name, or the word guests), the
+  seller of the lot, the item, the packing, the weight (a short figure, only for items sold by
+  weight), the quantity, the rate, the value and where it came from; `COLUMN_STEPS.R37` keeps the
+  first five at every step. Enter on a line opens the fruit screen (`/rokar/fruit`), which lists the
+  entry (it has no page for one entry yet).
+- R10 has a `fruit_taken` column between the write-offs and the balance (the backend works the
+  balance out); R10 shows it from the normal step, and moved its document column to the wide step to
+  make room. R34 has one row after the gardens' two (`report-r34-fruit-taken`: the count is نگ, the
+  amount the value). R31 writes the garden and fruit lines with the partners module's own sentences
+  (`partners-statement-*`): nothing in the screen changed for them.
+
 ## Not built yet
 
 - Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB

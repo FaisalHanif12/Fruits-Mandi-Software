@@ -287,9 +287,11 @@ export function ReportFilterBar({
         key="partner"
         partner={state.partner}
         required={entry.party_required}
-        error={fieldError(error, 'filters.partner_id')}
-        onChange={(partner) => {
-          onChange({ partner });
+        guests={takes('guests')}
+        guestsOnly={state.guestsOnly}
+        error={fieldError(error, takes('guests') ? 'filters.guests_only' : 'filters.partner_id')}
+        onChange={(partner, guestsOnly) => {
+          onChange({ partner, guestsOnly });
         }}
       />,
     );

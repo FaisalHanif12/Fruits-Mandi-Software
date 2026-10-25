@@ -313,7 +313,7 @@ analytics-saved-delete-body = "{ $name }" will be removed from your saved views.
 analytics-view-f-title = By Partner
 
 # review: pending
-analytics-view-f-help = Each { -shirakat-dar }: income share, expense share, profit share, what his trips changed and the net change of his { -kul-raqam }.
+analytics-view-f-help = Each { -shirakat-dar }: income share, expense share, profit share, what his { -baghat }, trips and { -phal } changed and the net change of his { -kul-raqam }.
 
 # review: pending
 analytics-view-g-title = Trend
@@ -475,3 +475,14 @@ analytics-filter-goods-trip = { analytics-goods-trip }
 
 # review: pending
 analytics-filter-goods-garden = { analytics-goods-garden }
+
+## View K: the fruit taken (PRD 18.2 K, 16.7).
+
+# review: pending
+analytics-view-k-title = { -phal }
+
+# review: pending
+analytics-view-k-help = The fruit taken for each partner (or the shop's { -mehman }) and { -qism-maal }: the quantity and the value, from our shop and from other shops.
+
+# review: pending
+analytics-chart-k = Fruit taken from our shop and from other shops
