@@ -4,27 +4,24 @@
 // out nothing.
 
 import { useLocalization } from '@fluent/react';
-import { Num } from '../ui/Num';
 import { PrintGoods } from './PrintGoods';
 import { PrintHeader } from './PrintHeader';
 import { PrintPartyBlock } from './PrintPartyBlock';
+import { PrintR5 } from './PrintR5';
+import { PrintScreenFooter } from './PrintScreenFooter';
 import { PrintSummary } from './PrintSummary';
-import {
-  FOOTER_LABEL_IDS,
-  LAYOUT_IDS,
-  type PrintColumn,
-  type PrintData,
-  type PrintPage,
-} from './types';
+import { LAYOUT_IDS, type PrintColumn, type PrintData, type PrintPage } from './types';
 
 interface PrintSheetProps {
   data: PrintData;
   page: PrintPage;
   /** The goods columns of this page. Empty when the document has no goods (a receipt slip). */
   columns: readonly PrintColumn[];
+  /** The goods as a table of lines, or in the client's R5 columns (see PrintDocument). */
+  layout?: 'goods' | 'r5';
 }
 
-export function PrintSheet({ data, page, columns }: PrintSheetProps) {
+export function PrintSheet({ data, page, columns, layout = 'goods' }: PrintSheetProps) {
   const { l10n } = useLocalization();
   return (
     <section className="print-sheet">
@@ -33,16 +30,20 @@ export function PrintSheet({ data, page, columns }: PrintSheetProps) {
           <span className="print-stamp-text">{l10n.getString(LAYOUT_IDS.cancelled)}</span>
         </div>
       ) : null}
-      <PrintHeader data={data} />
-      <PrintPartyBlock party={page.party} />
-      {page.lines.length === 0 || columns.length === 0 ? null : (
-        <PrintGoods lines={page.lines} columns={columns} paper={data.paper} />
+      <PrintHeader header={data.header} />
+      {layout === 'r5' ? (
+        <PrintR5 page={page} paper={data.paper} />
+      ) : (
+        <>
+          <PrintPartyBlock party={page.party} />
+          {page.lines.length === 0 || columns.length === 0 ? null : (
+            <PrintGoods lines={page.lines} columns={columns} paper={data.paper} />
+          )}
+        </>
       )}
       <PrintSummary page={page} />
       {/* On paper the footer is the page margin (print.css). This line is for the preview. */}
-      <p className="print-screen-footer">
-        {l10n.getString(FOOTER_LABEL_IDS.printed)} <Num>{data.printed_at}</Num>
-      </p>
+      <PrintScreenFooter footer={data.footer} />
     </section>
   );
 }

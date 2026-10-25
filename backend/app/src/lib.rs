@@ -6,6 +6,7 @@ pub mod day_auto;
 pub mod error;
 pub mod logging;
 pub mod print_job;
+pub mod print_report;
 pub mod print_types;
 #[cfg(windows)]
 mod print_windows;
@@ -257,6 +258,9 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::reports::reports_print,
         commands::reports::reports_voucher_print_data,
         commands::reports::reports_print_voucher,
+        commands::reports::reports_print_header,
+        commands::reports::reports_collection_print_data,
+        commands::reports::reports_print_collection,
         commands::reports::reports_list_printers,
         commands::settings::settings_get_printing,
         commands::settings::settings_set_printing,
@@ -308,6 +312,9 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::screen_prefs::prefs_screen_set,
         // Run B, D5 round 12 (append-only block).
         commands::reports_engine::reports_buyer_bills_print_data,
+        // Run B, D5 round 14 (append-only block).
+        commands::report_print::reports_print_report,
+        commands::report_print::analytics_print_view,
     ]
 }
 

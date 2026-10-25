@@ -109,6 +109,14 @@ use filters::{Takes, Typed, resolve};
 use crate::error::ReportsError;
 use crate::print::load::{load_firm, load_grouping, load_setup};
 
+/// Today in Pakistan as `YYYY-MM-DD`, from the database clock (the date a PDF name carries).
+///
+/// # Errors
+/// `ReportsError::Data` if the clock is outside the calendar.
+pub fn today_iso(db: &Db) -> Result<String, ReportsError> {
+    Ok(common::today(db.clock().now_utc())?.to_iso())
+}
+
 /// The page size when the screen sends 0 (Code Standards B31).
 pub const DEFAULT_LIMIT: i64 = 100;
 /// The most rows one page may ask for.
@@ -522,8 +530,9 @@ pub fn print_data(db: &Db, input: &ReportPrintInput) -> Result<ReportPrintData, 
 }
 
 /// The print data of a page that already holds every row, for a report the engine does not read
-/// itself (R31, whose lines come from the services). Only the firm, the number grouping and the
-/// print setup are read; the page is formatted as [`print_data`] formats its own.
+/// itself (R31, whose lines come from the services). Only the number grouping and the print setup
+/// are read; the page is formatted as [`print_data`] formats its own. The header and footer come
+/// from `reports_print_header` (PRD FR-19.13), not from here.
 ///
 /// # Errors
 /// A database error; a stored amount that cannot be written in words.
@@ -535,18 +544,15 @@ pub fn print_data_for_page(
     build_print(page, &print_options(db, input)?)
 }
 
-/// What a print needs besides its rows: the firm, the number grouping and the print setup.
+/// What a print needs besides its rows: the number grouping and the print setup.
 fn print_options(db: &Db, input: &ReportPrintInput) -> Result<PrintOptions, ReportsError> {
-    let (firm, grouping, setup) = db.read(|conn| {
-        Ok::<_, ReportsError>((load_firm(conn)?, load_grouping(conn)?, load_setup(conn)?))
-    })?;
+    let (grouping, setup) =
+        db.read(|conn| Ok::<_, ReportsError>((load_grouping(conn)?, load_setup(conn)?)))?;
     Ok(PrintOptions {
         language: input.language,
         grouping,
         urdu_digits_setting: setup.urdu_digits,
         paper: input.paper.unwrap_or(Paper::A4),
-        firm,
-        now_utc: db.clock().now_utc(),
     })
 }
 

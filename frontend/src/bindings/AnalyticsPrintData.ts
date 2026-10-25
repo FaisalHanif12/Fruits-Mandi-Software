@@ -5,7 +5,6 @@ import type { AnalyticsView } from './AnalyticsView';
 import type { Language } from './Language';
 import type { Paper } from './Paper';
 import type { PrintFact } from './PrintFact';
-import type { PrintFirm } from './PrintFirm';
 import type { ReportPrintCell } from './ReportPrintCell';
 import type { TextDir } from './TextDir';
 
@@ -38,17 +37,10 @@ export type AnalyticsPrintData = {
    */
   title_id: string;
   /**
-   * The firm header.
-   */
-  firm: PrintFirm;
-  /**
-   * The filters of the run, for the header.
+   * The filters of the run, the facts under the title. They go to `reports_print_header` with
+   * the title.
    */
   filters: Array<PrintFact>;
-  /**
-   * The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-   */
-  printed_at: string;
   /**
    * The columns.
    */
@@ -69,8 +61,4 @@ export type AnalyticsPrintData = {
    * The totals row, one cell for each column.
    */
   totals: Array<ReportPrintCell>;
-  /**
-   * Fluent message ID used for "Page x of y" in the shared layout.
-   */
-  footer_id: string;
 };

@@ -7,14 +7,13 @@
 //!   unless the Urdu digits setting is on and the print language is Urdu (NFR-URD-14);
 //! - titles, column headings and labels are Fluent message IDs; names are already in the print
 //!   language; the only sentences built here are the amounts in words (FR-19.7);
-//! - the header is the shared one of the other prints (`PrintFirm`), and the filters of the run
-//!   are listed in it (FR-19.10). The footer "Page x of y" is drawn by the shared print layout;
-//!   its message ID is in `footer_id`.
+//! - the header and footer are the shared ones of every print (PRD FR-19.13): the template asks
+//!   `reports_print_header` for them with `title_id` and `filters` (the facts under the title,
+//!   FR-19.10), so no header is built here.
 //!
 //! Example (R18 after the worked day, English): the totals row reads `85,048` and `85,048`, the
 //! difference line reads `0`.
 
-use chrono::{DateTime, Utc};
 use mandi_core::accounts::BalanceSide;
 use mandi_core::auth::Language;
 use mandi_core::english_words::english_words;
@@ -31,8 +30,7 @@ use super::model::{
 };
 use crate::error::ReportsError;
 use crate::print::format::NumberStyle;
-use crate::print::load::FirmNames;
-use crate::print::{PrintFact, PrintFirm, PrintWords, TextDir};
+use crate::print::{PrintFact, PrintWords, TextDir};
 
 /// The ID of the label of an amount in words, shared with the other prints.
 const IN_WORDS: &str = "print-in-words";
@@ -262,12 +260,9 @@ pub struct ReportPrintData {
     pub urdu_digits: bool,
     /// Fluent message ID of the title.
     pub title_id: String,
-    /// The firm header.
-    pub firm: PrintFirm,
-    /// The filters of the run, for the header: dates and party (FR-19.10).
+    /// The filters of the run, the facts under the title: dates and party (FR-19.10). They go to
+    /// `reports_print_header` with the title.
     pub filters: Vec<PrintFact>,
-    /// The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-    pub printed_at: String,
     /// The columns.
     pub columns: Vec<PrintReportColumn>,
     /// Lines above the table (opening balance and so on).
@@ -282,8 +277,6 @@ pub struct ReportPrintData {
     pub totals: Vec<PrintCell>,
     /// The closing balance of a ledger or statement in words (FR-19.7). Null otherwise.
     pub words: Option<PrintWords>,
-    /// Fluent message ID of the words used for "Page x of y" in the shared layout.
-    pub footer_id: String,
 }
 
 /// What a print needs besides the report page.
@@ -297,10 +290,6 @@ pub struct PrintOptions {
     pub urdu_digits_setting: bool,
     /// The paper class.
     pub paper: Paper,
-    /// The firm header.
-    pub firm: FirmNames,
-    /// The time of the print.
-    pub now_utc: DateTime<Utc>,
 }
 
 /// The formatting of one print: names in the print language, numbers by the grouping and digits
@@ -514,16 +503,6 @@ impl Fmt {
     }
 }
 
-/// The firm header of a print, names in the print language.
-pub(crate) fn print_firm(fmt: &Fmt, options: &PrintOptions) -> PrintFirm {
-    PrintFirm {
-        name: fmt.name(&options.firm.name_ur, &options.firm.name_en),
-        mandi: fmt.name(&options.firm.mandi_ur, &options.firm.mandi_en),
-        address: options.firm.address.clone(),
-        phone: options.firm.phone.clone(),
-    }
-}
-
 pub(crate) fn fact(label: &str, value: String) -> PrintFact {
     PrintFact {
         label_id: label.to_owned(),
@@ -680,9 +659,7 @@ pub fn build_print(
         paper: options.paper,
         urdu_digits: fmt.style.urdu_digits(),
         title_id: page.title_id.clone(),
-        firm: print_firm(&fmt, options),
         filters: filter_facts(&fmt, page.id, &page.filters)?,
-        printed_at: fmt.style.printed_at(options.now_utc),
         columns: page
             .columns
             .iter()
@@ -698,6 +675,5 @@ pub fn build_print(
         totals_label_id: page.totals_label_id.clone(),
         totals: fmt.cells(&page.totals)?,
         words,
-        footer_id: ids::PAGE_FOOTER.to_owned(),
     })
 }

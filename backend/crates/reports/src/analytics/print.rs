@@ -20,7 +20,7 @@ use super::model::{
     AnalyticsResolvedFilters, AnalyticsSide, AnalyticsTripView,
 };
 use crate::error::ReportsError;
-use crate::print::{PrintFact, PrintFirm, TextDir};
+use crate::print::{PrintFact, TextDir};
 use crate::reports::print_data::{Fmt, PrintOptions, fact};
 
 fn heading(fmt: &Fmt, heading: &AnalyticsHeading) -> Result<AnalyticsPrintHeading, ReportsError> {
@@ -161,19 +161,11 @@ pub(crate) fn build(
         paper: options.paper,
         urdu_digits: fmt.style.urdu_digits(),
         title_id: page.title_id.clone(),
-        firm: PrintFirm {
-            name: fmt.name(&options.firm.name_ur, &options.firm.name_en),
-            mandi: fmt.name(&options.firm.mandi_ur, &options.firm.mandi_en),
-            address: options.firm.address.clone(),
-            phone: options.firm.phone.clone(),
-        },
         filters: filter_facts(&fmt, &page.filters)?,
-        printed_at: fmt.style.printed_at(options.now_utc),
         columns,
         rows,
         row_count: fmt.style.count(page.total_count),
         totals_label_id: page.totals_label_id.clone(),
         totals: fmt.cells(&page.totals)?,
-        footer_id: ids::PAGE_FOOTER.to_owned(),
     })
 }

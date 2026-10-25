@@ -213,7 +213,7 @@ const ROW_SELECT: &str = "SELECT a.id, a.version, a.code, a.serial,
         a.credit_allowed, a.credit_limit_paisa,
         mk.id, mk.code, mk.mark_text,
         st.id, st.name_ur, st.name_en,
-        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code
+        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code, a.tag, l.tag
      FROM accounts a
      JOIN account_controls c ON c.id = a.control_id
      JOIN account_heads h ON h.id = c.head_id
@@ -240,12 +240,14 @@ fn optional_ref(
             code: r.get(first + 1)?,
             name_ur: r.get(first + 2)?,
             name_en: r.get(first + 3)?,
+            tag: None,
         },
         None => RecordRef {
             id,
             code: String::new(),
             name_ur: r.get(first + 1)?,
             name_en: r.get(first + 2)?,
+            tag: None,
         },
     }))
 }
@@ -276,6 +278,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
             code: control_code,
             name_ur: r.get(6)?,
             name_en: r.get(7)?,
+            tag: None,
         },
         name_ur: r.get(8)?,
         name_en: r.get(9)?,
@@ -286,7 +289,14 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         phone1: r.get::<_, Option<String>>(20)?.unwrap_or_default(),
         phone2: r.get::<_, Option<String>>(21)?.unwrap_or_default(),
         address: r.get::<_, Option<String>>(22)?.unwrap_or_default(),
-        linked_account: optional_ref(r, 23, Some(24))?,
+        linked_account: {
+            // The linked account is an account too, so it carries its tag (PRD 10.2).
+            let mut linked = optional_ref(r, 23, Some(24))?;
+            if let Some(linked) = linked.as_mut() {
+                linked.tag = r.get(46)?;
+            }
+            linked
+        },
         opening_date: r.get(27)?,
         opening_dr_paisa: paisa(r.get(28)?)?,
         opening_cr_paisa: paisa(r.get(29)?)?,
@@ -306,6 +316,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         is_active: r.get(42)?,
         note: r.get::<_, Option<String>>(43)?.unwrap_or_default(),
         balance: Balance::ZERO,
+        tag: r.get(45)?,
     })
 }
 
@@ -321,6 +332,7 @@ fn marka_ref(r: &Row<'_>) -> rusqlite::Result<Option<RecordRef>> {
         code: r.get(34)?,
         name_ur: text.clone(),
         name_en: text,
+        tag: None,
     }))
 }
 
@@ -605,6 +617,8 @@ pub fn similar_by_ids(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<Si
                     .unwrap_or_default(),
                 phone1: row.phone1,
                 account_type: row.account_type,
+                tag: row.tag,
+                is_duplicate: false,
             });
         }
     }
@@ -662,6 +676,8 @@ pub fn controls(conn: &Connection) -> rusqlite::Result<Vec<CoaControl>> {
 pub struct TreeAccount {
     /// Row id.
     pub id: i64,
+    /// The tag (نشان), if any (PRD 10.2).
+    pub tag: Option<String>,
     /// The control it is under.
     pub control_id: i64,
     /// Code.
@@ -682,7 +698,7 @@ pub struct TreeAccount {
 /// Any SQLite error.
 pub fn tree_accounts(conn: &Connection) -> rusqlite::Result<Vec<TreeAccount>> {
     let mut statement = conn.prepare(
-        "SELECT id, control_id, code, name_ur, name_en, is_active, is_system FROM accounts ORDER BY code, id",
+        "SELECT id, control_id, code, name_ur, name_en, is_active, is_system, tag FROM accounts ORDER BY code, id",
     )?;
     let rows = statement.query_map([], |r| {
         Ok(TreeAccount {
@@ -693,6 +709,7 @@ pub fn tree_accounts(conn: &Connection) -> rusqlite::Result<Vec<TreeAccount>> {
             name_en: r.get(4)?,
             is_active: r.get(5)?,
             is_system: r.get(6)?,
+            tag: r.get(7)?,
         })
     })?;
     rows.collect()
@@ -719,7 +736,7 @@ pub fn search_sources(
                 -- The account of a closed garden is offered in no picker and no search (PRD FR-12.38).
                 (a.is_active = 1 AND NOT EXISTS (SELECT 1 FROM ventures g WHERE g.account_id = a.id
                                                  AND g.kind = 'garden' AND g.status = 'closed')),
-                {TYPE_SQL}, a.control_id
+                {TYPE_SQL}, a.control_id, a.tag
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
@@ -750,6 +767,7 @@ pub fn search_sources(
                     _ => AccountType::Other,
                 }),
                 control_id: Some(r.get(12)?),
+                tag: r.get(13)?,
             })
         },
     )?;

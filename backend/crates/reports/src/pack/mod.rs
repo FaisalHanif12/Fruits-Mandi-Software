@@ -220,7 +220,7 @@ pub fn build_sheets(
     let data = read_data(db, today)?;
     let now = db.clock().now_utc();
     let l10n = L10n::new(data.language)?;
-    let fmt = fmt_of(data.language, data.grouping, &data.firm, now);
+    let fmt = fmt_of(data.language, data.grouping);
     let header = header_of(&fmt, &data.firm, data.language, now);
     let ctx = CellContext {
         fmt: &fmt,

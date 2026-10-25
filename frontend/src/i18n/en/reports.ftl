@@ -112,7 +112,7 @@ report-pick-party-help = This report is for one account. Type its code or name a
 report-balance-only-help = Only the balances are shown. Tick "With detail" to see every line.
 
 # review: pending
-report-count = Showing { $shown } of { $total } rows
+report-count = Showing <num>{ $shown }</num> of <num>{ $total }</num> rows
 
 # review: pending
 report-more = Show more rows
@@ -183,19 +183,19 @@ report-filter-detail = With detail
 report-filter-balance-only = Balances only
 
 # review: pending
-report-range-from-to = From { $from } to { $to }
+report-range-from-to = From <num>{ $from }</num> to <num>{ $to }</num>
 
 # review: pending
-report-range-from = From { $from }
+report-range-from = From <num>{ $from }</num>
 
 # review: pending
-report-range-to = Up to { $to }
+report-range-to = Up to <num>{ $to }</num>
 
 # review: pending
 report-range-all = All dates
 
 # review: pending
-report-as-of-shown = Balances as of { $date }
+report-as-of-shown = Balances as of <num>{ $date }</num>
 
 # review: pending
 report-as-of-now = Balances up to now
@@ -1162,7 +1162,7 @@ report-r35-sellers-remaining = Sellers' { -baqaya }
 report-filter-day = Day
 
 # review: pending
-report-day-shown = Sheet for { $date }
+report-day-shown = Sheet for <num>{ $date }</num>
 
 # review: pending
 report-day-now = Sheet for today

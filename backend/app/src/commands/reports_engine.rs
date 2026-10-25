@@ -272,6 +272,7 @@ mod tests {
                 code: String::new(),
                 name_ur: "الف".to_owned(),
                 name_en: "Partner A".to_owned(),
+                tag: None,
             },
             opening_total_paisa: rupees(10),
             closing_total_paisa: rupees(closing),

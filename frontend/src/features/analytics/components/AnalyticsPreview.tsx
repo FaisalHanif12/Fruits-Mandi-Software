@@ -12,7 +12,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { ExcelExportButton, type ExcelExporter } from '../../../shared/export';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { PrintPreviewFrame, ReportPrintDocument } from '../../reports';
+import { PrintPreviewFrame, ReportPrintDocument, usePrintFrameOf } from '../../reports';
 import { useAnalyticsPrintData } from '../hooks';
 import { printTableOf } from '../print/print-table';
 import type { AnalyticsFilters, AnalyticsView } from '../types';
@@ -30,20 +30,23 @@ export function AnalyticsPreview({ view, filters, onBack, exporter }: AnalyticsP
   const [language, setLanguage] = useState<Language>(appLanguage);
   const [paper, setPaper] = useState<Paper>('a4');
   const query = useAnalyticsPrintData({ view, filters, language, paper });
+  // The ONE header and footer of every print: the backend builds them from the title and the filters.
+  const frame = usePrintFrameOf(language, query.data);
 
   let body;
-  if (query.isPending) {
-    body = <LoadingState rows={8} />;
-  } else if (query.isError) {
+  if (query.isError || frame.isError) {
+    const failed = query.isError ? query : frame;
     body = (
       <ErrorState
         title={<Localized id="report-print-failed" />}
-        error={uiErrorOf(query.error)}
+        error={uiErrorOf(failed.error)}
         onRetry={() => {
-          void query.refetch();
+          void failed.refetch();
         }}
       />
     );
+  } else if (query.data === undefined || frame.data === undefined) {
+    body = <LoadingState rows={8} />;
   } else if (query.data.rows.length === 0) {
     body = (
       <EmptyState
@@ -53,7 +56,7 @@ export function AnalyticsPreview({ view, filters, onBack, exporter }: AnalyticsP
       />
     );
   } else {
-    body = <ReportPrintDocument data={printTableOf(query.data)} />;
+    body = <ReportPrintDocument data={printTableOf(query.data)} frame={frame.data} />;
   }
 
   return (

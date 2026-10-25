@@ -261,3 +261,102 @@ fn the_month_commands_answer_and_refuse_a_bad_month_at_its_field() {
         .unwrap_err();
     assert_eq!(reverse["errors"][0]["field"], "month");
 }
+
+// ---- Plan d5-late round 14: the print commands of a report and an analytics view ----------------
+
+fn code_and_field(error: &Value) -> (String, String) {
+    (
+        error["errors"][0]["code"].as_str().unwrap().to_owned(),
+        error["errors"][0]["field"]
+            .as_str()
+            .unwrap_or("")
+            .to_owned(),
+    )
+}
+
+/// A valid request is built and checked first, and on a system without WebView2 printing it then
+/// answers `ERR_PRINT_WINDOWS_ONLY` (the screen offers the preview in the app).
+#[cfg(not(windows))]
+#[test]
+fn a_report_or_view_print_is_checked_and_then_needs_windows() {
+    let h = Harness::new();
+    h.sign_in();
+    let report = h
+        .call(
+            "reports_print_report",
+            json!({ "input": { "report": { "id": "R18", "filters": {}, "language": "ur" },
+                "to": "pdf" } }),
+        )
+        .unwrap_err();
+    assert_eq!(code_and_field(&report).0, "ERR_PRINT_WINDOWS_ONLY");
+    let slips = h
+        .call(
+            "reports_print_report",
+            json!({ "input": { "report": { "id": "R5", "filters": {}, "language": "en" },
+                "slips": true, "to": "printer", "copies": "2" } }),
+        )
+        .unwrap_err();
+    assert_eq!(code_and_field(&slips).0, "ERR_PRINT_WINDOWS_ONLY");
+    let view = h
+        .call(
+            "analytics_print_view",
+            json!({ "input": { "view": { "view": "K", "filters": {}, "language": "en" },
+                "to": "pdf" } }),
+        )
+        .unwrap_err();
+    assert_eq!(code_and_field(&view).0, "ERR_PRINT_WINDOWS_ONLY");
+}
+
+/// A request that cannot be built stops with its own error before the Windows check, at its field.
+#[test]
+fn a_bad_print_request_is_refused_at_its_field_before_any_paper_is_used() {
+    let h = Harness::new();
+    h.sign_in();
+    let bad_date = h
+        .call(
+            "reports_print_report",
+            json!({ "input": { "report": { "id": "R11",
+                "filters": { "from": "xx" }, "language": "en" }, "to": "pdf" } }),
+        )
+        .unwrap_err();
+    assert_eq!(
+        code_and_field(&bad_date),
+        ("ERR_DATE_INVALID".to_owned(), "filters.from".to_owned())
+    );
+    // The slips belong to R5 only.
+    let slips = h
+        .call(
+            "reports_print_report",
+            json!({ "input": { "report": { "id": "R20", "filters": {}, "language": "en" },
+                "slips": true, "to": "pdf" } }),
+        )
+        .unwrap_err();
+    assert_eq!(
+        code_and_field(&slips),
+        ("ERR_OUT_OF_RANGE".to_owned(), "slips".to_owned())
+    );
+    // The copies are checked like every other print.
+    let copies = h
+        .call(
+            "reports_print_report",
+            json!({ "input": { "report": { "id": "R18", "filters": {}, "language": "en" },
+                "to": "printer", "copies": "0" } }),
+        )
+        .unwrap_err();
+    assert_eq!(
+        code_and_field(&copies),
+        ("ERR_OUT_OF_RANGE".to_owned(), "copies".to_owned())
+    );
+    // An analytics filter the view does not take.
+    let view = h
+        .call(
+            "analytics_print_view",
+            json!({ "input": { "view": { "view": "A",
+                "filters": { "group_by": "day" }, "language": "en" }, "to": "pdf" } }),
+        )
+        .unwrap_err();
+    assert_eq!(
+        code_and_field(&view),
+        ("ERR_OUT_OF_RANGE".to_owned(), "filters.group_by".to_owned())
+    );
+}

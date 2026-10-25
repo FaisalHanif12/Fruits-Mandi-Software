@@ -21,10 +21,10 @@ import {
   signedIn,
   fail,
 } from '../helpers/app';
-import { message, visible } from '../helpers/render';
+import { printFirmName } from '../helpers/print-frame';
+import { message, visible, paragraph } from '../helpers/render';
 import {
   CATALOG,
-  PRINT_R18_EN,
   R11_BAD_DATES,
   R13_AKRAM,
   R13_RAHIM,
@@ -264,7 +264,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
       await openReport('R18');
       expect(
         await screen.findByText(
-          named(m('report-count', { shown: 17, total: 17 })),
+          paragraph(m('report-count', { shown: 17, total: 17 })),
           undefined,
           SLOW_MS,
         ),
@@ -306,12 +306,12 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         expect(drawnRows().length).toBeGreaterThan(0);
       }, SLOW_MS);
       expect(
-        screen.getByText(named(m('report-count', { shown: 100, total: 230 }))),
+        screen.getByText(paragraph(m('report-count', { shown: 100, total: 230 }))),
       ).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: named(m('report-more')) }));
       await waitFor(() => {
         expect(
-          screen.getByText(named(m('report-count', { shown: 200, total: 230 }))),
+          screen.getByText(paragraph(m('report-count', { shown: 200, total: 230 }))),
         ).toBeInTheDocument();
       }, SLOW_MS);
       expect(vi.mocked(reportsApi.reportsRun).mock.calls.map(([input]) => input.offset)).toEqual([
@@ -623,7 +623,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         paper: 'a4',
       });
       // The firm, the totals row and the rows of the print data.
-      const doc = await screen.findByText(PRINT_R18_EN.firm.name, undefined, SLOW_MS);
+      const doc = await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       expect(doc).toBeInTheDocument();
       expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(17);
       expect(visible(document.querySelector('.print-report tfoot')?.textContent)).toContain(

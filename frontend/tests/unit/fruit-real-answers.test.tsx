@@ -178,9 +178,11 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
         screen.getByRole('group', { name: named(message(language, 'fruit-field-source')) }),
       ).getByRole('button', { name: named(message(language, 'fruit-source-other')) }),
     );
-    await pickFirst(user, 'fruit-field-agent', 'nazir');
+    // Each pick names the option it wants, so a list that is still open from the field before can
+    // never be taken by mistake when the machine is busy.
+    await pickFirst(user, 'fruit-field-agent', 'nazir', /نذیر|Nazir/);
     await pickFirst(user, 'glossary-qism-maal', item.text, item.shown);
-    await pickFirst(user, 'glossary-packing', 'box');
+    await pickFirst(user, 'glossary-packing', 'box', /پیٹی|Box/);
     await user.type(field('fruit-field-qty'), '3');
     if (weight !== undefined) await user.type(field('fruit-field-weight'), weight);
     await user.type(field('fruit-field-rate'), rate);

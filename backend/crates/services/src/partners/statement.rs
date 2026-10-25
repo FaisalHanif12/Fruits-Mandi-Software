@@ -276,6 +276,7 @@ fn named(n: &read::Named) -> RecordRef {
         code: n.1.clone(),
         name_ur: n.2.clone(),
         name_en: n.3.clone(),
+        tag: None,
     }
 }
 

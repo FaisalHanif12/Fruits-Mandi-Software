@@ -134,6 +134,7 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             account_type: row.account_type,
             name_ur: row.name_ur.clone(),
             name_en: row.name_en.clone(),
+            tag: row.tag.clone(),
             father_or_firm_ur: row.father_or_firm_ur.clone(),
             father_or_firm_en: row.father_or_firm_en.clone(),
             city_ur,

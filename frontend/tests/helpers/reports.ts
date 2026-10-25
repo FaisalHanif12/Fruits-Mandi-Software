@@ -56,6 +56,7 @@ import {
   R32_E2E_30B,
 } from './reports-business-real';
 
+import { fakePrintFrame } from './print-frame';
 import { PRINT_R36_PARTNER_EN, R36_GARDEN, R36_PARTNER } from './reports-gardens-real';
 import { PRINT_R37_EN, R37_FRUIT, R37_GUESTS } from './reports-fruit-real';
 import {
@@ -258,6 +259,7 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
   vi.mocked(reportsApi.reportsPrintData).mockImplementation((input) =>
     Promise.resolve(options.print ?? printOf(input.id)),
   );
+  fakePrintFrame();
   vi.mocked(reportsApi.reportsBuyerBillsPrintData).mockImplementation((input) =>
     Promise.resolve(options.slips ?? (input.language === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN)),
   );

@@ -219,10 +219,10 @@ analytics-lines-grid-label = Lines behind the figure
 ## Views D and E have a column for each period or item; the window shows as many as fit.
 
 # review: pending
-analytics-columns-shown = Periods { $from } to { $to } of { $total }
+analytics-columns-shown = Periods <num>{ $from }</num> to <num>{ $to }</num> of <num>{ $total }</num>
 
 # review: pending
-analytics-columns-shown-items = Items { $from } to { $to } of { $total }
+analytics-columns-shown-items = Items <num>{ $from }</num> to <num>{ $to }</num> of <num>{ $total }</num>
 
 # review: pending
 analytics-columns-earlier = Earlier
@@ -231,7 +231,7 @@ analytics-columns-earlier = Earlier
 analytics-columns-later = Later
 
 # review: pending
-analytics-columns-fit = { $shown } of { $total } columns fit this window. The print has every column.
+analytics-columns-fit = <num>{ $shown }</num> of <num>{ $total }</num> columns fit this window. The print has every column.
 
 # review: pending
 analytics-columns-other = Show the other columns

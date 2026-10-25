@@ -178,6 +178,9 @@ const APP_COMMANDS: &[&str] = &[
     "reports_print",
     "reports_voucher_print_data",
     "reports_print_voucher",
+    "reports_print_header",
+    "reports_collection_print_data",
+    "reports_print_collection",
     "reports_list_printers",
     "settings_get_printing",
     "settings_set_printing",
@@ -229,6 +232,9 @@ const APP_COMMANDS: &[&str] = &[
     "prefs_screen_set",
     // Run B, D5 round 12 (append-only block).
     "reports_buyer_bills_print_data",
+    // Run B, D5 round 14 (append-only block).
+    "reports_print_report",
+    "analytics_print_view",
 ];
 
 fn main() {

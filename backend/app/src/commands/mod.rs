@@ -46,6 +46,8 @@ pub mod updates;
 // Run B, plan 19 (append-only block).
 pub mod dashboard;
 pub mod screen_prefs;
+// Run B, D5 round 14 (append-only block).
+pub mod report_print;
 
 use std::fmt;
 

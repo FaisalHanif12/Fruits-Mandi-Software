@@ -3,7 +3,6 @@ import type { BuyerBillSlip } from './BuyerBillSlip';
 import type { Language } from './Language';
 import type { Paper } from './Paper';
 import type { PrintFact } from './PrintFact';
-import type { PrintFirm } from './PrintFirm';
 import type { PrintReportColumn } from './PrintReportColumn';
 import type { ReportId } from './ReportId';
 import type { ReportPrintCell } from './ReportPrintCell';
@@ -38,17 +37,10 @@ export type BuyerBillsPrintData = {
    */
   title_id: string;
   /**
-   * The firm header.
-   */
-  firm: PrintFirm;
-  /**
-   * The filters of the run, for the header: dates, buyer, seller and so on (FR-19.10).
+   * The filters of the run, the facts under the title: dates, buyer, seller and so on
+   * (FR-19.10). They go to `reports_print_header` with the title.
    */
   filters: Array<PrintFact>;
-  /**
-   * The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-   */
-  printed_at: string;
   /**
    * The columns of every slip.
    */
@@ -77,8 +69,4 @@ export type BuyerBillsPrintData = {
    * Fluent message ID of the label of a slip's quantity total (total Nag).
    */
   qty_label_id: string;
-  /**
-   * Fluent message ID of the words used for "Page x of y" in the shared layout.
-   */
-  footer_id: string;
 };

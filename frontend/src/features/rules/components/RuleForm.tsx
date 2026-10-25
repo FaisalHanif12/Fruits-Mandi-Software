@@ -14,6 +14,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { useFocusFirstField, useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
@@ -142,10 +143,7 @@ export function RuleForm({ rule, today }: RuleFormProps) {
   };
   const pickerValue = (
     hit: { id: number; code: string; name_ur: string; name_en: string } | null,
-  ) =>
-    hit === null
-      ? null
-      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+  ) => (hit === null ? null : pickedOf(hit));
 
   const methods = methodsOf(values.side, values.charge_type);
 

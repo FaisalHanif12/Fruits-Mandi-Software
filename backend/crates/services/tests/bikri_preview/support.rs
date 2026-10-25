@@ -90,6 +90,25 @@ pub fn add_account(
     credit_allowed: bool,
     credit_limit: &str,
 ) -> i64 {
+    add_account_tagged(
+        env,
+        owner,
+        kind,
+        (ur, en),
+        (credit_allowed, credit_limit),
+        "",
+    )
+}
+
+/// An account with a tag (نشان), for example `K` (PRD 10.2).
+pub fn add_account_tagged(
+    env: &TestEnv,
+    owner: &Actor,
+    kind: AccountType,
+    (ur, en): (&str, &str),
+    (credit_allowed, credit_limit): (bool, &str),
+    tag: &str,
+) -> i64 {
     let mut input = AccountInput {
         id: None,
         version: None,
@@ -118,6 +137,7 @@ pub fn add_account(
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: tag.into(),
     };
     loop {
         match accounts::save(&env.ctx, owner, &input) {

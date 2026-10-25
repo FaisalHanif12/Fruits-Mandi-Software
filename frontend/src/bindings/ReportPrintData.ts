@@ -2,7 +2,6 @@
 import type { Language } from './Language';
 import type { Paper } from './Paper';
 import type { PrintFact } from './PrintFact';
-import type { PrintFirm } from './PrintFirm';
 import type { PrintReportColumn } from './PrintReportColumn';
 import type { PrintReportRow } from './PrintReportRow';
 import type { PrintWords } from './PrintWords';
@@ -40,17 +39,10 @@ export type ReportPrintData = {
    */
   title_id: string;
   /**
-   * The firm header.
-   */
-  firm: PrintFirm;
-  /**
-   * The filters of the run, for the header: dates and party (FR-19.10).
+   * The filters of the run, the facts under the title: dates and party (FR-19.10). They go to
+   * `reports_print_header` with the title.
    */
   filters: Array<PrintFact>;
-  /**
-   * The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-   */
-  printed_at: string;
   /**
    * The columns.
    */
@@ -79,8 +71,4 @@ export type ReportPrintData = {
    * The closing balance of a ledger or statement in words (FR-19.7). Null otherwise.
    */
   words: PrintWords | null;
-  /**
-   * Fluent message ID of the words used for "Page x of y" in the shared layout.
-   */
-  footer_id: string;
 };

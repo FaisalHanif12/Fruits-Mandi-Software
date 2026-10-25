@@ -15,6 +15,7 @@
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
 import type { CustomCellEditorProps } from 'ag-grid-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { pickedOf } from '../accounts';
 import { AccountPicker } from '../ui/AccountPicker';
 import { Picker } from '../ui/Picker';
 import type { EntryStore } from './entryStore';
@@ -82,15 +83,7 @@ export function PickerCellEditor(props: EditorProps) {
   });
 
   const commit = (hit: PickedRecord | null) => {
-    store
-      .getState()
-      .updatePicked(
-        rowId,
-        field,
-        hit === null
-          ? null
-          : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-      );
+    store.getState().updatePicked(rowId, field, hit === null ? null : pickedOf(hit));
   };
 
   // Enter has picked: close the cell, then take the step Enter takes on any cell.

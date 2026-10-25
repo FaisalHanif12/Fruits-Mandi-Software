@@ -89,14 +89,15 @@ pub(crate) fn stock_waiting(
     // that fruit emptied is not listed. The day a lot was received is its بکری's day.
     let mut statement = conn.prepare(
         "SELECT e.id, e.entry_date, COALESCE(l.pukhta_name_ur, a.name_ur),
-                COALESCE(l.pukhta_name_en, a.name_en), SUM(m.qty)
+                COALESCE(l.pukhta_name_en, a.name_en), SUM(m.qty),
+                CASE WHEN l.pukhta_name_ur IS NULL THEN a.tag END
          FROM stock_moves m
          JOIN bikri_lots l ON l.id = m.lot_id
          JOIN bikri_entries e ON e.id = l.bikri_id
          JOIN accounts a ON a.id = l.seller_account_id
          WHERE m.move_date <= ?1 AND e.status = 'saved'
          GROUP BY m.lot_id, e.id, e.entry_date, l.pukhta_name_ur, l.pukhta_name_en, a.name_ur,
-                  a.name_en
+                  a.name_en, a.tag
          HAVING SUM(m.qty) > 0",
     )?;
     let lots = statement
@@ -107,10 +108,11 @@ pub(crate) fn stock_waiting(
                 r.get::<_, String>(2)?,
                 r.get::<_, String>(3)?,
                 r.get::<_, i64>(4)?,
+                r.get::<_, Option<String>>(5)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
-    for (bikri_id, received, name_ur, name_en, balance) in lots {
+    for (bikri_id, received, name_ur, name_en, balance, tag) in lots {
         let days = age(&received);
         if days > STOCK_WAIT_DAYS {
             waiting.push((
@@ -122,6 +124,7 @@ pub(crate) fn stock_waiting(
                     person_key: None,
                     name_ur: Some(name_ur),
                     name_en: Some(name_en),
+                    tag,
                 },
             ));
         }
@@ -157,6 +160,7 @@ pub(crate) fn stock_waiting(
                     person_key: None,
                     name_ur: Some(purchase.item.name_ur.clone()),
                     name_en: Some(purchase.item.name_en.clone()),
+                    tag: None,
                 },
             ));
         }

@@ -108,19 +108,12 @@ pub(crate) fn header_of(
 }
 
 /// The formatter of a sheet: names in the sheet language, English digits in text.
-pub(crate) fn fmt_of(
-    language: Language,
-    grouping: Grouping,
-    firm: &FirmNames,
-    now_utc: chrono::DateTime<chrono::Utc>,
-) -> Fmt {
+pub(crate) fn fmt_of(language: Language, grouping: Grouping) -> Fmt {
     Fmt::new(&PrintOptions {
         language,
         grouping,
         urdu_digits_setting: false,
         paper: Paper::A4,
-        firm: firm.clone(),
-        now_utc,
     })
 }
 
@@ -183,7 +176,7 @@ fn write_report_page(
 ) -> Result<ExcelExported, ReportsError> {
     let now = db.clock().now_utc();
     let l10n = L10n::new(input.language)?;
-    let fmt = fmt_of(input.language, grouping, firm, now);
+    let fmt = fmt_of(input.language, grouping);
     let header = header_of(&fmt, firm, input.language, now);
     let sheet = report::sheet(
         page,
@@ -220,7 +213,7 @@ pub fn export_analytics(
     let (page, firm, grouping) = crate::analytics::export_page(db, input.view, &input.filters)?;
     let now = db.clock().now_utc();
     let l10n = L10n::new(input.language)?;
-    let fmt = fmt_of(input.language, grouping, &firm, now);
+    let fmt = fmt_of(input.language, grouping);
     let header = header_of(&fmt, &firm, input.language, now);
     let sheet = analytics::sheet(
         &page,

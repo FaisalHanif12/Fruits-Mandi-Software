@@ -891,14 +891,7 @@ fn r18_prints_every_row_with_the_totals_in_both_languages() {
         assert_eq!(data.totals.get(1).map(text_of).as_deref(), Some("85,048"));
         assert_eq!(data.totals.get(2).map(text_of).as_deref(), Some("85,048"));
         assert_eq!(data.title_id, "report-r18-title");
-        assert_eq!(data.footer_id, "print-page-label");
-        assert_eq!(
-            data.firm.name,
-            match language {
-                Language::Ur => "ماہر عدنان اینڈ برادرز",
-                Language::En => "Maher Adnan and Brothers",
-            }
-        );
+        // The header and footer come from `reports_print_header` (PRD FR-19.13), not from here.
         assert!(data.words.is_none());
         // A party is shown with its short code and name in the print language.
         match data.rows.iter().find_map(|r| match r.cells.first() {
@@ -1562,6 +1555,29 @@ mod fixtures {
             &w,
             "reports_print_data_r35_slip_akram_en",
             json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.akram) })), "language": "en", "paper": null }),
+        );
+        // The party day sheet in the client's two layouts, printed in both languages (FR-19.12): all
+        // parties as one table, one buyer's slip and one seller's slip. The digits are English
+        // in Urdu too (the setting is off).
+        print_pair(
+            &w,
+            "reports_print_data_r35_table_en",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026" })), "language": "en", "paper": null }),
+        );
+        print_pair(
+            &w,
+            "reports_print_data_r35_table_ur",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026" })), "language": "ur", "paper": null }),
+        );
+        print_pair(
+            &w,
+            "reports_print_data_r35_slip_akram_ur",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.akram) })), "language": "ur", "paper": null }),
+        );
+        print_pair(
+            &w,
+            "reports_print_data_r35_slip_rahim_en",
+            json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.rahim) })), "language": "en", "paper": null }),
         );
         // Round 12: the sale book of بکری 1 and the buyer bills of the day.
         let first: i64 = w

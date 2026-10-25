@@ -63,6 +63,7 @@ fn form(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -868,6 +869,7 @@ fn names_that_differ_only_in_look_alike_letters_are_still_caught() {
                 name_en: String::new(),
                 phone: String::new(),
                 exclude_id: None,
+                tag: String::new(),
             },
         )
         .unwrap();
@@ -895,6 +897,7 @@ fn names_that_differ_only_in_look_alike_letters_are_still_caught() {
                 name_en: typed.into(),
                 phone: String::new(),
                 exclude_id: None,
+                tag: String::new(),
             },
         )
         .unwrap();
@@ -911,6 +914,7 @@ fn names_that_differ_only_in_look_alike_letters_are_still_caught() {
             name_en: "Akram Multani".into(),
             phone: String::new(),
             exclude_id: Some(first.id),
+            tag: String::new(),
         },
     )
     .unwrap();
@@ -923,6 +927,7 @@ fn names_that_differ_only_in_look_alike_letters_are_still_caught() {
             name_en: "Shahid Karim".into(),
             phone: String::new(),
             exclude_id: None,
+            tag: String::new(),
         },
     )
     .unwrap();

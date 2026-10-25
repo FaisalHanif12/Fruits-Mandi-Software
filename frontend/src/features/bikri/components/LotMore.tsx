@@ -9,7 +9,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { UiError } from '../../../bindings/UiError';
-import { usePartyCard } from '../../../shared/accounts';
+import { pickedOf, usePartyCard } from '../../../shared/accounts';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import type { EntryRow, PickedRecord } from '../../../shared/grid';
 import {
@@ -98,15 +98,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
     stores.lots.getState().updateTyped(row.rowId, field, text);
   };
   const setPicked = (field: string, hit: PickedRecord | null) => {
-    stores.lots
-      .getState()
-      .updatePicked(
-        row.rowId,
-        field,
-        hit === null
-          ? null
-          : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-      );
+    stores.lots.getState().updatePicked(row.rowId, field, hit === null ? null : pickedOf(hit));
   };
   const methodLabel: Record<Method, string> = {
     manual: l10n.getString('bikri-method-manual'),

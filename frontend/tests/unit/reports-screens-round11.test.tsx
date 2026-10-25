@@ -32,7 +32,8 @@ import {
 import { fakeGardens } from '../helpers/gardens';
 import { fakePartners } from '../helpers/partners';
 import { paisaForTest } from '../helpers/paisa';
-import { message, visible } from '../helpers/render';
+import { printFirmName } from '../helpers/print-frame';
+import { message, visible, paragraph } from '../helpers/render';
 import {
   CATALOG,
   PRINT_R35_SLIP_AKRAM_EN,
@@ -269,9 +270,11 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       }, SLOW_MS);
       // The backend echoes the day it read; the sheet says "for" that day, not "balances as of".
       expect(
-        await screen.findByText(named(m('report-day-shown', { date: '10-10-2026' }))),
+        await screen.findByText(paragraph(m('report-day-shown', { date: '10-10-2026' }))),
       ).toBeVisible();
-      expect(screen.queryByText(named(m('report-as-of-shown', { date: '10-10-2026' })))).toBeNull();
+      expect(
+        screen.queryByText(paragraph(m('report-as-of-shown', { date: '10-10-2026' }))),
+      ).toBeNull();
     });
   });
 
@@ -409,7 +412,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         expect(drawnColumns()).toEqual(['qty', 'item', 'rate', 'amount']);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-      await screen.findByText(PRINT_R35_SLIP_AKRAM_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       expect(vi.mocked(reportsApi.reportsPrintData).mock.calls[0]?.[0]).toMatchObject({
         id: 'R35',
         language,
@@ -829,7 +832,7 @@ describe.each(LANGUAGES)(
           expect(drawnRows()).toHaveLength(1);
         }, SLOW_MS);
         await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-        await screen.findByText(PRINT_R36_PARTNER_EN.firm.name, undefined, SLOW_MS);
+        await screen.findByText(printFirmName(language), undefined, SLOW_MS);
         expect(vi.mocked(reportsApi.reportsPrintData).mock.calls[0]?.[0]).toMatchObject({
           id: 'R36',
           language,

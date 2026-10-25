@@ -28,6 +28,7 @@ import {
 import { fakeGardens } from '../helpers/gardens';
 import { paisaForTest } from '../helpers/paisa';
 import { fakePartners, partnerRow } from '../helpers/partners';
+import { printFirmName } from '../helpers/print-frame';
 import { message, visible } from '../helpers/render';
 import {
   CATALOG,
@@ -290,7 +291,7 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
     expect(runCount()).toBe(before);
   });
 
-  it('Enter on a line opens the fruit screen', async () => {
+  it('Enter on a line opens that entry on the fruit screen (?entry=)', async () => {
     const { router, user } = await openRegister();
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(2);
@@ -302,6 +303,36 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/rokar/fruit');
     }, SLOW_MS);
+    // The line's own id (the first line of E2E-42 is entry 1), read by the fruit screen.
+    expect(router.state.location.search).toEqual({ entry: 1 });
+  });
+
+  it('starts from the address the fruit screen sends: the days, the guests and the item', async () => {
+    fakeReports();
+    const item = { id: 2, name_ur: 'سیب', name_en: 'Apple', code: '2' };
+    await renderApp(
+      `/reports/R37?from=10-10-2026&to=10-10-2026&guests=true&item=${encodeURIComponent(JSON.stringify(item))}`,
+    );
+    await screen.findByRole('heading', { level: 1, name: named(m('report-r37-title')) });
+    await waitFor(() => {
+      expect(lastRun()?.filters).toMatchObject({
+        from: '10-10-2026',
+        to: '10-10-2026',
+        guests_only: true,
+        partner_id: null,
+        item_id: 2,
+      });
+    }, SLOW_MS);
+  });
+
+  it('starts with a partner from the address and no guests, even when both were sent', async () => {
+    fakeReports();
+    await renderApp('/reports/R37?partner=1&guests=true');
+    await screen.findByRole('heading', { level: 1, name: named(m('report-r37-title')) });
+    await waitFor(() => {
+      expect(lastRun()?.filters.partner_id).toBe(1);
+    }, SLOW_MS);
+    expect(lastRun()?.filters.guests_only).toBeUndefined();
   });
 
   it('shows the print with every line and the totals row', async () => {
@@ -310,7 +341,7 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
       expect(drawnRows()).toHaveLength(2);
     }, SLOW_MS);
     await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-    await screen.findByText(PRINT_R37_EN.firm.name, undefined, SLOW_MS);
+    await screen.findByText(printFirmName(language), undefined, SLOW_MS);
     expect(vi.mocked(reportsApi.reportsPrintData).mock.calls[0]?.[0]).toMatchObject({
       id: 'R37',
       language,

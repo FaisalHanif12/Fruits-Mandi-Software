@@ -1,0 +1,46 @@
+{
+  "buyer_count": "0",
+  "dir": "rtl",
+  "doc": "collection_list",
+  "footer": {
+    "of_label_id": "print-page-of",
+    "page_label_id": "print-page-label",
+    "printed_at": "10-10-2026 14:00",
+    "printed_label_id": "print-printed-at"
+  },
+  "groups": [],
+  "header": {
+    "contacts": [
+      {
+        "name": "منشی آصف بھٹی",
+        "phone": "03004058860"
+      },
+      {
+        "name": "اکرم",
+        "phone": "03211234567"
+      }
+    ],
+    "facts": [
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      }
+    ],
+    "firm": {
+      "address": "Kot Radha Kishan",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+      "name": "ماہر عدنان اینڈ برادرز",
+      "phone": "03001234567"
+    },
+    "title_id": "print-collection-list-title",
+    "trade_mark": "RH"
+  },
+  "language": "ur",
+  "paper": "a4",
+  "total": {
+    "amount": "0",
+    "label_id": "print-collection-total",
+    "role": "total"
+  },
+  "urdu_digits": false
+}

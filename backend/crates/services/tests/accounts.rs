@@ -7,8 +7,9 @@ mod common;
 
 use common::*;
 use mandi_services::core::accounts::{
-    AccountFilter, AccountInput, AccountRow, AccountType, AccountsListInput, AccountsSimilarInput,
-    BalanceSide, OpeningLineInput, OpeningsInput,
+    AccountFilter, AccountHit, AccountInput, AccountRow, AccountScope, AccountType,
+    AccountsListInput, AccountsSimilarInput, BalanceSide, OpeningLineInput, OpeningsInput,
+    SearchAccountsInput, SimilarAccount,
 };
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::money::Paisa;
@@ -59,6 +60,7 @@ fn input(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     }
 }
 
@@ -129,6 +131,283 @@ fn difference(env: &TestEnv) -> (BalanceSide, Paisa) {
     let id = account_id(env, "06019999");
     let balance = ledger::account_balance(&env.ctx, id).unwrap();
     (balance.side, balance.amount_paisa)
+}
+
+/// The three search columns and the tag of one account, as stored.
+fn stored_keys(dir: &TempDir, id: i64) -> (String, String, String, Option<String>) {
+    raw(dir)
+        .query_row(
+            "SELECT search_ur, search_en, search_phonetic, tag FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap()
+}
+
+#[test]
+fn the_tag_is_checked_stored_once_and_never_inside_a_name() {
+    // PRD 10.2, Code Standards 4.2: "k" is saved as "K"; "1A", "ABCDE", "ب" and "K-" are refused.
+    let (dir, env, owner) = ready();
+    for (typed, saved) in [("K", "K"), ("BA", "BA"), ("D.P", "D.P"), ("k", "K")] {
+        let mut form = input(AccountType::Buyer, "", "طارق", "Tariq");
+        form.tag = typed.into();
+        let row = save(&env, &owner, form);
+        assert_eq!(row.tag.as_deref(), Some(saved), "{typed}");
+        // Stored once, in its own column: never inside either name.
+        assert_eq!(
+            (row.name_ur.as_str(), row.name_en.as_str()),
+            ("طارق", "Tariq")
+        );
+        assert_eq!(stored_keys(&dir, row.id).3.as_deref(), Some(saved));
+    }
+    let before = count(&dir, "SELECT COUNT(*) FROM accounts");
+    for bad in ["1A", "ABCDE", "ب", "K-"] {
+        let mut form = input(AccountType::Buyer, "", "طارق", "Tariq");
+        form.tag = bad.into();
+        let error = accounts::save(&env.ctx, &owner, &form).unwrap_err();
+        assert_eq!(
+            first_error(error),
+            (ErrorCode::ErrTagInvalid, Some("tag".to_owned())),
+            "{bad}"
+        );
+    }
+    assert_eq!(
+        count(&dir, "SELECT COUNT(*) FROM accounts"),
+        before,
+        "nothing written"
+    );
+    // No tag: the row has none, and the JSON has no `tag` key at all.
+    let plain = save(&env, &owner, input(AccountType::Buyer, "", "طارق", "Tariq"));
+    assert_eq!(plain.tag, None);
+    assert!(serde_json::to_value(&plain).unwrap().get("tag").is_none());
+    assert_eq!(stored_keys(&dir, plain.id).3, None);
+}
+
+#[test]
+fn the_tag_is_one_more_word_in_the_three_keys_and_an_untagged_account_keeps_its_keys() {
+    let (dir, env, owner) = ready();
+    let mut form = input(AccountType::Buyer, "", "عاشق ظفر", "Ashiq Zafar");
+    form.tag = "k".into();
+    let tagged = save(&env, &owner, form);
+    assert_eq!(
+        stored_keys(&dir, tagged.id),
+        (
+            "عاشق ظفر k".to_owned(),
+            "ashiq zafar k".to_owned(),
+            "ashqzfrk".to_owned(),
+            Some("K".to_owned())
+        )
+    );
+    // An account with no tag has exactly the keys `core::text` makes from its names.
+    let plain = buyer(&env, &owner, "عاشق ظفر", "Ashiq Zafar");
+    let (ur, en, ph, tag) = stored_keys(&dir, plain.id);
+    assert_eq!(
+        (ur, en, ph, tag),
+        (
+            mandi_services::core::text::search_ur("عاشق ظفر"),
+            mandi_services::core::text::search_en("Ashiq Zafar"),
+            mandi_services::core::text::search_phonetic("Ashiq Zafar"),
+            None
+        )
+    );
+}
+
+#[test]
+fn ashiq_k_finds_the_tagged_account_in_both_scripts_and_the_hit_carries_the_tag() {
+    // PRD FR-7.40: "ashiq k" finds عاشق ظفر K.
+    let (_dir, env, owner) = ready();
+    let mut form = input(AccountType::Buyer, "", "عاشق ظفر", "Ashiq Zafar");
+    form.tag = "K".into();
+    let tagged = save(&env, &owner, form);
+    let plain = buyer(&env, &owner, "عاشق ظفر", "Ashiq Zafar");
+    let kamran = buyer(&env, &owner, "عاشق کامران", "Ashiq Kamran");
+    let find = |text: &str| -> Vec<AccountHit> {
+        search::search_accounts(
+            &env.ctx,
+            &owner,
+            &SearchAccountsInput {
+                scope: AccountScope::Any,
+                control_id: None,
+                text: text.into(),
+                limit: 20,
+            },
+        )
+        .unwrap()
+    };
+    for typed in [
+        "ashiq k",
+        "ASHIQ K",
+        "ashiq zafar k",
+        "عاشق k",
+        "عاشق ظفر k",
+    ] {
+        let hits = find(typed);
+        let hit = hits
+            .iter()
+            .find(|h| h.id == tagged.id)
+            .unwrap_or_else(|| panic!("{typed} did not find the tagged account: {hits:?}"));
+        assert_eq!(hit.tag.as_deref(), Some("K"), "{typed}");
+    }
+    // The tag narrows the search: the same name with no tag is not an "ashiq zafar k".
+    let ids: Vec<i64> = find("ashiq zafar k").iter().map(|h| h.id).collect();
+    assert_eq!(ids, vec![tagged.id]);
+    // "ashiq" alone still finds all three, and only the tagged one carries a tag.
+    let all = find("ashiq");
+    for id in [tagged.id, plain.id, kamran.id] {
+        assert!(all.iter().any(|h| h.id == id));
+    }
+    assert!(
+        all.iter()
+            .filter(|h| h.id != tagged.id)
+            .all(|h| h.tag.is_none())
+    );
+}
+
+#[test]
+fn the_duplicate_check_compares_name_tag_and_phone() {
+    // PRD FR-10.7, E38: اسلم BA and اسلم are two different people.
+    let (_dir, env, owner) = ready();
+    let mut with_tag = input(AccountType::Buyer, "", "اسلم", "Aslam");
+    with_tag.phone1 = "0300-1111111".into();
+    with_tag.tag = "BA".into();
+    let ba = save(&env, &owner, with_tag);
+    let mut without = input(AccountType::Buyer, "", "اسلم", "Aslam");
+    without.phone1 = "0300-1111111".into();
+    let none = save(&env, &owner, without);
+    let ask = |tag: &str, phone: &str| {
+        accounts::similar(
+            &env.ctx,
+            &AccountsSimilarInput {
+                name_ur: "اسلم".into(),
+                name_en: "".into(),
+                phone: phone.into(),
+                tag: tag.into(),
+                exclude_id: None,
+            },
+        )
+        .unwrap()
+    };
+    let flags = |found: &[SimilarAccount]| -> Vec<(i64, bool)> {
+        let mut v: Vec<_> = found.iter().map(|a| (a.id, a.is_duplicate)).collect();
+        v.sort();
+        v
+    };
+    // Same name, tag and phone: that one is the duplicate; the other is only listed as similar.
+    let found = ask("BA", "03001111111");
+    assert_eq!(found.len(), 2, "both are listed");
+    assert_eq!(flags(&found).iter().filter(|(_, d)| *d).count(), 1);
+    assert!(
+        found[0].is_duplicate && found[0].id == ba.id,
+        "a duplicate comes first"
+    );
+    assert_eq!(found[0].tag.as_deref(), Some("BA"));
+    // A lower-case tag is the same tag.
+    assert!(ask("ba", "0300-1111111")[0].is_duplicate);
+    // No tag typed: the account with no tag is the duplicate.
+    let found = ask("", "0300-1111111");
+    assert!(found[0].is_duplicate && found[0].id == none.id);
+    assert_eq!(found.iter().filter(|a| a.is_duplicate).count(), 1);
+    // Another tag, or another phone: nothing is a duplicate (same name and phone, different tag).
+    assert!(ask("K", "0300-1111111").iter().all(|a| !a.is_duplicate));
+    assert!(ask("BA", "0300-2222222").iter().all(|a| !a.is_duplicate));
+    // A tag that is not valid yet marks nothing, and the list is still there.
+    let found = ask("1A", "0300-1111111");
+    assert_eq!(found.len(), 2);
+    assert!(found.iter().all(|a| !a.is_duplicate));
+}
+
+#[test]
+fn an_edit_changes_the_tag_and_the_keys_and_the_search_follows() {
+    let (dir, env, owner) = ready();
+    let row = buyer(&env, &owner, "اسلم", "Aslam");
+    let edit = |tag: &str| {
+        let current = accounts::get(&env.ctx, row.id).unwrap();
+        let mut form = input(AccountType::Buyer, &current.code, "اسلم", "Aslam");
+        form.id = Some(current.id);
+        form.version = Some(current.version);
+        form.tag = tag.into();
+        save(&env, &owner, form)
+    };
+    let find = |text: &str| {
+        search::search_accounts(
+            &env.ctx,
+            &owner,
+            &SearchAccountsInput {
+                scope: AccountScope::Buyer,
+                control_id: None,
+                text: text.into(),
+                limit: 5,
+            },
+        )
+        .unwrap()
+    };
+    assert!(find("aslam ba").is_empty() || find("aslam ba").iter().all(|h| h.tag.is_none()));
+    let tagged = edit("ba");
+    assert_eq!(tagged.tag.as_deref(), Some("BA"));
+    assert_eq!(stored_keys(&dir, row.id).1, "aslam ba");
+    assert_eq!(find("aslam ba")[0].tag.as_deref(), Some("BA"));
+    // The audit row of the edit holds the old and the new tag (Code Standards S7).
+    let (old, new): (String, String) = raw(&dir)
+        .query_row(
+            "SELECT old_json, new_json FROM audit_log WHERE entity = 'account' AND action = 'edit' AND entity_id = ?1 ORDER BY id DESC LIMIT 1",
+            [row.id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(!old.contains("\"tag\""), "no tag before: {old}");
+    assert!(new.contains("\"tag\":\"BA\""), "{new}");
+    // Clearing the tag gives the old keys back.
+    let cleared = edit("");
+    assert_eq!(cleared.tag, None);
+    assert_eq!(
+        stored_keys(&dir, row.id),
+        (
+            mandi_services::core::text::search_ur("اسلم"),
+            mandi_services::core::text::search_en("Aslam"),
+            mandi_services::core::text::search_phonetic("Aslam"),
+            None
+        )
+    );
+    assert!(find("aslam ba").iter().all(|h| h.tag.is_none()));
+}
+
+#[test]
+fn the_tag_shows_in_the_row_the_party_card_and_the_chart() {
+    let (_dir, env, owner) = ready();
+    let mut form = input(AccountType::Buyer, "", "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    form.tag = "gm".into();
+    let row = save(&env, &owner, form);
+    assert_eq!(
+        accounts::get(&env.ctx, row.id).unwrap().tag.as_deref(),
+        Some("GM")
+    );
+    assert_eq!(
+        mandi_services::assist::party_card(&env.ctx, row.id)
+            .unwrap()
+            .tag
+            .as_deref(),
+        Some("GM")
+    );
+    let tree = coa::tree(&env.ctx).unwrap();
+    let node = tree
+        .heads
+        .iter()
+        .flat_map(|h| &h.controls)
+        .flat_map(|c| &c.accounts)
+        .find(|a| a.id == row.id)
+        .unwrap();
+    assert_eq!(node.tag.as_deref(), Some("GM"));
+    // A linked account carries its own tag in the row that points at it.
+    let mut other = input(AccountType::Seller, "", "اکرم", "Akram");
+    other.linked_account_id = Some(row.id);
+    let linked = save(&env, &owner, other);
+    assert_eq!(
+        linked
+            .linked_account
+            .as_ref()
+            .and_then(|l| l.tag.as_deref()),
+        Some("GM")
+    );
 }
 
 #[test]
@@ -1052,6 +1331,7 @@ fn similar_accounts_are_found_by_name_in_either_script_and_by_phone() {
                 name_ur: ur.into(),
                 name_en: en.into(),
                 phone: phone.into(),
+                tag: String::new(),
                 exclude_id: exclude,
             },
         )

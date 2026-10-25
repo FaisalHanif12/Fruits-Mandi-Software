@@ -237,7 +237,7 @@ dashboard-tasks-empty-help = جب کوئی کام باقی ہو گا تو یہا
 dashboard-charts-title = چارٹ
 
 # review: pending
-dashboard-chart-days-title = پچھلے 30 دن
+dashboard-chart-days-title = پچھلے <num>30</num> دن
 
 # review: pending
 dashboard-chart-days-label = پچھلے 30 دنوں میں ہر دن کی { -kham-bikri } اور { -commission }

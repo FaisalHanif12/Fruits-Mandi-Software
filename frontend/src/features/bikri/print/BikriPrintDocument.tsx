@@ -28,8 +28,10 @@ export function BikriPrintDocument({ data, applyRoot, ref }: BikriPrintDocumentP
     case 'pukhta_slip':
       return <PukhtaSlipTemplate {...rest} />;
     case 'receipt_slip':
-      // The receipt slip belongs to a voucher and comes from its own command (plan 15), never from
-      // `reports_bikri_print_data`; the sale book has no template for it.
+    case 'collection_list':
+      // The receipt slip belongs to a voucher (plan 15) and the collection list to the collection
+      // screen (plan 17e); each comes from its own command, never from `reports_bikri_print_data`,
+      // so the sale book has no template for them.
       return null;
   }
 }

@@ -9,6 +9,7 @@
 
 import { Localized } from '@fluent/react';
 import type { UiError } from '../../../bindings/UiError';
+import { pickedOf } from '../../../shared/accounts';
 import {
   Field,
   FreeTextInput,
@@ -31,7 +32,7 @@ interface PurchaseFieldsFormProps {
 
 /** The two names of a record a picker gave back. */
 function valueOf(hit: { id: number; code: string; name_ur: string; name_en: string }): PickerValue {
-  return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+  return pickedOf(hit);
 }
 
 export function PurchaseFieldsForm({

@@ -1075,6 +1075,22 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "reports_print_header",
+            json!({ "input": { "language": "ur", "title_id": "print-collection-list-title", "facts": [] } }),
+            true,
+        ),
+        (
+            "reports_collection_print_data",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur" } }),
+            true,
+        ),
+        (
+            "reports_print_collection",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null, "language": "ur",
+                "copies": null, "to": "pdf" } }),
+            true,
+        ),
+        (
             "pukhta_make_regular",
             json!({ "input": { "person_key": "x|", "side": "buyer", "account_input": { "id": null, "version": null,
                 "account_type": "buyer", "control_id": null, "code": "", "name_ur": "شاہد", "name_en": "Shahid",
@@ -1248,6 +1264,17 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "reports_buyer_bills_print_data",
             json!({ "input": { "id": "R5", "filters": {}, "language": "en" } }),
+            true,
+        ),
+        // Run B, D5 round 14 (append-only block).
+        (
+            "reports_print_report",
+            json!({ "input": { "report": { "id": "R18", "filters": {}, "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "analytics_print_view",
+            json!({ "input": { "view": { "view": "A", "filters": {}, "language": "en" }, "to": "pdf" } }),
             true,
         ),
     ]
@@ -2455,7 +2482,7 @@ fn the_bikri_commands_work_through_the_ipc() {
     let bill = print_data("seller_bill", "en");
     assert_eq!(bill["dir"], "ltr");
     assert_eq!(bill["paper"], "a4");
-    assert_eq!(bill["firm"]["name"], "Maher Adnan and Brothers");
+    assert_eq!(bill["header"]["firm"]["name"], "Maher Adnan and Brothers");
     assert_eq!(bill["pages"][0]["amounts"][9]["label_id"], "print-net-sale");
     assert_eq!(bill["pages"][0]["amounts"][9]["amount"], "19,316");
     assert_eq!(
@@ -2480,7 +2507,8 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(
         printing,
         json!({ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-            "paper_receipt_slip": "a5", "printer": "", "copies": 1, "urdu_digits": false,
+            "paper_receipt_slip": "a5", "paper_collection_list": "a4", "printer": "", "copies": 1,
+            "urdu_digits": false,
             "print_after_save": ["seller_bill", "buyer_slips", "pukhta_slip"] })
     );
     let bad = h
@@ -2606,4 +2634,189 @@ fn the_plan_17_commands_are_built_when_signed_in() {
             );
         }
     }
+}
+
+// ---- Plan 17e through the real IPC: the tag, the firm contacts, the shared header ----
+
+const WRITE_FIXTURES: &str = "MANDI_WRITE_FIXTURES";
+
+fn fixtures_folder() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("crates")
+        .join("services")
+        .join("tests")
+        .join("fixtures")
+}
+
+/// Writes the file (when asked to) or checks that it holds exactly this text. The frontend copies
+/// the files from the services fixtures folder (they are written by the real commands).
+fn write_or_check(file: &str, text: &str) {
+    let path = fixtures_folder().join(file);
+    if std::env::var_os(WRITE_FIXTURES).is_some() {
+        std::fs::write(&path, text).unwrap();
+        return;
+    }
+    let on_disk = std::fs::read_to_string(&path).unwrap_or_else(|_| {
+        panic!("{file} is missing: run with {WRITE_FIXTURES}=1 to write the fixtures")
+    });
+    assert!(
+        on_disk == text,
+        "{file} is not the real answer any more. If the change is on purpose, run with \
+         {WRITE_FIXTURES}=1, read the diff and tell frontend."
+    );
+}
+
+/// One pair of files: the `input` the command takes and the real answer.
+fn fixture_pair(name: &str, request: &Value, answer: &Value) {
+    write_or_check(
+        &format!("{name}_request.json"),
+        &(serde_json::to_string_pretty(request).unwrap() + "\n"),
+    );
+    write_or_check(
+        &format!("{name}.json"),
+        &(serde_json::to_string_pretty(answer).unwrap() + "\n"),
+    );
+}
+
+/// A refusal as the screen gets it; the reference number is a counter, so a stand-in is written.
+fn fixture_refusal(name: &str, request: &Value, error: &Value) {
+    assert!(is_reference(error["ref"].as_str().unwrap()), "{error}");
+    let mut wire = error.clone();
+    wire["ref"] = json!("E-20261010-0001");
+    fixture_pair(name, request, &wire);
+}
+
+fn tag_account_json(tag: &str) -> Value {
+    json!({ "id": null, "version": null, "account_type": "buyer", "control_id": null,
+        "code": "", "name_ur": "اکرم ٹول ٹیکس", "name_en": "Akram Toll Tax",
+        "confirmed_rules_words": [], "father_or_firm_ur": "", "father_or_firm_en": "",
+        "city_id": null, "adda_id": null, "phone1": "03001234567", "phone2": "", "address": "",
+        "linked_account_id": null, "opening_date": "", "opening_dr": "", "opening_cr": "",
+        "opening_is_advance": false, "credit_allowed": true, "credit_limit": "",
+        "default_marka_id": null, "collector_staff_id": null, "collection_weekday": null,
+        "is_active": true, "note": "", "tag": tag })
+}
+
+#[test]
+fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
+    let h = Harness::new();
+    h.set_up_and_login();
+
+    // The tag: "k" is saved as "K"; "1A" is refused at the field `tag`.
+    let request = tag_account_json("k");
+    let saved = h.ok("accounts_save", json!({ "input": request }));
+    assert_eq!(saved["tag"], "K");
+    assert_eq!(saved["name_en"], "Akram Toll Tax");
+    fixture_pair("accounts_save_tag", &request, &saved);
+    let bad = tag_account_json("1A");
+    let error = h
+        .call("accounts_save", json!({ "input": bad }))
+        .unwrap_err();
+    assert_eq!(error["errors"][0]["code"], "ERR_TAG_INVALID");
+    assert_eq!(error["errors"][0]["field"], "tag");
+    assert_eq!(error["errors"][0]["values"]["max"], 4);
+    fixture_refusal("accounts_save_tag_refused", &bad, &error);
+    // No tag: the answer has no `tag` key at all.
+    let mut plain = tag_account_json("");
+    plain["name_ur"] = json!("ناصر");
+    plain["name_en"] = json!("Nasir");
+    plain["phone1"] = json!("");
+    let nasir = h.ok("accounts_save", json!({ "input": plain }));
+    assert!(nasir.get("tag").is_none(), "{nasir}");
+
+    // The firm contacts and the trade mark: saved by `settings_set_firm`, read by `settings_get`.
+    let settings = h.ok("settings_get", json!({}));
+    assert_eq!(settings["firm"]["firm_contacts"], json!([]));
+    assert_eq!(settings["firm"]["trade_mark"], "");
+    let mut firm = settings["firm"].clone();
+    firm["firm_contacts"] = json!([
+        { "name_ur": "منشی آصف بھٹی", "name_en": "Munshi Asif Bhatti", "phone": "0300-4058860" },
+        { "name_ur": "اکرم", "name_en": "Akram", "phone": "03211234567" }
+    ]);
+    firm["trade_mark"] = json!("RH");
+    let set = h.ok("settings_set_firm", json!({ "input": firm }));
+    assert_eq!(set["trade_mark"], "RH");
+    assert_eq!(set["firm_contacts"][0]["phone"], "03004058860");
+    fixture_pair("settings_set_firm_contacts", &firm, &set);
+    let after = h.ok("settings_get", json!({}));
+    assert_eq!(after["firm"], set);
+    fixture_pair("settings_get_contacts", &json!({}), &after);
+    let mut too_many = set.clone();
+    too_many["firm_contacts"] = json!([
+        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" },
+        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" },
+        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" },
+        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" }
+    ]);
+    let error = h
+        .call("settings_set_firm", json!({ "input": too_many }))
+        .unwrap_err();
+    assert_eq!(error["errors"][0]["code"], "ERR_OUT_OF_RANGE");
+    assert_eq!(error["errors"][0]["field"], "firm_contacts");
+    fixture_refusal("settings_set_firm_contacts_refused", &too_many, &error);
+
+    // The one read command for every header: the contacts follow the print language, and the
+    // trade mark is there. The footer holds the print time and the "Page x of y" labels.
+    for (language, file) in [
+        ("ur", "reports_print_header_ur"),
+        ("en", "reports_print_header_en"),
+    ] {
+        let request = json!({ "language": language, "title_id": "print-collection-list-title",
+            "facts": [{ "label_id": "print-fact-date", "value": "10-10-2026" }] });
+        let frame = h.ok("reports_print_header", json!({ "input": request }));
+        assert_eq!(frame["header"]["trade_mark"], "RH");
+        assert_eq!(frame["header"]["contacts"].as_array().unwrap().len(), 2);
+        assert_eq!(frame["footer"]["printed_at"], "10-10-2026 14:00");
+        fixture_pair(file, &request, &frame);
+    }
+    let en = h.ok(
+        "reports_print_header",
+        json!({ "input": { "language": "en", "title_id": "t", "facts": [] } }),
+    );
+    assert_eq!(en["header"]["contacts"][0]["name"], "Munshi Asif Bhatti");
+    assert_eq!(
+        h.code(
+            "reports_print_header",
+            json!({ "input": { "language": "en", "title_id": " ", "facts": [] } })
+        ),
+        "ERR_REQUIRED"
+    );
+
+    // The collection list: an empty day prints an empty list; the print command needs Windows.
+    let request = json!({ "date": "10-10-2026", "collector_staff_id": null, "city_id": null,
+        "language": "ur" });
+    let empty = h.ok("reports_collection_print_data", json!({ "input": request }));
+    assert_eq!(empty["doc"], "collection_list");
+    assert_eq!(empty["groups"], json!([]));
+    assert_eq!(empty["total"]["amount"], "0");
+    assert_eq!(empty["header"]["trade_mark"], "RH");
+    fixture_pair("reports_collection_print_data_empty", &request, &empty);
+    assert_eq!(
+        h.code(
+            "reports_collection_print_data",
+            json!({ "input": { "date": "10-10-2026", "collector_staff_id": 99, "city_id": null,
+                "language": "ur" } })
+        ),
+        "ERR_NOT_FOUND"
+    );
+    if !cfg!(windows) {
+        assert_eq!(
+            h.code(
+                "reports_print_collection",
+                json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null,
+                    "language": "ur", "copies": null, "to": "pdf" } })
+            ),
+            "ERR_PRINT_WINDOWS_ONLY"
+        );
+    }
+    // The bikri print command refuses the two documents it does not print.
+    assert_eq!(
+        h.code(
+            "reports_print",
+            json!({ "input": { "bikri_id": 1, "docs": ["collection_list"], "language": "ur",
+                "copies": null, "to": "pdf", "only_buyer_id": null } })
+        ),
+        "ERR_FORMAT_INVALID"
+    );
 }

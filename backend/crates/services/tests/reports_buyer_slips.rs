@@ -225,7 +225,6 @@ fn the_worked_day_has_a_slip_for_akram_and_one_for_arshad_and_none_for_shahid() 
             ("report-filter-to", "10-10-2026")
         ]
     );
-    assert_eq!(data.footer_id, "print-page-label");
 }
 
 #[test]

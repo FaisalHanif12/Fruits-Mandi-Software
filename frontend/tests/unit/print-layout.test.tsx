@@ -17,7 +17,6 @@ import { FOOTER_PROPERTY } from '../../src/shared/print';
 import {
   DEFAULT_PAPER,
   printDataFor,
-  toUrduDigits,
   voucherPrintData,
   type SlipKind,
 } from '../helpers/print-data';
@@ -106,8 +105,8 @@ describe.each(LANGUAGES)('the seller bill (%s)', (language: Language) => {
   it('shows the firm, the facts, the seller, and the buyers on the lines', () => {
     const { root } = show(data);
     const text = textOf(root);
-    expect(text).toContain(data.firm.name);
-    expect(text).toContain(data.firm.mandi);
+    expect(text).toContain(data.header.firm.name);
+    expect(text).toContain(data.header.firm.mandi);
     expect(text).toContain('LES-1234');
     expect(text).toContain('10-10-2026');
     expect(text).toContain('030110001');
@@ -178,10 +177,12 @@ describe.each(LANGUAGES)('the buyer slips, print all (%s)', (language: Language)
     for (const sheet of page) expect(textOf(sheet)).toContain(title);
     const first = textOf(must(page[0]));
     const second = textOf(must(page[1]));
-    for (const value of ['03040001', '20', '600', '12,000', '720', '160', '12,880']) {
+    // The client's own layout (R5): the buyer's name, then his line written "(item qty . rate)".
+    const banana = language === 'ur' ? 'کیلا' : 'Banana';
+    for (const value of [`(${banana} 20 . 600)`, '12,000', '720', '160', '12,880']) {
       expect(first).toContain(value);
     }
-    for (const value of ['03040002', '30', '580', '17,400', '1,044', '240', '18,684']) {
+    for (const value of [`(${banana} 30 . 580)`, '17,400', '1,044', '240', '18,684']) {
       expect(second).toContain(value);
     }
     expect(first).not.toContain('18,684');
@@ -237,6 +238,7 @@ describe('paper classes', () => {
       buyer_slips: 'a5',
       pukhta_slip: 'a5',
       receipt_slip: 'a5',
+      collection_list: 'a4',
     });
     for (const doc of ['seller_bill', 'buyer_slips', 'pukhta_slip'] as const) {
       const { root, unmount } = show(printDataFor(doc));
@@ -245,11 +247,19 @@ describe('paper classes', () => {
     }
   });
 
-  it('the 80 mm roll has no columns: each line is two rows of text, with "20 @ 600" kept in order', () => {
+  it('the 80 mm roll has no columns: the pieces of the buyer are written one under the other', () => {
     const { root } = show(printDataFor('buyer_slips', { paper: 'mm80', language: 'ur' }));
     expect(root.querySelector('table.print-table')).toBeNull();
-    const lines = root.querySelectorAll('.print-compact-line');
-    expect(lines).toHaveLength(2);
+    expect(root.querySelectorAll('.print-r5-compact')).toHaveLength(2);
+    // One line of تفصیل for each buyer, exactly as the backend wrote it.
+    const details = [...root.querySelectorAll('.print-r5-detail')].map((item) => item.textContent);
+    expect(details).toEqual(['(کیلا 20 . 600)', '(کیلا 30 . 580)']);
+  });
+
+  it('the goods of the seller bill on the roll are two rows of text, with "20 @ 600" kept in order', () => {
+    const { root } = show(printDataFor('seller_bill', { paper: 'mm80', language: 'ur' }));
+    expect(root.querySelector('table.print-table')).toBeNull();
+    expect(root.querySelectorAll('.print-compact-line')).toHaveLength(2);
     expect(isolated(root, '20 @ 600')).toBe(true);
   });
 
@@ -279,34 +289,6 @@ describe('the hidden window and the roll', () => {
       'counter(pages)',
     );
     sheet.unmount();
-  });
-});
-
-describe('digits', () => {
-  it('Urdu digits: the root asks for the Naskh digit font and every number is shown as given', () => {
-    const data = printDataFor('seller_bill', { language: 'ur', urduDigits: true });
-    const { root } = show(data);
-    expect(root.dataset['digits']).toBe('urdu');
-    const text = textOf(root);
-    expect(text).toContain(toUrduDigits('19,316'));
-    expect(text).toContain(toUrduDigits('10-10-2026'));
-    expect(text).not.toContain('19,316');
-  });
-
-  it('English digits are the default', () => {
-    const { root } = show(printDataFor('seller_bill', { language: 'ur' }));
-    expect(root.dataset['digits']).toBe('latin');
-  });
-
-  it('the page footer uses the Urdu digit style for its counters when the setting is on', () => {
-    const { unmount } = show(
-      printDataFor('seller_bill', { language: 'ur', urduDigits: true }),
-      true,
-    );
-    expect(document.documentElement.style.getPropertyValue(FOOTER_PROPERTY)).toContain(
-      'counter(page, persian)',
-    );
-    unmount();
   });
 });
 

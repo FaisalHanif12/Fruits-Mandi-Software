@@ -27,6 +27,7 @@ import {
 import { listRow } from '../helpers/bikri-saved';
 import { paisaForTest } from '../helpers/paisa';
 import { fakePartners } from '../helpers/partners';
+import { printFirmName } from '../helpers/print-frame';
 import { message, visible } from '../helpers/render';
 import {
   BUYER_BILLS_EN,
@@ -202,7 +203,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
       expect(drawnRows()).toHaveLength(2);
     }, SLOW_MS);
     await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-    await screen.findByText(PRINT_R5_EN.firm.name, undefined, SLOW_MS);
+    await screen.findByText(printFirmName(language), undefined, SLOW_MS);
     expect(vi.mocked(reportsApi.reportsPrintData).mock.calls[0]?.[0]).toMatchObject({
       id: 'R5',
       language,
@@ -225,7 +226,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
         expect(drawnRows()).toHaveLength(2);
       }, SLOW_MS);
       await opened.user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
-      await screen.findAllByText(options.slips?.firm.name ?? bills.firm.name, undefined, SLOW_MS);
+      await screen.findAllByText(printFirmName(language), undefined, SLOW_MS);
       return opened;
     }
 
@@ -294,7 +295,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
         expect(drawnRows()).toHaveLength(2);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
-      await screen.findAllByText(bills.firm.name, undefined, SLOW_MS);
+      await screen.findAllByText(printFirmName(language), undefined, SLOW_MS);
       await user.keyboard('{Escape}');
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(2);

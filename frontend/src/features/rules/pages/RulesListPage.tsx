@@ -7,6 +7,7 @@ import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { FlaskConical, Plus, Scale, SearchX } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
@@ -201,11 +202,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
               scope="any"
               value={party}
               onChange={(hit) => {
-                setParty(
-                  hit === null
-                    ? null
-                    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                );
+                setParty(hit === null ? null : pickedOf(hit));
               }}
             />
           )}
@@ -217,11 +214,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
               scope="item"
               value={item}
               onChange={(hit) => {
-                setItem(
-                  hit === null
-                    ? null
-                    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                );
+                setItem(hit === null ? null : pickedOf(hit));
               }}
             />
           )}

@@ -22,6 +22,10 @@ export type AccountNode = {
    */
   name_en: string;
   /**
+   * The tag (نشان), or absent if none (PRD 10.2).
+   */
+  tag?: string;
+  /**
    * The balance now.
    */
   balance: Balance;

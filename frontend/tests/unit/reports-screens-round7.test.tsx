@@ -30,6 +30,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakePartners, partnerRow } from '../helpers/partners';
+import { printFirmName } from '../helpers/print-frame';
 import { message, visible } from '../helpers/render';
 import {
   CATALOG,
@@ -439,11 +440,14 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
         paper: 'a4',
       });
       expect(vi.mocked(reportsApi.reportsPrintData).mock.calls[0]?.[0].filters.partner_id).toBe(2);
-      await screen.findByText(PRINT_R31_BAY_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       const body = visible(document.querySelector('.print-report tbody')?.textContent);
-      expect(body).toContain('Sale 1: Commission, Laga and Phone Charge');
-      expect(body).toContain('Shop Expense E-1: Electricity');
-      expect(body).toContain('Capital put in CI-1');
+      // The sentences are in the print language, which is the language the print was asked for.
+      expect(body).toContain(
+        names('بکری 1: کمیشن، لاگا اور فون', 'Sale 1: Commission, Laga and Phone Charge'),
+      );
+      expect(body).toContain(names('دکان خرچہ خ-1: بجلی', 'Shop Expense E-1: Electricity'));
+      expect(body).toContain(names('سرمایہ لگایا س-1', 'Capital put in CI-1'));
       expect(body).not.toMatch(/[{}$]/);
     });
 

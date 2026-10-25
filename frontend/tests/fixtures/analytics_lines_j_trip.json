@@ -100,7 +100,7 @@
           "party": {
             "account_id": 17,
             "code": "030119998",
-            "short_code": "9998",
+            "short_code": null,
             "name_ur": "اپنا مال",
             "name_en": "Own Goods (Trips)",
             "tag": null,

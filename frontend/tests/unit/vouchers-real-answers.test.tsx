@@ -456,8 +456,8 @@ describe.each(LANGUAGES)('the receipt slips of the backend (%s)', (language) => 
   it.each(slips)(
     '%s: every label has a message in both languages, and the page shows the facts',
     (_name, data, amount, words) => {
-      const ids = new Set<string>([data.title_id]);
-      for (const fact of data.facts) ids.add(fact.label_id);
+      const ids = new Set<string>([data.header.title_id]);
+      for (const fact of data.header.facts) ids.add(fact.label_id);
       for (const page of data.pages) {
         ids.add(page.party.role_id);
         for (const row of page.amounts) ids.add(row.label_id);
@@ -474,10 +474,10 @@ describe.each(LANGUAGES)('the receipt slips of the backend (%s)', (language) => 
       expect(root?.querySelector('.print-payment')).toBeNull();
       if (root === null) throw new Error('no print document');
       const text = visible(root.textContent);
-      expect(text).toContain(message(data.language, data.title_id));
+      expect(text).toContain(message(data.language, data.header.title_id));
       expect(text).toContain(amount);
       expect(text).toContain(words);
-      for (const fact of data.facts) expect(text).toContain(fact.value);
+      for (const fact of data.header.facts) expect(text).toContain(fact.value);
       expect(root.getAttribute('lang')).toBe(data.language);
       expect(language).toBeDefined();
     },

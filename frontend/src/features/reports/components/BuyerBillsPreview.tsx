@@ -12,7 +12,7 @@ import type { ReportFilters } from '../../../bindings/ReportFilters';
 import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { useBuyerBillsPrintData } from '../hooks';
+import { useBuyerBillsPrintData, usePrintFrameOf } from '../hooks';
 import { BuyerBillsPrintDocument } from '../print/BuyerBillsPrintDocument';
 import { PrintPreviewFrame } from './PrintPreviewFrame';
 
@@ -26,20 +26,23 @@ export function BuyerBillsPreview({ filters, onBack }: BuyerBillsPreviewProps) {
   const [language, setLanguage] = useState<Language>(appLanguage);
   const [paper, setPaper] = useState<Paper>('a4');
   const query = useBuyerBillsPrintData({ id: 'R5', filters, language, paper });
+  // The ONE header and footer of every print: the backend builds them from the title and the filters.
+  const frame = usePrintFrameOf(language, query.data);
 
   let body;
-  if (query.isPending) {
-    body = <LoadingState rows={8} />;
-  } else if (query.isError) {
+  if (query.isError || frame.isError) {
+    const failed = query.isError ? query : frame;
     body = (
       <ErrorState
         title={<Localized id="report-print-failed" />}
-        error={uiErrorOf(query.error)}
+        error={uiErrorOf(failed.error)}
         onRetry={() => {
-          void query.refetch();
+          void failed.refetch();
         }}
       />
     );
+  } else if (query.data === undefined || frame.data === undefined) {
+    body = <LoadingState rows={8} />;
   } else if (query.data.slips.length === 0) {
     body = (
       <EmptyState
@@ -49,7 +52,7 @@ export function BuyerBillsPreview({ filters, onBack }: BuyerBillsPreviewProps) {
       />
     );
   } else {
-    body = <BuyerBillsPrintDocument data={query.data} />;
+    body = <BuyerBillsPrintDocument data={query.data} frame={frame.data} />;
   }
 
   return (

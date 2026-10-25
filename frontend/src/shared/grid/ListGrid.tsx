@@ -23,7 +23,7 @@ import { formatPaisa, useGrouping, type Paisa } from '../format';
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
 import { directionOf, useLanguage } from '../i18n';
 import './agGridSetup';
-import { NumberRunsCell, hasNumberRun } from './NumberRuns';
+import { NumberRuns, NumberRunsCell, hasNumberRun } from './NumberRuns';
 import {
   LIST_COLUMN_WIDTHS,
   LIST_GROW_MIN_WIDTH,
@@ -185,12 +185,12 @@ function toColDef<T>(
       : {
           cellRenderer: (params: ICellRendererParams<T>) => (
             <span lang={column.script?.(context.language)} className="cell-lang">
-              {typeof params.value === 'string' ? params.value : ''}
+              {typeof params.value === 'string' ? <NumberRuns text={params.value} /> : ''}
             </span>
           ),
         }),
-    // A text cell with a date or a range inside keeps its digits in order in Urdu (F25). Only a cell
-    // that holds such a run gets the renderer; every other cell is drawn by the grid as before.
+    // A text cell with a number inside keeps it in order and in Inter in Urdu (F25). Only a cell that
+    // holds a number gets the renderer; every other cell is drawn by the grid as before.
     ...(column.script === undefined && unitOf === undefined && !isListNumberLike(column.type)
       ? {
           cellRendererSelector: (params: ICellRendererParams<T>) =>

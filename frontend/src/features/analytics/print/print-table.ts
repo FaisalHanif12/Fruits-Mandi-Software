@@ -25,13 +25,9 @@ function headingOf(heading: AnalyticsPrintHeading | null): PrintHeading | null {
 export function printTableOf(data: AnalyticsPrintData): PrintTable {
   return {
     language: data.language,
-    dir: data.dir,
     paper: data.paper,
-    urdu_digits: data.urdu_digits,
     title_id: data.title_id,
-    firm: data.firm,
     filters: data.filters,
-    printed_at: data.printed_at,
     columns: data.columns.map((column) => ({
       key: column.key,
       title_id: column.title_id,

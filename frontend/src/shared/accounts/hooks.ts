@@ -80,31 +80,43 @@ export function useAccountNextCode(
 
 /**
  * Accounts that look like the one being typed (PRD FR-7.63). Asked after a pause, and only when
- * a name or a phone has been typed.
+ * a name or a phone has been typed. The tag typed goes with the question, and the backend marks
+ * the account whose name, tag and phone all match as a duplicate (PRD FR-10.7, E38).
  */
 export function useSimilarAccounts(
   nameUr: string,
   nameEn: string,
   phone: string,
+  tag: string,
   excludeId: number | null,
 ) {
-  const [settled, setSettled] = useState({ ur: '', en: '', phone: '' });
+  const [settled, setSettled] = useState({ ur: '', en: '', phone: '', tag: '' });
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setSettled({ ur: nameUr.trim(), en: nameEn.trim(), phone: phone.trim() });
+      setSettled({ ur: nameUr.trim(), en: nameEn.trim(), phone: phone.trim(), tag: tag.trim() });
     }, SIMILAR_DELAY_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [nameUr, nameEn, phone]);
+  }, [nameUr, nameEn, phone, tag]);
+  // The tag alone does not start a search: it only tells a duplicate from a look-alike (E38).
   const typed = settled.ur !== '' || settled.en !== '' || settled.phone !== '';
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'similar', settled.ur, settled.en, settled.phone, excludeId],
+    queryKey: [
+      ...ACCOUNTS_KEY,
+      'similar',
+      settled.ur,
+      settled.en,
+      settled.phone,
+      settled.tag,
+      excludeId,
+    ],
     queryFn: () =>
       accountsSimilar({
         name_ur: settled.ur,
         name_en: settled.en,
         phone: settled.phone,
+        tag: settled.tag,
         exclude_id: excludeId,
       }),
     enabled: typed,

@@ -109,6 +109,152 @@ fn cr(w: &World, id: i64, code: &str) -> i64 {
     journal(w, id, code).1
 }
 
+// ---- Plan 17e: the shared header, the tag and the short code ----
+
+/// Sets the firm's contacts and trade mark through the Settings action.
+fn set_contacts(w: &World) {
+    use mandi_services::core::firm::FirmContact;
+    use mandi_services::settings::{self, FirmPrintInfo};
+    let firm = settings::get(&w.env.ctx).unwrap().firm;
+    let info = FirmPrintInfo {
+        firm_contacts: vec![
+            FirmContact {
+                name_ur: "علی".into(),
+                name_en: "Ali".into(),
+                phone: "0300-4058860".into(),
+            },
+            FirmContact {
+                name_ur: "اکرم".into(),
+                name_en: "Akram".into(),
+                phone: "03211234567".into(),
+            },
+        ],
+        trade_mark: "RH".into(),
+    };
+    settings::set_firm_with_print_info(&w.env.ctx, &w.owner, &firm, &info, &[]).unwrap();
+}
+
+/// True if any string in this JSON holds an Arabic-Indic or Urdu digit.
+fn has_urdu_digit(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::String(text) => text.chars().any(|c| {
+            ('\u{0660}'..='\u{0669}').contains(&c) || ('\u{06F0}'..='\u{06F9}').contains(&c)
+        }),
+        serde_json::Value::Array(items) => items.iter().any(has_urdu_digit),
+        serde_json::Value::Object(map) => map.values().any(has_urdu_digit),
+        _ => false,
+    }
+}
+
+#[test]
+fn a_default_urdu_print_of_the_real_world_has_only_plain_digits_even_for_a_phone_typed_in_urdu_digits()
+ {
+    // Umar, 26-10-2026: the digits of every print are 0-9; the Urdu digits are an option, off by
+    // default. A one-time buyer's phone typed with Urdu digits is saved, and printed, as 0-9.
+    let w = world();
+    let id1 = save_event1(&w);
+    let mut line = sale("s-1", w.pukhta_buyer, "10", "1200");
+    line.pukhta = Some(PukhtaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: "۰۳۰۰۰۰۰۰۰۰۰".into(),
+    });
+    let mut lot = with_sales(lot(&w, "lot-1", w.karim, w.apple, "10"), vec![line]);
+    lot.freight = Some("1,000".into());
+    lot.cash_paid = None;
+    let id2 = save(&w, &draft(vec![lot]));
+    set_contacts(&w);
+    for (id, doc) in [
+        (id1, PrintDoc::SellerBill),
+        (id1, PrintDoc::BuyerSlips),
+        (id2, PrintDoc::PukhtaSlip),
+    ] {
+        let value = serde_json::to_value(data(&w, id, doc, Language::Ur)).unwrap();
+        assert!(!has_urdu_digit(&value), "{doc:?}: {value}");
+    }
+    let slip = data(&w, id2, PrintDoc::PukhtaSlip, Language::Ur);
+    assert_eq!(slip.pages[0].party.phone.as_deref(), Some("03000000000"));
+}
+
+#[test]
+fn the_contacts_and_the_trade_mark_print_in_the_header_of_every_bikri_document() {
+    // D4R-A11: up to 3 contacts and the trade mark show in the header; none set, no empty box.
+    let w = world();
+    let id1 = save_event1(&w);
+    let id2 = save_event2(&w);
+    let docs = [
+        (id1, PrintDoc::SellerBill),
+        (id1, PrintDoc::BuyerSlips),
+        (id2, PrintDoc::PukhtaSlip),
+    ];
+    for (id, doc) in docs {
+        for language in [Language::Ur, Language::En] {
+            let none = data(&w, id, doc, language);
+            assert!(none.header.contacts.is_empty(), "{doc:?}");
+            assert_eq!(none.header.trade_mark, None, "{doc:?}");
+        }
+    }
+    set_contacts(&w);
+    for (id, doc) in docs {
+        let ur = data(&w, id, doc, Language::Ur);
+        let en = data(&w, id, doc, Language::En);
+        assert_eq!(ur.header.contacts.len(), 2, "{doc:?}");
+        assert_eq!(ur.header.contacts[0].name, "علی");
+        assert_eq!(en.header.contacts[0].name, "Ali");
+        assert_eq!(en.header.contacts[0].phone, "03004058860");
+        assert_eq!(ur.header.trade_mark.as_deref(), Some("RH"));
+        assert_eq!(en.header.trade_mark.as_deref(), Some("RH"));
+        // The footer and the numbers are the ones they were.
+        assert_eq!(en.footer.page_label_id, "print-page-label");
+    }
+    let bill = data(&w, id1, PrintDoc::SellerBill, Language::En);
+    assert_eq!(amount(&bill.pages[0], "print-gross-sale"), 29_400);
+    assert_eq!(amount(&bill.pages[0], "print-net-sale"), 19_316);
+}
+
+#[test]
+fn a_buyer_with_a_tag_prints_with_it_and_every_party_has_its_short_code() {
+    // D4R-A12: "اکرم ٹول ٹیکس K" with short code 1; the seller رحیم has short code 1 too.
+    let w = world();
+    let id = save_event1(&w);
+    raw(&w.dir)
+        .execute("UPDATE accounts SET tag = 'K' WHERE id = ?1", [w.akram])
+        .unwrap();
+    for language in [Language::Ur, Language::En] {
+        let slips = data(&w, id, PrintDoc::BuyerSlips, language);
+        let akram = &slips.pages[0].party;
+        assert_eq!(akram.tag.as_deref(), Some("K"));
+        assert_eq!(akram.short_code.as_deref(), Some("1"));
+        assert_eq!(akram.code.as_deref(), Some("03040001"));
+        let arshad = &slips.pages[1].party;
+        assert_eq!(
+            (arshad.tag.as_deref(), arshad.short_code.as_deref()),
+            (None, Some("2"))
+        );
+        // The seller bill: the seller's short code, and the tag on the buyer's line.
+        let bill = data(&w, id, PrintDoc::SellerBill, language);
+        let page = &bill.pages[0];
+        assert_eq!(page.party.short_code.as_deref(), Some("1"));
+        assert_eq!(page.party.tag, None);
+        let tags: Vec<_> = page.lines.iter().map(|l| l.name_tag.as_deref()).collect();
+        assert_eq!(tags, vec![Some("K"), None]);
+    }
+    // The R5 columns: "(item qty . rate)", the value and the amount after لاگا, the row number.
+    let en = data(&w, id, PrintDoc::BuyerSlips, Language::En);
+    assert_eq!(en.pages[0].lines[0].detail, "(Banana 20 . 600)");
+    assert_eq!(en.pages[1].lines[0].detail, "(Banana 30 . 580)");
+    assert_eq!(
+        (en.pages[0].serial.as_str(), en.pages[1].serial.as_str()),
+        ("1", "2")
+    );
+    assert_eq!(amount(&en.pages[0], "print-items-value"), 12_000);
+    assert_eq!(amount(&en.pages[0], "print-buyer-pays"), 12_880);
+    assert_eq!(amount(&en.pages[1], "print-items-value"), 17_400);
+    assert_eq!(amount(&en.pages[1], "print-buyer-pays"), 18_684);
+    let ur = data(&w, id, PrintDoc::BuyerSlips, Language::Ur);
+    assert_eq!(ur.pages[0].lines[0].detail, "(کیلا 20 . 600)");
+}
+
 // ---- Every printed total equals the screen and the journal ----
 
 #[test]
@@ -252,10 +398,10 @@ fn the_firm_header_comes_from_settings_in_the_print_language() {
     let id = save_event1(&w);
     let ur = data(&w, id, PrintDoc::SellerBill, Language::Ur);
     let en = data(&w, id, PrintDoc::SellerBill, Language::En);
-    assert_eq!(ur.firm.name, "ماہر عدنان اینڈ برادرز");
-    assert_eq!(en.firm.name, "Maher Adnan and Brothers");
-    assert_eq!(en.firm.mandi, "New Sabzi Mandi Kot Radha Kishan");
-    assert_eq!(ur.printed_at, "10-10-2026 14:00");
+    assert_eq!(ur.header.firm.name, "ماہر عدنان اینڈ برادرز");
+    assert_eq!(en.header.firm.name, "Maher Adnan and Brothers");
+    assert_eq!(en.header.firm.mandi, "New Sabzi Mandi Kot Radha Kishan");
+    assert_eq!(ur.footer.printed_at, "10-10-2026 14:00");
 }
 
 #[test]
@@ -282,6 +428,7 @@ fn set_input() -> SetPrintingInput {
         paper_buyer_slips: Paper::Mm80,
         paper_pukhta_slip: Paper::A5,
         paper_receipt_slip: Paper::A5,
+        paper_collection_list: Paper::A4,
         printer: "  Office Laser  ".into(),
         copies: "2".into(),
         urdu_digits: true,
@@ -314,6 +461,7 @@ fn printing_settings_start_with_a21_and_are_saved_with_an_audit_row() {
     assert!(!start.urdu_digits);
     assert!(start.printer.is_empty());
     assert_eq!(start.paper_receipt_slip, Paper::A5);
+    assert_eq!(start.paper_collection_list, Paper::A4);
     assert_eq!(start.print_after_save, PrintDoc::BIKRI_DOCS.to_vec());
 
     let edits_before = audit_rows(&w, "edit");

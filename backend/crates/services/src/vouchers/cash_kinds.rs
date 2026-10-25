@@ -152,6 +152,7 @@ pub(super) fn record_of_account(
         code: row.code,
         name_ur: row.name_ur,
         name_en: row.name_en,
+        tag: row.tag,
     }))
 }
 

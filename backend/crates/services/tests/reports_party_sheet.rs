@@ -216,8 +216,9 @@ fn e2e_43_the_buyers_slip_of_akram() {
         other => panic!("not names: {other:?}"),
     }
     assert_eq!((money(&cells[2]), money(&cells[3])), (600, 12_880));
-    assert!(matches!(&page.totals[0], Cell::Number { value: 20 }));
-    assert_eq!(money(&page.totals[3]), 12_880);
+    // The footer holds the total نگ and the day's amount; the slip has no totals row (FR-19.12).
+    assert!(page.totals.iter().all(|c| matches!(c, Cell::Empty)));
+    assert_eq!(line_of(&page, "report-r35-bought"), 12_880);
     // The footer: previous 0, bought 12,880, paid 10,000, remaining 2,880 بنام.
     assert!(matches!(
         summary_of(&page, "report-r35-total-qty"),
@@ -313,7 +314,7 @@ fn e2e_43_the_sellers_slips_of_rahim_and_karim() {
     assert_eq!(line(&rahim, "report-r35-sold"), 24_316);
     assert_eq!(line(&rahim, "report-r35-cash-given"), 5_000);
     assert_eq!(line(&rahim, "report-r35-paid"), 4_316);
-    assert_eq!(line(&rahim, "report-r35-remaining"), 0);
+    assert_eq!(line(&rahim, "report-r35-balance"), 0);
 
     let karim = report(
         &w,
@@ -330,7 +331,7 @@ fn e2e_43_the_sellers_slips_of_rahim_and_karim() {
         Some(Cell::Empty)
     ));
     // 10,160 جمع.
-    assert_eq!(line(&karim, "report-r35-remaining"), -10_160);
+    assert_eq!(line(&karim, "report-r35-balance"), -10_160);
 }
 
 #[test]
@@ -664,12 +665,11 @@ fn a_lot_with_a_negative_net_is_a_negative_sale_and_not_cash_the_seller_got() {
     assert_eq!(line("report-r35-sold"), -2_180);
     assert_eq!(line("report-r35-cash-given"), 500);
     assert_eq!(line("report-r35-paid"), 0);
-    assert_eq!(line("report-r35-remaining"), -(-2_680));
-    assert_eq!(line("report-r35-remaining"), book(&w, w.karim));
+    assert_eq!(line("report-r35-balance"), -(-2_680));
+    assert_eq!(line("report-r35-balance"), book(&w, w.karim));
     // The rows add up to what was sold.
     let rows_total: i64 = slip.rows.iter().map(|r| money(&r.cells[3])).sum();
     assert_eq!(rows_total, -2_180);
-    assert_eq!(money(&slip.totals[3]), -2_180);
     // In the table: previous 0, debit 2,680, credit 0, remaining 2,680 بنام.
     let page = report(&w, ReportId::R35, sheet("10-10-2026", None), 0, 0);
     assert_eq!(figures(row_of(&page, "Karim")), (0, 2_680, 0, 2_680));
@@ -835,8 +835,8 @@ fn an_advance_given_to_a_seller_is_not_a_payment() {
     assert_eq!(line_of(&slip, "report-r35-other-debits"), 2_000);
     assert_eq!(line_of(&slip, "report-r35-cash-given"), 5_000);
     // 15,000 Dr + 5,000 + 4,316 + 2,000 - 24,316 = 2,000 Dr.
-    assert_eq!(line_of(&slip, "report-r35-remaining"), 2_000);
-    assert_eq!(line_of(&slip, "report-r35-remaining"), book(&w, w.rahim));
+    assert_eq!(line_of(&slip, "report-r35-balance"), 2_000);
+    assert_eq!(line_of(&slip, "report-r35-balance"), book(&w, w.rahim));
 }
 
 #[test]
@@ -866,12 +866,14 @@ fn a_posting_with_a_negative_lot_and_a_good_lot_keeps_the_item_of_the_good_one()
     }
     assert_eq!(money(&slip.rows[0].cells[3]), 2_520);
     assert_eq!(money(&slip.rows[1].cells[3]), -2_180);
-    assert!(matches!(&slip.totals[0], Cell::Number { value: 10 }));
-    assert_eq!(money(&slip.totals[3]), 340);
+    assert!(matches!(
+        summary_of(&slip, "report-r35-total-qty"),
+        Some(Cell::Number { value: 10 })
+    ));
     assert_eq!(line_of(&slip, "report-r35-sold"), 340);
     // 340 جمع.
-    assert_eq!(line_of(&slip, "report-r35-remaining"), -340);
-    assert_eq!(line_of(&slip, "report-r35-remaining"), book(&w, w.karim));
+    assert_eq!(line_of(&slip, "report-r35-balance"), -340);
+    assert_eq!(line_of(&slip, "report-r35-balance"), book(&w, w.karim));
 }
 
 #[test]

@@ -6,21 +6,20 @@
 // (CLAUDE.md rule 1). The totals of all the slips are in the preview only, not on a buyer's slip.
 
 import { useLocalization } from '@fluent/react';
-import { useEffect, type Ref } from 'react';
+import type { Ref } from 'react';
 import type { BuyerBillSlip } from '../../../bindings/BuyerBillSlip';
 import type { BuyerBillsPrintData } from '../../../bindings/BuyerBillsPrintData';
 import type { PrintReportColumn } from '../../../bindings/PrintReportColumn';
 import {
-  FOOTER_LABEL_IDS,
-  PrintProvider,
-  applyPrintRoot,
-  footerContent,
+  PrintHeader,
+  PrintName,
+  PrintRoot,
+  PrintScreenFooter,
+  type PrintFrame,
 } from '../../../shared/print';
 import { Code } from '../../../shared/ui/Code';
 import { Num } from '../../../shared/ui/Num';
-import { ScriptText } from '../../../shared/ui/ScriptText';
 import { Cell, cellClass } from './PrintCell';
-import { ReportSheetHeader } from './ReportSheetHeader';
 
 /** The class of the cell at a column: a column the data does not name is plain text. */
 function columnClass(columns: readonly PrintReportColumn[], position: number): string {
@@ -29,26 +28,22 @@ function columnClass(columns: readonly PrintReportColumn[], position: number): s
 
 interface SlipProps {
   data: BuyerBillsPrintData;
+  frame: PrintFrame;
   slip: BuyerBillSlip;
 }
 
-function Slip({ data, slip }: SlipProps) {
+function Slip({ data, frame, slip }: SlipProps) {
   const { l10n } = useLocalization();
   const { party } = slip;
-  const name = party.tag === null || party.tag === '' ? party.name : `${party.name} ${party.tag}`;
   return (
     <section className="print-sheet" data-slip={slip.serial}>
-      <ReportSheetHeader
-        firm={data.firm}
-        titleId={data.title_id}
-        filters={data.filters}
-        printedAt={data.printed_at}
-      />
+      <PrintHeader header={frame.header} />
       <dl className="print-facts">
         <div className="print-fact">
           <dt>{l10n.getString('report-col-buyer')}</dt>
           <dd>
-            <Code>{party.short_code ?? party.code}</Code> <ScriptText>{name}</ScriptText>
+            <Code>{party.short_code ?? party.code}</Code>{' '}
+            <PrintName name={party.name} tag={party.tag ?? undefined} />
           </dd>
         </div>
       </dl>
@@ -95,7 +90,8 @@ function Slip({ data, slip }: SlipProps) {
           </dd>
         </div>
       </dl>
-      {/* On paper the footer is the page margin (print.css). This line is for the preview. */}
+      {/* On paper the footer is the page margin (print.css). These lines are for the preview. */}
+      <PrintScreenFooter footer={frame.footer} />
       <p className="print-screen-footer">
         {l10n.getString('report-print-row-count')} <Num>{slip.row_count}</Num>
       </p>
@@ -105,6 +101,8 @@ function Slip({ data, slip }: SlipProps) {
 
 interface BuyerBillsPrintDocumentProps {
   data: BuyerBillsPrintData;
+  /** The header and footer the backend built for this print (`reports_print_header`). */
+  frame: PrintFrame;
   /**
    * True in the hidden print window: the root element then takes the print language, direction and
    * footer, so the page margin boxes are right. False in the in-app preview, which must not change
@@ -114,30 +112,12 @@ interface BuyerBillsPrintDocumentProps {
   ref?: Ref<HTMLDivElement>;
 }
 
-function BuyerBillsBody({ data, applyRoot = false, ref }: BuyerBillsPrintDocumentProps) {
+function BuyerBillsBody({ data, frame }: { data: BuyerBillsPrintData; frame: PrintFrame }) {
   const { l10n } = useLocalization();
-  const words = {
-    printed: l10n.getString(FOOTER_LABEL_IDS.printed),
-    page: l10n.getString(FOOTER_LABEL_IDS.page),
-    of: l10n.getString(FOOTER_LABEL_IDS.of),
-  };
-  const footer = footerContent(words, data.printed_at, data.urdu_digits, data.paper !== 'mm80');
-  useEffect(() => {
-    if (!applyRoot) return undefined;
-    return applyPrintRoot({ language: data.language, dir: data.dir, footer });
-  }, [applyRoot, data.language, data.dir, footer]);
   return (
-    <div
-      ref={ref}
-      className="print-doc print-report"
-      lang={data.language}
-      dir={data.dir}
-      data-paper={data.paper}
-      data-digits={data.urdu_digits ? 'urdu' : 'latin'}
-      data-window={applyRoot ? 'true' : undefined}
-    >
+    <div className="print-report">
       {data.slips.map((slip) => (
-        <Slip key={slip.serial} data={data} slip={slip} />
+        <Slip key={slip.serial} data={data} frame={frame} slip={slip} />
       ))}
       {/* What all the slips come to is for the one who prints them: it is not on a buyer's slip. */}
       <dl className="print-facts print-screen-footer" data-slips-total="">
@@ -168,10 +148,20 @@ function BuyerBillsBody({ data, applyRoot = false, ref }: BuyerBillsPrintDocumen
   );
 }
 
-export function BuyerBillsPrintDocument(props: BuyerBillsPrintDocumentProps) {
+export function BuyerBillsPrintDocument({
+  data,
+  frame,
+  applyRoot = false,
+  ref,
+}: BuyerBillsPrintDocumentProps) {
   return (
-    <PrintProvider language={props.data.language}>
-      <BuyerBillsBody {...props} />
-    </PrintProvider>
+    <PrintRoot
+      frame={frame}
+      paper={data.paper}
+      applyRoot={applyRoot}
+      {...(ref === undefined ? {} : { ref })}
+    >
+      <BuyerBillsBody data={data} frame={frame} />
+    </PrintRoot>
   );
 }

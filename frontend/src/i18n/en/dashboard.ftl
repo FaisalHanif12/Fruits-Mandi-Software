@@ -243,7 +243,7 @@ dashboard-tasks-empty-help = When something needs doing, it shows here.
 dashboard-charts-title = Charts
 
 # review: pending
-dashboard-chart-days-title = Last 30 days
+dashboard-chart-days-title = Last <num>30</num> days
 
 # review: pending
 dashboard-chart-days-label = { -kham-bikri } and { -commission } of each of the last 30 days

@@ -107,8 +107,12 @@ pub(crate) fn load_parties(
         let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
             let party_type: String = r.get(3)?;
             let serial: i64 = r.get(2)?;
-            let short_code =
-                matches!(party_type.as_str(), "seller" | "buyer").then(|| serial.to_string());
+            // A short code is the serial of an ordinary account: 1 to 8999. Serial 0 and 9000 to
+            // 9999 are reserved for system accounts (نقدی منڈی, the two پختہ کھاتہ), which are known by
+            // their full code (PRD FR-10.3, FR-7.39).
+            let short_code = (matches!(party_type.as_str(), "seller" | "buyer")
+                && (1..=8_999).contains(&serial))
+            .then(|| serial.to_string());
             Ok(PartyRef {
                 account_id: r.get(0)?,
                 code: r.get(1)?,

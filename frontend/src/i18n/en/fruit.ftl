@@ -124,6 +124,20 @@ fruit-cancel-confirm = Cancel entry
 # review: pending
 fruit-cancelled-toast = { $number } cancelled
 
+## One entry in its saved view, opened by its address (PRD FR-19.4).
+# $number: the entry number, written with fruit-number.
+# review: pending
+fruit-entry-title = Entry { $number }
+# review: pending
+fruit-entry-failed = This entry could not be opened
+# review: pending
+fruit-entry-close = Close
+# review: pending
+fruit-entry-parts = Parts
+# $reason: why it was cancelled, as typed.
+# review: pending
+fruit-entry-cancelled = This entry was cancelled. Reason: { $reason }
+
 ## The list under the form (PRD FR-16.12, FR-19.11).
 # review: pending
 fruit-list-title = Fruit taken
@@ -187,5 +201,8 @@ fruit-period-month = This month
 fruit-period-year = This year
 # review: pending
 fruit-period-all = All days
+# review: pending
+fruit-print = Print the list
+
 # review: pending
 fruit-list-select-help = Move to an entry and press Enter to change it.

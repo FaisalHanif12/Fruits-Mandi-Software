@@ -67,6 +67,8 @@ import {
   ANALYTICS_RUN_J_TRIP_PARTNER,
 } from './analytics-trips-real';
 
+import { fakePrintFrame } from './print-frame';
+
 export * from './analytics-real';
 export * from './analytics-trips-real';
 export * from './analytics-gardens-real';
@@ -208,6 +210,7 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
       limit: input.limit,
     });
   });
+  fakePrintFrame();
   vi.mocked(analyticsApi.analyticsPrintData).mockImplementation((input) =>
     Promise.resolve(
       options.print ??

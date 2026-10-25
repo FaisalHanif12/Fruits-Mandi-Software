@@ -32,6 +32,7 @@ import {
 } from '../helpers/analytics';
 import { fakeGardens } from '../helpers/gardens';
 import { fakePartners, partnerRow } from '../helpers/partners';
+import { printFirmName } from '../helpers/print-frame';
 import { message, visible } from '../helpers/render';
 import { fakeTrips } from '../helpers/trips';
 
@@ -274,7 +275,7 @@ describe.each(LANGUAGES)('تجزیات, view K and the fruit of view F (%s)', (l
         expect(drawnRows()).toHaveLength(2);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-      await screen.findByText(ANALYTICS_PRINT_DATA_K_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       expect(vi.mocked(analyticsApi.analyticsPrintData).mock.calls[0]?.[0]).toMatchObject({
         view: 'K',
         language,

@@ -144,6 +144,8 @@ pub struct Counterpart {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// Its tag (نشان), if any (PRD 10.2).
+    pub tag: Option<String>,
     /// True if the line is a debit.
     pub is_debit: bool,
 }
@@ -164,7 +166,7 @@ pub fn counterparts(
     }
     let marks = vec!["?"; entry_ids.len()].join(", ");
     let mut statement = conn.prepare(&format!(
-        "SELECT l.entry_id, l.account_id, a.code, a.name_ur, a.name_en, l.dr_paisa > 0
+        "SELECT l.entry_id, l.account_id, a.code, a.name_ur, a.name_en, l.dr_paisa > 0, a.tag
          FROM journal_lines l JOIN accounts a ON a.id = l.account_id
          WHERE l.account_id <> ? AND l.entry_id IN ({marks})
          ORDER BY l.entry_id, l.line_no"
@@ -180,6 +182,7 @@ pub fn counterparts(
             name_ur: r.get(3)?,
             name_en: r.get(4)?,
             is_debit: r.get(5)?,
+            tag: r.get(6)?,
         })
     })?;
     for row in rows {

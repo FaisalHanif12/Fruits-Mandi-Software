@@ -2,8 +2,8 @@
 import type { Language } from './Language';
 import type { Paper } from './Paper';
 import type { PrintDoc } from './PrintDoc';
-import type { PrintFact } from './PrintFact';
-import type { PrintFirm } from './PrintFirm';
+import type { PrintFooter } from './PrintFooter';
+import type { PrintHeader } from './PrintHeader';
 import type { PrintPage } from './PrintPage';
 import type { TextDir } from './TextDir';
 
@@ -33,25 +33,20 @@ export type PrintData = {
    */
   urdu_digits: boolean;
   /**
-   * Fluent message ID of the title.
+   * The header: the firm, its contacts and trade mark, the title and the facts (number, date,
+   * bill date when it differs, truck). Plan 17e moved these here from the top level
+   * (`firm`, `title_id`, `facts`).
    */
-  title_id: string;
+  header: PrintHeader;
   /**
-   * The firm header.
+   * The footer: the print time and the labels of "Page x of y". Plan 17e moved `printed_at`
+   * here.
    */
-  firm: PrintFirm;
+  footer: PrintFooter;
   /**
-   * The بکری number, formatted for print.
+   * The بکری or voucher number, formatted for print.
    */
   number: string;
-  /**
-   * The facts of the header, in order: number, date, bill date (when it differs), truck.
-   */
-  facts: Array<PrintFact>;
-  /**
-   * The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-   */
-  printed_at: string;
   /**
    * True for a cancelled بکری; the template stamps the pages.
    */

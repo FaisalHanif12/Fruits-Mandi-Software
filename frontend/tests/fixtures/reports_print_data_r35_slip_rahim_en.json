@@ -1,0 +1,125 @@
+{
+  "report": "R35",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r35-title",
+  "filters": [
+    {
+      "label_id": "report-filter-as-of",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "1 Rahim"
+    }
+  ],
+  "columns": [
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-r35-total-qty",
+      "cell": {
+        "type": "number",
+        "text": "50"
+      }
+    },
+    {
+      "label_id": "report-r35-previous",
+      "cell": {
+        "type": "balance",
+        "text": "15,000",
+        "side_id": "report-side-dr"
+      }
+    },
+    {
+      "label_id": "report-r35-sold",
+      "cell": {
+        "type": "money",
+        "text": "24,316"
+      }
+    },
+    {
+      "label_id": "report-r35-cash-given",
+      "cell": {
+        "type": "money",
+        "text": "5,000"
+      }
+    },
+    {
+      "label_id": "report-r35-paid",
+      "cell": {
+        "type": "money",
+        "text": "4,316"
+      }
+    },
+    {
+      "label_id": "report-r35-balance",
+      "cell": {
+        "type": "balance",
+        "text": "0",
+        "side_id": "report-side-zero"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "number",
+          "text": "50"
+        },
+        {
+          "type": "names",
+          "text": "Box Banana"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "24,316"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "1",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null
+}

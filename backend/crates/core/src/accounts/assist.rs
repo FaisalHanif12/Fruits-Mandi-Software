@@ -83,6 +83,10 @@ pub struct AccountHit {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2, FR-7.40).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Second line in Urdu: father or firm and city.
     pub extra_ur: String,
     /// Second line in English.
@@ -207,6 +211,10 @@ pub struct PartyCard {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The tag (نشان), or absent if none (PRD 10.2, FR-7.38).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
     /// Father or firm in Urdu. Empty if none.
     pub father_or_firm_ur: String,
     /// Father or firm in English. Empty if none.

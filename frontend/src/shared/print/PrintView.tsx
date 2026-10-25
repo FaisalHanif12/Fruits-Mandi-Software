@@ -16,20 +16,45 @@ import { useLatest } from '../hooks';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorState } from '../ui/ErrorState';
 import { LoadingState } from '../ui/LoadingState';
-import type { PrintData } from './types';
+import type { PrintData, PrintFrame } from './types';
 import { fontFamiliesOf, waitForPrintReady, type PrintReady } from './wait-ready';
 
-interface PrintViewProps {
-  query: UseQueryResult<PrintData>;
+/** What every printed document gives: the frame the backend built, whatever its body is. */
+type PrintedFrame = Pick<PrintFrame, 'language' | 'urdu_digits'>;
+
+/** What the view needs to know of a document that its own type says: is it empty, and some text to load the fonts for. */
+export interface PrintDescription {
+  empty: boolean;
+  sample: string;
+}
+
+/** The sheets of a بکری or a voucher: empty when it has no page, the party names are the sample. */
+export function describePrintData(data: PrintData): PrintDescription {
+  return {
+    empty: data.pages.length === 0,
+    sample: data.pages.map((page) => page.party.name).join(' '),
+  };
+}
+
+interface PrintViewProps<D extends PrintedFrame> {
+  query: UseQueryResult<D>;
+  /** Says whether the document has nothing to print, and gives a sample of its text (for the fonts). */
+  describe: (data: D) => PrintDescription;
   /** The document is drawn, its fonts are loaded and its layout is final. Called once. */
   onReady?: (ready: PrintReady) => void;
   /** The print data could not be read. The codes of the error. Called once. */
   onFailed?: (codes: string[]) => void;
   /** Draws the document with the module's template. `ref` goes on the element that is measured. */
-  render: (data: PrintData, ref: Ref<HTMLDivElement>) => ReactNode;
+  render: (data: D, ref: Ref<HTMLDivElement>) => ReactNode;
 }
 
-export function PrintView({ query, onReady, onFailed, render }: PrintViewProps) {
+export function PrintView<D extends PrintedFrame>({
+  query,
+  describe,
+  onReady,
+  onFailed,
+  render,
+}: PrintViewProps<D>) {
   const ready = useLatest(onReady);
   const failed = useLatest(onFailed);
   const told = useRef(false);
@@ -43,7 +68,7 @@ export function PrintView({ query, onReady, onFailed, render }: PrintViewProps) 
   useEffect(() => {
     if (data === undefined) return undefined;
     let current = true;
-    const sample = data.pages.map((page) => page.party.name).join(' ');
+    const { sample } = describe(data);
     void waitForPrintReady(fontFamiliesOf(data), sample, documentRef.current).then((result) => {
       if (!current || told.current) return;
       told.current = true;
@@ -52,7 +77,7 @@ export function PrintView({ query, onReady, onFailed, render }: PrintViewProps) 
     return () => {
       current = false;
     };
-  }, [data, ready]);
+  }, [data, describe, ready]);
 
   useEffect(() => {
     if (error === null || told.current) return;
@@ -73,7 +98,7 @@ export function PrintView({ query, onReady, onFailed, render }: PrintViewProps) 
       />
     );
   }
-  if (query.data.pages.length === 0) {
+  if (describe(query.data).empty) {
     return (
       <EmptyState
         icon={FileX}

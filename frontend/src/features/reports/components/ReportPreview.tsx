@@ -14,7 +14,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { ExcelExportButton, type ExcelExporter } from '../../../shared/export';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { useReportPrintData } from '../hooks';
+import { usePrintFrameOf, useReportPrintData } from '../hooks';
 import { ReportPrintDocument } from '../print/ReportPrintDocument';
 import { PrintPreviewFrame } from './PrintPreviewFrame';
 
@@ -31,20 +31,23 @@ export function ReportPreview({ id, filters, onBack, exporter }: ReportPreviewPr
   const [language, setLanguage] = useState<Language>(appLanguage);
   const [paper, setPaper] = useState<Paper>('a4');
   const query = useReportPrintData({ id, filters, language, paper });
+  // The ONE header and footer of every print: the backend builds them from the title and the filters.
+  const frame = usePrintFrameOf(language, query.data);
 
   let body;
-  if (query.isPending) {
-    body = <LoadingState rows={8} />;
-  } else if (query.isError) {
+  if (query.isError || frame.isError) {
+    const failed = query.isError ? query : frame;
     body = (
       <ErrorState
         title={<Localized id="report-print-failed" />}
-        error={uiErrorOf(query.error)}
+        error={uiErrorOf(failed.error)}
         onRetry={() => {
-          void query.refetch();
+          void failed.refetch();
         }}
       />
     );
+  } else if (query.data === undefined || frame.data === undefined) {
+    body = <LoadingState rows={8} />;
   } else if (query.data.rows.length === 0 && query.data.summary.length === 0) {
     body = (
       <EmptyState
@@ -54,7 +57,7 @@ export function ReportPreview({ id, filters, onBack, exporter }: ReportPreviewPr
       />
     );
   } else {
-    body = <ReportPrintDocument data={query.data} />;
+    body = <ReportPrintDocument data={query.data} frame={frame.data} />;
   }
 
   return (

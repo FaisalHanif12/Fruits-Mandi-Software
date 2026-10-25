@@ -1,33 +1,26 @@
 // One printed report on screen, in the print language (PRD FR-7.36, FR-19.3, FR-19.5, FR-19.13).
-// It is the shared print layout: the firm header, the title and the filters (dates and party), the
-// lines above the table, every row, the totals row under its columns, the amount in words where the
-// backend sent it, and "Page x of y" as the page footer. Every figure and date is already written
-// by the backend in the print language; this file lays them out and adds up nothing (CLAUDE.md
-// rule 1). The in-app preview and the hidden print window (later) draw this same page.
+// It is the shared print layout: the ONE header of the app (`PrintHeader`: the firm, its contacts and
+// trade mark, the title and the filters, built by the backend's `reports_print_header`), the lines
+// above the table, every row, the totals row under its columns, the amount in words where the backend
+// sent it, and "Page x of y" as the page footer (the `PrintRoot` frame). Every figure and date is
+// already written by the backend in the print language; this file lays them out and adds up nothing
+// (CLAUDE.md rule 1). The in-app preview and the hidden print window draw this same page.
 
 import { useLocalization } from '@fluent/react';
-import { useEffect, type Ref } from 'react';
+import type { Ref } from 'react';
 import type { ReportPrintCell } from '../../../bindings/ReportPrintCell';
 import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
 import type { PrintFact } from '../../../bindings/PrintFact';
-import type { PrintFirm } from '../../../bindings/PrintFirm';
 import type { ReportColumnKind } from '../../../bindings/ReportColumnKind';
 import type { ReportId } from '../../../bindings/ReportId';
 import type { ReportPrintSummaryLine } from '../../../bindings/ReportPrintSummaryLine';
 import type { ReportRowKind } from '../../../bindings/ReportRowKind';
-import type { TextDir } from '../../../bindings/TextDir';
-import {
-  FOOTER_LABEL_IDS,
-  PrintProvider,
-  applyPrintRoot,
-  footerContent,
-} from '../../../shared/print';
+import { PrintHeader, PrintRoot, PrintScreenFooter, type PrintFrame } from '../../../shared/print';
 import { Num } from '../../../shared/ui/Num';
 import { ScriptText } from '../../../shared/ui/ScriptText';
 import { emptyNameMessageId, monthMessageId } from '../cells';
 import { Cell, cellClass } from './PrintCell';
-import { ReportSheetHeader } from './ReportSheetHeader';
 
 /** The heading of a column: its message, or the day, month or item it stands for. */
 function ColumnHeading({ heading, titleId }: { heading: PrintHeading | null; titleId: string }) {
@@ -76,13 +69,10 @@ export type PrintHeading =
  */
 export interface PrintTable {
   language: Language;
-  dir: TextDir;
   paper: Paper;
-  urdu_digits: boolean;
+  /** The title and the filters are what the backend turns into the shared header (`PrintFrameInput`). */
   title_id: string;
-  firm: PrintFirm;
   filters: PrintFact[];
-  printed_at: string;
   columns: { key: string; title_id: string; kind: ReportColumnKind }[];
   /** The heading of each column when it is not its message (same order as `columns`). */
   headings?: readonly (PrintHeading | null)[];
@@ -98,6 +88,8 @@ export interface PrintTable {
 
 interface ReportPrintDocumentProps {
   data: PrintTable;
+  /** The header and footer the backend built for this print (`reports_print_header`). */
+  frame: PrintFrame;
   /**
    * True in the hidden print window: the root element then takes the print language, direction and
    * footer, so the page margin boxes are right. False in the in-app preview, which must not change
@@ -107,19 +99,8 @@ interface ReportPrintDocumentProps {
   ref?: Ref<HTMLDivElement>;
 }
 
-function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentProps) {
+function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' | 'frame'>) {
   const { l10n } = useLocalization();
-  const words = {
-    printed: l10n.getString(FOOTER_LABEL_IDS.printed),
-    page: l10n.getString(FOOTER_LABEL_IDS.page),
-    of: l10n.getString(FOOTER_LABEL_IDS.of),
-  };
-  const footer = footerContent(words, data.printed_at, data.urdu_digits, data.paper !== 'mm80');
-  useEffect(() => {
-    if (!applyRoot) return undefined;
-    return applyPrintRoot({ language: data.language, dir: data.dir, footer });
-  }, [applyRoot, data.language, data.dir, footer]);
-
   // The party day sheet (R35) is the client's own slip: its lines first, what the day comes to
   // underneath (PRD FR-19.12). The other reports have their figures above the table.
   const sheet = data.report === 'R35';
@@ -138,25 +119,10 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
         ))}
       </dl>
     );
-  const { firm } = data;
   return (
-    <div
-      ref={ref}
-      className="print-doc print-report"
-      lang={data.language}
-      dir={data.dir}
-      data-paper={data.paper}
-      data-digits={data.urdu_digits ? 'urdu' : 'latin'}
-      data-window={applyRoot ? 'true' : undefined}
-    >
+    <div className="print-report">
       <section className="print-sheet">
-        <ReportSheetHeader
-          firm={firm}
-          titleId={data.title_id}
-          filters={data.filters}
-          printedAt={data.printed_at}
-          dayFilter={sheet}
-        />
+        <PrintHeader header={frame.header} />
         {sheet ? null : summaryLines}
         <table className="print-table">
           <thead>
@@ -217,7 +183,8 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
             <span className="print-words-text">{data.words.text}</span>
           </p>
         )}
-        {/* On paper the footer is the page margin (print.css). This line is for the preview. */}
+        {/* On paper the footer is the page margin (print.css). These lines are for the preview. */}
+        <PrintScreenFooter footer={frame.footer} />
         <p className="print-screen-footer">
           {l10n.getString('report-print-row-count')} <Num>{data.row_count}</Num>
         </p>
@@ -226,10 +193,20 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
   );
 }
 
-export function ReportPrintDocument(props: ReportPrintDocumentProps) {
+export function ReportPrintDocument({
+  data,
+  frame,
+  applyRoot = false,
+  ref,
+}: ReportPrintDocumentProps) {
   return (
-    <PrintProvider language={props.data.language}>
-      <ReportPrintBody {...props} />
-    </PrintProvider>
+    <PrintRoot
+      frame={frame}
+      paper={data.paper}
+      applyRoot={applyRoot}
+      {...(ref === undefined ? {} : { ref })}
+    >
+      <ReportPrintBody data={data} frame={frame} />
+    </PrintRoot>
   );
 }

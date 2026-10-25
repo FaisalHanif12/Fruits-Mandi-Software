@@ -5,19 +5,12 @@
   "paper": "a4",
   "urdu_digits": false,
   "title_id": "report-r13-title",
-  "firm": {
-    "name": "ماہر عدنان اینڈ برادرز",
-    "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
-    "address": "Kot Radha Kishan",
-    "phone": "03001234567"
-  },
   "filters": [
     {
       "label_id": "report-filter-party",
       "value": "1 اکرم ٹول ٹیکس"
     }
   ],
-  "printed_at": "10-10-2026 14:00",
   "columns": [
     {
       "key": "date",
@@ -184,6 +177,5 @@
   "words": {
     "label_id": "print-in-words",
     "text": "دو ہزار آٹھ سو اسی روپے"
-  },
-  "footer_id": "print-page-label"
+  }
 }

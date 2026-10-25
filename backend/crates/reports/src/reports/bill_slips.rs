@@ -31,12 +31,11 @@ use super::model::{
     Cell, ColumnKind, DetailPart, ReportId, ReportPrintInput, ResolvedFilters, RowKind,
 };
 use super::print_data::{
-    Fmt, PrintCell, PrintOptions, PrintReportColumn, PrintReportParty, PrintReportRow,
-    filter_facts, print_firm,
+    Fmt, PrintCell, PrintOptions, PrintReportColumn, PrintReportParty, PrintReportRow, filter_facts,
 };
 use super::sales::Slips;
 use crate::error::ReportsError;
-use crate::print::{PrintFact, PrintFirm, TextDir};
+use crate::print::{PrintFact, TextDir};
 
 /// One buyer's slip.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -70,12 +69,9 @@ pub struct BuyerBillsPrintData {
     pub urdu_digits: bool,
     /// Fluent message ID of the title.
     pub title_id: String,
-    /// The firm header.
-    pub firm: PrintFirm,
-    /// The filters of the run, for the header: dates, buyer, seller and so on (FR-19.10).
+    /// The filters of the run, the facts under the title: dates, buyer, seller and so on
+    /// (FR-19.10). They go to `reports_print_header` with the title.
     pub filters: Vec<PrintFact>,
-    /// The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-    pub printed_at: String,
     /// The columns of every slip.
     pub columns: Vec<PrintReportColumn>,
     /// The slips, in the Urdu order of the buyers' names. The template starts a new page for each.
@@ -90,8 +86,6 @@ pub struct BuyerBillsPrintData {
     pub totals: Vec<PrintCell>,
     /// Fluent message ID of the label of a slip's quantity total (total Nag).
     pub qty_label_id: String,
-    /// Fluent message ID of the words used for "Page x of y" in the shared layout.
-    pub footer_id: String,
 }
 
 /// The columns of a slip.
@@ -182,9 +176,7 @@ pub(crate) fn build(
         paper: options.paper,
         urdu_digits: fmt.style.urdu_digits(),
         title_id: ids::title_id("R5"),
-        firm: print_firm(&fmt, options),
         filters: filter_facts(&fmt, ReportId::R5, filters)?,
-        printed_at: fmt.style.printed_at(options.now_utc),
         columns: columns(),
         slip_count: fmt
             .style
@@ -194,7 +186,6 @@ pub(crate) fn build(
         totals_label_id: ids::TOTAL.to_owned(),
         totals: sums(&fmt, slips.value, slips.total)?,
         qty_label_id: ids::R35_TOTAL_QTY.to_owned(),
-        footer_id: ids::PAGE_FOOTER.to_owned(),
     })
 }
 

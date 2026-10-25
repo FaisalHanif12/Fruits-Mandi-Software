@@ -3,7 +3,7 @@
 // balance went down), the sellers' balances and party cards, the partners' totals and statements,
 // a garden's history, the search recents and the day.
 
-import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useDebouncedValue, usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { fruitCancel, fruitEdit, fruitGet, fruitList, fruitPreview, fruitSave } from './api';
 import type { FruitCancelInput, FruitInput, FruitListInput, FruitSaveRequest } from './types';
@@ -78,5 +78,15 @@ export function useFruitList(filter: Omit<FruitListInput, 'offset' | 'limit'>) {
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
+  });
+}
+
+/** One saved entry, for the saved view that its address opens (PRD FR-19.4). Never kept: an edit changes it. */
+export function useFruitEntry(id: number | null) {
+  return useQuery({
+    queryKey: [...FRUIT_KEY, 'one', id],
+    queryFn: () => fruitGet({ id: id ?? 0 }),
+    enabled: id !== null,
+    staleTime: 0,
   });
 }

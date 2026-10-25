@@ -9,6 +9,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { UiError } from '../../../bindings/UiError';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { useEscape, useFormNavigation } from '../../../shared/keyboard';
@@ -179,9 +180,7 @@ export function RuleTestPage() {
     void navigate({ to: '/index/rules' });
   });
   const toValue = (hit: { id: number; code: string; name_ur: string; name_en: string } | null) =>
-    hit === null
-      ? null
-      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+    hit === null ? null : pickedOf(hit);
 
   return (
     <div className="flex max-w-form flex-col gap-5">

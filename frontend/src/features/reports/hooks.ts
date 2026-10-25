@@ -3,6 +3,11 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { useDebouncedValue } from '../../shared/hooks';
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
+import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
+import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
+import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
+import type { Language } from '../../bindings/Language';
+import type { PrintFact } from '../../bindings/PrintFact';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
 import type { ReportFilters } from '../../bindings/ReportFilters';
@@ -17,6 +22,9 @@ import {
   reportsListPrinters,
   reportsPrint,
   reportsPrintData,
+  reportsCollectionPrintData,
+  reportsPrintCollection,
+  reportsPrintHeader,
   reportsPrintVoucher,
   reportsRun,
   reportsVoucherPrintData,
@@ -117,6 +125,20 @@ export function useReportPrintData(input: ReportPrintInput | null) {
   });
 }
 
+/** The print data of the collection list of one day. A print is a snapshot, like the above. */
+export function useCollectionPrintData(input: CollectionPrintDataInput | null) {
+  return useQuery({
+    queryKey: ['reports', 'collection-print-data', input],
+    queryFn: () => {
+      if (input === null) throw new Error('no print input');
+      return reportsCollectionPrintData(input);
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
 /** The print data of all the credit buyers' slips of R5: a snapshot, like the print above. */
 export function useBuyerBillsPrintData(input: ReportPrintInput | null) {
   return useQuery({
@@ -129,6 +151,41 @@ export function useBuyerBillsPrintData(input: ReportPrintInput | null) {
     staleTime: Infinity,
     gcTime: 0,
   });
+}
+
+/** Print the collection list of a day, or save it as PDF. The caller shows the outcome or the error. */
+export function usePrintCollection() {
+  return useMutation({
+    mutationFn: (input: PrintCollectionInput) => reportsPrintCollection(input),
+  });
+}
+
+/** The shared header and footer of a report print (title and facts in, header and footer out). */
+export function usePrintFrame(input: PrintFrameInput | null) {
+  return useQuery({
+    queryKey: ['reports', 'print-frame', input],
+    queryFn: () => {
+      if (input === null) throw new Error('no print input');
+      return reportsPrintHeader(input);
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+/**
+ * The shared header and footer of a print whose data holds its title and its filters (every report and
+ * analytics print): asked once the data is there, in the language the print was asked for, from that
+ * title and those filters (PRD FR-19.13).
+ */
+export function usePrintFrameOf(
+  language: Language,
+  source: { title_id: string; filters: PrintFact[] } | undefined,
+) {
+  return usePrintFrame(
+    source === undefined ? null : { language, title_id: source.title_id, facts: source.filters },
+  );
 }
 
 /** How long the text of a person search rests before the backend is asked (Code Standards F35). */

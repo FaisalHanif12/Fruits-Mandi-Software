@@ -270,11 +270,10 @@ pub fn print_data(
         offset: 0,
         limit: None,
     };
-    let (page, firm, grouping, setup) = db.read(|conn| {
+    let (page, grouping, setup) = db.read(|conn| {
         let (typed, table) = build(conn, db, input.view, &input.filters, all)?;
         Ok::<_, ReportsError>((
             page_of(input.view, &typed, table, all),
-            load_firm(conn)?,
             load_grouping(conn)?,
             load_setup(conn)?,
         ))
@@ -286,8 +285,6 @@ pub fn print_data(
             grouping,
             urdu_digits_setting: setup.urdu_digits,
             paper: input.paper.unwrap_or(Paper::A4),
-            firm,
-            now_utc: db.clock().now_utc(),
         },
     )
 }

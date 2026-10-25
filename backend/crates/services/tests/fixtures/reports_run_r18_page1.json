@@ -263,7 +263,7 @@
           "party": {
             "account_id": 9,
             "code": "03049999",
-            "short_code": "9999",
+            "short_code": null,
             "name_ur": "پختہ کھاتہ (خریدار)",
             "name_en": "Pukhta Khata (Buyer)",
             "tag": null,

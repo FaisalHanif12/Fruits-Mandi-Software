@@ -81,18 +81,16 @@
   "totals_label_id": "report-total",
   "totals": [
     {
-      "type": "number",
-      "value": 20
-    },
-    {
       "type": "empty"
     },
     {
       "type": "empty"
     },
     {
-      "type": "money",
-      "paisa": 1288000
+      "type": "empty"
+    },
+    {
+      "type": "empty"
     }
   ],
   "summary": [
@@ -104,18 +102,18 @@
       }
     },
     {
+      "label_id": "report-r35-bought",
+      "cell": {
+        "type": "money",
+        "paisa": 1288000
+      }
+    },
+    {
       "label_id": "report-r35-previous",
       "cell": {
         "type": "balance",
         "paisa": 0,
         "side": "zero"
-      }
-    },
-    {
-      "label_id": "report-r35-bought",
-      "cell": {
-        "type": "money",
-        "paisa": 1288000
       }
     },
     {

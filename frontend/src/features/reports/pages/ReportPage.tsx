@@ -85,8 +85,8 @@ function useOpenSource(catalog: readonly ReportCatalogEntry[], reportId: ReportC
         }
         return;
       case 'fruit':
-        // A row of the fruit register is one fruit entry: its screen lists it with the others.
-        void navigate({ to: '/rokar/fruit' });
+        // A row of the fruit register is one fruit entry: its screen opens it in its saved view.
+        void navigate({ to: '/rokar/fruit', search: { entry: source.id } });
         return;
       case 'account':
         // The ledger of the account is the most useful record behind it (R13), when it is built.

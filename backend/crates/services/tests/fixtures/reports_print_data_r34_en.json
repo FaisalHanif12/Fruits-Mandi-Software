@@ -5,12 +5,6 @@
   "paper": "a4",
   "urdu_digits": false,
   "title_id": "report-r34-title",
-  "firm": {
-    "name": "Maher Adnan and Brothers",
-    "mandi": "New Sabzi Mandi Kot Radha Kishan",
-    "address": "Kot Radha Kishan",
-    "phone": "03001234567"
-  },
   "filters": [
     {
       "label_id": "report-filter-from",
@@ -21,7 +15,6 @@
       "value": "10-10-2026"
     }
   ],
-  "printed_at": "10-10-2026 14:00",
   "columns": [
     {
       "key": "date",
@@ -609,6 +602,5 @@
       "type": "empty"
     }
   ],
-  "words": null,
-  "footer_id": "print-page-label"
+  "words": null
 }

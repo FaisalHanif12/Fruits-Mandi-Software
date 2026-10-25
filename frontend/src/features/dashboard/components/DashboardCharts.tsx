@@ -11,7 +11,7 @@ import type { DashboardChartItem } from '../../../bindings/DashboardChartItem';
 import { BarChart } from '../../../shared/charts';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { useLanguage } from '../../../shared/i18n';
-import { EmptyState } from '../../../shared/ui';
+import { EmptyState, RUNNING_NUMBER } from '../../../shared/ui';
 import { daysAreEmpty, daysChart, itemsChart, type ChartWords } from '../charts';
 
 interface DashboardChartsProps {
@@ -30,7 +30,7 @@ function ChartCard({
 }) {
   return (
     <figure className="flex min-w-0 flex-col gap-2 rounded-3 border border-border bg-surface p-4">
-      <Localized id={titleId}>
+      <Localized id={titleId} elems={RUNNING_NUMBER}>
         <figcaption className="type-section text-ink" />
       </Localized>
       {empty ? (

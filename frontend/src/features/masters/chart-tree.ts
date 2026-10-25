@@ -16,6 +16,8 @@ export interface TreeRow {
   code: string;
   name_ur: string;
   name_en: string;
+  /** The tag (نشان) after an account's name, shown by `displayName`. Absent when there is none. */
+  tag?: string;
   balance: Balance;
   /** Heads and controls can be opened; an account cannot. */
   expandable: boolean;
@@ -38,6 +40,7 @@ function accountRow(account: ChartAccount, parent: string): TreeRow {
     code: account.code,
     name_ur: account.name_ur,
     name_en: account.name_en,
+    ...(account.tag === undefined ? {} : { tag: account.tag }),
     balance: account.balance,
     expandable: false,
     expanded: false,

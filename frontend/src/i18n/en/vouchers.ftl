@@ -577,3 +577,13 @@ vouchers-number-khata-in = KI-{ $number }
 
 # review: pending
 vouchers-number-general = G-{ $number }
+
+## Printing the collection list (plan 17e, PRD FR-15.6).
+
+# The title of the print box of the collection list.
+# review: pending
+vouchers-collection-print-title = Print the { -agrahi } list
+
+# $date is the day of the list, for example 10-10-2026.
+# review: pending
+vouchers-collection-print-help = Prints the { -agrahi } list of { $date }, as it is on the screen. Choose the language and where it goes.

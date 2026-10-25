@@ -83,9 +83,10 @@ function secondaryText(line: StatementLine, say: StatementSay): string {
 }
 
 /**
- * A fruit line of an entry that was changed or cancelled since: the backend gives the details
- * (item, packing, values) only for the posting in force, so an older posting and its reversal have
- * the number only (PRD FR-17.10). They read as that, never as a sentence with holes.
+ * A fruit line of an entry that was changed since: the backend gives the details (item, packing,
+ * values) only for the posting in force, so an older posting and its reversal have the number only
+ * (PRD FR-17.10). A cancelled entry keeps its details. They read as that, never as a sentence
+ * with holes.
  */
 function isOldFruitLine(line: StatementLine): boolean {
   return line.detail === 'fruit_taken' && line.values['qty'] === undefined;

@@ -355,6 +355,66 @@ print-r5-col-value = Amount
 # review: pending
 print-r5-col-total = Amount after { -laga }
 
-# One line of a buyer, the client's way: "(کیلا 20 . 600)". $item: the item name in the print language; $qty and $rate are numbers.
+# A line of an item sold by weight in the buyer's bill (R5): the weight in kilograms and the rate for each
+# kilo, written the client's way. A line of a نگ item is written by the backend ("(کیلا 20 . 600)").
+# $item: the item in the print language; $weight: kilograms; $rate: the rate for each kilo.
 # review: pending
-print-r5-line = ({ $item } { $qty } . { $rate })
+print-r5-line-weight = ({ $item } { $weight } kg . { $rate })
+
+## The collection list on paper (plan 17e, PRD FR-15.6, FR-7.61).
+
+# The name of the document in the Printing settings and in the print box.
+# review: pending
+print-doc-collection-list = { -agrahi } list
+
+# The title in the header of the collection list.
+# review: pending
+print-collection-list-title = { -agrahi } list
+
+# A fact under the title: the city the list is filtered by.
+# review: pending
+print-fact-city = City
+
+# The heading of a group with no collector, and of one with no city.
+# review: pending
+print-collection-no-collector = No collector set
+
+# review: pending
+print-collection-no-city = No city set
+
+# review: pending
+print-collection-col-serial = No.
+
+# The short code of the buyer.
+# review: pending
+print-collection-col-code = Code
+
+# review: pending
+print-collection-col-party = Party
+
+
+# review: pending
+print-collection-col-dues = Dues
+
+# The date of the oldest bill still open, and how many days old it is.
+# review: pending
+print-collection-col-oldest = Oldest bill
+
+# review: pending
+print-collection-col-days = Days
+
+# Left empty, for the collector to write in.
+# review: pending
+print-collection-col-note = Note
+
+# The total of one collector and city.
+# review: pending
+print-collection-group-total = Total
+
+# The number of buyers on the list.
+# review: pending
+print-collection-buyers = Buyers on this list
+
+# The total of THIS list only: the buyers planned for this day, not every buyer who owes.
+# review: pending
+print-collection-total = Total of this list

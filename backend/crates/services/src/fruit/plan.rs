@@ -501,6 +501,7 @@ fn finish(
                 code: String::new(),
                 name_ur: partner.name_ur.clone(),
                 name_en: partner.name_en.clone(),
+                tag: None,
             },
             amount_paisa: part.amount,
             total_before_paisa: before,

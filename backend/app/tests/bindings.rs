@@ -486,6 +486,17 @@ const EXPECTED_FILES: &[&str] = &[
     "TextDir.ts",
     "PrintFirm.ts",
     "PrintFact.ts",
+    "PrintContact.ts",
+    "PrintHeader.ts",
+    "PrintFooter.ts",
+    "PrintFrameInput.ts",
+    "PrintFrame.ts",
+    "CollectionPrintDataInput.ts",
+    "CollectionPrintRow.ts",
+    "CollectionPrintGroup.ts",
+    "CollectionPrintData.ts",
+    "PrintCollectionInput.ts",
+    "FirmContact.ts",
     "PrintParty.ts",
     "PrintLine.ts",
     "AmountRole.ts",
@@ -644,6 +655,9 @@ const EXPECTED_FILES: &[&str] = &[
     // Run B, D5 round 12 (append-only block).
     "BuyerBillsPrintData.ts",
     "BuyerBillSlip.ts",
+    // Run B, D5 round 14 (append-only block).
+    "PrintReportInput.ts",
+    "PrintAnalyticsViewInput.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -1031,6 +1045,12 @@ fn export_bindings() {
     mandi_reports::print::VoucherPrintDataInput::export_all(&cfg).unwrap();
     printing::PrintVoucherInput::export_all(&cfg).unwrap();
     mandi_reports::print::PrintData::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintFrameInput::export_all(&cfg).unwrap();
+    mandi_reports::print::PrintFrame::export_all(&cfg).unwrap();
+    mandi_reports::print::CollectionPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::print::CollectionPrintData::export_all(&cfg).unwrap();
+    printing::PrintCollectionInput::export_all(&cfg).unwrap();
+    mandi_services::core::firm::FirmContact::export_all(&cfg).unwrap();
     UiError::export_all(&cfg).unwrap();
     UiErrorItem::export_all(&cfg).unwrap();
     ErrorCode::export_all(&cfg).unwrap();
@@ -1101,6 +1121,9 @@ fn export_bindings() {
     mandi_app_lib::commands::screen_prefs::ScreenState::export_all(&cfg).unwrap();
     // Run B, D5 round 12 (append-only block).
     mandi_reports::reports::BuyerBillsPrintData::export_all(&cfg).unwrap();
+    // Run B, D5 round 14 (append-only block).
+    mandi_app_lib::print_report::PrintReportInput::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintAnalyticsViewInput::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(
@@ -1295,6 +1318,8 @@ fn plan_04_contract_shapes() {
             "mandi_en: string",
             "address: string",
             "phone: string",
+            "firm_contacts: Array<FirmContact>",
+            "trade_mark: string",
             "confirmed_rules_words: Array<string>",
         ],
     );

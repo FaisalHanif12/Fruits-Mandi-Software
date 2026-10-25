@@ -9,6 +9,7 @@ import { Localized } from '@fluent/react';
 import { FileText, Pencil, Printer, SearchX, Ban } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { VouchersListInput } from '../../../bindings/VouchersListInput';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { PagedList } from '../../../shared/grid';
@@ -155,11 +156,7 @@ export function VoucherListSection({
                 showCard={false}
                 value={account}
                 onChange={(hit) => {
-                  setAccount(
-                    hit === null
-                      ? null
-                      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                  );
+                  setAccount(hit === null ? null : pickedOf(hit));
                 }}
               />
             )}

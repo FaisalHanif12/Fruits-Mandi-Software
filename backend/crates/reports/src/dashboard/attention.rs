@@ -60,7 +60,7 @@ fn count_of(len: usize) -> Result<i64, ReportsError> {
 /// Named buyers over their credit limit (the rule of the party card).
 fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, ReportsError> {
     let mut statement = conn.prepare(
-        "SELECT a.id, a.name_ur, a.name_en, a.credit_limit_paisa
+        "SELECT a.id, a.name_ur, a.name_en, a.credit_limit_paisa, a.tag
          FROM accounts a JOIN account_controls k ON k.id = a.control_id
          WHERE k.code = '0304' AND a.is_pukhta_khata = 0 AND a.credit_limit_paisa IS NOT NULL
          ORDER BY a.code",
@@ -72,6 +72,7 @@ fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, Reports
                 r.get::<_, String>(1)?,
                 r.get::<_, String>(2)?,
                 r.get::<_, i64>(3)?,
+                r.get::<_, Option<String>>(4)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -80,14 +81,14 @@ fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, Reports
     for chunk in ids.chunks(IN_CHUNK) {
         totals.extend(totals_for_accounts(conn, chunk)?);
     }
-    // (excess, account id, names)
-    let mut over: Vec<(Paisa, i64, String, String)> = Vec::new();
-    for (id, name_ur, name_en, limit) in limits {
+    // (excess, account id, names, tag)
+    let mut over: Vec<(Paisa, i64, String, String, Option<String>)> = Vec::new();
+    for (id, name_ur, name_en, limit, tag) in limits {
         let Some(t) = totals.get(&id) else { continue };
         let used = paisa(t.dr_paisa)?.checked_sub(paisa(t.cr_paisa)?)?;
         let limit = paisa(limit)?;
         if used > limit {
-            over.push((used.checked_sub(limit)?, id, name_ur, name_en));
+            over.push((used.checked_sub(limit)?, id, name_ur, name_en, tag));
         }
     }
     over.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
@@ -96,7 +97,7 @@ fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, Reports
         add(&mut amount, *excess)?;
     }
     let count = count_of(over.len())?;
-    Ok(over.first().cloned().map(|(_, id, name_ur, name_en)| {
+    Ok(over.first().cloned().map(|(_, id, name_ur, name_en, tag)| {
         item(
             AttentionKind::OverCreditLimit,
             count,
@@ -108,6 +109,7 @@ fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, Reports
                 person_key: None,
                 name_ur: Some(name_ur),
                 name_en: Some(name_en),
+                tag,
             }),
         )
     }))
@@ -153,6 +155,7 @@ fn dues_old(facts: &Facts) -> Result<Option<AttentionItem>, ReportsError> {
                 person_key: party.person_key.clone(),
                 name_ur: Some(party.name_ur.clone()),
                 name_en: Some(party.name_en.clone()),
+                tag: party.tag.clone(),
             }),
         )
     }))
@@ -288,6 +291,7 @@ fn payables_old(conn: &Connection, facts: &Facts) -> Result<Option<AttentionItem
                 person_key: party.person_key.clone(),
                 name_ur: Some(party.name_ur.clone()),
                 name_en: Some(party.name_en.clone()),
+                tag: party.tag.clone(),
             }),
         )
     }))
@@ -317,6 +321,7 @@ fn overdue_item(
             person_key: None,
             name_ur: Some(first.name_ur.clone()),
             name_en: Some(first.name_en.clone()),
+            tag: None,
         }),
     )))
 }

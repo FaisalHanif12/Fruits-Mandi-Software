@@ -6,6 +6,7 @@
 import { Localized } from '@fluent/react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
+import { pickedOf } from '../../../shared/accounts';
 import {
   ControlAccountPicker,
   DateInput,
@@ -53,15 +54,7 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
             showCard={false}
             onChange={(account) => {
               onChange({
-                khata:
-                  account === null
-                    ? null
-                    : {
-                        id: account.id,
-                        code: account.code,
-                        name_ur: account.name_ur,
-                        name_en: account.name_en,
-                      },
+                khata: account === null ? null : pickedOf(account),
               });
             }}
             onAddNew={setAdding}

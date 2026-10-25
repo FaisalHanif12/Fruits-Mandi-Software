@@ -5,17 +5,30 @@
 import { Localized } from '@fluent/react';
 import type { AnalyticsResolvedFilters } from '../../../bindings/AnalyticsResolvedFilters';
 import { isoToDisplayDate } from '../../../shared/format';
+import { RUNNING_NUMBER } from '../../../shared/ui';
 
 export function AnalyticsRange({ filters }: { filters: AnalyticsResolvedFilters }) {
   const from = filters.from === null ? null : isoToDisplayDate(filters.from);
   const to = filters.to === null ? null : isoToDisplayDate(filters.to);
   let line;
   if (from !== null && to !== null) {
-    line = <Localized id="report-range-from-to" vars={{ from, to }} />;
+    line = (
+      <Localized id="report-range-from-to" vars={{ from, to }} elems={RUNNING_NUMBER}>
+        <span />
+      </Localized>
+    );
   } else if (from !== null) {
-    line = <Localized id="report-range-from" vars={{ from }} />;
+    line = (
+      <Localized id="report-range-from" vars={{ from }} elems={RUNNING_NUMBER}>
+        <span />
+      </Localized>
+    );
   } else if (to !== null) {
-    line = <Localized id="report-range-to" vars={{ to }} />;
+    line = (
+      <Localized id="report-range-to" vars={{ to }} elems={RUNNING_NUMBER}>
+        <span />
+      </Localized>
+    );
   } else {
     line = <Localized id="report-range-all" />;
   }

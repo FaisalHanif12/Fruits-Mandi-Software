@@ -5,12 +5,6 @@
   "paper": "a4",
   "urdu_digits": false,
   "title_id": "report-r35-title",
-  "firm": {
-    "name": "Maher Adnan and Brothers",
-    "mandi": "New Sabzi Mandi Kot Radha Kishan",
-    "address": "Kot Radha Kishan",
-    "phone": "03001234567"
-  },
   "filters": [
     {
       "label_id": "report-filter-as-of",
@@ -21,7 +15,6 @@
       "value": "1 Akram Toll Tax"
     }
   ],
-  "printed_at": "10-10-2026 14:00",
   "columns": [
     {
       "key": "qty",
@@ -53,18 +46,18 @@
       }
     },
     {
+      "label_id": "report-r35-bought",
+      "cell": {
+        "type": "money",
+        "text": "12,880"
+      }
+    },
+    {
       "label_id": "report-r35-previous",
       "cell": {
         "type": "balance",
         "text": "0",
         "side_id": "report-side-zero"
-      }
-    },
-    {
-      "label_id": "report-r35-bought",
-      "cell": {
-        "type": "money",
-        "text": "12,880"
       }
     },
     {
@@ -110,20 +103,17 @@
   "totals_label_id": "report-total",
   "totals": [
     {
-      "type": "number",
-      "text": "20"
-    },
-    {
       "type": "empty"
     },
     {
       "type": "empty"
     },
     {
-      "type": "money",
-      "text": "12,880"
+      "type": "empty"
+    },
+    {
+      "type": "empty"
     }
   ],
-  "words": null,
-  "footer_id": "print-page-label"
+  "words": null
 }

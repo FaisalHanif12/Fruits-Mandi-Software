@@ -13,6 +13,11 @@ export type PrintLine = {
    */
   name: string | null;
   /**
+   * The tag (نشان) of that buyer, printed after his name. Absent if none, on a slip, and for
+   * a one-time buyer (PRD 10.2).
+   */
+  name_tag?: string;
+  /**
    * The item in the print language.
    */
   item: string;
@@ -36,6 +41,12 @@ export type PrintLine = {
    * The amount: the seller amount on the seller bill, the buyer value on a slip.
    */
   amount: string;
+  /**
+   * The line written the client's way for R5 and the buyer slips: `(item qty . rate)`, for
+   * example `(کیلا 20 . 600)` (PRD R5, plan 17e). Built here from the item name in the print
+   * language and the formatted quantity and rate, so the template only lays it out.
+   */
+  detail: string;
   /**
    * The line note as typed. Null if none.
    */

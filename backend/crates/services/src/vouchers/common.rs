@@ -201,6 +201,7 @@ pub(super) fn resolve_party(
         code: row.code,
         name_ur: row.name_ur,
         name_en: row.name_en,
+        tag: row.tag,
     });
     let Some(record) = record else {
         errors.push(FieldError::new(ErrorCode::ErrNotFound, "account_id"));

@@ -354,11 +354,14 @@ pub enum ErrorCode {
     /// A بکری cannot be cancelled while fruit taken from one of its lots is in force: cancel those
     /// entries first (plan 17d). Field `id`. Values: `qty_taken` (نگ).
     ErrBikriHasFruit,
+    /// The tag (نشان) of an account is not 1 to 4 English capital letters and dots with at least
+    /// one letter (PRD 10.2, FR-7.28, Code Standards 4.2; plan 17e). Field `tag`.
+    ErrTagInvalid,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 129] = [
+    pub const ALL: [ErrorCode; 130] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -488,6 +491,7 @@ impl ErrorCode {
         ErrorCode::ErrGardenEntryCancelled,
         ErrorCode::ErrFruitCancelled,
         ErrorCode::ErrBikriHasFruit,
+        ErrorCode::ErrTagInvalid,
     ];
 }
 

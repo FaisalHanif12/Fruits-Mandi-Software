@@ -122,6 +122,7 @@ pub(crate) fn record_of(partner_id: i64, name_ur: &str, name_en: &str) -> Record
         code: String::new(),
         name_ur: name_ur.to_owned(),
         name_en: name_en.to_owned(),
+        tag: None,
     }
 }
 

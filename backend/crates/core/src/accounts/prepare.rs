@@ -302,6 +302,9 @@ pub fn prepare_account(
         &input.father_or_firm_en,
         validate::name_en,
     );
+    // The tag (نشان, PRD 10.2): empty or 1 to 4 English capital letters and dots. Stored once, in
+    // its own column, and one more word in the three search keys (Code Standards B26).
+    let tag = errors.take(validate::tag("tag", &input.tag));
     let phone1 = errors.take(validate::phone_optional("phone1", &input.phone1));
     let phone2 = errors.take(validate::phone_optional("phone2", &input.phone2));
     let address = errors.take(validate::free_text("address", &input.address));
@@ -380,23 +383,31 @@ pub fn prepare_account(
     let (
         Some(ur),
         Some(en),
+        Some(tag),
         Some(phone1),
         Some(phone2),
         Some(address),
         Some(note),
         Some(credit_limit),
-    ) = (ur, en, phone1, phone2, address, note, credit_limit)
+    ) = (ur, en, tag, phone1, phone2, address, note, credit_limit)
     else {
         return Err(vec![error(ErrorCode::ErrInternal, "account")]);
     };
     let mut fields: Vec<(&'static str, ColValue)> = vec![
         ("name_ur", ColValue::Text(ur.clone())),
         ("name_en", ColValue::Text(en.clone())),
-        ("search_ur", ColValue::Text(text::search_ur(&ur))),
-        ("search_en", ColValue::Text(text::search_en(&en))),
+        ("tag", optional(tag.as_deref().unwrap_or_default())),
+        (
+            "search_ur",
+            ColValue::Text(text::search_ur_tagged(&ur, tag.as_deref())),
+        ),
+        (
+            "search_en",
+            ColValue::Text(text::search_en_tagged(&en, tag.as_deref())),
+        ),
         (
             "search_phonetic",
-            ColValue::Text(text::search_phonetic(&en)),
+            ColValue::Text(text::search_phonetic_tagged(&en, tag.as_deref())),
         ),
         ("father_or_firm_ur", optional(&father_ur)),
         ("father_or_firm_en", optional(&father_en)),

@@ -7,6 +7,7 @@ import { useLocalization } from '@fluent/react';
 import { Code } from '../ui/Code';
 import { Num } from '../ui/Num';
 import { ScriptText } from '../ui/ScriptText';
+import { PrintName } from './PrintName';
 import { COLUMN_HEAD_ID, type Paper, type PrintColumn, type PrintLine } from './types';
 
 interface PrintGoodsProps {
@@ -28,7 +29,7 @@ function Cell({ column, line }: { column: PrintColumn; line: PrintLine }) {
     case 'date':
       return <Num>{line.date}</Num>;
     case 'buyer':
-      return <ScriptText>{line.name ?? ''}</ScriptText>;
+      return <PrintName name={line.name ?? ''} tag={line.name_tag} />;
     case 'item':
       return <ScriptText>{line.item}</ScriptText>;
     case 'packing':
@@ -99,7 +100,7 @@ function CompactLines({ lines, columns }: Omit<PrintGoodsProps, 'paper'>) {
             <span className="print-compact-name">
               {showBuyer && line.name !== null ? (
                 <>
-                  <ScriptText>{line.name}</ScriptText>{' '}
+                  <PrintName name={line.name} tag={line.name_tag} />{' '}
                 </>
               ) : null}
               <ScriptText>{line.item}</ScriptText> <ScriptText>{line.packing}</ScriptText>

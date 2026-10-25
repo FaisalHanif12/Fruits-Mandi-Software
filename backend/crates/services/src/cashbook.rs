@@ -141,5 +141,6 @@ fn counterpart(
         code: line.code.clone(),
         name_ur: line.name_ur.clone(),
         name_en: line.name_en.clone(),
+        tag: line.tag.clone(),
     })
 }

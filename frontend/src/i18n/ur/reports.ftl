@@ -112,7 +112,7 @@ report-pick-party-help = یہ رپورٹ ایک کھاتے کی ہوتی ہے۔ 
 report-balance-only-help = صرف بقایا دکھائے گئے ہیں۔ ہر اندراج دیکھنے کے لیے "تفصیل کے ساتھ" پر نشان لگائیں۔
 
 # review: pending
-report-count = { $total } میں سے { $shown } قطاریں دکھائی گئی ہیں
+report-count = <num>{ $total }</num> میں سے <num>{ $shown }</num> قطاریں دکھائی گئی ہیں
 
 # review: pending
 report-more = مزید قطاریں
@@ -183,19 +183,19 @@ report-filter-detail = تفصیل کے ساتھ
 report-filter-balance-only = صرف بقایا
 
 # review: pending
-report-range-from-to = { $from } سے { $to } تک
+report-range-from-to = <num>{ $from }</num> سے <num>{ $to }</num> تک
 
 # review: pending
-report-range-from = { $from } سے
+report-range-from = <num>{ $from }</num> سے
 
 # review: pending
-report-range-to = { $to } تک
+report-range-to = <num>{ $to }</num> تک
 
 # review: pending
 report-range-all = تمام تاریخیں
 
 # review: pending
-report-as-of-shown = { $date } تک کا بقایا
+report-as-of-shown = <num>{ $date }</num> تک کا بقایا
 
 # review: pending
 report-as-of-now = آج تک کا بقایا
@@ -1163,7 +1163,7 @@ report-r35-sellers-remaining = بیوپاریوں کا { -baqaya }
 report-filter-day = دن
 
 # review: pending
-report-day-shown = { $date } کی پرچی
+report-day-shown = <num>{ $date }</num> کی پرچی
 
 # review: pending
 report-day-now = آج کی پرچی

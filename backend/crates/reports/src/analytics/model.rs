@@ -9,7 +9,7 @@ use mandi_core::printing::Paper;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::print::{PrintFact, PrintFirm, TextDir};
+use crate::print::{PrintFact, TextDir};
 use crate::reports::{
     Cell, Column, ColumnKind, Names, PartyFilter, PartyRef, PrintCell, Row, RowKind,
 };
@@ -608,12 +608,9 @@ pub struct AnalyticsPrintData {
     pub urdu_digits: bool,
     /// Fluent message ID of the title.
     pub title_id: String,
-    /// The firm header.
-    pub firm: PrintFirm,
-    /// The filters of the run, for the header.
+    /// The filters of the run, the facts under the title. They go to `reports_print_header` with
+    /// the title.
     pub filters: Vec<PrintFact>,
-    /// The time of this print in Pakistan time, `DD-MM-YYYY HH:MM`.
-    pub printed_at: String,
     /// The columns.
     pub columns: Vec<AnalyticsPrintColumn>,
     /// Every row of the filter.
@@ -624,8 +621,6 @@ pub struct AnalyticsPrintData {
     pub totals_label_id: String,
     /// The totals row, one cell for each column.
     pub totals: Vec<PrintCell>,
-    /// Fluent message ID used for "Page x of y" in the shared layout.
-    pub footer_id: String,
 }
 
 /// One saved view of PRD FR-18.5: a name and a set of filters.

@@ -7,7 +7,7 @@ use super::*;
 pub(super) fn table_columns() -> Vec<crate::reports::model::Column> {
     vec![
         col("code", ids::COL_CODE, ColumnKind::Text),
-        col("party", ids::COL_ACCOUNT, ColumnKind::Party),
+        col("party", ids::COL_PARTY, ColumnKind::Party),
         col("previous", ids::COL_PREVIOUS, ColumnKind::Balance),
         col("debit", ids::COL_DEBIT, ColumnKind::Money),
         col("credit", ids::COL_CREDIT, ColumnKind::Money),
@@ -87,27 +87,27 @@ pub(super) fn table(
         }
     }
     let parties = parties_of(conn, &items)?;
-    // Urdu alphabetical order of the names; on a tie the account and then the person.
+    // Urdu alphabetical order of the names; on a tie the tag, the account and then the person.
     let collator = UrduCollator::new().ok();
     let sort_key = |name: &str| -> Vec<u8> {
         collator
             .as_ref()
             .map_or_else(|| name.as_bytes().to_vec(), |c| c.sort_key(name))
     };
-    let mut keyed: Vec<(Vec<u8>, Activity)> = items
+    let mut keyed: Vec<(Vec<u8>, Option<String>, Activity)> = items
         .into_iter()
         .map(|item| {
-            let name = parties
-                .get(&(item.account_id, item.person_key.clone()))
-                .map(|p| p.name_ur.clone())
-                .unwrap_or_default();
-            (sort_key(&name), item)
+            let party = parties.get(&(item.account_id, item.person_key.clone()));
+            let name = party.map(|p| p.name_ur.clone()).unwrap_or_default();
+            (sort_key(&name), party.and_then(|p| p.tag.clone()), item)
         })
         .collect();
+    // Two people with the same name are told apart by their tag, then by the account.
     keyed.sort_by(|a, b| {
         a.0.cmp(&b.0)
-            .then(a.1.account_id.cmp(&b.1.account_id))
-            .then(a.1.person_key.cmp(&b.1.person_key))
+            .then(a.1.cmp(&b.1))
+            .then(a.2.account_id.cmp(&b.2.account_id))
+            .then(a.2.person_key.cmp(&b.2.person_key))
     });
 
     let mut rows = Vec::new();
@@ -119,7 +119,7 @@ pub(super) fn table(
     for (buyers, label) in [(true, ids::R35_BUYERS), (false, ids::R35_SELLERS)] {
         let section: Vec<&Activity> = keyed
             .iter()
-            .map(|(_, a)| a)
+            .map(|(_, _, a)| a)
             .filter(|a| a.buyer == buyers)
             .collect();
         if section.is_empty() {

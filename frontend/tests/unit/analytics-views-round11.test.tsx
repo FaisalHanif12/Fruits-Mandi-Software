@@ -40,7 +40,8 @@ import {
 } from '../helpers/analytics';
 import { fakeGardens } from '../helpers/gardens';
 import { fakePartners, partnerRow } from '../helpers/partners';
-import { message, visible } from '../helpers/render';
+import { printFirmName } from '../helpers/print-frame';
+import { message, visible, paragraph } from '../helpers/render';
 import { paisaForTest } from '../helpers/paisa';
 import { fakeTrips } from '../helpers/trips';
 import {
@@ -355,7 +356,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       expect(drawnColumns().length).toBeLessThan(18);
       const shown = drawnColumns().length;
       expect(
-        await screen.findByText(named(m('analytics-columns-fit', { shown, total: 18 }))),
+        await screen.findByText(paragraph(m('analytics-columns-fit', { shown, total: 18 }))),
       ).toBeVisible();
       await user.click(screen.getByRole('button', { name: named(m('analytics-columns-other')) }));
       await waitFor(() => {
@@ -516,7 +517,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
         { level: 2, name: named(m('report-print-title')) },
         SLOW_MS,
       );
-      await screen.findByText(ANALYTICS_PRINT_DATA_J_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       expect(vi.mocked(analyticsApi.analyticsPrintData).mock.calls[0]?.[0]).toMatchObject({
         view: 'J',
         language,
@@ -672,7 +673,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
         expect(drawnRows()).toHaveLength(1);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-      await screen.findByText(ANALYTICS_PRINT_DATA_I_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       const heads = Array.from(document.querySelectorAll('.print-report thead th')).map((th) =>
         visible(th.textContent),
       );

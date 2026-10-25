@@ -13,6 +13,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import type { PukhtaPerson } from '../../../bindings/PukhtaPerson';
 import type { UiError } from '../../../bindings/UiError';
+import { pickedOf } from '../../../shared/accounts';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
@@ -270,10 +271,7 @@ export function VoucherForm({
               value={draft.collector}
               onChange={(hit) => {
                 onChange({
-                  collector:
-                    hit === null
-                      ? null
-                      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
+                  collector: hit === null ? null : pickedOf(hit),
                 });
               }}
             />

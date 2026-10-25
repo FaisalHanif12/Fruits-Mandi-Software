@@ -10,6 +10,7 @@ import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
 import { ReportPrintDocument } from '../../src/features/reports/print/ReportPrintDocument';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { FOOTER_PROPERTY } from '../../src/shared/print';
+import { printFrameFor } from '../helpers/print-frame';
 import { message, visible } from '../helpers/render';
 import {
   PRINT_R13_AKRAM_UR,
@@ -25,8 +26,23 @@ afterEach(() => {
   document.documentElement.style.removeProperty(FOOTER_PROPERTY);
 });
 
+/**
+ * The header and footer the backend builds for this print from its title and filters, in the print's
+ * language, direction and digit style (the print data of the test says which).
+ */
+function frameOf(data: ReportPrintData) {
+  const frame = printFrameFor({
+    language: data.language,
+    title_id: data.title_id,
+    facts: data.filters,
+  });
+  return { ...frame, dir: data.dir, urdu_digits: data.urdu_digits };
+}
+
 function show(data: ReportPrintData, applyRoot = false) {
-  const result = render(<ReportPrintDocument data={data} applyRoot={applyRoot} />);
+  const result = render(
+    <ReportPrintDocument data={data} frame={frameOf(data)} applyRoot={applyRoot} />,
+  );
   const root = result.container.querySelector<HTMLElement>('.print-doc');
   if (root === null) throw new Error('no print document');
   return { ...result, root };
@@ -56,9 +72,9 @@ describe('the trial balance in English (R18)', () => {
   it('has the firm and the title in the header', () => {
     const { root } = show(data);
     const header = must(root.querySelector('.print-header'));
-    expect(textOf(header)).toContain(data.firm.name);
+    expect(textOf(header)).toContain(frameOf(data).header.firm.name);
     expect(textOf(header)).toContain(message('en', 'report-r18-title'));
-    expect(textOf(header)).toContain(data.firm.phone);
+    expect(textOf(header)).toContain(frameOf(data).header.firm.phone);
   });
 
   it('shows the heading of every column and one row for each of the 17 accounts', () => {

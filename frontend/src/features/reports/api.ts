@@ -7,8 +7,13 @@
 
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { BuyerBillsPrintData } from '../../bindings/BuyerBillsPrintData';
+import type { CollectionPrintData } from '../../bindings/CollectionPrintData';
+import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
 import type { FindPeopleInput } from '../../bindings/FindPeopleInput';
+import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
 import type { PrintData } from '../../bindings/PrintData';
+import type { PrintFrame } from '../../bindings/PrintFrame';
+import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
@@ -100,4 +105,29 @@ export function reportsFindPeople(input: FindPeopleInput): Promise<PukhtaPersonH
  */
 export function reportsExportExcel(input: ReportsExportRequest): Promise<ExcelExported> {
   return callCommand<ExcelExported>('reports_export_excel', { input });
+}
+
+/**
+ * The collection list of one day (اگراہی فہرست, PRD FR-15.6) for print, in the print language:
+ * the buyers by collector and city, with the totals of each group and of the list. Every value is
+ * formatted by the backend; the template adds up nothing (CLAUDE.md rule 1).
+ */
+export function reportsCollectionPrintData(
+  input: CollectionPrintDataInput,
+): Promise<CollectionPrintData> {
+  return callCommand<CollectionPrintData>('reports_collection_print_data', { input });
+}
+
+/** Prints the collection list of one day on the printer, or saves it as a PDF. Windows only. */
+export function reportsPrintCollection(input: PrintCollectionInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_print_collection', { input });
+}
+
+/**
+ * The shared header and footer of a print that is not a document of a بکری or a voucher (PRD
+ * FR-19.13): the firm, contacts, trade mark, the title and facts, and the print time. The one
+ * command every report print asks for its frame.
+ */
+export function reportsPrintHeader(input: PrintFrameInput): Promise<PrintFrame> {
+  return callCommand<PrintFrame>('reports_print_header', { input });
 }

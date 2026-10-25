@@ -27,6 +27,16 @@ export function visible(text: string | null | undefined): string {
   return (text ?? '').replace(/[⁨⁩]/g, '');
 }
 
+/**
+ * A matcher for `getByText` and `findByText` that finds a paragraph by ALL its text. A line of words
+ * with a number in it holds the number in its own element (`<Num>`, Code Standards F25), so the
+ * paragraph has no text of its own that Testing Library would compare; this reads the whole of it.
+ */
+export function paragraph(text: string) {
+  return (_content: string, element: Element | null): boolean =>
+    element?.tagName === 'P' && visible(element.textContent) === text;
+}
+
 /** The text of one Fluent message in one language, without isolation marks. */
 export function message(
   language: Language,

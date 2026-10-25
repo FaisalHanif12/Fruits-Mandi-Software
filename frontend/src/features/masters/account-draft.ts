@@ -26,6 +26,7 @@ export function newAccountValues(
     control_id: controlId,
     code,
     names: { urdu: '', english: '' },
+    tag: '',
     father: { urdu: '', english: '' },
     city: null,
     adda: null,
@@ -63,6 +64,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     control_id: row.control.id,
     code: row.code,
     names: { urdu: row.name_ur, english: row.name_en },
+    tag: row.tag ?? '',
     father: { urdu: row.father_or_firm_ur, english: row.father_or_firm_en },
     city: row.city,
     adda: row.adda,
@@ -86,6 +88,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
 
 const TEXT_FIELDS = [
   'code',
+  'tag',
   'phone1',
   'phone2',
   'address',

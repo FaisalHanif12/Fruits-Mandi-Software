@@ -27,6 +27,7 @@ import {
   messageVars,
   FALLBACK_ERROR_MESSAGE_ID,
 } from '../../../shared/api';
+import { pickedOf } from '../../../shared/accounts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { EntryGrid, FIT_MIN, createEntryStore, type EntryColumn } from '../../../shared/grid';
 import { useSingleFlight } from '../../../shared/hooks';
@@ -359,11 +360,7 @@ export function CollectionPage() {
                 scope="staff"
                 value={collector}
                 onChange={(hit) => {
-                  setCollector(
-                    hit === null
-                      ? null
-                      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                  );
+                  setCollector(hit === null ? null : pickedOf(hit));
                 }}
               />
             )}
@@ -375,11 +372,7 @@ export function CollectionPage() {
                 scope="city"
                 value={city}
                 onChange={(hit) => {
-                  setCity(
-                    hit === null
-                      ? null
-                      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                  );
+                  setCity(hit === null ? null : pickedOf(hit));
                 }}
               />
             )}

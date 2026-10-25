@@ -14,7 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
-import { accountsGet } from '../../../shared/accounts';
+import { accountsGet, pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { findMaster, type SearchHit } from '../../../shared/search';
@@ -53,10 +53,8 @@ interface HeaderCardProps {
   editing?: boolean;
 }
 
-function pickedOf(hit: SearchHit | null): PickedRecord | null {
-  return hit === null
-    ? null
-    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+function pickedOrNull(hit: SearchHit | null): PickedRecord | null {
+  return hit === null ? null : pickedOf(hit);
 }
 
 export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: HeaderCardProps) {
@@ -95,16 +93,11 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
       const now = stores.header.getState();
       if (now.truckNo.trim() !== truck) return;
       if (memoryOfTruck.adda_id !== null && now.adda === null) {
-        filled.adda = pickedOf(await findMaster('adda', memoryOfTruck.adda_id));
+        filled.adda = pickedOrNull(await findMaster('adda', memoryOfTruck.adda_id));
       }
       if (memoryOfTruck.zamindar_account_id !== null && now.zamindar === null) {
         const account = await accountsGet(memoryOfTruck.zamindar_account_id);
-        filled.zamindar = {
-          id: account.id,
-          code: account.code,
-          name_ur: account.name_ur,
-          name_en: account.name_en,
-        };
+        filled.zamindar = pickedOf(account);
       }
       if (memoryOfTruck.driver_name !== null && now.driverName === '') {
         filled.driverName = memoryOfTruck.driver_name;
@@ -195,15 +188,7 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
                   value={header.zamindar}
                   onChange={(hit) => {
                     patch({
-                      zamindar:
-                        hit === null
-                          ? null
-                          : {
-                              id: hit.id,
-                              code: hit.code,
-                              name_ur: hit.name_ur,
-                              name_en: hit.name_en,
-                            },
+                      zamindar: hit === null ? null : pickedOf(hit),
                     });
                   }}
                 />
@@ -217,7 +202,7 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
                 scope="adda"
                 value={header.adda}
                 onChange={(hit) => {
-                  patch({ adda: pickedOf(hit) });
+                  patch({ adda: pickedOrNull(hit) });
                 }}
               />
             )}
@@ -281,7 +266,7 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
                     scope="store"
                     value={header.store}
                     onChange={(hit) => {
-                      patch({ store: pickedOf(hit) });
+                      patch({ store: pickedOrNull(hit) });
                     }}
                   />
                 )}

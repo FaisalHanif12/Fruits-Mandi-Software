@@ -48,6 +48,7 @@ fn person_ref(person: &PersonFacts) -> RecordRef {
         code: person.code.clone(),
         name_ur: person.name_ur.clone(),
         name_en: person.name_en.clone(),
+        tag: person.tag.clone(),
     }
 }
 
@@ -105,6 +106,7 @@ pub fn person_create(
         collection_weekday: None,
         is_active: true,
         note: String::new(),
+        tag: String::new(),
     };
     let (id, learned) = ctx
         .db

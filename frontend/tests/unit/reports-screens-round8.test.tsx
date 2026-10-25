@@ -30,7 +30,8 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { paisaForTest } from '../helpers/paisa';
-import { message, visible } from '../helpers/render';
+import { printFirmName } from '../helpers/print-frame';
+import { message, visible, paragraph } from '../helpers/render';
 import {
   CATALOG,
   PRINT_R33_PARTNER_EN,
@@ -426,8 +427,8 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(document.querySelector('.ag-row[row-id="0"]')).toHaveClass('row-group');
       expect(cell('0', 'trip')).toContain(names('سفر-1', 'TRP-1'));
       // The date inside the heading keeps its digit order in Urdu: it sits in its own isolate.
-      const dateRun = cellElement('0', 'trip')?.querySelector('bdi[dir="ltr"]');
-      expect(dateRun?.textContent).toBe('10-10-2026');
+      const runs = Array.from(cellElement('0', 'trip')?.querySelectorAll('bdi[dir="ltr"]') ?? []);
+      expect(runs.map((run) => run.textContent)).toContain('10-10-2026');
       expect(cell('1', 'purchase')).toBe(
         m('report-doc-number', { kind: m('report-doc-purchase'), number: '1' }),
       );
@@ -590,7 +591,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
         expect(drawnRows()).toHaveLength(2);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-      await screen.findByText(PRINT_R33_PARTNER_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       expect(vi.mocked(reportsApi.reportsPrintData).mock.calls[0]?.[0]).toMatchObject({
         id: 'R33',
         language,
@@ -600,7 +601,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(body).toContain('Partner A');
       expect(body).toContain('-776');
       const facts = visible(document.querySelector('.print-facts')?.textContent);
-      expect(facts).toContain(message('en', 'report-filter-trip-by-partner'));
+      expect(facts).toContain(m('report-filter-trip-by-partner'));
     });
   });
 
@@ -624,7 +625,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(drawnColumns()).toEqual(['date', 'item', 'count', 'amount']);
       // The page says how many lines the backend has: all 27 of the day.
       expect(
-        await screen.findByText(named(m('report-count', { shown: 27, total: 27 }))),
+        await screen.findByText(paragraph(m('report-count', { shown: 27, total: 27 }))),
       ).toBeInTheDocument();
     });
 
@@ -693,7 +694,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
         expect(drawnRows().length).toBeGreaterThan(5);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
-      await screen.findByText(PRINT_R34_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(27);
       expect(document.querySelector('.print-report tfoot')).toBeNull();
       expect(visible(document.querySelector('.print-report tbody')?.textContent)).toContain(

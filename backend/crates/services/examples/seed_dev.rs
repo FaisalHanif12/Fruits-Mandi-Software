@@ -273,6 +273,7 @@ fn run(path: &Path) -> Result<(), ServiceError> {
                     collection_weekday: None,
                     is_active: true,
                     note: String::new(),
+                    tag: String::new(),
                 },
             )
         })

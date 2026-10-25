@@ -84,7 +84,6 @@ pub(super) fn slip(
 
     let mut rows = Vec::new();
     let mut total_qty = 0_i64;
-    let total_amount: Paisa;
     let mut summary = Vec::new();
     if buyer {
         let lines = sale_lines(conn, day, account, key)?;
@@ -111,7 +110,6 @@ pub(super) fn slip(
                 kind: RowKind::Normal,
             });
         }
-        total_amount = bought;
         // What the ledger shows beyond the sale lines: cash lent, a جنرل debit.
         let other_debits = me.day_dr.checked_sub(bought)?;
         // "Paid that day" is the receipts (وصولی) only; any other credit (a جنرل credit, an
@@ -123,8 +121,8 @@ pub(super) fn slip(
                 "the sale lines of the day are more than the ledger of the party".to_owned(),
             ));
         }
+        // The client's order (PRD FR-19.12): the total نگ, تازہ بنام, سابقہ رقم, موقع پر ادا, وصولی, ٹوٹل رقم.
         summary.push(line(ids::R35_TOTAL_QTY, Cell::Number { value: total_qty }));
-        summary.push(line(ids::R35_PREVIOUS, previous));
         summary.push(line(ids::R35_BOUGHT, Cell::Money { paisa: bought }));
         if other_debits != Paisa::ZERO {
             summary.push(line(
@@ -134,6 +132,7 @@ pub(super) fn slip(
                 },
             ));
         }
+        summary.push(line(ids::R35_PREVIOUS, previous));
         if on_spot != Paisa::ZERO {
             summary.push(line(ids::R35_ON_SPOT, Cell::Money { paisa: on_spot }));
         }
@@ -209,7 +208,6 @@ pub(super) fn slip(
             });
         }
         let sold = sold.checked_sub(negative_nets)?;
-        total_amount = sold;
         summary.push(line(ids::R35_TOTAL_QTY, Cell::Number { value: total_qty }));
         summary.push(line(ids::R35_PREVIOUS, previous));
         summary.push(line(ids::R35_SOLD, Cell::Money { paisa: sold }));
@@ -235,6 +233,10 @@ pub(super) fn slip(
         }
         summary.push(line(ids::R35_REMAINING, remaining));
     }
+    // A seller's last line is what is left ("balance"), not the buyer's ٹوٹل رقم.
+    if !buyer && let Some(last) = summary.last_mut() {
+        last.label_id = ids::R35_BALANCE.to_owned();
+    }
 
     let mut resolved = typed.resolved.clone();
     resolved.as_of = Some(day.to_owned());
@@ -248,14 +250,9 @@ pub(super) fn slip(
         offset: spec.offset,
         limit: spec.reported_limit(),
         totals_label_id: ids::TOTAL.to_owned(),
-        totals: vec![
-            Cell::Number { value: total_qty },
-            Cell::Empty,
-            Cell::Empty,
-            Cell::Money {
-                paisa: total_amount,
-            },
-        ],
+        // The footer lines hold the total نگ and the day's amount: the client's slip has no totals
+        // row above them (PRD FR-19.12), so nothing is said twice.
+        totals: vec![Cell::Empty; 4],
         summary,
     })
 }

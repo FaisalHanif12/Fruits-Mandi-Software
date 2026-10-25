@@ -219,10 +219,10 @@ analytics-lines-grid-label = اس رقم کی تفصیل
 ## Views D and E have a column for each period or item; the window shows as many as fit.
 
 # review: pending
-analytics-columns-shown = { $total } میں سے مدتیں { $from } تا { $to }
+analytics-columns-shown = <num>{ $total }</num> میں سے مدتیں <num>{ $from }</num> تا <num>{ $to }</num>
 
 # review: pending
-analytics-columns-shown-items = { $total } میں سے اقسام { $from } تا { $to }
+analytics-columns-shown-items = <num>{ $total }</num> میں سے اقسام <num>{ $from }</num> تا <num>{ $to }</num>
 
 # review: pending
 analytics-columns-earlier = پہلے
@@ -231,7 +231,7 @@ analytics-columns-earlier = پہلے
 analytics-columns-later = بعد کی
 
 # review: pending
-analytics-columns-fit = اس ونڈو میں { $total } میں سے { $shown } کالم آتے ہیں۔ پرنٹ میں سب کالم ہوتے ہیں۔
+analytics-columns-fit = اس ونڈو میں <num>{ $total }</num> میں سے <num>{ $shown }</num> کالم آتے ہیں۔ پرنٹ میں سب کالم ہوتے ہیں۔
 
 # review: pending
 analytics-columns-other = باقی کالم دکھائیں

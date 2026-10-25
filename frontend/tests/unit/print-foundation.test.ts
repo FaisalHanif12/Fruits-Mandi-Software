@@ -22,6 +22,7 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 
 const SRC = path.resolve(import.meta.dirname, '../../src');
 const PRINT_CSS = fs.readFileSync(path.join(SRC, 'shared/print/print.css'), 'utf8');
+const FONTS_CSS = fs.readFileSync(path.join(SRC, 'styles/fonts.css'), 'utf8');
 const TOKENS_CSS = fs.readFileSync(path.join(SRC, 'styles/tokens.css'), 'utf8');
 
 describe('the page footer text', () => {
@@ -125,8 +126,22 @@ describe('the print stylesheet', () => {
     expect(PRINT_CSS).not.toMatch(
       /margin-(left|right)|padding-(left|right)|text-align:\s*(left|right)/,
     );
-    expect(PRINT_CSS).toContain('font-family: var(--font-text)');
+    // The digits 0 to 9 are Inter first, in the page and in the footer boxes, whatever the language
+    // (NFR-URD-14): `--font-digits` is the Inter face of the ten digits only (fonts.css).
+    expect(PRINT_CSS.match(/font-family: var\(--font-digits\), var\(--font-text\)/g)).toHaveLength(
+      4,
+    );
     expect(PRINT_CSS).toContain('var(--font-urdu-digits)');
+  });
+
+  it('has a font face of the ten digits only, made from Inter, so a digit never takes an Urdu shape', () => {
+    // `Mandi Digits` is Inter, limited by `unicode-range` to U+0030 to U+0039: letters and signs fall
+    // through to the font of the language, and only the digits 0-9 are always Inter (NFR-URD-14).
+    const face = /@font-face\s*{[^}]*font-family:\s*'Mandi Digits'[^}]*}/.exec(FONTS_CSS)?.[0];
+    expect(face).toBeDefined();
+    expect(face).toContain('Inter-Variable.woff2');
+    expect(face).toContain('unicode-range: U+0030-0039;');
+    expect(TOKENS_CSS).toContain("--font-digits: 'Mandi Digits';");
   });
 
   it('lays the hidden window out at the width of the text of each paper, with nothing added on screen', () => {
@@ -234,8 +249,8 @@ describe.each(LANGUAGES)('the words the backend sends (%s)', (language) => {
     for (const doc of ['seller_bill', 'buyer_slips', 'pukhta_slip'] as const) {
       const data = printDataFor(doc, { language });
       const ids = [
-        data.title_id,
-        ...data.facts.map((fact) => fact.label_id),
+        data.header.title_id,
+        ...data.header.facts.map((fact) => fact.label_id),
         ...data.pages.flatMap((page) => [
           page.party.role_id,
           ...page.amounts.map((amount) => amount.label_id),

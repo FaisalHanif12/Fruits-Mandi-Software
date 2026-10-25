@@ -156,6 +156,11 @@ pub(crate) const R35_CASH_GIVEN: &str = "report-r35-cash-given";
 pub(crate) const R35_PAID: &str = "report-r35-paid";
 pub(crate) const R35_RECEIVED: &str = "report-r35-received";
 pub(crate) const R35_REMAINING: &str = "report-r35-remaining";
+/// The last line of a seller's slip: what is left, "balance" (the word ٹوٹل رقم suits a buyer's bill
+/// only: for a seller it would read as money he owes).
+pub(crate) const R35_BALANCE: &str = "report-r35-balance";
+/// The party column of the all-parties table (PRD FR-19.12 says پارٹی).
+pub(crate) const COL_PARTY: &str = "report-col-party";
 pub(crate) const R35_COLLECTION: &str = "report-r35-collection";
 pub(crate) const R35_SELLERS_CREDIT: &str = "report-r35-sellers-credit";
 pub(crate) const R35_SELLERS_DEBIT: &str = "report-r35-sellers-debit";
@@ -247,9 +252,6 @@ pub(crate) const FILTER_TRIP_BY_MONTH: &str = "report-filter-trip-by-month";
 pub(crate) const FILTER_TRIP_BY_PARTNER: &str = "report-filter-trip-by-partner";
 pub(crate) const FILTER_DETAIL: &str = "report-filter-detail";
 pub(crate) const FILTER_BALANCE_ONLY: &str = "report-filter-balance-only";
-
-/// The page footer message of the shared print layout ("Page x of y").
-pub(crate) const PAGE_FOOTER: &str = "print-page-label";
 
 /// The ID of the title of a report: `report-r11-title`.
 pub(crate) fn title_id(code: &str) -> String {

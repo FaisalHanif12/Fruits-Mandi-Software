@@ -167,6 +167,7 @@ describe('each wrapper sends the command and the input of the backend', () => {
       account_type: 'buyer',
       control_id: null,
       code: '',
+      tag: '',
       name_ur: 'شاہد',
       name_en: 'Shahid',
       confirmed_rules_words: [],

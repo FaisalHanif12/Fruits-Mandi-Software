@@ -8,35 +8,46 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
   "dir": "ltr",
   "paper": "a5",
   "urdu_digits": false,
-  "title_id": "print-buyer-slip-title",
-  "firm": {
-    "name": "Maher Adnan and Brothers",
-    "mandi": "New Sabzi Mandi, Kot Radha Kishan",
-    "address": "Kot Radha Kishan",
-    "phone": "03001234567"
+  "header": {
+    "firm": {
+      "name": "Maher Adnan and Brothers",
+      "mandi": "New Sabzi Mandi, Kot Radha Kishan",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-buyer-slip-title",
+    "facts": [
+      {
+        "label_id": "print-fact-number",
+        "value": "1"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      },
+      {
+        "label_id": "print-fact-truck",
+        "value": "LES-1234"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
   },
   "number": "1",
-  "facts": [
-    {
-      "label_id": "print-fact-number",
-      "value": "1"
-    },
-    {
-      "label_id": "print-fact-date",
-      "value": "10-10-2026"
-    },
-    {
-      "label_id": "print-fact-truck",
-      "value": "LES-1234"
-    }
-  ],
-  "printed_at": "10-10-2026 14:00",
   "cancelled": false,
   "pages": [
     {
+      "serial": "1",
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040001",
+        "short_code": "1",
         "name": "Akram Toll Tax",
         "phone": null
       },
@@ -50,6 +61,7 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
           "weight_kg": null,
           "rate": "600",
           "amount": "12,000",
+          "detail": "(Banana 20 . 600)",
           "note": null
         }
       ],
@@ -82,9 +94,11 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
       }
     },
     {
+      "serial": "2",
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040002",
+        "short_code": "2",
         "name": "Arshad Multani",
         "phone": null
       },
@@ -98,6 +112,7 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
           "weight_kg": null,
           "rate": "580",
           "amount": "17,400",
+          "detail": "(Banana 30 . 580)",
           "note": null
         }
       ],

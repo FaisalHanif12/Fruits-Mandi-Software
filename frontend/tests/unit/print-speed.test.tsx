@@ -29,9 +29,8 @@ describe.each(LANGUAGES)('a %s print of 15 pages', (language) => {
       `print-speed: ${language}, ${String(PAGES)} pages: ${took.toFixed(0)} ms, NFR target ${String(NFR_SPD_14_MS)} ms\n`,
     );
     expect(container.querySelectorAll('.print-sheet')).toHaveLength(PAGES);
-    expect(container.querySelectorAll('.print-table tbody tr')).toHaveLength(
-      PAGES * LINES_PER_PAGE,
-    );
+    // The buyer's bill is the client's R5 layout: one line of تفصیل for each line of goods.
+    expect(container.querySelectorAll('.print-r5-detail')).toHaveLength(PAGES * LINES_PER_PAGE);
     expect(took).toBeLessThan(NFR_SPD_14_MS);
   });
 
@@ -39,7 +38,7 @@ describe.each(LANGUAGES)('a %s print of 15 pages', (language) => {
     const data = longPrintData(3, 4, { language });
     const { container } = render(<BikriPrintDocument data={data} />);
     const first = data.pages[0]?.lines[0];
-    expect(container.querySelectorAll('.print-table tbody tr')).toHaveLength(12);
-    expect(container.textContent).toContain(first?.amount);
+    expect(container.querySelectorAll('.print-r5-detail')).toHaveLength(12);
+    expect(container.textContent).toContain(first?.detail);
   });
 });

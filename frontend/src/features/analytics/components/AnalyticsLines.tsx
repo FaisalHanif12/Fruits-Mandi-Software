@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
-import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { Button, EmptyState, ErrorState, LoadingState, RUNNING_NUMBER } from '../../../shared/ui';
 import { totalsFor, type ReportRowView } from '../../reports';
 import { linesColumns } from '../columns';
 import { useAnalyticsLines, type LinesRequest } from '../hooks';
@@ -94,6 +94,7 @@ export function AnalyticsLines({ request, about, onBack }: AnalyticsLinesProps) 
           <Localized
             id="report-count"
             vars={{ shown: String(rows.length), total: String(last.total_count) }}
+            elems={RUNNING_NUMBER}
           >
             <p className="type-body text-ink-muted" />
           </Localized>

@@ -28,6 +28,7 @@ import {
 } from './trips-data';
 import { printingSettings } from './print-settings';
 import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
+import { indexHandlers, isIndexPage } from './dev-bridge-index';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
@@ -688,7 +689,9 @@ export function installDevBridge(): void {
           ? rokarHandlers[command]
           : isGardensPage()
             ? gardensHandlers[command]
-            : undefined;
+            : isIndexPage()
+              ? indexHandlers[command]
+              : undefined;
         const handler = own ?? handlers[command];
         // The delay is the answer time of a real command, so the screen's waiting looks real.
         return new Promise((resolve, reject) => {

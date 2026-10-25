@@ -249,6 +249,7 @@ fn day_summary(
                 code: String::new(),
                 name_ur: record.name_ur.clone(),
                 name_en: record.name_en.clone(),
+                tag: None,
             },
             income_paisa: income,
             expense_paisa: expense,

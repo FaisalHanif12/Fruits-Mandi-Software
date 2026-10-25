@@ -339,7 +339,7 @@ pub enum PaidFilter {
 
 /// What the user typed or picked in the filter boxes. Dates are text as typed
 /// (`DD-MM-YYYY`, `10`, `10-9`, or the stored form `YYYY-MM-DD`); the backend reads them.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, TS)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default)]
 pub struct ReportFilters {
     /// A date shortcut. When set, `from` and `to` are ignored.

@@ -14,10 +14,11 @@ use mandi_core::printing::{PrintDoc, PrintSetup};
 use mandi_core::urdu_words::urdu_words;
 
 use super::format::NumberStyle;
+use super::header::{footer, header, pick};
 use super::ids::*;
 use super::load::FirmNames;
 use super::pages::{buyer_pages, pukhta_pages, seller_pages};
-use super::{AmountRole, PrintAmount, PrintData, PrintFact, PrintFirm, PrintWords, TextDir};
+use super::{AmountRole, PrintAmount, PrintData, PrintFact, PrintWords, TextDir};
 use crate::error::ReportsError;
 
 /// Everything besides the saved بکری that decides what is printed.
@@ -37,20 +38,6 @@ pub struct BuildOptions {
     pub now_utc: DateTime<Utc>,
     /// Only the page of this buyer account (buyer slips only).
     pub only_buyer_id: Option<i64>,
-}
-
-/// The name in the print language. If that script is empty the other one is used, so a page is
-/// never nameless (a record has both names, PRD FR-7.24; this guards old data).
-fn pick(language: Language, name_ur: &str, name_en: &str) -> String {
-    let (first, second) = match language {
-        Language::Ur => (name_ur, name_en),
-        Language::En => (name_en, name_ur),
-    };
-    if first.trim().is_empty() {
-        second.to_owned()
-    } else {
-        first.to_owned()
-    }
 }
 
 /// Builds the print data of one document from a saved بکری. Pure: it reads nothing else.
@@ -78,11 +65,13 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
             buyer_pages(&ctx, detail, options.only_buyer_id)?,
         ),
         PrintDoc::PukhtaSlip => (TITLE_PUKHTA_SLIP, pukhta_pages(&ctx, detail)?),
-        // The voucher slip is built from a voucher, not from a بکری (plan 15).
-        PrintDoc::ReceiptSlip => {
-            return Err(ReportsError::Data(
-                "the receipt slip is not a document of a بکری".to_owned(),
-            ));
+        // The voucher slip is built from a voucher (plan 15) and the collection list from a
+        // day (plan 17e), not from a بکری.
+        PrintDoc::ReceiptSlip | PrintDoc::CollectionList => {
+            return Err(ReportsError::Data(format!(
+                "{} is not a document of a بکری",
+                options.doc.as_str()
+            )));
         }
     };
     let language = options.language;
@@ -92,16 +81,9 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
         dir: TextDir::of(language),
         paper: options.setup.paper_of(options.doc),
         urdu_digits: ctx.style.urdu_digits(),
-        title_id: title_id.to_owned(),
-        firm: PrintFirm {
-            name: pick(language, &options.firm.name_ur, &options.firm.name_en),
-            mandi: pick(language, &options.firm.mandi_ur, &options.firm.mandi_en),
-            address: options.firm.address.clone(),
-            phone: options.firm.phone.clone(),
-        },
+        header: header(language, &options.firm, title_id, facts(&ctx, detail)?),
+        footer: footer(ctx.style.printed_at(options.now_utc)),
         number: ctx.style.count(detail.number),
-        facts: facts(&ctx, detail)?,
-        printed_at: ctx.style.printed_at(options.now_utc),
         cancelled: detail.status == BikriStatus::Cancelled,
         pages,
     })

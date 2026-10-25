@@ -126,6 +126,3 @@ pub(crate) const FILTER_TRIP_BY_ITEM: &str = "report-filter-trip-by-item";
 pub(crate) const FILTER_TRIP_BY_DAY: &str = "report-filter-trip-by-day";
 pub(crate) const FILTER_COMPARE_FROM: &str = "analytics-filter-compare-from";
 pub(crate) const FILTER_COMPARE_TO: &str = "analytics-filter-compare-to";
-
-/// The footer of the shared print layout.
-pub(crate) const PAGE_FOOTER: &str = "print-page-label";

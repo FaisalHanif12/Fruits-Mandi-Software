@@ -18,6 +18,7 @@ import type { RecordRef } from '../../bindings/RecordRef';
 import type { SaleInput } from '../../bindings/SaleInput';
 import type { SavedLot } from '../../bindings/SavedLot';
 import { accountsGet } from '../../shared/accounts/api';
+import { pickedOf } from '../../shared/accounts/picked';
 import { isoToDisplayDate } from '../../shared/format';
 import type { EntryRow, PickedRecord } from '../../shared/grid';
 import { findMaster, type SearchScope } from '../../shared/search';
@@ -31,10 +32,6 @@ type MasterScope = Extract<SearchScope, 'item' | 'packing' | 'marka' | 'adda' | 
 export interface DraftRecords {
   account: (id: number | null) => PickedRecord | null;
   master: (scope: MasterScope, id: number | null) => PickedRecord | null;
-}
-
-function pickedOfRef(ref: RecordRef): PickedRecord {
-  return { id: ref.id, code: ref.code, name_ur: ref.name_ur, name_en: ref.name_en };
 }
 
 /** A record that cannot be found: shown by its id, so it is still there and still saved as it was. */
@@ -105,9 +102,9 @@ export async function resolveDraftRecords(
 ): Promise<DraftRecords> {
   const wanted = wantedBy(draft);
   const accounts = new Map<number, PickedRecord>();
-  for (const ref of known.accounts) accounts.set(ref.id, pickedOfRef(ref));
+  for (const ref of known.accounts) accounts.set(ref.id, pickedOf(ref));
   const masters = new Map<string, PickedRecord>();
-  for (const [key, ref] of known.masters) masters.set(key, pickedOfRef(ref));
+  for (const [key, ref] of known.masters) masters.set(key, pickedOf(ref));
 
   await Promise.all([
     ...[...wanted.accounts]
@@ -115,12 +112,7 @@ export async function resolveDraftRecords(
       .map(async (id) => {
         try {
           const row = await accountsGet(id);
-          accounts.set(id, {
-            id: row.id,
-            code: row.code,
-            name_ur: row.name_ur,
-            name_en: row.name_en,
-          });
+          accounts.set(id, pickedOf(row));
         } catch {
           accounts.set(id, stub(id));
         }
@@ -130,12 +122,7 @@ export async function resolveDraftRecords(
       .map(async ([key, { scope, id }]) => {
         try {
           const hit = await findMaster(scope, id);
-          masters.set(
-            key,
-            hit === null
-              ? stub(id)
-              : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-          );
+          masters.set(key, hit === null ? stub(id) : pickedOf(hit));
         } catch {
           masters.set(key, stub(id));
         }

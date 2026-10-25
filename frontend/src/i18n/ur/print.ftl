@@ -355,6 +355,66 @@ print-r5-col-value = رقم
 # review: pending
 print-r5-col-total = رقم بعد { -laga }
 
-# One line of a buyer, the client's way: "(کیلا 20 . 600)". $item: the item name in the print language; $qty and $rate are numbers.
+# A line of an item sold by weight in the buyer's bill (R5): the weight in kilograms and the rate for each
+# kilo, written the client's way. A line of a نگ item is written by the backend ("(کیلا 20 . 600)").
+# $item: the item in the print language; $weight: kilograms; $rate: the rate for each kilo.
 # review: pending
-print-r5-line = ({ $item } { $qty } . { $rate })
+print-r5-line-weight = ({ $item } { $weight } کلو . { $rate })
+
+## The collection list on paper (plan 17e, PRD FR-15.6, FR-7.61).
+
+# The name of the document in the Printing settings and in the print box.
+# review: pending
+print-doc-collection-list = { -agrahi } فہرست
+
+# The title in the header of the collection list.
+# review: pending
+print-collection-list-title = { -agrahi } فہرست
+
+# A fact under the title: the city the list is filtered by.
+# review: pending
+print-fact-city = شہر
+
+# The heading of a group with no collector, and of one with no city.
+# review: pending
+print-collection-no-collector = { -agrahi } والا مقرر نہیں
+
+# review: pending
+print-collection-no-city = شہر درج نہیں
+
+# review: pending
+print-collection-col-serial = نمبر
+
+# The short code of the buyer.
+# review: pending
+print-collection-col-code = کوڈ
+
+# review: pending
+print-collection-col-party = پارٹی
+
+
+# review: pending
+print-collection-col-dues = بقایا
+
+# The date of the oldest bill still open, and how many days old it is.
+# review: pending
+print-collection-col-oldest = پرانا بل
+
+# review: pending
+print-collection-col-days = دن
+
+# Left empty, for the collector to write in.
+# review: pending
+print-collection-col-note = نوٹ
+
+# The total of one collector and city.
+# review: pending
+print-collection-group-total = میزان
+
+# The number of buyers on the list.
+# review: pending
+print-collection-buyers = اس فہرست میں { -gahak }
+
+# The total of THIS list only: the buyers planned for this day, not every buyer who owes.
+# review: pending
+print-collection-total = اس فہرست کا میزان

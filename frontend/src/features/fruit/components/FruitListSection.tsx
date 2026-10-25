@@ -7,8 +7,9 @@
 // with a retry, nothing to list, and the rows. The print and Excel of this list come with R37 (D5).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Ban, Apple, Pencil, SearchX } from 'lucide-react';
+import { Ban, Apple, Pencil, Printer, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { PagedList } from '../../../shared/grid';
@@ -25,6 +26,7 @@ import {
   type PickerValue,
 } from '../../../shared/ui';
 import { usePartnerList } from '../../partners';
+import { useOpenReport } from '../../reports';
 import { FRUIT_COLUMNS } from '../list-columns';
 import { useFruitList } from '../hooks';
 import { FOR_GUESTS, type FruitListInput, type FruitRow } from '../types';
@@ -35,6 +37,11 @@ const EVERYONE = 'everyone';
 interface FruitListSectionProps {
   /** Today, `YYYY-MM-DD`: the list starts with today's entries. */
   today: string;
+  /**
+   * The day the list starts with, `YYYY-MM-DD`: the day of the entry the address opened, so that
+   * entry is in the list. Default: today.
+   */
+  day?: string | undefined;
   /** The entry that has focus in the list, or null. */
   selectedId: number | null;
   onSelect: (row: FruitRow | null) => void;
@@ -52,6 +59,7 @@ function yearStart(today: string): string {
 
 export function FruitListSection({
   today,
+  day,
   selectedId,
   onSelect,
   onEdit,
@@ -60,9 +68,11 @@ export function FruitListSection({
   const { l10n } = useLocalization();
   const language = useLanguage();
   const partners = usePartnerList();
+  const openReport = useOpenReport();
   const todayText = isoToDisplayDate(today);
-  const [from, setFrom] = useState(todayText);
-  const [to, setTo] = useState(todayText);
+  const startText = day === undefined ? todayText : isoToDisplayDate(day);
+  const [from, setFrom] = useState(startText);
+  const [to, setTo] = useState(startText);
   const [forWhom, setForWhom] = useState(EVERYONE);
   const [item, setItem] = useState<PickerValue | null>(null);
   const partnerId = forWhom === EVERYONE || forWhom === FOR_GUESTS ? null : Number(forWhom);
@@ -83,6 +93,8 @@ export function FruitListSection({
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
   const onlyToday =
     from.trim() === todayText && to.trim() === todayText && forWhom === EVERYONE && item === null;
+  // The list the address opened starts on the entry's day; "nothing yet" is still the plain empty
+  // message only for today.
   const period = (nextFrom: string, nextTo: string) => {
     setFrom(nextFrom);
     setTo(nextTo);
@@ -147,11 +159,7 @@ export function FruitListSection({
               value={item}
               placeholder={l10n.getString('fruit-filter-item-all')}
               onChange={(hit) => {
-                setItem(
-                  hit === null
-                    ? null
-                    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                );
+                setItem(hit === null ? null : pickedOf(hit));
               }}
             />
           )}
@@ -207,6 +215,23 @@ export function FruitListSection({
           <Ban aria-hidden="true" className="size-icon-md" />
           <Localized id="fruit-cancel" />
         </Button>
+        {/* The fruit register (R37, PRD FR-16.12) with the same days, partner or guests and item. */}
+        {openReport === null ? null : (
+          <Button
+            onClick={() => {
+              openReport('R37', {
+                ...(from.trim() === '' ? {} : { from: from.trim() }),
+                ...(to.trim() === '' ? {} : { to: to.trim() }),
+                ...(partnerId === null ? {} : { partner: partnerId }),
+                ...(forWhom === FOR_GUESTS ? { guests: true } : {}),
+                ...(item === null ? {} : { item }),
+              });
+            }}
+          >
+            <Printer aria-hidden="true" className="size-icon-md" />
+            <Localized id="fruit-print" />
+          </Button>
+        )}
         <Localized id="fruit-list-select-help">
           <p className="type-body text-ink-muted" />
         </Localized>

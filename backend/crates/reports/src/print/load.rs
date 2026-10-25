@@ -1,6 +1,7 @@
 //! Reads a saved بکری and the settings that decide how it is printed, then builds the print data
 //! (plan 14). The only part of the print data that touches the database.
 
+use mandi_core::firm::{FirmContact, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_TRADE_MARK};
 use mandi_core::money::Grouping;
 use mandi_core::printing::PrintSetup;
 use mandi_db::Db;
@@ -32,6 +33,11 @@ pub struct FirmNames {
     pub address: String,
     /// Phone as typed.
     pub phone: String,
+    /// The contact persons for the print header, at most 3 (PRD Section 21, plan 17e). Empty if
+    /// none are set.
+    pub contacts: Vec<FirmContact>,
+    /// The trade mark text as typed. Empty if not set.
+    pub trade_mark: String,
 }
 
 /// Reads the saved بکری and the settings, and builds the print data of one document.
@@ -93,6 +99,12 @@ pub(crate) fn load_firm(conn: &Connection) -> Result<FirmNames, ReportsError> {
         mandi_en: text("mandi_en"),
         address: text("address"),
         phone: text("phone"),
+        contacts: load_contacts(conn)?,
+        trade_mark: setting(conn, SETTING_KEY_TRADE_MARK)?
+            .as_ref()
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
     })
 }
 
@@ -106,6 +118,16 @@ pub(crate) fn load_default_language(
         .and_then(Value::as_str)
         .and_then(mandi_core::auth::Language::parse)
         .unwrap_or(mandi_core::auth::Language::Ur))
+}
+
+/// The saved contact persons, at most [`MAX_CONTACTS`]. A damaged value gives none, so a print is
+/// never stopped by it.
+fn load_contacts(conn: &Connection) -> Result<Vec<FirmContact>, ReportsError> {
+    let mut contacts: Vec<FirmContact> = setting(conn, SETTING_KEY_CONTACTS)?
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default();
+    contacts.truncate(MAX_CONTACTS);
+    Ok(contacts)
 }
 
 pub(crate) fn load_grouping(conn: &Connection) -> Result<Grouping, ReportsError> {

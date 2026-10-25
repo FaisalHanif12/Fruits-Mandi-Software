@@ -210,3 +210,10 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   same documents.
 - The hidden print window may call `reports_bikri_print_data` only (its capability allows no other
   command, NFR-SEC-10). `features/bikri/print/BikriPrintPage.tsx` is that window's route.
+
+Plan 17e adds `reports_collection_print_data`, `reports_print_collection` and `reports_print_header`
+(`reportsCollectionPrintData`, `reportsPrintCollection`, `reportsPrintHeader`; hooks
+`useCollectionPrintData`, `usePrintCollection`, `usePrintFrame`). `reports_print_header` is the ONE
+command every report print asks for its header and footer (title and facts in, `PrintFrame` out); the
+layout is `shared/print` (`PrintRoot`, `PrintHeader`). The collection list template and its print box
+are in `features/vouchers/print/`.

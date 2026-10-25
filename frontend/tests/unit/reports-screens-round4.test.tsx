@@ -26,7 +26,8 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { message, visible } from '../helpers/render';
+import { printFirmName } from '../helpers/print-frame';
+import { message, paragraph, visible } from '../helpers/render';
 import {
   CATALOG,
   PEOPLE_SHAHID,
@@ -235,7 +236,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       await openReport('R2', { pages: { R2: { ...R2_ALL, total_count: 2 } } });
       expect(
         await screen.findByText(
-          named(m('report-count', { shown: 2, total: 2 })),
+          paragraph(m('report-count', { shown: 2, total: 2 })),
           undefined,
           SLOW_MS,
         ),
@@ -710,9 +711,9 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
         paper: 'a4',
       });
       // The print data is the English one; the month is named by the print language's words.
-      await screen.findByText(PRINT_R28_MONTH_EN.firm.name, undefined, SLOW_MS);
+      await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       const body = visible(document.querySelector('.print-report tbody')?.textContent);
-      expect(body).toContain(`${message('en', 'report-month-10')} 2026`);
+      expect(body).toContain(`${m('report-month-10')} 2026`);
     });
   });
 

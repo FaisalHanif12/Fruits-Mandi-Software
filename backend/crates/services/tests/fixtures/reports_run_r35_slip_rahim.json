@@ -80,18 +80,16 @@
   "totals_label_id": "report-total",
   "totals": [
     {
-      "type": "number",
-      "value": 50
-    },
-    {
       "type": "empty"
     },
     {
       "type": "empty"
     },
     {
-      "type": "money",
-      "paisa": 2431600
+      "type": "empty"
+    },
+    {
+      "type": "empty"
     }
   ],
   "summary": [
@@ -132,7 +130,7 @@
       }
     },
     {
-      "label_id": "report-r35-remaining",
+      "label_id": "report-r35-balance",
       "cell": {
         "type": "balance",
         "paisa": 0,

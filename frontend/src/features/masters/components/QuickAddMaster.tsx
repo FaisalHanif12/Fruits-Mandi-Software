@@ -8,6 +8,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
@@ -127,11 +128,7 @@ function QuickAddForm({
                 scope="city"
                 value={city}
                 onChange={(hit) => {
-                  setCity(
-                    hit === null
-                      ? null
-                      : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                  );
+                  setCity(hit === null ? null : pickedOf(hit));
                 }}
               />
             )}

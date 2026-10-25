@@ -39,6 +39,8 @@ const SETTINGS: Settings = {
     mandi_en: 'New Sabzi Mandi Kot Radha Kishan',
     address: 'Kot Radha Kishan',
     phone: '0300-1234567',
+    firm_contacts: [],
+    trade_mark: '',
   },
   idle_lock_minutes: 15,
   default_language: 'ur',

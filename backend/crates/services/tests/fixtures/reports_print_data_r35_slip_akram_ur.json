@@ -1,0 +1,119 @@
+{
+  "report": "R35",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r35-title",
+  "filters": [
+    {
+      "label_id": "report-filter-as-of",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "1 اکرم ٹول ٹیکس"
+    }
+  ],
+  "columns": [
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-r35-total-qty",
+      "cell": {
+        "type": "number",
+        "text": "20"
+      }
+    },
+    {
+      "label_id": "report-r35-bought",
+      "cell": {
+        "type": "money",
+        "text": "12,880"
+      }
+    },
+    {
+      "label_id": "report-r35-previous",
+      "cell": {
+        "type": "balance",
+        "text": "0",
+        "side_id": "report-side-zero"
+      }
+    },
+    {
+      "label_id": "report-r35-received",
+      "cell": {
+        "type": "money",
+        "text": "10,000"
+      }
+    },
+    {
+      "label_id": "report-r35-remaining",
+      "cell": {
+        "type": "balance",
+        "text": "2,880",
+        "side_id": "report-side-dr"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "number",
+          "text": "20"
+        },
+        {
+          "type": "names",
+          "text": "پیٹی کیلا"
+        },
+        {
+          "type": "money",
+          "text": "600"
+        },
+        {
+          "type": "money",
+          "text": "12,880"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "1",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null
+}

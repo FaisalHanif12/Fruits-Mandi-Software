@@ -23,6 +23,11 @@ export type DashboardBikri = {
    */
   seller: ReportNames | null;
   /**
+   * The tag (نشان) of that seller's account, shown after his name. Missing when he has none and
+   * for a one-time person.
+   */
+  seller_tag?: string;
+  /**
    * How many sellers it has. 1 for a truck with one seller.
    */
   seller_count: number;

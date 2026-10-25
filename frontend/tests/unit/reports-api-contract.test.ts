@@ -384,11 +384,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'columns',
         'dir',
         'filters',
-        'firm',
-        'footer_id',
         'language',
         'paper',
-        'printed_at',
         'report',
         'row_count',
         'rows',
@@ -399,7 +396,10 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'urdu_digits',
         'words',
       ]);
-      expect(keysOf(data.firm)).toEqual(['address', 'mandi', 'name', 'phone']);
+      // The firm, its contacts, the trade mark and the print time are not in the print data: the shared
+      // header and footer come from `reports_print_header` (PRD FR-19.13).
+      expect(Object.keys(data)).not.toContain('firm');
+      expect(Object.keys(data)).not.toContain('printed_at');
     }
   });
 });

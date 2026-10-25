@@ -2,6 +2,8 @@
 // opens the ledger of account 20 with the dates already filled, the way the party card's buttons
 // do. Everything is optional, and anything that does not read is left out.
 
+import { pickedOrNull } from '../../shared/screen-state';
+import type { PickerValue } from '../../shared/ui';
 import type { PeriodChoice, ReportFilterState, ReportPerson } from './filters';
 import { EMPTY_FILTERS, PERIOD_CHOICES } from './filters';
 
@@ -15,6 +17,10 @@ export interface ReportSearch {
   partner?: number;
   /** A one-time person (PRD FR-13.5): the global search opens his register this way. */
   person?: ReportPerson;
+  /** The fruit register (R37) for the shop's guests only: the fruit screen's "Print" opens it this way. */
+  guests?: boolean;
+  /** One item (R37): the item chosen in the fruit list, whole or not at all. */
+  item?: PickerValue;
 }
 
 function text(value: unknown): string | undefined {
@@ -56,6 +62,8 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   const party = Number(search['party']);
   const partner = Number(search['partner']);
   const person = readPerson(search['person']);
+  const guests = search['guests'] === true || search['guests'] === 'true';
+  const item = pickedOrNull(search['item']);
   return {
     ...(period === undefined ? {} : { period }),
     ...(from === undefined ? {} : { from }),
@@ -64,6 +72,8 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
     ...(Number.isSafeInteger(party) && party > 0 ? { party } : {}),
     ...(Number.isSafeInteger(partner) && partner > 0 ? { partner } : {}),
     ...(person === undefined ? {} : { person }),
+    ...(guests ? { guests: true } : {}),
+    ...(item === null ? {} : { item }),
   };
 }
 
@@ -81,5 +91,7 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
         : { id: search.party, name_ur: '', name_en: '', code: undefined },
     person: search.person ?? null,
     partner: search.partner ?? null,
+    guestsOnly: search.guests === true && search.partner === undefined,
+    item: search.item ?? null,
   };
 }

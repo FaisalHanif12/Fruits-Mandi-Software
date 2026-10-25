@@ -25,7 +25,8 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { message, visible } from '../helpers/render';
+import { printFirmName } from '../helpers/print-frame';
+import { message, visible, paragraph } from '../helpers/render';
 import {
   ANALYTICS_PRINT_DATA_D_UR,
   ANALYTICS_RUN_A_REQUEST,
@@ -231,7 +232,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       ]);
       // It says so, with the numbers, so a column that waits is never a surprise.
       expect(
-        await screen.findByText(named(m('analytics-columns-fit', { shown: 8, total: 9 }))),
+        await screen.findByText(paragraph(m('analytics-columns-fit', { shown: 8, total: 9 }))),
       ).toBeInTheDocument();
     });
 
@@ -254,7 +255,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       expect(totalsCell('item')).toBe(m('report-total'));
       // The same text still says 8 of 9, and the button offers the way back.
       expect(
-        screen.getByText(named(m('analytics-columns-fit', { shown: 8, total: 9 }))),
+        screen.getByText(paragraph(m('analytics-columns-fit', { shown: 8, total: 9 }))),
       ).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: named(m('analytics-columns-main')) }));
       await waitFor(() => {
@@ -767,7 +768,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
         language,
         paper: 'a4',
       });
-      const doc = await screen.findByText(ANALYTICS_PRINT_DATA_D_UR.firm.name, undefined, SLOW_MS);
+      const doc = await screen.findByText(printFirmName(language), undefined, SLOW_MS);
       expect(doc).toBeInTheDocument();
       const heads = Array.from(document.querySelectorAll('.print-report thead th')).map((th) =>
         visible(th.textContent),
@@ -834,7 +835,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       // The room of the normal step holds six months beside the item and the total.
       expect(
         await screen.findByText(
-          named(m('analytics-columns-shown', { from: 1, to: 6, total: 12 })),
+          paragraph(m('analytics-columns-shown', { from: 1, to: 6, total: 12 })),
           undefined,
           SLOW_MS,
         ),
@@ -857,7 +858,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       await user.click(screen.getByRole('button', { name: named(m('analytics-columns-later')) }));
       expect(
         await screen.findByText(
-          named(m('analytics-columns-shown', { from: 7, to: 12, total: 12 })),
+          paragraph(m('analytics-columns-shown', { from: 7, to: 12, total: 12 })),
         ),
       ).toBeInTheDocument();
       await waitFor(() => {

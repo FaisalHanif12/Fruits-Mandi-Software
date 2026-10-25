@@ -230,6 +230,8 @@ fn record(account_id: i64, code: &str, name_ur: &str, name_en: &str) -> RecordRe
         code: code.to_owned(),
         name_ur: name_ur.to_owned(),
         name_en: name_en.to_owned(),
+        // The accounts of a month close are income, expense and capital accounts: none has a tag.
+        tag: None,
     }
 }
 

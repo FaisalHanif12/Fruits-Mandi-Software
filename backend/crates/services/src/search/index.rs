@@ -33,6 +33,9 @@ pub struct Entry {
     code: String,
     /// What the picker shows.
     hit: SearchHit,
+    /// For an account: its tag (نشان, PRD 10.2), shown after its name. It is also one more word
+    /// of the three keys, which the database holds.
+    tag: Option<String>,
     key_ur: String,
     key_en: String,
     key_ph: String,
@@ -85,15 +88,16 @@ impl Entry {
     fn from_source(kind: SearchScope, source: SearchSource) -> Entry {
         // Bank accounts also find the bank name, title and number (typed in one script).
         let more = source.more_keys.trim();
+        let tag = source.tag.clone();
         let mut key_ur = source
             .search_ur
-            .unwrap_or_else(|| text::search_ur(&source.name_ur));
+            .unwrap_or_else(|| text::search_ur_tagged(&source.name_ur, tag.as_deref()));
         let mut key_en = source
             .search_en
-            .unwrap_or_else(|| text::search_en(&source.name_en));
+            .unwrap_or_else(|| text::search_en_tagged(&source.name_en, tag.as_deref()));
         let key_ph = source
             .search_phonetic
-            .unwrap_or_else(|| text::search_phonetic(&source.name_en));
+            .unwrap_or_else(|| text::search_phonetic_tagged(&source.name_en, tag.as_deref()));
         if !more.is_empty() {
             key_ur = format!("{key_ur} {}", text::search_ur(more));
             key_en = format!("{key_en} {}", text::search_en(more));
@@ -120,6 +124,7 @@ impl Entry {
             .and_then(|_| serial_of(&source.code));
         Entry {
             id: source.id,
+            tag,
             name_key,
             serial,
             account,
@@ -528,6 +533,7 @@ fn account_hit(entry: &Entry) -> Option<AccountHit> {
         account_type: facts.account_type,
         control_id: facts.control_id,
         is_active: entry.hit.is_active,
+        tag: entry.tag.clone(),
     })
 }
 

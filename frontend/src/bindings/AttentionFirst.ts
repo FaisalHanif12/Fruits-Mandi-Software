@@ -25,4 +25,9 @@ export type AttentionFirst = {
    * English name.
    */
   name_en: string | null;
+  /**
+   * The tag (نشان) of the account, shown after the name (PRD 10.2). Missing when it has none,
+   * and for a record that is not an account.
+   */
+  tag?: string;
 };

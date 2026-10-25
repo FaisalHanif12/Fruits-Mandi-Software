@@ -22,8 +22,9 @@ pub enum JobTarget {
 /// One document to print: the hidden print window shows it, then the web view prints it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Job {
-    /// Which document.
-    pub doc: PrintDoc,
+    /// Which of the five documents (plan 14, 17e), or none for a report or an analytics view
+    /// (plan d5-late): those are not one of the documents of the Printing settings.
+    pub doc: Option<PrintDoc>,
     /// Its paper class, from the Printing settings.
     pub paper: Paper,
     /// The query of the print route without the job number: `bikri=1&doc=seller_bill&language=ur`.

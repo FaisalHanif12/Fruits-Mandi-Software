@@ -18,7 +18,7 @@ import type { AnalyticsPage } from '../../../bindings/AnalyticsPage';
 import { uiErrorOf } from '../../../shared/api';
 import { ListGrid } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
-import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { Button, EmptyState, ErrorState, LoadingState, RUNNING_NUMBER } from '../../../shared/ui';
 import { cellText, totalsFor } from '../../reports';
 import {
   analyticsColumns,
@@ -170,6 +170,7 @@ export function AnalyticsResults({
                 to: String(window.start + window.count),
                 total: String(window.total),
               }}
+              elems={RUNNING_NUMBER}
             >
               <p className="type-body text-ink-muted" />
             </Localized>
@@ -200,6 +201,7 @@ export function AnalyticsResults({
             <Localized
               id="analytics-columns-fit"
               vars={{ shown: String(plan.trimmed.shown), total: String(plan.trimmed.total) }}
+              elems={RUNNING_NUMBER}
             >
               <p className="type-body text-ink-muted" />
             </Localized>
@@ -249,6 +251,7 @@ export function AnalyticsResults({
           <Localized
             id="report-count"
             vars={{ shown: String(rows.length), total: String(last.total_count) }}
+            elems={RUNNING_NUMBER}
           >
             <p className="type-body text-ink-muted" />
           </Localized>

@@ -4,31 +4,42 @@
   "dir": "rtl",
   "paper": "a5",
   "urdu_digits": false,
-  "title_id": "print-advance-slip-title",
-  "firm": {
-    "name": "ماہر عدنان اینڈ برادرز",
-    "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
-    "address": "Kot Radha Kishan",
-    "phone": "03001234567"
+  "header": {
+    "firm": {
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-advance-slip-title",
+    "facts": [
+      {
+        "label_id": "print-fact-voucher-number",
+        "value": "1"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
   },
   "number": "1",
-  "facts": [
-    {
-      "label_id": "print-fact-voucher-number",
-      "value": "1"
-    },
-    {
-      "label_id": "print-fact-date",
-      "value": "10-10-2026"
-    }
-  ],
-  "printed_at": "10-10-2026 14:00",
   "cancelled": false,
   "pages": [
     {
+      "serial": "1",
       "party": {
         "role_id": "print-party-seller",
         "code": "030110001",
+        "short_code": "1",
         "name": "رحیم",
         "phone": null
       },

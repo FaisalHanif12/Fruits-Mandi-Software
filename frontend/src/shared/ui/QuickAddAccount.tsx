@@ -14,6 +14,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useState, type ReactNode } from 'react';
 import {
+  pickedOf,
   useAccountNextCode,
   useSaveAccount,
   type AccountDraft,
@@ -34,6 +35,7 @@ import { FormDialog } from './FormDialog';
 import { NamePair, type NamePairValue } from './NamePair';
 import { Picker } from './Picker';
 import { Select } from './Select';
+import { TagInput } from './TagInput';
 import { TextInput } from './TextInput';
 import { fieldError } from './field-error';
 import { showToast } from './toast-store';
@@ -69,6 +71,7 @@ const FIELD_PATHS = [
   'code',
   'name_ur',
   'name_en',
+  'tag',
   'father_or_firm_ur',
   'father_or_firm_en',
   'phone1',
@@ -109,6 +112,7 @@ function QuickAddForm({
           ? { urdu: text, english: '' }
           : { urdu: '', english: text },
   );
+  const [tag, setTag] = useState('');
   const [father, setFather] = useState<NamePairValue>({ urdu: '', english: '' });
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [city, setCity] = useState<AccountDraft['city']>(null);
@@ -130,6 +134,7 @@ function QuickAddForm({
     control_id: null,
     code: codeShown,
     names,
+    tag,
     father,
     city,
     adda: null,
@@ -223,6 +228,13 @@ function QuickAddForm({
           urduError={fieldError(error, 'name_ur')}
           englishError={fieldError(error, 'name_en')}
         />
+        <Field
+          label={<Localized id="accounts-field-tag" />}
+          hint={<Localized id="accounts-field-tag-hint" />}
+          error={fieldError(error, 'tag')}
+        >
+          {(props) => <TagInput {...props} value={tag} onChange={setTag} />}
+        </Field>
         <NamePair
           value={father}
           onChange={setFather}
@@ -241,11 +253,7 @@ function QuickAddForm({
               scope="city"
               value={city}
               onChange={(hit) => {
-                setCity(
-                  hit === null
-                    ? null
-                    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                );
+                setCity(hit === null ? null : pickedOf(hit));
               }}
             />
           )}

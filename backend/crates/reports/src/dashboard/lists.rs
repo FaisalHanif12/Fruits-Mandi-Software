@@ -15,15 +15,17 @@ use crate::reports::Names;
 use crate::reports::collections::dues::Buyer;
 use crate::reports::common::{IN_CHUNK, paisa, placeholders};
 
-/// The first seller of a بکری, by its first lot.
-type FirstSellers = HashMap<i64, Names>;
+/// The first seller of a بکری, by its first lot, with the tag of his account (none for a one-time
+/// person).
+type FirstSellers = HashMap<i64, (Names, Option<String>)>;
 
 /// The seller of the first lot of each of these بکری; a one-time seller shows his own name.
 fn first_sellers(conn: &Connection, ids: &[i64]) -> Result<FirstSellers, ReportsError> {
     let mut out = HashMap::new();
     for chunk in ids.chunks(IN_CHUNK) {
         let sql = format!(
-            "SELECT l.bikri_id, COALESCE(l.pukhta_name_ur, a.name_ur), COALESCE(l.pukhta_name_en, a.name_en)
+            "SELECT l.bikri_id, COALESCE(l.pukhta_name_ur, a.name_ur), COALESCE(l.pukhta_name_en, a.name_en),
+                    CASE WHEN l.pukhta_name_ur IS NULL THEN a.tag END
              FROM bikri_lots l JOIN accounts a ON a.id = l.seller_account_id
              WHERE l.bikri_id IN ({}) AND l.lot_no = (SELECT MIN(m.lot_no) FROM bikri_lots m
                                                       WHERE m.bikri_id = l.bikri_id)",
@@ -33,15 +35,18 @@ fn first_sellers(conn: &Connection, ids: &[i64]) -> Result<FirstSellers, Reports
         let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
             Ok((
                 r.get::<_, i64>(0)?,
-                Names {
-                    ur: r.get(1)?,
-                    en: r.get(2)?,
-                },
+                (
+                    Names {
+                        ur: r.get(1)?,
+                        en: r.get(2)?,
+                    },
+                    r.get::<_, Option<String>>(3)?,
+                ),
             ))
         })?;
         for row in rows {
-            let (id, names) = row?;
-            out.insert(id, names);
+            let (id, seller) = row?;
+            out.insert(id, seller);
         }
     }
     Ok(out)
@@ -90,7 +95,8 @@ pub(crate) fn bikri_today(
             bikri_id,
             number,
             truck_no: truck_no.filter(|t| !t.trim().is_empty()),
-            seller: sellers.get(&bikri_id).cloned(),
+            seller: sellers.get(&bikri_id).map(|(names, _)| names.clone()),
+            seller_tag: sellers.get(&bikri_id).and_then(|(_, tag)| tag.clone()),
             seller_count,
             gross_paisa: paisa(gross)?,
             net_paisa: paisa(net)?,

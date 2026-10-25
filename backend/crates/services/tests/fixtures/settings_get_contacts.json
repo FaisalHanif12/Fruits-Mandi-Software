@@ -1,0 +1,26 @@
+{
+  "default_language": "ur",
+  "firm": {
+    "address": "Kot Radha Kishan",
+    "firm_contacts": [
+      {
+        "name_en": "Munshi Asif Bhatti",
+        "name_ur": "منشی آصف بھٹی",
+        "phone": "03004058860"
+      },
+      {
+        "name_en": "Akram",
+        "name_ur": "اکرم",
+        "phone": "03211234567"
+      }
+    ],
+    "mandi_en": "New Sabzi Mandi Kot Radha Kishan",
+    "mandi_ur": "نئی سبزی منڈی کوٹ رادھا کشن",
+    "name_en": "Maher Adnan and Brothers",
+    "name_ur": "ماہر عدنان اینڈ برادرز",
+    "phone": "03001234567",
+    "trade_mark": "RH"
+  },
+  "idle_lock_minutes": 15,
+  "number_grouping": "international"
+}

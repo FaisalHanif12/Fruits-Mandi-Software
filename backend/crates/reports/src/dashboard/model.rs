@@ -139,6 +139,11 @@ pub struct DashboardBikri {
     pub truck_no: Option<String>,
     /// The seller of its first lot (the one-time person's name for a پختہ کھاتہ lot).
     pub seller: Option<Names>,
+    /// The tag (نشان) of that seller's account, shown after his name. Missing when he has none and
+    /// for a one-time person.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub seller_tag: Option<String>,
     /// How many sellers it has. 1 for a truck with one seller.
     #[ts(type = "number")]
     pub seller_count: i64,
@@ -267,6 +272,11 @@ pub struct AttentionFirst {
     pub name_ur: Option<String>,
     /// English name.
     pub name_en: Option<String>,
+    /// The tag (نشان) of the account, shown after the name (PRD 10.2). Missing when it has none,
+    /// and for a record that is not an account.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tag: Option<String>,
 }
 
 /// One line of the attention list.

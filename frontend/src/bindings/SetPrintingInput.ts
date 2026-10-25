@@ -24,6 +24,10 @@ export type SetPrintingInput = {
    */
   paper_receipt_slip: Paper;
   /**
+   * Paper of the collection list. Missing means A4.
+   */
+  paper_collection_list: Paper;
+  /**
    * Printer name. Empty means the default printer. At most 259 characters.
    */
   printer: string;

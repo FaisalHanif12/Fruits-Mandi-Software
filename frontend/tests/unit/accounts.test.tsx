@@ -426,6 +426,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
         city_en: 'Kot Radha Kishan',
         phone1: '03001234567',
         account_type: 'buyer',
+        is_duplicate: false,
       },
     ]);
     await renderApp('/index/accounts/new');
@@ -464,6 +465,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
         city_en: '',
         phone1: '',
         account_type: 'buyer',
+        is_duplicate: false,
       },
     ]);
     await renderApp('/index/accounts/21');

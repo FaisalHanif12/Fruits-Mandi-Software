@@ -1,0 +1,42 @@
+{
+  "account_type": "buyer",
+  "adda": null,
+  "address": "",
+  "balance": {
+    "amount_paisa": 0,
+    "side": "zero"
+  },
+  "can_take_opening": true,
+  "city": null,
+  "code": "03040001",
+  "collection_weekday": null,
+  "collector": null,
+  "control": {
+    "code": "0304",
+    "id": 6,
+    "name_en": "Buyers",
+    "name_ur": "گاہک"
+  },
+  "credit_allowed": true,
+  "credit_limit_paisa": null,
+  "default_marka": null,
+  "father_or_firm_en": "",
+  "father_or_firm_ur": "",
+  "id": 18,
+  "is_active": true,
+  "is_pukhta_khata": false,
+  "is_system": false,
+  "linked_account": null,
+  "name_en": "Akram Toll Tax",
+  "name_ur": "اکرم ٹول ٹیکس",
+  "note": "",
+  "opening_cr_paisa": 0,
+  "opening_date": null,
+  "opening_dr_paisa": 0,
+  "opening_is_advance": false,
+  "phone1": "03001234567",
+  "phone2": "",
+  "serial": 1,
+  "tag": "K",
+  "version": 1
+}

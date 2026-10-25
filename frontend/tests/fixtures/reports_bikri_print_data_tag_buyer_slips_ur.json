@@ -1,0 +1,154 @@
+{
+  "doc": "buyer_slips",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a5",
+  "urdu_digits": false,
+  "header": {
+    "firm": {
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [
+      {
+        "name": "منشی آصف بھٹی",
+        "phone": "03004058860"
+      },
+      {
+        "name": "اکرم",
+        "phone": "03211234567"
+      }
+    ],
+    "trade_mark": "RH",
+    "title_id": "print-buyer-slip-title",
+    "facts": [
+      {
+        "label_id": "print-fact-number",
+        "value": "1"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      },
+      {
+        "label_id": "print-fact-truck",
+        "value": "LES-1234"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
+  },
+  "number": "1",
+  "cancelled": false,
+  "pages": [
+    {
+      "serial": "1",
+      "party": {
+        "role_id": "print-party-buyer",
+        "code": "03040001",
+        "short_code": "1",
+        "name": "اکرم ٹول ٹیکس",
+        "tag": "K",
+        "phone": null
+      },
+      "lines": [
+        {
+          "date": "10-10-2026",
+          "name": null,
+          "item": "کیلا",
+          "packing": "پیٹی",
+          "qty": "20",
+          "weight_kg": null,
+          "rate": "600",
+          "amount": "12,000",
+          "detail": "(کیلا 20 . 600)",
+          "note": null
+        }
+      ],
+      "amounts": [
+        {
+          "label_id": "print-items-value",
+          "amount": "12,000",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-buyer-commission",
+          "amount": "720",
+          "role": "line"
+        },
+        {
+          "label_id": "print-laga",
+          "amount": "160",
+          "role": "line"
+        },
+        {
+          "label_id": "print-buyer-pays",
+          "amount": "12,880",
+          "role": "total"
+        }
+      ],
+      "payment_id": "print-payment-credit",
+      "words": {
+        "label_id": "print-in-words",
+        "text": "بارہ ہزار آٹھ سو اسی روپے"
+      }
+    },
+    {
+      "serial": "2",
+      "party": {
+        "role_id": "print-party-buyer",
+        "code": "03040002",
+        "short_code": "2",
+        "name": "ارشد ملتانی",
+        "phone": null
+      },
+      "lines": [
+        {
+          "date": "10-10-2026",
+          "name": null,
+          "item": "کیلا",
+          "packing": "پیٹی",
+          "qty": "30",
+          "weight_kg": null,
+          "rate": "580",
+          "amount": "17,400",
+          "detail": "(کیلا 30 . 580)",
+          "note": null
+        }
+      ],
+      "amounts": [
+        {
+          "label_id": "print-items-value",
+          "amount": "17,400",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-buyer-commission",
+          "amount": "1,044",
+          "role": "line"
+        },
+        {
+          "label_id": "print-laga",
+          "amount": "240",
+          "role": "line"
+        },
+        {
+          "label_id": "print-buyer-pays",
+          "amount": "18,684",
+          "role": "total"
+        }
+      ],
+      "payment_id": "print-payment-credit",
+      "words": {
+        "label_id": "print-in-words",
+        "text": "اٹھارہ ہزار چھ سو چوراسی روپے"
+      }
+    }
+  ]
+}

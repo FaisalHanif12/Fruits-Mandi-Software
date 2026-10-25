@@ -11,8 +11,6 @@ import type { ListColumn } from '../../shared/grid';
 import { sideMessageId } from '../../shared/ui';
 import type { AccountRow } from '../../shared/accounts';
 
-const nameOf = (row: AccountRow) => ({ name_ur: row.name_ur, name_en: row.name_en });
-
 export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
   { field: 'code', type: 'code', headerId: 'accounts-col-code', value: (row) => row.code },
   {
@@ -24,8 +22,8 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     // (NFR-USE-12). The word comes with the name, so it takes no column of its own.
     value: (row, { language, text }) =>
       row.is_active
-        ? displayName(nameOf(row), language)
-        : `${displayName(nameOf(row), language)} (${text('masters-status-inactive')})`,
+        ? displayName(row, language)
+        : `${displayName(row, language)} (${text('masters-status-inactive')})`,
   },
   {
     field: 'other_name',
@@ -34,7 +32,7 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     from: 'wide',
     grow: true,
     script: (language: Language) => (language === 'ur' ? 'en' : 'ur'),
-    value: (row, { language }) => otherScriptName(nameOf(row), language),
+    value: (row, { language }) => otherScriptName(row, language),
   },
   {
     field: 'city',

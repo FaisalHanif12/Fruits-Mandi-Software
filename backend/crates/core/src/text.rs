@@ -156,6 +156,50 @@ pub fn search_phonetic(name_en: &str) -> String {
     key
 }
 
+/// `search_ur` of an account with a tag (نشان, PRD 10.2, FR-7.40): the Urdu key and the tag as one
+/// more lower-case word, so `عاشق k` finds `عاشق ظفر K`. With no tag it is exactly `search_ur`, so an
+/// account without a tag keeps the key it had.
+///
+/// `search_ur_tagged("عاشق ظفر", Some("K")) == "عاشق ظفر k"`.
+pub fn search_ur_tagged(name_ur: &str, tag: Option<&str>) -> String {
+    with_tag_word(search_ur(name_ur), tag)
+}
+
+/// `search_en` of an account with a tag (PRD 10.2, FR-7.40): the English key and the tag as one
+/// more lower-case word, so `ashiq k` finds `Ashiq Zafar K`. With no tag it is exactly
+/// `search_en`.
+///
+/// `search_en_tagged("Ashiq Zafar", Some("K")) == "ashiq zafar k"`.
+pub fn search_en_tagged(name_en: &str, tag: Option<&str>) -> String {
+    with_tag_word(search_en(name_en), tag)
+}
+
+/// `search_phonetic` of an account with a tag (PRD 10.2): the letters of the tag come after the
+/// letters of the name. With no tag it is exactly `search_phonetic`.
+///
+/// `search_phonetic_tagged("Ashiq Zafar", Some("K")) == "ashqzfrk"`.
+pub fn search_phonetic_tagged(name_en: &str, tag: Option<&str>) -> String {
+    match tag.map(str::trim).filter(|t| !t.is_empty()) {
+        Some(tag) => search_phonetic(&format!("{name_en} {tag}")),
+        None => search_phonetic(name_en),
+    }
+}
+
+/// A key and the tag as one more word. A tag that is empty adds nothing.
+fn with_tag_word(key: String, tag: Option<&str>) -> String {
+    match tag.map(str::trim).filter(|t| !t.is_empty()) {
+        Some(tag) => {
+            let word = search_en(tag);
+            if key.is_empty() {
+                word
+            } else {
+                format!("{key} {word}")
+            }
+        }
+        None => key,
+    }
+}
+
 /// The key of a one-time person of the پختہ کھاتہ accounts (PRD FR-13.5): the Urdu name after
 /// Urdu normalisation, a `|`, and the phone digits (empty if there is none). Balances, matching
 /// and aging are kept per key, so one person's payment never settles another's bill.
@@ -465,5 +509,54 @@ mod tests {
         assert_eq!(shuffled, expected);
         assert_eq!(collator.compare("ب", "پ"), Ordering::Less);
         assert_eq!(collator.compare("ت", "ٹ"), Ordering::Less);
+    }
+}
+
+#[cfg(test)]
+mod tagged_key_tests {
+    use super::*;
+
+    #[test]
+    fn a_tag_is_one_more_word_in_the_three_keys() {
+        assert_eq!(search_ur_tagged("عاشق ظفر", Some("K")), "عاشق ظفر k");
+        assert_eq!(search_en_tagged("Ashiq Zafar", Some("K")), "ashiq zafar k");
+        assert_eq!(
+            search_en_tagged("Ashiq Zafar", Some("D.P")),
+            "ashiq zafar d.p"
+        );
+        assert_eq!(search_phonetic_tagged("Ashiq Zafar", Some("K")), "ashqzfrk");
+    }
+
+    #[test]
+    fn no_tag_keeps_exactly_the_old_keys() {
+        for name in ["Akram Toll Tax", "  Arshad  Multani ", "", "Ali"] {
+            for none in [None, Some(""), Some("  ")] {
+                assert_eq!(search_en_tagged(name, none), search_en(name), "{name:?}");
+                assert_eq!(
+                    search_phonetic_tagged(name, none),
+                    search_phonetic(name),
+                    "{name:?}"
+                );
+            }
+        }
+        for name in ["اکرم ٹول ٹیکس", "اكرم", ""] {
+            assert_eq!(search_ur_tagged(name, None), search_ur(name));
+        }
+    }
+
+    #[test]
+    fn two_people_with_one_name_get_different_keys() {
+        // اسلم BA and اسلم are two people (PRD E38): the keys tell them apart.
+        assert_ne!(
+            search_en_tagged("Aslam", Some("BA")),
+            search_en_tagged("Aslam", None)
+        );
+        assert_eq!(search_en_tagged("Aslam", Some("BA")), "aslam ba");
+    }
+
+    #[test]
+    fn an_empty_name_with_a_tag_is_just_the_tag() {
+        assert_eq!(search_en_tagged("", Some("K")), "k");
+        assert_eq!(search_ur_tagged("", Some("K")), "k");
     }
 }

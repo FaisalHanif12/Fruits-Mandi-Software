@@ -10,10 +10,10 @@ import type { ReportPrintCell } from '../../../bindings/ReportPrintCell';
 import type { ReportPrintDetailPart } from '../../../bindings/ReportPrintDetailPart';
 import type { ReportPrintMessageArg } from '../../../bindings/ReportPrintMessageArg';
 import { NumberRuns } from '../../../shared/grid/NumberRuns';
+import { PrintName } from '../../../shared/print';
 import { scriptOf } from '../../../shared/text/scriptHint';
 import { Code } from '../../../shared/ui/Code';
 import { Num } from '../../../shared/ui/Num';
-import { ScriptText } from '../../../shared/ui/ScriptText';
 import { monthMessageId } from '../cells';
 
 /** The column kinds that hold figures: they sit on the physical right edge (NFR-USE-19). */
@@ -34,44 +34,55 @@ function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSal
       // The buyers' list (R5) writes a line as the client's own print does: "(item qty . rate)".
       if (shortSale) {
         return (
-          <p>
-            {l10n.getString('report-detail-sale-short', {
-              item: part.item,
-              qty: part.qty,
-              rate: part.rate,
-            })}
+          // Spaces round the dot stay, the line does not wrap, and each number is in Inter (F25).
+          <p className="print-nowrap">
+            <NumberRuns
+              text={l10n.getString('report-detail-sale-short', {
+                item: part.item,
+                qty: part.qty,
+                rate: part.rate,
+              })}
+            />
           </p>
         );
       }
       return (
         <p>
-          {l10n.getString('report-detail-sale', {
-            number: part.bikri_number,
-            item: part.item,
-            qty: part.qty,
-            packing: part.packing,
-            rate: part.rate,
-            value: part.value,
-            commission: part.commission,
-            laga: part.laga,
-          })}
+          <NumberRuns
+            text={l10n.getString('report-detail-sale', {
+              number: part.bikri_number,
+              item: part.item,
+              qty: part.qty,
+              packing: part.packing,
+              rate: part.rate,
+              value: part.value,
+              commission: part.commission,
+              laga: part.laga,
+            })}
+          />
         </p>
       );
     case 'lot':
       return (
         <p>
-          {l10n.getString('report-detail-lot', {
-            number: part.bikri_number,
-            item: part.item,
-            qty: part.qty,
-            packing: part.packing,
-            gross: part.gross,
-            deductions: part.deductions,
-          })}
+          <NumberRuns
+            text={l10n.getString('report-detail-lot', {
+              number: part.bikri_number,
+              item: part.item,
+              qty: part.qty,
+              packing: part.packing,
+              gross: part.gross,
+              deductions: part.deductions,
+            })}
+          />
         </p>
       );
     case 'cash_lent':
-      return <p>{l10n.getString('report-detail-cash-lent', { reason: part.reason })}</p>;
+      return (
+        <p>
+          <NumberRuns text={l10n.getString('report-detail-cash-lent', { reason: part.reason })} />
+        </p>
+      );
     case 'text':
       return (
         <p>
@@ -114,7 +125,7 @@ export function Cell({ cell, shortSale = false }: { cell: ReportPrintCell; short
         </bdi>
       );
     case 'label':
-      return <>{l10n.getString(cell.id)}</>;
+      return <NumberRuns text={l10n.getString(cell.id)} />;
     case 'number':
     case 'money':
     case 'percent':
@@ -137,11 +148,11 @@ export function Cell({ cell, shortSale = false }: { cell: ReportPrintCell; short
       );
     case 'party': {
       const { party } = cell;
-      const name =
-        party.tag === null || party.tag === '' ? party.name : `${party.name} ${party.tag}`;
+      // The name, then the tag in its own isolate (PRD 10.2, FR-19.13): the shared `PrintName`.
       return (
         <>
-          <Code>{party.short_code ?? party.code}</Code> <ScriptText>{name}</ScriptText>
+          <Code>{party.short_code ?? party.code}</Code>{' '}
+          <PrintName name={party.name} tag={party.tag ?? undefined} />
         </>
       );
     }
@@ -173,7 +184,7 @@ export function Cell({ cell, shortSale = false }: { cell: ReportPrintCell; short
     case 'message':
       // A sentence of a partner statement line: the backend wrote every figure in the print
       // language, so the message only puts the words around them (PRD FR-17.10).
-      return <>{printMessageText(l10n, cell.id, cell.args)}</>;
+      return <NumberRuns text={printMessageText(l10n, cell.id, cell.args)} />;
   }
 }
 
