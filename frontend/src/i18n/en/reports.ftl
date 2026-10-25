@@ -1270,7 +1270,4 @@ report-detail-sale-short = ({ $item } { $qty } . { $rate })
 report-print-all = Print all slips
 
 # review: pending
-report-print-all-title = All { -udhari } buyers' slips
-
-# review: pending
 report-buyer-bills-slips = Slips

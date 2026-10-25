@@ -1271,7 +1271,4 @@ report-detail-sale-short = ({ $item } { $qty } . { $rate })
 report-print-all = تمام پرچیاں پرنٹ کریں
 
 # review: pending
-report-print-all-title = تمام { -udhari } گاہکوں کی پرچیاں
-
-# review: pending
 report-buyer-bills-slips = پرچیاں
