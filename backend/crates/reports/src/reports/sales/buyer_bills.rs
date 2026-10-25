@@ -363,24 +363,27 @@ pub(crate) fn slips(conn: &Connection, typed: &Typed) -> Result<Slips, ReportsEr
             qty = qty
                 .checked_add(line.qty)
                 .ok_or_else(|| ReportsError::Data("a slip quantity does not fit".to_owned()))?;
-            if let DetailPart::Sale {
+            let DetailPart::Sale {
                 value_paisa,
                 commission_paisa,
                 laga_paisa,
                 ..
             } = &line.part
-            {
-                add(&mut line_value, *value_paisa)?;
-                // C5: the stored total of a line is its value + commission + لاگا.
-                let mut c5 = *value_paisa;
-                add(&mut c5, *commission_paisa)?;
-                add(&mut c5, *laga_paisa)?;
-                if c5 != line.total {
-                    return Err(ReportsError::Data(format!(
-                        "a line of buyer {} is not value + commission + laga",
-                        buyer.key.0
-                    )));
-                }
+            else {
+                return Err(ReportsError::Data(
+                    "a slip line is not a sale line".to_owned(),
+                ));
+            };
+            add(&mut line_value, *value_paisa)?;
+            // C5: the stored total of a line is its value + commission + لاگا.
+            let mut c5 = *value_paisa;
+            add(&mut c5, *commission_paisa)?;
+            add(&mut c5, *laga_paisa)?;
+            if c5 != line.total {
+                return Err(ReportsError::Data(format!(
+                    "a line of buyer {} is not value + commission + laga",
+                    buyer.key.0
+                )));
             }
             add(&mut line_total, line.total)?;
         }

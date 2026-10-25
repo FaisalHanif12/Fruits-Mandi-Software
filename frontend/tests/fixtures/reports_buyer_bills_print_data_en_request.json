@@ -1,0 +1,21 @@
+{
+  "filters": {
+    "adda_id": null,
+    "as_of": "",
+    "bikri_id": null,
+    "city_id": null,
+    "detail": false,
+    "from": "10-10-2026",
+    "garden_id": null,
+    "item_id": null,
+    "partner_id": null,
+    "party": null,
+    "seller_id": null,
+    "shortcut": null,
+    "to": "10-10-2026",
+    "zamindar_id": null
+  },
+  "id": "R5",
+  "language": "en",
+  "paper": null
+}

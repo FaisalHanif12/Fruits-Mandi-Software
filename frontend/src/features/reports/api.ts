@@ -6,6 +6,7 @@
 // `reports_voucher_print_data` and `reports_print_data` (its capability allows nothing else).
 
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
+import type { BuyerBillsPrintData } from '../../bindings/BuyerBillsPrintData';
 import type { FindPeopleInput } from '../../bindings/FindPeopleInput';
 import type { PrintData } from '../../bindings/PrintData';
 import type { PrintInput } from '../../bindings/PrintInput';
@@ -74,6 +75,14 @@ export function reportsRun(input: ReportRunInput): Promise<ReportPage> {
 /** Everything a print of a report needs, with every row, in the print language (PRD FR-19.3). */
 export function reportsPrintData(input: ReportPrintInput): Promise<ReportPrintData> {
   return callCommand<ReportPrintData>('reports_print_data', { input });
+}
+
+/**
+ * Everything a print of ALL the credit buyers' slips of R5 needs, one slip for each buyer, with every
+ * row (PRD 19.2 R5, "Print All"). The input is the one of the R5 print; any other report is refused.
+ */
+export function reportsBuyerBillsPrintData(input: ReportPrintInput): Promise<BuyerBillsPrintData> {
+  return callCommand<BuyerBillsPrintData>('reports_buyer_bills_print_data', { input });
 }
 
 /**

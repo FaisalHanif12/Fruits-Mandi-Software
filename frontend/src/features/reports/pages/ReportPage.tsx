@@ -129,7 +129,7 @@ function ReportBody({
   useEffect(() => {
     remember(rememberedFilters(state));
   }, [state, remember]);
-  const [view, setView] = useState<'table' | 'preview'>('table');
+  const [view, setView] = useState<'table' | 'preview' | 'slips'>('table');
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const settled = useDebouncedValue(state, FILTER_SETTLE_MS);
   const wire = useMemo(
@@ -183,8 +183,8 @@ function ReportBody({
     void navigate({ to: '/reports' });
   };
   useEscape('leave', () => {
-    if (view === 'preview') setView('table');
-    else backToList();
+    if (view === 'table') backToList();
+    else setView('table');
   });
   // The sale book report (R1) prints the seller's bill itself, the shared print job of the بکری picked
   // (`PrintAction`, which has its own F9), not a page of the report.
@@ -235,7 +235,16 @@ function ReportBody({
   const filtering = !isUnfiltered(state, entry.filters);
 
   let body;
-  if (view === 'preview' && wire !== null) {
+  if (view === 'slips' && wire !== null) {
+    body = (
+      <BuyerBillsPreview
+        filters={wire}
+        onBack={() => {
+          setView('table');
+        }}
+      />
+    );
+  } else if (view === 'preview' && wire !== null) {
     body = (
       <ReportPreview
         id={entry.id}
@@ -302,8 +311,20 @@ function ReportBody({
               <Localized id="report-preview" />
             </Button>
           )}
+          {/* The credit buyers' details (R5) can print one slip for each buyer (PRD 19.2 R5). */}
+          {entry.id === 'R5' ? (
+            <Button
+              disabled={wire === null || view !== 'table'}
+              onClick={() => {
+                setView('slips');
+              }}
+            >
+              <Files aria-hidden="true" className="size-icon-md" />
+              <Localized id="report-print-all" />
+            </Button>
+          ) : null}
           {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
-          {view === 'preview' ? null : (
+          {view !== 'table' ? null : (
             <ExcelExportButton
               exporter={exporter}
               language={language}
@@ -313,7 +334,7 @@ function ReportBody({
         </div>
       </div>
       <ExcelExportNotices exporter={exporter} />
-      {view === 'preview' ? null : (
+      {view !== 'table' ? null : (
         <ReportFilterBar
           entry={entry}
           state={{ ...state, party }}

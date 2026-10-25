@@ -11,6 +11,7 @@ import type { ReportPrintInput } from '../../bindings/ReportPrintInput';
 import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput';
 import {
   reportsBikriPrintData,
+  reportsBuyerBillsPrintData,
   reportsCatalog,
   reportsFindPeople,
   reportsListPrinters,
@@ -109,6 +110,20 @@ export function useReportPrintData(input: ReportPrintInput | null) {
     queryFn: () => {
       if (input === null) throw new Error('no print input');
       return reportsPrintData(input);
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+/** The print data of all the credit buyers' slips of R5: a snapshot, like the print above. */
+export function useBuyerBillsPrintData(input: ReportPrintInput | null) {
+  return useQuery({
+    queryKey: ['reports_buyer_bills_print_data', input],
+    queryFn: () => {
+      if (input === null) throw new Error('no print input');
+      return reportsBuyerBillsPrintData(input);
     },
     enabled: input !== null,
     staleTime: Infinity,

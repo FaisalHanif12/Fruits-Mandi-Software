@@ -1,0 +1,196 @@
+{
+  "report": "R5",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r5-title",
+  "firm": {
+    "name": "ماہر عدنان اینڈ برادرز",
+    "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "10-10-2026"
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "serial",
+      "title_id": "report-col-serial",
+      "kind": "number"
+    },
+    {
+      "key": "detail",
+      "title_id": "report-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_total",
+      "title_id": "report-col-buyer-total",
+      "kind": "money"
+    }
+  ],
+  "slips": [
+    {
+      "serial": "1",
+      "party": {
+        "short_code": "2",
+        "code": "03040002",
+        "name": "ارشد ملتانی",
+        "tag": null,
+        "person_key": null
+      },
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "number",
+              "text": "1"
+            },
+            {
+              "type": "detail",
+              "parts": [
+                {
+                  "kind": "sale",
+                  "bikri_number": "1",
+                  "item": "کیلا",
+                  "packing": "پیٹی",
+                  "qty": "30",
+                  "rate": "580",
+                  "value": "17,400",
+                  "commission": "1,044",
+                  "laga": "240"
+                }
+              ]
+            },
+            {
+              "type": "money",
+              "text": "17,400"
+            },
+            {
+              "type": "money",
+              "text": "18,684"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "row_count": "1",
+      "qty": "30",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "17,400"
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        }
+      ]
+    },
+    {
+      "serial": "2",
+      "party": {
+        "short_code": "1",
+        "code": "03040001",
+        "name": "اکرم ٹول ٹیکس",
+        "tag": null,
+        "person_key": null
+      },
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "number",
+              "text": "1"
+            },
+            {
+              "type": "detail",
+              "parts": [
+                {
+                  "kind": "sale",
+                  "bikri_number": "1",
+                  "item": "کیلا",
+                  "packing": "پیٹی",
+                  "qty": "20",
+                  "rate": "600",
+                  "value": "12,000",
+                  "commission": "720",
+                  "laga": "160"
+                }
+              ]
+            },
+            {
+              "type": "money",
+              "text": "12,000"
+            },
+            {
+              "type": "money",
+              "text": "12,880"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "row_count": "1",
+      "qty": "20",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "12,000"
+        },
+        {
+          "type": "money",
+          "text": "12,880"
+        }
+      ]
+    }
+  ],
+  "slip_count": "2",
+  "qty": "50",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "29,400"
+    },
+    {
+      "type": "money",
+      "text": "31,564"
+    }
+  ],
+  "qty_label_id": "report-r35-total-qty",
+  "footer_id": "print-page-label"
+}

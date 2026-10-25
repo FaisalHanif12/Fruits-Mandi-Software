@@ -16,7 +16,7 @@ export function useListContext(): ListContext {
     () => ({
       language,
       text: (id, vars) => l10n.getString(id, vars),
-      money: (amount) => formatPaisa(amount, { grouping }),
+      money: (amount, plain = false) => formatPaisa(amount, { grouping, plain }),
     }),
     [language, l10n, grouping],
   );

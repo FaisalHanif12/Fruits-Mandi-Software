@@ -98,3 +98,24 @@ describe('formatPaisaValue', () => {
     expect(formatPaisaValue(paisa, { grouping: 'lakh' })).toBe(lakh);
   });
 });
+
+describe('formatPaisa with plain', () => {
+  // A rate inside a line of words has no separators, as on the client's own print (PRD 19.2 R5).
+  it.each([
+    [0, '0'],
+    [4_500_00, '4500'],
+    [260_000, '2600'],
+    [131_604_000, '1316040'],
+    [-260_000, '-2600'],
+  ])('%d paisa is %s', (paisa, text) => {
+    expect(formatPaisa(paisaForTest(paisa), { grouping: 'international', plain: true })).toBe(text);
+    expect(formatPaisa(paisaForTest(paisa), { grouping: 'lakh', plain: true })).toBe(text);
+  });
+
+  it('leaves the usual grouping alone when plain is off', () => {
+    expect(formatPaisa(paisaForTest(260_000), { grouping: 'international' })).toBe('2,600');
+    expect(formatPaisa(paisaForTest(260_000), { grouping: 'international', plain: false })).toBe(
+      '2,600',
+    );
+  });
+});

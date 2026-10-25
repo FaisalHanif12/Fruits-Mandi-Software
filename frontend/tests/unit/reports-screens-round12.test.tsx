@@ -9,6 +9,8 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReportCell } from '../../src/bindings/ReportCell';
+import type { ReportPage } from '../../src/bindings/ReportPage';
 import * as bikriApi from '../../src/features/bikri/api';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
@@ -23,6 +25,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { listRow } from '../helpers/bikri-saved';
+import { paisaForTest } from '../helpers/paisa';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import {
@@ -157,6 +160,38 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     }, SLOW_MS);
     expect(cell('0', 'detail')).toBe(`(${names('کیلا', 'Banana')} 30 . 580)`);
     expect(cell('1', 'detail')).toBe(`(${names('کیلا', 'Banana')} 20 . 600)`);
+  });
+
+  it('writes the rate plain, 2600, while the value columns keep the app’s grouping', async () => {
+    // The client's own print reads "(سیب 8 . 2600)": no separator inside the line of words.
+    const base = R5_CREDIT_BUYERS.rows[0];
+    if (base === undefined) throw new Error('The R5 fixture has no row.');
+    const page: ReportPage = {
+      ...R5_CREDIT_BUYERS,
+      rows: [
+        {
+          ...base,
+          cells: base.cells.map((found): ReportCell => {
+            if (found.type === 'detail') {
+              return {
+                ...found,
+                parts: found.parts.map((part) =>
+                  part.kind === 'sale' ? { ...part, rate_paisa: paisaForTest(260_000) } : part,
+                ),
+              };
+            }
+            if (found.type === 'money') return { ...found, paisa: paisaForTest(1_560_000) };
+            return found;
+          }),
+        },
+      ],
+    };
+    await openCredit({ pages: { R5: page } });
+    await waitFor(() => {
+      expect(drawnRows()).toEqual(['0']);
+    }, SLOW_MS);
+    expect(cell('0', 'detail')).toBe(`(${names('کیلا', 'Banana')} 30 . 2600)`);
+    expect(cell('0', 'value')).toBe('15,600');
   });
 
   it('prints the same lines, with the backend’s figures and the totals row', async () => {

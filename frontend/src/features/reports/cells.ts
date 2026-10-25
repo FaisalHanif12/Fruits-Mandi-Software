@@ -81,7 +81,8 @@ function detailPartText(part: ReportDetailPart, context: ListContext, shortSale:
         return text('report-detail-sale-short', {
           item: displayName({ name_ur: part.item.ur, name_en: part.item.en }, language),
           qty: String(part.qty),
-          rate: money(part.rate_paisa),
+          // The rate is written plain, "2600", as on the client's own print.
+          rate: money(part.rate_paisa, true),
         });
       }
       return text('report-detail-sale', {

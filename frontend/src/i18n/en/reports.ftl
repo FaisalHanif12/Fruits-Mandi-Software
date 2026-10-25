@@ -1263,3 +1263,14 @@ report-bikri-hit = { -bikri } <num>{ $number }</num> · <num>{ $date }</num>
 
 # review: pending
 report-detail-sale-short = ({ $item } { $qty } . { $rate })
+
+## Print all the credit buyers' slips (R5, PRD 19.2 R5 "Print All"): one slip for each buyer.
+
+# review: pending
+report-print-all = Print all slips
+
+# review: pending
+report-print-all-title = All { -udhari } buyers' slips
+
+# review: pending
+report-buyer-bills-slips = Slips

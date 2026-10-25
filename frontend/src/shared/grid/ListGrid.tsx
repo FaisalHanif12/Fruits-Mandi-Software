@@ -36,8 +36,11 @@ export interface ListContext {
   language: Language;
   /** A Fluent message ID as words in the app language (the label of a choice, for example), with its variables. */
   text: (id: string, vars?: Record<string, string>) => string;
-  /** An amount from the backend as whole rupees with the app's grouping (never worked out here). */
-  money: (amount: Paisa) => string;
+  /**
+   * An amount from the backend as whole rupees with the app's grouping (never worked out here). With
+   * `plain` the separators are left out, for a rate inside a line of words ("2600", PRD 19.2 R5).
+   */
+  money: (amount: Paisa, plain?: boolean) => string;
 }
 
 export interface ListColumn<T> {
@@ -247,7 +250,7 @@ function GridInner<T>({
     () => ({
       language,
       text: (id, vars) => l10n.getString(id, vars),
-      money: (amount) => formatPaisa(amount, { grouping }),
+      money: (amount, plain = false) => formatPaisa(amount, { grouping, plain }),
     }),
     [language, l10n, grouping],
   );

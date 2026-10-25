@@ -16,7 +16,7 @@ mod support;
 use common::*;
 use mandi_reports::ReportsError;
 use mandi_reports::reports::{
-    BuyerBillsPrintData, PartyFilter, PrintCell, PrintDetailPart, ReportFilters, ReportId,
+    BuyerBillsPrintData, Cell, PartyFilter, PrintCell, PrintDetailPart, ReportFilters, ReportId,
     ReportPrintInput, buyer_bills_print_data, print_data,
 };
 use mandi_services::bikri;
@@ -84,6 +84,8 @@ fn assert_adds_up(w: &support::World, filters: &ReportFilters, data: &BuyerBills
     let r4 = report(w, ReportId::R4, filters.clone(), 0, 0);
     assert_eq!(text(&data.totals[2]), format_rupees(money(&r5.totals[3])));
     assert_eq!(text(&data.totals[3]), format_rupees(money(&r5.totals[4])));
+    // The quantity of all slips is the quantity total of R4, which sums `qty` in SQL.
+    assert_eq!(data.qty, number(&r4.totals[5]).to_string());
     assert_eq!(money(&r4.totals[7]), money(&r5.totals[3]));
     assert_eq!(money(&r4.totals[8]), money(&r5.totals[4]));
     assert_eq!(data.slip_count, data.slips.len().to_string());
@@ -103,6 +105,13 @@ fn assert_adds_up(w: &support::World, filters: &ReportFilters, data: &BuyerBills
     }
 }
 
+fn number(cell: &Cell) -> i64 {
+    match cell {
+        Cell::Number { value } => *value,
+        other => panic!("not a number: {other:?}"),
+    }
+}
+
 fn parse(text: &str) -> i64 {
     text.replace(',', "").parse().unwrap()
 }
@@ -111,7 +120,7 @@ fn format_rupees(value: i64) -> String {
     let digits = value.to_string();
     let mut out = String::new();
     for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -607,6 +616,124 @@ fn more_buyers_than_one_chunk_each_have_their_slip_with_every_line_once() {
     assert_adds_up(&w, &filters, &data);
 }
 
+/// More one-time persons than one chunk of the IN list holds (500): they all sit under ONE
+/// account, so the account must be asked for once. Without that, its lines would be read twice
+/// and printed twice (money agent, round 12).
+#[test]
+fn more_one_time_persons_than_one_chunk_have_their_lines_once() {
+    let w = worked_day();
+    // Two بکری of 251 and 250 persons (at most 500 lines each, NFR-SCL-3).
+    for (part, range) in [(0, 1..=251), (1, 252..=501)] {
+        let mut lot = support::bare_lot(
+            &w,
+            "lot-1",
+            w.rahim,
+            w.banana,
+            &range.clone().count().to_string(),
+        );
+        lot.sales = range
+            .map(|n| {
+                let mut s = support::sale(&format!("s-{part}-{n}"), w.pukhta_buyer, "1", "100");
+                s.pukhta = Some(PukhtaInput {
+                    name_ur: format!("مہمان {n}"),
+                    name_en: format!("Guest {n}"),
+                    phone: format!("0300-{n:07}"),
+                });
+                s.payment_type = Some(PaymentType::Credit);
+                s
+            })
+            .collect();
+        save(&w, &support::draft(vec![lot]));
+    }
+    let filters = ReportFilters::default();
+    let data = slips_of(&w, filters.clone());
+    assert_eq!(data.slips.len(), 501);
+    // 501 persons, each with one line of 100 and 114 (6 + 8).
+    assert!(data.slips.iter().all(|s| s.rows.len() == 1
+        && text(&s.rows[0].cells[2]) == "100"
+        && text(&s.rows[0].cells[3]) == "114"));
+    assert_eq!(data.qty, "501");
+    assert_eq!(
+        (text(&data.totals[2]), text(&data.totals[3])),
+        ("50,100".into(), "57,114".into())
+    );
+    assert_adds_up(&w, &filters, &data);
+    // The plain R5 print reads every row too; its details must not be doubled.
+    assert_same_as_plain_print(&w, &filters, &data);
+}
+
+// ---- Weight lines and a buyer rate that differs -----------------------------------------------
+
+#[test]
+fn a_weight_line_prints_the_stored_value_not_qty_times_rate() {
+    // 2 نگ of grapes, 12.345 kg at 100 a kilo: 1,234.5 rounds to 1,235 (C1). Commission 6% of
+    // 1,235 = 74.1 → 74; لاگا 8 for each of the 2 نگ = 16. After لاگا 1,235 + 74 + 16 = 1,325.
+    let w = worked_day();
+    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.weight_fruit, "2");
+    lot.weight_received = Some("12.345".into());
+    let mut s = support::sale("s-1", w.akram, "2", "100");
+    s.weight = Some("12.345".into());
+    s.payment_type = Some(PaymentType::Credit);
+    lot.sales = vec![s];
+    save(&w, &support::draft(vec![lot]));
+    let filters = ReportFilters::default();
+    let data = slips_of(&w, filters.clone());
+    assert_eq!(
+        overview(&data),
+        vec![row("Akram Toll Tax", "1,235", "1,325", "2")]
+    );
+    // The line shows 2 نگ and a rate of 100 a kilo; the value is the stored one, not 2 × 100.
+    let PrintDetailPart::Sale {
+        qty,
+        rate,
+        value,
+        commission,
+        laga,
+        ..
+    } = &parts(&data.slips[0].rows[0].cells[1])[0]
+    else {
+        panic!("not a sale");
+    };
+    assert_eq!(
+        (
+            qty.as_str(),
+            rate.as_str(),
+            value.as_str(),
+            commission.as_str(),
+            laga.as_str()
+        ),
+        ("2", "100", "1,235", "74", "16")
+    );
+    assert_adds_up(&w, &filters, &data);
+    assert_same_as_plain_print(&w, &filters, &data);
+}
+
+#[test]
+fn a_line_with_a_different_buyer_rate_prints_the_buyer_rate_and_buyer_value() {
+    // Seller rate 600, buyer rate 610 (ریٹ مختلف): the buyer pays 20 × 610 = 12,200 + 732 + 160 =
+    // 13,092 (the numbers of E2E-13). The slip shows the buyer's rate and value, not the seller's.
+    let w = worked_day();
+    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "20");
+    let mut s = support::sale("s-1", w.akram, "20", "600");
+    s.rate_differs = true;
+    s.buyer_rate = Some("610".into());
+    s.payment_type = Some(PaymentType::Credit);
+    lot.sales = vec![s];
+    save(&w, &support::draft(vec![lot]));
+    let filters = ReportFilters::default();
+    let data = slips_of(&w, filters.clone());
+    assert_eq!(
+        overview(&data),
+        vec![row("Akram Toll Tax", "12,200", "13,092", "20")]
+    );
+    let PrintDetailPart::Sale { rate, value, .. } = &parts(&data.slips[0].rows[0].cells[1])[0]
+    else {
+        panic!("not a sale");
+    };
+    assert_eq!((rate.as_str(), value.as_str()), ("610", "12,200"));
+    assert_adds_up(&w, &filters, &data);
+}
+
 // ---- The checks refuse a print that does not add up --------------------------------------------
 
 #[test]
@@ -648,15 +775,16 @@ fn a_stored_line_that_is_not_value_plus_commission_plus_laga_is_refused_not_prin
 
 // ---- The slips and the plain print agree ------------------------------------------------------
 
-#[test]
-fn the_slips_hold_the_lines_of_the_r5_print_row_for_row() {
-    let w = full_day();
-    let filters = day("10-10-2026", "10-10-2026");
-    let slips = slips_of(&w, filters.clone());
-    let plain = print_data(w.env.ctx.db(), &input(filters, Language::En)).unwrap();
+/// The slips hold the lines of the plain R5 print row for row: the buyer, the details and the
+/// sums of a row are those of the slip.
+fn assert_same_as_plain_print(
+    w: &support::World,
+    filters: &ReportFilters,
+    slips: &BuyerBillsPrintData,
+) {
+    let plain = print_data(w.env.ctx.db(), &input(filters.clone(), Language::En)).unwrap();
     assert_eq!(plain.rows.len(), slips.slips.len());
     for (row, slip) in plain.rows.iter().zip(&slips.slips) {
-        // The buyer, the details and the sums of a row of R5 are those of the slip.
         let PrintCell::Party { party } = &row.cells[1] else {
             panic!("not a party");
         };
@@ -666,10 +794,18 @@ fn the_slips_hold_the_lines_of_the_r5_print_row_for_row() {
             .iter()
             .flat_map(|r| parts(&r.cells[1]).clone())
             .collect();
-        assert_eq!(parts(&row.cells[2]), &all);
+        assert_eq!(parts(&row.cells[2]), &all, "{}", slip.party.name);
         assert_eq!(row.cells[3], slip.totals[2]);
         assert_eq!(row.cells[4], slip.totals[3]);
     }
     assert_eq!(plain.totals[3], slips.totals[2]);
     assert_eq!(plain.totals[4], slips.totals[3]);
+}
+
+#[test]
+fn the_slips_hold_the_lines_of_the_r5_print_row_for_row() {
+    let w = full_day();
+    let filters = day("10-10-2026", "10-10-2026");
+    let slips = slips_of(&w, filters.clone());
+    assert_same_as_plain_print(&w, &filters, &slips);
 }

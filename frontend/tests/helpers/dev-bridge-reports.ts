@@ -20,7 +20,14 @@ import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-
 import { rokarHandlers } from './dev-bridge-rokar';
 import { listRow } from './bikri-saved';
 import { createGardenBooks } from './gardens-data';
-import { PRINT_R5_EN, R1_BIKRI_1, R1_NEEDS_A_BIKRI, R5_CREDIT_BUYERS } from './reports-sales-real';
+import {
+  BUYER_BILLS_EN,
+  BUYER_BILLS_UR,
+  PRINT_R5_EN,
+  R1_BIKRI_1,
+  R1_NEEDS_A_BIKRI,
+  R5_CREDIT_BUYERS,
+} from './reports-sales-real';
 import {
   PRINT_R36_PARTNER_EN,
   R34_GARDEN_DAY,
@@ -208,6 +215,8 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_catalog: () => catalog(),
   reports_run: (input) => page(input),
   reports_print_data: (input) => PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN,
+  reports_buyer_bills_print_data: (input) =>
+    input['language'] === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN,
   reports_find_people: () => PEOPLE_SHAHID,
   // The partner box (R29, R31) and the person box of R32 (the people who can borrow) read these
   // from the cash book stand-in, so the filter boxes of the new reports work in the browser.

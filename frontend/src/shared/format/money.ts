@@ -65,6 +65,11 @@ export type Grouping = 'international' | 'lakh';
 
 export interface FormatPaisaOptions {
   grouping: Grouping;
+  /**
+   * No group separators: 2,600 paisa-rupees written "2600". For a rate inside a line of words, the way
+   * the client's own print writes it, "(سیب 8 . 2600)" (PRD 19.2 R5). Display only, like every option.
+   */
+  plain?: boolean;
 }
 
 /** Shown in place of an amount the backend should never send (production only). */
@@ -107,7 +112,8 @@ function invalidAmount(amount: number): string {
  * The text of an amount, in whole rupees with group separators (Code Standards M12).
  * Examples: 1,200,000 paisa -> "12,000"; 131,604,000 paisa -> "1,316,040", or "13,16,040" with
  * lakh grouping; 4,500 paisa -> "45"; 0 -> "0". A negative amount gets a minus sign, for
- * technical views only (business screens show the بنام or جمع word instead).
+ * technical views only (business screens show the بنام or جمع word instead). With `plain` the
+ * separators are left out: 131,604,000 paisa -> "1316040".
  */
 export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string {
   const value = paisaNumber(amount);
@@ -117,7 +123,7 @@ export function formatPaisa(amount: Paisa, options: FormatPaisaOptions): string 
   const negative = text.startsWith('-');
   const digits = negative ? text.slice(1) : text;
   const rupees = digits === '0' ? '0' : digits.slice(0, -PAISA_DIGITS);
-  const grouped = groupDigits(rupees, options.grouping);
+  const grouped = options.plain === true ? rupees : groupDigits(rupees, options.grouping);
   return negative ? `-${grouped}` : grouped;
 }
 

@@ -5,6 +5,7 @@
 // (`CommandError`), the way `invoke` fails.
 
 import { vi } from 'vitest';
+import type { BuyerBillsPrintData } from '../../src/bindings/BuyerBillsPrintData';
 import type { PukhtaPersonHit } from '../../src/bindings/PukhtaPersonHit';
 import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
 import type { ReportId } from '../../src/bindings/ReportId';
@@ -56,7 +57,14 @@ import {
 } from './reports-business-real';
 
 import { PRINT_R36_PARTNER_EN, R36_GARDEN, R36_PARTNER } from './reports-gardens-real';
-import { PRINT_R5_EN, R1_BIKRI_1, R1_NEEDS_A_BIKRI, R5_CREDIT_BUYERS } from './reports-sales-real';
+import {
+  BUYER_BILLS_EN,
+  BUYER_BILLS_UR,
+  PRINT_R5_EN,
+  R1_BIKRI_1,
+  R1_NEEDS_A_BIKRI,
+  R5_CREDIT_BUYERS,
+} from './reports-sales-real';
 import {
   PRINT_R35_SLIP_AKRAM_EN,
   R35_SLIP_AKRAM,
@@ -97,6 +105,8 @@ export interface ReportsOptions {
   /** Called for every `reports_run`; return a refusal to refuse that run. */
   refuse?: (input: Parameters<typeof reportsApi.reportsRun>[0]) => UiError | null;
   print?: ReportPrintData;
+  /** What the slips print of R5 answers; the default is the backend's own answer, in the print language asked for. */
+  slips?: BuyerBillsPrintData;
   /** What the people search answers; the default is the backend's own answer for "shahid". */
   people?: readonly PukhtaPersonHit[];
 }
@@ -234,6 +244,9 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
   );
   vi.mocked(reportsApi.reportsPrintData).mockImplementation((input) =>
     Promise.resolve(options.print ?? printOf(input.id)),
+  );
+  vi.mocked(reportsApi.reportsBuyerBillsPrintData).mockImplementation((input) =>
+    Promise.resolve(options.slips ?? (input.language === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN)),
   );
   return { pages };
 }
