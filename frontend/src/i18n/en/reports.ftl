@@ -1169,3 +1169,97 @@ report-day-now = Sheet for today
 
 # review: pending
 report-r35-all-parties = All parties
+
+## R36, the gardens report (round 11, plan 27, PRD 19.2 R36, FR-12.37), and the garden rows of R34.
+
+# review: pending
+report-r36-title = { -baghat } Report
+
+# review: pending
+report-r36-help = Each garden: rent, installments, costs, what the shop and the partners paid, the money that came in, the running balance and the rent still due. By garden or by partner.
+
+# review: pending
+report-col-garden = { -bagh }
+
+# review: pending
+report-col-rent = { -thaika }
+
+# review: pending
+report-col-installments = { -qist }s
+
+# review: pending
+report-col-garden-costs = Garden Costs
+
+# review: pending
+report-col-sales-our-shop = Sales in Our Shop
+
+# review: pending
+report-col-sales-other-shops = Sales in Other Shops
+
+# review: pending
+report-col-other-in = Other Money In
+
+# review: pending
+report-col-money-in = Money In
+
+# review: pending
+report-col-running-balance = Running Balance
+
+# review: pending
+report-col-rent-due = Rent Due
+
+# review: pending
+report-garden-open = Open
+
+# review: pending
+report-garden-closed = Closed
+
+# review: pending
+report-filter-garden = { -bagh }
+
+# review: pending
+report-filter-garden-view = Show by
+
+# review: pending
+report-filter-garden-by-garden = By garden
+
+# review: pending
+report-filter-garden-by-partner = By partner
+
+# review: pending
+report-r34-gardens-paid = { -baghat } Paid
+
+# review: pending
+report-r34-gardens-in = { -baghat } Money In
+
+## R1, the sale book, and R5, the credit buyers' details (round 12, PRD 19.2 R1 and R5, FR-12.12).
+
+# review: pending
+report-r1-title = { -bikri-book }
+
+# review: pending
+report-r1-help = The lots of one { -bikri }: what came, what was sold, the charges and the net sale. Its bill is printed from here.
+
+# review: pending
+report-r5-title = { -udhari } Details
+
+# review: pending
+report-r5-help = Each { -udhari } buyer with his goods, what they come to and what he owes with the { -commission } and { -laga }.
+
+# review: pending
+report-col-serial = No.
+
+# review: pending
+report-filter-bikri = { -bikri } number
+
+# review: pending
+report-pick-bikri = Pick a { -bikri } first
+
+# review: pending
+report-pick-bikri-help = This report is for one { -bikri }. Type its number above.
+
+# review: pending
+report-bikri-hit = { -bikri } <num>{ $number }</num> · <num>{ $date }</num>
+
+# review: pending
+report-detail-sale-short = ({ $item } { $qty } . { $rate })

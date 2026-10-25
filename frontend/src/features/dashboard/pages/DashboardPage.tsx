@@ -22,6 +22,7 @@ import { useAuthStatus } from '../../auth/hooks';
 import { AttentionLines } from '../components/AttentionLines';
 import { DashboardCharts } from '../components/DashboardCharts';
 import { DashboardTiles } from '../components/DashboardTiles';
+import { OpenGardens } from '../components/OpenGardens';
 import { OldestDues } from '../components/OldestDues';
 import { PartnerStrip } from '../components/PartnerStrip';
 import { QuickActions } from '../components/QuickActions';
@@ -88,6 +89,11 @@ export function DashboardPage() {
         <Section id="dashboard-partners-title" title={<Localized id="dashboard-partners-title" />}>
           <PartnerStrip partners={data.partners} />
         </Section>
+        {data.gardens.length === 0 ? null : (
+          <Section id="dashboard-gardens-title" title={<Localized id="dashboard-gardens-title" />}>
+            <OpenGardens rows={data.gardens} />
+          </Section>
+        )}
         <Section id="dashboard-bikri-title" title={<Localized id="dashboard-bikri-title" />}>
           <TodayBikriList rows={data.bikri_today} count={data.bikri_today_count} />
         </Section>

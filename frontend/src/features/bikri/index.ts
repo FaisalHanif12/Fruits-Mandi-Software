@@ -6,3 +6,7 @@ export { BikriBookPage } from './pages/BikriBookPage';
 export { TodayBikriPage } from './pages/TodayBikriPage';
 export { createBikriDraft, useBikriDraft, type BikriDraftStores } from './draft-store';
 export { registerPrintAfterSave, type PrintAfterSave } from './after-save';
+// What the reports module borrows for the sale book report (R1): finding a بکری by its number, and the
+// print box of its bill (the printed bill is the shared print job, not a report page).
+export { useBikriFind } from './hooks/useBikriReads';
+export { PrintAction } from './print/PrintAction';

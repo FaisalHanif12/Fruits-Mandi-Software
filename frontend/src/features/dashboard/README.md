@@ -25,10 +25,11 @@ The screen after sign-in, and the attention list that the bell and the dashboard
 - A tile or a figure that is below zero, or past its date, also says so in words (NFR-USE-12).
 - The dashboard and the bell are read again after every save: `app/refresh-after-save.ts` watches
   the mutation cache (300 ms after the last save), and the bell also asks once a minute (NFR-SPD-22).
-- The gardens tile (PRD 9.1, FR-12.37) is `components/GardenTile.tsx`: the running balance of the open
-  gardens and how many are open, from the gardens module's `useGardensSummary` (`gardens_summary`). It
-  asks for itself, so a list that cannot be read says so on its own tile. It opens `/gardens`. The
-  summary is read again after any save (`app/refresh-after-save.ts`).
+- The gardens tile (PRD 9.1, FR-12.37) is in `DashboardTiles`: the running balance of the open gardens
+  and how many are open, from the same `dashboard_get` call as the other tiles (`gardens_open`,
+  `gardens_balance_paisa`). It opens `/gardens`. Under the partners, `components/OpenGardens.tsx` lists
+  each open garden (name, running balance, rent due) from `Dashboard.gardens`; a name opens that
+  garden. With no open garden the tile says so and the section is not drawn.
 - The new-version note comes from `useStartupUpdateCheck` (settings), asked once when the app starts.
   It is only a note, here and in the bell; installing stays in Settings.
 

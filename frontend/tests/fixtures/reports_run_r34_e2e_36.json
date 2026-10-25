@@ -408,6 +408,49 @@
         },
         {
           "type": "label",
+          "id": "report-r34-gardens-paid"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-gardens-in"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
           "id": "report-r34-partner-shares"
         },
         {
@@ -558,7 +601,7 @@
   ],
   "offset": 0,
   "limit": 100,
-  "total_count": 24,
+  "total_count": 26,
   "totals_label_id": "report-total",
   "totals": [
     {

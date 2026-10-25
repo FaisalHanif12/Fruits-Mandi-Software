@@ -38,6 +38,14 @@ import {
   VIEWS_SAVE_BAD,
 } from './analytics-real';
 import {
+  ANALYTICS_LINES_I_GARDEN,
+  ANALYTICS_PRINT_DATA_I_EN,
+  ANALYTICS_RUN_A_GARDEN_GOODS,
+  ANALYTICS_RUN_G_GARDEN_DAY,
+  ANALYTICS_RUN_I_GARDEN,
+  ANALYTICS_RUN_I_GARDEN_SELLER_SIDE,
+} from './analytics-gardens-real';
+import {
   ANALYTICS_LINES_F_PARTNER_A,
   ANALYTICS_LINES_J_TRIP,
   ANALYTICS_PRINT_DATA_J_EN,
@@ -54,6 +62,7 @@ import {
 
 export * from './analytics-real';
 export * from './analytics-trips-real';
+export * from './analytics-gardens-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -81,13 +90,23 @@ const DEFAULT_PAGES: Record<AnalyticsView, AnalyticsPage> = {
   F: ANALYTICS_RUN_F,
   G: ANALYTICS_RUN_G_MONTH,
   H: ANALYTICS_RUN_H,
+  I: ANALYTICS_RUN_I_GARDEN,
   J: ANALYTICS_RUN_J_TRIP,
 };
 
 /** The views that have no comparison (the catalogue says so): the backend refuses one. */
-const NO_COMPARE: readonly AnalyticsView[] = ['F', 'G', 'J'];
+const NO_COMPARE: readonly AnalyticsView[] = ['F', 'G', 'I', 'J'];
+/** The views that refuse a garden: the backend answers ERR_OUT_OF_RANGE on `filters.garden_id`. */
+const NO_GARDEN: readonly AnalyticsView[] = ['F', 'J'];
 /** The views that take a grouping. */
 const GROUPED: readonly AnalyticsView[] = ['D', 'G'];
+
+/** The refusal of a garden on a view that takes none. */
+const GARDEN_REFUSED: UiError = {
+  ok: false,
+  errors: [{ code: 'ERR_OUT_OF_RANGE', field: 'filters.garden_id', values: {} }],
+  ref: 'E-20261010-0002',
+};
 
 function slice(page: AnalyticsPage, offset: number, limit: number): AnalyticsPage {
   const size = limit > 0 ? limit : 100;
@@ -120,6 +139,9 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
     if (NO_COMPARE.includes(view) && filters.compare !== 'off') {
       return Promise.reject(refusedWith(ANALYTICS_RUN_F_COMPARE_REFUSED));
     }
+    if (NO_GARDEN.includes(view) && filters.garden_id !== null) {
+      return Promise.reject(refusedWith(GARDEN_REFUSED));
+    }
     if (filters.item_id === 9999) {
       return Promise.reject(refusedWith(ANALYTICS_RUN_A_UNKNOWN_ITEM));
     }
@@ -133,6 +155,9 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
     let answer = pages[view];
     if (view === 'A' && filters.compare !== 'off') answer = ANALYTICS_RUN_A_COMPARE;
     if (view === 'A' && filters.side === 'seller') answer = ANALYTICS_RUN_A_SELLER_SIDE;
+    if (view === 'A' && filters.garden_id !== null) answer = ANALYTICS_RUN_A_GARDEN_GOODS;
+    if (view === 'G' && filters.garden_id !== null) answer = ANALYTICS_RUN_G_GARDEN_DAY;
+    if (view === 'I' && filters.side === 'seller') answer = ANALYTICS_RUN_I_GARDEN_SELLER_SIDE;
     if (view === 'A' && filters.goods === 'consigned') answer = ANALYTICS_RUN_A_GOODS_CONSIGNED;
     if (view === 'A' && filters.goods === 'trip') answer = ANALYTICS_RUN_A_GOODS_TRIP;
     if (view === 'D' && filters.group_by === 'day') answer = ANALYTICS_RUN_D_DAY;
@@ -155,7 +180,9 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
             ? ANALYTICS_LINES_F_PARTNER_A
             : input.view === 'J'
               ? ANALYTICS_LINES_J_TRIP
-              : ANALYTICS_LINES_A_BANANA);
+              : input.view === 'I'
+                ? ANALYTICS_LINES_I_GARDEN
+                : ANALYTICS_LINES_A_BANANA);
     const size = input.limit > 0 ? input.limit : 100;
     return Promise.resolve({
       ...page,
@@ -171,7 +198,9 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
           ? ANALYTICS_PRINT_DATA_D_UR
           : input.view === 'J'
             ? ANALYTICS_PRINT_DATA_J_EN
-            : ANALYTICS_PRINT_DATA_A_EN),
+            : input.view === 'I'
+              ? ANALYTICS_PRINT_DATA_I_EN
+              : ANALYTICS_PRINT_DATA_A_EN),
     ),
   );
   vi.mocked(analyticsApi.analyticsViewsGet).mockImplementation(() =>

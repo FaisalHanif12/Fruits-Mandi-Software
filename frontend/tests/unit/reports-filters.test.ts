@@ -11,6 +11,7 @@ import {
   EMPTY_FILTERS,
   canRun,
   filtersToWire,
+  gardenViewMessageId,
   isUnfiltered,
   periodMessageId,
   personFromHit,
@@ -48,6 +49,8 @@ import {
   R9_DUE_REQUEST,
   R9_NOT_A_ONE_TIME_ACCOUNT_REQUEST,
 } from '../helpers/reports-real';
+import { R36_PARTNER_REQUEST } from '../helpers/reports-gardens-real';
+import { R1_BIKRI_1_REQUEST } from '../helpers/reports-sales-real';
 import {
   PRINT_R33_PARTNER_EN_REQUEST,
   R10_STOCK_REQUEST,
@@ -92,6 +95,8 @@ describe('filtersToWire', () => {
       city_id: null,
       adda_id: null,
       partner_id: null,
+      garden_id: null,
+      bikri_id: null,
       detail: false,
     });
   });
@@ -157,6 +162,8 @@ describe('filtersToWire', () => {
       city_id: null,
       adda_id: null,
       partner_id: null,
+      garden_id: null,
+      bikri_id: null,
       detail: false,
     });
     // R18 takes only the day.
@@ -297,6 +304,9 @@ function wireOf(request: ReportRunInput): ReportFilters {
     partner_id: partnerId,
     voucher_type: voucherType,
     trip_view: tripView,
+    garden_id: gardenId,
+    garden_view: gardenView,
+    bikri_id: bikriId,
     ...rest
   } = request.filters;
   return {
@@ -310,6 +320,10 @@ function wireOf(request: ReportRunInput): ReportFilters {
     // The requests the backend wrote before round 7 have no `partner_id`; it reads a missing key as
     // none, and the screen always sends it (null when the report takes no partner box).
     partner_id: partnerId ?? null,
+    // `garden_id` is left out of the backend's requests when unset; the screen always sends it.
+    garden_id: gardenId ?? null,
+    bikri_id: bikriId ?? null,
+    ...(gardenView === undefined ? {} : { garden_view: gardenView }),
     ...(groupBy === undefined || (groupBy as unknown) === null ? {} : { group_by: groupBy }),
     ...(status === undefined || (status as unknown) === null ? {} : { status }),
   };
@@ -379,7 +393,12 @@ describe('the requests the screen builds are the ones the backend wrote (round 7
 
   it('is exactly the print request of the statement of partner ب', () => {
     const state: ReportFilterState = { ...EMPTY_FILTERS, partner: 2 };
-    expect(filtersToWire(state, entryOf('R31').filters)).toEqual(PRINT_R31_BAY_EN_REQUEST.filters);
+    // The backend leaves `garden_id` out when it is unset; the screen always sends it, as null.
+    expect(filtersToWire(state, entryOf('R31').filters)).toEqual({
+      ...PRINT_R31_BAY_EN_REQUEST.filters,
+      garden_id: null,
+      bikri_id: null,
+    });
   });
 
   it('the address can carry a partner: a whole number above 0, nothing else', () => {
@@ -548,5 +567,81 @@ describe('the words and figures of a cell that is not money (round 4)', () => {
     // A buyer under a heading has an empty first cell by design, and says nothing.
     expect(emptyNameMessageId('R21', 'normal')).toBeNull();
     expect(emptyNameMessageId('R20', 'normal')).toBeNull();
+  });
+});
+
+describe('the garden slice: the boxes of R36 become the request the backend wrote', () => {
+  const entry = entryOf('R36');
+
+  it('by garden is the default and is not sent; a garden picked is sent by its id', () => {
+    const wire = filtersToWire(EMPTY_FILTERS, entry.filters);
+    expect(wire.garden_id).toBeNull();
+    expect(wire.garden_view).toBeUndefined();
+    expect(filtersToWire({ ...EMPTY_FILTERS, garden: 1 }, entry.filters).garden_id).toBe(1);
+  });
+
+  it('by partner is the request the backend wrote', () => {
+    const wire = filtersToWire({ ...EMPTY_FILTERS, gardenView: 'partner' }, entry.filters);
+    // The backend leaves `garden_id` and `partner_id` out of its request when unset; the screen sends them.
+    expect(wire).toEqual({
+      ...R36_PARTNER_REQUEST.filters,
+      garden_id: null,
+      bikri_id: null,
+      partner_id: null,
+    });
+  });
+
+  it('no other report takes a garden or a layout, so none is sent to it', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, garden: 1, gardenView: 'partner' };
+    for (const id of ['R11', 'R18', 'R33', 'R34'] as const) {
+      const wire = filtersToWire(state, entryOf(id).filters);
+      expect(wire.garden_id).toBeNull();
+      expect(wire.garden_view).toBeUndefined();
+    }
+  });
+
+  it('a garden is a filter, so “clear the filters” is offered; the layout is not', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, garden: 1 }, entry.filters)).toBe(false);
+    expect(isUnfiltered({ ...EMPTY_FILTERS, gardenView: 'partner' }, entry.filters)).toBe(true);
+  });
+
+  it('the layout has a message for each choice', () => {
+    expect(gardenViewMessageId('garden')).toBe('report-filter-garden-by-garden');
+    expect(gardenViewMessageId('partner')).toBe('report-filter-garden-by-partner');
+  });
+});
+
+describe('round 12: the بکری of the sale book report (R1) becomes the request the backend wrote', () => {
+  const entry = entryOf('R1');
+
+  it('cannot run without a بکری, and runs once one is picked', () => {
+    expect(canRun(EMPTY_FILTERS, entry)).toBe(false);
+    expect(canRun({ ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } }, entry)).toBe(true);
+    // A report that does not take the box is not held back by it.
+    expect(canRun(EMPTY_FILTERS, entryOf('R5'))).toBe(true);
+  });
+
+  it('sends the id of the بکری picked, and is exactly the request the backend wrote', () => {
+    const wire = filtersToWire({ ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } }, entry.filters);
+    expect(wire.bikri_id).toBe(1);
+    expect(wire).toEqual({
+      ...R1_BIKRI_1_REQUEST.filters,
+      garden_id: null,
+      partner_id: null,
+    });
+  });
+
+  it('sends none to a report that takes no بکری, even if one is left in the boxes', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } };
+    for (const id of ['R5', 'R11', 'R36'] as const) {
+      expect(filtersToWire(state, entryOf(id).filters).bikri_id).toBeNull();
+    }
+  });
+
+  it('a بکری is a filter, so “clear the filters” is offered', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } }, entry.filters)).toBe(
+      false,
+    );
+    expect(isUnfiltered(EMPTY_FILTERS, entry.filters)).toBe(true);
   });
 });

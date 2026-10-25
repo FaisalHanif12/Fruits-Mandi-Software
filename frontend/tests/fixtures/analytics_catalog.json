@@ -12,6 +12,7 @@
       "side",
       "trip",
       "goods",
+      "garden",
       "compare"
     ]
   },
@@ -28,6 +29,7 @@
       "side",
       "trip",
       "goods",
+      "garden",
       "compare"
     ]
   },
@@ -44,6 +46,7 @@
       "side",
       "trip",
       "goods",
+      "garden",
       "compare"
     ]
   },
@@ -60,6 +63,7 @@
       "side",
       "trip",
       "goods",
+      "garden",
       "compare",
       "group_by"
     ]
@@ -77,6 +81,7 @@
       "side",
       "trip",
       "goods",
+      "garden",
       "compare"
     ]
   },
@@ -101,6 +106,7 @@
       "side",
       "trip",
       "goods",
+      "garden",
       "group_by",
       "partner"
     ]
@@ -118,7 +124,19 @@
       "side",
       "trip",
       "goods",
+      "garden",
       "compare"
+    ]
+  },
+  {
+    "id": "I",
+    "title_id": "analytics-view-i-title",
+    "filters": [
+      "period",
+      "item",
+      "side",
+      "partner",
+      "garden"
     ]
   },
   {

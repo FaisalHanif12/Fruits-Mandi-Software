@@ -133,6 +133,34 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - Tests: `reports-screens-round11.test.tsx`, the round 11 block of `reports-api-contract.test.ts`.
   Windows spec: `49-party-sheet-analytics-round11.e2e.mjs`.
 
+## R36, the gardens report, and the garden rows of R34 (round 11, PRD 19.2 R36, FR-12.37)
+
+- R36 is on the generic screen. Boxes: the days (the gardens made in them), the item, the partner, one
+  garden (`GardenFilterSelect`) and the layout (`ReportGardenViewSelect`): by garden, 15 columns, or by
+  partner, 7. The layout is sent only when it is by partner. `columns.ts` chooses the steps by layout
+  (`GARDEN_LAYOUT_STEPS`, `GARDEN_PARTNER_LAYOUT_STEPS`): the print has every column. Enter on a garden
+  opens its screen. Nothing is called a loss: the running balance starts below zero by design.
+- R34 has two rows more for each day (what was paid into the gardens, what came in); they are
+  information and are not added to the cash lines. Tests: the garden block of
+  `reports-screens-round11.test.tsx` and of `reports-api-contract.test.ts`.
+
+## R1, the sale book, and R5, the credit buyers' details (round 12, PRD 19.2 R1 and R5, FR-12.12)
+
+- Both are on the generic screen. R5 takes the days and the usual party boxes. Its table writes each
+  sale line the way the client's own print does, "(item qty . rate)" (`report-detail-sale-short`,
+  `shortSale` in `cells.ts` and `columns.ts`), and has a numbered first column (`report-col-serial`).
+  The print draws the same lines (`buyersList` in `ReportPrintDocument.tsx`).
+- R1 is the lots of ONE بکری, so it cannot run without one: the new box kind `bikri` shows
+  `ReportBikriBox` (the number typed, the backend's own `bikri_find`, the first hit highlighted, so a
+  number and Enter takes it). `filters.ts` keeps it in `bikri` and `bikriText`, sends `bikri_id` (always
+  in the wire, null when not picked) and `canRun` asks for it. Until one is picked the screen says
+  `report-pick-bikri` and draws no rows.
+- R1's print is the bill itself: once a بکری is picked the preview button gives way to the shared
+  `PrintAction` of the sale book (its box, its F9, its languages and paper). R1 has its own column
+  steps in `COLUMN_STEPS`: the lot's number charges stay behind the wider steps, and the print has all.
+- Not built: "Print All", one slip per buyer from R5 (the generic table print is used). Tests:
+  `reports-screens-round12.test.tsx`, the R1 and R5 blocks of `reports-api-contract.test.ts`.
+
 ## Not built yet
 
 - Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB

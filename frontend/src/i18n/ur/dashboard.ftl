@@ -84,6 +84,21 @@ dashboard-tile-gardens-note = <num>{ $open }</num> کھلے
 dashboard-tile-gardens-none = کوئی باغ کھلا نہیں
 
 # review: pending
+dashboard-gardens-title = کھلے { -baghat }
+
+# review: pending
+dashboard-gardens-col-garden = { -bagh }
+
+# review: pending
+dashboard-gardens-col-balance = چلتا بقایا
+
+# review: pending
+dashboard-gardens-col-rent-due = ٹھیکہ باقی
+
+# review: pending
+dashboard-gardens-all = تمام { -baghat }
+
+# review: pending
 dashboard-tile-lent = { -adhar-raqam } باقی
 
 # review: pending

@@ -368,3 +368,9 @@ gardens-reopen-reason = وجہ
 gardens-reopen-confirm = بندش واپس لیں
 # review: pending
 gardens-reopened-toast = { $number } دوبارہ کھل گیا
+
+# review: pending
+gardens-filter-all = تمام باغات
+
+# review: pending
+gardens-filter-failed = باغات کی فہرست نہیں کھل سکی

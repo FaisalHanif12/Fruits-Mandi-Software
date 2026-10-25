@@ -1,0 +1,220 @@
+{
+  "view": "I",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "analytics-view-i-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [],
+  "printed_at": "13-10-2026 14:00",
+  "columns": [
+    {
+      "key": "group",
+      "title_id": "analytics-col-garden",
+      "kind": "names",
+      "heading": null
+    },
+    {
+      "key": "status",
+      "title_id": "analytics-col-garden-status",
+      "kind": "label",
+      "heading": null
+    },
+    {
+      "key": "paid_shop",
+      "title_id": "analytics-col-paid-shop",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "paid_pocket",
+      "title_id": "analytics-col-paid-pocket",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "sales_our_shop",
+      "title_id": "analytics-col-sales-our-shop",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "sales_other_shops",
+      "title_id": "analytics-col-sales-other-shops",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "other_in",
+      "title_id": "analytics-col-other-in",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "commission",
+      "title_id": "report-col-total-comm",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "result",
+      "title_id": "analytics-col-garden-result",
+      "kind": "money",
+      "heading": null
+    },
+    {
+      "key": "share_1",
+      "title_id": "analytics-col-partner-share",
+      "kind": "percent",
+      "heading": {
+        "kind": "partner",
+        "text": "Partner A"
+      }
+    },
+    {
+      "key": "result_1",
+      "title_id": "analytics-col-partner-result",
+      "kind": "money",
+      "heading": {
+        "kind": "partner",
+        "text": "Partner A"
+      }
+    },
+    {
+      "key": "share_2",
+      "title_id": "analytics-col-partner-share",
+      "kind": "percent",
+      "heading": {
+        "kind": "partner",
+        "text": "Partner B"
+      }
+    },
+    {
+      "key": "result_2",
+      "title_id": "analytics-col-partner-result",
+      "kind": "money",
+      "heading": {
+        "kind": "partner",
+        "text": "Partner B"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Shahpur Garden"
+        },
+        {
+          "type": "label",
+          "id": "report-garden-closed"
+        },
+        {
+          "type": "money",
+          "text": "33,000"
+        },
+        {
+          "type": "money",
+          "text": "22,000"
+        },
+        {
+          "type": "money",
+          "text": "56,400"
+        },
+        {
+          "type": "money",
+          "text": "10,000"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "8,000"
+        },
+        {
+          "type": "money",
+          "text": "11,400"
+        },
+        {
+          "type": "percent",
+          "text": "60.00"
+        },
+        {
+          "type": "money",
+          "text": "6,840"
+        },
+        {
+          "type": "percent",
+          "text": "40.00"
+        },
+        {
+          "type": "money",
+          "text": "4,560"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "1",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "33,000"
+    },
+    {
+      "type": "money",
+      "text": "22,000"
+    },
+    {
+      "type": "money",
+      "text": "56,400"
+    },
+    {
+      "type": "money",
+      "text": "10,000"
+    },
+    {
+      "type": "money",
+      "text": "0"
+    },
+    {
+      "type": "money",
+      "text": "8,000"
+    },
+    {
+      "type": "money",
+      "text": "11,400"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "6,840"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "4,560"
+    }
+  ],
+  "footer_id": "print-page-label"
+}

@@ -123,9 +123,18 @@ function drawnColumns(): string[] {
 
 /** The filters of a request the backend wrote, as the screen sends them (every key is sent). */
 function sentLike(request: ReportRunInput, change: Record<string, unknown> = {}) {
-  const { group_by: groupBy, status, ...rest } = request.filters;
+  const {
+    group_by: groupBy,
+    status,
+    garden_id: gardenId,
+    bikri_id: bikriId,
+    ...rest
+  } = request.filters;
   return {
     ...rest,
+    // The backend's requests leave `garden_id` out when it is unset; the screen always sends it.
+    garden_id: gardenId ?? null,
+    bikri_id: bikriId ?? null,
     ...(groupBy === undefined || (groupBy as unknown) === null ? {} : { group_by: groupBy }),
     ...(status === undefined || (status as unknown) === null ? {} : { status }),
     ...change,

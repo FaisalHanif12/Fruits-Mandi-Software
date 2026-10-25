@@ -37,6 +37,9 @@ export function columnWidth(kind: ReportColumnKind, key: string, signed = false)
       return LIST_COLUMN_WIDTHS.date;
     case 'doc':
       return LIST_COLUMN_WIDTHS.status;
+    case 'label':
+      // A state is one short word (a garden is open or closed); any other label is a sentence.
+      return key === 'status' ? LIST_COLUMN_WIDTHS.status : LIST_COLUMN_WIDTHS.text;
     default:
       return LIST_COLUMN_WIDTHS.text;
   }

@@ -14,9 +14,19 @@ import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
 import type { ReportId } from '../../src/bindings/ReportId';
 import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
+import type { GardensListInput } from '../../src/bindings/GardensListInput';
 import { devFlag } from './dev-bridge';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import { rokarHandlers } from './dev-bridge-rokar';
+import { listRow } from './bikri-saved';
+import { createGardenBooks } from './gardens-data';
+import { PRINT_R5_EN, R1_BIKRI_1, R1_NEEDS_A_BIKRI, R5_CREDIT_BUYERS } from './reports-sales-real';
+import {
+  PRINT_R36_PARTNER_EN,
+  R34_GARDEN_DAY,
+  R36_GARDEN,
+  R36_PARTNER,
+} from './reports-gardens-real';
 import {
   PRINT_R35_SLIP_AKRAM_EN,
   R35_SLIP_AKRAM,
@@ -86,6 +96,9 @@ import {
 
 type Input = Record<string, unknown>;
 
+/** The gardens of the garden box of R36: the garden world of the gardens module. */
+const gardenBooks = createGardenBooks();
+
 const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R11: R11_TODAY,
   R13: R13_AKRAM,
@@ -120,6 +133,9 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R33: R33_TRIP,
   R34: R34_DAY,
   R35: R35_TABLE,
+  R36: R36_GARDEN,
+  R1: R1_BIKRI_1,
+  R5: R5_CREDIT_BUYERS,
 };
 
 const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
@@ -132,6 +148,8 @@ const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R33: PRINT_R33_PARTNER_EN,
   R34: PRINT_R34_EN,
   R35: PRINT_R35_SLIP_AKRAM_EN,
+  R36: PRINT_R36_PARTNER_EN,
+  R5: PRINT_R5_EN,
 };
 
 function catalog(): ReportCatalogEntry[] {
@@ -163,6 +181,13 @@ function page(input: Input): ReportPage {
     else if (view === 'partner') base = R33_PARTNER;
     else if (view === 'month' || view === 'day') base = R33_MONTH;
   }
+  // The sale book needs a بکری picked, as the backend refuses it.
+  if (id === 'R1' && (filters['bikri_id'] ?? null) === null) {
+    throw Object.assign(new Error('ERR_REQUIRED'), R1_NEEDS_A_BIKRI);
+  }
+  // R36 answers in the layout asked for; the day summary shows the garden world with the `garden` flag.
+  if (id === 'R36' && filters['garden_view'] === 'partner') base = R36_PARTNER;
+  if (id === 'R34' && devFlag('garden')) base = R34_GARDEN_DAY;
   // R35 for one party answers with his slip: the seller's for a seller (رحیم is 18), the buyer's
   // for any other account.
   if (id === 'R35' && party?.account_id !== undefined) {
@@ -187,6 +212,9 @@ const handlers: Record<string, (input: Input) => unknown> = {
   // The partner box (R29, R31) and the person box of R32 (the people who can borrow) read these
   // from the cash book stand-in, so the filter boxes of the new reports work in the browser.
   partners_list: (input) => rokarHandlers['partners_list']?.(input),
+  gardens_list: (input) => gardenBooks.list(input as GardensListInput),
+  // The box of the sale book report (R1) finds a بکری by its number: the worked day's بکری 1.
+  bikri_find: () => [listRow({ id: 1, number: 1 })],
   coa_controls_list: (input) => rokarHandlers['coa_controls_list']?.(input),
   search_accounts: (input) => rokarHandlers['search_accounts']?.(input),
   search_accounts_recent: (input) => rokarHandlers['search_accounts_recent']?.(input),

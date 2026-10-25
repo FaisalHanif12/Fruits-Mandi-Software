@@ -63,6 +63,14 @@ import {
   ANALYTICS_RUN_J_TRIP_REQUEST,
   ANALYTICS_RUN_J_TRIP_WRITTEN_OFF,
 } from '../helpers/analytics-trips-real';
+import {
+  ANALYTICS_RUN_A_GARDEN_GOODS_REQUEST,
+  ANALYTICS_RUN_G_GARDEN_DAY,
+  ANALYTICS_RUN_G_GARDEN_DAY_REQUEST,
+  ANALYTICS_RUN_I_GARDEN,
+  ANALYTICS_RUN_I_GARDEN_REQUEST,
+  ANALYTICS_RUN_I_GARDEN_SELLER_SIDE_REQUEST,
+} from '../helpers/analytics-gardens-real';
 
 const takesOf = (view: AnalyticsView) => {
   const entry = ANALYTICS_CATALOG.find((candidate) => candidate.id === view);
@@ -639,15 +647,17 @@ describe('round 11: what the charts of F, G and J draw', () => {
     const day = chartFor('G', ANALYTICS_RUN_G_DAY, context);
     expect(day?.labelId).toBe('analytics-chart-g');
     expect(day?.data.categories).toEqual(['10-10-2026']);
-    // The trips' result is empty on the worked day: four bars, not five.
+    // The trips' result is empty on the worked day: five bars, not six (the movement of the garden
+    // balances is a figure, a 0, so it has its bar).
     expect(day?.data.series.map((series) => series.name)).toEqual([
       '<report-col-total-comm>',
       '<analytics-col-shared-income>',
       '<analytics-col-shop-expenses>',
       '<analytics-col-profit>',
+      '<analytics-col-gardens-result>',
     ]);
     const trip = chartFor('G', ANALYTICS_RUN_G_TRIP_DAY, context);
-    expect(trip?.data.series).toHaveLength(5);
+    expect(trip?.data.series).toHaveLength(6);
     expect(trip?.data.series[4]?.labels).toEqual(['660']);
   });
 
@@ -683,5 +693,105 @@ describe('round 11: what the charts of F, G and J draw', () => {
     expect(chartFor('F', { ...ANALYTICS_RUN_F, rows: [] }, context)).toBeNull();
     expect(chartFor('G', { ...ANALYTICS_RUN_G_DAY, rows: [] }, context)).toBeNull();
     expect(chartFor('J', { ...ANALYTICS_RUN_J_TRIP, rows: [] }, context)).toBeNull();
+  });
+});
+
+describe('the garden slice: the boxes of view I and the garden filter become the backend’s requests', () => {
+  const cases: [string, AnalyticsView, Partial<AnalyticsFilterState>, AnalyticsRunInput][] = [
+    ['I with nothing filled', 'I', {}, ANALYTICS_RUN_I_GARDEN_REQUEST],
+    [
+      'I with the seller side only',
+      'I',
+      { side: 'seller' },
+      ANALYTICS_RUN_I_GARDEN_SELLER_SIDE_REQUEST,
+    ],
+    ['G by day', 'G', { groupBy: 'day' }, ANALYTICS_RUN_G_GARDEN_DAY_REQUEST],
+    ['A for one garden', 'A', { garden: 1 }, ANALYTICS_RUN_A_GARDEN_GOODS_REQUEST],
+  ];
+  it.each(cases)('%s', (_name, view, part, request) => {
+    const state: AnalyticsFilterState = { ...EMPTY_ANALYTICS_FILTERS, ...part };
+    expect(filtersToWire(state, takesOf(view))).toEqual(filtersOf(request));
+  });
+
+  it('never sends a garden to F or J, which the backend refuses with ERR_OUT_OF_RANGE', () => {
+    const state: AnalyticsFilterState = { ...EMPTY_ANALYTICS_FILTERS, garden: 1 };
+    for (const view of ['F', 'J'] as const) {
+      expect(takesOf(view)).not.toContain('garden');
+      expect(filtersToWire(state, takesOf(view)).garden_id).toBeNull();
+    }
+    // View I and the older views do take it.
+    for (const view of ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I'] as const) {
+      expect(filtersToWire(state, takesOf(view)).garden_id).toBe(1);
+    }
+  });
+
+  it('never sends a comparison to view I either', () => {
+    expect(takesOf('I')).not.toContain('compare');
+    const state: AnalyticsFilterState = { ...EMPTY_ANALYTICS_FILTERS, compare: 'previous' };
+    expect(filtersToWire(state, takesOf('I')).compare).toBe('off');
+  });
+
+  it('knows a garden is a filter, so “clear the filters” is offered, and a saved view keeps it', () => {
+    expect(isUnfiltered({ ...EMPTY_ANALYTICS_FILTERS, garden: 1 }, takesOf('I'))).toBe(false);
+    const wire = filtersToWire({ ...EMPTY_ANALYTICS_FILTERS, garden: 1, partner: 2 }, takesOf('I'));
+    expect(stateFromWire(wire)).toMatchObject({ garden: 1, partner: 2 });
+    expect(filtersToWire(stateFromWire(wire), takesOf('I'))).toEqual(wire);
+  });
+});
+
+describe('the garden slice: the columns and the chart of view I', () => {
+  it('I is never windowed, and keeps the garden, its result and each partner’s result before the least used columns at the wide step', () => {
+    const plan = planColumns('I', ANALYTICS_RUN_I_GARDEN.columns, 'wide', 0);
+    expect(plan.window).toBeNull();
+    const shown = ANALYTICS_RUN_I_GARDEN.columns
+      .filter((_column, index) => plan.visible.has(index))
+      .map((column) => column.key);
+    expect(shown[0]).toBe('group');
+    for (const key of ['result', 'result_1', 'result_2', 'sales_our_shop']) {
+      expect(shown).toContain(key);
+    }
+  });
+
+  it('I at the compact step still shows the garden and its result, and offers the others', () => {
+    const plan = planColumns('I', ANALYTICS_RUN_I_GARDEN.columns, 'compact', 0);
+    const shown = ANALYTICS_RUN_I_GARDEN.columns
+      .filter((_column, index) => plan.visible.has(index))
+      .map((column) => column.key);
+    expect(shown).toEqual(expect.arrayContaining(['group', 'result']));
+    expect(plan.trimmed?.total).toBe(ANALYTICS_RUN_I_GARDEN.columns.length);
+    expect(plan.trimmed?.shown).toBe(shown.length);
+  });
+
+  it('no figure of the garden views is marked as a loss: a garden’s balance starts below zero', () => {
+    expect(signedKeysOf('I', ANALYTICS_RUN_I_GARDEN.columns).size).toBe(0);
+    expect(signedKeysOf('G', ANALYTICS_RUN_G_GARDEN_DAY.columns)).toEqual(
+      new Set(['trips_result']),
+    );
+  });
+
+  it('I: the sales in our shop and in other shops and the result of each garden side by side', () => {
+    const plan = chartFor('I', ANALYTICS_RUN_I_GARDEN, context);
+    expect(plan?.labelId).toBe('analytics-chart-i');
+    expect(plan?.data.categories).toEqual(['Shahpur Garden']);
+    expect(plan?.data.series.map((series) => series.name)).toEqual([
+      '<analytics-col-sales-our-shop>',
+      '<analytics-col-sales-other-shops>',
+      '<analytics-col-garden-result>',
+    ]);
+    expect(plan?.data.series.map((series) => series.labels[0])).toEqual([
+      '56,400',
+      '10,000',
+      '11,400',
+    ]);
+    expect(chartFor('I', { ...ANALYTICS_RUN_I_GARDEN, rows: [] }, context)).toBeNull();
+  });
+
+  it('G: the movement of the garden balances is a bar below the line on a day of payments', () => {
+    const plan = chartFor('G', ANALYTICS_RUN_G_GARDEN_DAY, context);
+    const movement = plan?.data.series.find(
+      (series) => series.name === '<analytics-col-gardens-result>',
+    );
+    expect(movement?.labels).toEqual(['-30,000', '-25,000', '66,400']);
+    expect(movement?.values.slice(0, 2).every((value) => value < 0)).toBe(true);
   });
 });

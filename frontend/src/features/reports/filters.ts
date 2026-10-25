@@ -7,6 +7,7 @@ import type { ReportDateShortcut } from '../../bindings/ReportDateShortcut';
 import type { ReportFilterKind } from '../../bindings/ReportFilterKind';
 import type { PukhtaPersonHit } from '../../bindings/PukhtaPersonHit';
 import type { ReportFilters } from '../../bindings/ReportFilters';
+import type { ReportGardenView } from '../../bindings/ReportGardenView';
 import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
 import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
 import type { ReportTripView } from '../../bindings/ReportTripView';
@@ -75,6 +76,14 @@ export function tripViewMessageId(view: ReportTripView): string {
   return `report-filter-trip-by-${view}`;
 }
 
+/** The gardens report (R36) is laid out by garden (the default) or by partner. */
+export const GARDEN_VIEW_CHOICES: readonly ReportGardenView[] = ['garden', 'partner'];
+
+/** The Fluent message of a garden layout: `report-filter-garden-by-partner`. */
+export function gardenViewMessageId(view: ReportGardenView): string {
+  return `report-filter-garden-by-${view}`;
+}
+
 /** The income report groups its lines by month or by day (R28). */
 export const GROUP_BY_CHOICES: readonly ReportGroupBy[] = ['month', 'day'];
 
@@ -116,6 +125,14 @@ export function personFromHit(hit: PukhtaPersonHit, accountId: number | null): R
   };
 }
 
+/**
+ * The بکری picked for the sale book report (R1): its row id for the request, its number to show.
+ */
+export interface ReportBikri {
+  id: number;
+  number: number;
+}
+
 /** What the filter boxes hold. Every box that a report does not take is simply not shown. */
 export interface ReportFilterState {
   period: PeriodChoice;
@@ -144,6 +161,14 @@ export interface ReportFilterState {
   voucherType: VoucherChoice;
   /** How the trip profit or loss is laid out (R33). It is a layout, not a filter to clear. */
   tripView: ReportTripView;
+  /** One garden of the gardens report (R36); null is every garden. */
+  garden: number | null;
+  /** How the gardens report is laid out (R36): by garden or by partner. A layout, not a filter. */
+  gardenView: ReportGardenView;
+  /** The one بکری of the sale book report (R1, required there). */
+  bikri: ReportBikri | null;
+  /** What is typed in the بکری box, kept here so a language switch loses nothing. */
+  bikriText: string;
 }
 
 export const EMPTY_FILTERS: ReportFilterState = {
@@ -165,6 +190,10 @@ export const EMPTY_FILTERS: ReportFilterState = {
   partner: null,
   voucherType: 'all',
   tripView: 'trip',
+  garden: null,
+  gardenView: 'garden',
+  bikri: null,
+  bikriText: '',
 };
 
 /**
@@ -200,6 +229,8 @@ export function filtersToWire(
     city_id: has('city') ? (state.city?.id ?? null) : null,
     adda_id: has('adda') ? (state.adda?.id ?? null) : null,
     partner_id: has('partner') ? state.partner : null,
+    garden_id: has('garden') ? state.garden : null,
+    bikri_id: has('bikri') ? (state.bikri?.id ?? null) : null,
     detail: has('detail') && state.detail,
     // The two newer keys are sent only when they are set; the backend reads a missing key as its
     // default (all lines; by month), so an old request stays valid.
@@ -210,6 +241,10 @@ export function filtersToWire(
       ? { voucher_type: state.voucherType }
       : {}),
     ...(has('trip_view') ? { trip_view: state.tripView } : {}),
+    // The gardens layout is sent only when it is not the first, like the grouping of R28.
+    ...(has('garden_view') && state.gardenView !== 'garden'
+      ? { garden_view: state.gardenView }
+      : {}),
     ...(has('group_by') && state.groupBy !== 'month' ? { group_by: state.groupBy } : {}),
   };
 }
@@ -232,6 +267,8 @@ export function isUnfiltered(
     wire.city_id === null &&
     wire.adda_id === null &&
     wire.partner_id === null &&
+    wire.garden_id === null &&
+    wire.bikri_id === null &&
     !wire.detail &&
     wire.status === undefined &&
     wire.voucher_type === undefined
@@ -247,5 +284,7 @@ export function canRun(
   entry: { filters: readonly ReportFilterKind[]; party_required: boolean },
 ): boolean {
   if (!entry.party_required) return true;
+  // The required box is the one the report takes: a partner (R31), a بکری (R1) or an account.
+  if (entry.filters.includes('bikri')) return state.bikri !== null;
   return entry.filters.includes('partner') ? state.partner !== null : state.party !== null;
 }

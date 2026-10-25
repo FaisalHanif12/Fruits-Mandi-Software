@@ -38,6 +38,7 @@ export function rememberedAnalytics(state: AnalyticsFilterState): Record<string,
   if (state.compare !== base.compare) kept['compare'] = state.compare;
   if (state.partner !== null) kept['partner'] = state.partner;
   if (state.trip !== null) kept['trip'] = state.trip;
+  if (state.garden !== null) kept['garden'] = state.garden;
   if (state.goods !== base.goods) kept['goods'] = state.goods;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
   return Object.keys(kept).length === 0 ? null : kept;
@@ -62,6 +63,7 @@ export function analyticsFromRemembered(raw: unknown): AnalyticsFilterState | nu
     compare: choiceOr(raw['compare'], COMPARE_CHOICES, base.compare),
     partner: idOrNull(raw['partner']),
     trip: idOrNull(raw['trip']),
+    garden: idOrNull(raw['garden']),
     goods: choiceOr(raw['goods'], GOODS_CHOICES, base.goods),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
   };

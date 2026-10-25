@@ -5,7 +5,8 @@
 // Standards F38): its name is made from its number and its day.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useLoadRest } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { Field, Select } from '../../../shared/ui';
 import { useTripsList } from '../../trips';
@@ -28,12 +29,7 @@ export function AnalyticsTripSelect({ trip, onChange, error }: AnalyticsTripSele
   const { l10n } = useLocalization();
   const language = useLanguage();
   const trips = useTripsList(EVERY_TRIP);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = trips;
-  // The list loads a page at a time; a drop-down wants all of it, so the next page is asked for
-  // as soon as the last one has come.
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  useLoadRest(trips, true);
   const rows = trips.data?.pages.flatMap((page) => page.rows) ?? [];
   let value = ALL;
   if (trip !== null) value = String(trip);

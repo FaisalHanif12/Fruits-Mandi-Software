@@ -1,4 +1,4 @@
-### Analytics (plan 21 and plan 27, PRD 18; views A to H and J).
+### Analytics (plan 21 and plan 27, PRD 18; views A to J).
 ### Every message here is `# review: pending` until the Urdu and English reviewers have read it (NFR-URD-4).
 
 ## The area: its views and the lines above the table.
@@ -164,13 +164,13 @@ analytics-compare-range = موازنہ: { $from } تا { $to }
 ## What the print says about the filters (PRD FR-18.4).
 
 # review: pending
-analytics-by-year = سال کے حساب سے
+analytics-filter-by-year = سال کے حساب سے
 
 # review: pending
-analytics-compare-from = موازنہ از
+analytics-filter-compare-from = موازنہ از
 
 # review: pending
-analytics-compare-to = موازنہ تا
+analytics-filter-compare-to = موازنہ تا
 
 ## The table, the lines behind a figure and the states (PRD FR-18.2, FR-7.46).
 
@@ -414,3 +414,64 @@ analytics-chart-g = ہر مدت کا { -commission }، مشترکہ آمدن، �
 
 # review: pending
 analytics-chart-j = فروخت کی رقم اور نتیجہ
+
+## View I, the gardens (round 11, plan 27, PRD 18.2), and the garden box and columns of the other views.
+
+# review: pending
+analytics-view-i-title = { -baghat }
+
+# review: pending
+analytics-view-i-help = ہر باغ کا: ادائیگی، ہماری دکان اور دوسری دکانوں میں فروخت، { -commission }، نتیجہ اور ہر { -shirakat-dar } کا حصہ۔
+
+# review: pending
+analytics-col-garden = { -bagh }
+
+# review: pending
+analytics-col-garden-status = حالت
+
+# review: pending
+analytics-col-paid-shop = دکان سے ادا
+
+# review: pending
+analytics-col-paid-pocket = جیب سے ادا
+
+# review: pending
+analytics-col-sales-our-shop = ہماری دکان میں فروخت
+
+# review: pending
+analytics-col-sales-other-shops = دوسری دکانوں میں فروخت
+
+# review: pending
+analytics-col-other-in = دیگر آمد
+
+# review: pending
+analytics-col-garden-result = نتیجہ
+
+# review: pending
+analytics-col-partner-result = نتیجہ
+
+# review: pending
+analytics-col-gardens-result = { -baghat } میں تبدیلی
+
+# review: pending
+analytics-filter-garden = { -bagh }
+
+# review: pending
+analytics-chart-i = ہر باغ کی فروخت اور نتیجہ
+
+## The facts a print of an analytics view says about its filters (the label is the whole fact).
+
+# review: pending
+analytics-filter-side-seller = { analytics-side-seller }
+
+# review: pending
+analytics-filter-side-buyer = { analytics-side-buyer }
+
+# review: pending
+analytics-filter-goods-consigned = { analytics-goods-consigned }
+
+# review: pending
+analytics-filter-goods-trip = { analytics-goods-trip }
+
+# review: pending
+analytics-filter-goods-garden = { analytics-goods-garden }

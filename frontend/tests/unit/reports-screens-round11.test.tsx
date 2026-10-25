@@ -14,6 +14,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReportPage } from '../../src/bindings/ReportPage';
+import * as gardensApi from '../../src/features/gardens/api';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLayoutStep, type LayoutStep } from '../../src/shared/hooks/useLayoutStep';
@@ -26,14 +27,24 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { fakeGardens } from '../helpers/gardens';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
-import { CATALOG, PRINT_R35_SLIP_AKRAM_EN, R35_TABLE, fakeReports } from '../helpers/reports';
+import {
+  CATALOG,
+  PRINT_R35_SLIP_AKRAM_EN,
+  PRINT_R36_PARTNER_EN,
+  R34_GARDEN_DAY,
+  R35_TABLE,
+  R36_GARDEN,
+  fakeReports,
+} from '../helpers/reports';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/reports/api');
+vi.mock('../../src/features/gardens/api');
 vi.mock('../../src/features/partners/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/search/api');
@@ -51,6 +62,7 @@ beforeEach(() => {
   vi.mocked(useLayoutStep).mockReturnValue('normal');
   healthyBackend();
   fakePartners([]);
+  fakeGardens();
 });
 
 afterEach(() => {
@@ -528,3 +540,253 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
     });
   });
 });
+
+describe.each(LANGUAGES)(
+  'the gardens report R36 and the garden rows of R34 (%s)',
+  (language: Language) => {
+    beforeEach(() => {
+      resetClientState(language);
+      signedIn(sessionUser({ language }));
+    });
+
+    const m = (id: string, vars: Record<string, string | number> = {}) =>
+      message(language, id, vars);
+    const names = (ur: string, en: string) => (language === 'ur' ? ur : en);
+    const other: Language = language === 'ur' ? 'en' : 'ur';
+
+    async function openGardens(options: Parameters<typeof fakeReports>[0] = {}) {
+      const fake = fakeReports(options);
+      const view = await renderApp('/reports/R36');
+      await screen.findByRole('heading', { level: 1, name: named(m('report-r36-title')) });
+      return { ...view, fake, user: userEvent.setup() };
+    }
+
+    async function choose(user: ReturnType<typeof userEvent.setup>, box: string, option: string) {
+      await user.click(screen.getByRole('combobox', { name: m(box) }));
+      await user.click(await screen.findByRole('option', { name: option }, SLOW_MS));
+    }
+
+    describe('R36', () => {
+      it('is in the catalogue with the boxes of the PRD: the days, the item, the partner, the garden and the layout', async () => {
+        expect(CATALOG.find((entry) => entry.id === 'R36')?.filters).toEqual([
+          'date_range',
+          'item',
+          'partner',
+          'garden',
+          'garden_view',
+        ]);
+        await openGardens();
+        for (const box of [
+          'report-filter-period',
+          'report-filter-item',
+          'report-filter-partner',
+          'report-filter-garden',
+          'report-filter-garden-view',
+        ]) {
+          const found = screen.queryByRole('combobox', { name: m(box) });
+          // The item is a picker (a text box with a list), the others are drop-downs.
+          expect(found ?? screen.queryByLabelText(m(box)), box).not.toBeNull();
+        }
+      });
+
+      it('asks by garden with no garden and no layout, and draws the garden with the backend’s figures', async () => {
+        await openGardens();
+        await waitFor(() => {
+          expect(drawnRows()).toEqual(['0']);
+        }, SLOW_MS);
+        expect(lastRun()).toMatchObject({
+          id: 'R36',
+          filters: { garden_id: null, partner_id: null },
+          offset: 0,
+          limit: 100,
+        });
+        expect(lastRun()?.filters.garden_view).toBeUndefined();
+        expect(cell('0', 'garden')).toBe(names('شاہ پور باغ', 'Shahpur Garden'));
+        expect(cell('0', 'status')).toBe(m('report-garden-closed'));
+        expect(cell('0', 'rent')).toBe('50,000');
+        expect(cell('0', 'installments')).toBe('50,000');
+        expect(cell('0', 'costs')).toBe('5,000');
+        expect(cell('0', 'money_in')).toBe('66,400');
+        expect(cell('0', 'balance')).toBe('11,400');
+        expect(cell('0', 'rent_due')).toBe('0');
+        // The totals row is the backend's: the sums of the rows.
+        expect(totalsCell('money_in')).toBe('66,400');
+        expect(totalsCell('balance')).toBe('11,400');
+      });
+
+      it('draws the columns that fit: the costs come with the normal step, the sales and what was paid with the wide one', async () => {
+        await openGardens();
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(1);
+        }, SLOW_MS);
+        expect(drawnColumns()).toEqual([
+          'garden',
+          'status',
+          'rent',
+          'installments',
+          'costs',
+          'money_in',
+          'balance',
+          'rent_due',
+        ]);
+      });
+
+      it('does not call a balance below zero a loss: a garden starts below zero by design', async () => {
+        await openGardens();
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(1);
+        }, SLOW_MS);
+        expect(cell('0', 'balance')).not.toContain(m('report-result-loss'));
+        expect(document.querySelector('.ag-row[row-id="0"] [col-id="balance"]')).not.toHaveClass(
+          'cell-tone-due',
+        );
+      });
+
+      it('the layout box asks by partner and shows each partner’s percent and money, with his name', async () => {
+        const { user } = await openGardens();
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(1);
+        }, SLOW_MS);
+        await choose(user, 'report-filter-garden-view', m('report-filter-garden-by-partner'));
+        await waitFor(() => {
+          expect(lastRun()?.filters.garden_view).toBe('partner');
+        }, SLOW_MS);
+        await waitFor(() => {
+          expect(drawnRows()).toEqual(['0', '1']);
+        }, SLOW_MS);
+        expect(drawnColumns()).toEqual([
+          'garden',
+          'partner',
+          'share',
+          'paid_shop',
+          'paid_pocket',
+          'money_back',
+          'result',
+        ]);
+        await waitFor(() => {
+          expect(cell('0', 'partner')).toBe(names('الف', 'Partner A'));
+        }, SLOW_MS);
+        expect(cell('0', 'share')).toBe('60.00%');
+        expect(cell('0', 'paid_shop')).toBe('33,000');
+        expect(cell('0', 'money_back')).toBe('39,840');
+        expect(cell('0', 'result')).toBe('6,840');
+        expect(cell('1', 'paid_pocket')).toBe('22,000');
+        expect(totalsCell('result')).toBe('11,400');
+      });
+
+      it('the garden box lists the gardens by name with “all gardens” first, and asks for the one picked', async () => {
+        const { user } = await openGardens();
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(1);
+        }, SLOW_MS);
+        await choose(user, 'report-filter-garden', names('شاہ پور باغ', 'Shahpur Garden'));
+        await waitFor(() => {
+          expect(lastRun()?.filters.garden_id).toBe(1);
+        }, SLOW_MS);
+        expect(gardensApi.gardensList).toHaveBeenCalled();
+      });
+
+      it('Enter on a garden opens its screen', async () => {
+        const { router, user } = await openGardens();
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(1);
+        }, SLOW_MS);
+        await user.click(pick('.ag-row[row-id="0"] [col-id="garden"]'));
+        await user.keyboard('{Enter}');
+        await waitFor(() => {
+          expect(router.state.location.pathname).toBe('/gardens/1');
+        }, SLOW_MS);
+      });
+
+      it('says there is nothing, and offers to clear a filter that is set', async () => {
+        const { user } = await openGardens({
+          pages: { R36: { ...R36_GARDEN, rows: [], total_count: 0 } },
+        });
+        await screen.findByText(named(m('report-empty')), undefined, SLOW_MS);
+        expect(screen.queryByRole('button', { name: named(m('report-clear-filters')) })).toBeNull();
+        await choose(user, 'report-filter-garden', names('شاہ پور باغ', 'Shahpur Garden'));
+        expect(
+          await screen.findByRole('button', { name: named(m('report-clear-filters')) }, SLOW_MS),
+        ).toBeVisible();
+      });
+
+      it('keeps the garden and the layout across a language switch, and asks nothing new', async () => {
+        const { user } = await openGardens();
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(1);
+        }, SLOW_MS);
+        await choose(user, 'report-filter-garden', names('شاہ پور باغ', 'Shahpur Garden'));
+        await choose(user, 'report-filter-garden-view', m('report-filter-garden-by-partner'));
+        await waitFor(() => {
+          expect(lastRun()?.filters).toMatchObject({ garden_id: 1, garden_view: 'partner' });
+        }, SLOW_MS);
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(2);
+        }, SLOW_MS);
+        const before = runCount();
+        act(() => {
+          useLanguageStore.getState().setLanguage(other);
+        });
+        await waitFor(() => {
+          expect(
+            screen.getByRole('combobox', { name: message(other, 'report-filter-garden-view') }),
+          ).toHaveTextContent(message(other, 'report-filter-garden-by-partner'));
+        }, SLOW_MS);
+        expect(
+          screen.getByRole('combobox', { name: message(other, 'report-filter-garden') }),
+        ).toHaveTextContent(other === 'ur' ? 'شاہ پور باغ' : 'Shahpur Garden');
+        await waitFor(() => {
+          expect(cell('0', 'partner')).toBe(other === 'ur' ? 'الف' : 'Partner A');
+        }, SLOW_MS);
+        expect(runCount()).toBe(before);
+      });
+
+      it('prints the report by partner with every column and the partner’s name', async () => {
+        const { user } = await openGardens({ print: PRINT_R36_PARTNER_EN });
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(1);
+        }, SLOW_MS);
+        await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
+        await screen.findByText(PRINT_R36_PARTNER_EN.firm.name, undefined, SLOW_MS);
+        expect(vi.mocked(reportsApi.reportsPrintData).mock.calls[0]?.[0]).toMatchObject({
+          id: 'R36',
+          language,
+          paper: 'a4',
+        });
+        const heads = Array.from(document.querySelectorAll('.print-report thead th')).map((th) =>
+          visible(th.textContent),
+        );
+        expect(heads).toHaveLength(PRINT_R36_PARTNER_EN.columns.length);
+        expect(visible(document.querySelector('.print-report tbody')?.textContent)).toContain(
+          'Partner A',
+        );
+      });
+    });
+
+    describe('R34', () => {
+      it('has two rows for the gardens: what was paid into them and what came in, as information', async () => {
+        // The part of the day with the trips and the gardens, as a short list that is drawn whole.
+        const block: ReportPage = {
+          ...R34_GARDEN_DAY,
+          rows: R34_GARDEN_DAY.rows.slice(15, 21),
+          total_count: 6,
+        };
+        fakeReports({ pages: { R34: block } });
+        await renderApp('/reports/R34');
+        await screen.findByRole('heading', { level: 1, name: named(m('report-r34-title')) });
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(6);
+        }, SLOW_MS);
+        expect(cell('1', 'item')).toBe(m('report-r34-trips-sold'));
+        expect(cell('2', 'item')).toBe(m('report-r34-gardens-paid'));
+        expect(cell('2', 'count')).toBe('0');
+        expect(cell('2', 'amount')).toBe('0');
+        expect(cell('3', 'item')).toBe(m('report-r34-gardens-in'));
+        // The money that came into the gardens' accounts on 12-10-26: the sale in our shop and the other shop.
+        expect(cell('3', 'amount')).toBe('66,400');
+        expect(cell('3', 'count')).toBe('');
+        expect(cell('4', 'item')).toBe(m('report-r34-partner-shares'));
+      });
+    });
+  },
+);

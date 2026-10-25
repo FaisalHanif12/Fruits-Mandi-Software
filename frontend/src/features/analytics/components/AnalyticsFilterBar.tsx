@@ -1,5 +1,5 @@
 // The filter boxes of an analytics view (PRD 18.1, FR-18.1): the period with its shortcuts and the two
-// dates, the grouping of views D and G, the partner (F, G, J), the layout of the trips (J), the item,
+// dates, the grouping of views D and G, the partner (F, G, I, J), the garden (I and others), the layout of the trips (J), the item,
 // seller, buyer (and one person inside a one-time buyer account), city, اڈا, the side (both, seller,
 // buyer), the trip, the goods (all, consigned, trip, garden) and the comparison. They combine freely. Each
 // view shows the boxes the catalogue says it takes. The boxes are plain fields of the shared kit:
@@ -27,6 +27,7 @@ import {
   fieldError,
   type PickerValue,
 } from '../../../shared/ui';
+import { GardenFilterSelect } from '../../gardens';
 import { isPukhtaCode } from '../../pukhta_khata';
 import { ReportPartnerSelect, ReportPersonPicker } from '../../reports';
 import {
@@ -76,6 +77,7 @@ const FOLDED_FIELDS = [
   'filters.adda_id',
   'filters.side',
   'filters.trip_id',
+  'filters.garden_id',
   'filters.goods',
   'filters.compare',
 ];
@@ -94,7 +96,10 @@ export function AnalyticsFilterBar({
   // The trend (G) and the trips (J) take thirteen boxes: at the normal step they would push the chart
   // and the table below the fold, so the less used ones wait behind "More filters" there too. The
   // other views fold only in the compact step (Code Standards F22).
-  const crowded = has('partner') && has('item');
+  const crowded = has('partner') && has('item') && has('seller');
+  // The gardens view (I) is about gardens, so its garden box stays in view; on the other views that
+  // take it, the box is one of those that wait behind "More filters".
+  const aboutGardens = has('garden') && !has('seller');
   const compact = step === 'compact' || (step === 'normal' && crowded);
 
   const primary: ReactNode[] = [];
@@ -228,6 +233,19 @@ export function AnalyticsFilterBar({
         error={fieldError(error, 'filters.trip_id')}
         onChange={(trip) => {
           onChange({ trip });
+        }}
+      />,
+    );
+  }
+  if (aboutGardens) {
+    primary.push(
+      <GardenFilterSelect
+        key="garden"
+        garden={state.garden}
+        labelId="analytics-filter-garden"
+        error={fieldError(error, 'filters.garden_id')}
+        onChange={(garden) => {
+          onChange({ garden });
         }}
       />,
     );
@@ -392,6 +410,19 @@ export function AnalyticsFilterBar({
       />,
     );
   }
+  if (has('garden') && !aboutGardens) {
+    folded.push(
+      <GardenFilterSelect
+        key="garden"
+        garden={state.garden}
+        labelId="analytics-filter-garden"
+        error={fieldError(error, 'filters.garden_id')}
+        onChange={(garden) => {
+          onChange({ garden });
+        }}
+      />,
+    );
+  }
   if (has('goods')) {
     folded.push(
       <Field
@@ -450,6 +481,7 @@ export function AnalyticsFilterBar({
     state.adda !== null ||
     state.side !== 'both' ||
     (state.trip !== null && !has('trip_view')) ||
+    (state.garden !== null && !aboutGardens) ||
     state.goods !== 'all' ||
     state.compare !== 'off';
   // `fieldError` gives nothing (undefined) for a field with no refusal.

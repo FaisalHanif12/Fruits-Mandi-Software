@@ -11,6 +11,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as analyticsApi from '../../src/features/analytics/api';
+import * as gardensApi from '../../src/features/gardens/api';
 import * as tripsApi from '../../src/features/trips/api';
 import { useAnalyticsStore } from '../../src/features/analytics/store';
 import { LANGUAGES, type Language } from '../../src/i18n';
@@ -33,15 +34,22 @@ import {
   fakeAnalytics,
   type AnalyticsOptions,
 } from '../helpers/analytics';
+import { fakeGardens } from '../helpers/gardens';
 import { fakePartners, partnerRow } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { fakeTrips } from '../helpers/trips';
+import {
+  ANALYTICS_PRINT_DATA_I_EN,
+  ANALYTICS_RUN_F_GARDEN,
+  ANALYTICS_RUN_G_GARDEN_DAY,
+} from '../helpers/analytics-gardens-real';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/analytics/api');
 vi.mock('../../src/features/partners/api');
+vi.mock('../../src/features/gardens/api');
 vi.mock('../../src/features/trips/api');
 vi.mock('../../src/features/purchases/api');
 vi.mock('../../src/shared/accounts/api');
@@ -69,6 +77,7 @@ beforeEach(() => {
   healthyBackend();
   fakePartners(PARTNERS);
   fakeTrips();
+  fakeGardens();
   act(() => {
     useAnalyticsStore.getState().reset();
   });
@@ -169,8 +178,9 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       expect(cell('1', 'profit_share')).toBe('746');
       expect(totalsCell('income_share')).toBe('5,488');
       expect(totalsCell('profit_share')).toBe('2,488');
-      // The garden and fruit columns have no figure until their part of the app is built.
-      expect(cell('0', 'gardens')).toBe('');
+      // The garden column has money now (0 before any garden); the fruit column has no figure yet.
+      expect(cell('0', 'gardens')).toBe('0');
+      expect(cell('0', 'fruit')).toBe('');
     });
 
     it('draws a chart labelled for a screen reader, in the direction of the app', async () => {
@@ -510,6 +520,170 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       expect(heads).toHaveLength(ANALYTICS_PRINT_DATA_J_EN.columns.length);
       expect(heads.some((head) => head.startsWith('Partner A:'))).toBe(true);
       expect(heads.some((head) => /report-col-|analytics-col-/.test(head))).toBe(false);
+    });
+  });
+
+  describe('view I, the gardens', () => {
+    it('asks for no garden, no partner and no comparison, and shows each garden with the backend’s figures and totals', async () => {
+      await openView('I');
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+      expect(lastRun()).toMatchObject({
+        view: 'I',
+        filters: { garden_id: null, partner_id: null, compare: 'off', goods: 'all' },
+      });
+      expect(cell('0', 'group')).toBe(names('شاہ پور باغ', 'Shahpur Garden'));
+      expect(cell('0', 'status')).toBe(m('report-garden-closed'));
+      expect(cell('0', 'result')).toBe('11,400');
+      expect(totalsCell('result')).toBe('11,400');
+      expect(cell('0', 'result_1')).toBe('6,840');
+      expect(cell('0', 'result_2')).toBe('4,560');
+    });
+
+    it('heads the columns of a partner with his name, then what they hold', async () => {
+      await openView('I');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(1);
+      }, SLOW_MS);
+      expect(headerText('result_1')).toBe(
+        `${names('الف', 'Partner A')}: ${m('analytics-col-partner-result')}`,
+      );
+    });
+
+    it('does not call a result below zero a loss, and offers no comparison', async () => {
+      await openView('I');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(1);
+      }, SLOW_MS);
+      expect(cell('0', 'result')).not.toContain(m('report-result-loss'));
+      expect(screen.queryByRole('combobox', { name: m('analytics-filter-compare') })).toBeNull();
+    });
+
+    it('keeps the garden box in view, lists the gardens by name and asks for the one picked', async () => {
+      const { user } = await openView('I');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(1);
+      }, SLOW_MS);
+      // The box is one of the main boxes of this view, not behind "More filters".
+      await user.click(screen.getByRole('combobox', { name: m('analytics-filter-garden') }));
+      await user.click(
+        await screen.findByRole(
+          'option',
+          { name: names('شاہ پور باغ', 'Shahpur Garden') },
+          SLOW_MS,
+        ),
+      );
+      await waitFor(() => {
+        expect(lastRun()?.filters.garden_id).toBe(1);
+      }, SLOW_MS);
+      expect(gardensApi.gardensList).toHaveBeenCalled();
+    });
+
+    it('the side box narrows the commission, and the backend’s answer is shown', async () => {
+      const { user } = await openView('I');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(1);
+      }, SLOW_MS);
+      await user.click(await screen.findByRole('combobox', { name: m('analytics-filter-side') }));
+      await user.click(
+        await screen.findByRole('option', { name: named(m('analytics-side-seller')) }),
+      );
+      await waitFor(() => {
+        expect(lastRun()?.filters.side).toBe('seller');
+      }, SLOW_MS);
+      await user.click(screen.getByRole('button', { name: named(m('analytics-columns-other')) }));
+      await waitFor(() => {
+        expect(cell('0', 'commission')).toBe('3,600');
+      }, SLOW_MS);
+    });
+
+    it('draws a chart of the sales and the result of each garden', async () => {
+      await openView('I');
+      expect(
+        await screen.findByRole('img', { name: named(m('analytics-chart-i')) }, SLOW_MS),
+      ).toBeVisible();
+    });
+
+    it('Enter on a garden opens the sale lines of its goods, with the garden’s account as the row key', async () => {
+      const { user } = await openView('I');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(1);
+      }, SLOW_MS);
+      await user.click(pick('.ag-row[row-id="0"] [col-id="group"]'));
+      await user.keyboard('{Enter}');
+      await screen.findByRole(
+        'heading',
+        { level: 2, name: named(m('analytics-lines-title')) },
+        SLOW_MS,
+      );
+      expect(lastLines()).toMatchObject({
+        view: 'I',
+        row_key: { seller_id: 31 },
+        column_key: null,
+      });
+    });
+
+    it('the print has the partners’ columns headed with their names', async () => {
+      const { user } = await openView('I', { print: ANALYTICS_PRINT_DATA_I_EN });
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(1);
+      }, SLOW_MS);
+      await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
+      await screen.findByText(ANALYTICS_PRINT_DATA_I_EN.firm.name, undefined, SLOW_MS);
+      const heads = Array.from(document.querySelectorAll('.print-report thead th')).map((th) =>
+        visible(th.textContent),
+      );
+      expect(heads).toHaveLength(ANALYTICS_PRINT_DATA_I_EN.columns.length);
+      expect(heads.some((head) => head.startsWith('Partner A:'))).toBe(true);
+      expect(heads.some((head) => /analytics-col-|report-col-/.test(head))).toBe(false);
+    });
+  });
+
+  describe('the garden columns of F and G, and the garden box of the other views', () => {
+    it('F has money in its gardens column', async () => {
+      await openView('F', { pages: { F: ANALYTICS_RUN_F_GARDEN } });
+      await waitFor(() => {
+        expect(cell('0', 'gardens')).toBe('6,840');
+      }, SLOW_MS);
+      expect(cell('1', 'gardens')).toBe('26,560');
+      expect(totalsCell('gardens')).toBe('33,400');
+      expect(cell('0', 'net_change')).toBe('10,040');
+    });
+
+    it('F and J offer no garden box, because the backend refuses it there', async () => {
+      await openView('F');
+      expect(screen.queryByRole('combobox', { name: m('analytics-filter-garden') })).toBeNull();
+    });
+
+    it('G shows the movement of the garden balances, below the line on a day of payments', async () => {
+      await openView('G', { pages: { G: ANALYTICS_RUN_G_GARDEN_DAY } });
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(3);
+      }, SLOW_MS);
+      await waitFor(() => {
+        expect(cell('0', 'gardens_result')).toBe('-30,000');
+      }, SLOW_MS);
+      expect(cell('2', 'gardens_result')).toBe('66,400');
+      expect(totalsCell('gardens_result')).toBe('11,400');
+    });
+
+    it('a garden picked on view A narrows the sales to its goods, and the box is in the “More filters” group', async () => {
+      const { user } = await openView('A');
+      await waitFor(() => {
+        expect(lastRun()?.filters.garden_id).toBeNull();
+      }, SLOW_MS);
+      await user.click(screen.getByRole('combobox', { name: m('analytics-filter-garden') }));
+      await user.click(
+        await screen.findByRole(
+          'option',
+          { name: names('شاہ پور باغ', 'Shahpur Garden') },
+          SLOW_MS,
+        ),
+      );
+      await waitFor(() => {
+        expect(lastRun()?.filters.garden_id).toBe(1);
+      }, SLOW_MS);
     });
   });
 

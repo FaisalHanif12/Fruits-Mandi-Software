@@ -1,5 +1,15 @@
 [
   {
+    "id": "R1",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r1-title",
+    "filters": [
+      "bikri"
+    ],
+    "party_required": true
+  },
+  {
     "id": "R2",
     "group": "sales",
     "group_title_id": "report-group-sales",
@@ -36,6 +46,22 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r4-title",
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R5",
+    "group": "sales",
+    "group_title_id": "report-group-sales",
+    "title_id": "report-r5-title",
     "filters": [
       "date_range",
       "party",
@@ -385,6 +411,20 @@
     "filters": [
       "as_of",
       "party"
+    ],
+    "party_required": false
+  },
+  {
+    "id": "R36",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r36-title",
+    "filters": [
+      "date_range",
+      "item",
+      "partner",
+      "garden",
+      "garden_view"
     ],
     "party_required": false
   }

@@ -43,10 +43,22 @@ const FIGURE_KINDS: ReadonlySet<ReportColumnKind> = new Set([
 /** The message of a zero balance's side: a nil balance has no side word. */
 const ZERO_SIDE_ID = 'report-side-zero';
 
-function DetailLine({ part }: { part: ReportPrintDetailPart }) {
+function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSale: boolean }) {
   const { l10n } = useLocalization();
   switch (part.kind) {
     case 'sale':
+      // The buyers' list (R5) writes a line as the client's own print does: "(item qty . rate)".
+      if (shortSale) {
+        return (
+          <p>
+            {l10n.getString('report-detail-sale-short', {
+              item: part.item,
+              qty: part.qty,
+              rate: part.rate,
+            })}
+          </p>
+        );
+      }
       return (
         <p>
           {l10n.getString('report-detail-sale', {
@@ -106,7 +118,7 @@ function printMessageText(
   return l10n.getString(id, vars);
 }
 
-function Cell({ cell }: { cell: ReportPrintCell }) {
+function Cell({ cell, shortSale = false }: { cell: ReportPrintCell; shortSale?: boolean }) {
   const { l10n } = useLocalization();
   switch (cell.type) {
     case 'empty':
@@ -170,7 +182,7 @@ function Cell({ cell }: { cell: ReportPrintCell }) {
       return (
         <div className="print-lines">
           {cell.parts.map((part, index) => (
-            <DetailLine key={index} part={part} />
+            <DetailLine key={index} part={part} shortSale={shortSale} />
           ))}
         </div>
       );
@@ -283,6 +295,8 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
   // The party day sheet (R35) is the client's own slip: its lines first, what the day comes to
   // underneath (PRD FR-19.12). The other reports have their figures above the table.
   const sheet = data.report === 'R35';
+  // The buyers' list (R5) writes each sale line as "(item qty . rate)", like the client's own print.
+  const buyersList = data.report === 'R5';
   const summaryLines =
     (data.summary ?? []).length === 0 ? null : (
       <dl className="print-facts print-summary-lines">
@@ -372,7 +386,11 @@ function ReportPrintBody({ data, applyRoot = false, ref }: ReportPrintDocumentPr
                       : null;
                   return (
                     <td key={position} className={columnClass(data, position)}>
-                      {none === null ? <Cell cell={cell} /> : l10n.getString(none)}
+                      {none === null ? (
+                        <Cell cell={cell} shortSale={buyersList} />
+                      ) : (
+                        l10n.getString(none)
+                      )}
                     </td>
                   );
                 })}

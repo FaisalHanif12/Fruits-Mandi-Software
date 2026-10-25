@@ -16,6 +16,7 @@ export type Destination =
   | { kind: 'cashbook' }
   | { kind: 'trips' }
   | { kind: 'gardens' }
+  | { kind: 'garden'; id: number }
   | { kind: 'backup' }
   | { kind: 'index' }
   | { kind: 'analytics' }
@@ -128,6 +129,9 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'gardens':
         void navigate({ to: '/gardens' });
+        return;
+      case 'garden':
+        void navigate({ to: '/gardens/$id', params: { id: String(destination.id) } });
         return;
       case 'backup':
         void navigate({ to: '/backup' });

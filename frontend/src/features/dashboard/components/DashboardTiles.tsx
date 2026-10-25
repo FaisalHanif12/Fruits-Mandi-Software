@@ -5,9 +5,9 @@
 // zero or past its date also says so in words, never by colour alone (NFR-USE-12). ↑ ↓ ← → move
 // between tiles the way the user sees them (PRD FR-7.13).
 //
-// The gardens tile (PRD 9.1) asks the gardens module for itself (`GardenTile`), so a garden list that
-// cannot be read never hides the others. The backup and the books check tiles are drawn by
-// `StatusTiles` and come in as `children` for the same reason.
+// The gardens tile (PRD 9.1, FR-12.37) shows the running balance of the open gardens, from the same
+// call as the other tiles (`dashboard_get`). The backup and the books check tiles are drawn by
+// `StatusTiles` and come in as `children`, so one tile that cannot be read never hides the others.
 
 import { Localized } from '@fluent/react';
 import type { ReactNode } from 'react';
@@ -16,7 +16,6 @@ import { isNegativePaisa, isPositivePaisa } from '../../../shared/format';
 import { formNavigationProps } from '../../../shared/keyboard';
 import { Num, Tile } from '../../../shared/ui';
 import { useOpenDestination } from '../destinations';
-import { GardenTile } from './GardenTile';
 
 interface DashboardTilesProps {
   tiles: DashboardTilesData;
@@ -140,7 +139,27 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
           <span />
         </Localized>
       </Tile>
-      <GardenTile />
+      <Tile
+        label={<Localized id="dashboard-tile-gardens" />}
+        note={
+          tiles.gardens_open === 0 ? (
+            <Localized id="dashboard-tile-gardens-none" />
+          ) : (
+            <Localized
+              id="dashboard-tile-gardens-note"
+              vars={{ open: tiles.gardens_open }}
+              elems={{ num: <Num /> }}
+            >
+              <span />
+            </Localized>
+          )
+        }
+        onOpen={() => {
+          open({ kind: 'gardens' });
+        }}
+      >
+        <Num inherit paisa={tiles.gardens_balance_paisa} />
+      </Tile>
       <Tile
         label={<Localized id="dashboard-tile-lent" />}
         tone={lentOverdue ? 'warn' : 'neutral'}

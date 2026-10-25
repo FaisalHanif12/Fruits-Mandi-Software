@@ -55,6 +55,8 @@ import {
   R32_E2E_30B,
 } from './reports-business-real';
 
+import { PRINT_R36_PARTNER_EN, R36_GARDEN, R36_PARTNER } from './reports-gardens-real';
+import { PRINT_R5_EN, R1_BIKRI_1, R1_NEEDS_A_BIKRI, R5_CREDIT_BUYERS } from './reports-sales-real';
 import {
   PRINT_R35_SLIP_AKRAM_EN,
   R35_SLIP_AKRAM,
@@ -80,6 +82,8 @@ export * from './reports-real';
 export * from './reports-business-real';
 export * from './reports-stock-real';
 export * from './reports-party-real';
+export * from './reports-gardens-real';
+export * from './reports-sales-real';
 
 /** A backend refusal, as a rejected promise. */
 export function refusedWith(error: UiError): CommandError {
@@ -136,6 +140,11 @@ const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
   R34: R34_DAY,
   // Round 11: the party day sheet, the table of every party (a slip is answered for a party picked).
   R35: R35_TABLE,
+  // The garden slice: the gardens report by garden (by partner when the layout box says so).
+  R36: R36_GARDEN,
+  // Round 12: the sale book of بکری 1 (it needs a بکری picked) and the credit buyers' details.
+  R1: R1_BIKRI_1,
+  R5: R5_CREDIT_BUYERS,
 };
 
 function slice(page: ReportPage, offset: number, limit: number): ReportPage {
@@ -151,6 +160,8 @@ function printOf(id: ReportId): ReportPrintData {
   if (id === 'R33') return PRINT_R33_PARTNER_EN;
   if (id === 'R34') return PRINT_R34_EN;
   if (id === 'R35') return PRINT_R35_SLIP_AKRAM_EN;
+  if (id === 'R36') return PRINT_R36_PARTNER_EN;
+  if (id === 'R5') return PRINT_R5_EN;
   return PRINT_R18_EN;
 }
 
@@ -180,6 +191,10 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
         }),
       );
     }
+    // The sale book is the lots of one بکری: with none picked the backend refuses it.
+    if (input.id === 'R1' && input.filters.bikri_id === null) {
+      return Promise.reject(refusedWith(R1_NEEDS_A_BIKRI));
+    }
     // The as-of day of the backend's fixture is the 9th: a filled as-of box answers with it.
     const base = input.id === 'R18' && input.filters.as_of !== '' ? R18_AS_OF : page;
     // R14 answers with its lines only when the detail box is ticked.
@@ -191,6 +206,10 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     if (input.id === 'R29' && input.filters.partner_id !== null) answer = R29_ALIF;
     // R15 for one kind of voucher answers with that kind (the payments), with one total.
     if (input.id === 'R15' && input.filters.voucher_type !== undefined) answer = R15_PAYMENTS;
+    // R36 answers in the layout asked for (unless the test brought a page of its own).
+    if (input.id === 'R36' && options.pages?.R36 === undefined) {
+      answer = input.filters.garden_view === 'partner' ? R36_PARTNER : R36_GARDEN;
+    }
     // R35 for one party answers with his slip: the seller's slip for a seller's account (the worked
     // day's ids: رحیم is 18 and کریم 19), the buyer's slip for any other (unless the test brought a
     // page of its own).

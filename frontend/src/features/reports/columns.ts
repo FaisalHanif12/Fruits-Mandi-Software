@@ -43,7 +43,57 @@ interface StepRange {
 /** A column that is in the print and the backend's answer but has no room on the screen. */
 const NEVER: StepRange = { from: 'wide', until: 'compact' };
 
+/**
+ * The gardens report (R36) has two layouts with some keys in common (the garden, what the shop and the
+ * pockets paid), so its steps are chosen by the layout: the partner layout is the one that has a
+ * `partner` column. By garden has 15 columns: the garden, its state, the rent, the installments, the
+ * money in, the running balance and the rent due always; the costs come at the normal step; what the
+ * shop and the pockets paid and the sales (our shop, other shops) at the wide step; the day, the
+ * other money in and the commission are in the print only. By partner has 7: his percent and his
+ * money always; what he paid from his pocket from the normal step.
+ */
+const GARDEN_LAYOUT_STEPS: Readonly<Record<string, StepRange>> = {
+  costs: { from: 'normal' },
+  paid_shop: { from: 'wide' },
+  paid_pocket: { from: 'wide' },
+  sales_our_shop: { from: 'wide' },
+  sales_other_shops: { from: 'wide' },
+  date: NEVER,
+  other_in: NEVER,
+  commission: NEVER,
+};
+const GARDEN_PARTNER_LAYOUT_STEPS: Readonly<Record<string, StepRange>> = {
+  paid_pocket: { from: 'normal' },
+};
+
+/** The steps of a report's columns; most reports have one map, R36 has one for each layout. */
+function stepsOf(
+  id: ReportId,
+  columns: readonly Pick<ReportColumn, 'key'>[],
+): Readonly<Record<string, StepRange>> | undefined {
+  if (id !== 'R36') return COLUMN_STEPS[id];
+  return columns.some((column) => column.key === 'partner')
+    ? GARDEN_PARTNER_LAYOUT_STEPS
+    : GARDEN_LAYOUT_STEPS;
+}
+
 const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>>> = {
+  // The sale book (R1) has the 15 columns of the seller's bill and a table never scrolls sideways: the
+  // seller, the item, the quantity, the gross, the deductions and the net always; the day and the
+  // commission from the normal step; the document, the freight, the labour and the cash paid at the
+  // wide step. The munshiana, the store rent and the phone charge are in the print, which holds the
+  // whole bill (and in the deductions, which is the sum of them all).
+  R1: {
+    date: { from: 'normal' },
+    commission: { from: 'normal' },
+    doc: { from: 'wide' },
+    freight: { from: 'wide' },
+    labour: { from: 'wide' },
+    cash_paid: { from: 'wide' },
+    munshiana: NEVER,
+    store_rent: NEVER,
+    phone_charge: NEVER,
+  },
   // Sales register: date, buyer, item, quantity, rate and the buyer's total always; the rest follow.
   R2: { doc: { from: 'normal' }, value: { from: 'normal' }, city: { from: 'wide' } },
   R3: { doc: { from: 'normal' }, value: { from: 'normal' }, city: { from: 'wide' } },
@@ -170,8 +220,12 @@ function resultTone(cell: ReportCell): 'due' | undefined {
 const SHORT_LABEL_KEYS: ReadonlySet<string> = new Set(['status', 'side', 'staff', 'heading']);
 
 /** True when the column of this report is shown at the step. */
-function shownAt(id: ReportId, key: string, step: LayoutStep): boolean {
-  const range = COLUMN_STEPS[id]?.[key];
+function shownAt(
+  steps: Readonly<Record<string, StepRange>> | undefined,
+  key: string,
+  step: LayoutStep,
+): boolean {
+  const range = steps?.[key];
   if (range === undefined) return true;
   return isFromStep(step, range.from ?? 'compact') && isFromStep(range.until ?? 'wide', step);
 }
@@ -191,13 +245,14 @@ export function listColumnOf<V extends RowLike>(
   index: number,
   emptyName: (rowKind: ReportRowKind) => string | null = () => null,
   signed = false,
+  shortSale = false,
 ): ListColumn<V> {
   const cell = (view: V, context: ListContext) => {
     const found = view.row.cells[index];
     if (found === undefined) return '';
     // A name left empty on purpose: say what it is.
     const none = index === 0 && found.type === 'empty' ? emptyName(view.row.kind) : null;
-    return none === null ? cellText(found, context) : context.text(none);
+    return none === null ? cellText(found, context, shortSale) : context.text(none);
   };
   const base = { field: column.key, headerId: column.title_id, value: cell };
   switch (column.kind) {
@@ -273,14 +328,17 @@ export function reportColumns(
   step: LayoutStep,
 ): ListColumn<ReportRowView>[] {
   const signed = signedColumnsOf(id);
+  const steps = stepsOf(id, columns);
   return columns.flatMap((column, index) =>
-    shownAt(id, column.key, step)
+    shownAt(steps, column.key, step)
       ? [
           listColumnOf<ReportRowView>(
             column,
             index,
             (rowKind) => emptyNameMessageId(id, rowKind),
             signed.has(column.key),
+            // The buyers' list writes each sale line as the client's own print does (R5).
+            id === 'R5',
           ),
         ]
       : [],

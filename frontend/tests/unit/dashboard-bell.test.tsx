@@ -292,7 +292,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
 });
 
 describe('the bell and the dashboard are read again after every save', () => {
-  it('a saved entry makes the bell, the dashboard and the gardens tile ask once, 300 ms after the last save', async () => {
+  it('a saved entry makes the bell and the dashboard ask once, 300 ms after the last save', async () => {
     vi.useFakeTimers();
     try {
       const client: QueryClient = createQueryClient();
@@ -307,11 +307,9 @@ describe('the bell and the dashboard are read again after every save', () => {
       // Two saves close together are one read.
       expect(invalidate).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(REFRESH_AFTER_SAVE_MS + 10);
-      // The dashboard, the bell and the gardens tile (a بکری of a garden's lot changes its balance).
       expect(invalidate.mock.calls.map((call) => call[0]?.queryKey)).toEqual([
         ['dashboard'],
         ['attention'],
-        ['gardens', 'summary'],
       ]);
     } finally {
       vi.useRealTimers();

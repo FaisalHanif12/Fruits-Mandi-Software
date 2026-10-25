@@ -17,6 +17,7 @@
     "compare_to": null,
     "partner": null,
     "trip": null,
+    "garden": null,
     "goods": "all",
     "trip_view": null
   },
@@ -108,7 +109,8 @@
           "paisa": 99600
         },
         {
-          "type": "empty"
+          "type": "money",
+          "paisa": 0
         },
         {
           "type": "money",
@@ -161,7 +163,8 @@
           "paisa": 74600
         },
         {
-          "type": "empty"
+          "type": "money",
+          "paisa": 0
         },
         {
           "type": "money",
@@ -214,7 +217,8 @@
           "paisa": 74600
         },
         {
-          "type": "empty"
+          "type": "money",
+          "paisa": 0
         },
         {
           "type": "money",
@@ -267,7 +271,8 @@
       "paisa": 248800
     },
     {
-      "type": "empty"
+      "type": "money",
+      "paisa": 0
     },
     {
       "type": "money",

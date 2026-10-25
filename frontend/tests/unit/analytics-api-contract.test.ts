@@ -53,6 +53,15 @@ import {
   ANALYTICS_RUN_J_TRIP_PARTNER,
   ANALYTICS_RUN_J_TRIP_WRITTEN_OFF,
 } from '../helpers/analytics-trips-real';
+import {
+  ANALYTICS_LINES_I_GARDEN,
+  ANALYTICS_PRINT_DATA_I_EN,
+  ANALYTICS_RUN_A_GARDEN_GOODS,
+  ANALYTICS_RUN_F_GARDEN,
+  ANALYTICS_RUN_G_GARDEN_DAY,
+  ANALYTICS_RUN_I_GARDEN,
+  ANALYTICS_RUN_I_GARDEN_SELLER_SIDE,
+} from '../helpers/analytics-gardens-real';
 
 vi.mock('../../src/shared/api/invoke');
 
@@ -124,8 +133,8 @@ describe('the fixtures are the backend’s own', () => {
 const keysOf = (value: object) => Object.keys(value).sort();
 
 describe('the answers carry exactly the fields of the generated types', () => {
-  it('AnalyticsCatalogEntry: the nine views, each with the filters it takes', () => {
-    // Views I (gardens) and K (fruit taken) come with D4R.
+  it('AnalyticsCatalogEntry: the ten views, each with the filters it takes', () => {
+    // View K (fruit taken) comes with D4R 17d.
     expect(ANALYTICS_CATALOG.map((entry) => entry.id)).toEqual([
       'A',
       'B',
@@ -135,17 +144,20 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'F',
       'G',
       'H',
+      'I',
       'J',
     ]);
     for (const entry of ANALYTICS_CATALOG) {
       expect(keysOf(entry)).toEqual(['filters', 'id', 'title_id']);
       // Only views D and G take a grouping.
       expect(entry.filters.includes('group_by')).toBe(entry.id === 'D' || entry.id === 'G');
-      // The comparison is refused on the partner, trend and trips views, so they do not offer it.
-      expect(entry.filters.includes('compare')).toBe(!['F', 'G', 'J'].includes(entry.id));
-      // The partner box is on F, G and J only; the trip layout on J only.
-      expect(entry.filters.includes('partner')).toBe(['F', 'G', 'J'].includes(entry.id));
+      // The comparison is refused on the partner, trend, gardens and trips views: they do not offer it.
+      expect(entry.filters.includes('compare')).toBe(!['F', 'G', 'I', 'J'].includes(entry.id));
+      // The partner box is on F, G, I and J only; the trip layout on J only.
+      expect(entry.filters.includes('partner')).toBe(['F', 'G', 'I', 'J'].includes(entry.id));
       expect(entry.filters.includes('trip_view')).toBe(entry.id === 'J');
+      // The garden box is on every view but F and J, which refuse a garden.
+      expect(entry.filters.includes('garden')).toBe(!['F', 'J'].includes(entry.id));
     }
   });
 
@@ -172,6 +184,11 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_RUN_J_TRIP_BY_PURCHASE,
       ANALYTICS_RUN_J_TRIP_PARTNER,
       ANALYTICS_RUN_J_TRIP_WRITTEN_OFF,
+      ANALYTICS_RUN_I_GARDEN,
+      ANALYTICS_RUN_I_GARDEN_SELLER_SIDE,
+      ANALYTICS_RUN_F_GARDEN,
+      ANALYTICS_RUN_G_GARDEN_DAY,
+      ANALYTICS_RUN_A_GARDEN_GOODS,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -193,6 +210,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'compare_from',
         'compare_to',
         'from',
+        'garden',
         'goods',
         'group_by',
         'item',
@@ -236,6 +254,41 @@ describe('the answers carry exactly the fields of the generated types', () => {
     const percent = ANALYTICS_LINES_F_PARTNER_A.columns.find((column) => column.key === 'share');
     expect(percent?.title_id).toBe('analytics-col-share-percent');
     expect(percent?.kind).toBe('percent');
+  });
+
+  it('view I is one row for each garden, with a percent and a result for each partner of the gardens', () => {
+    expect(ANALYTICS_RUN_I_GARDEN.rows).toHaveLength(1);
+    const partner = ANALYTICS_RUN_I_GARDEN.columns.filter(
+      (column) => column.heading?.kind === 'partner',
+    );
+    expect(partner.map((column) => column.title_id)).toEqual([
+      'analytics-col-partner-share',
+      'analytics-col-partner-result',
+      'analytics-col-partner-share',
+      'analytics-col-partner-result',
+    ]);
+    expect(partner.map((column) => column.kind)).toEqual(['percent', 'money', 'percent', 'money']);
+    // The row names its garden by his account, to send back for the lines behind it.
+    expect(ANALYTICS_RUN_I_GARDEN.rows[0]?.key?.seller_id).toBe(31);
+    expect(ANALYTICS_RUN_I_GARDEN_SELLER_SIDE.filters.side).toBe('seller');
+  });
+
+  it('F has money in its gardens column now, and its fruit column is still empty', () => {
+    const gardens = ANALYTICS_RUN_F_GARDEN.columns.findIndex((column) => column.key === 'gardens');
+    const fruit = ANALYTICS_RUN_F_GARDEN.columns.findIndex((column) => column.key === 'fruit');
+    expect(ANALYTICS_RUN_F_GARDEN.rows.map((row) => row.cells[gardens]?.type)).toEqual([
+      'money',
+      'money',
+      'money',
+    ]);
+    expect(ANALYTICS_RUN_F_GARDEN.rows.every((row) => row.cells[fruit]?.type === 'empty')).toBe(
+      true,
+    );
+  });
+
+  it('G has a column for the movement of the garden balances, after the trips', () => {
+    const keys = ANALYTICS_RUN_G_GARDEN_DAY.columns.map((column) => column.key);
+    expect(keys.slice(-2)).toEqual(['trips_result', 'gardens_result']);
   });
 
   it('a partner row of F opens his share rows; a trip row of J opens its purchases', () => {
@@ -294,6 +347,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_LINES_E_RAHIM_BANANA,
       ANALYTICS_LINES_F_PARTNER_A,
       ANALYTICS_LINES_J_TRIP,
+      ANALYTICS_LINES_I_GARDEN,
     ]) {
       expect(keysOf(page)).toEqual([
         'columns',
@@ -320,6 +374,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_PRINT_DATA_A_EN,
       ANALYTICS_PRINT_DATA_D_UR,
       ANALYTICS_PRINT_DATA_J_EN,
+      ANALYTICS_PRINT_DATA_I_EN,
     ]) {
       expect(keysOf(data)).toEqual([
         'columns',
@@ -353,6 +408,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'city_id',
         'compare',
         'from',
+        'garden_id',
         'goods',
         'group_by',
         'item_id',

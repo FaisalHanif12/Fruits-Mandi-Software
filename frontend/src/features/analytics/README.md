@@ -57,3 +57,20 @@ nothing (FR-18.8) except the user's list of saved views.
   the whole filter).
 - Tests: `analytics-views-round11.test.tsx`, `analytics-logic.test.ts`, the contract test. Windows
   spec: `49-party-sheet-analytics-round11.e2e.mjs`. Screenshot snippet: `shots-plan27.playwright.txt`.
+
+## View I and the garden slice (round 11, PRD 18.2 I, FR-12.37)
+
+- View I (gardens) is one row for each garden: its state (open or closed), what was paid from the
+  shop and from pockets, the sales in our shop and in other shops, the other money in, the commission
+  and the result, then a percent and a result for each partner of the gardens. The row key is the
+  garden's account (`seller_id`), sent back to `analytics_lines` for the sale lines of its goods. A
+  figure below zero is not called a loss: a garden starts below zero by design (FR-12.37).
+- The garden box (`GardenFilterSelect` of the gardens module, loaded whole like the trip box) is a main
+  box of view I and one of the "More filters" boxes of A to E, G and H (it narrows the sales to that
+  garden's goods). F and J refuse a garden, so the catalogue does not list it there and none is sent.
+  The comparison is not offered on I either.
+- F has money in its gardens column now (the fruit column is still empty until D4R 17d). G has the
+  movement of the garden balances after the trips' result (a day of payments is below the line).
+- `columns.ts`: view I and J share `PARTNER_PLACES` (a partner's result right after the garden's or
+  trip's result, his percent after the first sales column). The state of a garden ranks right after
+  its name and is sized as one short word.

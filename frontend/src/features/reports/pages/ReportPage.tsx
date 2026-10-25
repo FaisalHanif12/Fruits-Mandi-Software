@@ -34,6 +34,7 @@ import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type ScreenMemory } from '../../../shared/screen-state';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { PrintAction } from '../../bikri';
 import { ReportFilterBar } from '../components/ReportFilterBar';
 import { ReportPreview } from '../components/ReportPreview';
 import { ReportResults } from '../components/ReportResults';
@@ -64,7 +65,7 @@ function isFilterRefusal(error: UiError): boolean {
 }
 
 /** Opens the record behind a row; a row that opens nothing (no screen for it yet) does nothing. */
-function useOpenSource(catalog: readonly ReportCatalogEntry[]) {
+function useOpenSource(catalog: readonly ReportCatalogEntry[], reportId: ReportCatalogEntry['id']) {
   const navigate = useNavigate();
   return (view: ReportRowView) => {
     const source = view.row.source;
@@ -75,6 +76,12 @@ function useOpenSource(catalog: readonly ReportCatalogEntry[]) {
         return;
       case 'voucher':
         void navigate({ to: '/bikri/voucher', search: { id: source.id } });
+        return;
+      case 'venture':
+        // A row of the gardens report is a garden: its screen has its entries and its closing.
+        if (reportId === 'R36') {
+          void navigate({ to: '/gardens/$id', params: { id: String(source.id) } });
+        }
         return;
       case 'account':
         // The ledger of the account is the most useful record behind it (R13), when it is built.
@@ -90,6 +97,12 @@ function useOpenSource(catalog: readonly ReportCatalogEntry[]) {
         return;
     }
   };
+}
+
+/** What a report that cannot run yet asks for: a partner, a بکری or an account. */
+function pickPromptOf(partner: boolean, bikri: boolean): string {
+  if (bikri) return 'report-pick-bikri';
+  return partner ? 'report-pick-partner' : 'report-pick-party';
 }
 
 function ReportBody({
@@ -124,7 +137,7 @@ function ReportBody({
     [settled, entry],
   );
   const query = useReportPages(entry.id, wire);
-  const openSource = useOpenSource(catalog);
+  const openSource = useOpenSource(catalog, entry.id);
   const language = useLanguage();
   // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
   const exporter = useExcelExport({
@@ -173,8 +186,11 @@ function ReportBody({
     if (view === 'preview') setView('table');
     else backToList();
   });
+  // The sale book report (R1) prints the seller's bill itself, the shared print job of the بکری picked
+  // (`PrintAction`, which has its own F9), not a page of the report.
+  const printsBill = entry.id === 'R1';
   useShortcut(SHORTCUTS.print, () => {
-    if (wire !== null) setView('preview');
+    if (wire !== null && !printsBill) setView('preview');
   });
 
   const change = (part: Partial<ReportFilterState>) => {
@@ -214,6 +230,7 @@ function ReportBody({
   // R13 and R14 wait for an account, R31 for a partner (the catalogue says which box it takes).
   const needsPick = !canRun(state, entry);
   const pickingPartner = entry.filters.includes('partner');
+  const pickingBikri = entry.filters.includes('bikri');
   const balanceOnly = entry.filters.includes('detail') && !settled.detail;
   const filtering = !isUnfiltered(state, entry.filters);
 
@@ -233,10 +250,8 @@ function ReportBody({
     body = (
       <EmptyState
         icon={FileX}
-        title={<Localized id={pickingPartner ? 'report-pick-partner' : 'report-pick-party'} />}
-        help={
-          <Localized id={pickingPartner ? 'report-pick-partner-help' : 'report-pick-party-help'} />
-        }
+        title={<Localized id={pickPromptOf(pickingPartner, pickingBikri)} />}
+        help={<Localized id={`${pickPromptOf(pickingPartner, pickingBikri)}-help`} />}
       />
     );
   } else {
@@ -273,16 +288,20 @@ function ReportBody({
             <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
             <Localized id="report-back" />
           </Button>
-          <Button
-            shortcut={SHORTCUTS.print}
-            disabled={wire === null || view === 'preview'}
-            onClick={() => {
-              setView('preview');
-            }}
-          >
-            <Printer aria-hidden="true" className="size-icon-md" />
-            <Localized id="report-preview" />
-          </Button>
+          {printsBill && state.bikri !== null ? (
+            <PrintAction target={{ id: state.bikri.id, number: state.bikri.number }} />
+          ) : (
+            <Button
+              shortcut={SHORTCUTS.print}
+              disabled={wire === null || view === 'preview'}
+              onClick={() => {
+                setView('preview');
+              }}
+            >
+              <Printer aria-hidden="true" className="size-icon-md" />
+              <Localized id="report-preview" />
+            </Button>
+          )}
           {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
           {view === 'preview' ? null : (
             <ExcelExportButton

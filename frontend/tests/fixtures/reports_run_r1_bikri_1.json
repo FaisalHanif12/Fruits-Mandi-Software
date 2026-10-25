@@ -1,0 +1,242 @@
+{
+  "id": "R1",
+  "title_id": "report-r1-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false,
+    "bikri_number": 1
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "gross",
+      "title_id": "report-col-gross",
+      "kind": "money"
+    },
+    {
+      "key": "freight",
+      "title_id": "report-col-freight",
+      "kind": "money"
+    },
+    {
+      "key": "commission",
+      "title_id": "report-col-commission",
+      "kind": "money"
+    },
+    {
+      "key": "labour",
+      "title_id": "report-col-labour",
+      "kind": "money"
+    },
+    {
+      "key": "munshiana",
+      "title_id": "report-col-munshiana",
+      "kind": "money"
+    },
+    {
+      "key": "cash_paid",
+      "title_id": "report-col-cash-paid",
+      "kind": "money"
+    },
+    {
+      "key": "store_rent",
+      "title_id": "report-col-store-rent",
+      "kind": "money"
+    },
+    {
+      "key": "phone_charge",
+      "title_id": "report-col-phone-charge",
+      "kind": "money"
+    },
+    {
+      "key": "deductions",
+      "title_id": "report-col-deductions",
+      "kind": "money"
+    },
+    {
+      "key": "net",
+      "title_id": "report-col-net",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "money",
+          "paisa": 2940000
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "money",
+          "paisa": 176400
+        },
+        {
+          "type": "money",
+          "paisa": 25000
+        },
+        {
+          "type": "money",
+          "paisa": 5000
+        },
+        {
+          "type": "money",
+          "paisa": 500000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 2000
+        },
+        {
+          "type": "money",
+          "paisa": 1008400
+        },
+        {
+          "type": "money",
+          "paisa": 1931600
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 50
+    },
+    {
+      "type": "money",
+      "paisa": 2940000
+    },
+    {
+      "type": "money",
+      "paisa": 300000
+    },
+    {
+      "type": "money",
+      "paisa": 176400
+    },
+    {
+      "type": "money",
+      "paisa": 25000
+    },
+    {
+      "type": "money",
+      "paisa": 5000
+    },
+    {
+      "type": "money",
+      "paisa": 500000
+    },
+    {
+      "type": "money",
+      "paisa": 0
+    },
+    {
+      "type": "money",
+      "paisa": 2000
+    },
+    {
+      "type": "money",
+      "paisa": 1008400
+    },
+    {
+      "type": "money",
+      "paisa": 1931600
+    }
+  ],
+  "summary": []
+}

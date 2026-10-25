@@ -1,4 +1,4 @@
-### Analytics (plan 21 and plan 27, PRD 18; views A to H and J).
+### Analytics (plan 21 and plan 27, PRD 18; views A to J).
 ### Every message here is `# review: pending` until the Urdu and English reviewers have read it (NFR-URD-4).
 
 ## The area: its views and the lines above the table.
@@ -164,13 +164,13 @@ analytics-compare-range = Compared with { $from } to { $to }
 ## What the print says about the filters (PRD FR-18.4).
 
 # review: pending
-analytics-by-year = By year
+analytics-filter-by-year = By year
 
 # review: pending
-analytics-compare-from = Compared with, from
+analytics-filter-compare-from = Compared with, from
 
 # review: pending
-analytics-compare-to = Compared with, to
+analytics-filter-compare-to = Compared with, to
 
 ## The table, the lines behind a figure and the states (PRD FR-18.2, FR-7.46).
 
@@ -414,3 +414,64 @@ analytics-chart-g = Each period: { -commission }, shared income, shop expenses, 
 
 # review: pending
 analytics-chart-j = Sales money and result
+
+## View I, the gardens (round 11, plan 27, PRD 18.2), and the garden box and columns of the other views.
+
+# review: pending
+analytics-view-i-title = { -baghat }
+
+# review: pending
+analytics-view-i-help = Each garden: what was paid, the sales in our shop and in other shops, the { -commission }, the result and the share of each { -shirakat-dar }.
+
+# review: pending
+analytics-col-garden = { -bagh }
+
+# review: pending
+analytics-col-garden-status = Status
+
+# review: pending
+analytics-col-paid-shop = Paid From the Shop
+
+# review: pending
+analytics-col-paid-pocket = Paid From Pockets
+
+# review: pending
+analytics-col-sales-our-shop = Sales in Our Shop
+
+# review: pending
+analytics-col-sales-other-shops = Sales in Other Shops
+
+# review: pending
+analytics-col-other-in = Other Money In
+
+# review: pending
+analytics-col-garden-result = Result
+
+# review: pending
+analytics-col-partner-result = Result
+
+# review: pending
+analytics-col-gardens-result = { -baghat } Change
+
+# review: pending
+analytics-filter-garden = { -bagh }
+
+# review: pending
+analytics-chart-i = Sales money and result of each garden
+
+## The facts a print of an analytics view says about its filters (the label is the whole fact).
+
+# review: pending
+analytics-filter-side-seller = { analytics-side-seller }
+
+# review: pending
+analytics-filter-side-buyer = { analytics-side-buyer }
+
+# review: pending
+analytics-filter-goods-consigned = { analytics-goods-consigned }
+
+# review: pending
+analytics-filter-goods-trip = { analytics-goods-trip }
+
+# review: pending
+analytics-filter-goods-garden = { analytics-goods-garden }

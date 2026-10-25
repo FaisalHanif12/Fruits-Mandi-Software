@@ -1,0 +1,162 @@
+{
+  "report": "R36",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r36-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-garden",
+      "value": "Shahpur Garden"
+    },
+    {
+      "label_id": "report-filter-garden-by-partner",
+      "value": ""
+    }
+  ],
+  "printed_at": "13-10-2026 14:00",
+  "columns": [
+    {
+      "key": "garden",
+      "title_id": "report-col-garden",
+      "kind": "names"
+    },
+    {
+      "key": "partner",
+      "title_id": "report-col-partner",
+      "kind": "names"
+    },
+    {
+      "key": "share",
+      "title_id": "report-col-share",
+      "kind": "percent"
+    },
+    {
+      "key": "paid_shop",
+      "title_id": "report-col-money-in-shop",
+      "kind": "money"
+    },
+    {
+      "key": "paid_pocket",
+      "title_id": "report-col-money-in-pocket",
+      "kind": "money"
+    },
+    {
+      "key": "money_back",
+      "title_id": "report-col-money-back",
+      "kind": "money"
+    },
+    {
+      "key": "result",
+      "title_id": "report-col-part-of-result",
+      "kind": "money"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Shahpur Garden"
+        },
+        {
+          "type": "names",
+          "text": "Partner A"
+        },
+        {
+          "type": "percent",
+          "text": "60.00"
+        },
+        {
+          "type": "money",
+          "text": "33,000"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "39,840"
+        },
+        {
+          "type": "money",
+          "text": "6,840"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Shahpur Garden"
+        },
+        {
+          "type": "names",
+          "text": "Partner B"
+        },
+        {
+          "type": "percent",
+          "text": "40.00"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "22,000"
+        },
+        {
+          "type": "money",
+          "text": "26,560"
+        },
+        {
+          "type": "money",
+          "text": "4,560"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "33,000"
+    },
+    {
+      "type": "money",
+      "text": "22,000"
+    },
+    {
+      "type": "money",
+      "text": "66,400"
+    },
+    {
+      "type": "money",
+      "text": "11,400"
+    }
+  ],
+  "words": null,
+  "footer_id": "print-page-label"
+}

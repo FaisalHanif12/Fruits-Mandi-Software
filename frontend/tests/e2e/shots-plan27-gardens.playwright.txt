@@ -1,35 +1,51 @@
-// Screenshots of the garden slice of round 11 (plan 27): the gardens tile of the dashboard (one open
-// garden, none open, a full dashboard, a failed call), in both languages at the three window sizes,
-// taken from the development page /dev/dashboard. R36 and view I are added to this file when their
-// contract is in. Run it the way shots-plan26.playwright.txt says (own headless Chrome, Vite on a free
-// port). It measures sideways overflow (NFR-USE-15): the page and the main area must not scroll
-// sideways, no tile may cut its words, and no raw markup, message ID or error code may show. The
-// Windows check is spec 50.
+// Screenshots of the garden slice of round 11 (plan 27): the gardens tile and the list of open gardens on
+// the dashboard (a garden open, none open, a full dashboard, a failed call), the gardens report R36 (by
+// garden, by partner, empty), the day summary R34 with its garden rows, and the analytics view I (and F
+// with its garden money), in both languages at the three window sizes, taken from the development pages
+// /dev/dashboard, /dev/reports/R36 and /dev/analytics/I. It is a developer tool: run it with the Vite dev
+// server up on a free port (`pnpm --filter frontend exec vite --port 5188 --strictPort --host
+// 127.0.0.1`) in its own headless Chrome with a throwaway profile (a small Node runner that evaluates
+// this text with playwright-core). It measures sideways overflow (NFR-USE-15): the page, the main area
+// and every grid must not scroll sideways, no tile or cell may cut its words, and no raw markup,
+// message ID or error code may show. The snippet writes with an absolute path from inside the page
+// code, because the tool's own screenshot action may only write inside the folder it was started in.
+// (A snippet for that tool, not a module, so it is kept as .txt and the linter does not read it. The
+// Windows check is spec 50.)
 //
-// The flags in the hash (tests/helpers/dev-bridge-dashboard.ts): `nogardens` makes no garden open.
+// The flags in the hash: dashboard `garden` (the garden world of E2E-40), `many`, `down`; reports `empty`
+// and, on R36, a click on the layout box (action `partner`); R34 `garden`. A shot with `act` does it
+// after the page has loaded.
 async (page) => {
   const OUT =
     '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan27';
-  const BASE = 'http://127.0.0.1:5188/#/dev/dashboard';
+  const HOST = 'http://127.0.0.1:5188/#/dev/';
   const SIZES = [
     [1024, 600],
     [1366, 768],
     [1920, 1080],
   ];
-  // [flags in the hash, name of the shot, act (or null)].
+  // [route, flags in the hash, name of the shot, act (or null), what to wait for].
   const SHOTS = [
-    ['', 'dashboard-gardens', null],
-    ['?nogardens', 'dashboard-gardens-none', null],
-    ['?many', 'dashboard-gardens-many', null],
-    ['?down', 'dashboard-gardens-down', null],
+    ['dashboard', '', 'dashboard-gardens-none', null, 'h1'],
+    ['dashboard', '?garden', 'dashboard-gardens', null, 'h1'],
+    ['dashboard', '?garden&many', 'dashboard-gardens-many', null, 'h1'],
+    ['dashboard', '?down', 'dashboard-gardens-down', null, '[role="alert"]'],
+    ['reports/R36', '', 'r36-garden', null, '.ag-row'],
+    ['reports/R36', '', 'r36-partner', 'partner', '.ag-row'],
+    ['reports/R36', '?empty', 'r36-empty', null, 'h1'],
+    ['reports/R34', '?garden', 'r34-garden', null, '.ag-row'],
+    ['analytics/I', '', 'I', null, '.ag-row'],
+    ['analytics/I', '', 'I-other-columns', 'other', '.ag-row'],
+    ['analytics/F', '', 'F-gardens', null, '.ag-row'],
   ];
+  const LANGS = ['ur', 'en'];
   const results = [];
   for (const [width, height] of SIZES) {
     await page.setViewportSize({ width, height });
-    for (const [flags, name, act] of SHOTS) {
-      for (const lang of ['ur', 'en']) {
+    for (const [route, flags, name, act, ready] of SHOTS) {
+      for (const lang of LANGS) {
         try {
-          await page.goto(`${BASE}${flags}`);
+          await page.goto(`${HOST}${route}${flags}`);
           await page.reload({ waitUntil: 'load', timeout: 60000 });
           await page.waitForSelector('h1, [role="alert"]', { timeout: 45000 });
           for (let step = 0; step < 2; step += 1) {
@@ -38,30 +54,61 @@ async (page) => {
             await page.keyboard.press('Alt+l');
             await page.waitForTimeout(250);
           }
-          await page.waitForTimeout(1800);
-          if (act === 'bell') {
-            await page.locator('[data-attention-count]').click();
-            await page.waitForTimeout(800);
+          if (flags.includes('empty')) await page.waitForTimeout(1500);
+          else await page.waitForSelector(ready, { timeout: 45000 });
+          await page.waitForTimeout(900);
+          if (act === 'partner') {
+            await page
+              .locator('[role="combobox"]')
+              .filter({ hasText: /By garden|باغ وار/ })
+              .first()
+              .click();
+            await page
+              .locator('[role="option"]')
+              .filter({ hasText: /By partner|شراکت دار وار/ })
+              .click();
+            await page.waitForTimeout(1200);
+          }
+          if (act === 'other') {
+            await page
+              .locator('button', { hasText: /Show the other columns|باقی کالم دکھائیں/ })
+              .first()
+              .click();
+            await page.waitForTimeout(700);
           }
           const o = await page.evaluate(() => {
             const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
             const main = document.querySelector('main');
-            const cut = Array.from(document.querySelectorAll('main button[data-nav-field]')).filter(
-              (tile) => tile.scrollWidth > tile.clientWidth + 1,
-            ).length;
-            const text = document.body.textContent || '';
-            const raw = /<(num|code|key|money|unit|name)>|ERR_|dashboard-|attention-|guide-/.test(text);
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            const cutTiles = Array.from(
+              document.querySelectorAll('main button[data-nav-field]'),
+            ).filter((tile) => tile.scrollWidth > tile.clientWidth + 1).length;
+            const raw =
+              /report-col-|analytics-col-|report-r3\d-|analytics-view-|dashboard-|gardens-|ERR_|<num>|<name>/.test(
+                document.body.innerText,
+              );
             return [
+              root.lang,
+              root.dir,
               'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
               'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
-              'cutTiles=' + cut,
+              'clipped=' + clipped,
+              'cutTiles=' + cutTiles,
+              'cols=' + document.querySelectorAll('.ag-header-cell').length,
+              'charts=' + document.querySelectorAll('[data-chart="bar"] svg').length,
               'raw=' + raw,
-            ].join(' ');
+            ].join(' | ');
           });
           await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
           results.push(`${name} ${lang} ${width} ${o}`);
         } catch (e) {
-          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 140)}`);
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 120)}`);
         }
       }
     }

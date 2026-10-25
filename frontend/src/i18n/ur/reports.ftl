@@ -1170,3 +1170,97 @@ report-day-now = آج کی پرچی
 
 # review: pending
 report-r35-all-parties = تمام پارٹیاں
+
+## R36, the gardens report (round 11, plan 27, PRD 19.2 R36, FR-12.37), and the garden rows of R34.
+
+# review: pending
+report-r36-title = { -baghat } رپورٹ
+
+# review: pending
+report-r36-help = ہر باغ کا: ٹھیکہ، قسطیں، خرچ، دکان اور شراکت داروں کی ادائیگی، آنے والی رقم، چلتا بقایا اور باقی ٹھیکہ۔ باغ وار یا شراکت دار وار۔
+
+# review: pending
+report-col-garden = { -bagh }
+
+# review: pending
+report-col-rent = { -thaika }
+
+# review: pending
+report-col-installments = { -qist }
+
+# review: pending
+report-col-garden-costs = باغ خرچ
+
+# review: pending
+report-col-sales-our-shop = ہماری دکان میں فروخت
+
+# review: pending
+report-col-sales-other-shops = دوسری دکانوں میں فروخت
+
+# review: pending
+report-col-other-in = دیگر آمد
+
+# review: pending
+report-col-money-in = آنے والی رقم
+
+# review: pending
+report-col-running-balance = چلتا بقایا
+
+# review: pending
+report-col-rent-due = ٹھیکہ باقی
+
+# review: pending
+report-garden-open = کھلا
+
+# review: pending
+report-garden-closed = بند
+
+# review: pending
+report-filter-garden = { -bagh }
+
+# review: pending
+report-filter-garden-view = ترتیب
+
+# review: pending
+report-filter-garden-by-garden = باغ وار
+
+# review: pending
+report-filter-garden-by-partner = شراکت دار وار
+
+# review: pending
+report-r34-gardens-paid = { -baghat } کی ادائیگی
+
+# review: pending
+report-r34-gardens-in = { -baghat } میں آمد
+
+## R1, the sale book, and R5, the credit buyers' details (round 12, PRD 19.2 R1 and R5, FR-12.12).
+
+# review: pending
+report-r1-title = { -bikri-book }
+
+# review: pending
+report-r1-help = ایک { -bikri } کے لاٹ: کیا آیا، کیا بکا، خرچے اور صافی بکری۔ اس کا بل یہیں سے پرنٹ ہوتا ہے۔
+
+# review: pending
+report-r5-title = { -udhari } تفصیل
+
+# review: pending
+report-r5-help = ہر { -udhari } گاہک کا مال، اس کی رقم اور { -commission } اور { -laga } کے ساتھ اس کے ذمے رقم۔
+
+# review: pending
+report-col-serial = نمبر شمار
+
+# review: pending
+report-filter-bikri = { -bikri } نمبر
+
+# review: pending
+report-pick-bikri = پہلے { -bikri } چنیں
+
+# review: pending
+report-pick-bikri-help = یہ رپورٹ ایک { -bikri } کی ہے۔ اوپر اس کا نمبر لکھیں۔
+
+# review: pending
+report-bikri-hit = { -bikri } <num>{ $number }</num> · <num>{ $date }</num>
+
+# review: pending
+report-detail-sale-short = ({ $item } { $qty } . { $rate })

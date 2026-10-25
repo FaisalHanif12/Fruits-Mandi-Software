@@ -10,6 +10,7 @@ import type { Dashboard } from '../../src/bindings/Dashboard';
 import type { ScreenState } from '../../src/bindings/ScreenState';
 import type { ScreenStateSetInput } from '../../src/bindings/ScreenStateSetInput';
 import attention1810 from '../fixtures/assist_attention_18_10.json';
+import dashboardGarden from '../fixtures/dashboard_get_garden.json';
 import dashboardWorkedDay from '../fixtures/dashboard_get_worked_day.json';
 import prefsScreenSet from '../fixtures/prefs_screen_set.json';
 import prefsScreenSetRequest from '../fixtures/prefs_screen_set_request.json';
@@ -20,6 +21,9 @@ function readDashboard(value: unknown): Dashboard {
 function readAttention(value: unknown): AttentionList {
   return value as AttentionList;
 }
+
+/** The dashboard in the garden world of E2E-40: one open garden (Shahpur) with a balance of 11,400. */
+export const DASHBOARD_GARDEN = readDashboard(dashboardGarden);
 
 /** The dashboard after Events 1 to 5 of the worked day: sales 41,400 in 2 بکری, cash 58,484. */
 export const DASHBOARD_WORKED_DAY = readDashboard(dashboardWorkedDay);

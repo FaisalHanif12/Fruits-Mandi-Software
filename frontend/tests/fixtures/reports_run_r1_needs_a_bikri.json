@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "code": "ERR_REQUIRED",
+      "field": "filters.bikri_id",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

@@ -125,7 +125,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
 
   const m = (id: string, vars: Record<string, string | number> = {}) => message(language, id, vars);
   const names = (ur: string, en: string) => (language === 'ur' ? ur : en);
-  const VIEW_IDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j'] as const;
+  const VIEW_IDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'] as const;
 
   async function openView(view: string, options: AnalyticsOptions = {}) {
     const fake = fakeAnalytics(options);
@@ -140,7 +140,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   }
 
   describe('the area', () => {
-    it('opens on view A, with a tab for each of the nine views, and asks for nothing filtered', async () => {
+    it('opens on view A, with a tab for each of the ten views, and asks for nothing filtered', async () => {
       await openView('');
       const tabs = screen.getByRole('tablist', { name: m('analytics-views-label') });
       const labels = within(tabs)

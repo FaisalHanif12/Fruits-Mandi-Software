@@ -77,6 +77,8 @@ export interface AnalyticsFilterState {
   partner: number | null;
   /** One trip (views that take it), or all (null). */
   trip: number | null;
+  /** One garden (view I and the views that take it), or all (null). */
+  garden: number | null;
   goods: AnalyticsGoods;
   /** The layout of view J. */
   tripView: AnalyticsTripView;
@@ -98,6 +100,7 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
   compare: 'off',
   partner: null,
   trip: null,
+  garden: null,
   goods: 'all',
   tripView: 'trip',
 };
@@ -136,6 +139,7 @@ export function filtersToWire(
     compare: has('compare') ? state.compare : 'off',
     partner_id: has('partner') ? state.partner : null,
     trip_id: has('trip') ? state.trip : null,
+    garden_id: has('garden') ? state.garden : null,
     goods: has('goods') ? state.goods : 'all',
     // The first layout is the backend's default, so it is left null, like the month of group_by.
     trip_view: has('trip_view') && state.tripView !== 'trip' ? state.tripView : null,
@@ -178,6 +182,7 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
     compare: filters.compare,
     partner: filters.partner_id,
     trip: filters.trip_id,
+    garden: filters.garden_id,
     goods: filters.goods,
     tripView: filters.trip_view ?? 'trip',
   };
@@ -202,6 +207,7 @@ export function isUnfiltered(
     wire.compare === 'off' &&
     wire.partner_id === null &&
     wire.trip_id === null &&
+    wire.garden_id === null &&
     wire.goods === 'all'
   );
 }

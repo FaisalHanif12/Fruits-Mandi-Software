@@ -115,11 +115,21 @@ function drawnColumns(): string[] {
  * the backend's requests as null when unset and are left out by the screen (same meaning).
  */
 function sentLike(request: ReportRunInput) {
-  const { group_by: groupBy, status, partner_id: partnerId, ...rest } = request.filters;
+  const {
+    group_by: groupBy,
+    status,
+    partner_id: partnerId,
+    garden_id: gardenId,
+    bikri_id: bikriId,
+    ...rest
+  } = request.filters;
   return {
     ...rest,
     // The requests the backend wrote before round 7 have no `partner_id`; the screen always sends it.
     partner_id: partnerId ?? null,
+    // The backend's requests leave `garden_id` out when it is unset; the screen always sends it.
+    garden_id: gardenId ?? null,
+    bikri_id: bikriId ?? null,
     ...(groupBy === undefined || (groupBy as unknown) === null ? {} : { group_by: groupBy }),
     ...(status === undefined || (status as unknown) === null ? {} : { status }),
   };

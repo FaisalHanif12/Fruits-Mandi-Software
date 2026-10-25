@@ -332,3 +332,6 @@ attention-names-missing = { $count ->
     [one] <num>{ $count }</num> record has only one of its two names
    *[other] <num>{ $count }</num> records have only one of their two names
 }
+# FR-12.37: the running balance of a garden (money in less everything paid).
+# review: pending
+working-garden-balance = Money in <num>{ $money_in }</num> − everything paid <num>{ $paid }</num> = <num>{ $result }</num>

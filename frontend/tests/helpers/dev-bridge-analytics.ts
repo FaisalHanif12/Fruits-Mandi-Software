@@ -16,10 +16,12 @@ import type { AnalyticsPage } from '../../src/bindings/AnalyticsPage';
 import type { AnalyticsSavedView } from '../../src/bindings/AnalyticsSavedView';
 import type { AnalyticsView } from '../../src/bindings/AnalyticsView';
 import type { ReportCell } from '../../src/bindings/ReportCell';
+import type { GardensListInput } from '../../src/bindings/GardensListInput';
 import type { TripsListInput } from '../../src/bindings/TripsListInput';
 import { devFlag } from './dev-bridge';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import { rokarHandlers } from './dev-bridge-rokar';
+import { createGardenBooks } from './gardens-data';
 import { createTripBooks } from './trips-data';
 import {
   ANALYTICS_CATALOG,
@@ -37,6 +39,11 @@ import {
   ANALYTICS_RUN_H,
   VIEWS_GET_TWO,
 } from './analytics-real';
+import {
+  ANALYTICS_PRINT_DATA_I_EN,
+  ANALYTICS_RUN_I_GARDEN,
+  ANALYTICS_RUN_I_GARDEN_SELLER_SIDE,
+} from './analytics-gardens-real';
 import {
   ANALYTICS_PRINT_DATA_J_EN,
   ANALYTICS_RUN_F,
@@ -57,6 +64,7 @@ const PAGES: Record<AnalyticsView, AnalyticsPage> = {
   F: ANALYTICS_RUN_F,
   G: ANALYTICS_RUN_G_MONTH,
   H: ANALYTICS_RUN_H,
+  I: ANALYTICS_RUN_I_GARDEN,
   J: ANALYTICS_RUN_J_TRIP,
 };
 
@@ -110,6 +118,7 @@ function page(input: Input): AnalyticsPage {
   if (view === 'D' && filters['group_by'] === 'day') base = ANALYTICS_RUN_D_DAY;
   if (view === 'G' && filters['group_by'] === 'day') base = ANALYTICS_RUN_G_DAY;
   if (view === 'J' && filters['trip_view'] === 'purchase') base = ANALYTICS_RUN_J_TRIP_BY_PURCHASE;
+  if (view === 'I' && filters['side'] === 'seller') base = ANALYTICS_RUN_I_GARDEN_SELLER_SIDE;
   if (devFlag('wide')) base = wide(base);
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {
@@ -125,6 +134,9 @@ let saved: AnalyticsSavedView[] = [...VIEWS_GET_TWO];
 
 /** The trips of the trip box (view J, the trip filter): the worked trip of the trips module's books. */
 const tripBooks = createTripBooks();
+
+/** The gardens of the garden box (view I, the garden filter): the garden world of the gardens module. */
+const gardenBooks = createGardenBooks();
 
 const handlers: Record<string, (input: Input) => unknown> = {
   analytics_export_excel: (input) => devExport(input),
@@ -145,10 +157,13 @@ const handlers: Record<string, (input: Input) => unknown> = {
       ? ANALYTICS_PRINT_DATA_D_UR
       : input['view'] === 'J'
         ? ANALYTICS_PRINT_DATA_J_EN
-        : ANALYTICS_PRINT_DATA_A_EN,
+        : input['view'] === 'I'
+          ? ANALYTICS_PRINT_DATA_I_EN
+          : ANALYTICS_PRINT_DATA_A_EN,
   // The partner box (F, G, J) and the trip box read these, so the boxes work in the browser.
   partners_list: (input) => rokarHandlers['partners_list']?.(input),
   trips_list: (input) => tripBooks.list(input as TripsListInput),
+  gardens_list: (input) => gardenBooks.list(input as GardensListInput),
   analytics_views_get: () => saved,
   analytics_views_save: (input) => {
     saved = (input['views'] ?? []) as AnalyticsSavedView[];

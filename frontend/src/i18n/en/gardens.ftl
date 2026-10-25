@@ -368,3 +368,9 @@ gardens-reopen-reason = Reason
 gardens-reopen-confirm = Undo the closing
 # review: pending
 gardens-reopened-toast = { $number } is open again
+
+# review: pending
+gardens-filter-all = All gardens
+
+# review: pending
+gardens-filter-failed = The list of gardens could not be read

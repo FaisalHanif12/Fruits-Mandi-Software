@@ -72,10 +72,18 @@ export function sideText(cell: ReportCell, context: ListContext): string {
   return context.text(cell.side === 'dr' ? 'report-side-dr' : 'report-side-cr');
 }
 
-function detailPartText(part: ReportDetailPart, context: ListContext): string {
+function detailPartText(part: ReportDetailPart, context: ListContext, shortSale: boolean): string {
   const { language, text, money } = context;
   switch (part.kind) {
     case 'sale':
+      // The buyers' list (R5) writes a line the way the client's own print does: "(item qty . rate)".
+      if (shortSale) {
+        return text('report-detail-sale-short', {
+          item: displayName({ name_ur: part.item.ur, name_en: part.item.en }, language),
+          qty: String(part.qty),
+          rate: money(part.rate_paisa),
+        });
+      }
       return text('report-detail-sale', {
         number: String(part.bikri_number),
         item: displayName({ name_ur: part.item.ur, name_en: part.item.en }, language),
@@ -135,8 +143,11 @@ export function messageText(
   return context.text(id, vars);
 }
 
-/** The text of one cell. A balance's side word is `sideText`, shown in its own slot. */
-export function cellText(cell: ReportCell, context: ListContext): string {
+/**
+ * The text of one cell. A balance's side word is `sideText`, shown in its own slot. `shortSale`
+ * writes each sale line of a detail cell as "(item qty . rate)" (R5).
+ */
+export function cellText(cell: ReportCell, context: ListContext, shortSale = false): string {
   switch (cell.type) {
     case 'empty':
       return '';
@@ -166,7 +177,7 @@ export function cellText(cell: ReportCell, context: ListContext): string {
         : context.text('report-doc-number', { kind, number: String(cell.number) });
     }
     case 'detail':
-      return cell.parts.map((part) => detailPartText(part, context)).join(' · ');
+      return cell.parts.map((part) => detailPartText(part, context, shortSale)).join(' · ');
     case 'message':
       return messageText(cell.id, cell.args, context);
   }

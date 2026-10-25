@@ -103,7 +103,7 @@ describe.each(LANGUAGES)('Settings, app and updates (%s)', (language: Language) 
       const { user } = await openApp();
       expect(await screen.findByText(m('settings-update-up-to-date'))).toBeInTheDocument();
       expect(
-        screen.getByText(leaf(m('settings-app-version', { version: '0.1.0' }))),
+        screen.getByText(leaf(m('settings-app-version', { version: '1.0.0' }))),
       ).toBeInTheDocument();
       expect(maintenance.updatesCheck).toHaveBeenCalledTimes(1 + START_UP_CHECKS);
       // Nothing is on offer, so there is nothing to install.

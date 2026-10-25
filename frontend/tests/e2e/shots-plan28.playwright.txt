@@ -1,0 +1,87 @@
+// Screenshots of round 12 (plan 28): the credit buyers' details R5 and the sale book R1 (asking for a
+// بکری first, then with one picked and its lots shown), in both languages at the three window sizes,
+// taken from the development page /dev/reports/R1 and /dev/reports/R5. It is a developer tool: run it
+// with the Vite dev server up on a free port (`pnpm --filter frontend exec vite --port 5188
+// --strictPort --host 127.0.0.1`) in its own headless Chrome with a throwaway profile (a small Node
+// runner that evaluates this text with playwright-core). It measures sideways overflow (NFR-USE-15):
+// the page, the main area and every grid must not scroll sideways, no cell may be cut, and no raw
+// markup, message ID or error code may show. The snippet writes with an absolute path from inside the
+// page code. (A snippet for that tool, not a module, so it is kept as .txt and the linter does not
+// read it. The Windows check is spec 51.)
+//
+// The action `pick` types the number 1 into the بکری box and takes the first match with Enter.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan28';
+  const HOST = 'http://127.0.0.1:5188/#/dev/reports/';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  // [report, flags in the hash, name of the shot, act (or null), what to wait for].
+  const SHOTS = [
+    ['R5', '', 'r5-credit', null, '.ag-row'],
+    ['R5', '?empty', 'r5-empty', null, 'h1'],
+    ['R1', '', 'r1-pick', null, 'h1'],
+    ['R1', '', 'r1-bikri', 'pick', '.ag-row'],
+  ];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [report, flags, name, act, ready] of SHOTS) {
+      for (const lang of ['ur', 'en']) {
+        try {
+          await page.goto(`${HOST}${report}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          if (flags.includes('empty')) await page.waitForTimeout(1500);
+          else if (act === null) await page.waitForSelector(ready, { timeout: 45000 });
+          await page.waitForTimeout(700);
+          if (act === 'pick') {
+            await page.getByRole('combobox', { name: /Sale.*number|بکری.*نمبر/ }).click();
+            await page.keyboard.type('1');
+            await page.waitForSelector('[role="option"]', { timeout: 15000 });
+            await page.keyboard.press('Enter');
+            await page.waitForSelector(ready, { timeout: 30000 });
+            await page.waitForTimeout(900);
+          }
+          const o = await page.evaluate(() => {
+            const root = document.documentElement;
+            const grids = Array.from(
+              document.querySelectorAll('.ag-body-horizontal-scroll-viewport'),
+            ).map((n) => n.scrollWidth - n.clientWidth);
+            const main = document.querySelector('main');
+            const clipped = Array.from(
+              document.querySelectorAll('.ag-cell, .ag-header-cell'),
+            ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
+            const raw = /report-col-|report-r[15]-|report-pick|report-filter-|report-detail|ERR_|<num>/.test(
+              document.body.innerText,
+            );
+            return [
+              root.lang,
+              root.dir,
+              'pageX=' + (root.scrollWidth - window.innerWidth),
+              'gridX=' + grids.join(','),
+              'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
+              'clipped=' + clipped,
+              'cols=' + document.querySelectorAll('.ag-header-cell').length,
+              'raw=' + raw,
+            ].join(' | ');
+          });
+          await page.screenshot({ path: `${OUT}/${name}-${lang}-${width}x${height}.png` });
+          results.push(`${name} ${lang} ${width} ${o}`);
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 120)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};

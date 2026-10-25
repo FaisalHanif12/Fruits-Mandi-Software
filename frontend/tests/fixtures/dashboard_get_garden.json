@@ -1,0 +1,268 @@
+{
+  "today": "2026-10-12",
+  "tiles": {
+    "sales_gross_paisa": 6000000,
+    "sales_count": 1,
+    "commission_paisa": 800000,
+    "cash_in_hand_paisa": 2700000,
+    "buyers_dues_paisa": 6440000,
+    "sellers_payable_paisa": 0,
+    "advances_open_paisa": 1500000,
+    "stock_lots": 0,
+    "stock_qty": 0,
+    "trips_open": 0,
+    "trips_purchases_with_stock": 0,
+    "trips_qty_left": 0,
+    "trips_cost_left_paisa": 0,
+    "gardens_open": 1,
+    "gardens_balance_paisa": 1140000,
+    "lent_open_paisa": 0,
+    "lent_overdue_paisa": 0,
+    "expenses_today_paisa": 0
+  },
+  "partners": [
+    {
+      "partner_id": 1,
+      "name_ur": "الف",
+      "name_en": "Partner A",
+      "today_paisa": 320000,
+      "month_paisa": 320000,
+      "year_paisa": 320000,
+      "total_paisa": -2980000
+    },
+    {
+      "partner_id": 2,
+      "name_ur": "ب",
+      "name_en": "Partner B",
+      "today_paisa": 240000,
+      "month_paisa": 240000,
+      "year_paisa": 240000,
+      "total_paisa": 240000
+    },
+    {
+      "partner_id": 3,
+      "name_ur": "ج",
+      "name_en": "Partner C",
+      "today_paisa": 240000,
+      "month_paisa": 240000,
+      "year_paisa": 240000,
+      "total_paisa": 240000
+    }
+  ],
+  "gardens": [
+    {
+      "id": 1,
+      "number": 1,
+      "name_ur": "شاہ پور باغ",
+      "name_en": "Shahpur Garden",
+      "balance_paisa": 1140000,
+      "rent_due_paisa": 0
+    }
+  ],
+  "bikri_today": [
+    {
+      "bikri_id": 1,
+      "number": 1,
+      "truck_no": "LES-1234",
+      "seller": {
+        "ur": "شاہ پور باغ",
+        "en": "Shahpur Garden"
+      },
+      "seller_count": 1,
+      "gross_paisa": 6000000,
+      "net_paisa": 5640000,
+      "cancelled": false
+    }
+  ],
+  "bikri_today_count": 1,
+  "oldest_dues": [
+    {
+      "party": {
+        "account_id": 21,
+        "code": "03040002",
+        "short_code": "2",
+        "name_ur": "ارشد ملتانی",
+        "name_en": "Arshad Multani",
+        "tag": null,
+        "person_key": null
+      },
+      "city": null,
+      "balance_paisa": 6440000,
+      "oldest_date": "2026-10-12",
+      "days": 0
+    }
+  ],
+  "chart_days": [
+    {
+      "date": "2026-09-13",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-14",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-15",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-16",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-17",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-18",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-19",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-20",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-21",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-22",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-23",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-24",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-25",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-26",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-27",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-28",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-29",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-09-30",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-01",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-02",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-03",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-04",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-05",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-06",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-07",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-08",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-09",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-10",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-11",
+      "gross_paisa": 0,
+      "commission_paisa": 0
+    },
+    {
+      "date": "2026-10-12",
+      "gross_paisa": 6000000,
+      "commission_paisa": 800000
+    }
+  ],
+  "chart_items": [
+    {
+      "item_id": 1,
+      "name_ur": "کیلا",
+      "name_en": "Banana",
+      "commission_paisa": 800000
+    }
+  ],
+  "attention": {
+    "items": [
+      {
+        "kind": "open_days",
+        "count": 2,
+        "amount_paisa": null,
+        "qty": null,
+        "days": 2,
+        "first": null
+      }
+    ],
+    "total_count": 2
+  }
+}

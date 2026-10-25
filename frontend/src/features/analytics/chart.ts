@@ -7,7 +7,7 @@
 // of each buyer, D one stack for each period with a part for each item, E one stack for each seller
 // with a part for each item, F each partner's profit share and his net change side by side, G the
 // money columns of each period side by side (many thin bars for the days of a month), H the top
-// items, J the result of each trip, purchase, item or day. A chart shows the first rows (the backend
+// items, I the sales and result of each garden, J the result of each trip, purchase, item or day. A chart shows the first rows (the backend
 // sends the biggest first) and says how many it left out.
 
 import type { AnalyticsColumn } from '../../bindings/AnalyticsColumn';
@@ -291,7 +291,14 @@ export function chartFor(
         page,
         rows,
         'period',
-        ['commission', 'shared_income', 'shop_expenses', 'profit', 'trips_result'],
+        [
+          'commission',
+          'shared_income',
+          'shop_expenses',
+          'profit',
+          'trips_result',
+          'gardens_result',
+        ],
         'analytics-chart-g',
         context,
         rows.length > DENSE_AFTER,
@@ -305,6 +312,15 @@ export function chartFor(
         'total_comm',
         'report-col-total-comm',
         'analytics-chart-h',
+        context,
+      );
+    case 'I':
+      return sideBySide(
+        page,
+        recordRows(page.rows),
+        'group',
+        ['sales_our_shop', 'sales_other_shops', 'result'],
+        'analytics-chart-i',
         context,
       );
     case 'J':

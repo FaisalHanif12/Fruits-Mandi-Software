@@ -15,6 +15,7 @@ import {
 } from '../../shared/screen-state';
 import {
   EMPTY_FILTERS,
+  GARDEN_VIEW_CHOICES,
   GROUP_BY_CHOICES,
   PAID_CHOICES,
   PERIOD_CHOICES,
@@ -53,6 +54,8 @@ export function rememberedFilters(state: ReportFilterState): Record<string, unkn
   if (state.partner !== null) kept['partner'] = state.partner;
   if (state.voucherType !== base.voucherType) kept['voucherType'] = state.voucherType;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
+  if (state.garden !== null) kept['garden'] = state.garden;
+  if (state.gardenView !== base.gardenView) kept['gardenView'] = state.gardenView;
   return Object.keys(kept).length === 0 ? null : kept;
 }
 
@@ -78,5 +81,7 @@ export function filtersFromRemembered(raw: unknown): ReportFilterState | null {
     partner: idOrNull(raw['partner']),
     voucherType: choiceOr(raw['voucherType'], VOUCHER_CHOICES, base.voucherType),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
+    garden: idOrNull(raw['garden']),
+    gardenView: choiceOr(raw['gardenView'], GARDEN_VIEW_CHOICES, base.gardenView),
   };
 }

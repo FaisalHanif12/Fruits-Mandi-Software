@@ -142,6 +142,19 @@ const PRIORITY: Readonly<Record<AnalyticsView, readonly string[]>> = {
   // Trend (G): the period and the profit first, then what the profit is made of.
   G: ['period', 'profit', 'commission', 'gross', 'shared_income', 'shop_expenses', 'trips_result'],
   H: ['rank', 'name', 'total_comm', 'share', 'qty', 'compare', 'change'],
+  // Gardens (I): the garden, its result and the sales, then what was paid and the commission. The
+  // partner columns are inserted from the page itself (`priorityOf`).
+  I: [
+    'group',
+    'status',
+    'result',
+    'sales_our_shop',
+    'sales_other_shops',
+    'commission',
+    'paid_shop',
+    'paid_pocket',
+    'other_in',
+  ],
   // Trips (J): the name, the result and where it came from. The partner columns are inserted
   // from the page itself (`priorityOf`), because a trip has one pair for each partner.
   J: [
@@ -173,6 +186,7 @@ const ANCHORS: Readonly<Record<AnalyticsView, readonly string[]>> = {
   F: ['partner'],
   G: ['period'],
   H: ['rank', 'name'],
+  I: ['group'],
   J: ['group'],
 };
 
@@ -180,25 +194,34 @@ const ANCHORS: Readonly<Record<AnalyticsView, readonly string[]>> = {
 const WINDOWED: ReadonlySet<AnalyticsView> = new Set<AnalyticsView>(['D', 'E']);
 
 /**
- * The columns of a view, most useful first, for this page. View J has a pair of columns for each
- * partner of the trips (his percent and his part of the result): his part comes right after the
- * result and his percent after the quantity sold, so the partners show before the least used
- * columns at the wide step.
+ * Where the partner columns of a view go in its priority list: his part comes right after the key in
+ * `parts` and his percent after the key in `shares`, so the partners show before the least used
+ * columns at the wide step. Views I (gardens) and J (trips) have a pair of columns for each partner.
+ */
+const PARTNER_PLACES: Partial<Record<AnalyticsView, { parts: string; shares: string }>> = {
+  I: { parts: 'result', shares: 'sales_our_shop' },
+  J: { parts: 'result', shares: 'sold_qty' },
+};
+
+/**
+ * The columns of a view, most useful first, for this page. Views I and J have a pair of columns for
+ * each partner (his percent and his part of the result), put in place by `PARTNER_PLACES`.
  */
 function priorityOf(view: AnalyticsView, columns: readonly AnalyticsColumn[]): readonly string[] {
   const base = PRIORITY[view];
-  if (view !== 'J') return base;
+  const place = PARTNER_PLACES[view];
+  if (place === undefined) return base;
   const partner = columns.filter((column) => column.heading?.kind === 'partner');
   const parts = partner.filter((column) => column.kind === 'money').map((column) => column.key);
   const shares = partner.filter((column) => column.kind !== 'money').map((column) => column.key);
-  const result = base.indexOf('result') + 1;
-  const sold = base.indexOf('sold_qty') + 1;
+  const afterParts = base.indexOf(place.parts) + 1;
+  const afterShares = base.indexOf(place.shares) + 1;
   return [
-    ...base.slice(0, result),
+    ...base.slice(0, afterParts),
     ...parts,
-    ...base.slice(result, sold),
+    ...base.slice(afterParts, afterShares),
     ...shares,
-    ...base.slice(sold),
+    ...base.slice(afterShares),
   ];
 }
 

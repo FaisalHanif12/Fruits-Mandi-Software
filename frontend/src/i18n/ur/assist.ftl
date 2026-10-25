@@ -263,3 +263,6 @@ attention-takes-overdue-aged = شراکت داروں کی لی ہوئی <num>{ $
 
 # review: pending
 attention-names-missing = <num>{ $count }</num> ریکارڈ میں دو ناموں میں سے ایک ہی نام ہے
+# FR-12.37: the running balance of a garden (money in less everything paid).
+# review: pending
+working-garden-balance = آنے والی رقم <num>{ $money_in }</num> − ہر ادائیگی <num>{ $paid }</num> = <num>{ $result }</num>

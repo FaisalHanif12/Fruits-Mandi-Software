@@ -12,7 +12,7 @@
 //   cashneg   cash in hand is below zero                 lent      money lent is past its return-by date
 //   update    a new version is ready                     bad       the books check found a problem
 //   fresh     the first-run guide has not been seen      none      no books check has been run yet
-//   cloudold  the last cloud backup is old       nogardens  no garden is open (the tile says so)
+//   cloudold  the last cloud backup is old       garden    the garden world of E2E-40: one open garden
 
 import type { AttentionItem } from '../../src/bindings/AttentionItem';
 import type { AttentionList } from '../../src/bindings/AttentionList';
@@ -23,9 +23,8 @@ import type { DashboardBikri } from '../../src/bindings/DashboardBikri';
 import type { ScreenState } from '../../src/bindings/ScreenState';
 import { HEALTH_LAST, UPDATE_AVAILABLE, UPDATE_NONE } from './b5-real';
 import { STATUS_AFTER } from './backup-real';
-import { ATTENTION_18_10, DASHBOARD_WORKED_DAY } from './dashboard-real';
+import { ATTENTION_18_10, DASHBOARD_GARDEN, DASHBOARD_WORKED_DAY } from './dashboard-real';
 import { devFlag } from './dev-bridge';
-import { GARDENS_SUMMARY_AFTER_CLOSE, GARDENS_SUMMARY_OPEN } from './gardens-real';
 import { paisaForTest } from './paisa';
 
 type Input = Record<string, unknown>;
@@ -47,6 +46,8 @@ const EMPTY_TILES = {
   trips_purchases_with_stock: 0,
   trips_qty_left: 0,
   trips_cost_left_paisa: paisaForTest(0),
+  gardens_open: 0,
+  gardens_balance_paisa: paisaForTest(0),
   lent_open_paisa: paisaForTest(0),
   lent_overdue_paisa: paisaForTest(0),
   expenses_today_paisa: paisaForTest(0),
@@ -158,6 +159,7 @@ function dashboard(): Dashboard {
         year_paisa: paisaForTest(0),
         total_paisa: paisaForTest(0),
       })),
+      gardens: [],
       bikri_today: [],
       bikri_today_count: 0,
       oldest_dues: [],
@@ -170,7 +172,9 @@ function dashboard(): Dashboard {
       attention: attention(),
     };
   }
-  let result: Dashboard = { ...DASHBOARD_WORKED_DAY, attention: attention() };
+  // The garden world of E2E-40 has the same day with one open garden and its balance.
+  const base = devFlag('garden') ? DASHBOARD_GARDEN : DASHBOARD_WORKED_DAY;
+  let result: Dashboard = { ...base, attention: attention() };
   if (devFlag('many')) {
     const many = manyBikri();
     result = {
@@ -252,9 +256,6 @@ const handlers: Record<string, (input: Input) => unknown> = {
       ? { ...STATUS_AFTER, cloud_level: 'red' as const, cloud_age_hours: 60 }
       : STATUS_AFTER,
   health_last: () => health(),
-  // The gardens tile (round 11): one open garden (E2E-40), or none after its closing.
-  gardens_summary: () =>
-    devFlag('nogardens') ? GARDENS_SUMMARY_AFTER_CLOSE : GARDENS_SUMMARY_OPEN,
   updates_check: () => (devFlag('update') ? UPDATE_AVAILABLE : UPDATE_NONE),
   prefs_screen_get: (input) => stateOf(screenOf(input)),
   prefs_screen_set: (input) => {

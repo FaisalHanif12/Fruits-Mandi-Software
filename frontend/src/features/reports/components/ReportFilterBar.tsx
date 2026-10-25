@@ -25,6 +25,7 @@ import {
   fieldError,
   type PickerValue,
 } from '../../../shared/ui';
+import { GardenFilterSelect } from '../../gardens';
 import { isPukhtaCode } from '../../pukhta_khata';
 import { partyBoxOf } from '../catalog';
 import {
@@ -38,6 +39,8 @@ import {
 } from '../filters';
 import { ReportPartnerSelect } from './ReportPartnerSelect';
 import { ReportPersonPicker } from './ReportPersonPicker';
+import { ReportBikriBox } from './ReportBikriBox';
+import { ReportGardenViewSelect } from './ReportGardenViewSelect';
 import { ReportTripViewSelect } from './ReportTripViewSelect';
 import { ReportVoucherTypeSelect } from './ReportVoucherTypeSelect';
 
@@ -311,6 +314,55 @@ export function ReportFilterBar({
         error={fieldError(error, 'filters.trip_view')}
         onChange={(tripView) => {
           onChange({ tripView });
+        }}
+      />,
+    );
+  }
+  if (takes('bikri')) {
+    // The sale book report is the lots of one بکری: its number is the first box and cannot be left out.
+    boxes.push(
+      <Field
+        key="bikri"
+        label={<Localized id="report-filter-bikri" />}
+        error={fieldError(error, 'filters.bikri_id')}
+      >
+        {(control) => (
+          <ReportBikriBox
+            {...control}
+            bikri={state.bikri}
+            text={state.bikriText}
+            onTextChange={(bikriText) => {
+              onChange({ bikri: null, bikriText });
+            }}
+            onPick={(bikri) => {
+              onChange({ bikri, bikriText: '' });
+            }}
+          />
+        )}
+      </Field>,
+    );
+  }
+  if (takes('garden')) {
+    boxes.push(
+      <GardenFilterSelect
+        key="garden"
+        garden={state.garden}
+        labelId="report-filter-garden"
+        error={fieldError(error, 'filters.garden_id')}
+        onChange={(garden) => {
+          onChange({ garden });
+        }}
+      />,
+    );
+  }
+  if (takes('garden_view')) {
+    boxes.push(
+      <ReportGardenViewSelect
+        key="garden_view"
+        value={state.gardenView}
+        error={fieldError(error, 'filters.garden_view')}
+        onChange={(gardenView) => {
+          onChange({ gardenView });
         }}
       />,
     );

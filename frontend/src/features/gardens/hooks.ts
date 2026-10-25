@@ -36,8 +36,6 @@ import type {
 } from './types';
 
 export const GARDENS_KEY = ['gardens'] as const;
-/** The key of the summary behind the dashboard tile, read again after any save in the app. */
-export const GARDENS_SUMMARY_KEY = [...GARDENS_KEY, 'summary'] as const;
 /** A pause so a burst of key presses in a filter asks once. */
 const FILTER_DELAY_MS = 150;
 
@@ -135,7 +133,7 @@ export function useGarden(id: number | null) {
 
 /** The data of the dashboard tile باغات (PRD 9.1). */
 export function useGardensSummary() {
-  return useQuery({ queryKey: GARDENS_SUMMARY_KEY, queryFn: gardensSummary, staleTime: 0 });
+  return useQuery({ queryKey: [...GARDENS_KEY, 'summary'], queryFn: gardensSummary, staleTime: 0 });
 }
 
 /** The preview of an installment, a cost or a sale in another shop: each partner's part (C23). */

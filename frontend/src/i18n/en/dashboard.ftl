@@ -90,6 +90,21 @@ dashboard-tile-gardens-note = <num>{ $open }</num> open
 dashboard-tile-gardens-none = No open garden
 
 # review: pending
+dashboard-gardens-title = Open { -baghat }
+
+# review: pending
+dashboard-gardens-col-garden = { -bagh }
+
+# review: pending
+dashboard-gardens-col-balance = Running balance
+
+# review: pending
+dashboard-gardens-col-rent-due = Rent due
+
+# review: pending
+dashboard-gardens-all = All { -baghat }
+
+# review: pending
 dashboard-tile-lent = { -adhar-raqam } open
 
 # review: pending

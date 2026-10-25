@@ -122,12 +122,18 @@ function sentLike(request: ReportRunInput, change: Record<string, unknown> = {})
     voucher_type: voucherType,
     trip_view: tripView,
     partner_id: partnerId,
+    garden_id: gardenId,
+    garden_view: gardenView,
+    bikri_id: bikriId,
     ...rest
   } = request.filters;
   const present = (value: unknown) => value !== undefined && value !== null;
   return {
     ...rest,
     partner_id: partnerId ?? null,
+    garden_id: gardenId ?? null,
+    bikri_id: bikriId ?? null,
+    ...(present(gardenView) ? { garden_view: gardenView } : {}),
     ...(present(groupBy) ? { group_by: groupBy } : {}),
     ...(present(status) ? { status } : {}),
     ...(present(voucherType) ? { voucher_type: voucherType } : {}),
@@ -563,9 +569,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('5', 'item')).toBe(m('report-r34-cash-closing'));
       expect(cell('5', 'amount')).toBe('58,484');
       expect(drawnColumns()).toEqual(['date', 'item', 'count', 'amount']);
-      // The page says how many lines the backend has: all 24 of the day.
+      // The page says how many lines the backend has: all 26 of the day.
       expect(
-        await screen.findByText(named(m('report-count', { shown: 24, total: 24 }))),
+        await screen.findByText(named(m('report-count', { shown: 26, total: 26 }))),
       ).toBeInTheDocument();
     });
 
@@ -573,7 +579,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       // The block of the partners and what follows it, as a short list that is drawn whole.
       const block: ReportPage = {
         ...R34_DAY,
-        rows: R34_DAY.rows.slice(16, 22),
+        rows: R34_DAY.rows.slice(18, 24),
         total_count: 6,
       };
       await openReport('R34', { pages: { R34: block } });
@@ -619,7 +625,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
       await screen.findByText(PRINT_R34_EN.firm.name, undefined, SLOW_MS);
-      expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(24);
+      expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(26);
       expect(document.querySelector('.print-report tfoot')).toBeNull();
       expect(visible(document.querySelector('.print-report tbody')?.textContent)).toContain(
         '58,484',

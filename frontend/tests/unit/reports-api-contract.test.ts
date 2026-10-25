@@ -13,6 +13,25 @@ import * as api from '../../src/features/reports/api';
 import { bundles, LANGUAGES } from '../../src/i18n';
 import * as invoke from '../../src/shared/api/invoke';
 import {
+  PRINT_R5_EN,
+  PRINT_R5_EN_REQUEST,
+  R1_BIKRI_1,
+  R1_BIKRI_1_REQUEST,
+  R1_NEEDS_A_BIKRI,
+  R1_NEEDS_A_BIKRI_REQUEST,
+  R5_CREDIT_BUYERS,
+  R5_CREDIT_BUYERS_REQUEST,
+} from '../helpers/reports-sales-real';
+import {
+  PRINT_R36_PARTNER_EN,
+  PRINT_R36_PARTNER_EN_REQUEST,
+  R34_GARDEN_DAY,
+  R36_GARDEN,
+  R36_GARDEN_REQUEST,
+  R36_PARTNER,
+  R36_PARTNER_REQUEST,
+} from '../helpers/reports-gardens-real';
+import {
   PRINT_R35_SLIP_AKRAM_EN,
   PRINT_R35_SLIP_AKRAM_EN_REQUEST,
   R35_SLIP_AKRAM,
@@ -174,7 +193,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
 
 describe('the fixtures are the backend’s own', () => {
   it('every report engine fixture is the same text as the backend’s file', () => {
-    // The catalogue too: it holds all 33 reports of the early track now, as the backend lists them.
+    // The catalogue too: it holds all 36 reports of the early track now, as the backend lists them.
     const names = readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture);
     expect(names.length).toBeGreaterThan(100);
     for (const name of names) {
@@ -384,8 +403,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
 describe('round 7: the cash book, the expense report, the partner statement and money lent', () => {
   const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
 
-  it('the catalogue lists 33 reports, with the boxes the backend says for the newer ones', () => {
-    expect(CATALOG).toHaveLength(33);
+  it('the catalogue lists 36 reports, with the boxes the backend says for the newer ones', () => {
+    expect(CATALOG).toHaveLength(36);
     expect(entryOf('R12')).toMatchObject({ filters: ['date_range'], party_required: false });
     expect(entryOf('R29')).toMatchObject({
       filters: ['date_range', 'partner'],
@@ -692,6 +711,171 @@ describe('round 11: the party day sheet (R35)', () => {
       expect(slip.columns.map((column) => column.key)).toEqual(['qty', 'item', 'rate', 'amount']);
       expect(slip.rows[0]?.source).toMatchObject({ kind: 'bikri' });
     }
+  });
+});
+
+describe('the garden slice: R36, the gardens report, and the garden rows of R34', () => {
+  const entry = CATALOG.find((candidate) => candidate.id === 'R36');
+  const keys = (page: { columns: { key: string }[] }) => page.columns.map((column) => column.key);
+
+  it('is in the business group with the boxes the backend says, and runs with nothing picked', () => {
+    expect(entry).toMatchObject({
+      group: 'business',
+      title_id: 'report-r36-title',
+      filters: ['date_range', 'item', 'partner', 'garden', 'garden_view'],
+      party_required: false,
+    });
+  });
+
+  it('sends the exact requests the backend wrote: by garden, by partner and the print', async () => {
+    const requests = [R36_GARDEN_REQUEST, R36_PARTNER_REQUEST];
+    for (const request of requests) await api.reportsRun(request);
+    await api.reportsPrintData(PRINT_R36_PARTNER_EN_REQUEST);
+    expect(call.mock.calls).toEqual([
+      ...requests.map((request) => ['reports_run', { input: request }]),
+      ['reports_print_data', { input: PRINT_R36_PARTNER_EN_REQUEST }],
+    ]);
+    // By garden is the default and is not sent; by partner is.
+    expect(R36_GARDEN_REQUEST.filters.garden_view).toBeUndefined();
+    expect(R36_PARTNER_REQUEST.filters.garden_view).toBe('partner');
+  });
+
+  it('by garden has the 15 columns of the PRD and a row that opens the garden', () => {
+    expect(keys(R36_GARDEN)).toEqual([
+      'garden',
+      'date',
+      'status',
+      'rent',
+      'installments',
+      'costs',
+      'paid_shop',
+      'paid_pocket',
+      'sales_our_shop',
+      'sales_other_shops',
+      'other_in',
+      'commission',
+      'money_in',
+      'balance',
+      'rent_due',
+    ]);
+    expect(R36_GARDEN.rows[0]?.source).toEqual({ kind: 'venture', id: 1 });
+    expect(R36_GARDEN.rows[0]?.cells[2]).toEqual({ type: 'label', id: 'report-garden-closed' });
+    // The totals row is the backend's: the sums of the rows, nothing under the name and the state.
+    expect(R36_GARDEN.totals.slice(0, 3).every((cell) => cell.type === 'empty')).toBe(true);
+  });
+
+  it('by partner has 7 columns, each partner’s percent and money, and the same totals logic', () => {
+    expect(keys(R36_PARTNER)).toEqual([
+      'garden',
+      'partner',
+      'share',
+      'paid_shop',
+      'paid_pocket',
+      'money_back',
+      'result',
+    ]);
+    expect(R36_PARTNER.rows).toHaveLength(2);
+    expect(R36_PARTNER.rows.map((row) => row.cells[2])).toEqual([
+      { type: 'percent', hundredths: 6000 },
+      { type: 'percent', hundredths: 4000 },
+    ]);
+    expect(PRINT_R36_PARTNER_EN.report).toBe('R36');
+  });
+
+  it('R34 has two rows more for each day: what was paid into the gardens and what came in', () => {
+    const labels = R34_GARDEN_DAY.rows.flatMap((row) =>
+      row.cells[1]?.type === 'label' ? [row.cells[1].id] : [],
+    );
+    expect(labels).toContain('report-r34-gardens-paid');
+    expect(labels).toContain('report-r34-gardens-in');
+    // Information only: they come after the trips rows and before the partners' shares.
+    expect(labels.indexOf('report-r34-gardens-paid')).toBe(
+      labels.indexOf('report-r34-trips-sold') + 1,
+    );
+    expect(labels.indexOf('report-r34-gardens-in')).toBe(
+      labels.indexOf('report-r34-gardens-paid') + 1,
+    );
+  });
+});
+
+describe('round 12: R1, the sale book, and R5, the credit buyers’ details', () => {
+  const entryOf = (id: string) => CATALOG.find((candidate) => candidate.id === id);
+  const keys = (page: { columns: { key: string }[] }) => page.columns.map((column) => column.key);
+
+  it('R1 takes one box, the بکری, which it cannot run without; R5 takes the boxes of R4', () => {
+    expect(entryOf('R1')).toMatchObject({
+      group: 'sales',
+      title_id: 'report-r1-title',
+      filters: ['bikri'],
+      party_required: true,
+    });
+    expect(entryOf('R5')).toMatchObject({
+      group: 'sales',
+      title_id: 'report-r5-title',
+      filters: ['date_range', 'party', 'seller', 'zamindar', 'item', 'city', 'adda'],
+      party_required: false,
+    });
+    // The two reports of the sales group that were missing now come before and after R2 to R4.
+    expect(CATALOG.filter((candidate) => candidate.group === 'sales').map((c) => c.id)).toEqual(
+      expect.arrayContaining(['R1', 'R2', 'R3', 'R4', 'R5', 'R6']),
+    );
+  });
+
+  it('sends the exact requests the backend wrote: the sale book, its refusal, the credit buyers and the print', async () => {
+    const requests = [R1_BIKRI_1_REQUEST, R1_NEEDS_A_BIKRI_REQUEST, R5_CREDIT_BUYERS_REQUEST];
+    for (const request of requests) await api.reportsRun(request);
+    await api.reportsPrintData(PRINT_R5_EN_REQUEST);
+    expect(call.mock.calls).toEqual([
+      ...requests.map((request) => ['reports_run', { input: request }]),
+      ['reports_print_data', { input: PRINT_R5_EN_REQUEST }],
+    ]);
+    expect(R1_BIKRI_1_REQUEST.filters.bikri_id).toBe(1);
+    expect(R1_NEEDS_A_BIKRI_REQUEST.filters.bikri_id).toBeUndefined();
+  });
+
+  it('with no بکری R1 is refused with ERR_REQUIRED on its own box', () => {
+    expect(R1_NEEDS_A_BIKRI).toMatchObject({
+      ok: false,
+      errors: [{ code: 'ERR_REQUIRED', field: 'filters.bikri_id' }],
+    });
+  });
+
+  it('R1 is the lots of the بکری with the columns of the seller bill, and its filters name the بکری', () => {
+    expect(keys(R1_BIKRI_1)).toEqual([
+      'date',
+      'doc',
+      'seller',
+      'item',
+      'qty',
+      'gross',
+      'freight',
+      'commission',
+      'labour',
+      'munshiana',
+      'cash_paid',
+      'store_rent',
+      'phone_charge',
+      'deductions',
+      'net',
+    ]);
+    expect(R1_BIKRI_1.filters.bikri_number).toBe(1);
+    expect(R1_BIKRI_1.rows[0]?.source).toEqual({ kind: 'bikri', id: 1 });
+  });
+
+  it('R5 has a serial, the buyer, his sale lines, the value and the total, and the totals of the whole filter', () => {
+    expect(keys(R5_CREDIT_BUYERS)).toEqual(['serial', 'buyer', 'detail', 'value', 'buyer_total']);
+    expect(R5_CREDIT_BUYERS.rows.map((row) => row.cells[0])).toEqual([
+      { type: 'number', value: 1 },
+      { type: 'number', value: 2 },
+    ]);
+    for (const row of R5_CREDIT_BUYERS.rows) {
+      const detail = row.cells[2];
+      expect(detail?.type).toBe('detail');
+      if (detail?.type === 'detail') {
+        expect(detail.parts.every((part) => part.kind === 'sale')).toBe(true);
+      }
+    }
+    expect(PRINT_R5_EN.report).toBe('R5');
   });
 });
 
