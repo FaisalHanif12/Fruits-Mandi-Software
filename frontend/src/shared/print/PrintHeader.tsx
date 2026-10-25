@@ -7,14 +7,20 @@
 // is data in the print language; every label is a Fluent message id resolved in the print language.
 
 import { useLocalization } from '@fluent/react';
+import { Fragment, type ReactNode } from 'react';
 import { Code } from '../ui/Code';
+import { PrintText } from './PrintText';
 import { LAYOUT_IDS, type PrintHeaderData } from './types';
 
 export function PrintHeader({ header }: { header: PrintHeaderData }) {
   const { l10n } = useLocalization();
   const { firm } = header;
-  // Address and phone are as typed in Settings (PRD FR-7.25); either may be empty.
-  const contact = [firm.address, firm.phone].filter((part) => part.trim() !== '');
+  const parts: ReactNode[] = [];
+  if (firm.address.trim() !== '') parts.push(<PrintText text={firm.address} />);
+  if (firm.phone.trim() !== '') parts.push(<Code>{firm.phone}</Code>);
+  // Address and phone are as typed in Settings (PRD FR-7.25); either may be empty. The phone is a
+  // code (`Code`) and any number inside the address is a number (`PrintText`), so no digit of this
+  // line is drawn in the font of the words (NFR-URD-14).
   return (
     <>
       <header className="print-header">
@@ -27,14 +33,18 @@ export function PrintHeader({ header }: { header: PrintHeaderData }) {
               </p>
             )}
           </div>
-          {firm.mandi === '' ? null : <p className="print-firm-line">{firm.mandi}</p>}
-          {contact.length === 0 ? null : (
+          {firm.mandi === '' ? null : (
             <p className="print-firm-line">
-              {contact.map((part, index) => (
-                <span key={part}>
+              <PrintText text={firm.mandi} />
+            </p>
+          )}
+          {parts.length === 0 ? null : (
+            <p className="print-firm-line">
+              {parts.map((part, index) => (
+                <Fragment key={index}>
                   {index > 0 ? ' · ' : null}
-                  <bdi dir="auto">{part}</bdi>
-                </span>
+                  {part}
+                </Fragment>
               ))}
             </p>
           )}
@@ -42,7 +52,7 @@ export function PrintHeader({ header }: { header: PrintHeaderData }) {
             <ul className="print-contacts">
               {header.contacts.map((person, index) => (
                 <li key={index} className="print-firm-line">
-                  <bdi dir="auto">{person.name}</bdi>{' '}
+                  <PrintText text={person.name} />{' '}
                   {person.phone === '' ? null : <Code>{person.phone}</Code>}
                 </li>
               ))}

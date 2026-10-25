@@ -90,6 +90,9 @@ const said = (text: string) => (content: string) => visible(content) === text;
 const pageText = () => visible(document.body.textContent);
 type User = ReturnType<typeof userEvent.setup>;
 
+/** How many times a pick is tried again when a busy machine loses the click (see `pickFirst`). */
+const PICK_TRIES = 3;
+
 describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
@@ -126,20 +129,30 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
       expect(box).toHaveValue(language === 'ur' ? 'کیلا پیٹی' : 'Banana Box');
     });
   };
-  /** Takes the first match of a picker field after typing some letters. */
-  const pickFirst = async (user: User, id: string, text: string, shown?: RegExp) => {
+  /**
+   * Takes the first match of a picker field after typing some letters. The wanted option is named,
+   * and the pick has landed only when the field shows ITS name. On a busy machine the list can be
+   * drawn again between the moment the option is found and the click, and the click then lands on a
+   * row that is gone: the field is left empty and nothing is picked (the field clears itself when it
+   * is left). That is not a pick, so the typing is done again, up to three times.
+   */
+  const pickFirst = async (user: User, id: string, text: string, shown: RegExp) => {
     const box = field(id);
-    await user.click(box);
-    await user.type(box, text);
-    await user.click(
-      shown === undefined
-        ? await screen.findByRole('option')
-        : await screen.findByRole('option', { name: (name) => shown.test(visible(name)) }),
-    );
-    // The pick has landed when the field shows the name instead of the letters typed.
-    await waitFor(() => {
-      expect(box).not.toHaveValue(text);
-    });
+    for (let attempt = 1; attempt <= PICK_TRIES; attempt += 1) {
+      await user.click(box);
+      await user.type(box, text);
+      await user.click(
+        await screen.findByRole('option', { name: (name) => shown.test(visible(name)) }),
+      );
+      try {
+        await waitFor(() => {
+          expect(visible((box as HTMLInputElement).value)).toMatch(shown);
+        });
+        return;
+      } catch (lost) {
+        if (attempt === PICK_TRIES) throw lost;
+      }
+    }
   };
   async function previewSettled(rate: string) {
     await waitFor(() => {
@@ -180,7 +193,7 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     );
     // Each pick names the option it wants, so a list that is still open from the field before can
     // never be taken by mistake when the machine is busy.
-    await pickFirst(user, 'fruit-field-agent', 'nazir', /نذیر|Nazir/);
+    await pickFirst(user, 'fruit-field-agent', 'nazir', /نذیر|Nazeer/);
     await pickFirst(user, 'glossary-qism-maal', item.text, item.shown);
     await pickFirst(user, 'glossary-packing', 'box', /پیٹی|Box/);
     await user.type(field('fruit-field-qty'), '3');

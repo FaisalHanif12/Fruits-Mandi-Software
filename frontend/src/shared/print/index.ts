@@ -17,6 +17,7 @@ export {
 } from './PrintView';
 export { PrintHeader } from './PrintHeader';
 export { PrintName } from './PrintName';
+export { PrintText } from './PrintText';
 export { PrintR5 } from './PrintR5';
 export { PrintScreenFooter } from './PrintScreenFooter';
 export { PrintPartyBlock } from './PrintPartyBlock';

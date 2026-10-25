@@ -95,6 +95,74 @@ describe.each(LANGUAGES)('the shared print header (%s)', (language: Language) =>
   });
 });
 
+describe.each(LANGUAGES)(
+  'the firm lines of the header have no bare digit (%s)',
+  (language: Language) => {
+    /** The text of an element without the text of the numbers and codes inside it. */
+    function bareText(element: HTMLElement): string {
+      const copy = element.cloneNode(true) as HTMLElement;
+      for (const number of copy.querySelectorAll('.type-number')) number.remove();
+      return copy.textContent;
+    }
+
+    it('the phone is a code, a number in the address is a number, the contact phones are codes', () => {
+      const base = printDataFor('seller_bill', { language, contacts: true, tradeMark: 'RH' });
+      const data: PrintData = {
+        ...base,
+        header: {
+          ...base.header,
+          firm: {
+            ...base.header.firm,
+            mandi: language === 'ur' ? 'نیو سبزی منڈی، دکان 7' : 'New Sabzi Mandi, Shop 7',
+            address: 'Shop 12-14, Kot Radha Kishan',
+            phone: '0300-1112233',
+          },
+        },
+      };
+      const { root } = show(data);
+      const lines = [...root.querySelectorAll<HTMLElement>('.print-firm-line')];
+      // The mandi line, the address and phone line, and the three contact persons.
+      expect(lines).toHaveLength(5);
+      for (const line of lines) {
+        expect(bareText(line), textOf(line)).not.toMatch(/\d/);
+      }
+      // The numbers are Inter numbers, written left to right: 7, 12-14, the firm phone, a contact phone.
+      const numbers = lines.flatMap((line) =>
+        [...line.querySelectorAll('.type-number')].map((item) => item.textContent),
+      );
+      expect(numbers).toContain('7');
+      expect(numbers).toContain('12-14');
+      expect(numbers).toContain('0300-1112233');
+      expect(numbers).toContain('0300-4058860');
+      // The phone of the firm is a code: it is not turned into a number of the words' font.
+      const phone = lines
+        .flatMap((line) => [...line.querySelectorAll('.type-number')])
+        .find((item) => item.textContent === '0300-1112233');
+      expect(phone?.getAttribute('data-kind')).toBe('code');
+      // The words keep their own direction, so Urdu stays Urdu next to the numbers.
+      expect(lines[1]?.querySelector('bdi[dir="auto"]')).not.toBeNull();
+    });
+
+    it('an address with no digit is the words alone, and a firm with no phone has no empty line', () => {
+      const base = printDataFor('seller_bill', { language });
+      const data: PrintData = {
+        ...base,
+        header: {
+          ...base.header,
+          firm: { ...base.header.firm, address: 'Kot Radha Kishan', phone: '' },
+        },
+      };
+      const { root } = show(data);
+      const lines = [...root.querySelectorAll<HTMLElement>('.print-firm-line')];
+      expect(
+        lines.map((line) => textOf(line)).some((text) => text.includes('Kot Radha Kishan')),
+      ).toBe(true);
+      expect(lines.every((line) => textOf(line).trim() !== '')).toBe(true);
+      expect(root.querySelector('.print-firm-line .type-number')).toBeNull();
+    });
+  },
+);
+
 describe('the root of a print', () => {
   it('takes the print language, direction, paper and digit style, whatever the app language is', () => {
     useLanguageStore.setState({ language: 'en' });
