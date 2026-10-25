@@ -195,7 +195,11 @@ pub(crate) fn resolve(
     // takes none of the sale filters either (PRD 18.1).
     if matches!(
         view,
-        AnalyticsView::F | AnalyticsView::G | AnalyticsView::I | AnalyticsView::J
+        AnalyticsView::F
+            | AnalyticsView::G
+            | AnalyticsView::I
+            | AnalyticsView::J
+            | AnalyticsView::K
     ) && input.compare != AnalyticsCompare::Off
     {
         problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "filters.compare"));
@@ -244,6 +248,24 @@ pub(crate) fn resolve(
             }
         }
     }
+    // View K counts fruit taken: no seller, buyer, city, اڈا or trip, no commission side, and no
+    // trip goods (they are not offered as fruit, PRD FR-16.11).
+    if view == AnalyticsView::K {
+        let not_taken = [
+            (input.seller_id.is_some(), "filters.seller_id"),
+            (input.buyer.is_some(), "filters.buyer"),
+            (input.city_id.is_some(), "filters.city_id"),
+            (input.adda_id.is_some(), "filters.adda_id"),
+            (input.trip_id.is_some(), "filters.trip_id"),
+            (input.side != AnalyticsSide::Both, "filters.side"),
+            (input.goods == AnalyticsGoods::Trip, "filters.goods"),
+        ];
+        for (set, field) in not_taken {
+            if set {
+                problems.push(FieldError::new(ErrorCode::ErrOutOfRange, field));
+            }
+        }
+    }
     // View J counts purchases, which have no seller, buyer, city or اڈا.
     if view == AnalyticsView::J {
         let sale_filters = [
@@ -262,7 +284,11 @@ pub(crate) fn resolve(
     if input.partner_id.is_some()
         && !matches!(
             view,
-            AnalyticsView::F | AnalyticsView::G | AnalyticsView::I | AnalyticsView::J
+            AnalyticsView::F
+                | AnalyticsView::G
+                | AnalyticsView::I
+                | AnalyticsView::J
+                | AnalyticsView::K
         )
     {
         problems.push(FieldError::new(

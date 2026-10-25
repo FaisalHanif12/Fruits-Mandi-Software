@@ -77,6 +77,15 @@ pub(crate) const COL_RESULT: &str = "report-col-result";
 pub(crate) const COL_PARTNER_SHARE: &str = "analytics-col-partner-share";
 pub(crate) const COL_PARTNER_PART: &str = "analytics-col-partner-part";
 
+// Column headings of view K, fruit taken. The words the fruit screen already has are used as they
+// are: "Partner or guests", "Our shop" and "Another shop".
+pub(crate) const COL_FRUIT_FOR: &str = "fruit-filter-for";
+pub(crate) const COL_FRUIT_OWN: &str = "fruit-source-own";
+pub(crate) const COL_FRUIT_OTHER: &str = "fruit-source-other";
+pub(crate) const COL_VALUE: &str = "report-col-value";
+/// The label of the shop's guests in a row of view K.
+pub(crate) const FRUIT_GUESTS: &str = "fruit-for-guests";
+
 // Section headings of view H.
 pub(crate) const TOP_ITEMS: &str = "analytics-top-items";
 pub(crate) const TOP_SELLERS: &str = "analytics-top-sellers";

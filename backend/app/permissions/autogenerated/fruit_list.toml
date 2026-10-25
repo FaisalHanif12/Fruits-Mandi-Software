@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fruit-list"
+description = "Enables the fruit_list command without any pre-configured scope."
+commands.allow = ["fruit_list"]
+
+[[permission]]
+identifier = "deny-fruit-list"
+description = "Denies the fruit_list command without any pre-configured scope."
+commands.deny = ["fruit_list"]

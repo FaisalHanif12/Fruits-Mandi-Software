@@ -7,8 +7,8 @@
 //! the buyers' dues at the end of the day and the lots still in باقی مال. It is a flat list: every
 //! row has its day, a label, an optional count and an optional amount, so it pages, prints and
 //! exports like every other report. The same rows come in the same order for every day.
-//! The garden rows (paid, money in) are in; the fruit-taken row comes with plan 17d at the marked
-//! place in `run` and nothing else changes.
+//! The garden rows (paid, money in) and the fruit-taken row (نگ and value of the saved entries of
+//! the day, PRD 16.7) are in.
 //!
 //! A day is listed when anything was posted on it (a journal entry, a sale, a trip purchase or
 //! entry, a stock move). A report for one day always lists that day. With no dates the report is
@@ -544,6 +544,15 @@ pub(crate) fn run(
         &values(&from, &to),
     )?;
 
+    // Fruit taken: the saved entries of the day, نگ and value as stored (PRD 16.7). No cash moves
+    // and the value is already in the partners' totals, so it is for information like the gardens.
+    let fruit_taken = by_day(
+        conn,
+        "SELECT entry_date, COALESCE(SUM(qty), 0), COALESCE(SUM(value_paisa), 0) FROM fruit_takes
+         WHERE status = 'saved' AND entry_date >= ?1 AND entry_date <= ?2 GROUP BY entry_date",
+        &values(&from, &to),
+    )?;
+
     // The share of each partner on each day: income rows less expense rows (C12).
     let mut shares: BTreeMap<String, Vec<(i64, i64)>> = BTreeMap::new();
     {
@@ -623,6 +632,7 @@ pub(crate) fn run(
         let (sold_own, sold_other) = pair(&trips_sold, day)?;
         let (garden_payments, garden_paid) = gardens_paid.get(day).copied().unwrap_or((0, 0));
         let (garden_dr, garden_cr) = pair(&gardens_in, day)?;
+        let (fruit_qty, fruit_value) = fruit_taken.get(day).copied().unwrap_or((0, 0));
         let dues_now = dues.at_end_of(day)?;
         let (open_lots, open_qty) = stock.at_end_of(day)?;
 
@@ -721,7 +731,12 @@ pub(crate) fn run(
             None,
             amount(garden_cr.checked_sub(garden_dr)?),
         ));
-        // The fruit-taken row of the PRD line is added here when plan 17d is merged.
+        all_rows.push(row(
+            day,
+            label(ids::R34_FRUIT_TAKEN),
+            Some(fruit_qty),
+            amount(paisa(fruit_value)?),
+        ));
         if let Some(day_shares) = shares.get(day) {
             // A heading row, so a partner's name below it reads as his share of the day.
             all_rows.push(row(day, label(ids::R34_PARTNER_SHARES), None, None));

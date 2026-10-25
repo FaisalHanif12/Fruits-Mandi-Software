@@ -14,7 +14,7 @@ use crate::reports::{
     Cell, Column, ColumnKind, Names, PartyFilter, PartyRef, PrintCell, Row, RowKind,
 };
 
-/// The views of PRD 18.2 that exist so far. K (fruit taken) comes with plan 17d.
+/// The views of PRD 18.2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 pub enum AnalyticsView {
     /// By item, قسم مال وار.
@@ -47,6 +47,9 @@ pub enum AnalyticsView {
     /// Trips, مارکیٹ سفر.
     #[serde(rename = "J")]
     J,
+    /// Fruit taken, پھل.
+    #[serde(rename = "K")]
+    K,
 }
 
 impl AnalyticsView {
@@ -63,6 +66,7 @@ impl AnalyticsView {
             AnalyticsView::H => "H",
             AnalyticsView::I => "I",
             AnalyticsView::J => "J",
+            AnalyticsView::K => "K",
         }
     }
 }
@@ -153,6 +157,19 @@ pub enum AnalyticsTripView {
     Day,
 }
 
+/// Which money of a partner's gardens, trips and fruit account a column of view F stands for
+/// (PRD 18.2 F, FR-18.2): the lines behind the column are his lines on that account.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AnalyticsPartnerMoney {
+    /// His lines for market trips.
+    Trips,
+    /// His lines for gardens.
+    Gardens,
+    /// His lines for fruit taken: what he took home and his part of the guests' fruit.
+    Fruit,
+}
+
 /// Which filter boxes a view shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -175,7 +192,7 @@ pub enum AnalyticsFilterKind {
     Compare,
     /// Day, month or year columns (views D and G).
     GroupBy,
-    /// A partner (views F, G and J).
+    /// A partner (views F, G, I, J and K).
     Partner,
     /// A market trip (views A to E, G, H and J).
     Trip,
@@ -338,6 +355,15 @@ pub struct AnalyticsKey {
     /// The trip purchases whose sales are meant (the lines behind a row of view J).
     #[ts(type = "Array<number>")]
     pub purchase_ids: Vec<i64>,
+    /// True for the row of the shop's guests in view K (the fruit entries with no partner).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "boolean | null", optional)]
+    pub guests: Option<bool>,
+    /// Which of a partner's venture money a column of view F stands for. Set by the column, not by
+    /// the row.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub money: Option<AnalyticsPartnerMoney>,
 }
 
 /// What a dynamic column is called. The screen names a month from Fluent.

@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DATE_BEFORE_RECEIVED",
+      "field": "date",
+      "values": {
+        "received_date": "2026-10-11"
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

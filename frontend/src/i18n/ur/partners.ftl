@@ -389,6 +389,23 @@ partners-statement-detail-garden-paid = { $garden }: { $reason }، { -dukan-se }
 # review: pending
 partners-statement-detail-garden-closed = { $garden } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد: { $part }، { -wapsi } { $back }
 
+# A fruit line in a partner's statement (PRD FR-17.10, plan 17d): the fruit he took home, or his
+# equal part of the fruit served to the shop's guests (C27).
+# review: pending
+partners-statement-heading-fruit = { -phal }
+
+# $for: home or guests; $subject: the item; $qty, $packing, $rate: what was taken; $value: the whole
+# value (the amount of the line is his part).
+# review: pending
+partners-statement-detail-fruit-taken = { $for ->
+    [guests] { -mehman } کے لیے { -phal }: { $subject } { $qty } { $packing } @ { $rate } = { $value }، آپ کا برابر حصہ
+   *[home] گھر کے لیے { -phal }: { $subject } { $qty } { $packing } @ { $rate } = { $value }
+}
+
+# $fruit: the entry's number. The details of an entry are shown only for the posting in force.
+# review: pending
+partners-statement-detail-fruit-earlier = { -phal } { $fruit }: ایسے اندراج کی پرانی پوسٹنگ جو بعد میں بدلا یا منسوخ ہوا، یا اس کی الٹ
+
 # review: pending
 partners-statement-detail-other = { $reason }
 

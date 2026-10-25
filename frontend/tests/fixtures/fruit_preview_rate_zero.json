@@ -1,0 +1,16 @@
+{
+  "numbers": null,
+  "errors": [
+    {
+      "code": "ERR_MUST_BE_MORE_THAN_ZERO",
+      "field": "rate",
+      "values": {}
+    }
+  ],
+  "warnings": [],
+  "rate_hint": {
+    "rate_paisa": 58000,
+    "source": "today",
+    "date": "2026-10-10"
+  }
+}

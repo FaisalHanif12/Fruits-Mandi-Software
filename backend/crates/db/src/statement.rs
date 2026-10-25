@@ -219,6 +219,39 @@ pub fn closed_trip_notes(conn: &Connection, partner_id: i64) -> rusqlite::Result
     rows.collect()
 }
 
+/// The garden closings that posted nothing for this partner: a balance of 0, or a part of his that
+/// came to 0, so the closing has no line on his 0604 account (PRD FR-17.10, E64). They become note
+/// lines with no amount, so the statement still shows the garden's cost, sales, result and his
+/// share. `id` is the closing's venture entry, `venture_id` the garden. A closing that was undone is
+/// left out.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn unposted_garden_close_notes(
+    conn: &Connection,
+    partner_id: i64,
+) -> rusqlite::Result<Vec<NoteEvent>> {
+    let mut statement = conn.prepare(
+        "SELECT x.id, x.entry_date, x.venture_id
+         FROM venture_entries x
+         JOIN venture_entry_parts p ON p.entry_id = x.id AND p.partner_id = ?1
+         JOIN partners pa ON pa.id = ?1
+         WHERE x.kind = 'close' AND x.status = 'saved'
+           AND NOT EXISTS (SELECT 1 FROM journal_lines l
+                           WHERE l.entry_id = x.journal_entry_id
+                             AND l.account_id = pa.venture_account_id)
+         ORDER BY x.entry_date, x.id",
+    )?;
+    let rows = statement.query_map([partner_id], |r| {
+        Ok(NoteEvent {
+            id: r.get(0)?,
+            date: r.get(1)?,
+            venture_id: r.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
 // ---- The facts that word the lines of one page ----
 
 /// A named record.
@@ -335,12 +368,66 @@ pub fn bikri_numbers(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap
     numbers_of(conn, "bikri_entries", ids)
 }
 
-/// The numbers of these fruit takes.
+/// What the statement says about a fruit entry (PRD FR-17.10).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FruitInfo {
+    /// Its number in the پھل series.
+    pub number: i64,
+    /// The item.
+    pub item: Named,
+    /// The packing.
+    pub packing: Named,
+    /// نگ taken.
+    pub qty: i64,
+    /// The rate, paisa.
+    pub rate_paisa: i64,
+    /// The value, paisa.
+    pub value_paisa: i64,
+    /// True for the shop's guests.
+    pub guests: bool,
+    /// The posting in force (after a cancel, the posting that was reversed). The row holds the values
+    /// of this posting only; an older posting of an edited entry has no details (an edit updates the
+    /// row).
+    pub current_entry_id: Option<i64>,
+}
+
+/// The fruit entries with these ids.
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn fruit_numbers(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i64, i64>> {
-    numbers_of(conn, "fruit_takes", ids)
+pub fn fruit_infos(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i64, FruitInfo>> {
+    let mut out = HashMap::new();
+    if ids.is_empty() {
+        return Ok(out);
+    }
+    let mut statement = conn.prepare(&format!(
+        "SELECT f.id, f.number, it.id, it.code, it.name_ur, it.name_en,
+                pk.id, pk.code, pk.name_ur, pk.name_en, f.qty, f.rate_paisa, f.value_paisa,
+                f.partner_id IS NULL, f.current_entry_id
+         FROM fruit_takes f JOIN items it ON it.id = f.item_id JOIN packings pk ON pk.id = f.packing_id
+         WHERE f.id IN ({})",
+        marks(ids.len())
+    ))?;
+    let rows = statement.query_map(params_from_iter(ids.iter()), |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            FruitInfo {
+                number: r.get(1)?,
+                item: (r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?),
+                packing: (r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?),
+                qty: r.get(10)?,
+                rate_paisa: r.get(11)?,
+                value_paisa: r.get(12)?,
+                guests: r.get(13)?,
+                current_entry_id: r.get(14)?,
+            },
+        ))
+    })?;
+    for row in rows {
+        let (id, info) = row?;
+        out.insert(id, info);
+    }
+    Ok(out)
 }
 
 fn numbers_of(conn: &Connection, table: &str, ids: &[i64]) -> rusqlite::Result<HashMap<i64, i64>> {

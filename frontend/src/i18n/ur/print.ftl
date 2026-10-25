@@ -328,3 +328,33 @@ print-slip-amount-advance = دی گئی { -peshgi }
 
 # review: pending
 print-doc-receipt-slip = رقم کی رسید
+
+## R5 and the buyer slips in the client's layout; the header of every print (plan 17e, PRD R5, FR-19.13).
+
+# Read by a screen reader: the name of the box in the header.
+# review: pending
+print-header-trade-mark = { -trade-mark }
+
+# R5 (PRD 19.2), in the client's layout.
+# review: pending
+print-r5-title = { -udhari } تفصیل
+
+# review: pending
+print-r5-col-serial = نمبر
+
+# review: pending
+print-r5-col-party = پارٹی
+
+# review: pending
+print-r5-col-details = تفصیل
+
+# review: pending
+print-r5-col-value = رقم
+
+# Value + buyer commission + لاگا (PRD C5).
+# review: pending
+print-r5-col-total = رقم بعد { -laga }
+
+# One line of a buyer, the client's way: "(کیلا 20 . 600)". $item: the item name in the print language; $qty and $rate are numbers.
+# review: pending
+print-r5-line = ({ $item } { $qty } . { $rate })

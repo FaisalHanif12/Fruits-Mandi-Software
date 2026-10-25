@@ -1,0 +1,190 @@
+{
+  "id": "R10",
+  "title_id": "report-r10-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "received",
+      "title_id": "report-col-received",
+      "kind": "number"
+    },
+    {
+      "key": "sold",
+      "title_id": "report-col-sold",
+      "kind": "number"
+    },
+    {
+      "key": "written_off",
+      "title_id": "report-col-written-off",
+      "kind": "number"
+    },
+    {
+      "key": "fruit_taken",
+      "title_id": "report-col-fruit-taken",
+      "kind": "number"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance-qty",
+      "kind": "number"
+    },
+    {
+      "key": "days",
+      "title_id": "report-col-days-waiting",
+      "kind": "number"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "پیٹی",
+            "en": "Box"
+          }
+        },
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "number",
+          "value": 45
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "number",
+          "value": 2
+        },
+        {
+          "type": "number",
+          "value": 3
+        },
+        {
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 50
+    },
+    {
+      "type": "number",
+      "value": 45
+    },
+    {
+      "type": "number",
+      "value": 0
+    },
+    {
+      "type": "number",
+      "value": 2
+    },
+    {
+      "type": "number",
+      "value": 3
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": []
+}

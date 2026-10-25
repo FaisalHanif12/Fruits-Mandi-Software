@@ -88,4 +88,8 @@ export type ReportResolvedFilters = {
    * The number of the بکری picked (R1).
    */
   bikri_number?: number | null;
+  /**
+   * True when R37 lists only the fruit taken for the shop's guests. Missing for any other run.
+   */
+  guests_only?: boolean | null;
 };

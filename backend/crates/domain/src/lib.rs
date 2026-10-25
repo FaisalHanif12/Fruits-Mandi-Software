@@ -13,6 +13,7 @@ pub mod bikri;
 pub mod capital;
 pub mod cash;
 pub mod expenses;
+pub mod fruit;
 pub mod general;
 pub mod khata;
 pub mod ledger;

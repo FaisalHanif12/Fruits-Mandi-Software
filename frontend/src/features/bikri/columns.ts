@@ -10,7 +10,7 @@
 
 import { FIT_MIN, type EntryColumn } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks';
-import { isOwnLot } from './draft';
+import { isGardenLot, isOwnLot } from './draft';
 import { LOT, SALE } from './types';
 
 export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
@@ -51,14 +51,15 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       minWidth: FIT_MIN.longHeading,
     },
     // A one-time seller's نقد is filled by the backend while empty (FR-13.10), with its working.
-    // An own goods lot has no نقد: the firm does not give cash to itself (PRD FR-12.26).
+    // An own goods lot has no نقد: the firm does not give cash to itself (PRD FR-12.26). A garden's
+    // lot has none either (PRD FR-12.36).
     {
       field: LOT.cash,
       type: 'money',
       headerId: 'glossary-naqd',
       showsCalc: true,
       explain: true,
-      editable: (row) => !isOwnLot(row),
+      editable: (row) => !isOwnLot(row) && !isGardenLot(row),
     },
     ...(isFromStep(step, 'normal')
       ? ([

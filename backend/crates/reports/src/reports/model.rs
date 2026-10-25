@@ -124,6 +124,9 @@ pub enum ReportId {
     /// Gardens, باغات رپورٹ.
     #[serde(rename = "R36")]
     R36,
+    /// Fruit taken, پھل رجسٹر.
+    #[serde(rename = "R37")]
+    R37,
 }
 
 impl ReportId {
@@ -166,6 +169,7 @@ impl ReportId {
             ReportId::R34 => "R34",
             ReportId::R35 => "R35",
             ReportId::R36 => "R36",
+            ReportId::R37 => "R37",
         }
     }
 
@@ -228,6 +232,8 @@ pub enum FilterKind {
     GardenView,
     /// One بکری (R1).
     Bikri,
+    /// Only the fruit taken for the shop's guests (R37).
+    Guests,
 }
 
 /// One report in the catalogue.
@@ -387,6 +393,10 @@ pub struct ReportFilters {
     /// One بکری (R1, the sale book). Required there.
     #[ts(type = "number | null")]
     pub bikri_id: Option<i64>,
+    /// Only the fruit taken for the shop's guests (R37). Missing or false means every entry; with
+    /// true the partner filter must be empty.
+    #[ts(optional)]
+    pub guests_only: Option<bool>,
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
@@ -476,6 +486,10 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(type = "number | null", optional)]
     pub bikri_number: Option<i64>,
+    /// True when R37 lists only the fruit taken for the shop's guests. Missing for any other run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "boolean | null", optional)]
+    pub guests_only: Option<bool>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.

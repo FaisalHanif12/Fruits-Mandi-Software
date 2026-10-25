@@ -18,8 +18,9 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, bikri, capital, cash, cashbook, drafts, expenses, gardens, general, khata, lent,
-    masters, partners, printing, purchases, rules, search, statement, trips, ventures, vouchers,
+    accounts, bikri, capital, cash, cashbook, drafts, expenses, fruit, gardens, general, khata,
+    lent, masters, partners, printing, purchases, rules, search, statement, trips, ventures,
+    vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -395,6 +396,29 @@ const EXPECTED_FILES: &[&str] = &[
     "OtherSaleSaved.ts",
     "TripEntryCancelInput.ts",
     "TripEntryCancelled.ts",
+    "FruitSource.ts",
+    "FruitStatus.ts",
+    "FruitInput.ts",
+    "FruitPart.ts",
+    "FruitCredit.ts",
+    "FruitLotBalance.ts",
+    "FruitNumbers.ts",
+    "FruitPreview.ts",
+    "FruitSaved.ts",
+    "FruitEditInput.ts",
+    "FruitEdited.ts",
+    "FruitCancelInput.ts",
+    "FruitCancelled.ts",
+    "FruitLotRef.ts",
+    "FruitPartRow.ts",
+    "FruitRow.ts",
+    "FruitGetInput.ts",
+    "FruitListInput.ts",
+    "FruitTotals.ts",
+    "FruitList.ts",
+    "FruitLotsInput.ts",
+    "FruitLotRow.ts",
+    "FruitLots.ts",
     "GardenInput.ts",
     "GardenSetPartnersInput.ts",
     "GardenDefaults.ts",
@@ -951,6 +975,29 @@ fn export_bindings() {
     gardens::GardenClosed::export_all(&cfg).unwrap();
     gardens::GardenReopenInput::export_all(&cfg).unwrap();
     gardens::GardenReopened::export_all(&cfg).unwrap();
+    fruit::FruitSource::export_all(&cfg).unwrap();
+    fruit::FruitStatus::export_all(&cfg).unwrap();
+    fruit::FruitInput::export_all(&cfg).unwrap();
+    fruit::FruitPart::export_all(&cfg).unwrap();
+    fruit::FruitCredit::export_all(&cfg).unwrap();
+    fruit::FruitLotBalance::export_all(&cfg).unwrap();
+    fruit::FruitNumbers::export_all(&cfg).unwrap();
+    fruit::FruitPreview::export_all(&cfg).unwrap();
+    fruit::FruitSaved::export_all(&cfg).unwrap();
+    fruit::FruitEditInput::export_all(&cfg).unwrap();
+    fruit::FruitEdited::export_all(&cfg).unwrap();
+    fruit::FruitCancelInput::export_all(&cfg).unwrap();
+    fruit::FruitCancelled::export_all(&cfg).unwrap();
+    fruit::FruitLotRef::export_all(&cfg).unwrap();
+    fruit::FruitPartRow::export_all(&cfg).unwrap();
+    fruit::FruitRow::export_all(&cfg).unwrap();
+    fruit::FruitGetInput::export_all(&cfg).unwrap();
+    fruit::FruitListInput::export_all(&cfg).unwrap();
+    fruit::FruitTotals::export_all(&cfg).unwrap();
+    fruit::FruitList::export_all(&cfg).unwrap();
+    fruit::FruitLotsInput::export_all(&cfg).unwrap();
+    fruit::FruitLotRow::export_all(&cfg).unwrap();
+    fruit::FruitLots::export_all(&cfg).unwrap();
     partners::PartnerVentureCard::export_all(&cfg).unwrap();
     bikri::LaterSaleInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();

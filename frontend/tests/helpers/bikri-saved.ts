@@ -157,6 +157,7 @@ export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
         qty_received: 50,
         qty_sold: 50,
         qty_written_off: 0,
+        qty_taken: 0,
         weight_received_grams: null,
         freight: money(3_000),
         freight_paid_by: 'firm',

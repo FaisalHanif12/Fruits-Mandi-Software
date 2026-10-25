@@ -70,6 +70,11 @@ export type SavedLot = {
    */
   qty_written_off: number;
   /**
+   * نگ taken as fruit by a partner or for the shop's guests (PRD FR-16.11, C16). The lot's balance
+   * is received less sold, written off and taken.
+   */
+  qty_taken: number;
+  /**
    * Weight received, in grams.
    */
   weight_received_grams: number | null;

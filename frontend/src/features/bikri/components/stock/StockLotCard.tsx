@@ -41,6 +41,9 @@ export function LotFacts({ row }: { row: StockRow }) {
       <Fact label={<Localized id="bikri-stock-col-written-off" />}>
         <Num>{row.qty_written_off}</Num>
       </Fact>
+      <Fact label={<Localized id="bikri-stock-col-taken" />}>
+        <Num>{row.qty_taken}</Num>
+      </Fact>
       <Fact label={<Localized id="bikri-col-balance" />}>
         <Num>{row.balance}</Num>
       </Fact>

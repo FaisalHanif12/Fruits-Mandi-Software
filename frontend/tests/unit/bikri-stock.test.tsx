@@ -124,6 +124,26 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     expect(text).toContain(names.box);
   });
 
+  it('fruit taken from the lot is a column and a figure on the card, and the balance is the backend’s (C16)', async () => {
+    // 50 received, 45 sold, 2 taken as fruit (E2E-42): the balance is 3, as the backend counted it.
+    fakePlan16({ rows: [stockRow({ qty_taken: 2, balance: 3 })] });
+    await open();
+    await waitFor(() => {
+      expect(cell(40, 'number')).toBe('1');
+    });
+    // The column of the taken fruit comes with the wide layout step; the card shows it at every size.
+    expect(cell(40, 'balance')).toBe('3');
+    const card = await screen.findByRole('heading', {
+      name: named(message(language, 'bikri-stock-lot-title', { number: 1, lot: 1 })),
+    });
+    const facts = card.closest('section')?.querySelectorAll('dl > div');
+    const taken = Array.from(facts ?? []).find((fact) =>
+      visible(fact.textContent).includes(message(language, 'bikri-stock-col-taken')),
+    );
+    expect(taken).toBeDefined();
+    expect(visible(taken?.textContent)).toContain('2');
+  });
+
   it('an empty list says why and has a button (FR-7.46)', async () => {
     fakePlan16({ rows: [] });
     await open();

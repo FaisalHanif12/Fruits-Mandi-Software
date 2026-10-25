@@ -712,6 +712,7 @@ pub fn live_lines(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<Li
                 CASE e.source_type
                     WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = e.source_id)
                     WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = e.source_id)
+                    WHEN 'fruit' THEN (SELECT x.number FROM fruit_takes x WHERE x.id = e.source_id)
                 END,
                 COALESCE(e.order_key, e.id)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id

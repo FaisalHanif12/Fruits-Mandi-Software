@@ -252,9 +252,18 @@ pub(super) fn lot_running_totals(
     })
 }
 
+/// Whether the lot's seller is a garden's account (PRD FR-12.36).
+pub(super) fn is_garden_lot(
+    conn: &Connection,
+    shaped: &LotShape<'_>,
+) -> Result<bool, ServiceError> {
+    Ok(mandi_db::gardens::of_account(conn, shaped.journal.seller_account_id.get())?.is_some())
+}
+
 /// The columns of a lot of the first posting, with its running totals. `person` is the lot's
 /// one-time seller (see [`lot_person`]).
 pub(super) fn lot_columns<'a>(
+    conn: &Connection,
     bikri_id: i64,
     lot_no: i64,
     shaped: &'a LotShape<'a>,
@@ -263,6 +272,7 @@ pub(super) fn lot_columns<'a>(
 ) -> Result<NewLot<'a>, ServiceError> {
     let lot = shaped.lot;
     let totals = shaped.totals;
+    let garden = is_garden_lot(conn, shaped)?;
     let qty_received = lot
         .qty_received
         .ok_or_else(|| data("a lot without errors has no quantity"))?
@@ -293,8 +303,10 @@ pub(super) fn lot_columns<'a>(
         phone: lot_charge_columns(shaped.preview.phone.as_ref())?,
         cash_paid_paisa: totals.cash_paid.as_paisa(),
         store_rent_paisa: totals.store_rent.as_paisa(),
-        // A trip lot adjusts no advance: there is no seller (PRD FR-12.26).
-        adjust_advance: lot.adjust_advance && lot.purchase_id.is_none(),
+        // A trip lot adjusts no advance: there is no seller (PRD FR-12.26). Nor does a garden's
+        // lot: the garden's account holds sales money, never an advance (PRD FR-12.36). The
+        // backend forces it off, whatever the screen sent.
+        adjust_advance: lot.adjust_advance && lot.purchase_id.is_none() && !garden,
         qty_sold: running.qty_sold,
         gross_paisa: running.gross_paisa,
         seller_comm_paisa: running.seller_comm_paisa,
@@ -604,6 +616,7 @@ pub(super) fn match_posting(
         if shaped.lot.adjust_advance
             && shaped.journal.person_key.is_none()
             && shaped.lot.purchase_id.is_none()
+            && !is_garden_lot(tx, shaped)?
         {
             // The amount adjusted is the credit of the journal line itself: both come from the
             // one calculation, and a drift would be caught here before the database trigger.

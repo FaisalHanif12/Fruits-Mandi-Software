@@ -127,8 +127,12 @@ pub struct StatementLine {
     /// A second number: a purchase, a trip cost or a بکری inside a trip line.
     #[ts(type = "number | null")]
     pub secondary_number: Option<i64>,
-    /// What the line is about: the expense head, or the item of a trip sale. Null if none.
+    /// What the line is about: the expense head, or the item of a trip sale or of fruit taken. Null
+    /// if none.
     pub subject: Option<RecordRef>,
+    /// The packing of the item, for a fruit line (PRD FR-17.10): "2 پیٹی مالٹا @ 1,400". Null for
+    /// any other line.
+    pub packing: Option<RecordRef>,
     /// The user's reason. Empty if none.
     pub reason: String,
     /// The signed amount, or null for a note line.

@@ -357,6 +357,20 @@ const SPECS: &[Spec] = &[
         ],
         false,
     ),
+    // The fruit taken: by day, partner (or only the shop's guests), item, or the garden whose lot
+    // it came from.
+    spec(
+        ReportId::R37,
+        ReportGroup::Business,
+        &[
+            FilterKind::DateRange,
+            FilterKind::Partner,
+            FilterKind::Guests,
+            FilterKind::Item,
+            FilterKind::Garden,
+        ],
+        false,
+    ),
 ];
 
 fn spec_of(id: ReportId) -> Result<&'static Spec, ReportsError> {
@@ -463,6 +477,7 @@ fn build_in(
         ReportId::R34 => business::run_r34(conn, &typed, spec),
         ReportId::R35 => business::run_r35(conn, &typed, spec),
         ReportId::R36 => business::run_r36(conn, &typed, spec),
+        ReportId::R37 => business::run_r37(conn, &typed, spec),
         ReportId::R10 => sales::run_r10(conn, &typed, spec),
         ReportId::R15 => vouchers::run(conn, &typed, spec, vouchers::Layout::All),
         ReportId::R23 => vouchers::run(conn, &typed, spec, vouchers::Layout::Receipts),

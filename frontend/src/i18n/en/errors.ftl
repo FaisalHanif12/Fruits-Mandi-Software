@@ -63,6 +63,10 @@ err-name-ur-script = Write the Urdu name in Urdu letters.
 # PRD FR-7.28.
 # review: pending
 err-name-en-script = Write the English name in English letters.
+# PRD 10.2, Code Standards 4.2 (Tag). The code name is the backend's (plan 17e T1).
+# review: pending
+err-tag-invalid = The tag must be 1 to 4 English capital letters or dots, with at least one letter. For example K, BA or D.P.
+
 # review: pending
 err-name-too-long = The name is too long. Use at most { $max } characters.
 # review: pending
@@ -147,7 +151,7 @@ err-not-logged-in = Please sign in first.
 # review: pending
 err-session-locked = The app is locked. Type your password to unlock it.
 # review: pending
-err-not-found = This item was not found. Open the list again.
+err-not-found = This was not found. Open the page again and choose again.
 # PRD FR-7.66, E49.
 # review: pending
 err-spelling-unconfirmed = The spelling of these words is not confirmed: { $words }. Check the spelling, then confirm it or fix it.
@@ -328,7 +332,7 @@ err-nothing-to-sell = Nothing is left in this lot to sell.
 err-write-off-exceeds-balance = You cannot write off more than is left. Only { $available } { -nag } are left.
 
 # review: pending
-err-date-before-received = The day of the sale cannot be before the day the goods were received.
+err-date-before-received = The day cannot be before the day the goods were received.
 
 # review: pending
 err-qty-below-sold = The quantity received cannot be less than the quantity already sold from this lot.
@@ -520,6 +524,15 @@ err-update-changed = A different version is on offer now. Look for the new versi
 err-update-none = There is no newer version. The app is up to date.
 
 ## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
+
+# PRD FR-16.12: the fruit entry was cancelled already (it cannot be changed or cancelled again).
+# review: pending
+err-fruit-cancelled = This fruit entry was cancelled already, so it cannot be changed.
+
+# PRD 16.11, FR-12.22: fruit was taken from a lot of this sale, so the sale cannot be cancelled or undone.
+# $qty_taken: the نگ taken from its lots.
+# review: pending
+err-bikri-has-fruit = { $qty_taken } { -nag } of { -phal } were taken from a lot of this { -bikri }, so it cannot be cancelled. Cancel the { -phal } entry first.
 
 # PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
 # review: pending

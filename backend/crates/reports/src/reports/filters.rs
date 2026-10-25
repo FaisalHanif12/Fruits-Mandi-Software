@@ -58,6 +58,8 @@ pub(crate) struct Typed {
     pub(crate) status: Option<PaidFilter>,
     /// The statement with its detail lines.
     pub(crate) detail: bool,
+    /// Only the fruit taken for the shop's guests (R37).
+    pub(crate) guests_only: bool,
     /// What goes back to the screen.
     pub(crate) resolved: ResolvedFilters,
 }
@@ -185,6 +187,11 @@ pub(crate) fn resolve(
         "filters.garden_view",
     );
     refuse_unless(FilterKind::Detail, input.detail, "filters.detail");
+    refuse_unless(
+        FilterKind::Guests,
+        input.guests_only == Some(true),
+        "filters.guests_only",
+    );
     refuse_unless(
         FilterKind::GroupBy,
         input.group_by.is_some(),
@@ -405,6 +412,17 @@ pub(crate) fn resolve(
         }
     }
     typed.detail = takes.has(FilterKind::Detail) && input.detail;
+    if takes.has(FilterKind::Guests) && input.guests_only == Some(true) {
+        // The guests are no partner: both together can only mean a mistake.
+        if input.partner_id.is_some() {
+            problems.push(FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                "filters.guests_only",
+            ));
+        }
+        typed.guests_only = true;
+        typed.resolved.guests_only = Some(true);
+    }
     if takes.has(FilterKind::GroupBy) {
         typed.group_by = input.group_by.unwrap_or(GroupBy::Month);
         typed.resolved.group_by = Some(typed.group_by);

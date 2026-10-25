@@ -791,6 +791,7 @@ pub fn open_bill_rows(
                 CASE e.source_type
                     WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = e.source_id)
                     WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = e.source_id)
+                    WHEN 'fruit' THEN (SELECT x.number FROM fruit_takes x WHERE x.id = e.source_id)
                 END,
                 l.dr_paisa, {matched}
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
@@ -829,6 +830,7 @@ pub fn bill_rows_by_ids(conn: &Connection, line_ids: &[i64]) -> rusqlite::Result
                 CASE e.source_type
                     WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = e.source_id)
                     WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = e.source_id)
+                    WHEN 'fruit' THEN (SELECT x.number FROM fruit_takes x WHERE x.id = e.source_id)
                 END,
                 l.dr_paisa
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
@@ -1170,6 +1172,7 @@ pub fn credit_row(conn: &Connection, line_id: i64) -> rusqlite::Result<CreditRow
                 CASE e.source_type
                     WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = e.source_id)
                     WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = e.source_id)
+                    WHEN 'fruit' THEN (SELECT x.number FROM fruit_takes x WHERE x.id = e.source_id)
                 END,
                 l.cr_paisa,
                 COALESCE((SELECT SUM(a.amount_paisa) FROM advance_allocations a

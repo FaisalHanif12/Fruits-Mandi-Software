@@ -352,13 +352,14 @@ fn view_f_on_the_worked_day_is_the_partner_table_of_the_prd() {
         pick(&page.totals, &keys),
         vec![5_488, 3_000, 2_488, 0, 0, 0, 0, 2_488]
     );
-    // The gardens column is money (0 here); the fruit column is not built yet and is empty.
+    // The gardens and fruit columns are money (0 here: no garden and no fruit on the worked day).
     for r in data_rows(&page) {
-        assert!(matches!(
-            r.cells[column(&page, "gardens")],
-            Cell::Money { .. }
-        ));
-        assert!(matches!(r.cells[column(&page, "fruit")], Cell::Empty));
+        for key in ["gardens", "fruit"] {
+            assert!(matches!(
+                r.cells[column(&page, key)],
+                Cell::Money { paisa } if paisa.rupees() == 0
+            ));
+        }
     }
 }
 

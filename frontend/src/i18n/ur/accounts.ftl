@@ -199,6 +199,13 @@ accounts-field-name-ur = اردو نام
 # review: pending
 accounts-field-name-en = انگریزی نام
 
+# PRD 10.2, FR-7.25: English capital letters, never converted to Urdu.
+# review: pending
+accounts-field-tag = { -nishan }
+
+# review: pending
+accounts-field-tag-hint = اختیاری۔ 1 سے 4 انگریزی بڑے حروف، مثلاً K یا BA۔ یہ نام کے بعد دکھایا جاتا ہے اور ایک جیسے نام والے دو لوگوں میں فرق بتاتا ہے۔
+
 # review: pending
 accounts-field-father-ur = ولدیت یا فرم، اردو
 
@@ -258,6 +265,10 @@ accounts-field-note = نوٹ
 
 # review: pending
 accounts-similar-title = ملتے جلتے کھاتے پہلے سے موجود ہیں
+
+# PRD FR-10.7, E38.
+# review: pending
+accounts-similar-tag-help = ایک ہی نام کے دو لوگوں میں فرق نشان سے ہوتا ہے، مثلاً اسلم BA اور اسلم۔ صرف وہی نام، نشان اور فون ایک ہوں تو نیا کھاتہ دہرا مانا جاتا ہے۔
 
 ## The chart of accounts (PRD FR-10.1).
 

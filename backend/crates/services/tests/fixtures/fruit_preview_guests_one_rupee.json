@@ -1,0 +1,100 @@
+{
+  "numbers": {
+    "item": {
+      "id": 2,
+      "code": "2",
+      "name_ur": "سیب",
+      "name_en": "Apple"
+    },
+    "packing": {
+      "id": 1,
+      "code": "1",
+      "name_ur": "پیٹی",
+      "name_en": "Box"
+    },
+    "qty": 1,
+    "weight_grams": null,
+    "rate_paisa": 100,
+    "value_paisa": 100,
+    "value_working": {
+      "message_id": "working-fruit-value",
+      "args": [
+        {
+          "name": "qty",
+          "value": {
+            "kind": "count",
+            "value": 1
+          }
+        },
+        {
+          "name": "rate",
+          "value": {
+            "kind": "money",
+            "paisa": 100
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 100
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "parts": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "amount_paisa": 100,
+        "total_before_paisa": -73600,
+        "total_after_paisa": -73700
+      }
+    ],
+    "parts_working": {
+      "message_id": "working-fruit-guests",
+      "args": [
+        {
+          "name": "value",
+          "value": {
+            "kind": "money",
+            "paisa": 100
+          }
+        },
+        {
+          "name": "count",
+          "value": {
+            "kind": "count",
+            "value": 3
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 100
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "credit": {
+      "account": {
+        "id": 31,
+        "code": "030110003",
+        "name_ur": "حاجی نذیر",
+        "name_en": "Haji Nazeer"
+      },
+      "pukhta": null
+    },
+    "lot": null
+  },
+  "errors": [],
+  "warnings": [],
+  "rate_hint": null
+}

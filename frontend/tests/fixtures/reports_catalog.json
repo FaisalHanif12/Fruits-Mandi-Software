@@ -427,5 +427,19 @@
       "garden_view"
     ],
     "party_required": false
+  },
+  {
+    "id": "R37",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r37-title",
+    "filters": [
+      "date_range",
+      "partner",
+      "guests",
+      "item",
+      "garden"
+    ],
+    "party_required": false
   }
 ]

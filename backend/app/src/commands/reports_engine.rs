@@ -255,6 +255,7 @@ mod tests {
             number: Some(1),
             secondary_number: None,
             subject: None,
+            packing: None,
             reason: String::new(),
             amount_paisa: Some(rupees(amount)),
             running_paisa: rupees(running),

@@ -1,0 +1,188 @@
+{
+  "view": "K",
+  "title_id": "analytics-view-k-title",
+  "filters": {
+    "period": null,
+    "from": "2026-10-10",
+    "to": "2026-10-10",
+    "group_by": null,
+    "item": null,
+    "seller": null,
+    "buyer": null,
+    "city": null,
+    "adda": null,
+    "side": "both",
+    "compare": "off",
+    "compare_from": null,
+    "compare_to": null,
+    "partner": null,
+    "trip": null,
+    "garden": null,
+    "goods": "all",
+    "trip_view": null
+  },
+  "columns": [
+    {
+      "key": "for",
+      "title_id": "fruit-filter-for",
+      "kind": "names",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "own_shop",
+      "title_id": "fruit-source-own",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    },
+    {
+      "key": "other_shops",
+      "title_id": "fruit-source-other",
+      "kind": "money",
+      "heading": null,
+      "drill": null
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "number",
+          "value": 2
+        },
+        {
+          "type": "money",
+          "paisa": 116000
+        },
+        {
+          "type": "money",
+          "paisa": 116000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "key": {
+        "item_id": 1,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": 1,
+        "purchase_ids": []
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "label",
+          "id": "fruit-for-guests"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "سیب",
+            "en": "Apple"
+          }
+        },
+        {
+          "type": "number",
+          "value": 3
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        }
+      ],
+      "key": {
+        "item_id": 2,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": [],
+        "guests": true
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 5
+    },
+    {
+      "type": "money",
+      "paisa": 416000
+    },
+    {
+      "type": "money",
+      "paisa": 116000
+    },
+    {
+      "type": "money",
+      "paisa": 300000
+    }
+  ]
+}

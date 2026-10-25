@@ -1,7 +1,7 @@
 // Development page /dev/rokar (plan 17): the screens of the روکڑ area inside the app shell, answered
 // by a stand-in for the backend with the books of the PRD worked day (tests/helpers/cashbook-books.ts),
 // so they can be opened in a plain browser tab and photographed in both languages and at every window
-// size. The flags in the hash choose the screen: `?screen=book|expense|lent|khata|general|capital|statement|overview|day`, `&type=...` the
+// size. The flags in the hash choose the screen: `?screen=book|expense|fruit|lent|khata|general|capital|statement|overview|day`, `&type=...` the
 // type of an entry screen, `&empty`, `&cash`, `&repeat` (see dev-bridge-rokar.ts). Never shipped: the
 // route exists only when import.meta.env.DEV is true (app/router.tsx).
 
@@ -13,6 +13,7 @@ import { KhataPage } from '../../features/cashbook/pages/KhataPage';
 import { GeneralPage } from '../../features/cashbook/pages/GeneralPage';
 import { LentPage } from '../../features/cashbook/pages/LentPage';
 import { DayPage } from '../../features/day/pages/DayPage';
+import { FruitPage } from '../../features/fruit/pages/FruitPage';
 import { CapitalPage } from '../../features/partners/pages/CapitalPage';
 import { PartnersOverviewPage } from '../../features/partners/pages/PartnersOverviewPage';
 import { StatementPage } from '../../features/partners/pages/StatementPage';
@@ -49,6 +50,8 @@ function screenOf(name: string | null): DevScreen {
       return { main: 'rokar', id: 'lent', page: <LentPage /> };
     case 'khata':
       return { main: 'rokar', id: 'khata', page: <KhataPage /> };
+    case 'fruit':
+      return { main: 'rokar', id: 'expense', page: <FruitPage /> };
     default:
       return { main: 'rokar', id: 'cashbook', page: <CashbookPage /> };
   }

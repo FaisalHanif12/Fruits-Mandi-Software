@@ -1,0 +1,236 @@
+{
+  "report": "R37",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r37-title",
+  "firm": {
+    "name": "Maher Adnan and Brothers",
+    "mandi": "New Sabzi Mandi Kot Radha Kishan",
+    "address": "Kot Radha Kishan",
+    "phone": "03001234567"
+  },
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "10-10-2026"
+    }
+  ],
+  "printed_at": "10-10-2026 14:00",
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "for",
+      "title_id": "fruit-filter-for",
+      "kind": "names"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "weight",
+      "title_id": "fruit-col-weight",
+      "kind": "text"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "source",
+      "title_id": "fruit-col-source",
+      "kind": "label"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-fruit-taken",
+          "number": "1"
+        },
+        {
+          "type": "names",
+          "text": "Partner A"
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": "1",
+            "code": "030110001",
+            "name": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "text": "Banana"
+        },
+        {
+          "type": "names",
+          "text": "Box"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
+          "text": "2"
+        },
+        {
+          "type": "money",
+          "text": "580"
+        },
+        {
+          "type": "money",
+          "text": "1,160"
+        },
+        {
+          "type": "label",
+          "id": "fruit-source-own"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-fruit-taken",
+          "number": "2"
+        },
+        {
+          "type": "label",
+          "id": "fruit-for-guests"
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": "3",
+            "code": "030110003",
+            "name": "Haji Nazeer",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "text": "Apple"
+        },
+        {
+          "type": "names",
+          "text": "Box"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
+          "text": "3"
+        },
+        {
+          "type": "money",
+          "text": "1,000"
+        },
+        {
+          "type": "money",
+          "text": "3,000"
+        },
+        {
+          "type": "label",
+          "id": "fruit-source-other"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "2",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "text": "5"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "4,160"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null,
+  "footer_id": "print-page-label"
+}

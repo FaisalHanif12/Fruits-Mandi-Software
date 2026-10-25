@@ -130,7 +130,10 @@ pub struct StockRow {
     /// نگ written off.
     #[ts(type = "number")]
     pub qty_written_off: i64,
-    /// نگ left: received less sold less written off.
+    /// نگ taken as fruit (PRD FR-16.11, C16).
+    #[ts(type = "number")]
+    pub qty_taken: i64,
+    /// نگ left: received less sold, written off and taken (C16).
     #[ts(type = "number")]
     pub balance: i64,
     /// Whole days from `received_date` to today.

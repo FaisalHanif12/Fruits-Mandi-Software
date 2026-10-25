@@ -112,6 +112,13 @@
               }
             },
             {
+              "name": "packing",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
               "name": "voucher",
               "value": {
                 "type": "text",
@@ -161,6 +168,13 @@
             },
             {
               "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "packing",
               "value": {
                 "type": "text",
                 "text": ""
@@ -229,6 +243,13 @@
               }
             },
             {
+              "name": "packing",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
               "name": "voucher",
               "value": {
                 "type": "message",
@@ -294,6 +315,13 @@
             },
             {
               "name": "subject",
+              "value": {
+                "type": "text",
+                "text": ""
+              }
+            },
+            {
+              "name": "packing",
               "value": {
                 "type": "text",
                 "text": ""

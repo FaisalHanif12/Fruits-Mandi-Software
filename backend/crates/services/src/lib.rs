@@ -15,6 +15,7 @@ pub mod day;
 pub mod drafts;
 pub mod error;
 mod floor;
+pub mod fruit;
 pub mod gardens;
 pub mod khata;
 pub mod ledger;

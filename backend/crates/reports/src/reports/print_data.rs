@@ -616,6 +616,10 @@ pub(crate) fn filter_facts(
         };
         facts.push(fact(label, String::new()));
     }
+    // R37: only the fruit for the shop's guests. The label is the whole fact.
+    if filters.guests_only == Some(true) {
+        facts.push(fact(ids::FRUIT_FOR_GUESTS, String::new()));
+    }
     if id == ReportId::R14 {
         let label = if filters.detail {
             ids::FILTER_DETAIL

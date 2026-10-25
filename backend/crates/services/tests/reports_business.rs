@@ -60,7 +60,8 @@ fn the_business_group_is_in_the_catalogue_with_its_filters() {
             ReportId::R33,
             ReportId::R34,
             ReportId::R35,
-            ReportId::R36
+            ReportId::R36,
+            ReportId::R37
         ]
     );
     assert_eq!(

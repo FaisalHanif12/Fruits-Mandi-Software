@@ -1088,8 +1088,9 @@ fn r10_lists_the_lots_with_goods_left_like_the_stock_screen() {
     assert_eq!(page.rows.len(), 1);
     let row = &page.rows[0];
     assert_eq!(code_of(&row.cells[2]), "030110001");
-    assert_eq!(figures_of_cells(&row.cells, 5), vec![50, 20, 0, 30, 0]);
-    assert_eq!(figures_of_cells(&page.totals[..9], 5), [50, 20, 0, 30]);
+    // received, sold, written off, taken as fruit, balance, days (C16).
+    assert_eq!(figures_of_cells(&row.cells, 5), vec![50, 20, 0, 0, 30, 0]);
+    assert_eq!(figures_of_cells(&page.totals[..10], 5), [50, 20, 0, 0, 30]);
     // The screen shows the same lot with the same balance and days.
     let screen = bikri::stock_list(&w.env.ctx, &StockListInput::default()).unwrap();
     assert_eq!(screen.rows.len(), 1);
@@ -1110,7 +1111,8 @@ fn r10_lists_the_lots_with_goods_left_like_the_stock_screen() {
     // Two days later the goods have waited 2 days.
     set_today(&w.env, 2026, 10, 12);
     let later = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
-    assert_eq!(qty(&later.rows[0].cells[9]), 2);
+    // The days waiting are the last column (after the fruit taken and the balance).
+    assert_eq!(qty(&later.rows[0].cells[10]), 2);
 }
 
 #[test]
@@ -1124,7 +1126,7 @@ fn r10_also_lists_the_stock_of_a_trip_marked_with_the_own_goods_account() {
     assert!(
         matches!(&row.cells[1], Cell::Doc { number: Some(1), type_id } if type_id == "report-doc-purchase")
     );
-    assert_eq!(figures_of_cells(&row.cells, 5), vec![20, 15, 0, 5, 0]);
+    assert_eq!(figures_of_cells(&row.cells, 5), vec![20, 15, 0, 0, 5, 0]);
     let screen = bikri::stock_list(&w.env.ctx, &StockListInput::default()).unwrap();
     assert_eq!(screen.own_rows.len(), 1);
     assert_eq!(screen.own_rows[0].balance, 5);

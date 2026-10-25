@@ -94,6 +94,16 @@ pub(crate) const COL_RECEIVED: &str = "report-col-received";
 pub(crate) const COL_SOLD: &str = "report-col-sold";
 pub(crate) const COL_WRITTEN_OFF: &str = "report-col-written-off";
 pub(crate) const COL_BALANCE_QTY: &str = "report-col-balance-qty";
+// Fruit taken (plan d5-late, after D4R 17d): R10, R34 and R37.
+pub(crate) const COL_FRUIT_TAKEN: &str = "report-col-fruit-taken";
+pub(crate) const R34_FRUIT_TAKEN: &str = "report-r34-fruit-taken";
+/// Words the fruit screen already has, used as they are by the register and its header.
+pub(crate) const FRUIT_FOR_GUESTS: &str = "fruit-for-guests";
+pub(crate) const FRUIT_SOURCE_OWN: &str = "fruit-source-own";
+pub(crate) const FRUIT_SOURCE_OTHER: &str = "fruit-source-other";
+pub(crate) const COL_FRUIT_FOR: &str = "fruit-filter-for";
+pub(crate) const COL_FRUIT_SOURCE: &str = "fruit-col-source";
+pub(crate) const COL_FRUIT_WEIGHT: &str = "fruit-col-weight";
 pub(crate) const COL_DAYS_WAITING: &str = "report-col-days-waiting";
 pub(crate) const COL_TRIP: &str = "report-col-trip";
 pub(crate) const COL_PURCHASE: &str = "report-col-purchase";

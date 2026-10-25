@@ -149,6 +149,11 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
             <Num>{String(lot.qty_written_off)}</Num>
           </Fact>
         )}
+        {lot.qty_taken === 0 ? null : (
+          <Fact label={<Localized id="bikri-saved-qty-taken" />}>
+            <Num>{String(lot.qty_taken)}</Num>
+          </Fact>
+        )}
         {purchase === null ? null : (
           <Fact label={<Localized id="bikri-saved-purchase" />}>
             <LinkButton

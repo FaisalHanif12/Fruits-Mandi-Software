@@ -109,6 +109,41 @@ describe.each(LANGUAGES)('the garden lines of a partner statement (%s)', (langua
     expect(cellOf(grid(), 4, 'detail')).not.toBeNull();
   });
 
+  it('a closing that posted nothing for him is a note: no amount, the running total stays, the words are the same', async () => {
+    // The backend sends such a closing with amount null and the same values (his part and his money
+    // back are 0): the running total is the one before it.
+    const statement = real.PARTNERS_STATEMENT_GARDEN_ALIF;
+    const closing = statement.lines[4];
+    const before = statement.lines[3];
+    if (closing === undefined || before === undefined) throw new Error('no lines');
+    vi.mocked(partnersApi.partnersStatement).mockResolvedValue({
+      ...statement,
+      lines: [
+        ...statement.lines.slice(0, 4),
+        {
+          ...closing,
+          amount_paisa: null,
+          running_paisa: before.running_paisa,
+          values: { ...closing.values, part_paisa: 0, back_paisa: 0 },
+        },
+      ],
+    });
+    await open();
+    expect(textOf(grid(), 4, 'amount')).toBe('');
+    expect(textOf(grid(), 4, 'running')).toBe(textOf(grid(), 3, 'running'));
+    expect(textOf(grid(), 4, 'detail')).toBe(
+      message(language, 'partners-statement-detail-garden-closed', {
+        garden,
+        cost: '55,000',
+        sales: '66,400',
+        result: '11,400',
+        share: '60',
+        part: '0',
+        back: '0',
+      }),
+    );
+  });
+
   it('the line of the sale in the sale book still reads as before', async () => {
     await open();
     expect(textOf(grid(), 3, 'detail')).toBe(

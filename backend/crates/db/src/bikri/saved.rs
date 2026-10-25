@@ -212,6 +212,7 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let qty_received: i64 = c.get()?;
     let qty_sold: i64 = c.get()?;
     let qty_written_off: i64 = c.get()?;
+    let qty_taken: i64 = c.get()?;
     let weight_received_grams: Option<i64> = c.get()?;
     let freight = c.paisa()?;
     let at = c.at;
@@ -255,6 +256,7 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
         qty_received,
         qty_sold,
         qty_written_off,
+        qty_taken,
         weight_received_grams,
         freight,
         freight_paid_by: FreightPaidBy::parse(&paid_by)
@@ -379,7 +381,7 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
                 l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 l.marka_id, mk.mark_text, l.store_id, l.qty_received, l.qty_sold, l.qty_written_off,
-                l.weight_received_grams, l.freight_paisa, l.freight_paid_by,
+                l.qty_taken, l.weight_received_grams, l.freight_paisa, l.freight_paid_by,
                 l.labour_paisa, l.labour_method, l.labour_value_paisa, l.labour_rule_id,
                 l.munshiana_paisa, l.munshiana_method, l.munshiana_value_paisa, l.munshiana_rule_id,
                 l.phone_paisa, l.phone_method, l.phone_value_paisa, l.phone_rule_id,

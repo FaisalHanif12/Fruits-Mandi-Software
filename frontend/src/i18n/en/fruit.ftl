@@ -35,9 +35,9 @@ fruit-source-other-help = Fruit from another { -arhti }'s shop. His account is c
 fruit-field-lot = { -lot }
 # review: pending
 fruit-lot-hint = Only lots with goods left are offered.
-# $bikri, $lot: the numbers; $item, $packing, $seller: names; $left: the lot's balance.
+# $bikri, $lot: the numbers; $item, $packing, $seller: names; $remaining: the lot's balance.
 # review: pending
-fruit-lot-option = { -bikri } { $bikri }, { -lot } { $lot }: { $item }, { $packing }, { $seller }, { $left } left
+fruit-lot-option = { -bikri } { $bikri }, { -lot } { $lot }: { $item }, { $packing }, { $seller }, { $remaining } left
 # review: pending
 fruit-lot-empty = No lot has goods left
 # review: pending
@@ -50,9 +50,9 @@ fruit-agent-hint = The seller account of the other commission agent. Add it with
 fruit-item-from-lot = Taken from the lot
 # review: pending
 fruit-field-qty = Quantity
-# $left: the lot's balance, from the backend.
+# $remaining: the lot's balance, from the backend.
 # review: pending
-fruit-qty-left = The lot has { $left } left
+fruit-qty-left = The lot has { $remaining } left
 # review: pending
 fruit-field-weight = Weight (kg)
 # review: pending
@@ -73,9 +73,10 @@ fruit-numbers-incomplete = The figures show when the form is complete.
 fruit-numbers-failed = The figures could not be worked out
 # review: pending
 fruit-numbers-value = Value
-# $name: the lot's seller, or the other agent.
 # review: pending
-fruit-numbers-credit = Credited to { $name }
+fruit-numbers-credit = Credited to
+# review: pending
+fruit-numbers-lot-before = Balance of the lot now
 # review: pending
 fruit-numbers-lot-after = Balance of the lot after
 # $name: the partner.
@@ -85,6 +86,19 @@ fruit-parts-title-home = Comes off the { -kul-raqam } of { $name }
 fruit-parts-title-guests = Shared equally between the partners
 # review: pending
 fruit-parts-note = A rupee that does not divide goes to the partner made first. The { -commission } shares are not used.
+# $remaining: the lot's balance, from the backend.
+# review: pending
+fruit-lot-left = { $remaining } left
+# review: pending
+fruit-parts-col-partner = Partner
+# review: pending
+fruit-parts-col-amount = Part
+# review: pending
+fruit-parts-col-now = { -kul-raqam } now
+# review: pending
+fruit-parts-col-after = { -kul-raqam } after
+# review: pending
+fruit-field-reason = Why is it changed
 
 ## Saving, editing and cancelling (PRD FR-16.12).
 # $number: the number of the entry in its own series.
@@ -138,6 +152,11 @@ fruit-col-item = { -qism-maal } and { -packing }
 # review: pending
 fruit-col-qty = { -nag }
 # review: pending
+fruit-col-weight = Weight (kg)
+# $lot: the بکری number and the lot number, for example 1-2.
+# review: pending
+fruit-from-lot = { -lot } { $lot }
+# review: pending
 fruit-col-rate = Rate
 # review: pending
 fruit-col-value = Value
@@ -145,19 +164,28 @@ fruit-col-value = Value
 fruit-col-source = From where
 # review: pending
 fruit-col-from = From
+# $name: the partner or the guests. A cancelled entry says so in the first column of the list.
 # review: pending
-fruit-col-state = State
+fruit-for-cancelled = { $name }, cancelled
 # review: pending
-fruit-state-cancelled = Cancelled
-# review: pending
-fruit-filter-for = For
+fruit-filter-for = Partner or guests
 # review: pending
 fruit-filter-for-all = Everyone
 # review: pending
-fruit-filter-item = { -qism-maal }
+fruit-filter-item = Item in the list
 # review: pending
 fruit-filter-item-all = All items
 # review: pending
 fruit-filter-from = From
 # review: pending
 fruit-filter-to = To
+# review: pending
+fruit-period-today = Today
+# review: pending
+fruit-period-month = This month
+# review: pending
+fruit-period-year = This year
+# review: pending
+fruit-period-all = All days
+# review: pending
+fruit-list-select-help = Move to an entry and press Enter to change it.

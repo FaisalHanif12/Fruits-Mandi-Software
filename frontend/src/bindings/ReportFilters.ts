@@ -88,4 +88,9 @@ export type ReportFilters = {
    * One بکری (R1, the sale book). Required there.
    */
   bikri_id: number | null;
+  /**
+   * Only the fruit taken for the shop's guests (R37). Missing or false means every entry; with
+   * true the partner filter must be empty.
+   */
+  guests_only?: boolean;
 };

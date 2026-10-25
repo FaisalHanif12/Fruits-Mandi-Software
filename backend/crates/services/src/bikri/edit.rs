@@ -202,6 +202,7 @@ fn check_first(
                 last_lot_no = found.lot_no;
                 // A lot that other postings or write-offs rest on keeps its seller and item.
                 let others = found.qty_written_off > 0
+                    || found.qty_taken > 0
                     || found
                         .sales
                         .iter()
@@ -211,6 +212,22 @@ fn check_first(
                         &format!("lots[{index}].seller_account_id"),
                         "lot_seller_locked",
                     ));
+                }
+                // The one-time seller of a lot that fruit was taken from keeps his name and phone:
+                // the fruit credit rests on his person key (plan 17d).
+                if found.qty_taken > 0
+                    && let Some(stored_person) = found.pukhta.as_ref()
+                {
+                    // The key is made the way the save makes it (names and phone cleaned first); a
+                    // person who cannot be cleaned is left to the normal name checks.
+                    let same = mandi_domain::bikri::clean_person(&lot.pukhta)
+                        .is_none_or(|clean| clean.key == stored_person.person_key);
+                    if !same {
+                        errors.push(not_allowed(
+                            &format!("lots[{index}].pukhta"),
+                            "lot_seller_locked",
+                        ));
+                    }
                 }
                 // The purchase of an own lot never changes: its stock and cost rest on it.
                 if lot.purchase_id != found.purchase.as_ref().map(|p| p.id) {
@@ -576,8 +593,14 @@ fn write_edit(
                     &LotCharges::of_totals(shaped.totals),
                     posting_sums(shaped)?,
                 )?;
-                let columns =
-                    lot_columns(detail.id, next_lot_no, shaped, person.as_ref(), &running)?;
+                let columns = lot_columns(
+                    tx,
+                    detail.id,
+                    next_lot_no,
+                    shaped,
+                    person.as_ref(),
+                    &running,
+                )?;
                 lot_ids.push(repo::insert_lot(tx, &columns, user, &now)?);
                 next_lot_no = next_lot_no
                     .checked_add(1)
@@ -638,7 +661,8 @@ fn write_edit(
                     .find(|l| Some(l.id) == shaped.lot.lot_id)
                     .map(|l| l.lot_no)
                     .ok_or_else(|| data("a lot of an edit is not in its بکری"))?;
-                let columns = lot_columns(detail.id, lot_no, shaped, person.as_ref(), &running)?;
+                let columns =
+                    lot_columns(tx, detail.id, lot_no, shaped, person.as_ref(), &running)?;
                 edit_repo::update_lot(tx, *lot_id, &columns, user, &now)?;
             }
             repo::set_lot_first_entry(tx, *lot_id, new_entry_id, user, &now)?;

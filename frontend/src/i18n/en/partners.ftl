@@ -389,6 +389,23 @@ partners-statement-detail-garden-paid = { $garden }: { $reason }, { -dukan-se }
 # review: pending
 partners-statement-detail-garden-closed = { $garden } closed: cost { $cost }, sales { $sales }, result { $result }, your { $share }%: { $part }, { -wapsi } { $back }
 
+# A fruit line in a partner's statement (PRD FR-17.10, plan 17d): the fruit he took home, or his
+# equal part of the fruit served to the shop's guests (C27).
+# review: pending
+partners-statement-heading-fruit = { -phal }
+
+# $for: home or guests; $subject: the item; $qty, $packing, $rate: what was taken; $value: the whole
+# value (the amount of the line is his part).
+# review: pending
+partners-statement-detail-fruit-taken = { $for ->
+    [guests] { -phal } for { -mehman }: { $subject } { $qty } { $packing } @ { $rate } = { $value }, your equal part
+   *[home] { -phal } for home: { $subject } { $qty } { $packing } @ { $rate } = { $value }
+}
+
+# $fruit: the entry's number. The details of an entry are shown only for the posting in force.
+# review: pending
+partners-statement-detail-fruit-earlier = { -phal } { $fruit }: an earlier posting of an entry that was changed or cancelled, or its reversal
+
 # review: pending
 partners-statement-detail-other = { $reason }
 

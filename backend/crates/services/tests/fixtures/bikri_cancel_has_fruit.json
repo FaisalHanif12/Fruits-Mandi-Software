@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_BIKRI_HAS_FRUIT",
+      "field": "id",
+      "values": {
+        "qty_taken": 3
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

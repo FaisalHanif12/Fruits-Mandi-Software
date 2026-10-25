@@ -62,7 +62,7 @@ function seriesOf(line: StatementLine): string | undefined {
   return VOUCHER_SERIES[line.detail];
 }
 
-/** The word of the group a line belongs to (the heading). Fruit comes with its own plan (D4R). */
+/** The word of the group a line belongs to (the heading). */
 export function headingText(line: StatementLine, say: StatementSay): string {
   const id = `partners-statement-heading-${idPart(line.heading)}`;
   return say.exists(id) ? say.text(id) : say.text('partners-statement-heading-other');
@@ -82,8 +82,23 @@ function secondaryText(line: StatementLine, say: StatementSay): string {
   }
 }
 
+/**
+ * A fruit line of an entry that was changed or cancelled since: the backend gives the details
+ * (item, packing, values) only for the posting in force, so an older posting and its reversal have
+ * the number only (PRD FR-17.10). They read as that, never as a sentence with holes.
+ */
+function isOldFruitLine(line: StatementLine): boolean {
+  return line.detail === 'fruit_taken' && line.values['qty'] === undefined;
+}
+
 /** The sentence of a line, from its detail and the numbers the backend sent. */
 export function detailText(line: StatementLine, say: StatementSay): string {
+  if (isOldFruitLine(line)) {
+    const number = line.number === null ? '' : String(line.number);
+    return say.text('partners-statement-detail-fruit-earlier', {
+      fruit: number === '' ? '' : say.text('fruit-number', { number }),
+    });
+  }
   const id = `partners-statement-detail-${idPart(line.detail)}`;
   if (!say.exists(id)) {
     return say.text('partners-statement-detail-other', { reason: line.reason });
@@ -93,6 +108,8 @@ export function detailText(line: StatementLine, say: StatementSay): string {
   vars['number'] = number;
   vars['reason'] = line.reason;
   vars['subject'] = line.subject === null ? '' : displayName(line.subject, say.language);
+  // The packing of a fruit line (PRD FR-17.10): "2 پیٹی مالٹا @ 1,400". Null on every other line.
+  vars['packing'] = line.packing === null ? '' : displayName(line.packing, say.language);
   const series = seriesOf(line);
   vars['voucher'] =
     series === undefined || line.number === null

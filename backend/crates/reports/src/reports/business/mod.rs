@@ -7,6 +7,7 @@
 
 pub(crate) mod day;
 mod expenses;
+pub(crate) mod fruit;
 mod gardens;
 mod income;
 pub(crate) mod lent;
@@ -16,6 +17,7 @@ pub(crate) mod trips;
 
 pub(super) use day::run as run_r34;
 pub(super) use expenses::run as run_r29;
+pub(super) use fruit::run as run_r37;
 pub(super) use gardens::run as run_r36;
 pub(super) use income::{page_query as r28_page_query, run as run_r28};
 pub(super) use lent::run as run_r32;

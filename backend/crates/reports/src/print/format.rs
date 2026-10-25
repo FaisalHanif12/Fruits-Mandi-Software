@@ -87,17 +87,7 @@ impl NumberStyle {
     /// A weight in grams as kg with up to 3 decimals and no trailing zeros: 12,345 → `12.345`,
     /// 12,500 → `12.5`, 12,000 → `12`.
     pub(crate) fn kilos(self, grams: i64) -> String {
-        let sign = if grams < 0 { "-" } else { "" };
-        let grams = grams.unsigned_abs();
-        let whole = grams / 1_000;
-        let fraction = grams % 1_000;
-        let text = if fraction == 0 {
-            format!("{sign}{whole}")
-        } else {
-            let fraction = format!("{fraction:03}");
-            format!("{sign}{whole}.{}", fraction.trim_end_matches('0'))
-        };
-        self.digits(text)
+        self.digits(kilos_text(grams))
     }
 
     /// Turns the digits 0-9 into ۰-۹ when this print uses Urdu digits. Every other character
@@ -108,6 +98,22 @@ impl NumberStyle {
         } else {
             text
         }
+    }
+}
+
+/// A weight in grams as kg with up to 3 decimals and no trailing zeros, in English digits:
+/// 12,345 → `12.345`, 12,500 → `12.5`, 12,000 → `12`. Text work on the digits, no arithmetic on
+/// a float. A report page cell holds it as text; a print may turn the digits into Urdu ones.
+pub(crate) fn kilos_text(grams: i64) -> String {
+    let sign = if grams < 0 { "-" } else { "" };
+    let grams = grams.unsigned_abs();
+    let whole = grams / 1_000;
+    let fraction = grams % 1_000;
+    if fraction == 0 {
+        format!("{sign}{whole}")
+    } else {
+        let fraction = format!("{fraction:03}");
+        format!("{sign}{whole}.{}", fraction.trim_end_matches('0'))
     }
 }
 

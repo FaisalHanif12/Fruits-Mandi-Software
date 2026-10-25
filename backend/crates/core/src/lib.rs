@@ -19,6 +19,7 @@ pub mod drafts;
 pub mod english_words;
 pub mod error;
 pub mod expenses;
+pub mod fruit;
 pub mod gardens;
 pub mod general;
 pub mod ids;

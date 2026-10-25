@@ -1,6 +1,7 @@
 // Which route each menu item opens, and which item a route belongs to (PRD FR-5.2, FR-5.3).
 // Menu items whose module is not built yet open the "coming soon" page.
 
+import { EXPENSE_TABS } from '../features/cashbook/expense-tabs';
 import { asScreenType } from '../features/vouchers/screen-type';
 import type { MainNavId } from './layout/MainNav';
 import type { ModuleMenuId, RokarMenuId } from './layout/ModuleMenu';
@@ -49,8 +50,9 @@ export const PARTNERS_ROUTES = {
   statement: '/partners/statement',
 } as const;
 
-/** The روکڑ side menu item a path belongs to. */
+/** The روکڑ side menu item a path belongs to. The پھل tab belongs to خرچہ (PRD 16.7). */
 export function rokarMenuOf(pathname: string): RokarMenuId {
+  if (EXPENSE_TABS.some((tab) => tab.path === pathname)) return 'expense';
   const found = (Object.keys(ROKAR_ROUTES) as RokarMenuId[]).find(
     (id) => id !== 'cashbook' && ROKAR_ROUTES[id] === pathname,
   );

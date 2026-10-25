@@ -1,0 +1,89 @@
+{
+  "id": 1,
+  "number": 1,
+  "version": 4,
+  "journal_entry_id": 7,
+  "reversal_entry_id": 6,
+  "preview": {
+    "numbers": {
+      "item": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 3,
+      "weight_grams": null,
+      "rate_paisa": 58000,
+      "value_paisa": 174000,
+      "value_working": {
+        "message_id": "working-fruit-value",
+        "args": [
+          {
+            "name": "qty",
+            "value": {
+              "kind": "count",
+              "value": 3
+            }
+          },
+          {
+            "name": "rate",
+            "value": {
+              "kind": "money",
+              "paisa": 58000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 174000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "amount_paisa": 174000,
+          "total_before_paisa": 42400,
+          "total_after_paisa": -131600
+        }
+      ],
+      "parts_working": null,
+      "credit": {
+        "account": {
+          "id": 18,
+          "code": "030110001",
+          "name_ur": "رحیم",
+          "name_en": "Rahim"
+        },
+        "pukhta": null
+      },
+      "lot": {
+        "lot_id": 1,
+        "balance_before": 5,
+        "balance_after": 2
+      }
+    },
+    "errors": [],
+    "warnings": [],
+    "rate_hint": {
+      "rate_paisa": 58000,
+      "source": "today",
+      "date": "2026-10-10"
+    }
+  }
+}

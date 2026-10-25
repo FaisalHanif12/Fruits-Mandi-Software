@@ -1,5 +1,7 @@
 //! Analytics (plan 21, PRD 18, NFR-SPD-12, NFR-SPD-24): the views A by item, B by seller, C by
-//! buyer, D item by period, E seller by item and H top 10, over the sale facts.
+//! buyer, D item by period, E seller by item and H top 10, over the sale facts; F by partner,
+//! G trend, I gardens, J trips and K fruit taken, over the share rows, the journal and their own
+//! tables.
 //!
 //! - [`catalog`] lists the views with the filters each takes;
 //! - [`run`] reads and checks the filters, and returns one page of typed rows with the number
@@ -12,8 +14,7 @@
 //! Analytics reads posted records only and writes nothing but the saved views, which are
 //! preferences and keep no figure (PRD FR-18.8). Sales figures are the stored values of the sale
 //! lines, summed from `analytics_facts` with their sign, never worked out again with today's
-//! rules (FR-18.6); a cancelled posting cancels itself out (FR-18.7). The views for partners,
-//! gardens, trips and fruit (F, G, I, J, K) and their filters come with the later plans.
+//! rules (FR-18.6); a cancelled posting cancels itself out (FR-18.7).
 //!
 //! Example (the worked day, view A, no filters): کیلا 3,928 (72.10%) and سیب 1,520 (27.90%) of
 //! 5,448 total commission, the same as the dashboard.
@@ -22,6 +23,7 @@ mod buyer;
 mod calc;
 mod facts;
 mod filters;
+mod fruit;
 mod gardens;
 mod ids;
 mod item;
@@ -52,18 +54,18 @@ pub use calc::{average_days, share_hundredths};
 pub use model::{
     AnalyticsCatalogEntry, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind,
     AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey,
-    AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsPage, AnalyticsPeriod, AnalyticsPrintColumn,
-    AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintInput, AnalyticsPrintRow,
-    AnalyticsResolvedFilters, AnalyticsRow, AnalyticsRunInput, AnalyticsSavedView, AnalyticsSide,
-    AnalyticsTripView, AnalyticsView, AnalyticsViewsSaveInput,
+    AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsPage, AnalyticsPartnerMoney, AnalyticsPeriod,
+    AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintInput,
+    AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsRow, AnalyticsRunInput,
+    AnalyticsSavedView, AnalyticsSide, AnalyticsTripView, AnalyticsView, AnalyticsViewsSaveInput,
 };
 pub use store::{MAX_NAME_LETTERS, MAX_VIEWS, PREF_KEY, views_get, views_save};
 
 use filters::{Typed, resolve};
 use table::Table;
 
-/// The views of the catalogue, in order. K (fruit taken) comes with plan 17d.
-const VIEWS: [AnalyticsView; 10] = [
+/// The views of the catalogue, in order.
+const VIEWS: [AnalyticsView; 11] = [
     AnalyticsView::A,
     AnalyticsView::B,
     AnalyticsView::C,
@@ -74,6 +76,7 @@ const VIEWS: [AnalyticsView; 10] = [
     AnalyticsView::H,
     AnalyticsView::I,
     AnalyticsView::J,
+    AnalyticsView::K,
 ];
 
 /// The filters a view takes (PRD 18.1). Views D and G take the grouping, view J the layout of its
@@ -92,6 +95,17 @@ fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
             AnalyticsFilterKind::Side,
             AnalyticsFilterKind::Partner,
             AnalyticsFilterKind::Garden,
+        ];
+    }
+    // Fruit taken is picked by the day, the item, a partner (or the guests row), a garden whose lot
+    // it came from, and the kind of goods.
+    if view == AnalyticsView::K {
+        return vec![
+            AnalyticsFilterKind::Period,
+            AnalyticsFilterKind::Item,
+            AnalyticsFilterKind::Partner,
+            AnalyticsFilterKind::Garden,
+            AnalyticsFilterKind::Goods,
         ];
     }
     let mut kinds = vec![
@@ -166,6 +180,7 @@ fn build_in(
         AnalyticsView::H => top::run(conn, &typed, spec)?,
         AnalyticsView::I => gardens::run(conn, &typed, spec)?,
         AnalyticsView::J => trips::run(conn, &typed, spec)?,
+        AnalyticsView::K => fruit::run(conn, &typed, spec)?,
     };
     Ok((typed, table))
 }

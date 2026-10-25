@@ -37,7 +37,7 @@ The header and footer on every D5 report, analytics print and list print (D5 reu
 
 ## 8. Open questions
 
-None (team reading of R5 and the buyer slips is in `changes-v1.7.md` Section 7).
+None. The team reading of R5 and the buyer slips (slips show a named buyer's نقدی lines; R5 lists credit buyers only) was left to the lead by Umar on 25-10-2026 and is decided as built here (`changes-v1.7.md` Section 7). It stays in the DONE REPORT list.
 
 ## 10. Contract as built in T1
 

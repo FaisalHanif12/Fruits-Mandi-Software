@@ -186,6 +186,8 @@ pub(crate) fn merge(
         not_item_ids,
         partner_id,
         purchase_ids,
+        guests: row_key.guests.or(other.guests),
+        money: row_key.money.or(other.money),
     })
 }
 
@@ -229,10 +231,37 @@ pub(crate) fn run(
     input: &AnalyticsLinesInput,
     spec: PageSpec,
 ) -> Result<AnalyticsLinesPage, ReportsError> {
+    // The fields of a key that belong to one view are refused on any other (code standards V0).
+    let mut problems = Vec::new();
+    for (key, field) in [
+        (Some(&input.row_key), "row_key"),
+        (input.column_key.as_ref(), "column_key"),
+    ] {
+        let Some(key) = key else { continue };
+        if key.money.is_some() && input.view != super::model::AnalyticsView::F {
+            problems.push(FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                &format!("{field}.money"),
+            ));
+        }
+        if key.guests.is_some() && input.view != super::model::AnalyticsView::K {
+            problems.push(FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                &format!("{field}.guests"),
+            ));
+        }
+    }
+    if !problems.is_empty() {
+        return Err(ReportsError::Rejected(problems));
+    }
     let key = merge(&input.row_key, input.column_key.as_ref())?;
     // View F opens the share rows of a partner, not sale facts.
     if input.view == super::model::AnalyticsView::F {
         return super::partner_lines::run(conn, typed, &key, input, spec);
+    }
+    // View K opens the fruit entries, not sale facts.
+    if input.view == super::model::AnalyticsView::K {
+        return super::fruit::lines(conn, typed, &key, input, spec);
     }
     // The lines behind a row of view J are the sale facts its commission was made from: under the
     // same filters, in no date range (money agent M2), so they add up to the number opened.

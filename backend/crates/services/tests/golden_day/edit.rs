@@ -401,7 +401,7 @@ fn e2e_15_cancel_bikri_2_reverses_everything_and_keeps_the_books_balanced() {
 }
 
 /// Event 1 with only 45 of 50 sold: اکرم 20 at 600, ارشد 25 at 580 (E2E-16).
-fn event1_part_sold(w: &support::World) -> BikriDraft {
+pub(super) fn event1_part_sold(w: &support::World) -> BikriDraft {
     let mut draft = support::event1(w);
     draft.lots[0].sales[1].qty = "25".into();
     draft
@@ -525,4 +525,86 @@ fn e2e_16_and_16b_a_part_sold_bikri_and_its_later_sale() {
     assert_eq!(trial.total_dr, trial.total_cr);
     ledger::verify_journal_chain(&w.env.ctx).unwrap();
     assert_chain_ok(&w.dir);
+}
+
+#[test]
+fn a_lot_balance_subtracts_the_fruit_taken_in_every_place_c16() {
+    // C16: balance = received - sold - written off - taken. After E2E-16 the lot has 5 left; 2 of
+    // them are taken as fruit (plan 17d writes `qty_taken`; here it is set directly).
+    use mandi_services::core::bikri::WriteOffInput;
+    let w = worked_day();
+    let saved = save_ok(&w, &event1_part_sold(&w), false);
+    raw(&w.dir)
+        .execute("UPDATE bikri_lots SET qty_taken = 2 WHERE id = 1", [])
+        .unwrap();
+    // باقی مال shows 3 left and the 2 taken.
+    let stock = bikri::stock_list(&w.env.ctx, &StockListInput::default()).unwrap();
+    let row = &stock.rows[0];
+    assert_eq!(
+        (
+            row.qty_received,
+            row.qty_sold,
+            row.qty_written_off,
+            row.qty_taken,
+            row.balance
+        ),
+        (50, 45, 0, 2, 3)
+    );
+    assert_eq!(stock.balance_total, 3);
+    // The saved lot carries the same figure.
+    let detail = bikri::get(&w.env.ctx, saved.bikri_id).unwrap();
+    assert_eq!(detail.lots[0].qty_taken, 2);
+    // A later sale of 4 is refused (3 left); a sale of 3 is allowed.
+    set_today(&w.env, 2026, 10, 11);
+    let later = |qty: &str| {
+        let mut line = support::sale("s-3", w.arshad, qty, "560");
+        line.sale_id = None;
+        bikri::later_sale_preview(
+            &w.env.ctx,
+            &LaterSaleInput {
+                lot_id: row.lot_id,
+                date: "11-10-2026".into(),
+                sales: vec![line],
+            },
+        )
+        .unwrap()
+    };
+    assert!(
+        later("4")
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsLot),
+        "4 is more than the 3 left"
+    );
+    assert!(later("3").errors.is_empty());
+    // A write-off of 4 is refused with 3 available.
+    let error = bikri::write_off(
+        &w.env.ctx,
+        &w.owner,
+        &WriteOffInput {
+            lot_id: row.lot_id,
+            qty: "4".into(),
+            reason: "spoiled".into(),
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.code(), ErrorCode::ErrWriteOffExceedsBalance);
+    // A write-off of 3 empties the lot: nothing is left in باقی مال.
+    let done = bikri::write_off(
+        &w.env.ctx,
+        &w.owner,
+        &WriteOffInput {
+            lot_id: row.lot_id,
+            qty: "3".into(),
+            reason: "spoiled".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!((done.qty_written_off, done.balance), (3, 0));
+    assert!(
+        bikri::stock_list(&w.env.ctx, &StockListInput::default())
+            .unwrap()
+            .rows
+            .is_empty()
+    );
 }

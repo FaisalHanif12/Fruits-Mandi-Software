@@ -155,5 +155,16 @@
       "partner",
       "trip_view"
     ]
+  },
+  {
+    "id": "K",
+    "title_id": "analytics-view-k-title",
+    "filters": [
+      "period",
+      "item",
+      "partner",
+      "garden",
+      "goods"
+    ]
   }
 ]

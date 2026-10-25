@@ -212,6 +212,22 @@ pub fn account_is_closed(conn: &Connection, account_id: i64) -> rusqlite::Result
     )
 }
 
+/// True once a garden's shares are fixed: it has an entry of its own (an installment, a cost, a sale
+/// in another shop), or its account has a posted line, for example the seller credit of a بکری lot
+/// sold into it (PRD FR-12.29, E66, Umar 25-10-2026).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn shares_locked(conn: &Connection, garden_id: i64) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM venture_entries WHERE venture_id = ?1)
+             OR EXISTS (SELECT 1 FROM journal_lines l JOIN ventures v ON v.account_id = l.account_id
+                        WHERE v.id = ?1)",
+        [garden_id],
+        |r| r.get(0),
+    )
+}
+
 /// Whether a بکری has a lot whose seller is the account of a closed garden (PRD FR-12.38): such a
 /// بکری cannot be edited or cancelled until the closing is undone.
 ///

@@ -57,6 +57,11 @@
       "kind": "number"
     },
     {
+      "key": "fruit_taken",
+      "title_id": "report-col-fruit-taken",
+      "kind": "number"
+    },
+    {
       "key": "balance",
       "title_id": "report-col-balance-qty",
       "kind": "number"
@@ -119,6 +124,10 @@
         },
         {
           "type": "number",
+          "value": 0
+        },
+        {
+          "type": "number",
           "value": 30
         },
         {
@@ -160,6 +169,10 @@
     {
       "type": "number",
       "value": 20
+    },
+    {
+      "type": "number",
+      "value": 0
     },
     {
       "type": "number",

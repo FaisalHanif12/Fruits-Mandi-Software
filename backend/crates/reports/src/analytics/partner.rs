@@ -16,9 +16,14 @@
 //!   running cost (a debit) and his part of the closing (a credit, a debit in a loss closing). A
 //!   garden's sales credit the garden's own account, not his, so they come to him only at the
 //!   closing. A pocket part posts nothing.
-//! * **Fruit.** The column exists and stays empty until fruit taken is merged (plan 17d).
-//! * **Other.** Whatever else is on his 0604 account in the period (a جنرل line, and until plan
-//!   17d a fruit line), so the columns always add up to his whole 0604 net.
+//! * **Fruit.** The credits less the debits on his 0604 account made by fruit postings in the
+//!   period: the fruit he took home (a debit of its value) and his equal part of the fruit served
+//!   to the shop's guests (C27, a debit of his part), so it is negative. It is read from the
+//!   journal, the books, and the parts of all partners add up to minus the value of the fruit
+//!   entries of view K. Entries that were reversed, with their reversal, are left out (the live
+//!   entries), so an edited or cancelled entry counts once or not at all.
+//! * **Other.** Whatever else is on his 0604 account in the period (a جنرل line), so the columns
+//!   always add up to his whole 0604 net.
 //! * **Net change.** Profit share plus the whole 0604 net: what his کل رقم changed by in the
 //!   period (C22), without capital and without money taken.
 //!
@@ -33,7 +38,7 @@ use mandi_db::rusqlite::{Connection, params};
 
 use super::filters::Typed;
 use super::ids;
-use super::model::AnalyticsKey;
+use super::model::{AnalyticsKey, AnalyticsPartnerMoney};
 use super::table::{Table, col, count_of, row};
 use crate::error::ReportsError;
 use crate::reports::common::{LIVE, add, paisa};
@@ -61,6 +66,11 @@ pub(crate) const GARDEN_POSTINGS: &str = "(e.source_type = 'venture' AND EXISTS 
             SELECT 1 FROM venture_entries x JOIN ventures v ON v.id = x.venture_id
             WHERE x.id = e.source_id AND v.kind = 'garden'))";
 
+/// The entries that move a partner's money for fruit taken (PRD FR-16.10): the fruit he took
+/// home and his part of the fruit served to the shop's guests. They are their own source
+/// (`fruit`), so this set meets neither [`TRIP_POSTINGS`] nor [`GARDEN_POSTINGS`].
+pub(crate) const FRUIT_POSTINGS: &str = "(e.source_type = 'fruit')";
+
 /// One partner's figures.
 #[derive(Debug, Clone, Copy, Default)]
 struct Figures {
@@ -69,6 +79,7 @@ struct Figures {
     profit: Paisa,
     gardens: Paisa,
     trips: Paisa,
+    fruit: Paisa,
     other: Paisa,
     net: Paisa,
 }
@@ -79,6 +90,7 @@ impl Figures {
             && self.expense == Paisa::ZERO
             && self.gardens == Paisa::ZERO
             && self.trips == Paisa::ZERO
+            && self.fruit == Paisa::ZERO
             && self.other == Paisa::ZERO
             && self.net == Paisa::ZERO
     }
@@ -89,6 +101,7 @@ impl Figures {
         add(&mut self.profit, other.profit)?;
         add(&mut self.gardens, other.gardens)?;
         add(&mut self.trips, other.trips)?;
+        add(&mut self.fruit, other.fruit)?;
         add(&mut self.other, other.other)?;
         add(&mut self.net, other.net)?;
         Ok(())
@@ -103,8 +116,7 @@ impl Figures {
             money(self.profit),
             money(self.gardens),
             money(self.trips),
-            // Fruit taken: with D4R.
-            Cell::Empty,
+            money(self.fruit),
             money(self.other),
             money(self.net),
         ]
@@ -112,41 +124,61 @@ impl Figures {
 }
 
 /// The credits less the debits on a partner's 0604 account in the period, on the live entries and
-/// not of a month close: the trip entries, the garden entries, and the whole account. Returns
-/// (trips, gardens, whole).
+/// not of a month close, by where they came from.
+#[derive(Debug, Clone, Copy, Default)]
+struct VentureNets {
+    trips: Paisa,
+    gardens: Paisa,
+    fruit: Paisa,
+    /// The whole account.
+    whole: Paisa,
+}
+
 fn venture_net(
     conn: &Connection,
     partner: &PartnerRecord,
     from: &str,
     to: &str,
-) -> Result<(Paisa, Paisa, Paisa), ReportsError> {
+) -> Result<VentureNets, ReportsError> {
     if partner.venture_account_id == 0 {
-        return Ok((Paisa::ZERO, Paisa::ZERO, Paisa::ZERO));
+        return Ok(VentureNets::default());
     }
     let sql = format!(
         "SELECT COALESCE(SUM(CASE WHEN {TRIP_POSTINGS} THEN l.dr_paisa END), 0),
                 COALESCE(SUM(CASE WHEN {TRIP_POSTINGS} THEN l.cr_paisa END), 0),
                 COALESCE(SUM(CASE WHEN {GARDEN_POSTINGS} THEN l.dr_paisa END), 0),
                 COALESCE(SUM(CASE WHEN {GARDEN_POSTINGS} THEN l.cr_paisa END), 0),
+                COALESCE(SUM(CASE WHEN {FRUIT_POSTINGS} THEN l.dr_paisa END), 0),
+                COALESCE(SUM(CASE WHEN {FRUIT_POSTINGS} THEN l.cr_paisa END), 0),
                 COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND {LIVE} AND e.source_type <> 'month_close'
            AND e.entry_date >= ?2 AND e.entry_date <= ?3"
     );
-    let sums: [i64; 6] =
+    let sums: [i64; 8] =
         conn.query_row(&sql, params![partner.venture_account_id, from, to], |r| {
-            let mut out = [0_i64; 6];
+            let mut out = [0_i64; 8];
             for (index, slot) in out.iter_mut().enumerate() {
                 *slot = r.get(index)?;
             }
             Ok(out)
         })?;
-    let [trip_dr, trip_cr, garden_dr, garden_cr, all_dr, all_cr] = sums;
-    Ok((
-        paisa(trip_cr)?.checked_sub(paisa(trip_dr)?)?,
-        paisa(garden_cr)?.checked_sub(paisa(garden_dr)?)?,
-        paisa(all_cr)?.checked_sub(paisa(all_dr)?)?,
-    ))
+    let [
+        trip_dr,
+        trip_cr,
+        garden_dr,
+        garden_cr,
+        fruit_dr,
+        fruit_cr,
+        all_dr,
+        all_cr,
+    ] = sums;
+    Ok(VentureNets {
+        trips: paisa(trip_cr)?.checked_sub(paisa(trip_dr)?)?,
+        gardens: paisa(garden_cr)?.checked_sub(paisa(garden_dr)?)?,
+        fruit: paisa(fruit_cr)?.checked_sub(paisa(fruit_dr)?)?,
+        whole: paisa(all_cr)?.checked_sub(paisa(all_dr)?)?,
+    })
 }
 
 /// The money of the trips of one partner by period, in one query: the credits less the debits of
@@ -234,29 +266,43 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         }
         // Expense rows are negative; the view shows the expense as a positive number.
         let expense = Paisa::ZERO.checked_sub(expense_rows)?;
-        let (trips, gardens, whole) = venture_net(conn, &partner, from, to)?;
+        let nets = venture_net(conn, &partner, from, to)?;
         let figures = Figures {
             income,
             expense,
             profit,
-            gardens,
-            trips,
-            other: whole.checked_sub(trips)?.checked_sub(gardens)?,
-            net: profit.checked_add(whole)?,
+            gardens: nets.gardens,
+            trips: nets.trips,
+            fruit: nets.fruit,
+            other: nets
+                .whole
+                .checked_sub(nets.trips)?
+                .checked_sub(nets.gardens)?
+                .checked_sub(nets.fruit)?,
+            net: profit.checked_add(nets.whole)?,
         };
         if partner.is_active || !figures.is_zero() {
             entries.push((partner, figures));
         }
     }
 
+    // The three columns of venture money open his lines on that account (FR-18.2).
+    let money_col = |key: &str, title: &str, money: AnalyticsPartnerMoney| {
+        let mut column = col(key, title, ColumnKind::Money);
+        column.drill = Some(AnalyticsKey {
+            money: Some(money),
+            ..AnalyticsKey::default()
+        });
+        column
+    };
     let columns = vec![
         col("partner", ids::COL_PARTNER, ColumnKind::Names),
         col("income_share", ids::COL_INCOME_SHARE, ColumnKind::Money),
         col("expense_share", ids::COL_EXPENSE_SHARE, ColumnKind::Money),
         col("profit_share", ids::COL_PROFIT_SHARE, ColumnKind::Money),
-        col("gardens", ids::COL_GARDENS, ColumnKind::Money),
-        col("trips", ids::COL_TRIPS, ColumnKind::Money),
-        col("fruit", ids::COL_FRUIT, ColumnKind::Money),
+        money_col("gardens", ids::COL_GARDENS, AnalyticsPartnerMoney::Gardens),
+        money_col("trips", ids::COL_TRIPS, AnalyticsPartnerMoney::Trips),
+        money_col("fruit", ids::COL_FRUIT, AnalyticsPartnerMoney::Fruit),
         col("other", ids::COL_OTHER_MONEY, ColumnKind::Money),
         col("net_change", ids::COL_NET_CHANGE, ColumnKind::Money),
     ];

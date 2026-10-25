@@ -7,11 +7,12 @@
 //! every save, the same as the باقی مال screen reads (so the report and the screen agree). The
 //! totals row adds up the four quantities over the whole filter.
 //!
-//! The "taken as fruit" column of the PRD line comes with the fruit screen (D4R); this report has
-//! no such column yet.
+//! The balance of a lot is received less sold, written off and taken as fruit (C16, PRD 16.11);
+//! the column "taken as fruit" says how much of it left the lot that way (a trip purchase has
+//! none: its goods are not offered as fruit).
 //!
-//! Example (E2E-16 on 10-10-26): one lot, رحیم کیلا, received 50, sold 45, written off 0,
-//! balance 5, 0 days.
+//! Example (E2E-16 on 10-10-26): one lot, رحیم کیلا, received 50, sold 45, written off 0, taken 0,
+//! balance 5, 0 days. After E2E-42 (الف takes 2 at home): taken 2, balance 3.
 
 use mandi_core::accounts::OWN_GOODS_CODE;
 use mandi_core::dates::BusinessDate;
@@ -91,26 +92,37 @@ pub(crate) fn run(
     let parties = load_parties(conn, &ids_to_load)?;
 
     let mut pending: Vec<Pending> = Vec::with_capacity(lots.len().saturating_add(purchases.len()));
-    let mut totals = [0_i64; 4];
-    let mut add_totals =
-        |received: i64, sold: i64, written_off: i64, balance: i64| -> Result<(), ReportsError> {
-            for (slot, amount) in totals
-                .iter_mut()
-                .zip([received, sold, written_off, balance])
-            {
-                *slot = slot.checked_add(amount).ok_or_else(|| {
-                    ReportsError::Data("the stock quantities do not fit".to_owned())
-                })?;
-            }
-            Ok(())
-        };
+    let mut totals = [0_i64; 5];
+    let mut add_totals = |received: i64,
+                          sold: i64,
+                          written_off: i64,
+                          taken: i64,
+                          balance: i64|
+     -> Result<(), ReportsError> {
+        for (slot, amount) in totals
+            .iter_mut()
+            .zip([received, sold, written_off, taken, balance])
+        {
+            *slot = slot
+                .checked_add(amount)
+                .ok_or_else(|| ReportsError::Data("the stock quantities do not fit".to_owned()))?;
+        }
+        Ok(())
+    };
     for lot in lots {
         let balance = lot
             .qty_received
             .checked_sub(lot.qty_sold)
             .and_then(|v| v.checked_sub(lot.qty_written_off))
+            .and_then(|v| v.checked_sub(lot.qty_taken))
             .ok_or_else(|| ReportsError::Data("the quantity of a lot does not fit".to_owned()))?;
-        add_totals(lot.qty_received, lot.qty_sold, lot.qty_written_off, balance)?;
+        add_totals(
+            lot.qty_received,
+            lot.qty_sold,
+            lot.qty_written_off,
+            lot.qty_taken,
+            balance,
+        )?;
         let mut seller = parties
             .get(&lot.seller.id)
             .cloned()
@@ -140,6 +152,9 @@ pub(crate) fn run(
                 Cell::Number {
                     value: lot.qty_written_off,
                 },
+                Cell::Number {
+                    value: lot.qty_taken,
+                },
                 Cell::Number { value: balance },
                 Cell::Number {
                     value: days_waiting(&lot.received_date),
@@ -167,6 +182,7 @@ pub(crate) fn run(
             purchase.qty,
             purchase.qty_sold,
             purchase.qty_written_off,
+            0,
             balance,
         )?;
         pending.push(Pending {
@@ -196,6 +212,8 @@ pub(crate) fn run(
                 Cell::Number {
                     value: purchase.qty_written_off,
                 },
+                // Trip goods are not offered as fruit: none was taken.
+                Cell::Number { value: 0 },
                 Cell::Number { value: balance },
                 Cell::Number {
                     value: days_waiting(&purchase.entry_date),
@@ -217,7 +235,7 @@ pub(crate) fn run(
         })
         .collect();
 
-    let [received, sold, written_off, balance] = totals;
+    let [received, sold, written_off, taken, balance] = totals;
     Ok(ReportPage {
         id: ReportId::R10,
         title_id: ids::title_id("R10"),
@@ -231,6 +249,7 @@ pub(crate) fn run(
             col("received", ids::COL_RECEIVED, ColumnKind::Number),
             col("sold", ids::COL_SOLD, ColumnKind::Number),
             col("written_off", ids::COL_WRITTEN_OFF, ColumnKind::Number),
+            col("fruit_taken", ids::COL_FRUIT_TAKEN, ColumnKind::Number),
             col("balance", ids::COL_BALANCE_QTY, ColumnKind::Number),
             col("days", ids::COL_DAYS_WAITING, ColumnKind::Number),
         ],
@@ -248,6 +267,7 @@ pub(crate) fn run(
             Cell::Number { value: received },
             Cell::Number { value: sold },
             Cell::Number { value: written_off },
+            Cell::Number { value: taken },
             Cell::Number { value: balance },
             Cell::Empty,
         ],

@@ -95,8 +95,7 @@ pub fn statement_paging(offset: i64, limit: i64) -> Result<(i64, i64), ReportsEr
     Ok((spec.offset, spec.limit.unwrap_or(super::DEFAULT_LIMIT)))
 }
 
-/// The message ID of the group a line belongs to. Garden and fruit have no group word yet (they
-/// come with D4R), so they read as "other".
+/// The message ID of the group a line belongs to.
 fn heading_id(heading: StatementHeading) -> &'static str {
     match heading {
         StatementHeading::Bikri => "partners-statement-heading-bikri",
@@ -104,12 +103,12 @@ fn heading_id(heading: StatementHeading) -> &'static str {
         StatementHeading::Capital => "partners-statement-heading-capital",
         StatementHeading::Drawings => "partners-statement-heading-drawings",
         StatementHeading::Trip => "partners-statement-heading-trip",
-        StatementHeading::Garden | StatementHeading::Fruit => "partners-statement-heading-other",
+        StatementHeading::Garden => "partners-statement-heading-garden",
+        StatementHeading::Fruit => "partners-statement-heading-fruit",
     }
 }
 
-/// The message ID of the sentence of a line, if there is one. A kind with no sentence yet
-/// (garden and fruit, D4R) is written with its reason alone.
+/// The message ID of the sentence of a line.
 fn detail_id(detail: StatementDetail) -> &'static str {
     match detail {
         StatementDetail::IncomeShare => "partners-statement-detail-income-share",
@@ -125,9 +124,9 @@ fn detail_id(detail: StatementDetail) -> &'static str {
         StatementDetail::TripCredit => "partners-statement-detail-trip-credit",
         StatementDetail::TripWriteOff => "partners-statement-detail-trip-write-off",
         StatementDetail::TripClosed => "partners-statement-detail-trip-closed",
-        StatementDetail::GardenPaid
-        | StatementDetail::GardenClosed
-        | StatementDetail::FruitTaken => "partners-statement-detail-other",
+        StatementDetail::GardenPaid => "partners-statement-detail-garden-paid",
+        StatementDetail::GardenClosed => "partners-statement-detail-garden-closed",
+        StatementDetail::FruitTaken => "partners-statement-detail-fruit-taken",
     }
 }
 
@@ -228,6 +227,15 @@ fn kind_of(line: &StatementLine) -> Option<&str> {
 
 /// The sentence of one line as a message and its arguments.
 fn detail_cell(line: &StatementLine) -> Result<Cell, ReportsError> {
+    // A fruit line of an entry that was edited since: the services give the details (item, packing,
+    // values) only for the posting in force, so an older posting and its reversal read as that,
+    // never as a sentence with holes (PRD FR-17.10). A cancelled entry keeps its details.
+    if line.detail == StatementDetail::FruitTaken && !line.values.contains_key("qty") {
+        return Ok(Cell::Message {
+            id: "partners-statement-detail-fruit-earlier".to_owned(),
+            args: vec![series_arg("fruit", "fruit-number", line.number)],
+        });
+    }
     let id = detail_id(line.detail);
     let mut args = value_args(&line.values)?;
     args.push(text_arg("number", number_text(line.number)));
@@ -253,6 +261,26 @@ fn detail_cell(line: &StatementLine) -> Result<Cell, ReportsError> {
             .and_then(series_of_kind)
             .or_else(|| series_of_detail(line.detail))
     };
+    // The packing of a fruit line: "2 پیٹی مالٹا @ 1,400". Empty on every other line.
+    args.push(match &line.packing {
+        Some(packing) => MessageArg {
+            name: "packing".to_owned(),
+            value: ArgValue::Names {
+                names: Names {
+                    ur: packing.name_ur.clone(),
+                    en: packing.name_en.clone(),
+                },
+            },
+        },
+        None => text_arg("packing", ""),
+    });
+    // A garden's number in its own series (PRD FR-12.11).
+    if line.heading == StatementHeading::Garden {
+        args.push(match line.number {
+            Some(_) => series_arg("garden", "gardens-number", line.number),
+            None => text_arg("garden", ""),
+        });
+    }
     args.push(match (series, line.number) {
         (Some(series), Some(_)) => {
             series_arg("voucher", &format!("vouchers-number-{series}"), line.number)

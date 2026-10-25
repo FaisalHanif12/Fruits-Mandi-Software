@@ -18,7 +18,7 @@ import { isOwnGoods } from '../../../shared/accounts';
 import { findMaster, type SearchHit } from '../../../shared/search';
 import type { PickedRecord } from '../../../shared/grid';
 import { assistSellerMemory } from '../api';
-import { isOwnLot } from '../draft';
+import { isGardenLot, isOwnLot } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, ON, SALE, type BikriPreview } from '../types';
 
@@ -92,6 +92,17 @@ export function useDraftFills(
         .getState()
         .patchRow(row.rowId, { typed: { [LOT.memoryFilledFor]: String(seller.id) } });
       void fillFromSellerMemory(stores, row.rowId, seller.id);
+    }
+  }, [lotRows, stores]);
+
+  // A lot became a garden's: the نقد goes (PRD FR-12.36). A saved lot keeps what it came with.
+  useEffect(() => {
+    for (const row of lotRows) {
+      if (!isGardenLot(row)) continue;
+      const saved = (row.typed[LOT.lotId] ?? '') !== '';
+      if (!saved && (row.typed[LOT.cash] ?? '') !== '') {
+        stores.lots.getState().patchRow(row.rowId, { typed: { [LOT.cash]: '' } });
+      }
     }
   }, [lotRows, stores]);
 

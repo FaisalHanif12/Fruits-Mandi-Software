@@ -193,7 +193,7 @@ fn row_with(conn: &Connection, garden: &Garden, money: &Money) -> Result<GardenR
         status: VentureStatus::parse(&rec.status)
             .ok_or_else(|| data("a garden has a status that is not open or closed"))?,
         closed_date: rec.closed_date.clone(),
-        shares_locked: vrepo::has_entries(conn, rec.id)?,
+        shares_locked: mandi_db::gardens::shares_locked(conn, rec.id)?,
         partners: partner_rows(&garden.venture.partners)?,
         installments_paisa: money.installments,
         costs_paisa: money.costs,

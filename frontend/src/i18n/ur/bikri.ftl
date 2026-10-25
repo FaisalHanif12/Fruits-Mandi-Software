@@ -432,6 +432,10 @@ bikri-saved-qty-sold = فروخت
 # review: pending
 bikri-saved-qty-written-off = ضائع
 
+# Fruit taken from the lot by a partner or for the guests (PRD 16.7, C16): part of the lot's balance sum.
+# review: pending
+bikri-saved-qty-taken = { -phal }
+
 # review: pending
 bikri-split-income = آمدن کا حصہ
 
@@ -565,6 +569,10 @@ bikri-stock-item-packing = { $item }، { $packing }
 
 # review: pending
 bikri-stock-col-written-off = ضائع
+
+# Fruit taken from the lot by a partner or for the guests (PRD 16.7, C16): part of the lot's balance sum.
+# review: pending
+bikri-stock-col-taken = { -phal }
 
 # review: pending
 bikri-stock-col-days = انتظار کے دن

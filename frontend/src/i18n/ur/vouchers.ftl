@@ -234,6 +234,10 @@ vouchers-source-general = { -general } { $number }
 # review: pending
 vouchers-source-purchase = خریداری { $number }
 
+# A fruit credit on a seller (PRD FR-16.11, FR-7.59): $number is the پھل number.
+# review: pending
+vouchers-source-fruit = { -phal } { $number }
+
 # review: pending
 vouchers-source-other = دیگر اندراج
 

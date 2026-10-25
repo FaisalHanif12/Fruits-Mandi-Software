@@ -155,6 +155,17 @@ working-venture-part = Payment <num>{ $amount }</num>, <num>{ $bps }</num> ÷ 10
 # left over go to the largest share, so the message does not claim an exact equation.
 # review: pending
 working-venture-credit = Money in <num>{ $amount }</num>, <num>{ $bps }</num> ÷ 10,000 of it (each part is rounded down and the rupees left over go to the largest { -hissa }): <num>{ $result }</num>
+# PRD 16.7, C1: the value of the fruit taken (qty × rate).
+# review: pending
+working-fruit-value = <num>{ $qty }</num> × <num>{ $rate }</num> = <num>{ $result }</num>
+# PRD 16.7, C1 for fruit of an item sold by weight: the weight is in grams, the rate is for each kilo.
+# review: pending
+working-fruit-value-weight = <num>{ $grams }</num> g × <num>{ $rate }</num> per kg ÷ <num>1,000</num> = <num>{ $result }</num> (to the nearest rupee)
+# PRD 16.7, C27: fruit for the shop's guests is shared equally between the partners who have a share
+# on the day. Each part is rounded down and the rupees left over go to the partner made first, so
+# $result is the first partner's part and the message does not claim an exact equation.
+# review: pending
+working-fruit-guests = Value <num>{ $value }</num> shared equally between <num>{ $count }</num> partners (each part is rounded down and the rupees left over go to the partner made first): the first part <num>{ $result }</num>
 # C24: the part of a trip cost that one purchase carries, by the { -nag } bought. The rupees left
 # over go to the larger part, so the message does not claim an exact equation.
 # review: pending
@@ -165,6 +176,10 @@ working-trip-result = Sales money <num>{ $sales }</num> + money from other shops
 # FR-12.27: what a partner has so far: money back less money in from the shop and from his pocket.
 # review: pending
 working-trip-partner-net = Money back <num>{ $back }</num> − paid from the shop <num>{ $in_shop }</num> − paid from his pocket <num>{ $in_pocket }</num> = <num>{ $result }</num>
+# FR-12.37: the running balance of a garden: its money in less everything paid in (installments and
+# costs, from the shop and from pockets). It starts in minus.
+# review: pending
+working-garden-balance = Money in <num>{ $money_in }</num> − everything paid (installments and costs, from the shop and from pockets) <num>{ $paid }</num> = <num>{ $result }</num>
 # FR-12.27: the result of one purchase.
 # review: pending
 working-purchase-result = Sales money <num>{ $sales }</num> + money from other shops <num>{ $other_shop }</num> − cost of goods sold <num>{ $cost_sold }</num> − cost written off <num>{ $cost_written_off }</num> = <num>{ $result }</num>
@@ -332,6 +347,3 @@ attention-names-missing = { $count ->
     [one] <num>{ $count }</num> record has only one of its two names
    *[other] <num>{ $count }</num> records have only one of their two names
 }
-# FR-12.37: the running balance of a garden (money in less everything paid).
-# review: pending
-working-garden-balance = Money in <num>{ $money_in }</num> − everything paid <num>{ $paid }</num> = <num>{ $result }</num>

@@ -1,0 +1,128 @@
+{
+  "id": 2,
+  "number": 2,
+  "version": 2,
+  "journal_entry_id": 5,
+  "preview": {
+    "numbers": {
+      "item": {
+        "id": 2,
+        "code": "2",
+        "name_ur": "سیب",
+        "name_en": "Apple"
+      },
+      "packing": {
+        "id": 1,
+        "code": "1",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 3,
+      "weight_grams": null,
+      "rate_paisa": 100000,
+      "value_paisa": 300000,
+      "value_working": {
+        "message_id": "working-fruit-value",
+        "args": [
+          {
+            "name": "qty",
+            "value": {
+              "kind": "count",
+              "value": 3
+            }
+          },
+          {
+            "name": "rate",
+            "value": {
+              "kind": "money",
+              "paisa": 100000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 300000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "parts": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "amount_paisa": 100000,
+          "total_before_paisa": 26400,
+          "total_after_paisa": -73600
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "amount_paisa": 100000,
+          "total_before_paisa": 106800,
+          "total_after_paisa": 6800
+        },
+        {
+          "partner": {
+            "id": 3,
+            "code": "",
+            "name_ur": "ج",
+            "name_en": "Partner C"
+          },
+          "amount_paisa": 100000,
+          "total_before_paisa": 106800,
+          "total_after_paisa": 6800
+        }
+      ],
+      "parts_working": {
+        "message_id": "working-fruit-guests",
+        "args": [
+          {
+            "name": "value",
+            "value": {
+              "kind": "money",
+              "paisa": 300000
+            }
+          },
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 3
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 100000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "credit": {
+        "account": {
+          "id": 31,
+          "code": "030110003",
+          "name_ur": "حاجی نذیر",
+          "name_en": "Haji Nazeer"
+        },
+        "pukhta": null
+      },
+      "lot": null
+    },
+    "errors": [],
+    "warnings": [],
+    "rate_hint": null
+  }
+}

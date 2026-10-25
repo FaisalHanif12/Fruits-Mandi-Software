@@ -1,0 +1,256 @@
+{
+  "id": "R37",
+  "title_id": "report-r37-title",
+  "filters": {
+    "shortcut": null,
+    "from": "2026-10-10",
+    "to": "2026-10-10",
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "for",
+      "title_id": "fruit-filter-for",
+      "kind": "names"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "weight",
+      "title_id": "fruit-col-weight",
+      "kind": "text"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "source",
+      "title_id": "fruit-col-source",
+      "kind": "label"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-fruit-taken",
+          "number": 1
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 18,
+            "code": "030110001",
+            "short_code": "1",
+            "name_ur": "رحیم",
+            "name_en": "Rahim",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "پیٹی",
+            "en": "Box"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
+          "value": 2
+        },
+        {
+          "type": "money",
+          "paisa": 58000
+        },
+        {
+          "type": "money",
+          "paisa": 116000
+        },
+        {
+          "type": "label",
+          "id": "fruit-source-own"
+        }
+      ],
+      "source": {
+        "kind": "fruit",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-fruit-taken",
+          "number": 2
+        },
+        {
+          "type": "label",
+          "id": "fruit-for-guests"
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 31,
+            "code": "030110003",
+            "short_code": "3",
+            "name_ur": "حاجی نذیر",
+            "name_en": "Haji Nazeer",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "سیب",
+            "en": "Apple"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "پیٹی",
+            "en": "Box"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
+          "value": 3
+        },
+        {
+          "type": "money",
+          "paisa": 100000
+        },
+        {
+          "type": "money",
+          "paisa": 300000
+        },
+        {
+          "type": "label",
+          "id": "fruit-source-other"
+        }
+      ],
+      "source": {
+        "kind": "fruit",
+        "id": 2
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "value": 5
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 416000
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": []
+}

@@ -50,9 +50,10 @@ use crate::page;
 use crate::ventures::record_of;
 
 /// Notes sort after the amounts of their day. Month close, then a write-off, then a closing.
-const NOTE_MONTH_CLOSE: i64 = i64::MAX - 2;
-const NOTE_WRITE_OFF: i64 = i64::MAX - 1;
-const NOTE_TRIP_CLOSED: i64 = i64::MAX;
+const NOTE_MONTH_CLOSE: i64 = i64::MAX - 3;
+const NOTE_WRITE_OFF: i64 = i64::MAX - 2;
+const NOTE_TRIP_CLOSED: i64 = i64::MAX - 1;
+const NOTE_GARDEN_CLOSED: i64 = i64::MAX;
 
 fn paisa(value: i64) -> Result<Paisa, ServiceError> {
     Paisa::try_from_paisa(value).map_err(money_error)
@@ -81,6 +82,11 @@ enum Kind {
         venture_id: i64,
     },
     TripClosed {
+        venture_id: i64,
+    },
+    /// A garden closing that posted nothing for him (PRD FR-17.10, E64): a note with no amount.
+    GardenClosed {
+        venture_entry_id: i64,
         venture_id: i64,
     },
 }
@@ -223,6 +229,19 @@ fn events_of(conn: &Connection, partner: &PartnerRecord) -> Result<Vec<Event>, S
             },
         });
     }
+    for note in read::unposted_garden_close_notes(conn, partner.id)? {
+        events.push(Event {
+            date: note.date,
+            entry_id: NOTE_GARDEN_CLOSED,
+            group: 5,
+            id: note.id,
+            amount: None,
+            kind: Kind::GardenClosed {
+                venture_entry_id: note.id,
+                venture_id: note.venture_id,
+            },
+        });
+    }
     events.sort_by(|a, b| {
         (a.date.as_str(), a.entry_id, a.group, a.id).cmp(&(
             b.date.as_str(),
@@ -240,7 +259,7 @@ struct Facts {
     entries: HashMap<i64, read::EntryInfo>,
     vouchers: HashMap<i64, read::VoucherInfo>,
     bikri: HashMap<i64, i64>,
-    fruit: HashMap<i64, i64>,
+    fruit: HashMap<i64, read::FruitInfo>,
     purchases: HashMap<i64, read::PurchaseInfo>,
     venture_entries: HashMap<i64, read::VentureEntryInfo>,
     ventures: HashMap<i64, (i64, String)>,
@@ -286,7 +305,7 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
     };
     let vouchers = read::voucher_infos(conn, &by_source("voucher"))?;
     let bikri = read::bikri_numbers(conn, &by_source("bikri"))?;
-    let fruit = read::fruit_numbers(conn, &by_source("fruit"))?;
+    let fruit = read::fruit_infos(conn, &by_source("fruit"))?;
     let venture_entries = read::venture_entry_infos(conn, &by_source("venture"))?;
     let lot_ids = sorted(
         page.iter()
@@ -303,9 +322,20 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
     let purchases = read::purchase_infos(conn, &sorted(purchase_ids))?;
     let mut venture_ids: Vec<i64> = purchases.values().map(|p| p.venture_id).collect();
     venture_ids.extend(venture_entries.values().map(|v| v.venture_id));
+    let mut note_closes = Vec::new();
     for event in page {
-        if let Kind::WriteOff { venture_id } | Kind::TripClosed { venture_id } = event.kind {
-            venture_ids.push(venture_id);
+        match event.kind {
+            Kind::WriteOff { venture_id } | Kind::TripClosed { venture_id } => {
+                venture_ids.push(venture_id);
+            }
+            Kind::GardenClosed {
+                venture_entry_id,
+                venture_id,
+            } => {
+                venture_ids.push(venture_id);
+                note_closes.push(venture_entry_id);
+            }
+            _ => {}
         }
     }
     let ventures = read::venture_numbers(conn, &sorted(venture_ids))?;
@@ -328,13 +358,13 @@ fn facts_for(conn: &Connection, partner_id: i64, page: &[&Event]) -> Result<Fact
             .collect(),
     );
     let part_shares = read::entry_part_shares(conn, partner_id, &part_entries)?;
-    let close_entries = sorted(
-        venture_entries
-            .values()
-            .filter(|v| v.kind == "close")
-            .map(|v| v.id)
-            .collect(),
-    );
+    let mut close_entries: Vec<i64> = venture_entries
+        .values()
+        .filter(|v| v.kind == "close")
+        .map(|v| v.id)
+        .collect();
+    close_entries.extend(note_closes);
+    let close_entries = sorted(close_entries);
     let garden_closes = read::garden_close_figures(conn, partner_id, &close_entries)?;
     Ok(Facts {
         entries,
@@ -359,6 +389,8 @@ struct Draft {
     number: Option<i64>,
     secondary: Option<i64>,
     subject: Option<RecordRef>,
+    /// The packing of a fruit line (PRD FR-17.10).
+    packing: Option<RecordRef>,
     reason: String,
     values: BTreeMap<String, ErrorValue>,
 }
@@ -371,6 +403,7 @@ impl Draft {
             number: None,
             secondary: None,
             subject: None,
+            packing: None,
             reason: String::new(),
             values: BTreeMap::new(),
         }
@@ -379,6 +412,12 @@ impl Draft {
     fn kind(mut self, kind: &str) -> Draft {
         self.values
             .insert("kind".to_owned(), ErrorValue::Text(kind.to_owned()));
+        self
+    }
+
+    fn text_value(mut self, name: &str, text: &str) -> Draft {
+        self.values
+            .insert(name.to_owned(), ErrorValue::Text(text.to_owned()));
         self
     }
 
@@ -536,7 +575,49 @@ fn draft_of(
             Draft::new(H::Trip, D::TripWriteOff).number(facts.ventures.get(venture_id).map(|v| v.0))
         }
         Kind::TripClosed { venture_id } => trip_closed_draft(conn, partner, facts, *venture_id)?,
+        // A closing that posted nothing for him: the same words and figures, with no amount.
+        Kind::GardenClosed {
+            venture_entry_id,
+            venture_id,
+        } => {
+            let mut draft = Draft::new(H::Garden, D::GardenClosed)
+                .number(facts.ventures.get(venture_id).map(|v| v.0));
+            if let Some(figures) = facts.garden_closes.get(venture_entry_id) {
+                draft = garden_close_values(draft, figures, 1)?;
+            }
+            draft
+        }
     })
+}
+
+/// The numbers of a partner's closing line (PRD FR-17.10), from stored rows only: the total cost,
+/// the sales money (the closing parts together), the result, his %, his part of the result (his
+/// money back less what he paid) and his money back. `sign` is -1 for the line of a reversal.
+fn garden_close_values(
+    draft: Draft,
+    figures: &read::GardenCloseFigures,
+    sign: i64,
+) -> Result<Draft, ServiceError> {
+    let signed = |value: i64| -> Result<i64, ServiceError> {
+        value
+            .checked_mul(sign)
+            .ok_or_else(|| data("a figure does not fit"))
+    };
+    let result = figures
+        .sales_paisa
+        .checked_sub(figures.cost_paisa)
+        .ok_or_else(|| data("a figure does not fit"))?;
+    let part = figures
+        .back_paisa
+        .checked_sub(figures.paid_paisa)
+        .ok_or_else(|| data("a figure does not fit"))?;
+    Ok(draft
+        .number_value("cost_paisa", signed(figures.cost_paisa)?)
+        .number_value("sales_paisa", signed(figures.sales_paisa)?)
+        .number_value("result_paisa", signed(result)?)
+        .number_value("share_bps", figures.share_bps)
+        .number_value("part_paisa", signed(part)?)
+        .number_value("back_paisa", signed(figures.back_paisa)?))
 }
 
 /// A line from the journal of his gardens, trips and fruit account that is not a بکری.
@@ -629,31 +710,31 @@ fn venture_draft(
             // the result (his money back less what he paid) and his money back. A reversal line
             // shows them with the opposite sign.
             if let Some(figures) = entry.and_then(|e| facts.garden_closes.get(&e.id)) {
+                draft = garden_close_values(draft, figures, sign)?;
+            }
+            draft
+        }
+        Some("fruit_taken") => {
+            let fruit = facts.fruit.get(&info.source_id);
+            let mut draft = Draft::new(H::Fruit, D::FruitTaken).number(fruit.map(|f| f.number));
+            // The details are those of the entry as it stands. An edit updates the entry, so an older
+            // posting of an edited entry (and its reversal) gets the number only.
+            let effective = info.reverses_entry_id.unwrap_or(info.entry_id);
+            if let Some(f) = fruit.filter(|f| f.current_entry_id == Some(effective)) {
                 let signed = |value: i64| -> Result<i64, ServiceError> {
                     value
                         .checked_mul(sign)
                         .ok_or_else(|| data("a figure does not fit"))
                 };
-                let result = figures
-                    .sales_paisa
-                    .checked_sub(figures.cost_paisa)
-                    .ok_or_else(|| data("a figure does not fit"))?;
-                let part = figures
-                    .back_paisa
-                    .checked_sub(figures.paid_paisa)
-                    .ok_or_else(|| data("a figure does not fit"))?;
+                draft.subject = Some(named(&f.item));
+                draft.packing = Some(named(&f.packing));
                 draft = draft
-                    .number_value("cost_paisa", signed(figures.cost_paisa)?)
-                    .number_value("sales_paisa", signed(figures.sales_paisa)?)
-                    .number_value("result_paisa", signed(result)?)
-                    .number_value("share_bps", figures.share_bps)
-                    .number_value("part_paisa", signed(part)?)
-                    .number_value("back_paisa", signed(figures.back_paisa)?);
+                    .number_value("qty", signed(f.qty)?)
+                    .number_value("rate_paisa", f.rate_paisa)
+                    .number_value("value_paisa", signed(f.value_paisa)?)
+                    .text_value("for", if f.guests { "guests" } else { "home" });
             }
             draft
-        }
-        Some("fruit_taken") => {
-            Draft::new(H::Fruit, D::FruitTaken).number(facts.fruit.get(&info.source_id).copied())
         }
         other => {
             // A جنرل (or anything else) on the account: worded by its sign.
@@ -791,6 +872,7 @@ pub fn statement(
                 number: draft.number,
                 secondary_number: draft.secondary,
                 subject: draft.subject,
+                packing: draft.packing,
                 reason: draft.reason,
                 amount_paisa: event.amount,
                 running_paisa: *running,

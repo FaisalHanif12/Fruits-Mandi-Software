@@ -55,21 +55,54 @@
       "title_id": "analytics-col-gardens",
       "kind": "money",
       "heading": null,
-      "drill": null
+      "drill": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": [],
+        "money": "gardens"
+      }
     },
     {
       "key": "trips",
       "title_id": "analytics-col-trips",
       "kind": "money",
       "heading": null,
-      "drill": null
+      "drill": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": [],
+        "money": "trips"
+      }
     },
     {
       "key": "fruit",
       "title_id": "analytics-col-fruit",
       "kind": "money",
       "heading": null,
-      "drill": null
+      "drill": {
+        "item_id": null,
+        "seller_id": null,
+        "buyer_id": null,
+        "person_key": null,
+        "from": null,
+        "to": null,
+        "not_item_ids": [],
+        "partner_id": null,
+        "purchase_ids": [],
+        "money": "fruit"
+      }
     },
     {
       "key": "other",
@@ -117,7 +150,8 @@
           "paisa": -77600
         },
         {
-          "type": "empty"
+          "type": "money",
+          "paisa": 0
         },
         {
           "type": "money",
@@ -171,7 +205,8 @@
           "paisa": -58200
         },
         {
-          "type": "empty"
+          "type": "money",
+          "paisa": 0
         },
         {
           "type": "money",
@@ -225,7 +260,8 @@
           "paisa": -58200
         },
         {
-          "type": "empty"
+          "type": "money",
+          "paisa": 0
         },
         {
           "type": "money",
@@ -279,7 +315,8 @@
       "paisa": -194000
     },
     {
-      "type": "empty"
+      "type": "money",
+      "paisa": 0
     },
     {
       "type": "money",

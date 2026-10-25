@@ -20,4 +20,5 @@ export type ReportFilterKind =
   | 'trip_view'
   | 'garden'
   | 'garden_view'
-  | 'bikri';
+  | 'bikri'
+  | 'guests';
