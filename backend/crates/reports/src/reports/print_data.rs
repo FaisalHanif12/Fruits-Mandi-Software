@@ -48,6 +48,10 @@ pub struct PrintReportParty {
     pub tag: Option<String>,
     /// The person inside a پختہ کھاتہ account, as stored. Null for any other line.
     pub person_key: Option<String>,
+    /// His phone in the dash form `03XX-XXXXXXX`. Missing when he has none or for any other line.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub phone: Option<String>,
 }
 
 /// The goods or reason behind a ledger line, formatted for print.
@@ -328,6 +332,12 @@ impl Fmt {
             text.push(' ');
             text.push_str(tag);
         }
+        // A one-time person is told from another of the same name by his phone.
+        if let Some(phone) = &p.phone {
+            text.push_str(" (");
+            text.push_str(phone);
+            text.push(')');
+        }
         text
     }
 
@@ -350,6 +360,7 @@ impl Fmt {
             name: self.name(&party.name_ur, &party.name_en),
             tag: party.tag.clone(),
             person_key: party.person_key.clone(),
+            phone: party.phone.clone(),
         }
     }
 

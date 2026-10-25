@@ -26,6 +26,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::Paisa;
+use mandi_core::text::phone_display;
 use mandi_db::ledger::{Totals, account_totals, totals_of};
 use mandi_db::rusqlite::{Connection, params, params_from_iter};
 
@@ -306,7 +307,7 @@ fn buyer_cells(buyer: &Buyer, city: Option<&Cell>) -> Vec<Cell> {
     if let Some(city) = city {
         cells.push(city.clone());
     }
-    cells.push(text_cell(buyer.phone.clone()));
+    cells.push(text_cell(buyer.phone.as_deref().map(phone_display)));
     cells.push(Cell::Money {
         paisa: buyer.balance,
     });

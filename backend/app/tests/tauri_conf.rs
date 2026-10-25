@@ -387,11 +387,14 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "allow-reports-print-data",
             "allow-reports-buyer-bills-print-data",
             "allow-analytics-print-data",
+            "allow-reports-print-header",
             "core:event:default"
         ])
     );
-    // The hidden window reads the print data of exactly three documents (the بکری documents, the
-    // voucher slip and the collection list, plan 17e) and calls no command that writes or prints.
+    // The hidden window reads the print data of exactly these documents and calls no command that
+    // writes or prints: the بکری documents, the voucher slip and the collection list (plan 17e), and
+    // the report, the slips of R5 and the analytics view (plan d5-late). It asks the shared header
+    // and footer from `reports_print_header`.
     let print_data: Vec<&str> = cap["permissions"]
         .as_array()
         .unwrap()
@@ -404,7 +407,10 @@ fn print_capability_is_small_and_only_for_print_windows() {
         [
             "allow-reports-bikri-print-data",
             "allow-reports-collection-print-data",
-            "allow-reports-voucher-print-data"
+            "allow-reports-voucher-print-data",
+            "allow-reports-print-data",
+            "allow-reports-buyer-bills-print-data",
+            "allow-analytics-print-data"
         ]
     );
     let others: Vec<&str> = cap["permissions"]
@@ -414,7 +420,14 @@ fn print_capability_is_small_and_only_for_print_windows() {
         .filter_map(Value::as_str)
         .filter(|p| p.starts_with("allow-") && !p.ends_with("-print-data"))
         .collect();
-    assert_eq!(others, ["allow-app-data-status", "allow-auth-status"]);
+    assert_eq!(
+        others,
+        [
+            "allow-app-data-status",
+            "allow-auth-status",
+            "allow-reports-print-header"
+        ]
+    );
 }
 
 /// NFR-INS-5 (plan 22 early): uninstall never deletes the data folder or the backups.

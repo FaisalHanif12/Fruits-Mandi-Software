@@ -27,6 +27,7 @@ use std::collections::{BTreeMap, HashMap};
 use mandi_core::bikri::PukhtaSide;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::Paisa;
+use mandi_core::text::phone_display;
 use mandi_db::bikri::saved::{self as repo, BillLine, RegisterLine};
 use mandi_db::matching as matching_repo;
 use mandi_db::rusqlite::Connection;
@@ -317,7 +318,7 @@ pub(crate) fn run(
                     .to_owned(),
                 },
                 Cell::Party { party },
-                text_cell(Some(line.phone.clone())),
+                text_cell(Some(phone_display(&line.phone))),
                 names_cell(
                     Some(line.item.name_ur.clone()),
                     Some(line.item.name_en.clone()),

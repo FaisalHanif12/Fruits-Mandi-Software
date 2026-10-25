@@ -697,7 +697,8 @@ fn r9_lists_the_one_time_line_as_paid_with_the_numbers_of_prd_4_5() {
     assert_eq!(
         row[4],
         Cell::Text {
-            text: "03000000000".into()
+            // The phone is stored as 11 digits and printed in the dash form (Umar, 26-10-2026).
+            text: "0300-0000000".into()
         }
     );
     assert_eq!(names_en(&row[5]), "Apple");

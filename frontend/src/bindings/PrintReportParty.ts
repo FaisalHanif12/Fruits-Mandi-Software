@@ -24,4 +24,8 @@ export type PrintReportParty = {
    * The person inside a پختہ کھاتہ account, as stored. Null for any other line.
    */
   person_key: string | null;
+  /**
+   * His phone in the dash form `03XX-XXXXXXX`. Missing when he has none or for any other line.
+   */
+  phone?: string;
 };

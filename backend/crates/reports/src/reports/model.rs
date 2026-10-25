@@ -428,6 +428,12 @@ pub struct PartyRef {
     pub tag: Option<String>,
     /// The person inside a پختہ کھاتہ account, as stored. Null for any other line.
     pub person_key: Option<String>,
+    /// The phone of that person in the dash form `03XX-XXXXXXX` (English digits), so two people
+    /// with the same name are two different rows (PRD FR-13.5). Missing for any other line and for
+    /// a person with no phone.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub phone: Option<String>,
 }
 
 /// The filters as the backend read them, echoed back (PRD FR-19.10). Dates are `YYYY-MM-DD`.

@@ -32,4 +32,10 @@ export type ReportParty = {
    * The person inside a پختہ کھاتہ account, as stored. Null for any other line.
    */
   person_key: string | null;
+  /**
+   * The phone of that person in the dash form `03XX-XXXXXXX` (English digits), so two people
+   * with the same name are two different rows (PRD FR-13.5). Missing for any other line and for
+   * a person with no phone.
+   */
+  phone?: string;
 };

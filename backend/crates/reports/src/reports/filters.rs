@@ -8,7 +8,8 @@ use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::{Connection, OptionalExtension};
 
-use super::common::{MasterTable, load_party, names_of, parse_day};
+use super::common::{MasterTable, load_party, names_of, parse_day, pukhta_party};
+use super::grouped_sums::pukhta_names;
 use super::model::{
     DateShortcut, FilterKind, GardenView, GroupBy, Names, PaidFilter, ReportFilters,
     ResolvedFilters, TripView,
@@ -261,7 +262,18 @@ pub(crate) fn resolve(
                     }
                     typed.party_id = Some(party.account_id);
                     typed.person_key = key.map(str::to_owned);
-                    party.person_key.clone_from(&typed.person_key);
+                    // A one-time person is named with his own names and phone, so the header of
+                    // his ledger says who it is (PRD FR-13.5).
+                    if let Some(person_key) = &typed.person_key {
+                        let known = pukhta_names(conn, &[party.account_id])?;
+                        let names = known.get(person_key);
+                        party = pukhta_party(
+                            party,
+                            Some(person_key.clone()),
+                            names.map(|n| n.name_ur.as_str()),
+                            names.map(|n| n.name_en.as_str()),
+                        );
+                    }
                     typed.resolved.party = Some(party);
                 }
                 None => problems.push(FieldError::new(

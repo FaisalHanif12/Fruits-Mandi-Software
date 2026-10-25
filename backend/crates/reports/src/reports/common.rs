@@ -8,6 +8,7 @@ use chrono::{DateTime, Duration, Utc};
 use mandi_core::accounts::{Balance, BalanceSide};
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::{MoneyError, Paisa};
+use mandi_core::text::phone_display;
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
@@ -114,6 +115,7 @@ pub(crate) fn load_parties(
                 && (1..=8_999).contains(&serial))
             .then(|| serial.to_string());
             Ok(PartyRef {
+                phone: None,
                 account_id: r.get(0)?,
                 code: r.get(1)?,
                 short_code,
@@ -291,6 +293,13 @@ pub(crate) fn pukhta_party(
     if person_key.is_none() {
         return party;
     }
+    // The key is the normalised Urdu name, a `|`, and the phone digits (core::text::person_key).
+    party.phone = person_key
+        .as_deref()
+        .and_then(|key| key.rsplit_once('|'))
+        .map(|(_, digits)| digits)
+        .filter(|digits| !digits.is_empty())
+        .map(phone_display);
     party.person_key = person_key;
     party.short_code = None;
     let ur = name_ur.map(str::trim).filter(|t| !t.is_empty());
