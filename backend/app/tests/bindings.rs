@@ -617,6 +617,9 @@ const EXPECTED_FILES: &[&str] = &[
     "ScreenStateGetInput.ts",
     "ScreenStateSetInput.ts",
     "ScreenState.ts",
+    // Run B, D5 round 12 (append-only block).
+    "BuyerBillsPrintData.ts",
+    "BuyerBillSlip.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -1049,6 +1052,8 @@ fn export_bindings() {
     mandi_app_lib::commands::screen_prefs::ScreenStateGetInput::export_all(&cfg).unwrap();
     mandi_app_lib::commands::screen_prefs::ScreenStateSetInput::export_all(&cfg).unwrap();
     mandi_app_lib::commands::screen_prefs::ScreenState::export_all(&cfg).unwrap();
+    // Run B, D5 round 12 (append-only block).
+    mandi_reports::reports::BuyerBillsPrintData::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

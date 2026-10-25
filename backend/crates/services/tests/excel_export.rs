@@ -189,20 +189,12 @@ fn expect_cell(sheet: &Sheet, row: u32, col: u32, cell: &Cell, l10n: &L10n, what
     }
 }
 
-/// Message IDs the engine sends for the reports of plan d5-late round 7 that the frontend has not
-/// written yet (`reports.ftl`). A sheet may show one of these as its own ID until then. The check
-/// below lets an ID through only while the bundle really lacks it, so once the frontend adds the
-/// message the sheet must use it, and this list can be emptied.
-const PENDING_IDS: &[&str] = &[
-    // R1 and R5 (round 12): the frontend writes these.
-    "report-r1-title",
-    "report-r5-title",
-    "report-col-serial",
-    "report-filter-bikri",
-    "analytics-filter-goods-consigned",
-    "analytics-filter-goods-garden",
-    "analytics-filter-goods-trip",
-];
+/// Message IDs the engine sends that the frontend has not written yet. A sheet may show one of
+/// these as its own ID until then. The check below lets an ID through only while the bundle really
+/// lacks it, so once the frontend adds a message the sheet must use it. The list is empty now:
+/// every ID is in both languages (frontend-d5, round 12). A new report adds its IDs here until the
+/// frontend has written them.
+const PENDING_IDS: &[&str] = &[];
 
 /// The row of the heading: the one whose texts are exactly the column titles.
 fn header_row(sheet: &Sheet, titles: &[String]) -> u32 {

@@ -13,7 +13,9 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReportCell } from '../../src/bindings/ReportCell';
 import type { ReportPage } from '../../src/bindings/ReportPage';
+import type { ReportRow } from '../../src/bindings/ReportRow';
 import * as gardensApi from '../../src/features/gardens/api';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
@@ -29,6 +31,7 @@ import {
 } from '../helpers/app';
 import { fakeGardens } from '../helpers/gardens';
 import { fakePartners } from '../helpers/partners';
+import { paisaForTest } from '../helpers/paisa';
 import { message, visible } from '../helpers/render';
 import {
   CATALOG,
@@ -77,6 +80,10 @@ const named = (text: string) => (name: string) => {
   if (seen === text) return true;
   return seen.startsWith(text) && KEY_CHIPS.has(seen.slice(text.length).trim());
 };
+
+/** Where the garden's state and its balance are among the cells of an R36 row (by garden). */
+const STATUS_COLUMN = 2;
+const BALANCE_COLUMN = 13;
 
 function cell(rowId: string, colId: string): string {
   const row = document.querySelector(`.ag-row[row-id="${rowId}"]`);
@@ -607,14 +614,15 @@ describe.each(LANGUAGES)(
         expect(cell('0', 'installments')).toBe('50,000');
         expect(cell('0', 'costs')).toBe('5,000');
         expect(cell('0', 'money_in')).toBe('66,400');
-        expect(cell('0', 'balance')).toBe('11,400');
+        // A closed garden: its result is a profit, so the figure carries the word (FR-12.38).
+        expect(cell('0', 'balance')).toBe(`11,400${m('report-result-profit')}`);
         expect(cell('0', 'rent_due')).toBe('0');
         // The totals row is the backend's: the sums of the rows.
         expect(totalsCell('money_in')).toBe('66,400');
         expect(totalsCell('balance')).toBe('11,400');
       });
 
-      it('draws the columns that fit: the costs come with the normal step, the sales and what was paid with the wide one', async () => {
+      it('draws the columns that fit: the installments and costs come with the normal step, what was paid and the sales with the wide one', async () => {
         await openGardens();
         await waitFor(() => {
           expect(drawnRows()).toHaveLength(1);
@@ -631,15 +639,89 @@ describe.each(LANGUAGES)(
         ]);
       });
 
-      it('does not call a balance below zero a loss: a garden starts below zero by design', async () => {
+      it.each([
+        ['compact', ['garden', 'status', 'rent', 'money_in', 'balance', 'rent_due']],
+        [
+          'wide',
+          [
+            'garden',
+            'status',
+            'rent',
+            'installments',
+            'costs',
+            'paid_shop',
+            'paid_pocket',
+            'sales_our_shop',
+            'money_in',
+            'balance',
+            'rent_due',
+          ],
+        ],
+      ] as const)(
+        'draws only the columns that fit at the %s step, so the table never scrolls sideways',
+        async (step, columns) => {
+          vi.mocked(useLayoutStep).mockReturnValue(step);
+          await openGardens();
+          await waitFor(() => {
+            expect(drawnRows()).toHaveLength(1);
+          }, SLOW_MS);
+          expect(drawnColumns()).toEqual([...columns]);
+        },
+      );
+
+      it('writes Profit on the result of a closed garden, with no colour for a profit', async () => {
         await openGardens();
         await waitFor(() => {
           expect(drawnRows()).toHaveLength(1);
         }, SLOW_MS);
-        expect(cell('0', 'balance')).not.toContain(m('report-result-loss'));
+        // Shahpur is closed with a profit of 11,400 (E2E-40).
+        expect(cell('0', 'balance')).toContain('11,400');
+        expect(cell('0', 'balance')).toContain(m('report-result-profit'));
         expect(document.querySelector('.ag-row[row-id="0"] [col-id="balance"]')).not.toHaveClass(
           'cell-tone-due',
         );
+      });
+
+      it('writes Loss, in red, on a closed garden’s loss, but only the sign on an open garden below zero (FR-12.38)', async () => {
+        // Row 0: an open garden, running balance −30,000 (it starts below zero by design).
+        // Row 1: a closed garden that lost 4,500.
+        const base = R36_GARDEN.rows[0];
+        if (base === undefined) throw new Error('The R36 fixture has no row.');
+        const gardenRow = (state: string, paisa: number): ReportRow => ({
+          ...base,
+          cells: base.cells.map((found, index): ReportCell => {
+            if (index === STATUS_COLUMN) return { type: 'label', id: state };
+            if (index === BALANCE_COLUMN) return { type: 'money', paisa: paisaForTest(paisa) };
+            return found;
+          }),
+        });
+        const page: ReportPage = {
+          ...R36_GARDEN,
+          rows: [
+            gardenRow('report-garden-open', -3_000_000),
+            gardenRow('report-garden-closed', -450_000),
+          ],
+        };
+        await openGardens({ pages: { R36: page } });
+        await waitFor(() => {
+          expect(drawnRows()).toEqual(['0', '1']);
+        }, SLOW_MS);
+        const open = cell('0', 'balance');
+        expect(open).toContain('30,000');
+        expect(open).not.toContain(m('report-result-loss'));
+        expect(open).not.toContain(m('report-result-profit'));
+        expect(document.querySelector('.ag-row[row-id="0"] [col-id="balance"]')).not.toHaveClass(
+          'cell-tone-due',
+        );
+        const closed = cell('1', 'balance');
+        expect(closed).toContain('4,500');
+        expect(closed).toContain(m('report-result-loss'));
+        expect(document.querySelector('.ag-row[row-id="1"] [col-id="balance"]')).toHaveClass(
+          'cell-tone-due',
+        );
+        // The totals row adds open and closed gardens, so it carries no word.
+        expect(totalsCell('balance')).not.toContain(m('report-result-loss'));
+        expect(totalsCell('balance')).not.toContain(m('report-result-profit'));
       });
 
       it('the layout box asks by partner and shows each partner’s percent and money, with his name', async () => {

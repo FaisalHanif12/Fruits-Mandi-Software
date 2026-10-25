@@ -15,7 +15,7 @@ mod register;
 mod stock;
 
 pub(super) use adda::run as run_r8;
-pub(super) use buyer_bills::run as run_r5;
+pub(super) use buyer_bills::{Slips, run as run_r5, slips as buyer_slips};
 pub(super) use items::{query as r7_query, run as run_r7};
 pub(super) use lots::{r6_page_query, run_r1, run_r6, run_r27};
 pub(super) use pukhta::run as run_r9;

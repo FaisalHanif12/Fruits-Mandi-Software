@@ -40,4 +40,10 @@ export {
   type PrintHeading,
   type PrintTable,
 } from './print/ReportPrintDocument';
-export { listColumnOf, totalsFor, type ReportRowView, type RowLike } from './columns';
+export {
+  listColumnOf,
+  totalsFor,
+  type ReportRowView,
+  type RowLike,
+  type SignMode,
+} from './columns';

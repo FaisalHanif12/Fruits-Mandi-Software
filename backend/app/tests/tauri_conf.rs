@@ -339,6 +339,7 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-assist-attention",
             "allow-prefs-screen-get",
             "allow-prefs-screen-set",
+            "allow-reports-buyer-bills-print-data",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",
@@ -371,6 +372,7 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "allow-reports-bikri-print-data",
             "allow-reports-voucher-print-data",
             "allow-reports-print-data",
+            "allow-reports-buyer-bills-print-data",
             "allow-analytics-print-data",
             "core:event:default"
         ])

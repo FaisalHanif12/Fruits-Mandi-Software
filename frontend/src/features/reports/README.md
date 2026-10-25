@@ -139,7 +139,10 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   garden (`GardenFilterSelect`) and the layout (`ReportGardenViewSelect`): by garden, 15 columns, or by
   partner, 7. The layout is sent only when it is by partner. `columns.ts` chooses the steps by layout
   (`GARDEN_LAYOUT_STEPS`, `GARDEN_PARTNER_LAYOUT_STEPS`): the print has every column. Enter on a garden
-  opens its screen. Nothing is called a loss: the running balance starts below zero by design.
+  opens its screen. The balance column carries the word "Profit" or "Loss" (red for a loss) only on the
+  row of a CLOSED garden (FR-12.38, `CLOSED_ONLY_COLUMNS`, `signModeOf`, `isClosedGardenRow` in
+  `columns.ts`). An open garden's running balance starts below zero by design, so it keeps only its
+  sign, and the totals row has no word. The by-partner layout has no state cell, so it keeps signs only.
 - R34 has two rows more for each day (what was paid into the gardens, what came in); they are
   information and are not added to the cash lines. Tests: the garden block of
   `reports-screens-round11.test.tsx` and of `reports-api-contract.test.ts`.

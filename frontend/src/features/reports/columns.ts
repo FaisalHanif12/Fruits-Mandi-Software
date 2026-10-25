@@ -46,18 +46,20 @@ const NEVER: StepRange = { from: 'wide', until: 'compact' };
 /**
  * The gardens report (R36) has two layouts with some keys in common (the garden, what the shop and the
  * pockets paid), so its steps are chosen by the layout: the partner layout is the one that has a
- * `partner` column. By garden has 15 columns: the garden, its state, the rent, the installments, the
- * money in, the running balance and the rent due always; the costs come at the normal step; what the
- * shop and the pockets paid and the sales (our shop, other shops) at the wide step; the day, the
- * other money in and the commission are in the print only. By partner has 7: his percent and his
- * money always; what he paid from his pocket from the normal step.
+ * `partner` column. By garden has 15 columns: the garden, its state, the rent, the money in, the
+ * balance and the rent due always (the balance is the widest: it carries the word "Profit" or "Loss" of
+ * a closed garden); the installments and the costs come at the normal step; what the shop and the
+ * pockets paid and the sales in our shop at the wide step; the day, the sales in other shops, the other
+ * money in and the commission are in the print only. By partner has 7: his percent and his money
+ * always; what he paid from his pocket from the normal step.
  */
 const GARDEN_LAYOUT_STEPS: Readonly<Record<string, StepRange>> = {
+  installments: { from: 'normal' },
   costs: { from: 'normal' },
   paid_shop: { from: 'wide' },
   paid_pocket: { from: 'wide' },
   sales_our_shop: { from: 'wide' },
-  sales_other_shops: { from: 'wide' },
+  sales_other_shops: NEVER,
   date: NEVER,
   other_in: NEVER,
   commission: NEVER,
@@ -201,6 +203,30 @@ export function signedColumnsOf(id: ReportId): ReadonlySet<string> {
   return SIGNED_COLUMNS[id] ?? NO_KEYS;
 }
 
+/**
+ * The columns that carry the word "Profit" or "Loss" only on the row of a CLOSED garden (PRD
+ * FR-12.38): the garden's result once it is closed. The running balance of an open garden starts
+ * below zero by design, so it keeps only its sign. There is no word in the totals row, because it
+ * adds open and closed gardens together.
+ */
+const CLOSED_ONLY_COLUMNS: Partial<Record<ReportId, ReadonlySet<string>>> = {
+  R36: new Set(['balance']),
+};
+
+/** How the figure of a column shows a result: no word, a word on every row, or only on closed gardens. */
+export type SignMode = boolean | 'closed';
+
+/** The sign mode of one column of a report. */
+export function signModeOf(id: ReportId, key: string): SignMode {
+  if (signedColumnsOf(id).has(key)) return true;
+  return CLOSED_ONLY_COLUMNS[id]?.has(key) === true ? 'closed' : false;
+}
+
+/** True when the row says its garden is closed (its state cell holds `report-garden-closed`). */
+export function isClosedGardenRow(cells: readonly ReportCell[]): boolean {
+  return cells.some((cell) => cell.type === 'label' && cell.id === 'report-garden-closed');
+}
+
 const NO_KEYS: ReadonlySet<string> = new Set();
 
 /** The words of a result: "Loss" under zero, "Profit" over zero, nothing at zero. */
@@ -244,7 +270,7 @@ export function listColumnOf<V extends RowLike>(
   column: Pick<ReportColumn, 'key' | 'title_id' | 'kind'>,
   index: number,
   emptyName: (rowKind: ReportRowKind) => string | null = () => null,
-  signed = false,
+  signed: SignMode = false,
   shortSale = false,
 ): ListColumn<V> {
   const cell = (view: V, context: ListContext) => {
@@ -264,17 +290,19 @@ export function listColumnOf<V extends RowLike>(
     case 'money':
     case 'percent':
       // A result can be a loss: the figure is red, with its sign and a word after it (PRD E50).
-      if (signed && column.kind === 'money') {
+      if (signed !== false && column.kind === 'money') {
+        // Closed only: an open garden's figure keeps its sign and nothing else (FR-12.38).
+        const shown = (view: V) => signed === true || isClosedGardenRow(view.row.cells);
         return {
           ...base,
           type: 'balance',
           unit: (view: V, context: ListContext) => {
             const found = view.row.cells[index];
-            return found === undefined ? '' : resultWord(found, context);
+            return found === undefined || !shown(view) ? '' : resultWord(found, context);
           },
           tone: (view: V) => {
             const found = view.row.cells[index];
-            return found === undefined ? undefined : resultTone(found);
+            return found === undefined || !shown(view) ? undefined : resultTone(found);
           },
         };
       }
@@ -327,7 +355,6 @@ export function reportColumns(
   columns: readonly ReportColumn[],
   step: LayoutStep,
 ): ListColumn<ReportRowView>[] {
-  const signed = signedColumnsOf(id);
   const steps = stepsOf(id, columns);
   return columns.flatMap((column, index) =>
     shownAt(steps, column.key, step)
@@ -336,7 +363,7 @@ export function reportColumns(
             column,
             index,
             (rowKind) => emptyNameMessageId(id, rowKind),
-            signed.has(column.key),
+            signModeOf(id, column.key),
             // The buyers' list writes each sale line as the client's own print does (R5).
             id === 'R5',
           ),

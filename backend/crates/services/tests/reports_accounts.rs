@@ -16,7 +16,7 @@ mod support;
 use common::*;
 use mandi_reports::reports::{
     Cell, DetailPart, FilterKind, PartyFilter, PrintCell, PrintDetailPart, ReportFilters, ReportId,
-    ReportPrintInput, ReportRunInput, catalog, print_data, run,
+    ReportPrintInput, ReportRunInput, buyer_bills_print_data, catalog, print_data, run,
 };
 use mandi_services::core::accounts::{BalanceSide, OpeningLineInput, OpeningsInput};
 use mandi_services::core::auth::Language;
@@ -1401,6 +1401,13 @@ mod fixtures {
         pair(name, &request, &data);
     }
 
+    /// The slips of R5 "Print All" (round 12).
+    fn slips_pair(w: &support::World, name: &str, request: Value) {
+        let input: ReportPrintInput = typed(&request);
+        let data = buyer_bills_print_data(w.env.ctx.db(), &input).unwrap();
+        pair(name, &request, &data);
+    }
+
     /// A refusal as a command returns it.
     fn refusal_pair(w: &support::World, name: &str, request: Value, code: ErrorCode) {
         let input: ReportRunInput = typed(&request);
@@ -1427,6 +1434,12 @@ mod fixtures {
             "seller_id": null, "zamindar_id": null, "item_id": null, "city_id": null,
             "adda_id": null, "detail": false
         });
+        // Every key of the generated type, so the request is the exact input of the command.
+        if let Some(map) = base.as_object_mut() {
+            for key in ["partner_id", "garden_id", "bikri_id"] {
+                map.entry(key).or_insert(Value::Null);
+            }
+        }
         if let (Some(base), Some(extra)) = (base.as_object_mut(), extra.as_object()) {
             for (k, v) in extra {
                 base.insert(k.clone(), v.clone());
@@ -1575,6 +1588,16 @@ mod fixtures {
             &w,
             "reports_print_data_r5_en",
             json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026" })), "language": "en", "paper": null }),
+        );
+        slips_pair(
+            &w,
+            "reports_buyer_bills_print_data_en",
+            json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026" })), "language": "en", "paper": null }),
+        );
+        slips_pair(
+            &w,
+            "reports_buyer_bills_print_data_ur",
+            json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026" })), "language": "ur", "paper": "a4" }),
         );
         refusal_pair(
             &w,

@@ -108,6 +108,12 @@ fn filters(extra: Value) -> Value {
         "seller_id": null, "zamindar_id": null, "item_id": null, "city_id": null,
         "adda_id": null, "detail": false, "group_by": null, "status": null
     });
+    // Every key of the generated type, so the request is the exact input of the command.
+    if let Some(map) = base.as_object_mut() {
+        for key in ["partner_id", "garden_id", "bikri_id"] {
+            map.entry(key).or_insert(Value::Null);
+        }
+    }
     if let (Some(base), Some(extra)) = (base.as_object_mut(), extra.as_object()) {
         for (k, v) in extra {
             base.insert(k.clone(), v.clone());

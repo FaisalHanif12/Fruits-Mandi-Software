@@ -354,7 +354,7 @@ impl Fmt {
         }
     }
 
-    fn party(&self, party: &PartyRef) -> PrintReportParty {
+    pub(crate) fn party(&self, party: &PartyRef) -> PrintReportParty {
         PrintReportParty {
             short_code: party.short_code.clone(),
             code: party.code.clone(),
@@ -514,6 +514,16 @@ impl Fmt {
     }
 }
 
+/// The firm header of a print, names in the print language.
+pub(crate) fn print_firm(fmt: &Fmt, options: &PrintOptions) -> PrintFirm {
+    PrintFirm {
+        name: fmt.name(&options.firm.name_ur, &options.firm.name_en),
+        mandi: fmt.name(&options.firm.mandi_ur, &options.firm.mandi_en),
+        address: options.firm.address.clone(),
+        phone: options.firm.phone.clone(),
+    }
+}
+
 pub(crate) fn fact(label: &str, value: String) -> PrintFact {
     PrintFact {
         label_id: label.to_owned(),
@@ -666,12 +676,7 @@ pub fn build_print(
         paper: options.paper,
         urdu_digits: fmt.style.urdu_digits(),
         title_id: page.title_id.clone(),
-        firm: PrintFirm {
-            name: fmt.name(&options.firm.name_ur, &options.firm.name_en),
-            mandi: fmt.name(&options.firm.mandi_ur, &options.firm.mandi_en),
-            address: options.firm.address.clone(),
-            phone: options.firm.phone.clone(),
-        },
+        firm: print_firm(&fmt, options),
         filters: filter_facts(&fmt, page.id, &page.filters)?,
         printed_at: fmt.style.printed_at(options.now_utc),
         columns: page

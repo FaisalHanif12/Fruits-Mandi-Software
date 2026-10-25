@@ -214,6 +214,7 @@
     "allow-assist-attention",
     "allow-prefs-screen-get",
     "allow-prefs-screen-set",
+    "allow-reports-buyer-bills-print-data",
     "core:event:default",
     "window-state:default",
     "updater:allow-check",

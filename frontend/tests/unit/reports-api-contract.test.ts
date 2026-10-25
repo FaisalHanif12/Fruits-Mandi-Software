@@ -830,7 +830,7 @@ describe('round 12: R1, the sale book, and R5, the credit buyers’ details', ()
       ['reports_print_data', { input: PRINT_R5_EN_REQUEST }],
     ]);
     expect(R1_BIKRI_1_REQUEST.filters.bikri_id).toBe(1);
-    expect(R1_NEEDS_A_BIKRI_REQUEST.filters.bikri_id).toBeUndefined();
+    expect(R1_NEEDS_A_BIKRI_REQUEST.filters.bikri_id).toBeNull();
   });
 
   it('with no بکری R1 is refused with ERR_REQUIRED on its own box', () => {

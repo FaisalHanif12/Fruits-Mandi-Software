@@ -9,6 +9,7 @@
     "allow-reports-bikri-print-data",
     "allow-reports-voucher-print-data",
     "allow-reports-print-data",
+    "allow-reports-buyer-bills-print-data",
     "allow-analytics-print-data",
     "core:event:default"
   ]

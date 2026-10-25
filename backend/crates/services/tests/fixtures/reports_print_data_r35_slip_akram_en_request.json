@@ -2,10 +2,13 @@
   "filters": {
     "adda_id": null,
     "as_of": "10-10-2026",
+    "bikri_id": null,
     "city_id": null,
     "detail": false,
     "from": "",
+    "garden_id": null,
     "item_id": null,
+    "partner_id": null,
     "party": {
       "account_id": 20,
       "person_key": null

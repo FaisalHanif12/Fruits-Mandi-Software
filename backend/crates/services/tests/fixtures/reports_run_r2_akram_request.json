@@ -2,11 +2,14 @@
   "filters": {
     "adda_id": null,
     "as_of": "",
+    "bikri_id": null,
     "city_id": null,
     "detail": false,
     "from": "",
+    "garden_id": null,
     "group_by": null,
     "item_id": null,
+    "partner_id": null,
     "party": {
       "account_id": 20,
       "person_key": null

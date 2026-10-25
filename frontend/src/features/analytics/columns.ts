@@ -15,7 +15,7 @@ import type { ListColumn, ListContext } from '../../shared/grid';
 import { LIST_COLUMN_WIDTHS } from '../../shared/grid/columnTypes';
 import type { LayoutStep } from '../../shared/hooks/useLayoutStep';
 import { displayName } from '../../shared/i18n';
-import { listColumnOf, monthText, type ReportRowView } from '../reports';
+import { listColumnOf, monthText, type ReportRowView, type SignMode } from '../reports';
 import { columnWidth, fitColumns, STEP_ROOM, windowOf, type ColumnWindow } from './fit';
 
 /** One row of the grid: its place in the whole view is its key. */
@@ -73,6 +73,17 @@ function isSigned(view: AnalyticsView, column: AnalyticsColumn): boolean {
   if (column.kind !== 'money') return false;
   if (view === 'J') return column.key === 'result' || column.heading?.kind === 'partner';
   return view === 'G' && column.key === 'trips_result';
+}
+
+/**
+ * How a column shows its result. View I (gardens) writes "Profit" or "Loss" only on the row of a
+ * closed garden, for the garden's result and each partner's part (PRD FR-12.38); an open garden keeps
+ * its sign only. The totals row has no word, because it adds open and closed gardens.
+ */
+function signModeOf(view: AnalyticsView, column: AnalyticsColumn): SignMode {
+  if (isSigned(view, column)) return true;
+  const result = column.key === 'result' || column.heading?.kind === 'partner';
+  return view === 'I' && column.kind === 'money' && result ? 'closed' : false;
 }
 
 /** The keys of the columns of a page that can be a loss, for the totals row. */
@@ -261,7 +272,8 @@ export function planColumns(
       column.heading === null ? [{ column, index }] : [],
     );
     const fixedWidth = fixed.reduce(
-      (sum, { column }) => sum + columnWidth(column.kind, column.key, isSigned(view, column)),
+      (sum, { column }) =>
+        sum + columnWidth(column.kind, column.key, signModeOf(view, column) !== false),
       0,
     );
     const window = windowOf(
@@ -280,7 +292,7 @@ export function planColumns(
   }
   const items = columns.map((column) => ({
     key: column.key,
-    width: columnWidth(column.kind, column.key, isSigned(view, column)),
+    width: columnWidth(column.kind, column.key, signModeOf(view, column) !== false),
   }));
   const priority = priorityOf(view, columns);
   const byDefault = fitColumns(items, priority, room);
@@ -315,7 +327,7 @@ export function analyticsColumns(
 ): ListColumn<AnalyticsRowView>[] {
   return columns.flatMap((column, index) => {
     if (!plan.visible.has(index)) return [];
-    const base = listColumnOf<AnalyticsRowView>(column, index, undefined, isSigned(view, column));
+    const base = listColumnOf<AnalyticsRowView>(column, index, undefined, signModeOf(view, column));
     const heading = column.heading;
     // The rank of H shares its column with the headings of the three lists, which are words.
     const named: ListColumn<AnalyticsRowView> =

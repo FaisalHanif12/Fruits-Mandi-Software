@@ -1074,6 +1074,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "screen": "report.r20", "value": "{\"city_id\":3}" } }),
             true,
         ),
+        // Run B, D5 round 12 (append-only block).
+        (
+            "reports_buyer_bills_print_data",
+            json!({ "input": { "id": "R5", "filters": {}, "language": "en" } }),
+            true,
+        ),
     ]
 }
 

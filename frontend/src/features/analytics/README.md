@@ -63,8 +63,10 @@ nothing (FR-18.8) except the user's list of saved views.
 - View I (gardens) is one row for each garden: its state (open or closed), what was paid from the
   shop and from pockets, the sales in our shop and in other shops, the other money in, the commission
   and the result, then a percent and a result for each partner of the gardens. The row key is the
-  garden's account (`seller_id`), sent back to `analytics_lines` for the sale lines of its goods. A
-  figure below zero is not called a loss: a garden starts below zero by design (FR-12.37).
+  garden's account (`seller_id`), sent back to `analytics_lines` for the sale lines of its goods. The
+  result and each partner's part carry "Profit" or "Loss" (red for a loss) only on the row of a CLOSED
+  garden (FR-12.38, `signModeOf` in `columns.ts`); an open garden's figure below zero keeps only its sign,
+  because a garden starts below zero by design (FR-12.37). The totals row has no word.
 - The garden box (`GardenFilterSelect` of the gardens module, loaded whole like the trip box) is a main
   box of view I and one of the "More filters" boxes of A to E, G and H (it narrows the sales to that
   garden's goods). F and J refuse a garden, so the catalogue does not list it there and none is sent.

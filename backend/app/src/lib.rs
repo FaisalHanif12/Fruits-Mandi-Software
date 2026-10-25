@@ -299,6 +299,8 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::dashboard::assist_attention,
         commands::screen_prefs::prefs_screen_get,
         commands::screen_prefs::prefs_screen_set,
+        // Run B, D5 round 12 (append-only block).
+        commands::reports_engine::reports_buyer_bills_print_data,
     ]
 }
 

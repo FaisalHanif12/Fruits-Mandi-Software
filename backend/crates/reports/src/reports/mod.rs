@@ -22,6 +22,7 @@
 //! the later plans.
 
 mod accounts;
+mod bill_slips;
 pub(crate) mod business;
 pub(crate) mod collections;
 pub(crate) mod common;
@@ -88,6 +89,7 @@ pub mod grouped_sums {
     pub use super::collections::{KeySums, SellerSums, payable_sums, pukhta_names};
 }
 
+pub use bill_slips::{BuyerBillSlip, BuyerBillsPrintData};
 pub use ids::posting_types;
 pub use model::{
     ArgValue, CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind,
@@ -515,20 +517,55 @@ pub fn print_data_for_page(
     page: &ReportPage,
     input: &ReportPrintInput,
 ) -> Result<ReportPrintData, ReportsError> {
+    build_print(page, &print_options(db, input)?)
+}
+
+/// What a print needs besides its rows: the firm, the number grouping and the print setup.
+fn print_options(db: &Db, input: &ReportPrintInput) -> Result<PrintOptions, ReportsError> {
     let (firm, grouping, setup) = db.read(|conn| {
         Ok::<_, ReportsError>((load_firm(conn)?, load_grouping(conn)?, load_setup(conn)?))
     })?;
-    build_print(
-        page,
-        &PrintOptions {
-            language: input.language,
-            grouping,
-            urdu_digits_setting: setup.urdu_digits,
-            paper: input.paper.unwrap_or(Paper::A4),
-            firm,
-            now_utc: db.clock().now_utc(),
-        },
-    )
+    Ok(PrintOptions {
+        language: input.language,
+        grouping,
+        urdu_digits_setting: setup.urdu_digits,
+        paper: input.paper.unwrap_or(Paper::A4),
+        firm,
+        now_utc: db.clock().now_utc(),
+    })
+}
+
+/// The print data of "Print All" for R5: one slip for each credit buyer of the filter, with every
+/// line, in the print language (PRD 19.2 R5, FR-19.10, FR-19.11). The filters are those of R5.
+/// The slips and the totals are read from one snapshot of the books; the slips add up to the
+/// totals of R5 and of R4. Reads only.
+///
+/// # Errors
+/// As [`run`]; `ERR_OUT_OF_RANGE` on `id` if the report is not R5; `ReportsError::Data` if a
+/// buyer's lines do not add up to his sums.
+pub fn buyer_bills_print_data(
+    db: &Db,
+    input: &ReportPrintInput,
+) -> Result<BuyerBillsPrintData, ReportsError> {
+    bill_slips::check_input(input)?;
+    let (typed, slips) = db.read(|conn| {
+        common::in_snapshot(conn, |conn| {
+            let entry = spec_of(ReportId::R5)?;
+            let today = common::today(db.clock().now_utc())?;
+            let typed: Typed = resolve(
+                conn,
+                today,
+                Takes {
+                    kinds: entry.filters,
+                    party_required: entry.party_required,
+                },
+                &input.filters,
+            )?;
+            let slips = sales::buyer_slips(conn, &typed)?;
+            Ok((typed, slips))
+        })
+    })?;
+    bill_slips::build(&slips, &typed.resolved, &print_options(db, input)?)
 }
 
 /// Every row of a report with the firm header names and the number grouping, for the Excel

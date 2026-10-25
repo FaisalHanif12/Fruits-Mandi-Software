@@ -7,9 +7,9 @@
 
 use mandi_reports::ReportsError;
 use mandi_reports::reports::{
-    CatalogEntry, ReportFilters, ReportId, ReportPage, ReportPrintData, ReportPrintInput,
-    ReportRunInput, catalog, print_data, print_data_for_page, run as run_report, statement_page,
-    statement_paging, statement_request,
+    BuyerBillsPrintData, CatalogEntry, ReportFilters, ReportId, ReportPage, ReportPrintData,
+    ReportPrintInput, ReportRunInput, buyer_bills_print_data, catalog, print_data,
+    print_data_for_page, run as run_report, statement_page, statement_paging, statement_request,
 };
 use mandi_services::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_services::core::error::ErrorCode;
@@ -211,6 +211,23 @@ pub async fn reports_print_data<R: tauri::Runtime>(
             return print_data_for_page(ctx.db(), &page, &input).map_err(engine_error);
         }
         print_data(ctx.db(), &input).map_err(engine_error)
+    })
+    .await
+}
+
+/// The print data of R5 "Print All" (PRD 19.2 R5, FR-19.10, FR-19.11): one slip for each credit
+/// buyer of the filter, with every line of his, his sums, and the sums of all slips, in the print
+/// language. A one-time person has his own slip; a buyer who paid cash on the spot has none. Read
+/// only. The input is that of `reports_print_data` with `id` R5. Errors: as `reports_run`;
+/// `ERR_OUT_OF_RANGE` on `id` if the report is not R5.
+#[tauri::command]
+pub async fn reports_buyer_bills_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ReportPrintInput,
+) -> Result<BuyerBillsPrintData, UiError> {
+    run(app, "reports_buyer_bills_print_data", move |ctx| {
+        auth::require(ctx)?;
+        buyer_bills_print_data(ctx.db(), &input).map_err(engine_error)
     })
     .await
 }

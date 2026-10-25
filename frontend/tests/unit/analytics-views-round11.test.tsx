@@ -10,6 +10,9 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AnalyticsPage } from '../../src/bindings/AnalyticsPage';
+import type { AnalyticsRow } from '../../src/bindings/AnalyticsRow';
+import type { ReportCell } from '../../src/bindings/ReportCell';
 import * as analyticsApi from '../../src/features/analytics/api';
 import * as gardensApi from '../../src/features/gardens/api';
 import * as tripsApi from '../../src/features/trips/api';
@@ -28,6 +31,7 @@ import {
 import {
   ANALYTICS_PRINT_DATA_J_EN,
   ANALYTICS_RUN_F_TRIP,
+  ANALYTICS_RUN_I_GARDEN,
   ANALYTICS_RUN_G_TRIP_WRITTEN_OFF,
   ANALYTICS_RUN_J_EMPTY,
   ANALYTICS_RUN_J_TRIP_WRITTEN_OFF,
@@ -37,6 +41,7 @@ import {
 import { fakeGardens } from '../helpers/gardens';
 import { fakePartners, partnerRow } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { paisaForTest } from '../helpers/paisa';
 import { fakeTrips } from '../helpers/trips';
 import {
   ANALYTICS_PRINT_DATA_I_EN,
@@ -95,6 +100,10 @@ const named = (text: string) => (name: string) => {
   if (seen === text) return true;
   return seen.startsWith(text) && KEY_CHIPS.has(seen.slice(text.length).trim());
 };
+
+/** Where the garden's state and its result are among the cells of a view I row. */
+const STATUS_COLUMN = 1;
+const RESULT_COLUMN = 8;
 
 function cellElement(rowId: string, colId: string): Element | null {
   return document.querySelector(`.ag-row[row-id="${rowId}"] [col-id="${colId}"]`);
@@ -535,10 +544,10 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       });
       expect(cell('0', 'group')).toBe(names('شاہ پور باغ', 'Shahpur Garden'));
       expect(cell('0', 'status')).toBe(m('report-garden-closed'));
-      expect(cell('0', 'result')).toBe('11,400');
+      expect(cell('0', 'result')).toBe(`11,400${m('report-result-profit')}`);
       expect(totalsCell('result')).toBe('11,400');
-      expect(cell('0', 'result_1')).toBe('6,840');
-      expect(cell('0', 'result_2')).toBe('4,560');
+      expect(cell('0', 'result_1')).toBe(`6,840${m('report-result-profit')}`);
+      expect(cell('0', 'result_2')).toBe(`4,560${m('report-result-profit')}`);
     });
 
     it('heads the columns of a partner with his name, then what they hold', async () => {
@@ -551,13 +560,46 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       );
     });
 
-    it('does not call a result below zero a loss, and offers no comparison', async () => {
+    it('writes Profit on the result of a closed garden and each partner’s part, and offers no comparison', async () => {
       await openView('I');
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(1);
       }, SLOW_MS);
-      expect(cell('0', 'result')).not.toContain(m('report-result-loss'));
+      expect(cell('0', 'result')).toContain(m('report-result-profit'));
+      expect(cell('0', 'result_1')).toContain(m('report-result-profit'));
+      // The totals row adds open and closed gardens, so it carries no word.
+      expect(totalsCell('result')).toBe('11,400');
       expect(screen.queryByRole('combobox', { name: m('analytics-filter-compare') })).toBeNull();
+    });
+
+    it('writes Loss, in red, on a closed garden’s loss, but only the sign on an open garden below zero (FR-12.38)', async () => {
+      const base = ANALYTICS_RUN_I_GARDEN.rows[0];
+      if (base === undefined) throw new Error('The view I fixture has no row.');
+      const gardenRow = (state: string, paisa: number): AnalyticsRow => ({
+        ...base,
+        cells: base.cells.map((found, index): ReportCell => {
+          if (index === STATUS_COLUMN) return { type: 'label', id: state };
+          if (index === RESULT_COLUMN) return { type: 'money', paisa: paisaForTest(paisa) };
+          return found;
+        }),
+      });
+      const page: AnalyticsPage = {
+        ...ANALYTICS_RUN_I_GARDEN,
+        rows: [
+          gardenRow('report-garden-open', -3_000_000),
+          gardenRow('report-garden-closed', -450_000),
+        ],
+      };
+      await openView('I', { pages: { I: page } });
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0', '1']);
+      }, SLOW_MS);
+      expect(cell('0', 'result')).toContain('30,000');
+      expect(cell('0', 'result')).not.toContain(m('report-result-loss'));
+      expect(cellElement('0', 'result')).not.toHaveClass('cell-tone-due');
+      expect(cell('1', 'result')).toContain('4,500');
+      expect(cell('1', 'result')).toContain(m('report-result-loss'));
+      expect(cellElement('1', 'result')).toHaveClass('cell-tone-due');
     });
 
     it('keeps the garden box in view, lists the gardens by name and asks for the one picked', async () => {

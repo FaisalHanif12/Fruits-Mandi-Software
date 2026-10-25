@@ -220,6 +220,8 @@ const APP_COMMANDS: &[&str] = &[
     "assist_attention",
     "prefs_screen_get",
     "prefs_screen_set",
+    // Run B, D5 round 12 (append-only block).
+    "reports_buyer_bills_print_data",
 ];
 
 fn main() {
