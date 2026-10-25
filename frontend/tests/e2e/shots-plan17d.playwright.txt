@@ -1,0 +1,237 @@
+// The screens of plan 17d (the پھل tab next to خرچہ) in both languages at the three window sizes,
+// taken from the development page /dev/rokar?screen=fruit with the Playwright tool: the form with
+// nothing typed (and the list empty), the list with the two entries of E2E-42, home fruit typed
+// (A, the lot of رحیم, 2 at 580), guest fruit typed (1 at 1,000 shared 334 / 333 / 333), fruit from
+// another shop typed, the refusals at their fields (9 of a lot with 5, a rate of 0), an entry opened
+// for edit, and the cancel box. It is a developer tool: run it with a Vite dev server up on its OWN
+// port (`pnpm --filter frontend exec vite --port 5273 --strictPort`; change BASE if you use another
+// port). It checks the address before each shot and returns, for each shot, the sideways overflow
+// (NFR-USE-15). Set ONLY below to a list of scenario names to run a part. (It is a snippet for that
+// tool, not a module, so it is kept as .txt and the linter does not read it. The Windows check is
+// spec 30.)
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/plan17d';
+  const BASE = 'http://localhost:5273';
+  const PAGE = `${BASE}/#/dev/rokar`;
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const settle = (ms) => page.waitForTimeout(ms);
+  page.setDefaultTimeout(15000);
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type !== 'beforeunload') add(type, ...rest);
+    };
+  });
+
+  // Pieces of the labels (from fruit.ftl). A label that holds a glossary word has invisible marks
+  // around it in the page, so only a piece of the plain words is matched.
+  const W = {
+    ur: {
+      forWhom: /^کس کے لیے$/,
+      partner: /الف/,
+      guests: /مہمان/,
+      lot: /لاٹ/,
+      qty: /^تعداد$/,
+      rate: /^ریٹ$/,
+      sourceOther: /دوسری دکان/,
+      agent: /آڑھتی/,
+      item: /قسم مال/,
+      packing: /پیکنگ/,
+      edit: /^ترمیم/,
+      cancel: /^اندراج منسوخ کریں/,
+      reason: /وجہ/,
+    },
+    en: {
+      forWhom: /^For$/,
+      partner: /Partner A/,
+      guests: /Guests/,
+      lot: /Lot/,
+      qty: /^Quantity$/,
+      rate: /^Rate$/,
+      sourceOther: /Another Shop/,
+      agent: /Commission Agent/,
+      item: /Item/,
+      packing: /Packing/,
+      edit: /^Edit/,
+      cancel: /^Cancel entry/,
+      reason: /Why/,
+    },
+  };
+  const typeInto = async (box, text) => {
+    await box.click();
+    await box.selectText().catch(() => undefined);
+    await box.pressSequentially(text, { delay: 25 });
+    await settle(200);
+  };
+  const fill = async (language, key, text) => {
+    await typeInto(page.getByLabel(W[language][key]).first(), text);
+  };
+  const chooseFor = async (language, key) => {
+    await page.getByLabel(W[language].forWhom).first().click();
+    await page.getByRole('option', { name: W[language][key] }).first().click();
+    await settle(200);
+  };
+  const pickFirst = async (language, label, text) => {
+    await typeInto(page.getByLabel(W[language][label]).first(), text);
+    await settle(500);
+    await page.getByRole('option').first().click();
+    await settle(300);
+  };
+  const scrollEnd = () =>
+    page.evaluate(() => {
+      const main = document.querySelector('main');
+      if (main) main.scrollTop = main.scrollHeight;
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+  const scrollTop = () =>
+    page.evaluate(() => {
+      const main = document.querySelector('main');
+      if (main) main.scrollTop = 0;
+      window.scrollTo(0, 0);
+    });
+  const selectFirstRow = async () => {
+    await page.locator('.ag-row[row-id="1"] .ag-cell').first().click();
+    await settle(300);
+  };
+
+  const SCENARIOS = {
+    empty: { query: '&empty', run: async () => settle(500), bottom: true },
+    seeded: { query: '', run: async () => settle(700), bottom: true },
+    home: {
+      query: '&empty',
+      run: async (language) => {
+        await chooseFor(language, 'partner');
+        await pickFirst(language, 'lot', 'rahim');
+        await fill(language, 'qty', '2');
+        await fill(language, 'rate', '580');
+        await settle(700);
+      },
+      bottom: true,
+    },
+    guests: {
+      query: '&empty',
+      run: async (language) => {
+        await chooseFor(language, 'guests');
+        await pickFirst(language, 'lot', 'rahim');
+        await fill(language, 'qty', '1');
+        await fill(language, 'rate', '1000');
+        await settle(700);
+      },
+      bottom: true,
+    },
+    other: {
+      query: '&empty',
+      run: async (language) => {
+        await chooseFor(language, 'guests');
+        await page.getByRole('button', { name: W[language].sourceOther }).first().click();
+        await settle(300);
+        await pickFirst(language, 'agent', 'nazir');
+        await pickFirst(language, 'item', 'app');
+        await pickFirst(language, 'packing', 'box');
+        await fill(language, 'qty', '3');
+        await fill(language, 'rate', '1000');
+        await settle(700);
+      },
+      bottom: true,
+    },
+    refused: {
+      query: '&empty',
+      run: async (language) => {
+        await chooseFor(language, 'partner');
+        await pickFirst(language, 'lot', 'rahim');
+        await fill(language, 'qty', '9');
+        await fill(language, 'rate', '0');
+        await settle(700);
+      },
+      bottom: true,
+    },
+    edit: {
+      query: '',
+      run: async (language) => {
+        await scrollEnd();
+        await selectFirstRow();
+        await page.getByRole('button', { name: W[language].edit }).first().click();
+        await settle(700);
+        await scrollTop();
+      },
+      bottom: true,
+    },
+    cancel: {
+      query: '',
+      run: async (language) => {
+        await scrollEnd();
+        await selectFirstRow();
+        await page.getByRole('button', { name: W[language].cancel }).first().click();
+        await settle(500);
+      },
+    },
+  };
+
+  const ONLY = null;
+  const only = ONLY ?? Object.keys(SCENARIOS);
+  const result = [];
+  for (const name of only) {
+    const scenario = SCENARIOS[name];
+    if (scenario === undefined) {
+      result.push(`${name}: no such scenario`);
+      continue;
+    }
+    for (const language of ['ur', 'en']) {
+      for (const [width, height] of SIZES) {
+        await page.setViewportSize({ width, height });
+        await page.goto('about:blank');
+        await page.goto(`${PAGE}?screen=fruit${scenario.query}`);
+        await page.reload();
+        await settle(900);
+        if (language === 'en') {
+          await page.keyboard.press('Alt+KeyL');
+          await settle(500);
+        }
+        const here = page.url();
+        if (!here.startsWith(PAGE)) {
+          result.push(`${name} ${language} ${width}x${height} WRONG ADDRESS ${here}`);
+          continue;
+        }
+        let failed = '';
+        try {
+          await scenario.run(language);
+        } catch (error) {
+          failed = ` RUN FAILED: ${String(error).slice(0, 160)}`;
+        }
+        const overflow = await page.evaluate(() => {
+          const main = document.querySelector('main');
+          const wide = [...document.querySelectorAll('main *')].filter(
+            (el) =>
+              el.scrollWidth > el.clientWidth + 1 &&
+              getComputedStyle(el).overflowX === 'visible' &&
+              el.clientWidth > 0,
+          );
+          return {
+            main: main ? main.scrollWidth - main.clientWidth : -1,
+            page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            wide: wide.length,
+          };
+        });
+        const lang = await page.evaluate(
+          () => `${document.documentElement.lang}/${document.documentElement.dir}`,
+        );
+        await page.screenshot({ path: `${OUT}/${name}-${language}-${width}x${height}.png` });
+        if (scenario.bottom === true) {
+          await scrollEnd();
+          await settle(300);
+          await page.screenshot({ path: `${OUT}/${name}-${language}-${width}x${height}-bottom.png` });
+          await scrollTop();
+        }
+        result.push(
+          `${name} ${language} ${width}x${height} [${lang}] overflow main=${overflow.main} page=${overflow.page} wide=${overflow.wide}${failed}`,
+        );
+      }
+    }
+  }
+  return result.join('\n');
+}

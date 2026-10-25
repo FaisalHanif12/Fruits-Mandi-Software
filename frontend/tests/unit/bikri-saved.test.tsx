@@ -174,6 +174,32 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
     );
   });
 
+  it('fruit taken from a lot is shown on its card, and only when some was taken (PRD 16.7, C16)', async () => {
+    const base = savedEvent1();
+    const lot = base.lots[0];
+    if (lot === undefined) throw new Error('no lot');
+    // E2E-42: 2 پیٹی were taken home; the lot's own figures are the backend's.
+    vi.mocked(bikriApi.bikriGet).mockResolvedValue({
+      ...base,
+      lots: [{ ...lot, qty_sold: 45, qty_taken: 2 }],
+    });
+    await open();
+    await waitFor(() => {
+      expect(pageText()).toContain(message(language, 'bikri-saved-qty-taken'));
+    });
+    const label = screen.getAllByText(named(message(language, 'bikri-saved-qty-taken')))[0];
+    expect(visible(label?.closest('div')?.textContent)).toContain('2');
+  });
+
+  it('a lot with no fruit taken does not show the figure', async () => {
+    await open();
+    await screen.findByRole('heading', {
+      level: 1,
+      name: named(message(language, 'bikri-saved-title', { number: 1 })),
+    });
+    expect(screen.queryByText(named(message(language, 'bikri-saved-qty-taken')))).toBeNull();
+  });
+
   it('a one-time buyer is shown by his own name', async () => {
     const base = savedEvent1();
     const lot = base.lots[0];

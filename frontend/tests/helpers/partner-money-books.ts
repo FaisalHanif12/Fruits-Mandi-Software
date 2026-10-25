@@ -380,6 +380,7 @@ export function createPartnerMoneyBooks(
         number: one.number,
         secondary_number: one.secondary,
         subject: one.subject,
+        packing: null,
         reason: one.reason,
         amount_paisa: one.amount === null ? null : money(one.amount),
         running_paisa: money(total),

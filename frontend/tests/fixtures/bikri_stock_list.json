@@ -29,6 +29,7 @@
       "qty_received": 50,
       "qty_sold": 45,
       "qty_written_off": 0,
+      "qty_taken": 0,
       "balance": 5,
       "days_waiting": 0,
       "write_offs": []

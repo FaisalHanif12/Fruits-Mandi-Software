@@ -4,6 +4,7 @@
 export { EntryBalances } from './components/EntryBalances';
 export { EntryFrame } from './components/EntryFrame';
 export { EntryNotes } from './components/EntryNotes';
+export { ExpenseTabs } from './components/ExpenseTabs';
 export { SignedNum } from './components/SignedNum';
 export { previewRefusal, useFollowType } from './entry-support';
 export { CASHBOOK_KEY, useEntryPreview, useReadAgain } from './hooks';

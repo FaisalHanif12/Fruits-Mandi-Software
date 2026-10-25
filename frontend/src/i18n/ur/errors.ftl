@@ -434,6 +434,10 @@ err-capital-exceeds-balance = یہ شراکت دار کے { -sarmaya } بقای�
 
 ## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
 
+# PRD FR-16.12: the fruit entry was cancelled already (it cannot be changed or cancelled again).
+# review: pending
+err-fruit-cancelled = یہ { -phal } کا اندراج پہلے ہی منسوخ ہو چکا ہے، اس لیے اس میں تبدیلی نہیں ہو سکتی۔
+
 # PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
 # review: pending
 err-garden-closed = یہ { -bagh } بند ہے، اس لیے اس میں نیا اندراج، نیا لاٹ یا پھل نہیں لیا جا سکتا۔ پہلے اس کی بندش واپس لیں۔

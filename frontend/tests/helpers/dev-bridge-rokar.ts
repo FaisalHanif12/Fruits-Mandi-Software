@@ -32,9 +32,16 @@ import {
 import type { CapitalHistoryInput } from '../../src/bindings/CapitalHistoryInput';
 import type { CapitalInput } from '../../src/bindings/CapitalInput';
 import type { DayCloseSummary } from '../../src/bindings/DayCloseSummary';
+import type { FruitCancelInput } from '../../src/bindings/FruitCancelInput';
+import type { FruitEditInput } from '../../src/bindings/FruitEditInput';
+import type { FruitGetInput } from '../../src/bindings/FruitGetInput';
+import type { FruitInput } from '../../src/bindings/FruitInput';
+import type { FruitListInput } from '../../src/bindings/FruitListInput';
+import type { FruitLotsInput } from '../../src/bindings/FruitLotsInput';
 import type { GeneralInput } from '../../src/bindings/GeneralInput';
 import type { GeneralPreviewInput } from '../../src/bindings/GeneralPreviewInput';
 import type { PartnersStatementInput } from '../../src/bindings/PartnersStatementInput';
+import { createFruitBooks, HAJI_NAZIR } from './fruit-data';
 import { GENERAL_ACCOUNTS, SHAHID, createPartnerMoneyBooks } from './partner-money-books';
 import { paisaForTest } from './paisa';
 import { overviewRow, partnerRow, THREE_PARTNERS } from './partners';
@@ -137,6 +144,8 @@ const DAY_SUMMARY: DayCloseSummary = {
 const PEOPLE = [
   { ...ASLAM, type: 'money_lent' as const, control: 103 },
   { ...FAMILY_KHATA, type: 'other' as const, control: 305 },
+  // The other commission agent of the پھل tab: a seller account (plan 17d, PRD FR-16.11).
+  { ...HAJI_NAZIR, type: 'seller' as const, control: 11 },
 ];
 
 const asNumber = (value: unknown): number => (typeof value === 'number' ? value : 0);
@@ -156,7 +165,51 @@ function hitOf(person: (typeof PEOPLE)[number]) {
   };
 }
 
+/**
+ * The books of the پھل tab (plan 17d, tests/helpers/fruit-data.ts). Unless `&empty`, two entries of
+ * E2E-42 are in it: A took 2 پیٹی کیلا home at 580, and the guests had 3 پیٹی سیب at 1,000 from
+ * حاجی نذیر's shop.
+ */
+const fruitBooks = createFruitBooks();
+if (!flag('empty')) {
+  fruitBooks.save({
+    for_guests: false,
+    partner_id: 1,
+    date: '10-10-2026',
+    source: 'shop',
+    lot_id: 40,
+    agent_account_id: null,
+    item_id: null,
+    packing_id: null,
+    qty: '2',
+    weight: null,
+    rate: '580',
+    note: null,
+  });
+  fruitBooks.save({
+    for_guests: true,
+    partner_id: null,
+    date: '10-10-2026',
+    source: 'other_shop',
+    lot_id: null,
+    agent_account_id: HAJI_NAZIR.id,
+    item_id: 63,
+    packing_id: 71,
+    qty: '3',
+    weight: null,
+    rate: '1000',
+    note: null,
+  });
+}
+
 export const rokarHandlers: Record<string, Handler> = {
+  fruit_preview: (input) => fruitBooks.preview(input as unknown as FruitInput),
+  fruit_save: (input) => fruitBooks.save(input as unknown as FruitInput),
+  fruit_edit: (input) => fruitBooks.edit(input as unknown as FruitEditInput),
+  fruit_cancel: (input) => fruitBooks.cancel(input as unknown as FruitCancelInput),
+  fruit_get: (input) => fruitBooks.get(input as unknown as FruitGetInput),
+  fruit_list: (input) => fruitBooks.list(input as unknown as FruitListInput),
+  fruit_lots: (input) => fruitBooks.lots(input as unknown as FruitLotsInput),
   cashbook_get: (input) => books.cashbook(input as unknown as CashbookInput),
   masters_expense_heads: () => books.heads(),
   vouchers_preview_expense: (input) => books.expensePreview(input['entry'] as ExpenseEntry),
@@ -256,6 +309,15 @@ export const rokarHandlers: Record<string, Handler> = {
         is_active: true,
       }));
     }
+    if (asText(input['scope']) === 'seller') {
+      return PEOPLE.filter(
+        (person) =>
+          person.type === 'seller' &&
+          [person.code, person.name_ur, person.name_en].some((part) =>
+            part.toLowerCase().includes(wanted),
+          ),
+      ).map(hitOf);
+    }
     return PEOPLE.filter(
       (person) =>
         asNumber(input['control_id']) === person.control &&
@@ -265,7 +327,11 @@ export const rokarHandlers: Record<string, Handler> = {
     ).map(hitOf);
   },
   search_accounts_recent: (input) =>
-    PEOPLE.filter((person) => asNumber(input['control_id']) === person.control).map(hitOf),
+    PEOPLE.filter((person) =>
+      asText(input['scope']) === 'seller'
+        ? person.type === 'seller'
+        : asNumber(input['control_id']) === person.control,
+    ).map(hitOf),
   search_accounts_touch: () => null,
   accounts_balances: () => [],
   assist_party_card: (input) => {

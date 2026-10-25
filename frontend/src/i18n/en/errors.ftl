@@ -436,6 +436,10 @@ err-capital-exceeds-balance = This is more than the partner's { -sarmaya } balan
 
 ## Plan 17c: gardens (PRD 12.11, FR-12.34 to FR-12.38).
 
+# PRD FR-16.12: the fruit entry was cancelled already (it cannot be changed or cancelled again).
+# review: pending
+err-fruit-cancelled = This fruit entry was cancelled already, so it cannot be changed.
+
 # PRD FR-12.38, E65. Also shown when an entry of a closed garden is cancelled, or a { -bikri } with a lot of it is edited or cancelled.
 # review: pending
 err-garden-closed = This { -bagh } is closed, so it takes no new entry, no lot and no fruit. Undo its closing first.

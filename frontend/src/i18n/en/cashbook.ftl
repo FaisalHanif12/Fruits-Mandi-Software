@@ -250,6 +250,9 @@ cashbook-type-khata-in = Received
 cashbook-tab-expense = { -kharcha }
 
 # review: pending
+cashbook-tab-fruit = { -phal }
+
+# review: pending
 cashbook-tabs-label = Sections of { -kharcha }
 
 ## The { -kharcha } screen (PRD 16.2, 16.3, FR-16.8, FR-7.68, FR-7.62).

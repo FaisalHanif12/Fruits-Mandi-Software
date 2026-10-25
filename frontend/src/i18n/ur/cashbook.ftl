@@ -250,6 +250,9 @@ cashbook-type-khata-in = رقم آئی
 cashbook-tab-expense = { -kharcha }
 
 # review: pending
+cashbook-tab-fruit = { -phal }
+
+# review: pending
 cashbook-tabs-label = { -kharcha } کے حصے
 
 ## The { -kharcha } screen (PRD 16.2, 16.3, FR-16.8, FR-7.68, FR-7.62).

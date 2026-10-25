@@ -56,6 +56,7 @@ export function stockRow(overrides: Partial<StockRow> = {}): StockRow {
     qty_received: 50,
     qty_sold: 45,
     qty_written_off: 0,
+    qty_taken: 0,
     balance: 5,
     days_waiting: 1,
     write_offs: [],

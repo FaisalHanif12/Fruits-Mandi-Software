@@ -35,9 +35,9 @@ fruit-source-other-help = کسی دوسرے { -arhti } کی دکان سے پھل
 fruit-field-lot = { -lot }
 # review: pending
 fruit-lot-hint = صرف وہ { -lot } دکھائے جاتے ہیں جن میں مال باقی ہے۔
-# $bikri, $lot: the numbers; $item, $packing, $seller: names; $left: the lot's balance.
+# $bikri, $lot: the numbers; $item, $packing, $seller: names; $remaining: the lot's balance.
 # review: pending
-fruit-lot-option = { -bikri } { $bikri }، { -lot } { $lot }: { $item }، { $packing }، { $seller }، باقی { $left }
+fruit-lot-option = { -bikri } { $bikri }، { -lot } { $lot }: { $item }، { $packing }، { $seller }، باقی { $remaining }
 # review: pending
 fruit-lot-empty = کسی { -lot } میں مال باقی نہیں
 # review: pending
@@ -50,9 +50,9 @@ fruit-agent-hint = دوسرے { -arhti } کا { -beopari } کھاتہ۔ اگر �
 fruit-item-from-lot = { -lot } سے لیا گیا
 # review: pending
 fruit-field-qty = تعداد
-# $left: the lot's balance, from the backend.
+# $remaining: the lot's balance, from the backend.
 # review: pending
-fruit-qty-left = { -lot } میں { $left } باقی ہیں
+fruit-qty-left = { -lot } میں { $remaining } باقی ہیں
 # review: pending
 fruit-field-weight = وزن (کلو)
 # review: pending
@@ -73,9 +73,10 @@ fruit-numbers-incomplete = فارم مکمل ہو تو اعداد نظر آئی�
 fruit-numbers-failed = اعداد نہیں نکل سکے
 # review: pending
 fruit-numbers-value = قیمت
-# $name: the lot's seller, or the other agent.
 # review: pending
-fruit-numbers-credit = { $name } کے کھاتے میں جمع
+fruit-numbers-credit = کھاتے میں جمع
+# review: pending
+fruit-numbers-lot-before = ابھی { -lot } کا باقی مال
 # review: pending
 fruit-numbers-lot-after = اس کے بعد { -lot } کا باقی مال
 # $name: the partner.
@@ -85,6 +86,19 @@ fruit-parts-title-home = { $name } کی { -kul-raqam } سے کٹے گا
 fruit-parts-title-guests = شراکت داروں میں برابر بٹے گا
 # review: pending
 fruit-parts-note = جو روپیہ برابر نہ بٹے وہ سب سے پہلے بنائے گئے شراکت دار کو ملتا ہے۔ { -commission } کے حصے استعمال نہیں ہوتے۔
+# $remaining: the lot's balance, from the backend.
+# review: pending
+fruit-lot-left = باقی { $remaining }
+# review: pending
+fruit-parts-col-partner = { -shirakat-dar }
+# review: pending
+fruit-parts-col-amount = حصہ
+# review: pending
+fruit-parts-col-now = ابھی کی { -kul-raqam }
+# review: pending
+fruit-parts-col-after = اس کے بعد کی { -kul-raqam }
+# review: pending
+fruit-field-reason = تبدیلی کی وجہ
 
 ## Saving, editing and cancelling (PRD FR-16.12).
 # $number: the number of the entry in its own series.
@@ -138,6 +152,11 @@ fruit-col-item = { -qism-maal } اور { -packing }
 # review: pending
 fruit-col-qty = { -nag }
 # review: pending
+fruit-col-weight = وزن (کلو)
+# $lot: the بکری number and the lot number, for example 1-2.
+# review: pending
+fruit-from-lot = { -lot } { $lot }
+# review: pending
 fruit-col-rate = ریٹ
 # review: pending
 fruit-col-value = قیمت
@@ -145,19 +164,28 @@ fruit-col-value = قیمت
 fruit-col-source = کہاں سے
 # review: pending
 fruit-col-from = کس سے
+# $name: the partner or the guests. A cancelled entry says so in the first column of the list.
 # review: pending
-fruit-col-state = حالت
+fruit-for-cancelled = { $name }، منسوخ
 # review: pending
-fruit-state-cancelled = منسوخ
-# review: pending
-fruit-filter-for = کس کے لیے
+fruit-filter-for = شراکت دار یا { -mehman }
 # review: pending
 fruit-filter-for-all = سب
 # review: pending
-fruit-filter-item = { -qism-maal }
+fruit-filter-item = فہرست میں { -qism-maal }
 # review: pending
 fruit-filter-item-all = سب قسمیں
 # review: pending
 fruit-filter-from = از
 # review: pending
 fruit-filter-to = تا
+# review: pending
+fruit-period-today = آج
+# review: pending
+fruit-period-month = یہ مہینہ
+# review: pending
+fruit-period-year = یہ سال
+# review: pending
+fruit-period-all = سب دن
+# review: pending
+fruit-list-select-help = کسی اندراج پر جا کر Enter دبائیں تو اس میں تبدیلی ہو سکتی ہے۔

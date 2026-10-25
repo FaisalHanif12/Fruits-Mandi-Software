@@ -74,6 +74,13 @@ export const STOCK_COLUMNS: readonly ListColumn<StockRow>[] = [
     value: (row) => String(row.qty_written_off),
   },
   {
+    field: 'taken',
+    type: 'number',
+    headerId: 'bikri-stock-col-taken',
+    from: 'wide',
+    value: (row) => String(row.qty_taken),
+  },
+  {
     field: 'balance',
     type: 'number',
     headerId: 'bikri-col-balance',

@@ -16,6 +16,7 @@
       "number": 1,
       "secondary_number": null,
       "subject": null,
+      "packing": null,
       "reason": "",
       "amount_paisa": 118400,
       "running_paisa": 118400,
@@ -34,6 +35,7 @@
         "name_ur": "بجلی",
         "name_en": "Electricity"
       },
+      "packing": null,
       "reason": "",
       "amount_paisa": -90000,
       "running_paisa": 28400,
@@ -49,6 +51,7 @@
       "number": 1,
       "secondary_number": null,
       "subject": null,
+      "packing": null,
       "reason": "",
       "amount_paisa": 5000000,
       "running_paisa": 5028400,

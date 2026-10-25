@@ -62,7 +62,7 @@ function seriesOf(line: StatementLine): string | undefined {
   return VOUCHER_SERIES[line.detail];
 }
 
-/** The word of the group a line belongs to (the heading). Fruit comes with its own plan (D4R). */
+/** The word of the group a line belongs to (the heading). */
 export function headingText(line: StatementLine, say: StatementSay): string {
   const id = `partners-statement-heading-${idPart(line.heading)}`;
   return say.exists(id) ? say.text(id) : say.text('partners-statement-heading-other');
@@ -93,6 +93,8 @@ export function detailText(line: StatementLine, say: StatementSay): string {
   vars['number'] = number;
   vars['reason'] = line.reason;
   vars['subject'] = line.subject === null ? '' : displayName(line.subject, say.language);
+  // The packing of a fruit line (PRD FR-17.10): "2 پیٹی مالٹا @ 1,400". Null on every other line.
+  vars['packing'] = line.packing === null ? '' : displayName(line.packing, say.language);
   const series = seriesOf(line);
   vars['voucher'] =
     series === undefined || line.number === null

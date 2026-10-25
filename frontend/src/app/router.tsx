@@ -410,6 +410,13 @@ const expenseRoute = createRoute({
   ),
 });
 
+// پھل (PRD 16.7, plan 17d): a tab next to خرچہ in the روکڑ area, one more entry in `EXPENSE_TABS`.
+const fruitRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/rokar/fruit',
+  component: lazyRouteComponent(() => import('../features/fruit/pages/FruitPage'), 'FruitPage'),
+});
+
 const lentRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/rokar/lent',
@@ -475,6 +482,7 @@ const appRoutes = [
   laterSaleRoute,
   rokarRoute,
   expenseRoute,
+  fruitRoute,
   lentRoute,
   khataRoute,
   generalRoute,
