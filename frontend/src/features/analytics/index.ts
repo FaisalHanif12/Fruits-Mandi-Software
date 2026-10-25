@@ -16,4 +16,6 @@ export {
   useSavedViews,
   useSaveViews,
 } from './hooks';
+export { isAnalyticsAddress } from './print/params';
+export { AnalyticsPrintPage } from './print/AnalyticsPrintPage';
 export type { AnalyticsSavedView, AnalyticsView } from './types';

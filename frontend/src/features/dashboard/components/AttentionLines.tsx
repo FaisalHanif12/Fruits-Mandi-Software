@@ -29,7 +29,10 @@ function Line({ item, onOpen }: { item: AttentionItem; onOpen: (to: Destination)
   const firstName =
     first === null
       ? ''
-      : displayName({ name_ur: first.name_ur ?? '', name_en: first.name_en ?? '' }, language);
+      : displayName(
+          { name_ur: first.name_ur ?? '', name_en: first.name_en ?? '', tag: first.tag },
+          language,
+        );
   return (
     <li className="flex flex-col">
       <button

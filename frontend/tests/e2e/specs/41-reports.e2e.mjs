@@ -108,10 +108,11 @@ describe('reports (Urdu)', () => {
   it('4. F9 shows the print preview; Esc closes it, and the next Esc leaves the report', async () => {
     await press(Key.F9);
     await waitForText(t('ur', 'report-print-title'));
-    await waitForText(t('ur', 'report-print-job-later'));
+    // The Print and Save as PDF buttons are there and enabled (17e): the page goes through the print job.
+    await waitForText(t('ur', 'report-print-pdf'));
     const sheet = await $('.print-report');
     await sheet.waitForDisplayed({ timeout: WAIT_MS });
-    expect(await sheet.getAttribute('dir')).toBe('rtl');
+    expect(await (await $('.print-doc')).getAttribute('dir')).toBe('rtl');
     expect(await (await sheet.$('tfoot')).getText()).toContain(t('ur', 'report-total'));
     await shootScreen('reports-print-preview', 'ur');
     await press(Key.Escape);

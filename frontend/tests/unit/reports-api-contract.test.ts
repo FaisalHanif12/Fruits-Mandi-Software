@@ -673,13 +673,14 @@ describe('round 11: the party day sheet (R35)', () => {
     expect(people.find((party) => party.code === '03049999')?.person_key).toBe('شاہد|03000000000');
   });
 
-  it('the table has no totals row of its own: the totals are in the group rows and the footer lines', () => {
+  it('no table has a totals row of its own: the totals are in the group rows and the footer lines', () => {
     // The buyers' total is the heading row of their section and the line "collection" (equal to R20),
     // the sellers' are three footer lines, so a pinned row under both would be read as the total of all.
-    expect(R35_TABLE.totals).toHaveLength(R35_TABLE.columns.length);
-    for (const total of R35_TABLE.totals) expect(total).toEqual({ type: 'empty' });
-    // A slip has its own total: the quantity and the amount of its lines.
-    expect(R35_SLIP_AKRAM.totals[0]).toEqual({ type: 'number', value: 20 });
+    // A slip's total quantity is its first footer line (the client's layout), so its totals row is empty too.
+    for (const page of [R35_TABLE, R35_SLIP_AKRAM, R35_SLIP_RAHIM]) {
+      expect(page.totals).toHaveLength(page.columns.length);
+      for (const total of page.totals) expect(total).toEqual({ type: 'empty' });
+    }
   });
 
   it('the footer lines come in the order the screen and the print show them', () => {
@@ -689,21 +690,24 @@ describe('round 11: the party day sheet (R35)', () => {
       'report-r35-sellers-debit',
       'report-r35-sellers-remaining',
     ]);
-    // A buyer's slip says "received" (the client's وصولی), a seller's says "paid" (ادائیگی).
+    // A buyer's slip follows the client's own order (17e): total نگ, تازہ بنام, سابقہ رقم, then the
+    // paid and total lines. On-spot, other debits and other credits show only when not 0, and the
+    // received line is there for the collector to fill when nothing is paid yet.
     expect(lines(R35_SLIP_AKRAM)).toEqual([
       'report-r35-total-qty',
-      'report-r35-previous',
       'report-r35-bought',
+      'report-r35-previous',
       'report-r35-received',
       'report-r35-remaining',
     ]);
+    // A seller's slip ends with his balance, with no "remaining" line.
     expect(lines(R35_SLIP_RAHIM)).toEqual([
       'report-r35-total-qty',
       'report-r35-previous',
       'report-r35-sold',
       'report-r35-cash-given',
       'report-r35-paid',
-      'report-r35-remaining',
+      'report-r35-balance',
     ]);
     expect(PRINT_R35_SLIP_AKRAM_EN.summary.map((line) => line.label_id)).toEqual(
       lines(R35_SLIP_AKRAM),

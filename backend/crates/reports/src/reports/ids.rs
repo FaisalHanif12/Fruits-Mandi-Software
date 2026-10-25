@@ -237,6 +237,8 @@ pub(crate) const SIDE_ZERO: &str = "report-side-zero";
 pub(crate) const FILTER_FROM: &str = "report-filter-from";
 pub(crate) const FILTER_TO: &str = "report-filter-to";
 pub(crate) const FILTER_AS_OF: &str = "report-filter-as-of";
+/// The day of the party day sheet (R35): a sheet is for one day, not "as of" a day.
+pub(crate) const FILTER_DAY: &str = "report-filter-day";
 pub(crate) const FILTER_PARTY: &str = "report-filter-party";
 pub(crate) const FILTER_SELLER: &str = "report-filter-seller";
 pub(crate) const FILTER_ZAMINDAR: &str = "report-filter-zamindar";

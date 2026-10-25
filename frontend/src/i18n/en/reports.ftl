@@ -386,7 +386,7 @@ report-print-print = Print
 report-print-pdf = Save as PDF
 
 # review: pending
-report-print-job-later = Sending to the printer and saving as PDF come in a later version. For now you can look at the page.
+report-print-sent = Sent to the printer.
 
 # review: pending
 report-print-close = Close
@@ -1099,7 +1099,7 @@ report-r34-open-qty = { -nag } Left
 report-r35-title = Party Day Sheet
 
 # review: pending
-report-r35-help = For one day: what each party owed at the start, what was debited and credited, and what is left. Pick a party to see his slip.
+report-r35-help = For one day: what each party owed at the start, what was debited and credited, and what is left. Pick a party to see his slip. A bill edited or cancelled on its own day counts once in the day's columns; the balances agree with the ledger.
 
 # review: pending
 report-col-code = Code
@@ -1116,10 +1116,10 @@ report-col-party = Party
 report-r35-balance = { -baqaya }
 
 # review: pending
-report-r35-buyers = Buyers
+report-r35-buyers = { -gahak }
 
 # review: pending
-report-r35-sellers = Sellers
+report-r35-sellers = { -beopari }
 
 # review: pending
 report-r35-total-qty = Total { -nag }

@@ -125,9 +125,11 @@ describe.each(TEMPLATES)('the $name print', ({ draw }) => {
       const numbers = cells.map((item) => item.textContent);
       expect(numbers.length).toBeGreaterThan(0);
       // An amount, a count and a date have Urdu digits only: no 0-9 is left in them. The short code
-      // column of the collection list is not one of them: a code is never converted.
+      // of the collection list is not one of them, in the table column or in the first place of the
+      // line under a name on 80 mm paper: a code is never converted.
       const figures = cells
         .filter((item) => item.closest('.print-col-code') === null)
+        .filter((item) => !item.matches('.print-compact-sub > :first-child'))
         .map((item) => item.textContent)
         .filter((text) => AMOUNT_OR_DATE.test(text));
       expect(figures.length).toBeGreaterThan(0);

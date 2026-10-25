@@ -12,9 +12,10 @@ import type { ReportFilters } from '../../../bindings/ReportFilters';
 import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { useBuyerBillsPrintData, usePrintFrameOf } from '../hooks';
+import { useBuyerBillsPrintData, usePrintFrameOf, usePrintReport } from '../hooks';
 import { BuyerBillsPrintDocument } from '../print/BuyerBillsPrintDocument';
 import { PrintPreviewFrame } from './PrintPreviewFrame';
+import { usePrintJob } from './usePrintJob';
 
 interface BuyerBillsPreviewProps {
   filters: ReportFilters;
@@ -28,6 +29,16 @@ export function BuyerBillsPreview({ filters, onBack }: BuyerBillsPreviewProps) {
   const query = useBuyerBillsPrintData({ id: 'R5', filters, language, paper });
   // The ONE header and footer of every print: the backend builds them from the title and the filters.
   const frame = usePrintFrameOf(language, query.data);
+  // "Print" and "Save as PDF": the slips of all the credit buyers, in the language and paper chosen here.
+  const printReport = usePrintReport();
+  const job = usePrintJob((to) =>
+    printReport.mutateAsync({
+      report: { id: 'R5', filters, language, paper },
+      slips: true,
+      to,
+      copies: null,
+    }),
+  );
 
   let body;
   if (query.isError || frame.isError) {
@@ -62,6 +73,8 @@ export function BuyerBillsPreview({ filters, onBack }: BuyerBillsPreviewProps) {
       onLanguageChange={setLanguage}
       onPaperChange={setPaper}
       onBack={onBack}
+      job={job}
+      canPrint={query.data !== undefined && frame.data !== undefined && query.data.slips.length > 0}
     >
       {body}
     </PrintPreviewFrame>

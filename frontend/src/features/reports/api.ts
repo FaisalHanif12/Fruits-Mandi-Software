@@ -16,6 +16,7 @@ import type { PrintFrame } from '../../bindings/PrintFrame';
 import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
+import type { PrintReportInput } from '../../bindings/PrintReportInput';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
 import type { PukhtaPersonHit } from '../../bindings/PukhtaPersonHit';
 import type { ExcelExported } from '../../bindings/ExcelExported';
@@ -88,6 +89,15 @@ export function reportsPrintData(input: ReportPrintInput): Promise<ReportPrintDa
  */
 export function reportsBuyerBillsPrintData(input: ReportPrintInput): Promise<BuyerBillsPrintData> {
   return callCommand<BuyerBillsPrintData>('reports_buyer_bills_print_data', { input });
+}
+
+/**
+ * Sends a report to the printer or saves it as a PDF (PRD FR-19.3): the request is checked first, so a
+ * bad filter is refused at its own field before any paper is used. `slips` is R5 "Print All", one
+ * slip for each credit buyer. Off Windows a valid request answers `ERR_PRINT_WINDOWS_ONLY`.
+ */
+export function reportsPrintReport(input: PrintReportInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('reports_print_report', { input });
 }
 
 /**

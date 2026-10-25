@@ -57,6 +57,7 @@ import {
 } from './reports-business-real';
 
 import { fakePrintFrame } from './print-frame';
+import { printOutcomeFor } from './print-job';
 import { PRINT_R36_PARTNER_EN, R36_GARDEN, R36_PARTNER } from './reports-gardens-real';
 import { PRINT_R37_EN, R37_FRUIT, R37_GUESTS } from './reports-fruit-real';
 import {
@@ -110,6 +111,8 @@ export interface ReportsOptions {
   print?: ReportPrintData;
   /** What the slips print of R5 answers; the default is the backend's own answer, in the print language asked for. */
   slips?: BuyerBillsPrintData;
+  /** Called for every `reports_print_report`; return a refusal to refuse that print job. */
+  printJob?: (input: Parameters<typeof reportsApi.reportsPrintReport>[0]) => UiError | null;
   /** What the people search answers; the default is the backend's own answer for "shahid". */
   people?: readonly PukhtaPersonHit[];
 }
@@ -260,6 +263,12 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     Promise.resolve(options.print ?? printOf(input.id)),
   );
   fakePrintFrame();
+  vi.mocked(reportsApi.reportsPrintReport).mockImplementation((input) => {
+    const refused = options.printJob?.(input) ?? null;
+    if (refused !== null) return Promise.reject(refusedWith(refused));
+    const name = `report-${input.slips ? 'r5-slips' : input.report.id.toLowerCase()}-20261010-${input.report.language}.pdf`;
+    return Promise.resolve(printOutcomeFor(input.to, name));
+  });
   vi.mocked(reportsApi.reportsBuyerBillsPrintData).mockImplementation((input) =>
     Promise.resolve(options.slips ?? (input.language === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN)),
   );

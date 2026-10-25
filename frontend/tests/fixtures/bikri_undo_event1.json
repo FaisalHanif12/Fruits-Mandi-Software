@@ -1,7 +1,9 @@
 {
   "bikri_id": 3,
   "number": 3,
-  "reversal_entry_ids": [10],
+  "reversal_entry_ids": [
+    10
+  ],
   "draft": {
     "header": {
       "entry_date": "10-10-2026",

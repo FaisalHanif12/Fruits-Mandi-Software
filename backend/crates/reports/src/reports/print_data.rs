@@ -535,7 +535,13 @@ pub(crate) fn filter_facts(
         facts.push(fact(ids::FILTER_TO, fmt.style.date(to)?));
     }
     if let Some(as_of) = &filters.as_of {
-        facts.push(fact(ids::FILTER_AS_OF, fmt.style.date(as_of)?));
+        // The day sheet is for one day: its header says "Day", the balance lists say "As of".
+        let label = if id == ReportId::R35 {
+            ids::FILTER_DAY
+        } else {
+            ids::FILTER_AS_OF
+        };
+        facts.push(fact(label, fmt.style.date(as_of)?));
     }
     let party_text = |p: &PartyRef| fmt.party_text(p);
     if let Some(party) = &filters.party {

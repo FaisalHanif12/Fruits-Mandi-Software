@@ -56,7 +56,11 @@ function ColumnHeading({ heading, titleId }: { heading: PrintHeading | null; tit
 
 /** The class of the cell at a column: a column the data does not name is plain text. */
 function columnClass(data: PrintTable, position: number): string {
-  return cellClass(data.columns[position]?.kind ?? 'text');
+  const base = cellClass(data.columns[position]?.kind ?? 'text');
+  // The code column of the party day sheet holds an eight-digit code of a one-time person: it never wraps.
+  return data.report === 'R35' && data.columns[position]?.key === 'code'
+    ? `${base} print-nowrap`
+    : base;
 }
 
 /** The heading of a column that is not one message: a day, a month or an item (analytics, plan 21). */
@@ -192,7 +196,11 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
                   return (
                     <td key={position} className={columnClass(data, position)}>
                       {none === null ? (
-                        <Cell cell={cell} shortSale={buyersList} />
+                        <Cell
+                          cell={cell}
+                          shortSale={buyersList}
+                          nameOnly={sheet && data.columns[position]?.key === 'party'}
+                        />
                       ) : (
                         l10n.getString(none)
                       )}

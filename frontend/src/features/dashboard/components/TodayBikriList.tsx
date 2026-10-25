@@ -95,7 +95,11 @@ export function TodayBikriList({ rows, count }: TodayBikriListProps) {
       header: <Localized id="dashboard-bikri-col-seller" />,
       cell: (row) => {
         if (row.seller === null) return null;
-        const name = displayName({ name_ur: row.seller.ur, name_en: row.seller.en }, language);
+        // The tag (نشان) tells two sellers with one name apart (PRD 10.2).
+        const name = displayName(
+          { name_ur: row.seller.ur, name_en: row.seller.en, tag: row.seller_tag },
+          language,
+        );
         return row.seller_count > 1 ? (
           <Localized
             id="dashboard-bikri-sellers"

@@ -9,6 +9,7 @@ import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
 import type { Language } from '../../bindings/Language';
 import type { PrintFact } from '../../bindings/PrintFact';
 import type { PrintInput } from '../../bindings/PrintInput';
+import type { PrintReportInput } from '../../bindings/PrintReportInput';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
 import type { ReportFilters } from '../../bindings/ReportFilters';
 import type { ReportId } from '../../bindings/ReportId';
@@ -22,6 +23,7 @@ import {
   reportsListPrinters,
   reportsPrint,
   reportsPrintData,
+  reportsPrintReport,
   reportsCollectionPrintData,
   reportsPrintCollection,
   reportsPrintHeader,
@@ -167,6 +169,55 @@ export function usePrintFrame(input: PrintFrameInput | null) {
     queryFn: () => {
       if (input === null) throw new Error('no print input');
       return reportsPrintHeader(input);
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+/** Sends a report to the printer or saves it as a PDF. The caller shows the outcome or the error. */
+export function usePrintReport() {
+  return useMutation({ mutationFn: (input: PrintReportInput) => reportsPrintReport(input) });
+}
+
+/**
+ * The page the hidden print window draws for a report (PRD FR-19.3): its print data and the shared
+ * header and footer, read together so the window says "ready" only when both are there. The language
+ * is the one the print was asked for.
+ */
+export function useReportPrintBundle(input: ReportPrintInput | null) {
+  return useQuery({
+    queryKey: ['reports', 'print-bundle', input],
+    queryFn: async () => {
+      if (input === null) throw new Error('no print input');
+      const data = await reportsPrintData(input);
+      const frame = await reportsPrintHeader({
+        language: input.language,
+        title_id: data.title_id,
+        facts: data.filters,
+      });
+      return { language: frame.language, urdu_digits: frame.urdu_digits, data, frame };
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+/** The same for the slips of all the credit buyers of R5 ("Print All"). */
+export function useSlipsPrintBundle(input: ReportPrintInput | null) {
+  return useQuery({
+    queryKey: ['reports', 'slips-print-bundle', input],
+    queryFn: async () => {
+      if (input === null) throw new Error('no print input');
+      const data = await reportsBuyerBillsPrintData(input);
+      const frame = await reportsPrintHeader({
+        language: input.language,
+        title_id: data.title_id,
+        facts: data.filters,
+      });
+      return { language: frame.language, urdu_digits: frame.urdu_digits, data, frame };
     },
     enabled: input !== null,
     staleTime: Infinity,

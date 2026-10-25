@@ -212,6 +212,8 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(cell('2', 'remaining')).toContain(m('report-side-dr'));
       // A one-time buyer who paid on the spot has nothing left, and says so with the word for zero.
       expect(cell('3', 'party')).toContain(names('شاہد', 'Shahid'));
+      // His phone follows his name, in the dash form with English digits (PRD FR-13.5).
+      expect(cell('3', 'party')).toContain('0300-0000000');
       expect(cell('3', 'remaining')).toContain('0');
       // A seller is owed: his balance is on the other side.
       expect(cell('6', 'remaining')).toContain('10,160');
@@ -293,16 +295,17 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(cell('0', 'qty')).toBe('20');
       expect(cell('0', 'rate')).toBe('600');
       expect(cell('0', 'amount')).toBe('12,880');
-      expect(totalsCell('qty')).toBe('20');
-      expect(totalsCell('amount')).toBe('12,880');
+      // The slip has no totals row: its total نگ is the first footer line, as on the client's own slip.
+      expect(totalsCell('qty')).toBe('');
+      expect(totalsCell('amount')).toBe('');
       // The footer is in the order of the client's own slip, as the backend sent it.
       const lines = footerLines();
       expect(lines).toHaveLength(5);
       expect(lines[0]).toContain(m('report-r35-total-qty'));
       expect(lines[0]).toContain('20');
-      expect(lines[1]).toContain(m('report-r35-previous'));
-      expect(lines[2]).toContain(m('report-r35-bought'));
-      expect(lines[2]).toContain('12,880');
+      expect(lines[1]).toContain(m('report-r35-bought'));
+      expect(lines[1]).toContain('12,880');
+      expect(lines[2]).toContain(m('report-r35-previous'));
       // A buyer's slip says what was received (the client's وصولی), not what was paid.
       expect(lines[3]).toContain(m('report-r35-received'));
       expect(lines[3]).toContain('10,000');
@@ -343,7 +346,9 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(lines[3]).toContain('5,000');
       expect(lines[4]).toContain(m('report-r35-paid'));
       expect(lines[4]).toContain('4,316');
-      expect(lines[5]).toContain(m('report-r35-remaining'));
+      // A seller's slip ends with his balance, not with "remaining".
+      expect(lines[5]).toContain(m('report-r35-balance'));
+      expect(lines[5]).toContain('0');
       // A seller's rate is the lot's, so the backend sends none and the cell is blank.
       expect(cell('0', 'rate')).toBe('');
       expect(cell('0', 'amount')).toBe('24,316');
@@ -427,12 +432,13 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         visible(term.textContent),
       );
       expect(labels).toEqual(
-        PRINT_R35_SLIP_AKRAM_EN.summary.map((line) => message('en', line.label_id)),
+        PRINT_R35_SLIP_AKRAM_EN.summary.map((line) => message(language, line.label_id)),
       );
-      // The day is named "Day" in the header, not "As of".
+      // The header names the day with the word "Day", not "As of", and the date the backend sent.
       const facts = visible(pick('.print-report .print-facts').textContent);
-      expect(facts).toContain(message('en', 'report-filter-day'));
-      expect(facts).not.toContain(message('en', 'report-filter-as-of'));
+      expect(facts).toContain(message(language, 'report-filter-day'));
+      expect(facts).not.toContain(message(language, 'report-filter-as-of'));
+      expect(facts).toContain('10-10-2026');
     });
   });
 
@@ -508,7 +514,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         useLanguageStore.getState().setLanguage(other);
       });
       await waitFor(() => {
-        expect(footerLines()[2]).toContain(message(other, 'report-r35-bought'));
+        expect(footerLines()[1]).toContain(message(other, 'report-r35-bought'));
       }, SLOW_MS);
       expect(screen.getByLabelText(message(other, 'report-filter-day'))).toHaveValue('10-10-2026');
       expect(boxText(message(other, 'report-filter-party'))).toContain(

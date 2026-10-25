@@ -68,6 +68,7 @@ import {
 } from './analytics-trips-real';
 
 import { fakePrintFrame } from './print-frame';
+import { printOutcomeFor } from './print-job';
 
 export * from './analytics-real';
 export * from './analytics-trips-real';
@@ -89,6 +90,8 @@ export interface AnalyticsOptions {
   /** The saved views to start with. */
   saved?: AnalyticsSavedView[] | Error;
   lines?: AnalyticsLinesPage | Error;
+  /** Called for every `analytics_print_view`; return a refusal to refuse that print job. */
+  printJob?: (input: Parameters<typeof analyticsApi.analyticsPrintView>[0]) => UiError | null;
   /** View F answers with the fruit column filled (the fruit world of E2E-42). */
   fruitInF?: boolean;
 }
@@ -211,6 +214,16 @@ export function fakeAnalytics(options: AnalyticsOptions = {}): FakeAnalytics {
     });
   });
   fakePrintFrame();
+  vi.mocked(analyticsApi.analyticsPrintView).mockImplementation((input) => {
+    const refused = options.printJob?.(input) ?? null;
+    if (refused !== null) return Promise.reject(refusedWith(refused));
+    return Promise.resolve(
+      printOutcomeFor(
+        input.to,
+        `analytics-${input.view.view.toLowerCase()}-20261010-${input.view.language}.pdf`,
+      ),
+    );
+  });
   vi.mocked(analyticsApi.analyticsPrintData).mockImplementation((input) =>
     Promise.resolve(
       options.print ??

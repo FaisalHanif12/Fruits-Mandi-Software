@@ -39,6 +39,10 @@ import {
 } from './reports-gardens-real';
 import {
   PRINT_R35_SLIP_AKRAM_EN,
+  PRINT_R35_SLIP_AKRAM_UR,
+  PRINT_R35_SLIP_RAHIM_EN,
+  PRINT_R35_TABLE_EN,
+  PRINT_R35_TABLE_UR,
   R35_SLIP_AKRAM,
   R35_SLIP_RAHIM,
   R35_TABLE,
@@ -158,11 +162,20 @@ const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R31: PRINT_R31_BAY_EN,
   R33: PRINT_R33_PARTNER_EN,
   R34: PRINT_R34_EN,
-  R35: PRINT_R35_SLIP_AKRAM_EN,
   R36: PRINT_R36_PARTNER_EN,
   R5: PRINT_R5_EN,
   R37: PRINT_R37_EN,
 };
+
+/** R35 prints in the language asked for: the table for no party, a slip for one (a seller's for رحیم). */
+function partyDaySheetPrint(input: Input): ReportPrintData {
+  const filters = (input['filters'] ?? {}) as Record<string, unknown>;
+  const party = filters['party'] as { account_id?: number } | null;
+  const urdu = input['language'] === 'ur';
+  if (party?.account_id === undefined) return urdu ? PRINT_R35_TABLE_UR : PRINT_R35_TABLE_EN;
+  if (party.account_id === 18) return PRINT_R35_SLIP_RAHIM_EN;
+  return urdu ? PRINT_R35_SLIP_AKRAM_UR : PRINT_R35_SLIP_AKRAM_EN;
+}
 
 function catalog(): ReportCatalogEntry[] {
   return CATALOG;
@@ -224,7 +237,10 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_export_excel: (input) => devExport(input),
   reports_catalog: () => catalog(),
   reports_run: (input) => page(input),
-  reports_print_data: (input) => PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN,
+  reports_print_data: (input) => {
+    if (input['id'] === 'R35') return partyDaySheetPrint(input);
+    return PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN;
+  },
   // The shared header and footer of every report print: the firm's own, the title and facts asked for.
   reports_print_header: (input) => printFrameFor(input as unknown as PrintFrameInput),
   reports_buyer_bills_print_data: (input) =>

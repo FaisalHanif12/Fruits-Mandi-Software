@@ -8,6 +8,9 @@
 //   3. "Print all slips" shows one sheet for each credit buyer, and Esc goes back to the table.
 //   4. The analytics view J (up to eighteen columns) prints inside its sheet, on A4.
 //   5. Alt+L turns the print of R37 to English, left to right, with the same lines.
+//   6. R35, the party day sheet, prints the client's all-parties table inside its sheet on A4 and A5
+//      (the party column has his name only, the code column never wraps), and the slip of one buyer
+//      has its footer under the lines, both with English digits only.
 // The figures are the backend's and are proved by the Rust tests and the fixtures; this spec proves
 // that the real app draws the print with the shared header, keeps every table inside its sheet and
 // writes only English digits. It runs on Windows only (LOCAL-ONLY in the Mac phase: checked with
@@ -166,6 +169,69 @@ describe('the report prints (English)', () => {
     expect(await sheetsHoldTheirTables()).toBe(true);
     expect(await printHasOnlyEnglishDigits()).toBe(true);
     await shootScreen('reports-print-r37', 'en');
+    await press(Key.Escape);
+    await switchLanguage('ur');
+  });
+});
+
+describe('the party day sheet print', () => {
+  it('6. R35 prints the table and a buyer slip inside the sheet on A4 and A5, with English digits only', async () => {
+    await openRoute('#/reports/R35');
+    await waitForHeading('ur', 'report-r35-title');
+    await switchLanguage('en');
+    await waitForHeading('en', 'report-r35-title');
+    await focusField('en', 'report-filter-day');
+    await type(DAY);
+    await waitForAnswer('en');
+    await press(Key.F9);
+    await waitForText(t('en', 'report-print-title'));
+    await waitForSheet();
+    for (const paper of ['print-paper-a4', 'print-paper-a5']) {
+      await (await button('en', paper)).click();
+      await browser.pause(700);
+      await waitForSheet();
+      expect(await sheetsHoldTheirTables()).toBe(true);
+      expect(await printHasOnlyEnglishDigits()).toBe(true);
+      // The party column has his name only: his code is in the column before it.
+      const codeCells = await browser.execute(() =>
+        Array.from(document.querySelectorAll('.print-table tbody td.print-nowrap')).every(
+          (cell) => cell.getBoundingClientRect().height < 40,
+        ),
+      );
+      expect(codeCells).toBe(true);
+    }
+    await shootScreen('reports-print-r35-table', 'en');
+    await press(Key.Escape);
+    // A slip: click the first buyer, Enter opens his slip, then F9 for its print.
+    await browser.waitUntil(async () => (await $$('.print-sheet')).length === 0, {
+      timeout: WAIT_MS,
+      timeoutMsg: 'Esc never went back to the table.',
+    });
+    // The first drawn row is the heading of the buyers; the second is the first buyer.
+    const buyerRow = (await $$('.ag-row[row-id]:not(.ag-row-pinned)'))[1];
+    if (buyerRow === undefined) throw new Error('The table has no buyer row.');
+    await (await buyerRow.$('[col-id="party"]')).click();
+    await press(Key.Enter);
+    await browser.waitUntil(async () => (await $$('.ag-header-cell[col-id="qty"]')).length > 0, {
+      timeout: WAIT_MS,
+      timeoutMsg: 'The slip of the party never opened.',
+    });
+    await press(Key.F9);
+    await waitForSheet();
+    // The lines come first, what the day comes to under them.
+    const footerBelowLines = await browser.execute(() => {
+      const table = document.querySelector('.print-report .print-table');
+      const summary = document.querySelector('.print-report .print-summary-lines');
+      return (
+        table !== null &&
+        summary !== null &&
+        (table.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+      );
+    });
+    expect(footerBelowLines).toBe(true);
+    expect(await sheetsHoldTheirTables()).toBe(true);
+    expect(await printHasOnlyEnglishDigits()).toBe(true);
+    await shootScreen('reports-print-r35-slip', 'en');
     await press(Key.Escape);
     await switchLanguage('ur');
   });

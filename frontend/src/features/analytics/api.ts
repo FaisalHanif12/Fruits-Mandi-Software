@@ -17,6 +17,8 @@ import type {
 import type { AnalyticsExportRequest } from '../../bindings/AnalyticsExportRequest';
 import type { AnalyticsViewsSaveInput } from '../../bindings/AnalyticsViewsSaveInput';
 import type { ExcelExported } from '../../bindings/ExcelExported';
+import type { PrintAnalyticsViewInput } from '../../bindings/PrintAnalyticsViewInput';
+import type { PrintOutcome } from '../../bindings/PrintOutcome';
 
 /** The views that are built, with the filter boxes each takes. */
 export function analyticsCatalog(): Promise<AnalyticsCatalogEntry[]> {
@@ -39,6 +41,11 @@ export function analyticsLines(input: AnalyticsLinesInput): Promise<AnalyticsLin
 /** Everything a print of a view needs, in the print language (PRD FR-18.4). */
 export function analyticsPrintData(input: AnalyticsPrintInput): Promise<AnalyticsPrintData> {
   return callCommand<AnalyticsPrintData>('analytics_print_data', { input });
+}
+
+/** Sends a view to the printer or saves it as a PDF (PRD FR-18.4), checked like a report print. */
+export function analyticsPrintView(input: PrintAnalyticsViewInput): Promise<PrintOutcome> {
+  return callCommand<PrintOutcome>('analytics_print_view', { input });
 }
 
 /** The saved views of this user (PRD FR-18.5): a name, a view and the filters. */

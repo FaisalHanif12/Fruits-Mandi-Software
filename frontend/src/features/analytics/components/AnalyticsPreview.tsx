@@ -12,8 +12,13 @@ import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { ExcelExportButton, type ExcelExporter } from '../../../shared/export';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { PrintPreviewFrame, ReportPrintDocument, usePrintFrameOf } from '../../reports';
-import { useAnalyticsPrintData } from '../hooks';
+import {
+  PrintPreviewFrame,
+  ReportPrintDocument,
+  usePrintFrameOf,
+  usePrintJob,
+} from '../../reports';
+import { useAnalyticsPrintData, useAnalyticsPrintView } from '../hooks';
 import { printTableOf } from '../print/print-table';
 import type { AnalyticsFilters, AnalyticsView } from '../types';
 
@@ -32,6 +37,11 @@ export function AnalyticsPreview({ view, filters, onBack, exporter }: AnalyticsP
   const query = useAnalyticsPrintData({ view, filters, language, paper });
   // The ONE header and footer of every print: the backend builds them from the title and the filters.
   const frame = usePrintFrameOf(language, query.data);
+  // "Print" and "Save as PDF": the same view, language and paper as the page on screen.
+  const printView = useAnalyticsPrintView();
+  const job = usePrintJob((to) =>
+    printView.mutateAsync({ view: { view, filters, language, paper }, to, copies: null }),
+  );
 
   let body;
   if (query.isError || frame.isError) {
@@ -67,6 +77,8 @@ export function AnalyticsPreview({ view, filters, onBack, exporter }: AnalyticsP
       onPaperChange={setPaper}
       onBack={onBack}
       excel={<ExcelExportButton exporter={exporter} language={language} />}
+      job={job}
+      canPrint={query.data !== undefined && frame.data !== undefined && query.data.rows.length > 0}
     >
       {body}
     </PrintPreviewFrame>

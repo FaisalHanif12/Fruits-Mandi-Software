@@ -47,14 +47,13 @@ export function emptyNameMessageId(id: ReportId, rowKind: 'normal' | 'group'): s
   return null;
 }
 
-/** The tag follows the name after a space ("عاشق ظفر K", PRD 10.2, Code Standards F38). */
+/** The tag follows the name after a space ("عاشق ظفر K", PRD 10.2): `displayName` adds it, here too. */
 export function nameWithTag(
   names: { name_ur: string; name_en: string },
   tag: string | null,
   language: Language,
 ): string {
-  const name = displayName(names, language);
-  return tag === null || tag === '' ? name : `${name} ${tag}`;
+  return displayName({ ...names, tag }, language);
 }
 
 /**
@@ -63,7 +62,10 @@ export function nameWithTag(
  * where there is one (FR-19.13).
  */
 export function partyText(party: ReportParty, language: Language): string {
-  return `${party.code} ${nameWithTag(party, party.tag, language)}`;
+  const text = `${party.code} ${nameWithTag(party, party.tag, language)}`;
+  // A one-time person has his phone after his name, so two people with one name are two rows
+  // (PRD FR-13.5): the dash form 03XX-XXXXXXX, English digits.
+  return party.phone === undefined ? text : `${text} ${party.phone}`;
 }
 
 /** The side word of a balance: بنام or جمع. A zero balance has none. */

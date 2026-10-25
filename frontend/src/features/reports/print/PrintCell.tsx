@@ -113,7 +113,18 @@ function printMessageText(
   return l10n.getString(id, vars);
 }
 
-export function Cell({ cell, shortSale = false }: { cell: ReportPrintCell; shortSale?: boolean }) {
+interface CellProps {
+  cell: ReportPrintCell;
+  /** The buyers' list (R5) writes each sale line as "(item qty . rate)". */
+  shortSale?: boolean;
+  /**
+   * A party is written as his name with tag and phone, without his code: the table has a column of
+   * codes before it (the party day sheet R35, the client's own layout, FR-19.12).
+   */
+  nameOnly?: boolean;
+}
+
+export function Cell({ cell, shortSale = false, nameOnly = false }: CellProps) {
   const { l10n } = useLocalization();
   switch (cell.type) {
     case 'empty':
@@ -151,8 +162,18 @@ export function Cell({ cell, shortSale = false }: { cell: ReportPrintCell; short
       // The name, then the tag in its own isolate (PRD 10.2, FR-19.13): the shared `PrintName`.
       return (
         <>
-          <Code>{party.short_code ?? party.code}</Code>{' '}
+          {nameOnly ? null : (
+            <>
+              <Code>{party.short_code ?? party.code}</Code>{' '}
+            </>
+          )}
           <PrintName name={party.name} tag={party.tag ?? undefined} />
+          {party.phone === undefined ? null : (
+            <>
+              {' '}
+              <Code>{party.phone}</Code>
+            </>
+          )}
         </>
       );
     }

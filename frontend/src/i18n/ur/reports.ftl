@@ -386,7 +386,7 @@ report-print-print = پرنٹ کریں
 report-print-pdf = PDF محفوظ کریں
 
 # review: pending
-report-print-job-later = پرنٹر پر بھیجنا اور PDF محفوظ کرنا اگلے ورژن میں آئے گا۔ ابھی صفحہ دیکھا جا سکتا ہے۔
+report-print-sent = پرنٹر کو بھیج دیا گیا۔
 
 # review: pending
 report-print-close = بند کریں
@@ -1100,7 +1100,7 @@ report-r34-open-qty = باقی { -nag }
 report-r35-title = پارٹی کی روزانہ پرچی
 
 # review: pending
-report-r35-help = ایک دن کا: ہر پارٹی کا شروع کا بقایا، اس دن کا بنام اور جمع، اور جو باقی ہے۔ پرچی دیکھنے کے لیے پارٹی چنیں۔
+report-r35-help = ایک دن کا: ہر پارٹی کا شروع کا بقایا، اس دن کا بنام اور جمع، اور جو باقی ہے۔ پرچی دیکھنے کے لیے پارٹی چنیں۔ جو بل اسی دن بدلا یا منسوخ ہوا وہ دن کے خانوں میں ایک ہی بار گنا جاتا ہے؛ بقایا کھاتے سے ملتے ہیں۔
 
 # review: pending
 report-col-code = کوڈ
@@ -1117,10 +1117,10 @@ report-col-party = پارٹی
 report-r35-balance = { -baqaya }
 
 # review: pending
-report-r35-buyers = گاہک
+report-r35-buyers = { -gahak }
 
 # review: pending
-report-r35-sellers = بیوپاری
+report-r35-sellers = { -beopari }
 
 # review: pending
 report-r35-total-qty = کل { -nag }

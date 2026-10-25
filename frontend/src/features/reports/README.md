@@ -130,8 +130,17 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   table. The words of the footer are backend message IDs; the glossary has the four terms the client's
   slip uses (تازہ بنام, سابقہ رقم, ٹوٹل رقم, بقایا). A buyer's slip says "Receipt" (وصولی,
   `report-r35-received`), a seller's says "Payment" (ادائیگی, `report-r35-paid`).
-- Tests: `reports-screens-round11.test.tsx`, the round 11 block of `reports-api-contract.test.ts`.
-  Windows spec: `49-party-sheet-analytics-round11.e2e.mjs`.
+- 17e, the client's own layouts (Umar 20-10-2026): a slip has no totals row, its total نگ is the first
+  footer line, then the lines in the backend's order (buyer: total نگ, تازہ بنام, سابقہ رقم, then
+  موقع پر ادا, وصولی and the others only when the backend sends them, ٹوٹل رقم; seller: ends with
+  `report-r35-balance`). The all-parties table prints its short code in its own column (never wrapped,
+  `print-nowrap`) and the party as his name with tag and phone only (`Cell nameOnly`), so the code is
+  not written twice. A one-time person has his phone after his name in the dash form, English digits.
+  The header names the day with the word "Day" (the backend sends `report-filter-day` for R35).
+- Tests: `reports-screens-round11.test.tsx`, `reports-print-r35.test.tsx` (the print data of the table
+  and both slips, in both languages, A4 and A5), the round 11 block of `reports-api-contract.test.ts`.
+  Windows specs: `49-party-sheet-analytics-round11.e2e.mjs`, step 6 of
+  `53-report-prints-round14.e2e.mjs`. Screenshots: `tests/e2e/shots-plan31.playwright.txt`.
 
 ## R36, the gardens report, and the garden rows of R34 (round 11, PRD 19.2 R36, FR-12.37)
 
@@ -214,12 +223,24 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   exception, and `.print-firm-line` of the shared header is a known gap, reported). The print digits are
   0-9 in both languages (the Urdu-digits setting stays off by default).
 
+## The print job: printer and PDF (round 14, 17e)
+
+- The two buttons of the print preview (`PrintPreviewFrame`, `usePrintJob`) are real. Print sends
+  `reports_print_report` (or `analytics_print_view`, `to: 'printer'`) and Save as PDF sends the same
+  with `to: 'pdf'`; the backend opens the hidden print window on the route `#/print?report=<id>` (or
+  `analytics=<view>`, plus `language`, `paper`, `filters` as percent-encoded JSON, `slips=1` for the
+  slips of R5 and the job number). That window draws `ReportPrintPage` (`print/ReportPrintPage.tsx`),
+  which asks for the print data and the frame itself, applies the print's language and direction to
+  the page root, and fires the ready event the backend waits for (or the failure event with the
+  error). The preview and the hidden window draw the same `ReportPrintDocument`, so what is seen is
+  what is printed. Off Windows the backend answers `ERR_PRINT_WINDOWS_ONLY`, shown in words.
+- Tests: `report-print-job.test.tsx` (the buttons and what they send), `report-print-window.test.tsx`
+  (the hidden window, ready and failed). The printing itself and the PDF are the Windows check
+  (LOCAL-ONLY in the Mac phase).
+
 ## Not built yet
 
-- Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB
-  needs a generic report document in the plan 14 print path (`PrintDoc::Report`, plan 17e). The two
-  buttons of the preview are dimmed and say so.
-- (Excel is built: the buttons are `shared/export`.)
+- (Nothing open for the report area. Excel is built: the buttons are `shared/export`.)
 
 ## Older notes (plan 14)
 

@@ -97,12 +97,13 @@
             "name_ur": "شاہد",
             "name_en": "Shahid",
             "tag": null,
-            "person_key": "شاہد|03000000000"
+            "person_key": "شاہد|03000000000",
+            "phone": "0300-0000000"
           }
         },
         {
           "type": "text",
-          "text": "03000000000"
+          "text": "0300-0000000"
         },
         {
           "type": "names",

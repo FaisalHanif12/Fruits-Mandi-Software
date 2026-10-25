@@ -629,10 +629,9 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
       expect(visible(document.querySelector('.print-report tfoot')?.textContent)).toContain(
         '85,048',
       );
-      // The printer and PDF buttons wait for the print job of reports, and say so.
-      expect(screen.getByRole('button', { name: named(m('report-print-print')) })).toBeDisabled();
-      expect(screen.getByRole('button', { name: named(m('report-print-pdf')) })).toBeDisabled();
-      expect(screen.getByText(named(m('report-print-job-later')))).toBeInTheDocument();
+      // The printer and PDF buttons send the same page through the print job (17e).
+      expect(screen.getByRole('button', { name: named(m('report-print-print')) })).toBeEnabled();
+      expect(screen.getByRole('button', { name: named(m('report-print-pdf')) })).toBeEnabled();
     });
 
     it('can be previewed in the other language without changing the app', async () => {

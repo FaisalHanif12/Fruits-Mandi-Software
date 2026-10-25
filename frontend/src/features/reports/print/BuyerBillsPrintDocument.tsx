@@ -44,6 +44,12 @@ function Slip({ data, frame, slip }: SlipProps) {
           <dd>
             <Code>{party.short_code ?? party.code}</Code>{' '}
             <PrintName name={party.name} tag={party.tag ?? undefined} />
+            {party.phone === undefined ? null : (
+              <>
+                {' '}
+                <Code>{party.phone}</Code>
+              </>
+            )}
           </dd>
         </div>
       </dl>

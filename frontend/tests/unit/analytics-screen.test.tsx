@@ -306,7 +306,8 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       }, SLOW_MS);
       expect(cell('0', 'dues_now')).toContain('18,684');
       expect(cell('0', 'dues_now')).toContain(m('report-side-dr'));
-      expect(cell('2', 'buyer')).toBe(`03049999 ${names('شاہد', 'Shahid')}`);
+      // His phone follows his name, in the dash form (PRD FR-13.5), so two people with one name are two rows.
+      expect(cell('2', 'buyer')).toBe(`03049999 ${names('شاہد', 'Shahid')} 0300-0000000`);
       expect(cell('2', 'avg_days')).toBe('0');
       expect(cell('0', 'avg_days')).toBe('');
     });
@@ -776,9 +777,9 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       );
       // The month is named in the language the print was asked for, which is the app's here.
       expect(heads).toContain(`${m('report-month-10')} 2026`);
-      // The print buttons wait for the print job, as in the reports.
-      expect(screen.getByRole('button', { name: named(m('report-print-print')) })).toBeDisabled();
-      expect(screen.getByRole('button', { name: named(m('report-print-pdf')) })).toBeDisabled();
+      // The print buttons send the same view through the print job, as in the reports (17e).
+      expect(screen.getByRole('button', { name: named(m('report-print-print')) })).toBeEnabled();
+      expect(screen.getByRole('button', { name: named(m('report-print-pdf')) })).toBeEnabled();
     });
 
     it('Esc closes the preview and the view is where it was', async () => {

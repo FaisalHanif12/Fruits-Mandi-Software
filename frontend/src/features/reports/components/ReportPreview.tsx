@@ -14,9 +14,10 @@ import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { ExcelExportButton, type ExcelExporter } from '../../../shared/export';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { usePrintFrameOf, useReportPrintData } from '../hooks';
+import { usePrintFrameOf, usePrintReport, useReportPrintData } from '../hooks';
 import { ReportPrintDocument } from '../print/ReportPrintDocument';
 import { PrintPreviewFrame } from './PrintPreviewFrame';
+import { usePrintJob } from './usePrintJob';
 
 interface ReportPreviewProps {
   id: ReportId;
@@ -33,6 +34,16 @@ export function ReportPreview({ id, filters, onBack, exporter }: ReportPreviewPr
   const query = useReportPrintData({ id, filters, language, paper });
   // The ONE header and footer of every print: the backend builds them from the title and the filters.
   const frame = usePrintFrameOf(language, query.data);
+  // "Print" and "Save as PDF": the same report, language and paper as the page on screen.
+  const printReport = usePrintReport();
+  const job = usePrintJob((to) =>
+    printReport.mutateAsync({
+      report: { id, filters, language, paper },
+      slips: false,
+      to,
+      copies: null,
+    }),
+  );
 
   let body;
   if (query.isError || frame.isError) {
@@ -60,6 +71,12 @@ export function ReportPreview({ id, filters, onBack, exporter }: ReportPreviewPr
     body = <ReportPrintDocument data={query.data} frame={frame.data} />;
   }
 
+  // There is something to send once the page is drawn: not while it loads, fails or is empty.
+  const isPrintable =
+    query.data !== undefined &&
+    frame.data !== undefined &&
+    (query.data.rows.length > 0 || query.data.summary.length > 0);
+
   return (
     <PrintPreviewFrame
       language={language}
@@ -68,6 +85,8 @@ export function ReportPreview({ id, filters, onBack, exporter }: ReportPreviewPr
       onPaperChange={setPaper}
       onBack={onBack}
       excel={<ExcelExportButton exporter={exporter} language={language} />}
+      job={job}
+      canPrint={isPrintable}
     >
       {body}
     </PrintPreviewFrame>

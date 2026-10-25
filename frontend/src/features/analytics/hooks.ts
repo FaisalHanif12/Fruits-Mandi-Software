@@ -7,10 +7,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import type { PrintAnalyticsViewInput } from '../../bindings/PrintAnalyticsViewInput';
+import { reportsPrintHeader } from '../reports';
 import {
   analyticsCatalog,
   analyticsLines,
   analyticsPrintData,
+  analyticsPrintView,
   analyticsRun,
   analyticsViewsGet,
   analyticsViewsSave,
@@ -99,6 +102,36 @@ export function useAnalyticsPrintData(input: AnalyticsPrintInput | null) {
     queryFn: () => {
       if (input === null) throw new Error('no print input');
       return analyticsPrintData(input);
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+/** Sends a view to the printer or saves it as a PDF. The caller shows the outcome or the error. */
+export function useAnalyticsPrintView() {
+  return useMutation({
+    mutationFn: (input: PrintAnalyticsViewInput) => analyticsPrintView(input),
+  });
+}
+
+/**
+ * The page the hidden print window draws for a view (PRD FR-18.4): its print data and the shared
+ * header and footer, read together so the window says "ready" only when both are there.
+ */
+export function useAnalyticsPrintBundle(input: AnalyticsPrintInput | null) {
+  return useQuery({
+    queryKey: ['analytics_print_bundle', input],
+    queryFn: async () => {
+      if (input === null) throw new Error('no print input');
+      const data = await analyticsPrintData(input);
+      const frame = await reportsPrintHeader({
+        language: input.language,
+        title_id: data.title_id,
+        facts: data.filters,
+      });
+      return { language: frame.language, urdu_digits: frame.urdu_digits, data, frame };
     },
     enabled: input !== null,
     staleTime: Infinity,

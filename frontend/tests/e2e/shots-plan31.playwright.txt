@@ -1,0 +1,96 @@
+// Screenshots of the party day sheet R35 printed in the client's two layouts (plan 31, 17e): the
+// all-parties table and the slip of one party (a buyer's, then a seller's), in both languages on A4
+// and A5, taken from the development page /dev/reports/R35. The print is the shared PrintRoot with the
+// ONE PrintHeader (firm, contacts, trade mark, title, the day and the party) and the footer of the
+// backend's `reports_print_header`. It is a developer tool: run it with the Vite dev server up on a
+// free port (`pnpm --filter frontend exec vite --port 5188 --strictPort --host 127.0.0.1`) in its own
+// headless Chrome with a throwaway profile (a small Node runner that evaluates this text with
+// playwright-core). It measures sideways overflow of the page and of every sheet (NFR-USE-15), and
+// checks that no digit outside 0-9 is on the page and that no raw markup, message ID or error code
+// shows. The snippet writes the picture of the document itself with an absolute path from inside the
+// page code. (A snippet for that tool, not a module, so it is kept as .txt and the linter does not
+// read it. The Windows check is spec 53.)
+//
+// [name of the shot, the row of the table to open with Enter (null = the table itself)].
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan31';
+  const HOST = 'http://127.0.0.1:5188/#/dev/';
+  const SIZES = [
+    [1024, 600],
+    [1366, 768],
+    [1920, 1080],
+  ];
+  const PREVIEW = /^(Print preview|پرنٹ پر نظر)/;
+  const SHOTS = [
+    ['reports/R35', '', 'print-r35-table', PREVIEW, null],
+    ['reports/R35', '', 'print-r35-slip-buyer', PREVIEW, '2'],
+    ['reports/R35', '', 'print-r35-slip-seller', PREVIEW, '5'],
+  ];
+  const PAPERS = [
+    ['a4', /A4|کاغذ A4/],
+    ['a5', /A5|کاغذ A5/],
+  ];
+  const results = [];
+  for (const [width, height] of SIZES) {
+    await page.setViewportSize({ width, height });
+    for (const [route, flags, name, button, row] of SHOTS) {
+      for (const lang of ['ur', 'en']) {
+        try {
+          await page.goto(`${HOST}${route}${flags}`);
+          await page.reload({ waitUntil: 'load', timeout: 60000 });
+          await page.waitForSelector('h1, [role="alert"]', { timeout: 45000 });
+          for (let step = 0; step < 2; step += 1) {
+            const now = await page.evaluate(() => document.documentElement.lang);
+            if (now === lang) break;
+            await page.keyboard.press('Alt+l');
+            await page.waitForTimeout(250);
+          }
+          await page.waitForSelector('.ag-row', { timeout: 45000 });
+          if (row !== null) {
+            await page.locator(`.ag-row[row-id="${row}"] [col-id="party"]`).click();
+            await page.keyboard.press('Enter');
+            await page.waitForSelector('.ag-header-cell[col-id="qty"]', { timeout: 30000 });
+            await page.waitForTimeout(500);
+          }
+          await page.getByRole('button', { name: button }).first().click();
+          await page.waitForSelector('.print-sheet', { timeout: 30000 });
+          await page.waitForTimeout(700);
+          for (const [paper, paperName] of PAPERS) {
+            if (width !== 1366 && paper === 'a5') continue;
+            await page.getByRole('button', { name: paperName }).first().click();
+            await page.waitForTimeout(900);
+            await page.waitForSelector('.print-sheet', { timeout: 30000 });
+            const o = await page.evaluate(() => {
+              const root = document.documentElement;
+              const sheets = Array.from(document.querySelectorAll('.print-sheet'));
+              const sheetX = sheets.map((n) => n.scrollWidth - n.clientWidth);
+              const text = document.querySelector('.print-doc')?.textContent ?? '';
+              const eastern = /[۰-۹٠-٩]/.test(text);
+              const raw = /report-col-|report-r\d+-|print-fact|ERR_|<num>/.test(
+                text,
+              );
+              return [
+                root.lang,
+                root.dir,
+                'pageX=' + (root.scrollWidth - window.innerWidth),
+                'sheets=' + sheets.length,
+                'sheetX=' + sheetX.join(','),
+                'eastern=' + eastern,
+                'raw=' + raw,
+              ].join(' | ');
+            });
+            await page
+              .locator('.print-doc')
+              .first()
+              .screenshot({ path: `${OUT}/${name}-${paper}-${lang}-${width}x${height}.png` });
+            results.push(`${name} ${paper} ${lang} ${width} ${o}`);
+          }
+        } catch (e) {
+          results.push(`${name} ${lang} ${width} FAILED ${String(e).slice(0, 140)}`);
+        }
+      }
+    }
+  }
+  return results.join('\n');
+};
