@@ -15,7 +15,9 @@ import type { ReportId } from '../../src/bindings/ReportId';
 import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
 import type { GardensListInput } from '../../src/bindings/GardensListInput';
+import type { PrintFrameInput } from '../../src/bindings/PrintFrameInput';
 import { devFlag } from './dev-bridge';
+import { printFrameFor } from './print-frame-real';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import { rokarHandlers } from './dev-bridge-rokar';
 import { listRow } from './bikri-saved';
@@ -223,6 +225,8 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_catalog: () => catalog(),
   reports_run: (input) => page(input),
   reports_print_data: (input) => PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN,
+  // The shared header and footer of every report print: the firm's own, the title and facts asked for.
+  reports_print_header: (input) => printFrameFor(input as unknown as PrintFrameInput),
   reports_buyer_bills_print_data: (input) =>
     input['language'] === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN,
   reports_find_people: () => PEOPLE_SHAHID,

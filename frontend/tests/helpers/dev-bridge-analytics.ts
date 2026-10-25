@@ -18,7 +18,9 @@ import type { AnalyticsView } from '../../src/bindings/AnalyticsView';
 import type { ReportCell } from '../../src/bindings/ReportCell';
 import type { GardensListInput } from '../../src/bindings/GardensListInput';
 import type { TripsListInput } from '../../src/bindings/TripsListInput';
+import type { PrintFrameInput } from '../../src/bindings/PrintFrameInput';
 import { devFlag } from './dev-bridge';
+import { printFrameFor } from './print-frame-real';
 import { devExport, exportPluginCommand, transformCallback } from './dev-bridge-export';
 import { rokarHandlers } from './dev-bridge-rokar';
 import { createGardenBooks } from './gardens-data';
@@ -156,6 +158,7 @@ const handlers: Record<string, (input: Input) => unknown> = {
       limit,
     };
   },
+  reports_print_header: (input) => printFrameFor(input as unknown as PrintFrameInput),
   analytics_print_data: (input) =>
     input['view'] === 'D'
       ? ANALYTICS_PRINT_DATA_D_UR

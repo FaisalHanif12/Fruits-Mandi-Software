@@ -1108,6 +1108,14 @@ report-col-code = کوڈ
 # review: pending
 report-col-previous = { -sabiqa-raqam }
 
+# The party of a line of the party day sheet (R35): his short code is in the column before.
+# review: pending
+report-col-party = پارٹی
+
+# The seller's balance at the end of his day slip (R35).
+# review: pending
+report-r35-balance = { -baqaya }
+
 # review: pending
 report-r35-buyers = گاہک
 

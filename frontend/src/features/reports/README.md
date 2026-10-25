@@ -193,6 +193,27 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   amount the value). R31 writes the garden and fruit lines with the partners module's own sentences
   (`partners-statement-*`): nothing in the screen changed for them.
 
+## Prints on the shared layout, English digits, numbers in running text (round 14, 17e)
+
+- Every report, analytics and R5 slips print draws the shared `PrintRoot`, `PrintHeader` and
+  `PrintScreenFooter` (`shared/print`, never a header of its own). The preview asks the backend for
+  its frame with `usePrintFrameOf(language, data)` (command `reports_print_header`, from the print's
+  title and filters, in the language the print was asked for) and passes it to `ReportPrintDocument` or
+  `BuyerBillsPrintDocument`. The firm, its contacts, the trade mark and the footer are the backend's.
+- A table wider than its sheet is made to fit: a table of more than eight columns is set in the smaller
+  size with tighter cells (`print-table-dense` in `reports.css`), the headings of figure columns may
+  wrap, and `useFitToSheet` zooms what still runs past the sheet down to it (`print/fit.ts`, never
+  below 0.55). Without it the analytics views of trips and partners (up to eighteen columns) were
+  wider than an A4 page.
+- Every number inside a line of words is in its own isolate in Inter (`<Num>`, `<Code>` or
+  `number-run`): the grid text cells through `shared/grid/NumberRuns.tsx` (every number, not only
+  dates), the counts, ranges and windows through `<num>` in the Fluent message and
+  `elems={RUNNING_NUMBER}`, and in prints through `PrintCell.tsx`. The guard test
+  `tests/unit/running-text-numbers.test.tsx` draws 14 screens and 8 prints in both languages and fails
+  on any digit outside one (`tests/helpers/bare-digits.ts`; titles and tabs are names and are the only
+  exception, and `.print-firm-line` of the shared header is a known gap, reported). The print digits are
+  0-9 in both languages (the Urdu-digits setting stays off by default).
+
 ## Not built yet
 
 - Sending a report to the printer and saving it as PDF: the report print DATA exists, the print JOB

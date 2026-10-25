@@ -41,6 +41,7 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/analytics/api');
+vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/search/api');
 // The window of a test has no layout, so the step is the middle one; a test that needs the compact
@@ -773,7 +774,8 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       const heads = Array.from(document.querySelectorAll('.print-report thead th')).map((th) =>
         visible(th.textContent),
       );
-      expect(heads).toContain(`${message('ur', 'report-month-10')} 2026`);
+      // The month is named in the language the print was asked for, which is the app's here.
+      expect(heads).toContain(`${m('report-month-10')} 2026`);
       // The print buttons wait for the print job, as in the reports.
       expect(screen.getByRole('button', { name: named(m('report-print-print')) })).toBeDisabled();
       expect(screen.getByRole('button', { name: named(m('report-print-pdf')) })).toBeDisabled();

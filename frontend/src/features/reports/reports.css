@@ -2,6 +2,22 @@
    table are the shared ones. Only what a report adds is here: the totals row at the end of the
    table, a head that heads a group, and the side word of a balance in a slot after its figure. */
 
+/* The heading of a figure column may wrap onto two lines ("Seller Commission"): only the figures
+   below it never wrap. Without this a report of nine columns is wider than the sheet. */
+.print-report .print-table th.print-num {
+  white-space: normal;
+}
+
+/* A report of many columns (analytics views of partners and trips have up to eighteen) is set in the
+   smaller print size with tighter cells, so that as many columns as possible fit the sheet. */
+.print-report .print-table-dense th,
+.print-report .print-table-dense td {
+  --print-num-size: var(--print-latin-1);
+
+  padding-inline: var(--print-gap-1);
+  font-size: var(--print-text-1);
+}
+
 /* The totals row is drawn once, under the last row, not repeated at the foot of every page. */
 .print-report .print-table tfoot {
   display: table-row-group;
@@ -10,6 +26,14 @@
 .print-report .print-table tfoot td {
   border-block-start: var(--print-rule-strong) solid var(--color-ink);
   font-weight: var(--weight-strong);
+}
+
+/* A text cell of a dense table (the name of a trip, the word "Total") keeps a width a word fits in:
+   without it the browser squeezes the column to a letter and the name falls apart. The table is then
+   zoomed down to the sheet (fit.ts). */
+.print-report .print-table-dense td:not(.print-num),
+.print-report .print-table-dense th:not(.print-num) {
+  min-inline-size: 18mm;
 }
 
 .print-report .print-table tr[data-row='group'] td {

@@ -54,6 +54,7 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/analytics/api');
+vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/partners/api');
 vi.mock('../../src/features/gardens/api');
 vi.mock('../../src/features/trips/api');

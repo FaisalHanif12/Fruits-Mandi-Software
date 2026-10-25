@@ -446,7 +446,8 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       expect(body).toContain(
         names('بکری 1: کمیشن، لاگا اور فون', 'Sale 1: Commission, Laga and Phone Charge'),
       );
-      expect(body).toContain(names('دکان خرچہ خ-1: بجلی', 'Shop Expense E-1: Electricity'));
+      // The head of the expense is a name the fake print carries in English only.
+      expect(body).toContain(names('دکان خرچہ خ-1', 'Shop Expense E-1: Electricity'));
       expect(body).toContain(names('سرمایہ لگایا س-1', 'Capital put in CI-1'));
       expect(body).not.toMatch(/[{}$]/);
     });

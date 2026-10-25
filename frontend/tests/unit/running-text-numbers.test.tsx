@@ -6,6 +6,7 @@
 // Titles and tabs are names, not running text ("Top 10"), and are the one exception.
 
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReportCell } from '../../src/bindings/ReportCell';
 import type { ReportPage } from '../../src/bindings/ReportPage';
@@ -30,6 +31,7 @@ import { DASHBOARD_GARDEN, fakeDashboard } from '../helpers/dashboard';
 import { fakeGardens } from '../helpers/gardens';
 import { paisaForTest } from '../helpers/paisa';
 import { fakePartners, partnerRow } from '../helpers/partners';
+import { message, visible } from '../helpers/render';
 import { R31_BAY, fakeReports } from '../helpers/reports';
 import { fakeTrips } from '../helpers/trips';
 
@@ -50,6 +52,9 @@ vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/search/api');
 
 const SLOW_MS = { timeout: 8_000 };
+
+/** The key shown on a button after its words. */
+const KEY_CHIPS = new Set(['F9']);
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -164,13 +169,64 @@ describe.each(LANGUAGES)('numbers in running text are in Inter (%s)', (language:
     expect(bareDigits(document.body)).toEqual([]);
   });
 
+  it.each([
+    { path: '/reports/R5', button: 'report-preview' },
+    { path: '/reports/R5', button: 'report-print-all' },
+    { path: '/reports/R37', button: 'report-preview' },
+    { path: '/reports/R31?partner=2', button: 'report-preview' },
+    { path: '/reports/R34', button: 'report-preview' },
+    { path: '/reports/R18', button: 'report-preview' },
+    { path: '/analytics/K', button: 'report-preview' },
+    { path: '/analytics/J', button: 'report-preview' },
+  ])('the print of $path ($button) has no digit outside a number', async ({ path, button }) => {
+    fakeReports(
+      path.startsWith('/reports/R31') ? { pages: { R31: statementWithSentences() } } : {},
+    );
+    fakeAnalytics();
+    const user = userEvent.setup();
+    await renderApp(path);
+    await screen.findByRole('heading', { level: 1 }, SLOW_MS);
+    await waitFor(() => {
+      expect(document.querySelector('.ag-row')).not.toBeNull();
+    }, SLOW_MS);
+    const words = message(language, button);
+    await user.click(
+      screen.getByRole('button', {
+        name: (name) =>
+          visible(name) === words ||
+          (visible(name).startsWith(words) &&
+            KEY_CHIPS.has(visible(name).slice(words.length).trim())),
+      }),
+    );
+    await waitFor(() => {
+      expect(document.querySelector('.print-sheet')).not.toBeNull();
+    }, SLOW_MS);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    // The sheet is drawn in the print language: its header, lines, totals and footer.
+    expect(bareDigits(document.querySelector('.print-doc') ?? document.body)).toEqual([]);
+  });
+
   it('the guard itself sees a bare digit and a number in its isolate', () => {
     // A box that is not in the page, so it cannot leak into another test.
     const box = document.createElement('div');
-    box.innerHTML =
-      '<p>From 10-10-2026</p><p>From <bdi class="number-run">10-10-2026</bdi></p><h1>Top 10</h1>';
+    const line = (words: string, isolate: boolean) => {
+      const paragraph = document.createElement('p');
+      paragraph.append(`${words} `);
+      const number = document.createElement(isolate ? 'bdi' : 'span');
+      if (isolate) number.className = 'number-run';
+      number.textContent = '10-10-2026';
+      paragraph.append(number);
+      box.append(paragraph);
+    };
+    line('From', false);
+    line('From', true);
+    const title = document.createElement('h1');
+    title.textContent = message('en', 'analytics-view-h-title');
+    box.append(title);
     const bare = bareDigits(box);
     expect(bare).toHaveLength(1);
-    expect(bare[0]?.text).toBe('From 10-10-2026');
+    // The number left in the words, and only it: the one in its isolate and the title are fine.
+    expect(bare[0]?.text).toBe('10-10-2026');
+    expect(bare[0]?.tag).toBe('span');
   });
 });

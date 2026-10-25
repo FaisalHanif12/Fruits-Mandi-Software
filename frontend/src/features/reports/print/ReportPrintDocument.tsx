@@ -7,7 +7,7 @@
 // (CLAUDE.md rule 1). The in-app preview and the hidden print window draw this same page.
 
 import { useLocalization } from '@fluent/react';
-import type { Ref } from 'react';
+import { useLayoutEffect, useRef, type Ref } from 'react';
 import type { ReportPrintCell } from '../../../bindings/ReportPrintCell';
 import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
@@ -21,6 +21,10 @@ import { Num } from '../../../shared/ui/Num';
 import { ScriptText } from '../../../shared/ui/ScriptText';
 import { emptyNameMessageId, monthMessageId } from '../cells';
 import { Cell, cellClass } from './PrintCell';
+import { fitZoom } from './fit';
+
+/** A table of more columns than this is set in the smaller print size (reports.css). */
+const DENSE_COLUMNS = 8;
 
 /** The heading of a column: its message, or the day, month or item it stands for. */
 function ColumnHeading({ heading, titleId }: { heading: PrintHeading | null; titleId: string }) {
@@ -99,8 +103,42 @@ interface ReportPrintDocumentProps {
   ref?: Ref<HTMLDivElement>;
 }
 
+/**
+ * Brings a table that is wider than its sheet back inside it (`fit.ts`). It measures after the fonts
+ * are loaded, because the Urdu and English words have different widths, and again when the data, the
+ * language or the paper change.
+ */
+function useFitToSheet(key: unknown) {
+  const ref = useRef<HTMLTableElement>(null);
+  useLayoutEffect(() => {
+    const table = ref.current;
+    const sheet = table?.closest<HTMLElement>('.print-sheet') ?? null;
+    if (table === null || sheet === null) return undefined;
+    let current = true;
+    const fit = () => {
+      if (!current) return;
+      table.style.zoom = '';
+      // What the sheet leaves for the table: its width less its own padding (the page margin on
+      // paper is not padding, so there it is the whole width).
+      const style = getComputedStyle(sheet);
+      const lengthOf = (px: string) => Number(px.replace('px', '')) || 0;
+      const padding = lengthOf(style.paddingInlineStart) + lengthOf(style.paddingInlineEnd);
+      const zoom = fitZoom(table.offsetWidth, sheet.clientWidth - padding);
+      if (zoom !== null) table.style.zoom = String(zoom);
+    };
+    fit();
+    // A window without the font API (a test page) has nothing to wait for.
+    if ('fonts' in document) void document.fonts.ready.then(fit);
+    return () => {
+      current = false;
+    };
+  }, [key]);
+  return ref;
+}
+
 function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' | 'frame'>) {
   const { l10n } = useLocalization();
+  const tableRef = useFitToSheet(data);
   // The party day sheet (R35) is the client's own slip: its lines first, what the day comes to
   // underneath (PRD FR-19.12). The other reports have their figures above the table.
   const sheet = data.report === 'R35';
@@ -124,7 +162,12 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
       <section className="print-sheet">
         <PrintHeader header={frame.header} />
         {sheet ? null : summaryLines}
-        <table className="print-table">
+        <table
+          ref={tableRef}
+          className={
+            data.columns.length > DENSE_COLUMNS ? 'print-table print-table-dense' : 'print-table'
+          }
+        >
           <thead>
             <tr>
               {data.columns.map((column, position) => (
