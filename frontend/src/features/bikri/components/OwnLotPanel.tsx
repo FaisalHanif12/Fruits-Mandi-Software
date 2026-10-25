@@ -20,9 +20,9 @@ import { Localized } from '@fluent/react';
 import { PackageOpen, TriangleAlert } from 'lucide-react';
 import { useMemo } from 'react';
 import type { LotPreview } from '../../../bindings/LotPreview';
-import type { RecordRef } from '../../../bindings/RecordRef';
 import type { UiError } from '../../../bindings/UiError';
-import type { EntryRow, PickedRecord } from '../../../shared/grid';
+import { pickedOf } from '../../../shared/accounts';
+import type { EntryRow } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { isNegativePaisa } from '../../../shared/format';
 import {
@@ -80,10 +80,6 @@ export function focusOwnPurchaseSoon(rowId: string): void {
   window.setTimeout(attempt, 0);
 }
 
-function pickedOfRef(ref: RecordRef): PickedRecord {
-  return { id: ref.id, code: ref.code, name_ur: ref.name_ur, name_en: ref.name_en };
-}
-
 export function OwnLotPanel({ row, lotIndex, error, lot }: OwnLotPanelProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -130,8 +126,8 @@ export function OwnLotPanel({ row, lotIndex, error, lot }: OwnLotPanelProps) {
     stores.lots.getState().patchRow(row.rowId, {
       typed: { [LOT.purchase]: value, [LOT.qty]: String(purchase.qty_left) },
       picked: {
-        [LOT.item]: pickedOfRef(purchase.item),
-        [LOT.packing]: pickedOfRef(purchase.packing),
+        [LOT.item]: pickedOf(purchase.item),
+        [LOT.packing]: pickedOf(purchase.packing),
       },
     });
   };

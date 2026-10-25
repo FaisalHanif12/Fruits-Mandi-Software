@@ -48,7 +48,7 @@ fn person_ref(person: &PersonFacts) -> RecordRef {
         code: person.code.clone(),
         name_ur: person.name_ur.clone(),
         name_en: person.name_en.clone(),
-        tag: None,
+        tag: person.tag.clone(),
     }
 }
 

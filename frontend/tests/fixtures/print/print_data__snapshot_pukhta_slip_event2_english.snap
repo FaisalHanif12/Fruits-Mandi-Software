@@ -8,32 +8,42 @@ expression: "print(EVENT2, PrintDoc::PukhtaSlip, Language::En)"
   "dir": "ltr",
   "paper": "a5",
   "urdu_digits": false,
-  "title_id": "print-pukhta-slip-title",
-  "firm": {
-    "name": "Maher Adnan and Brothers",
-    "mandi": "New Sabzi Mandi, Kot Radha Kishan",
-    "address": "Kot Radha Kishan",
-    "phone": "03001234567"
+  "header": {
+    "firm": {
+      "name": "Maher Adnan and Brothers",
+      "mandi": "New Sabzi Mandi, Kot Radha Kishan",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-pukhta-slip-title",
+    "facts": [
+      {
+        "label_id": "print-fact-number",
+        "value": "2"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      },
+      {
+        "label_id": "print-fact-truck",
+        "value": "LHR-0077"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
   },
   "number": "2",
-  "facts": [
-    {
-      "label_id": "print-fact-number",
-      "value": "2"
-    },
-    {
-      "label_id": "print-fact-date",
-      "value": "10-10-2026"
-    },
-    {
-      "label_id": "print-fact-truck",
-      "value": "LHR-0077"
-    }
-  ],
-  "printed_at": "10-10-2026 14:00",
   "cancelled": false,
   "pages": [
     {
+      "serial": "1",
       "party": {
         "role_id": "print-party-onetime-buyer",
         "code": null,
@@ -50,6 +60,7 @@ expression: "print(EVENT2, PrintDoc::PukhtaSlip, Language::En)"
           "weight_kg": null,
           "rate": "1,200",
           "amount": "12,000",
+          "detail": "(Apple 10 . 1,200)",
           "note": null
         }
       ],

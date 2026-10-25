@@ -577,3 +577,13 @@ vouchers-number-khata-in = کا-{ $number }
 
 # review: pending
 vouchers-number-general = ج-{ $number }
+
+## اگراہی فہرست پرنٹ کرنا (plan 17e, PRD FR-15.6).
+
+# The title of the print box of the collection list.
+# review: pending
+vouchers-collection-print-title = { -agrahi } فہرست پرنٹ کریں
+
+# $date is the day of the list, for example 10-10-2026.
+# review: pending
+vouchers-collection-print-help = { $date } کی { -agrahi } فہرست، جیسی سکرین پر ہے ویسی ہی پرنٹ ہوگی۔ زبان اور پرنٹ کی جگہ چنیں۔

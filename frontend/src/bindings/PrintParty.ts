@@ -13,6 +13,11 @@ export type PrintParty = {
    */
   code: string | null;
   /**
+   * The short code of a seller or buyer (PRD FR-7.39, FR-19.13), for example `1` for
+   * 03040001. Absent for a one-time person and for an account that has no short code.
+   */
+  short_code?: string;
+  /**
    * The name in the print language.
    */
   name: string;

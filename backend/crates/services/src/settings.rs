@@ -336,16 +336,82 @@ pub fn get_print_info(ctx: &Context) -> Result<FirmPrintInfo, ServiceError> {
     ctx.db.read(load_print_info)
 }
 
+impl FirmPrintInfo {
+    /// Checks the contacts and the trade mark and returns them cleaned, or every problem found
+    /// (PRD Section 21 "Firm", Code Standards 4.2): at most [`MAX_CONTACTS`] contacts, each with an
+    /// Urdu name in Urdu letters, an English name in English letters and a phone; the trade mark
+    /// as free text.
+    ///
+    /// # Errors
+    /// `ERR_OUT_OF_RANGE` (values `min` 0, `max` 3) on `firm_contacts`; the name codes on
+    /// `firm_contacts[i].name_ur` and `.name_en`; the phone codes on `firm_contacts[i].phone`;
+    /// `ERR_TEXT_TOO_LONG` or `ERR_CONTROL_CHARS` on `trade_mark`.
+    pub fn validated(&self) -> Result<FirmPrintInfo, Vec<FieldError>> {
+        let mut errors = FieldErrors::default();
+        let mut contacts = Vec::with_capacity(self.firm_contacts.len());
+        if self.firm_contacts.len() > MAX_CONTACTS {
+            errors.push(
+                FieldError::new(
+                    mandi_domain::core::error::ErrorCode::ErrOutOfRange,
+                    "firm_contacts",
+                )
+                .with("min", mandi_domain::core::error::ErrorValue::Number(0))
+                .with(
+                    "max",
+                    mandi_domain::core::error::ErrorValue::Number(
+                        i64::try_from(MAX_CONTACTS).unwrap_or(i64::MAX),
+                    ),
+                ),
+            );
+        } else {
+            for (index, contact) in self.firm_contacts.iter().enumerate() {
+                let name_ur = errors.take(validate::name_ur(
+                    &format!("firm_contacts[{index}].name_ur"),
+                    &contact.name_ur,
+                ));
+                let name_en = errors.take(validate::name_en(
+                    &format!("firm_contacts[{index}].name_en"),
+                    &contact.name_en,
+                ));
+                let phone = errors.take(validate::phone(
+                    &format!("firm_contacts[{index}].phone"),
+                    &contact.phone,
+                ));
+                if let (Some(name_ur), Some(name_en), Some(phone)) = (name_ur, name_en, phone) {
+                    contacts.push(FirmContact {
+                        name_ur,
+                        name_en,
+                        phone,
+                    });
+                }
+            }
+        }
+        let trade_mark = errors.take(validate::free_text("trade_mark", &self.trade_mark));
+        errors.finish()?;
+        Ok(FirmPrintInfo {
+            firm_contacts: contacts,
+            trade_mark: trade_mark.unwrap_or_default(),
+        })
+    }
+
+    fn to_json(&self) -> (Value, Value) {
+        (json!(self.firm_contacts), json!(self.trade_mark))
+    }
+}
+
 /// Saves the firm details together with the contact persons and the trade mark (Owner): one user
-/// action, one transaction, one audit entry per change (Code Standards B3, S7).
+/// action, one transaction (Code Standards B3). The firm names, the contacts' names and the
+/// trade mark are checked together, so every wrong field comes back at once; the spelling of
+/// every name is checked too (PRD FR-7.66), and the words in `confirmed_rules_words` are
+/// accepted and learned inside the same transaction (FR-7.26).
 ///
-/// Plan 17e T1: the contacts and the trade mark are in the contract but are not stored yet. A
-/// request that carries either is refused, so a save never drops them silently; one that carries
-/// neither saves the firm exactly as `set_firm_confirmed` does. T2 stores them, checks each
-/// contact (names in their own script, phone, at most 3) and writes the audit entry.
+/// The firm writes the audit row it always wrote. A change of the contacts or the trade mark
+/// writes one more, with the old and the new value (Code Standards S7); a save that changes
+/// neither writes none. The contacts are stored under the key `firm_contacts` and the trade mark
+/// under `trade_mark`, exactly as validated (phones as 11 digits).
 ///
 /// # Errors
-/// As `set_firm_confirmed`; `ERR_NOT_IMPLEMENTED` on `firm_contacts` or `trade_mark` until T2.
+/// As `set_firm_confirmed`, and the codes of [`FirmPrintInfo::validated`].
 pub fn set_firm_with_print_info(
     ctx: &Context,
     actor: &Actor,
@@ -353,20 +419,94 @@ pub fn set_firm_with_print_info(
     info: &FirmPrintInfo,
     confirmed_rules_words: &[String],
 ) -> Result<(Firm, FirmPrintInfo), ServiceError> {
-    if !info.firm_contacts.is_empty() {
-        return Err(ServiceError::reject_field(
-            mandi_domain::core::error::ErrorCode::ErrNotImplemented,
-            "firm_contacts",
-        ));
+    let mut errors: Vec<FieldError> = Vec::new();
+    let firm = firm
+        .validated(&FirmFields::SETTINGS)
+        .map_err(|found| errors.extend(found));
+    let info = info.validated().map_err(|found| errors.extend(found));
+    let (Ok(firm), Ok(info)) = (firm, info) else {
+        return Err(ServiceError::from(errors));
+    };
+    let checks = all_spelling_checks(ctx, &firm, &info, confirmed_rules_words)?;
+    let (saved, learned) = ctx.db.write(|tx| {
+        let old = load_firm(tx)?;
+        store::set_setting(tx, KEY_FIRM, &firm.to_json(), Some(actor.user_id))?;
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "edit", "settings")
+                .old(json!({ "firm": old.to_json() }))
+                .new_value(json!({ "firm": firm.to_json() }))
+                .into_entry(),
+        )?;
+        let old_info = load_print_info(tx)?;
+        if old_info != info {
+            let (contacts, trade_mark) = info.to_json();
+            store::set_setting(tx, SETTING_KEY_CONTACTS, &contacts, Some(actor.user_id))?;
+            store::set_setting(tx, SETTING_KEY_TRADE_MARK, &trade_mark, Some(actor.user_id))?;
+            let (old_contacts, old_trade_mark) = old_info.to_json();
+            ctx.db.auditor().write(
+                tx,
+                &Event::new(Some(actor.user_id), "edit", "settings")
+                    .old(json!({ "firm_contacts": old_contacts, "trade_mark": old_trade_mark }))
+                    .new_value(json!({ "firm_contacts": contacts, "trade_mark": trade_mark }))
+                    .into_entry(),
+            )?;
+        }
+        let mut learned = Vec::new();
+        for check in &checks {
+            learned.push(check.learn(ctx, actor, tx)?);
+        }
+        Ok::<_, ServiceError>(((firm.clone(), info.clone()), learned))
+    })?;
+    for learned in learned {
+        learned.after_commit(ctx);
     }
-    if !info.trade_mark.trim().is_empty() {
-        return Err(ServiceError::reject_field(
-            mandi_domain::core::error::ErrorCode::ErrNotImplemented,
-            "trade_mark",
-        ));
+    Ok(saved)
+}
+
+/// The spelling of the firm name, the mandi name and the name of every contact, checked together
+/// (PRD FR-7.66). The contact fields are `firm_contacts[i].name_ur` and `.name_en`.
+fn all_spelling_checks(
+    ctx: &Context,
+    firm: &Firm,
+    info: &FirmPrintInfo,
+    confirmed_rules_words: &[String],
+) -> Result<Vec<SpellingCheck>, ServiceError> {
+    let fields = &FirmFields::SETTINGS;
+    let contact_fields: Vec<(String, String)> = (0..info.firm_contacts.len())
+        .map(|index| {
+            (
+                format!("firm_contacts[{index}].name_ur"),
+                format!("firm_contacts[{index}].name_en"),
+            )
+        })
+        .collect();
+    let mut pairs = vec![
+        NamePair {
+            field_ur: fields.name_ur,
+            name_ur: &firm.name_ur,
+            field_en: fields.name_en,
+            name_en: &firm.name_en,
+            kind: Kind::Name,
+        },
+        NamePair {
+            field_ur: fields.mandi_ur,
+            name_ur: &firm.mandi_ur,
+            field_en: fields.mandi_en,
+            name_en: &firm.mandi_en,
+            kind: Kind::Place,
+        },
+    ];
+    for (contact, (field_ur, field_en)) in info.firm_contacts.iter().zip(&contact_fields) {
+        pairs.push(NamePair {
+            field_ur,
+            name_ur: &contact.name_ur,
+            field_en,
+            name_en: &contact.name_en,
+            kind: Kind::Name,
+        });
     }
-    let saved = set_firm_confirmed(ctx, actor, firm, confirmed_rules_words)?;
-    Ok((saved, get_print_info(ctx)?))
+    spelling::check_all(ctx, &pairs, confirmed_rules_words)
 }
 
 /// Saves the idle lock minutes (Owner), typed as text: 1 to 120.

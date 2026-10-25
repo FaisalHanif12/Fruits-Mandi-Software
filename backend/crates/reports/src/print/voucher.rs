@@ -7,7 +7,7 @@
 //! only sentence built here is the amount in words (PRD FR-19.7).
 
 use chrono::{DateTime, Utc};
-use mandi_core::accounts::BUYER_CONTROL;
+use mandi_core::accounts::{BUYER_CONTROL, short_code_of};
 use mandi_core::auth::Language;
 use mandi_core::english_words::english_words;
 use mandi_core::money::Grouping;
@@ -118,6 +118,7 @@ fn build_slip(
             }
             .to_owned(),
             code: None,
+            short_code: None,
             name: pick(language, &person.name_ur, &person.name_en),
             tag: None,
             phone: Some(person.phone.trim().to_owned()).filter(|p| !p.is_empty()),
@@ -130,6 +131,7 @@ fn build_slip(
             }
             .to_owned(),
             code: Some(account.code.clone()),
+            short_code: short_code_of(&account.code),
             name: pick(language, &account.name_ur, &account.name_en),
             tag: account.tag.clone(),
             phone: None,

@@ -1,5 +1,6 @@
 // The buyer slips (R5, PRD FR-12.12): one slip per buyer, each on a new sheet ("print all"), on A5
-// or on the 80 mm roll. It lays out the print data and works out nothing (CLAUDE.md rule 1).
+// or on the 80 mm roll, in the client's R5 columns (serial, party with tag, تفصیل, رقم, رقم بعد لاگا).
+// It lays out the print data and works out nothing (CLAUDE.md rule 1).
 
 import type { Ref } from 'react';
 import { PrintDocument, type PrintData } from '../../../shared/print';
@@ -16,6 +17,7 @@ export function BuyerSlipTemplate({ data, applyRoot, ref }: BuyerSlipTemplatePro
     <PrintDocument
       data={data}
       columnsOf={slipColumns}
+      layout="r5"
       {...(applyRoot === undefined ? {} : { applyRoot })}
       {...(ref === undefined ? {} : { ref })}
     />

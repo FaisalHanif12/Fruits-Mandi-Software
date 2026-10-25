@@ -10,7 +10,7 @@ import type { PrintColumn, PrintData, PrintPage } from '../../../shared/print';
 export const DATE_FACT_ID = 'print-fact-date';
 
 function headerDate(data: PrintData): string | null {
-  return data.facts.find((fact) => fact.label_id === DATE_FACT_ID)?.value ?? null;
+  return data.header.facts.find((fact) => fact.label_id === DATE_FACT_ID)?.value ?? null;
 }
 
 function withDateAndWeight(

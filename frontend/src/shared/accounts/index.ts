@@ -3,5 +3,6 @@
 export * from './api';
 export { accountInputOf } from './account-input';
 export * from './hooks';
+export { pickedOf, type PickedAccount } from './picked';
 export { OWN_GOODS_CODE, isGardenAccount, isOwnGoods } from './own-goods';
 export type * from './types';

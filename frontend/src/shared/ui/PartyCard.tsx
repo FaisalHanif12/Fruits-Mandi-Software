@@ -56,9 +56,7 @@ function CardBody({ card }: { card: PartyCardData }) {
   return (
     <>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="type-section text-ink">
-          {displayName({ name_ur: card.name_ur, name_en: card.name_en }, language)}
-        </span>
+        <span className="type-section text-ink">{displayName(card, language)}</span>
         <Code>{card.code}</Code>
         <Localized id={`accounts-type-${card.account_type}`}>
           <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />

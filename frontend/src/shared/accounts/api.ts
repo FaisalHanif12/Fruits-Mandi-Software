@@ -76,6 +76,8 @@ export function accountsSimilar(input: {
   name_ur: string;
   name_en: string;
   phone: string;
+  /** The tag typed (empty if none): with the names and the phone it decides what is a duplicate. */
+  tag: string;
   exclude_id: number | null;
 }): Promise<AccountMatch[]> {
   return callCommand<AccountMatch[]>('accounts_similar', { input });

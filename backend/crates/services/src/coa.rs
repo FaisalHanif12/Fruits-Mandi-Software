@@ -91,7 +91,7 @@ fn build(
                     balance: sum.balance()?,
                     is_active: account.is_active,
                     is_system: account.is_system,
-                    tag: None,
+                    tag: account.tag.clone(),
                 });
             }
             head_sum = head_sum.add(control_sum)?;

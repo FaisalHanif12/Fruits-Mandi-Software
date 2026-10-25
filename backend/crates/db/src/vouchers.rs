@@ -183,7 +183,7 @@ const ROW_COLUMNS: &str =
     "v.id, v.type, v.number, v.entry_date, v.account_id, a.code, a.name_ur, a.name_en,
                 v.amount_paisa, v.mode, v.bank_account_id, v.cheque_no, v.cheque_date,
                 v.expected_goods, v.narration, v.status, v.version, v.pukhta_person_key,
-                v.collector_staff_id, v.reason, v.cancel_reason, v.current_entry_id";
+                v.collector_staff_id, v.reason, v.cancel_reason, v.current_entry_id, a.tag";
 
 /// A voucher row and the person key it names. The person's names are filled in by
 /// [`fill_people`], because they come from the بکری lines, not from the voucher.
@@ -212,7 +212,7 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<(VoucherRow, Option<Strin
                 .ok()
                 .flatten()
                 .unwrap_or_default(),
-            tag: None,
+            tag: r.get::<_, Option<String>>(22).ok().flatten(),
         }),
         amount_paisa: Paisa::try_from_paisa(r.get(8)?).map_err(|_| bad(8, "amount"))?,
         // A salary deduction (plan 17) is stored as `salary`; as a row it reads as cash because it
@@ -678,7 +678,7 @@ pub fn hits_by_number(
 ) -> rusqlite::Result<Vec<mandi_core::vouchers::VoucherHit>> {
     let mut statement = conn.prepare(
         "SELECT v.id, v.type, v.number, v.entry_date, v.account_id, a.code, a.name_ur, a.name_en,
-                v.amount_paisa, v.status
+                v.amount_paisa, v.status, a.tag
          FROM vouchers v LEFT JOIN accounts a ON a.id = v.account_id
          WHERE v.number = ?1 AND (?2 IS NULL OR v.type = ?2)
          ORDER BY CASE v.type WHEN 'receipt' THEN 0 WHEN 'payment' THEN 1 WHEN 'advance' THEN 2
@@ -711,7 +711,7 @@ pub fn hits_by_number(
                         .ok()
                         .flatten()
                         .unwrap_or_default(),
-                    tag: None,
+                    tag: r.get::<_, Option<String>>(10).ok().flatten(),
                 }),
                 amount_paisa: Paisa::try_from_paisa(r.get(8)?).map_err(|_| bad(8, "amount"))?,
                 status: r.get(9)?,
@@ -1367,7 +1367,7 @@ pub fn collection_candidates(
 ) -> rusqlite::Result<Vec<CollectionCandidate>> {
     let mut statement = conn.prepare(
         "SELECT a.id, a.code, a.name_ur, a.name_en, COALESCE(a.phone1, ''),
-                s.id, s.name_ur, s.name_en, c.id, c.code, c.name_ur, c.name_en
+                s.id, s.name_ur, s.name_en, c.id, c.code, c.name_ur, c.name_en, a.tag
          FROM accounts a
          JOIN account_controls k ON k.id = a.control_id
          LEFT JOIN staff s ON s.id = a.collector_staff_id
@@ -1386,7 +1386,7 @@ pub fn collection_candidates(
                 code: r.get(1)?,
                 name_ur: r.get(2)?,
                 name_en: r.get(3)?,
-                tag: None,
+                tag: r.get(12)?,
             },
             phone: r.get(4)?,
             collector: collector_id

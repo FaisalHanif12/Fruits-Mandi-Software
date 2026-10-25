@@ -6,7 +6,7 @@ import type { Language } from '../../i18n';
 import type { UiError } from '../../bindings/UiError';
 import { formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
 import { displayName } from '../../shared/i18n';
-import type { AccountHit, AccountType } from '../../shared/accounts';
+import { pickedOf, type AccountHit, type AccountType } from '../../shared/accounts';
 import type { PickerValue } from '../../shared/ui';
 import { isPukhtaCode, PUKHTA_BUYER_CODE } from '../pukhta_khata';
 import type { PukhtaSide } from '../../bindings/PukhtaSide';
@@ -96,7 +96,7 @@ export function isCashLent(draft: VoucherDraft): boolean {
 
 /** The account as the picker holds it, from a search result. */
 export function pickerValueOf(hit: AccountHit): PickerValue {
-  return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+  return pickedOf(hit);
 }
 
 /** The voucher that is checked or saved, with its type. */

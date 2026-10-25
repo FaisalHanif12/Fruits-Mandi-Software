@@ -117,6 +117,30 @@ impl ControlRule {
     }
 }
 
+/// The short code of a seller or buyer account (PRD FR-7.39): the serial of its code without
+/// leading zeros. `None` for every other account (other accounts have no short code), and for a
+/// system serial (0 and 9000 to 9999, PRD FR-10.3), which is never a short code.
+///
+/// ```
+/// use mandi_core::accounts::short_code_of;
+/// assert_eq!(short_code_of("03040001").as_deref(), Some("1"));
+/// assert_eq!(short_code_of("030110012").as_deref(), Some("12"));
+/// assert_eq!(short_code_of("03049999"), None); // پختہ کھاتہ (system serial)
+/// assert_eq!(short_code_of("01010001"), None); // cash: not a seller or a buyer
+/// ```
+pub fn short_code_of(code: &str) -> Option<String> {
+    let serial = code
+        .strip_prefix(SELLER_CONTROL)
+        .or_else(|| code.strip_prefix(BUYER_CONTROL))?;
+    if serial.len() != 4 || !serial.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let number: u32 = serial.parse().ok()?;
+    (FIRST_SERIAL..=LAST_SERIAL)
+        .contains(&number)
+        .then(|| number.to_string())
+}
+
 /// The first normal serial (PRD FR-10.3).
 pub const FIRST_SERIAL: u32 = 1;
 /// The last normal serial. 9000 to 9999 and 0 are for system accounts (PRD FR-10.3).
@@ -451,6 +475,10 @@ pub struct AccountsSimilarInput {
     pub name_en: String,
     /// What was typed in the phone. Empty if nothing yet.
     pub phone: String,
+    /// What was typed in the tag (نشان). Empty if none. With the names and the phone it decides
+    /// which similar account is a duplicate (PRD FR-10.7, E38). Missing means none.
+    #[serde(default)]
+    pub tag: String,
     /// The account being edited, which is left out of the answer.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -485,6 +513,9 @@ pub struct SimilarAccount {
     pub phone1: String,
     /// The kind of account.
     pub account_type: AccountType,
+    /// True when its name, its tag and its phone all equal what was typed: the duplicate warning
+    /// of PRD FR-10.7. The same name and phone with another tag is not a duplicate (PRD E38).
+    pub is_duplicate: bool,
 }
 
 /// One line of the openings grid.

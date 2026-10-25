@@ -7,7 +7,7 @@
 // other for a بکری).
 
 import type { BikriPrintDataInput } from '../../../bindings/BikriPrintDataInput';
-import { PrintView, type PrintReady } from '../../../shared/print';
+import { PrintView, describePrintData, type PrintReady } from '../../../shared/print';
 import { useBikriPrintData } from '../../reports';
 import { BikriPrintDocument } from './BikriPrintDocument';
 
@@ -26,6 +26,7 @@ export function BikriPrintView({ input, mode, onReady, onFailed }: BikriPrintVie
   return (
     <PrintView
       query={query}
+      describe={describePrintData}
       {...(onReady === undefined ? {} : { onReady })}
       {...(onFailed === undefined ? {} : { onFailed })}
       render={(data, ref) => (

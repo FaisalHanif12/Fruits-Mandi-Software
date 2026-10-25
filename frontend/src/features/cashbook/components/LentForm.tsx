@@ -7,6 +7,7 @@
 import { Localized } from '@fluent/react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
+import { pickedOf } from '../../../shared/accounts';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   ControlAccountPicker,
@@ -63,15 +64,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
             value={draft.person}
             onChange={(account) => {
               onChange({
-                person:
-                  account === null
-                    ? null
-                    : {
-                        id: account.id,
-                        code: account.code,
-                        name_ur: account.name_ur,
-                        name_en: account.name_en,
-                      },
+                person: account === null ? null : pickedOf(account),
               });
             }}
             onAddNew={setAdding}

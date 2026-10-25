@@ -172,6 +172,7 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
       paper_buyer_slips: 'mm80',
       paper_pukhta_slip: 'a5',
       paper_receipt_slip: 'a5',
+      paper_collection_list: 'a4',
       printer: 'HP LaserJet',
       copies: '2',
       urdu_digits: true,
@@ -209,6 +210,34 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
       paper_receipt_slip: 'mm80',
       paper_seller_bill: 'a4',
       print_after_save: ['seller_bill', 'buyer_slips', 'pukhta_slip', 'receipt_slip'],
+    });
+  });
+
+  it('the collection list has its own paper, and is not one of the documents printed after a save', async () => {
+    const printing = fakePrinting({ printers: [] });
+    const { user } = await open();
+    const paper = await screen.findByRole('combobox', {
+      name: named(language, 'print-doc-collection-list'),
+    });
+    const after = screen.getByRole('region', {
+      name: named(language, 'print-settings-after-save'),
+    });
+    // It is printed from the collection screen, so it is not in the "print after save" list.
+    expect(
+      within(after).queryByRole('checkbox', { name: named(language, 'print-doc-collection-list') }),
+    ).toBeNull();
+    await user.click(paper);
+    await user.click(
+      await screen.findByRole('option', { name: named(language, 'print-paper-mm80') }),
+    );
+    press('F10');
+    await waitFor(() => {
+      expect(printing.saves).toHaveLength(1);
+    });
+    expect(printing.saves[0]).toMatchObject({
+      paper_collection_list: 'mm80',
+      paper_seller_bill: 'a4',
+      print_after_save: ['seller_bill', 'buyer_slips', 'pukhta_slip'],
     });
   });
 
@@ -289,6 +318,7 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
               paper_buyer_slips: 'a5',
               paper_pukhta_slip: 'a5',
               paper_receipt_slip: 'a5',
+              paper_collection_list: 'a4',
               printer: '',
               copies: 1,
               urdu_digits: false,

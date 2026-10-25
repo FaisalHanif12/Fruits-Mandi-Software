@@ -5,14 +5,20 @@
 import type { AmountRole } from '../../bindings/AmountRole';
 import type { Paper } from '../../bindings/Paper';
 import type { PrintAmount } from '../../bindings/PrintAmount';
+import type { PrintContact } from '../../bindings/PrintContact';
 import type { PrintData } from '../../bindings/PrintData';
 import type { PrintFact } from '../../bindings/PrintFact';
+import type { PrintFirm } from '../../bindings/PrintFirm';
+import type { PrintFooter } from '../../bindings/PrintFooter';
+import type { PrintFrame } from '../../bindings/PrintFrame';
+import type { PrintHeader as PrintHeaderData } from '../../bindings/PrintHeader';
 import type { PrintLine } from '../../bindings/PrintLine';
 import type { PrintPage } from '../../bindings/PrintPage';
 import type { PrintParty } from '../../bindings/PrintParty';
 import type { PrintWords } from '../../bindings/PrintWords';
 
-export type { AmountRole, Paper, PrintAmount, PrintData, PrintFact, PrintLine, PrintPage };
+export type { AmountRole, Paper, PrintAmount, PrintContact, PrintData, PrintFact, PrintFirm };
+export type { PrintFooter, PrintFrame, PrintHeaderData, PrintLine, PrintPage };
 export type { PrintParty, PrintWords };
 
 /** The columns a goods table can have. The template picks them for each page. */
@@ -47,6 +53,17 @@ export const LAYOUT_IDS = {
   partyPhone: 'print-party-phone',
   cancelled: 'print-cancelled-stamp',
   empty: 'print-preview-empty',
+  tradeMark: 'print-header-trade-mark',
+} as const;
+
+/**
+ * The labels of the amount lines the buyer slip and R5 take their two columns from: the value of the
+ * goods (رقم) and what the buyer pays with the commission and لاگا (رقم بعد لاگا, PRD C5). They are
+ * picked, never added up (CLAUDE.md rule 1).
+ */
+export const R5_AMOUNT_IDS = {
+  value: 'print-items-value',
+  total: 'print-buyer-pays',
 } as const;
 
 /** The payment message that means the buyer has paid (contract 6). */

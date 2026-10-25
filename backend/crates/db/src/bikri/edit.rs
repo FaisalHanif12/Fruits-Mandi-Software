@@ -878,7 +878,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
         "SELECT l.id, l.lot_no, e.id, e.number, e.entry_date, sa.id, sa.code, sa.name_ur, sa.name_en,
                 l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
-                l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken
+                l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken, sa.tag
          FROM bikri_lots l
          JOIN bikri_entries e ON e.id = l.bikri_id
          JOIN accounts sa ON sa.id = l.seller_account_id
@@ -924,7 +924,11 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
                 bikri_id: r.get(2)?,
                 bikri_number: r.get(3)?,
                 received_date: r.get(4)?,
-                seller: record(5)?,
+                seller: {
+                    let mut seller = record(5)?;
+                    seller.tag = r.get(25)?;
+                    seller
+                },
                 pukhta: key.map(|key| {
                     (
                         ur.unwrap_or_default(),

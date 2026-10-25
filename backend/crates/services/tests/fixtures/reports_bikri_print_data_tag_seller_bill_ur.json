@@ -1,28 +1,32 @@
----
-source: crates/reports/tests/print_data.rs
-assertion_line: 107
-expression: "print(EVENT2, PrintDoc::SellerBill, Language::En)"
----
 {
   "doc": "seller_bill",
-  "language": "en",
-  "dir": "ltr",
+  "language": "ur",
+  "dir": "rtl",
   "paper": "a4",
   "urdu_digits": false,
   "header": {
     "firm": {
-      "name": "Maher Adnan and Brothers",
-      "mandi": "New Sabzi Mandi, Kot Radha Kishan",
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
       "phone": "03001234567"
     },
-    "contacts": [],
-    "trade_mark": null,
+    "contacts": [
+      {
+        "name": "منشی آصف بھٹی",
+        "phone": "03004058860"
+      },
+      {
+        "name": "اکرم",
+        "phone": "03211234567"
+      }
+    ],
+    "trade_mark": "RH",
     "title_id": "print-seller-bill-title",
     "facts": [
       {
         "label_id": "print-fact-number",
-        "value": "2"
+        "value": "1"
       },
       {
         "label_id": "print-fact-date",
@@ -30,7 +34,7 @@ expression: "print(EVENT2, PrintDoc::SellerBill, Language::En)"
       },
       {
         "label_id": "print-fact-truck",
-        "value": "LHR-0077"
+        "value": "LES-1234"
       }
     ]
   },
@@ -40,50 +44,64 @@ expression: "print(EVENT2, PrintDoc::SellerBill, Language::En)"
     "page_label_id": "print-page-label",
     "of_label_id": "print-page-of"
   },
-  "number": "2",
+  "number": "1",
   "cancelled": false,
   "pages": [
     {
       "serial": "1",
       "party": {
         "role_id": "print-party-seller",
-        "code": "030110002",
-        "name": "Karim",
+        "code": "030110001",
+        "short_code": "1",
+        "name": "رحیم",
         "phone": null
       },
       "lines": [
         {
           "date": "10-10-2026",
-          "name": "Shahid",
-          "item": "Apple",
-          "packing": "Box",
-          "qty": "10",
+          "name": "اکرم ٹول ٹیکس",
+          "name_tag": "K",
+          "item": "کیلا",
+          "packing": "پیٹی",
+          "qty": "20",
           "weight_kg": null,
-          "rate": "1,200",
+          "rate": "600",
           "amount": "12,000",
-          "detail": "(Apple 10 . 1,200)",
+          "detail": "(کیلا 20 . 600)",
+          "note": null
+        },
+        {
+          "date": "10-10-2026",
+          "name": "ارشد ملتانی",
+          "item": "کیلا",
+          "packing": "پیٹی",
+          "qty": "30",
+          "weight_kg": null,
+          "rate": "580",
+          "amount": "17,400",
+          "detail": "(کیلا 30 . 580)",
           "note": null
         }
       ],
       "amounts": [
         {
           "label_id": "print-gross-sale",
-          "amount": "12,000",
+          "amount": "29,400",
           "role": "subtotal"
         },
         {
           "label_id": "print-freight",
-          "amount": "1,000",
+          "amount": "3,000",
           "role": "line"
         },
         {
           "label_id": "print-commission",
-          "amount": "720",
+          "amount": "1,764",
           "role": "line"
         },
         {
           "label_id": "print-labour",
-          "amount": "50",
+          "amount": "250",
           "role": "line"
         },
         {
@@ -93,7 +111,7 @@ expression: "print(EVENT2, PrintDoc::SellerBill, Language::En)"
         },
         {
           "label_id": "print-cash-paid",
-          "amount": "0",
+          "amount": "5,000",
           "role": "line"
         },
         {
@@ -108,19 +126,19 @@ expression: "print(EVENT2, PrintDoc::SellerBill, Language::En)"
         },
         {
           "label_id": "print-total-deductions",
-          "amount": "1,840",
+          "amount": "10,084",
           "role": "subtotal"
         },
         {
           "label_id": "print-net-sale",
-          "amount": "10,160",
+          "amount": "19,316",
           "role": "total"
         }
       ],
       "payment_id": null,
       "words": {
         "label_id": "print-in-words",
-        "text": "Ten thousand one hundred sixty rupees only"
+        "text": "انیس ہزار تین سو سولہ روپے"
       }
     }
   ]

@@ -47,6 +47,7 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040001",
+        "short_code": "1",
         "name": "Akram Toll Tax",
         "phone": null
       },
@@ -97,6 +98,7 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040002",
+        "short_code": "2",
         "name": "Arshad Multani",
         "phone": null
       },

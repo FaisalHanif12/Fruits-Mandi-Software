@@ -13,7 +13,7 @@ import type { PrintingSettings } from '../../../bindings/PrintingSettings';
 import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
-import { DOC_NAME_ID, PAPERS, PRINT_DOCS } from '../../../shared/print';
+import { AFTER_SAVE_DOCS, DOC_NAME_ID, PAPERS } from '../../../shared/print';
 import {
   Button,
   Checkbox,
@@ -40,6 +40,7 @@ interface FormValues {
   paper_buyer_slips: Paper;
   paper_pukhta_slip: Paper;
   paper_receipt_slip: Paper;
+  paper_collection_list: Paper;
   printer: string;
   copies: string;
   urdu_digits: boolean;
@@ -52,6 +53,7 @@ function valuesOf(saved: PrintingSettings): FormValues {
     paper_buyer_slips: saved.paper_buyer_slips,
     paper_pukhta_slip: saved.paper_pukhta_slip,
     paper_receipt_slip: saved.paper_receipt_slip,
+    paper_collection_list: saved.paper_collection_list,
     printer: saved.printer,
     copies: String(saved.copies),
     urdu_digits: saved.urdu_digits,
@@ -65,6 +67,7 @@ function sameValues(a: FormValues, b: FormValues): boolean {
     a.paper_buyer_slips === b.paper_buyer_slips &&
     a.paper_pukhta_slip === b.paper_pukhta_slip &&
     a.paper_receipt_slip === b.paper_receipt_slip &&
+    a.paper_collection_list === b.paper_collection_list &&
     a.printer === b.printer &&
     a.copies === b.copies &&
     a.urdu_digits === b.urdu_digits &&
@@ -77,6 +80,7 @@ const PAPER_FIELDS = [
   { field: 'paper_buyer_slips', doc: 'buyer_slips' },
   { field: 'paper_pukhta_slip', doc: 'pukhta_slip' },
   { field: 'paper_receipt_slip', doc: 'receipt_slip' },
+  { field: 'paper_collection_list', doc: 'collection_list' },
 ] as const;
 
 function PrintingForm({ saved }: { saved: PrintingSettings }) {
@@ -125,7 +129,7 @@ function PrintingForm({ saved }: { saved: PrintingSettings }) {
 
   const toggleDoc = (doc: PrintDoc, on: boolean) => {
     setField('print_after_save')(
-      PRINT_DOCS.filter((candidate) =>
+      AFTER_SAVE_DOCS.filter((candidate) =>
         candidate === doc ? on : values.print_after_save.includes(candidate),
       ),
     );
@@ -149,8 +153,8 @@ function PrintingForm({ saved }: { saved: PrintingSettings }) {
         <Localized id="print-settings-paper-help">
           <p className="type-body text-ink-muted" />
         </Localized>
-        {/* Two columns in a narrow window and four in a wide one, so the tab stays short. */}
-        <div className="grid grid-cols-2 gap-4 normal:grid-cols-4">
+        {/* Two columns in a narrow window and three in a wide one, so the tab stays short. */}
+        <div className="grid grid-cols-2 gap-4 normal:grid-cols-3">
           {PAPER_FIELDS.map(({ field, doc }) => (
             <Field key={field} label={<Localized id={DOC_NAME_ID[doc]} />}>
               {(control) => (
@@ -234,7 +238,7 @@ function PrintingForm({ saved }: { saved: PrintingSettings }) {
         <Localized id="print-settings-after-save-hint" vars={{ key: SHORTCUTS.saveAndNext.label }}>
           <p className="type-body text-ink-muted" />
         </Localized>
-        {PRINT_DOCS.map((doc) => (
+        {AFTER_SAVE_DOCS.map((doc) => (
           <Checkbox
             key={doc}
             checked={values.print_after_save.includes(doc)}

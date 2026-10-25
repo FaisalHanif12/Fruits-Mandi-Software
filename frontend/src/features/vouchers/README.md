@@ -64,3 +64,9 @@ only).
 `VoucherDraft`), `draft.ts` (pure helpers, unit tested in `tests/unit/voucher-draft.test.ts`),
 `api.ts` (the only file that knows the command shapes; tests mock it), `hooks.ts` (queries and the
 preview hook), `useSaveFlow.ts`, `useEditSeed.ts`, `collection.ts`, `list-columns.ts`.
+
+Plan 17e: the collection list can be printed (`print/CollectionListTemplate.tsx`, the 5th document,
+`print/CollectionPrintView.tsx` for the preview and the hidden window, `print/CollectionPrintBox.tsx`
+for the language, printer or PDF, copies and preview). The day and the filters are the collection
+screen's own. The total on paper is the total OF THIS LIST (not the shop's total اگراہی). The print
+button on the collection screen is wired in F2, with the hidden window's address.

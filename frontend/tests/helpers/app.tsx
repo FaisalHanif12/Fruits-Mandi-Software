@@ -63,6 +63,8 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
       mandi_en: FIRM.mandi_en,
       address: 'Shop 1',
       phone: '0300-0000000',
+      firm_contacts: [],
+      trade_mark: '',
     },
     idle_lock_minutes: 15,
     default_language: 'ur',

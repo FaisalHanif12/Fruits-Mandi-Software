@@ -107,7 +107,7 @@ pub fn make_regular(
                 code: row.code,
                 name_ur: row.name_ur,
                 name_en: row.name_en,
-                tag: None,
+                tag: row.tag,
             })
             .ok_or_else(|| ServiceError::Data("the new account is missing".to_owned()))?;
         // His net on the پختہ کھاتہ account: debit less credit.

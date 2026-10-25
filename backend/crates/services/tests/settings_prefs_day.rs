@@ -69,47 +69,169 @@ fn settings_have_the_plan_defaults() {
     assert_eq!(all.firm.mandi_en, "New Sabzi Mandi Kot Radha Kishan");
 }
 
+fn contact(ur: &str, en: &str, phone: &str) -> FirmContact {
+    FirmContact {
+        name_ur: ur.into(),
+        name_en: en.into(),
+        phone: phone.into(),
+    }
+}
+
+/// The audit rows of the settings: (old, new) as text, newest last.
+fn settings_audit(dir: &TempDir) -> Vec<(String, String)> {
+    let connection = raw(dir);
+    let mut statement = connection
+        .prepare(
+            "SELECT COALESCE(old_json, ''), COALESCE(new_json, '') FROM audit_log
+             WHERE action = 'edit' AND entity = 'settings' ORDER BY id",
+        )
+        .unwrap();
+    statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+}
+
 #[test]
-fn plan_17e_t1_contacts_and_trade_mark_are_refused_until_t2_and_an_empty_save_is_as_before() {
-    let (_dir, env, owner) = owner_ready();
+fn plan_17e_contacts_and_trade_mark_save_with_an_audit_row_and_read_back() {
+    // PRD Section 21 "Firm": up to 3 contact persons and the trade mark, D4R-A11.
+    let (dir, env, owner) = owner_ready();
+    let firm = settings::get(&env.ctx).unwrap().firm;
     assert_eq!(
         settings::get_print_info(&env.ctx).unwrap(),
         FirmPrintInfo::default()
     );
-    let firm = settings::get(&env.ctx).unwrap().firm;
-    let contact = FirmContact {
-        name_ur: "منشی آصف بھٹی".into(),
-        name_en: "Munshi Asif Bhatti".into(),
-        phone: "0300-4058860".into(),
+    let info = FirmPrintInfo {
+        firm_contacts: vec![
+            contact("منشی آصف بھٹی", "Munshi Asif Bhatti", "0300-4058860"),
+            contact("اکرم", "Akram", "03211234567"),
+        ],
+        trade_mark: "  RH  ".into(),
     };
-    let with_contact = FirmPrintInfo {
-        firm_contacts: vec![contact],
-        trade_mark: String::new(),
-    };
-    assert_eq!(
-        rejected(
-            settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &with_contact, &[])
-                .unwrap_err()
-        ),
-        vec![("firm_contacts".to_owned(), ErrorCode::ErrNotImplemented)]
+    let audits_before = settings_audit(&dir).len();
+    let (_, saved) =
+        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &info, &[]).unwrap();
+    // Cleaned: phones as 11 digits, the trade mark trimmed. Stored under the two settings keys.
+    assert_eq!(saved.trade_mark, "RH");
+    assert_eq!(saved.firm_contacts[0].phone, "03004058860");
+    assert_eq!(settings::get_print_info(&env.ctx).unwrap(), saved);
+    let stored: (String, String) = raw(&dir)
+        .query_row(
+            "SELECT (SELECT value_json FROM settings WHERE key = 'firm_contacts'),
+                    (SELECT value_json FROM settings WHERE key = 'trade_mark')",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(stored.0.contains("Munshi Asif Bhatti") && stored.0.contains("03004058860"));
+    assert_eq!(stored.1, "\"RH\"");
+    // The firm row and one more audit row for the contacts and the trade mark, with old and new.
+    let audits = settings_audit(&dir);
+    assert_eq!(audits.len(), audits_before + 2);
+    let (old, new) = audits.last().unwrap();
+    assert!(
+        old.contains("\"firm_contacts\":[]") && old.contains("\"trade_mark\":\"\""),
+        "{old}"
     );
-    let with_mark = FirmPrintInfo {
-        firm_contacts: Vec::new(),
-        trade_mark: "RH".into(),
-    };
-    assert_eq!(
-        rejected(
-            settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &with_mark, &[])
-                .unwrap_err()
-        ),
-        vec![("trade_mark".to_owned(), ErrorCode::ErrNotImplemented)]
+    assert!(
+        new.contains("Akram") && new.contains("\"trade_mark\":\"RH\""),
+        "{new}"
     );
-    // Neither set: the firm is saved exactly as `set_firm` saves it, and the answer is empty.
-    let (saved, info) =
+
+    // The same values again: the firm row is written as it always was, no contacts row.
+    settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &saved, &[]).unwrap();
+    assert_eq!(settings_audit(&dir).len(), audits_before + 3);
+    // Settings read-back through `get` is unchanged, and clearing both gives back the empty state.
+    let (_, cleared) =
         settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &FirmPrintInfo::default(), &[])
             .unwrap();
-    assert_eq!(saved, firm);
-    assert!(info.is_empty());
+    assert!(cleared.is_empty());
+    assert_eq!(settings::get_print_info(&env.ctx).unwrap(), cleared);
+    assert_eq!(settings_audit(&dir).len(), audits_before + 5);
+}
+
+#[test]
+fn plan_17e_a_contact_phone_typed_in_urdu_digits_is_stored_and_printed_in_plain_digits() {
+    // Umar, 26-10-2026: phones print with 0-9. The phone is stored as 11 plain digits whatever
+    // digits were typed, so no print can show it in Urdu digits.
+    let (_dir, env, owner) = owner_ready();
+    let firm = settings::get(&env.ctx).unwrap().firm;
+    let info = FirmPrintInfo {
+        firm_contacts: vec![contact("علی", "Ali", "۰۳۰۰۱۲۳۴۵۶۷")],
+        trade_mark: String::new(),
+    };
+    let (_, saved) =
+        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &info, &[]).unwrap();
+    assert_eq!(saved.firm_contacts[0].phone, "03001234567");
+    assert!(
+        saved.firm_contacts[0]
+            .phone
+            .chars()
+            .all(|c| c.is_ascii_digit())
+    );
+}
+
+#[test]
+fn plan_17e_contact_and_trade_mark_mistakes_come_back_together_and_nothing_is_saved() {
+    let (dir, env, owner) = owner_ready();
+    let firm = settings::get(&env.ctx).unwrap().firm;
+    let before = settings_audit(&dir).len();
+    let bad = FirmPrintInfo {
+        firm_contacts: vec![
+            contact("Asif", "Asif", "0300-4058860"), // Urdu name in Latin letters
+            contact("اکرم", "اکرم", "0123"),         // English name in Urdu, bad phone
+            contact("علی", "Ali", ""),               // phone missing
+        ],
+        trade_mark: "x".repeat(501),
+    };
+    let got = rejected(
+        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &bad, &[]).unwrap_err(),
+    );
+    for want in [
+        ("firm_contacts[0].name_ur", ErrorCode::ErrNameUrScript),
+        ("firm_contacts[1].name_en", ErrorCode::ErrNameEnScript),
+        ("firm_contacts[1].phone", ErrorCode::ErrPhoneInvalid),
+        ("firm_contacts[2].phone", ErrorCode::ErrRequired),
+        ("trade_mark", ErrorCode::ErrTextTooLong),
+    ] {
+        assert!(
+            got.contains(&(want.0.to_owned(), want.1)),
+            "missing {want:?} in {got:?}"
+        );
+    }
+    // More than 3 contacts: out of range at the list, with the limits.
+    let four = FirmPrintInfo {
+        firm_contacts: vec![contact("علی", "Ali", "03001234567"); 4],
+        trade_mark: String::new(),
+    };
+    let error =
+        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &four, &[]).unwrap_err();
+    let ServiceError::Rejected(items) = error else {
+        panic!("not a rejection")
+    };
+    assert_eq!(
+        (items[0].field.as_deref(), items[0].code),
+        (Some("firm_contacts"), ErrorCode::ErrOutOfRange)
+    );
+    assert_eq!(items[0].values.get("max"), Some(&ErrorValue::Number(3)));
+    // The firm's own mistake and a contact's mistake are returned in one answer.
+    let mut bad_firm = firm.clone();
+    bad_firm.phone = "0123".into();
+    let got = rejected(
+        settings::set_firm_with_print_info(&env.ctx, &owner, &bad_firm, &bad, &[]).unwrap_err(),
+    );
+    assert!(got.iter().any(|(field, _)| field == "phone"));
+    assert!(
+        got.iter()
+            .any(|(field, _)| field == "firm_contacts[0].name_ur")
+    );
+    // Nothing was written.
+    assert_eq!(settings_audit(&dir).len(), before);
+    assert_eq!(
+        settings::get_print_info(&env.ctx).unwrap(),
+        FirmPrintInfo::default()
+    );
 }
 
 #[test]

@@ -4,7 +4,7 @@
 // Nothing here works out money.
 
 import { useQuery } from '@tanstack/react-query';
-import { accountsGet } from '../../shared/accounts';
+import { accountsGet, pickedOf } from '../../shared/accounts';
 import { findMaster, type SearchScope } from '../../shared/search';
 import type { PickerValue } from '../../shared/ui';
 import type { RowExtras } from './draft';
@@ -16,9 +16,7 @@ async function pickerValueOf(scope: SearchScope, id: number | null): Promise<Pic
   if (id === null) return null;
   const found = await findMaster(scope, id);
   // A master that was switched off since is no longer offered, but the voucher still points at it.
-  return found === null
-    ? { id, name_ur: String(id), name_en: String(id) }
-    : { id: found.id, code: found.code, name_ur: found.name_ur, name_en: found.name_en };
+  return found === null ? { id, name_ur: String(id), name_en: String(id) } : pickedOf(found);
 }
 
 export function useEditSeed(row: VoucherRow | null) {

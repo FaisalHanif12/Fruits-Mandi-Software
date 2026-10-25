@@ -10,10 +10,10 @@
 // then for a short timer, and measuring the document (`getBoundingClientRect`) makes the browser
 // lay it out at that moment, frame or no frame.
 
-import type { PrintData } from './types';
+import type { PrintFrame } from './types';
 
 /** The fonts a print needs: Inter for numbers and English, Gulzar for Urdu, Naskh for Urdu digits. */
-export function fontFamiliesOf(data: PrintData): string[] {
+export function fontFamiliesOf(data: Pick<PrintFrame, 'language' | 'urdu_digits'>): string[] {
   const families = ['Inter'];
   if (data.language === 'ur') families.push('Gulzar');
   if (data.urdu_digits) families.push('Noto Naskh Arabic');

@@ -6,14 +6,16 @@
 //! a print request, and raising the print count of a بکری together with its audit row.
 
 use mandi_db::bikri::saved;
-use mandi_db::rusqlite::{Connection, params};
+use mandi_db::rusqlite::{Connection, OptionalExtension, params};
 use mandi_domain::core::auth::Language;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::printing::{
-    self, MAX_PRINTER_CHARS, PRINT_AFTER_SAVE_PREF, PrintDoc, PrintInput, PrintSetup, PrintTo,
-    PrintVoucherInput, PrintingSettings, SETTING_KEY, SetPrintingInput,
+    self, CollectionFilterNames, MAX_PRINTER_CHARS, PRINT_AFTER_SAVE_PREF, PrintCollectionInput,
+    PrintDoc, PrintInput, PrintSetup, PrintTo, PrintVoucherInput, PrintingSettings, SETTING_KEY,
+    SetPrintingInput,
 };
 use mandi_domain::core::validate::{self, FieldErrors};
+use mandi_domain::core::vouchers::{CollectionList, CollectionListInput};
 use serde_json::{Value, json};
 
 use crate::audit::Event;
@@ -159,13 +161,25 @@ pub struct PrintPlan {
 /// Nothing is written.
 ///
 /// # Errors
-/// `ERR_NOT_FOUND` on `bikri_id`; `ERR_REQUIRED` on `docs`; the copies codes on `copies`.
+/// `ERR_NOT_FOUND` on `bikri_id`; `ERR_REQUIRED` on `docs`; `ERR_FORMAT_INVALID` on `docs` for
+/// `receipt_slip` or `collection_list`; the copies codes on `copies`.
 pub fn plan(ctx: &Context, input: &PrintInput) -> Result<PrintPlan, ServiceError> {
     let mut errors = FieldErrors::default();
     let docs = printing::unique_docs(&input.docs);
     if docs.is_empty() {
         errors.push(mandi_domain::core::error::FieldError::new(
             ErrorCode::ErrRequired,
+            "docs",
+        ));
+    }
+    // The voucher slip and the collection list are not documents of a بکری: they have their own
+    // commands (plan 17e). Asking for one here is refused, not turned into an internal error.
+    if docs
+        .iter()
+        .any(|doc| matches!(doc, PrintDoc::ReceiptSlip | PrintDoc::CollectionList))
+    {
+        errors.push(mandi_domain::core::error::FieldError::new(
+            ErrorCode::ErrFormatInvalid,
             "docs",
         ));
     }
@@ -323,6 +337,148 @@ pub fn record_voucher(
                     "type": plan.voucher_type,
                     "number": plan.number,
                     "doc": PrintDoc::ReceiptSlip,
+                    "language": plan.language.as_str(),
+                    "to": plan.to,
+                    "copies": plan.copies,
+                }))
+                .into_entry(),
+        )?;
+        Ok(())
+    })
+}
+
+/// The collection list of a day with the names of its filters, read for a print (plan 17e, PRD
+/// FR-15.6). The list is the one the screen reads, `vouchers::collection_list`; the print builder
+/// takes it as it is and checks that it adds up (two reads of the same value, accepted deviation
+/// from Code Standards B2). Only reads.
+///
+/// # Errors
+/// The date codes on `date`; `ERR_NOT_FOUND` on `collector_staff_id` or `city_id` for an id that
+/// is not a staff member or a city.
+pub fn collection_for_print(
+    ctx: &Context,
+    date: &str,
+    collector_staff_id: Option<i64>,
+    city_id: Option<i64>,
+) -> Result<(CollectionList, CollectionFilterNames), ServiceError> {
+    let names = |conn: &Connection, sql: &str, id: Option<i64>, field: &str| {
+        let Some(id) = id else {
+            return Ok(None);
+        };
+        conn.query_row(sql, [id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .optional()?
+        .map(Some)
+        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, field))
+    };
+    let filters = ctx.db.read(|conn| {
+        Ok::<_, ServiceError>(CollectionFilterNames {
+            collector: names(
+                conn,
+                "SELECT name_ur, name_en FROM staff WHERE id = ?1",
+                collector_staff_id,
+                "collector_staff_id",
+            )?,
+            city: names(
+                conn,
+                "SELECT name_ur, name_en FROM cities WHERE id = ?1",
+                city_id,
+                "city_id",
+            )?,
+        })
+    })?;
+    let list = crate::vouchers::collection_list(
+        ctx,
+        &CollectionListInput {
+            date: date.to_owned(),
+            collector_staff_id,
+            city_id,
+        },
+    )?;
+    Ok((list, filters))
+}
+
+/// A collection list print request that passed its checks (plan 17e).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CollectionPrintPlan {
+    /// The list, as the screen reads it.
+    pub list: CollectionList,
+    /// The names of the collector and the city it is filtered by.
+    pub filters: CollectionFilterNames,
+    /// The day as the number `YYYYMMDD`, for the PDF file name.
+    pub file_number: i64,
+    /// The collector filter, as the id the print route carries.
+    pub collector_staff_id: Option<i64>,
+    /// The city filter, as the id the print route carries.
+    pub city_id: Option<i64>,
+    /// The print language.
+    pub language: Language,
+    /// Printer or PDF.
+    pub to: PrintTo,
+    /// Copies of this print.
+    pub copies: u32,
+    /// The Printing settings: printer name and paper.
+    pub setup: PrintSetup,
+}
+
+/// Checks a collection list print request and reads what it needs. Nothing is written.
+///
+/// # Errors
+/// As [`collection_for_print`], and the copies codes on `copies`.
+pub fn plan_collection(
+    ctx: &Context,
+    input: &PrintCollectionInput,
+) -> Result<CollectionPrintPlan, ServiceError> {
+    let mut errors = FieldErrors::default();
+    let typed_copies = input
+        .copies
+        .as_deref()
+        .map(str::trim)
+        .filter(|text| !text.is_empty());
+    let copies = typed_copies.and_then(|text| errors.take(printing::parse_copies("copies", text)));
+    errors.finish()?;
+    let (list, filters) =
+        collection_for_print(ctx, &input.date, input.collector_staff_id, input.city_id)?;
+    let file_number = list
+        .date
+        .replace('-', "")
+        .parse::<i64>()
+        .map_err(|_| ServiceError::Data(format!("collection list date {}", list.date)))?;
+    let setup = ctx.db.read(load_setup)?;
+    Ok(CollectionPrintPlan {
+        file_number,
+        collector_staff_id: input.collector_staff_id,
+        city_id: input.city_id,
+        language: input.language,
+        to: input.to,
+        copies: copies.unwrap_or(setup.copies),
+        setup,
+        list,
+        filters,
+    })
+}
+
+/// Records a collection list that was printed: an audit row (Code Standards S7). The list has no
+/// record of its own, so the audit row is the record of the print.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn record_collection(
+    ctx: &Context,
+    actor: &Actor,
+    plan: &CollectionPrintPlan,
+) -> Result<(), ServiceError> {
+    let buyers: usize = plan.list.groups.iter().map(|g| g.buyers.len()).sum();
+    ctx.db.write(|tx| {
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "print", "collection_list")
+                .new_value(json!({
+                    "date": plan.list.date,
+                    "buyers": buyers,
+                    "total_paisa": plan.list.total_paisa.as_paisa(),
+                    "doc": PrintDoc::CollectionList,
                     "language": plan.language.as_str(),
                     "to": plan.to,
                     "copies": plan.copies,

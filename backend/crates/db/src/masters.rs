@@ -42,6 +42,8 @@ pub struct SearchSource {
     pub account_type: Option<mandi_core::accounts::AccountType>,
     /// For an account: the control it is under. `None` for masters.
     pub control_id: Option<i64>,
+    /// For an account: its tag (نشان, PRD 10.2). `None` for masters and for an account with none.
+    pub tag: Option<String>,
 }
 
 fn value(v: &ColValue) -> Value {
@@ -608,6 +610,7 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         is_active: r.get(10)?,
         account_type: None,
         control_id: None,
+        tag: None,
     })
 }
 

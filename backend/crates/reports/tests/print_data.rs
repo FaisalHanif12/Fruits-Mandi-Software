@@ -463,6 +463,79 @@ fn replaced_lines_are_not_printed_and_a_cancelled_bikri_is_flagged() {
 
 // ---- Digits, grouping, paper ----
 
+/// True if any string in this JSON holds a digit of the Urdu or Arabic-Indic sets (U+0660 to
+/// U+0669 or U+06F0 to U+06F9). The digits of a default print are the plain digits 0-9 (PRD
+/// FR-7.32, NFR-URD-14): the Urdu digits are an option, off until the Owner turns it on.
+fn has_urdu_digit(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::String(text) => text.chars().any(|c| {
+            ('\u{0660}'..='\u{0669}').contains(&c) || ('\u{06F0}'..='\u{06F9}').contains(&c)
+        }),
+        serde_json::Value::Array(items) => items.iter().any(has_urdu_digit),
+        serde_json::Value::Object(map) => map.values().any(has_urdu_digit),
+        _ => false,
+    }
+}
+
+#[test]
+fn a_default_urdu_print_has_only_plain_digits_everywhere() {
+    // Umar, 26-10-2026: amounts, dates, phones, short codes, serials and counts print with 0-9 in
+    // both languages. The Urdu digits are off by default, in the setting and in the print data.
+    assert!(!PrintSetup::default().urdu_digits);
+    assert!(
+        !serde_json::from_str::<PrintSetup>("{}")
+            .unwrap()
+            .urdu_digits
+    );
+    for (json, doc) in [
+        (EVENT1, PrintDoc::SellerBill),
+        (EVENT1, PrintDoc::BuyerSlips),
+        (EVENT2, PrintDoc::PukhtaSlip),
+    ] {
+        for language in [Language::Ur, Language::En] {
+            let data = print(json, doc, language);
+            assert!(!data.urdu_digits, "{doc:?} {language:?}");
+            let value = serde_json::to_value(&data).unwrap();
+            assert!(!has_urdu_digit(&value), "{doc:?} {language:?}: {value}");
+        }
+    }
+    // The check itself works: the same Urdu print with the setting on does have Urdu digits.
+    let mut opts = options(PrintDoc::SellerBill, Language::Ur);
+    opts.setup.urdu_digits = true;
+    let on = build(&detail(EVENT1), &opts).unwrap();
+    assert!(has_urdu_digit(&serde_json::to_value(&on).unwrap()));
+}
+
+#[test]
+fn every_print_type_has_one_case_with_the_urdu_digits_on_and_the_phones_stay_plain() {
+    for (json, doc) in [
+        (EVENT1, PrintDoc::BuyerSlips),
+        (EVENT2, PrintDoc::PukhtaSlip),
+    ] {
+        let mut opts = options(doc, Language::Ur);
+        opts.setup.urdu_digits = true;
+        let data = build(&detail(json), &opts).unwrap();
+        assert!(data.urdu_digits, "{doc:?}");
+        let page = data.pages.first().unwrap();
+        assert!(
+            page.serial
+                .chars()
+                .all(|c| ('\u{06F0}'..='\u{06F9}').contains(&c))
+        );
+        assert!(page.amounts.iter().any(|a| a.amount.contains('۱')));
+        // A phone and a code are text as typed: the setting never touches them (PRD FR-7.21).
+        if let Some(phone) = &page.party.phone {
+            assert!(
+                phone.chars().all(|c| c.is_ascii_digit() || c == '-'),
+                "{phone}"
+            );
+        }
+        if let Some(code) = &page.party.code {
+            assert!(code.chars().all(|c| c.is_ascii_digit()), "{code}");
+        }
+    }
+}
+
 #[test]
 fn urdu_digits_only_on_an_urdu_print_with_the_setting_on() {
     let mut opts = options(PrintDoc::SellerBill, Language::Ur);

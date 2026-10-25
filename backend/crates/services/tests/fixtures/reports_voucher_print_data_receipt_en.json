@@ -39,6 +39,7 @@
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040002",
+        "short_code": "2",
         "name": "Arshad Multani",
         "phone": null
       },

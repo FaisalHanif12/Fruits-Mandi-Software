@@ -18,16 +18,18 @@ use std::path::PathBuf;
 
 use mandi_reports::ReportsError;
 use mandi_reports::print::{
-    BikriPrintDataInput, VoucherPrintDataInput, bikri_print_data, voucher_print_data,
+    BikriPrintDataInput, VoucherPrintDataInput, bikri_print_data, collection_print_data,
+    voucher_print_data,
 };
 use mandi_services::ServiceError;
 use mandi_services::auth::{self, Actor};
 use mandi_services::core::auth::Language;
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::printing::{
-    PrintDoc, PrintInput, PrintOutcome, PrintTo, PrintVoucherInput, pdf_file_name,
+    PrintCollectionInput, PrintDoc, PrintInput, PrintOutcome, PrintTo, PrintVoucherInput,
+    pdf_file_name,
 };
-use mandi_services::printing::{self, PrintPlan, VoucherPrintPlan};
+use mandi_services::printing::{self, CollectionPrintPlan, PrintPlan, VoucherPrintPlan};
 use tauri::Manager;
 
 use crate::error::{UiError, UiErrorItem};
@@ -142,6 +144,111 @@ pub async fn run_voucher<R: tauri::Runtime>(
                 .collect()
         }),
     })
+}
+
+/// Runs the print of the collection list of one day (plan 17e, PRD FR-15.6): the same hidden
+/// window and the same settings as the other documents. The list has no record of its own, so a
+/// print that happened is written to the audit log. A day with no buyer on the list prints
+/// nothing and answers an empty outcome.
+pub async fn run_collection<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintCollectionInput,
+) -> Result<PrintOutcome, UiError> {
+    let state = AppState::of(&app)?;
+    let data_dir = app.path().app_data_dir();
+    let (actor, plan, job) = {
+        let state = state.clone();
+        run_blocking("reports_print_collection", move || {
+            prepare_collection(&state, &input, data_dir.map(|dir| dir.join(PDF_FOLDER)))
+        })
+        .await?
+    };
+    if !cfg!(windows) {
+        return Err(UiError::single(ErrorCode::ErrPrintWindowsOnly, None));
+    }
+    let Some(job) = job else {
+        return Ok(PrintOutcome {
+            printed: Vec::new(),
+            pdf_paths: (plan.to == PrintTo::Pdf).then(Vec::new),
+        });
+    };
+    let executed = execute(&app, std::slice::from_ref(&job)).await;
+    if !executed.printed.is_empty() {
+        let state = state.clone();
+        let plan = plan.clone();
+        run_blocking("reports_print_collection", move || {
+            let ctx = state.context()?;
+            printing::record_collection(&ctx, &actor, &plan)?;
+            Ok(())
+        })
+        .await?;
+    }
+    if let Some(error) = executed.error {
+        return Err(error);
+    }
+    Ok(PrintOutcome {
+        printed: executed.printed,
+        pdf_paths: (plan.to == PrintTo::Pdf).then(|| {
+            executed
+                .pdf_paths
+                .iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect()
+        }),
+    })
+}
+
+/// Checks a collection list request and makes its job, or none when the list is empty. The print
+/// route's query is `collection=<YYYY-MM-DD>&doc=collection_list&language=ur`, with
+/// `&collector=<id>` and `&city=<id>` when the list is filtered.
+fn prepare_collection(
+    state: &AppState,
+    input: &PrintCollectionInput,
+    pdf_dir: tauri::Result<PathBuf>,
+) -> Result<(Actor, CollectionPrintPlan, Option<Job>), UiError> {
+    let ctx = state.context()?;
+    let actor = auth::require(&ctx)?;
+    let plan = printing::plan_collection(&ctx, input)?;
+    let pdf_dir = pdf_dir.map_err(UiError::internal)?;
+    if plan.list.groups.iter().all(|group| group.buyers.is_empty()) {
+        return Ok((actor, plan, None));
+    }
+    // Built here as well as by the print window, so a list that does not add up stops the print
+    // before any paper is used.
+    let data = collection_print_data(ctx.db(), &plan.list, &plan.filters, plan.language)
+        .map_err(reports_error)?;
+    let language = match plan.language {
+        Language::Ur => "ur",
+        Language::En => "en",
+    };
+    let mut query = format!(
+        "collection={}&doc={}&language={language}",
+        plan.list.date,
+        PrintDoc::CollectionList.as_str()
+    );
+    if let Some(id) = plan.collector_staff_id {
+        query.push_str(&format!("&collector={id}"));
+    }
+    if let Some(id) = plan.city_id {
+        query.push_str(&format!("&city={id}"));
+    }
+    let job = Job {
+        doc: PrintDoc::CollectionList,
+        paper: data.paper,
+        query,
+        target: match plan.to {
+            PrintTo::Printer => JobTarget::Printer {
+                name: plan.setup.printer.clone(),
+                copies: plan.copies,
+            },
+            PrintTo::Pdf => JobTarget::Pdf(pdf_dir.join(pdf_file_name(
+                PrintDoc::CollectionList,
+                plan.file_number,
+                plan.language,
+            ))),
+        },
+    };
+    Ok((actor, plan, Some(job)))
 }
 
 /// Checks a voucher slip request and makes its one job.

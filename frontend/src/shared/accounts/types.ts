@@ -54,6 +54,11 @@ export interface AccountDraft {
   control_id: number | null;
   code: string;
   names: { urdu: string; english: string };
+  /**
+   * The tag after the name (PRD 10.2): empty, or 1 to 4 English capital letters and dots. Typed as
+   * text, never turned into Urdu; the backend makes it capital and checks it (`ERR_TAG_INVALID`).
+   */
+  tag: string;
   father: { urdu: string; english: string };
   city: AccountRef | null;
   adda: AccountRef | null;

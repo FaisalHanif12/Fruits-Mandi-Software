@@ -120,7 +120,7 @@ pub struct GardenRec {
 
 const COLUMNS: &str = "v.id, v.version, v.number, v.entry_date, v.name_ur, v.name_en,
     it.id, it.code, it.name_ur, it.name_en, v.rent_paisa, v.season_end_date, v.note, v.status,
-    v.closed_date, v.close_entry_id, a.id, a.code, a.name_ur, a.name_en";
+    v.closed_date, v.close_entry_id, a.id, a.code, a.name_ur, a.name_en, a.tag";
 
 const FROM: &str = "FROM ventures v JOIN accounts a ON a.id = v.account_id
     LEFT JOIN items it ON it.id = v.item_id";
@@ -156,7 +156,7 @@ fn read(r: &Row<'_>) -> rusqlite::Result<GardenRec> {
             code: r.get(17)?,
             name_ur: r.get(18)?,
             name_en: r.get(19)?,
-            tag: None,
+            tag: r.get(20)?,
         },
     })
 }

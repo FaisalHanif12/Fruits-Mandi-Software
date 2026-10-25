@@ -248,7 +248,13 @@ export function fakeAccounts(
       draft.code,
       draft.names.urdu,
       draft.names.english,
-      { version: (draft.version ?? 0) + 1, city: draft.city, phone1: draft.phone1 },
+      {
+        version: (draft.version ?? 0) + 1,
+        city: draft.city,
+        phone1: draft.phone1,
+        // The backend makes the tag capital and keeps none when it is empty (PRD 10.2).
+        ...(draft.tag.trim() === '' ? {} : { tag: draft.tag.trim().toUpperCase() }),
+      },
     );
     const index = store.rows.findIndex((row) => row.id === saved.id);
     if (index >= 0) store.rows[index] = saved;
@@ -277,6 +283,7 @@ function hitOf(row: AccountRow): AccountHit {
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
+    ...(row.tag === undefined ? {} : { tag: row.tag }),
     extra_ur: row.city?.name_ur ?? '',
     extra_en: row.city?.name_en ?? '',
     is_active: row.is_active,
@@ -389,6 +396,7 @@ export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): Par
     is_active: row.is_active,
     name_ur: row.name_ur,
     name_en: row.name_en,
+    ...(row.tag === undefined ? {} : { tag: row.tag }),
     father_or_firm_ur: row.father_or_firm_ur,
     father_or_firm_en: row.father_or_firm_en,
     city_ur: row.city?.name_ur ?? '',

@@ -49,4 +49,9 @@ export type SimilarAccount = {
    * The kind of account.
    */
   account_type: AccountType;
+  /**
+   * True when its name, its tag and its phone all equal what was typed: the duplicate warning
+   * of PRD FR-10.7. The same name and phone with another tag is not a duplicate (PRD E38).
+   */
+  is_duplicate: boolean;
 };

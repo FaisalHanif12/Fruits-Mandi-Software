@@ -39,6 +39,7 @@
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040001",
+        "short_code": "1",
         "name": "اکرم ٹول ٹیکس",
         "phone": null
       },

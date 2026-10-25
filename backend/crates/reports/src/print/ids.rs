@@ -45,6 +45,11 @@ pub(super) const SLIP_AMOUNT_RECEIVED: &str = "print-slip-amount-received";
 pub(super) const SLIP_AMOUNT_PAID: &str = "print-slip-amount-paid";
 pub(super) const SLIP_AMOUNT_ADVANCE: &str = "print-slip-amount-advance";
 
+// The collection list (plan 17e, PRD FR-15.6). The facts reuse FACT_DATE and FACT_COLLECTOR.
+pub(super) const TITLE_COLLECTION_LIST: &str = "print-collection-list-title";
+pub(super) const FACT_CITY: &str = "print-fact-city";
+pub(super) const COLLECTION_TOTAL: &str = "print-collection-total";
+
 // The footer of every print (PRD FR-19.13): the print time and "Page x of y". Defined in
 // `print.ftl` of the frontend.
 pub(super) const FOOTER_PRINTED: &str = "print-printed-at";

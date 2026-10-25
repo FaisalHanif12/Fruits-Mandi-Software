@@ -13,17 +13,18 @@ summing in this folder or in `features/bikri/print/`.
 
 ## What is here
 
-| File                                                         | What it is                                                                                                                                                                                                                                   |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `print.css`                                                  | All print styles. ONE literal `@page` rule per paper class (`a4`, `a5`, `r80`), with the paper size, the margins and the page footer. Table header repeats, rows never split, numbers on the physical right edge, a new sheet for each party |
-| `PrintDocument.tsx`                                          | The root: print language (`lang`, `dir`), paper class, digit style. Gives the pages a Fluent bundle of the PRINT language                                                                                                                    |
-| `PrintProvider.tsx`                                          | A Fluent bundle of the print language that leaves the app language alone (PRD FR-7.36)                                                                                                                                                       |
-| `PrintSheet.tsx`                                             | One party: header, who it is for, goods, amounts, how he pays, amount in words                                                                                                                                                               |
-| `PrintGoods.tsx`                                             | The goods: a table, or two rows of text for each line on the 80 mm roll                                                                                                                                                                      |
-| `PrintSummary.tsx`, `PrintHeader.tsx`, `PrintPartyBlock.tsx` | The parts of a sheet                                                                                                                                                                                                                         |
-| `footer.ts`                                                  | The page footer: "Printed 10-10-2026 17:40 · Page 1 of 2", as a CSS `content` value                                                                                                                                                          |
-| `wait-ready.ts`                                              | Waits for the fonts and the layout, and gives the page height for the 80 mm roll                                                                                                                                                             |
-| `docs.ts`, `types.ts`                                        | The documents (seller bill, buyer slips, پختہ slip, receipt slip) and their names; the types from the generated bindings                                                                                                                     |
+| File                                                         | What it is                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print.css`                                                  | All print styles. ONE literal `@page` rule per paper class (`a4`, `a5`, `r80`), with the paper size, the margins and the page footer. Table header repeats, rows never split, numbers on the physical right edge, a new sheet for each party                            |
+| `PrintRoot.tsx`                                              | The root of EVERY print (plan 17e): print language (`lang`, `dir`), paper class, digit style, the footer in the hidden window. Gives the children a Fluent bundle of the PRINT language. Given the frame the backend built (`language`, `dir`, `urdu_digits`, `footer`) |
+| `PrintDocument.tsx`                                          | The sheets of a بکری or a voucher inside a `PrintRoot`                                                                                                                                                                                                                  |
+| `PrintProvider.tsx`                                          | A Fluent bundle of the print language that leaves the app language alone (PRD FR-7.36)                                                                                                                                                                                  |
+| `PrintSheet.tsx`                                             | One party: header, who it is for, goods, amounts, how he pays, amount in words                                                                                                                                                                                          |
+| `PrintGoods.tsx`                                             | The goods: a table, or two rows of text for each line on the 80 mm roll                                                                                                                                                                                                 |
+| `PrintSummary.tsx`, `PrintHeader.tsx`, `PrintPartyBlock.tsx` | The parts of a sheet                                                                                                                                                                                                                                                    |
+| `footer.ts`                                                  | The page footer: "Printed 10-10-2026 17:40 · Page 1 of 2", as a CSS `content` value                                                                                                                                                                                     |
+| `wait-ready.ts`                                              | Waits for the fonts and the layout, and gives the page height for the 80 mm roll                                                                                                                                                                                        |
+| `docs.ts`, `types.ts`                                        | The documents (seller bill, buyer slips, پختہ slip, receipt slip) and their names; the types from the generated bindings                                                                                                                                                |
 
 ## Things that were found the hard way
 
@@ -67,3 +68,25 @@ There is no line about how it was paid: all money is روکڑ (PRD 15.1). The te
 `features/vouchers/print/ReceiptSlipTemplate.tsx`, the hidden route is
 `?voucher=<id>&doc=receipt_slip&language=..&job=..`, and its paper is `paper_receipt_slip` in the
 Printing tab. The data is `reports_voucher_print_data`; the layout still calculates nothing.
+
+## The shared header and footer, R5, and the collection list (plan 17e)
+
+- **One header for every print** (PRD FR-19.13, Section 21): `PrintHeader` is given the `header` the
+  backend built (`PrintHeader` of the bindings: the firm, up to three contact persons with phones, the
+  trade mark, the title id and the facts). A contact or a trade mark that is not set is not drawn: no
+  empty line, no empty box. The footer is the `footer` of the same shape (`printed_label_id`,
+  `printed_at`, `page_label_id`, `of_label_id`), read by `PrintRoot`. A report print (D5) asks
+  `reports_print_header { language, title_id, facts }` (`usePrintFrame`), gets a `PrintFrame`, and
+  draws `PrintHeader` and `PrintRoot` with it. It never builds a header of its own.
+- **Names with tags.** A party or a line name is drawn by `PrintName`: the name, then the tag (نشان)
+  in its own isolated element. The tag comes from the backend (`PrintParty.tag`, `PrintLine.name_tag`).
+- **R5** (`PrintR5.tsx`): the client's own layout of the buyer's bill. One row: serial, party, تفصیل,
+  رقم, رقم بعد لاگا. The lines of تفصیل are the backend's `PrintLine.detail`, shown as they are (the
+  spaces round the dot stay, `white-space: nowrap`, no isolate round the whole text). A line of an
+  item sold by weight shows its weight in kg (`print-r5-line-weight`), because its نگ count next to a
+  rate per kilo invites a wrong reading. The two amounts are picked from `page.amounts` by their
+  labels (`R5_AMOUNT_IDS`), never added up.
+- **Collection list** (`features/vouchers/print/CollectionListTemplate.tsx`, the 5th document): its
+  data is `CollectionPrintData`, not `PrintData`, but it sits in the same `PrintRoot` with the same
+  `PrintHeader`. `PrintView` is generic: the module gives the `describe` function that says whether the
+  document is empty and gives a sample for the fonts. The total of the list is the total OF THIS LIST.

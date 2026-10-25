@@ -375,6 +375,54 @@ fn confirming_saves_the_firm_and_learns_a_name_pair_and_a_place_pair() {
 }
 
 #[test]
+fn a_contact_name_with_a_rules_only_word_is_refused_until_confirmed() {
+    // Plan 17e: the contact persons of the print header are names too (PRD FR-7.66).
+    use mandi_services::core::firm::FirmContact;
+    use mandi_services::settings::FirmPrintInfo;
+    let (dir, env, owner) = ready();
+    let firm = settings::get(&env.ctx).unwrap().firm;
+    let info = FirmPrintInfo {
+        firm_contacts: vec![FirmContact {
+            name_ur: "علی قزکس".into(),
+            name_en: "Ali Qzxwv".into(),
+            phone: "0300-1234567".into(),
+        }],
+        trade_mark: "RH".into(),
+    };
+    let audit_before = audit_total(&dir);
+    let items = rejections(
+        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &info, &[]).unwrap_err(),
+    );
+    let got: Vec<(&str, String)> = items
+        .iter()
+        .map(|i| (i.field.as_deref().unwrap_or(""), words_of(i)))
+        .collect();
+    assert_eq!(
+        got,
+        [
+            ("firm_contacts[0].name_ur", "قزکس".to_owned()),
+            ("firm_contacts[0].name_en", "Qzxwv".to_owned()),
+        ]
+    );
+    assert_eq!(audit_total(&dir), audit_before, "nothing was written");
+    assert_eq!(pair_rows(&dir), 0);
+    // Confirmed: it saves, and the pair is learned.
+    let (_, saved) = settings::set_firm_with_print_info(
+        &env.ctx,
+        &owner,
+        &firm,
+        &info,
+        &confirm(&["قزکس", "Qzxwv"]),
+    )
+    .unwrap();
+    assert_eq!(saved.firm_contacts[0].name_en, "Ali Qzxwv");
+    assert_eq!(
+        learned_pairs(&dir),
+        [("qzxwv".to_owned(), "قزکس".to_owned(), "name".to_owned())]
+    );
+}
+
+#[test]
 fn a_mandi_word_is_learned_as_a_place() {
     let (dir, env, owner) = ready();
     let firm = firm_with(

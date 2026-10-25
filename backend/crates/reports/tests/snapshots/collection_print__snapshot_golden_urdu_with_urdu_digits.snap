@@ -1,0 +1,67 @@
+---
+source: crates/reports/tests/collection_print.rs
+expression: "build_collection(&golden_list(), &set).unwrap()"
+---
+{
+  "doc": "collection_list",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "urdu_digits": true,
+  "header": {
+    "firm": {
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-collection-list-title",
+    "facts": [
+      {
+        "label_id": "print-fact-date",
+        "value": "۱۰-۱۰-۲۰۲۶"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "۱۰-۱۰-۲۰۲۶ ۱۴:۰۰",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
+  },
+  "groups": [
+    {
+      "collector": null,
+      "city": null,
+      "rows": [
+        {
+          "serial": "۱",
+          "code": "1",
+          "name": "اکرم ٹول ٹیکس",
+          "phone": "03001234567",
+          "dues": "۲,۸۸۰",
+          "oldest_bill_date": "۱۰-۱۰-۲۰۲۶",
+          "oldest_days": "۰"
+        },
+        {
+          "serial": "۲",
+          "code": "2",
+          "name": "ارشد ملتانی",
+          "phone": "",
+          "dues": "۱۸,۶۸۴",
+          "oldest_bill_date": "۱۰-۱۰-۲۰۲۶",
+          "oldest_days": "۰"
+        }
+      ],
+      "total": "۲۱,۵۶۴"
+    }
+  ],
+  "total": {
+    "label_id": "print-collection-total",
+    "amount": "۲۱,۵۶۴",
+    "role": "total"
+  },
+  "buyer_count": "۲"
+}

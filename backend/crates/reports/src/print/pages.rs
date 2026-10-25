@@ -2,6 +2,7 @@
 //! seller bill, the buyer slips and the slip of a one-time buyer. Every number is a stored value
 //! or a checked sum of stored values.
 
+use mandi_core::accounts::short_code_of;
 use mandi_core::bikri::{BikriDetail, PaymentType, SavedLot, SavedPukhta, SavedSale, SavedTotals};
 use mandi_core::money::Paisa;
 
@@ -129,6 +130,7 @@ fn seller_page(ctx: &Ctx, serial: String, lots: &[&SavedLot]) -> Result<PrintPag
         Some(person) => PrintParty {
             role_id: PARTY_SELLER.to_owned(),
             code: None,
+            short_code: None,
             name: ctx.name(&person.name_ur, &person.name_en),
             tag: None,
             phone: phone_of(Some(person)),
@@ -136,6 +138,7 @@ fn seller_page(ctx: &Ctx, serial: String, lots: &[&SavedLot]) -> Result<PrintPag
         None => PrintParty {
             role_id: PARTY_SELLER.to_owned(),
             code: Some(first.seller.code.clone()),
+            short_code: short_code_of(&first.seller.code),
             name: ctx.name(&first.seller.name_ur, &first.seller.name_en),
             tag: first.seller.tag.clone(),
             phone: None,
@@ -231,6 +234,7 @@ pub(super) fn buyer_pages(
             let party = PrintParty {
                 role_id: PARTY_BUYER.to_owned(),
                 code: Some(buyer.code.clone()),
+                short_code: short_code_of(&buyer.code),
                 name: ctx.name(&buyer.name_ur, &buyer.name_en),
                 tag: buyer.tag.clone(),
                 phone: None,
@@ -266,6 +270,7 @@ pub(super) fn pukhta_pages(
             let party = PrintParty {
                 role_id: PARTY_ONETIME_BUYER.to_owned(),
                 code: None,
+                short_code: None,
                 name: ctx.name(&person.name_ur, &person.name_en),
                 tag: None,
                 phone: phone_of(Some(person)),

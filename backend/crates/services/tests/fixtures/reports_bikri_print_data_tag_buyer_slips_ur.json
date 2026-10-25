@@ -1,23 +1,27 @@
----
-source: crates/reports/tests/print_data.rs
-assertion_line: 92
-expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
----
 {
   "doc": "buyer_slips",
-  "language": "en",
-  "dir": "ltr",
+  "language": "ur",
+  "dir": "rtl",
   "paper": "a5",
   "urdu_digits": false,
   "header": {
     "firm": {
-      "name": "Maher Adnan and Brothers",
-      "mandi": "New Sabzi Mandi, Kot Radha Kishan",
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
       "phone": "03001234567"
     },
-    "contacts": [],
-    "trade_mark": null,
+    "contacts": [
+      {
+        "name": "منشی آصف بھٹی",
+        "phone": "03004058860"
+      },
+      {
+        "name": "اکرم",
+        "phone": "03211234567"
+      }
+    ],
+    "trade_mark": "RH",
     "title_id": "print-buyer-slip-title",
     "facts": [
       {
@@ -48,20 +52,22 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040001",
-        "name": "Akram Toll Tax",
+        "short_code": "1",
+        "name": "اکرم ٹول ٹیکس",
+        "tag": "K",
         "phone": null
       },
       "lines": [
         {
           "date": "10-10-2026",
           "name": null,
-          "item": "Banana",
-          "packing": "Box",
+          "item": "کیلا",
+          "packing": "پیٹی",
           "qty": "20",
           "weight_kg": null,
           "rate": "600",
           "amount": "12,000",
-          "detail": "(Banana 20 . 600)",
+          "detail": "(کیلا 20 . 600)",
           "note": null
         }
       ],
@@ -90,7 +96,7 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
       "payment_id": "print-payment-credit",
       "words": {
         "label_id": "print-in-words",
-        "text": "Twelve thousand eight hundred eighty rupees only"
+        "text": "بارہ ہزار آٹھ سو اسی روپے"
       }
     },
     {
@@ -98,20 +104,21 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
       "party": {
         "role_id": "print-party-buyer",
         "code": "03040002",
-        "name": "Arshad Multani",
+        "short_code": "2",
+        "name": "ارشد ملتانی",
         "phone": null
       },
       "lines": [
         {
           "date": "10-10-2026",
           "name": null,
-          "item": "Banana",
-          "packing": "Box",
+          "item": "کیلا",
+          "packing": "پیٹی",
           "qty": "30",
           "weight_kg": null,
           "rate": "580",
           "amount": "17,400",
-          "detail": "(Banana 30 . 580)",
+          "detail": "(کیلا 30 . 580)",
           "note": null
         }
       ],
@@ -140,7 +147,7 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::En)"
       "payment_id": "print-payment-credit",
       "words": {
         "label_id": "print-in-words",
-        "text": "Eighteen thousand six hundred eighty-four rupees only"
+        "text": "اٹھارہ ہزار چھ سو چوراسی روپے"
       }
     }
   ]

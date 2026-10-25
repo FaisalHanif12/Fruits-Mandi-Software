@@ -372,3 +372,11 @@ openings-locked-help = جن کھاتوں کے خانے بند ہیں، ان کا
 # The name of a seller whose opening debit is an advance, in the opening balances grid.
 # review: pending
 openings-name-advance = { $name } ({ -peshgi-khata })
+
+# The title of the warning when an account with the same name, tag and phone already exists.
+# review: pending
+accounts-similar-duplicate-title = یہ کھاتہ پہلے سے موجود ہو سکتا ہے
+
+# A word on the row of that account, so colour is never the only signal.
+# review: pending
+accounts-similar-duplicate-chip = نام، نشان اور فون ایک جیسے ہیں

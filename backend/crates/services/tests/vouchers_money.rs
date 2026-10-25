@@ -1922,6 +1922,68 @@ fn the_global_search_finds_vouchers_by_number() {
 }
 
 #[test]
+fn plan_17e_the_receipt_slip_has_the_shared_header_the_tag_and_the_short_code() {
+    use mandi_services::core::auth::Language;
+    use mandi_services::core::firm::FirmContact;
+    use mandi_services::settings::{self, FirmPrintInfo};
+    let w = support::world();
+    event1_saved(&w);
+    let saved = vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.akram, "10,000")).unwrap();
+    let slip = |language| {
+        mandi_reports::print::voucher_print_data(
+            w.env.ctx.db(),
+            &mandi_reports::print::VoucherPrintDataInput {
+                voucher_id: saved.voucher_id,
+                language,
+            },
+        )
+        .unwrap()
+    };
+    let before = slip(Language::En);
+    assert!(before.header.contacts.is_empty());
+    assert_eq!(before.header.trade_mark, None);
+    assert_eq!(before.pages[0].party.short_code.as_deref(), Some("1"));
+    assert_eq!(before.pages[0].party.tag, None);
+    // The default Urdu slip has only plain digits (Umar, 26-10-2026).
+    let plain = serde_json::to_string(&slip(Language::Ur)).unwrap();
+    assert!(
+        !plain
+            .chars()
+            .any(|c| ('\u{0660}'..='\u{0669}').contains(&c)
+                || ('\u{06F0}'..='\u{06F9}').contains(&c)),
+        "{plain}"
+    );
+    // The buyer's tag shows on the slip with the party.
+    raw(&w.dir)
+        .execute("UPDATE accounts SET tag = 'K' WHERE id = ?1", [w.akram])
+        .unwrap();
+    assert_eq!(slip(Language::En).pages[0].party.tag.as_deref(), Some("K"));
+    let firm = settings::get(&w.env.ctx).unwrap().firm;
+    let info = FirmPrintInfo {
+        firm_contacts: vec![FirmContact {
+            name_ur: "علی".into(),
+            name_en: "Ali".into(),
+            phone: "0300-4058860".into(),
+        }],
+        trade_mark: "RH".into(),
+    };
+    settings::set_firm_with_print_info(&w.env.ctx, &w.owner, &firm, &info, &[]).unwrap();
+    for language in [Language::Ur, Language::En] {
+        let after = slip(language);
+        assert_eq!(after.header.contacts.len(), 1);
+        assert_eq!(after.header.contacts[0].phone, "03004058860");
+        assert_eq!(after.header.trade_mark.as_deref(), Some("RH"));
+        // The amount and its words are what they were.
+        assert_eq!(after.pages[0].amounts[0].amount, "10,000");
+    }
+    assert_eq!(
+        slip(Language::Ur).header.contacts[0].name,
+        "علی",
+        "the contact follows the print language"
+    );
+}
+
+#[test]
 fn the_slip_has_the_party_the_amount_and_the_words_in_both_languages() {
     use mandi_services::core::auth::Language;
     let w = support::world();

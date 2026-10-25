@@ -9,6 +9,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { Ban, Apple, Pencil, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { PagedList } from '../../../shared/grid';
@@ -156,11 +157,7 @@ export function FruitListSection({
               value={item}
               placeholder={l10n.getString('fruit-filter-item-all')}
               onChange={(hit) => {
-                setItem(
-                  hit === null
-                    ? null
-                    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en },
-                );
+                setItem(hit === null ? null : pickedOf(hit));
               }}
             />
           )}

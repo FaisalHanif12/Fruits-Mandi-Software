@@ -13,6 +13,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { useFocusFirstField, useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
@@ -61,7 +62,7 @@ function fieldPath(spec: FieldSpec): string {
 }
 
 function toPickerValue(hit: Pick<SearchHit, 'id' | 'code' | 'name_ur' | 'name_en'>): PickerValue {
-  return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+  return pickedOf(hit);
 }
 
 export function MasterForm({ config, record, suggestedCode }: MasterFormProps) {

@@ -24,7 +24,7 @@
 
   @bottom-center {
     content: var(--print-footer, '');
-    font-family: var(--font-text);
+    font-family: var(--font-digits), var(--font-text);
     font-size: var(--print-text-1);
     line-height: var(--leading-text);
     color: var(--color-ink-muted);
@@ -37,7 +37,7 @@
 
   @bottom-center {
     content: var(--print-footer, '');
-    font-family: var(--font-text);
+    font-family: var(--font-digits), var(--font-text);
     font-size: var(--print-text-1);
     line-height: var(--leading-text);
     color: var(--color-ink-muted);
@@ -52,7 +52,7 @@
 
   @bottom-center {
     content: var(--print-footer, '');
-    font-family: var(--font-text);
+    font-family: var(--font-digits), var(--font-text);
     font-size: var(--print-text-1);
     line-height: var(--leading-text);
     color: var(--color-ink-muted);
@@ -80,7 +80,10 @@ html:has(.print-doc[data-paper='mm80']) {
 .print-doc {
   --print-num-size: var(--print-latin-3);
 
-  font-family: var(--font-text);
+  /* The digits 0 to 9 are Inter even in a Gulzar sentence (fonts.css, `Mandi Digits`), with equal
+     widths, so a number outside <Num> never takes an Urdu digit shape (NFR-URD-14). */
+  font-family: var(--font-digits), var(--font-text);
+  font-variant-numeric: tabular-nums;
   font-size: var(--print-text-3);
   line-height: var(--leading-text);
   color: var(--color-ink);
@@ -158,9 +161,47 @@ html:has(.print-doc[data-paper='mm80']) {
 .print-title {
   --print-num-size: var(--print-latin-4);
 
+  /* Nastaliq letters reach past their box at the end of a line. A little room there keeps the first
+     and last letter of the title inside the sheet. */
+  padding-inline: var(--print-gap-2);
   font-size: var(--print-text-4);
   font-weight: var(--weight-strong);
   color: var(--color-primary);
+}
+
+/* The firm name at the start and the trade mark in a box beside it (PRD FR-19.13, Section 21). A
+   trade mark that is not set has no box at all: the element is not drawn. */
+.print-firm-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--print-gap-3);
+}
+
+.print-trade-mark {
+  --print-num-size: var(--print-latin-4);
+
+  margin: 0;
+  padding: var(--print-gap-1) var(--print-gap-3);
+  border: var(--print-rule-strong) solid var(--color-ink);
+  border-radius: var(--radius-1);
+  font-size: var(--print-text-4);
+  font-weight: var(--weight-strong);
+}
+
+/* The contact persons of the firm with their phones, up to three, side by side. */
+.print-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--print-gap-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.print-doc[data-paper='mm80'] .print-firm-top,
+.print-doc[data-paper='mm80'] .print-contacts {
+  justify-content: center;
 }
 
 .print-doc[data-paper='mm80'] .print-header {
@@ -285,6 +326,100 @@ html:has(.print-doc[data-paper='mm80']) {
   inline-size: 24mm;
 }
 
+/* The buyer's bill in the client's layout (R5): the lines of تفصیل are the backend's own text, one
+   under the other, and never wrap inside a line, so "(سیب 8 . 2600)" stays in one piece. */
+.print-r5 td {
+  vertical-align: top;
+}
+
+.print-r5-details {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.print-r5-detail {
+  white-space: nowrap;
+}
+
+/* The collection list: one block for each collector and city, each with its own total. */
+.print-collection-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-2);
+  break-inside: auto;
+}
+
+.print-collection-group-title {
+  --print-num-size: var(--print-latin-3);
+
+  margin: 0;
+  font-size: var(--print-text-3);
+  font-weight: var(--weight-strong);
+  break-after: avoid;
+}
+
+/* The columns of the collection list. Fixed, so every group (each is its own table) has its columns
+   under the same places. The phone sits under the name, so a narrow sheet (A5) keeps room for the
+   name: it breaks between words, never inside one. */
+.print-collection {
+  table-layout: fixed;
+}
+
+.print-collection .print-col-serial {
+  inline-size: 10mm;
+}
+
+.print-collection .print-col-code {
+  inline-size: 14mm;
+}
+
+.print-collection .print-col-days {
+  inline-size: 12mm;
+}
+
+/* The name has a width of its own, so the dues stay close to it. The note column is the one that
+   takes what remains: the collector writes there, so it has a rule round it and room to write. */
+.print-collection .print-col-party {
+  inline-size: 54mm;
+}
+
+.print-collection .print-col-note {
+  border-inline-start: var(--print-rule) solid var(--color-border);
+}
+
+.print-collection-phone {
+  --print-num-size: var(--print-latin-1);
+
+  font-size: var(--print-text-1);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.print-doc[data-paper='a5'] .print-collection .print-col-serial {
+  inline-size: 8mm;
+}
+
+.print-doc[data-paper='a5'] .print-collection .print-col-code {
+  inline-size: 10mm;
+}
+
+.print-doc[data-paper='a5'] .print-collection .print-col-num {
+  inline-size: 19mm;
+}
+
+.print-doc[data-paper='a5'] .print-collection .print-col-date {
+  inline-size: 23mm;
+}
+
+.print-doc[data-paper='a5'] .print-collection .print-col-days {
+  inline-size: 9mm;
+}
+
+.print-doc[data-paper='a5'] .print-collection .print-col-party {
+  inline-size: 38mm;
+}
+
 /* The 80 mm roll has no room for columns: each line is two rows of text. */
 .print-compact {
   display: flex;
@@ -383,6 +518,23 @@ html:has(.print-doc[data-paper='mm80']) {
   border-block-end: var(--print-gap-1) double var(--color-ink);
   font-size: var(--print-text-4);
   font-weight: var(--weight-strong);
+}
+
+/* The total of a group runs under every column of the list, not only under the first ones, so the
+   line is whole. Its label and its number are the strong ones. */
+.print-collection .print-amount-subtotal th,
+.print-collection .print-amount-subtotal td {
+  border-block: var(--print-rule) solid var(--color-ink);
+  font-size: var(--print-text-2);
+  color: var(--color-ink);
+}
+
+/* The buyers and the total of the list: as wide as their words and numbers need, at the end of
+   the sheet, so a label is next to its number and not at the other edge. */
+.print-amounts.print-collection-totals {
+  inline-size: auto;
+  min-inline-size: 60mm;
+  margin-block-start: var(--print-gap-3);
 }
 
 .print-words {

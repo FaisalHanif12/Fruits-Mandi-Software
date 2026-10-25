@@ -69,6 +69,7 @@ function hitOfRow(row: AccountRow): AccountHit {
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
+    ...(row.tag === undefined ? {} : { tag: row.tag }),
     extra_ur: [row.father_or_firm_ur, row.city?.name_ur ?? '']
       .filter((part) => part !== '')
       .join('، '),

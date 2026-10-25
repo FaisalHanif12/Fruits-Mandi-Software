@@ -25,6 +25,7 @@ import { Ban, FileText, Plus, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import type { UiError } from '../../../bindings/UiError';
+import { pickedOf } from '../../../shared/accounts';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import { useFocusFirstField } from '../../../shared/hooks';
 import {
@@ -472,12 +473,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
             onMadeRegular={(made) => {
               // The account of the one-time person now exists: it takes his place in the form.
               change({
-                account: {
-                  id: made.account.id,
-                  code: made.account.code,
-                  name_ur: made.account.name_ur,
-                  name_en: made.account.name_en,
-                },
+                account: pickedOf(made.account),
                 accountType: personSide(draft),
                 person: null,
                 personText: '',

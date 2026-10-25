@@ -18,7 +18,9 @@ use crate::error::UiError;
 /// Errors: the validate codes with field paths, `ERR_CODE_TAKEN`, `ERR_CODE_RESERVED`,
 /// `ERR_SERIES_FULL` (`code`), `ERR_OPENING_BOTH_SIDES`, `ERR_ADVANCE_NOT_SELLER`,
 /// `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE` (`opening_date`), `ERR_NOT_FOUND`,
-/// `ERR_VERSION_CHANGED`, `ERR_SPELLING_UNCONFIRMED`.
+/// `ERR_VERSION_CHANGED`, `ERR_SPELLING_UNCONFIRMED`, `ERR_TAG_INVALID` (`tag`, value `max` 4: the
+/// tag is empty or 1 to 4 English capital letters and dots with a letter; `k` is saved as `K`).
+/// The tag is stored once, in its own column, and is one more word of the three search keys.
 #[tauri::command]
 pub async fn accounts_save<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -85,7 +87,9 @@ pub async fn accounts_next_code<R: tauri::Runtime>(
 }
 
 /// Accounts that look like the one being typed, by name in either script and by phone
-/// (PRD FR-10.7, FR-7.63). Read only.
+/// (PRD FR-10.7, FR-7.63). An account is marked `is_duplicate` when its name, its tag and its phone
+/// all equal what was typed; the same name and phone with another tag is only similar (PRD E38).
+/// Duplicates come first. Read only.
 #[tauri::command]
 pub async fn accounts_similar<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

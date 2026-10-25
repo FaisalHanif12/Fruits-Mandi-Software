@@ -364,6 +364,16 @@ pub struct PrintCollectionInput {
     pub to: PrintTo,
 }
 
+/// The names of the collector and the city a collection list is filtered by, in both scripts, for
+/// the facts under its title (plan 17e). `None` for a filter that is not used.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CollectionFilterNames {
+    /// The collector's Urdu and English names.
+    pub collector: Option<(String, String)>,
+    /// The city's Urdu and English names.
+    pub city: Option<(String, String)>,
+}
+
 /// Reads the number of copies as typed: a whole number from [`MIN_COPIES`] to [`MAX_COPIES`].
 ///
 /// # Errors

@@ -14,7 +14,7 @@
 //   an earlier seller is cleared once, so no cell is left that cannot be changed.
 
 import { useEffect } from 'react';
-import { isOwnGoods } from '../../../shared/accounts';
+import { isOwnGoods, pickedOf } from '../../../shared/accounts';
 import { findMaster, type SearchHit } from '../../../shared/search';
 import type { PickedRecord } from '../../../shared/grid';
 import { assistSellerMemory } from '../api';
@@ -22,10 +22,8 @@ import { isGardenLot, isOwnLot } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, ON, SALE, type BikriPreview } from '../types';
 
-function pickedOf(hit: SearchHit | null): PickedRecord | null {
-  return hit === null
-    ? null
-    : { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+function pickedOrNull(hit: SearchHit | null): PickedRecord | null {
+  return hit === null ? null : pickedOf(hit);
 }
 
 /** Fills item, packing and مارکہ from the seller's memory into the cells that are still empty. */
@@ -51,7 +49,7 @@ async function fillFromSellerMemory(
       [LOT.marka, marka],
     ];
     for (const [field, hit] of fills) {
-      if (row.picked[field] === undefined && hit !== null) picked[field] = pickedOf(hit);
+      if (row.picked[field] === undefined && hit !== null) picked[field] = pickedOrNull(hit);
     }
     stores.lots.getState().patchRow(rowId, { picked });
   } catch {

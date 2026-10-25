@@ -22,6 +22,7 @@ import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
 import {
   BIKRI_PRINT_DOCS,
+  printingInputOf,
   DOC_NAME_ID,
   PrintLanguageTo,
   PrintOutcomeNotice,
@@ -104,16 +105,7 @@ function PrintBoxForm({
     const kept = saved.print_after_save.filter((doc) => !BIKRI_PRINT_DOCS.includes(doc));
     const next = [...docs, ...kept];
     if (next.join() === saved.print_after_save.join()) return;
-    await saveSettings.mutateAsync({
-      paper_seller_bill: saved.paper_seller_bill,
-      paper_buyer_slips: saved.paper_buyer_slips,
-      paper_pukhta_slip: saved.paper_pukhta_slip,
-      paper_receipt_slip: saved.paper_receipt_slip,
-      printer: saved.printer,
-      copies: String(saved.copies),
-      urdu_digits: saved.urdu_digits,
-      print_after_save: next,
-    });
+    await saveSettings.mutateAsync(printingInputOf(saved, next));
   };
 
   const run = (): Promise<boolean> =>

@@ -4,7 +4,7 @@
 // no other for a voucher).
 
 import type { VoucherPrintDataInput } from '../../../bindings/VoucherPrintDataInput';
-import { PrintView, type PrintReady } from '../../../shared/print';
+import { PrintView, describePrintData, type PrintReady } from '../../../shared/print';
 import { useVoucherPrintData } from '../../reports';
 import { ReceiptSlipTemplate } from './ReceiptSlipTemplate';
 
@@ -21,6 +21,7 @@ export function VoucherPrintView({ input, mode, onReady, onFailed }: VoucherPrin
   return (
     <PrintView
       query={query}
+      describe={describePrintData}
       {...(onReady === undefined ? {} : { onReady })}
       {...(onFailed === undefined ? {} : { onFailed })}
       render={(data, ref) => (

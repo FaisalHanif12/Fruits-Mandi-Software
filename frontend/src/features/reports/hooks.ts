@@ -2,13 +2,19 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
+import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
+import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
+import type { PrintFrameInput } from '../../bindings/PrintFrameInput';
 import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
 import type { VoucherPrintDataInput } from '../../bindings/VoucherPrintDataInput';
 import {
   reportsBikriPrintData,
+  reportsCollectionPrintData,
   reportsListPrinters,
   reportsPrint,
+  reportsPrintCollection,
+  reportsPrintHeader,
   reportsPrintVoucher,
   reportsVoucherPrintData,
 } from './api';
@@ -54,4 +60,39 @@ export function useVoucherPrintData(input: VoucherPrintDataInput | null) {
 /** Print the receipt slip of a voucher, or save it as PDF. The caller shows the outcome or the error. */
 export function usePrintVoucher() {
   return useMutation({ mutationFn: (input: PrintVoucherInput) => reportsPrintVoucher(input) });
+}
+
+/** The print data of the collection list of one day. A print is a snapshot, like the above. */
+export function useCollectionPrintData(input: CollectionPrintDataInput | null) {
+  return useQuery({
+    queryKey: ['reports', 'collection-print-data', input],
+    queryFn: () => {
+      if (input === null) throw new Error('no print input');
+      return reportsCollectionPrintData(input);
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+/** Print the collection list of a day, or save it as PDF. The caller shows the outcome or the error. */
+export function usePrintCollection() {
+  return useMutation({
+    mutationFn: (input: PrintCollectionInput) => reportsPrintCollection(input),
+  });
+}
+
+/** The shared header and footer of a report print (title and facts in, header and footer out). */
+export function usePrintFrame(input: PrintFrameInput | null) {
+  return useQuery({
+    queryKey: ['reports', 'print-frame', input],
+    queryFn: () => {
+      if (input === null) throw new Error('no print input');
+      return reportsPrintHeader(input);
+    },
+    enabled: input !== null,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
 }

@@ -4,7 +4,8 @@
 
 use mandi_reports::print::{
     BikriPrintDataInput, CollectionPrintData, CollectionPrintDataInput, PrintData, PrintFrame,
-    PrintFrameInput, VoucherPrintDataInput, bikri_print_data, print_frame, voucher_print_data,
+    PrintFrameInput, VoucherPrintDataInput, bikri_print_data, collection_print_data, print_frame,
+    voucher_print_data,
 };
 use mandi_services::ServiceError;
 use mandi_services::auth;
@@ -12,6 +13,7 @@ use mandi_services::core::error::ErrorCode;
 use mandi_services::core::printing::{
     PrintCollectionInput, PrintInput, PrintOutcome, PrintVoucherInput,
 };
+use mandi_services::printing;
 
 use super::run;
 use crate::error::UiError;
@@ -51,8 +53,9 @@ pub async fn reports_print<R: tauri::Runtime>(
 /// 17e): the buyers planned for the day with their dues, by collector and then by city, each with
 /// his short code, name with tag, phone, dues and oldest open bill, then the totals row, under the
 /// shared header and footer (FR-19.13). Names, digits and dates are in the print language. Read
-/// only. Until plan 17e T2 it answers `ERR_NOT_IMPLEMENTED`. From T2 the errors are the date codes
-/// on `date` and `ERR_NOT_FOUND` on `collector_staff_id` or `city_id`.
+/// only. Errors: the date codes on `date`; `ERR_NOT_FOUND` on `collector_staff_id` or `city_id`.
+/// The list is the one `assist_collection_list` gives; its total is the total of this list, not
+/// the shop's total اگراہی. A list whose rows do not add up to its totals is not printed.
 #[tauri::command]
 pub async fn reports_collection_print_data<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -60,29 +63,31 @@ pub async fn reports_collection_print_data<R: tauri::Runtime>(
 ) -> Result<CollectionPrintData, UiError> {
     run(app, "reports_collection_print_data", move |ctx| {
         auth::require(ctx)?;
-        let _ = &input;
-        Err(ServiceError::reject(ErrorCode::ErrNotImplemented))
+        // Two reads of the same value (accepted deviation from Code Standards B2, plan 17e).
+        let (list, filters) = printing::collection_for_print(
+            ctx,
+            &input.date,
+            input.collector_staff_id,
+            input.city_id,
+        )?;
+        collection_print_data(ctx.db(), &list, &filters, input.language)
+            .map_err(print_job::reports_service_error)
     })
     .await
 }
 
 /// Prints the collection list of one day on the printer of Settings, or saves it as a PDF named
 /// `collection-list-<day as YYYYMMDD>-<language>.pdf` (plan 17e). The print is written to the
-/// audit log. Printing needs Windows. Until plan 17e T2 it answers `ERR_NOT_IMPLEMENTED`. From T2
-/// the errors are as `reports_collection_print_data`, the copies codes on `copies`,
-/// `ERR_PRINT_WINDOWS_ONLY` on any other system, `ERR_PRINTER_NOT_FOUND` (value `printer`) and
-/// `ERR_PRINT_FAILED`.
+/// audit log. Printing needs Windows. Errors: as `reports_collection_print_data`, the copies codes
+/// on `copies`, `ERR_PRINT_WINDOWS_ONLY` on any other system, `ERR_PRINTER_NOT_FOUND` (value
+/// `printer`) and `ERR_PRINT_FAILED`. A day with no buyer on the list prints nothing and answers
+/// an empty outcome.
 #[tauri::command]
 pub async fn reports_print_collection<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     input: PrintCollectionInput,
 ) -> Result<PrintOutcome, UiError> {
-    run(app, "reports_print_collection", move |ctx| {
-        auth::require(ctx)?;
-        let _ = &input;
-        Err(ServiceError::reject(ErrorCode::ErrNotImplemented))
-    })
-    .await
+    print_job::run_collection(app, input).await
 }
 
 /// The shared header and footer of a print that is not a document of a بکری or a voucher, for

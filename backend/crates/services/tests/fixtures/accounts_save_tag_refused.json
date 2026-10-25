@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_TAG_INVALID",
+      "field": "tag",
+      "values": {
+        "max": 4
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

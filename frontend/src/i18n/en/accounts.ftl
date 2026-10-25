@@ -372,3 +372,11 @@ openings-locked-help = An account whose cells are locked cannot have an opening 
 # The name of a seller whose opening debit is an advance, in the opening balances grid.
 # review: pending
 openings-name-advance = { $name } ({ -peshgi-khata })
+
+# The title of the warning when an account with the same name, tag and phone already exists.
+# review: pending
+accounts-similar-duplicate-title = This account may already exist
+
+# A word on the row of that account, so colour is never the only signal.
+# review: pending
+accounts-similar-duplicate-chip = Same name, tag and phone

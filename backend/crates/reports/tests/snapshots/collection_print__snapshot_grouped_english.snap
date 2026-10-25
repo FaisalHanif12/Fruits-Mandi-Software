@@ -1,0 +1,84 @@
+---
+source: crates/reports/tests/collection_print.rs
+expression: "print(&grouped_list(), Language::En)"
+---
+{
+  "doc": "collection_list",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "header": {
+    "firm": {
+      "name": "Maher Adnan and Brothers",
+      "mandi": "New Sabzi Mandi, Kot Radha Kishan",
+      "address": "Kot Radha Kishan",
+      "phone": "03001234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-collection-list-title",
+    "facts": [
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
+  },
+  "groups": [
+    {
+      "collector": null,
+      "city": null,
+      "rows": [
+        {
+          "serial": "1",
+          "code": "7",
+          "name": "Nasir",
+          "phone": "",
+          "dues": "800",
+          "oldest_bill_date": "01-10-2026",
+          "oldest_days": "9"
+        }
+      ],
+      "total": "800"
+    },
+    {
+      "collector": "Asif",
+      "city": "Multan",
+      "rows": [
+        {
+          "serial": "2",
+          "code": "3",
+          "name": "Ashiq Zafar",
+          "tag": "K",
+          "phone": "03211234567",
+          "dues": "5,000",
+          "oldest_bill_date": "30-09-2026",
+          "oldest_days": "10"
+        },
+        {
+          "serial": "3",
+          "code": "12",
+          "name": "Tariq Mehmood",
+          "phone": "03001112223",
+          "dues": "1,200",
+          "oldest_bill_date": null,
+          "oldest_days": null
+        }
+      ],
+      "total": "6,200"
+    }
+  ],
+  "total": {
+    "label_id": "print-collection-total",
+    "amount": "7,000",
+    "role": "total"
+  },
+  "buyer_count": "3"
+}

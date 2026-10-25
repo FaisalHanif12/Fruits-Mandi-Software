@@ -62,7 +62,7 @@ const SELECT: &str = "SELECT f.id, f.version, f.number, f.entry_date,
         l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone,
         it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
         f.qty, f.weight_grams, f.rate_paisa, f.value_paisa, f.note, f.journal_entry_id,
-        f.status, f.cancel_reason, f.current_entry_id
+        f.status, f.cancel_reason, f.current_entry_id, ca.tag
     FROM fruit_takes f
     LEFT JOIN partners pa ON pa.id = f.partner_id
     LEFT JOIN bikri_lots l ON l.id = f.lot_id
@@ -116,7 +116,7 @@ fn read(r: &Row<'_>) -> rusqlite::Result<FruitRec> {
             code: r.get(13)?,
             name_ur: r.get(14)?,
             name_en: r.get(15)?,
-            tag: None,
+            tag: r.get(37)?,
         },
         pukhta_person_key: key,
         pukhta,
@@ -464,7 +464,7 @@ fn read_lot(r: &Row<'_>) -> rusqlite::Result<LotRec> {
             code: r.get(6)?,
             name_ur: r.get(7)?,
             name_en: r.get(8)?,
-            tag: None,
+            tag: r.get(23)?,
         },
         pukhta: key.map(|key| {
             (
@@ -556,7 +556,7 @@ pub fn lots(
                 l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 it.sold_by = 'weight',
-                l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken
+                l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag
          {LOT_FROM} {LOT_WHERE}
          ORDER BY e.entry_date, e.number, l.lot_no LIMIT ?2"
     ))?;
@@ -576,7 +576,7 @@ pub fn lot_one(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotRec
                     l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                     it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                     it.sold_by = 'weight',
-                    l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken
+                    l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag
              {LOT_FROM} WHERE l.id = ?1"
         ),
         [lot_id],
@@ -594,7 +594,7 @@ pub fn account_ref(
     id: i64,
 ) -> rusqlite::Result<Option<(RecordRef, String, bool)>> {
     conn.query_row(
-        "SELECT a.id, a.code, a.name_ur, a.name_en, c.code, a.is_active
+        "SELECT a.id, a.code, a.name_ur, a.name_en, c.code, a.is_active, a.tag
          FROM accounts a JOIN account_controls c ON c.id = a.control_id WHERE a.id = ?1",
         [id],
         |r| {
@@ -604,7 +604,7 @@ pub fn account_ref(
                     code: r.get(1)?,
                     name_ur: r.get(2)?,
                     name_en: r.get(3)?,
-                    tag: None,
+                    tag: r.get(6)?,
                 },
                 r.get(4)?,
                 r.get(5)?,

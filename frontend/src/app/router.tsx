@@ -549,6 +549,11 @@ const devRoutes = import.meta.env.DEV
       }),
       createRoute({
         getParentRoute: () => rootRoute,
+        path: '/dev/index',
+        component: lazyRouteComponent(() => import('./dev/IndexPage'), 'IndexPage'),
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
         path: '/dev/print',
         component: lazyRouteComponent(() => import('./dev/PrintPage'), 'PrintPage'),
       }),

@@ -165,6 +165,11 @@ pub fn next_code(
 /// Accounts that look like the one being typed: names in either script (mistakes forgiven) and
 /// the same phone (PRD FR-10.7, FR-7.63). Only reads.
 ///
+/// An account is marked `is_duplicate` when its name (in either script typed), its tag and its
+/// phone all match what was typed (PRD FR-10.7, E38). The same name and phone with another tag,
+/// or one with a tag and one without, is another person and is only listed as similar: `اسلم BA`
+/// and `اسلم` are two different people. A tag or a phone that is not valid yet marks nothing.
+///
 /// # Errors
 /// `ServiceError::Db`.
 pub fn similar(
@@ -189,8 +194,35 @@ pub fn similar(
         }
     }
     ids.truncate(MAX_SIMILAR);
-    ctx.db
-        .read(|conn| repo::similar_by_ids(conn, &ids).map_err(ServiceError::from))
+    let mut found = ctx
+        .db
+        .read(|conn| repo::similar_by_ids(conn, &ids).map_err(ServiceError::from))?;
+    mark_duplicates(&mut found, input);
+    // A duplicate is listed first; the rest keep their order.
+    found.sort_by_key(|account| !account.is_duplicate);
+    Ok(found)
+}
+
+/// Sets `is_duplicate` where the typed name, tag and phone all equal the account's (PRD FR-10.7).
+/// Names are compared by their search keys, so look-alike letters and capitals do not matter.
+fn mark_duplicates(found: &mut [SimilarAccount], input: &AccountsSimilarInput) {
+    let (Ok(tag), Ok(phone)) = (
+        validate::tag("tag", &input.tag),
+        validate::phone_optional("phone", &input.phone),
+    ) else {
+        return;
+    };
+    let phone = phone.unwrap_or_default();
+    let typed_ur = text::search_ur(&input.name_ur);
+    let typed_en = text::search_en(&input.name_en);
+    if typed_ur.is_empty() && typed_en.is_empty() {
+        return;
+    }
+    for account in found {
+        let name_matches = (!typed_ur.is_empty() && text::search_ur(&account.name_ur) == typed_ur)
+            || (!typed_en.is_empty() && text::search_en(&account.name_en) == typed_en);
+        account.is_duplicate = name_matches && account.tag == tag && account.phone1.trim() == phone;
+    }
 }
 
 /// Why an opening cannot be put on an account (PRD FR-6.5, FR-10.9, FR-13.5, FR-12.4): income and
@@ -271,15 +303,6 @@ pub fn save(
     actor: &Actor,
     input: &AccountInput,
 ) -> Result<AccountRow, ServiceError> {
-    // Plan 17e T1: the tag is in the contract but is not stored yet. A typed tag is refused, so a
-    // save never drops it silently. T2 replaces this check with the tag rules
-    // (`ERR_TAG_INVALID`) and the storage.
-    if !input.tag.trim().is_empty() {
-        return Err(ServiceError::reject_field(
-            ErrorCode::ErrNotImplemented,
-            "tag",
-        ));
-    }
     let (closed, today) = day::window(ctx)?;
     // An edit that leaves the opening as it is must not trip over a closed opening day.
     let stored = match input.id {

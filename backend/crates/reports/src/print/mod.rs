@@ -42,7 +42,8 @@ use ts_rs::TS;
 
 pub use build::{BuildOptions, build};
 pub use collection::{
-    CollectionPrintData, CollectionPrintDataInput, CollectionPrintGroup, CollectionPrintRow,
+    CollectionBuildOptions, CollectionPrintData, CollectionPrintDataInput, CollectionPrintGroup,
+    CollectionPrintRow, build_collection, collection_print_data,
 };
 pub use frame::{PrintFrame, PrintFrameInput, print_frame};
 pub use header::{PrintContact, PrintFooter, PrintHeader};
@@ -124,6 +125,11 @@ pub struct PrintParty {
     pub role_id: String,
     /// The account code. Null for a one-time person.
     pub code: Option<String>,
+    /// The short code of a seller or buyer (PRD FR-7.39, FR-19.13), for example `1` for
+    /// 03040001. Absent for a one-time person and for an account that has no short code.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub short_code: Option<String>,
     /// The name in the print language.
     pub name: String,
     /// The tag (نشان) of the account, printed after the name. Absent if none, and always absent

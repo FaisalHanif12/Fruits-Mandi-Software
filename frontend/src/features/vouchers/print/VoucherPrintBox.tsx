@@ -19,7 +19,12 @@ import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
-import { DOC_NAME_ID, PrintLanguageTo, PrintOutcomeNotice } from '../../../shared/print';
+import {
+  DOC_NAME_ID,
+  PrintLanguageTo,
+  PrintOutcomeNotice,
+  printingInputOf,
+} from '../../../shared/print';
 import {
   Button,
   Checkbox,
@@ -75,16 +80,9 @@ function PrintBoxForm({
   const remember = async (): Promise<void> => {
     if (ticked === saved.print_after_save.includes('receipt_slip')) return;
     const others = saved.print_after_save.filter((doc) => doc !== 'receipt_slip');
-    await saveSettings.mutateAsync({
-      paper_seller_bill: saved.paper_seller_bill,
-      paper_buyer_slips: saved.paper_buyer_slips,
-      paper_pukhta_slip: saved.paper_pukhta_slip,
-      paper_receipt_slip: saved.paper_receipt_slip,
-      printer: saved.printer,
-      copies: String(saved.copies),
-      urdu_digits: saved.urdu_digits,
-      print_after_save: ticked ? [...others, 'receipt_slip'] : others,
-    });
+    await saveSettings.mutateAsync(
+      printingInputOf(saved, ticked ? [...others, 'receipt_slip'] : others),
+    );
   };
 
   const run = (): Promise<boolean> =>

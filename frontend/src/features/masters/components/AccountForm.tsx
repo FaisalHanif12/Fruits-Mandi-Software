@@ -39,6 +39,7 @@ import {
   Picker,
   Select,
   showToast,
+  TagInput,
   TextInput,
 } from '../../../shared/ui';
 import {
@@ -48,6 +49,7 @@ import {
   type AccountFormValues,
 } from '../account-draft';
 import {
+  pickedOf,
   useAccountNextCode,
   useCoaControls,
   useSaveAccount,
@@ -72,7 +74,7 @@ const WEEKDAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 const WEEKDAY_ORDER = [5, 6, 0, 1, 2, 3, 4] as const;
 
 function toRef(hit: SearchHit): AccountRef {
-  return { id: hit.id, code: hit.code, name_ur: hit.name_ur, name_en: hit.name_en };
+  return pickedOf(hit);
 }
 
 /** Every field the form draws, by the path the backend refuses it with. */
@@ -82,6 +84,7 @@ const FIELD_PATHS = [
   'code',
   'name_ur',
   'name_en',
+  'tag',
   'father_or_firm_ur',
   'father_or_firm_en',
   'city_id',
@@ -138,6 +141,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
     values.names.urdu,
     values.names.english,
     values.phone1,
+    values.tag,
     account?.id ?? null,
   );
 
@@ -247,10 +251,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
       <h1 className="type-title" />
     </Localized>
   ) : (
-    <Localized
-      id="accounts-edit-title"
-      vars={{ name: displayName({ name_ur: account.name_ur, name_en: account.name_en }, language) }}
-    >
+    <Localized id="accounts-edit-title" vars={{ name: displayName(account, language) }}>
       <h1 className="type-title" />
     </Localized>
   );
@@ -379,6 +380,21 @@ export function AccountForm({ account, today }: AccountFormProps) {
               setNames,
               { ur: 'name_ur', en: 'name_en' },
             )}
+            <Field
+              label={<Localized id="accounts-field-tag" />}
+              hint={<Localized id="accounts-field-tag-hint" />}
+              error={fieldError(error, 'tag')}
+            >
+              {(props) => (
+                <TagInput
+                  {...props}
+                  value={values.tag}
+                  onChange={(tag) => {
+                    setValues((current) => ({ ...current, tag }));
+                  }}
+                />
+              )}
+            </Field>
           </div>
           <SimilarAccounts
             matches={(similar.data ?? []).filter((match) => match.id !== account?.id)}
@@ -570,15 +586,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
                     onChange={(hit) => {
                       setValues((current) => ({
                         ...current,
-                        linked_account:
-                          hit === null
-                            ? null
-                            : {
-                                id: hit.id,
-                                code: hit.code,
-                                name_ur: hit.name_ur,
-                                name_en: hit.name_en,
-                              },
+                        linked_account: hit === null ? null : pickedOf(hit),
                       }));
                     }}
                   />
@@ -678,9 +686,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
           description={
             <Localized
               id="accounts-inactive-description"
-              vars={{
-                name: displayName({ name_ur: account.name_ur, name_en: account.name_en }, language),
-              }}
+              vars={{ name: displayName(account, language) }}
             />
           }
           confirmLabel={<Localized id="accounts-make-inactive" />}

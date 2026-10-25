@@ -107,8 +107,8 @@ describe.each(REAL_SNAPSHOTS)('the real $doc of $event in $language', (snapshot)
     expect(root?.dataset['paper']).toBe(data.paper);
     // Every label id the backend sent has words in the print language.
     for (const id of [
-      data.title_id,
-      ...data.facts.map((fact) => fact.label_id),
+      data.header.title_id,
+      ...data.header.facts.map((fact) => fact.label_id),
       ...data.pages.flatMap((page) => [
         page.party.role_id,
         ...page.amounts.map((amount) => amount.label_id),

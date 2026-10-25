@@ -36,6 +36,8 @@ export interface PickedRecord {
   readonly code: string;
   readonly name_ur: string;
   readonly name_en: string;
+  /** The tag (نشان) after the name, shown by `displayName`. Absent when there is none. */
+  readonly tag?: string | undefined;
 }
 
 /** Which records a picker column offers. */

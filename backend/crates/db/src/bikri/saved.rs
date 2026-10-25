@@ -69,6 +69,17 @@ impl<'a> Cols<'a> {
         })
     }
 
+    /// An account: id, code, both names and the tag (نشان, PRD 10.2).
+    fn account(&mut self) -> rusqlite::Result<RecordRef> {
+        Ok(RecordRef {
+            id: self.get()?,
+            code: self.get()?,
+            name_ur: self.get()?,
+            name_en: self.get()?,
+            tag: self.get()?,
+        })
+    }
+
     /// Four columns that are all NULL when a LEFT JOIN found nothing.
     fn opt_record(&mut self) -> rusqlite::Result<Option<RecordRef>> {
         let id: Option<i64> = self.get()?;
@@ -141,7 +152,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
     let line_no: i64 = c.get()?;
     let journal_entry_id: i64 = c.get()?;
     let entry_date: String = c.get()?;
-    let buyer = c.record()?;
+    let buyer = c.account()?;
     let pukhta = c.pukhta()?;
     let qty: i64 = c.get()?;
     let weight_grams: Option<i64> = c.get()?;
@@ -192,7 +203,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
 }
 
 const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.entry_date,
-    ba.id, ba.code, ba.name_ur, ba.name_en,
+    ba.id, ba.code, ba.name_ur, ba.name_en, ba.tag,
     s.pukhta_name_ur, s.pukhta_name_en, s.pukhta_phone, s.pukhta_person_key,
     s.qty, s.weight_grams, s.seller_rate_paisa, s.seller_amount_paisa,
     s.seller_comm_method, s.seller_comm_value_bps, s.seller_comm_value_paisa, s.seller_comm_rule_id, s.seller_comm_paisa,
@@ -204,7 +215,7 @@ const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.ent
 fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let id: i64 = c.get()?;
     let lot_no: i64 = c.get()?;
-    let seller = c.record()?;
+    let seller = c.account()?;
     let pukhta = c.pukhta()?;
     let item = c.record()?;
     let packing = c.record()?;
@@ -380,7 +391,7 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
     };
 
     let mut statement = conn.prepare(
-        "SELECT l.id, l.lot_no, sa.id, sa.code, sa.name_ur, sa.name_en,
+        "SELECT l.id, l.lot_no, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
                 l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 l.marka_id, mk.mark_text, l.store_id, l.qty_received, l.qty_sold, l.qty_written_off,
@@ -693,7 +704,7 @@ fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusql
     let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
     let marks = vec!["?"; ids.len()].join(", ");
     let mut statement = conn.prepare(&format!(
-        "SELECT l.bikri_id, sa.id, sa.code, sa.name_ur, sa.name_en,
+        "SELECT l.bikri_id, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
                 l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en
          FROM bikri_lots l JOIN accounts sa ON sa.id = l.seller_account_id JOIN items it ON it.id = l.item_id
@@ -702,7 +713,7 @@ fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusql
     let lots = statement.query_map(rusqlite::params_from_iter(&ids), |row| {
         let mut c = Cols::new(row);
         let bikri_id: i64 = c.get()?;
-        Ok((bikri_id, c.record()?, c.pukhta()?, c.record()?))
+        Ok((bikri_id, c.account()?, c.pukhta()?, c.record()?))
     })?;
     let mut by_id: HashMap<i64, usize> = HashMap::with_capacity(rows.len());
     for (index, row) in rows.iter().enumerate() {

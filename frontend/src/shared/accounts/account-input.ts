@@ -21,6 +21,7 @@ export function accountInputOf(
     code: draft.code,
     name_ur: draft.names.urdu,
     name_en: draft.names.english,
+    tag: draft.tag,
     father_or_firm_ur: draft.father.urdu,
     father_or_firm_en: draft.father.english,
     confirmed_rules_words: [...confirmedRulesWords],

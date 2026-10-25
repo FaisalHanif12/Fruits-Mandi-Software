@@ -4,6 +4,7 @@
 // from a hint (PRD FR-7.53), and the backend reads and checks everything again on save.
 
 import type { RecordRef } from '../../bindings/RecordRef';
+import { pickedOf } from '../../shared/accounts';
 import { formatGrams, formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
 import type { PickerValue } from '../../shared/ui';
 import { textOrNull } from '../purchases';
@@ -35,7 +36,7 @@ export const FRUIT_FIELD_PATHS: readonly string[] = [
 
 /** A record the form holds for a picker: both names, so a language switch needs no ask (F38). */
 export function valueOfRef(ref: RecordRef): PickerValue {
-  return { id: ref.id, code: ref.code, name_ur: ref.name_ur, name_en: ref.name_en };
+  return pickedOf(ref);
 }
 
 /**

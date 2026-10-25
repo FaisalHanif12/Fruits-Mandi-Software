@@ -242,7 +242,7 @@ fn plan(
             code: row.code,
             name_ur: row.name_ur,
             name_en: row.name_en,
-            tag: None,
+            tag: row.tag,
         });
         let mut request = None;
         match &facts {

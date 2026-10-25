@@ -18,7 +18,7 @@ pub const DEFAULT_RULES_FROM: &str = "1000-01-01";
 const ROW_SELECT: &str = "SELECT r.id, r.version, r.side, r.charge_type,
         r.account_id, a.code, a.name_ur, a.name_en,
         r.item_id, i.code, i.name_ur, i.name_en,
-        r.item_group, r.method, r.value_bps, r.value_paisa, r.from_date, r.to_date, r.is_active, r.note
+        r.item_group, r.method, r.value_bps, r.value_paisa, r.from_date, r.to_date, r.is_active, r.note, a.tag
     FROM charge_rules r
     LEFT JOIN accounts a ON a.id = r.account_id
     LEFT JOIN items i ON i.id = r.item_id";
@@ -42,7 +42,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
             code: r.get::<_, Option<String>>(5)?.unwrap_or_default(),
             name_ur: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
             name_en: r.get::<_, Option<String>>(7)?.unwrap_or_default(),
-            tag: None,
+            tag: r.get(20)?,
         }),
         None => None,
     };

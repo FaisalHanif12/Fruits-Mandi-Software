@@ -19,6 +19,8 @@ use crate::text;
 pub const MAX_NAME_CHARS: usize = 100;
 /// The longest free text, in characters (Code Standards 4.2).
 pub const MAX_TEXT_CHARS: usize = 500;
+/// The longest tag (نشان) of an account, in characters (PRD 10.2, Code Standards 4.2).
+pub const MAX_TAG_CHARS: usize = 4;
 /// Decimals a percent may have.
 const PERCENT_DECIMALS: i64 = 2;
 /// Decimals a weight may have.
@@ -40,6 +42,7 @@ fn error(code: ErrorCode, field: &str) -> FieldError {
         ErrorCode::ErrTooManyDecimals => Some(PERCENT_DECIMALS),
         ErrorCode::ErrNameTooLong => i64::try_from(MAX_NAME_CHARS).ok(),
         ErrorCode::ErrTextTooLong => i64::try_from(MAX_TEXT_CHARS).ok(),
+        ErrorCode::ErrTagInvalid => i64::try_from(MAX_TAG_CHARS).ok(),
         _ => None,
     };
     let e = FieldError::new(code, field);
@@ -243,6 +246,40 @@ pub fn name_en(field: &str, input: &str) -> Result<String, FieldError> {
     )
 }
 
+/// The tag (نشان) of an account: empty, or 1 to 4 characters, English capital letters A to Z and
+/// `.`, with at least one letter (PRD 10.2, FR-7.28, Code Standards 4.2). A lower-case English
+/// letter is made capital. Returns `None` for an empty tag, else the tag to store in
+/// `accounts.tag`. It is never inside a name and never converted to Urdu (PRD FR-7.25).
+///
+/// # Errors
+/// `ERR_TAG_INVALID` (value `max` 4) for a digit, a space, an Urdu letter, any other sign,
+/// more than 4 characters, or dots only.
+///
+/// ```
+/// use mandi_core::validate::tag;
+/// assert_eq!(tag("tag", "k").unwrap(), Some("K".to_owned()));
+/// assert_eq!(tag("tag", " D.P ").unwrap(), Some("D.P".to_owned()));
+/// assert_eq!(tag("tag", "").unwrap(), None);
+/// for bad in ["1A", "ABCDE", "ب", "K-", "..", "K A"] {
+///     assert!(tag("tag", bad).is_err(), "{bad}");
+/// }
+/// ```
+pub fn tag(field: &str, input: &str) -> Result<Option<String>, FieldError> {
+    let typed = input.trim();
+    if typed.is_empty() {
+        return Ok(None);
+    }
+    // Only ASCII letters change case; anything else stays as it is and is refused below.
+    let capital = typed.to_ascii_uppercase();
+    let letters_and_dots = capital.chars().all(|c| c.is_ascii_uppercase() || c == '.');
+    let has_letter = capital.chars().any(|c| c.is_ascii_uppercase());
+    if letters_and_dots && has_letter && capital.chars().count() <= MAX_TAG_CHARS {
+        Ok(Some(capital))
+    } else {
+        Err(error(ErrorCode::ErrTagInvalid, field))
+    }
+}
+
 /// The name of a person as shown in the top bar: 1 to 100 characters in any script, with at
 /// least one letter. Unlike `name_ur` and `name_en` it is not checked for one script, because
 /// it is typed once and not searched (plan 04). Returns the cleaned name.
@@ -356,6 +393,71 @@ impl FieldErrors {
             Ok(())
         } else {
             Err(self.0)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tag_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    #[test]
+    fn the_tag_rules_of_code_standards_4_2() {
+        for (typed, saved) in [
+            ("K", "K"),
+            ("BA", "BA"),
+            ("D.P", "D.P"),
+            ("k", "K"),
+            ("d.p", "D.P"),
+            ("  gm  ", "GM"),
+            ("A.B.", "A.B."),
+        ] {
+            assert_eq!(
+                tag("tag", typed).unwrap().as_deref(),
+                Some(saved),
+                "{typed}"
+            );
+        }
+        for empty in ["", "   ", "\t"] {
+            assert_eq!(tag("tag", empty).unwrap(), None, "{empty:?}");
+        }
+        for bad in [
+            "1A",
+            "ABCDE",
+            "ب",
+            "K-",
+            ".",
+            "...",
+            "K A",
+            "K1",
+            "K_",
+            "ÄB",
+            "ＫＡ",
+            "K\u{200b}",
+        ] {
+            let error = tag("tag", bad).unwrap_err();
+            assert_eq!(error.code, ErrorCode::ErrTagInvalid, "{bad}");
+            assert_eq!(error.field, "tag");
+        }
+    }
+
+    #[test]
+    fn four_characters_fit_and_five_do_not() {
+        assert!(tag("tag", "A.B.").is_ok());
+        assert!(tag("tag", "A.B.C").is_err());
+    }
+
+    proptest! {
+        #[test]
+        fn a_saved_tag_always_follows_the_rule(input in ".{0,12}") {
+            if let Ok(Some(saved)) = tag("tag", &input) {
+                prop_assert!((1..=MAX_TAG_CHARS).contains(&saved.chars().count()));
+                prop_assert!(saved.chars().all(|c| c.is_ascii_uppercase() || c == '.'));
+                prop_assert!(saved.chars().any(|c| c.is_ascii_uppercase()));
+                // Saving a saved tag again changes nothing.
+                prop_assert_eq!(tag("tag", &saved).unwrap(), Some(saved.clone()));
+            }
         }
     }
 }
