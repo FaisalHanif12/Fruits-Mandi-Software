@@ -13,7 +13,7 @@ expression: "print(EVENT2, PrintDoc::PukhtaSlip, Language::Ur)"
       "name": "ماہر عدنان اینڈ برادرز",
       "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
-      "phone": "03001234567"
+      "phone": "0300-1234567"
     },
     "contacts": [],
     "trade_mark": null,
@@ -48,7 +48,7 @@ expression: "print(EVENT2, PrintDoc::PukhtaSlip, Language::Ur)"
         "role_id": "print-party-onetime-buyer",
         "code": null,
         "name": "شاہد",
-        "phone": "03000000000"
+        "phone": "0300-0000000"
       },
       "lines": [
         {

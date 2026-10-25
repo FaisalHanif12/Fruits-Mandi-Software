@@ -7,6 +7,7 @@
     "allow-app-data-status",
     "allow-auth-status",
     "allow-reports-bikri-print-data",
+    "allow-reports-collection-print-data",
     "allow-reports-voucher-print-data",
     "allow-reports-print-data",
     "allow-reports-buyer-bills-print-data",

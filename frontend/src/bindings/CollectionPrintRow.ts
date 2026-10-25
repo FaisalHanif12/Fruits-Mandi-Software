@@ -21,7 +21,7 @@ export type CollectionPrintRow = {
    */
   tag?: string;
   /**
-   * His phone as typed (PRD FR-7.25). Empty if none.
+   * His phone as the print shows it, `03XX-XXXXXXX` (stored as 11 digits). Empty if none.
    */
   phone: string;
   /**

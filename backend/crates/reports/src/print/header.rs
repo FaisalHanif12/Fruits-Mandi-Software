@@ -1,7 +1,7 @@
 //! The one header and footer of every print (PRD FR-19.13, Section 21 "Firm", plan 17e).
 //!
 //! The header carries the firm name and mandi in the print language, the contact persons (name in
-//! the print language and the phone as typed), the trade mark, the title and the facts (the
+//! the print language and the phone as `03XX-XXXXXXX`), the trade mark, the title and the facts (the
 //! document number, the date, the filters). The footer carries the print time and the labels of
 //! "Page x of y"; the page numbers themselves are drawn by the template's page counters.
 //!
@@ -11,6 +11,7 @@
 //! reports look the same.
 
 use mandi_core::auth::Language;
+use mandi_core::text;
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -23,7 +24,7 @@ use super::{PrintFact, PrintFirm};
 pub struct PrintContact {
     /// His name in the print language.
     pub name: String,
-    /// His phone as typed (PRD FR-7.25).
+    /// His phone, printed `03XX-XXXXXXX` with plain digits (stored as 11 digits).
     pub phone: String,
 }
 
@@ -87,8 +88,8 @@ pub(super) fn header(
         .iter()
         .map(|contact| PrintContact {
             name: pick(language, &contact.name_ur, &contact.name_en),
-            // The phone is as typed (PRD FR-7.25).
-            phone: contact.phone.trim().to_owned(),
+            // The phone is stored as 11 digits and printed as 03XX-XXXXXXX.
+            phone: text::phone_display(&contact.phone),
         })
         .filter(|contact| !contact.name.trim().is_empty() || !contact.phone.is_empty())
         .collect();
@@ -100,7 +101,7 @@ pub(super) fn header(
             name: pick(language, &firm.name_ur, &firm.name_en),
             mandi: pick(language, &firm.mandi_ur, &firm.mandi_en),
             address: firm.address.clone(),
-            phone: firm.phone.clone(),
+            phone: text::phone_display(&firm.phone),
         },
         contacts,
         trade_mark,

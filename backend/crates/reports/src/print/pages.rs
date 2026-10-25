@@ -5,6 +5,7 @@
 use mandi_core::accounts::short_code_of;
 use mandi_core::bikri::{BikriDetail, PaymentType, SavedLot, SavedPukhta, SavedSale, SavedTotals};
 use mandi_core::money::Paisa;
+use mandi_core::text;
 
 use super::build::Ctx;
 use super::ids::*;
@@ -22,12 +23,12 @@ fn buyer_name(ctx: &Ctx, sale: &SavedSale) -> String {
     }
 }
 
-/// A phone as typed, or `None` when empty.
+/// A one-time person's phone as the print shows it (`03XX-XXXXXXX`), or `None` when empty.
 fn phone_of(person: Option<&SavedPukhta>) -> Option<String> {
     person
         .map(|p| p.phone.trim())
         .filter(|p| !p.is_empty())
-        .map(str::to_owned)
+        .map(text::phone_display)
 }
 
 /// A line written the client's way for R5 and the buyer slips: `(item qty . rate)`, for example

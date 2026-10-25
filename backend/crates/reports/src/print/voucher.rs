@@ -13,6 +13,7 @@ use mandi_core::english_words::english_words;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::Grouping;
 use mandi_core::printing::{PrintDoc, PrintSetup};
+use mandi_core::text;
 use mandi_core::urdu_words::urdu_words;
 use mandi_core::vouchers::{VoucherRow, VoucherType};
 use mandi_db::Db;
@@ -127,7 +128,7 @@ fn build_slip(
             short_code: None,
             name: pick(language, &person.name_ur, &person.name_en),
             tag: None,
-            phone: Some(person.phone.trim().to_owned()).filter(|p| !p.is_empty()),
+            phone: Some(text::phone_display(&person.phone)).filter(|p| !p.is_empty()),
         },
         _ => PrintParty {
             role_id: match kind {

@@ -173,7 +173,7 @@ fn a_default_urdu_print_of_the_real_world_has_only_plain_digits_even_for_a_phone
         assert!(!has_urdu_digit(&value), "{doc:?}: {value}");
     }
     let slip = data(&w, id2, PrintDoc::PukhtaSlip, Language::Ur);
-    assert_eq!(slip.pages[0].party.phone.as_deref(), Some("03000000000"));
+    assert_eq!(slip.pages[0].party.phone.as_deref(), Some("0300-0000000"));
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn the_contacts_and_the_trade_mark_print_in_the_header_of_every_bikri_document()
         assert_eq!(ur.header.contacts.len(), 2, "{doc:?}");
         assert_eq!(ur.header.contacts[0].name, "علی");
         assert_eq!(en.header.contacts[0].name, "Ali");
-        assert_eq!(en.header.contacts[0].phone, "03004058860");
+        assert_eq!(en.header.contacts[0].phone, "0300-4058860");
         assert_eq!(ur.header.trade_mark.as_deref(), Some("RH"));
         assert_eq!(en.header.trade_mark.as_deref(), Some("RH"));
         // The footer and the numbers are the ones they were.
@@ -372,8 +372,8 @@ fn event2_printed_totals_equal_bikri_get_and_the_journal() {
                 "Twelve thousand eight hundred rupees only"
             }
         );
-        // His phone is saved as 11 digits and printed as saved.
-        assert_eq!(page.party.phone.as_deref(), Some("03000000000"));
+        // His phone is saved as 11 digits and printed as 03XX-XXXXXXX.
+        assert_eq!(page.party.phone.as_deref(), Some("0300-0000000"));
 
         let bill = data(&w, id, PrintDoc::SellerBill, language);
         let page = bill.pages.first().unwrap();

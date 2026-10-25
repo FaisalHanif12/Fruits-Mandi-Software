@@ -13,7 +13,7 @@ expression: "print(&grouped_list(), Language::En)"
       "name": "Maher Adnan and Brothers",
       "mandi": "New Sabzi Mandi, Kot Radha Kishan",
       "address": "Kot Radha Kishan",
-      "phone": "03001234567"
+      "phone": "0300-1234567"
     },
     "contacts": [],
     "trade_mark": null,
@@ -57,7 +57,7 @@ expression: "print(&grouped_list(), Language::En)"
           "code": "3",
           "name": "Ashiq Zafar",
           "tag": "K",
-          "phone": "03211234567",
+          "phone": "0321-1234567",
           "dues": "5,000",
           "oldest_bill_date": "30-09-2026",
           "oldest_days": "10"
@@ -66,7 +66,7 @@ expression: "print(&grouped_list(), Language::En)"
           "serial": "3",
           "code": "12",
           "name": "Tariq Mehmood",
-          "phone": "03001112223",
+          "phone": "0300-1112223",
           "dues": "1,200",
           "oldest_bill_date": null,
           "oldest_days": null

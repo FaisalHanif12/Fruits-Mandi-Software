@@ -9,7 +9,7 @@ export type PrintContact = {
    */
   name: string;
   /**
-   * His phone as typed (PRD FR-7.25).
+   * His phone, printed `03XX-XXXXXXX` with plain digits (stored as 11 digits).
    */
   phone: string;
 };

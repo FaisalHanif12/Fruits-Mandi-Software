@@ -10,7 +10,7 @@
 //!   of the print language (CLAUDE.md rule 7). The only sentences the backend builds are the
 //!   amounts in words (FR-19.7).
 //! - Names are already in the print language (`name_ur` or `name_en`, FR-7.36). Notes, truck
-//!   numbers, phones and codes are as typed (FR-7.25).
+//!   numbers and codes are as typed (FR-7.25); a phone is printed `03XX-XXXXXXX` (plain digits).
 //!
 //! The documents (PRD 4.4, worked day):
 //!
@@ -105,7 +105,7 @@ pub struct PrintFirm {
     pub mandi: String,
     /// Address as typed. Empty if none.
     pub address: String,
-    /// Phone as typed. Empty if none.
+    /// Phone, printed `03XX-XXXXXXX` with plain digits. Empty if none.
     pub phone: String,
 }
 
@@ -137,7 +137,7 @@ pub struct PrintParty {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub tag: Option<String>,
-    /// The phone as typed. Null if none.
+    /// The phone, printed `03XX-XXXXXXX` with plain digits. Null if none.
     pub phone: Option<String>,
 }
 

@@ -1971,7 +1971,7 @@ fn plan_17e_the_receipt_slip_has_the_shared_header_the_tag_and_the_short_code() 
     for language in [Language::Ur, Language::En] {
         let after = slip(language);
         assert_eq!(after.header.contacts.len(), 1);
-        assert_eq!(after.header.contacts[0].phone, "03004058860");
+        assert_eq!(after.header.contacts[0].phone, "0300-4058860");
         assert_eq!(after.header.trade_mark.as_deref(), Some("RH"));
         // The amount and its words are what they were.
         assert_eq!(after.pages[0].amounts[0].amount, "10,000");

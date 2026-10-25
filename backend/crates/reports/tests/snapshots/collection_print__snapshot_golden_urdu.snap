@@ -13,7 +13,7 @@ expression: "print(&golden_list(), Language::Ur)"
       "name": "ماہر عدنان اینڈ برادرز",
       "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
-      "phone": "03001234567"
+      "phone": "0300-1234567"
     },
     "contacts": [],
     "trade_mark": null,
@@ -40,7 +40,7 @@ expression: "print(&golden_list(), Language::Ur)"
           "serial": "1",
           "code": "1",
           "name": "اکرم ٹول ٹیکس",
-          "phone": "03001234567",
+          "phone": "0300-1234567",
           "dues": "2,880",
           "oldest_bill_date": "10-10-2026",
           "oldest_days": "0"
