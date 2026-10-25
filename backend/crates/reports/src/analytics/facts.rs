@@ -174,6 +174,8 @@ pub(crate) fn conds(
         .id("f.city_id = ?", typed.city_id)
         .id("f.adda_id = ?", typed.adda_id)
         .id("f.venture_id = ?", typed.trip_id)
+        // The goods of one garden: the lots whose seller is its account (FR-12.36).
+        .id("f.seller_account_id = ?", typed.garden_account_id)
         .in_list("f.purchase_id", &key.purchase_ids);
     match typed.goods {
         AnalyticsGoods::All => {}

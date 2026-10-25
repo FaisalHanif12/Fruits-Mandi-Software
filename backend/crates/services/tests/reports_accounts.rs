@@ -1435,6 +1435,34 @@ mod fixtures {
         base
     }
 
+    /// R36 in both layouts, its print data and the day summary of the sale day, on the garden of
+    /// E2E-40 closed on 13-10-26.
+    fn garden_fixtures() {
+        let (w, garden) = garden_40();
+        set_today(&w.env, 2026, 10, 13);
+        garden_close(&w, garden.id, "13-10-2026");
+        run_pair(
+            &w,
+            "reports_run_r36_garden",
+            json!({ "id": "R36", "filters": filters(json!({})), "offset": 0, "limit": 0 }),
+        );
+        run_pair(
+            &w,
+            "reports_run_r36_partner",
+            json!({ "id": "R36", "filters": filters(json!({ "garden_view": "partner" })), "offset": 0, "limit": 0 }),
+        );
+        print_pair(
+            &w,
+            "reports_print_data_r36_partner_en",
+            json!({ "id": "R36", "filters": filters(json!({ "garden_id": garden.id, "garden_view": "partner" })), "language": "en", "paper": null }),
+        );
+        run_pair(
+            &w,
+            "reports_run_r34_garden_day",
+            json!({ "id": "R34", "filters": filters(json!({ "from": "12-10-2026", "to": "12-10-2026" })), "offset": 0, "limit": 0 }),
+        );
+    }
+
     #[test]
     fn fixtures_are_the_real_answers() {
         let w = full_day();
@@ -1522,6 +1550,8 @@ mod fixtures {
             "reports_print_data_r35_slip_akram_en",
             json!({ "id": "R35", "filters": filters(json!({ "as_of": "10-10-2026", "party": party(w.akram) })), "language": "en", "paper": null }),
         );
+        // Round 11: the gardens report and the day summary on the garden of E2E-40 (closed).
+        garden_fixtures();
         refusal_pair(
             &w,
             "reports_run_r13_no_party",

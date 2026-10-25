@@ -13,9 +13,9 @@
 //! * money lent: the R32 working;
 //! * today's expenses: the head 05 accounts today, a month close left out.
 //!
-//! The gardens tile (PRD 9.1, FR-12.37) comes with the gardens in D4R: it will call the garden
-//! screen's own running-balance function, and this file will get one more field and one more
-//! line here. No second formula is written for it.
+//! * gardens: the open gardens and the total of their running balances, each read with the one
+//!   function the garden screen uses (`mandi_db::gardens::Money::of`), so the tile equals
+//!   `gardens_summary` (PRD 9.1, FR-12.37).
 //!
 //! Example (PRD 4.9, after Events 1 to 5): 41,400 in 2 بکری, commission 5,448, cash 58,484,
 //! dues 21,564, payable 10,160, advances 0, 0 lots, expenses 3,000.
@@ -29,6 +29,7 @@ use super::Facts;
 use super::lent::LentFacts;
 use super::model::DashboardTiles;
 use crate::error::ReportsError;
+use crate::gardens::OpenGarden;
 use crate::reports::business::day::{expenses_by_day, pair, sales_by_day};
 use crate::reports::common::{add, paisa};
 
@@ -44,6 +45,7 @@ pub(crate) fn build(
     conn: &Connection,
     facts: &Facts,
     lent: &LentFacts,
+    gardens: &[OpenGarden],
 ) -> Result<DashboardTiles, ReportsError> {
     let today = facts.today_iso.as_str();
 
@@ -77,6 +79,11 @@ pub(crate) fn build(
     let (trips_open, trips_purchases, trips_qty, trips_cost) =
         mandi_db::ventures::tile_totals(conn)?;
 
+    let mut gardens_balance = Paisa::ZERO;
+    for garden in gardens {
+        add(&mut gardens_balance, garden.balance)?;
+    }
+
     let (expense_dr, expense_cr) = pair(&expenses_by_day(conn, today, today)?, today)?;
 
     Ok(DashboardTiles {
@@ -93,6 +100,9 @@ pub(crate) fn build(
         trips_purchases_with_stock: trips_purchases,
         trips_qty_left: trips_qty,
         trips_cost_left_paisa: paisa(trips_cost)?,
+        gardens_open: i64::try_from(gardens.len())
+            .map_err(|_| ReportsError::Data("the number of gardens does not fit".to_owned()))?,
+        gardens_balance_paisa: gardens_balance,
         lent_open_paisa: lent.open,
         lent_overdue_paisa: lent.overdue,
         expenses_today_paisa: expense_dr.checked_sub(expense_cr)?,

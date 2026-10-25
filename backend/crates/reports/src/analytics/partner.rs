@@ -12,10 +12,13 @@
 //!   part of the seller credit of an own lot and of the money of a sale in another shop (a
 //!   credit). A pocket part posts nothing, so it is not here. Entries of a month close and
 //!   entries that were reversed, with their reversal, are left out (the live entries).
-//! * **Gardens and fruit.** The two columns exist and stay empty until gardens and fruit taken
-//!   are merged (D4R).
-//! * **Other.** Whatever else is on his 0604 account in the period (a جنرل line, and until D4R a
-//!   garden or a fruit line), so the columns always add up to his whole 0604 net.
+//! * **Gardens.** The same for the lines of garden entries: the shop's part of an installment or a
+//!   running cost (a debit) and his part of the closing (a credit, a debit in a loss closing). A
+//!   garden's sales credit the garden's own account, not his, so they come to him only at the
+//!   closing. A pocket part posts nothing.
+//! * **Fruit.** The column exists and stays empty until fruit taken is merged (plan 17d).
+//! * **Other.** Whatever else is on his 0604 account in the period (a جنرل line, and until plan
+//!   17d a fruit line), so the columns always add up to his whole 0604 net.
 //! * **Net change.** Profit share plus the whole 0604 net: what his کل رقم changed by in the
 //!   period (C22), without capital and without money taken.
 //!
@@ -49,12 +52,22 @@ pub(crate) const TRIP_POSTINGS: &str = "(e.source_type IN ('purchase', 'bikri')
             SELECT 1 FROM venture_entries x JOIN ventures v ON v.id = x.venture_id
             WHERE x.id = e.source_id AND v.kind = 'trip')))";
 
+/// The entries that move a partner's money for a garden (PRD FR-12.30, FR-12.35, FR-12.38): an
+/// entry of a venture that is a garden, that is the shop's part of an installment or a running
+/// cost (a debit) and his part of the closing (a credit, or a debit in a loss closing). A garden's
+/// sales credit the garden's own account, never a partner's 0604, and fruit taken has its own
+/// source, so this set is the exact set of garden lines. It does not meet [`TRIP_POSTINGS`].
+pub(crate) const GARDEN_POSTINGS: &str = "(e.source_type = 'venture' AND EXISTS (
+            SELECT 1 FROM venture_entries x JOIN ventures v ON v.id = x.venture_id
+            WHERE x.id = e.source_id AND v.kind = 'garden'))";
+
 /// One partner's figures.
 #[derive(Debug, Clone, Copy, Default)]
 struct Figures {
     income: Paisa,
     expense: Paisa,
     profit: Paisa,
+    gardens: Paisa,
     trips: Paisa,
     other: Paisa,
     net: Paisa,
@@ -64,6 +77,7 @@ impl Figures {
     fn is_zero(&self) -> bool {
         self.income == Paisa::ZERO
             && self.expense == Paisa::ZERO
+            && self.gardens == Paisa::ZERO
             && self.trips == Paisa::ZERO
             && self.other == Paisa::ZERO
             && self.net == Paisa::ZERO
@@ -73,6 +87,7 @@ impl Figures {
         add(&mut self.income, other.income)?;
         add(&mut self.expense, other.expense)?;
         add(&mut self.profit, other.profit)?;
+        add(&mut self.gardens, other.gardens)?;
         add(&mut self.trips, other.trips)?;
         add(&mut self.other, other.other)?;
         add(&mut self.net, other.net)?;
@@ -86,8 +101,7 @@ impl Figures {
             money(self.income),
             money(self.expense),
             money(self.profit),
-            // Gardens: with D4R.
-            Cell::Empty,
+            money(self.gardens),
             money(self.trips),
             // Fruit taken: with D4R.
             Cell::Empty,
@@ -98,30 +112,39 @@ impl Figures {
 }
 
 /// The credits less the debits on a partner's 0604 account in the period, on the live entries and
-/// not of a month close: the trip entries, and the whole account. Returns (trips, whole).
+/// not of a month close: the trip entries, the garden entries, and the whole account. Returns
+/// (trips, gardens, whole).
 fn venture_net(
     conn: &Connection,
     partner: &PartnerRecord,
     from: &str,
     to: &str,
-) -> Result<(Paisa, Paisa), ReportsError> {
+) -> Result<(Paisa, Paisa, Paisa), ReportsError> {
     if partner.venture_account_id == 0 {
-        return Ok((Paisa::ZERO, Paisa::ZERO));
+        return Ok((Paisa::ZERO, Paisa::ZERO, Paisa::ZERO));
     }
     let sql = format!(
         "SELECT COALESCE(SUM(CASE WHEN {TRIP_POSTINGS} THEN l.dr_paisa END), 0),
                 COALESCE(SUM(CASE WHEN {TRIP_POSTINGS} THEN l.cr_paisa END), 0),
+                COALESCE(SUM(CASE WHEN {GARDEN_POSTINGS} THEN l.dr_paisa END), 0),
+                COALESCE(SUM(CASE WHEN {GARDEN_POSTINGS} THEN l.cr_paisa END), 0),
                 COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND {LIVE} AND e.source_type <> 'month_close'
            AND e.entry_date >= ?2 AND e.entry_date <= ?3"
     );
-    let (trip_dr, trip_cr, all_dr, all_cr): (i64, i64, i64, i64) =
+    let sums: [i64; 6] =
         conn.query_row(&sql, params![partner.venture_account_id, from, to], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+            let mut out = [0_i64; 6];
+            for (index, slot) in out.iter_mut().enumerate() {
+                *slot = r.get(index)?;
+            }
+            Ok(out)
         })?;
+    let [trip_dr, trip_cr, garden_dr, garden_cr, all_dr, all_cr] = sums;
     Ok((
         paisa(trip_cr)?.checked_sub(paisa(trip_dr)?)?,
+        paisa(garden_cr)?.checked_sub(paisa(garden_dr)?)?,
         paisa(all_cr)?.checked_sub(paisa(all_dr)?)?,
     ))
 }
@@ -136,6 +159,29 @@ pub(crate) fn trips_net_by_bucket(
     to: &str,
     group_by: super::model::AnalyticsGroupBy,
 ) -> Result<Vec<(String, Paisa)>, ReportsError> {
+    net_by_bucket(conn, partner, from, to, group_by, TRIP_POSTINGS)
+}
+
+/// The same for the lines of a partner's gardens: view G with a partner picked, so each bucket is
+/// the number view F gives for that bucket's days.
+pub(crate) fn gardens_net_by_bucket(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    from: &str,
+    to: &str,
+    group_by: super::model::AnalyticsGroupBy,
+) -> Result<Vec<(String, Paisa)>, ReportsError> {
+    net_by_bucket(conn, partner, from, to, group_by, GARDEN_POSTINGS)
+}
+
+fn net_by_bucket(
+    conn: &Connection,
+    partner: &PartnerRecord,
+    from: &str,
+    to: &str,
+    group_by: super::model::AnalyticsGroupBy,
+    postings: &str,
+) -> Result<Vec<(String, Paisa)>, ReportsError> {
     if partner.venture_account_id == 0 {
         return Ok(Vec::new());
     }
@@ -144,7 +190,7 @@ pub(crate) fn trips_net_by_bucket(
         "SELECT {bucket}, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE l.account_id = ?1 AND {LIVE} AND e.source_type <> 'month_close'
-           AND e.entry_date >= ?2 AND e.entry_date <= ?3 AND {TRIP_POSTINGS}
+           AND e.entry_date >= ?2 AND e.entry_date <= ?3 AND {postings}
          GROUP BY 1 ORDER BY 1"
     );
     let rows = conn
@@ -188,13 +234,14 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         }
         // Expense rows are negative; the view shows the expense as a positive number.
         let expense = Paisa::ZERO.checked_sub(expense_rows)?;
-        let (trips, whole) = venture_net(conn, &partner, from, to)?;
+        let (trips, gardens, whole) = venture_net(conn, &partner, from, to)?;
         let figures = Figures {
             income,
             expense,
             profit,
+            gardens,
             trips,
-            other: whole.checked_sub(trips)?,
+            other: whole.checked_sub(trips)?.checked_sub(gardens)?,
             net: profit.checked_add(whole)?,
         };
         if partner.is_active || !figures.is_zero() {

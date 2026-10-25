@@ -65,6 +65,10 @@ export type AnalyticsFilters = {
    */
   trip_id: number | null;
   /**
+   * A garden.
+   */
+  garden_id: number | null;
+  /**
    * Which goods are counted.
    */
   goods: AnalyticsGoods;

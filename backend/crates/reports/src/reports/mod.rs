@@ -91,9 +91,9 @@ pub mod grouped_sums {
 pub use ids::posting_types;
 pub use model::{
     ArgValue, CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind,
-    GroupBy, MessageArg, Names, PaidFilter, PartyFilter, PartyRef, ReportFilters, ReportGroup,
-    ReportId, ReportPage, ReportPrintInput, ReportRunInput, ResolvedFilters, Row, RowKind,
-    RowSource, SourceKind, SummaryLine, TripView,
+    GardenView, GroupBy, MessageArg, Names, PaidFilter, PartyFilter, PartyRef, ReportFilters,
+    ReportGroup, ReportId, ReportPage, ReportPrintInput, ReportRunInput, ResolvedFilters, Row,
+    RowKind, RowSource, SourceKind, SummaryLine, TripView,
 };
 pub use print_data::{
     PrintArgValue, PrintCell, PrintDetailPart, PrintMessageArg, PrintOptions, PrintReportColumn,
@@ -339,6 +339,19 @@ const SPECS: &[Spec] = &[
         &[FilterKind::AsOf, FilterKind::Party],
         false,
     ),
+    // The gardens are picked by the day made, the main fruit, a partner in them, or one garden.
+    spec(
+        ReportId::R36,
+        ReportGroup::Business,
+        &[
+            FilterKind::DateRange,
+            FilterKind::Item,
+            FilterKind::Partner,
+            FilterKind::Garden,
+            FilterKind::GardenView,
+        ],
+        false,
+    ),
 ];
 
 fn spec_of(id: ReportId) -> Result<&'static Spec, ReportsError> {
@@ -442,6 +455,7 @@ fn build_in(
         ReportId::R33 => business::run_r33(conn, &typed, spec),
         ReportId::R34 => business::run_r34(conn, &typed, spec),
         ReportId::R35 => business::run_r35(conn, &typed, spec),
+        ReportId::R36 => business::run_r36(conn, &typed, spec),
         ReportId::R10 => sales::run_r10(conn, &typed, spec),
         ReportId::R15 => vouchers::run(conn, &typed, spec, vouchers::Layout::All),
         ReportId::R23 => vouchers::run(conn, &typed, spec, vouchers::Layout::Receipts),

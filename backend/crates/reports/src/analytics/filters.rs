@@ -6,7 +6,7 @@
 
 use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
-use mandi_db::rusqlite::Connection;
+use mandi_db::rusqlite::{Connection, OptionalExtension};
 
 use super::model::{
     AnalyticsCompare, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsPeriod,
@@ -42,6 +42,10 @@ pub(crate) struct Typed {
     pub(crate) partner_id: Option<i64>,
     /// The picked market trip.
     pub(crate) trip_id: Option<i64>,
+    /// The picked garden.
+    pub(crate) garden_id: Option<i64>,
+    /// The account of the picked garden: the seller of its lots.
+    pub(crate) garden_account_id: Option<i64>,
     /// Which goods are counted.
     pub(crate) goods: AnalyticsGoods,
     /// How view J lays out its rows.
@@ -154,6 +158,8 @@ pub(crate) fn resolve(
         side: input.side,
         partner_id: None,
         trip_id: None,
+        garden_id: None,
+        garden_account_id: None,
         goods: input.goods,
         trip_view: AnalyticsTripView::Trip,
         compare: None,
@@ -187,8 +193,10 @@ pub(crate) fn resolve(
     }
     // Views F, G and J work on periods and take no comparison; view F counts no sales, so it
     // takes none of the sale filters either (PRD 18.1).
-    if matches!(view, AnalyticsView::F | AnalyticsView::G | AnalyticsView::J)
-        && input.compare != AnalyticsCompare::Off
+    if matches!(
+        view,
+        AnalyticsView::F | AnalyticsView::G | AnalyticsView::I | AnalyticsView::J
+    ) && input.compare != AnalyticsCompare::Off
     {
         problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "filters.compare"));
     }
@@ -209,6 +217,33 @@ pub(crate) fn resolve(
             }
         }
     }
+    // A garden filter belongs to every view that counts sales; F counts none and J counts the
+    // purchases of trips. View I is the gardens themselves: it takes no sale filter but the side
+    // and no trip, and only garden goods.
+    if matches!(view, AnalyticsView::F | AnalyticsView::J) && input.garden_id.is_some() {
+        problems.push(FieldError::new(
+            ErrorCode::ErrOutOfRange,
+            "filters.garden_id",
+        ));
+    }
+    if view == AnalyticsView::I {
+        let not_taken = [
+            (input.seller_id.is_some(), "filters.seller_id"),
+            (input.buyer.is_some(), "filters.buyer"),
+            (input.city_id.is_some(), "filters.city_id"),
+            (input.adda_id.is_some(), "filters.adda_id"),
+            (input.trip_id.is_some(), "filters.trip_id"),
+            (
+                !matches!(input.goods, AnalyticsGoods::All | AnalyticsGoods::Garden),
+                "filters.goods",
+            ),
+        ];
+        for (set, field) in not_taken {
+            if set {
+                problems.push(FieldError::new(ErrorCode::ErrOutOfRange, field));
+            }
+        }
+    }
     // View J counts purchases, which have no seller, buyer, city or اڈا.
     if view == AnalyticsView::J {
         let sale_filters = [
@@ -223,9 +258,12 @@ pub(crate) fn resolve(
             }
         }
     }
-    // The partner belongs to views F, G and J; the trip and goods to every view but F.
+    // The partner belongs to views F, G, I and J; the trip and goods to every view but F.
     if input.partner_id.is_some()
-        && !matches!(view, AnalyticsView::F | AnalyticsView::G | AnalyticsView::J)
+        && !matches!(
+            view,
+            AnalyticsView::F | AnalyticsView::G | AnalyticsView::I | AnalyticsView::J
+        )
     {
         problems.push(FieldError::new(
             ErrorCode::ErrOutOfRange,
@@ -355,13 +393,38 @@ pub(crate) fn resolve(
                     })
                 },
             )
-            .ok();
+            .optional()?;
         match names {
             Some(names) => {
                 typed.trip_id = Some(id);
                 typed.resolved.trip = Some(names);
             }
             None => problems.push(FieldError::new(ErrorCode::ErrNotFound, "filters.trip_id")),
+        }
+    }
+    if let Some(id) = input.garden_id {
+        let found = conn
+            .query_row(
+                "SELECT name_ur, name_en, account_id FROM ventures WHERE id = ?1 AND kind = 'garden'",
+                [id],
+                |r| {
+                    Ok((
+                        crate::reports::Names {
+                            ur: r.get(0)?,
+                            en: r.get(1)?,
+                        },
+                        r.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .optional()?;
+        match found {
+            Some((names, account)) => {
+                typed.garden_id = Some(id);
+                typed.garden_account_id = Some(account);
+                typed.resolved.garden = Some(names);
+            }
+            None => problems.push(FieldError::new(ErrorCode::ErrNotFound, "filters.garden_id")),
         }
     }
     for (id, table, field) in [

@@ -7,6 +7,7 @@
         "city_id": null,
         "compare": "off",
         "from": "",
+        "garden_id": null,
         "goods": "all",
         "group_by": null,
         "item_id": 9999,

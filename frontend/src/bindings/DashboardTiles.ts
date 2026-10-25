@@ -2,7 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 
 /**
- * The tiles of PRD 9.1. The garden tile comes with the gardens (D4R).
+ * The tiles of PRD 9.1.
  */
 export type DashboardTiles = {
   /**
@@ -59,6 +59,15 @@ export type DashboardTiles = {
    * مارکیٹ سفر: their cost left (C21).
    */
   trips_cost_left_paisa: Paisa;
+  /**
+   * باغات: open gardens (PRD 9.1, FR-12.37).
+   */
+  gardens_open: number;
+  /**
+   * باغات: the total of their running balances (money in less everything paid, each as on the
+   * garden screen). Can be below 0.
+   */
+  gardens_balance_paisa: Paisa;
   /**
    * ادھار رقم باقی: Σ of the open money lent (FR-16.5).
    */

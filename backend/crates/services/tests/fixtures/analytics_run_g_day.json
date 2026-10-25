@@ -17,6 +17,7 @@
     "compare_to": null,
     "partner": null,
     "trip": null,
+    "garden": null,
     "goods": "all",
     "trip_view": null
   },
@@ -69,6 +70,13 @@
       "kind": "money",
       "heading": null,
       "drill": null
+    },
+    {
+      "key": "gardens_result",
+      "title_id": "analytics-col-gardens-result",
+      "kind": "money",
+      "heading": null,
+      "drill": null
     }
   ],
   "rows": [
@@ -100,6 +108,10 @@
         },
         {
           "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
         }
       ],
       "key": {
@@ -146,6 +158,10 @@
     },
     {
       "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 0
     }
   ]
 }

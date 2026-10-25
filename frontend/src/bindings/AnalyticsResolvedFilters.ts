@@ -73,6 +73,10 @@ export type AnalyticsResolvedFilters = {
    */
   trip: ReportNames | null;
   /**
+   * The garden.
+   */
+  garden: ReportNames | null;
+  /**
    * Which goods are counted.
    */
   goods: AnalyticsGoods;

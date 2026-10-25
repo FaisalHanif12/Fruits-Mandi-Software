@@ -1,0 +1,35 @@
+{
+  "column_key": null,
+  "filters": {
+    "adda_id": null,
+    "buyer": null,
+    "city_id": null,
+    "compare": "off",
+    "from": "",
+    "garden_id": null,
+    "goods": "all",
+    "group_by": null,
+    "item_id": null,
+    "partner_id": null,
+    "period": null,
+    "seller_id": null,
+    "side": "both",
+    "to": "",
+    "trip_id": null,
+    "trip_view": null
+  },
+  "limit": 0,
+  "offset": 0,
+  "row_key": {
+    "buyer_id": null,
+    "from": null,
+    "item_id": null,
+    "not_item_ids": [],
+    "partner_id": null,
+    "person_key": null,
+    "purchase_ids": [],
+    "seller_id": 31,
+    "to": null
+  },
+  "view": "I"
+}

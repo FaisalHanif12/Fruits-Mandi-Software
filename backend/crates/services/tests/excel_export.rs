@@ -46,7 +46,7 @@ fn all_reports() -> Vec<ReportId> {
     ids
 }
 
-const ALL_VIEWS: [AnalyticsView; 9] = [
+const ALL_VIEWS: [AnalyticsView; 10] = [
     AnalyticsView::A,
     AnalyticsView::B,
     AnalyticsView::C,
@@ -55,6 +55,7 @@ const ALL_VIEWS: [AnalyticsView; 9] = [
     AnalyticsView::F,
     AnalyticsView::G,
     AnalyticsView::H,
+    AnalyticsView::I,
     AnalyticsView::J,
 ];
 
@@ -298,6 +299,38 @@ const PENDING_IDS: &[&str] = &[
     "report-r35-sold",
     "report-r35-title",
     "report-r35-total-qty",
+    // Round 11, gardens: R36, view I, the gardens columns and the R34 rows.
+    "report-r36-title",
+    "analytics-view-i-title",
+    "analytics-col-garden",
+    "analytics-col-garden-result",
+    "analytics-col-garden-status",
+    "analytics-col-gardens-result",
+    "analytics-col-other-in",
+    "analytics-col-paid-pocket",
+    "analytics-col-paid-shop",
+    "analytics-col-partner-result",
+    "analytics-col-sales-other-shops",
+    "analytics-col-sales-our-shop",
+    "analytics-filter-garden",
+    "report-col-garden",
+    "report-col-garden-costs",
+    "report-col-installments",
+    "report-col-money-in",
+    "report-col-other-in",
+    "report-col-rent",
+    "report-col-rent-due",
+    "report-col-running-balance",
+    "report-col-sales-other-shops",
+    "report-col-sales-our-shop",
+    "report-col-store-rent",
+    "report-filter-garden",
+    "report-filter-garden-by-garden",
+    "report-filter-garden-by-partner",
+    "report-garden-closed",
+    "report-garden-open",
+    "report-r34-gardens-in",
+    "report-r34-gardens-paid",
 ];
 
 /// The row of the heading: the one whose texts are exactly the column titles.

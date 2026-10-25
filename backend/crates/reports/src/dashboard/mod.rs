@@ -34,8 +34,8 @@ use crate::reports::grouped_sums::SellerSums;
 pub use model::{
     AttentionFirst, AttentionItem, AttentionKind, AttentionList, AttentionTarget, BACKUP_OLD_HOURS,
     BackupFacts, CHART_DAYS, DUES_OLD_DAYS, Dashboard, DashboardBikri, DashboardChartDay,
-    DashboardChartItem, DashboardDue, DashboardPartner, DashboardTiles, MAX_TODAY_ROWS,
-    OLDEST_DUES, PAYABLES_OLD_DAYS, STOCK_WAIT_DAYS, TOP_ITEMS,
+    DashboardChartItem, DashboardDue, DashboardGarden, DashboardPartner, DashboardTiles,
+    MAX_TODAY_ROWS, OLDEST_DUES, PAYABLES_OLD_DAYS, STOCK_WAIT_DAYS, TOP_ITEMS,
 };
 
 /// What the tiles and the attention list both read, loaded once.
@@ -80,12 +80,24 @@ pub fn get(db: &Db, backup: BackupFacts) -> Result<Dashboard, ReportsError> {
             let today = today_of(db.clock().now_utc())?;
             let facts = load_facts(conn, today)?;
             let lent = lent::facts(conn, today)?;
-            let tiles = tiles::build(conn, &facts, &lent)?;
+            let gardens = crate::gardens::open_gardens(conn)?;
+            let tiles = tiles::build(conn, &facts, &lent, &gardens)?;
             let (bikri_today, bikri_today_count) = lists::bikri_today(conn, &facts.today_iso)?;
             Ok(Dashboard {
                 today: facts.today_iso.clone(),
                 tiles,
                 partners: strip::build(conn, today)?,
+                gardens: gardens
+                    .into_iter()
+                    .map(|g| model::DashboardGarden {
+                        id: g.id,
+                        number: g.number,
+                        name_ur: g.name_ur,
+                        name_en: g.name_en,
+                        balance_paisa: g.balance,
+                        rent_due_paisa: g.rent_due,
+                    })
+                    .collect(),
                 bikri_today,
                 bikri_today_count,
                 oldest_dues: lists::oldest_dues(conn, &facts.buyers)?,

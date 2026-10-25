@@ -1,0 +1,621 @@
+{
+  "id": "R34",
+  "title_id": "report-r34-title",
+  "filters": {
+    "shortcut": null,
+    "from": "2026-10-12",
+    "to": "2026-10-12",
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-line",
+      "kind": "label"
+    },
+    {
+      "key": "count",
+      "title_id": "report-col-count",
+      "kind": "number"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-bikri"
+        },
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "money",
+          "paisa": 6000000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 800000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-opening"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1700000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-in"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1000000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-out"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-closing"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 2700000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-receipts"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-payments"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-advances"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-expenses"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-taken"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-returned"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-capital"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-money-lent"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-money-lent-back"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-trips-bought"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-trips-sold"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-gardens-paid"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-gardens-in"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 6640000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-shares"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 320000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "ب",
+            "en": "Partner B"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 240000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "ج",
+            "en": "Partner C"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 240000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-dues"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 6440000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-open-lots"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-12"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-open-qty"
+        },
+        {
+          "type": "number",
+          "value": 0
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 26,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": []
+}

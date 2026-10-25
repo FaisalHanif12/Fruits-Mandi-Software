@@ -17,6 +17,7 @@ pub mod audit;
 pub mod dashboard;
 pub mod error;
 pub mod export;
+mod gardens;
 pub mod pack;
 pub mod people;
 pub mod print;

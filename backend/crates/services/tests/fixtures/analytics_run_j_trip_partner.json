@@ -20,6 +20,7 @@
       "en": "Partner A"
     },
     "trip": null,
+    "garden": null,
     "goods": "all",
     "trip_view": "trip"
   },

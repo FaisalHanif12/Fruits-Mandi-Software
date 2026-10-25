@@ -79,6 +79,9 @@ pub(crate) fn filter_facts(
     if let Some(trip) = &filters.trip {
         facts.push(fact(ids::FILTER_TRIP, fmt.names(trip)));
     }
+    if let Some(garden) = &filters.garden {
+        facts.push(fact(ids::FILTER_GARDEN, fmt.names(garden)));
+    }
     // The goods and the layout say it all in their label, so their value is empty.
     match filters.goods {
         AnalyticsGoods::All => {}

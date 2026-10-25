@@ -115,6 +115,9 @@ pub enum ReportId {
     /// Party day sheet, پارٹی کی روزانہ پرچی.
     #[serde(rename = "R35")]
     R35,
+    /// Gardens, باغات رپورٹ.
+    #[serde(rename = "R36")]
+    R36,
 }
 
 impl ReportId {
@@ -154,6 +157,7 @@ impl ReportId {
             ReportId::R33 => "R33",
             ReportId::R34 => "R34",
             ReportId::R35 => "R35",
+            ReportId::R36 => "R36",
         }
     }
 
@@ -210,6 +214,10 @@ pub enum FilterKind {
     VoucherType,
     /// How R33 lays out the trips: by trip, item, day, month, or by partner.
     TripView,
+    /// One garden (R36).
+    Garden,
+    /// How R36 lays out the gardens: by garden or by partner.
+    GardenView,
 }
 
 /// One report in the catalogue.
@@ -290,6 +298,18 @@ pub enum TripView {
     Partner,
 }
 
+/// How R36 lays out the gardens (PRD 19.2 R36: per garden; each partner's % and money).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(rename = "ReportGardenView")]
+pub enum GardenView {
+    /// One row for each garden.
+    #[default]
+    Garden,
+    /// One row for each partner of each garden: his %, what he paid in and got back, his result.
+    Partner,
+}
+
 /// The paid or due filter of the one-time parties register (R9, PRD FR-13.6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -348,6 +368,12 @@ pub struct ReportFilters {
     /// The layout of the trip report (R33). Missing means by trip.
     #[ts(optional)]
     pub trip_view: Option<TripView>,
+    /// One garden (R36). Missing means every garden of the other filters.
+    #[ts(type = "number | null")]
+    pub garden_id: Option<i64>,
+    /// The layout of the gardens report (R36). Missing means by garden.
+    #[ts(optional)]
+    pub garden_view: Option<GardenView>,
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
@@ -425,6 +451,14 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub trip_view: Option<TripView>,
+    /// The garden picked (R36).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub garden: Option<Names>,
+    /// The layout of R36. Missing for any other report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub garden_view: Option<GardenView>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.

@@ -14,6 +14,8 @@
     "trips_purchases_with_stock": 0,
     "trips_qty_left": 0,
     "trips_cost_left_paisa": 0,
+    "gardens_open": 0,
+    "gardens_balance_paisa": 0,
     "lent_open_paisa": 0,
     "lent_overdue_paisa": 0,
     "expenses_today_paisa": 300000
@@ -47,6 +49,7 @@
       "total_paisa": 74600
     }
   ],
+  "gardens": [],
   "bikri_today": [
     {
       "bikri_id": 1,

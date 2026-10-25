@@ -14,7 +14,7 @@ use crate::reports::{
     Cell, Column, ColumnKind, Names, PartyFilter, PartyRef, PrintCell, Row, RowKind,
 };
 
-/// The views of PRD 18.2 that exist so far. I (gardens) and K (fruit taken) come with D4R.
+/// The views of PRD 18.2 that exist so far. K (fruit taken) comes with plan 17d.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 pub enum AnalyticsView {
     /// By item, قسم مال وار.
@@ -41,6 +41,9 @@ pub enum AnalyticsView {
     /// Top 10, سرفہرست.
     #[serde(rename = "H")]
     H,
+    /// Gardens, باغات.
+    #[serde(rename = "I")]
+    I,
     /// Trips, مارکیٹ سفر.
     #[serde(rename = "J")]
     J,
@@ -58,6 +61,7 @@ impl AnalyticsView {
             AnalyticsView::F => "F",
             AnalyticsView::G => "G",
             AnalyticsView::H => "H",
+            AnalyticsView::I => "I",
             AnalyticsView::J => "J",
         }
     }
@@ -179,6 +183,8 @@ pub enum AnalyticsFilterKind {
     Goods,
     /// How view J lays out its rows.
     TripView,
+    /// A garden (views A to E, G, H and I).
+    Garden,
 }
 
 /// One view in the catalogue.
@@ -229,6 +235,9 @@ pub struct AnalyticsFilters {
     /// A market trip.
     #[ts(type = "number | null")]
     pub trip_id: Option<i64>,
+    /// A garden.
+    #[ts(type = "number | null")]
+    pub garden_id: Option<i64>,
     /// Which goods are counted.
     pub goods: AnalyticsGoods,
     /// How view J lays out its rows. Trip when left out; refused for the other views.
@@ -251,6 +260,7 @@ impl Default for AnalyticsFilters {
             compare: AnalyticsCompare::Off,
             partner_id: None,
             trip_id: None,
+            garden_id: None,
             goods: AnalyticsGoods::All,
             trip_view: None,
         }
@@ -290,6 +300,8 @@ pub struct AnalyticsResolvedFilters {
     pub partner: Option<Names>,
     /// The trip.
     pub trip: Option<Names>,
+    /// The garden.
+    pub garden: Option<Names>,
     /// Which goods are counted.
     pub goods: AnalyticsGoods,
     /// How view J lays out its rows.

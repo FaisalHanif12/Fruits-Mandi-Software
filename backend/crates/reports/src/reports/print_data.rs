@@ -26,8 +26,8 @@ use ts_rs::TS;
 
 use super::ids;
 use super::model::{
-    ArgValue, Cell, ColumnKind, DetailPart, GroupBy, MessageArg, Names, PaidFilter, PartyRef,
-    ReportId, ReportPage, ResolvedFilters, RowKind, TripView,
+    ArgValue, Cell, ColumnKind, DetailPart, GardenView, GroupBy, MessageArg, Names, PaidFilter,
+    PartyRef, ReportId, ReportPage, ResolvedFilters, RowKind, TripView,
 };
 use crate::error::ReportsError;
 use crate::print::format::NumberStyle;
@@ -588,6 +588,17 @@ pub(crate) fn filter_facts(
             TripView::Day => ids::FILTER_TRIP_BY_DAY,
             TripView::Month => ids::FILTER_TRIP_BY_MONTH,
             TripView::Partner => ids::FILTER_TRIP_BY_PARTNER,
+        };
+        facts.push(fact(label, String::new()));
+    }
+    // R36: the garden picked, and how the gardens are laid out. The label is the whole fact.
+    if let Some(names) = &filters.garden {
+        facts.push(fact(ids::FILTER_GARDEN, fmt.names(names)));
+    }
+    if let Some(view) = filters.garden_view {
+        let label = match view {
+            GardenView::Garden => ids::FILTER_GARDEN_BY_GARDEN,
+            GardenView::Partner => ids::FILTER_GARDEN_BY_PARTNER,
         };
         facts.push(fact(label, String::new()));
     }

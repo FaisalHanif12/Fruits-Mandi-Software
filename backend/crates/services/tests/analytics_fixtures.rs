@@ -79,7 +79,7 @@ fn filters(extra: Value) -> Value {
         "period": null, "from": "", "to": "", "group_by": null, "item_id": null,
         "seller_id": null, "buyer": null, "city_id": null, "adda_id": null,
         "side": "both", "compare": "off", "partner_id": null, "trip_id": null,
-        "goods": "all", "trip_view": null
+        "goods": "all", "trip_view": null, "garden_id": null
     });
     if let (Some(base), Some(extra)) = (base.as_object_mut(), extra.as_object()) {
         for (k, v) in extra {
@@ -251,6 +251,8 @@ fn fixtures_are_the_real_answers() {
 
     // Round 11: a trip on its own world (E2E-34 after the sale of 15, then the 5 written off).
     trip_fixtures();
+    // Round 11: a garden on its own world (E2E-40, closed).
+    garden_fixtures();
 
     // Refusals.
     refusal_run(
@@ -343,4 +345,47 @@ fn trip_fixtures() {
         page("G", json!({ "group_by": "day" })),
     );
     run_pair(&w, "run_j_trip_written_off", page("J", json!({})));
+}
+
+/// The garden views on the garden of E2E-40, closed on 13-10-26. The frontend copies these to draw
+/// view I and the gardens columns.
+fn garden_fixtures() {
+    let (w, garden) = garden_40();
+    set_today(&w.env, 2026, 10, 13);
+    garden_close(&w, garden.id, "13-10-2026");
+    let page = |view: &str, extra: Value| json!({ "view": view, "filters": filters(extra), "offset": 0, "limit": 0 });
+    run_pair(&w, "run_i_garden", page("I", json!({})));
+    run_pair(
+        &w,
+        "run_i_garden_seller_side",
+        page("I", json!({ "side": "seller" })),
+    );
+    run_pair(&w, "run_f_garden", page("F", json!({})));
+    run_pair(
+        &w,
+        "run_g_garden_day",
+        page("G", json!({ "group_by": "day" })),
+    );
+    run_pair(
+        &w,
+        "run_a_garden_goods",
+        page("A", json!({ "garden_id": garden.id })),
+    );
+    let first = run(
+        w.env.ctx.db(),
+        &typed::<AnalyticsRunInput>(&page("I", json!({}))),
+    )
+    .unwrap();
+    let key = first.rows[0].key.clone().unwrap();
+    lines_pair(
+        &w,
+        "lines_i_garden",
+        json!({ "view": "I", "filters": filters(json!({})), "row_key": key,
+                "column_key": null, "offset": 0, "limit": 0 }),
+    );
+    print_pair(
+        &w,
+        "print_data_i_en",
+        json!({ "view": "I", "filters": filters(json!({})), "language": "en", "paper": null }),
+    );
 }

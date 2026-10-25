@@ -1,0 +1,176 @@
+{
+  "id": "R36",
+  "title_id": "report-r36-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false,
+    "garden_view": "partner"
+  },
+  "columns": [
+    {
+      "key": "garden",
+      "title_id": "report-col-garden",
+      "kind": "names"
+    },
+    {
+      "key": "partner",
+      "title_id": "report-col-partner",
+      "kind": "names"
+    },
+    {
+      "key": "share",
+      "title_id": "report-col-share",
+      "kind": "percent"
+    },
+    {
+      "key": "paid_shop",
+      "title_id": "report-col-money-in-shop",
+      "kind": "money"
+    },
+    {
+      "key": "paid_pocket",
+      "title_id": "report-col-money-in-pocket",
+      "kind": "money"
+    },
+    {
+      "key": "money_back",
+      "title_id": "report-col-money-back",
+      "kind": "money"
+    },
+    {
+      "key": "result",
+      "title_id": "report-col-part-of-result",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "شاہ پور باغ",
+            "en": "Shahpur Garden"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "الف",
+            "en": "Partner A"
+          }
+        },
+        {
+          "type": "percent",
+          "hundredths": 6000
+        },
+        {
+          "type": "money",
+          "paisa": 3300000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 3984000
+        },
+        {
+          "type": "money",
+          "paisa": 684000
+        }
+      ],
+      "source": {
+        "kind": "venture",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "شاہ پور باغ",
+            "en": "Shahpur Garden"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "ب",
+            "en": "Partner B"
+          }
+        },
+        {
+          "type": "percent",
+          "hundredths": 4000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 2200000
+        },
+        {
+          "type": "money",
+          "paisa": 2656000
+        },
+        {
+          "type": "money",
+          "paisa": 456000
+        }
+      ],
+      "source": {
+        "kind": "venture",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 3300000
+    },
+    {
+      "type": "money",
+      "paisa": 2200000
+    },
+    {
+      "type": "money",
+      "paisa": 6640000
+    },
+    {
+      "type": "money",
+      "paisa": 1140000
+    }
+  ],
+  "summary": []
+}

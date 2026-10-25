@@ -387,5 +387,19 @@
       "party"
     ],
     "party_required": false
+  },
+  {
+    "id": "R36",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "report-r36-title",
+    "filters": [
+      "date_range",
+      "item",
+      "partner",
+      "garden",
+      "garden_view"
+    ],
+    "party_required": false
   }
 ]

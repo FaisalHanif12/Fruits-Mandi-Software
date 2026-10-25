@@ -17,4 +17,6 @@ export type ReportFilterKind =
   | 'group_by'
   | 'partner'
   | 'voucher_type'
-  | 'trip_view';
+  | 'trip_view'
+  | 'garden'
+  | 'garden_view';

@@ -40,7 +40,7 @@ pub struct BackupFacts {
     pub cloud_age_hours: Option<i64>,
 }
 
-/// The tiles of PRD 9.1. The garden tile comes with the gardens (D4R).
+/// The tiles of PRD 9.1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 pub struct DashboardTiles {
     /// آج کی بکری: Σ خام بکری of today's postings (reversals take out cancelled ones).
@@ -84,6 +84,13 @@ pub struct DashboardTiles {
     /// مارکیٹ سفر: their cost left (C21).
     #[ts(type = "Paisa")]
     pub trips_cost_left_paisa: Paisa,
+    /// باغات: open gardens (PRD 9.1, FR-12.37).
+    #[ts(type = "number")]
+    pub gardens_open: i64,
+    /// باغات: the total of their running balances (money in less everything paid, each as on the
+    /// garden screen). Can be below 0.
+    #[ts(type = "Paisa")]
+    pub gardens_balance_paisa: Paisa,
     /// ادھار رقم باقی: Σ of the open money lent (FR-16.5).
     #[ts(type = "Paisa")]
     pub lent_open_paisa: Paisa,
@@ -293,6 +300,27 @@ pub struct AttentionList {
     pub total_count: i64,
 }
 
+/// One open garden of the garden tile (PRD 9.1): its running balance and the rent still to pay.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct DashboardGarden {
+    /// The garden.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// Its number in the series of gardens.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// The running balance: money in less everything paid.
+    #[ts(type = "Paisa")]
+    pub balance_paisa: Paisa,
+    /// The rent still to pay (signed).
+    #[ts(type = "Paisa")]
+    pub rent_due_paisa: Paisa,
+}
+
 /// Everything the dashboard shows (PRD 9). Read only; one signed-in call.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct Dashboard {
@@ -302,6 +330,8 @@ pub struct Dashboard {
     pub tiles: DashboardTiles,
     /// The partner strip, in the order the partners were made.
     pub partners: Vec<DashboardPartner>,
+    /// The open gardens, in the order they were made, each with its running balance.
+    pub gardens: Vec<DashboardGarden>,
     /// Today's بکری, oldest first, at most [`MAX_TODAY_ROWS`].
     pub bikri_today: Vec<DashboardBikri>,
     /// How many بکری there are today in all.

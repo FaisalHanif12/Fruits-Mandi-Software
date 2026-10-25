@@ -17,6 +17,7 @@
     "compare_to": null,
     "partner": null,
     "trip": null,
+    "garden": null,
     "goods": "trip",
     "trip_view": null
   },

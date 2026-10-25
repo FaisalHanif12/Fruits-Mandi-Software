@@ -16,6 +16,7 @@
       "compare": "off",
       "partner_id": null,
       "trip_id": null,
+      "garden_id": null,
       "goods": "all",
       "trip_view": null
     }
@@ -37,6 +38,7 @@
       "compare": "off",
       "partner_id": null,
       "trip_id": null,
+      "garden_id": null,
       "goods": "all",
       "trip_view": null
     }

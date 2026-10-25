@@ -117,6 +117,7 @@ fn sale_filter_set(typed: &Typed) -> bool {
         || typed.city_id.is_some()
         || typed.adda_id.is_some()
         || typed.trip_id.is_some()
+        || typed.garden_id.is_some()
         || typed.goods != AnalyticsGoods::All
 }
 
@@ -164,6 +165,78 @@ fn trip_conds(
         .id(item, typed.item_id)
         .id(trip, typed.trip_id);
     c
+}
+
+/// The movement of the running balances of the gardens by period: the credits less the debits on
+/// their accounts dated in the period (the closing and its undo left out), less the installments
+/// and costs dated in it. Over the life of a garden the periods add up to its running balance.
+/// The gardens are picked by the item (their main fruit) and the garden filter, whatever the
+/// period, because the period here is the day of each movement.
+fn gardens_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsError> {
+    let group_by = typed.group_by;
+    let recs = crate::gardens::pick_recs(
+        conn,
+        &crate::gardens::Pick {
+            item_id: typed.item_id,
+            garden_id: typed.garden_id,
+            ..crate::gardens::Pick::default()
+        },
+    )?;
+    let mut result = ByBucket::new();
+    let first = typed.from.clone().unwrap_or_else(|| FIRST_DAY.to_owned());
+    let last = typed.to.clone().unwrap_or_else(|| LAST_DAY.to_owned());
+    let bucket = bucket_sql(group_by, "e.entry_date");
+    let paid_bucket = bucket_sql(group_by, "x.entry_date");
+    for chunk in recs.chunks(crate::reports::common::IN_CHUNK) {
+        let accounts: Vec<Value> = chunk.iter().map(|r| Value::Integer(r.account.id)).collect();
+        let gardens: Vec<Value> = chunk.iter().map(|r| Value::Integer(r.id)).collect();
+        let marks = vec!["?"; chunk.len()].join(", ");
+        let money_sql = format!(
+            "SELECT {bucket}, COALESCE(SUM(l.cr_paisa), 0), COALESCE(SUM(l.dr_paisa), 0)
+             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+             WHERE l.account_id IN ({marks}) AND e.status = 'posted' AND {}
+               AND e.entry_date >= ? AND e.entry_date <= ? GROUP BY 1",
+            mandi_db::garden_figures::NOT_A_CLOSING
+        );
+        let mut args = accounts;
+        args.push(Value::Text(first.clone()));
+        args.push(Value::Text(last.clone()));
+        let mut statement = conn.prepare(&money_sql)?;
+        let rows = statement.query_map(params_from_iter(args.iter()), |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+            ))
+        })?;
+        for row in rows {
+            let (key, credits, debits) = row?;
+            let slot = result.entry(key).or_insert(Paisa::ZERO);
+            *slot = slot
+                .checked_add(paisa(credits)?)?
+                .checked_sub(paisa(debits)?)?;
+        }
+        let paid_sql = format!(
+            "SELECT {paid_bucket}, COALESCE(SUM(x.amount_paisa), 0)
+             FROM venture_entries x
+             WHERE x.venture_id IN ({marks}) AND x.status = 'saved'
+               AND x.kind IN ('installment', 'cost')
+               AND x.entry_date >= ? AND x.entry_date <= ? GROUP BY 1"
+        );
+        let mut args = gardens;
+        args.push(Value::Text(first.clone()));
+        args.push(Value::Text(last.clone()));
+        let mut statement = conn.prepare(&paid_sql)?;
+        let rows = statement.query_map(params_from_iter(args.iter()), |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+        })?;
+        for row in rows {
+            let (key, paid) = row?;
+            let slot = result.entry(key).or_insert(Paisa::ZERO);
+            *slot = slot.checked_sub(paisa(paid)?)?;
+        }
+    }
+    Ok(result)
 }
 
 /// The result of the trips for each period by the day each event happened (see the module doc).
@@ -286,6 +359,7 @@ struct Period {
     expenses: Option<Paisa>,
     profit: Option<Paisa>,
     trips: Option<Paisa>,
+    gardens: Option<Paisa>,
 }
 
 impl Period {
@@ -301,6 +375,7 @@ impl Period {
             maybe(self.expenses),
             maybe(self.profit),
             maybe(self.trips),
+            maybe(self.gardens),
         ]
     }
 }
@@ -356,6 +431,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
 
     // Trips.
     let trips_allowed = typed.buyer_id.is_none()
+        && typed.garden_id.is_none()
         && typed.seller_id.is_none()
         && typed.city_id.is_none()
         && typed.adda_id.is_none()
@@ -386,6 +462,44 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         }
     }
 
+    // Gardens: the movement of the running balances in the period. Not when a sale filter or the
+    // goods or a trip leave the gardens out.
+    let gardens_allowed = typed.buyer_id.is_none()
+        && typed.seller_id.is_none()
+        && typed.city_id.is_none()
+        && typed.adda_id.is_none()
+        && typed.trip_id.is_none()
+        && !matches!(
+            typed.goods,
+            AnalyticsGoods::Consigned | AnalyticsGoods::Trip
+        );
+    if let Some(partner_id) = typed.partner_id {
+        // His money from gardens by period (as view F's gardens column), when nothing narrows it.
+        if plain
+            && gardens_allowed
+            && typed.garden_id.is_none()
+            && let Some(partner) = mandi_db::partners::get(conn, partner_id)?
+        {
+            for slot in periods.values_mut() {
+                slot.gardens = Some(Paisa::ZERO);
+            }
+            let first = typed.from.as_deref().unwrap_or(FIRST_DAY);
+            let last = typed.to.as_deref().unwrap_or(LAST_DAY);
+            for (bucket, amount) in
+                super::partner::gardens_net_by_bucket(conn, &partner, first, last, group_by)?
+            {
+                periods.entry(bucket).or_default().gardens = Some(amount);
+            }
+        }
+    } else if gardens_allowed {
+        for slot in periods.values_mut() {
+            slot.gardens = Some(Paisa::ZERO);
+        }
+        for (bucket, amount) in gardens_result(conn, typed)? {
+            periods.entry(bucket).or_default().gardens = Some(amount);
+        }
+    }
+
     // A period with nothing in it has no row.
     periods.retain(|_, p| {
         p.gross != Paisa::ZERO
@@ -393,6 +507,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             || p.income.is_some_and(|v| v != Paisa::ZERO)
             || p.expenses.is_some_and(|v| v != Paisa::ZERO)
             || p.trips.is_some_and(|v| v != Paisa::ZERO)
+            || p.gardens.is_some_and(|v| v != Paisa::ZERO)
     });
 
     let period_kind = match group_by {
@@ -418,6 +533,17 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             },
             ColumnKind::Money,
         ),
+        // The movement of the running balances of the gardens in the period (money in less what
+        // was paid); with a partner picked, his money from gardens, as in view F.
+        col(
+            "gardens_result",
+            if typed.partner_id.is_some() {
+                ids::COL_GARDENS
+            } else {
+                ids::COL_GARDENS_RESULT
+            },
+            ColumnKind::Money,
+        ),
     ];
     let mut grand = Period::default();
     let mut all_rows = Vec::with_capacity(periods.len());
@@ -428,6 +554,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         plus(&mut grand.expenses, period.expenses)?;
         plus(&mut grand.profit, period.profit)?;
         plus(&mut grand.trips, period.trips)?;
+        plus(&mut grand.gardens, period.gardens)?;
         let (from, to) = bucket_days(group_by, bucket)?;
         all_rows.push(row(
             period.cells(period_cell(group_by, bucket)?),

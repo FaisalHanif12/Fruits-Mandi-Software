@@ -236,7 +236,11 @@ pub(crate) fn run(
     }
     // The lines behind a row of view J are the sale facts its commission was made from: under the
     // same filters, in no date range (money agent M2), so they add up to the number opened.
-    let for_j = (input.view == super::model::AnalyticsView::J).then(|| facts::for_trips(typed));
+    let for_j = matches!(
+        input.view,
+        super::model::AnalyticsView::J | super::model::AnalyticsView::I
+    )
+    .then(|| facts::for_trips(typed));
     let (typed, range) = match &for_j {
         Some(j) => (j, facts::TRIPS_RANGE),
         None => (typed, run_range(typed)),

@@ -7,7 +7,7 @@
 //! the buyers' dues at the end of the day and the lots still in باقی مال. It is a flat list: every
 //! row has its day, a label, an optional count and an optional amount, so it pages, prints and
 //! exports like every other report. The same rows come in the same order for every day.
-//! The garden and fruit parts of the PRD line come with D4R; their rows are added at the marked
+//! The garden rows (paid, money in) are in; the fruit-taken row comes with plan 17d at the marked
 //! place in `run` and nothing else changes.
 //!
 //! A day is listed when anything was posted on it (a journal entry, a sale, a trip purchase or
@@ -216,6 +216,7 @@ fn trips_sold_by_day(conn: &Connection, from: &str, to: &str) -> Result<ByDay, R
              WHERE e.entry_date >= ?1 AND e.entry_date <= ?2
              UNION ALL
              SELECT x.entry_date, 0, x.amount_paisa FROM venture_entries x
+             JOIN ventures v ON v.id = x.venture_id AND v.kind = 'trip'
              WHERE x.kind = 'other_sale' AND x.status = 'saved'
                AND x.entry_date >= ?1 AND x.entry_date <= ?2)
          GROUP BY day",
@@ -518,6 +519,30 @@ pub(crate) fn run(
         &values(&from, &to),
     )?;
     let trips_sold = trips_sold_by_day(conn, &from, &to)?;
+    // Gardens: what was paid (installments and costs, from the shop and from pockets) and the
+    // money that came into the gardens' accounts (the closing and its undo left out). Both are
+    // for information: pocket money is not cash, and a credit sale is not cash yet, so neither is
+    // added to the cash lines (money agent, round 11).
+    let gardens_paid = by_day(
+        conn,
+        "SELECT x.entry_date, COUNT(*), COALESCE(SUM(x.amount_paisa), 0)
+         FROM venture_entries x JOIN ventures v ON v.id = x.venture_id
+         WHERE v.kind = 'garden' AND x.kind IN ('installment', 'cost') AND x.status = 'saved'
+           AND x.entry_date >= ?1 AND x.entry_date <= ?2 GROUP BY x.entry_date",
+        &values(&from, &to),
+    )?;
+    let gardens_in = by_day(
+        conn,
+        &format!(
+            "SELECT e.entry_date, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+             JOIN ventures v ON v.account_id = l.account_id AND v.kind = 'garden'
+             WHERE e.status = 'posted' AND {}
+               AND e.entry_date >= ?1 AND e.entry_date <= ?2 GROUP BY e.entry_date",
+            mandi_db::garden_figures::NOT_A_CLOSING
+        ),
+        &values(&from, &to),
+    )?;
 
     // The share of each partner on each day: income rows less expense rows (C12).
     let mut shares: BTreeMap<String, Vec<(i64, i64)>> = BTreeMap::new();
@@ -596,6 +621,8 @@ pub(crate) fn run(
         let (lent_out, lent_back) = pair(&lent, day)?;
         let (bought_qty, bought_cost) = trips_bought.get(day).copied().unwrap_or((0, 0));
         let (sold_own, sold_other) = pair(&trips_sold, day)?;
+        let (garden_payments, garden_paid) = gardens_paid.get(day).copied().unwrap_or((0, 0));
+        let (garden_dr, garden_cr) = pair(&gardens_in, day)?;
         let dues_now = dues.at_end_of(day)?;
         let (open_lots, open_qty) = stock.at_end_of(day)?;
 
@@ -682,8 +709,19 @@ pub(crate) fn run(
             None,
             amount(sold_own.checked_add(sold_other)?),
         ));
-        // The garden and fruit rows of the PRD line (gardens paid, garden money in, fruit taken)
-        // are added here when D4R is merged (plan d5-late, round 11).
+        all_rows.push(row(
+            day,
+            label(ids::R34_GARDENS_PAID),
+            Some(garden_payments),
+            amount(paisa(garden_paid)?),
+        ));
+        all_rows.push(row(
+            day,
+            label(ids::R34_GARDENS_IN),
+            None,
+            amount(garden_cr.checked_sub(garden_dr)?),
+        ));
+        // The fruit-taken row of the PRD line is added here when plan 17d is merged.
         if let Some(day_shares) = shares.get(day) {
             // A heading row, so a partner's name below it reads as his share of the day.
             all_rows.push(row(day, label(ids::R34_PARTNER_SHARES), None, None));

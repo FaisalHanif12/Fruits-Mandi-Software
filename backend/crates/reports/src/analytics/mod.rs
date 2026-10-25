@@ -22,6 +22,7 @@ mod buyer;
 mod calc;
 mod facts;
 mod filters;
+mod gardens;
 mod ids;
 mod item;
 mod lines;
@@ -61,8 +62,8 @@ pub use store::{MAX_NAME_LETTERS, MAX_VIEWS, PREF_KEY, views_get, views_save};
 use filters::{Typed, resolve};
 use table::Table;
 
-/// The views of the catalogue, in order. I (gardens) and K (fruit taken) come with D4R.
-const VIEWS: [AnalyticsView; 9] = [
+/// The views of the catalogue, in order. K (fruit taken) comes with plan 17d.
+const VIEWS: [AnalyticsView; 10] = [
     AnalyticsView::A,
     AnalyticsView::B,
     AnalyticsView::C,
@@ -71,6 +72,7 @@ const VIEWS: [AnalyticsView; 9] = [
     AnalyticsView::F,
     AnalyticsView::G,
     AnalyticsView::H,
+    AnalyticsView::I,
     AnalyticsView::J,
 ];
 
@@ -80,6 +82,17 @@ const VIEWS: [AnalyticsView; 9] = [
 fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
     if view == AnalyticsView::F {
         return vec![AnalyticsFilterKind::Period, AnalyticsFilterKind::Partner];
+    }
+    // Gardens are picked by the day made, the main fruit, a partner and a garden; the side narrows
+    // the commission on their goods.
+    if view == AnalyticsView::I {
+        return vec![
+            AnalyticsFilterKind::Period,
+            AnalyticsFilterKind::Item,
+            AnalyticsFilterKind::Side,
+            AnalyticsFilterKind::Partner,
+            AnalyticsFilterKind::Garden,
+        ];
     }
     let mut kinds = vec![
         AnalyticsFilterKind::Period,
@@ -92,6 +105,9 @@ fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
         AnalyticsFilterKind::Trip,
         AnalyticsFilterKind::Goods,
     ];
+    if view != AnalyticsView::J {
+        kinds.push(AnalyticsFilterKind::Garden);
+    }
     if !matches!(view, AnalyticsView::G | AnalyticsView::J) {
         kinds.push(AnalyticsFilterKind::Compare);
     }
@@ -148,6 +164,7 @@ fn build_in(
         AnalyticsView::F => partner::run(conn, &typed, spec)?,
         AnalyticsView::G => trend::run(conn, &typed, spec)?,
         AnalyticsView::H => top::run(conn, &typed, spec)?,
+        AnalyticsView::I => gardens::run(conn, &typed, spec)?,
         AnalyticsView::J => trips::run(conn, &typed, spec)?,
     };
     Ok((typed, table))

@@ -6,11 +6,12 @@
 
 use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
-use mandi_db::rusqlite::Connection;
+use mandi_db::rusqlite::{Connection, OptionalExtension};
 
 use super::common::{MasterTable, load_party, names_of, parse_day};
 use super::model::{
-    DateShortcut, FilterKind, GroupBy, PaidFilter, ReportFilters, ResolvedFilters, TripView,
+    DateShortcut, FilterKind, GardenView, GroupBy, Names, PaidFilter, ReportFilters,
+    ResolvedFilters, TripView,
 };
 use crate::error::ReportsError;
 
@@ -45,6 +46,10 @@ pub(crate) struct Typed {
     pub(crate) voucher_type: Option<mandi_core::vouchers::VoucherType>,
     /// The layout of R33. By trip when the screen sent nothing.
     pub(crate) trip_view: TripView,
+    /// The picked garden (R36).
+    pub(crate) garden_id: Option<i64>,
+    /// The layout of R36. By garden when the screen sent nothing.
+    pub(crate) garden_view: GardenView,
     /// How R28 groups its lines. Month when the screen sent nothing.
     pub(crate) group_by: GroupBy,
     /// The paid or due filter of R9.
@@ -161,6 +166,16 @@ pub(crate) fn resolve(
         FilterKind::TripView,
         input.trip_view.is_some(),
         "filters.trip_view",
+    );
+    refuse_unless(
+        FilterKind::Garden,
+        input.garden_id.is_some(),
+        "filters.garden_id",
+    );
+    refuse_unless(
+        FilterKind::GardenView,
+        input.garden_view.is_some(),
+        "filters.garden_view",
     );
     refuse_unless(FilterKind::Detail, input.detail, "filters.detail");
     refuse_unless(
@@ -327,6 +342,28 @@ pub(crate) fn resolve(
     if takes.has(FilterKind::TripView) {
         typed.trip_view = input.trip_view.unwrap_or_default();
         typed.resolved.trip_view = Some(typed.trip_view);
+    }
+    if takes.has(FilterKind::GardenView) {
+        typed.garden_view = input.garden_view.unwrap_or_default();
+        typed.resolved.garden_view = Some(typed.garden_view);
+    }
+    if takes.has(FilterKind::Garden)
+        && let Some(id) = input.garden_id
+    {
+        let names: Option<(String, String)> = conn
+            .query_row(
+                "SELECT name_ur, name_en FROM ventures WHERE id = ?1 AND kind = 'garden'",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        match names {
+            Some((ur, en)) => {
+                typed.garden_id = Some(id);
+                typed.resolved.garden = Some(Names { ur, en });
+            }
+            None => problems.push(FieldError::new(ErrorCode::ErrNotFound, "filters.garden_id")),
+        }
     }
     typed.detail = takes.has(FilterKind::Detail) && input.detail;
     if takes.has(FilterKind::GroupBy) {

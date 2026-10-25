@@ -4,6 +4,7 @@ import type { DashboardBikri } from './DashboardBikri';
 import type { DashboardChartDay } from './DashboardChartDay';
 import type { DashboardChartItem } from './DashboardChartItem';
 import type { DashboardDue } from './DashboardDue';
+import type { DashboardGarden } from './DashboardGarden';
 import type { DashboardPartner } from './DashboardPartner';
 import type { DashboardTiles } from './DashboardTiles';
 
@@ -23,6 +24,10 @@ export type Dashboard = {
    * The partner strip, in the order the partners were made.
    */
   partners: Array<DashboardPartner>;
+  /**
+   * The open gardens, in the order they were made, each with its running balance.
+   */
+  gardens: Array<DashboardGarden>;
   /**
    * Today's بکری, oldest first, at most [`MAX_TODAY_ROWS`].
    */

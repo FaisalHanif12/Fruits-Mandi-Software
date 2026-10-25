@@ -1392,6 +1392,9 @@ mod fixtures {
             cloud_age_hours: Some(30),
         };
         pair("assist_attention_18_10", &json!({}), &bell(&w, backup));
+        // An open garden on the tile: E2E-40 up to the day before the closing (balance 11,400).
+        let (garden_world, _) = garden_40();
+        pair("dashboard_get_garden", &json!({}), &dash(&garden_world));
     }
 
     #[test]

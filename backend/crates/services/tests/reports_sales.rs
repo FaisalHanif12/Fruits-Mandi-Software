@@ -117,7 +117,8 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             ReportId::R32,
             ReportId::R33,
             ReportId::R34,
-            ReportId::R35
+            ReportId::R35,
+            ReportId::R36
         ]
     );
     let r2 = entries.iter().find(|e| e.id == ReportId::R2).unwrap();

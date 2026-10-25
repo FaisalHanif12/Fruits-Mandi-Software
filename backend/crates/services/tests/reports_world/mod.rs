@@ -360,3 +360,173 @@ pub fn trip_34_world() -> (support::World, i64, i64, i64) {
     let sale = save(&w, &draft).bikri_id;
     (w, trip, purchase, sale)
 }
+
+// ---- The garden of E2E-40 and E2E-40b (plan 17c) --------------------------------------------------
+
+/// The garden شاہ پور باغ of the worked check: الف 60% from the shop, ب 40% from his pocket, ج not
+/// in it; rent 50,000. Made on 10-10-26 with the first installment of 30,000.
+pub fn garden_made(w: &support::World) -> mandi_services::core::gardens::GardenRow {
+    garden_made_with(w, "50,000", "30,000")
+}
+
+/// The same garden with another rent and first installment.
+pub fn garden_made_with(
+    w: &support::World,
+    rent: &str,
+    paid_now: &str,
+) -> mandi_services::core::gardens::GardenRow {
+    use mandi_services::core::gardens::GardenInput;
+    use mandi_services::core::ventures::{MoneySource, VenturePartnerInput};
+    let [a, b, _] = w.partners;
+    let input = GardenInput {
+        name_ur: "شاہ پور باغ".into(),
+        name_en: "Shahpur Garden".into(),
+        confirmed_rules_words: vec![
+            "شاہ".into(),
+            "پور".into(),
+            "باغ".into(),
+            "Shahpur".into(),
+            "Garden".into(),
+        ],
+        date: "10-10-2026".into(),
+        item_id: Some(w.banana),
+        rent: rent.into(),
+        season_end: None,
+        note: None,
+        partners: vec![
+            VenturePartnerInput {
+                partner_id: a,
+                share: "60".into(),
+                source: MoneySource::Shop,
+            },
+            VenturePartnerInput {
+                partner_id: b,
+                share: "40".into(),
+                source: MoneySource::Pocket,
+            },
+        ],
+        paid_now: Some(paid_now.into()),
+        paid_now_reason: Some("first installment".into()),
+        parts: Vec::new(),
+        confirm_cash_below_zero: false,
+    };
+    mandi_services::gardens::create(&w.env.ctx, &w.owner, &input)
+        .unwrap()
+        .row
+}
+
+/// An installment or a running cost of a garden.
+pub fn garden_pay(
+    w: &support::World,
+    garden: i64,
+    cost: bool,
+    date: &str,
+    amount: &str,
+    reason: &str,
+) {
+    use mandi_services::core::gardens::{GardenEntryInput, GardenPaymentInput};
+    let payment = GardenPaymentInput {
+        garden_id: Some(garden),
+        date: date.into(),
+        amount: amount.into(),
+        reason: reason.into(),
+        parts: Vec::new(),
+        confirm_cash_below_zero: false,
+    };
+    let entry = if cost {
+        GardenEntryInput::Cost(payment)
+    } else {
+        GardenEntryInput::Installment(payment)
+    };
+    mandi_services::gardens::entry_save(&w.env.ctx, &w.owner, &entry).unwrap();
+}
+
+/// A sale in another shop: the money comes into the cash book and the garden's account.
+pub fn garden_other_sale(w: &support::World, garden: i64, date: &str, qty: &str, amount: &str) {
+    use mandi_services::core::gardens::{GardenEntryInput, GardenOtherSaleInput};
+    mandi_services::gardens::entry_save(
+        &w.env.ctx,
+        &w.owner,
+        &GardenEntryInput::OtherSale(GardenOtherSaleInput {
+            garden_id: Some(garden),
+            date: date.into(),
+            shop: Some("Haji Traders".into()),
+            qty: qty.into(),
+            amount: amount.into(),
+            note: None,
+        }),
+    )
+    .unwrap();
+}
+
+/// A sale in our shop: a lot of the garden sold to a buyer on credit, no lot charges.
+pub fn garden_lot_sale(
+    w: &support::World,
+    garden_account: i64,
+    date: &str,
+    qty: &str,
+    buyer: i64,
+    rate: &str,
+) -> mandi_services::core::bikri::BikriSaved {
+    let mut lot = support::with_sales(
+        support::bare_lot(w, "garden-1", garden_account, w.banana, qty),
+        vec![support::sale("s-1", buyer, qty, rate)],
+    );
+    lot.adjust_advance = false;
+    let mut draft = support::draft(vec![lot]);
+    draft.header.entry_date = date.into();
+    save(w, &draft)
+}
+
+/// Closes a garden on a day.
+pub fn garden_close(w: &support::World, garden: i64, date: &str) {
+    use mandi_services::core::gardens::{GardenCloseInput, GardenGetInput};
+    let version = mandi_services::gardens::get(
+        &w.env.ctx,
+        &GardenGetInput {
+            id: garden,
+            history_offset: 0,
+            history_limit: 0,
+        },
+    )
+    .unwrap()
+    .row
+    .version;
+    mandi_services::gardens::close(
+        &w.env.ctx,
+        &w.owner,
+        &GardenCloseInput {
+            id: garden,
+            version,
+            date: date.into(),
+        },
+    )
+    .unwrap();
+}
+
+/// E2E-40 up to the day before the closing: payments of 10-10 (30,000) and 11-10 (20,000 and the
+/// labour 5,000), the sale of 100 at 600 to ارشد in our shop and 10,000 from another shop on 12-10.
+/// Returns the world and the garden.
+pub fn garden_40() -> (support::World, mandi_services::core::gardens::GardenRow) {
+    let w = worked_day();
+    let garden = garden_made(&w);
+    set_today(&w.env, 2026, 10, 11);
+    garden_pay(&w, garden.id, false, "11-10-2026", "20,000", "installment");
+    garden_pay(&w, garden.id, true, "11-10-2026", "5,000", "labour");
+    set_today(&w.env, 2026, 10, 12);
+    garden_lot_sale(&w, garden.account.id, "12-10-2026", "100", w.arshad, "600");
+    garden_other_sale(&w, garden.id, "12-10-2026", "20", "10,000");
+    (w, garden)
+}
+
+/// E2E-40b up to the day before the closing: the payments and only the other shop's 10,000.
+pub fn garden_40b() -> (support::World, mandi_services::core::gardens::GardenRow) {
+    let w = worked_day();
+    let garden = garden_made(&w);
+    set_today(&w.env, 2026, 10, 11);
+    garden_pay(&w, garden.id, false, "11-10-2026", "20,000", "installment");
+    garden_pay(&w, garden.id, true, "11-10-2026", "5,000", "labour");
+    set_today(&w.env, 2026, 10, 12);
+    garden_other_sale(&w, garden.id, "12-10-2026", "20", "10,000");
+    (w, garden)
+}

@@ -16,4 +16,5 @@ export type AnalyticsFilterKind =
   | 'partner'
   | 'trip'
   | 'goods'
-  | 'trip_view';
+  | 'trip_view'
+  | 'garden';
