@@ -334,8 +334,34 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "allow-app-data-status",
             "allow-auth-status",
             "allow-reports-bikri-print-data",
+            "allow-reports-collection-print-data",
             "allow-reports-voucher-print-data",
             "core:event:default"
         ])
     );
+    // The hidden window reads the print data of exactly three documents (the بکری documents, the
+    // voucher slip and the collection list, plan 17e) and calls no command that writes or prints.
+    let print_data: Vec<&str> = cap["permissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|p| p.ends_with("-print-data"))
+        .collect();
+    assert_eq!(
+        print_data,
+        [
+            "allow-reports-bikri-print-data",
+            "allow-reports-collection-print-data",
+            "allow-reports-voucher-print-data"
+        ]
+    );
+    let others: Vec<&str> = cap["permissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|p| p.starts_with("allow-") && !p.ends_with("-print-data"))
+        .collect();
+    assert_eq!(others, ["allow-app-data-status", "allow-auth-status"]);
 }

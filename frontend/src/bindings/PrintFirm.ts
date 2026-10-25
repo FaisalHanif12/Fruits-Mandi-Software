@@ -17,7 +17,7 @@ export type PrintFirm = {
    */
   address: string;
   /**
-   * Phone as typed. Empty if none.
+   * Phone, printed `03XX-XXXXXXX` with plain digits. Empty if none.
    */
   phone: string;
 };

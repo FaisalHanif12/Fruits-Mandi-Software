@@ -156,6 +156,29 @@ pub fn search_phonetic(name_en: &str) -> String {
     key
 }
 
+/// A phone as every print shows it: `03XX-XXXXXXX` (Umar's own print shows `0300-4058860`). The
+/// phone is stored as 11 plain digits (Code Standards 4.2); only the print adds the dash. The
+/// digits stay the plain digits 0-9 whatever the print language or the Urdu digits setting (PRD
+/// FR-7.21, FR-7.32). Text that is not exactly 11 ASCII digits starting with `03` (an empty phone,
+/// an old value typed with a dash) is returned as it is.
+///
+/// ```
+/// use mandi_core::text::phone_display;
+/// assert_eq!(phone_display("03004058860"), "0300-4058860");
+/// assert_eq!(phone_display("0300-4058860"), "0300-4058860");
+/// assert_eq!(phone_display(""), "");
+/// ```
+pub fn phone_display(phone: &str) -> String {
+    let digits = phone.trim();
+    let is_mobile = digits.len() == 11
+        && digits.starts_with("03")
+        && digits.bytes().all(|b| b.is_ascii_digit());
+    match (is_mobile, digits.get(..4), digits.get(4..)) {
+        (true, Some(prefix), Some(number)) => format!("{prefix}-{number}"),
+        _ => phone.trim().to_owned(),
+    }
+}
+
 /// `search_ur` of an account with a tag (نشان, PRD 10.2, FR-7.40): the Urdu key and the tag as one
 /// more lower-case word, so `عاشق k` finds `عاشق ظفر K`. With no tag it is exactly `search_ur`, so an
 /// account without a tag keeps the key it had.
@@ -558,5 +581,48 @@ mod tagged_key_tests {
     fn an_empty_name_with_a_tag_is_just_the_tag() {
         assert_eq!(search_en_tagged("", Some("K")), "k");
         assert_eq!(search_ur_tagged("", Some("K")), "k");
+    }
+}
+
+#[cfg(test)]
+mod phone_display_tests {
+    use super::*;
+
+    #[test]
+    fn eleven_digits_get_the_dash_after_the_operator_code() {
+        assert_eq!(phone_display("03004058860"), "0300-4058860");
+        assert_eq!(phone_display(" 03211234567 "), "0321-1234567");
+        assert_eq!(phone_display("03000000000"), "0300-0000000");
+    }
+
+    #[test]
+    fn anything_else_is_left_as_it_is() {
+        for same in [
+            "",
+            "0300-4058860",
+            "3004058860",
+            "030040588601",
+            "04004058860",
+            "0300405886a",
+            "۰۳۰۰۴۰۵۸۸۶۰",
+        ] {
+            assert_eq!(phone_display(same), same, "{same}");
+        }
+    }
+
+    #[test]
+    fn the_result_is_ascii_digits_and_one_dash_and_never_panics() {
+        for text in [
+            "03004058860",
+            "٠٣٠٠٤٠٥٨٨٦٠",
+            "0300😀405886",
+            "０３００４０５８８６０",
+        ] {
+            let shown = phone_display(text);
+            if shown != text {
+                assert!(shown.chars().all(|c| c.is_ascii_digit() || c == '-'));
+                assert_eq!(shown.matches('-').count(), 1);
+            }
+        }
     }
 }

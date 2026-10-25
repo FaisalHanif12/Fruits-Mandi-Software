@@ -232,7 +232,7 @@ fn the_golden_list_prints_2880_18684_and_21564() {
         );
         assert_eq!(rows[0].oldest_bill_date.as_deref(), Some("10-10-2026"));
         assert_eq!(rows[0].oldest_days.as_deref(), Some("0"));
-        assert_eq!(rows[0].phone, "03001234567");
+        assert_eq!(rows[0].phone, "0300-1234567");
     }
     let ur = print(&golden_list(), Language::Ur);
     assert_eq!(ur.dir, TextDir::Rtl);
@@ -350,12 +350,13 @@ fn a_default_urdu_collection_print_has_only_plain_digits_everywhere() {
             assert!(!has_urdu_digit(&value), "{language:?}: {value}");
         }
     }
-    // The setting on is the one case: then the numbers are Urdu digits, the phones and codes not.
+    // The setting on is the one case: then the numbers are Urdu digits, the phones and codes not
+    // (a phone is plain digits and the dash of `03XX-XXXXXXX`).
     let mut set = options(Language::Ur);
     set.setup.urdu_digits = true;
     let on = serde_json::to_value(build_collection(&golden_list(), &set).unwrap()).unwrap();
     assert!(has_urdu_digit(&on));
-    assert_eq!(on["groups"][0]["rows"][0]["phone"], "03001234567");
+    assert_eq!(on["groups"][0]["rows"][0]["phone"], "0300-1234567");
     assert_eq!(on["groups"][0]["rows"][0]["code"], "1");
 }
 

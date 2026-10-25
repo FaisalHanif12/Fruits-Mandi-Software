@@ -13,16 +13,16 @@ expression: "build_collection(&grouped_list(), &set).unwrap()"
       "name": "ماہر عدنان اینڈ برادرز",
       "mandi": "نیو سبزی منڈی کوٹ رادھا کشن",
       "address": "Kot Radha Kishan",
-      "phone": "03001234567"
+      "phone": "0300-1234567"
     },
     "contacts": [
       {
         "name": "منشی آصف بھٹی",
-        "phone": "03004058860"
+        "phone": "0300-4058860"
       },
       {
         "name": "اکرم",
-        "phone": "03211234567"
+        "phone": "0321-1234567"
       }
     ],
     "trade_mark": "RH",
@@ -74,7 +74,7 @@ expression: "build_collection(&grouped_list(), &set).unwrap()"
           "code": "3",
           "name": "عاشق ظفر",
           "tag": "K",
-          "phone": "03211234567",
+          "phone": "0321-1234567",
           "dues": "5,000",
           "oldest_bill_date": "30-09-2026",
           "oldest_days": "10"
@@ -83,7 +83,7 @@ expression: "build_collection(&grouped_list(), &set).unwrap()"
           "serial": "3",
           "code": "12",
           "name": "طارق محمود",
-          "phone": "03001112223",
+          "phone": "0300-1112223",
           "dues": "1,200",
           "oldest_bill_date": null,
           "oldest_days": null

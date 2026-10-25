@@ -18,6 +18,7 @@ use mandi_core::accounts::short_code_of;
 use mandi_core::auth::Language;
 use mandi_core::money::{Grouping, Paisa};
 use mandi_core::printing::{CollectionFilterNames, Paper, PrintDoc, PrintSetup};
+use mandi_core::text;
 use mandi_core::vouchers::CollectionList;
 use mandi_db::Db;
 use serde::{Deserialize, Serialize};
@@ -62,7 +63,7 @@ pub struct CollectionPrintRow {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub tag: Option<String>,
-    /// His phone as typed (PRD FR-7.25). Empty if none.
+    /// His phone as the print shows it, `03XX-XXXXXXX` (stored as 11 digits). Empty if none.
     pub phone: String,
     /// What he owes (his debit balance), in whole rupees, formatted for print.
     pub dues: String,
@@ -219,7 +220,7 @@ pub fn build_collection(
                     .unwrap_or_else(|| buyer.account.code.clone()),
                 name: pick(language, &buyer.account.name_ur, &buyer.account.name_en),
                 tag: buyer.account.tag.clone(),
-                phone: buyer.phone.clone(),
+                phone: text::phone_display(&buyer.phone),
                 dues: style.money(buyer.dues_paisa)?,
                 oldest_bill_date: buyer
                     .oldest_bill_date

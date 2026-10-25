@@ -27,7 +27,7 @@ export type PrintParty = {
    */
   tag?: string;
   /**
-   * The phone as typed. Null if none.
+   * The phone, printed `03XX-XXXXXXX` with plain digits. Null if none.
    */
   phone: string | null;
 };

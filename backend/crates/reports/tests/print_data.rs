@@ -332,7 +332,7 @@ fn pukhta_slip_of_event2_shows_12800_paid_and_its_words() {
         assert_eq!(page.payment_id.as_deref(), Some("print-payment-cash"));
         assert_eq!(page.party.role_id, "print-party-onetime-buyer");
         assert_eq!(page.party.code, None);
-        assert_eq!(page.party.phone.as_deref(), Some("03000000000"));
+        assert_eq!(page.party.phone.as_deref(), Some("0300-0000000"));
         let words = &page.words.as_ref().unwrap().text;
         match language {
             Language::Ur => {
