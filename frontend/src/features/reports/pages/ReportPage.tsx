@@ -17,7 +17,7 @@
 import { Localized } from '@fluent/react';
 import type { InfiniteData } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, FileX, Printer } from 'lucide-react';
+import { ArrowLeft, FileX, Files, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import type { ReportPage as ReportPageData } from '../../../bindings/ReportPage';
@@ -36,6 +36,7 @@ import { Remembered, type ScreenMemory } from '../../../shared/screen-state';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { PrintAction } from '../../bikri';
 import { ReportFilterBar } from '../components/ReportFilterBar';
+import { BuyerBillsPreview } from '../components/BuyerBillsPreview';
 import { ReportPreview } from '../components/ReportPreview';
 import { ReportResults } from '../components/ReportResults';
 import type { ReportRowView } from '../columns';
@@ -190,7 +191,7 @@ function ReportBody({
   // (`PrintAction`, which has its own F9), not a page of the report.
   const printsBill = entry.id === 'R1';
   useShortcut(SHORTCUTS.print, () => {
-    if (wire !== null && !printsBill) setView('preview');
+    if (wire !== null && !printsBill && view === 'table') setView('preview');
   });
 
   const change = (part: Partial<ReportFilterState>) => {
@@ -302,7 +303,7 @@ function ReportBody({
           ) : (
             <Button
               shortcut={SHORTCUTS.print}
-              disabled={wire === null || view === 'preview'}
+              disabled={wire === null || view !== 'table'}
               onClick={() => {
                 setView('preview');
               }}

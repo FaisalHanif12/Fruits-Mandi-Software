@@ -9,6 +9,9 @@
 //      columns and a totals row, and never scroll sideways.
 //   4. F9 on R1 opens the print box of that بکری (the bill), and Esc closes it.
 //   5. Alt+L turns R1 to English, left to right, with the same بکری still picked and the same rows.
+//   6. R5 is in English, left to right, with the same buyers.
+//   7. R5 "Print all slips" opens one sheet for each credit buyer (as many as the table has rows), with
+//      no sideways scroll, and Esc goes back to the table.
 // The figures are the backend's and are proved by the Rust tests (E2E-1, E2E-36) and the report
 // fixtures; this spec proves that the screens ask for what was typed, show what the backend sends,
 // never add up a list themselves and never overflow sideways. It runs on Windows only (LOCAL-ONLY in
@@ -19,6 +22,7 @@ import { OWNER } from '../support/credentials.mjs';
 import { t } from '../support/messages.mjs';
 import {
   Key,
+  button,
   focusField,
   openRoute,
   pageText,
@@ -168,5 +172,37 @@ describe('credit buyers details and the sale book report (English)', () => {
     expect(await noSidewaysScroll()).toBe(true);
     await shootScreen('reports-r5', 'en');
     await switchLanguage('ur');
+  });
+});
+
+describe('credit buyers slips (Urdu)', () => {
+  it('7. Print all slips shows one sheet for each credit buyer, and Esc goes back to the table', async () => {
+    await openRoute('#/reports/R5');
+    await waitForHeading('ur', 'report-r5-title');
+    await focusField('ur', 'report-filter-from');
+    await type(DAY);
+    await focusField('ur', 'report-filter-to');
+    await type(DAY);
+    await waitForAnswer('ur');
+    const buyers = await rowCount();
+    expect(buyers).toBeGreaterThan(0);
+    await (await button('ur', 'report-print-all')).click();
+    await browser.waitUntil(async () => (await $$('.print-sheet')).length > 0, {
+      timeout: WAIT_MS,
+      timeoutMsg: 'The slips never opened.',
+    });
+    // One sheet for each buyer of the table, each with his own totals row.
+    expect(await $$('.print-sheet')).toHaveLength(buyers);
+    expect(await $$('.print-sheet tfoot')).toHaveLength(buyers);
+    expect(await showsNoRawText()).toBe(true);
+    expect(await noSidewaysScroll()).toBe(true);
+    await shootScreen('reports-r5-slips', 'ur');
+    await press(Key.Escape);
+    await browser.waitUntil(async () => (await $$('.print-sheet')).length === 0, {
+      timeout: WAIT_MS,
+      timeoutMsg: 'Esc never went back to the table.',
+    });
+    await waitForAnswer('ur');
+    expect(await rowCount()).toBe(buyers);
   });
 });

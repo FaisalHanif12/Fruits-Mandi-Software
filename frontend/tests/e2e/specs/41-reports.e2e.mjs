@@ -63,8 +63,9 @@ async function openTrialBalance(language) {
     window.location.hash = '#/reports';
   });
   await waitForHeading(language, 'reports-title');
-  // The first report has focus; ↓ moves down the list in PRD order: R11, R13, R14, R16, R17, R18.
-  for (let step = 0; step < 5; step += 1) await press(Key.ArrowDown);
+  // The first report (R1) has focus; ↓ moves down the list in PRD order: the ten Sales reports (R1 to
+  // R10), then R11, R12, R13, R14, R15, R16, R17 and R18, which is seventeen steps down.
+  for (let step = 0; step < 17; step += 1) await press(Key.ArrowDown);
   await press(Key.Enter);
   await waitForHeading(language, 'report-r18-title');
 }

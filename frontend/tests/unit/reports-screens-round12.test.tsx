@@ -6,7 +6,7 @@
 // seller's bill itself, not a page of the report. The four states, the print, a language switch and the
 // keyboard are each proved. The screen adds up nothing: every figure is one the backend sent.
 
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReportCell } from '../../src/bindings/ReportCell';
@@ -29,6 +29,8 @@ import { paisaForTest } from '../helpers/paisa';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import {
+  BUYER_BILLS_EN,
+  BUYER_BILLS_UR,
   CATALOG,
   PRINT_R5_EN,
   R1_BIKRI_1,
@@ -210,6 +212,112 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     expect(body).toContain('(Banana 30 . 580)');
     expect(body).toContain('18,684');
     expect(visible(document.querySelector('.print-report tfoot')?.textContent)).toContain('31,564');
+  });
+
+  describe('Print all slips: one sheet for each credit buyer (PRD 19.2 R5)', () => {
+    // The slips come in the print language, which starts as the app's.
+    const bills = language === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN;
+    const banana = names('کیلا', 'Banana');
+
+    async function openSlips(options: Parameters<typeof fakeReports>[0] = {}) {
+      const opened = await openCredit(options);
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+      await opened.user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
+      await screen.findAllByText(options.slips?.firm.name ?? bills.firm.name, undefined, SLOW_MS);
+      return opened;
+    }
+
+    it('asks the backend for every buyer of the filter, in the print language and on A4, with the filters of the screen', async () => {
+      await openSlips();
+      expect(vi.mocked(reportsApi.reportsBuyerBillsPrintData)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(reportsApi.reportsBuyerBillsPrintData).mock.calls[0]?.[0]).toMatchObject({
+        id: 'R5',
+        language,
+        paper: 'a4',
+        filters: { bikri_id: null, garden_id: null },
+      });
+      // It is not the table print: that one is not asked for.
+      expect(vi.mocked(reportsApi.reportsPrintData)).not.toHaveBeenCalled();
+    });
+
+    it('draws one sheet for each buyer, in the backend’s order, each with his own lines and totals', async () => {
+      await openSlips();
+      const sheets = Array.from(document.querySelectorAll('.print-report .print-sheet'));
+      expect(sheets).toHaveLength(2);
+      const first = visible(sheets[0]?.textContent);
+      const second = visible(sheets[1]?.textContent);
+      // ارشد first, as the backend orders the names; each sheet holds only his line.
+      expect(first).toContain(names('ارشد ملتانی', 'Arshad Multani'));
+      expect(first).toContain(`(${banana} 30 . 580)`);
+      expect(first).not.toContain(`(${banana} 20 . 600)`);
+      expect(second).toContain(names('اکرم ٹول ٹیکس', 'Akram Toll Tax'));
+      expect(second).toContain(`(${banana} 20 . 600)`);
+      // His totals row is the backend's, never added up here.
+      expect(visible(sheets[0]?.querySelector('tfoot')?.textContent)).toContain('18,684');
+      expect(visible(sheets[1]?.querySelector('tfoot')?.textContent)).toContain('12,880');
+      // His total نگ, with the backend's own message and figure.
+      expect(first).toContain(message(language, bills.qty_label_id));
+    });
+
+    it('shows what all the slips come to in the preview only, from the backend’s totals', async () => {
+      await openSlips();
+      const total = visible(document.querySelector('[data-slips-total]')?.textContent);
+      expect(total).toContain('2');
+      expect(total).toContain('50');
+      expect(total).toContain('29,400');
+      expect(total).toContain('31,564');
+      // It is not inside a slip, so it is not on a buyer's paper.
+      expect(document.querySelector('.print-sheet [data-slips-total]')).toBeNull();
+    });
+
+    it('takes another print language in the frame and asks again', async () => {
+      const { user } = await openSlips();
+      // The frame's own choice, not the language switch of the top bar.
+      await user.click(
+        within(screen.getByRole('main')).getByRole('button', {
+          name: message(language, `common-language-${other}`),
+        }),
+      );
+      await waitFor(() => {
+        expect(
+          vi.mocked(reportsApi.reportsBuyerBillsPrintData).mock.calls.at(-1)?.[0],
+        ).toMatchObject({ language: other });
+      }, SLOW_MS);
+    });
+
+    it('goes back to the table with the filters as they were, and Esc does the same', async () => {
+      const { user } = await openSlips();
+      await user.click(screen.getByRole('button', { name: named(m('common-back')) }));
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+      await user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
+      await screen.findAllByText(bills.firm.name, undefined, SLOW_MS);
+      await user.keyboard('{Escape}');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+    });
+
+    it('says there is nothing to print when no buyer has a slip', async () => {
+      const opened = await openCredit({
+        slips: { ...bills, slips: [], slip_count: '0', qty: '0' },
+      });
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+      await opened.user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
+      await screen.findByText(named(m('report-print-empty')), undefined, SLOW_MS);
+    });
+
+    it('is offered on R5 only', async () => {
+      fakeReports();
+      await renderApp('/reports/R4');
+      await screen.findByRole('heading', { level: 1, name: named(m('report-r4-title')) });
+      expect(screen.queryByRole('button', { name: named(m('report-print-all')) })).toBeNull();
+    });
   });
 
   it('Enter on a buyer does nothing here (the lines have no record of their own) and nothing breaks', async () => {

@@ -9,7 +9,9 @@
 // page code. (A snippet for that tool, not a module, so it is kept as .txt and the linter does not
 // read it. The Windows check is spec 51.)
 //
-// The action `pick` types the number 1 into the بکری box and takes the first match with Enter.
+// The action `pick` types the number 1 into the بکری box and takes the first match with Enter. The
+// action `slips` presses "Print all slips" on R5 and waits for the sheets (one for each buyer); the
+// preview must not scroll sideways either, and every sheet is counted.
 async (page) => {
   const OUT =
     '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan28';
@@ -25,6 +27,7 @@ async (page) => {
     ['R5', '?empty', 'r5-empty', null, 'h1'],
     ['R1', '', 'r1-pick', null, 'h1'],
     ['R1', '', 'r1-bikri', 'pick', '.ag-row'],
+    ['R5', '', 'r5-slips', 'slips', '.print-sheet'],
   ];
   const results = [];
   for (const [width, height] of SIZES) {
@@ -52,6 +55,13 @@ async (page) => {
             await page.waitForSelector(ready, { timeout: 30000 });
             await page.waitForTimeout(900);
           }
+          if (act === 'slips') {
+            await page
+              .getByRole('button', { name: /Print all slips|تمام پرچیاں پرنٹ کریں/ })
+              .click();
+            await page.waitForSelector(ready, { timeout: 30000 });
+            await page.waitForTimeout(900);
+          }
           const o = await page.evaluate(() => {
             const root = document.documentElement;
             const grids = Array.from(
@@ -61,7 +71,7 @@ async (page) => {
             const clipped = Array.from(
               document.querySelectorAll('.ag-cell, .ag-header-cell'),
             ).filter((c) => c.scrollWidth > c.clientWidth + 1).length;
-            const raw = /report-col-|report-r[15]-|report-pick|report-filter-|report-detail|ERR_|<num>/.test(
+            const raw = /report-col-|report-r[15]-|report-pick|report-print-all|report-buyer-bills|report-filter-|report-detail|ERR_|<num>/.test(
               document.body.innerText,
             );
             return [
@@ -72,6 +82,11 @@ async (page) => {
               'mainX=' + (main ? main.scrollWidth - main.clientWidth : 0),
               'clipped=' + clipped,
               'cols=' + document.querySelectorAll('.ag-header-cell').length,
+              'sheets=' + document.querySelectorAll('.print-sheet').length,
+              'docX=' +
+                Array.from(document.querySelectorAll('.print-doc'))
+                  .map((n) => n.scrollWidth - n.clientWidth)
+                  .join(','),
               'raw=' + raw,
             ].join(' | ');
           });

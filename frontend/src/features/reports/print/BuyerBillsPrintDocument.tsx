@@ -156,9 +156,7 @@ function BuyerBillsBody({ data, applyRoot = false, ref }: BuyerBillsPrintDocumen
         {data.totals.map((cell, position) =>
           cell.type === 'empty' ? null : (
             <div key={position} className="print-fact">
-              <dt>
-                {l10n.getString(data.columns[position]?.title_id ?? data.totals_label_id)}
-              </dt>
+              <dt>{l10n.getString(data.columns[position]?.title_id ?? data.totals_label_id)}</dt>
               <dd>
                 <Cell cell={cell} />
               </dd>

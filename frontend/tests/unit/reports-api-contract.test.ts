@@ -13,6 +13,10 @@ import * as api from '../../src/features/reports/api';
 import { bundles, LANGUAGES } from '../../src/i18n';
 import * as invoke from '../../src/shared/api/invoke';
 import {
+  BUYER_BILLS_EN,
+  BUYER_BILLS_EN_REQUEST,
+  BUYER_BILLS_UR,
+  BUYER_BILLS_UR_REQUEST,
   PRINT_R5_EN,
   PRINT_R5_EN_REQUEST,
   R1_BIKRI_1,
@@ -819,6 +823,39 @@ describe('round 12: R1, the sale book, and R5, the credit buyers’ details', ()
     expect(CATALOG.filter((candidate) => candidate.group === 'sales').map((c) => c.id)).toEqual(
       expect.arrayContaining(['R1', 'R2', 'R3', 'R4', 'R5', 'R6']),
     );
+  });
+
+  it('asks for every slip of R5 with the print input of R5 and sends the exact requests the backend wrote', async () => {
+    await api.reportsBuyerBillsPrintData(BUYER_BILLS_EN_REQUEST);
+    await api.reportsBuyerBillsPrintData(BUYER_BILLS_UR_REQUEST);
+    expect(call.mock.calls).toEqual([
+      ['reports_buyer_bills_print_data', { input: BUYER_BILLS_EN_REQUEST }],
+      ['reports_buyer_bills_print_data', { input: BUYER_BILLS_UR_REQUEST }],
+    ]);
+    expect(BUYER_BILLS_EN_REQUEST.id).toBe('R5');
+    expect(BUYER_BILLS_UR_REQUEST.language).toBe('ur');
+  });
+
+  it('reads the slips as the backend wrote them: one sheet for each buyer, in the Urdu order, with his totals and the totals of all', () => {
+    expect(BUYER_BILLS_EN.slips.map((slip) => slip.party.name)).toEqual([
+      'Arshad Multani',
+      'Akram Toll Tax',
+    ]);
+    expect(BUYER_BILLS_EN.slips.map((slip) => slip.qty)).toEqual(['30', '20']);
+    expect(BUYER_BILLS_EN.slip_count).toBe('2');
+    expect(BUYER_BILLS_EN.qty).toBe('50');
+    expect(BUYER_BILLS_EN.columns.map((column) => column.key)).toEqual([
+      'serial',
+      'detail',
+      'value',
+      'buyer_total',
+    ]);
+    // Each slip's totals row has a cell for each column; the totals of all are the R5 totals row.
+    for (const slip of BUYER_BILLS_EN.slips) {
+      expect(slip.totals).toHaveLength(BUYER_BILLS_EN.columns.length);
+    }
+    expect(BUYER_BILLS_EN.totals).toHaveLength(BUYER_BILLS_EN.columns.length);
+    expect(BUYER_BILLS_UR.dir).toBe('rtl');
   });
 
   it('sends the exact requests the backend wrote: the sale book, its refusal, the credit buyers and the print', async () => {

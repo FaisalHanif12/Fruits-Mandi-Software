@@ -751,12 +751,12 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       const { router } = await renderApp('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
       const user = userEvent.setup();
-      // R2 R3 R4 R6 R7 R8 R9 R10 R11 R12 R13 R14 R15 R16 R17 R18 R19 are in front of R20: seventeen
+      // The ten Sales reports (R1 to R10, R1 has focus) and R11 to R19 are in front of R20: nineteen
       // steps down.
       await waitFor(() => {
-        expect(document.activeElement?.getAttribute('href')).toMatch(/R2$/);
+        expect(document.activeElement?.getAttribute('href')).toMatch(/R1$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(17)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(19)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R20');
       }, SLOW_MS);

@@ -161,8 +161,19 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - R1's print is the bill itself: once a بکری is picked the preview button gives way to the shared
   `PrintAction` of the sale book (its box, its F9, its languages and paper). R1 has its own column
   steps in `COLUMN_STEPS`: the lot's number charges stay behind the wider steps, and the print has all.
-- Not built: "Print All", one slip per buyer from R5 (the generic table print is used). Tests:
-  `reports-screens-round12.test.tsx`, the R1 and R5 blocks of `reports-api-contract.test.ts`.
+- R5 "Print all slips" (PRD 19.2 R5): the button next to the print preview opens `BuyerBillsPreview`
+  (the same frame as the report preview, with the print language and the paper). It asks the backend's
+  own command `reports_buyer_bills_print_data` (`reportsBuyerBillsPrintData`, hook
+  `useBuyerBillsPrintData`) for every buyer of the filter, and `print/BuyerBillsPrintDocument.tsx` draws
+  one `print-sheet` for each buyer (print.css starts each on a new page): the shared sheet header
+  (`print/ReportSheetHeader.tsx`), who the slip is for, his lines "(item qty . rate)", his totals row and
+  his total نگ. What all the slips come to is in the preview only (`data-slips-total`), not on a buyer's
+  paper. The cells are the shared `print/PrintCell.tsx` that the report print uses too. Sending to the
+  printer and saving as PDF wait for the report print job (plan 17e), like the report preview.
+- The rate in the detail line is written plain, "2600", through the `plain` option of `formatPaisa`
+  (`money(amount, true)` of the list context): the one place that skips the grouping, as on the client's
+  own print. Tests: `reports-screens-round12.test.tsx`, the R1 and R5 blocks of
+  `reports-api-contract.test.ts`, `money-format.test.ts`.
 
 ## Not built yet
 
