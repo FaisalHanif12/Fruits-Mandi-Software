@@ -42,9 +42,15 @@ R10. **Nothing else changes.** No money rule, posting, formula or golden number 
 | Type `xyz` in it | empty list and the button "نیا گاہک بنائیں"; pressing it opens Index → New account, type Buyer, Urdu name box holds `xyz`; Save → back to the sale with every line still there |
 | Worked day with new codes | Rahim 0010, Karim 0011, Akram 0020, Arshad 0021, Tariq (E2E-23) 0022, حاجی نذیر (E2E-42) 0012; every amount of PRD 4 and 27 unchanged |
 
-## 4. Contract
+## 4. Contract (from `backend` T1, 27-10-2026; `pnpm gen:types` wrote 668 files)
 
-Written by `backend` in T1 and copied here by the lead. It must cover: the new code builder and parser in `core` (type number, running number, no padding, the short-code rule), the migration (a **new** numbered file that renumbers existing sellers, buyers, items, packings, staff and the two pukhta accounts; released migrations are never edited), the accounts list filter enum (all, seller, buyer, pukhta) and which accounts it returns, the account form types, `search_accounts` and the master searches with **empty text** (all of the type, recent first then by code, paged), the next-code commands, the clean-data tool (R9), and every error code with its field.
+1. **Codes** (`mandi_core::codes`): type numbers seller 001, buyer 002, pukhta 003, item 004, packing 005, staff 006. Code = type number + running number from 0, no padding, at most 10 digits. Functions `build_code`, `parse_code`, `parse_running`, `running_of`, `next_running`, `check_typed_code`, `short_code_of_party`, `code_sort_key`. Pukhta buyer 0030 (running 0), pukhta seller 0031 (running 1). A full code starts with `00`, so it is never taken for a short code. A short code is a running number with no leading zero (`0`, `11`). `short_code_of(code)` gives the running number for sellers and buyers, none for pukhta and others (reports use it).
+2. **Accounts list:** `AccountFilter { kind: AccountListKind, text, include_inactive }` (the old `account_type` field is gone). `AccountListKind` = all, seller, buyer, pukhta. "all" = regular sellers (control 03011, not system) + regular buyers (control 0304, not system) + the two pukhta accounts, nothing else. The footer is over the same rows. Backend `AccountType` is unchanged (seller, buyer, money_lent, other); the Accounts form offers Seller and Buyer only.
+3. **Next code:** `accounts_next_code` gives 0010, 0011 … and 0020 … for seller and buyer; other types unchanged (control code + 4 digits). `masters_next_code` gives 0040 …, 0050 …, 0060 … for item, packing, staff; other masters unchanged. Staff gets a `code` column (migration 0007), `StaffInput.code`, `StaffRow.code`.
+4. **Errors** (all on `code`): `ERR_CODE_INVALID` (wrong type, padded, letters), `ERR_CODE_TAKEN`, `ERR_SERIES_FULL` (numbers used up). `ERR_CODE_RESERVED` is no longer returned for sellers and buyers; `resolve_code` never returns "reserved".
+5. **Search:** `SearchMastersInput` and `SearchAccountsInput` gain `offset`. Empty text = the whole list: the records chosen last first, then every other active record by code, pages of at most 50 (a page shorter than `limit` is the last). With text: exact code, running number, start of code or running number, names, used before, close spellings. `search_recent` and `search_accounts_recent` order the rest by code. `search_global` with empty text returns nothing. `resolve_code`: a full code exactly; a running number as a short code (found, several, unknown with `suggested_code`, inactive).
+6. **Migration** `0007_simple_party_codes.sql` + a Rust hook (new file; no old migration edited): renumbers non-system sellers and buyers, the two pukhta accounts (03049999 → 0030, 030119999 → 0031), items, packings and staff, keeping their order; sets `accounts.serial` to the running number; lifts the 0 to 9999 limit on `accounts.serial` (same schema edit as migration 0006); recreates the trigger `accounts_system_fixed`. No amount, journal line, id or chain hash is touched.
+7. **Order by code:** one SQL helper (type number, length, code), so 00110 sorts after 0019 (D3).
 
 ## 5. Tasks
 
@@ -79,6 +85,14 @@ Pukhta persons as accounts. Renumbering cities, addas, marks, stores, narrations
 2. Pukhta: "a user [who] rarely comes to buy the things; may be he can give the cash on the spot or can give later on against the goods he buys". Lead's reading: today's pukhta, codes 0030 and 0031 (R3). To confirm with Umar.
 3. Clean data: keep sign-in and partners (his data has no partners), remove all sellers, buyers, items, packings, staff and entries.
 4. No-match button: go to the Index; the entry is kept and comes back.
+
+## 8b. Decisions of the lead
+
+D1 (27-10-2026, from `frontend`'s F1 question). An entry screen keeps its unsaved form in its own state, and leaving the route asks "save changes?". So the R8 button does not change the route. It opens the real Index form (the same AccountForm or MasterForm, same title, the main menu showing انڈکس) full screen over the work area. Save or Esc closes it. The screen underneath never unmounts, so nothing typed is lost. After Save, the list re-opens with the new record visible. Focus goes back to the picker that opened it. To Umar this is the Index form, as he chose. It is not the "small form" he declined. He is told and can still ask for a real route change.
+
+D2 (27-10-2026). A code has at most 10 digits, so each type can have 9,999,999 records. This is no limit in practice; PRD FR-10.3 says so.
+
+D3 (27-10-2026). Lists sorted by code use type number, then length, then code, so 0019 comes before 00110.
 
 ## 9. Open questions
 

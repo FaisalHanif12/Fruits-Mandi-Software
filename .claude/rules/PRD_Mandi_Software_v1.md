@@ -828,7 +828,7 @@ FR-10.2 [C] **Codes by type** (Umar, 27-10-2026). Each kind of record has a type
 | Staff (عملہ) | **006** | 0060, 0061 ... | [C] |
 | Others | keep their control code + 4-digit serial | 01010001 cash, 04010001 seller commission, 03040000 نقدی منڈی, 030119998 اپنا مال, money lent 0103xxxx, separate khatas 0305xxxx, gardens 0306xxxx; cities, addas, marks, stores, narrations and expense heads keep their codes | [A] |
 
-FR-10.3 [C] **Running numbers.** The next code suggested is the highest running number of that type + 1. The user can type a different free code of the same type. There is no upper limit, and a code is never reused (Umar, 27-10-2026). Example: the first seller is 0010, the eleventh 00110.
+FR-10.3 [C] **Running numbers.** The next code suggested is the highest running number of that type + 1. The user can type a different free code of the same type. There is no limit in practice (a code has at most 10 digits, so 9,999,999 of each type), and a code is never reused (Umar, 27-10-2026). Example: the first seller is 0010, the eleventh 00110.
 
 FR-10.4 [A] Seeded at install (system accounts, the rows below with a fixed code: cannot be deleted or made inactive; codes cannot be changed. Umar, 15-10-2026: a posting refuses an inactive account, so an inactive روکڑ would stop every voucher. The per-person rows, such as 0103xxxx and 0305xxxx, are normal accounts):
 
@@ -1892,7 +1892,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | E26 | Restore of an older backup | Warning listing what will be lost; safety copy first |
 | E27 | Rounding leftover in a split | Goes to the largest share; totals always exact |
 | E28 | Lot net negative (deductions more than gross) | Allowed with a red warning; seller ends up owing |
-| E29 | A code typed that is already used | Refused; the next free code is suggested. There is no upper limit (FR-10.3). |
+| E29 | A code typed that is already used | Refused; the next free code is suggested (FR-10.3). |
 | E30 | Two one-time people in پختہ کھاتہ | Separate balances and matching per person (FR-13.5) |
 | E31 | Money typed with decimals ("850.50") | Not allowed: "رقم پورے روپوں میں لکھیں" |
 | E32 | Language switched in the middle of an unsaved بکری | Values, selected row, cursor and draft stay; only words, names and direction change (FR-7.33) |
