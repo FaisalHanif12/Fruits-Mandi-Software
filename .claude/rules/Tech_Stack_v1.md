@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.5 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026 and 22-10-2026) |
-| Date | 22 October 2026 |
+| Version | 1.6 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026 and 27-10-2026) |
+| Date | 27 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.7 (the master), NFR v1.4 |
+| Depends on | PRD v1.8 (the master), NFR v1.5 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---
@@ -212,7 +212,7 @@ If long help text is needed, IndicTrans2 (MIT licence, supports Urdu) can produc
 | Piece | Where | How |
 |---|---|---|
 | Party card | Command `assist_party_card(account_id)`; component `shared/ui/PartyCard` | One query on indexed balances and the matching tables; target NFR-SPD-21 |
-| Short codes and smart search | Command `search_accounts(text, scope)`; component `shared/ui/AccountPicker` | Rust index in memory: code, serial, three name keys (the tag included), father or firm, city, phone. Order: exact code, exact serial (in a seller or buyer field, that type only; in an any-account field, the seller and the buyer with that serial), starts-with, recent and frequent (from `user_prefs`), then close matches by `strsim` Damerau-Levenshtein (at most 1 mistake up to 5 letters, 2 above). Target NFR-SPD-6. |
+| Short codes and smart search | Command `search_accounts(text, scope)`; component `shared/ui/AccountPicker` | Rust index in memory: code, serial, three name keys (the tag included), father or firm, city, phone. Order: exact code, exact running number (the short code, PRD FR-7.39; in a seller or buyer field, that type only; in an any-account field, the seller and the buyer with that running number), code starts-with, name starts-with, recent and frequent (from `user_prefs`), then close matches by `strsim` Damerau-Levenshtein (at most 1 mistake up to 5 letters, 2 above). Target NFR-SPD-6. With empty text (a click on the picker, PRD FR-7.10) it returns every record of the field's type, recent first, then by code, a page at a time. |
 | How was this worked out | Every preview result from the backend carries a `working` object for each calculated amount (formula, inputs, rule ID); component `shared/ui/CalcInfo` | The frontend never rebuilds the working; it only shows what the backend sent |
 | Attention list | Command `assist_attention()`; components `AttentionBell` (top bar) and the dashboard list | Counts from indexed queries, refreshed after each save event |
 | Memories and hints | Commands `assist_truck_memory`, `assist_seller_memory`, `assist_last_rate`, `assist_open_bills`, `assist_open_payables` | Read-only queries; nothing is saved by them. The rate hint for a lot is returned by `bikri_preview`, which sees the unsaved lines of the screen, and falls back to `assist_last_rate` for saved data (PRD FR-7.53). Open payables use the read-time oldest-first working of PRD FR-7.59 (Money agent 8.2). |
@@ -438,3 +438,4 @@ Urdu words in code: we use simple English transliteration for business terms tha
 | 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list file has six columns (4.4) and its open sources are named and credited (4.4). |
 | 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): module names trips, purchases, gardens, ventures and fruit (5.2). |
 | 1.5 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag is in the search index (4.7). |
+| 1.6 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type, short code = running number, empty-text search for a click (4.7). |

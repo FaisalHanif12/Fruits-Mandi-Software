@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.4 (Umar's changes of 11-10-2026, 15-10-2026 and 18-10-2026) |
-| Date | 19 October 2026 |
+| Version | 1.5 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026 and 27-10-2026) |
+| Date | 27 October 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.7, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.8, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -72,7 +72,7 @@ So 10 years at today's pace is about 30 × 3,650 ≈ 110,000 sale lines. We plan
 
 | ID | Requirement | Target |
 |---|---|---|
-| NFR-SCL-1 | Data volume handled with no change in speed targets | 1,200,000 sale lines, 3,500,000 journal lines, 20,000 accounts (account numbering allows 8,999 sellers and 8,999 buyers, PRD FR-10.3, plus other accounts), 500 items, 20 years of dates |
+| NFR-SCL-1 | Data volume handled with no change in speed targets | 1,200,000 sale lines, 3,500,000 journal lines, 20,000 accounts (codes by type have no upper limit, PRD FR-10.3), 500 items, 20 years of dates |
 | NFR-SCL-2 | Daily volume handled | 500 بکری and 5,000 sale lines in one day |
 | NFR-SCL-3 | Lines in one بکری | Up to 50 lots and 500 sale lines, with no visible lag while typing |
 | NFR-SCL-4 | Database size at NFR-SCL-1 | Under 2 GB on disk; compressed backup under 500 MB |
@@ -379,3 +379,4 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | 1.2 | 12-10-2026 | PRD v1.2: one user, no roles (NFR-SEC-4, NFR-SEC-13, Section 11). Urdu accuracy: new NFR-URD-24 targets with a 15,000-word list and the spelling check; new NFR-URD-29. |
 | 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list size and the accuracy gates of NFR-URD-24 and NFR-URD-25 must be met before go-live (D5), not at the end of D2; until then the numbers are reported and must not drop. |
 | 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): large lists load page by page, with a speed target (NFR-SPD-24); the spelling example in NFR-URD-21 no longer names a cheque. |
+| 1.5 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type have no upper limit (NFR-SCL-1). |

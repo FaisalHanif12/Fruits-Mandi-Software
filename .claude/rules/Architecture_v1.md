@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.7 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026 and 22-10-2026, and his answers of 15-10-2026) |
-| Date | 22 October 2026 |
+| Version | 1.8 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026 and 27-10-2026, and his answers of 15-10-2026) |
+| Date | 27 October 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.7 (the master), NFR v1.4, Tech Stack v1.5, Code Standards v1.8 |
+| Derived from | PRD v1.8 (the master), NFR v1.5, Tech Stack v1.6, Code Standards v1.9 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -223,7 +223,7 @@ flowchart RL
     search, توجہ طلب bell, اردو | English"]
 
     IDX --> IDX1["Chart of accounts: Head, Control, Tree"]
-    IDX --> IDX2["Accounts - sellers 03011, buyers 0304"]
+    IDX --> IDX2["Accounts - sellers 0010, buyers 0020, pukhta 0030"]
     IDX --> IDX3["Items, Packing, City, اڈا, مارکہ, Store, Narration, Expense heads, Staff"]
     IDX --> IDX4["کمیشن اصول - rules"]
 
@@ -902,12 +902,12 @@ sequenceDiagram
     participant A as assist_party_card
     participant DB as SQLite
     participant C as PartyCard
-    U->>P: types 1
+    U->>P: types 0
     P->>S: text = "1", scope = buyer
-    S->>IX: exact code? serial 1 among buyers?
-    IX-->>S: 03040001 اکرم ٹول ٹیکس (only match)
-    S-->>P: match list, first = 03040001
-    P->>A: account_id of 03040001
+    S->>IX: exact code? running number 0 among buyers?
+    IX-->>S: 0020 اکرم ٹول ٹیکس (only match)
+    S-->>P: match list, first = 0020
+    P->>A: account_id of 0020
     A->>DB: balance from journal_lines, credit limit,<br/>oldest open bill from bill_allocations, last entry date
     DB-->>A: 2,880 بنام, bill 10-10-26, 0 days
     A-->>C: card data (read-only)
@@ -929,7 +929,7 @@ flowchart LR
     always read from the database"]
 ```
 
-Search order (Tech Stack 4.7): exact code, exact serial (taken on Enter; in an any-account field both the seller and the buyer with that serial are listed), names starting with the typed text, recent and frequent, then close matches by spelling distance.
+Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter; in an any-account field both the seller and the buyer with that running number are listed), names starting with the typed text, recent and frequent, then close matches by spelling distance.
 
 ---
 
@@ -945,3 +945,4 @@ Search order (Tech Stack 4.7): exact code, exact serial (taken on Enter; in an a
 | 1.5 | 15-10-2026 | PRD v1.5, approved by Umar: the rule tie and no party + group level (diagram 8); line commission allowed by default (diagram 8). `charge_rules.item_group` only with no item and no party (15.5). Section 15.8 lists the three indexes of migration 0002 (no table or column changed). |
 | 1.6 | 19-10-2026 | PRD v1.6, approved by Umar: gardens and market trips (diagrams 4, 5, 6, 9 and 15.1; tables `ventures`, `venture_partners`, `venture_entries`, `venture_entry_parts`; `partners.venture_account_id`; party type garden; `purchases` belongs to a trip, with no supplier account, credit or bank; `analytics_facts.venture_id`; posting types trip_cost, garden_payment, venture_receipt, garden_close, fruit_taken, own_write_off no longer used). Fruit taken (`fruit_takes`, `bikri_lots.qty_taken`, stock move kind taken). One cash account: `bank_accounts`, voucher bank and cheque columns kept but not used. The unreleased migration 0006 of plan 16b carries every v1.6 table, column, posting type and seeded account, for trips, gardens and fruit alike, so later plans need no new migration. |
 | 1.7 | 22-10-2026 | PRD v1.7, approved by Umar: `accounts.tag` (15.4), added by the same unreleased migration 0006; the settings keys `firm_contacts` and `trade_mark` (15.3). No posting type changed. |
+| 1.8 | 27-10-2026 | PRD v1.8, approved by Umar: codes by type (`accounts.code` for sellers, buyers and پختہ کھاتہ, and the codes of items, packings and staff, are the type number + `serial` from 0 with no padding; a new numbered migration renumbers existing rows); diagrams 5 and 20. |

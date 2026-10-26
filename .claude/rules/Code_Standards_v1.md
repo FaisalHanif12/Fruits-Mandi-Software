@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.8 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026 and 23-10-2026) |
-| Date | 23 October 2026 |
+| Version | 1.9 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026 and 27-10-2026) |
+| Date | 27 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.7 (the master), NFR v1.4, Tech Stack v1.5 |
+| Depends on | PRD v1.8 (the master), NFR v1.5, Tech Stack v1.6 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -99,7 +99,7 @@ Rule V0: the backend MUST treat everything from the frontend as untrusted, even 
 | Quantity (نگ) | Whole number, 1 to 1,000,000. A simple sum such as `20+25` (PRD FR-7.48) is evaluated by the backend parser `core::validate::parse_sum`, then checked like a typed number. The same applies to money. | 0, negative, decimals, `×` or `÷`, a sum below 0 | `INTEGER` |
 | Weight | Up to 3 decimals, more than 0 | | `INTEGER` grams |
 | Date | `DD-MM-YYYY`, or shortcuts (PRD FR-7.19) | Impossible dates; for postings, dates on or before the "closed up to" date or after today (PRD FR-6.6) | `TEXT` `YYYY-MM-DD` |
-| Account code | Digits only: control code + 4-digit serial (8 digits, or 9 for sellers). 1 to 4 digits are a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller or buyer field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that serial, each with its type. Must exist and be active for new postings. | Inactive accounts in new postings; reserved serials for user accounts (PRD FR-10.3) | `TEXT` |
+| Account code | Digits only. Sellers, buyers, پختہ کھاتہ, items, packings and staff: the 3-digit type number + a running number from 0 with no padding (0010, 00110; PRD FR-10.2). Other accounts: control code + 4-digit serial. The running number alone is a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller, buyer, item, packing or staff field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that running number, each with its type. Must exist and be active for new postings. | Inactive accounts in new postings; a code already used; a code of another type | `TEXT` |
 | Name (Urdu) | 1 to 100 characters: Urdu letters, digits, spaces and `. - ' ( ) / &`; at least one Urdu letter (PRD FR-7.28) | Empty, only spaces, any Latin letter, control characters | `TEXT` `name_ur` (original) + `search_ur` (normalised) |
 | Name (English) | 1 to 100 characters: Latin letters, digits, spaces and `. - ' ( ) / &`; at least one Latin letter | Empty, only spaces, any Urdu letter, control characters | `TEXT` `name_en` (original) + `search_en` (lower case) + `search_phonetic` |
 | Tag (نشان) | Empty, or 1 to 4 characters: English capital letters A to Z and `.`, at least one letter; lower-case letters are made capital (PRD 10.2) | Urdu letters, digits, spaces, any other sign | `TEXT` `tag` (null), added to `search_en` and `search_phonetic` |
@@ -434,3 +434,4 @@ A change is done only when every box is ticked:
 | 1.6 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag field (4.2, B26, F38). |
 | 1.7 | 23-10-2026 | Approved by Umar (D5-Q1): one exception to the no-float rule, at the Excel export boundary only (M3, M13). |
 | 1.8 | 23-10-2026 | Approved by Umar: the same exception also covers whole-number quantities, through `count_as_f64` in the same file (M13). |
+| 1.9 | 27-10-2026 | Approved by Umar (PRD v1.8): account and master codes by type, short code = running number (4.2). |
