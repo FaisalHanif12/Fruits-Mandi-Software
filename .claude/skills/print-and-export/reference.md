@@ -64,7 +64,7 @@ Page counters in `@page` margin boxes need a recent Chromium-based WebView2. Con
   "number": "1",
   "date": "10-10-2026",
   "printedAt": "10-10-2026 17:40",
-  "seller": { "code": "030110001", "name": "رحیم" },
+  "seller": { "code": "0010", "name": "رحیم" },
   "rows": [
     { "buyer": "اکرم ٹول ٹیکس", "qty": "20", "rate": "600", "amount": "12,000" },
     { "buyer": "ارشد ملتانی", "qty": "30", "rate": "580", "amount": "17,400" }
