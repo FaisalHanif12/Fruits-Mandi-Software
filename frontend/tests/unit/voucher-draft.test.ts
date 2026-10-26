@@ -22,17 +22,17 @@ import { asScreenType, parseVoucherSearch } from '../../src/features/vouchers/sc
 import { moduleMenuOf } from '../../src/app/nav-routes';
 import { voucherRow } from '../helpers/vouchers';
 
-const AKRAM = { id: 21, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
-const RAHIM = { id: 31, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
+const AKRAM = { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
+const RAHIM = { id: 31, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
 const PUKHTA_BUYER = {
   id: 23,
-  code: '03049999',
+  code: '0030',
   name_ur: 'پختہ کھاتہ (خریدار)',
   name_en: 'Pukhta Khata (Buyer)',
 };
 const PUKHTA_SELLER = {
   id: 24,
-  code: '030119999',
+  code: '0031',
   name_ur: 'پختہ کھاتہ (بیوپاری)',
   name_en: 'Pukhta Khata (Seller)',
 };

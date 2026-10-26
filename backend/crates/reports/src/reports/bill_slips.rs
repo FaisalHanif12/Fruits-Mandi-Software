@@ -14,8 +14,8 @@
 //! header with the contacts and the trade mark joins in plan 17e (FR-19.13); until then the
 //! header is the one of the other report prints.
 //!
-//! Example (10-10-26, English): slip 1 is "03040001 Akram Toll Tax" with one row, serial 1,
-//! "(Banana 20 . 600)", 12,000 and 12,880, total Nag 20. Slip 2 is "03040002 Arshad Multani",
+//! Example (10-10-26, English): slip 1 is "0020 Akram Toll Tax" with one row, serial 1,
+//! "(Banana 20 . 600)", 12,000 and 12,880, total Nag 20. Slip 2 is "0021 Arshad Multani",
 //! "(Banana 30 . 580)", 17,400 and 18,684. Shahid has no slip. The totals row reads 29,400 and
 //! 31,564.
 

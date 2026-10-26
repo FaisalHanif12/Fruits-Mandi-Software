@@ -1,10 +1,12 @@
 //! Codes, names and duplicates under attack (D2 attack list items 1 and 5; PRD FR-10.2, FR-10.3,
 //! FR-10.7, FR-7.28, FR-7.63, Code Standards 4.2, E29). Owner: `robustness`.
 //!
-//! - Accounts made at the same moment never get the same code, and the serials come out as
-//!   1, 2, 3 ... with no gap.
-//! - Serial 0000 and 9000 to 9999 are refused for normal accounts, whatever way the code is
-//!   typed. The series stops at 8999 and no code is ever reused.
+//! - Accounts made at the same moment never get the same code, and the running numbers of a type
+//!   (plan 32: 0010, 0011 ... for sellers, 0020, 0021 ... for buyers) come out as 0, 1, 2 ... with
+//!   no gap.
+//! - A typed code that is not a full code of the type (another type, the system's, padded, the old
+//!   forms, odd digits) is refused, whatever way it is written. The numbers of a type stop at the
+//!   7-digit running number and no code is ever reused.
 //! - Hostile names (mixed scripts, zero-width marks, look-alike letters, huge, emoji, control and
 //!   direction marks, SQL, paths, scripts): each is stored as plain text, cleaned, or refused with
 //!   nothing written. Nothing is ever run.
@@ -119,15 +121,18 @@ fn accounts_made_at_the_same_moment_never_share_a_code() {
     let unique: HashSet<&String> = all.iter().collect();
     assert_eq!(unique.len(), all.len(), "two accounts got the same code");
     assert_eq!(all.len(), threads * each);
-    // Serials run 1, 2, 3 ... in each series with no gap and nothing reused.
-    for (prefix, len) in [("0304", 8), ("03011", 9)] {
-        let serials: BTreeSet<u32> = all
+    // Running numbers run 0, 1, 2 ... in each type with no gap and nothing reused.
+    for prefix in ["002", "001"] {
+        let numbers: BTreeSet<u32> = all
             .iter()
-            .filter(|c| c.len() == len && c.starts_with(prefix))
+            .filter(|c| c.starts_with(prefix))
             .map(|c| c[prefix.len()..].parse().unwrap())
             .collect();
-        let want: BTreeSet<u32> = (1..=u32::try_from(serials.len()).unwrap()).collect();
-        assert_eq!(serials, want, "serials of {prefix} have a gap or a repeat");
+        let want: BTreeSet<u32> = (0..u32::try_from(numbers.len()).unwrap()).collect();
+        assert_eq!(
+            numbers, want,
+            "running numbers of {prefix} have a gap or a repeat"
+        );
     }
     assert_eq!(
         count(
@@ -148,63 +153,54 @@ fn accounts_made_at_the_same_moment_never_share_a_code() {
 }
 
 #[test]
-fn a_typed_code_in_the_reserved_ranges_is_refused_every_way_it_is_written() {
+fn a_typed_code_that_is_not_a_full_code_of_the_type_is_refused_every_way_it_is_written() {
+    // Plan 32 R2: a buyer's code is 002 plus a running number with no padding. The codes of the
+    // system, of another type, in the old forms and in odd digits are all refused, nothing written.
+    use mandi_services::core::codes::{CodeType, build_code, parse_code};
     let (dir, env, owner) = ready();
     accounts::save(&env.ctx, &owner, &form(AccountType::Buyer, "اکرم", "Akram")).unwrap();
     let before = count(&dir, "SELECT COUNT(*) FROM accounts");
     let audit_before = audit_total(&dir);
     let bad_buyer_codes = [
-        "03040000", // serial 0000: reserved (نقدی منڈی)
-        "03049000",
-        "03049001",
-        "03049500",
-        "03049998",
-        "03049999", // 9000 to 9999 reserved
-        "03040001", // taken
-        "0304",
+        "03040000", // نقدی منڈی
+        "03049999", // the old code of پختہ کھاتہ
+        "0030",     // پختہ کھاتہ (buyer)
+        "0031",     // پختہ کھاتہ (seller)
+        "0020",     // taken
+        "0010",     // a seller's code
+        "0040",     // an item's code
+        "002",      // no running number
+        "0020x",
+        "00200", // padded: 0 then 0
+        "00201",
+        "0021a",
+        "002 1",
+        "002-1",
+        "003",
+        "0",
+        "21", // a short code is not a code
+        "03040001",
         "030400",
-        "03040",
-        "0304000", // too short to be a code
-        "030400001",
-        "0304000001", // too long
-        "0304000a",
-        "0304 0002",
-        "0304-0002",
-        "03040002 ", // not digits only (a trailing space is trimmed: see below)
+        "0304",
         "03050001",
         "03011000",
         "01010099",
-        "3040002",          // another series
-        "٠٣٠٤٠٠٠٢",         // Arabic-Indic digits
-        "０３０４０００２", // full-width digits
-        "03040002\u{200B}", // a zero-width mark
-        "-03040002",
-        "+03040002",
-        "03040002.0",
-        "0x3040002",
-        "3.04e7",
+        "00212345678",  // 11 digits: too long
+        "٠٠٢١",         // Arabic-Indic digits
+        "００２１",     // full-width digits
+        "0021\u{200B}", // a zero-width mark
+        "-0021",
+        "+0021",
+        "0021.0",
+        "0x21",
+        "2e1",
     ];
     for code in bad_buyer_codes {
         let mut input = form(AccountType::Buyer, "ارشد", "Arshad");
         input.code = code.to_owned();
-        let fingerprint_rows = count(&dir, "SELECT COUNT(*) FROM accounts");
-        let result = accounts::save(&env.ctx, &owner, &input);
-        match result {
-            Ok(row) => {
-                // The only forgiven forms: a typed code that means the next free serial after
-                // trimming. It must then be a normal serial, never a reserved one.
-                let serial: u32 = row.code[4..].parse().unwrap();
-                assert!(
-                    (1..=8999).contains(&serial),
-                    "typed '{code}' gave the reserved serial {serial} ({})",
-                    row.code
-                );
-                assert!(
-                    code.trim() == row.code || code.chars().all(|c| c.is_ascii_digit() || c == ' '),
-                    "typed '{code}' was taken as {}",
-                    row.code
-                );
-            }
+        let rows_before = count(&dir, "SELECT COUNT(*) FROM accounts");
+        match accounts::save(&env.ctx, &owner, &input) {
+            Ok(row) => panic!("typed '{code}' was taken as {}", row.code),
             Err(error) => {
                 assert!(
                     matches!(error, ServiceError::Rejected(_)),
@@ -212,28 +208,29 @@ fn a_typed_code_in_the_reserved_ranges_is_refused_every_way_it_is_written() {
                 );
                 assert_eq!(
                     count(&dir, "SELECT COUNT(*) FROM accounts"),
-                    fingerprint_rows,
+                    rows_before,
                     "typed '{code}' was refused but left a row"
                 );
             }
         }
     }
-    // The reserved serials of the series: a code with serial 0000 or 9000 and up was never
-    // created for a user account, whatever was typed.
+    // The forgiven form: spaces around a good code are trimmed.
+    let mut spaced = form(AccountType::Buyer, "ارشد", "Arshad");
+    spaced.code = " 0025 ".to_owned();
     assert_eq!(
-        count(
-            &dir,
-            "SELECT COUNT(*) FROM accounts WHERE is_system = 0 AND (serial = 0 OR serial >= 9000)"
-        ),
-        0
+        accounts::save(&env.ctx, &owner, &spaced).unwrap().code,
+        "0025"
     );
     // Sellers: the same.
     for code in [
+        "0020",
+        "0030",
+        "0031",
         "030110000",
-        "030119000",
-        "030119001",
         "030119999",
-        "030119500",
+        "001",
+        "0010x",
+        "00103",
     ] {
         let mut input = form(AccountType::Seller, "رحیم", "Rahim");
         input.code = code.to_owned();
@@ -242,28 +239,49 @@ fn a_typed_code_in_the_reserved_ranges_is_refused_every_way_it_is_written() {
         assert!(
             codes
                 .iter()
-                .any(|c| matches!(c, ErrorCode::ErrCodeReserved | ErrorCode::ErrCodeTaken)),
+                .any(|c| matches!(c, ErrorCode::ErrCodeInvalid | ErrorCode::ErrCodeTaken)),
             "seller code {code}: {codes:?}"
         );
     }
-    // The next free code is still the right one.
-    let next = accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap();
-    let highest: String = raw(&dir)
-        .query_row(
-            "SELECT MAX(code) FROM accounts WHERE code LIKE '0304____' AND serial BETWEEN 1 AND 8999",
-            [],
-            |r| r.get(0),
+    // Every normal seller and buyer on file has a full code of its own type.
+    let conn = raw(&dir);
+    let mut statement = conn
+        .prepare(
+            "SELECT a.code, k.code FROM accounts a JOIN account_controls k ON k.id = a.control_id
+             WHERE a.is_system = 0 AND k.code IN ('03011', '0304')",
         )
         .unwrap();
-    let want = format!("0304{:04}", highest[4..].parse::<u32>().unwrap() + 1);
-    assert_eq!(next, want);
+    let rows: Vec<(String, String)> = statement
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(!rows.is_empty());
+    let mut highest = 0_u64;
+    for (code, control) in &rows {
+        let parsed =
+            parse_code(code).unwrap_or_else(|| panic!("{code} is not a code of the scheme"));
+        let want = if control == "0304" {
+            CodeType::Buyer
+        } else {
+            CodeType::Seller
+        };
+        assert_eq!(parsed.code_type, want, "{code}");
+        if want == CodeType::Buyer {
+            highest = highest.max(parsed.running);
+        }
+    }
+    // The next free code goes on from the highest and never repeats one.
+    let next = accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap();
+    assert_eq!(Some(next), build_code(CodeType::Buyer, highest + 1));
     assert!(count(&dir, "SELECT COUNT(*) FROM accounts") >= before);
     assert!(audit_total(&dir) >= audit_before);
     assert_chain_ok(&dir);
 }
 
 #[test]
-fn the_series_stops_at_8999_and_no_code_is_reused() {
+fn the_numbers_of_a_type_stop_at_seven_digits_and_no_code_is_reused() {
+    // A code has at most 10 digits: 3 for the type and 7 for the running number (plan 32 R2).
     let (dir, env, owner) = ready();
     let conn = raw(&dir);
     let control: i64 = conn
@@ -273,35 +291,21 @@ fn the_series_stops_at_8999_and_no_code_is_reused() {
             |r| r.get(0),
         )
         .unwrap();
-    conn.execute_batch("BEGIN").unwrap();
-    {
-        let mut insert = conn
-            .prepare(
-                "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
-                 VALUES (?1, ?2, ?3, 'buyer', 'گاہک', 'Buyer', 'گاہک', 'buyer', 'byr')",
-            )
-            .unwrap();
-        for serial in 1..=8_998_u32 {
-            insert
-                .execute(mandi_services::db::rusqlite::params![
-                    control,
-                    format!("0304{serial:04}"),
-                    serial
-                ])
-                .unwrap();
-        }
-    }
-    conn.execute_batch("COMMIT").unwrap();
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES (?1, '0029999998', 9999998, 'buyer', 'گاہک', 'Buyer', 'گاہک', 'buyer', 'byr')",
+        [control],
+    )
+    .unwrap();
     drop(conn);
-    // Serial 8999 is the last normal one.
     assert_eq!(
         accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap(),
-        "03048999"
+        "0029999999"
     );
     let last =
         accounts::save(&env.ctx, &owner, &form(AccountType::Buyer, "اکرم", "Akram")).unwrap();
-    assert_eq!(last.code, "03048999");
-    // Now the series is full: a clear message, nothing written, and the reserved 9000 is never given.
+    assert_eq!(last.code, "0029999999");
+    // Now the numbers are used up: a clear message, nothing written.
     let rows = count(&dir, "SELECT COUNT(*) FROM accounts");
     let audit = audit_total(&dir);
     for _ in 0..3 {
@@ -320,20 +324,22 @@ fn the_series_stops_at_8999_and_no_code_is_reused() {
     }
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM accounts"), rows);
     assert_eq!(audit_total(&dir), audit);
-    // Typing a free serial inside the range does not help once the code is taken, and the
-    // gap-free rule means there is no free normal serial left.
+    // Typing the last code again is refused as taken, and a code with an eighth digit is invalid.
     let mut typed = form(AccountType::Buyer, "ارشد", "Arshad");
-    typed.code = "03048999".into();
+    typed.code = "0029999999".into();
     assert_eq!(
         rejection_codes(&accounts::save(&env.ctx, &owner, &typed).unwrap_err()),
         vec![ErrorCode::ErrCodeTaken]
     );
+    typed.code = "00210000000".into();
     assert_eq!(
-        count(
-            &dir,
-            "SELECT COUNT(*) FROM accounts WHERE code LIKE '03049%' AND is_system = 0"
-        ),
-        0
+        rejection_codes(&accounts::save(&env.ctx, &owner, &typed).unwrap_err()),
+        vec![ErrorCode::ErrCodeInvalid]
+    );
+    // Sellers have their own numbers, still at the start.
+    assert_eq!(
+        accounts::next_code(&env.ctx, AccountType::Seller, None).unwrap(),
+        "0010"
     );
 }
 
@@ -756,6 +762,7 @@ fn hostile_names_are_kept_as_plain_text_cleaned_or_refused_and_never_run() {
                     control_id: None,
                     text: text.chars().take(60).collect(),
                     limit: 50,
+                    offset: 0,
                 },
             )
             .unwrap();
@@ -963,7 +970,7 @@ fn the_search_index_rebuilt_from_the_database_gives_the_same_answers() {
         &env.ctx,
         &mandi_services::core::accounts::AccountsListInput {
             filter: mandi_services::core::accounts::AccountFilter {
-                account_type: None,
+                kind: mandi_services::core::accounts::AccountListKind::All,
                 text: String::new(),
                 include_inactive: true,
             },
@@ -1015,6 +1022,7 @@ fn the_search_index_rebuilt_from_the_database_gives_the_same_answers() {
                         control_id: None,
                         text: (*q).into(),
                         limit: 50,
+                        offset: 0,
                     },
                 )
                 .unwrap()

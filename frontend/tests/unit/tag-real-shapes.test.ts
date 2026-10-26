@@ -28,7 +28,7 @@ import { same, sendsTheSame } from '../helpers/shapes';
 import * as real from '../helpers/tag-real';
 
 /** Akram Toll Tax K, as the backend's test made him. */
-const AKRAM = account(18, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(18, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   tag: 'K',
   phone1: '03001234567',
 });
@@ -130,7 +130,7 @@ describe('the canned data has the real shape: prints', () => {
     ).toBeNull();
     expect(real.BIKRI_TAG_SELLER_BILL_UR.pages[0]?.lines[0]?.name_tag).toBe('K');
     expect(real.BIKRI_TAG_BUYER_SLIPS_UR.pages[0]?.party.tag).toBe('K');
-    expect(real.BIKRI_TAG_BUYER_SLIPS_UR.pages[0]?.party.short_code).toBe('1');
+    expect(real.BIKRI_TAG_BUYER_SLIPS_UR.pages[0]?.party.short_code).toBe('0');
   });
 
   it('every real snapshot of a بکری has the short code of a seller and a buyer', () => {
@@ -142,7 +142,7 @@ describe('the canned data has the real shape: prints', () => {
       }
     }
     const receipt = voucherPrintData('receipt', { language: 'ur', tagged: true });
-    expect(receipt.pages[0]?.party.short_code).toBe('1');
+    expect(receipt.pages[0]?.party.short_code).toBe('0');
   });
 });
 

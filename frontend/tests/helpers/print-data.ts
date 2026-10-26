@@ -161,8 +161,8 @@ function sellerPage(language: Language): PrintPage {
     serial: '1',
     party: {
       role_id: 'print-party-seller',
-      code: '030110001',
-      short_code: '1',
+      code: '0010',
+      short_code: '0',
       name: n.rahim,
       phone: null,
     },
@@ -208,7 +208,10 @@ function slipPage(language: Language, spec: SlipSpec, serial = '1'): PrintPage {
       role_id: spec.role,
       code: spec.code,
       // A seller or buyer has a short code (PRD FR-7.39); a one-time person has no code at all.
-      ...(spec.code === null ? {} : { short_code: String(Number(spec.code.slice(-4))) }),
+      // The short code is the running number of the code (plan 32, R5): a پختہ کھاتہ account has none.
+      ...(spec.code === null || !/^00[12]\d/.test(spec.code)
+        ? {}
+        : { short_code: String(Number(spec.code.slice(3))) }),
       name: spec.name,
       phone: spec.phone,
     },
@@ -243,7 +246,7 @@ function slipPages(language: Language): PrintPage[] {
   return [
     slipPage(language, {
       role: 'print-party-buyer',
-      code: '03040001',
+      code: '0020',
       name: n.akram,
       phone: null,
       item: n.banana,
@@ -260,7 +263,7 @@ function slipPages(language: Language): PrintPage[] {
       language,
       {
         role: 'print-party-buyer',
-        code: '03040002',
+        code: '0021',
         name: n.arshad,
         phone: null,
         item: n.banana,
@@ -505,8 +508,8 @@ export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): Pri
     serial: '1',
     party: {
       role_id: kind === 'receipt' ? 'print-party-buyer' : 'print-party-seller',
-      code: kind === 'receipt' ? '03040001' : '030110001',
-      short_code: '1',
+      code: kind === 'receipt' ? '0020' : '0010',
+      short_code: '0',
       name: kind === 'receipt' ? n.akram : n.rahim,
       ...(options.tagged === true && kind === 'receipt' ? { tag: 'K' } : {}),
       phone: kind === 'receipt' ? '0300-1234567' : null,

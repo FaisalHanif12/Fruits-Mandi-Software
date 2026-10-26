@@ -71,7 +71,7 @@ expression: "build_collection(&grouped_list(), &set).unwrap()"
       "rows": [
         {
           "serial": "2",
-          "code": "3",
+          "code": "2",
           "name": "عاشق ظفر",
           "tag": "K",
           "phone": "0321-1234567",

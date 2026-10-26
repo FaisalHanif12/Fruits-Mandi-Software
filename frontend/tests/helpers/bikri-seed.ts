@@ -9,20 +9,20 @@ import { parseSnapshot, serialiseDraft } from '../../src/features/bikri/draft-sn
 import { LOT, ON, SALE } from '../../src/features/bikri/types';
 import { IDS } from './bikri-data';
 
-const RAHIM = { id: IDS.rahim, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
-const KARIM = { id: IDS.karim, code: '030110002', name_ur: 'کریم', name_en: 'Karim' };
+const RAHIM = { id: IDS.rahim, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
+const KARIM = { id: IDS.karim, code: '0011', name_ur: 'کریم', name_en: 'Karim' };
 const BANANA = { id: IDS.banana, code: '0001', name_ur: 'کیلا', name_en: 'Banana' };
 const APPLE = { id: IDS.apple, code: '0002', name_ur: 'سیب', name_en: 'Apple' };
 const BOX = { id: IDS.box, code: '0001', name_ur: 'پیٹی', name_en: 'Box' };
 const PUKHTA_BUYER = {
   id: IDS.pukhtaBuyer,
-  code: '03049999',
+  code: '0030',
   name_ur: 'پختہ کھاتہ (خریدار)',
   name_en: 'Pukhta Khata (Buyer)',
 };
 const PUKHTA_SELLER = {
   id: IDS.pukhtaSeller,
-  code: '030119999',
+  code: '0031',
   name_ur: 'پختہ کھاتہ (بیوپاری)',
   name_en: 'Pukhta Khata (Seller)',
 };

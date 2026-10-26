@@ -218,11 +218,11 @@ describe.each(LANGUAGES)('saving Event 1 as the backend’s file has it (%s)', (
       suggestions: [],
     });
     await typeEvent1Lot(user, language);
-    await user.keyboard('1{Enter}20{Enter}600{Enter}');
+    await user.keyboard('0{Enter}20{Enter}600{Enter}');
     await waitFor(() => {
       expect(textOf(salesGrid(language), 1, 'qty')).toBe('30');
     });
-    await user.keyboard('2{Enter}{Enter}580{Enter}');
+    await user.keyboard('1{Enter}{Enter}580{Enter}');
     await waitFor(() => {
       expect(backend.previews.at(-1)?.lots[0]?.sales[1]?.seller_rate).toBe('580');
     });

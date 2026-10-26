@@ -19,13 +19,13 @@ import type { UiError } from '../../src/bindings/UiError';
 import { uiErrorOf } from '../../src/shared/api';
 
 const COMMON = '10-10-2026';
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم', 'Akram');
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم', 'Akram');
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   opening_date: '2026-08-31',
   opening_dr_paisa: money(15000),
   opening_is_advance: true,
 });
-const NEW_ONE = account(41, 'buyer', '03040009', 'نیا', 'New One', { opening_date: null });
+const NEW_ONE = account(41, 'buyer', '0028', 'نیا', 'New One', { opening_date: null });
 
 function rowsOf(...accounts: ReturnType<typeof account>[]) {
   const baselines = new Map<string, OpeningBaseline>();

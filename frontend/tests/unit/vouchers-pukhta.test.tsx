@@ -89,7 +89,7 @@ describe.each(LANGUAGES)('one-time people on the voucher screen (%s)', (language
         name: named(message(language, 'vouchers-field-buyer')),
       }),
     );
-    await user.keyboard('03049999');
+    await user.keyboard('0030');
     await waitFor(() => {
       expect(screen.getAllByRole('option')).toHaveLength(1);
     });
@@ -175,7 +175,7 @@ describe.each(LANGUAGES)('one-time people on the voucher screen (%s)', (language
     await user.keyboard('shah');
     await screen.findByRole('option');
     await user.keyboard('{Enter}');
-    const made = account(24, 'buyer', '03040003', 'شاہد', 'Shahid');
+    const made = account(24, 'buyer', '0022', 'شاہد', 'Shahid');
     vi.mocked(pukhtaApi.pukhtaMakeRegular).mockResolvedValue({
       account: { id: made.id, code: made.code, name_ur: made.name_ur, name_en: made.name_en },
       moved: { amount_paisa: made.balance.amount_paisa, side: 'zero' },

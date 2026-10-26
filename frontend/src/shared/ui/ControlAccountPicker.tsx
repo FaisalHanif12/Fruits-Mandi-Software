@@ -20,6 +20,8 @@ interface ControlAccountPickerProps extends FieldControlProps {
   onChange: (account: AccountHit | null) => void;
   /** Called with the typed text on F4 and from the button of an empty result. */
   onAddNew?: ((text: string) => void) | undefined;
+  /** The Fluent id of the words of the empty list's button. Default: "Add a new account". */
+  addLabelId?: string | undefined;
   placeholder?: string | undefined;
   /** Show the party card under the field. Default: yes (PRD FR-7.38). */
   showCard?: boolean | undefined;
@@ -30,6 +32,7 @@ export function ControlAccountPicker({
   value,
   onChange,
   onAddNew,
+  addLabelId = 'search-add-account',
   placeholder,
   showCard = true,
   readOnly,
@@ -51,6 +54,7 @@ export function ControlAccountPicker({
         onChange={onChange}
         onHighlight={setHighlight}
         onAddNew={onAddNew}
+        addLabelId={addLabelId}
         placeholder={placeholder}
         renderEnd={(hit) => (hit.balance === null ? null : <Balance balance={hit.balance} />)}
       />

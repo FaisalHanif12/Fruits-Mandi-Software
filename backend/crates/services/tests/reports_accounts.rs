@@ -80,11 +80,11 @@ fn r18_is_the_e2e_10_trial_balance_and_both_sides_are_85048() {
         ("02010001", 0, 300),
         ("02010002", 0, 4_000),
         ("02010004", 0, 100),
-        ("030110001", 0, 0),
-        ("030110002", 0, 10_160),
-        ("03040001", 2_880, 0),
-        ("03040002", 18_684, 0),
-        ("03049999", 0, 0),
+        ("0010", 0, 0),
+        ("0011", 0, 10_160),
+        ("0020", 2_880, 0),
+        ("0021", 18_684, 0),
+        ("0030", 0, 0),
         ("04010001", 0, 2_484),
         ("04010002", 0, 2_484),
         ("04010003", 0, 480),
@@ -549,15 +549,47 @@ fn r16_lists_accounts_and_its_sides_equal_the_trial_balance() {
     let page = report(&w, ReportId::R16, ReportFilters::default(), 0, 0);
     assert_eq!(page.totals.get(2).map(money), Some(85_048));
     assert_eq!(page.totals.get(3).map(money), Some(85_048));
-    // The accounts come in code order, and one with no line is listed with no balance.
+    // The accounts come in chart order (by control, then by code as numbers: plan 32), and one with
+    // no line is listed with no balance.
     let codes: Vec<String> = page
         .rows
         .iter()
         .map(|r| code_of(r.cells.first().unwrap()))
         .collect();
-    let mut sorted = codes.clone();
-    sorted.sort();
-    assert_eq!(codes, sorted);
+    let want = [
+        "01010001",
+        "01020001",
+        "02010001",
+        "02010002",
+        "02010003",
+        "02010004",
+        "0010",
+        "0011",
+        "0031",
+        "030119998",
+        "0020",
+        "0021",
+        "0030",
+        "03040000",
+        "04010001",
+        "04010002",
+        "04010003",
+        "04010004",
+        "04010005",
+        "05010001",
+        "06010001",
+        "06019999",
+        "06020001",
+        "06020002",
+        "06020003",
+        "06030001",
+        "06030002",
+        "06030003",
+        "06040001",
+        "06040002",
+        "06040003",
+    ];
+    assert_eq!(codes, want);
     assert!(
         codes.contains(&"01020001".to_owned()),
         "an account with no lines is listed"
@@ -565,12 +597,12 @@ fn r16_lists_accounts_and_its_sides_equal_the_trial_balance() {
     let akram = page
         .rows
         .iter()
-        .find(|r| code_of(r.cells.first().unwrap()) == "03040001")
+        .find(|r| code_of(r.cells.first().unwrap()) == "0020")
         .unwrap();
     assert_eq!(money(akram.cells.get(2).unwrap()), 2_880);
-    // The short code of a buyer is his serial.
+    // The short code of a buyer is the running number of his code (0020 is `0`).
     match akram.cells.first() {
-        Some(Cell::Party { party }) => assert_eq!(party.short_code.as_deref(), Some("1")),
+        Some(Cell::Party { party }) => assert_eq!(party.short_code.as_deref(), Some("0")),
         other => panic!("{other:?}"),
     }
     // A city that no account has gives no rows.
@@ -895,11 +927,11 @@ fn r18_prints_every_row_with_the_totals_in_both_languages() {
         assert!(data.words.is_none());
         // A party is shown with its short code and name in the print language.
         match data.rows.iter().find_map(|r| match r.cells.first() {
-            Some(PrintCell::Party { party }) if party.code == "03040001" => Some(party.clone()),
+            Some(PrintCell::Party { party }) if party.code == "0020" => Some(party.clone()),
             _ => None,
         }) {
             Some(party) => {
-                assert_eq!(party.short_code.as_deref(), Some("1"));
+                assert_eq!(party.short_code.as_deref(), Some("0"));
                 assert_eq!(
                     party.name,
                     match language {
@@ -908,7 +940,7 @@ fn r18_prints_every_row_with_the_totals_in_both_languages() {
                     }
                 );
             }
-            None => panic!("no row for 03040001"),
+            None => panic!("no row for 0020"),
         }
     }
 }
@@ -927,7 +959,7 @@ fn r13_prints_the_items_the_filters_and_the_closing_in_words() {
     );
     assert_eq!(
         en.filters.first().map(|f| f.value.as_str()),
-        Some("1 Akram Toll Tax")
+        Some("0 Akram Toll Tax")
     );
     // The sale line, formatted: Banana, Box, 20, 600, 12,000, 720, 160.
     match en.rows.first().and_then(|r| r.cells.get(2)) {

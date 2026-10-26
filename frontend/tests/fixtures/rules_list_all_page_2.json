@@ -8,7 +8,7 @@
       "account": null,
       "item": {
         "id": 4,
-        "code": "4",
+        "code": "0043",
         "name_ur": "انگور",
         "name_en": "Grapes"
       },
@@ -32,7 +32,7 @@
       "account": null,
       "item": {
         "id": 3,
-        "code": "3",
+        "code": "0042",
         "name_ur": "مولی",
         "name_en": "Radish"
       },
@@ -56,7 +56,7 @@
       "account": null,
       "item": {
         "id": 2,
-        "code": "2",
+        "code": "0041",
         "name_ur": "سیب",
         "name_en": "Apple"
       },

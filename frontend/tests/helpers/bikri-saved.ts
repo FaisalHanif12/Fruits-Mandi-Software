@@ -25,9 +25,9 @@ const ref = (id: number, code: string, ur: string, en: string): RecordRef => ({
   name_en: en,
 });
 
-const RAHIM = ref(IDS.rahim, '030110001', 'رحیم', 'Rahim');
-const AKRAM = ref(IDS.akram, '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax');
-const ARSHAD = ref(IDS.arshad, '03040002', 'ارشد ملتانی', 'Arshad Multani');
+const RAHIM = ref(IDS.rahim, '0010', 'رحیم', 'Rahim');
+const AKRAM = ref(IDS.akram, '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax');
+const ARSHAD = ref(IDS.arshad, '0021', 'ارشد ملتانی', 'Arshad Multani');
 const BANANA = ref(IDS.banana, '0001', 'کیلا', 'Banana');
 const BOX = ref(IDS.box, '0001', 'پیٹی', 'Box');
 
@@ -320,7 +320,7 @@ export function savedTwoLots(): BikriDetail {
   const one = savedEvent1();
   const first = one.lots[0];
   if (first === undefined) throw new Error('no lot');
-  const karim = ref(IDS.karim, '030110002', 'کریم', 'Karim');
+  const karim = ref(IDS.karim, '0011', 'کریم', 'Karim');
   return {
     ...one,
     lots: [

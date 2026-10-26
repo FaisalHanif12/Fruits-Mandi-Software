@@ -15,7 +15,9 @@ export type ResolveCodeInput = {
    */
   control_id: number | null;
   /**
-   * What was typed: 1 to 4 digits are a short code, 8 or 9 digits a full code.
+   * What was typed. A running number (`0`, `11`: digits with no leading zero, at most 7) is a
+   * short code; a full code (`0010`, `00111`, or any other account's code) is looked up as it
+   * is (plan 32 R5).
    */
   text: string;
 };

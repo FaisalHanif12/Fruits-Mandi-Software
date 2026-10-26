@@ -240,6 +240,7 @@ function StockBody({ saved, remember }: MemoryProps) {
           {(control) => (
             <AccountPicker
               {...control}
+              canAdd={false}
               scope="seller"
               showCard={false}
               value={seller}
@@ -251,6 +252,7 @@ function StockBody({ saved, remember }: MemoryProps) {
           {(control) => (
             <Picker
               {...control}
+              canAdd={false}
               scope="item"
               value={item}
               onChange={(hit) => {

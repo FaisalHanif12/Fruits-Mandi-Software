@@ -670,7 +670,7 @@ describe('round 11: the party day sheet (R35)', () => {
     const people = R35_TABLE.rows.flatMap((row) =>
       row.cells.flatMap((cell) => (cell.type === 'party' ? [cell.party] : [])),
     );
-    expect(people.find((party) => party.code === '03049999')?.person_key).toBe('شاہد|03000000000');
+    expect(people.find((party) => party.code === '0030')?.person_key).toBe('شاہد|03000000000');
   });
 
   it('no table has a totals row of its own: the totals are in the group rows and the footer lines', () => {

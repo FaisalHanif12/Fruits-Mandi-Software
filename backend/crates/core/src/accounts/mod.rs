@@ -2,8 +2,9 @@
 //! they read back. No database here.
 //!
 //! - An account is made under a control: a seller under 03011, a buyer under 0304, a person who
-//!   borrows money under 0103, any other under the control chosen. The code is the control code
-//!   plus a 4-digit serial (PRD FR-10.2, FR-10.3).
+//!   borrows money under 0103, any other under the control chosen. The code of a seller or a buyer
+//!   is its type number plus a running number (`0010`, `0020`, plan 32, PRD 1.8 R2); every other
+//!   account keeps the control code plus a 4-digit serial (PRD FR-10.2, FR-10.3, 1.8 R4).
 //! - An opening debit or credit posts as an opening entry against ابتدائی فرق (06019999)
 //!   (PRD FR-10.9). It is never a column that only looks like a balance.
 //! - Every balance is read from the posted journal and sent as a [`Balance`]: an amount that is

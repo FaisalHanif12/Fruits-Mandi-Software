@@ -21,7 +21,8 @@ export type AccountRow = {
    */
   code: string;
   /**
-   * The 4-digit serial as a number.
+   * The serial as a number: the running number of a seller's or buyer's code (`0` for `0010`),
+   * the 4-digit serial of every other account.
    */
   serial: number;
   /**

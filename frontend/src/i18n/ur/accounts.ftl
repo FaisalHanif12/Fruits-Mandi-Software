@@ -6,7 +6,7 @@
 accounts-title = کھاتے
 
 # review: pending
-accounts-help = { -beopari }، { -gahak }، { -adhar-raqam } لینے والے اور باقی کھاتے۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
+accounts-help = { -beopari }، { -gahak } اور { -pukhta-khata }۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
 
 # review: pending
 accounts-new = نیا کھاتہ
@@ -95,6 +95,9 @@ accounts-type-seller = { -beopari }
 
 # review: pending
 accounts-type-buyer = { -gahak }
+
+# review: pending
+accounts-type-pukhta = { -pukhta-khata }
 
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
@@ -300,7 +303,7 @@ chart-load-failed = کھاتوں کی ترتیب نہیں کھل سکی
 masters-accounts-title = کھاتے
 
 # review: pending
-masters-accounts-help = { -beopari }، { -gahak } اور باقی کھاتے۔
+masters-accounts-help = { -beopari }، { -gahak } اور { -pukhta-khata }۔
 
 # review: pending
 masters-chart-title = کھاتوں کی ترتیب

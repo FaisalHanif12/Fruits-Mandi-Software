@@ -52,11 +52,11 @@ export interface GeneralAccount extends RecordRef {
 /** The accounts of the worked day that a جنرل correction would touch. */
 export const GENERAL_ACCOUNTS: readonly GeneralAccount[] = [
   { id: 1, code: '01010001', name_ur: 'روکڑ', name_en: 'Cash', kind: 'cash' },
-  { id: 21, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', kind: 'buyer' },
-  { id: 31, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim', kind: 'seller' },
+  { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', kind: 'buyer' },
+  { id: 31, code: '0010', name_ur: 'رحیم', name_en: 'Rahim', kind: 'seller' },
   {
     id: 23,
-    code: '03049999',
+    code: '0030',
     name_ur: 'پختہ کھاتہ (خریدار)',
     name_en: 'Pukhta Khata (Buyer)',
     kind: 'pukhta',

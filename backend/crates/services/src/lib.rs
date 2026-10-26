@@ -9,6 +9,7 @@ pub mod auth;
 pub mod bikri;
 pub mod cash;
 pub mod cashbook;
+pub mod clean_data;
 pub mod coa;
 pub mod context;
 pub mod day;

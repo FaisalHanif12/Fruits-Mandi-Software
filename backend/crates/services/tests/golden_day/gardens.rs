@@ -714,6 +714,7 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
             control_id: None,
             text: "shahpur".into(),
             limit: 10,
+            offset: 0,
         },
     )
     .unwrap();
@@ -747,6 +748,7 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
             control_id: None,
             text: "shahpur".into(),
             limit: 10,
+            offset: 0,
         },
     )
     .unwrap();

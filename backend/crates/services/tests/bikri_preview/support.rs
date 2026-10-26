@@ -23,19 +23,19 @@ pub struct World {
     pub dir: TempDir,
     pub env: TestEnv,
     pub owner: Actor,
-    /// رحیم, seller 030110001.
+    /// رحیم, seller 0010.
     pub rahim: i64,
-    /// کریم, seller 030110002.
+    /// کریم, seller 0011.
     pub karim: i64,
-    /// اکرم ٹول ٹیکس, buyer 03040001.
+    /// اکرم ٹول ٹیکس, buyer 0020.
     pub akram: i64,
-    /// ارشد ملتانی, buyer 03040002.
+    /// ارشد ملتانی, buyer 0021.
     pub arshad: i64,
     /// نقدی منڈی, 03040000.
     pub naqdi: i64,
-    /// پختہ کھاتہ (خریدار), 03049999.
+    /// پختہ کھاتہ (خریدار), 0030.
     pub pukhta_buyer: i64,
-    /// پختہ کھاتہ (بیوپاری), 030119999.
+    /// پختہ کھاتہ (بیوپاری), 0031.
     pub pukhta_seller: i64,
     /// کیلا, fruit.
     pub banana: i64,
@@ -246,7 +246,7 @@ pub fn world_with(cash: i64, shares: bool) -> World {
     w
 }
 
-/// The rest of the worked day's world after seller رحیم (030110001) exists and today is
+/// The rest of the worked day's world after seller رحیم (0010) exists and today is
 /// 10-10-2026: the other parties, the items, the packing and the partners with their shares
 /// (effective 10-10-2026). The golden day builds رحیم and the opening position itself and then
 /// calls this.
@@ -296,8 +296,8 @@ pub fn finish_world(dir: TempDir, env: TestEnv, owner: Actor, rahim: i64, shares
         .unwrap();
     }
     let naqdi = id_of(&env, "03040000");
-    let pukhta_buyer = id_of(&env, "03049999");
-    let pukhta_seller = id_of(&env, "030119999");
+    let pukhta_buyer = id_of(&env, "0030");
+    let pukhta_seller = id_of(&env, "0031");
     World {
         dir,
         env,

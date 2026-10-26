@@ -15,6 +15,7 @@ import {
   undoResult,
 } from './bikri-plan16-data';
 import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved';
+import { account as accountRow } from './accounts';
 import { paisaForTest } from './paisa';
 import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
 import { printDataFor, voucherPrintData } from './print-data';
@@ -67,7 +68,7 @@ const OWN_CODE = '030119998';
 const BIKRI_PARTIES: readonly Party[] = [
   {
     id: IDS.rahim,
-    code: '030110001',
+    code: '0010',
     type: 'seller',
     ur: 'رحیم',
     en: 'Rahim',
@@ -76,7 +77,7 @@ const BIKRI_PARTIES: readonly Party[] = [
   },
   {
     id: IDS.karim,
-    code: '030110002',
+    code: '0011',
     type: 'seller',
     ur: 'کریم',
     en: 'Karim',
@@ -85,7 +86,7 @@ const BIKRI_PARTIES: readonly Party[] = [
   },
   {
     id: IDS.pukhtaSeller,
-    code: '030119999',
+    code: '0031',
     type: 'seller',
     ur: 'پختہ کھاتہ (بیوپاری)',
     en: 'Pukhta Khata (Seller)',
@@ -104,7 +105,7 @@ const BIKRI_PARTIES: readonly Party[] = [
   },
   {
     id: IDS.akram,
-    code: '03040001',
+    code: '0020',
     type: 'buyer',
     ur: 'اکرم ٹول ٹیکس',
     en: 'Akram Toll Tax',
@@ -113,7 +114,7 @@ const BIKRI_PARTIES: readonly Party[] = [
   },
   {
     id: IDS.arshad,
-    code: '03040002',
+    code: '0021',
     type: 'buyer',
     ur: 'ارشد ملتانی',
     en: 'Arshad Multani',
@@ -122,7 +123,7 @@ const BIKRI_PARTIES: readonly Party[] = [
   },
   {
     id: IDS.pukhtaBuyer,
-    code: '03049999',
+    code: '0030',
     type: 'buyer',
     ur: 'پختہ کھاتہ (خریدار)',
     en: 'Pukhta Khata (Buyer)',
@@ -153,8 +154,13 @@ const VOUCHER_PARTIES: readonly Party[] = BOOK_PARTIES.filter(
 
 /** The parties the pickers offer: the worked day's books on the voucher pages, else the sale book's. */
 function parties(): readonly Party[] {
-  return window.location.hash.startsWith('#/dev/vouchers') ? VOUCHER_PARTIES : BIKRI_PARTIES;
+  const base = window.location.hash.startsWith('#/dev/vouchers') ? VOUCHER_PARTIES : BIKRI_PARTIES;
+  return [...base, ...ADDED_PARTIES];
 }
+
+/** Accounts made in the Index form that a picker's "add" button opens (plan 32, R8). */
+const ADDED_PARTIES: Party[] = [];
+const NEXT_ID = { value: 9000 };
 
 interface Master {
   id: number;
@@ -191,6 +197,13 @@ function accountHit(party: Party) {
   };
 }
 
+/** The running number of a seller or a buyer: his code without the 3-digit type number. */
+function runningOfParty(party: Party): number | null {
+  const prefix = party.type === 'seller' ? '001' : '002';
+  const rest = party.code.startsWith(prefix) ? party.code.slice(prefix.length) : '';
+  return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
+}
+
 function partyMatches(party: Party, scope: string, text: string): boolean {
   // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
   if (scope === 'lot_seller') {
@@ -203,7 +216,11 @@ function partyMatches(party: Party, scope: string, text: string): boolean {
   const wanted = text.trim().toLowerCase();
   if (wanted === '') return true;
   if (/^\d+$/.test(wanted)) {
-    return party.code === wanted || Number(party.code.slice(-4)) === Number(wanted);
+    // A full code, or the running number of a seller or a buyer: the short code (plan 32, R5).
+    return (
+      party.code === wanted ||
+      (/^(0|[1-9]\d*)$/.test(wanted) && runningOfParty(party) === Number(wanted))
+    );
   }
   return [party.code, party.ur, party.en].some((part) => part.toLowerCase().includes(wanted));
 }
@@ -317,6 +334,27 @@ const handlers: Record<string, Handler> = {
   purchases_write_off: () => tripBooks.writeOff(),
   purchases_write_off_undo: () => tripBooks.writeOffUndo(),
   day_status: () => ({ today: '2026-10-10', closed_up_to: null, today_open: true }),
+  // The Index form a picker's "add" button opens (plan 32, R8): the next code of a type, no
+  // look-alikes, and a save that makes the account findable by the pickers.
+  accounts_next_code: (input) => (asText(input['account_type']) === 'seller' ? '0013' : '0023'),
+  accounts_similar: () => [],
+  coa_controls_list: () => [],
+  accounts_save: (input) => {
+    NEXT_ID.value += 1;
+    const type = asText(input['account_type']) === 'seller' ? 'seller' : 'buyer';
+    const ur = asText(input['name_ur']);
+    const en = asText(input['name_en']);
+    ADDED_PARTIES.push({
+      id: NEXT_ID.value,
+      code: asText(input['code']),
+      type,
+      ur,
+      en,
+      paisa: 0,
+      side: 'zero',
+    });
+    return accountRow(NEXT_ID.value, type, asText(input['code']), ur, en);
+  },
   search_accounts: (input) =>
     parties()
       .filter((party) => partyMatches(party, asText(input['scope']), asText(input['text'])))
@@ -728,7 +766,7 @@ export function installDevBridge(): void {
 /** The draft of Event 1 (PRD 4.4) typed into the stores, for the sample page. */
 export function seedEvent1(stores: BikriDraftStores): void {
   const { header, lots } = stores;
-  const rahim = { id: IDS.rahim, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
+  const rahim = { id: IDS.rahim, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
   header.getState().patch({
     truckNo: 'LES-1234',
     zamindar: rahim,
@@ -759,13 +797,13 @@ export function seedEvent1(stores: BikriDraftStores): void {
   if (first === undefined) return;
   const akram = {
     id: IDS.akram,
-    code: '03040001',
+    code: '0020',
     name_ur: 'اکرم ٹول ٹیکس',
     name_en: 'Akram Toll Tax',
   };
   const arshad = {
     id: IDS.arshad,
-    code: '03040002',
+    code: '0021',
     name_ur: 'ارشد ملتانی',
     name_en: 'Arshad Multani',
   };
@@ -797,7 +835,7 @@ export function seedOwn(stores: BikriDraftStores): void {
     picked: {
       buyer: {
         id: IDS.akram,
-        code: '03040001',
+        code: '0020',
         name_ur: 'اکرم ٹول ٹیکس',
         name_en: 'Akram Toll Tax',
       },

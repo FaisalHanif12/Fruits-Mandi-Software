@@ -131,7 +131,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
   it('a payment to a seller with nothing payable: the warning with its numbers and the note that offers a پیشگی', async () => {
     vi.mocked(vouchersApi.vouchersPreview).mockResolvedValue(real.PREVIEW_PAYMENT_NOTHING_PAYABLE);
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '030110002');
+    await pick(user, language, 'vouchers-field-paid-to', '0011');
     await user.click(await amountField());
     await user.keyboard('1000');
     expect(
@@ -151,7 +151,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
   it('cash below zero: the amber note with the backend’s number, and the box asks before the save', async () => {
     vi.mocked(vouchersApi.vouchersPreview).mockResolvedValue(real.PREVIEW_PAYMENT_CASH_BELOW_ZERO);
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '030110002');
+    await pick(user, language, 'vouchers-field-paid-to', '0011');
     await user.click(await amountField());
     await user.keyboard('9900000');
     await waitFor(() => {
@@ -178,7 +178,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
     await user.click(
       within(group).getByRole('button', { name: named(message(language, 'vouchers-from-seller')) }),
     );
-    await pick(user, language, 'vouchers-field-seller', '030110002');
+    await pick(user, language, 'vouchers-field-seller', '0011');
     await user.click(await amountField());
     await user.keyboard('2000');
     const advances = await panelText(language, 'vouchers-advances-title');
@@ -212,7 +212,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
     vi.mocked(vouchersApi.vouchersPreview).mockResolvedValue(real.PREVIEW_PAYMENT_SELLER);
     vi.mocked(vouchersApi.assistOpenPayables).mockResolvedValue(real.OPEN_PAYABLES_TRUNCATED);
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '030110002');
+    await pick(user, language, 'vouchers-field-paid-to', '0011');
     const shown = String(real.OPEN_PAYABLES_TRUNCATED.postings.length);
     const total = String(real.OPEN_PAYABLES_TRUNCATED.total_count);
     expect(
@@ -227,7 +227,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
     vi.mocked(vouchersApi.vouchersPreview).mockResolvedValue(real.PREVIEW_PAYMENT_SELLER);
     vi.mocked(vouchersApi.assistOpenPayables).mockResolvedValue(real.OPEN_PAYABLES_RAHIM);
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '030110001');
+    await pick(user, language, 'vouchers-field-paid-to', '0010');
     const text = await panelText(language, 'vouchers-payables-title');
     for (const figure of ['24,316', '15,000', '5,000', '4,316']) expect(text).toContain(figure);
   });
@@ -236,7 +236,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
     vi.mocked(vouchersApi.vouchersPreview).mockResolvedValue(real.PREVIEW_PAYMENT_BUYER);
     vi.mocked(vouchersApi.vouchersSave).mockRejectedValue(refused(real.REFUSED_NEEDS_REASON));
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '03040001');
+    await pick(user, language, 'vouchers-field-paid-to', '0020');
     await user.click(await amountField());
     await user.keyboard('3000');
     await user.click(await labelled(language, 'vouchers-field-reason-lent'));
@@ -260,7 +260,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
     await user.click(
       within(group).getByRole('button', { name: named(message(language, 'vouchers-from-seller')) }),
     );
-    await pick(user, language, 'vouchers-field-seller', '030110002');
+    await pick(user, language, 'vouchers-field-seller', '0011');
     await user.click(await amountField());
     await user.keyboard('9000');
     press('F10');
@@ -284,7 +284,7 @@ describe.each(LANGUAGES)('the voucher screen with the real answers (%s)', (langu
       return Promise.reject(refused(real.REFUSED_CASH_BELOW_ZERO));
     });
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '030110002');
+    await pick(user, language, 'vouchers-field-paid-to', '0011');
     await user.click(await amountField());
     await user.keyboard('9900000');
     await waitFor(() => {
@@ -397,7 +397,7 @@ describe.each(LANGUAGES)(
         level: 1,
         name: message(language, 'vouchers-receipt-title'),
       });
-      await pick(user, language, 'vouchers-field-buyer', '03049999');
+      await pick(user, language, 'vouchers-field-buyer', '0030');
       const person = await labelled(language, 'vouchers-field-person');
       await user.click(person);
       await user.keyboard('shah');

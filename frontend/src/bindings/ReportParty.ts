@@ -9,7 +9,7 @@ export type ReportParty = {
    */
   account_id: number;
   /**
-   * The full code, for example `03040001`.
+   * The full code, for example `0021`.
    */
   code: string;
   /**

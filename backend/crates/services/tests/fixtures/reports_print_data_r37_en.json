@@ -92,8 +92,8 @@
         {
           "type": "party",
           "party": {
-            "short_code": "1",
-            "code": "030110001",
+            "short_code": "0",
+            "code": "0010",
             "name": "Rahim",
             "tag": null,
             "person_key": null
@@ -147,8 +147,8 @@
         {
           "type": "party",
           "party": {
-            "short_code": "3",
-            "code": "030110003",
+            "short_code": "2",
+            "code": "0012",
             "name": "Haji Nazeer",
             "tag": null,
             "person_key": null

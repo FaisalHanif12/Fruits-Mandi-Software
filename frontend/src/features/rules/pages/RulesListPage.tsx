@@ -199,6 +199,8 @@ function RulesBody({ saved, remember }: MemoryProps) {
           {(props) => (
             <AccountPicker
               {...props}
+              // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+              canAdd={false}
               scope="any"
               value={party}
               onChange={(hit) => {
@@ -211,6 +213,8 @@ function RulesBody({ saved, remember }: MemoryProps) {
           {(props) => (
             <Picker
               {...props}
+              // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+              canAdd={false}
               scope="item"
               value={item}
               onChange={(hit) => {

@@ -171,7 +171,7 @@ fn line_checks_reject_bad_amounts() {
     // An advance must be a debit. The entry and account are the right kind, so the CHECK is
     // what refuses it (the trigger journal_lines_advance_flag has its own test).
     let advance_entry = common::draft_entry_of(&conn, "advance", 100);
-    let seller = common::account_id(&conn, "030119999");
+    let seller = common::account_id(&conn, "0031");
     let credit_advance = conn.execute(
         "INSERT INTO journal_lines (entry_id, line_no, account_id, dr_paisa, cr_paisa, is_advance) VALUES (?1, 1, ?2, 0, 100, 1)",
         params![advance_entry, seller],
@@ -426,20 +426,14 @@ fn system_accounts_cannot_be_deleted_or_recoded() {
     // An ordinary account is not affected.
     conn.execute(
         "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
-         SELECT id, '03040001', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
+         SELECT id, '0020', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
         [],
     )
     .unwrap();
-    conn.execute(
-        "UPDATE accounts SET is_active = 0 WHERE code = '03040001'",
-        [],
-    )
-    .unwrap();
-    conn.execute(
-        "UPDATE accounts SET is_active = 1 WHERE code = '03040001'",
-        [],
-    )
-    .unwrap();
+    conn.execute("UPDATE accounts SET is_active = 0 WHERE code = '0020'", [])
+        .unwrap();
+    conn.execute("UPDATE accounts SET is_active = 1 WHERE code = '0020'", [])
+        .unwrap();
     // The opening balance is typed on the account form (PRD 4.3): that update is allowed.
     conn.execute("UPDATE accounts SET opening_dr_paisa = 6_500_000, opening_date = '2026-08-31' WHERE code = '01010001'", []).unwrap();
 }
@@ -753,7 +747,7 @@ fn an_advance_matching_row_needs_an_advance_debit_and_a_seller_credit() {
     let f = fixture(&conn);
     // Rahim: advance 15,000 on 01-09-26 (PRD 4.3), and a credit of 24,316 from the bikri.
     let advance_entry = draft_entry(&conn, 1_500_000);
-    let seller_code = "030110001";
+    let seller_code = "0010";
     let seller_id = f.seller;
     let plain = line(&conn, advance_entry, 1, seller_code, 1_500_000, 0).unwrap();
     // is_advance can only be set when the line is made.
@@ -817,7 +811,7 @@ fn an_opening_advance_needs_an_opening_debit() {
     let (_dir, conn) = setup();
     let set = |dr: i64, advance: i64| {
         conn.execute(
-            "UPDATE accounts SET opening_dr_paisa = ?1, opening_is_advance = ?2 WHERE code = '030119999'",
+            "UPDATE accounts SET opening_dr_paisa = ?1, opening_is_advance = ?2 WHERE code = '0031'",
             params![dr, advance],
         )
     };

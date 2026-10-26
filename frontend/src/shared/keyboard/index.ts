@@ -11,6 +11,13 @@ export {
 export { keepKeyForApp } from './downshiftKeys';
 export { useShortcut } from './useShortcut';
 export {
+  ModalLayerContext,
+  heldBackByDialog,
+  topLayer,
+  useModalLayer,
+  useOwnLayer,
+} from './modalLayer';
+export {
   registerEscape,
   runEscape,
   useEscape,

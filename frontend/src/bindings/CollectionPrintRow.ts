@@ -9,7 +9,7 @@ export type CollectionPrintRow = {
    */
   serial: string;
   /**
-   * The short code of the buyer (PRD FR-7.39): his serial, for example `1` for 03040001.
+   * The short code of the buyer (PRD FR-7.39): his running number, for example `1` for 0021.
    */
   code: string;
   /**

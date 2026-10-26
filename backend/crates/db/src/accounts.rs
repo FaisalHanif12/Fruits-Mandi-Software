@@ -3,8 +3,8 @@
 //! (PRD FR-10.6). Balances are not here: they come from the journal (`crate::ledger`).
 
 use mandi_core::accounts::{
-    AccountFilter, AccountRow, AccountType, Balance, CoaControl, CoaHead, RecordRef,
-    SimilarAccount, can_take_opening,
+    AccountFilter, AccountListKind, AccountRow, AccountType, BUYER_CONTROL, Balance, CoaControl,
+    CoaHead, RecordRef, SELLER_CONTROL, SimilarAccount, can_take_opening,
 };
 use mandi_core::masters::ColValue;
 use mandi_core::money::Paisa;
@@ -346,6 +346,22 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountRow>> {
         .optional()
 }
 
+/// The condition of an account list kind, or `None` for `every` (no condition: every account, as the
+/// list was before plan 32, decision D4).
+fn kind_condition(kind: AccountListKind) -> Option<String> {
+    match kind {
+        AccountListKind::Every => None,
+        AccountListKind::All => Some(format!(
+            "((c.code IN ('{SELLER_CONTROL}', '{BUYER_CONTROL}') AND a.is_system = 0) OR a.is_pukhta_khata = 1)"
+        )),
+        AccountListKind::Seller => {
+            Some(format!("(c.code = '{SELLER_CONTROL}' AND a.is_system = 0)"))
+        }
+        AccountListKind::Buyer => Some(format!("(c.code = '{BUYER_CONTROL}' AND a.is_system = 0)")),
+        AccountListKind::Pukhta => Some("a.is_pukhta_khata = 1".to_owned()),
+    }
+}
+
 /// The WHERE part and its parameters for a filter. `text_ur` and `text_en` are search keys made
 /// by `core::text`. Parameters are numbered from 1 in the order of the returned values.
 fn filter_sql(filter: &AccountFilter, text_ur: &str, text_en: &str) -> (String, Vec<Value>) {
@@ -354,9 +370,12 @@ fn filter_sql(filter: &AccountFilter, text_ur: &str, text_en: &str) -> (String, 
     if !filter.include_inactive {
         conditions.push("a.is_active = 1".to_owned());
     }
-    if let Some(kind) = filter.account_type {
-        values.push(Value::Text(kind.as_str().to_owned()));
-        conditions.push(format!("{TYPE_SQL} = ?{}", values.len()));
+    // Plan 32 R6: the list shows only sellers, buyers and the two پختہ کھاتہ accounts. A regular
+    // seller or buyer is an account under its control that is not a system account (which leaves
+    // out اپنا مال, نقدی منڈی and the two پختہ کھاتہ accounts); everything else (cash, payables,
+    // income, capital, money-lent people, khatas, gardens) is under another control.
+    if let Some(condition) = kind_condition(filter.kind) {
+        conditions.push(condition);
     }
     if !text_ur.is_empty() || !text_en.is_empty() {
         values.push(Value::Text(text_ur.to_owned()));
@@ -418,8 +437,15 @@ pub fn list(
     let limit_mark = page.len();
     page.push(Value::Integer(i64::from(offset)));
     let offset_mark = page.len();
+    // `every` is in chart order (by control, then by code), as the full list always was; the
+    // other kinds are by type number and running number.
+    let order = if filter.kind == AccountListKind::Every {
+        format!("c.code, {}", crate::codes::order_by_code("a.code"))
+    } else {
+        crate::codes::order_by_code("a.code")
+    };
     let mut statement = conn.prepare(&format!(
-        "{ROW_SELECT}{where_sql} ORDER BY a.code, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
+        "{ROW_SELECT}{where_sql} ORDER BY {order}, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
     ))?;
     let rows = statement
         .query_map(params_from_iter(page.iter()), row_from)?
@@ -697,9 +723,14 @@ pub struct TreeAccount {
 /// # Errors
 /// Any SQLite error.
 pub fn tree_accounts(conn: &Connection) -> rusqlite::Result<Vec<TreeAccount>> {
-    let mut statement = conn.prepare(
-        "SELECT id, control_id, code, name_ur, name_en, is_active, is_system, tag FROM accounts ORDER BY code, id",
-    )?;
+    // The chart order: by control (cash, payables, sellers, buyers, income ...), then by code
+    // within it, so the numbers of sellers and buyers (0010, 00110) run in order (plan 32 R7).
+    let mut statement = conn.prepare(&format!(
+        "SELECT a.id, a.control_id, a.code, a.name_ur, a.name_en, a.is_active, a.is_system, a.tag
+         FROM accounts a JOIN account_controls k ON k.id = a.control_id
+         ORDER BY k.code, {}, a.id",
+        crate::codes::order_by_code("a.code")
+    ))?;
     let rows = statement.query_map([], |r| {
         Ok(TreeAccount {
             id: r.get(0)?,

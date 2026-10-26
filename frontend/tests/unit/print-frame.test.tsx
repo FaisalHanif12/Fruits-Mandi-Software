@@ -337,16 +337,14 @@ describe.each(LANGUAGES)('the party of a print shows the short code (%s)', (lang
     const page = must(data.pages[0]);
     const withShort = show(data);
     const block = must(withShort.root.querySelector<HTMLElement>('.print-party'));
-    expect(textOf(block)).toContain(`${message(language, 'print-party-code')} 1`);
-    expect(textOf(block)).not.toContain('030110001');
+    expect(textOf(block)).toContain(`${message(language, 'print-party-code')} 0`);
+    expect(textOf(block)).not.toContain('0010');
     withShort.unmount();
     // An account that has no short code shows its full code.
     const bare = { ...page.party };
     delete bare.short_code;
     const full = show({ ...data, pages: [{ ...page, party: bare }] });
-    expect(textOf(must(full.root.querySelector<HTMLElement>('.print-party')))).toContain(
-      '030110001',
-    );
+    expect(textOf(must(full.root.querySelector<HTMLElement>('.print-party')))).toContain('0010');
     full.unmount();
     const oneTime = show(printDataFor('pukhta_slip', { language }));
     expect(oneTime.root.querySelector('.print-party-extra')?.textContent).not.toContain('0304');

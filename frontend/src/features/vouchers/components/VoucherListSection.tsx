@@ -152,6 +152,7 @@ export function VoucherListSection({
             {(control) => (
               <AccountPicker
                 {...control}
+                canAdd={false}
                 scope="any"
                 showCard={false}
                 value={account}

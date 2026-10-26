@@ -143,12 +143,25 @@ fn codes_are_suggested_taken_and_unique() {
         (ErrorCode::ErrCodeTaken, Some("code".to_owned()))
     );
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM cities"), 2);
-    // Kinds without a code give an empty suggestion.
-    for kind in [MasterKind::Narration, MasterKind::Staff] {
-        assert_eq!(masters::next_code(&env.ctx, kind).unwrap(), "");
-    }
-    // Each list has its own codes.
-    assert_eq!(masters::next_code(&env.ctx, MasterKind::Item).unwrap(), "1");
+    // A narration has no code: an empty suggestion.
+    assert_eq!(
+        masters::next_code(&env.ctx, MasterKind::Narration).unwrap(),
+        ""
+    );
+    // Each list has its own codes. Items, packings and staff take the type number and a running
+    // number from 0 (plan 32 R2).
+    assert_eq!(
+        masters::next_code(&env.ctx, MasterKind::Item).unwrap(),
+        "0040"
+    );
+    assert_eq!(
+        masters::next_code(&env.ctx, MasterKind::Packing).unwrap(),
+        "0050"
+    );
+    assert_eq!(
+        masters::next_code(&env.ctx, MasterKind::Staff).unwrap(),
+        "0060"
+    );
 }
 
 #[test]
@@ -275,7 +288,7 @@ fn the_rows_every_kind_needs_can_be_added_edited_and_made_inactive() {
     };
     assert_eq!(
         (radish.code.as_str(), radish.item_group.as_str()),
-        ("2", "vegetable")
+        ("0041", "vegetable")
     );
     let c = save(city("", "لاہور", "Lahore"));
     let MasterRow::City(c) = c else { panic!() };
@@ -327,6 +340,7 @@ fn the_rows_every_kind_needs_can_be_added_edited_and_made_inactive() {
         version: None,
         name_ur: "اسلم".into(),
         name_en: "Aslam".into(),
+        code: String::new(),
         job: "collector".into(),
         phone: "0300-1234567".into(),
         confirmed_rules_words: Vec::new(),

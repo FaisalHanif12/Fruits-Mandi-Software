@@ -416,7 +416,7 @@ pub struct PartyRef {
     /// The account id, to open its ledger.
     #[ts(type = "number")]
     pub account_id: i64,
-    /// The full code, for example `03040001`.
+    /// The full code, for example `0021`.
     pub code: String,
     /// The short code of a seller or buyer (the serial, PRD FR-7.39). Null for other accounts.
     pub short_code: Option<String>,

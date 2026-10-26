@@ -65,13 +65,13 @@
       "pukhta": null,
       "item": {
         "id": 5,
-        "code": "5",
+        "code": "0044",
         "name_ur": "مالٹا",
         "name_en": "Orange"
       },
       "packing": {
         "id": 1,
-        "code": "1",
+        "code": "0050",
         "name_ur": "پیٹی",
         "name_en": "Box"
       },
@@ -119,7 +119,7 @@
           "entry_date": "2026-10-10",
           "buyer": {
             "id": 21,
-            "code": "03040002",
+            "code": "0021",
             "name_ur": "ارشد ملتانی",
             "name_en": "Arshad Multani"
           },

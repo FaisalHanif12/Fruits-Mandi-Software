@@ -51,8 +51,8 @@
       "serial": "1",
       "party": {
         "role_id": "print-party-buyer",
-        "code": "03040001",
-        "short_code": "1",
+        "code": "0020",
+        "short_code": "0",
         "name": "اکرم ٹول ٹیکس",
         "tag": "K",
         "phone": null
@@ -103,8 +103,8 @@
       "serial": "2",
       "party": {
         "role_id": "print-party-buyer",
-        "code": "03040002",
-        "short_code": "2",
+        "code": "0021",
+        "short_code": "1",
         "name": "ارشد ملتانی",
         "phone": null
       },

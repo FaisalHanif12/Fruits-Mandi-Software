@@ -93,8 +93,8 @@
           "type": "party",
           "party": {
             "account_id": 31,
-            "code": "030110003",
-            "short_code": "3",
+            "code": "0012",
+            "short_code": "2",
             "name_ur": "حاجی نذیر",
             "name_en": "Haji Nazeer",
             "tag": null,

@@ -21,13 +21,13 @@ import { message, renderIn, visible } from '../helpers/render';
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/urdu/api');
 
-const AKRAM_REF = { id: 21, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
+const AKRAM_REF = { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
 
 const HITS: GlobalHit[] = [
   {
     kind: 'account',
     id: 21,
-    code: '03040001',
+    code: '0020',
     name_ur: 'اکرم ٹول ٹیکس',
     name_en: 'Akram Toll Tax',
     extra_ur: 'کوٹ رادھا کشن',
@@ -36,7 +36,7 @@ const HITS: GlobalHit[] = [
   {
     kind: 'account',
     id: 22,
-    code: '03040002',
+    code: '0021',
     name_ur: 'ارشد ملتانی',
     name_en: 'Arshad Multani',
     extra_ur: '',
@@ -78,7 +78,7 @@ const HITS: GlobalHit[] = [
     voucher_type: 'payment',
     number: 12,
     entry_date: '2026-10-09',
-    account: { id: 31, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' },
+    account: { id: 31, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' },
     amount_paisa: paisaForTest(431_600),
     status: 'cancelled',
   },
@@ -162,7 +162,7 @@ describe.each(LANGUAGES)('GlobalSearch (%s)', (language) => {
     });
     expect(accountApi.searchGlobal).toHaveBeenLastCalledWith('akram');
     const row = visible(options()[0]?.textContent);
-    expect(row).toContain('03040001');
+    expect(row).toContain('0020');
     expect(row).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     expect(row).toContain(language === 'ur' ? 'Akram Toll Tax' : 'اکرم ٹول ٹیکس');
     expect(row).toContain(language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan');
@@ -172,7 +172,7 @@ describe.each(LANGUAGES)('GlobalSearch (%s)', (language) => {
       expect(options()).toHaveLength(1);
     });
     await user.clear(box);
-    await user.keyboard('0304');
+    await user.keyboard('002');
     await waitFor(() => {
       expect(options()).toHaveLength(2);
     });
@@ -182,7 +182,7 @@ describe.each(LANGUAGES)('GlobalSearch (%s)', (language) => {
   it('↓ then Enter opens the highlighted account and clears the box', async () => {
     const { box, user, onOpenAccount } = setup(language);
     await user.click(box);
-    await user.keyboard('0304');
+    await user.keyboard('002');
     await waitFor(() => {
       expect(options()).toHaveLength(2);
     });

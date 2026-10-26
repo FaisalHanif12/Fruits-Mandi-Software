@@ -20,3 +20,18 @@ export function useFocusFirstField<T extends HTMLElement>(refocusKey?: unknown) 
   }, [refocusKey]);
   return ref;
 }
+
+/** A text box the user can type in: not hidden, not read only, not switched off. */
+const TEXT_BOX =
+  'input:not([type="hidden"]):not([readonly]):not(:disabled), textarea:not(:disabled)';
+
+/**
+ * Puts the focus in the first box of `root` that is still empty (plan 32, R8, decision D1): the
+ * Index form a picker opens starts with the text already typed there, so the cursor goes to the
+ * first thing left to write. When every box has something in it, the first box takes the focus.
+ */
+export function focusFirstEmptyField(root: HTMLElement | null): void {
+  if (root === null) return;
+  const boxes = Array.from(root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(TEXT_BOX));
+  (boxes.find((box) => box.value === '') ?? boxes[0])?.focus();
+}

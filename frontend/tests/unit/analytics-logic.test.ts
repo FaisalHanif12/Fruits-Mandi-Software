@@ -126,7 +126,7 @@ describe('the boxes become the request the backend wrote', () => {
   });
 
   it('sends a buyer, and a person inside a one-time buyer account with his key', () => {
-    const buyer = { id: 9, name_ur: 'پختہ', name_en: 'Pukhta', code: '03049999' };
+    const buyer = { id: 9, name_ur: 'پختہ', name_en: 'Pukhta', code: '0030' };
     const plain = filtersToWire({ ...EMPTY_ANALYTICS_FILTERS, buyer }, takesOf('C'));
     expect(plain.buyer).toEqual({ account_id: 9, person_key: null });
     const person = {

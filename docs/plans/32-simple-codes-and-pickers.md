@@ -94,6 +94,10 @@ D2 (27-10-2026). A code has at most 10 digits, so each type can have 9,999,999 r
 
 D3 (27-10-2026). Lists sorted by code use type number, then length, then code, so 0019 comes before 00110.
 
+D4 (27-10-2026, from `frontend`). The Opening balances screen lists every account it lists today. A fifth list kind, `every`, does this and is used only there. Without it, cash and capital would lose their openings (PRD 4.3).
+
+D5 (27-10-2026). The no-match button shows on every entry field. It is hidden on pure filter boxes: report and analytics filters, list filters, find, and the rule test. A mouse click on a picker cell in a grid opens the full list. Enter, Tab and arrow moves never open it. While the Index form is open over a screen, F10, Ctrl+Enter and Esc act only inside the form, so a save there never saves the entry underneath.
+
 ## 9. Open questions
 
 - R3 reading of pukhta (above).

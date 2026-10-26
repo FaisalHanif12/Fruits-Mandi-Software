@@ -880,7 +880,7 @@ fn r23_and_r25_are_the_receipts_and_the_payments_of_the_worked_day() {
     let receipts = report(&w, ReportId::R23, day(), 0, 0);
     assert_eq!(receipts.rows.len(), 1);
     let row = &receipts.rows[0];
-    assert_eq!(code_of(&row.cells[2]), "03040001");
+    assert_eq!(code_of(&row.cells[2]), "0020");
     assert_eq!(money(&row.cells[3]), 10_000);
     assert!(
         matches!(&row.cells[1], Cell::Doc { number: Some(1), type_id } if type_id == "report-doc-receipt")
@@ -906,7 +906,7 @@ fn r23_and_r25_are_the_receipts_and_the_payments_of_the_worked_day() {
 
     let payments = report(&w, ReportId::R25, day(), 0, 0);
     assert_eq!(payments.rows.len(), 1);
-    assert_eq!(code_of(&payments.rows[0].cells[2]), "030110001");
+    assert_eq!(code_of(&payments.rows[0].cells[2]), "0010");
     assert_eq!(money(&payments.totals[3]), 4_316);
     // There is no mode, bank or cheque column.
     assert_eq!(
@@ -1051,7 +1051,7 @@ fn the_voucher_lists_filter_by_party_and_day() {
     assert_eq!(by_akram.rows.len(), 1);
     assert_eq!(
         by_akram.filters.party.as_ref().map(|p| p.code.clone()),
-        Some("03040001".to_owned())
+        Some("0020".to_owned())
     );
     assert!(
         report(&w, ReportId::R23, party(w.arshad), 0, 0)
@@ -1087,7 +1087,7 @@ fn r10_lists_the_lots_with_goods_left_like_the_stock_screen() {
     let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
     assert_eq!(page.rows.len(), 1);
     let row = &page.rows[0];
-    assert_eq!(code_of(&row.cells[2]), "030110001");
+    assert_eq!(code_of(&row.cells[2]), "0010");
     // received, sold, written off, taken as fruit, balance, days (C16).
     assert_eq!(figures_of_cells(&row.cells, 5), vec![50, 20, 0, 0, 30, 0]);
     assert_eq!(figures_of_cells(&page.totals[..10], 5), [50, 20, 0, 0, 30]);

@@ -53,13 +53,13 @@ fn buyer(
 fn golden_list() -> CollectionList {
     let buyers = vec![
         buyer(
-            record(1, "03040001", "اکرم ٹول ٹیکس", "Akram Toll Tax", None),
+            record(1, "0020", "اکرم ٹول ٹیکس", "Akram Toll Tax", None),
             "03001234567",
             2_880,
             Some(("2026-10-10", 0)),
         ),
         buyer(
-            record(2, "03040002", "ارشد ملتانی", "Arshad Multani", None),
+            record(2, "0021", "ارشد ملتانی", "Arshad Multani", None),
             "",
             18_684,
             Some(("2026-10-10", 0)),
@@ -82,20 +82,20 @@ fn golden_list() -> CollectionList {
 fn grouped_list() -> CollectionList {
     let group_one = vec![
         buyer(
-            record(3, "03040003", "عاشق ظفر", "Ashiq Zafar", Some("K")),
+            record(3, "0022", "عاشق ظفر", "Ashiq Zafar", Some("K")),
             "03211234567",
             5_000,
             Some(("2026-09-30", 10)),
         ),
         buyer(
-            record(4, "03040012", "طارق محمود", "Tariq Mehmood", None),
+            record(4, "00212", "طارق محمود", "Tariq Mehmood", None),
             "03001112223",
             1_200,
             None,
         ),
     ];
     let group_two = vec![buyer(
-        record(5, "03040007", "ناصر", "Nasir", None),
+        record(5, "0027", "ناصر", "Nasir", None),
         "",
         800,
         Some(("2026-10-01", 9)),
@@ -224,7 +224,7 @@ fn the_golden_list_prints_2880_18684_and_21564() {
         // The short code (PRD FR-7.39) and the row numbers.
         assert_eq!(
             rows.iter().map(|r| r.code.as_str()).collect::<Vec<_>>(),
-            vec!["1", "2"]
+            vec!["0", "1"]
         );
         assert_eq!(
             rows.iter().map(|r| r.serial.as_str()).collect::<Vec<_>>(),
@@ -285,7 +285,7 @@ fn groups_keep_their_order_and_totals_and_the_rows_are_numbered_through_the_list
         .flat_map(|g| g.rows.iter().map(|r| r.serial.as_str()))
         .collect();
     assert_eq!(serials, vec!["1", "2", "3"]);
-    // Short codes: the serial without leading zeros.
+    // Short codes: the running number of the code (00212 is 12).
     assert_eq!(data.groups[1].rows[1].code, "12");
     // The tag is its own field; the name does not hold it. No tag means no key in the JSON.
     let tagged = &data.groups[1].rows[0];
@@ -357,7 +357,7 @@ fn a_default_urdu_collection_print_has_only_plain_digits_everywhere() {
     let on = serde_json::to_value(build_collection(&golden_list(), &set).unwrap()).unwrap();
     assert!(has_urdu_digit(&on));
     assert_eq!(on["groups"][0]["rows"][0]["phone"], "0300-1234567");
-    assert_eq!(on["groups"][0]["rows"][0]["code"], "1");
+    assert_eq!(on["groups"][0]["rows"][0]["code"], "0");
 }
 
 #[test]

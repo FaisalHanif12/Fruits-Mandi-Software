@@ -10,7 +10,7 @@
 //! spellings by the phonetic key, a phone by its digits. Read only (Code Standards B29).
 //!
 //! Example (PRD 4.5): "shahid" or "شاہد" or "0300" finds شاہد (phone 03000000000) once, with the
-//! one-time buyer account 03049999.
+//! one-time buyer account 0030.
 
 use std::collections::BTreeMap;
 
@@ -33,8 +33,8 @@ pub const DEFAULT_PEOPLE: u32 = 10;
 const MAX_TEXT_CHARS: usize = 100;
 
 /// The code of the one-time buyer account and of the one-time seller account (PRD FR-13.1).
-const BUYER_CODE: &str = "03049999";
-const SELLER_CODE: &str = "030119999";
+const BUYER_CODE: &str = mandi_core::codes::PUKHTA_BUYER_CODE;
+const SELLER_CODE: &str = mandi_core::codes::PUKHTA_SELLER_CODE;
 
 /// Input of `find_people`.
 #[derive(Debug, Clone, Deserialize, TS)]

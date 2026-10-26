@@ -218,7 +218,9 @@ pub fn opening_request_in_force(
     })
 }
 
-/// The serial inside a full account code, if the code is the control code plus 4 digits.
+/// The serial inside a full account code of the old scheme (control code plus 4 digits), used for
+/// the accounts that are not sellers or buyers (PRD 1.8 R4). Sellers and buyers use
+/// `codes::check_typed_code`.
 ///
 /// - `ERR_CODE_INVALID` if it is not digits, or does not start with the control code, or has
 ///   the wrong length (PRD FR-10.2).
@@ -227,9 +229,9 @@ pub fn opening_request_in_force(
 ///
 /// ```
 /// use mandi_core::accounts::account_code_for;
-/// assert_eq!(account_code_for("code", "0304", "03040003").unwrap(), 3);
-/// assert!(account_code_for("code", "0304", "03049999").is_err());
-/// assert!(account_code_for("code", "0304", "03110003").is_err());
+/// assert_eq!(account_code_for("code", "0103", "01030003").unwrap(), 3);
+/// assert!(account_code_for("code", "0103", "01039999").is_err());
+/// assert!(account_code_for("code", "0103", "03110003").is_err());
 /// ```
 pub fn account_code_for(field: &str, control_code: &str, typed: &str) -> Result<u32, FieldError> {
     let digits: String = typed.trim().chars().collect();
@@ -282,6 +284,14 @@ pub fn prepare_account(
         if digits.is_empty() {
             None
         } else if digits.bytes().all(|b| b.is_ascii_digit()) && digits.len() <= 12 {
+            // A new seller's or buyer's code must be a full code of its own type (plan 32 R2):
+            // `0013` on a seller form, never `0023` or `0013` padded. An edit never changes the
+            // code; the service compares it with the saved one.
+            if input.id.is_none()
+                && let Some(code_type) = input.account_type.code_type()
+            {
+                errors.take(crate::codes::check_typed_code("code", digits, code_type));
+            }
             Some(digits.to_owned())
         } else {
             errors.push(error(ErrorCode::ErrCodeInvalid, "code"));

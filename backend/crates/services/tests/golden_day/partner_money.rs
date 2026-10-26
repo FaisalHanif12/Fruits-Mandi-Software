@@ -544,7 +544,7 @@ fn e2e_38_the_family_khata_pays_out_gets_back_and_sells_its_goods() {
     assert_eq!(
         entry_lines(&w, saved.entry_id),
         lines(&[
-            ("03040002", 9_620, 0),
+            ("0021", 9_620, 0),
             ("03050001", 0, 9_000),
             ("04010002", 0, 540),
             ("04010003", 0, 80),

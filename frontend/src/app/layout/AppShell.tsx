@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { PartyReportLinks } from '../../features/reports';
 import type { VoucherSearchHit } from '../../shared/accounts';
 import { useFocusRegion } from '../../shared/keyboard';
+import { useWorkAreaStore } from '../../shared/ui';
 import { StatusBar, type DayState } from './StatusBar';
 import { TopBar } from './TopBar';
 import { useTextSize } from './text-size';
@@ -56,6 +57,8 @@ export function AppShell({
 }: AppShellProps) {
   useTextSize();
   const screen = useFocusRegion<HTMLElement>('screen');
+  // The Index form a picker opens is drawn over the screen, in this slot (shared/ui/work-area.ts).
+  const setSlot = useWorkAreaStore((state) => state.setSlot);
   // The shell is exactly as tall as the window and never scrolls itself; each screen scrolls in
   // its own area. Without the clip, Gulzar's tall letter metrics in the status bar pushed the page
   // 8 px past the window (D1+D2 review, finding 29).
@@ -74,16 +77,21 @@ export function AppShell({
             onOpenBikri={onOpenBikri}
             onOpenVoucher={onOpenVoucher}
           />
-          {/* `relative` makes the screen the containing block of the hidden native <select> that
-              Radix Select keeps beside each drop-down. Without it that element sits against the
-              window, outside this scroll area, and the whole page scrolled (finding 29). */}
-          <main
-            ref={screen}
-            className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 wide:mx-auto wide:w-full wide:max-w-page"
-          >
-            {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
-            <PartyReportLinks>{children}</PartyReportLinks>
-          </main>
+          {/* The Index form of a picker's "add" button is drawn over the screen, in the slot below
+              (shared/ui/work-area.ts). */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {/* `relative` makes the screen the containing block of the hidden native <select> that
+                Radix Select keeps beside each drop-down. Without it that element sits against the
+                window, outside this scroll area, and the whole page scrolled (finding 29). */}
+            <main
+              ref={screen}
+              className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 wide:mx-auto wide:w-full wide:max-w-page"
+            >
+              {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
+              <PartyReportLinks>{children}</PartyReportLinks>
+            </main>
+            <div ref={setSlot} className="pointer-events-none absolute inset-0 z-40" />
+          </div>
         </div>
       </div>
       <StatusBar

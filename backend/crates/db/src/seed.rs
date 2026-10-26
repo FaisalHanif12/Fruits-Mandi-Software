@@ -353,6 +353,10 @@ pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
                  search_ur, search_en, search_phonetic, is_system, is_pukhta_khata, credit_allowed)
              SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
              FROM account_controls WHERE code = ?1
+               -- Migration 7 renumbers the two پختہ کھاتہ accounts (0030, 0031), so a second run must
+               -- find them by what they are, not by their old code (plan 32).
+               AND NOT (?10 = 1 AND EXISTS (SELECT 1 FROM accounts x
+                                            WHERE x.is_pukhta_khata = 1 AND x.party_type = ?4))
              ON CONFLICT(code) DO NOTHING",
             params![
                 account.control_code,

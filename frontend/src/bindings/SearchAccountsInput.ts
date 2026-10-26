@@ -14,11 +14,18 @@ export type SearchAccountsInput = {
    */
   control_id: number | null;
   /**
-   * What was typed. Raw: never converted to Urdu (PRD FR-7.22).
+   * What was typed. Raw: never converted to Urdu (PRD FR-7.22). **Empty text gives the whole
+   * list of the field** (plan 32 R7): the accounts this user chose last first (latest first), then
+   * every other active account by code. A click on the picker opens this list.
    */
   text: string;
   /**
-   * The most hits, at most 50.
+   * The most hits in this page, at most 50.
    */
   limit: number;
+  /**
+   * How many hits to skip, for the next page of a long list. 0 for the first page. A page with
+   * fewer than `limit` hits is the last one. Missing means 0.
+   */
+  offset: number;
 };

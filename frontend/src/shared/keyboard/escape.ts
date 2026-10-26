@@ -7,6 +7,7 @@
 // level the one registered last, so a list opened inside a dialog closes before the dialog.
 
 import { useEffect, useRef } from 'react';
+import { topLayer, useOwnLayer } from './modalLayer';
 
 export type EscapeLevel = 'overlay' | 'edit' | 'leave';
 
@@ -18,6 +19,8 @@ interface Entry {
   /** Asked when Esc is pressed, so the answer is always current. */
   isActive: () => boolean;
   order: number;
+  /** The form dialog this part sits in, or null for the screen itself (modalLayer.ts). */
+  layer: string | null;
 }
 
 const entries = new Set<Entry>();
@@ -31,9 +34,10 @@ export function registerEscape(
   level: EscapeLevel,
   handler: () => void,
   isActive: () => boolean = () => true,
+  layer: string | null = null,
 ): () => void {
   nextOrder += 1;
-  const entry: Entry = { level, handler, isActive, order: nextOrder };
+  const entry: Entry = { level, handler, isActive, order: nextOrder, layer };
   entries.add(entry);
   return () => {
     entries.delete(entry);
@@ -47,8 +51,12 @@ export function registerEscape(
  */
 export function runEscape(only?: EscapeLevel): boolean {
   let best: Entry | undefined;
+  // While a form dialog is open, Esc belongs to the parts inside it: the screen under it, with its
+  // grid cell or its own way out, must not answer for it.
+  const top = topLayer();
   for (const entry of entries) {
     if (only !== undefined && entry.level !== only) continue;
+    if (top !== undefined && entry.layer !== top) continue;
     if (!entry.isActive()) continue;
     if (
       best === undefined ||
@@ -75,6 +83,7 @@ export function useEscape(
 ): void {
   const handlerRef = useRef(handler);
   const activeRef = useRef(active);
+  const layer = useOwnLayer();
   useEffect(() => {
     handlerRef.current = handler;
     activeRef.current = active;
@@ -87,8 +96,9 @@ export function useEscape(
           handlerRef.current();
         },
         () => (typeof activeRef.current === 'boolean' ? activeRef.current : activeRef.current()),
+        layer,
       ),
-    [level],
+    [level, layer],
   );
 }
 

@@ -2,9 +2,15 @@
 // (AccountPicker) are thin wrappers that give it a source of records (PRD FR-7.10, FR-7.16,
 // FR-7.35, FR-7.40, FR-7.41, Code Standards F7, F40). Built on Downshift `useCombobox`.
 //
+// - A mouse click on the field opens the list of every record of the kind, recent first, then by
+//   code (plan 32, R7). Arriving by keyboard (Enter, Tab, arrows) does not open it: the arrows
+//   keep moving between fields, and typing or Alt+↓ opens the list (PRD 7.2).
 // - Typing searches (shared/search). Both scripts are searched and a small spelling mistake is
 //   forgiven, by the backend. The picker never converts English letters to Urdu (F41): the text
 //   goes to the search exactly as typed.
+// - A list that is long is read page by page and draws only the rows in view (B31, F34).
+// - When nothing is found, or nothing has been added yet, the list shows a button that opens the
+//   Index form of that kind above the screen (plan 32, R8, shared/ui/add-record.ts).
 // - Keys (PRD FR-7.16): with the list open ↑ ↓ move through the matches, Enter picks the
 //   highlighted one (the best match is highlighted at once) and moves on, Esc closes the list.
 //   With the list closed ↑ ↓ move between fields like in any other field. Alt+↓ opens the full
@@ -34,8 +40,14 @@ import { uiErrorOf } from '../api';
 import { tokenPx } from '../hooks/tokenPx';
 import { displayName, otherScriptLang, otherScriptName, useLanguage, type Named } from '../i18n';
 import { SHORTCUTS, focusNextField, keepKeyForApp, matchesShortcut, useEscape } from '../keyboard';
-import { useFetchHits, usePickerHits, useTouchRecord, type PickerSource } from '../search';
-import { usePickerText } from './usePickerText';
+import {
+  PICKER_LOAD_AHEAD_ROWS,
+  useFetchHits,
+  usePickerHits,
+  useTouchRecord,
+  type PickerSource,
+} from '../search';
+import { usePickerFlag, usePickerText } from './usePickerText';
 import { Button } from './Button';
 import { Code } from './Code';
 import { controlClasses } from './control-classes';
@@ -66,6 +78,16 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   placeholder?: string | undefined;
   /** Called with the typed text on F4 and from the button of an empty result. Leave out to hide both. */
   onAddNew?: ((text: string) => void) | undefined;
+  /**
+   * The button of an empty result opens the Index form with this (plan 32, R8). `done` is called
+   * when that form closes, saved or not; the picker then takes the focus back with the same text
+   * and opens its list. Without it the button uses `onAddNew`, and F4 is not changed by it.
+   */
+  onAddRecord?: ((text: string, done: () => void) => void) | undefined;
+  /** False hides the button of an empty result (a filter has nothing to add). F4 is not changed. */
+  showAdd?: boolean | undefined;
+  /** The Fluent id of the button's words, for example `search-add-seller`. Default: "Add new". */
+  addLabelId?: string | undefined;
   /** Something at the end of each row, for example a balance. */
   renderEnd?: ((hit: H) => ReactNode) | undefined;
   /** The record the list highlights now, or null: a screen can preview it (the party card). */
@@ -123,6 +145,9 @@ export function PickerBase<H extends PickerHit>({
   onChange,
   placeholder,
   onAddNew,
+  onAddRecord,
+  showAdd = true,
+  addLabelId = 'search-add-new',
   renderEnd,
   onHighlight,
   onLeave,
@@ -146,9 +171,21 @@ export function PickerBase<H extends PickerHit>({
   const [{ rowPx, listPx }] = useState(readListSizes);
 
   const touch = useTouchRecord(source);
-  const { query, current } = usePickerHits(source, typed ?? '', open && readOnly !== true);
+  const {
+    rows,
+    isPending,
+    isError,
+    error: queryError,
+    current,
+    hasMore,
+    loadMore,
+  } = usePickerHits(source, typed ?? '', open && readOnly !== true);
   const fetchHits = useFetchHits(source);
-  const hits = useMemo(() => (query.data ?? []).filter((hit) => hit.is_active), [query.data]);
+  const hits = useMemo(() => rows.filter((hit) => hit.is_active), [rows]);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  // True while the Index form of the "add" button is open above the screen. The field loses focus
+  // to it, and that must not drop what was typed or send it as a code (plan 32, R8).
+  const adding = usePickerFlag();
 
   const shown = typed ?? (value === null ? '' : displayName(value, language));
 
@@ -183,11 +220,23 @@ export function PickerBase<H extends PickerHit>({
         if (type === useCombobox.stateChangeTypes.InputBlur) {
           return { ...changes, selectedItem: state.selectedItem, inputValue: state.inputValue };
         }
+        // A click on the field opens the list and never closes it again (plan 32, R7): the list
+        // closes with Esc, a pick, or leaving the field. The chevron button is the one that toggles.
+        if (type === useCombobox.stateChangeTypes.InputClick) {
+          return {
+            ...changes,
+            isOpen: true,
+            highlightedIndex:
+              (state.isOpen ? state.highlightedIndex : changes.highlightedIndex) ?? 0,
+          };
+        }
         return changes;
       },
       onIsOpenChange: ({ isOpen }: UseComboboxStateChange<H>) => {
-        if (isOpen) setOpen(true);
-        else closeList();
+        // A field that cannot be changed (read only) opens no list, whatever is clicked.
+        if (isOpen) {
+          if (readOnly !== true) setOpen(true);
+        } else closeList();
       },
       onSelectedItemChange: ({ selectedItem }: UseComboboxStateChange<H>) => {
         if (selectedItem !== null && selectedItem !== undefined) pick(selectedItem);
@@ -312,8 +361,34 @@ export function PickerBase<H extends PickerHit>({
     }
   };
 
+  // The "add" button: the Index form above the screen, or the small form of the screen's own.
+  const addFromList = () => {
+    const text = typed ?? '';
+    closeList();
+    if (onAddRecord === undefined) {
+      onAddNew?.(text);
+      return;
+    }
+    adding.set(true);
+    onAddRecord(text, () => {
+      // Radix gives the focus back to the field after the form has closed; take it from there.
+      window.setTimeout(() => {
+        adding.set(false);
+        const field = boxRef.current?.querySelector('input');
+        if (!field?.isConnected) return;
+        setTypedNow(text);
+        field.focus();
+        setOpen(true);
+      }, 0);
+    });
+  };
+
   const onBlur = () => {
     setFocused(false);
+    if (adding.get()) {
+      closeList();
+      return;
+    }
     // Emptying the field and leaving clears the value; any other typing is dropped. The text is
     // read as the last key left it: after a pick it is already gone, so nothing is resolved twice.
     const left = readTyped();
@@ -327,12 +402,19 @@ export function PickerBase<H extends PickerHit>({
     setScrollTop(event.currentTarget.scrollTop);
   };
 
-  const error = query.isError ? uiErrorOf(query.error) : null;
-  const searching = open && query.isPending;
-  const noMatch = open && !query.isPending && !query.isError && hits.length === 0;
+  // Near the end of what has been read, the next page is asked for (B31, F34).
+  const nearEnd = last >= hits.length - PICKER_LOAD_AHEAD_ROWS;
+  useEffect(() => {
+    if (open && hasMore && nearEnd) loadMore();
+  }, [open, hasMore, nearEnd, loadMore, hits.length]);
+
+  const error = isError ? uiErrorOf(queryError) : null;
+  const searching = open && isPending;
+  const noMatch = open && !isPending && !isError && hits.length === 0;
+  const canAdd = showAdd && (onAddRecord !== undefined || onAddNew !== undefined);
 
   return (
-    <div className="relative">
+    <div ref={boxRef} className="relative">
       <input
         {...getInputProps({
           type: 'text',
@@ -343,6 +425,11 @@ export function PickerBase<H extends PickerHit>({
           autoComplete: 'off',
           spellCheck: false,
           onKeyDown,
+          onClick: (event: { currentTarget: HTMLInputElement }) => {
+            // A click on a field that shows a chosen name selects the whole name, so typing
+            // replaces it, as it does when the field is entered by keyboard (PRD FR-7.15).
+            if (readOnly !== true && typed === null) event.currentTarget.select();
+          },
           onFocus: () => {
             setFocused(true);
           },
@@ -454,20 +541,18 @@ export function PickerBase<H extends PickerHit>({
               event.preventDefault();
             }}
           >
-            <Localized id="search-no-match">
+            <Localized id={(typed ?? '').trim() === '' ? 'search-empty' : 'search-no-match'}>
               <p className="type-body text-ink-muted" />
             </Localized>
-            {onAddNew === undefined ? null : (
+            {canAdd ? (
               <Button
-                shortcut={SHORTCUTS.addAccount}
-                onClick={() => {
-                  closeList();
-                  onAddNew(typed ?? '');
-                }}
+                // F4 is shown on the button only where F4 does the same (the small form).
+                {...(onAddRecord === undefined ? { shortcut: SHORTCUTS.addAccount } : {})}
+                onClick={addFromList}
               >
-                <Localized id="search-add-new" />
+                <Localized id={addLabelId} />
               </Button>
-            )}
+            ) : null}
           </div>
         ) : null}
         {footer}

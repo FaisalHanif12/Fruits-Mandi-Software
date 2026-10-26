@@ -706,7 +706,7 @@ erDiagram
 |---|---|
 | `account_heads` | `code` (unique), `name_ur`, `name_en`, `nature` (asset, payable, party, income, expense, capital) |
 | `account_controls` | `head_id`, `code` (unique), `name_ur`, `name_en`, `party_type` (seller, buyer, separate, garden, other; separate = a الگ کھاتہ under control 0305, PRD 16.6; garden = a garden's account under control 0306, PRD 12.11) |
-| `accounts` | `control_id`, `code` (unique), `serial`, `party_type`, `name_ur`, `name_en`, `tag` (null; 1 to 4 English capital letters and dots, shown after the name, PRD 10.2, v1.7), + search columns (the tag is in the search keys), `father_or_firm_ur`, `father_or_firm_en`, `city_id`, `adda_id`, `phone1`, `phone2`, `address`, `linked_account_id`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `opening_is_advance`, `opening_entry_id`, `credit_allowed`, `credit_limit_paisa`, `default_marka_id`, `collector_staff_id`, `collection_weekday`, `is_system`, `is_pukhta_khata`, `is_active`, `note` |
+| `accounts` | `control_id`, `code` (unique; for sellers, buyers and the two پختہ کھاتہ accounts the type number + `serial` with no padding, for example 0010, PRD 10.2, v1.8), `serial` (for those, the running number from 0; else the 4-digit serial), `party_type`, `name_ur`, `name_en`, `tag` (null; 1 to 4 English capital letters and dots, shown after the name, PRD 10.2, v1.7), + search columns (the tag is in the search keys), `father_or_firm_ur`, `father_or_firm_en`, `city_id`, `adda_id`, `phone1`, `phone2`, `address`, `linked_account_id`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `opening_is_advance`, `opening_entry_id`, `credit_allowed`, `credit_limit_paisa`, `default_marka_id`, `collector_staff_id`, `collection_weekday`, `is_system`, `is_pukhta_khata`, `is_active`, `note` |
 | `cities` | `code`, `name_ur`, `name_en`, + search columns, `is_active` |
 | `items` | `code`, `name_ur`, `name_en`, + search columns, `item_group` (fruit, vegetable), `default_packing_id`, `sold_by` (unit, weight), `is_active` |
 | `packings` | `code`, `name_ur`, `name_en`, + search columns, `approx_grams`, `is_active` |
@@ -715,7 +715,7 @@ erDiagram
 | `stores` | `code`, `name_ur`, `name_en`, + search columns, `is_active` |
 | `narrations` | `text_ur`, `text_en`, `used_in_json`, `is_active` |
 | `expense_heads` | `code`, `name_ur`, `name_en`, + search columns, `account_id`, `is_active` |
-| `staff` | `name_ur`, `name_en`, + search columns, `role` (munshi, collector, labour; the job, not a login role), `phone`, `account_id` (null; his ادھار رقم account under control 0103, made the first time he is lent money), `is_active` |
+| `staff` | `code` (unique; type number 006 + running number, PRD 10.2, v1.8), `name_ur`, `name_en`, + search columns, `role` (munshi, collector, labour; the job, not a login role), `phone`, `account_id` (null; his ادھار رقم account under control 0103, made the first time he is lent money), `is_active` |
 | `bank_accounts` | `bank_name`, `title`, `number` (all as typed, one script), `account_id`, `is_active`. Kept from migration 0001; not used from v1.6 (PRD FR-10.4: all money is روکڑ). |
 
 ### 15.5 Rules and partners
@@ -775,7 +775,8 @@ erDiagram
 | `bill_allocations`, `advance_allocations` | (`account_id`, `pukhta_person_key`, `is_active`) |
 | `bikri_entries` | (`truck_no`, `entry_date`) for truck memory and the same-truck check |
 | Every table with search columns | (`search_ur`), (`search_en`), (`search_phonetic`), (`code`) where it has one |
-| `accounts` | (`party_type`, `serial`) for short codes |
+| `accounts` | (`party_type`, `serial`) for short codes. Lists sorted by code use type number, then length, then code, so 0019 comes before 00110 (v1.8) |
+| `staff` | unique (`code`) (`idx_staff_code`, migration 0007) |
 | `user_prefs` | unique (`user_id`, `key`) |
 | `translit_pairs` | unique (`roman`, `urdu`) |
 | `charge_rules` | (`side`, `charge_type`, `account_id`, `item_id`, `item_group`, `from_date`) |

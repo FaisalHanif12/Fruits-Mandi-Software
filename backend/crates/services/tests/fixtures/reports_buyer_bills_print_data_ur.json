@@ -41,8 +41,8 @@
     {
       "serial": "1",
       "party": {
-        "short_code": "2",
-        "code": "03040002",
+        "short_code": "1",
+        "code": "0021",
         "name": "ارشد ملتانی",
         "tag": null,
         "person_key": null
@@ -104,8 +104,8 @@
     {
       "serial": "2",
       "party": {
-        "short_code": "1",
-        "code": "03040001",
+        "short_code": "0",
+        "code": "0020",
         "name": "اکرم ٹول ٹیکس",
         "tag": null,
         "person_key": null

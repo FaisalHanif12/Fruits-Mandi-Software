@@ -257,7 +257,7 @@ fn a_negative_credit_is_a_plain_debit_and_adjusts_nothing() {
     let lines = entry_lines(&w, saved.entry_id);
     // gross 6,000, comm 360, charges 20,000: credit = -14,360, written as a debit of 14,360.
     assert!(
-        lines.contains(&("030110001".to_owned(), 14_360, 0, None)),
+        lines.contains(&("0010".to_owned(), 14_360, 0, None)),
         "{lines:?}"
     );
     assert_eq!(adjusted(&w), 0);
@@ -287,7 +287,7 @@ fn a_credit_of_exactly_zero_makes_no_seller_line() {
         &draft(vec![with_sales(l, vec![sale("s-1", w.akram, "1", "1000")])]),
     );
     let lines = entry_lines(&w, saved.entry_id);
-    assert!(!lines.iter().any(|l| l.0 == "030110001"), "{lines:?}");
+    assert!(!lines.iter().any(|l| l.0 == "0010"), "{lines:?}");
     assert_eq!(
         bikri::get(&w.env.ctx, saved.bikri_id).unwrap().lots[0]
             .net
@@ -322,7 +322,7 @@ fn a_lot_with_no_sale_is_saved_with_its_charges_and_a_negative_net() {
     let lines = entry_lines(&w, saved.entry_id);
     // The seller owes 1,120: a debit of 1,120 on کریم; the charges are credits.
     assert!(
-        lines.contains(&("030110002".to_owned(), 1_120, 0, None)),
+        lines.contains(&("0011".to_owned(), 1_120, 0, None)),
         "{lines:?}"
     );
     assert!(
@@ -368,7 +368,7 @@ fn freight_paid_by_the_seller_is_kept_but_not_deducted_or_posted() {
     assert_eq!(detail.totals.seller_credit.rupees(), 27_316);
     let lines = entry_lines(&w, saved.entry_id);
     assert!(
-        lines.contains(&("030110001".to_owned(), 0, 27_316, None)),
+        lines.contains(&("0010".to_owned(), 0, 27_316, None)),
         "{lines:?}"
     );
     assert!(!lines.iter().any(|l| l.0 == "02010002"));
@@ -491,7 +491,7 @@ fn a_rate_difference_posts_to_the_rate_difference_account_on_either_side() {
         lines.contains(&("04010005".to_owned(), 200, 0, None)),
         "{lines:?}"
     );
-    assert_eq!(lines[0], ("03040001".to_owned(), 12_668, 0, None));
+    assert_eq!(lines[0], ("0020".to_owned(), 12_668, 0, None));
     // Sale part 31,552 = 31,552, and the cash part adds 5,000 to each side.
     assert_eq!(lines.iter().map(|l| l.1).sum::<i64>(), 36_552, "{lines:?}");
     assert_eq!(lines.iter().map(|l| l.2).sum::<i64>(), 36_552, "{lines:?}");
@@ -534,11 +534,11 @@ fn a_one_time_seller_is_paid_on_the_spot() {
     let key = Some("ناصر|03001111111".to_owned());
     let lines = entry_lines(&w, saved.entry_id);
     assert!(
-        lines.contains(&("030119999".to_owned(), 0, 10_160, key.clone())),
+        lines.contains(&("0031".to_owned(), 0, 10_160, key.clone())),
         "{lines:?}"
     );
     assert!(
-        lines.contains(&("030119999".to_owned(), 10_160, 0, key.clone())),
+        lines.contains(&("0031".to_owned(), 10_160, 0, key.clone())),
         "{lines:?}"
     );
     // His own balance is 0.

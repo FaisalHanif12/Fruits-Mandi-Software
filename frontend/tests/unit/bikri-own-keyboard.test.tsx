@@ -150,7 +150,7 @@ describe.each(LANGUAGES)('a lot of trip goods typed with the keyboard (%s)', (la
     const visited = await enterToTheLines(user);
     expect(visited).not.toContain('0:cash');
     // One line: Akram by his short code, all of it at 600.
-    await user.keyboard('1{Enter}');
+    await user.keyboard('0{Enter}');
     await waitFor(() => {
       expect(focusedIn(salesGrid(language))).toBe('0:qty');
     });

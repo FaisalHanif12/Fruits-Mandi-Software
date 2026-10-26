@@ -13,6 +13,7 @@ pub mod audit;
 pub mod bikri;
 pub mod cashbook;
 pub mod clock;
+pub mod codes;
 mod db;
 pub mod disk;
 pub mod drafts;

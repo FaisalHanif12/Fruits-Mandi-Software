@@ -37,3 +37,16 @@ The duplicate check (PRD FR-10.7, E38): the form sends the typed names, phone AN
 (`is_duplicate`). `SimilarAccounts` shows that row with a word chip and changes the title of the panel; the
 frontend never decides it. It only warns, and the save is never blocked. A contact person of the firm
 (`features/settings/components/FirmTab`) has the same spelling check as the firm's names.
+
+The accounts list and the codes (plan 32, R1 to R6): the list shows only sellers, buyers and the
+two پختہ کھاتہ accounts, with the filter All, Seller, Buyer, Pukhta (`AccountListKind`); the
+chart still shows every account. A code has no fixed length: `0010`, `00110`, `0020`. The screens
+read it as text and never count its digits, and the new-account form offers only Seller and Buyer.
+Staff have a code of their own now (`0060`, `0061`).
+
+The Index form from a picker (plan 32, R8): the "add a new …" button of an empty picker opens
+`components/IndexAddDialog` above the screen. It is the same `AccountForm` or `MasterForm`, given
+`embedded` (the type, the typed text and a way out), in a `FormDialog` that answers Esc through
+the Esc order. The screen under it is never closed, so an entry in progress keeps every value.
+`app/AddRecordHost` gives the dialog to the pickers (`shared/ui/add-record.ts`); the pickers inside
+the dialog get none, so there is no second Index form on top of the first.

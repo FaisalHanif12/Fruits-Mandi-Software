@@ -240,13 +240,13 @@ fn the_worked_day_shows_the_prd_4_9_numbers() {
         dues,
         vec![
             (
-                "03040002".to_owned(),
+                "0021".to_owned(),
                 18_684,
                 Some("2026-10-10".to_owned()),
                 Some(0)
             ),
             (
-                "03040001".to_owned(),
+                "0020".to_owned(),
                 2_880,
                 Some("2026-10-10".to_owned()),
                 Some(0)

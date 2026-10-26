@@ -45,7 +45,7 @@ const ROWS: MasterRow[] = [
     is_active: true,
     mark_text: 'AR',
     owner_account_id: 31,
-    owner_account_code: '030110001',
+    owner_account_code: '0010',
     owner_name_ur: 'رحیم',
     owner_name_en: 'Rahim',
   },
@@ -75,6 +75,8 @@ const ROWS: MasterRow[] = [
     version: 1,
     is_active: true,
     ...names,
+    // Staff have a code of their own since plan 32: 006 and a running number.
+    code: '0060',
     job: 'munshi',
     phone: null,
     account_id: null,
@@ -208,6 +210,7 @@ describe('draftToInput', () => {
 
   it('a staff member sends his job and phone and his names', () => {
     expect(draftToInput('staff', draftOf(at(ROWS, 8)), [])).toMatchObject({
+      code: '0060',
       job: 'munshi',
       phone: '',
     });

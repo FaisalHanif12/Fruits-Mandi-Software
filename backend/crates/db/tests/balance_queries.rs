@@ -160,20 +160,13 @@ struct Book {
 /// Builds a journal of `entries` postings, about four in five of them on the cash account.
 fn generate(conn: &Connection, entries: usize) -> Book {
     let codes = [
-        "01010001",
-        "04010001",
-        "04010002",
-        "04010003",
-        "02010001",
-        "02010002",
-        "03040000",
-        "03049999",
-        "030119999",
+        "01010001", "04010001", "04010002", "04010003", "02010001", "02010002", "03040000", "0030",
+        "0031",
     ];
     let accounts: Vec<i64> = codes.iter().map(|c| account_id(conn, c)).collect();
     let cash = account_id(conn, "01010001");
-    let pukhta = account_id(conn, "03049999");
-    let seller = account_id(conn, "030119999");
+    let pukhta = account_id(conn, "0030");
+    let seller = account_id(conn, "0031");
     let persons = [Some("ali|0300"), Some("bilal|0301"), Some("chand|0302")];
     let mut rng = Rng(0x00D2_C0DE_1234_5678);
     let mut earlier: Vec<i64> = Vec::new();

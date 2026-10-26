@@ -37,7 +37,7 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   balance: balance(2880, 'dr'),
   credit_limit_paisa: money(50000),
 });

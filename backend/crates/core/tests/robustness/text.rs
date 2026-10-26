@@ -157,8 +157,9 @@ fn codes_and_phones_refuse_hostile_text() {
         "1e3",
         "-1",
         "+1",
-        "12345",
-        "1234567",
+        "00",
+        "01",
+        "0001",
         "1234567890",
         "0x10",
         "１",
@@ -166,10 +167,10 @@ fn codes_and_phones_refuse_hostile_text() {
         assert_eq!(code(s).err(), Some(ErrorCode::ErrCodeInvalid), "{s:?}");
     }
     assert_eq!(code("").err(), Some(ErrorCode::ErrRequired));
-    assert!(code("65536").is_err(), "5 digits is not a short code");
+    assert!(code("012").is_err(), "a short code has no leading zero");
     assert_eq!(
-        code("۰۳۰۴۰۰۰۱"),
-        Ok(validate::AccountCodeInput::Full("03040001".to_owned()))
+        code("۰۰۲۰"),
+        Ok(validate::AccountCodeInput::Full("0020".to_owned()))
     );
     let phone = |s: &str| validate::phone("phone", s).map_err(|e| e.code);
     assert_eq!(phone("0300-0000000"), Ok("03000000000".to_owned()));

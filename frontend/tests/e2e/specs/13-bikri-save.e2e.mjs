@@ -1,7 +1,7 @@
 // Plan 13 (D3-A5 to D3-A9 screen part, D3-A12, D3-A14, PRD 12.6, 13): Events 1 and 2 of the worked
 // day (PRD 4.4, 4.5) typed with the keyboard only and SAVED with F10, in Urdu, then looked at again
 // on the screens they change.
-//   1. Makes what Event 2 needs: the seller کریم (030110002), the item سیب and لاہور اڈا. (The rest
+//   1. Makes what Event 2 needs: the seller کریم (0011), the item سیب and لاہور اڈا. (The rest
 //      was made by specs 09 and 12.)
 //   2. Event 1: truck, زمیندار, اڈا, the lot, two sale lines, F10. The message names بکری 1 and a
 //      new empty بکری is ready with the cursor on the truck number.
@@ -82,7 +82,7 @@ async function waitForSaved(number) {
 }
 
 /**
- * Makes a seller account: the second one gets 030110002.
+ * Makes a seller account: the second one gets 0011.
  * @param {string} nameUr
  * @param {string} nameEn
  */
@@ -199,7 +199,7 @@ describe('saving the worked day, Events 1 and 2 (Urdu)', () => {
     await type(`10${Key.Enter}1000${Key.Enter}50${Key.Enter}50${Key.Enter}${Key.Enter}`);
     await typePhoneCharge(1, '20');
     // The one-time buyer account: Enter goes to his name, then the other name, then his phone.
-    await type(`03049999${Key.Enter}`);
+    await type(`0030${Key.Enter}`);
     await type(`shahid${Key.Enter}`);
     await confirmSpellingIfAsked();
     await type(`${Key.Enter}0300-0000000${Key.Enter}`);

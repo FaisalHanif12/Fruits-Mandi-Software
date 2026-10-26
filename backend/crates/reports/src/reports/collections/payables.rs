@@ -41,10 +41,15 @@ use crate::reports::model::{
 use crate::reports::workings::payable_totals_from;
 
 /// The seller accounts. Parameter: account.
-const SELLERS_SQL: &str = "SELECT a.id, a.is_pukhta_khata
+fn sellers_sql() -> String {
+    format!(
+        "SELECT a.id, a.is_pukhta_khata
     FROM accounts a JOIN account_controls k ON k.id = a.control_id
     WHERE k.code = '03011' AND (?1 IS NULL OR a.id = ?1)
-    ORDER BY a.code";
+    ORDER BY {}",
+        mandi_db::codes::order_by_code("a.code")
+    )
+}
 
 /// The posted totals of each person of a پختہ کھاتہ account. Parameters: account, as-of day.
 const PERSONS_SQL: &str = "SELECT l.pukhta_person_key, COALESCE(SUM(l.dr_paisa), 0),
@@ -93,7 +98,7 @@ pub(crate) fn candidates(
 ) -> Result<(Vec<Seller>, Option<SellerSums>), ReportsError> {
     let as_of = typed.as_of.as_deref();
     let accounts = {
-        let mut statement = conn.prepare(SELLERS_SQL)?;
+        let mut statement = conn.prepare(&sellers_sql())?;
         statement
             .query_map(params![typed.party_id], |r| {
                 Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)? == 1))

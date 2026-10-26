@@ -184,8 +184,8 @@ fn the_worked_day_has_a_slip_for_akram_and_one_for_arshad_and_none_for_shahid() 
     );
     // Akram's slip: the one line, serial 1, "(Banana 20 . 600)", 12,000 and 12,880.
     let akram = &data.slips[1];
-    assert_eq!(akram.party.code, "03040001");
-    assert_eq!(akram.party.short_code.as_deref(), Some("1"));
+    assert_eq!(akram.party.code, "0020");
+    assert_eq!(akram.party.short_code.as_deref(), Some("0"));
     assert_eq!(akram.rows.len(), 1);
     assert_eq!(text(&akram.rows[0].cells[0]), "1");
     let detail = parts(&akram.rows[0].cells[1]);
@@ -383,7 +383,7 @@ fn each_one_time_person_has_a_slip_of_his_own_even_with_the_same_name() {
         .map(|s| s.party.person_key.as_deref().unwrap())
         .collect();
     assert!(keys[0] < keys[1], "{keys:?}");
-    assert!(data.slips.iter().all(|s| s.party.code == "03049999"));
+    assert!(data.slips.iter().all(|s| s.party.code == "0030"));
     // 17 نگ, 3,400 and 3,740 in all.
     assert_eq!(data.qty, "17");
     assert_eq!(

@@ -111,7 +111,7 @@ describe.each(LANGUAGES)('the seller bill (%s)', (language: Language) => {
     expect(text).toContain('10-10-2026');
     // The seller shows his short code (PRD FR-19.13), not the long one.
     expect(textOf(must(root.querySelector<HTMLElement>('.print-party')))).toContain(
-      `${message(language, 'print-party-code')} 1`,
+      `${message(language, 'print-party-code')} 0`,
     );
     expect(text).toContain(language === 'ur' ? 'رحیم' : 'Rahim');
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
@@ -391,7 +391,7 @@ describe.each(LANGUAGES)('the receipt slip template (%s)', (language: Language) 
     expect(text).toContain(message(language, 'print-party-buyer'));
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     // The buyer shows his short code.
-    expect(text).toContain(`${message(language, 'print-party-code')} 1`);
+    expect(text).toContain(`${message(language, 'print-party-code')} 0`);
     expect(text).toContain(message(language, 'print-slip-amount-received'));
     expect(text).toContain('10,000');
     expect(text).toContain(language === 'ur' ? 'دس ہزار روپے' : 'Ten thousand rupees only');

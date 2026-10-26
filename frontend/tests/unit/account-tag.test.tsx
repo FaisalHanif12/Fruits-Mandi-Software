@@ -38,11 +38,11 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const ASHIQ = account(61, 'buyer', '03040061', 'عاشق ظفر', 'Ashiq Zafar', {
+const ASHIQ = account(61, 'buyer', '00260', 'عاشق ظفر', 'Ashiq Zafar', {
   tag: 'K',
   balance: balance(1000, 'dr'),
 });
-const ASHIQ_NO_TAG = account(62, 'buyer', '03040062', 'عاشق ظفر', 'Ashiq Zafar');
+const ASHIQ_NO_TAG = account(62, 'buyer', '00261', 'عاشق ظفر', 'Ashiq Zafar');
 
 const named = (text: string) => (name: string) => visible(name) === text;
 function must<T>(found: T | null | undefined): T {
@@ -92,10 +92,10 @@ describe('displayName and the tag', () => {
 describe('pickedOf', () => {
   it('keeps the id, the code, both names and the tag of a hit', () => {
     expect(
-      pickedOf({ id: 61, code: '03040061', name_ur: 'عاشق ظفر', name_en: 'Ashiq Zafar', tag: 'K' }),
+      pickedOf({ id: 61, code: '00260', name_ur: 'عاشق ظفر', name_en: 'Ashiq Zafar', tag: 'K' }),
     ).toEqual({
       id: 61,
-      code: '03040061',
+      code: '00260',
       name_ur: 'عاشق ظفر',
       name_en: 'Ashiq Zafar',
       tag: 'K',
@@ -104,7 +104,7 @@ describe('pickedOf', () => {
 
   it('leaves the tag out when there is none, so a record without one has no empty tag', () => {
     for (const tag of [undefined, null, '']) {
-      const picked = pickedOf({ id: 62, code: '03040062', name_ur: 'ا', name_en: 'A', tag });
+      const picked = pickedOf({ id: 62, code: '00261', name_ur: 'ا', name_en: 'A', tag });
       expect('tag' in picked).toBe(false);
     }
   });
@@ -122,7 +122,7 @@ describe('what the account form sends', () => {
       version: null,
       account_type: 'buyer' as const,
       control_id: null,
-      code: '03040061',
+      code: '00260',
       names: { urdu: 'عاشق ظفر', english: 'Ashiq Zafar' },
       tag: 'k',
       father: { urdu: '', english: '' },
@@ -249,7 +249,7 @@ describe.each(LANGUAGES)('the tag on the account form (%s)', (language) => {
     vi.mocked(accountApi.accountsSimilar).mockResolvedValue([
       {
         id: 61,
-        code: '03040061',
+        code: '00260',
         name_ur: 'عاشق ظفر',
         name_en: 'Ashiq Zafar',
         tag: 'K',
@@ -263,7 +263,7 @@ describe.each(LANGUAGES)('the tag on the account form (%s)', (language) => {
       },
       {
         id: 62,
-        code: '03040062',
+        code: '00261',
         name_ur: 'عاشق ظفر',
         name_en: 'Ashiq Zafar',
         father_or_firm_ur: '',
@@ -304,7 +304,7 @@ describe.each(LANGUAGES)('the tag on the account form (%s)', (language) => {
   it("the tag typed goes with the question, and the backend's duplicate mark is shown in words on that row only", async () => {
     fakeAccounts([ASHIQ, ASHIQ_NO_TAG]);
     const base = {
-      code: '03040061',
+      code: '00260',
       name_ur: 'عاشق ظفر',
       name_en: 'Ashiq Zafar',
       father_or_firm_ur: '',
@@ -316,7 +316,7 @@ describe.each(LANGUAGES)('the tag on the account form (%s)', (language) => {
     };
     vi.mocked(accountApi.accountsSimilar).mockResolvedValue([
       { ...base, id: 61, tag: 'K', is_duplicate: true },
-      { ...base, id: 62, code: '03040062', is_duplicate: false },
+      { ...base, id: 62, code: '00261', is_duplicate: false },
     ]);
     await renderApp('/index/accounts/new');
     const user = userEvent.setup();
@@ -336,7 +336,7 @@ describe.each(LANGUAGES)('the tag on the account form (%s)', (language) => {
     const panel = must(heading.closest('section'));
     const marked = within(panel).getAllByText(message(language, 'accounts-similar-duplicate-chip'));
     expect(marked).toHaveLength(1);
-    expect(must(marked[0]?.closest('li')).textContent).toContain('03040061');
+    expect(must(marked[0]?.closest('li')).textContent).toContain('00260');
     // The save is never blocked by the warning: F10 still saves.
     press('F10');
     await waitFor(() => {
@@ -416,9 +416,9 @@ describe.each(LANGUAGES)('the tag in the picker and the party card (%s)', (langu
     act(() => {
       useLanguageStore.setState({ language });
     });
-    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('03040063');
+    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('00262');
     vi.mocked(accountApi.accountsSave).mockResolvedValue(
-      account(63, 'buyer', '03040063', 'عاشق ظفر', 'Ashiq Zafar', { tag: 'BA' }),
+      account(63, 'buyer', '00262', 'عاشق ظفر', 'Ashiq Zafar', { tag: 'BA' }),
     );
     const picked: (PickerValue | null)[] = [];
     renderIn(

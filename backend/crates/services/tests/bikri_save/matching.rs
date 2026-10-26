@@ -628,7 +628,7 @@ fn an_advance_before_a_back_dated_bikri_is_still_adjusted() {
     let older_credit = scalar(
         &w,
         "SELECT l.id FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id = (SELECT id FROM accounts WHERE code = '030110001')
+         WHERE l.account_id = (SELECT id FROM accounts WHERE code = '0010')
            AND l.cr_paisa > 0 AND e.posting_type = 'bikri_first' AND e.entry_date = '2026-10-10'",
     );
     assert_eq!(adjusting[0].1, older_credit);

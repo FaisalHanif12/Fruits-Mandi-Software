@@ -125,7 +125,7 @@ describe('the ledger of اکرم in Urdu (R13)', () => {
     const { root } = show(data);
     const facts = textOf(root.querySelector('.print-facts'));
     expect(facts).toContain(message('ur', 'report-filter-party'));
-    expect(facts).toContain('1 اکرم ٹول ٹیکس');
+    expect(facts).toContain('0 اکرم ٹول ٹیکس');
   });
 
   it('writes the goods of the sale line with the Urdu words of the PRD example', () => {

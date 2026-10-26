@@ -44,8 +44,8 @@ const person = (id: number, ur: string, en: string, code = ''): RecordRef => ({
 export const PARTNER_A = person(1, 'الف', 'Partner A');
 export const PARTNER_B = person(2, 'ب', 'Partner B');
 export const PARTNER_C = person(3, 'ج', 'Partner C');
-export const RAHIM_REF = person(21, 'رحیم', 'Rahim', '030110001');
-export const HAJI_NAZIR = person(31, 'حاجی نذیر', 'Haji Nazir', '030110003');
+export const RAHIM_REF = person(21, 'رحیم', 'Rahim', '0010');
+export const HAJI_NAZIR = person(31, 'حاجی نذیر', 'Haji Nazir', '0012');
 export const BANANA_REF = person(62, 'کیلا', 'Banana', '0062');
 export const APPLE_REF = person(63, 'سیب', 'Apple', '0063');
 export const BOX_REF = person(71, 'پیٹی', 'Box', '0071');

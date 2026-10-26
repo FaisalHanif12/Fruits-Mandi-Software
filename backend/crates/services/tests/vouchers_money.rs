@@ -1397,6 +1397,7 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
         version: None,
         name_ur: "اسلم".into(),
         name_en: "Aslam".into(),
+        code: String::new(),
         job: "collector".into(),
         phone: String::new(),
         confirmed_rules_words: Vec::new(),
@@ -1654,7 +1655,7 @@ fn make_regular_moves_the_balance_of_a_one_time_buyer_to_a_new_account() {
         (BalanceSide::Dr, rupees(2_000))
     );
     assert!(made.entry_id.is_some());
-    assert_eq!(made.account.code, "03040003");
+    assert_eq!(made.account.code, "0022");
     assert_eq!(balance(&w, made.account.id), (BalanceSide::Dr, 2_000));
     assert_eq!(
         ledger::person_balance(&w.env.ctx, w.pukhta_buyer, &key)
@@ -1942,7 +1943,7 @@ fn plan_17e_the_receipt_slip_has_the_shared_header_the_tag_and_the_short_code() 
     let before = slip(Language::En);
     assert!(before.header.contacts.is_empty());
     assert_eq!(before.header.trade_mark, None);
-    assert_eq!(before.pages[0].party.short_code.as_deref(), Some("1"));
+    assert_eq!(before.pages[0].party.short_code.as_deref(), Some("0"));
     assert_eq!(before.pages[0].party.tag, None);
     // The default Urdu slip has only plain digits (Umar, 26-10-2026).
     let plain = serde_json::to_string(&slip(Language::Ur)).unwrap();
@@ -2018,7 +2019,7 @@ fn the_slip_has_the_party_the_amount_and_the_words_in_both_languages() {
             page.party.name.as_str(),
             page.party.code.as_deref()
         ),
-        ("print-party-buyer", "Akram Toll Tax", Some("03040001"))
+        ("print-party-buyer", "Akram Toll Tax", Some("0020"))
     );
     assert_eq!(page.amounts[0].amount, "10,000");
     assert_eq!(page.amounts[0].label_id, "print-slip-amount-received");
@@ -2082,7 +2083,7 @@ fn a_payment_to_an_account_the_picker_does_not_offer_is_refused() {
         ("01010001", ErrorCode::ErrFormatInvalid),
         ("03040000", ErrorCode::ErrFormatInvalid),
         ("04010001", ErrorCode::ErrFormatInvalid),
-        ("03049999", ErrorCode::ErrPersonRequired),
+        ("0030", ErrorCode::ErrPersonRequired),
     ] {
         let id = support::id_of(&w.env, code);
         let refused =

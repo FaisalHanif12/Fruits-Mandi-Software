@@ -159,7 +159,7 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     });
     // The buyer of the line of lot 2 (the fourth line), by short code 2, then Enter.
     await user.click(cellOf(sales, 3, 'buyer'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('1{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[1]?.sales[0]?.buyer_account_id).toBe(IDS.arshad);
     });
@@ -246,7 +246,7 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     });
     failing = true;
     await user.click(cellOf(salesGrid(language), 3, 'buyer'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('1{Enter}');
     expect(
       await screen.findByText(
         (text) => visible(text) === message(language, 'bikri-preview-failed'),

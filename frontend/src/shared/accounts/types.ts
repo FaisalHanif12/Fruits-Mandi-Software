@@ -4,6 +4,7 @@
 // Money from the backend is `Paisa` (shown, never worked out); money typed by the user is text.
 
 import type { AccountFilter } from '../../bindings/AccountFilter';
+import type { AccountListKind } from '../../bindings/AccountListKind';
 import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
 import type { AccountScope } from '../../bindings/AccountScope';
 import type { CardWarning } from '../../bindings/CardWarning';
@@ -25,7 +26,7 @@ import type { HeadNode } from '../../bindings/HeadNode';
 import type { RecordRef } from '../../bindings/RecordRef';
 import type { SimilarAccount } from '../../bindings/SimilarAccount';
 
-export type { AccountFilter, AccountRow, AccountType, Balance, BalanceSide };
+export type { AccountFilter, AccountListKind, AccountRow, AccountType, Balance, BalanceSide };
 export type { OpeningLineInput } from '../../bindings/OpeningLineInput';
 export type { OpeningPreviewRow } from '../../bindings/OpeningPreviewRow';
 export type { OpeningsInput } from '../../bindings/OpeningsInput';

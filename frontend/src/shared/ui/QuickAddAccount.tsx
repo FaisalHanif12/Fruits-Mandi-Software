@@ -64,7 +64,9 @@ interface QuickAddAccountProps {
   help?: ReactNode;
 }
 
-const TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
+// A new account is a seller or a buyer. The people who can borrow and the khatas are added from
+// their own screens (plan 32, R6).
+const TYPES: readonly AccountType[] = ['seller', 'buyer'];
 const FIELD_PATHS = [
   'account_type',
   'control_id',
@@ -78,8 +80,6 @@ const FIELD_PATHS = [
   'city_id',
 ];
 const URDU_LETTER = /[؀-ۿ]/;
-/** A full code has at least this many digits; a shorter one is a serial (PRD FR-7.39). */
-const FULL_CODE_DIGITS = 8;
 
 function startingType(scope: AccountScope): AccountType {
   return scope === 'seller' ? 'seller' : 'buyer';
@@ -100,9 +100,9 @@ function QuickAddForm({
   const text = typed.trim();
   const digits = /^\d+$/.test(text);
   const [type, setType] = useState<AccountType>(startingType(scope));
-  const [code, setCode] = useState<string | null>(
-    digits && text.length >= FULL_CODE_DIGITS ? text : null,
-  );
+  // A typed number is a code that did not resolve, and its length says nothing (plan 32, R2): the
+  // code to offer is the one the backend suggested, else the next free one of the type.
+  const [code, setCode] = useState<string | null>(null);
   const [names, setNames] = useState<NamePairValue>(() =>
     initial !== undefined
       ? initial.names
@@ -117,7 +117,7 @@ function QuickAddForm({
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [city, setCity] = useState<AccountDraft['city']>(null);
   const save = useSaveAccount();
-  const nextCode = useAccountNextCode(type, null, code === null && type !== 'other');
+  const nextCode = useAccountNextCode(type, null, code === null);
   const spelling = useSpellingFlow();
   // What the backend refused in the last try, to show at the fields. The next try clears it.
   const [error, setError] = useState<UiError | null>(null);
@@ -208,7 +208,7 @@ function QuickAddForm({
                   setType(next);
                   setCode(null);
                 }}
-                options={TYPES.filter((option) => option !== 'other').map((option) => ({
+                options={TYPES.map((option) => ({
                   value: option,
                   label: <Localized id={`accounts-type-${option}`} />,
                 }))}

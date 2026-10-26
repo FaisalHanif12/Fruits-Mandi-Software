@@ -236,3 +236,17 @@
 .entry-grid .header-unit .ag-header-cell-label {
   padding-inline-end: calc(var(--unit-slot) + var(--space-2));
 }
+
+/*
+ * The list of a picker cell hangs below its cell, over whatever is there: the numbers strip that
+ * sticks to the bottom of the screen (z-index 10) must not cover its rows or its "add" button
+ * (plan 32, R8). The popups are drawn on the page, so the rule is not inside the grid's class.
+ */
+.ag-popup-child {
+  z-index: 20;
+}
+
+/* While the Index form of a picker's "add" button is open, no cell popup shows beside it. */
+body[data-index-form] .ag-popup {
+  visibility: hidden;
+}

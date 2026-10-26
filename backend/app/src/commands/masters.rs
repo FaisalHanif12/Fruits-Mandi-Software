@@ -55,7 +55,9 @@ pub async fn masters_set_active<R: tauri::Runtime>(
     .await
 }
 
-/// The next free code of a master, for the form to suggest. Empty for kinds without a code.
+/// The next free code of a master, for the form to suggest. An item gets `0040`, `0041` ..., a
+/// packing `0050` ... and a staff member `0060` ... (plan 32 R2); the other kinds the largest number
+/// plus one. Empty for a narration, which has no code.
 #[tauri::command]
 pub async fn masters_next_code<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

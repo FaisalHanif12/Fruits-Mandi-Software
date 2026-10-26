@@ -602,12 +602,12 @@ fn code_and_phone_fields_refuse_reordering_marks() {
     let phone = |s: &str| validate::phone("phone", s).map_err(|e| e.code);
     for mark in REFUSED_MARKS {
         assert!(
-            code(&format!("{mark}03040001")).is_err(),
+            code(&format!("{mark}0020")).is_err(),
             "code U+{:04X}",
             u32::from(mark)
         );
         assert!(
-            code(&format!("0304{mark}0001")).is_err(),
+            code(&format!("00{mark}20")).is_err(),
             "code U+{:04X}",
             u32::from(mark)
         );
@@ -638,10 +638,10 @@ fn a_pasted_zero_width_mark_in_a_code_is_taken_like_a_phone() {
     // Finding R02-7 (fixed): a code is cleaned like a phone, so a pasted mark is removed.
     let code = |s: &str| validate::account_code("code", s).map_err(|e| e.code);
     for mark in REMOVED_MARKS {
-        let got = code(&format!("{mark}03040001{mark}"));
+        let got = code(&format!("{mark}0020{mark}"));
         assert_eq!(
             got,
-            Ok(validate::AccountCodeInput::Full("03040001".to_owned())),
+            Ok(validate::AccountCodeInput::Full("0020".to_owned())),
             "code U+{:04X}",
             u32::from(mark)
         );

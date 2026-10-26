@@ -63,8 +63,8 @@
           "type": "party",
           "party": {
             "account_id": 18,
-            "code": "030110001",
-            "short_code": "1",
+            "code": "0010",
+            "short_code": "0",
             "name_ur": "رحیم",
             "name_en": "Rahim",
             "tag": null,
@@ -103,8 +103,8 @@
           "type": "party",
           "party": {
             "account_id": 18,
-            "code": "030110001",
-            "short_code": "1",
+            "code": "0010",
+            "short_code": "0",
             "name_ur": "رحیم",
             "name_en": "Rahim",
             "tag": null,
@@ -143,8 +143,8 @@
           "type": "party",
           "party": {
             "account_id": 20,
-            "code": "03040001",
-            "short_code": "1",
+            "code": "0020",
+            "short_code": "0",
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax",
             "tag": null,

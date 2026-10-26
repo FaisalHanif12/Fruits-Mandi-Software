@@ -20,7 +20,7 @@ import { renderRouted } from '../helpers/router';
 
 vi.mock('../../src/shared/accounts/api');
 
-const AKRAM = account(20, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(20, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   balance: balance(2880, 'dr'),
   credit_limit_paisa: money(50000),
 });

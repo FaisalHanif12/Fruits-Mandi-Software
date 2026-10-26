@@ -252,8 +252,8 @@ fn r12_names_the_other_side_only_when_it_is_one_account() {
     // names none. A receipt, a payment and an expense have one other side each.
     assert_eq!(account(0), "");
     assert_eq!(account(1), "");
-    assert_eq!(account(2), "03040001");
-    assert_eq!(account(3), "030110001");
+    assert_eq!(account(2), "0020");
+    assert_eq!(account(3), "0010");
     assert_eq!(account(4), "05010001");
     assert_eq!(account(5), "06030001");
 }

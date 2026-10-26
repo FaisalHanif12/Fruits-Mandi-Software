@@ -59,12 +59,13 @@ fn count_of(len: usize) -> Result<i64, ReportsError> {
 
 /// Named buyers over their credit limit (the rule of the party card).
 fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, ReportsError> {
-    let mut statement = conn.prepare(
+    let mut statement = conn.prepare(&format!(
         "SELECT a.id, a.name_ur, a.name_en, a.credit_limit_paisa, a.tag
          FROM accounts a JOIN account_controls k ON k.id = a.control_id
          WHERE k.code = '0304' AND a.is_pukhta_khata = 0 AND a.credit_limit_paisa IS NOT NULL
-         ORDER BY a.code",
-    )?;
+         ORDER BY {}",
+        mandi_db::codes::order_by_code("a.code")
+    ))?;
     let limits = statement
         .query_map([], |r| {
             Ok((

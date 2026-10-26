@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useFocusRegion, useRovingKeys } from '../../shared/keyboard';
+import { useWorkAreaStore } from '../../shared/ui';
 
 export type MainNavId =
   | 'dashboard'
@@ -60,8 +61,12 @@ interface MainNavProps {
   onSelect: (id: MainNavId) => void;
 }
 
-export function MainNav({ current, onSelect }: MainNavProps) {
+export function MainNav({ current: screenArea, onSelect }: MainNavProps) {
   const { l10n } = useLocalization();
+  // While the Index form of a picker's "add" button is open over the screen, the menu says انڈکس
+  // (plan 32, decision D1); the screen under it is still there.
+  const indexFormOpen = useWorkAreaStore((state) => state.indexFormOpen);
+  const current: MainNavId = indexFormOpen ? 'index' : screenArea;
   const region = useFocusRegion<HTMLElement>('menu');
   const onKeyDown = useRovingKeys({ isMenu: true });
   return (

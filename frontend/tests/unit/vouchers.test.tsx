@@ -161,7 +161,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('a receipt from a buyer shows his party card and open bills, and the backend marks what the amount settles', async () => {
     const { user } = await open('receipt');
-    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    await pick(user, language, 'vouchers-field-buyer', '0', '0020');
     const bills = await panelText(language, 'vouchers-bills-title');
     expect(bills).toContain('12,880');
     expect(bills).toContain(message(language, 'vouchers-source-bikri', { number: 1 }));
@@ -195,7 +195,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('"full balance" and "oldest bill" put the backend\'s amount into the field', async () => {
     const { user } = await open('receipt');
-    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    await pick(user, language, 'vouchers-field-buyer', '0', '0020');
     const full = await screen.findByRole('button', {
       name: (name) => visible(name).startsWith(message(language, 'vouchers-fill-full')),
     });
@@ -212,7 +212,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('more than all the bills: the extra stays as credit and the screen says so', async () => {
     const { user } = await open('receipt');
-    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    await pick(user, language, 'vouchers-field-buyer', '0', '0020');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('15000');
     await waitFor(() => {
@@ -223,7 +223,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('a receipt is saved with F10: the text sent, a message, the form ready for the next, the voucher listed', async () => {
     const { user } = await open('receipt');
-    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    await pick(user, language, 'vouchers-field-buyer', '0', '0020');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('10000');
     await user.click(await labelled(language, 'vouchers-field-narration'));
@@ -314,7 +314,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('a payment to a seller shows what is payable with the advance already adjusted', async () => {
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '0010');
     const text = await panelText(language, 'vouchers-payables-title');
     expect(text).toContain('24,316');
     expect(text).toContain('15,000');
@@ -336,7 +336,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('more than is payable only warns: the extra shows in words and the save still goes', async () => {
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '0010');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('5000');
     await waitFor(() => {
@@ -353,7 +353,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
   it('a payment to a seller with nothing payable offers a پیشگی; only the button switches', async () => {
     store = fakeVouchers({ karimPayable: 0 });
     const { user, router } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', 'karim', '030110002');
+    await pick(user, language, 'vouchers-field-paid-to', 'karim', '0011');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('3000');
     const hint = message(language, 'vouchers-advance-hint');
@@ -379,7 +379,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('a payment to a buyer is cash lent: the reason is asked, told at its field, and sent', async () => {
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', '03040001', '03040001');
+    await pick(user, language, 'vouchers-field-paid-to', '0020', '0020');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('3000');
     const reason = await labelled(language, 'vouchers-field-reason-lent');
@@ -404,7 +404,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     await user.click(
       screen.getByRole('button', { name: message(language, 'vouchers-from-seller') }),
     );
-    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
     const text = await panelText(language, 'vouchers-advances-title');
     expect(text).toContain('15,000');
     await user.click(await labelled(language, 'vouchers-field-amount'));
@@ -423,7 +423,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
   it('an advance goes with the expected goods; cash below zero shows the note and asks before saving', async () => {
     store = fakeVouchers({ cash: 20000 });
     const { user } = await open('advance');
-    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('25000');
     await user.click(await labelled(language, 'vouchers-field-expected'));
@@ -469,7 +469,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('changing the type keeps the date, amount and narration and clears the rest', async () => {
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '0010');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('3000');
     await user.click(await labelled(language, 'vouchers-field-narration'));
@@ -491,7 +491,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('an advance goes to the backend with its date, amount and seller only, and Enter walks the fields', async () => {
     const { user } = await open('advance');
-    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('100');
     press('F10');
@@ -510,7 +510,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('a refused field shows at the field, and nothing typed is lost', async () => {
     const { user } = await open('advance');
-    await pick(user, language, 'vouchers-field-seller', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-seller', 'rahim', '0010');
     const amount = await labelled(language, 'vouchers-field-amount');
     await user.click(amount);
     await user.keyboard('5000');
@@ -547,7 +547,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
 
   it('switching the language in the middle of an entry keeps what was typed', async () => {
     const { user } = await open('payment');
-    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '030110001');
+    await pick(user, language, 'vouchers-field-paid-to', 'rahim', '0010');
     await user.click(await labelled(language, 'vouchers-field-amount'));
     await user.keyboard('300');
     await user.click(await labelled(language, 'vouchers-field-narration'));
@@ -591,7 +591,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     vi.mocked(vouchersApi.assistOpenBills).mockRejectedValueOnce(
       fail({ code: 'ERR_NOT_IMPLEMENTED' }),
     );
-    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    await pick(user, language, 'vouchers-field-buyer', '0', '0020');
     await screen.findByText(message(language, 'vouchers-bills-failed'));
     const failedPanel = (
       await screen.findByText(message(language, 'vouchers-bills-failed'))

@@ -68,7 +68,7 @@ const PREVIEW_DELAY_MS = 50;
 /** A grid of this many rows or fewer is as tall as its rows; a longer one fills the screen. */
 const SHORT_GRID_ROWS = 30;
 /** Every active account, the same list the account screen opens with. */
-const ALL_ACTIVE: AccountFilter = { account_type: null, text: '', include_inactive: false };
+const ALL_ACTIVE: AccountFilter = { kind: 'every', text: '', include_inactive: false };
 
 const BASE_COLUMNS: readonly EntryColumn[] = [
   { field: 'code', type: 'calc', headerId: 'accounts-col-code' },

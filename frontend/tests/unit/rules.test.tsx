@@ -36,8 +36,8 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax');
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim');
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax');
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim');
 const BANANA = record('item', 5, '0005', 'کیلا', 'Banana');
 const APPLE = record('item', 6, '0006', 'سیب', 'Apple');
 
@@ -443,7 +443,7 @@ describe.each(LANGUAGES)('the rule form (%s)', (language) => {
     const user = userEvent.setup();
     const group = await dropdown(language, 'rules-field-group');
     expect(group).toBeEnabled();
-    await pick(user, language, 'rules-field-party', 'rahim', '030110001');
+    await pick(user, language, 'rules-field-party', 'rahim', '0010');
     await waitFor(() => {
       expect(group).toBeDisabled();
     });
@@ -582,7 +582,7 @@ describe.each(LANGUAGES)('the rule form (%s)', (language) => {
     fakeRules([
       rule(7, {
         side: 'buyer',
-        account: pointer(21, '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax'),
+        account: pointer(21, '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax'),
         value: '7',
         level: 'party',
       }),

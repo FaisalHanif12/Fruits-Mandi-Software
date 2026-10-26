@@ -102,7 +102,7 @@ export function rowToRecord(row: MasterRow): MasterRecord {
     case 'staff':
       return {
         ...base,
-        code: '',
+        code: row.code,
         names: { name_ur: row.name_ur, name_en: row.name_en },
         text: { job: row.job, phone: row.phone ?? '' },
         shown: { account_code: row.account_code ?? '' },
@@ -162,6 +162,6 @@ export function draftToInput(
         used_in: [...(draft.lists['used_in'] ?? [])],
       };
     case 'staff':
-      return { kind, ...common, job: text('job'), phone: text('phone') };
+      return { kind, ...common, code: draft.code, job: text('job'), phone: text('phone') };
   }
 }

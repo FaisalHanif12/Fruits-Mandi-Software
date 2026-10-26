@@ -95,6 +95,12 @@ interface NamePairProps {
    */
   fillOnOpen?: boolean | undefined;
   /**
+   * The form was not changed by the user when the pair filled the other name on open. When this
+   * is given, the fill goes here instead of `onChange`, so the form can take it as its starting
+   * point and not ask "save changes?" for text the app wrote (plan 32, R8).
+   */
+  onFilledOnOpen?: ((value: NamePairValue) => void) | undefined;
+  /**
    * Records already known that the name may be (the one-time people, PRD FR-7.29). They are rows
    * at the head of the list of the name typed first: the Urdu field in the Urdu app, the English
    * field in the English app. Taking one fills both names and whatever else the screen puts in
@@ -115,6 +121,7 @@ export function NamePair({
   kind,
   checkSpelling = true,
   fillOnOpen = false,
+  onFilledOnOpen,
   knownRecords,
 }: NamePairProps) {
   const language = useLanguage();
@@ -129,9 +136,11 @@ export function NamePair({
   const latest = useRef(value);
   const request = useRef(0);
   const onChangeRef = useRef(onChange);
+  const onFilledRef = useRef(onFilledOnOpen);
   useEffect(() => {
     latest.current = value;
     onChangeRef.current = onChange;
+    onFilledRef.current = onFilledOnOpen;
   });
 
   // A pair that opens with one name typed fills the other from it once (fillOnOpen).
@@ -162,7 +171,7 @@ export function NamePair({
                 'english',
                 checkSpelling ? worked.rulesWords : [],
               );
-        onChangeRef.current(filled);
+        (onFilledRef.current ?? onChangeRef.current)(filled);
       })
       .catch(() => undefined);
     return () => {

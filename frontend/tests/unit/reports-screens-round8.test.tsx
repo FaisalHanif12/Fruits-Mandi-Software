@@ -185,7 +185,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
         expect(drawnRows()).toEqual(['0']);
       }, SLOW_MS);
       expect(lastRun()).toMatchObject({ id: 'R10', offset: 0, limit: 100 });
-      expect(cell('0', 'seller')).toContain('030110001');
+      expect(cell('0', 'seller')).toContain('0010');
       expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
       expect(cell('0', 'received')).toBe('50');
       expect(cell('0', 'sold')).toBe('20');
@@ -390,7 +390,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(drawnRows()).toEqual(['0']);
       }, SLOW_MS);
-      expect(cell('0', 'account')).toContain('03040001');
+      expect(cell('0', 'account')).toContain('0020');
       expect(cell('0', 'amount')).toBe('10,000');
       expect(totalsCell('amount')).toBe('10,000');
       expect(drawnColumns()).toEqual(['date', 'doc', 'account', 'amount', 'collector', 'status']);
@@ -402,7 +402,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(drawnRows()).toEqual(['0']);
       }, SLOW_MS);
-      expect(cell('0', 'account')).toContain('030110001');
+      expect(cell('0', 'account')).toContain('0010');
       expect(totalsCell('amount')).toBe('4,316');
       expect(drawnColumns()).toEqual(['date', 'doc', 'account', 'amount', 'status']);
       const keys = R25_DAY.columns.map((column) => column.key).join(' ');

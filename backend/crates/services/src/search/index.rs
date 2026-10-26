@@ -11,6 +11,7 @@ use std::sync::{Arc, OnceLock};
 
 use mandi_db::masters::SearchSource;
 use mandi_domain::core::accounts::{AccountHit, AccountScope, AccountType};
+use mandi_domain::core::codes::{self, CodeType};
 use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
 use mandi_domain::core::text::{self, UrduCollator};
@@ -43,9 +44,16 @@ pub struct Entry {
     words_en: Vec<String>,
     /// The Urdu name as a sort key: records with equal rank are ordered by comparing these bytes.
     name_key: Vec<u8>,
-    /// For a seller or a buyer: the serial in his code (1 to 8999 for a normal account, or a
-    /// system serial), which a short code names (PRD FR-7.39). `None` for every other record.
-    serial: Option<u32>,
+    /// For a seller, a buyer, an item, a packing or a staff member with a code of the scheme of
+    /// plan 32: the running number of his code, which a short code names (PRD 1.8 R5). `None` for
+    /// every other record, and for the two پختہ کھاتہ accounts.
+    running: Option<u64>,
+    /// True if the code is a full code of that scheme (including `0030` and `0031`). Such a code
+    /// is only ever equal to the same text: `10` is not `0010` (plan 32 R5).
+    scheme: bool,
+    /// The order "by code" (plan 32 R7): the scheme's codes by type and running number, any other
+    /// code after them. Made once, when the entry is made.
+    order: (u8, &'static str, u64, usize, String),
     /// For an account: what it is and the control it is under. `None` for masters.
     account: Option<AccountFacts>,
 }
@@ -74,13 +82,15 @@ fn is_garden(source: &SearchSource) -> bool {
             .starts_with(mandi_domain::core::accounts::GARDEN_CONTROL_CODE)
 }
 
-/// The serial of a seller or buyer code: its last four digits.
-fn serial_of(code: &str) -> Option<u32> {
-    let digits = code.get(code.len().checked_sub(4)?..)?;
-    if digits.bytes().all(|b| b.is_ascii_digit()) {
-        digits.parse().ok()
-    } else {
-        None
+/// The code type a list's entries are of, if the list has codes of the scheme of plan 32.
+fn code_type_of(kind: SearchScope, account_type: Option<AccountType>) -> Option<CodeType> {
+    match (kind, account_type) {
+        (SearchScope::Item, _) => Some(CodeType::Item),
+        (SearchScope::Packing, _) => Some(CodeType::Packing),
+        (SearchScope::Staff, _) => Some(CodeType::Staff),
+        (_, Some(AccountType::Seller)) => Some(CodeType::Seller),
+        (_, Some(AccountType::Buyer)) => Some(CodeType::Buyer),
+        _ => None,
     }
 }
 
@@ -119,14 +129,17 @@ impl Entry {
             }),
             _ => None,
         };
-        let serial = account
-            .filter(|a| matches!(a.account_type, AccountType::Seller | AccountType::Buyer))
-            .and_then(|_| serial_of(&source.code));
+        let running = code_type_of(kind, source.account_type)
+            .and_then(|code_type| codes::running_of(&source.code, code_type));
+        let scheme = codes::parse_code(&source.code).is_some();
+        let order = codes::code_sort_key(&source.code);
         Entry {
             id: source.id,
             tag,
             name_key,
-            serial,
+            running,
+            scheme,
+            order,
             account,
             code: source.code.to_lowercase(),
             words_ur: words(&key_ur),
@@ -297,25 +310,15 @@ struct Query {
     ur_words: Vec<String>,
     en_words: Vec<String>,
     ph: String,
-    /// The serial a short code names: 1 to 4 digits, from 1 to 8999 (PRD FR-7.39, FR-10.3).
-    /// Serial 0 and 9000 and up are system serials and are never a short code.
-    serial: Option<u32>,
+    /// The running number a short code names: digits with no leading zero, from `0` (plan 32 R5).
+    running: Option<u64>,
+    /// The digits of the short code, to find the running numbers that start with them.
+    running_text: Option<String>,
 }
 
-/// The most digits a short code has (PRD FR-7.39).
-pub const SHORT_CODE_DIGITS: usize = 4;
-/// The last normal serial (PRD FR-10.3).
-const LAST_NORMAL_SERIAL: u32 = 8_999;
-
-/// The serial a typed text names as a short code, if it is one.
-pub fn short_serial(typed: &str) -> Option<u32> {
-    let t = typed.trim();
-    if t.is_empty() || t.len() > SHORT_CODE_DIGITS || !t.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    t.parse()
-        .ok()
-        .filter(|n| (1..=LAST_NORMAL_SERIAL).contains(n))
+/// The running number a typed text names as a short code, if it is one (`0`, `11`).
+pub fn short_running(typed: &str) -> Option<u64> {
+    codes::parse_running(typed)
 }
 
 impl Query {
@@ -334,8 +337,13 @@ impl Query {
             ur_words: words(&ur),
             en_words: words(&en),
             ph: text::search_phonetic(typed),
-            serial: if short_codes {
-                short_serial(typed)
+            running: if short_codes {
+                short_running(typed)
+            } else {
+                None
+            },
+            running_text: if short_codes && short_running(typed).is_some() {
+                Some(typed.trim().to_owned())
             } else {
                 None
             },
@@ -360,13 +368,19 @@ const TIER_STARTS: u8 = 2;
 const TIER_USED: u8 = 3;
 const TIER_CLOSE: u8 = 4;
 
-/// Numbers compare as numbers: `01` is `1`.
-fn same_code(entry_code: &str, typed: &str) -> bool {
+/// Whether the typed text is exactly the record's code. Numbers compare as numbers (`01` is `1`),
+/// except for a code of the scheme of plan 32, which is only equal to the same text: `10` names the
+/// running number 10, never the code `0010` (PRD 1.8 R5).
+fn same_code(entry: &Entry, typed: &str) -> bool {
+    let entry_code = entry.code.as_str();
     if entry_code.is_empty() || typed.is_empty() {
         return false;
     }
     if entry_code == typed {
         return true;
+    }
+    if entry.scheme {
+        return false;
     }
     match (entry_code.parse::<u64>(), typed.parse::<u64>()) {
         (Ok(a), Ok(b)) => a == b,
@@ -428,13 +442,13 @@ fn close_distance(typed: &[String], whole: &str, words: &[String]) -> Option<usi
 
 /// The cheap tiers: exact code, starts with, used before.
 fn rank_cheap(entry: &Entry, q: &Query, used: bool) -> Option<Rank> {
-    if same_code(&entry.code, &q.code) {
+    if same_code(entry, &q.code) {
         return Some(Rank {
             tier: TIER_CODE,
             distance: 0,
         });
     }
-    if let (Some(want), Some(have)) = (q.serial, entry.serial)
+    if let (Some(want), Some(have)) = (q.running, entry.running)
         && want == have
     {
         return Some(Rank {
@@ -448,6 +462,12 @@ fn rank_cheap(entry: &Entry, q: &Query, used: bool) -> Option<Rank> {
         all_words_start(&q.en_words, &entry.words_en)
             || (q.ph.chars().count() >= 2 && entry.key_ph.starts_with(&q.ph))
             || (!entry.code.is_empty() && entry.code.starts_with(&q.code))
+            // Typing `1` also finds the running numbers that start with it (10, 11, 12 ...).
+            || q.running_text.as_deref().is_some_and(|typed| {
+                entry
+                    .running
+                    .is_some_and(|running| running.to_string().starts_with(typed))
+            })
     };
     if starts {
         return Some(Rank {
@@ -537,11 +557,72 @@ fn account_hit(entry: &Entry) -> Option<AccountHit> {
     })
 }
 
+/// The order "by code" of two entries, then by id (plan 32 R7).
+fn by_code(a: &Entry, b: &Entry) -> Ordering {
+    a.order.cmp(&b.order).then_with(|| a.id.cmp(&b.id))
+}
+
+/// The whole list of a field (plan 32 R7): the records this user chose last first (latest first),
+/// then every other active record by code. `keep` leaves out what the field does not take.
+/// `offset` and `limit` cut out one page.
+fn full_list<'a>(
+    list: &'a [Arc<Entry>],
+    keep: impl Fn(&Entry) -> bool,
+    usage: &Usage,
+    offset: usize,
+    limit: usize,
+) -> Vec<&'a Arc<Entry>> {
+    let mut out: Vec<&Arc<Entry>> = Vec::new();
+    for id in &usage.recent {
+        if let Ok(at) = list.binary_search_by_key(id, |e| e.id)
+            && let Some(entry) = list.get(at)
+            && entry.hit.is_active
+            && keep(entry)
+            && !out.iter().any(|o| o.id == entry.id)
+        {
+            out.push(entry);
+        }
+    }
+    let mut rest: Vec<&Arc<Entry>> = list
+        .iter()
+        .filter(|e| e.hit.is_active && keep(e) && !usage.recent.contains(&e.id))
+        .collect();
+    rest.sort_by(|a, b| by_code(a, b));
+    out.extend(rest);
+    out.into_iter().skip(offset).take(limit).collect()
+}
+
 impl Index {
-    /// The active records of a list that match the typed text, best first: exact code, then
-    /// records that start with the text, then records this user chose before, then close
-    /// spellings. Equal ranks: recently chosen first, more often chosen first, then Urdu
-    /// alphabetical order (Tech Stack 4.7). At most `limit` (and never more than [`MAX_HITS`]).
+    /// One page of the active records of a list for the typed text, best first: exact code, then
+    /// the record whose running number is the typed number (a short code), then records that start
+    /// with the text, then records this user chose before, then close spellings. Equal ranks:
+    /// recently chosen first, more often chosen first, then Urdu alphabetical order (Tech Stack
+    /// 4.7). **Empty text gives the whole list** (plan 32 R7): the records chosen last first, then
+    /// the rest by code. At most `limit` hits (never more than [`MAX_HITS`]) after skipping
+    /// `offset`.
+    pub fn search_page(
+        &self,
+        scope: SearchScope,
+        typed: &str,
+        offset: usize,
+        limit: usize,
+        usage: &Usage,
+    ) -> Vec<SearchHit> {
+        let limit = limit.clamp(1, MAX_HITS);
+        if typed.trim().is_empty() {
+            return full_list(self.entries(scope), |_| true, usage, offset, limit)
+                .into_iter()
+                .map(|e| e.hit.clone())
+                .collect();
+        }
+        let query = Query::new(typed, true);
+        self.rank(self.entries(scope), |_| true, &query, offset, limit, usage)
+            .into_iter()
+            .map(|e| e.hit.clone())
+            .collect()
+    }
+
+    /// The first page of [`Index::search_page`].
     pub fn search(
         &self,
         scope: SearchScope,
@@ -549,16 +630,39 @@ impl Index {
         limit: usize,
         usage: &Usage,
     ) -> Vec<SearchHit> {
-        let query = Query::new(typed, true);
-        self.rank(self.entries(scope), |_| true, &query, limit, usage)
+        self.search_page(scope, typed, 0, limit, usage)
+    }
+
+    /// One page of the accounts of an account field for the typed text, best first: exact full
+    /// code, the accounts whose running number is the typed number (a short code, not for scope
+    /// `control`), names that start with the text, accounts used before, close spellings (plan 08,
+    /// PRD FR-7.38 to FR-7.40). **Empty text gives the whole list of the field** (plan 32 R7):
+    /// the accounts chosen last first, then the rest by code.
+    pub fn search_accounts_page(
+        &self,
+        scope: AccountScope,
+        control_id: Option<i64>,
+        typed: &str,
+        offset: usize,
+        limit: usize,
+        usage: &Usage,
+    ) -> Vec<AccountHit> {
+        let limit = limit.clamp(1, MAX_HITS);
+        let (list, in_control) = self.account_list(scope, control_id);
+        if typed.trim().is_empty() {
+            return full_list(list, in_control, usage, offset, limit)
+                .into_iter()
+                .filter_map(|e| account_hit(e))
+                .collect();
+        }
+        let query = Query::new(typed, scope != AccountScope::Control);
+        self.rank(list, in_control, &query, offset, limit, usage)
             .into_iter()
-            .map(|e| e.hit.clone())
+            .filter_map(|e| account_hit(e))
             .collect()
     }
 
-    /// The accounts of an account field that match the typed text, best first: exact code, exact
-    /// serial (a short code, not for scope `control`), names that start with the text, accounts
-    /// used before, close spellings (plan 08, PRD FR-7.38 to FR-7.40).
+    /// The first page of [`Index::search_accounts_page`].
     pub fn search_accounts(
         &self,
         scope: AccountScope,
@@ -567,17 +671,12 @@ impl Index {
         limit: usize,
         usage: &Usage,
     ) -> Vec<AccountHit> {
-        let query = Query::new(typed, scope != AccountScope::Control);
-        let (list, in_control) = self.account_list(scope, control_id);
-        self.rank(list, in_control, &query, limit, usage)
-            .into_iter()
-            .filter_map(|e| account_hit(e))
-            .collect()
+        self.search_accounts_page(scope, control_id, typed, 0, limit, usage)
     }
 
     /// The list for `Alt+Down` in an account field (PRD FR-7.41): the accounts this user chose
-    /// last (up to 10, the latest first), then the rest in Urdu alphabetical order. Active
-    /// accounts only, at most [`MAX_FULL_LIST`].
+    /// last (up to 10, the latest first), then the rest by code (plan 32 R7). Active accounts
+    /// only, at most [`MAX_FULL_LIST`].
     pub fn recent_accounts(
         &self,
         scope: AccountScope,
@@ -585,30 +684,10 @@ impl Index {
         usage: &Usage,
     ) -> Vec<AccountHit> {
         let (list, in_control) = self.account_list(scope, control_id);
-        let mut out: Vec<AccountHit> = Vec::new();
-        for id in &usage.recent {
-            if let Ok(at) = list.binary_search_by_key(id, |e| e.id)
-                && let Some(entry) = list.get(at)
-                && entry.hit.is_active
-                && in_control(entry)
-                && let Some(hit) = account_hit(entry)
-            {
-                out.push(hit);
-            }
-        }
-        let mut rest: Vec<&Arc<Entry>> = list
-            .iter()
-            .filter(|e| e.hit.is_active && in_control(e) && !usage.recent.contains(&e.id))
-            .collect();
-        rest.sort_by(|a, b| {
-            usage
-                .count(b.id)
-                .cmp(&usage.count(a.id))
-                .then_with(|| by_name(a, b))
-        });
-        out.extend(rest.into_iter().filter_map(|e| account_hit(e)));
-        out.truncate(MAX_FULL_LIST);
-        out
+        full_list(list, in_control, usage, 0, MAX_FULL_LIST)
+            .into_iter()
+            .filter_map(|e| account_hit(e))
+            .collect()
     }
 
     /// True if there is an active account with this id in the field's list.
@@ -625,15 +704,16 @@ impl Index {
             .is_some_and(|e| e.hit.is_active && in_control(e))
     }
 
-    /// The accounts of a field with this serial, active or not (PRD FR-7.39). Used when a code
-    /// is taken on `Enter`.
-    pub fn accounts_with_serial(&self, scope: AccountScope, serial: u32) -> Vec<AccountHit> {
+    /// The accounts of a field with this running number, active or not (PRD 1.8 R5). Used when a
+    /// code is taken on `Enter`. In a field that takes any account this is the seller and the buyer
+    /// with that number.
+    pub fn accounts_with_running(&self, scope: AccountScope, running: u64) -> Vec<AccountHit> {
         if scope == AccountScope::Control {
             return Vec::new();
         }
         let (list, _) = self.account_list(scope, None);
         list.iter()
-            .filter(|e| e.serial == Some(serial))
+            .filter(|e| e.running == Some(running))
             .filter_map(|e| account_hit(e))
             .collect()
     }
@@ -667,7 +747,7 @@ impl Index {
             AccountScope::Any | AccountScope::Control => self.entries(SearchScope::AnyAccount),
         };
         let narrow = scope == AccountScope::Control;
-        // The اपنا مال account is offered only in the seller field of a lot (PRD FR-12.26).
+        // The اپنا مال account is offered only in the seller field of a lot (PRD FR-12.26).
         let with_own = scope == AccountScope::LotSeller;
         (list, move |e: &Entry| {
             (!narrow || e.account.map(|a| a.control_id) == control_id)
@@ -676,19 +756,21 @@ impl Index {
     }
 
     /// Ranks the active entries of a list that pass `keep` against the query and returns the
-    /// best `limit` (never more than [`MAX_HITS`]) in order.
+    /// page of `limit` hits after `offset` (never more than [`MAX_FULL_LIST`] ranked in all) in
+    /// order. The query is not empty.
     fn rank<'a>(
         &self,
         list: &'a [Arc<Entry>],
         keep: impl Fn(&Entry) -> bool,
         query: &Query,
+        offset: usize,
         limit: usize,
         usage: &Usage,
     ) -> Vec<&'a Arc<Entry>> {
         if query.is_empty() {
             return Vec::new();
         }
-        let limit = limit.clamp(1, MAX_HITS);
+        let wanted = offset.saturating_add(limit).clamp(1, MAX_FULL_LIST);
         let mut found: Vec<(Rank, &Arc<Entry>)> = Vec::new();
         let mut open: Vec<&Arc<Entry>> = Vec::new();
         // First the cheap tiers. The close spellings are only worked out if the cheap ones
@@ -699,7 +781,7 @@ impl Index {
                 None => open.push(entry),
             }
         }
-        if found.len() < limit {
+        if found.len() < wanted {
             for entry in open {
                 if let Some(r) = rank_close(entry, query) {
                     found.push((r, entry));
@@ -712,38 +794,27 @@ impl Index {
                 .then_with(|| usage.count(b.id).cmp(&usage.count(a.id)))
                 .then_with(|| by_name(a, b))
         };
-        // Only the best `limit` are needed: pick them, then put those in order.
-        if found.len() > limit {
-            found.select_nth_unstable_by(limit.saturating_sub(1), order);
-            found.truncate(limit);
+        // Only the best `wanted` are needed: pick them, then put those in order.
+        if found.len() > wanted {
+            found.select_nth_unstable_by(wanted.saturating_sub(1), order);
+            found.truncate(wanted);
         }
         found.sort_by(order);
-        found.into_iter().take(limit).map(|(_, e)| e).collect()
+        found
+            .into_iter()
+            .skip(offset)
+            .take(limit)
+            .map(|(_, e)| e)
+            .collect()
     }
 
     /// The list for `Alt+Down` (PRD FR-7.41): the records this user chose last (up to 10, the
-    /// latest first), then the rest in Urdu alphabetical order. Active records only, at most
+    /// latest first), then the rest by code (plan 32 R7). Active records only, at most
     /// [`MAX_FULL_LIST`].
     pub fn recent(&self, scope: SearchScope, usage: &Usage) -> Vec<SearchHit> {
-        let list = self.entries(scope);
-        let mut out: Vec<SearchHit> = Vec::new();
-        for id in &usage.recent {
-            if let Some(hit) = self.active_hit(scope, *id) {
-                out.push(hit.clone());
-            }
-        }
-        let mut rest: Vec<&Arc<Entry>> = list
-            .iter()
-            .filter(|e| e.hit.is_active && !usage.recent.contains(&e.id))
-            .collect();
-        rest.sort_by(|a, b| {
-            usage
-                .count(b.id)
-                .cmp(&usage.count(a.id))
-                .then_with(|| by_name(a, b))
-        });
-        out.extend(rest.into_iter().map(|e| e.hit.clone()));
-        out.truncate(MAX_FULL_LIST);
-        out
+        full_list(self.entries(scope), |_| true, usage, 0, MAX_FULL_LIST)
+            .into_iter()
+            .map(|e| e.hit.clone())
+            .collect()
     }
 }

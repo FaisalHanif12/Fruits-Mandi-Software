@@ -59,9 +59,15 @@ export function PickerCellEditor(props: EditorProps) {
     const input = wrapper.current?.querySelector('input');
     if (input === null || input === undefined) return;
     input.focus();
-    const end = input.value.length;
-    input.setSelectionRange(end, end);
-  }, [store]);
+    // Opened by a key, the key is the first letter and the cursor goes after it. Opened by a click
+    // or by Alt+↓, a name already in the cell is selected, so typing replaces it (PRD FR-7.15).
+    if (start.text === undefined) {
+      input.select();
+    } else {
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
+    }
+  }, [store, start.text]);
 
   // The card follows the cell while it is open; when it closes, the screen goes back to the row.
   useEffect(

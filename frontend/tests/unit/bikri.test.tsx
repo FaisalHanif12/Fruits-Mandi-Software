@@ -276,11 +276,11 @@ describe.each(LANGUAGES)(
       const { user } = await openBook(language);
       await typeHeaderAndLot(user, language);
       const sales = salesGrid(language);
-      await user.keyboard('1{Enter}20{Enter}600{Enter}');
+      await user.keyboard('0{Enter}20{Enter}600{Enter}');
       await waitFor(() => {
         expect(focusedIn(sales)).toBe('1:buyer');
       });
-      await user.keyboard('2{Enter}');
+      await user.keyboard('1{Enter}');
       await waitFor(() => {
         expect(focusedIn(sales)).toBe('1:qty');
       });
@@ -309,7 +309,7 @@ describe.each(LANGUAGES)(
     it('never fills the rate by itself: without a typed rate the draft has an empty rate', async () => {
       const { backend, user } = await openBook(language);
       await typeHeaderAndLot(user, language);
-      await user.keyboard('1{Enter}20{Enter}600{Enter}2{Enter}{Enter}');
+      await user.keyboard('0{Enter}20{Enter}600{Enter}1{Enter}{Enter}');
       await waitFor(() => {
         expect(backend.lastDraft().lots[0]?.sales[1]).toMatchObject({
           buyer_account_id: IDS.arshad,
@@ -322,7 +322,7 @@ describe.each(LANGUAGES)(
     it('a sum such as 20+5 is sent as typed text', async () => {
       const { backend, user } = await openBook(language);
       await typeHeaderAndLot(user, language);
-      await user.keyboard('1{Enter}20+5{Enter}');
+      await user.keyboard('0{Enter}20+5{Enter}');
       await waitFor(() => {
         expect(backend.lastDraft().lots[0]?.sales[0]?.qty).toBe('20+5');
       });

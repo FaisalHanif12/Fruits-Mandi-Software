@@ -45,7 +45,7 @@
       "charge_type": "commission",
       "account": {
         "id": 18,
-        "code": "030110001",
+        "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
@@ -70,7 +70,7 @@
       "account": null,
       "item": {
         "id": 4,
-        "code": "4",
+        "code": "0043",
         "name_ur": "انگور",
         "name_en": "Grapes"
       },
@@ -94,7 +94,7 @@
       "account": null,
       "item": {
         "id": 3,
-        "code": "3",
+        "code": "0042",
         "name_ur": "مولی",
         "name_en": "Radish"
       },
@@ -118,7 +118,7 @@
       "account": null,
       "item": {
         "id": 2,
-        "code": "2",
+        "code": "0041",
         "name_ur": "سیب",
         "name_en": "Apple"
       },
@@ -142,7 +142,7 @@
       "account": null,
       "item": {
         "id": 1,
-        "code": "1",
+        "code": "0040",
         "name_ur": "کیلا",
         "name_en": "Banana"
       },

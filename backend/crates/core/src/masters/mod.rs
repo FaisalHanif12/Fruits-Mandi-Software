@@ -98,9 +98,21 @@ impl MasterKind {
         }
     }
 
-    /// True if the table has a `code` column (staff and narrations do not).
+    /// True if the table has a `code` column (narrations do not; staff have one from plan 32).
     pub const fn has_code(self) -> bool {
-        !matches!(self, MasterKind::Narration | MasterKind::Staff)
+        !matches!(self, MasterKind::Narration)
+    }
+
+    /// The code type of an item, a packing or a staff member: their codes are the type number plus
+    /// a running number (`0040`, `0050`, `0060`, plan 32 R2). `None` for every other kind, which
+    /// keeps a plain number (PRD 1.8 R4).
+    pub const fn code_type(self) -> Option<crate::codes::CodeType> {
+        match self {
+            MasterKind::Item => Some(crate::codes::CodeType::Item),
+            MasterKind::Packing => Some(crate::codes::CodeType::Packing),
+            MasterKind::Staff => Some(crate::codes::CodeType::Staff),
+            _ => None,
+        }
     }
 }
 
@@ -352,6 +364,10 @@ pub struct StaffInput {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// Unique code `006` plus a running number (`0060`, `0061` ...). Empty gives the next free code
+    /// (plan 32 R2).
+    #[serde(default)]
+    pub code: String,
     /// The job: `munshi`, `collector` or `labour`. Not a login role.
     pub job: String,
     /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`. Empty if not known.
@@ -416,6 +432,6 @@ pub struct MastersSetActiveInput {
 /// What a screen sends to get the next free code.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct MastersNextCodeInput {
-    /// Which master. Kinds without a code (narration, staff) give an empty text.
+    /// Which master. A narration has no code and gives an empty text.
     pub kind: MasterKind,
 }

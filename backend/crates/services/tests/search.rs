@@ -110,10 +110,10 @@ fn a_mistyped_roman_word_and_look_alike_urdu_letters_find_the_record() {
             .map(String::as_str),
         Some("Arshad Multani")
     );
-    // Nothing near: nothing. Empty text: nothing.
+    // Nothing near: nothing. Empty text is the whole list (plan 32 R7): the three cities, by code.
     assert!(find(&env, &owner, "zzzzzzz").is_empty());
-    assert!(find(&env, &owner, "").is_empty());
-    assert!(find(&env, &owner, "   ").is_empty());
+    assert_eq!(find(&env, &owner, "").len(), 3);
+    assert_eq!(find(&env, &owner, "   ").len(), 3);
 }
 
 #[test]
@@ -508,6 +508,7 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
                 control_id: None,
                 text: text.into(),
                 limit: 10,
+                offset: 0,
             },
         )
         .unwrap()
@@ -594,13 +595,13 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
     assert!(recent(AccountScope::LotSeller).contains(&"Family Khata".to_owned()));
     assert!(!recent(AccountScope::Seller).contains(&"Family Khata".to_owned()));
 
-    // A short code still means a seller serial: `1` in a lot field is Rahim, never the khata.
+    // A short code still means a seller's running number: `0` in a lot field is Rahim (0010), never the khata.
     let resolved = search::resolve_code(
         &w.env.ctx,
         &ResolveCodeInput {
             scope: AccountScope::LotSeller,
             control_id: None,
-            text: "1".into(),
+            text: "0".into(),
         },
     )
     .unwrap();
@@ -636,6 +637,7 @@ fn the_bank_account_is_offered_in_no_picker_and_no_search() {
                 control_id: None,
                 text: text.into(),
                 limit: 10,
+                offset: 0,
             },
         )
         .unwrap()

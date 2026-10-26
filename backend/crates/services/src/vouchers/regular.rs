@@ -30,8 +30,8 @@ use crate::search;
 /// The code of the پختہ کھاتہ account of a side (PRD FR-13.1).
 const fn pukhta_code(side: PukhtaSide) -> &'static str {
     match side {
-        PukhtaSide::Buyer => "03049999",
-        PukhtaSide::Seller => "030119999",
+        PukhtaSide::Buyer => mandi_domain::core::codes::PUKHTA_BUYER_CODE,
+        PukhtaSide::Seller => mandi_domain::core::codes::PUKHTA_SELLER_CODE,
     }
 }
 

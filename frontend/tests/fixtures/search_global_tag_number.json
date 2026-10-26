@@ -2,11 +2,10 @@
   {
     "kind": "account",
     "hit": {
-      "id": 20,
-      "code": "03040001",
-      "name_ur": "اکرم ٹول ٹیکس",
-      "name_en": "Akram Toll Tax",
-      "tag": "K",
+      "id": 21,
+      "code": "0021",
+      "name_ur": "ارشد ملتانی",
+      "name_en": "Arshad Multani",
       "extra_ur": "",
       "extra_en": "",
       "account_type": "buyer",
@@ -17,14 +16,29 @@
   {
     "kind": "account",
     "hit": {
-      "id": 18,
-      "code": "030110001",
-      "name_ur": "رحیم",
-      "name_en": "Rahim",
+      "id": 19,
+      "code": "0011",
+      "name_ur": "کریم",
+      "name_en": "Karim",
       "extra_ur": "",
       "extra_en": "",
       "account_type": "seller",
       "control_id": 5,
+      "is_active": true
+    }
+  },
+  {
+    "kind": "account",
+    "hit": {
+      "id": 20,
+      "code": "0020",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": "K",
+      "extra_ur": "",
+      "extra_en": "",
+      "account_type": "buyer",
+      "control_id": 6,
       "is_active": true
     }
   },
@@ -99,20 +113,6 @@
     }
   },
   {
-    "kind": "account",
-    "hit": {
-      "id": 29,
-      "code": "06030003",
-      "name_ur": "ذاتی خرچہ - ج",
-      "name_en": "Drawings - Partner C",
-      "extra_ur": "",
-      "extra_en": "",
-      "account_type": "other",
-      "control_id": 11,
-      "is_active": true
-    }
-  },
-  {
     "kind": "bikri",
     "hit": {
       "id": 1,
@@ -132,7 +132,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 20,
-        "code": "03040001",
+        "code": "0020",
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax",
         "tag": "K"

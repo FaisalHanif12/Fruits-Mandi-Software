@@ -34,7 +34,7 @@ export function cash(before: number, after: number, needsConfirm = false): CashC
 
 const RAHIM_REF: RecordRef = {
   id: IDS.rahim,
-  code: '030110001',
+  code: '0010',
   name_ur: 'رحیم',
   name_en: 'Rahim',
 };

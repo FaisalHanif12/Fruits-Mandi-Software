@@ -1365,7 +1365,7 @@ pub fn collection_candidates(
     collector_staff_id: Option<i64>,
     city_id: Option<i64>,
 ) -> rusqlite::Result<Vec<CollectionCandidate>> {
-    let mut statement = conn.prepare(
+    let mut statement = conn.prepare(&format!(
         "SELECT a.id, a.code, a.name_ur, a.name_en, COALESCE(a.phone1, ''),
                 s.id, s.name_ur, s.name_en, c.id, c.code, c.name_ur, c.name_en, a.tag
          FROM accounts a
@@ -1375,8 +1375,9 @@ pub fn collection_candidates(
          WHERE k.code = '0304' AND a.is_active = 1 AND a.is_pukhta_khata = 0 AND a.code <> '03040000'
            AND a.collection_weekday = ?1
            AND (?2 IS NULL OR a.collector_staff_id = ?2) AND (?3 IS NULL OR a.city_id = ?3)
-         ORDER BY a.code",
-    )?;
+         ORDER BY {}",
+        crate::codes::order_by_code("a.code")
+    ))?;
     let rows = statement.query_map(params![weekday, collector_staff_id, city_id], |r| {
         let collector_id: Option<i64> = r.get(5)?;
         let city_id: Option<i64> = r.get(8)?;

@@ -289,6 +289,8 @@ pub struct StaffRow {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// The code, `006` plus a running number (plan 32).
+    pub code: String,
     /// `munshi`, `collector` or `labour`.
     pub job: String,
     /// Phone as 11 digits, or null.

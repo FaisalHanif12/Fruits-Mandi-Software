@@ -83,8 +83,8 @@
     {
       "party": {
         "account_id": 21,
-        "code": "03040002",
-        "short_code": "2",
+        "code": "0021",
+        "short_code": "1",
         "name_ur": "ارشد ملتانی",
         "name_en": "Arshad Multani",
         "tag": null,
@@ -98,8 +98,8 @@
     {
       "party": {
         "account_id": 20,
-        "code": "03040001",
-        "short_code": "1",
+        "code": "0020",
+        "short_code": "0",
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax",
         "tag": null,

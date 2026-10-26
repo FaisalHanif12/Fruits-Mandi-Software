@@ -452,6 +452,6 @@ fn a_later_sale_of_a_one_time_sellers_lot_pays_no_cash() {
     assert!(
         lines
             .iter()
-            .any(|(code, _, _, key)| code == "030119999" && key.is_some())
+            .any(|(code, _, _, key)| code == "0031" && key.is_some())
     );
 }

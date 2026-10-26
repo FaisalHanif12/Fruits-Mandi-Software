@@ -73,11 +73,11 @@ describe('the text a screen keeps', () => {
     expect(idOrNull(0)).toBeNull();
     expect(idOrNull('7')).toBeNull();
     expect(idOrNull(1.5)).toBeNull();
-    expect(pickedOrNull({ id: 4, name_ur: 'اکرم', name_en: 'Akram', code: '03040001' })).toEqual({
+    expect(pickedOrNull({ id: 4, name_ur: 'اکرم', name_en: 'Akram', code: '0020' })).toEqual({
       id: 4,
       name_ur: 'اکرم',
       name_en: 'Akram',
-      code: '03040001',
+      code: '0020',
     });
     expect(pickedOrNull({ id: 'x' })).toBeNull();
     expect(pickedOrNull(null)).toBeNull();

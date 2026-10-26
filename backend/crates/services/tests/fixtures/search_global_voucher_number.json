@@ -2,10 +2,10 @@
   {
     "kind": "account",
     "hit": {
-      "id": 20,
-      "code": "03040001",
-      "name_ur": "اکرم ٹول ٹیکس",
-      "name_en": "Akram Toll Tax",
+      "id": 21,
+      "code": "0021",
+      "name_ur": "ارشد ملتانی",
+      "name_en": "Arshad Multani",
       "extra_ur": "",
       "extra_en": "",
       "account_type": "buyer",
@@ -16,10 +16,10 @@
   {
     "kind": "account",
     "hit": {
-      "id": 18,
-      "code": "030110001",
-      "name_ur": "رحیم",
-      "name_en": "Rahim",
+      "id": 19,
+      "code": "0011",
+      "name_ur": "کریم",
+      "name_en": "Karim",
       "extra_ur": "",
       "extra_en": "",
       "account_type": "seller",
@@ -173,7 +173,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 20,
-        "code": "03040001",
+        "code": "0020",
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax"
       },
@@ -190,7 +190,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 18,
-        "code": "030110001",
+        "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
@@ -207,7 +207,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 18,
-        "code": "030110001",
+        "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },

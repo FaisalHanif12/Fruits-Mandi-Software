@@ -95,8 +95,8 @@
           "type": "party",
           "party": {
             "account_id": 18,
-            "code": "030110001",
-            "short_code": "1",
+            "code": "0010",
+            "short_code": "0",
             "name_ur": "رحیم",
             "name_en": "Rahim",
             "tag": null,
@@ -162,8 +162,8 @@
           "type": "party",
           "party": {
             "account_id": 31,
-            "code": "030110003",
-            "short_code": "3",
+            "code": "0012",
+            "short_code": "2",
             "name_ur": "حاجی نذیر",
             "name_en": "Haji Nazeer",
             "tag": null,

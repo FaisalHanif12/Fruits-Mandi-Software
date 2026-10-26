@@ -160,7 +160,7 @@ fn seller_bill_names_follow_the_print_language() {
     let (ur_page, en_page) = (ur.pages.first().unwrap(), en.pages.first().unwrap());
     assert_eq!(ur_page.party.name, "رحیم");
     assert_eq!(en_page.party.name, "Rahim");
-    assert_eq!(ur_page.party.code.as_deref(), Some("030110001"));
+    assert_eq!(ur_page.party.code.as_deref(), Some("0010"));
     assert_eq!(
         ur_page.lines.first().unwrap().name.as_deref(),
         Some("اکرم ٹول ٹیکس")
@@ -549,7 +549,7 @@ fn urdu_digits_only_on_an_urdu_print_with_the_setting_on() {
     assert_eq!(page.lines.first().unwrap().qty, "۲۰");
     // The truck number and the code stay as typed.
     assert_eq!(ur.header.facts.last().unwrap().value, "LES-1234");
-    assert_eq!(page.party.code.as_deref(), Some("030110001"));
+    assert_eq!(page.party.code.as_deref(), Some("0010"));
     // The setting does nothing on an English print.
     opts.language = Language::En;
     let en = build(&detail(EVENT1), &opts).unwrap();
@@ -662,7 +662,7 @@ fn the_tag_of_an_account_prints_after_its_name_and_a_one_time_buyer_has_none() {
     for lot in &mut d.lots {
         lot.seller.tag = Some("S".into());
         for sale in &mut lot.sales {
-            if sale.buyer.code == "03040001" {
+            if sale.buyer.code == "0020" {
                 sale.buyer.tag = Some("K".into());
             }
         }

@@ -37,7 +37,7 @@ const guests = (qty: string, rate: string, item: number, weight = ''): FruitDraf
   ...newFruitDraft('2026-10-10'),
   forWhom: 'guests',
   source: 'other_shop',
-  agent: { id: 31, code: '030110003', name_ur: 'حاجی نذیر', name_en: 'Haji Nazeer' },
+  agent: { id: 31, code: '0012', name_ur: 'حاجی نذیر', name_en: 'Haji Nazeer' },
   item: valueOfRef({ id: item, code: '', name_ur: '', name_en: '' }),
   packing: valueOfRef({ id: 1, code: '', name_ur: '', name_en: '' }),
   qty,

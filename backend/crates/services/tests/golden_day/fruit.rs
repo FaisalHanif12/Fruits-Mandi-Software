@@ -55,7 +55,7 @@ fn guests(w: &support::World, agent: i64, qty: &str, rate: &str) -> FruitInput {
     }
 }
 
-/// حاجی نذیر, seller 030110003.
+/// حاجی نذیر, seller 0012.
 fn nazeer(w: &support::World) -> i64 {
     support::add_account(
         &w.env,
@@ -420,7 +420,7 @@ fn the_refusals_come_back_at_their_fields() {
         preview_codes(&w, &no_agent)
             .contains(&(ErrorCode::ErrRequired, Some("agent_account_id".into())))
     );
-    let pukhta_seller = support::id_of(&w.env, "030119999");
+    let pukhta_seller = support::id_of(&w.env, "0031");
     let mut one_time = guests(&w, pukhta_seller, "1", "1,000");
     one_time.agent_account_id = Some(pukhta_seller);
     assert!(

@@ -219,6 +219,7 @@ export function ReportFilterBar({
             ) : (
               <AccountPicker
                 {...control}
+                canAdd={false}
                 scope={box}
                 showCard={false}
                 value={state.party}
@@ -248,6 +249,7 @@ export function ReportFilterBar({
         {(control) => (
           <AccountPicker
             {...control}
+            canAdd={false}
             scope="seller"
             showCard={false}
             value={state[kind]}
@@ -270,6 +272,7 @@ export function ReportFilterBar({
         {(control) => (
           <Picker
             {...control}
+            canAdd={false}
             scope={kind}
             value={state[kind]}
             onChange={(hit) => {

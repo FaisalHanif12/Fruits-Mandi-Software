@@ -167,6 +167,8 @@ export function accountSource(
     key: ['search', 'accounts', scope, String(controlId)],
     search: (text, limit) => searchAccounts({ scope, controlId, text, limit }),
     recent: () => searchAccountsRecent(scope, controlId),
+    // The click-open list and every typed search are read a page at a time (plan 32, R7).
+    page: (text, offset, limit) => searchAccounts({ scope, controlId, text, offset, limit }),
     touch: (id) => searchAccountsTouch(scope, controlId, id),
   };
 }

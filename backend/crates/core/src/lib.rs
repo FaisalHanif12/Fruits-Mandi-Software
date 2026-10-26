@@ -14,6 +14,7 @@ pub mod bikri;
 pub mod capital;
 pub mod cash;
 pub mod cashbook;
+pub mod codes;
 pub mod dates;
 pub mod drafts;
 pub mod english_words;

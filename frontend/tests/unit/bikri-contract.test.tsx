@@ -95,12 +95,12 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
   it('Event 1: header, lot and the two sale lines are the same as bikri_preview_event1_request.json', async () => {
     const { backend, user } = await open();
     await typeEvent1Lot(user, language);
-    await user.keyboard('1{Enter}20{Enter}600{Enter}');
+    await user.keyboard('0{Enter}20{Enter}600{Enter}');
     // The second line starts at 30 before the buyer is chosen; the munshi sees it, then goes on.
     await waitFor(() => {
       expect(textOf(salesGrid(language), 1, 'qty')).toBe('30');
     });
-    await user.keyboard('2{Enter}{Enter}580{Enter}');
+    await user.keyboard('1{Enter}{Enter}580{Enter}');
     await waitFor(() => {
       const sent = backend.previews.at(-1)?.lots[0]?.sales[1]?.seller_rate;
       expect(sent).toBe('580');
@@ -120,7 +120,7 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
   it('E2E-26: one finished line and a blank line that already starts at 30 are the same as bikri_preview_e2e26_request.json', async () => {
     const { backend, user } = await open();
     await typeEvent1Lot(user, language);
-    await user.keyboard('1{Enter}20{Enter}600{Enter}');
+    await user.keyboard('0{Enter}20{Enter}600{Enter}');
     const sales = salesGrid(language);
     // The blank second line starts at what the lot has left, before any buyer is chosen.
     await waitFor(() => {
@@ -147,7 +147,7 @@ describe.each(LANGUAGES)('E2E-26 on the screen, from the backend’s answer (%s)
       suggestions: [],
     });
     await typeEvent1Lot(user, language);
-    await user.keyboard('1{Enter}20{Enter}600{Enter}');
+    await user.keyboard('0{Enter}20{Enter}600{Enter}');
     const sales = salesGrid(language);
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:buyer');
@@ -169,7 +169,7 @@ describe.each(LANGUAGES)('E2E-26 on the screen, from the backend’s answer (%s)
       message(language, 'err-qty-left-unsold', { left: 30 }),
     );
     // Buyer, Enter takes the 30, then Ctrl+D copies the rate of the line above.
-    await user.keyboard('2{Enter}{Enter}');
+    await user.keyboard('1{Enter}{Enter}');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:rate');
     });

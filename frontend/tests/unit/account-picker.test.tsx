@@ -24,7 +24,7 @@ vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   city: ref(1, '0001', 'کوٹ رادھا کشن', 'Kot Radha Kishan'),
   father_or_firm_ur: 'ٹول ٹیکس',
   father_or_firm_en: 'Toll Tax',
@@ -32,13 +32,13 @@ const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akra
   balance: balance(2880, 'dr'),
   credit_limit_paisa: money(50000),
 });
-const ARSHAD = account(22, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+const ARSHAD = account(22, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   balance: balance(18684, 'dr'),
 });
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   balance: balance(4316, 'cr'),
 });
-const KARIM = account(32, 'seller', '030110002', 'کریم', 'Karim');
+const KARIM = account(32, 'seller', '0011', 'کریم', 'Karim');
 const ROWS = [AKRAM, ARSHAD, RAHIM, KARIM];
 
 const named = (text: string) => (name: string) => visible(name) === text;
@@ -124,23 +124,23 @@ beforeEach(() => {
 });
 
 describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
-  it('buyer: `1` then Enter takes 03040001, and his card shows at once', async () => {
+  it('buyer: `0` then Enter takes 0020, and his card shows at once', async () => {
     const onValue = vi.fn();
     const { input, user } = setup(language, 'buyer', { onValue });
     await user.click(input);
-    await user.keyboard('1');
+    await user.keyboard('0');
     await waitFor(() => {
       expect(options()).toHaveLength(1);
     });
     await user.keyboard('{Enter}');
-    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 21, code: '03040001' }));
+    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 21, code: '0020' }));
     expect(input.value).toBe(nameIn(language, AKRAM));
     expect(screen.getByTestId('after')).toHaveFocus();
     // The card: name, city, phone, balance with the side as a word, last entry, credit.
     const card = await screen.findByText(message(language, 'assist-card-balance'));
     const text = visible(card.closest('section')?.textContent);
     expect(text).toContain(nameIn(language, AKRAM));
-    expect(text).toContain('03040001');
+    expect(text).toContain('0020');
     expect(text).toContain(language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan');
     expect(text).toContain('03001234567');
     expect(text).toContain('2,880');
@@ -157,7 +157,14 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     await waitFor(() => {
       expect(options().length).toBeGreaterThan(0);
     });
-    expect(accountApi.searchAccountsRecent).toHaveBeenCalledWith('buyer', null);
+    // Empty text is every account of the field: the last chosen first, then by code (plan 32, R7).
+    expect(accountApi.searchAccounts).toHaveBeenCalledWith({
+      scope: 'buyer',
+      controlId: null,
+      text: '',
+      offset: 0,
+      limit: 50,
+    });
     await user.keyboard('{ArrowDown}{Enter}');
     await waitFor(() => {
       expect(accountApi.searchAccountsTouch).toHaveBeenCalledTimes(1);
@@ -167,11 +174,11 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(typeof id).toBe('number');
   });
 
-  it('`0001` is the same buyer', async () => {
+  it('the full code `0020` is the same buyer', async () => {
     const onValue = vi.fn();
     const { input, user } = setup(language, 'buyer', { onValue });
     await user.click(input);
-    await user.keyboard('0001');
+    await user.keyboard('0020');
     await waitFor(() => {
       expect(options()).toHaveLength(1);
     });
@@ -179,19 +186,19 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 21 }));
   });
 
-  it('seller: `1` is 030110001, and the card shows his open advance, not a credit limit', async () => {
+  it('seller: `0` is 0010, and the card shows his open advance, not a credit limit', async () => {
     const { input, user } = setup(language, 'seller');
     await user.click(input);
-    await user.keyboard('1{Enter}');
+    await user.keyboard('0{Enter}');
     const card = await screen.findByText(message(language, 'assist-card-balance'));
     const text = visible(card.closest('section')?.textContent);
-    expect(text).toContain('030110001');
+    expect(text).toContain('0010');
     expect(text).toContain(message(language, 'assist-card-advance'));
     expect(text).not.toContain(message(language, 'assist-card-credit-limit'));
     expect(text).toContain(message(language, 'common-side-cr'));
   });
 
-  it('seller: `7` does not exist, so Enter says so and offers to add 030110007', async () => {
+  it('seller: `7` does not exist, so Enter says so and offers to add the next seller', async () => {
     const { input, user } = setup(language, 'seller');
     await user.click(input);
     await user.keyboard('7');
@@ -209,19 +216,19 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('any account: `1` lists the buyer and the seller with their types, and the user picks one', async () => {
+  it('any account: `0` lists the buyer and the seller with their types, and the user picks one', async () => {
     const onValue = vi.fn();
     const { input, user } = setup(language, 'any', { onValue });
     await user.click(input);
-    await user.keyboard('1');
+    await user.keyboard('0');
     await waitFor(() => {
       expect(options()).toHaveLength(2);
     });
     const rows = options().map((option) => visible(option.textContent));
     expect(rows[0]).toContain(message(language, 'accounts-type-buyer'));
-    expect(rows[0]).toContain('03040001');
+    expect(rows[0]).toContain('0020');
     expect(rows[1]).toContain(message(language, 'accounts-type-seller'));
-    expect(rows[1]).toContain('030110001');
+    expect(rows[1]).toContain('0010');
     await user.keyboard('{ArrowDown}{Enter}');
     expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 31 }));
   });
@@ -302,29 +309,55 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(screen.queryByText(message(language, 'accountpicker-several'))).not.toBeInTheDocument();
   });
 
-  it('`9999` is reserved: it is never a short code for an ordinary account', async () => {
+  it('a پختہ کھاتہ account has no short code, but its full code works; the backend never says "reserved"', async () => {
+    const pukhta = account(23, 'buyer', '0030', 'پختہ کھاتہ (خریدار)', 'Pukhta Khata (Buyer)', {
+      is_system: true,
+      is_pukhta_khata: true,
+    });
+    fakeAccountSearch([...ROWS, pukhta]);
+    const onValue = vi.fn();
+    const { input, user } = setup(language, 'buyer', { onValue });
+    await user.click(input);
+    // `0` is the running number of the first buyer, not the پختہ کھاتہ account.
+    await user.keyboard('0');
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
+    });
+    expect(visible(options()[0]?.textContent)).toContain('0020');
+    await user.clear(input);
+    await user.keyboard('0030');
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
+    });
+    await user.keyboard('{Enter}');
+    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 23, code: '0030' }));
+  });
+
+  it('a number no buyer has says so and offers to add one; there is no "reserved" answer', async () => {
     const { input, user } = setup(language, 'buyer');
     await user.click(input);
-    await user.keyboard('9999');
+    await user.keyboard('9');
     await waitFor(() => {
       expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
     });
     await user.keyboard('{Enter}');
     expect(
-      await screen.findByText(named(message(language, 'accountpicker-reserved'))),
+      await screen.findByText(named(message(language, 'accountpicker-unknown-buyer'))),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: new RegExp(message(language, 'accountpicker-add')) }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', {
+        name: (name) => visible(name).startsWith(message(language, 'accountpicker-add')),
+      }),
+    ).toBeInTheDocument();
   });
 
   it('a code of an inactive account says so, names it, and offers no add and takes nothing', async () => {
-    const hidden = account(41, 'buyer', '03040009', 'پرانا', 'Old One', { is_active: false });
+    const hidden = account(41, 'buyer', '0028', 'پرانا', 'Old One', { is_active: false });
     fakeAccountSearch([...ROWS, hidden]);
     const onValue = vi.fn();
     const { input, user } = setup(language, 'buyer', { onValue });
     await user.click(input);
-    await user.keyboard('9');
+    await user.keyboard('8');
     await waitFor(() => {
       expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
     });
@@ -334,7 +367,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
         named(
           message(language, 'accountpicker-inactive', {
             name: language === 'ur' ? 'پرانا' : 'Old One',
-            code: '03040009',
+            code: '0028',
           }),
         ),
       ),
@@ -349,7 +382,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     const onValue = vi.fn();
     const { input, user } = setup(language, 'buyer', { onValue });
     await user.click(input);
-    await user.keyboard('2');
+    await user.keyboard('1');
     await user.tab();
     await waitFor(() => {
       expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 22 }));
@@ -361,14 +394,14 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     const onValue = vi.fn();
     const { input, user } = setup(language, 'any', { onValue });
     await user.click(input);
-    await user.keyboard('1');
+    await user.keyboard('0');
     await user.tab();
     expect(
       await screen.findByText(named(message(language, 'accountpicker-several'))),
     ).toBeInTheDocument();
     expect(onValue).not.toHaveBeenCalled();
     await user.click(
-      screen.getByRole('button', { name: (name) => visible(name).includes('030110001') }),
+      screen.getByRole('button', { name: (name) => visible(name).includes('0010') }),
     );
     expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 31 }));
   });
@@ -384,6 +417,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
       scope: 'buyer',
       controlId: null,
       text: 'akram',
+      offset: 0,
       limit: 50,
     });
     expect(urduApi.translitSuggest).not.toHaveBeenCalled();
@@ -397,7 +431,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
       expect(options()).toHaveLength(1);
     });
     const row = visible(options()[0]?.textContent);
-    expect(row).toContain('03040001');
+    expect(row).toContain('0020');
     expect(row).toContain(nameIn(language, AKRAM));
     expect(row).toContain(language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan');
     expect(row).toContain('2,880');
@@ -426,7 +460,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
       expect(options()).toHaveLength(1);
     });
     const row = visible(options()[0]?.textContent);
-    expect(row).toContain('03040001');
+    expect(row).toContain('0020');
     expect(row).not.toContain(message(language, 'common-side-dr'));
     expect(row).not.toContain('2,880');
   });
@@ -435,7 +469,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
 describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (language) => {
   it('an unknown full code: leave the field, F4, fill the name, F10 saves and the account is in the field', async () => {
     const onValue = vi.fn();
-    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('03040003');
+    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('0022');
     vi.mocked(accountApi.accountsSave).mockImplementation((draft) =>
       Promise.resolve(
         account(99, draft.account_type, draft.code, draft.names.urdu, draft.names.english),
@@ -443,7 +477,7 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
     );
     const { input, user } = setup(language, 'buyer', { onValue });
     await user.click(input);
-    await user.keyboard('03045555');
+    await user.keyboard('0025554');
     await waitFor(() => {
       expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
     });
@@ -464,7 +498,8 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
     const code = within(dialog).getByLabelText<HTMLInputElement>(
       named(message(language, 'accounts-field-code')),
     );
-    expect(code.value).toBe('03045555');
+    // The form offers the code the backend suggested, not the digits typed (plan 32, R2).
+    expect(code.value).toBe('0022');
     if (language === 'ur') {
       await user.click(
         within(dialog).getByLabelText(named(message(language, 'accounts-field-name-ur'))),
@@ -494,13 +529,13 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
     expect(vi.mocked(accountApi.accountsSave).mock.calls[0]?.[0]).toMatchObject({
       id: null,
       account_type: 'buyer',
-      code: '03045555',
+      code: '0022',
       names: { urdu: 'طارق محمود', english: 'Tariq Mehmood' },
     });
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
-    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 99, code: '03045555' }));
+    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 99, code: '0022' }));
     expect(input.value).toBe(language === 'ur' ? 'طارق محمود' : 'Tariq Mehmood');
     expect(
       screen.queryByText(named(message(language, 'accountpicker-unknown-buyer'))),
@@ -508,7 +543,7 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
   });
 
   it('F4 in the field adds an account with the typed text as its name, and Esc closes without saving', async () => {
-    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('03040003');
+    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('0022');
     const { input, user } = setup(language, 'buyer');
     await user.click(input);
     await user.keyboard('Tariq');
@@ -525,7 +560,7 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
         within(dialog).getByLabelText<HTMLInputElement>(
           named(message(language, 'accounts-field-code')),
         ).value,
-      ).toBe('03040003');
+      ).toBe('0022');
     });
     expect(
       within(dialog).getByLabelText<HTMLInputElement>(
@@ -544,7 +579,7 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
   });
 
   it('one Esc closes the suggestion list inside the dialog, the next Esc closes the dialog (FR-7.18)', async () => {
-    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('03040003');
+    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('0022');
     const { input, user } = setup(language, 'buyer');
     await user.click(input);
     await user.keyboard('zzz');
@@ -596,7 +631,7 @@ describe.each(LANGUAGES)('AccountPicker, adding an account on the spot (%s)', (l
   });
 
   it('a refusal at the code sits under the code field and the dialog stays open', async () => {
-    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('03040003');
+    vi.mocked(accountApi.accountsNextCode).mockResolvedValue('0022');
     vi.mocked(accountApi.accountsSave).mockRejectedValue(
       fail({ code: 'ERR_CODE_TAKEN', field: 'code' }),
     );

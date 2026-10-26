@@ -136,13 +136,16 @@ async function withBalances(hits: readonly AccountHitBinding[]): Promise<Account
 }
 
 /**
- * Accounts for a picker: exact code first, then the exact serial, then names, then close
- * spellings (PRD FR-7.40). `controlId` is for a field that takes the accounts of one control.
+ * Accounts for a picker: exact code first, then the running number (a short code), then names,
+ * then close spellings (PRD FR-7.40). Empty text is every account of the field, the last chosen
+ * first, then by code (plan 32, R7). `offset` and `limit` cut out one page. `controlId` is for a
+ * field that takes the accounts of one control.
  */
 export async function searchAccounts(input: {
   scope: AccountScope;
   controlId: number | null;
   text: string;
+  offset?: number;
   limit: number;
 }): Promise<AccountHit[]> {
   const hits = await callCommand<AccountHitBinding[]>('search_accounts', {
@@ -150,6 +153,7 @@ export async function searchAccounts(input: {
       scope: input.scope,
       control_id: input.controlId,
       text: input.text,
+      offset: input.offset ?? 0,
       limit: input.limit,
     },
   });

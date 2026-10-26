@@ -100,28 +100,25 @@ pub(crate) fn load_parties(
     unique.dedup();
     for chunk in unique.chunks(IN_CHUNK) {
         let sql = format!(
-            "SELECT id, code, serial, party_type, name_ur, name_en, tag FROM accounts
+            "SELECT id, code, name_ur, name_en, tag FROM accounts
              WHERE id IN ({})",
             placeholders(chunk.len())
         );
         let mut statement = conn.prepare(&sql)?;
         let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
-            let party_type: String = r.get(3)?;
-            let serial: i64 = r.get(2)?;
-            // A short code is the serial of an ordinary account: 1 to 8999. Serial 0 and 9000 to
-            // 9999 are reserved for system accounts (نقدی منڈی, the two پختہ کھاتہ), which are known by
-            // their full code (PRD FR-10.3, FR-7.39).
-            let short_code = (matches!(party_type.as_str(), "seller" | "buyer")
-                && (1..=8_999).contains(&serial))
-            .then(|| serial.to_string());
+            let code: String = r.get(1)?;
+            // A short code is the running number of a seller's or buyer's code (`0` for 0010,
+            // `11` for 00111, PRD 1.8 R5). The system accounts (نقدی منڈی, the two پختہ کھاتہ) have
+            // none and are known by their full code.
+            let short_code = mandi_core::accounts::short_code_of(&code);
             Ok(PartyRef {
                 phone: None,
                 account_id: r.get(0)?,
-                code: r.get(1)?,
+                code,
                 short_code,
-                name_ur: r.get(4)?,
-                name_en: r.get(5)?,
-                tag: r.get(6)?,
+                name_ur: r.get(2)?,
+                name_en: r.get(3)?,
+                tag: r.get(4)?,
                 person_key: None,
             })
         })?;
@@ -282,7 +279,7 @@ pub(crate) fn date_cell(iso: Option<String>) -> Cell {
 }
 
 /// A one-time person inside a پختہ کھاتہ account shows with his own names, the account's code,
-/// no short code (the serial 9999 is reserved) and his person key (PRD FR-13.5, FR-19.13). A
+/// no short code (the account has none) and his person key (PRD FR-13.5, FR-19.13). A
 /// line that names nobody keeps the account's names.
 pub(crate) fn pukhta_party(
     mut party: PartyRef,

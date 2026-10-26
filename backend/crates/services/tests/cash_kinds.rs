@@ -1096,6 +1096,7 @@ fn a_staff_member_becomes_a_lent_person_once() {
                 version: None,
                 name_ur: "اسلم".into(),
                 name_en: "Aslam".into(),
+                code: String::new(),
                 job: "munshi".into(),
                 phone: String::new(),
                 confirmed_rules_words: words.to_vec(),

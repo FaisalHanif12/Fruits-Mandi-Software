@@ -43,6 +43,19 @@ const CONTROL_OF: Record<AccountType, AccountRef> = {
   other: ref(1, '0101', 'نقد', 'Cash'),
 };
 
+/**
+ * The running number of a seller or a buyer: the code without its 3-digit type number and without
+ * padding (plan 32, R2), so `0010` is 0 and `00110` is 10. Null for every other account, and for
+ * the two پختہ کھاتہ accounts (`0030`, `0031`), which have no short code (R5).
+ */
+export function runningOf(type: AccountType, code: string): number | null {
+  if (type !== 'seller' && type !== 'buyer') return null;
+  const prefix = type === 'seller' ? '001' : '002';
+  if (!code.startsWith(prefix) || code.length > 10) return null;
+  const rest = code.slice(prefix.length);
+  return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
+}
+
 export function account(
   id: number,
   type: AccountType,
@@ -56,7 +69,7 @@ export function account(
     id,
     version: 1,
     code,
-    serial: Number(code.slice(-4)),
+    serial: runningOf(type, code) ?? Number(code.slice(-4)),
     account_type: type,
     control,
     name_ur: ur,
@@ -86,6 +99,20 @@ export function account(
     balance: ZERO,
     ...extra,
   };
+}
+
+/**
+ * Which accounts the Accounts list shows for a kind (plan 32, R6): "all" is the sellers, the
+ * buyers and the two پختہ کھاتہ accounts; cash, payables, capital, نقدی منڈی, اپنا مال, people who
+ * borrow, khatas and gardens are never in it. "every" is for the openings grid only.
+ */
+export function inListKind(row: AccountRow, kind: string): boolean {
+  if (kind === 'every') return true;
+  const party = (row.account_type === 'seller' || row.account_type === 'buyer') && !row.is_system;
+  if (kind === 'pukhta') return row.is_pukhta_khata;
+  if (kind === 'seller') return party && row.account_type === 'seller';
+  if (kind === 'buyer') return party && row.account_type === 'buyer';
+  return party || row.is_pukhta_khata;
 }
 
 export interface FakeAccounts {
@@ -143,7 +170,7 @@ export function sampleTree(): ChartHead[] {
           accounts: [
             {
               id: 21,
-              code: '03040001',
+              code: '0020',
               name_ur: 'اکرم ٹول ٹیکس',
               name_en: 'Akram Toll Tax',
               is_active: true,
@@ -152,7 +179,7 @@ export function sampleTree(): ChartHead[] {
             },
             {
               id: 22,
-              code: '03040002',
+              code: '0021',
               name_ur: 'ارشد ملتانی',
               name_en: 'Arshad Multani',
               is_active: true,
@@ -214,7 +241,7 @@ export function fakeAccounts(
     const found = store.rows.filter(
       (row) =>
         (filter.include_inactive || row.is_active) &&
-        (filter.account_type === null || row.account_type === filter.account_type) &&
+        inListKind(row, filter.kind) &&
         (wanted === '' ||
           [row.code, row.name_ur, row.name_en].some((part) => part.toLowerCase().includes(wanted))),
     );
@@ -231,6 +258,13 @@ export function fakeAccounts(
     return found === undefined ? Promise.reject(new Error('not found')) : Promise.resolve(found);
   });
   vi.mocked(accountApi.accountsNextCode).mockImplementation((type) => {
+    if (type === 'seller' || type === 'buyer') {
+      const prefix = type === 'seller' ? '001' : '002';
+      const used = store.rows
+        .filter((row) => row.account_type === type)
+        .map((row) => runningOf(type, row.code) ?? -1);
+      return Promise.resolve(`${prefix}${String(Math.max(-1, ...used) + 1)}`);
+    }
     const control = CONTROL_OF[type];
     const highest = Math.max(
       0,
@@ -272,9 +306,6 @@ export function fakeAccounts(
   return store;
 }
 
-const SERIAL_LENGTH = 4;
-const RESERVED_SERIAL = (serial: number) => serial === 0 || serial >= 9000;
-
 function hitOf(row: AccountRow): AccountHit {
   return {
     id: row.id,
@@ -308,13 +339,13 @@ function inScope(row: AccountRow, scope: AccountScope): boolean {
   return row.account_type === scope;
 }
 
-/** The serial of an account: the last four digits of its code (PRD FR-10.3). */
-const serialOf = (row: AccountRow) => Number(row.code.slice(-SERIAL_LENGTH));
+/** A typed number that can be a running number: `0`, or digits with no leading zero (plan 32, R5). */
+const SHORT_CODE = /^(0|[1-9]\d{0,6})$/;
 
 /**
- * Search, short codes and the party card as the backend answers them (plan 08 Section 3): an exact
- * code first, then the exact serial within the scope, then names in either script. A code typed
- * alone is resolved on its own.
+ * Search, short codes and the party card as the backend answers them (plan 32): an exact full code
+ * first, then the running number (a short code) within the scope, then the code or the names with
+ * the text in them. Empty text is every account of the scope, a page at a time.
  */
 export function fakeAccountSearch(
   rows: AccountRow[],
@@ -328,20 +359,24 @@ export function fakeAccountSearch(
     if (digits) {
       const exact = scoped.filter((row) => row.code === wanted);
       if (exact.length > 0) return exact;
-      if (wanted.length <= SERIAL_LENGTH) {
-        // A khata and a garden have no short code: their full code works, a serial does not.
-        const bySerial = scoped.filter(
-          (row) => !isKhata(row) && !isGarden(row) && serialOf(row) === Number(wanted),
+      if (SHORT_CODE.test(wanted)) {
+        // A khata, a garden and a پختہ کھاتہ account have no short code: their full code works.
+        const byRunning = scoped.filter(
+          (row) => runningOf(row.account_type, row.code) === Number(wanted),
         );
-        if (bySerial.length > 0) return bySerial;
+        if (byRunning.length > 0) return byRunning;
       }
     }
     return scoped.filter((row) =>
       [row.code, row.name_ur, row.name_en].some((part) => part.toLowerCase().includes(wanted)),
     );
   };
-  vi.mocked(accountApi.searchAccounts).mockImplementation(({ scope, text }) =>
-    Promise.resolve(find(scope, text).map(hitOf)),
+  vi.mocked(accountApi.searchAccounts).mockImplementation(({ scope, text, offset = 0, limit }) =>
+    Promise.resolve(
+      find(scope, text)
+        .slice(offset, offset + limit)
+        .map(hitOf),
+    ),
   );
   vi.mocked(accountApi.searchAccountsRecent).mockImplementation((scope) =>
     Promise.resolve(rows.filter((row) => inScope(row, scope)).map(hitOf)),
@@ -349,17 +384,13 @@ export function fakeAccountSearch(
   vi.mocked(accountApi.searchAccountsTouch).mockResolvedValue(null);
   vi.mocked(accountApi.accountsResolveCode).mockImplementation((scope, _controlId, text) => {
     const digits = /^\d+$/.test(text.trim());
-    const serial = Number(text.trim());
-    if (digits && text.trim().length <= SERIAL_LENGTH && RESERVED_SERIAL(serial)) {
-      return Promise.resolve<ResolvedCode>({
-        status: 'reserved',
-        account: null,
-        candidates: [],
-        suggested_code: null,
-      });
-    }
     const found = find(scope, text, true).filter(() => digits);
     const first = found[0];
+    const type = scope === 'buyer' ? 'buyer' : 'seller';
+    const used = rows
+      .filter((row) => row.account_type === type)
+      .map((row) => runningOf(type, row.code) ?? -1);
+    const next = `${type === 'buyer' ? '002' : '001'}${String(Math.max(-1, ...used) + 1)}`;
     const result: ResolvedCode =
       found.length === 1 && first !== undefined
         ? {
@@ -374,7 +405,8 @@ export function fakeAccountSearch(
               status: 'unknown',
               account: null,
               candidates: [],
-              suggested_code: digits && text.trim().length > SERIAL_LENGTH ? text.trim() : null,
+              // An F4 add would take the next code of the field's type (plan 32, R2).
+              suggested_code: digits && (scope === 'seller' || scope === 'buyer') ? next : null,
             };
     return Promise.resolve(result);
   });

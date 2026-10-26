@@ -85,7 +85,7 @@ describe.each(LANGUAGES)('the voucher screen against the real rules (%s)', (lang
         name: named(message(language, 'vouchers-field-buyer')),
       }),
     );
-    await user.keyboard('03040001');
+    await user.keyboard('0020');
     await screen.findByRole('option');
     await user.keyboard('{Enter}');
     await user.click(
@@ -150,7 +150,7 @@ describe.each(LANGUAGES)(
         }));
         return { ...real, bills, total_count: 250, truncated: true };
       });
-      const user = await pickAccount('receipt', 'vouchers-field-buyer', '03040001');
+      const user = await pickAccount('receipt', 'vouchers-field-buyer', '0020');
       expect(
         await screen.findByText((content) => visible(content) === note('200', '250')),
       ).toBeInTheDocument();
@@ -182,14 +182,14 @@ describe.each(LANGUAGES)(
           truncated: true,
         };
       });
-      await pickAccount('payment', 'vouchers-field-paid-to', '030110001');
+      await pickAccount('payment', 'vouchers-field-paid-to', '0010');
       expect(
         await screen.findByText((content) => visible(content) === note('200', '312')),
       ).toBeInTheDocument();
     });
 
     it('a whole list has no note', async () => {
-      await pickAccount('receipt', 'vouchers-field-buyer', '03040001');
+      await pickAccount('receipt', 'vouchers-field-buyer', '0020');
       await screen.findByText(message(language, 'vouchers-bills-title'));
       await waitFor(() => {
         expect(document.body.textContent).toContain('12,880');
@@ -205,7 +205,7 @@ describe('making a one-time person a regular account reads the lists again', () 
     const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
     const spy = vi.spyOn(client, 'invalidateQueries');
     vi.mocked(pukhtaApi.pukhtaMakeRegular).mockResolvedValue({
-      account: { id: 24, code: '03040003', name_ur: 'شاہد', name_en: 'Shahid' },
+      account: { id: 24, code: '0022', name_ur: 'شاہد', name_en: 'Shahid' },
       moved: { amount_paisa: 0 as never, side: 'zero' },
       entry_id: null,
     });

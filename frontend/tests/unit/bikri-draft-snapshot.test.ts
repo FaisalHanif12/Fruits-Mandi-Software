@@ -11,8 +11,8 @@ import {
 } from '../../src/features/bikri/draft-snapshot';
 import { LOT, SALE } from '../../src/features/bikri/types';
 
-const RAHIM = { id: 17, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
-const AKRAM = { id: 19, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
+const RAHIM = { id: 17, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
+const AKRAM = { id: 19, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
 
 /** A draft with a header, one lot and one sale line, typed the way the munshi does. */
 function typedDraft() {
@@ -126,7 +126,7 @@ describe('the size of a snapshot', () => {
       Object.fromEntries(keys.map((key) => [key, 'ٹرک-1234567890']));
     const record = {
       id: 123456,
-      code: '030110001',
+      code: '0010',
       name_ur: 'اکرم ٹول ٹیکس',
       name_en: 'Akram Toll Tax',
     };

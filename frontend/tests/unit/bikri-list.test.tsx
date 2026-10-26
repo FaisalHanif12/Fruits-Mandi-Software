@@ -106,8 +106,8 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
       bikriListOf([
         listRow({
           sellers: [
-            ref(17, '030110001', 'رحیم', 'Rahim'),
-            ref(22, '030119999', 'پختہ کھاتہ (بیوپاری)', 'Pukhta Khata (Seller)'),
+            ref(17, '0010', 'رحیم', 'Rahim'),
+            ref(22, '0031', 'پختہ کھاتہ (بیوپاری)', 'Pukhta Khata (Seller)'),
           ],
           pukhta_sellers: [
             { name_ur: 'شاہد', name_en: 'Shahid', phone: '03000000000', person_key: 'shahid|0300' },

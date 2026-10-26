@@ -204,8 +204,8 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(cell('4', 'credit')).toBe('34,476');
       expect(document.querySelector('.ag-row[row-id="0"]')?.className).toContain('row-group');
       // A buyer: his short code, his name with his code, and what was debited, credited and is left.
-      expect(cell('2', 'code')).toBe('1');
-      expect(cell('2', 'party')).toBe(`03040001 ${names('اکرم ٹول ٹیکس', 'Akram Toll Tax')}`);
+      expect(cell('2', 'code')).toBe('0');
+      expect(cell('2', 'party')).toBe(`0020 ${names('اکرم ٹول ٹیکس', 'Akram Toll Tax')}`);
       expect(cell('2', 'debit')).toBe('12,880');
       expect(cell('2', 'credit')).toBe('10,000');
       expect(cell('2', 'remaining')).toContain('2,880');

@@ -7,7 +7,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 18,
-        "code": "030110001",
+        "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
@@ -34,7 +34,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 20,
-        "code": "03040001",
+        "code": "0020",
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax"
       },
@@ -61,7 +61,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 18,
-        "code": "030110001",
+        "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
@@ -88,7 +88,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 20,
-        "code": "03040001",
+        "code": "0020",
         "name_ur": "اکرم ٹول ٹیکس",
         "name_en": "Akram Toll Tax"
       },
@@ -115,7 +115,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 19,
-        "code": "030110002",
+        "code": "0011",
         "name_ur": "کریم",
         "name_en": "Karim"
       },
@@ -142,7 +142,7 @@
       "entry_date": "2026-10-10",
       "account": {
         "id": 21,
-        "code": "03040002",
+        "code": "0021",
         "name_ur": "ارشد ملتانی",
         "name_en": "Arshad Multani"
       },

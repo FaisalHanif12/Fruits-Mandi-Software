@@ -1,6 +1,15 @@
 // Design system (Tech Stack 5.3, docs/design/design-system.md). Screens build only from these
 // (Code Standards F7).
 export { AccountPicker } from './AccountPicker';
+export { useWorkAreaStore } from './work-area';
+export {
+  AddRecordContext,
+  useAddRecord,
+  type AddRecord,
+  type AddRecordKind,
+  type AddRecordRequest,
+  type MasterAddKind,
+} from './add-record';
 export { Balance, sideMessageId, type BalanceValue } from './Balance';
 export { Button, type ButtonVariant } from './Button';
 export { CalcInfo, CalcInfoAt, type Working } from './CalcInfo';

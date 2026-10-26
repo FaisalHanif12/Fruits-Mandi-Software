@@ -143,7 +143,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
   it('F2 puts the form in the list and starts the next: the type and date stay, the rest starts again', async () => {
     const { user } = await open('receipt');
     expect(noWaitingList(language)).toBeNull();
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     await waitFor(() => {
       expect(vouchersApi.vouchersPreview).toHaveBeenCalled();
     });
@@ -152,7 +152,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
     // The row shows the account, and the amount and balance after come from the backend's preview.
     await waitFor(() => {
       const text = visible(card.textContent);
-      expect(text).toContain('03040001');
+      expect(text).toContain('0020');
       expect(text).toContain('10,000');
       expect(text).toContain('2,880');
       expect(text).toContain(message(language, 'vouchers-state-waiting'));
@@ -175,12 +175,12 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
 
   it('F10 saves the list in order, each voucher with its own save; the form joins it; saved ones leave and the day total shows', async () => {
     const { user } = await open('receipt');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '2', '5000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '5000');
     press('F2');
     // The third is still on the form when F10 is pressed: it joins the list.
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '2880');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '2880');
     press('F10');
     await waitFor(() => {
       expect(vouchersApi.vouchersSave).toHaveBeenCalledTimes(3);
@@ -217,11 +217,11 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
         ? Promise.reject(fail({ code: 'ERR_VOUCHER_CANCELLED', field: 'amount' }))
         : (original?.(built) ?? Promise.reject(new Error('no fake'))),
     );
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '2', '5000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '5000');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '2880');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '2880');
     press('F10');
     await waitFor(() => {
       expect(store.rows).toHaveLength(2);
@@ -231,7 +231,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
     await waitFor(() => {
       const text = visible(card.textContent);
       expect(text).toContain(message(language, 'err-voucher-cancelled'));
-      expect(text).toContain('03040002');
+      expect(text).toContain('0021');
       expect(text).not.toContain('ERR_');
     });
     expect(within(card).getAllByRole('row')).toHaveLength(2);
@@ -255,11 +255,11 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
   it('cash below zero asks for the voucher that needs it, with the cash after that entry: No keeps it and the run goes on, Yes saves it', async () => {
     store = fakeVouchers({ cash: 20000 });
     const { user } = await open('advance');
-    await typeVoucher(user, language, 'vouchers-field-seller', 'rahim', '15000', '030110001');
+    await typeVoucher(user, language, 'vouchers-field-seller', 'rahim', '15000', '0010');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-seller', 'karim', '10000', '030110002');
+    await typeVoucher(user, language, 'vouchers-field-seller', 'karim', '10000', '0011');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-seller', 'rahim', '1000', '030110001');
+    await typeVoucher(user, language, 'vouchers-field-seller', 'rahim', '1000', '0010');
     press('F10');
     // The first voucher is saved on its own (cash 5,000). The second would take cash to -5,000:
     // the run stops there and asks, with focus on "No".
@@ -279,7 +279,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
     const card = await waitingCard(language);
     await waitFor(() => {
       const text = visible(card.textContent);
-      expect(text).toContain('030110002');
+      expect(text).toContain('0011');
       expect(text).toContain(message(language, 'vouchers-state-declined'));
     });
     expect(within(card).getAllByRole('row')).toHaveLength(2);
@@ -310,13 +310,13 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
 
   it('vouchers of different types wait in one list, each saved as its own type', async () => {
     const { user } = await open('receipt');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     press('F2');
     const group = screen.getByRole('group', { name: message(language, 'vouchers-field-type') });
     await user.click(
       within(group).getByRole('button', { name: message(language, 'vouchers-type-payment') }),
     );
-    await typeVoucher(user, language, 'vouchers-field-paid-to', 'rahim', '4316', '030110001');
+    await typeVoucher(user, language, 'vouchers-field-paid-to', 'rahim', '4316', '0010');
     press('F2');
     // The list keeps both, with the type of each.
     const card = await waitingCard(language);
@@ -343,7 +343,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
     expect(await screen.findByText(message(language, 'err-required'))).toBeInTheDocument();
     expect(noWaitingList(language)).toBeNull();
     await user.clear(await labelled(language, 'vouchers-field-amount'));
-    await pick(user, language, 'vouchers-field-buyer', '1', '03040001');
+    await pick(user, language, 'vouchers-field-buyer', '0', '0020');
     press('F2');
     expect(await screen.findByText(message(language, 'err-required'))).toBeInTheDocument();
     expect(noWaitingList(language)).toBeNull();
@@ -352,7 +352,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
 
   it('a voucher can be removed from the list before it is saved', async () => {
     const { user } = await open('receipt');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     press('F2');
     const card = await waitingCard(language);
     await user.click(
@@ -366,9 +366,9 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
 
   it('switching the language keeps the list and its vouchers; the names follow the language', async () => {
     const { user } = await open('receipt');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     press('F2');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '2', '5000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '5000');
     const other: Language = language === 'ur' ? 'en' : 'ur';
     act(() => {
       useLanguageStore.setState({ language: other });
@@ -390,7 +390,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
 
   it('leaving with vouchers waiting asks first', async () => {
     const { user } = await open('receipt');
-    await typeVoucher(user, language, 'vouchers-field-buyer', '1', '10000');
+    await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     press('F2');
     await waitingCard(language);
     press('Escape');
@@ -408,7 +408,7 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
       voucher_type: 'receipt',
       number: 1,
       entry_date: '2026-10-10',
-      account: { id: 21, code: '03040001', name_ur: AKRAM.name_ur, name_en: AKRAM.name_en },
+      account: { id: 21, code: '0020', name_ur: AKRAM.name_ur, name_en: AKRAM.name_en },
       amount_paisa: store.rows[0]?.amount_paisa ?? (1_000_000 as never),
       mode: 'cash',
       bank_account_id: null,

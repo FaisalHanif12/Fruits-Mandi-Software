@@ -34,19 +34,19 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   city: ref(1, '0001', 'کوٹ رادھا کشن', 'Kot Radha Kishan'),
   balance: balance(2880, 'dr'),
   credit_limit_paisa: money(50000),
 });
-const ARSHAD = account(22, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+const ARSHAD = account(22, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   balance: balance(18684, 'dr'),
 });
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   opening_dr_paisa: money(15000),
   opening_is_advance: true,
 });
-const OLD = account(41, 'buyer', '03040009', 'پرانا', 'Old One', { is_active: false });
+const OLD = account(41, 'buyer', '0028', 'پرانا', 'Old One', { is_active: false });
 const CASH = account(51, 'other', '01010001', 'روکڑ', 'Cash in Hand', { is_system: true });
 
 const named = (text: string) => (name: string) => visible(name) === text;
@@ -104,7 +104,7 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
     await waitFor(() => {
       expect(rowIds()).toEqual(['21', '22']);
     });
-    expect(cell(21, 'code')).toBe('03040001');
+    expect(cell(21, 'code')).toBe('0020');
     expect(cell(21, 'name')).toBe(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     expect(cell(21, 'city')).toBe(language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan');
     expect(cell(21, 'opening_date')).toBe('31-08-2026');
@@ -199,7 +199,7 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
       expect(rowIds()).toEqual(['21', '31', '41']);
     });
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
-      { account_type: null, text: '', include_inactive: true },
+      { kind: 'all', text: '', include_inactive: true },
       0,
       100,
     );
@@ -277,12 +277,12 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     signedIn(sessionUser({ language }));
   });
 
-  it('E2E-23: a new buyer typed `tariq mehmood` gets code 03040003 and both names', async () => {
+  it('E2E-23: a new buyer typed `tariq mehmood` gets code 0022 and both names', async () => {
     const store = fakeAccounts([AKRAM, ARSHAD]);
     const { router } = await renderApp('/index/accounts/new');
     const code = await labelled(language, 'accounts-field-code');
     await waitFor(() => {
-      expect(code.value).toBe('03040003');
+      expect(code.value).toBe('0022');
     });
     const user = userEvent.setup();
     if (language === 'ur') {
@@ -310,7 +310,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     expect(draft).toMatchObject({
       id: null,
       account_type: 'buyer',
-      code: '03040003',
+      code: '0022',
       names: { urdu: 'طارق محمود', english: 'Tariq Mehmood' },
       credit_allowed: true,
       opening_date: '10-10-2026',
@@ -328,7 +328,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     await renderApp('/index/accounts/new');
     const code = await labelled(language, 'accounts-field-code');
     await waitFor(() => {
-      expect(code.value).toBe('03040002');
+      expect(code.value).toBe('0021');
     });
     const user = userEvent.setup();
     await user.click(
@@ -338,10 +338,10 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
       await screen.findByRole('option', { name: named(message(language, 'accounts-type-seller')) }),
     );
     await waitFor(() => {
-      expect(code.value).toBe('030110002');
+      expect(code.value).toBe('0011');
     });
     await user.click(code);
-    await user.keyboard('{Control>}a{/Control}030110077');
+    await user.keyboard('{Control>}a{/Control}00176');
     await user.click(
       screen.getByRole('combobox', { name: named(message(language, 'accounts-field-type')) }),
     );
@@ -350,7 +350,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     );
     // A new type asks for a new suggestion: the code of the old type is not kept.
     await waitFor(() => {
-      expect(code.value).toBe('03040002');
+      expect(code.value).toBe('0021');
     });
   });
 
@@ -417,7 +417,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     vi.mocked(accountApi.accountsSimilar).mockResolvedValue([
       {
         id: 21,
-        code: '03040001',
+        code: '0020',
         name_ur: 'اکرم ٹول ٹیکس',
         name_en: 'Akram Toll Tax',
         father_or_firm_ur: 'ٹول ٹیکس',
@@ -444,7 +444,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     const panel = heading.closest('section');
     expect(panel).not.toBeNull();
     const text = visible(panel?.textContent);
-    expect(text).toContain('03040001');
+    expect(text).toContain('0020');
     expect(text).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     expect(text).toContain(language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan');
     expect(text).toContain('03001234567');
@@ -456,7 +456,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     vi.mocked(accountApi.accountsSimilar).mockResolvedValue([
       {
         id: 21,
-        code: '03040001',
+        code: '0020',
         name_ur: 'اکرم ٹول ٹیکس',
         name_en: 'Akram Toll Tax',
         father_or_firm_ur: '',
@@ -483,7 +483,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
   it('an account being edited shows what was saved, the opening money as the text the backend reads', async () => {
     fakeAccounts([RAHIM]);
     await renderApp('/index/accounts/31');
-    expect((await labelled(language, 'accounts-field-code')).value).toBe('030110001');
+    expect((await labelled(language, 'accounts-field-code')).value).toBe('0010');
     expect((await labelled(language, 'accounts-field-opening-dr')).value).toBe('15,000');
     expect((await labelled(language, 'accounts-field-opening-cr')).value).toBe('');
     expect((await labelled(language, 'accounts-field-opening-date')).value).toBe('31-08-2026');
@@ -532,7 +532,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
   });
 
   it('editing only the note sends an opening credit and a credit limit back unchanged', async () => {
-    const buyer = account(23, 'buyer', '03040003', 'ناصر', 'Nasir', {
+    const buyer = account(23, 'buyer', '0022', 'ناصر', 'Nasir', {
       opening_date: '2026-08-31',
       opening_cr_paisa: money(2500),
       credit_limit_paisa: money(50000),
@@ -572,7 +572,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
   });
 
   it('an account with no opening sends none when another field is edited', async () => {
-    const plain = account(24, 'buyer', '03040004', 'بغیر', 'Plain', { opening_date: null });
+    const plain = account(24, 'buyer', '0023', 'بغیر', 'Plain', { opening_date: null });
     fakeAccounts([plain]);
     await renderApp('/index/accounts/24');
     const user = userEvent.setup();
@@ -720,7 +720,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     });
     expect((await labelled(other, 'accounts-field-phone1')).value).toBe('03001234567');
     expect((await labelled(other, 'accounts-field-opening-dr')).value).toBe('65,000');
-    expect((await labelled(other, 'accounts-field-code')).value).toBe('03040002');
+    expect((await labelled(other, 'accounts-field-code')).value).toBe('0021');
   });
 
   it('F4 on the city picker adds a city without losing what is typed (PRD FR-7.64)', async () => {
@@ -823,7 +823,7 @@ describe.each(LANGUAGES)('the chart of accounts (%s)', (language) => {
     // On an open row the same arrow goes to its first account.
     await user.keyboard(toChildren);
     expect(tree).toHaveAttribute('aria-activedescendant', rows()[4]?.id);
-    expect(ROW_TEXT(4)).toContain('03040001');
+    expect(ROW_TEXT(4)).toContain('0020');
     expect(ROW_TEXT(4)).toContain('2,880');
     // The other arrow goes back to the control, then closes it.
     await user.keyboard(toParent);

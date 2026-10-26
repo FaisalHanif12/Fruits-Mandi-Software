@@ -89,11 +89,16 @@ pub(crate) struct Ages {
 }
 
 /// The buyer accounts. Parameters: city, account.
-const BUYERS_SQL: &str = "SELECT a.id, a.is_pukhta_khata, a.city_id, a.collector_staff_id,
+fn buyers_sql() -> String {
+    format!(
+        "SELECT a.id, a.is_pukhta_khata, a.city_id, a.collector_staff_id,
         a.phone1
     FROM accounts a JOIN account_controls k ON k.id = a.control_id
     WHERE k.code = '0304' AND (?1 IS NULL OR a.city_id = ?1) AND (?2 IS NULL OR a.id = ?2)
-    ORDER BY a.code";
+    ORDER BY {}",
+        mandi_db::codes::order_by_code("a.code")
+    )
+}
 
 /// The balances of the persons of a پختہ کھاتہ account. Parameters: account, as-of day.
 const PERSONS_SQL: &str = "SELECT l.pukhta_person_key, COALESCE(SUM(l.dr_paisa), 0),
@@ -410,7 +415,7 @@ pub(crate) fn buyers_owing_now(
 /// whether the ages were worked out.
 fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), ReportsError> {
     let accounts = {
-        let mut statement = conn.prepare(BUYERS_SQL)?;
+        let mut statement = conn.prepare(&buyers_sql())?;
         statement
             .query_map(params![typed.city_id, typed.party_id], |r| {
                 Ok(Account {

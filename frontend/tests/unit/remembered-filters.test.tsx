@@ -88,7 +88,7 @@ vi.mock('../../src/shared/urdu/api');
 const get = vi.mocked(screenApi.prefsScreenGet);
 const set = vi.mocked(screenApi.prefsScreenSet);
 
-const AKRAM = { id: 20, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '03040001' };
+const AKRAM = { id: 20, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '0020' };
 
 describe('what a report keeps of its filters', () => {
   it('keeps nothing for a report with nothing chosen, so a cleared report forgets', () => {

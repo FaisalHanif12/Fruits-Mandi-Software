@@ -395,7 +395,7 @@ fn report(ctx: &Context) -> Result<(), ServiceError> {
     let trial = ledger::trial_balance(ctx, None)?;
     let cash = ledger::account_balance(ctx, code_id(ctx, "01010001")?)?;
     let difference = ledger::account_balance(ctx, code_id(ctx, "06019999")?)?;
-    let rahim = code_id(ctx, "030110001")?;
+    let rahim = code_id(ctx, "0010")?;
     let advances = assist::advances(ctx, rahim)?;
     let status = day::status(ctx)?;
     let shares: Vec<i32> = partners::list(ctx)?.iter().map(|p| p.share_bps).collect();

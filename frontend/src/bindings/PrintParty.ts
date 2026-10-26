@@ -13,8 +13,9 @@ export type PrintParty = {
    */
   code: string | null;
   /**
-   * The short code of a seller or buyer (PRD FR-7.39, FR-19.13), for example `1` for
-   * 03040001. Absent for a one-time person and for an account that has no short code.
+   * The short code of a seller or buyer (PRD 1.8 R5, FR-19.13): the running number of his code,
+   * for example `0` for 0020 and `11` for 00111. Absent for a one-time person and for an
+   * account that has no short code (پختہ کھاتہ).
    */
   short_code?: string;
   /**

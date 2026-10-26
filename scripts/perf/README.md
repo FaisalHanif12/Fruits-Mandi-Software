@@ -203,12 +203,12 @@ What is in it:
 
 | Part | Count |
 |---|---|
-| Accounts | 20,000: 8,999 sellers (03011), 8,999 buyers (0304), 2,002 others (0103) |
+| Accounts | 20,000: 8,999 sellers (0010 to 0018998), 8,999 buyers (0020 to 0028998), 2,002 others (0103) |
 | Masters | 2,000: 400 cities, 500 items, 100 packings, 300 addas, 100 stores, 200 expense heads, 400 staff |
 | Posted journal entries | 1,030,000, dated 11-10-2016 to 10-10-2026 (10 years) |
 | Journal lines | 3,503,940 |
 | Data file | about 670 MB |
-| Skewed accounts | the cash account has about 514,000 lines; the busiest buyer (03040001) about 55,000; the busiest seller (030110001) about 49,000; an ordinary buyer (03044500) about 90 |
+| Skewed accounts | the cash account has about 514,000 lines; the busiest buyer (0020) about 55,000; the busiest seller (0010) about 49,000; an ordinary buyer (0024499) about 90 |
 
 The skew is on purpose. A shop has a few parties that trade every day and the cash account is touched by every cash sale, so the worst case of a balance, a party card and a ledger is a busy account, not an average one. Benchmarks report the busiest and an ordinary account side by side.
 

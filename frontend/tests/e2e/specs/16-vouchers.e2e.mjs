@@ -96,7 +96,7 @@ describe('the voucher screen: وصولی, ادائیگی and پیشگی by keybo
   });
 
   it('3. ادائیگی to رحیم: his payable is 4,316 and "full balance" fills it; F10 saves (E2E-7)', async () => {
-    await pick('ur', 'vouchers-field-paid-to', '030110001', 'رحیم');
+    await pick('ur', 'vouchers-field-paid-to', '0010', 'رحیم');
     await waitForAll(t('ur', 'vouchers-payables-title'), '24,316', '15,000', '4,316');
     const full = await $(
       `//button[starts-with(normalize-space(.), "${t('ur', 'vouchers-fill-full')}")]`,
@@ -114,7 +114,7 @@ describe('the voucher screen: وصولی, ادائیگی and پیشگی by keybo
   });
 
   it('4. ادائیگی to کریم: the payable is 10,160 and "full balance" fills it, not saved (E2E-27)', async () => {
-    await pick('ur', 'vouchers-field-paid-to', '030110002', 'کریم');
+    await pick('ur', 'vouchers-field-paid-to', '0011', 'کریم');
     await waitForAll(t('ur', 'vouchers-payables-title'), '10,160');
     const full = await $(
       `//button[starts-with(normalize-space(.), "${t('ur', 'vouchers-fill-full')}")]`,
@@ -127,7 +127,7 @@ describe('the voucher screen: وصولی, ادائیگی and پیشگی by keybo
     // Alt+P is the same screen with another type: the typed amount stays, no question is asked.
     await press([Key.Alt, 'p']);
     await waitForHeading('ur', 'vouchers-advance-title');
-    await pick('ur', 'vouchers-field-seller', '030110002', 'کریم');
+    await pick('ur', 'vouchers-field-seller', '0011', 'کریم');
     const amount = await focusField('ur', 'vouchers-field-amount');
     await amount.setValue('9999999');
     await waitForText(t('ur', 'common-cash-confirm-title'));

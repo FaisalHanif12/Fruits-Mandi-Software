@@ -177,7 +177,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
         ("expense_heads", with_code(&["account_id", "is_active"])),
         (
             "staff",
-            named(&[], &["role", "phone", "account_id", "is_active"]),
+            // Migration 7 (plan 32) gave staff a code.
+            named(&[], &["role", "phone", "account_id", "is_active", "code"]),
         ),
         (
             "bank_accounts",
@@ -808,6 +809,7 @@ fn listed_indexes() -> Vec<(&'static str, Vec<&'static str>)> {
         "markas",
         "stores",
         "expense_heads",
+        "staff",
     ] {
         v.push((table, vec!["code"]));
     }

@@ -264,6 +264,7 @@ export function AnalyticsFilterBar({
         {(control) => (
           <Picker
             {...control}
+            canAdd={false}
             scope="item"
             value={state.item}
             onChange={(hit) => {
@@ -284,6 +285,7 @@ export function AnalyticsFilterBar({
         {(control) => (
           <AccountPicker
             {...control}
+            canAdd={false}
             scope="seller"
             showCard={false}
             value={state.seller}
@@ -305,6 +307,7 @@ export function AnalyticsFilterBar({
         {(control) => (
           <AccountPicker
             {...control}
+            canAdd={false}
             scope="buyer"
             showCard={false}
             value={state.buyer}
@@ -353,6 +356,7 @@ export function AnalyticsFilterBar({
         {(control) => (
           <Picker
             {...control}
+            canAdd={false}
             scope="city"
             value={state.city}
             onChange={(hit) => {
@@ -373,6 +377,7 @@ export function AnalyticsFilterBar({
         {(control) => (
           <Picker
             {...control}
+            canAdd={false}
             scope="adda"
             value={state.adda}
             onChange={(hit) => {

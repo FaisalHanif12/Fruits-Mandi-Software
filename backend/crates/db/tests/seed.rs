@@ -27,7 +27,7 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 17] = [
     ("02010004", "منشیانہ کھاتہ", "Munshiana Payable", "other", 0),
     ("030119998", "اپنا مال", "Own Goods (Trips)", "seller", 0),
     (
-        "030119999",
+        "0031",
         "پختہ کھاتہ (بیوپاری)",
         "Pukhta Khata (Seller)",
         "seller",
@@ -41,7 +41,7 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 17] = [
         0,
     ),
     (
-        "03049999",
+        "0030",
         "پختہ کھاتہ (خریدار)",
         "Pukhta Khata (Buyer)",
         "buyer",
@@ -129,12 +129,17 @@ fn the_fixed_accounts_match_fr_10_4() {
             (1, 1),
             "{code} is a system account and active"
         );
-        // The code is the control code plus the 4-digit serial (FR-10.2).
-        assert!(
-            code.ends_with(&format!("{:04}", row.serial)),
-            "{code} serial {}",
-            row.serial
-        );
+        // The code is the control code plus the 4-digit serial (FR-10.2). The two پختہ کھاتہ accounts
+        // are the exception since migration 7: the type number 003 plus the running number (plan 32).
+        if row.pukhta == 1 {
+            assert_eq!(code, format!("003{}", row.serial), "{code}");
+        } else {
+            assert!(
+                code.ends_with(&format!("{:04}", row.serial)),
+                "{code} serial {}",
+                row.serial
+            );
+        }
         // Search keys come from core::text only (B26).
         assert_eq!(row.search_ur, text::search_ur(ur));
         assert_eq!(row.search_en, text::search_en(en));
@@ -201,10 +206,13 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
             want
         );
     }
-    // Every account sits under the control its code starts with.
+    // Every account sits under the control its code starts with, except the two پختہ کھاتہ accounts,
+    // whose code is the type number and a running number (plan 32).
     let misplaced: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM accounts a JOIN account_controls c ON c.id = a.control_id WHERE substr(a.code, 1, length(c.code)) <> c.code OR length(a.code) <> length(c.code) + 4",
+            "SELECT COUNT(*) FROM accounts a JOIN account_controls c ON c.id = a.control_id
+             WHERE a.is_pukhta_khata = 0
+               AND (substr(a.code, 1, length(c.code)) <> c.code OR length(a.code) <> length(c.code) + 4)",
             [],
             |r| r.get(0),
         )

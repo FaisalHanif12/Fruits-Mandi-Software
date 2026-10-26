@@ -40,7 +40,7 @@ fn after_e2e_16() -> World {
     w
 }
 
-/// حاجی نذیر, another agent, seller 030110003.
+/// حاجی نذیر, another agent, seller 0012.
 fn nazeer(w: &World) -> i64 {
     support::add_account(
         &w.env,

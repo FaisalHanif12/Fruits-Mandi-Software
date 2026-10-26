@@ -71,7 +71,7 @@ export interface MasterConfig {
   newId: string;
   /** The empty state: "No cities yet". */
   emptyId: string;
-  /** Does this master have a code of its own? Narration and staff do not. */
+  /** Does this master have a code of its own? Only a narration does not. */
   hasCode: boolean;
   /** The two names, or null for a master with none (mark). */
   names: { urduLabelId: string; englishLabelId: string; spelling: boolean } | null;
@@ -344,7 +344,8 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
     helpId: 'masters-staff-help',
     newId: 'masters-staff-new',
     emptyId: 'masters-staff-empty',
-    hasCode: false,
+    // Staff have a code since plan 32: 006 plus a running number (0060, 0061 ...).
+    hasCode: true,
     names: NAMES,
     fields: [
       {

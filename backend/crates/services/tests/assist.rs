@@ -73,8 +73,8 @@ fn buyer_form(code: &str, ur: &str, en: &str) -> AccountInput {
 
 #[test]
 fn e2e_23_a_new_buyer_typed_in_english_letters_becomes_urdu_and_is_found_in_both_scripts() {
-    // PRD Section 27, E2E-23, backend part. After the worked day the buyers are 03040001 اکرم
-    // ٹول ٹیکس and 03040002 ارشد ملتانی.
+    // PRD Section 27, E2E-23, backend part. After the worked day the buyers are 0020 اکرم
+    // ٹول ٹیکس and 0021 ارشد ملتانی.
     let (_dir, env, owner) = ready();
     for (ur, en) in [
         ("اکرم ٹول ٹیکس", "Akram Toll Tax"),
@@ -105,7 +105,7 @@ fn e2e_23_a_new_buyer_typed_in_english_letters_becomes_urdu_and_is_found_in_both
         &buyer_form("", &first.text, "Tariq Mehmood"),
     )
     .unwrap();
-    assert_eq!(saved.code, "03040003");
+    assert_eq!(saved.code, "0022");
     assert_eq!(saved.name_ur, "طارق محمود");
     assert_eq!(saved.name_en, "Tariq Mehmood");
 
@@ -116,7 +116,7 @@ fn e2e_23_a_new_buyer_typed_in_english_letters_becomes_urdu_and_is_found_in_both
         by_roman.iter().map(|h| h.id).collect::<Vec<_>>(),
         [saved.id]
     );
-    assert_eq!(by_roman[0].code, "03040003");
+    assert_eq!(by_roman[0].code, "0022");
     assert_eq!(by_roman[0].name_en, "Tariq Mehmood");
     assert_eq!(by_roman[0].name_ur, "طارق محمود");
     let by_urdu = search::search(&env.ctx, &owner, SearchScope::Buyer, "طارق", 10).unwrap();
@@ -178,6 +178,7 @@ fn find(
             control_id: None,
             text: text.into(),
             limit: 20,
+            offset: 0,
         },
     )
     .unwrap()
@@ -207,21 +208,37 @@ fn the_parties(env: &TestEnv, owner: &auth::Actor) -> [AccountRow; 4] {
 
 #[test]
 fn a_short_code_in_a_buyer_field_brings_the_buyer_after_enter() {
-    // Plan 08 Section 3, rows 1, 2 and 5.
+    // Plan 32 R5 (PRD 1.8): the short code is the running number of the code. Akram is 0020, so
+    // `0` finds him; `1` finds Arshad (0021).
     let (_dir, env, owner) = ready();
-    let [_, _, akram, _] = the_parties(&env, &owner);
-    for typed in ["1", "0001", " 1 ", "01"] {
+    let [_, _, akram, arshad] = the_parties(&env, &owner);
+    for typed in ["0", " 0 "] {
         let found = resolve(&env, AccountScope::Buyer, typed);
         assert_eq!(found.status, ResolveStatus::Found, "{typed}");
         let hit = found.account.expect("the account");
-        assert_eq!((hit.id, hit.code.as_str()), (akram.id, "03040001"));
+        assert_eq!((hit.id, hit.code.as_str()), (akram.id, "0020"));
         assert_eq!(hit.name_ur, "اکرم ٹول ٹیکس");
         assert_eq!(hit.account_type, AccountType::Buyer);
         assert!(found.candidates.is_empty() && found.suggested_code.is_none());
     }
-    // While typing, the list previews the top match; `1` is not yet a taken code. The exact
-    // serial is first, and `12` is a different serial, so it does not bring Akram.
-    let preview = find(&env, &owner, AccountScope::Buyer, "1");
+    assert_eq!(
+        resolve(&env, AccountScope::Buyer, "1")
+            .account
+            .map(|a| (a.id, a.code)),
+        Some((arshad.id, "0021".to_owned()))
+    );
+    // A short code has no leading zero: `01` and `0001` are neither a running number nor a code.
+    for typed in ["00", "01", "0001"] {
+        let answer = resolve(&env, AccountScope::Buyer, typed);
+        assert_eq!(
+            (answer.status, answer.suggested_code),
+            (ResolveStatus::Unknown, None),
+            "{typed}"
+        );
+    }
+    // While typing, the list previews the top match; `0` is not yet a taken code. The exact
+    // running number is first, and `12` is a different number, so it does not bring Akram.
+    let preview = find(&env, &owner, AccountScope::Buyer, "0");
     assert_eq!(preview.first().map(|h| h.id), Some(akram.id));
     assert!(
         find(&env, &owner, AccountScope::Buyer, "12")
@@ -234,12 +251,12 @@ fn a_short_code_in_a_buyer_field_brings_the_buyer_after_enter() {
     );
     // The full code works too, and a seller's code in a buyer field is not a buyer.
     assert_eq!(
-        resolve(&env, AccountScope::Buyer, "03040001")
+        resolve(&env, AccountScope::Buyer, "0020")
             .account
             .map(|a| a.id),
         Some(akram.id)
     );
-    let wrong_series = resolve(&env, AccountScope::Buyer, "030110001");
+    let wrong_series = resolve(&env, AccountScope::Buyer, "0010");
     assert_eq!(
         (wrong_series.status, wrong_series.suggested_code),
         (ResolveStatus::Unknown, None)
@@ -248,39 +265,46 @@ fn a_short_code_in_a_buyer_field_brings_the_buyer_after_enter() {
 
 #[test]
 fn a_short_code_in_a_seller_field_and_an_unknown_one() {
-    // Plan 08 Section 3, row 3: `7` in a seller field is 030110007 if it exists, else the
-    // unknown-code path for that code.
+    // Plan 32 R5: `7` in a seller field is 0017 if it exists, else the unknown-code path for
+    // that code; `0` is the first seller.
     let (_dir, env, owner) = ready();
     the_parties(&env, &owner);
     let unknown = resolve(&env, AccountScope::Seller, "7");
     assert_eq!(unknown.status, ResolveStatus::Unknown);
-    assert_eq!(unknown.suggested_code.as_deref(), Some("030110007"));
+    assert_eq!(unknown.suggested_code.as_deref(), Some("0017"));
     assert!(unknown.account.is_none());
     accounts::save(
         &env.ctx,
         &owner,
-        &form(AccountType::Seller, "030110007", "ناصر", "Nasir"),
+        &form(AccountType::Seller, "0017", "ناصر", "Nasir"),
     )
     .unwrap();
     let found = resolve(&env, AccountScope::Seller, "7");
     assert_eq!(found.status, ResolveStatus::Found);
-    assert_eq!(found.account.map(|a| a.code), Some("030110007".to_owned()));
-    // `1` in a seller field is Rahim, not the buyer with serial 1.
+    assert_eq!(found.account.map(|a| a.code), Some("0017".to_owned()));
+    // `0` in a seller field is Rahim, not the buyer with running number 0.
     assert_eq!(
-        resolve(&env, AccountScope::Seller, "1")
+        resolve(&env, AccountScope::Seller, "0")
             .account
             .map(|a| a.code),
-        Some("030110001".to_owned())
+        Some("0010".to_owned())
     );
-    let hits = find(&env, &owner, AccountScope::Seller, "1");
+    let hits = find(&env, &owner, AccountScope::Seller, "0");
     assert!(hits.iter().all(|h| h.account_type == AccountType::Seller));
+    // `11` is the seller 00111: not there, so the add suggests it (plan 32 Section 3).
+    let unknown = resolve(&env, AccountScope::Seller, "11");
+    assert_eq!(
+        (unknown.status, unknown.suggested_code.as_deref()),
+        (ResolveStatus::Unknown, Some("00111"))
+    );
 }
 
 #[test]
-fn a_field_for_any_account_lists_the_seller_and_the_buyer_with_that_serial() {
-    // Plan 08 Section 3, row 4 (E2E-24, second part).
+fn a_field_for_any_account_lists_the_seller_and_the_buyer_with_that_running_number() {
+    // Plan 32 Section 3: a journal line, `1` + Enter lists the seller 0011 and the buyer 0021,
+    // each with its type.
     let (_dir, env, owner) = ready();
-    let [rahim, _, akram, _] = the_parties(&env, &owner);
+    let [_, karim, _, arshad] = the_parties(&env, &owner);
     let several = resolve(&env, AccountScope::Any, "1");
     assert_eq!(several.status, ResolveStatus::Several);
     let listed: Vec<(i64, AccountType, &str)> = several
@@ -289,21 +313,20 @@ fn a_field_for_any_account_lists_the_seller_and_the_buyer_with_that_serial() {
         .map(|c| (c.id, c.account_type, c.code.as_str()))
         .collect();
     assert_eq!(listed.len(), 2);
-    assert!(listed.contains(&(akram.id, AccountType::Buyer, "03040001")));
-    assert!(listed.contains(&(rahim.id, AccountType::Seller, "030110001")));
+    assert!(listed.contains(&(arshad.id, AccountType::Buyer, "0021")));
+    assert!(listed.contains(&(karim.id, AccountType::Seller, "0011")));
     // The search lists both too, in the same rows.
     let ids: Vec<i64> = find(&env, &owner, AccountScope::Any, "1")
         .iter()
         .take(2)
         .map(|h| h.id)
         .collect();
-    assert!(ids.contains(&akram.id) && ids.contains(&rahim.id));
-    // A serial that only a buyer has is one account, not several.
-    let only_buyer = resolve(&env, AccountScope::Any, "2");
+    assert!(ids.contains(&arshad.id) && ids.contains(&karim.id));
+    // A number nobody has is unknown; the pukhta accounts (0030, 0031) have no short code.
     assert_eq!(
-        only_buyer.status,
-        ResolveStatus::Several,
-        "Karim and Arshad share serial 2"
+        resolve(&env, AccountScope::Any, "2").status,
+        ResolveStatus::Unknown,
+        "no seller and no buyer has the running number 2 yet"
     );
     add(&env, &owner, AccountType::Buyer, "ناصر", "Nasir");
     add(
@@ -313,44 +336,76 @@ fn a_field_for_any_account_lists_the_seller_and_the_buyer_with_that_serial() {
         "طارق محمود",
         "Tariq Mehmood",
     );
+    let only_buyer = resolve(&env, AccountScope::Any, "2");
+    assert_eq!(only_buyer.status, ResolveStatus::Found, "Nasir (0022) only");
     assert_eq!(
-        resolve(&env, AccountScope::Any, "4").status,
-        ResolveStatus::Found
+        resolve(&env, AccountScope::Any, "3")
+            .account
+            .map(|a| a.code),
+        Some("0023".to_owned())
+    );
+    // The full code of any account works in this field, old-style codes included.
+    assert_eq!(
+        resolve(&env, AccountScope::Any, "01010001")
+            .account
+            .map(|a| a.code),
+        Some("01010001".to_owned())
     );
 }
 
 #[test]
-fn reserved_serials_are_never_a_short_code() {
-    // Plan 08 Section 3, row 6: 9999 is the system's, never a normal account's short code.
+fn the_pukhta_accounts_have_no_short_code_and_no_serial_is_reserved() {
+    // Plan 32 R3, R5: the two پختہ کھاتہ accounts are found by their full code (0030, 0031) or
+    // their name, never by a short code. No running number is the system's, so nothing is
+    // `reserved` in a seller or buyer field.
     let (_dir, env, owner) = ready();
     the_parties(&env, &owner);
-    for typed in ["9999", "0000", "9000", "0", "8999x"] {
-        let status = resolve(&env, AccountScope::Buyer, typed).status;
-        let want = if typed == "8999x" {
-            ResolveStatus::Unknown
-        } else {
-            ResolveStatus::Reserved
-        };
-        assert_eq!(status, want, "{typed}");
+    for typed in ["9999", "9000", "8999", "100", "0000"] {
+        let answer = resolve(&env, AccountScope::Buyer, typed);
+        assert_eq!(answer.status, ResolveStatus::Unknown, "{typed}");
+        assert!(answer.account.is_none(), "{typed}");
     }
-    // 8999 is the last normal serial.
+    // A short code that nobody has suggests the code an add would use.
     assert_eq!(
-        resolve(&env, AccountScope::Buyer, "8999").status,
-        ResolveStatus::Unknown
+        resolve(&env, AccountScope::Buyer, "9999")
+            .suggested_code
+            .as_deref(),
+        Some("0029999")
     );
-    // The system buyer پختہ کھاتہ (serial 9999) is not found by the short code, and is found by
-    // its full code, as the buyer field must offer it.
-    assert!(
-        find(&env, &owner, AccountScope::Buyer, "9999")
-            .iter()
-            .all(|h| h.code != "03049999")
+    // `0` and `1` are the first buyers, not the پختہ کھاتہ buyer (0030).
+    assert_eq!(
+        resolve(&env, AccountScope::Buyer, "0")
+            .account
+            .map(|a| a.code),
+        Some("0020".to_owned())
     );
-    let pukhta = resolve(&env, AccountScope::Buyer, "03049999");
+    let pukhta = resolve(&env, AccountScope::Buyer, "0030");
     assert_eq!(pukhta.status, ResolveStatus::Found);
+    assert_eq!(
+        pukhta.account.map(|a| (a.code, a.account_type)),
+        (Some(("0030".to_owned(), AccountType::Buyer)))
+    );
+    assert_eq!(
+        resolve(&env, AccountScope::Seller, "0031").status,
+        ResolveStatus::Found
+    );
     assert_eq!(
         resolve(&env, AccountScope::Buyer, "03040000").status,
         ResolveStatus::Found
     );
+    // The buyer list holds them too: a click on the buyer box shows them (plan 32 R7).
+    let all = find(&env, &owner, AccountScope::Buyer, "");
+    assert!(all.iter().any(|h| h.code == "0030"));
+    // And a short code never brings them.
+    for short in ["0", "1"] {
+        assert!(
+            find(&env, &owner, AccountScope::Buyer, short)
+                .iter()
+                .take(1)
+                .all(|h| h.code != "0030"),
+            "{short}"
+        );
+    }
 }
 
 #[test]
@@ -358,37 +413,42 @@ fn a_full_code_that_does_not_exist_offers_to_add_it() {
     // Plan 08 Section 3, row 7: "اس کوڈ کا کوئی گاہک نہیں" with an F4 add button.
     let (_dir, env, owner) = ready();
     the_parties(&env, &owner);
-    let unknown = resolve(&env, AccountScope::Buyer, "03045555");
+    let unknown = resolve(&env, AccountScope::Buyer, "0025");
     assert_eq!(unknown.status, ResolveStatus::Unknown);
-    assert_eq!(unknown.suggested_code.as_deref(), Some("03045555"));
-    // A reserved serial that no account has cannot be added by F4.
-    assert_eq!(
-        resolve(&env, AccountScope::Buyer, "03049500").status,
-        ResolveStatus::Reserved
-    );
+    assert_eq!(unknown.suggested_code.as_deref(), Some("0025"));
+    // The code of another type cannot be added in this field.
+    for typed in ["0035", "0015", "03045555", "03049500"] {
+        let answer = resolve(&env, AccountScope::Buyer, typed);
+        assert_eq!(
+            (answer.status, answer.suggested_code),
+            (ResolveStatus::Unknown, None),
+            "{typed}"
+        );
+    }
     // Text that is not digits is a name, not a code.
     let name = resolve(&env, AccountScope::Buyer, "akram");
     assert_eq!(
         (name.status, name.suggested_code),
         (ResolveStatus::Unknown, None)
     );
-    // 5 to 7 digits are not a code of any series.
-    let odd = resolve(&env, AccountScope::Buyer, "30400");
-    assert_eq!(
-        (odd.status, odd.suggested_code),
-        (ResolveStatus::Unknown, None)
-    );
     // The suggested code really is free: the add works with it.
     let added = accounts::save(
         &env.ctx,
         &owner,
-        &form(AccountType::Buyer, "03045555", "ناصر", "Nasir"),
+        &form(AccountType::Buyer, "0025", "ناصر", "Nasir"),
     )
     .unwrap();
-    assert_eq!(added.code, "03045555");
+    assert_eq!(added.code, "0025");
     assert_eq!(
-        resolve(&env, AccountScope::Buyer, "03045555").status,
+        resolve(&env, AccountScope::Buyer, "0025").status,
         ResolveStatus::Found
+    );
+    // The short code of it is its running number, 5.
+    assert_eq!(
+        resolve(&env, AccountScope::Buyer, "5")
+            .account
+            .map(|a| a.code),
+        Some("0025".to_owned())
     );
 }
 
@@ -397,20 +457,26 @@ fn an_inactive_account_is_named_but_not_taken() {
     let (_dir, env, owner) = ready();
     let [_, _, akram, _] = the_parties(&env, &owner);
     accounts::set_active(&env.ctx, &owner, akram.id, false).unwrap();
-    let found = resolve(&env, AccountScope::Buyer, "1");
+    let found = resolve(&env, AccountScope::Buyer, "0");
     assert_eq!(found.status, ResolveStatus::Inactive);
     assert_eq!(
         found.account.map(|a| (a.id, a.is_active)),
         Some((akram.id, false))
     );
     assert_eq!(
-        resolve(&env, AccountScope::Buyer, "03040001").status,
+        resolve(&env, AccountScope::Buyer, "0020").status,
         ResolveStatus::Inactive
     );
     assert!(
-        find(&env, &owner, AccountScope::Buyer, "1")
+        find(&env, &owner, AccountScope::Buyer, "0")
             .iter()
             .all(|h| h.id != akram.id)
+    );
+    assert!(
+        find(&env, &owner, AccountScope::Buyer, "")
+            .iter()
+            .all(|h| h.id != akram.id),
+        "the whole list leaves out an inactive account"
     );
 }
 
@@ -452,6 +518,7 @@ fn a_field_for_one_control_has_no_short_codes_but_finds_by_full_code_and_name() 
             control_id: Some(control),
             text: "nasir".into(),
             limit: 10,
+            offset: 0,
         },
     )
     .unwrap();
@@ -467,6 +534,7 @@ fn a_field_for_one_control_has_no_short_codes_but_finds_by_full_code_and_name() 
             control_id: None,
             text: "x".into(),
             limit: 5,
+            offset: 0,
         },
     )
     .unwrap_err();
@@ -485,6 +553,7 @@ fn text_limits_and_empty_codes_are_refused() {
             control_id: None,
             text: long.clone(),
             limit: 5,
+            offset: 0,
         },
     )
     .unwrap_err();
@@ -499,7 +568,8 @@ fn text_limits_and_empty_codes_are_refused() {
     )
     .unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrRequired);
-    assert!(find(&env, &owner, AccountScope::Any, "  ").is_empty());
+    // Whitespace is empty text: it gives the whole list of the field (plan 32 R7), not nothing.
+    assert!(!find(&env, &owner, AccountScope::Any, "  ").is_empty());
 }
 
 #[test]
@@ -606,7 +676,7 @@ fn the_party_card_of_a_buyer_shows_balance_credit_and_last_entry() {
     let card = assist::party_card(&env.ctx, akram.id).unwrap();
     assert_eq!(
         (card.code.as_str(), card.account_type),
-        ("03040001", AccountType::Buyer)
+        ("0020", AccountType::Buyer)
     );
     assert_eq!(
         (card.name_en.as_str(), card.father_or_firm_en.as_str()),
@@ -837,19 +907,27 @@ fn twenty_thousand_accounts_are_searched_and_resolved_fast() {
             .unwrap();
         let mut n = 0_usize;
         let plan = [
-            (sellers, "03011", "seller", 8_999_usize),
-            (buyers, "0304", "buyer", 8_999),
+            (sellers, "001", "seller", 8_999_usize),
+            (buyers, "002", "buyer", 8_999),
             (others, "0101", "other", 2_100),
         ];
         for (control_id, code, party, count) in plan {
-            for serial in (if code == "0101" { 2 } else { 1 })..=count {
+            // Sellers and buyers: type number plus a running number from 0, no padding (plan 32).
+            // The others keep the control code plus a 4-digit serial.
+            let scheme = code.len() == 3;
+            for serial in (if code == "0101" { 2 } else { 0 })..=count {
                 let (a, b) = (words[n % words.len()], words[(n * 7 + 13) % words.len()]);
                 let en = format!("{} {}", capital(a.0), capital(b.0));
                 let ur = format!("{} {}", a.1, b.1);
+                let full_code = if scheme {
+                    format!("{code}{serial}")
+                } else {
+                    format!("{code}{serial:04}")
+                };
                 statement
                     .execute((
                         control_id,
-                        format!("{code}{serial:04}"),
+                        full_code,
                         i64::try_from(serial).unwrap(),
                         party,
                         &ur,
@@ -874,7 +952,7 @@ fn twenty_thousand_accounts_are_searched_and_resolved_fast() {
         .db()
         .read(|c| {
             c.query_row(
-                "SELECT name_en, name_ur FROM accounts WHERE code = '03040500'",
+                "SELECT name_en, name_ur FROM accounts WHERE code = '002500'",
                 [],
                 |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
             )
@@ -898,7 +976,10 @@ fn twenty_thousand_accounts_are_searched_and_resolved_fast() {
         (AccountScope::Any, "7"),
         (AccountScope::Seller, "8999"),
         (AccountScope::Any, "zzzqqq"),
-        (AccountScope::Any, "03040500"),
+        (AccountScope::Any, "002500"),
+        // The whole list, one page: a click on the picker (plan 32 R7).
+        (AccountScope::Buyer, ""),
+        (AccountScope::Any, ""),
     ] {
         let t = Instant::now();
         let hits = find(&env, &owner, scope, typed);
@@ -906,13 +987,13 @@ fn twenty_thousand_accounts_are_searched_and_resolved_fast() {
         slowest = slowest.max(took);
         assert!(took < BOUND_MS, "{typed}: {took} ms");
         if typed == "500" {
-            assert_eq!(hits.first().map(|h| h.code.as_str()), Some("03040500"));
+            assert_eq!(hits.first().map(|h| h.code.as_str()), Some("002500"));
         }
     }
     for (scope, typed) in [
         (AccountScope::Buyer, "500"),
         (AccountScope::Any, "7"),
-        (AccountScope::Seller, "03011042"),
+        (AccountScope::Seller, "00142"),
     ] {
         let t = Instant::now();
         resolve(&env, scope, typed);
@@ -926,12 +1007,11 @@ fn twenty_thousand_accounts_are_searched_and_resolved_fast() {
     search::balances(&env.ctx, &ids).unwrap();
     assert!(t.elapsed().as_millis() < BOUND_MS);
     eprintln!("index built in {build:?}; slowest account search {slowest} ms (debug build)");
-    // 9,000 is reserved and 8,999 is the last serial: the generated series is full.
-    let (code, _) = common::code_and_value(
-        &accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap_err(),
-        "x",
+    // The generated buyers run from 0 to 8,999: the next code goes on from there, never back.
+    assert_eq!(
+        accounts::next_code(&env.ctx, AccountType::Buyer, None).unwrap(),
+        "0029000"
     );
-    assert_eq!(code, ErrorCode::ErrSeriesFull);
     let _ = Source::Rules;
 }
 
@@ -1017,7 +1097,7 @@ fn the_card_of_the_pukhta_khata_account_does_not_net_one_person_against_another(
     let pukhta = env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "03049999"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0030"))
         .unwrap()
         .unwrap();
     let card = assist::party_card(&env.ctx, pukhta).unwrap();
@@ -1030,7 +1110,7 @@ fn the_card_of_the_pukhta_khata_account_does_not_net_one_person_against_another(
     let seller = env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "030119999"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0031"))
         .unwrap()
         .unwrap();
     let card = assist::party_card(&env.ctx, seller).unwrap();
@@ -1198,6 +1278,7 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
             control_id: control,
             text: "nas".into(),
             limit: 5,
+            offset: 0,
         },
     )
     .unwrap();
@@ -1571,11 +1652,11 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
 }
 
 #[test]
-fn e2e_24_after_the_worked_day_the_code_1_brings_akram_his_card_and_his_open_bill() {
-    // PRD E2E-24, backend part (plan 17): after Events 1 to 5, `1` in a buyer field is 03040001
-    // اکرم ٹول ٹیکس; the card shows 2,880 بنام; his oldest open bill is بکری 1 of 10-10-26, 0
-    // days old, and "پورا بقایا" is 2,880. In a field for any account `1` lists both the buyer
-    // 03040001 and the seller 030110001. Events 2, 4 and 5 do not touch Akram's account, so
+fn e2e_24_after_the_worked_day_the_short_code_0_brings_akram_his_card_and_his_open_bill() {
+    // PRD E2E-24, backend part (plan 17, codes of plan 32): after Events 1 to 5, `0` in a buyer
+    // field is 0020 اکرم ٹول ٹیکس (the first buyer); the card shows 2,880 بنام; his oldest open
+    // bill is بکری 1 of 10-10-26, 0 days old, and "پورا بقایا" is 2,880. In a field for any
+    // account `0` lists both the buyer 0020 and the seller 0010. Events 2, 4 and 5 do not touch Akram's account, so
     // Events 1 and 3 are enough to build his side of the day.
     use bikri_support::*;
     use mandi_services::core::vouchers::{LineSource, OpenBillsInput, ReceiptInput};
@@ -1604,13 +1685,13 @@ fn e2e_24_after_the_worked_day_the_code_1_brings_akram_his_card_and_his_open_bil
     )
     .unwrap();
 
-    // `1` in a buyer field, taken on Enter.
-    let found = resolve(&w.env, AccountScope::Buyer, "1");
+    // `0` in a buyer field (Akram is 0020, the first buyer), taken on Enter.
+    let found = resolve(&w.env, AccountScope::Buyer, "0");
     assert_eq!(found.status, ResolveStatus::Found);
     let account = found.account.unwrap();
     assert_eq!(
         (account.id, account.code.as_str(), account.name_ur.as_str()),
-        (w.akram, "03040001", "اکرم ٹول ٹیکس")
+        (w.akram, "0020", "اکرم ٹول ٹیکس")
     );
 
     // The card: 2,880 بنام.
@@ -1644,8 +1725,8 @@ fn e2e_24_after_the_worked_day_the_code_1_brings_akram_his_card_and_his_open_bil
     assert_eq!(bills.open_paisa.rupees(), 2_880);
     assert_eq!(bills.oldest_days, Some(0));
 
-    // In a جنرل line (any account) `1` lists the buyer and the seller with their types.
-    let several = resolve(&w.env, AccountScope::Any, "1");
+    // In a جنرل line (any account) `0` lists the buyer and the seller with their types.
+    let several = resolve(&w.env, AccountScope::Any, "0");
     assert_eq!(several.status, ResolveStatus::Several);
     let listed: Vec<(i64, AccountType, &str)> = several
         .candidates
@@ -1653,6 +1734,6 @@ fn e2e_24_after_the_worked_day_the_code_1_brings_akram_his_card_and_his_open_bil
         .map(|c| (c.id, c.account_type, c.code.as_str()))
         .collect();
     assert_eq!(listed.len(), 2);
-    assert!(listed.contains(&(w.akram, AccountType::Buyer, "03040001")));
-    assert!(listed.contains(&(w.rahim, AccountType::Seller, "030110001")));
+    assert!(listed.contains(&(w.akram, AccountType::Buyer, "0020")));
+    assert!(listed.contains(&(w.rahim, AccountType::Seller, "0010")));
 }

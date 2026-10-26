@@ -54,8 +54,8 @@
           "type": "party",
           "party": {
             "account_id": 18,
-            "code": "030110001",
-            "short_code": "1",
+            "code": "0010",
+            "short_code": "0",
             "name_ur": "رحیم",
             "name_en": "Rahim",
             "tag": null,

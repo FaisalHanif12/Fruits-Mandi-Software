@@ -21,6 +21,10 @@ export type StaffRow = {
    */
   name_en: string;
   /**
+   * The code, `006` plus a running number (plan 32).
+   */
+  code: string;
+  /**
    * `munshi`, `collector` or `labour`.
    */
   job: string;

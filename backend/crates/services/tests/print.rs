@@ -214,7 +214,8 @@ fn the_contacts_and_the_trade_mark_print_in_the_header_of_every_bikri_document()
 
 #[test]
 fn a_buyer_with_a_tag_prints_with_it_and_every_party_has_its_short_code() {
-    // D4R-A12: "اکرم ٹول ٹیکس K" with short code 1; the seller رحیم has short code 1 too.
+    // D4R-A12: "اکرم ٹول ٹیکس K" with short code 0 (his code is 0020, plan 32); the seller رحیم
+    // (0010) has short code 0 too.
     let w = world();
     let id = save_event1(&w);
     raw(&w.dir)
@@ -224,17 +225,17 @@ fn a_buyer_with_a_tag_prints_with_it_and_every_party_has_its_short_code() {
         let slips = data(&w, id, PrintDoc::BuyerSlips, language);
         let akram = &slips.pages[0].party;
         assert_eq!(akram.tag.as_deref(), Some("K"));
-        assert_eq!(akram.short_code.as_deref(), Some("1"));
-        assert_eq!(akram.code.as_deref(), Some("03040001"));
+        assert_eq!(akram.short_code.as_deref(), Some("0"));
+        assert_eq!(akram.code.as_deref(), Some("0020"));
         let arshad = &slips.pages[1].party;
         assert_eq!(
             (arshad.tag.as_deref(), arshad.short_code.as_deref()),
-            (None, Some("2"))
+            (None, Some("1"))
         );
         // The seller bill: the seller's short code, and the tag on the buyer's line.
         let bill = data(&w, id, PrintDoc::SellerBill, language);
         let page = &bill.pages[0];
-        assert_eq!(page.party.short_code.as_deref(), Some("1"));
+        assert_eq!(page.party.short_code.as_deref(), Some("0"));
         assert_eq!(page.party.tag, None);
         let tags: Vec<_> = page.lines.iter().map(|l| l.name_tag.as_deref()).collect();
         assert_eq!(tags, vec![Some("K"), None]);
@@ -295,10 +296,10 @@ fn event1_printed_totals_equal_bikri_get_and_the_journal() {
         assert_eq!(amount(page, "print-store-rent"), cr(&w, id, "02010003"));
         assert_eq!(amount(page, "print-phone-charge"), cr(&w, id, "04010004"));
         assert_eq!(amount(page, "print-cash-paid"), cr(&w, id, "01010001"));
-        let seller_net = cr(&w, id, "030110001") - dr(&w, id, "030110001");
+        let seller_net = cr(&w, id, "0010") - dr(&w, id, "0010");
         assert_eq!(amount(page, "print-net-sale"), seller_net);
         // Gross = what the seller is credited plus everything taken off it in the same entry.
-        let credited = cr(&w, id, "030110001");
+        let credited = cr(&w, id, "0010");
         let taken = [
             "04010001", "02010002", "02010001", "02010004", "02010003", "04010004",
         ]
@@ -312,8 +313,8 @@ fn event1_printed_totals_equal_bikri_get_and_the_journal() {
         assert_eq!(slips.pages.len(), 2);
         let akram = slips.pages.first().unwrap();
         let arshad = slips.pages.get(1).unwrap();
-        assert_eq!(amount(akram, "print-buyer-pays"), dr(&w, id, "03040001"));
-        assert_eq!(amount(arshad, "print-buyer-pays"), dr(&w, id, "03040002"));
+        assert_eq!(amount(akram, "print-buyer-pays"), dr(&w, id, "0020"));
+        assert_eq!(amount(arshad, "print-buyer-pays"), dr(&w, id, "0021"));
         assert_eq!(
             (
                 amount(akram, "print-buyer-pays"),
@@ -357,8 +358,8 @@ fn event2_printed_totals_equal_bikri_get_and_the_journal() {
         // 12,800: the debit on the پختہ کھاتہ buyer account, paid at once (a credit of the same
         // amount in the cash part).
         assert_eq!(amount(page, "print-buyer-pays"), 12_800);
-        assert_eq!(amount(page, "print-buyer-pays"), dr(&w, id, "03049999"));
-        assert_eq!(cr(&w, id, "03049999"), 12_800);
+        assert_eq!(amount(page, "print-buyer-pays"), dr(&w, id, "0030"));
+        assert_eq!(cr(&w, id, "0030"), 12_800);
         assert_eq!(
             amount(page, "print-buyer-pays"),
             detail.totals.buyer_total.rupees()
@@ -381,7 +382,7 @@ fn event2_printed_totals_equal_bikri_get_and_the_journal() {
         assert_eq!(amount(page, "print-net-sale"), detail.totals.net.rupees());
         assert_eq!(
             amount(page, "print-net-sale"),
-            cr(&w, id, "030110002") - dr(&w, id, "030110002")
+            cr(&w, id, "0011") - dr(&w, id, "0011")
         );
         // The buyer slips leave the one-time buyer to his own slip.
         assert!(

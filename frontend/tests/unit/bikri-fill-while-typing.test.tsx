@@ -67,7 +67,7 @@ describe.each(LANGUAGES)('a fill while a buyer code is typed (%s)', (language) =
     await waitFor(() => {
       expect(document.activeElement?.tagName).toBe('INPUT');
     });
-    await user.keyboard('30');
+    await user.keyboard('02');
     // The answer for the lot lands now, in the middle of the code, and the quantity is filled.
     open = true;
     waiting.splice(0).forEach((release) => {
@@ -78,9 +78,9 @@ describe.each(LANGUAGES)('a fill while a buyer code is typed (%s)', (language) =
     });
     // The cell is still the one he is typing in, with what he typed so far, and typing goes on.
     expect(document.activeElement?.tagName).toBe('INPUT');
-    expect((document.activeElement as HTMLInputElement).value).toBe('030');
-    await user.keyboard('40001');
-    expect((document.activeElement as HTMLInputElement).value).toBe('03040001');
+    expect((document.activeElement as HTMLInputElement).value).toBe('002');
+    await user.keyboard('0');
+    expect((document.activeElement as HTMLInputElement).value).toBe('0020');
     await screen.findAllByRole('option', undefined, { timeout: 8_000 });
     await user.keyboard('{Enter}');
     await waitFor(() => {

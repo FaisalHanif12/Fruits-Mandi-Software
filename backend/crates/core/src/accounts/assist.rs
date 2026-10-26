@@ -12,17 +12,17 @@ use crate::money::Paisa;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountScope {
-    /// A seller field (control 03011). A short code is a seller serial. The اپنا مال account is
-    /// not offered here (PRD FR-12.26).
+    /// A seller field (control 03011). A short code is the running number of a seller's code
+    /// (`0` finds `0010`). The اپنا مال account is not offered here (PRD FR-12.26).
     Seller,
     /// The seller field of a lot: the same as `seller`, and also the اپنا مال account (030119998),
     /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase.
     LotSeller,
-    /// A buyer field (control 0304), including نقدی منڈی and پختہ کھاتہ. A short code is a buyer
-    /// serial.
+    /// A buyer field (control 0304), including نقدی منڈی and پختہ کھاتہ. A short code is the running
+    /// number of a buyer's code (`1` finds `0021`).
     Buyer,
     /// A field that takes any account. A short code lists the seller and the buyer with that
-    /// serial, each with its type (PRD FR-7.39).
+    /// running number, each with its type (PRD 1.8 R5): `1` lists `0011` and `0021`.
     Any,
     /// The accounts of one control (`control_id` names it). Short codes do not apply: other
     /// accounts are found by full code or name (PRD FR-7.39).
@@ -38,10 +38,16 @@ pub struct SearchAccountsInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
-    /// What was typed. Raw: never converted to Urdu (PRD FR-7.22).
+    /// What was typed. Raw: never converted to Urdu (PRD FR-7.22). **Empty text gives the whole
+    /// list of the field** (plan 32 R7): the accounts this user chose last first (latest first), then
+    /// every other active account by code. A click on the picker opens this list.
     pub text: String,
-    /// The most hits, at most 50.
+    /// The most hits in this page, at most 50.
     pub limit: u32,
+    /// How many hits to skip, for the next page of a long list. 0 for the first page. A page with
+    /// fewer than `limit` hits is the last one. Missing means 0.
+    #[serde(default)]
+    pub offset: u32,
 }
 
 /// The last accounts used in a field, then the rest (`Alt+Down`, PRD FR-7.41).
@@ -110,7 +116,9 @@ pub struct ResolveCodeInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
-    /// What was typed: 1 to 4 digits are a short code, 8 or 9 digits a full code.
+    /// What was typed. A running number (`0`, `11`: digits with no leading zero, at most 7) is a
+    /// short code; a full code (`0010`, `00111`, or any other account's code) is looked up as it
+    /// is (plan 32 R5).
     pub text: String,
 }
 
@@ -120,14 +128,16 @@ pub struct ResolveCodeInput {
 pub enum ResolveStatus {
     /// Exactly one active account. It is in `account`.
     Found,
-    /// A field that takes any account, and both a seller and a buyer have this serial. They
-    /// are in `candidates`.
+    /// A field that takes any account, and both a seller and a buyer have this running number.
+    /// They are in `candidates`.
     Several,
     /// No account has this code. `suggested_code` is the full code an `F4` add would use, if
     /// the field has one series.
     Unknown,
-    /// The serial belongs to the system (0000 and 9000 to 9999), so it is never a short code
-    /// for a normal account (PRD FR-10.3).
+    /// Only for the field of one control (other accounts keep the control code plus a 4-digit
+    /// serial): the serial belongs to the system (0000 and 9000 to 9999), so such a code cannot
+    /// be added (PRD FR-10.3). Never returned for sellers and buyers from plan 32: every running
+    /// number from 0 is a normal short code, and the two پختہ کھاتہ accounts have no short code.
     Reserved,
     /// The account exists but is hidden from pickers; a new posting cannot use it. It is in
     /// `account`.

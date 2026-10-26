@@ -182,7 +182,7 @@ describe('the canned data of the component tests has the real shape', () => {
 
   it('a one-time person made regular', () => {
     const canned = {
-      account: { id: 24, code: '03040003', name_ur: 'شاہد', name_en: 'Shahid' },
+      account: { id: 24, code: '0022', name_ur: 'شاہد', name_en: 'Shahid' },
       moved: { amount_paisa: 0, side: 'zero' },
       entry_id: null,
     };
@@ -212,8 +212,8 @@ function stripType<T extends { type: string }>(entry: T): Omit<T, 'type'> {
 }
 
 describe('the screen builds the request the backend’s own test sent', () => {
-  const buyer = { id: 20, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
-  const seller = { id: 18, code: '030110001', name_ur: 'رحیم', name_en: 'Rahim' };
+  const buyer = { id: 20, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
+  const seller = { id: 18, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
   const draft = (type: VoucherDraft['type'], changes: Partial<VoucherDraft>): VoucherDraft => ({
     ...newDraft(type, '2026-10-10'),
     ...changes,
@@ -232,7 +232,7 @@ describe('the screen builds the request the backend’s own test sent', () => {
   it('a plain cash receipt for another buyer has the same request, and never a mode, bank or cheque', () => {
     const built = build(
       draft('receipt', {
-        account: { ...buyer, id: 21, code: '03040002' },
+        account: { ...buyer, id: 21, code: '0021' },
         accountType: 'buyer',
         amount: '5,000',
       }),

@@ -174,8 +174,8 @@ pub fn fixture(conn: &Connection) -> Fixture {
         .unwrap();
         conn.last_insert_rowid()
     };
-    let seller = account("03011", "030110001", 1, "seller", "رحیم", "Rahim");
-    let buyer = account("0304", "03040001", 1, "buyer", "اکرم", "Akram");
+    let seller = account("03011", "0010", 1, "seller", "رحیم", "Rahim");
+    let buyer = account("0304", "0020", 1, "buyer", "اکرم", "Akram");
     let one = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
     let item = one("SELECT id FROM items LIMIT 1");
     let packing = one("SELECT id FROM packings LIMIT 1");
@@ -214,8 +214,8 @@ pub fn fixture(conn: &Connection) -> Fixture {
 pub fn bill_and_payment(conn: &Connection) -> (i64, i64, i64, i64) {
     let f = fixture(conn);
     let bill_entry = draft_entry(conn, 1_288_000);
-    let bill = line(conn, bill_entry, 1, "03040001", 1_288_000, 0).unwrap();
+    let bill = line(conn, bill_entry, 1, "0020", 1_288_000, 0).unwrap();
     let pay_entry = draft_entry(conn, 1_000_000);
-    let payment = line(conn, pay_entry, 1, "03040001", 0, 1_000_000).unwrap();
+    let payment = line(conn, pay_entry, 1, "0020", 0, 1_000_000).unwrap();
     (bill, payment, f.buyer, f.seller)
 }

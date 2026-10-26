@@ -113,7 +113,8 @@ describe("the wrappers send the backend's requests and read its answers", () => 
       text: request.text,
       limit: request.limit,
     });
-    expect(call).toHaveBeenCalledWith('search_accounts', { input: request });
+    // The wrapper always sends the page it asks for; the backend's file leaves the first page out.
+    expect(call).toHaveBeenCalledWith('search_accounts', { input: { ...request, offset: 0 } });
     expect(hits[0]?.tag).toBe('K');
     const first = hits[0];
     if (first === undefined) throw new Error('no hit');

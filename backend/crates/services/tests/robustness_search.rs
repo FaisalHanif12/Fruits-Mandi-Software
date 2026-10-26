@@ -2,8 +2,9 @@
 //! FR-10.3, Code Standards V0, B27, B29). Owner: `robustness`.
 //!
 //! - A short code is taken only by `resolve_code` (on `Enter` or leaving the field), and every odd
-//!   code gets a clean answer: `1` is serial 1 and not 12, `0`, `0000` and `9000` to `9999` are
-//!   reserved, digits that are not ASCII digits are a name and not a code, huge text is refused.
+//!   code gets a clean answer: `1` is the running number 1 and not 11, `0` is the first account,
+//!   a number with a leading zero is neither a short code nor a code (plan 32), digits that are
+//!   not ASCII digits are a name and not a code, huge text is refused.
 //! - Hostile text in a picker (SQL, wildcards, control characters, zero-width marks, emoji, huge
 //!   text) never ends in an internal error, never matches everything, is quick, and writes
 //!   nothing: search is read-only.
@@ -68,9 +69,9 @@ struct World {
     dir: TempDir,
     env: TestEnv,
     owner: auth::Actor,
-    /// Ids of the buyers 03040001 to 03040012, in order.
+    /// Ids of the buyers 0020 to 00211, in order.
     buyers: Vec<i64>,
-    /// Ids of the sellers 030110001 to 030110003, in order.
+    /// Ids of the sellers 0010 to 0012, in order.
     sellers: Vec<i64>,
 }
 
@@ -89,7 +90,7 @@ fn world() -> World {
             &form(AccountType::Buyer, ur[n % 4], en[n % 4]),
         )
         .unwrap();
-        assert_eq!(row.code, format!("0304{:04}", n + 1));
+        assert_eq!(row.code, format!("002{n}"));
         buyers.push(row.id);
     }
     let mut sellers = Vec::new();
@@ -100,7 +101,7 @@ fn world() -> World {
             &form(AccountType::Seller, ur[n % 4], en[n % 4]),
         )
         .unwrap();
-        assert_eq!(row.code, format!("03011{:04}", n + 1));
+        assert_eq!(row.code, format!("001{n}"));
         sellers.push(row.id);
     }
     World {
@@ -163,51 +164,52 @@ fn find(
             control_id: None,
             text: text.to_owned(),
             limit: 20,
+            offset: 0,
         },
     )
 }
 
 #[test]
-fn a_short_code_is_the_serial_and_one_is_not_twelve() {
+fn a_short_code_is_the_running_number_and_one_is_not_eleven() {
     let w = world();
     let before = table_counts(&w.dir);
-    // Buyer field.
+    // Buyer field: the running number alone, no padding.
     for (typed, code) in [
-        ("1", "03040001"),
-        ("01", "03040001"),
-        ("0001", "03040001"),
-        ("12", "03040012"),
-        ("0012", "03040012"),
-        ("9", "03040009"),
-        ("  3  ", "03040003"),
+        ("0", "0020"),
+        ("1", "0021"),
+        ("10", "00210"),
+        ("11", "00211"),
+        ("9", "0029"),
+        ("  3  ", "0023"),
     ] {
         let found = resolve(&w, AccountScope::Buyer, typed).unwrap();
         assert_eq!(found.status, ResolveStatus::Found, "typed '{typed}'");
         assert_eq!(found.account.unwrap().code, code, "typed '{typed}'");
     }
-    // Seller field: the same serial is a different account.
-    let seller = resolve(&w, AccountScope::Seller, "1").unwrap();
+    // Seller field: the same number is a different account.
+    let seller = resolve(&w, AccountScope::Seller, "0").unwrap();
     assert_eq!(seller.status, ResolveStatus::Found);
-    assert_eq!(seller.account.unwrap().code, "030110001");
-    // A field that takes any account: serial 1 is both a seller and a buyer.
-    let any = resolve(&w, AccountScope::Any, "1").unwrap();
+    assert_eq!(seller.account.unwrap().code, "0010");
+    // A field that takes any account: running number 0 is both a seller and a buyer.
+    let any = resolve(&w, AccountScope::Any, "0").unwrap();
     assert_eq!(any.status, ResolveStatus::Several);
     let mut codes: Vec<String> = any.candidates.iter().map(|c| c.code.clone()).collect();
     codes.sort();
-    assert_eq!(codes, ["030110001", "03040001"]);
-    // Serial 12 exists only as a buyer, so the any field finds it.
+    assert_eq!(codes, ["0010", "0020"]);
+    // Running number 11 exists only as a buyer (3 sellers), so the any field finds it.
     assert_eq!(
-        resolve(&w, AccountScope::Any, "12").unwrap().status,
+        resolve(&w, AccountScope::Any, "11").unwrap().status,
         ResolveStatus::Found
     );
-    // A serial nobody has yet: unknown, with the code a new account would get.
-    let next = resolve(&w, AccountScope::Buyer, "13").unwrap();
+    // A number nobody has yet: unknown, with the code a new account would get.
+    let next = resolve(&w, AccountScope::Buyer, "12").unwrap();
     assert_eq!(next.status, ResolveStatus::Unknown);
-    assert_eq!(next.suggested_code.as_deref(), Some("03040013"));
+    assert_eq!(next.suggested_code.as_deref(), Some("00212"));
     // The full code works, in its own series only.
-    let full = resolve(&w, AccountScope::Buyer, "03040002").unwrap();
+    let full = resolve(&w, AccountScope::Buyer, "0021").unwrap();
     assert_eq!(full.status, ResolveStatus::Found);
-    let wrong_series = resolve(&w, AccountScope::Seller, "03040002").unwrap();
+    assert_eq!(full.account.unwrap().code, "0021");
+    let wrong_series = resolve(&w, AccountScope::Seller, "0021").unwrap();
     assert_ne!(
         wrong_series.status,
         ResolveStatus::Found,
@@ -218,34 +220,52 @@ fn a_short_code_is_the_serial_and_one_is_not_twelve() {
 }
 
 #[test]
-fn reserved_serials_and_odd_digits_get_a_clean_answer() {
+fn leading_zeros_and_odd_digits_get_a_clean_answer() {
     let w = world();
     let before = table_counts(&w.dir);
-    // Reserved serials (FR-10.3): 0 and 9000 and up are the system's, never a normal account.
-    for typed in ["0", "00", "0000", "9000", "9001", "9999", "8999999"] {
+    // A number with a leading zero is neither a short code nor a full code: no account, no offer.
+    for typed in ["00", "000", "01", "0000", "0001", "007", "012", "8999999a"] {
         let found = resolve(&w, AccountScope::Buyer, typed).unwrap();
-        assert!(
-            found.account.is_none() || typed.len() > 4,
-            "typed '{typed}' brought an account: {found:?}"
-        );
         assert_ne!(found.status, ResolveStatus::Found, "typed '{typed}'");
-        if typed.len() <= 4 {
-            assert_eq!(found.status, ResolveStatus::Reserved, "typed '{typed}'");
-        }
+        assert_eq!(found.status, ResolveStatus::Unknown, "typed '{typed}'");
         assert!(
-            found.suggested_code.is_none(),
-            "typed '{typed}' offered a code to make"
+            found.account.is_none() && found.suggested_code.is_none(),
+            "typed '{typed}' brought an account or an offer: {found:?}"
         );
     }
+    // No running number is reserved: a big one nobody has is unknown, and a new account would get
+    // that code. More than 7 digits is no number.
+    for typed in ["9000", "9001", "9999", "8999999"] {
+        let found = resolve(&w, AccountScope::Buyer, typed).unwrap();
+        assert_eq!(found.status, ResolveStatus::Unknown, "typed '{typed}'");
+        assert!(found.account.is_none(), "typed '{typed}'");
+        assert_eq!(
+            found.suggested_code,
+            Some(format!("002{typed}")),
+            "typed '{typed}'"
+        );
+    }
+    let too_long = resolve(&w, AccountScope::Buyer, "89999999").unwrap();
+    assert_eq!(too_long.status, ResolveStatus::Unknown);
+    assert!(too_long.account.is_none() && too_long.suggested_code.is_none());
     // The system accounts are found by their full code, which is how they are reached.
-    for code in ["03040000", "03049999"] {
-        let found = resolve(&w, AccountScope::Buyer, code).unwrap();
+    for (scope, code) in [
+        (AccountScope::Buyer, "03040000"),
+        (AccountScope::Buyer, "0030"),
+        (AccountScope::Seller, "0031"),
+    ] {
+        let found = resolve(&w, scope, code).unwrap();
         assert_eq!(found.status, ResolveStatus::Found, "{code}");
     }
-    // The full code of a reserved serial that does not exist is reserved, not "make this one".
-    let ghost = resolve(&w, AccountScope::Buyer, "03049000").unwrap();
-    assert_eq!(ghost.status, ResolveStatus::Reserved);
-    assert!(ghost.suggested_code.is_none());
+    // The pukhta accounts have no short code: `0` and `1` are the first buyers, not 0030.
+    assert_eq!(
+        resolve(&w, AccountScope::Buyer, "0")
+            .unwrap()
+            .account
+            .unwrap()
+            .code,
+        "0020"
+    );
     // Not ASCII digits means a name, not a code: nothing found, nothing offered.
     for typed in [
         "1a",
@@ -456,15 +476,16 @@ fn the_index_follows_every_committed_change() {
     .unwrap();
     assert!(names(AccountScope::Buyer, "tariq").contains(&tariq.code));
     assert!(names(AccountScope::Buyer, "طارق").contains(&tariq.code));
+    assert_eq!(tariq.code, "00212");
     assert_eq!(
-        resolve(&w, AccountScope::Buyer, "13").unwrap().status,
+        resolve(&w, AccountScope::Buyer, "12").unwrap().status,
         ResolveStatus::Found
     );
     // Switched off: not offered for new postings, and a code says so.
     accounts::set_active(&w.env.ctx, &w.owner, tariq.id, false).unwrap();
     assert!(!names(AccountScope::Buyer, "tariq").contains(&tariq.code));
-    assert!(!names(AccountScope::Any, "13").contains(&tariq.code));
-    let off = resolve(&w, AccountScope::Buyer, "13").unwrap();
+    assert!(!names(AccountScope::Any, "12").contains(&tariq.code));
+    let off = resolve(&w, AccountScope::Buyer, "12").unwrap();
     assert_eq!(off.status, ResolveStatus::Inactive);
     // Switched on again: back.
     accounts::set_active(&w.env.ctx, &w.owner, tariq.id, true).unwrap();

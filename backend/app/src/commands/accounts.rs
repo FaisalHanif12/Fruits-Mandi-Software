@@ -46,7 +46,9 @@ pub async fn accounts_get<R: tauri::Runtime>(
     .await
 }
 
-/// The account list with the columns of PRD FR-10.5 and its footer totals.
+/// The account list with the columns of PRD FR-10.5 and its footer totals. It shows only sellers,
+/// buyers and the two پختہ کھاتہ accounts, filtered by `kind` (`all`, `seller`, `buyer`, `pukhta`;
+/// plan 32 R6). The totals are over the same rows.
 #[tauri::command]
 pub async fn accounts_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -72,7 +74,9 @@ pub async fn accounts_set_active<R: tauri::Runtime>(
     .await
 }
 
-/// The next free code for a kind of account. Errors: `ERR_SERIES_FULL`, `ERR_NOT_FOUND`
+/// The next free code for a kind of account: `0010`, `0011` ... for sellers and `0020` ... for buyers
+/// (the type number and the next running number, never a code used before, plan 32 R2); the other
+/// types keep the control code plus a 4-digit serial. Errors: `ERR_SERIES_FULL`, `ERR_NOT_FOUND`
 /// (`control_id`), `ERR_REQUIRED` (`control_id` for type `other`).
 #[tauri::command]
 pub async fn accounts_next_code<R: tauri::Runtime>(
@@ -164,9 +168,10 @@ pub async fn coa_controls_list<R: tauri::Runtime>(
 }
 
 /// Takes a code typed in an account field, on `Enter` or on leaving the field only (PRD
-/// FR-7.38, FR-7.39, FR-7.42). Status `found`, `several` (a field that takes any account),
-/// `unknown` (with the code an `F4` add would use), `reserved` (serial 0000 or 9000 to 9999) or
-/// `inactive`. Read only.
+/// FR-7.38, FR-7.42, PRD 1.8 R5). A full code is looked up as typed; a running number (`0`, `11`)
+/// is a short code. Status `found`, `several` (a field that takes any account), `unknown` (with
+/// the code an `F4` add would use), `inactive`, or `reserved` (only in the field of one control,
+/// for a system serial such as 01019999). Read only.
 #[tauri::command]
 pub async fn accounts_resolve_code<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

@@ -396,7 +396,7 @@ fn e2e_34_the_own_lot_sells_15_and_the_partners_get_the_seller_credit() {
     assert_eq!(
         entry_lines(&w, saved.entry_id),
         lines(&[
-            ("03040001", 9_660, 0),
+            ("0020", 9_660, 0),
             (&code_a, 0, 3_384),
             (&code_b, 0, 2_538),
             (&code_c, 0, 2_538),
@@ -599,7 +599,7 @@ fn e2e_41_a_pocket_source_a_truck_and_one_own_lot_that_sells_everything() {
     assert_eq!(
         entry_lines(&w, saved.entry_id),
         lines(&[
-            ("03040002", 119_360, 0),
+            ("0021", 119_360, 0),
             (&code_a, 0, 52_640),
             (&code_b, 0, 52_640),
             ("04010001", 0, 6_720),
@@ -910,7 +910,7 @@ fn a_negative_seller_credit_is_posted_on_the_debit_side_of_the_partners() {
     assert_eq!(
         entry_lines(&w, saved.entry_id),
         lines(&[
-            ("03040001", 19, 0),
+            ("0020", 19, 0),
             (&code_a, 17, 0),
             (&code_b, 12, 0),
             (&code_c, 12, 0),

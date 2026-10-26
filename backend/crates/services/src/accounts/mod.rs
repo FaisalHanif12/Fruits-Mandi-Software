@@ -9,12 +9,14 @@
 mod openings;
 
 use mandi_db::accounts as repo;
+use mandi_db::codes::CodeTable;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
     AccountInput, AccountRow, AccountType, AccountsList, AccountsListInput, AccountsSimilarInput,
     ControlRule, OpeningRequest, SimilarAccount, account_code_for, can_take_opening,
     prepare_account,
 };
+use mandi_domain::core::codes::{build_code, check_typed_code};
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::text;
@@ -144,17 +146,23 @@ fn resolve_control(
     }
 }
 
-/// The next free code for a kind of account: the control code plus the next free serial (PRD
-/// FR-10.3).
+/// The next free code for a kind of account. A seller gets `001` plus the next running number and a
+/// buyer `002` plus the next running number (`0010`, `0011` ...; plan 32 R2, never a code used
+/// before). Every other kind keeps the control code plus the next free serial (PRD FR-10.3).
 ///
 /// # Errors
-/// `ERR_REQUIRED` or `ERR_NOT_FOUND` on `control_id`; `ERR_SERIES_FULL` when 8999 is used.
+/// `ERR_REQUIRED` or `ERR_NOT_FOUND` on `control_id`; `ERR_SERIES_FULL` when the numbers are used up.
 pub fn next_code(
     ctx: &Context,
     account_type: AccountType,
     control_id: Option<i64>,
 ) -> Result<String, ServiceError> {
     ctx.db.read(|conn| {
+        if let Some(code_type) = account_type.code_type() {
+            let (_, code) = mandi_db::codes::next_code(conn, CodeTable::Accounts, code_type)?
+                .ok_or_else(|| series_full(code_type.number()))?;
+            return Ok(code);
+        }
         let control = resolve_control(conn, account_type, control_id)?;
         let serial =
             repo::next_serial(conn, control.id)?.ok_or_else(|| series_full(&control.code))?;
@@ -353,6 +361,36 @@ pub(crate) fn create_in(
     write(ctx, actor, tx, &prepared, &checks)
 }
 
+/// The code and the serial of a new account. A seller or a buyer: the typed code, which must be a
+/// full code of its type, or the next running number; the serial is the running number (plan 32
+/// R2). Any other account: the control code plus a 4-digit serial (PRD FR-10.3).
+fn new_code(
+    tx: &Connection,
+    prepared: &mandi_domain::core::accounts::PreparedAccount,
+    control: &repo::ControlRow,
+) -> Result<(String, u32), ServiceError> {
+    if let Some(code_type) = prepared.account_type.code_type() {
+        let running = match &prepared.typed_code {
+            Some(typed) => check_typed_code("code", typed, code_type)?,
+            None => {
+                mandi_db::codes::next_code(tx, CodeTable::Accounts, code_type)?
+                    .ok_or_else(|| series_full(code_type.number()))?
+                    .0
+            }
+        };
+        let code = build_code(code_type, running)
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrSeriesFull, "code"))?;
+        let serial = u32::try_from(running)
+            .map_err(|_| ServiceError::reject_field(ErrorCode::ErrSeriesFull, "code"))?;
+        return Ok((code, serial));
+    }
+    let serial = match &prepared.typed_code {
+        Some(typed) => account_code_for("code", &control.code, typed)?,
+        None => repo::next_serial(tx, control.id)?.ok_or_else(|| series_full(&control.code))?,
+    };
+    Ok((format!("{}{serial:04}", control.code), serial))
+}
+
 fn write(
     ctx: &Context,
     actor: &Actor,
@@ -390,13 +428,7 @@ fn write(
     let id = match &old {
         None => {
             let control = resolve_control(tx, prepared.account_type, prepared.control_id)?;
-            let serial = match &prepared.typed_code {
-                Some(typed) => account_code_for("code", &control.code, typed)?,
-                None => {
-                    repo::next_serial(tx, control.id)?.ok_or_else(|| series_full(&control.code))?
-                }
-            };
-            let code = format!("{}{serial:04}", control.code);
+            let (code, serial) = new_code(tx, prepared, &control)?;
             if repo::code_taken(tx, &code, None)? {
                 return Err(ServiceError::reject_field(ErrorCode::ErrCodeTaken, "code"));
             }

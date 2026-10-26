@@ -356,7 +356,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
         voucher_type: 'receipt',
         number: 1,
         entry_date: '2026-10-10',
-        account: { id: 21, code: '03040001', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' },
+        account: { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' },
         amount_paisa: paisaForTest(1_000_000),
         status: 'saved',
       },

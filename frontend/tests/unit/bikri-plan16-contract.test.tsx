@@ -264,9 +264,9 @@ describe('a later sale against the backend files (E2E-16b)', () => {
     await waitFor(() => {
       expect(textOf(salesGrid(language), 0, 'qty')).toBe('5');
     });
-    // Arshad (serial 2) takes the 5 that are left, at 560.
+    // Arshad (short code 1) takes the 5 that are left, at 560.
     await user.click(cellOf(salesGrid(language), 0, 'buyer'));
-    await user.keyboard('2');
+    await user.keyboard('1');
     await screen.findAllByRole('option');
     await user.keyboard('{Enter}{Enter}560{Enter}');
     await waitFor(() => {

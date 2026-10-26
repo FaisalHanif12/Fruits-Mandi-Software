@@ -354,7 +354,7 @@ fn a_matching_row_never_passes_the_line_it_matches() {
     let (bill, payment, buyer, _seller) = bill_and_payment(&conn);
     // A second receipt of 5,000 for the same buyer (PRD 4.6 bill 12,880, first receipt 10,000).
     let more_entry = draft_entry(&conn, 500_000);
-    let more = line(&conn, more_entry, 1, "03040001", 0, 500_000).unwrap();
+    let more = line(&conn, more_entry, 1, "0020", 0, 500_000).unwrap();
     let alloc = |bill_line: i64, payment_line: i64, amount: i64| {
         conn.execute(
             "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, amount_paisa) VALUES (?1, ?2, ?3, ?4)",
@@ -405,7 +405,7 @@ fn an_advance_matching_row_never_passes_the_advance() {
     let small = advance_line(1_500_000);
     let big = advance_line(3_000_000);
     let credit_entry = common::draft_entry_of(&conn, "bikri_first", 2_431_600);
-    let credit = line(&conn, credit_entry, 1, "030110001", 0, 2_431_600).unwrap();
+    let credit = line(&conn, credit_entry, 1, "0010", 0, 2_431_600).unwrap();
     let alloc = |advance: i64, amount: i64| {
         conn.execute(
             "INSERT INTO advance_allocations (advance_line_id, credit_line_id, account_id, amount_paisa) VALUES (?1, ?2, ?3, ?4)",
@@ -445,7 +445,7 @@ fn an_advance_matching_row_never_passes_the_advance() {
 #[test]
 fn a_person_key_must_match_on_both_lines() {
     let (_dir, conn) = setup();
-    let pukhta = common::account_id(&conn, "03049999");
+    let pukhta = common::account_id(&conn, "0030");
     let entry_a = draft_entry(&conn, 100_000);
     let entry_b = draft_entry(&conn, 100_000);
     let make = |entry: i64, dr: i64, cr: i64, key: &str| {
@@ -533,7 +533,7 @@ fn a_reversal_must_mirror_a_posted_entry() {
 #[test]
 fn a_reversal_must_mirror_the_person_key_too() {
     let (_dir, conn) = setup();
-    let pukhta = common::account_id(&conn, "03049999");
+    let pukhta = common::account_id(&conn, "0030");
     let cash = common::account_id(&conn, "01010001");
     // Shahid, a one-time buyer, owes 1,000 (PRD E2E-21).
     let entry_with = |reverses: Option<i64>, key: &str, first_debit: bool| {
@@ -652,14 +652,14 @@ fn replace_is_refused_on_the_other_append_only_tables_too() {
     )
     .unwrap();
     let bill_entry = draft_entry(&conn, 1_288_000);
-    let bill = line(&conn, bill_entry, 1, "03040001", 1_288_000, 0).unwrap();
+    let bill = line(&conn, bill_entry, 1, "0020", 1_288_000, 0).unwrap();
     let pay_entry = draft_entry(&conn, 1_000_000);
-    let payment = line(&conn, pay_entry, 1, "03040001", 0, 1_000_000).unwrap();
+    let payment = line(&conn, pay_entry, 1, "0020", 0, 1_000_000).unwrap();
     conn.execute("INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, amount_paisa) VALUES (?1, ?2, ?3, 1000000)", params![bill, payment, f.buyer]).unwrap();
     // A replace of the allocation that already exists, with real lines and an amount that fits,
     // so only the replace guard can refuse it.
     let more_entry = draft_entry(&conn, 500_000);
-    let more = line(&conn, more_entry, 1, "03040001", 0, 500_000).unwrap();
+    let more = line(&conn, more_entry, 1, "0020", 0, 500_000).unwrap();
     let replace_allocation = format!(
         "INSERT OR REPLACE INTO bill_allocations (id, bill_line_id, payment_line_id, account_id, amount_paisa) VALUES (1, {bill}, {more}, {}, 100)",
         f.buyer

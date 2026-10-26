@@ -216,7 +216,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       expect(cell('2', 'doc')).toBe(
         m('report-doc-number', { kind: m('report-doc-receipt'), number: '1' }),
       );
-      expect(cell('2', 'account')).toContain('03040001');
+      expect(cell('2', 'account')).toContain('0020');
       expect(cell('5', 'balance')).toContain('58,484');
       // The narration waits for the wide step (the print has it).
       expect(drawnColumns()).toEqual(['date', 'doc', 'account', 'cash_in', 'cash_out', 'balance']);

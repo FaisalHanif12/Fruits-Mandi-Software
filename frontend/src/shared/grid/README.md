@@ -47,3 +47,7 @@ rowsIn, totalOf }`. `useLoadRest` reads the remaining pages while a screen needs
   آج کی بکری, باقی مال (the lots, then the firm's own goods, counted together), the voucher lists,
   the پختہ کھاتہ register, the masters, the rules, the accounts and the learned words.
 - A language switch rebuilds the grid; the loaded pages live in the query, so nothing is lost.
+
+A mouse click on an editable picker cell starts its editor with the full list open (plan 32, R7),
+like a click on the field of a form. A key never does: arriving on the cell by Enter or an arrow
+opens nothing, and `Alt+↓` is the key for the list (PRD 7.2, FR-7.16).

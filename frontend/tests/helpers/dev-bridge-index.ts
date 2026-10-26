@@ -19,7 +19,7 @@ export function isIndexPage(): boolean {
 const SIMILAR: AccountMatch[] = [
   {
     id: 61,
-    code: '03040061',
+    code: '00260',
     name_ur: 'عاشق ظفر',
     name_en: 'Ashiq Zafar',
     tag: 'K',
@@ -33,7 +33,7 @@ const SIMILAR: AccountMatch[] = [
   },
   {
     id: 62,
-    code: '03040062',
+    code: '00261',
     name_ur: 'عاشق ظفر',
     name_en: 'Ashiq Zafar',
     father_or_firm_ur: 'ظفر',
@@ -50,7 +50,7 @@ const flag = (name: string): boolean =>
   new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
 
 export const indexHandlers: Record<string, Handler> = {
-  accounts_next_code: () => '03040063',
+  accounts_next_code: () => '00262',
   // `&duplicate`: the first one has the name, the tag and the phone typed (the backend's mark).
   accounts_similar: () =>
     flag('duplicate')

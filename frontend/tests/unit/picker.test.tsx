@@ -127,6 +127,7 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     expect(searchApi.searchMasters).toHaveBeenLastCalledWith({
       scope: 'city',
       text: 'ar',
+      offset: 0,
       limit: 50,
     });
     // Never converted to Urdu: pickers search raw text (F41).
@@ -171,8 +172,17 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     const { input, user } = setup(language, { onValue });
     await user.click(input);
     await user.keyboard('a');
+    // The list kept from the click has the same three rows: wait for the answer to the text.
+    await waitFor(() => {
+      expect(searchApi.searchMasters).toHaveBeenLastCalledWith(
+        expect.objectContaining({ text: 'a' }),
+      );
+    });
     await waitFor(() => {
       expect(options()).toHaveLength(3);
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
     await user.keyboard('{ArrowDown}');
     expect(options()[1]).toHaveAttribute('aria-selected', 'true');
@@ -270,8 +280,13 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     await waitFor(() => {
       expect(options().length).toBeGreaterThan(0);
     });
-    expect(searchApi.searchRecent).toHaveBeenCalledWith({ scope: 'city' });
-    expect(searchApi.searchMasters).not.toHaveBeenCalled();
+    // Empty text is the whole list, the last chosen first, then by code (plan 32, R7).
+    expect(searchApi.searchMasters).toHaveBeenCalledWith({
+      scope: 'city',
+      text: '',
+      offset: 0,
+      limit: 50,
+    });
     // The inactive one is still not offered.
     expect(options()).toHaveLength(3);
   });
@@ -285,7 +300,7 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
       expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
     });
     await user.click(
-      screen.getByRole('button', { name: new RegExp(message(language, 'search-add-new')) }),
+      screen.getByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
     );
     expect(onAddNew).toHaveBeenLastCalledWith('zzz');
     await user.click(input);
@@ -305,7 +320,7 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
       expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
     });
     expect(
-      screen.queryByRole('button', { name: new RegExp(message(language, 'search-add-new')) }),
+      screen.queryByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
     ).not.toBeInTheDocument();
   });
 

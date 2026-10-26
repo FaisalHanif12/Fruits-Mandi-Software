@@ -31,13 +31,13 @@
       "secondary_number": null,
       "subject": {
         "id": 1,
-        "code": "1",
+        "code": "0040",
         "name_ur": "کیلا",
         "name_en": "Banana"
       },
       "packing": {
         "id": 1,
-        "code": "1",
+        "code": "0050",
         "name_ur": "پیٹی",
         "name_en": "Box"
       },
@@ -60,13 +60,13 @@
       "secondary_number": null,
       "subject": {
         "id": 2,
-        "code": "2",
+        "code": "0041",
         "name_ur": "سیب",
         "name_en": "Apple"
       },
       "packing": {
         "id": 1,
-        "code": "1",
+        "code": "0050",
         "name_ur": "پیٹی",
         "name_en": "Box"
       },

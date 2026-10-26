@@ -2,7 +2,8 @@
 import type { AccountType } from './AccountType';
 
 /**
- * The next free code for a kind of account.
+ * The next free code for a kind of account: for a seller or a buyer the type number plus the next
+ * running number (`0010` for the first seller), never a code used before (plan 32 R2).
  */
 export type AccountsNextCodeInput = {
   /**

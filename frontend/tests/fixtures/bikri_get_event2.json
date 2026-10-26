@@ -8,7 +8,7 @@
   "truck_no": "LHR-0077",
   "zamindar": {
     "id": 19,
-    "code": "030110002",
+    "code": "0011",
     "name_ur": "کریم",
     "name_en": "Karim"
   },
@@ -28,7 +28,7 @@
       "lot_no": 1,
       "seller": {
         "id": 19,
-        "code": "030110002",
+        "code": "0011",
         "name_ur": "کریم",
         "name_en": "Karim"
       },
@@ -37,13 +37,13 @@
       "pukhta": null,
       "item": {
         "id": 2,
-        "code": "2",
+        "code": "0041",
         "name_ur": "سیب",
         "name_en": "Apple"
       },
       "packing": {
         "id": 1,
-        "code": "1",
+        "code": "0050",
         "name_ur": "پیٹی",
         "name_en": "Box"
       },
@@ -91,7 +91,7 @@
           "entry_date": "2026-10-10",
           "buyer": {
             "id": 9,
-            "code": "03049999",
+            "code": "0030",
             "name_ur": "پختہ کھاتہ (خریدار)",
             "name_en": "Pukhta Khata (Buyer)"
           },

@@ -139,8 +139,10 @@ fn error(code: ErrorCode, field: &str) -> FieldError {
     FieldError::new(code, field)
 }
 
-/// The code typed by the user: 1 to 10 digits. Empty gives `None`.
-fn master_code(errors: &mut FieldErrors, input: &str) -> Option<String> {
+/// The code typed by the user: 1 to 10 digits. Empty gives `None`. An item, a packing or a staff
+/// member must have a full code of its own type (`0040`, `0050`, `0060`; plan 32 R2): otherwise
+/// `ERR_CODE_INVALID` on `code`.
+fn master_code(errors: &mut FieldErrors, kind: MasterKind, input: &str) -> Option<String> {
     let cleaned: String = input
         .trim()
         .chars()
@@ -151,6 +153,13 @@ fn master_code(errors: &mut FieldErrors, input: &str) -> Option<String> {
     }
     if cleaned.chars().count() > MAX_CODE_DIGITS || !cleaned.chars().all(|c| c.is_ascii_digit()) {
         errors.push(error(ErrorCode::ErrFormatInvalid, "code"));
+        return None;
+    }
+    if let Some(code_type) = kind.code_type()
+        && errors
+            .take(crate::codes::check_typed_code("code", &cleaned, code_type))
+            .is_none()
+    {
         return None;
     }
     Some(cleaned)
@@ -300,7 +309,7 @@ fn simple_named(
     confirmed: &[String],
 ) -> Option<Prepared> {
     let version = edit_version(errors, id, version);
-    let code = master_code(errors, code);
+    let code = master_code(errors, kind, code);
     let (ur, en) = names(errors, name_ur, name_en)?;
     Some(Prepared {
         kind,
@@ -404,7 +413,7 @@ fn adda(errors: &mut FieldErrors, i: &AddaInput) -> Option<Prepared> {
 
 fn marka(errors: &mut FieldErrors, i: &MarkaInput) -> Option<Prepared> {
     let version = edit_version(errors, i.id, i.version);
-    let code = master_code(errors, &i.code);
+    let code = master_code(errors, MasterKind::Marka, &i.code);
     let mark = errors.take(validate::person_name("mark_text", &i.mark_text));
     let mut references = Vec::new();
     reference(
@@ -498,6 +507,7 @@ fn expense_head(errors: &mut FieldErrors, i: &ExpenseHeadInput) -> Option<Prepar
 
 fn staff(errors: &mut FieldErrors, i: &StaffInput) -> Option<Prepared> {
     let version = edit_version(errors, i.id, i.version);
+    let code = master_code(errors, MasterKind::Staff, &i.code);
     let job = choice(errors, "job", &i.job, &["munshi", "collector", "labour"]);
     let phone = errors.take(validate::phone_optional("phone", &i.phone));
     let (ur, en) = names(errors, &i.name_ur, &i.name_en)?;
@@ -508,7 +518,7 @@ fn staff(errors: &mut FieldErrors, i: &StaffInput) -> Option<Prepared> {
         kind: MasterKind::Staff,
         id: i.id,
         version,
-        code: None,
+        code,
         fields,
         names: Some(NameTexts {
             field_ur: "name_ur",
@@ -602,7 +612,7 @@ mod tests {
             MasterInput::Item(ItemInput {
                 id: None,
                 version: None,
-                code: "1".into(),
+                code: "0041".into(),
                 name_ur: "کیلا".into(),
                 name_en: "Banana".into(),
                 item_group: group.into(),
@@ -634,12 +644,55 @@ mod tests {
     }
 
     #[test]
+    fn an_item_packing_or_staff_code_is_a_full_code_of_its_type() {
+        // Plan 32 R2: 004, 005, 006 and a running number with no padding.
+        let item = |code: &str| {
+            MasterInput::Item(ItemInput {
+                id: None,
+                version: None,
+                code: code.into(),
+                name_ur: "کیلا".into(),
+                name_en: "Banana".into(),
+                item_group: "fruit".into(),
+                default_packing_id: None,
+                sold_by: "unit".into(),
+                confirmed_rules_words: Vec::new(),
+            })
+        };
+        assert_eq!(
+            prepare(&item("0040")).unwrap().code.as_deref(),
+            Some("0040")
+        );
+        assert_eq!(
+            prepare(&item("00410")).unwrap().code.as_deref(),
+            Some("00410")
+        );
+        assert_eq!(
+            prepare(&item("")).unwrap().code,
+            None,
+            "empty asks for the next one"
+        );
+        for bad in ["0050", "0060", "40", "004", "00401", "0040a"] {
+            let errors = prepare(&item(bad)).unwrap_err();
+            assert_eq!(errors[0].field, "code", "{bad}");
+            assert!(
+                matches!(
+                    errors[0].code,
+                    ErrorCode::ErrCodeInvalid | ErrorCode::ErrFormatInvalid
+                ),
+                "{bad}: {:?}",
+                errors[0].code
+            );
+        }
+    }
+
+    #[test]
     fn packing_weight_is_kg_with_up_to_three_decimals() {
         let input = |kg: &str| {
             MasterInput::Packing(PackingInput {
                 id: None,
                 version: None,
-                code: "1".into(),
+                code: "0051".into(),
                 name_ur: "پیٹی".into(),
                 name_en: "Box".into(),
                 approx_kg: kg.into(),
@@ -740,6 +793,7 @@ mod tests {
                 version: None,
                 name_ur: "اسلم".into(),
                 name_en: "Aslam".into(),
+                code: String::new(),
                 job: job.into(),
                 phone: phone.into(),
                 confirmed_rules_words: Vec::new(),

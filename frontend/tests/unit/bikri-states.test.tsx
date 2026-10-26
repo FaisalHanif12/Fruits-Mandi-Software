@@ -160,7 +160,7 @@ describe.each(LANGUAGES)('an answer that arrives late (%s)', (language) => {
     });
     await typeHeaderAndLot(user, language);
     const sales = salesGrid(language);
-    await user.keyboard('1{Enter}20{Enter}');
+    await user.keyboard('0{Enter}20{Enter}');
     await waitFor(() => {
       expect(backend.previews.some((draft) => draft.lots[0]?.sales[0]?.qty === '20')).toBe(true);
     });
@@ -395,7 +395,7 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
     // editor stays open as it does in a real window. bikri-fill-while-typing.test.tsx proves a
     // fill that lands in the middle of the code does not close it either.
     await waitForLineFill(language);
-    await typeCodeAndEnter(user, '03049999');
+    await typeCodeAndEnter(user, '0030');
     await waitFor(() => {
       const active = document.activeElement;
       expect(active?.closest('[data-pukhta-for]')).not.toBeNull();
@@ -434,7 +434,7 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
   it('keeps every value, the focused cell and the numbers, redraws the names, and typing goes on', async () => {
     const { backend, user } = await openBook(language);
     await typeHeaderAndLot(user, language);
-    await user.keyboard('1{Enter}20{Enter}');
+    await user.keyboard('0{Enter}20{Enter}');
     await waitFor(() => {
       expect(focusedIn(salesGrid(language))).toBe('0:rate');
     });
@@ -466,7 +466,7 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
       expect(focusedIn(salesGrid(next))).toBe('0:rate');
     });
     // And the entry goes on: the rate, then the second line.
-    await user.keyboard('600{Enter}2{Enter}');
+    await user.keyboard('600{Enter}1{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales.slice(0, 2)).toMatchObject([
         { buyer_account_id: IDS.akram, qty: '20', seller_rate: '600' },

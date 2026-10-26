@@ -36,7 +36,7 @@ pub struct Position {
     pub dir: TempDir,
     pub env: TestEnv,
     pub owner: auth::Actor,
-    /// رحیم, seller 030110001.
+    /// رحیم, seller 0010.
     pub rahim: i64,
     /// روکڑ, 01010001.
     pub cash: i64,
@@ -219,7 +219,7 @@ fn e2e_19_the_opening_position() {
         "cash 50,000"
     );
     assert_eq!(
-        row("030110001").map(|b| (b.side, b.amount_paisa)),
+        row("0010").map(|b| (b.side, b.amount_paisa)),
         Some((BalanceSide::Dr, rupees(15_000))),
         "رحیم بنام 15,000"
     );
@@ -485,9 +485,9 @@ fn e2e_1_to_4_event_1_is_saved_with_its_journal_split_and_matching() {
     assert_eq!(
         journal,
         lines(&[
-            ("03040001", 12_880, 0),
-            ("03040002", 18_684, 0),
-            ("030110001", 0, 24_316),
+            ("0020", 12_880, 0),
+            ("0021", 18_684, 0),
+            ("0010", 0, 24_316),
             ("04010001", 0, 1_764),
             ("04010002", 0, 1_764),
             ("04010003", 0, 400),
@@ -495,7 +495,7 @@ fn e2e_1_to_4_event_1_is_saved_with_its_journal_split_and_matching() {
             ("02010001", 0, 250),
             ("02010002", 0, 3_000),
             ("02010004", 0, 50),
-            ("030110001", 5_000, 0),
+            ("0010", 5_000, 0),
             ("01010001", 0, 5_000),
         ])
     );
@@ -590,8 +590,8 @@ fn e2e_5_event_2_with_the_one_time_buyer_is_saved_and_paid() {
     let journal = entry_lines(&w, saved.entry_id);
     let key = Some("شاہد|03000000000".to_owned());
     let expected = vec![
-        ("03049999".to_owned(), 12_800, 0, key.clone()),
-        ("030110002".to_owned(), 0, 10_160, None),
+        ("0030".to_owned(), 12_800, 0, key.clone()),
+        ("0011".to_owned(), 0, 10_160, None),
         ("04010001".to_owned(), 0, 720, None),
         ("04010002".to_owned(), 0, 720, None),
         ("04010003".to_owned(), 0, 80, None),
@@ -600,7 +600,7 @@ fn e2e_5_event_2_with_the_one_time_buyer_is_saved_and_paid() {
         ("02010002".to_owned(), 0, 1_000, None),
         ("02010004".to_owned(), 0, 50, None),
         ("01010001".to_owned(), 12_800, 0, None),
-        ("03049999".to_owned(), 0, 12_800, key),
+        ("0030".to_owned(), 0, 12_800, key),
     ];
     assert_eq!(journal, expected);
     assert_eq!(journal[..9].iter().map(|l| l.1).sum::<i64>(), 12_800);
@@ -658,7 +658,7 @@ fn e2e_28_bikri_part_with_the_advance_tick_off() {
     );
     assert_eq!(balance(&w, w.rahim), (BalanceSide::Cr, 4_316));
     let journal = entry_lines(&w, saved.entry_id);
-    assert_eq!(journal[2], ("030110001".to_owned(), 0, 24_316, None));
+    assert_eq!(journal[2], ("0010".to_owned(), 0, 24_316, None));
     // The tick is kept on the lot.
     let detail = bikri::get(&w.env.ctx, saved.bikri_id).unwrap();
     assert!(!detail.lots[0].adjust_advance);
@@ -814,14 +814,14 @@ fn e2e_6_event_3_akram_pays_10000_and_owes_2880() {
     assert_eq!(
         scalar(
             &w,
-            "SELECT COALESCE(SUM(amount_paisa), 0) FROM bill_allocations WHERE is_active = 1 AND account_id = (SELECT id FROM accounts WHERE code = '03040001')"
+            "SELECT COALESCE(SUM(amount_paisa), 0) FROM bill_allocations WHERE is_active = 1 AND account_id = (SELECT id FROM accounts WHERE code = '0020')"
         ),
         1_000_000
     );
     let journal = entry_lines(&w, saved.entry_id);
     assert_eq!(
         journal,
-        lines(&[("01010001", 10_000, 0), ("03040001", 0, 10_000)])
+        lines(&[("01010001", 10_000, 0), ("0020", 0, 10_000)])
     );
 
     // E2E-6: open 2,880 بنام; the oldest open bill is بکری 1 of 10-10-26, 0 days.
@@ -918,7 +918,7 @@ fn e2e_7_event_4_rahim_is_paid_4316() {
     assert_eq!(balance(&w, w.rahim).0, BalanceSide::Zero);
     assert_eq!(
         entry_lines(&w, saved.entry_id),
-        lines(&[("030110001", 4_316, 0), ("01010001", 0, 4_316)])
+        lines(&[("0010", 4_316, 0), ("01010001", 0, 4_316)])
     );
 
     // After it: nothing payable, nothing owed, and the posting is paid in full.

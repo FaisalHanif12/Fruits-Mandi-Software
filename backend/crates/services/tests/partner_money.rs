@@ -750,7 +750,7 @@ fn a_general_line_with_mistakes_is_refused_at_its_own_path() {
     let w = support::world();
     let own = support::id_of(&w.env, "030119998");
     let naqdi = support::id_of(&w.env, "03040000");
-    let pukhta = support::id_of(&w.env, "03049999");
+    let pukhta = support::id_of(&w.env, "0030");
     let lines = vec![
         gl(own, "100", ""),
         gl(naqdi, "", "100"),

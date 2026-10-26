@@ -12,3 +12,33 @@ search-error = The list could not be opened.
 search-no-match = Nothing found.
 # review: pending
 search-add-new = Add new
+# review: pending
+search-empty = Nothing has been added yet.
+# review: pending
+search-add-seller = Add a new { -beopari }
+# review: pending
+search-add-buyer = Add a new { -gahak }
+# review: pending
+search-add-account = Add a new account
+# review: pending
+search-add-item = Add a new { -qism-maal }
+# review: pending
+search-add-packing = Add a new { -packing }
+# review: pending
+search-add-city = Add a new city
+# review: pending
+search-add-adda = Add a new { -adda }
+# review: pending
+search-add-marka = Add a new { -marka }
+# review: pending
+search-add-store = Add a new store
+# review: pending
+search-add-narration = Add a new narration
+# review: pending
+search-add-expense-head = Add a new expense head
+# review: pending
+search-add-staff = Add a new staff member
+# review: pending
+search-add-lent-person = Add a new person
+# review: pending
+search-add-khata = Add a new { -alag-khata }

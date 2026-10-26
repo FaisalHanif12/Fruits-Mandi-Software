@@ -37,13 +37,13 @@ const CASH = account(51, 'other', '01010001', 'روکڑ', 'Cash in Hand', {
   opening_date: '2026-08-31',
   opening_dr_paisa: money(65000),
 });
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   opening_date: null,
 });
-const ARSHAD = account(22, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+const ARSHAD = account(22, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   opening_date: null,
 });
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   opening_date: '2026-08-31',
   opening_dr_paisa: money(15000),
   opening_is_advance: true,

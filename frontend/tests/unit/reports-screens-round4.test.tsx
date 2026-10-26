@@ -214,7 +214,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(drawnRows()).toEqual(['0', '1']);
       }, SLOW_MS);
-      expect(cell('0', 'buyer')).toBe(`03040001 ${names('اکرم ٹول ٹیکس', 'Akram Toll Tax')}`);
+      expect(cell('0', 'buyer')).toBe(`0020 ${names('اکرم ٹول ٹیکس', 'Akram Toll Tax')}`);
       expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
       expect(cell('0', 'qty')).toBe('20');
       expect(cell('0', 'rate')).toBe('600');
@@ -444,7 +444,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
     it('shows the person box once the party is a پختہ account, and only his lines', async () => {
       const party = {
         account_id: 9,
-        code: '03049999',
+        code: '0030',
         short_code: null,
         name_ur: 'پختہ کھاتہ (خریدار)',
         name_en: 'Pukhta Khata (Buyer)',
@@ -473,7 +473,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
     it('lists nobody for an account the person has no lines on', async () => {
       const party = {
         account_id: 30,
-        code: '03049999',
+        code: '0030',
         short_code: null,
         name_ur: 'پختہ کھاتہ (خریدار)',
         name_en: 'Pukhta Khata (Buyer)',
@@ -527,7 +527,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       expect(cell('0', 'balance')).toBe('2,880');
       // The buyer under it has an empty first cell.
       expect(cell('1', 'group')).toBe('');
-      expect(cell('1', 'buyer')).toBe(`03040001 ${names('اکرم ٹول ٹیکس', 'Akram Toll Tax')}`);
+      expect(cell('1', 'buyer')).toBe(`0020 ${names('اکرم ٹول ٹیکس', 'Akram Toll Tax')}`);
       // The heading of the buyers with no city has no name from the backend: the screen says so.
       expect(cell('2', 'group')).toBe(m('report-group-no-city'));
       expect(cell('2', 'balance')).toBe('18,684');
@@ -561,7 +561,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
         expect(cell('0', 'section')).toBe(m('report-section-payable'));
       }, SLOW_MS);
       expect(cell('0', 'payable')).toBe('10,160');
-      expect(cell('1', 'seller')).toBe(`030110002 ${names('کریم', 'Karim')}`);
+      expect(cell('1', 'seller')).toBe(`0011 ${names('کریم', 'Karim')}`);
       expect(cell('1', 'balance')).toContain('10,160');
       expect(cell('1', 'balance')).toContain(m('report-side-cr'));
     });

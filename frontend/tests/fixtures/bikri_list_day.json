@@ -9,7 +9,7 @@
       "sellers": [
         {
           "id": 19,
-          "code": "030110002",
+          "code": "0011",
           "name_ur": "کریم",
           "name_en": "Karim"
         }
@@ -18,7 +18,7 @@
       "items": [
         {
           "id": 2,
-          "code": "2",
+          "code": "0041",
           "name_ur": "سیب",
           "name_en": "Apple"
         }
@@ -39,7 +39,7 @@
       "sellers": [
         {
           "id": 18,
-          "code": "030110001",
+          "code": "0010",
           "name_ur": "رحیم",
           "name_en": "Rahim"
         }
@@ -48,7 +48,7 @@
       "items": [
         {
           "id": 1,
-          "code": "1",
+          "code": "0040",
           "name_ur": "کیلا",
           "name_en": "Banana"
         }

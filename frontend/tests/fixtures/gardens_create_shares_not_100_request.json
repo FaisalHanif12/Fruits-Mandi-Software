@@ -1,6 +1,12 @@
 {
   "confirm_cash_below_zero": false,
-  "confirmed_rules_words": ["شاہ", "پور", "باغ", "Shahpur", "Garden"],
+  "confirmed_rules_words": [
+    "شاہ",
+    "پور",
+    "باغ",
+    "Shahpur",
+    "Garden"
+  ],
   "date": "10-10-2026",
   "item_id": 1,
   "name_en": "Shahpur Garden",

@@ -19,28 +19,28 @@ import { refusal } from './ui-error';
 import { fakeMasters, record } from './masters';
 import { bikriListOf, pukhtaRegisterOf } from './paged';
 
-export const RAHIM = account(IDS.rahim, 'seller', '030110001', 'رحیم', 'Rahim', {
+export const RAHIM = account(IDS.rahim, 'seller', '0010', 'رحیم', 'Rahim', {
   balance: balance(4316, 'cr'),
 });
-export const KARIM = account(IDS.karim, 'seller', '030110002', 'کریم', 'Karim');
-export const AKRAM = account(IDS.akram, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+export const KARIM = account(IDS.karim, 'seller', '0011', 'کریم', 'Karim');
+export const AKRAM = account(IDS.akram, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   city: ref(1, '0001', 'کوٹ رادھا کشن', 'Kot Radha Kishan'),
   balance: balance(2880, 'dr'),
 });
-export const ARSHAD = account(IDS.arshad, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+export const ARSHAD = account(IDS.arshad, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   balance: balance(18684, 'dr'),
 });
 export const PUKHTA_BUYER = account(
   IDS.pukhtaBuyer,
   'buyer',
-  '03049999',
+  '0030',
   'پختہ کھاتہ (خریدار)',
   'Pukhta Khata (Buyer)',
 );
 export const PUKHTA_SELLER = account(
   IDS.pukhtaSeller,
   'seller',
-  '030119999',
+  '0031',
   'پختہ کھاتہ (بیوپاری)',
   'Pukhta Khata (Seller)',
 );

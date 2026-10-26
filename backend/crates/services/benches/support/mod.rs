@@ -47,7 +47,7 @@ pub const ENTRIES: u64 = 1_030_000;
 /// Entries written in one transaction.
 const BATCH: u64 = 20_000;
 /// A change here rebuilds the cached file.
-const VERSION: &str = "d2-v2";
+const VERSION: &str = "d2-v3";
 
 /// Writes one line to the error output. (`eprintln!` is denied in real code, Code Standards G4.)
 pub fn note(text: &str) {
@@ -287,13 +287,9 @@ pub fn ensure_volume() -> Volume {
     let conn = Connection::open(dir.join("data").join("mandi.db"));
     let (busy_buyer, busy_seller, median_buyer, lines) = match conn {
         Ok(conn) => (
-            id_of(&conn, "SELECT id FROM accounts WHERE code = ?1", "03040001"),
-            id_of(
-                &conn,
-                "SELECT id FROM accounts WHERE code = ?1",
-                "030110001",
-            ),
-            id_of(&conn, "SELECT id FROM accounts WHERE code = ?1", "03044500"),
+            id_of(&conn, "SELECT id FROM accounts WHERE code = ?1", "0020"),
+            id_of(&conn, "SELECT id FROM accounts WHERE code = ?1", "0010"),
+            id_of(&conn, "SELECT id FROM accounts WHERE code = ?1", "0024499"),
             conn.query_row("SELECT COUNT(*) FROM journal_lines", [], |r| r.get(0))
                 .unwrap_or(0),
         ),
@@ -450,8 +446,7 @@ fn account_ids(env: &TestEnv) -> Ids {
             let list = |like: &str| -> Result<Vec<i64>, ServiceError> {
                 let mut statement = conn
                     .prepare(
-                        "SELECT id FROM accounts WHERE code LIKE ?1
-                         AND CAST(substr(code, -4) AS INTEGER) BETWEEN 1 AND 8999 ORDER BY code",
+                        "SELECT id FROM accounts WHERE code GLOB ?1 AND is_system = 0 ORDER BY serial",
                     )
                     .map_err(mandi_services::db::DbError::from)?;
                 let rows = statement
@@ -461,8 +456,8 @@ fn account_ids(env: &TestEnv) -> Ids {
                     .map_err(|e| ServiceError::from(mandi_services::db::DbError::from(e)))
             };
             Ok(Ids {
-                sellers: list("03011____")?,
-                buyers: list("0304____")?,
+                sellers: list("001[0-9]*")?,
+                buyers: list("002[0-9]*")?,
                 cash: id_of(conn, "SELECT id FROM accounts WHERE code = ?1", "01010001"),
                 commission: id_of(conn, "SELECT id FROM accounts WHERE code = ?1", "04010001"),
                 labour: id_of(conn, "SELECT id FROM accounts WHERE code = ?1", "02010001"),
@@ -490,14 +485,28 @@ fn insert_accounts(tx: &Connection) -> Result<(), ServiceError> {
     ];
     for (control_code, party, count, shift) in kinds {
         let control = control_id(tx, control_code);
+        // Plan 32: sellers 001n and buyers 002n, the running number n from 0 and no padding; the
+        // other accounts keep the control code plus a 4-digit serial.
+        let type_number = match control_code {
+            "03011" => Some("001"),
+            "0304" => Some("002"),
+            _ => None,
+        };
         for serial in 1..=count {
             let (ur, en) = account_names(serial.saturating_add(shift).saturating_sub(1));
             let phone = (serial % 20 == 0).then(|| format!("0300{serial:07}"));
             insert
                 .execute(params![
                     control,
-                    format!("{control_code}{serial:04}"),
-                    serial,
+                    match type_number {
+                        Some(type_number) => format!("{type_number}{}", serial.saturating_sub(1)),
+                        None => format!("{control_code}{serial:04}"),
+                    },
+                    if type_number.is_some() {
+                        serial.saturating_sub(1)
+                    } else {
+                        serial
+                    },
                     party,
                     ur,
                     en,

@@ -94,7 +94,7 @@ describe('each paged wrapper sends exactly the request the backend’s own test 
 
   it('accounts_list sends the page it is asked for, and no longer asks for every account', async () => {
     call.mockResolvedValue({ rows: [], count: 0, total_dr_paisa: 0, total_cr_paisa: 0 });
-    const filter = { account_type: null, text: '', include_inactive: false };
+    const filter = { kind: 'all' as const, text: '', include_inactive: false };
     await accountsApi.accountsList(filter, 100, 100);
     expect(call).toHaveBeenLastCalledWith('accounts_list', {
       input: { filter, offset: 100, limit: 100 },

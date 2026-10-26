@@ -74,7 +74,7 @@ import {
   R32_E2E_30B_REQUEST,
 } from '../helpers/reports-business-real';
 
-const PARTY = { id: 20, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '03040001' };
+const PARTY = { id: 20, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '0020' };
 const entryOf = (id: string) => {
   const found = CATALOG.find((entry) => entry.id === id);
   if (found === undefined) throw new Error(`no ${id}`);

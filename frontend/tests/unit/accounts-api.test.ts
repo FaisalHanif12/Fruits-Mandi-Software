@@ -18,7 +18,7 @@ vi.mock('../../src/shared/api/invoke');
 
 const HIT = {
   id: 21,
-  code: '03040001',
+  code: '0020',
   name_ur: 'اکرم',
   name_en: 'Akram',
   extra_ur: '',
@@ -45,7 +45,7 @@ beforeEach(() => {
 describe('searchAccounts', () => {
   it('asks for the balances of all the hits in one call and puts each on its row', async () => {
     backend({
-      search_accounts: [HIT, { ...HIT, id: 22, code: '03040002' }],
+      search_accounts: [HIT, { ...HIT, id: 22, code: '0021' }],
       accounts_balances: [
         { id: 21, balance: balance(2880, 'dr') },
         { id: 22, balance: balance(0, 'zero') },
@@ -53,11 +53,19 @@ describe('searchAccounts', () => {
     });
     const hits = await searchAccounts({ scope: 'buyer', controlId: null, text: 'ak', limit: 50 });
     expect(call).toHaveBeenCalledWith('search_accounts', {
-      input: { scope: 'buyer', control_id: null, text: 'ak', limit: 50 },
+      input: { scope: 'buyer', control_id: null, text: 'ak', offset: 0, limit: 50 },
     });
     expect(call).toHaveBeenCalledWith('accounts_balances', { input: { ids: [21, 22] } });
     expect(call).toHaveBeenCalledTimes(2);
     expect(hits.map((hit) => hit.balance?.side)).toEqual(['dr', 'zero']);
+  });
+
+  it('asks for a page of the whole list with empty text: the offset goes to the backend (plan 32, R7)', async () => {
+    backend({ search_accounts: [], accounts_balances: [] });
+    await searchAccounts({ scope: 'seller', controlId: null, text: '', offset: 50, limit: 50 });
+    expect(call).toHaveBeenCalledWith('search_accounts', {
+      input: { scope: 'seller', control_id: null, text: '', offset: 50, limit: 50 },
+    });
   });
 
   it('asks for no balances when nothing matched', async () => {
@@ -79,7 +87,7 @@ describe('searchAccounts', () => {
     backend({ search_accounts: [] });
     await searchAccounts({ scope: 'control', controlId: 3, text: 'as', limit: 5 });
     expect(call).toHaveBeenCalledWith('search_accounts', {
-      input: { scope: 'control', control_id: 3, text: 'as', limit: 5 },
+      input: { scope: 'control', control_id: 3, text: 'as', offset: 0, limit: 5 },
     });
   });
 });
@@ -87,7 +95,7 @@ describe('searchAccounts', () => {
 describe('recent accounts', () => {
   const recentHit = (type: string) => ({
     id: 7,
-    code: '030110001',
+    code: '0010',
     name_ur: 'رحیم',
     name_en: 'Rahim',
     extra_ur: '',
@@ -183,10 +191,10 @@ describe('accountsResolveCode', () => {
         status: 'unknown',
         account: null,
         candidates: [],
-        suggested_code: '03040003',
+        suggested_code: '0022',
       },
     });
-    expect((await accountsResolveCode('buyer', null, '03040003')).suggested_code).toBe('03040003');
+    expect((await accountsResolveCode('buyer', null, '0022')).suggested_code).toBe('0022');
   });
 });
 
@@ -199,7 +207,7 @@ describe('searchGlobal', () => {
       {
         kind: 'account',
         id: 21,
-        code: '03040001',
+        code: '0020',
         name_ur: 'اکرم',
         name_en: 'Akram',
         extra_ur: '',

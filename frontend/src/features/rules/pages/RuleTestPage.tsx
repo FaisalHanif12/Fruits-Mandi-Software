@@ -210,6 +210,8 @@ export function RuleTestPage() {
               {(props) => (
                 <AccountPicker
                   {...props}
+                  // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                  canAdd={false}
                   scope="seller"
                   value={seller}
                   onChange={(hit) => {
@@ -226,6 +228,8 @@ export function RuleTestPage() {
               {(props) => (
                 <AccountPicker
                   {...props}
+                  // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                  canAdd={false}
                   scope="buyer"
                   value={buyer}
                   onChange={(hit) => {
@@ -239,6 +243,8 @@ export function RuleTestPage() {
               {(props) => (
                 <Picker
                   {...props}
+                  // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                  canAdd={false}
                   scope="item"
                   value={item}
                   onChange={(hit) => {

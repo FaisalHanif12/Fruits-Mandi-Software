@@ -190,7 +190,7 @@ fn e2e_43_the_table_of_all_parties_for_the_worked_day() {
     assert!(page.totals.iter().all(|c| matches!(c, Cell::Empty)));
     // The blank column for the collector's note, and the short code of each party.
     assert!(page.rows.iter().all(|r| matches!(&r.cells[6], Cell::Empty)));
-    assert_eq!(text(&page.rows[1].cells[0]), "2");
+    assert_eq!(text(&page.rows[1].cells[0]), "1");
     assert_eq!(page.filters.as_of.as_deref(), Some("2026-10-10"));
 }
 
@@ -243,7 +243,7 @@ fn e2e_43_the_buyers_slip_of_akram() {
     // No cash-on-the-spot line and no other-debits line when they are 0.
     assert!(summary_of(&page, "report-r35-on-spot").is_none());
     assert!(summary_of(&page, "report-r35-other-debits").is_none());
-    assert_eq!(page.filters.party.as_ref().unwrap().code, "03040001");
+    assert_eq!(page.filters.party.as_ref().unwrap().code, "0020");
 }
 
 #[test]

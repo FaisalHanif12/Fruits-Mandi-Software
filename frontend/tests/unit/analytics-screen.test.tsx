@@ -295,7 +295,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       await waitFor(() => {
         expect(cell('0', 'net')).toBe('19,316');
       }, SLOW_MS);
-      expect(cell('0', 'seller')).toBe(`030110001 ${names('رحیم', 'Rahim')}`);
+      expect(cell('0', 'seller')).toBe(`0010 ${names('رحیم', 'Rahim')}`);
       expect(totalsCell('net')).toBe('29,476');
     });
 
@@ -307,7 +307,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       expect(cell('0', 'dues_now')).toContain('18,684');
       expect(cell('0', 'dues_now')).toContain(m('report-side-dr'));
       // His phone follows his name, in the dash form (PRD FR-13.5), so two people with one name are two rows.
-      expect(cell('2', 'buyer')).toBe(`03049999 ${names('شاہد', 'Shahid')} 0300-0000000`);
+      expect(cell('2', 'buyer')).toBe(`0030 ${names('شاہد', 'Shahid')} 0300-0000000`);
       expect(cell('2', 'avg_days')).toBe('0');
       expect(cell('0', 'avg_days')).toBe('');
     });

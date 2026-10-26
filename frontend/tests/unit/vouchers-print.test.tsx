@@ -102,7 +102,7 @@ describe.each(LANGUAGES)('printing a voucher from the screen (%s)', (language) =
         name: named(message(language, 'vouchers-field-buyer')),
       }),
     );
-    await user.keyboard('03040001');
+    await user.keyboard('0020');
     await waitFor(() => {
       expect(screen.getAllByRole('option')).toHaveLength(1);
     });

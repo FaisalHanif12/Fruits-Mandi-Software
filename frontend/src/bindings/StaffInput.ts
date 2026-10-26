@@ -21,6 +21,11 @@ export type StaffInput = {
    */
   name_en: string;
   /**
+   * Unique code `006` plus a running number (`0060`, `0061` ...). Empty gives the next free code
+   * (plan 32 R2).
+   */
+  code: string;
+  /**
    * The job: `munshi`, `collector` or `labour`. Not a login role.
    */
   job: string;

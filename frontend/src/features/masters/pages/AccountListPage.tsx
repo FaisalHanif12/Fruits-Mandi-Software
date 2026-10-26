@@ -31,7 +31,7 @@ import {
 } from '../../../shared/ui';
 import { accountColumns, hasMoreColumns, showsOpeningColumns } from '../account-columns';
 import { useAccountList } from '../../../shared/accounts';
-import type { AccountFilter, AccountRow, AccountType } from '../../../shared/accounts';
+import type { AccountFilter, AccountListKind, AccountRow } from '../../../shared/accounts';
 import { ACCOUNTS_SCREEN, accountChoicesFrom, accountChoicesText } from '../remember';
 import { useMasterFocus } from '../store';
 
@@ -44,7 +44,8 @@ const SHORT_LIST_ROWS = 30;
  */
 const REMEMBERED_ROW_PAGES = 10;
 const ALL = 'all';
-const TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
+/** The kinds the list can show besides "all": sellers, buyers and the پختہ کھاتہ accounts (plan 32, R6). */
+const KINDS: readonly AccountListKind[] = ['seller', 'buyer', 'pukhta'];
 
 /** The account list starts as the Owner left it: the kind and the inactive tick (PRD FR-7.45). */
 export function AccountListPage() {
@@ -56,7 +57,7 @@ export function AccountListPage() {
 function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
   const navigate = useNavigate();
   const start = useMemo(() => accountChoicesFrom(saved), [saved]);
-  const [type, setType] = useState<AccountType | typeof ALL>(start.type);
+  const [type, setType] = useState<AccountListKind>(start.type);
   const [text, setText] = useState('');
   const [showInactive, setShowInactive] = useState(start.showInactive);
   useEffect(() => {
@@ -68,7 +69,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
   const columns = useMemo(() => accountColumns(step, moreColumns), [step, moreColumns]);
   const filter = useMemo<AccountFilter>(
     () => ({
-      account_type: type === ALL ? null : type,
+      kind: type,
       text: text.trim(),
       include_inactive: showInactive,
     }),
@@ -97,7 +98,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
       <Localized id="accounts-new" />
     </Button>
   );
-  const filtering = filter.text !== '' || filter.account_type !== null || filter.include_inactive;
+  const filtering = filter.text !== '' || filter.kind !== ALL || filter.include_inactive;
   // Every page loaded so far. The first page carries the count and the opening totals of the whole
   // filter, which are the ones shown (PRD FR-19.11).
   const first = list.data?.pages[0];
@@ -250,7 +251,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
                 onChange={setType}
                 options={[
                   { value: ALL, label: <Localized id="accounts-type-all" /> },
-                  ...TYPES.map((option) => ({
+                  ...KINDS.map((option) => ({
                     value: option,
                     label: <Localized id={`accounts-type-${option}`} />,
                   })),

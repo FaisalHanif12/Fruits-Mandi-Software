@@ -41,8 +41,13 @@ fn col(key: &str, title: &str, kind: ColumnKind) -> Column {
 
 /// The account ids that pass the city filter, in code order.
 fn account_ids(conn: &Connection, city_id: Option<i64>) -> Result<Vec<i64>, ReportsError> {
-    let mut statement =
-        conn.prepare("SELECT id FROM accounts WHERE (?1 IS NULL OR city_id = ?1) ORDER BY code")?;
+    // The chart order: by control (cash, payables, sellers, buyers, income ...), then by code within
+    // it, so the numbers of sellers and buyers (0010, 00110) are in running-number order.
+    let mut statement = conn.prepare(&format!(
+        "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
+         WHERE (?1 IS NULL OR a.city_id = ?1) ORDER BY k.code, {}, a.id",
+        mandi_db::codes::order_by_code("a.code")
+    ))?;
     let ids = statement
         .query_map(params![city_id], |r| r.get(0))?
         .collect::<Result<Vec<i64>, _>>()?;

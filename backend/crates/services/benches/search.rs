@@ -102,6 +102,7 @@ fn account_search(ctx: &Context, actor: &Actor, scope: AccountScope, text: &str)
         control_id: None,
         text: text.to_owned(),
         limit: 20,
+        offset: 0,
     };
     match search::search_accounts(ctx, actor, &input) {
         Ok(hits) => hits.len(),

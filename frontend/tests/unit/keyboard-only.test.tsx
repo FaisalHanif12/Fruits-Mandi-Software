@@ -42,17 +42,17 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   opening_date: null,
 });
-const ARSHAD = account(22, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+const ARSHAD = account(22, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   opening_date: null,
 });
 const CASH = account(51, 'other', '01010001', 'روکڑ', 'Cash in Hand', {
   opening_date: '2026-08-31',
   opening_dr_paisa: money(65000),
 });
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim');
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim');
 
 const named = (text: string) => (name: string) => visible(name) === text;
 const labelled = (language: Language, id: string) =>
@@ -115,7 +115,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     fakeAccounts([AKRAM, ARSHAD]);
     const { router } = await renderApp('/index/accounts/new');
     await waitFor(() => {
-      expect(labelled(language, 'accounts-field-code').value).toBe('03040003');
+      expect(labelled(language, 'accounts-field-code').value).toBe('0022');
     });
     const user = userEvent.setup();
     const nameId = language === 'ur' ? 'accounts-field-name-ur' : 'accounts-field-name-en';
@@ -130,7 +130,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
       expect(accountApi.accountsSave).toHaveBeenCalledTimes(1);
     });
     expect(vi.mocked(accountApi.accountsSave).mock.calls[0]?.[0]).toMatchObject({
-      code: '03040003',
+      code: '0022',
       names: { urdu: 'طارق محمود', english: 'Tariq Mehmood' },
     });
     await waitFor(() => {
@@ -181,7 +181,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     await waitFor(() => {
       const options = screen.getAllByRole('option');
       expect(options).toHaveLength(1);
-      expect(visible(options[0]?.textContent)).toContain('030110001');
+      expect(visible(options[0]?.textContent)).toContain('0010');
     });
     await user.keyboard('{Enter}');
     await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
@@ -215,7 +215,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     await waitFor(() => {
       const options = screen.getAllByRole('option');
       expect(options).toHaveLength(1);
-      expect(visible(options[0]?.textContent)).toContain('03040001');
+      expect(visible(options[0]?.textContent)).toContain('0020');
     });
     await user.keyboard('{Enter}');
     await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
@@ -258,7 +258,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
       await user.keyboard('{Enter}');
     };
     await tabTo(user, buyer, 'the buyer');
-    await typeBuyer('akram', '03040001');
+    await typeBuyer('akram', '0020');
     await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
     await user.keyboard('10000');
     press('F2');
@@ -266,7 +266,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     await waitFor(() => {
       expect(document.activeElement).toBe(buyer());
     });
-    await typeBuyer('arshad', '03040002');
+    await typeBuyer('arshad', '0021');
     await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');
     await user.keyboard('5000');
     press('F10');
@@ -299,7 +299,7 @@ describe.each(LANGUAGES)('main tasks by keyboard only (%s)', (language) => {
     await waitFor(() => {
       const options = screen.getAllByRole('option');
       expect(options).toHaveLength(1);
-      expect(visible(options[0]?.textContent)).toContain('030110001');
+      expect(visible(options[0]?.textContent)).toContain('0010');
     });
     await user.keyboard('{Enter}');
     await tabTo(user, () => labelled(language, 'vouchers-field-amount'), 'the amount');

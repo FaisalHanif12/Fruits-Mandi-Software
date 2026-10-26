@@ -3,7 +3,10 @@
 // side menu is 692 px at the narrowest compact window, 874 at the narrowest normal one and 1,332 at
 // the narrowest wide one (tests/unit/list-widths.test.ts), so the list shows the columns that
 // fit; the card of the lot under the list shows all of them for the row that has focus. Nothing
-// scrolls sideways (NFR-USE-15). Every figure is the backend's; nothing is worked out here.
+// scrolls sideways (NFR-USE-15). Every figure is the backend's; nothing is worked out here. The
+// four quantity columns (received, sold, written off, taken as fruit) are `count` columns of 100 px,
+// so the ten columns of the wide step fit its 1,332 px with the column for the fruit taken (PRD
+// FR-16.11) that was added after the first widths were worked out.
 
 import type { StockRow } from '../../bindings/StockRow';
 import { isoToDisplayDate } from '../../shared/format';
@@ -54,28 +57,28 @@ export const STOCK_COLUMNS: readonly ListColumn<StockRow>[] = [
   },
   {
     field: 'received',
-    type: 'number',
+    type: 'count',
     headerId: 'bikri-col-qty-received',
     from: 'wide',
     value: (row) => String(row.qty_received),
   },
   {
     field: 'sold',
-    type: 'number',
+    type: 'count',
     headerId: 'bikri-saved-qty-sold',
     from: 'wide',
     value: (row) => String(row.qty_sold),
   },
   {
     field: 'written_off',
-    type: 'number',
+    type: 'count',
     headerId: 'bikri-stock-col-written-off',
     from: 'wide',
     value: (row) => String(row.qty_written_off),
   },
   {
     field: 'taken',
-    type: 'number',
+    type: 'count',
     headerId: 'bikri-stock-col-taken',
     from: 'wide',
     value: (row) => String(row.qty_taken),

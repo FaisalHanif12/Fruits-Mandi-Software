@@ -4,7 +4,7 @@
 // with contacts and refused, the header and footer of a report print, the collection list in both
 // languages and empty, and the sale book's documents with a tag. The backend wrote them in its own
 // tests (backend/crates/services/tests/fixtures); they are copied here, never edited, and read as
-// the generated types. The story: Akram Toll Tax K (03040001, short code 1) owes 2,880 and Arshad
+// the generated types. The story: Akram Toll Tax K (0020, short code 1) owes 2,880 and Arshad
 // Multani 18,684 on 10-10-2026.
 
 import type { AccountInput } from '../../src/bindings/AccountInput';

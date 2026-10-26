@@ -85,7 +85,7 @@ describe.each(LANGUAGES)("the account form with the backend's real answers (%s)"
   it('keyboard only: the tag is reached with Tab after the names, typed in lower case, and F10 sends it as typed', async () => {
     const store = fakeAccounts([]);
     vi.mocked(accountApi.accountsSave).mockImplementation((draft) => {
-      const saved = account(18, 'buyer', '03040001', draft.names.urdu, draft.names.english, {
+      const saved = account(18, 'buyer', '0020', draft.names.urdu, draft.names.english, {
         tag: real.ACCOUNTS_SAVE_TAG.tag ?? '',
       });
       store.rows.push(saved);

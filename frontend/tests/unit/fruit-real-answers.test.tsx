@@ -43,7 +43,7 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const HAJI = account(31, 'seller', '030110003', 'حاجی نذیر', 'Haji Nazeer');
+const HAJI = account(31, 'seller', '0012', 'حاجی نذیر', 'Haji Nazeer');
 
 /** The masters the backend's test used: item 2 (apple), item 5 (sold by weight), packing 1 (box). */
 const hit = (id: number, kind: 'item' | 'packing', ur: string, en: string) => ({

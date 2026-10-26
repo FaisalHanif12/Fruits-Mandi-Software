@@ -91,8 +91,8 @@
           "type": "party",
           "party": {
             "account_id": 19,
-            "code": "030110002",
-            "short_code": "2",
+            "code": "0011",
+            "short_code": "1",
             "name_ur": "کریم",
             "name_en": "Karim",
             "tag": null,

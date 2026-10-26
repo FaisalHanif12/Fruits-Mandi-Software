@@ -9,20 +9,20 @@
       "received_date": "2026-10-10",
       "seller": {
         "id": 18,
-        "code": "030110001",
+        "code": "0010",
         "name_ur": "رحیم",
         "name_en": "Rahim"
       },
       "pukhta": null,
       "item": {
         "id": 1,
-        "code": "1",
+        "code": "0040",
         "name_ur": "کیلا",
         "name_en": "Banana"
       },
       "packing": {
         "id": 1,
-        "code": "1",
+        "code": "0050",
         "name_ur": "پیٹی",
         "name_en": "Box"
       },

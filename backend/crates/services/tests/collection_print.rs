@@ -150,9 +150,9 @@ fn the_print_has_the_buyers_of_the_day_and_a_total_below_the_shops_dues() {
         );
         assert_eq!(data.total.amount, "21,564");
         assert_eq!(data.buyer_count, "2");
-        // Short codes: the first two buyers are serial 1 and 2.
-        assert_eq!(rows[0].code, "1");
-        assert_eq!(rows[1].code, "2");
+        // Short codes: the running numbers of the first two buyers, 0020 and 0021 (plan 32).
+        assert_eq!(rows[0].code, "0");
+        assert_eq!(rows[1].code, "1");
         // The tag of ارشد is its own field.
         assert_eq!(rows[0].tag, None);
         assert_eq!(rows[1].tag.as_deref(), Some("K"));

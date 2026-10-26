@@ -123,20 +123,42 @@ fn dates_and_open_days() {
 #[test]
 fn account_codes() {
     assert_eq!(
-        validate::account_code("buyer", "03040001"),
-        Ok(AccountCodeInput::Full("03040001".to_owned()))
+        validate::account_code("buyer", "0020"),
+        Ok(AccountCodeInput::Full("0020".to_owned()))
     );
     assert_eq!(
-        validate::account_code("seller", " 030110001 "),
-        Ok(AccountCodeInput::Full("030110001".to_owned()))
+        validate::account_code("seller", " 0010 "),
+        Ok(AccountCodeInput::Full("0010".to_owned()))
     );
-    for (text, serial) in [("1", 1), ("0001", 1), ("7", 7), ("9999", 9_999), ("۱", 1)] {
+    for (text, serial) in [
+        ("0", 0),
+        ("1", 1),
+        ("7", 7),
+        ("9999", 9_999),
+        ("1234567", 1_234_567),
+        ("۱", 1),
+    ] {
         match validate::account_code("buyer", text).unwrap() {
             AccountCodeInput::Short(s) => assert_eq!(s.serial(), serial, "{text}"),
             other => panic!("{text} gave {other:?}"),
         }
     }
-    for text in ["12345", "1234567", "0304000100", "12a", "-1", "1 2"] {
+    // A full code of the scheme (up to 10 digits) is a full code; a short code has no padding.
+    assert_eq!(
+        validate::account_code("c", "0029999999"),
+        Ok(AccountCodeInput::Full("0029999999".to_owned()))
+    );
+    for text in [
+        "0001",
+        "01",
+        "00",
+        "0304000100",
+        "1234567890",
+        "12a",
+        "-1",
+        "1 2",
+        "00212345678",
+    ] {
         assert_eq!(
             code(validate::account_code("buyer", text)),
             ErrorCode::ErrCodeInvalid,
@@ -358,11 +380,11 @@ fn fields_refuse_arabic_indic_sums() {
 /// bidi controls still make it invalid, and a code of only marks is required.
 #[test]
 fn account_codes_ignore_pasted_invisible_marks() {
-    let full = Ok(AccountCodeInput::Full("03040001".to_owned()));
+    let full = Ok(AccountCodeInput::Full("0020".to_owned()));
     for mark in [
         '\u{200B}', '\u{200C}', '\u{200D}', '\u{200E}', '\u{2060}', '\u{FEFF}',
     ] {
-        let text = format!("{mark}0304{mark}0001{mark}");
+        let text = format!("{mark}00{mark}20{mark}");
         assert_eq!(
             validate::account_code("c", &text),
             full,
@@ -376,7 +398,7 @@ fn account_codes_ignore_pasted_invisible_marks() {
         Ok(true)
     );
     for mark in ['\u{200F}', '\u{061C}', '\u{202E}', '\u{2066}'] {
-        let text = format!("0304{mark}0001");
+        let text = format!("00{mark}20");
         assert_eq!(
             code(validate::account_code("c", &text)),
             ErrorCode::ErrCodeInvalid,

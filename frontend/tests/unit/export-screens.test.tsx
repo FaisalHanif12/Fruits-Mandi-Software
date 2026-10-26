@@ -370,9 +370,27 @@ describe.each(LANGUAGES)('Excel export (%s)', (language: Language) => {
     it('in the print preview the button sits with PDF and Print, and the sheet takes the print language chosen there', async () => {
       vi.mocked(reportsApi.reportsExportExcel).mockResolvedValue(RESULT);
       const { user } = await openReport();
+      // The page of the print is held back until the test lets it go, so "off while it loads" is
+      // seen at a moment the test chooses and does not depend on how fast the fake answers.
+      const answer = vi.mocked(reportsApi.reportsPrintData).getMockImplementation();
+      if (answer === undefined) throw new Error('the fake has no print data');
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      vi.mocked(reportsApi.reportsPrintData).mockImplementation(async (input) => {
+        await held;
+        return answer(input);
+      });
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
       const pdf = await screen.findByRole('button', { name: named(m('report-print-pdf')) });
       expect(pdf).toBeDisabled();
+      act(() => {
+        release();
+      });
+      await waitFor(() => {
+        expect(pdf).toBeEnabled();
+      }, SLOW_MS);
       // The frame has its own Excel button; the header's is not drawn twice.
       expect(screen.getAllByRole('button', { name: exportName })).toHaveLength(1);
       const row = parentOf(pdf);

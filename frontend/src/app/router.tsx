@@ -21,9 +21,19 @@ import {
 import { parseFruitSearch } from '../features/fruit/screen-search';
 import { parseCapitalSearch, parseStatementSearch } from '../features/partners/screen-type';
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
+import { AddRecordHost } from './AddRecordHost';
 import { moveDevPathToHash } from './dev/hash-route';
 
-const rootRoute = createRootRoute({ component: Outlet });
+// The root holds the Index form that the "add" button of any picker opens (plan 32, R8).
+function RootLayout() {
+  return (
+    <AddRecordHost>
+      <Outlet />
+    </AddRecordHost>
+  );
+}
+
+const rootRoute = createRootRoute({ component: RootLayout });
 
 // The hidden print window (plans 14 and 15): `#/print?bikri=...&doc=...&language=...&job=...` for a
 // بکری, `#/print?voucher=...&doc=receipt_slip&language=...&job=...` for a voucher. It sits outside

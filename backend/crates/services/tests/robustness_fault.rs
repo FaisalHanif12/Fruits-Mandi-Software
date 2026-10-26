@@ -194,13 +194,13 @@ fn child_process_for_the_kill_tests() {
     let rahim = env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "030110001"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0010"))
         .unwrap()
         .unwrap();
     let karim = env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "030110002"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0011"))
         .unwrap()
         .unwrap();
     let mut n = 0_u64;
@@ -1053,7 +1053,7 @@ fn damaged_files_never_crash_the_program_and_a_file_that_fails_its_check_stops_s
                     &ctx,
                     &mandi_services::core::accounts::AccountsListInput {
                         filter: mandi_services::core::accounts::AccountFilter {
-                            account_type: None,
+                            kind: mandi_services::core::accounts::AccountListKind::All,
                             text: String::new(),
                             include_inactive: true,
                         },
@@ -1168,6 +1168,7 @@ fn a_long_run_of_many_operations_shows_no_slowdown_and_no_memory_growth() {
                             control_id: None,
                             text: text.into(),
                             limit: 20,
+                            offset: 0,
                         },
                     )
                     .unwrap();

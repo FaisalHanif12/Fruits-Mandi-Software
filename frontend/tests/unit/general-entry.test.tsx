@@ -34,7 +34,7 @@ const nameOf = (language: Language, ur: string, en: string) => (language === 'ur
 
 const ELECTRICITY = '05010001';
 const CASH = '01010001';
-const PUKHTA = '03049999';
+const PUKHTA = '0030';
 
 beforeEach(() => {
   vi.clearAllMocks();

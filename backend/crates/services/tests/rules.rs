@@ -818,7 +818,7 @@ fn the_rule_form_refuses_what_prd_11_2_and_11_3_do_not_allow() {
         .env
         .ctx
         .db()
-        .read(|c| mandi_services::db::accounts::id_by_code(c, "03049999"))
+        .read(|c| mandi_services::db::accounts::id_by_code(c, "0030"))
         .unwrap()
         .unwrap();
     save(

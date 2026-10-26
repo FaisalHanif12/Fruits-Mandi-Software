@@ -23,7 +23,9 @@ export type AccountInput = {
    */
   control_id: number | null;
   /**
-   * The full code (control code plus 4 digits). Empty gives the next free code.
+   * The full code. A seller: `001` plus a running number (`0010`, `00110`); a buyer: `002` plus a
+   * running number; any other account: the control code plus 4 digits. Empty gives the next free
+   * code. A code of the wrong type is `ERR_CODE_INVALID` on `code`; a used one `ERR_CODE_TAKEN`.
    */
   code: string;
   /**

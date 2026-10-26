@@ -174,7 +174,7 @@ fn r2_lists_every_sale_line_and_its_totals_are_the_bills_of_the_day() {
     );
     // Event 1: اکرم 20 at 600 = 12,000 and he pays 12,880 (E2E-2); ارشد 30 at 580 = 17,400, 18,684.
     let first = &page.rows.first().unwrap().cells;
-    assert_eq!(code_of(first.get(2).unwrap()), "03040001");
+    assert_eq!(code_of(first.get(2).unwrap()), "0020");
     assert_eq!(names_en(first.get(4).unwrap()), "Banana");
     assert_eq!(first.get(3), Some(&Cell::Empty));
     assert_eq!(
@@ -185,7 +185,7 @@ fn r2_lists_every_sale_line_and_its_totals_are_the_bills_of_the_day() {
     assert_eq!(moneys(&page, 1, &[6, 7, 8]), vec![580, 17_400, 18_684]);
     // Event 2: a one-time buyer, shown by his own name and person key under the پختہ account.
     let (code, name, key) = party_name(page.rows.get(2).unwrap().cells.get(2).unwrap());
-    assert_eq!((code.as_str(), name.as_str()), ("03049999", "Shahid"));
+    assert_eq!((code.as_str(), name.as_str()), ("0030", "Shahid"));
     assert!(key.is_some_and(|k| k.contains("03000000000")));
     assert_eq!(moneys(&page, 2, &[7, 8]), vec![12_000, 12_800]);
     // The totals: 60 نگ, value 41,400 (= خام بکری of the day), buyer totals 44,364.
@@ -388,7 +388,7 @@ fn r6_is_the_seller_summary_of_each_lot_and_the_deductions_add_up() {
     );
     assert_eq!(
         code_of(page.rows.first().unwrap().cells.get(2).unwrap()),
-        "030110001"
+        "0010"
     );
     assert_eq!(number(page.rows.first().unwrap().cells.get(4).unwrap()), 50);
     // The total row, and the identity: خام بکری − کل اخراجات = صافی بکری; the seven columns add
@@ -692,7 +692,7 @@ fn r9_lists_the_one_time_line_as_paid_with_the_numbers_of_prd_4_5() {
     // date, doc, side, person, phone, item, qty, amount, commission, status, open.
     assert_eq!(label(&row[2]), "report-side-buyer");
     let (code, name, key) = party_name(&row[3]);
-    assert_eq!((code.as_str(), name.as_str()), ("03049999", "Shahid"));
+    assert_eq!((code.as_str(), name.as_str()), ("0030", "Shahid"));
     assert!(key.is_some());
     assert_eq!(
         row[4],
@@ -1014,7 +1014,7 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
         PrintCell::Party { party } => {
             assert_eq!(
                 (party.short_code.as_deref(), party.name.as_str()),
-                (Some("1"), "Akram Toll Tax")
+                (Some("0"), "Akram Toll Tax")
             );
         }
         other => panic!("{other:?}"),

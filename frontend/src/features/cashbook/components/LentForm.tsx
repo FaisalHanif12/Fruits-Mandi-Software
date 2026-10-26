@@ -68,6 +68,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
               });
             }}
             onAddNew={setAdding}
+            addLabelId="search-add-lent-person"
           />
         )}
       </Field>

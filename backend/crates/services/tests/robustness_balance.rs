@@ -64,7 +64,7 @@ const TRIGGERS_OF_0004: [&str; 7] = [
     "bikri_lots_no_replace",
     "bikri_sales_no_replace",
 ];
-const LATEST_VERSION: i64 = 6;
+const LATEST_VERSION: i64 = 7;
 /// The tables migration 0006 adds (plan 16b). A file of an old release does not have them, and
 /// they are empty in this test, so the row fingerprint leaves them out.
 const TABLES_OF_0006: [&str; 8] = [
@@ -784,7 +784,7 @@ fn a_draft_left_in_a_damaged_file_is_never_part_of_any_balance() {
     let card_before = assist::party_card(&w.env.ctx, busy).unwrap();
     let list_input = AccountsListInput {
         filter: AccountFilter {
-            account_type: None,
+            kind: mandi_services::core::accounts::AccountListKind::All,
             text: String::new(),
             include_inactive: true,
         },
@@ -930,7 +930,7 @@ fn snapshot(env: &TestEnv, dir: &TempDir, watch: &[i64], busy: i64) -> Vec<Strin
         &env.ctx,
         &AccountsListInput {
             filter: AccountFilter {
-                account_type: None,
+                kind: mandi_services::core::accounts::AccountListKind::All,
                 text: String::new(),
                 include_inactive: true,
             },
@@ -1273,20 +1273,28 @@ fn a_version_2_file_migrated_to_0003_keeps_every_number() {
 #[test]
 fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
     let w = world();
-    let list = accounts::list(
-        &w.env.ctx,
-        &AccountsListInput {
-            filter: AccountFilter {
-                account_type: None,
-                text: String::new(),
-                include_inactive: true,
-            },
-            offset: 0,
-            limit: 0,
-        },
-    )
-    .unwrap();
-    let system: Vec<_> = list.rows.iter().filter(|r| r.is_system).collect();
+    // The accounts list shows only sellers and buyers since plan 32, so the system accounts are
+    // read from the table.
+    struct SystemAccount {
+        id: i64,
+        code: String,
+    }
+    let system: Vec<SystemAccount> = {
+        let conn = raw(&w.dir);
+        let mut statement = conn
+            .prepare("SELECT id, code FROM accounts WHERE is_system = 1 ORDER BY code")
+            .unwrap();
+        statement
+            .query_map([], |r| {
+                Ok(SystemAccount {
+                    id: r.get(0)?,
+                    code: r.get(1)?,
+                })
+            })
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
     assert!(system.len() >= 15, "only {} system accounts", system.len());
 
     for row in &system {

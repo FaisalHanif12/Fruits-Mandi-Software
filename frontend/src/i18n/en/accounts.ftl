@@ -6,7 +6,7 @@
 accounts-title = Accounts
 
 # review: pending
-accounts-help = Sellers, buyers, people who borrow money and the other accounts. Open an account to see or change it, or make a new one.
+accounts-help = Sellers, buyers and { -pukhta-khata }. Open an account to see or change it, or make a new one.
 
 # review: pending
 accounts-new = New account
@@ -95,6 +95,9 @@ accounts-type-seller = { -beopari }
 
 # review: pending
 accounts-type-buyer = { -gahak }
+
+# review: pending
+accounts-type-pukhta = { -pukhta-khata }
 
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
@@ -300,7 +303,7 @@ chart-load-failed = The chart of accounts could not be opened
 masters-accounts-title = Accounts
 
 # review: pending
-masters-accounts-help = Sellers, buyers and the other accounts.
+masters-accounts-help = Sellers, buyers and { -pukhta-khata }.
 
 # review: pending
 masters-chart-title = Chart of accounts

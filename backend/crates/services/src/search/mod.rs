@@ -14,18 +14,17 @@ use std::sync::Arc;
 use mandi_db::masters as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
-    AccountBalance, AccountHit, AccountScope, BUYER_CONTROL, Balance, GlobalHit, ResolveCodeInput,
-    ResolveStatus, ResolvedCode, SELLER_CONTROL, SearchAccountsInput, SearchGlobalInput,
+    AccountBalance, AccountHit, AccountScope, Balance, GlobalHit, ResolveCodeInput, ResolveStatus,
+    ResolvedCode, SearchAccountsInput, SearchGlobalInput,
 };
 use mandi_domain::core::accounts::{AccountsRecentInput, AccountsTouchInput};
+use mandi_domain::core::codes::{self, CodeType};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
 use serde_json::{Value, json};
 
-pub use index::{
-    Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, SHORT_CODE_DIGITS, Usage, short_serial,
-};
+pub use index::{Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, Usage, short_running};
 
 use crate::auth::Actor;
 use crate::context::Context;
@@ -166,8 +165,9 @@ fn usage_json(usage: &Usage) -> Value {
     json!({ "recent": usage.recent, "counts": counts })
 }
 
-/// The active records of a list that match `text`, best first (see [`Index::search`]). Empty
-/// text gives nothing. Only reads.
+/// The active records of a list that match `text`, best first (see [`Index::search_page`]). Empty
+/// text gives the whole list: the records chosen last first, then the rest by code (plan 32 R7).
+/// This is the first page; [`search_page`] takes an offset. Only reads.
 ///
 /// # Errors
 /// `ERR_TEXT_TOO_LONG` (`text`, value `max`) for more than [`MAX_QUERY_CHARS`] characters;
@@ -179,12 +179,29 @@ pub fn search(
     text: &str,
     limit: u32,
 ) -> Result<Vec<SearchHit>, ServiceError> {
+    search_page(ctx, actor, scope, text, 0, limit)
+}
+
+/// One page of [`search`]: `limit` hits after skipping `offset`. A page shorter than `limit` is the
+/// last one. Only reads.
+///
+/// # Errors
+/// As [`search`].
+pub fn search_page(
+    ctx: &Context,
+    actor: &Actor,
+    scope: SearchScope,
+    text: &str,
+    offset: u32,
+    limit: u32,
+) -> Result<Vec<SearchHit>, ServiceError> {
     // A huge paste is refused before it is turned into search keys, like the account search.
     check_text(text)?;
     let index = current(ctx)?;
     let usage = usage_of(ctx, actor, scope)?;
     let limit = usize::try_from(limit).unwrap_or(MAX_HITS);
-    Ok(index.search(scope, text, limit, &usage))
+    let offset = usize::try_from(offset).unwrap_or(0);
+    Ok(index.search_page(scope, text, offset, limit, &usage))
 }
 
 /// The list for `Alt+Down`: the last 10 chosen, then the rest (see [`Index::recent`]). Only
@@ -327,10 +344,12 @@ pub fn touch_account(
     })
 }
 
-/// The accounts of a field that match the typed text, best first: exact full code, exact serial
-/// (a short code, PRD FR-7.39), names that start with the text, accounts used before, close
-/// spellings. Only reads. A short code needs no `Enter` here: the list previews the top match
-/// while the user types, and the code is only taken by [`resolve_code`] (PRD FR-7.38).
+/// The accounts of a field that match the typed text, best first: exact full code, running number
+/// (a short code, PRD 1.8 R5), names that start with the text, accounts used before, close
+/// spellings. Empty text gives the whole list of the field: the accounts chosen last first, then
+/// the rest by code, one page at a time (plan 32 R7). Only reads. A short code needs no `Enter`
+/// here: the list previews the top match while the user types, and the code is only taken by
+/// [`resolve_code`] (PRD FR-7.38).
 ///
 /// # Errors
 /// `ERR_REQUIRED` on `control_id` for scope `control`; `ERR_TEXT_TOO_LONG` on `text`;
@@ -349,26 +368,37 @@ pub fn search_accounts(
         &account_usage_key(input.scope, input.control_id),
     )?;
     let limit = usize::try_from(input.limit).unwrap_or(MAX_HITS);
-    Ok(index.search_accounts(input.scope, input.control_id, &input.text, limit, &usage))
+    let offset = usize::try_from(input.offset).unwrap_or(0);
+    Ok(index.search_accounts_page(
+        input.scope,
+        input.control_id,
+        &input.text,
+        offset,
+        limit,
+        &usage,
+    ))
 }
 
-/// The full code a new account would get, if the typed digits are a well-formed code of the
-/// field's series and the serial is a normal one (PRD FR-10.3).
-fn well_formed(control_code: &str, digits: &str) -> Option<u32> {
-    let serial = digits.strip_prefix(control_code)?;
-    if serial.len() != 4 {
-        return None;
+/// The code type of the sellers or the buyers of a field, if the field has one series.
+fn series_type(scope: AccountScope) -> Option<CodeType> {
+    match scope {
+        AccountScope::Seller | AccountScope::LotSeller => Some(CodeType::Seller),
+        AccountScope::Buyer => Some(CodeType::Buyer),
+        AccountScope::Any | AccountScope::Control => None,
     }
-    serial.parse().ok()
 }
 
-/// Takes a typed code on `Enter` or on leaving the field (PRD FR-7.38, FR-7.39, FR-7.42).
+/// Takes a typed code on `Enter` or on leaving the field (PRD FR-7.38, FR-7.39, FR-7.42, PRD 1.8
+/// R5).
 ///
-/// - 1 to 4 digits are a short code: the serial in a seller or buyer field, the seller and the
-///   buyer with that serial in a field that takes any account. Serial 0 and 9000 and up are
-///   `reserved`. Other accounts have no short code.
-/// - More digits are a full code, which must be in the field's series.
+/// - A full code is looked up as it is, in the field's list: `0010` or `00111` in a seller field,
+///   or the code of any account in a field that takes any account.
+/// - A running number (`0`, `11`: digits with no leading zero, at most 7) is a short code: the
+///   account with that running number in a seller or buyer field, and the seller and the buyer with
+///   it in a field that takes any account. Other accounts have no short code.
 /// - Anything that is not digits is a name, not a code: `unknown`, nothing suggested.
+/// - `unknown` carries `suggested_code` when the field has one series and the typed text is a short
+///   code or a full code of that series (the code an `F4` add would take).
 ///
 /// # Errors
 /// `ERR_REQUIRED` on `control_id` (scope `control`) or on `text` (empty); `ERR_TEXT_TOO_LONG`.
@@ -391,23 +421,25 @@ pub fn resolve_code(ctx: &Context, input: &ResolveCodeInput) -> Result<ResolvedC
     if !text.bytes().all(|b| b.is_ascii_digit()) {
         return Ok(unknown(None));
     }
-    let series = |scope: AccountScope| match scope {
-        AccountScope::Seller => Some(SELLER_CONTROL.to_owned()),
-        AccountScope::Buyer => Some(BUYER_CONTROL.to_owned()),
-        _ => None,
-    };
-    if text.len() <= SHORT_CODE_DIGITS {
+    // A full code first: a code of the scheme never looks like a running number (it starts with 00).
+    if let Some(hit) = index.account_with_code(input.scope, input.control_id, text) {
+        let status = if hit.is_active {
+            ResolveStatus::Found
+        } else {
+            ResolveStatus::Inactive
+        };
+        return Ok(answer(status, Some(hit), Vec::new(), None));
+    }
+    let series = series_type(input.scope);
+    if let Some(running) = short_running(text) {
         if input.scope == AccountScope::Control {
             return Ok(unknown(None));
         }
-        let Some(serial) = short_serial(text) else {
-            return Ok(answer(ResolveStatus::Reserved, None, Vec::new(), None));
-        };
-        let all = index.accounts_with_serial(input.scope, serial);
+        let all = index.accounts_with_running(input.scope, running);
         let mut active: Vec<AccountHit> = all.iter().filter(|a| a.is_active).cloned().collect();
         return Ok(match (active.len(), all.first()) {
             (1, _) => answer(ResolveStatus::Found, active.pop(), Vec::new(), None),
-            (0, None) => unknown(series(input.scope).map(|code| format!("{code}{serial:04}"))),
+            (0, None) => unknown(series.and_then(|t| codes::build_code(t, running))),
             (0, Some(first)) => answer(
                 ResolveStatus::Inactive,
                 Some(first.clone()),
@@ -417,36 +449,38 @@ pub fn resolve_code(ctx: &Context, input: &ResolveCodeInput) -> Result<ResolvedC
             _ => answer(ResolveStatus::Several, None, active, None),
         });
     }
-    if let Some(hit) = index.account_with_code(input.scope, input.control_id, text) {
-        let status = if hit.is_active {
-            ResolveStatus::Found
-        } else {
-            ResolveStatus::Inactive
+    // Not found. In the field of one control (other accounts keep the control code plus a 4-digit
+    // serial, PRD FR-10.3), a well-formed code of that control is what an add would use; a system
+    // serial (0000 and 9000 to 9999) can never be added.
+    if input.scope == AccountScope::Control {
+        let Some(id) = input.control_id else {
+            return Ok(unknown(None));
         };
-        return Ok(answer(status, Some(hit), Vec::new(), None));
+        let control = ctx
+            .db
+            .read(|conn| mandi_db::accounts::control_by_id(conn, id))?;
+        let serial = control
+            .and_then(|c| text.strip_prefix(c.code.as_str()).map(str::to_owned))
+            .filter(|rest| rest.len() == 4)
+            .and_then(|rest| rest.parse::<u32>().ok());
+        return Ok(match serial {
+            Some(serial)
+                if (mandi_domain::core::accounts::FIRST_SERIAL
+                    ..=mandi_domain::core::accounts::LAST_SERIAL)
+                    .contains(&serial) =>
+            {
+                unknown(Some(text.to_owned()))
+            }
+            Some(_) => answer(ResolveStatus::Reserved, None, Vec::new(), None),
+            None => unknown(None),
+        });
     }
-    // Not found: if the digits are a well-formed code of the field's series, say which add
-    // would make it, or that its serial is the system's.
-    let control_code = match input.scope {
-        AccountScope::Control => match input.control_id {
-            Some(id) => ctx
-                .db
-                .read(|conn| mandi_db::accounts::control_by_id(conn, id))?
-                .map(|c| c.code),
-            None => None,
-        },
-        other => series(other),
-    };
-    let serial = control_code
-        .as_deref()
-        .and_then(|code| well_formed(code, text));
-    Ok(match serial {
-        Some(serial) if short_serial(&serial.to_string()).is_some() => {
-            unknown(Some(text.to_owned()))
-        }
-        Some(_) => answer(ResolveStatus::Reserved, None, Vec::new(), None),
-        None => unknown(None),
-    })
+    // A well-formed full code of the field's series is what an add would use.
+    Ok(unknown(
+        series
+            .filter(|t| codes::running_of(text, *t).is_some())
+            .map(|_| text.to_owned()),
+    ))
 }
 
 /// The balances of some accounts, read from the posted journal (PRD FR-6.1). An account with no
@@ -580,6 +614,10 @@ pub fn global(
     input: &SearchGlobalInput,
 ) -> Result<Vec<GlobalHit>, ServiceError> {
     check_text(&input.text)?;
+    // Global search needs a word: empty text is not "the whole list" here (that is for pickers).
+    if input.text.trim().is_empty() {
+        return Ok(Vec::new());
+    }
     let limit = usize::try_from(input.limit)
         .unwrap_or(MAX_HITS)
         .min(MAX_HITS);
@@ -596,6 +634,7 @@ pub fn global(
             control_id: None,
             text: input.text.clone(),
             limit: u32::try_from(account_limit).unwrap_or(input.limit),
+            offset: 0,
         },
     )?;
     let mut out: Vec<GlobalHit> = hits

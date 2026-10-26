@@ -284,7 +284,7 @@ describe('search_global keeps the voucher hits of the backend’s answer', () =>
     expect(vouchers[0]).toMatchObject({
       id: 2,
       entry_date: '2026-10-10',
-      account: { code: '03040001' },
+      account: { code: '0020' },
       status: 'saved',
     });
     // A voucher hit and an account hit with the same id are two rows.

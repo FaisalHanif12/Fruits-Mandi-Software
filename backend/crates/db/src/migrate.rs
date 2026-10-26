@@ -49,6 +49,12 @@ pub const STABLE_POSTING_ORDER_SQL: &str =
 pub const TRIPS_GARDENS_FRUIT_KHATA_SQL: &str =
     include_str!("../migrations/0006_trips_gardens_fruit_khata.sql");
 
+/// The seventh migration (plan 32, PRD 1.8): simple codes. Sellers, buyers, the two پختہ کھاتہ accounts,
+/// items, packings and staff are renumbered to the type number plus a running number from 0
+/// (`0010`, `0020`, `0030`, `0040`, `0050`, `0060`), staff get a `code` column, and the upper limit of
+/// `accounts.serial` is lifted by [`codes_hook`]. No amount, journal line or id changes.
+pub const SIMPLE_PARTY_CODES_SQL: &str = include_str!("../migrations/0007_simple_party_codes.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -67,6 +73,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
         M::up(STABLE_POSTING_ORDER_SQL),
         M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, codes_hook),
     ])
 }
 
@@ -128,9 +135,15 @@ const WIDEN: [Widen; 7] = [
 /// the new text. Each edit must find its text exactly once, or the migration fails and the copy
 /// taken before it is put back.
 fn widen_checks(tx: &Connection) -> Result<(), HookError> {
+    edit_table_text(tx, &WIDEN, "migration 6")
+}
+
+/// Edits the text of tables in `sqlite_schema`, as [`widen_checks`] does. `label` names the migration
+/// in the error text.
+fn edit_table_text(tx: &Connection, edits: &[Widen], label: &str) -> Result<(), HookError> {
     let version: i64 = tx.query_row("PRAGMA schema_version", [], |row| row.get(0))?;
     tx.execute_batch("PRAGMA writable_schema = ON")?;
-    for edit in &WIDEN {
+    for edit in edits {
         let sql: String = tx.query_row(
             "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?1",
             [edit.table],
@@ -138,7 +151,7 @@ fn widen_checks(tx: &Connection) -> Result<(), HookError> {
         )?;
         if sql.matches(edit.from).count() != 1 {
             return Err(HookError::Hook(format!(
-                "migration 6: the text to widen was not found exactly once in {}",
+                "{label}: the text to widen was not found exactly once in {}",
                 edit.table
             )));
         }
@@ -149,7 +162,7 @@ fn widen_checks(tx: &Connection) -> Result<(), HookError> {
     }
     let next = version
         .checked_add(1)
-        .ok_or_else(|| HookError::Hook("migration 6: the schema version is too big".to_owned()))?;
+        .ok_or_else(|| HookError::Hook(format!("{label}: the schema version is too big")))?;
     tx.execute_batch(&format!("PRAGMA schema_version = {next}"))?;
     tx.execute_batch("PRAGMA writable_schema = OFF")?;
     Ok(())
@@ -157,12 +170,26 @@ fn widen_checks(tx: &Connection) -> Result<(), HookError> {
 
 /// After the SQL of migration 6: widen the checks, then seed the new controls and the system
 /// account (the `separate` and `garden` controls need the wider party type check), rename the cash
-/// account in English, and make the 0604 account of every partner that exists.
-fn trips_hook(tx: &Transaction) -> Result<(), HookError> {
+/// account in English, and make the 0604 account of every partner that exists. Public so the tests
+/// of migration 7 can build the file as it was released at version 6.
+pub fn trips_hook(tx: &Transaction) -> Result<(), HookError> {
     widen_checks(tx)?;
     crate::seed::trip_accounts(tx)?;
     crate::seed::partner_venture_accounts(tx)?;
     Ok(())
+}
+
+/// The one CHECK that migration 7 widens: `accounts.serial` was limited to 0 to 9999 for the old
+/// 4-digit serial. A running number has no upper limit (plan 32 R2), so only the lower limit stays.
+const WIDEN_SERIAL: [Widen; 1] = [Widen {
+    table: "accounts",
+    from: "serial BETWEEN 0 AND 9999",
+    to: "serial >= 0",
+}];
+
+/// After the SQL of migration 7: lift the upper limit of `accounts.serial` (see [`WIDEN_SERIAL`]).
+fn codes_hook(tx: &Transaction) -> Result<(), HookError> {
+    edit_table_text(tx, &WIDEN_SERIAL, "migration 7")
 }
 
 /// What a call to [`migrate`] did.

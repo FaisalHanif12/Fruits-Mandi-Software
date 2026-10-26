@@ -242,7 +242,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         count(&f.dir, "SELECT COUNT(*) FROM journal_entries"),
         audit_total(&f.dir),
     );
-    let pukhta = id_of(&f.env, "030119999");
+    let pukhta = id_of(&f.env, "0031");
     let buyer = accounts::save(
         &f.env.ctx,
         &f.owner,
@@ -572,7 +572,7 @@ fn the_running_list_shows_balances_and_saves_each_voucher_alone() {
     );
     assert_eq!(
         preview.rows[0].account.as_ref().map(|a| a.code.as_str()),
-        Some("030110001")
+        Some("0010")
     );
     assert_eq!(
         preview.total_paisa,
@@ -963,7 +963,7 @@ fn the_voucher_list_filters_by_kind_and_date() {
     );
     assert_eq!(
         mid[0].account.as_ref().map(|a| a.code.as_str()),
-        Some("030110002")
+        Some("0011")
     );
     let early = ask(None, "", "01-10-2026");
     assert_eq!(early.iter().map(|v| v.number).collect::<Vec<_>>(), [1]);

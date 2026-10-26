@@ -148,7 +148,7 @@ fn mixed_bikri_prints_the_stored_totals_and_the_journal() {
         assert_eq!(get(rahim, "print-freight"), 0);
         assert_eq!(get(rahim, "print-total-deductions"), 7_084);
         assert_eq!(get(rahim, "print-net-sale"), 22_316);
-        let (dr, cr) = journal(&w, id, "030110001");
+        let (dr, cr) = journal(&w, id, "0010");
         assert_eq!((dr, cr), (5_000, 27_316));
         assert_eq!(get(rahim, "print-net-sale"), cr - dr);
         // No freight was posted to the transporters' account.
@@ -158,7 +158,7 @@ fn mixed_bikri_prints_the_stored_totals_and_the_journal() {
         assert_eq!(get(karim, "print-gross-sale"), 12_000);
         assert_eq!(get(karim, "print-total-deductions"), 720);
         assert_eq!(get(karim, "print-net-sale"), 11_280);
-        let (dr, cr) = journal(&w, id, "030110002");
+        let (dr, cr) = journal(&w, id, "0011");
         assert_eq!(get(karim, "print-net-sale"), cr - dr);
 
         // The two bills together are the بکری totals of bikri_get.
@@ -183,10 +183,7 @@ fn mixed_bikri_prints_the_stored_totals_and_the_journal() {
         assert_eq!(get(akram, "print-buyer-commission"), 1_452);
         assert_eq!(get(akram, "print-laga"), 240);
         assert_eq!(get(akram, "print-buyer-pays"), 25_892);
-        assert_eq!(
-            get(akram, "print-buyer-pays"),
-            journal(&w, id, "03040001").0
-        );
+        assert_eq!(get(akram, "print-buyer-pays"), journal(&w, id, "0020").0);
         assert_eq!(
             akram.words.as_ref().unwrap().text,
             if language == Language::Ur {
@@ -197,10 +194,7 @@ fn mixed_bikri_prints_the_stored_totals_and_the_journal() {
         );
         let arshad = slips.pages.get(1).unwrap();
         assert_eq!(get(arshad, "print-buyer-pays"), 18_684);
-        assert_eq!(
-            get(arshad, "print-buyer-pays"),
-            journal(&w, id, "03040002").0
-        );
+        assert_eq!(get(arshad, "print-buyer-pays"), journal(&w, id, "0021").0);
         let slips_total = slips
             .pages
             .iter()
@@ -234,7 +228,7 @@ fn a_seller_who_owes_the_firm_matches_his_journal_debit() {
         assert_eq!(amount(page, "print-net-sale"), None);
         assert_eq!(get(page, "print-seller-owes"), 7_511);
         // The journal: the negative seller credit 2,511 and the نقد 5,000 are both debits.
-        assert_eq!(journal(&w, id, "030110001"), (7_511, 0));
+        assert_eq!(journal(&w, id, "0010"), (7_511, 0));
         // No minus sign anywhere on the page.
         assert!(page.amounts.iter().all(|a| !a.amount.contains('-')));
         assert_eq!(

@@ -413,7 +413,7 @@ fn a_line_on_a_pukhta_khata_account_needs_its_person_and_others_must_not_have_on
     // PRD FR-13.5: balances there are kept per person.
     let (dir, env, owner) = ready();
     let cash = id_of(&env, "01010001");
-    let pukhta = id_of(&env, "03049999");
+    let pukhta = id_of(&env, "0030");
     let build = |person: Option<&str>, on_pukhta: bool, other_person: Option<&str>| {
         let mut a = LedgerLine::new(AccountId::new(cash), Side::Dr, rupees(100));
         a.person_key = other_person.map(str::to_owned);

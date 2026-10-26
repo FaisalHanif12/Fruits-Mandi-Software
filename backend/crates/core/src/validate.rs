@@ -128,30 +128,33 @@ pub fn posting_date(
     Ok(value)
 }
 
-/// What the user typed in an account code field (Code Standards 4.2, PRD FR-7.39).
+/// What the user typed in an account code field (Code Standards 4.2, PRD 1.8 R5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AccountCodeInput {
-    /// A full code: control code + 4-digit serial, 8 digits (9 for sellers).
+    /// A full code: a code of the scheme of plan 32 (`0010`, `00111`: the type number and a running
+    /// number, 4 to 10 digits, starting with `00`), or the 8 or 9 digits of any other account
+    /// (control code + 4-digit serial).
     Full(String),
-    /// A short code: the serial alone, 1 to 4 digits. Services resolve it by field type.
+    /// A short code: the running number alone, digits with no leading zero, up to 7 digits. Services
+    /// resolve it by field type.
     Short(ShortCode),
 }
 
-/// A serial typed as a short code, 0 to 9999. `"1"` and `"0001"` are both serial 1.
+/// A running number typed as a short code, 0 to 9,999,999. `"0"` is the first account of its type
+/// (`0010` in a seller field) and `"11"` is `00111`. There is no padding: `"011"` is not a short
+/// code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ShortCode(u16);
+pub struct ShortCode(u32);
 
 impl ShortCode {
-    /// The serial.
-    pub fn serial(self) -> u16 {
+    /// The running number.
+    pub fn serial(self) -> u32 {
         self.0
     }
 }
 
-/// Lengths of a full account code.
+/// Lengths of a full code of an account that is not a seller or a buyer.
 const FULL_CODE_LENGTHS: [usize; 2] = [8, 9];
-/// The longest short code.
-const MAX_SHORT_CODE_LEN: usize = 4;
 
 /// An account code. Whether it exists and is active is checked by the service.
 pub fn account_code(field: &str, input: &str) -> Result<AccountCodeInput, FieldError> {
@@ -162,15 +165,17 @@ pub fn account_code(field: &str, input: &str) -> Result<AccountCodeInput, FieldE
     if !digits.bytes().all(|b| b.is_ascii_digit()) {
         return Err(error(ErrorCode::ErrCodeInvalid, field));
     }
-    if FULL_CODE_LENGTHS.contains(&digits.len()) {
+    // A running number never starts with 0 (except `0` itself) and a code of the scheme starts with
+    // 00, so the two can never be mixed up.
+    if let Some(running) = crate::codes::parse_running(&digits)
+        && let Ok(serial) = u32::try_from(running)
+    {
+        return Ok(AccountCodeInput::Short(ShortCode(serial)));
+    }
+    if crate::codes::parse_code(&digits).is_some() || FULL_CODE_LENGTHS.contains(&digits.len()) {
         return Ok(AccountCodeInput::Full(digits));
     }
-    match digits.parse::<u16>() {
-        Ok(serial) if digits.len() <= MAX_SHORT_CODE_LEN => {
-            Ok(AccountCodeInput::Short(ShortCode(serial)))
-        }
-        _ => Err(error(ErrorCode::ErrCodeInvalid, field)),
-    }
+    Err(error(ErrorCode::ErrCodeInvalid, field))
 }
 
 /// Urdu (۰-۹) and Arabic-Indic (٠-٩) digits to 0-9; other characters unchanged.

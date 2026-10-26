@@ -1,14 +1,18 @@
 // The picker for every account field of the app (PRD FR-7.38 to FR-7.42, FR-10.8, Code Standards
 // F40): sellers, buyers, or any account. It is the shared picker with three things added:
 //
-// - Short codes. A code typed in a seller or buyer field can be just the serial: `1` is 03040001
-//   in a buyer field. It is taken on Enter or on leaving the field, never while typing, because `1`
+// - Short codes. A code typed in a seller or buyer field can be just the running number: `1` is
+//   0021 in a buyer field (plan 32, R5). It is taken on Enter or on leaving the field, never while typing, because `1`
 //   may be the start of `12`. While typing, the list shows the matches and the party card previews
-//   the top one. The backend resolves the code (found, several, unknown, reserved).
+//   the top one. The backend resolves the code (found, several, unknown, reserved). A code has no
+//   fixed length (plan 32), so any run of digits is sent.
 // - The party card under the field as soon as an account is known, or highlighted (FR-7.38).
 // - Adding an account on the spot: `F4`, or the button of the unknown-code message, opens the
 //   quick add over the screen with the typed code filled in (FR-7.42, FR-10.8). The new account
 //   comes back into the field.
+// - The button of an empty list opens the Index form of a seller or a buyer above the screen,
+//   with the typed text in the name box (plan 32, R8). The new account is not put in the field:
+//   the list opens again and he is picked from it.
 //
 // Pickers never convert English letters to Urdu (F41): the text is searched as typed.
 
@@ -24,6 +28,7 @@ import {
 } from '../accounts';
 import { SHORTCUTS, useShortcut } from '../keyboard';
 import { displayName, useLanguage } from '../i18n';
+import { useAddRecord, type AddRecordKind } from './add-record';
 import { Balance } from './Balance';
 import { Button } from './Button';
 import type { FieldControlProps } from './Field';
@@ -48,6 +53,8 @@ interface AccountPickerProps extends FieldControlProps {
    * turns `showCard` off and reads this.
    */
   onCardAccount?: ((accountId: number | null) => void) | undefined;
+  /** False where adding an account from the field would not make sense, for example a filter. */
+  canAdd?: boolean | undefined;
   /** For a picker in a grid cell (see PickerBase). */
   initialText?: string | undefined;
   startOpen?: boolean | undefined;
@@ -81,8 +88,18 @@ function hitOfRow(row: AccountRow): AccountHit {
   };
 }
 
-/** Only digits, up to the length of a full code, can be a code (PRD FR-7.39). */
-const CODE_TEXT = /^\d{1,9}$/;
+/** Only digits can be a code (PRD FR-7.39). Codes grow without a limit (plan 32, R2). */
+const CODE_TEXT = /^\d{1,18}$/;
+
+/** What the empty list's button says, and what Index form it opens, for each kind of field. */
+const ADD: Record<AccountScope, { label: string; kind: AddRecordKind | null }> = {
+  seller: { label: 'search-add-seller', kind: 'seller' },
+  lot_seller: { label: 'search-add-seller', kind: 'seller' },
+  buyer: { label: 'search-add-buyer', kind: 'buyer' },
+  any: { label: 'search-add-account', kind: 'any' },
+  // The accounts of one control have their own forms (money lent, separate khata).
+  control: { label: 'search-add-account', kind: null },
+};
 
 const UNKNOWN_ID: Record<AccountScope, string> = {
   seller: 'accountpicker-unknown-seller',
@@ -101,6 +118,7 @@ export function AccountPicker({
   controlId,
   onCardAccount,
   onEnterPicked,
+  canAdd = true,
   ...field
 }: AccountPickerProps) {
   const language = useLanguage();
@@ -108,6 +126,8 @@ export function AccountPicker({
   const [note, setNote] = useState<CodeNote | null>(null);
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  const addRecord = useAddRecord();
+  const add = ADD[scope];
   // True while a code that Enter sent to the backend is being answered: when it is found, the
   // grid cell goes on to the next cell as it does after any pick by Enter (PRD FR-7.14).
   const enterPending = useRef(false);
@@ -181,6 +201,15 @@ export function AccountPicker({
           setNote(null);
         }}
         onAddNew={setAdding}
+        addLabelId={add.label}
+        showAdd={canAdd}
+        onAddRecord={
+          addRecord !== null && add.kind !== null
+            ? (text, done) => {
+                if (add.kind !== null) addRecord({ kind: add.kind, text, onClosed: done });
+              }
+            : undefined
+        }
         renderEnd={(hit) => (
           <span className="flex items-baseline gap-3">
             {scope === 'any' ? (

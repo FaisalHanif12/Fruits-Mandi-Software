@@ -37,7 +37,7 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', { balance: balance(4316, 'cr') });
+const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', { balance: balance(4316, 'cr') });
 
 const named = (text: string) => (name: string) => visible(name) === text;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

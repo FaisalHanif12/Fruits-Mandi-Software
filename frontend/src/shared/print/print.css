@@ -449,6 +449,20 @@ html:has(.print-doc[data-paper='mm80']) {
   font-weight: var(--weight-strong);
 }
 
+/* The buyer's bill (R5) on the 80 mm roll: the same pieces, one under the other (plan 17e). */
+.print-r5-compact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-2);
+}
+
+/* The last row of the roll: the buyer's total, set apart from the rows above it. */
+.print-compact-total {
+  padding-block-start: var(--print-gap-2);
+  border-block-start: var(--print-rule) solid var(--color-border);
+  font-weight: var(--weight-strong);
+}
+
 .print-compact-sub {
   --print-num-size: var(--print-latin-2);
 

@@ -8,6 +8,20 @@
 
 import { useCallback, useRef, useState } from 'react';
 
+/**
+ * A yes/no that a handler sets and another reads later, without drawing again. The picker uses it
+ * to know the Index form of its "add" button is open above the screen (plan 32, R8). It is a hook
+ * of its own for the same reason as `usePickerText`: a screen only calls `get()` and `set()`.
+ */
+export function usePickerFlag() {
+  const flag = useRef(false);
+  const get = useCallback(() => flag.current, []);
+  const set = useCallback((next: boolean) => {
+    flag.current = next;
+  }, []);
+  return { get, set };
+}
+
 export function usePickerText(initial: string | null = null) {
   // What the user is typing, or null while the field shows the chosen name. A picker in a grid
   // cell starts with the key that opened it already typed.

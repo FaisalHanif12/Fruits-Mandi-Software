@@ -109,7 +109,7 @@ export async function typeHeaderAndLot(user: User, language: Language) {
 /** Types the two sale lines of Event 1: Akram 20 at 600 and Arshad 30 at 580. */
 export async function typeTwoLines(user: User, language: Language) {
   const sales = salesGrid(language);
-  await user.keyboard('1{Enter}');
+  await user.keyboard('0{Enter}');
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('0:qty');
   });
@@ -117,7 +117,7 @@ export async function typeTwoLines(user: User, language: Language) {
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('1:buyer');
   });
-  await user.keyboard('2{Enter}');
+  await user.keyboard('1{Enter}');
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('1:qty');
   });

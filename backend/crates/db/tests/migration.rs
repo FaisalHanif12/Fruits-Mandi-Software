@@ -11,7 +11,7 @@ use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
     self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, INIT_SQL, MigrationOutcome,
-    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
+    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -19,7 +19,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 6;
+const LATEST: usize = 7;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -88,6 +88,22 @@ fn released_version_5() -> Migrations<'static> {
         M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
         M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
         M::up(STABLE_POSTING_ORDER_SQL),
+    ])
+}
+
+/// The schema as it was released at version 6: migrations 0001 to 0006.
+fn released_version_6() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
     ])
 }
 
@@ -365,10 +381,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 7).unwrap();
+    conn.pragma_update(None, "user_version", 8).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 7);
+    assert_eq!(user_version(&conn), 8);
     assert!(!backups.exists());
 }
 
@@ -526,7 +542,7 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
     // An ordinary account, to make inactive and active again after the upgrade.
     conn.execute(
         "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
-         SELECT id, '03040001', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
+         SELECT id, '0020', 1, 'buyer', 'اکرم', 'Akram', 'اکرم', 'akram', 'krm' FROM account_controls WHERE code = '0304'",
         [],
     )
     .unwrap();
@@ -639,16 +655,10 @@ fn migration_3_adds_only_a_trigger_and_keeps_every_row_and_balance() {
         [],
     )
     .unwrap();
-    conn.execute(
-        "UPDATE accounts SET is_active = 0 WHERE code = '03040001'",
-        [],
-    )
-    .unwrap();
-    conn.execute(
-        "UPDATE accounts SET is_active = 1 WHERE code = '03040001'",
-        [],
-    )
-    .unwrap();
+    conn.execute("UPDATE accounts SET is_active = 0 WHERE code = '0020'", [])
+        .unwrap();
+    conn.execute("UPDATE accounts SET is_active = 1 WHERE code = '0020'", [])
+        .unwrap();
 }
 
 #[test]
@@ -1258,7 +1268,8 @@ fn migration_6_keeps_every_row_number_and_hash_and_widens_the_checks() {
     let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
     let accounts_before = seed::counts(&conn).unwrap().accounts;
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_6(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (5, 6));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 6);
@@ -1909,4 +1920,249 @@ fn migration_6_keeps_every_row_number_and_hash_and_widens_the_checks() {
     assert!(!table_exists(&copy_conn, "purchases"));
     assert!(!table_exists(&copy_conn, "ventures"));
     assert_eq!(seed::counts(&copy_conn).unwrap().accounts, accounts_before);
+}
+
+/// Adds an account with an old-style code straight into a file of version 6.
+fn add_old_account(
+    conn: &Connection,
+    control: &str,
+    code: &str,
+    serial: i64,
+    party: &str,
+    name: &str,
+) -> i64 {
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+             search_en, search_phonetic)
+         SELECT id, ?2, ?3, ?4, ?5, ?5, ?5, lower(?5), lower(?5) FROM account_controls WHERE code = ?1",
+        (control, code, serial, party, name),
+    )
+    .unwrap();
+    conn.last_insert_rowid()
+}
+
+#[test]
+fn migration_7_renumbers_the_codes_and_changes_nothing_else() {
+    // Plan 32 (PRD 1.8): a populated file made at version 6 (old codes, posted entries with their
+    // hash chain, items, packings and staff) is upgraded: a copy is taken, sellers, buyers, the two
+    // پختہ کھاتہ accounts, items, packings and staff get the new codes in the order they have, staff
+    // get a code column, the upper limit of `accounts.serial` is gone. Every other code, every id,
+    // every amount, every balance and every chain hash is what it was.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_6(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 6);
+
+    // Sellers with a gap in their serials, buyers, a khata and a person who borrows.
+    let ids: Vec<i64> = [
+        ("03011", "030110001", 1, "seller", "Rahim"),
+        ("03011", "030110002", 2, "seller", "Karim"),
+        ("03011", "030110005", 5, "seller", "Nazir"),
+        ("0304", "03040001", 1, "buyer", "Akram"),
+        ("0304", "03040002", 2, "buyer", "Arshad"),
+        ("0304", "03040010", 10, "buyer", "Tariq"),
+        ("0305", "03050001", 1, "separate", "Family"),
+        ("0103", "01030001", 1, "other", "Aslam Lent"),
+    ]
+    .into_iter()
+    .map(|(control, code, serial, party, name)| {
+        add_old_account(&conn, control, code, serial, party, name)
+    })
+    .collect();
+    // Items and packings with codes typed by hand, out of order.
+    for (code, name) in [("2", "Mango"), ("1", "Banana"), ("12", "Apple")] {
+        conn.execute(
+            "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+             VALUES (?1, ?2, ?2, ?2, lower(?2), lower(?2), 'fruit')",
+            (code, name),
+        )
+        .unwrap();
+    }
+    for (code, name) in [("3", "Box"), ("1", "Bag")] {
+        conn.execute(
+            "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES (?1, ?2, ?2, ?2, lower(?2), lower(?2))",
+            (code, name),
+        )
+        .unwrap();
+    }
+    for name in ["Aslam", "Bilal"] {
+        conn.execute(
+            "INSERT INTO staff (name_ur, name_en, search_ur, search_en, search_phonetic, role)
+             VALUES (?1, ?1, ?1, lower(?1), lower(?1), 'munshi')",
+            [name],
+        )
+        .unwrap();
+    }
+    post_chained(&conn, "2026-10-10", "03040001", "04010001", 12_880, None);
+    post_chained(&conn, "2026-10-10", "01010001", "03040001", 10_000, None);
+    post_chained(&conn, "2026-10-10", "030110002", "01010001", 4_316, None);
+
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 3);
+    let skip_codes = [
+        ("accounts", "code"),
+        ("accounts", "serial"),
+        ("items", "code"),
+        ("packings", "code"),
+        ("staff", "code"),
+    ];
+    let before_rows = all_rows_without(&conn, &skip_codes);
+    let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
+    let before_triggers: Vec<String> = schema(&conn, "trigger");
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (6, 7));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 7);
+
+    // The new codes, in the order the records have.
+    let code_of = |id: i64| -> (String, i64) {
+        conn.query_row(
+            "SELECT code, serial FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap()
+    };
+    let got: Vec<(String, i64)> = ids.iter().map(|id| code_of(*id)).collect();
+    let want = [
+        ("0010", 0),
+        ("0011", 1),
+        ("0012", 2),
+        ("0020", 0),
+        ("0021", 1),
+        ("0022", 2),
+        ("03050001", 1),
+        ("01030001", 1),
+    ];
+    assert_eq!(
+        got,
+        want.map(|(c, n)| (c.to_owned(), n)).to_vec(),
+        "sellers and buyers are numbered from 0 in their old order; the khata and the lent person keep theirs"
+    );
+    let one = |sql: &str| -> (String, i64) {
+        conn.query_row(sql, [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+    };
+    assert_eq!(
+        one("SELECT code, serial FROM accounts WHERE is_pukhta_khata = 1 AND party_type = 'buyer'"),
+        ("0030".to_owned(), 0)
+    );
+    assert_eq!(
+        one(
+            "SELECT code, serial FROM accounts WHERE is_pukhta_khata = 1 AND party_type = 'seller'"
+        ),
+        ("0031".to_owned(), 1)
+    );
+    for kept in [
+        "01010001",
+        "01020001",
+        "02010001",
+        "03040000",
+        "030119998",
+        "04010001",
+        "06010001",
+        "06019999",
+    ] {
+        let found: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM accounts WHERE code = ?1",
+                [kept],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(found, 1, "{kept} keeps its code");
+    }
+    let list = |sql: &str| -> Vec<String> {
+        conn.prepare(sql)
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    assert_eq!(
+        list("SELECT code || ' ' || name_en FROM items ORDER BY code"),
+        ["0040 Banana", "0041 Mango", "0042 Apple"],
+        "items follow the order of their old codes as numbers: 1, 2, 12"
+    );
+    assert_eq!(
+        list("SELECT code || ' ' || name_en FROM packings ORDER BY code"),
+        ["0050 Bag", "0051 Box"]
+    );
+    assert_eq!(
+        list("SELECT code || ' ' || name_en FROM staff ORDER BY code"),
+        ["0060 Aslam", "0061 Bilal"]
+    );
+
+    // The staff code is unique; the serial of an account has no upper limit any more, but is not
+    // negative; a system account still cannot change its code.
+    assert!(
+        conn.execute(
+            "INSERT INTO staff (name_ur, name_en, search_ur, search_en, search_phonetic, role, code)
+             VALUES ('x', 'x', 'x', 'x', 'x', 'munshi', '0060')",
+            [],
+        )
+        .is_err()
+    );
+    add_old_account(&conn, "03011", "0019999999", 9_999_999, "seller", "Last");
+    assert_eq!(
+        one("SELECT code, serial FROM accounts WHERE name_en = 'Last'"),
+        ("0019999999".to_owned(), 9_999_999)
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                 search_en, search_phonetic)
+             SELECT id, '0019', -1, 'seller', 'n', 'n', 'n', 'n', 'n' FROM account_controls WHERE code = '03011'",
+            [],
+        )
+        .is_err(),
+        "a negative serial is still refused"
+    );
+    let changed = conn.execute("UPDATE accounts SET code = '9' WHERE code = '0030'", []);
+    assert!(changed.is_err(), "a system account keeps its code");
+    assert_eq!(
+        schema(&conn, "trigger"),
+        before_triggers,
+        "no trigger is lost or changed"
+    );
+    let temp: i64 = conn
+        .query_row("SELECT COUNT(*) FROM sqlite_temp_master", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(temp, 0, "the working table of the migration is gone");
+
+    // Nothing else moved: every other column of every row, every hash, every balance.
+    // The account added above is left out of the comparison.
+    conn.execute("DELETE FROM accounts WHERE name_en = 'Last'", [])
+        .unwrap();
+    assert_eq!(all_rows_without(&conn, &skip_codes), before_rows);
+    assert_eq!(hashes(&conn), before_hashes);
+    mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before_totals
+    );
+    let bad_keys: i64 = conn
+        .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(bad_keys, 0);
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
 }

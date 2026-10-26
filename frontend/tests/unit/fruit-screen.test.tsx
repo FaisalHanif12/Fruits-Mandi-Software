@@ -41,7 +41,7 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-const HAJI = account(31, 'seller', '030110003', 'حاجی نذیر', 'Haji Nazir');
+const HAJI = account(31, 'seller', '0012', 'حاجی نذیر', 'Haji Nazir');
 
 beforeEach(() => {
   vi.resetAllMocks();

@@ -1624,7 +1624,7 @@ fn the_masters_and_search_commands_work_through_the_ipc() {
     );
     assert_eq!(
         h.ok("masters_next_code", json!({ "input": { "kind": "staff" } })),
-        json!("")
+        json!("0060")
     );
     // The error shape: code and field.
     let taken = save(city("1", "ملتان", "Multan", &[])).unwrap_err();

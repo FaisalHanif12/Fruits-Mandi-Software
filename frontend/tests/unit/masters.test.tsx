@@ -722,14 +722,12 @@ describe.each(LANGUAGES)('masters with their own fields (%s)', (language) => {
     expect(visible(document.body.textContent)).toContain(
       message(language, 'masters-staff-account-hint'),
     );
-    // A master with no code of its own has no code field.
-    expect(
-      screen.queryByLabelText(message(language, 'masters-field-code')),
-    ).not.toBeInTheDocument();
+    // Staff have a code of their own since plan 32.
+    expect(screen.getByLabelText(message(language, 'masters-field-code'))).toBeInTheDocument();
   });
 
   it('a mark has an owner seller, found with the account picker and sent back as chosen', async () => {
-    const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim');
+    const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim');
     fakeAccountSearch([RAHIM]);
     fakeMasters();
     await renderApp('/index/markas/new');
@@ -753,7 +751,7 @@ describe.each(LANGUAGES)('masters with their own fields (%s)', (language) => {
     const [kind, draft] = vi.mocked(mastersApi.mastersSave).mock.calls[0] ?? [];
     expect(kind).toBe('marka');
     expect(draft?.text).toMatchObject({ mark_text: 'AR' });
-    expect(draft?.refs['owner']).toMatchObject({ id: 31, code: '030110001' });
+    expect(draft?.refs['owner']).toMatchObject({ id: 31, code: '0010' });
   });
 
   it('a narration is offered in the voucher types that are ticked, and in all when none is', async () => {

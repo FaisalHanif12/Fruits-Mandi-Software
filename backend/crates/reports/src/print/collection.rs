@@ -55,7 +55,7 @@ pub struct CollectionPrintDataInput {
 pub struct CollectionPrintRow {
     /// The row number in the whole list, 1, 2, 3 ..., formatted for print.
     pub serial: String,
-    /// The short code of the buyer (PRD FR-7.39): his serial, for example `1` for 03040001.
+    /// The short code of the buyer (PRD FR-7.39): his running number, for example `1` for 0021.
     pub code: String,
     /// His name in the print language.
     pub name: String,

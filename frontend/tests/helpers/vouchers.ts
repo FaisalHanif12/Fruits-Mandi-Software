@@ -25,23 +25,23 @@ export type FakeVouchers = VoucherBooks;
 
 const isoOf = (text: string): string => text.split('-').reverse().join('-');
 
-export const AKRAM = account(21, 'buyer', '03040001', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
+export const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax', {
   balance: balance(12880, 'dr'),
 });
-export const ARSHAD = account(22, 'buyer', '03040002', 'ارشد ملتانی', 'Arshad Multani', {
+export const ARSHAD = account(22, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   balance: balance(18684, 'dr'),
 });
 export const PUKHTA_BUYER = account(
   23,
   'buyer',
-  '03049999',
+  '0030',
   'پختہ کھاتہ (خریدار)',
   'Pukhta Khata (Buyer)',
 );
-export const RAHIM = account(31, 'seller', '030110001', 'رحیم', 'Rahim', {
+export const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   balance: balance(4316, 'cr'),
 });
-export const KARIM = account(32, 'seller', '030110002', 'کریم', 'Karim', {
+export const KARIM = account(32, 'seller', '0011', 'کریم', 'Karim', {
   balance: balance(10160, 'cr'),
 });
 export const TRANSPORT = account(41, 'other', '02010002', 'کرایہ کھاتہ', 'Freight Payable', {

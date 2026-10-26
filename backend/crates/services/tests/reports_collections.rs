@@ -140,7 +140,7 @@ fn r20_lists_the_buyers_who_owe_and_its_total_is_the_shops_total_agrahi() {
     // PRD 4.9: اکرم 2,880 and ارشد 18,684. شاہد paid on the spot and رحیم, کریم are sellers.
     assert_eq!(page.total_count, 2);
     let akram = &page.rows.first().unwrap().cells;
-    assert_eq!(code_of(&akram[0]), "03040001");
+    assert_eq!(code_of(&akram[0]), "0020");
     assert_eq!(money(&akram[3]), 2_880);
     // His one open bill is بکری 1 of 10-10-26, 0 days old, in the first band (E2E-6, E2E-24).
     assert_eq!(date_of(&akram[4]).as_deref(), Some("2026-10-10"));
@@ -150,7 +150,7 @@ fn r20_lists_the_buyers_who_owe_and_its_total_is_the_shops_total_agrahi() {
         vec![2_880, 0, 0, 0]
     );
     let arshad = &page.rows.get(1).unwrap().cells;
-    assert_eq!(code_of(&arshad[0]), "03040002");
+    assert_eq!(code_of(&arshad[0]), "0021");
     assert_eq!(money(&arshad[3]), 18_684);
     // The total row is 21,564 (PRD 4.9, FR-19.9) and equals the books.
     assert_eq!(page.totals.get(3).map(money), Some(21_564));
@@ -251,14 +251,15 @@ fn r20_keeps_one_time_buyers_apart_by_person_e2e_21() {
     assert_eq!(
         shahid[2],
         Cell::Text {
-            text: "03000000000".into()
+            // The dash form of every report phone (commit 63be6df).
+            text: "0300-0000000".into()
         }
     );
     let nasir = by_name(&before, "Nasir").unwrap();
     assert_eq!(money(&nasir[3]), 2_000);
     match &nasir[0] {
         Cell::Party { party } => {
-            assert_eq!(party.code, "03049999");
+            assert_eq!(party.code, "0030");
             assert!(party.person_key.is_some());
             assert_eq!(party.short_code, None);
         }
@@ -340,7 +341,7 @@ fn r21_groups_the_buyers_by_city_with_a_total_for_each_city() {
     let first = &page.rows[0].cells;
     assert_eq!(names_en(&first[0]), "Kot Radha Kishan");
     assert_eq!(money(&first[3]), 2_880);
-    assert_eq!(code_of(&page.rows[1].cells[1]), "03040001");
+    assert_eq!(code_of(&page.rows[1].cells[1]), "0020");
     let no_city = &page.rows[2].cells;
     assert_eq!(no_city[0], Cell::Empty);
     assert_eq!(money(&no_city[3]), 18_684);
@@ -422,7 +423,7 @@ fn r24_lists_karim_with_10160_and_not_rahim_who_is_paid_up() {
     assert_eq!(label(&page.rows[0].cells[0]), "report-section-payable");
     assert_eq!(money(&page.rows[0].cells[2]), 10_160);
     let karim = &page.rows[1].cells;
-    assert_eq!(code_of(&karim[1]), "030110002");
+    assert_eq!(code_of(&karim[1]), "0011");
     assert_eq!(money(&karim[2]), 10_160);
     assert_eq!(karim[3], Cell::Empty);
     assert_eq!(karim[4], Cell::Empty);
@@ -521,7 +522,7 @@ fn r24_after_e2e_28_shows_the_payable_and_the_advance_that_stays_open() {
     save(&w, &draft);
     let page = report(&w, ReportId::R24, ReportFilters::default(), 0, 0);
     assert_eq!(
-        seller_row(&page, "030110001"),
+        seller_row(&page, "0010"),
         Some((
             19_316,
             15_000,
@@ -539,7 +540,7 @@ fn r24_after_e2e_28_shows_the_payable_and_the_advance_that_stays_open() {
     vouchers::save_payment(&w.env.ctx, &w.owner, &payment(w.rahim, "19,316")).unwrap();
     let after = report(&w, ReportId::R24, ReportFilters::default(), 0, 0);
     assert_eq!(
-        seller_row(&after, "030110001"),
+        seller_row(&after, "0010"),
         Some((
             0,
             15_000,
@@ -553,7 +554,7 @@ fn r24_after_e2e_28_shows_the_payable_and_the_advance_that_stays_open() {
     vouchers::save_payment(&w.env.ctx, &w.owner, &payment(w.rahim, "700")).unwrap();
     let owing = report(&w, ReportId::R24, ReportFilters::default(), 0, 0);
     assert_eq!(
-        seller_row(&owing, "030110001"),
+        seller_row(&owing, "0010"),
         Some((
             0,
             15_000,
@@ -610,7 +611,7 @@ fn r26_shows_rahims_advance_fully_adjusted_e2e_7() {
     let page = report(&w, ReportId::R26, ReportFilters::default(), 0, 0);
     assert_eq!(page.total_count, 1);
     let row = &page.rows[0].cells;
-    assert_eq!(code_of(&row[0]), "030110001");
+    assert_eq!(code_of(&row[0]), "0010");
     // Given 15,000, returned 0, adjusted 15,000, open 0, last advance 01-09-26.
     assert_eq!(
         row[1..5].iter().map(money).collect::<Vec<_>>(),
@@ -858,7 +859,7 @@ fn every_collections_report_prints_in_both_languages_with_the_totals_of_the_scre
     match en.rows[0].cells.first().unwrap() {
         PrintCell::Party { party } => assert_eq!(
             (party.short_code.as_deref(), party.name.as_str()),
-            (Some("1"), "Akram Toll Tax")
+            (Some("0"), "Akram Toll Tax")
         ),
         other => panic!("{other:?}"),
     }

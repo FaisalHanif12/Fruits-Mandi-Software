@@ -124,7 +124,7 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
     });
     const [first, second] = rowIds();
     if (first === undefined || second === undefined) throw new Error('rows');
-    expect(cell(first, 'code')).toBe('03040001');
+    expect(cell(first, 'code')).toBe('0020');
     expect(cell(first, 'name')).toBe(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     expect(cell(first, 'dues')).toBe('2,880');
     expect(cell(first, 'days')).toBe('3');
@@ -205,9 +205,9 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
     );
     const byCode = (code: string) => rowIds().find((id) => cell(id, 'code') === code) ?? '';
     await waitFor(() => {
-      expect(cell(byCode('03040002'), 'received')).toContain('50.5');
+      expect(cell(byCode('0021'), 'received')).toContain('50.5');
     });
-    expect(cell(byCode('03040001'), 'received')).toBe('');
+    expect(cell(byCode('0020'), 'received')).toBe('');
     // The reason stays after the round was built again, and is also at the cell.
     expect(visible(screen.getByRole('alert').textContent)).toContain(
       message(language, 'err-decimals-not-allowed'),
@@ -245,10 +245,10 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
       useLanguageStore.setState({ language: other });
     });
     await waitFor(() => {
-      const id = rowIds().find((candidate) => cell(candidate, 'code') === '03040001');
+      const id = rowIds().find((candidate) => cell(candidate, 'code') === '0020');
       expect(cell(id ?? '', 'received')).toContain('2,880');
     });
-    const id = rowIds().find((candidate) => cell(candidate, 'code') === '03040001');
+    const id = rowIds().find((candidate) => cell(candidate, 'code') === '0020');
     expect(cell(id ?? '', 'name')).toBe(other === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
   });
 

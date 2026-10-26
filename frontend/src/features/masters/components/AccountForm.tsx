@@ -16,7 +16,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
-import { useFocusFirstField, useSingleFlight, useSpellingFlow } from '../../../shared/hooks';
+import {
+  focusFirstEmptyField,
+  useFocusFirstField,
+  useSingleFlight,
+  useSpellingFlow,
+} from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import type { SearchHit } from '../../../shared/search';
@@ -37,6 +42,7 @@ import {
   NamePair,
   type NamePairValue,
   Picker,
+  SaveChangesPrompt,
   Select,
   showToast,
   TagInput,
@@ -60,14 +66,40 @@ import type { AccountRef, AccountRow, AccountType } from '../../../shared/accoun
 import { QuickAddMaster, type QuickMasterKind } from './QuickAddMaster';
 import { SimilarAccounts } from './SimilarAccounts';
 
+/**
+ * The form opened above another screen by the "add" button of a picker (plan 32, R8): a new seller
+ * or buyer, with what was typed in the picker already in the name box. It is the same form, with
+ * the same fields and checks; only the way in and out is different. Nothing leaves the screen
+ * underneath, so what is typed there stays.
+ */
+export interface EmbeddedAccount {
+  /** The type to start with. */
+  type: 'seller' | 'buyer';
+  /** What was typed in the picker. */
+  text: string;
+  /** The form closed: saved (true) or left (false). */
+  onDone: (saved: boolean) => void;
+}
+
 interface AccountFormProps {
   /** The account being edited, or null for a new one. */
   account: AccountRow | null;
   /** Today as `YYYY-MM-DD`, the opening date of a new account. */
   today: string;
+  /** Set when the form is opened above another screen instead of being a screen of its own. */
+  embedded?: EmbeddedAccount | undefined;
 }
 
-const ACCOUNT_TYPES: readonly AccountType[] = ['seller', 'buyer', 'money_lent', 'other'];
+/** The types a new account can be: sellers and buyers. Others have their own screens (plan 32, R6). */
+const NEW_ACCOUNT_TYPES: readonly AccountType[] = ['seller', 'buyer'];
+const URDU_LETTER = /[؀-ۿ]/;
+
+/** The two names a typed text starts: Urdu letters are the Urdu name, anything else the English. */
+function namesOfText(text: string): NamePairValue {
+  const typed = text.trim();
+  if (typed === '' || /^\d+$/.test(typed)) return { urdu: '', english: '' };
+  return URDU_LETTER.test(typed) ? { urdu: typed, english: '' } : { urdu: '', english: typed };
+}
 /** The name of each day by the backend's number: 0 is Monday, 6 is Sunday. */
 const WEEKDAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 /** The order the list shows them in: the mandi week starts on Saturday. */
@@ -105,14 +137,14 @@ const FIELD_PATHS = [
   'note',
 ];
 
-export function AccountForm({ account, today }: AccountFormProps) {
+export function AccountForm({ account, today, embedded }: AccountFormProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const grouping = useGrouping();
   const navigate = useNavigate();
   const isNew = account === null;
   const controls = useCoaControls();
-  const [type, setType] = useState<AccountType>(account?.account_type ?? 'buyer');
+  const [type, setType] = useState<AccountType>(account?.account_type ?? embedded?.type ?? 'buyer');
   const [controlId, setControlId] = useState<number | null>(account?.control.id ?? null);
   const nextCode = useAccountNextCode(
     type,
@@ -121,16 +153,18 @@ export function AccountForm({ account, today }: AccountFormProps) {
   );
 
   // The form starts from the account that was read, once.
-  const [initial] = useState(() =>
-    account === null
-      ? newAccountValues('buyer', null, '', today)
-      : accountValuesOf(account, grouping),
-  );
+  const [initial] = useState(() => {
+    if (account !== null) return accountValuesOf(account, grouping);
+    const fresh = newAccountValues(embedded?.type ?? 'buyer', null, '', today);
+    return embedded === undefined ? fresh : { ...fresh, names: namesOfText(embedded.text) };
+  });
   const [values, setValues] = useState<AccountFormValues>(initial);
   const [baseline, setBaseline] = useState<AccountFormValues>(initial);
   const [codeTyped, setCodeTyped] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [confirmInactive, setConfirmInactive] = useState(false);
+  // The question "save changes?" of Esc above another screen (the route guard cannot ask it there).
+  const [askLeave, setAskLeave] = useState(false);
   // A city or an اڈا being added on the spot (FR-7.64): what was typed in its picker starts the name.
   const [quickAdd, setQuickAdd] = useState<{ kind: QuickMasterKind; typed: string } | null>(null);
   const save = useSaveAccount();
@@ -163,9 +197,23 @@ export function AccountForm({ account, today }: AccountFormProps) {
   // One save at a time: a second F10 or Enter while one is on its way does nothing (NFR-REL-1).
   const flight = useSingleFlight();
 
+  // The host's way out, kept in a ref: the form leaves once, whichever object the host passes.
+  // Above another screen the cursor goes to the first box still empty, once the next code has come
+  // (the code box is empty until then). Opened as a page, the first box has the focus as always.
+  const isEmbedded = embedded !== undefined;
+  const codeReady = !nextCode.isPending;
   useEffect(() => {
-    if (leaving) void navigate({ to: '/index/accounts' });
-  }, [leaving, navigate]);
+    if (isEmbedded && codeReady) focusFirstEmptyField(formRef.current);
+  }, [isEmbedded, codeReady]);
+  const doneRef = useRef(embedded?.onDone);
+  useEffect(() => {
+    doneRef.current = embedded?.onDone;
+  });
+  useEffect(() => {
+    if (!leaving) return;
+    if (isEmbedded) doneRef.current?.(true);
+    else void navigate({ to: '/index/accounts' });
+  }, [leaving, isEmbedded, navigate]);
 
   const setNames = (names: NamePairValue) => {
     setValues((current) => ({ ...current, names }));
@@ -202,9 +250,15 @@ export function AccountForm({ account, today }: AccountFormProps) {
   const navigation = useFormNavigation(saveAndClose);
   useShortcut(SHORTCUTS.save, saveAndClose);
   const goBack = () => {
-    void navigate({ to: '/index/accounts' });
+    if (embedded === undefined) {
+      void navigate({ to: '/index/accounts' });
+    } else if (dirty) {
+      setAskLeave(true);
+    } else {
+      embedded.onDone(false);
+    }
   };
-  useEscape('leave', goBack);
+  useEscape('leave', goBack, !askLeave);
 
   const changeActive = (isActive: boolean) => {
     if (account === null) return;
@@ -261,10 +315,17 @@ export function AccountForm({ account, today }: AccountFormProps) {
     names: NamePairValue,
     onChange: (next: NamePairValue) => void,
     fields: { ur: string; en: string },
+    key: 'names' | 'father',
   ): ReactNode => (
     <NamePair
       value={names}
       onChange={onChange}
+      fillOnOpen={embedded !== undefined}
+      // What the pair writes on open is the form's starting point, not a change of the user's.
+      onFilledOnOpen={(filled) => {
+        onChange(filled);
+        setBaseline((current) => ({ ...current, [key]: filled }));
+      }}
       urduLabel={<Localized id={label.urdu} />}
       englishLabel={<Localized id={label.english} />}
       urduError={fieldError(error, fields.ur)}
@@ -275,7 +336,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
   return (
     <div className="flex max-w-form flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
-        {heading}
+        {embedded === undefined ? heading : null}
         {account !== null && !account.is_active ? (
           <Localized id="accounts-status-inactive">
             <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
@@ -298,7 +359,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
         }}
         className="flex flex-col gap-4"
       >
-        <LeaveGuard dirty={dirty} onSave={persist} />
+        {embedded === undefined ? <LeaveGuard dirty={dirty} onSave={persist} /> : null}
         {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
 
         <Card title={<Localized id="accounts-section-account" />}>
@@ -317,7 +378,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
                     setCodeTyped(false);
                     setValues((current) => ({ ...current, account_type: next, code: '' }));
                   }}
-                  options={ACCOUNT_TYPES.map((option) => ({
+                  options={(isNew ? NEW_ACCOUNT_TYPES : [type]).map((option) => ({
                     value: option,
                     label: <Localized id={`accounts-type-${option}`} />,
                   }))}
@@ -379,6 +440,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
               values.names,
               setNames,
               { ur: 'name_ur', en: 'name_en' },
+              'names',
             )}
             <Field
               label={<Localized id="accounts-field-tag" />}
@@ -405,6 +467,7 @@ export function AccountForm({ account, today }: AccountFormProps) {
               values.father,
               setFather,
               { ur: 'father_or_firm_ur', en: 'father_or_firm_en' },
+              'father',
             )}
           </div>
         </Card>
@@ -666,6 +729,20 @@ export function AccountForm({ account, today }: AccountFormProps) {
         </div>
       </form>
       {spelling.dialog}
+      {embedded === undefined ? null : (
+        <SaveChangesPrompt
+          open={askLeave}
+          onOpenChange={setAskLeave}
+          onSave={() => {
+            setAskLeave(false);
+            saveAndClose();
+          }}
+          onLeave={() => {
+            setAskLeave(false);
+            embedded.onDone(false);
+          }}
+        />
+      )}
       <QuickAddMaster
         open={quickAdd !== null}
         onOpenChange={(open) => {

@@ -8,7 +8,7 @@
   },
   "can_take_opening": true,
   "city": null,
-  "code": "03040001",
+  "code": "0020",
   "collection_weekday": null,
   "collector": null,
   "control": {
@@ -36,7 +36,7 @@
   "opening_is_advance": false,
   "phone1": "03001234567",
   "phone2": "",
-  "serial": 1,
+  "serial": 0,
   "tag": "K",
   "version": 1
 }

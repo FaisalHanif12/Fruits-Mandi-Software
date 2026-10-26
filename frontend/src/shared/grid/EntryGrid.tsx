@@ -27,7 +27,7 @@ import type {
   ValueSetterParams,
 } from 'ag-grid-community';
 import { AgGridReact, type CustomCellRendererProps } from 'ag-grid-react';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useGrouping, type Grouping } from '../format';
 import { useLatest } from '../hooks/useLatest';
 import { directionOf, displayName, useLanguage } from '../i18n';
@@ -128,6 +128,40 @@ interface ColumnEnv {
   getKeyHandler: () => KeyHandler;
   onCardAccount: ((accountId: number | null) => void) | undefined;
   cycle: (cell: CellRef) => void;
+  /** The cell a mouse press has just put the focus on, read by the click that follows it. */
+  mouseFocus: MouseFocus;
+}
+
+/**
+ * Whether a click only selected its cell. A press on a cell that is not focused focuses it, and
+ * the grid says so (`cellFocused`) before the click arrives; a click on a cell that already has
+ * the focus has no such move before it.
+ */
+interface MouseFocus {
+  /** The grid moved the focus to this cell (from another) and tells what pressed. */
+  noteFocus: (cell: { rowIndex: number; colId: string }, pressedByMouse: boolean) => void;
+  /** True once if the click on this cell only selected it (a press that moved the focus here). */
+  onlySelected: (cell: { rowIndex: number; colId: string }) => boolean;
+}
+
+/** Keeps the cell a mouse press has just focused, for the click that follows it. */
+function useMouseFocus(): MouseFocus {
+  const state = useRef<{
+    pressed: { rowIndex: number; colId: string } | null;
+    last: { rowIndex: number; colId: string } | null;
+  }>({ pressed: null, last: null });
+  const noteFocus = useCallback<MouseFocus['noteFocus']>((cell, pressedByMouse) => {
+    const { last } = state.current;
+    const moved = !(last?.rowIndex === cell.rowIndex && last.colId === cell.colId);
+    state.current.last = cell;
+    state.current.pressed = pressedByMouse && moved ? cell : null;
+  }, []);
+  const onlySelected = useCallback<MouseFocus['onlySelected']>((cell) => {
+    const { pressed } = state.current;
+    state.current.pressed = null;
+    return pressed?.rowIndex === cell.rowIndex && pressed.colId === cell.colId;
+  }, []);
+  return useMemo(() => ({ noteFocus, onlySelected }), [noteFocus, onlySelected]);
 }
 
 function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
@@ -207,6 +241,23 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       cellEditor: PickerCellEditor,
       cellEditorPopup: true,
       cellEditorPopupPosition: 'under',
+      // A click on a picker cell that already has the focus opens the picker with the full list,
+      // like a click on the field of a form (plan 32, R7). The click that only selects the cell
+      // (a press on a cell that had no focus) opens nothing, so moving about the grid with the
+      // mouse stays quiet. A key never opens the list either: arriving on the cell by Enter, Tab or
+      // an arrow opens nothing, and Alt+↓ is the key for the list (PRD FR-7.16, gridKeys.ts).
+      onCellClicked: (event) => {
+        if (event.data === undefined || !isEditable(column, event.data)) return;
+        const { rowIndex } = event;
+        if (rowIndex === null) return;
+        if (env.mouseFocus.onlySelected({ rowIndex, colId: column.field })) return;
+        const editing = event.api
+          .getEditingCells()
+          .some((cell) => cell.rowIndex === rowIndex && cell.colId === column.field);
+        if (editing) return;
+        store.getState().setEditHint('open-list');
+        event.api.startEditingCell({ rowIndex, colKey: column.field });
+      },
       cellEditorParams:
         spec === undefined
           ? undefined
@@ -389,10 +440,12 @@ function GridInner({
   );
   const getKeyHandler = useLatest(keyHandler);
 
+  const mouseFocusTracker = useMouseFocus();
   const columnDefs = useMemo(
     () =>
       columns.map((column) =>
         toColDef(column, {
+          mouseFocus: mouseFocusTracker,
           grouping,
           language,
           word: (id) => l10n.getString(id),
@@ -404,7 +457,19 @@ function GridInner({
           cycle,
         }),
       ),
-    [columns, l10n, grouping, language, store, fit, onCardAccount, cycle, live, getKeyHandler],
+    [
+      columns,
+      l10n,
+      grouping,
+      language,
+      store,
+      fit,
+      onCardAccount,
+      cycle,
+      live,
+      getKeyHandler,
+      mouseFocusTracker,
+    ],
   );
 
   const defaultColDef = useMemo<ColDef<EntryRow>>(
@@ -444,6 +509,13 @@ function GridInner({
   const onCellFocused = (event: CellFocusedEvent<EntryRow>) => {
     if (event.rowIndex === null || event.column === null || typeof event.column === 'string')
       return;
+    // The grid says `cellFocused` for a press on the focused cell too; the tracker tells a move
+    // of the focus by a mouse press from a press that stayed where it was.
+    const source = event.sourceEvent?.type;
+    mouseFocusTracker.noteFocus(
+      { rowIndex: event.rowIndex, colId: event.column.getColId() },
+      source === 'pointerdown' || source === 'mousedown' || source === 'touchstart',
+    );
     const row = store.getState().rows[event.rowIndex];
     if (row !== undefined)
       store.getState().setFocus({ rowId: row.rowId, field: event.column.getColId() });

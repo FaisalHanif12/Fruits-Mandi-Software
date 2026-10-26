@@ -146,7 +146,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     });
     expect(drawnColumns()).toEqual(['serial', 'buyer', 'detail', 'value', 'buyer_total']);
     expect(cell('0', 'serial')).toBe('1');
-    expect(cell('0', 'buyer')).toBe(`03040002 ${names('ارشد ملتانی', 'Arshad Multani')}`);
+    expect(cell('0', 'buyer')).toBe(`0021 ${names('ارشد ملتانی', 'Arshad Multani')}`);
     expect(cell('0', 'value')).toBe('17,400');
     expect(cell('0', 'buyer_total')).toBe('18,684');
     expect(cell('1', 'serial')).toBe('2');
@@ -444,7 +444,7 @@ describe.each(LANGUAGES)('R1, the sale book (%s)', (language: Language) => {
       'deductions',
       'net',
     ]);
-    expect(cell('0', 'seller')).toBe(`030110001 ${names('رحیم', 'Rahim')}`);
+    expect(cell('0', 'seller')).toBe(`0010 ${names('رحیم', 'Rahim')}`);
     expect(cell('0', 'qty')).toBe('50');
     expect(cell('0', 'gross')).toBe('29,400');
     expect(totalsCell('gross')).toBe('29,400');

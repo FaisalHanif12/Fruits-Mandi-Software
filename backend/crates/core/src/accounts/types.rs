@@ -31,6 +31,17 @@ impl AccountType {
         }
     }
 
+    /// The code type of a seller or a buyer (plan 32): their codes are the type number plus a
+    /// running number. `None` for the other types, which keep the control code plus a 4-digit
+    /// serial (PRD 1.8 R4).
+    pub const fn code_type(self) -> Option<crate::codes::CodeType> {
+        match self {
+            AccountType::Seller => Some(crate::codes::CodeType::Seller),
+            AccountType::Buyer => Some(crate::codes::CodeType::Buyer),
+            AccountType::MoneyLent | AccountType::Other => None,
+        }
+    }
+
     /// The control a type always goes under, or `None` for `Other` (the user chooses).
     pub const fn fixed_control(self) -> Option<&'static str> {
         match self {
@@ -84,11 +95,11 @@ pub const BANK_ACCOUNT_CODE: &str = "01020001";
 /// ```
 /// use mandi_core::accounts::can_take_opening;
 /// assert!(can_take_opening("01", "01010001", false)); // روکڑ
-/// assert!(can_take_opening("03", "030110001", false)); // a seller
+/// assert!(can_take_opening("03", "0010", false)); // a seller
 /// assert!(!can_take_opening("04", "04010001", false)); // income
 /// assert!(!can_take_opening("06", "06019999", false)); // ابتدائی فرق
 /// assert!(!can_take_opening("03", "03040000", false)); // نقدی منڈی
-/// assert!(!can_take_opening("03", "03049999", true)); // پختہ کھاتہ
+/// assert!(!can_take_opening("03", "0030", true)); // پختہ کھاتہ
 /// ```
 pub fn can_take_opening(head_code: &str, code: &str, is_pukhta_khata: bool) -> bool {
     head_code != INCOME_HEAD
@@ -117,28 +128,20 @@ impl ControlRule {
     }
 }
 
-/// The short code of a seller or buyer account (PRD FR-7.39): the serial of its code without
-/// leading zeros. `None` for every other account (other accounts have no short code), and for a
-/// system serial (0 and 9000 to 9999, PRD FR-10.3), which is never a short code.
+/// The short code of a seller or buyer account (PRD 1.8 R5): the running number of its code, which
+/// is the code without its 3-digit type number and without padding. `None` for every other account
+/// (other accounts have no short code), and for the two پختہ کھاتہ accounts.
 ///
 /// ```
 /// use mandi_core::accounts::short_code_of;
-/// assert_eq!(short_code_of("03040001").as_deref(), Some("1"));
-/// assert_eq!(short_code_of("030110012").as_deref(), Some("12"));
-/// assert_eq!(short_code_of("03049999"), None); // پختہ کھاتہ (system serial)
+/// assert_eq!(short_code_of("0021").as_deref(), Some("1"));
+/// assert_eq!(short_code_of("00112").as_deref(), Some("12"));
+/// assert_eq!(short_code_of("0010").as_deref(), Some("0"));
+/// assert_eq!(short_code_of("0030"), None); // پختہ کھاتہ
 /// assert_eq!(short_code_of("01010001"), None); // cash: not a seller or a buyer
 /// ```
 pub fn short_code_of(code: &str) -> Option<String> {
-    let serial = code
-        .strip_prefix(SELLER_CONTROL)
-        .or_else(|| code.strip_prefix(BUYER_CONTROL))?;
-    if serial.len() != 4 || !serial.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    let number: u32 = serial.parse().ok()?;
-    (FIRST_SERIAL..=LAST_SERIAL)
-        .contains(&number)
-        .then(|| number.to_string())
+    crate::codes::short_code_of_party(code)
 }
 
 /// The first normal serial (PRD FR-10.3).
@@ -164,7 +167,9 @@ pub struct AccountInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
-    /// The full code (control code plus 4 digits). Empty gives the next free code.
+    /// The full code. A seller: `001` plus a running number (`0010`, `00110`); a buyer: `002` plus a
+    /// running number; any other account: the control code plus 4 digits. Empty gives the next free
+    /// code. A code of the wrong type is `ERR_CODE_INVALID` on `code`; a used one `ERR_CODE_TAKEN`.
     pub code: String,
     /// Urdu name (PRD FR-7.28).
     pub name_ur: String,
@@ -329,7 +334,8 @@ pub struct AccountRow {
     pub version: i64,
     /// The full code.
     pub code: String,
-    /// The 4-digit serial as a number.
+    /// The serial as a number: the running number of a seller's or buyer's code (`0` for `0010`),
+    /// the 4-digit serial of every other account.
     pub serial: u32,
     /// The kind of account (an account under another control is `other`).
     pub account_type: AccountType,
@@ -396,13 +402,39 @@ pub struct AccountRow {
     pub balance: Balance,
 }
 
+/// Which accounts the Accounts list shows (plan 32 R6). `all` shows only sellers, buyers and the
+/// two پختہ کھاتہ accounts; cash, bank, payables, income, capital, نقدی منڈی, اپنا مال, money-lent
+/// people, khatas and gardens are not in it (the chart of accounts still shows every account, and
+/// so does `every`, for the Opening balances screen).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AccountListKind {
+    /// Sellers, buyers and the two پختہ کھاتہ accounts.
+    #[default]
+    All,
+    /// بیوپاری: the accounts under control 03011 that are not system accounts (not the پختہ کھاتہ
+    /// seller, not اپنا مال).
+    Seller,
+    /// گاہک: the accounts under control 0304 that are not system accounts (not نقدی منڈی, not the
+    /// پختہ کھاتہ buyer).
+    Buyer,
+    /// پختہ کھاتہ: the two system accounts `0030` (buyer) and `0031` (seller).
+    Pukhta,
+    /// Every account, as the list showed before plan 32 (decision D4): cash, bank, payables, income,
+    /// capital, drawings, money-lent people, khatas, gardens and all the others as well. Only the
+    /// Index → Opening balances screen asks for it, because cash and the capital accounts take
+    /// openings there. The rows come in chart order (by control, then by code) and the footer
+    /// totals are over these rows.
+    Every,
+}
+
 /// What the account list is filtered by.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct AccountFilter {
-    /// Only this kind of account, or null for all.
+    /// Which accounts to list. Missing means `all`.
     #[serde(default)]
-    pub account_type: Option<AccountType>,
-    /// Part of the code, or part of a name in either script. Empty for all.
+    pub kind: AccountListKind,
+    /// Part of the code, the running number, or part of a name in either script. Empty for all.
     pub text: String,
     /// True to list the inactive accounts too.
     pub include_inactive: bool,
@@ -455,7 +487,8 @@ pub struct AccountsSetActiveInput {
     pub is_active: bool,
 }
 
-/// The next free code for a kind of account.
+/// The next free code for a kind of account: for a seller or a buyer the type number plus the next
+/// running number (`0010` for the first seller), never a code used before (plan 32 R2).
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct AccountsNextCodeInput {
     /// The kind.

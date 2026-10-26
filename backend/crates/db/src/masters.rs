@@ -100,7 +100,7 @@ fn select(kind: MasterKind) -> &'static str {
              FROM expense_heads m JOIN accounts a ON a.id = m.account_id"
         }
         MasterKind::Staff => {
-            "SELECT m.id, m.version, m.name_ur, m.name_en, m.role, m.phone, m.account_id, a.code, m.is_active
+            "SELECT m.id, m.version, m.code, m.name_ur, m.name_en, m.role, m.phone, m.account_id, a.code, m.is_active
              FROM staff m LEFT JOIN accounts a ON a.id = m.account_id"
         }
     }
@@ -192,13 +192,14 @@ fn row_from(kind: MasterKind, r: &Row<'_>) -> rusqlite::Result<MasterRow> {
         MasterKind::Staff => MasterRow::Staff(StaffRow {
             id: r.get(0)?,
             version: r.get(1)?,
-            name_ur: r.get(2)?,
-            name_en: r.get(3)?,
-            job: r.get(4)?,
-            phone: r.get(5)?,
-            account_id: r.get(6)?,
-            account_code: r.get(7)?,
-            is_active: r.get(8)?,
+            code: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
+            name_ur: r.get(3)?,
+            name_en: r.get(4)?,
+            job: r.get(5)?,
+            phone: r.get(6)?,
+            account_id: r.get(7)?,
+            account_code: r.get(8)?,
+            is_active: r.get(9)?,
         }),
     })
 }
@@ -324,16 +325,26 @@ pub fn code_taken(
         .is_some())
 }
 
-/// The next free code: the largest number among the codes plus one, written as wide as the
-/// widest code so far (`07` gives `08`). `1` for an empty list. Empty for kinds without a code.
-/// Only codes of digits count (the app allows nothing else). `None` if the next code would be
-/// longer than the 10 digits the app accepts (the list is full).
+/// The next free code. An item, a packing or a staff member gets the type number plus the next
+/// running number (`0040`, `0050`, `0060` for the first, plan 32 R2). Every other kind: the largest
+/// number among the codes plus one, written as wide as the widest code so far (`07` gives `08`),
+/// `1` for an empty list. Empty for kinds without a code. Only codes of digits count (the app
+/// allows nothing else). `None` if the next code would be longer than the 10 digits the app accepts
+/// (the list is full).
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn next_code(conn: &Connection, kind: MasterKind) -> rusqlite::Result<Option<String>> {
     if !kind.has_code() {
         return Ok(Some(String::new()));
+    }
+    if let Some(code_type) = kind.code_type() {
+        let table = match kind {
+            MasterKind::Item => crate::codes::CodeTable::Items,
+            MasterKind::Packing => crate::codes::CodeTable::Packings,
+            _ => crate::codes::CodeTable::Staff,
+        };
+        return Ok(crate::codes::next_code(conn, table, code_type)?.map(|(_, code)| code));
     }
     let mut statement = conn.prepare(&format!("SELECT code FROM {}", kind.table()))?;
     let codes = statement.query_map([], |r| r.get::<_, String>(0))?;
@@ -655,7 +666,7 @@ pub fn search_sources(
              FROM expense_heads m JOIN accounts a ON a.id = m.account_id"
         }
         MasterKind::Staff => {
-            "SELECT m.id, NULL, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM staff m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM staff m"
         }
     };
     let sql = if only_id.is_some() {
