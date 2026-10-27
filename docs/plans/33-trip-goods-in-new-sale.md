@@ -1,6 +1,6 @@
 # Plan 33: today's trip goods come into a new sale by themselves
 
-Version 1.0, 27-10-2026. Lead: tech-lead. Asked by Umar on 27-10-2026 while testing ("when the market trip is added on the current day, it should automatically add to the current بکری lots in selling, because although it is our own goods it must be sold and carry the commission"). His pick from three options: "ready lots in a new sale". Branch `feature/d5-early`, folder `Fruit Mandi Parallel/d5`.
+Version 1.1, 27-10-2026 (1.1: Umar's answers on the date to sell, leftovers and garden goods, Section 6). Lead: tech-lead. Asked by Umar on 27-10-2026 while testing ("when the market trip is added on the current day, it should automatically add to the current بکری lots in selling, because although it is our own goods it must be sold and carry the commission"). His pick from three options: "ready lots in a new sale". Branch `feature/d5-early`, folder `Fruit Mandi Parallel/d5`.
 
 ## 1. Goal
 
@@ -38,3 +38,26 @@ Targeted checks only (Umar's rule).
 ## 5. Acceptance
 
 R1 to R6 each shown by a test; E2E-34 and E2E-41 numbers unchanged; screenshots of a new sale with a trip lot in ur and en.
+
+## 6. Version 1.1 (Umar, 27-10-2026, his answers to three questions)
+
+These replace R1's "dated the same day" rule and add gardens.
+
+R7. **Date to sell on a trip purchase.** Each purchase gets a box "تاریخ فروخت" (Date to sell). It starts as the purchase date and can be set to the same day or a later day (never earlier than the purchase date; `ERR_SELL_DATE_BEFORE_ENTRY` on `sell_date`). It can be changed while the purchase has goods left. No money effect.
+
+R8. **Which goods come into a new sale.** A new بکری gets a ready lot for every stock record with goods left whose date to sell is **on or before** the بکری's date. Goods not sold on their day stay in باقی مال and come again into the next new sale, until they are sold or written off (Umar: "will go automatically in unsold stock and then will come again the next day"). For a trip purchase, the ready lot is the own lot of R1.
+
+R9. **Garden goods arrived.** The garden screen's type list gets a new entry, **مال آیا** (Goods arrived): date to sell, item, packing, qty (and weight for weight items), note. It posts **no money** and changes no partner total. It is garden stock, shown on the garden screen and in باقی مال marked as the garden's goods.
+
+R10. **A garden ready lot.** For each garden arrival with goods left (R8), a new بکری gets a ready lot: seller = the garden (its 0306 account), item, packing, qty = the goods left, linked to that arrival. Like an own lot, its qty must equal what is sold in it, and the leftover stays in the arrival (so it comes again, R8). Charges and posting are those of a garden lot today (FR-12.36): seller credit to the garden's account, نقد and the advance tick hidden. A garden lot typed by hand without an arrival still works as today.
+
+R11. **Closing and refusals.** A closed garden takes no new arrival (`ERR_GARDEN_CLOSED`), and its arrivals with goods left stop coming into new sales. A garden whose arrivals still have goods left can still be closed only after the goods are sold or written off (written off like trip goods, with a reason, no money). An arrival can be cancelled with a reason only while nothing of it is sold or written off.
+
+R12. **Money unchanged.** No posting of an own lot or a garden lot changes. E2E-34, 34b, 40, 40b, 41 stay exactly.
+
+### Tasks for 1.1
+
+| # | Task | Owner |
+|---|---|---|
+| T2 | `purchases.sell_date` (new migration; existing rows = their entry date), its check and edit; garden arrivals as a stock record of the garden (backend designs the table and the stock moves; no journal entry), arrivals list, cancel, write-off; a garden lot linked to an arrival takes its qty from it and must be fully sold; the list command for a new sale returns trip purchases and garden arrivals with goods left and date to sell on or before a given date, oldest first; tests (R7 to R12); fixtures; `pnpm gen:types`; tell `frontend` | backend (before plan 34) |
+| F2 | Date to sell box on the purchase form and screen; the مال آیا type on the garden screen with its list; ready lots for both kinds in a new sale, oldest date first, then number; the note counts both; باقی مال shows both; tests and screenshots ur and en | frontend |
