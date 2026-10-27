@@ -29,6 +29,12 @@ export type StatementLine = {
    */
   number: number | null;
   /**
+   * The code of the garden or trip the line belongs to (plan 34): `0080`, `0070`. Null on a
+   * line of any other heading. For a garden or trip line `number` is the number in its series
+   * and this is the text to show.
+   */
+  venture_code: string | null;
+  /**
    * A second number: a purchase, a trip cost or a بکری inside a trip line.
    */
   secondary_number: number | null;

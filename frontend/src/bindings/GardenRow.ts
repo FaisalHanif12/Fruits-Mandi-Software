@@ -18,9 +18,14 @@ export type GardenRow = {
    */
   version: number;
   /**
-   * Its number, from 1 (باغ-1, GDN-1).
+   * Its number in its own series, from 1.
    */
   number: number;
+  /**
+   * Its code, the number a screen shows (plan 34): `0080` for the first garden, `0081` for the
+   * second. Type 008, the number less one, no padding. The garden's account has the same code.
+   */
+  code: string;
   /**
    * Urdu name, as typed.
    */

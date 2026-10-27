@@ -10,9 +10,13 @@ export type GardenSummaryRow = {
    */
   id: number;
   /**
-   * Its number (باغ-1, GDN-1).
+   * Its number in its own series, from 1.
    */
   number: number;
+  /**
+   * Its code (plan 34): `0080` for the first garden.
+   */
+  code: string;
   /**
    * Urdu name.
    */

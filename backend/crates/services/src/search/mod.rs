@@ -55,6 +55,22 @@ fn current(ctx: &Context) -> Result<Arc<Index>, ServiceError> {
     Ok(index)
 }
 
+/// The index a scope searches. The accounts and the masters are in the long-lived index; the open
+/// trips and gardens (plan 34) are few and change with every sale, so they are read for the call.
+fn index_for(ctx: &Context, scope: SearchScope) -> Result<Arc<Index>, ServiceError> {
+    let kind = match scope {
+        SearchScope::Trip => "trip",
+        SearchScope::Garden => "garden",
+        _ => return current(ctx),
+    };
+    let sources = ctx
+        .db
+        .read(|conn| mandi_db::ventures::search_sources(conn, kind).map_err(ServiceError::from))?;
+    let mut index = Index::empty();
+    index.set_ventures(scope, sources);
+    Ok(Arc::new(index))
+}
+
 /// Builds the index again from the database. The restore of a backup calls this (the whole
 /// data is replaced). Searches give the same answers as before a restore that changed nothing.
 ///
@@ -197,7 +213,7 @@ pub fn search_page(
 ) -> Result<Vec<SearchHit>, ServiceError> {
     // A huge paste is refused before it is turned into search keys, like the account search.
     check_text(text)?;
-    let index = current(ctx)?;
+    let index = index_for(ctx, scope)?;
     let usage = usage_of(ctx, actor, scope)?;
     let limit = usize::try_from(limit).unwrap_or(MAX_HITS);
     let offset = usize::try_from(offset).unwrap_or(0);
@@ -214,7 +230,7 @@ pub fn recent(
     actor: &Actor,
     scope: SearchScope,
 ) -> Result<Vec<SearchHit>, ServiceError> {
-    let index = current(ctx)?;
+    let index = index_for(ctx, scope)?;
     let usage = usage_of(ctx, actor, scope)?;
     Ok(index.recent(scope, &usage))
 }
@@ -230,7 +246,7 @@ pub fn touch(
     scope: SearchScope,
     id: i64,
 ) -> Result<(), ServiceError> {
-    let index = current(ctx)?;
+    let index = index_for(ctx, scope)?;
     if index.active_hit(scope, id).is_none() {
         return Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "id"));
     }

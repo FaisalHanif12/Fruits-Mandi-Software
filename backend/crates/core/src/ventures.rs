@@ -206,10 +206,13 @@ pub struct TripRef {
     /// The trip.
     #[ts(type = "number")]
     pub id: i64,
-    /// Its number, from 1 (سفر-1, TRP-1).
+    /// Its number in its own series, from 1.
     #[ts(type = "number")]
     pub number: i64,
-    /// Urdu name, made from the number and the date.
+    /// Its code, the number a screen shows (plan 34): `0070` for the first trip, `0071` for the
+    /// second. Type 007, the number less one, no padding.
+    pub code: String,
+    /// Urdu name, made from the code and the date.
     pub name_ur: String,
     /// English name.
     pub name_en: String,

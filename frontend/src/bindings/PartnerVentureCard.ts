@@ -17,9 +17,13 @@ export type PartnerVentureCard = {
    */
   kind: VentureKind;
   /**
-   * Its number (باغ-1, GDN-1, سفر-1, TRP-1).
+   * Its number in the series of its kind, from 1.
    */
   number: number;
+  /**
+   * Its code (plan 34): `0080` for the first garden, `0070` for the first trip.
+   */
+  code: string;
   /**
    * Urdu name.
    */

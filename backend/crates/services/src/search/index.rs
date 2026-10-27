@@ -68,18 +68,14 @@ struct AccountFacts {
 /// True for the account of a separate khata: under control 0305, of type "other" (PRD 16.6).
 fn is_khata(source: &SearchSource) -> bool {
     source.account_type == Some(AccountType::Other)
-        && source
-            .code
-            .starts_with(mandi_domain::core::accounts::KHATA_CONTROL)
+        && source.control_code.as_deref() == Some(mandi_domain::core::accounts::KHATA_CONTROL)
 }
 
 /// True for the account of a garden: under control 0306, of type "other" (PRD FR-12.34). The
 /// account of a closed garden is not in the index at all (its source is inactive).
 fn is_garden(source: &SearchSource) -> bool {
     source.account_type == Some(AccountType::Other)
-        && source
-            .code
-            .starts_with(mandi_domain::core::accounts::GARDEN_CONTROL_CODE)
+        && source.control_code.as_deref() == Some(mandi_domain::core::accounts::GARDEN_CONTROL_CODE)
 }
 
 /// The code type a list's entries are of, if the list has codes of the scheme of plan 32.
@@ -88,6 +84,8 @@ fn code_type_of(kind: SearchScope, account_type: Option<AccountType>) -> Option<
         (SearchScope::Item, _) => Some(CodeType::Item),
         (SearchScope::Packing, _) => Some(CodeType::Packing),
         (SearchScope::Staff, _) => Some(CodeType::Staff),
+        (SearchScope::Trip, _) => Some(CodeType::Trip),
+        (SearchScope::Garden, _) => Some(CodeType::Garden),
         (_, Some(AccountType::Seller)) => Some(CodeType::Seller),
         (_, Some(AccountType::Buyer)) => Some(CodeType::Buyer),
         _ => None,
@@ -181,6 +179,18 @@ impl Index {
     /// Puts the records of one list in the index, replacing the list.
     pub fn set_scope(&mut self, kind: MasterKind, sources: Vec<SearchSource>) {
         let scope = SearchScope::of(kind);
+        let mut entries: Vec<Arc<Entry>> = sources
+            .into_iter()
+            .map(|s| Arc::new(Entry::from_source(scope, s)))
+            .collect();
+        entries.sort_by_key(|e| e.id);
+        self.scopes.insert(scope, entries);
+    }
+
+    /// Puts the open trips or the open gardens in the index (plan 34): the scope is `Trip` or
+    /// `Garden`. They are small lists that change with every sale, so the service builds this index
+    /// for the call and does not keep it.
+    pub fn set_ventures(&mut self, scope: SearchScope, sources: Vec<SearchSource>) {
         let mut entries: Vec<Arc<Entry>> = sources
             .into_iter()
             .map(|s| Arc::new(Entry::from_source(scope, s)))

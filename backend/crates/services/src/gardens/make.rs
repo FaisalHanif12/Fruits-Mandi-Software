@@ -12,6 +12,7 @@ use mandi_db::gardens::{self as repo, NewGarden};
 use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as vrepo, NewEntry, PartnerShare};
 use mandi_domain::core::cash::CashCheck;
+use mandi_domain::core::codes::{CodeType, number_code};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::gardens::{
@@ -304,7 +305,7 @@ pub(super) fn create_preview(
 
 /// Makes a garden: its account under 0306, its row, its partners and, if typed, its first installment.
 ///
-/// Example: garden 1 "شاہ پور باغ" with a rent of 50,000 gets the account `03060001`; the first
+/// Example: garden 1 "شاہ پور باغ" with a rent of 50,000 gets the code 0080, which is also the code of its account (plan 34); the first
 /// installment of 30,000 at 60 / 40 with الف from the shop and ب from his pocket takes 18,000 off
 /// cash and records 12,000 as paid from his pocket.
 pub(super) fn create(
@@ -359,11 +360,21 @@ pub(super) fn create(
             name_ur: ready.name_ur.clone(),
             name_en: ready.name_en.clone(),
         };
-        let (account_id, account_code) =
-            mandi_db::masters::create_account(tx, &account, user, &now)?.ok_or_else(|| {
-                ServiceError::reject_with(ErrorCode::ErrSeriesFull, Some("name_ur"), "control", 0)
-            })?;
         let number = vrepo::next_number(tx, "garden")?;
+        // The garden's account has the code of the garden, `0080` for the first one (plan 34 R2),
+        // and the running number as its serial.
+        let account_code = number_code(CodeType::Garden, number);
+        let serial = u32::try_from(number.saturating_sub(1)).map_err(|_| {
+            ServiceError::reject_with(ErrorCode::ErrSeriesFull, Some("name_ur"), "control", 0)
+        })?;
+        let account_id = mandi_db::masters::create_account_coded(
+            tx,
+            &account,
+            &account_code,
+            serial,
+            user,
+            &now,
+        )?;
         let season_end = ready.season_end.map(BusinessDate::to_iso);
         let id = repo::insert(
             tx,

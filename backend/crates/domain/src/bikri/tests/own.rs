@@ -152,8 +152,9 @@ mod lot {
             trip: TripRef {
                 id: 1,
                 number: 1,
-                name_ur: "سفر-1".into(),
-                name_en: "Trip 1".into(),
+                code: "0070".into(),
+                name_ur: "0070".into(),
+                name_en: "0070".into(),
             },
             partners: vec![
                 partner(1, TRIP_A, 4_000),

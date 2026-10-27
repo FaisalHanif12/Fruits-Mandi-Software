@@ -255,6 +255,10 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
                 number,
                 trip_id,
                 trip_number,
+                trip_code: mandi_core::codes::number_code(
+                    mandi_core::codes::CodeType::Trip,
+                    trip_number,
+                ),
             }),
             _ => None,
         },

@@ -403,9 +403,11 @@ pub struct SavedPurchaseRef {
     /// Its trip.
     #[ts(type = "number")]
     pub trip_id: i64,
-    /// The trip's number (سفر-1, TRP-1).
+    /// The trip's number in its own series, from 1.
     #[ts(type = "number")]
     pub trip_number: i64,
+    /// The trip's code (plan 34): `0070` for the first trip.
+    pub trip_code: String,
 }
 
 /// One trip partner's part of the seller credit of a saved trip lot (PRD C25), read from the lines of

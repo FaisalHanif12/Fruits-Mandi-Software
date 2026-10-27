@@ -16,4 +16,6 @@ export type SearchScope =
   | 'staff'
   | 'seller'
   | 'buyer'
-  | 'any_account';
+  | 'any_account'
+  | 'trip'
+  | 'garden';

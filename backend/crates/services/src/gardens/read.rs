@@ -182,6 +182,10 @@ fn row_with(conn: &Connection, garden: &Garden, money: &Money) -> Result<GardenR
         id: rec.id,
         version: rec.version,
         number: rec.number,
+        code: mandi_domain::core::codes::number_code(
+            mandi_domain::core::codes::CodeType::Garden,
+            rec.number,
+        ),
         name_ur: rec.name_ur.clone(),
         name_en: rec.name_en.clone(),
         account: rec.account.clone(),
@@ -312,6 +316,10 @@ pub(super) fn summary(ctx: &Context) -> Result<GardensSummary, ServiceError> {
             rows.push(GardenSummaryRow {
                 id: rec.id,
                 number: rec.number,
+                code: mandi_domain::core::codes::number_code(
+                    mandi_domain::core::codes::CodeType::Garden,
+                    rec.number,
+                ),
                 name_ur: rec.name_ur.clone(),
                 name_en: rec.name_en.clone(),
                 balance_paisa: money.balance,
@@ -696,6 +704,10 @@ pub(crate) fn cards_of_partner(
             venture_id: garden.rec.id,
             kind: VentureKind::Garden,
             number: garden.rec.number,
+            code: mandi_domain::core::codes::number_code(
+                mandi_domain::core::codes::CodeType::Garden,
+                garden.rec.number,
+            ),
             name_ur: garden.rec.name_ur.clone(),
             name_en: garden.rec.name_en.clone(),
             share_bps: i32::try_from(share_bps)

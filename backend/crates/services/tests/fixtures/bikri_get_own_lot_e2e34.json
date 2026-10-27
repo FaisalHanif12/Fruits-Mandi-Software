@@ -31,7 +31,8 @@
         "id": 1,
         "number": 1,
         "trip_id": 1,
-        "trip_number": 1
+        "trip_number": 1,
+        "trip_code": "0070"
       },
       "own": {
         "cost_paisa": 780000,

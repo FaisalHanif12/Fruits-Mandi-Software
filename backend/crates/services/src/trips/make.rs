@@ -3,6 +3,7 @@
 //! one transaction with its audit row (Code Standards B3, S7).
 
 use mandi_db::ventures::{self as repo, NewVenture};
+use mandi_domain::core::codes::{CodeType, number_code};
 use mandi_domain::core::dates::format_ddmmyyyy;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::text;
@@ -27,9 +28,9 @@ fn optional_text(errors: &mut FieldErrors, field: &str, text: Option<&str>) -> O
 }
 
 /// Makes a trip with its partners, shares and default sources (PRD FR-12.29). The trip gets the next
-/// number of its series, and names made from the number and the date for the search.
+/// number of its series, and names made from its code and the date for the search.
 ///
-/// Example: trip 1 on 10-10-2026 is named "سفر-1 10-10-2026" and "TRP-1 10-10-2026".
+/// Example: trip 1 on 10-10-2026 has the code 0070 and is named "0070 10-10-2026" in both scripts.
 ///
 /// # Errors
 /// The date codes on `date`; the text codes on `market`, `sent_person` and `note`; the percent codes
@@ -61,8 +62,10 @@ pub(super) fn create(
         let user = actor.user_id;
         let number = repo::next_number(tx, "trip")?;
         let day_text = format_ddmmyyyy(date);
-        let name_ur = format!("سفر-{number} {day_text}");
-        let name_en = format!("TRP-{number} {day_text}");
+        // The name is the code and the day, the same in both scripts: "0070 10-10-2026" (plan 34).
+        let code = number_code(CodeType::Trip, number);
+        let name_ur = format!("{code} {day_text}");
+        let name_en = format!("{code} {day_text}");
         let id = repo::insert(
             tx,
             &NewVenture {

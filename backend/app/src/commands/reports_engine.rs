@@ -253,6 +253,7 @@ mod tests {
             detail: StatementDetail::IncomeShare,
             entry_id: Some(1),
             number: Some(1),
+            venture_code: None,
             secondary_number: None,
             subject: None,
             packing: None,

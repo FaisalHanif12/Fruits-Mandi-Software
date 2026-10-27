@@ -55,6 +55,12 @@ pub const TRIPS_GARDENS_FRUIT_KHATA_SQL: &str =
 /// `accounts.serial` is lifted by [`codes_hook`]. No amount, journal line or id changes.
 pub const SIMPLE_PARTY_CODES_SQL: &str = include_str!("../migrations/0007_simple_party_codes.sql");
 
+/// The eighth migration (plan 34, PRD 1.8): easy codes for market trips (type 007) and gardens
+/// (type 008). The account of each garden gets the code of its garden, and the Rust hook
+/// [`trip_names_hook`] gives each trip its new name. No amount, id or chain hash changes.
+pub const TRIP_AND_GARDEN_CODES_SQL: &str =
+    include_str!("../migrations/0008_trip_and_garden_codes.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -74,6 +80,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(STABLE_POSTING_ORDER_SQL),
         M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, trips_hook),
         M::up_with_hook(SIMPLE_PARTY_CODES_SQL, codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, trip_names_hook),
     ])
 }
 
@@ -188,8 +195,46 @@ const WIDEN_SERIAL: [Widen; 1] = [Widen {
 }];
 
 /// After the SQL of migration 7: lift the upper limit of `accounts.serial` (see [`WIDEN_SERIAL`]).
-fn codes_hook(tx: &Transaction) -> Result<(), HookError> {
+/// Public so the tests of migration 8 can build the file as it was released at version 7.
+pub fn codes_hook(tx: &Transaction) -> Result<(), HookError> {
     edit_table_text(tx, &WIDEN_SERIAL, "migration 7")
+}
+
+/// After the SQL of migration 8: every trip is named by its code and its day, in both scripts
+/// (`0070 10-10-2026`), and its three search columns are made again from the new names by
+/// `mandi_core::text`, as every save of a named record does (Code Standards B26). Public so the tests
+/// of migration 8 can build the file as it was released at version 7.
+pub fn trip_names_hook(tx: &Transaction) -> Result<(), HookError> {
+    use mandi_core::codes::{CodeType, number_code};
+    use mandi_core::dates::{BusinessDate, format_ddmmyyyy};
+    let trips: Vec<(i64, i64, String)> = {
+        let mut statement = tx.prepare(
+            "SELECT id, number, entry_date FROM ventures WHERE kind = 'trip' ORDER BY number",
+        )?;
+        statement
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    for (id, number, entry_date) in trips {
+        let day = BusinessDate::parse_iso(&entry_date)
+            .map(format_ddmmyyyy)
+            .ok_or_else(|| {
+                HookError::Hook(format!("migration 8: trip {id} has the date {entry_date}"))
+            })?;
+        let name = format!("{} {day}", number_code(CodeType::Trip, number));
+        tx.execute(
+            "UPDATE ventures SET name_ur = ?1, name_en = ?1, search_ur = ?2, search_en = ?3,
+                 search_phonetic = ?4 WHERE id = ?5",
+            rusqlite::params![
+                name,
+                mandi_core::text::search_ur(&name),
+                mandi_core::text::search_en(&name),
+                mandi_core::text::search_phonetic(&name),
+                id
+            ],
+        )?;
+    }
+    Ok(())
 }
 
 /// What a call to [`migrate`] did.

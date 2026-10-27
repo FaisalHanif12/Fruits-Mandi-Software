@@ -309,6 +309,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         is_system: r.get(40)?,
         can_take_opening: can_take_opening(
             &r.get::<_, String>(44)?,
+            &r.get::<_, String>(4)?,
             &r.get::<_, String>(2)?,
             r.get(41)?,
         ),
@@ -767,7 +768,7 @@ pub fn search_sources(
                 -- The account of a closed garden is offered in no picker and no search (PRD FR-12.38).
                 (a.is_active = 1 AND NOT EXISTS (SELECT 1 FROM ventures g WHERE g.account_id = a.id
                                                  AND g.kind = 'garden' AND g.status = 'closed')),
-                {TYPE_SQL}, a.control_id, a.tag
+                {TYPE_SQL}, a.control_id, a.tag, c.code
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
@@ -799,6 +800,7 @@ pub fn search_sources(
                 }),
                 control_id: Some(r.get(12)?),
                 tag: r.get(13)?,
+                control_code: Some(r.get(14)?),
             })
         },
     )?;

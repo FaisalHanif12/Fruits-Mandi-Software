@@ -195,9 +195,11 @@ pub struct PartnerVentureCard {
     pub venture_id: i64,
     /// A garden or a trip. `gardens_get` or `trips_get` opens it.
     pub kind: VentureKind,
-    /// Its number (باغ-1, GDN-1, سفر-1, TRP-1).
+    /// Its number in the series of its kind, from 1.
     #[ts(type = "number")]
     pub number: i64,
+    /// Its code (plan 34): `0080` for the first garden, `0070` for the first trip.
+    pub code: String,
     /// Urdu name.
     pub name_ur: String,
     /// English name.

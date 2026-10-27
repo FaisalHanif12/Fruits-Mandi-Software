@@ -17,7 +17,11 @@ export type SavedPurchaseRef = {
    */
   trip_id: number;
   /**
-   * The trip's number (سفر-1, TRP-1).
+   * The trip's number in its own series, from 1.
    */
   trip_number: number;
+  /**
+   * The trip's code (plan 34): `0070` for the first trip.
+   */
+  trip_code: string;
 };

@@ -238,7 +238,12 @@ fn mark_duplicates(found: &mut [SimilarAccount], input: &AccountsSimilarInput) {
 /// itself, a پختہ کھاتہ account has no person to hold the balance, and نقدی منڈی pays at once.
 /// The documents do not say what to do about these; they are refused until Umar decides.
 pub(crate) fn opening_allowed(facts: &repo::AccountFacts) -> bool {
-    can_take_opening(&facts.head_code, &facts.code, facts.is_pukhta_khata)
+    can_take_opening(
+        &facts.head_code,
+        &facts.control_code,
+        &facts.code,
+        facts.is_pukhta_khata,
+    )
 }
 
 /// Checks the name and the father or firm name together, so both fields come back at once.

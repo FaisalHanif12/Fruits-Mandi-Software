@@ -938,3 +938,47 @@ pub fn with_entries(conn: &Connection, venture_ids: &[i64]) -> rusqlite::Result<
     let rows = statement.query_map(rusqlite::params_from_iter(venture_ids), |r| r.get(0))?;
     rows.collect()
 }
+
+/// The open trips or the open gardens as the pickers search them (plan 34): the code of each (the
+/// number in its own series as a code), both names, the market of a trip as the second line, the three
+/// search columns, and the flag that says it is open. A closed trip or garden is not offered in a
+/// picker. `kind` is `trip` or `garden`.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn search_sources(
+    conn: &Connection,
+    kind: &str,
+) -> rusqlite::Result<Vec<crate::masters::SearchSource>> {
+    let code_type = if kind == "garden" {
+        mandi_core::codes::CodeType::Garden
+    } else {
+        mandi_core::codes::CodeType::Trip
+    };
+    let mut statement = conn.prepare(
+        "SELECT v.id, v.number, v.name_ur, v.name_en, COALESCE(v.market, ''),
+                v.search_ur, v.search_en, v.search_phonetic, v.status = 'open'
+         FROM ventures v WHERE v.kind = ?1 ORDER BY v.number",
+    )?;
+    let rows = statement.query_map([kind], |r| {
+        let market: String = r.get(4)?;
+        Ok(crate::masters::SearchSource {
+            id: r.get(0)?,
+            code: mandi_core::codes::number_code(code_type, r.get(1)?),
+            name_ur: r.get(2)?,
+            name_en: r.get(3)?,
+            extra_ur: market.clone(),
+            extra_en: market,
+            more_keys: String::new(),
+            search_ur: r.get(5)?,
+            search_en: r.get(6)?,
+            search_phonetic: r.get(7)?,
+            is_active: r.get(8)?,
+            account_type: None,
+            control_id: None,
+            control_code: None,
+            tag: None,
+        })
+    })?;
+    rows.collect()
+}

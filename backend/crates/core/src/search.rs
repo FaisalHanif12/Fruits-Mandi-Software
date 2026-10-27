@@ -37,6 +37,12 @@ pub enum SearchScope {
     Buyer,
     /// Any active account: sellers, buyers and all others (جنرل, ledgers, the linked account).
     AnyAccount,
+    /// The open market trips (plan 34): code `0070`, `0071` ..., their name and market. A short code is
+    /// the running number (`0` finds `0070`).
+    Trip,
+    /// The open gardens (plan 34): code `0080`, `0081` ..., their name. A short code is the running
+    /// number (`0` finds `0080`).
+    Garden,
 }
 
 impl SearchScope {
@@ -58,7 +64,11 @@ impl SearchScope {
     /// The master kind this scope searches, if it searches a master.
     pub const fn master_kind(self) -> Option<MasterKind> {
         Some(match self {
-            SearchScope::Seller | SearchScope::Buyer | SearchScope::AnyAccount => return None,
+            SearchScope::Seller
+            | SearchScope::Buyer
+            | SearchScope::AnyAccount
+            | SearchScope::Trip
+            | SearchScope::Garden => return None,
             SearchScope::City => MasterKind::City,
             SearchScope::Item => MasterKind::Item,
             SearchScope::Packing => MasterKind::Packing,
@@ -77,6 +87,8 @@ impl SearchScope {
             SearchScope::Seller => "seller",
             SearchScope::Buyer => "buyer",
             SearchScope::AnyAccount => "any_account",
+            SearchScope::Trip => "trip",
+            SearchScope::Garden => "garden",
             _ => match self.master_kind() {
                 Some(kind) => kind.as_str(),
                 None => "unknown",

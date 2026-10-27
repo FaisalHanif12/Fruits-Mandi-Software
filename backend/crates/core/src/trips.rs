@@ -18,8 +18,8 @@
 //! | `trips_other_sale_cancel` | `TripEntryCancelInput` | `TripEntryCancelled` |
 //!
 //! Lists return one page with the row count and the totals over the whole filter (Code Standards
-//! B31, PRD FR-19.11). Trip numbers are their own series, shown as سفر-1 in Urdu and TRP-1 in
-//! English; trip costs and sales in another shop have their own series too (letters from Fluent:
+//! B31, PRD FR-19.11). A trip's number is its own series (1, 2, 3 ...) and its code, the number a screen
+//! shows, is `0070`, `0071` ... (type 007, plan 34), the same in both languages; trip costs and sales in another shop have their own series too (letters from Fluent:
 //! trip cost `TC-1`, sale in another shop `OS-1`, purchase `PUR-1`).
 //!
 //! Worked numbers (PRD E2E-41): a trip with الف 50% from the shop and ب 50% from his pocket buys 80
@@ -147,10 +147,13 @@ pub struct TripRow {
     /// Its version, for `trips_set_partners`.
     #[ts(type = "number")]
     pub version: i64,
-    /// Its number, from 1 (سفر-1, TRP-1).
+    /// Its number in its own series, from 1.
     #[ts(type = "number")]
     pub number: i64,
-    /// Urdu name, made from the number and the date.
+    /// Its code, the number a screen shows (plan 34): `0070` for the first trip, `0071` for the
+    /// second. Type 007, the number less one, no padding.
+    pub code: String,
+    /// Urdu name, made from the code and the date.
     pub name_ur: String,
     /// English name.
     pub name_en: String,

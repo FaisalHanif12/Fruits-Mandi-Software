@@ -124,6 +124,10 @@ pub struct StatementLine {
     /// The main number: a بکری, voucher or trip number.
     #[ts(type = "number | null")]
     pub number: Option<i64>,
+    /// The code of the garden or trip the line belongs to (plan 34): `0080`, `0070`. Null on a
+    /// line of any other heading. For a garden or trip line `number` is the number in its series
+    /// and this is the text to show.
+    pub venture_code: Option<String>,
     /// A second number: a purchase, a trip cost or a بکری inside a trip line.
     #[ts(type = "number | null")]
     pub secondary_number: Option<i64>,

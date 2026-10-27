@@ -453,6 +453,18 @@ fn voucher_of<'a>(facts: &'a Facts, info: &read::EntryInfo) -> Option<&'a read::
     }
 }
 
+/// The code of the garden or trip a line belongs to (plan 34): `0080`, `0070`. Null for the lines
+/// of any other heading, whose number is a بکری or a voucher.
+fn venture_code(heading: StatementHeading, number: Option<i64>) -> Option<String> {
+    use mandi_domain::core::codes::{CodeType, number_code};
+    let code_type = match heading {
+        StatementHeading::Garden => CodeType::Garden,
+        StatementHeading::Trip => CodeType::Trip,
+        _ => return None,
+    };
+    number.map(|n| number_code(code_type, n))
+}
+
 /// Words one amount event.
 #[allow(clippy::too_many_lines)]
 fn draft_of(
@@ -871,6 +883,7 @@ pub fn statement(
                 entry_id: entry_id
                     .or_else(|| (matches!(event.kind, Kind::MonthClose)).then_some(event.id)),
                 number: draft.number,
+                venture_code: venture_code(draft.heading, draft.number),
                 secondary_number: draft.secondary,
                 subject: draft.subject,
                 packing: draft.packing,

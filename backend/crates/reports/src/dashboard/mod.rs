@@ -92,6 +92,10 @@ pub fn get(db: &Db, backup: BackupFacts) -> Result<Dashboard, ReportsError> {
                     .map(|g| model::DashboardGarden {
                         id: g.id,
                         number: g.number,
+                        code: mandi_core::codes::number_code(
+                            mandi_core::codes::CodeType::Garden,
+                            g.number,
+                        ),
                         name_ur: g.name_ur,
                         name_en: g.name_en,
                         balance_paisa: g.balance,

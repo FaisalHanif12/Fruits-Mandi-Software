@@ -141,6 +141,10 @@ fn row_of(
         id: rec.id,
         version: rec.version,
         number: rec.number,
+        code: mandi_domain::core::codes::number_code(
+            mandi_domain::core::codes::CodeType::Trip,
+            rec.number,
+        ),
         name_ur: rec.name_ur.clone(),
         name_en: rec.name_en.clone(),
         entry_date: rec.entry_date.clone(),
@@ -553,6 +557,7 @@ pub(crate) fn cards_of_partner(
             venture_id: id,
             kind: mandi_domain::core::ventures::VentureKind::Trip,
             number: row.number,
+            code: row.code.clone(),
             name_ur: row.name_ur.clone(),
             name_en: row.name_en.clone(),
             share_bps: mine.share_bps,

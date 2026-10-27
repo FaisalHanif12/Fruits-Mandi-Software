@@ -108,6 +108,10 @@ fn row_of(
         trip: TripRef {
             id: rec.trip_id,
             number: rec.trip_number,
+            code: mandi_domain::core::codes::number_code(
+                mandi_domain::core::codes::CodeType::Trip,
+                rec.trip_number,
+            ),
             name_ur: rec.trip_name_ur.clone(),
             name_en: rec.trip_name_en.clone(),
         },

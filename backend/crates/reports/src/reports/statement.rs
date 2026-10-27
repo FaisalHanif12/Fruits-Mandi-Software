@@ -276,10 +276,11 @@ fn detail_cell(line: &StatementLine) -> Result<Cell, ReportsError> {
     });
     // A garden's number in its own series (PRD FR-12.11).
     if line.heading == StatementHeading::Garden {
-        args.push(match line.number {
-            Some(_) => series_arg("garden", "gardens-number", line.number),
-            None => text_arg("garden", ""),
-        });
+        // The garden's code: 0080 for the first garden (plan 34).
+        args.push(text_arg(
+            "garden",
+            line.venture_code.clone().unwrap_or_default(),
+        ));
     }
     args.push(match (series, line.number) {
         (Some(series), Some(_)) => {
@@ -288,10 +289,11 @@ fn detail_cell(line: &StatementLine) -> Result<Cell, ReportsError> {
         _ => text_arg("voucher", number_text(line.number)),
     });
     if line.heading == StatementHeading::Trip {
-        args.push(match line.number {
-            Some(_) => series_arg("trip", "trips-number", line.number),
-            None => text_arg("trip", ""),
-        });
+        // The trip's code: 0070 for the first trip (plan 34).
+        args.push(text_arg(
+            "trip",
+            line.venture_code.clone().unwrap_or_default(),
+        ));
         args.push(match (kind_of(line), line.secondary_number) {
             (Some("purchase"), Some(_)) => {
                 series_arg("secondary", "purchases-number", line.secondary_number)

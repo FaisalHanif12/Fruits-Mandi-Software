@@ -94,14 +94,20 @@ pub const BANK_ACCOUNT_CODE: &str = "01020001";
 ///
 /// ```
 /// use mandi_core::accounts::can_take_opening;
-/// assert!(can_take_opening("01", "01010001", false)); // روکڑ
-/// assert!(can_take_opening("03", "0010", false)); // a seller
-/// assert!(!can_take_opening("04", "04010001", false)); // income
-/// assert!(!can_take_opening("06", "06019999", false)); // ابتدائی فرق
-/// assert!(!can_take_opening("03", "03040000", false)); // نقدی منڈی
-/// assert!(!can_take_opening("03", "0030", true)); // پختہ کھاتہ
+/// assert!(can_take_opening("01", "0101", "01010001", false)); // روکڑ
+/// assert!(can_take_opening("03", "03011", "0010", false)); // a seller
+/// assert!(!can_take_opening("04", "0401", "04010001", false)); // income
+/// assert!(!can_take_opening("06", "0601", "06019999", false)); // ابتدائی فرق
+/// assert!(!can_take_opening("03", "0304", "03040000", false)); // نقدی منڈی
+/// assert!(!can_take_opening("03", "0304", "0030", true)); // پختہ کھاتہ
+/// assert!(!can_take_opening("03", "0306", "0080", false)); // a garden (code 0080, control 0306)
 /// ```
-pub fn can_take_opening(head_code: &str, code: &str, is_pukhta_khata: bool) -> bool {
+pub fn can_take_opening(
+    head_code: &str,
+    control_code: &str,
+    code: &str,
+    is_pukhta_khata: bool,
+) -> bool {
     head_code != INCOME_HEAD
         && head_code != EXPENSE_HEAD
         && code != OPENING_DIFFERENCE_CODE
@@ -111,8 +117,9 @@ pub fn can_take_opening(head_code: &str, code: &str, is_pukhta_khata: bool) -> b
         // used (PRD FR-10.9 v1.6, D4-A31, D4-A32).
         && code != OWN_GOODS_CODE
         && code != BANK_ACCOUNT_CODE
-        && !code.starts_with(VENTURE_CONTROL_CODE)
-        && !code.starts_with(GARDEN_CONTROL_CODE)
+        // A garden's account has the code of its garden (0080), so it is told by its control.
+        && control_code != VENTURE_CONTROL_CODE
+        && control_code != GARDEN_CONTROL_CODE
         && !is_pukhta_khata
 }
 

@@ -9,11 +9,16 @@ export type TripRef = {
    */
   id: number;
   /**
-   * Its number, from 1 (سفر-1, TRP-1).
+   * Its number in its own series, from 1.
    */
   number: number;
   /**
-   * Urdu name, made from the number and the date.
+   * Its code, the number a screen shows (plan 34): `0070` for the first trip, `0071` for the
+   * second. Type 007, the number less one, no padding.
+   */
+  code: string;
+  /**
+   * Urdu name, made from the code and the date.
    */
   name_ur: string;
   /**

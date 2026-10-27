@@ -14,6 +14,10 @@ export type DashboardGarden = {
    */
   number: number;
   /**
+   * Its code (plan 34): `0080` for the first garden.
+   */
+  code: string;
+  /**
    * Urdu name.
    */
   name_ur: string;

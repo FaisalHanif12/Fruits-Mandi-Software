@@ -64,7 +64,7 @@ const TRIGGERS_OF_0004: [&str; 7] = [
     "bikri_lots_no_replace",
     "bikri_sales_no_replace",
 ];
-const LATEST_VERSION: i64 = 7;
+const LATEST_VERSION: i64 = 8;
 /// The tables migration 0006 adds (plan 16b). A file of an old release does not have them, and
 /// they are empty in this test, so the row fingerprint leaves them out.
 const TABLES_OF_0006: [&str; 8] = [

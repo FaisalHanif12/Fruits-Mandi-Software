@@ -11,6 +11,8 @@
 //! | Item (قسم مال) | `004` | `0040`, `0041` ... |
 //! | Packing (پیکنگ) | `005` | `0050`, `0051` ... |
 //! | Staff (عملہ) | `006` | `0060`, `0061` ... |
+//! | Market trip (مارکیٹ سفر) | `007` | `0070`, `0071` ... (plan 34) |
+//! | Garden (باغ) | `008` | `0080`, `0081` ... and the garden's account has the same code |
 //!
 //! The next code of a type is the largest running number of that type plus one, so a code is never
 //! reused. A code has at most 10 digits (`MAX_CODE_DIGITS` of the masters), so the running number has
@@ -49,17 +51,24 @@ pub enum CodeType {
     Packing,
     /// عملہ, type number `006`.
     Staff,
+    /// مارکیٹ سفر, type number `007` (plan 34): the number of a trip. The first trip is `0070`.
+    Trip,
+    /// باغ, type number `008` (plan 34): the number of a garden and the code of its account. The
+    /// first garden is `0080`.
+    Garden,
 }
 
 impl CodeType {
     /// Every type.
-    pub const ALL: [CodeType; 6] = [
+    pub const ALL: [CodeType; 8] = [
         CodeType::Seller,
         CodeType::Buyer,
         CodeType::Pukhta,
         CodeType::Item,
         CodeType::Packing,
         CodeType::Staff,
+        CodeType::Trip,
+        CodeType::Garden,
     ];
 
     /// The three digits at the start of every code of this type.
@@ -77,6 +86,8 @@ impl CodeType {
             CodeType::Item => "004",
             CodeType::Packing => "005",
             CodeType::Staff => "006",
+            CodeType::Trip => "007",
+            CodeType::Garden => "008",
         }
     }
 
@@ -168,6 +179,26 @@ pub fn running_of(code: &str, code_type: CodeType) -> Option<u64> {
     parse_code(code)
         .filter(|p| p.code_type == code_type)
         .map(|p| p.running)
+}
+
+/// The code of a trip or a garden from its number in its own series (1, 2, 3 ...): the type number
+/// and the number less one, so trip 1 is `0070`, trip 2 `0071`, garden 1 `0080` (plan 34). A trip or
+/// garden is never deleted and its number is never reused, so its code never is either. A number
+/// below 1 or too big for a code gives the plain number, which a screen shows as it is.
+///
+/// ```
+/// use mandi_core::codes::{number_code, CodeType};
+/// assert_eq!(number_code(CodeType::Trip, 1), "0070");
+/// assert_eq!(number_code(CodeType::Trip, 11), "00710");
+/// assert_eq!(number_code(CodeType::Garden, 1), "0080");
+/// assert_eq!(number_code(CodeType::Garden, 0), "0");
+/// ```
+pub fn number_code(code_type: CodeType, number: i64) -> String {
+    number
+        .checked_sub(1)
+        .and_then(|running| u64::try_from(running).ok())
+        .and_then(|running| build_code(code_type, running))
+        .unwrap_or_else(|| number.to_string())
 }
 
 /// The next running number of a type: 0 when there is no code yet, else the largest plus one.
@@ -268,6 +299,31 @@ mod tests {
     }
 
     #[test]
+    fn trips_and_gardens_are_numbered_from_zero_in_their_own_types() {
+        // Plan 34 R1, R2: the first trip is 0070, the first garden 0080 (and so is its account).
+        assert_eq!(number_code(CodeType::Trip, 1), "0070");
+        assert_eq!(number_code(CodeType::Trip, 2), "0071");
+        assert_eq!(number_code(CodeType::Trip, 11), "00710");
+        assert_eq!(number_code(CodeType::Garden, 1), "0080");
+        assert_eq!(number_code(CodeType::Garden, 12), "00811");
+        for (code, kind, running) in [
+            ("0070", CodeType::Trip, 0),
+            ("00710", CodeType::Trip, 10),
+            ("0080", CodeType::Garden, 0),
+            ("0081", CodeType::Garden, 1),
+        ] {
+            let p = parse_code(code).unwrap();
+            assert_eq!((p.code_type, p.running), (kind, running), "{code}");
+        }
+        // Never a seller's or a buyer's short code.
+        assert_eq!(short_code_of_party("0070"), None);
+        assert_eq!(short_code_of_party("0080"), None);
+        // A number that is not a number of the series gives the plain number.
+        assert_eq!(number_code(CodeType::Trip, 0), "0");
+        assert_eq!(number_code(CodeType::Trip, -3), "-3");
+    }
+
+    #[test]
     fn short_code_rule() {
         // Seller box: 0 finds 0010, 11 finds 00111.
         assert_eq!(parse_running("0"), Some(0));
@@ -297,7 +353,7 @@ mod tests {
             assert!(parse_code(code).is_none(), "{code}");
         }
         // The type number alone, a padded running number and a bad type number.
-        for code in ["001", "00101", "0070", "0000"] {
+        for code in ["001", "00101", "0090", "0000"] {
             assert!(parse_code(code).is_none(), "{code}");
         }
     }
@@ -356,7 +412,7 @@ mod tests {
     proptest! {
         // parse(build(type, n)) == (type, n) for every type and running number.
         #[test]
-        fn build_then_parse_gives_the_same(kind in 0usize..6, n in 0u64..=MAX_RUNNING) {
+        fn build_then_parse_gives_the_same(kind in 0usize..CodeType::ALL.len(), n in 0u64..=MAX_RUNNING) {
             let code_type = CodeType::ALL[kind];
             let code = build_code(code_type, n).unwrap();
             let parsed = parse_code(&code).unwrap();

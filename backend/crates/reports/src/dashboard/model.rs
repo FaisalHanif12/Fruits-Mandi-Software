@@ -319,6 +319,8 @@ pub struct DashboardGarden {
     /// Its number in the series of gardens.
     #[ts(type = "number")]
     pub number: i64,
+    /// Its code (plan 34): `0080` for the first garden.
+    pub code: String,
     /// Urdu name.
     pub name_ur: String,
     /// English name.

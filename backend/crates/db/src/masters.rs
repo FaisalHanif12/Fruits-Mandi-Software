@@ -42,6 +42,9 @@ pub struct SearchSource {
     pub account_type: Option<mandi_core::accounts::AccountType>,
     /// For an account: the control it is under. `None` for masters.
     pub control_id: Option<i64>,
+    /// For an account: the code of that control (a garden's account has the code of its garden,
+    /// `0080`, so the control tells it apart). `None` for masters.
+    pub control_code: Option<String>,
     /// For an account: its tag (نشان, PRD 10.2). `None` for masters and for an account with none.
     pub tag: Option<String>,
 }
@@ -523,6 +526,23 @@ pub fn create_account(
         return Ok(None);
     };
     let code = format!("{}{serial:04}", account.control_code);
+    let id = create_account_coded(conn, account, &code, serial, user_id, now)?;
+    Ok(Some((id, code)))
+}
+
+/// Makes an account under its control with the code and the serial given. A garden's account has the
+/// code of its garden (`0080`, plan 34), which is not the control code plus a serial. Returns the id.
+///
+/// # Errors
+/// Any SQLite error (a UNIQUE clash on the code), or a control that does not exist.
+pub fn create_account_coded(
+    conn: &Connection,
+    account: &AccountToMake,
+    code: &str,
+    serial: u32,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<i64> {
     let made = conn.execute(
         "INSERT INTO accounts (created_at, created_by, updated_at, updated_by, control_id, code, serial,
              party_type, name_ur, name_en, search_ur, search_en, search_phonetic, is_system, is_active)
@@ -545,7 +565,7 @@ pub fn create_account(
     if made != 1 {
         return Err(rusqlite::Error::StatementChangedRows(made));
     }
-    Ok(Some((conn.last_insert_rowid(), code)))
+    Ok(conn.last_insert_rowid())
 }
 
 /// Gives the account of a master its new names (and search columns).
@@ -621,6 +641,7 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         is_active: r.get(10)?,
         account_type: None,
         control_id: None,
+        control_code: None,
         tag: None,
     })
 }

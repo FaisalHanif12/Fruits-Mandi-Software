@@ -22,8 +22,9 @@
 //! | `gardens_reopen` | `GardenReopenInput` | `GardenReopened` |
 //!
 //! Lists return one page with the row count and the totals over the whole filter (Code Standards
-//! B31, PRD FR-19.11). A garden's number is its own series, shown as باغ-1 in Urdu and GDN-1 in
-//! English; the screen lists its entries by date, with no entry number (plan 17c, Q3).
+//! B31, PRD FR-19.11). A garden's number is its own series (1, 2, 3 ...) and its code, the number a
+//! screen shows, is `0080`, `0081` ... (type 008, plan 34), the same in both languages, and the code of
+//! its account; the screen lists its entries by date, with no entry number (plan 17c, Q3).
 //!
 //! Money words (the money agent, Section 5.5):
 //!
@@ -218,9 +219,12 @@ pub struct GardenRow {
     /// Its version, for `gardens_set_partners`, `gardens_close` and `gardens_reopen`.
     #[ts(type = "number")]
     pub version: i64,
-    /// Its number, from 1 (باغ-1, GDN-1).
+    /// Its number in its own series, from 1.
     #[ts(type = "number")]
     pub number: i64,
+    /// Its code, the number a screen shows (plan 34): `0080` for the first garden, `0081` for the
+    /// second. Type 008, the number less one, no padding. The garden's account has the same code.
+    pub code: String,
     /// Urdu name, as typed.
     pub name_ur: String,
     /// English name, as typed.
@@ -430,9 +434,11 @@ pub struct GardenSummaryRow {
     /// The garden.
     #[ts(type = "number")]
     pub id: i64,
-    /// Its number (باغ-1, GDN-1).
+    /// Its number in its own series, from 1.
     #[ts(type = "number")]
     pub number: i64,
+    /// Its code (plan 34): `0080` for the first garden.
+    pub code: String,
     /// Urdu name.
     pub name_ur: String,
     /// English name.

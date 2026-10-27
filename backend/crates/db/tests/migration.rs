@@ -11,7 +11,8 @@ use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
     self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, INIT_SQL, MigrationOutcome,
-    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
+    TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -19,7 +20,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 7;
+const LATEST: usize = 8;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -104,6 +105,23 @@ fn released_version_6() -> Migrations<'static> {
         M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
         M::up(STABLE_POSTING_ORDER_SQL),
         M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+    ])
+}
+
+/// The schema as it was released at version 7: migrations 0001 to 0007.
+fn released_version_7() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
     ])
 }
 
@@ -381,10 +399,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 8).unwrap();
+    conn.pragma_update(None, "user_version", 9).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 8);
+    assert_eq!(user_version(&conn), 9);
     assert!(!backups.exists());
 }
 
@@ -2022,7 +2040,8 @@ fn migration_7_renumbers_the_codes_and_changes_nothing_else() {
     let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
     let before_triggers: Vec<String> = schema(&conn, "trigger");
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_7(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (6, 7));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 7);
@@ -2149,6 +2168,161 @@ fn migration_7_renumbers_the_codes_and_changes_nothing_else() {
     conn.execute("DELETE FROM accounts WHERE name_en = 'Last'", [])
         .unwrap();
     assert_eq!(all_rows_without(&conn, &skip_codes), before_rows);
+    assert_eq!(hashes(&conn), before_hashes);
+    mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
+    assert_eq!(
+        mandi_db::ledger::account_totals(&conn, None).unwrap(),
+        before_totals
+    );
+    let bad_keys: i64 = conn
+        .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(bad_keys, 0);
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+}
+
+#[test]
+fn migration_8_gives_trips_and_gardens_their_codes_and_changes_nothing_else() {
+    // Plan 34: a populated file made at version 7 (three trips named the old way, two gardens with
+    // their accounts under control 0306, posted entries with their hash chain) is upgraded: a copy
+    // is taken, each garden's account gets the code of its garden, each trip gets the name "0070
+    // 10-10-2026" in both scripts with its search keys made again. Nothing else moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_7(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 7);
+
+    let garden_one = add_old_account(&conn, "0306", "03060001", 1, "garden", "Shahpur");
+    let garden_two = add_old_account(&conn, "0306", "03060002", 2, "garden", "Multan Bagh");
+    for (kind, number, day, name_ur, name_en, account) in [
+        (
+            "trip",
+            1,
+            "2026-10-10",
+            "سفر-1 10-10-2026",
+            "TRP-1 10-10-2026",
+            None,
+        ),
+        (
+            "trip",
+            2,
+            "2026-10-11",
+            "سفر-2 11-10-2026",
+            "TRP-2 11-10-2026",
+            None,
+        ),
+        (
+            "garden",
+            1,
+            "2026-10-10",
+            "شاہ پور",
+            "Shahpur",
+            Some(garden_one),
+        ),
+        (
+            "garden",
+            2,
+            "2026-10-12",
+            "ملتان باغ",
+            "Multan Bagh",
+            Some(garden_two),
+        ),
+        (
+            "trip",
+            3,
+            "2026-10-12",
+            "سفر-3 12-10-2026",
+            "TRP-3 12-10-2026",
+            None,
+        ),
+    ] {
+        conn.execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en,
+                 search_phonetic, account_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?4, lower(?5), lower(?5), ?6)",
+            (kind, number, day, name_ur, name_en, account),
+        )
+        .unwrap();
+    }
+    post_chained(&conn, "2026-10-10", "01010001", "03060001", 5_000, None);
+    post_chained(&conn, "2026-10-12", "03060002", "01010001", 1_000, None);
+
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 2);
+    let skip = [
+        ("accounts", "code"),
+        ("accounts", "serial"),
+        ("ventures", "name_ur"),
+        ("ventures", "name_en"),
+        ("ventures", "search_ur"),
+        ("ventures", "search_en"),
+        ("ventures", "search_phonetic"),
+    ];
+    let before_rows = all_rows_without(&conn, &skip);
+    let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (7, 8));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 8);
+
+    // The gardens' accounts have the code of their garden, and the serial is the running number.
+    let account_of = |id: i64| -> (String, i64) {
+        conn.query_row(
+            "SELECT code, serial FROM accounts WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap()
+    };
+    assert_eq!(account_of(garden_one), ("0080".to_owned(), 0));
+    assert_eq!(account_of(garden_two), ("0081".to_owned(), 1));
+    // The trips are named by their code and day, the same in both scripts, with new search keys.
+    let trips: Vec<(i64, String, String, String)> = conn
+        .prepare("SELECT number, name_ur, name_en, search_en FROM ventures WHERE kind = 'trip' ORDER BY number")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let want = [
+        (1, "0070 10-10-2026"),
+        (2, "0071 11-10-2026"),
+        (3, "0072 12-10-2026"),
+    ];
+    for ((number, ur, en, key), (want_number, want_name)) in trips.iter().zip(want) {
+        assert_eq!(*number, want_number);
+        assert_eq!((ur.as_str(), en.as_str()), (want_name, want_name));
+        assert_eq!(key, &mandi_core::text::search_en(want_name));
+    }
+    // The gardens keep the names they were typed with.
+    let garden_names: Vec<String> = conn
+        .prepare("SELECT name_en FROM ventures WHERE kind = 'garden' ORDER BY number")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(garden_names, ["Shahpur", "Multan Bagh"]);
+
+    // Nothing else moved: every other column of every row, every hash, every balance.
+    assert_eq!(all_rows_without(&conn, &skip), before_rows);
     assert_eq!(hashes(&conn), before_hashes);
     mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
     assert_eq!(

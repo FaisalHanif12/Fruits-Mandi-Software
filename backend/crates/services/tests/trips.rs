@@ -1242,3 +1242,184 @@ fn lists_load_page_by_page_with_totals_over_the_whole_filter() {
     assert_eq!(summary.cost_left_paisa.rupees(), 3_030);
     let _: Option<PurchaseRow> = None;
 }
+
+/// Plan 33 T1: the own-lot picker and the new sale ask `purchases_list` for a day. The answer for
+/// `from = to = that day` with `state = in_stock` is the purchases of that day with goods left, with
+/// everything a ready lot needs: date, trip, number, item, packing and qty left. A purchase of a
+/// closed trip, one with nothing left, a cancelled one and one of another day are not in it.
+#[test]
+fn plan_33_the_purchases_of_one_day_with_goods_left_are_what_a_new_sale_needs() {
+    let w = world();
+    let [a, b, c] = w.partners;
+    let make_trip = |date: &str| {
+        trips::create(
+            &w.env.ctx,
+            &w.owner,
+            &trip_input(date, vec![shop(a, "40"), shop(b, "30"), shop(c, "30")]),
+        )
+        .unwrap()
+    };
+    let (trip_a, trip_b, trip_c) = (
+        make_trip("10-10-2026"),
+        make_trip("10-10-2026"),
+        make_trip("10-10-2026"),
+    );
+    let save = |trip: i64, qty: &str, rate: &str| {
+        purchases::save(
+            &w.env.ctx,
+            &w.owner,
+            &purchase_input(&w, trip, qty, rate, None),
+        )
+        .unwrap()
+    };
+    // Today 10-10: خ-1 (trip A, 20), خ-2 (trip B, 30), خ-3 (trip C, 10, then all written off, so
+    // trip C closes), خ-4 (trip A, 5, cancelled).
+    let p1 = save(trip_a.id, "20", "50");
+    let p2 = save(trip_b.id, "30", "40");
+    let p3 = save(trip_c.id, "10", "10");
+    let p4 = save(trip_a.id, "5", "10");
+    assert_eq!(
+        (p1.number, p2.number, p3.number, p4.number),
+        (1, 2, 3, 4),
+        "the numbers go up in the order of saving"
+    );
+    purchases::write_off(
+        &w.env.ctx,
+        &w.owner,
+        &PurchaseWriteOffInput {
+            purchase_id: p3.id,
+            qty: "10".into(),
+            reason: "spoiled".into(),
+        },
+    )
+    .unwrap();
+    purchases::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &PurchaseCancelInput {
+            id: p4.id,
+            version: p4.version,
+            reason: "wrong".into(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let closed = trips::list(
+        &w.env.ctx,
+        &TripsListInput {
+            status: Some(VentureStatus::Closed),
+            ..TripsListInput::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        closed.rows.iter().map(|t| t.id).collect::<Vec<_>>(),
+        [trip_c.id],
+        "a trip whose goods are all written off closes by itself"
+    );
+    // Tomorrow, 11-10: a purchase on the open trip A.
+    set_today(&w.env, 2026, 10, 11);
+    let p5 = purchases::save(
+        &w.env.ctx,
+        &w.owner,
+        &PurchaseInput {
+            date: "11-10-2026".into(),
+            ..purchase_input(&w, trip_a.id, "8", "30", None)
+        },
+    )
+    .unwrap();
+
+    let day = |date: &str| {
+        let mut rows = purchases::list(
+            &w.env.ctx,
+            &PurchasesListInput {
+                from: Some(date.into()),
+                to: Some(date.into()),
+                state: Some(PurchaseStateFilter::InStock),
+                ..PurchasesListInput::default()
+            },
+        )
+        .unwrap()
+        .rows;
+        // The list is newest first; a new sale takes the lots in purchase number order.
+        rows.sort_by_key(|r| r.number);
+        rows
+    };
+    let tenth = day("10-10-2026");
+    assert_eq!(
+        tenth.iter().map(|r| r.number).collect::<Vec<_>>(),
+        [1, 2],
+        "خ-3 (closed trip, nothing left) and خ-4 (cancelled) are not there"
+    );
+    let first = &tenth[0];
+    assert_eq!(first.entry_date, "2026-10-10");
+    assert_eq!(
+        (first.trip.id, first.trip.number),
+        (trip_a.id, trip_a.number)
+    );
+    assert_eq!(first.item.id, w.banana);
+    assert_eq!(first.packing.id, w.box_);
+    assert_eq!((first.qty, first.qty_left), (20, 20));
+    assert!(!first.trip.name_en.is_empty() && !first.item.name_ur.is_empty());
+    assert_eq!(tenth[1].trip.id, trip_b.id);
+    assert_eq!(tenth[1].qty_left, 30);
+    // The other day has its own purchase only, and the written-off and cancelled ones never come.
+    let eleventh = day("11-10-2026");
+    assert_eq!(
+        eleventh.iter().map(|r| r.id).collect::<Vec<_>>(),
+        [p5.id],
+        "a purchase of another day is not in the day"
+    );
+    assert_eq!(eleventh[0].entry_date, "2026-10-11");
+    assert!(day("12-10-2026").is_empty());
+    // Without a day, the same filter gives all the goods left, and still nothing of the closed trip.
+    let all = purchases::list(
+        &w.env.ctx,
+        &PurchasesListInput {
+            state: Some(PurchaseStateFilter::InStock),
+            ..PurchasesListInput::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(all.total_count, 3);
+    assert!(all.rows.iter().all(|r| r.trip.id != trip_c.id));
+    // A part sold or written off lowers the qty left that the day shows; nothing left drops it.
+    purchases::write_off(
+        &w.env.ctx,
+        &w.owner,
+        &PurchaseWriteOffInput {
+            purchase_id: p2.id,
+            qty: "12".into(),
+            reason: "spoiled".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(day("10-10-2026")[1].qty_left, 18);
+    purchases::write_off(
+        &w.env.ctx,
+        &w.owner,
+        &PurchaseWriteOffInput {
+            purchase_id: p2.id,
+            qty: "18".into(),
+            reason: "spoiled".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        day("10-10-2026")
+            .iter()
+            .map(|r| r.number)
+            .collect::<Vec<_>>(),
+        [1]
+    );
+    // A bad day is a clear refusal on its field.
+    let error = purchases::list(
+        &w.env.ctx,
+        &PurchasesListInput {
+            from: Some("31-02-2026".into()),
+            ..PurchasesListInput::default()
+        },
+    )
+    .unwrap_err();
+    assert_eq!(first_error(&error).1.as_deref(), Some("from"));
+}
