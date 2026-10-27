@@ -826,6 +826,8 @@ FR-10.2 [C] **Codes by type** (Umar, 27-10-2026). Each kind of record has a type
 | Item (قسم مال) | **004** | 0040, 0041 ... | [C] |
 | Packing (پیکنگ) | **005** | 0050, 0051 ... | [C] |
 | Staff (عملہ) | **006** | 0060, 0061 ... | [C] |
+| Market trip (مارکیٹ سفر) | **007** | 0070, 0071 ... (the trip's number) | [C] |
+| Garden (باغ) | **008** | 0080, 0081 ... (the garden's number and its account's code) | [C] |
 | Others | keep their control code + 4-digit serial | 01010001 cash, 04010001 seller commission, 03040000 نقدی منڈی, 030119998 اپنا مال, money lent 0103xxxx, separate khatas 0305xxxx, gardens 0306xxxx; cities, addas, marks, stores, narrations and expense heads keep their codes | [A] |
 
 FR-10.3 [C] **Running numbers.** The next code suggested is the highest running number of that type + 1. The user can type a different free code of the same type. There is no limit in practice (a code has at most 10 digits, so 9,999,999 of each type), and a code is never reused (Umar, 27-10-2026). Example: the first seller is 0010, the eleventh 00110.
@@ -1209,7 +1211,7 @@ Umar (14-10-2026, 18-10-2026 and 19-10-2026): some partners send a person to a b
 
 | Field | Urdu | Type | Req | Rule |
 |---|---|---|---|---|
-| Trip no | سفر نمبر | Auto at save | Yes | Own series (سفر-1, سفر-2 ...) |
+| Trip no | سفر نمبر | Auto at save | Yes | Code by type 007 (FR-10.2): the first trip is 0070, then 0071 ... (v1.8; before: سفر-1, سفر-2) |
 | Date | تاریخ | Date | Yes | An open date |
 | Market | منڈی | Text | No | Where the goods are bought, as typed (FR-7.25) |
 | Sent | بھیجا گیا | Text | No | Who went, as typed |
@@ -1277,7 +1279,7 @@ Umar (18-10-2026 and 19-10-2026): some partners rent a garden (باغ) for a sea
 
 | Field | Urdu | Type | Req | Rule |
 |---|---|---|---|---|
-| Garden no | باغ نمبر | Auto at save | Yes | Own series (باغ-1, باغ-2 ...) |
+| Garden no | باغ نمبر | Auto at save | Yes | Code by type 008 (FR-10.2): the first garden is 0080, then 0081 ...; its account under 0306 has the same code (v1.8; before: باغ-1, باغ-2) |
 | Name | نام | Text, Urdu and English (FR-7.24) | Yes | |
 | Date | تاریخ | Date | Yes | An open date |
 | Item | قسم مال | Picker | No | The main fruit |
@@ -1809,7 +1811,7 @@ FR-20.10 [A] USB and cloud backups are locked with a key that is shown once at s
 | Group | Settings |
 |---|---|
 | Firm | Firm name (Urdu, English), mandi name, address, phones, logo; up to 3 contact persons for prints, each a name (Urdu and English) and a phone, for example "منشی آصف بھٹی 0300-4058860"; trade mark text (for example "RH"), printed in a box (FR-19.13, v1.7) |
-| Codes | Type numbers: seller 001, buyer 002, پختہ کھاتہ 003, item 004, packing 005, staff 006 (fixed, FR-10.2) |
+| Codes | Type numbers: seller 001, buyer 002, پختہ کھاتہ 003, item 004, packing 005, staff 006, market trip 007, garden 008 (fixed, FR-10.2) |
 | Charges | Global defaults: seller commission 6%, buyer commission 6%, لاگا 8 per نگ on fruit (as an item-group rule). مزدوری, منشیانہ, فون have no default. The commission agent changes any of them (Section 11). |
 | Overrides | Allow line-level commission and لاگا override (on / off, default on, FR-11.10) |
 | Checks | Credit limit: warn or block. Rate check (FR-7.55) on or off, with its percent (default 30%). |
@@ -2239,5 +2241,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.5 | 15-10-2026 | Umar's answers of 15-10-2026 to the team's open questions after D1 and D2, approved by Umar. Commission is typed on the بکری line by default (FR-11.10, 12.4, Section 21), and there is no party + group rule level (11.1). "Newer wins" means the later start date (FR-11.5). A removed per-lot commission line moves its charge (FR-11.9). A seller's opening credit and a جنرل credit on a seller are payable (FR-7.59). A جنرل line never adjusts advances (16.4). Cash going below zero asks the user to confirm, on every entry (FR-6.7, A52 resolved). A return-by date cannot be before the entry date (FR-16.9). Opening balance rules (FR-10.9) and system accounts stay active (FR-10.4). New edge cases E58 to E60. No posting or test number changed. |
 | 1.6 | 19-10-2026 | Umar's changes of 18-10-2026 and 19-10-2026, approved by Umar. Market trips (12.10 rewritten, FR-12.29 to FR-12.33): goods bought by some partners, paid from the shop's cash or their own pockets, sold in بکری or another shop; the commission is firm income; the trip's result goes only to its partners by its %, on the day of the sale; خریداری moves into the مارکیٹ سفر section; the accounts 01040001, 04010006 and 05020001 are removed (never in a released migration). Gardens (12.11, FR-12.34 to FR-12.38, control 0306). A garden, trip and fruit account per partner (0604). Fruit taken (16.7, FR-16.10 to FR-16.12). One cash account: no bank, no cheque, no mode (15.1, 16, 17.4, FR-10.4, 10.3); no cash count box (FR-16.1). Analytics complete and printable by day, month or year (FR-18.4, FR-18.8, views I to K, all views Must). Large lists page by page (FR-19.11). Party day sheet R35 (FR-19.12) and the collection round are Must; R7 with commission, R36, R37; R33 is the trip report. Dated statement lines (FR-17.10). E2E-38 renamed (خاندانی کھاتہ). Formulas C16, C21, C22 changed; C23 to C27 new. E2E-34 and E2E-34b numbers changed (approved by Umar); new tests E2E-40, E2E-40b, E2E-41, E2E-42 and E2E-43; edge cases E61 to E70; assumptions A53 to A64. Numbers from `worked_day.py`. The worked day (Section 4) and E2E-1 to E2E-33 and E2E-35 to E2E-39 are unchanged. |
 | 1.7 | 22-10-2026 | Umar's answers of 20-10-2026 and 21-10-2026, from the client's own prints of 18-10-26, approved by Umar. The buyer pays commission and لاگا on every line; the seller pays commission only (11.2, A3 resolved). R35 in the client's two layouts, the day slip and the all-parties table (FR-19.12); R5 lines written "(item qty . rate)"; a clear layout for every other print (FR-19.13). The tag نشان after a name (10.2, FR-7.28, FR-7.40, FR-10.7, E38). The firm's contact persons and trade mark (Section 21). Glossary: تازہ بنام, سابقہ رقم, ٹوٹل رقم, بقایا, نشان. E2E-36 writes R5 the new way (no number changed). Still open: کیلا lines with no rate (A42). No money rule, posting or test number changed. |
-| 1.8 | 27-10-2026 | Umar's change of 27-10-2026, made while testing the app himself, approved by Umar. Codes by type: seller 001, buyer 002, پختہ کھاتہ 003, item 004, packing 005, staff 006, each code the type number + a running number from 0 with no padding (FR-10.2, FR-10.3, FR-10.4, FR-13.1, Section 21, E29, A14 resolved). Short codes are the running number (FR-7.39, A35). The accounts list shows sellers, buyers and پختہ کھاتہ only, and the account form makes sellers and buyers only (10.2, FR-10.5). A click opens a picker's list; a list with no match offers a button to add one in the انڈکس and comes back with nothing lost (FR-7.10, FR-7.16, FR-7.41, FR-7.42). The worked day's codes change (4.3 to 4.5, 4.10, E2E-23, E2E-24, E2E-25, E2E-42, demo step 4). Today's trip goods come into a new sale as ready lots (FR-12.39). No money rule, posting or test number changed. |
+| 1.8 | 27-10-2026 | Umar's change of 27-10-2026, made while testing the app himself, approved by Umar. Codes by type: seller 001, buyer 002, پختہ کھاتہ 003, item 004, packing 005, staff 006, each code the type number + a running number from 0 with no padding (FR-10.2, FR-10.3, FR-10.4, FR-13.1, Section 21, E29, A14 resolved). Short codes are the running number (FR-7.39, A35). The accounts list shows sellers, buyers and پختہ کھاتہ only, and the account form makes sellers and buyers only (10.2, FR-10.5). A click opens a picker's list; a list with no match offers a button to add one in the انڈکس and comes back with nothing lost (FR-7.10, FR-7.16, FR-7.41, FR-7.42). The worked day's codes change (4.3 to 4.5, 4.10, E2E-23, E2E-24, E2E-25, E2E-42, demo step 4). Today's trip goods come into a new sale as ready lots (FR-12.39). Market trips (007) and gardens (008) get codes by type (FR-10.2, 12.10, 12.11); purchase numbers (خ-1) stay. No money rule, posting or test number changed. |
 
