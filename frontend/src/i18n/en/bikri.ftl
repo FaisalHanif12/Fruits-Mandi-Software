@@ -911,3 +911,14 @@ bikri-stock-own-total-cost = Total cost
 
 # review: pending
 bikri-stock-own-trip = { -market-safar }
+
+## Ready goods that come into a new sale by themselves (plan 33, PRD FR-12.39, FR-12.40).
+
+# review: pending
+bikri-ready-lots-note = { $count ->
+    [one] <num>1</num> { -lot }
+   *[other] <num>{ $count }</num> { -lot }s
+} added from goods that are ready to sell.
+
+# review: pending
+bikri-ready-lots-note-hint = Add the buyers and rates. To leave one out, remove its lot with <key>{ $key }</key>.

@@ -9,6 +9,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
+import { isoToDisplayDate } from '../../shared/format';
 import { useDebouncedValue } from '../../shared/hooks';
 import {
   purchasesCancel,
@@ -77,6 +78,32 @@ export function usePurchasesList(filter: PurchasesListInput, enabled = true) {
     queryFn: () => purchasesList(settled),
     enabled,
     placeholderData: keepPreviousData,
+    staleTime: 0,
+  });
+}
+
+/**
+ * The purchases bought on or before a day that still have goods left (plan 33, PRD FR-12.39): the
+ * goods a new بکری of that day brings in as lots. A trip with goods left is an open trip, because a
+ * trip closes by itself when nothing is left (FR-12.33). Asked for one day at a time and never
+ * kept from another day: the answer for the day before must not put its lots in a sale of this
+ * one. Nothing is asked while `iso` is null (the date is not a whole date yet).
+ */
+export function usePurchasesReadyBy(iso: string | null) {
+  return useQuery({
+    queryKey: [...PURCHASES_KEY, 'ready-by', iso],
+    queryFn: () =>
+      purchasesList({
+        trip_id: null,
+        from: null,
+        // The list takes its dates as DD-MM-YYYY (PRD FR-19.10).
+        to: iso === null ? null : isoToDisplayDate(iso),
+        item_id: null,
+        state: 'in_stock',
+        offset: 0,
+        limit: 0,
+      }),
+    enabled: iso !== null,
     staleTime: 0,
   });
 }

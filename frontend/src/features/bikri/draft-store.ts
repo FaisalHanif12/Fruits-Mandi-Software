@@ -38,9 +38,22 @@ interface ViewState {
   wholeView: boolean;
   /** The "more" panel of the selected lot is open (PRD FR-12.2). */
   moreOpen: boolean;
+  /**
+   * The lots that came into this new بکری by themselves from the stock that is ready to sell
+   * (plan 33, PRD FR-12.39, FR-12.40): the key of the lot row, and the key of the stock record it
+   * takes its goods from (`readyKey`). A lot the user has worked on stays in the list; it is only
+   * a record of where the lot came from.
+   */
+  readyLots: Record<string, string>;
+  /**
+   * Stock records whose lot the user removed from this form. They are not put back (R3). The keys
+   * are unique, so a date change cannot bring a removed one back by mistake either.
+   */
+  removedReady: string[];
   select: (lotKey: string | null) => void;
   setWhole: (whole: boolean) => void;
   setMore: (open: boolean) => void;
+  setReadyLots: (readyLots: Record<string, string>, removed: string[]) => void;
 }
 
 export interface BikriDraftStores {
@@ -105,6 +118,8 @@ export function createBikriDraft(today: string): BikriDraftStores {
     selectedLot: lots.getState().rows[0]?.rowId ?? null,
     wholeView: false,
     moreOpen: false,
+    readyLots: {},
+    removedReady: [],
     select: (selectedLot) => {
       set({ selectedLot });
     },
@@ -113,6 +128,9 @@ export function createBikriDraft(today: string): BikriDraftStores {
     },
     setMore: (moreOpen) => {
       set({ moreOpen });
+    },
+    setReadyLots: (readyLots, removedReady) => {
+      set({ readyLots, removedReady });
     },
   }));
 

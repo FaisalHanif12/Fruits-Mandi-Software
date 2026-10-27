@@ -5,7 +5,8 @@
 // its first entry open for edit; `?today` the list; `?pukhta` the register; `?stock` the goods left;
 // `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer; `?own` the
 // lot of trip goods of E2E-34 (with `?stock`, `?id=1` and `?id=1&edit=4` the same lot saved, in
-// the goods left list and open for edit), answered with the backend's real files. Never shipped: the route exists
+// the goods left list and open for edit), answered with the backend's real files; `?tripday` a new
+// بکری with two purchases of today already in it as lots (plan 33). Never shipped: the route exists
 // only when import.meta.env.DEV is true (app/router.tsx).
 
 import { Localized } from '@fluent/react';
@@ -100,7 +101,13 @@ export function BikriPage() {
         <LaterSalePage />
       ) : (
         <BikriBookPage
-          initialDraft={devFlag('empty') ? undefined : devFlag('own') ? seedOwn : seedEvent1}
+          initialDraft={
+            devFlag('empty') || devFlag('tripday')
+              ? undefined
+              : devFlag('own')
+                ? seedOwn
+                : seedEvent1
+          }
         />
       )}
     </AppShell>

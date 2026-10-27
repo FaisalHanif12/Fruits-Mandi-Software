@@ -85,8 +85,9 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
   const typeLine = async (user: ReturnType<typeof userEvent.setup>) => {
     await waitForLineFill(language);
     await user.click(cellOf(salesGrid(language), 0, 'buyer'));
-    // The first key opens the cell, the list answers, Enter takes the buyer (a short code).
-    await user.keyboard('1');
+    // The first key opens the cell, the list answers, Enter takes the buyer (a short code: Akram is
+    // the first buyer, running number 0, PRD 1.8).
+    await user.keyboard('0');
     await screen.findAllByRole('option');
     await user.keyboard('{Enter}');
     await waitFor(() => {

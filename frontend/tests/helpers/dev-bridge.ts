@@ -290,6 +290,21 @@ const tripBooks = createTripBooks({
 });
 const tripsDefaults = tripBooks.defaults();
 
+// `#/dev/bikri?tripday`: two purchases of today with all their goods left, so a new بکری opens with
+// two lots of trip goods in it (PRD FR-12.39, plan 33).
+const TRIP_DAY_PURCHASES = [
+  { ...tripsReal.PURCHASE_GET_AFTER_SALES, qty: 20, qty_sold: 0, qty_left: 20 },
+  {
+    ...tripsReal.PURCHASE_GET_AFTER_SALES,
+    id: 2,
+    number: 2,
+    item: { id: 6, code: '0045', name_ur: 'کیلا', name_en: 'Banana' },
+    qty: 30,
+    qty_sold: 0,
+    qty_left: 30,
+  },
+];
+
 /** The share text of one row sent to partners_check_shares, or an empty text. */
 function shareTextOf(row: unknown): string {
   if (typeof row !== 'object' || row === null) return '';
@@ -327,9 +342,11 @@ const handlers: Record<string, Handler> = {
       ? tripsReal.PURCHASE_GET_AFTER_SALES
       : tripBooks.purchaseGet(asNumber(input['id'])),
   purchases_list: (input) =>
-    devFlag('own')
-      ? { ...tripsReal.PURCHASES_LIST_ALL, rows: [tripsReal.PURCHASE_GET_AFTER_SALES] }
-      : tripBooks.purchaseList(input as PurchasesListInput),
+    devFlag('tripday')
+      ? { ...tripsReal.PURCHASES_LIST_ALL, rows: TRIP_DAY_PURCHASES }
+      : devFlag('own')
+        ? { ...tripsReal.PURCHASES_LIST_ALL, rows: [tripsReal.PURCHASE_GET_AFTER_SALES] }
+        : tripBooks.purchaseList(input as PurchasesListInput),
   purchases_cancel: () => tripBooks.purchaseCancel(),
   purchases_write_off: () => tripBooks.writeOff(),
   purchases_write_off_undo: () => tripBooks.writeOffUndo(),

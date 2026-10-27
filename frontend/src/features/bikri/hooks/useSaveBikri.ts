@@ -25,6 +25,9 @@ const READ_AGAIN: readonly (readonly string[])[] = [
   ['search'],
   ['pukhta'],
   ['day_status'],
+  // A lot of trip goods takes its quantity off the purchase (PRD FR-12.26, FR-12.39).
+  ['purchases'],
+  ['trips'],
 ];
 
 /** Reads again everything a posting changed (PRD 6.2). Used after a save, an edit, a cancel, an undo. */

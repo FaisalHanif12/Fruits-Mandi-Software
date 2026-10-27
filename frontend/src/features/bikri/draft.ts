@@ -193,10 +193,9 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
   };
 }
 
-/** Has anything been typed yet? An untouched screen asks the backend nothing. */
-export function isFilled(draft: BikriDraft): boolean {
-  const header = draft.header;
-  if (
+/** Has anything been typed in the header? */
+function headerFilled(header: BikriDraft['header']): boolean {
+  return (
     [
       header.truck_no,
       header.driver_name,
@@ -207,20 +206,44 @@ export function isFilled(draft: BikriDraft): boolean {
     header.zamindar_account_id !== null ||
     header.adda_id !== null ||
     header.book !== null
-  ) {
-    return true;
-  }
-  return draft.lots.some(
-    (lot) =>
-      lot.seller_account_id !== null ||
-      lot.item_id !== null ||
-      lot.packing_id !== null ||
-      lot.qty_received !== '' ||
-      lot.freight !== null ||
-      lot.cash_paid !== null ||
-      lot.labour !== null ||
-      lot.munshiana !== null ||
-      lot.sales.some((sale) => sale.buyer_account_id !== null || sale.seller_rate !== ''),
+  );
+}
+
+/** Has anything been typed on this lot or its lines? */
+function lotFilled(lot: BikriDraft['lots'][number]): boolean {
+  return (
+    lot.seller_account_id !== null ||
+    lot.item_id !== null ||
+    lot.packing_id !== null ||
+    lot.qty_received !== '' ||
+    lot.freight !== null ||
+    lot.cash_paid !== null ||
+    lot.labour !== null ||
+    lot.munshiana !== null ||
+    lot.sales.some((sale) => sale.buyer_account_id !== null || sale.seller_rate !== '')
+  );
+}
+
+/** Has anything been typed yet? An untouched screen asks the backend nothing. */
+export function isFilled(draft: BikriDraft): boolean {
+  return headerFilled(draft.header) || draft.lots.some(lotFilled);
+}
+
+/**
+ * Has the user put anything on the screen? The lots that came in by themselves from the ready stock
+ * (plan 33, PRD FR-12.39, FR-12.40) and that he has not worked on (no buyer and no rate on any of
+ * their lines) are not his work yet: a form with only those asks no "save changes?", keeps no draft
+ * and asks no preview. As soon as he types a line on any lot, the screen counts as filled and the
+ * whole draft goes to the preview, those lots too, so a ready lot he leaves alone is still checked
+ * and must be sold or removed (FR-12.26).
+ */
+export function isFilledByUser(stores: BikriDraftStores, draft: BikriDraft): boolean {
+  const { readyLots } = stores.view.getState();
+  const cameByItself = (lot: BikriDraft['lots'][number]) =>
+    lot.key in readyLots &&
+    lot.sales.every((sale) => sale.buyer_account_id === null && sale.seller_rate === '');
+  return (
+    headerFilled(draft.header) || draft.lots.some((lot) => !cameByItself(lot) && lotFilled(lot))
   );
 }
 

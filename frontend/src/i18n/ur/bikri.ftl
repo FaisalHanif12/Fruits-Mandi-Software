@@ -913,3 +913,11 @@ bikri-stock-own-total-cost = کل لاگت
 
 # review: pending
 bikri-stock-own-trip = { -market-safar }
+
+## Ready goods that come into a new sale by themselves (plan 33, PRD FR-12.39, FR-12.40).
+
+# review: pending
+bikri-ready-lots-note = فروخت کے لیے تیار مال سے <num>{ $count }</num> { -lot } شامل کیے گئے۔
+
+# review: pending
+bikri-ready-lots-note-hint = خریدار اور ریٹ لکھیں۔ کسی { -lot } کو چھوڑنا ہو تو اسے <key>{ $key }</key> سے ہٹا دیں۔

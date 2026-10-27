@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 import { useDebouncedValue } from '../../../shared/hooks';
 import { bikriPreview } from '../api';
 import type { BikriDraftStores } from '../draft-store';
-import { buildDraft, isFilled } from '../draft';
+import { buildDraft, isFilledByUser } from '../draft';
 import type { BikriDraft, BikriPreview } from '../types';
 
 /** The preview waits this long after the last key press (NFR-SPD-7). */
@@ -46,7 +46,8 @@ export interface PreviewSource {
 export function useBikriPreview(stores: BikriDraftStores, source?: PreviewSource) {
   const draft = useSyncExternalStore(stores.version.subscribe, () => draftOf(stores));
   const settled = useDebouncedValue(draft, PREVIEW_DELAY_MS);
-  const ready = source?.ready ?? isFilled;
+  // Lots that came in by themselves and were not worked on ask nothing (plan 33, R3).
+  const ready = source?.ready ?? ((candidate: BikriDraft) => isFilledByUser(stores, candidate));
   const run = source?.run ?? bikriPreview;
   const query = useQuery({
     queryKey:

@@ -10,7 +10,7 @@
 
 import { Localized } from '@fluent/react';
 import { Plus } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
@@ -40,6 +40,8 @@ interface LotsSectionProps {
   cellChanged?: Record<string, Record<string, string>> | undefined;
   /** Can Ctrl+Delete remove this lot? A saved lot of an edit cannot be removed. */
   canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
+  /** A note between the title and the grid, for example where some of the lots came from. */
+  note?: ReactNode;
 }
 
 export function LotsSection({
@@ -48,6 +50,7 @@ export function LotsSection({
   moreForced,
   cellChanged,
   canRemoveRow,
+  note,
 }: LotsSectionProps) {
   const stores = useBikriDraft();
   const step = useLayoutStep();
@@ -124,6 +127,7 @@ export function LotsSection({
           />
         </div>
       </div>
+      {note}
       <EntryGrid
         columns={columns}
         store={stores.lots}

@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from 'react';
 import { DRAFT_SAVE_INTERVAL_MS, draftsDiscard, draftsSave } from '../../../shared/drafts';
-import { buildDraft, isFilled } from '../draft';
+import { buildDraft, isFilledByUser } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { BIKRI_DRAFT_SCREEN, serialiseDraft } from '../draft-snapshot';
 
@@ -35,7 +35,7 @@ export function useDraftAutosave(stores: BikriDraftStores, { enabled }: Options)
     const send = async () => {
       if (!dirty.current || isStopped()) return;
       dirty.current = false;
-      const filled = isFilled(buildDraft(stores));
+      const filled = isFilledByUser(stores, buildDraft(stores));
       try {
         if (!filled) {
           if (onBackend.current) {
