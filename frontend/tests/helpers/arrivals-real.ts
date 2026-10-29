@@ -19,6 +19,8 @@ import type { ArrivalWriteOffUndoInput } from '../../src/bindings/ArrivalWriteOf
 import type { ArrivalWriteOffUndone } from '../../src/bindings/ArrivalWriteOffUndone';
 import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
 import type { PurchaseSaved } from '../../src/bindings/PurchaseSaved';
+import type { ReportPage } from '../../src/bindings/ReportPage';
+import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
 import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
 import type { SellDateInput } from '../../src/bindings/SellDateInput';
 import type { SellDateSet } from '../../src/bindings/SellDateSet';
@@ -47,6 +49,8 @@ import gardenLotPreviewNotFullySold from '../fixtures/bikri_preview_garden_lot_w
 import gardenLotPreviewTooMany from '../fixtures/bikri_preview_garden_lot_with_arrival_too_many.json';
 import gardenLotSaveOversold from '../fixtures/bikri_save_garden_lot_with_arrival_oversold.json';
 import stockWithGardenRows from '../fixtures/bikri_stock_list_with_garden_rows.json';
+import r10GardenArrival from '../fixtures/reports_run_r10_with_garden_arrival.json';
+import r10GardenArrivalPrint from '../fixtures/reports_print_data_r10_with_garden_arrival_en.json';
 import closeHasStock from '../fixtures/gardens_close_has_stock.json';
 import purchaseSaveWithSellDate from '../fixtures/purchases_save_with_sell_date.json';
 import purchaseSaveWithSellDateRequest from '../fixtures/purchases_save_with_sell_date_request.json';
@@ -101,6 +105,12 @@ function readPurchaseInput(value: unknown): PurchaseInput {
 }
 function readPurchaseSaved(value: unknown): PurchaseSaved {
   return value as PurchaseSaved;
+}
+function readReportPage(value: unknown): ReportPage {
+  return value as ReportPage;
+}
+function readReportPrintData(value: unknown): ReportPrintData {
+  return value as ReportPrintData;
 }
 function readReadyGoods(value: unknown): ReadyGoods {
   return value as ReadyGoods;
@@ -157,3 +167,7 @@ export const PURCHASE_SAVE_WITH_SELL_DATE_REQUEST = readPurchaseInput(
   purchaseSaveWithSellDateRequest,
 );
 export const PURCHASE_SAVE_WITH_SELL_DATE = readPurchaseSaved(purchaseSaveWithSellDate);
+
+/** R10, the goods left, with a garden's goods arrived as a row (backend: reports_run_r10_with_garden_arrival). */
+export const R10_GARDEN_ARRIVAL = readReportPage(r10GardenArrival);
+export const R10_GARDEN_ARRIVAL_PRINT = readReportPrintData(r10GardenArrivalPrint);

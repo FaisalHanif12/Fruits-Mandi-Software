@@ -5,4 +5,5 @@
 export { useGardensSummary } from './hooks';
 export type { GardenRow, GardensSummary } from './types';
 export { arrivalNumberText } from './list-columns';
+export { useOpenArrival } from './open-arrival';
 export { GardenFilterSelect } from './components/GardenFilterSelect';

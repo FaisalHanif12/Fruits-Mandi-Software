@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportRunInput } from '../../src/bindings/ReportRunInput';
 import * as partnersApi from '../../src/features/partners/api';
+import * as gardensApi from '../../src/features/gardens/api';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLayoutStep, type LayoutStep } from '../../src/shared/hooks/useLayoutStep';
@@ -31,6 +32,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { paisaForTest } from '../helpers/paisa';
 import { printFirmName } from '../helpers/print-frame';
+import * as arrivals from '../helpers/arrivals-real';
 import { message, visible, paragraph } from '../helpers/render';
 import {
   CATALOG,
@@ -57,6 +59,7 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/reports/api');
+vi.mock('../../src/features/gardens/api');
 vi.mock('../../src/features/partners/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/search/api');
@@ -268,6 +271,34 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(
         document.querySelector('.ag-header-cell[col-id="fruit_taken"]')?.textContent,
       ).toContain(m('report-col-fruit-taken'));
+    });
+
+    it('a garden’s goods arrived is a row with its own word in the document column, the garden as the party, and Enter opens its garden', async () => {
+      vi.mocked(useLayoutStep).mockReturnValue('wide');
+      vi.mocked(gardensApi.gardensArrivalGet).mockResolvedValue(arrivals.ARRIVAL_AFTER_A_SALE);
+      const { router, user } = await openReport('R10', {
+        pages: { R10: arrivals.R10_GARDEN_ARRIVAL },
+      });
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+      expect(cell('0', 'doc')).toBe(
+        m('report-doc-number', { kind: m('report-doc-garden-arrival'), number: '1' }),
+      );
+      expect(cell('0', 'seller')).toContain('0080');
+      expect(cell('0', 'received')).toBe('100');
+      expect(cell('0', 'balance')).toBe('40');
+      const target = cellElement('0', 'seller');
+      if (target === null) throw new Error('no seller cell');
+      await user.click(target);
+      await user.keyboard('{Enter}');
+      // The row gives the id of the entry; the backend says which garden it is in.
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/gardens/1');
+      }, SLOW_MS);
+      expect(gardensApi.gardensArrivalGet).toHaveBeenCalledWith(
+        arrivals.R10_GARDEN_ARRIVAL.rows[0]?.source?.id,
+      );
     });
 
     it('opens the بکری behind a row with Enter', async () => {

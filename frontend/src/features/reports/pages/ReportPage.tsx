@@ -35,6 +35,7 @@ import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type ScreenMemory } from '../../../shared/screen-state';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { PrintAction } from '../../bikri';
+import { useOpenArrival } from '../../gardens';
 import { ReportFilterBar } from '../components/ReportFilterBar';
 import { BuyerBillsPreview } from '../components/BuyerBillsPreview';
 import { ReportPreview } from '../components/ReportPreview';
@@ -68,10 +69,15 @@ function isFilterRefusal(error: UiError): boolean {
 /** Opens the record behind a row; a row that opens nothing (no screen for it yet) does nothing. */
 function useOpenSource(catalog: readonly ReportCatalogEntry[], reportId: ReportCatalogEntry['id']) {
   const navigate = useNavigate();
+  const openArrival = useOpenArrival();
   return (view: ReportRowView) => {
     const source = view.row.source;
     if (source === null) return;
     switch (source.kind) {
+      case 'arrival':
+        // A row of the goods left report that is a garden's goods arrived: its garden screen.
+        openArrival(source.id);
+        return;
       case 'bikri':
         void navigate({ to: '/bikri/book', search: { id: source.id } });
         return;

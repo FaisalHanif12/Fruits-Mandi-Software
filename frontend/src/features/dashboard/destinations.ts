@@ -6,6 +6,7 @@ import { useRouter } from '@tanstack/react-router';
 import type { AttentionFirst } from '../../bindings/AttentionFirst';
 import type { AttentionKind } from '../../bindings/AttentionKind';
 import type { ReportId } from '../../bindings/ReportId';
+import { useOpenArrival } from '../gardens';
 import type { ReportPerson } from '../reports';
 
 export type Destination =
@@ -17,6 +18,8 @@ export type Destination =
   | { kind: 'trips' }
   | { kind: 'gardens' }
   | { kind: 'garden'; id: number }
+  /** The garden screen of a goods arrived entry, found by the entry's id (PRD FR-12.40). */
+  | { kind: 'arrival'; id: number }
   | { kind: 'backup' }
   | { kind: 'index' }
   | { kind: 'analytics' }
@@ -95,9 +98,9 @@ export function destinationOfFirst(first: AttentionFirst): Destination {
       return { kind: 'bikri-book', id: first.id };
     case 'purchase':
       return { kind: 'trips' };
-    // Garden goods waiting are listed in باقی مال with the other goods left (PRD FR-12.40).
+    // Garden goods waiting: the entry opens its garden (PRD FR-12.40).
     case 'arrival':
-      return { kind: 'stock' };
+      return { kind: 'arrival', id: first.id };
   }
 }
 
@@ -109,6 +112,7 @@ export function useOpenDestination(): (destination: Destination) => void {
   const router = useRouter({ warn: false }) as ReturnType<typeof useRouter> | undefined;
   const navigate: ReturnType<typeof useRouter>['navigate'] = (options) =>
     router === undefined ? Promise.resolve() : router.navigate(options);
+  const openArrival = useOpenArrival();
   return (destination) => {
     switch (destination.kind) {
       case 'day':
@@ -135,6 +139,9 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'garden':
         void navigate({ to: '/gardens/$id', params: { id: String(destination.id) } });
+        return;
+      case 'arrival':
+        openArrival(destination.id);
         return;
       case 'backup':
         void navigate({ to: '/backup' });
