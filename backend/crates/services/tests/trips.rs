@@ -75,6 +75,8 @@ fn purchase_input(
     freight: Option<&str>,
 ) -> PurchaseInput {
     PurchaseInput {
+        other_qty: None,
+        shop_name: None,
         sell_date: None,
         trip_id: Some(trip),
         date: "10-10-2026".into(),

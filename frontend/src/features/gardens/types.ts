@@ -5,6 +5,9 @@
 
 import type { ArrivalCancelInput } from '../../bindings/ArrivalCancelInput';
 import type { ArrivalCancelled } from '../../bindings/ArrivalCancelled';
+import type { ArrivalEntryInput } from '../../bindings/ArrivalEntryInput';
+import type { ArrivalEntryPreview } from '../../bindings/ArrivalEntryPreview';
+import type { ArrivalEntrySaved } from '../../bindings/ArrivalEntrySaved';
 import type { ArrivalInput } from '../../bindings/ArrivalInput';
 import type { ArrivalRow } from '../../bindings/ArrivalRow';
 import type { ArrivalSaved } from '../../bindings/ArrivalSaved';
@@ -18,6 +21,8 @@ import type { ArrivalWriteOffUndone } from '../../bindings/ArrivalWriteOffUndone
 import type { EntryPartInput } from '../../bindings/EntryPartInput';
 import type { SellDateInput } from '../../bindings/SellDateInput';
 import type { SellDateSet } from '../../bindings/SellDateSet';
+import type { SplitInput } from '../../bindings/SplitInput';
+import type { SplitSet } from '../../bindings/SplitSet';
 import type { GardenCloseInput } from '../../bindings/GardenCloseInput';
 import type { GardenCloseNumbers } from '../../bindings/GardenCloseNumbers';
 import type { GardenClosePreview } from '../../bindings/GardenClosePreview';
@@ -55,6 +60,9 @@ import type { NamePairValue, PickerValue } from '../../shared/ui';
 export type {
   ArrivalCancelInput,
   ArrivalCancelled,
+  ArrivalEntryInput,
+  ArrivalEntryPreview,
+  ArrivalEntrySaved,
   ArrivalInput,
   ArrivalRow,
   ArrivalSaved,
@@ -97,6 +105,8 @@ export type {
   MoneySource,
   SellDateInput,
   SellDateSet,
+  SplitInput,
+  SplitSet,
   VenturePartnerInput,
   VenturePartnerRow,
   VentureStatus,
@@ -156,12 +166,17 @@ export interface EntryDraft {
   reason: string;
   /** The shop, as typed, and the نگ sold: a sale in another shop. */
   shop: string;
-  /** The نگ sold in another shop, or the نگ that arrived (goods arrived, PRD FR-12.40). */
+  /** The نگ sold in another shop. */
   qty: string;
-  /** Goods arrived: the item and packing, the weight of an item sold by weight, and the day to sell. */
-  item: PickerValue | null;
-  packing: PickerValue | null;
-  weight: string;
-  /** The day to sell as typed, `DD-MM-YYYY`. Empty means the day of the arrival (PRD FR-12.40). */
+  /**
+   * The goods arrived the sale in another shop takes its نگ from, as the arrival's id as text, or
+   * empty (PRD FR-12.41). Needed when the garden has any arrival; a garden with none types the sale
+   * by hand.
+   */
+  arrivalId: string;
+  /**
+   * Goods arrived: the day to sell as typed, `DD-MM-YYYY`. Empty means the day of the arrival (PRD
+   * FR-12.40). The item lines are rows in the lines grid's store, not here (PRD FR-12.41).
+   */
   sellDate: string;
 }

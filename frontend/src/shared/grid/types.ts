@@ -9,6 +9,8 @@ export type EntryColumnType =
   | 'account'
   | 'money'
   | 'qty'
+  // Kilograms with up to 3 decimals, as typed (PRD E23): a number cell that is never grouped.
+  | 'weight'
   | 'rate'
   | 'date'
   | 'text'

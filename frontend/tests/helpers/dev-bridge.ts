@@ -37,7 +37,9 @@ import * as tripsReal from './trips-real';
 import { EMPTY_PAIRS, bikriListOf, pukhtaRegisterOf } from './paged';
 import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
 import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
+import type { PurchaseEntryInput } from '../../src/bindings/PurchaseEntryInput';
 import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
+import type { SplitInput } from '../../src/bindings/SplitInput';
 import type { PurchasesListInput } from '../../src/bindings/PurchasesListInput';
 import type { TripCostInput } from '../../src/bindings/TripCostInput';
 import type { TripGetInput } from '../../src/bindings/TripGetInput';
@@ -355,6 +357,9 @@ const handlers: Record<string, Handler> = {
   trips_other_sale_cancel: () => tripBooks.saleCancel(),
   purchases_preview: (input) => tripBooks.purchasePreview(input as PurchaseInput),
   purchases_save: (input) => tripBooks.purchaseSave(input as PurchaseInput),
+  purchases_entry_preview: (input) => tripBooks.purchaseEntryPreview(input as PurchaseEntryInput),
+  purchases_entry_save: (input) => tripBooks.purchaseEntrySave(input as PurchaseEntryInput),
+  purchases_change_split: (input) => tripBooks.splitChange(input as SplitInput),
   // `?own` answers with the backend's real purchase (id 1) instead of the canned one (id 7).
   purchases_get: (input) =>
     devFlag('own')

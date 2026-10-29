@@ -385,6 +385,7 @@ fn run(case: &Case) {
                     &w.env.ctx,
                     &w.owner,
                     &GardenEntryInput::OtherSale(GardenOtherSaleInput {
+                        arrival_id: None,
                         garden_id: Some(garden.id),
                         date: "10-10-2026".into(),
                         shop: Some("Haji Traders".into()),

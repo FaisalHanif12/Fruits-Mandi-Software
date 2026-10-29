@@ -12,6 +12,9 @@
 //   function as the save (Code Standards B5).
 // - The sources default to the trip's and can be changed on the entry (PRD A54). A shop part
 //   comes off the partner's total and out of روکڑ; a pocket part is only recorded (FR-12.30).
+// - A purchase entry holds many item lines in a grid (PRD FR-12.41). The lines live in a row store
+//   above the grid (F39). One save writes every line, each as its own purchase. A mistake on a
+//   line shows on its cell, and the list under the form tells it too.
 // - Four states: the form (empty), the preview loading or failed (an error with a retry), and
 //   the numbers. The trip's own loading and error states are on the page.
 
@@ -20,10 +23,14 @@ import { useNavigate } from '@tanstack/react-router';
 import { Plus, TriangleAlert } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
+import type { Working } from '../../../bindings/Working';
 import type { CashCheck } from '../../../bindings/CashCheck';
 import type { FieldError } from '../../../bindings/FieldError';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import { formatPaisa, useGrouping } from '../../../shared/format';
+import { createEntryStore } from '../../../shared/grid';
+import { displayName, useLanguage } from '../../../shared/i18n';
 import { useEntrySaveFlow, useFocusFirstField, useRefusalIntoView } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
@@ -44,13 +51,20 @@ import {
   useErrorText,
 } from '../../../shared/ui';
 import {
+  GoodsLinesGrid,
+  LINE,
   PURCHASE_FIELD_PATHS,
-  PurchaseFieldsForm,
-  PurchaseNumbersCard,
+  PurchaseEntryFieldsForm,
+  PurchaseEntryNumbersCard,
+  filledLines,
+  lineCellErrors,
+  linesText,
   purchaseNumberText,
-  purchasesPreview,
-  useSavePurchase,
-  usePurchasePreview,
+  purchasesEntryPreview,
+  resetLines,
+  useSavePurchaseEntry,
+  usePurchaseEntryPreview,
+  type EntryLineNumbers,
   type PurchaseRow,
 } from '../../purchases';
 import { tripsCostPreview } from '../api';
@@ -81,6 +95,8 @@ const FIELD_PATHS: Record<EntryType, readonly string[]> = {
   other_sale: SALE_FIELD_PATHS,
 };
 
+type PerRow<T> = Readonly<Record<string, Readonly<Record<string, T>>>>;
+
 /** What the screen needs of the preview of the type that is open, whichever type it is. */
 interface ActiveView {
   errors: readonly FieldError[];
@@ -106,7 +122,12 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const errorText = useErrorText();
+  const language = useLanguage();
+  const grouping = useGrouping();
   const [draft, setDraft] = useState<EntryDraft>(() => newEntryDraft('purchase', today));
+  // The item lines of a purchase entry, kept above the grid so a language switch loses nothing.
+  const [lines] = useState(() => createEntryStore());
+  const rows = lines((state) => state.rows);
   const [tried, setTried] = useState(false);
   const [askNew, setAskNew] = useState(false);
   const formRef = useFocusFirstField<HTMLFormElement>();
@@ -117,15 +138,15 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
     setDraft((current) => ({ ...current, ...patch }));
     setTried(false);
   };
-  const filled = entryIsFilled(draft);
+  const filled = entryIsFilled(draft, rows);
 
   // The input of the type that is open, and nothing for the others, so only one preview is asked.
   const purchaseInput = useMemo(
     () =>
       filled && draft.type === 'purchase'
-        ? buildEntryPurchase(draft, trip.id, trip.partners, false)
+        ? buildEntryPurchase(draft, rows, trip.id, trip.partners, false)
         : null,
-    [draft, filled, trip.id, trip.partners],
+    [draft, filled, rows, trip.id, trip.partners],
   );
   const costInput = useMemo(
     () =>
@@ -136,7 +157,7 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
     () => (filled && draft.type === 'other_sale' ? buildEntrySale(draft, trip.id) : null),
     [draft, filled, trip.id],
   );
-  const purchaseView = usePurchasePreview(purchaseInput);
+  const purchaseView = usePurchaseEntryPreview(purchaseInput);
   const costView = useCostPreview(costInput);
   const saleView = useOtherSalePreview(saleInput);
   const purchasePreview = purchaseInput === null ? undefined : purchaseView.query.data;
@@ -192,29 +213,41 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
         };
   }, [active.errors, tried]);
 
-  const draftText = useMemo(() => JSON.stringify(draft), [draft]);
+  const draftText = useMemo(() => JSON.stringify({ draft, lines: linesText(rows) }), [draft, rows]);
   const afterSave = () => {
     setDraft((previous) => nextEntryDraft(previous));
+    resetLines(lines);
     setTried(false);
     window.requestAnimationFrame(() => {
       formRef.current?.querySelector<HTMLElement>('input')?.focus();
     });
   };
 
-  const savePurchase = useSavePurchase();
+  const savePurchase = useSavePurchaseEntry();
   const purchaseFlow = useEntrySaveFlow({
     draftText,
-    build: (confirm) => buildEntryPurchase(draft, trip.id, trip.partners, confirm),
+    build: (confirm) => buildEntryPurchase(draft, rows, trip.id, trip.partners, confirm),
     save: (input) => savePurchase.mutateAsync(input),
-    freshCash: (input) => purchasesPreview(input).then((preview) => preview.cash),
+    freshCash: (input) => purchasesEntryPreview(input).then((preview) => preview.cash),
     cash: purchasePreview?.cash,
     current: purchaseView.current,
-    onSaved: (saved) => {
+    onSaved: (done) => {
+      const first = done.saved[0];
+      const last = done.saved[done.saved.length - 1];
+      if (first === undefined || last === undefined) return;
       showToast(
         'success',
-        l10n.getString('trips-saved-purchase', { number: purchaseNumberText(saved.number, say) }),
+        done.saved.length === 1
+          ? l10n.getString('trips-saved-purchase', {
+              number: purchaseNumberText(first.number, say),
+            })
+          : l10n.getString('trips-saved-purchases', {
+              count: String(done.saved.length),
+              first: purchaseNumberText(first.number, say),
+              last: purchaseNumberText(last.number, say),
+            }),
       );
-      onPurchaseSaved(saved.id);
+      onPurchaseSaved(first.id);
       afterSave();
     },
   });
@@ -268,6 +301,7 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
 
   const startNew = () => {
     setDraft((previous) => newEntryDraft(previous.type, today));
+    resetLines(lines);
     setTried(false);
     window.requestAnimationFrame(() => {
       formRef.current?.querySelector<HTMLElement>('input')?.focus();
@@ -282,25 +316,77 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
     void navigate({ to: '/trips' });
   });
 
-  // The weight field shows for an item sold by weight (the backend asks for it) or once typed.
-  const showWeight =
-    draft.purchase.weight.trim() !== '' ||
-    purchasePreview?.errors.some((item) => item.code === 'ERR_WEIGHT_REQUIRED') === true ||
-    purchasePreview?.numbers?.workings.value.message_id === 'working-weight-value';
+  // The lines the entry sends, in order: the backend counts these, so its problems for line i
+  // belong to the i-th filled row. Its numbers come back with the key of the row (PRD FR-12.41).
+  const sent = useMemo(() => filledLines(rows), [rows]);
+  const previewOf = useMemo(
+    () => new Map((purchasePreview?.lines ?? []).map((line) => [line.key, line])),
+    [purchasePreview?.lines],
+  );
+  const lineNumbers: EntryLineNumbers[] = sent.map((row, index) => {
+    const item = row.picked?.[LINE.item];
+    const packing = row.picked?.[LINE.packing];
+    return {
+      key: row.rowId,
+      name:
+        [item, packing]
+          .flatMap((hit) => (hit === undefined ? [] : [displayName(hit, language)]))
+          .join(' ') || String(index + 1),
+      numbers: previewOf.get(row.rowId)?.numbers ?? null,
+    };
+  });
+  // What the backend worked out for each line, put in its row: the value of the line and the نگ
+  // left for our shop.
+  const calc: PerRow<string> = useMemo(() => {
+    const cells: Record<string, Record<string, string>> = {};
+    for (const row of sent) {
+      const line = previewOf.get(row.rowId);
+      if (line === undefined) continue;
+      const cell: Record<string, string> = {};
+      if (line.numbers !== null) {
+        cell[LINE.value] = formatPaisa(line.numbers.value, { grouping });
+      }
+      if (line.qty_our !== null) cell[LINE.ourQty] = String(line.qty_our);
+      cells[row.rowId] = cell;
+    }
+    return cells;
+  }, [grouping, previewOf, sent]);
+  // How the value of each line was worked out, behind the ⓘ of its cell.
+  const workings: PerRow<Working> = useMemo(() => {
+    const cells: Record<string, Record<string, Working>> = {};
+    for (const row of sent) {
+      const numbers = previewOf.get(row.rowId)?.numbers ?? null;
+      if (numbers !== null) cells[row.rowId] = { [LINE.value]: numbers.workings.value };
+    }
+    return cells;
+  }, [previewOf, sent]);
+  const cellErrors: PerRow<string> = useMemo(
+    () => lineCellErrors(error?.errors ?? [], sent, errorText),
+    [error, errorText, sent],
+  );
+  // The words of a mistake on a line stay in the list under the form too: the cell is marked, and
+  // colour is never the only signal (NFR-USE-12).
+  const fieldsShown = FIELD_PATHS[draft.type];
 
   const typeOptions = ENTRY_TYPES.map((type) => ({
     value: type,
     label: l10n.getString(`trips-type-${type.replaceAll('_', '-')}`),
   }));
   const payment = draft.type !== 'other_sale';
+  // Any purchase with goods left can be sold in another shop: the part set for another shop goes
+  // first and the backend moves the rest from our shop's part (PRD FR-12.41, D1).
   const withStock = purchases.filter((purchase) => purchase.qty_left > 0);
 
   const numbers =
     draft.type === 'purchase' ? (
       <>
-        <PurchaseNumbersCard numbers={purchasePreview?.numbers ?? null} empty={!filled} />
+        <PurchaseEntryNumbersCard
+          lines={lineNumbers}
+          total={purchasePreview?.paid_now_total ?? null}
+          empty={!filled}
+        />
         <EntryPartsCard
-          parts={purchasePreview?.numbers?.parts ?? null}
+          parts={purchasePreview?.parts ?? null}
           title={l10n.getString('trips-parts-title')}
         />
       </>
@@ -326,6 +412,7 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
           value={draft.type}
           onChange={(type) => {
             setDraft((current) => changeType(current, type));
+            resetLines(lines);
             setTried(false);
           }}
         />
@@ -353,9 +440,7 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
         }}
         className="flex flex-col gap-4"
       >
-        {error === null ? null : (
-          <ErrorNotice error={error} fieldsShown={FIELD_PATHS[draft.type]} />
-        )}
+        {error === null ? null : <ErrorNotice error={error} fieldsShown={fieldsShown} />}
         <div className="grid grid-cols-1 gap-4 normal:grid-cols-5">
           <div className="grid grid-cols-2 gap-4 rounded-3 border border-border bg-surface p-3 normal:col-span-3">
             <Field label={<Localized id="trips-field-date" />} error={fieldError(error, 'date')}>
@@ -369,15 +454,14 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
                 />
               )}
             </Field>
-            <div />
+            {draft.type === 'purchase' ? null : <div />}
             {draft.type === 'purchase' ? (
-              <PurchaseFieldsForm
+              <PurchaseEntryFieldsForm
                 fields={draft.purchase}
                 onChange={(patch) => {
                   change({ purchase: { ...draft.purchase, ...patch } });
                 }}
                 error={error}
-                showWeight={showWeight}
                 purchaseDate={draft.date}
               />
             ) : draft.type === 'cost' ? (
@@ -472,6 +556,18 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
             ) : null}
           </div>
         </div>
+        {draft.type === 'purchase' ? (
+          // The grid owns its keys (PRD 7.2); the form's own Enter and arrows leave it alone.
+          <div data-nav-owns-keys>
+            <GoodsLinesGrid
+              kind="purchase"
+              store={lines}
+              calc={calc}
+              cellErrors={cellErrors}
+              workings={workings}
+            />
+          </div>
+        ) : null}
       </form>
       {flow.cashAfter === null ? null : (
         <CashConfirmDialog

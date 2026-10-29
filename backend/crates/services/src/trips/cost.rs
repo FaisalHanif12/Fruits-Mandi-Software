@@ -251,6 +251,8 @@ pub(super) fn save(
         let id = repo::insert_entry(
             tx,
             &NewEntry {
+                arrival_id: None,
+                moved_qty: 0,
                 venture_id: ready.venture.rec.id,
                 kind: "cost",
                 entry_date: &date_iso,

@@ -105,6 +105,10 @@ pub(crate) const COL_FRUIT_FOR: &str = "fruit-filter-for";
 pub(crate) const COL_FRUIT_SOURCE: &str = "fruit-col-source";
 pub(crate) const COL_FRUIT_WEIGHT: &str = "fruit-col-weight";
 pub(crate) const COL_DAYS_WAITING: &str = "report-col-days-waiting";
+// The two parts of the goods left (plan 35, PRD FR-12.41): R10.
+pub(crate) const COL_OUR_LEFT: &str = "report-col-our-left";
+pub(crate) const COL_OTHER_LEFT: &str = "report-col-other-left";
+pub(crate) const COL_SHOP_NAME: &str = "report-col-shop-name";
 pub(crate) const COL_TRIP: &str = "report-col-trip";
 pub(crate) const COL_PURCHASE: &str = "report-col-purchase";
 pub(crate) const COL_BOUGHT_QTY: &str = "report-col-bought-qty";

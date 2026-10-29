@@ -147,7 +147,7 @@ pub struct VenturePartnerRow {
 ///
 /// Field paths in errors: `parts[i].partner_id`, `parts[i].source`, and `parts` when a partner of
 /// the venture is missing.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct EntryPartInput {
     /// The partner. `ERR_PARTNER_NOT_LISTED` on `parts` if he is not in the venture or is sent twice.
     #[ts(type = "number")]
@@ -165,7 +165,9 @@ pub struct EntryPart {
     pub share_bps: i32,
     /// Where his part comes from.
     pub source: MoneySource,
-    /// His part: `split_by_bps` of the payment, whole rupees. The parts add up to the payment.
+    /// His part: `split_by_bps` of the payment, whole rupees. The parts add up to the payment. In
+    /// the preview of a many-lines entry it is the sum of his parts of the lines, each line split
+    /// on its own (see `PurchaseEntryPreview::parts`).
     #[ts(type = "Paisa")]
     pub amount_paisa: Paisa,
     /// How the part was worked out: the payment, his share and the leftover rule (CalcInfo).

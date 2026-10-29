@@ -19,8 +19,8 @@ use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
     accounts, arrivals, bikri, capital, cash, cashbook, drafts, expenses, fruit, gardens, general,
-    khata, lent, masters, partners, printing, purchases, rules, search, statement, trips, ventures,
-    vouchers,
+    khata, lent, masters, partners, printing, purchases, rules, search, split, statement, trips,
+    ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -394,6 +394,18 @@ const EXPECTED_FILES: &[&str] = &[
     "SavedArrivalRef.ts",
     "SellDateInput.ts",
     "SellDateSet.ts",
+    "PurchaseLineInput.ts",
+    "PurchaseEntryInput.ts",
+    "PurchaseLinePreview.ts",
+    "PurchaseEntryPreview.ts",
+    "PurchaseEntrySaved.ts",
+    "SplitInput.ts",
+    "SplitSet.ts",
+    "ArrivalLineInput.ts",
+    "ArrivalEntryInput.ts",
+    "ArrivalEntryPreview.ts",
+    "ArrivalEntrySaved.ts",
+    "ArrivalLinePreview.ts",
     "ReadyGoods.ts",
     "ReadyGoodsInput.ts",
     "ReadyGoodsRow.ts",
@@ -979,6 +991,19 @@ fn export_bindings() {
     arrivals::ArrivalWriteOffUndone::export_all(&cfg).unwrap();
     arrivals::SellDateInput::export_all(&cfg).unwrap();
     arrivals::SellDateSet::export_all(&cfg).unwrap();
+    // Many item lines in one entry, and the split between our shop and another shop (plan 35).
+    purchases::PurchaseLineInput::export_all(&cfg).unwrap();
+    purchases::PurchaseEntryInput::export_all(&cfg).unwrap();
+    purchases::PurchaseLinePreview::export_all(&cfg).unwrap();
+    purchases::PurchaseEntryPreview::export_all(&cfg).unwrap();
+    purchases::PurchaseEntrySaved::export_all(&cfg).unwrap();
+    arrivals::ArrivalLineInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalEntryInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalEntryPreview::export_all(&cfg).unwrap();
+    arrivals::ArrivalEntrySaved::export_all(&cfg).unwrap();
+    arrivals::ArrivalLinePreview::export_all(&cfg).unwrap();
+    split::SplitInput::export_all(&cfg).unwrap();
+    split::SplitSet::export_all(&cfg).unwrap();
     bikri::ReadyGoodsInput::export_all(&cfg).unwrap();
     bikri::ReadyGoods::export_all(&cfg).unwrap();
     bikri::ReadyGoodsRow::export_all(&cfg).unwrap();

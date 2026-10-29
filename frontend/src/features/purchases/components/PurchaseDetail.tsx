@@ -14,7 +14,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Ban, CalendarClock, RotateCcw, TriangleAlert } from 'lucide-react';
+import { ArrowLeftRight, Ban, CalendarClock, RotateCcw, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
@@ -32,11 +32,12 @@ import {
   LoadingState,
   Num,
   SellDateDialog,
+  SplitDialog,
   Table,
   type TableColumn,
   showToast,
 } from '../../../shared/ui';
-import { useSetPurchaseSellDate } from '../hooks';
+import { useChangePurchaseSplit, useSetPurchaseSellDate } from '../hooks';
 import { purchaseNumberText, supplierText } from '../list-columns';
 import type { PurchaseLotRef, PurchaseRow, WriteOffRow } from '../types';
 
@@ -60,6 +61,9 @@ export function PurchaseDetail({
   const setSellDate = useSetPurchaseSellDate();
   const [sellDateOpen, setSellDateOpen] = useState(false);
   const [sellDateError, setSellDateError] = useState<UiError | null>(null);
+  const changeSplit = useChangePurchaseSplit();
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [splitError, setSplitError] = useState<UiError | null>(null);
 
   if (query.isPending) return <LoadingState rows={4} />;
   if (query.isError) {
@@ -203,6 +207,22 @@ export function PurchaseDetail({
         <Fact label={<Localized id="purchases-col-left" />}>
           <Num>{String(row.qty_left)}</Num>
         </Fact>
+        <Fact label={<Localized id="purchases-detail-qty-other" />}>
+          <Num>{String(row.qty_other)}</Num>
+        </Fact>
+        <Fact label={<Localized id="goods-line-col-shop" />}>{row.shop_name ?? ''}</Fact>
+        <Fact label={<Localized id="purchases-detail-our-sold" />}>
+          <Num>{String(row.qty_our_sold)}</Num>
+        </Fact>
+        <Fact label={<Localized id="purchases-detail-other-sold" />}>
+          <Num>{String(row.qty_other_sold)}</Num>
+        </Fact>
+        <Fact label={<Localized id="purchases-detail-our-left" />}>
+          <Num>{String(row.qty_our_left)}</Num>
+        </Fact>
+        <Fact label={<Localized id="purchases-detail-other-left" />}>
+          <Num>{String(row.qty_other_left)}</Num>
+        </Fact>
         <Fact label={<Localized id="purchases-detail-days" />}>
           <Num>{String(row.days_waiting)}</Num>
         </Fact>
@@ -319,6 +339,15 @@ export function PurchaseDetail({
             <Localized id="purchases-change-sell-date" />
           </Button>
           <Button
+            disabled={!row.can_change_split}
+            onClick={() => {
+              setSplitOpen(true);
+            }}
+          >
+            <ArrowLeftRight aria-hidden="true" className="size-icon-md" />
+            <Localized id="split-change" />
+          </Button>
+          <Button
             variant="danger"
             onClick={() => {
               onCancel(row);
@@ -357,6 +386,51 @@ export function PurchaseDetail({
             })
             .catch((failure: unknown) => {
               setSellDateError(uiErrorOf(failure));
+            });
+        }}
+      />
+      <SplitDialog
+        open={splitOpen}
+        onOpenChange={(open) => {
+          setSplitOpen(open);
+          if (!open) setSplitError(null);
+        }}
+        title={<Localized id="split-title" />}
+        description={
+          <Localized
+            id="split-text"
+            vars={{
+              number: purchaseNumberText(row.number, say),
+              item: displayName(row.item, language),
+              packing: displayName(row.packing, language),
+              qty_left: String(row.qty_left),
+              our_left: String(row.qty_our_left),
+              other_left: String(row.qty_other_left),
+            }}
+          >
+            <span />
+          </Localized>
+        }
+        qty={row.qty}
+        currentOtherQty={row.qty_other}
+        currentShop={row.shop_name}
+        busy={changeSplit.isPending}
+        error={splitError}
+        onSave={(otherQty, shopName) => {
+          setSplitError(null);
+          changeSplit
+            .mutateAsync({
+              id: row.id,
+              version: row.version,
+              other_qty: otherQty,
+              shop_name: shopName === '' ? null : shopName,
+            })
+            .then(() => {
+              showToast('success', <Localized id="split-done" />);
+              setSplitOpen(false);
+            })
+            .catch((failure: unknown) => {
+              setSplitError(uiErrorOf(failure));
             });
         }}
       />

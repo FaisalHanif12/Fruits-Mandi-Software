@@ -265,6 +265,10 @@ trips-preview-failed = اعداد نہیں نکل سکے
 # review: pending
 trips-saved-purchase = { -khareedari } { $number } محفوظ ہو گئی
 
+# $count: how many lines were saved; $first, $last: the first and the last number.
+# review: pending
+trips-saved-purchases = { $count } { -khareedari } محفوظ ہو گئیں: { $first } سے { $last } تک
+
 # $number: the number of the trip cost.
 # review: pending
 trips-saved-cost = سفر خرچ { $number } محفوظ ہو گیا
@@ -313,11 +317,11 @@ trips-cost-spread-qty = ({ $qty } { -nag })
 trips-sale-purchase = مال کہاں سے
 
 # review: pending
-trips-sale-purchase-hint = صرف اسی سفر کی وہ خریداریاں نظر آتی ہیں جن میں مال باقی ہے۔
+trips-sale-purchase-hint = صرف اسی سفر کی وہ خریداریاں نظر آتی ہیں جن میں مال باقی ہے۔ پہلے { -dusri-dukan } کے لیے رکھا ہوا مال بکتا ہے۔ اس سے زیادہ بیچیں تو باقی { -apni-dukan } کے مال سے آتا ہے، اور اسکرین بتاتی ہے کتنا۔
 
-# $number: the purchase; $qty_left: how many { -nag } are left.
+# $number: the purchase; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
 # review: pending
-trips-sale-purchase-option = { $number }: { $item }، { $packing } ({ $qty_left } باقی)
+trips-sale-purchase-option = { $number }: { $item }، { $packing } ({ -dusri-dukan } کے لیے { $other_left }، { -apni-dukan } کے لیے { $our_left } باقی)
 
 # review: pending
 trips-sale-shop = دکان
@@ -342,6 +346,9 @@ trips-sale-numbers-incomplete = نتیجہ دیکھنے کے لیے مال چن�
 
 # review: pending
 trips-sale-left-after = اس کے بعد خریداری میں باقی
+
+# review: pending
+trips-sale-other-left-after = اس کے بعد { -dusri-dukan } کے لیے باقی
 
 # review: pending
 trips-sale-cost-left-after = باقی مال کی لاگت

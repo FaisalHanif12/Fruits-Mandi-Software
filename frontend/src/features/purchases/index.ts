@@ -7,11 +7,15 @@
 export { CancelPurchaseDialog } from './components/CancelPurchaseDialog';
 export { OwnWriteOffDialog, UndoOwnWriteOffDialog } from './components/OwnWriteOffDialogs';
 export { PurchaseDetail } from './components/PurchaseDetail';
-export { PurchaseFieldsForm } from './components/PurchaseFieldsForm';
+export { PurchaseEntryFieldsForm } from './components/PurchaseEntryFieldsForm';
 export { PurchaseNumbersCard } from './components/PurchaseNumbersCard';
 export {
+  PurchaseEntryNumbersCard,
+  type EntryLineNumbers,
+} from './components/PurchaseEntryNumbersCard';
+export {
   PURCHASE_FIELD_PATHS,
-  buildPurchase,
+  buildPurchaseEntry,
   emptyPurchaseFields,
   nextPurchaseFields,
   purchaseIsFilled,
@@ -20,20 +24,41 @@ export {
 } from './draft';
 export {
   readAgainAfterPurchase,
+  useChangePurchaseSplit,
   usePurchase,
-  usePurchasePreview,
+  usePurchaseEntryPreview,
   usePurchasesList,
-  useSavePurchase,
+  useSavePurchaseEntry,
 } from './hooks';
 export { TRIP_PURCHASE_COLUMNS, purchaseNumberText, supplierText } from './list-columns';
 export type {
   OwnStockRow,
   OwnStockTarget,
-  PurchaseFields,
-  PurchaseInput,
-  PurchasePreview,
+  PurchaseEntryFields,
+  PurchaseEntryInput,
+  PurchaseEntryPreview,
+  PurchaseEntrySaved,
   PurchaseRow,
   PurchaseSaved,
+  SplitInput,
+  SplitSet,
   TripRef,
 } from './types';
-export { purchasesPreview } from './api';
+export { purchasesEntryPreview } from './api';
+export { GoodsLinesGrid, addGoodsLine } from './components/GoodsLinesGrid';
+export {
+  LINE,
+  filledLines,
+  goodsLineColumns,
+  lineCellErrors,
+  lineIsBlank,
+  lineOfPath,
+  lineText,
+  lineTextOrNull,
+  arrivalLineInputs,
+  linesAreFilled,
+  linesText,
+  purchaseLineInputs,
+  resetLines,
+  type GoodsKind,
+} from './lines';

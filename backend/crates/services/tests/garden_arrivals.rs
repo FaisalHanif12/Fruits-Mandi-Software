@@ -128,6 +128,8 @@ fn buy(w: &World, trip_id: i64, date: &str, sell: Option<&str>, qty: &str) -> Pu
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            other_qty: None,
+            shop_name: None,
             sell_date: sell.map(str::to_owned),
             trip_id: Some(trip_id),
             date: date.into(),
@@ -244,6 +246,8 @@ fn a_purchase_starts_with_its_own_day_as_the_day_to_sell_and_it_can_move_later_b
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            other_qty: None,
+            shop_name: None,
             sell_date: Some("10-10-2026".into()),
             trip_id: Some(t),
             date: "11-10-2026".into(),

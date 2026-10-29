@@ -75,6 +75,34 @@ export type ArrivalRow = {
    */
   qty_left: number;
   /**
+   * نگ for another shop (PRD FR-12.41). The rest are for our shop. Starts as 0.
+   */
+  qty_other: number;
+  /**
+   * The other shop, as typed.
+   */
+  shop_name: string | null;
+  /**
+   * نگ sold in our shop (garden lots of بکری).
+   */
+  qty_our_sold: number;
+  /**
+   * نگ sold in other shops (`gardens_entry_save` with an other-shop sale naming this arrival).
+   */
+  qty_other_sold: number;
+  /**
+   * نگ left for our shop. Only these become ready lots.
+   */
+  qty_our_left: number;
+  /**
+   * نگ left for another shop: `qty_our_left + qty_other_left = qty_left`.
+   */
+  qty_other_left: number;
+  /**
+   * True while it is saved and has goods left: `gardens_arrival_change_split` is allowed.
+   */
+  can_change_split: boolean;
+  /**
    * Whole days from the day to sell (`sell_date`) to today, while goods are left; 0 otherwise.
    * Goods meant for a later day are not waiting before it.
    */

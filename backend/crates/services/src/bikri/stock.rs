@@ -423,11 +423,15 @@ pub fn ready_goods(
                 item: rec.item.clone(),
                 packing: rec.packing.clone(),
                 qty: rec.qty,
-                qty_left: rec
-                    .qty
-                    .checked_sub(rec.qty_sold)
-                    .and_then(|v| v.checked_sub(rec.qty_written_off))
-                    .ok_or_else(|| data("the quantity of a purchase does not fit"))?,
+                qty_left: mandi_domain::core::split::StockParts::of(
+                    rec.qty,
+                    rec.other_qty,
+                    rec.qty_sold,
+                    rec.qty_sold_other,
+                    rec.qty_written_off,
+                )
+                .ok_or_else(|| data("the split of a purchase does not fit"))?
+                .our_left,
                 weight_grams: rec.weight_grams,
                 trip: Some(TripRef {
                     id: rec.trip_id,
@@ -452,11 +456,7 @@ pub fn ready_goods(
                 item: rec.item.clone(),
                 packing: rec.packing.clone(),
                 qty: rec.qty,
-                qty_left: rec
-                    .qty
-                    .checked_sub(rec.qty_sold)
-                    .and_then(|v| v.checked_sub(rec.qty_written_off))
-                    .ok_or_else(|| data("the quantity of an arrival does not fit"))?,
+                qty_left: crate::gardens::arrivals::parts_of(&rec)?.our_left,
                 weight_grams: rec.weight_grams,
                 trip: None,
                 garden: Some(crate::gardens::arrivals::garden_ref(&rec)),

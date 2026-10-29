@@ -9,7 +9,7 @@
 // Four states: loading, an error with a retry, nothing yet (a helpful message), and the rows.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Ban, CalendarClock, RotateCcw, Sprout } from 'lucide-react';
+import { ArrowLeftRight, Ban, CalendarClock, RotateCcw, Sprout } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
@@ -26,12 +26,13 @@ import {
   LoadingState,
   Num,
   SellDateDialog,
+  SplitDialog,
   Table,
   showToast,
   type TableColumn,
 } from '../../../shared/ui';
 import { ARRIVAL_COLUMNS } from '../arrival-columns';
-import { useArrivalsList, useSetArrivalSellDate } from '../hooks';
+import { useArrivalsList, useChangeArrivalSplit, useSetArrivalSellDate } from '../hooks';
 import { arrivalNumberText } from '../list-columns';
 import type { ArrivalRow, GardenRow } from '../types';
 import {
@@ -55,6 +56,9 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [sellDateOpen, setSellDateOpen] = useState(false);
   const [sellDateError, setSellDateError] = useState<UiError | null>(null);
+  const changeSplit = useChangeArrivalSplit();
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [splitError, setSplitError] = useState<UiError | null>(null);
   const [writeOff, setWriteOff] = useState<ArrivalRow | null>(null);
   const [undo, setUndo] = useState<ArrivalRow | null>(null);
   const [cancel, setCancel] = useState<ArrivalRow | null>(null);
@@ -194,6 +198,22 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
               <Fact label={<Localized id="gardens-arrival-col-left" />}>
                 <Num>{String(selected.qty_left)}</Num>
               </Fact>
+              <Fact label={<Localized id="purchases-detail-qty-other" />}>
+                <Num>{String(selected.qty_other)}</Num>
+              </Fact>
+              <Fact label={<Localized id="goods-line-col-shop" />}>{selected.shop_name ?? ''}</Fact>
+              <Fact label={<Localized id="purchases-detail-our-sold" />}>
+                <Num>{String(selected.qty_our_sold)}</Num>
+              </Fact>
+              <Fact label={<Localized id="purchases-detail-other-sold" />}>
+                <Num>{String(selected.qty_other_sold)}</Num>
+              </Fact>
+              <Fact label={<Localized id="purchases-detail-our-left" />}>
+                <Num>{String(selected.qty_our_left)}</Num>
+              </Fact>
+              <Fact label={<Localized id="purchases-detail-other-left" />}>
+                <Num>{String(selected.qty_other_left)}</Num>
+              </Fact>
               <Fact label={<Localized id="bikri-stock-col-days" />}>
                 <Num>{String(selected.days_waiting)}</Num>
               </Fact>
@@ -219,6 +239,15 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
                 >
                   <CalendarClock aria-hidden="true" className="size-icon-md" />
                   <Localized id="purchases-change-sell-date" />
+                </Button>
+                <Button
+                  disabled={!selected.can_change_split}
+                  onClick={() => {
+                    setSplitOpen(true);
+                  }}
+                >
+                  <ArrowLeftRight aria-hidden="true" className="size-icon-md" />
+                  <Localized id="split-change" />
                 </Button>
                 <Button
                   disabled={selected.qty_left <= 0}
@@ -293,6 +322,54 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
             })
             .catch((failure: unknown) => {
               setSellDateError(uiErrorOf(failure));
+            });
+        }}
+      />
+      <SplitDialog
+        open={splitOpen}
+        onOpenChange={(open) => {
+          setSplitOpen(open);
+          if (!open) setSplitError(null);
+        }}
+        title={<Localized id="split-title" />}
+        description={
+          selected === null ? null : (
+            <Localized
+              id="split-text"
+              vars={{
+                number: arrivalNumberText(selected.number, say),
+                item: displayName(selected.item, language),
+                packing: displayName(selected.packing, language),
+                qty_left: String(selected.qty_left),
+                our_left: String(selected.qty_our_left),
+                other_left: String(selected.qty_other_left),
+              }}
+            >
+              <span />
+            </Localized>
+          )
+        }
+        qty={selected?.qty ?? 0}
+        currentOtherQty={selected?.qty_other ?? 0}
+        currentShop={selected?.shop_name ?? null}
+        busy={changeSplit.isPending}
+        error={splitError}
+        onSave={(otherQty, shopName) => {
+          if (selected === null) return;
+          setSplitError(null);
+          changeSplit
+            .mutateAsync({
+              id: selected.id,
+              version: selected.version,
+              other_qty: otherQty,
+              shop_name: shopName === '' ? null : shopName,
+            })
+            .then(() => {
+              showToast('success', <Localized id="split-done" />);
+              setSplitOpen(false);
+            })
+            .catch((failure: unknown) => {
+              setSplitError(uiErrorOf(failure));
             });
         }}
       />

@@ -255,6 +255,16 @@ gardens-sale-qty-hint = پورا عدد۔ آپ جمع بھی لکھ سکتے ہ�
 # review: pending
 gardens-sale-amount = ملنے والی رقم
 # review: pending
+gardens-sale-arrival = مال کہاں سے
+
+# review: pending
+gardens-sale-arrival-hint = صرف وہ مال نظر آتا ہے جو باقی ہے۔ پہلے { -dusri-dukan } کے لیے رکھا ہوا مال بکتا ہے۔ اس سے زیادہ بیچیں تو باقی { -apni-dukan } کے مال سے آتا ہے، اور اسکرین بتاتی ہے کتنا۔
+
+# $number: the entry; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
+# review: pending
+gardens-sale-arrival-option = { $number }: { $item }، { $packing } ({ -dusri-dukan } کے لیے { $other_left }، { -apni-dukan } کے لیے { $our_left } باقی)
+
+# review: pending
 gardens-sale-amount-hint = رقم { -rokar } میں آتی ہے اور باغ بند ہونے تک باغ کے کھاتے میں رہتی ہے۔
 # review: pending
 gardens-saved-installment = { -qist } { $number } محفوظ ہو گئی
@@ -385,6 +395,10 @@ gardens-type-arrival = { -maal-aaya }
 # review: pending
 gardens-saved-arrival = { -maal-aaya } { $number } محفوظ ہو گیا
 
+# $count: how many lines were saved; $first, $last: the first and the last number.
+# review: pending
+gardens-saved-arrivals = { -maal-aaya } کے { $count } اندراج محفوظ ہو گئے: { $first } سے { $last } تک
+
 # review: pending
 gardens-arrival-qty = آئے ہوئے { -nag }
 
@@ -514,3 +528,6 @@ gardens-arrival-write-off-option = { $qty } { -nag }: { $reason }
 
 # review: pending
 gardens-arrival-write-off-undone = ضائع واپس لے لیا گیا
+
+# review: pending
+gardens-numbers-left-after = اس کے بعد اندراج میں باقی

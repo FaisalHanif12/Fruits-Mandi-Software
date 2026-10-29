@@ -573,3 +573,15 @@ err-arrival-lot-not-fully-sold = { -bagh } کے مال کا یہ { -lot } اسی
 # PRD FR-12.40. $qty_left: how many { -nag } of garden goods are still left.
 # review: pending
 err-garden-has-stock = اس { -bagh } میں ابھی بغیر بکا مال ہے ({ $qty_left } { -nag })۔ بند کرنے سے پہلے اسے بیچیں یا ضائع لکھیں۔
+
+# PRD FR-12.41. $min_other: the most that other shops have sold; $max_other: the { -nag } less what { -apni-dukan } has sold.
+# review: pending
+err-split-below-sold = { -dusri-dukan } کے { -nag } { $min_other } اور { $max_other } کے درمیان ہونے چاہییں۔ جو مال بک چکا وہ دوسرے حصے میں نہیں جا سکتا۔
+
+# PRD FR-12.41. $qty: how many { -nag } the entry has in all.
+# review: pending
+err-split-above-qty = { -dusri-dukan } کے { -nag } اس اندراج کے کل { $qty } { -nag } سے زیادہ نہیں ہو سکتے۔
+
+# PRD FR-12.41. $max: the most lines an entry can have.
+# review: pending
+err-too-many-lines = ایک اندراج میں زیادہ سے زیادہ { $max } لائنیں ہو سکتی ہیں۔

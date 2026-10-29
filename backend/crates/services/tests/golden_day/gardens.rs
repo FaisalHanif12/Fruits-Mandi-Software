@@ -86,6 +86,7 @@ fn cost(w: &support::World, garden: i64, date: &str, amount: &str) {
 
 fn other_sale(garden: i64, date: &str, qty: &str, amount: &str) -> GardenEntryInput {
     GardenEntryInput::OtherSale(GardenOtherSaleInput {
+        arrival_id: None,
         garden_id: Some(garden),
         date: date.into(),
         shop: Some("Haji Traders".into()),

@@ -7,9 +7,10 @@ import { formatBps, isoToDisplayDate } from '../../shared/format';
 import { sourceOf } from '../../shared/ui';
 import { confirmedSpelling } from '../../shared/urdu/spelling';
 import type { ShareInput } from '../partners';
-import { textOrNull } from '../purchases';
+import type { EntryRow } from '../../shared/grid';
+import { arrivalLineInputs, linesAreFilled, textOrNull } from '../purchases';
 import type {
-  ArrivalInput,
+  ArrivalEntryInput,
   EntryDraft,
   EntryPartInput,
   EntryType,
@@ -115,9 +116,7 @@ export function newEntryDraft(type: EntryType, today: string): EntryDraft {
     reason: '',
     shop: '',
     qty: '',
-    item: null,
-    packing: null,
-    weight: '',
+    arrivalId: '',
     sellDate: '',
   };
 }
@@ -150,8 +149,11 @@ export function nextEntryDraft(draft: EntryDraft): EntryDraft {
   };
 }
 
-/** True once anything beyond the day is typed or chosen on the entry form. */
-export function entryIsFilled(draft: EntryDraft): boolean {
+/**
+ * True once anything beyond the day is typed or chosen on the entry form. `lines` are the rows of
+ * the goods arrived lines grid (PRD FR-12.41); the other types have none.
+ */
+export function entryIsFilled(draft: EntryDraft, lines: readonly EntryRow[]): boolean {
   switch (draft.type) {
     case 'installment':
     case 'cost':
@@ -162,17 +164,11 @@ export function entryIsFilled(draft: EntryDraft): boolean {
         draft.amount.trim() !== '' ||
         draft.shop.trim() !== '' ||
         draft.qty.trim() !== '' ||
+        draft.arrivalId !== '' ||
         draft.note.trim() !== ''
       );
     case 'arrival':
-      return (
-        draft.item !== null ||
-        draft.packing !== null ||
-        draft.qty.trim() !== '' ||
-        draft.weight.trim() !== '' ||
-        draft.sellDate.trim() !== '' ||
-        draft.note.trim() !== ''
-      );
+      return linesAreFilled(lines) || draft.sellDate.trim() !== '' || draft.note.trim() !== '';
   }
 }
 
@@ -188,20 +184,27 @@ export function entryParts(
 }
 
 /**
- * What the goods arrived form sends (PRD FR-12.40): the text typed and the ids of what was chosen.
- * An empty day to sell is sent as nothing: the backend reads it as the day of the arrival.
+ * What the goods arrived form sends (PRD FR-12.40, FR-12.41): the text typed and the ids of what
+ * was chosen, with every filled line. One day and one day to sell for the whole entry; an empty
+ * day to sell is sent as nothing, and the backend reads it as the day of the arrival.
  */
-export function buildArrival(draft: EntryDraft, gardenId: number): ArrivalInput {
+export function buildArrivalEntry(
+  draft: EntryDraft,
+  lines: readonly EntryRow[],
+  gardenId: number,
+): ArrivalEntryInput {
   return {
     garden_id: gardenId,
     date: draft.date.trim(),
     sell_date: textOrNull(draft.sellDate),
-    item_id: draft.item?.id ?? null,
-    packing_id: draft.packing?.id ?? null,
-    qty: draft.qty.trim(),
-    weight: textOrNull(draft.weight),
-    note: textOrNull(draft.note),
+    lines: arrivalLineInputs(lines, draft.note),
   };
+}
+
+/** A whole number from text, or null (the id of a chosen arrival). */
+function idOf(text: string): number | null {
+  const id = Number(text);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 /** What the entry form sends, whichever type is open. The amount may be a simple sum. */
@@ -222,6 +225,7 @@ export function buildEntry(
       garden_id: gardenId,
       date: draft.date.trim(),
       shop: textOrNull(draft.shop),
+      arrival_id: idOf(draft.arrivalId),
       qty: draft.qty.trim(),
       amount: draft.amount.trim(),
       note: textOrNull(draft.note),
@@ -242,6 +246,6 @@ export function buildEntry(
 export const ENTRY_FIELD_PATHS: Record<EntryType, readonly string[]> = {
   installment: ['date', 'amount', 'reason'],
   cost: ['date', 'amount', 'reason'],
-  other_sale: ['date', 'shop', 'qty', 'amount', 'note'],
-  arrival: ['date', 'sell_date', 'item_id', 'packing_id', 'qty', 'weight', 'note', 'garden_id'],
+  other_sale: ['date', 'shop', 'arrival_id', 'qty', 'amount', 'note'],
+  arrival: ['date', 'sell_date', 'note', 'garden_id'],
 };

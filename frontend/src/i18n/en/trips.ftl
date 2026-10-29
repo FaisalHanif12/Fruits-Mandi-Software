@@ -265,6 +265,10 @@ trips-preview-failed = The numbers could not be worked out
 # review: pending
 trips-saved-purchase = { -khareedari } { $number } saved
 
+# $count: how many lines were saved; $first, $last: the first and the last number.
+# review: pending
+trips-saved-purchases = { $count } { -khareedari } entries saved: { $first } to { $last }
+
 # $number: the number of the trip cost.
 # review: pending
 trips-saved-cost = Trip cost { $number } saved
@@ -313,11 +317,11 @@ trips-cost-spread-qty = ({ $qty } { -nag })
 trips-sale-purchase = Goods from
 
 # review: pending
-trips-sale-purchase-hint = Only purchases of this trip with goods left are listed.
+trips-sale-purchase-hint = Only purchases of this trip with goods left are listed. The goods set for { -dusri-dukan } are sold first. If you sell more, the rest comes from { -apni-dukan }, and the screen tells you how many.
 
-# $number: the purchase; $qty_left: how many { -nag } are left.
+# $number: the purchase; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
 # review: pending
-trips-sale-purchase-option = { $number }: { $item }, { $packing } ({ $qty_left } left)
+trips-sale-purchase-option = { $number }: { $item }, { $packing } ({ $other_left } left for { -dusri-dukan }, { $our_left } for { -apni-dukan })
 
 # review: pending
 trips-sale-shop = Shop
@@ -342,6 +346,9 @@ trips-sale-numbers-incomplete = Choose the goods and enter the quantity and the 
 
 # review: pending
 trips-sale-left-after = Left in the purchase after this
+
+# review: pending
+trips-sale-other-left-after = Left for { -dusri-dukan } after this
 
 # review: pending
 trips-sale-cost-left-after = Cost of what is left

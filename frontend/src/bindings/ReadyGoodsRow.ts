@@ -41,7 +41,9 @@ export type ReadyGoodsRow = {
    */
   qty: number;
   /**
-   * نگ left to sell (more than 0): the qty of the ready lot.
+   * نگ left to sell in OUR shop (more than 0): the qty of the ready lot. The part for another
+   * shop never comes into a sale (PRD FR-12.41); rows with nothing left for our shop are not
+   * listed.
    */
   qty_left: number;
   /**

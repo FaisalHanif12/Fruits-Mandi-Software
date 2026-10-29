@@ -6,6 +6,9 @@ import { callCommand } from '../../shared/api';
 import type {
   ArrivalCancelInput,
   ArrivalCancelled,
+  ArrivalEntryInput,
+  ArrivalEntryPreview,
+  ArrivalEntrySaved,
   ArrivalInput,
   ArrivalRow,
   ArrivalSaved,
@@ -17,6 +20,8 @@ import type {
   ArrivalWriteOffUndone,
   SellDateInput,
   SellDateSet,
+  SplitInput,
+  SplitSet,
   GardenCloseInput,
   GardenClosePreview,
   GardenClosed,
@@ -107,6 +112,24 @@ export function gardensReopen(input: GardenReopenInput): Promise<GardenReopened>
 /** Saves a goods arrived entry: the garden's goods that came to the shop. Posts no money. */
 export function gardensArrivalSave(input: ArrivalInput): Promise<ArrivalSaved> {
   return callCommand<ArrivalSaved>('gardens_arrival_save', { input });
+}
+
+/**
+ * Checks a goods arrived entry with many item lines (PRD FR-12.41): the mistakes of each line and
+ * of the shared fields. Saves nothing.
+ */
+export function gardensArrivalEntryPreview(input: ArrivalEntryInput): Promise<ArrivalEntryPreview> {
+  return callCommand<ArrivalEntryPreview>('gardens_arrival_entry_preview', { input });
+}
+
+/** Saves a goods arrived entry: every line is its own arrival, in one transaction. No money. */
+export function gardensArrivalEntrySave(input: ArrivalEntryInput): Promise<ArrivalEntrySaved> {
+  return callCommand<ArrivalEntrySaved>('gardens_arrival_entry_save', { input });
+}
+
+/** Changes the split of an arrival with goods left: the نگ for another shop and its name. */
+export function gardensArrivalChangeSplit(input: SplitInput): Promise<SplitSet> {
+  return callCommand<SplitSet>('gardens_arrival_change_split', { input });
 }
 
 /** One page of the garden's goods arrived entries and the totals over the whole filter (FR-19.11). */

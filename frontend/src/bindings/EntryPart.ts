@@ -21,7 +21,9 @@ export type EntryPart = {
    */
   source: MoneySource;
   /**
-   * His part: `split_by_bps` of the payment, whole rupees. The parts add up to the payment.
+   * His part: `split_by_bps` of the payment, whole rupees. The parts add up to the payment. In
+   * the preview of a many-lines entry it is the sum of his parts of the lines, each line split
+   * on its own (see `PurchaseEntryPreview::parts`).
    */
   amount_paisa: Paisa;
   /**

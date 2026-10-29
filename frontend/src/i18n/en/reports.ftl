@@ -1297,3 +1297,13 @@ report-col-fruit-taken = { -phal }
 
 # review: pending
 report-r34-fruit-taken = { -phal }
+
+# PRD FR-12.41, R10: the goods left for our shop and for another shop, and the other shop's name as typed.
+# review: pending
+report-col-our-left = Our Shop Left
+
+# review: pending
+report-col-other-left = Other Shop Left
+
+# review: pending
+report-col-shop-name = Other Shop Name

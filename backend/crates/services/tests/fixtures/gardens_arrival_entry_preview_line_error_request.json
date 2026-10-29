@@ -1,0 +1,27 @@
+{
+  "date": "10-10-2026",
+  "garden_id": 2,
+  "lines": [
+    {
+      "item_id": 1,
+      "key": "a",
+      "note": null,
+      "other_qty": null,
+      "packing_id": 1,
+      "qty": "10",
+      "shop_name": null,
+      "weight": null
+    },
+    {
+      "item_id": 2,
+      "key": "b",
+      "note": null,
+      "other_qty": "9",
+      "packing_id": 1,
+      "qty": "5",
+      "shop_name": "حاجی شاپ",
+      "weight": null
+    }
+  ],
+  "sell_date": null
+}

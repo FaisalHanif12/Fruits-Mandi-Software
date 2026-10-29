@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_SPLIT_ABOVE_QTY",
+      "field": "other_qty",
+      "values": {
+        "qty": 80
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261011-0001"
+}

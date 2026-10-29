@@ -67,6 +67,11 @@ pub const TRIP_AND_GARDEN_CODES_SQL: &str =
 pub const DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL: &str =
     include_str!("../migrations/0009_date_to_sell_and_garden_arrivals.sql");
 
+/// The tenth migration (plan 35, PRD FR-12.41): the split between our shop and another shop on
+/// every trip purchase and garden arrival, and the arrival a garden's sale in another shop takes
+/// its goods from. No amount, id or chain hash changes.
+pub const SHOP_SPLIT_SQL: &str = include_str!("../migrations/0010_shop_split.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -88,6 +93,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up_with_hook(SIMPLE_PARTY_CODES_SQL, codes_hook),
         M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, trip_names_hook),
         M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
     ])
 }
 

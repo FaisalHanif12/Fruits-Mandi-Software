@@ -57,6 +57,10 @@ describe('the commands the screens call are the ones the backend declares', () =
       'purchases_get',
       'purchases_write_off',
       'purchases_write_off_undo',
+      // Many item lines in one entry, and the split between our shop and another shop (plan 35).
+      'purchases_entry_preview',
+      'purchases_entry_save',
+      'purchases_change_split',
     ]) {
       expect(purchases).toContain(name);
     }
@@ -163,6 +167,36 @@ describe('each wrapper sends the command and `{ input }`', () => {
     expect(call).toHaveBeenLastCalledWith('purchases_preview', { input });
     await purchasesApi.purchasesSave(input);
     expect(call).toHaveBeenLastCalledWith('purchases_save', { input });
+    const entry = {
+      trip_id: 1,
+      date: '10-10-2026',
+      supplier: null,
+      sell_date: null,
+      parts: entryParts,
+      confirm_cash_below_zero: false,
+      lines: [
+        {
+          item_id: 61,
+          packing_id: 71,
+          qty: '20',
+          weight: null,
+          rate: '500',
+          freight: null,
+          labour: null,
+          other_cost: null,
+          note: null,
+          other_qty: '5',
+          shop_name: 'Haji Shop',
+        },
+      ],
+    };
+    await purchasesApi.purchasesEntryPreview(entry);
+    expect(call).toHaveBeenLastCalledWith('purchases_entry_preview', { input: entry });
+    await purchasesApi.purchasesEntrySave(entry);
+    expect(call).toHaveBeenLastCalledWith('purchases_entry_save', { input: entry });
+    const split = { id: 7, version: 1, other_qty: '5', shop_name: 'Haji Shop' };
+    await purchasesApi.purchasesChangeSplit(split);
+    expect(call).toHaveBeenLastCalledWith('purchases_change_split', { input: split });
     await purchasesApi.purchasesGet(e34Purchase().id);
     expect(call).toHaveBeenLastCalledWith('purchases_get', { input: { id: 7 } });
     await purchasesApi.purchasesWriteOff(7, '5', 'Spoiled');

@@ -200,6 +200,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(totalsCell('received')).toBe('50');
       expect(totalsCell('sold')).toBe('20');
       expect(totalsCell('balance')).toBe('30');
+      // What is left for our shop and for another shop (PRD FR-12.41): 30 for ours, none for another.
+      expect(cell('0', 'our_left')).toBe('30');
+      expect(cell('0', 'other_left')).toBe('0');
       expect(drawnColumns()).toEqual([
         'date',
         'seller',
@@ -208,8 +211,19 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
         'sold',
         'fruit_taken',
         'balance',
+        'our_left',
+        'other_left',
         'days',
       ]);
+    });
+
+    it('at the narrowest step the two parts left are drawn instead of the figures that make them', async () => {
+      vi.mocked(useLayoutStep).mockReturnValue('compact');
+      await openReport('R10');
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+      expect(drawnColumns()).toEqual(['date', 'seller', 'item', 'our_left', 'other_left', 'days']);
     });
 
     it('draws the document, the packing and the write-offs at the wide step', async () => {
@@ -229,6 +243,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
         'written_off',
         'fruit_taken',
         'balance',
+        'our_left',
+        'other_left',
+        'shop_name',
         'days',
       ]);
       expect(cell('0', 'doc')).toBe(
@@ -255,6 +272,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
         'written_off',
         'fruit_taken',
         'balance',
+        'our_left',
+        'other_left',
+        'shop_name',
         'days',
       ]);
       await openReport('R10', { pages: { R10: R10_FRUIT } });
@@ -288,6 +308,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('0', 'seller')).toContain('0080');
       expect(cell('0', 'received')).toBe('100');
       expect(cell('0', 'balance')).toBe('40');
+      // All 40 that are left are for our shop in the backend's file (PRD FR-12.41).
+      expect(cell('0', 'our_left')).toBe('40');
+      expect(cell('0', 'other_left')).toBe('0');
       const target = cellElement('0', 'seller');
       if (target === null) throw new Error('no seller cell');
       await user.click(target);

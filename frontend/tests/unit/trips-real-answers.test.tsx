@@ -23,6 +23,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { lineCell, lineCellText, typePurchaseLine } from '../helpers/goods-lines';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { fakeItemPickers, fakeTrips } from '../helpers/trips';
@@ -168,51 +169,49 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
 
   it('the real purchase preview of E2E-34 shows 4,160 / 3,120 / 3,120 and the cash after', async () => {
     vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
-    vi.mocked(purchasesApi.purchasesPreview).mockResolvedValue(real.PURCHASE_PREVIEW_E34);
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.entryPreviewFor(sent, real.PURCHASE_PREVIEW_E34)),
+    );
     const { user } = await openTrip();
-    const pick = async (id: string, text: string) => {
-      const box = field(id);
-      await user.click(box);
-      await user.type(box, text);
-      await user.click(await screen.findByRole('option'));
-    };
-    await pick('glossary-qism-maal', language === 'ur' ? 'م' : 'Ora');
-    await pick('glossary-packing', language === 'ur' ? 'پ' : 'Box');
-    await user.type(field('purchases-field-qty'), '20');
-    await user.type(field('purchases-field-rate'), '500');
-    await user.type(field('glossary-kiraya'), '400');
+    await typePurchaseLine(user, 0, {
+      item: language === 'ur' ? 'م' : 'Ora',
+      packing: language === 'ur' ? 'پ' : 'Box',
+      qty: '20',
+      rate: '500',
+      freight: '400',
+    });
     const parts = await screen.findByRole('list', {
       name: named(message(language, 'trips-parts-title')),
     });
     const text = visible(parts.textContent);
     for (const figure of ['4,160', '3,120']) expect(text).toContain(figure);
-    // Value 10,000, paid now 10,400, average cost 520: all the backend’s.
-    for (const figure of ['10,000', '10,400', '520']) expect(pageText()).toContain(figure);
+    // Paid now 10,400 and the total cost 10,400 on the line, and the money of the entry: all the
+    // backend’s. The value of the goods is on the line's calculated cell (10,000).
+    expect(pageText()).toContain('10,400');
+    expect(lineCellText(0, 'value')).toBe('10,000');
     expect(within(parts).getAllByText(said(message(language, 'ventures-part-shop')))).toHaveLength(
       3,
     );
   });
 
-  /** Fills the purchase of the preview files: the item, the packing, the quantity and the rate. */
+  /** Fills the purchase of the preview files as one line: the item, the packing, the quantity and the rate. */
   async function fillPurchaseFields(user: ReturnType<typeof userEvent.setup>) {
-    const pick = async (id: string, text: string) => {
-      const box = field(id);
-      await user.click(box);
-      await user.type(box, text);
-      await user.click(await screen.findByRole('option'));
-    };
-    await pick('glossary-qism-maal', language === 'ur' ? 'م' : 'Ora');
-    await pick('glossary-packing', language === 'ur' ? 'پ' : 'Box');
-    await user.type(field('purchases-field-qty'), '100');
-    await user.type(field('purchases-field-rate'), '1000');
+    await typePurchaseLine(user, 0, {
+      item: language === 'ur' ? 'م' : 'Ora',
+      packing: language === 'ur' ? 'پ' : 'Box',
+      qty: '100',
+      rate: '1000',
+    });
   }
 
   it('a purchase that takes cash below zero: the amber note with the backend’s −50,000, No saves nothing, Yes saves with the confirmation', async () => {
     vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
-    vi.mocked(purchasesApi.purchasesPreview).mockResolvedValue(
-      real.PURCHASE_PREVIEW_CASH_BELOW_ZERO,
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.entryPreviewFor(sent, real.PURCHASE_PREVIEW_CASH_BELOW_ZERO)),
     );
-    vi.mocked(purchasesApi.purchasesSave).mockResolvedValue(real.PURCHASE_SAVE_E34);
+    vi.mocked(purchasesApi.purchasesEntrySave).mockResolvedValue(
+      real.entrySavedOf(real.PURCHASE_SAVE_E34),
+    );
     const { user } = await openTrip();
     await fillPurchaseFields(user);
     expect(
@@ -221,12 +220,14 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     // The answer to the last key must have landed, so that F10 asks first (a stale answer saves
     // and lets the backend's refusal open the box).
     await waitFor(() => {
-      expect(purchasesApi.purchasesPreview).toHaveBeenLastCalledWith(
-        expect.objectContaining({ qty: '100', rate: '1000' }),
+      expect(purchasesApi.purchasesEntryPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          lines: [expect.objectContaining({ qty: '100', rate: '1000' })],
+        }),
       );
     });
     await act(async () => {
-      await vi.mocked(purchasesApi.purchasesPreview).mock.results.at(-1)?.value;
+      await vi.mocked(purchasesApi.purchasesEntryPreview).mock.results.at(-1)?.value;
     });
     await settlePreview();
     press('F10');
@@ -244,23 +245,151 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
         screen.queryByRole('button', { name: startsWith('common-cash-confirm-no') }),
       ).toBeNull();
     });
-    expect(purchasesApi.purchasesSave).not.toHaveBeenCalled();
+    expect(purchasesApi.purchasesEntrySave).not.toHaveBeenCalled();
     press('F10');
     await user.click(
       await screen.findByRole('button', { name: startsWith('common-cash-confirm-yes') }),
     );
     await waitFor(() => {
-      expect(purchasesApi.purchasesSave).toHaveBeenCalledTimes(1);
+      expect(purchasesApi.purchasesEntrySave).toHaveBeenCalledTimes(1);
     });
-    expect(vi.mocked(purchasesApi.purchasesSave).mock.calls[0]?.[0]).toMatchObject({
+    expect(vi.mocked(purchasesApi.purchasesEntrySave).mock.calls[0]?.[0]).toMatchObject({
       confirm_cash_below_zero: true,
       trip_id: 1,
     });
   });
 
+  const oranges = () => ({
+    item: language === 'ur' ? 'م' : 'Ora',
+    packing: language === 'ur' ? 'پ' : 'Box',
+  });
+
+  it('R1: the real preview of an entry of two lines: each line’s numbers, the quantity left for our shop, the parts of the whole entry and ONE cash question', async () => {
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.withKeysOf(real.ENTRY_PREVIEW_TWO_LINES, sent)),
+    );
+    const { user } = await openTrip();
+    // The lines of the backend's own file: 80 at 1,200 (30 for another shop) and 40 at 900.
+    await typePurchaseLine(user, 0, {
+      ...oranges(),
+      qty: '80',
+      rate: '1,200',
+      otherQty: '30',
+      shop: 'Haji Shop',
+    });
+    await typePurchaseLine(user, 1, { ...oranges(), qty: '40', rate: '900' });
+    // 132,000 is the money of the whole entry, and the parts are the backend's for all the lines.
+    const parts = await screen.findByRole('list', {
+      name: named(message(language, 'trips-parts-title')),
+    });
+    for (const figure of ['52,800', '39,600']) expect(visible(parts.textContent)).toContain(figure);
+    expect((await screen.findAllByText('132,000')).length).toBeGreaterThan(0);
+    // What is left for our shop is the backend's: 80 − 30 = 50, and 40.
+    await waitFor(() => {
+      expect(lineCellText(0, 'ourQty')).toBe('50');
+    });
+    expect(lineCellText(1, 'ourQty')).toBe('40');
+    // The cash question is one question for the whole entry: −82,000 after it.
+    expect(
+      await screen.findByText(said(message(language, 'common-cash-confirm-title'))),
+    ).toBeInTheDocument();
+  });
+
+  it('R1: each line shows its own value from the backend’s real preview, found by the key of its row, whatever the order of the answer', async () => {
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) => {
+      const answer = real.withKeysOf(real.ENTRY_PREVIEW_TWO_LINES, sent);
+      // The lines come back in the other order: a number must still go to the row of its key.
+      return Promise.resolve({ ...answer, lines: [...answer.lines].reverse() });
+    });
+    const { user } = await openTrip();
+    // The backend's own lines: 80 at 1,200 = 96,000, and 40 at 900 = 36,000.
+    await typePurchaseLine(user, 0, { ...oranges(), qty: '80', rate: '1,200', otherQty: '30' });
+    await typePurchaseLine(user, 1, { ...oranges(), qty: '40', rate: '900' });
+    await waitFor(() => {
+      expect(lineCellText(1, 'value')).toBe('36,000');
+    });
+    expect(lineCellText(0, 'value')).toBe('96,000');
+    // The quantity left for our shop follows its row too: 50 and 40.
+    expect(lineCellText(0, 'ourQty')).toBe('50');
+    expect(lineCellText(1, 'ourQty')).toBe('40');
+    // The aside table has the same two lines with what is paid now.
+    const table = screen.getByRole('table', {
+      name: named(message(language, 'purchases-entry-title')),
+    });
+    expect(visible(table.textContent)).toContain('96,000');
+    expect(visible(table.textContent)).toContain('36,000');
+    expect(visible(table.textContent)).toContain('132,000');
+  });
+
+  it('R1: a mistake the backend found on the second line is on its cell and told in plain words', async () => {
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.withKeysOf(real.ENTRY_PREVIEW_LINE_ERROR, sent)),
+    );
+    const { user } = await openTrip();
+    await typePurchaseLine(user, 0, { ...oranges(), qty: '10', rate: '1,000' });
+    await typePurchaseLine(user, 1, { ...oranges(), qty: '10', rate: '1,000', otherQty: '20' });
+    expect(
+      await screen.findByText(said(message(language, 'err-split-above-qty', { qty: 10 }))),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(lineCell(1, 'otherQty').className).toContain('cell-error');
+    });
+    expect(lineCell(0, 'otherQty').className).not.toContain('cell-error');
+  });
+
+  it('R1: the backend’s refusal of the save names the line, and the lines stay', async () => {
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.withKeysOf(real.ENTRY_PREVIEW_ONE_LINE, sent)),
+    );
+    vi.mocked(purchasesApi.purchasesEntrySave).mockRejectedValue(
+      new CommandError(real.ENTRY_SAVE_LINE_ERROR),
+    );
+    const { user } = await openTrip();
+    await typePurchaseLine(user, 0, { ...oranges(), qty: '10', rate: '1,000' });
+    await typePurchaseLine(user, 1, { ...oranges(), qty: '10', rate: '1,000', otherQty: '20' });
+    await screen.findByRole('list', { name: named(message(language, 'trips-parts-title')) });
+    press('F10');
+    expect(
+      await screen.findByText(said(message(language, 'err-split-above-qty', { qty: 10 }))),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(lineCell(1, 'otherQty').className).toContain('cell-error');
+    });
+    expect(lineCellText(0, 'qty')).toBe('10');
+    expect(lineCellText(1, 'otherQty')).toBe('20');
+  });
+
+  it('D1: a sale in another shop that needs goods from our shop says how many move, before the save', async () => {
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
+    vi.mocked(tripsApi.tripsOtherSalePreview).mockResolvedValue(real.OTHER_PREVIEW_MOVES);
+    const { user } = await openTrip();
+    await user.click(
+      within(
+        screen.getByRole('group', { name: named(message(language, 'trips-type-label')) }),
+      ).getByRole('button', { name: named(message(language, 'trips-type-other-sale')) }),
+    );
+    await user.click(
+      screen.getByRole('combobox', { name: named(message(language, 'trips-sale-purchase')) }),
+    );
+    await user.click(await screen.findByRole('option'));
+    await user.type(field('trips-sale-shop'), 'Haji Shop');
+    await user.type(field('trips-sale-qty'), '25');
+    await user.type(field('trips-sale-amount'), '2000');
+    // The backend's preview says 5 move from our shop; nothing is worked out here.
+    expect(
+      await screen.findByText(said(message(language, 'split-moved-from-our', { count: 5 }))),
+    ).toBeInTheDocument();
+  });
+
   it('a part paid from a pocket: 48,000 from the shop, 48,000 recorded only, and no cash question (E2E-41)', async () => {
     vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
-    vi.mocked(purchasesApi.purchasesPreview).mockResolvedValue(real.PURCHASE_PREVIEW_POCKET);
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.entryPreviewFor(sent, real.PURCHASE_PREVIEW_POCKET)),
+    );
     const { user } = await openTrip();
     await fillPurchaseFields(user);
     const parts = await screen.findByRole('list', {
@@ -279,11 +408,17 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
 
   it('a missing quantity is told at the quantity field and the numbers wait', async () => {
     vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
-    vi.mocked(purchasesApi.purchasesPreview).mockResolvedValue(real.PURCHASE_PREVIEW_NO_QTY);
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.entryPreviewFor(sent, real.PURCHASE_PREVIEW_NO_QTY)),
+    );
     const { user } = await openTrip();
-    await user.type(field('purchases-field-rate'), '1000');
     await waitFor(() => {
-      expect(purchasesApi.purchasesPreview).toHaveBeenCalled();
+      lineCell(0, 'rate');
+    });
+    await user.click(lineCell(0, 'rate'));
+    await user.keyboard('1000{Enter}');
+    await waitFor(() => {
+      expect(purchasesApi.purchasesEntryPreview).toHaveBeenCalled();
     });
     // Nothing is shown as a number and nothing is invented: no parts list.
     expect(
@@ -368,25 +503,23 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
 
   it('a purchase on a closed trip is refused with the backend’s own refusal, told in plain words', async () => {
     vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
-    vi.mocked(purchasesApi.purchasesPreview).mockResolvedValue(real.PURCHASE_PREVIEW_E34);
-    vi.mocked(purchasesApi.purchasesSave).mockRejectedValue(
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((sent) =>
+      Promise.resolve(real.entryPreviewFor(sent, real.PURCHASE_PREVIEW_E34)),
+    );
+    vi.mocked(purchasesApi.purchasesEntrySave).mockRejectedValue(
       new CommandError(real.PURCHASE_SAVE_TRIP_CLOSED),
     );
     const { user } = await openTrip();
-    const pick = async (id: string, text: string) => {
-      const box = field(id);
-      await user.click(box);
-      await user.type(box, text);
-      await user.click(await screen.findByRole('option'));
-    };
-    await pick('glossary-qism-maal', language === 'ur' ? 'م' : 'Ora');
-    await pick('glossary-packing', language === 'ur' ? 'پ' : 'Box');
-    await user.type(field('purchases-field-qty'), '20');
-    await user.type(field('purchases-field-rate'), '500');
+    await typePurchaseLine(user, 0, {
+      item: language === 'ur' ? 'م' : 'Ora',
+      packing: language === 'ur' ? 'پ' : 'Box',
+      qty: '20',
+      rate: '500',
+    });
     await screen.findByRole('list', { name: named(message(language, 'trips-parts-title')) });
     press('F10');
     expect(await screen.findByText(said(message(language, 'err-trip-closed')))).toBeInTheDocument();
     // Nothing typed is lost.
-    expect(field('purchases-field-qty')).toHaveValue('20');
+    expect(lineCellText(0, 'qty')).toBe('20');
   });
 });

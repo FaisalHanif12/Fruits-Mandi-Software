@@ -60,6 +60,18 @@ export type OwnStockRow = {
    */
   balance: number;
   /**
+   * نگ left for our shop (PRD FR-12.41): the ready lots take these.
+   */
+  qty_our_left: number;
+  /**
+   * نگ left for another shop: `qty_our_left + qty_other_left = balance`.
+   */
+  qty_other_left: number;
+  /**
+   * The other shop, as typed.
+   */
+  shop_name: string | null;
+  /**
    * The total cost of the purchase.
    */
   total_cost_paisa: Paisa;

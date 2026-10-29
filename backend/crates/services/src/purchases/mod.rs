@@ -18,9 +18,11 @@
 //! 40 / 30 / 30: each partner's 0604 account بنام 4,160 / 3,120 / 3,120, روکڑ جمع 10,400. Selling 15
 //! releases cost 7,800; the 5 left cost 2,600; writing them off posts nothing.
 
+mod entry;
 mod plan;
 mod reads;
 
+pub(crate) use entry::MAX_LINES as MAX_ENTRY_LINES;
 pub(crate) use reads::{rows_of_trip, stock_rows};
 
 use mandi_db::bikri::edit::{self as edit_repo, NewMove};
@@ -93,126 +95,147 @@ pub fn save(
         let ready = planned
             .ready
             .ok_or_else(|| data("a purchase without errors has no numbers"))?;
-        let user = actor.user_id;
-        let date_iso = ready.date.to_iso();
-        let number = repo::next_number(tx)?;
-        let id = repo::insert(
-            tx,
-            &NewPurchase {
-                venture_id: ready.venture.rec.id,
-                entry_date: &date_iso,
-                sell_date: &ready.sell_date.to_iso(),
-                supplier_text: ready.supplier.as_deref(),
-                item_id: ready.item_id,
-                packing_id: ready.packing_id,
-                qty: ready.qty.get(),
-                weight_grams: ready.weight.map(mandi_domain::core::money::Grams::get),
-                rate_paisa: ready.rate.as_paisa(),
-                value_paisa: ready.value.as_paisa(),
-                freight_paisa: ready.freight.as_paisa(),
-                labour_paisa: ready.labour.as_paisa(),
-                other_cost_paisa: ready.other_cost.as_paisa(),
-                paid_now_paisa: ready.paid_now.as_paisa(),
-                note: ready.note.as_deref(),
-            },
-            number,
-            user,
-            &now,
-        )?;
-        // The trip's entry for it holds the partners' parts (C23).
-        let entry_number = venture_repo::next_entry_number(tx, "purchase")?;
-        let venture_entry = venture_repo::insert_entry(
-            tx,
-            &NewEntry {
-                venture_id: ready.venture.rec.id,
-                kind: "purchase",
-                entry_date: &date_iso,
-                amount_paisa: ready.paid_now.as_paisa(),
-                reason: None,
-                purchase_id: Some(id),
-                qty: None,
-                shop_name: None,
-                cost_paisa: 0,
-            },
-            entry_number,
-            user,
-            &now,
-        )?;
-        ventures::write_parts(tx, user, &now, venture_entry, &ready.payment.parts)?;
-        // Only the parts paid from the shop's cash post (FR-12.30); none at all: no entry.
-        let entry_id = ventures::post_settlement(
-            ctx,
-            tx,
-            user,
-            &now,
-            &Settlement {
-                venture_entry_id: venture_entry,
-                date: ready.date,
-                entry: ready.payment.entry.as_ref(),
-                posting_type: PostingType::Purchase,
-                source_type: SourceType::Purchase,
-                source_id: id,
-            },
-        )?;
-        if let Some(entry_id) = entry_id {
-            repo::set_entry(tx, id, entry_id, user, &now)?;
-        }
-        edit_repo::insert_move(
-            tx,
-            &NewMove {
-                arrival_id: None,
-                lot_id: None,
-                purchase_id: Some(id),
-                cost_paisa: 0,
-                entry_id,
-                move_date: &date_iso,
-                kind: "received",
-                qty: ready.qty.get(),
-                reason: None,
-                reverses_move_id: None,
-            },
-            user,
-            &now,
-        )?;
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(user), "create", "purchase")
-                .entity_id(id)
-                .new_value(json!({
-                    "number": number,
-                    "trip_id": ready.venture.rec.id,
-                    "entry_date": date_iso,
-                    "entry_id": entry_id,
-                    "item_id": ready.item_id,
-                    "qty": ready.qty.get(),
-                    "value_paisa": ready.value.as_paisa(),
-                    "paid_now_paisa": ready.paid_now.as_paisa(),
-                    "parts": ready
-                        .payment
-                        .parts
-                        .iter()
-                        .map(|p| json!({
-                            "partner_id": p.partner_id.get(),
-                            "source": p.source.as_str(),
-                            "amount_paisa": p.amount.as_paisa(),
-                        }))
-                        .collect::<Vec<_>>(),
-                    "cash_after_paisa": planned.cash.cash_after_paisa.as_paisa(),
-                    "cash_below_zero_confirmed": planned.cash.needs_confirm,
-                }))
-                .into_entry(),
-        )?;
-        let version = repo::get(tx, id)?
-            .map(|p| p.version)
-            .ok_or_else(|| data("a purchase is missing after its save"))?;
-        Ok(PurchaseSaved {
-            id,
-            number,
-            version,
+        write_one(ctx, tx, actor, &now, ready, preview, planned.cash)
+    })
+}
+
+/// Writes ONE planned purchase inside the transaction of the caller (Code Standards B3): the
+/// purchase, the trip's entry with the partners' parts (C23), the journal entry for the parts paid
+/// from the shop's cash, the stock move and the audit row. The cash question is the caller's.
+/// Used by [`save`] for one purchase and by [`entry_save`] for each line of an entry, so a line of
+/// an entry is exactly one purchase of today.
+fn write_one(
+    ctx: &Context,
+    tx: &Connection,
+    actor: &Actor,
+    now: &str,
+    ready: plan::Ready,
+    preview: PurchasePreview,
+    cash: mandi_domain::core::cash::CashCheck,
+) -> Result<PurchaseSaved, ServiceError> {
+    let user = actor.user_id;
+    let date_iso = ready.date.to_iso();
+    let number = repo::next_number(tx)?;
+    let id = repo::insert(
+        tx,
+        &NewPurchase {
+            venture_id: ready.venture.rec.id,
+            entry_date: &date_iso,
+            sell_date: &ready.sell_date.to_iso(),
+            supplier_text: ready.supplier.as_deref(),
+            item_id: ready.item_id,
+            packing_id: ready.packing_id,
+            qty: ready.qty.get(),
+            weight_grams: ready.weight.map(mandi_domain::core::money::Grams::get),
+            rate_paisa: ready.rate.as_paisa(),
+            value_paisa: ready.value.as_paisa(),
+            freight_paisa: ready.freight.as_paisa(),
+            labour_paisa: ready.labour.as_paisa(),
+            other_cost_paisa: ready.other_cost.as_paisa(),
+            paid_now_paisa: ready.paid_now.as_paisa(),
+            note: ready.note.as_deref(),
+            other_qty: ready.other_qty,
+            shop_name: ready.shop_name.as_deref(),
+        },
+        number,
+        user,
+        now,
+    )?;
+    // The trip's entry for it holds the partners' parts (C23).
+    let entry_number = venture_repo::next_entry_number(tx, "purchase")?;
+    let venture_entry = venture_repo::insert_entry(
+        tx,
+        &NewEntry {
+            arrival_id: None,
+            moved_qty: 0,
+            venture_id: ready.venture.rec.id,
+            kind: "purchase",
+            entry_date: &date_iso,
+            amount_paisa: ready.paid_now.as_paisa(),
+            reason: None,
+            purchase_id: Some(id),
+            qty: None,
+            shop_name: None,
+            cost_paisa: 0,
+        },
+        entry_number,
+        user,
+        now,
+    )?;
+    ventures::write_parts(tx, user, now, venture_entry, &ready.payment.parts)?;
+    // Only the parts paid from the shop's cash post (FR-12.30); none at all: no entry.
+    let entry_id = ventures::post_settlement(
+        ctx,
+        tx,
+        user,
+        now,
+        &Settlement {
+            venture_entry_id: venture_entry,
+            date: ready.date,
+            entry: ready.payment.entry.as_ref(),
+            posting_type: PostingType::Purchase,
+            source_type: SourceType::Purchase,
+            source_id: id,
+        },
+    )?;
+    if let Some(entry_id) = entry_id {
+        repo::set_entry(tx, id, entry_id, user, now)?;
+    }
+    edit_repo::insert_move(
+        tx,
+        &NewMove {
+            arrival_id: None,
+            lot_id: None,
+            purchase_id: Some(id),
+            cost_paisa: 0,
             entry_id,
-            total_cost: ready.paid_now,
-            preview,
-        })
+            move_date: &date_iso,
+            kind: "received",
+            qty: ready.qty.get(),
+            reason: None,
+            reverses_move_id: None,
+        },
+        user,
+        now,
+    )?;
+    ctx.db.auditor().write(
+        tx,
+        &Event::new(Some(user), "create", "purchase")
+            .entity_id(id)
+            .new_value(json!({
+                "number": number,
+                "trip_id": ready.venture.rec.id,
+                "entry_date": date_iso,
+                "entry_id": entry_id,
+                "item_id": ready.item_id,
+                "qty": ready.qty.get(),
+                "value_paisa": ready.value.as_paisa(),
+                "paid_now_paisa": ready.paid_now.as_paisa(),
+                "parts": ready
+                    .payment
+                    .parts
+                    .iter()
+                    .map(|p| json!({
+                        "partner_id": p.partner_id.get(),
+                        "source": p.source.as_str(),
+                        "amount_paisa": p.amount.as_paisa(),
+                    }))
+                    .collect::<Vec<_>>(),
+                "cash_after_paisa": cash.cash_after_paisa.as_paisa(),
+                "cash_below_zero_confirmed": cash.needs_confirm,
+            }))
+            .into_entry(),
+    )?;
+    let version = repo::get(tx, id)?
+        .map(|p| p.version)
+        .ok_or_else(|| data("a purchase is missing after its save"))?;
+    Ok(PurchaseSaved {
+        id,
+        number,
+        version,
+        entry_id,
+        total_cost: ready.paid_now,
+        preview,
     })
 }
 
@@ -253,6 +276,25 @@ pub(crate) fn take_sold(
     now: &str,
 ) -> Result<(), ServiceError> {
     repo::add_sold(tx, purchase_id, qty, cost.as_paisa(), user_id, now)?;
+    ensure_consistent(tx, purchase_id)
+}
+
+/// The purchase gives up what a sale in another shop took: `qty` نگ from its part for another shop
+/// and their cost (C21, PRD FR-12.32, FR-12.41).
+///
+/// # Errors
+/// `ServiceError::Db` (the checks of `purchases`), `ServiceError::Data` if the figures break the
+/// rule of [`ensure_consistent`].
+pub(crate) fn take_sold_other_shop(
+    tx: &Connection,
+    purchase_id: i64,
+    qty: i64,
+    moved: i64,
+    cost: Paisa,
+    user_id: i64,
+    now: &str,
+) -> Result<(), ServiceError> {
+    repo::add_sold_in_other_shop(tx, purchase_id, qty, moved, cost.as_paisa(), user_id, now)?;
     ensure_consistent(tx, purchase_id)
 }
 
@@ -717,6 +759,124 @@ pub fn set_sell_date(
             id: after.id,
             version: after.version,
             sell_date: after.sell_date,
+        })
+    })
+}
+
+/// Works out a purchase entry with many item lines (PRD FR-12.41, R1): each line exactly as
+/// [`preview`] works out one purchase, the money of the entry, and one cash note for all lines.
+/// Nothing is saved.
+///
+/// # Errors
+/// `ServiceError::Db` or `ServiceError::Data` for a failure the user cannot fix. The mistakes come
+/// back inside the preview (`lines[i].qty` ...).
+pub fn entry_preview(
+    ctx: &Context,
+    input: &mandi_domain::core::purchases::PurchaseEntryInput,
+) -> Result<mandi_domain::core::purchases::PurchaseEntryPreview, ServiceError> {
+    entry::preview(ctx, input)
+}
+
+/// Saves a purchase entry with many item lines in ONE transaction (PRD FR-12.41, R1). Each line is
+/// its own purchase with its own number and its own posting, exactly as [`save`] writes one.
+///
+/// # Errors
+/// Every mistake of the preview at its field; `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED`. Nothing is
+/// written when any of them is returned.
+pub fn entry_save(
+    ctx: &Context,
+    actor: &Actor,
+    input: &mandi_domain::core::purchases::PurchaseEntryInput,
+) -> Result<mandi_domain::core::purchases::PurchaseEntrySaved, ServiceError> {
+    entry::save(ctx, actor, input)
+}
+
+/// Changes the split of a purchase between our shop and another shop, while goods are left (PRD
+/// FR-12.41, R3). No money effect: it moves no cost and posts nothing.
+///
+/// # Errors
+/// `ERR_NOT_FOUND`, `ERR_PURCHASE_CANCELLED`, `ERR_NOTHING_TO_SELL` on `id`; `ERR_VERSION_CHANGED` on
+/// `version`; the quantity codes and `ERR_SPLIT_ABOVE_QTY` (value `qty`) on `other_qty`;
+/// `ERR_SPLIT_BELOW_SOLD` (values `min_other`, `max_other`) on `other_qty`.
+pub fn change_split(
+    ctx: &Context,
+    actor: &Actor,
+    input: &mandi_domain::core::split::SplitInput,
+) -> Result<mandi_domain::core::split::SplitSet, ServiceError> {
+    use mandi_domain::core::split::{SplitSet, StockParts};
+    let now = ctx.now_text();
+    ctx.db.write(|tx| {
+        let purchase = repo::get(tx, input.id)?.ok_or_else(|| not_found("id"))?;
+        if purchase.status == "cancelled" {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrPurchaseCancelled,
+                "id",
+            ));
+        }
+        if purchase.version != input.version {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrVersionChanged,
+                "version",
+            ));
+        }
+        let parts = StockParts::of(
+            purchase.qty,
+            purchase.other_qty,
+            purchase.qty_sold,
+            purchase.qty_sold_other,
+            purchase.qty_written_off,
+        )
+        .ok_or_else(|| data("the split of a purchase does not fit"))?;
+        if parts.total_left == 0 {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrNothingToSell,
+                "id",
+            ));
+        }
+        let mut errors = validate::FieldErrors::default();
+        let (other, shop) = ventures::split_of(
+            &mut errors,
+            "",
+            Some(&input.other_qty),
+            input.shop_name.as_ref(),
+            Some(purchase.qty),
+        );
+        errors.finish()?;
+        let (min, max) =
+            StockParts::other_range(purchase.qty, purchase.qty_sold, purchase.qty_sold_other)
+                .ok_or_else(|| data("the split of a purchase does not fit"))?;
+        ventures::check_split_range(other, min, max)?;
+        let user = actor.user_id;
+        repo::set_split(tx, purchase.id, other, shop.as_deref(), user, &now)?;
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(user), "change_split", "purchase")
+                .entity_id(purchase.id)
+                .old(json!({ "other_qty": purchase.other_qty, "shop_name": purchase.shop_name }))
+                .new_value(json!({
+                    "number": purchase.number,
+                    "other_qty": other,
+                    "shop_name": shop,
+                }))
+                .into_entry(),
+        )?;
+        let after = repo::get(tx, purchase.id)?
+            .ok_or_else(|| data("the purchase is missing after the change"))?;
+        let now_parts = StockParts::of(
+            after.qty,
+            after.other_qty,
+            after.qty_sold,
+            after.qty_sold_other,
+            after.qty_written_off,
+        )
+        .ok_or_else(|| data("the split of a purchase does not fit"))?;
+        Ok(SplitSet {
+            id: after.id,
+            version: after.version,
+            qty_other: after.other_qty,
+            shop_name: after.shop_name,
+            qty_our_left: now_parts.our_left,
+            qty_other_left: now_parts.other_left,
         })
     })
 }

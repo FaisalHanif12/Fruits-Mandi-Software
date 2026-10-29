@@ -84,6 +84,67 @@ pub(crate) fn sell_date_of(
     Some(day)
 }
 
+/// The split of a line between our shop and another shop (PRD FR-12.41): the نگ for another shop
+/// (empty means 0; 0 is allowed; at most `qty`: `ERR_SPLIT_ABOVE_QTY` on `{prefix}other_qty`, value
+/// `qty`) and the shop's name. `prefix` is `""` or `"lines[i]."`.
+///
+/// Example: 80 نگ with "30" for another shop and "حاجی شاپ" gives `(30, Some("حاجی شاپ"))`.
+pub(crate) fn split_of(
+    errors: &mut FieldErrors,
+    prefix: &str,
+    other_qty: Option<&String>,
+    shop_name: Option<&String>,
+    qty: Option<i64>,
+) -> (i64, Option<String>) {
+    let field = format!("{prefix}other_qty");
+    let other = match other_qty.map(|t| t.trim()).filter(|t| !t.is_empty()) {
+        None => 0,
+        Some(text) => match validate::qty(&field, text) {
+            Ok(q) => q.get(),
+            // 0 for another shop is the same as nothing for another shop.
+            Err(e) if e.code == ErrorCode::ErrMustBeMoreThanZero => 0,
+            Err(e) => {
+                errors.push(e);
+                0
+            }
+        },
+    };
+    if let Some(qty) = qty
+        && other > qty
+    {
+        errors.push(
+            FieldError::new(ErrorCode::ErrSplitAboveQty, &field)
+                .with("qty", ErrorValue::Number(qty)),
+        );
+    }
+    let shop_field = format!("{prefix}shop_name");
+    let shop = shop_name
+        .map(|t| t.trim())
+        .filter(|t| !t.is_empty())
+        .and_then(|t| errors.take(validate::free_text(&shop_field, t)))
+        .filter(|t| !t.is_empty());
+    (other, shop)
+}
+
+/// Checks a new split against the range it may take (`StockParts::other_range`): not below what
+/// other shops have sold and not above the qty less what our shop has sold (PRD FR-12.41).
+///
+/// # Errors
+/// `ERR_SPLIT_BELOW_SOLD` on `other_qty` (values `min_other`, `max_other`).
+pub(crate) fn check_split_range(other: i64, min: i64, max: i64) -> Result<(), ServiceError> {
+    if other >= min && other <= max {
+        return Ok(());
+    }
+    Err(ServiceError::Rejected(vec![Rejection {
+        code: ErrorCode::ErrSplitBelowSold,
+        field: Some("other_qty".to_owned()),
+        values: std::collections::BTreeMap::from([
+            ("min_other".to_owned(), ErrorValue::Number(min)),
+            ("max_other".to_owned(), ErrorValue::Number(max)),
+        ]),
+    }]))
+}
+
 /// The day of a posting that is undone or written must be an open day (PRD FR-6.6).
 ///
 /// # Errors

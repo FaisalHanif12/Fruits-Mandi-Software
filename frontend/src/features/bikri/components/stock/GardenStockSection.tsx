@@ -122,6 +122,15 @@ export function GardenStockSection({ rows, list }: GardenStockSectionProps) {
             <Fact label={<Localized id="bikri-stock-col-written-off" />}>
               <Num>{selected.qty_written_off}</Num>
             </Fact>
+            <Fact label={<Localized id="purchases-detail-our-left" />}>
+              <Num>{selected.qty_our_left}</Num>
+            </Fact>
+            <Fact label={<Localized id="purchases-detail-other-left" />}>
+              <Num>{selected.qty_other_left}</Num>
+            </Fact>
+            {selected.shop_name === null || selected.shop_name === '' ? null : (
+              <Fact label={<Localized id="goods-line-col-shop" />}>{selected.shop_name}</Fact>
+            )}
             <Fact label={<Localized id="bikri-col-balance" />}>
               <Num>{selected.balance}</Num>
             </Fact>

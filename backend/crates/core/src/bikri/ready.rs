@@ -49,7 +49,9 @@ pub struct ReadyGoodsRow {
     /// نگ bought or arrived.
     #[ts(type = "number")]
     pub qty: i64,
-    /// نگ left to sell (more than 0): the qty of the ready lot.
+    /// نگ left to sell in OUR shop (more than 0): the qty of the ready lot. The part for another
+    /// shop never comes into a sale (PRD FR-12.41); rows with nothing left for our shop are not
+    /// listed.
     #[ts(type = "number")]
     pub qty_left: i64,
     /// The whole weight in grams of what was bought or arrived, for a weight item. Use it as the

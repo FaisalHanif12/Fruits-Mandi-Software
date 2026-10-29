@@ -14,6 +14,9 @@
 //! | `gardens_arrival_get` | `ArrivalGetInput` | `ArrivalRow` |
 //! | `gardens_arrival_write_off` | `ArrivalWriteOffInput` | `ArrivalWriteOffDone` |
 //! | `gardens_arrival_write_off_undo` | `ArrivalWriteOffUndoInput` | `ArrivalWriteOffUndone` |
+//! | `gardens_arrival_entry_preview` | `ArrivalEntryInput` | `ArrivalEntryPreview` |
+//! | `gardens_arrival_entry_save` | `ArrivalEntryInput` | `ArrivalEntrySaved` |
+//! | `gardens_arrival_change_split` | `SplitInput` (in `split`) | `SplitSet` (in `split`) |
 //!
 //! There is no preview command: an arrival has nothing to work out. A save with a mistake answers
 //! with the error codes, each at its field, and writes nothing.
@@ -113,6 +116,96 @@ pub struct ArrivalInput {
     pub note: Option<String>,
 }
 
+/// One item line of a goods-arrived entry (PRD FR-12.41, R2). Each line becomes its own arrival
+/// (its own number). Field paths in errors: `lines[i].item_id`, `lines[i].packing_id`,
+/// `lines[i].qty`, `lines[i].weight`, `lines[i].note`, `lines[i].other_qty`, `lines[i].shop_name`.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct ArrivalLineInput {
+    /// The screen's own key for this row. Echoed back in the preview (`ArrivalLinePreview.key`).
+    #[serde(default)]
+    pub key: String,
+    /// The item. Required.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub item_id: Option<i64>,
+    /// The packing. Required.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub packing_id: Option<i64>,
+    /// Quantity in نگ. A simple sum such as `20+25` is taken.
+    #[serde(default)]
+    pub qty: String,
+    /// Weight in kg, up to 3 decimals. Required for an item sold by weight.
+    #[serde(default)]
+    pub weight: Option<String>,
+    /// A note, up to 500 characters.
+    #[serde(default)]
+    pub note: Option<String>,
+    /// The نگ of this line for another shop. Empty means 0: all for our shop. At most `qty`
+    /// (`ERR_SPLIT_ABOVE_QTY`, value `qty`).
+    #[serde(default)]
+    pub other_qty: Option<String>,
+    /// The other shop, as typed.
+    #[serde(default)]
+    pub shop_name: Option<String>,
+}
+
+/// A goods-arrived entry with many item lines (PRD FR-12.41, R2), saved in ONE transaction. The
+/// garden, the day of arrival and the day to sell are chosen once and apply to every line. A line
+/// with a mistake stops the whole save.
+///
+/// Field paths in errors: `garden_id`, `date`, `sell_date`, `lines` (no line: `ERR_REQUIRED`; more
+/// than 100: `ERR_TOO_MANY_LINES`, value `max`), and `lines[i].<field>`.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct ArrivalEntryInput {
+    /// The garden. Required. `ERR_NOT_FOUND`; `ERR_GARDEN_CLOSED`.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub garden_id: Option<i64>,
+    /// The day the goods arrived, `DD-MM-YYYY` or a shortcut.
+    pub date: String,
+    /// The day to sell. Empty means the arrival day. Applies to every line.
+    #[serde(default)]
+    pub sell_date: Option<String>,
+    /// The item lines, in the order of the grid. At least 1, at most 100.
+    #[serde(default)]
+    pub lines: Vec<ArrivalLineInput>,
+}
+
+/// What one line of a goods-arrived entry works out to (nothing but its quantities).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ArrivalLinePreview {
+    /// The key sent with the line.
+    pub key: String,
+    /// The qty of the line as worked out (a sum such as `20+25` is 45). Null while it has a mistake.
+    #[ts(type = "number | null")]
+    pub qty: Option<i64>,
+    /// نگ of this line for our shop: the qty less `other_qty`. Null while the line has a mistake.
+    #[ts(type = "number | null")]
+    pub qty_our: Option<i64>,
+}
+
+/// What `gardens_arrival_entry_preview` sends back: only the mistakes (an arrival has no numbers).
+/// Nothing is saved.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ArrivalEntryPreview {
+    /// One per input line, in the same order.
+    pub lines: Vec<ArrivalLinePreview>,
+    /// Mistakes, each at its field. The same mistake of the shared fields is listed once.
+    pub errors: Vec<FieldError>,
+    /// Notes that do not stop the save.
+    pub warnings: Vec<FieldError>,
+}
+
+/// What `gardens_arrival_entry_save` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ArrivalEntrySaved {
+    /// One arrival per line, in the order of the lines.
+    pub rows: Vec<ArrivalRow>,
+    /// Notes that did not stop the save.
+    pub warnings: Vec<FieldError>,
+}
+
 /// One bikri lot that sold from an arrival.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct ArrivalLotRef {
@@ -179,6 +272,25 @@ pub struct ArrivalRow {
     /// نگ left: arrived less sold less written off.
     #[ts(type = "number")]
     pub qty_left: i64,
+    /// نگ for another shop (PRD FR-12.41). The rest are for our shop. Starts as 0.
+    #[ts(type = "number")]
+    pub qty_other: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
+    /// نگ sold in our shop (garden lots of بکری).
+    #[ts(type = "number")]
+    pub qty_our_sold: i64,
+    /// نگ sold in other shops (`gardens_entry_save` with an other-shop sale naming this arrival).
+    #[ts(type = "number")]
+    pub qty_other_sold: i64,
+    /// نگ left for our shop. Only these become ready lots.
+    #[ts(type = "number")]
+    pub qty_our_left: i64,
+    /// نگ left for another shop: `qty_our_left + qty_other_left = qty_left`.
+    #[ts(type = "number")]
+    pub qty_other_left: i64,
+    /// True while it is saved and has goods left: `gardens_arrival_change_split` is allowed.
+    pub can_change_split: bool,
     /// Whole days from the day to sell (`sell_date`) to today, while goods are left; 0 otherwise.
     /// Goods meant for a later day are not waiting before it.
     #[ts(type = "number")]

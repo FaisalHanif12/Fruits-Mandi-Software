@@ -18,6 +18,7 @@ use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::{Paisa, Qty};
 use mandi_domain::core::rules::{Working, WorkingArg, WorkingValue};
+use mandi_domain::core::split::StockParts;
 use mandi_domain::core::trips::{
     OtherSaleInput, OtherSaleNumbers, OtherSalePreview, OtherSaleSaved, TripEntryCancelInput,
     TripEntryCancelled,
@@ -61,6 +62,8 @@ struct Ready {
     note: Option<String>,
     amount: Paisa,
     qty: Qty,
+    /// نگ moved from our shop's part to the part for another shop by this sale (plan 35 D1).
+    moved: i64,
     cost: Paisa,
     credits: Vec<CreditPart>,
     entry: BalancedEntry,
@@ -177,12 +180,29 @@ fn plan(
             .ok_or_else(|| data("the quantity of a purchase does not fit"))?,
         None => 0,
     };
+    // A sale in another shop takes its goods from the purchase's part for another shop first; what
+    // that part does not have is moved from our shop's part in the same save (PRD FR-12.41, plan 35
+    // D1). It is refused only above all the نگ left.
+    let (our_left, other_left, total_left) = match &purchase {
+        Some(p) => {
+            let parts = StockParts::of(
+                p.qty,
+                p.other_qty,
+                p.qty_sold,
+                p.qty_sold_other,
+                p.qty_written_off,
+            )
+            .ok_or_else(|| data("the split of a purchase does not fit"))?;
+            (parts.our_left, parts.other_left, parts.total_left)
+        }
+        None => (0, 0, 0),
+    };
     if let (Some(q), Some(_)) = (qty, purchase.as_ref())
-        && q.get() > qty_left
+        && q.get() > total_left
     {
         errors.push(
             FieldError::new(ErrorCode::ErrQtyExceedsLot, "qty")
-                .with("available", ErrorValue::Number(qty_left)),
+                .with("available", ErrorValue::Number(total_left)),
         );
     }
     let found = errors.finish().err().unwrap_or_default();
@@ -223,6 +243,8 @@ fn plan(
     let qty_left_after = qty_left
         .checked_sub(qty.get())
         .ok_or_else(|| data("the quantity does not fit"))?;
+    let moved = qty.get().saturating_sub(other_left).max(0);
+    let qty_other_left_after = other_left.saturating_sub(qty.get()).max(0);
     let numbers = OtherSaleNumbers {
         amount,
         qty: qty.get(),
@@ -240,6 +262,9 @@ fn plan(
         },
         credits: credits_view(&venture, &credits)?,
         qty_left_after,
+        qty_other_left_after,
+        qty_our_left_after: our_left.saturating_sub(moved).max(0),
+        qty_from_our_shop: moved,
         cost_left_after_paisa: cost_left.checked_sub(cost).map_err(money_error)?,
     };
     Ok(Plan {
@@ -253,6 +278,7 @@ fn plan(
             note,
             amount,
             qty,
+            moved,
             cost,
             credits,
             entry,
@@ -304,6 +330,8 @@ pub(super) fn save(
         let id = repo::insert_entry(
             tx,
             &NewEntry {
+                arrival_id: None,
+                moved_qty: ready.moved,
                 venture_id: ready.venture.rec.id,
                 kind: "other_sale",
                 entry_date: &date_iso,
@@ -358,10 +386,11 @@ pub(super) fn save(
             user,
             &now,
         )?;
-        purchases::take_sold(
+        purchases::take_sold_other_shop(
             tx,
             ready.purchase.id,
             ready.qty.get(),
+            ready.moved,
             ready.cost,
             user,
             &now,
@@ -459,7 +488,19 @@ pub(super) fn cancel(
             .cost_paisa
             .checked_neg()
             .ok_or_else(|| data("the cost of a sale does not fit"))?;
-        purchase_repo::add_sold(tx, purchase_id, qty_back, cost_back, user, &now)?;
+        let moved_back = entry
+            .moved_qty
+            .checked_neg()
+            .ok_or_else(|| data("the quantity of a sale does not fit"))?;
+        purchase_repo::add_sold_in_other_shop(
+            tx,
+            purchase_id,
+            qty_back,
+            moved_back,
+            cost_back,
+            user,
+            &now,
+        )?;
         purchases::ensure_consistent(tx, purchase_id)?;
         repo::mark_entry_cancelled(tx, entry.id, &reason, user, &now)?;
         let change =

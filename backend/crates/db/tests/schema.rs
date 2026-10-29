@@ -384,6 +384,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "cancel_reason",
                 "qty_sold",
                 "qty_written_off",
+                // Migration 0010 (plan 35): the split between our shop and another shop.
+                "other_qty",
+                "qty_sold_other",
+                "shop_name",
             ],
         ),
         (
@@ -414,6 +418,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "cost_released_paisa",
                 // Migration 0009 (plan 33 v1.1): the day to sell (PRD FR-12.39).
                 "sell_date",
+                // Migration 0010 (plan 35): the split between our shop and another shop.
+                "other_qty",
+                "qty_sold_other",
+                "shop_name",
             ],
         ),
         (
@@ -455,6 +463,9 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "status",
                 "cancel_reason",
                 "current_entry_id",
+                // Migration 0010 (plan 35): the arrival of a garden's sale in another shop, and what it moved.
+                "arrival_id",
+                "moved_qty",
             ],
         ),
         (

@@ -8,7 +8,12 @@ import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import type { StockList } from '../../src/bindings/StockList';
 import type { ArrivalCancelInput } from '../../src/bindings/ArrivalCancelInput';
 import type { ArrivalCancelled } from '../../src/bindings/ArrivalCancelled';
+import type { ArrivalEntryInput } from '../../src/bindings/ArrivalEntryInput';
+import type { ArrivalEntryPreview } from '../../src/bindings/ArrivalEntryPreview';
+import type { ArrivalEntrySaved } from '../../src/bindings/ArrivalEntrySaved';
 import type { ArrivalInput } from '../../src/bindings/ArrivalInput';
+import type { GardenEntryPreview } from '../../src/bindings/GardenEntryPreview';
+import type { SplitSet } from '../../src/bindings/SplitSet';
 import type { ArrivalRow } from '../../src/bindings/ArrivalRow';
 import type { ArrivalSaved } from '../../src/bindings/ArrivalSaved';
 import type { ArrivalsList } from '../../src/bindings/ArrivalsList';
@@ -25,6 +30,15 @@ import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
 import type { SellDateInput } from '../../src/bindings/SellDateInput';
 import type { SellDateSet } from '../../src/bindings/SellDateSet';
 import type { UiError } from '../../src/bindings/UiError';
+import arrivalChangeSplit from '../fixtures/gardens_arrival_change_split.json';
+import arrivalEntryPreviewLineError from '../fixtures/gardens_arrival_entry_preview_line_error.json';
+import arrivalEntryPreviewTwoLines from '../fixtures/gardens_arrival_entry_preview_two_lines.json';
+import arrivalEntryPreviewTwoLinesRequest from '../fixtures/gardens_arrival_entry_preview_two_lines_request.json';
+import arrivalEntrySaveLineError from '../fixtures/gardens_arrival_entry_save_line_error.json';
+import arrivalEntrySaveTwoLines from '../fixtures/gardens_arrival_entry_save_two_lines.json';
+import gardenOtherSaleWithArrival from '../fixtures/gardens_entry_preview_other_sale_with_arrival.json';
+import readyGoodsOurShopOnly from '../fixtures/bikri_ready_goods_our_shop_only.json';
+import stockListWithSplit from '../fixtures/bikri_stock_list_with_the_split.json';
 import arrivalCancel from '../fixtures/gardens_arrival_cancel.json';
 import arrivalCancelRequest from '../fixtures/gardens_arrival_cancel_request.json';
 import arrivalCancelHasSales from '../fixtures/gardens_arrival_cancel_has_sales.json';
@@ -171,3 +185,19 @@ export const PURCHASE_SAVE_WITH_SELL_DATE = readPurchaseSaved(purchaseSaveWithSe
 /** R10, the goods left, with a garden's goods arrived as a row (backend: reports_run_r10_with_garden_arrival). */
 export const R10_GARDEN_ARRIVAL = readReportPage(r10GardenArrival);
 export const R10_GARDEN_ARRIVAL_PRINT = readReportPrintData(r10GardenArrivalPrint);
+
+// Plan 35: goods arrived of many lines, the split, and the stock by part (the backend's own files).
+export const ARRIVAL_ENTRY_PREVIEW_TWO_LINES =
+  arrivalEntryPreviewTwoLines as unknown as ArrivalEntryPreview;
+export const ARRIVAL_ENTRY_PREVIEW_TWO_LINES_REQUEST =
+  arrivalEntryPreviewTwoLinesRequest as ArrivalEntryInput;
+export const ARRIVAL_ENTRY_PREVIEW_LINE_ERROR =
+  arrivalEntryPreviewLineError as unknown as ArrivalEntryPreview;
+export const ARRIVAL_ENTRY_SAVE_TWO_LINES =
+  arrivalEntrySaveTwoLines as unknown as ArrivalEntrySaved;
+export const ARRIVAL_ENTRY_SAVE_LINE_ERROR = readUiError(arrivalEntrySaveLineError);
+export const ARRIVAL_CHANGE_SPLIT = arrivalChangeSplit as unknown as SplitSet;
+export const GARDEN_OTHER_SALE_WITH_ARRIVAL =
+  gardenOtherSaleWithArrival as unknown as GardenEntryPreview;
+export const READY_GOODS_OUR_SHOP_ONLY = readReadyGoods(readyGoodsOurShopOnly);
+export const STOCK_LIST_WITH_SPLIT = readStockList(stockListWithSplit);

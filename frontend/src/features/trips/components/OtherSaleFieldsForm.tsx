@@ -13,7 +13,7 @@ import type { OtherSaleFields } from '../types';
 interface OtherSaleFieldsFormProps {
   fields: OtherSaleFields;
   amount: string;
-  /** The purchases of this trip that have goods left. */
+  /** The purchases of this trip that have goods left, with what is left in each part (PRD FR-12.41). */
   purchases: readonly PurchaseRow[];
   onChange: (patch: { shop?: string; purchaseId?: string; qty?: string; amount?: string }) => void;
   error: UiError | null;
@@ -50,7 +50,8 @@ export function OtherSaleFieldsForm({
                   number: purchaseNumberText(purchase.number, say),
                   item: displayName(purchase.item, language),
                   packing: displayName(purchase.packing, language),
-                  qty_left: String(purchase.qty_left),
+                  other_left: String(purchase.qty_other_left),
+                  our_left: String(purchase.qty_our_left),
                 }),
               }))}
             />

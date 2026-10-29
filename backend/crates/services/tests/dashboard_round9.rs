@@ -439,6 +439,8 @@ fn trip_with_one_purchase(w: &World) -> (i64, i64) {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            other_qty: None,
+            shop_name: None,
             sell_date: None,
             trip_id: Some(trip),
             date: "10-10-2026".into(),

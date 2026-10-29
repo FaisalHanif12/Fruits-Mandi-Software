@@ -536,6 +536,19 @@ pub struct OtherSaleNumbers {
     /// نگ left in the purchase after this sale.
     #[ts(type = "number")]
     pub qty_left_after: i64,
+    /// نگ left for another shop after this sale (PRD FR-12.41).
+    #[ts(type = "number")]
+    pub qty_other_left_after: i64,
+    /// نگ left for our shop after this sale (our part less what the sale moves from it).
+    #[ts(type = "number")]
+    pub qty_our_left_after: i64,
+    /// نگ this sale moves from our shop's part to the part for another shop (plan 35 D1): the sale
+    /// takes its qty from the part for another shop first, and what that part does not have is
+    /// moved from our shop's part in the same save. 0 when the part for another shop has enough.
+    /// More than the purchase has left in all is `ERR_QTY_EXCEEDS_LOT` with `available` = the
+    /// whole qty left. A cancel moves them back.
+    #[ts(type = "number")]
+    pub qty_from_our_shop: i64,
     /// The cost of the نگ left after this sale.
     #[ts(type = "Paisa")]
     pub cost_left_after_paisa: Paisa,

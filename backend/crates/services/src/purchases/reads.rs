@@ -15,6 +15,7 @@ use mandi_domain::core::purchases::{
     PurchasesList, PurchasesListInput, PurchasesTotals,
 };
 use mandi_domain::core::rules::{Working, WorkingArg, WorkingValue};
+use mandi_domain::core::split::StockParts;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::core::ventures::{EntryPart, MoneySource, TripRef};
 use mandi_domain::ventures::payment_working;
@@ -67,6 +68,15 @@ fn row_of(
             .and_then(|v| v.checked_sub(rec.qty_written_off))
             .ok_or_else(|| data("the quantity of a purchase does not fit"))?
     };
+    // The split between our shop and another shop (PRD FR-12.41).
+    let parts = StockParts::of(
+        rec.qty,
+        rec.other_qty,
+        rec.qty_sold,
+        rec.qty_sold_other,
+        rec.qty_written_off,
+    )
+    .ok_or_else(|| data("the split of a purchase does not fit"))?;
     let released = paisa(rec.cost_released_paisa)?;
     let total = paisa(rec.total_cost_paisa)?;
     let cost_left = if cancelled {
@@ -141,6 +151,13 @@ fn row_of(
         qty_sold: rec.qty_sold,
         qty_written_off: rec.qty_written_off,
         qty_left,
+        qty_other: rec.other_qty,
+        shop_name: rec.shop_name.clone(),
+        qty_our_sold: parts.our_sold,
+        qty_other_sold: parts.other_sold,
+        qty_our_left: if cancelled { 0 } else { parts.our_left },
+        qty_other_left: if cancelled { 0 } else { parts.other_left },
+        can_change_split: rec.status == "saved" && qty_left > 0,
         cost_released_paisa: released,
         cost_left_paisa: cost_left,
         sales_paisa: sales,
@@ -365,6 +382,9 @@ pub(crate) fn stock_rows(
             qty_sold: row.qty_sold,
             qty_written_off: row.qty_written_off,
             balance: row.qty_left,
+            qty_our_left: row.qty_our_left,
+            qty_other_left: row.qty_other_left,
+            shop_name: row.shop_name,
             total_cost_paisa: row.total_cost_paisa,
             cost_left_paisa: row.cost_left_paisa,
             days_waiting: row.days_waiting,

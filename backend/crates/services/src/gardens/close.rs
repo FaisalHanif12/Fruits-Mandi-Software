@@ -237,6 +237,8 @@ pub(super) fn close(
         let entry_id = vrepo::insert_entry(
             tx,
             &NewEntry {
+                arrival_id: None,
+                moved_qty: 0,
                 venture_id: ready.garden.rec.id,
                 kind: "close",
                 entry_date: &date_iso,

@@ -13,6 +13,7 @@ import * as purchasesApi from '../../src/features/purchases/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { money } from '../helpers/accounts';
+import * as arrivals from '../helpers/arrivals-real';
 import { fakeBikri } from '../helpers/bikri';
 import { fakePlan16 } from '../helpers/bikri-plan16';
 import { stockList } from '../helpers/bikri-plan16-data';
@@ -60,6 +61,8 @@ afterEach(() => {
 const said = (text: string) => (content: string) => visible(content) === text;
 
 describe.each(LANGUAGES)('trip goods in باقی مال (%s)', (language) => {
+  const displayItem = (item: OwnStockRow['item']) =>
+    language === 'ur' ? item.name_ur : item.name_en;
   beforeEach(() => {
     resetClientState(language);
     signedIn(sessionUser({ language }));
@@ -96,6 +99,40 @@ describe.each(LANGUAGES)('trip goods in باقی مال (%s)', (language) => {
     expect(screen.queryByText(said(message(language, 'bikri-stock-empty')))).toBeNull();
     const pinned = document.querySelectorAll('.ag-row-pinned');
     expect(pinned.length).toBeGreaterThan(0);
+  });
+
+  it('R6: with the backend’s real list, each row shows the goods left for our shop and for another shop, and the card names the shop', async () => {
+    vi.mocked(bikriApi.bikriStockList).mockResolvedValue(arrivals.STOCK_LIST_WITH_SPLIT);
+    const { user } = await open();
+    const first = arrivals.STOCK_LIST_WITH_SPLIT.own_rows[1];
+    const second = arrivals.STOCK_LIST_WITH_SPLIT.own_rows[0];
+    if (first === undefined || second === undefined) throw new Error('the file has no rows');
+    const cell = (id: number, col: string) =>
+      visible(
+        document.querySelector(`.ag-row[row-id="${String(id)}"] [col-id="${col}"]`)?.textContent,
+      );
+    await waitFor(() => {
+      expect(cell(first.purchase_id, 'qty_our_left')).toBe(String(first.qty_our_left));
+    });
+    expect(cell(first.purchase_id, 'qty_other_left')).toBe(String(first.qty_other_left));
+    expect(cell(second.purchase_id, 'qty_our_left')).toBe(String(second.qty_our_left));
+    // The card of a row names the other shop as typed and tells both parts.
+    const target = document.querySelector<HTMLElement>(
+      `.ag-row[row-id="${String(first.purchase_id)}"] [col-id="number"]`,
+    );
+    if (target === null) throw new Error('no row');
+    await user.click(target);
+    const card = (
+      await screen.findByText(
+        said(
+          message(language, 'bikri-stock-own-card-title', {
+            number: message(language, 'purchases-number', { number: first.number }),
+            item: displayItem(first.item),
+          }),
+        ),
+      )
+    ).closest('section');
+    expect(visible(card?.textContent)).toContain(first.shop_name ?? '');
   });
 
   it('the card has the figures, and the write-off asks for a reason and posts nothing', async () => {

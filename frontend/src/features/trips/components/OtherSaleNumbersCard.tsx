@@ -5,7 +5,7 @@
 // Nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { TriangleAlert } from 'lucide-react';
+import { ArrowLeftRight, TriangleAlert } from 'lucide-react';
 import { isNegativePaisa } from '../../../shared/format';
 import { CalcInfo, Card, Num, ShareAmounts } from '../../../shared/ui';
 import type { OtherSaleNumbers } from '../types';
@@ -27,6 +27,19 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
         </Localized>
       ) : (
         <>
+          {numbers.qty_from_our_shop > 0 ? (
+            // The part set for another shop is not enough: the rest comes from our shop's part, in
+            // this same save (PRD FR-12.41, D1). Told in words and an icon, before the save.
+            <p role="status" className="flex items-start gap-2 type-label text-warn">
+              <ArrowLeftRight aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
+              <Localized
+                id="split-moved-from-our"
+                vars={{ count: String(numbers.qty_from_our_shop) }}
+              >
+                <span />
+              </Localized>
+            </p>
+          ) : null}
           <dl className="flex flex-col">
             <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink">
               <Localized id="trips-sale-amount">
@@ -62,6 +75,14 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
               </Localized>
               <dd>
                 <Num>{String(numbers.qty_left_after)}</Num>
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink">
+              <Localized id="trips-sale-other-left-after">
+                <dt />
+              </Localized>
+              <dd>
+                <Num>{String(numbers.qty_other_left_after)}</Num>
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink">

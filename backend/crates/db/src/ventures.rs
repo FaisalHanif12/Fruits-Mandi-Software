@@ -438,6 +438,11 @@ pub struct NewEntry<'a> {
     pub shop_name: Option<&'a str>,
     /// C21: the cost of the goods sold in another shop, paisa.
     pub cost_paisa: i64,
+    /// The garden arrival a sale in another shop takes its goods from (PRD FR-12.41).
+    pub arrival_id: Option<i64>,
+    /// نگ a sale in another shop moved from our shop's part to the part for another shop (plan 35
+    /// D1). 0 for every other entry.
+    pub moved_qty: i64,
 }
 
 /// The next entry number of a kind: the biggest ever given plus one (all ventures share the series
@@ -466,8 +471,9 @@ pub fn insert_entry(
 ) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO venture_entries (created_at, created_by, updated_at, updated_by, venture_id, kind,
-             number, entry_date, amount_paisa, reason, purchase_id, qty, shop_name, cost_paisa)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+             number, entry_date, amount_paisa, reason, purchase_id, qty, shop_name, cost_paisa, arrival_id,
+             moved_qty)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
         params![
             now,
             user_id,
@@ -481,6 +487,8 @@ pub fn insert_entry(
             entry.qty,
             entry.shop_name,
             entry.cost_paisa,
+            entry.arrival_id,
+            entry.moved_qty,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -559,11 +567,15 @@ pub struct EntryRec {
     pub status: String,
     /// Why it was cancelled.
     pub cancel_reason: Option<String>,
+    /// The garden arrival a sale in another shop took its goods from.
+    pub arrival_id: Option<i64>,
+    /// نگ the sale moved from our shop's part to the part for another shop.
+    pub moved_qty: i64,
 }
 
 const ENTRY_COLUMNS: &str = "x.id, x.version, x.venture_id, x.kind, x.number, x.entry_date, x.amount_paisa,
     x.reason, x.purchase_id, pu.number, x.qty, x.shop_name, x.cost_paisa, x.journal_entry_id, x.status,
-    x.cancel_reason";
+    x.cancel_reason, x.arrival_id, x.moved_qty";
 
 const ENTRY_FROM: &str = "FROM venture_entries x LEFT JOIN purchases pu ON pu.id = x.purchase_id";
 
@@ -585,6 +597,8 @@ fn read_entry(r: &Row<'_>) -> rusqlite::Result<EntryRec> {
         journal_entry_id: r.get(13)?,
         status: r.get(14)?,
         cancel_reason: r.get(15)?,
+        arrival_id: r.get(16)?,
+        moved_qty: r.get(17)?,
     })
 }
 

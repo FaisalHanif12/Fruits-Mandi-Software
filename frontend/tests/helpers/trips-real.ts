@@ -8,6 +8,11 @@ import type { OtherSalePreview } from '../../src/bindings/OtherSalePreview';
 import type { OtherSaleSaved } from '../../src/bindings/OtherSaleSaved';
 import type { PurchaseCancelInput } from '../../src/bindings/PurchaseCancelInput';
 import type { PurchaseCancelled } from '../../src/bindings/PurchaseCancelled';
+import type { PurchaseEntryInput } from '../../src/bindings/PurchaseEntryInput';
+import type { PurchaseEntryPreview } from '../../src/bindings/PurchaseEntryPreview';
+import type { PurchaseEntrySaved } from '../../src/bindings/PurchaseEntrySaved';
+import type { SplitInput } from '../../src/bindings/SplitInput';
+import type { SplitSet } from '../../src/bindings/SplitSet';
 import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
 import type { PurchasePreview } from '../../src/bindings/PurchasePreview';
 import type { PurchaseRow } from '../../src/bindings/PurchaseRow';
@@ -30,6 +35,24 @@ import type { TripRow } from '../../src/bindings/TripRow';
 import type { TripsList } from '../../src/bindings/TripsList';
 import type { TripsSummary } from '../../src/bindings/TripsSummary';
 import type { UiError } from '../../src/bindings/UiError';
+import { paisaForTest } from './paisa';
+import entryPreviewLineError from '../fixtures/purchases_entry_preview_line_error.json';
+import entryPreviewLineErrorRequest from '../fixtures/purchases_entry_preview_line_error_request.json';
+import entryPreviewOneLine from '../fixtures/purchases_entry_preview_one_line.json';
+import entryPreviewOneLineRequest from '../fixtures/purchases_entry_preview_one_line_request.json';
+import entryPreviewTwoLines from '../fixtures/purchases_entry_preview_two_lines.json';
+import entryPreviewTwoLinesRequest from '../fixtures/purchases_entry_preview_two_lines_request.json';
+import entrySaveCashBelowZero from '../fixtures/purchases_entry_save_cash_below_zero.json';
+import entrySaveLineError from '../fixtures/purchases_entry_save_line_error.json';
+import entrySaveTwoLines from '../fixtures/purchases_entry_save_two_lines.json';
+import entrySaveTwoLinesRequest from '../fixtures/purchases_entry_save_two_lines_request.json';
+import changeSplit from '../fixtures/purchases_change_split.json';
+import changeSplitRequest from '../fixtures/purchases_change_split_request.json';
+import changeSplitAboveQty from '../fixtures/purchases_change_split_above_qty.json';
+import purchaseGetWithSplit from '../fixtures/purchases_get_with_a_split.json';
+import otherPreviewMoves from '../fixtures/trips_other_sale_preview_moves_from_our_shop.json';
+import otherPreviewMovesRequest from '../fixtures/trips_other_sale_preview_moves_from_our_shop_request.json';
+import otherAboveAllLeft from '../fixtures/trips_other_sale_above_all_left.json';
 import costCancel from '../fixtures/trips_cost_cancel.json';
 import costCancelRequest from '../fixtures/trips_cost_cancel_request.json';
 import costCancelHasSales from '../fixtures/trips_cost_cancel_has_sales.json';
@@ -243,3 +266,82 @@ export const PURCHASE_SAVE_CASH_NOT_CONFIRMED = readUiError(purchaseSaveCashNotC
 export const PURCHASE_SAVE_CASH_NOT_CONFIRMED_REQUEST = readPurchaseInput(
   purchaseSaveCashNotConfirmedRequest,
 );
+
+// Plan 35: the purchase entry of many lines, the split, and a sale in another shop that moves goods
+// from our shop's part (the backend's own files, copied, never edited).
+export const ENTRY_PREVIEW_ONE_LINE = entryPreviewOneLine as unknown as PurchaseEntryPreview;
+export const ENTRY_PREVIEW_ONE_LINE_REQUEST = entryPreviewOneLineRequest as PurchaseEntryInput;
+export const ENTRY_PREVIEW_TWO_LINES = entryPreviewTwoLines as unknown as PurchaseEntryPreview;
+export const ENTRY_PREVIEW_TWO_LINES_REQUEST = entryPreviewTwoLinesRequest as PurchaseEntryInput;
+export const ENTRY_PREVIEW_LINE_ERROR = entryPreviewLineError as unknown as PurchaseEntryPreview;
+export const ENTRY_PREVIEW_LINE_ERROR_REQUEST = entryPreviewLineErrorRequest as PurchaseEntryInput;
+export const ENTRY_SAVE_TWO_LINES = entrySaveTwoLines as unknown as PurchaseEntrySaved;
+export const ENTRY_SAVE_TWO_LINES_REQUEST = entrySaveTwoLinesRequest as PurchaseEntryInput;
+export const ENTRY_SAVE_LINE_ERROR = readUiError(entrySaveLineError);
+export const ENTRY_SAVE_CASH_BELOW_ZERO = readUiError(entrySaveCashBelowZero);
+export const CHANGE_SPLIT = changeSplit as unknown as SplitSet;
+export const CHANGE_SPLIT_REQUEST = changeSplitRequest as unknown as SplitInput;
+export const CHANGE_SPLIT_ABOVE_QTY = readUiError(changeSplitAboveQty);
+export const PURCHASE_GET_WITH_SPLIT = readPurchaseRow(purchaseGetWithSplit);
+export const OTHER_PREVIEW_MOVES = readOtherSalePreview(otherPreviewMoves);
+export const OTHER_PREVIEW_MOVES_REQUEST = readOtherSaleInput(otherPreviewMovesRequest);
+export const OTHER_ABOVE_ALL_LEFT = readUiError(otherAboveAllLeft);
+
+/** The line fields of a purchase, as the backend names them in `lines[i].field` (PRD FR-12.41). */
+const LINE_FIELDS = new Set([
+  'item_id',
+  'packing_id',
+  'qty',
+  'weight',
+  'rate',
+  'freight',
+  'labour',
+  'other_cost',
+  'note',
+  'other_qty',
+  'shop_name',
+]);
+
+/**
+ * The real answer of an entry preview, for the lines the screen sent: the backend echoes the key of
+ * each line, and the keys of its own file are not the screen's row ids, so the answer is given the
+ * keys of the request, in order. Nothing else is changed.
+ */
+export function withKeysOf(
+  answer: PurchaseEntryPreview,
+  sent: PurchaseEntryInput,
+): PurchaseEntryPreview {
+  return {
+    ...answer,
+    lines: answer.lines.map((line, index) => ({
+      ...line,
+      key: sent.lines[index]?.key ?? line.key,
+    })),
+  };
+}
+
+/**
+ * The preview of an entry made from the real preview of ONE purchase (the backend's own file): every
+ * line the screen sent gets its numbers, the cash and the parts are the purchase's. For the cases
+ * the backend's entry files do not cover (a part from a pocket, a missing quantity).
+ */
+export function entryPreviewFor(
+  sent: PurchaseEntryInput,
+  one: PurchasePreview,
+): PurchaseEntryPreview {
+  return {
+    lines: sent.lines.map((line) => ({ key: line.key, qty_our: null, numbers: one.numbers })),
+    paid_now_total: one.numbers?.paid_now ?? paisaForTest(0),
+    parts: one.numbers?.parts ?? null,
+    cash: one.cash,
+    errors: one.errors.map((item) =>
+      LINE_FIELDS.has(item.field) ? { ...item, field: `lines[0].${item.field}` } : item,
+    ),
+    warnings: one.warnings,
+  };
+}
+
+/** What saving an entry of ONE line gives back, from the real answer of saving one purchase. */
+export function entrySavedOf(one: PurchaseSaved): PurchaseEntrySaved {
+  return { saved: [one], paid_now_total: one.preview.numbers?.paid_now ?? paisaForTest(0) };
+}

@@ -47,10 +47,24 @@ export const TRIP_PURCHASE_COLUMNS: readonly ListColumn<PurchaseRow>[] = [
       return row.status === 'cancelled' ? text('purchases-item-cancelled', { item: words }) : words;
     },
   },
+  // The goods left, by part (PRD FR-12.41): what is for our shop and what is for another shop.
+  {
+    field: 'qty_our_left',
+    type: 'figure',
+    headerId: 'purchases-col-our-left',
+    value: (row) => String(row.qty_our_left),
+  },
+  {
+    field: 'qty_other_left',
+    type: 'figure',
+    headerId: 'purchases-col-other-left',
+    value: (row) => String(row.qty_other_left),
+  },
   {
     field: 'qty_left',
     type: 'number',
     headerId: 'purchases-col-left',
+    from: 'normal',
     value: (row) => String(row.qty_left),
   },
   {

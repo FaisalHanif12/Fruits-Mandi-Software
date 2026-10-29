@@ -6,6 +6,8 @@
 // numbers the screens show are the backend's (E2E-34 and E2E-41).
 
 import { describe, expect, it } from 'vitest';
+import type { PurchaseEntryInput } from '../../src/bindings/PurchaseEntryInput';
+import type { EntryRow } from '../../src/shared/grid';
 import {
   buildEntryCost,
   buildEntryPurchase,
@@ -278,6 +280,30 @@ describe('every refusal the backend really sent reads as words in both languages
   });
 });
 
+describe('the fake entry preview of the tests is the backend’s own for the backend’s own lines', () => {
+  // The fake works each line out from what was typed (the tests need numbers for any line). For the
+  // two lines of the backend's own file it must give exactly the file's numbers, so it cannot drift.
+  it('two lines: the numbers, the quantity left for our shop, the parts of the whole entry, the cash', () => {
+    const books = createTripBooks();
+    const made = books.purchaseEntryPreview(real.ENTRY_PREVIEW_TWO_LINES_REQUEST);
+    const file = real.ENTRY_PREVIEW_TWO_LINES;
+    expect(made.lines).toEqual(file.lines);
+    expect(made.paid_now_total).toEqual(file.paid_now_total);
+    expect(made.parts).toEqual(file.parts);
+    expect(made.cash).toEqual(file.cash);
+    expect(made.errors).toEqual(file.errors);
+  });
+
+  it('one line: the same numbers as the backend’s file', () => {
+    const books = createTripBooks();
+    const made = books.purchaseEntryPreview(real.ENTRY_PREVIEW_ONE_LINE_REQUEST);
+    const file = real.ENTRY_PREVIEW_ONE_LINE;
+    expect(made.lines).toEqual(file.lines);
+    expect(made.paid_now_total).toEqual(file.paid_now_total);
+    expect(made.parts).toEqual(file.parts);
+  });
+});
+
 describe('the screens build the request the backend tested', () => {
   const partners = tripPartners();
 
@@ -311,34 +337,78 @@ describe('the screens build the request the backend tested', () => {
     expect(buildTrip(draft)).toEqual(request);
   });
 
-  it('a purchase: the fields as typed, the item and packing by id', () => {
-    const request = real.PURCHASE_SAVE_E34_REQUEST;
-    const draft = newEntryDraft('purchase', '');
-    draft.date = request.date;
-    draft.purchase.supplier = request.supplier ?? '';
-    draft.purchase.item = { id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' };
-    draft.purchase.packing = { id: request.packing_id ?? 0, code: '', name_ur: '', name_en: '' };
-    draft.purchase.qty = request.qty;
-    draft.purchase.rate = request.rate;
-    draft.purchase.freight = request.freight ?? '';
-    const sent = buildEntryPurchase(draft, request.trip_id ?? 0, partners, false);
-    // The backend's file was written before the date to sell: a missing one is read as empty, the
-    // day of the purchase (PRD FR-12.39), and the screen sends that as null.
-    expect(withoutParts(sent)).toEqual({ ...withoutParts(request), sell_date: null });
-    expect(sent.parts).toHaveLength(3);
-  });
+  /**
+   * The rows of the lines grid for the lines of a request, typed the way a user types them: the
+   * item and the packing by id, every other cell as text. The row id is the line's key, so the
+   * request the screen builds can be compared with the backend's file whole.
+   */
+  const rowsOf = (lines: PurchaseEntryInput['lines']): EntryRow[] =>
+    lines.map((line) => {
+      const pick = (id: number | null) => ({ id: id ?? 0, code: '', name_ur: '', name_en: '' });
+      return {
+        rowId: line.key,
+        typed: {
+          qty: line.qty,
+          weight: line.weight ?? '',
+          rate: line.rate,
+          freight: line.freight ?? '',
+          labour: line.labour ?? '',
+          otherCost: line.other_cost ?? '',
+          otherQty: line.other_qty ?? '',
+          shop: line.shop_name ?? '',
+        },
+        picked: { item: pick(line.item_id), packing: pick(line.packing_id) },
+      };
+    });
+
+  it.each([
+    ['one line', real.ENTRY_PREVIEW_ONE_LINE_REQUEST],
+    ['two lines, 30 of the first for another shop', real.ENTRY_PREVIEW_TWO_LINES_REQUEST],
+    ['two lines, one with a mistake', real.ENTRY_PREVIEW_LINE_ERROR_REQUEST],
+    ['the save of two lines', real.ENTRY_SAVE_TWO_LINES_REQUEST],
+  ])(
+    'a purchase entry of %s: the cells as typed, the split as typed, the key of each row',
+    (_, request) => {
+      const draft = newEntryDraft('purchase', '');
+      draft.date = request.date;
+      draft.purchase.supplier = request.supplier ?? '';
+      draft.purchase.sellDate = request.sell_date ?? '';
+      const sent = buildEntryPurchase(
+        draft,
+        rowsOf(request.lines),
+        request.trip_id ?? 0,
+        partners,
+        request.confirm_cash_below_zero,
+      );
+      expect(withoutParts(sent)).toEqual(withoutParts(request));
+      expect(sent.parts).toHaveLength(3);
+    },
+  );
 
   it('a purchase with a date to sell: the day typed goes as typed', () => {
     const request = arrivals.PURCHASE_SAVE_WITH_SELL_DATE_REQUEST;
     const draft = newEntryDraft('purchase', '');
     draft.date = request.date;
-    draft.purchase.item = { id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' };
-    draft.purchase.packing = { id: request.packing_id ?? 0, code: '', name_ur: '', name_en: '' };
-    draft.purchase.qty = request.qty;
-    draft.purchase.rate = request.rate;
     draft.purchase.sellDate = request.sell_date ?? '';
-    const sent = buildEntryPurchase(draft, request.trip_id ?? 0, partners, false);
-    expect(withoutParts(sent)).toEqual(withoutParts(request));
+    const rows = rowsOf([
+      {
+        key: 'a',
+        item_id: request.item_id,
+        packing_id: request.packing_id,
+        qty: request.qty,
+        weight: null,
+        rate: request.rate,
+        freight: null,
+        labour: null,
+        other_cost: null,
+        note: null,
+        other_qty: null,
+        shop_name: null,
+      },
+    ]);
+    const sent = buildEntryPurchase(draft, rows, request.trip_id ?? 0, partners, false);
+    expect(sent.sell_date).toBe(request.sell_date);
+    expect(sent.lines[0]).toMatchObject({ item_id: request.item_id, qty: request.qty });
   });
 
   it('a trip cost: the amount stays as typed, commas and all', () => {

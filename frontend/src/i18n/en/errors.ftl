@@ -575,3 +575,15 @@ err-arrival-lot-not-fully-sold = This lot of garden goods must be sold in full i
 # PRD FR-12.40. $qty_left: how many { -nag } of garden goods are still left.
 # review: pending
 err-garden-has-stock = This { -bagh } still has goods that are not sold ({ $qty_left } { -nag }). Sell them or write them off before closing it.
+
+# PRD FR-12.41. $min_other: the most that other shops have sold; $max_other: the { -nag } less what { -apni-dukan } has sold.
+# review: pending
+err-split-below-sold = The { -nag } for { -dusri-dukan } must be between { $min_other } and { $max_other }. Goods that are sold already cannot be moved to the other part.
+
+# PRD FR-12.41. $qty: how many { -nag } the entry has in all.
+# review: pending
+err-split-above-qty = The { -nag } for { -dusri-dukan } cannot be more than all { $qty } { -nag } of this entry.
+
+# PRD FR-12.41. $max: the most lines an entry can have.
+# review: pending
+err-too-many-lines = An entry can have at most { $max } lines.

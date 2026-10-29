@@ -179,6 +179,14 @@ pub struct OwnStockRow {
     /// نگ left: bought less sold less written off. More than 0 in this list.
     #[ts(type = "number")]
     pub balance: i64,
+    /// نگ left for our shop (PRD FR-12.41): the ready lots take these.
+    #[ts(type = "number")]
+    pub qty_our_left: i64,
+    /// نگ left for another shop: `qty_our_left + qty_other_left = balance`.
+    #[ts(type = "number")]
+    pub qty_other_left: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
     /// The total cost of the purchase.
     #[ts(type = "Paisa")]
     pub total_cost_paisa: Paisa,
@@ -227,6 +235,14 @@ pub struct GardenStockRow {
     /// نگ left: arrived less sold less written off. More than 0 in this list.
     #[ts(type = "number")]
     pub balance: i64,
+    /// نگ left for our shop (PRD FR-12.41): the ready lots take these.
+    #[ts(type = "number")]
+    pub qty_our_left: i64,
+    /// نگ left for another shop: `qty_our_left + qty_other_left = balance`.
+    #[ts(type = "number")]
+    pub qty_other_left: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
     /// Whole days from the day to sell (`sell_date`) to today. Goods meant for a later day are not
     /// waiting before it.
     #[ts(type = "number")]

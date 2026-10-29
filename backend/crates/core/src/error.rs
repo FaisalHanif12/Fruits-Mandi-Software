@@ -373,11 +373,20 @@ pub enum ErrorCode {
     /// A garden cannot be closed while its arrivals still have goods left: sell them or write them
     /// off first (PRD FR-12.40). Field `id`. Values: `qty_left` (نگ).
     ErrGardenHasStock,
+    /// The part of a line for another shop is more than the line's qty (PRD FR-12.41). Field
+    /// `lines[i].other_qty` or `other_qty`. Value: `qty`.
+    ErrSplitAboveQty,
+    /// The split cannot go below what a part has already sold (PRD FR-12.41). Field `other_qty`.
+    /// Values: `min_other` (the most other shops have sold) and `max_other` (the qty less what
+    /// our shop has sold): the part for another shop must be between them.
+    ErrSplitBelowSold,
+    /// An entry has more item lines than it may (PRD FR-12.41). Field `lines`. Value: `max`.
+    ErrTooManyLines,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 135] = [
+    pub const ALL: [ErrorCode; 138] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -513,6 +522,9 @@ impl ErrorCode {
         ErrorCode::ErrArrivalHasSales,
         ErrorCode::ErrArrivalLotNotFullySold,
         ErrorCode::ErrGardenHasStock,
+        ErrorCode::ErrSplitAboveQty,
+        ErrorCode::ErrSplitBelowSold,
+        ErrorCode::ErrTooManyLines,
     ];
 }
 

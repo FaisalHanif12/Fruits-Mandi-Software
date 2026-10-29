@@ -58,6 +58,21 @@
       "kind": "number"
     },
     {
+      "key": "our_left",
+      "title_id": "report-col-our-left",
+      "kind": "number"
+    },
+    {
+      "key": "other_left",
+      "title_id": "report-col-other-left",
+      "kind": "number"
+    },
+    {
+      "key": "shop_name",
+      "title_id": "report-col-shop-name",
+      "kind": "text"
+    },
+    {
       "key": "days",
       "title_id": "report-col-days-waiting",
       "kind": "number"
@@ -116,6 +131,17 @@
         },
         {
           "type": "number",
+          "text": "40"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
           "text": "0"
         }
       ],
@@ -159,6 +185,17 @@
     {
       "type": "number",
       "text": "40"
+    },
+    {
+      "type": "number",
+      "text": "40"
+    },
+    {
+      "type": "number",
+      "text": "0"
+    },
+    {
+      "type": "empty"
     },
     {
       "type": "empty"

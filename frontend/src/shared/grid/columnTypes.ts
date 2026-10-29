@@ -9,6 +9,7 @@ export const COLUMN_WIDTHS: Record<EntryColumnType, number> = {
   account: 280,
   money: 140,
   qty: 100,
+  weight: 120,
   rate: 160,
   date: 140,
   text: 240,
@@ -26,6 +27,7 @@ export const FIT_WEIGHTS: Record<EntryColumnType, number> = {
   account: 300,
   money: 100,
   qty: 80,
+  weight: 90,
   rate: 100,
   date: 100,
   text: 240,
@@ -61,6 +63,7 @@ export const FIT_MIN_WIDTHS: Record<EntryColumnType, number> = {
   account: 150,
   money: 72,
   qty: 64,
+  weight: 72,
   rate: 80,
   date: 104,
   text: 120,
@@ -73,7 +76,14 @@ export const FIT_MIN_WIDTHS: Record<EntryColumnType, number> = {
 };
 
 /** The types whose cells are numbers, codes or dates: Latin digits, left to right, tabular. */
-const NUMBER_LIKE: ReadonlySet<EntryColumnType> = new Set(['money', 'qty', 'rate', 'date', 'calc']);
+const NUMBER_LIKE: ReadonlySet<EntryColumnType> = new Set([
+  'money',
+  'qty',
+  'weight',
+  'rate',
+  'date',
+  'calc',
+]);
 
 export function isNumberLike(type: EntryColumnType): boolean {
   return NUMBER_LIKE.has(type);

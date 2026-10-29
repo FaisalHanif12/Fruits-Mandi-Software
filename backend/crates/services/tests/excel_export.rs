@@ -198,6 +198,10 @@ fn expect_cell(sheet: &Sheet, row: u32, col: u32, cell: &Cell, l10n: &L10n, what
 const PENDING_IDS: &[&str] = &[
     // The document label of a garden arrival in R10 (plan 33 v1.1): frontend writes it.
     "report-doc-garden-arrival",
+    // The two parts of the goods left in R10 (plan 35, PRD FR-12.41): frontend writes them.
+    "report-col-our-left",
+    "report-col-other-left",
+    "report-col-shop-name",
 ];
 
 /// The row of the heading: the one whose texts are exactly the column titles.

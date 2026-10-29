@@ -25,6 +25,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { lineCell, lineCellText, linesSection, typePurchaseLine } from '../helpers/goods-lines';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import {
@@ -103,21 +104,15 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
   const sourceGroup = (name: string) =>
     screen.getByRole('group', { name: named(message(language, 'ventures-source-of', { name })) });
 
-  /** Picks the one orange or the one box from a master picker. */
-  async function pick(user: User, id: string, text: string) {
-    const box = combo(id);
-    await user.click(box);
-    await user.type(box, text);
-    await user.click(await screen.findByRole('option'));
-  }
-
-  /** Fills the purchase of E2E-34: 20 oranges at 500, freight 400. */
+  /** Fills the purchase of E2E-34 as one line of the grid: 20 oranges at 500, freight 400. */
   async function fillPurchase(user: User) {
-    await pick(user, 'glossary-qism-maal', language === 'ur' ? 'م' : 'Ora');
-    await pick(user, 'glossary-packing', language === 'ur' ? 'پ' : 'Box');
-    await user.type(field('purchases-field-qty'), '20');
-    await user.type(field('purchases-field-rate'), '500');
-    await user.type(field('glossary-kiraya'), '400');
+    await typePurchaseLine(user, 0, {
+      item: language === 'ur' ? 'م' : 'Ora',
+      packing: language === 'ur' ? 'پ' : 'Box',
+      qty: '20',
+      rate: '500',
+      freight: '400',
+    });
   }
 
   it('shows the trip: its number, the state, the partners with their %, and the result with its working', async () => {
@@ -178,14 +173,14 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
       message(language, 'trips-type-cost'),
       message(language, 'trips-type-other-sale'),
     ]);
-    // A purchase: a note and a quantity.
+    // A purchase: a note and a quantity on a line of the grid.
     await user.type(field('trips-field-note'), 'Nasir');
-    await user.type(field('purchases-field-qty'), '20');
-    // A trip cost: the day stays, the quantity is gone, the amount is typed here.
+    await user.click(lineCell(0, 'qty'));
+    await user.keyboard('20{Enter}');
+    expect(lineCellText(0, 'qty')).toBe('20');
+    // A trip cost: the day stays, the lines are gone, the amount is typed here.
     await chooseType(user, 'cost');
-    expect(
-      screen.queryByRole('textbox', { name: named(message(language, 'purchases-field-qty')) }),
-    ).toBeNull();
+    expect(linesSection()).toBeNull();
     await user.type(field('trips-cost-amount'), '4000');
     // A sale in another shop: the amount stays, the note comes back as typed, the cost reason goes.
     await chooseType(user, 'other-sale');
@@ -194,9 +189,9 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     expect(
       screen.getByRole('textbox', { name: named(message(language, 'trips-field-date')) }),
     ).toHaveValue('10-10-2026');
-    // Back on the purchase the quantity starts again.
+    // Back on the purchase the lines start again.
     await chooseType(user, 'purchase');
-    expect(field('purchases-field-qty')).toHaveValue('');
+    expect(lineCellText(0, 'qty')).toBe('');
   });
 
   it('a purchase shows each partner’s part before the save, from the shop or from a pocket', async () => {
@@ -205,14 +200,18 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await fillPurchase(user);
     // The preview asked with one row for every partner, each from the trip’s source.
     await waitFor(() => {
-      expect(purchasesApi.purchasesPreview).toHaveBeenLastCalledWith(
+      expect(purchasesApi.purchasesEntryPreview).toHaveBeenLastCalledWith(
         expect.objectContaining({
           trip_id: 1,
-          qty: '20',
-          rate: '500',
-          freight: '400',
-          item_id: 61,
-          packing_id: 71,
+          lines: [
+            expect.objectContaining({
+              qty: '20',
+              rate: '500',
+              freight: '400',
+              item_id: 61,
+              packing_id: 71,
+            }),
+          ],
           parts: [
             { partner_id: 1, source: 'shop' },
             { partner_id: 2, source: 'shop' },
@@ -229,8 +228,8 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     expect(within(parts).getAllByText(said(message(language, 'ventures-part-shop')))).toHaveLength(
       3,
     );
-    // The cost lines are the backend's: value 10,000, paid now 10,400.
-    expect(screen.getByText('10,000')).toBeInTheDocument();
+    // The money of the entry is the backend's: paid now 10,400 for the line and for the whole entry.
+    expect((await screen.findAllByText('10,400')).length).toBeGreaterThan(0);
     // Partner B pays from his own pocket: his part is recorded only.
     await user.click(
       within(sourceGroup(names.b)).getByRole('button', {
@@ -238,7 +237,7 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
       }),
     );
     await waitFor(() => {
-      expect(purchasesApi.purchasesPreview).toHaveBeenLastCalledWith(
+      expect(purchasesApi.purchasesEntryPreview).toHaveBeenLastCalledWith(
         expect.objectContaining({
           parts: [
             { partner_id: 1, source: 'shop' },
@@ -265,23 +264,31 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await screen.findByRole('list', { name: named(message(language, 'trips-parts-title')) });
     press('F10');
     await waitFor(() => {
-      expect(fake.saved.purchases).toHaveLength(1);
+      expect(fake.saved.entries).toHaveLength(1);
     });
-    expect(fake.saved.purchases[0]).toEqual({
+    expect(fake.saved.entries[0]).toEqual({
       trip_id: 1,
       date: '10-10-2026',
       // Not touched: the date to sell is the day of the purchase, so nothing is sent (FR-12.39).
       sell_date: null,
       supplier: 'Haji Nazir',
-      item_id: 61,
-      packing_id: 71,
-      qty: '20',
-      weight: null,
-      rate: '500',
-      freight: '400',
-      labour: null,
-      other_cost: null,
-      note: null,
+      lines: [
+        {
+          key: expect.any(String) as string,
+          item_id: 61,
+          packing_id: 71,
+          qty: '20',
+          weight: null,
+          rate: '500',
+          freight: '400',
+          labour: null,
+          other_cost: null,
+          note: null,
+          // Nothing for another shop: all of it is for our shop (PRD FR-12.41).
+          other_qty: null,
+          shop_name: null,
+        },
+      ],
       parts: [
         { partner_id: 1, source: 'shop' },
         { partner_id: 2, source: 'shop' },
@@ -298,11 +305,178 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
         ),
       ),
     ).toBeInTheDocument();
-    // The next purchase: the supplier stays, the rest is empty.
+    // The next purchase: the supplier stays, the lines are empty.
     await waitFor(() => {
-      expect(field('purchases-field-qty')).toHaveValue('');
+      expect(lineCellText(0, 'qty')).toBe('');
     });
     expect(field('purchases-field-supplier')).toHaveValue('Haji Nazir');
+  });
+
+  const oranges = () => ({
+    item: language === 'ur' ? 'م' : 'Ora',
+    packing: language === 'ur' ? 'پ' : 'Box',
+  });
+
+  it('R1, R3: a purchase of three lines is typed with the keyboard only and one F10 saves all three, with the split of each line', async () => {
+    // The cash in hand covers the 152,400, so there is no cash question.
+    const fake = fakeTrips({ cashBefore: 500_000 });
+    const { user } = await open();
+    await typePurchaseLine(user, 0, {
+      ...oranges(),
+      qty: '80',
+      rate: '1200',
+      freight: '400',
+      otherQty: '30',
+      shop: 'Haji Shop',
+    });
+    await typePurchaseLine(user, 1, { ...oranges(), qty: '40', rate: '900' });
+    await typePurchaseLine(user, 2, { ...oranges(), qty: '10', rate: '2000', otherQty: '4' });
+    // Each line's value is its own: 80 × 1,200, 40 × 900 and 10 × 2,000, and the money of the whole
+    // entry is the backend's: 96,400 (with the freight) + 36,000 + 20,000.
+    await waitFor(() => {
+      expect(lineCellText(2, 'value')).toBe('20,000');
+    });
+    expect(lineCellText(0, 'value')).toBe('96,000');
+    expect(lineCellText(1, 'value')).toBe('36,000');
+    // What is left for our shop, line by line: 80 − 30, 40, 10 − 4.
+    await waitFor(() => {
+      expect([0, 1, 2].map((row) => lineCellText(row, 'ourQty'))).toEqual(['50', '40', '6']);
+    });
+    expect((await screen.findAllByText('152,400')).length).toBeGreaterThan(0);
+    press('F10');
+    await waitFor(() => {
+      expect(fake.saved.entries).toHaveLength(1);
+    });
+    const sent = fake.saved.entries[0];
+    // One call for all the lines, in the order of the grid, and the empty row at the end is not sent.
+    expect(sent?.lines.map((line) => line.qty)).toEqual(['80', '40', '10']);
+    expect(sent?.lines.map((line) => line.rate)).toEqual(['1200', '900', '2000']);
+    expect(sent?.lines.map((line) => line.other_qty)).toEqual(['30', null, '4']);
+    expect(sent?.lines.map((line) => line.shop_name)).toEqual(['Haji Shop', null, null]);
+    // The partners' sources are chosen once for the whole entry.
+    expect(sent?.parts).toHaveLength(3);
+    const number = (value: number) => message(language, 'purchases-number', { number: value });
+    expect(
+      await screen.findByText(
+        said(
+          message(language, 'trips-saved-purchases', {
+            count: 3,
+            first: number(2),
+            last: number(4),
+          }),
+        ),
+      ),
+    ).toBeInTheDocument();
+    // The next entry starts with one empty line.
+    await waitFor(() => {
+      expect(lineCellText(0, 'qty')).toBe('');
+    });
+  });
+
+  it('a mistake of one line is on the cell of that line and in words under the form, and every line stays', async () => {
+    const fake = fakeTrips();
+    fake.refuse.purchase = [
+      { code: 'ERR_SPLIT_ABOVE_QTY', field: 'lines[1].other_qty', values: { qty: 40 } },
+    ];
+    const { user } = await open();
+    await typePurchaseLine(user, 0, { ...oranges(), qty: '80', rate: '1200' });
+    await typePurchaseLine(user, 1, { ...oranges(), qty: '40', rate: '900', otherQty: '90' });
+    press('F10');
+    expect(
+      await screen.findByText(said(message(language, 'err-split-above-qty', { qty: 40 }))),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(lineCell(1, 'otherQty').className).toContain('cell-error');
+    });
+    expect(lineCell(0, 'otherQty').className).not.toContain('cell-error');
+    expect(lineCell(1, 'qty').className).not.toContain('cell-error');
+    expect(lineCellText(0, 'qty')).toBe('80');
+    expect(lineCellText(1, 'qty')).toBe('40');
+    expect(lineCellText(1, 'otherQty')).toBe('90');
+  });
+
+  it('R6: the list of purchases shows what is left for our shop and for another shop', async () => {
+    fakeTrips({
+      purchases: [e34Purchase({ qty_other: 3, qty_other_left: 3, qty_our_left: 2, qty_left: 5 })],
+    });
+    await open();
+    const row = await waitFor(() => {
+      const found = document.querySelector('.ag-row[row-id="7"]');
+      if (found === null) throw new Error('no purchase row');
+      return found;
+    });
+    expect(visible(row.querySelector('[col-id="qty_our_left"]')?.textContent)).toBe('2');
+    expect(visible(row.querySelector('[col-id="qty_other_left"]')?.textContent)).toBe('3');
+  });
+
+  it('R3: change the split on the purchase card: the box starts with the part now, and the new part goes with the version', async () => {
+    const fake = fakeTrips({
+      purchases: [e34Purchase({ qty_other: 3, qty_other_left: 3, qty_our_left: 2, qty_left: 5 })],
+    });
+    const { user } = await open();
+    const target = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('.ag-row[row-id="7"] [col-id="number"]');
+      if (found === null) throw new Error('no purchase row');
+      return found;
+    });
+    await user.click(target);
+    await user.click(
+      await screen.findByRole('button', { name: said(message(language, 'split-change')) }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    const qty = within(dialog).getByRole<HTMLInputElement>('textbox', {
+      name: named(message(language, 'split-other-qty')),
+    });
+    // The box starts with the part now, visible like a typed value (NFR-USE-27).
+    expect(qty.value).toBe('3');
+    await user.click(qty);
+    await user.keyboard('{Control>}a{/Control}4');
+    await user.type(
+      within(dialog).getByRole('combobox', { name: named(message(language, 'split-shop')) }),
+      'Haji Shop',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: said(message(language, 'common-save')) }),
+    );
+    await waitFor(() => {
+      expect(fake.saved.splits).toHaveLength(1);
+    });
+    expect(fake.saved.splits[0]).toEqual({
+      id: 7,
+      version: 1,
+      other_qty: '4',
+      shop_name: 'Haji Shop',
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('R3: a part above the quantity is refused in the box, at the field, and what was typed stays', async () => {
+    fakeTrips();
+    const { user } = await open();
+    const target = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('.ag-row[row-id="7"] [col-id="number"]');
+      if (found === null) throw new Error('no purchase row');
+      return found;
+    });
+    await user.click(target);
+    await user.click(
+      await screen.findByRole('button', { name: said(message(language, 'split-change')) }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    const qty = within(dialog).getByRole<HTMLInputElement>('textbox', {
+      name: named(message(language, 'split-other-qty')),
+    });
+    await user.click(qty);
+    await user.keyboard('{Control>}a{/Control}90');
+    await user.click(
+      within(dialog).getByRole('button', { name: said(message(language, 'common-save')) }),
+    );
+    expect(
+      await within(dialog).findByText(said(message(language, 'err-split-above-qty', { qty: 20 }))),
+    ).toBeInTheDocument();
+    expect(qty.value).toBe('90');
   });
 
   it('FR-12.39: the date to sell shows the day of the purchase, follows it, and a day typed over it goes with the purchase', async () => {
@@ -330,9 +504,9 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await screen.findByRole('list', { name: named(message(language, 'trips-parts-title')) });
     press('F10');
     await waitFor(() => {
-      expect(fake.saved.purchases).toHaveLength(1);
+      expect(fake.saved.entries).toHaveLength(1);
     });
-    expect(fake.saved.purchases[0]).toMatchObject({ date: '10-10-2026', sell_date: '12-10-2026' });
+    expect(fake.saved.entries[0]).toMatchObject({ date: '10-10-2026', sell_date: '12-10-2026' });
     // The next purchase starts with the box on its own day again.
     await waitFor(() => {
       expect(sellDate()).toHaveValue('10-10-2026');
@@ -350,12 +524,12 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     // flight makes the save go without the question, and the backend's refusal opens the box). So
     // wait until the answer to the last key has landed.
     await waitFor(() => {
-      expect(purchasesApi.purchasesPreview).toHaveBeenLastCalledWith(
-        expect.objectContaining({ freight: '400' }),
+      expect(purchasesApi.purchasesEntryPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ lines: [expect.objectContaining({ freight: '400' })] }),
       );
     });
     await act(async () => {
-      await vi.mocked(purchasesApi.purchasesPreview).mock.results.at(-1)?.value;
+      await vi.mocked(purchasesApi.purchasesEntryPreview).mock.results.at(-1)?.value;
     });
     await settlePreview();
     press('F10');
@@ -370,15 +544,15 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
         screen.queryByRole('button', { name: startsWith('common-cash-confirm-no') }),
       ).toBeNull();
     });
-    expect(purchasesApi.purchasesSave).not.toHaveBeenCalled();
+    expect(purchasesApi.purchasesEntrySave).not.toHaveBeenCalled();
     press('F10');
     await user.click(
       await screen.findByRole('button', { name: startsWith('common-cash-confirm-yes') }),
     );
     await waitFor(() => {
-      expect(fake.saved.purchases).toHaveLength(1);
+      expect(fake.saved.entries).toHaveLength(1);
     });
-    expect(fake.saved.purchases[0]?.confirm_cash_below_zero).toBe(true);
+    expect(fake.saved.entries[0]?.confirm_cash_below_zero).toBe(true);
   });
 
   it('with every part from a pocket the shop’s cash is not touched: no question', async () => {
@@ -399,7 +573,7 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     });
     press('F10');
     await waitFor(() => {
-      expect(fake.saved.purchases).toHaveLength(1);
+      expect(fake.saved.entries).toHaveLength(1);
     });
     expect(
       screen.queryByRole('button', { name: message(language, 'common-cash-confirm-yes') }),
@@ -413,8 +587,8 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await fillPurchase(user);
     press('F10');
     expect(await screen.findByText(said(message(language, 'err-trip-closed')))).toBeInTheDocument();
-    expect(field('purchases-field-qty')).toHaveValue('20');
-    expect(field('purchases-field-rate')).toHaveValue('500');
+    expect(lineCellText(0, 'qty')).toBe('20');
+    expect(lineCellText(0, 'rate')).toBe('500');
   });
 
   it('a trip cost shows how it is spread over the purchases and each partner’s part, then saves', async () => {
@@ -450,7 +624,18 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
   });
 
   it('a sale in another shop shows the cost, the result and each partner’s part, then saves', async () => {
-    const fake = fakeTrips();
+    // The 15 are set for another shop, so the purchase is offered (PRD FR-12.41).
+    const fake = fakeTrips({
+      purchases: [
+        e34Purchase({
+          qty_other: 15,
+          qty_our_sold: 0,
+          qty_our_left: 0,
+          qty_other_left: 15,
+          qty_left: 15,
+        }),
+      ],
+    });
     const { user } = await open();
     await chooseType(user, 'other-sale');
     await user.click(
@@ -713,14 +898,13 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
       useLanguageStore.setState({ language: other });
     });
     const otherNames = { b: other === 'ur' ? 'ب' : 'Partner B' };
+    // The grid is made again for the other direction, from the lines in the store.
     await waitFor(() => {
-      expect(
-        screen.getByRole('textbox', { name: named(message(other, 'purchases-field-qty')) }),
-      ).toHaveValue('20');
+      expect(lineCellText(0, 'qty')).toBe('20');
     });
-    expect(
-      screen.getByRole('textbox', { name: named(message(other, 'purchases-field-rate')) }),
-    ).toHaveValue('500');
+    expect(lineCellText(0, 'rate')).toBe('500');
+    expect(lineCellText(0, 'freight')).toBe('400');
+    expect(lineCellText(0, 'item')).toBe(other === 'ur' ? 'مالٹا' : 'Orange');
     expect(
       screen.getByRole('combobox', { name: named(message(other, 'purchases-field-supplier')) }),
     ).toHaveValue('Haji Nazir');
@@ -730,10 +914,6 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
       }),
     ).getByRole('button', { name: message(other, 'ventures-source-pocket') });
     expect(pocket).toHaveAttribute('aria-pressed', 'true');
-    // The item and the packing are still chosen (their names come in the other language).
-    expect(
-      screen.getByRole('combobox', { name: named(message(other, 'glossary-qism-maal')) }),
-    ).toHaveValue(other === 'ur' ? 'مالٹا' : 'Orange');
   });
 
   it('the keyboard alone does a trip cost: type the amount and the reason, F10', async () => {

@@ -9,6 +9,8 @@
 //! closed (undo the closing first).
 
 use mandi_db::accounts as account_repo;
+use mandi_db::arrivals as arrival_repo;
+use mandi_db::bikri::edit as edit_repo;
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as vrepo, NewEntry};
@@ -22,6 +24,7 @@ use mandi_domain::core::gardens::{
 };
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::split::StockParts;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::core::ventures::EntryParts;
 use mandi_domain::ledger::{BalancedEntry, LedgerLine, PostingType, Side, SourceType, build_entry};
@@ -54,8 +57,15 @@ fn optional_text(errors: &mut FieldErrors, field: &str, text: Option<&str>) -> O
 enum Body {
     /// An installment or a running cost, with its payment worked out.
     Payment { payment: PaymentPlan },
-    /// Money from a sale in another shop, with its journal entry.
-    OtherSale { entry: BalancedEntry, qty: i64 },
+    /// Money from a sale in another shop, with its journal entry. `arrival_id` is the arrival the
+    /// goods come from, and `moved` how many نگ the sale moves from our shop's part to the part for
+    /// another shop (plan 35 D1).
+    OtherSale {
+        entry: BalancedEntry,
+        qty: i64,
+        arrival_id: Option<i64>,
+        moved: i64,
+    },
 }
 
 /// An entry after the checks.
@@ -223,6 +233,10 @@ fn plan_payment_entry(
         balance_after_paisa: balance_after,
         rent_due_after_paisa: rent_due_after,
         balance_working: balance_working(money.money_in, paid_after, balance_after),
+        qty_from_our_shop: None,
+        qty_left_after: None,
+        qty_other_left_after: None,
+        qty_our_left_after: None,
     };
     let cash = payment.cash;
     Ok(Plan {
@@ -258,6 +272,66 @@ fn plan_other_sale(
     let note = optional_text(&mut errors, "note", input.note.as_deref());
     let qty = errors.take(validate::qty("qty", &input.qty));
     let amount = positive_money(&mut errors, "amount", &input.amount);
+    // The goods come from an arrival of the garden (PRD FR-12.41): required when the garden has
+    // any arrival, and typed by hand as before when it has none.
+    let mut arrival_id = None;
+    let mut moved = 0_i64;
+    // (our left, other left, total left) of the linked arrival before this sale.
+    let mut left_before: Option<(i64, i64, i64)> = None;
+    if let Some(g) = garden.as_ref() {
+        match input.arrival_id {
+            None => {
+                if arrival_repo::count_saved_of_garden(conn, g.rec.id)? > 0 {
+                    errors.push(FieldError::new(ErrorCode::ErrRequired, "arrival_id"));
+                }
+            }
+            Some(id) => match arrival_repo::get(conn, id)? {
+                Some(a) if a.garden_id == g.rec.id => {
+                    if a.status == "cancelled" {
+                        errors.push(FieldError::new(
+                            ErrorCode::ErrArrivalCancelled,
+                            "arrival_id",
+                        ));
+                    } else {
+                        let parts = StockParts::of(
+                            a.qty,
+                            a.other_qty,
+                            a.qty_sold,
+                            a.qty_sold_other,
+                            a.qty_written_off,
+                        )
+                        .ok_or_else(|| data("the split of an arrival does not fit"))?;
+                        if let Some(date) = date {
+                            let arrived = BusinessDate::parse_iso(&a.entry_date)
+                                .ok_or_else(|| data("the day of an arrival is not a date"))?;
+                            if date < arrived {
+                                errors.push(
+                                    FieldError::new(ErrorCode::ErrDateBeforeReceived, "date")
+                                        .with("received_date", ErrorValue::Text(arrived.to_iso())),
+                                );
+                            }
+                        }
+                        // The other shop's part first; the rest is moved from our shop's part. It
+                        // is refused only above all the نگ left.
+                        if let Some(q) = qty {
+                            if q.get() > parts.total_left {
+                                errors.push(
+                                    FieldError::new(ErrorCode::ErrQtyExceedsLot, "qty")
+                                        .with("available", ErrorValue::Number(parts.total_left)),
+                                );
+                            } else {
+                                moved = q.get().saturating_sub(parts.other_left).max(0);
+                            }
+                        }
+                        left_before = Some((parts.our_left, parts.other_left, parts.total_left));
+                        arrival_id = Some(a.id);
+                    }
+                }
+                Some(_) => errors.push(FieldError::new(ErrorCode::ErrFormatInvalid, "arrival_id")),
+                None => errors.push(FieldError::new(ErrorCode::ErrNotFound, "arrival_id")),
+            },
+        }
+    }
     let found = errors.finish().err().unwrap_or_default();
     // The money comes into روکڑ: nothing here can take cash below 0.
     let cash = cash::cash_after_entry(conn, amount.unwrap_or(Paisa::ZERO))?;
@@ -295,6 +369,11 @@ fn plan_other_sale(
         balance_after_paisa: balance_after,
         rent_due_after_paisa: money.rent_due,
         balance_working: balance_working(money_in_after, money.paid, balance_after),
+        qty_from_our_shop: left_before.map(|_| moved),
+        qty_left_after: left_before.map(|(_, _, total)| total.saturating_sub(qty.get()).max(0)),
+        qty_other_left_after: left_before
+            .map(|(_, other, _)| other.saturating_sub(qty.get()).max(0)),
+        qty_our_left_after: left_before.map(|(our, _, _)| our.saturating_sub(moved).max(0)),
     };
     Ok(Plan {
         kind,
@@ -309,6 +388,8 @@ fn plan_other_sale(
             body: Body::OtherSale {
                 entry,
                 qty: qty.get(),
+                arrival_id,
+                moved,
             },
             numbers,
         }),
@@ -366,13 +447,20 @@ pub(super) fn save(
             _ => "other_sale",
         };
         let number = vrepo::next_entry_number(tx, kind_text)?;
-        let qty = match &ready.body {
-            Body::OtherSale { qty, .. } => Some(*qty),
-            Body::Payment { .. } => None,
+        let (qty, arrival_id, moved) = match &ready.body {
+            Body::OtherSale {
+                qty,
+                arrival_id,
+                moved,
+                ..
+            } => (Some(*qty), *arrival_id, *moved),
+            Body::Payment { .. } => (None, None, 0),
         };
         let id = vrepo::insert_entry(
             tx,
             &NewEntry {
+                arrival_id,
+                moved_qty: moved,
                 venture_id: ready.garden.rec.id,
                 kind: kind_text,
                 entry_date: &date_iso,
@@ -408,6 +496,32 @@ pub(super) fn save(
                 source_id: id,
             },
         )?;
+        // The goods of a sale in another shop go out of the arrival: its part for another shop first,
+        // and the rest from our shop's part (PRD FR-12.41, plan 35 D1). The move keeps the journal
+        // entry, so a cancel gives back exactly these.
+        if let (Some(arrival_id), Some(qty)) = (arrival_id, qty) {
+            let qty_out = qty
+                .checked_neg()
+                .ok_or_else(|| data("the quantity does not fit"))?;
+            edit_repo::insert_move(
+                tx,
+                &edit_repo::NewMove {
+                    arrival_id: Some(arrival_id),
+                    lot_id: None,
+                    purchase_id: None,
+                    cost_paisa: 0,
+                    entry_id: journal_entry_id,
+                    move_date: &date_iso,
+                    kind: "sold",
+                    qty: qty_out,
+                    reason: None,
+                    reverses_move_id: None,
+                },
+                user,
+                &now,
+            )?;
+            arrival_repo::add_sold_in_other_shop(tx, arrival_id, qty, moved, user, &now)?;
+        }
         ctx.db.auditor().write(
             tx,
             &Event::new(Some(user), "create", "garden_entry")
@@ -492,7 +606,23 @@ pub(super) fn cancel(
                     &cash::cash_after_entry(tx, change)?,
                     input.confirm_cash_below_zero,
                 )?;
-                Some(ledger::reverse(ctx, tx, user, journal_id, &reason)?.entry_id)
+                let reversal = ledger::reverse(ctx, tx, user, journal_id, &reason)?;
+                // A sale in another shop that took its goods from an arrival gives them back, and
+                // moves back what it moved from our shop's part (plan 35 D1).
+                if let (Some(arrival_id), Some(qty)) = (entry.arrival_id, entry.qty) {
+                    edit_repo::reverse_moves(tx, journal_id, reversal.entry_id, user, &now)?;
+                    let qty_back = qty
+                        .checked_neg()
+                        .ok_or_else(|| data("the quantity does not fit"))?;
+                    let moved_back = entry
+                        .moved_qty
+                        .checked_neg()
+                        .ok_or_else(|| data("the quantity does not fit"))?;
+                    arrival_repo::add_sold_in_other_shop(
+                        tx, arrival_id, qty_back, moved_back, user, &now,
+                    )?;
+                }
+                Some(reversal.entry_id)
             }
             None => None,
         };

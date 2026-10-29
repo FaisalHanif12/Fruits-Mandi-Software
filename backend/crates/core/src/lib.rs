@@ -35,6 +35,7 @@ pub mod printing;
 pub mod purchases;
 pub mod rules;
 pub mod search;
+pub mod split;
 pub mod statement;
 pub mod text;
 pub mod translit;

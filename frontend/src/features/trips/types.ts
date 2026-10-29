@@ -27,7 +27,7 @@ import type { TripsSummary } from '../../bindings/TripsSummary';
 import type { VenturePartnerInput } from '../../bindings/VenturePartnerInput';
 import type { VenturePartnerRow } from '../../bindings/VenturePartnerRow';
 import type { VentureStatus } from '../../bindings/VentureStatus';
-import type { PurchaseFields } from '../purchases';
+import type { PurchaseEntryFields } from '../purchases';
 
 export type {
   EntryPartInput,
@@ -107,7 +107,7 @@ export interface EntryDraft {
   note: string;
   /** This entry's choice of source by partner id. A missing one means the trip's source. */
   sources: Record<number, MoneySource>;
-  purchase: PurchaseFields;
+  purchase: PurchaseEntryFields;
   cost: CostFields;
   sale: OtherSaleFields;
 }

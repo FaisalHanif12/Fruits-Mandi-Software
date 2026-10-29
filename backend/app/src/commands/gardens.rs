@@ -4,7 +4,8 @@
 //! previews only read (Code Standards B29); the others are one transaction each (Code Standards B3).
 
 use mandi_services::core::arrivals::{
-    ArrivalCancelInput, ArrivalCancelled, ArrivalGetInput, ArrivalInput, ArrivalRow, ArrivalSaved,
+    ArrivalCancelInput, ArrivalCancelled, ArrivalEntryInput, ArrivalEntryPreview,
+    ArrivalEntrySaved, ArrivalGetInput, ArrivalInput, ArrivalRow, ArrivalSaved,
     ArrivalWriteOffDone, ArrivalWriteOffInput, ArrivalWriteOffUndoInput, ArrivalWriteOffUndone,
     ArrivalsList, ArrivalsListInput, SellDateInput, SellDateSet,
 };
@@ -15,6 +16,7 @@ use mandi_services::core::gardens::{
     GardenReopened, GardenRow, GardenSetPartnersInput, GardensList, GardensListInput,
     GardensSummary,
 };
+use mandi_services::core::split::{SplitInput, SplitSet};
 use mandi_services::{auth, gardens};
 
 use super::run;
@@ -312,6 +314,48 @@ pub async fn gardens_arrival_write_off_undo<R: tauri::Runtime>(
     run(app, "gardens_arrival_write_off_undo", move |ctx| {
         let actor = auth::require(ctx)?;
         gardens::arrivals::write_off_undo(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Works out a goods-arrived entry with many item lines (PRD FR-12.41, R2): only the mistakes, each
+/// at its field (`lines[i].qty` ...). Nothing is saved.
+#[tauri::command]
+pub async fn gardens_arrival_entry_preview<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalEntryInput,
+) -> Result<ArrivalEntryPreview, UiError> {
+    run(app, "gardens_arrival_entry_preview", move |ctx| {
+        auth::require(ctx)?;
+        gardens::arrivals::entry_preview(ctx, &input)
+    })
+    .await
+}
+
+/// Saves a goods-arrived entry with many item lines in ONE transaction (PRD FR-12.41, R2). Each line
+/// is its own arrival with its own number. A mistake in any line saves nothing.
+#[tauri::command]
+pub async fn gardens_arrival_entry_save<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalEntryInput,
+) -> Result<ArrivalEntrySaved, UiError> {
+    run(app, "gardens_arrival_entry_save", move |ctx| {
+        let actor = auth::require(ctx)?;
+        gardens::arrivals::entry_save(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Changes the split of an arrival between our shop and another shop, while goods are left (PRD
+/// FR-12.41, R3). No money effect.
+#[tauri::command]
+pub async fn gardens_arrival_change_split<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SplitInput,
+) -> Result<SplitSet, UiError> {
+    run(app, "gardens_arrival_change_split", move |ctx| {
+        let actor = auth::require(ctx)?;
+        gardens::arrivals::change_split(ctx, &actor, &input)
     })
     .await
 }

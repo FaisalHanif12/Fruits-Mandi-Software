@@ -12,6 +12,9 @@ import {
 import { useDebouncedValue } from '../../shared/hooks';
 import {
   purchasesCancel,
+  purchasesChangeSplit,
+  purchasesEntryPreview,
+  purchasesEntrySave,
   purchasesGet,
   purchasesList,
   purchasesPreview,
@@ -21,7 +24,13 @@ import {
   purchasesWriteOffUndo,
 } from './api';
 import type { SellDateInput } from '../../bindings/SellDateInput';
-import type { PurchaseCancelInput, PurchaseInput, PurchasesListInput } from './types';
+import type {
+  PurchaseCancelInput,
+  PurchaseEntryInput,
+  PurchaseInput,
+  PurchasesListInput,
+  SplitInput,
+} from './types';
 
 export const PURCHASES_KEY = ['purchases'] as const;
 /** The preview waits this long after the last key press, and the one before it is dropped (F35). */
@@ -71,6 +80,28 @@ export function usePurchasePreview(input: PurchaseInput | null) {
   return { query, current };
 }
 
+/**
+ * The preview of the purchase entry on the form (PRD FR-12.41): every line's numbers, the money of
+ * the whole entry, the warnings and the cash after. Asked 50 ms after the last key, only once the
+ * form is filled, so an empty form asks nothing.
+ */
+export function usePurchaseEntryPreview(input: PurchaseEntryInput | null) {
+  const settled = useDebouncedValue(input, PREVIEW_DELAY_MS);
+  const query = useQuery({
+    queryKey: [...PURCHASES_KEY, 'entry-preview', settled],
+    queryFn: () => {
+      if (settled === null) throw new Error('no purchase entry');
+      return purchasesEntryPreview(settled);
+    },
+    enabled: settled !== null,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const current = settled === input && !query.isPlaceholderData && query.isSuccess;
+  return { query, current };
+}
+
 /** The purchases for the filters, with the totals over the whole filter (PRD FR-19.11). */
 export function usePurchasesList(filter: PurchasesListInput, enabled = true) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
@@ -97,6 +128,25 @@ export function useSavePurchase() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: PurchaseInput) => purchasesSave(input),
+    onSuccess: () => readAgainAfterPurchase(queryClient),
+  });
+}
+
+/** Saves a purchase entry with its lines in one transaction (PRD FR-12.41). */
+export function useSavePurchaseEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PurchaseEntryInput) => purchasesEntrySave(input),
+    onSuccess: () => readAgainAfterPurchase(queryClient),
+  });
+}
+
+/** Changes the split of a purchase with goods left (PRD FR-12.41). */
+export function useChangePurchaseSplit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SplitInput) => purchasesChangeSplit(input),
+    // The ready lots and the stock lists change with the split: everything is read again.
     onSuccess: () => readAgainAfterPurchase(queryClient),
   });
 }

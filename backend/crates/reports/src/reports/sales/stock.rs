@@ -9,6 +9,10 @@
 //! every save, the same as the باقی مال screen reads (so the report and the screen agree). The
 //! totals row adds up the four quantities over the whole filter.
 //!
+//! Two more columns split the balance into the goods for our shop and the goods for another shop
+//! (PRD FR-12.41): a lot has only our shop's part; a trip purchase or an arrival has both. The two
+//! add up to the balance. A column after them shows the name of the other shop, as typed.
+//!
 //! The balance of a lot is received less sold, written off and taken as fruit (C16, PRD 16.11);
 //! the column "taken as fruit" says how much of it left the lot that way (a trip purchase has
 //! none: its goods are not offered as fruit).
@@ -18,6 +22,7 @@
 
 use mandi_core::accounts::OWN_GOODS_CODE;
 use mandi_core::dates::BusinessDate;
+use mandi_core::split::StockParts;
 use mandi_db::accounts as account_repo;
 use mandi_db::bikri::edit::{StockFilter, stock_lots};
 use mandi_db::purchases::{ListFilter, StateFilter};
@@ -38,6 +43,16 @@ struct Pending {
     key: (String, u8, i64, i64),
     cells: Vec<Cell>,
     source: RowSource,
+}
+
+/// The name of the other shop as typed (PRD FR-12.41), or nothing when none was given.
+fn shop_cell(name: Option<&str>) -> Cell {
+    match name {
+        Some(text) if !text.is_empty() => Cell::Text {
+            text: text.to_owned(),
+        },
+        _ => Cell::Empty,
+    }
 }
 
 /// Builds R10.
@@ -109,16 +124,18 @@ pub(crate) fn run(
             .saturating_add(purchases.len())
             .saturating_add(arrivals.len()),
     );
-    let mut totals = [0_i64; 5];
+    let mut totals = [0_i64; 7];
     let mut add_totals = |received: i64,
                           sold: i64,
                           written_off: i64,
                           taken: i64,
-                          balance: i64|
+                          balance: i64,
+                          (our, other): (i64, i64)|
      -> Result<(), ReportsError> {
-        for (slot, amount) in totals
-            .iter_mut()
-            .zip([received, sold, written_off, taken, balance])
+        for (slot, amount) in
+            totals
+                .iter_mut()
+                .zip([received, sold, written_off, taken, balance, our, other])
         {
             *slot = slot
                 .checked_add(amount)
@@ -139,6 +156,7 @@ pub(crate) fn run(
             lot.qty_written_off,
             lot.qty_taken,
             balance,
+            (balance, 0),
         )?;
         let mut seller = parties
             .get(&lot.seller.id)
@@ -173,6 +191,9 @@ pub(crate) fn run(
                     value: lot.qty_taken,
                 },
                 Cell::Number { value: balance },
+                Cell::Number { value: balance },
+                Cell::Number { value: 0 },
+                Cell::Empty,
                 Cell::Number {
                     value: days_waiting(&lot.received_date),
                 },
@@ -195,12 +216,21 @@ pub(crate) fn run(
             .ok_or_else(|| {
                 ReportsError::Data("the quantity of a purchase does not fit".to_owned())
             })?;
+        let parts = StockParts::of(
+            purchase.qty,
+            purchase.other_qty,
+            purchase.qty_sold,
+            purchase.qty_sold_other,
+            purchase.qty_written_off,
+        )
+        .ok_or_else(|| ReportsError::Data("the split of a purchase does not fit".to_owned()))?;
         add_totals(
             purchase.qty,
             purchase.qty_sold,
             purchase.qty_written_off,
             0,
             balance,
+            (parts.our_left, parts.other_left),
         )?;
         pending.push(Pending {
             key: (purchase.entry_date.clone(), 1, purchase.number, 0),
@@ -233,6 +263,13 @@ pub(crate) fn run(
                 Cell::Number { value: 0 },
                 Cell::Number { value: balance },
                 Cell::Number {
+                    value: parts.our_left,
+                },
+                Cell::Number {
+                    value: parts.other_left,
+                },
+                shop_cell(purchase.shop_name.as_deref()),
+                Cell::Number {
                     value: days_waiting(&purchase.sell_date),
                 },
             ],
@@ -250,12 +287,21 @@ pub(crate) fn run(
             .ok_or_else(|| {
                 ReportsError::Data("the quantity of an arrival does not fit".to_owned())
             })?;
+        let parts = StockParts::of(
+            arrival.qty,
+            arrival.other_qty,
+            arrival.qty_sold,
+            arrival.qty_sold_other,
+            arrival.qty_written_off,
+        )
+        .ok_or_else(|| ReportsError::Data("the split of an arrival does not fit".to_owned()))?;
         add_totals(
             arrival.qty,
             arrival.qty_sold,
             arrival.qty_written_off,
             0,
             balance,
+            (parts.our_left, parts.other_left),
         )?;
         let garden = parties.get(&arrival.account.id).cloned().ok_or_else(|| {
             ReportsError::Data("an arrival has an unknown garden account".to_owned())
@@ -290,6 +336,13 @@ pub(crate) fn run(
                 Cell::Number { value: 0 },
                 Cell::Number { value: balance },
                 Cell::Number {
+                    value: parts.our_left,
+                },
+                Cell::Number {
+                    value: parts.other_left,
+                },
+                shop_cell(arrival.shop_name.as_deref()),
+                Cell::Number {
                     value: days_waiting(&arrival.sell_date),
                 },
             ],
@@ -309,7 +362,15 @@ pub(crate) fn run(
         })
         .collect();
 
-    let [received, sold, written_off, taken, balance] = totals;
+    let [
+        received,
+        sold,
+        written_off,
+        taken,
+        balance,
+        our_left,
+        other_left,
+    ] = totals;
     Ok(ReportPage {
         id: ReportId::R10,
         title_id: ids::title_id("R10"),
@@ -325,6 +386,9 @@ pub(crate) fn run(
             col("written_off", ids::COL_WRITTEN_OFF, ColumnKind::Number),
             col("fruit_taken", ids::COL_FRUIT_TAKEN, ColumnKind::Number),
             col("balance", ids::COL_BALANCE_QTY, ColumnKind::Number),
+            col("our_left", ids::COL_OUR_LEFT, ColumnKind::Number),
+            col("other_left", ids::COL_OTHER_LEFT, ColumnKind::Number),
+            col("shop_name", ids::COL_SHOP_NAME, ColumnKind::Text),
             col("days", ids::COL_DAYS_WAITING, ColumnKind::Number),
         ],
         rows: spec.slice(&all_rows),
@@ -343,6 +407,9 @@ pub(crate) fn run(
             Cell::Number { value: written_off },
             Cell::Number { value: taken },
             Cell::Number { value: balance },
+            Cell::Number { value: our_left },
+            Cell::Number { value: other_left },
+            Cell::Empty,
             Cell::Empty,
         ],
         summary: Vec::new(),

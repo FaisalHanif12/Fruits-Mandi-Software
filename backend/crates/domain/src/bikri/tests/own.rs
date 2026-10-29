@@ -163,6 +163,7 @@ mod lot {
             ],
             item_id,
             packing_id: BOX,
+            our_left: qty_left,
             qty_left,
             cost_left: p(cost_left),
             cancelled: false,

@@ -88,6 +88,9 @@ pub(super) fn kept_line<'a>(
 #[derive(Debug, Default)]
 pub(super) struct OwnRun {
     left: HashMap<i64, (i64, Paisa)>,
+    /// The نگ our shop's part still has, for each purchase: the limit of what the lots can take
+    /// (PRD FR-12.41). The cost is worked out over `left`, which counts both parts.
+    our: HashMap<i64, i64>,
     /// The stored lines already shown with their stored cost, so a line id sent twice is kept once.
     claimed: HashSet<i64>,
 }
@@ -101,6 +104,11 @@ impl OwnRun {
                 .iter()
                 .map(|(id, p)| (*id, (p.qty_left, p.cost_left)))
                 .collect(),
+            our: lookups
+                .purchases
+                .iter()
+                .map(|(id, p)| (*id, p.our_left))
+                .collect(),
             claimed: HashSet::new(),
         }
     }
@@ -112,9 +120,9 @@ impl OwnRun {
         self.claimed.insert(sale_id)
     }
 
-    /// The نگ still available from a purchase.
+    /// The نگ our shop's part of a purchase can still give a lot.
     pub(super) fn qty_left(&self, purchase_id: i64) -> i64 {
-        self.left.get(&purchase_id).map_or(0, |(qty, _)| *qty)
+        self.our.get(&purchase_id).copied().unwrap_or(0)
     }
 
     /// Takes out the lines of an edit that keep their stored cost, before any other line is worked
@@ -168,6 +176,17 @@ impl OwnRun {
             ));
         }
         *state = (qty_left, cost_left);
+        // The lot sold our shop's goods: its part gives up the same نگ.
+        let our = self
+            .our
+            .get_mut(&purchase_id)
+            .ok_or(CalcError::Inconsistent("a lot names an unknown purchase"))?;
+        *our = our
+            .checked_sub(qty)
+            .filter(|left| *left >= 0)
+            .ok_or(CalcError::Inconsistent(
+                "stored own goods lines are more than our shop's part can give",
+            ))?;
         Ok(())
     }
 
@@ -194,6 +213,13 @@ impl OwnRun {
             .ok_or(CalcError::Inconsistent("own goods quantity does not fit"))?;
         let cost_left = state.1.checked_add(cost)?;
         *state = (qty_left, cost_left);
+        let our = self
+            .our
+            .get_mut(&purchase_id)
+            .ok_or(CalcError::Inconsistent("a lot names an unknown purchase"))?;
+        *our = our
+            .checked_add(qty)
+            .ok_or(CalcError::Inconsistent("own goods quantity does not fit"))?;
         Ok(())
     }
 
@@ -210,7 +236,10 @@ impl OwnRun {
         let Some(&(qty_left, cost_left)) = self.left.get(&purchase_id) else {
             return Ok(None);
         };
-        if qty < 1 || qty > qty_left {
+        // A lot sells only our shop's part (PRD FR-12.41); the cost is the share of ALL the cost
+        // left that these نگ carry (C21), so the last نگ of our part do not take the other part's
+        // cost.
+        if qty < 1 || qty > qty_left || qty > self.our.get(&purchase_id).copied().unwrap_or(0) {
             return Ok(None);
         }
         let (cost, shown) = own_cost(cost_left, qty_left, qty)?;

@@ -403,6 +403,8 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
       garden_id: 1,
       date: '10-10-2026',
       shop: 'Haji Shop',
+      // A garden with no goods arrived: the sale is typed by hand, as before (PRD FR-12.41).
+      arrival_id: null,
       qty: '20',
       amount: '10000',
       note: null,

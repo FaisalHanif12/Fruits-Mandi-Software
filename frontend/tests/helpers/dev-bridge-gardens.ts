@@ -8,6 +8,7 @@
 // development route imports it.
 
 import * as arrivalsReal from './arrivals-real';
+import type { ArrivalEntryInput } from '../../src/bindings/ArrivalEntryInput';
 import type { GardenCloseInput } from '../../src/bindings/GardenCloseInput';
 import type { GardenEntryCancelInput } from '../../src/bindings/GardenEntryCancelInput';
 import type { GardenEntryInput } from '../../src/bindings/GardenEntryInput';
@@ -96,6 +97,25 @@ export const gardensHandlers: Record<string, Handler> = {
   // Goods arrived of the garden (plan 33 version 1.1): the backend's real list, one entry in stock.
   gardens_arrivals_list: () => arrivalsReal.ARRIVALS_IN_STOCK,
   gardens_arrival_save: () => arrivalsReal.ARRIVAL_SAVE,
+  gardens_arrival_entry_preview: (input) => ({
+    // The key of each row comes back with what is left for our shop: qty less the other part.
+    lines: (input as ArrivalEntryInput).lines.map((line) => {
+      const qty = Number(line.qty);
+      const other = Number(line.other_qty ?? '0');
+      const known = line.qty !== '' && !Number.isNaN(qty) && !Number.isNaN(other);
+      return { key: line.key, qty: known ? qty : null, qty_our: known ? qty - other : null };
+    }),
+    errors: [],
+    warnings: [],
+  }),
+  gardens_arrival_entry_save: (input) => ({
+    rows: (input as ArrivalEntryInput).lines.map((_, index) => ({
+      ...arrivalsReal.ARRIVAL_SAVE.row,
+      id: index + 1,
+      number: index + 1,
+    })),
+    warnings: [],
+  }),
   gardens_arrival_cancel: () => arrivalsReal.ARRIVAL_CANCEL,
   gardens_arrival_set_sell_date: () => arrivalsReal.ARRIVAL_SET_SELL_DATE,
   gardens_arrival_write_off: () => arrivalsReal.ARRIVAL_WRITE_OFF,

@@ -31,6 +31,10 @@ pub struct NewArrival<'a> {
     pub weight_grams: Option<i64>,
     /// A note.
     pub note: Option<&'a str>,
+    /// نگ for another shop (PRD FR-12.41); the rest are for our shop. At most `qty`.
+    pub other_qty: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<&'a str>,
 }
 
 /// The next arrival number: the biggest ever given plus one (a cancelled arrival keeps its number).
@@ -58,8 +62,8 @@ pub fn insert(
 ) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO garden_arrivals (created_at, created_by, updated_at, updated_by, number, venture_id,
-             entry_date, sell_date, item_id, packing_id, qty, weight_grams, note)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+             entry_date, sell_date, item_id, packing_id, qty, weight_grams, note, other_qty, shop_name)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         params![
             now,
             user_id,
@@ -72,6 +76,8 @@ pub fn insert(
             arrival.qty,
             arrival.weight_grams,
             arrival.note,
+            arrival.other_qty,
+            arrival.shop_name,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -114,6 +120,51 @@ pub fn add_written_off(
              updated_by = ?4, version = version + 1
          WHERE id = ?1",
         params![id, qty, now, user_id],
+    )?;
+    Ok(())
+}
+
+/// Moves what other shops took from an arrival: `qty` more (or fewer, if negative) نگ sold in other
+/// shops, in ONE update with `qty_sold`, so the trigger `garden_arrivals_split_fits_*` sees a whole
+/// row. `moved` is how many were moved from our shop's part to the part for another shop (plan 35
+/// D1; negative when a cancel moves them back).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn add_sold_in_other_shop(
+    conn: &Connection,
+    id: i64,
+    qty: i64,
+    moved: i64,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE garden_arrivals SET qty_sold = qty_sold + ?2, qty_sold_other = qty_sold_other + ?2,
+             other_qty = other_qty + ?3, updated_at = ?4, updated_by = ?5, version = version + 1
+         WHERE id = ?1",
+        params![id, qty, moved, now, user_id],
+    )?;
+    Ok(())
+}
+
+/// Changes the split of an arrival (PRD FR-12.41): the نگ for another shop and its name.
+///
+/// # Errors
+/// Any SQLite error (the trigger `garden_arrivals_split_fits_update`).
+pub fn set_split(
+    conn: &Connection,
+    id: i64,
+    other_qty: i64,
+    shop_name: Option<&str>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE garden_arrivals SET other_qty = ?2, shop_name = ?3, updated_at = ?4, updated_by = ?5,
+             version = version + 1
+         WHERE id = ?1",
+        params![id, other_qty, shop_name, now, user_id],
     )?;
     Ok(())
 }
@@ -200,13 +251,19 @@ pub struct ArrivalRec {
     pub qty_sold: i64,
     /// نگ written off.
     pub qty_written_off: i64,
+    /// نگ for another shop (PRD FR-12.41).
+    pub other_qty: i64,
+    /// نگ sold in other shops (part of `qty_sold`).
+    pub qty_sold_other: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
 }
 
 const REC_COLUMNS: &str = "a.id, a.version, a.number, a.venture_id, v.number, v.name_ur, v.name_en,
     v.status, ac.id, ac.code, ac.name_ur, ac.name_en, ac.tag,
     a.entry_date, a.sell_date, it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur,
     pk.name_en, a.qty, a.weight_grams, a.note, a.status, a.cancel_reason, a.qty_sold,
-    a.qty_written_off";
+    a.qty_written_off, a.other_qty, a.qty_sold_other, a.shop_name";
 
 const REC_FROM: &str = "FROM garden_arrivals a
     JOIN ventures v ON v.id = a.venture_id
@@ -254,6 +311,9 @@ fn read_rec(r: &Row<'_>) -> rusqlite::Result<ArrivalRec> {
         cancel_reason: r.get(27)?,
         qty_sold: r.get(28)?,
         qty_written_off: r.get(29)?,
+        other_qty: r.get(30)?,
+        qty_sold_other: r.get(31)?,
+        shop_name: r.get(32)?,
     })
 }
 
@@ -413,7 +473,8 @@ pub fn ready_by(conn: &Connection, date: &str, limit: i64) -> rusqlite::Result<V
     let mut statement = conn.prepare(&format!(
         "SELECT {REC_COLUMNS} {REC_FROM}
          WHERE a.status = 'saved' AND v.status = 'open'
-           AND a.qty - a.qty_sold - a.qty_written_off > 0 AND a.sell_date <= ?1
+           AND a.qty - a.other_qty - (a.qty_sold - a.qty_sold_other) - a.qty_written_off > 0
+           AND a.sell_date <= ?1
          ORDER BY a.sell_date, a.number LIMIT ?2"
     ))?;
     let rows = statement.query_map(params![date, limit], read_rec)?;
@@ -441,6 +502,19 @@ pub fn with_stock(
     ))?;
     let rows = statement.query_map(params![from, to, item_id, account_id], read_rec)?;
     rows.collect()
+}
+
+/// How many saved arrivals a garden has (a garden with some names the arrival of every sale in
+/// another shop, PRD FR-12.41).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn count_saved_of_garden(conn: &Connection, garden_id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM garden_arrivals WHERE venture_id = ?1 AND status = 'saved'",
+        [garden_id],
+        |r| r.get(0),
+    )
 }
 
 /// Σ نگ left in the saved arrivals of one garden (a garden with some left cannot be closed, PRD

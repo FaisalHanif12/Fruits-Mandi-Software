@@ -27,6 +27,7 @@ use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::ids::AccountId;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::rules::{CreditLimitMode, ItemGroup, OverridesSettings};
+use mandi_domain::core::split::StockParts;
 use mandi_domain::core::ventures::TripRef;
 use mandi_domain::ledger::bikri::{EntryLayout, SystemAccounts, build_bikri_entry_with_layout};
 use mandi_domain::ledger::{BalancedEntry, LedgerError, MAX_LINE_PAISA};
@@ -192,6 +193,23 @@ fn load_purchases(
                     .ok_or_else(|| data("the cost of a purchase does not fit"))?,
             )?
         };
+        // What our shop's part can give (PRD FR-12.41): its part left now, and the lines of the
+        // posting being replaced are our shop's sales, so they go back to it.
+        let our_left = if cancelled {
+            0
+        } else {
+            StockParts::of(
+                rec.qty,
+                rec.other_qty,
+                rec.qty_sold,
+                rec.qty_sold_other,
+                rec.qty_written_off,
+            )
+            .ok_or_else(|| data("the split of a purchase does not fit"))?
+            .our_left
+            .checked_add(back_qty)
+            .ok_or_else(|| data("the quantity of a purchase does not fit"))?
+        };
         let trip = ventures::load(conn, rec.trip_id)?
             .ok_or_else(|| data("the trip of a purchase is missing"))?;
         let partners = trip_partners(&trip)?;
@@ -214,6 +232,7 @@ fn load_purchases(
                 item_id: rec.item.id,
                 packing_id: rec.packing.id,
                 qty_left,
+                our_left,
                 cost_left,
                 cancelled,
             },
@@ -246,14 +265,22 @@ fn load_arrivals(
     for rec in arrival_repo::get_many(conn, &ids)? {
         let cancelled = rec.status == "cancelled";
         let back_qty = back.get(&rec.id).copied().unwrap_or(0);
+        // A lot linked to an arrival sells only our shop's part (PRD FR-12.41); the lines of the
+        // posting being replaced are our shop's sales, so they go back to our part.
         let qty_left = if cancelled {
             0
         } else {
-            rec.qty
-                .checked_sub(rec.qty_sold)
-                .and_then(|v| v.checked_sub(rec.qty_written_off))
-                .and_then(|v| v.checked_add(back_qty))
-                .ok_or_else(|| data("the quantity of an arrival does not fit"))?
+            StockParts::of(
+                rec.qty,
+                rec.other_qty,
+                rec.qty_sold,
+                rec.qty_sold_other,
+                rec.qty_written_off,
+            )
+            .ok_or_else(|| data("the split of an arrival does not fit"))?
+            .our_left
+            .checked_add(back_qty)
+            .ok_or_else(|| data("the quantity of an arrival does not fit"))?
         };
         out.insert(
             rec.id,

@@ -108,8 +108,13 @@ pub struct PurchaseFacts {
     pub item_id: i64,
     /// The packing of the purchase.
     pub packing_id: i64,
-    /// نگ the posting can take: bought less sold less written off.
+    /// نگ left in all: bought less sold less written off. The cost (C21) is worked out over these:
+    /// the cost left belongs to ALL the نگ left, in both parts.
     pub qty_left: i64,
+    /// نگ an own lot can take: the part for our shop that is left (PRD FR-12.41). At most
+    /// `qty_left`; equal to it when nothing is for another shop. In an edit the posting's own lines
+    /// are added back.
+    pub our_left: i64,
     /// The cost of those نگ: total cost less the cost already released.
     pub cost_left: Paisa,
     /// True once the purchase is cancelled: nothing can be sold from it.

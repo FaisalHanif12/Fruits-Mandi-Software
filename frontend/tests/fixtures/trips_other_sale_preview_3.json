@@ -179,6 +179,9 @@
       }
     ],
     "qty_left_after": 2,
+    "qty_other_left_after": 0,
+    "qty_our_left_after": 2,
+    "qty_from_our_shop": 3,
     "cost_left_after_paisa": 104000
   },
   "errors": [],

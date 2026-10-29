@@ -4,92 +4,46 @@
 // typed, how many نگ were sold, the money received and a note. The day, and the sources of the
 // partners, are on the screen for every type in the same places.
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import type { UiError } from '../../../bindings/UiError';
-import { pickedOf } from '../../../shared/accounts';
+import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   DateInput,
   Field,
   FreeTextInput,
   MoneyInput,
-  Picker,
   QtyInput,
+  Select,
   fieldError,
 } from '../../../shared/ui';
-import type { EntryDraft } from '../types';
+import { arrivalNumberText } from '../list-columns';
+import type { ArrivalRow, EntryDraft } from '../types';
 
 interface GardenEntryFieldsFormProps {
   draft: EntryDraft;
   onChange: (patch: Partial<EntryDraft>) => void;
   error: UiError | null;
-  /** Goods arrived: the weight field shows for an item sold by weight (the backend asks) or once typed. */
-  showWeight: boolean;
+  /**
+   * The garden's goods arrived, for a sale in another shop (PRD FR-12.41). The sale picks the
+   * entry its نگ come from: only those standing with goods left are offered.
+   * A garden with no goods arrived has none, and the sale is typed by hand as before.
+   */
+  arrivals: readonly ArrivalRow[];
 }
 
 export function GardenEntryFieldsForm({
   draft,
   onChange,
   error,
-  showWeight,
+  arrivals,
 }: GardenEntryFieldsFormProps) {
+  const { l10n } = useLocalization();
+  const language = useLanguage();
   if (draft.type === 'arrival') {
+    // The item lines are in the grid under the form (PRD FR-12.41); here is what the whole entry
+    // shares: the day to sell, and a note every line carries.
     return (
       <>
-        <Field label={<Localized id="glossary-qism-maal" />} error={fieldError(error, 'item_id')}>
-          {(props) => (
-            <Picker
-              {...props}
-              scope="item"
-              value={draft.item}
-              onChange={(hit) => {
-                onChange({ item: hit === null ? null : pickedOf(hit) });
-              }}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="glossary-packing" />} error={fieldError(error, 'packing_id')}>
-          {(props) => (
-            <Picker
-              {...props}
-              scope="packing"
-              value={draft.packing}
-              onChange={(hit) => {
-                onChange({ packing: hit === null ? null : pickedOf(hit) });
-              }}
-            />
-          )}
-        </Field>
-        <Field
-          label={<Localized id="gardens-arrival-qty" />}
-          hint={<Localized id="gardens-arrival-qty-hint" />}
-          error={fieldError(error, 'qty')}
-        >
-          {(props) => (
-            <QtyInput
-              {...props}
-              value={draft.qty}
-              onChange={(qty) => {
-                onChange({ qty });
-              }}
-            />
-          )}
-        </Field>
-        {showWeight ? (
-          <Field
-            label={<Localized id="purchases-field-weight" />}
-            error={fieldError(error, 'weight')}
-          >
-            {(props) => (
-              <MoneyInput
-                {...props}
-                value={draft.weight}
-                onChange={(weight) => {
-                  onChange({ weight });
-                }}
-              />
-            )}
-          </Field>
-        ) : null}
         <Field
           label={<Localized id="glossary-sell-date" />}
           hint={<Localized id="gardens-arrival-sell-date-hint" />}
@@ -123,8 +77,44 @@ export function GardenEntryFieldsForm({
     );
   }
   if (draft.type === 'other_sale') {
+    // Any entry with goods left: the part set for another shop goes first, and the backend moves
+    // the rest from our shop's part (PRD FR-12.41, D1).
+    const offered = arrivals.filter(
+      (arrival) => arrival.status === 'saved' && arrival.qty_left > 0,
+    );
     return (
       <>
+        {arrivals.length === 0 ? null : (
+          <div className="col-span-2">
+            <Field
+              label={<Localized id="gardens-sale-arrival" />}
+              hint={<Localized id="gardens-sale-arrival-hint" />}
+              error={fieldError(error, 'arrival_id')}
+            >
+              {(props) => (
+                <Select
+                  {...props}
+                  value={draft.arrivalId === '' ? undefined : draft.arrivalId}
+                  onChange={(arrivalId) => {
+                    onChange({ arrivalId });
+                  }}
+                  options={offered.map((arrival) => ({
+                    value: String(arrival.id),
+                    label: l10n.getString('gardens-sale-arrival-option', {
+                      number: arrivalNumberText(arrival.number, (id, vars) =>
+                        l10n.getString(id, vars),
+                      ),
+                      item: displayName(arrival.item, language),
+                      packing: displayName(arrival.packing, language),
+                      other_left: String(arrival.qty_other_left),
+                      our_left: String(arrival.qty_our_left),
+                    }),
+                  }))}
+                />
+              )}
+            </Field>
+          </div>
+        )}
         <div className="col-span-2">
           <Field label={<Localized id="gardens-sale-shop" />} error={fieldError(error, 'shop')}>
             {(props) => (

@@ -156,16 +156,20 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
     returned_salary: { from: 'normal' },
     oldest_open: { from: 'wide' },
   },
-  // Stock (R10): the date, who sent it, the item, what came, what is left and for how long always;
-  // what was sold and what was taken as fruit wait for the normal step, the document, the packing and
-  // the write-offs for the wide step (the balance is what came less all four, so the two that are
-  // used most come first).
+  // Stock (R10): the date, who sent it, the item, what is left for our shop and for another shop
+  // (PRD FR-12.41) and for how long always; what came, what was sold, what was taken as fruit and
+  // the balance wait for the normal step, the document, the packing, the write-offs and the other
+  // shop's name for the wide step (the balance is what came less all four, so the two that are used
+  // most come first).
   R10: {
+    received: { from: 'normal' },
     sold: { from: 'normal' },
     fruit_taken: { from: 'normal' },
+    balance: { from: 'normal' },
     doc: { from: 'wide' },
     packing: { from: 'wide' },
     written_off: { from: 'wide' },
+    shop_name: { from: 'wide' },
   },
   // The fruit register (R37): the date, who it was for, the item, the quantity and the value always;
   // the document, the rate and where it came from at the normal step; the seller of the lot, the

@@ -275,3 +275,110 @@ purchases-sell-date-text = اس دن سے { $number } کا مال ہر نئی { 
 
 # review: pending
 purchases-sell-date-done = { -sell-date } بدل گئی۔
+
+## The item lines of an entry, and the split between our shop and another shop (plan 35, PRD FR-12.41).
+## Used by a trip purchase entry and by a garden's goods arrived entry.
+
+# review: pending
+goods-lines-title = مال کی لائنیں
+
+# review: pending
+goods-lines-add = لائن شامل کریں
+
+# review: pending
+goods-lines-help-purchase = جو مال خریدا اس کی ہر قسم کی ایک لائن۔ جو مال دوسری دکان کو جائے اس کے { -nag } "{ -dusri-dukan }" میں لکھیں: باقی { -apni-dukan } کے لیے رہتا ہے۔
+
+# review: pending
+goods-lines-help-arrival = جو مال آیا اس کی ہر قسم کی ایک لائن۔ جو مال دوسری دکان کو جائے اس کے { -nag } "{ -dusri-dukan }" میں لکھیں: باقی { -apni-dukan } کے لیے رہتا ہے۔
+
+# review: pending
+goods-lines-label-purchase = خریدا ہوا مال
+
+# review: pending
+goods-lines-label-arrival = آیا ہوا مال
+
+# review: pending
+goods-line-col-qty = { -nag }
+
+# review: pending
+goods-line-col-weight = وزن (کلو)
+
+# review: pending
+goods-line-col-rate = ریٹ
+
+# review: pending
+goods-line-col-other-qty = { -dusri-dukan }
+
+# review: pending
+goods-line-col-shop = دکان کا نام
+
+# review: pending
+goods-line-col-our-qty = { -apni-dukan }
+
+# review: pending
+goods-line-col-value = قیمت
+
+# review: pending
+purchases-entry-title = اس اندراج کی لائنیں
+
+# review: pending
+purchases-entry-col-line = { -qism-maal }
+
+# review: pending
+purchases-entry-line-incomplete = ابھی مکمل نہیں
+
+# review: pending
+purchases-entry-no-lines = کوئی لائن بھریں تو اس کی لاگت یہاں نظر آئے گی۔
+
+# review: pending
+purchases-entry-total = پورے اندراج کی ادا شدہ رقم
+
+## Changing the split between { -apni-dukan } and { -dusri-dukan } (used by a trip purchase and by a garden's goods arrived entry).
+
+# review: pending
+split-change = تقسیم بدلیں
+
+# review: pending
+split-title = تقسیم بدلیں
+
+# $number: the entry; $qty_left, $our_left, $other_left: how many { -nag } are left in all, for { -apni-dukan } and for { -dusri-dukan }.
+# review: pending
+split-text = { $number }: { $item }، { $packing }۔ { $qty_left } { -nag } باقی ہیں: { $our_left } { -apni-dukan } کے لیے اور { $other_left } { -dusri-dukan } کے لیے۔ اس سے کوئی رقم نہیں بدلتی۔
+
+# review: pending
+split-other-qty = { -dusri-dukan } کے لیے { -nag }
+
+# $qty: how many { -nag } the entry has in all.
+# review: pending
+split-other-qty-hint = اس اندراج کے کل { $qty } { -nag } میں سے۔ باقی { -apni-dukan } کے لیے رہتے ہیں۔
+
+# review: pending
+split-shop = دکان کا نام
+
+# review: pending
+split-done = تقسیم بدل دی گئی
+
+# review: pending
+purchases-col-our-left = { -apni-dukan } میں باقی
+
+# review: pending
+purchases-col-other-left = { -dusri-dukan } میں باقی
+
+# review: pending
+purchases-detail-qty-other = { -dusri-dukan } کے لیے { -nag }
+
+# review: pending
+purchases-detail-our-sold = { -apni-dukan } میں بکا
+
+# review: pending
+purchases-detail-other-sold = { -dusri-dukan } میں بکا
+
+# review: pending
+purchases-detail-our-left = { -apni-dukan } کے لیے باقی
+
+# review: pending
+purchases-detail-other-left = { -dusri-dukan } کے لیے باقی
+
+# $count: how many { -nag } come from { -apni-dukan } because the part for { -dusri-dukan } is not enough.
+# review: pending
+split-moved-from-our = اس بکری سے { $count } { -nag } { -apni-dukan } سے { -dusri-dukan } میں منتقل ہوں گے۔

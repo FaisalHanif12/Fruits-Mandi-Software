@@ -119,6 +119,8 @@ fn buy_on(
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            other_qty: None,
+            shop_name: None,
             sell_date: None,
             trip_id: Some(trip),
             date: date.into(),
@@ -276,6 +278,17 @@ fn trip_input(id: i64) -> TripGetInput {
         entries_offset: 0,
         entries_limit: 0,
     }
+}
+
+/// The figures of R10's stock rows: the cells from `from`, without the text cell of the other
+/// shop's name (index 12).
+fn stock_figures(cells: &[Cell]) -> Vec<i64> {
+    let mut figures = figures_of_cells(&cells[5..12], 0);
+    figures.push(match &cells[13] {
+        Cell::Number { value } => *value,
+        other => panic!("{other:?}"),
+    });
+    figures
 }
 
 fn figures_of_cells(cells: &[Cell], from: usize) -> Vec<i64> {
@@ -1090,9 +1103,13 @@ fn r10_lists_the_lots_with_goods_left_like_the_stock_screen() {
     assert_eq!(page.rows.len(), 1);
     let row = &page.rows[0];
     assert_eq!(code_of(&row.cells[2]), "0010");
-    // received, sold, written off, taken as fruit, balance, days (C16).
-    assert_eq!(figures_of_cells(&row.cells, 5), vec![50, 20, 0, 0, 30, 0]);
-    assert_eq!(figures_of_cells(&page.totals[..10], 5), [50, 20, 0, 0, 30]);
+    // received, sold, written off, taken as fruit, balance, left for our shop, left for another
+    // shop (a lot has only our shop's part, FR-12.41), days (C16).
+    assert_eq!(stock_figures(&row.cells), vec![50, 20, 0, 0, 30, 30, 0, 0]);
+    assert_eq!(
+        figures_of_cells(&page.totals[..12], 5),
+        [50, 20, 0, 0, 30, 30, 0]
+    );
     // The screen shows the same lot with the same balance and days.
     let screen = bikri::stock_list(&w.env.ctx, &StockListInput::default()).unwrap();
     assert_eq!(screen.rows.len(), 1);
@@ -1113,8 +1130,8 @@ fn r10_lists_the_lots_with_goods_left_like_the_stock_screen() {
     // Two days later the goods have waited 2 days.
     set_today(&w.env, 2026, 10, 12);
     let later = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
-    // The days waiting are the last column (after the fruit taken and the balance).
-    assert_eq!(qty(&later.rows[0].cells[10]), 2);
+    // The days waiting are the last column (after the balance and its two parts).
+    assert_eq!(qty(&later.rows[0].cells[13]), 2);
 }
 
 #[test]
@@ -1150,9 +1167,13 @@ fn r10_also_lists_the_garden_arrivals_with_goods_left_like_the_stock_screen() {
         "0080",
         "the seller is the garden's account"
     );
-    // received, sold, written off, taken as fruit, balance, days (from the day to sell).
-    assert_eq!(figures_of_cells(&row.cells, 5), vec![100, 60, 0, 0, 40, 0]);
-    assert_eq!(figures_of_cells(&page.totals[..10], 5), [100, 60, 0, 0, 40]);
+    // received, sold, written off, taken as fruit, balance, left for our shop, left for another
+    // shop, days (from the day to sell).
+    assert_eq!(stock_figures(&row.cells), vec![100, 60, 0, 0, 40, 40, 0, 0]);
+    assert_eq!(
+        figures_of_cells(&page.totals[..12], 5),
+        [100, 60, 0, 0, 40, 40, 0]
+    );
     let source = row.source.expect("a row opens its record");
     assert_eq!((source.kind, source.id), (SourceKind::Arrival, arrival.id));
     // The screen shows the same arrival with the same balance.
@@ -1184,7 +1205,7 @@ fn r10_also_lists_the_garden_arrivals_with_goods_left_like_the_stock_screen() {
     // Two days after the day to sell, the goods have waited 2 days; before it, 0.
     set_today(&w.env, 2026, 10, 12);
     let later = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
-    assert_eq!(qty(&later.rows[0].cells[10]), 2);
+    assert_eq!(qty(&later.rows[0].cells[13]), 2);
     // Written off for good, the arrival leaves the report.
     mandi_services::gardens::arrivals::write_off(
         &w.env.ctx,
@@ -1210,13 +1231,13 @@ fn r10_counts_the_days_of_an_arrival_from_its_day_to_sell_and_prints_its_row() {
     let (_, arrival) = garden_with_arrival(&w, "30", "12-10-2026");
     let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
     assert_eq!(
-        figures_of_cells(&page.rows[0].cells, 5),
-        vec![30, 0, 0, 0, 30, 0]
+        stock_figures(&page.rows[0].cells),
+        vec![30, 0, 0, 0, 30, 30, 0, 0]
     );
     set_today(&w.env, 2026, 10, 15);
     let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
     assert_eq!(
-        qty(&page.rows[0].cells[10]),
+        qty(&page.rows[0].cells[13]),
         3,
         "from 12-10-26, not from 10-10-26"
     );
@@ -1240,6 +1261,55 @@ fn r10_counts_the_days_of_an_arrival_from_its_day_to_sell_and_prints_its_row() {
 }
 
 #[test]
+fn r10_splits_the_goods_left_into_our_shops_part_and_the_part_for_another_shop() {
+    // PRD FR-12.41, plan 35 R6: 20 bought, 15 sold, 5 left. 3 of the 20 are for another shop, so
+    // the 5 left are 2 for our shop and 3 for another shop. The two add up to the balance.
+    let (w, _, purchase) = trip_34();
+    let row = purchases::get(
+        &w.env.ctx,
+        &mandi_services::core::purchases::PurchaseGetInput { id: purchase },
+    )
+    .unwrap();
+    purchases::change_split(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::split::SplitInput {
+            id: purchase,
+            version: row.version,
+            other_qty: "3".into(),
+            shop_name: Some("Haji Shop".into()),
+        },
+    )
+    .unwrap();
+    let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
+    assert_eq!(page.rows.len(), 1);
+    assert_eq!(
+        stock_figures(&page.rows[0].cells),
+        vec![20, 15, 0, 0, 5, 2, 3, 0]
+    );
+    assert_eq!(
+        figures_of_cells(&page.totals[..12], 5),
+        [20, 15, 0, 0, 5, 2, 3]
+    );
+    let titles: Vec<&str> = page.columns.iter().map(|c| c.title_id.as_str()).collect();
+    assert_eq!(
+        &titles[10..13],
+        [
+            "report-col-our-left",
+            "report-col-other-left",
+            "report-col-shop-name"
+        ]
+    );
+    // The other shop's name, as typed (FR-12.41); a lot has none.
+    assert_eq!(
+        page.rows[0].cells[12],
+        Cell::Text {
+            text: "Haji Shop".into()
+        }
+    );
+}
+
+#[test]
 fn r10_also_lists_the_stock_of_a_trip_marked_with_the_own_goods_account() {
     let (w, _, _) = trip_34();
     let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
@@ -1250,7 +1320,7 @@ fn r10_also_lists_the_stock_of_a_trip_marked_with_the_own_goods_account() {
     assert!(
         matches!(&row.cells[1], Cell::Doc { number: Some(1), type_id } if type_id == "report-doc-purchase")
     );
-    assert_eq!(figures_of_cells(&row.cells, 5), vec![20, 15, 0, 0, 5, 0]);
+    assert_eq!(stock_figures(&row.cells), vec![20, 15, 0, 0, 5, 5, 0, 0]);
     let screen = bikri::stock_list(&w.env.ctx, &StockListInput::default()).unwrap();
     assert_eq!(screen.own_rows.len(), 1);
     assert_eq!(screen.own_rows[0].balance, 5);

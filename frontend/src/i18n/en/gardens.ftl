@@ -255,6 +255,16 @@ gardens-sale-qty-hint = A whole number. You can type a sum, for example 20+25.
 # review: pending
 gardens-sale-amount = Money received
 # review: pending
+gardens-sale-arrival = Goods from
+
+# review: pending
+gardens-sale-arrival-hint = Only goods that are left are listed. The goods set for { -dusri-dukan } are sold first. If you sell more, the rest comes from { -apni-dukan }, and the screen tells you how many.
+
+# $number: the entry; $other_left, $our_left: how many { -nag } are left for { -dusri-dukan } and for { -apni-dukan }.
+# review: pending
+gardens-sale-arrival-option = { $number }: { $item }, { $packing } ({ $other_left } left for { -dusri-dukan }, { $our_left } for { -apni-dukan })
+
+# review: pending
 gardens-sale-amount-hint = The money comes into { -rokar } and goes to the garden's account until the garden is closed.
 # review: pending
 gardens-saved-installment = { -qist } { $number } has been saved
@@ -385,6 +395,10 @@ gardens-type-arrival = { -maal-aaya }
 # review: pending
 gardens-saved-arrival = { -maal-aaya } { $number } has been saved
 
+# $count: how many lines were saved; $first, $last: the first and the last number.
+# review: pending
+gardens-saved-arrivals = { $count } { -maal-aaya } entries saved: { $first } to { $last }
+
 # review: pending
 gardens-arrival-qty = { -nag } arrived
 
@@ -514,3 +528,6 @@ gardens-arrival-write-off-option = { $qty } { -nag }: { $reason }
 
 # review: pending
 gardens-arrival-write-off-undone = The write-off was undone
+
+# review: pending
+gardens-numbers-left-after = Left in the entry after this

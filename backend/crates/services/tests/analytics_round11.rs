@@ -158,6 +158,8 @@ fn buy(w: &World, trip: i64, item: i64, qty: &str, rate: &str, freight: &str) ->
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            other_qty: None,
+            shop_name: None,
             sell_date: None,
             trip_id: Some(trip),
             date: "10-10-2026".into(),

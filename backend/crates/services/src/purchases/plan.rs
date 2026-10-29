@@ -48,6 +48,9 @@ pub(super) struct Ready {
     pub item_id: i64,
     pub packing_id: i64,
     pub qty: Qty,
+    /// نگ for another shop (PRD FR-12.41).
+    pub other_qty: i64,
+    pub shop_name: Option<String>,
     pub weight: Option<Grams>,
     pub rate: Paisa,
     pub value: Paisa,
@@ -208,6 +211,13 @@ pub(super) fn plan(
     } else {
         None
     };
+    let (other_qty, shop_name) = ventures::split_of(
+        &mut errors,
+        "",
+        input.other_qty.as_ref(),
+        input.shop_name.as_ref(),
+        qty.map(Qty::get),
+    );
     let rate = errors.take(validate::rate("rate", &input.rate));
     let freight = optional_money(&mut errors, "freight", input.freight.as_ref());
     let labour = optional_money(&mut errors, "labour", input.labour.as_ref());
@@ -361,6 +371,8 @@ pub(super) fn plan(
             item_id: item.id,
             packing_id: packing,
             qty,
+            other_qty,
+            shop_name,
             weight,
             rate,
             value,

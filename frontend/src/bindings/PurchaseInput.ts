@@ -77,4 +77,12 @@ export type PurchaseInput = {
    * shop parts take روکڑ below 0.
    */
   confirm_cash_below_zero: boolean;
+  /**
+   * The نگ for another shop (PRD FR-12.41). Empty means 0: all for our shop. At most `qty`.
+   */
+  other_qty: string | null;
+  /**
+   * The other shop, as typed.
+   */
+  shop_name: string | null;
 };

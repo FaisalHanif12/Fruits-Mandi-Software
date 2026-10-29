@@ -404,6 +404,8 @@ pub(super) fn create(
                 let entry_id = vrepo::insert_entry(
                     tx,
                     &NewEntry {
+                        arrival_id: None,
+                        moved_qty: 0,
                         venture_id: id,
                         kind: "installment",
                         entry_date: &date_iso,

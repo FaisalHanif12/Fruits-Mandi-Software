@@ -31,4 +31,22 @@ export type GardenEntryNumbers = {
    * How the balance after was worked out (CalcInfo).
    */
   balance_working: Working;
+  /**
+   * Only for a sale in another shop linked to an arrival (PRD FR-12.41, plan 35 D1), else null:
+   * the نگ the sale moves from our shop's part to the part for another shop. 0 when the part for
+   * another shop has enough.
+   */
+  qty_from_our_shop: number | null;
+  /**
+   * Same case: نگ left of the arrival in all after this sale.
+   */
+  qty_left_after: number | null;
+  /**
+   * Same case: نگ left for another shop after this sale.
+   */
+  qty_other_left_after: number | null;
+  /**
+   * Same case: نگ left for our shop after this sale.
+   */
+  qty_our_left_after: number | null;
 };

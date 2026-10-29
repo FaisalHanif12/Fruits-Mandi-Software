@@ -390,6 +390,38 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "id": 1, "version": 1, "sell_date": "11-10-2026" } }),
             true,
         ),
+        (
+            "purchases_entry_preview",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "sell_date": null,
+                "parts": [], "confirm_cash_below_zero": false, "lines": [] } }),
+            true,
+        ),
+        (
+            "purchases_entry_save",
+            json!({ "input": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "sell_date": null,
+                "parts": [], "confirm_cash_below_zero": false, "lines": [] } }),
+            true,
+        ),
+        (
+            "purchases_change_split",
+            json!({ "input": { "id": 1, "version": 1, "other_qty": "5", "shop_name": null } }),
+            true,
+        ),
+        (
+            "gardens_arrival_entry_preview",
+            json!({ "input": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "lines": [] } }),
+            true,
+        ),
+        (
+            "gardens_arrival_entry_save",
+            json!({ "input": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "lines": [] } }),
+            true,
+        ),
+        (
+            "gardens_arrival_change_split",
+            json!({ "input": { "id": 1, "version": 1, "other_qty": "5", "shop_name": null } }),
+            true,
+        ),
         ("trips_defaults", json!({}), true),
         (
             "trips_create",

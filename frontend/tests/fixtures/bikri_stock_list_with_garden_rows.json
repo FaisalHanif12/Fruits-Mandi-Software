@@ -32,6 +32,9 @@
       "qty_sold": 0,
       "qty_written_off": 0,
       "balance": 20,
+      "qty_our_left": 20,
+      "qty_other_left": 0,
+      "shop_name": null,
       "total_cost_paisa": 100000,
       "cost_left_paisa": 100000,
       "days_waiting": 0,
@@ -75,6 +78,9 @@
       "qty_sold": 60,
       "qty_written_off": 0,
       "balance": 40,
+      "qty_our_left": 40,
+      "qty_other_left": 0,
+      "shop_name": null,
       "days_waiting": 0,
       "write_offs": []
     }

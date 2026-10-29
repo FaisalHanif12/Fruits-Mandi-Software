@@ -11,6 +11,9 @@ import type { PurchaseWriteOffUndoInput } from '../../bindings/PurchaseWriteOffU
 import type {
   PurchaseCancelInput,
   PurchaseCancelled,
+  PurchaseEntryInput,
+  PurchaseEntryPreview,
+  PurchaseEntrySaved,
   PurchaseInput,
   PurchasePreview,
   PurchaseRow,
@@ -19,6 +22,8 @@ import type {
   PurchaseWriteOffUndone,
   PurchasesList,
   PurchasesListInput,
+  SplitInput,
+  SplitSet,
 } from './types';
 
 /**
@@ -32,6 +37,27 @@ export function purchasesPreview(input: PurchaseInput): Promise<PurchasePreview>
 /** Saves one purchase: one posting event, one transaction (PRD FR-12.24). */
 export function purchasesSave(input: PurchaseInput): Promise<PurchaseSaved> {
   return callCommand<PurchaseSaved>('purchases_save', { input });
+}
+
+/**
+ * Works out a purchase entry with many item lines (PRD FR-12.41): each line's numbers, the money
+ * of the whole entry and its cash. Saves nothing. The same function as the save (B5).
+ */
+export function purchasesEntryPreview(input: PurchaseEntryInput): Promise<PurchaseEntryPreview> {
+  return callCommand<PurchaseEntryPreview>('purchases_entry_preview', { input });
+}
+
+/** Saves a purchase entry: every line is its own purchase, in one transaction (PRD FR-12.41). */
+export function purchasesEntrySave(input: PurchaseEntryInput): Promise<PurchaseEntrySaved> {
+  return callCommand<PurchaseEntrySaved>('purchases_entry_save', { input });
+}
+
+/**
+ * Changes the split of a purchase with goods left: the نگ for another shop and its name (PRD
+ * FR-12.41). Nothing is posted.
+ */
+export function purchasesChangeSplit(input: SplitInput): Promise<SplitSet> {
+  return callCommand<SplitSet>('purchases_change_split', { input });
 }
 
 /** Cancels a purchase with a reason, by reversal, while nothing of it was sold or written off. */

@@ -275,3 +275,110 @@ purchases-sell-date-text = From this day the goods of { $number } come into ever
 
 # review: pending
 purchases-sell-date-done = The { -sell-date } was changed.
+
+## The item lines of an entry, and the split between our shop and another shop (plan 35, PRD FR-12.41).
+## Used by a trip purchase entry and by a garden's goods arrived entry.
+
+# review: pending
+goods-lines-title = Items
+
+# review: pending
+goods-lines-add = Add a line
+
+# review: pending
+goods-lines-help-purchase = One line for each item bought. For the goods that go to another shop, type their { -nag } in "{ -dusri-dukan }": the rest stays for { -apni-dukan }.
+
+# review: pending
+goods-lines-help-arrival = One line for each item that arrived. For the goods that go to another shop, type their { -nag } in "{ -dusri-dukan }": the rest stays for { -apni-dukan }.
+
+# review: pending
+goods-lines-label-purchase = Items bought
+
+# review: pending
+goods-lines-label-arrival = Items that arrived
+
+# review: pending
+goods-line-col-qty = { -nag }
+
+# review: pending
+goods-line-col-weight = Weight (kg)
+
+# review: pending
+goods-line-col-rate = Rate
+
+# review: pending
+goods-line-col-other-qty = { -dusri-dukan }
+
+# review: pending
+goods-line-col-shop = Shop name
+
+# review: pending
+goods-line-col-our-qty = { -apni-dukan }
+
+# review: pending
+goods-line-col-value = Value
+
+# review: pending
+purchases-entry-title = Lines of this entry
+
+# review: pending
+purchases-entry-col-line = { -qism-maal }
+
+# review: pending
+purchases-entry-line-incomplete = Not complete yet
+
+# review: pending
+purchases-entry-no-lines = Fill in a line and its cost shows here.
+
+# review: pending
+purchases-entry-total = Paid now, whole entry
+
+## Changing the split between { -apni-dukan } and { -dusri-dukan } (used by a trip purchase and by a garden's goods arrived entry).
+
+# review: pending
+split-change = Change the split
+
+# review: pending
+split-title = Change the split
+
+# $number: the entry; $qty_left, $our_left, $other_left: how many { -nag } are left in all, for { -apni-dukan } and for { -dusri-dukan }.
+# review: pending
+split-text = { $number }: { $item }, { $packing }. { $qty_left } { -nag } are left: { $our_left } for { -apni-dukan } and { $other_left } for { -dusri-dukan }. No money changes.
+
+# review: pending
+split-other-qty = { -nag } for { -dusri-dukan }
+
+# $qty: how many { -nag } the entry has in all.
+# review: pending
+split-other-qty-hint = Out of all { $qty } { -nag } of this entry. The rest are for { -apni-dukan }.
+
+# review: pending
+split-shop = Shop name
+
+# review: pending
+split-done = The split has been changed
+
+# review: pending
+purchases-col-our-left = { -apni-dukan } left
+
+# review: pending
+purchases-col-other-left = { -dusri-dukan } left
+
+# review: pending
+purchases-detail-qty-other = { -nag } for { -dusri-dukan }
+
+# review: pending
+purchases-detail-our-sold = Sold in { -apni-dukan }
+
+# review: pending
+purchases-detail-other-sold = Sold in { -dusri-dukan }
+
+# review: pending
+purchases-detail-our-left = Left for { -apni-dukan }
+
+# review: pending
+purchases-detail-other-left = Left for { -dusri-dukan }
+
+# $count: how many { -nag } come from { -apni-dukan } because the part for { -dusri-dukan } is not enough.
+# review: pending
+split-moved-from-our = { $count } { -nag } will move from { -apni-dukan } to { -dusri-dukan } with this sale.

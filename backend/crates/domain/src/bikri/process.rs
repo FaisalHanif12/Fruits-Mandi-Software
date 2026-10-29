@@ -320,12 +320,12 @@ fn own_purchase_checks(
         same = false;
     }
     if let Some(qty) = lot.qty_received
-        && qty.get() > purchase.qty_left
+        && qty.get() > purchase.our_left
     {
         issues.error_with(
             ErrorCode::ErrQtyExceedsLot,
             &format!("{prefix}.qty_received"),
-            &[("available", purchase.qty_left)],
+            &[("available", purchase.our_left)],
         );
         same = false;
     }

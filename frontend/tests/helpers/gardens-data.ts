@@ -465,6 +465,11 @@ export function createGardenBooks(options: GardensOptions = {}) {
     balance_after_paisa: money(balanceAfter),
     rent_due_after_paisa: money(rentDue),
     balance_working: balanceWorking(0, 0, balanceAfter),
+    // Only a sale in another shop linked to goods arrived has these (PRD FR-12.41).
+    qty_from_our_shop: null,
+    qty_left_after: null,
+    qty_other_left_after: null,
+    qty_our_left_after: null,
   });
 
   return {

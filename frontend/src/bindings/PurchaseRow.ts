@@ -129,6 +129,35 @@ export type PurchaseRow = {
    */
   qty_left: number;
   /**
+   * نگ for another shop (PRD FR-12.41). The rest are for our shop. Starts as 0.
+   */
+  qty_other: number;
+  /**
+   * The other shop, as typed.
+   */
+  shop_name: string | null;
+  /**
+   * نگ sold in our shop (own lots of بکری).
+   */
+  qty_our_sold: number;
+  /**
+   * نگ sold in other shops.
+   */
+  qty_other_sold: number;
+  /**
+   * نگ left for our shop: the part for our shop less what it sold, less the write-off (a
+   * write-off comes off our shop's part first). Only these become ready lots.
+   */
+  qty_our_left: number;
+  /**
+   * نگ left for another shop: `qty_our_left + qty_other_left = qty_left`.
+   */
+  qty_other_left: number;
+  /**
+   * True while it is saved and has goods left: `purchases_change_split` is allowed.
+   */
+  can_change_split: boolean;
+  /**
    * The cost already released: sold plus written off.
    */
   cost_released_paisa: Paisa;

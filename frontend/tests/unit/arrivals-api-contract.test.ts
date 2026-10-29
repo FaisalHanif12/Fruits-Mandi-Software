@@ -41,6 +41,10 @@ describe('the commands the screens call are the ones the backend declares', () =
       'gardens_arrival_set_sell_date',
       'gardens_arrival_write_off',
       'gardens_arrival_write_off_undo',
+      // Many item lines in one entry, and the split between our shop and another shop (plan 35).
+      'gardens_arrival_entry_preview',
+      'gardens_arrival_entry_save',
+      'gardens_arrival_change_split',
     ]) {
       expect(gardens).toContain(name);
     }
@@ -59,6 +63,32 @@ describe('every wrapper sends its command name and its input', () => {
     const input = arrivals.PURCHASE_SET_SELL_DATE_REQUEST;
     await purchasesApi.purchasesSetSellDate(input);
     expect(call).toHaveBeenLastCalledWith('purchases_set_sell_date', { input });
+  });
+
+  it('the goods arrived entry of many lines, and the split of one arrival (plan 35)', async () => {
+    const entry = {
+      garden_id: 1,
+      date: '10-10-2026',
+      sell_date: null,
+      lines: [
+        {
+          item_id: 61,
+          packing_id: 71,
+          qty: '100',
+          weight: null,
+          note: null,
+          other_qty: '40',
+          shop_name: 'Haji Shop',
+        },
+      ],
+    };
+    await gardensApi.gardensArrivalEntryPreview(entry);
+    expect(call).toHaveBeenLastCalledWith('gardens_arrival_entry_preview', { input: entry });
+    await gardensApi.gardensArrivalEntrySave(entry);
+    expect(call).toHaveBeenLastCalledWith('gardens_arrival_entry_save', { input: entry });
+    const split = { id: 1, version: 1, other_qty: '40', shop_name: 'Haji Shop' };
+    await gardensApi.gardensArrivalChangeSplit(split);
+    expect(call).toHaveBeenLastCalledWith('gardens_arrival_change_split', { input: split });
   });
 
   it('the goods arrived of a garden: save, list, get, cancel, date to sell, write-off and its undo', async () => {

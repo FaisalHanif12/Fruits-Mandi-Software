@@ -408,6 +408,7 @@ fn one_sequence(seed: u64) -> (usize, usize) {
                     &w.owner,
                     &mandi_services::core::gardens::GardenEntryInput::OtherSale(
                         mandi_services::core::gardens::GardenOtherSaleInput {
+                            arrival_id: None,
                             garden_id: Some(garden.id),
                             date: "10-10-2026".into(),
                             shop: Some("Haji".into()),

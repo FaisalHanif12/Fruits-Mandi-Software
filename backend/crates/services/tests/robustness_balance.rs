@@ -64,7 +64,7 @@ const TRIGGERS_OF_0004: [&str; 7] = [
     "bikri_lots_no_replace",
     "bikri_sales_no_replace",
 ];
-const LATEST_VERSION: i64 = 9;
+const LATEST_VERSION: i64 = 10;
 /// The tables migration 0006 adds (plan 16b). A file of an old release does not have them, and
 /// they are empty in this test, so the row fingerprint leaves them out.
 const TABLES_OF_0006: [&str; 8] = [
@@ -95,9 +95,14 @@ const COLUMNS_OF_0006: [(&str, &str); 10] = [
 /// is empty in this test, so the row fingerprint leaves it out.
 const TABLES_OF_0009: [&str; 1] = ["garden_arrivals"];
 /// The columns migration 0009 adds to old tables. A row's numbers do not change when they appear,
-/// so the row fingerprint leaves them out. (`purchases.sell_date` is in a table of 0006.)
-const COLUMNS_OF_0009: [(&str, &str); 2] =
-    [("bikri_lots", "arrival_id"), ("stock_moves", "arrival_id")];
+/// so the row fingerprint leaves them out. (`purchases.sell_date` is in a table of 0006.) The two
+/// `venture_entries` columns are migration 0010's (plan 35, the shop split).
+const COLUMNS_OF_0009: [(&str, &str); 4] = [
+    ("bikri_lots", "arrival_id"),
+    ("stock_moves", "arrival_id"),
+    ("venture_entries", "arrival_id"),
+    ("venture_entries", "moved_qty"),
+];
 /// The two controls whose party types (separate, garden) the CHECK lists of an old release do not
 /// hold. Migration 0006 seeds them, so they are not copied into the old file and are left out of
 /// the row fingerprint.

@@ -10,9 +10,10 @@ use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
-    self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, INIT_SQL, MigrationOutcome,
-    SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
-    TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL,
+    DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, INIT_SQL, MigrationOutcome, SIMPLE_PARTY_CODES_SQL,
+    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL,
+    TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -20,7 +21,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 9;
+const LATEST: usize = 10;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -140,6 +141,25 @@ fn released_version_8() -> Migrations<'static> {
         M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
         M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
         M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+    ])
+}
+
+/// The schema as it was released at version 9: migrations 0001 to 0009.
+fn released_version_9() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
     ])
 }
 
@@ -417,10 +437,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 10).unwrap();
+    conn.pragma_update(None, "user_version", 11).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 10);
+    assert_eq!(user_version(&conn), 11);
     assert!(!backups.exists());
 }
 
@@ -2403,7 +2423,8 @@ fn migration_9_adds_the_date_to_sell_and_the_arrivals_and_changes_nothing_else()
     let skip = [("purchases", "sell_date")];
     let before_rows = all_rows_without(&conn, &skip);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_9(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (8, 9));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 9);
@@ -2561,4 +2582,156 @@ fn migration_9_adds_the_date_to_sell_and_the_arrivals_and_changes_nothing_else()
 
 fn count(conn: &Connection, sql: &str) -> i64 {
     conn.query_row(sql, [], |r| r.get(0)).unwrap()
+}
+
+#[test]
+fn migration_10_splits_the_goods_and_keeps_every_old_number_true() {
+    // Plan 35: a file at version 9 with a trip, a purchase of 20 that our shop sold 5 of and
+    // other shops 6 of (one saved and one cancelled sale of 3 in another shop), and a
+    // garden arrival, is upgraded. The purchase gets other_qty = qty_sold_other = the qty of its
+    // SAVED sales in other shops; the arrival starts as all for our shop; nothing else moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_9(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 9);
+    conn.execute(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('0040', 'x', 'x', 'x', 'x', 'x', 'fruit')",
+        [],
+    )
+    .unwrap();
+    let item = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('0050', 'x', 'x', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let packing = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('trip', 1, '2026-10-10', '0070', '0070', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let trip = conn.last_insert_rowid();
+    // 20 bought; qty_sold = 11 in all, of which the saved sales in other shops are 6 (so our shop
+    // sold 5).
+    conn.execute(
+        "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa,
+             value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa, qty_sold)
+         VALUES (1, ?1, '2026-10-10', ?2, ?3, 20, 50_000, 1_000_000, 0, 1_000_000, 1_000_000, 11)",
+        (trip, item, packing),
+    )
+    .unwrap();
+    let purchase = conn.last_insert_rowid();
+    for (number, qty, status, reason) in [(1, 6, "saved", None), (2, 3, "cancelled", Some("x"))] {
+        conn.execute(
+            "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, purchase_id,
+                 qty, status, cancel_reason)
+             VALUES (?1, 'other_sale', ?2, '2026-10-10', 100_000, ?3, ?4, ?5, ?6)",
+            (trip, number, purchase, qty, status, reason),
+        )
+        .unwrap();
+    }
+    let account: i64 = conn
+        .query_row("SELECT id FROM accounts LIMIT 1", [], |r| r.get(0))
+        .unwrap();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, account_id)
+         VALUES ('garden', 1, '2026-10-10', 'g', 'g', 'g', 'g', 'g', ?1)",
+        [account],
+    )
+    .unwrap();
+    let garden = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO garden_arrivals (number, venture_id, entry_date, sell_date, item_id, packing_id, qty, qty_sold)
+         VALUES (1, ?1, '2026-10-10', '2026-10-10', ?2, ?3, 100, 40)",
+        (garden, item, packing),
+    )
+    .unwrap();
+    let skip = [
+        ("purchases", "other_qty"),
+        ("purchases", "qty_sold_other"),
+        ("purchases", "shop_name"),
+        ("garden_arrivals", "other_qty"),
+        ("garden_arrivals", "qty_sold_other"),
+        ("garden_arrivals", "shop_name"),
+        ("venture_entries", "arrival_id"),
+        ("venture_entries", "moved_qty"),
+    ];
+    let before = all_rows_without(&conn, &skip);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (9, 10));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 10);
+    assert_eq!(all_rows_without(&conn, &skip), before, "nothing else moved");
+
+    let split = |table: &str, id: i64| -> (i64, i64, Option<String>) {
+        conn.query_row(
+            &format!("SELECT other_qty, qty_sold_other, shop_name FROM {table} WHERE id = ?1"),
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap()
+    };
+    // The saved sale of 6 in another shop is the purchase's part for another shop, all sold.
+    assert_eq!(split("purchases", purchase), (6, 6, None));
+    let arrival: i64 = conn
+        .query_row("SELECT id FROM garden_arrivals", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(split("garden_arrivals", arrival), (0, 0, None));
+
+    // The triggers keep the split true.
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET other_qty = 21 WHERE id = ?1",
+            [purchase]
+        )
+        .is_err(),
+        "the part for another shop is not above the qty"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET other_qty = 5 WHERE id = ?1",
+            [purchase]
+        )
+        .is_err(),
+        "other shops sold 6, so their part is not below 6"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE purchases SET other_qty = 16 WHERE id = ?1",
+            [purchase]
+        )
+        .is_err(),
+        "our shop sold 5, so its part (20 - 16 = 4) is not below 5"
+    );
+    conn.execute(
+        "UPDATE purchases SET other_qty = 15 WHERE id = ?1",
+        [purchase],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET other_qty = 101 WHERE id = ?1",
+            [arrival]
+        )
+        .is_err()
+    );
+    conn.execute(
+        "UPDATE garden_arrivals SET other_qty = 60 WHERE id = ?1",
+        [arrival],
+    )
+    .unwrap();
+    // Our part is now 40 and our shop sold 40: one more for another shop is refused.
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET other_qty = 61 WHERE id = ?1",
+            [arrival]
+        )
+        .is_err()
+    );
 }

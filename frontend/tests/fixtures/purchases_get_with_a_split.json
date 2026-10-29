@@ -1,0 +1,221 @@
+{
+  "id": 1,
+  "version": 2,
+  "number": 1,
+  "trip": {
+    "id": 1,
+    "number": 1,
+    "code": "0070",
+    "name_ur": "0070 10-10-2026",
+    "name_en": "0070 10-10-2026"
+  },
+  "entry_date": "2026-10-10",
+  "sell_date": "2026-10-10",
+  "status": "saved",
+  "cancel_reason": null,
+  "supplier": null,
+  "item": {
+    "id": 1,
+    "code": "0040",
+    "name_ur": "کیلا",
+    "name_en": "Banana"
+  },
+  "packing": {
+    "id": 1,
+    "code": "0050",
+    "name_ur": "پیٹی",
+    "name_en": "Box"
+  },
+  "qty": 80,
+  "weight_grams": null,
+  "rate_paisa": 5000,
+  "value_paisa": 400000,
+  "freight_paisa": 0,
+  "labour_paisa": 0,
+  "other_cost_paisa": 0,
+  "paid_now_paisa": 400000,
+  "trip_cost_paisa": 0,
+  "total_cost_paisa": 400000,
+  "avg_cost_paisa": 5000,
+  "note": null,
+  "entry_id": 3,
+  "parts": [
+    {
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "share_bps": 4000,
+      "source": "shop",
+      "amount_paisa": 160000,
+      "working": {
+        "message_id": "working-venture-part",
+        "args": [
+          {
+            "name": "amount",
+            "value": {
+              "kind": "money",
+              "paisa": 400000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "count",
+              "value": 4000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 160000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "ب",
+        "name_en": "Partner B"
+      },
+      "share_bps": 3000,
+      "source": "shop",
+      "amount_paisa": 120000,
+      "working": {
+        "message_id": "working-venture-part",
+        "args": [
+          {
+            "name": "amount",
+            "value": {
+              "kind": "money",
+              "paisa": 400000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "count",
+              "value": 3000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 120000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner": {
+        "id": 3,
+        "code": "",
+        "name_ur": "ج",
+        "name_en": "Partner C"
+      },
+      "share_bps": 3000,
+      "source": "shop",
+      "amount_paisa": 120000,
+      "working": {
+        "message_id": "working-venture-part",
+        "args": [
+          {
+            "name": "amount",
+            "value": {
+              "kind": "money",
+              "paisa": 400000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "count",
+              "value": 3000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 120000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
+  "qty_sold": 0,
+  "qty_written_off": 0,
+  "qty_left": 80,
+  "qty_other": 30,
+  "shop_name": "حاجی شاپ",
+  "qty_our_sold": 0,
+  "qty_other_sold": 0,
+  "qty_our_left": 50,
+  "qty_other_left": 30,
+  "can_change_split": true,
+  "cost_released_paisa": 0,
+  "cost_left_paisa": 400000,
+  "sales_paisa": 0,
+  "other_shop_paisa": 0,
+  "cost_sold_paisa": 0,
+  "cost_written_off_paisa": 0,
+  "result_paisa": 0,
+  "result_working": {
+    "message_id": "working-purchase-result",
+    "args": [
+      {
+        "name": "sales",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "other_shop",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "cost_sold",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "cost_written_off",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "result",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      }
+    ],
+    "rule_id": null
+  },
+  "days_waiting": 0,
+  "can_cancel": true,
+  "can_change_sell_date": true,
+  "lots": [],
+  "write_offs": []
+}

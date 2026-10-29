@@ -22,6 +22,7 @@ export { ControlAccountPicker } from './ControlAccountPicker';
 export { CodeInput } from './CodeInput';
 export { ConfirmDialog, type ConfirmTone } from './ConfirmDialog';
 export { SellDateDialog } from './SellDateDialog';
+export { SplitDialog } from './SplitDialog';
 export { DataCheckFailedState } from './DataCheckFailedState';
 export { DateInput } from './DateInput';
 export { EmptyState } from './EmptyState';

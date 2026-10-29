@@ -4,10 +4,12 @@
 
 use mandi_services::core::arrivals::{SellDateInput, SellDateSet};
 use mandi_services::core::purchases::{
-    PurchaseCancelInput, PurchaseCancelled, PurchaseGetInput, PurchaseInput, PurchasePreview,
-    PurchaseRow, PurchaseSaved, PurchaseWriteOffDone, PurchaseWriteOffInput,
-    PurchaseWriteOffUndoInput, PurchaseWriteOffUndone, PurchasesList, PurchasesListInput,
+    PurchaseCancelInput, PurchaseCancelled, PurchaseEntryInput, PurchaseEntryPreview,
+    PurchaseEntrySaved, PurchaseGetInput, PurchaseInput, PurchasePreview, PurchaseRow,
+    PurchaseSaved, PurchaseWriteOffDone, PurchaseWriteOffInput, PurchaseWriteOffUndoInput,
+    PurchaseWriteOffUndone, PurchasesList, PurchasesListInput,
 };
+use mandi_services::core::split::{SplitInput, SplitSet};
 use mandi_services::{auth, purchases};
 
 use super::run;
@@ -127,6 +129,50 @@ pub async fn purchases_set_sell_date<R: tauri::Runtime>(
     run(app, "purchases_set_sell_date", move |ctx| {
         let actor = auth::require(ctx)?;
         purchases::set_sell_date(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Works out a purchase entry with many item lines for the live screen (PRD FR-12.41, R1): each
+/// line exactly as `purchases_preview` works one purchase out, plus the entry's money and its cash
+/// note. Nothing is saved. Errors and warnings come back inside the preview, each at its field
+/// (`lines[i].qty` ...).
+#[tauri::command]
+pub async fn purchases_entry_preview<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PurchaseEntryInput,
+) -> Result<PurchaseEntryPreview, UiError> {
+    run(app, "purchases_entry_preview", move |ctx| {
+        auth::require(ctx)?;
+        purchases::entry_preview(ctx, &input)
+    })
+    .await
+}
+
+/// Saves a purchase entry with many item lines in ONE transaction (PRD FR-12.41, R1). Each line is
+/// its own purchase with its own number and its own posting. A mistake in any line saves nothing.
+#[tauri::command]
+pub async fn purchases_entry_save<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PurchaseEntryInput,
+) -> Result<PurchaseEntrySaved, UiError> {
+    run(app, "purchases_entry_save", move |ctx| {
+        let actor = auth::require(ctx)?;
+        purchases::entry_save(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Changes the split of a purchase between our shop and another shop, while goods are left (PRD
+/// FR-12.41, R3). No money effect.
+#[tauri::command]
+pub async fn purchases_change_split<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SplitInput,
+) -> Result<SplitSet, UiError> {
+    run(app, "purchases_change_split", move |ctx| {
+        let actor = auth::require(ctx)?;
+        purchases::change_split(ctx, &actor, &input)
     })
     .await
 }

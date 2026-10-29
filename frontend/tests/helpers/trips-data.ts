@@ -16,7 +16,13 @@ import type { MoneySource } from '../../src/bindings/MoneySource';
 import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
 import type { OwnLotPreview } from '../../src/bindings/OwnLotPreview';
 import type { OwnStockRow } from '../../src/bindings/OwnStockRow';
+import type { PurchaseNumbers } from '../../src/bindings/PurchaseNumbers';
+import type { PurchaseEntryInput } from '../../src/bindings/PurchaseEntryInput';
+import type { PurchaseEntryPreview } from '../../src/bindings/PurchaseEntryPreview';
+import type { PurchaseEntrySaved } from '../../src/bindings/PurchaseEntrySaved';
 import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
+import type { SplitInput } from '../../src/bindings/SplitInput';
+import type { SplitSet } from '../../src/bindings/SplitSet';
 import type { RecordRef } from '../../src/bindings/RecordRef';
 import type { ShareAmount } from '../../src/bindings/ShareAmount';
 import type { TripCostInput } from '../../src/bindings/TripCostInput';
@@ -255,6 +261,14 @@ export function e34Purchase(over: Partial<PurchaseRow> = {}): PurchaseRow {
     qty_sold: 15,
     qty_written_off: 0,
     qty_left: 5,
+    // The split (PRD FR-12.41): all for our shop, 15 sold in it, 5 left for it.
+    qty_other: 0,
+    shop_name: null,
+    qty_our_sold: 15,
+    qty_other_sold: 0,
+    qty_our_left: 5,
+    qty_other_left: 0,
+    can_change_split: true,
     cost_released_paisa: money(7_800),
     cost_left_paisa: money(2_600),
     sales_paisa: money(8_460),
@@ -406,6 +420,9 @@ export function e34OwnStockRow(): OwnStockRow {
     qty_sold: 15,
     qty_written_off: 0,
     balance: 5,
+    qty_our_left: 5,
+    qty_other_left: 0,
+    shop_name: null,
     total_cost_paisa: money(10_400),
     cost_left_paisa: money(2_600),
     days_waiting: 2,
@@ -424,6 +441,10 @@ export interface TripStore {
   saved: {
     trips: TripInput[];
     purchases: PurchaseInput[];
+    /** The purchase entries with their lines, as sent (PRD FR-12.41). */
+    entries: PurchaseEntryInput[];
+    /** The splits that were changed, as sent. */
+    splits: SplitInput[];
     costs: TripCostInput[];
     sales: OtherSaleInput[];
   };
@@ -433,6 +454,32 @@ export interface TripStore {
     cost?: RefusalItem[];
     sale?: RefusalItem[];
     trip?: RefusalItem[];
+  };
+}
+
+/** One line of an entry as the single purchase the fake works out (shared fields from the entry). */
+function singleOf(
+  input: PurchaseEntryInput,
+  line: PurchaseEntryInput['lines'][number],
+): PurchaseInput {
+  return {
+    trip_id: input.trip_id,
+    date: input.date,
+    sell_date: input.sell_date,
+    supplier: input.supplier,
+    item_id: line.item_id,
+    packing_id: line.packing_id,
+    qty: line.qty,
+    weight: line.weight,
+    rate: line.rate,
+    freight: line.freight,
+    labour: line.labour,
+    other_cost: line.other_cost,
+    note: line.note,
+    parts: input.parts,
+    confirm_cash_below_zero: input.confirm_cash_below_zero,
+    other_qty: line.other_qty,
+    shop_name: line.shop_name,
   };
 }
 
@@ -472,6 +519,99 @@ const sourcesOf = (
   parts.find((part) => part.partner_id === 3)?.source ?? 'shop',
 ];
 
+/** Whole rupees from the text of a cell ("1,200" is 1200), or null when it is not a whole number. */
+function wholeOf(text: string | null | undefined): number | null {
+  const plain = (text ?? '').replaceAll(',', '').trim();
+  return /^\d+$/.test(plain) ? Number(plain) : null;
+}
+
+/** A partner's part of a sum: the shares 40 / 30 / 30, each rounded down, the rest to the first (C10). */
+function splitByShares(total: number): number[] {
+  const parts = SHARES.map((bps) => Math.floor((total * bps) / 10_000));
+  const left = total - parts.reduce((sum, part) => sum + part, 0);
+  return parts.map((part, index) => (index === 0 ? part + left : part));
+}
+
+/**
+ * What one line of a purchase entry works out to, from the text typed in it: the value (quantity
+ * times rate), the costs paid at once, what is paid now, the cost, the average cost and each
+ * partner's part. Whole rupees the test double holds itself (the lint rule keeps tests from reading
+ * a Paisa). Null when a number of the line is not a whole number.
+ */
+function entryLineNumbers(
+  line: PurchaseEntryInput['lines'][number],
+  sources: readonly [MoneySource, MoneySource, MoneySource],
+): { numbers: PurchaseNumbers; paid: number; parts: number[] } | null {
+  const qty = wholeOf(line.qty);
+  const rate = wholeOf(line.rate);
+  const freight = line.freight === null ? 0 : wholeOf(line.freight);
+  const labour = line.labour === null ? 0 : wholeOf(line.labour);
+  const otherCost = line.other_cost === null ? 0 : wholeOf(line.other_cost);
+  if (qty === null || qty === 0 || rate === null) return null;
+  if (freight === null || labour === null || otherCost === null) return null;
+  const value = qty * rate;
+  const paid = value + freight + labour + otherCost;
+  const avg = Math.round(paid / qty);
+  const parts = splitByShares(paid);
+  const partRows: EntryPart[] = PARTNERS.map((partner, index) => ({
+    partner,
+    share_bps: SHARES[index] ?? 0,
+    source: sources[index] ?? 'shop',
+    amount_paisa: money(parts[index] ?? 0),
+    working: working('working-venture-part', [
+      moneyArg('amount', paid),
+      countArg('bps', SHARES[index] ?? 0),
+      moneyArg('result', parts[index] ?? 0),
+    ]),
+  }));
+  const shop = partRows.reduce(
+    (sum, part, index) => sum + (part.source === 'shop' ? (parts[index] ?? 0) : 0),
+    0,
+  );
+  return {
+    paid,
+    parts,
+    numbers: {
+      value: money(value),
+      freight: money(freight),
+      labour: money(labour),
+      other_cost: money(otherCost),
+      paid_now: money(paid),
+      total_cost: money(paid),
+      avg_cost: money(avg),
+      parts: {
+        parts: partRows,
+        shop_total_paisa: money(shop),
+        pocket_total_paisa: money(paid - shop),
+      },
+      workings: {
+        value: working('working-line-value', [
+          countArg('qty', qty),
+          moneyArg('rate', rate),
+          moneyArg('result', value),
+        ]),
+        paid_now: working('working-purchase-paid-now', [
+          moneyArg('value', value),
+          moneyArg('freight', freight),
+          moneyArg('labour', labour),
+          moneyArg('other_cost', otherCost),
+          moneyArg('result', paid),
+        ]),
+        total_cost: working('working-purchase-total-cost', [
+          moneyArg('paid_now', paid),
+          moneyArg('trip_cost', 0),
+          moneyArg('result', paid),
+        ]),
+        avg_cost: working('working-purchase-avg-cost', [
+          moneyArg('total', paid),
+          countArg('qty', qty),
+          moneyArg('result', avg),
+        ]),
+      },
+    },
+  };
+}
+
 /**
  * The commands of trips and purchases as a healthy backend answers them, in memory. Every method
  * answers at once or throws the refusal (a `CommandError`); the test wrapper turns that into a
@@ -484,7 +624,7 @@ export function createTripBooks(options: TripsOptions = {}) {
     entries: options.entries ?? [purchaseEntry()],
     results: options.results ?? e34Results(),
     cashBefore: options.cashBefore ?? 50_000,
-    saved: { trips: [], purchases: [], costs: [], sales: [] },
+    saved: { trips: [], purchases: [], entries: [], splits: [], costs: [], sales: [] },
     refuse: {},
   };
   const defaults: TripDefaults = options.defaults ?? {
@@ -492,7 +632,7 @@ export function createTripBooks(options: TripsOptions = {}) {
     from_last_trip: false,
   };
 
-  return {
+  const books = {
     store,
     defaults: (): TripDefaults => defaults,
     list: (input: TripsListInput): TripsList => {
@@ -588,6 +728,114 @@ export function createTripBooks(options: TripsOptions = {}) {
         cash: cashOf(store.cashBefore, shop),
         errors: [],
         warnings: [],
+      };
+    },
+    /**
+     * The preview of an entry of many lines (PRD FR-12.41), the way the backend answers it: every
+     * line is worked out from what was typed in it (quantity times rate, plus the three costs), in
+     * whole rupees this test double holds itself, and a mistake of a line is at `lines[i].field`.
+     * The partners' parts of the whole entry are the sum of the parts of the lines. The numbers it
+     * gives for the two lines of the backend's own file are the file's (tests/unit/
+     * trips-real-answers.test.tsx checks that, so this double cannot drift from the backend).
+     */
+    purchaseEntryPreview: (input: PurchaseEntryInput): PurchaseEntryPreview => {
+      const errors: FieldError[] = [];
+      if (input.lines.length === 0) errors.push(problem('ERR_REQUIRED', 'lines'));
+      const sources = sourcesOf(input.parts);
+      const worked: { key: string; numbers: PurchaseNumbers; paid: number; parts: number[] }[] = [];
+      const lines = input.lines.map((line, index) => {
+        const one = books.purchasePreview(singleOf(input, line));
+        for (const item of one.errors) {
+          errors.push({ ...item, field: `lines[${String(index)}].${item.field}` });
+        }
+        const made = one.errors.length === 0 ? entryLineNumbers(line, sources) : null;
+        if (made !== null) worked.push({ key: line.key, ...made });
+        const qty = wholeOf(line.qty);
+        const other = wholeOf(line.other_qty ?? '') ?? 0;
+        return {
+          key: line.key,
+          qty_our: made === null || qty === null ? null : qty - other,
+          numbers: made?.numbers ?? null,
+        };
+      });
+      // Each partner's part of the whole entry: his parts of the lines added up (test double).
+      const sums = [0, 1, 2].map((p) =>
+        worked.reduce((sum, line) => sum + (line.parts[p] ?? 0), 0),
+      );
+      const paidTotal = worked.reduce((sum, line) => sum + line.paid, 0);
+      const shop = sums.reduce((sum, amount, p) => sum + (sources[p] === 'shop' ? amount : 0), 0);
+      const first = worked[0];
+      const entryParts: EntryParts | null =
+        first === undefined
+          ? null
+          : {
+              parts: PARTNERS.map((partner, p) => ({
+                partner,
+                share_bps: SHARES[p] ?? 0,
+                source: sources[p] ?? 'shop',
+                amount_paisa: money(sums[p] ?? 0),
+                // One line: that line's own working. Several: the sum of his parts of the lines.
+                working:
+                  worked.length === 1
+                    ? (first.numbers.parts.parts[p]?.working ?? working('working-venture-part', []))
+                    : working('working-entry-part-sum', [
+                        countArg('lines', worked.length),
+                        moneyArg('amount', sums[p] ?? 0),
+                      ]),
+              })),
+              shop_total_paisa: money(shop),
+              pocket_total_paisa: money(paidTotal - shop),
+            };
+      return {
+        lines,
+        paid_now_total: money(paidTotal),
+        parts: entryParts,
+        cash: cashOf(store.cashBefore, shop),
+        errors,
+        warnings: [],
+      };
+    },
+    purchaseEntrySave: (input: PurchaseEntryInput): PurchaseEntrySaved => {
+      if (store.refuse.purchase !== undefined) return refuse(store.refuse.purchase);
+      const preview = books.purchaseEntryPreview(input);
+      if (preview.errors.length > 0) {
+        return refuse(preview.errors.map((item) => ({ code: item.code, field: item.field })));
+      }
+      if (preview.cash.needs_confirm && !input.confirm_cash_below_zero) {
+        return refuse([
+          { code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED', field: 'confirm_cash_below_zero' },
+        ]);
+      }
+      store.saved.entries.push(input);
+      return {
+        saved: input.lines.map((_, index) => ({
+          id: 8 + index,
+          number: 2 + index,
+          version: 1,
+          entry_id: 33 + index,
+          total_cost: money(10_400),
+          preview: { numbers: null, cash: preview.cash, errors: [], warnings: [] },
+        })),
+        paid_now_total: preview.paid_now_total,
+      };
+    },
+    splitChange: (input: SplitInput): SplitSet => {
+      const found = store.purchases.find((row) => row.id === input.id);
+      if (found === undefined) return refuse([{ code: 'ERR_NOT_FOUND', field: 'id' }]);
+      const other = Number(input.other_qty === '' ? '0' : input.other_qty);
+      if (other > found.qty) {
+        return refuse([
+          { code: 'ERR_SPLIT_ABOVE_QTY', field: 'other_qty', values: { qty: found.qty } },
+        ]);
+      }
+      store.saved.splits.push(input);
+      return {
+        id: input.id,
+        version: input.version + 1,
+        qty_other: other,
+        shop_name: input.shop_name,
+        qty_our_left: Math.max(found.qty_left - other, 0),
+        qty_other_left: Math.min(other, found.qty_left),
       };
     },
     purchaseSave: (input: PurchaseInput): PurchaseSaved => {
@@ -687,6 +935,9 @@ export function createTripBooks(options: TripsOptions = {}) {
           ]),
           credits: e34Credits(),
           qty_left_after: 5,
+          qty_other_left_after: 0,
+          qty_our_left_after: 5,
+          qty_from_our_shop: 0,
           cost_left_after_paisa: money(2_600),
         },
         errors: [],
@@ -762,4 +1013,5 @@ export function createTripBooks(options: TripsOptions = {}) {
       trip_reopened: true,
     }),
   };
+  return books;
 }

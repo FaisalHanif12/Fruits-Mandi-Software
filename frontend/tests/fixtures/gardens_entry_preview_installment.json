@@ -113,7 +113,11 @@
         }
       ],
       "rule_id": null
-    }
+    },
+    "qty_from_our_shop": null,
+    "qty_left_after": null,
+    "qty_other_left_after": null,
+    "qty_our_left_after": null
   },
   "cash": {
     "cash_before_paisa": 3200000,

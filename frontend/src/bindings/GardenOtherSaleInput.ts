@@ -20,6 +20,14 @@ export type GardenOtherSaleInput = {
    */
   shop: string | null;
   /**
+   * The garden arrival (مال آیا) the goods come from (PRD FR-12.41). The qty comes off that
+   * arrival's part for another shop (`ERR_QTY_EXCEEDS_LOT` on `qty`, value `available`). Required
+   * when the garden has any arrival (`ERR_REQUIRED` on `arrival_id`); for a garden with no arrival
+   * it stays empty and the sale is typed by hand as before. The arrival must belong to this garden
+   * (`ERR_FORMAT_INVALID`) and stand (`ERR_ARRIVAL_CANCELLED`).
+   */
+  arrival_id?: number | null;
+  /**
    * نگ sold, a whole number more than 0.
    */
   qty: string;

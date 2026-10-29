@@ -6,8 +6,9 @@
 import { formatBps, isoToDisplayDate } from '../../shared/format';
 import { sourceOf } from '../../shared/ui';
 import type { ShareInput } from '../partners';
+import type { EntryRow } from '../../shared/grid';
 import {
-  buildPurchase,
+  buildPurchaseEntry,
   emptyPurchaseFields,
   purchaseIsFilled,
   textOrNull,
@@ -124,11 +125,14 @@ export function nextEntryDraft(draft: EntryDraft): EntryDraft {
   };
 }
 
-/** True once anything beyond the day is typed or chosen on the entry form. */
-export function entryIsFilled(draft: EntryDraft): boolean {
+/**
+ * True once anything beyond the day is typed or chosen on the entry form. `lines` are the rows of
+ * the purchase lines grid (PRD FR-12.41); the other types have none.
+ */
+export function entryIsFilled(draft: EntryDraft, lines: readonly EntryRow[]): boolean {
   switch (draft.type) {
     case 'purchase':
-      return purchaseIsFilled(draft.purchase) || draft.note.trim() !== '';
+      return purchaseIsFilled(draft.purchase, lines) || draft.note.trim() !== '';
     case 'cost':
       return draft.amount.trim() !== '' || draft.cost.reason.trim() !== '';
     case 'other_sale':
@@ -153,9 +157,13 @@ export function entryParts(
   }));
 }
 
-/** What the purchase form sends: its fields with the day, the note and the parts of the screen. */
+/**
+ * What the purchase form sends: its fields and every filled line (PRD FR-12.41) with the day, the
+ * note and the parts of the screen.
+ */
 export function buildEntryPurchase(
   draft: EntryDraft,
+  lines: readonly EntryRow[],
   tripId: number,
   partners: readonly VenturePartnerRow[],
   confirmCash: boolean,
@@ -166,7 +174,7 @@ export function buildEntryPurchase(
     note: draft.note,
     parts: entryParts(partners, draft.sources),
   };
-  return buildPurchase(draft.purchase, common, confirmCash);
+  return buildPurchaseEntry(draft.purchase, lines, common, confirmCash);
 }
 
 /** What the trip cost form sends. The amount may be a simple sum; the backend reads it. */

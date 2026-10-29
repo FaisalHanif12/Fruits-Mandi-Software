@@ -13,6 +13,9 @@ import {
 import { PAGE_SIZE, useDebouncedValue, usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import {
   gardensArrivalCancel,
+  gardensArrivalChangeSplit,
+  gardensArrivalEntryPreview,
+  gardensArrivalEntrySave,
   gardensArrivalSave,
   gardensArrivalSetSellDate,
   gardensArrivalWriteOff,
@@ -33,11 +36,13 @@ import {
 } from './api';
 import type {
   ArrivalCancelInput,
+  ArrivalEntryInput,
   ArrivalInput,
   ArrivalsListInput,
   ArrivalWriteOffInput,
   ArrivalWriteOffUndoInput,
   SellDateInput,
+  SplitInput,
   GardenCloseInput,
   GardenDetail,
   GardenEntryCancelInput,
@@ -218,6 +223,33 @@ export function useSaveGardenArrival() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: ArrivalInput) => gardensArrivalSave(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+/** The check of the goods arrived entry on the form: the mistakes of each line (PRD FR-12.41). */
+export function useArrivalEntryPreview(input: ArrivalEntryInput | null) {
+  return usePreviewQuery(
+    [...GARDENS_KEY, 'arrival-entry-preview'],
+    input,
+    gardensArrivalEntryPreview,
+  );
+}
+
+/** Saves a goods arrived entry with its lines in one transaction (PRD FR-12.41). */
+export function useSaveArrivalEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ArrivalEntryInput) => gardensArrivalEntrySave(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+/** Changes the split of an arrival with goods left (PRD FR-12.41). */
+export function useChangeArrivalSplit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SplitInput) => gardensArrivalChangeSplit(input),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }

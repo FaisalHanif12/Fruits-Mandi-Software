@@ -144,13 +144,17 @@ pub(crate) fn stock_waiting(
         -1,
     )?;
     for purchase in purchases {
-        let balance = purchase
-            .qty
-            .checked_sub(purchase.qty_sold)
-            .and_then(|v| v.checked_sub(purchase.qty_written_off))
-            .ok_or_else(|| {
-                ReportsError::Data("the quantity of a purchase does not fit".to_owned())
-            })?;
+        // Only the goods for our shop wait: the part for another shop waits for its sale entry
+        // there (PRD FR-12.41, plan 35 D2).
+        let balance = mandi_core::split::StockParts::of(
+            purchase.qty,
+            purchase.other_qty,
+            purchase.qty_sold,
+            purchase.qty_sold_other,
+            purchase.qty_written_off,
+        )
+        .ok_or_else(|| ReportsError::Data("the split of a purchase does not fit".to_owned()))?
+        .our_left;
         let days = age(&purchase.sell_date);
         if balance > 0 && days > STOCK_WAIT_DAYS {
             waiting.push((
@@ -169,13 +173,15 @@ pub(crate) fn stock_waiting(
     }
     // The garden arrivals with goods left (PRD FR-12.40), waiting from their day to sell.
     for arrival in mandi_db::arrivals::with_stock(conn, None, None, None, None)? {
-        let balance = arrival
-            .qty
-            .checked_sub(arrival.qty_sold)
-            .and_then(|v| v.checked_sub(arrival.qty_written_off))
-            .ok_or_else(|| {
-                ReportsError::Data("the quantity of an arrival does not fit".to_owned())
-            })?;
+        let balance = mandi_core::split::StockParts::of(
+            arrival.qty,
+            arrival.other_qty,
+            arrival.qty_sold,
+            arrival.qty_sold_other,
+            arrival.qty_written_off,
+        )
+        .ok_or_else(|| ReportsError::Data("the split of an arrival does not fit".to_owned()))?
+        .our_left;
         let days = age(&arrival.sell_date);
         if balance > 0 && days > STOCK_WAIT_DAYS {
             waiting.push((

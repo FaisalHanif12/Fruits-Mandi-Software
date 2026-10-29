@@ -17,6 +17,9 @@
 //! | `purchases_write_off` | `PurchaseWriteOffInput` | `PurchaseWriteOffDone` |
 //! | `purchases_write_off_undo` | `PurchaseWriteOffUndoInput` | `PurchaseWriteOffUndone` |
 //! | `purchases_set_sell_date` | `SellDateInput` (in `arrivals`) | `SellDateSet` (in `arrivals`) |
+//! | `purchases_entry_preview` | `PurchaseEntryInput` | `PurchaseEntryPreview` |
+//! | `purchases_entry_save` | `PurchaseEntryInput` | `PurchaseEntrySaved` |
+//! | `purchases_change_split` | `SplitInput` (in `split`) | `SplitSet` (in `split`) |
 //!
 //! Money is paisa and arrives as text; names are `RecordRef` with both scripts (Code Standards
 //! F38). Purchase numbers are their own series, shown as خ-1 in Urdu and PUR-1 in English (letters
@@ -141,6 +144,143 @@ pub struct PurchaseInput {
     /// shop parts take روکڑ below 0.
     #[serde(default)]
     pub confirm_cash_below_zero: bool,
+    /// The نگ for another shop (PRD FR-12.41). Empty means 0: all for our shop. At most `qty`.
+    #[serde(default)]
+    pub other_qty: Option<String>,
+    /// The other shop, as typed.
+    #[serde(default)]
+    pub shop_name: Option<String>,
+}
+
+/// One item line of a purchase entry (PRD FR-12.41, R1): what the grid row holds. Each line becomes
+/// its own purchase (its own number, its own posting, its own cost, exactly as one purchase today).
+///
+/// Field paths in errors are `lines[i].item_id`, `lines[i].packing_id`, `lines[i].qty`,
+/// `lines[i].weight`, `lines[i].rate`, `lines[i].freight`, `lines[i].labour`,
+/// `lines[i].other_cost`, `lines[i].note`, `lines[i].other_qty`, `lines[i].shop_name`.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct PurchaseLineInput {
+    /// The screen's own key for this row. Echoed back in the preview (`PurchaseLinePreview.key`) so
+    /// the screen can match its rows.
+    #[serde(default)]
+    pub key: String,
+    /// The item.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub item_id: Option<i64>,
+    /// The packing.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub packing_id: Option<i64>,
+    /// Quantity in نگ. A simple sum such as `20+25` is taken (PRD FR-7.48).
+    #[serde(default)]
+    pub qty: String,
+    /// Weight in kg, up to 3 decimals. Required for an item sold by weight.
+    #[serde(default)]
+    pub weight: Option<String>,
+    /// The rate for each نگ, or for each kg for a weight item. Whole rupees.
+    #[serde(default)]
+    pub rate: String,
+    /// Freight of this line, paid at once and added to its cost.
+    #[serde(default)]
+    pub freight: Option<String>,
+    /// Labour of this line, paid at once and added to its cost.
+    #[serde(default)]
+    pub labour: Option<String>,
+    /// Other cost of this line, paid at once and added to its cost.
+    #[serde(default)]
+    pub other_cost: Option<String>,
+    /// A note of this line, up to 500 characters.
+    #[serde(default)]
+    pub note: Option<String>,
+    /// The نگ of this line for another shop (PRD FR-12.41). Empty means 0: all for our shop. At most
+    /// `qty` (`ERR_SPLIT_ABOVE_QTY`, value `qty`). A simple sum is taken.
+    #[serde(default)]
+    pub other_qty: Option<String>,
+    /// The other shop, as typed.
+    #[serde(default)]
+    pub shop_name: Option<String>,
+}
+
+/// A purchase entry with many item lines (PRD FR-12.41, R1), saved in ONE transaction. The trip,
+/// the day, the supplier, the day to sell and the partners' sources are chosen once and apply to
+/// every line. A line with a mistake stops the whole save; the mistake points to the line.
+///
+/// Field paths in errors: the entry's own `trip_id`, `date`, `supplier`, `sell_date`, `parts`,
+/// `parts[i].partner_id`, `parts[i].source`, `lines` (no line: `ERR_REQUIRED`; more than 100:
+/// `ERR_TOO_MANY_LINES`, value `max`), and for line i the paths of [`PurchaseLineInput`].
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct PurchaseEntryInput {
+    /// The trip. Required. `ERR_NOT_FOUND`; `ERR_TRIP_CLOSED`.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub trip_id: Option<i64>,
+    /// The day, `DD-MM-YYYY` or a shortcut. An open day, not before the trip's day.
+    pub date: String,
+    /// Who the goods were bought from, as typed.
+    #[serde(default)]
+    pub supplier: Option<String>,
+    /// The day to sell, `DD-MM-YYYY`. Empty means the purchase day. Applies to every line.
+    #[serde(default)]
+    pub sell_date: Option<String>,
+    /// The source of each partner's part on this entry (PRD A54). Empty takes the trip's defaults.
+    /// Applies to every line.
+    #[serde(default)]
+    pub parts: Vec<EntryPartInput>,
+    /// The Owner's answer to the cash question (PRD FR-6.7), asked once for the whole entry: the
+    /// shop parts of ALL lines together take روکڑ below 0.
+    #[serde(default)]
+    pub confirm_cash_below_zero: bool,
+    /// The item lines, in the order of the grid. At least 1, at most 100.
+    #[serde(default)]
+    pub lines: Vec<PurchaseLineInput>,
+}
+
+/// The numbers of one line of the preview: null while the line has a mistake or is not complete.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PurchaseLinePreview {
+    /// The key sent with the line.
+    pub key: String,
+    /// نگ of this line for our shop: the qty less `other_qty`. Null while the line has a mistake.
+    /// The screen shows it and never works it out (the qty may be a sum such as `20+25`).
+    #[ts(type = "number | null")]
+    pub qty_our: Option<i64>,
+    /// What the line works out to, exactly as `purchases_preview` gives for one purchase.
+    pub numbers: Option<PurchaseNumbers>,
+}
+
+/// What `purchases_entry_preview` sends back. Nothing is saved.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PurchaseEntryPreview {
+    /// One per input line, in the same order.
+    pub lines: Vec<PurchaseLinePreview>,
+    /// Σ paid now of the lines that work out. The money of the entry.
+    #[ts(type = "Paisa")]
+    pub paid_now_total: Paisa,
+    /// The partners' parts of the WHOLE entry: each partner's part is the sum of his parts of the
+    /// lines that work out, with the shop and pocket totals over all lines. Null while no line works
+    /// out. With one line it is exactly the `parts` of `purchases_preview` for that purchase. A
+    /// partner's `working` is the line's own when one line adds to it, else `working-entry-part-sum`
+    /// (args `lines`, `amount`).
+    pub parts: Option<EntryParts>,
+    /// What the whole entry does to cash (the shop parts of all lines together).
+    pub cash: CashCheck,
+    /// Mistakes, each at its field (`lines[i].qty` ...). The same mistake of the shared fields is
+    /// listed once.
+    pub errors: Vec<FieldError>,
+    /// Notes that do not stop the save.
+    pub warnings: Vec<FieldError>,
+}
+
+/// What `purchases_entry_save` gives back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PurchaseEntrySaved {
+    /// One saved purchase per line, in the order of the lines (each with its number خ-n, version,
+    /// journal entry and its preview).
+    pub saved: Vec<PurchaseSaved>,
+    /// Σ paid now of all lines.
+    #[ts(type = "Paisa")]
+    pub paid_now_total: Paisa,
 }
 
 /// The working of each amount of a purchase (PRD FR-7.43, Code Standards B30).
@@ -405,6 +545,26 @@ pub struct PurchaseRow {
     /// نگ left: bought less sold less written off. 0 for a cancelled purchase.
     #[ts(type = "number")]
     pub qty_left: i64,
+    /// نگ for another shop (PRD FR-12.41). The rest are for our shop. Starts as 0.
+    #[ts(type = "number")]
+    pub qty_other: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
+    /// نگ sold in our shop (own lots of بکری).
+    #[ts(type = "number")]
+    pub qty_our_sold: i64,
+    /// نگ sold in other shops.
+    #[ts(type = "number")]
+    pub qty_other_sold: i64,
+    /// نگ left for our shop: the part for our shop less what it sold, less the write-off (a
+    /// write-off comes off our shop's part first). Only these become ready lots.
+    #[ts(type = "number")]
+    pub qty_our_left: i64,
+    /// نگ left for another shop: `qty_our_left + qty_other_left = qty_left`.
+    #[ts(type = "number")]
+    pub qty_other_left: i64,
+    /// True while it is saved and has goods left: `purchases_change_split` is allowed.
+    pub can_change_split: bool,
     /// The cost already released: sold plus written off.
     #[ts(type = "Paisa")]
     pub cost_released_paisa: Paisa,

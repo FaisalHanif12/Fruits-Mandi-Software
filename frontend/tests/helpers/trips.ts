@@ -34,6 +34,15 @@ export function fakeTrips(options: TripsOptions = {}): FakeTrips {
   vi.mocked(purchasesApi.purchasesSave).mockImplementation((input) =>
     answer(() => books.purchaseSave(input)),
   );
+  vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation((input) =>
+    answer(() => books.purchaseEntryPreview(input)),
+  );
+  vi.mocked(purchasesApi.purchasesEntrySave).mockImplementation((input) =>
+    answer(() => books.purchaseEntrySave(input)),
+  );
+  vi.mocked(purchasesApi.purchasesChangeSplit).mockImplementation((input) =>
+    answer(() => books.splitChange(input)),
+  );
   vi.mocked(tripsApi.tripsCostPreview).mockImplementation((input) =>
     answer(() => books.costPreview(input)),
   );

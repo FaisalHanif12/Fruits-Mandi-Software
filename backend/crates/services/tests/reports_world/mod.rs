@@ -327,6 +327,8 @@ pub fn trip_34_world() -> (support::World, i64, i64, i64) {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            other_qty: None,
+            shop_name: None,
             sell_date: None,
             trip_id: Some(trip),
             date: "10-10-2026".into(),
@@ -449,6 +451,7 @@ pub fn garden_other_sale(w: &support::World, garden: i64, date: &str, qty: &str,
         &w.env.ctx,
         &w.owner,
         &GardenEntryInput::OtherSale(GardenOtherSaleInput {
+            arrival_id: None,
             garden_id: Some(garden),
             date: date.into(),
             shop: Some("Haji Traders".into()),

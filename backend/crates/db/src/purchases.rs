@@ -49,6 +49,10 @@ pub struct NewPurchase<'a> {
     pub paid_now_paisa: i64,
     /// A note.
     pub note: Option<&'a str>,
+    /// نگ for another shop (PRD FR-12.41); the rest are for our shop. At most `qty`.
+    pub other_qty: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<&'a str>,
 }
 
 /// The next purchase number: the biggest ever given plus one (a cancelled purchase keeps its
@@ -79,8 +83,8 @@ pub fn insert(
         "INSERT INTO purchases (created_at, created_by, updated_at, updated_by, number, venture_id,
              entry_date, supplier_text, item_id, packing_id, qty, weight_grams, rate_paisa, value_paisa,
              freight_paisa, labour_paisa, other_cost_paisa, paid_now_paisa, trip_cost_paisa,
-             total_cost_paisa, note, sell_date)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 0, ?16, ?17, ?18)",
+             total_cost_paisa, note, sell_date, other_qty, shop_name)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 0, ?16, ?17, ?18, ?19, ?20)",
         params![
             now,
             user_id,
@@ -100,6 +104,8 @@ pub fn insert(
             purchase.paid_now_paisa,
             purchase.note,
             purchase.sell_date,
+            purchase.other_qty,
+            purchase.shop_name,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -229,6 +235,55 @@ pub fn add_trip_cost(
     Ok(())
 }
 
+/// Moves what other shops took from a purchase: `qty` more (or fewer, if negative) نگ sold in other
+/// shops and `cost_paisa` more (or less) cost released (C21), in ONE update, so `qty_sold` and
+/// `qty_sold_other` move together and the trigger `purchases_split_fits_*` sees a whole row.
+/// `moved` is how many of those نگ were moved from our shop's part to the part for another shop
+/// (plan 35 D1; negative when a cancel moves them back): `other_qty` moves with it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn add_sold_in_other_shop(
+    conn: &Connection,
+    id: i64,
+    qty: i64,
+    moved: i64,
+    cost_paisa: i64,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    let released = plus(conn, id, "cost_released_paisa", cost_paisa)?;
+    conn.execute(
+        "UPDATE purchases SET qty_sold = qty_sold + ?2, qty_sold_other = qty_sold_other + ?2,
+             other_qty = other_qty + ?3, cost_released_paisa = ?4, updated_at = ?5, updated_by = ?6,
+             version = version + 1
+         WHERE id = ?1",
+        params![id, qty, moved, released, now, user_id],
+    )?;
+    Ok(())
+}
+
+/// Changes the split of a purchase (PRD FR-12.41): the نگ for another shop and its name.
+///
+/// # Errors
+/// Any SQLite error (the trigger `purchases_split_fits_update`).
+pub fn set_split(
+    conn: &Connection,
+    id: i64,
+    other_qty: i64,
+    shop_name: Option<&str>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE purchases SET other_qty = ?2, shop_name = ?3, updated_at = ?4, updated_by = ?5,
+             version = version + 1
+         WHERE id = ?1",
+        params![id, other_qty, shop_name, now, user_id],
+    )?;
+    Ok(())
+}
+
 /// Marks a purchase cancelled, with the reason.
 ///
 /// # Errors
@@ -310,6 +365,12 @@ pub struct PurchaseRec {
     pub qty_written_off: i64,
     /// The cost already released, paisa.
     pub cost_released_paisa: i64,
+    /// نگ for another shop (PRD FR-12.41).
+    pub other_qty: i64,
+    /// نگ sold in other shops (part of `qty_sold`).
+    pub qty_sold_other: i64,
+    /// The other shop, as typed.
+    pub shop_name: Option<String>,
 }
 
 const REC_COLUMNS: &str = "p.id, p.version, p.number, p.venture_id, v.number, v.name_ur, v.name_en,
@@ -318,7 +379,7 @@ const REC_COLUMNS: &str = "p.id, p.version, p.number, p.venture_id, v.number, v.
     p.qty, p.weight_grams, p.rate_paisa, p.value_paisa, p.freight_paisa, p.labour_paisa,
     p.other_cost_paisa, p.paid_now_paisa, p.trip_cost_paisa, p.total_cost_paisa, p.journal_entry_id,
     p.status, p.cancel_reason, p.note, p.qty_sold, p.qty_written_off, p.cost_released_paisa,
-    COALESCE(p.sell_date, p.entry_date)";
+    COALESCE(p.sell_date, p.entry_date), p.other_qty, p.qty_sold_other, p.shop_name";
 
 const REC_FROM: &str = "FROM purchases p
     JOIN ventures v ON v.id = p.venture_id
@@ -368,6 +429,9 @@ fn read_rec(r: &Row<'_>) -> rusqlite::Result<PurchaseRec> {
         qty_written_off: r.get(32)?,
         cost_released_paisa: r.get(33)?,
         sell_date: r.get(34)?,
+        other_qty: r.get(35)?,
+        qty_sold_other: r.get(36)?,
+        shop_name: r.get(37)?,
     })
 }
 
@@ -933,7 +997,7 @@ pub fn ready_by(conn: &Connection, date: &str, limit: i64) -> rusqlite::Result<V
     let mut statement = conn.prepare(&format!(
         "SELECT {REC_COLUMNS} {REC_FROM}
          WHERE p.status = 'saved' AND v.status = 'open'
-           AND p.qty - p.qty_sold - p.qty_written_off > 0
+           AND p.qty - p.other_qty - (p.qty_sold - p.qty_sold_other) - p.qty_written_off > 0
            AND COALESCE(p.sell_date, p.entry_date) <= ?1
          ORDER BY COALESCE(p.sell_date, p.entry_date), p.number LIMIT ?2"
     ))?;
