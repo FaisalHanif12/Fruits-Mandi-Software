@@ -52,6 +52,14 @@ export const ARRIVAL_COLUMNS: readonly ListColumn<ArrivalRow>[] = [
     from: 'normal',
     value: (row) => String(row.qty_left),
   },
+  // The shop's commission on this entry's goods sold in our shop (PRD FR-12.37).
+  {
+    field: 'commission',
+    type: 'money',
+    headerId: 'glossary-commission',
+    from: 'normal',
+    value: (row, { money }) => money(row.commission_paisa),
+  },
   {
     field: 'sell_date',
     type: 'date',

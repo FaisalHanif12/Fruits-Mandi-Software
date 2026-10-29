@@ -681,6 +681,73 @@ fn view_j_e2e_41_a_pocket_part_a_truck_and_a_trip_sold_out() {
     );
 }
 
+/// The commission figures of the trip screens, in rupees: the trip row, its first purchase and the
+/// total row of the trips list.
+fn screen_commissions(w: &World, trip: i64) -> (i64, i64, i64) {
+    let detail = trips::get(
+        &w.env.ctx,
+        &mandi_services::core::trips::TripGetInput {
+            id: trip,
+            entries_offset: 0,
+            entries_limit: 0,
+        },
+    )
+    .unwrap();
+    let list = trips::list(
+        &w.env.ctx,
+        &mandi_services::core::trips::TripsListInput::default(),
+    )
+    .unwrap();
+    (
+        detail.row.commission_paisa.rupees(),
+        detail.purchases[0].commission_paisa.rupees(),
+        list.totals.commission_paisa.rupees(),
+    )
+}
+
+#[test]
+fn the_commission_of_the_trip_screens_is_the_commission_of_view_j_e2e_34_and_e2e_41() {
+    // Plan 36 (PRD FR-12.27): seller commission + buyer commission + لاگا of the sales in our shop.
+    // E2E-34: 540 + 540 + 120 = 1,200 (not the seller-only 540 of R33).
+    let (w, trip, purchase, _) = trip_34();
+    let j = j_figures(&view(&w, AnalyticsView::J, filters()), 0)[4];
+    assert_eq!(j, 1_200);
+    assert_eq!(screen_commissions(&w, trip), (1_200, 1_200, 1_200));
+    // The dashboard tile of the open trips says the same.
+    assert_eq!(
+        trips::summary(&w.env.ctx)
+            .unwrap()
+            .commission_paisa
+            .rupees(),
+        1_200
+    );
+    // A write-off adds and takes nothing (E2E-34b).
+    write_off_5(&w, purchase);
+    assert_eq!(screen_commissions(&w, trip), (1_200, 1_200, 1_200));
+    // A sale in another shop adds nothing: it is money, not a sale line of ours.
+    let (w, trip, purchase, _) = trip_34();
+    trips::other_sale_save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::trips::OtherSaleInput {
+            trip_id: Some(trip),
+            purchase_id: Some(purchase),
+            date: "10-10-2026".into(),
+            shop: Some("Haji Traders".into()),
+            qty: "5".into(),
+            amount: "3,000".into(),
+            note: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(screen_commissions(&w, trip), (1_200, 1_200, 1_200));
+    // E2E-41: 6,720 + 6,720 + 640 = 14,080.
+    let (w, trip, _) = trip_41();
+    let j = j_figures(&view(&w, AnalyticsView::J, filters()), 0)[4];
+    assert_eq!(j, 14_080);
+    assert_eq!(screen_commissions(&w, trip), (14_080, 14_080, 14_080));
+}
+
 #[test]
 fn view_j_in_every_layout_adds_up_to_the_same_totals() {
     let (w, trip, _, _) = trip_34();

@@ -38,6 +38,52 @@ fn data(message: &str) -> ServiceError {
     ServiceError::Data(message.to_owned())
 }
 
+/// The commission on goods sold in our shop as a number and its working (plan 36, PRD FR-12.27,
+/// FR-12.37): the three parts summed with their sign by `mandi_db::commission`, and their checked
+/// sum. Example (E2E-34): seller 540, buyer 540, لاگا 120, total 1,200.
+///
+/// # Errors
+/// `ServiceError::Data` if a stored sum is not whole rupees or the sum does not fit.
+pub(crate) fn commission_view(
+    c: &mandi_db::commission::Commission,
+) -> Result<(Paisa, mandi_domain::core::rules::Working), ServiceError> {
+    use mandi_domain::core::rules::{Working, WorkingArg, WorkingValue};
+    // A commission is never negative, so a net below 0 means the facts are wrong: an error, like the
+    // analytics (Code Standards: fail loudly).
+    let part = |paisa: i64| {
+        if paisa < 0 {
+            return Err(data("the commission on some goods is below 0"));
+        }
+        Paisa::try_from_paisa(paisa).map_err(money_error)
+    };
+    let (seller, buyer, laga) = (
+        part(c.seller_paisa)?,
+        part(c.buyer_paisa)?,
+        part(c.laga_paisa)?,
+    );
+    let total = seller
+        .checked_add(buyer)
+        .and_then(|v| v.checked_add(laga))
+        .map_err(money_error)?;
+    let arg = |name: &str, paisa: Paisa| WorkingArg {
+        name: name.to_owned(),
+        value: WorkingValue::Money { paisa },
+    };
+    Ok((
+        total,
+        Working {
+            message_id: "working-goods-commission".to_owned(),
+            args: vec![
+                arg("seller", seller),
+                arg("buyer", buyer),
+                arg("laga", laga),
+                arg("total", total),
+            ],
+            rule_id: None,
+        },
+    ))
+}
+
 /// `ERR_NOT_FOUND` on a field.
 pub(crate) fn not_found(field: &str) -> ServiceError {
     ServiceError::reject_field(ErrorCode::ErrNotFound, field)

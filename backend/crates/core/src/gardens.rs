@@ -180,6 +180,9 @@ pub struct GardensTotals {
     /// Σ rent due (signed).
     #[ts(type = "Paisa")]
     pub rent_due_paisa: Paisa,
+    /// Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
 }
 
 /// Input of `gardens_list` (PRD FR-19.10, FR-19.11). Dates are `DD-MM-YYYY` or a shortcut; null or
@@ -288,6 +291,14 @@ pub struct GardenRow {
     /// The day of the latest entry or lot posting of the garden, `YYYY-MM-DD`: the closing cannot be
     /// dated before it. Null if there is none.
     pub last_date: Option<String>,
+    /// The shop's commission on the goods sold in OUR shop (plan 36, PRD FR-12.27, FR-12.37):
+    /// seller commission + buyer commission + لاگا of the stored sale lines, with reversals taken
+    /// out. A sale in another shop adds nothing. The same number as analytics views J and I and
+    /// R36 (not the seller-only column of R33). Display only: nothing posts.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+    /// How the commission was worked out: the three parts and their sum (CalcInfo).
+    pub commission_working: Working,
 }
 
 /// The answer of `gardens_list`: one page and the totals over the whole filter.
@@ -449,6 +460,9 @@ pub struct GardenSummaryRow {
     /// The rent still due (signed).
     #[ts(type = "Paisa")]
     pub rent_due_paisa: Paisa,
+    /// Its commission on the goods sold in our shop (plan 36).
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
 }
 
 /// The data of the dashboard tile باغات (PRD 9.1): the open gardens and each one's running balance.
@@ -461,6 +475,9 @@ pub struct GardensSummary {
     /// Σ running balances of the open gardens.
     #[ts(type = "Paisa")]
     pub balance_total_paisa: Paisa,
+    /// Σ commission on the goods sold in our shop, over the open gardens (plan 36).
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
     /// The open gardens, by number.
     pub rows: Vec<GardenSummaryRow>,
 }

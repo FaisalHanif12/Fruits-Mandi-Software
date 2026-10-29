@@ -57,5 +57,40 @@
       "qty_sold": 60
     }
   ],
-  "write_offs": []
+  "write_offs": [],
+  "commission_paisa": 480000,
+  "commission_working": {
+    "message_id": "working-goods-commission",
+    "args": [
+      {
+        "name": "seller",
+        "value": {
+          "kind": "money",
+          "paisa": 216000
+        }
+      },
+      {
+        "name": "buyer",
+        "value": {
+          "kind": "money",
+          "paisa": 216000
+        }
+      },
+      {
+        "name": "laga",
+        "value": {
+          "kind": "money",
+          "paisa": 48000
+        }
+      },
+      {
+        "name": "total",
+        "value": {
+          "kind": "money",
+          "paisa": 480000
+        }
+      }
+    ],
+    "rule_id": null
+  }
 }

@@ -1,6 +1,7 @@
 {
   "open_gardens": 1,
   "balance_total_paisa": 1140000,
+  "commission_paisa": 800000,
   "rows": [
     {
       "id": 1,
@@ -9,7 +10,8 @@
       "name_ur": "شاہ پور باغ",
       "name_en": "Shahpur Garden",
       "balance_paisa": 1140000,
-      "rent_due_paisa": 0
+      "rent_due_paisa": 0,
+      "commission_paisa": 800000
     }
   ]
 }

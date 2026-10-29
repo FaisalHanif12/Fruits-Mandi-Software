@@ -18,6 +18,7 @@ import { ListGrid, PagedFooter, type ListContext } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   Button,
+  CalcInfo,
   Card,
   Code,
   EmptyState,
@@ -79,6 +80,9 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
         qty_left: String(first?.totals.qty_left ?? 0),
         qty: String(first?.totals.qty ?? 0),
         qty_sold: String(first?.totals.qty_sold ?? 0),
+        ...(first === undefined
+          ? {}
+          : { commission: context.money(first.totals.commission_paisa) }),
       },
     }),
     [first],
@@ -213,6 +217,12 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
               </Fact>
               <Fact label={<Localized id="purchases-detail-other-left" />}>
                 <Num>{String(selected.qty_other_left)}</Num>
+              </Fact>
+              <Fact label={<Localized id="glossary-commission" />}>
+                <span className="inline-flex items-center gap-1">
+                  <Num paisa={selected.commission_paisa} />
+                  <CalcInfo working={selected.commission_working} inCell />
+                </span>
               </Fact>
               <Fact label={<Localized id="bikri-stock-col-days" />}>
                 <Num>{String(selected.days_waiting)}</Num>

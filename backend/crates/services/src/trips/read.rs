@@ -26,7 +26,7 @@ use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
 use crate::purchases;
-use crate::ventures::{self, Venture, not_found, partner_rows, record_of};
+use crate::ventures::{self, Venture, commission_view, not_found, partner_rows, record_of};
 
 /// The default page of a list (PRD FR-19.11).
 const DEFAULT_PAGE: u32 = 100;
@@ -128,8 +128,10 @@ fn row_of(
     partners: &[repo::PartnerShare],
     figures: PurchaseFigures,
     locked: bool,
+    commission: &mandi_db::commission::Commission,
 ) -> Result<TripRow, ServiceError> {
     let money = Money::of(&figures)?;
+    let (commission_paisa, commission_working) = commission_view(commission)?;
     let qty_left = figures
         .qty_bought
         .checked_sub(figures.qty_sold)
@@ -169,6 +171,8 @@ fn row_of(
         cost_written_off_paisa: money.cost_written_off,
         result_paisa: money.result,
         result_working: money.working(),
+        commission_paisa,
+        commission_working,
     })
 }
 
@@ -181,6 +185,7 @@ pub(super) fn rows_of(
     let partners = repo::partners_of_many(conn, &ids)?;
     let figures = figures_of(conn, &ids)?;
     let locked = repo::with_entries(conn, &ids)?;
+    let commissions = mandi_db::commission::by_trips(conn, &ids)?;
     recs.iter()
         .map(|rec| {
             row_of(
@@ -188,6 +193,7 @@ pub(super) fn rows_of(
                 partners.get(&rec.id).map_or(&[], Vec::as_slice),
                 figures.get(&rec.id).copied().unwrap_or_default(),
                 locked.contains(&rec.id),
+                &commissions.get(&rec.id).copied().unwrap_or_default(),
             )
         })
         .collect()
@@ -281,7 +287,16 @@ pub(super) fn list(ctx: &Context, input: &TripsListInput) -> Result<TripsList, S
             cost_paisa: Paisa::ZERO,
             sales_paisa: Paisa::ZERO,
             result_paisa: Paisa::ZERO,
+            commission_paisa: Paisa::ZERO,
         };
+        // The commission on the goods sold in our shop, over every trip of the filter: one grouped
+        // query (analytics view J, by trip).
+        for commission in mandi_db::commission::by_trips(conn, &ids)?.values() {
+            totals.commission_paisa = totals
+                .commission_paisa
+                .checked_add(commission_view(commission)?.0)
+                .map_err(money_error)?;
+        }
         for f in figures.values() {
             let money = Money::of(f)?;
             let left = f
@@ -322,11 +337,25 @@ pub(super) fn list(ctx: &Context, input: &TripsListInput) -> Result<TripsList, S
 pub(super) fn summary(ctx: &Context) -> Result<TripsSummary, ServiceError> {
     ctx.db.read(|conn| {
         let (open_trips, purchases_with_stock, qty_left, cost_left) = repo::tile_totals(conn)?;
+        // The commission on the goods of the open trips: one grouped query (plan 36).
+        let open = repo::ListFilter {
+            kind: "trip".to_owned(),
+            status: Some("open".to_owned()),
+            ..repo::ListFilter::default()
+        };
+        let open_ids = repo::ids_of(conn, &open)?;
+        let mut commission = Paisa::ZERO;
+        for c in mandi_db::commission::by_trips(conn, &open_ids)?.values() {
+            commission = commission
+                .checked_add(commission_view(c)?.0)
+                .map_err(money_error)?;
+        }
         Ok(TripsSummary {
             open_trips,
             purchases_with_stock,
             qty_left,
             cost_left_paisa: paisa(cost_left)?,
+            commission_paisa: commission,
         })
     })
 }

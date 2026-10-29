@@ -126,4 +126,15 @@ export type GardenRow = {
    * dated before it. Null if there is none.
    */
   last_date: string | null;
+  /**
+   * The shop's commission on the goods sold in OUR shop (plan 36, PRD FR-12.27, FR-12.37):
+   * seller commission + buyer commission + لاگا of the stored sale lines, with reversals taken
+   * out. A sale in another shop adds nothing. The same number as analytics views J and I and
+   * R36 (not the seller-only column of R33). Display only: nothing posts.
+   */
+  commission_paisa: Paisa;
+  /**
+   * How the commission was worked out: the three parts and their sum (CalcInfo).
+   */
+  commission_working: Working;
 };

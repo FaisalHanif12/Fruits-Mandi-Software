@@ -171,6 +171,17 @@ export function TripFiguresCard({ trip }: TripCardProps) {
               </div>
             ))}
           </dl>
+          <dl className="flex flex-col">
+            <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-label text-ink">
+              <Localized id="glossary-commission">
+                <dt />
+              </Localized>
+              <dd className="flex items-center gap-1">
+                <Num paisa={trip.commission_paisa} />
+                <CalcInfo working={trip.commission_working} inCell />
+              </dd>
+            </div>
+          </dl>
           <ResultLine trip={trip} />
         </div>
       </div>

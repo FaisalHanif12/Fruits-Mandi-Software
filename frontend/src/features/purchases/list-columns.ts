@@ -62,7 +62,7 @@ export const TRIP_PURCHASE_COLUMNS: readonly ListColumn<PurchaseRow>[] = [
   },
   {
     field: 'qty_left',
-    type: 'number',
+    type: 'figure',
     headerId: 'purchases-col-left',
     from: 'normal',
     value: (row) => String(row.qty_left),
@@ -81,12 +81,13 @@ export const TRIP_PURCHASE_COLUMNS: readonly ListColumn<PurchaseRow>[] = [
     from: 'normal',
     value: (row, { money }) => money(row.result_paisa),
   },
+  // The shop's commission on this purchase's goods sold in our shop (PRD FR-12.27).
   {
-    field: 'date',
-    type: 'date',
-    headerId: 'purchases-col-date',
-    from: 'wide',
-    value: (row) => isoToDisplayDate(row.entry_date),
+    field: 'commission',
+    type: 'money',
+    headerId: 'glossary-commission',
+    from: 'normal',
+    value: (row, { money }) => money(row.commission_paisa),
   },
   {
     field: 'sell_date',
@@ -94,13 +95,6 @@ export const TRIP_PURCHASE_COLUMNS: readonly ListColumn<PurchaseRow>[] = [
     headerId: 'purchases-col-sell-date',
     from: 'wide',
     value: (row) => isoToDisplayDate(row.sell_date),
-  },
-  {
-    field: 'qty',
-    type: 'number',
-    headerId: 'purchases-col-qty',
-    from: 'wide',
-    value: (row) => String(row.qty),
   },
   {
     field: 'total_cost',

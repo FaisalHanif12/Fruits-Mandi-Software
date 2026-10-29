@@ -33,4 +33,8 @@ export type GardenSummaryRow = {
    * The rent still due (signed).
    */
   rent_due_paisa: Paisa;
+  /**
+   * Its commission on the goods sold in our shop (plan 36).
+   */
+  commission_paisa: Paisa;
 };

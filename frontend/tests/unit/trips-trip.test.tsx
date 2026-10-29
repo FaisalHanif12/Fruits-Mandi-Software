@@ -755,6 +755,45 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     });
   });
 
+  it('FR-12.27: the list of purchases and the purchase card show the commission on the goods sold in our shop, with the backend’s working', async () => {
+    fakeTrips();
+    const { user } = await open();
+    const target = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('.ag-row[row-id="7"] [col-id="number"]');
+      if (found === null) throw new Error('no purchase row');
+      return found;
+    });
+    // E2E-34: the 15 sold in our shop gave 540 + 540 + 120 = 1,200, in the row of the list.
+    expect(
+      visible(document.querySelector('.ag-row[row-id="7"] [col-id="commission"]')?.textContent),
+    ).toBe('1,200');
+    await user.click(target);
+    const card = (
+      await screen.findByText(
+        said(
+          message(language, 'purchases-detail-title', {
+            number: purchaseNumber,
+            item: language === 'ur' ? 'مالٹا' : 'Orange',
+          }),
+        ),
+      )
+    ).closest('section');
+    if (card === null) throw new Error('no purchase card');
+    const line = within(card)
+      .getAllByText(said(message(language, 'glossary-commission')))[0]
+      ?.closest('div');
+    if (line === null || line === undefined) throw new Error('no commission fact on the card');
+    expect(visible(line.textContent)).toContain('1,200');
+    const info = line.querySelector('button');
+    if (info === null) throw new Error('no ⓘ on the commission fact');
+    await user.click(info);
+    const words = await screen.findByText((content) =>
+      visible(content).includes(language === 'ur' ? 'بیوپاری' : 'seller'),
+    );
+    for (const figure of ['540', '120', '1,200'])
+      expect(visible(words.textContent)).toContain(figure);
+  });
+
   it('FR-12.39: the purchase card shows the date to sell, and "change" asks for a day and sends it with the version', async () => {
     fakeTrips();
     vi.mocked(purchasesApi.purchasesSetSellDate).mockImplementation((input) =>

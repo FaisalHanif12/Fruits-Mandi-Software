@@ -1762,7 +1762,7 @@ fn the_masters_and_search_commands_work_through_the_ipc() {
     assert_eq!(
         hits,
         json!([{ "id": 2, "kind": "city", "code": "2", "name_ur": "علی قزکس", "name_en": "Ali Qzxwv",
-                 "extra_ur": "", "extra_en": "", "is_active": true }])
+                 "extra_ur": "", "extra_en": "", "is_active": true, "sold_by_weight": false }])
     );
     assert_eq!(
         h.ok(

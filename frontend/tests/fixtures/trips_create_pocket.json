@@ -86,5 +86,40 @@
       }
     ],
     "rule_id": null
+  },
+  "commission_paisa": 0,
+  "commission_working": {
+    "message_id": "working-goods-commission",
+    "args": [
+      {
+        "name": "seller",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "buyer",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "laga",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      },
+      {
+        "name": "total",
+        "value": {
+          "kind": "money",
+          "paisa": 0
+        }
+      }
+    ],
+    "rule_id": null
   }
 }

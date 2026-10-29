@@ -91,6 +91,7 @@ function TripsBody({ saved, remember }: MemoryProps) {
               qty_left: String(first.totals.qty_left),
               cost_left: context.money(first.totals.cost_left_paisa),
               result: context.money(first.totals.result_paisa),
+              commission: context.money(first.totals.commission_paisa),
               cost: context.money(first.totals.cost_paisa),
               sales: context.money(first.totals.sales_paisa),
             }),

@@ -94,6 +94,16 @@ const countArg = (name: string, value: number): WorkingArg => ({
   value: { kind: 'count', value },
 });
 
+/** The working of the shop's commission on goods sold in our shop: seller, buyer and Laga (PRD FR-12.27). */
+export function commissionWorking(seller: number, buyer: number, laga: number): Working {
+  return working('working-goods-commission', [
+    moneyArg('seller', seller),
+    moneyArg('buyer', buyer),
+    moneyArg('laga', laga),
+    moneyArg('total', seller + buyer + laga),
+  ]);
+}
+
 /** The partners of a trip at 40, 30, 30, each with the source given. */
 export function tripPartners(
   sources: readonly [MoneySource, MoneySource, MoneySource] = ['shop', 'shop', 'shop'],
@@ -159,6 +169,8 @@ export function tripRow(over: Partial<TripRow> = {}): TripRow {
     cost_written_off_paisa: money(0),
     result_paisa: money(0),
     result_working: resultWorking('working-trip-result', 0, 0, 0, 0, 0),
+    commission_paisa: money(0),
+    commission_working: commissionWorking(0, 0, 0),
     ...over,
   };
 }
@@ -176,6 +188,9 @@ export function e34Trip(over: Partial<TripRow> = {}): TripRow {
     cost_sold_paisa: money(7_800),
     result_paisa: money(660),
     result_working: resultWorking('working-trip-result', 8_460, 0, 7_800, 0, 660),
+    // E2E-34: 540 + 540 + 120.
+    commission_paisa: money(1_200),
+    commission_working: commissionWorking(540, 540, 120),
     shares_locked: true,
     ...over,
   });
@@ -277,6 +292,9 @@ export function e34Purchase(over: Partial<PurchaseRow> = {}): PurchaseRow {
     cost_written_off_paisa: money(0),
     result_paisa: money(660),
     result_working: resultWorking('working-purchase-result', 8_460, 0, 7_800, 0, 660),
+    // E2E-34: the 15 sold in our shop gave 540 + 540 + 120.
+    commission_paisa: money(1_200),
+    commission_working: commissionWorking(540, 540, 120),
     days_waiting: 2,
     can_cancel: false,
     // Goods are left, so its date to sell can still be changed (plan 33).
@@ -652,6 +670,7 @@ export function createTripBooks(options: TripsOptions = {}) {
           cost_paisa: money(10_400),
           sales_paisa: money(8_460),
           result_paisa: money(660),
+          commission_paisa: money(1_200),
         },
       };
     },
@@ -985,6 +1004,7 @@ export function createTripBooks(options: TripsOptions = {}) {
           cost_left_paisa: money(2_600),
           qty_left: 5,
           result_paisa: money(660),
+          commission_paisa: money(1_200),
         },
       };
     },

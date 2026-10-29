@@ -16,6 +16,10 @@ export type GardensSummary = {
    */
   balance_total_paisa: Paisa;
   /**
+   * Σ commission on the goods sold in our shop, over the open gardens (plan 36).
+   */
+  commission_paisa: Paisa;
+  /**
    * The open gardens, by number.
    */
   rows: Array<GardenSummaryRow>;

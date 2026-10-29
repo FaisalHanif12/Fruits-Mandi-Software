@@ -102,6 +102,27 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     expect(rowCell('1', 'balance')).toBe('11,400');
     const pinned = document.querySelector('.ag-row-pinned');
     expect(visible(pinned?.querySelector('[col-id="balance"]')?.textContent)).toBe('11,400');
+    // The shop's commission on the garden's goods sold in our shop (PRD FR-12.37): 3,600 + 3,600 +
+    // 800, the backend's figure, in the row and in the total row.
+    expect(rowCell('1', 'commission')).toBe('8,000');
+    expect(visible(pinned?.querySelector('[col-id="commission"]')?.textContent)).toBe('8,000');
+  });
+
+  it('the commission on the garden’s goods: a line on the garden card with the backend’s working behind the ⓘ', async () => {
+    vi.mocked(gardensApi.gardensGet).mockResolvedValue(real.GARDENS_GET_OPEN);
+    const { user } = await open();
+    const label = screen.getAllByText(said(message(language, 'glossary-commission')))[0];
+    const line = label?.closest('div');
+    if (line === null || line === undefined) throw new Error('no commission line on the card');
+    expect(visible(line.textContent)).toContain('8,000');
+    const info = line.querySelector('button');
+    if (info === null) throw new Error('no ⓘ on the commission line');
+    await user.click(info);
+    const words = await screen.findByText((content) =>
+      visible(content).includes(language === 'ur' ? 'بیوپاری' : 'seller'),
+    );
+    for (const figure of ['3,600', '800', '8,000'])
+      expect(visible(words.textContent)).toContain(figure);
   });
 
   it('an open garden (E2E-40): the figures, the partners and what each one paid', async () => {

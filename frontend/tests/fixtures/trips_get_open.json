@@ -97,6 +97,41 @@
         }
       ],
       "rule_id": null
+    },
+    "commission_paisa": 120000,
+    "commission_working": {
+      "message_id": "working-goods-commission",
+      "args": [
+        {
+          "name": "seller",
+          "value": {
+            "kind": "money",
+            "paisa": 54000
+          }
+        },
+        {
+          "name": "buyer",
+          "value": {
+            "kind": "money",
+            "paisa": 54000
+          }
+        },
+        {
+          "name": "laga",
+          "value": {
+            "kind": "money",
+            "paisa": 12000
+          }
+        },
+        {
+          "name": "total",
+          "value": {
+            "kind": "money",
+            "paisa": 120000
+          }
+        }
+      ],
+      "rule_id": null
     }
   },
   "purchases": [
@@ -310,6 +345,41 @@
             "value": {
               "kind": "money",
               "paisa": 110000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "commission_paisa": 120000,
+      "commission_working": {
+        "message_id": "working-goods-commission",
+        "args": [
+          {
+            "name": "seller",
+            "value": {
+              "kind": "money",
+              "paisa": 54000
+            }
+          },
+          {
+            "name": "buyer",
+            "value": {
+              "kind": "money",
+              "paisa": 54000
+            }
+          },
+          {
+            "name": "laga",
+            "value": {
+              "kind": "money",
+              "paisa": 12000
+            }
+          },
+          {
+            "name": "total",
+            "value": {
+              "kind": "money",
+              "paisa": 120000
             }
           }
         ],

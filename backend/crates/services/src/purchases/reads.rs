@@ -57,8 +57,10 @@ fn optional_date(
 fn row_of(
     rec: &PurchaseRec,
     figures: SoldFigures,
+    commission: &mandi_db::commission::Commission,
     today: BusinessDate,
 ) -> Result<PurchaseRow, ServiceError> {
+    let (commission_paisa, commission_working) = crate::ventures::commission_view(commission)?;
     let cancelled = rec.status == "cancelled";
     let qty_left = if cancelled {
         0
@@ -176,6 +178,8 @@ fn row_of(
             ],
             rule_id: None,
         },
+        commission_paisa,
+        commission_working,
         days_waiting,
         can_cancel: !cancelled && rec.qty_sold == 0 && rec.qty_written_off == 0 && !carries_cost,
         lots: Vec::new(),
@@ -207,11 +211,13 @@ pub(super) fn rows_of(
 ) -> Result<Vec<PurchaseRow>, ServiceError> {
     let ids: Vec<i64> = recs.iter().map(|r| r.id).collect();
     let figures = repo::sold_figures(conn, &ids)?;
+    let commissions = mandi_db::commission::by_purchases(conn, &ids)?;
     recs.iter()
         .map(|rec| {
             row_of(
                 rec,
                 figures.get(&rec.id).copied().unwrap_or_default(),
+                &commissions.get(&rec.id).copied().unwrap_or_default(),
                 today,
             )
         })
@@ -314,6 +320,7 @@ pub(super) fn list(
                 cost_left_paisa: paisa(sums.cost_left_paisa)?,
                 qty_left: sums.qty_left,
                 result_paisa: result,
+                commission_paisa: crate::ventures::commission_view(&sums.commission)?.0,
             },
         })
     })

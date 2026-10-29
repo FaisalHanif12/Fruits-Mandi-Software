@@ -168,6 +168,14 @@ export function GardenFiguresCard({ garden }: GardenCardProps) {
               </Line>
             ))}
           </dl>
+          <dl className="flex flex-col">
+            <Line label={l10n.getString('glossary-commission')}>
+              <span className="flex items-center gap-1">
+                <Num paisa={garden.commission_paisa} />
+                <CalcInfo working={garden.commission_working} inCell />
+              </span>
+            </Line>
+          </dl>
           <BalanceLines garden={garden} />
         </div>
       </div>

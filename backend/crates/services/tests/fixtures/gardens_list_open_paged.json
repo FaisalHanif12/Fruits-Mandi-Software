@@ -85,7 +85,42 @@
         "rule_id": null
       },
       "account_balance_paisa": 6640000,
-      "last_date": "2026-10-12"
+      "last_date": "2026-10-12",
+      "commission_paisa": 800000,
+      "commission_working": {
+        "message_id": "working-goods-commission",
+        "args": [
+          {
+            "name": "seller",
+            "value": {
+              "kind": "money",
+              "paisa": 360000
+            }
+          },
+          {
+            "name": "buyer",
+            "value": {
+              "kind": "money",
+              "paisa": 360000
+            }
+          },
+          {
+            "name": "laga",
+            "value": {
+              "kind": "money",
+              "paisa": 80000
+            }
+          },
+          {
+            "name": "total",
+            "value": {
+              "kind": "money",
+              "paisa": 800000
+            }
+          }
+        ],
+        "rule_id": null
+      }
     }
   ],
   "total_count": 1,
@@ -94,6 +129,7 @@
     "paid_paisa": 5500000,
     "money_in_paisa": 6640000,
     "balance_paisa": 1140000,
-    "rent_due_paisa": 0
+    "rent_due_paisa": 0,
+    "commission_paisa": 800000
   }
 }

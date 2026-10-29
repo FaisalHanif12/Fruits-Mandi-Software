@@ -32,6 +32,8 @@ import { lineCell, lineCellText, linesSection, typeArrivalLine } from '../helper
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { paisaForTest } from '../helpers/paisa';
+import { commissionWorking } from '../helpers/trips-data';
 import { fakeItemPickers } from '../helpers/trips';
 
 vi.mock('../../src/app/api');
@@ -273,8 +275,8 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     await typeArrivalLine(user, 1, { ...oranges, qty: '30' });
     await waitFor(() => {
       expect(lineCellText(0, 'ourQty', 'arrival')).toBe('60');
+      expect(lineCellText(1, 'ourQty', 'arrival')).toBe('30');
     });
-    expect(lineCellText(1, 'ourQty', 'arrival')).toBe('30');
   });
 
   it('the real refusal of a line of the save is on the cell of that line', async () => {
@@ -560,6 +562,44 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     expect(
       await screen.findByText(said(message(language, 'split-moved-from-our', { count: 4 }))),
     ).toBeInTheDocument();
+  });
+
+  it('FR-12.37: each goods arrived entry shows the commission on its goods sold in our shop, in its row, in the total row and on its card with the backend’s working', async () => {
+    fakeGardens();
+    const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
+    if (first === undefined) throw new Error('the fixture has no arrival');
+    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+      ...arrivals.ARRIVALS_IN_STOCK,
+      // The backend's own list has no sale yet, so the figures are made up here: 700 + 700 + 100.
+      rows: [
+        {
+          ...first,
+          commission_paisa: paisaForTest(150_000),
+          commission_working: commissionWorking(700, 700, 100),
+        },
+      ],
+      totals: { ...arrivals.ARRIVALS_IN_STOCK.totals, commission_paisa: paisaForTest(150_000) },
+    });
+    const { user } = await open();
+    const row = await waitFor(() => {
+      const found = document.querySelector('.ag-row[row-id="1"]');
+      if (found === null) throw new Error('no row');
+      return found;
+    });
+    expect(visible(row.querySelector('[col-id="commission"]')?.textContent)).toBe('1,500');
+    const pinned = document.querySelector('.ag-row-pinned');
+    expect(visible(pinned?.querySelector('[col-id="commission"]')?.textContent)).toBe('1,500');
+    // The card has the figure with its working.
+    const label = (await screen.findAllByText(said(message(language, 'glossary-commission'))))
+      .map((node) => node.closest('div'))
+      .find((box) => box !== null && box.querySelector('button') !== null);
+    if (label === null || label === undefined) throw new Error('no commission fact on the card');
+    await user.click(label.querySelector('button') as HTMLElement);
+    const words = await screen.findByText((content) =>
+      visible(content).includes(language === 'ur' ? 'بیوپاری' : 'seller'),
+    );
+    for (const figure of ['700', '100', '1,500'])
+      expect(visible(words.textContent)).toContain(figure);
   });
 
   it('a garden with no goods arrived says what to do', async () => {

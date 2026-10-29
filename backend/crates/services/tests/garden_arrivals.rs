@@ -1095,6 +1095,101 @@ fn cancelling_or_editing_a_sale_gives_the_arrival_its_goods_back() {
     assert!(after_cancel.can_cancel);
 }
 
+#[test]
+fn the_commission_on_the_goods_of_an_arrival_and_its_garden_takes_a_cancelled_sale_out() {
+    // Plan 36 (PRD FR-12.37): the shop's commission on goods sold in our shop = seller commission +
+    // buyer commission + لاگا of the stored sale lines, reversals included. 60 at 600 = 36,000:
+    // seller 6% 2,160, buyer 6% 2,160, لاگا 60 × 8 = 480, so 4,800.
+    let w = world();
+    day(&w, 11);
+    let g = shahpur(&w);
+    let a = arrive(&w, g.id, "11-10-2026", None, "100");
+    let garden_commission = |w: &World| {
+        gardens::get(
+            &w.env.ctx,
+            &mandi_services::core::gardens::GardenGetInput {
+                id: g.id,
+                history_offset: 0,
+                history_limit: 0,
+            },
+        )
+        .unwrap()
+        .row
+    };
+    // Nothing sold: 0, with a working.
+    assert_eq!(arrival(&w, a.id).commission_paisa.rupees(), 0);
+    let saved = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-1", &g, Some(a.id), "60")],
+        ),
+    )
+    .unwrap();
+    let row = arrival(&w, a.id);
+    assert_eq!(row.commission_paisa.rupees(), 4_800);
+    let args: Vec<(String, i64)> = row
+        .commission_working
+        .args
+        .iter()
+        .map(|arg| match &arg.value {
+            mandi_services::core::rules::WorkingValue::Money { paisa } => {
+                (arg.name.clone(), paisa.rupees())
+            }
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(
+        args,
+        vec![
+            ("seller".to_owned(), 2_160),
+            ("buyer".to_owned(), 2_160),
+            ("laga".to_owned(), 480),
+            ("total".to_owned(), 4_800)
+        ]
+    );
+    // The garden shows the same, and so do the totals of both lists.
+    assert_eq!(garden_commission(&w).commission_paisa.rupees(), 4_800);
+    let garden_list = gardens::list(
+        &w.env.ctx,
+        &mandi_services::core::gardens::GardensListInput::default(),
+    )
+    .unwrap();
+    assert_eq!(garden_list.totals.commission_paisa.rupees(), 4_800);
+    let arrival_list = gardens::arrivals::list(
+        &w.env.ctx,
+        &mandi_services::core::arrivals::ArrivalsListInput::default(),
+    )
+    .unwrap();
+    assert_eq!(arrival_list.totals.commission_paisa.rupees(), 4_800);
+
+    // A lot of the garden sold with no link to an arrival is in the garden's commission and in no
+    // arrival's: 10 at 600 = 6,000 → 360 + 360 + 80 = 800.
+    try_save(
+        &w,
+        &draft_on("11-10-2026", vec![garden_lot(&w, "lot-2", &g, None, "10")]),
+    )
+    .unwrap();
+    assert_eq!(arrival(&w, a.id).commission_paisa.rupees(), 4_800);
+    assert_eq!(garden_commission(&w).commission_paisa.rupees(), 5_600);
+
+    // Cancelling the first sale takes its commission out again (the reversal facts, sign −1).
+    let detail = bikri::get(&w.env.ctx, saved.bikri_id).unwrap();
+    bikri::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &CancelInput {
+            id: saved.bikri_id,
+            version: detail.version,
+            reason: "غلط اندراج".into(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(arrival(&w, a.id).commission_paisa.rupees(), 0);
+    assert_eq!(garden_commission(&w).commission_paisa.rupees(), 800);
+}
+
 // ---- باقی مال and the filters ----
 
 #[test]

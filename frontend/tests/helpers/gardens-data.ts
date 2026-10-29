@@ -44,6 +44,7 @@ import type { Working } from '../../src/bindings/Working';
 import type { WorkingArg } from '../../src/bindings/WorkingArg';
 import { CommandError } from '../../src/shared/api';
 import { paisaForTest } from './paisa';
+import { commissionWorking } from './trips-data';
 import { refusal, type RefusalItem } from './ui-error';
 
 const money = (rupees: number): ReturnType<typeof paisaForTest> => paisaForTest(rupees * 100);
@@ -140,6 +141,8 @@ export function gardenRow(over: Partial<GardenRow> = {}): GardenRow {
     balance_paisa: money(0),
     balance_working: balanceWorking(0, 0, 0),
     account_balance_paisa: money(0),
+    commission_paisa: money(0),
+    commission_working: commissionWorking(0, 0, 0),
     last_date: null,
     ...over,
   };
@@ -160,6 +163,9 @@ export function e40Garden(over: Partial<GardenRow> = {}): GardenRow {
     balance_paisa: money(11_400),
     balance_working: balanceWorking(66_400, 55_000, 11_400),
     account_balance_paisa: money(66_400),
+    // E2E-40: the 60 sold in our shop gave 3,600 + 3,600 + 800.
+    commission_paisa: money(8_000),
+    commission_working: commissionWorking(3_600, 3_600, 800),
     last_date: '2026-10-12',
     ...over,
   });
@@ -553,6 +559,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
           money_in_paisa: money(66_400),
           balance_paisa: money(11_400),
           rent_due_paisa: money(0),
+          commission_paisa: money(8_000),
         },
       };
     },
@@ -570,6 +577,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
     summary: (): GardensSummary => ({
       open_gardens: 1,
       balance_total_paisa: money(11_400),
+      commission_paisa: money(8_000),
       rows: [
         {
           id: GARDEN_ID,
@@ -579,6 +587,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
           name_en: 'Shahpur Garden',
           balance_paisa: money(11_400),
           rent_due_paisa: money(0),
+          commission_paisa: money(8_000),
         },
       ],
     }),

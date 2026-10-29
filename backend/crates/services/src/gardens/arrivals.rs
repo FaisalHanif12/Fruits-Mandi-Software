@@ -95,9 +95,11 @@ fn row_of(
     rec: &ArrivalRec,
     lots: Vec<ArrivalLotRef>,
     write_offs: Vec<WriteOffRow>,
+    commission: &mandi_db::commission::Commission,
     closed_up_to: Option<BusinessDate>,
     today: BusinessDate,
 ) -> Result<ArrivalRow, ServiceError> {
+    let (commission_paisa, commission_working) = ventures::commission_view(commission)?;
     let status =
         ArrivalStatus::parse(&rec.status).ok_or_else(|| data("an unknown arrival status"))?;
     let qty_left = if status == ArrivalStatus::Cancelled {
@@ -153,6 +155,8 @@ fn row_of(
         can_change_sell_date: saved && qty_left > 0,
         lots,
         write_offs,
+        commission_paisa,
+        commission_working,
     })
 }
 
@@ -165,6 +169,7 @@ fn rows_of(
 ) -> Result<Vec<ArrivalRow>, ServiceError> {
     let ids: Vec<i64> = recs.iter().map(|r| r.id).collect();
     let mut offs = repo::write_offs_of(conn, &ids)?;
+    let commissions = mandi_db::commission::by_arrivals(conn, &ids)?;
     recs.iter()
         .map(|rec| {
             let lots = repo::lots_of(conn, rec.id)?
@@ -179,7 +184,14 @@ fn rows_of(
                 })
                 .collect();
             let off = write_off_rows(offs.remove(&rec.id).unwrap_or_default());
-            row_of(rec, lots, off, closed_up_to, today)
+            row_of(
+                rec,
+                lots,
+                off,
+                &commissions.get(&rec.id).copied().unwrap_or_default(),
+                closed_up_to,
+                today,
+            )
         })
         .collect()
 }
@@ -458,7 +470,15 @@ pub fn save(
         let id = write_line(ctx, tx, actor.user_id, &now, &shared, &line)?;
         let rec =
             repo::get(tx, id)?.ok_or_else(|| data("the arrival is missing after the save"))?;
-        let row = row_of(&rec, Vec::new(), Vec::new(), closed_up_to, today)?;
+        let row = row_of(
+            &rec,
+            Vec::new(),
+            Vec::new(),
+            // A new arrival has no sale yet, so no commission.
+            &mandi_db::commission::Commission::default(),
+            closed_up_to,
+            today,
+        )?;
         Ok(ArrivalSaved {
             row,
             warnings: Vec::new(),
@@ -578,7 +598,15 @@ pub fn entry_save(
             let id = write_line(ctx, tx, actor.user_id, &now, &shared, line)?;
             let rec =
                 repo::get(tx, id)?.ok_or_else(|| data("the arrival is missing after the save"))?;
-            rows.push(row_of(&rec, Vec::new(), Vec::new(), closed_up_to, today)?);
+            rows.push(row_of(
+                &rec,
+                Vec::new(),
+                Vec::new(),
+                // A new arrival has no sale yet, so no commission.
+                &mandi_db::commission::Commission::default(),
+                closed_up_to,
+                today,
+            )?);
         }
         Ok(ArrivalEntrySaved {
             rows,
@@ -777,6 +805,7 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
                 qty_sold: sums.qty_sold,
                 qty_written_off: sums.qty_written_off,
                 qty_left,
+                commission_paisa: ventures::commission_view(&sums.commission)?.0,
             },
         })
     })

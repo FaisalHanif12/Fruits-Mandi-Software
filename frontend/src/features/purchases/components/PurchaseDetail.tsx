@@ -241,6 +241,12 @@ export function PurchaseDetail({
         <Fact label={<Localized id="purchases-col-cost-left" />}>
           <Num paisa={row.cost_left_paisa} />
         </Fact>
+        <Fact label={<Localized id="glossary-commission" />}>
+          <span className="inline-flex items-center gap-1">
+            <Num paisa={row.commission_paisa} />
+            <CalcInfo working={row.commission_working} inCell />
+          </span>
+        </Fact>
         {row.note === null ? null : (
           <Fact label={<Localized id="purchases-field-note" />}>{row.note}</Fact>
         )}

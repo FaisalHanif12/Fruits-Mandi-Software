@@ -27,7 +27,7 @@ use super::{DEFAULT_PAGE, data};
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
-use crate::ventures::{self, Venture, not_found, partner_rows, record_of};
+use crate::ventures::{self, Venture, commission_view, not_found, partner_rows, record_of};
 
 pub(super) fn paisa(value: i64) -> Result<Paisa, ServiceError> {
     Paisa::try_from_paisa(value).map_err(money_error)
@@ -173,11 +173,20 @@ pub(super) fn balance_working(money_in: Paisa, paid: Paisa, balance: Paisa) -> W
 pub(super) fn row_of(conn: &Connection, garden: &Garden) -> Result<GardenRow, ServiceError> {
     let figures = repo::figures(conn, &garden.rec)?;
     let money = Money::of(&garden.rec, &figures)?;
-    row_with(conn, garden, &money)
+    let commission = mandi_db::commission::by_garden_accounts(conn, &[garden.rec.account.id])?
+        .remove(&garden.rec.account.id)
+        .unwrap_or_default();
+    row_with(conn, garden, &money, &commission)
 }
 
-fn row_with(conn: &Connection, garden: &Garden, money: &Money) -> Result<GardenRow, ServiceError> {
+fn row_with(
+    conn: &Connection,
+    garden: &Garden,
+    money: &Money,
+    commission: &mandi_db::commission::Commission,
+) -> Result<GardenRow, ServiceError> {
     let rec = &garden.rec;
+    let (commission_paisa, commission_working) = commission_view(commission)?;
     Ok(GardenRow {
         id: rec.id,
         version: rec.version,
@@ -211,6 +220,8 @@ fn row_with(conn: &Connection, garden: &Garden, money: &Money) -> Result<GardenR
         balance_working: money.balance_working(),
         account_balance_paisa: money.account_balance,
         last_date: money.last_date.clone(),
+        commission_paisa,
+        commission_working,
     })
 }
 
@@ -259,7 +270,12 @@ pub(super) fn list(ctx: &Context, input: &GardensListInput) -> Result<GardensLis
             money_in_paisa: Paisa::ZERO,
             balance_paisa: Paisa::ZERO,
             rent_due_paisa: Paisa::ZERO,
+            commission_paisa: Paisa::ZERO,
         };
+        // The commission on the goods of every garden of the filter, in one grouped query (plan 36,
+        // analytics view I, report R36): the lots whose seller is the garden's account.
+        let accounts: Vec<i64> = recs.iter().map(|r| r.account.id).collect();
+        let commissions = mandi_db::commission::by_garden_accounts(conn, &accounts)?;
         let mut all = Vec::with_capacity(recs.len());
         for rec in recs {
             let garden = load(conn, rec.id)?.ok_or_else(|| data("a garden was lost"))?;
@@ -271,7 +287,13 @@ pub(super) fn list(ctx: &Context, input: &GardensListInput) -> Result<GardensLis
             totals.money_in_paisa = add(totals.money_in_paisa, money.money_in)?;
             totals.balance_paisa = add(totals.balance_paisa, money.balance)?;
             totals.rent_due_paisa = add(totals.rent_due_paisa, money.rent_due)?;
-            all.push((garden, money));
+            let commission = commissions
+                .get(&garden.rec.account.id)
+                .copied()
+                .unwrap_or_default();
+            totals.commission_paisa =
+                add(totals.commission_paisa, commission_view(&commission)?.0)?;
+            all.push((garden, money, commission));
         }
         // Newest day first, then by number.
         all.sort_by(|a, b| {
@@ -285,8 +307,8 @@ pub(super) fn list(ctx: &Context, input: &GardensListInput) -> Result<GardensLis
         let skip = usize::try_from(input.offset).unwrap_or(usize::MAX);
         let take = usize::try_from(limit).unwrap_or(usize::MAX);
         let mut rows = Vec::new();
-        for (garden, money) in all.iter().skip(skip).take(take) {
-            rows.push(row_with(conn, garden, money)?);
+        for (garden, money, commission) in all.iter().skip(skip).take(take) {
+            rows.push(row_with(conn, garden, money, commission)?);
         }
         Ok(GardensList {
             rows,
@@ -307,11 +329,25 @@ pub(super) fn summary(ctx: &Context) -> Result<GardensSummary, ServiceError> {
         let ids = vrepo::ids_of(conn, &filter)?;
         let mut rows = Vec::with_capacity(ids.len());
         let mut balance_total = Paisa::ZERO;
-        for rec in repo::get_many(conn, &ids)? {
+        let mut commission_total = Paisa::ZERO;
+        let recs = repo::get_many(conn, &ids)?;
+        let accounts: Vec<i64> = recs.iter().map(|r| r.account.id).collect();
+        let commissions = mandi_db::commission::by_garden_accounts(conn, &accounts)?;
+        for rec in recs {
             let figures = repo::figures(conn, &rec)?;
             let money = Money::of(&rec, &figures)?;
             balance_total = balance_total
                 .checked_add(money.balance)
+                .map_err(money_error)?;
+            let commission = commission_view(
+                &commissions
+                    .get(&rec.account.id)
+                    .copied()
+                    .unwrap_or_default(),
+            )?
+            .0;
+            commission_total = commission_total
+                .checked_add(commission)
                 .map_err(money_error)?;
             rows.push(GardenSummaryRow {
                 id: rec.id,
@@ -324,6 +360,7 @@ pub(super) fn summary(ctx: &Context) -> Result<GardensSummary, ServiceError> {
                 name_en: rec.name_en.clone(),
                 balance_paisa: money.balance,
                 rent_due_paisa: money.rent_due,
+                commission_paisa: commission,
             });
         }
         rows.sort_by_key(|r| r.number);
@@ -331,6 +368,7 @@ pub(super) fn summary(ctx: &Context) -> Result<GardensSummary, ServiceError> {
             open_gardens: i64::try_from(rows.len())
                 .map_err(|_| data("the number of gardens does not fit"))?,
             balance_total_paisa: balance_total,
+            commission_paisa: commission_total,
             rows,
         })
     })

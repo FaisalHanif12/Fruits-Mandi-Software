@@ -156,6 +156,10 @@ fn view_i_e2e_40_before_the_closing_is_the_running_balance_and_the_partners_lose
         },
     );
     assert_eq!(i_figures(&seller)[5], 3_600);
+    // The tile of the open gardens (plan 36) says 8,000 too, in its total and on its row.
+    let tile = gardens::summary(&w.env.ctx).unwrap();
+    assert_eq!(tile.commission_paisa.rupees(), 8_000);
+    assert_eq!(tile.rows[0].commission_paisa.rupees(), 8_000);
 }
 
 #[test]
@@ -313,6 +317,17 @@ fn view_i_agrees_with_the_garden_screen() {
     assert_eq!(i_figures(&page)[1], d.row.paid_pocket_paisa.rupees());
     assert_eq!(i_figures(&page)[3], d.row.other_shop_paisa.rupees());
     assert_eq!(i_figures(&page)[6], d.row.balance_paisa.rupees());
+    // Plan 36: the commission on the garden's goods is the number of view I (E2E-40: 3,600 + 3,600
+    // + 800 = 8,000); the money of the other shop adds nothing. The list totals agree.
+    assert_eq!(i_figures(&page)[5], 8_000);
+    assert_eq!(d.row.commission_paisa.rupees(), i_figures(&page)[5]);
+    let list = gardens::list(
+        &w.env.ctx,
+        &mandi_services::core::gardens::GardensListInput::default(),
+    )
+    .unwrap();
+    assert_eq!(list.rows[0].commission_paisa.rupees(), 8_000);
+    assert_eq!(list.totals.commission_paisa.rupees(), 8_000);
     let results: Vec<i64> = d
         .partner_results
         .iter()

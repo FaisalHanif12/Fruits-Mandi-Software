@@ -431,14 +431,23 @@ pub struct Totals {
     pub qty_sold: i64,
     /// Σ نگ written off, of the saved ones.
     pub qty_written_off: i64,
+    /// Σ commission on the goods sold from the saved ones in our shop (plan 36).
+    pub commission: crate::commission::Commission,
 }
 
-/// The totals of a filter, in one indexed query.
+/// The totals of a filter, in two indexed queries.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals> {
-    conn.query_row(
+    let args = params![
+        filter.garden_id,
+        filter.from,
+        filter.to,
+        filter.item_id,
+        state_code(filter)
+    ];
+    let mut out = conn.query_row(
         &format!(
             "SELECT COUNT(*),
                     COALESCE(SUM(CASE WHEN a.status = 'saved' THEN a.qty END), 0),
@@ -446,22 +455,19 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
                     COALESCE(SUM(CASE WHEN a.status = 'saved' THEN a.qty_written_off END), 0)
              FROM garden_arrivals a {FILTER_WHERE}"
         ),
-        params![
-            filter.garden_id,
-            filter.from,
-            filter.to,
-            filter.item_id,
-            state_code(filter)
-        ],
+        args,
         |r| {
             Ok(Totals {
                 count: r.get(0)?,
                 qty: r.get(1)?,
                 qty_sold: r.get(2)?,
                 qty_written_off: r.get(3)?,
+                commission: crate::commission::Commission::default(),
             })
         },
-    )
+    )?;
+    out.commission = crate::commission::of_arrivals_where(conn, FILTER_WHERE, args)?;
+    Ok(out)
 }
 
 /// The saved arrivals of open gardens with goods left and a day to sell on or before `date`, oldest

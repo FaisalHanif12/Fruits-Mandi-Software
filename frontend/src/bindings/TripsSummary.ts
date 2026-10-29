@@ -22,4 +22,8 @@ export type TripsSummary = {
    * Their cost left (C21).
    */
   cost_left_paisa: Paisa;
+  /**
+   * Σ commission on the goods sold in our shop, over the open trips (plan 36).
+   */
+  commission_paisa: Paisa;
 };

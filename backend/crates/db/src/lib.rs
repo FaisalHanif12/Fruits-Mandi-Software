@@ -15,6 +15,7 @@ pub mod bikri;
 pub mod cashbook;
 pub mod clock;
 pub mod codes;
+pub mod commission;
 mod db;
 pub mod disk;
 pub mod drafts;

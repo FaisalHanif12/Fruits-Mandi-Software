@@ -108,6 +108,9 @@ pub struct TripsTotals {
     /// Σ result.
     #[ts(type = "Paisa")]
     pub result_paisa: Paisa,
+    /// Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
 }
 
 /// Input of `trips_list` (PRD FR-19.10, FR-19.11). Dates are `DD-MM-YYYY` or a shortcut; null or
@@ -213,6 +216,14 @@ pub struct TripRow {
     pub result_paisa: Paisa,
     /// How the result was worked out.
     pub result_working: Working,
+    /// The shop's commission on the goods sold in OUR shop (plan 36, PRD FR-12.27): seller
+    /// commission + buyer commission + لاگا of the stored sale lines, with reversals taken out. A
+    /// sale in another shop adds nothing. The same number as analytics views J and I and R36 (not
+    /// the seller-only column of R33). Display only: nothing posts.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+    /// How the commission was worked out: the three parts and their sum (CalcInfo).
+    pub commission_working: Working,
 }
 
 /// The answer of `trips_list`: one page and the totals over the whole filter.
@@ -406,6 +417,9 @@ pub struct TripsSummary {
     /// Their cost left (C21).
     #[ts(type = "Paisa")]
     pub cost_left_paisa: Paisa,
+    /// Σ commission on the goods sold in our shop, over the open trips (plan 36).
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
 }
 
 // ---- A trip cost (PRD FR-12.31) ----

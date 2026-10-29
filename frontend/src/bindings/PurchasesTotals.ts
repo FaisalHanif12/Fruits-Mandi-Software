@@ -22,4 +22,8 @@ export type PurchasesTotals = {
    * Σ of the result.
    */
   result_paisa: Paisa;
+  /**
+   * Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
+   */
+  commission_paisa: Paisa;
 };

@@ -63,6 +63,9 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'date',
     type: 'date',
     headerId: 'gardens-col-date',
+    // The commission takes the room of the date at the narrowest window (plan 36); the date is on
+    // the garden's own screen.
+    from: 'normal',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
@@ -81,6 +84,13 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     type: 'money',
     headerId: 'gardens-col-balance',
     value: (row, { money }) => money(row.balance_paisa),
+  },
+  // The shop's commission on the garden's goods sold in our shop (PRD FR-12.37): the backend's figure.
+  {
+    field: 'commission',
+    type: 'money',
+    headerId: 'glossary-commission',
+    value: (row, { money }) => money(row.commission_paisa),
   },
   {
     field: 'rent_due',

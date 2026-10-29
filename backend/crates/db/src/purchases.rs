@@ -581,9 +581,11 @@ pub struct Totals {
     pub sales_paisa: i64,
     /// Σ money of sales in other shops of the saved ones, paisa.
     pub other_shop_paisa: i64,
+    /// Σ commission on the goods sold in our shop, of the saved ones (plan 36).
+    pub commission: crate::commission::Commission,
 }
 
-/// The totals of a filter, in three indexed queries.
+/// The totals of a filter, in four indexed queries.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -614,6 +616,7 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
                 cost_released_paisa: r.get(3)?,
                 sales_paisa: 0,
                 other_shop_paisa: 0,
+                commission: crate::commission::Commission::default(),
             })
         },
     )?;
@@ -645,6 +648,7 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
         args,
         |r| r.get(0),
     )?;
+    out.commission = crate::commission::of_purchases_where(conn, FILTER_WHERE, args)?;
     Ok(out)
 }
 

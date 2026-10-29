@@ -204,6 +204,9 @@ working-purchase-paid-now = <num>{ $value }</num> + <num>{ $freight }</num> + <n
 # FR-12.41: a partner's part of a purchase entry with many lines. $lines: how many lines; $amount: his parts of all of them added together.
 # review: pending
 working-entry-part-sum = His part of each of the <num>{ $lines }</num> lines, added together: <num>{ $amount }</num>
+# PRD FR-12.27, FR-12.37: the shop's commission on the goods sold in our shop. $seller: the seller commission; $buyer: the buyer commission; $laga: the Laga; $total: all three.
+# review: pending
+working-goods-commission = Commission: seller <num>{ $seller }</num> + buyer <num>{ $buyer }</num> + { -laga } <num>{ $laga }</num> = <num>{ $total }</num>
 
 ## The attention list and the bell (plan 19, PRD FR-7.44). Every Urdu line says what its English line says (NFR-URD-29).
 

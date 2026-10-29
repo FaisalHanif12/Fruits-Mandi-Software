@@ -159,6 +159,7 @@ export function GardensPage() {
                   values: {
                     name: context.text('glossary-meezan'),
                     balance: context.money(first.totals.balance_paisa),
+                    commission: context.money(first.totals.commission_paisa),
                     rent_due: context.money(first.totals.rent_due_paisa),
                     rent: context.money(first.totals.rent_paisa),
                     paid: context.money(first.totals.paid_paisa),

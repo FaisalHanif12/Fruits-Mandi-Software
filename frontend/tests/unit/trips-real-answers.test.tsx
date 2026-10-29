@@ -89,10 +89,43 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     expect(cell('number')).toBe(tripNumber);
     expect(cell('market')).toBe('Lahore');
     expect(cell('status')).toBe(message(language, 'trips-status-open'));
-    // 20 bought, 18 sold, 2 left (cost left 1,040) and the result 1,100.
+    // 20 bought, 18 sold, 2 left and the result 1,100. The cost left waits for the wide step.
     expect(cell('qty_left')).toBe('2');
-    expect(cell('cost_left')).toBe('1,040');
     expect(cell('result')).toBe('1,100');
+    // The shop's commission on the goods sold in our shop (PRD FR-12.27): 540 + 540 + 120, the
+    // backend's figure, in the row and in the total row under it.
+    expect(cell('commission')).toBe('1,200');
+    const pinned = document.querySelector('.ag-row-pinned');
+    expect(visible(pinned?.querySelector('[col-id="commission"]')?.textContent)).toBe('1,200');
+  });
+
+  it('the commission on the trip’s goods: a line on the trip card and on each purchase, with the backend’s working behind the ⓘ', async () => {
+    vi.mocked(tripsApi.tripsGet).mockResolvedValue(real.TRIP_GET_OPEN);
+    const { user } = await openTrip();
+    const label = screen.getAllByText(said(message(language, 'glossary-commission')))[0];
+    const line = label?.closest('div');
+    if (line === null || line === undefined) throw new Error('no commission line on the card');
+    expect(visible(line.textContent)).toContain('1,200');
+    // The working is the backend's: seller 540 + buyer 540 + Laga 120 = 1,200.
+    const info = line.querySelector('button');
+    if (info === null) throw new Error('no ⓘ on the commission line');
+    await user.click(info);
+    const words = await screen.findByText((content) =>
+      visible(content).includes(language === 'ur' ? 'بیوپاری' : 'seller'),
+    );
+    for (const figure of ['540', '120', '1,200'])
+      expect(visible(words.textContent)).toContain(figure);
+    // Each purchase of the trip has its own figure in its row.
+    const purchase = real.TRIP_GET_OPEN.purchases[0];
+    if (purchase === undefined) throw new Error('the file has no purchase');
+    const cell = await waitFor(() => {
+      const found = document.querySelector(
+        `.ag-row[row-id="${String(purchase.id)}"] [col-id="commission"]`,
+      );
+      if (found === null) throw new Error('no commission cell');
+      return found;
+    });
+    expect(visible(cell.textContent)).toBe('1,200');
   });
 
   it('an open trip: its facts, the partners at 40, 30 and 30, and what each one put in and got back', async () => {

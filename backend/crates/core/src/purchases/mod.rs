@@ -589,6 +589,14 @@ pub struct PurchaseRow {
     pub result_paisa: Paisa,
     /// How the result was worked out.
     pub result_working: Working,
+    /// The shop's commission on the goods sold in OUR shop (plan 36, PRD FR-12.27, FR-12.37):
+    /// seller commission + buyer commission + لاگا of the stored sale lines, with reversals taken
+    /// out. A sale in another shop adds nothing. The same number as analytics views J and I and
+    /// R36 (not the seller-only column of R33). Display only: nothing posts.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+    /// How the commission was worked out: the three parts and their sum (CalcInfo).
+    pub commission_working: Working,
     /// Whole days from the day to sell (`sell_date`) to today, while stock is left; 0 otherwise. Goods
     /// meant for a later day are not waiting before it.
     #[ts(type = "number")]
@@ -620,6 +628,9 @@ pub struct PurchasesTotals {
     /// Σ of the result.
     #[ts(type = "Paisa")]
     pub result_paisa: Paisa,
+    /// Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
 }
 
 /// The answer of `purchases_list`: one page and the totals over the whole filter.

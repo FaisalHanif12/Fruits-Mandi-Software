@@ -59,7 +59,7 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
   },
   {
     field: 'qty_left',
-    type: 'number',
+    type: 'figure',
     headerId: 'purchases-col-left',
     value: (row) => String(row.qty_left),
   },
@@ -67,7 +67,7 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
     field: 'cost_left',
     type: 'money',
     headerId: 'purchases-col-cost-left',
-    from: 'normal',
+    from: 'wide',
     value: (row, { money }) => money(row.cost_left_paisa),
   },
   {
@@ -76,6 +76,13 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
     headerId: 'purchases-col-result',
     from: 'normal',
     value: (row, { money }) => money(row.result_paisa),
+  },
+  // The shop's commission on the goods sold in our shop (PRD FR-12.27): the backend's figure.
+  {
+    field: 'commission',
+    type: 'money',
+    headerId: 'glossary-commission',
+    value: (row, { money }) => money(row.commission_paisa),
   },
   {
     field: 'cost',

@@ -35,6 +35,8 @@ use ts_rs::TS;
 use crate::accounts::RecordRef;
 use crate::bikri::WriteOffRow;
 use crate::error::FieldError;
+use crate::money::Paisa;
+use crate::rules::Working;
 use crate::ventures::GardenRef;
 
 /// Whether an arrival stands or was cancelled.
@@ -304,6 +306,13 @@ pub struct ArrivalRow {
     /// The write-offs that can still be undone, oldest first (`WriteOffRow.move_id` goes to
     /// `gardens_arrival_write_off_undo`).
     pub write_offs: Vec<WriteOffRow>,
+    /// The shop's commission on the goods sold from this arrival in OUR shop (plan 36, PRD
+    /// FR-12.37): seller commission + buyer commission + لاگا of the stored sale lines of the lots
+    /// linked to it, with reversals taken out. Sales in another shop add nothing. Display only.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
+    /// How the commission was worked out: the three parts and their sum (CalcInfo).
+    pub commission_working: Working,
 }
 
 /// What `gardens_arrival_save` gives back.
@@ -391,6 +400,9 @@ pub struct ArrivalsTotals {
     /// Σ نگ left.
     #[ts(type = "number")]
     pub qty_left: i64,
+    /// Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
+    #[ts(type = "Paisa")]
+    pub commission_paisa: Paisa,
 }
 
 /// The answer of `gardens_arrivals_list`: oldest arrival day first, then number.

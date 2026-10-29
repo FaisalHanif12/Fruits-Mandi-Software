@@ -25,4 +25,8 @@ export type GardensTotals = {
    * Σ rent due (signed).
    */
   rent_due_paisa: Paisa;
+  /**
+   * Σ commission on the goods sold in our shop (plan 36), the same definition as the rows.
+   */
+  commission_paisa: Paisa;
 };
