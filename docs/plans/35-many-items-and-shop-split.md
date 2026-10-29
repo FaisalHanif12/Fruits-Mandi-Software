@@ -50,3 +50,5 @@ Migration 0010: `purchases` and `garden_arrivals` get `other_qty`, `qty_sold_oth
 
 D1 (lead, Umar's "complete flexibility"): a sale in another shop takes from the other-shop part first, and moves any rest from our shop's part in the same save (preview says so). It is refused only above the line's whole qty left. No separate split step is needed.
 D2: a write-off comes off our shop's part first. The bell counts our shop's goods; the tile and day close count all goods left.
+
+D3 (Umar, 29-10-2026, his choice A): in the purchase and goods-arrived line grids, Enter stops only at item, packing, qty and rate (arrival: item, packing, qty), and at weight when the item is sold by weight. Freight, labour, other cost, the other-shop qty and the shop name stay visible and optional, reached by a click or the arrows. PRD FR-12.41 records it as an exception to FR-7.14.
