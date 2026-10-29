@@ -15,6 +15,15 @@ R2. **A clean look on every screen**, checked one by one against this list:
 - no sideways scroll at 1024 x 600 and 1366 x 768, in Urdu and English (NFR-USE-15, NFR-USE-28);
 - spacing and sizes only from the tokens (F9 to F11); cards and sections aligned on the grid (F15).
 
+R4. **Data over many years** (Umar, 30-10-2026: "this software will keep going for years; keep the data professional and organized, without clutter"):
+- **A sensible starting period, never "everything":** day lists (آج کی بکری, وصولی and ادائیگی lists, روکڑ بک) open on today; registers and reports on this month; ledgers and statements on this year, with one click to "from the first date". The date filter offers today, this week, this month, last month, this year, last year and a custom range (FR-19.2). The last choice is remembered per screen (FR-7.45).
+- **Finished records step aside:** closed trips and gardens, cancelled entries and inactive records are hidden by default, behind a tick "بند / منسوخ بھی دکھائیں" (show closed and cancelled too). Nothing is deleted.
+- **Month and year headings** in long registers and ledgers (a heading row per month, with that month's subtotal); the grand total stays the whole filter's (B31). Subtotals come from the backend, never summed on screen (F34).
+- **Sort by a column:** a click on a column title sorts by it, a second click reverses; each list opens in its natural order (newest first, or by code for master lists). Sorting is done by the backend over the whole filter, never only on the page.
+- **Fixed header and totals row** while moving through a page.
+- **A search box in every list** (code, name or number) in addition to its filters.
+- **Speed with years of data:** first page with totals under 1 second, each next page under 300 ms (NFR-SPD-24), proved with the 10-year test data.
+
 R3. Nothing changes in money, postings or what is saved. Only how pages show data.
 
 ## 2. Phases
@@ -22,7 +31,9 @@ R3. Nothing changes in money, postings or what is saved. Only how pages show dat
 | # | Task | Owner |
 |---|---|---|
 | B1 | Check every list command accepts `offset` and `limit` 25, 50 or 100 and returns the whole-filter `total_count` and totals (B31). List any that do not and fix them, with tests; `pnpm gen:types` if needed | backend |
+| B2 | R4 on the backend: a `sort` (column and direction) on every list command, done in SQL over the whole filter with indexes; month subtotals for registers and ledgers (`group_by_month`); the closed and cancelled filter where missing; a speed test with the 10-year data for the first page and the next page | backend |
 | P1 | The shared pager (R1) in `shared/grid`, used by every paged list; rows-per-page pref; keys; tests (paging, filter resets to page 1, totals over the whole filter, language switch, both directions) | frontend |
+| P2 | R4 on the screens: default periods, the show-closed tick, month heading rows, column-title sorting, fixed header and totals, a search box; all in `shared/grid` and the shared filter bar so every list gets them | frontend |
 | A1 | Audit: a screenshot of EVERY screen (ur and en, 1366 and 1024) through the dev pages (add a dev page for any screen not covered yet: Index lists, chart, rules, openings, partners setup, day close, audit, sign-in), and a findings list per screen against R2 with the fix proposed. Send it to the lead before changing screens | frontend |
 | A2 | The lead reviews the findings and a sample of shots, approves the list (and asks Umar where a choice is his) | tech-lead |
 | F1 | The approved fixes, screen by screen, with screenshot proof before and after | frontend |
