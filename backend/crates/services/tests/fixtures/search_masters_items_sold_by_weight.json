@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "kind": "item",
+    "code": "0040",
+    "name_ur": "کیلا",
+    "name_en": "Banana",
+    "extra_ur": "",
+    "extra_en": "",
+    "is_active": true,
+    "sold_by_weight": false
+  },
+  {
+    "id": 2,
+    "kind": "item",
+    "code": "0041",
+    "name_ur": "سیب",
+    "name_en": "Apple",
+    "extra_ur": "",
+    "extra_en": "",
+    "is_active": true,
+    "sold_by_weight": false
+  },
+  {
+    "id": 3,
+    "kind": "item",
+    "code": "0042",
+    "name_ur": "مولی",
+    "name_en": "Radish",
+    "extra_ur": "",
+    "extra_en": "",
+    "is_active": true,
+    "sold_by_weight": false
+  },
+  {
+    "id": 4,
+    "kind": "item",
+    "code": "0043",
+    "name_ur": "انگور",
+    "name_en": "Grapes",
+    "extra_ur": "",
+    "extra_en": "",
+    "is_active": true,
+    "sold_by_weight": true
+  }
+]

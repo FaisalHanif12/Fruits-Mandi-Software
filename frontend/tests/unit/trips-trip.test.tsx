@@ -373,6 +373,58 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     });
   });
 
+  it('D3: Enter stops at the weight of a line whose item is sold by weight, which the backend tells as soon as the item is chosen', async () => {
+    fakeTrips();
+    const original = vi.mocked(purchasesApi.purchasesEntryPreview).getMockImplementation();
+    if (original === undefined) throw new Error('no preview fake');
+    // The backend asks for the weight of every line that has none: the item is sold by weight.
+    vi.mocked(purchasesApi.purchasesEntryPreview).mockImplementation(async (input) => {
+      const answer = await original(input);
+      return {
+        ...answer,
+        errors: [
+          ...answer.errors,
+          ...input.lines.flatMap((line, index) =>
+            line.weight === null
+              ? [
+                  {
+                    code: 'ERR_WEIGHT_REQUIRED' as const,
+                    field: `lines[${String(index)}].weight`,
+                    values: {},
+                  },
+                ]
+              : [],
+          ),
+        ],
+      };
+    });
+    const { user } = await open();
+    await waitFor(() => {
+      lineCell(0, 'item');
+    });
+    await user.click(lineCell(0, 'item'));
+    await user.keyboard(oranges().item);
+    await user.keyboard('{Enter}');
+    await user.keyboard(oranges().packing);
+    await user.keyboard('{Enter}');
+    // The answer about the weight must be here before the quantity is finished.
+    await waitFor(() => {
+      expect(purchasesApi.purchasesEntryPreview).toHaveBeenCalled();
+    });
+    await act(async () => {
+      await vi.mocked(purchasesApi.purchasesEntryPreview).mock.results.at(-1)?.value;
+    });
+    await settlePreview();
+    await user.keyboard('80{Enter}');
+    await waitFor(() => {
+      expect(document.activeElement?.closest('[col-id]')?.getAttribute('col-id')).toBe('weight');
+    });
+    await user.keyboard('1234{Enter}');
+    await waitFor(() => {
+      expect(document.activeElement?.closest('[col-id]')?.getAttribute('col-id')).toBe('rate');
+    });
+  });
+
   it('a mistake of one line is on the cell of that line and in words under the form, and every line stays', async () => {
     const fake = fakeTrips();
     fake.refuse.purchase = [

@@ -31,7 +31,12 @@ import { uiErrorOf } from '../../../shared/api';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { createEntryStore } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { useEntrySaveFlow, useFocusFirstField, useRefusalIntoView } from '../../../shared/hooks';
+import {
+  useEntrySaveFlow,
+  useFocusFirstField,
+  useLatest,
+  useRefusalIntoView,
+} from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -59,6 +64,7 @@ import {
   filledLines,
   lineCellErrors,
   linesText,
+  weightRowIds,
   purchaseNumberText,
   purchasesEntryPreview,
   resetLines,
@@ -360,6 +366,19 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
     }
     return cells;
   }, [previewOf, sent]);
+  // The rows whose item is sold by weight: Enter stops at the weight of those rows (plan 35, D3).
+  const weightRows = useMemo(
+    () =>
+      weightRowIds(
+        purchasePreview?.errors ?? [],
+        sent,
+        (purchasePreview?.lines ?? []).flatMap((line) =>
+          line.numbers?.workings.value.message_id === 'working-weight-value' ? [line.key] : [],
+        ),
+      ),
+    [purchasePreview?.errors, purchasePreview?.lines, sent],
+  );
+  const weightRowsNow = useLatest(weightRows);
   const cellErrors: PerRow<string> = useMemo(
     () => lineCellErrors(error?.errors ?? [], sent, errorText),
     [error, errorText, sent],
@@ -565,6 +584,7 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
               calc={calc}
               cellErrors={cellErrors}
               workings={workings}
+              weightRows={weightRowsNow}
             />
           </div>
         ) : null}

@@ -36,15 +36,31 @@ export const LINE = {
   value: 'value',
 } as const;
 
+const EMPTY_ROWS: ReadonlySet<string> = new Set();
+
 /**
- * The columns of the lines grid, in the order Enter walks them: the goods, the quantity, the rate
- * and the costs (a purchase), and the split. At the narrowest window (1024) the value of the line
- * is left out so the grid fits without a sideways scroll (NFR-USE-15); every cell that can be typed
- * in is always there. Enter stops on every cell that can be typed in
- * (PRD FR-7.14); the two calculated cells are shown by the backend's preview and are never typed.
- * The item and the packing are chosen from their lists; the shop is free text, as typed (FR-7.25).
+ * The columns of the lines grid, in reading order. At the narrowest window (1024) the value of the
+ * line is left out so the grid fits without a sideways scroll (NFR-USE-15); every cell that can be
+ * typed in is always there and always editable (PRD FR-12.41, Umar's decision D3).
+ *
+ * Enter stops only where a line needs its answer: the item, the packing, the quantity and, for a
+ * purchase, the rate, and the weight of a line whose item is sold by weight. From the last stop it
+ * goes to the item of the next line. Freight, labour, other cost, the part for another shop and the
+ * shop's name are optional: they are reached with a click or the arrow keys, and what is typed in
+ * them is sent as before. The two calculated cells are shown from the backend's preview and are
+ * never typed. The item and the packing are chosen from their lists; the shop is free text, as
+ * typed (FR-7.25).
+ *
+ * A row holds an item sold by weight when the item chosen says so (`soldByWeight`, from its search
+ * hit, known the moment it is chosen). `weightRows` is the fallback: the rows the backend has told
+ * are by weight (`ERR_WEIGHT_REQUIRED`, `working-weight-value`). It is read at the moment Enter is
+ * pressed, so the columns stay the same while it changes.
  */
-export function goodsLineColumns(kind: GoodsKind, step: LayoutStep): readonly EntryColumn[] {
+export function goodsLineColumns(
+  kind: GoodsKind,
+  step: LayoutStep,
+  weightRows: () => ReadonlySet<string> = () => EMPTY_ROWS,
+): readonly EntryColumn[] {
   const goods: readonly EntryColumn[] = [
     {
       field: LINE.item,
@@ -59,15 +75,30 @@ export function goodsLineColumns(kind: GoodsKind, step: LayoutStep): readonly En
       headerId: 'glossary-packing',
     },
     { field: LINE.qty, type: 'qty', headerId: 'goods-line-col-qty' },
-    { field: LINE.weight, type: 'weight', headerId: 'goods-line-col-weight' },
+    {
+      field: LINE.weight,
+      type: 'weight',
+      headerId: 'goods-line-col-weight',
+      // A weight item needs its weight: the item chosen says so (its search hit), so no answer is
+      // waited for; the backend's answer is the fallback. A weight already typed is a stop too.
+      enterStop: (row) =>
+        row.picked?.[LINE.item]?.soldByWeight === true ||
+        weightRows().has(row.rowId) ||
+        lineText(row, LINE.weight) !== '',
+    },
   ];
   const costs: readonly EntryColumn[] =
     kind === 'purchase'
       ? [
           { field: LINE.rate, type: 'rate', headerId: 'goods-line-col-rate' },
-          { field: LINE.freight, type: 'money', headerId: 'glossary-kiraya' },
-          { field: LINE.labour, type: 'money', headerId: 'glossary-mazdoori' },
-          { field: LINE.otherCost, type: 'money', headerId: 'purchases-field-other-cost' },
+          { field: LINE.freight, type: 'money', headerId: 'glossary-kiraya', enterStop: false },
+          { field: LINE.labour, type: 'money', headerId: 'glossary-mazdoori', enterStop: false },
+          {
+            field: LINE.otherCost,
+            type: 'money',
+            headerId: 'purchases-field-other-cost',
+            enterStop: false,
+          },
         ]
       : [];
   const split: readonly EntryColumn[] = [
@@ -76,8 +107,15 @@ export function goodsLineColumns(kind: GoodsKind, step: LayoutStep): readonly En
       type: 'qty',
       headerId: 'goods-line-col-other-qty',
       minWidth: FIT_MIN.heading,
+      enterStop: false,
     },
-    { field: LINE.shop, type: 'text', headerId: 'goods-line-col-shop', minWidth: FIT_MIN.heading },
+    {
+      field: LINE.shop,
+      type: 'text',
+      headerId: 'goods-line-col-shop',
+      minWidth: FIT_MIN.heading,
+      enterStop: false,
+    },
     {
       field: LINE.ourQty,
       type: 'calc',
@@ -244,4 +282,26 @@ export function resetLines(store: EntryStore): void {
     focus: null,
     pendingFocus: null,
   });
+}
+
+/**
+ * The rows whose item is sold by weight, as the backend tells it: `ERR_WEIGHT_REQUIRED` on the
+ * weight of a line (it comes as soon as the item is chosen and no weight is typed), or the working
+ * of the value of a line that is by weight (`working-weight-value`, once the weight is typed).
+ * `sent` are the rows that were sent, in the order they were sent (`filledLines`); `weightValueKeys`
+ * are the keys of the lines whose value is worked out from a weight. Nothing is worked out here.
+ */
+export function weightRowIds(
+  errors: readonly { code: string; field: string | null }[],
+  sent: readonly EntryRow[],
+  weightValueKeys: Iterable<string> = [],
+): Set<string> {
+  const rows = new Set<string>(weightValueKeys);
+  for (const item of errors) {
+    if (item.code !== 'ERR_WEIGHT_REQUIRED' || item.field === null) continue;
+    const at = lineOfPath(item.field);
+    const row = at?.sub === 'weight' ? sent[at.line] : undefined;
+    if (row !== undefined) rows.add(row.rowId);
+  }
+  return rows;
 }

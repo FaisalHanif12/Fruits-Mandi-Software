@@ -994,6 +994,7 @@ pub fn search_sources(
             control_id: None,
             control_code: None,
             tag: None,
+            sold_by_weight: false,
         })
     })?;
     rows.collect()

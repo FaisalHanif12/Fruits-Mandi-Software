@@ -6,7 +6,8 @@
 //
 // - The grid is the shared one (shared/grid): Enter, the arrow keys, Ctrl+Delete and the pickers
 //   come from it (PRD 7.2, Code Standards F27). This file only declares the columns and puts the
-//   words around the grid.
+//   words around the grid. Enter stops only at the item, the packing, the quantity and the rate
+//   (and the weight of a weight item); the other cells are reached by click or arrows (plan 35, D3).
 // - The lines live in the store above the grid, so a language switch rebuilds the grid and nothing
 //   typed is lost (F39).
 // - What the backend refused on a line is shown on its cell and the words are the cell's tooltip;
@@ -35,6 +36,11 @@ interface GoodsLinesGridProps {
   cellErrors?: PerRow<string> | undefined;
   /** How the value of each line was worked out, behind its ⓘ (PRD FR-7.43). */
   workings?: PerRow<Working> | undefined;
+  /**
+   * Which rows hold an item sold by weight, read when Enter is pressed: Enter stops at the weight of
+   * those rows only (plan 35, PRD FR-12.41). It must stay the same function between renders.
+   */
+  weightRows?: (() => ReadonlySet<string>) | undefined;
 }
 
 /** Puts the cursor on the item of the line just added. */
@@ -43,9 +49,16 @@ export function addGoodsLine(store: EntryStore): void {
   store.getState().setPendingFocus({ rowIndex: 'last', field: LINE.item });
 }
 
-export function GoodsLinesGrid({ kind, store, calc, cellErrors, workings }: GoodsLinesGridProps) {
+export function GoodsLinesGrid({
+  kind,
+  store,
+  calc,
+  cellErrors,
+  workings,
+  weightRows,
+}: GoodsLinesGridProps) {
   const step = useLayoutStep();
-  const columns = useMemo(() => goodsLineColumns(kind, step), [kind, step]);
+  const columns = useMemo(() => goodsLineColumns(kind, step, weightRows), [kind, step, weightRows]);
   return (
     <section aria-labelledby={`goods-lines-heading-${kind}`} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">

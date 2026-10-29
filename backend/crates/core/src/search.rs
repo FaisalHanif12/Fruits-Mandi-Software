@@ -128,6 +128,9 @@ pub struct SearchHit {
     pub extra_en: String,
     /// True for an active record. Always true in search results.
     pub is_active: bool,
+    /// True only for an item that is sold by weight (plan 35 D3): the screen then asks for the
+    /// kilograms. False for a unit item and for every other kind of hit.
+    pub sold_by_weight: bool,
 }
 
 /// Search one list for the typed text.

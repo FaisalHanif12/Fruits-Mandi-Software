@@ -47,6 +47,9 @@ pub struct SearchSource {
     pub control_code: Option<String>,
     /// For an account: its tag (نشان, PRD 10.2). `None` for masters and for an account with none.
     pub tag: Option<String>,
+    /// True only for an item that is sold by weight (`items.sold_by = 'weight'`, plan 35 D3).
+    /// False for every other record.
+    pub sold_by_weight: bool,
 }
 
 fn value(v: &ColValue) -> Value {
@@ -643,11 +646,12 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         control_id: None,
         control_code: None,
         tag: None,
+        sold_by_weight: r.get(11)?,
     })
 }
 
 /// The records of one kind as the search index sees them: the columns are code, both names, the
-/// two second lines, extra keys, the three search columns and the active flag. `only_id` limits
+/// two second lines, extra keys, the three search columns, the active flag and "sold by weight". `only_id` limits
 /// it to one record (after a save).
 ///
 /// # Errors
@@ -659,35 +663,35 @@ pub fn search_sources(
 ) -> rusqlite::Result<Vec<SearchSource>> {
     let select = match kind {
         MasterKind::City => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM cities m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM cities m"
         }
         MasterKind::Store => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM stores m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM stores m"
         }
         MasterKind::Item => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, p.name_ur, p.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active
+            "SELECT m.id, m.code, m.name_ur, m.name_en, p.name_ur, p.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, m.sold_by = 'weight'
              FROM items m LEFT JOIN packings p ON p.id = m.default_packing_id"
         }
         MasterKind::Packing => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM packings m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, NULL, NULL, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM packings m"
         }
         MasterKind::Adda => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, c.name_ur, c.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active
+            "SELECT m.id, m.code, m.name_ur, m.name_en, c.name_ur, c.name_en, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0
              FROM addas m LEFT JOIN cities c ON c.id = m.city_id"
         }
         MasterKind::Marka => {
-            "SELECT m.id, m.code, m.mark_text, m.mark_text, a.name_ur, a.name_en, NULL, NULL, NULL, NULL, m.is_active
+            "SELECT m.id, m.code, m.mark_text, m.mark_text, a.name_ur, a.name_en, NULL, NULL, NULL, NULL, m.is_active, 0
              FROM markas m LEFT JOIN accounts a ON a.id = m.owner_account_id"
         }
         MasterKind::Narration => {
-            "SELECT m.id, NULL, m.text_ur, m.text_en, NULL, NULL, NULL, NULL, NULL, NULL, m.is_active FROM narrations m"
+            "SELECT m.id, NULL, m.text_ur, m.text_en, NULL, NULL, NULL, NULL, NULL, NULL, m.is_active, 0 FROM narrations m"
         }
         MasterKind::ExpenseHead => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, a.code, a.code, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active
+            "SELECT m.id, m.code, m.name_ur, m.name_en, a.code, a.code, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0
              FROM expense_heads m JOIN accounts a ON a.id = m.account_id"
         }
         MasterKind::Staff => {
-            "SELECT m.id, m.code, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active FROM staff m"
+            "SELECT m.id, m.code, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0 FROM staff m"
         }
     };
     let sql = if only_id.is_some() {

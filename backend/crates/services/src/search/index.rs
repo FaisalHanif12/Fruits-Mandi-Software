@@ -154,6 +154,7 @@ impl Entry {
                 extra_ur: source.extra_ur,
                 extra_en: source.extra_en,
                 is_active: source.is_active,
+                sold_by_weight: source.sold_by_weight,
             },
         }
     }

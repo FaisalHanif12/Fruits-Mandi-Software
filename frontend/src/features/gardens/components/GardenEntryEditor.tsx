@@ -27,7 +27,12 @@ import { LeaveGuard } from '../../../app/LeaveGuard';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { createEntryStore } from '../../../shared/grid';
-import { useEntrySaveFlow, useFocusFirstField, useRefusalIntoView } from '../../../shared/hooks';
+import {
+  useEntrySaveFlow,
+  useFocusFirstField,
+  useLatest,
+  useRefusalIntoView,
+} from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -52,6 +57,7 @@ import {
   filledLines,
   lineCellErrors,
   linesText,
+  weightRowIds,
   resetLines,
 } from '../../purchases';
 import { gardensEntryPreview } from '../api';
@@ -213,6 +219,12 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
     }
     return cells;
   }, [arrivalPreview?.lines, sent]);
+  // The rows whose item is sold by weight: Enter stops at the weight of those rows (plan 35, D3).
+  const weightRows = useMemo(
+    () => weightRowIds(arrivalPreview?.errors ?? [], sent),
+    [arrivalPreview?.errors, sent],
+  );
+  const weightRowsNow = useLatest(weightRows);
   const cellErrors = useMemo(
     () => lineCellErrors(error?.errors ?? [], sent, errorText),
     [error, errorText, sent],
@@ -399,7 +411,13 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
         {arrival ? (
           // The grid owns its keys (PRD 7.2); the form's own Enter and arrows leave it alone.
           <div data-nav-owns-keys>
-            <GoodsLinesGrid kind="arrival" store={lines} calc={calc} cellErrors={cellErrors} />
+            <GoodsLinesGrid
+              kind="arrival"
+              store={lines}
+              calc={calc}
+              cellErrors={cellErrors}
+              weightRows={weightRowsNow}
+            />
           </div>
         ) : null}
       </form>

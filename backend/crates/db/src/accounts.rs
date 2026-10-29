@@ -801,6 +801,7 @@ pub fn search_sources(
                 control_id: Some(r.get(12)?),
                 tag: r.get(13)?,
                 control_code: Some(r.get(14)?),
+                sold_by_weight: false,
             })
         },
     )?;

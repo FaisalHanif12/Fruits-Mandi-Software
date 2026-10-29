@@ -21,12 +21,14 @@ import {
   linesAreFilled,
 } from '../../src/features/purchases';
 import { LANGUAGES, type Language } from '../../src/i18n';
-import { createEntryStore, type EntryStore } from '../../src/shared/grid';
+import { createEntryStore, isEnterStop, type EntryStore } from '../../src/shared/grid';
+import { useLatest } from '../../src/shared/hooks';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { useEscapeDispatcher } from '../../src/shared/keyboard';
 import * as searchApi from '../../src/shared/search/api';
 import type { SearchHit } from '../../src/shared/search';
 import { message, renderIn, visible } from '../helpers/render';
+import realItems from '../fixtures/search_masters_items_sold_by_weight.json';
 
 vi.mock('../../src/shared/search/api');
 
@@ -36,6 +38,7 @@ const hit = (
   code: string,
   ur: string,
   en: string,
+  soldByWeight = false,
 ): SearchHit => ({
   id,
   kind: scope,
@@ -45,12 +48,15 @@ const hit = (
   extra_ur: '',
   extra_en: '',
   is_active: true,
+  // True only for an item sold by weight: the search hit says it, so the row knows at once.
+  sold_by_weight: soldByWeight,
 });
 
 const ITEMS = [
   hit(61, 'item', '0044', 'مالٹا', 'Orange'),
   hit(62, 'item', '0045', 'کیلا', 'Banana'),
   hit(63, 'item', '0046', 'سیب', 'Apple'),
+  hit(64, 'item', '0047', 'انار', 'Pomegranate', true),
 ];
 const PACKINGS = [
   hit(71, 'packing', '0050', 'پیٹی', 'Box'),
@@ -78,12 +84,16 @@ function Harness({
   store,
   kind,
   errors,
+  weightRowIds,
 }: {
   store: EntryStore;
   kind: 'purchase' | 'arrival';
   errors?: readonly FieldError[];
+  /** The rows whose item is sold by weight, as the backend would tell. */
+  weightRowIds?: ReadonlySet<string>;
 }) {
   useEscapeDispatcher();
+  const weightRows = useLatest(weightRowIds ?? new Set<string>());
   const rows = store((state) => state.rows);
   const cellErrors = useMemo(
     () =>
@@ -96,6 +106,7 @@ function Harness({
     <GoodsLinesGrid
       kind={kind}
       store={store}
+      weightRows={weightRows}
       {...(cellErrors === undefined ? {} : { cellErrors })}
     />
   );
@@ -103,12 +114,23 @@ function Harness({
 
 function render(
   language: Language,
-  options: { kind?: 'purchase' | 'arrival'; errors?: readonly FieldError[] } = {},
+  options: {
+    kind?: 'purchase' | 'arrival';
+    errors?: readonly FieldError[];
+    /** Row numbers (0 is the first) of the rows whose item is sold by weight. */
+    weightRows?: readonly number[];
+  } = {},
 ) {
   act(() => {
     useLanguageStore.setState({ language });
   });
   const store = createEntryStore();
+  const weightRowIds = new Set(
+    (options.weightRows ?? []).flatMap((index) => {
+      const row = store.getState().rows[index];
+      return row === undefined ? [] : [row.rowId];
+    }),
+  );
   renderIn(
     language,
     <QueryClientProvider
@@ -117,6 +139,7 @@ function render(
       <Harness
         store={store}
         kind={options.kind ?? 'purchase'}
+        weightRowIds={weightRowIds}
         {...(options.errors === undefined ? {} : { errors: options.errors })}
       />
     </QueryClientProvider>,
@@ -188,6 +211,38 @@ describe('the columns of the lines', () => {
     expect(calc.map((column) => column.field)).toEqual(['ourQty', 'value']);
   });
 
+  it('Enter stops only at the item, the packing, the quantity and, for a purchase, the rate; the optional cells are editable but not stops (plan 35, D3)', () => {
+    const row = { rowId: 'r', typed: {} };
+    const stops = (kind: 'purchase' | 'arrival', current = row) =>
+      goodsLineColumns(kind, 'normal')
+        .filter((column) => isEnterStop(column, current))
+        .map((column) => column.field);
+    expect(stops('purchase')).toEqual(['item', 'packing', 'qty', 'rate']);
+    expect(stops('arrival')).toEqual(['item', 'packing', 'qty']);
+    // The optional cells are still typed cells: only the calculated two are not.
+    const optional = goodsLineColumns('purchase', 'normal').filter(
+      (column) => !isEnterStop(column, row) && column.type !== 'calc',
+    );
+    expect(optional.map((column) => column.field)).toEqual([
+      'weight',
+      'freight',
+      'labour',
+      'otherCost',
+      'otherQty',
+      'shop',
+    ]);
+  });
+
+  it('the weight is a stop on a row whose item is sold by weight, and on a row that has a weight typed', () => {
+    const weight = (typed: Record<string, string>, weightRows: string[]) =>
+      goodsLineColumns('purchase', 'normal', () => new Set(weightRows))
+        .filter((column) => isEnterStop(column, { rowId: 'r', typed }))
+        .map((column) => column.field);
+    expect(weight({}, ['r'])).toEqual(['item', 'packing', 'qty', 'weight', 'rate']);
+    expect(weight({ weight: '12.5' }, [])).toEqual(['item', 'packing', 'qty', 'weight', 'rate']);
+    expect(weight({}, ['other'])).toEqual(['item', 'packing', 'qty', 'rate']);
+  });
+
   it('a line with nothing typed or chosen is blank, and only the lines that hold something are sent', () => {
     const store = createEntryStore([{}, { qty: '5' }, { shop: '  ' }]);
     const rows = store.getState().rows;
@@ -229,7 +284,9 @@ describe.each(LANGUAGES)('the lines grid with the keyboard (%s)', (language) => 
     await user.keyboard('{Enter}');
   }
 
-  it('a purchase of three lines is typed with the keys only: Enter stops on every typed cell and skips the two calculated ones', async () => {
+  const forward = language === 'ur' ? '{ArrowLeft}' : '{ArrowRight}';
+
+  it('a purchase of three lines is typed with the keys only: four Enters for each line (item, packing, quantity, rate), and Enter on the rate goes to the item of the next line', async () => {
     const { store, user } = render(language);
     act(() => {
       store.getState().setPendingFocus({ rowIndex: 0, field: LINE.item });
@@ -237,56 +294,58 @@ describe.each(LANGUAGES)('the lines grid with the keyboard (%s)', (language) => 
     await waitFor(() => {
       expect(document.querySelector('.ag-cell-focus')).not.toBeNull();
     });
-    // Line 1: oranges, 80 boxes, 1,200, freight 400, 30 of them for another shop.
+    const focused = () => {
+      const cell = document.querySelector('.ag-cell-focus');
+      return `${cell?.closest('.ag-row')?.getAttribute('row-index') ?? ''}:${cell?.getAttribute('col-id') ?? ''}`;
+    };
+    // Line 1: oranges, 80 boxes at 1,200. Enter in the picker takes the match and goes on.
     await pick(user, 'Ora');
     await pick(user, 'Box');
     await user.keyboard('80{Enter}');
-    await user.keyboard('{Enter}'); // weight: not an item sold by weight
-    await user.keyboard('1200{Enter}400{Enter}');
-    await user.keyboard('{Enter}'); // labour
-    await user.keyboard('{Enter}'); // other cost
-    await user.keyboard('30{Enter}Haji Shop{Enter}');
-    // Enter went on to the item of the next line: the two calculated cells were skipped.
+    // The cursor is on the rate: the weight, which this item has none of, was passed over.
     await waitFor(() => {
-      expect(document.querySelector('.ag-row[row-index="1"] .ag-cell-focus')).not.toBeNull();
+      expect(focused()).toBe('0:rate');
+    });
+    await user.keyboard('1200{Enter}');
+    await waitFor(() => {
+      expect(focused()).toBe('1:item');
     });
     expect(store.getState().rows).toHaveLength(2);
-    // Line 2: bananas, 40 boxes at 900, all for our shop.
+    // Line 2: bananas, 40 boxes at 900.
     await pick(user, 'Ban');
     await pick(user, 'Box');
-    await user.keyboard('40{Enter}{Enter}900{Enter}');
-    for (let stop = 0; stop < 5; stop += 1) await user.keyboard('{Enter}');
+    await user.keyboard('40{Enter}900{Enter}');
     await waitFor(() => {
-      expect(store.getState().rows).toHaveLength(3);
+      expect(focused()).toBe('2:item');
     });
-    // Line 3: apples, 10 crates at 2,000, 4 for another shop.
+    // Line 3: apples, 10 crates at 2,000.
     await pick(user, 'App');
     await pick(user, 'Crate');
-    await user.keyboard('10{Enter}{Enter}2000{Enter}{Enter}{Enter}{Enter}4{Enter}');
+    await user.keyboard('10{Enter}2000{Enter}');
+    await waitFor(() => {
+      expect(focused()).toBe('3:item');
+    });
 
     const rows = store.getState().rows;
-    expect(rows.map((row) => pickedOf(store, rows.indexOf(row), LINE.item))).toEqual([61, 62, 63]);
-    expect(rows.map((row) => pickedOf(store, rows.indexOf(row), LINE.packing))).toEqual([
-      71, 71, 72,
+    expect(rows.map((_, index) => pickedOf(store, index, LINE.item))).toEqual([
+      61,
+      62,
+      63,
+      undefined,
     ]);
+    expect([0, 1, 2].map((index) => pickedOf(store, index, LINE.packing))).toEqual([71, 71, 72]);
     expect([0, 1, 2].map((index) => typedOf(store, index, LINE.qty))).toEqual(['80', '40', '10']);
     expect([0, 1, 2].map((index) => typedOf(store, index, LINE.rate))).toEqual([
       '1200',
       '900',
       '2000',
     ]);
-    expect(typedOf(store, 0, LINE.freight)).toBe('400');
-    expect([0, 1, 2].map((index) => typedOf(store, index, LINE.otherQty))).toEqual([
-      '30',
-      undefined,
-      '4',
-    ]);
-    expect(typedOf(store, 0, LINE.shop)).toBe('Haji Shop');
-    // Nothing was worked out here: the quantity left for our shop is not in the rows.
+    // Nothing else was typed, and nothing was worked out here: the calculated cells are not in the rows.
+    expect(typedOf(store, 0, LINE.freight)).toBeUndefined();
     expect(typedOf(store, 0, LINE.ourQty)).toBeUndefined();
   });
 
-  it('goods arrived have no rate or costs: Enter goes from the weight to the split', async () => {
+  it('goods arrived: three stops, item, packing and quantity, then the item of the next line', async () => {
     const { store, user } = render(language, { kind: 'arrival' });
     act(() => {
       store.getState().setPendingFocus({ rowIndex: 0, field: LINE.item });
@@ -297,11 +356,135 @@ describe.each(LANGUAGES)('the lines grid with the keyboard (%s)', (language) => 
     await pick(user, 'Ban');
     await pick(user, 'Box');
     await user.keyboard('100{Enter}');
-    await user.keyboard('{Enter}'); // weight
-    await user.keyboard('40{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-row[row-index="1"] .ag-cell-focus')).not.toBeNull();
+    });
     expect(typedOf(store, 0, LINE.qty)).toBe('100');
-    expect(typedOf(store, 0, LINE.otherQty)).toBe('40');
     expect(document.querySelector('.ag-cell[col-id="rate"]')).toBeNull();
+    expect(store.getState().rows).toHaveLength(2);
+  });
+
+  it('an item sold by weight: Enter also stops at its weight, between the quantity and the rate', async () => {
+    const { store, user } = render(language, { weightRows: [0] });
+    act(() => {
+      store.getState().setPendingFocus({ rowIndex: 0, field: LINE.item });
+    });
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')).not.toBeNull();
+    });
+    await pick(user, 'Ora');
+    await pick(user, 'Box');
+    await user.keyboard('80{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('weight');
+    });
+    await user.keyboard('1234.5{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('rate');
+    });
+    await user.keyboard('100{Enter}');
+    expect(typedOf(store, 0, LINE.weight)).toBe('1234.5');
+    expect(typedOf(store, 0, LINE.rate)).toBe('100');
+  });
+
+  it('D3: an item sold by weight is known the moment it is chosen: Enter on the quantity stops at the weight at once, with no preview and no answer of the backend', async () => {
+    // This grid has no preview at all and is given no weight rows: only the chosen item can say it.
+    const { store, user } = render(language);
+    act(() => {
+      store.getState().setPendingFocus({ rowIndex: 0, field: LINE.item });
+    });
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')).not.toBeNull();
+    });
+    await pick(user, 'Pom');
+    await pick(user, 'Box');
+    await user.keyboard('80{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('weight');
+    });
+    // The chosen record keeps what its hit said, and a plain item does not carry it.
+    expect(store.getState().rows[0]?.picked?.[LINE.item]?.soldByWeight).toBe(true);
+    await user.keyboard('1234{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('rate');
+    });
+    // The next line, a plain item: Enter on the quantity goes straight to the rate.
+    await user.keyboard('100{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-row[row-index="1"] .ag-cell-focus')).not.toBeNull();
+    });
+    await pick(user, 'Ora');
+    await pick(user, 'Box');
+    await user.keyboard('40{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('rate');
+    });
+    expect(store.getState().rows[1]?.picked?.[LINE.item]?.soldByWeight).toBeUndefined();
+  });
+
+  it('D3: the backend’s own search answer for the items says which are sold by weight, and the row takes it from the chosen hit', async () => {
+    const real = realItems as SearchHit[];
+    const byWeight = real.find((row) => row.sold_by_weight);
+    if (byWeight === undefined) throw new Error('the file has no item sold by weight');
+    vi.mocked(searchApi.searchMasters).mockImplementation(({ scope, text }) =>
+      Promise.resolve(
+        scope === 'item'
+          ? real.filter((row) => row.name_en.toLowerCase().includes(text.trim().toLowerCase()))
+          : PACKINGS,
+      ),
+    );
+    const { store, user } = render(language);
+    act(() => {
+      store.getState().setPendingFocus({ rowIndex: 0, field: LINE.item });
+    });
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')).not.toBeNull();
+    });
+    await pick(user, byWeight.name_en);
+    await pick(user, 'Box');
+    await user.keyboard('80{Enter}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('weight');
+    });
+    expect(store.getState().rows[0]?.picked?.[LINE.item]?.id).toBe(byWeight.id);
+  });
+
+  it('the arrow keys reach the optional cells: freight, labour, other cost, the part for another shop and the shop name', async () => {
+    const { store, user, cell } = render(language);
+    act(() => {
+      store.getState().setPendingFocus({ rowIndex: 0, field: LINE.item });
+    });
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')).not.toBeNull();
+    });
+    await pick(user, 'Ora');
+    await pick(user, 'Box');
+    await user.keyboard('80{Enter}1200{Enter}');
+    // Back to the rate of line 1 with a click, then the arrow that goes on in the reading direction.
+    await user.click(cell(0, LINE.rate));
+    await user.keyboard(forward);
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('freight');
+    });
+    // Typing starts the cell; an arrow down and up finishes it and comes back to the same cell.
+    await user.keyboard('400{ArrowDown}{ArrowUp}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-row[row-index="0"] .ag-cell-focus')).not.toBeNull();
+    });
+    await user.keyboard(forward);
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('labour');
+    });
+    await user.keyboard(`${forward}${forward}${forward}`);
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-focus')?.getAttribute('col-id')).toBe('shop');
+    });
+    await user.keyboard('Haji Shop');
+    await user.keyboard('{Enter}');
+    expect(typedOf(store, 0, LINE.freight)).toBe('400');
+    expect(typedOf(store, 0, LINE.shop)).toBe('Haji Shop');
+    // The values typed in the optional cells are in the line as before.
+    expect(store.getState().rows[0]?.typed[LINE.rate]).toBe('1200');
   });
 
   it('"Add a line" adds a line and puts the cursor on its item; Ctrl+Delete removes the line', async () => {
@@ -347,7 +530,7 @@ describe.each(LANGUAGES)('the lines grid with the keyboard (%s)', (language) => 
     });
     await pick(user, 'Ora');
     await pick(user, 'Box');
-    await user.keyboard('80{Enter}{Enter}1200{Enter}');
+    await user.keyboard('80{Enter}1200{Enter}');
     const before = JSON.stringify(store.getState().rows);
     // The other language: the headers and the names change, the lines do not.
     const other: Language = language === 'ur' ? 'en' : 'ur';

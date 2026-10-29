@@ -65,37 +65,65 @@ async function pick(user: User, text: string): Promise<void> {
   await user.keyboard('{Enter}');
 }
 
-/** Types one cell and goes on to the next typed cell with Enter. */
-async function typeCell(user: User, text: string | undefined): Promise<void> {
+/** Types one stop of the line and presses Enter, which goes on to the next stop. */
+async function typeStop(user: User, text: string | undefined): Promise<void> {
   if (text !== undefined) await user.keyboard(text);
   await user.keyboard('{Enter}');
 }
 
 /**
- * Types line `row` of a purchase entry from its item cell to its shop name, leaving the cursor on
- * the item of the next line (Enter on the last cell goes to the next row).
+ * Types the cells Enter does not stop at (freight, labour, other cost, the part for another shop
+ * and the shop's name, PRD FR-12.41): a click on the cell, then the text. Clicking the item of the
+ * next line afterwards finishes the last one, as the user's mouse would.
+ */
+async function typeOptional(
+  user: User,
+  row: number,
+  kind: LinesKind,
+  cells: readonly (readonly [string, string | undefined])[],
+): Promise<void> {
+  for (const [field, text] of cells) {
+    if (text === undefined) continue;
+    await user.click(lineCell(row, field, kind));
+    await user.keyboard(text);
+  }
+  // Enter on the last stop made the next line: its item is where the cursor goes next.
+  await waitFor(() => {
+    lineCell(row + 1, 'item', kind);
+  });
+  await user.click(lineCell(row + 1, 'item', kind));
+}
+
+/**
+ * Types line `row` of a purchase entry the way the munshi does: item, packing, quantity and rate
+ * with Enter after each (four Enters), and the weight too when the item is sold by weight (give
+ * `weight`). Enter on the rate goes to the item of the next line. The optional cells are clicked.
  */
 export async function typePurchaseLine(user: User, row: number, line: LineText): Promise<void> {
   await enterRow(user, row, 'purchase');
   await pick(user, line.item);
   await pick(user, line.packing);
-  await typeCell(user, line.qty);
-  await typeCell(user, line.weight);
-  await typeCell(user, line.rate);
-  await typeCell(user, line.freight);
-  await typeCell(user, line.labour);
-  await typeCell(user, line.otherCost);
-  await typeCell(user, line.otherQty);
-  await typeCell(user, line.shop);
+  await typeStop(user, line.qty);
+  if (line.weight !== undefined) await typeStop(user, line.weight);
+  await typeStop(user, line.rate);
+  await typeOptional(user, row, 'purchase', [
+    ['freight', line.freight],
+    ['labour', line.labour],
+    ['otherCost', line.otherCost],
+    ['otherQty', line.otherQty],
+    ['shop', line.shop],
+  ]);
 }
 
-/** Types line `row` of a goods arrived entry: the goods, the quantity, the weight and the split. */
+/** Types line `row` of a goods arrived entry: item, packing and quantity (three Enters). */
 export async function typeArrivalLine(user: User, row: number, line: LineText): Promise<void> {
   await enterRow(user, row, 'arrival');
   await pick(user, line.item);
   await pick(user, line.packing);
-  await typeCell(user, line.qty);
-  await typeCell(user, line.weight);
-  await typeCell(user, line.otherQty);
-  await typeCell(user, line.shop);
+  await typeStop(user, line.qty);
+  if (line.weight !== undefined) await typeStop(user, line.weight);
+  await typeOptional(user, row, 'arrival', [
+    ['otherQty', line.otherQty],
+    ['shop', line.shop],
+  ]);
 }

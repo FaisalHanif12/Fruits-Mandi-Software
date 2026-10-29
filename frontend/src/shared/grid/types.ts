@@ -40,6 +40,11 @@ export interface PickedRecord {
   readonly name_en: string;
   /** The tag (نشان) after the name, shown by `displayName`. Absent when there is none. */
   readonly tag?: string | undefined;
+  /**
+   * An item sold by weight, as its search hit said when it was chosen. Absent for every other
+   * record. The item lines of an entry stop Enter at the weight of such a row (plan 35, D3).
+   */
+  readonly soldByWeight?: boolean | undefined;
 }
 
 /** Which records a picker column offers. */
@@ -81,9 +86,11 @@ export interface EntryColumn {
   readonly editable?: (row: EntryRow) => boolean;
   /**
    * Does Enter stop here? Default: yes for every typed column, no for `calc`. Cells such as a
-   * payment-type toggle can be editable but not an Enter stop (entry-grid skill).
+   * payment-type toggle can be editable but not an Enter stop (entry-grid skill). A function
+   * decides per row: the weight of a line stops Enter only when its item is sold by weight
+   * (plan 35, PRD FR-12.41).
    */
-  readonly enterStop?: boolean;
+  readonly enterStop?: boolean | ((row: EntryRow) => boolean);
   /** In a grid that must fit its room (`fit`): the least width of this column, if not the type's. */
   readonly minWidth?: number;
   /** Grey hint inside an empty cell, for example the last rate. Never saved (PRD FR-7.53). */

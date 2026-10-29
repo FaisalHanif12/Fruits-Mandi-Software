@@ -58,6 +58,7 @@ export {
   arrivalLineInputs,
   linesAreFilled,
   linesText,
+  weightRowIds,
   purchaseLineInputs,
   resetLines,
   type GoodsKind,
