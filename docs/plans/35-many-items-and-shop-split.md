@@ -43,3 +43,10 @@ Targeted checks only (Umar's rule).
 ## 5. Acceptance
 
 R1 to R7 each shown by a test or screenshot; a one-line entry identical to today (fixture diff); golden numbers unchanged; keyboard-only entry of a 3-line purchase.
+
+## 6. Contract (backend T1, 29-10-2026) and decisions
+
+Migration 0010: `purchases` and `garden_arrivals` get `other_qty`, `qty_sold_other`, `shop_name` (triggers keep the split true; old purchases sold in other shops get other_qty = qty_sold_other = those sales, so every old number stays true); `venture_entries.arrival_id` links a garden sale in another shop to an arrival. Parts from one pure function `mandi_core::split::StockParts::of` (our_left, other_left, our_sold, other_sold). New commands `purchases_entry_preview/save`, `gardens_arrival_entry_preview/save` (many lines, one transaction, errors `lines[i].field`), `purchases_change_split`, `gardens_arrival_change_split`; old single-item commands stay. New errors ERR_SPLIT_ABOVE_QTY, ERR_SPLIT_BELOW_SOLD, ERR_TOO_MANY_LINES. C21 cost uses the total left (unchanged).
+
+D1 (lead, Umar's "complete flexibility"): a sale in another shop takes from the other-shop part first, and moves any rest from our shop's part in the same save (preview says so). It is refused only above the line's whole qty left. No separate split step is needed.
+D2: a write-off comes off our shop's part first. The bell counts our shop's goods; the tile and day close count all goods left.
