@@ -385,6 +385,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "move_id": 1, "reason": "x" } }),
             true,
         ),
+        (
+            "purchases_set_sell_date",
+            json!({ "input": { "id": 1, "version": 1, "sell_date": "11-10-2026" } }),
+            true,
+        ),
         ("trips_defaults", json!({}), true),
         (
             "trips_create",
@@ -491,6 +496,39 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "gardens_reopen",
             json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_save",
+            json!({ "input": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "item_id": 1,
+                "packing_id": 1, "qty": "100", "weight": null, "note": null } }),
+            true,
+        ),
+        (
+            "gardens_arrival_cancel",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_set_sell_date",
+            json!({ "input": { "id": 1, "version": 1, "sell_date": "11-10-2026" } }),
+            true,
+        ),
+        (
+            "gardens_arrivals_list",
+            json!({ "input": { "garden_id": null, "from": null, "to": null, "item_id": null,
+                "state": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        ("gardens_arrival_get", json!({ "input": { "id": 1 } }), true),
+        (
+            "gardens_arrival_write_off",
+            json!({ "input": { "arrival_id": 1, "qty": "1", "reason": "x" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_write_off_undo",
+            json!({ "input": { "move_id": 1, "reason": "x" } }),
             true,
         ),
         (
@@ -791,6 +829,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             "bikri_stock_list",
             json!({ "input": { "date": null, "from": null, "to": null, "seller_id": null,
                 "item_id": null, "include_written_off": false } }),
+            true,
+        ),
+        (
+            "bikri_ready_goods",
+            json!({ "input": { "date": "10-10-2026" } }),
             true,
         ),
         (

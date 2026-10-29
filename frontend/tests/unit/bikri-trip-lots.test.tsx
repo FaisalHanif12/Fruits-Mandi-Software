@@ -14,7 +14,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
-import type { PurchaseRow } from '../../src/bindings/PurchaseRow';
+import type { ReadyGoodsRow } from '../../src/bindings/ReadyGoodsRow';
+import * as bikriApi from '../../src/features/bikri/api';
 import * as purchasesApi from '../../src/features/purchases/api';
 import * as tripsApi from '../../src/features/trips/api';
 import * as draftsApi from '../../src/shared/drafts/api';
@@ -30,10 +31,12 @@ import {
   RAHIM,
   fakeBikri,
 } from '../helpers/bikri';
+import * as arrivals from '../helpers/arrivals-real';
 import * as own from '../helpers/bikri-own-real';
 import { fakePlan16 } from '../helpers/bikri-plan16';
 import { cellOf, focusedIn, lotsGrid, named, salesGrid, textOf } from '../helpers/bikri-screen';
 import {
+  fail,
   healthyBackend,
   leaveAppWindow,
   press,
@@ -70,42 +73,59 @@ const TOMORROW = '2026-10-11';
 
 const BANANA = { id: 6, code: '0045', name_ur: 'کیلا', name_en: 'Banana' };
 
-/** The real purchase of E2E-34, with the facts a test sets. */
+/** The backend's real row of a trip purchase that is ready (bikri_ready_goods), with the facts a test sets. */
 function purchase(
   id: number,
   number: number,
-  facts: Partial<Pick<PurchaseRow, 'entry_date' | 'qty_left' | 'status' | 'item'>> = {},
-): PurchaseRow {
+  facts: Partial<Pick<ReadyGoodsRow, 'sell_date' | 'qty_left' | 'item'>> = {},
+): ReadyGoodsRow {
+  const trip = arrivals.READY_GOODS.rows.find((row) => row.kind === 'trip');
+  if (trip === undefined) throw new Error('the fixture has no trip row');
   return {
-    ...structuredClone(trips.PURCHASE_GET_AFTER_SALES),
+    ...structuredClone(trip),
     id,
     number,
-    entry_date: TODAY,
+    sell_date: TODAY,
+    // The orange of E2E-34, as the purchase of the real answer has it.
+    item: trips.PURCHASE_GET_AFTER_SALES.item,
+    qty: 2,
     qty_left: 2,
-    status: 'saved',
     ...facts,
   };
 }
 
-/** The purchases the fake backend has; each test sets them. */
-let stock: PurchaseRow[] = [];
+/** The backend's real row of a garden's goods arrived that is ready, with the facts a test sets. */
+function arrival(
+  id: number,
+  number: number,
+  facts: Partial<Pick<ReadyGoodsRow, 'sell_date' | 'qty_left' | 'item'>> = {},
+): ReadyGoodsRow {
+  const garden = arrivals.READY_GOODS.rows.find((row) => row.kind === 'garden');
+  if (garden === undefined) throw new Error('the fixture has no garden row');
+  return {
+    ...structuredClone(garden),
+    id,
+    number,
+    sell_date: TODAY,
+    qty: 100,
+    qty_left: 100,
+    ...facts,
+  };
+}
 
-/** Answers the list the way the backend does: the day asked for, the goods left. */
+/** The stock the fake backend has; each test sets it. */
+let stock: ReadyGoodsRow[] = [];
+
+/** The day of a `DD-MM-YYYY` text, `YYYY-MM-DD`. */
+const isoOf = (text: string) => text.split('-').reverse().join('-');
+
+/** Answers the list the way the backend does: the goods left whose day to sell is not after the day. */
 function answerLikeTheBackend() {
-  vi.mocked(purchasesApi.purchasesList).mockImplementation((input) => {
-    const wanted = (text: string | null) =>
-      text === null ? null : text.split('-').reverse().join('-');
-    const from = wanted(input.from);
-    const to = wanted(input.to);
-    const rows = stock.filter(
-      (row) =>
-        (from === null || row.entry_date >= from) &&
-        (to === null || row.entry_date <= to) &&
-        (input.state !== 'in_stock' || row.qty_left > 0) &&
-        row.status === 'saved',
-    );
-    return Promise.resolve({ ...trips.PURCHASES_LIST_ALL, rows });
-  });
+  vi.mocked(bikriApi.bikriReadyGoods).mockImplementation((date) =>
+    Promise.resolve({
+      rows: stock.filter((row) => row.sell_date <= isoOf(date) && row.qty_left > 0),
+    }),
+  );
 }
 
 beforeEach(() => {
@@ -205,16 +225,14 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
     );
     // The backend was asked for the purchases up to the day of the بکری with goods left, in the
     // date form it reads.
-    expect(purchasesApi.purchasesList).toHaveBeenCalledWith(
-      expect.objectContaining({ from: null, to: '10-10-2026', state: 'in_stock' }),
-    );
+    expect(bikriApi.bikriReadyGoods).toHaveBeenCalledWith('10-10-2026');
   });
 
   it('no purchase today: the sale opens as before, one empty lot and no note', async () => {
     stock = [];
     await openWithOwnGoods(language, fitted);
     await waitFor(() => {
-      expect(purchasesApi.purchasesList).toHaveBeenCalled();
+      expect(bikriApi.bikriReadyGoods).toHaveBeenCalled();
     });
     const lots = lotsGrid(language);
     expect(rowsIn(lots)).toBe(1);
@@ -239,19 +257,16 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
     expect(pageText()).toContain(note(2));
   });
 
-  it('R4: a purchase of a later day, with no goods left, or cancelled is not a lot, even if the backend sends it', async () => {
+  it('R4: goods to sell on a later day or with no goods left are not lots, even if the backend sends them', async () => {
     const wrong = [
-      purchase(1, 1, { entry_date: TOMORROW }),
+      purchase(1, 1, { sell_date: TOMORROW }),
       purchase(2, 2, { qty_left: 0 }),
-      purchase(3, 3, { status: 'cancelled' }),
+      arrival(3, 1, { sell_date: TOMORROW }),
     ];
-    vi.mocked(purchasesApi.purchasesList).mockResolvedValue({
-      ...trips.PURCHASES_LIST_ALL,
-      rows: wrong,
-    });
+    vi.mocked(bikriApi.bikriReadyGoods).mockResolvedValue({ rows: wrong });
     await openWithOwnGoods(language, fitted);
     await waitFor(() => {
-      expect(purchasesApi.purchasesList).toHaveBeenCalled();
+      expect(bikriApi.bikriReadyGoods).toHaveBeenCalled();
     });
     await waitFor(() => {
       expect(rowsIn(lotsGrid(language))).toBe(1);
@@ -265,13 +280,13 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
     stock = [purchase(1, 1, { qty_left: 0 })];
     await openWithOwnGoods(language, fitted);
     await waitFor(() => {
-      expect(purchasesApi.purchasesList).toHaveBeenCalled();
+      expect(bikriApi.bikriReadyGoods).toHaveBeenCalled();
     });
     expect(textOf(lotsGrid(language), 0, 'seller')).toBe('');
   });
 
   it('R8: goods not sold come again the next day, oldest day first; while no line is typed the lots follow the date of the بکری', async () => {
-    stock = [purchase(1, 1), purchase(2, 2, { entry_date: YESTERDAY, item: BANANA, qty_left: 7 })];
+    stock = [purchase(1, 1), purchase(2, 2, { sell_date: YESTERDAY, item: BANANA, qty_left: 7 })];
     const { user } = await openWithOwnGoods(language, fitted);
     // The purchase of yesterday still has goods left: it comes first, then today's.
     await waitFor(() => {
@@ -306,7 +321,7 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
   });
 
   it('R3: Ctrl+Delete removes a lot, and it is not put back in the same form, not even when the date goes away and comes back', async () => {
-    stock = [purchase(1, 1), purchase(2, 2, { entry_date: YESTERDAY, item: BANANA, qty_left: 7 })];
+    stock = [purchase(1, 1), purchase(2, 2, { sell_date: YESTERDAY, item: BANANA, qty_left: 7 })];
     const { user } = await openWithOwnGoods(language, fitted);
     await waitFor(() => {
       expect(rowsIn(lotsGrid(language))).toBe(2);
@@ -372,7 +387,7 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
   });
 
   it('a lot that has a line does not follow the date any more', async () => {
-    stock = [purchase(1, 1), purchase(2, 2, { entry_date: YESTERDAY, item: BANANA, qty_left: 7 })];
+    stock = [purchase(1, 1), purchase(2, 2, { sell_date: YESTERDAY, item: BANANA, qty_left: 7 })];
     const { user } = await openWithOwnGoods(language, fitted);
     await waitFor(() => {
       expect(rowsIn(lotsGrid(language))).toBe(2);
@@ -387,9 +402,7 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
     await changeDateTo(user, '09-10-2026');
     // Give a wrong replacement time to happen; the lots stay as he left them.
     await waitFor(() => {
-      expect(purchasesApi.purchasesList).toHaveBeenCalledWith(
-        expect.objectContaining({ to: '09-10-2026' }),
-      );
+      expect(bikriApi.bikriReadyGoods).toHaveBeenCalledWith('09-10-2026');
     });
     expect(rowsIn(lotsGrid(language))).toBe(2);
     expect(textOf(lotsGrid(language), 0, 'item')).toBe(banana);
@@ -489,6 +502,160 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
   });
 });
 
+/** The backend's real preview of a garden's lot with its arrival, with the keys of the draft. */
+function fittedGarden(draft: BikriDraft): BikriPreview {
+  const preview = structuredClone(arrivals.GARDEN_LOT_PREVIEW);
+  preview.lots.forEach((lot, lotIndex) => {
+    lot.key = draft.lots[lotIndex]?.key ?? lot.key;
+    lot.lines.forEach((line, lineIndex) => {
+      line.key = draft.lots[lotIndex]?.sales[lineIndex]?.key ?? line.key;
+    });
+  });
+  return preview;
+}
+
+describe.each(LANGUAGES)(
+  "a garden's goods arrived in a new بکری (%s, PRD FR-12.40)",
+  (language) => {
+    const gardenName = language === 'ur' ? 'شاہ پور باغ' : 'Shahpur Garden';
+    const note = (count: number) => visible(message(language, 'bikri-ready-lots-note', { count }));
+
+    beforeEach(() => {
+      resetClientState(language);
+      signedIn(sessionUser({ language }));
+      fakeTrips();
+      vi.mocked(purchasesApi.purchasesGet).mockResolvedValue(trips.PURCHASE_GET_AFTER_SALES);
+      answerLikeTheBackend();
+    });
+
+    it('an entry that is ready is a lot: the garden is the seller, the item, the packing and the goods left come from it, and a panel says where they come from', async () => {
+      stock = [arrival(1, 1)];
+      await openWithOwnGoods(language, fittedGarden);
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'seller')).toBe(gardenName);
+      });
+      const lots = lotsGrid(language);
+      expect(textOf(lots, 0, 'qty')).toBe('100');
+      expect(rowsIn(lots)).toBe(1);
+      expect(pageText()).toContain(note(1));
+      // The panel: the garden by its code and name; the entry; what it has left. The seller is the
+      // garden's account (code 0080), which is why the cash and the advance cells do not apply.
+      const panel = await screen.findByText(
+        (text) => visible(text) === message(language, 'bikri-arrival-title'),
+      );
+      expect(panel).toBeInTheDocument();
+      expect(pageText()).toContain('0080');
+    });
+
+    it('both kinds come in together, oldest day first, a trip purchase before a garden entry of the same day', async () => {
+      stock = [
+        arrival(1, 1),
+        purchase(1, 1),
+        arrival(2, 2, { sell_date: YESTERDAY, item: BANANA, qty_left: 30 }),
+      ];
+      await openWithOwnGoods(language, fittedGarden);
+      await waitFor(() => {
+        expect(rowsIn(lotsGrid(language))).toBe(3);
+      });
+      const lots = lotsGrid(language);
+      // Yesterday's garden entry first, then today's trip purchase, then today's garden entry.
+      expect(textOf(lots, 0, 'seller')).toBe(gardenName);
+      expect(textOf(lots, 0, 'qty')).toBe('30');
+      expect(textOf(lots, 1, 'seller')).toBe(
+        language === 'ur' ? OWN_GOODS.name_ur : OWN_GOODS.name_en,
+      );
+      expect(textOf(lots, 2, 'seller')).toBe(gardenName);
+      expect(textOf(lots, 2, 'qty')).toBe('100');
+      expect(pageText()).toContain(note(3));
+    });
+
+    it('goods that were sold in part come again with what is left', async () => {
+      stock = [arrival(1, 1, { qty_left: 40 })];
+      await openWithOwnGoods(language, fittedGarden);
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'qty')).toBe('40');
+      });
+    });
+
+    it('item and packing follow the entry: they cannot be typed on this lot', async () => {
+      stock = [arrival(1, 1)];
+      const { user } = await openWithOwnGoods(language, fittedGarden);
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'seller')).toBe(gardenName);
+      });
+      await user.click(cellOf(lotsGrid(language), 0, 'item'));
+      await user.keyboard('x');
+      expect(document.activeElement?.tagName).not.toBe('INPUT');
+    });
+
+    it('F10 sends the garden as the seller and the link to the entry, with no cash and no advance; the buyer and the rate are typed', async () => {
+      stock = [arrival(1, 1)];
+      const { user, backend } = await openWithOwnGoods(language, fittedGarden);
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'seller')).toBe(gardenName);
+      });
+      await user.click(await waitFor(() => cellOf(salesGrid(language), 0, 'buyer')));
+      await user.keyboard('0');
+      await screen.findAllByRole('option');
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(focusedIn(salesGrid(language))).toBe('0:qty');
+      });
+      await user.keyboard('100{Enter}600{Enter}');
+      press('F10');
+      await waitFor(() => {
+        expect(backend.saves).toHaveLength(1);
+      });
+      const sent = backend.saves[0]?.draft.lots[0];
+      expect(sent?.seller_account_id).toBe(31);
+      expect(sent?.arrival_id).toBe(1);
+      expect(sent?.purchase_id ?? null).toBeNull();
+      expect(sent?.qty_received).toBe('100');
+      expect(sent?.cash_paid).toBeNull();
+      expect(sent?.adjust_advance).toBe(false);
+      expect(sent?.sales[0]).toMatchObject({
+        buyer_account_id: AKRAM.id,
+        qty: '100',
+        seller_rate: '600',
+      });
+    });
+
+    it('a second sale of the same goods is refused with what is left, the words are at the quantity, and the ready goods are read again', async () => {
+      stock = [arrival(1, 1)];
+      const { user, backend } = await openWithOwnGoods(language, fittedGarden);
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'seller')).toBe(gardenName);
+      });
+      await user.click(await waitFor(() => cellOf(salesGrid(language), 0, 'buyer')));
+      await user.keyboard('0');
+      await screen.findAllByRole('option');
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(focusedIn(salesGrid(language))).toBe('0:qty');
+      });
+      await user.keyboard('100{Enter}600{Enter}');
+      const before = vi.mocked(bikriApi.bikriReadyGoods).mock.calls.length;
+      vi.mocked(bikriApi.bikriSave).mockRejectedValueOnce(
+        fail({
+          code: 'ERR_QTY_EXCEEDS_LOT',
+          field: 'lots[0].qty_received',
+          values: { available: 40 },
+        }),
+      );
+      press('F10');
+      await waitFor(() => {
+        expect(pageText()).toContain(message(language, 'err-qty-exceeds-lot', { available: 40 }));
+      });
+      // Nothing was saved, nothing typed is lost, and the goods are asked for again.
+      expect(backend.saves).toHaveLength(0);
+      expect(textOf(salesGrid(language), 0, 'rate')).toBe('600');
+      await waitFor(() => {
+        expect(vi.mocked(bikriApi.bikriReadyGoods).mock.calls.length).toBeGreaterThan(before);
+      });
+    });
+  },
+);
+
 describe.each(LANGUAGES)(
   'a saved بکری, an edit and a later sale get no trip lots (%s)',
   (language) => {
@@ -518,7 +685,7 @@ describe.each(LANGUAGES)(
       expect(pageText()).not.toContain(
         visible(message(language, 'bikri-ready-lots-note-hint', { key: 'Ctrl+Delete' })),
       );
-      expect(purchasesApi.purchasesList).not.toHaveBeenCalled();
+      expect(bikriApi.bikriReadyGoods).not.toHaveBeenCalled();
     });
 
     it('an edit shows its own lots only', async () => {
@@ -532,7 +699,7 @@ describe.each(LANGUAGES)(
       expect(pageText()).not.toContain(
         visible(message(language, 'bikri-ready-lots-note-hint', { key: 'Ctrl+Delete' })),
       );
-      expect(purchasesApi.purchasesList).not.toHaveBeenCalled();
+      expect(bikriApi.bikriReadyGoods).not.toHaveBeenCalled();
     });
 
     it('a later sale shows the lot it sells, and nothing is added', async () => {
@@ -544,7 +711,7 @@ describe.each(LANGUAGES)(
       expect(pageText()).not.toContain(
         visible(message(language, 'bikri-ready-lots-note-hint', { key: 'Ctrl+Delete' })),
       );
-      expect(purchasesApi.purchasesList).not.toHaveBeenCalled();
+      expect(bikriApi.bikriReadyGoods).not.toHaveBeenCalled();
     });
   },
 );

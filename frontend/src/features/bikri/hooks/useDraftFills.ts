@@ -18,7 +18,7 @@ import { isOwnGoods, pickedOf } from '../../../shared/accounts';
 import { findMaster, type SearchHit } from '../../../shared/search';
 import type { PickedRecord } from '../../../shared/grid';
 import { assistSellerMemory } from '../api';
-import { isGardenLot, isOwnLot } from '../draft';
+import { isArrivalLot, isGardenLot, isOwnLot } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, ON, SALE, type BikriPreview } from '../types';
 
@@ -84,12 +84,21 @@ export function useDraftFills(
   useEffect(() => {
     for (const row of lotRows) {
       const seller = row.picked?.[LOT.seller];
-      if (seller === undefined || isOwnLot(row)) continue;
+      if (seller === undefined || isOwnLot(row) || isArrivalLot(row)) continue;
       if (row.typed[LOT.memoryFilledFor] === String(seller.id)) continue;
       stores.lots
         .getState()
         .patchRow(row.rowId, { typed: { [LOT.memoryFilledFor]: String(seller.id) } });
       void fillFromSellerMemory(stores, row.rowId, seller.id);
+    }
+  }, [lotRows, stores]);
+
+  // A lot that is not a garden's any more drops the goods arrived entry it had (PRD FR-12.40).
+  useEffect(() => {
+    for (const row of lotRows) {
+      if (!isGardenLot(row) && (row.typed[LOT.arrival] ?? '') !== '') {
+        stores.lots.getState().patchRow(row.rowId, { typed: { [LOT.arrival]: '' } });
+      }
     }
   }, [lotRows, stores]);
 

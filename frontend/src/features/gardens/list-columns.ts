@@ -12,9 +12,9 @@ import type { GardenHistoryKind, GardenHistoryRow, GardenRow } from './types';
 
 type Say = (id: string, vars?: Record<string, string>) => string;
 
-/** The number of a garden in its series: "باغ-3" or "GRD-3" (letters from Fluent). */
-export function gardenNumberText(number: number, text: Say): string {
-  return text('gardens-number', { number: String(number) });
+/** The number of a goods arrived entry in its own series: "GA-3" or "مآ-3" (letters from Fluent). */
+export function arrivalNumberText(number: number, text: Say): string {
+  return text('gardens-arrival-number', { number: String(number) });
 }
 
 /** The word for what a history row is (the type list of the garden screen, FR-7.67). */
@@ -49,7 +49,8 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'number',
     type: 'code',
     headerId: 'gardens-col-number',
-    value: (row, { text }) => gardenNumberText(row.number, text),
+    // The code of a garden, type 008 (plan 34). Its account has the same code.
+    value: (row) => row.code,
   },
   {
     field: 'name',

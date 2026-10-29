@@ -30,7 +30,7 @@ use super::saved::{BikriStatus, SavedLot, SavedPosting, SavedPukhta};
 use crate::accounts::RecordRef;
 use crate::cash::CashCheck;
 use crate::money::Paisa;
-use crate::ventures::TripRef;
+use crate::ventures::{GardenRef, TripRef};
 
 /// The reason an undo (PRD FR-7.47) writes to the audit log and to `cancel_reason`. It is a Fluent
 /// message ID, not text: the screen turns it into "محفوظ کرنے کے فوراً بعد واپس" or "Undone straight
@@ -72,7 +72,7 @@ pub struct StockListInput {
     #[serde(default)]
     pub include_written_off: bool,
     /// How many rows to skip. 0 for the first page. The page runs over the lots first, then the
-    /// trip goods (PRD FR-19.11).
+    /// trip goods, then the garden arrivals (PRD FR-19.11).
     #[serde(default)]
     pub offset: u32,
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
@@ -157,6 +157,8 @@ pub struct OwnStockRow {
     pub number: i64,
     /// The day it was bought, `YYYY-MM-DD`.
     pub received_date: String,
+    /// The day to sell, `YYYY-MM-DD` (PRD FR-12.39). A new بکری from this day opens with a ready lot.
+    pub sell_date: String,
     /// Its trip.
     pub trip: TripRef,
     /// Who it was bought from, as typed.
@@ -183,11 +185,54 @@ pub struct OwnStockRow {
     /// The cost of the نگ left (C21): total cost less the cost already released.
     #[ts(type = "Paisa")]
     pub cost_left_paisa: Paisa,
-    /// Whole days from `received_date` to today.
+    /// Whole days from the day to sell (`sell_date`) to today. Goods meant for a later day are not
+    /// waiting before it.
     #[ts(type = "number")]
     pub days_waiting: i64,
     /// The write-offs of this purchase that can still be undone, oldest first
     /// (`purchases_write_off_undo` takes their `move_id`).
+    pub write_offs: Vec<WriteOffRow>,
+}
+
+/// One garden arrival with goods left (PRD FR-12.40), marked with its garden: arrived, sold,
+/// written off, left and days waiting. It is not a lot: it has no `lot_id`, and it is sold by a
+/// garden lot of a بکری linked to it. `gardens_arrival_write_off` takes its `arrival_id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct GardenStockRow {
+    /// The arrival.
+    #[ts(type = "number")]
+    pub arrival_id: i64,
+    /// The arrival number, in its own series.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// The day it arrived, `YYYY-MM-DD`.
+    pub received_date: String,
+    /// The day to sell, `YYYY-MM-DD`.
+    pub sell_date: String,
+    /// Its garden, with the garden's account.
+    pub garden: GardenRef,
+    /// The item.
+    pub item: RecordRef,
+    /// The packing.
+    pub packing: RecordRef,
+    /// نگ that arrived.
+    #[ts(type = "number")]
+    pub qty_arrived: i64,
+    /// نگ sold, over the garden lots in force.
+    #[ts(type = "number")]
+    pub qty_sold: i64,
+    /// نگ written off.
+    #[ts(type = "number")]
+    pub qty_written_off: i64,
+    /// نگ left: arrived less sold less written off. More than 0 in this list.
+    #[ts(type = "number")]
+    pub balance: i64,
+    /// Whole days from the day to sell (`sell_date`) to today. Goods meant for a later day are not
+    /// waiting before it.
+    #[ts(type = "number")]
+    pub days_waiting: i64,
+    /// The write-offs of this arrival that can still be undone, oldest first
+    /// (`gardens_arrival_write_off_undo` takes their `move_id`).
     pub write_offs: Vec<WriteOffRow>,
 }
 
@@ -212,6 +257,13 @@ pub struct StockList {
     /// Σ of the `cost_left_paisa` of the own rows.
     #[ts(type = "Paisa")]
     pub own_cost_left_paisa: Paisa,
+    /// The garden arrivals with goods left (PRD FR-12.40), oldest first, after the trip goods. The
+    /// `item_id` filter matches the item and the dates the day arrived. The `seller_id` filter
+    /// keeps the arrivals whose garden account is that seller and leaves out the rest.
+    pub garden_rows: Vec<GardenStockRow>,
+    /// Σ of the `balance` of the garden rows (نگ).
+    #[ts(type = "number")]
+    pub garden_balance_total: i64,
 }
 
 // ---- Later sale (PRD FR-12.17) ----

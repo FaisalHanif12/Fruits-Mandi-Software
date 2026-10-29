@@ -138,7 +138,7 @@ describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
     expect(textOf(grid(), 0, 'detail')).toBe(
       message(language, 'partners-statement-detail-trip-paid', {
         kind: 'purchase',
-        trip: message(language, 'trips-number', { number: 1 }),
+        trip: '0070',
         secondary: message(language, 'purchases-number', { number: 1 }),
       }),
     );
@@ -150,7 +150,7 @@ describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
       expect(textOf(grid(), row, 'amount')).toBe('');
       expect(textOf(grid(), row, 'running')).toBe('-296');
     }
-    expect(textOf(grid(), 3, 'detail')).toContain(message(language, 'trips-number', { number: 1 }));
+    expect(textOf(grid(), 3, 'detail')).toContain('0070');
     const closed = textOf(grid(), 4, 'detail');
     expect(closed).toContain('10,400');
     expect(closed).toContain('-776');

@@ -36,6 +36,29 @@ pub(crate) fn slice_two<A, B>(
     (first_page, second_page)
 }
 
+/// One page over three lists read one after the other (the lots, the trip goods, the garden
+/// arrivals of the stock list): the page takes from the first, then what is left of the page from the
+/// second, then from the third. An offset past a list skips into the next.
+pub(crate) fn slice_three<A, B, C>(
+    first: Vec<A>,
+    second: Vec<B>,
+    third: Vec<C>,
+    offset: u32,
+    limit: u32,
+) -> (Vec<A>, Vec<B>, Vec<C>) {
+    let size = if limit == 0 { DEFAULT_PAGE } else { limit };
+    let first_len = u32::try_from(first.len()).unwrap_or(u32::MAX);
+    let second_len = u32::try_from(second.len()).unwrap_or(u32::MAX);
+    let (first_page, second_page) = slice_two(first, second, offset, size);
+    let taken = u32::try_from(first_page.len() + second_page.len()).unwrap_or(u32::MAX);
+    let room = size.saturating_sub(taken);
+    if room == 0 {
+        return (first_page, second_page, Vec::new());
+    }
+    let skip = offset.saturating_sub(first_len.saturating_add(second_len));
+    (first_page, second_page, slice(third, skip, room))
+}
+
 /// The limit a database query asks for: 100 when the screen sends 0.
 pub(crate) fn limit_of(limit: u32) -> i64 {
     i64::from(if limit == 0 { DEFAULT_PAGE } else { limit })

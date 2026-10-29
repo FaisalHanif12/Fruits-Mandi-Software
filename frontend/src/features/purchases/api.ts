@@ -5,6 +5,8 @@
 import { callCommand } from '../../shared/api';
 import type { PurchaseGetInput } from '../../bindings/PurchaseGetInput';
 import type { PurchaseWriteOffInput } from '../../bindings/PurchaseWriteOffInput';
+import type { SellDateInput } from '../../bindings/SellDateInput';
+import type { SellDateSet } from '../../bindings/SellDateSet';
 import type { PurchaseWriteOffUndoInput } from '../../bindings/PurchaseWriteOffUndoInput';
 import type {
   PurchaseCancelInput,
@@ -46,6 +48,14 @@ export function purchasesList(input: PurchasesListInput): Promise<PurchasesList>
 export function purchasesGet(id: number): Promise<PurchaseRow> {
   const input: PurchaseGetInput = { id };
   return callCommand<PurchaseRow>('purchases_get', { input });
+}
+
+/**
+ * Changes the date to sell of a purchase that still has goods left (PRD FR-12.39). Nothing is
+ * posted. `sell_date` is `DD-MM-YYYY`.
+ */
+export function purchasesSetSellDate(input: SellDateInput): Promise<SellDateSet> {
+  return callCommand<SellDateSet>('purchases_set_sell_date', { input });
 }
 
 /** Writes trip goods off with a reason; nothing is posted (PRD FR-12.28). */

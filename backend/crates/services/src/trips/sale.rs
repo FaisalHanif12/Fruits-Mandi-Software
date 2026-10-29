@@ -344,6 +344,7 @@ pub(super) fn save(
         edit_repo::insert_move(
             tx,
             &NewMove {
+                arrival_id: None,
                 lot_id: None,
                 purchase_id: Some(ready.purchase.id),
                 cost_paisa: ready.cost.as_paisa(),

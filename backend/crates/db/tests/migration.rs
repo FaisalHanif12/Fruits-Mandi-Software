@@ -12,7 +12,7 @@ use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
     self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, INIT_SQL, MigrationOutcome,
     SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
-    TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -20,7 +20,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 8;
+const LATEST: usize = 9;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -122,6 +122,24 @@ fn released_version_7() -> Migrations<'static> {
         M::up(STABLE_POSTING_ORDER_SQL),
         M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
         M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+    ])
+}
+
+/// The schema as it was released at version 8: migrations 0001 to 0008.
+fn released_version_8() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
     ])
 }
 
@@ -399,10 +417,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 9).unwrap();
+    conn.pragma_update(None, "user_version", 10).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 9);
+    assert_eq!(user_version(&conn), 10);
     assert!(!backups.exists());
 }
 
@@ -2277,7 +2295,8 @@ fn migration_8_gives_trips_and_gardens_their_codes_and_changes_nothing_else() {
     let before_rows = all_rows_without(&conn, &skip);
     let before_totals = mandi_db::ledger::account_totals(&conn, None).unwrap();
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_8(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (7, 8));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 8);
@@ -2339,4 +2358,207 @@ fn migration_8_gives_trips_and_gardens_their_codes_and_changes_nothing_else() {
         .query_row("PRAGMA integrity_check", [], |r| r.get(0))
         .unwrap();
     assert_eq!(integrity, "ok");
+}
+
+#[test]
+fn migration_9_adds_the_date_to_sell_and_the_arrivals_and_changes_nothing_else() {
+    // Plan 33 v1.1: a file at version 8 with a trip and two purchases is upgraded. Each purchase gets
+    // its own entry date as its date to sell; the table of garden arrivals, the two link columns and
+    // the triggers exist; no other row or number changes.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_8(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 8);
+    conn.execute(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('0040', 'x', 'x', 'x', 'x', 'x', 'fruit')",
+        [],
+    )
+    .unwrap();
+    let item = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('0050', 'x', 'x', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let packing = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('trip', 1, '2026-10-10', '0070 10-10-2026', '0070 10-10-2026', 'x', 'x', 'x')",
+        [],
+    )
+    .unwrap();
+    let trip = conn.last_insert_rowid();
+    for (number, day) in [(1, "2026-10-10"), (2, "2026-10-12")] {
+        conn.execute(
+            "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa,
+                 value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa)
+             VALUES (?1, ?2, ?3, ?4, ?5, 20, 50_000, 1_000_000, 40_000, 1_040_000, 1_040_000)",
+            (number, trip, day, item, packing),
+        )
+        .unwrap();
+    }
+    let skip = [("purchases", "sell_date")];
+    let before_rows = all_rows_without(&conn, &skip);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (8, 9));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 9);
+
+    // Nothing else moved: every other column of every other table reads as before.
+    let mut after_rows = all_rows_without(&conn, &skip);
+    after_rows.retain(|(table, _)| table != "garden_arrivals");
+    let mut before_rows = before_rows;
+    before_rows.retain(|(table, _)| table != "garden_arrivals");
+    assert_eq!(after_rows, before_rows);
+
+    // Each purchase starts with its own entry date as its date to sell.
+    let sell: Vec<(String, String)> = conn
+        .prepare("SELECT entry_date, sell_date FROM purchases ORDER BY number")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        sell,
+        [
+            ("2026-10-10".into(), "2026-10-10".into()),
+            ("2026-10-12".into(), "2026-10-12".into())
+        ]
+    );
+    // A date to sell later than the purchase day is allowed; an earlier one is refused.
+    conn.execute(
+        "UPDATE purchases SET sell_date = '2026-10-15' WHERE number = 1",
+        [],
+    )
+    .unwrap();
+    let early = conn.execute(
+        "UPDATE purchases SET sell_date = '2026-10-09' WHERE number = 1",
+        [],
+    );
+    assert!(early.is_err(), "a date to sell before the purchase day");
+    let new_early = conn.execute(
+        "INSERT INTO purchases (number, venture_id, entry_date, sell_date, item_id, packing_id, qty,
+             rate_paisa, value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa)
+         VALUES (9, ?1, '2026-10-12', '2026-10-11', ?2, ?3, 20, 50_000, 1_000_000, 0, 1_000_000, 1_000_000)",
+        (trip, item, packing),
+    );
+    assert!(
+        new_early.is_err(),
+        "a new purchase with an early date to sell"
+    );
+
+    // The arrivals table: empty, with its checks and triggers.
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM garden_arrivals"),
+        0,
+        "no arrival yet"
+    );
+    let account: i64 = conn
+        .query_row("SELECT id FROM accounts LIMIT 1", [], |r| r.get(0))
+        .unwrap();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic, account_id)
+         VALUES ('garden', 1, '2026-10-10', 'g', 'g', 'g', 'g', 'g', ?1)",
+        [account],
+    )
+    .unwrap();
+    let garden = conn.last_insert_rowid();
+    let arrival = |number: i64, day: &str, sell: &str, qty: i64| {
+        conn.execute(
+            "INSERT INTO garden_arrivals (number, venture_id, entry_date, sell_date, item_id, packing_id, qty)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            (number, garden, day, sell, item, packing, qty),
+        )
+    };
+    arrival(1, "2026-10-10", "2026-10-11", 100).unwrap();
+    assert!(
+        arrival(2, "2026-10-10", "2026-10-09", 100).is_err(),
+        "sell date before arrival"
+    );
+    assert!(
+        arrival(1, "2026-10-10", "2026-10-10", 100).is_err(),
+        "number used once"
+    );
+    assert!(
+        arrival(3, "2026-10-10", "2026-10-10", 0).is_err(),
+        "qty above 0"
+    );
+    let arrival_id: i64 = conn
+        .query_row("SELECT id FROM garden_arrivals WHERE number = 1", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET qty_sold = 101 WHERE id = ?1",
+            [arrival_id]
+        )
+        .is_err(),
+        "sold plus written off is never more than arrived"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET qty = 50 WHERE id = ?1",
+            [arrival_id]
+        )
+        .is_err(),
+        "what arrived never changes"
+    );
+    conn.execute(
+        "UPDATE garden_arrivals SET qty_sold = 60, sell_date = '2026-10-12' WHERE id = ?1",
+        [arrival_id],
+    )
+    .unwrap();
+    assert!(
+        conn.execute("DELETE FROM garden_arrivals WHERE id = ?1", [arrival_id])
+            .is_err(),
+        "an arrival is never deleted"
+    );
+    assert!(
+        conn.execute(
+            "UPDATE garden_arrivals SET status = 'cancelled' WHERE id = ?1",
+            [arrival_id]
+        )
+        .is_err(),
+        "a cancel needs a reason"
+    );
+    // A stock move may belong to an arrival, and a reversal must mirror it.
+    conn.execute(
+        "INSERT INTO stock_moves (arrival_id, move_date, kind, qty) VALUES (?1, '2026-10-11', 'written_off', -5)",
+        [arrival_id],
+    )
+    .unwrap();
+    let move_id = conn.last_insert_rowid();
+    assert!(
+        conn.execute(
+            "INSERT INTO stock_moves (move_date, kind, qty) VALUES ('2026-10-11', 'written_off', -5)",
+            [],
+        )
+        .is_err(),
+        "a move has an owner"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO stock_moves (arrival_id, move_date, kind, qty, reverses_move_id)
+             VALUES (?1, '2026-10-11', 'reversal', 4, ?2)",
+            (arrival_id, move_id),
+        )
+        .is_err(),
+        "a reversal is the exact opposite"
+    );
+    conn.execute(
+        "INSERT INTO stock_moves (arrival_id, move_date, kind, qty, reverses_move_id)
+         VALUES (?1, '2026-10-11', 'reversal', 5, ?2)",
+        (arrival_id, move_id),
+    )
+    .unwrap();
+}
+
+fn count(conn: &Connection, sql: &str) -> i64 {
+    conn.query_row(sql, [], |r| r.get(0)).unwrap()
 }

@@ -148,6 +148,7 @@
             }
           ]
         },
+        "arrival": null,
         "labour": {
           "method": "manual",
           "value_paisa": 0,

@@ -8,7 +8,7 @@ use crate::cash::CashCheck;
 use crate::error::FieldError;
 use crate::money::Paisa;
 use crate::rules::{RuleLevel, Working};
-use crate::ventures::{ShareAmount, TripRef};
+use crate::ventures::{GardenRef, ShareAmount, TripRef};
 
 /// Where a rate hint came from (PRD FR-7.53).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
@@ -316,6 +316,24 @@ pub struct OwnLotPreview {
     pub credits: Vec<ShareAmount>,
 }
 
+/// What a garden lot shows about the arrival it takes its goods from (PRD FR-12.40, plan 33 v1.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ArrivalLotPreview {
+    /// The arrival.
+    #[ts(type = "number")]
+    pub arrival_id: i64,
+    /// Its number in its own series.
+    #[ts(type = "number")]
+    pub arrival_number: i64,
+    /// Its garden.
+    pub garden: GardenRef,
+    /// نگ the arrival has left for this lot: what it had before this بکری (the lots this
+    /// بکری replaces in an edit are given back), less the lots above this one that use the same
+    /// arrival. The lot's `qty_received` cannot be more.
+    #[ts(type = "number")]
+    pub qty_left: i64,
+}
+
 /// One lot of the preview.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct LotPreview {
@@ -340,6 +358,9 @@ pub struct LotPreview {
     /// its working. Null for any other lot, and while the purchase is not picked or the lot cannot
     /// work its numbers out.
     pub own: Option<OwnLotPreview>,
+    /// The arrival a garden lot takes its goods from (PRD FR-12.40). Null for any other lot, and
+    /// while the arrival is not picked or cannot be found.
+    pub arrival: Option<ArrivalLotPreview>,
     /// مزدوری as it will be charged, or null while the lot cannot work it out.
     pub labour: Option<LotCharge>,
     /// منشیانہ as it will be charged.

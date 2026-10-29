@@ -43,6 +43,12 @@ pub enum SearchScope {
     /// The open gardens (plan 34): code `0080`, `0081` ..., their name. A short code is the running
     /// number (`0` finds `0080`).
     Garden,
+    /// Every market trip, closed ones too, for the FILTER field of a report or an analytics view (a
+    /// past trip's R33). Same codes and short codes as `trip`. Entry fields use `trip`.
+    TripAll,
+    /// Every garden, closed ones too, for the FILTER field of a report or an analytics view (a
+    /// closed garden's R36). Same codes and short codes as `garden`. Entry fields use `garden`.
+    GardenAll,
 }
 
 impl SearchScope {
@@ -68,7 +74,9 @@ impl SearchScope {
             | SearchScope::Buyer
             | SearchScope::AnyAccount
             | SearchScope::Trip
-            | SearchScope::Garden => return None,
+            | SearchScope::Garden
+            | SearchScope::TripAll
+            | SearchScope::GardenAll => return None,
             SearchScope::City => MasterKind::City,
             SearchScope::Item => MasterKind::Item,
             SearchScope::Packing => MasterKind::Packing,
@@ -89,6 +97,8 @@ impl SearchScope {
             SearchScope::AnyAccount => "any_account",
             SearchScope::Trip => "trip",
             SearchScope::Garden => "garden",
+            SearchScope::TripAll => "trip_all",
+            SearchScope::GardenAll => "garden_all",
             _ => match self.master_kind() {
                 Some(kind) => kind.as_str(),
                 None => "unknown",

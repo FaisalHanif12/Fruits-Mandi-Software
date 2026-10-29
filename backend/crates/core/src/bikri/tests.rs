@@ -30,6 +30,7 @@ fn sale(buyer: Option<i64>, qty: &str, rate: &str) -> SaleInput {
 
 fn lot(sales: Vec<SaleInput>) -> LotInput {
     LotInput {
+        arrival_id: None,
         key: "l".to_owned(),
         lot_id: None,
         seller_account_id: Some(1),

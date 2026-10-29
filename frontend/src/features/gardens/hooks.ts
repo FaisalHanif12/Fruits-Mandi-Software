@@ -12,6 +12,12 @@ import {
 } from '@tanstack/react-query';
 import { PAGE_SIZE, useDebouncedValue, usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import {
+  gardensArrivalCancel,
+  gardensArrivalSave,
+  gardensArrivalSetSellDate,
+  gardensArrivalWriteOff,
+  gardensArrivalWriteOffUndo,
+  gardensArrivalsList,
   gardensClose,
   gardensClosePreview,
   gardensCreate,
@@ -26,6 +32,12 @@ import {
   gardensSummary,
 } from './api';
 import type {
+  ArrivalCancelInput,
+  ArrivalInput,
+  ArrivalsListInput,
+  ArrivalWriteOffInput,
+  ArrivalWriteOffUndoInput,
+  SellDateInput,
   GardenCloseInput,
   GardenDetail,
   GardenEntryCancelInput,
@@ -174,6 +186,70 @@ export function useReopenGarden() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: GardenReopenInput) => gardensReopen(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+// Goods arrived (PRD FR-12.40). A save, a cancel, a new day to sell or a write-off changes the
+// garden's stock, so everything a garden changes is read again, and with it the goods ready for a
+// new بکری (the queries that start with `bikri`).
+
+/** The goods arrived entries of one garden, page by page, for the filter (PRD FR-19.11). */
+export function useArrivalsList(gardenId: number, state: ArrivalsListInput['state'] = null) {
+  return usePagedQuery({
+    queryKey: [...GARDENS_KEY, 'arrivals', gardenId, state],
+    fetchPage: (offset, limit) =>
+      gardensArrivalsList({
+        garden_id: gardenId,
+        from: null,
+        to: null,
+        item_id: null,
+        state,
+        offset,
+        limit,
+      }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
+  });
+}
+
+export function useSaveGardenArrival() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ArrivalInput) => gardensArrivalSave(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+export function useCancelGardenArrival() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ArrivalCancelInput) => gardensArrivalCancel(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+export function useSetArrivalSellDate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SellDateInput) => gardensArrivalSetSellDate(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+export function useWriteOffArrival() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ArrivalWriteOffInput) => gardensArrivalWriteOff(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+export function useWriteOffArrivalUndo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ArrivalWriteOffUndoInput) => gardensArrivalWriteOffUndo(input),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }

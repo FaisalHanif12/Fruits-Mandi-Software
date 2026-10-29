@@ -92,6 +92,7 @@ fn take_from_lot(
     edit_repo::insert_move(
         tx,
         &edit_repo::NewMove {
+            arrival_id: None,
             lot_id: Some(lot_id),
             purchase_id: None,
             cost_paisa: 0,

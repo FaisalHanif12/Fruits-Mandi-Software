@@ -90,9 +90,7 @@ describe.each(LANGUAGES)('trip goods in باقی مال (%s)', (language) => {
     expect(visible(row.querySelector('[col-id="number"]')?.textContent)).toBe(
       message(language, 'purchases-number', { number: 1 }),
     );
-    expect(visible(row.querySelector('[col-id="trip"]')?.textContent)).toBe(
-      message(language, 'trips-number', { number: 1 }),
-    );
+    expect(visible(row.querySelector('[col-id="trip"]')?.textContent)).toBe('0070');
     expect(visible(row.querySelector('[col-id="balance"]')?.textContent)).toBe('5');
     // The list of lots is empty but the screen is not "empty": there is trip stock.
     expect(screen.queryByText(said(message(language, 'bikri-stock-empty')))).toBeNull();

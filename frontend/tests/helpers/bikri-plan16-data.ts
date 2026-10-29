@@ -72,6 +72,8 @@ export function stockList(rows: StockRow[] = [stockRow()]): StockList {
     own_rows: [],
     own_balance_total: 0,
     own_cost_left_paisa: paisaForTest(0),
+    garden_rows: [],
+    garden_balance_total: 0,
   };
 }
 
@@ -83,8 +85,9 @@ export function withIds(draft: BikriDraft): BikriDraft {
     ...lot,
     key: 'lot:40',
     lot_id: 40,
-    // The backend's own draft of a saved lot says it has no purchase.
+    // The backend's own draft of a saved lot says it has no purchase and no goods arrived entry.
     purchase_id: null,
+    arrival_id: null,
     sales: lot.sales
       .filter((sale) => sale.buyer_account_id !== null)
       .map((sale, index) => ({

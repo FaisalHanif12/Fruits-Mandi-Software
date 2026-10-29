@@ -3,4 +3,4 @@
 /**
  * What the screen opens for the first record of an item.
  */
-export type AttentionTarget = 'account' | 'partner' | 'bikri' | 'purchase';
+export type AttentionTarget = 'account' | 'partner' | 'bikri' | 'purchase' | 'arrival';

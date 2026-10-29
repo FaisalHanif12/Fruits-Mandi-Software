@@ -283,6 +283,8 @@ pub(super) fn lot_columns<'a>(
         seller_account_id: shaped.journal.seller_account_id.get(),
         // A trip lot names its purchase (PRD FR-12.26).
         purchase_id: lot.purchase_id,
+        // A garden lot may name the arrival it takes its goods from (PRD FR-12.40).
+        arrival_id: lot.arrival_id,
         pukhta: person_columns(person),
         item_id: lot
             .item_id
@@ -365,6 +367,7 @@ pub(super) fn insert_sales_and_facts(
                     // The lot's own "received" move; the purchase gives up its goods when they
                     // are sold (the sold move names the purchase).
                     purchase_id: None,
+                    arrival_id: None,
                 },
                 posting.user_id,
                 posting.now,
@@ -372,6 +375,7 @@ pub(super) fn insert_sales_and_facts(
         }
         let first_line = edit_repo::max_line_no(tx, *lot_id)?;
         let purchase_id = shaped.lot.purchase_id;
+        let arrival_id = shaped.lot.arrival_id;
         // The trip of an own lot, kept on every fact for the analytics filters (PRD FR-18.1).
         let venture_id = match shaped.preview.own.as_ref() {
             Some(own) => Some(own.trip.id),
@@ -400,6 +404,7 @@ pub(super) fn insert_sales_and_facts(
                         .checked_neg()
                         .ok_or_else(|| data("the quantity does not fit"))?,
                     purchase_id,
+                    arrival_id,
                 },
                 posting.user_id,
                 posting.now,
@@ -471,6 +476,16 @@ pub(super) fn insert_sales_and_facts(
                 purchase_id,
                 own_qty,
                 own_cost,
+                posting.user_id,
+                posting.now,
+            )?;
+        }
+        // The arrival gives up what the garden lot sold (PRD FR-12.40). It has no cost.
+        if let Some(arrival_id) = arrival_id {
+            crate::gardens::arrivals::take_sold(
+                tx,
+                arrival_id,
+                own_qty,
                 posting.user_id,
                 posting.now,
             )?;

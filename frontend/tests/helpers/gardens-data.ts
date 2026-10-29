@@ -61,7 +61,7 @@ export const PARTNER_B = person(2, 'ب', 'Partner B');
 export const PARTNER_C = person(3, 'ج', 'Partner C');
 export const GARDEN_ACCOUNT: RecordRef = {
   id: 41,
-  code: '03060001',
+  code: '0080',
   name_ur: 'شاہ پور باغ',
   name_en: 'Shahpur Garden',
 };
@@ -106,12 +106,17 @@ const balanceWorking = (inRupees: number, paidRupees: number, result: number): W
     moneyArg('result', result),
   ]);
 
-/** A new garden with nothing paid: rent 50,000 still due. */
+/** The code of the n-th garden: the type number 008 and n - 1, so the first is 0080 (plan 34). */
+export const gardenCode = (number: number) => `008${String(number - 1)}`;
+
+/** A new garden with nothing paid: rent 50,000 still due. Its code follows its number, unless given. */
 export function gardenRow(over: Partial<GardenRow> = {}): GardenRow {
+  const number = over.number ?? 1;
   return {
     id: GARDEN_ID,
     version: 1,
-    number: 1,
+    number,
+    code: gardenCode(number),
     name_ur: 'شاہ پور باغ',
     name_en: 'Shahpur Garden',
     account: GARDEN_ACCOUNT,
@@ -564,6 +569,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
         {
           id: GARDEN_ID,
           number: 1,
+          code: '0080',
           name_ur: 'شاہ پور باغ',
           name_en: 'Shahpur Garden',
           balance_paisa: money(11_400),

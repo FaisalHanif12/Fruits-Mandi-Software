@@ -36,8 +36,8 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-/** The garden of E2E-40: an account of type "other" under control 0306. */
-const SHAHPUR = account(91, 'other', '03060001', 'شاہ پور باغ', 'Shahpur Garden');
+/** The garden of E2E-40: an account of type "other" under control 0306 with the garden's code, 0080. */
+const SHAHPUR = account(91, 'other', '0080', 'شاہ پور باغ', 'Shahpur Garden');
 
 beforeEach(() => {
   vi.resetAllMocks();

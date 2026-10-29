@@ -84,9 +84,7 @@ describe('E2E-34 and E2E-34b: trip goods in a بکری (Urdu)', () => {
   it('4. باقی مال lists the 5 left under the trip goods and leads to the trip', async () => {
     await openRoute('/bikri/stock');
     await waitForText(t('ur', 'bikri-stock-own-title'));
-    const row = await $(
-      `//div[@role="row"][.//div[@col-id="trip"][normalize-space(.)="${t('ur', 'trips-number', { number: 1 })}"]]`,
-    );
+    const row = await $('//div[@role="row"][.//div[@col-id="trip"][normalize-space(.)="0070"]]');
     await row.waitForDisplayed({ timeout: WAIT_MS });
     expect(await row.$('[col-id="balance"]').getText()).toBe('5');
     await shootScreen('trip-goods-stock', 'ur');

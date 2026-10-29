@@ -71,9 +71,11 @@ pub(crate) fn open_days(
     Ok(Some(item))
 }
 
-/// Lots waiting in باقی مال for more than [`STOCK_WAIT_DAYS`] days, the lots of بکری and the
-/// purchases of trips both, as the باقی مال screen lists them (PRD FR-12.14, FR-12.25). The lots
-/// are worked from the stock moves, like the tile.
+/// Lots waiting in باقی مال for more than [`STOCK_WAIT_DAYS`] days, the lots of بکری, the
+/// purchases of trips and the garden arrivals all, as the باقی مال screen lists them (PRD FR-12.14,
+/// FR-12.25, FR-12.40). The lots are worked from the stock moves, like the tile. A purchase or an
+/// arrival waits from its day to sell, not from the day it came: goods meant for a later day are
+/// not late before it (PRD FR-12.39; for goods without a changed day the two days are the same).
 /// `qty` is their نگ left, `days` the age of the oldest, `first` the oldest one.
 pub(crate) fn stock_waiting(
     conn: &Connection,
@@ -149,7 +151,7 @@ pub(crate) fn stock_waiting(
             .ok_or_else(|| {
                 ReportsError::Data("the quantity of a purchase does not fit".to_owned())
             })?;
-        let days = age(&purchase.entry_date);
+        let days = age(&purchase.sell_date);
         if balance > 0 && days > STOCK_WAIT_DAYS {
             waiting.push((
                 days,
@@ -160,6 +162,31 @@ pub(crate) fn stock_waiting(
                     person_key: None,
                     name_ur: Some(purchase.item.name_ur.clone()),
                     name_en: Some(purchase.item.name_en.clone()),
+                    tag: None,
+                },
+            ));
+        }
+    }
+    // The garden arrivals with goods left (PRD FR-12.40), waiting from their day to sell.
+    for arrival in mandi_db::arrivals::with_stock(conn, None, None, None, None)? {
+        let balance = arrival
+            .qty
+            .checked_sub(arrival.qty_sold)
+            .and_then(|v| v.checked_sub(arrival.qty_written_off))
+            .ok_or_else(|| {
+                ReportsError::Data("the quantity of an arrival does not fit".to_owned())
+            })?;
+        let days = age(&arrival.sell_date);
+        if balance > 0 && days > STOCK_WAIT_DAYS {
+            waiting.push((
+                days,
+                balance,
+                AttentionFirst {
+                    target: AttentionTarget::Arrival,
+                    id: arrival.id,
+                    person_key: None,
+                    name_ur: Some(arrival.item.name_ur.clone()),
+                    name_en: Some(arrival.item.name_en.clone()),
                     tag: None,
                 },
             ));

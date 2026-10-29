@@ -43,6 +43,7 @@ pub(super) struct Plan {
 pub(super) struct Ready {
     pub venture: Venture,
     pub date: BusinessDate,
+    pub sell_date: BusinessDate,
     pub supplier: Option<String>,
     pub item_id: i64,
     pub packing_id: i64,
@@ -156,6 +157,8 @@ pub(super) fn plan(
         }
     }
 
+    let sell_date = ventures::sell_date_of(&mut errors, input.sell_date.as_ref(), date, today);
+
     // Item and packing; a weight item needs its kilograms.
     let item = match input.item_id {
         None => {
@@ -264,13 +267,16 @@ pub(super) fn plan(
     let (
         Some(venture),
         Some(date),
+        Some(sell_date),
         Some(item),
         Some(packing),
         Some(qty),
         Some(rate),
         Some((value, value_working)),
         Some(partners),
-    ) = (venture, date, item, packing, qty, rate, value, partners)
+    ) = (
+        venture, date, sell_date, item, packing, qty, rate, value, partners,
+    )
     else {
         return Ok(Plan {
             errors: errors_so_far,
@@ -350,6 +356,7 @@ pub(super) fn plan(
         ready: Some(Ready {
             venture,
             date,
+            sell_date,
             supplier,
             item_id: item.id,
             packing_id: packing,

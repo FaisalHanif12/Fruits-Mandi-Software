@@ -5,8 +5,8 @@ use std::collections::HashMap;
 
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
-    FreightPaidBy, LinePreview, LotCharge, LotPreview, OwnLotPreview, PaymentType, PreparedLot,
-    PreparedSale, RateHint, RateHintSource, SummaryTotals,
+    ArrivalLotPreview, FreightPaidBy, LinePreview, LotCharge, LotPreview, OwnLotPreview,
+    PaymentType, PreparedLot, PreparedSale, RateHint, RateHintSource, SummaryTotals,
 };
 use mandi_core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_core::ids::AccountId;
@@ -16,7 +16,7 @@ use mandi_core::ventures::ShareAmount;
 
 use super::checks::{self, Issues, Wanted};
 use super::line::{LineArgs, LotRef, calc_line, unchanged_stored};
-use super::lookups::{AccountFacts, ItemFacts, Lookups, PurchaseFacts};
+use super::lookups::{AccountFacts, ItemFacts, Lookups, PartyKind, PurchaseFacts};
 use super::lot::{Acc, LotKey, Scope, lot_charge};
 use super::own::{OwnRun, kept_line};
 use super::person::{CleanPerson, clean_person};
@@ -35,6 +35,8 @@ pub(super) struct Run {
     pub last_rates: HashMap<(i64, i64), Paisa>,
     /// What is left of each purchase of own goods, shared by the lots (PRD FR-12.26, C21).
     pub own: OwnRun,
+    /// What is left of each garden arrival, shared by the lots linked to it (PRD FR-12.40).
+    pub arrivals: HashMap<i64, i64>,
 }
 
 /// What one lot gives back to the whole.
@@ -90,6 +92,11 @@ struct LotFacts<'a> {
     complete: bool,
     /// The purchase of a lot of own goods that can be sold from (PRD FR-12.26).
     own_purchase: Option<i64>,
+    /// The garden arrival a garden lot can take its goods from (PRD FR-12.40). Set by
+    /// `process_lot`, which holds the running total of the arrivals.
+    arrival: Option<i64>,
+    /// What the lot shows about its arrival, even when the arrival has a mistake.
+    arrival_preview: Option<ArrivalLotPreview>,
 }
 
 fn lot_facts<'a>(
@@ -171,7 +178,90 @@ fn lot_facts<'a>(
         item,
         complete,
         own_purchase,
+        arrival: None,
+        arrival_preview: None,
     }
+}
+
+/// The checks of a garden lot linked to an arrival (PRD FR-12.40): the seller is the account of the
+/// arrival's garden, the arrival exists and stands, the posting is not dated before it, the lot's
+/// item and packing are its, and the lot does not take more نگ than the arrival has left once the
+/// lots above it in the same draft have taken theirs. Returns the arrival if the lot can take from
+/// it, and what the lot shows about it.
+fn arrival_checks(
+    issues: &mut Issues,
+    lookups: &Lookups,
+    run: &mut Run,
+    prefix: &str,
+    date_iso: &str,
+    lot: &PreparedLot,
+    seller: Option<&AccountFacts>,
+) -> (Option<i64>, Option<ArrivalLotPreview>) {
+    let Some(id) = lot.arrival_id else {
+        return (None, None);
+    };
+    let field = format!("{prefix}.arrival_id");
+    let Some(seller) = seller else {
+        return (None, None);
+    };
+    if seller.kind != PartyKind::Garden {
+        issues.error(ErrorCode::ErrFormatInvalid, &field);
+        return (None, None);
+    }
+    let Some(arrival) = lookups.arrivals.get(&id) else {
+        issues.error(ErrorCode::ErrNotFound, &field);
+        return (None, None);
+    };
+    if arrival.cancelled {
+        issues.error(ErrorCode::ErrArrivalCancelled, &field);
+        return (None, None);
+    }
+    let left_before = run.arrivals.get(&id).copied().unwrap_or(0);
+    let preview = ArrivalLotPreview {
+        arrival_id: id,
+        arrival_number: arrival.number,
+        garden: arrival.garden.clone(),
+        qty_left: left_before,
+    };
+    let mut same = true;
+    if lot.seller_account_id != Some(arrival.garden.account.id) {
+        issues.error(ErrorCode::ErrFormatInvalid, &field);
+        same = false;
+    }
+    if !date_iso.is_empty() && date_iso < arrival.entry_date.as_str() {
+        issues.errors.push(
+            FieldError::new(ErrorCode::ErrDateBeforeReceived, &field).with(
+                "received_date",
+                ErrorValue::Text(arrival.entry_date.clone()),
+            ),
+        );
+        same = false;
+    }
+    if lot.item_id.is_some_and(|item| item != arrival.item_id) {
+        issues.error(ErrorCode::ErrFormatInvalid, &format!("{prefix}.item_id"));
+        same = false;
+    }
+    if lot
+        .packing_id
+        .is_some_and(|packing| packing != arrival.packing_id)
+    {
+        issues.error(ErrorCode::ErrFormatInvalid, &format!("{prefix}.packing_id"));
+        same = false;
+    }
+    if let Some(qty) = lot.qty_received {
+        if qty.get() > left_before {
+            issues.error_with(
+                ErrorCode::ErrQtyExceedsLot,
+                &format!("{prefix}.qty_received"),
+                &[("available", left_before)],
+            );
+            same = false;
+        } else if same && let Some(left) = run.arrivals.get_mut(&id) {
+            // The lot takes its نگ: the lots below it see what is left (PRD FR-12.40).
+            *left = left_before.saturating_sub(qty.get());
+        }
+    }
+    (same.then_some(id), Some(preview))
 }
 
 /// The checks of a lot of own goods (PRD FR-12.26): the seller is the اپنا مال account exactly
@@ -763,7 +853,14 @@ pub(super) fn process_lot(
     issues: &mut Issues,
 ) -> Result<LotOutcome, CalcError> {
     let prefix = format!("lots[{index}]");
-    let facts = lot_facts(issues, lookups, env.is_some(), &prefix, date_iso, lot);
+    let mut facts = lot_facts(issues, lookups, env.is_some(), &prefix, date_iso, lot);
+    let (arrival, arrival_preview) =
+        arrival_checks(issues, lookups, run, &prefix, date_iso, lot, facts.seller);
+    // A lot that names an arrival it cannot take from is not worked out (as an own lot with a
+    // purchase that cannot be used).
+    facts.complete &= lot.arrival_id.is_none() || arrival.is_some();
+    facts.arrival = arrival;
+    facts.arrival_preview = arrival_preview;
     let found = lot
         .lot_id
         .and_then(|id| env.and_then(|e| e.stored.lots.get(&id)));
@@ -775,6 +872,7 @@ pub(super) fn process_lot(
             Some(stored.seller_account_id) != lot.seller_account_id
                 || Some(stored.item_id) != lot.item_id
                 || stored.purchase_id != lot.purchase_id
+                || stored.arrival_id != lot.arrival_id
                 // The one-time seller's key counts only for a one-time seller: leftover name text
                 // on an ordinary seller's lot is not a change.
                 || (facts.seller.is_some_and(|s| s.is_pukhta)
@@ -833,6 +931,14 @@ pub(super) fn process_lot(
                 &format!("{}.qty_received", ctx.prefix),
                 &[("qty_left", left)],
             );
+        } else if lot.arrival_id.is_some() {
+            // A garden lot linked to an arrival is sold in full too: what is not sold stays in the
+            // arrival (PRD FR-12.40).
+            issues.error_with(
+                ErrorCode::ErrArrivalLotNotFullySold,
+                &format!("{}.qty_received", ctx.prefix),
+                &[("qty_left", left)],
+            );
         } else {
             issues.warn_with(
                 ErrorCode::ErrQtyLeftUnsold,
@@ -854,6 +960,7 @@ pub(super) fn process_lot(
             sold_by_weight: ctx.facts.item.is_some_and(|item| item.by_weight),
             is_own: ctx.facts.seller.is_some_and(|s| s.is_own_goods),
             own: money.own,
+            arrival: ctx.facts.arrival_preview.clone(),
             labour: money.labour,
             munshiana: money.munshiana,
             phone: money.phone,

@@ -681,7 +681,7 @@ describe('round 11: what the charts of F, G and J draw', () => {
   it('J: the sales money and the result of each trip, a loss below the line', () => {
     const plan = chartFor('J', ANALYTICS_RUN_J_TRIP, context);
     expect(plan?.labelId).toBe('analytics-chart-j');
-    expect(plan?.data.categories).toEqual(['TRP-1 10-10-2026']);
+    expect(plan?.data.categories).toEqual(['0070 10-10-2026']);
     expect(plan?.data.series[0]?.labels).toEqual(['8,460']);
     expect(plan?.data.series[1]?.labels).toEqual(['660']);
     const lost = chartFor('J', ANALYTICS_RUN_J_TRIP_WRITTEN_OFF, context);

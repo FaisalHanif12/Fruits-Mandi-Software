@@ -99,7 +99,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - **R34 day summary** is a flat list of rows [date, label, count, amount]: one block for each day.
   A heading row (`report-r34-partner-shares`) comes before the partner rows. It has no totals row:
   `totalsFor` returns no row when every total cell is empty, and the print draws no `tfoot` then.
-- A text cell that holds a date or a range ("سفر-1 10-10-2026", the heading of a trip) keeps its
+- A text cell that holds a date or a range ("0070 10-10-2026", the heading of a trip) keeps its
   digits in order in Urdu: `shared/grid/NumberRuns` puts each run in its own isolate, on screen and
   on paper.
 - Tests: `reports-screens-round8.test.tsx`, `number-runs.test.tsx`, plus the contract and filter

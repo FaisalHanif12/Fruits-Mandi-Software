@@ -43,7 +43,11 @@ export function GardenFilterSelect({ garden, onChange, labelId, error }: GardenF
   if (garden !== null) value = String(garden);
   const options = [
     { value: ALL, label: l10n.getString('gardens-filter-all') },
-    ...rows.map((row) => ({ value: String(row.id), label: displayName(row, language) })),
+    // The code of the garden (type 008, plan 34) and its name, so two gardens are easy to tell apart.
+    ...rows.map((row) => ({
+      value: String(row.id),
+      label: `${row.code} ${displayName(row, language)}`,
+    })),
   ];
   return (
     <Field

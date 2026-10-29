@@ -4,6 +4,7 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
+use mandi_db::arrivals as arrival_repo;
 use mandi_db::bikri as repo;
 use mandi_db::bikri::edit as edit_repo;
 use mandi_db::ledger as ledger_repo;
@@ -11,8 +12,9 @@ use mandi_db::partners as partner_repo;
 use mandi_db::purchases as purchase_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::bikri::{
-    AccountFacts, CalcError, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc, PostingTarget,
-    PurchaseFacts, StoredPosting, Switches, TripPartnerFacts, calc_posting, partner_share,
+    AccountFacts, ArrivalFacts, CalcError, ItemFacts, ItemSales, Lookups, PartyKind, PostingCalc,
+    PostingTarget, PurchaseFacts, StoredPosting, Switches, TripPartnerFacts, calc_posting,
+    partner_share,
 };
 use mandi_domain::cash;
 use mandi_domain::core::accounts::{
@@ -218,6 +220,68 @@ fn load_purchases(
         );
     }
     Ok(out)
+}
+
+/// What the garden arrivals named by the garden lots of a draft can give this posting (PRD
+/// FR-12.40): the garden with its account, the item and packing, and the نگ left. In an edit, what
+/// the posting being replaced took is added back, so the posting is worked out against what it
+/// could take if it were not saved yet.
+fn load_arrivals(
+    conn: &Connection,
+    prepared: &PreparedDraft,
+    replaces: Option<i64>,
+) -> Result<HashMap<i64, ArrivalFacts>, ServiceError> {
+    let ids: BTreeSet<i64> = prepared.lots.iter().filter_map(|l| l.arrival_id).collect();
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let ids: Vec<i64> = ids.into_iter().collect();
+    let mut back: HashMap<i64, i64> = HashMap::new();
+    if let Some(entry_id) = replaces {
+        for taken in edit_repo::arrival_release_of_entry(conn, entry_id)? {
+            back.insert(taken.arrival_id, taken.qty);
+        }
+    }
+    let mut out = HashMap::with_capacity(ids.len());
+    for rec in arrival_repo::get_many(conn, &ids)? {
+        let cancelled = rec.status == "cancelled";
+        let back_qty = back.get(&rec.id).copied().unwrap_or(0);
+        let qty_left = if cancelled {
+            0
+        } else {
+            rec.qty
+                .checked_sub(rec.qty_sold)
+                .and_then(|v| v.checked_sub(rec.qty_written_off))
+                .and_then(|v| v.checked_add(back_qty))
+                .ok_or_else(|| data("the quantity of an arrival does not fit"))?
+        };
+        out.insert(
+            rec.id,
+            ArrivalFacts {
+                number: rec.number,
+                entry_date: rec.entry_date.clone(),
+                garden: crate::gardens::arrivals::garden_ref(&rec),
+                item_id: rec.item.id,
+                packing_id: rec.packing.id,
+                qty_left,
+                cancelled,
+            },
+        );
+    }
+    Ok(out)
+}
+
+/// A garden lot linked to an arrival with no seller, item or packing takes them from its arrival;
+/// the screen shows them as filled values (PRD FR-12.40, NFR-USE-27). A different one is refused by
+/// the domain.
+fn fill_arrival_lots(prepared: &mut PreparedDraft, arrivals: &HashMap<i64, ArrivalFacts>) {
+    for lot in &mut prepared.lots {
+        if let Some(facts) = lot.arrival_id.and_then(|id| arrivals.get(&id)) {
+            lot.seller_account_id = lot.seller_account_id.or(Some(facts.garden.account.id));
+            lot.item_id = lot.item_id.or(Some(facts.item_id));
+            lot.packing_id = lot.packing_id.or(Some(facts.packing_id));
+        }
+    }
 }
 
 /// The partners of a trip with their shares and 0604 accounts, for the split of the seller credit
@@ -575,6 +639,8 @@ pub(crate) fn work_out(
 ) -> Result<Worked, ServiceError> {
     let purchases = load_purchases(conn, &prepared, basis.replaces.map(|r| r.entry_id))?;
     fill_own_lots(&mut prepared, &purchases);
+    let arrivals = load_arrivals(conn, &prepared, basis.replaces.map(|r| r.entry_id))?;
+    fill_arrival_lots(&mut prepared, &arrivals);
     let mut lookups = load_lookups(
         conn,
         &prepared,
@@ -582,6 +648,7 @@ pub(crate) fn work_out(
         basis.replaces.map(|r| r.entry_id),
     )?;
     lookups.purchases = purchases;
+    lookups.arrivals = arrivals;
     let calc = calc_posting(
         basis.target,
         &prepared,

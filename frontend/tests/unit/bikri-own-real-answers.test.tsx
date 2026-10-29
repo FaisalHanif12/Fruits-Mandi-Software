@@ -230,7 +230,7 @@ describe.each(LANGUAGES)('a saved lot of trip goods, real answer (%s)', (languag
     const open = screen.getByRole('button', {
       name: (name) =>
         visible(name).includes(message(language, 'purchases-number', { number: 1 })) &&
-        visible(name).includes(message(language, 'trips-number', { number: 1 })),
+        visible(name).includes('0070'),
     });
     await userEvent.setup().click(open);
     await waitFor(() => {
@@ -275,7 +275,7 @@ describe.each(LANGUAGES)('trip goods in باقی مال, real answer (%s)', (lan
     });
     const cell = (id: string) => visible(row.querySelector(`[col-id="${id}"]`)?.textContent);
     expect(cell('number')).toBe(message(language, 'purchases-number', { number: 1 }));
-    expect(cell('trip')).toBe(message(language, 'trips-number', { number: 1 }));
+    expect(cell('trip')).toBe('0070');
     expect(cell('balance')).toBe('5');
     expect(screen.queryByText(said(message(language, 'bikri-stock-empty')))).toBeNull();
     // The totals row is the backend's: 5 nag and the cost left 2,600.

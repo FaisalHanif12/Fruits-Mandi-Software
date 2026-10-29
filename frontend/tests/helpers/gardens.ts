@@ -51,6 +51,14 @@ export function fakeGardens(options: GardensOptions = {}): FakeGardens {
   vi.mocked(gardensApi.gardensReopen).mockImplementation((input) =>
     answer(() => books.reopen(input)),
   );
+  // A garden with no goods arrived yet; the tests of the goods arrived set their own answers.
+  vi.mocked(gardensApi.gardensArrivalsList).mockImplementation(() =>
+    Promise.resolve({
+      rows: [],
+      total_count: 0,
+      totals: { qty: 0, qty_sold: 0, qty_written_off: 0, qty_left: 0 },
+    }),
+  );
   return books.store;
 }
 

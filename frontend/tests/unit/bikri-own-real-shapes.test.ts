@@ -89,6 +89,7 @@ describe('the canned data of the own-lot tests has the real shape', () => {
       number: 1,
       trip_id: 1,
       trip_number: 1,
+      trip_code: '0070',
     });
   });
 });

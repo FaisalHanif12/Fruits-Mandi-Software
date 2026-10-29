@@ -101,7 +101,7 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
     fakeTrips();
     await open();
     await waitFor(() => {
-      expect(cell(1, 'number')).toBe(message(language, 'trips-number', { number: 1 }));
+      expect(cell(1, 'number')).toBe('0070');
     });
     expect(cell(1, 'market')).toBe('Lahore Mandi');
     expect(cell(1, 'status')).toBe(message(language, 'trips-status-open'));
@@ -153,7 +153,7 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: message(language, 'common-retry') }));
     await waitFor(() => {
-      expect(cell(1, 'number')).toBe(message(language, 'trips-number', { number: 1 }));
+      expect(cell(1, 'number')).toBe('0070');
     });
   });
 
@@ -196,7 +196,7 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
     expect(tripsApi.tripsList).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'zzz' }));
     await user.click(screen.getByRole('button', { name: message(language, 'trips-list-clear') }));
     await waitFor(() => {
-      expect(cell(1, 'number')).toBe(message(language, 'trips-number', { number: 1 }));
+      expect(cell(1, 'number')).toBe('0070');
     });
   });
 

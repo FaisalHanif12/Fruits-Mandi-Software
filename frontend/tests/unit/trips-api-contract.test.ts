@@ -145,6 +145,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
     const input = {
       trip_id: 1,
       date: '10-10-2026',
+      sell_date: null,
       supplier: null,
       item_id: 61,
       packing_id: 71,

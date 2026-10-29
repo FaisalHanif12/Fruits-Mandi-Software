@@ -3,8 +3,9 @@
     "id": 1,
     "version": 2,
     "number": 1,
-    "name_ur": "سفر-1 10-10-2026",
-    "name_en": "TRP-1 10-10-2026",
+    "code": "0070",
+    "name_ur": "0070 10-10-2026",
+    "name_en": "0070 10-10-2026",
     "entry_date": "2026-10-10",
     "market": "Lahore",
     "sent_person": "Aslam",
@@ -106,10 +107,12 @@
       "trip": {
         "id": 1,
         "number": 1,
-        "name_ur": "سفر-1 10-10-2026",
-        "name_en": "TRP-1 10-10-2026"
+        "code": "0070",
+        "name_ur": "0070 10-10-2026",
+        "name_en": "0070 10-10-2026"
       },
       "entry_date": "2026-10-10",
+      "sell_date": "2026-10-10",
       "status": "saved",
       "cancel_reason": null,
       "supplier": "Orange Traders",
@@ -307,6 +310,7 @@
       },
       "days_waiting": 0,
       "can_cancel": false,
+      "can_change_sell_date": false,
       "lots": [],
       "write_offs": []
     }

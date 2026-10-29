@@ -9,7 +9,6 @@ import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { ReasonDialog, showToast } from '../../../shared/ui';
 import { useReopenGarden } from '../hooks';
-import { gardenNumberText } from '../list-columns';
 import type { GardenRow } from '../types';
 
 interface ReopenGardenDialogProps {
@@ -22,19 +21,13 @@ export function ReopenGardenDialog({ garden, open, onOpenChange }: ReopenGardenD
   const { l10n } = useLocalization();
   const reopen = useReopenGarden();
   const [error, setError] = useState<UiError | null>(null);
-  const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
 
   const confirm = (reason: string) => {
     setError(null);
     reopen
       .mutateAsync({ id: garden.id, version: garden.version, reason })
       .then(() => {
-        showToast(
-          'success',
-          l10n.getString('gardens-reopened-toast', {
-            number: gardenNumberText(garden.number, say),
-          }),
-        );
+        showToast('success', l10n.getString('gardens-reopened-toast', { code: garden.code }));
         onOpenChange(false);
       })
       .catch((failure: unknown) => {

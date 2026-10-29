@@ -88,3 +88,7 @@ common-list-count = Showing { $shown } of { $total }
 
 # review: pending
 common-list-more = Show more
+
+# The save button of a small box.
+# review: pending
+common-save = Save

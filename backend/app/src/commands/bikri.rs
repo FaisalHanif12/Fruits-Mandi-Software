@@ -280,3 +280,18 @@ pub async fn bikri_write_off_undo<R: tauri::Runtime>(
     })
     .await
 }
+
+/// The goods a new بکری opens with (PRD FR-12.39, FR-12.40): the purchases of open trips and the
+/// arrivals of open gardens with goods left and a date to sell on or before the date given, in one
+/// list, oldest date to sell first, then number. Read only.
+#[tauri::command]
+pub async fn bikri_ready_goods<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: mandi_services::core::bikri::ReadyGoodsInput,
+) -> Result<mandi_services::core::bikri::ReadyGoods, UiError> {
+    run(app, "bikri_ready_goods", move |ctx| {
+        auth::require(ctx)?;
+        bikri::ready_goods(ctx, &input)
+    })
+    .await
+}

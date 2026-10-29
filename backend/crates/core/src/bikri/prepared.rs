@@ -112,6 +112,8 @@ pub struct PreparedLot {
     pub seller_account_id: Option<i64>,
     /// The purchase an own lot takes its goods from (PRD FR-12.26).
     pub purchase_id: Option<i64>,
+    /// The garden arrival a garden lot takes its goods from (PRD FR-12.40).
+    pub arrival_id: Option<i64>,
     /// The one-time seller.
     pub pukhta: PreparedPukhta,
     /// The item.

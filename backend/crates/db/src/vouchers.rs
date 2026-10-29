@@ -1654,6 +1654,8 @@ pub fn sales_of_days(conn: &Connection, from: &str, to: &str) -> rusqlite::Resul
 /// plus; sold, written off and taken as fruit are minus; a reversal carries the date of the move
 /// it takes back). So a day-close preview made after a later sale still shows what was left on
 /// the day itself: 5 نگ on 10-10-26 even when the last 5 were sold on 11-10-26 (PRD E2E-16, 16b).
+/// The garden arrivals with goods left (PRD FR-12.40) are counted with the lots, each arrival as one
+/// lot, worked the same way from its own stock moves.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -1666,6 +1668,16 @@ pub fn open_stock(conn: &Connection, to: &str) -> rusqlite::Result<(i64, i64)> {
                JOIN bikri_entries e ON e.id = l.bikri_id
                WHERE m.move_date <= ?1 AND e.status = 'saved'
                GROUP BY m.lot_id
+               HAVING SUM(m.qty) > 0
+               UNION ALL
+               -- The garden arrivals with goods left count as stock too (PRD FR-12.40), AS OF the
+               -- day like the lots: arrived (plus) less sold and written off (minus), from the
+               -- stock moves of the arrival.
+               SELECT SUM(m.qty)
+               FROM stock_moves m
+               JOIN garden_arrivals a ON a.id = m.arrival_id
+               WHERE m.move_date <= ?1 AND a.status = 'saved'
+               GROUP BY m.arrival_id
                HAVING SUM(m.qty) > 0)",
         [to],
         |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),

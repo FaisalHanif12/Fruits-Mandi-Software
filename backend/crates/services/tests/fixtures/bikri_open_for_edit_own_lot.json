@@ -26,6 +26,7 @@
         "lot_id": 1,
         "seller_account_id": 17,
         "purchase_id": 1,
+        "arrival_id": null,
         "pukhta": null,
         "item_id": 5,
         "packing_id": 1,
@@ -119,6 +120,7 @@
           }
         ]
       },
+      "arrival": null,
       "pukhta": null,
       "item": {
         "id": 5,

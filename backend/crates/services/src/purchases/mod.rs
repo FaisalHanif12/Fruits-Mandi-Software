@@ -101,6 +101,7 @@ pub fn save(
             &NewPurchase {
                 venture_id: ready.venture.rec.id,
                 entry_date: &date_iso,
+                sell_date: &ready.sell_date.to_iso(),
                 supplier_text: ready.supplier.as_deref(),
                 item_id: ready.item_id,
                 packing_id: ready.packing_id,
@@ -159,6 +160,7 @@ pub fn save(
         edit_repo::insert_move(
             tx,
             &NewMove {
+                arrival_id: None,
                 lot_id: None,
                 purchase_id: Some(id),
                 cost_paisa: 0,
@@ -379,6 +381,7 @@ pub fn cancel(
         edit_repo::insert_move(
             tx,
             &NewMove {
+                arrival_id: None,
                 lot_id: None,
                 purchase_id: Some(purchase.id),
                 cost_paisa: 0,
@@ -507,6 +510,7 @@ pub fn write_off(
         let move_id = edit_repo::insert_move(
             tx,
             &NewMove {
+                arrival_id: None,
                 lot_id: None,
                 purchase_id: Some(purchase.id),
                 cost_paisa: cost.as_paisa(),
@@ -592,6 +596,7 @@ pub fn write_off_undo(
         let reversal_move_id = edit_repo::insert_move(
             tx,
             &NewMove {
+                arrival_id: None,
                 lot_id: None,
                 purchase_id: Some(purchase.id),
                 cost_paisa: back_cost,
@@ -647,6 +652,71 @@ pub fn write_off_undo(
             )
             .map_err(money_error)?,
             trip_reopened: change == TripChange::Reopened,
+        })
+    })
+}
+
+/// Changes the date to sell of a purchase with goods left (PRD FR-12.39). No money effect: a new
+/// بکری from that day opens with a ready lot for the goods left.
+///
+/// # Errors
+/// `ERR_NOT_FOUND`, `ERR_PURCHASE_CANCELLED`, `ERR_NOTHING_TO_SELL` on `id`; `ERR_VERSION_CHANGED` on
+/// `version`; `ERR_SELL_DATE_BEFORE_ENTRY` (value `entry_date`) and the date codes on `sell_date`.
+pub fn set_sell_date(
+    ctx: &Context,
+    actor: &Actor,
+    input: &mandi_domain::core::arrivals::SellDateInput,
+) -> Result<mandi_domain::core::arrivals::SellDateSet, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let now = ctx.now_text();
+    ctx.db.write(|tx| {
+        let purchase = repo::get(tx, input.id)?.ok_or_else(|| not_found("id"))?;
+        if purchase.status == "cancelled" {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrPurchaseCancelled,
+                "id",
+            ));
+        }
+        if purchase.version != input.version {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrVersionChanged,
+                "version",
+            ));
+        }
+        let left = purchase
+            .qty
+            .checked_sub(purchase.qty_sold)
+            .and_then(|v| v.checked_sub(purchase.qty_written_off))
+            .ok_or_else(|| data("the quantity of a purchase does not fit"))?;
+        if left == 0 {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrNothingToSell,
+                "id",
+            ));
+        }
+        let entry = BusinessDate::parse_iso(&purchase.entry_date)
+            .ok_or_else(|| data("the day of a purchase is not a date"))?;
+        let mut errors = validate::FieldErrors::default();
+        let sell = ventures::sell_date_of(&mut errors, Some(&input.sell_date), Some(entry), today);
+        errors.finish()?;
+        let sell = sell.ok_or_else(|| data("a sell date without errors is missing"))?;
+        let sell_iso = sell.to_iso();
+        let user = actor.user_id;
+        repo::set_sell_date(tx, purchase.id, &sell_iso, user, &now)?;
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(user), "set_sell_date", "purchase")
+                .entity_id(purchase.id)
+                .old(json!({ "sell_date": purchase.sell_date }))
+                .new_value(json!({ "number": purchase.number, "sell_date": sell_iso }))
+                .into_entry(),
+        )?;
+        let after = repo::get(tx, purchase.id)?
+            .ok_or_else(|| data("the purchase is missing after the change"))?;
+        Ok(mandi_domain::core::arrivals::SellDateSet {
+            id: after.id,
+            version: after.version,
+            sell_date: after.sell_date,
         })
     })
 }

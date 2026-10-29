@@ -245,6 +245,10 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let purchase_number: Option<i64> = c.get()?;
     let trip_id: Option<i64> = c.get()?;
     let trip_number: Option<i64> = c.get()?;
+    let arrival_id: Option<i64> = c.get()?;
+    let arrival_number: Option<i64> = c.get()?;
+    let garden_id: Option<i64> = c.get()?;
+    let garden_number: Option<i64> = c.get()?;
     Ok(SavedLot {
         id,
         lot_no,
@@ -264,6 +268,21 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
         },
         // Filled by `fill_own_lots` after the lines are read (PRD FR-12.27).
         own: None,
+        arrival: match (arrival_id, arrival_number, garden_id, garden_number) {
+            (Some(id), Some(number), Some(garden_id), Some(garden_number)) => {
+                Some(mandi_core::bikri::SavedArrivalRef {
+                    id,
+                    number,
+                    garden_id,
+                    garden_number,
+                    garden_code: mandi_core::codes::number_code(
+                        mandi_core::codes::CodeType::Garden,
+                        garden_number,
+                    ),
+                })
+            }
+            _ => None,
+        },
         pukhta,
         item,
         packing,
@@ -405,10 +424,13 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
                 l.phone_paisa, l.phone_method, l.phone_value_paisa, l.phone_rule_id,
                 l.cash_paid_paisa, l.store_rent_paisa, l.adjust_advance, l.first_entry_id,
                 l.gross_paisa, l.seller_comm_paisa, l.deductions_paisa, l.net_paisa,
-                l.purchase_id, pu.number, pu.venture_id, tr.number
+                l.purchase_id, pu.number, pu.venture_id, tr.number,
+                l.arrival_id, ga.number, ga.venture_id, gd.number
          FROM bikri_lots l
          LEFT JOIN purchases pu ON pu.id = l.purchase_id
          LEFT JOIN ventures tr ON tr.id = pu.venture_id
+         LEFT JOIN garden_arrivals ga ON ga.id = l.arrival_id
+         LEFT JOIN ventures gd ON gd.id = ga.venture_id
          JOIN accounts sa ON sa.id = l.seller_account_id
          JOIN items it ON it.id = l.item_id
          JOIN packings pk ON pk.id = l.packing_id

@@ -39,7 +39,7 @@ import { shootScreen } from '../support/screens.mjs';
 import { buttonNamed, waitForNumbers } from '../support/bikri-sale.mjs';
 
 const WAIT_MS = 15_000;
-const GARDEN_ONE = () => t('ur', 'gardens-number', { number: 1 });
+const GARDEN_ONE = () => '0080';
 
 /** A button of the main bar by its words (the name is its aria-label). @param {string} id */
 function navItem(id) {
@@ -143,7 +143,7 @@ describe('E2E-40b: a garden (Urdu)', () => {
     await shootScreen('gardens-new', 'ur');
     await type(Key.F10);
     await confirmSpellingIfAsked();
-    await waitForText(t('ur', 'gardens-created', { number: GARDEN_ONE() }));
+    await waitForText(t('ur', 'gardens-created', { code: GARDEN_ONE() }));
     await waitForText(t('ur', 'gardens-status-open'));
     await shootScreen('gardens-one-first-installment', 'ur');
   });
@@ -209,7 +209,7 @@ describe('E2E-40b: a garden (Urdu)', () => {
     await dialog.waitForDisplayed({ timeout: WAIT_MS });
     await type(Key.Tab);
     await type(Key.Enter);
-    await waitForText(t('ur', 'gardens-closed-toast', { number: GARDEN_ONE() }));
+    await waitForText(t('ur', 'gardens-closed-toast', { code: GARDEN_ONE() }));
     await waitForText(t('ur', 'gardens-reopen-button'));
     // A closed garden takes no entry: the form is gone.
     const text = await pageText();
@@ -225,7 +225,7 @@ describe('E2E-40b: a garden (Urdu)', () => {
     await dialog.waitForDisplayed({ timeout: WAIT_MS });
     await type('غلط دن');
     await type(Key.Enter);
-    await waitForText(t('ur', 'gardens-reopened-toast', { number: GARDEN_ONE() }));
+    await waitForText(t('ur', 'gardens-reopened-toast', { code: GARDEN_ONE() }));
     await waitForText(t('ur', 'gardens-type-label'));
     await shootScreen('gardens-reopened', 'ur');
   });
@@ -235,9 +235,9 @@ describe('a garden in English', () => {
   it('shows the same screens left to right and keeps the numbers', async () => {
     await switchLanguage('en');
     await waitForText(t('en', 'gardens-title'));
-    await browser.waitUntil(async () => (await pageText()).includes('GRD-1'), {
+    await browser.waitUntil(async () => (await pageText()).includes('0080'), {
       timeout: WAIT_MS,
-      timeoutMsg: 'The English garden screen never showed GRD-1.',
+      timeoutMsg: 'The English garden screen never showed 0080.',
     });
     await shootScreen('gardens-one', 'en');
     await type(Key.Escape);

@@ -378,6 +378,11 @@ export function createPartnerMoneyBooks(
         detail: one.detail,
         entry_id: one.amount === null ? null : 1900 + input.offset + index,
         number: one.number,
+        // The garden and trip heading lines show their code (plan 34): type 008 or 007.
+        venture_code:
+          (one.heading === 'garden' || one.heading === 'trip') && one.number !== null
+            ? `${one.heading === 'garden' ? '008' : '007'}${String(one.number - 1)}`
+            : null,
         secondary_number: one.secondary,
         subject: one.subject,
         packing: null,

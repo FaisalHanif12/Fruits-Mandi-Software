@@ -17,6 +17,7 @@ export function emptyPurchaseFields(): PurchaseFields {
     freight: '',
     labour: '',
     otherCost: '',
+    sellDate: '',
   };
 }
 
@@ -41,6 +42,7 @@ export function purchaseIsFilled(fields: PurchaseFields): boolean {
       fields.freight,
       fields.labour,
       fields.otherCost,
+      fields.sellDate,
     ].some((text) => text.trim() !== '')
   );
 }
@@ -74,6 +76,8 @@ export function buildPurchase(
   return {
     trip_id: common.tripId,
     date: common.date.trim(),
+    // Empty: the date to sell is the day of the purchase (PRD FR-12.39).
+    sell_date: textOrNull(fields.sellDate),
     supplier: textOrNull(fields.supplier),
     item_id: fields.item?.id ?? null,
     packing_id: fields.packing?.id ?? null,

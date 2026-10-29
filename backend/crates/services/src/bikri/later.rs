@@ -104,8 +104,9 @@ fn plan_later(
         .checked_add(state.qty_written_off)
         .and_then(|v| v.checked_add(state.qty_taken))
         .ok_or_else(|| data("the quantity of a lot does not fit"))?;
-    // A lot of own goods is sold in full in its بکری and never has a later sale (PRD FR-12.26).
-    if state.qty_received <= taken || state.purchase_id.is_some() {
+    // A lot of own goods is sold in full in its بکری and never has a later sale (PRD FR-12.26). The
+    // same holds for a garden lot linked to an arrival (PRD FR-12.40).
+    if state.qty_received <= taken || state.purchase_id.is_some() || state.arrival_id.is_some() {
         return Err(ServiceError::reject_field(
             ErrorCode::ErrNothingToSell,
             "lot_id",

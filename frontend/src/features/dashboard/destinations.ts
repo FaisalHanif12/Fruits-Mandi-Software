@@ -82,7 +82,7 @@ export function ledgerOf(
 
 /**
  * The record the most urgent line of an item leads to: an account opens its ledger, a partner his
- * statement, a بکری itself, a trip purchase the trips. The backend names the record; the screen only
+ * statement, a بکری itself, a trip purchase the trips, garden goods the list of goods left. The backend names the record; the screen only
  * opens it.
  */
 export function destinationOfFirst(first: AttentionFirst): Destination {
@@ -95,6 +95,9 @@ export function destinationOfFirst(first: AttentionFirst): Destination {
       return { kind: 'bikri-book', id: first.id };
     case 'purchase':
       return { kind: 'trips' };
+    // Garden goods waiting are listed in باقی مال with the other goods left (PRD FR-12.40).
+    case 'arrival':
+      return { kind: 'stock' };
   }
 }
 

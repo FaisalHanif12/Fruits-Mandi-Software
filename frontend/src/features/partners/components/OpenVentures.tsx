@@ -9,7 +9,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { formatBps } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { LinkButton, Num, Table, type TableColumn } from '../../../shared/ui';
-import { gardenNumberText } from '../../gardens';
 import type { PartnerVentureCard } from '../../../bindings/PartnerVentureCard';
 
 interface OpenVenturesProps {
@@ -22,7 +21,6 @@ export function OpenVentures({ ventures, partnerName }: OpenVenturesProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const language = useLanguage();
-  const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   if (ventures.length === 0) return null;
 
   const open = (venture: PartnerVentureCard) => {
@@ -39,7 +37,7 @@ export function OpenVentures({ ventures, partnerName }: OpenVenturesProps) {
       cell: (venture) => {
         const label =
           venture.kind === 'garden'
-            ? `${gardenNumberText(venture.number, say)} ${displayName(venture, language)}`
+            ? `${venture.code} ${displayName(venture, language)}`
             : displayName(venture, language);
         return (
           <LinkButton

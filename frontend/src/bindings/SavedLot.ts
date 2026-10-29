@@ -2,6 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 import type { FreightPaidBy } from './FreightPaidBy';
 import type { RecordRef } from './RecordRef';
+import type { SavedArrivalRef } from './SavedArrivalRef';
 import type { SavedLotCharge } from './SavedLotCharge';
 import type { SavedOwnLot } from './SavedOwnLot';
 import type { SavedPukhta } from './SavedPukhta';
@@ -33,6 +34,10 @@ export type SavedLot = {
    * The cost, the result and the partners' parts of a trip lot. `null` for any other lot.
    */
   own: SavedOwnLot | null;
+  /**
+   * The garden arrival a garden lot took its goods from (PRD FR-12.40). `null` for any other lot.
+   */
+  arrival: SavedArrivalRef | null;
   /**
    * The one-time seller, for the پختہ کھاتہ account.
    */

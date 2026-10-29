@@ -23,6 +23,8 @@ pub struct NewPurchase<'a> {
     pub venture_id: i64,
     /// The day, `YYYY-MM-DD`.
     pub entry_date: &'a str,
+    /// The day to sell, `YYYY-MM-DD` (PRD FR-12.39). Never before `entry_date`.
+    pub sell_date: &'a str,
     /// Who it was bought from, as typed.
     pub supplier_text: Option<&'a str>,
     /// The item.
@@ -77,8 +79,8 @@ pub fn insert(
         "INSERT INTO purchases (created_at, created_by, updated_at, updated_by, number, venture_id,
              entry_date, supplier_text, item_id, packing_id, qty, weight_grams, rate_paisa, value_paisa,
              freight_paisa, labour_paisa, other_cost_paisa, paid_now_paisa, trip_cost_paisa,
-             total_cost_paisa, note)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 0, ?16, ?17)",
+             total_cost_paisa, note, sell_date)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 0, ?16, ?17, ?18)",
         params![
             now,
             user_id,
@@ -97,9 +99,30 @@ pub fn insert(
             purchase.other_cost_paisa,
             purchase.paid_now_paisa,
             purchase.note,
+            purchase.sell_date,
         ],
     )?;
     Ok(conn.last_insert_rowid())
+}
+
+/// Changes the day to sell of a purchase (PRD FR-12.39). The table refuses a day before the
+/// purchase day.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn set_sell_date(
+    conn: &Connection,
+    id: i64,
+    sell_date: &str,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE purchases SET sell_date = ?2, updated_at = ?3, updated_by = ?4, version = version + 1
+         WHERE id = ?1",
+        params![id, sell_date, now, user_id],
+    )?;
+    Ok(())
 }
 
 /// Names the journal entry of a purchase (once, right after it is posted).
@@ -245,6 +268,8 @@ pub struct PurchaseRec {
     pub trip_name_en: String,
     /// The day, `YYYY-MM-DD`.
     pub entry_date: String,
+    /// The day to sell, `YYYY-MM-DD` (PRD FR-12.39). The entry date for a row from before it.
+    pub sell_date: String,
     /// Who it was bought from, as typed.
     pub supplier_text: Option<String>,
     /// The item.
@@ -292,7 +317,8 @@ const REC_COLUMNS: &str = "p.id, p.version, p.number, p.venture_id, v.number, v.
     it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
     p.qty, p.weight_grams, p.rate_paisa, p.value_paisa, p.freight_paisa, p.labour_paisa,
     p.other_cost_paisa, p.paid_now_paisa, p.trip_cost_paisa, p.total_cost_paisa, p.journal_entry_id,
-    p.status, p.cancel_reason, p.note, p.qty_sold, p.qty_written_off, p.cost_released_paisa";
+    p.status, p.cancel_reason, p.note, p.qty_sold, p.qty_written_off, p.cost_released_paisa,
+    COALESCE(p.sell_date, p.entry_date)";
 
 const REC_FROM: &str = "FROM purchases p
     JOIN ventures v ON v.id = p.venture_id
@@ -341,6 +367,7 @@ fn read_rec(r: &Row<'_>) -> rusqlite::Result<PurchaseRec> {
         qty_sold: r.get(31)?,
         qty_written_off: r.get(32)?,
         cost_released_paisa: r.get(33)?,
+        sell_date: r.get(34)?,
     })
 }
 
@@ -894,5 +921,22 @@ pub fn trips_of_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Vec<
          ORDER BY p.venture_id",
     )?;
     let rows = statement.query_map([entry_id], |r| r.get(0))?;
+    rows.collect()
+}
+
+/// The saved purchases of open trips with goods left and a day to sell on or before `date`, oldest
+/// day to sell first, then by number (PRD FR-12.39, FR-12.40). At most `limit` rows.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn ready_by(conn: &Connection, date: &str, limit: i64) -> rusqlite::Result<Vec<PurchaseRec>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT {REC_COLUMNS} {REC_FROM}
+         WHERE p.status = 'saved' AND v.status = 'open'
+           AND p.qty - p.qty_sold - p.qty_written_off > 0
+           AND COALESCE(p.sell_date, p.entry_date) <= ?1
+         ORDER BY COALESCE(p.sell_date, p.entry_date), p.number LIMIT ?2"
+    ))?;
+    let rows = statement.query_map(params![date, limit], read_rec)?;
     rows.collect()
 }

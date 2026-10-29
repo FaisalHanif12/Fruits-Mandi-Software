@@ -30,7 +30,7 @@ pub use later::{preview as later_sale_preview, save as later_sale_save};
 pub use pukhta::{register, search_people};
 pub use read::{find, get, list, navigate};
 pub use save::save;
-pub use stock::{list as stock_list, write_off, write_off_undo};
+pub use stock::{list as stock_list, ready_goods, write_off, write_off_undo};
 
 pub(crate) use shared::work_out;
 

@@ -1,0 +1,168 @@
+{
+  "report": "R10",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r10-title",
+  "filters": [],
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "seller",
+      "title_id": "report-col-seller",
+      "kind": "party"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "received",
+      "title_id": "report-col-received",
+      "kind": "number"
+    },
+    {
+      "key": "sold",
+      "title_id": "report-col-sold",
+      "kind": "number"
+    },
+    {
+      "key": "written_off",
+      "title_id": "report-col-written-off",
+      "kind": "number"
+    },
+    {
+      "key": "fruit_taken",
+      "title_id": "report-col-fruit-taken",
+      "kind": "number"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance-qty",
+      "kind": "number"
+    },
+    {
+      "key": "days",
+      "title_id": "report-col-days-waiting",
+      "kind": "number"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-garden-arrival",
+          "number": "1"
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "0080",
+            "name": "Shahpur Garden",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "text": "Banana"
+        },
+        {
+          "type": "names",
+          "text": "Box"
+        },
+        {
+          "type": "number",
+          "text": "100"
+        },
+        {
+          "type": "number",
+          "text": "60"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "number",
+          "text": "40"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "row_count": "1",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "number",
+      "text": "100"
+    },
+    {
+      "type": "number",
+      "text": "60"
+    },
+    {
+      "type": "number",
+      "text": "0"
+    },
+    {
+      "type": "number",
+      "text": "0"
+    },
+    {
+      "type": "number",
+      "text": "40"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null
+}

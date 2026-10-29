@@ -949,6 +949,7 @@ pub fn with_entries(conn: &Connection, venture_ids: &[i64]) -> rusqlite::Result<
 pub fn search_sources(
     conn: &Connection,
     kind: &str,
+    include_closed: bool,
 ) -> rusqlite::Result<Vec<crate::masters::SearchSource>> {
     let code_type = if kind == "garden" {
         mandi_core::codes::CodeType::Garden
@@ -973,7 +974,8 @@ pub fn search_sources(
             search_ur: r.get(5)?,
             search_en: r.get(6)?,
             search_phonetic: r.get(7)?,
-            is_active: r.get(8)?,
+            // An entry field offers the open ones only; a filter field offers them all.
+            is_active: include_closed || r.get::<_, bool>(8)?,
             account_type: None,
             control_id: None,
             control_code: None,

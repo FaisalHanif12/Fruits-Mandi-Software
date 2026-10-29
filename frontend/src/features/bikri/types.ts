@@ -59,6 +59,8 @@ export const LOT = {
   phoneMethod: 'phoneMethod',
   // The purchase of an own goods lot (the seller is اپنا مال, PRD FR-12.26): its id, as text.
   purchase: 'purchase',
+  // The goods arrived entry of a garden's lot (the seller is the garden, PRD FR-12.40): its id.
+  arrival: 'arrival',
   // A one-time seller (the پختہ کھاتہ account).
   pukhtaUr: 'pukhtaUr',
   pukhtaEn: 'pukhtaEn',

@@ -3,6 +3,6 @@
 // exported here. The dashboard tile باغات reads its figures from `dashboard_get`; `useGardensSummary`
 // (`gardens_summary`) stays for a screen that wants only the open gardens.
 export { useGardensSummary } from './hooks';
-export { gardenNumberText } from './list-columns';
 export type { GardenRow, GardensSummary } from './types';
+export { arrivalNumberText } from './list-columns';
 export { GardenFilterSelect } from './components/GardenFilterSelect';

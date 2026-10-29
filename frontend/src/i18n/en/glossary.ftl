@@ -253,6 +253,15 @@
 # review: pending
 -market-safar = Market Trip
 
+# The day a purchase or a garden's goods are meant to be sold; the goods come into a new sale from
+# that day (PRD FR-12.39)
+# review: pending
+-sell-date = Date to Sell
+
+# A garden's goods that have come to the shop, to be sold (PRD FR-12.40)
+# review: pending
+-maal-aaya = Goods Arrived
+
 # Where a partner's part of a payment comes from: the shop's cash (PRD Section 3, FR-12.29)
 # review: pending
 -dukan-se = From the Shop
@@ -390,6 +399,8 @@ glossary-khareedari = { -khareedari }
 glossary-tijarati-munafa = { -tijarati-munafa }
 glossary-tijarati-nuqsan = { -tijarati-nuqsan }
 glossary-market-safar = { -market-safar }
+glossary-sell-date = { -sell-date }
+glossary-maal-aaya = { -maal-aaya }
 glossary-dukan-se = { -dukan-se }
 glossary-apni-jeb-se = { -apni-jeb-se }
 glossary-kul-raqam = { -kul-raqam }

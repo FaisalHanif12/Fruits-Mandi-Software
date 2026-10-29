@@ -93,7 +93,7 @@ fn row_of(
         .and_then(|v| v.checked_sub(released))
         .map_err(money_error)?;
     let days_waiting = if qty_left > 0 {
-        BusinessDate::parse_iso(&rec.entry_date).map_or(0, |d| today.days_after(d).max(0))
+        BusinessDate::parse_iso(&rec.sell_date).map_or(0, |d| today.days_after(d).max(0))
     } else {
         0
     };
@@ -105,6 +105,8 @@ fn row_of(
         id: rec.id,
         version: rec.version,
         number: rec.number,
+        sell_date: rec.sell_date.clone(),
+        can_change_sell_date: rec.status == "saved" && qty_left > 0,
         trip: TripRef {
             id: rec.trip_id,
             number: rec.trip_number,
@@ -353,7 +355,8 @@ pub(crate) fn stock_rows(
         .map(|row| OwnStockRow {
             purchase_id: row.id,
             number: row.number,
-            received_date: row.entry_date,
+            received_date: row.entry_date.clone(),
+            sell_date: row.sell_date,
             trip: row.trip,
             supplier: row.supplier,
             item: row.item,

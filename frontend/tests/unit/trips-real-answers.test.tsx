@@ -65,10 +65,10 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     fakeTrips();
   });
 
-  const tripNumber = message(language, 'trips-number', { number: 1 });
+  const tripNumber = '0070';
   const openTrip = async () => {
     const view = await renderApp('/trips/1');
-    await screen.findByText(said(message(language, 'trips-detail-title', { number: tripNumber })));
+    await screen.findByText(said(message(language, 'trips-detail-title', { code: tripNumber })));
     return { ...view, user: userEvent.setup() };
   };
   const field = (id: string) => {

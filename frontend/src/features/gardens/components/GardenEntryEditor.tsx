@@ -35,6 +35,7 @@ import {
   ErrorNotice,
   ErrorState,
   Field,
+  Notice,
   SaveChangesPrompt,
   SegmentedControl,
   fieldError,
@@ -44,13 +45,15 @@ import {
 import { gardensEntryPreview } from '../api';
 import {
   ENTRY_FIELD_PATHS,
+  buildArrival,
   buildEntry,
   changeType,
   entryIsFilled,
   newEntryDraft,
   nextEntryDraft,
 } from '../draft';
-import { useGardenEntryPreview, useSaveGardenEntry } from '../hooks';
+import { useGardenEntryPreview, useSaveGardenArrival, useSaveGardenEntry } from '../hooks';
+import { arrivalNumberText } from '../list-columns';
 import {
   ENTRY_TYPES,
   type EntryDraft,
@@ -77,6 +80,9 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
   const errorText = useErrorText();
   const [draft, setDraft] = useState<EntryDraft>(() => newEntryDraft('installment', today));
   const [tried, setTried] = useState(false);
+  // Goods arrived have no preview and no cash: they are saved by their own command, and what the
+  // backend refuses is kept here.
+  const [arrivalRefusal, setArrivalRefusal] = useState<UiError | null>(null);
   const [askNew, setAskNew] = useState(false);
   const formRef = useFocusFirstField<HTMLFormElement>();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -84,18 +90,20 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
   const change = (patch: Partial<EntryDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
     setTried(false);
+    setArrivalRefusal(null);
   };
   const filled = entryIsFilled(draft);
 
   // Nothing is asked for an empty form; the preview is one function for every type.
+  const arrival = draft.type === 'arrival';
   const input: GardenEntryInput | null = useMemo(
-    () => (filled ? buildEntry(draft, garden.id, garden.partners, false) : null),
-    [draft, filled, garden.id, garden.partners],
+    () => (filled && !arrival ? buildEntry(draft, garden.id, garden.partners, false) : null),
+    [arrival, draft, filled, garden.id, garden.partners],
   );
   const view = useGardenEntryPreview(input);
   const preview = input === null ? undefined : view.query.data;
   const previewFailed = input !== null && view.query.isError;
-  const payment = draft.type !== 'other_sale';
+  const payment = draft.type === 'installment' || draft.type === 'cost';
 
   // What the preview found, in the shape of a refused save, so the fields can show it. Problems
   // that only say "this is empty" wait until the user tries to save, so a field does not turn red
@@ -119,15 +127,24 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
   const afterSave = () => {
     setDraft((previous) => nextEntryDraft(previous));
     setTried(false);
+    setArrivalRefusal(null);
     window.requestAnimationFrame(() => {
       formRef.current?.querySelector<HTMLElement>('input')?.focus();
     });
   };
 
   const saveEntry = useSaveGardenEntry();
+  const saveArrival = useSaveGardenArrival();
   const flow = useEntrySaveFlow<GardenEntryInput, GardenEntrySaved>({
     draftText,
-    build: (confirm) => buildEntry(draft, garden.id, garden.partners, confirm),
+    build: (confirm) =>
+      buildEntry(
+        // The flow is only used for a money entry; goods arrived never reach it.
+        arrival ? newEntryDraft('installment', today) : draft,
+        garden.id,
+        garden.partners,
+        confirm,
+      ),
     save: (built) => saveEntry.mutateAsync(built),
     freshCash: (built) => gardensEntryPreview(built).then((answer) => answer.cash),
     cash: preview?.cash,
@@ -143,12 +160,32 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
     },
   });
 
-  const error = flow.refusal ?? previewError;
-  useRefusalIntoView(rootRef, flow.refusal);
+  const error = arrival ? arrivalRefusal : (flow.refusal ?? previewError);
+  useRefusalIntoView(rootRef, arrival ? arrivalRefusal : flow.refusal);
+
+  // The weight field shows for an item sold by weight (the backend asks for it) or once typed.
+  const showWeight =
+    draft.weight.trim() !== '' ||
+    arrivalRefusal?.errors.some((item) => item.code === 'ERR_WEIGHT_REQUIRED') === true;
 
   const save = async (): Promise<boolean> => {
     setTried(true);
-    return flow.save();
+    if (!arrival) return flow.save();
+    setArrivalRefusal(null);
+    try {
+      const saved = await saveArrival.mutateAsync(buildArrival(draft, garden.id));
+      showToast(
+        'success',
+        l10n.getString('gardens-saved-arrival', {
+          number: arrivalNumberText(saved.row.number, (id, vars) => l10n.getString(id, vars)),
+        }),
+      );
+      afterSave();
+      return true;
+    } catch (failure: unknown) {
+      setArrivalRefusal(uiErrorOf(failure));
+      return false;
+    }
   };
   const saveNow = () => {
     void save();
@@ -190,6 +227,7 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
           onChange={(type) => {
             setDraft((current) => changeType(current, type));
             setTried(false);
+            setArrivalRefusal(null);
           }}
         />
         <div className="flex flex-wrap items-center gap-2">
@@ -200,7 +238,7 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
           <Button
             variant="primary"
             shortcut={SHORTCUTS.save}
-            busy={flow.busy}
+            busy={arrival ? saveArrival.isPending : flow.busy}
             disabled={!filled}
             onClick={saveNow}
           >
@@ -233,7 +271,12 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
               )}
             </Field>
             <div />
-            <GardenEntryFieldsForm draft={draft} onChange={change} error={error} />
+            <GardenEntryFieldsForm
+              draft={draft}
+              onChange={change}
+              error={error}
+              showWeight={showWeight}
+            />
             {payment ? (
               <div className="col-span-2 flex flex-col gap-1">
                 <Localized id="gardens-sources-title">
@@ -253,11 +296,17 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
             ) : null}
           </div>
           <div className="flex flex-col gap-3 normal:col-span-2">
-            <GardenEntryNumbersCard numbers={preview?.numbers ?? null} empty={!filled} />
+            {arrival ? (
+              <Notice tone="info">
+                <Localized id="gardens-arrival-posts-nothing" />
+              </Notice>
+            ) : (
+              <GardenEntryNumbersCard numbers={preview?.numbers ?? null} empty={!filled} />
+            )}
             {payment ? (
               <EntryPartsCard parts={parts} title={l10n.getString('gardens-parts-title')} />
             ) : null}
-            {preview === undefined ? null : <CashNote cash={preview.cash} />}
+            {preview === undefined || arrival ? null : <CashNote cash={preview.cash} />}
             {warnings.length === 0 ? null : (
               <ul className="flex flex-col gap-1">
                 {warnings.map((item) => (

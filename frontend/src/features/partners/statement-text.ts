@@ -5,8 +5,8 @@
 // formatted with the app's grouping and never worked out (CLAUDE.md rule 1).
 //
 // Examples (PRD FR-17.10, ending at -296 in D4-A33):
-//   "10-10-26 سفر-1: خریداری خ-1، دکان سے" -4,160
-//   "10-10-26 سفر-1، بکری 1: مالٹا 15 پیٹی، فروخت 8,460 ... آپ کا 40%" +3,384
+//   "10-10-26 0070: خریداری خ-1، دکان سے" -4,160
+//   "10-10-26 0070، بکری 1: مالٹا 15 پیٹی، فروخت 8,460 ... آپ کا 40%" +3,384
 
 import { messageVars } from '../../shared/api';
 import type { Grouping } from '../../shared/format';
@@ -117,11 +117,12 @@ export function detailText(line: StatementLine, say: StatementSay): string {
       ? number
       : say.text(`vouchers-number-${series}`, { number });
   if (line.heading === 'garden') {
-    // `number` is the garden's number in its own series (PRD FR-12.11).
-    vars['garden'] = line.number === null ? '' : say.text('gardens-number', { number });
+    // The garden's code, type 008 (plan 34). The backend sends it; it is never built from `number`.
+    vars['garden'] = line.venture_code ?? '';
   }
   if (line.heading === 'trip') {
-    vars['trip'] = line.number === null ? '' : say.text('trips-number', { number });
+    // The trip's code, type 007.
+    vars['trip'] = line.venture_code ?? '';
     vars['secondary'] = secondaryText(line, say);
     vars['kind'] = typeof line.values['kind'] === 'string' ? line.values['kind'] : 'other';
     // A sale in another shop has no بکری number: the line says so (PRD FR-12.32).

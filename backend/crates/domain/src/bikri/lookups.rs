@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use mandi_core::bikri::RateHint;
 use mandi_core::money::Paisa;
 use mandi_core::rules::ItemGroup;
-use mandi_core::ventures::TripRef;
+use mandi_core::ventures::{GardenRef, TripRef};
 
 use crate::ventures::VenturePartner;
 
@@ -116,6 +116,28 @@ pub struct PurchaseFacts {
     pub cancelled: bool,
 }
 
+/// What `calc_posting` needs to know about a garden arrival that a garden lot is linked to (PRD
+/// FR-12.40, plan 33 v1.1): its garden, item and packing, and the نگ the posting can take. In an
+/// edit the نگ the posting being replaced took are added back. An arrival has no cost and posts
+/// nothing, so no money is read from it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArrivalFacts {
+    /// The number of the arrival, in its own series.
+    pub number: i64,
+    /// The day it arrived, `YYYY-MM-DD`. A lot cannot be sold on an earlier day.
+    pub entry_date: String,
+    /// Its garden, with the garden's account (the only seller a lot linked to it may have).
+    pub garden: GardenRef,
+    /// The item of the arrival.
+    pub item_id: i64,
+    /// The packing of the arrival.
+    pub packing_id: i64,
+    /// نگ the posting can take: arrived less sold less written off.
+    pub qty_left: i64,
+    /// True once the arrival is cancelled: nothing can be sold from it.
+    pub cancelled: bool,
+}
+
 /// The Owner's switches that `calc_posting` obeys (PRD Section 21 "Overrides" and "Checks").
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Switches {
@@ -148,4 +170,6 @@ pub struct Lookups {
     pub item_sales: HashMap<i64, ItemSales>,
     /// The purchases the lots of the draft name (PRD FR-12.26).
     pub purchases: HashMap<i64, PurchaseFacts>,
+    /// The garden arrivals the lots of the draft name (PRD FR-12.40).
+    pub arrivals: HashMap<i64, ArrivalFacts>,
 }

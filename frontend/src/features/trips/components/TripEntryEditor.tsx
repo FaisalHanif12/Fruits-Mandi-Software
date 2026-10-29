@@ -378,6 +378,7 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
                 }}
                 error={error}
                 showWeight={showWeight}
+                purchaseDate={draft.date}
               />
             ) : draft.type === 'cost' ? (
               <CostFieldsForm

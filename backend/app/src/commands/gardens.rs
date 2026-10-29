@@ -3,6 +3,11 @@
 //! money goes to its partners (C26). Every command needs the signed-in Owner. The reads and the
 //! previews only read (Code Standards B29); the others are one transaction each (Code Standards B3).
 
+use mandi_services::core::arrivals::{
+    ArrivalCancelInput, ArrivalCancelled, ArrivalGetInput, ArrivalInput, ArrivalRow, ArrivalSaved,
+    ArrivalWriteOffDone, ArrivalWriteOffInput, ArrivalWriteOffUndoInput, ArrivalWriteOffUndone,
+    ArrivalsList, ArrivalsListInput, SellDateInput, SellDateSet,
+};
 use mandi_services::core::gardens::{
     GardenCloseInput, GardenClosePreview, GardenClosed, GardenCreatePreview, GardenCreated,
     GardenDefaults, GardenDetail, GardenEntryCancelInput, GardenEntryCancelled, GardenEntryInput,
@@ -203,6 +208,110 @@ pub async fn gardens_reopen<R: tauri::Runtime>(
     run(app, "gardens_reopen", move |ctx| {
         let actor = auth::require(ctx)?;
         gardens::reopen(ctx, &actor, &input)
+    })
+    .await
+}
+
+// ---- Goods arrived from a garden (مال آیا, PRD FR-12.40, plan 33 v1.1) ----
+// The types and the codes are the contract (`mandi_core::arrivals`); each command is one service call.
+
+/// Saves a garden arrival: a stock record of the garden with its date to sell. Posts no money.
+/// Errors: `ERR_NOT_FOUND`, `ERR_GARDEN_CLOSED` on `garden_id`; `ERR_DATE_BEFORE_GARDEN` and
+/// `ERR_DATE_CLOSED` on `date`; `ERR_SELL_DATE_BEFORE_ENTRY` on `sell_date`; the item, packing, qty
+/// and weight codes at their fields.
+#[tauri::command]
+pub async fn gardens_arrival_save<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalInput,
+) -> Result<ArrivalSaved, UiError> {
+    run(app, "gardens_arrival_save", move |ctx| {
+        let actor = auth::require(ctx)?;
+        gardens::arrivals::save(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Cancels an arrival with a reason, only while nothing of it is sold or written off. Errors:
+/// `ERR_NOT_FOUND`, `ERR_ARRIVAL_CANCELLED`, `ERR_ARRIVAL_HAS_SALES` on `id`; `ERR_VERSION_CHANGED`
+/// on `version`; `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on `id`.
+#[tauri::command]
+pub async fn gardens_arrival_cancel<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalCancelInput,
+) -> Result<ArrivalCancelled, UiError> {
+    run(app, "gardens_arrival_cancel", move |ctx| {
+        let actor = auth::require(ctx)?;
+        gardens::arrivals::cancel(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Changes the date to sell of an arrival with goods left. No money effect.
+#[tauri::command]
+pub async fn gardens_arrival_set_sell_date<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SellDateInput,
+) -> Result<SellDateSet, UiError> {
+    run(app, "gardens_arrival_set_sell_date", move |ctx| {
+        let actor = auth::require(ctx)?;
+        gardens::arrivals::set_sell_date(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// One page of arrivals with the totals over the whole filter. Read only.
+#[tauri::command]
+pub async fn gardens_arrivals_list<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalsListInput,
+) -> Result<ArrivalsList, UiError> {
+    run(app, "gardens_arrivals_list", move |ctx| {
+        auth::require(ctx)?;
+        gardens::arrivals::list(ctx, &input)
+    })
+    .await
+}
+
+/// One arrival with its lots and its write-offs. Read only.
+#[tauri::command]
+pub async fn gardens_arrival_get<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalGetInput,
+) -> Result<ArrivalRow, UiError> {
+    run(app, "gardens_arrival_get", move |ctx| {
+        auth::require(ctx)?;
+        gardens::arrivals::get(ctx, &input)
+    })
+    .await
+}
+
+/// Writes off spoiled goods of an arrival. Nothing is posted. Errors: `ERR_NOT_FOUND`,
+/// `ERR_ARRIVAL_CANCELLED` on `arrival_id`; the quantity codes on `qty`;
+/// `ERR_WRITE_OFF_EXCEEDS_BALANCE` (value `available`) on `qty`; `ERR_REASON_REQUIRED` on `reason`;
+/// `ERR_DATE_CLOSED` on `date`.
+#[tauri::command]
+pub async fn gardens_arrival_write_off<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalWriteOffInput,
+) -> Result<ArrivalWriteOffDone, UiError> {
+    run(app, "gardens_arrival_write_off", move |ctx| {
+        let actor = auth::require(ctx)?;
+        gardens::arrivals::write_off(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Undoes a write-off of an arrival, while its day is open. Errors: `ERR_NOT_FOUND` on `move_id`;
+/// `ERR_ARRIVAL_CANCELLED` on `move_id`; `ERR_REASON_REQUIRED` on `reason`; `ERR_DATE_CLOSED` on
+/// `move_id`.
+#[tauri::command]
+pub async fn gardens_arrival_write_off_undo<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: ArrivalWriteOffUndoInput,
+) -> Result<ArrivalWriteOffUndone, UiError> {
+    run(app, "gardens_arrival_write_off_undo", move |ctx| {
+        let actor = auth::require(ctx)?;
+        gardens::arrivals::write_off_undo(ctx, &actor, &input)
     })
     .await
 }

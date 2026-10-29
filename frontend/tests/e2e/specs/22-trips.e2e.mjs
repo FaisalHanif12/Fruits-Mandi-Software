@@ -64,7 +64,7 @@ describe('E2E-34: a market trip (Urdu)', () => {
     await waitForText(t('ur', 'partners-total-ok'));
     await shootScreen('trips-new', 'ur');
     await type(Key.F10);
-    await waitForText(t('ur', 'trips-created', { number: t('ur', 'trips-number', { number: 1 }) }));
+    await waitForText(t('ur', 'trips-created', { code: '0070' }));
     await waitForText(t('ur', 'trips-status-open'));
     await shootScreen('trips-one-empty', 'ur');
   });
@@ -114,7 +114,7 @@ describe('E2E-34: a market trip (Urdu)', () => {
     await type(Key.Escape);
     await waitForHeading('ur', 'trips-title');
     const text = await pageText();
-    expect(text).toContain(t('ur', 'trips-number', { number: 1 }));
+    expect(text).toContain('0070');
     expect(text).toContain(t('ur', 'trips-list-count', { shown: 1, total: 1 }));
   });
 });
@@ -124,9 +124,9 @@ describe('a market trip in English', () => {
     await switchLanguage('en');
     await waitForText(t('en', 'trips-title'));
     await shootScreen('trips-list', 'en');
-    await browser.waitUntil(async () => (await pageText()).includes('TRP-1'), {
+    await browser.waitUntil(async () => (await pageText()).includes('0070'), {
       timeout: WAIT_MS,
-      timeoutMsg: 'The English list never showed TRP-1.',
+      timeoutMsg: 'The English list never showed 0070.',
     });
     await switchLanguage('ur');
   });

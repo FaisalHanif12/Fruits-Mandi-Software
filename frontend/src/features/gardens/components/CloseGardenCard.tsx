@@ -40,7 +40,6 @@ import {
   showToast,
 } from '../../../shared/ui';
 import { useCloseGarden, useGardenClosePreview } from '../hooks';
-import { gardenNumberText } from '../list-columns';
 import type { GardenCloseInput, GardenRow } from '../types';
 import { GardenPartnersCard } from './GardenPartnersCard';
 
@@ -68,7 +67,6 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
   const [date, setDate] = useState(() => isoToDisplayDate(today));
   const [asking, setAsking] = useState(false);
   const [refusal, setRefusal] = useState<{ error: UiError; date: string } | null>(null);
-  const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
 
   const input: GardenCloseInput | null = useMemo(
     () =>
@@ -92,12 +90,7 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
     close
       .mutateAsync(input)
       .then((closed) => {
-        showToast(
-          'success',
-          l10n.getString('gardens-closed-toast', {
-            number: gardenNumberText(closed.row.number, say),
-          }),
-        );
+        showToast('success', l10n.getString('gardens-closed-toast', { code: closed.row.code }));
       })
       .catch((failure: unknown) => {
         setRefusal({ error: uiErrorOf(failure), date });

@@ -14,7 +14,9 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Ban, RotateCcw, TriangleAlert } from 'lucide-react';
+import { Ban, CalendarClock, RotateCcw, TriangleAlert } from 'lucide-react';
+import { useState } from 'react';
+import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { isNegativePaisa, isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
@@ -29,9 +31,12 @@ import {
   LinkButton,
   LoadingState,
   Num,
+  SellDateDialog,
   Table,
   type TableColumn,
+  showToast,
 } from '../../../shared/ui';
+import { useSetPurchaseSellDate } from '../hooks';
 import { purchaseNumberText, supplierText } from '../list-columns';
 import type { PurchaseLotRef, PurchaseRow, WriteOffRow } from '../types';
 
@@ -52,6 +57,9 @@ export function PurchaseDetail({
   const language = useLanguage();
   const navigate = useNavigate();
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
+  const setSellDate = useSetPurchaseSellDate();
+  const [sellDateOpen, setSellDateOpen] = useState(false);
+  const [sellDateError, setSellDateError] = useState<UiError | null>(null);
 
   if (query.isPending) return <LoadingState rows={4} />;
   if (query.isError) {
@@ -176,6 +184,9 @@ export function PurchaseDetail({
         <Fact label={<Localized id="purchases-field-date" />}>
           <Code>{isoToDisplayDate(row.entry_date)}</Code>
         </Fact>
+        <Fact label={<Localized id="glossary-sell-date" />}>
+          <Code>{isoToDisplayDate(row.sell_date)}</Code>
+        </Fact>
         <Fact label={<Localized id="glossary-qism-maal" />}>{displayName(row.item, language)}</Fact>
         <Fact label={<Localized id="glossary-packing" />}>
           {displayName(row.packing, language)}
@@ -299,6 +310,15 @@ export function PurchaseDetail({
             <Localized id="purchases-undo-write-off" />
           </Button>
           <Button
+            disabled={!row.can_change_sell_date}
+            onClick={() => {
+              setSellDateOpen(true);
+            }}
+          >
+            <CalendarClock aria-hidden="true" className="size-icon-md" />
+            <Localized id="purchases-change-sell-date" />
+          </Button>
+          <Button
             variant="danger"
             onClick={() => {
               onCancel(row);
@@ -309,6 +329,37 @@ export function PurchaseDetail({
           </Button>
         </div>
       )}
+      <SellDateDialog
+        open={sellDateOpen}
+        onOpenChange={(open) => {
+          setSellDateOpen(open);
+          if (!open) setSellDateError(null);
+        }}
+        title={<Localized id="purchases-sell-date-title" />}
+        description={
+          <Localized
+            id="purchases-sell-date-text"
+            vars={{ number: purchaseNumberText(row.number, say) }}
+          >
+            <span />
+          </Localized>
+        }
+        current={isoToDisplayDate(row.sell_date)}
+        busy={setSellDate.isPending}
+        error={sellDateError}
+        onSave={(sellDate) => {
+          setSellDateError(null);
+          setSellDate
+            .mutateAsync({ id: row.id, version: row.version, sell_date: sellDate })
+            .then(() => {
+              showToast('success', <Localized id="purchases-sell-date-done" />);
+              setSellDateOpen(false);
+            })
+            .catch((failure: unknown) => {
+              setSellDateError(uiErrorOf(failure));
+            });
+        }}
+      />
     </Card>
   );
 }

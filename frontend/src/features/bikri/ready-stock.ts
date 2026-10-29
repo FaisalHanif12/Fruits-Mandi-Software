@@ -4,10 +4,14 @@
 // works with this one shape, so the way lots are made, removed and counted does not depend on the
 // kind. The quantity is what the backend says is left: the screen counts nothing.
 
+import type { GardenRef } from '../../bindings/GardenRef';
 import type { RecordRef } from '../../bindings/RecordRef';
 
-/** Where the goods are: a trip purchase (the lot's seller is اپنا مال, FR-12.26). */
-export type ReadyKind = 'trip';
+/**
+ * Where the goods are: a trip purchase (the lot's seller is اپنا مال, FR-12.26) or a garden's
+ * goods arrived entry (the lot's seller is the garden, FR-12.36, FR-12.40).
+ */
+export type ReadyKind = 'trip' | 'garden';
 
 export interface ReadyStock {
   kind: ReadyKind;
@@ -21,6 +25,8 @@ export interface ReadyStock {
   packing: RecordRef;
   /** The goods left. This is the quantity of the lot. */
   qtyLeft: number;
+  /** The garden of a garden entry: its account is the seller of the lot. Null for trip goods. */
+  garden: GardenRef | null;
 }
 
 /** A stable key of a stock record across kinds, for "this one was removed from this form". */
@@ -29,7 +35,7 @@ export function readyKey(stock: Pick<ReadyStock, 'kind' | 'id'>): string {
 }
 
 /** Which kind comes first on the same day. A new kind must be given its place here. */
-const KIND_ORDER: Record<ReadyKind, number> = { trip: 0 };
+const KIND_ORDER: Record<ReadyKind, number> = { trip: 0, garden: 1 };
 
 /** Oldest day to sell first, then the kind, then the number (plan 33 R8). The backend's order. */
 export function byDayThenNumber(a: ReadyStock, b: ReadyStock): number {

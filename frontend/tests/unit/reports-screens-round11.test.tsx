@@ -770,7 +770,11 @@ describe.each(LANGUAGES)(
         await waitFor(() => {
           expect(drawnRows()).toHaveLength(1);
         }, SLOW_MS);
-        await choose(user, 'report-filter-garden', names('شاہ پور باغ', 'Shahpur Garden'));
+        await choose(
+          user,
+          'report-filter-garden',
+          `0080 ${names('شاہ پور باغ', 'Shahpur Garden')}`,
+        );
         await waitFor(() => {
           expect(lastRun()?.filters.garden_id).toBe(1);
         }, SLOW_MS);
@@ -795,7 +799,11 @@ describe.each(LANGUAGES)(
         });
         await screen.findByText(named(m('report-empty')), undefined, SLOW_MS);
         expect(screen.queryByRole('button', { name: named(m('report-clear-filters')) })).toBeNull();
-        await choose(user, 'report-filter-garden', names('شاہ پور باغ', 'Shahpur Garden'));
+        await choose(
+          user,
+          'report-filter-garden',
+          `0080 ${names('شاہ پور باغ', 'Shahpur Garden')}`,
+        );
         expect(
           await screen.findByRole('button', { name: named(m('report-clear-filters')) }, SLOW_MS),
         ).toBeVisible();
@@ -806,7 +814,11 @@ describe.each(LANGUAGES)(
         await waitFor(() => {
           expect(drawnRows()).toHaveLength(1);
         }, SLOW_MS);
-        await choose(user, 'report-filter-garden', names('شاہ پور باغ', 'Shahpur Garden'));
+        await choose(
+          user,
+          'report-filter-garden',
+          `0080 ${names('شاہ پور باغ', 'Shahpur Garden')}`,
+        );
         await choose(user, 'report-filter-garden-view', m('report-filter-garden-by-partner'));
         await waitFor(() => {
           expect(lastRun()?.filters).toMatchObject({ garden_id: 1, garden_view: 'partner' });

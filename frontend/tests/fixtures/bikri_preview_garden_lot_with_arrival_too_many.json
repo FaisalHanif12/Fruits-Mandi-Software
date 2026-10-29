@@ -1,0 +1,570 @@
+{
+  "lots": [
+    {
+      "key": "lot-1",
+      "lot_no": 1,
+      "freight": 0,
+      "freight_paid_by": "firm",
+      "sold_by_weight": false,
+      "is_own": false,
+      "own": null,
+      "arrival": {
+        "arrival_id": 1,
+        "arrival_number": 1,
+        "garden": {
+          "id": 1,
+          "number": 1,
+          "code": "0080",
+          "name_ur": "شاہ پور باغ",
+          "name_en": "Shahpur Garden",
+          "account": {
+            "id": 31,
+            "code": "0080",
+            "name_ur": "شاہ پور باغ",
+            "name_en": "Shahpur Garden"
+          }
+        },
+        "qty_left": 100
+      },
+      "labour": null,
+      "munshiana": null,
+      "phone": null,
+      "sold_qty": 101,
+      "balance_qty": 0,
+      "net_is_negative": false,
+      "totals": null,
+      "lines": [
+        {
+          "key": "sale-1",
+          "line_no": 1,
+          "is_blank": false,
+          "remaining_qty": 101,
+          "rate_hint": null,
+          "calc": null,
+          "warnings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "gross": 0,
+    "freight": 0,
+    "seller_comm": 0,
+    "labour": 0,
+    "munshiana": 0,
+    "cash_paid": 0,
+    "store_rent": 0,
+    "phone": 0,
+    "deductions": 0,
+    "net": 0,
+    "seller_credit": 0,
+    "buyer_comm": 0,
+    "laga": 0,
+    "rate_diff": 0,
+    "buyer_credit": 0,
+    "buyer_cash": 0,
+    "buyer_total": 0,
+    "shared_income": 0,
+    "workings": {
+      "gross": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "freight": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "seller_comm": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "labour": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "munshiana": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "cash_paid": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "store_rent": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "phone": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "deductions": {
+        "message_id": "working-deductions",
+        "args": [
+          {
+            "name": "freight",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "comm",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "labour",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "munshiana",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "cash",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "store_rent",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "phone",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "net": {
+        "message_id": "working-net",
+        "args": [
+          {
+            "name": "gross",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "deductions",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "seller_credit": {
+        "message_id": "working-seller-credit",
+        "args": [
+          {
+            "name": "gross",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "comm",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "freight",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "labour",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "munshiana",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "store_rent",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "phone",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_comm": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "laga": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "rate_diff": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_credit": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_cash": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_total": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "shared_income": {
+        "message_id": "working-shared-income",
+        "args": [
+          {
+            "name": "seller_comm",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "buyer_comm",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "laga",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "phone",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "rate_diff",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  },
+  "split": [],
+  "cash": {
+    "cash_before_paisa": 4900000,
+    "change_paisa": 0,
+    "cash_after_paisa": 4900000,
+    "below_zero": false,
+    "lowers_cash": false,
+    "needs_confirm": false
+  },
+  "allow_line_override": true,
+  "errors": [
+    {
+      "code": "ERR_QTY_EXCEEDS_LOT",
+      "field": "lots[0].qty_received",
+      "values": {
+        "available": 100
+      }
+    }
+  ],
+  "warnings": []
+}

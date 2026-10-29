@@ -133,12 +133,37 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 .checked_add(row.cost_left_paisa)
                 .map_err(crate::error::money_error)?;
         }
-        // One page over the lots first, then the trip goods; the totals above are over every
-        // matching row, never the page (PRD FR-19.11, B31).
+        // The garden arrivals with goods left (PRD FR-12.40). A seller filter keeps the arrivals
+        // whose garden account is that seller; a single lot asked for lists none.
+        let garden_rows = if input.lot_id.is_some() {
+            Vec::new()
+        } else {
+            crate::gardens::arrivals::stock_rows(
+                conn,
+                own_filter.from.as_deref(),
+                own_filter.to.as_deref(),
+                input.item_id,
+                input.seller_id,
+                today,
+            )?
+        };
+        let mut garden_balance_total = 0_i64;
+        for row in &garden_rows {
+            garden_balance_total = garden_balance_total
+                .checked_add(row.balance)
+                .ok_or_else(|| data("the quantity of the stock does not fit"))?;
+        }
+        // One page over the lots first, then the trip goods, then the garden arrivals; the totals
+        // above are over every matching row, never the page (PRD FR-19.11, B31).
         let lots = i64::try_from(rows.len()).map_err(|_| data("too many rows"))?;
         let own = i64::try_from(own_rows.len()).map_err(|_| data("too many rows"))?;
-        let total_count = lots.checked_add(own).ok_or_else(|| data("too many rows"))?;
-        let (rows, own_rows) = crate::page::slice_two(rows, own_rows, input.offset, input.limit);
+        let garden = i64::try_from(garden_rows.len()).map_err(|_| data("too many rows"))?;
+        let total_count = lots
+            .checked_add(own)
+            .and_then(|v| v.checked_add(garden))
+            .ok_or_else(|| data("too many rows"))?;
+        let (rows, own_rows, garden_rows) =
+            crate::page::slice_three(rows, own_rows, garden_rows, input.offset, input.limit);
         Ok(StockList {
             total_count,
             rows,
@@ -146,6 +171,8 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
             own_rows,
             own_balance_total,
             own_cost_left_paisa: own_cost_left,
+            garden_rows,
+            garden_balance_total,
         })
     })
 }
@@ -228,6 +255,7 @@ pub fn write_off(
         let move_id = edit_repo::insert_move(
             tx,
             &NewMove {
+                arrival_id: None,
                 lot_id: Some(state.id),
                 purchase_id: None,
                 cost_paisa: 0,
@@ -306,6 +334,7 @@ pub fn write_off_undo(
         let reversal_move_id = edit_repo::insert_move(
             tx,
             &NewMove {
+                arrival_id: None,
                 lot_id: Some(state.id),
                 purchase_id: None,
                 cost_paisa: 0,
@@ -354,5 +383,94 @@ pub fn write_off_undo(
             qty_written_off: written_off,
             balance,
         })
+    })
+}
+
+/// The goods a new بکری opens with (PRD FR-12.39, FR-12.40): the purchases of open trips and the
+/// arrivals of open gardens with goods left and a day to sell on or before the day of the new بکری,
+/// in one list, oldest day to sell first, then number (a trip purchase before a garden arrival of
+/// the same number). At most 100 rows. Read only.
+///
+/// Nothing is reserved: a second new بکری open at the same time sees the same rows, and the save
+/// of the second is refused when the goods are gone (`ERR_QTY_EXCEEDS_LOT`), because the save reads
+/// what is left inside its own transaction.
+///
+/// # Errors
+/// The date codes on `date`.
+pub fn ready_goods(
+    ctx: &Context,
+    input: &mandi_domain::core::bikri::ReadyGoodsInput,
+) -> Result<mandi_domain::core::bikri::ReadyGoods, ServiceError> {
+    use mandi_domain::core::bikri::{ReadyGoods, ReadyGoodsRow};
+    use mandi_domain::core::ventures::{TripRef, VentureKind};
+    let (_, today) = day::window(ctx)?;
+    let date = if input.date.trim().is_empty() {
+        today
+    } else {
+        validate::date("date", &input.date, today)?
+    };
+    let date_iso = date.to_iso();
+    let limit = 100_i64;
+    ctx.db.read(|conn| {
+        let mut rows: Vec<ReadyGoodsRow> = Vec::new();
+        for rec in mandi_db::purchases::ready_by(conn, &date_iso, limit)? {
+            rows.push(ReadyGoodsRow {
+                kind: VentureKind::Trip,
+                id: rec.id,
+                number: rec.number,
+                sell_date: rec.sell_date.clone(),
+                entry_date: rec.entry_date.clone(),
+                item: rec.item.clone(),
+                packing: rec.packing.clone(),
+                qty: rec.qty,
+                qty_left: rec
+                    .qty
+                    .checked_sub(rec.qty_sold)
+                    .and_then(|v| v.checked_sub(rec.qty_written_off))
+                    .ok_or_else(|| data("the quantity of a purchase does not fit"))?,
+                weight_grams: rec.weight_grams,
+                trip: Some(TripRef {
+                    id: rec.trip_id,
+                    number: rec.trip_number,
+                    code: mandi_domain::core::codes::number_code(
+                        mandi_domain::core::codes::CodeType::Trip,
+                        rec.trip_number,
+                    ),
+                    name_ur: rec.trip_name_ur.clone(),
+                    name_en: rec.trip_name_en.clone(),
+                }),
+                garden: None,
+            });
+        }
+        for rec in mandi_db::arrivals::ready_by(conn, &date_iso, limit)? {
+            rows.push(ReadyGoodsRow {
+                kind: VentureKind::Garden,
+                id: rec.id,
+                number: rec.number,
+                sell_date: rec.sell_date.clone(),
+                entry_date: rec.entry_date.clone(),
+                item: rec.item.clone(),
+                packing: rec.packing.clone(),
+                qty: rec.qty,
+                qty_left: rec
+                    .qty
+                    .checked_sub(rec.qty_sold)
+                    .and_then(|v| v.checked_sub(rec.qty_written_off))
+                    .ok_or_else(|| data("the quantity of an arrival does not fit"))?,
+                weight_grams: rec.weight_grams,
+                trip: None,
+                garden: Some(crate::gardens::arrivals::garden_ref(&rec)),
+            });
+        }
+        // Oldest day to sell first, then number; a trip purchase before a garden arrival.
+        rows.sort_by(|a, b| {
+            (&a.sell_date, a.number, a.kind != VentureKind::Trip).cmp(&(
+                &b.sell_date,
+                b.number,
+                b.kind != VentureKind::Trip,
+            ))
+        });
+        rows.truncate(100);
+        Ok(ReadyGoods { rows })
     })
 }

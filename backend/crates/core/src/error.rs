@@ -357,11 +357,27 @@ pub enum ErrorCode {
     /// The tag (نشان) of an account is not 1 to 4 English capital letters and dots with at least
     /// one letter (PRD 10.2, FR-7.28, Code Standards 4.2; plan 17e). Field `tag`.
     ErrTagInvalid,
+    /// The date to sell is before the day the goods were bought or arrived (PRD FR-12.39,
+    /// FR-12.40). Field `sell_date`. Value `entry_date` (`YYYY-MM-DD`).
+    ErrSellDateBeforeEntry,
+    /// The garden arrival is cancelled already (PRD FR-12.40). Field `id`, or `arrival_id`, or the
+    /// `lots[i].arrival_id` of a lot that names it.
+    ErrArrivalCancelled,
+    /// A garden arrival cannot be cancelled once any of it was sold or written off (PRD FR-12.40).
+    /// Field `id`. Values: `qty_sold`, `qty_written_off` (نگ).
+    ErrArrivalHasSales,
+    /// A garden lot linked to an arrival was not sold in full in its بکری (PRD FR-12.40). The goods
+    /// not sold stay in the arrival, so the lot takes from it only what its lines sell. Field
+    /// `lots[i].qty_received`. Values: `qty_left` (نگ).
+    ErrArrivalLotNotFullySold,
+    /// A garden cannot be closed while its arrivals still have goods left: sell them or write them
+    /// off first (PRD FR-12.40). Field `id`. Values: `qty_left` (نگ).
+    ErrGardenHasStock,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 130] = [
+    pub const ALL: [ErrorCode; 135] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -492,6 +508,11 @@ impl ErrorCode {
         ErrorCode::ErrFruitCancelled,
         ErrorCode::ErrBikriHasFruit,
         ErrorCode::ErrTagInvalid,
+        ErrorCode::ErrSellDateBeforeEntry,
+        ErrorCode::ErrArrivalCancelled,
+        ErrorCode::ErrArrivalHasSales,
+        ErrorCode::ErrArrivalLotNotFullySold,
+        ErrorCode::ErrGardenHasStock,
     ];
 }
 

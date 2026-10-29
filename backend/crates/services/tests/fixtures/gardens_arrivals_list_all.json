@@ -1,0 +1,110 @@
+{
+  "rows": [
+    {
+      "id": 1,
+      "version": 6,
+      "number": 1,
+      "garden": {
+        "id": 1,
+        "number": 1,
+        "code": "0080",
+        "name_ur": "شاہ پور باغ",
+        "name_en": "Shahpur Garden",
+        "account": {
+          "id": 31,
+          "code": "0080",
+          "name_ur": "شاہ پور باغ",
+          "name_en": "Shahpur Garden"
+        }
+      },
+      "entry_date": "2026-10-11",
+      "sell_date": "2026-10-12",
+      "status": "saved",
+      "cancel_reason": null,
+      "item": {
+        "id": 1,
+        "code": "0040",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 100,
+      "weight_grams": null,
+      "note": null,
+      "qty_sold": 60,
+      "qty_written_off": 0,
+      "qty_left": 40,
+      "days_waiting": 0,
+      "can_cancel": false,
+      "can_change_sell_date": true,
+      "lots": [
+        {
+          "bikri_id": 1,
+          "bikri_number": 1,
+          "lot_id": 1,
+          "lot_no": 1,
+          "entry_date": "2026-10-12",
+          "qty_sold": 60
+        }
+      ],
+      "write_offs": []
+    },
+    {
+      "id": 2,
+      "version": 2,
+      "number": 2,
+      "garden": {
+        "id": 1,
+        "number": 1,
+        "code": "0080",
+        "name_ur": "شاہ پور باغ",
+        "name_en": "Shahpur Garden",
+        "account": {
+          "id": 31,
+          "code": "0080",
+          "name_ur": "شاہ پور باغ",
+          "name_en": "Shahpur Garden"
+        }
+      },
+      "entry_date": "2026-10-12",
+      "sell_date": "2026-10-12",
+      "status": "cancelled",
+      "cancel_reason": "غلط اندراج",
+      "item": {
+        "id": 1,
+        "code": "0040",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty": 5,
+      "weight_grams": null,
+      "note": "ٹوٹا",
+      "qty_sold": 0,
+      "qty_written_off": 0,
+      "qty_left": 0,
+      "days_waiting": 0,
+      "can_cancel": false,
+      "can_change_sell_date": false,
+      "lots": [],
+      "write_offs": []
+    }
+  ],
+  "total_count": 2,
+  "totals": {
+    "qty": 100,
+    "qty_sold": 60,
+    "qty_written_off": 0,
+    "qty_left": 40
+  }
+}

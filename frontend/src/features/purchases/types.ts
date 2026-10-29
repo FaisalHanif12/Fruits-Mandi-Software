@@ -58,6 +58,11 @@ export interface PurchaseFields {
   freight: string;
   labour: string;
   otherCost: string;
+  /**
+   * The day to sell (PRD FR-12.39) as typed, `DD-MM-YYYY`. Empty means the day of the purchase:
+   * the form then shows that day in the box, and sends nothing.
+   */
+  sellDate: string;
 }
 
 /**

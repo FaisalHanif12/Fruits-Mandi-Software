@@ -41,6 +41,12 @@ export type PurchaseInput = {
    */
   weight: string | null;
   /**
+   * The day to sell, `DD-MM-YYYY` or a shortcut (PRD FR-12.39). Empty means the purchase day.
+   * Never before the purchase day: `ERR_SELL_DATE_BEFORE_ENTRY` on `sell_date`. A new بکری from
+   * this day opens with a ready lot for the goods left.
+   */
+  sell_date: string | null;
+  /**
    * The rate for each نگ, or for each kg for a weight item. Whole rupees.
    */
   rate: string;

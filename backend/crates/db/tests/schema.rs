@@ -298,6 +298,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 // taken from the lot (PRD FR-16.11).
                 "purchase_id",
                 "qty_taken",
+                // Migration 0009 (plan 33 v1.1): the garden arrival a garden lot takes its goods from.
+                "arrival_id",
             ],
         ),
         (
@@ -361,6 +363,27 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 // the trip goods it releases (C21).
                 "purchase_id",
                 "cost_paisa",
+                // Migration 0009 (plan 33 v1.1): a move of a garden arrival.
+                "arrival_id",
+            ],
+        ),
+        (
+            "garden_arrivals",
+            // Migration 0009 (plan 33 v1.1, PRD FR-12.40): goods that arrived from a garden.
+            vec![
+                "number",
+                "venture_id",
+                "entry_date",
+                "sell_date",
+                "item_id",
+                "packing_id",
+                "qty",
+                "weight_grams",
+                "note",
+                "status",
+                "cancel_reason",
+                "qty_sold",
+                "qty_written_off",
             ],
         ),
         (
@@ -389,6 +412,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "qty_sold",
                 "qty_written_off",
                 "cost_released_paisa",
+                // Migration 0009 (plan 33 v1.1): the day to sell (PRD FR-12.39).
+                "sell_date",
             ],
         ),
         (
@@ -621,7 +646,7 @@ fn table_list_equals_architecture_15() {
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
-    assert_eq!(want.len(), 45);
+    assert_eq!(want.len(), 46);
     assert_eq!(tables(&conn), want);
 }
 
@@ -654,7 +679,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 45);
+    assert_eq!(rows.len(), 46);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn
@@ -733,8 +758,12 @@ fn every_date_column_has_the_date_check() {
             .into_iter()
             .filter(|c| c.ends_with("_date") || c == "effective_from")
         {
+            // `purchases.sell_date` is nullable (SQLite cannot add a NOT NULL column without a
+            // default, migration 0009), so its check also lets NULL through.
+            let nullable = format!("CHECK ({column} IS NULL OR date({column}) IS {column})");
             assert!(
-                sql.contains(&format!("CHECK (date({column}) IS {column})")),
+                sql.contains(&format!("CHECK (date({column}) IS {column})"))
+                    || sql.contains(&nullable),
                 "{table}.{column}"
             );
         }

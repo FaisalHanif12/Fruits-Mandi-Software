@@ -75,6 +75,13 @@ export const TRIP_PURCHASE_COLUMNS: readonly ListColumn<PurchaseRow>[] = [
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
+    field: 'sell_date',
+    type: 'date',
+    headerId: 'purchases-col-sell-date',
+    from: 'wide',
+    value: (row) => isoToDisplayDate(row.sell_date),
+  },
+  {
     field: 'qty',
     type: 'number',
     headerId: 'purchases-col-qty',

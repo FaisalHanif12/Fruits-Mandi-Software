@@ -61,6 +61,12 @@ pub const SIMPLE_PARTY_CODES_SQL: &str = include_str!("../migrations/0007_simple
 pub const TRIP_AND_GARDEN_CODES_SQL: &str =
     include_str!("../migrations/0008_trip_and_garden_codes.sql");
 
+/// The ninth migration (plan 33 v1.1, PRD FR-12.39, FR-12.40): the date to sell on a trip purchase
+/// and the table of goods that arrived from a garden, with the columns that link a lot and a stock
+/// move to an arrival. No amount, id or chain hash changes.
+pub const DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL: &str =
+    include_str!("../migrations/0009_date_to_sell_and_garden_arrivals.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -81,6 +87,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, trips_hook),
         M::up_with_hook(SIMPLE_PARTY_CODES_SQL, codes_hook),
         M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
     ])
 }
 

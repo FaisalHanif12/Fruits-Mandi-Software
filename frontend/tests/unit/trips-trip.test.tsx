@@ -16,6 +16,7 @@ import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { named } from '../helpers/bikri-screen';
 import {
+  fail,
   healthyBackend,
   leaveAppWindow,
   press,
@@ -75,12 +76,12 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     a: language === 'ur' ? 'الف' : 'Partner A',
     b: language === 'ur' ? 'ب' : 'Partner B',
   };
-  const tripNumber = message(language, 'trips-number', { number: 1 });
+  const tripNumber = '0070';
   const purchaseNumber = message(language, 'purchases-number', { number: 1 });
 
   const open = async (path = '/trips/1') => {
     const view = await renderApp(path);
-    await screen.findByText(said(message(language, 'trips-detail-title', { number: tripNumber })));
+    await screen.findByText(said(message(language, 'trips-detail-title', { code: tripNumber })));
     return { ...view, user: userEvent.setup() };
   };
 
@@ -269,6 +270,8 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     expect(fake.saved.purchases[0]).toEqual({
       trip_id: 1,
       date: '10-10-2026',
+      // Not touched: the date to sell is the day of the purchase, so nothing is sent (FR-12.39).
+      sell_date: null,
       supplier: 'Haji Nazir',
       item_id: 61,
       packing_id: 71,
@@ -300,6 +303,40 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
       expect(field('purchases-field-qty')).toHaveValue('');
     });
     expect(field('purchases-field-supplier')).toHaveValue('Haji Nazir');
+  });
+
+  it('FR-12.39: the date to sell shows the day of the purchase, follows it, and a day typed over it goes with the purchase', async () => {
+    const fake = fakeTrips();
+    const { user } = await open();
+    const sellDate = () => field('glossary-sell-date');
+    // The box is filled with the day of the purchase, like a typed value (NFR-USE-27).
+    expect(sellDate()).toHaveValue('10-10-2026');
+    // It follows the purchase day while nobody has typed in it.
+    const day = field('trips-field-date');
+    await user.click(day);
+    await user.keyboard('{Control>}a{/Control}11-10-2026');
+    await waitFor(() => {
+      expect(sellDate()).toHaveValue('11-10-2026');
+    });
+    await user.click(day);
+    await user.keyboard('{Control>}a{/Control}10-10-2026');
+    await fillPurchase(user);
+    // A later day typed over it stays, and is sent as typed.
+    await user.click(sellDate());
+    await user.keyboard('{Control>}a{/Control}12-10-2026');
+    await waitFor(() => {
+      expect(sellDate()).toHaveValue('12-10-2026');
+    });
+    await screen.findByRole('list', { name: named(message(language, 'trips-parts-title')) });
+    press('F10');
+    await waitFor(() => {
+      expect(fake.saved.purchases).toHaveLength(1);
+    });
+    expect(fake.saved.purchases[0]).toMatchObject({ date: '10-10-2026', sell_date: '12-10-2026' });
+    // The next purchase starts with the box on its own day again.
+    await waitFor(() => {
+      expect(sellDate()).toHaveValue('10-10-2026');
+    });
   });
 
   it('cash going below zero shows the amber note and asks first; No saves nothing, Yes saves', async () => {
@@ -479,6 +516,97 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await waitFor(() => {
       expect(purchasesApi.purchasesWriteOff).toHaveBeenCalledWith(7, '5', 'Spoiled');
     });
+  });
+
+  it('FR-12.39: the purchase card shows the date to sell, and "change" asks for a day and sends it with the version', async () => {
+    fakeTrips();
+    vi.mocked(purchasesApi.purchasesSetSellDate).mockImplementation((input) =>
+      Promise.resolve({ ...input, version: input.version + 1 }),
+    );
+    const { user } = await open();
+    const target = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('.ag-row[row-id="7"] [col-id="number"]');
+      if (found === null) throw new Error('no purchase row');
+      return found;
+    });
+    await user.click(target);
+    const card = (
+      await screen.findByText(
+        said(
+          message(language, 'purchases-detail-title', {
+            number: purchaseNumber,
+            item: language === 'ur' ? 'مالٹا' : 'Orange',
+          }),
+        ),
+      )
+    ).closest('section');
+    if (card === null) throw new Error('no purchase card');
+    // The day to sell is a fact of the card: it starts as the day of the purchase.
+    expect(visible(card.textContent)).toContain('10-10-2026');
+    await user.click(
+      await screen.findByRole('button', {
+        name: said(message(language, 'purchases-change-sell-date')),
+      }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    const box = within(dialog).getByRole<HTMLInputElement>('textbox', {
+      name: named(message(language, 'glossary-sell-date')),
+    });
+    // The box starts with the day it has now, visible like a typed value.
+    expect(box.value).toBe('10-10-2026');
+    await user.click(box);
+    await user.keyboard('{Control>}a{/Control}13-10-2026');
+    await user.click(
+      within(dialog).getByRole('button', { name: said(message(language, 'common-save')) }),
+    );
+    await waitFor(() => {
+      expect(purchasesApi.purchasesSetSellDate).toHaveBeenCalledWith({
+        id: 7,
+        version: 1,
+        sell_date: '13-10-2026',
+      });
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('FR-12.39: a refusal of the day stays in the box with the words at the field, and the typed day is kept', async () => {
+    fakeTrips();
+    vi.mocked(purchasesApi.purchasesSetSellDate).mockRejectedValue(
+      fail({
+        code: 'ERR_SELL_DATE_BEFORE_ENTRY',
+        field: 'sell_date',
+        values: { entry_date: '10-10-2026' },
+      }),
+    );
+    const { user } = await open();
+    const target = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('.ag-row[row-id="7"] [col-id="number"]');
+      if (found === null) throw new Error('no purchase row');
+      return found;
+    });
+    await user.click(target);
+    await user.click(
+      await screen.findByRole('button', {
+        name: said(message(language, 'purchases-change-sell-date')),
+      }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    const box = within(dialog).getByRole<HTMLInputElement>('textbox', {
+      name: named(message(language, 'glossary-sell-date')),
+    });
+    await user.click(box);
+    await user.keyboard('{Control>}a{/Control}09-10-2026');
+    await user.click(
+      within(dialog).getByRole('button', { name: said(message(language, 'common-save')) }),
+    );
+    expect(
+      await within(dialog).findByText(
+        said(message(language, 'err-sell-date-before-entry', { entry_date: '10-10-2026' })),
+      ),
+    ).toBeInTheDocument();
+    expect(box.value).toBe('09-10-2026');
   });
 
   it('the history lists the entries; a trip cost can be cancelled with a reason', async () => {

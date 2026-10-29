@@ -13,7 +13,6 @@ import type { ReactNode } from 'react';
 import { formatBps, isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { CalcInfo, Card, Code, Fact, Num } from '../../../shared/ui';
-import { gardenNumberText } from '../list-columns';
 import type { GardenRow } from '../types';
 
 interface GardenCardProps {
@@ -57,9 +56,7 @@ function BalanceLines({ garden }: GardenCardProps) {
 }
 
 export function GardenHeaderCard({ garden }: GardenCardProps) {
-  const { l10n } = useLocalization();
   const language = useLanguage();
-  const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   const open = garden.status === 'open';
   const StatusIcon = open ? CircleDot : CircleCheck;
   return (
@@ -67,10 +64,7 @@ export function GardenHeaderCard({ garden }: GardenCardProps) {
       compact
       title={
         <span className="inline-flex flex-wrap items-center gap-2">
-          <Localized
-            id="gardens-detail-title"
-            vars={{ number: gardenNumberText(garden.number, say) }}
-          >
+          <Localized id="gardens-detail-title" vars={{ code: garden.code }}>
             <span />
           </Localized>
           <span lang={language}>{displayName(garden, language)}</span>

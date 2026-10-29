@@ -17,6 +17,7 @@
     "lots": [
       {
         "adjust_advance": false,
+        "arrival_id": null,
         "cash_paid": null,
         "freight": null,
         "freight_paid_by": "firm",

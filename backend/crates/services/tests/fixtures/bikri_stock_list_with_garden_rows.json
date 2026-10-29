@@ -1,0 +1,83 @@
+{
+  "total_count": 2,
+  "rows": [],
+  "balance_total": 0,
+  "own_rows": [
+    {
+      "purchase_id": 1,
+      "number": 1,
+      "received_date": "2026-10-11",
+      "sell_date": "2026-10-12",
+      "trip": {
+        "id": 2,
+        "number": 1,
+        "code": "0070",
+        "name_ur": "0070 10-10-2026",
+        "name_en": "0070 10-10-2026"
+      },
+      "supplier": null,
+      "item": {
+        "id": 1,
+        "code": "0040",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty_bought": 20,
+      "qty_sold": 0,
+      "qty_written_off": 0,
+      "balance": 20,
+      "total_cost_paisa": 100000,
+      "cost_left_paisa": 100000,
+      "days_waiting": 0,
+      "write_offs": []
+    }
+  ],
+  "own_balance_total": 20,
+  "own_cost_left_paisa": 100000,
+  "garden_rows": [
+    {
+      "arrival_id": 1,
+      "number": 1,
+      "received_date": "2026-10-11",
+      "sell_date": "2026-10-12",
+      "garden": {
+        "id": 1,
+        "number": 1,
+        "code": "0080",
+        "name_ur": "شاہ پور باغ",
+        "name_en": "Shahpur Garden",
+        "account": {
+          "id": 31,
+          "code": "0080",
+          "name_ur": "شاہ پور باغ",
+          "name_en": "Shahpur Garden"
+        }
+      },
+      "item": {
+        "id": 1,
+        "code": "0040",
+        "name_ur": "کیلا",
+        "name_en": "Banana"
+      },
+      "packing": {
+        "id": 1,
+        "code": "0050",
+        "name_ur": "پیٹی",
+        "name_en": "Box"
+      },
+      "qty_arrived": 100,
+      "qty_sold": 60,
+      "qty_written_off": 0,
+      "balance": 40,
+      "days_waiting": 0,
+      "write_offs": []
+    }
+  ],
+  "garden_balance_total": 40
+}

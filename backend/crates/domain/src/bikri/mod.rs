@@ -80,7 +80,7 @@ use crate::ledger::bikri::JournalSource;
 use crate::rules::RuleSet;
 
 pub use self::lookups::{
-    AccountFacts, ItemFacts, ItemSales, Lookups, PartyKind, PurchaseFacts, Switches,
+    AccountFacts, ArrivalFacts, ItemFacts, ItemSales, Lookups, PartyKind, PurchaseFacts, Switches,
     TripPartnerFacts,
 };
 pub use self::own::own_cost;
@@ -216,6 +216,11 @@ pub fn calc_posting(
         owed: HashMap::new(),
         last_rates: HashMap::new(),
         own: OwnRun::new(lookups),
+        arrivals: lookups
+            .arrivals
+            .iter()
+            .map(|(id, a)| (*id, a.qty_left))
+            .collect(),
     };
     // The lines of an edit that keep their stored cost are taken out of the purchases first.
     if let Some(env) = &env {

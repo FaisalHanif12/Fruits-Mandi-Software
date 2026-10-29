@@ -65,10 +65,7 @@ trips-list-count = Showing { $shown } of { $total }
 # review: pending
 trips-list-more = Show more
 
-## Numbers: each series has its own letters.
-
-# review: pending
-trips-number = TRP-{ $number }
+## Numbers: a trip has a code of type 007 (plan 34); its entries have series with their own letters.
 
 # A trip cost.
 # review: pending
@@ -81,7 +78,7 @@ trips-sale-number = OS-{ $number }
 ## The columns of the lists.
 
 # review: pending
-trips-col-number = No.
+trips-col-number = Code
 
 # review: pending
 trips-col-trip = Trip
@@ -146,7 +143,7 @@ trips-new-details-title = Details
 
 # $number: the number of the new trip.
 # review: pending
-trips-created = { $number } made
+trips-created = { $code } made
 
 # review: pending
 trips-field-date = Date
@@ -167,7 +164,7 @@ trips-field-note = Note
 
 # $number: the number of the trip.
 # review: pending
-trips-detail-title = { $number }
+trips-detail-title = { $code }
 
 # review: pending
 trips-detail-failed = The trip could not be opened

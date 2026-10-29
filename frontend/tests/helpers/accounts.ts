@@ -327,8 +327,12 @@ const OWN_GOODS_CODE = '030119998';
 
 /** A الگ کھاتہ (control 0305): the seller of a lot may be one (PRD FR-16.7), but no other field. */
 const isKhata = (row: AccountRow) => row.account_type === 'other' && row.code.startsWith('0305');
-/** A garden's account (control 0306, PRD 12.11): offered like a khata, only as the seller of a lot. */
-const isGarden = (row: AccountRow) => row.account_type === 'other' && row.code.startsWith('0306');
+/**
+ * A garden's account (control 0306, PRD 12.11): offered like a khata, only as the seller of a lot.
+ * Its code is the garden's: type 008 and a running number (plan 34), `0080`.
+ */
+const isGarden = (row: AccountRow) =>
+  row.account_type === 'other' && /^008(0|[1-9]\d*)$/.test(row.code);
 
 function inScope(row: AccountRow, scope: AccountScope): boolean {
   if (scope === 'any' || scope === 'control') return true;

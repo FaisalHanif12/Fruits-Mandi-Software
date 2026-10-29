@@ -11,6 +11,7 @@ import { Localized } from '@fluent/react';
 import type { UiError } from '../../../bindings/UiError';
 import { pickedOf } from '../../../shared/accounts';
 import {
+  DateInput,
   Field,
   FreeTextInput,
   MoneyInput,
@@ -28,6 +29,8 @@ interface PurchaseFieldsFormProps {
   error: UiError | null;
   /** The weight field shows: the item is sold by weight, or a weight was typed. */
   showWeight: boolean;
+  /** The day of the purchase as typed (`DD-MM-YYYY`): the date to sell starts as this day. */
+  purchaseDate: string;
 }
 
 /** The two names of a record a picker gave back. */
@@ -40,6 +43,7 @@ export function PurchaseFieldsForm({
   onChange,
   error,
   showWeight,
+  purchaseDate,
 }: PurchaseFieldsFormProps) {
   return (
     <>
@@ -162,6 +166,22 @@ export function PurchaseFieldsForm({
             value={fields.otherCost}
             onChange={(otherCost) => {
               onChange({ otherCost });
+            }}
+          />
+        )}
+      </Field>
+      <Field
+        label={<Localized id="glossary-sell-date" />}
+        hint={<Localized id="purchases-sell-date-hint" />}
+        error={fieldError(error, 'sell_date')}
+      >
+        {(props) => (
+          <DateInput
+            {...props}
+            // The box shows the day of the purchase until the user types another (NFR-USE-27).
+            value={fields.sellDate === '' ? purchaseDate : fields.sellDate}
+            onChange={(sellDate) => {
+              onChange({ sellDate });
             }}
           />
         )}

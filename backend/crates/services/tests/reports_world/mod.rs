@@ -327,6 +327,7 @@ pub fn trip_34_world() -> (support::World, i64, i64, i64) {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            sell_date: None,
             trip_id: Some(trip),
             date: "10-10-2026".into(),
             supplier: Some("Orange Traders".into()),
@@ -529,4 +530,69 @@ pub fn garden_40b() -> (support::World, mandi_services::core::gardens::GardenRow
     set_today(&w.env, 2026, 10, 12);
     garden_other_sale(&w, garden.id, "12-10-2026", "20", "10,000");
     (w, garden)
+}
+
+/// A garden (شاہ پور باغ, 0080) of the three partners at 40 / 30 / 30 and an arrival of `qty`
+/// پیٹی کیلا on 10-10-26 with the given day to sell (`DD-MM-YYYY`), nothing sold yet (plan 33 v1.1,
+/// R10). Returns the garden's account id and the arrival.
+pub fn garden_with_arrival(
+    w: &support::World,
+    qty: &str,
+    sell_date: &str,
+) -> (i64, mandi_services::core::arrivals::ArrivalRow) {
+    use mandi_services::core::arrivals::ArrivalInput;
+    use mandi_services::core::gardens::GardenInput;
+    use mandi_services::core::ventures::{MoneySource, VenturePartnerInput};
+    let [a, b, c] = w.partners;
+    let garden = mandi_services::gardens::create(
+        &w.env.ctx,
+        &w.owner,
+        &GardenInput {
+            name_ur: "شاہ پور باغ".into(),
+            name_en: "Shahpur Garden".into(),
+            confirmed_rules_words: vec![
+                "شاہ".into(),
+                "پور".into(),
+                "باغ".into(),
+                "Shahpur".into(),
+                "Garden".into(),
+            ],
+            date: "10-10-2026".into(),
+            item_id: Some(w.banana),
+            rent: "50,000".into(),
+            season_end: None,
+            note: None,
+            partners: [(a, "40"), (b, "30"), (c, "30")]
+                .into_iter()
+                .map(|(partner_id, share)| VenturePartnerInput {
+                    partner_id,
+                    share: share.into(),
+                    source: MoneySource::Shop,
+                })
+                .collect(),
+            paid_now: None,
+            paid_now_reason: None,
+            parts: Vec::new(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap()
+    .row;
+    let arrival = mandi_services::gardens::arrivals::save(
+        &w.env.ctx,
+        &w.owner,
+        &ArrivalInput {
+            garden_id: Some(garden.id),
+            date: "10-10-2026".into(),
+            sell_date: Some(sell_date.into()),
+            item_id: Some(w.banana),
+            packing_id: Some(w.box_),
+            qty: qty.into(),
+            weight: None,
+            note: None,
+        },
+    )
+    .unwrap()
+    .row;
+    (garden.account.id, arrival)
 }

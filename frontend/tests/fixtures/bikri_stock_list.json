@@ -38,5 +38,7 @@
   "balance_total": 5,
   "own_rows": [],
   "own_balance_total": 0,
-  "own_cost_left_paisa": 0
+  "own_cost_left_paisa": 0,
+  "garden_rows": [],
+  "garden_balance_total": 0
 }

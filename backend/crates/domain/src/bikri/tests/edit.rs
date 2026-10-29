@@ -445,6 +445,7 @@ fn a_lot_whose_seller_or_item_changed_keeps_nothing_stored_for_the_old_one() {
         1,
         StoredLot {
             identity: Some(StoredIdentity {
+                arrival_id: None,
                 seller_account_id: RAHIM,
                 item_id: BANANA,
                 person_key: None,
@@ -478,6 +479,7 @@ fn leftover_one_time_name_text_on_an_ordinary_sellers_lot_is_not_a_change() {
         1,
         StoredLot {
             identity: Some(StoredIdentity {
+                arrival_id: None,
                 seller_account_id: RAHIM,
                 item_id: BANANA,
                 person_key: None,

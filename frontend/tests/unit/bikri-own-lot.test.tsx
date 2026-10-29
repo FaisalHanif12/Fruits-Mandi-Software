@@ -108,7 +108,7 @@ describe.each(LANGUAGES)('a lot of trip goods (%s)', (language) => {
     expect(visible(option.textContent)).toBe(
       message(language, 'bikri-own-option', {
         number: message(language, 'purchases-number', { number: 1 }),
-        trip: message(language, 'trips-number', { number: 1 }),
+        trip: '0070',
         item,
         packing: box,
         qty_left: 5,

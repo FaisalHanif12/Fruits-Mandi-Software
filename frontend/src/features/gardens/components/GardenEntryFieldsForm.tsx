@@ -6,16 +6,122 @@
 
 import { Localized } from '@fluent/react';
 import type { UiError } from '../../../bindings/UiError';
-import { Field, FreeTextInput, MoneyInput, QtyInput, fieldError } from '../../../shared/ui';
+import { pickedOf } from '../../../shared/accounts';
+import {
+  DateInput,
+  Field,
+  FreeTextInput,
+  MoneyInput,
+  Picker,
+  QtyInput,
+  fieldError,
+} from '../../../shared/ui';
 import type { EntryDraft } from '../types';
 
 interface GardenEntryFieldsFormProps {
   draft: EntryDraft;
   onChange: (patch: Partial<EntryDraft>) => void;
   error: UiError | null;
+  /** Goods arrived: the weight field shows for an item sold by weight (the backend asks) or once typed. */
+  showWeight: boolean;
 }
 
-export function GardenEntryFieldsForm({ draft, onChange, error }: GardenEntryFieldsFormProps) {
+export function GardenEntryFieldsForm({
+  draft,
+  onChange,
+  error,
+  showWeight,
+}: GardenEntryFieldsFormProps) {
+  if (draft.type === 'arrival') {
+    return (
+      <>
+        <Field label={<Localized id="glossary-qism-maal" />} error={fieldError(error, 'item_id')}>
+          {(props) => (
+            <Picker
+              {...props}
+              scope="item"
+              value={draft.item}
+              onChange={(hit) => {
+                onChange({ item: hit === null ? null : pickedOf(hit) });
+              }}
+            />
+          )}
+        </Field>
+        <Field label={<Localized id="glossary-packing" />} error={fieldError(error, 'packing_id')}>
+          {(props) => (
+            <Picker
+              {...props}
+              scope="packing"
+              value={draft.packing}
+              onChange={(hit) => {
+                onChange({ packing: hit === null ? null : pickedOf(hit) });
+              }}
+            />
+          )}
+        </Field>
+        <Field
+          label={<Localized id="gardens-arrival-qty" />}
+          hint={<Localized id="gardens-arrival-qty-hint" />}
+          error={fieldError(error, 'qty')}
+        >
+          {(props) => (
+            <QtyInput
+              {...props}
+              value={draft.qty}
+              onChange={(qty) => {
+                onChange({ qty });
+              }}
+            />
+          )}
+        </Field>
+        {showWeight ? (
+          <Field
+            label={<Localized id="purchases-field-weight" />}
+            error={fieldError(error, 'weight')}
+          >
+            {(props) => (
+              <MoneyInput
+                {...props}
+                value={draft.weight}
+                onChange={(weight) => {
+                  onChange({ weight });
+                }}
+              />
+            )}
+          </Field>
+        ) : null}
+        <Field
+          label={<Localized id="glossary-sell-date" />}
+          hint={<Localized id="gardens-arrival-sell-date-hint" />}
+          error={fieldError(error, 'sell_date')}
+        >
+          {(props) => (
+            <DateInput
+              {...props}
+              // The box shows the day of the arrival until the user types another (NFR-USE-27).
+              value={draft.sellDate === '' ? draft.date : draft.sellDate}
+              onChange={(sellDate) => {
+                onChange({ sellDate });
+              }}
+            />
+          )}
+        </Field>
+        <div className="col-span-2">
+          <Field label={<Localized id="gardens-field-note" />} error={fieldError(error, 'note')}>
+            {(props) => (
+              <FreeTextInput
+                {...props}
+                value={draft.note}
+                onChange={(note) => {
+                  onChange({ note });
+                }}
+              />
+            )}
+          </Field>
+        </div>
+      </>
+    );
+  }
   if (draft.type === 'other_sale') {
     return (
       <>

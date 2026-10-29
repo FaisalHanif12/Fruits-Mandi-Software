@@ -111,6 +111,7 @@ fn the_first_trip_is_0070_and_the_eleventh_is_00710_and_the_name_is_the_code_and
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            sell_date: None,
             trip_id: Some(rows[1].id),
             date: "10-10-2026".into(),
             supplier: None,
@@ -300,6 +301,7 @@ fn a_short_code_finds_a_trip_or_a_garden_in_its_own_picker() {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            sell_date: None,
             trip_id: Some(first_trip),
             date: "10-10-2026".into(),
             supplier: None,
@@ -340,6 +342,7 @@ fn the_partners_statement_lines_of_a_garden_and_a_trip_carry_the_code() {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            sell_date: None,
             trip_id: Some(t.id),
             date: "10-10-2026".into(),
             supplier: None,

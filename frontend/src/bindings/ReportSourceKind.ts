@@ -4,4 +4,12 @@
  * What a row opens (PRD FR-19.4).
  */
 export type ReportSourceKind =
-  'bikri' | 'voucher' | 'account' | 'month_close' | 'purchase' | 'venture' | 'fruit' | 'entry';
+  | 'bikri'
+  | 'voucher'
+  | 'account'
+  | 'month_close'
+  | 'purchase'
+  | 'arrival'
+  | 'venture'
+  | 'fruit'
+  | 'entry';

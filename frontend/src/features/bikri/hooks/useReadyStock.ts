@@ -1,35 +1,51 @@
-// The stock that is ready for a new بکری (PRD FR-12.39): the one place that knows which backend
-// command answers. Today it is the purchases list, asked for the purchases bought on or before the
-// day of the بکری that still have goods left; a purchase's date to sell starts as its day. When the
-// backend's list of ready stock for both kinds is there (plan 33 v1.1), only this file changes.
+// The stock that is ready for a new بکری (PRD FR-12.39, FR-12.40): the one place that knows which
+// backend command answers. `bikri_ready_goods` lists, for the day of the بکری, every trip purchase
+// and every garden goods arrived entry with goods left whose date to sell is on or before that day,
+// oldest first. The answer is asked again after anything that changes stock (a save, an arrival, a
+// write-off): every such screen reads again the queries that start with `bikri`.
 
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { usePurchasesReadyBy } from '../../purchases';
+import { isoToDisplayDate } from '../../../shared/format';
+import { bikriReadyGoods } from '../api';
 import type { ReadyStock } from '../ready-stock';
+
+/** The query key of the list for a day. The day is `YYYY-MM-DD`. */
+export const readyGoodsKey = (iso: string | null) => ['bikri', 'ready-goods', iso] as const;
 
 /** The ready stock of a day, `YYYY-MM-DD`, or undefined while it is not known. Null day: nothing is asked. */
 export function useReadyStock(iso: string | null): ReadyStock[] | undefined {
-  const purchases = usePurchasesReadyBy(iso);
-  const rows = purchases.data?.rows;
+  const answer = useQuery({
+    queryKey: readyGoodsKey(iso),
+    queryFn: () => bikriReadyGoods(isoToDisplayDate(iso ?? '')),
+    enabled: iso !== null,
+    // The goods left change with every sale: never keep an old answer for a new sale.
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const rows = answer.data?.rows;
   return useMemo(
     () =>
-      rows?.flatMap((purchase) =>
-        // The backend lists saved purchases with goods left. The screen still checks it, so a wrong
-        // answer never makes a lot.
-        purchase.status === 'saved' && purchase.qty_left > 0
-          ? [
-              {
-                kind: 'trip' as const,
-                id: purchase.id,
-                number: purchase.number,
-                sellDate: purchase.entry_date,
-                item: purchase.item,
-                packing: purchase.packing,
-                qtyLeft: purchase.qty_left,
-              },
-            ]
-          : [],
-      ),
+      rows?.flatMap((row): ReadyStock[] => {
+        // The backend lists goods left. The screen still checks it, so a wrong answer never makes
+        // a lot: a trip row has its trip, a garden row its garden.
+        if (row.qty_left <= 0) return [];
+        const base = {
+          id: row.id,
+          number: row.number,
+          sellDate: row.sell_date,
+          item: row.item,
+          packing: row.packing,
+          qtyLeft: row.qty_left,
+        };
+        if (row.kind === 'trip' && row.trip !== null) {
+          return [{ ...base, kind: 'trip', garden: null }];
+        }
+        if (row.kind === 'garden' && row.garden !== null) {
+          return [{ ...base, kind: 'garden', garden: row.garden }];
+        }
+        return [];
+      }),
     [rows],
   );
 }

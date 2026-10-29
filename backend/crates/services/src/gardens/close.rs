@@ -92,6 +92,14 @@ fn plan(
     if !garden.is_open() {
         errors.push(FieldError::new(ErrorCode::ErrGardenClosed, "id"));
     }
+    // A garden is closed only after its arrivals are sold or written off (PRD FR-12.40).
+    let stock_left = mandi_db::arrivals::left_of_garden(conn, garden.rec.id)?;
+    if stock_left > 0 {
+        errors.push(
+            FieldError::new(ErrorCode::ErrGardenHasStock, "id")
+                .with("qty_left", ErrorValue::Number(stock_left)),
+        );
+    }
     let date = errors.take(validate::posting_date(
         "date",
         &input.date,

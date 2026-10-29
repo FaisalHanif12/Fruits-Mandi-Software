@@ -18,6 +18,7 @@ import type { UiError } from '../../src/bindings/UiError';
 import { errorMessageId, messageVars } from '../../src/shared/api';
 import { LANGUAGES } from '../../src/i18n';
 import { message } from '../helpers/render';
+import * as arrivals from '../helpers/arrivals-real';
 import * as real from '../helpers/trips-real';
 import {
   BOX,
@@ -321,8 +322,23 @@ describe('the screens build the request the backend tested', () => {
     draft.purchase.rate = request.rate;
     draft.purchase.freight = request.freight ?? '';
     const sent = buildEntryPurchase(draft, request.trip_id ?? 0, partners, false);
-    expect(withoutParts(sent)).toEqual(withoutParts(request));
+    // The backend's file was written before the date to sell: a missing one is read as empty, the
+    // day of the purchase (PRD FR-12.39), and the screen sends that as null.
+    expect(withoutParts(sent)).toEqual({ ...withoutParts(request), sell_date: null });
     expect(sent.parts).toHaveLength(3);
+  });
+
+  it('a purchase with a date to sell: the day typed goes as typed', () => {
+    const request = arrivals.PURCHASE_SAVE_WITH_SELL_DATE_REQUEST;
+    const draft = newEntryDraft('purchase', '');
+    draft.date = request.date;
+    draft.purchase.item = { id: request.item_id ?? 0, code: '', name_ur: '', name_en: '' };
+    draft.purchase.packing = { id: request.packing_id ?? 0, code: '', name_ur: '', name_en: '' };
+    draft.purchase.qty = request.qty;
+    draft.purchase.rate = request.rate;
+    draft.purchase.sellDate = request.sell_date ?? '';
+    const sent = buildEntryPurchase(draft, request.trip_id ?? 0, partners, false);
+    expect(withoutParts(sent)).toEqual(withoutParts(request));
   });
 
   it('a trip cost: the amount stays as typed, commas and all', () => {

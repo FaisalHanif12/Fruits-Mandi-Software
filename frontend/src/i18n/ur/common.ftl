@@ -88,3 +88,7 @@ common-list-count = { $total } میں سے { $shown } نظر آ رہے ہیں
 
 # review: pending
 common-list-more = مزید دکھائیں
+
+# The save button of a small box.
+# review: pending
+common-save = محفوظ کریں

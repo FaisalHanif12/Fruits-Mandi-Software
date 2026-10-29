@@ -376,7 +376,7 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(2);
     }, SLOW_MS);
-    await choose(user, 'report-filter-garden', names('شاہ پور باغ', 'Shahpur Garden'));
+    await choose(user, 'report-filter-garden', `0080 ${names('شاہ پور باغ', 'Shahpur Garden')}`);
     await waitFor(() => {
       expect(lastRun()?.filters.garden_id).toBe(1);
     }, SLOW_MS);

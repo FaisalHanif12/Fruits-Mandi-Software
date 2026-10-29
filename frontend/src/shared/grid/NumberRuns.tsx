@@ -1,5 +1,5 @@
 // Every number inside a line of words in a text cell: a date ("10-10-2026"), a quantity and a rate
-// ("(کیلا 30 . 580)"), a code ("0021"), the number of a trip ("سفر-1"). In a right-to-left cell the
+// ("(کیلا 30 . 580)"), a code ("0021"), the code of a trip with its day ("0070 10-10-2026"). In a right-to-left cell the
 // digits that follow Arabic letters are read as Arabic-Indic numbers, the dashes between them split a
 // date into three pieces that come out back to front ("2026-10-10"), and an Urdu font may draw the
 // digits in its own Eastern shapes. Each number is put in its own left-to-right isolate in Inter with

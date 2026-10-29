@@ -551,3 +551,25 @@ err-close-before-last-entry = { -bagh } اپنے آخری اندراج یا لا
 # Plan 17c. The entry of the garden was cancelled already.
 # review: pending
 err-garden-entry-cancelled = { -bagh } کا یہ اندراج پہلے ہی منسوخ ہو چکا ہے۔
+
+## Plan 33 version 1.1: the date to sell, the goods that arrived at a garden.
+
+# PRD FR-12.39. $entry_date: the day of the purchase or arrival.
+# review: pending
+err-sell-date-before-entry = { -sell-date } اس دن سے پہلے نہیں ہو سکتی جب مال آیا ({ $entry_date })۔ وہی دن یا اس کے بعد کا دن چنیں۔
+
+# PRD FR-12.40. The goods arrived entry was cancelled already.
+# review: pending
+err-arrival-cancelled = یہ { -maal-aaya } کا اندراج پہلے ہی منسوخ ہو چکا ہے۔
+
+# PRD FR-12.40. $qty_sold, $qty_written_off: what has been sold and written off from it.
+# review: pending
+err-arrival-has-sales = { -maal-aaya } کا یہ اندراج منسوخ نہیں ہو سکتا: { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } ضائع ہو چکے ہیں۔
+
+# PRD FR-12.40. $qty_left: how many { -nag } of the arrival are not sold on the lines.
+# review: pending
+err-arrival-lot-not-fully-sold = { -bagh } کے مال کا یہ { -lot } اسی { -bikri } میں پورا بکنا چاہیے۔ لائنوں میں ابھی { $qty_left } { -nag } نہیں بکے۔ انہیں لائنوں میں بیچیں، یا کم { -nag } لیں۔ جو نہ لیں وہ { -maal-aaya } میں رہتا ہے۔
+
+# PRD FR-12.40. $qty_left: how many { -nag } of garden goods are still left.
+# review: pending
+err-garden-has-stock = اس { -bagh } میں ابھی بغیر بکا مال ہے ({ $qty_left } { -nag })۔ بند کرنے سے پہلے اسے بیچیں یا ضائع لکھیں۔

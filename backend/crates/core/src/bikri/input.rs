@@ -311,6 +311,19 @@ pub struct LotInput {
     #[serde(default)]
     #[ts(type = "number | null", optional)]
     pub purchase_id: Option<i64>,
+    /// The garden arrival a garden lot takes its goods from (PRD FR-12.40, plan 33 v1.1). Optional
+    /// and allowed only when the seller is a garden's account (`ERR_FORMAT_INVALID` on
+    /// `lots[i].arrival_id` for any other seller). The arrival must belong to that garden, which
+    /// must be open, and must not be cancelled (`ERR_ARRIVAL_CANCELLED`). Item and packing come
+    /// from the arrival: an empty one is filled, a different one is refused. The lot's
+    /// `qty_received` is the نگ taken from the arrival; more than it has left is
+    /// `ERR_QTY_EXCEEDS_LOT`, and the lines must sell exactly that many
+    /// (`ERR_ARRIVAL_LOT_NOT_FULLY_SOLD`): what is not sold stays in the arrival. Such a lot has no
+    /// later sale. Its money is the garden lot of PRD FR-12.36, unchanged. A garden lot with no
+    /// `arrival_id` works as before.
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub arrival_id: Option<i64>,
     /// The one-time seller, for the پختہ کھاتہ (بیوپاری) account.
     #[serde(default)]
     pub pukhta: Option<PukhtaInput>,

@@ -9,6 +9,7 @@ import { confirmedSpelling } from '../../shared/urdu/spelling';
 import type { ShareInput } from '../partners';
 import { textOrNull } from '../purchases';
 import type {
+  ArrivalInput,
   EntryDraft,
   EntryPartInput,
   EntryType,
@@ -114,6 +115,10 @@ export function newEntryDraft(type: EntryType, today: string): EntryDraft {
     reason: '',
     shop: '',
     qty: '',
+    item: null,
+    packing: null,
+    weight: '',
+    sellDate: '',
   };
 }
 
@@ -129,7 +134,7 @@ export function changeType(draft: EntryDraft, type: EntryType): EntryDraft {
     date: draft.date,
     amount: draft.amount,
     note: draft.note,
-    sources: type === 'other_sale' ? {} : draft.sources,
+    sources: type === 'other_sale' || type === 'arrival' ? {} : draft.sources,
   };
 }
 
@@ -159,6 +164,15 @@ export function entryIsFilled(draft: EntryDraft): boolean {
         draft.qty.trim() !== '' ||
         draft.note.trim() !== ''
       );
+    case 'arrival':
+      return (
+        draft.item !== null ||
+        draft.packing !== null ||
+        draft.qty.trim() !== '' ||
+        draft.weight.trim() !== '' ||
+        draft.sellDate.trim() !== '' ||
+        draft.note.trim() !== ''
+      );
   }
 }
 
@@ -173,6 +187,23 @@ export function entryParts(
   }));
 }
 
+/**
+ * What the goods arrived form sends (PRD FR-12.40): the text typed and the ids of what was chosen.
+ * An empty day to sell is sent as nothing: the backend reads it as the day of the arrival.
+ */
+export function buildArrival(draft: EntryDraft, gardenId: number): ArrivalInput {
+  return {
+    garden_id: gardenId,
+    date: draft.date.trim(),
+    sell_date: textOrNull(draft.sellDate),
+    item_id: draft.item?.id ?? null,
+    packing_id: draft.packing?.id ?? null,
+    qty: draft.qty.trim(),
+    weight: textOrNull(draft.weight),
+    note: textOrNull(draft.note),
+  };
+}
+
 /** What the entry form sends, whichever type is open. The amount may be a simple sum. */
 export function buildEntry(
   draft: EntryDraft,
@@ -180,6 +211,11 @@ export function buildEntry(
   partners: readonly VenturePartnerRow[],
   confirmCash: boolean,
 ): GardenEntryInput {
+  if (draft.type === 'arrival') {
+    // Goods arrived are saved by their own command and are never a money entry: the editor never
+    // builds one from this type.
+    throw new Error('goods arrived are not a money entry');
+  }
   if (draft.type === 'other_sale') {
     return {
       type: 'other_sale',
@@ -207,4 +243,5 @@ export const ENTRY_FIELD_PATHS: Record<EntryType, readonly string[]> = {
   installment: ['date', 'amount', 'reason'],
   cost: ['date', 'amount', 'reason'],
   other_sale: ['date', 'shop', 'qty', 'amount', 'note'],
+  arrival: ['date', 'sell_date', 'item_id', 'packing_id', 'qty', 'weight', 'note', 'garden_id'],
 };

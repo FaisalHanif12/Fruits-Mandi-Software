@@ -296,6 +296,7 @@ fn prepare_lot(
         has_errors: !ok,
         seller_account_id: input.seller_account_id,
         purchase_id: input.purchase_id,
+        arrival_id: input.arrival_id,
         pukhta: pukhta_of(input.pukhta.as_ref()),
         item_id: input.item_id,
         packing_id: input.packing_id,

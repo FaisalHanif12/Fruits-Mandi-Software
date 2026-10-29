@@ -44,6 +44,10 @@ purchases-rate-hint = ہر { -nag } کا، یا وزن سے بکنے والی { 
 # review: pending
 purchases-field-other-cost = دیگر خرچ
 
+# PRD FR-12.39. The box shows the day of the purchase until it is changed.
+# review: pending
+purchases-sell-date-hint = شروع میں خریداری کا دن ہوتا ہے۔ اس دن سے مال ہر نئی { -bikri } میں آتا رہتا ہے جب تک بک نہ جائے۔
+
 # review: pending
 purchases-field-note = نوٹ
 
@@ -91,6 +95,8 @@ purchases-col-cost-left = باقی کی لاگت
 
 # review: pending
 purchases-col-date = تاریخ
+# review: pending
+purchases-col-sell-date = { -sell-date }
 
 # review: pending
 purchases-col-qty = خریدے
@@ -254,3 +260,18 @@ purchases-cancel-blocked = یہ خریداری منسوخ نہیں ہو سکتی
 # A purchase that carries a part of a trip cost cannot be cancelled either (PRD FR-12.31).
 # review: pending
 purchases-cancel-blocked-cost = اس خریداری میں سفر کے خرچ کا حصہ شامل ہے، اس لیے یہ منسوخ نہیں ہو سکتی۔ پہلے وہ خرچ منسوخ کریں۔
+
+## Changing the date to sell (PRD FR-12.39).
+
+# review: pending
+purchases-change-sell-date = { -sell-date } بدلیں
+
+# review: pending
+purchases-sell-date-title = { -sell-date } بدلیں
+
+# $number: the purchase.
+# review: pending
+purchases-sell-date-text = اس دن سے { $number } کا مال ہر نئی { -bikri } میں آئے گا جب تک بک نہ جائے۔ یہ دن خریداری کے دن سے پہلے نہیں ہو سکتا۔
+
+# review: pending
+purchases-sell-date-done = { -sell-date } بدل گئی۔

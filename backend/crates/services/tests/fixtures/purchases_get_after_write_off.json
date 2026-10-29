@@ -10,6 +10,7 @@
     "name_en": "0070 10-10-2026"
   },
   "entry_date": "2026-10-10",
+  "sell_date": "2026-10-10",
   "status": "saved",
   "cancel_reason": null,
   "supplier": "Orange Traders",
@@ -207,6 +208,7 @@
   },
   "days_waiting": 0,
   "can_cancel": false,
+  "can_change_sell_date": false,
   "lots": [
     {
       "bikri_id": 1,

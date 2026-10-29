@@ -290,6 +290,10 @@ report-doc-number = { $kind } { $number }
 # review: pending
 report-doc-bikri-first = { -bikri }
 
+# A garden's goods arrived: a row of the goods left report (plan 33 version 1.1, PRD FR-12.40).
+# review: pending
+report-doc-garden-arrival = { -maal-aaya }
+
 # review: pending
 report-doc-bikri-later = Later { -bikri }
 

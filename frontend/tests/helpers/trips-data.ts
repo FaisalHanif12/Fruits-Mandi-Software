@@ -66,7 +66,14 @@ export const PARTNER_C = person(3, 'ج', 'Partner C');
 export const ORANGE: RecordRef = { id: 61, code: '0061', name_ur: 'مالٹا', name_en: 'Orange' };
 export const BOX: RecordRef = { id: 71, code: '0071', name_ur: 'پیٹی', name_en: 'Box' };
 
-export const TRIP_REF = { id: TRIP_ID, number: 1, name_ur: 'سفر-1', name_en: 'Trip 1' };
+/** The first trip: its code is of type 007 (plan 34); its names are the code and the day. */
+export const TRIP_REF = {
+  id: TRIP_ID,
+  number: 1,
+  code: '0070',
+  name_ur: '0070 10-10-2026',
+  name_en: '0070 10-10-2026',
+};
 
 /** A working the way the backend names it: a message and its values. */
 export function working(id: string, args: readonly WorkingArg[]): Working {
@@ -112,14 +119,19 @@ function resultWorking(
   ]);
 }
 
-/** A new trip with nothing bought yet. */
+/** The code of the n-th trip: the type number 007 and n - 1, so the first is 0070 (plan 34). */
+export const tripCode = (number: number) => `007${String(number - 1)}`;
+
+/** A new trip with nothing bought yet. Its code and its names follow its number, unless given. */
 export function tripRow(over: Partial<TripRow> = {}): TripRow {
+  const number = over.number ?? 1;
   return {
     id: TRIP_ID,
     version: 1,
-    number: 1,
-    name_ur: 'سفر-1',
-    name_en: 'Trip 1',
+    number,
+    code: tripCode(number),
+    name_ur: `${tripCode(number)} 10-10-2026`,
+    name_en: `${tripCode(number)} 10-10-2026`,
     entry_date: '2026-10-10',
     market: 'Lahore Mandi',
     sent_person: 'Aslam',
@@ -220,6 +232,7 @@ export function e34Purchase(over: Partial<PurchaseRow> = {}): PurchaseRow {
     number: 1,
     trip: TRIP_REF,
     entry_date: '2026-10-10',
+    sell_date: '2026-10-10',
     status: 'saved',
     cancel_reason: null,
     supplier: 'Haji Nazir',
@@ -252,6 +265,8 @@ export function e34Purchase(over: Partial<PurchaseRow> = {}): PurchaseRow {
     result_working: resultWorking('working-purchase-result', 8_460, 0, 7_800, 0, 660),
     days_waiting: 2,
     can_cancel: false,
+    // Goods are left, so its date to sell can still be changed (plan 33).
+    can_change_sell_date: true,
     lots: [],
     write_offs: [],
     ...over,
@@ -382,6 +397,7 @@ export function e34OwnStockRow(): OwnStockRow {
     purchase_id: 7,
     number: 1,
     received_date: '2026-10-10',
+    sell_date: '2026-10-10',
     trip: TRIP_REF,
     supplier: 'Haji Nazir',
     item: ORANGE,

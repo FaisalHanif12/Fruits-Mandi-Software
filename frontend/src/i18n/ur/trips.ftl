@@ -65,10 +65,7 @@ trips-list-count = { $total } میں سے { $shown } نظر آ رہے ہیں
 # review: pending
 trips-list-more = مزید دکھائیں
 
-## Numbers: each series has its own letters.
-
-# review: pending
-trips-number = سفر-{ $number }
+## Numbers: a trip has a code of type 007 (plan 34); its entries have series with their own letters.
 
 # A trip cost.
 # review: pending
@@ -81,7 +78,7 @@ trips-sale-number = دف-{ $number }
 ## The columns of the lists.
 
 # review: pending
-trips-col-number = نمبر
+trips-col-number = کوڈ
 
 # review: pending
 trips-col-trip = سفر
@@ -146,7 +143,7 @@ trips-new-details-title = تفصیل
 
 # $number: the number of the new trip.
 # review: pending
-trips-created = { $number } بن گیا
+trips-created = { $code } بن گیا
 
 # review: pending
 trips-field-date = تاریخ
@@ -167,7 +164,7 @@ trips-field-note = نوٹ
 
 # $number: the number of the trip.
 # review: pending
-trips-detail-title = { $number }
+trips-detail-title = { $code }
 
 # review: pending
 trips-detail-failed = سفر نہیں کھل سکا

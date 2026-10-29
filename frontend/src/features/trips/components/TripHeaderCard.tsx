@@ -10,7 +10,6 @@ import { CircleCheck, CircleDot, TriangleAlert } from 'lucide-react';
 import { formatBps, isNegativePaisa, isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { CalcInfo, Card, Code, Fact, Num } from '../../../shared/ui';
-import { tripNumberText } from '../list-columns';
 import type { TripRow } from '../types';
 
 interface TripCardProps {
@@ -48,8 +47,6 @@ function LossNote({ trip }: TripCardProps) {
 }
 
 export function TripHeaderCard({ trip }: TripCardProps) {
-  const { l10n } = useLocalization();
-  const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   const open = trip.status === 'open';
   const StatusIcon = open ? CircleDot : CircleCheck;
   return (
@@ -57,7 +54,7 @@ export function TripHeaderCard({ trip }: TripCardProps) {
       compact
       title={
         <span className="inline-flex flex-wrap items-center gap-2">
-          <Localized id="trips-detail-title" vars={{ number: tripNumberText(trip.number, say) }}>
+          <Localized id="trips-detail-title" vars={{ code: trip.code }}>
             <span />
           </Localized>
           <span

@@ -260,7 +260,9 @@ pub(crate) fn title_id(code: &str) -> String {
     format!("report-{}-title", code.to_ascii_lowercase())
 }
 
-/// The posting types the journal can hold (Architecture 15.7, after migration 0006).
+/// The posting types the journal can hold (Architecture 15.7, after migration 0006), and the
+/// document kinds that have no posting but still print as a document: `garden_arrival` (مال آیا,
+/// PRD FR-12.40), which posts nothing.
 const POSTING_TYPES: &[&str] = &[
     "bikri_first",
     "bikri_later",
@@ -282,6 +284,7 @@ const POSTING_TYPES: &[&str] = &[
     "garden_payment",
     "venture_receipt",
     "garden_close",
+    "garden_arrival",
     "fruit_taken",
     "general",
     "opening",

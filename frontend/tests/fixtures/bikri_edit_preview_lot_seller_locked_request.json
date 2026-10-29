@@ -16,6 +16,7 @@
     "lots": [
       {
         "adjust_advance": true,
+        "arrival_id": null,
         "cash_paid": "5000",
         "freight": "3000",
         "freight_paid_by": "firm",

@@ -766,6 +766,8 @@ pub enum SourceKind {
     MonthClose,
     /// A trip purchase.
     Purchase,
+    /// A garden arrival (مال آیا, PRD FR-12.40): the id is the arrival's.
+    Arrival,
     /// A trip or a garden.
     Venture,
     /// Fruit taken.

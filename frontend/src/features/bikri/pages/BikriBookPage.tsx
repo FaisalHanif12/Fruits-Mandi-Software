@@ -79,6 +79,7 @@ import { changedCellWords } from '../edit-view';
 import { editSource } from '../preview-source';
 import { HeaderCard } from '../components/HeaderCard';
 import { LotMore } from '../components/LotMore';
+import { ArrivalLotPanel } from '../components/ArrivalLotPanel';
 import { OwnLotPanel } from '../components/OwnLotPanel';
 import { LotsSection } from '../components/LotsSection';
 import { ProblemList } from '../components/ProblemList';
@@ -92,7 +93,7 @@ import {
   useBikriDraft,
   type BikriDraftStores,
 } from '../draft-store';
-import { buildDraft, isFilledByUser, isOwnLot, isPukhtaSeller } from '../draft';
+import { buildDraft, isArrivalLot, isFilledByUser, isOwnLot, isPukhtaSeller } from '../draft';
 import { buildGridViews } from '../grid-views';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
@@ -638,6 +639,14 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             />
             {lotRow === undefined || !isOwnLot(lotRow) ? null : (
               <OwnLotPanel row={lotRow} lotIndex={lotIndex} error={formError} lot={lotPreview} />
+            )}
+            {lotRow === undefined || !isArrivalLot(lotRow) ? null : (
+              <ArrivalLotPanel
+                row={lotRow}
+                lotIndex={lotIndex}
+                error={formError}
+                lot={lotPreview}
+              />
             )}
             {lotRow === undefined ? null : (
               <LotMore

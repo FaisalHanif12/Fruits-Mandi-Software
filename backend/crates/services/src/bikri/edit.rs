@@ -236,6 +236,13 @@ fn check_first(
                         "lot_purchase_locked",
                     ));
                 }
+                // The arrival of a garden lot never changes either (PRD FR-12.40).
+                if lot.arrival_id != found.arrival.as_ref().map(|a| a.id) {
+                    errors.push(not_allowed(
+                        &format!("lots[{index}].arrival_id"),
+                        "lot_arrival_locked",
+                    ));
+                }
                 if others && lot.item_id != Some(found.item.id) {
                     errors.push(not_allowed(
                         &format!("lots[{index}].item_id"),
@@ -551,6 +558,8 @@ fn write_edit(
     edit_repo::reverse_credit_parts(tx, old_entry_id, reversal.entry_id, user, &now)?;
     // The own goods the old lines took go back to their purchases, exactly (PRD FR-12.20).
     crate::purchases::give_back_entry(tx, old_entry_id, user, &now)?;
+    // The garden goods the old lines took go back to their arrivals, exactly (PRD FR-12.40).
+    crate::gardens::arrivals::give_back_entry(tx, old_entry_id, user, &now)?;
 
     // 2. The new posting, with the place of the old one.
     let posted = ledger::post_ordered(

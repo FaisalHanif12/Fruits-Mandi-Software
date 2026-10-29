@@ -44,6 +44,7 @@ const GARDEN_CARD: PartnerVentureCard = {
   venture_id: 1,
   kind: 'garden',
   number: 1,
+  code: '0080',
   name_ur: 'شاہ پور باغ',
   name_en: 'Shahpur Garden',
   share_bps: 6000,
@@ -57,8 +58,9 @@ const TRIP_CARD: PartnerVentureCard = {
   venture_id: 3,
   kind: 'trip',
   number: 3,
-  name_ur: 'سفر-3',
-  name_en: 'Trip 3',
+  code: '0072',
+  name_ur: '0072 12-10-2026',
+  name_en: '0072 12-10-2026',
   share_bps: 5000,
   paid_shop_paisa: money(0),
   paid_pocket_paisa: money(50_000),
@@ -122,7 +124,7 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
     });
     const text = visible(table.textContent);
     expect(text).toContain(language === 'ur' ? 'شاہ پور باغ' : 'Shahpur Garden');
-    expect(text).toContain(message(language, 'gardens-number', { number: 1 }));
+    expect(text).toContain('0080');
     for (const amount of ['60%', '33,000', '11,400', '50%', '50,000', '52,640', '5,280']) {
       expect(text).toContain(amount);
     }
@@ -142,7 +144,7 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
     const card = await cardOf(nameOf(language, 'الف', 'Partner A'));
     await user.click(
       await within(card).findByRole('button', {
-        name: (name) => visible(name).includes(message(language, 'gardens-number', { number: 1 })),
+        name: (name) => visible(name).includes('0080'),
       }),
     );
     await waitFor(() => {
@@ -155,7 +157,7 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
     const card = await cardOf(nameOf(language, 'الف', 'Partner A'));
     await user.click(
       await within(card).findByRole('button', {
-        name: (name) => visible(name).includes(nameOf(language, 'سفر-3', 'Trip 3')),
+        name: (name) => visible(name).includes('0072 12-10-2026'),
       }),
     );
     await waitFor(() => {

@@ -2,6 +2,7 @@
 //! write-off of spoiled goods. Every command needs the signed-in Owner. The preview, the list and
 //! the get only read (Code Standards B29); the others are one transaction each (Code Standards B3).
 
+use mandi_services::core::arrivals::{SellDateInput, SellDateSet};
 use mandi_services::core::purchases::{
     PurchaseCancelInput, PurchaseCancelled, PurchaseGetInput, PurchaseInput, PurchasePreview,
     PurchaseRow, PurchaseSaved, PurchaseWriteOffDone, PurchaseWriteOffInput,
@@ -111,6 +112,21 @@ pub async fn purchases_write_off_undo<R: tauri::Runtime>(
     run(app, "purchases_write_off_undo", move |ctx| {
         let actor = auth::require(ctx)?;
         purchases::write_off_undo(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Changes the date to sell of a purchase with goods left (PRD FR-12.39). No money effect. Errors:
+/// `ERR_NOT_FOUND`, `ERR_PURCHASE_CANCELLED`, `ERR_NOTHING_TO_SELL` on `id`; `ERR_VERSION_CHANGED` on
+/// `version`; `ERR_SELL_DATE_BEFORE_ENTRY` (value `entry_date`) and the date codes on `sell_date`.
+#[tauri::command]
+pub async fn purchases_set_sell_date<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SellDateInput,
+) -> Result<SellDateSet, UiError> {
+    run(app, "purchases_set_sell_date", move |ctx| {
+        let actor = auth::require(ctx)?;
+        purchases::set_sell_date(ctx, &actor, &input)
     })
     .await
 }

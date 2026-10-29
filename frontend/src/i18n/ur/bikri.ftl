@@ -921,3 +921,45 @@ bikri-ready-lots-note = فروخت کے لیے تیار مال سے <num>{ $coun
 
 # review: pending
 bikri-ready-lots-note-hint = خریدار اور ریٹ لکھیں۔ کسی { -lot } کو چھوڑنا ہو تو اسے <key>{ $key }</key> سے ہٹا دیں۔
+
+## A lot of a garden's goods arrived (plan 33 version 1.1, PRD FR-12.40).
+
+# review: pending
+bikri-arrival-title = { -bagh } کا مال
+
+# review: pending
+bikri-arrival-hint = { -qism-maal }، { -packing } اور تعداد { -bagh } کے { -maal-aaya } کے اندراج سے آتے ہیں۔ لائنوں میں پوری تعداد بکنی چاہیے۔ نقد اور پیشگی کا نشان اس مال پر لاگو نہیں۔
+
+# How many the entry can still give this lot, after the lots above it in this form.
+# review: pending
+bikri-arrival-left = اندراج میں باقی
+
+# review: pending
+bikri-saved-arrival-open = { $garden } میں اندراج { $number } کھولیں
+
+## Garden goods in the list of { -baqi-maal } (PRD FR-12.40).
+
+# review: pending
+bikri-stock-garden-title = { -bagh } کا مال
+
+# review: pending
+bikri-stock-garden-help = وہ مال جو { -bagh } سے آیا اور ابھی بکا نہیں۔ یہ { -bagh } کا ہے۔ ہر نئی { -bikri } میں بکنے کے لیے تیار ہر مال کا ایک { -lot } پہلے سے موجود ہوتا ہے۔
+
+# review: pending
+bikri-stock-garden-label = باقی { -bagh } کے مال کی فہرست
+
+# $number: the number of the entry; $item: its item.
+# review: pending
+bikri-stock-garden-card-title = { -maal-aaya }: { $number }، { $item }
+
+# review: pending
+bikri-stock-garden-open = { -bagh } کھولیں
+
+# review: pending
+bikri-stock-garden-col-garden = { -bagh }
+
+# review: pending
+bikri-stock-garden-col-number = نمبر
+
+# review: pending
+bikri-stock-garden-col-arrived = آیا

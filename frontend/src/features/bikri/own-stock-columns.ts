@@ -8,10 +8,10 @@
 // Nothing scrolls sideways (NFR-USE-15). Every figure is the backend's; nothing is worked out here.
 
 import type { OwnStockRow } from '../../bindings/OwnStockRow';
+import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 import { purchaseNumberText, supplierText } from '../purchases';
-import { tripNumberText } from '../trips';
 
 export const OWN_STOCK_COLUMNS: readonly ListColumn<OwnStockRow>[] = [
   {
@@ -24,7 +24,7 @@ export const OWN_STOCK_COLUMNS: readonly ListColumn<OwnStockRow>[] = [
     field: 'trip',
     type: 'code',
     headerId: 'trips-col-trip',
-    value: (row, { text }) => tripNumberText(row.trip.number, text),
+    value: (row) => row.trip.code,
   },
   {
     field: 'item',
@@ -57,6 +57,13 @@ export const OWN_STOCK_COLUMNS: readonly ListColumn<OwnStockRow>[] = [
     headerId: 'purchases-col-cost-left',
     from: 'normal',
     value: (row, { money }) => money(row.cost_left_paisa),
+  },
+  {
+    field: 'sell_date',
+    type: 'date',
+    headerId: 'purchases-col-sell-date',
+    from: 'wide',
+    value: (row) => isoToDisplayDate(row.sell_date),
   },
   {
     field: 'days',

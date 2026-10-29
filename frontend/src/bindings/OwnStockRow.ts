@@ -24,6 +24,10 @@ export type OwnStockRow = {
    */
   received_date: string;
   /**
+   * The day to sell, `YYYY-MM-DD` (PRD FR-12.39). A new بکری from this day opens with a ready lot.
+   */
+  sell_date: string;
+  /**
    * Its trip.
    */
   trip: TripRef;
@@ -64,7 +68,8 @@ export type OwnStockRow = {
    */
   cost_left_paisa: Paisa;
   /**
-   * Whole days from `received_date` to today.
+   * Whole days from the day to sell (`sell_date`) to today. Goods meant for a later day are not
+   * waiting before it.
    */
   days_waiting: number;
   /**

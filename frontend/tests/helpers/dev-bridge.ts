@@ -36,6 +36,7 @@ import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
 import { EMPTY_PAIRS, bikriListOf, pukhtaRegisterOf } from './paged';
 import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
+import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
 import type { PurchaseInput } from '../../src/bindings/PurchaseInput';
 import type { PurchasesListInput } from '../../src/bindings/PurchasesListInput';
 import type { TripCostInput } from '../../src/bindings/TripCostInput';
@@ -48,6 +49,7 @@ import type { SaleInput } from '../../src/bindings/SaleInput';
 import type { PaymentInput } from '../../src/bindings/PaymentInput';
 import type { ReceiptInput } from '../../src/bindings/ReceiptInput';
 import type { VoucherEntry } from '../../src/features/vouchers/types';
+import * as arrivalsReal from './arrivals-real';
 import { createBikriDraft, type BikriDraftStores } from '../../src/features/bikri/draft-store';
 import { serialiseDraft } from '../../src/features/bikri/draft-snapshot';
 
@@ -290,20 +292,37 @@ const tripBooks = createTripBooks({
 });
 const tripsDefaults = tripBooks.defaults();
 
-// `#/dev/bikri?tripday`: two purchases of today with all their goods left, so a new بکری opens with
-// two lots of trip goods in it (PRD FR-12.39, plan 33).
-const TRIP_DAY_PURCHASES = [
-  { ...tripsReal.PURCHASE_GET_AFTER_SALES, qty: 20, qty_sold: 0, qty_left: 20 },
-  {
-    ...tripsReal.PURCHASE_GET_AFTER_SALES,
-    id: 2,
-    number: 2,
-    item: { id: 6, code: '0045', name_ur: 'کیلا', name_en: 'Banana' },
-    qty: 30,
-    qty_sold: 0,
-    qty_left: 30,
-  },
-];
+// `#/dev/bikri?tripday`: stock that is ready to sell today, so a new بکری opens with a lot for each
+// (PRD FR-12.39, FR-12.40, plan 33): two trip purchases, one of them left over from yesterday, and a
+// garden's goods arrived. The rows are the backend's real ones (bikri_ready_goods) with the days set.
+const READY_TRIP = arrivalsReal.READY_GOODS.rows.find((row) => row.kind === 'trip');
+const READY_GARDEN = arrivalsReal.READY_GOODS.rows.find((row) => row.kind === 'garden');
+const READY_TODAY: ReadyGoods = {
+  rows:
+    READY_TRIP === undefined || READY_GARDEN === undefined
+      ? []
+      : [
+          // A purchase of yesterday that was not sold: it comes again today, first.
+          {
+            ...structuredClone(READY_TRIP),
+            id: 2,
+            number: 2,
+            sell_date: '2026-10-09',
+            entry_date: '2026-10-09',
+            item: { id: 6, code: '0045', name_ur: 'کیلا', name_en: 'Banana' },
+            qty: 30,
+            qty_left: 30,
+          },
+          { ...structuredClone(READY_TRIP), sell_date: '2026-10-10', entry_date: '2026-10-10' },
+          {
+            ...structuredClone(READY_GARDEN),
+            sell_date: '2026-10-10',
+            entry_date: '2026-10-09',
+            qty: 100,
+            qty_left: 100,
+          },
+        ],
+};
 
 /** The share text of one row sent to partners_check_shares, or an empty text. */
 function shareTextOf(row: unknown): string {
@@ -342,11 +361,16 @@ const handlers: Record<string, Handler> = {
       ? tripsReal.PURCHASE_GET_AFTER_SALES
       : tripBooks.purchaseGet(asNumber(input['id'])),
   purchases_list: (input) =>
-    devFlag('tripday')
-      ? { ...tripsReal.PURCHASES_LIST_ALL, rows: TRIP_DAY_PURCHASES }
-      : devFlag('own')
-        ? { ...tripsReal.PURCHASES_LIST_ALL, rows: [tripsReal.PURCHASE_GET_AFTER_SALES] }
-        : tripBooks.purchaseList(input as PurchasesListInput),
+    devFlag('own')
+      ? { ...tripsReal.PURCHASES_LIST_ALL, rows: [tripsReal.PURCHASE_GET_AFTER_SALES] }
+      : tripBooks.purchaseList(input as PurchasesListInput),
+  // The stock that is ready to sell on the day of a new بکری (plan 33): `?tripday`, else nothing.
+  bikri_ready_goods: () => (devFlag('tripday') ? READY_TODAY : { rows: [] }),
+  purchases_set_sell_date: (input) => ({
+    id: asNumber(input['id']),
+    version: asNumber(input['version']) + 1,
+    sell_date: '2026-10-13',
+  }),
   purchases_cancel: () => tripBooks.purchaseCancel(),
   purchases_write_off: () => tripBooks.writeOff(),
   purchases_write_off_undo: () => tripBooks.writeOffUndo(),
@@ -408,6 +432,28 @@ const handlers: Record<string, Handler> = {
       : { id: party.id, code: party.code, name_ur: party.ur, name_en: party.en };
   },
   assist_party_card: (input) => {
+    // A garden's account (0080, plan 34): the card of an account that is neither a seller nor a buyer.
+    if (asNumber(input['account_id']) === 31) {
+      return {
+        id: 31,
+        code: '0080',
+        account_type: 'other',
+        name_ur: 'شاہ پور باغ',
+        name_en: 'Shahpur Garden',
+        father_or_firm_ur: '',
+        father_or_firm_en: '',
+        city_ur: '',
+        city_en: '',
+        phone: '',
+        is_active: true,
+        balance: { amount_paisa: 0, side: 'zero' },
+        last_entry_date: '2026-10-09',
+        credit_limit: null,
+        credit_used: null,
+        advance_open: null,
+        warnings: [],
+      };
+    }
     const party = parties().find((candidate) => candidate.id === asNumber(input['account_id']));
     if (party === undefined) return null;
     const buyer = party.type === 'buyer';
@@ -532,23 +578,25 @@ const handlers: Record<string, Handler> = {
   // Plan 16: goods left, later sale, edit, cancel and undo (bikri-plan16-data.ts). `#/dev/bikri?
   // closed` is a closed day (the edit and the cancel are refused); `empty` is nothing left.
   bikri_stock_list: () =>
-    devFlag('own')
-      ? ownReal.STOCK_OWN_ROWS
-      : devFlag('empty')
-        ? stockList([])
-        : stockList([
-            stockRow(),
-            stockRow({
-              lot_id: 41,
-              bikri_id: 43,
-              bikri_number: 3,
-              received_date: '2026-10-08',
-              qty_received: 30,
-              qty_sold: 20,
-              balance: 10,
-              days_waiting: 2,
-            }),
-          ]),
+    devFlag('garden')
+      ? arrivalsReal.STOCK_WITH_GARDEN_ROWS
+      : devFlag('own')
+        ? ownReal.STOCK_OWN_ROWS
+        : devFlag('empty')
+          ? stockList([])
+          : stockList([
+              stockRow(),
+              stockRow({
+                lot_id: 41,
+                bikri_id: 43,
+                bikri_number: 3,
+                received_date: '2026-10-08',
+                qty_received: 30,
+                qty_sold: 20,
+                balance: 10,
+                days_waiting: 2,
+              }),
+            ]),
   bikri_later_sale_preview: (input) =>
     laterSaleAnswer(Array.isArray(input['sales']) ? (input['sales'] as SaleInput[]) : [], 5),
   bikri_later_sale_save: (input) => ({

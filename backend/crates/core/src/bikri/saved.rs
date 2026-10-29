@@ -391,6 +391,25 @@ impl SavedTotals {
     }
 }
 
+/// The garden arrival a garden lot took its goods from (PRD FR-12.40).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct SavedArrivalRef {
+    /// The arrival.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// Its number in its own series.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its garden.
+    #[ts(type = "number")]
+    pub garden_id: i64,
+    /// The garden's number in its own series, from 1.
+    #[ts(type = "number")]
+    pub garden_number: i64,
+    /// The garden's code (plan 34): `0080` for the first garden.
+    pub garden_code: String,
+}
+
 /// The purchase an own lot took its goods from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct SavedPurchaseRef {
@@ -460,6 +479,9 @@ pub struct SavedLot {
     /// The cost, the result and the partners' parts of a trip lot. `null` for any other lot.
     #[serde(default)]
     pub own: Option<SavedOwnLot>,
+    /// The garden arrival a garden lot took its goods from (PRD FR-12.40). `null` for any other lot.
+    #[serde(default)]
+    pub arrival: Option<SavedArrivalRef>,
     /// The one-time seller, for the پختہ کھاتہ account.
     pub pukhta: Option<SavedPukhta>,
     /// The item.

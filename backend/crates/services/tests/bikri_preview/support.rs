@@ -377,6 +377,7 @@ pub fn per_unit(value: &str) -> Option<ChargeInput> {
 /// نقد 5,000. Lines are added with [`with_sales`].
 pub fn lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        arrival_id: None,
         key: key.into(),
         lot_id: None,
         seller_account_id: Some(seller),

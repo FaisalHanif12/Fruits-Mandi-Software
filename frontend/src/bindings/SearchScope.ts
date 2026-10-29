@@ -18,4 +18,6 @@ export type SearchScope =
   | 'buyer'
   | 'any_account'
   | 'trip'
-  | 'garden';
+  | 'garden'
+  | 'trip_all'
+  | 'garden_all';

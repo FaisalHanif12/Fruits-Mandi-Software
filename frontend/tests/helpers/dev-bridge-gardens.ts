@@ -7,6 +7,7 @@
 // 5,000, so a 30,000 installment asks the cash question). Never part of a build: only the
 // development route imports it.
 
+import * as arrivalsReal from './arrivals-real';
 import type { GardenCloseInput } from '../../src/bindings/GardenCloseInput';
 import type { GardenEntryCancelInput } from '../../src/bindings/GardenEntryCancelInput';
 import type { GardenEntryInput } from '../../src/bindings/GardenEntryInput';
@@ -52,6 +53,7 @@ const card = (
   venture_id: 1,
   kind: 'garden',
   number: 1,
+  code: '0080',
   name_ur: 'شاہ پور باغ',
   name_en: 'Shahpur Garden',
   share_bps: share,
@@ -91,6 +93,13 @@ export const gardensHandlers: Record<string, Handler> = {
   gardens_close_preview: (input) => books.closePreview(input as unknown as GardenCloseInput),
   gardens_close: (input) => books.close(input as unknown as GardenCloseInput),
   gardens_reopen: (input) => books.reopen(input as unknown as GardenReopenInput),
+  // Goods arrived of the garden (plan 33 version 1.1): the backend's real list, one entry in stock.
+  gardens_arrivals_list: () => arrivalsReal.ARRIVALS_IN_STOCK,
+  gardens_arrival_save: () => arrivalsReal.ARRIVAL_SAVE,
+  gardens_arrival_cancel: () => arrivalsReal.ARRIVAL_CANCEL,
+  gardens_arrival_set_sell_date: () => arrivalsReal.ARRIVAL_SET_SELL_DATE,
+  gardens_arrival_write_off: () => arrivalsReal.ARRIVAL_WRITE_OFF,
+  gardens_arrival_write_off_undo: () => arrivalsReal.ARRIVAL_WRITE_OFF_UNDO,
   partners_overview: () => overview(),
   partners_list: () => THREE_PARTNERS,
 };

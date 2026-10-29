@@ -67,6 +67,14 @@ export function isGardenLot(row: EntryRow): boolean {
   return isGardenAccount(row.picked?.[LOT.seller]);
 }
 
+/**
+ * Is this a lot that takes its goods from a garden's goods arrived entry (PRD FR-12.40)? Its item
+ * and packing follow the entry, like the goods of a purchase, and it must be sold in full.
+ */
+export function isArrivalLot(row: EntryRow): boolean {
+  return isGardenLot(row) && (row.typed[LOT.arrival] ?? '') !== '';
+}
+
 /** Is this the one-time buyer account (PRD FR-13.1)? */
 export function isPukhtaBuyer(row: EntryRow): boolean {
   return row.picked?.[SALE.buyer]?.code === PUKHTA_BUYER_CODE;
@@ -159,6 +167,10 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
   // typed نقد on it, so a new lot sends none whatever was typed before the seller became a garden.
   const noCash = own || isGardenLot(row);
   const purchaseId = own ? savedId(typed[LOT.purchase]) : null;
+  // A garden's lot may take its goods from a goods arrived entry (PRD FR-12.40). A saved lot says
+  // it has none, as the backend's own draft of it does (an edit sends it back as it came); a new
+  // lot leaves the field out.
+  const arrivalId = isGardenLot(row) ? savedId(typed[LOT.arrival]) : null;
   return {
     key: row.rowId,
     ...(lotId === null ? {} : { lot_id: lotId }),
@@ -168,6 +180,11 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
       ? { purchase_id: purchaseId }
       : lotId !== null
         ? { purchase_id: null }
+        : {}),
+    ...(arrivalId !== null
+      ? { arrival_id: arrivalId }
+      : lotId !== null
+        ? { arrival_id: null }
         : {}),
     seller_account_id: row.picked?.[LOT.seller]?.id ?? null,
     pukhta: isPukhtaSeller(row)

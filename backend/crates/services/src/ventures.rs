@@ -58,6 +58,32 @@ pub(crate) fn required_reason(text: &str) -> Result<String, ServiceError> {
     Ok(reason)
 }
 
+/// The day to sell of a purchase or an arrival (PRD FR-12.39, FR-12.40): empty means the day of the
+/// entry itself; a typed day is never before it (`ERR_SELL_DATE_BEFORE_ENTRY` on `sell_date`, value
+/// `entry_date`). A day in the future is allowed: the goods are meant to wait.
+///
+/// Example: bought on 28-10-2026; "29-10-2026" is the day after; "27-10-2026" is refused.
+pub(crate) fn sell_date_of(
+    errors: &mut FieldErrors,
+    text: Option<&String>,
+    entry: Option<BusinessDate>,
+    today: BusinessDate,
+) -> Option<BusinessDate> {
+    let entry = entry?;
+    let Some(text) = text.map(|t| t.trim()).filter(|t| !t.is_empty()) else {
+        return Some(entry);
+    };
+    let day = errors.take(validate::date("sell_date", text, today))?;
+    if day < entry {
+        errors.push(
+            FieldError::new(ErrorCode::ErrSellDateBeforeEntry, "sell_date")
+                .with("entry_date", ErrorValue::Text(entry.to_iso())),
+        );
+        return None;
+    }
+    Some(day)
+}
+
 /// The day of a posting that is undone or written must be an open day (PRD FR-6.6).
 ///
 /// # Errors

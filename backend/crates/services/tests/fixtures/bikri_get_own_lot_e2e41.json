@@ -63,6 +63,7 @@
           }
         ]
       },
+      "arrival": null,
       "pukhta": null,
       "item": {
         "id": 5,

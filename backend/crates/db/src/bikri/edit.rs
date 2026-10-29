@@ -73,6 +73,39 @@ pub fn own_release_of_entry(conn: &Connection, entry_id: i64) -> rusqlite::Resul
     rows.collect()
 }
 
+/// What the garden lots of one posting took from their arrivals: for each arrival, the نگ of the sale
+/// lines in force. A reversal gives exactly this back (PRD FR-12.40).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ArrivalRelease {
+    /// The arrival.
+    pub arrival_id: i64,
+    /// نگ sold on those lines.
+    pub qty: i64,
+}
+
+/// The garden goods the lines in force of one posting took, by arrival.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn arrival_release_of_entry(
+    conn: &Connection,
+    entry_id: i64,
+) -> rusqlite::Result<Vec<ArrivalRelease>> {
+    let mut statement = conn.prepare(
+        "SELECT l.arrival_id, SUM(s.qty)
+         FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id
+         WHERE s.journal_entry_id = ?1 AND s.is_active = 1 AND l.arrival_id IS NOT NULL
+         GROUP BY l.arrival_id ORDER BY l.arrival_id",
+    )?;
+    let rows = statement.query_map([entry_id], |r| {
+        Ok(ArrivalRelease {
+            arrival_id: r.get(0)?,
+            qty: r.get(1)?,
+        })
+    })?;
+    rows.collect()
+}
+
 /// The biggest line number the lot has had, in force or not (0 for a lot with no line). New lines
 /// continue from it, so a line number is never used twice in a lot.
 ///
@@ -249,6 +282,8 @@ pub struct LotState {
     pub store_rent_paisa: i64,
     /// The purchase an own lot took its goods from (PRD FR-12.26).
     pub purchase_id: Option<i64>,
+    /// The garden arrival a garden lot took its goods from (PRD FR-12.40).
+    pub arrival_id: Option<i64>,
 }
 
 /// One lot by id, with its بکری's status and day.
@@ -263,7 +298,7 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 l.pukhta_phone, l.pukhta_person_key, l.first_entry_id, l.freight_paisa,
                 l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa, l.phone_paisa,
                 l.cash_paid_paisa, l.store_rent_paisa, l.weight_received_grams, e.adda_id, l.purchase_id,
-                l.qty_taken
+                l.qty_taken, l.arrival_id
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
          WHERE l.id = ?1",
         [lot_id],
@@ -308,6 +343,7 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 adda_id: r.get(28)?,
                 purchase_id: r.get(29)?,
                 qty_taken: r.get(30)?,
+                arrival_id: r.get(31)?,
             })
         },
     )
@@ -612,6 +648,8 @@ pub struct NewMove<'a> {
     pub lot_id: Option<i64>,
     /// The purchase, for a move of trip goods.
     pub purchase_id: Option<i64>,
+    /// The garden arrival, for a move of garden goods (a sale of a linked lot, a write-off).
+    pub arrival_id: Option<i64>,
     /// C21: the cost of the trip goods this move releases, paisa (a write-off or a sale in another
     /// shop; negative for the reversal of one). 0 for every other move.
     pub cost_paisa: i64,
@@ -641,8 +679,8 @@ pub fn insert_move(
 ) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO stock_moves (created_at, created_by, updated_at, updated_by, lot_id, journal_entry_id,
-             move_date, kind, qty, reason, reverses_move_id, purchase_id, cost_paisa)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+             move_date, kind, qty, reason, reverses_move_id, purchase_id, cost_paisa, arrival_id)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
         params![
             now,
             user_id,
@@ -654,7 +692,8 @@ pub fn insert_move(
             stock_move.reason,
             stock_move.reverses_move_id,
             stock_move.purchase_id,
-            stock_move.cost_paisa
+            stock_move.cost_paisa,
+            stock_move.arrival_id
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -675,9 +714,9 @@ pub fn reverse_moves(
 ) -> rusqlite::Result<usize> {
     conn.execute(
         "INSERT INTO stock_moves (created_at, created_by, updated_at, updated_by, lot_id, journal_entry_id,
-             move_date, kind, qty, reason, reverses_move_id, purchase_id, cost_paisa)
+             move_date, kind, qty, reason, reverses_move_id, purchase_id, cost_paisa, arrival_id)
          SELECT ?3, ?4, ?3, ?4, m.lot_id, ?2, m.move_date, 'reversal', -m.qty, NULL, m.id, m.purchase_id,
-             -m.cost_paisa
+             -m.cost_paisa, m.arrival_id
          FROM stock_moves m
          WHERE m.journal_entry_id = ?1 AND m.kind <> 'reversal'
            AND NOT EXISTS (SELECT 1 FROM stock_moves r WHERE r.reverses_move_id = m.id)

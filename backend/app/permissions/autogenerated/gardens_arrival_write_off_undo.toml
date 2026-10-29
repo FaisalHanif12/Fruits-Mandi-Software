@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-gardens-arrival-write-off-undo"
+description = "Enables the gardens_arrival_write_off_undo command without any pre-configured scope."
+commands.allow = ["gardens_arrival_write_off_undo"]
+
+[[permission]]
+identifier = "deny-gardens-arrival-write-off-undo"
+description = "Denies the gardens_arrival_write_off_undo command without any pre-configured scope."
+commands.deny = ["gardens_arrival_write_off_undo"]

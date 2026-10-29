@@ -65,7 +65,6 @@ import {
   newGardenDraft,
 } from '../draft';
 import { useCreateGarden, useGardenCreatePreview, useGardenDefaults } from '../hooks';
-import { gardenNumberText } from '../list-columns';
 import type { GardenCreated, GardenDefaults, GardenDraft, GardenInput } from '../types';
 
 /** Codes that only say a field is empty. Held back until the user tries to save. */
@@ -156,12 +155,7 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
     onSaved: (saved) => {
       if (saved === undefined) return;
       made.current = true;
-      showToast(
-        'success',
-        l10n.getString('gardens-created', {
-          number: gardenNumberText(saved.row.number, (id, vars) => l10n.getString(id, vars)),
-        }),
-      );
+      showToast('success', l10n.getString('gardens-created', { code: saved.row.code }));
       setCreatedId(saved.row.id);
     },
   });

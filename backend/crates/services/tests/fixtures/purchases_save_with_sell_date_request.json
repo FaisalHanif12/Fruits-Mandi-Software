@@ -1,0 +1,17 @@
+{
+  "confirm_cash_below_zero": false,
+  "date": "11-10-2026",
+  "freight": null,
+  "item_id": 1,
+  "labour": null,
+  "note": null,
+  "other_cost": null,
+  "packing_id": 1,
+  "parts": [],
+  "qty": "20",
+  "rate": "50",
+  "sell_date": "12-10-2026",
+  "supplier": null,
+  "trip_id": 2,
+  "weight": null
+}

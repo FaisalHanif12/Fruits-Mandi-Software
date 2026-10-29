@@ -66,12 +66,12 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     a: language === 'ur' ? 'الف' : 'Partner A',
     b: language === 'ur' ? 'ب' : 'Partner B',
   };
-  const gardenNumber = message(language, 'gardens-number', { number: 1 });
+  const gardenNumber = '0080';
 
   const open = async (path = '/gardens/1') => {
     const view = await renderApp(path);
     await screen.findByText(
-      said(message(language, 'gardens-detail-title', { number: gardenNumber })),
+      said(message(language, 'gardens-detail-title', { code: gardenNumber })),
     );
     return { ...view, user: userEvent.setup() };
   };
@@ -230,7 +230,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('the type list has the three types; changing it keeps the day, the amount and the note', async () => {
+  it('the type list has the four types; changing it keeps the day, the amount and the note', async () => {
     fakeGardens();
     const { user } = await open();
     const buttons = within(typeList()).getAllByRole('button');
@@ -238,6 +238,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
       message(language, 'gardens-type-installment'),
       message(language, 'gardens-type-cost'),
       message(language, 'gardens-type-other-sale'),
+      message(language, 'gardens-type-arrival'),
     ]);
     // An installment: an amount and a reason.
     await user.type(field('gardens-installment-amount'), '5000');
@@ -681,7 +682,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     expect(fake.saved.closings[0]).toEqual({ id: 1, version: 1, date: '10-10-2026' });
     expect(
       await screen.findByText(
-        said(message(language, 'gardens-closed-toast', { number: gardenNumber })),
+        said(message(language, 'gardens-closed-toast', { code: gardenNumber })),
       ),
     ).toBeInTheDocument();
   });

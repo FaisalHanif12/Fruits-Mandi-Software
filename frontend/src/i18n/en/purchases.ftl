@@ -44,6 +44,10 @@ purchases-rate-hint = For each { -nag }, or for each kg for an item sold by weig
 # review: pending
 purchases-field-other-cost = Other cost
 
+# PRD FR-12.39. The box shows the day of the purchase until it is changed.
+# review: pending
+purchases-sell-date-hint = Starts as the day of the purchase. From this day the goods come into every new { -bikri } until they are sold.
+
 # review: pending
 purchases-field-note = Note
 
@@ -91,6 +95,8 @@ purchases-col-cost-left = Cost left
 
 # review: pending
 purchases-col-date = Day
+# review: pending
+purchases-col-sell-date = { -sell-date }
 
 # review: pending
 purchases-col-qty = Bought
@@ -254,3 +260,18 @@ purchases-cancel-blocked = This purchase cannot be cancelled, because { $sold } 
 # A purchase that carries a part of a trip cost cannot be cancelled either (PRD FR-12.31).
 # review: pending
 purchases-cancel-blocked-cost = This purchase carries a part of a trip cost, so it cannot be cancelled. Cancel that cost first.
+
+## Changing the date to sell (PRD FR-12.39).
+
+# review: pending
+purchases-change-sell-date = Change the { -sell-date }
+
+# review: pending
+purchases-sell-date-title = Change the { -sell-date }
+
+# $number: the purchase.
+# review: pending
+purchases-sell-date-text = From this day the goods of { $number } come into every new { -bikri } until they are sold. The day cannot be before the day of the purchase.
+
+# review: pending
+purchases-sell-date-done = The { -sell-date } was changed.

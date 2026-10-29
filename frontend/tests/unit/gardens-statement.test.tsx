@@ -44,7 +44,7 @@ describe.each(LANGUAGES)('the garden lines of a partner statement (%s)', (langua
   });
 
   const grid = () => gridOf(language, 'partners-statement-label');
-  const garden = message(language, 'gardens-number', { number: 1 });
+  const garden = '0080';
 
   async function open() {
     await renderApp('/partners/statement?partner=1');

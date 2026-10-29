@@ -147,6 +147,7 @@ export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
         lot_no: 1,
         seller: RAHIM,
         purchase: null,
+        arrival: null,
         own: null,
         pukhta: null,
         item: BANANA,

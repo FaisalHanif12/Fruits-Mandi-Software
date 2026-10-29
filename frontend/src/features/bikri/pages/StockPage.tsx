@@ -34,6 +34,7 @@ import {
   Picker,
   type PickerValue,
 } from '../../../shared/ui';
+import { GardenStockSection } from '../components/stock/GardenStockSection';
 import { OwnStockSection } from '../components/stock/OwnStockSection';
 import { StockLotCard } from '../components/stock/StockLotCard';
 import { UndoWriteOffDialog, WriteOffDialog } from '../components/stock/WriteOffDialogs';
@@ -81,6 +82,7 @@ function StockBody({ saved, remember }: MemoryProps) {
   const first = list.data?.pages[0];
   const rows = list.data?.pages.flatMap((page) => page.rows);
   const ownRows = list.data?.pages.flatMap((page) => page.own_rows) ?? [];
+  const gardenRows = list.data?.pages.flatMap((page) => page.garden_rows) ?? [];
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const noFilter = filter.from === null && filter.to === null && seller === null && item === null;
 
@@ -126,7 +128,7 @@ function StockBody({ saved, remember }: MemoryProps) {
         }}
       />
     );
-  } else if (rows?.length === 0 && ownRows.length === 0) {
+  } else if (rows?.length === 0 && ownRows.length === 0 && gardenRows.length === 0) {
     body = noFilter ? (
       <EmptyState
         icon={PackageCheck}
@@ -202,9 +204,12 @@ function StockBody({ saved, remember }: MemoryProps) {
         {ownRows.length === 0 || first === undefined ? null : (
           <OwnStockSection rows={ownRows} list={first} />
         )}
+        {gardenRows.length === 0 || first === undefined ? null : (
+          <GardenStockSection rows={gardenRows} list={first} />
+        )}
         <PagedFooter
-          shown={rows.length + ownRows.length}
-          total={first?.total_count ?? rows.length + ownRows.length}
+          shown={rows.length + ownRows.length + gardenRows.length}
+          total={first?.total_count ?? rows.length + ownRows.length + gardenRows.length}
           hasMore={list.hasNextPage}
           loadingMore={list.isFetchingNextPage}
           onLoadMore={() => {

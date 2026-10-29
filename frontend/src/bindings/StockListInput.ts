@@ -39,7 +39,7 @@ export type StockListInput = {
   include_written_off: boolean;
   /**
    * How many rows to skip. 0 for the first page. The page runs over the lots first, then the
-   * trip goods (PRD FR-19.11).
+   * trip goods, then the garden arrivals (PRD FR-19.11).
    */
   offset: number;
   /**

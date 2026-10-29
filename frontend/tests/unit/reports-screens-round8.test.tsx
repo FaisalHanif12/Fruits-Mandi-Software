@@ -425,7 +425,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(lastRun()?.filters).toEqual(sentLike(R33_TRIP_REQUEST));
       // The first row is the trip heading (a group row): its name and the sums of its purchases.
       expect(document.querySelector('.ag-row[row-id="0"]')).toHaveClass('row-group');
-      expect(cell('0', 'trip')).toContain(names('سفر-1', 'TRP-1'));
+      expect(cell('0', 'trip')).toContain('0070');
       // The date inside the heading keeps its digit order in Urdu: it sits in its own isolate.
       const runs = Array.from(cellElement('0', 'trip')?.querySelectorAll('bdi[dir="ltr"]') ?? []);
       expect(runs.map((run) => run.textContent)).toContain('10-10-2026');

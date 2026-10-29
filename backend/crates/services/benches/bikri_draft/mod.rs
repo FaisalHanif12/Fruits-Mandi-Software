@@ -86,6 +86,7 @@ pub fn first_id(env: &TestEnv, table: &str, skip: i64) -> i64 {
 pub fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
     let packing = first_id(env, "packings", 0);
     let lot = |n: usize| LotInput {
+        arrival_id: None,
         key: format!("lot-{n}"),
         lot_id: None,
         seller_account_id: Some(id_by_code(env, &format!("03011{:04}", 1 + n))),

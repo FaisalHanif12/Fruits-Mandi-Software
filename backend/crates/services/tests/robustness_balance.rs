@@ -64,7 +64,7 @@ const TRIGGERS_OF_0004: [&str; 7] = [
     "bikri_lots_no_replace",
     "bikri_sales_no_replace",
 ];
-const LATEST_VERSION: i64 = 8;
+const LATEST_VERSION: i64 = 9;
 /// The tables migration 0006 adds (plan 16b). A file of an old release does not have them, and
 /// they are empty in this test, so the row fingerprint leaves them out.
 const TABLES_OF_0006: [&str; 8] = [
@@ -91,6 +91,13 @@ const COLUMNS_OF_0006: [(&str, &str); 10] = [
     ("partners", "venture_account_id"),
     ("accounts", "tag"),
 ];
+/// The table migration 0009 adds (plan 33 v1.1). A file of an old release does not have it, and it
+/// is empty in this test, so the row fingerprint leaves it out.
+const TABLES_OF_0009: [&str; 1] = ["garden_arrivals"];
+/// The columns migration 0009 adds to old tables. A row's numbers do not change when they appear,
+/// so the row fingerprint leaves them out. (`purchases.sell_date` is in a table of 0006.)
+const COLUMNS_OF_0009: [(&str, &str); 2] =
+    [("bikri_lots", "arrival_id"), ("stock_moves", "arrival_id")];
 /// The two controls whose party types (separate, garden) the CHECK lists of an old release do not
 /// hold. Migration 0006 seeds them, so they are not copied into the old file and are left out of
 /// the row fingerprint.
@@ -328,10 +335,11 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
             .unwrap()
     };
     let mut hasher = DefaultHasher::new();
-    for table in tables
-        .iter()
-        .filter(|t| !skip.contains(&t.as_str()) && !TABLES_OF_0006.contains(&t.as_str()))
-    {
+    for table in tables.iter().filter(|t| {
+        !skip.contains(&t.as_str())
+            && !TABLES_OF_0006.contains(&t.as_str())
+            && !TABLES_OF_0009.contains(&t.as_str())
+    }) {
         table.hash(&mut hasher);
         let names: Vec<String> = {
             let mut info = conn
@@ -345,6 +353,7 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
                 .filter(|c| {
                     !COLUMNS_OF_0005.contains(&(table.as_str(), c.as_str()))
                         && !COLUMNS_OF_0006.contains(&(table.as_str(), c.as_str()))
+                        && !COLUMNS_OF_0009.contains(&(table.as_str(), c.as_str()))
                 })
                 .collect()
         };

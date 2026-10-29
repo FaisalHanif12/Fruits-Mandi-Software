@@ -41,14 +41,9 @@ gardens-list-no-match-help = دوسری تاریخیں، کھلے یا بند ب
 # review: pending
 gardens-list-clear = سب باغ دکھائیں
 
-## Numbers: the letters of the series of gardens.
-# $number: the number of the garden in its series.
-# review: pending
-gardens-number = باغ-{ $number }
-
 ## The columns of the lists.
 # review: pending
-gardens-col-number = نمبر
+gardens-col-number = کوڈ
 # review: pending
 gardens-col-name = نام
 # review: pending
@@ -156,16 +151,16 @@ gardens-field-note = نوٹ
 gardens-first-parts-title = پہلی قسط میں ہر شراکت دار کا حصہ
 # review: pending
 gardens-preview-failed = اعداد نہیں نکل سکے
-# $number: the number of the garden, for example GRD-3.
+# $code: the code of the garden, type 008.
 # review: pending
-gardens-created = { $number } بن گیا
+gardens-created = { $code } بن گیا
 
 ## One garden.
 # review: pending
 gardens-back = باغات پر واپس
 # $number: the number of the garden.
 # review: pending
-gardens-detail-title = { $number }
+gardens-detail-title = { $code }
 # review: pending
 gardens-detail-failed = باغ نہیں کھل سکا
 # review: pending
@@ -353,7 +348,7 @@ gardens-close-confirm-text = باغ { $name } { $date } کو بند ہو جائ�
 # review: pending
 gardens-close-confirm = ہاں، بند کریں
 # review: pending
-gardens-closed-toast = { $number } بند ہو گیا
+gardens-closed-toast = { $code } بند ہو گیا
 
 ## Undoing the closing (PRD FR-12.38).
 # review: pending
@@ -367,10 +362,155 @@ gardens-reopen-reason = وجہ
 # review: pending
 gardens-reopen-confirm = بندش واپس لیں
 # review: pending
-gardens-reopened-toast = { $number } دوبارہ کھل گیا
+gardens-reopened-toast = { $code } دوبارہ کھل گیا
 
 # review: pending
 gardens-filter-all = تمام باغات
 
 # review: pending
 gardens-filter-failed = باغات کی فہرست نہیں کھل سکی
+
+## The number of a goods arrived entry: its own series (plan 33 version 1.1, PRD FR-12.40).
+
+# $number: the number of the entry in its series.
+# review: pending
+gardens-arrival-number = مآ-{ $number }
+
+## Goods arrived (مال آیا): a garden's stock (plan 33 version 1.1, PRD FR-12.40). They carry no money.
+
+# review: pending
+gardens-type-arrival = { -maal-aaya }
+
+# $number: the number of the entry.
+# review: pending
+gardens-saved-arrival = { -maal-aaya } { $number } محفوظ ہو گیا
+
+# review: pending
+gardens-arrival-qty = آئے ہوئے { -nag }
+
+# review: pending
+gardens-arrival-qty-hint = پورا عدد۔ آپ جمع بھی لکھ سکتے ہیں، مثلاً 20+25۔
+
+# review: pending
+gardens-arrival-sell-date-hint = شروع میں مال آنے کا دن ہوتا ہے۔ اس دن سے مال ہر نئی { -bikri } میں آتا رہتا ہے جب تک بک نہ جائے۔
+
+# review: pending
+gardens-arrival-posts-nothing = اس مال کے ساتھ کوئی رقم نہیں ہے۔ یہ { -bagh } کے ذخیرے میں رہتا ہے جب تک { -bikri } میں بک نہ جائے یا ضائع نہ لکھا جائے۔ { -sell-date } سے نئی { -bikri } میں اس کا { -lot } پہلے سے موجود ہوتا ہے۔
+
+# review: pending
+gardens-arrival-title = { -maal-aaya }
+
+# review: pending
+gardens-arrival-help = اس { -bagh } سے آیا ہوا وہ مال جو ابھی بکا نہیں۔ ہر نئی { -bikri } میں اس کی { -sell-date } پر اس کا ایک { -lot } پہلے سے موجود ہوتا ہے۔ جو نہ بکے وہ اگلے دن پھر آتا ہے۔
+
+# review: pending
+gardens-arrival-failed = آیا ہوا مال پڑھا نہیں جا سکا
+
+# review: pending
+gardens-arrival-empty = ابھی کوئی مال نہیں آیا
+
+# review: pending
+gardens-arrival-empty-help = اوپر اندراج کی قسم میں { -maal-aaya } چنیں، { -qism-maal }، { -packing } اور { -nag } لکھیں اور محفوظ کریں۔
+
+# review: pending
+gardens-arrival-label = آئے ہوئے مال کی فہرست
+
+# review: pending
+gardens-arrival-col-number = نمبر
+
+# review: pending
+gardens-arrival-col-item = { -qism-maal }
+
+# review: pending
+gardens-arrival-col-left = باقی
+
+# review: pending
+gardens-arrival-col-date = تاریخ
+
+# review: pending
+gardens-arrival-col-qty = آیا
+
+# review: pending
+gardens-arrival-item-packing = { $item }، { $packing }
+
+# review: pending
+gardens-arrival-item-cancelled = { $item } (منسوخ)
+
+# $number: the number of the entry; $item: its item.
+# review: pending
+gardens-arrival-card-title = { -maal-aaya }: { $number }، { $item }
+
+# $reason: why it was cancelled.
+# review: pending
+gardens-arrival-cancelled = یہ اندراج منسوخ ہے۔ { $reason }
+
+# The lots of the sales that took goods from the entry.
+# review: pending
+gardens-arrival-lots = اس مال کی فروخت
+
+# review: pending
+gardens-arrival-lot-bikri = { -bikri }
+
+# review: pending
+gardens-arrival-cancel = { -maal-aaya } منسوخ کریں
+
+# $number: the entry.
+# review: pending
+gardens-arrival-sell-date-title = { -sell-date } بدلیں
+
+# $number: the entry.
+# review: pending
+gardens-arrival-sell-date-text = اس دن سے { $number } کا مال ہر نئی { -bikri } میں آئے گا جب تک بک نہ جائے۔ یہ دن مال آنے کے دن سے پہلے نہیں ہو سکتا۔
+
+# review: pending
+gardens-arrival-reason = وجہ
+
+# review: pending
+gardens-arrival-cancel-title = یہ اندراج منسوخ کریں؟
+
+# $number: the entry.
+# review: pending
+gardens-arrival-cancel-text = { $number } منسوخ ہو جائے گا اور مال ذخیرے سے نکل جائے گا۔ یہ تب ہی منسوخ ہو سکتا ہے جب اس میں سے کچھ بکا یا ضائع نہ ہوا ہو۔ کچھ پوسٹ نہیں ہوگا۔
+
+# review: pending
+gardens-arrival-cancel-confirm = { -maal-aaya } منسوخ کریں
+
+# $number: the entry.
+# review: pending
+gardens-arrival-cancelled-toast = { $number } منسوخ ہو گیا
+
+# review: pending
+gardens-arrival-write-off-title = مال ضائع لکھیں
+
+# $number: the entry; $item, $packing: what it is; $qty_left: how many are left.
+# review: pending
+gardens-arrival-write-off-text = { $number } ({ $item }، { $packing }) کا خراب یا گم مال ذخیرے سے نکال دیا جائے گا۔ ابھی { $qty_left } { -nag } باقی ہیں۔ کچھ پوسٹ نہیں ہوگا۔
+
+# review: pending
+gardens-arrival-write-off-qty = ضائع { -nag }
+
+# review: pending
+gardens-arrival-write-off-confirm = ضائع لکھیں
+
+# $qty: how many were written off.
+# review: pending
+gardens-arrival-write-off-done = { $qty } { -nag } ضائع لکھ دیے گئے
+
+# review: pending
+gardens-arrival-write-off-undo-title = ضائع واپس لیں
+
+# review: pending
+gardens-arrival-write-off-undo-text = مال واپس ذخیرے میں چلا جائے گا۔ ضائع منتخب کریں اور وجہ لکھیں۔
+
+# review: pending
+gardens-arrival-write-off-undo-confirm = ضائع واپس لیں
+
+# review: pending
+gardens-arrival-write-off-pick = ضائع
+
+# $qty: how many were written off; $reason: why.
+# review: pending
+gardens-arrival-write-off-option = { $qty } { -nag }: { $reason }
+
+# review: pending
+gardens-arrival-write-off-undone = ضائع واپس لے لیا گیا

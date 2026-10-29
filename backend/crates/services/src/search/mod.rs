@@ -58,14 +58,17 @@ fn current(ctx: &Context) -> Result<Arc<Index>, ServiceError> {
 /// The index a scope searches. The accounts and the masters are in the long-lived index; the open
 /// trips and gardens (plan 34) are few and change with every sale, so they are read for the call.
 fn index_for(ctx: &Context, scope: SearchScope) -> Result<Arc<Index>, ServiceError> {
-    let kind = match scope {
-        SearchScope::Trip => "trip",
-        SearchScope::Garden => "garden",
+    let (kind, include_closed) = match scope {
+        SearchScope::Trip => ("trip", false),
+        SearchScope::Garden => ("garden", false),
+        // A filter field also offers the closed ones (a past trip, a closed garden).
+        SearchScope::TripAll => ("trip", true),
+        SearchScope::GardenAll => ("garden", true),
         _ => return current(ctx),
     };
-    let sources = ctx
-        .db
-        .read(|conn| mandi_db::ventures::search_sources(conn, kind).map_err(ServiceError::from))?;
+    let sources = ctx.db.read(|conn| {
+        mandi_db::ventures::search_sources(conn, kind, include_closed).map_err(ServiceError::from)
+    })?;
     let mut index = Index::empty();
     index.set_ventures(scope, sources);
     Ok(Arc::new(index))

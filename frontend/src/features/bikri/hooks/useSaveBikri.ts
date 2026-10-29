@@ -5,6 +5,7 @@
 // (PRD 6.2): the balances on the party cards, the trial balance, the partners' shares, the lists.
 
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { uiErrorOf } from '../../../shared/api';
 import { draftsDiscard } from '../../../shared/drafts';
 import { bikriEditSave, bikriLaterSaleSave, bikriSave } from '../api';
 import { BIKRI_DRAFT_SCREEN } from '../draft-snapshot';
@@ -47,6 +48,16 @@ export function useSaveBikri() {
       // may have arrived after it, so the screen asks for it to be thrown away once more.
       await draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
       await readAgainAfterPosting(queryClient);
+    },
+    // Two open new sales can hold the same ready goods: the second save is refused with what is
+    // left (ERR_QTY_EXCEEDS_LOT, PRD FR-12.40). The goods ready to sell are asked for again, so the
+    // next new بکری and the panel of the lot show what is really left. Nothing typed is changed.
+    onError: (error) => {
+      const refused = uiErrorOf(error).errors.some(
+        (item) =>
+          item.code === 'ERR_QTY_EXCEEDS_LOT' && (item.field ?? '').endsWith('qty_received'),
+      );
+      if (refused) void queryClient.invalidateQueries({ queryKey: ['bikri', 'ready-goods'] });
     },
   });
 }

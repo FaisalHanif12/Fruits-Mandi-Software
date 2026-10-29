@@ -233,6 +233,10 @@ function lotRow(lot: LotInput, header: HeaderState, records: DraftRecords): Entr
   if (lot.purchase_id !== undefined && lot.purchase_id !== null) {
     typed[LOT.purchase] = String(lot.purchase_id);
   }
+  // A garden's lot keeps the goods arrived entry it takes its goods from (PRD FR-12.40).
+  if (lot.arrival_id !== undefined && lot.arrival_id !== null) {
+    typed[LOT.arrival] = String(lot.arrival_id);
+  }
 
   const picked: Record<string, PickedRecord> = {};
   const seller = records.account(lot.seller_account_id);

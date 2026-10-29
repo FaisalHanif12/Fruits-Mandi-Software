@@ -256,6 +256,8 @@ pub enum AttentionTarget {
     Bikri,
     /// A trip purchase.
     Purchase,
+    /// A garden arrival (مال آیا, PRD FR-12.40): the id is the arrival's.
+    Arrival,
 }
 
 /// The most urgent record of an item, to open straight from the list.

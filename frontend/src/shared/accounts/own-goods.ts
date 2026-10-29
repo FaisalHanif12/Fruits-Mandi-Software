@@ -10,8 +10,12 @@ export function isOwnGoods(account: { code: string } | undefined | null): boolea
   return account?.code === OWN_GOODS_CODE;
 }
 
-/** The control of the gardens' accounts, 0306 (PRD FR-10.4, FR-12.34). A code is the control plus a 4-digit serial. */
-const GARDEN_CODE = /^0306\d{4}$/;
+/**
+ * A garden's account has the same code as the garden: the type number 008 and a running number from
+ * 0 with no padding, `0080`, `0081`, `00810` (plan 34, PRD FR-12.34). The account is still under
+ * the control 0306. No other account has a code that starts with 008.
+ */
+const GARDEN_CODE = /^008(0|[1-9]\d{0,6})$/;
 
 /**
  * Is this a garden's own account (PRD FR-12.34)? A lot with a garden as its seller gives no نقد

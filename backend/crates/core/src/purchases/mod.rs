@@ -16,6 +16,7 @@
 //! | `purchases_get` | `PurchaseGetInput` | `PurchaseRow` |
 //! | `purchases_write_off` | `PurchaseWriteOffInput` | `PurchaseWriteOffDone` |
 //! | `purchases_write_off_undo` | `PurchaseWriteOffUndoInput` | `PurchaseWriteOffUndone` |
+//! | `purchases_set_sell_date` | `SellDateInput` (in `arrivals`) | `SellDateSet` (in `arrivals`) |
 //!
 //! Money is paisa and arrives as text; names are `RecordRef` with both scripts (Code Standards
 //! F38). Purchase numbers are their own series, shown as خ-1 in Urdu and PUR-1 in English (letters
@@ -111,6 +112,11 @@ pub struct PurchaseInput {
     /// Weight in kg, up to 3 decimals. Required for an item sold by weight.
     #[serde(default)]
     pub weight: Option<String>,
+    /// The day to sell, `DD-MM-YYYY` or a shortcut (PRD FR-12.39). Empty means the purchase day.
+    /// Never before the purchase day: `ERR_SELL_DATE_BEFORE_ENTRY` on `sell_date`. A new بکری from
+    /// this day opens with a ready lot for the goods left.
+    #[serde(default)]
+    pub sell_date: Option<String>,
     /// The rate for each نگ, or for each kg for a weight item. Whole rupees.
     #[serde(default)]
     pub rate: String,
@@ -336,6 +342,9 @@ pub struct PurchaseRow {
     pub trip: TripRef,
     /// The day, `YYYY-MM-DD`.
     pub entry_date: String,
+    /// The day to sell, `YYYY-MM-DD` (PRD FR-12.39). A new بکری from this day opens with a ready
+    /// lot for the goods left. Starts as `entry_date`.
+    pub sell_date: String,
     /// Saved or cancelled.
     pub status: PurchaseStatus,
     /// Why it was cancelled.
@@ -420,12 +429,15 @@ pub struct PurchaseRow {
     pub result_paisa: Paisa,
     /// How the result was worked out.
     pub result_working: Working,
-    /// Whole days from the day bought to today, while stock is left; 0 otherwise.
+    /// Whole days from the day to sell (`sell_date`) to today, while stock is left; 0 otherwise. Goods
+    /// meant for a later day are not waiting before it.
     #[ts(type = "number")]
     pub days_waiting: i64,
     /// True while nothing was sold or written off, it carries no trip cost and it is not cancelled:
     /// `purchases_cancel` will accept it (if its day is open).
     pub can_cancel: bool,
+    /// True while it is saved and has goods left: `purchases_set_sell_date` is allowed.
+    pub can_change_sell_date: bool,
     /// The own lots that took goods from it (only in `purchases_get`).
     pub lots: Vec<PurchaseLotRef>,
     /// The write-offs that can still be undone, oldest first (only in `purchases_get`).

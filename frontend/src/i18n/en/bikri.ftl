@@ -922,3 +922,45 @@ bikri-ready-lots-note = { $count ->
 
 # review: pending
 bikri-ready-lots-note-hint = Add the buyers and rates. To leave one out, remove its lot with <key>{ $key }</key>.
+
+## A lot of a garden's goods arrived (plan 33 version 1.1, PRD FR-12.40).
+
+# review: pending
+bikri-arrival-title = Garden goods
+
+# review: pending
+bikri-arrival-hint = The item, the packing and the quantity come from the { -maal-aaya } entry of the { -bagh }. The lines must sell all of the quantity. Cash paid and the advance tick do not apply to these goods.
+
+# How many the entry can still give this lot, after the lots above it in this form.
+# review: pending
+bikri-arrival-left = Left in the entry
+
+# review: pending
+bikri-saved-arrival-open = Open entry { $number } in { $garden }
+
+## Garden goods in the list of { -baqi-maal } (PRD FR-12.40).
+
+# review: pending
+bikri-stock-garden-title = { -bagh } goods
+
+# review: pending
+bikri-stock-garden-help = Goods that came to a { -bagh } and are not sold yet. They belong to the garden. A new { -bikri } holds a lot for each one that is ready to sell.
+
+# review: pending
+bikri-stock-garden-label = List of garden goods left
+
+# $number: the number of the entry; $item: its item.
+# review: pending
+bikri-stock-garden-card-title = { -maal-aaya }: { $number }, { $item }
+
+# review: pending
+bikri-stock-garden-open = Open the garden
+
+# review: pending
+bikri-stock-garden-col-garden = { -bagh }
+
+# review: pending
+bikri-stock-garden-col-number = No.
+
+# review: pending
+bikri-stock-garden-col-arrived = Arrived

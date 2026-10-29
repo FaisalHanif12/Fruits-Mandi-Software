@@ -1,5 +1,5 @@
 {
-  "app_schema_version": 8,
+  "app_schema_version": 9,
   "backup": {
     "kind": "cloud",
     "name": "mandi-20261010T090100000Z.mbk"
@@ -22,7 +22,7 @@
     "vouchers": 0
   },
   "needs_upgrade": false,
-  "schema_version": 8,
+  "schema_version": 9,
   "size_bytes": 0,
   "totals": {
     "accounts": 17,

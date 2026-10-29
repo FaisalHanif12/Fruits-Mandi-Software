@@ -214,6 +214,8 @@ fn cancel_in(
         edit_repo::reverse_credit_parts(tx, posting.entry_id, reversal.entry_id, user, &now)?;
         // The own goods the lines took go back to their purchases, exactly (PRD FR-12.26).
         crate::purchases::give_back_entry(tx, posting.entry_id, user, &now)?;
+        // The garden goods the lines took go back to their arrivals, exactly (PRD FR-12.40).
+        crate::gardens::arrivals::give_back_entry(tx, posting.entry_id, user, &now)?;
         for sale in edit_repo::active_sales_of_entry(tx, posting.entry_id)? {
             edit_repo::end_sale(tx, sale.id, Ended::Cancelled, None, user, &now)?;
         }
@@ -233,6 +235,7 @@ fn cancel_in(
         edit_repo::insert_move(
             tx,
             &edit_repo::NewMove {
+                arrival_id: None,
                 lot_id: Some(write_off.lot_id),
                 purchase_id: None,
                 cost_paisa: 0,

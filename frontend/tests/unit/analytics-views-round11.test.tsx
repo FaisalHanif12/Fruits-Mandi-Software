@@ -339,7 +339,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
         view: 'J',
         filters: { trip_view: null, partner_id: null, trip_id: null, goods: 'all' },
       });
-      expect(cell('0', 'group')).toBe(names('سفر-1 10-10-2026', 'TRP-1 10-10-2026'));
+      expect(cell('0', 'group')).toBe('0070 10-10-2026');
       expect(cell('0', 'sales_money')).toBe('8,460');
       expect(cell('0', 'result')).toContain('660');
       expect(cell('0', 'result')).toContain(m('report-result-profit'));
@@ -448,7 +448,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       }, SLOW_MS);
       // The trip box lists the trips by name, with “all trips” first.
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-trip') }));
-      await user.click(await screen.findByRole('option', { name: names('سفر-1', 'Trip 1') }));
+      await user.click(await screen.findByRole('option', { name: '0070 10-10-2026' }));
       await waitFor(() => {
         expect(lastRun()?.filters.trip_id).toBe(1);
       }, SLOW_MS);
@@ -614,7 +614,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       await user.click(
         await screen.findByRole(
           'option',
-          { name: names('شاہ پور باغ', 'Shahpur Garden') },
+          { name: `0080 ${names('شاہ پور باغ', 'Shahpur Garden')}` },
           SLOW_MS,
         ),
       );
@@ -721,7 +721,7 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       await user.click(
         await screen.findByRole(
           'option',
-          { name: names('شاہ پور باغ', 'Shahpur Garden') },
+          { name: `0080 ${names('شاہ پور باغ', 'Shahpur Garden')}` },
           SLOW_MS,
         ),
       );

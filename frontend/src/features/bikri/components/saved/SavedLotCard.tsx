@@ -16,7 +16,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { Card, Fact, LinkButton, Num, Table, type TableColumn } from '../../../../shared/ui';
 import { isNegativePaisa } from '../../../../shared/format';
 import { purchaseNumberText } from '../../../purchases';
-import { tripNumberText } from '../../../trips';
 import { useLocalization } from '@fluent/react';
 
 /** The buyer of a line: the one-time person by his own name, else the account (PRD FR-13.2). */
@@ -171,10 +170,26 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
                   number: purchaseNumberText(purchase.number, (id, vars) =>
                     l10n.getString(id, vars),
                   ),
-                  trip: tripNumberText(purchase.trip_number, (id, vars) =>
-                    l10n.getString(id, vars),
-                  ),
+                  trip: purchase.trip_code,
                 }}
+              />
+            </LinkButton>
+          </Fact>
+        )}
+        {lot.arrival === null ? null : (
+          <Fact label={<Localized id="glossary-maal-aaya" />}>
+            <LinkButton
+              onClick={() => {
+                // The garden screen: the entry sits in its list.
+                void navigate({
+                  to: '/gardens/$id',
+                  params: { id: String(lot.arrival?.garden_id ?? 0) },
+                });
+              }}
+            >
+              <Localized
+                id="bikri-saved-arrival-open"
+                vars={{ number: lot.arrival.number, garden: lot.arrival.garden_code }}
               />
             </LinkButton>
           </Fact>

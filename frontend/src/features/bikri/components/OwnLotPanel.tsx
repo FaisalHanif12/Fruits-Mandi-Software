@@ -41,7 +41,6 @@ import {
   usePurchasesList,
   type PurchaseRow,
 } from '../../purchases';
-import { tripNumberText } from '../../trips';
 import { useLocalization } from '@fluent/react';
 import { useBikriDraft } from '../draft-store';
 import { LOT } from '../types';
@@ -114,7 +113,7 @@ export function OwnLotPanel({ row, lotIndex, error, lot }: OwnLotPanelProps) {
   const label = (purchase: PurchaseRow) =>
     l10n.getString('bikri-own-option', {
       number: purchaseNumberText(purchase.number, say),
-      trip: tripNumberText(purchase.trip.number, say),
+      trip: purchase.trip.code,
       item: displayName(purchase.item, language),
       packing: displayName(purchase.packing, language),
       qty_left: String(purchase.qty_left),
@@ -182,9 +181,7 @@ export function OwnLotPanel({ row, lotIndex, error, lot }: OwnLotPanelProps) {
       </div>
       {current === null ? null : (
         <dl className="grid grid-cols-3 gap-x-4 gap-y-3 normal:grid-cols-6">
-          <Fact label={<Localized id="bikri-stock-own-trip" />}>
-            {tripNumberText(current.trip.number, say)}
-          </Fact>
+          <Fact label={<Localized id="bikri-stock-own-trip" />}>{current.trip.code}</Fact>
           <Fact label={<Localized id="purchases-col-qty" />}>
             <Num>{String(current.qty)}</Num>
           </Fact>

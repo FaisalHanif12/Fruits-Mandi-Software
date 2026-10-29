@@ -24,6 +24,7 @@ import type { EditSaveInput } from '../../bindings/EditSaveInput';
 import type { LaterSaleInput } from '../../bindings/LaterSaleInput';
 import type { LaterSaleSaved } from '../../bindings/LaterSaleSaved';
 import type { LaterSaleSaveInput } from '../../bindings/LaterSaleSaveInput';
+import type { ReadyGoods } from '../../bindings/ReadyGoods';
 import type { SaleInput } from '../../bindings/SaleInput';
 import type { StockList } from '../../bindings/StockList';
 import type { StockListInput } from '../../bindings/StockListInput';
@@ -111,6 +112,15 @@ export function bikriNavigate(currentId: number | null, to: NavigateTo): Promise
 
 // Plan 16: goods left in stock, later sales, edit, cancel, undo and write-off (PRD 12.8, 12.9,
 // FR-7.47). Every number comes back from the backend; the screen sends only text and ids.
+
+/**
+ * The stock that is ready to sell on a day: trip purchases and garden goods arrived with goods left
+ * whose date to sell is on or before the day, oldest first (PRD FR-12.39, FR-12.40). `date` is
+ * `DD-MM-YYYY`. Read only.
+ */
+export function bikriReadyGoods(date: string): Promise<ReadyGoods> {
+  return callCommand<ReadyGoods>('bikri_ready_goods', { input: { date } });
+}
 
 /** The lots with goods left, oldest first (PRD FR-12.14, FR-19.10). Read only. */
 export function bikriStockList(input: StockListInput): Promise<StockList> {

@@ -61,3 +61,16 @@ R12. **Money unchanged.** No posting of an own lot or a garden lot changes. E2E-
 |---|---|---|
 | T2 | `purchases.sell_date` (new migration; existing rows = their entry date), its check and edit; garden arrivals as a stock record of the garden (backend designs the table and the stock moves; no journal entry), arrivals list, cancel, write-off; a garden lot linked to an arrival takes its qty from it and must be fully sold; the list command for a new sale returns trip purchases and garden arrivals with goods left and date to sell on or before a given date, oldest first; tests (R7 to R12); fixtures; `pnpm gen:types`; tell `frontend` | backend (before plan 34) |
 | F2 | Date to sell box on the purchase form and screen; the مال آیا type on the garden screen with its list; ready lots for both kinds in a new sale, oldest date first, then number; the note counts both; باقی مال shows both; tests and screenshots ur and en | frontend |
+
+## 7. Built (27-10 to 29-10-2026)
+
+- backend T1 (no change; `purchases_list`), T2 (migration 0009: `purchases.sell_date`, table `garden_arrivals`, `stock_moves.arrival_id`, `bikri_lots.arrival_id`; commands `purchases_set_sell_date`, `gardens_arrival_save / cancel / get / set_sell_date / write_off / write_off_undo`, `gardens_arrivals_list`, `bikri_ready_goods`; `StockList.garden_rows`; errors ERR_SELL_DATE_BEFORE_ENTRY, ERR_ARRIVAL_CANCELLED, ERR_ARRIVAL_HAS_SALES, ERR_ARRIVAL_LOT_NOT_FULLY_SOLD, ERR_GARDEN_HAS_STOCK). Two open sales on the same goods: the second is refused (ERR_QTY_EXCEEDS_LOT), tested. Money review before and after: no must-fix. E2E-34, 34b, 40, 40b, 41 unchanged.
+- frontend F1, F2: ready lots of both kinds in a new sale, the date-to-sell box and action, the مال آیا type and its list on the garden screen, garden goods in باقی مال, the garden lot panel.
+
+Decisions of the lead:
+- D1: the report and analytics filters stay drop-downs of every trip and garden, closed ones included.
+- D2: garden arrivals with goods left count in the attention list (FR-7.44), the باقی مال tile and the day-close summary. Days waiting count from the date to sell for arrivals and trip purchases alike (old data: date to sell = entry date, so nothing changes).
+- D3: R10 lists garden arrivals (row kind `arrival`).
+- D4: arrival numbers are their own series (GA-1 / مآ-1), like purchases (خ-1). Wording pending review.
+
+Open for Umar: a per-lot charge rule on a garden's account is taken once per linked lot. One arrival sold over two days is two lots, as trips already are. Should it instead be taken once per arrival? Nothing is coded either way.

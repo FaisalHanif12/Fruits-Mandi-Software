@@ -41,14 +41,9 @@ gardens-list-no-match-help = Try other days, open or closed gardens, or other wo
 # review: pending
 gardens-list-clear = Show all gardens
 
-## Numbers: the letters of the series of gardens.
-# $number: the number of the garden in its series.
-# review: pending
-gardens-number = GRD-{ $number }
-
 ## The columns of the lists.
 # review: pending
-gardens-col-number = Number
+gardens-col-number = Code
 # review: pending
 gardens-col-name = Name
 # review: pending
@@ -156,16 +151,16 @@ gardens-field-note = Note
 gardens-first-parts-title = Each partner's part of the first installment
 # review: pending
 gardens-preview-failed = The numbers could not be worked out
-# $number: the number of the garden, for example GRD-3.
+# $code: the code of the garden, type 008.
 # review: pending
-gardens-created = { $number } has been made
+gardens-created = { $code } has been made
 
 ## One garden.
 # review: pending
 gardens-back = Back to the gardens
 # $number: the number of the garden.
 # review: pending
-gardens-detail-title = { $number }
+gardens-detail-title = { $code }
 # review: pending
 gardens-detail-failed = The garden could not be opened
 # review: pending
@@ -353,7 +348,7 @@ gardens-close-confirm-text = The garden { $name } will be closed on { $date }. {
 # review: pending
 gardens-close-confirm = Yes, close it
 # review: pending
-gardens-closed-toast = { $number } has been closed
+gardens-closed-toast = { $code } has been closed
 
 ## Undoing the closing (PRD FR-12.38).
 # review: pending
@@ -367,10 +362,155 @@ gardens-reopen-reason = Reason
 # review: pending
 gardens-reopen-confirm = Undo the closing
 # review: pending
-gardens-reopened-toast = { $number } is open again
+gardens-reopened-toast = { $code } is open again
 
 # review: pending
 gardens-filter-all = All gardens
 
 # review: pending
 gardens-filter-failed = The list of gardens could not be read
+
+## The number of a goods arrived entry: its own series (plan 33 version 1.1, PRD FR-12.40).
+
+# $number: the number of the entry in its series.
+# review: pending
+gardens-arrival-number = GA-{ $number }
+
+## Goods arrived (مال آیا): a garden's stock (plan 33 version 1.1, PRD FR-12.40). They carry no money.
+
+# review: pending
+gardens-type-arrival = { -maal-aaya }
+
+# $number: the number of the entry.
+# review: pending
+gardens-saved-arrival = { -maal-aaya } { $number } has been saved
+
+# review: pending
+gardens-arrival-qty = { -nag } arrived
+
+# review: pending
+gardens-arrival-qty-hint = A whole number. You can type a sum, for example 20+25.
+
+# review: pending
+gardens-arrival-sell-date-hint = Starts as the day the goods arrived. From this day they come into every new { -bikri } until they are sold.
+
+# review: pending
+gardens-arrival-posts-nothing = These goods carry no money. They stay in the stock of the { -bagh } until they are sold in a { -bikri } or written off. A new { -bikri } holds a lot for them from the { -sell-date }.
+
+# review: pending
+gardens-arrival-title = { -maal-aaya }
+
+# review: pending
+gardens-arrival-help = The goods that came from this { -bagh } and are not sold yet. A new { -bikri } holds a lot for each one on its { -sell-date }. What is not sold comes again the next day.
+
+# review: pending
+gardens-arrival-failed = The goods arrived could not be read
+
+# review: pending
+gardens-arrival-empty = No goods have arrived yet
+
+# review: pending
+gardens-arrival-empty-help = Choose { -maal-aaya } in the kind of entry above, fill in the item, the packing and the { -nag }, and save.
+
+# review: pending
+gardens-arrival-label = List of the goods arrived
+
+# review: pending
+gardens-arrival-col-number = No.
+
+# review: pending
+gardens-arrival-col-item = { -qism-maal }
+
+# review: pending
+gardens-arrival-col-left = Left
+
+# review: pending
+gardens-arrival-col-date = Day
+
+# review: pending
+gardens-arrival-col-qty = Arrived
+
+# review: pending
+gardens-arrival-item-packing = { $item }, { $packing }
+
+# review: pending
+gardens-arrival-item-cancelled = { $item } (cancelled)
+
+# $number: the number of the entry; $item: its item.
+# review: pending
+gardens-arrival-card-title = { -maal-aaya }: { $number }, { $item }
+
+# $reason: why it was cancelled.
+# review: pending
+gardens-arrival-cancelled = This entry is cancelled. { $reason }
+
+# The lots of the sales that took goods from the entry.
+# review: pending
+gardens-arrival-lots = Sales of these goods
+
+# review: pending
+gardens-arrival-lot-bikri = { -bikri }
+
+# review: pending
+gardens-arrival-cancel = Cancel { -maal-aaya }
+
+# $number: the entry.
+# review: pending
+gardens-arrival-sell-date-title = Change the { -sell-date }
+
+# $number: the entry.
+# review: pending
+gardens-arrival-sell-date-text = From this day the goods of { $number } come into every new { -bikri } until they are sold. The day cannot be before the day the goods arrived.
+
+# review: pending
+gardens-arrival-reason = Reason
+
+# review: pending
+gardens-arrival-cancel-title = Cancel this entry?
+
+# $number: the entry.
+# review: pending
+gardens-arrival-cancel-text = { $number } will be cancelled and the goods are taken off the stock. It can be cancelled only while nothing of it is sold or written off. Nothing is posted.
+
+# review: pending
+gardens-arrival-cancel-confirm = Cancel { -maal-aaya }
+
+# $number: the entry.
+# review: pending
+gardens-arrival-cancelled-toast = { $number } has been cancelled
+
+# review: pending
+gardens-arrival-write-off-title = Write off goods
+
+# $number: the entry; $item, $packing: what it is; $qty_left: how many are left.
+# review: pending
+gardens-arrival-write-off-text = Goods of { $number } ({ $item }, { $packing }) that are spoiled or lost are taken off the stock. { $qty_left } { -nag } are left now. Nothing is posted.
+
+# review: pending
+gardens-arrival-write-off-qty = { -nag } to write off
+
+# review: pending
+gardens-arrival-write-off-confirm = Write off
+
+# $qty: how many were written off.
+# review: pending
+gardens-arrival-write-off-done = { $qty } { -nag } have been written off
+
+# review: pending
+gardens-arrival-write-off-undo-title = Undo a write-off
+
+# review: pending
+gardens-arrival-write-off-undo-text = The goods go back to the stock. Choose the write-off and give the reason.
+
+# review: pending
+gardens-arrival-write-off-undo-confirm = Undo the write-off
+
+# review: pending
+gardens-arrival-write-off-pick = Write-off
+
+# $qty: how many were written off; $reason: why.
+# review: pending
+gardens-arrival-write-off-option = { $qty } { -nag }: { $reason }
+
+# review: pending
+gardens-arrival-write-off-undone = The write-off was undone

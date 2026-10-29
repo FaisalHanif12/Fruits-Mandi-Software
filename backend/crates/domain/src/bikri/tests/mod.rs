@@ -214,6 +214,7 @@ pub fn per_unit(value: &str) -> Option<ChargeInput> {
 /// The lot of PRD 4.4: freight 3,000 (firm), labour 5 per نگ, munshiana 50, phone 20, نقد 5,000.
 pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
     LotInput {
+        arrival_id: None,
         key: format!("lot-{seller}-{item}"),
         lot_id: None,
         seller_account_id: Some(seller),

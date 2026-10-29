@@ -203,6 +203,8 @@ pub struct StoredIdentity {
     pub person_key: Option<String>,
     /// The purchase an own lot takes its goods from, `None` for any other lot.
     pub purchase_id: Option<i64>,
+    /// The garden arrival a garden lot takes its goods from, `None` for any other lot.
+    pub arrival_id: Option<i64>,
 }
 
 /// A stored lot, as an edit or a later sale needs to know it.

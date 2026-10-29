@@ -34,6 +34,7 @@
       },
       "purchase": null,
       "own": null,
+      "arrival": null,
       "pukhta": null,
       "item": {
         "id": 1,

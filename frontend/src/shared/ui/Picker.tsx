@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { masterSource, type SearchHit, type SearchScope } from '../search';
-import { useAddRecord, type AddRecordKind } from './add-record';
+import { useAddRecord, type AddRecordKind, type VentureScope } from './add-record';
 import { PickerBase, type PickerValue } from './PickerBase';
 import type { FieldControlProps } from './Field';
 
@@ -31,8 +31,11 @@ interface PickerProps extends FieldControlProps {
   onEnterPicked?: (() => void) | undefined;
 }
 
-/** The Fluent message of the "add" button of each list, and the Index form it opens. */
-const ADD: Record<SearchScope, { label: string; kind: AddRecordKind }> = {
+/**
+ * The Fluent message of the "add" button of each list, and the Index form it opens. A trip and a
+ * garden have none: they are made on their own screens (PRD 12.10, 12.11), so their picker only finds.
+ */
+const ADD: Record<Exclude<SearchScope, VentureScope>, { label: string; kind: AddRecordKind }> = {
   city: { label: 'search-add-city', kind: 'city' },
   item: { label: 'search-add-item', kind: 'item' },
   packing: { label: 'search-add-packing', kind: 'packing' },
@@ -47,22 +50,26 @@ const ADD: Record<SearchScope, { label: string; kind: AddRecordKind }> = {
   any_account: { label: 'search-add-account', kind: 'any' },
 };
 
+function isVentureScope(scope: SearchScope): scope is VentureScope {
+  return scope === 'trip' || scope === 'garden' || scope === 'trip_all' || scope === 'garden_all';
+}
+
 export function Picker({ scope, canAdd = true, ...rest }: PickerProps) {
   const source = useMemo(() => masterSource(scope), [scope]);
   const addRecord = useAddRecord();
-  const add = ADD[scope];
+  const add = isVentureScope(scope) ? null : ADD[scope];
   return (
     <PickerBase<SearchHit>
       source={source}
-      addLabelId={add.label}
+      addLabelId={add?.label}
       onAddRecord={
-        addRecord !== null
+        addRecord !== null && add !== null
           ? (text, done) => {
               addRecord({ kind: add.kind, text, onClosed: done });
             }
           : undefined
       }
-      showAdd={canAdd}
+      showAdd={canAdd && add !== null}
       {...rest}
     />
   );

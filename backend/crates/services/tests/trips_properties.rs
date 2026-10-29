@@ -257,6 +257,7 @@ fn run(case: &Case) {
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            sell_date: None,
             trip_id: Some(trip),
             date: "10-10-2026".into(),
             supplier: None,

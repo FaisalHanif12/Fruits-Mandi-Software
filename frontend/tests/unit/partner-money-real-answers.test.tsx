@@ -257,7 +257,7 @@ describe.each(LANGUAGES)('the partner statement with the real answers (%s)', (la
     expect(textOf(grid(), 0, 'detail')).toBe(
       message(language, 'partners-statement-detail-trip-paid', {
         kind: 'purchase',
-        trip: message(language, 'trips-number', { number: 1 }),
+        trip: '0070',
         secondary: message(language, 'purchases-number', { number: 1 }),
       }),
     );

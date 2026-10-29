@@ -18,8 +18,8 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, bikri, capital, cash, cashbook, drafts, expenses, fruit, gardens, general, khata,
-    lent, masters, partners, printing, purchases, rules, search, statement, trips, ventures,
+    accounts, arrivals, bikri, capital, cash, cashbook, drafts, expenses, fruit, gardens, general,
+    khata, lent, masters, partners, printing, purchases, rules, search, statement, trips, ventures,
     vouchers,
 };
 use ts_rs::{Config, TS};
@@ -372,6 +372,31 @@ const EXPECTED_FILES: &[&str] = &[
     "PurchaseWriteOffDone.ts",
     "PurchaseWriteOffUndoInput.ts",
     "PurchaseWriteOffUndone.ts",
+    "ArrivalCancelInput.ts",
+    "ArrivalCancelled.ts",
+    "ArrivalGetInput.ts",
+    "ArrivalInput.ts",
+    "ArrivalLotRef.ts",
+    "ArrivalRow.ts",
+    "ArrivalSaved.ts",
+    "ArrivalStateFilter.ts",
+    "ArrivalStatus.ts",
+    "ArrivalWriteOffDone.ts",
+    "ArrivalWriteOffInput.ts",
+    "ArrivalWriteOffUndoInput.ts",
+    "ArrivalWriteOffUndone.ts",
+    "ArrivalsList.ts",
+    "ArrivalsListInput.ts",
+    "ArrivalsTotals.ts",
+    "ArrivalLotPreview.ts",
+    "GardenRef.ts",
+    "GardenStockRow.ts",
+    "SavedArrivalRef.ts",
+    "SellDateInput.ts",
+    "SellDateSet.ts",
+    "ReadyGoods.ts",
+    "ReadyGoodsInput.ts",
+    "ReadyGoodsRow.ts",
     "TripInput.ts",
     "TripSetPartnersInput.ts",
     "TripDefaults.ts",
@@ -934,6 +959,29 @@ fn export_bindings() {
     purchases::PurchaseWriteOffInput::export_all(&cfg).unwrap();
     purchases::PurchaseWriteOffDone::export_all(&cfg).unwrap();
     purchases::PurchaseWriteOffUndoInput::export_all(&cfg).unwrap();
+    // Goods that arrived from a garden, the date to sell and the ready goods of a new sale (plan 33
+    // v1.1).
+    arrivals::ArrivalInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalSaved::export_all(&cfg).unwrap();
+    arrivals::ArrivalRow::export_all(&cfg).unwrap();
+    arrivals::ArrivalLotRef::export_all(&cfg).unwrap();
+    arrivals::ArrivalStatus::export_all(&cfg).unwrap();
+    arrivals::ArrivalStateFilter::export_all(&cfg).unwrap();
+    arrivals::ArrivalCancelInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalCancelled::export_all(&cfg).unwrap();
+    arrivals::ArrivalGetInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalsListInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalsList::export_all(&cfg).unwrap();
+    arrivals::ArrivalsTotals::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffDone::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffUndoInput::export_all(&cfg).unwrap();
+    arrivals::ArrivalWriteOffUndone::export_all(&cfg).unwrap();
+    arrivals::SellDateInput::export_all(&cfg).unwrap();
+    arrivals::SellDateSet::export_all(&cfg).unwrap();
+    bikri::ReadyGoodsInput::export_all(&cfg).unwrap();
+    bikri::ReadyGoods::export_all(&cfg).unwrap();
+    bikri::ReadyGoodsRow::export_all(&cfg).unwrap();
     purchases::PurchaseWriteOffUndone::export_all(&cfg).unwrap();
     trips::TripInput::export_all(&cfg).unwrap();
     trips::TripSetPartnersInput::export_all(&cfg).unwrap();

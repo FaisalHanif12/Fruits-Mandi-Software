@@ -11,11 +11,6 @@ import type { TripEntryKind, TripEntryRow, TripRow } from './types';
 
 type Say = (id: string, vars?: Record<string, string>) => string;
 
-/** The number of a trip in its series: "TRP-3" or "سفر-3" (letters from Fluent). */
-export function tripNumberText(number: number, text: Say): string {
-  return text('trips-number', { number: String(number) });
-}
-
 /** The number of an entry in the series of its kind: a purchase, a trip cost or a sale elsewhere. */
 export function entryNumberText(kind: TripEntryKind, number: number, text: Say): string {
   switch (kind) {
@@ -38,7 +33,8 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
     field: 'number',
     type: 'code',
     headerId: 'trips-col-number',
-    value: (row, { text }) => tripNumberText(row.number, text),
+    // The code of a trip, type 007 (plan 34): 0070, 0071 ... The backend makes it; it is shown as it is.
+    value: (row) => row.code,
   },
   {
     field: 'date',

@@ -126,6 +126,8 @@ pub struct NewLot<'a> {
     pub seller_account_id: i64,
     /// The purchase an own lot takes its goods from (PRD FR-12.26).
     pub purchase_id: Option<i64>,
+    /// The garden arrival a garden lot takes its goods from (PRD FR-12.40).
+    pub arrival_id: Option<i64>,
     /// The one-time seller.
     pub pukhta: Option<PukhtaColumns<'a>>,
     /// The item.
@@ -186,9 +188,9 @@ pub fn insert_lot(
              munshiana_paisa, munshiana_method, munshiana_value_paisa, munshiana_rule_id,
              phone_paisa, phone_method, phone_value_paisa, phone_rule_id,
              cash_paid_paisa, store_rent_paisa, adjust_advance, qty_sold, gross_paisa, seller_comm_paisa,
-             deductions_paisa, net_paisa, purchase_id)
+             deductions_paisa, net_paisa, purchase_id, arrival_id)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
-             ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38)",
+             ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
         params![
             now,
             user_id,
@@ -228,6 +230,7 @@ pub fn insert_lot(
             lot.deductions_paisa,
             lot.net_paisa,
             lot.purchase_id,
+            lot.arrival_id,
         ],
     )?;
     Ok(conn.last_insert_rowid())
@@ -413,6 +416,8 @@ pub struct NewStockMove<'a> {
     /// The purchase the goods came out of, for a sale of an own lot (PRD FR-12.26). The lot's own
     /// "received" move has none.
     pub purchase_id: Option<i64>,
+    /// The garden arrival the goods came out of, for a sale of a lot linked to one (PRD FR-12.40).
+    pub arrival_id: Option<i64>,
 }
 
 /// Adds a stock move (append-only).
@@ -427,8 +432,8 @@ pub fn insert_stock_move(
 ) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO stock_moves (created_at, created_by, updated_at, updated_by, lot_id, journal_entry_id, move_date,
-             kind, qty, purchase_id)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+             kind, qty, purchase_id, arrival_id)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             now,
             user_id,
@@ -437,7 +442,8 @@ pub fn insert_stock_move(
             stock_move.move_date,
             stock_move.kind.as_str(),
             stock_move.qty,
-            stock_move.purchase_id
+            stock_move.purchase_id,
+            stock_move.arrival_id
         ],
     )?;
     Ok(())

@@ -290,6 +290,7 @@ mod lot {
 
     fn stored_identity() -> StoredIdentity {
         StoredIdentity {
+            arrival_id: None,
             seller_account_id: OWN_GOODS,
             item_id: BANANA,
             person_key: None,

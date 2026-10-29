@@ -4,6 +4,19 @@
 
 import { callCommand } from '../../shared/api';
 import type {
+  ArrivalCancelInput,
+  ArrivalCancelled,
+  ArrivalInput,
+  ArrivalRow,
+  ArrivalSaved,
+  ArrivalsList,
+  ArrivalsListInput,
+  ArrivalWriteOffDone,
+  ArrivalWriteOffInput,
+  ArrivalWriteOffUndoInput,
+  ArrivalWriteOffUndone,
+  SellDateInput,
+  SellDateSet,
   GardenCloseInput,
   GardenClosePreview,
   GardenClosed,
@@ -87,4 +100,43 @@ export function gardensClose(input: GardenCloseInput): Promise<GardenClosed> {
 /** Undoes the closing by reversal while its day is open (PRD FR-12.38). */
 export function gardensReopen(input: GardenReopenInput): Promise<GardenReopened> {
   return callCommand<GardenReopened>('gardens_reopen', { input });
+}
+
+// Goods arrived (مال آیا): a garden's stock, with no money (PRD FR-12.40, plan 33 version 1.1).
+
+/** Saves a goods arrived entry: the garden's goods that came to the shop. Posts no money. */
+export function gardensArrivalSave(input: ArrivalInput): Promise<ArrivalSaved> {
+  return callCommand<ArrivalSaved>('gardens_arrival_save', { input });
+}
+
+/** One page of the garden's goods arrived entries and the totals over the whole filter (FR-19.11). */
+export function gardensArrivalsList(input: ArrivalsListInput): Promise<ArrivalsList> {
+  return callCommand<ArrivalsList>('gardens_arrivals_list', { input });
+}
+
+/** One entry with the lots that sold it and its write-offs. */
+export function gardensArrivalGet(id: number): Promise<ArrivalRow> {
+  return callCommand<ArrivalRow>('gardens_arrival_get', { input: { id } });
+}
+
+/** Cancels an entry with a reason, while nothing of it is sold or written off. */
+export function gardensArrivalCancel(input: ArrivalCancelInput): Promise<ArrivalCancelled> {
+  return callCommand<ArrivalCancelled>('gardens_arrival_cancel', { input });
+}
+
+/** Changes the date to sell of an entry that still has goods left. Nothing is posted. */
+export function gardensArrivalSetSellDate(input: SellDateInput): Promise<SellDateSet> {
+  return callCommand<SellDateSet>('gardens_arrival_set_sell_date', { input });
+}
+
+/** Writes goods off with a reason; nothing is posted. */
+export function gardensArrivalWriteOff(input: ArrivalWriteOffInput): Promise<ArrivalWriteOffDone> {
+  return callCommand<ArrivalWriteOffDone>('gardens_arrival_write_off', { input });
+}
+
+/** Undoes a write-off. */
+export function gardensArrivalWriteOffUndo(
+  input: ArrivalWriteOffUndoInput,
+): Promise<ArrivalWriteOffUndone> {
+  return callCommand<ArrivalWriteOffUndone>('gardens_arrival_write_off_undo', { input });
 }

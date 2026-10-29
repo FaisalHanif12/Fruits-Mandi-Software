@@ -553,3 +553,25 @@ err-close-before-last-entry = The { -bagh } cannot be closed before its latest e
 # Plan 17c. The entry of the garden was cancelled already.
 # review: pending
 err-garden-entry-cancelled = This entry of the { -bagh } is cancelled already.
+
+## Plan 33 version 1.1: the date to sell, the goods that arrived at a garden.
+
+# PRD FR-12.39. $entry_date: the day of the purchase or arrival.
+# review: pending
+err-sell-date-before-entry = The { -sell-date } cannot be before the day the goods came ({ $entry_date }). Choose that day or a later day.
+
+# PRD FR-12.40. The goods arrived entry was cancelled already.
+# review: pending
+err-arrival-cancelled = This { -maal-aaya } entry is cancelled already.
+
+# PRD FR-12.40. $qty_sold, $qty_written_off: what has been sold and written off from it.
+# review: pending
+err-arrival-has-sales = This { -maal-aaya } entry cannot be cancelled: { $qty_sold } { -nag } are sold and { $qty_written_off } are written off.
+
+# PRD FR-12.40. $qty_left: how many { -nag } of the arrival are not sold on the lines.
+# review: pending
+err-arrival-lot-not-fully-sold = This lot of garden goods must be sold in full in this { -bikri }. { $qty_left } { -nag } are not sold on the lines yet. Sell them on the lines, or take fewer { -nag }. What you do not take stays with the { -maal-aaya } entry.
+
+# PRD FR-12.40. $qty_left: how many { -nag } of garden goods are still left.
+# review: pending
+err-garden-has-stock = This { -bagh } still has goods that are not sold ({ $qty_left } { -nag }). Sell them or write them off before closing it.

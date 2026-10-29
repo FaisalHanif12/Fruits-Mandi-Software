@@ -64,11 +64,11 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     fakeGardens();
   });
 
-  const gardenNumber = message(language, 'gardens-number', { number: 1 });
+  const gardenNumber = '0080';
   const open = async (path = '/gardens/1') => {
     const view = await renderApp(path);
     await screen.findByText(
-      said(message(language, 'gardens-detail-title', { number: gardenNumber })),
+      said(message(language, 'gardens-detail-title', { code: gardenNumber })),
     );
     return { ...view, user: userEvent.setup() };
   };

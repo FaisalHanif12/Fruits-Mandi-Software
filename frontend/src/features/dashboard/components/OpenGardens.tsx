@@ -9,7 +9,6 @@ import type { DashboardGarden } from '../../../bindings/DashboardGarden';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { useRovingKeys } from '../../../shared/keyboard';
 import { Button, Code, Num, ScriptText, Table, type TableColumn } from '../../../shared/ui';
-import { gardenNumberText } from '../../gardens';
 import { useOpenDestination } from '../destinations';
 
 export function OpenGardens({ rows }: { rows: readonly DashboardGarden[] }) {
@@ -31,7 +30,7 @@ export function OpenGardens({ rows }: { rows: readonly DashboardGarden[] }) {
           }}
           className="flex min-h-target items-center gap-2 rounded-1 text-start text-primary underline"
         >
-          <Code>{gardenNumberText(row.number, (id, vars) => l10n.getString(id, vars))}</Code>
+          <Code>{row.code}</Code>
           <ScriptText>{displayName(row, language)}</ScriptText>
         </button>
       ),

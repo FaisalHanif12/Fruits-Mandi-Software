@@ -63,7 +63,7 @@ export function useBikriFind(input: BikriFindInput, enabled: boolean) {
 
 /**
  * The lots with goods left for the filters, page by page (PRD FR-12.14, FR-19.11): the lots first,
- * then the firm's own goods, counted together. The first page has the totals of the whole filter.
+ * then the firm's own goods, then the gardens' goods, counted together. The first page has the totals of the whole filter.
  * The last answer stays while the next comes.
  */
 export function useStockList(filter: Omit<StockListInput, 'offset' | 'limit'>, enabled = true) {
@@ -72,7 +72,7 @@ export function useStockList(filter: Omit<StockListInput, 'offset' | 'limit'>, e
     queryKey: ['bikri', 'stock', settled],
     enabled,
     fetchPage: (offset, limit) => bikriStockList({ ...settled, offset, limit }),
-    rowsIn: (page) => page.rows.length + page.own_rows.length,
+    rowsIn: (page) => page.rows.length + page.own_rows.length + page.garden_rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
   });

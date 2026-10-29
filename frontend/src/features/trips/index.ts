@@ -2,5 +2,4 @@
 // screens are opened by the router (lazy routes, Code Standards F36), so the pages are not
 // exported here. The dashboard tile مارکیٹ سفر (D5) reads `useTripsSummary`.
 export { useTripsList, useTripsSummary } from './hooks';
-export { tripNumberText } from './list-columns';
 export type { TripRow, TripsSummary } from './types';

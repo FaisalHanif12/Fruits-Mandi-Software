@@ -3,7 +3,21 @@
 // forms hold the drafts below, and the amounts the backend sends are `Paisa`, shown and never
 // worked out.
 
+import type { ArrivalCancelInput } from '../../bindings/ArrivalCancelInput';
+import type { ArrivalCancelled } from '../../bindings/ArrivalCancelled';
+import type { ArrivalInput } from '../../bindings/ArrivalInput';
+import type { ArrivalRow } from '../../bindings/ArrivalRow';
+import type { ArrivalSaved } from '../../bindings/ArrivalSaved';
+import type { ArrivalStateFilter } from '../../bindings/ArrivalStateFilter';
+import type { ArrivalsList } from '../../bindings/ArrivalsList';
+import type { ArrivalsListInput } from '../../bindings/ArrivalsListInput';
+import type { ArrivalWriteOffDone } from '../../bindings/ArrivalWriteOffDone';
+import type { ArrivalWriteOffInput } from '../../bindings/ArrivalWriteOffInput';
+import type { ArrivalWriteOffUndoInput } from '../../bindings/ArrivalWriteOffUndoInput';
+import type { ArrivalWriteOffUndone } from '../../bindings/ArrivalWriteOffUndone';
 import type { EntryPartInput } from '../../bindings/EntryPartInput';
+import type { SellDateInput } from '../../bindings/SellDateInput';
+import type { SellDateSet } from '../../bindings/SellDateSet';
 import type { GardenCloseInput } from '../../bindings/GardenCloseInput';
 import type { GardenCloseNumbers } from '../../bindings/GardenCloseNumbers';
 import type { GardenClosePreview } from '../../bindings/GardenClosePreview';
@@ -39,6 +53,18 @@ import type { VentureStatus } from '../../bindings/VentureStatus';
 import type { NamePairValue, PickerValue } from '../../shared/ui';
 
 export type {
+  ArrivalCancelInput,
+  ArrivalCancelled,
+  ArrivalInput,
+  ArrivalRow,
+  ArrivalSaved,
+  ArrivalStateFilter,
+  ArrivalsList,
+  ArrivalsListInput,
+  ArrivalWriteOffDone,
+  ArrivalWriteOffInput,
+  ArrivalWriteOffUndoInput,
+  ArrivalWriteOffUndone,
   EntryPartInput,
   GardenCloseInput,
   GardenCloseNumbers,
@@ -69,15 +95,17 @@ export type {
   GardensSummary,
   GardensTotals,
   MoneySource,
+  SellDateInput,
+  SellDateSet,
   VenturePartnerInput,
   VenturePartnerRow,
   VentureStatus,
 };
 
 /** The types of the type list on the garden screen (PRD FR-7.67), in the order they are shown. */
-export type EntryType = 'installment' | 'cost' | 'other_sale';
+export type EntryType = 'installment' | 'cost' | 'other_sale' | 'arrival';
 
-export const ENTRY_TYPES: readonly EntryType[] = ['installment', 'cost', 'other_sale'];
+export const ENTRY_TYPES: readonly EntryType[] = ['installment', 'cost', 'other_sale', 'arrival'];
 
 /** The new garden form as text (PRD FR-12.29): the shares first, then the sources, then the details. */
 export interface GardenDraft {
@@ -128,5 +156,12 @@ export interface EntryDraft {
   reason: string;
   /** The shop, as typed, and the نگ sold: a sale in another shop. */
   shop: string;
+  /** The نگ sold in another shop, or the نگ that arrived (goods arrived, PRD FR-12.40). */
   qty: string;
+  /** Goods arrived: the item and packing, the weight of an item sold by weight, and the day to sell. */
+  item: PickerValue | null;
+  packing: PickerValue | null;
+  weight: string;
+  /** The day to sell as typed, `DD-MM-YYYY`. Empty means the day of the arrival (PRD FR-12.40). */
+  sellDate: string;
 }

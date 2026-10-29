@@ -18,7 +18,6 @@ import { isoToDisplayDate } from '../../../../shared/format';
 import { ListGrid, type ListContext } from '../../../../shared/grid';
 import { displayName, useLanguage } from '../../../../shared/i18n';
 import { Button, Card, Code, Fact, Num } from '../../../../shared/ui';
-import { tripNumberText } from '../../../trips';
 import {
   OwnWriteOffDialog,
   UndoOwnWriteOffDialog,
@@ -120,9 +119,7 @@ export function OwnStockSection({ rows, list }: OwnStockSectionProps) {
           }
         >
           <dl className="grid grid-cols-3 gap-x-4 gap-y-3 normal:grid-cols-5">
-            <Fact label={<Localized id="bikri-stock-own-trip" />}>
-              {tripNumberText(selected.trip.number, say)}
-            </Fact>
+            <Fact label={<Localized id="bikri-stock-own-trip" />}>{selected.trip.code}</Fact>
             <Fact label={<Localized id="purchases-field-supplier" />}>
               {supplierText(selected.supplier, say)}
             </Fact>

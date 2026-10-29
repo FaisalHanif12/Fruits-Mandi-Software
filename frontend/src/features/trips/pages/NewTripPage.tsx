@@ -45,7 +45,6 @@ import {
   tripShareInputs,
 } from '../draft';
 import { useCreateTrip, useTripDefaults } from '../hooks';
-import { tripNumberText } from '../list-columns';
 import type { TripDefaults, TripDraft } from '../types';
 
 /** The rows of the running total, in the paths of this form (`partners[i].share`). */
@@ -107,12 +106,7 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
       try {
         const row = await create.mutateAsync(buildTrip(draft));
         setRefusal(null);
-        showToast(
-          'success',
-          l10n.getString('trips-created', {
-            number: tripNumberText(row.number, (id, vars) => l10n.getString(id, vars)),
-          }),
-        );
+        showToast('success', l10n.getString('trips-created', { code: row.code }));
         setCreatedId(row.id);
         return true;
       } catch (failure: unknown) {

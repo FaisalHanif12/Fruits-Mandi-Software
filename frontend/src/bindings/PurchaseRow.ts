@@ -35,6 +35,11 @@ export type PurchaseRow = {
    */
   entry_date: string;
   /**
+   * The day to sell, `YYYY-MM-DD` (PRD FR-12.39). A new بکری from this day opens with a ready
+   * lot for the goods left. Starts as `entry_date`.
+   */
+  sell_date: string;
+  /**
    * Saved or cancelled.
    */
   status: PurchaseStatus;
@@ -157,7 +162,8 @@ export type PurchaseRow = {
    */
   result_working: Working;
   /**
-   * Whole days from the day bought to today, while stock is left; 0 otherwise.
+   * Whole days from the day to sell (`sell_date`) to today, while stock is left; 0 otherwise. Goods
+   * meant for a later day are not waiting before it.
    */
   days_waiting: number;
   /**
@@ -165,6 +171,10 @@ export type PurchaseRow = {
    * `purchases_cancel` will accept it (if its day is open).
    */
   can_cancel: boolean;
+  /**
+   * True while it is saved and has goods left: `purchases_set_sell_date` is allowed.
+   */
+  can_change_sell_date: boolean;
   /**
    * The own lots that took goods from it (only in `purchases_get`).
    */

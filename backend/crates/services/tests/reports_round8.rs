@@ -18,7 +18,8 @@ mod xlsx_support;
 use common::*;
 use mandi_reports::export::{ReportExportInput, export_report};
 use mandi_reports::reports::{
-    Cell, FilterKind, ReportFilters, ReportGroup, ReportId, ReportPage, Row, TripView, catalog,
+    Cell, FilterKind, ReportFilters, ReportGroup, ReportId, ReportPage, Row, SourceKind, TripView,
+    catalog,
 };
 use mandi_reports::reports::{ReportPrintInput, print_data};
 use mandi_services::core::auth::Language;
@@ -118,6 +119,7 @@ fn buy_on(
         &w.env.ctx,
         &w.owner,
         &PurchaseInput {
+            sell_date: None,
             trip_id: Some(trip),
             date: date.into(),
             supplier: Some("Orange Traders".into()),
@@ -1116,6 +1118,128 @@ fn r10_lists_the_lots_with_goods_left_like_the_stock_screen() {
 }
 
 #[test]
+fn r10_also_lists_the_garden_arrivals_with_goods_left_like_the_stock_screen() {
+    let w = worked_day();
+    // 100 arrive on 10-10-26 to sell on 10-10-26; 60 are sold in a linked lot.
+    let (garden_account, arrival) = garden_with_arrival(&w, "100", "10-10-2026");
+    let lot = support::with_sales(
+        mandi_services::core::bikri::LotInput {
+            arrival_id: Some(arrival.id),
+            ..support::bare_lot(&w, "g-1", garden_account, w.banana, "60")
+        },
+        vec![support::sale("s-1", w.akram, "60", "600")],
+    );
+    bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &BikriSaveInput {
+            draft: support::draft(vec![lot]),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
+    // The garden lot is sold in full, so the only row is the arrival with its 40 left.
+    assert_eq!(page.rows.len(), 1);
+    let row = &page.rows[0];
+    assert!(
+        matches!(&row.cells[1], Cell::Doc { number: Some(1), type_id } if type_id == "report-doc-garden-arrival")
+    );
+    assert_eq!(
+        code_of(&row.cells[2]),
+        "0080",
+        "the seller is the garden's account"
+    );
+    // received, sold, written off, taken as fruit, balance, days (from the day to sell).
+    assert_eq!(figures_of_cells(&row.cells, 5), vec![100, 60, 0, 0, 40, 0]);
+    assert_eq!(figures_of_cells(&page.totals[..10], 5), [100, 60, 0, 0, 40]);
+    let source = row.source.expect("a row opens its record");
+    assert_eq!((source.kind, source.id), (SourceKind::Arrival, arrival.id));
+    // The screen shows the same arrival with the same balance.
+    let screen = bikri::stock_list(&w.env.ctx, &StockListInput::default()).unwrap();
+    assert_eq!(screen.garden_rows.len(), 1);
+    assert_eq!(screen.garden_rows[0].balance, 40);
+    assert_eq!(screen.garden_rows[0].arrival_id, arrival.id);
+    // The seller filter keeps it for the garden's account and drops it for another seller; the
+    // item filter keeps it for کیلا and drops it for another item.
+    let by = |seller: Option<i64>, item: Option<i64>| {
+        report(
+            &w,
+            ReportId::R10,
+            ReportFilters {
+                seller_id: seller,
+                item_id: item,
+                ..ReportFilters::default()
+            },
+            0,
+            0,
+        )
+        .rows
+        .len()
+    };
+    assert_eq!(by(Some(garden_account), None), 1);
+    assert_eq!(by(Some(w.karim), None), 0);
+    assert_eq!(by(None, Some(w.banana)), 1);
+    assert_eq!(by(None, Some(w.apple)), 0);
+    // Two days after the day to sell, the goods have waited 2 days; before it, 0.
+    set_today(&w.env, 2026, 10, 12);
+    let later = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
+    assert_eq!(qty(&later.rows[0].cells[10]), 2);
+    // Written off for good, the arrival leaves the report.
+    mandi_services::gardens::arrivals::write_off(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::arrivals::ArrivalWriteOffInput {
+            arrival_id: arrival.id,
+            qty: "40".into(),
+            reason: "خراب".into(),
+        },
+    )
+    .unwrap();
+    assert!(
+        report(&w, ReportId::R10, ReportFilters::default(), 0, 0)
+            .rows
+            .is_empty()
+    );
+}
+
+#[test]
+fn r10_counts_the_days_of_an_arrival_from_its_day_to_sell_and_prints_its_row() {
+    let w = worked_day();
+    // Arrived on 10-10-26 to sell on 12-10-26: on 10-10-26 it has waited 0 days, not negative.
+    let (_, arrival) = garden_with_arrival(&w, "30", "12-10-2026");
+    let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
+    assert_eq!(
+        figures_of_cells(&page.rows[0].cells, 5),
+        vec![30, 0, 0, 0, 30, 0]
+    );
+    set_today(&w.env, 2026, 10, 15);
+    let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
+    assert_eq!(
+        qty(&page.rows[0].cells[10]),
+        3,
+        "from 12-10-26, not from 10-10-26"
+    );
+
+    // The print data has the same row, with the document label ID the frontend writes in words.
+    let printed = print_data(
+        w.env.ctx.db(),
+        &ReportPrintInput {
+            id: ReportId::R10,
+            filters: ReportFilters::default(),
+            language: Language::En,
+            paper: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(printed.rows.len(), 1);
+    let json = serde_json::to_value(&printed.rows[0]).unwrap().to_string();
+    assert!(json.contains("report-doc-garden-arrival"), "{json}");
+    assert_eq!(printed.rows[0].cells.len(), page.rows[0].cells.len());
+    let _ = arrival;
+}
+
+#[test]
 fn r10_also_lists_the_stock_of_a_trip_marked_with_the_own_goods_account() {
     let (w, _, _) = trip_34();
     let page = report(&w, ReportId::R10, ReportFilters::default(), 0, 0);
@@ -1388,6 +1512,39 @@ mod fixtures {
         );
         let stock = bikri::stock_list(&w.env.ctx, &StockListInput::default()).unwrap();
         assert!(stock.own_rows.is_empty());
+    }
+
+    #[test]
+    fn the_stock_fixture_with_a_garden_arrival_is_the_real_answer() {
+        // Plan 33 v1.1: R10 holds a garden arrival (60 of 100 sold in a linked lot, 40 left).
+        let w = worked_day();
+        let (garden_account, arrival) = garden_with_arrival(&w, "100", "10-10-2026");
+        let lot = support::with_sales(
+            mandi_services::core::bikri::LotInput {
+                arrival_id: Some(arrival.id),
+                ..support::bare_lot(&w, "g-1", garden_account, w.banana, "60")
+            },
+            vec![support::sale("s-1", w.akram, "60", "600")],
+        );
+        bikri::save(
+            &w.env.ctx,
+            &w.owner,
+            &BikriSaveInput {
+                draft: support::draft(vec![lot]),
+                confirm_cash_below_zero: false,
+            },
+        )
+        .unwrap();
+        run_pair(
+            &w,
+            "reports_run_r10_with_garden_arrival",
+            json!({ "id": "R10", "offset": 0, "limit": 100, "filters": filters(json!({})) }),
+        );
+        print_pair(
+            &w,
+            "reports_print_data_r10_with_garden_arrival_en",
+            json!({ "id": "R10", "language": "en", "paper": null, "filters": filters(json!({})) }),
+        );
     }
 
     #[test]

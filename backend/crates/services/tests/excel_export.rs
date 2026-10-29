@@ -195,7 +195,10 @@ fn expect_cell(sheet: &Sheet, row: u32, col: u32, cell: &Cell, l10n: &L10n, what
 /// lacks it, so once the frontend adds a message the sheet must use it. The list is empty now:
 /// every ID is in both languages (frontend-d5, round 12). A new report adds its IDs here until the
 /// frontend has written them.
-const PENDING_IDS: &[&str] = &[];
+const PENDING_IDS: &[&str] = &[
+    // The document label of a garden arrival in R10 (plan 33 v1.1): frontend writes it.
+    "report-doc-garden-arrival",
+];
 
 /// The row of the heading: the one whose texts are exactly the column titles.
 fn header_row(sheet: &Sheet, titles: &[String]) -> u32 {
@@ -255,7 +258,10 @@ fn check_report(w: &support::World, id: ReportId, language: Language, dir: &Path
     );
     // Every message the sheet uses exists in the language: nothing fell back to its ID.
     for text in sheet.all_texts() {
-        let pending = PENDING_IDS.contains(&text.as_str()) && !l10n.has(&text);
+        // A document cell is its label and its number ("report-doc-garden-arrival 1").
+        let pending = PENDING_IDS
+            .iter()
+            .any(|id| !l10n.has(id) && (text == *id || text.starts_with(&format!("{id} "))));
         assert!(
             pending || (!text.starts_with("report-") && !text.starts_with("analytics-")),
             "{what}: {text}"
@@ -944,4 +950,24 @@ fn a_pack_for_a_bad_day_is_refused() {
     let out = tempfile::tempdir().unwrap();
     assert!(pack::build_sheets(w.env.ctx.db(), "not-a-day", out.path()).is_err());
     assert!(std::fs::read_dir(out.path()).unwrap().next().is_none());
+}
+
+#[test]
+fn r10_exports_a_garden_arrival_row_with_every_number_equal_to_the_page_in_both_languages() {
+    // Plan 33 v1.1: an arrival is a row of the printed باقی مال (R10). The sheet holds the same
+    // cells as the page: the document label, the garden's account, the quantities and the days.
+    let w = full_day();
+    garden_with_arrival(&w, "30", "10-10-2026");
+    let page = page_of(&w, ReportId::R10);
+    assert!(
+        page.rows.iter().any(|r| matches!(
+            &r.cells[1],
+            Cell::Doc { type_id, .. } if type_id == "report-doc-garden-arrival"
+        )),
+        "the arrival is a row of R10"
+    );
+    for language in [Language::En, Language::Ur] {
+        let dir = tempfile::tempdir().unwrap();
+        check_report(&w, ReportId::R10, language, dir.path());
+    }
 }

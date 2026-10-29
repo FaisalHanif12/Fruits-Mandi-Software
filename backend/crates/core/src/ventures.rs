@@ -217,3 +217,24 @@ pub struct TripRef {
     /// English name.
     pub name_en: String,
 }
+
+/// A garden as other screens point at it (plan 33 v1.1): the stock list, the ready goods of a new
+/// sale and the arrival rows.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct GardenRef {
+    /// The garden.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// Its number in its own series, from 1.
+    #[ts(type = "number")]
+    pub number: i64,
+    /// Its code (plan 34): `0080` for the first garden. Its account has the same code.
+    pub code: String,
+    /// Urdu name, as typed.
+    pub name_ur: String,
+    /// English name, as typed.
+    pub name_en: String,
+    /// The garden's account (control 0306). It is the seller of a garden lot, so a ready lot can
+    /// fill its seller from it.
+    pub account: crate::accounts::RecordRef,
+}

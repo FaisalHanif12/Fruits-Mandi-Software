@@ -49,12 +49,13 @@ describe('a draft from the backend in the stores', () => {
   });
 
   it('the real draft of an undo (no ids, `null` in the file) builds back to the same values', () => {
-    // The file has `lot_id: null`, `sale_id: null` and `purchase_id: null`; the screen leaves them out
+    // The file has `lot_id: null`, `sale_id: null`, `purchase_id: null` and `arrival_id: null`; the screen leaves them out
     // when the lot is not saved yet (the backend reads a missing purchase and null the same).
     const withoutIds = structuredClone(UNDO.draft);
     for (const lot of withoutIds.lots) {
       delete lot.lot_id;
       delete lot.purchase_id;
+      delete lot.arrival_id;
       for (const sale of lot.sales) delete sale.sale_id;
     }
     expect(buildDraft(loaded(UNDO.draft))).toEqual(withoutIds);

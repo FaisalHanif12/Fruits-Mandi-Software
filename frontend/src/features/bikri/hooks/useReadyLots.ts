@@ -93,22 +93,39 @@ function isUntouched(stores: BikriDraftStores): boolean {
     );
 }
 
-/** The lot row of a stock record: the visible cells, filled like values typed (NFR-USE-27, F43). */
-function lotRowOf(stock: ReadyStock, own: AccountHit): EntryRow {
-  return {
-    rowId: globalThis.crypto.randomUUID(),
-    typed: {
-      [LOT.purchase]: String(stock.id),
-      [LOT.qty]: String(stock.qtyLeft),
-      // The seller is set, so the screen does not fill it again from the زمیندار.
-      [LOT.sellerFilled]: ON,
-    },
-    picked: {
-      [LOT.seller]: pickedOf(own),
-      [LOT.item]: pickedOf(stock.item),
-      [LOT.packing]: pickedOf(stock.packing),
-    },
+/**
+ * The lot row of a stock record: the visible cells, filled like values typed (NFR-USE-27, F43). A
+ * trip purchase is sold by اپنا مال and keeps its purchase; a garden's entry is sold by the garden
+ * (its account) and keeps its entry. Null while the account of اپنا مال is not known yet.
+ */
+function lotRowOf(stock: ReadyStock, own: AccountHit | null): EntryRow | null {
+  const common = {
+    [LOT.qty]: String(stock.qtyLeft),
+    // The seller is set, so the screen does not fill it again from the زمیندار.
+    [LOT.sellerFilled]: ON,
   };
+  const goods = {
+    [LOT.item]: pickedOf(stock.item),
+    [LOT.packing]: pickedOf(stock.packing),
+  };
+  switch (stock.kind) {
+    case 'trip':
+      return own === null
+        ? null
+        : {
+            rowId: globalThis.crypto.randomUUID(),
+            typed: { ...common, [LOT.purchase]: String(stock.id) },
+            picked: { [LOT.seller]: pickedOf(own), ...goods },
+          };
+    case 'garden':
+      return stock.garden === null
+        ? null
+        : {
+            rowId: globalThis.crypto.randomUUID(),
+            typed: { ...common, [LOT.arrival]: String(stock.id) },
+            picked: { [LOT.seller]: pickedOf(stock.garden.account), ...goods },
+          };
+  }
 }
 
 const sameKeys = (a: readonly string[], b: readonly string[]) =>
@@ -151,31 +168,37 @@ export function useReadyLots(stores: BikriDraftStores, enabled: boolean): number
     if (removed !== removedReady) stores.view.getState().setReadyLots(kept, removed);
 
     // The lots of the day, while nothing of the user's is on the form.
-    if (found === undefined || ownAccount === null || !isUntouched(stores)) return;
+    if (found === undefined || !isUntouched(stores)) return;
     const wanted = found.filter((stock) => !removed.includes(readyKey(stock)));
+    // The account of اپنا مال is asked for once: wait for it while a trip purchase needs it. If it
+    // is not offered, trip goods have no lot, and the garden goods still do.
+    if (own.isPending && wanted.some((stock) => stock.kind === 'trip')) return;
+    const lots = wanted.flatMap((stock) => {
+      const row = lotRowOf(stock, ownAccount);
+      return row === null ? [] : [{ stock, row }];
+    });
     const have = rows.flatMap((row) => (row.rowId in kept ? [kept[row.rowId] ?? ''] : []));
     if (
       sameKeys(
-        wanted.map((stock) => readyKey(stock)),
+        lots.map((lot) => readyKey(lot.stock)),
         have,
       )
     ) {
       return;
     }
-    const made = wanted.map((stock) => lotRowOf(stock, ownAccount));
     stores.lots.setState({
-      rows: made.length > 0 ? made : [{ rowId: globalThis.crypto.randomUUID(), typed: {} }],
+      rows:
+        lots.length > 0
+          ? lots.map((lot) => lot.row)
+          : [{ rowId: globalThis.crypto.randomUUID(), typed: {} }],
     });
-    stores.view.getState().setReadyLots(
-      Object.fromEntries(
-        made.map((row, index) => {
-          const stock = wanted[index];
-          return [row.rowId, stock === undefined ? '' : readyKey(stock)];
-        }),
-      ),
-      removed,
-    );
-  }, [enabled, found, ownAccount, lotRows, stores]);
+    stores.view
+      .getState()
+      .setReadyLots(
+        Object.fromEntries(lots.map((lot) => [lot.row.rowId, readyKey(lot.stock)])),
+        removed,
+      );
+  }, [enabled, found, own.isPending, ownAccount, lotRows, stores]);
 
   return lotRows.filter((row) => row.rowId in readyLots).length;
 }

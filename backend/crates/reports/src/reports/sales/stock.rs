@@ -1,7 +1,9 @@
 //! R10 مکمل سٹاک / باقی مال (the goods not yet sold) (PRD 19.2, FR-12.14, FR-12.25, C16).
 //!
-//! One row is a lot of a saved بکری with goods left, or a purchase of a market trip with stock
-//! left (marked اپنا مال: its seller is the own-goods account and its document is the purchase).
+//! One row is a lot of a saved بکری with goods left, a purchase of a market trip with stock
+//! left (marked اپنا مال: its seller is the own-goods account and its document is the purchase),
+//! or a garden arrival (مال آیا, PRD FR-12.40) with goods left (its seller is the garden's account
+//! and its document is the arrival). A trip purchase or an arrival waits from its day to sell.
 //! The row says what was received, sold and written off, the balance and how many days the goods
 //! have been waiting. The figures are the ones the lots and the purchases keep up to date with
 //! every save, the same as the باقی مال screen reads (so the report and the screen agree). The
@@ -87,11 +89,26 @@ pub(crate) fn run(
         Vec::new()
     };
 
+    // The garden arrivals with goods left. A seller filter keeps the arrivals whose garden account
+    // is that seller.
+    let arrivals = mandi_db::arrivals::with_stock(
+        conn,
+        typed.from.as_deref(),
+        typed.to.as_deref(),
+        typed.item_id,
+        typed.seller_id,
+    )?;
+
     let mut ids_to_load: Vec<i64> = lots.iter().map(|l| l.seller.id).collect();
     ids_to_load.push(own_account);
+    ids_to_load.extend(arrivals.iter().map(|a| a.account.id));
     let parties = load_parties(conn, &ids_to_load)?;
 
-    let mut pending: Vec<Pending> = Vec::with_capacity(lots.len().saturating_add(purchases.len()));
+    let mut pending: Vec<Pending> = Vec::with_capacity(
+        lots.len()
+            .saturating_add(purchases.len())
+            .saturating_add(arrivals.len()),
+    );
     let mut totals = [0_i64; 5];
     let mut add_totals = |received: i64,
                           sold: i64,
@@ -216,12 +233,69 @@ pub(crate) fn run(
                 Cell::Number { value: 0 },
                 Cell::Number { value: balance },
                 Cell::Number {
-                    value: days_waiting(&purchase.entry_date),
+                    value: days_waiting(&purchase.sell_date),
                 },
             ],
             source: RowSource {
                 kind: SourceKind::Purchase,
                 id: purchase.id,
+            },
+        });
+    }
+    for arrival in arrivals {
+        let balance = arrival
+            .qty
+            .checked_sub(arrival.qty_sold)
+            .and_then(|v| v.checked_sub(arrival.qty_written_off))
+            .ok_or_else(|| {
+                ReportsError::Data("the quantity of an arrival does not fit".to_owned())
+            })?;
+        add_totals(
+            arrival.qty,
+            arrival.qty_sold,
+            arrival.qty_written_off,
+            0,
+            balance,
+        )?;
+        let garden = parties.get(&arrival.account.id).cloned().ok_or_else(|| {
+            ReportsError::Data("an arrival has an unknown garden account".to_owned())
+        })?;
+        pending.push(Pending {
+            key: (arrival.entry_date.clone(), 2, arrival.number, 0),
+            cells: vec![
+                Cell::Date {
+                    iso: arrival.entry_date.clone(),
+                },
+                Cell::Doc {
+                    type_id: ids::doc_id("garden_arrival"),
+                    number: Some(arrival.number),
+                },
+                Cell::Party { party: garden },
+                names_cell(
+                    Some(arrival.item.name_ur.clone()),
+                    Some(arrival.item.name_en.clone()),
+                ),
+                names_cell(
+                    Some(arrival.packing.name_ur.clone()),
+                    Some(arrival.packing.name_en.clone()),
+                ),
+                Cell::Number { value: arrival.qty },
+                Cell::Number {
+                    value: arrival.qty_sold,
+                },
+                Cell::Number {
+                    value: arrival.qty_written_off,
+                },
+                // Garden goods are taken as fruit through a lot, never from an arrival.
+                Cell::Number { value: 0 },
+                Cell::Number { value: balance },
+                Cell::Number {
+                    value: days_waiting(&arrival.sell_date),
+                },
+            ],
+            source: RowSource {
+                kind: SourceKind::Arrival,
+                id: arrival.id,
             },
         });
     }

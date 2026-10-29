@@ -18,6 +18,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { Button, ErrorState, LoadingState, Notice } from '../../../shared/ui';
 import { CloseGardenCard } from '../components/CloseGardenCard';
+import { GardenArrivalsSection } from '../components/GardenArrivalsSection';
 import { GardenEntryEditor } from '../components/GardenEntryEditor';
 import { GardenFiguresCard, GardenHeaderCard } from '../components/GardenHeaderCard';
 import { GardenHistorySection } from '../components/GardenHistorySection';
@@ -91,6 +92,7 @@ function GardenBody({
           </Localized>
         </Notice>
       )}
+      <GardenArrivalsSection garden={garden} />
       <GardenFiguresCard garden={garden} />
       <GardenPartnersCard results={detail.partner_results} closed={!open} />
       <GardenHistorySection
