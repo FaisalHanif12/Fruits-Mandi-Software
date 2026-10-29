@@ -24,6 +24,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS, sliceOf } from '../helpers/paged';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -106,7 +107,7 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
       include_written_off: false,
       lot_id: null,
       offset: 0,
-      limit: 100,
+      limit: PAGE_ROWS,
     });
   });
 
@@ -317,7 +318,7 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     });
   });
 
-  it('150 lots come page by page: 100 at once, the count and the total are the backend’s, Show more loads the rest', async () => {
+  it('150 lots come one page at a time: 25 at once, the count and the total are the backend’s, Next page loads the next 25', async () => {
     fakePlan16();
     const all = Array.from({ length: 150 }, (_, index) =>
       stockRow({ lot_id: 3000 + index, lot_no: index + 1, bikri_number: index + 1 }),
@@ -331,10 +332,8 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
       }),
     );
     await open();
-    const showing = (shown: number) =>
-      message(language, 'common-list-count', { shown: String(shown), total: '150' });
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(100));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
     });
     await waitFor(() => {
       expect(
@@ -342,19 +341,19 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
       ).toBe('777');
     });
     expect(bikriApi.bikriStockList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 0, limit: 100 }),
+      expect.objectContaining({ offset: 0, limit: PAGE_ROWS }),
     );
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    );
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(150));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
     });
     expect(bikriApi.bikriStockList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 100, limit: 100 }),
+      expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
+    );
+    // The balance is over the whole filter on every page.
+    expect(visible(document.querySelector('.ag-row-pinned [col-id="balance"]')?.textContent)).toBe(
+      '777',
     );
   });
 });

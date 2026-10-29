@@ -18,6 +18,8 @@ import {
   Notice,
   Select,
   fieldError,
+  FormCard,
+  FormSpan,
 } from '../../../shared/ui';
 import type { LentDraft } from '../lent-draft';
 import { useExpenseHeads } from '../hooks';
@@ -41,7 +43,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
   const lent = draft.type === 'money_lent';
   const salary = draft.type === 'money_lent_return' && draft.mode === 'salary';
   return (
-    <div className="grid grid-cols-1 gap-4 rounded-3 border border-border bg-surface p-3 normal:grid-cols-2">
+    <FormCard>
       <Field label={<Localized id="cashbook-field-date" />} error={fieldError(error, 'date')}>
         {(props) => (
           <DateInput
@@ -155,15 +157,15 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
             </Field>
           ) : null}
           {salary ? (
-            <div className="normal:col-span-2">
+            <FormSpan>
               <Notice tone="info">
                 <Localized id="cashbook-salary-note" />
               </Notice>
-            </div>
+            </FormSpan>
           ) : null}
         </>
       )}
-      <div className="normal:col-span-2">
+      <FormSpan>
         <Field
           label={<Localized id="cashbook-field-narration" />}
           error={fieldError(error, 'narration')}
@@ -178,7 +180,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
             />
           )}
         </Field>
-      </div>
+      </FormSpan>
       <AddAccountDialog
         kind="person"
         open={adding !== null}
@@ -190,6 +192,6 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
           onChange({ person: account });
         }}
       />
-    </div>
+    </FormCard>
   );
 }

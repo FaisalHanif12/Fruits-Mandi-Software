@@ -275,5 +275,75 @@
       "type": "money",
       "paisa": 544800
     }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "total_comm",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "کیلا",
+              "en": "Banana"
+            }
+          },
+          "key": {
+            "item_id": 1,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 392800
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "سیب",
+              "en": "Apple"
+            }
+          },
+          "key": {
+            "item_id": 2,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 152000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

@@ -96,8 +96,9 @@ describe.each(LANGUAGES)('the sale book screen (%s)', (language) => {
         message(language, 'bikri-header-filled-from', { number: 1, date: '09-10-2026' }),
       );
     });
-    // His item and packing, and the seller of the lot, are in the cells as Enter stops.
-    await user.keyboard('{Enter}{Enter}{Enter}');
+    // The زمیندار and the اڈا are the last stops of the header (the rest is behind "More"); then his
+    // item and packing, and the seller of the lot, are in the cells as Enter stops.
+    await user.keyboard('{Enter}{Enter}');
     const lots = lotsGrid(language);
     await waitFor(() => {
       expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);

@@ -120,6 +120,7 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::accounts::accounts_openings_preview,
         commands::accounts::accounts_openings_save,
         commands::accounts::coa_tree,
+        commands::accounts::coa_control_accounts,
         commands::accounts::coa_heads_list,
         commands::accounts::coa_controls_list,
         commands::search::search_accounts,

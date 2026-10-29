@@ -12,6 +12,7 @@ const RULES_KEY = ['rules'] as const;
 /** The rules for the filter, page by page, with the count and the totals of the whole filter. */
 export function useRuleList(filter: RuleFilter) {
   return usePagedQuery({
+    screen: 'rules.list',
     queryKey: [...RULES_KEY, 'list', filter],
     fetchPage: (offset, limit) => rulesList(filter, offset, limit),
     rowsIn: (page) => page.rows.length,

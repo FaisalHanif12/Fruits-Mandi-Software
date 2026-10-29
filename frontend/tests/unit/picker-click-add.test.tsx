@@ -34,6 +34,7 @@ function hit(id: number): SearchHit {
     extra_ur: '',
     extra_en: '',
     is_active: true,
+    sold_by_weight: false,
   };
 }
 

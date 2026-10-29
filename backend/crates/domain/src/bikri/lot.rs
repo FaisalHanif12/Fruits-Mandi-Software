@@ -9,11 +9,11 @@ use mandi_core::bikri::{LineCalc, PaymentType};
 use mandi_core::money::{MoneyError, Paisa, Qty};
 use mandi_core::rules::{ChargeSide, ChargeType, ChargeValue, RuleLevel, Working};
 
-use super::lookups::ItemFacts;
+use super::lookups::{EntryLot, ItemFacts};
 use super::stored::StoredLotCharge;
 use super::working;
 use super::{CalcError, Env, PostingKind};
-use crate::rules::{Query, Winner, charge_amount, resolve};
+use crate::rules::{Charged, Query, Winner, charge_amount, resolve};
 
 /// What a lot charge is looked up for.
 pub(super) struct LotKey {
@@ -23,6 +23,16 @@ pub(super) struct LotKey {
     pub item_id: i64,
     pub item: ItemFacts,
     pub qty_received: Qty,
+}
+
+/// The goods-arrived entry a garden lot belongs to, for one kind of lot charge (PRD FR-12.40, plan
+/// 37).
+#[derive(Debug, Clone, Copy)]
+pub(super) struct EntryCharge {
+    /// The number of the entry (for the working).
+    pub number: i64,
+    /// The lot of the entry that has already taken this kind of per-lot charge, if any.
+    pub taken: Option<EntryLot>,
 }
 
 /// A lot charge that is not charged in this posting (a later sale charges none, PRD FR-12.17).
@@ -50,6 +60,7 @@ fn from_stored(
     key: &LotKey,
     kind: ChargeType,
     stored: &StoredLotCharge,
+    entry: Option<EntryCharge>,
 ) -> Result<LotCharge, CalcError> {
     let typed_by_hand = stored.rule_id.is_none();
     let value = match stored.method {
@@ -72,6 +83,33 @@ fn from_stored(
         LotChargeMethod::PerUnit => ChargeValue::PerUnit(stored.value),
         LotChargeMethod::PerLot => ChargeValue::PerLot(stored.value),
     };
+    // A per-lot rule charge saved as 0 on a lot of a goods-arrived entry was taken by the entry's
+    // first lot (plan 37): it stays 0, it is not worked out again (PRD FR-12.20). It is stored
+    // with value 0 and amount 0, because the table requires a per-lot charge's amount to be its
+    // value.
+    if let Some(entry) = entry
+        && stored.method == LotChargeMethod::PerLot
+        && stored.rule_id.is_some()
+        && stored.amount == Paisa::ZERO
+    {
+        let level = stored.level.unwrap_or(RuleLevel::Default);
+        return Ok(LotCharge {
+            method: LotChargeMethod::PerLot,
+            value_paisa: Paisa::ZERO,
+            amount: Paisa::ZERO,
+            rule_id: stored.rule_id,
+            rule_label: Some(RuleLabel {
+                level,
+                rule_id: stored.rule_id,
+            }),
+            source: if level == RuleLevel::Default {
+                ChargeSource::Default
+            } else {
+                ChargeSource::Rule
+            },
+            working: working::per_lot_on_entry(entry.number, stored.value, stored.rule_id),
+        });
+    }
     let level = if typed_by_hand {
         RuleLevel::LineOverride
     } else {
@@ -110,6 +148,10 @@ fn from_stored(
 /// allowed (PRD FR-11.10 limits only commission and لاگا on a line). A per-نگ charge counts the
 /// نگ received, not the نگ sold (PRD E2E-16).
 ///
+/// A garden lot linked to a goods-arrived entry takes a charge a rule works out per lot only if no
+/// other active lot of the entry has taken it: `entry.taken` is then true and the lot carries 0
+/// for it (PRD FR-12.40, plan 37). A per-نگ charge and a typed amount are not affected.
+///
 /// Example (PRD 4.4): 5 per نگ on 50 نگ received is 250.
 pub(super) fn lot_charge(
     env: &Env<'_>,
@@ -117,12 +159,13 @@ pub(super) fn lot_charge(
     kind: ChargeType,
     typed: Option<TypedLotCharge>,
     stored: Option<&StoredLotCharge>,
+    entry: Option<EntryCharge>,
 ) -> Result<LotCharge, CalcError> {
     if env.kind == PostingKind::Later {
         return Ok(not_charged());
     }
     if let Some(stored) = stored.filter(|s| s.typed() == typed) {
-        return from_stored(key, kind, stored);
+        return from_stored(key, kind, stored, entry);
     }
     if let Some(typed) = typed {
         return Ok(match typed.method {
@@ -198,11 +241,23 @@ pub(super) fn lot_charge(
             return Err(CalcError::Inconsistent("a percent rule for a lot charge"));
         }
     };
-    let charged = charge_amount(Some(&winner), kind, Paisa::ZERO, key.qty_received, true)?;
+    let mut charged = charge_amount(Some(&winner), kind, Paisa::ZERO, key.qty_received, true)?;
     let value = match winner.value {
         ChargeValue::PerUnit(v) | ChargeValue::PerLot(v) => v,
         ChargeValue::Percent(_) => Paisa::ZERO,
     };
+    // The entry's first lot has taken this per-lot charge: this lot carries 0 (plan 37).
+    let mut value = value;
+    if let (ChargeValue::PerLot(_), Some(entry)) = (&winner.value, entry)
+        && entry.taken.is_some()
+    {
+        charged = Charged {
+            amount: Paisa::ZERO,
+            working: working::per_lot_on_entry(entry.number, value, winner.rule_id),
+        };
+        // Stored as 0 and 0: the table needs a per-lot charge's amount to equal its value.
+        value = Paisa::ZERO;
+    }
     Ok(LotCharge {
         method,
         value_paisa: value,

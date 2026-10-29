@@ -3,10 +3,12 @@
 // the way a healthy backend answers. Money is built the way a reply arrives (paisaForTest).
 
 import { vi } from 'vitest';
+import type { AccountNode } from '../../src/bindings/AccountNode';
 import * as accountApi from '../../src/shared/accounts/api';
 import type {
   AccountHit,
   AccountScope,
+  ChartAccountsPage,
   PartyCardData,
   ResolvedCode,
   AccountRef,
@@ -120,6 +122,66 @@ export interface FakeAccounts {
   tree: ChartHead[];
 }
 
+/** The accounts of each control of the chart in miniature (what `coa_control_accounts` answers). */
+export const SAMPLE_CONTROL_ACCOUNTS: Record<number, AccountNode[]> = {
+  101: [
+    {
+      id: 1010001,
+      code: '01010001',
+      name_ur: 'روکڑ',
+      name_en: 'Cash in Hand',
+      is_active: true,
+      is_system: true,
+      balance: balance(58484, 'dr'),
+    },
+  ],
+  4: [
+    {
+      id: 21,
+      code: '0020',
+      name_ur: 'اکرم ٹول ٹیکس',
+      name_en: 'Akram Toll Tax',
+      is_active: true,
+      is_system: false,
+      balance: balance(2880, 'dr'),
+    },
+    {
+      id: 22,
+      code: '0021',
+      name_ur: 'ارشد ملتانی',
+      name_en: 'Arshad Multani',
+      is_active: true,
+      is_system: false,
+      balance: balance(18684, 'dr'),
+    },
+  ],
+  11: [],
+};
+
+/**
+ * One page of the accounts of a control, as `coa_control_accounts` answers: the rows from `offset`,
+ * how many the control has, and the control's own balance (the tree's, over all of them).
+ */
+export function controlAccountsPage(
+  tree: readonly ChartHead[],
+  all: Record<number, AccountNode[]>,
+  controlId: number,
+  offset: number,
+  limit: number,
+): ChartAccountsPage {
+  const accounts = all[controlId] ?? [];
+  const control = tree.flatMap((head) => head.controls).find((node) => node.id === controlId);
+  const size = limit === 0 ? 100 : limit;
+  return {
+    control_id: controlId,
+    rows: accounts.slice(offset, offset + size),
+    total_count: accounts.length,
+    offset,
+    limit: size,
+    balance: control?.balance ?? ZERO,
+  };
+}
+
 /** The chart of PRD 10.1 in miniature, with balances as the backend would send them. */
 export function sampleTree(): ChartHead[] {
   return [
@@ -138,17 +200,7 @@ export function sampleTree(): ChartHead[] {
           name_en: 'Cash',
           party_type: 'other',
           balance: balance(58484, 'dr'),
-          accounts: [
-            {
-              id: 1010001,
-              code: '01010001',
-              name_ur: 'روکڑ',
-              name_en: 'Cash in Hand',
-              is_active: true,
-              is_system: true,
-              balance: balance(58484, 'dr'),
-            },
-          ],
+          account_count: 1,
         },
       ],
     },
@@ -167,26 +219,7 @@ export function sampleTree(): ChartHead[] {
           name_en: 'Buyers',
           party_type: 'buyer',
           balance: balance(21564, 'dr'),
-          accounts: [
-            {
-              id: 21,
-              code: '0020',
-              name_ur: 'اکرم ٹول ٹیکس',
-              name_en: 'Akram Toll Tax',
-              is_active: true,
-              is_system: false,
-              balance: balance(2880, 'dr'),
-            },
-            {
-              id: 22,
-              code: '0021',
-              name_ur: 'ارشد ملتانی',
-              name_en: 'Arshad Multani',
-              is_active: true,
-              is_system: false,
-              balance: balance(18684, 'dr'),
-            },
-          ],
+          account_count: 2,
         },
         {
           id: 11,
@@ -195,7 +228,7 @@ export function sampleTree(): ChartHead[] {
           name_en: 'Sellers',
           party_type: 'seller',
           balance: ZERO,
-          accounts: [],
+          account_count: 0,
         },
       ],
     },
@@ -214,6 +247,9 @@ export function fakeAccounts(
   let nextId = 5000;
 
   vi.mocked(accountApi.coaTree).mockResolvedValue(tree);
+  vi.mocked(accountApi.coaControlAccounts).mockImplementation((controlId, offset, limit) =>
+    Promise.resolve(controlAccountsPage(tree, SAMPLE_CONTROL_ACCOUNTS, controlId, offset, limit)),
+  );
   vi.mocked(accountApi.coaHeadsList).mockResolvedValue(
     tree.map((head) => ({
       id: head.id,

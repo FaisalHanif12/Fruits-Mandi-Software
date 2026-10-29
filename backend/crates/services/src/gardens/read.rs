@@ -15,6 +15,7 @@ use mandi_domain::core::gardens::{
     GardenRow, GardenSummaryRow, GardensList, GardensListInput, GardensSummary, GardensTotals,
 };
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::partners::PartnerVentureCard;
 use mandi_domain::core::rules::{Working, WorkingArg, WorkingValue};
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -253,7 +254,13 @@ pub(super) fn list(ctx: &Context, input: &GardensListInput) -> Result<GardensLis
         status: input.status.map(|s| s.as_str().to_owned()),
         partner_id: input.partner_id,
         search,
+        order_by: None,
     };
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&SORT_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
     let limit = if input.limit == 0 {
         DEFAULT_PAGE
     } else {
@@ -277,6 +284,7 @@ pub(super) fn list(ctx: &Context, input: &GardensListInput) -> Result<GardensLis
         let accounts: Vec<i64> = recs.iter().map(|r| r.account.id).collect();
         let commissions = mandi_db::commission::by_garden_accounts(conn, &accounts)?;
         let mut all = Vec::with_capacity(recs.len());
+        let mut month_acc = crate::page::MonthAcc::new(1);
         for rec in recs {
             let garden = load(conn, rec.id)?.ok_or_else(|| data("a garden was lost"))?;
             let figures = repo::figures(conn, &garden.rec)?;
@@ -293,15 +301,31 @@ pub(super) fn list(ctx: &Context, input: &GardensListInput) -> Result<GardensLis
                 .unwrap_or_default();
             totals.commission_paisa =
                 add(totals.commission_paisa, commission_view(&commission)?.0)?;
+            month_acc.add(&garden.rec.entry_date, &[garden.rec.rent_paisa])?;
             all.push((garden, money, commission));
         }
-        // Newest day first, then by number.
+        // Newest day first, then by number. A sort reorders the whole list after that, before
+        // the page is cut; the sort is stable, so equal rows keep this order (plan 38 R4).
         all.sort_by(|a, b| {
             b.0.rec
                 .entry_date
                 .cmp(&a.0.rec.entry_date)
                 .then(b.0.rec.number.cmp(&a.0.rec.number))
         });
+        if let Some(sort) = &input.sort {
+            sort_gardens(&mut all, &sort.column, sort.direction);
+        }
+        let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+        // The natural order is newest first, as is a sort by the day when it is descending.
+        let newest_first = input
+            .sort
+            .as_ref()
+            .is_none_or(|s| s.direction == SortDirection::Desc);
+        let months = if input.group_by_month && in_date_order {
+            month_acc.finish(&[("rent_paisa", true)], newest_first)
+        } else {
+            Vec::new()
+        };
         let total_count =
             i64::try_from(all.len()).map_err(|_| data("the number of gardens does not fit"))?;
         let skip = usize::try_from(input.offset).unwrap_or(usize::MAX);
@@ -314,8 +338,63 @@ pub(super) fn list(ctx: &Context, input: &GardensListInput) -> Result<GardensLis
             rows,
             total_count,
             totals,
+            months,
         })
     })
+}
+
+/// The columns the list of gardens can be sorted by: the names of the fields of the row. The
+/// gardens are read whole, so the figures worked out from the entries can be sorted too.
+const SORT_COLUMNS: [&str; 14] = [
+    "number",
+    "code",
+    "entry_date",
+    "name_ur",
+    "name_en",
+    "rent_paisa",
+    "season_end_date",
+    "status",
+    "closed_date",
+    "paid_paisa",
+    "money_in_paisa",
+    "balance_paisa",
+    "rent_due_paisa",
+    "commission_paisa",
+];
+
+type GardenEntry = (Garden, Money, mandi_db::commission::Commission);
+
+/// Sorts the whole list by a column (checked by [`SORT_COLUMNS`]). A stable sort.
+fn sort_gardens(rows: &mut [GardenEntry], column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    let cmp: fn(&GardenEntry, &GardenEntry) -> Ordering = match column {
+        "number" | "code" => |a, b| a.0.rec.number.cmp(&b.0.rec.number),
+        "entry_date" => |a, b| {
+            (a.0.rec.entry_date.as_str(), a.0.rec.number)
+                .cmp(&(b.0.rec.entry_date.as_str(), b.0.rec.number))
+        },
+        "name_ur" => |a, b| a.0.rec.name_ur.cmp(&b.0.rec.name_ur),
+        "name_en" => |a, b| {
+            a.0.rec
+                .name_en
+                .to_lowercase()
+                .cmp(&b.0.rec.name_en.to_lowercase())
+        },
+        "rent_paisa" => |a, b| a.0.rec.rent_paisa.cmp(&b.0.rec.rent_paisa),
+        "season_end_date" => |a, b| a.0.rec.season_end_date.cmp(&b.0.rec.season_end_date),
+        "status" => |a, b| a.0.rec.status.cmp(&b.0.rec.status),
+        "closed_date" => |a, b| a.0.rec.closed_date.cmp(&b.0.rec.closed_date),
+        "paid_paisa" => |a, b| a.1.paid.cmp(&b.1.paid),
+        "money_in_paisa" => |a, b| a.1.money_in.cmp(&b.1.money_in),
+        "balance_paisa" => |a, b| a.1.balance.cmp(&b.1.balance),
+        "rent_due_paisa" => |a, b| a.1.rent_due.cmp(&b.1.rent_due),
+        "commission_paisa" => |a, b| {
+            let total = |c: &mandi_db::commission::Commission| c.total_paisa().unwrap_or(i64::MAX);
+            total(&a.2).cmp(&total(&b.2))
+        },
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
 }
 
 /// The data of the dashboard tile باغات.

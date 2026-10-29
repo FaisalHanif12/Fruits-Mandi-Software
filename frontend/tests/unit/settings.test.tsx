@@ -20,6 +20,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { at } from '../helpers/sample';
 import { suggestionsFor } from '../helpers/translit';
@@ -409,7 +410,7 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       );
     });
 
-    it('150 pairs come page by page: 100 at once with the count of the backend, Show more loads the rest', async () => {
+    it('150 pairs come page by page: 25 at once with the count of the backend, Next page loads the next 25', async () => {
       const many = Array.from({ length: 150 }, (_, index) => ({
         id: 100 + index,
         roman: `word${String(index)}`,
@@ -422,21 +423,15 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
         Promise.resolve(pairsOf(many, offset, limit)),
       );
       const { user } = await openWords();
-      const showing = (shown: number) =>
-        message(language, 'common-list-count', { shown: String(shown), total: '150' });
       await waitFor(() => {
-        expect(visible(document.body.textContent)).toContain(showing(100));
+        expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
       });
-      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(0, 100);
-      await user.click(
-        await screen.findByRole('button', {
-          name: (name) => visible(name) === message(language, 'common-list-more'),
-        }),
-      );
+      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(0, PAGE_ROWS);
+      await user.click(await pagerButton(language, 'next'));
       await waitFor(() => {
-        expect(visible(document.body.textContent)).toContain(showing(150));
+        expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
       });
-      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(100, 100);
+      expect(urduApi.translitPairsList).toHaveBeenLastCalledWith(PAGE_ROWS, PAGE_ROWS);
     });
 
     it('Remove asks first, says what will happen, and then removes only that pair', async () => {

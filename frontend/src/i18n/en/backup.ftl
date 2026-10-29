@@ -121,13 +121,6 @@ backup-list-empty = No copies yet
 # review: pending
 backup-list-empty-help = Press the button to make the first copy now.
 
-# $shown and $total are whole numbers as text.
-# review: pending
-backup-list-count = Showing { $shown } of { $total } copies
-
-# review: pending
-backup-list-more = Show more
-
 # review: pending
 backup-list-how = Select a copy and press Enter, or double-click it, to restore it.
 

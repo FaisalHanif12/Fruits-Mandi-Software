@@ -235,47 +235,161 @@ pub fn list(
     rows.collect()
 }
 
-/// One page of the masters of a kind, as [`list`] orders them, with how many match and how many
-/// of those are active, counted over the whole filter in one query (PRD FR-19.11, B31).
+/// The columns the list of a kind can be sorted by: the name of the field of the row and its SQL
+/// expression (`m` is the master, `p`, `c` and `a` the record it points at). `code` is sorted as a
+/// number, then as text: [`list_page`] turns it into both terms.
+pub fn sort_columns(kind: MasterKind) -> &'static [(&'static str, &'static str)] {
+    match kind {
+        MasterKind::City | MasterKind::Store => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Item => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("item_group", "m.item_group"),
+            ("default_packing_name_en", "p.name_en COLLATE NOCASE"),
+            ("sold_by", "m.sold_by"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Packing => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("approx_kg", "m.approx_grams"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Adda => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("city_name_en", "c.name_en COLLATE NOCASE"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Marka => &[
+            ("code", "m.code"),
+            ("mark_text", "m.mark_text"),
+            ("owner_account_code", "a.code"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Narration => &[
+            ("text_ur", "m.text_ur"),
+            ("text_en", "m.text_en COLLATE NOCASE"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::ExpenseHead => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("account_code", "a.code"),
+            ("is_active", "m.is_active"),
+        ],
+        MasterKind::Staff => &[
+            ("code", "m.code"),
+            ("name_ur", "m.name_ur"),
+            ("name_en", "m.name_en COLLATE NOCASE"),
+            ("job", "m.role"),
+            ("phone", "m.phone"),
+            ("account_code", "a.code"),
+            ("is_active", "m.is_active"),
+        ],
+    }
+}
+
+/// The text columns the search of a kind looks in.
+fn search_columns(kind: MasterKind) -> &'static [&'static str] {
+    match kind {
+        MasterKind::City | MasterKind::Store | MasterKind::Packing | MasterKind::Adda => {
+            &["m.code", "m.name_ur", "m.name_en"]
+        }
+        MasterKind::Item => &["m.code", "m.name_ur", "m.name_en"],
+        MasterKind::ExpenseHead => &["m.code", "m.name_ur", "m.name_en", "a.code"],
+        MasterKind::Staff => &["m.code", "m.name_ur", "m.name_en", "m.phone"],
+        MasterKind::Marka => &["m.code", "m.mark_text", "a.code", "a.name_ur", "a.name_en"],
+        MasterKind::Narration => &["m.text_ur", "m.text_en"],
+    }
+}
+
+/// The filter of [`list_page`]: the records to read.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PageFilter<'a> {
+    /// True to include the inactive ones too.
+    pub include_inactive: bool,
+    /// Only this record.
+    pub id: Option<i64>,
+    /// Only records whose code, names or phone hold this text.
+    pub search: Option<&'a str>,
+    /// The `ORDER BY` expressions chosen by a sort from [`sort_columns`]. `None` is by code (or by
+    /// id for a kind without a code).
+    pub order_by: Option<&'a str>,
+}
+
+/// One page of the masters of a kind, in the order of the filter, with how many match and how
+/// many of those are active, counted over the whole filter in one query (PRD FR-19.11, B31).
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn list_page(
     conn: &Connection,
     kind: MasterKind,
-    include_inactive: bool,
-    id: Option<i64>,
+    filter: &PageFilter<'_>,
     offset: i64,
     limit: i64,
 ) -> rusqlite::Result<(Vec<MasterRow>, i64, i64)> {
     // `:id` is the one record asked for, or null for no record in particular.
-    let filter = if include_inactive {
-        " WHERE (:id IS NULL OR m.id = :id)"
-    } else {
-        " WHERE m.is_active = 1 AND (:id IS NULL OR m.id = :id)"
-    };
-    // `kind.table()` is one of a fixed list of names, never input.
+    let mut where_sql = String::from(" WHERE (:id IS NULL OR m.id = :id)");
+    if !filter.include_inactive {
+        where_sql.push_str(" AND m.is_active = 1");
+    }
+    let search = filter.search.map(str::trim).filter(|t| !t.is_empty());
+    if search.is_some() {
+        let likes: Vec<String> = search_columns(kind)
+            .iter()
+            .map(|column| format!("{column} LIKE :search ESCAPE '\\'"))
+            .collect();
+        where_sql.push_str(&format!(" AND ({})", likes.join(" OR ")));
+    }
+    let pattern = search.map(crate::listing::like_contains);
+    let mut named: Vec<(&str, Value)> = vec![(":id", Value::from(filter.id))];
+    if let Some(pattern) = pattern {
+        named.push((":search", Value::Text(pattern)));
+    }
+    let args: Vec<(&str, &dyn rusqlite::ToSql)> = named
+        .iter()
+        .map(|(name, value)| (*name, value as &dyn rusqlite::ToSql))
+        .collect();
+    // `kind.table()` is one of a fixed list of names, never input. The joins are those of the
+    // row select, so a search or a sort can read the record a master points at.
     let (count, active): (i64, i64) = conn.query_row(
         &format!(
-            "SELECT COUNT(*), COALESCE(SUM(m.is_active), 0) FROM {} m{filter}",
-            kind.table()
+            "SELECT COUNT(*), COALESCE(SUM(x.is_active), 0) FROM ({}{where_sql}) x",
+            select(kind)
         ),
-        rusqlite::named_params! { ":id": id },
+        args.as_slice(),
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
-    let order = if kind.has_code() {
-        " ORDER BY CAST(m.code AS INTEGER), m.code, m.id"
+    let natural = if kind.has_code() {
+        "CAST(m.code AS INTEGER), m.code, m.id"
     } else {
-        " ORDER BY m.id"
+        "m.id"
     };
+    let order = match filter.order_by {
+        Some(chosen) => format!("{chosen}, {natural}"),
+        None => natural.to_owned(),
+    };
+    let mut page = args.clone();
+    let limit_value = Value::Integer(limit);
+    let offset_value = Value::Integer(offset);
+    page.push((":limit", &limit_value));
+    page.push((":offset", &offset_value));
     let mut statement = conn.prepare(&format!(
-        "{}{filter}{order} LIMIT :limit OFFSET :offset",
+        "{}{where_sql} ORDER BY {order} LIMIT :limit OFFSET :offset",
         select(kind)
     ))?;
-    let rows = statement.query_map(
-        rusqlite::named_params! { ":id": id, ":limit": limit, ":offset": offset },
-        |r| row_from(kind, r),
-    )?;
+    let rows = statement.query_map(page.as_slice(), |r| row_from(kind, r))?;
     Ok((rows.collect::<rusqlite::Result<Vec<_>>>()?, count, active))
 }
 

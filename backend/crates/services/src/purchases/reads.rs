@@ -10,6 +10,7 @@ use mandi_db::ventures as venture_repo;
 use mandi_domain::core::bikri::{OwnStockRow, WriteOffRow};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::{Paisa, Qty, avg_rate};
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::purchases::{
     PurchaseGetInput, PurchaseLotRef, PurchaseRow, PurchaseStateFilter, PurchaseStatus,
     PurchasesList, PurchasesListInput, PurchasesTotals,
@@ -286,6 +287,18 @@ pub(super) fn list(
     let from = optional_date(&mut errors, "from", input.from.as_ref(), today);
     let to = optional_date(&mut errors, "to", input.to.as_ref(), today);
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| sort.order_by(&repo::SORT_COLUMNS))
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_none_or(|s| s.direction == SortDirection::Desc);
     let filter = ListFilter {
         trip_id: input.trip_id,
         from,
@@ -296,6 +309,14 @@ pub(super) fn list(
             PurchaseStateFilter::SoldOut => StateFilter::SoldOut,
             PurchaseStateFilter::Cancelled => StateFilter::Cancelled,
         }),
+        search: input
+            .search
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_owned),
+        order_by,
+        hide_cancelled: !input.show_finished,
     };
     let limit = if input.limit == 0 {
         DEFAULT_PAGE
@@ -311,6 +332,20 @@ pub(super) fn list(
             .checked_add(paisa(sums.other_shop_paisa)?)
             .and_then(|v| v.checked_sub(released))
             .map_err(money_error)?;
+        // Month headings with their subtotals, over the whole filter (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            crate::page::month_subtotals(
+                repo::list_months(conn, &filter)?,
+                &[
+                    ("total_cost_paisa", true),
+                    ("cost_left_paisa", true),
+                    ("qty_left", false),
+                ],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(PurchasesList {
             rows,
             total_count: u32::try_from(sums.count)
@@ -322,6 +357,7 @@ pub(super) fn list(
                 result_paisa: result,
                 commission_paisa: crate::ventures::commission_view(&sums.commission)?.0,
             },
+            months,
         })
     })
 }

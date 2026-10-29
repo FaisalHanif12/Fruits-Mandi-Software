@@ -22,6 +22,7 @@ import {
 import { e40Closed, e40Garden, fakeGardens, gardenRow } from '../helpers/gardens';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { refusal } from '../helpers/ui-error';
 import * as urduApi from '../../src/shared/urdu/api';
@@ -117,11 +118,9 @@ describe.each(LANGUAGES)('باغات, the list (%s)', (language) => {
       partner_id: null,
       search: null,
       offset: 0,
-      limit: 100,
+      limit: PAGE_ROWS,
     });
-    expect(
-      screen.getByText(said(message(language, 'common-list-count', { shown: 1, total: 1 }))),
-    ).toBeInTheDocument();
+    expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 1, 1));
   });
 
   it('a closed garden stays in the list, marked closed with the day it was closed', async () => {
@@ -169,8 +168,8 @@ describe.each(LANGUAGES)('باغات, the list (%s)', (language) => {
     });
   });
 
-  it('loads page by page: the next 100 rows come on the button, the count says how many', async () => {
-    const many = Array.from({ length: 120 }, (_, index) =>
+  it('loads page by page: the next 25 rows come on the page button, the count says where it is', async () => {
+    const many = Array.from({ length: 60 }, (_, index) =>
       gardenRow({
         id: index + 1,
         number: index + 1,
@@ -181,22 +180,20 @@ describe.each(LANGUAGES)('باغات, the list (%s)', (language) => {
     fakeGardens({ gardens: many });
     const { user } = await open();
     await waitFor(() => {
-      expect(
-        screen.getByText(said(message(language, 'common-list-count', { shown: 100, total: 120 }))),
-      ).toBeInTheDocument();
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 60));
     });
-    await user.click(screen.getByRole('button', { name: message(language, 'common-list-more') }));
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(
-        screen.getByText(said(message(language, 'common-list-count', { shown: 120, total: 120 }))),
-      ).toBeInTheDocument();
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 60));
     });
     expect(gardensApi.gardensList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 100, limit: 100 }),
+      expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
     );
-    expect(
-      screen.queryByRole('button', { name: message(language, 'common-list-more') }),
-    ).toBeNull();
+    await user.click(await pagerButton(language, 'last'));
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 51, 60, 60));
+    });
+    expect(await pagerButton(language, 'next')).toBeDisabled();
   });
 
   it('the search is sent to the backend, and a search with no match offers to clear it', async () => {

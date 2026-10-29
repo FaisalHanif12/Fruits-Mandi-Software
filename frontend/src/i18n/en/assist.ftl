@@ -80,6 +80,9 @@ working-manual-per-unit-received = Typed by hand: <num>{ $qty_received }</num> {
 working-manual-per-lot = Typed by hand: <num>{ $value }</num> per { -lot } = <num>{ $result }</num>
 # review: pending
 working-per-lot-already-charged = This charge is made once per { -lot } and was made in the first { -bikri }, so nothing is added now.
+# PRD FR-12.41, plan 37: a charge a rule works out for each lot is made once for each goods-arrived entry, on its first lot. $entry: the number of the entry; $value: the amount the rule gives for a lot; $result: what is charged on this lot (0).
+# review: pending
+working-per-lot-charged-on-entry = This charge is made once for each { -maal-aaya } entry, and was made on the first { -lot } of entry <num>{ $entry }</num> (<num>{ $value }</num>), so nothing is added now: <num>{ $result }</num>
 
 ## How the amounts of the sale screen were worked out (plan 12, PRD 22). The backend names the message and gives its values.
 

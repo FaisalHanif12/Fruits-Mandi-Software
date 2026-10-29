@@ -40,6 +40,7 @@ const APP_COMMANDS: &[&str] = &[
     "accounts_openings_preview",
     "accounts_openings_save",
     "coa_tree",
+    "coa_control_accounts",
     "coa_heads_list",
     "coa_controls_list",
     "search_accounts",

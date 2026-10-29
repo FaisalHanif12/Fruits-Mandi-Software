@@ -18,6 +18,8 @@ use mandi_domain::core::lent::{
     OverdueItem, OverdueKind,
 };
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
+use mandi_domain::core::text;
 use mandi_domain::core::validate;
 use mandi_domain::expenses::{OpenAmount, days_past_return_by, open_amounts};
 use serde_json::json;
@@ -258,6 +260,11 @@ fn loans_by_person<'a>(
 /// `ERR_NOT_FOUND` on `person_id`.
 pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceError> {
     let (_, today) = day::window(ctx)?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&LOAN_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
     ctx.db.read(|conn| {
         let person = open_lines::persons(conn, &[input.person_id])?
             .remove(&input.person_id)
@@ -273,11 +280,20 @@ pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceErr
             open_paisa: Paisa::ZERO,
         };
         let mut rows = Vec::with_capacity(loans.len());
+        let mut month_acc = page::MonthAcc::new(3);
         for loan in &loans {
             let amount = paisa(loan.line.dr_paisa)?;
             add(&mut totals.lent_paisa, amount)?;
             add(&mut totals.returned_paisa, loan.figures.returned)?;
             add(&mut totals.open_paisa, loan.figures.open)?;
+            month_acc.add(
+                &loan.line.entry_date,
+                &[
+                    amount.as_paisa(),
+                    loan.figures.returned.as_paisa(),
+                    loan.figures.open.as_paisa(),
+                ],
+            )?;
             rows.push(LentRow {
                 voucher_id: loan.line.voucher_id.unwrap_or(0),
                 number: loan.line.number.unwrap_or(0),
@@ -291,12 +307,33 @@ pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceErr
             });
         }
         let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+        if let Some(sort) = &input.sort {
+            sort_loans(&mut rows, &sort.column, sort.direction);
+        }
+        let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+        let newest_first = input
+            .sort
+            .as_ref()
+            .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
+        let months = if input.group_by_month && in_date_order {
+            month_acc.finish(
+                &[
+                    ("lent_paisa", true),
+                    ("returned_paisa", true),
+                    ("open_paisa", true),
+                ],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(LentList {
             person: lent_person(&person),
             balance: ledger::balance_in(conn, person.account_id, None, None)?,
             rows: page::slice(rows, input.offset, input.limit),
             total_count,
             totals,
+            months,
         })
     })
 }
@@ -319,8 +356,21 @@ pub fn report(ctx: &Context, input: &LentReportInput) -> Result<LentReport, Serv
         None => today,
     };
     let as_of_iso = as_of.to_iso();
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&REPORT_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
+    let search = input
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty());
     ctx.db.read(|conn| {
-        let (rows, totals) = report_rows(conn, &as_of_iso, as_of)?;
+        let (mut rows, totals) = report_rows(conn, &as_of_iso, as_of, search)?;
+        if let Some(sort) = &input.sort {
+            sort_report(&mut rows, &sort.column, sort.direction);
+        }
         let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
         Ok(LentReport {
             as_of: as_of_iso,
@@ -336,6 +386,7 @@ fn report_rows(
     conn: &Connection,
     as_of_iso: &str,
     as_of: BusinessDate,
+    search: Option<&str>,
 ) -> Result<(Vec<LentReportRow>, LentReportTotals), ServiceError> {
     let persons = open_lines::persons(conn, &[])?;
     let ids: Vec<i64> = persons.keys().copied().collect();
@@ -350,6 +401,17 @@ fn report_rows(
     };
     let mut keyed: Vec<(bool, String, i64, LentReportRow)> = Vec::new();
     for (account, person) in &persons {
+        // A search keeps only the people it names, before anything is added to the totals.
+        if let Some(text) = search {
+            let typed_ur = text::search_ur(text);
+            let typed_en = text::search_en(text);
+            let found = person.code.to_lowercase().contains(&text.to_lowercase())
+                || (!typed_ur.is_empty() && text::search_ur(&person.name_ur).contains(&typed_ur))
+                || (!typed_en.is_empty() && text::search_en(&person.name_en).contains(&typed_en));
+            if !found {
+                continue;
+            }
+        }
         let Some(Loans {
             loans,
             returned_cash,
@@ -473,4 +535,71 @@ pub fn attention_overdue(ctx: &Context) -> Result<AttentionOverdue, ServiceError
             truncated,
         })
     })
+}
+
+/// The columns the list of one person's loans can be sorted by: the names of the fields of the row.
+const LOAN_COLUMNS: [&str; 8] = [
+    "entry_date",
+    "number",
+    "amount_paisa",
+    "reason",
+    "return_by",
+    "returned_paisa",
+    "open_paisa",
+    "days_past_return_by",
+];
+
+/// Sorts the whole list by a column (checked by [`LOAN_COLUMNS`]). A stable sort, so equal rows keep
+/// the order by day.
+fn sort_loans(rows: &mut [LentRow], column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    let cmp: fn(&LentRow, &LentRow) -> Ordering = match column {
+        "entry_date" => |a, b| a.entry_date.cmp(&b.entry_date),
+        "number" => |a, b| a.number.cmp(&b.number),
+        "amount_paisa" => |a, b| a.amount_paisa.cmp(&b.amount_paisa),
+        "reason" => |a, b| a.reason.cmp(&b.reason),
+        "return_by" => |a, b| a.return_by.cmp(&b.return_by),
+        "returned_paisa" => |a, b| a.returned_paisa.cmp(&b.returned_paisa),
+        "open_paisa" => |a, b| a.open_paisa.cmp(&b.open_paisa),
+        "days_past_return_by" => |a, b| a.days_past_return_by.cmp(&b.days_past_return_by),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
+}
+
+/// The columns the report R32 can be sorted by: the names of the fields of the row.
+const REPORT_COLUMNS: [&str; 9] = [
+    "person",
+    "is_staff",
+    "lent_paisa",
+    "returned_cash_paisa",
+    "returned_salary_paisa",
+    "open_paisa",
+    "oldest_open_date",
+    "return_by",
+    "days_past_return_by",
+];
+
+/// Sorts the whole report by a column (checked by [`REPORT_COLUMNS`]). A stable sort, so equal rows
+/// keep the natural order (open first, the oldest open loan first).
+fn sort_report(rows: &mut [LentReportRow], column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    let cmp: fn(&LentReportRow, &LentReportRow) -> Ordering = match column {
+        "person" => |a, b| {
+            a.person
+                .name_en
+                .to_lowercase()
+                .cmp(&b.person.name_en.to_lowercase())
+        },
+        "is_staff" => |a, b| a.is_staff.cmp(&b.is_staff),
+        "lent_paisa" => |a, b| a.lent_paisa.cmp(&b.lent_paisa),
+        "returned_cash_paisa" => |a, b| a.returned_cash_paisa.cmp(&b.returned_cash_paisa),
+        "returned_salary_paisa" => |a, b| a.returned_salary_paisa.cmp(&b.returned_salary_paisa),
+        "open_paisa" => |a, b| a.open_paisa.cmp(&b.open_paisa),
+        "oldest_open_date" => |a, b| a.oldest_open_date.cmp(&b.oldest_open_date),
+        "return_by" => |a, b| a.return_by.cmp(&b.return_by),
+        "days_past_return_by" => |a, b| a.days_past_return_by.cmp(&b.days_past_return_by),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
 }

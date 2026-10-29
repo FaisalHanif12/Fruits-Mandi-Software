@@ -1,7 +1,8 @@
-// The key numbers pinned to the bottom of the sale book in compact and normal windows (plan 12):
-// the selected lot and the whole sale (خام بکری, کل اخراجات, صافی بکری, the buyers' bills) and the
-// cash note, straight from the preview. It holds nothing the keyboard can reach. In a wide window
-// the summary has its own column and the strip is not drawn. Urdu and English.
+// The key numbers of the sale book, docked under its grids in compact and normal windows (plan 12,
+// plan 38): the lot on screen or the whole sale (خام بکری, کل اخراجات, صافی بکری, the buyers'
+// bills) on one line, and the cash note, straight from the preview. It sits under the scrolling area,
+// never over a grid, and holds nothing the keyboard can reach. In a wide window the summary has its
+// own column and the strip is not drawn. Urdu and English.
 
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -66,7 +67,7 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
     signedIn(sessionUser({ language }));
   });
 
-  it('shows the numbers of the lot and of the whole sale, from the preview', async () => {
+  it('shows the four numbers of the sale on one line, from the preview; one lot needs no name', async () => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
@@ -74,11 +75,10 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
       expect(textOf(salesGrid(language), 1, 'buyerTotal')).toBe('18,684');
     });
     const text = visible((await strip(language)).textContent);
-    // Both groups have a name and the four numbers of Event 1 (PRD 4.4): one lot, so equal.
-    expect(text).toContain(message(language, 'bikri-summary-lot', { lot: 1 }));
-    expect(text).toContain(message(language, 'bikri-summary-whole'));
+    // The four numbers of Event 1 (PRD 4.4), once each: with one lot the lot is the whole sale, so
+    // the strip does not repeat them under two names.
     for (const number of ['29,400', '10,084', '19,316', '31,564']) {
-      expect(countOf(text, number)).toBe(2);
+      expect(countOf(text, number)).toBe(1);
     }
     for (const id of [
       'glossary-kham-bikri',
@@ -86,17 +86,19 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
       'glossary-safi-bikri',
       'bikri-summary-buyer-total',
     ]) {
-      expect(countOf(text, message(language, id))).toBe(2);
+      expect(countOf(text, message(language, id))).toBe(1);
     }
+    expect(text).not.toContain(message(language, 'bikri-summary-whole'));
   });
 
-  it('is pinned to the bottom, holds nothing the keyboard can reach, and is not a live region', async () => {
+  it('is docked under the scrolling area, holds nothing the keyboard can reach, and is not a live region', async () => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
     const box = await strip(language);
-    expect(box).toHaveClass('sticky');
-    expect(box).toHaveClass('-bottom-5');
+    // Docked, not floating over the grids: it takes its own room and never covers a cell.
+    expect(box).not.toHaveClass('sticky');
+    expect(box).toHaveClass('shrink-0');
     // No button, link, field or tab stop inside: Tab and the arrow keys pass over it.
     expect(box.querySelectorAll('button, a, input, select, textarea, [tabindex]')).toHaveLength(0);
     expect(box).not.toHaveAttribute('aria-live');
@@ -120,7 +122,7 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
     expect(text).toContain(message(language, 'common-cash-after', { amount: '-5,000' }));
   });
 
-  it('says so for a lot that cannot be worked out yet, and still shows the whole sale', async () => {
+  it('says so for a lot that cannot be worked out yet', async () => {
     const { user } = await openBook(language, (draft) => {
       const preview = previewFor(draft);
       for (const lot of preview.lots) lot.totals = null;
@@ -129,9 +131,6 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
     await typeHeaderAndLot(user, language);
     const text = visible((await strip(language)).textContent);
     expect(text).toContain(message(language, 'bikri-strip-incomplete'));
-    // The whole sale still has its numbers (here the backend's answer for one finished line).
-    expect(text).toContain(message(language, 'glossary-kham-bikri'));
-    expect(text).toContain('12,000');
   });
 
   it.each(['compact', 'normal'] as const)('is drawn in a %s window', async (step) => {
@@ -179,9 +178,8 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
     await user.keyboard('{Alt>}l{/Alt}');
     const text = visible((await strip(next)).textContent);
     expect(text).toContain(message(next, 'glossary-kham-bikri'));
-    expect(text).toContain(message(next, 'bikri-summary-whole'));
     for (const number of ['29,400', '10,084', '19,316', '31,564']) {
-      expect(countOf(text, number)).toBe(2);
+      expect(countOf(text, number)).toBe(1);
     }
   });
 

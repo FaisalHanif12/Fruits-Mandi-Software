@@ -281,11 +281,11 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
     it('keyboard only: Enter walks through the loaded cells, a new rate is typed, F10 saves', async () => {
       const plan = fakePlan16();
       const { user } = await openEdit();
-      // The cursor starts on the truck. Four Enters leave the header (truck, زمیندار, اڈا, freight).
+      // The cursor starts on the truck. Three Enters leave the header (truck, زمیندار, اڈا).
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('role')).toBe('combobox');
       });
-      await user.keyboard('{Enter}{Enter}{Enter}{Enter}');
+      await user.keyboard('{Enter}{Enter}{Enter}');
       await waitFor(() => {
         expect(focusedIn(lotsGrid(language))).toBe('0:seller');
       });

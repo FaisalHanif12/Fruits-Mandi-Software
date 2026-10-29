@@ -61,6 +61,7 @@ function hitOf(row: MasterRecord): SearchHit {
     extra_ur: '',
     extra_en: '',
     is_active: row.is_active,
+    sold_by_weight: false,
   };
 }
 

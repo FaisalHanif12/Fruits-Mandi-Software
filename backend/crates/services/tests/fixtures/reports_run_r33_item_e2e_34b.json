@@ -44,7 +44,12 @@
     },
     {
       "key": "commission",
-      "title_id": "report-col-commission",
+      "title_id": "report-col-seller-comm",
+      "kind": "money"
+    },
+    {
+      "key": "total_commission",
+      "title_id": "report-col-total-comm",
       "kind": "money"
     },
     {
@@ -110,6 +115,10 @@
         },
         {
           "type": "money",
+          "paisa": 120000
+        },
+        {
+          "type": "money",
           "paisa": 780000
         },
         {
@@ -167,6 +176,10 @@
     },
     {
       "type": "money",
+      "paisa": 120000
+    },
+    {
+      "type": "money",
       "paisa": 780000
     },
     {
@@ -190,5 +203,6 @@
       "paisa": -194000
     }
   ],
-  "summary": []
+  "summary": [],
+  "group_above": null
 }

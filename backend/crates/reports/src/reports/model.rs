@@ -796,6 +796,9 @@ pub enum RowKind {
     Normal,
     /// A heading line that groups the lines under it (a head in R17).
     Group,
+    /// A heading line above the first row of a month, with the sums of the whole month (plan 38
+    /// R4). Only when the screen asks for `group_by_month`.
+    Month,
 }
 
 /// One row.
@@ -849,6 +852,12 @@ pub struct ReportPage {
     pub totals: Vec<Cell>,
     /// Lines above the table (opening balance, closing balance, the difference of a trial).
     pub summary: Vec<SummaryLine>,
+    /// For a report with group rows (a head, a city, a collector, a trip), when this page starts
+    /// in the middle of a group: the heading row of that group, with the totals of the WHOLE
+    /// group, so the screen can draw the heading above the first row of the page. Null when the
+    /// page starts with a heading, at the first page, and for a report without group rows. A
+    /// group total on screen is always the whole group's.
+    pub group_above: Option<Row>,
 }
 
 /// Input of `reports_run`.
@@ -867,6 +876,18 @@ pub struct ReportRunInput {
     #[serde(default)]
     #[ts(type = "number")]
     pub limit: i64,
+    /// The column to sort the whole filter by: the `key` of a column of the answer (not a column
+    /// of kind detail or message). Null is the order of the report. The rows between two heading
+    /// rows are sorted among themselves; the heading rows stay where they are. An unknown key is
+    /// `ERR_OUT_OF_RANGE` on `sort.column` (value `allowed`) (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<mandi_core::paging::SortInput>,
+    /// True to put a heading row (kind `month`) above the first row of each month, with the sums
+    /// of the whole month, for the reports whose rows are in date order (R2, R3, R4, R11, R12,
+    /// R13, R14, R15, R23, R25). With this, `total_count` and the offsets count the heading rows
+    /// too. Used only when there is no sort or the sort is by the date column.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// Input of `reports_print_data`.

@@ -31,6 +31,7 @@ import {
   R18_FULL,
   fakeReports,
 } from '../helpers/reports';
+import { PAGE_ROWS, pagerButton } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -236,7 +237,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
           detail: false,
         },
         offset: 0,
-        limit: 100,
+        limit: PAGE_ROWS,
       });
       // The first row is the cash account: its code and its name in this language.
       expect(cell('0', 'account')).toBe(`01010001 ${language === 'ur' ? 'روکڑ' : 'Cash'}`);
@@ -264,7 +265,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
       await openReport('R18');
       expect(
         await screen.findByText(
-          paragraph(m('report-count', { shown: 17, total: 17 })),
+          paragraph(m('common-pager-range', { from: 1, to: 17, total: 17 })),
           undefined,
           SLOW_MS,
         ),
@@ -293,7 +294,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
   });
 
   describe('paging', () => {
-    it('loads the next 100 rows from where the first page ended, with the same totals', async () => {
+    it('loads the next page from where the first page ended, with the same totals', async () => {
       const row = R18_FULL.rows[0];
       if (row === undefined) throw new Error('no row');
       const many = {
@@ -306,16 +307,21 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         expect(drawnRows().length).toBeGreaterThan(0);
       }, SLOW_MS);
       expect(
-        screen.getByText(paragraph(m('report-count', { shown: 100, total: 230 }))),
+        screen.getByText(
+          paragraph(m('common-pager-range', { from: 1, to: PAGE_ROWS, total: 230 })),
+        ),
       ).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: named(m('report-more')) }));
+      await user.click(await pagerButton(language, 'next'));
       await waitFor(() => {
         expect(
-          screen.getByText(paragraph(m('report-count', { shown: 200, total: 230 }))),
+          screen.getByText(
+            paragraph(m('common-pager-range', { from: 26, to: 2 * PAGE_ROWS, total: 230 })),
+          ),
         ).toBeInTheDocument();
       }, SLOW_MS);
       expect(vi.mocked(reportsApi.reportsRun).mock.calls.map(([input]) => input.offset)).toEqual([
-        0, 100,
+        0,
+        PAGE_ROWS,
       ]);
       // The totals are the backend's, over the whole filter: never the sum of the rows on screen.
       expect(totalsCell('debit')).toBe('85,048');

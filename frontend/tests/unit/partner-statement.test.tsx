@@ -14,6 +14,7 @@ import { cellOf, gridOf, textOf } from '../helpers/bikri-screen';
 import { choose, named, pageText, startsWith } from '../helpers/cashbook-screen';
 import { fail, leaveAppWindow, renderApp } from '../helpers/app';
 import { preparePartnerMoney, type PartnerMoney } from '../helpers/partner-money';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -234,33 +235,43 @@ describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
     expect(cellOf(rebuilt, 0, 'detail')).toBeInTheDocument();
   });
 
-  it("pages 100 lines at a time and the count is the backend's over the whole range", async () => {
+  it("pages 25 lines at a time and the count is the backend's over the whole range", async () => {
     const full = books.money.statement({
       partner_id: 2,
       from: null,
       to: null,
       offset: 0,
       limit: 0,
+      sort: null,
+      group_by_month: false,
     });
+    // Thirty lines in all: the three real ones again and again, each with its own id.
+    const lines = Array.from({ length: 30 }, (_, index) => {
+      const base = full.lines[index % full.lines.length];
+      return base === undefined ? [] : [{ ...base, id: `line-${String(index)}` }];
+    }).flat();
     vi.mocked(partnersApi.partnersStatement).mockImplementation((input) =>
       Promise.resolve({
         ...full,
-        lines: full.lines.slice(input.offset, input.offset + 2),
-        total_count: 3,
+        lines: lines.slice(input.offset, input.offset + input.limit),
+        total_count: 30,
       }),
     );
     const { user } = await open('?partner=2');
     await waitFor(() => {
-      expect(rows()).toBe(2);
+      expect(visible(pageText())).toContain(rangeText(language, 1, 25, 30));
     });
-    expect(pageText()).toContain(message(language, 'common-list-count', { shown: 2, total: 3 }));
-    await user.click(
-      screen.getByRole('button', { name: startsWith(message(language, 'common-list-more')) }),
+    expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 0, limit: PAGE_ROWS }),
     );
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
       expect(partnersApi.partnersStatement).toHaveBeenLastCalledWith(
-        expect.objectContaining({ offset: 2 }),
+        expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
       );
+    });
+    await waitFor(() => {
+      expect(visible(pageText())).toContain(rangeText(language, 26, 30, 30));
     });
   });
 });

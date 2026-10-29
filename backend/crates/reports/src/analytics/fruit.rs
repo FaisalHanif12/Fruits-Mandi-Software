@@ -173,6 +173,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     }
 
     Ok(Table {
+        charts: Vec::new(),
         columns: vec![
             col("for", ids::COL_FRUIT_FOR, ColumnKind::Names),
             col("item", ids::COL_ITEM, ColumnKind::Names),

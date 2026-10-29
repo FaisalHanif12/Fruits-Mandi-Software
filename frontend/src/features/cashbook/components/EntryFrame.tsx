@@ -25,6 +25,7 @@ import {
   CashConfirmDialog,
   ErrorNotice,
   Field,
+  InfoHint,
   SaveChangesPrompt,
   SegmentedControl,
 } from '../../../shared/ui';
@@ -50,6 +51,8 @@ interface EntryFrameProps<T extends string> {
   helpId: string;
   /** The Fluent message ID of the type list's name, read by screen readers. */
   typeLabelId?: string | undefined;
+  /** The tab strip of the area (خرچہ and پھل), drawn under the title (plan 38 G7), not above it. */
+  tabs?: ReactNode;
   /** The type list. A screen with only one kind of entry (the جنرل screen) has none. */
   types?: readonly TypeChoice<T>[] | undefined;
   type?: T | undefined;
@@ -93,6 +96,7 @@ interface EntryFrameProps<T extends string> {
 export function EntryFrame<T extends string>({
   titleId,
   helpId,
+  tabs,
   typeLabelId,
   types,
   type,
@@ -135,20 +139,26 @@ export function EntryFrame<T extends string>({
   });
 
   return (
-    <div ref={rootRef} className="flex max-w-page flex-col gap-4">
+    <div ref={rootRef} className="flex max-w-page flex-col gap-3 short:gap-2">
       <LeaveGuard
         dirty={filled}
         onSave={onSave}
         allowNavigation={(next) => next.pathname === path}
       />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        {/* The name first, with its line of help behind an ⓘ, so the name and the buttons are one
+            row (plan 38 G5, G7). */}
+        <div className="flex items-center gap-1">
           <Localized id={titleId}>
             <h1 className="sr-only normal:not-sr-only normal:type-title" />
           </Localized>
-          <Localized id={helpId}>
-            <p className="hidden type-body text-ink-muted normal:block" />
-          </Localized>
+          <div className="hidden normal:block">
+            <InfoHint>
+              <Localized id={helpId}>
+                <p />
+              </Localized>
+            </InfoHint>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {actions}
@@ -167,6 +177,7 @@ export function EntryFrame<T extends string>({
           </Button>
         </div>
       </div>
+      {tabs}
       {types === undefined ||
       type === undefined ||
       onType === undefined ||
@@ -193,7 +204,7 @@ export function EntryFrame<T extends string>({
         onSubmit={(event) => {
           event.preventDefault();
         }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3 short:gap-2"
       >
         {error === null ? null : <ErrorNotice error={error} fieldsShown={fieldsShown} />}
         {children}

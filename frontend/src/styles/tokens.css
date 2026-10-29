@@ -52,14 +52,20 @@
   /* The popup of a picker in a grid cell (plan 12): wide enough for a name and its code. */
   --picker-cell-w: 280px;
 
+  /* The "rows per page" choice of the pager under a list (plan 38): room for 100 and its arrow. */
+  --pager-size-w: 112px;
+
   /* Room kept under a focused cell so the numbers strip pinned to the bottom never covers it. The
      strip is about 90 px in Urdu and 115 px in English at 1024 px, and a line taller with the
      cash note. */
   --strip-clearance: 160px;
 
-  /* The height of a long list that sits inside a scrolling screen, under a form (plan 15): rows
-     past the thirtieth scroll inside it and only the rows in view are drawn (Code Standards F34). */
-  --list-region-h: 360px;
+  /* The least a list grid is given: its header and five rows. A list on a screen with a fixed height
+     takes all the room the screen leaves, and the rows scroll inside it with only the rows in view
+     drawn (plan 38 G2, Code Standards F34). */
+  --list-region-h: 264px;
+  /* A row of a read-only list: tight enough for 25 rows to fit a window with the page buttons. */
+  --list-row-h: 40px;
 
   /* The height of the chart above an analytics table (plan 21). */
   --chart-h: 224px;
@@ -86,6 +92,16 @@
   /* The width of a form screen (a master's form) and of a short field in it, such as a code. */
   --form-max-w: 960px;
   --field-short-w: 320px;
+
+  /* Fields of a one-row form (plan 38 G1): a date or a truck number, and a picker of a name. The row
+     keeps the words of its buttons from 760 px of free width and only their icons below it. */
+  --field-date-w: 144px;
+  --field-mid-w: 168px;
+  --row-roomy-w: 760px;
+
+  /* A screen puts its preview beside the form from 820 px of free width (plan 38, forms): the form
+     takes two thirds and the preview one third. Tailwind variant `@beside:`. */
+  --beside-w: 820px;
 
   /* Toast and dialog sizes (UsersEn, FormEn boards). */
   --toast-max-w: 480px;
@@ -194,6 +210,13 @@
   --color-money-in-on-nav: #5fbf8a;
   --color-due-on-nav: #f2a29b;
 
+  /* Container widths for forms and filter bars (plan 38 G1). They follow the free width of the
+     screen, not the window: a form has 2 columns from 480 px, 3 from 640 px and 4 from 900 px.
+     Tailwind variants `@form2:`, `@form3:`, `@form4:`. */
+  --container-form2: 480px;
+  --container-form3: 640px;
+  --container-form4: 900px;
+
   /* Layout steps as Tailwind variants: `normal:` and `wide:` (compact is the default). */
   --breakpoint-normal: 1366px;
   --breakpoint-wide: 1920px;
@@ -222,6 +245,7 @@
   --spacing-picker-row: var(--picker-row-h);
   --spacing-picker-list: var(--picker-list-h);
   --spacing-picker-cell: var(--picker-cell-w);
+  --spacing-pager-size: var(--pager-size-w);
   --spacing-strip: var(--strip-clearance);
   --spacing-list-region: var(--list-region-h);
   --spacing-tree: var(--tree-min-h);
@@ -279,6 +303,10 @@
   --container-toast: var(--toast-max-w);
   --container-form: var(--form-max-w);
   --container-field: var(--field-short-w);
+  --container-date: var(--field-date-w);
+  --container-mid: var(--field-mid-w);
+  --container-row-roomy: var(--row-roomy-w);
+  --container-beside: var(--beside-w);
 }
 
 /*

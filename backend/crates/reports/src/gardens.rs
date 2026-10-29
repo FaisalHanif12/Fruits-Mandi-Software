@@ -127,6 +127,7 @@ fn money_error(error: MoneyDataError) -> ReportsError {
 /// A database error.
 pub(crate) fn pick_ids(conn: &Connection, pick: &Pick) -> Result<Vec<i64>, ReportsError> {
     let filter = ListFilter {
+        order_by: None,
         kind: "garden".to_owned(),
         from: pick.from.clone(),
         to: pick.to.clone(),

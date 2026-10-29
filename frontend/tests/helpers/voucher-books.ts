@@ -372,6 +372,7 @@ export function createBooks(options: BooksOptions = {}) {
         cancelled_count: rows.filter((row) => row.status === 'cancelled').length,
         total_paisa: input.voucher_type === null ? null : money(total),
       },
+      months: [],
     };
   }
 
@@ -488,6 +489,20 @@ export function collectionList(rows: 'two' | 'none' = 'two') {
     date: TODAY_ISO,
     weekday: 5,
     groups: rows === 'none' ? [] : [group],
+    group_totals:
+      rows === 'none'
+        ? []
+        : [
+            {
+              collector: group.collector,
+              city: group.city,
+              count: group.buyers.length,
+              total_paisa: money(21564),
+            },
+          ],
+    total_count: rows === 'none' ? 0 : 2,
+    offset: 0,
+    limit: 100,
     total_paisa: money(rows === 'none' ? 0 : 21564),
   };
 }

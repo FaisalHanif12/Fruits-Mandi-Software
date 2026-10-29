@@ -392,7 +392,7 @@ fn arrivals_fixtures_of_the_date_to_sell_the_arrival_and_its_linked_lot() {
     );
     let all = json!({
         "garden_id": null, "from": null, "to": null, "item_id": null, "state": null,
-        "offset": 0, "limit": 0
+        "offset": 0, "limit": 0, "show_finished": true
     });
     pair(
         "gardens_arrivals_list_all",

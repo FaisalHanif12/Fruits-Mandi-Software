@@ -86,6 +86,7 @@ const hitOf = (record: RecordRef, kind: SearchHit['kind']): SearchHit => ({
   extra_ur: '',
   extra_en: '',
   is_active: true,
+  sold_by_weight: false,
 });
 
 /** The item and packing pickers of the purchase form: one orange and one box. */

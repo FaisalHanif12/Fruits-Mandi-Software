@@ -161,6 +161,7 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-accounts-openings-preview",
             "allow-accounts-openings-save",
             "allow-coa-tree",
+            "allow-coa-control-accounts",
             "allow-coa-heads-list",
             "allow-coa-controls-list",
             "allow-search-accounts",

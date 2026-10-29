@@ -9,6 +9,7 @@ use ts_rs::TS;
 
 use crate::accounts::RecordRef;
 use crate::money::{Bps, Paisa};
+use crate::paging::SortInput;
 
 /// Whose side a charge is on (PRD 11.1 "جانب").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, TS)]
@@ -547,6 +548,16 @@ pub struct RulesListInput {
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// Only rules whose party or item (code or name) or note holds this text. The counts are over
+    /// these rules.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole filter by: `side`, `charge_type`, `account`, `item`,
+    /// `item_group`, `level`, `method`, `from_date`, `to_date`, `is_active` or `note`. Null is the
+    /// order of the rule list: by side and charge, then most specific level, then newest (plan 38
+    /// R4). Inactive rules are left out unless `filter.include_inactive` is true.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
 }
 
 /// One page of the rule list with the counts over the whole filter (PRD FR-19.11, B31).

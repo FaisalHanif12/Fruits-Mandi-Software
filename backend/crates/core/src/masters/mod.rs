@@ -16,6 +16,8 @@ mod rows;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::paging::SortInput;
+
 pub use prepare::{
     AccountToMake, ColValue, MAX_CODE_DIGITS, NameTexts, Prepared, Reference, prepare,
 };
@@ -395,6 +397,19 @@ pub struct MastersListInput {
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// Only records whose code, name (either script), mark text or phone holds this text. For a
+    /// marka also its owner's code and name; for an expense head or staff member also the account
+    /// code.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole list by, a field of the row of the kind: `code`, `name_ur`,
+    /// `name_en` and `is_active` for most kinds; items also `item_group`, `default_packing_name_en`
+    /// and `sold_by`; packings `approx_kg`; addas `city_name_en`; markas `mark_text` and
+    /// `owner_account_code`; narrations `text_ur` and `text_en`; expense heads `account_code`;
+    /// staff `job`, `phone` and `account_code`. Null is by code (plan 38 R4). Inactive records are
+    /// left out unless `include_inactive` is true.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
 }
 
 /// One page of a master list with the totals over the whole list (PRD FR-19.11, B31).

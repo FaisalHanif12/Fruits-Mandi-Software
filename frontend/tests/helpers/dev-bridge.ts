@@ -30,6 +30,7 @@ import {
 import { printingSettings } from './print-settings';
 import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
 import { indexHandlers, isIndexPage } from './dev-bridge-index';
+import { isListsPage, listsHandlers } from './dev-bridge-lists';
 import * as tagReal from './tag-real';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
@@ -799,6 +800,9 @@ function windowsOnly(): Error {
   });
 }
 
+/** The commands a page asked that the stand-in has no answer for (development only). */
+const missingCommands: string[] = [];
+
 /** Puts the stand-in where Tauri's `invoke` looks for the bridge. */
 export function installDevBridge(): void {
   Object.defineProperty(window, '__TAURI_INTERNALS__', {
@@ -812,12 +816,18 @@ export function installDevBridge(): void {
             ? gardensHandlers[command]
             : isIndexPage()
               ? indexHandlers[command]
-              : undefined;
+              : isListsPage()
+                ? listsHandlers[command]
+                : undefined;
         const handler = own ?? handlers[command];
         // The delay is the answer time of a real command, so the screen's waiting looks real.
         return new Promise((resolve, reject) => {
           window.setTimeout(() => {
             if (handler === undefined) {
+              // Development only: a page that asked a command no answer exists for is named on
+              // `window.devBridgeMissing`, for the screenshot script to read.
+              missingCommands.push(command);
+              Object.assign(window, { devBridgeMissing: [...missingCommands] });
               reject(refusal());
               return;
             }

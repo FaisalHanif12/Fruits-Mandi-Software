@@ -97,7 +97,7 @@ pub(crate) fn run(
         open_cr.checked_add(total_out)?,
     )?;
 
-    let stored = cash_repo::page(conn, cash, from, to, spec.offset, spec.sql_limit())?;
+    let stored = cash_repo::page(conn, cash, from, to, None, spec.offset, spec.sql_limit())?;
     let entry_ids: Vec<i64> = stored.iter().map(|r| r.entry_id).collect();
     let others = cash_repo::counterparts(conn, cash, &entry_ids)?;
     let account_ids: Vec<i64> = stored
@@ -150,6 +150,7 @@ pub(crate) fn run(
     }
 
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R12,
         title_id: ids::title_id("R12"),
         filters: typed.resolved.clone(),

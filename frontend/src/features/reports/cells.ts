@@ -9,6 +9,7 @@ import type { ReportDetailPart } from '../../bindings/ReportDetailPart';
 import type { ReportId } from '../../bindings/ReportId';
 import type { ReportMessageArg } from '../../bindings/ReportMessageArg';
 import type { ReportParty } from '../../bindings/ReportParty';
+import type { ReportRowKind } from '../../bindings/ReportRowKind';
 import type { Language } from '../../i18n';
 import { formatBps, isoToDisplayDate } from '../../shared/format';
 import type { ListContext } from '../../shared/grid';
@@ -40,7 +41,7 @@ export function monthText(text: (id: string) => string, year: number, month: num
  * no city (R21) or no collector (R22), and the sales with no اڈا (R8). Shown as an empty name, they
  * would look like a mistake. Null for any other empty cell.
  */
-export function emptyNameMessageId(id: ReportId, rowKind: 'normal' | 'group'): string | null {
+export function emptyNameMessageId(id: ReportId, rowKind: ReportRowKind): string | null {
   if (id === 'R21' && rowKind === 'group') return 'report-group-no-city';
   if (id === 'R22' && rowKind === 'group') return 'report-group-no-collector';
   if (id === 'R8') return 'report-adda-none';

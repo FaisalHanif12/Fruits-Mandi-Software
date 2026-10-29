@@ -52,6 +52,8 @@ pub(crate) struct Typed {
     pub(crate) trip_view: AnalyticsTripView,
     /// The compared period, if a comparison was asked for.
     pub(crate) compare: Option<(String, String)>,
+    /// The sort asked for, for the view that cuts its page early (view C).
+    pub(crate) sort: Option<mandi_core::paging::SortInput>,
     /// What goes back to the screen.
     pub(crate) resolved: AnalyticsResolvedFilters,
 }
@@ -146,6 +148,7 @@ pub(crate) fn resolve(
 ) -> Result<Typed, ReportsError> {
     let mut problems: Vec<FieldError> = Vec::new();
     let mut typed = Typed {
+        sort: None,
         from: None,
         to: None,
         group_by: AnalyticsGroupBy::Month,

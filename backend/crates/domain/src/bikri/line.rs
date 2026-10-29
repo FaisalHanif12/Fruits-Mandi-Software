@@ -43,6 +43,9 @@ pub(super) struct LineArgs<'a> {
     pub lot: &'a LotRef,
     /// True once the lot's per-lot seller commission has been charged on an earlier line.
     pub per_lot_charged: &'a mut bool,
+    /// `Some(number of the goods-arrived entry)` when the entry's first lot has taken the per-lot
+    /// seller commission, so this lot carries 0 for it (PRD FR-12.40, plan 37).
+    pub entry_spent: Option<i64>,
     /// The running amounts buyers owe, for the credit limit (see [`checks::credit_limit`]).
     pub owed: &'a mut HashMap<i64, Paisa>,
     pub row: &'a PreparedSale,
@@ -201,7 +204,12 @@ fn charge(
     if per_lot_due {
         *args.per_lot_charged = true;
     }
-    let charged = charge_amount(Some(&winner), kind, base, qty, per_lot_due)?;
+    let mut charged = charge_amount(Some(&winner), kind, base, qty, per_lot_due)?;
+    if let (ChargeValue::PerLot(value), Some(entry), ChargeSide::Seller, false) =
+        (&winner.value, args.entry_spent, side, per_lot_due)
+    {
+        charged.working = working::per_lot_on_entry(entry, *value, winner.rule_id);
+    }
     line_charge_of(&winner, charged.amount, charged.working)
 }
 
@@ -231,11 +239,17 @@ fn stored_charge(
     if carries {
         *args.per_lot_charged = true;
     }
-    let charged = charge_amount(Some(&winner), kind, base, qty, carries)?;
+    let mut charged = charge_amount(Some(&winner), kind, base, qty, carries)?;
     if charged.amount != stored.amount {
         return Err(CalcError::Inconsistent(
             "a stored charge does not match its method and value",
         ));
+    }
+    // A line of a lot that the entry's first lot spared this charge says so (plan 37).
+    if let (ChargeValue::PerLot(value), Some(entry), ChargeSide::Seller, false) =
+        (&winner.value, args.entry_spent, side, carries)
+    {
+        charged.working = working::per_lot_on_entry(entry, *value, winner.rule_id);
     }
     line_charge_of(&winner, charged.amount, charged.working)
 }

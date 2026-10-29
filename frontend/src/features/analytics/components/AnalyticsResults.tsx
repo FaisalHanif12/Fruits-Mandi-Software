@@ -10,13 +10,12 @@
 // two buttons to move it.
 
 import { Localized } from '@fluent/react';
-import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, SearchX } from 'lucide-react';
 import { useMemo } from 'react';
 import type { AnalyticsKey } from '../../../bindings/AnalyticsKey';
 import type { AnalyticsPage } from '../../../bindings/AnalyticsPage';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, RUNNING_NUMBER } from '../../../shared/ui';
 import { cellText, totalsFor } from '../../reports';
@@ -27,6 +26,7 @@ import {
   signedKeysOf,
   type AnalyticsRowView,
 } from '../columns';
+import type { useAnalyticsPages } from '../hooks';
 import { useListContext } from '../list-context';
 import type { AnalyticsView } from '../types';
 import { AnalyticsChart } from './AnalyticsChart';
@@ -50,9 +50,11 @@ export const WHOLE_FILTER_KEY: AnalyticsKey = {
 
 interface AnalyticsResultsProps {
   view: AnalyticsView;
-  query: UseInfiniteQueryResult<InfiniteData<AnalyticsPage>>;
-  /** The pages last shown, kept while a half-typed filter is refused (see AnalyticsBody). */
-  kept: InfiniteData<AnalyticsPage> | null;
+  query: ReturnType<typeof useAnalyticsPages>;
+  /** The rows the chart is drawn from: the first rows of the view, whatever page the table is on. */
+  chartPage: AnalyticsPage | undefined;
+  /** The page last shown, kept while a half-typed filter is refused (see AnalyticsBody). */
+  kept: { pages: AnalyticsPage[] } | null;
   /** A filter that the view takes is filled: the empty state offers to clear it. */
   filtering: boolean;
   onClear: () => void;
@@ -74,6 +76,7 @@ interface AnalyticsResultsProps {
 export function AnalyticsResults({
   view,
   query,
+  chartPage,
   kept,
   filtering,
   onClear,
@@ -87,6 +90,7 @@ export function AnalyticsResults({
 }: AnalyticsResultsProps) {
   const step = useLayoutStep();
   const context = useListContext();
+  const paging = useListPaging(query.pager);
   const data = query.data ?? kept ?? undefined;
   const pages = data?.pages;
   const last = pages?.at(-1);
@@ -236,6 +240,7 @@ export function AnalyticsResults({
             onFocusRow={onFocusRow}
             focusRowId={focusRowId}
             heightMode={long ? 'fill' : 'auto'}
+            paging={paging}
             isGroup={(item) => item.row.kind === 'group'}
             totals={(ctx) =>
               totalsFor(
@@ -247,26 +252,7 @@ export function AnalyticsResults({
             }
           />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Localized
-            id="report-count"
-            vars={{ shown: String(rows.length), total: String(last.total_count) }}
-            elems={RUNNING_NUMBER}
-          >
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          {query.hasNextPage ? (
-            <Button
-              disabled={query.isFetchingNextPage}
-              busy={query.isFetchingNextPage}
-              onClick={() => {
-                void query.fetchNextPage();
-              }}
-            >
-              <Localized id="report-more" />
-            </Button>
-          ) : null}
-        </div>
+        <Pager pager={query.pager} />
         <Localized id="analytics-open-hint">
           <p className="type-body text-ink-muted" />
         </Localized>
@@ -277,9 +263,9 @@ export function AnalyticsResults({
   return (
     <div className="flex flex-col gap-4" aria-busy={query.isFetching}>
       <AnalyticsRange filters={last.filters} />
-      {/* The chart shows the first rows, which are on the first page (the later pages go on). */}
-      {rows.length === 0 || pages?.[0] === undefined ? null : (
-        <AnalyticsChart view={view} page={pages[0]} />
+      {/* The chart shows the first rows of the whole filter, on every page of the table (plan 38). */}
+      {rows.length === 0 || chartPage === undefined ? null : (
+        <AnalyticsChart view={view} page={chartPage} />
       )}
       {body}
     </div>

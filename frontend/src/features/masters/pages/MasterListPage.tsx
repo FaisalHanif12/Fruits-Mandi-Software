@@ -8,7 +8,7 @@ import { useNavigate, useParams } from '@tanstack/react-router';
 import { Plus, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { useFocusFirstField, useLoadRest } from '../../../shared/hooks';
+import { useClientPager, useFocusFirstField, useLoadRest } from '../../../shared/hooks';
 import { PagedList } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Button, Checkbox, EmptyState, ErrorState, Field, TextInput } from '../../../shared/ui';
@@ -17,9 +17,6 @@ import { useMasterFilter, useMasterList } from '../hooks';
 import { useMasterFocus } from '../store';
 import type { MasterRecord } from '../types';
 import { UnknownMasterPage } from './UnknownMasterPage';
-
-/** How many pages (100 masters each) are read to find the row last opened; then the focus starts on the first row. */
-const REMEMBERED_ROW_PAGES = 20;
 
 export function MasterListPage() {
   const params = useParams({ strict: false });
@@ -38,16 +35,9 @@ function MasterList({ config }: { config: MasterConfig }) {
   const filter = useMasterFilter(config.kind, filterText);
   const remember = useMasterFocus((state) => state.remember);
   const focusRowId = useMasterFocus((state) => state.rows[config.kind]);
-  // The grid puts the focus back on the row last opened or saved when it is drawn, so that row must
-  // be loaded first: while it is on a later page, the pages are read until it is (no filter typed).
-  const findingRow =
-    focusRowId !== undefined &&
-    filter.ids === null &&
-    list.hasNextPage &&
-    (list.data?.pages.length ?? 0) < REMEMBERED_ROW_PAGES &&
-    !list.data?.pages.some((page) => page.rows.some((record) => record.id === focusRowId));
-  // A typed filter is matched against the rows, so while it is typed the rest of the pages load.
-  useLoadRest(list, filter.ids !== null || findingRow);
+  // A master list is short, so every page is read, the filter is matched against the rows, and the
+  // page buttons turn the pages in memory (`useClientPager`).
+  useLoadRest(list, true);
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const columns = useMemo(() => columnsOf(config), [config]);
 
@@ -73,7 +63,12 @@ function MasterList({ config }: { config: MasterConfig }) {
     return filter.ids.flatMap((id) => byId.get(id) ?? []);
   }, [list.data, showInactive, filter.ids]);
   // While the filter is on its way, or the rest of the pages it needs, there is nothing to say yet.
-  const settling = filter.isPending || (filter.ids !== null && list.hasNextPage);
+  const settling = filter.isPending || list.hasNextPage;
+  const client = useClientPager(
+    `masters.${config.kind}`,
+    JSON.stringify([showInactive, filter.ids]),
+    rows,
+  );
 
   const newButton = (
     <Button variant="primary" shortcut={SHORTCUTS.newEntry} onClick={openNew}>
@@ -120,14 +115,7 @@ function MasterList({ config }: { config: MasterConfig }) {
     <PagedList<MasterRecord>
       columns={columns}
       // Nothing is drawn while the filter settles, so "no match" never flashes.
-      rows={list.isError || findingRow || (settling && rows?.length === 0) ? undefined : rows}
-      totalCount={
-        filter.ids !== null
-          ? rows?.length
-          : showInactive
-            ? first?.total_count
-            : first?.totals.active_count
-      }
+      rows={list.isError || (settling && rows?.length === 0) ? undefined : client.pageRows}
       getRowId={(record) => String(record.id)}
       labelId={config.titleId}
       failedId="masters-load-failed"
@@ -135,11 +123,7 @@ function MasterList({ config }: { config: MasterConfig }) {
       onRetry={() => {
         void list.refetch();
       }}
-      hasMore={list.hasNextPage && filter.ids === null}
-      loadingMore={list.isFetchingNextPage}
-      onLoadMore={() => {
-        void list.fetchNextPage();
-      }}
+      pager={client.pager}
       empty={empty}
       onOpen={open}
       isInactive={(record) => !record.is_active}

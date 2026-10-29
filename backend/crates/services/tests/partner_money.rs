@@ -243,6 +243,8 @@ fn taking_back_more_than_the_balance_warns_in_the_preview_and_still_saves() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            group_by_month: false,
+            sort: None,
             partner_id: b,
             offset: 0,
             limit: 0,
@@ -332,6 +334,8 @@ fn a_capital_entry_is_edited_and_cancelled_by_reversal() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            group_by_month: false,
+            sort: None,
             partner_id: b,
             offset: 0,
             limit: 0,
@@ -357,6 +361,8 @@ fn a_capital_entry_is_edited_and_cancelled_by_reversal() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            group_by_month: false,
+            sort: None,
             partner_id: b,
             offset: 0,
             limit: 0,
@@ -380,6 +386,8 @@ fn the_capital_history_pages_and_the_totals_cover_every_row() {
         partners::capital_history(
             &w.env.ctx,
             &CapitalHistoryInput {
+                group_by_month: false,
+                sort: None,
                 partner_id: a,
                 offset,
                 limit,
@@ -399,6 +407,8 @@ fn the_capital_history_pages_and_the_totals_cover_every_row() {
     let unknown = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            group_by_month: false,
+            sort: None,
             partner_id: 777,
             offset: 0,
             limit: 0,
@@ -454,6 +464,10 @@ fn the_overview_has_returned_net_and_total_and_a_return_adds_back() {
     let list = vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
             voucher_type: Some(VoucherType::PersonalReturn),
             from: String::new(),
             to: String::new(),
@@ -566,6 +580,8 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
         khata::statement(
             &w.env.ctx,
             &KhataStatementInput {
+                group_by_month: false,
+                sort: None,
                 khata_account_id: family,
                 from: from.map(str::to_owned),
                 to: to.map(str::to_owned),
@@ -620,6 +636,10 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
     let received = vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
             voucher_type: Some(VoucherType::KhataIn),
             from: String::new(),
             to: String::new(),
@@ -649,6 +669,8 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
     let unknown = khata::statement(
         &w.env.ctx,
         &KhataStatementInput {
+            group_by_month: false,
+            sort: None,
             khata_account_id: w.akram,
             from: None,
             to: None,
@@ -684,6 +706,8 @@ fn a_khata_needs_both_names_in_their_scripts_and_keeps_its_note() {
     let statement = khata::statement(
         &w.env.ctx,
         &KhataStatementInput {
+            group_by_month: false,
+            sort: None,
             khata_account_id: family,
             from: None,
             to: None,

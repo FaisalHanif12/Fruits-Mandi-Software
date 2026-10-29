@@ -15,6 +15,7 @@ import {
   MoneyInput,
   Select,
   fieldError,
+  FormCard,
 } from '../../../shared/ui';
 import type { CapitalDraft } from '../capital-draft';
 import { usePartnerList } from '../hooks';
@@ -29,7 +30,7 @@ export function CapitalForm({ draft, onChange, error }: CapitalFormProps) {
   const language = useLanguage();
   const partners = usePartnerList();
   return (
-    <div className="grid grid-cols-1 gap-4 rounded-3 border border-border bg-surface p-3 normal:grid-cols-2">
+    <FormCard>
       <Field label={<Localized id="cashbook-field-date" />} error={fieldError(error, 'date')}>
         {(props) => (
           <DateInput
@@ -97,6 +98,6 @@ export function CapitalForm({ draft, onChange, error }: CapitalFormProps) {
           />
         )}
       </Field>
-    </div>
+    </FormCard>
   );
 }

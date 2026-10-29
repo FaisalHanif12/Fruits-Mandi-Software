@@ -103,6 +103,8 @@ fn statement_of(w: &support::World, partner: i64) -> PartnerStatement {
     partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: partner,
             from: None,
             to: None,
@@ -569,7 +571,14 @@ fn a_fruit_entry_is_edited_by_reversal_and_cancelled_by_reversal() {
     assert!(!row.can_change);
     assert_eq!(row.journal_entry_id, None);
     // A cancelled entry counts for nothing in the totals and cannot be cancelled again.
-    let list = fruit::list(ctx, &FruitListInput::default()).unwrap();
+    let list = fruit::list(
+        ctx,
+        &FruitListInput {
+            show_finished: true,
+            ..FruitListInput::default()
+        },
+    )
+    .unwrap();
     assert_eq!(list.total_count, 1);
     assert_eq!((list.totals.qty, list.totals.value_paisa.rupees()), (0, 0));
     let again = fruit::cancel(
@@ -624,6 +633,7 @@ fn the_lot_picker_lists_lots_with_a_balance_and_the_last_fruit_empties_the_lot()
             ctx,
             &FruitLotsInput {
                 search: Some(text.into()),
+                offset: 0,
                 limit: 0,
             },
         )

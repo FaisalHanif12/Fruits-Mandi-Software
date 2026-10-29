@@ -98,6 +98,10 @@ export function OwnLotPanel({ row, lotIndex, error, lot }: OwnLotPanelProps) {
     state: 'in_stock',
     offset: 0,
     limit: 0,
+    show_finished: false,
+    search: null,
+    sort: null,
+    group_by_month: false,
   });
   const chosen = usePurchase(chosenId);
   const options = useMemo(() => {

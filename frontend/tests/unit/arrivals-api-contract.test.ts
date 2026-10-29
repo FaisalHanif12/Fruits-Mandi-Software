@@ -72,6 +72,7 @@ describe('every wrapper sends its command name and its input', () => {
       sell_date: null,
       lines: [
         {
+          key: 'line-1',
           item_id: 61,
           packing_id: 71,
           qty: '100',

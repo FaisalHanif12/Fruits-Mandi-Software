@@ -303,8 +303,6 @@ gardens-history-empty-help = اس باغ کی { -qist }، خرچ اور فروخ
 # review: pending
 gardens-history-count = { $total } میں سے { $shown } نظر آ رہے ہیں
 # review: pending
-gardens-history-more = مزید دکھائیں
-# review: pending
 gardens-history-cancel = اندراج منسوخ کریں
 # review: pending
 gardens-entry-cancelled-reason = یہ اندراج منسوخ ہو چکا ہے۔ وجہ: { $reason }

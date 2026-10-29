@@ -110,6 +110,10 @@ fn live_vouchers(w: &World, kinds: &[VoucherType]) -> Vec<(i64, VoucherType)> {
     vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
             voucher_type: None,
             from: String::new(),
             to: String::new(),
@@ -224,6 +228,8 @@ fn check_seller(w: &World) {
         &AdvancesReportInput {
             seller_id: Some(w.rahim),
             as_of: String::new(),
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();

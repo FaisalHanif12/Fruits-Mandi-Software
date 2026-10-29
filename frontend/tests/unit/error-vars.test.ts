@@ -116,4 +116,16 @@ describe('messageVars', () => {
   it('a name that merely ends like paisa but holds text is passed as sent', () => {
     expect(messageVars({ note_paisa: 'x' }, 'lakh')).toEqual({ note_paisa: 'x' });
   });
+
+  it('tells whether a record number is 0 ("none"), for a message that must choose (plan 37)', () => {
+    expect(messageVars({ bikri_number: 0, lot_no: 2 }, 'lakh')).toEqual({
+      bikri_number: '0',
+      bikri_number_zero: 'yes',
+      lot_no: '2',
+    });
+    expect(messageVars({ bikri_number: 7 }, 'lakh')).toEqual({
+      bikri_number: '7',
+      bikri_number_zero: 'no',
+    });
+  });
 });

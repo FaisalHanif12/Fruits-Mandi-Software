@@ -1,25 +1,30 @@
 // A list of any module with its four states (Code Standards F8, F34, PRD FR-19.11, FR-7.46):
 // loading, an error with a retry, nothing yet (the screen's own helpful message), and the rows. The
-// rows load page by page and only the rows in view are drawn. The totals under the columns and the
-// count are the backend's over the whole filter, never a sum of the rows on screen. The rows are
-// read only here: Enter on a row does nothing unless the screen gives `onOpen`.
+// rows come one page at a time with the page buttons under them (`Pager`, plan 38 R1), and only the
+// rows in view are drawn. The totals under the columns and the count are the backend's over the
+// whole filter, never a sum of the rows on screen. Page Up and Page Down in the table turn the
+// page. The rows are read only here: Enter on a row does nothing unless the screen gives `onOpen`.
 
 import { Localized } from '@fluent/react';
 import { useState, type ReactNode } from 'react';
 import type { UiError } from '../../bindings/UiError';
+import type { PagerState } from '../hooks';
 import { ErrorState, LoadingState } from '../ui';
-import { ListGrid, type ListColumn, type ListContext } from './ListGrid';
-import { PagedFooter } from './PagedFooter';
-
-/** A list with more rows than this scrolls inside its region and draws only the rows in view. */
-const SHORT_LIST_ROWS = 30;
+import {
+  ListGrid,
+  type ListColumn,
+  type ListContext,
+  type ListMonths,
+  type ListSort,
+} from './ListGrid';
+import { ListRegion, listHeightMode } from './ListRegion';
+import { Pager } from './Pager';
+import { useListPaging } from './useListPaging';
 
 interface PagedListProps<T> {
   columns: readonly ListColumn<T>[];
-  /** The rows loaded so far, or undefined while the first page is on its way. */
+  /** The rows of the page on screen, or undefined while the first page is on its way. */
   rows: readonly T[] | undefined;
-  /** How many rows the whole filter has (the backend's count). */
-  totalCount: number | undefined;
   getRowId: (row: T) => string;
   /** The Fluent message ID of the list's name, read by screen readers. */
   labelId: string;
@@ -28,9 +33,19 @@ interface PagedListProps<T> {
   /** Why the first page could not load, or null. */
   error: UiError | null;
   onRetry: () => void;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onLoadMore: () => void;
+  /** Where the list is: the page on screen, the rows per page and the count of the whole filter. */
+  pager: PagerState;
+  /**
+   * The order of the list, from `usePagedQuery` (`{ value: list.sort, onChange: list.setSort }`).
+   * With it, the title of every column that has a `sortKey` is a button (plan 38 R4).
+   */
+  sort?: ListSort | undefined;
+  /**
+   * A heading row above each month, with the backend's count and subtotals of the month over the
+   * whole filter (plan 38 R4). Only for a list in date order: ask the backend for `months` only
+   * when no other sort is chosen.
+   */
+  months?: ListMonths<T> | undefined;
   /** Shown when the filter has no rows: why, and what to do next. */
   empty: ReactNode;
   isInactive?: ((row: T) => boolean) | undefined;
@@ -50,15 +65,14 @@ interface PagedListProps<T> {
 export function PagedList<T>({
   columns,
   rows,
-  totalCount,
   getRowId,
   labelId,
   failedId,
   error,
   onRetry,
-  hasMore,
-  loadingMore,
-  onLoadMore,
+  pager,
+  sort,
+  months,
   empty,
   isInactive,
   onOpen,
@@ -68,6 +82,7 @@ export function PagedList<T>({
 }: PagedListProps<T>) {
   // The row that has focus, kept here so a language switch (which rebuilds the grid) keeps it.
   const [ownFocusId, setOwnFocusId] = useState<string | null>(null);
+  const paging = useListPaging(pager);
   const focusId = focusRowId === undefined ? ownFocusId : focusRowId;
   if (rows === undefined) {
     return error === null ? (
@@ -77,10 +92,13 @@ export function PagedList<T>({
     );
   }
   if (rows.length === 0) return <>{empty}</>;
-  const long = rows.length > SHORT_LIST_ROWS;
+  // The work area of a list (plan 38 G2): the grid takes the height the screen leaves, with its
+  // header and its totals row fixed and the rows scrolling between them, and the page buttons stay
+  // under it, always in view. On a screen that is not given a fixed height (a list under a form)
+  // the grid keeps a floor of a few rows and the page scrolls as before.
   return (
-    <>
-      <div className={long ? 'h-list-region' : undefined}>
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <ListRegion rowCount={rows.length}>
         <ListGrid<T>
           columns={columns}
           rows={rows}
@@ -92,18 +110,17 @@ export function PagedList<T>({
             onFocusRow?.(rowId);
           }}
           focusRowId={focusId}
-          heightMode={long ? 'fill' : 'auto'}
+          heightMode={listHeightMode(rows.length)}
           isInactive={isInactive}
           totals={totals}
+          paging={paging}
+          sort={sort}
+          months={months}
         />
+      </ListRegion>
+      <div className="shrink-0">
+        <Pager pager={pager} />
       </div>
-      <PagedFooter
-        shown={rows.length}
-        total={totalCount ?? rows.length}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        onLoadMore={onLoadMore}
-      />
-    </>
+    </div>
   );
 }

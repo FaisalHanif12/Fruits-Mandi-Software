@@ -10,7 +10,16 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as searchApi from '../../src/shared/search/api';
 import * as urduApi from '../../src/shared/urdu/api';
-import { account, balance, fakeAccounts, money, ref } from '../helpers/accounts';
+import {
+  SAMPLE_CONTROL_ACCOUNTS,
+  account,
+  balance,
+  controlAccountsPage,
+  fakeAccounts,
+  money,
+  ref,
+  sampleTree,
+} from '../helpers/accounts';
 import {
   fail,
   healthyBackend,
@@ -22,6 +31,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakeMasters } from '../helpers/masters';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
 import { useMasterFocus } from '../../src/features/masters/store';
@@ -151,7 +161,7 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
     }
   });
 
-  it('150 accounts come page by page: 100 at once with the count and the totals of the backend, Show more loads the rest', async () => {
+  it('150 accounts come page by page: 25 at once with the count and the totals of the backend, Next page loads the next 25', async () => {
     // The list remembers the row it last focused; an earlier test may have left one.
     useMasterFocus.setState({ rows: {} });
     fakeAccounts(
@@ -166,23 +176,22 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
       ),
     );
     await renderApp('/index/accounts');
-    const showing = (shown: number) =>
-      message(language, 'common-list-count', { shown: String(shown), total: '150' });
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(100));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
     });
     // The opening totals are the backend's for all 150, shown once, not summed from a page.
     expect(visible(document.body.textContent)).toContain('65,000');
-    expect(accountApi.accountsList).toHaveBeenLastCalledWith(expect.anything(), 0, 100);
-    await userEvent.setup().click(
-      await screen.findByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    );
+    expect(accountApi.accountsList).toHaveBeenLastCalledWith(expect.anything(), 0, PAGE_ROWS);
+    await userEvent.setup().click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(150));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
     });
-    expect(accountApi.accountsList).toHaveBeenLastCalledWith(expect.anything(), 100, 100);
+    expect(accountApi.accountsList).toHaveBeenLastCalledWith(
+      expect.anything(),
+      PAGE_ROWS,
+      PAGE_ROWS,
+    );
+    expect(visible(document.body.textContent)).toContain('65,000');
   });
 
   it('the type, the search and the inactive tick go to the backend filter', async () => {
@@ -201,7 +210,7 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
       { kind: 'all', text: '', include_inactive: true },
       0,
-      100,
+      PAGE_ROWS,
     );
     expect(document.querySelector('[row-id="41"]')).toHaveClass('row-inactive');
     // Dimmed is not enough (NFR-USE-12): the name says "inactive" in words, in the app language.
@@ -840,6 +849,56 @@ describe.each(LANGUAGES)('the chart of accounts (%s)', (language) => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/index/accounts/21');
     });
+  });
+
+  it('a control with 60 accounts opens its first 25 and a page row; Next shows the next 25', async () => {
+    fakeAccounts();
+    const sixty = Array.from({ length: 60 }, (_, index) => ({
+      id: 600 + index,
+      code: String(index + 1).padStart(4, '0'),
+      name_ur: `خریدار ${String(index + 1)}`,
+      name_en: `Buyer ${String(index + 1)}`,
+      is_active: true,
+      is_system: false,
+      balance: balance(index + 1, 'dr'),
+    }));
+    vi.mocked(accountApi.coaControlAccounts).mockImplementation((controlId, offset, limit) =>
+      Promise.resolve(
+        controlAccountsPage(
+          sampleTree(),
+          { ...SAMPLE_CONTROL_ACCOUNTS, 4: sixty },
+          controlId,
+          offset,
+          limit,
+        ),
+      ),
+    );
+    await renderApp('/index/chart');
+    const tree = await screen.findByRole('tree');
+    const user = userEvent.setup();
+    tree.focus();
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
+    await waitFor(() => {
+      expect(accountApi.coaControlAccounts).toHaveBeenLastCalledWith(4, 0, 25);
+    });
+    // 5 head and control rows, 25 accounts and the page row.
+    await waitFor(() => {
+      expect(rows()).toHaveLength(5 + 25 + 1);
+    });
+    const pageRow = rows()[3 + 25 + 1];
+    if (pageRow === undefined) throw new Error('the page row is not there');
+    expect(visible(pageRow.textContent)).toContain(rangeText(language, 1, 25, 60));
+    const next = within(pageRow).getByRole('button', {
+      name: (name) => visible(name) === message(language, 'common-pager-next'),
+    });
+    await user.click(next);
+    await waitFor(() => {
+      expect(accountApi.coaControlAccounts).toHaveBeenLastCalledWith(4, 25, 25);
+    });
+    await waitFor(() => {
+      expect(visible(rows()[3 + 25 + 1]?.textContent)).toContain(rangeText(language, 26, 50, 60));
+    });
+    expect(visible(rows()[4]?.textContent)).toContain('0026');
   });
 
   it('Home and End jump to the first and the last row', async () => {

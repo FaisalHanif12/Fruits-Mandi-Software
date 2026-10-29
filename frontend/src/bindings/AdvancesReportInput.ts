@@ -12,4 +12,12 @@ export type AdvancesReportInput = {
    * The "as of" day, `DD-MM-YYYY` or a shortcut. Empty means today.
    */
   as_of: string;
+  /**
+   * How many sellers to skip. 0 for the first page.
+   */
+  offset: number;
+  /**
+   * The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
+   */
+  limit: number;
 };

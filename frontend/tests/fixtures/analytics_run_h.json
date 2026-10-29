@@ -448,5 +448,226 @@
       "type": "percent",
       "hundredths": 10000
     }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": {
+        "type": "label",
+        "id": "analytics-top-items"
+      },
+      "series": [
+        {
+          "key": "total_comm",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "number",
+            "value": 1
+          },
+          "key": {
+            "item_id": 1,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 392800
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "number",
+            "value": 2
+          },
+          "key": {
+            "item_id": 2,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 152000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    },
+    {
+      "kind": "ranked",
+      "title": {
+        "type": "label",
+        "id": "analytics-top-sellers"
+      },
+      "series": [
+        {
+          "key": "total_comm",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "number",
+            "value": 1
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": 18,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 392800
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "number",
+            "value": 2
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": 19,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 152000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    },
+    {
+      "kind": "ranked",
+      "title": {
+        "type": "label",
+        "id": "analytics-top-buyers"
+      },
+      "series": [
+        {
+          "key": "total_comm",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "number",
+            "value": 1
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": 21,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 232800
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "number",
+            "value": 2
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": 20,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 160000
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "number",
+            "value": 3
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": 9,
+            "person_key": "شاہد|03000000000",
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 152000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

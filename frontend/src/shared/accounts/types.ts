@@ -20,6 +20,7 @@ import type { AccountType } from '../../bindings/AccountType';
 import type { Balance } from '../../bindings/Balance';
 import type { BalanceSide } from '../../bindings/BalanceSide';
 import type { CoaControl } from '../../bindings/CoaControl';
+import type { CoaControlAccounts } from '../../bindings/CoaControlAccounts';
 import type { CoaHead } from '../../bindings/CoaHead';
 import type { ControlNode } from '../../bindings/ControlNode';
 import type { HeadNode } from '../../bindings/HeadNode';
@@ -43,6 +44,8 @@ export type AccountMatch = SimilarAccount;
 export type ChartHead = HeadNode;
 export type ChartControl = ControlNode;
 export type ChartAccount = AccountNode;
+/** One page of the accounts of one control, with the control's own balance (plan 38 B1). */
+export type ChartAccountsPage = CoaControlAccounts;
 /** The plain lists of heads and controls (the control list says where "other" may go). */
 export type HeadItem = CoaHead;
 export type ControlItem = CoaControl;

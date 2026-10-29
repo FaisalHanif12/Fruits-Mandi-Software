@@ -18,7 +18,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   them. The screen writes what the backend sent (money through `formatPaisa`, names through
   `displayName`); it adds up nothing.
 - `components/`: `ReportFilterBar` (the boxes), `ReportResults` (the four states, the table, the
-  totals row, "show more rows"), `ReportSummary` and `ReportRange` (the lines above the table),
+  totals row, the page buttons), `ReportSummary` and `ReportRange` (the lines above the table),
   `ReportPreview` (the print preview).
 - `print/ReportPrintDocument.tsx`: the printed report on the shared print layout (firm header,
   filters, rows, totals row, amount in words, page footer). The in-app preview and the hidden print
@@ -26,8 +26,8 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 
 ## Rules the screen keeps
 
-- Lists load 100 rows at a time (`REPORT_PAGE_SIZE`, Code Standards B31). The totals row is the
-  backend's, over the whole filter, never a sum of the rows on screen.
+- A report shows one page at a time (25, 50 or 100 rows, the shared pager; Code Standards B31). The
+  totals row is the backend's, over the whole filter, never a sum of the rows on screen.
 - A filter change asks the backend once, 250 ms after the last key. A half-typed date is refused
   under its own box and the rows already on screen stay.
 - Filters live in the page's state, above the grid, so a language switch loses nothing.

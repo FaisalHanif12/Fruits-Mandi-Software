@@ -182,7 +182,6 @@ function StatementBody({ saved, remember }: MemoryProps) {
           <PagedList
             columns={columns}
             rows={lines}
-            totalCount={first?.total_count}
             getRowId={(row) => row.id}
             labelId="partners-statement-label"
             failedId="partners-statement-failed"
@@ -190,11 +189,7 @@ function StatementBody({ saved, remember }: MemoryProps) {
             onRetry={() => {
               void statement.refetch();
             }}
-            hasMore={statement.hasNextPage}
-            loadingMore={statement.isFetchingNextPage}
-            onLoadMore={() => {
-              void statement.fetchNextPage();
-            }}
+            pager={statement.pager}
             empty={
               <EmptyState
                 icon={ScrollText}

@@ -55,4 +55,12 @@ export type ReportPage = {
    * Lines above the table (opening balance, closing balance, the difference of a trial).
    */
   summary: Array<ReportSummaryLine>;
+  /**
+   * For a report with group rows (a head, a city, a collector, a trip), when this page starts
+   * in the middle of a group: the heading row of that group, with the totals of the WHOLE
+   * group, so the screen can draw the heading above the first row of the page. Null when the
+   * page starts with a heading, at the first page, and for a report without group rows. A
+   * group total on screen is always the whole group's.
+   */
+  group_above: ReportRow | null;
 };

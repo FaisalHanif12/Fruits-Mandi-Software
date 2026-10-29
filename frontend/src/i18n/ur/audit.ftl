@@ -64,12 +64,6 @@ audit-system-user = ایپ خود
 audit-open-hint = اندراج چننے کے لیے تیر کی کیز اور کیا بدلا دیکھنے کے لیے Enter دبائیں۔
 
 # review: pending
-audit-count = { $total } میں سے { $shown } اندراجات دکھائے گئے ہیں
-
-# review: pending
-audit-more = مزید دکھائیں
-
-# review: pending
 audit-empty = ان فلٹروں میں کوئی اندراج نہیں۔
 
 # review: pending

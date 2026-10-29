@@ -165,7 +165,27 @@ pub struct ListFilter {
     pub partner_id: Option<i64>,
     /// Lower-case text to find in the English name, the Urdu name, the market or the sent person.
     pub search: Option<String>,
+    /// The `ORDER BY` expressions chosen by a sort, from [`SORT_COLUMNS`]. `None` is newest day
+    /// first.
+    pub order_by: Option<String>,
 }
+
+/// The columns a list of trips or gardens can be sorted by: the name of the field of the row and
+/// its SQL expression. The figures worked out from the entries (cost, sales, result) are not
+/// sortable here.
+pub const SORT_COLUMNS: [(&str, &str); 11] = [
+    ("number", "v.number"),
+    ("code", "v.number"),
+    ("entry_date", "v.entry_date"),
+    ("name_ur", "v.name_ur"),
+    ("name_en", "v.name_en COLLATE NOCASE"),
+    ("market", "v.market"),
+    ("sent_person", "v.sent_person"),
+    ("rent_paisa", "v.rent_paisa"),
+    ("season_end_date", "v.season_end_date"),
+    ("status", "v.status"),
+    ("closed_date", "v.closed_date"),
+];
 
 const FILTER_WHERE: &str = "WHERE v.kind = ?1
        AND (?2 IS NULL OR v.entry_date >= ?2) AND (?3 IS NULL OR v.entry_date <= ?3)
@@ -184,9 +204,20 @@ pub fn list(
     offset: i64,
     limit: i64,
 ) -> rusqlite::Result<Vec<VentureRec>> {
+    // Newest day first, then by number. A sort puts its column first and keeps that order after
+    // it, so ties come out the same on every page. A sort by the day keeps the numbers in the
+    // same direction.
+    let order = match filter.order_by.as_deref() {
+        None => "v.entry_date DESC, v.number DESC".to_owned(),
+        Some(o) if o.starts_with("v.entry_date") => {
+            let direction = if o.ends_with("DESC") { "DESC" } else { "ASC" };
+            format!("{o}, v.number {direction}, v.id {direction}")
+        }
+        Some(o) => format!("{o}, v.entry_date DESC, v.number DESC, v.id DESC"),
+    };
     let mut statement = conn.prepare(&format!(
         "SELECT {VENTURE_COLUMNS} FROM ventures v {FILTER_WHERE}
-         ORDER BY v.entry_date DESC, v.number DESC LIMIT ?7 OFFSET ?8"
+         ORDER BY {order} LIMIT ?7 OFFSET ?8"
     ))?;
     let rows = statement.query_map(
         params![
@@ -202,6 +233,33 @@ pub fn list(
         read_venture,
     )?;
     rows.collect()
+}
+
+/// The count of each month of the filter (the day of the venture) with the garden rent, oldest
+/// month first, in one grouped query (plan 38 R4).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_months(
+    conn: &Connection,
+    filter: &ListFilter,
+) -> rusqlite::Result<Vec<crate::listing::MonthSums>> {
+    let binds = [
+        rusqlite::types::Value::Text(filter.kind.clone()),
+        filter.from.clone().into(),
+        filter.to.clone().into(),
+        filter.status.clone().into(),
+        filter.partner_id.into(),
+        filter.search.clone().into(),
+    ];
+    crate::listing::month_sums(
+        conn,
+        "ventures v",
+        &format!(" {FILTER_WHERE}"),
+        "v.entry_date",
+        &["v.rent_paisa"],
+        &binds,
+    )
 }
 
 /// The ids of every venture that matches, to add up their figures over the whole filter (B31).

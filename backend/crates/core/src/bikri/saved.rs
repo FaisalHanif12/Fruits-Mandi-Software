@@ -9,6 +9,7 @@ use super::input::{BikriDraft, FreightPaidBy, LotChargeMethod, PaymentType, Stor
 use super::preview::BikriPreview;
 use crate::accounts::RecordRef;
 use crate::money::{MoneyError, Paisa};
+use crate::paging::{MonthSubtotal, SortInput};
 
 /// Input of `bikri_save` (PRD FR-12.8, FR-6.7).
 #[derive(Debug, Clone, Deserialize, TS)]
@@ -667,13 +668,29 @@ pub struct BikriListInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub item_id: Option<i64>,
-    /// Only this status.
+    /// Only this status. When it is sent it decides, whatever `show_finished` says.
     #[serde(default)]
     pub status: Option<BikriStatus>,
+    /// Show cancelled بکری too. False (the default) leaves them out of the rows, the count and the
+    /// totals (plan 38 R4).
+    #[serde(default)]
+    pub show_finished: bool,
+    /// A number or the start of a truck number: finds the بکری with that number or the trucks
+    /// that start with the text (plan 38 R4).
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The sort: `number`, `entry_date`, `truck_no`, `status`, `qty_received`, `qty_sold`,
+    /// `gross`, `net` or `buyer_total`. Null opens newest first (day, then number).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// Send `months` too: the count and the subtotals of each month over the whole filter. Months
+    /// come only when the list is in date order (no sort, or a sort by `entry_date`).
+    #[serde(default)]
+    pub group_by_month: bool,
     /// How many rows to skip. 0 for the first page (PRD FR-19.11).
     #[serde(default)]
     pub offset: u32,
-    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
+    /// How many rows to return: 25, 50 or 100. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
 }
@@ -688,6 +705,10 @@ pub struct BikriList {
     pub total_count: i64,
     /// The sums over every matching بکری that is not cancelled, never over the page.
     pub totals: BikriListTotals,
+    /// The month subtotals over the whole filter (`qty_received`, `qty_sold`, `gross`, `net`,
+    /// `buyer_total`), oldest month first or newest first as the list is. Empty unless
+    /// `group_by_month` was sent and the list is in date order.
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// The totals of the list of بکری: sums of stored values, cancelled بکری left out.
@@ -874,6 +895,22 @@ pub struct PukhtaRegisterInput {
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// True to list the lines of cancelled بکری too. False (the default) leaves them out of the
+    /// rows and the count (plan 38 R5). They were never in the totals.
+    #[serde(default)]
+    pub show_finished: bool,
+    /// Only lines whose person (name or phone), item (code or name) or بکری number holds this
+    /// text.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole filter by: `entry_date`, `bikri_number`, `side`, `name_ur`,
+    /// `name_en`, `phone`, `item`, `qty`, `amount`, `commission`, `paid` or `open`. Null is by day
+    /// and number (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// One page of the پختہ کھاتہ register with the totals over the whole filter (PRD FR-19.11).
@@ -886,6 +923,10 @@ pub struct PukhtaRegister {
     pub total_count: i64,
     /// The sums over every matching line that is not cancelled, never over the page.
     pub totals: PukhtaRegisterTotals,
+    /// The count and subtotals of each month of the whole filter, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `qty`, `amount`,
+    /// `commission` and `open`, only when one side is chosen (the same rule as `totals`).
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// The totals of the register over the whole filter. They are given only when one side is chosen:

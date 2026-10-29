@@ -672,6 +672,7 @@ export function createTripBooks(options: TripsOptions = {}) {
           result_paisa: money(660),
           commission_paisa: money(1_200),
         },
+        months: [],
       };
     },
     get: (input: TripGetInput): TripDetail => {
@@ -1006,6 +1007,7 @@ export function createTripBooks(options: TripsOptions = {}) {
           result_paisa: money(660),
           commission_paisa: money(1_200),
         },
+        months: [],
       };
     },
     purchaseCancel: (): PurchaseCancelled => ({ id: 7, number: 1, reversal_entry_id: 38 }),

@@ -36,7 +36,8 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { message, visible } from '../helpers/render';
+import { message, paragraph, visible } from '../helpers/render';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -118,12 +119,16 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
       .filter((item) => visible(item.textContent).includes(message(language, id)));
 
   describe('the state and the list', () => {
-    it('shows the last copies and the rows the backend sent, asking for the first page of 100', async () => {
+    it('shows the last copies and the rows the backend sent, asking for the first page of 25', async () => {
       await open();
       await waitFor(() => {
         expect(cell(LOCAL, 'kind')).toBe(message(language, 'backup-kind-local'));
       });
-      expect(backupApi.backupList).toHaveBeenCalledWith({ kind: null, offset: 0, limit: 100 });
+      expect(backupApi.backupList).toHaveBeenCalledWith({
+        kind: null,
+        offset: 0,
+        limit: PAGE_ROWS,
+      });
       expect(cell(LOCAL, 'created')).toBe(MADE);
       expect(cell(USB, 'kind')).toBe(message(language, 'backup-kind-usb'));
       expect(cell(CLOUD, 'kind')).toBe(message(language, 'backup-kind-cloud'));
@@ -132,9 +137,7 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
       // Only a copy locked with the key says so.
       expect(cell(LOCAL, 'locked')).toBe(message(language, 'backup-locked-no'));
       expect(cell(CLOUD, 'locked')).toBe(message(language, 'backup-locked-yes'));
-      expect(
-        screen.getByText(named(message(language, 'backup-list-count', { shown: 3, total: 3 }))),
-      ).toBeInTheDocument();
+      expect(screen.getByText(paragraph(rangeText(language, 1, 3, 3)))).toBeInTheDocument();
       // The state card: the time of each last copy comes from the backend's state.
       const state = screen
         .getByText(named(message(language, 'backup-state-title')))
@@ -163,7 +166,7 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
         expect(backupApi.backupList).toHaveBeenLastCalledWith({
           kind: 'cloud',
           offset: 0,
-          limit: 100,
+          limit: PAGE_ROWS,
         });
       });
       await waitFor(() => {
@@ -250,7 +253,7 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
       ).toBeInTheDocument();
     });
 
-    it('loads the list page by page and says how many are shown', async () => {
+    it('turns the list page by page and says which rows are shown', async () => {
       const template = LIST_ALL.rows[0];
       if (template === undefined) throw new Error('no fixture row');
       const many = Array.from({ length: 120 }, (_, index) => ({
@@ -260,23 +263,19 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
       const { user } = await open({ rows: many });
       await waitFor(() => {
         expect(
-          screen.getByText(
-            named(message(language, 'backup-list-count', { shown: 100, total: 120 })),
-          ),
+          screen.getByText(paragraph(rangeText(language, 1, PAGE_ROWS, 120))),
         ).toBeInTheDocument();
       });
-      await user.click(button('backup-list-more'));
+      await user.click(await pagerButton(language, 'next'));
       await waitFor(() => {
         expect(
-          screen.getByText(
-            named(message(language, 'backup-list-count', { shown: 120, total: 120 })),
-          ),
+          screen.getByText(paragraph(rangeText(language, PAGE_ROWS + 1, 2 * PAGE_ROWS, 120))),
         ).toBeInTheDocument();
       });
       expect(backupApi.backupList).toHaveBeenLastCalledWith({
         kind: null,
-        offset: 100,
-        limit: 100,
+        offset: PAGE_ROWS,
+        limit: PAGE_ROWS,
       });
     });
   });

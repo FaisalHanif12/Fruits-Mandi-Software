@@ -126,6 +126,10 @@ describe('each wrapper sends the command and the input of the backend', () => {
       person_key: null,
       offset: 0,
       limit: 0,
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
     };
     await api.vouchersList(list);
     expect(call).toHaveBeenLastCalledWith('vouchers_list', { input: list });
@@ -151,6 +155,8 @@ describe('each wrapper sends the command and the input of the backend', () => {
       date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
+      offset: 0,
+      limit: 100,
     };
     await api.assistCollectionList(list);
     expect(call).toHaveBeenLastCalledWith('assist_collection_list', { input: list });

@@ -20,6 +20,7 @@ use ts_rs::TS;
 use crate::accounts::RecordRef;
 use crate::error::ErrorValue;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 
 /// Input of `partners_statement`. Dates are `DD-MM-YYYY` or a shortcut; null or empty means no
 /// limit. The running total at the start of the range is the balance before it.
@@ -40,6 +41,13 @@ pub struct PartnersStatementInput {
     /// How many lines to return. 0 gives the default page of 100 lines (PRD FR-19.11).
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole range by: `entry_date`, `amount_paisa` or `running_paisa`. Null is the natural order (plan 38
+    /// R4). A sorted row still shows its true running figure of the natural order.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// Where a line came from (PRD FR-17.10 "headings").
@@ -180,4 +188,7 @@ pub struct PartnerStatement {
     pub total_count: i64,
     /// The totals over the whole range.
     pub totals: StatementTotals,
+    /// The count and subtotals of each month of the whole range, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `plus_paisa` and `minus_paisa`.
+    pub months: Vec<MonthSubtotal>,
 }

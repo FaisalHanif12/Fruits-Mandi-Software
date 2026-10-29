@@ -1,14 +1,24 @@
 // The رپورٹ area (route /reports; PRD FR-5.2, 19.1, 19.2): the catalogue of reports grouped as the
-// PRD lists them. ↑ ↓ move between the reports and Enter opens one. Four states: loading, an error
-// with a retry, nothing built yet, and the groups.
+// PRD lists them. A search box finds a report by its name, its line or its number (R20), and a row
+// of buttons jumps to a group (plan 38). ↑ ↓ move between the reports and Enter opens one. Four
+// states: loading, an error with a retry, nothing built yet (or nothing found), and the groups.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Link } from '@tanstack/react-router';
-import { FileText, FileX } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { FileText, FileX, SearchX } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReportCatalogEntry } from '../../../bindings/ReportCatalogEntry';
 import { uiErrorOf } from '../../../shared/api';
-import { useRovingKeys } from '../../../shared/keyboard';
-import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { formNavigationProps, useRovingKeys } from '../../../shared/keyboard';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  FilterBar,
+  FormSpan,
+  ListPage,
+  LoadingState,
+} from '../../../shared/ui';
 import { groupCatalog, helpIdOf } from '../catalog';
 import { useReportCatalog } from '../hooks';
 
@@ -17,11 +27,37 @@ export function ReportsHomePage() {
   const catalog = useReportCatalog();
   const onKeyDown = useRovingKeys();
   const ref = useRef<HTMLElement>(null);
+  const [text, setText] = useState('');
   const ready = catalog.data !== undefined;
   // The first report has focus when the area opens, so ↓ and Enter work at once.
   useEffect(() => {
     if (ready) ref.current?.querySelector<HTMLElement>('[data-nav-item]')?.focus();
   }, [ready]);
+
+  const needle = text.trim().toLowerCase();
+  // A report is found by its name, its line of help or its number, in the language of the screen.
+  const matches = (entry: ReportCatalogEntry): boolean => {
+    if (needle === '') return true;
+    const haystack = [
+      entry.id,
+      l10n.getString(entry.title_id),
+      l10n.getBundle(helpIdOf(entry)) === null ? '' : l10n.getString(helpIdOf(entry)),
+    ];
+    return haystack.some((part) => part.toLowerCase().includes(needle));
+  };
+  const groups = useMemo(() => groupCatalog(catalog.data ?? []), [catalog.data]);
+  const shown = groups
+    .map((group) => ({ ...group, entries: group.entries.filter(matches) }))
+    .filter((group) => group.entries.length > 0);
+
+  /** Takes the user to the first report of a group: it scrolls into view and has focus. */
+  const jumpTo = (group: string) => {
+    const first = ref.current?.querySelector<HTMLElement>(
+      `[data-group="${group}"] [data-nav-item]`,
+    );
+    first?.scrollIntoView({ block: 'start' });
+    first?.focus();
+  };
 
   let body;
   if (catalog.isPending) {
@@ -44,26 +80,48 @@ export function ReportsHomePage() {
         help={<Localized id="reports-catalog-empty-help" />}
       />
     );
+  } else if (shown.length === 0) {
+    body = (
+      <EmptyState
+        icon={SearchX}
+        title={<Localized id="reports-search-none" />}
+        help={<Localized id="reports-search-none-help" />}
+        action={
+          <Button
+            onClick={() => {
+              setText('');
+            }}
+          >
+            <Localized id="reports-search-clear" />
+          </Button>
+        }
+      />
+    );
   } else {
     body = (
-      <nav ref={ref} onKeyDown={onKeyDown} className="flex flex-col gap-5">
-        {groupCatalog(catalog.data).map((group) => (
+      <nav
+        ref={ref}
+        onKeyDown={onKeyDown}
+        className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto"
+      >
+        {shown.map((group) => (
           <section
             key={group.group}
+            data-group={group.group}
             aria-label={l10n.getString('reports-group-label', {
               group: l10n.getString(group.titleId),
             })}
             className="flex flex-col gap-3"
           >
             <h2 className="type-section text-ink">{l10n.getString(group.titleId)}</h2>
-            <div className="grid grid-cols-1 gap-3 normal:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 normal:grid-cols-3">
               {group.entries.map((entry) => (
                 <Link
                   key={entry.id}
                   to="/reports/$id"
                   params={{ id: entry.id }}
                   data-nav-item
-                  className="flex min-h-control items-center gap-4 rounded-3 border border-border bg-surface p-4"
+                  className="flex min-h-control items-center gap-3 rounded-3 border border-border bg-surface p-3"
                 >
                   <span className="flex size-badge shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
                     <FileText aria-hidden="true" className="size-icon-lg" />
@@ -86,16 +144,55 @@ export function ReportsHomePage() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <Localized id="reports-title">
-          <h1 className="type-title" />
-        </Localized>
+    <ListPage
+      titleId="reports-title"
+      help={
         <Localized id="reports-help">
-          <p className="type-body text-ink-muted" />
+          <p />
         </Localized>
-      </div>
+      }
+      filters={
+        ready && catalog.data.length > 0 ? (
+          <div {...formNavigationProps}>
+            <FilterBar
+              screen="reports.home"
+              search={{
+                value: text,
+                onChange: setText,
+                labelId: 'reports-search-label',
+                placeholderId: 'reports-search-placeholder',
+              }}
+            >
+              <FormSpan span="two">
+                <div
+                  role="group"
+                  aria-label={l10n.getString('reports-jump-label')}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <Localized id="reports-jump-label">
+                    <span className="type-label text-ink" />
+                  </Localized>
+                  {groups.map((group) => (
+                    <Button
+                      key={group.group}
+                      onClick={() => {
+                        jumpTo(group.group);
+                      }}
+                      accessibleName={l10n.getString('reports-jump-to', {
+                        group: l10n.getString(group.titleId),
+                      })}
+                    >
+                      {l10n.getString(group.titleId)}
+                    </Button>
+                  ))}
+                </div>
+              </FormSpan>
+            </FilterBar>
+          </div>
+        ) : undefined
+      }
+    >
       {body}
-    </div>
+    </ListPage>
   );
 }

@@ -1,27 +1,20 @@
 // What a report shows under its filters (PRD 19.1, FR-19.5, FR-19.11): the lines above the table,
-// the table page by page with its totals row from the backend, and the four states: loading, an
+// the table one page at a time with its totals row from the backend, and the four states: loading, an
 // error with a retry, nothing found (with a way out), and the rows. Enter (or a double click) on a
 // row opens the record behind it (FR-19.4). The totals are the backend's, over the whole filter;
 // the rows on screen are never added up (CLAUDE.md rule 1, Code Standards F34).
 
 import { Localized } from '@fluent/react';
-import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { SearchX } from 'lucide-react';
 import { useMemo } from 'react';
 import type { ReportFilterKind } from '../../../bindings/ReportFilterKind';
 import type { ReportPage } from '../../../bindings/ReportPage';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  Notice,
-  RUNNING_NUMBER,
-} from '../../../shared/ui';
+import { Button, EmptyState, ErrorState, LoadingState, Notice } from '../../../shared/ui';
 import { reportColumns, signedColumnsOf, totalsFor, type ReportRowView } from '../columns';
+import type { useReportPages } from '../hooks';
 import { ReportRange } from './ReportRange';
 import { ReportSummary } from './ReportSummary';
 
@@ -31,9 +24,9 @@ const SHORT_LIST_ROWS = 30;
 interface ReportResultsProps {
   /** The filter boxes the report takes, so the line under them knows what to say. */
   takes: readonly ReportFilterKind[];
-  query: UseInfiniteQueryResult<InfiniteData<ReportPage>>;
-  /** The pages last shown, kept while a half-typed filter is refused (see ReportBody). */
-  kept: InfiniteData<ReportPage> | null;
+  query: ReturnType<typeof useReportPages>;
+  /** The page last shown, kept while a half-typed filter is refused (see ReportBody). */
+  kept: { pages: ReportPage[] } | null;
   /** A filter that the report takes is filled: the empty state offers to clear it. */
   filtering: boolean;
   /** The detail box is off for a report that has one (R14): balances only. */
@@ -67,6 +60,7 @@ export function ReportResults({
     [pages],
   );
   const step = useLayoutStep();
+  const paging = useListPaging(query.pager);
   const columns = useMemo(
     () => (last === undefined ? [] : reportColumns(last.id, last.columns, step)),
     [last, step],
@@ -125,6 +119,7 @@ export function ReportResults({
             onFocusRow={onFocusRow}
             focusRowId={focusRowId}
             heightMode={long ? 'fill' : 'auto'}
+            paging={paging}
             isGroup={(view) => view.row.kind === 'group'}
             totals={(context) =>
               totalsFor(
@@ -138,26 +133,7 @@ export function ReportResults({
         </div>
         {/* The slip's footer sits right under its lines, like the client's own (PRD FR-19.12). */}
         {sheet ? <ReportSummary lines={last.summary} /> : null}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Localized
-            id="report-count"
-            vars={{ shown: String(rows.length), total: String(last.total_count) }}
-            elems={RUNNING_NUMBER}
-          >
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          {query.hasNextPage ? (
-            <Button
-              disabled={query.isFetchingNextPage}
-              busy={query.isFetchingNextPage}
-              onClick={() => {
-                void query.fetchNextPage();
-              }}
-            >
-              <Localized id="report-more" />
-            </Button>
-          ) : null}
-        </div>
+        <Pager pager={query.pager} />
         <Localized id="report-open-hint">
           <p className="type-body text-ink-muted" />
         </Localized>

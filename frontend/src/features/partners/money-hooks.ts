@@ -10,11 +10,19 @@ import { PARTNERS_KEY } from './hooks';
 import type { CapitalEntry } from './types';
 
 /** One partner's capital history, page by page (PRD 17.4). Never kept: a save changes it. */
-export function useCapitalHistory(partnerId: number | null) {
+export function useCapitalHistory(partnerId: number | null, groupByMonth = false) {
   return usePagedQuery({
-    queryKey: [...PARTNERS_KEY, 'capital', partnerId],
+    screen: 'partners.capital',
+    queryKey: [...PARTNERS_KEY, 'capital', partnerId, groupByMonth],
     enabled: partnerId !== null,
-    fetchPage: (offset, limit) => capitalHistory({ partner_id: partnerId ?? 0, offset, limit }),
+    fetchPage: (offset, limit, sort) =>
+      capitalHistory({
+        partner_id: partnerId ?? 0,
+        offset,
+        limit,
+        sort,
+        group_by_month: groupByMonth && sort === null,
+      }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
   });
@@ -37,17 +45,24 @@ export interface StatementRange {
 }
 
 /** One partner's statement, page by page, with the totals over the whole range (PRD FR-17.9). */
-export function usePartnerStatement(partnerId: number | null, range: StatementRange) {
+export function usePartnerStatement(
+  partnerId: number | null,
+  range: StatementRange,
+  groupByMonth = false,
+) {
   return usePagedQuery({
-    queryKey: [...PARTNERS_KEY, 'statement', partnerId, range],
+    screen: 'partners.statement',
+    queryKey: [...PARTNERS_KEY, 'statement', partnerId, range, groupByMonth],
     enabled: partnerId !== null,
-    fetchPage: (offset, limit) =>
+    fetchPage: (offset, limit, sort) =>
       partnersStatement({
         partner_id: partnerId ?? 0,
         from: range.from,
         to: range.to,
         offset,
         limit,
+        sort,
+        group_by_month: groupByMonth && sort === null,
       }),
     rowsIn: (page) => page.lines.length,
     totalOf: (page) => page.total_count,

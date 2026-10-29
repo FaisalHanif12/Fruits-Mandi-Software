@@ -20,9 +20,11 @@
 - To add a master: add its configuration, its Fluent messages (`masters.ftl`, ur and en) and its
   backend kind. Nothing else.
 
-The master lists and the account list load page by page (plan 17b). A typed filter is matched
-against the loaded rows, so while it is typed the rest of the pages is read (`useLoadRest`); the
-openings screen reads every page too, because it types against every active account.
+The account list has page buttons (plan 17b, plan 38): the backend search and filter, one page at a
+time, and the list comes back to the page it was left on. A master list is short: every page is read
+(`useAllPagesQuery`, `useLoadRest`), the typed filter is matched against the rows, and the page
+buttons turn the pages in memory (`useClientPager`). The openings screen reads every page too,
+because it types against every active account (`useAllAccounts`).
 
 The tag (نشان, plan 17e, PRD 10.2): the account form has a plain field for it after the names
 (`shared/ui/TagInput`: English capital letters and dots, made capital when the user leaves the field,

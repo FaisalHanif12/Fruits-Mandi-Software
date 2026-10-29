@@ -225,6 +225,7 @@ fn assert_same(w: &support::World, id: i64, step: &str) {
     let i = run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: AnalyticsView::I,
             filters: AnalyticsFilters::default(),
             offset: 0,
@@ -245,6 +246,7 @@ fn assert_same(w: &support::World, id: i64, step: &str) {
     let g = run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: AnalyticsView::G,
             filters: AnalyticsFilters::default(),
             offset: 0,
@@ -264,6 +266,7 @@ fn assert_same(w: &support::World, id: i64, step: &str) {
         let f_view = run(
             w.env.ctx.db(),
             &AnalyticsRunInput {
+                sort: None,
                 view: AnalyticsView::F,
                 filters: AnalyticsFilters {
                     partner_id: Some(p.partner.id),

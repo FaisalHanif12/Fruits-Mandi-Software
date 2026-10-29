@@ -2,13 +2,8 @@
 // minute, every two seconds while a copy or a restore runs, and again after each action that
 // changes it (plan 18: there is no progress event).
 
-import {
-  keepPreviousData,
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePagedQuery } from '../../shared/hooks';
 import {
   backupKeyConfirm,
   backupKeySetup,
@@ -39,8 +34,6 @@ const SETTINGS_KEY = ['backup_settings'] as const;
 export const STATUS_POLL_MS = 60_000;
 /** While a copy or a restore runs, the screen follows it closely. */
 export const STATUS_POLL_RUNNING_MS = 2_000;
-/** A page of the list (Code Standards B31). */
-export const LIST_PAGE_SIZE = 100;
 
 /** How long to wait before the state is read again: sooner while a copy or a restore runs. */
 export function statusPollMs(status: BackupStatus | undefined): number {
@@ -56,17 +49,15 @@ export function useBackupStatus() {
   });
 }
 
-/** The copies, page by page. `kind` null is all places. */
+/** The copies, one page at a time (Code Standards B31). `kind` null is all places. */
 export function useBackupList(kind: BackupKind | null) {
-  return useInfiniteQuery({
+  return usePagedQuery({
+    screen: 'backup.list',
     queryKey: [...LIST_KEY, kind],
-    queryFn: ({ pageParam }) => backupList({ kind, offset: pageParam, limit: LIST_PAGE_SIZE }),
-    initialPageParam: 0,
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((count, page) => count + page.rows.length, 0);
-      return last.rows.length > 0 && loaded < last.total_count ? loaded : undefined;
-    },
-    placeholderData: keepPreviousData,
+    fetchPage: (offset, limit) => backupList({ kind, offset, limit }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }
 

@@ -11,6 +11,7 @@ use mandi_domain::core::fruit::{
     FruitPartRow, FruitRow, FruitSource, FruitStatus, FruitTotals,
 };
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::validate::{self, FieldErrors};
 
 use super::act::lot_of_closed_garden;
@@ -133,6 +134,18 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
         ));
     }
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| sort.order_by(&frepo::SORT_COLUMNS))
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_none_or(|s| s.direction == SortDirection::Desc);
     let filter = ListFilter {
         partner_id: input.partner_id,
         guests_only: input.guests_only,
@@ -141,6 +154,14 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
         from,
         to,
         status: input.status.map(|s| s.as_str().to_owned()),
+        search: input
+            .search
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_owned),
+        order_by,
+        hide_cancelled: !input.show_finished,
     };
     ctx.db.read(|conn| {
         let (count, qty, value) = frepo::totals(conn, &filter)?;
@@ -154,6 +175,16 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
         for rec in &recs {
             rows.push(row_of(conn, rec, closed_up_to)?);
         }
+        // Month headings with their subtotals, over the whole filter (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            crate::page::month_subtotals(
+                frepo::list_months(conn, &filter)?,
+                &[("qty", false), ("value_paisa", true)],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(FruitList {
             rows,
             total_count: count,
@@ -161,6 +192,7 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
                 qty,
                 value_paisa: paisa(value)?,
             },
+            months,
         })
     })
 }
@@ -173,7 +205,12 @@ pub(super) fn lots(ctx: &Context, input: &FruitLotsInput) -> Result<FruitLots, S
         .map(|t| t.trim().to_lowercase())
         .filter(|t| !t.is_empty());
     ctx.db.read(|conn| {
-        let (recs, total) = frepo::lots(conn, search.as_deref(), limit_of(input.limit))?;
+        let (recs, total) = frepo::lots(
+            conn,
+            search.as_deref(),
+            i64::from(input.offset),
+            limit_of(input.limit),
+        )?;
         Ok(FruitLots {
             rows: recs
                 .into_iter()
@@ -192,6 +229,8 @@ pub(super) fn lots(ctx: &Context, input: &FruitLotsInput) -> Result<FruitLots, S
                 })
                 .collect(),
             total_count: total,
+            offset: input.offset,
+            limit: u32::try_from(limit_of(input.limit)).unwrap_or(u32::MAX),
         })
     })
 }

@@ -10,9 +10,9 @@ import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
-import { Button, EmptyState, ErrorState, LoadingState, RUNNING_NUMBER } from '../../../shared/ui';
+import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { totalsFor, type ReportRowView } from '../../reports';
 import { linesColumns } from '../columns';
 import { useAnalyticsLines, type LinesRequest } from '../hooks';
@@ -30,6 +30,7 @@ export function AnalyticsLines({ request, about, onBack }: AnalyticsLinesProps) 
   const navigate = useNavigate();
   const step = useLayoutStep();
   const query = useAnalyticsLines(request);
+  const paging = useListPaging(query.pager);
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const pages = query.data?.pages;
   const last = pages?.at(-1);
@@ -85,31 +86,13 @@ export function AnalyticsLines({ request, about, onBack }: AnalyticsLinesProps) 
             onFocusRow={setFocusRowId}
             focusRowId={focusRowId}
             heightMode={long ? 'fill' : 'auto'}
+            paging={paging}
             totals={(ctx) =>
               totalsFor(last.columns, { labelId: last.totals_label_id, cells: last.totals }, ctx)
             }
           />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Localized
-            id="report-count"
-            vars={{ shown: String(rows.length), total: String(last.total_count) }}
-            elems={RUNNING_NUMBER}
-          >
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          {query.hasNextPage ? (
-            <Button
-              disabled={query.isFetchingNextPage}
-              busy={query.isFetchingNextPage}
-              onClick={() => {
-                void query.fetchNextPage();
-              }}
-            >
-              <Localized id="report-more" />
-            </Button>
-          ) : null}
-        </div>
+        <Pager pager={query.pager} />
         <Localized id="analytics-lines-hint">
           <p className="type-body text-ink-muted" />
         </Localized>

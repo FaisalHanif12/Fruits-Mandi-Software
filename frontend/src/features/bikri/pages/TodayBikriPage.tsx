@@ -25,8 +25,11 @@ import {
   DateInput,
   EmptyState,
   Field,
+  FilterBar,
+  ListPage,
   Picker,
   Select,
+  ShowClosedTick,
   type PickerValue,
 } from '../../../shared/ui';
 import { useBikriList } from '../hooks/useBikriReads';
@@ -54,16 +57,24 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
   const [seller, setSeller] = useState<PickerValue | null>(start.seller);
   const [item, setItem] = useState<PickerValue | null>(start.item);
   const [status, setStatus] = useState<StatusChoice>(start.status);
+  const [search, setSearch] = useState('');
+  // Cancelled بکری step aside until the tick is on (plan 38 R5). A chosen status still decides.
+  const [showFinished, setShowFinished] = useState(false);
+  const moreSet = [seller !== null, item !== null, status !== ALL].filter(Boolean).length;
   useEffect(() => {
     remember(todayChoicesText({ seller, item, status }));
   }, [seller, item, status, remember]);
-  const filter: Omit<BikriListInput, 'offset' | 'limit'> = {
+  const filter: Omit<BikriListInput, 'offset' | 'limit' | 'sort'> = {
     date: date.trim() === '' ? null : date.trim(),
     from: null,
     to: null,
     seller_id: seller?.id ?? null,
     item_id: item?.id ?? null,
     status: status === ALL ? null : status,
+    show_finished: showFinished,
+    search: search.trim() === '' ? null : search.trim(),
+    // Today's list is one day: month heading rows would have nothing to head.
+    group_by_month: false,
   };
   const list = useBikriList(filter);
   // The tick that adds the نگ column, which does not fit beside the others (FR-12.7). It is kept.
@@ -71,7 +82,8 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
   const step = useLayoutStep();
   const columns = useMemo(() => bikriListColumns(step, moreColumns), [step, moreColumns]);
   const containerRef = useFocusFirstField<HTMLDivElement>();
-  const onlyToday = filter.date === today && seller === null && item === null && status === ALL;
+  const onlyToday =
+    filter.date === today && seller === null && item === null && status === ALL && search === '';
 
   const openNew = () => {
     void navigate({ to: '/bikri/book', search: {} });
@@ -108,6 +120,8 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
             setSeller(null);
             setItem(null);
             setStatus(ALL);
+            setSearch('');
+            setShowFinished(false);
           }}
         >
           <Localized id="bikri-list-clear" />
@@ -121,7 +135,6 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
     <PagedList<BikriListRow>
       columns={columns}
       rows={rows}
-      totalCount={first?.total_count}
       getRowId={(row) => String(row.id)}
       labelId="bikri-list-label"
       failedId="bikri-list-failed"
@@ -129,11 +142,8 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
       onRetry={() => {
         void list.refetch();
       }}
-      hasMore={list.hasNextPage}
-      loadingMore={list.isFetchingNextPage}
-      onLoadMore={() => {
-        void list.fetchNextPage();
-      }}
+      pager={list.pager}
+      sort={{ value: list.sort, onChange: list.setSort }}
       empty={empty}
       onOpen={(row) => {
         void navigate({ to: '/bikri/book', search: { id: row.id } });
@@ -160,74 +170,86 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
   );
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="layout-module-today">
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id="bikri-list-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
+    <ListPage
+      titleId="layout-module-today"
+      help={
+        <Localized id="bikri-list-help">
+          <p />
+        </Localized>
+      }
+      actions={rows === undefined || rows.length === 0 ? undefined : newButton}
+      filters={
+        <div ref={containerRef} {...formNavigationProps}>
+          <FilterBar
+            screen="bikri.today"
+            search={{
+              value: search,
+              onChange: setSearch,
+              placeholderId: 'bikri-list-search-placeholder',
+            }}
+            moreSet={moreSet}
+            more={
+              <>
+                <Field label={<Localized id="glossary-beopari" />}>
+                  {(control) => (
+                    <AccountPicker
+                      {...control}
+                      canAdd={false}
+                      scope="seller"
+                      showCard={false}
+                      value={seller}
+                      onChange={setSeller}
+                    />
+                  )}
+                </Field>
+                <Field label={<Localized id="glossary-qism-maal" />}>
+                  {(control) => (
+                    <Picker
+                      {...control}
+                      canAdd={false}
+                      scope="item"
+                      value={item}
+                      onChange={(hit) => {
+                        setItem(hit);
+                      }}
+                    />
+                  )}
+                </Field>
+                <Field label={<Localized id="bikri-list-col-status" />}>
+                  {(control) => (
+                    <Select
+                      {...control}
+                      value={status}
+                      onChange={setStatus}
+                      options={[
+                        { value: ALL, label: <Localized id="bikri-list-status-all" /> },
+                        { value: 'saved', label: <Localized id="bikri-status-saved" /> },
+                        { value: 'cancelled', label: <Localized id="bikri-status-cancelled" /> },
+                      ]}
+                    />
+                  )}
+                </Field>
+              </>
+            }
+            extra={
+              <>
+                <ShowClosedTick checked={showFinished} onChange={setShowFinished} />
+                <Checkbox
+                  checked={moreColumns}
+                  onChange={setMoreColumns}
+                  label={<Localized id="common-more-columns" />}
+                />
+              </>
+            }
+          >
+            <Field label={<Localized id="bikri-header-date" />}>
+              {(control) => <DateInput {...control} value={date} onChange={setDayText} />}
+            </Field>
+          </FilterBar>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <Checkbox
-            checked={moreColumns}
-            onChange={setMoreColumns}
-            label={<Localized id="common-more-columns" />}
-          />
-          {rows === undefined || rows.length === 0 ? null : newButton}
-        </div>
-      </div>
-      <div
-        ref={containerRef}
-        {...formNavigationProps}
-        className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4"
-      >
-        <Field label={<Localized id="bikri-header-date" />}>
-          {(control) => <DateInput {...control} value={date} onChange={setDayText} />}
-        </Field>
-        <Field label={<Localized id="glossary-beopari" />}>
-          {(control) => (
-            <AccountPicker
-              {...control}
-              canAdd={false}
-              scope="seller"
-              showCard={false}
-              value={seller}
-              onChange={setSeller}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="glossary-qism-maal" />}>
-          {(control) => (
-            <Picker
-              {...control}
-              canAdd={false}
-              scope="item"
-              value={item}
-              onChange={(hit) => {
-                setItem(hit);
-              }}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="bikri-list-col-status" />}>
-          {(control) => (
-            <Select
-              {...control}
-              value={status}
-              onChange={setStatus}
-              options={[
-                { value: ALL, label: <Localized id="bikri-list-status-all" /> },
-                { value: 'saved', label: <Localized id="bikri-status-saved" /> },
-                { value: 'cancelled', label: <Localized id="bikri-status-cancelled" /> },
-              ]}
-            />
-          )}
-        </Field>
-      </div>
+      }
+    >
       {body}
-    </div>
+    </ListPage>
   );
 }

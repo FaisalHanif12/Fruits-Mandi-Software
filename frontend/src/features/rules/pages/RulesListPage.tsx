@@ -80,7 +80,6 @@ function RulesBody({ saved, remember }: MemoryProps) {
       <Localized id="rules-new" />
     </Button>
   );
-  const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the filter before it.
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
   const empty = filtering ? (
@@ -114,7 +113,6 @@ function RulesBody({ saved, remember }: MemoryProps) {
     <PagedList<RuleRow>
       columns={RULE_COLUMNS}
       rows={rows}
-      totalCount={first?.total_count}
       getRowId={(row) => String(row.id)}
       labelId="rules-title"
       failedId="rules-load-failed"
@@ -122,11 +120,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
       onRetry={() => {
         void list.refetch();
       }}
-      hasMore={list.hasNextPage}
-      loadingMore={list.isFetchingNextPage}
-      onLoadMore={() => {
-        void list.fetchNextPage();
-      }}
+      pager={list.pager}
       empty={empty}
       onOpen={(row) => {
         void navigate({ to: '/index/rules/$id', params: { id: String(row.id) } });

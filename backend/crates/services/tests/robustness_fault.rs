@@ -1052,6 +1052,7 @@ fn damaged_files_never_crash_the_program_and_a_file_that_fails_its_check_stops_s
                 let _ = accounts::list(
                     &ctx,
                     &mandi_services::core::accounts::AccountsListInput {
+                        sort: None,
                         filter: mandi_services::core::accounts::AccountFilter {
                             kind: mandi_services::core::accounts::AccountListKind::All,
                             text: String::new(),

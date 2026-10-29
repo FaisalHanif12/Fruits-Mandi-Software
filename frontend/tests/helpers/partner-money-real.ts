@@ -185,6 +185,7 @@ export const STATEMENT_A_E2E34: PartnerStatement = {
   closing_total_paisa: rupees(-296),
   total_count: 3,
   totals: { plus_paisa: rupees(3864), minus_paisa: rupees(4160) },
+  months: [],
   lines: [
     {
       entry_date: '2026-10-10',

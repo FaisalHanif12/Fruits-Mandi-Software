@@ -80,15 +80,105 @@ common-cash-confirm-no = No, go back
 # review: pending
 common-more-columns = More columns
 
+## The pager under every list that loads page by page (PRD FR-19.11, plan 38 R1).
+
+# The name of the page buttons, read by screen readers.
+# review: pending
+common-pager-label = Pages
+
+# $from, $to: the first and the last row on this page; $total: how many rows the whole filter has.
+# review: pending
+common-pager-range = <num>{ $from }</num> to <num>{ $to }</num> of <num>{ $total }</num>
+
+# $page: the page on screen; $pages: how many pages the whole filter has.
+# review: pending
+common-pager-page = Page <num>{ $page }</num> of <num>{ $pages }</num>
+
+# The choice of how many rows a page has (25, 50 or 100).
+# review: pending
+common-pager-size = Rows per page
+
+# review: pending
+common-pager-first = First page
+
+# review: pending
+common-pager-previous = Previous page
+
+# review: pending
+common-pager-next = Next page
+
+# review: pending
+common-pager-last = Last page
+
 ## Lists that load page by page (PRD FR-19.11, Code Standards F34).
-
-# $shown: how many are on screen; $total: how many the whole filter has.
-# review: pending
-common-list-count = Showing { $shown } of { $total }
-
-# review: pending
-common-list-more = Show more
 
 # The save button of a small box.
 # review: pending
 common-save = Save
+
+## Shared list pieces (plan 38): the period box, the filter bar, the search box, the tick for closed
+## records and the small info button.
+
+# review: pending
+common-period-label = Period
+
+# review: pending
+common-period-today = Today
+
+# review: pending
+common-period-week = This week
+
+# review: pending
+common-period-month = This month
+
+# review: pending
+common-period-last-month = Last month
+
+# review: pending
+common-period-year = This year
+
+# review: pending
+common-period-last-year = Last year
+
+# One click to every date from the first one on.
+# review: pending
+common-period-all = From the first date
+
+# review: pending
+common-period-custom = Choose the dates
+
+# review: pending
+common-period-from = From
+
+# review: pending
+common-period-to = To
+
+# review: pending
+common-filters-more = More filters
+
+# review: pending
+common-filters-less = Fewer filters
+
+# $count: how many of the filters behind "More filters" are set.
+# review: pending
+common-filters-set = <num>{ $count }</num> in use
+
+# review: pending
+common-search-label = Search
+
+# review: pending
+common-search-placeholder = Type a code, a name or a number
+
+# review: pending
+common-show-closed = Show closed and cancelled too
+
+# review: pending
+common-info-label = About this field
+
+# A screen could not be drawn: the answer it got was not what it expects.
+# review: pending
+common-screen-failed = This screen could not be opened
+
+# $count: how many rows the filter has in one month, on the heading row of that month.
+# review: pending
+common-month-count = { $count } entries

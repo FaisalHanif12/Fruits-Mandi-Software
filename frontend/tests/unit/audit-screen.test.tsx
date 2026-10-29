@@ -30,6 +30,7 @@ import { AUDIT_FIRST_PAGE, AUDIT_OPTIONS, AUDIT_REFUSED, AUDIT_SETTINGS } from '
 import { paisaForTest } from '../helpers/paisa';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -160,7 +161,7 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
-    // Nothing is filtered, and the page size is the backend's page of a hundred.
+    // Nothing is filtered, and the first page is the list's default page of 25 rows.
     expect(lastRequest()).toEqual({
       filters: {
         user_id: null,
@@ -172,7 +173,7 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
         text: '',
       },
       offset: 0,
-      limit: 100,
+      limit: PAGE_ROWS,
     });
     // The newest first, as the backend sent it: the Pakistan day and time (without seconds), who,
     // what and to what.
@@ -185,24 +186,32 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
     // The count is the backend's count of the whole filter, never the rows on screen.
     expect(
       screen.getByText(
-        (_, element) =>
-          visible(element?.textContent) === m('audit-count', { shown: 3, total: TOTAL }),
+        (_, element) => visible(element?.textContent) === rangeText(language, 1, PAGE_ROWS, TOTAL),
       ),
     ).toBeInTheDocument();
   });
 
-  it('shows more entries on a press, from where the loaded ones end', async () => {
+  it('turns to the next page on a press, from where the first page ends', async () => {
     const { user } = await openAudit();
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
-    await user.click(screen.getByRole('button', { name: named(language, 'audit-more') }));
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(lastRequest()?.offset).toBe(3);
+      expect(lastRequest()?.offset).toBe(PAGE_ROWS);
     }, SLOW_MS);
+    expect(lastRequest()?.limit).toBe(PAGE_ROWS);
+    // The rows of the second page replace the first: they are not added to it.
     await waitFor(() => {
-      expect(drawnRows()).toHaveLength(6);
+      expect(drawnRows()[0]).toBe(String(1000 - PAGE_ROWS));
     }, SLOW_MS);
+    expect(drawnRows()).toHaveLength(3);
+    expect(
+      screen.getByText(
+        (_, element) =>
+          visible(element?.textContent) === rangeText(language, 26, 2 * PAGE_ROWS, TOTAL),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('sends the action, the area, the record, the days and the words as chosen and typed', async () => {

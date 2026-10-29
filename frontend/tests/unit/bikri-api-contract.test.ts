@@ -87,6 +87,10 @@ describe('each wrapper sends the command and the input of the backend’s file',
       status: null,
       offset: 0,
       limit: 0,
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
     });
     expect(call).toHaveBeenCalledTimes(1);
     expect(call.mock.calls[0]?.[0]).toBe('bikri_list');
@@ -107,6 +111,10 @@ describe('each wrapper sends the command and the input of the backend’s file',
       state: null,
       offset: 0,
       limit: 0,
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
     });
     expect(call.mock.calls.at(-1)?.[0]).toBe('pukhta_register');
     expect(call.mock.calls.at(-1)?.[1]).toMatchObject({ input: REGISTER_DAY_REQUEST });

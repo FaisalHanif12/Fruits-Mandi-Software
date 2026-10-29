@@ -22,6 +22,7 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { money, ref } from '../helpers/accounts';
 import { EMPTY_PAIRS, bikriListOf } from '../helpers/paged';
 
@@ -85,7 +86,11 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
         item_id: null,
         status: null,
         offset: 0,
-        limit: 100,
+        limit: PAGE_ROWS,
+        show_finished: false,
+        search: null,
+        sort: null,
+        group_by_month: false,
       });
     });
   });
@@ -192,9 +197,16 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     });
   });
 
-  it('the status filter sends cancelled', async () => {
+  it('the status filter, behind "More filters", sends cancelled', async () => {
     await open();
     const user = userEvent.setup();
+    // The seller, the item and the status are the rare filters: they are behind "More filters".
+    expect(
+      screen.queryByRole('combobox', { name: named(message(language, 'bikri-list-col-status')) }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      await screen.findByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
     await user.click(
       await screen.findByRole('combobox', {
         name: named(message(language, 'bikri-list-col-status')),
@@ -208,6 +220,51 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     await waitFor(() => {
       expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
         expect.objectContaining({ status: 'cancelled' }),
+      );
+    });
+  });
+
+  it('the search box sends the text as `search`, and the tick sends show_finished (off by default)', async () => {
+    await open();
+    const user = userEvent.setup();
+    await waitFor(() => {
+      expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: null, show_finished: false, sort: null }),
+      );
+    });
+    await user.type(
+      await screen.findByRole('textbox', { name: named(message(language, 'common-search-label')) }),
+      'LES',
+    );
+    await waitFor(() => {
+      expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'LES' }),
+      );
+    });
+    await user.click(
+      await screen.findByRole('checkbox', { name: named(message(language, 'common-show-closed')) }),
+    );
+    await waitFor(() => {
+      expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ show_finished: true }),
+      );
+    });
+  });
+
+  it('a click on a column title asks the backend for that order, up and then down', async () => {
+    await open();
+    const user = userEvent.setup();
+    const title = () => screen.findByText(named(message(language, 'bikri-list-col-number')));
+    await user.click(await title());
+    await waitFor(() => {
+      expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: { column: 'number', direction: 'asc' } }),
+      );
+    });
+    await user.click(await title());
+    await waitFor(() => {
+      expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: { column: 'number', direction: 'desc' } }),
       );
     });
   });
@@ -240,7 +297,7 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     });
   });
 
-  it('150 بکری come page by page: 100 at once, the count and the totals are the backend’s, Show more loads the rest', async () => {
+  it('150 بکری come one page at a time: 25 at once, the count and the totals are the backend’s, Next page loads the next 25', async () => {
     const all = Array.from({ length: 150 }, (_, index) =>
       listRow({ id: 1000 + index, number: index + 1 }),
     );
@@ -258,14 +315,12 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
       }),
     );
     await open();
-    const showing = (shown: number) =>
-      message(language, 'common-list-count', { shown: String(shown), total: '150' });
     // The day is known a moment after the screen opens, and then the list asks for that day.
     await waitFor(() => {
       expect(vi.mocked(bikriApi.bikriList).mock.calls.at(-1)?.[0].date).toBe('10-10-2026');
     });
     await waitFor(() => {
-      expect(pageText()).toContain(showing(100));
+      expect(pageText()).toContain(rangeText(language, 1, 25, 150));
     });
     const pinned = (colId: string) =>
       visible(document.querySelector(`.ag-row-pinned [col-id="${colId}"]`)?.textContent);
@@ -274,23 +329,16 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     });
     expect(pinned('net')).toBe('2,897,400');
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    );
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(pageText()).toContain(showing(150));
+      expect(pageText()).toContain(rangeText(language, 26, 50, 150));
     });
     expect(vi.mocked(bikriApi.bikriList).mock.calls.at(-1)?.[0]).toMatchObject({
       date: '10-10-2026',
-      offset: 100,
-      limit: 100,
+      offset: PAGE_ROWS,
+      limit: PAGE_ROWS,
     });
-    expect(
-      screen.queryByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    ).toBeNull();
+    // The totals are over the whole filter on every page.
+    expect(pinned('gross')).toBe('4,410,000');
   });
 });

@@ -28,6 +28,9 @@
       "last_date": "2026-10-10"
     }
   ],
+  "total_count": 2,
+  "offset": 0,
+  "limit": 100,
   "given_paisa": 2000000,
   "returned_paisa": 0,
   "adjusted_paisa": 1500000,

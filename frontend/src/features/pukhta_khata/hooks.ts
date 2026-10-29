@@ -32,11 +32,12 @@ const FILTER_DELAY_MS = 150;
  * The register for the filters, page by page, with the count and the totals of the whole filter
  * (PRD FR-13.6, FR-19.11).
  */
-export function usePukhtaRegister(filter: Omit<PukhtaRegisterInput, 'offset' | 'limit'>) {
+export function usePukhtaRegister(filter: Omit<PukhtaRegisterInput, 'offset' | 'limit' | 'sort'>) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
   return usePagedQuery({
+    screen: 'pukhta.register',
     queryKey: ['pukhta', 'register', settled],
-    fetchPage: (offset, limit) => pukhtaRegister({ ...settled, offset, limit }),
+    fetchPage: (offset, limit, sort) => pukhtaRegister({ ...settled, offset, limit, sort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,

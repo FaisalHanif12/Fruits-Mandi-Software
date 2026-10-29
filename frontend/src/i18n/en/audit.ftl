@@ -64,12 +64,6 @@ audit-system-user = The app itself
 audit-open-hint = Use the arrow keys to pick an entry and Enter to see what changed.
 
 # review: pending
-audit-count = Showing { $shown } of { $total } entries
-
-# review: pending
-audit-more = Show more
-
-# review: pending
 audit-empty = No entry matches these filters.
 
 # review: pending

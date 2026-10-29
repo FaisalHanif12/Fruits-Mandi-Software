@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { Button, ErrorState, LoadingState, Notice } from '../../../shared/ui';
+import type { PagerState } from '../../../shared/hooks';
 import { TripEntriesSection } from '../components/TripEntriesSection';
 import { TripEntryEditor } from '../components/TripEntryEditor';
 import { TripFiguresCard, TripHeaderCard } from '../components/TripHeaderCard';
@@ -33,16 +34,12 @@ function TripBody({
   view,
   today,
   initialPurchase,
-  hasMore,
-  loadingMore,
-  onLoadMore,
+  pager,
 }: {
   view: TripView;
   today: string;
   initialPurchase: number | null;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onLoadMore: () => void;
+  pager: PagerState;
 }) {
   const navigate = useNavigate();
   const { detail } = view;
@@ -86,9 +83,7 @@ function TripBody({
       <TripEntriesSection
         entries={view.entries}
         count={view.entriesCount}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        onLoadMore={onLoadMore}
+        pager={pager}
         purchases={detail.purchases}
       />
     </div>
@@ -127,11 +122,7 @@ export function TripScreen({ id, purchase }: { id: number | null; purchase: numb
       view={trip.data}
       today={day.data.today}
       initialPurchase={purchase}
-      hasMore={trip.hasNextPage}
-      loadingMore={trip.isFetchingNextPage}
-      onLoadMore={() => {
-        void trip.fetchNextPage();
-      }}
+      pager={trip.pager}
     />
   );
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-coa-control-accounts"
+description = "Enables the coa_control_accounts command without any pre-configured scope."
+commands.allow = ["coa_control_accounts"]
+
+[[permission]]
+identifier = "deny-coa-control-accounts"
+description = "Denies the coa_control_accounts command without any pre-configured scope."
+commands.deny = ["coa_control_accounts"]

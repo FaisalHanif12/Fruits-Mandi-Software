@@ -19,6 +19,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakeMasters } from '../helpers/masters';
+import { PAGE_ROWS } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { useMasterFocus } from '../../src/features/masters/store';
 import * as searchApi from '../../src/shared/search/api';
@@ -99,7 +100,7 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
       { kind: 'all', text: '', include_inactive: false },
       0,
-      100,
+      PAGE_ROWS,
     );
   });
 
@@ -131,7 +132,7 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
       { kind: 'pukhta', text: '', include_inactive: false },
       0,
-      100,
+      PAGE_ROWS,
     );
   });
 

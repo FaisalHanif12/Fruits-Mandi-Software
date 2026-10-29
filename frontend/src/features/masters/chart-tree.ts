@@ -1,9 +1,29 @@
 // The chart of accounts as the rows the tree shows (PRD FR-10.1): heads, then their controls,
-// then their accounts, only for what is expanded. Pure, so the keys can be tested without a page.
+// then the accounts of an opened control, one page at a time (plan 38 B1). A control with more
+// accounts than one page has a page row under them. Pure, so the keys can be tested without a page.
 
-import type { Balance, ChartAccount, ChartControl, ChartHead } from '../../shared/accounts';
+import type {
+  Balance,
+  ChartAccount,
+  ChartAccountsPage,
+  ChartControl,
+  ChartHead,
+} from '../../shared/accounts';
 
-export type NodeKind = 'head' | 'control' | 'account';
+export type NodeKind = 'head' | 'control' | 'account' | 'pager';
+
+/** How many accounts of a control one page of the tree shows. */
+export const CHART_PAGE_ROWS = 25;
+
+/** Where a control's accounts are: the page row's numbers. Pages count from 1. */
+export interface ControlPager {
+  controlId: number;
+  page: number;
+  pageCount: number;
+  from: number;
+  to: number;
+  total: number;
+}
 
 /** One visible row of the tree. */
 export interface TreeRow {
@@ -18,18 +38,22 @@ export interface TreeRow {
   name_en: string;
   /** The tag (نشان) after an account's name, shown by `displayName`. Absent when there is none. */
   tag?: string;
-  balance: Balance;
+  /** The page row has none. */
+  balance: Balance | null;
   /** Heads and controls can be opened; an account cannot. */
   expandable: boolean;
   expanded: boolean;
   /** The key of the row above it in the chart (its head or control), or null for a head. */
   parent: string | null;
   inactive: boolean;
+  /** The page row of an opened control with more accounts than one page. */
+  pager?: ControlPager;
 }
 
 export const headKey = (id: number) => `head:${String(id)}`;
 export const controlKey = (id: number) => `control:${String(id)}`;
 export const accountKey = (id: number) => `account:${String(id)}`;
+export const pagerKey = (controlId: number) => `pager:${String(controlId)}`;
 
 function accountRow(account: ChartAccount, parent: string): TreeRow {
   return {
@@ -49,8 +73,16 @@ function accountRow(account: ChartAccount, parent: string): TreeRow {
   };
 }
 
-/** The rows to show now: a head always, its controls when it is open, their accounts when open. */
-export function visibleRows(heads: readonly ChartHead[], expanded: ReadonlySet<string>): TreeRow[] {
+/**
+ * The rows to show now: a head always, its controls when it is open, and the accounts of an opened
+ * control as far as the page that was read (`accounts`, by control id). A control with several pages
+ * has a page row after its accounts.
+ */
+export function visibleRows(
+  heads: readonly ChartHead[],
+  expanded: ReadonlySet<string>,
+  accounts: ReadonlyMap<number, ChartAccountsPage> = new Map(),
+): TreeRow[] {
   const rows: TreeRow[] = [];
   for (const head of heads) {
     const hk = headKey(head.id);
@@ -75,7 +107,11 @@ export function visibleRows(heads: readonly ChartHead[], expanded: ReadonlySet<s
       const controlOpen = expanded.has(ck);
       rows.push(controlRow(control, hk, controlOpen));
       if (!controlOpen) continue;
-      for (const account of control.accounts) rows.push(accountRow(account, ck));
+      const page = accounts.get(control.id);
+      if (page === undefined) continue;
+      for (const account of page.rows) rows.push(accountRow(account, ck));
+      const pager = pagerOf(page);
+      if (pager !== null) rows.push(pagerRow(pager, ck));
     }
   }
   return rows;
@@ -91,10 +127,43 @@ function controlRow(control: ChartControl, parent: string, open: boolean): TreeR
     name_ur: control.name_ur,
     name_en: control.name_en,
     balance: control.balance,
-    expandable: control.accounts.length > 0,
+    expandable: control.account_count > 0,
     expanded: open,
     parent,
     inactive: false,
+  };
+}
+
+/** The numbers of a control's page row, or null when its accounts fit one page. */
+function pagerOf(page: ChartAccountsPage): ControlPager | null {
+  if (page.total_count <= CHART_PAGE_ROWS) return null;
+  const pageCount = Math.ceil(page.total_count / page.limit);
+  const number = Math.floor(page.offset / page.limit) + 1;
+  return {
+    controlId: page.control_id,
+    page: number,
+    pageCount,
+    from: page.offset + 1,
+    to: Math.min(page.offset + page.limit, page.total_count),
+    total: page.total_count,
+  };
+}
+
+function pagerRow(pager: ControlPager, parent: string): TreeRow {
+  return {
+    key: pagerKey(pager.controlId),
+    kind: 'pager',
+    level: 3,
+    id: pager.controlId,
+    code: '',
+    name_ur: '',
+    name_en: '',
+    balance: null,
+    expandable: false,
+    expanded: false,
+    parent,
+    inactive: false,
+    pager,
   };
 }
 

@@ -98,7 +98,8 @@ function auditRows(): AuditRow[] {
 
 const handlers: Record<string, (input: Input) => unknown> = {
   settings_get: () => SETTINGS,
-  translit_pairs_list: () => [],
+  // The learned words, as a page: none yet (the shape of a real answer, so the tab draws its empty state).
+  translit_pairs_list: () => ({ rows: [], total_count: 0, totals: { use_count: 0 } }),
   settings_day_get: () => DAY_GET,
   settings_day_set: (input) => input,
   settings_set_number_grouping: (input) => input['grouping'],

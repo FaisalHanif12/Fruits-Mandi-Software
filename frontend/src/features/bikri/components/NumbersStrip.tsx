@@ -1,12 +1,12 @@
-// The key numbers pinned to the bottom of the screen in compact and normal windows, so the munshi
-// sees them while he types in the grids above (the summary is under the grids there). It shows
-// the selected lot and the whole بکری: خام بکری, کل اخراجات, صافی بکری and the buyers' bills, and
-// the cash note when cash would go below zero. Every number is the backend's, taken straight from
-// the preview with formatPaisa; nothing is added up here (CLAUDE.md rule 1).
+// The key numbers of the sale, docked under the grids in compact and normal windows (plan 38, sale
+// book), so the munshi sees them while he types in the grids above: the lot on screen, or the whole
+// sale when the summary's switch says so. They are خام بکری, کل اخراجات, صافی بکری and the buyers'
+// bills, on one line, and the cash note when cash would go below zero. Every number is the
+// backend's, taken straight from the preview with formatPaisa; nothing is added up here
+// (CLAUDE.md rule 1).
 //
-// It is pinned 24 px into the bottom padding of the scrolled area (the padding is 32 px), so it sits
-// just above the status bar with a gap of 8 px. `main` keeps a clearance under a focused cell
-// (`scroll-pb-strip`, token --strip-clearance), so the strip never covers the cell being typed in.
+// It sits under the scrolling area of the screen, not over it, so it can never cover a grid or the
+// cell being typed in.
 //
 // It holds no button, link or field, so the Tab key and the arrow keys pass over it (it is not a
 // tab stop). It is a region with a name, not a live region, so a screen reader does not read it
@@ -21,7 +21,7 @@ import { Num } from '../../../shared/ui';
 import type { SummaryTotals } from '../types';
 
 interface Group {
-  /** The words in front of the numbers: the lot, or the whole sale. */
+  /** The words in front of the numbers: the lot, or the whole sale. Null: one lot, no words. */
   label: ReactNode;
   /** Null: the backend could not work this out yet (nothing finished in it). */
   totals: SummaryTotals | null;
@@ -31,6 +31,10 @@ interface Group {
 
 interface NumbersStripProps {
   lotNumber: number;
+  /** How many lots the sale has. With one lot the lot is the whole sale, so no name is needed. */
+  lotCount: number;
+  /** The whole sale is on screen (the lot / whole switch of the summary): its numbers are shown. */
+  showWhole: boolean;
   lot: Omit<Group, 'label'>;
   whole: Omit<Group, 'label'>;
   cash: CashCheck;
@@ -55,7 +59,7 @@ const NUMBERS = [
 function StripRow({ label, totals, netIsNegative }: Group) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-4">
-      <span className="type-label text-ink">{label}</span>
+      {label === null ? null : <span className="type-label text-ink">{label}</span>}
       {totals === null ? (
         <Localized id="bikri-strip-incomplete">
           <span className="type-body text-ink-muted" />
@@ -77,19 +81,33 @@ function StripRow({ label, totals, netIsNegative }: Group) {
   );
 }
 
-export function NumbersStrip({ lotNumber, lot, whole, cash }: NumbersStripProps) {
+export function NumbersStrip({
+  lotNumber,
+  lotCount,
+  showWhole,
+  lot,
+  whole,
+  cash,
+}: NumbersStripProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   return (
     <section
       aria-label={l10n.getString('bikri-strip-label')}
-      className="sticky -bottom-5 z-10 flex flex-col gap-1 rounded-3 border border-border bg-surface p-2 shadow-overlay"
+      className="flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 rounded-3 border border-border bg-surface px-3 py-2"
     >
-      <StripRow
-        label={<Localized id="bikri-summary-lot" vars={{ lot: String(lotNumber) }} />}
-        {...lot}
-      />
-      <StripRow label={<Localized id="bikri-summary-whole" />} {...whole} />
+      {showWhole ? (
+        <StripRow label={lotCount > 1 ? <Localized id="bikri-summary-whole" /> : null} {...whole} />
+      ) : (
+        <StripRow
+          label={
+            lotCount > 1 ? (
+              <Localized id="bikri-summary-lot" vars={{ lot: String(lotNumber) }} />
+            ) : null
+          }
+          {...lot}
+        />
+      )}
       {cash.needs_confirm ? (
         <p className="flex items-center gap-2 type-body text-warn">
           <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />

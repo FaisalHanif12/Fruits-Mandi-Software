@@ -24,6 +24,7 @@ use ts_rs::TS;
 
 use crate::accounts::{Balance, RecordRef};
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 use crate::vouchers::MAX_OPEN_ROWS;
 
 /// ادھار رقم given, as typed (PRD 16.5): the person's account بنام, روکڑ جمع.
@@ -137,6 +138,13 @@ pub struct LentListInput {
     /// How many rows to return. 0 gives the default page of 100 rows (PRD FR-19.11).
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole range by: `entry_date`, `number`, `amount_paisa`, `reason`, `return_by`, `returned_paisa`, `open_paisa` or `days_past_return_by`. Null is the natural order (plan 38
+    /// R4). A sorted row still shows its true running figure of the natural order.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// One loan with what has been returned against it, oldest first (PRD FR-16.5).
@@ -196,6 +204,9 @@ pub struct LentList {
     pub total_count: i64,
     /// The totals over all his loans.
     pub totals: LentTotals,
+    /// The count and subtotals of each month of the whole range, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `lent_paisa`, `returned_paisa` and `open_paisa`.
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// Input of `lent_report` (PRD R32 data). A balance list takes an "as of" day (PRD FR-19.10).
@@ -210,6 +221,16 @@ pub struct LentReportInput {
     /// How many rows to return. 0 gives the default page of 100 rows.
     #[serde(default)]
     pub limit: u32,
+    /// Only people whose code or name (either script) holds this text. The totals are over these
+    /// people.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole report by: `person` (English name), `is_staff`, `lent_paisa`,
+    /// `returned_cash_paisa`, `returned_salary_paisa`, `open_paisa`, `oldest_open_date`,
+    /// `return_by` or `days_past_return_by`. Null puts people with something open first, the
+    /// oldest open loan first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
 }
 
 /// One person on the report R32.

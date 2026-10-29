@@ -14,6 +14,7 @@ use mandi_domain::core::accounts::RecordRef;
 use mandi_domain::core::cashbook::{Cashbook, CashbookInput, CashbookRow, CashbookTotals};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::validate::{self, FieldErrors};
 
 use crate::cash::CASH_ACCOUNT_CODE;
@@ -50,6 +51,18 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
     let to = bound(&mut errors, "to", input.to.as_deref(), today);
     errors.finish()?;
     let (from_iso, to_iso) = (from.map(BusinessDate::to_iso), to.map(BusinessDate::to_iso));
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| sort.order_by(&repo::SORT_COLUMNS))
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
     ctx.db.read(|conn| {
         let cash = account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
             .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
@@ -71,6 +84,7 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
             cash,
             from_iso.as_deref(),
             to_iso.as_deref(),
+            order_by.as_deref(),
             i64::from(input.offset),
             page::limit_of(input.limit),
         )?;
@@ -101,6 +115,16 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
                 running_paisa: running,
             });
         }
+        // Month headings with their subtotals, over the whole range (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            page::month_subtotals(
+                repo::months(conn, cash, from_iso.as_deref(), to_iso.as_deref())?,
+                &[("in_paisa", true), ("out_paisa", true)],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(Cashbook {
             opening_paisa: opening,
             closing_paisa: closing,
@@ -110,6 +134,7 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
                 in_paisa: total_in,
                 out_paisa: total_out,
             },
+            months,
         })
     })
 }

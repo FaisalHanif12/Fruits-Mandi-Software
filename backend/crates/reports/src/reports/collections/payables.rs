@@ -358,6 +358,7 @@ pub(crate) fn run(
     }
 
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R24,
         title_id: ids::title_id("R24"),
         filters: typed.resolved.clone(),

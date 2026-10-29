@@ -21,6 +21,7 @@
 
 mod buyer;
 mod calc;
+mod chart;
 mod facts;
 mod filters;
 mod fruit;
@@ -52,9 +53,10 @@ use crate::reports::{PageSpec, page_spec};
 
 pub use calc::{average_days, share_hundredths};
 pub use model::{
-    AnalyticsCatalogEntry, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind,
-    AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey,
-    AnalyticsLinesInput, AnalyticsLinesPage, AnalyticsPage, AnalyticsPartnerMoney, AnalyticsPeriod,
+    AnalyticsCatalogEntry, AnalyticsChart, AnalyticsChartKind, AnalyticsChartPoint,
+    AnalyticsChartSeries, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind, AnalyticsFilters,
+    AnalyticsGoods, AnalyticsGroupBy, AnalyticsHeading, AnalyticsKey, AnalyticsLinesInput,
+    AnalyticsLinesPage, AnalyticsPage, AnalyticsPartnerMoney, AnalyticsPeriod,
     AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintInput,
     AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsRow, AnalyticsRunInput,
     AnalyticsSavedView, AnalyticsSide, AnalyticsTripView, AnalyticsView, AnalyticsViewsSaveInput,
@@ -197,6 +199,7 @@ fn page_of(view: AnalyticsView, typed: &Typed, table: Table, spec: PageSpec) -> 
         total_count: table.total_count,
         totals_label_id: ids::TOTAL.to_owned(),
         totals: table.totals,
+        charts: table.charts,
     }
 }
 
@@ -208,9 +211,58 @@ fn page_of(view: AnalyticsView, typed: &Typed, table: Table, spec: PageSpec) -> 
 pub fn run(db: &Db, input: &AnalyticsRunInput) -> Result<AnalyticsPage, ReportsError> {
     let spec = page_spec(input.offset, input.limit)?;
     db.read(|conn| {
-        let (typed, table) = build(conn, db, input.view, &input.filters, spec)?;
+        // View C cuts its page early, because the dues and the days to pay are worked out for the
+        // page only: it sorts and makes its chart itself (see `buyer`). Every other view builds
+        // its whole table, which costs no more reading than before (they all work out every row),
+        // so the chart and a sort come from the whole filter (plan 38 R4, D1).
+        if input.view == AnalyticsView::C {
+            let (typed, table) = crate::reports::common::in_snapshot(conn, |conn| {
+                build_with_sort(
+                    conn,
+                    db,
+                    input.view,
+                    &input.filters,
+                    spec,
+                    input.sort.as_ref(),
+                )
+            })?;
+            return Ok(page_of(input.view, &typed, table, spec));
+        }
+        let all = PageSpec {
+            offset: 0,
+            limit: None,
+        };
+        let (typed, mut table) = build(conn, db, input.view, &input.filters, all)?;
+        let charts = chart::build(
+            input.view,
+            Some(typed.trip_view),
+            &table.columns,
+            &table.rows,
+            &table.totals,
+        )?;
+        if let Some(sort) = &input.sort {
+            table.rows = chart::sort_rows(&table.columns, std::mem::take(&mut table.rows), sort)?;
+        }
+        table.charts = charts;
+        table.total_count = i64::try_from(table.rows.len()).unwrap_or(i64::MAX);
+        table.rows = spec.slice(&table.rows);
         Ok(page_of(input.view, &typed, table, spec))
     })
+}
+
+fn build_with_sort(
+    conn: &Connection,
+    db: &Db,
+    view: AnalyticsView,
+    input: &AnalyticsFilters,
+    spec: PageSpec,
+    sort: Option<&mandi_core::paging::SortInput>,
+) -> Result<(Typed, Table), ReportsError> {
+    let now = today(db.clock().now_utc())?;
+    let mut typed = resolve(conn, now, view, input)?;
+    typed.sort = sort.cloned();
+    let table = buyer::run(conn, &typed, spec)?;
+    Ok((typed, table))
 }
 
 /// The lines behind a row or a cell of a view (PRD FR-18.2), one page of them, with the totals

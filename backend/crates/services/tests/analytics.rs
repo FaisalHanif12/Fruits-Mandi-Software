@@ -50,6 +50,7 @@ fn view(w: &support::World, v: AnalyticsView, f: AnalyticsFilters) -> AnalyticsP
     run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,
@@ -63,6 +64,7 @@ fn refused(w: &support::World, v: AnalyticsView, f: AnalyticsFilters) -> Vec<(Er
     match run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,
@@ -1361,6 +1363,7 @@ fn bad_filters_are_refused_together_with_their_fields() {
     let page = run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: AnalyticsView::A,
             filters: filters(),
             offset: -1,
@@ -1382,6 +1385,7 @@ fn paging_keeps_the_totals_of_the_whole_filter() {
         let part = run(
             w.env.ctx.db(),
             &AnalyticsRunInput {
+                sort: None,
                 view: AnalyticsView::C,
                 filters: filters(),
                 offset,

@@ -2,6 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 import type { CapitalRow } from './CapitalRow';
 import type { CapitalTotals } from './CapitalTotals';
+import type { MonthSubtotal } from './MonthSubtotal';
 import type { RecordRef } from './RecordRef';
 
 /**
@@ -28,4 +29,9 @@ export type CapitalHistory = {
    * The totals over all the rows.
    */
   totals: CapitalTotals;
+  /**
+   * The count and subtotals of each month of the whole range, in the order of the list, when
+   * asked with `group_by_month` and the list is in date order. Figures: `invested_paisa` and `taken_back_paisa`.
+   */
+  months: Array<MonthSubtotal>;
 };

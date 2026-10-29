@@ -270,6 +270,7 @@ pub(crate) fn run_d(
     }
 
     Ok(Table {
+        charts: Vec::new(),
         columns,
         total_count: count_of(all_rows.len()),
         rows: spec.slice(&all_rows),
@@ -484,6 +485,7 @@ pub(crate) fn run_e(
     }
 
     Ok(Table {
+        charts: Vec::new(),
         columns,
         total_count: count_of(all_rows.len()),
         rows: spec.slice(&all_rows),

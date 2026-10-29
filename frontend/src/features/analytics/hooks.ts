@@ -1,13 +1,8 @@
 // The analytics commands as hooks (Code Standards F6).
 
-import {
-  keepPreviousData,
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PrintAnalyticsViewInput } from '../../bindings/PrintAnalyticsViewInput';
+import { usePagedQuery } from '../../shared/hooks';
 import { reportsPrintHeader } from '../reports';
 import {
   analyticsCatalog,
@@ -26,9 +21,6 @@ import type {
   AnalyticsView,
 } from './types';
 
-/** A page of a view or of its lines (Code Standards B31, NFR-SPD-24). */
-export const ANALYTICS_PAGE_SIZE = 100;
-
 /** The catalogue changes only with a new version of the app, so it is read once. */
 export function useAnalyticsCatalog() {
   return useQuery({
@@ -39,24 +31,42 @@ export function useAnalyticsCatalog() {
 }
 
 /**
- * A view, page by page. `filters` null means the view cannot run yet. The totals come with every
- * page and are the same for all of them (they are over the whole filter), so the screen reads them
- * from the last page. While the filters change, the rows already on screen stay until the new ones
- * come (no flicker).
+ * A view, one page at a time. `filters` null means the view cannot run yet. The totals come with
+ * every page and are the same for all of them (they are over the whole filter), so the screen reads
+ * them from the page on screen. While the filters change, the rows already on screen stay until the
+ * new ones come (no flicker).
  */
 export function useAnalyticsPages(view: AnalyticsView, filters: AnalyticsFilters | null) {
-  return useInfiniteQuery({
+  return usePagedQuery({
+    screen: `analytics.${view.toLowerCase()}`,
     queryKey: ['analytics_run', view, filters],
-    queryFn: ({ pageParam }) => {
+    fetchPage: (offset, limit, sort) => {
       if (filters === null) throw new Error('no filters');
-      return analyticsRun({ view, filters, offset: pageParam, limit: ANALYTICS_PAGE_SIZE });
+      return analyticsRun({ view, filters, offset, limit, sort });
+    },
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    enabled: filters !== null,
+    keepPrevious: true,
+  });
+}
+
+/**
+ * How many rows the chart is drawn from: the first rows of the view in its own order. The chart
+ * never follows the page or the order of the table under it (plan 38 D1). This asks for the rows
+ * itself until the backend sends a chart series of the whole filter.
+ */
+export const CHART_ROWS = 100;
+
+/** The rows the chart of a view is drawn from. `filters` null means the view cannot run yet. */
+export function useAnalyticsChart(view: AnalyticsView, filters: AnalyticsFilters | null) {
+  return useQuery({
+    queryKey: ['analytics_run', view, filters, 'chart'],
+    queryFn: () => {
+      if (filters === null) throw new Error('no filters');
+      return analyticsRun({ view, filters, offset: 0, limit: CHART_ROWS, sort: null });
     },
     enabled: filters !== null,
-    initialPageParam: 0,
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((count, page) => count + page.rows.length, 0);
-      return last.rows.length > 0 && loaded < last.total_count ? loaded : undefined;
-    },
     placeholderData: keepPreviousData,
   });
 }
@@ -68,30 +78,27 @@ export interface LinesRequest {
   columnKey: AnalyticsKey | null;
 }
 
-/** The lines behind one number, page by page. `request` null means none is open. */
+/** The lines behind one number, one page at a time. `request` null means none is open. */
 export function useAnalyticsLines(request: LinesRequest | null) {
-  return useInfiniteQuery({
+  return usePagedQuery({
+    screen: 'analytics.lines',
     queryKey: ['analytics_lines', request],
-    queryFn: ({ pageParam }) => {
+    fetchPage: (offset, limit) => {
       if (request === null) throw new Error('no request');
       return analyticsLines({
         view: request.view,
         filters: request.filters,
         row_key: request.rowKey,
         column_key: request.columnKey,
-        offset: pageParam,
-        limit: ANALYTICS_PAGE_SIZE,
+        offset,
+        limit,
       });
     },
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
     enabled: request !== null,
-    initialPageParam: 0,
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((count, page) => count + page.rows.length, 0);
-      return last.rows.length > 0 && loaded < last.total_count ? loaded : undefined;
-    },
     // The lines of a number are a snapshot of what was on the screen when it was opened.
-    staleTime: Infinity,
-    gcTime: 0,
+    snapshot: true,
   });
 }
 

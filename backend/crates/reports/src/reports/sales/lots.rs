@@ -256,6 +256,7 @@ fn run_lots(
         });
     }
     Ok(ReportPage {
+        group_above: None,
         id,
         title_id: ids::title_id(id.code()),
         filters: typed.resolved.clone(),
@@ -378,6 +379,7 @@ pub(crate) fn run_r27(
         });
     }
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R27,
         title_id: ids::title_id("R27"),
         filters: typed.resolved.clone(),

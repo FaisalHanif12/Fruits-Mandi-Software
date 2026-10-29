@@ -27,6 +27,7 @@ import {
 } from '../helpers/app';
 import { lineCell, lineCellText, linesSection, typePurchaseLine } from '../helpers/goods-lines';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import {
   costEntry,
@@ -138,7 +139,7 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     expect(tripsApi.tripsGet).toHaveBeenCalledWith({
       id: 1,
       entries_offset: 0,
-      entries_limit: 100,
+      entries_limit: PAGE_ROWS,
     });
   });
 
@@ -937,30 +938,22 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
   });
 
   it('the history loads page by page', async () => {
-    const many = Array.from({ length: 130 }, (_, index) =>
+    const many = Array.from({ length: 60 }, (_, index) =>
       costEntry({ id: 200 + index, number: index + 1 }),
     );
     fakeTrips({ entries: many });
     const { user } = await open();
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          said(message(language, 'trips-entries-count', { shown: 100, total: 130 })),
-        ),
-      ).toBeInTheDocument();
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 60));
     });
-    await user.click(screen.getByRole('button', { name: message(language, 'trips-entries-more') }));
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          said(message(language, 'trips-entries-count', { shown: 130, total: 130 })),
-        ),
-      ).toBeInTheDocument();
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 60));
     });
     expect(tripsApi.tripsGet).toHaveBeenLastCalledWith({
       id: 1,
-      entries_offset: 100,
-      entries_limit: 100,
+      entries_offset: PAGE_ROWS,
+      entries_limit: PAGE_ROWS,
     });
   });
 
@@ -1033,6 +1026,10 @@ describe('purchases of other trips', () => {
       state: 'in_stock',
       offset: 0,
       limit: 0,
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
     });
     expect(list.rows.map((row) => row.id)).toEqual([7]);
   });

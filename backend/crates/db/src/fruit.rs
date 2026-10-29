@@ -6,7 +6,10 @@
 //! on `INTEGER` `*_paisa` columns only.
 
 use mandi_core::accounts::RecordRef;
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use rusqlite::types::Value;
+use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
+
+use crate::listing::{MonthSums, like_contains, like_prefix, month_sums};
 
 /// One fruit entry with the names its screens show.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -348,13 +351,104 @@ pub struct ListFilter {
     pub to: Option<String>,
     /// `saved` or `cancelled`.
     pub status: Option<String>,
+    /// Only entries whose number, note, item, partner or credited account holds this text.
+    pub search: Option<String>,
+    /// The `ORDER BY` expressions chosen by a sort, from [`SORT_COLUMNS`]. `None` is newest day
+    /// first.
+    pub order_by: Option<String>,
+    /// True to leave the cancelled entries out when no status is chosen (plan 38 R5).
+    pub hide_cancelled: bool,
 }
 
-const FILTER_WHERE: &str = "WHERE (?1 IS NULL OR f.partner_id = ?1)
-       AND (?2 = 0 OR f.partner_id IS NULL)
-       AND (?3 IS NULL OR f.item_id = ?3) AND (?4 IS NULL OR f.source = ?4)
-       AND (?5 IS NULL OR f.entry_date >= ?5) AND (?6 IS NULL OR f.entry_date <= ?6)
-       AND (?7 IS NULL OR f.status = ?7)";
+/// The columns a list can be sorted by: the name of the field of the row and its SQL expression
+/// (the list query joins the partner, the item and the credited account as `pa`, `it` and `ca`).
+pub const SORT_COLUMNS: [(&str, &str); 10] = [
+    ("number", "f.number"),
+    ("entry_date", "f.entry_date"),
+    ("partner", "pa.name_en"),
+    ("source", "f.source"),
+    ("credit_account", "ca.code"),
+    ("item", "it.code"),
+    ("qty", "f.qty"),
+    ("rate_paisa", "f.rate_paisa"),
+    ("value_paisa", "f.value_paisa"),
+    ("status", "f.status"),
+];
+
+/// The `WHERE` of a filter and the values it binds, in order. Written with `?` only, and with
+/// subqueries instead of joins for the search, so the same text serves the page query, the totals
+/// and the month sums. An empty filter gives an empty text.
+fn filter_where(filter: &ListFilter) -> (String, Vec<Value>) {
+    let mut conditions: Vec<String> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
+    if let Some(partner) = filter.partner_id {
+        conditions.push("f.partner_id = ?".to_owned());
+        binds.push(Value::Integer(partner));
+    }
+    if filter.guests_only {
+        conditions.push("f.partner_id IS NULL".to_owned());
+    }
+    if let Some(item) = filter.item_id {
+        conditions.push("f.item_id = ?".to_owned());
+        binds.push(Value::Integer(item));
+    }
+    if let Some(source) = &filter.source {
+        conditions.push("f.source = ?".to_owned());
+        binds.push(Value::Text(source.clone()));
+    }
+    if let Some(from) = &filter.from {
+        conditions.push("f.entry_date >= ?".to_owned());
+        binds.push(Value::Text(from.clone()));
+    }
+    if let Some(to) = &filter.to {
+        conditions.push("f.entry_date <= ?".to_owned());
+        binds.push(Value::Text(to.clone()));
+    }
+    match &filter.status {
+        Some(status) => {
+            conditions.push("f.status = ?".to_owned());
+            binds.push(Value::Text(status.clone()));
+        }
+        None if filter.hide_cancelled => conditions.push("f.status = 'saved'".to_owned()),
+        None => {}
+    }
+    if let Some(text) = filter
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
+        let mut parts = String::new();
+        if let Ok(number) = text.parse::<i64>() {
+            parts.push_str("f.number = ? OR ");
+            binds.push(Value::Integer(number));
+        }
+        parts.push_str(
+            "f.note LIKE ? ESCAPE '\\'
+             OR f.item_id IN (SELECT id FROM items WHERE code LIKE ? ESCAPE '\\'
+                 OR name_ur LIKE ? ESCAPE '\\' OR name_en LIKE ? ESCAPE '\\')
+             OR f.partner_id IN (SELECT id FROM partners
+                 WHERE name_ur LIKE ? ESCAPE '\\' OR name_en LIKE ? ESCAPE '\\')
+             OR f.credit_account_id IN (SELECT id FROM accounts WHERE code LIKE ? ESCAPE '\\'
+                 OR name_ur LIKE ? ESCAPE '\\' OR name_en LIKE ? ESCAPE '\\')",
+        );
+        conditions.push(format!("({parts})"));
+        let contains = like_contains(text);
+        binds.push(Value::Text(contains.clone()));
+        binds.push(Value::Text(like_prefix(text)));
+        for _ in 0..4 {
+            binds.push(Value::Text(contains.clone()));
+        }
+        binds.push(Value::Text(like_prefix(text)));
+        binds.push(Value::Text(contains.clone()));
+        binds.push(Value::Text(contains));
+    }
+    if conditions.is_empty() {
+        (String::new(), binds)
+    } else {
+        (format!(" WHERE {}", conditions.join(" AND ")), binds)
+    }
+}
 
 /// One page of entries that match, newest day first, then by number (Code Standards B31).
 ///
@@ -366,23 +460,24 @@ pub fn list(
     offset: i64,
     limit: i64,
 ) -> rusqlite::Result<Vec<FruitRec>> {
+    let (condition, mut binds) = filter_where(filter);
+    binds.push(Value::Integer(limit));
+    binds.push(Value::Integer(offset));
+    // Newest day first, then by number. A sort puts its column first and keeps that order after
+    // it, so ties come out the same on every page. A sort by the day keeps the numbers in the
+    // same direction.
+    let order = match filter.order_by.as_deref() {
+        None => "f.entry_date DESC, f.number DESC".to_owned(),
+        Some(o) if o.starts_with("f.entry_date") => {
+            let direction = if o.ends_with("DESC") { "DESC" } else { "ASC" };
+            format!("{o}, f.number {direction}, f.id {direction}")
+        }
+        Some(o) => format!("{o}, f.entry_date DESC, f.number DESC, f.id DESC"),
+    };
     let mut statement = conn.prepare(&format!(
-        "{SELECT} {FILTER_WHERE} ORDER BY f.entry_date DESC, f.number DESC LIMIT ?8 OFFSET ?9"
+        "{SELECT}{condition} ORDER BY {order} LIMIT ? OFFSET ?"
     ))?;
-    let rows = statement.query_map(
-        params![
-            filter.partner_id,
-            i64::from(filter.guests_only),
-            filter.item_id,
-            filter.source,
-            filter.from,
-            filter.to,
-            filter.status,
-            limit,
-            offset
-        ],
-        read,
-    )?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), read)?;
     rows.collect()
 }
 
@@ -391,23 +486,36 @@ pub fn list(
 /// # Errors
 /// Any SQLite error.
 pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<(i64, i64, i64)> {
+    let (condition, binds) = filter_where(filter);
     conn.query_row(
         &format!(
             "SELECT COUNT(*),
                     COALESCE(SUM(CASE WHEN f.status = 'saved' THEN f.qty END), 0),
                     COALESCE(SUM(CASE WHEN f.status = 'saved' THEN f.value_paisa END), 0)
-             FROM fruit_takes f {FILTER_WHERE}"
+             FROM fruit_takes f{condition}"
         ),
-        params![
-            filter.partner_id,
-            i64::from(filter.guests_only),
-            filter.item_id,
-            filter.source,
-            filter.from,
-            filter.to,
-            filter.status
-        ],
+        params_from_iter(binds.iter()),
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )
+}
+
+/// The count of each month of the filter with the نگ and the value of the saved entries, oldest
+/// month first, in one grouped query (plan 38 R4).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_months(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<MonthSums>> {
+    let (condition, binds) = filter_where(filter);
+    month_sums(
+        conn,
+        "fruit_takes f",
+        &condition,
+        "f.entry_date",
+        &[
+            "CASE WHEN f.status = 'saved' THEN f.qty ELSE 0 END",
+            "CASE WHEN f.status = 'saved' THEN f.value_paisa ELSE 0 END",
+        ],
+        &binds,
     )
 }
 
@@ -543,6 +651,7 @@ const LOT_FROM: &str = "FROM bikri_lots l
 pub fn lots(
     conn: &Connection,
     search: Option<&str>,
+    offset: i64,
     limit: i64,
 ) -> rusqlite::Result<(Vec<LotRec>, i64)> {
     let total: i64 = conn.query_row(
@@ -558,9 +667,9 @@ pub fn lots(
                 it.sold_by = 'weight',
                 l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag
          {LOT_FROM} {LOT_WHERE}
-         ORDER BY e.entry_date, e.number, l.lot_no LIMIT ?2"
+         ORDER BY e.entry_date, e.number, l.lot_no LIMIT ?2 OFFSET ?3"
     ))?;
-    let rows = statement.query_map(params![search, limit], read_lot)?;
+    let rows = statement.query_map(params![search, limit, offset], read_lot)?;
     Ok((rows.collect::<rusqlite::Result<Vec<_>>>()?, total))
 }
 

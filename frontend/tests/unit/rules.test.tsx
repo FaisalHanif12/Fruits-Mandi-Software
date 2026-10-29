@@ -23,6 +23,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakeMasters, record } from '../helpers/masters';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { fakeRuleTest, fakeRules, pointer, rule, testResult } from '../helpers/rules';
 import { EMPTY_PAIRS } from '../helpers/paged';
@@ -214,24 +215,18 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
     }
   });
 
-  it('150 rules come page by page: 100 at once with the count of the backend, Show more loads the rest', async () => {
+  it('150 rules come page by page: 25 at once with the count of the backend, Next page loads the next 25', async () => {
     fakeRules(Array.from({ length: 150 }, (_, index) => rule(index + 1)));
     await renderApp('/index/rules');
-    const showing = (shown: number) =>
-      message(language, 'common-list-count', { shown: String(shown), total: '150' });
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(100));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
     });
-    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, 100);
-    await userEvent.setup().click(
-      await screen.findByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    );
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, PAGE_ROWS);
+    await userEvent.setup().click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(150));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
     });
-    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 100, 100);
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), PAGE_ROWS, PAGE_ROWS);
   });
 
   it('the side, the charge and the inactive tick go to the backend filter', async () => {
@@ -259,7 +254,7 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
         include_inactive: false,
       },
       0,
-      100,
+      PAGE_ROWS,
     );
     await user.click(
       screen.getByRole('checkbox', { name: message(language, 'rules-show-inactive') }),
@@ -268,7 +263,7 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
       expect(rulesApi.rulesList).toHaveBeenLastCalledWith(
         expect.objectContaining({ include_inactive: true }),
         0,
-        100,
+        PAGE_ROWS,
       );
     });
   });

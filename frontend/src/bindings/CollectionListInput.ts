@@ -17,4 +17,12 @@ export type CollectionListInput = {
    * Only this city.
    */
   city_id: number | null;
+  /**
+   * How many buyers to skip, counting down the groups in order. 0 for the first page.
+   */
+  offset: number;
+  /**
+   * The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
+   */
+  limit: number;
 };

@@ -86,6 +86,23 @@ pub(super) fn sum(items: i64, result: Paisa) -> Working {
     )
 }
 
+/// A charge a rule works out per lot, which a goods-arrived entry takes once, on its first active
+/// lot (PRD FR-12.40, plan 37): this lot carries 0. `entry` is the number of the goods-arrived entry
+/// and `value` the rule's amount for a lot, which the first lot has taken.
+pub(super) fn per_lot_on_entry(entry: i64, value: Paisa, rule_id: Option<i64>) -> Working {
+    Working {
+        rule_id,
+        ..working(
+            "working-per-lot-charged-on-entry",
+            vec![
+                count("entry", entry),
+                money("value", value),
+                money("result", Paisa::ZERO),
+            ],
+        )
+    }
+}
+
 /// An amount typed by hand (freight, نقد, کرایہ سٹور of a lot).
 pub(super) fn typed(result: Paisa) -> Working {
     working("working-manual", vec![money("result", result)])

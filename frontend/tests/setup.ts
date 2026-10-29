@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import { resetPagerMemory } from '../src/shared/hooks/usePager';
 
 // A test waits for what the screen shows with waitFor and findBy. The default one second is
 // enough on a quiet machine and not on a loaded one: 49 files run at the same time, and the
@@ -11,6 +12,8 @@ configure({ asyncUtilTimeout: ASYNC_UTIL_TIMEOUT_MS });
 
 afterEach(() => {
   cleanup();
+  // A list remembers its page while the app runs; a test never starts on the page of another.
+  resetPagerMemory();
 });
 
 // What a screen remembers (PRD FR-7.45) is read from the backend when a screen opens. In a test there

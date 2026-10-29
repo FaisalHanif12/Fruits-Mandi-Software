@@ -3,6 +3,7 @@
 // vi.mock. The books throw the backend's refusal as a `CommandError`; here it becomes a rejected
 // promise, the way `invoke` fails.
 
+import { paisaForTest } from './paisa';
 import { vi } from 'vitest';
 import type { RecordRef } from '../../src/bindings/RecordRef';
 import type { SearchHit } from '../../src/bindings/SearchHit';
@@ -56,7 +57,14 @@ export function fakeGardens(options: GardensOptions = {}): FakeGardens {
     Promise.resolve({
       rows: [],
       total_count: 0,
-      totals: { qty: 0, qty_sold: 0, qty_written_off: 0, qty_left: 0 },
+      totals: {
+        qty: 0,
+        qty_sold: 0,
+        qty_written_off: 0,
+        qty_left: 0,
+        commission_paisa: paisaForTest(0),
+      },
+      months: [],
     }),
   );
   return books.store;
@@ -71,6 +79,7 @@ const hitOf = (record: RecordRef, kind: SearchHit['kind']): SearchHit => ({
   extra_ur: '',
   extra_en: '',
   is_active: true,
+  sold_by_weight: false,
 });
 
 /** The item picker of the new garden form: one banana. */

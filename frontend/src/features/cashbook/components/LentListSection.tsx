@@ -34,7 +34,6 @@ export function LentListSection({ personId }: { personId: number | null }) {
           <PagedList
             columns={LENT_COLUMNS}
             rows={rows}
-            totalCount={first?.total_count}
             getRowId={(row) => String(row.voucher_id)}
             labelId="cashbook-lent-label"
             failedId="cashbook-lent-failed"
@@ -42,11 +41,7 @@ export function LentListSection({ personId }: { personId: number | null }) {
             onRetry={() => {
               void lent.refetch();
             }}
-            hasMore={lent.hasNextPage}
-            loadingMore={lent.isFetchingNextPage}
-            onLoadMore={() => {
-              void lent.fetchNextPage();
-            }}
+            pager={lent.pager}
             empty={
               <EmptyState
                 icon={HandCoins}

@@ -88,7 +88,10 @@
   {
     "id": "F",
     "title_id": "analytics-view-f-title",
-    "filters": ["period", "partner"]
+    "filters": [
+      "period",
+      "partner"
+    ]
   },
   {
     "id": "G",
@@ -128,7 +131,13 @@
   {
     "id": "I",
     "title_id": "analytics-view-i-title",
-    "filters": ["period", "item", "side", "partner", "garden"]
+    "filters": [
+      "period",
+      "item",
+      "side",
+      "partner",
+      "garden"
+    ]
   },
   {
     "id": "J",
@@ -150,6 +159,12 @@
   {
     "id": "K",
     "title_id": "analytics-view-k-title",
-    "filters": ["period", "item", "partner", "garden", "goods"]
+    "filters": [
+      "period",
+      "item",
+      "partner",
+      "garden",
+      "goods"
+    ]
   }
 ]

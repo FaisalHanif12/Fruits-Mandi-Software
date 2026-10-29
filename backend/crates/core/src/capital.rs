@@ -22,6 +22,7 @@ use ts_rs::TS;
 
 use crate::accounts::RecordRef;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 
 /// A سرمایہ جمع or سرمایہ واپسی as typed. Invested: روکڑ بنام, his capital account (0602) جمع. Taken
 /// back: the opposite.
@@ -58,6 +59,13 @@ pub struct CapitalHistoryInput {
     /// How many rows to return. 0 gives the default page of 100 rows (PRD FR-19.11).
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole range by: `entry_date`, `kind`, `number`, `amount_paisa`, `narration` or `running_paisa`. Null is the natural order (plan 38
+    /// R4). A sorted row still shows its true running figure of the natural order.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// What a row of the capital history is.
@@ -124,4 +132,7 @@ pub struct CapitalHistory {
     pub total_count: i64,
     /// The totals over all the rows.
     pub totals: CapitalTotals,
+    /// The count and subtotals of each month of the whole range, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `invested_paisa` and `taken_back_paisa`.
+    pub months: Vec<MonthSubtotal>,
 }

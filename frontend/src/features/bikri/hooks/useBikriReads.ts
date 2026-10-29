@@ -26,11 +26,12 @@ export function useBikriDetail(id: number | null) {
  * The list of بکری for the filters, page by page, with the count and the totals of the whole filter
  * (PRD FR-12.7, FR-19.11). The last answer stays while the next comes.
  */
-export function useBikriList(filter: Omit<BikriListInput, 'offset' | 'limit'>) {
+export function useBikriList(filter: Omit<BikriListInput, 'offset' | 'limit' | 'sort'>) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
   return usePagedQuery({
+    screen: 'bikri.today',
     queryKey: ['bikri', 'list', settled],
-    fetchPage: (offset, limit) => bikriList({ ...settled, offset, limit }),
+    fetchPage: (offset, limit, sort) => bikriList({ ...settled, offset, limit, sort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
@@ -69,6 +70,7 @@ export function useBikriFind(input: BikriFindInput, enabled: boolean) {
 export function useStockList(filter: Omit<StockListInput, 'offset' | 'limit'>, enabled = true) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
   return usePagedQuery({
+    screen: 'bikri.stock',
     queryKey: ['bikri', 'stock', settled],
     enabled,
     fetchPage: (offset, limit) => bikriStockList({ ...settled, offset, limit }),

@@ -80,8 +80,8 @@ use crate::ledger::bikri::JournalSource;
 use crate::rules::RuleSet;
 
 pub use self::lookups::{
-    AccountFacts, ArrivalFacts, ItemFacts, ItemSales, Lookups, PartyKind, PurchaseFacts, Switches,
-    TripPartnerFacts,
+    AccountFacts, ArrivalCarried, ArrivalFacts, EntryLot, ItemFacts, ItemSales, Lookups, PartyKind,
+    PurchaseFacts, Switches, TripPartnerFacts,
 };
 pub use self::own::own_cost;
 pub use self::person::{CleanPerson, clean_person};
@@ -184,6 +184,82 @@ pub fn calc_posting(
     switches: Switches,
     stored: &StoredPosting,
 ) -> Result<PostingCalc, CalcError> {
+    // A per-lot charge is taken once per goods-arrived entry, on its first active lot (PRD FR-12.40,
+    // plan 37). A lot looks at what the entry's other lots carry: the lots listed before it by
+    // their real result in this pass, the lots listed after it by what they were saved with (a
+    // new lot is always after the saved ones, so the lots after a lot are saved lots that keep
+    // their stored charge, FR-12.20). A hand-typed per-lot amount counts as carrying too (lead
+    // decision D1), but only for the lots after it.
+    let kind = target.kind(stored);
+    let guess = initial_guess(kind, draft, stored);
+    calc_pass(target, draft, lookups, rules, switches, stored, &guess)
+}
+
+/// What each lot of an edit still carries of its entry's per-lot charges, from what was stored: a lot whose seller, item and entry are as stored, and whose charge the user
+/// did not change, keeps it (PRD FR-12.20). Nothing for a new draft or a later sale.
+fn initial_guess(
+    kind: PostingKind,
+    draft: &PreparedDraft,
+    stored: &StoredPosting,
+) -> Vec<ArrivalCarried> {
+    draft
+        .lots
+        .iter()
+        .enumerate()
+        .map(|(index, lot)| {
+            // This draft's lot number `index + 1` (bikri number 0).
+            let here = EntryLot {
+                bikri_number: 0,
+                lot_no: i64::try_from(index).unwrap_or(i64::MAX).saturating_add(1),
+            };
+            let found = lot
+                .lot_id
+                .and_then(|id| stored.lots.get(&id))
+                .filter(|_| kind == PostingKind::First && lot.arrival_id.is_some());
+            let Some(sl) = found else {
+                return ArrivalCarried::default();
+            };
+            let same_identity = sl.identity.as_ref().is_some_and(|i| {
+                Some(i.seller_account_id) == lot.seller_account_id
+                    && Some(i.item_id) == lot.item_id
+                    && i.purchase_id == lot.purchase_id
+                    && i.arrival_id == lot.arrival_id
+            });
+            if !same_identity {
+                return ArrivalCarried::default();
+            }
+            let kept = |charge: &Option<StoredLotCharge>, typed| {
+                charge
+                    .as_ref()
+                    .filter(|c| c.typed() == typed)
+                    .is_some_and(StoredLotCharge::carries_per_lot)
+                    .then_some(here)
+            };
+            ArrivalCarried {
+                seller_commission: sl
+                    .carrier
+                    .as_ref()
+                    .is_some_and(|c| c.charge.carries_per_lot())
+                    .then_some(here),
+                labour: kept(&sl.labour, lot.labour),
+                munshiana: kept(&sl.munshiana, lot.munshiana),
+                phone: kept(&sl.phone, lot.phone),
+            }
+        })
+        .collect()
+}
+
+/// The work of [`calc_posting`]: every lot in order, with what the lots after the first one carry
+/// taken from what was stored (`guess`).
+fn calc_pass(
+    target: PostingTarget,
+    draft: &PreparedDraft,
+    lookups: &Lookups,
+    rules: &RuleSet,
+    switches: Switches,
+    stored: &StoredPosting,
+    guess: &[ArrivalCarried],
+) -> Result<PostingCalc, CalcError> {
     let kind = target.kind(stored);
     let mut issues = Issues::default();
     issues.errors.extend(draft.issues.iter().cloned());
@@ -221,6 +297,8 @@ pub fn calc_posting(
             .iter()
             .map(|(id, a)| (*id, a.qty_left))
             .collect(),
+        lot_arrivals: draft.lots.iter().map(|lot| lot.arrival_id).collect(),
+        carried: guess.to_vec(),
     };
     // The lines of an edit that keep their stored cost are taken out of the purchases first.
     if let Some(env) = &env {

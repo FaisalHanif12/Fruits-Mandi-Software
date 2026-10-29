@@ -31,6 +31,7 @@ use mandi_domain::core::codes::{CodeType, number_code};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::money::Grams;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::split::StockParts;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::core::ventures::GardenRef;
@@ -772,6 +773,18 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
     let from = day_of("from", input.from.as_ref());
     let to = day_of("to", input.to.as_ref());
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| sort.order_by(&repo::SORT_COLUMNS))
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
     let filter = ListFilter {
         garden_id: input.garden_id,
         from,
@@ -782,6 +795,14 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
             ArrivalStateFilter::SoldOut => repo::StateFilter::SoldOut,
             ArrivalStateFilter::Cancelled => repo::StateFilter::Cancelled,
         }),
+        search: input
+            .search
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_owned),
+        order_by,
+        hide_cancelled: !input.show_finished,
     };
     ctx.db.read(|conn| {
         let recs = repo::list(
@@ -797,6 +818,21 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
             .checked_sub(sums.qty_sold)
             .and_then(|v| v.checked_sub(sums.qty_written_off))
             .ok_or_else(|| data("the quantity of the arrivals does not fit"))?;
+        // Month headings with their subtotals, over the whole filter (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            crate::page::month_subtotals(
+                repo::list_months(conn, &filter)?,
+                &[
+                    ("qty", false),
+                    ("qty_sold", false),
+                    ("qty_written_off", false),
+                    ("qty_left", false),
+                ],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(ArrivalsList {
             rows,
             total_count: sums.count,
@@ -807,6 +843,7 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
                 qty_left,
                 commission_paisa: ventures::commission_view(&sums.commission)?.0,
             },
+            months,
         })
     })
 }

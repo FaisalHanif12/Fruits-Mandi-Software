@@ -30,6 +30,7 @@ pub mod khata;
 pub mod lent;
 pub mod masters;
 pub mod money;
+pub mod paging;
 pub mod partners;
 pub mod printing;
 pub mod purchases;

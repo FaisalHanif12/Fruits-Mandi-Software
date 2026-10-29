@@ -173,6 +173,7 @@ pub(super) fn table(
     let mut resolved = typed.resolved.clone();
     resolved.as_of = Some(day.to_owned());
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R35,
         title_id: ids::title_id("R35"),
         filters: resolved,

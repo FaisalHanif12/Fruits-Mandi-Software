@@ -141,6 +141,57 @@ pub struct ArrivalFacts {
     pub qty_left: i64,
     /// True once the arrival is cancelled: nothing can be sold from it.
     pub cancelled: bool,
+    /// The per-lot rule charges that another active lot of this arrival, outside the posting being
+    /// worked on, already carries (plan 37). The lots of the draft itself are tracked by
+    /// `calc_posting`.
+    pub carried_elsewhere: ArrivalCarried,
+}
+
+/// A lot that took a per-lot charge of a goods-arrived entry: its بکری number (0 for the draft
+/// being worked on) and its lot number.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EntryLot {
+    /// The number of its بکری, or 0 for a lot of the draft being worked on.
+    pub bikri_number: i64,
+    /// The lot number inside that بکری.
+    pub lot_no: i64,
+}
+
+/// Which per-lot charges a goods-arrived entry already has on one of its lots, and on which lot
+/// (PRD FR-12.40, plan 37). A charge is taken once per entry, on its first active lot; a later lot
+/// carries 0 for a kind that is `Some` here.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ArrivalCarried {
+    /// The per-lot seller commission (carried by a sale line of a lot).
+    pub seller_commission: Option<EntryLot>,
+    /// مزدوری per lot.
+    pub labour: Option<EntryLot>,
+    /// منشیانہ per lot.
+    pub munshiana: Option<EntryLot>,
+    /// فون per lot.
+    pub phone: Option<EntryLot>,
+}
+
+impl ArrivalCarried {
+    /// True if any kind is carried.
+    pub fn any(&self) -> bool {
+        self.seller_commission.is_some()
+            || self.labour.is_some()
+            || self.munshiana.is_some()
+            || self.phone.is_some()
+    }
+
+    /// The kinds carried by this or by `other`; where both carry one, this one's lot is kept (the
+    /// earlier lot).
+    #[must_use]
+    pub fn or(self, other: ArrivalCarried) -> ArrivalCarried {
+        ArrivalCarried {
+            seller_commission: self.seller_commission.or(other.seller_commission),
+            labour: self.labour.or(other.labour),
+            munshiana: self.munshiana.or(other.munshiana),
+            phone: self.phone.or(other.phone),
+        }
+    }
 }
 
 /// The Owner's switches that `calc_posting` obeys (PRD Section 21 "Overrides" and "Checks").

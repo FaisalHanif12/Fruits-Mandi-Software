@@ -91,6 +91,9 @@ pub(crate) fn run(
         mandi_db::purchases::list(
             conn,
             &ListFilter {
+                hide_cancelled: false,
+                order_by: None,
+                search: None,
                 trip_id: None,
                 from: typed.from.clone(),
                 to: typed.to.clone(),
@@ -372,6 +375,7 @@ pub(crate) fn run(
         other_left,
     ] = totals;
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R10,
         title_id: ids::title_id("R10"),
         filters: typed.resolved.clone(),

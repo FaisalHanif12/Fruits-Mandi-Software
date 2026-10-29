@@ -9,12 +9,22 @@
 import { Localized } from '@fluent/react';
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useMemo, useState } from 'react';
-import { tokenPx } from '../../../shared/hooks';
+import { Pager } from '../../../shared/grid';
+import { DEFAULT_PAGE_SIZE, tokenPx, type PagerState } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { treeKeyHandler } from '../../../shared/keyboard';
 import { Balance, Code } from '../../../shared/ui';
-import type { ChartHead } from '../../../shared/accounts';
-import { headKeys, horizontalMove, visibleRows, type TreeRow } from '../chart-tree';
+import { useControlAccountPages } from '../../../shared/accounts';
+import type { ChartAccountsPage, ChartHead } from '../../../shared/accounts';
+import {
+  CHART_PAGE_ROWS,
+  controlKey,
+  headKeys,
+  horizontalMove,
+  visibleRows,
+  type ControlPager,
+  type TreeRow,
+} from '../chart-tree';
 
 const FALLBACK_ROW_PX = 44;
 /** What is drawn when the height of the tree cannot be read (tests have no layout). */
@@ -30,6 +40,27 @@ interface ChartTreeProps {
   onOpenAccount: (id: number) => void;
 }
 
+/** The pager of one opened control: its page row shows the count and the Previous and Next buttons. */
+function controlPagerState(
+  pager: ControlPager,
+  goTo: (controlId: number, page: number) => void,
+): PagerState {
+  return {
+    page: pager.page,
+    pageSize: DEFAULT_PAGE_SIZE,
+    total: pager.total,
+    pageCount: pager.pageCount,
+    from: pager.from,
+    to: pager.to,
+    busy: false,
+    goTo: (page) => {
+      goTo(pager.controlId, page);
+    },
+    // The chart has one page size; the rows per page choice is not on this row.
+    setPageSize: () => undefined,
+  };
+}
+
 export function ChartTree({ heads, onOpenAccount }: ChartTreeProps) {
   const language = useLanguage();
   const treeId = useId();
@@ -40,7 +71,34 @@ export function ChartTree({ heads, onOpenAccount }: ChartTreeProps) {
   const [rowPx] = useState(() => tokenPx('--control-h', FALLBACK_ROW_PX));
   const [box, setBox] = useState<HTMLDivElement | null>(null);
 
-  const rows = useMemo(() => visibleRows(heads, expanded), [heads, expanded]);
+  // The accounts of an opened control come one page at a time; each control keeps its own page.
+  const [controlPages, setControlPages] = useState<ReadonlyMap<number, number>>(new Map());
+  const opened = useMemo(
+    () =>
+      heads.flatMap((head) =>
+        head.controls
+          .filter((control) => expanded.has(controlKey(control.id)))
+          .map((control) => ({
+            controlId: control.id,
+            page: controlPages.get(control.id) ?? 1,
+            pageSize: CHART_PAGE_ROWS,
+          })),
+      ),
+    [heads, expanded, controlPages],
+  );
+  const answers = useControlAccountPages(opened);
+  const accounts = useMemo(() => {
+    const byControl = new Map<number, ChartAccountsPage>();
+    opened.forEach((want, index) => {
+      const answer = answers[index]?.data;
+      if (answer !== undefined) byControl.set(want.controlId, answer);
+    });
+    return byControl;
+  }, [opened, answers]);
+  const rows = useMemo(() => visibleRows(heads, expanded, accounts), [heads, expanded, accounts]);
+  const goToControlPage = (controlId: number, page: number) => {
+    setControlPages((current) => new Map(current).set(controlId, page));
+  };
   const activeIndex = Math.max(
     rows.findIndex((row) => row.key === activeKey),
     0,
@@ -104,7 +162,13 @@ export function ChartTree({ heads, onOpenAccount }: ChartTreeProps) {
       const row = rows[activeIndex];
       if (row === undefined) return;
       if (row.kind === 'account') onOpenAccount(row.id);
-      else toggle(row.key, !row.expanded);
+      else if (row.pager !== undefined) {
+        // Enter on the page row turns to the next page (the last page goes back to the first).
+        goToControlPage(
+          row.pager.controlId,
+          row.pager.page >= row.pager.pageCount ? 1 : row.pager.page + 1,
+        );
+      } else toggle(row.key, !row.expanded);
     },
   });
 
@@ -157,14 +221,22 @@ export function ChartTree({ heads, onOpenAccount }: ChartTreeProps) {
             ) : (
               <span aria-hidden="true" className="size-icon-md shrink-0" />
             )}
-            <Code>{row.code}</Code>
-            <span className="min-w-0 flex-1 truncate">{displayName(row, language)}</span>
-            {row.inactive ? (
-              <Localized id="accounts-status-inactive">
-                <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
-              </Localized>
-            ) : null}
-            <Balance balance={row.balance} />
+            {row.pager === undefined ? (
+              <>
+                <Code>{row.code}</Code>
+                <span className="min-w-0 flex-1 truncate">{displayName(row, language)}</span>
+                {row.inactive ? (
+                  <Localized id="accounts-status-inactive">
+                    <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
+                  </Localized>
+                ) : null}
+              </>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <Pager compact pager={controlPagerState(row.pager, goToControlPage)} />
+              </div>
+            )}
+            {row.balance === null ? null : <Balance balance={row.balance} />}
           </div>
         );
       })}

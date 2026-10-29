@@ -43,7 +43,7 @@ export function cashbookTree(): ChartHead[] {
     name_en: 'Money Lent',
     party_type: 'other',
     balance: ZERO,
-    accounts: [],
+    account_count: 0,
   });
   tree[1]?.controls.push({
     id: 305,
@@ -52,7 +52,7 @@ export function cashbookTree(): ChartHead[] {
     name_en: 'Separate Khatas',
     party_type: 'separate',
     balance: ZERO,
-    accounts: [],
+    account_count: 0,
   });
   return tree;
 }

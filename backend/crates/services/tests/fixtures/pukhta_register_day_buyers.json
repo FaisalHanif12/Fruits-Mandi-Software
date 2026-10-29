@@ -29,5 +29,6 @@
     "amount": 1280000,
     "commission": 72000,
     "open": 0
-  }
+  },
+  "months": []
 }

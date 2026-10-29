@@ -28,6 +28,8 @@ import {
   SegmentedControl,
   Select,
   fieldError,
+  FormCard,
+  FormSpan,
 } from '../../../shared/ui';
 import { usePartnerList } from '../../partners';
 import { changeSource, chosenLotOf, valueOfRef } from '../draft';
@@ -208,7 +210,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
   );
 
   return (
-    <div className="grid grid-cols-1 gap-4 rounded-3 border border-border bg-surface p-3 normal:grid-cols-2">
+    <FormCard>
       {forField}
       <Field label={<Localized id="fruit-field-date" />} error={fieldError(error, 'date')}>
         {(props) => (
@@ -221,7 +223,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
           />
         )}
       </Field>
-      <div className="normal:col-span-2">{sourceField}</div>
+      <FormSpan>{sourceField}</FormSpan>
       {shop ? lotField : otherFields}
       {shop ? (
         <div className="self-end">
@@ -285,7 +287,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
           />
         )}
       </Field>
-      <div className="normal:col-span-2">
+      <FormSpan>
         <Field label={<Localized id="fruit-field-note" />} error={fieldError(error, 'note')}>
           {(props) => (
             <FreeTextInput
@@ -297,9 +299,9 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
             />
           )}
         </Field>
-      </div>
+      </FormSpan>
       {editing ? (
-        <div className="normal:col-span-2">
+        <FormSpan>
           <Field label={<Localized id="fruit-field-reason" />} error={fieldError(error, 'reason')}>
             {(props) => (
               <FreeTextInput
@@ -311,8 +313,8 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
               />
             )}
           </Field>
-        </div>
+        </FormSpan>
       ) : null}
-    </div>
+    </FormCard>
   );
 }

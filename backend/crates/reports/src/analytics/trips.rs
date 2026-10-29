@@ -201,6 +201,7 @@ fn empty(view: AnalyticsTripView) -> Table {
     let mut totals = vec![Cell::Empty];
     totals.extend(Figures::default().cells());
     Table {
+        charts: Vec::new(),
         columns,
         rows: Vec::new(),
         total_count: 0,
@@ -213,6 +214,9 @@ fn picked(conn: &Connection, typed: &Typed) -> Result<Vec<PurchaseRec>, ReportsE
     Ok(mandi_db::purchases::list(
         conn,
         &ListFilter {
+            hide_cancelled: false,
+            order_by: None,
+            search: None,
             trip_id: typed.trip_id,
             from: typed.from.clone(),
             to: typed.to.clone(),
@@ -235,6 +239,9 @@ fn whole_trips(conn: &Connection, trip_ids: &[i64]) -> Result<Vec<PurchaseRec>, 
             mandi_db::purchases::list(
                 conn,
                 &ListFilter {
+                    hide_cancelled: false,
+                    order_by: None,
+                    search: None,
                     trip_id: Some(*trip_id),
                     from: None,
                     to: None,
@@ -428,6 +435,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         });
     }
     Ok(Table {
+        charts: Vec::new(),
         columns,
         total_count: count_of(all_rows.len()),
         rows: spec.slice(&all_rows),

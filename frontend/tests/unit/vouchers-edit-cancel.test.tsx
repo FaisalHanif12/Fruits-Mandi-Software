@@ -26,6 +26,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakeMasters } from '../helpers/masters';
+import { PAGE_ROWS } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import {
   AKRAM,
@@ -120,7 +121,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       account_id: null,
       person_key: null,
       offset: 0,
-      limit: 100,
+      limit: PAGE_ROWS,
     });
   });
 
@@ -144,6 +145,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       rows: real,
       total_count: real.length,
       totals: { cancelled_count: 0, total_paisa: null },
+      months: [],
     });
     await open();
     await waitFor(() => {

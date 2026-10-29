@@ -1,0 +1,36 @@
+{
+  "control_id": 6,
+  "rows": [
+    {
+      "id": 9,
+      "code": "0030",
+      "name_ur": "پختہ کھاتہ (خریدار)",
+      "name_en": "Pukhta Khata (Buyer)",
+      "balance": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "is_active": true,
+      "is_system": true
+    },
+    {
+      "id": 8,
+      "code": "03040000",
+      "name_ur": "نقدی منڈی",
+      "name_en": "Naqdi Mandi (Cash Buyer)",
+      "balance": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "is_active": true,
+      "is_system": true
+    }
+  ],
+  "total_count": 4,
+  "offset": 2,
+  "limit": 2,
+  "balance": {
+    "amount_paisa": 2156400,
+    "side": "dr"
+  }
+}

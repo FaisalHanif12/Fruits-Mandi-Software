@@ -153,6 +153,7 @@ pub(crate) fn run(
     add(&mut total_comm, laga)?;
 
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R7,
         title_id: ids::title_id("R7"),
         filters: typed.resolved.clone(),

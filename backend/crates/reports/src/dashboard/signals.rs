@@ -134,6 +134,9 @@ pub(crate) fn stock_waiting(
     let purchases = mandi_db::purchases::list(
         conn,
         &ListFilter {
+            hide_cancelled: false,
+            order_by: None,
+            search: None,
             trip_id: None,
             from: None,
             to: None,

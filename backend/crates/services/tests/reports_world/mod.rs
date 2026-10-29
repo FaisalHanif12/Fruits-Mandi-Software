@@ -229,6 +229,8 @@ pub fn report(
     run(
         w.env.ctx.db(),
         &ReportRunInput {
+            group_by_month: false,
+            sort: None,
             id,
             filters,
             offset,
@@ -248,6 +250,8 @@ pub fn rejected(
     match run(
         w.env.ctx.db(),
         &ReportRunInput {
+            group_by_month: false,
+            sort: None,
             id,
             filters,
             offset,

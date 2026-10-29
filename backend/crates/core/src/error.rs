@@ -382,11 +382,17 @@ pub enum ErrorCode {
     ErrSplitBelowSold,
     /// An entry has more item lines than it may (PRD FR-12.41). Field `lines`. Value: `max`.
     ErrTooManyLines,
+    /// A warning (plan 37, PRD FR-12.40): a per-lot amount is typed on a lot of a goods-arrived
+    /// entry that already took that charge on an earlier lot, so the entry would pay it twice. The
+    /// save is allowed and the typed amount is kept. Field `lots[i].labour`, `.munshiana` or
+    /// `.phone`. Values: `lot_no` (that earlier lot), `bikri_number` (its بکری, 0 when it is in
+    /// this same بکری) and `entry` (the number of the goods-arrived entry).
+    ErrEntryChargeAlreadyTaken,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 138] = [
+    pub const ALL: [ErrorCode; 139] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -525,6 +531,7 @@ impl ErrorCode {
         ErrorCode::ErrSplitAboveQty,
         ErrorCode::ErrSplitBelowSold,
         ErrorCode::ErrTooManyLines,
+        ErrorCode::ErrEntryChargeAlreadyTaken,
     ];
 }
 

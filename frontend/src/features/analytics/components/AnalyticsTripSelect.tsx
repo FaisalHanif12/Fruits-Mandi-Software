@@ -1,6 +1,6 @@
 // The trip box of the analytics filters (PRD 18.1, FR-12.27): one trip, or all of them. The trips are
 // a short list (a day trip now and then), so the box is the shared drop-down, not a picker. The list
-// is the trips module's own (`useTripsList`); its pages are loaded one after the other until it is
+// is the trips module's own (`useAllTrips`); its pages are loaded one after the other until it is
 // whole, because a drop-down has to hold every choice. A trip is named by `displayName` (Code
 // Standards F38): its name is made from its number and its day.
 
@@ -9,13 +9,20 @@ import type { ReactNode } from 'react';
 import { useLoadRest } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { Field, Select } from '../../../shared/ui';
-import { useTripsList } from '../../trips';
+import { useAllTrips } from '../../trips';
 
 /** The value of the "all trips" choice. A trip's own value is its id as text. */
 const ALL = 'all';
 
 /** Every trip: no day, no state, no partner and no text limit the list. */
-const EVERY_TRIP = { from: null, to: null, status: null, partner_id: null, search: null } as const;
+const EVERY_TRIP = {
+  from: null,
+  to: null,
+  status: null,
+  partner_id: null,
+  search: null,
+  group_by_month: false,
+} as const;
 
 interface AnalyticsTripSelectProps {
   /** The trip chosen, or null for all of them. */
@@ -28,7 +35,7 @@ interface AnalyticsTripSelectProps {
 export function AnalyticsTripSelect({ trip, onChange, error }: AnalyticsTripSelectProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
-  const trips = useTripsList(EVERY_TRIP);
+  const trips = useAllTrips(EVERY_TRIP);
   useLoadRest(trips, true);
   const rows = trips.data?.pages.flatMap((page) => page.rows) ?? [];
   let value = ALL;

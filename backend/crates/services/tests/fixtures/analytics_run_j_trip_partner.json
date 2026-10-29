@@ -356,5 +356,50 @@
       "type": "money",
       "paisa": -58200
     }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "result",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "names",
+            "names": {
+              "ur": "0070 10-10-2026",
+              "en": "0070 10-10-2026"
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": [
+              1
+            ]
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 66000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

@@ -162,6 +162,7 @@ pub(crate) fn run(
     // The total is the net income of the whole filter, on its side.
     let net = Balance::from_totals(paisa(dr)?, paisa(cr)?)?;
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R28,
         title_id: ids::title_id("R28"),
         filters: typed.resolved.clone(),

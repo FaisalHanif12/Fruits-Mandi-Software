@@ -394,6 +394,9 @@ pub fn collection_for_print(
             date: date.to_owned(),
             collector_staff_id,
             city_id,
+            // A print holds every buyer (PRD FR-19.11).
+            offset: 0,
+            limit: u32::MAX,
         },
     )?;
     Ok((list, filters))

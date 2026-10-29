@@ -9,7 +9,11 @@ export type FruitLotsInput = {
    */
   search: string | null;
   /**
-   * Rows to read. 0 means 100.
+   * How many lots to skip. 0 for the first page (plan 38 B1).
+   */
+  offset: number;
+  /**
+   * Rows to read: 25, 50 or 100. 0 means 100.
    */
   limit: number;
 };

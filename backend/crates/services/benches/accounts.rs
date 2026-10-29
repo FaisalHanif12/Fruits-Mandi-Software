@@ -39,6 +39,7 @@ fn flat<'a>(
 
 fn list_input(text: &str, limit: u32) -> AccountsListInput {
     AccountsListInput {
+        sort: None,
         filter: AccountFilter {
             kind: mandi_services::core::accounts::AccountListKind::All,
             text: text.to_owned(),

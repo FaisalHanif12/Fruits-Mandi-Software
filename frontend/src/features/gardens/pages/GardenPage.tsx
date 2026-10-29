@@ -17,6 +17,7 @@ import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { Button, ErrorState, LoadingState, Notice } from '../../../shared/ui';
+import type { PagerState } from '../../../shared/hooks';
 import { CloseGardenCard } from '../components/CloseGardenCard';
 import { GardenArrivalsSection } from '../components/GardenArrivalsSection';
 import { GardenEntryEditor } from '../components/GardenEntryEditor';
@@ -35,15 +36,11 @@ function positiveId(value: unknown): number | null {
 function GardenBody({
   view,
   today,
-  hasMore,
-  loadingMore,
-  onLoadMore,
+  pager,
 }: {
   view: GardenView;
   today: string;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onLoadMore: () => void;
+  pager: PagerState;
 }) {
   const navigate = useNavigate();
   const [reopening, setReopening] = useState(false);
@@ -95,13 +92,7 @@ function GardenBody({
       <GardenArrivalsSection garden={garden} />
       <GardenFiguresCard garden={garden} />
       <GardenPartnersCard results={detail.partner_results} closed={!open} />
-      <GardenHistorySection
-        history={view.history}
-        count={view.historyCount}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        onLoadMore={onLoadMore}
-      />
+      <GardenHistorySection history={view.history} count={view.historyCount} pager={pager} />
       {open ? <CloseGardenCard garden={garden} today={today} /> : null}
       <ReopenGardenDialog garden={garden} open={reopening} onOpenChange={setReopening} />
     </div>
@@ -134,15 +125,6 @@ export function GardenScreen({ id }: { id: number | null }) {
   }
   // A new key for each garden of the address, so the screen starts on the one it names.
   return (
-    <GardenBody
-      key={id ?? 'none'}
-      view={garden.data}
-      today={day.data.today}
-      hasMore={garden.hasNextPage}
-      loadingMore={garden.isFetchingNextPage}
-      onLoadMore={() => {
-        void garden.fetchNextPage();
-      }}
-    />
+    <GardenBody key={id ?? 'none'} view={garden.data} today={day.data.today} pager={garden.pager} />
   );
 }

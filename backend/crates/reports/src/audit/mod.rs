@@ -19,6 +19,7 @@ mod model;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
+use mandi_core::paging::MonthSubtotal;
 use mandi_db::Db;
 use mandi_db::rusqlite::types::Value as SqlValue;
 use mandi_db::rusqlite::{Connection, OptionalExtension, params_from_iter};
@@ -35,6 +36,17 @@ pub use model::{
 
 /// Pakistan time is UTC+5 all year (Code Standards G9).
 const PAKISTAN_OFFSET_HOURS: i64 = 5;
+/// The columns the audit list can be sorted by: the name of the field of the row and its SQL
+/// expression (the list query joins the user as `u`).
+const SORT_COLUMNS: [(&str, &str); 7] = [
+    ("at", "a.at"),
+    ("id", "a.id"),
+    ("user", "u.username"),
+    ("action", "a.action"),
+    ("entity", "a.entity"),
+    ("entity_id", "a.entity_id"),
+    ("reason", "a.reason"),
+];
 /// The longest action, entity or search text.
 const MAX_TEXT: usize = 100;
 
@@ -196,6 +208,28 @@ fn parse_json(text: Option<String>) -> Result<Option<Value>, ReportsError> {
 pub fn list(db: &Db, input: &AuditListInput) -> Result<AuditPage, ReportsError> {
     let spec = page_spec(input.offset, input.limit)?;
     let now = today(db.clock().now_utc())?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order = match &input.sort {
+        None => "a.at DESC, a.id DESC".to_owned(),
+        Some(sort) => {
+            let chosen = sort
+                .order_by(&SORT_COLUMNS)
+                .map_err(|e| ReportsError::Rejected(vec![e]))?;
+            // Ties keep the natural order, so pages are stable. A sort by the time keeps the ids
+            // in the same direction.
+            if sort.column == "at" {
+                format!("{chosen}, a.id {}", sort.direction.sql())
+            } else {
+                format!("{chosen}, a.at DESC, a.id DESC")
+            }
+        }
+    };
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "at");
+    // The natural order is newest first, as is a sort by the time when it is descending.
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_none_or(|s| s.direction == mandi_core::paging::SortDirection::Desc);
     db.read(|conn| {
         let typed = resolve(conn, now, &input.filters)?;
         let total_count: i64 = conn.query_row(
@@ -210,7 +244,7 @@ pub fn list(db: &Db, input: &AuditListInput) -> Result<AuditPage, ReportsError> 
             "SELECT a.id, a.at, a.user_id, u.username, u.display_name, a.action, a.entity,
                     a.entity_id, a.old_json, a.new_json, a.reason
              FROM audit_log a LEFT JOIN users u ON u.id = a.user_id
-             WHERE {} ORDER BY a.at DESC, a.id DESC LIMIT ? OFFSET ?",
+             WHERE {} ORDER BY {order} LIMIT ? OFFSET ?",
             typed.conds.sql()
         );
         let args: Vec<SqlValue> = typed.conds.page_args(spec.sql_limit(), spec.offset);
@@ -271,12 +305,45 @@ pub fn list(db: &Db, input: &AuditListInput) -> Result<AuditPage, ReportsError> 
                 changes_truncated,
             });
         }
+        // The number of entries of each month (Pakistan time) of the whole filter, in one grouped
+        // query (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            let mut statement = conn.prepare(&format!(
+                "SELECT substr(datetime(a.at, '+{PAKISTAN_OFFSET_HOURS} hours'), 1, 7), COUNT(*)
+                 FROM audit_log a WHERE {} GROUP BY 1 ORDER BY 1",
+                typed.conds.sql()
+            ))?;
+            let found = statement
+                .query_map(params_from_iter(typed.conds.args().iter()), |r| {
+                    Ok(mandi_db::listing::MonthSums {
+                        month: r.get(0)?,
+                        count: r.get(1)?,
+                        sums: Vec::new(),
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+            let mut months: Vec<MonthSubtotal> = found
+                .into_iter()
+                .map(|m| MonthSubtotal {
+                    month: m.month,
+                    count: m.count,
+                    figures: Vec::new(),
+                })
+                .collect();
+            if newest_first {
+                months.reverse();
+            }
+            months
+        } else {
+            Vec::new()
+        };
         Ok(AuditPage {
             filters: typed.resolved,
             rows,
             offset: spec.offset,
             limit: spec.reported_limit(),
             total_count,
+            months,
         })
     })
 }

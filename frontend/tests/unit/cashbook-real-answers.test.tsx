@@ -27,6 +27,7 @@ import {
   typeAmount,
 } from '../helpers/cashbook-screen';
 import { leaveAppWindow, press, renderApp } from '../helpers/app';
+import { PAGE_ROWS, pagerButton } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -90,16 +91,20 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
     expect(pageText()).not.toContain('ERR_');
   });
 
-  it('asks for the next page by the offset the backend counts, and shows the loan rows with their person', async () => {
+  it('asks for the next page by the offset of the page size, and shows the loan rows with their person', async () => {
+    // The real files hold a page of five rows. The screen pages by 25, so the first page says the
+    // range has 30 rows (the other fields are the backend's own) and the next page is the real second one.
+    vi.mocked(cashbookApi.cashbookGet).mockImplementation((input) =>
+      Promise.resolve(
+        input.offset === 0 ? { ...real.CASHBOOK_DAY, total_count: 30 } : real.CASHBOOK_SECOND_PAGE,
+      ),
+    );
     const { user } = { user: userEvent.setup() };
     await renderApp('/rokar');
-    const more = await screen.findByRole('button', {
-      name: startsWith(message(language, 'common-list-more')),
-    });
-    await user.click(more);
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
       expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(
-        expect.objectContaining({ offset: 5 }),
+        expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
       );
     });
     const list = await screen.findByRole('group', {

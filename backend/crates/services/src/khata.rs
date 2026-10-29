@@ -21,6 +21,7 @@ use mandi_domain::core::khata::{
 };
 use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::text;
 use mandi_domain::core::translit::Kind;
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -189,9 +190,15 @@ pub fn statement(
     let from = bound("from", input.from.as_ref());
     let to = bound("to", input.to.as_ref());
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&SORT_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
     ctx.db.read(|conn| {
         let khata = account_of(conn, input.khata_account_id)?;
         let lines = open_lines::live_lines(conn, &[khata.account.id])?;
+        let mut month_acc = page::MonthAcc::new(2);
         let mut opening = Paisa::ZERO;
         let mut running = Paisa::ZERO;
         let mut totals = KhataTotals {
@@ -215,6 +222,7 @@ pub fn statement(
             }
             totals.paid_out_paisa = totals.paid_out_paisa.checked_add(dr).map_err(money_error)?;
             totals.received_paisa = totals.received_paisa.checked_add(cr).map_err(money_error)?;
+            month_acc.add(&line.entry_date, &[line.dr_paisa, line.cr_paisa])?;
             let kind = kind_of(line);
             rows.push(KhataEntryRow {
                 kind,
@@ -234,6 +242,24 @@ pub fn statement(
         }
         let closing = rows.last().map_or(opening, |r| r.running_paisa);
         let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+        // The rows were built in the natural order, so each has its true running balance. A sort
+        // reorders the whole range after that, before the page is cut (plan 38 R4).
+        if let Some(sort) = &input.sort {
+            sort_rows(&mut rows, &sort.column, sort.direction);
+        }
+        let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+        let newest_first = input
+            .sort
+            .as_ref()
+            .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
+        let months = if input.group_by_month && in_date_order {
+            month_acc.finish(
+                &[("paid_out_paisa", true), ("received_paisa", true)],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(KhataStatement {
             khata,
             opening_paisa: opening,
@@ -241,6 +267,37 @@ pub fn statement(
             rows: page::slice(rows, input.offset, input.limit),
             total_count,
             totals,
+            months,
         })
     })
+}
+
+/// The columns the statement can be sorted by: the names of the fields of the row.
+const SORT_COLUMNS: [&str; 7] = [
+    "entry_date",
+    "kind",
+    "number",
+    "reason",
+    "narration",
+    "amount_paisa",
+    "running_paisa",
+];
+
+/// Sorts the whole statement by a column (checked by [`SORT_COLUMNS`]). A stable sort, so equal
+/// rows keep the order by day and entry.
+fn sort_rows(rows: &mut [KhataEntryRow], column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    let cmp: fn(&KhataEntryRow, &KhataEntryRow) -> Ordering = match column {
+        "entry_date" => {
+            |a, b| (a.entry_date.as_str(), a.entry_id).cmp(&(b.entry_date.as_str(), b.entry_id))
+        }
+        "kind" => |a, b| (a.kind as u8).cmp(&(b.kind as u8)),
+        "number" => |a, b| a.number.cmp(&b.number),
+        "reason" => |a, b| a.reason.cmp(&b.reason),
+        "narration" => |a, b| a.narration.cmp(&b.narration),
+        "amount_paisa" => |a, b| a.amount_paisa.cmp(&b.amount_paisa),
+        "running_paisa" => |a, b| a.running_paisa.cmp(&b.running_paisa),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
 }

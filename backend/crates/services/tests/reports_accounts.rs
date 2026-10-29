@@ -741,6 +741,8 @@ fn r19_shows_a_wrong_opening_as_a_difference() {
     let page = run(
         env.ctx.db(),
         &ReportRunInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R19,
             filters: ReportFilters::default(),
             offset: 0,

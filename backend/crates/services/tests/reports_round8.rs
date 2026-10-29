@@ -248,9 +248,12 @@ fn r33_e2e_34_the_trip_after_the_sale_of_15() {
     assert_eq!(page.rows.len(), 2);
     let heading = &page.rows[0];
     let purchase = &page.rows[1];
-    // bought 20 for 10,400; sold 15 for 8,460 after 540 commission; cost sold 7,800; nothing written
-    // off; left 5 for 2,600; result 8,460 − 7,800 = 660.
-    let want = vec![20, 10_400, 15, 8_460, 540, 7_800, 0, 0, 5, 2_600, 660];
+    // bought 20 for 10,400; sold 15 for 8,460 after 540 commission (the seller's), total commission
+    // 540 + 540 + 120 = 1,200 (plan 37); cost sold 7,800; nothing written off; left 5 for 2,600;
+    // result 8,460 − 7,800 = 660.
+    let want = vec![
+        20, 10_400, 15, 8_460, 540, 1_200, 7_800, 0, 0, 5, 2_600, 660,
+    ];
     assert_eq!(figures(purchase, 4), want);
     assert_eq!(
         figures(heading, 4),
@@ -268,8 +271,8 @@ fn r33_e2e_34_the_trip_after_the_sale_of_15() {
     ));
     // The trip screen reads the same result.
     let screen = trips::get(&w.env.ctx, &trip_input(trip)).unwrap();
-    assert_eq!(money(&purchase.cells[14]), screen.row.result_paisa.rupees());
-    assert_eq!(money(&purchase.cells[14]), 660);
+    assert_eq!(money(&purchase.cells[15]), screen.row.result_paisa.rupees());
+    assert_eq!(money(&purchase.cells[15]), 660);
 }
 
 fn trip_input(id: i64) -> TripGetInput {
@@ -311,12 +314,14 @@ fn r33_e2e_34b_the_last_5_spoil_and_the_result_is_a_loss_of_1940() {
     // written off 5 for 2,600; left 0; result 8,460 − 7,800 − 2,600 = −1,940.
     assert_eq!(
         figures(row, 4),
-        vec![20, 10_400, 15, 8_460, 540, 7_800, 5, 2_600, 0, 0, -1_940]
+        vec![
+            20, 10_400, 15, 8_460, 540, 1_200, 7_800, 5, 2_600, 0, 0, -1_940
+        ]
     );
     let screen = trips::get(&w.env.ctx, &trip_input(trip)).unwrap();
     assert_eq!(screen.row.result_paisa.rupees(), -1_940);
-    assert_eq!(money(&row.cells[14]), screen.row.result_paisa.rupees());
-    assert_eq!(money(&page.totals[14]), -1_940);
+    assert_eq!(money(&row.cells[15]), screen.row.result_paisa.rupees());
+    assert_eq!(money(&page.totals[15]), -1_940);
 
     // The partners: 40 / 30 / 30, money in 4,160 / 3,120 / 3,120, back 3,384 / 2,538 / 2,538,
     // parts −776 / −582 / −582 (E2E-34b).
@@ -376,7 +381,7 @@ fn r33_the_parts_of_a_trip_plus_its_cost_left_are_its_result() {
     let result = report(&w, ReportId::R33, ReportFilters::default(), 0, 0);
     assert_eq!(
         money(&partners.totals[6]) + money(&partners.totals[7]),
-        money(&result.totals[14])
+        money(&result.totals[15])
     );
 }
 
@@ -412,7 +417,7 @@ fn r33_partner_layout_takes_the_cost_left_of_the_whole_trip_whatever_the_filter(
     }
     // The result of the trip on the default layout is the same 660.
     let result = report(&w, ReportId::R33, ReportFilters::default(), 0, 0);
-    assert_eq!(money(&result.totals[14]), 660);
+    assert_eq!(money(&result.totals[15]), 660);
 }
 
 #[test]
@@ -441,7 +446,9 @@ fn r33_e2e_41_a_pocket_part_a_truck_cost_and_a_trip_sold_out() {
     // 100,000; left 0; result 5,280 (E2E-41).
     assert_eq!(
         figures(&page.rows[1], 4),
-        vec![80, 100_000, 80, 105_280, 6_720, 100_000, 0, 0, 0, 0, 5_280]
+        vec![
+            80, 100_000, 80, 105_280, 6_720, 14_080, 100_000, 0, 0, 0, 0, 5_280
+        ]
     );
     let partners = report(&w, ReportId::R33, view(TripView::Partner), 0, 0);
     let lines: Vec<(i64, i64, i64, i64)> = partners
@@ -562,7 +569,7 @@ fn r33_a_page_keeps_the_count_and_the_totals_of_the_whole_filter() {
     let page = report(&w, ReportId::R33, ReportFilters::default(), 1, 1);
     assert_eq!(page.rows.len(), 1);
     assert_eq!(page.total_count, 2);
-    assert_eq!(money(&page.totals[14]), 660);
+    assert_eq!(money(&page.totals[15]), 660);
 }
 
 #[test]

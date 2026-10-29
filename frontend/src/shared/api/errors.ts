@@ -76,6 +76,8 @@ export function errorsOutsideFields(error: UiError, fields: readonly string[]): 
 }
 
 const BPS_SUFFIX = '_bps';
+/** The names of values that count records: a sale number, a lot number. */
+const NUMBER_SUFFIX = '_number';
 const PAISA_SUFFIX = '_paisa';
 
 /** A whole number as grouped digits, with a minus sign when it is below zero. */
@@ -94,7 +96,9 @@ function groupedNumber(value: number, grouping: Grouping): string {
  * person reads, under the same name without `_bps` (`total`, "90"), written from its digits.
  * An amount whose name ends in `_paisa` (`cash_after_paisa`, 500000) is money: it is written with
  * formatPaisa ("5,000"), under its own name and under the name without `_paisa`
- * (`cash_after`), so a message never shows raw paisa (plan 12 contract 4).
+ * (`cash_after`), so a message never shows raw paisa (plan 12 contract 4). A number that names a
+ * record (`bikri_number`) also comes as `<name>_zero`, `yes` or `no`, because 0 means "none" there
+ * and Fluent matches a number key only against a number, never against the text "0" (plan 37).
  */
 export function messageVars(
   values: UiErrorItem['values'],
@@ -111,6 +115,9 @@ export function messageVars(
     // A value that is exactly a real day, YYYY-MM-DD, is shown as DD-MM-YYYY (Code Standards G9);
     // any other text passes as it is.
     vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : isoDayToDisplay(value);
+    if (typeof value === 'number' && key.endsWith(NUMBER_SUFFIX)) {
+      vars[`${key}_zero`] = value === 0 ? 'yes' : 'no';
+    }
     if (typeof value === 'number' && key.endsWith(BPS_SUFFIX) && Number.isSafeInteger(value)) {
       vars[key.slice(0, -BPS_SUFFIX.length)] = formatBps(value);
     }

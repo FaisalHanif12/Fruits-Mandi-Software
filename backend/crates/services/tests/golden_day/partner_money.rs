@@ -94,6 +94,8 @@ fn statement_of(
     partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: partner,
             from: None,
             to: None,
@@ -186,6 +188,8 @@ fn e2e_35_partner_b_invests_50000_it_is_never_split_and_never_income() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            group_by_month: false,
+            sort: None,
             partner_id: b,
             offset: 0,
             limit: 0,
@@ -432,6 +436,8 @@ fn month_close_leaves_the_partner_total_unchanged() {
     let history = partners::capital_history(
         &w.env.ctx,
         &CapitalHistoryInput {
+            group_by_month: false,
+            sort: None,
             partner_id: w.partners[0],
             offset: 0,
             limit: 0,
@@ -587,6 +593,8 @@ fn e2e_38_the_family_khata_pays_out_gets_back_and_sells_its_goods() {
     let statement = khata::statement(
         &w.env.ctx,
         &KhataStatementInput {
+            group_by_month: false,
+            sort: None,
             khata_account_id: f.khata,
             from: None,
             to: None,
@@ -738,6 +746,8 @@ fn d4_a31_a_drawings_opening_debit_counts_as_money_taken() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            group_by_month: false,
+            sort: None,
             partner_id: a,
             offset: 0,
             limit: 0,

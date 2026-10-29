@@ -70,11 +70,12 @@ export function useReadFruit() {
  * The entries for the filters, page by page, with the totals over the whole filter (PRD FR-19.11).
  * `fetchNextPage` loads the next 100 rows; the first page carries the count and the totals.
  */
-export function useFruitList(filter: Omit<FruitListInput, 'offset' | 'limit'>) {
+export function useFruitList(filter: Omit<FruitListInput, 'offset' | 'limit' | 'sort'>) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
   return usePagedQuery({
+    screen: 'fruit.list',
     queryKey: [...FRUIT_KEY, 'list', settled],
-    fetchPage: (offset, limit) => fruitList({ ...settled, offset, limit }),
+    fetchPage: (offset, limit, sort) => fruitList({ ...settled, offset, limit, sort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,

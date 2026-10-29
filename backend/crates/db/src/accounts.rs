@@ -406,6 +406,23 @@ pub struct ListTotals {
     pub opening_cr_paisa: i64,
 }
 
+/// The columns a list can be sorted by: the name of the field of the row and its SQL expression.
+/// `code` is sorted by the chart-of-accounts order (`codes::order_by_code_dir`) and `balance` by the
+/// net of the journal lines (debit minus credit), so the biggest dues are last when ascending.
+pub const SORT_COLUMNS: [(&str, &str); 11] = [
+    ("code", "a.code"),
+    ("serial", "a.serial"),
+    ("name_ur", "a.name_ur"),
+    ("name_en", "a.name_en COLLATE NOCASE"),
+    ("phone1", "a.phone1"),
+    ("city", "ci.code"),
+    ("opening_date", "a.opening_date"),
+    ("opening_dr_paisa", "a.opening_dr_paisa"),
+    ("opening_cr_paisa", "a.opening_cr_paisa"),
+    ("credit_allowed", "a.credit_allowed"),
+    ("balance", "COALESCE(bal.net, 0)"),
+];
+
 /// One page of accounts by code, and the totals of all that match (PRD FR-10.5).
 ///
 /// # Errors
@@ -415,6 +432,7 @@ pub fn list(
     filter: &AccountFilter,
     text_ur: &str,
     text_en: &str,
+    order_by: Option<&str>,
     offset: u32,
     limit: u32,
 ) -> rusqlite::Result<(Vec<AccountRow>, ListTotals)> {
@@ -440,13 +458,26 @@ pub fn list(
     let offset_mark = page.len();
     // `every` is in chart order (by control, then by code), as the full list always was; the
     // other kinds are by type number and running number.
-    let order = if filter.kind == AccountListKind::Every {
+    let natural = if filter.kind == AccountListKind::Every {
         format!("c.code, {}", crate::codes::order_by_code("a.code"))
     } else {
         crate::codes::order_by_code("a.code")
     };
+    // A chosen sort puts its column first; ties keep the natural order, so pages are stable.
+    let order = match order_by {
+        Some(chosen) => format!("{chosen}, {natural}"),
+        None => natural,
+    };
+    // The balance of an account is the net of its journal lines. It is joined only for a sort by
+    // balance, in one grouped read of the lines (plan 38 R4).
+    let join = if order_by.is_some_and(|o| o.contains("bal.net")) {
+        " LEFT JOIN (SELECT account_id, SUM(dr_paisa) - SUM(cr_paisa) AS net
+                      FROM journal_lines GROUP BY account_id) bal ON bal.account_id = a.id"
+    } else {
+        ""
+    };
     let mut statement = conn.prepare(&format!(
-        "{ROW_SELECT}{where_sql} ORDER BY {order}, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
+        "{ROW_SELECT}{join}{where_sql} ORDER BY {order}, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
     ))?;
     let rows = statement
         .query_map(params_from_iter(page.iter()), row_from)?
@@ -719,7 +750,7 @@ pub struct TreeAccount {
     pub is_system: bool,
 }
 
-/// Every account for the chart, by code.
+/// Every account for the trial balance and the like, by control and code.
 ///
 /// # Errors
 /// Any SQLite error.
@@ -733,6 +764,61 @@ pub fn tree_accounts(conn: &Connection) -> rusqlite::Result<Vec<TreeAccount>> {
         crate::codes::order_by_code("a.code")
     ))?;
     let rows = statement.query_map([], |r| {
+        Ok(TreeAccount {
+            id: r.get(0)?,
+            control_id: r.get(1)?,
+            code: r.get(2)?,
+            name_ur: r.get(3)?,
+            name_en: r.get(4)?,
+            is_active: r.get(5)?,
+            is_system: r.get(6)?,
+            tag: r.get(7)?,
+        })
+    })?;
+    rows.collect()
+}
+
+/// The control of every account, as `(account id, control id)`: the chart counts accounts and adds
+/// balances by control from this, without reading any account row (plan 38 B1).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn account_control_ids(conn: &Connection) -> rusqlite::Result<Vec<(i64, i64)>> {
+    let mut statement = conn.prepare("SELECT id, control_id FROM accounts")?;
+    let rows = statement.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    rows.collect()
+}
+
+/// How many accounts a control has.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn control_account_count(conn: &Connection, control_id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM accounts WHERE control_id = ?1",
+        [control_id],
+        |r| r.get(0),
+    )
+}
+
+/// One page of the accounts of ONE control for the chart, in the chart order (by code, so the
+/// numbers of sellers and buyers run in order, plan 32 R7). Found through `idx_accounts_control`.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn control_accounts_page(
+    conn: &Connection,
+    control_id: i64,
+    offset: i64,
+    limit: i64,
+) -> rusqlite::Result<Vec<TreeAccount>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT a.id, a.control_id, a.code, a.name_ur, a.name_en, a.is_active, a.is_system, a.tag
+         FROM accounts a WHERE a.control_id = ?1
+         ORDER BY {}, a.id LIMIT ?2 OFFSET ?3",
+        crate::codes::order_by_code("a.code")
+    ))?;
+    let rows = statement.query_map(params![control_id, limit, offset], |r| {
         Ok(TreeAccount {
             id: r.get(0)?,
             control_id: r.get(1)?,

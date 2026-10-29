@@ -1,5 +1,5 @@
 // The list of backups (PRD FR-20.8): date, place, size, whether it needs the key, and the result of
-// its check, newest first, page by page (Code Standards B31). Enter (or a double click) on a row
+// its check, newest first, one page at a time (Code Standards B31). Enter (or a double click) on a row
 // starts a restore; the buttons below do the same for the row that has focus, and test it. Four
 // states: loading, an error with a retry, nothing yet (with a button), and the rows. A cloud that
 // could not be reached is said in words, not hidden (the cloud copies are missing from the list).
@@ -8,7 +8,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { DatabaseBackup, HardDriveDownload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import {
   Button,
   Card,
@@ -44,6 +44,7 @@ export function BackupListSection({ onRestore, onTest, onBackupNow }: BackupList
   const [focusId, setFocusId] = useState<string | null>(null);
   const list = useBackupList(choice === 'all' ? null : choice);
   const rows = useMemo(() => list.data?.pages.flatMap((page) => page.rows), [list.data]);
+  const paging = useListPaging(list.pager);
   const first = list.data?.pages[0];
   const focused = rows?.find((row) => backupRowId(row) === focusId);
 
@@ -93,27 +94,10 @@ export function BackupListSection({ onRestore, onTest, onBackupNow }: BackupList
             focusRowId={focusId}
             heightMode={long ? 'fill' : 'auto'}
             isInactive={(row) => row.status === 'bad'}
+            paging={paging}
           />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Localized
-            id="backup-list-count"
-            vars={{ shown: String(rows.length), total: String(first?.total_count ?? rows.length) }}
-          >
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          {list.hasNextPage ? (
-            <Button
-              disabled={list.isFetchingNextPage}
-              busy={list.isFetchingNextPage}
-              onClick={() => {
-                void list.fetchNextPage();
-              }}
-            >
-              <Localized id="backup-list-more" />
-            </Button>
-          ) : null}
-        </div>
+        <Pager pager={list.pager} />
         <Localized id="backup-list-how">
           <p className="type-body text-ink-muted" />
         </Localized>

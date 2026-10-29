@@ -345,5 +345,48 @@
     {
       "type": "empty"
     }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "result",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "doc",
+            "type_id": "report-doc-purchase",
+            "number": 1
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": [
+              1
+            ]
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 66000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

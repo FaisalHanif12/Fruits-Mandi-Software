@@ -36,6 +36,7 @@ use crate::accounts::RecordRef;
 use crate::bikri::WriteOffRow;
 use crate::error::FieldError;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 use crate::rules::Working;
 use crate::ventures::GardenRef;
 
@@ -383,6 +384,22 @@ pub struct ArrivalsListInput {
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// True to list the cancelled arrivals too. False (the default) leaves them out of the rows,
+    /// the count and the totals, unless `state` is `cancelled` (plan 38 R5).
+    #[serde(default)]
+    pub show_finished: bool,
+    /// Only arrivals whose number, note, other shop, item (code or name) or garden name holds this
+    /// text.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole filter by: `number`, `entry_date`, `sell_date`, `status`,
+    /// `garden`, `item`, `qty`, `qty_sold`, `qty_written_off`, `qty_left` or `shop_name`. Null is
+    /// oldest day first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// The totals of `gardens_arrivals_list` over the whole filter (PRD FR-19.11).
@@ -415,6 +432,10 @@ pub struct ArrivalsList {
     pub total_count: i64,
     /// Totals over the whole filter.
     pub totals: ArrivalsTotals,
+    /// The count and subtotals of each month of the whole filter (the arrival day), in the order
+    /// of the list, when asked with `group_by_month` and the list is in date order. Figures: `qty`,
+    /// `qty_sold`, `qty_written_off` and `qty_left` of the saved arrivals.
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// Input of `gardens_arrival_write_off`: spoiled goods leave the arrival (nothing is posted).

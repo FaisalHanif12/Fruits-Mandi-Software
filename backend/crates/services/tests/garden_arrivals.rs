@@ -1190,6 +1190,451 @@ fn the_commission_on_the_goods_of_an_arrival_and_its_garden_takes_a_cancelled_sa
     assert_eq!(garden_commission(&w).commission_paisa.rupees(), 800);
 }
 
+// ---- Plan 37: a per-lot rule charge once per goods-arrived entry ----
+
+use mandi_services::core::rules::{ChargeMethod, ChargeSide, ChargeType, RuleInput};
+
+/// A seller-side rule for the item of the test goods (a rule cannot name a garden's account),
+/// from the start of the worked month.
+fn add_rule(w: &World, _garden: &GardenRow, charge: ChargeType, method: ChargeMethod, value: &str) {
+    mandi_services::rules::save(
+        &w.env.ctx,
+        &w.owner,
+        &RuleInput {
+            id: None,
+            version: None,
+            side: ChargeSide::Seller,
+            charge_type: charge,
+            account_id: None,
+            item_id: Some(w.banana),
+            item_group: None,
+            method,
+            value: value.into(),
+            from_date: "01-10-2026".into(),
+            to_date: String::new(),
+            is_active: true,
+            note: String::new(),
+        },
+    )
+    .unwrap();
+}
+
+/// The per-lot rules of the plan: munshiana 50, labour 30, phone 20 and a seller commission of
+/// 100 for a lot.
+fn per_lot_rules(w: &World, garden: &GardenRow) {
+    add_rule(w, garden, ChargeType::Munshiana, ChargeMethod::PerLot, "50");
+    add_rule(w, garden, ChargeType::Labour, ChargeMethod::PerLot, "30");
+    add_rule(w, garden, ChargeType::Phone, ChargeMethod::PerLot, "20");
+    add_rule(
+        w,
+        garden,
+        ChargeType::Commission,
+        ChargeMethod::PerLot,
+        "100",
+    );
+}
+
+/// What lot `i` of a saved بکری was charged: munshiana, labour, phone and the seller commission of
+/// all its lines.
+fn charges(saved: &BikriSaved, i: usize) -> (i64, i64, i64, i64) {
+    let lot = &saved.preview.lots[i];
+    let of = |c: &Option<mandi_services::core::bikri::LotCharge>| {
+        c.as_ref().map_or(0, |c| c.amount.rupees())
+    };
+    let comm: i64 = lot
+        .lines
+        .iter()
+        .filter_map(|l| l.calc.as_ref())
+        .map(|c| c.seller_comm.amount.rupees())
+        .sum();
+    (of(&lot.munshiana), of(&lot.labour), of(&lot.phone), comm)
+}
+
+fn cancel_bikri(w: &World, bikri_id: i64) {
+    let detail = bikri::get(&w.env.ctx, bikri_id).unwrap();
+    bikri::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &CancelInput {
+            id: bikri_id,
+            version: detail.version,
+            reason: "غلط اندراج".into(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+}
+
+#[test]
+fn a_per_lot_rule_charge_is_taken_on_the_first_lot_of_an_entry_and_the_next_new_lot_after_a_cancel()
+{
+    let w = world();
+    day(&w, 11);
+    let g = shahpur(&w);
+    per_lot_rules(&w, &g);
+    let a = arrive(&w, g.id, "11-10-2026", None, "100");
+
+    // 100 sold as 60 and then 40: the first lot carries every per-lot charge once, the second 0.
+    let first = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-1", &g, Some(a.id), "60")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&first, 0), (50, 30, 20, 100));
+    let second = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-2", &g, Some(a.id), "40")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&second, 0), (0, 0, 0, 0));
+    // Its working says why, with the number of the entry.
+    let working = &second.preview.lots[0].munshiana.as_ref().unwrap().working;
+    assert_eq!(working.message_id, "working-per-lot-charged-on-entry");
+    assert!(working.args.iter().any(|arg| arg.name == "entry"
+        && matches!(&arg.value,
+                mandi_services::core::rules::WorkingValue::Count { value } if *value == a.number)));
+    let line = second.preview.lots[0].lines[0].calc.as_ref().unwrap();
+    assert_eq!(
+        line.seller_comm.working.message_id,
+        "working-per-lot-charged-on-entry"
+    );
+    // The seller of the garden is credited the same total either way: the charges are on the lots.
+    assert_eq!(arrival(&w, a.id).qty_left, 0);
+
+    // The first lot is cancelled: 60 are back in the arrival, and the next NEW lot carries the
+    // charges. The second lot keeps what it was saved with (0).
+    cancel_bikri(&w, first.bikri_id);
+    assert_eq!(arrival(&w, a.id).qty_left, 60);
+    let third = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-3", &g, Some(a.id), "60")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&third, 0), (50, 30, 20, 100));
+    // A fourth lot has nothing left to sell, but a fifth entry's lot of another arrival is a new
+    // entry: it carries its own once.
+    let b = arrive(&w, g.id, "11-10-2026", None, "10");
+    let other = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-4", &g, Some(b.id), "10")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&other, 0), (50, 30, 20, 100));
+}
+
+#[test]
+fn two_lots_of_one_entry_in_one_draft_charge_once_and_a_hand_typed_amount_is_kept() {
+    let w = world();
+    day(&w, 11);
+    let g = shahpur(&w);
+    per_lot_rules(&w, &g);
+    let a = arrive(&w, g.id, "11-10-2026", None, "100");
+    let mut second = garden_lot(&w, "lot-2", &g, Some(a.id), "30");
+    // The second lot has its munshiana typed by hand: 70, kept as typed.
+    second.munshiana = support::manual("70");
+    let saved = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![
+                garden_lot(&w, "lot-1", &g, Some(a.id), "60"),
+                second,
+                garden_lot(&w, "lot-3", &g, Some(a.id), "10"),
+            ],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&saved, 0), (50, 30, 20, 100));
+    // Munshiana as typed; the other charges are the rule's, so 0 on this lot.
+    assert_eq!(charges(&saved, 1), (70, 0, 0, 0));
+    assert_eq!(charges(&saved, 2), (0, 0, 0, 0));
+    // The typed 70 on lot 2 is kept, and the screen is warned that lot 1 of this بکری already
+    // took the munshiana of the entry (plan 37).
+    let warning = saved
+        .preview
+        .warnings
+        .iter()
+        .find(|w| w.code == ErrorCode::ErrEntryChargeAlreadyTaken)
+        .expect("a warning");
+    assert_eq!(warning.field, "lots[1].munshiana");
+    let number = |name: &str| match warning.values.get(name) {
+        Some(mandi_services::core::error::ErrorValue::Number(n)) => *n,
+        other => panic!("{name}: {other:?}"),
+    };
+    assert_eq!(
+        (number("lot_no"), number("bikri_number"), number("entry")),
+        (1, 0, a.number)
+    );
+}
+
+#[test]
+fn a_hand_typed_amount_on_a_lot_counts_as_the_entry_taking_that_charge() {
+    // Lead decision D1: "once per entry" means once, so a munshiana typed by hand on the first lot
+    // is the entry's munshiana; the rule's 50 is not taken on a later lot. The typed 70 is kept.
+    let w = world();
+    day(&w, 11);
+    let g = shahpur(&w);
+    per_lot_rules(&w, &g);
+    let a = arrive(&w, g.id, "11-10-2026", None, "100");
+    let mut first = garden_lot(&w, "lot-1", &g, Some(a.id), "60");
+    first.munshiana = support::manual("70");
+    let first = try_save(&w, &draft_on("11-10-2026", vec![first])).unwrap();
+    // Munshiana as typed; labour, phone and the commission are the rule's, taken by this first lot.
+    assert_eq!(charges(&first, 0), (70, 30, 20, 100));
+    // The warning for a typed amount on a later lot names the saved بکری and its lot.
+    let mut later_typed = garden_lot(&w, "lot-x", &g, Some(a.id), "10");
+    later_typed.munshiana = support::manual("40");
+    let preview = support::preview(&w, &draft_on("11-10-2026", vec![later_typed]));
+    let warning = preview
+        .warnings
+        .iter()
+        .find(|x| x.code == ErrorCode::ErrEntryChargeAlreadyTaken)
+        .expect("a warning");
+    assert_eq!(warning.field, "lots[0].munshiana");
+    assert_eq!(
+        warning.values.get("bikri_number"),
+        Some(&mandi_services::core::error::ErrorValue::Number(
+            first.number
+        ))
+    );
+    assert_eq!(
+        warning.values.get("lot_no"),
+        Some(&mandi_services::core::error::ErrorValue::Number(1))
+    );
+    // A later lot saved on its own: nothing again, with the working that says why.
+    let second = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-2", &g, Some(a.id), "30")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&second, 0), (0, 0, 0, 0));
+    assert_eq!(
+        second.preview.lots[0]
+            .munshiana
+            .as_ref()
+            .unwrap()
+            .working
+            .message_id,
+        "working-per-lot-charged-on-entry"
+    );
+    // The same inside one draft: the first lot's typed amount, the second lot's rule gives 0.
+    let b = arrive(&w, g.id, "11-10-2026", None, "20");
+    let mut typed = garden_lot(&w, "lot-3", &g, Some(b.id), "10");
+    typed.munshiana = support::manual("70");
+    let saved = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![typed, garden_lot(&w, "lot-4", &g, Some(b.id), "10")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&saved, 0).0, 70);
+    assert_eq!(charges(&saved, 1), (0, 0, 0, 0));
+    // A per-نگ munshiana typed on a lot is not a per-lot amount: it does not stop the rule.
+    let c = arrive(&w, g.id, "11-10-2026", None, "20");
+    let mut per_unit = garden_lot(&w, "lot-5", &g, Some(c.id), "10");
+    per_unit.munshiana = Some(mandi_services::core::bikri::ChargeInput {
+        method: mandi_services::core::bikri::LotChargeMethod::PerUnit,
+        value: "2".into(),
+    });
+    let saved = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![per_unit, garden_lot(&w, "lot-6", &g, Some(c.id), "10")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&saved, 0).0, 20, "2 for each نگ received");
+    assert_eq!(
+        charges(&saved, 1).0,
+        50,
+        "the rule's per-lot amount, not taken yet"
+    );
+}
+
+#[test]
+fn a_per_unit_rule_is_charged_on_every_lot_of_the_entry_as_before() {
+    let w = world();
+    day(&w, 11);
+    let g = shahpur(&w);
+    // 2 for each نگ received: 60 → 120, 40 → 80. Per-lot labour 30 is taken once.
+    add_rule(&w, &g, ChargeType::Munshiana, ChargeMethod::PerUnit, "2");
+    add_rule(&w, &g, ChargeType::Labour, ChargeMethod::PerLot, "30");
+    let a = arrive(&w, g.id, "11-10-2026", None, "100");
+    let first = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-1", &g, Some(a.id), "60")],
+        ),
+    )
+    .unwrap();
+    let second = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-2", &g, Some(a.id), "40")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&first, 0).0, 120);
+    assert_eq!(charges(&second, 0).0, 80);
+    assert_eq!((charges(&first, 0).1, charges(&second, 0).1), (30, 0));
+}
+
+#[test]
+fn an_edit_keeps_the_stored_charges_of_every_lot_and_a_lot_without_an_entry_is_charged_per_lot() {
+    let w = world();
+    day(&w, 11);
+    let g = shahpur(&w);
+    per_lot_rules(&w, &g);
+    let a = arrive(&w, g.id, "11-10-2026", None, "100");
+    let first = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-1", &g, Some(a.id), "60")],
+        ),
+    )
+    .unwrap();
+    let second = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-2", &g, Some(a.id), "40")],
+        ),
+    )
+    .unwrap();
+    // Edit the first lot's rate: it stays the carrier of everything (FR-12.20).
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: first.bikri_id,
+            entry_id: first.entry_id,
+        },
+    )
+    .unwrap();
+    let mut edited = opened.draft.clone();
+    edited.lots[0].sales[0].seller_rate = "610".into();
+    let done = bikri::edit_save(
+        &w.env.ctx,
+        &w.owner,
+        &EditSaveInput {
+            entry_id: opened.entry_id,
+            version: opened.version,
+            draft: edited,
+            reason: Some("ریٹ کی درستی".into()),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let carried = &done.preview.lots[0];
+    assert_eq!(carried.munshiana.as_ref().unwrap().amount.rupees(), 50);
+    assert_eq!(carried.labour.as_ref().unwrap().amount.rupees(), 30);
+    assert_eq!(carried.phone.as_ref().unwrap().amount.rupees(), 20);
+    let comm: i64 = carried
+        .lines
+        .iter()
+        .filter_map(|l| l.calc.as_ref())
+        .map(|c| c.seller_comm.amount.rupees())
+        .sum();
+    assert_eq!(comm, 100);
+    // Edit the second lot's rate: it stays at 0 for everything, the per-lot seller commission
+    // included, even though its line was changed and looked its rule up again.
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: second.bikri_id,
+            entry_id: second.entry_id,
+        },
+    )
+    .unwrap();
+    let mut edited = opened.draft.clone();
+    edited.lots[0].sales[0].seller_rate = "620".into();
+    let done = bikri::edit_save(
+        &w.env.ctx,
+        &w.owner,
+        &EditSaveInput {
+            entry_id: opened.entry_id,
+            version: opened.version,
+            draft: edited,
+            reason: Some("ریٹ کی درستی".into()),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let spared = &done.preview.lots[0];
+    assert_eq!(spared.munshiana.as_ref().unwrap().amount.rupees(), 0);
+    let line = spared.lines[0].calc.as_ref().unwrap();
+    assert_eq!(line.seller_comm.amount.rupees(), 0);
+    assert_eq!(
+        line.seller_comm.working.message_id,
+        "working-per-lot-charged-on-entry"
+    );
+
+    // The carrier lot's bikri is cancelled; the spared lot is edited again and STAYS spared (the
+    // next NEW lot carries the charges, not an edit of an old one).
+    cancel_bikri(&w, first.bikri_id);
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: second.bikri_id,
+            entry_id: done.entry_id,
+        },
+    )
+    .unwrap();
+    let mut edited = opened.draft.clone();
+    edited.lots[0].sales[0].seller_rate = "630".into();
+    let again = bikri::edit_save(
+        &w.env.ctx,
+        &w.owner,
+        &EditSaveInput {
+            entry_id: opened.entry_id,
+            version: opened.version,
+            draft: edited,
+            reason: Some("ریٹ کی درستی".into()),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let still = again.preview.lots[0].lines[0].calc.as_ref().unwrap();
+    assert_eq!(still.seller_comm.amount.rupees(), 0);
+    let fresh = try_save(
+        &w,
+        &draft_on(
+            "11-10-2026",
+            vec![garden_lot(&w, "lot-3", &g, Some(a.id), "60")],
+        ),
+    )
+    .unwrap();
+    assert_eq!(charges(&fresh, 0), (50, 30, 20, 100));
+
+    // A garden lot typed by hand with no entry is charged per lot, as before.
+    let by_hand = try_save(
+        &w,
+        &draft_on("11-10-2026", vec![garden_lot(&w, "lot-4", &g, None, "5")]),
+    )
+    .unwrap();
+    assert_eq!(charges(&by_hand, 0), (50, 30, 20, 100));
+}
+
 // ---- باقی مال and the filters ----
 
 #[test]

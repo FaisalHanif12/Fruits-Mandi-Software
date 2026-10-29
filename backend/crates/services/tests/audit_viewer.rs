@@ -26,6 +26,8 @@ fn page(w: &support::World, filters: AuditFilters, offset: i64, limit: i64) -> A
     list(
         w.env.ctx.db(),
         &AuditListInput {
+            group_by_month: false,
+            sort: None,
             filters,
             offset,
             limit,
@@ -38,6 +40,8 @@ fn refused(w: &support::World, filters: AuditFilters) -> Vec<(ErrorCode, String)
     match list(
         w.env.ctx.db(),
         &AuditListInput {
+            group_by_month: false,
+            sort: None,
             filters,
             offset: 0,
             limit: 0,
@@ -431,6 +435,8 @@ fn bad_filters_are_refused_together_with_their_fields() {
     let bad_page = list(
         w.env.ctx.db(),
         &AuditListInput {
+            group_by_month: false,
+            sort: None,
             filters: AuditFilters::default(),
             offset: -1,
             limit: 5_000,

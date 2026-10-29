@@ -401,6 +401,8 @@ fn statement_of(w: &support::World, partner: i64) -> PartnerStatement {
     partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: partner,
             from: None,
             to: None,

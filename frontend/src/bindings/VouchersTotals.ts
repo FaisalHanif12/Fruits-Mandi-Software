@@ -6,7 +6,8 @@ import type { Paisa } from '../shared/format/money';
  */
 export type VouchersTotals = {
   /**
-   * How many of the matching vouchers are cancelled.
+   * How many of the vouchers that match the other filters are cancelled, shown or hidden, so
+   * the screen can say "3 cancelled hidden".
    */
   cancelled_count: number;
   /**

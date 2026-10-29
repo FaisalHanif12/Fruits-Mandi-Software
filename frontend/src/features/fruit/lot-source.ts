@@ -36,9 +36,9 @@ function hitOf(row: FruitLotRow): LotHit {
 export const LOT_SOURCE: PickerSource<LotHit> = {
   key: ['fruit', 'lots'],
   search: (text, limit) =>
-    fruitLots({ search: text, limit }).then((answer) => answer.rows.map(hitOf)),
+    fruitLots({ search: text, offset: 0, limit }).then((answer) => answer.rows.map(hitOf)),
   recent: () =>
-    fruitLots({ search: null, limit: PICKER_RESULT_LIMIT }).then((answer) =>
+    fruitLots({ search: null, offset: 0, limit: PICKER_RESULT_LIMIT }).then((answer) =>
       answer.rows.map(hitOf),
     ),
   touch: () => Promise.resolve(null),

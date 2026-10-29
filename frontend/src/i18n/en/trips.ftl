@@ -58,13 +58,6 @@ trips-list-no-match-help = Try other days, open or closed trips, or other words.
 # review: pending
 trips-list-clear = Show all trips
 
-# $shown: how many are on screen; $total: how many match.
-# review: pending
-trips-list-count = Showing { $shown } of { $total }
-
-# review: pending
-trips-list-more = Show more
-
 ## Numbers: a trip has a code of type 007 (plan 34); its entries have series with their own letters.
 
 # A trip cost.
@@ -393,9 +386,6 @@ trips-entries-empty-help = The purchases, costs and sales of this trip are liste
 # $shown: how many are on screen; $total: how many the trip has.
 # review: pending
 trips-entries-count = Showing { $shown } of { $total }
-
-# review: pending
-trips-entries-more = Show more
 
 # review: pending
 trips-entries-cancel = Cancel entry

@@ -9,7 +9,7 @@
 //   screen puts each part in the freight cell of its lot.
 // - A زمیندار becomes the seller of the first lot (FR-12.2); the lots grid does that.
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
@@ -27,8 +27,11 @@ import {
   DateInput,
   ErrorNotice,
   Field,
+  FormGrid,
+  FormSpan,
   FreeTextInput,
   MoneyInput,
+  Num,
   Picker,
   SuggestInput,
   TextInput,
@@ -53,11 +56,15 @@ interface HeaderCardProps {
   editing?: boolean;
 }
 
+/** The fields behind "More" that the backend can point at, so a problem on one opens the part. */
+const MORE_FIELDS = ['header.bill_date', 'header.total_freight', 'header.driver_phone'] as const;
+
 function pickedOrNull(hit: SearchHit | null): PickedRecord | null {
   return hit === null ? null : pickedOf(hit);
 }
 
 export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: HeaderCardProps) {
+  const { l10n } = useLocalization();
   const stores = useBikriDraft();
   const queryClient = useQueryClient();
   const header = stores.header();
@@ -116,6 +123,20 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
     split.mutate({ stores, totalFreight: header.totalFreight });
   };
 
+  // The fields behind "More" that hold something, so a value is never hidden without a sign
+  // (plan 38, sale book): the button shows how many. A problem on one of them opens the part.
+  const moreValues =
+    [
+      header.billDate,
+      header.totalFreight,
+      header.book,
+      header.driverName,
+      header.driverPhone,
+      header.note,
+    ].filter((value) => value.trim() !== '').length + (header.store === null ? 0 : 1);
+  const moreProblem = MORE_FIELDS.some((field) => fieldError(error, field) !== undefined);
+  const open = more || moreProblem;
+
   return (
     <Card compact>
       <form
@@ -123,62 +144,53 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
         onSubmit={(event) => {
           event.preventDefault();
         }}
-        className="flex flex-col gap-3"
+        className="@container flex flex-col gap-2"
       >
-        <div className="grid grid-cols-4 gap-x-3 gap-y-2">
-          <Field
-            label={<Localized id="bikri-header-date" />}
-            error={fieldError(error, 'header.entry_date')}
-            readOnly={editing}
-          >
-            {(control) => (
-              <DateInput
-                {...control}
-                value={header.entryDate}
-                onChange={(entryDate) => {
-                  patch({ entryDate });
-                }}
-              />
-            )}
-          </Field>
-          <Field
-            label={<Localized id="bikri-header-bill-date" />}
-            error={fieldError(error, 'header.bill_date')}
-          >
-            {(control) => (
-              <DateInput
-                {...control}
-                value={header.billDate}
-                placeholder={header.entryDate}
-                onChange={(billDate) => {
-                  patch({ billDate });
-                }}
-              />
-            )}
-          </Field>
-          <Field
-            label={<Localized id="bikri-header-truck" />}
-            error={fieldError(error, 'header.truck_no')}
-          >
-            {(control) => (
-              <SuggestInput
-                {...control}
-                value={header.truckNo}
-                onChange={(truckNo) => {
-                  patch({ truckNo });
-                }}
-                suggestions={(memory.data?.suggestions ?? []).map((suggestion) => ({
-                  value: suggestion.truck_no,
-                  note: isoToDisplayDate(suggestion.date),
-                }))}
-                onCommit={(text) => {
-                  // An entry open for edit is never filled from the truck's last sale.
-                  if (!editing) void fillFromTruck(text);
-                }}
-              />
-            )}
-          </Field>
-          <div>
+        {/* The fields typed on every بکری are one row: date, truck, زمیندار, اڈا. The rest of the
+            header is behind the button at its end (plan 38, sale book). */}
+        <div className="flex items-end gap-x-3">
+          <div className="w-date shrink-0">
+            <Field
+              label={<Localized id="bikri-header-date" />}
+              error={fieldError(error, 'header.entry_date')}
+              readOnly={editing}
+            >
+              {(control) => (
+                <DateInput
+                  {...control}
+                  value={header.entryDate}
+                  onChange={(entryDate) => {
+                    patch({ entryDate });
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+          <div className="w-date shrink-0">
+            <Field
+              label={<Localized id="bikri-header-truck" />}
+              error={fieldError(error, 'header.truck_no')}
+            >
+              {(control) => (
+                <SuggestInput
+                  {...control}
+                  value={header.truckNo}
+                  onChange={(truckNo) => {
+                    patch({ truckNo });
+                  }}
+                  suggestions={(memory.data?.suggestions ?? []).map((suggestion) => ({
+                    value: suggestion.truck_no,
+                    note: isoToDisplayDate(suggestion.date),
+                  }))}
+                  onCommit={(text) => {
+                    // An entry open for edit is never filled from the truck's last sale.
+                    if (!editing) void fillFromTruck(text);
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+          <div className="min-w-0 flex-1 basis-mid">
             <Field label={<Localized id="glossary-zamindar" />}>
               {(control) => (
                 <AccountPicker
@@ -195,123 +207,146 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
               )}
             </Field>
           </div>
-          <Field label={<Localized id="glossary-adda" />}>
-            {(control) => (
-              <Picker
-                {...control}
-                scope="adda"
-                value={header.adda}
-                onChange={(hit) => {
-                  patch({ adda: pickedOrNull(hit) });
-                }}
-              />
-            )}
-          </Field>
-          <div className="col-span-2">
-            <Field
-              label={<Localized id="bikri-header-total-freight" />}
-              error={fieldError(error, 'header.total_freight')}
-            >
+          <div className="min-w-0 flex-1 basis-mid">
+            <Field label={<Localized id="glossary-adda" />}>
               {(control) => (
-                <div className="flex items-start gap-2">
-                  <MoneyInput
-                    {...control}
-                    value={header.totalFreight}
-                    onChange={(totalFreight) => {
-                      patch({ totalFreight });
-                    }}
-                  />
-                  <Button
-                    disabled={header.totalFreight.trim() === ''}
-                    busy={split.isPending}
-                    onClick={splitFreight}
-                  >
-                    <Localized id="bikri-header-split-freight" />
-                  </Button>
-                </div>
+                <Picker
+                  {...control}
+                  scope="adda"
+                  value={header.adda}
+                  onChange={(hit) => {
+                    patch({ adda: pickedOrNull(hit) });
+                  }}
+                />
               )}
             </Field>
           </div>
-          <div className="flex items-end">
-            <Button
-              onClick={() => {
-                setMore((open) => !open);
-              }}
+          <Button
+            accessibleName={l10n.getString(open ? 'bikri-header-less' : 'bikri-header-more')}
+            onClick={() => {
+              setMore(!open);
+            }}
+          >
+            {open ? (
+              <ChevronUp aria-hidden="true" className="size-icon-md" />
+            ) : (
+              <ChevronDown aria-hidden="true" className="size-icon-md" />
+            )}
+            <span className="sr-only @row-roomy:not-sr-only">
+              <Localized id={open ? 'bikri-header-less' : 'bikri-header-more'} />
+            </span>
+            {moreValues > 0 && !open ? (
+              <span className="rounded-2 bg-primary-soft px-2 type-label text-primary">
+                <Num>{String(moreValues)}</Num>
+              </span>
+            ) : null}
+          </Button>
+        </div>
+        {open ? (
+          <FormGrid columns={4} alignEnd>
+            <Field
+              label={<Localized id="bikri-header-bill-date" />}
+              error={fieldError(error, 'header.bill_date')}
             >
-              {more ? (
-                <ChevronUp aria-hidden="true" className="size-icon-md" />
-              ) : (
-                <ChevronDown aria-hidden="true" className="size-icon-md" />
+              {(control) => (
+                <DateInput
+                  {...control}
+                  value={header.billDate}
+                  placeholder={header.entryDate}
+                  onChange={(billDate) => {
+                    patch({ billDate });
+                  }}
+                />
               )}
-              <Localized id={more ? 'bikri-header-less' : 'bikri-header-more'} />
-            </Button>
-          </div>
-          {more ? (
-            <>
-              <Field label={<Localized id="bikri-header-book" />}>
+            </Field>
+            <FormSpan span="two">
+              <Field
+                label={<Localized id="bikri-header-total-freight" />}
+                error={fieldError(error, 'header.total_freight')}
+              >
                 {(control) => (
-                  <TextInput
-                    {...control}
-                    value={header.book}
-                    onChange={(book) => {
-                      patch({ book });
-                    }}
-                  />
+                  <div className="flex items-start gap-2">
+                    <MoneyInput
+                      {...control}
+                      value={header.totalFreight}
+                      onChange={(totalFreight) => {
+                        patch({ totalFreight });
+                      }}
+                    />
+                    <Button
+                      disabled={header.totalFreight.trim() === ''}
+                      busy={split.isPending}
+                      onClick={splitFreight}
+                    >
+                      <Localized id="bikri-header-split-freight" />
+                    </Button>
+                  </div>
                 )}
               </Field>
-              <Field label={<Localized id="bikri-header-store" />}>
-                {(control) => (
-                  <Picker
-                    {...control}
-                    scope="store"
-                    value={header.store}
-                    onChange={(hit) => {
-                      patch({ store: pickedOrNull(hit) });
-                    }}
-                  />
-                )}
-              </Field>
-              <Field label={<Localized id="bikri-header-driver" />}>
+            </FormSpan>
+            <Field label={<Localized id="bikri-header-store" />}>
+              {(control) => (
+                <Picker
+                  {...control}
+                  scope="store"
+                  value={header.store}
+                  onChange={(hit) => {
+                    patch({ store: pickedOrNull(hit) });
+                  }}
+                />
+              )}
+            </Field>
+            <Field label={<Localized id="bikri-header-book" />}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={header.book}
+                  onChange={(book) => {
+                    patch({ book });
+                  }}
+                />
+              )}
+            </Field>
+            <Field label={<Localized id="bikri-header-driver" />}>
+              {(control) => (
+                <FreeTextInput
+                  {...control}
+                  value={header.driverName}
+                  onChange={(driverName) => {
+                    patch({ driverName });
+                  }}
+                />
+              )}
+            </Field>
+            <Field
+              label={<Localized id="bikri-header-driver-phone" />}
+              error={fieldError(error, 'header.driver_phone')}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={header.driverPhone}
+                  onChange={(driverPhone) => {
+                    patch({ driverPhone });
+                  }}
+                />
+              )}
+            </Field>
+            <FormSpan span="two">
+              <Field label={<Localized id="bikri-header-note" />}>
                 {(control) => (
                   <FreeTextInput
                     {...control}
-                    value={header.driverName}
-                    onChange={(driverName) => {
-                      patch({ driverName });
+                    value={header.note}
+                    onChange={(note) => {
+                      patch({ note });
                     }}
                   />
                 )}
               </Field>
-              <Field
-                label={<Localized id="bikri-header-driver-phone" />}
-                error={fieldError(error, 'header.driver_phone')}
-              >
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    value={header.driverPhone}
-                    onChange={(driverPhone) => {
-                      patch({ driverPhone });
-                    }}
-                  />
-                )}
-              </Field>
-              <div className="col-span-2">
-                <Field label={<Localized id="bikri-header-note" />}>
-                  {(control) => (
-                    <FreeTextInput
-                      {...control}
-                      value={header.note}
-                      onChange={(note) => {
-                        patch({ note });
-                      }}
-                    />
-                  )}
-                </Field>
-              </div>
-            </>
-          ) : null}
-        </div>
+            </FormSpan>
+          </FormGrid>
+        ) : null}
         {filledFrom !== null ? (
           <Localized
             id="bikri-header-filled-from"
@@ -332,16 +367,16 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
       {notice === null ? null : (
         <div
           role="status"
-          className="flex flex-wrap items-center gap-3 rounded-2 border border-warn-border bg-warn-soft p-3 text-warn"
+          className="flex items-center gap-3 rounded-2 border border-warn-border bg-warn-soft px-3 py-2 text-warn"
         >
           <TriangleAlert aria-hidden="true" className="size-icon-md shrink-0" />
           <Localized
             id="bikri-truck-same-day"
             vars={{ number: String(notice.bikri_number), date: header.entryDate }}
           >
-            <p className="type-body" />
+            <p className="min-w-0 flex-1 type-body" />
           </Localized>
-          <div className="ms-auto flex flex-wrap gap-2">
+          <div className="flex shrink-0 gap-2">
             <Button
               disabled={onOpenBikri === undefined}
               onClick={() => {

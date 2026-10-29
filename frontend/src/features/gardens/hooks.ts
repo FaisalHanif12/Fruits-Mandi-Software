@@ -3,14 +3,14 @@
 // is offered as a lot seller), the party cards, the cash, the day status and the partners' totals,
 // so every screen shows the new numbers.
 
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import type { SortInput } from '../../bindings/SortInput';
 import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type QueryClient,
-} from '@tanstack/react-query';
-import { PAGE_SIZE, useDebouncedValue, usePagedQuery, usePreviewQuery } from '../../shared/hooks';
+  useAllPagesQuery,
+  useDebouncedValue,
+  usePagedQuery,
+  usePreviewQuery,
+} from '../../shared/hooks';
 import {
   gardensArrivalCancel,
   gardensArrivalChangeSplit,
@@ -98,54 +98,59 @@ export function useCreateGarden() {
   });
 }
 
-/**
- * The gardens for the filters, page by page, with the totals over the whole filter (PRD FR-19.11).
- * `fetchNextPage` loads the next 100 rows; the first page carries the count and the totals.
- */
-export function useGardensList(filter: Omit<GardensListInput, 'offset' | 'limit'>) {
-  const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return usePagedQuery({
+/** What the list of gardens asks the backend, for the page buttons and for a choice list alike. */
+function gardensListQuery(settled: Omit<GardensListInput, 'offset' | 'limit' | 'sort'>) {
+  return {
     queryKey: [...GARDENS_KEY, 'list', settled],
-    fetchPage: (offset, limit) => gardensList({ ...settled, offset, limit }),
-    rowsIn: (page) => page.rows.length,
-    totalOf: (page) => page.total_count,
+    fetchPage: (offset: number, limit: number, sort: SortInput | null = null) =>
+      gardensList({ ...settled, offset, limit, sort }),
+    rowsIn: (page: { rows: readonly unknown[] }) => page.rows.length,
+    totalOf: (page: { total_count: number }) => page.total_count,
     keepPrevious: true,
-  });
+  };
 }
 
-/** What a garden screen shows: the garden, its partners' money, and all loaded history rows. */
+/**
+ * The gardens for the filters, one page at a time, with the totals over the whole filter (PRD
+ * FR-19.11). The first page carries the count and the totals.
+ */
+export function useGardensList(filter: Omit<GardensListInput, 'offset' | 'limit' | 'sort'>) {
+  const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
+  return usePagedQuery({ screen: 'gardens.list', ...gardensListQuery(settled) });
+}
+
+/** Every garden of the filter, page after page, for a choice list (`useLoadRest`). */
+export function useAllGardens(filter: Omit<GardensListInput, 'offset' | 'limit' | 'sort'>) {
+  return useAllPagesQuery(gardensListQuery(filter));
+}
+
+/** What a garden screen shows: the garden, its partners' money, and the history page on screen. */
 export interface GardenView {
-  /** The first page: the garden and each partner's money (always the latest). */
+  /** The page on screen: the garden and each partner's money (always the latest). */
   detail: GardenDetail;
-  /** Every history row loaded so far, in the order the backend sends (oldest day first). */
+  /** The history rows of this page, in the order the backend sends (oldest day first). */
   history: GardenDetail['history'];
   /** How many history rows the garden has in all. */
   historyCount: number;
 }
 
-/** One garden, with its history loaded page by page (PRD FR-19.11). Never kept: an entry changes it. */
+/** One garden, with its history one page at a time (PRD FR-19.11). Never kept: an entry changes it. */
 export function useGarden(id: number | null) {
-  return useInfiniteQuery({
+  const query = usePagedQuery({
+    screen: 'gardens.history',
     queryKey: [...GARDENS_KEY, 'one', id],
-    initialPageParam: 0,
     enabled: id !== null,
-    queryFn: ({ pageParam }) =>
-      gardensGet({ id: id ?? 0, history_offset: pageParam, history_limit: PAGE_SIZE }),
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((sum, page) => sum + page.history.length, 0);
-      return loaded < last.history_count && last.history.length > 0 ? loaded : undefined;
-    },
-    select: (data): GardenView | undefined => {
-      const first = data.pages[0];
-      if (first === undefined) return undefined;
-      return {
-        detail: first,
-        history: data.pages.flatMap((page) => page.history),
-        historyCount: first.history_count,
-      };
-    },
-    staleTime: 0,
+    fetchPage: (offset, limit) =>
+      gardensGet({ id: id ?? 0, history_offset: offset, history_limit: limit }),
+    rowsIn: (page) => page.history.length,
+    totalOf: (page) => page.history_count,
   });
+  const first = query.data?.pages[0];
+  const view: GardenView | undefined =
+    first === undefined
+      ? undefined
+      : { detail: first, history: first.history, historyCount: first.history_count };
+  return { ...query, data: view };
 }
 
 /** The data of the dashboard tile باغات (PRD 9.1). */
@@ -202,8 +207,9 @@ export function useReopenGarden() {
 /** The goods arrived entries of one garden, page by page, for the filter (PRD FR-19.11). */
 export function useArrivalsList(gardenId: number, state: ArrivalsListInput['state'] = null) {
   return usePagedQuery({
+    screen: 'gardens.arrivals',
     queryKey: [...GARDENS_KEY, 'arrivals', gardenId, state],
-    fetchPage: (offset, limit) =>
+    fetchPage: (offset, limit, sort) =>
       gardensArrivalsList({
         garden_id: gardenId,
         from: null,
@@ -212,6 +218,10 @@ export function useArrivalsList(gardenId: number, state: ArrivalsListInput['stat
         state,
         offset,
         limit,
+        show_finished: false,
+        search: null,
+        sort,
+        group_by_month: false,
       }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,

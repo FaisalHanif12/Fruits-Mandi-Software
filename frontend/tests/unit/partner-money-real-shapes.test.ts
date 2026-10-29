@@ -49,7 +49,16 @@ describe('the canned capital data has the real shape', () => {
     );
     expect(same(real.SAVED_CAPITAL_IN, saved)).toBeNull();
     expect(
-      same(real.CAPITAL_HISTORY, money.capitalHistory({ partner_id: 2, offset: 0, limit: 0 })),
+      same(
+        real.CAPITAL_HISTORY,
+        money.capitalHistory({
+          partner_id: 2,
+          offset: 0,
+          limit: 0,
+          sort: null,
+          group_by_month: false,
+        }),
+      ),
     ).toBeNull();
     const preview = money.capitalPreview(
       buildCapital(capitalDraft('capital_out', '60,000'), false),
@@ -97,13 +106,29 @@ describe('the canned partner overview and statement have the real shape', () => 
     expect(
       same(
         real.STATEMENT_B,
-        money.statement({ partner_id: 2, from: null, to: null, offset: 0, limit: 0 }),
+        money.statement({
+          partner_id: 2,
+          from: null,
+          to: null,
+          offset: 0,
+          limit: 0,
+          sort: null,
+          group_by_month: false,
+        }),
       ),
     ).toBeNull();
     expect(
       same(
         real.STATEMENT_A_PAGE,
-        money.statement({ partner_id: 2, from: '10-10-2026', to: null, offset: 0, limit: 2 }),
+        money.statement({
+          partner_id: 2,
+          from: '10-10-2026',
+          to: null,
+          offset: 0,
+          limit: 2,
+          sort: null,
+          group_by_month: false,
+        }),
       ),
     ).toBeNull();
     // The real lines: the keys of every line, the kind of the expense line, and the totals.
@@ -125,6 +150,8 @@ describe('the canned partner overview and statement have the real shape', () => 
       to: null,
       offset: 0,
       limit: 0,
+      sort: null,
+      group_by_month: false,
     }).lines;
     const amounts = lines.map((line) => line.amount_paisa);
     // -4,160, +480 and +3,384 in rupees, then two note lines with no amount.
@@ -184,6 +211,8 @@ describe('the canned الگ کھاتہ data has the real shape', () => {
           to: null,
           offset: 0,
           limit: 0,
+          sort: null,
+          group_by_month: false,
         }),
       ),
     ).toBeNull();

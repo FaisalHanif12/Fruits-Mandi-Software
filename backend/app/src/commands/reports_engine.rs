@@ -60,6 +60,8 @@ fn statement_read(
     partners::statement(
         ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: request.partner_id,
             from: typed_day(request.from.as_deref()),
             to: typed_day(request.to.as_deref()),
@@ -268,6 +270,7 @@ mod tests {
     fn chunk(from: usize, to: usize, closing: i64) -> PartnerStatement {
         let all = [line(100, 110), line(200, 310), line(-50, 260)];
         PartnerStatement {
+            months: Vec::new(),
             partner: RecordRef {
                 id: 1,
                 code: String::new(),

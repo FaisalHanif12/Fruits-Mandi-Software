@@ -85,7 +85,7 @@ describe.each(LANGUAGES)('the backend’s cases (%s)', (language) => {
       await waitFor(() => {
         expect(textOf(lotsGrid(language), 0, 'seller')).not.toBe('');
       });
-      await user.keyboard('{Enter}{Enter}{Enter}');
+      await user.keyboard('{Enter}{Enter}');
       await waitFor(() => {
         expect(focusedIn(lotsGrid(language))).toBe('0:seller');
       });

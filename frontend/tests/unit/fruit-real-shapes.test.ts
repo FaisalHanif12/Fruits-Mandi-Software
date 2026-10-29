@@ -48,8 +48,10 @@ const guests = (qty: string, rate: string, item: number, weight = ''): FruitDraf
 describe('the canned data of the fruit tests has the real shape', () => {
   it('the lots, the list and the row as it is read', () => {
     const fake = books();
-    expect(same(real.FRUIT_LOTS_ALL, fake.lots({ search: null, limit: 0 }))).toBeNull();
-    expect(same(real.FRUIT_LOTS_SEARCH, fake.lots({ search: 'rahim', limit: 0 }))).toBeNull();
+    expect(same(real.FRUIT_LOTS_ALL, fake.lots({ search: null, offset: 0, limit: 0 }))).toBeNull();
+    expect(
+      same(real.FRUIT_LOTS_SEARCH, fake.lots({ search: 'rahim', offset: 0, limit: 0 })),
+    ).toBeNull();
     fake.save(real.FRUIT_SAVE_HOME_REQUEST);
     const request = { ...real.FRUIT_LIST_ALL_REQUEST, offset: 0, limit: 0 };
     expect(same(real.FRUIT_LIST_ALL, fake.list(request))).toBeNull();

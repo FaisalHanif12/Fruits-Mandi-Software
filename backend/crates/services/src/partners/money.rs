@@ -19,6 +19,7 @@ use mandi_domain::core::expenses::{
     PartnerTakes, PartnerTakesInput, TakeRow, TakeSource, TakesTotals,
 };
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::{SortDirection, SortInput};
 use mandi_domain::expenses::{OpenAmount, days_past_return_by, open_amounts};
 
 use crate::context::Context;
@@ -76,6 +77,11 @@ fn is_take(line: &LiveLine) -> bool {
 /// `ERR_NOT_FOUND` on `partner_id`.
 pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, ServiceError> {
     let (_, today) = day::window(ctx)?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&TAKE_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
     ctx.db.read(|conn| {
         let partner = repo::get(conn, input.partner_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
@@ -101,6 +107,7 @@ pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, S
             open_paisa: Paisa::ZERO,
         };
         let mut rows = Vec::with_capacity(open.len());
+        let mut month_acc = page::MonthAcc::new(3);
         for line in lines.iter().filter(|l| is_take(l)) {
             let Some(figures) = open.get(&line.line_id) else {
                 continue;
@@ -118,6 +125,14 @@ pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, S
                 .open_paisa
                 .checked_add(figures.open)
                 .map_err(money_error)?;
+            month_acc.add(
+                &line.entry_date,
+                &[
+                    amount.as_paisa(),
+                    figures.returned.as_paisa(),
+                    figures.open.as_paisa(),
+                ],
+            )?;
             let return_by = line.return_by.as_deref().and_then(BusinessDate::parse_iso);
             rows.push(TakeRow {
                 source: if line.is_opening {
@@ -138,11 +153,28 @@ pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, S
             });
         }
         let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+        if let Some(sort) = &input.sort {
+            sort_takes(&mut rows, &sort.column, sort.direction);
+        }
+        let (in_date_order, newest_first) = date_order(input.sort.as_ref());
+        let months = if input.group_by_month && in_date_order {
+            month_acc.finish(
+                &[
+                    ("taken_paisa", true),
+                    ("returned_paisa", true),
+                    ("open_paisa", true),
+                ],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(PartnerTakes {
             partner: record_of(partner.id, &partner.name_ur, &partner.name_en),
             rows: page::slice(rows, input.offset, input.limit),
             total_count,
             totals,
+            months,
         })
     })
 }
@@ -160,10 +192,16 @@ pub fn capital_history(
     ctx: &Context,
     input: &CapitalHistoryInput,
 ) -> Result<CapitalHistory, ServiceError> {
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&CAPITAL_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
     ctx.db.read(|conn| {
         let partner = repo::get(conn, input.partner_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
         let lines = open_lines::live_lines(conn, &[partner.capital_account_id])?;
+        let mut month_acc = page::MonthAcc::new(2);
         let mut balance = Paisa::ZERO;
         let mut totals = CapitalTotals {
             invested_paisa: Paisa::ZERO,
@@ -189,6 +227,14 @@ pub fn capital_history(
                     .map_err(money_error)?;
             }
             balance = balance.checked_add(amount).map_err(money_error)?;
+            // Month close moves profit between his accounts, so it adds nothing to the month's
+            // money (the same rule as the totals).
+            let (put_in, put_out) = if kind == CapitalRowKind::MonthClose {
+                (0, 0)
+            } else {
+                (cr.as_paisa(), dr.as_paisa())
+            };
+            month_acc.add(&line.entry_date, &[put_in, put_out])?;
             let from_voucher = matches!(kind, CapitalRowKind::Invested | CapitalRowKind::TakenBack);
             rows.push(CapitalRow {
                 kind,
@@ -201,6 +247,18 @@ pub fn capital_history(
             });
         }
         let total_count = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+        if let Some(sort) = &input.sort {
+            sort_capital(&mut rows, &sort.column, sort.direction);
+        }
+        let (in_date_order, newest_first) = date_order(input.sort.as_ref());
+        let months = if input.group_by_month && in_date_order {
+            month_acc.finish(
+                &[("invested_paisa", true), ("taken_back_paisa", true)],
+                newest_first,
+            )
+        } else {
+            Vec::new()
+        };
         Ok(CapitalHistory {
             partner: RecordRef {
                 id: partner.id,
@@ -213,6 +271,75 @@ pub fn capital_history(
             rows: page::slice(rows, input.offset, input.limit),
             total_count,
             totals,
+            months,
         })
     })
+}
+
+/// Whether a sort keeps the list in date order, and whether it is newest first.
+fn date_order(sort: Option<&SortInput>) -> (bool, bool) {
+    (
+        sort.is_none_or(|s| s.column == "entry_date"),
+        sort.is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc),
+    )
+}
+
+/// The columns the list of money taken can be sorted by: the names of the fields of the row.
+const TAKE_COLUMNS: [&str; 10] = [
+    "entry_date",
+    "source",
+    "number",
+    "amount_paisa",
+    "reason",
+    "taken_by",
+    "return_by",
+    "returned_paisa",
+    "open_paisa",
+    "days_past_return_by",
+];
+
+/// Sorts the whole list by a column (checked by [`TAKE_COLUMNS`]). A stable sort, so equal rows keep
+/// the order by day.
+fn sort_takes(rows: &mut [TakeRow], column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    let cmp: fn(&TakeRow, &TakeRow) -> Ordering = match column {
+        "entry_date" => |a, b| a.entry_date.cmp(&b.entry_date),
+        "source" => |a, b| (a.source as u8).cmp(&(b.source as u8)),
+        "number" => |a, b| a.number.cmp(&b.number),
+        "amount_paisa" => |a, b| a.amount_paisa.cmp(&b.amount_paisa),
+        "reason" => |a, b| a.reason.cmp(&b.reason),
+        "taken_by" => |a, b| a.taken_by.cmp(&b.taken_by),
+        "return_by" => |a, b| a.return_by.cmp(&b.return_by),
+        "returned_paisa" => |a, b| a.returned_paisa.cmp(&b.returned_paisa),
+        "open_paisa" => |a, b| a.open_paisa.cmp(&b.open_paisa),
+        "days_past_return_by" => |a, b| a.days_past_return_by.cmp(&b.days_past_return_by),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
+}
+
+/// The columns the capital history can be sorted by: the names of the fields of the row.
+const CAPITAL_COLUMNS: [&str; 6] = [
+    "entry_date",
+    "kind",
+    "number",
+    "amount_paisa",
+    "narration",
+    "running_paisa",
+];
+
+/// Sorts the whole history by a column (checked by [`CAPITAL_COLUMNS`]). A stable sort, so equal
+/// rows keep the order by day.
+fn sort_capital(rows: &mut [CapitalRow], column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    let cmp: fn(&CapitalRow, &CapitalRow) -> Ordering = match column {
+        "entry_date" => |a, b| a.entry_date.cmp(&b.entry_date),
+        "kind" => |a, b| (a.kind as u8).cmp(&(b.kind as u8)),
+        "number" => |a, b| a.number.cmp(&b.number),
+        "amount_paisa" => |a, b| a.amount_paisa.cmp(&b.amount_paisa),
+        "narration" => |a, b| a.narration.cmp(&b.narration),
+        "running_paisa" => |a, b| a.running_paisa.cmp(&b.running_paisa),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
 }

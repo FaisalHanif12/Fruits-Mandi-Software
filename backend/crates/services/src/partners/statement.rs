@@ -37,6 +37,7 @@ use mandi_domain::core::accounts::RecordRef;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::statement::{
     PartnerStatement, PartnersStatementInput, StatementDetail, StatementHeading, StatementLine,
     StatementTotals,
@@ -830,10 +831,17 @@ pub fn statement(
     let from = bound("from", input.from.as_ref());
     let to = bound("to", input.to.as_ref());
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4). The lines are drawn
+    // for the page only, so a line can be sorted only by what every event has.
+    if let Some(sort) = &input.sort {
+        sort.check(&["entry_date", "amount_paisa", "running_paisa"])
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
     ctx.db.read(|conn| {
         let partner = repo::get(conn, input.partner_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "partner_id"))?;
         let events = events_of(conn, &partner)?;
+        let mut month_acc = crate::page::MonthAcc::new(2);
         // The running total at every event, in checked Paisa.
         let mut opening = Paisa::ZERO;
         let mut running = Paisa::ZERO;
@@ -853,6 +861,12 @@ pub fn statement(
             if to.as_deref().is_some_and(|t| event.date.as_str() > t) {
                 continue;
             }
+            let (plus, minus) = match event.amount {
+                Some(a) if a.is_negative() => (0, a.as_paisa().saturating_neg()),
+                Some(a) => (a.as_paisa(), 0),
+                None => (0, 0),
+            };
+            month_acc.add(&event.date, &[plus, minus])?;
             match event.amount {
                 Some(a) if a.is_negative() => {
                     totals.minus_paisa = totals
@@ -869,6 +883,21 @@ pub fn statement(
         }
         let closing = in_range.last().map_or(opening, |(_, r)| *r);
         let total_count = i64::try_from(in_range.len()).unwrap_or(i64::MAX);
+        // The running total was worked out in the natural order, so each event keeps its true
+        // figure. A sort reorders the whole range after that, before the page is cut.
+        if let Some(sort) = &input.sort {
+            sort_events(&mut in_range, &sort.column, sort.direction);
+        }
+        let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+        let newest_first = input
+            .sort
+            .as_ref()
+            .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
+        let months = if input.group_by_month && in_date_order {
+            month_acc.finish(&[("plus_paisa", true), ("minus_paisa", true)], newest_first)
+        } else {
+            Vec::new()
+        };
         let page_rows = page::slice(in_range, input.offset, input.limit);
         let page_events: Vec<&Event> = page_rows.iter().map(|(e, _)| *e).collect();
         let facts = facts_for(conn, partner.id, &page_events)?;
@@ -900,6 +929,24 @@ pub fn statement(
             lines,
             total_count,
             totals,
+            months,
         })
     })
+}
+
+/// Sorts the events of the range by a column (`entry_date`, `amount_paisa` or `running_paisa`). A
+/// stable sort over the natural order, so a sort by the day mirrors the order of events when
+/// descending, and equal amounts keep the order by day.
+fn sort_events(rows: &mut Vec<(&Event, Paisa)>, column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    type Keyed<'a> = (usize, (&'a Event, Paisa));
+    let mut keyed: Vec<Keyed<'_>> = rows.drain(..).enumerate().collect();
+    let cmp: fn(&Keyed<'_>, &Keyed<'_>) -> Ordering = match column {
+        "entry_date" => |a, b| a.0.cmp(&b.0),
+        "amount_paisa" => |a, b| a.1.0.amount.cmp(&b.1.0.amount),
+        "running_paisa" => |a, b| a.1.1.cmp(&b.1.1),
+        _ => |_, _| Ordering::Equal,
+    };
+    keyed.sort_by(|a, b| direction.apply(cmp(a, b)));
+    rows.extend(keyed.into_iter().map(|(_, row)| row));
 }

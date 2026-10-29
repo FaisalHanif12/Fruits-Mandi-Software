@@ -33,6 +33,7 @@ use crate::accounts::RecordRef;
 use crate::cash::CashCheck;
 use crate::error::FieldError;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 use crate::purchases::PurchaseRow;
 use crate::rules::Working;
 use crate::ventures::{
@@ -139,6 +140,13 @@ pub struct TripsListInput {
     /// How many rows to return. 0 gives the default page of 100 rows (PRD FR-19.11).
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole filter by: `number`, `code`, `entry_date`, `name_ur`, `name_en`, `market`, `sent_person`, `status` or `closed_date`. The figures worked out from the entries
+    /// (cost, sales, result) are not sortable. Null is newest day first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// One trip with its figures (PRD FR-12.25, FR-12.27). All figures are read from stored rows.
@@ -235,6 +243,9 @@ pub struct TripsList {
     pub total_count: u32,
     /// The totals over all of them.
     pub totals: TripsTotals,
+    /// The count and subtotals of each month of the whole filter (the day), in the order of the
+    /// list, when asked with `group_by_month` and the list is in date order. Figures: none (only the count).
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// Input of `trips_get`.

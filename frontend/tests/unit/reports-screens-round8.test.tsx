@@ -54,6 +54,7 @@ import {
   R34_FRUIT,
   fakeReports,
 } from '../helpers/reports';
+import { PAGE_ROWS } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -187,7 +188,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(drawnRows()).toEqual(['0']);
       }, SLOW_MS);
-      expect(lastRun()).toMatchObject({ id: 'R10', offset: 0, limit: 100 });
+      expect(lastRun()).toMatchObject({ id: 'R10', offset: 0, limit: PAGE_ROWS });
       expect(cell('0', 'seller')).toContain('0010');
       expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
       expect(cell('0', 'received')).toBe('50');
@@ -472,6 +473,8 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
 
   describe('R33 trip profit or loss', () => {
     it('asks by trip at first and draws the trip as a heading with its purchase under it', async () => {
+      // The purchase number is drawn from the wide step.
+      vi.mocked(useLayoutStep).mockReturnValue('wide');
       await openReport('R33');
       await waitFor(() => {
         expect(drawnRows()).toEqual(['0', '1']);
@@ -542,14 +545,44 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       }, SLOW_MS);
       expect(drawnColumns()).toEqual([
         'trip',
-        'purchase',
         'item',
         'bought_cost',
         'sold_qty',
         'sales_money',
+        'total_commission',
         'left_qty',
         'result',
       ]);
+    });
+
+    it('at the narrowest step the total commission is still there: the trip, the item, the sales money, the total commission and the result', async () => {
+      vi.mocked(useLayoutStep).mockReturnValue('compact');
+      await openReport('R33');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+      expect(drawnColumns()).toEqual(['trip', 'item', 'sales_money', 'total_commission', 'result']);
+      expect(cell('1', 'total_commission')).toBe('1,200');
+    });
+
+    it('PRD FR-12.27, plan 37: the seller’s commission and the total commission are two columns, and each figure is the backend’s (E2E-34: 540 and 1,200)', async () => {
+      vi.mocked(useLayoutStep).mockReturnValue('wide');
+      await openReport('R33');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+      // The two headings say which is which, in the words of the report columns.
+      const heading = (id: string) =>
+        visible(document.querySelector(`.ag-header-cell[col-id="${id}"]`)?.textContent);
+      expect(heading('commission')).toContain(m('report-col-seller-comm'));
+      expect(heading('total_commission')).toContain(m('report-col-total-comm'));
+      // The purchase row: seller commission 540, total commission 540 + 540 + 120 = 1,200.
+      expect(cell('1', 'commission')).toBe('540');
+      expect(cell('1', 'total_commission')).toBe('1,200');
+      // The trip row (its heading) and the total row carry the same figures.
+      expect(cell('0', 'total_commission')).toBe('1,200');
+      expect(totalsCell('commission')).toBe('540');
+      expect(totalsCell('total_commission')).toBe('1,200');
     });
 
     it('has a layout box with the five layouts', async () => {
@@ -677,9 +710,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('5', 'item')).toBe(m('report-r34-cash-closing'));
       expect(cell('5', 'amount')).toBe('58,484');
       expect(drawnColumns()).toEqual(['date', 'item', 'count', 'amount']);
-      // The page says how many lines the backend has: all 27 of the day.
+      // The page says how many lines the backend has: 27 for the day, 25 on the first page.
       expect(
-        await screen.findByText(paragraph(m('report-count', { shown: 27, total: 27 }))),
+        await screen.findByText(paragraph(m('common-pager-range', { from: 1, to: 25, total: 27 }))),
       ).toBeInTheDocument();
     });
 

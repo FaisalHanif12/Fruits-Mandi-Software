@@ -39,6 +39,7 @@ import {
   R37_FRUIT_REQUEST,
   fakeReports,
 } from '../helpers/reports';
+import { PAGE_ROWS } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -150,7 +151,7 @@ describe.each(LANGUAGES)('the fruit register R37 (%s)', (language: Language) => 
     await waitFor(() => {
       expect(drawnRows()).toEqual(['0', '1']);
     }, SLOW_MS);
-    expect(lastRun()).toMatchObject({ id: 'R37', offset: 0, limit: 100 });
+    expect(lastRun()).toMatchObject({ id: 'R37', offset: 0, limit: PAGE_ROWS });
     // The guests choice is sent only when it is set (the backend reads a missing key as every line).
     expect(lastRun()?.filters.guests_only).toBeUndefined();
     expect(lastRun()?.filters.partner_id).toBeNull();

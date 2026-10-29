@@ -38,6 +38,7 @@ import {
   R5_CREDIT_BUYERS,
   fakeReports,
 } from '../helpers/reports';
+import { PAGE_ROWS } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -142,7 +143,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
       id: 'R5',
       filters: { bikri_id: null, garden_id: null },
       offset: 0,
-      limit: 100,
+      limit: PAGE_ROWS,
     });
     expect(drawnColumns()).toEqual(['serial', 'buyer', 'detail', 'value', 'buyer_total']);
     expect(cell('0', 'serial')).toBe('1');

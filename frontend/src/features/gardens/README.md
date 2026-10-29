@@ -24,8 +24,9 @@ sits after روکڑ and before مارکیٹ سفر.
   (FR-7.8). A garden with nothing in its account still closes, and the card says nothing is posted
   (E64). A closed garden shows a note instead of the form, and a button that undoes the closing
   by reversal while its day is open.
-- Lists load page by page (FR-19.11): `useGardensList` and `useGarden` (the history) are infinite
-  queries; the totals under the list are the backend's over the whole filter.
+- Lists have page buttons (FR-19.11, plan 38): `useGardensList` and `useGarden` (the history) read one
+  page at a time through `usePagedQuery`; the totals under the list are the backend's over the whole
+  filter. `useAllGardens` reads every page for the garden filter box.
 - What is typed is text in the screen's state, so a language switch loses nothing (F39). `draft.ts`
   holds the text side that tests run without the screen.
 - `api.ts` is the only file that knows the command shapes. Tests mock `api.ts`

@@ -45,6 +45,9 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
         None => (from, to),
     };
     let own_filter = mandi_db::purchases::ListFilter {
+        hide_cancelled: false,
+        order_by: None,
+        search: None,
         trip_id: None,
         from: from.clone(),
         to: to.clone(),

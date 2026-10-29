@@ -25,6 +25,7 @@ import {
 } from '../helpers/app';
 import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import { fakeMasters, record } from '../helpers/masters';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import {
   AKRAM,
@@ -273,7 +274,7 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
     });
   });
 
-  it('150 vouchers come page by page: 100 at once, the count and the total are the backend’s, Show more loads the rest', async () => {
+  it('150 vouchers come one page at a time: 25 at once, the count and the total are the backend’s, Next page loads the next 25', async () => {
     const all = Array.from({ length: 150 }, (_, index) =>
       voucherRow({ id: 700 + index, number: index + 1 }),
     );
@@ -283,13 +284,12 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
         total_count: all.length,
         // The total of the whole filter, not the sum of the rows on screen.
         totals: { cancelled_count: 0, total_paisa: money(1_500_000) },
+        months: [],
       }),
     );
     const { user } = await open();
-    const showing = (shown: number) =>
-      message(language, 'common-list-count', { shown: String(shown), total: '150' });
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(100));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
     });
     await waitFor(() => {
       expect(visible(document.querySelector('.ag-row-pinned [col-id="amount"]')?.textContent)).toBe(
@@ -297,18 +297,14 @@ describe.each(LANGUAGES)('the voucher screen (%s)', (language) => {
       );
     });
     expect(vouchersApi.vouchersList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ voucher_type: 'receipt', offset: 0, limit: 100 }),
+      expect.objectContaining({ voucher_type: 'receipt', offset: 0, limit: PAGE_ROWS }),
     );
-    await user.click(
-      await screen.findByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    );
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(150));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
     });
     expect(vouchersApi.vouchersList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 100, limit: 100 }),
+      expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
     );
   });
 

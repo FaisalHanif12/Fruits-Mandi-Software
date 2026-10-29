@@ -280,7 +280,7 @@ export function CollectionPage() {
   });
   const today = day.data === undefined ? '' : isoToDisplayDate(day.data.today);
   const date = dayText ?? today;
-  const input: CollectionListInput | null =
+  const input: Omit<CollectionListInput, 'offset' | 'limit'> | null =
     date.trim() === ''
       ? null
       : { date: date.trim(), collector_staff_id: collector?.id ?? null, city_id: city?.id ?? null };

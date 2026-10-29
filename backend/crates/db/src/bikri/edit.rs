@@ -106,6 +106,78 @@ pub fn arrival_release_of_entry(
     rows.collect()
 }
 
+/// Which per-lot rule charges the active lots of a goods-arrived entry already carry (PRD FR-12.40,
+/// plan 37).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ArrivalCharges {
+    /// The first lot (its بکری number, its lot number) with a line that carries the per-lot seller
+    /// commission.
+    pub seller_commission: Option<(i64, i64)>,
+    /// The first lot that carries مزدوری per lot.
+    pub labour: Option<(i64, i64)>,
+    /// The first lot that carries منشیانہ per lot.
+    pub munshiana: Option<(i64, i64)>,
+    /// The first lot that carries فون per lot.
+    pub phone: Option<(i64, i64)>,
+}
+
+/// For each of these arrivals, which per-lot rule charges its ACTIVE lots (lots of a saved بکری)
+/// already carry, leaving out the lots in `except_lots` (the lots of the posting being worked on).
+/// A lot charge counts when its amount is more than 0 and it is not a per-نگ charge: a rule's
+/// per-lot amount or an amount typed on the lot (lead decision D1). The seller commission counts
+/// when a line of the lot carries a rule's per-lot commission. One grouped query for all the arrivals (Code Standards
+/// B22). An arrival with no such lot is not in the map.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn arrival_charges(
+    conn: &Connection,
+    arrival_ids: &[i64],
+    except_lots: &[i64],
+) -> rusqlite::Result<std::collections::HashMap<i64, ArrivalCharges>> {
+    if arrival_ids.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
+    let marks = |n: usize| vec!["?"; n].join(", ");
+    let except = if except_lots.is_empty() {
+        String::new()
+    } else {
+        format!("AND l.id NOT IN ({})", marks(except_lots.len()))
+    };
+    let mut statement = conn.prepare(&format!(
+        "SELECT l.arrival_id,
+                MIN(CASE WHEN l.labour_method <> 'per_unit' AND l.labour_paisa > 0 THEN b.number * 1000 + l.lot_no END),
+                MIN(CASE WHEN l.munshiana_method <> 'per_unit' AND l.munshiana_paisa > 0 THEN b.number * 1000 + l.lot_no END),
+                MIN(CASE WHEN l.phone_method <> 'per_unit' AND l.phone_paisa > 0 THEN b.number * 1000 + l.lot_no END),
+                MIN(CASE WHEN EXISTS (SELECT 1 FROM bikri_sales s
+                                      WHERE s.lot_id = l.id AND s.is_active = 1
+                                        AND s.seller_comm_method = 'per_lot'
+                                        AND s.seller_comm_rule_id IS NOT NULL
+                                        AND s.seller_comm_paisa > 0)
+                         THEN b.number * 1000 + l.lot_no END)
+         FROM bikri_lots l JOIN bikri_entries b ON b.id = l.bikri_id
+         WHERE l.arrival_id IN ({}) AND b.status = 'saved' {except}
+         GROUP BY l.arrival_id",
+        marks(arrival_ids.len())
+    ))?;
+    let params: Vec<i64> = arrival_ids.iter().chain(except_lots).copied().collect();
+    let rows = statement.query_map(rusqlite::params_from_iter(params.iter()), |r| {
+        // A lot is stored as `بکری number × 1000 + lot number` in the query (a بکری has at most 50
+        // lots).
+        let lot_of = |value: Option<i64>| value.map(|v| (v / 1000, v % 1000));
+        Ok((
+            r.get::<_, i64>(0)?,
+            ArrivalCharges {
+                labour: lot_of(r.get(1)?),
+                munshiana: lot_of(r.get(2)?),
+                phone: lot_of(r.get(3)?),
+                seller_commission: lot_of(r.get(4)?),
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
 /// The biggest line number the lot has had, in force or not (0 for a lot with no line). New lines
 /// continue from it, so a line number is never used twice in a lot.
 ///

@@ -58,13 +58,16 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
   useEffect(() => {
     remember(registerChoicesText({ from, to, side, name, phone, state }));
   }, [from, to, side, name, phone, state, remember]);
-  const filter: Omit<PukhtaRegisterInput, 'offset' | 'limit'> = {
+  const filter: Omit<PukhtaRegisterInput, 'offset' | 'limit' | 'sort'> = {
     from: from.trim(),
     to: to.trim(),
     side: side === ALL ? null : side,
     name: name.trim() === '' ? null : name.trim(),
     phone: phone.trim() === '' ? null : phone.trim(),
     state: state === ALL ? null : state,
+    show_finished: false,
+    search: null,
+    group_by_month: false,
   };
   const filtering =
     filter.from !== '' ||
@@ -129,7 +132,6 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
     <PagedList<KeyedRow>
       columns={columns}
       rows={rows}
-      totalCount={first?.total_count}
       getRowId={(row) => row.key}
       labelId="pukhta-register-label"
       failedId="pukhta-load-failed"
@@ -137,11 +139,7 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
       onRetry={() => {
         void list.refetch();
       }}
-      hasMore={list.hasNextPage}
-      loadingMore={list.isFetchingNextPage}
-      onLoadMore={() => {
-        void list.fetchNextPage();
-      }}
+      pager={list.pager}
       empty={empty}
       onOpen={(row) => {
         void navigate({ to: '/bikri/book', search: { id: row.bikri_id } });

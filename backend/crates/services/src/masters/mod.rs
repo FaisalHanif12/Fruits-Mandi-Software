@@ -55,12 +55,34 @@ pub fn list(
 /// # Errors
 /// `ServiceError::Db`.
 pub fn list_page(ctx: &Context, input: &MastersListInput) -> Result<MastersList, ServiceError> {
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| {
+            sort.order_by(repo::sort_columns(input.kind)).map(|order| {
+                // A code is sorted as a number, then as text.
+                if sort.column == "code" {
+                    let direction = sort.direction.sql();
+                    format!("CAST(m.code AS INTEGER) {direction}, m.code {direction}")
+                } else {
+                    order
+                }
+            })
+        })
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let filter = repo::PageFilter {
+        include_inactive: input.include_inactive,
+        id: input.id,
+        search: input.search.as_deref(),
+        order_by: order_by.as_deref(),
+    };
     ctx.db.read(|conn| {
         let (rows, total_count, active_count) = repo::list_page(
             conn,
             input.kind,
-            input.include_inactive,
-            input.id,
+            &filter,
             i64::from(input.offset),
             crate::page::limit_of(input.limit),
         )?;

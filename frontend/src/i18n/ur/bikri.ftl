@@ -963,3 +963,7 @@ bikri-stock-garden-col-number = نمبر
 
 # review: pending
 bikri-stock-garden-col-arrived = آیا
+
+# The hint inside the search box of today's list.
+# review: pending
+bikri-list-search-placeholder = بکری نمبر یا ٹرک نمبر لکھیں

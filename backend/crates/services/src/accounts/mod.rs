@@ -100,12 +100,28 @@ pub fn list(ctx: &Context, input: &AccountsListInput) -> Result<AccountsList, Se
         n => n.min(MAX_PAGE),
     };
     let typed = input.filter.text.trim();
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| {
+            sort.order_by(&repo::SORT_COLUMNS).map(|order| {
+                if sort.column == "code" {
+                    mandi_db::codes::order_by_code_dir("a.code", sort.direction.sql())
+                } else {
+                    order
+                }
+            })
+        })
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
     ctx.db.read(|conn| {
         let (mut rows, totals) = repo::list(
             conn,
             &input.filter,
             &text::search_ur(typed),
             &text::search_en(typed),
+            order_by.as_deref(),
             input.offset,
             limit,
         )?;

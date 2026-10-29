@@ -303,8 +303,6 @@ gardens-history-empty-help = The { -qist }, costs and sales of this garden show 
 # review: pending
 gardens-history-count = Showing { $shown } of { $total }
 # review: pending
-gardens-history-more = Show more
-# review: pending
 gardens-history-cancel = Cancel the entry
 # review: pending
 gardens-entry-cancelled-reason = This entry was cancelled. Reason: { $reason }

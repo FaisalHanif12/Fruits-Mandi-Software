@@ -168,6 +168,14 @@
   --ag-cell-horizontal-padding: var(--space-2);
 }
 
+/* In a short window the rows of a grid that must fit it are a little tighter, so the lots and the
+   first sale lines are on screen together (plan 38, sale book). */
+@media (max-height: 700px) {
+  .entry-grid.entry-grid-fit.ag-theme-quartz {
+    --ag-row-height: var(--control-h-compact);
+  }
+}
+
 /* The row with focus, and the focused cell: always clearly visible (NFR-USE-22). */
 .entry-grid .ag-row-focus {
   background-color: var(--color-row-current);
@@ -206,7 +214,14 @@
 /* A list fills the height its parent gives it, with room for a few rows at least. */
 .entry-grid.list-grid-fill {
   block-size: 100%;
-  min-block-size: calc(var(--control-h) * 5);
+  min-block-size: calc(var(--list-row-h) * 6);
+}
+
+/* The rows of a read-only list are a little tighter than the cells of an entry grid, so a page of
+   25 rows and its buttons fit the window (plan 38 G2). The heading keeps its height: an Urdu
+   heading needs the room above its letters. */
+.entry-grid.list-grid.ag-theme-quartz {
+  --ag-row-height: var(--list-row-h);
 }
 
 /* A row that heads a group (a head above its controls in the list of head balances) reads stronger
@@ -214,6 +229,40 @@
 .entry-grid .row-group .ag-cell {
   background-color: var(--color-surface-sunken);
   font-weight: var(--weight-strong);
+}
+
+/* The heading row of a month in a register (plan 38 R4): across the whole row, stronger, on the
+   sunken ground. The month and its count come first, then the subtotals with their column names, so
+   style is never the only signal. */
+.entry-grid .month-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  padding-inline: var(--space-3);
+  block-size: 100%;
+  align-content: center;
+  background-color: var(--color-surface-sunken);
+  font-family: var(--font-text);
+  font-size: var(--text-1);
+  line-height: var(--leading-text);
+}
+
+.entry-grid .month-heading-title {
+  font-weight: var(--weight-strong);
+  color: var(--color-ink);
+}
+
+.entry-grid .month-heading-count,
+.entry-grid .month-heading-label {
+  color: var(--color-ink-muted);
+}
+
+.entry-grid .month-heading-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
 }
 
 /* A long text in a read-only list wraps, in the script of the app, with room for Nastaliq lines. */

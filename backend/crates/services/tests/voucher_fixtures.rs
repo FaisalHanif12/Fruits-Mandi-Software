@@ -452,7 +452,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     // 11. The lists: payments (one cancelled, so the total leaves it out), and all types (no total).
     let list_request = json!({
         "voucher_type": "payment", "from": "", "to": "", "account_id": null, "person_key": null,
-        "offset": 0, "limit": 0
+        "offset": 0, "limit": 0, "show_finished": true
     });
     let list = vouchers::list(ctx, &typed::<VouchersListInput>(&list_request)).unwrap();
     assert_eq!(list.rows.len(), 2);
@@ -462,7 +462,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     pair("vouchers_list_payments", &list_request, &list);
     let all_request = json!({
         "voucher_type": null, "from": "", "to": "", "account_id": null, "person_key": null,
-        "offset": 0, "limit": 0
+        "offset": 0, "limit": 0, "show_finished": true
     });
     let all = vouchers::list(ctx, &typed::<VouchersListInput>(&all_request)).unwrap();
     assert_eq!(all.totals.total_paisa, None);
@@ -470,7 +470,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     // The second page of two rows: the count and the totals are still over the whole filter.
     let page_request = json!({
         "voucher_type": null, "from": "", "to": "", "account_id": null, "person_key": null,
-        "offset": 2, "limit": 2
+        "offset": 2, "limit": 2, "show_finished": true
     });
     let page = vouchers::list(ctx, &typed::<VouchersListInput>(&page_request)).unwrap();
     assert_eq!(page.rows.len(), 2);

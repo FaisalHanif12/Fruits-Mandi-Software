@@ -60,6 +60,7 @@ use crate::accounts::RecordRef;
 use crate::bikri::{RateHint, SavedPukhta};
 use crate::error::FieldError;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 use crate::rules::Working;
 
 /// Where the fruit comes from (PRD FR-16.11).
@@ -479,6 +480,22 @@ pub struct FruitListInput {
     /// Rows to read. 0 means a page of 100.
     #[serde(default)]
     pub limit: u32,
+    /// True to list the cancelled entries too. False (the default) leaves them out of the rows,
+    /// the count and the totals, unless `status` is chosen (plan 38 R5).
+    #[serde(default)]
+    pub show_finished: bool,
+    /// Only entries whose number, note, item, partner or credited account (code or name) holds
+    /// this text.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole filter by: `number`, `entry_date`, `partner`, `source`,
+    /// `credit_account`, `item`, `qty`, `rate_paisa`, `value_paisa` or `status`. Null is newest
+    /// day first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// Totals over the whole filter, saved entries only (B31).
@@ -502,6 +519,10 @@ pub struct FruitList {
     pub total_count: i64,
     /// The totals over the whole filter.
     pub totals: FruitTotals,
+    /// The count and subtotals of each month of the whole filter, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `qty` and `value_paisa`
+    /// of the saved entries.
+    pub months: Vec<MonthSubtotal>,
 }
 
 // ---- The lot picker ----
@@ -512,7 +533,10 @@ pub struct FruitLotsInput {
     /// Text to find in the seller's name, the item or the بکری number. Null for all.
     #[serde(default)]
     pub search: Option<String>,
-    /// Rows to read. 0 means 100.
+    /// How many lots to skip. 0 for the first page (plan 38 B1).
+    #[serde(default)]
+    pub offset: u32,
+    /// Rows to read: 25, 50 or 100. 0 means 100.
     #[serde(default)]
     pub limit: u32,
 }
@@ -555,7 +579,11 @@ pub struct FruitLotRow {
 pub struct FruitLots {
     /// The rows.
     pub rows: Vec<FruitLotRow>,
-    /// How many lots match in all.
+    /// How many lots match in all, over the whole filter.
     #[ts(type = "number")]
     pub total_count: i64,
+    /// The offset that was asked.
+    pub offset: u32,
+    /// The page size used.
+    pub limit: u32,
 }

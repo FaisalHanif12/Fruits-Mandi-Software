@@ -297,6 +297,8 @@ fn check(w: &World, lent_person: i64) {
         let takes = partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                group_by_month: false,
+                sort: None,
                 partner_id: partner,
                 offset: 0,
                 limit: 0,
@@ -338,6 +340,8 @@ fn check(w: &World, lent_person: i64) {
     let loans = lent::list(
         &w.env.ctx,
         &LentListInput {
+            group_by_month: false,
+            sort: None,
             person_id: lent_person,
             offset: 0,
             limit: 0,
@@ -357,6 +361,8 @@ fn check(w: &World, lent_person: i64) {
         let first = partners::statement(
             &w.env.ctx,
             &PartnersStatementInput {
+                group_by_month: false,
+                sort: None,
                 partner_id: *partner,
                 from: None,
                 to: None,
@@ -373,6 +379,8 @@ fn check(w: &World, lent_person: i64) {
         let last = partners::statement(
             &w.env.ctx,
             &PartnersStatementInput {
+                group_by_month: false,
+                sort: None,
                 partner_id: *partner,
                 from: None,
                 to: None,

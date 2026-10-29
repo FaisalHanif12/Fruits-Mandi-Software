@@ -969,6 +969,7 @@ fn the_search_index_rebuilt_from_the_database_gives_the_same_answers() {
     let list = accounts::list(
         &env.ctx,
         &mandi_services::core::accounts::AccountsListInput {
+            sort: None,
             filter: mandi_services::core::accounts::AccountFilter {
                 kind: mandi_services::core::accounts::AccountListKind::All,
                 text: String::new(),

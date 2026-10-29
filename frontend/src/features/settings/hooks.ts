@@ -59,6 +59,7 @@ export const TRANSLIT_PAIRS_KEY = ['translit_pairs'] as const;
 /** The words the app has learned (PRD FR-7.26). Owner only. */
 export function useLearnedPairs() {
   return usePagedQuery({
+    screen: 'settings.learned',
     queryKey: [...TRANSLIT_PAIRS_KEY, 'list'],
     fetchPage: (offset, limit) => translitPairsList(offset, limit),
     rowsIn: (page) => page.rows.length,

@@ -53,12 +53,15 @@ export function VoucherListSection({
   const [from, setFrom] = useState(todayText);
   const [to, setTo] = useState(todayText);
   const [account, setAccount] = useState<PickerValue | null>(null);
-  const input: Omit<VouchersListInput, 'offset' | 'limit'> = {
+  const input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'> = {
     voucher_type: type,
     from: from.trim(),
     to: to.trim(),
     account_id: account?.id ?? null,
     person_key: null,
+    show_finished: false,
+    search: null,
+    group_by_month: false,
   };
   const list = useVouchersList(input);
   const first = list.data?.pages[0];
@@ -99,7 +102,6 @@ export function VoucherListSection({
     <PagedList<VoucherRow>
       columns={columns}
       rows={rows}
-      totalCount={first?.total_count}
       getRowId={(row) => String(row.id)}
       labelId="vouchers-list-label"
       failedId="vouchers-list-failed"
@@ -107,11 +109,7 @@ export function VoucherListSection({
       onRetry={() => {
         void list.refetch();
       }}
-      hasMore={list.hasNextPage}
-      loadingMore={list.isFetchingNextPage}
-      onLoadMore={() => {
-        void list.fetchNextPage();
-      }}
+      pager={list.pager}
       empty={empty}
       onOpen={(row) => {
         if (row.editable) onEdit(row);

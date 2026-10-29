@@ -9,8 +9,8 @@ mod entry;
 
 pub use entry::{
     AdvanceEffect, AdvancesReport, AdvancesReportInput, AdvancesReportRow, BillEffect,
-    CollectionBuyer, CollectionGroup, CollectionList, CollectionListInput, LineSource,
-    MAX_OPEN_ROWS, MadeRegular, MakeRegularInput, OpenBill, OpenBills, OpenBillsInput,
+    CollectionBuyer, CollectionGroup, CollectionGroupTotal, CollectionList, CollectionListInput,
+    LineSource, MAX_OPEN_ROWS, MadeRegular, MakeRegularInput, OpenBill, OpenBills, OpenBillsInput,
     OpenPayables, OpenPayablesInput, PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult,
     ReceiptsInput, ReceiptsSaved, VoucherCancelInput, VoucherCancelled, VoucherEditInput,
     VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview, VoucherPreviewInput,
@@ -21,6 +21,7 @@ use ts_rs::TS;
 
 use crate::accounts::{Balance, LineError, RecordRef};
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 
 /// The kind of a voucher (`vouchers.type`, Architecture 15.7). Each kind has its own number
 /// series, shown as و-1, ا-1, پ-1 in Urdu and R-1, P-1, A-1 in English (letters from Fluent).
@@ -306,24 +307,44 @@ pub struct VouchersListInput {
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// True to list the cancelled vouchers too. False (the default) leaves them out of the rows,
+    /// the count and the total (plan 38 R5).
+    #[serde(default)]
+    pub show_finished: bool,
+    /// Only vouchers whose number, narration or account (code or name) holds this text.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole filter by: `number`, `entry_date`, `voucher_type`,
+    /// `amount_paisa`, `status` or `account`. Null is by day and number (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// One page of vouchers with the totals over the whole filter (PRD FR-15.1, FR-19.11, B31).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct VouchersList {
-    /// This page, by day and number. Cancelled ones are in the list, marked by `status`.
+    /// This page, by day and number unless a sort was asked. Cancelled ones are left out unless
+    /// `show_finished` is true; then they are in the list, marked by `status`.
     pub rows: Vec<VoucherRow>,
-    /// How many vouchers match the filter, cancelled ones too.
+    /// How many vouchers match the filter (cancelled ones only when `show_finished` is true).
     #[ts(type = "number")]
     pub total_count: i64,
     /// The totals over every matching voucher, never over the page.
     pub totals: VouchersTotals,
+    /// The count and subtotals of each month of the whole filter, oldest first, when asked with
+    /// `group_by_month` and the list is in date order. Figures: `count` is the vouchers,
+    /// `cancelled_count` and `total_paisa` as in `totals` (money only for one type).
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// The totals of the voucher list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct VouchersTotals {
-    /// How many of the matching vouchers are cancelled.
+    /// How many of the vouchers that match the other filters are cancelled, shown or hidden, so
+    /// the screen can say "3 cancelled hidden".
     #[ts(type = "number")]
     pub cancelled_count: i64,
     /// The total of the saved vouchers, cancelled ones left out. Null when the list is of all

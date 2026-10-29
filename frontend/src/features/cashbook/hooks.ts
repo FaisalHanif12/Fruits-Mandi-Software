@@ -63,10 +63,15 @@ export function useReadAgain() {
 }
 
 /** The cash book of a range, page by page, with the totals over the whole range (PRD 16.1). */
-export function useCashbook(range: { from: string | null; to: string | null }) {
+export function useCashbook(
+  range: { from: string | null; to: string | null },
+  groupByMonth = false,
+) {
   return usePagedQuery({
-    queryKey: [...CASHBOOK_KEY, 'book', range],
-    fetchPage: (offset, limit) => cashbookGet({ ...range, offset, limit }),
+    screen: 'cashbook.book',
+    queryKey: [...CASHBOOK_KEY, 'book', range, groupByMonth],
+    fetchPage: (offset, limit, sort) =>
+      cashbookGet({ ...range, offset, limit, sort, group_by_month: groupByMonth && sort === null }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
@@ -116,11 +121,19 @@ export interface TaggedPreview {
 }
 
 /** One partner's money taken, page by page (PRD FR-16.2). Never kept: a save changes it. */
-export function usePartnerTakes(partnerId: number | null) {
+export function usePartnerTakes(partnerId: number | null, groupByMonth = false) {
   return usePagedQuery({
-    queryKey: [...CASHBOOK_KEY, 'takes', partnerId],
+    screen: 'cashbook.takes',
+    queryKey: [...CASHBOOK_KEY, 'takes', partnerId, groupByMonth],
     enabled: partnerId !== null,
-    fetchPage: (offset, limit) => partnerTakes({ partner_id: partnerId ?? 0, offset, limit }),
+    fetchPage: (offset, limit, sort) =>
+      partnerTakes({
+        partner_id: partnerId ?? 0,
+        offset,
+        limit,
+        sort,
+        group_by_month: groupByMonth && sort === null,
+      }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
   });
@@ -137,23 +150,40 @@ export function useRepeatLastMonth(month: string, enabled: boolean) {
 }
 
 /** One person's loans, page by page (PRD FR-16.5). */
-export function useLentList(personId: number | null) {
+export function useLentList(personId: number | null, groupByMonth = false) {
   return usePagedQuery({
-    queryKey: [...CASHBOOK_KEY, 'lent', personId],
+    screen: 'cashbook.lent',
+    queryKey: [...CASHBOOK_KEY, 'lent', personId, groupByMonth],
     enabled: personId !== null,
-    fetchPage: (offset, limit) => lentList({ person_id: personId ?? 0, offset, limit }),
+    fetchPage: (offset, limit, sort) =>
+      lentList({
+        person_id: personId ?? 0,
+        offset,
+        limit,
+        sort,
+        group_by_month: groupByMonth && sort === null,
+      }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
   });
 }
 
 /** A khata's entries with the running balance, page by page (PRD FR-16.6). */
-export function useKhataStatement(khataId: number | null) {
+export function useKhataStatement(khataId: number | null, groupByMonth = false) {
   return usePagedQuery({
-    queryKey: [...CASHBOOK_KEY, 'khata', khataId],
+    screen: 'cashbook.khata',
+    queryKey: [...CASHBOOK_KEY, 'khata', khataId, groupByMonth],
     enabled: khataId !== null,
-    fetchPage: (offset, limit) =>
-      khataStatement({ khata_account_id: khataId ?? 0, from: null, to: null, offset, limit }),
+    fetchPage: (offset, limit, sort) =>
+      khataStatement({
+        khata_account_id: khataId ?? 0,
+        from: null,
+        to: null,
+        offset,
+        limit,
+        sort,
+        group_by_month: groupByMonth && sort === null,
+      }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
   });

@@ -23,6 +23,7 @@ import { parseCapitalSearch, parseStatementSearch } from '../features/partners/s
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
 import { AddRecordHost } from './AddRecordHost';
 import { moveDevPathToHash } from './dev/hash-route';
+import { RouteError } from './RouteError';
 
 // The root holds the Index form that the "add" button of any picker opens (plan 32, R8).
 function RootLayout() {
@@ -704,6 +705,18 @@ const dashboardDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Plan 38, A1: the development page of the lists and screens of the انڈکس area (dev only). ----
+const listsDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/lists/$kind',
+        component: lazyRouteComponent(() => import('./dev/ListsDevPage'), 'ListsDevPage'),
+      }),
+    ]
+  : [];
+// ---- end of plan 38 block ----
+
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren(appRoutes),
   printRoute,
@@ -714,6 +727,7 @@ const routeTree = rootRoute.addChildren([
   ...settingsDevRoutes,
   ...monthDevRoutes,
   ...dashboardDevRoutes,
+  ...listsDevRoutes,
 ]);
 
 // In development, /dev/gallery typed without the # moves to /#/dev/gallery before the router
@@ -722,7 +736,7 @@ if (import.meta.env.DEV) moveDevPathToHash();
 
 /** The app's router. Tests give it a memory history; the app uses the hash (no address bar). */
 export function createAppRouter(history: RouterHistory = createHashHistory()) {
-  return createRouter({ routeTree, history });
+  return createRouter({ routeTree, history, defaultErrorComponent: RouteError });
 }
 
 export const router = createAppRouter();

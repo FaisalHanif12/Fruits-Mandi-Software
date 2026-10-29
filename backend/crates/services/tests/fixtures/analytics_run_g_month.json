@@ -164,5 +164,78 @@
       "type": "money",
       "paisa": 0
     }
+  ],
+  "charts": [
+    {
+      "kind": "trend",
+      "title": null,
+      "series": [
+        {
+          "key": "gross",
+          "kind": "money"
+        },
+        {
+          "key": "commission",
+          "kind": "money"
+        },
+        {
+          "key": "shared_income",
+          "kind": "money"
+        },
+        {
+          "key": "shop_expenses",
+          "kind": "money"
+        },
+        {
+          "key": "profit",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "month",
+            "year": 2026,
+            "month": 10
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": null,
+            "person_key": null,
+            "from": "2026-10-01",
+            "to": "2026-10-31",
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 4140000
+            },
+            {
+              "type": "money",
+              "paisa": 544800
+            },
+            {
+              "type": "money",
+              "paisa": 548800
+            },
+            {
+              "type": "money",
+              "paisa": 300000
+            },
+            {
+              "type": "money",
+              "paisa": 248800
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

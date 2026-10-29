@@ -176,6 +176,10 @@ fn e2e_8_9_10_12_event_5_on_the_khercha_screen_completes_the_day() {
     let list = vouchers::list(
         &w.env.ctx,
         &VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
             voucher_type: Some(VoucherType::ShopExpense),
             from: String::new(),
             to: String::new(),
@@ -207,6 +211,8 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
     let all = mandi_services::cashbook::get(
         &w.env.ctx,
         &CashbookInput {
+            group_by_month: false,
+            sort: None,
             from: None,
             to: None,
             offset: 0,
@@ -218,6 +224,8 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
     let day = mandi_services::cashbook::get(
         &w.env.ctx,
         &CashbookInput {
+            group_by_month: false,
+            sort: None,
             from: Some("10-10-2026".into()),
             to: Some("10-10-2026".into()),
             offset: 0,
@@ -246,6 +254,8 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
         let page = mandi_services::cashbook::get(
             &w.env.ctx,
             &CashbookInput {
+                group_by_month: false,
+                sort: None,
                 from: None,
                 to: None,
                 offset,
@@ -397,6 +407,8 @@ fn e2e_29_a_partner_returns_2000_and_the_take_shows_fully_returned() {
         partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                group_by_month: false,
+                sort: None,
                 partner_id: a,
                 offset: 0,
                 limit: 0,
@@ -534,6 +546,8 @@ fn open_of_person(w: &support::World, person: i64) -> i64 {
     lent::list(
         &w.env.ctx,
         &LentListInput {
+            group_by_month: false,
+            sort: None,
             person_id: person,
             offset: 0,
             limit: 0,
@@ -624,6 +638,8 @@ fn e2e_30_money_lent_to_aslam_is_returned_in_cash_and_from_salary() {
     let report = lent::report(
         &w.env.ctx,
         &LentReportInput {
+            search: None,
+            sort: None,
             as_of: None,
             offset: 0,
             limit: 0,
@@ -695,6 +711,8 @@ fn e2e_30b_an_overdue_loan_is_in_the_attention_data_and_the_report() {
     let report = lent::report(
         &w.env.ctx,
         &LentReportInput {
+            search: None,
+            sort: None,
             as_of: None,
             offset: 0,
             limit: 0,
@@ -725,6 +743,8 @@ fn a_partner_take_past_its_return_by_day_is_in_the_attention_data() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            group_by_month: false,
+            sort: None,
             partner_id: w.partners[1],
             offset: 0,
             limit: 0,

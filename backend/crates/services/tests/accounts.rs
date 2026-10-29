@@ -103,6 +103,34 @@ fn buyer(env: &TestEnv, owner: &auth::Actor, ur: &str, en: &str) -> AccountRow {
     save(env, owner, input(AccountType::Buyer, "", ur, en))
 }
 
+/// Every account of the chart with the code of its control, read the way the chart screen reads
+/// it: the tree for the controls, then each control a page at a time (plan 38 B1).
+fn chart_accounts(env: &TestEnv) -> Vec<(String, mandi_services::core::accounts::AccountNode)> {
+    let tree = coa::tree(&env.ctx).unwrap();
+    let mut out = Vec::new();
+    for control in tree.heads.iter().flat_map(|h| &h.controls) {
+        let mut offset = 0;
+        loop {
+            let page = coa::control_accounts(
+                &env.ctx,
+                &mandi_services::core::accounts::CoaControlAccountsInput {
+                    control_id: control.id,
+                    offset,
+                    limit: 25,
+                },
+            )
+            .unwrap();
+            let got = u32::try_from(page.rows.len()).unwrap();
+            out.extend(page.rows.into_iter().map(|a| (control.code.clone(), a)));
+            offset += got;
+            if got == 0 || offset >= page.total_count {
+                break;
+            }
+        }
+    }
+    out
+}
+
 fn account_id(env: &TestEnv, code: &str) -> i64 {
     env.ctx
         .db()
@@ -390,12 +418,9 @@ fn the_tag_shows_in_the_row_the_party_card_and_the_chart() {
             .as_deref(),
         Some("GM")
     );
-    let tree = coa::tree(&env.ctx).unwrap();
-    let node = tree
-        .heads
-        .iter()
-        .flat_map(|h| &h.controls)
-        .flat_map(|c| &c.accounts)
+    let node = chart_accounts(&env)
+        .into_iter()
+        .map(|(_, a)| a)
         .find(|a| a.id == row.id)
         .unwrap();
     assert_eq!(node.tag.as_deref(), Some("GM"));
@@ -568,6 +593,7 @@ fn the_eleventh_seller_is_00110_and_a_code_is_never_reused() {
     let list = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
                 kind: AccountListKind::Seller,
                 text: String::new(),
@@ -811,6 +837,7 @@ fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
         accounts::list(
             &env.ctx,
             &AccountsListInput {
+                sort: None,
                 filter: AccountFilter {
                     kind,
                     text: text.into(),
@@ -1362,22 +1389,29 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
         .find(|c| c.code == "0304")
         .unwrap();
     assert_eq!(buyers.balance.amount_paisa, rupees(2_880));
-    let node = buyers.accounts.iter().find(|a| a.id == akram.id).unwrap();
+    // The accounts of the control come a page at a time (plan 38 B1).
+    let page = coa::control_accounts(
+        &env.ctx,
+        &mandi_services::core::accounts::CoaControlAccountsInput {
+            control_id: buyers.id,
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    assert_eq!(i64::from(page.total_count), buyers.account_count);
+    assert_eq!(page.balance, buyers.balance, "the control's own balance");
+    let node = page.rows.iter().find(|a| a.id == akram.id).unwrap();
     assert_eq!(
         (node.balance.side, node.balance.amount_paisa),
         (BalanceSide::Dr, rupees(2_880))
     );
     // The seeded accounts are in the tree and marked as system accounts, by code.
-    let codes: Vec<&str> = buyers.accounts.iter().map(|a| a.code.as_str()).collect();
+    let codes: Vec<&str> = page.rows.iter().map(|a| a.code.as_str()).collect();
     let mut sorted = codes.clone();
     sorted.sort_unstable();
     assert_eq!(codes, sorted);
-    assert!(
-        buyers
-            .accounts
-            .iter()
-            .any(|a| a.code == "0030" && a.is_system)
-    );
+    assert!(page.rows.iter().any(|a| a.code == "0030" && a.is_system));
     // Heads add up to the books: the debit heads and the credit heads are equal.
     let (mut dr, mut cr) = (0_i64, 0_i64);
     for h in &tree.heads {
@@ -1389,6 +1423,86 @@ fn the_chart_tree_adds_balances_up_through_the_levels() {
     }
     assert_eq!(dr, cr);
     assert_eq!(coa::heads(&env.ctx).unwrap().len(), 6);
+}
+
+#[test]
+fn a_control_gives_its_accounts_a_page_at_a_time_with_the_count_and_balance_of_all_of_them() {
+    // Plan 38 B1: the chart sends heads and controls with a balance and an account count; the
+    // accounts of a control come in pages of 25, 50 or 100, and the control's own balance is over
+    // every account, not the page.
+    let (_dir, env, owner) = ready();
+    for i in 0..7 {
+        save(
+            &env,
+            &owner,
+            input(
+                AccountType::Buyer,
+                "",
+                &format!("گاہک {i}"),
+                &format!("Buyer {i}"),
+            ),
+        );
+    }
+    let tree = coa::tree(&env.ctx).unwrap();
+    let buyers = tree
+        .heads
+        .iter()
+        .flat_map(|h| &h.controls)
+        .find(|c| c.code == "0304")
+        .unwrap();
+    // The two seeded buyers (نقدی منڈی, پختہ کھاتہ) and the seven.
+    assert_eq!(buyers.account_count, 9);
+    let page = |offset: u32, limit: u32| {
+        coa::control_accounts(
+            &env.ctx,
+            &mandi_services::core::accounts::CoaControlAccountsInput {
+                control_id: buyers.id,
+                offset,
+                limit,
+            },
+        )
+        .unwrap()
+    };
+    for limit in [25, 50, 100] {
+        let all = page(0, limit);
+        assert_eq!((all.rows.len(), all.total_count, all.limit), (9, 9, limit));
+    }
+    // Pages of 4 read one after the other hold every account once, in the order of one big page.
+    let whole: Vec<i64> = page(0, 100).rows.iter().map(|a| a.id).collect();
+    let mut paged = Vec::new();
+    for offset in [0, 4, 8] {
+        let p = page(offset, 4);
+        assert_eq!((p.total_count, p.balance), (9, buyers.balance));
+        paged.extend(p.rows.iter().map(|a| a.id));
+    }
+    assert_eq!(paged, whole);
+    // Past the end: no rows, the same count and balance. A limit of 0 is a page of 100.
+    let past = page(40, 25);
+    assert_eq!((past.rows.len(), past.total_count), (0, 9));
+    assert_eq!(page(0, 0).limit, 100);
+    // An unknown control and a page above 500 are refused.
+    let missing = coa::control_accounts(
+        &env.ctx,
+        &mandi_services::core::accounts::CoaControlAccountsInput {
+            control_id: 9_999,
+            offset: 0,
+            limit: 25,
+        },
+    )
+    .unwrap_err();
+    assert!(
+        matches!(missing, ServiceError::Rejected(ref r) if r[0].code == ErrorCode::ErrNotFound)
+    );
+    let big = coa::control_accounts(
+        &env.ctx,
+        &mandi_services::core::accounts::CoaControlAccountsInput {
+            control_id: buyers.id,
+            offset: 0,
+            limit: 501,
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(big, ServiceError::Rejected(ref r) if r[0].code == ErrorCode::ErrOutOfRange));
 }
 
 #[test]
@@ -1615,6 +1729,7 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
     let all = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
                 kind: AccountListKind::All,
                 text: String::new(),
@@ -1650,6 +1765,7 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
     let page = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
                 kind: AccountListKind::Buyer,
                 text: String::new(),
@@ -2077,6 +2193,7 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
         accounts::list(
             &env.ctx,
             &AccountsListInput {
+                sort: None,
                 filter: AccountFilter {
                     kind,
                     text: String::new(),
@@ -2147,6 +2264,7 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
     let found = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
                 kind: AccountListKind::Every,
                 text: "cash".into(),
@@ -2186,14 +2304,8 @@ fn an_account_that_is_not_in_the_list_still_opens_and_saves_from_the_chart() {
         },
     )
     .unwrap();
-    let chart = coa::tree(&env.ctx).unwrap();
-    let in_chart: Vec<&str> = chart
-        .heads
-        .iter()
-        .flat_map(|h| h.controls.iter())
-        .flat_map(|c| c.accounts.iter())
-        .map(|a| a.code.as_str())
-        .collect();
+    let chart = chart_accounts(&env);
+    let in_chart: Vec<&str> = chart.iter().map(|(_, a)| a.code.as_str()).collect();
     for id in [
         account_id(&env, "01010001"),
         account_id(&env, "02010001"),

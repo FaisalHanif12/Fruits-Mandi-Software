@@ -132,6 +132,24 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     );
   });
 
+  it('the docked strip names the lot on screen, and the whole sale when the switch says so (plan 38)', async () => {
+    const { user } = await openBook(language);
+    await twoLots(user, language);
+    const strip = () =>
+      screen.getByRole('region', { name: named(message(language, 'bikri-strip-label')) });
+    // Two lots: the one line names the lot it shows, so the numbers are not taken for the sale's.
+    expect(visible(strip().textContent)).toContain(
+      message(language, 'bikri-summary-lot', { lot: 2 }),
+    );
+    await user.click(switchTo(linesArea(language, false), language, true));
+    await waitFor(() => {
+      expect(visible(strip().textContent)).toContain(message(language, 'bikri-summary-whole'));
+    });
+    expect(visible(strip().textContent)).not.toContain(
+      message(language, 'bikri-summary-lot', { lot: 2 }),
+    );
+  });
+
   it('lists the lines of every lot in one grid, each with its lot', async () => {
     const { user } = await openBook(language);
     await twoLots(user, language);

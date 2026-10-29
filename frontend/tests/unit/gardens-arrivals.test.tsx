@@ -65,7 +65,11 @@ type User = ReturnType<typeof userEvent.setup>;
 
 /** The check and the save of the goods arrived entry as a healthy backend answers them. */
 function fakeArrivalEntry() {
-  vi.mocked(gardensApi.gardensArrivalEntryPreview).mockResolvedValue({ errors: [], warnings: [] });
+  vi.mocked(gardensApi.gardensArrivalEntryPreview).mockResolvedValue({
+    lines: [],
+    errors: [],
+    warnings: [],
+  });
   vi.mocked(gardensApi.gardensArrivalEntrySave).mockImplementation((input) =>
     Promise.resolve({
       rows: input.lines.map((_, index) => ({
@@ -230,6 +234,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
   it('a mistake of one line is on the cell of that line, in plain words, and nothing typed is lost', async () => {
     fakeGardens();
     vi.mocked(gardensApi.gardensArrivalEntryPreview).mockResolvedValue({
+      lines: [],
       errors: [],
       warnings: [],
     });
@@ -282,6 +287,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
   it('the real refusal of a line of the save is on the cell of that line', async () => {
     fakeGardens();
     vi.mocked(gardensApi.gardensArrivalEntryPreview).mockResolvedValue({
+      lines: [],
       errors: [],
       warnings: [],
     });
@@ -303,6 +309,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
   it('the screen builds the request the backend tested for two lines, key by key', async () => {
     fakeGardens();
     vi.mocked(gardensApi.gardensArrivalEntryPreview).mockResolvedValue({
+      lines: [],
       errors: [],
       warnings: [],
     });
@@ -343,6 +350,7 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
   it('a day to sell before the day of the arrival is refused at the field, and what was typed stays', async () => {
     fakeGardens();
     vi.mocked(gardensApi.gardensArrivalEntryPreview).mockResolvedValue({
+      lines: [],
       errors: [],
       warnings: [],
     });

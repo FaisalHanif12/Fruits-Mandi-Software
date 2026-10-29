@@ -627,6 +627,8 @@ fn r26_shows_rahims_advance_fully_adjusted_e2e_7() {
         &w.env.ctx,
         &mandi_services::core::vouchers::AdvancesReportInput {
             as_of: String::new(),
+            offset: 0,
+            limit: 0,
             seller_id: None,
         },
     )

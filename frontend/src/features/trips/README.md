@@ -13,8 +13,9 @@ purchase). The main bar item sits after روکڑ; D4R adds باغات before it.
   (CLAUDE.md rule 1). A shop part comes off the partner's total, a pocket part is only recorded.
 - `useEntrySaveFlow` (in `shared/hooks`, also used by the cash book area) is the one save for the three types: the cash question (FR-6.7) comes first,
   one save runs at a time, a refusal shows at its field and nothing typed is lost.
-- Lists load page by page (FR-19.11): `useTripsList` and `useTrip` (the history) are infinite
-  queries; the totals under a list are the backend's over the whole filter.
+- Lists have page buttons (FR-19.11, plan 38): `useTripsList` and `useTrip` (the history) read one
+  page at a time through `usePagedQuery`; the totals under a list are the backend's over the whole
+  filter. `useAllTrips` reads every page for the trip filter box of analytics.
 - What is typed is text in the screen's state, so a language switch loses nothing (F39). `draft.ts`
   holds the text side that tests run without the screen.
 - `api.ts` is the only file that knows the command shapes. Tests mock `api.ts`

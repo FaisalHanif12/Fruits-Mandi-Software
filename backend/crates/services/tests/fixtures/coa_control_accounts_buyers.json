@@ -1,0 +1,60 @@
+{
+  "control_id": 6,
+  "rows": [
+    {
+      "id": 20,
+      "code": "0020",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "balance": {
+        "amount_paisa": 288000,
+        "side": "dr"
+      },
+      "is_active": true,
+      "is_system": false
+    },
+    {
+      "id": 21,
+      "code": "0021",
+      "name_ur": "ارشد ملتانی",
+      "name_en": "Arshad Multani",
+      "balance": {
+        "amount_paisa": 1868400,
+        "side": "dr"
+      },
+      "is_active": true,
+      "is_system": false
+    },
+    {
+      "id": 9,
+      "code": "0030",
+      "name_ur": "پختہ کھاتہ (خریدار)",
+      "name_en": "Pukhta Khata (Buyer)",
+      "balance": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "is_active": true,
+      "is_system": true
+    },
+    {
+      "id": 8,
+      "code": "03040000",
+      "name_ur": "نقدی منڈی",
+      "name_en": "Naqdi Mandi (Cash Buyer)",
+      "balance": {
+        "amount_paisa": 0,
+        "side": "zero"
+      },
+      "is_active": true,
+      "is_system": true
+    }
+  ],
+  "total_count": 4,
+  "offset": 0,
+  "limit": 25,
+  "balance": {
+    "amount_paisa": 2156400,
+    "side": "dr"
+  }
+}

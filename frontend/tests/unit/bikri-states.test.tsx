@@ -408,7 +408,11 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
       Promise.resolve(lots.map((lot) => ({ key: lot.key, freight_paisa: money(4000) }))),
     );
     await typeHeaderAndLot(user, language);
-    const total = screen.getByRole('textbox', {
+    // The total freight is behind "More" in the header (plan 38, sale book).
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'bikri-header-more')) }),
+    );
+    const total = await screen.findByRole('textbox', {
       name: named(message(language, 'bikri-header-total-freight')),
     });
     await user.click(total);

@@ -42,7 +42,7 @@ import {
   showToast,
 } from '../../../shared/ui';
 import {
-  useAccountList,
+  useAllAccounts,
   useOpeningsPreview,
   useSaveOpenings,
   type AccountFilter,
@@ -390,7 +390,7 @@ function OpeningsEditor({ accounts, today }: EditorProps) {
 
 export function OpeningsPage() {
   const navigate = useNavigate();
-  const list = useAccountList(ALL_ACTIVE);
+  const list = useAllAccounts(ALL_ACTIVE);
   // The openings are typed against every active account, so the rest of the pages is read at once.
   useLoadRest(list, true);
   const day = useDayStatus();

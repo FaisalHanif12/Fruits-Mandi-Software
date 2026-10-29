@@ -249,6 +249,7 @@ fn load_arrivals(
     conn: &Connection,
     prepared: &PreparedDraft,
     replaces: Option<i64>,
+    posting_lots: &[i64],
 ) -> Result<HashMap<i64, ArrivalFacts>, ServiceError> {
     let ids: BTreeSet<i64> = prepared.lots.iter().filter_map(|l| l.arrival_id).collect();
     if ids.is_empty() {
@@ -261,6 +262,9 @@ fn load_arrivals(
             back.insert(taken.arrival_id, taken.qty);
         }
     }
+    // The per-lot rule charges the entry's other active lots already carry (plan 37): one grouped
+    // read for all the arrivals, leaving out the lots of the posting being worked on.
+    let carried = edit_repo::arrival_charges(conn, &ids, posting_lots)?;
     let mut out = HashMap::with_capacity(ids.len());
     for rec in arrival_repo::get_many(conn, &ids)? {
         let cancelled = rec.status == "cancelled";
@@ -292,6 +296,20 @@ fn load_arrivals(
                 packing_id: rec.packing.id,
                 qty_left,
                 cancelled,
+                carried_elsewhere: carried.get(&rec.id).map_or_else(Default::default, |c| {
+                    let at = |lot: Option<(i64, i64)>| {
+                        lot.map(|(bikri_number, lot_no)| mandi_domain::bikri::EntryLot {
+                            bikri_number,
+                            lot_no,
+                        })
+                    };
+                    mandi_domain::bikri::ArrivalCarried {
+                        seller_commission: at(c.seller_commission),
+                        labour: at(c.labour),
+                        munshiana: at(c.munshiana),
+                        phone: at(c.phone),
+                    }
+                }),
             },
         );
     }
@@ -666,7 +684,13 @@ pub(crate) fn work_out(
 ) -> Result<Worked, ServiceError> {
     let purchases = load_purchases(conn, &prepared, basis.replaces.map(|r| r.entry_id))?;
     fill_own_lots(&mut prepared, &purchases);
-    let arrivals = load_arrivals(conn, &prepared, basis.replaces.map(|r| r.entry_id))?;
+    let posting_lots: Vec<i64> = basis.stored.lots.keys().copied().collect();
+    let arrivals = load_arrivals(
+        conn,
+        &prepared,
+        basis.replaces.map(|r| r.entry_id),
+        &posting_lots,
+    )?;
     fill_arrival_lots(&mut prepared, &arrivals);
     let mut lookups = load_lookups(
         conn,

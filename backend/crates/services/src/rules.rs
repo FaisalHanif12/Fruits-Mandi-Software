@@ -160,7 +160,26 @@ pub fn list(ctx: &Context, filter: &RulesFilter) -> Result<Vec<RuleRow>, Service
 /// # Errors
 /// `ServiceError::Db`.
 pub fn list_page(ctx: &Context, input: &RulesListInput) -> Result<RulesList, ServiceError> {
-    let rows = list(ctx, &input.filter)?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&SORT_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
+    let mut rows = list(ctx, &input.filter)?;
+    // A search keeps the rules it names, before they are counted.
+    if let Some(typed) = input
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
+        rows.retain(|row| rule_matches(row, typed));
+    }
+    // A sort reorders the whole list before the page is cut. It is stable, so equal rules keep
+    // the order of the rule list.
+    if let Some(sort) = &input.sort {
+        sort_rules(&mut rows, &sort.column, sort.direction);
+    }
     let count =
         |n: usize| i64::try_from(n).map_err(|_| ServiceError::Data("too many rows".to_owned()));
     let total_count = count(rows.len())?;
@@ -813,4 +832,73 @@ pub fn set_overrides(
         }
         Ok(*input)
     })
+}
+
+/// The columns the rule list can be sorted by: the names of the fields of the row.
+const SORT_COLUMNS: [&str; 11] = [
+    "side",
+    "charge_type",
+    "account",
+    "item",
+    "item_group",
+    "level",
+    "method",
+    "from_date",
+    "to_date",
+    "is_active",
+    "note",
+];
+
+/// True if the text is in the rule's party or item (code or name in either script) or its note.
+fn rule_matches(row: &RuleRow, typed: &str) -> bool {
+    use mandi_domain::core::text;
+    let lower = typed.to_lowercase();
+    let ur = text::search_ur(typed);
+    let en = text::search_en(typed);
+    let record = |r: &Option<mandi_domain::core::accounts::RecordRef>| {
+        r.as_ref().is_some_and(|r| {
+            r.code.to_lowercase().contains(&lower)
+                || (!ur.is_empty() && text::search_ur(&r.name_ur).contains(&ur))
+                || (!en.is_empty() && text::search_en(&r.name_en).contains(&en))
+        })
+    };
+    record(&row.account) || record(&row.item) || row.note.to_lowercase().contains(&lower)
+}
+
+/// Sorts the whole rule list by a column (checked by [`SORT_COLUMNS`]). A stable sort.
+fn sort_rules(
+    rows: &mut [RuleRow],
+    column: &str,
+    direction: mandi_domain::core::paging::SortDirection,
+) {
+    use std::cmp::Ordering;
+    let cmp: fn(&RuleRow, &RuleRow) -> Ordering = match column {
+        "side" => |a, b| (a.side as u8).cmp(&(b.side as u8)),
+        "charge_type" => |a, b| (a.charge_type as u8).cmp(&(b.charge_type as u8)),
+        "account" => |a, b| {
+            a.account
+                .as_ref()
+                .map(|r| &r.code)
+                .cmp(&b.account.as_ref().map(|r| &r.code))
+        },
+        "item" => |a, b| {
+            a.item
+                .as_ref()
+                .map(|r| &r.code)
+                .cmp(&b.item.as_ref().map(|r| &r.code))
+        },
+        "item_group" => |a, b| {
+            a.item_group
+                .map(|g| g as u8)
+                .cmp(&b.item_group.map(|g| g as u8))
+        },
+        "level" => |a, b| a.level.cmp(&b.level),
+        "method" => |a, b| (a.method as u8).cmp(&(b.method as u8)),
+        "from_date" => |a, b| a.from_date.cmp(&b.from_date),
+        "to_date" => |a, b| a.to_date.cmp(&b.to_date),
+        "is_active" => |a, b| a.is_active.cmp(&b.is_active),
+        "note" => |a, b| a.note.cmp(&b.note),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
 }

@@ -11,6 +11,7 @@ use ts_rs::TS;
 
 use crate::accounts::RecordRef;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 
 /// Input of `cashbook_get`. Dates are `DD-MM-YYYY` or a shortcut; null or empty means no limit
 /// (from the first entry, to today).
@@ -28,6 +29,14 @@ pub struct CashbookInput {
     /// How many rows to return. 0 gives the default page of 100 rows (PRD FR-19.11).
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole range by: `entry_date`, `posting_type`, `number`, `narration`,
+    /// `in_paisa`, `out_paisa` or `running_paisa`. Null is by day and entry (plan 38 R4). A sorted
+    /// row still shows its true running cash of the natural order.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// One cash movement.
@@ -90,4 +99,8 @@ pub struct Cashbook {
     pub total_count: i64,
     /// The totals over the whole range.
     pub totals: CashbookTotals,
+    /// The count and subtotals of each month of the whole range, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `in_paisa` and
+    /// `out_paisa`.
+    pub months: Vec<MonthSubtotal>,
 }

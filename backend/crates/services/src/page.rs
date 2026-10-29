@@ -64,6 +64,100 @@ pub(crate) fn limit_of(limit: u32) -> i64 {
     i64::from(if limit == 0 { DEFAULT_PAGE } else { limit })
 }
 
+/// Turns the month rows of `mandi_db::listing::month_sums` into month subtotals (plan 38 R4).
+/// `figures` names each sum in the same order as the expressions given to the query: the field of
+/// the list's totals and whether it is money. The months come oldest first from the database;
+/// `newest_first` turns them round for a list that is shown newest first.
+pub(crate) fn month_subtotals(
+    rows: Vec<mandi_db::listing::MonthSums>,
+    figures: &[(&str, bool)],
+    newest_first: bool,
+) -> Vec<mandi_domain::core::paging::MonthSubtotal> {
+    use mandi_domain::core::paging::{MonthFigure, MonthSubtotal};
+    let mut months: Vec<MonthSubtotal> = rows
+        .into_iter()
+        .map(|row| MonthSubtotal {
+            month: row.month,
+            count: row.count,
+            figures: figures
+                .iter()
+                .zip(row.sums)
+                .map(|((key, is_money), value)| MonthFigure {
+                    key: (*key).to_owned(),
+                    is_money: *is_money,
+                    value,
+                })
+                .collect(),
+        })
+        .collect();
+    if newest_first {
+        months.reverse();
+    }
+    months
+}
+
+/// Adds up the month subtotals of a list that is built in memory (plan 38 R4): call [`add`] for
+/// each row, in any order, then [`finish`]. A month shows the count of the rows put in it and the
+/// sum of each figure. All sums are checked.
+///
+/// [`add`]: MonthAcc::add
+/// [`finish`]: MonthAcc::finish
+pub(crate) struct MonthAcc {
+    figures: usize,
+    months: std::collections::BTreeMap<String, (i64, Vec<i64>)>,
+}
+
+impl MonthAcc {
+    /// A new accumulator for `figures` sums per month.
+    pub(crate) fn new(figures: usize) -> Self {
+        Self {
+            figures,
+            months: std::collections::BTreeMap::new(),
+        }
+    }
+
+    /// Counts one row of the month of `date` (`YYYY-MM-DD`) and adds `sums` to it. A missing sum
+    /// counts as 0.
+    pub(crate) fn add(
+        &mut self,
+        date: &str,
+        sums: &[i64],
+    ) -> Result<(), crate::error::ServiceError> {
+        let month = date.get(..7).unwrap_or(date).to_owned();
+        let figures = self.figures;
+        let (count, totals) = self
+            .months
+            .entry(month)
+            .or_insert_with(|| (0, vec![0; figures]));
+        *count = count.checked_add(1).ok_or_else(|| {
+            crate::error::ServiceError::reject(mandi_domain::core::error::ErrorCode::ErrOverflow)
+        })?;
+        for (total, add) in totals.iter_mut().zip(sums) {
+            *total = total.checked_add(*add).ok_or_else(|| {
+                crate::error::ServiceError::reject(
+                    mandi_domain::core::error::ErrorCode::ErrOverflow,
+                )
+            })?;
+        }
+        Ok(())
+    }
+
+    /// The months, oldest first (newest first when asked), with the named figures: the field of
+    /// the list's totals and whether it is money, in the order of the sums given to `add`.
+    pub(crate) fn finish(
+        self,
+        figures: &[(&str, bool)],
+        newest_first: bool,
+    ) -> Vec<mandi_domain::core::paging::MonthSubtotal> {
+        let rows = self
+            .months
+            .into_iter()
+            .map(|(month, (count, sums))| mandi_db::listing::MonthSums { month, count, sums })
+            .collect();
+        month_subtotals(rows, figures, newest_first)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

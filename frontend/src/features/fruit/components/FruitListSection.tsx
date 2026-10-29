@@ -76,7 +76,7 @@ export function FruitListSection({
   const [forWhom, setForWhom] = useState(EVERYONE);
   const [item, setItem] = useState<PickerValue | null>(null);
   const partnerId = forWhom === EVERYONE || forWhom === FOR_GUESTS ? null : Number(forWhom);
-  const input: Omit<FruitListInput, 'offset' | 'limit'> = {
+  const input: Omit<FruitListInput, 'offset' | 'limit' | 'sort'> = {
     partner_id: partnerId,
     guests_only: forWhom === FOR_GUESTS,
     item_id: item?.id ?? null,
@@ -84,6 +84,9 @@ export function FruitListSection({
     from: from.trim() === '' ? null : from.trim(),
     to: to.trim() === '' ? null : to.trim(),
     status: null,
+    show_finished: false,
+    search: null,
+    group_by_month: false,
   };
   const list = useFruitList(input);
   const first = list.data?.pages[0];
@@ -240,7 +243,6 @@ export function FruitListSection({
       <PagedList<FruitRow>
         columns={columns}
         rows={rows}
-        totalCount={first?.total_count}
         getRowId={(row) => String(row.id)}
         labelId="fruit-list-label"
         failedId="fruit-list-failed"
@@ -248,11 +250,7 @@ export function FruitListSection({
         onRetry={() => {
           void list.refetch();
         }}
-        hasMore={list.hasNextPage}
-        loadingMore={list.isFetchingNextPage}
-        onLoadMore={() => {
-          void list.fetchNextPage();
-        }}
+        pager={list.pager}
         empty={empty}
         onOpen={(row) => {
           if (row.can_change) onEdit(row);

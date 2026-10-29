@@ -4,12 +4,20 @@
 
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQueries,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useDebouncedValue, usePagedQuery } from '../../shared/hooks';
+import {
+  PAGE_SIZE,
+  nextOffset,
+  useDebouncedValue,
+  useLoadRest,
+  usePagedQuery,
+} from '../../shared/hooks';
+import { joinCollectionPages } from './collection-pages';
 import {
   assistAdvances,
   assistCollectionList,
@@ -155,28 +163,53 @@ export function useVoucher(id: number | null) {
  * The vouchers of a kind in a date range (the list under the form), page by page, with the count
  * and the totals of the whole filter (PRD FR-19.11).
  */
-export function useVouchersList(input: Omit<VouchersListInput, 'offset' | 'limit'>) {
+export function useVouchersList(input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'>) {
   return usePagedQuery({
+    screen: 'vouchers.list',
     queryKey: [...VOUCHERS_KEY, 'list', input],
-    fetchPage: (offset, limit) => vouchersList({ ...input, offset, limit }),
+    fetchPage: (offset, limit, sort) => vouchersList({ ...input, offset, limit, sort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
   });
 }
 
-/** The اگراہی فہرست of a day (PRD FR-15.6). */
-export function useCollectionList(input: CollectionListInput | null) {
-  return useQuery({
+/**
+ * The اگراہی فہرست of a day (PRD FR-15.6): every buyer of the filter. The backend answers a page at
+ * a time, so the pages are read one after the other and joined; `data` is there only when the last
+ * page has come, because the round is built from the whole list.
+ */
+export function useCollectionList(input: Omit<CollectionListInput, 'offset' | 'limit'> | null) {
+  const query = useInfiniteQuery({
     queryKey: [...VOUCHERS_KEY, 'collection', input],
-    queryFn: () => {
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => {
       if (input === null) throw new Error('no list');
-      return assistCollectionList(input);
+      return assistCollectionList({ ...input, offset: pageParam, limit: PAGE_SIZE });
     },
+    getNextPageParam: (last, pages) =>
+      nextOffset(
+        pages.reduce((sum, page) => sum + buyersOf(page.groups), 0),
+        last.total_count,
+        buyersOf(last.groups),
+      ),
     enabled: input !== null,
     staleTime: 0,
     gcTime: 0,
   });
+  useLoadRest(query, true);
+  const complete = !query.hasNextPage;
+  return {
+    data: complete && query.data !== undefined ? joinCollectionPages(query.data.pages) : undefined,
+    isPending: query.isPending || query.hasNextPage,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  };
+}
+
+function buyersOf(groups: readonly { buyers: readonly unknown[] }[]): number {
+  return groups.reduce((count, group) => count + group.buyers.length, 0);
 }
 
 function useReadAgain() {

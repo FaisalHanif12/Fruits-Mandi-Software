@@ -52,6 +52,7 @@ import {
   R9_DUE_REQUEST,
   fakeReports,
 } from '../helpers/reports';
+import { PAGE_ROWS } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -189,7 +190,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
         // A balance carries its side as a word after the figure (R24's and R28's totals).
         expect(totalsCell(column)).toMatch(new RegExp(`^${total}(${m('report-side-cr')})?$`));
       }, SLOW_MS);
-      expect(lastRun()).toMatchObject({ id, offset: 0, limit: 100 });
+      expect(lastRun()).toMatchObject({ id, offset: 0, limit: PAGE_ROWS });
       expect(lastRun()?.filters).toEqual(
         sentLike({
           ...request,
@@ -232,11 +233,11 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       }, SLOW_MS);
     });
 
-    it('shows the first page of 100 and says how many rows the filter has', async () => {
+    it('shows the first page and says how many rows the filter has', async () => {
       await openReport('R2', { pages: { R2: { ...R2_ALL, total_count: 2 } } });
       expect(
         await screen.findByText(
-          paragraph(m('report-count', { shown: 2, total: 2 })),
+          paragraph(m('common-pager-range', { from: 1, to: 2, total: 2 })),
           undefined,
           SLOW_MS,
         ),

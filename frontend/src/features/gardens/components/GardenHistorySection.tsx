@@ -12,7 +12,8 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { Ban, History } from 'lucide-react';
 import { useState } from 'react';
-import { ListGrid } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
+import type { PagerState } from '../../../shared/hooks';
 import { SHORTCUTS } from '../../../shared/keyboard';
 import { Button, Card, EmptyState, EntryPartsList, Notice, ShareAmounts } from '../../../shared/ui';
 import { HISTORY_COLUMNS } from '../list-columns';
@@ -23,9 +24,8 @@ interface GardenHistorySectionProps {
   history: readonly GardenHistoryRow[];
   /** How many rows the garden has in all. */
   count: number;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onLoadMore: () => void;
+  /** Where the history is: the page on screen and the page buttons. */
+  pager: PagerState;
 }
 
 /** A stable ID of a row: the entry's id where it has one, else its place in the list. */
@@ -33,14 +33,9 @@ function rowKey(row: GardenHistoryRow, index: number): string {
   return row.entry_id === null ? `i${String(index)}` : `e${String(row.entry_id)}`;
 }
 
-export function GardenHistorySection({
-  history,
-  count,
-  hasMore,
-  loadingMore,
-  onLoadMore,
-}: GardenHistorySectionProps) {
+export function GardenHistorySection({ history, count, pager }: GardenHistorySectionProps) {
   const { l10n } = useLocalization();
+  const paging = useListPaging(pager);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cancelRow, setCancelRow] = useState<GardenHistoryRow | null>(null);
   const keys = new Map(history.map((row, index) => [row, rowKey(row, index)]));
@@ -93,14 +88,9 @@ export function GardenHistorySection({
             focusRowId={selectedId}
             heightMode="auto"
             isInactive={(row) => row.cancelled}
+            paging={paging}
           />
-          {hasMore ? (
-            <div>
-              <Button disabled={loadingMore} busy={loadingMore} onClick={onLoadMore}>
-                <Localized id="gardens-history-more" />
-              </Button>
-            </div>
-          ) : null}
+          <Pager pager={pager} />
         </>
       )}
       {selected === null ? null : (

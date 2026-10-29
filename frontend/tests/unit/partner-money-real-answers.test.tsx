@@ -29,6 +29,7 @@ import { paisaForTest } from '../helpers/paisa';
 import { leaveAppWindow, press, renderApp } from '../helpers/app';
 import { preparePartnerMoney } from '../helpers/partner-money';
 import * as real from '../helpers/partner-money-real';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -292,21 +293,23 @@ describe.each(LANGUAGES)('the partner statement with the real answers (%s)', (la
     expect(cellOf(grid(), 0, 'detail')).toBeInTheDocument();
   });
 
-  it('a page of two of three: the next page starts at the offset the backend counts', async () => {
+  it('a first page and a next page: the next page starts at the offset of the page size', async () => {
+    // The real files hold a page of two lines. The screen pages by 25, so the first page says the
+    // statement has 30 lines (its other fields are the backend's own) and the next page is the real second one.
     vi.mocked(partnersApi.partnersStatement).mockImplementation((input) =>
-      Promise.resolve(input.offset === 0 ? real.STATEMENT_A_PAGE : real.STATEMENT_B),
+      Promise.resolve(
+        input.offset === 0 ? { ...real.STATEMENT_A_PAGE, total_count: 30 } : real.STATEMENT_B,
+      ),
     );
     const { user } = await open('?partner=1');
     await waitFor(() => {
       expect(rows()).toBe(2);
     });
-    expect(pageText()).toContain(message(language, 'common-list-count', { shown: 2, total: 3 }));
-    await user.click(
-      screen.getByRole('button', { name: startsWith(message(language, 'common-list-more')) }),
-    );
+    expect(visible(pageText())).toContain(rangeText(language, 1, 25, 30));
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
       expect(partnersApi.partnersStatement).toHaveBeenLastCalledWith(
-        expect.objectContaining({ offset: 2 }),
+        expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
       );
     });
   });

@@ -115,7 +115,7 @@ describe('E2E-34: a market trip (Urdu)', () => {
     await waitForHeading('ur', 'trips-title');
     const text = await pageText();
     expect(text).toContain('0070');
-    expect(text).toContain(t('ur', 'trips-list-count', { shown: 1, total: 1 }));
+    expect(text).toContain(t('ur', 'common-pager-range', { from: 1, to: 1, total: 1 }));
   });
 });
 

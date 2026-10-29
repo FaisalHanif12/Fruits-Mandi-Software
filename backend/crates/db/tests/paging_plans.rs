@@ -35,6 +35,9 @@ fn voucher_filter<'a>(
     account: Option<i64>,
 ) -> ListFilter<'a> {
     ListFilter {
+        hide_cancelled: false,
+        order_by: None,
+        search: None,
         voucher_type,
         from: day,
         to: day,
@@ -45,6 +48,8 @@ fn voucher_filter<'a>(
 
 fn bikri_filter(day: Option<&str>) -> BikriFilter {
     BikriFilter {
+        order_by: None,
+        search: None,
         from: day.map(str::to_owned),
         to: day.map(str::to_owned),
         seller_id: None,

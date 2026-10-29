@@ -599,6 +599,30 @@ pub fn totals_for_accounts(
     rows.collect()
 }
 
+/// The posted debit and credit totals of ALL the accounts of one control: one query through
+/// `idx_accounts_control` and the journal index (plan 38 B1).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn totals_for_control(conn: &Connection, control_id: i64) -> rusqlite::Result<Totals> {
+    conn.query_row(
+        &format!(
+            "SELECT COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+             FROM journal_lines
+             WHERE account_id IN (SELECT id FROM accounts WHERE control_id = ?1)
+               AND entry_id NOT IN ({})",
+            left_out(None)
+        ),
+        [control_id],
+        |r| {
+            Ok(Totals {
+                dr_paisa: r.get(0)?,
+                cr_paisa: r.get(1)?,
+            })
+        },
+    )
+}
+
 /// The debit and credit totals that ONE entry has on each of these accounts, in paisa. An account
 /// the entry has no line on is not in the answer. An edit uses it to take its own old posting out
 /// of a balance (the credit limit check, plan 16).

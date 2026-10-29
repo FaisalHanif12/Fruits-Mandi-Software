@@ -43,6 +43,7 @@ import {
   R32_E2E_30B_REQUEST,
   fakeReports,
 } from '../helpers/reports';
+import { PAGE_ROWS } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -194,7 +195,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       }, SLOW_MS);
       expect(totalsCell('cash_out')).toBe('14,316');
       expect(totalsCell('balance')).toContain('58,484');
-      expect(lastRun()).toMatchObject({ id: 'R12', offset: 0, limit: 100 });
+      expect(lastRun()).toMatchObject({ id: 'R12', offset: 0, limit: PAGE_ROWS });
       expect(lastRun()?.filters).toEqual(
         sentLike(R12_DAY_REQUEST, { shortcut: null, from: '', to: '' }),
       );

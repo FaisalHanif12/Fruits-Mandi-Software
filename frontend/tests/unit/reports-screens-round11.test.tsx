@@ -43,6 +43,7 @@ import {
   R36_GARDEN,
   fakeReports,
 } from '../helpers/reports';
+import { PAGE_ROWS } from '../helpers/pager';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -193,7 +194,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         id: 'R35',
         filters: { party: null, as_of: '' },
         offset: 0,
-        limit: 100,
+        limit: PAGE_ROWS,
       });
       // The group rows say who the parties under them are, with the figures of the whole group.
       expect(cell('0', 'code')).toBe(m('report-r35-buyers'));
@@ -614,7 +615,7 @@ describe.each(LANGUAGES)(
           id: 'R36',
           filters: { garden_id: null, partner_id: null },
           offset: 0,
-          limit: 100,
+          limit: PAGE_ROWS,
         });
         expect(lastRun()?.filters.garden_view).toBeUndefined();
         expect(cell('0', 'garden')).toBe(names('شاہ پور باغ', 'Shahpur Garden'));

@@ -5,13 +5,13 @@
 
 import {
   keepPreviousData,
-  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { PAGE_SIZE, useDebouncedValue, usePagedQuery } from '../../shared/hooks';
+import type { SortInput } from '../../bindings/SortInput';
+import { useAllPagesQuery, useDebouncedValue, usePagedQuery } from '../../shared/hooks';
 import { readAgainAfterPurchase } from '../purchases';
 import {
   tripsCostCancel,
@@ -65,54 +65,59 @@ export function useCreateTrip() {
   });
 }
 
-/**
- * The trips for the filters, page by page, with the totals over the whole filter (PRD FR-19.11).
- * `fetchNextPage` loads the next 100 rows; the first page carries the count and the totals.
- */
-export function useTripsList(filter: Omit<TripsListInput, 'offset' | 'limit'>) {
-  const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return usePagedQuery({
+/** What the list of trips asks the backend, for the page buttons and for a choice list alike. */
+function tripsListQuery(settled: Omit<TripsListInput, 'offset' | 'limit' | 'sort'>) {
+  return {
     queryKey: [...TRIPS_KEY, 'list', settled],
-    fetchPage: (offset, limit) => tripsList({ ...settled, offset, limit }),
-    rowsIn: (page) => page.rows.length,
-    totalOf: (page) => page.total_count,
+    fetchPage: (offset: number, limit: number, sort: SortInput | null = null) =>
+      tripsList({ ...settled, offset, limit, sort }),
+    rowsIn: (page: { rows: readonly unknown[] }) => page.rows.length,
+    totalOf: (page: { total_count: number }) => page.total_count,
     keepPrevious: true,
-  });
+  };
 }
 
-/** What a trip screen shows: the trip, its purchases, its partners, and all loaded entries. */
+/**
+ * The trips for the filters, one page at a time, with the totals over the whole filter (PRD
+ * FR-19.11). The first page carries the count and the totals.
+ */
+export function useTripsList(filter: Omit<TripsListInput, 'offset' | 'limit' | 'sort'>) {
+  const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
+  return usePagedQuery({ screen: 'trips.list', ...tripsListQuery(settled) });
+}
+
+/** Every trip of the filter, page after page, for a choice list (`useLoadRest`). */
+export function useAllTrips(filter: Omit<TripsListInput, 'offset' | 'limit' | 'sort'>) {
+  return useAllPagesQuery(tripsListQuery(filter));
+}
+
+/** What a trip screen shows: the trip, its purchases, its partners, and the entries page on screen. */
 export interface TripView {
-  /** The first page: the trip, its purchases and each partner's money (always the latest). */
+  /** The page on screen: the trip, its purchases and each partner's money (always the latest). */
   detail: TripDetail;
-  /** Every entry loaded so far, newest first. */
+  /** The entries of this page, newest first. */
   entries: TripDetail['entries'];
   /** How many entries the trip has in all. */
   entriesCount: number;
 }
 
-/** One trip, with its history loaded page by page (PRD FR-19.11). Never kept: a sale changes it. */
+/** One trip, with its entries one page at a time (PRD FR-19.11). Never kept: a sale changes it. */
 export function useTrip(id: number | null) {
-  return useInfiniteQuery({
+  const query = usePagedQuery({
+    screen: 'trips.entries',
     queryKey: [...TRIPS_KEY, 'one', id],
-    initialPageParam: 0,
     enabled: id !== null,
-    queryFn: ({ pageParam }) =>
-      tripsGet({ id: id ?? 0, entries_offset: pageParam, entries_limit: PAGE_SIZE }),
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((sum, page) => sum + page.entries.length, 0);
-      return loaded < last.entries_count && last.entries.length > 0 ? loaded : undefined;
-    },
-    select: (data): TripView | undefined => {
-      const first = data.pages[0];
-      if (first === undefined) return undefined;
-      return {
-        detail: first,
-        entries: data.pages.flatMap((page) => page.entries),
-        entriesCount: first.entries_count,
-      };
-    },
-    staleTime: 0,
+    fetchPage: (offset, limit) =>
+      tripsGet({ id: id ?? 0, entries_offset: offset, entries_limit: limit }),
+    rowsIn: (page) => page.entries.length,
+    totalOf: (page) => page.entries_count,
   });
+  const first = query.data?.pages[0];
+  const view: TripView | undefined =
+    first === undefined
+      ? undefined
+      : { detail: first, entries: first.entries, entriesCount: first.entries_count };
+  return { ...query, data: view };
 }
 
 /** The data of the dashboard tile مارکیٹ سفر (PRD 9.1). */

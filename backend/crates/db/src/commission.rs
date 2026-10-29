@@ -172,6 +172,15 @@ pub fn by_arrivals(
     })
 }
 
+/// ` AND` after a `WHERE` text, or ` WHERE` when the filter is empty.
+fn glue(where_sql: &str) -> &'static str {
+    if where_sql.trim().is_empty() {
+        " WHERE"
+    } else {
+        " AND"
+    }
+}
+
 /// The commission on the goods of the purchases that match a filter's `WHERE` (the same text the
 /// purchase totals use, with `p` the purchases): one query for the total row of a list.
 ///
@@ -185,7 +194,8 @@ pub fn of_purchases_where(
     conn.query_row(
         &format!(
             "SELECT {SUMS} FROM purchases p JOIN analytics_facts f ON f.purchase_id = p.id
-             {where_sql} AND p.status = 'saved'"
+             {where_sql}{glue} p.status = 'saved'",
+            glue = glue(where_sql)
         ),
         args,
         |r| net(r, 0),
@@ -207,7 +217,8 @@ pub fn of_arrivals_where(
             "SELECT {SUMS} FROM garden_arrivals a
              JOIN bikri_lots l ON l.arrival_id = a.id
              JOIN analytics_facts f ON f.lot_id = l.id
-             {where_sql} AND a.status = 'saved'"
+             {where_sql}{glue} a.status = 'saved'",
+            glue = glue(where_sql)
         ),
         args,
         |r| net(r, 0),

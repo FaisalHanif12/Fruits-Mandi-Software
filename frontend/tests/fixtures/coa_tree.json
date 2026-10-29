@@ -1,0 +1,250 @@
+{
+  "heads": [
+    {
+      "id": 1,
+      "code": "01",
+      "name_ur": "اثاثے",
+      "name_en": "Assets",
+      "nature": "asset",
+      "balance": {
+        "amount_paisa": 5848400,
+        "side": "dr"
+      },
+      "controls": [
+        {
+          "id": 1,
+          "code": "0101",
+          "name_ur": "روکڑ",
+          "name_en": "Cash",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 5848400,
+            "side": "dr"
+          },
+          "account_count": 1
+        },
+        {
+          "id": 2,
+          "code": "0102",
+          "name_ur": "بینک",
+          "name_en": "Bank",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 1
+        },
+        {
+          "id": 3,
+          "code": "0103",
+          "name_ur": "ادھار رقم",
+          "name_en": "Money Lent",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "code": "02",
+      "name_ur": "واجب الادا",
+      "name_en": "Payables",
+      "nature": "payable",
+      "balance": {
+        "amount_paisa": 440000,
+        "side": "cr"
+      },
+      "controls": [
+        {
+          "id": 4,
+          "code": "0201",
+          "name_ur": "واجب الادا",
+          "name_en": "Payables",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 440000,
+            "side": "cr"
+          },
+          "account_count": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "code": "03",
+      "name_ur": "پارٹیاں",
+      "name_en": "Parties",
+      "nature": "party",
+      "balance": {
+        "amount_paisa": 1140400,
+        "side": "dr"
+      },
+      "controls": [
+        {
+          "id": 5,
+          "code": "03011",
+          "name_ur": "بیوپاری",
+          "name_en": "Sellers",
+          "party_type": "seller",
+          "balance": {
+            "amount_paisa": 1016000,
+            "side": "cr"
+          },
+          "account_count": 4
+        },
+        {
+          "id": 6,
+          "code": "0304",
+          "name_ur": "گاہک",
+          "name_en": "Buyers",
+          "party_type": "buyer",
+          "balance": {
+            "amount_paisa": 2156400,
+            "side": "dr"
+          },
+          "account_count": 4
+        },
+        {
+          "id": 12,
+          "code": "0305",
+          "name_ur": "الگ کھاتہ",
+          "name_en": "Separate Khatas",
+          "party_type": "separate",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 0
+        },
+        {
+          "id": 13,
+          "code": "0306",
+          "name_ur": "باغات",
+          "name_en": "Gardens",
+          "party_type": "garden",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 0
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "code": "04",
+      "name_ur": "آمدن",
+      "name_en": "Income",
+      "nature": "income",
+      "balance": {
+        "amount_paisa": 548800,
+        "side": "cr"
+      },
+      "controls": [
+        {
+          "id": 7,
+          "code": "0401",
+          "name_ur": "آمدن",
+          "name_en": "Income",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 548800,
+            "side": "cr"
+          },
+          "account_count": 5
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "code": "05",
+      "name_ur": "اخراجات",
+      "name_en": "Expenses",
+      "nature": "expense",
+      "balance": {
+        "amount_paisa": 300000,
+        "side": "dr"
+      },
+      "controls": [
+        {
+          "id": 8,
+          "code": "0501",
+          "name_ur": "دکان خرچہ",
+          "name_en": "Shop Expenses",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 300000,
+            "side": "dr"
+          },
+          "account_count": 1
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "code": "06",
+      "name_ur": "سرمایہ",
+      "name_en": "Capital",
+      "nature": "capital",
+      "balance": {
+        "amount_paisa": 6300000,
+        "side": "cr"
+      },
+      "controls": [
+        {
+          "id": 9,
+          "code": "0601",
+          "name_ur": "سرمایہ",
+          "name_en": "Capital",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 6500000,
+            "side": "cr"
+          },
+          "account_count": 2
+        },
+        {
+          "id": 10,
+          "code": "0602",
+          "name_ur": "شراکت دار سرمایہ",
+          "name_en": "Partner Capital",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 3
+        },
+        {
+          "id": 11,
+          "code": "0603",
+          "name_ur": "ذاتی خرچہ",
+          "name_en": "Drawings",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 200000,
+            "side": "dr"
+          },
+          "account_count": 3
+        },
+        {
+          "id": 14,
+          "code": "0604",
+          "name_ur": "باغ سفر اور پھل",
+          "name_en": "Gardens Trips and Fruit",
+          "party_type": "other",
+          "balance": {
+            "amount_paisa": 0,
+            "side": "zero"
+          },
+          "account_count": 3
+        }
+      ]
+    }
+  ]
+}

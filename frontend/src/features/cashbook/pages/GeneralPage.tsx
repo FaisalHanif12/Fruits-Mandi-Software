@@ -32,6 +32,7 @@ import {
   fieldError,
   showToast,
   useErrorText,
+  FormCard,
 } from '../../../shared/ui';
 import { GeneralLinesSection } from '../components/GeneralLinesSection';
 import { GeneralPeople } from '../components/GeneralPeople';
@@ -262,7 +263,7 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
         />
       }
     >
-      <div className="grid grid-cols-1 gap-4 rounded-3 border border-border bg-surface p-3 normal:grid-cols-2">
+      <FormCard>
         <Field label={<Localized id="cashbook-field-date" />} error={fieldError(error, 'date')}>
           {(props) => (
             <DateInput
@@ -290,7 +291,7 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
             />
           )}
         </Field>
-      </div>
+      </FormCard>
     </EntryFrame>
   );
 }

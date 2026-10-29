@@ -7,6 +7,7 @@ use ts_rs::TS;
 
 use super::run;
 use crate::error::UiError;
+use mandi_services::core::paging::SortInput;
 use mandi_services::core::translit::{Direction, Kind, Suggestion};
 use mandi_services::{auth, translit};
 
@@ -68,6 +69,14 @@ pub struct PairsListInput {
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// Only pairs whose English or Urdu spelling holds this text. The count and the uses are over
+    /// these pairs.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole list by: `roman`, `urdu`, `kind`, `use_count` or
+    /// `last_used_at`. Null is the most used first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
 }
 
 /// One page of learned pairs with the totals over every pair.
@@ -154,7 +163,13 @@ pub async fn translit_pairs_list<R: tauri::Runtime>(
 ) -> Result<PairsList, UiError> {
     run(app, "translit_pairs_list", move |ctx| {
         auth::require(ctx)?;
-        let (rows, total_count, use_count) = translit::list_page(ctx, input.offset, input.limit)?;
+        let (rows, total_count, use_count) = translit::list_page_with(
+            ctx,
+            input.offset,
+            input.limit,
+            input.search.as_deref(),
+            input.sort.as_ref(),
+        )?;
         Ok(PairsList {
             rows: rows.into_iter().map(PairRow::from).collect(),
             total_count,

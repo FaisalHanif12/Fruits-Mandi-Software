@@ -113,6 +113,16 @@ impl StoredCharge {
     pub fn carries_per_lot(&self) -> bool {
         self.method == StoredMethod::PerLot && self.amount > Paisa::ZERO
     }
+
+    /// True if this line was saved with a per-lot rule commission of 0, the form of every line of a
+    /// lot that does not carry it (the carrier is another line, or, in a goods-arrived entry,
+    /// another lot).
+    pub fn spared_per_lot(&self) -> bool {
+        self.method == StoredMethod::PerLot
+            && self.rule_id.is_some()
+            && self.amount == Paisa::ZERO
+            && self.value_paisa.is_some_and(|v| v > Paisa::ZERO)
+    }
 }
 
 /// A stored sale line, with what it needs to tell whether the user changed it (PRD FR-12.20).
@@ -161,6 +171,14 @@ pub struct StoredLotCharge {
 }
 
 impl StoredLotCharge {
+    /// True if this charge of the lot was actually taken as a per-lot amount (it has an amount and
+    /// is not a per-نگ charge): a rule's per-lot amount, or an amount typed by hand on the lot.
+    /// A goods-arrived entry takes such a charge once (PRD FR-12.40, plan 37, lead decision D1: a
+    /// typed amount counts as carrying it too, and stays as typed).
+    pub fn carries_per_lot(&self) -> bool {
+        self.method != LotChargeMethod::PerUnit && self.amount > Paisa::ZERO
+    }
+
     /// What the user typed to get this charge. A charge a rule decided, and a charge with
     /// nothing in it, were not typed (`None`). A typed manual charge keeps its amount as value.
     pub fn typed(&self) -> Option<TypedLotCharge> {

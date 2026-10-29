@@ -26,10 +26,14 @@ use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
 use super::calc::average_days;
+use super::chart;
 use super::facts::{self, Sums, compare_range, run_range};
 use super::filters::Typed;
 use super::ids;
-use super::model::{AnalyticsKey, AnalyticsRow};
+use super::model::{
+    AnalyticsChart, AnalyticsChartKind, AnalyticsChartPoint, AnalyticsChartSeries, AnalyticsKey,
+    AnalyticsRow,
+};
 use super::table::{Part, Table, col, compare_cells, compare_columns, count_of, part_cell, row};
 use crate::error::ReportsError;
 use crate::reports::PageSpec;
@@ -243,6 +247,82 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         add(&mut grand_compared, entry.compared)?;
     }
 
+    // The chart (plan 38 R4, D1): the ten buyers who bought most, and one point for the rest,
+    // from every buyer of the filter. The entries are in that order now; a sort changes the
+    // table, never the chart.
+    let charts = {
+        let mut points = Vec::new();
+        let (mut rest, mut rest_count) = (Paisa::ZERO, 0_i64);
+        for (rank, entry) in entries.iter().enumerate() {
+            if rank < chart::TOP {
+                points.push(AnalyticsChartPoint {
+                    label: party_of(&entry.key)
+                        .map(|party| Cell::Party { party })
+                        .unwrap_or(Cell::Empty),
+                    key: Some(AnalyticsKey {
+                        buyer_id: Some(entry.key.0),
+                        person_key: entry.key.1.clone(),
+                        ..AnalyticsKey::default()
+                    }),
+                    values: vec![Cell::Money {
+                        paisa: entry.sums.buyer_value,
+                    }],
+                    is_others: false,
+                });
+            } else {
+                add(&mut rest, entry.sums.buyer_value)?;
+                rest_count = rest_count.saturating_add(1);
+            }
+        }
+        if rest_count > 0 {
+            points.push(AnalyticsChartPoint {
+                label: Cell::Empty,
+                key: None,
+                values: vec![Cell::Money { paisa: rest }],
+                is_others: true,
+            });
+        }
+        if points.is_empty() {
+            Vec::new()
+        } else {
+            vec![AnalyticsChart {
+                kind: AnalyticsChartKind::Ranked,
+                title: None,
+                series: vec![AnalyticsChartSeries {
+                    key: "purchase_value".to_owned(),
+                    kind: ColumnKind::Money,
+                }],
+                points,
+                others_count: rest_count,
+                by_month: false,
+            }]
+        }
+    };
+
+    // A sort by the columns known before the page is cut. The dues and the days to pay are worked
+    // out for the page only, so they cannot be sorted (plan 38 R4).
+    if let Some(sort) = &typed.sort {
+        const SORTABLE: [&str; 5] = ["buyer", "qty", "purchase_value", "buyer_comm", "laga"];
+        sort.check(&SORTABLE)
+            .map_err(|e| ReportsError::Rejected(vec![e]))?;
+        let code = |e: &Entry| {
+            parties
+                .get(&e.key.0)
+                .map(|p| p.code.clone())
+                .unwrap_or_default()
+        };
+        entries.sort_by(|a, b| {
+            let ordering = match sort.column.as_str() {
+                "buyer" => code(a).cmp(&code(b)).then_with(|| a.key.1.cmp(&b.key.1)),
+                "qty" => a.sums.qty.cmp(&b.sums.qty),
+                "purchase_value" => a.sums.buyer_value.cmp(&b.sums.buyer_value),
+                "buyer_comm" => a.sums.buyer_comm.cmp(&b.sums.buyer_comm),
+                _ => a.sums.laga.cmp(&b.sums.laga),
+            };
+            sort.direction.apply(ordering)
+        });
+    }
+
     // Dues and days to pay for the rows of this page only.
     let page_entries: Vec<&Entry> = {
         let ordered: Vec<&Entry> = entries.iter().collect();
@@ -336,5 +416,6 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         total_count: count_of(entries.len()),
         rows,
         totals,
+        charts,
     })
 }

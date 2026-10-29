@@ -12,7 +12,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Plus, Route, SearchX } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, type ListContext } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
@@ -66,10 +66,12 @@ function TripsBody({ saved, remember }: MemoryProps) {
       status: status === 'all' ? null : status,
       partner_id: null,
       search: textOrNull(search),
+      group_by_month: false,
     }),
     [from, to, status, search],
   );
   const list = useTripsList(filter);
+  const paging = useListPaging(list.pager);
   const rows = useMemo(() => list.data?.pages.flatMap((page) => page.rows), [list.data]);
   const first = list.data?.pages[0];
   const newTrip = () => {
@@ -164,27 +166,10 @@ function TripsBody({ saved, remember }: MemoryProps) {
             heightMode={long ? 'fill' : 'auto'}
             isInactive={(row) => row.status === 'closed'}
             totals={totals}
+            paging={paging}
           />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Localized
-            id="trips-list-count"
-            vars={{ shown: String(rows.length), total: String(first?.total_count ?? rows.length) }}
-          >
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          {list.hasNextPage ? (
-            <Button
-              disabled={list.isFetchingNextPage}
-              busy={list.isFetchingNextPage}
-              onClick={() => {
-                void list.fetchNextPage();
-              }}
-            >
-              <Localized id="trips-list-more" />
-            </Button>
-          ) : null}
-        </div>
+        <Pager pager={list.pager} />
       </>
     );
   }

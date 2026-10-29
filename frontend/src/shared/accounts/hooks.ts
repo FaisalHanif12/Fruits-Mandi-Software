@@ -1,9 +1,15 @@
 // The accounts and the chart as hooks (Code Standards F6). A save or a change of active state
 // refreshes the lists, the chart and every picker, so a new account is found at once everywhere.
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { usePagedQuery } from '../hooks';
+import { useAllPagesQuery, usePagedQuery } from '../hooks';
 import {
   accountsGet,
   assistPartyCard,
@@ -18,6 +24,7 @@ import {
   accountsSave,
   accountsSetActive,
   accountsSimilar,
+  coaControlAccounts,
   coaControlsList,
   coaTree,
 } from './api';
@@ -36,18 +43,28 @@ const COA_KEY = ['coa'] as const;
 /** A short pause so a burst of key presses asks once. */
 const SIMILAR_DELAY_MS = 300;
 
+/** What the account list asks the backend, for the page buttons and for the whole list alike. */
+function accountListQuery(filter: AccountFilter) {
+  return {
+    queryKey: [...ACCOUNTS_KEY, 'list', filter],
+    fetchPage: (offset: number, limit: number) => accountsList(filter, offset, limit),
+    rowsIn: (page: { rows: readonly unknown[] }) => page.rows.length,
+    totalOf: (page: { count: number }) => page.count,
+    keepPrevious: true,
+  };
+}
+
 /**
- * The accounts for the filter, page by page, with the count of the whole filter and the opening
- * totals over all of it (PRD FR-10.5, FR-19.11).
+ * The accounts for the filter, one page at a time, with the count of the whole filter and the
+ * opening totals over all of it (PRD FR-10.5, FR-19.11).
  */
 export function useAccountList(filter: AccountFilter) {
-  return usePagedQuery({
-    queryKey: [...ACCOUNTS_KEY, 'list', filter],
-    fetchPage: (offset, limit) => accountsList(filter, offset, limit),
-    rowsIn: (page) => page.rows.length,
-    totalOf: (page) => page.count,
-    keepPrevious: true,
-  });
+  return usePagedQuery({ screen: 'accounts.list', ...accountListQuery(filter) });
+}
+
+/** Every account of the filter, page after page (the opening balances, `useLoadRest`). */
+export function useAllAccounts(filter: AccountFilter) {
+  return useAllPagesQuery(accountListQuery(filter));
 }
 
 /** One account for its form. */
@@ -57,6 +74,19 @@ export function useAccount(id: number) {
 
 export function useCoaTree() {
   return useQuery({ queryKey: [...COA_KEY, 'tree'], queryFn: coaTree });
+}
+
+/** The accounts of an opened control of the chart, one page at a time (plan 38 B1). */
+export function useControlAccountPages(
+  wanted: readonly { controlId: number; page: number; pageSize: number }[],
+) {
+  return useQueries({
+    queries: wanted.map(({ controlId, page, pageSize }) => ({
+      queryKey: [...COA_KEY, 'control', controlId, page, pageSize],
+      queryFn: () => coaControlAccounts(controlId, (page - 1) * pageSize, pageSize),
+      placeholderData: keepPreviousData,
+    })),
+  });
 }
 
 export function useCoaControls() {

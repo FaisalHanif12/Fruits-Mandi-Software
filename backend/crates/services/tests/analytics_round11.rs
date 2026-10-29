@@ -48,6 +48,7 @@ fn view(w: &World, v: AnalyticsView, f: AnalyticsFilters) -> AnalyticsPage {
     run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,
@@ -61,6 +62,7 @@ fn refused(w: &World, v: AnalyticsView, f: AnalyticsFilters) -> Vec<(ErrorCode, 
     match run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,
@@ -941,6 +943,7 @@ fn a_period_shortcut_and_a_page_work_on_the_new_views() {
         let page = run(
             w.env.ctx.db(),
             &AnalyticsRunInput {
+                sort: None,
                 view: v,
                 filters: AnalyticsFilters {
                     period: Some(AnalyticsPeriod::ThisYear),

@@ -173,6 +173,8 @@ fn bikri_page(
             offset,
             limit,
             status,
+            // This test counts the cancelled one too.
+            show_finished: true,
             ..Default::default()
         },
     )
@@ -370,6 +372,8 @@ fn the_stock_list_can_ask_for_one_lot_and_a_master_list_for_one_record() {
         masters::list_page(
             &w.env.ctx,
             &MastersListInput {
+                search: None,
+                sort: None,
                 kind: MasterKind::Item,
                 include_inactive,
                 id,
@@ -417,6 +421,10 @@ fn voucher_page(
     vouchers::list(
         &w.env.ctx,
         &VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
             voucher_type,
             from: String::new(),
             to: String::new(),
@@ -594,6 +602,8 @@ fn masters_page(
     masters::list_page(
         &w.env.ctx,
         &MastersListInput {
+            search: None,
+            sort: None,
             kind: MasterKind::Item,
             include_inactive,
             id: None,
@@ -669,6 +679,8 @@ fn rules_page(w: &World, offset: u32, limit: u32) -> mandi_services::core::rules
     rules::list_page(
         &w.env.ctx,
         &RulesListInput {
+            search: None,
+            sort: None,
             filter: RulesFilter {
                 side: None,
                 charge_type: None,

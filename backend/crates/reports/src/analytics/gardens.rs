@@ -196,6 +196,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         total_cells.push(money(partner_totals.get(id).copied().unwrap_or_default()));
     }
     Ok(Table {
+        charts: Vec::new(),
         columns,
         total_count: count_of(rows.len()),
         rows: spec.slice(&rows),

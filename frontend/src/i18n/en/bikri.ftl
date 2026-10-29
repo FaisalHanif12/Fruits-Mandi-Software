@@ -964,3 +964,7 @@ bikri-stock-garden-col-number = No.
 
 # review: pending
 bikri-stock-garden-col-arrived = Arrived
+
+# The hint inside the search box of today's list.
+# review: pending
+bikri-list-search-placeholder = Sale number or truck number

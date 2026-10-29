@@ -25,7 +25,6 @@ export {
 export { reportsCatalog, reportsPrintData, reportsRun } from './api';
 export {
   PEOPLE_RESULT_LIMIT,
-  REPORT_PAGE_SIZE,
   useReportCatalog,
   useReportPages,
   useReportPrintData,

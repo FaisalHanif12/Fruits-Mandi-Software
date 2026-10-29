@@ -300,6 +300,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       expect(keysOf(page)).toEqual([
         'columns',
         'filters',
+        'group_above',
         'id',
         'limit',
         'offset',
@@ -526,7 +527,7 @@ describe('round 8: stock, vouchers, registers, trip profit or loss and the day s
     for (const page of [R33_TRIP, R33_PARTNER]) {
       expect(page.rows.some((row) => row.kind === 'group')).toBe(true);
     }
-    expect(R33_TRIP.columns).toHaveLength(15);
+    expect(R33_TRIP.columns).toHaveLength(16);
     expect(R33_PARTNER.columns.map((column) => column.key)).toEqual([
       'trip',
       'partner',
@@ -539,7 +540,7 @@ describe('round 8: stock, vouchers, registers, trip profit or loss and the day s
     ]);
     // The share is a percent cell, in hundredths of a percent (4000 is 40%).
     expect(R33_PARTNER.rows[1]?.cells[2]).toEqual({ type: 'percent', hundredths: 4000 });
-    for (const page of [R33_ITEM, R33_MONTH]) expect(page.columns).toHaveLength(12);
+    for (const page of [R33_ITEM, R33_MONTH]) expect(page.columns).toHaveLength(13);
   });
 
   it('R34 is a flat list of date, line, count and amount with no totals', () => {

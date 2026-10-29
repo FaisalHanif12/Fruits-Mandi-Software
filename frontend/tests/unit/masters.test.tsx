@@ -25,6 +25,7 @@ import {
 } from '../helpers/app';
 import { account, fakeAccountSearch } from '../helpers/accounts';
 import { fakeMasters, record } from '../helpers/masters';
+import { pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
 
@@ -80,6 +81,12 @@ function cellElement(rowId: number, colId: string): HTMLElement {
 
 const rowIds = () =>
   Array.from(document.querySelectorAll('.ag-row[row-id]')).map((row) => row.getAttribute('row-id'));
+
+/** The ids of the rows drawn, by their place in the list (the grid keeps elements of rows that stay). */
+const sortedRowIds = () =>
+  Array.from(document.querySelectorAll('.ag-row[row-id]'))
+    .sort((a, b) => Number(a.getAttribute('row-index')) - Number(b.getAttribute('row-index')))
+    .map((row) => row.getAttribute('row-id'));
 
 /** Matches an accessible name or a label without Fluent's isolation marks. */
 const named = (text: string) => (name: string) => visible(name) === text;
@@ -209,7 +216,7 @@ describe.each(LANGUAGES)('a master list (%s)', (language) => {
     });
   });
 
-  it('150 cities come page by page: 100 at once with the count of the backend, Show more loads the rest', async () => {
+  it('150 cities are read in full (100 a request) and shown 25 at a time, with the page buttons', async () => {
     const cities = Array.from({ length: 150 }, (_, index) =>
       record(
         'city',
@@ -222,24 +229,27 @@ describe.each(LANGUAGES)('a master list (%s)', (language) => {
     fakeMasters({ city: cities });
     await renderApp('/index/cities');
     await screen.findByRole('heading', { level: 1, name: message(language, 'masters-city-title') });
-    const showing = (shown: number) =>
-      message(language, 'common-list-count', { shown: String(shown), total: '150' });
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(100));
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
     });
-    expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 0, 100);
-    await userEvent.setup().click(
-      await screen.findByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    );
-    await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(showing(150));
-    });
+    // A master list is short: every page is read, and the page buttons cut it in memory.
+    expect(mastersApi.mastersList).toHaveBeenCalledTimes(2);
     expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 100, 100);
+    await waitFor(() => {
+      expect(sortedRowIds()[0]).toBe('1');
+    });
+    await userEvent.setup().click(await pagerButton(language, 'next'));
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
+    });
+    await waitFor(() => {
+      expect(sortedRowIds()[0]).toBe('26');
+    });
+    // Nothing more was asked of the backend.
+    expect(mastersApi.mastersList).toHaveBeenCalledTimes(2);
   });
 
-  it('the row last opened is on a later page: the pages are read until it is loaded, so the list comes back to it', async () => {
+  it('the list comes back to the page it was on after a row was opened, with that row focused', async () => {
     const cities = Array.from({ length: 150 }, (_, index) =>
       record(
         'city',
@@ -250,18 +260,31 @@ describe.each(LANGUAGES)('a master list (%s)', (language) => {
       ),
     );
     fakeMasters({ city: cities });
-    useMasterFocus.setState({ rows: { city: 140 } });
-    await renderApp('/index/cities');
-    await waitFor(
-      () => {
-        expect(mastersApi.mastersList).toHaveBeenLastCalledWith('city', true, 100, 100);
-      },
-      { timeout: 15_000 },
-    );
+    useMasterFocus.setState({ rows: {} });
+    const { router } = await renderApp('/index/cities');
+    const user = userEvent.setup();
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(visible(document.body.textContent)).toContain(
-        message(language, 'common-list-count', { shown: '150', total: '150' }),
-      );
+      expect(sortedRowIds()[0]).toBe('26');
+    });
+    await user.click(cellElement(28, 'code'));
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/index/cities/28');
+    });
+    act(() => {
+      router.history.back();
+    });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/index/cities');
+    });
+    await waitFor(() => {
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
+    });
+    await waitFor(() => {
+      expect(
+        document.querySelector('.ag-cell-focus')?.closest('.ag-row')?.getAttribute('row-id'),
+      ).toBe('28');
     });
   });
 

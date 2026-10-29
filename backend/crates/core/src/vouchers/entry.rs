@@ -458,6 +458,12 @@ pub struct AdvancesReportInput {
     pub seller_id: Option<i64>,
     /// The "as of" day, `DD-MM-YYYY` or a shortcut. Empty means today.
     pub as_of: String,
+    /// How many sellers to skip. 0 for the first page.
+    #[serde(default)]
+    pub offset: u32,
+    /// The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
 }
 
 /// One seller's advances (PRD R26): given, returned, adjusted and open.
@@ -486,9 +492,16 @@ pub struct AdvancesReportRow {
 pub struct AdvancesReport {
     /// The day the report is as of, `YYYY-MM-DD`.
     pub as_of: String,
-    /// By seller code.
+    /// This page, by seller code.
     pub rows: Vec<AdvancesReportRow>,
-    /// Σ given.
+    /// How many sellers match, over the whole filter.
+    #[ts(type = "number")]
+    pub total_count: u32,
+    /// The offset that was asked.
+    pub offset: u32,
+    /// The page size used.
+    pub limit: u32,
+    /// Σ given, over every seller of the filter (not the page).
     #[ts(type = "Paisa")]
     pub given_paisa: Paisa,
     /// Σ returned.
@@ -518,6 +531,12 @@ pub struct CollectionListInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub city_id: Option<i64>,
+    /// How many buyers to skip, counting down the groups in order. 0 for the first page.
+    #[serde(default)]
+    pub offset: u32,
+    /// The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
+    #[serde(default)]
+    pub limit: u32,
 }
 
 /// A buyer on the collection list.
@@ -551,6 +570,22 @@ pub struct CollectionGroup {
     pub total_paisa: Paisa,
 }
 
+/// The whole group's figures for the heading of a group (plan 38 B2): one for each (collector, city)
+/// of the whole filter, in the order of the groups, whatever the page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct CollectionGroupTotal {
+    /// The collector (a staff member). Null for buyers with no collector.
+    pub collector: Option<RecordRef>,
+    /// The city. Null for buyers with no city.
+    pub city: Option<RecordRef>,
+    /// How many buyers the group has in all.
+    #[ts(type = "number")]
+    pub count: u32,
+    /// Σ of the dues of all of them.
+    #[ts(type = "Paisa")]
+    pub total_paisa: Paisa,
+}
+
 /// Today's planned collections (PRD FR-15.6). Read only; printable by the screen.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct CollectionList {
@@ -559,9 +594,20 @@ pub struct CollectionList {
     /// Its weekday, 0 (Monday) to 6 (Sunday), as stored on the account.
     #[ts(type = "number")]
     pub weekday: u32,
-    /// By collector, then city.
+    /// By collector, then city. A page holds the groups that have buyers on it, each with only the
+    /// buyers of the page; a group's own total stays over all its buyers.
     pub groups: Vec<CollectionGroup>,
-    /// Σ of all dues on the list.
+    /// How many buyers are on the list, over the whole filter.
+    #[ts(type = "number")]
+    pub total_count: u32,
+    /// Every group of the whole filter with its buyer count and total, in the order of `groups`.
+    /// A group heading is drawn from this, never from the page's slice of the group.
+    pub group_totals: Vec<CollectionGroupTotal>,
+    /// The offset that was asked.
+    pub offset: u32,
+    /// The page size used.
+    pub limit: u32,
+    /// Σ of all dues on the list (not only the page).
     #[ts(type = "Paisa")]
     pub total_paisa: Paisa,
 }

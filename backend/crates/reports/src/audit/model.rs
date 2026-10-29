@@ -6,6 +6,7 @@
 //! formatter; the screen works out nothing.
 
 use mandi_core::money::Paisa;
+use mandi_core::paging::{MonthSubtotal, SortInput};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -43,6 +44,14 @@ pub struct AuditListInput {
     /// The rows to return. 0 means 100; at most 1,000.
     #[ts(type = "number")]
     pub limit: i64,
+    /// The column to sort the whole filter by: `at`, `id`, `user`, `action`, `entity`,
+    /// `entity_id` or `reason`. Null is newest first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the number of entries of each month (Pakistan time) in `months`. Used only
+    /// in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// The user of an audit entry.
@@ -170,6 +179,10 @@ pub struct AuditPage {
     /// All the entries of the filter, not this page's.
     #[ts(type = "number")]
     pub total_count: i64,
+    /// The number of entries of each month of the whole filter (Pakistan time), in the order of
+    /// the list, when asked with `group_by_month` and the list is in date order. No figures:
+    /// only the count.
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// The values the filter boxes offer.

@@ -797,6 +797,7 @@ fn a_draft_left_in_a_damaged_file_is_never_part_of_any_balance() {
     let trial_before = ledger::trial_balance(&w.env.ctx, None).unwrap();
     let card_before = assist::party_card(&w.env.ctx, busy).unwrap();
     let list_input = AccountsListInput {
+        sort: None,
         filter: AccountFilter {
             kind: mandi_services::core::accounts::AccountListKind::All,
             text: String::new(),
@@ -943,6 +944,7 @@ fn snapshot(env: &TestEnv, dir: &TempDir, watch: &[i64], busy: i64) -> Vec<Strin
     let list = accounts::list(
         &env.ctx,
         &AccountsListInput {
+            sort: None,
             filter: AccountFilter {
                 kind: mandi_services::core::accounts::AccountListKind::All,
                 text: String::new(),

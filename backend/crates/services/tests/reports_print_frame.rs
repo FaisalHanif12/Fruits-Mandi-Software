@@ -227,6 +227,7 @@ fn the_tag_shows_in_the_analytics_views_the_buyer_bills_slips_and_the_dashboard(
     let c = a_run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: AnalyticsView::C,
             filters: AnalyticsFilters::default(),
             offset: 0,
@@ -249,6 +250,7 @@ fn the_tag_shows_in_the_analytics_views_the_buyer_bills_slips_and_the_dashboard(
     let b = a_run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: AnalyticsView::B,
             filters: AnalyticsFilters::default(),
             offset: 0,

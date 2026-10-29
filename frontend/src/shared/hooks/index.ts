@@ -11,4 +11,23 @@ export { useLatest } from './useLatest';
 export { useRefusalIntoView } from './useRefusalIntoView';
 export { useEntrySaveFlow } from './useEntrySaveFlow';
 export { PREVIEW_DELAY_MS, usePreviewQuery } from './usePreviewQuery';
-export { PAGE_SIZE, nextOffset, useLoadRest, usePagedQuery } from './usePagedQuery';
+export {
+  PAGE_SIZE,
+  nextOffset,
+  useAllPagesQuery,
+  useLoadRest,
+  usePagedQuery,
+} from './usePagedQuery';
+export {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZES,
+  describePager,
+  pageWindow,
+  resetPagerMemory,
+  useClientPager,
+  usePagerControl,
+  type PageSize,
+  type PagerControl,
+  type PagerState,
+} from './usePager';
+export { usePeriod, type PeriodControl, type PeriodState } from './usePeriod';

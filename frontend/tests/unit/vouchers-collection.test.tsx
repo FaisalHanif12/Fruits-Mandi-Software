@@ -115,12 +115,57 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
     await user.keyboard(`${text}{Enter}`);
   }
 
+  it('reads every page of the list before the round starts: 130 buyers come in two requests', async () => {
+    const base = collectionList();
+    const group = base.groups[0];
+    if (group === undefined) throw new Error('no group');
+    const first = group.buyers[0];
+    if (first === undefined) throw new Error('no buyer');
+    const everyBuyer = Array.from({ length: 130 }, (_, index) => ({
+      ...first,
+      account: { id: 1000 + index, code: String(index), name_ur: 'خ', name_en: 'B' },
+    }));
+    vi.mocked(vouchersApi.assistCollectionList).mockImplementation((input) =>
+      Promise.resolve({
+        ...base,
+        groups: [{ ...group, buyers: everyBuyer.slice(input.offset, input.offset + input.limit) }],
+        total_count: 130,
+        offset: input.offset,
+        limit: input.limit,
+      }),
+    );
+    await renderApp('/bikri/collection');
+    await waitFor(() => {
+      expect(vouchersApi.assistCollectionList).toHaveBeenCalledTimes(2);
+    });
+    expect(vouchersApi.assistCollectionList).toHaveBeenNthCalledWith(1, {
+      date: '10-10-2026',
+      collector_staff_id: null,
+      city_id: null,
+      offset: 0,
+      limit: 100,
+    });
+    expect(vouchersApi.assistCollectionList).toHaveBeenNthCalledWith(2, {
+      date: '10-10-2026',
+      collector_staff_id: null,
+      city_id: null,
+      offset: 100,
+      limit: 100,
+    });
+    // The round is drawn once, from the joined list; the grid draws the rows in view.
+    await waitFor(() => {
+      expect(rowIds().length).toBeGreaterThan(0);
+    });
+  });
+
   it('asks for today with no collector or city, and lists each buyer with his dues and days from the backend', async () => {
     await open();
     expect(vouchersApi.assistCollectionList).toHaveBeenCalledWith({
       date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
+      offset: 0,
+      limit: 100,
     });
     const [first, second] = rowIds();
     if (first === undefined || second === undefined) throw new Error('rows');

@@ -287,6 +287,10 @@ fn e2e_19_the_opening_position() {
     let list = vouchers::list(
         &p.env.ctx,
         &VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
             account_id: None,
             person_key: None,
             voucher_type: Some(VoucherType::Advance),
@@ -948,6 +952,8 @@ fn e2e_7_event_4_rahim_is_paid_4316() {
         &AdvancesReportInput {
             seller_id: Some(w.rahim),
             as_of: String::new(),
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -1299,6 +1305,8 @@ fn e2e_31_a_seller_returns_10000_of_his_advance() {
         &AdvancesReportInput {
             seller_id: None,
             as_of: String::new(),
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -1338,6 +1346,8 @@ fn e2e_31_a_seller_returns_10000_of_his_advance() {
         &AdvancesReportInput {
             seller_id: Some(w.rahim),
             as_of: "09-10-2026".into(),
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();

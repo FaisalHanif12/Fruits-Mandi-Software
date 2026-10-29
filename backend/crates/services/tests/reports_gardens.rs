@@ -675,6 +675,8 @@ fn r31_of_alif_after_e2e_40_has_the_garden_lines_and_ends_at_his_total_10040() {
     let statement = mandi_services::partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: request.partner_id,
             from: None,
             to: None,

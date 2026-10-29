@@ -9,13 +9,15 @@ import { useNavigate } from '@tanstack/react-router';
 import { Landmark, Plus, SearchX } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, PagedFooter, type ListContext } from '../../../shared/grid';
 import {
-  useFocusFirstField,
-  useLayoutStep,
-  useLoadRest,
-  useRememberedFlag,
-} from '../../../shared/hooks';
+  ListGrid,
+  ListRegion,
+  Pager,
+  listHeightMode,
+  useListPaging,
+  type ListContext,
+} from '../../../shared/grid';
+import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
@@ -24,10 +26,11 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FilterBar,
+  ListPage,
   LoadingState,
   Num,
   Select,
-  TextInput,
 } from '../../../shared/ui';
 import { accountColumns, hasMoreColumns, showsOpeningColumns } from '../account-columns';
 import { useAccountList } from '../../../shared/accounts';
@@ -35,14 +38,6 @@ import type { AccountFilter, AccountListKind, AccountRow } from '../../../shared
 import { ACCOUNTS_SCREEN, accountChoicesFrom, accountChoicesText } from '../remember';
 import { useMasterFocus } from '../store';
 
-/** A list of this many rows or fewer is as tall as its rows; a longer one fills the screen. */
-const SHORT_LIST_ROWS = 30;
-/**
- * How many pages (100 accounts each) are read to find the row last opened. It may be on no page of
- * this list (inactive, or not in this filter), and the list can have 20,000 accounts, so the
- * search stops here and the focus starts on the first row.
- */
-const REMEMBERED_ROW_PAGES = 10;
 const ALL = 'all';
 /** The kinds the list can show besides "all": sellers, buyers and the پختہ کھاتہ accounts (plan 32, R6). */
 const KINDS: readonly AccountListKind[] = ['seller', 'buyer', 'pukhta'];
@@ -76,6 +71,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
     [type, text, showInactive],
   );
   const list = useAccountList(filter);
+  const paging = useListPaging(list.pager);
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const remember = useMasterFocus((state) => state.remember);
   const focusRowId = useMasterFocus((state) => state.rows.account);
@@ -99,19 +95,11 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
     </Button>
   );
   const filtering = filter.text !== '' || filter.kind !== ALL || filter.include_inactive;
-  // Every page loaded so far. The first page carries the count and the opening totals of the whole
-  // filter, which are the ones shown (PRD FR-19.11).
+  // The page on screen. It carries the count and the opening totals of the whole filter, which are
+  // the ones shown (PRD FR-19.11). The grid puts the focus back on the account last opened or saved
+  // when it is on this page; the list comes back to the page it was on (`usePagedQuery`).
   const first = list.data?.pages[0];
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
-  // The grid puts the focus back on the account last opened or saved when it is drawn, so that row
-  // must be loaded first: while it is on a later page, the pages are read until it is (no filter).
-  const findingRow =
-    focusRowId !== undefined &&
-    !filtering &&
-    list.hasNextPage &&
-    (list.data?.pages.length ?? 0) < REMEMBERED_ROW_PAGES &&
-    !list.data?.pages.some((page) => page.rows.some((row) => row.id === focusRowId));
-  useLoadRest(list, findingRow);
   // The opening debit and credit columns come with the wide layout, or with "More columns"; the
   // totals stand under them there (Code Standards F19), and as a line under the list where the
   // columns are not shown.
@@ -135,7 +123,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
   );
 
   let body;
-  if ((rows === undefined && list.isPending) || findingRow) {
+  if (rows === undefined && list.isPending) {
     body = <LoadingState />;
   } else if (list.isError) {
     body = (
@@ -176,22 +164,23 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
   } else if (rows !== undefined && first !== undefined) {
     body = (
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <div className={rows.length <= SHORT_LIST_ROWS ? '' : 'min-h-0 flex-1'}>
+        <ListRegion rowCount={rows.length}>
           <ListGrid<AccountRow>
             columns={columns}
             rows={rows}
             getRowId={(row) => String(row.id)}
             labelId="accounts-title"
             onOpen={open}
-            heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
+            heightMode={listHeightMode(rows.length)}
             isInactive={(row) => !row.is_active}
             totals={totalsUnderColumns ? totals : undefined}
+            paging={paging}
             focusRowId={focusRowId === undefined ? null : String(focusRowId)}
             onFocusRow={(rowId) => {
               remember('account', Number(rowId));
             }}
           />
-        </div>
+        </ListRegion>
         {totalsUnderColumns ? null : (
           <div className="flex flex-wrap gap-x-6 gap-y-1 type-body text-ink">
             <span className="flex items-baseline gap-2">
@@ -204,32 +193,22 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
             </span>
           </div>
         )}
-        <PagedFooter
-          shown={rows.length}
-          total={first.count}
-          hasMore={list.hasNextPage}
-          loadingMore={list.isFetchingNextPage}
-          onLoadMore={() => {
-            void list.fetchNextPage();
-          }}
-        />
+        <Pager pager={list.pager} />
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="accounts-title">
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id="accounts-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        </div>
-        {rows === undefined || rows.length === 0 ? null : (
-          <div className="flex flex-wrap gap-2">
+    <ListPage
+      titleId="accounts-title"
+      help={
+        <Localized id="accounts-help">
+          <p />
+        </Localized>
+      }
+      actions={
+        rows === undefined || rows.length === 0 ? undefined : (
+          <>
             <Button
               onClick={() => {
                 void navigate({ to: '/index/openings' });
@@ -238,47 +217,52 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
               <Localized id="openings-open" />
             </Button>
             {newButton}
-          </div>
-        )}
-      </div>
-      <div ref={containerRef} {...formNavigationProps} className="flex flex-wrap items-end gap-4">
-        <div className="w-field">
-          <Field label={<Localized id="accounts-filter-type" />}>
-            {(props) => (
-              <Select
-                {...props}
-                value={type}
-                onChange={setType}
-                options={[
-                  { value: ALL, label: <Localized id="accounts-type-all" /> },
-                  ...KINDS.map((option) => ({
-                    value: option,
-                    label: <Localized id={`accounts-type-${option}`} />,
-                  })),
-                ]}
-              />
-            )}
-          </Field>
+          </>
+        )
+      }
+      filters={
+        <div ref={containerRef} {...formNavigationProps}>
+          <FilterBar
+            screen="accounts"
+            search={{ value: text, onChange: setText, labelId: 'accounts-filter-label' }}
+            extra={
+              <>
+                <Checkbox
+                  checked={showInactive}
+                  onChange={setShowInactive}
+                  label={<Localized id="accounts-show-inactive" />}
+                />
+                {hasMoreColumns(step) ? (
+                  <Checkbox
+                    checked={moreColumns}
+                    onChange={setMoreColumns}
+                    label={<Localized id="accounts-more-columns" />}
+                  />
+                ) : null}
+              </>
+            }
+          >
+            <Field label={<Localized id="accounts-filter-type" />}>
+              {(props) => (
+                <Select
+                  {...props}
+                  value={type}
+                  onChange={setType}
+                  options={[
+                    { value: ALL, label: <Localized id="accounts-type-all" /> },
+                    ...KINDS.map((option) => ({
+                      value: option,
+                      label: <Localized id={`accounts-type-${option}`} />,
+                    })),
+                  ]}
+                />
+              )}
+            </Field>
+          </FilterBar>
         </div>
-        <div className="min-w-0 flex-1 basis-field">
-          <Field label={<Localized id="accounts-filter-label" />}>
-            {(props) => <TextInput {...props} value={text} onChange={setText} />}
-          </Field>
-        </div>
-        <Checkbox
-          checked={showInactive}
-          onChange={setShowInactive}
-          label={<Localized id="accounts-show-inactive" />}
-        />
-        {hasMoreColumns(step) ? (
-          <Checkbox
-            checked={moreColumns}
-            onChange={setMoreColumns}
-            label={<Localized id="accounts-more-columns" />}
-          />
-        ) : null}
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col">{body}</div>
-    </div>
+      }
+    >
+      {body}
+    </ListPage>
   );
 }

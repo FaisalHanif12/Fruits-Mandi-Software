@@ -422,7 +422,7 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
         screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
       ).toHaveValue(language === 'ur' ? 'رحیم' : 'Rahim');
     });
-    await user.keyboard('{Enter}{Enter}{Enter}');
+    await user.keyboard('{Enter}{Enter}');
     await waitFor(() => {
       expect(focusedIn(salesGrid(language))).toBe('0:buyer');
     });

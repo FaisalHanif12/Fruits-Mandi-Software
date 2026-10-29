@@ -1,6 +1,6 @@
 // The روکڑ بک (plan 17, PRD 16.1, FR-16.1, FR-19.10, FR-19.11), in the Urdu and in the English app,
 // against a fake backend: the day's cash movements with the opening and closing cash and the
-// backend's totals, no box to type counted cash, paging by 100 with the totals over the whole
+// backend's totals, no box to type counted cash, paging by 25 with the totals over the whole
 // range, the four states, the side menu of the area and the language switch.
 
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -13,6 +13,7 @@ import type { CashRec } from '../helpers/cashbook-books';
 import { labelled, named, pageText, prepareCashbook, startsWith } from '../helpers/cashbook-screen';
 import type { FakeCashbook } from '../helpers/cashbook';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
@@ -123,7 +124,7 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     expect(pageText()).not.toMatch(/count/i);
   });
 
-  it('asks for a range and pages: 100 rows first, the count from the backend, then the rest', async () => {
+  it('asks for a range and pages: 25 rows first, the count from the backend, then the next 25', async () => {
     const many: CashRec[] = Array.from({ length: 150 }, (_, index) => ({
       date: '2026-10-10',
       type: 'receipt',
@@ -140,22 +141,19 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
         from: '10-10-2026',
         to: '10-10-2026',
         offset: 0,
-        limit: 100,
+        limit: PAGE_ROWS,
       });
     });
-    const count = (shown: number) =>
-      screen.findByText(
-        (content) =>
-          visible(content) === message(language, 'common-list-count', { shown, total: 154 }),
-      );
-    expect(await count(100)).toBeInTheDocument();
-    // The totals do not come from the 100 rows on screen: they are those of all 154.
-    await user.click(
-      screen.getByRole('button', { name: startsWith(message(language, 'common-list-more')) }),
-    );
-    expect(await count(154)).toBeInTheDocument();
+    const range = (from: number, to: number) =>
+      waitFor(() => {
+        expect(visible(pageText())).toContain(rangeText(language, from, to, 154));
+      });
+    await range(1, 25);
+    // The totals do not come from the 25 rows on screen: they are those of all 154.
+    await user.click(await pagerButton(language, 'next'));
+    await range(26, 50);
     expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 100, limit: 100 }),
+      expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
     );
   });
 

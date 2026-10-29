@@ -372,6 +372,15 @@ err-purchase-cancelled = یہ خریداری منسوخ ہو چکی ہے۔ کو�
 # review: pending
 err-own-lot-freight-in-cost = خریداری کا { -kiraya } اس کی لاگت میں پہلے سے شامل ہے۔ یہاں لکھا ہوا { -kiraya } دوبارہ گنا جائے گا۔ جب تک یہی مقصد نہ ہو، اسے خالی رہنے دیں۔
 
+# A warning (plan 37, PRD FR-11.9): the save is allowed and the typed amount is kept. $lot_no is the
+# earlier lot that took the charge, $bikri_number its sale (0 means a lot of this same sale; the
+# message chooses by $bikri_number_zero) and $entry the goods-arrived entry.
+# review: pending
+err-entry-charge-already-taken = { $bikri_number_zero ->
+    [yes] یہ خرچہ { -maal-aaya } اندراج { $entry } کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
+   *[no] یہ خرچہ { -bikri } { $bikri_number } ({ -maal-aaya } اندراج { $entry }) کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
+}
+
 # PRD FR-12.31, FR-12.33: a closed trip takes no new purchase or cost.
 # review: pending
 err-trip-closed = یہ { -market-safar } بند ہو چکا ہے۔ اس میں نئی خریداری یا نیا خرچ نہیں ہو سکتا۔

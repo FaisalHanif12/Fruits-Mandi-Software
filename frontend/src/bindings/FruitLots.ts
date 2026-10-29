@@ -11,7 +11,15 @@ export type FruitLots = {
    */
   rows: Array<FruitLotRow>;
   /**
-   * How many lots match in all.
+   * How many lots match in all, over the whole filter.
    */
   total_count: number;
+  /**
+   * The offset that was asked.
+   */
+  offset: number;
+  /**
+   * The page size used.
+   */
+  limit: number;
 };

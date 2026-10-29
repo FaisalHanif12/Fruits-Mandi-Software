@@ -374,6 +374,15 @@ err-purchase-cancelled = This purchase is cancelled. Choose another purchase.
 # review: pending
 err-own-lot-freight-in-cost = The freight of the purchase is already in its cost. A freight typed here is counted a second time. Leave it empty unless that is what you mean.
 
+# A warning (plan 37, PRD FR-11.9): the save is allowed and the typed amount is kept. $lot_no is the
+# earlier lot that took the charge, $bikri_number its sale (0 means a lot of this same sale; the
+# message chooses by $bikri_number_zero) and $entry the goods-arrived entry.
+# review: pending
+err-entry-charge-already-taken = { $bikri_number_zero ->
+    [yes] This charge was already taken on { -lot } { $lot_no } of { -maal-aaya } entry { $entry }. The amount you typed is kept.
+   *[no] This charge was already taken on { -lot } { $lot_no } of { -bikri } { $bikri_number }, { -maal-aaya } entry { $entry }. The amount you typed is kept.
+}
+
 # PRD FR-12.31, FR-12.33: a closed trip takes no new purchase or cost.
 # review: pending
 err-trip-closed = This { -market-safar } is closed. It takes no new purchase or cost.

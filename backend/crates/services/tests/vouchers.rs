@@ -940,6 +940,10 @@ fn the_voucher_list_filters_by_kind_and_date() {
         vouchers::list(
             &f.env.ctx,
             &VouchersListInput {
+                sort: None,
+                group_by_month: false,
+                search: None,
+                show_finished: true,
                 account_id: None,
                 person_key: None,
                 voucher_type: kind,
@@ -972,6 +976,10 @@ fn the_voucher_list_filters_by_kind_and_date() {
             vouchers::list(
                 &f.env.ctx,
                 &VouchersListInput {
+                    sort: None,
+                    group_by_month: false,
+                    search: None,
+                    show_finished: true,
                     account_id: None,
                     person_key: None,
                     voucher_type: None,

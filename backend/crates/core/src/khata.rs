@@ -26,6 +26,7 @@ use ts_rs::TS;
 
 use crate::accounts::RecordRef;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 
 /// A new separate khata (the `F4` of the screen, PRD 16.6): an account under control 0305.
 ///
@@ -122,6 +123,14 @@ pub struct KhataStatementInput {
     /// How many rows to return. 0 gives the default page of 100 rows.
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole range by: `entry_date`, `kind`, `number`, `reason`,
+    /// `narration`, `amount_paisa` or `running_paisa`. Null is by day and entry (plan 38 R4). A
+    /// sorted row still shows its true running balance of the natural order.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// What a row of a khata statement is.
@@ -196,4 +205,8 @@ pub struct KhataStatement {
     pub total_count: i64,
     /// The totals over the whole range.
     pub totals: KhataTotals,
+    /// The count and subtotals of each month of the whole range, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `paid_out_paisa` and
+    /// `received_paisa`.
+    pub months: Vec<MonthSubtotal>,
 }

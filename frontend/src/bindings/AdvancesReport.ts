@@ -11,11 +11,23 @@ export type AdvancesReport = {
    */
   as_of: string;
   /**
-   * By seller code.
+   * This page, by seller code.
    */
   rows: Array<AdvancesReportRow>;
   /**
-   * Σ given.
+   * How many sellers match, over the whole filter.
+   */
+  total_count: number;
+  /**
+   * The offset that was asked.
+   */
+  offset: number;
+  /**
+   * The page size used.
+   */
+  limit: number;
+  /**
+   * Σ given, over every seller of the filter (not the page).
    */
   given_paisa: Paisa;
   /**

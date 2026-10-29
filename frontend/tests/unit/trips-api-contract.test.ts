@@ -103,6 +103,8 @@ describe('each wrapper sends the command and `{ input }`', () => {
       search: null,
       offset: 0,
       limit: 100,
+      sort: null,
+      group_by_month: false,
     };
     await tripsApi.tripsList(list);
     expect(call).toHaveBeenLastCalledWith('trips_list', { input: list });
@@ -162,6 +164,8 @@ describe('each wrapper sends the command and `{ input }`', () => {
       note: null,
       parts: entryParts,
       confirm_cash_below_zero: false,
+      other_qty: null,
+      shop_name: null,
     };
     await purchasesApi.purchasesPreview(input);
     expect(call).toHaveBeenLastCalledWith('purchases_preview', { input });
@@ -176,6 +180,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
       confirm_cash_below_zero: false,
       lines: [
         {
+          key: 'line-1',
           item_id: 61,
           packing_id: 71,
           qty: '20',
@@ -218,6 +223,10 @@ describe('each wrapper sends the command and `{ input }`', () => {
       state: 'in_stock' as const,
       offset: 0,
       limit: 0,
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
     };
     await purchasesApi.purchasesList(list);
     expect(call).toHaveBeenLastCalledWith('purchases_list', { input: list });

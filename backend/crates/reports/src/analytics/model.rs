@@ -444,6 +444,67 @@ pub struct AnalyticsRunInput {
     /// The rows to return. 0 means 100; at most 1,000.
     #[ts(type = "number")]
     pub limit: i64,
+    /// The column to sort the whole filter by: the `key` of a column of the answer. Null is the
+    /// order of the view. The rows between two heading rows are sorted among themselves. For view
+    /// C (by buyer) only `buyer`, `qty`, `purchase_value`, `buyer_comm` and `laga` can be sorted:
+    /// the dues and the days to pay are worked out for the page only. An unknown key is
+    /// `ERR_OUT_OF_RANGE` on `sort.column` (value `allowed`). The charts never change with a sort
+    /// (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<mandi_core::paging::SortInput>,
+}
+
+/// How a chart is drawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AnalyticsChartKind {
+    /// The biggest rows by one measure (a bar chart), with one point "others" for the rest.
+    Ranked,
+    /// One point for every period (a line chart).
+    Trend,
+}
+
+/// What a value of a chart is: the column it comes from and its kind (money or a count).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AnalyticsChartSeries {
+    /// The `key` of the column of the table the values come from.
+    pub key: String,
+    /// `money` (the value is paisa, whole rupees) or `number`.
+    pub kind: crate::reports::ColumnKind,
+}
+
+/// One point of a chart.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AnalyticsChartPoint {
+    /// What the point is called, a cell like the table's: an item, a party, a month, a day. Empty
+    /// for the point `others`.
+    pub label: Cell,
+    /// Opens the lines behind the point, as the row of the table does. Null for `others`.
+    pub key: Option<AnalyticsKey>,
+    /// One value for each series, in the order of `series`: a money or number cell.
+    pub values: Vec<Cell>,
+    /// True for the point that adds up the rows beyond the biggest ten.
+    pub is_others: bool,
+}
+
+/// A chart of a view, over the WHOLE filter. Its numbers are the sums of the table.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct AnalyticsChart {
+    /// Ranked (bars) or trend (lines).
+    pub kind: AnalyticsChartKind,
+    /// For a view with sections (H): the heading of the section the chart belongs to. Null
+    /// otherwise.
+    pub title: Option<Cell>,
+    /// The measures. One for a ranked chart; several for a trend (view G has five).
+    pub series: Vec<AnalyticsChartSeries>,
+    /// The points. A ranked chart has at most 11 (ten and `others`); a trend has one for every
+    /// period, at most 120 (see `by_month`).
+    pub points: Vec<AnalyticsChartPoint>,
+    /// How many rows the point `others` adds up. 0 when there is none.
+    #[ts(type = "number")]
+    pub others_count: i64,
+    /// True when the periods were days and there were more than 120, so the points are months.
+    pub by_month: bool,
 }
 
 /// One page of a view with the totals over the whole filter.
@@ -472,6 +533,9 @@ pub struct AnalyticsPage {
     pub totals_label_id: String,
     /// The totals row over the whole filter, one cell for each column.
     pub totals: Vec<Cell>,
+    /// The charts of the view over the whole filter: none, one, or one for each section (view H).
+    /// A sort and the page never change them (plan 38 R4).
+    pub charts: Vec<AnalyticsChart>,
 }
 
 /// The input of `analytics_lines`: the lines behind a row or a cell.

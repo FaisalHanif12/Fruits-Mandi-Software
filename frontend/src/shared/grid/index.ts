@@ -1,9 +1,18 @@
 // The shared entry grid (entry-grid skill, Code Standards F17, F18, F27). Screens declare
 // columns and a row store; they never write key handlers.
 export { EntryGrid } from './EntryGrid';
-export { ListGrid, type ListColumn, type ListContext } from './ListGrid';
-export { PagedFooter } from './PagedFooter';
+export {
+  ListGrid,
+  type ListColumn,
+  type ListContext,
+  type ListMonths,
+  type ListPaging,
+  type ListSort,
+} from './ListGrid';
+export { Pager } from './Pager';
+export { useListPaging } from './useListPaging';
 export { PagedList } from './PagedList';
+export { ListRegion, SHORT_LIST_ROWS, isLongList, listHeightMode } from './ListRegion';
 export { columnsWithMore, type MoreColumnsPlan } from './moreColumns';
 export { createEntryStore, type EntryState, type EntryStore } from './entryStore';
 export {

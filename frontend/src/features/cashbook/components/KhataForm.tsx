@@ -14,6 +14,8 @@ import {
   FreeTextInput,
   MoneyInput,
   fieldError,
+  FormCard,
+  FormSpan,
 } from '../../../shared/ui';
 import type { KhataDraft } from '../khata-draft';
 import { AddAccountDialog } from './AddAccountDialog';
@@ -30,7 +32,7 @@ interface KhataFormProps {
 export function KhataForm({ draft, onChange, error }: KhataFormProps) {
   const [adding, setAdding] = useState<string | null>(null);
   return (
-    <div className="grid grid-cols-1 gap-4 rounded-3 border border-border bg-surface p-3 normal:grid-cols-2">
+    <FormCard>
       <Field label={<Localized id="cashbook-field-date" />} error={fieldError(error, 'date')}>
         {(props) => (
           <DateInput
@@ -84,7 +86,7 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
           />
         )}
       </Field>
-      <div className="normal:col-span-2">
+      <FormSpan>
         <Field
           label={<Localized id="cashbook-field-narration" />}
           error={fieldError(error, 'narration')}
@@ -99,7 +101,7 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
             />
           )}
         </Field>
-      </div>
+      </FormSpan>
       <AddAccountDialog
         kind="khata"
         open={adding !== null}
@@ -111,6 +113,6 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
           onChange({ khata: account });
         }}
       />
-    </div>
+    </FormCard>
   );
 }

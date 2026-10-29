@@ -181,6 +181,7 @@ fn av(w: &World, v: AnalyticsView, f: AnalyticsFilters) -> AnalyticsPage {
     run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,
@@ -194,6 +195,7 @@ fn refused(w: &World, v: AnalyticsView, f: AnalyticsFilters) -> Vec<(ErrorCode, 
     match run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,
@@ -533,6 +535,8 @@ fn e2e_42_the_partner_statement_report_writes_the_fruit_lines() {
     let statement = mandi_services::partners::statement(
         &w.env.ctx,
         &mandi_services::core::statement::PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: w.partners[0],
             from: None,
             to: None,

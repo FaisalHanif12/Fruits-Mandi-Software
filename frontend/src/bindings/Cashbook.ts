@@ -2,6 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 import type { CashbookRow } from './CashbookRow';
 import type { CashbookTotals } from './CashbookTotals';
+import type { MonthSubtotal } from './MonthSubtotal';
 
 /**
  * The cash book of a range, one page.
@@ -27,4 +28,10 @@ export type Cashbook = {
    * The totals over the whole range.
    */
   totals: CashbookTotals;
+  /**
+   * The count and subtotals of each month of the whole range, in the order of the list, when
+   * asked with `group_by_month` and the list is in date order. Figures: `in_paisa` and
+   * `out_paisa`.
+   */
+  months: Array<MonthSubtotal>;
 };

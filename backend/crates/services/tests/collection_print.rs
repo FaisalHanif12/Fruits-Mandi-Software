@@ -137,6 +137,9 @@ fn the_print_has_the_buyers_of_the_day_and_a_total_below_the_shops_dues() {
             date: "10-10-2026".into(),
             collector_staff_id: None,
             city_id: None,
+            // A print holds every buyer, so the screen is read the same way.
+            offset: 0,
+            limit: u32::MAX,
         },
     )
     .unwrap();

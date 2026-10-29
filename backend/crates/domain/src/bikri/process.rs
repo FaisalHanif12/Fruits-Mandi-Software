@@ -16,8 +16,10 @@ use mandi_core::ventures::ShareAmount;
 
 use super::checks::{self, Issues, Wanted};
 use super::line::{LineArgs, LotRef, calc_line, unchanged_stored};
-use super::lookups::{AccountFacts, ItemFacts, Lookups, PartyKind, PurchaseFacts};
-use super::lot::{Acc, LotKey, Scope, lot_charge};
+use super::lookups::{
+    AccountFacts, ArrivalCarried, EntryLot, ItemFacts, Lookups, PartyKind, PurchaseFacts,
+};
+use super::lot::{Acc, EntryCharge, LotKey, Scope, lot_charge};
 use super::own::{OwnRun, kept_line};
 use super::person::{CleanPerson, clean_person};
 use super::stored::{StoredCharge, StoredLot};
@@ -37,6 +39,34 @@ pub(super) struct Run {
     pub own: OwnRun,
     /// What is left of each garden arrival, shared by the lots linked to it (PRD FR-12.40).
     pub arrivals: HashMap<i64, i64>,
+    /// The goods-arrived entry of each draft lot (by lot index), `None` for any other lot.
+    pub lot_arrivals: Vec<Option<i64>>,
+    /// The per-lot rule charges each draft lot carries (by lot index): a guess for the lots not
+    /// worked out yet, the real result for the lots already done (PRD FR-12.40, plan 37). A later
+    /// lot of the same entry takes a charge only if no other lot carries it.
+    pub carried: Vec<ArrivalCarried>,
+}
+
+impl Run {
+    /// The per-lot rule charges that the entry of `arrival` already has on lots other than the lot
+    /// at `index`: the other active lots outside the posting (from the database) and the other lots
+    /// of the draft.
+    fn carried_by_others(&self, lookups: &Lookups, arrival: i64, index: usize) -> ArrivalCarried {
+        let mut others = lookups
+            .arrivals
+            .get(&arrival)
+            .map(|a| a.carried_elsewhere)
+            .unwrap_or_default();
+        for (j, lot_arrival) in self.lot_arrivals.iter().enumerate() {
+            if j != index
+                && *lot_arrival == Some(arrival)
+                && let Some(carried) = self.carried.get(j)
+            {
+                others = others.or(*carried);
+            }
+        }
+        others
+    }
 }
 
 /// What one lot gives back to the whole.
@@ -59,6 +89,9 @@ struct LotCtx<'a> {
     facts: LotFacts<'a>,
     /// What is stored about this lot, in an edit or a later sale.
     stored_lot: Option<&'a StoredLot>,
+    /// For a garden lot linked to a goods-arrived entry in a first posting: the number of the entry
+    /// and what its other lots already carry (PRD FR-12.40, plan 37). `None` for any other lot.
+    entry: Option<(i64, ArrivalCarried)>,
 }
 
 fn too_large(issues: &mut Issues, field: &str) {
@@ -505,7 +538,7 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             .map(|c| c.charge.clone()),
         _ => None,
     };
-    let mut per_lot_charged = match (ctx.env, ctx.lot_ref.as_ref()) {
+    let own_charged = match (ctx.env, ctx.lot_ref.as_ref()) {
         (Some(env), Some(lot_ref)) if env.kind == PostingKind::First => {
             lot.sales.iter().any(|row| {
                 !row.is_blank
@@ -516,6 +549,27 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
         }
         _ => false,
     };
+    // A lot of a goods-arrived entry takes the per-lot seller commission only if no other lot of
+    // the entry has it (PRD FR-12.40, plan 37). A lot saved with the charge spared (its lines have
+    // the per-lot method and 0, and no line carries it) stays spared: it is not given the charge
+    // by an edit of one line, the next NEW lot carries it.
+    let spared_before = match (ctx.env, ctx.lot_ref.as_ref(), ctx.entry) {
+        (Some(env), Some(lot_ref), Some(_)) if !lot_ref.identity_changed => {
+            ctx.stored_lot.is_some_and(|s| s.carrier.is_none())
+                && lot.sales.iter().any(|row| {
+                    row.sale_id
+                        .and_then(|id| env.stored.sales.get(&id))
+                        .is_some_and(|s| {
+                            Some(s.lot_id) == lot.lot_id && s.seller_comm.spared_per_lot()
+                        })
+                })
+        }
+        _ => false,
+    };
+    let entry_spent = ctx.entry.and_then(|(number, others)| {
+        ((others.seller_commission.is_some() || spared_before) && !own_charged).then_some(number)
+    });
+    let mut per_lot_charged = own_charged || entry_spent.is_some();
     let mut rows = Rows {
         lines: Vec::with_capacity(lot.sales.len()),
         acc: Acc::default(),
@@ -560,6 +614,7 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                     env,
                     lot: lot_ref,
                     per_lot_charged: &mut per_lot_charged,
+                    entry_spent,
                     owed: &mut run.owed,
                     row,
                     buyer_id,
@@ -699,12 +754,20 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         qty_received,
     };
     let stored_lot = ctx.stored_lot;
+    // What the entry's other lots already carry, kind by kind (plan 37).
+    let entry_of = |taken: fn(&ArrivalCarried) -> Option<EntryLot>| {
+        ctx.entry.map(|(number, others)| EntryCharge {
+            number,
+            taken: taken(&others),
+        })
+    };
     let labour = lot_charge(
         env,
         &key,
         ChargeType::Labour,
         lot.labour,
         stored_lot.and_then(|s| s.labour.as_ref()),
+        entry_of(|c| c.labour),
     )?;
     let munshiana = lot_charge(
         env,
@@ -712,6 +775,7 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         ChargeType::Munshiana,
         lot.munshiana,
         stored_lot.and_then(|s| s.munshiana.as_ref()),
+        entry_of(|c| c.munshiana),
     )?;
     let phone = lot_charge(
         env,
@@ -719,7 +783,38 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         ChargeType::Phone,
         lot.phone,
         stored_lot.and_then(|s| s.phone.as_ref()),
+        entry_of(|c| c.phone),
     )?;
+    // A per-lot amount typed on a lot of an entry that already took that charge on an earlier lot
+    // is kept, and the screen is told (a warning, plan 37).
+    if let Some((number, others)) = ctx.entry {
+        for (charge, typed, earlier, name) in [
+            (&labour, lot.labour.is_some(), others.labour, "labour"),
+            (
+                &munshiana,
+                lot.munshiana.is_some(),
+                others.munshiana,
+                "munshiana",
+            ),
+            (&phone, lot.phone.is_some(), others.phone, "phone"),
+        ] {
+            if let Some(earlier) = earlier
+                && typed
+                && charge.amount > Paisa::ZERO
+                && charge.method != mandi_core::bikri::LotChargeMethod::PerUnit
+            {
+                issues.warn_with(
+                    ErrorCode::ErrEntryChargeAlreadyTaken,
+                    &format!("{}.{name}", ctx.prefix),
+                    &[
+                        ("lot_no", earlier.lot_no),
+                        ("bikri_number", earlier.bikri_number),
+                        ("entry", number),
+                    ],
+                );
+            }
+        }
+    }
     for (charge, name) in [
         (&labour, "labour"),
         (&munshiana, "munshiana"),
@@ -917,6 +1012,13 @@ pub(super) fn process_lot(
         } else {
             found
         },
+        entry: match (env, arrival) {
+            (Some(env), Some(arrival_id)) if env.kind == PostingKind::First => lookups
+                .arrivals
+                .get(&arrival_id)
+                .map(|a| (a.number, run.carried_by_others(lookups, arrival_id, index))),
+            _ => None,
+        },
     };
     let mut rows = process_rows(&ctx, run, issues)?;
     let balance_qty = available_qty(&ctx).map(|r| r.saturating_sub(rows.sold).max(0));
@@ -948,6 +1050,40 @@ pub(super) fn process_lot(
         }
     }
     let money = lot_money(&ctx, &mut rows, issues)?;
+    // What this lot really carries of its entry's per-lot rule charges now (plan 37).
+    if let Some(slot) = run.carried.get_mut(index) {
+        // A per-lot rule amount or an amount typed on the lot (not a per-نگ charge) is a charge
+        // the entry has taken (lead decision D1).
+        let rule_per_lot = |c: Option<&mandi_core::bikri::LotCharge>| {
+            c.is_some_and(|c| {
+                c.method != mandi_core::bikri::LotChargeMethod::PerUnit && c.amount > Paisa::ZERO
+            })
+        };
+        *slot = if lot.arrival_id.is_some() {
+            // This draft's lot number (bikri number 0), for the warning on a later lot.
+            let here = EntryLot {
+                bikri_number: 0,
+                lot_no: i64::try_from(index).unwrap_or(i64::MAX).saturating_add(1),
+            };
+            ArrivalCarried {
+                seller_commission: rows
+                    .lines
+                    .iter()
+                    .filter_map(|l| l.calc.as_ref())
+                    .any(|c| {
+                        c.seller_comm.method == mandi_core::bikri::StoredMethod::PerLot
+                            && c.seller_comm.rule_id.is_some()
+                            && c.seller_comm.amount > Paisa::ZERO
+                    })
+                    .then_some(here),
+                labour: rule_per_lot(money.labour.as_ref()).then_some(here),
+                munshiana: rule_per_lot(money.munshiana.as_ref()).then_some(here),
+                phone: rule_per_lot(money.phone.as_ref()).then_some(here),
+            }
+        } else {
+            ArrivalCarried::default()
+        };
+    }
     let net_is_negative = money.totals.as_ref().is_some_and(|t| t.net.is_negative());
     Ok(LotOutcome {
         preview: LotPreview {

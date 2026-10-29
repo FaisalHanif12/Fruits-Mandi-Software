@@ -2,6 +2,7 @@
 //! the checks are in `mandi_core::vouchers` and `mandi_services::vouchers`. A voucher is never
 //! deleted: a cancelled voucher keeps its number and its row (Code Standards D3).
 
+use crate::listing::{MonthSums, like_contains, like_prefix, month_sums};
 use mandi_core::accounts::RecordRef;
 use mandi_core::money::Paisa;
 use mandi_core::vouchers::{LastAdvance, VoucherMode, VoucherRow, VoucherType};
@@ -312,7 +313,25 @@ pub struct ListFilter<'a> {
     pub account_id: Option<i64>,
     /// Only this one-time person.
     pub person_key: Option<&'a str>,
+    /// Only vouchers whose number, narration, reason or account (code or name) holds this text.
+    pub search: Option<&'a str>,
+    /// The `ORDER BY` expressions chosen by a sort, from [`SORT_COLUMNS`]. `None` is by day and
+    /// number.
+    pub order_by: Option<&'a str>,
+    /// True to leave the cancelled vouchers out of the rows and the count (plan 38 R5).
+    pub hide_cancelled: bool,
 }
+
+/// The columns a list can be sorted by: the name of the field of the row, and its SQL expression.
+/// The first four are indexed or small; `account` sorts by the account code.
+pub const SORT_COLUMNS: [(&str, &str); 6] = [
+    ("number", "v.number"),
+    ("entry_date", "v.entry_date"),
+    ("voucher_type", "v.type"),
+    ("amount_paisa", "v.amount_paisa"),
+    ("status", "v.status"),
+    ("account", "a.code"),
+];
 
 /// The vouchers matching a filter, by day and number.
 ///
@@ -345,9 +364,9 @@ pub fn list(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<Vec<
 /// The counts and the total over every voucher a filter matches (PRD FR-19.11, B31).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ListTotals {
-    /// How many vouchers match, cancelled ones too.
+    /// How many vouchers match, cancelled ones too unless the filter hides them.
     pub count: i64,
-    /// How many of them are cancelled.
+    /// How many of the vouchers that match the other conditions are cancelled, hidden or not.
     pub cancelled: i64,
     /// `SUM(amount_paisa)` of the saved ones: a cancelled voucher no longer moves money.
     pub saved_paisa: i64,
@@ -355,29 +374,52 @@ pub struct ListTotals {
 
 /// The `WHERE` of the list and the values it binds, in order. Only the conditions the filter
 /// really sets are written, so SQLite can search `idx_vouchers_date` and `idx_vouchers_account`
-/// instead of reading every voucher (Code Standards B18, NFR-SPD-24).
-fn list_where(filter: &ListFilter<'_>) -> (String, Vec<Value>) {
-    let mut conditions: Vec<&str> = Vec::new();
+/// instead of reading every voucher (Code Standards B18, NFR-SPD-24). The search reads the
+/// account, so a query with a search must join `accounts a`. `hide` adds the condition that
+/// leaves out the cancelled vouchers.
+fn list_where(filter: &ListFilter<'_>, hide: bool) -> (String, Vec<Value>) {
+    let mut conditions: Vec<String> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
     if let Some(kind) = filter.voucher_type {
-        conditions.push("v.type = ?");
+        conditions.push("v.type = ?".to_owned());
         binds.push(Value::Text(kind.as_str().to_owned()));
     }
     if let Some(from) = filter.from {
-        conditions.push("v.entry_date >= ?");
+        conditions.push("v.entry_date >= ?".to_owned());
         binds.push(Value::Text(from.to_owned()));
     }
     if let Some(to) = filter.to {
-        conditions.push("v.entry_date <= ?");
+        conditions.push("v.entry_date <= ?".to_owned());
         binds.push(Value::Text(to.to_owned()));
     }
     if let Some(account) = filter.account_id {
-        conditions.push("v.account_id = ?");
+        conditions.push("v.account_id = ?".to_owned());
         binds.push(Value::Integer(account));
     }
     if let Some(key) = filter.person_key {
-        conditions.push("v.pukhta_person_key = ?");
+        conditions.push("v.pukhta_person_key = ?".to_owned());
         binds.push(Value::Text(key.to_owned()));
+    }
+    if let Some(text) = filter.search.map(str::trim).filter(|t| !t.is_empty()) {
+        let mut parts = String::new();
+        if let Ok(number) = text.parse::<i64>() {
+            parts.push_str("v.number = ? OR ");
+            binds.push(Value::Integer(number));
+        }
+        parts.push_str(
+            "v.narration LIKE ? ESCAPE '\\' OR v.reason LIKE ? ESCAPE '\\'
+             OR a.code LIKE ? ESCAPE '\\' OR a.name_ur LIKE ? ESCAPE '\\'
+             OR a.name_en LIKE ? ESCAPE '\\'",
+        );
+        conditions.push(format!("({parts})"));
+        binds.push(Value::Text(like_contains(text)));
+        binds.push(Value::Text(like_contains(text)));
+        binds.push(Value::Text(like_prefix(text)));
+        binds.push(Value::Text(like_contains(text)));
+        binds.push(Value::Text(like_contains(text)));
+    }
+    if hide {
+        conditions.push("v.status <> 'cancelled'".to_owned());
     }
     if conditions.is_empty() {
         (String::new(), binds)
@@ -389,15 +431,27 @@ fn list_where(filter: &ListFilter<'_>) -> (String, Vec<Value>) {
 /// The totals query of [`list_totals`] and the values it binds, so a test can read its plan
 /// (Code Standards B18).
 pub fn list_totals_query(filter: &ListFilter<'_>) -> (String, Vec<Value>) {
-    let (condition, binds) = list_where(filter);
+    // The cancelled ones are counted even when they are hidden, so the screen can say how many
+    // are hidden. The caller takes them off the count (see `ListTotals::count`).
+    let (condition, binds) = list_where(filter, false);
     (
         format!(
             "SELECT COUNT(*), COALESCE(SUM(v.status = 'cancelled'), 0),
                     COALESCE(SUM(CASE WHEN v.status = 'saved' THEN v.amount_paisa ELSE 0 END), 0)
-             FROM vouchers v{condition}"
+             FROM vouchers v{join}{condition}",
+            join = account_join(filter)
         ),
         binds,
     )
+}
+
+/// The join to `accounts a`, written only when the search needs it.
+fn account_join(filter: &ListFilter<'_>) -> &'static str {
+    if filter.search.is_some_and(|t| !t.trim().is_empty()) {
+        " LEFT JOIN accounts a ON a.id = v.account_id"
+    } else {
+        ""
+    }
 }
 
 /// The totals over the whole filter, from one query. Only `SUM()` on INTEGER columns is used.
@@ -407,9 +461,16 @@ pub fn list_totals_query(filter: &ListFilter<'_>) -> (String, Vec<Value>) {
 pub fn list_totals(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<ListTotals> {
     let (sql, binds) = list_totals_query(filter);
     conn.query_row(&sql, params_from_iter(binds.iter()), |r| {
+        let all: i64 = r.get(0)?;
+        let cancelled: i64 = r.get(1)?;
         Ok(ListTotals {
-            count: r.get(0)?,
-            cancelled: r.get(1)?,
+            // Hidden cancelled vouchers are not in the count (plan 38 R5).
+            count: if filter.hide_cancelled {
+                all.saturating_sub(cancelled)
+            } else {
+                all
+            },
+            cancelled,
             saved_paisa: r.get(2)?,
         })
     })
@@ -418,12 +479,26 @@ pub fn list_totals(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Resu
 /// The page query of [`list_page`] and the values it binds, so a test can read its plan (Code
 /// Standards B18). The order is the date, then the number, then the id.
 pub fn list_page_query(filter: &ListFilter<'_>, offset: i64, limit: i64) -> (String, Vec<Value>) {
-    let (condition, mut binds) = list_where(filter);
+    let (condition, mut binds) = list_where(filter, filter.hide_cancelled);
     binds.push(Value::Integer(limit));
     binds.push(Value::Integer(offset));
+    // The natural order is the day, then the number, then the id. A sort puts its column first and
+    // keeps that order after it, so ties come out the same on every page. A sort by the day keeps
+    // the numbers in the same direction.
+    let date_sort = filter
+        .order_by
+        .is_none_or(|o| o.starts_with("v.entry_date"));
+    let order = match filter.order_by {
+        None => "v.entry_date, v.number, v.id".to_owned(),
+        Some(o) if o.starts_with("v.entry_date") => {
+            let direction = if o.ends_with("DESC") { "DESC" } else { "ASC" };
+            format!("{o}, v.number {direction}, v.id {direction}")
+        }
+        Some(o) => format!("{o}, v.entry_date, v.number, v.id"),
+    };
     // With no condition SQLite would pick any index and sort every voucher; the date index gives
     // the order of the first term, so only the voucher numbers of one day are sorted.
-    let table = if condition.is_empty() {
+    let table = if condition.is_empty() && date_sort {
         "vouchers v INDEXED BY idx_vouchers_date"
     } else {
         "vouchers v"
@@ -432,7 +507,7 @@ pub fn list_page_query(filter: &ListFilter<'_>, offset: i64, limit: i64) -> (Str
         format!(
             "SELECT {ROW_COLUMNS}
              FROM {table} LEFT JOIN accounts a ON a.id = v.account_id{condition}
-             ORDER BY v.entry_date, v.number, v.id LIMIT ? OFFSET ?"
+             ORDER BY {order} LIMIT ? OFFSET ?"
         ),
         binds,
     )
@@ -454,6 +529,27 @@ pub fn list_page(
         .query_map(params_from_iter(binds.iter()), read_row)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     fill_people(conn, rows)
+}
+
+/// The count of each month of the filter, with the sum of the cancelled ones (1 for each) and of
+/// the saved amounts, oldest month first, in one grouped query on the indexed day (plan 38 R4).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_months(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<Vec<MonthSums>> {
+    let (condition, binds) = list_where(filter, filter.hide_cancelled);
+    let from = format!("vouchers v{}", account_join(filter));
+    month_sums(
+        conn,
+        &from,
+        &condition,
+        "v.entry_date",
+        &[
+            "CASE WHEN v.status = 'cancelled' THEN 1 ELSE 0 END",
+            "CASE WHEN v.status = 'saved' THEN v.amount_paisa ELSE 0 END",
+        ],
+        &binds,
+    )
 }
 
 /// One voucher by id.

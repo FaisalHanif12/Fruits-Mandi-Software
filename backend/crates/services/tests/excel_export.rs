@@ -109,6 +109,7 @@ fn view_of(w: &support::World, view: AnalyticsView) -> AnalyticsPage {
     mandi_reports::analytics::run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view,
             filters: AnalyticsFilters::default(),
             offset: 0,

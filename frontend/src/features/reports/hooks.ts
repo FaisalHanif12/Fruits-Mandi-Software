@@ -1,7 +1,7 @@
 // The print commands as hooks (Code Standards F6).
 
-import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
-import { useDebouncedValue } from '../../shared/hooks';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { useDebouncedValue, usePagedQuery } from '../../shared/hooks';
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
 import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
@@ -77,9 +77,6 @@ export function usePrintVoucher() {
 
 // ---- Plan 20: the report engine. Run B, D5 early track. ----
 
-/** A page of a report (Code Standards B31, NFR-SPD-24). */
-export const REPORT_PAGE_SIZE = 100;
-
 /** The catalogue changes only with a new version of the app, so it is read once. */
 export function useReportCatalog(enabled = true) {
   return useQuery({
@@ -91,25 +88,30 @@ export function useReportCatalog(enabled = true) {
 }
 
 /**
- * A report, page by page. `filters` null means the report cannot run yet (a party is still to be
- * picked). The totals and the lines above the table come with every page and are the same for all of
- * them (they are over the whole filter), so the screen reads them from the last page. While the
- * filters change, the rows already on screen stay until the new ones come (no flicker).
+ * A report, one page at a time. `filters` null means the report cannot run yet (a party is still to
+ * be picked). The totals and the lines above the table come with every page and are the same for
+ * all of them (they are over the whole filter), so the screen reads them from the page on screen.
+ * While the filters change, the rows already on screen stay until the new ones come (no flicker).
  */
-export function useReportPages(id: ReportId, filters: ReportFilters | null) {
-  return useInfiniteQuery({
-    queryKey: ['reports_run', id, filters],
-    queryFn: ({ pageParam }) => {
+export function useReportPages(id: ReportId, filters: ReportFilters | null, groupByMonth = false) {
+  return usePagedQuery({
+    screen: `report.${id.toLowerCase()}`,
+    queryKey: ['reports_run', id, filters, groupByMonth],
+    fetchPage: (offset, limit, sort) => {
       if (filters === null) throw new Error('no filters');
-      return reportsRun({ id, filters, offset: pageParam, limit: REPORT_PAGE_SIZE });
+      return reportsRun({
+        id,
+        filters,
+        offset,
+        limit,
+        sort,
+        group_by_month: groupByMonth && sort === null,
+      });
     },
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
     enabled: filters !== null,
-    initialPageParam: 0,
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((count, page) => count + page.rows.length, 0);
-      return last.rows.length > 0 && loaded < last.total_count ? loaded : undefined;
-    },
-    placeholderData: keepPreviousData,
+    keepPrevious: true,
   });
 }
 

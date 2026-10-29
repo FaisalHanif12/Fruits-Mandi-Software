@@ -11,7 +11,8 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { Ban, History } from 'lucide-react';
 import { useState } from 'react';
-import { ListGrid } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
+import type { PagerState } from '../../../shared/hooks';
 import { SHORTCUTS } from '../../../shared/keyboard';
 import {
   Button,
@@ -31,22 +32,15 @@ interface TripEntriesSectionProps {
   entries: readonly TripEntryRow[];
   /** How many entries the trip has in all. */
   count: number;
-  hasMore: boolean;
-  loadingMore: boolean;
-  onLoadMore: () => void;
+  /** Where the entries are: the page on screen and the page buttons. */
+  pager: PagerState;
   /** The trip's purchases, to cancel a purchase from its row in the history. */
   purchases: readonly PurchaseRow[];
 }
 
-export function TripEntriesSection({
-  entries,
-  count,
-  hasMore,
-  loadingMore,
-  onLoadMore,
-  purchases,
-}: TripEntriesSectionProps) {
+export function TripEntriesSection({ entries, count, pager, purchases }: TripEntriesSectionProps) {
   const { l10n } = useLocalization();
+  const paging = useListPaging(pager);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cancelEntry, setCancelEntry] = useState<TripEntryRow | null>(null);
   const [cancelPurchase, setCancelPurchase] = useState<PurchaseRow | null>(null);
@@ -105,14 +99,9 @@ export function TripEntriesSection({
             focusRowId={selectedId}
             heightMode="auto"
             isInactive={(row) => row.cancelled}
+            paging={paging}
           />
-          {hasMore ? (
-            <div>
-              <Button disabled={loadingMore} busy={loadingMore} onClick={onLoadMore}>
-                <Localized id="trips-entries-more" />
-              </Button>
-            </div>
-          ) : null}
+          <Pager pager={pager} />
         </>
       )}
       {selected === null ? null : (

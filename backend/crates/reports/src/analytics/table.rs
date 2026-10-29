@@ -19,6 +19,9 @@ pub(crate) struct Table {
     pub(crate) rows: Vec<AnalyticsRow>,
     pub(crate) total_count: i64,
     pub(crate) totals: Vec<Cell>,
+    /// Charts a view made itself (view C, whose page is cut early). Other views leave it empty
+    /// and `run` makes their charts from the whole table.
+    pub(crate) charts: Vec<super::model::AnalyticsChart>,
 }
 
 /// A fixed column.

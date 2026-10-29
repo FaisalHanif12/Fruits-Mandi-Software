@@ -23,6 +23,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS, pukhtaRegisterOf } from '../helpers/paged';
 
@@ -247,7 +248,7 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
         phone: null,
         state: null,
         offset: 0,
-        limit: 100,
+        limit: PAGE_ROWS,
       });
     });
   });
@@ -393,7 +394,7 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
     });
   });
 
-  it('150 lines come page by page: 100 at once, the count and the totals are the backend’s, Show more loads the rest', async () => {
+  it('150 lines come one page at a time: 25 at once, the count and the totals are the backend’s, Next page loads the next 25', async () => {
     const all = Array.from({ length: 150 }, (_, index) =>
       registerRow({ bikri_id: 500 + index, bikri_number: index + 1 }),
     );
@@ -417,10 +418,8 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
       ),
     );
     await open();
-    const showing = (shown: number) =>
-      message(language, 'common-list-count', { shown: String(shown), total: '150' });
     await waitFor(() => {
-      expect(pageText()).toContain(showing(100));
+      expect(visible(pageText())).toContain(rangeText(language, 1, 25, 150));
     });
     // With no side chosen there are no sums, so there is no totals row at all.
     expect(document.querySelector('.ag-row-pinned')).toBeNull();
@@ -441,18 +440,14 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
       message(language, 'pukhta-state-due', { amount: '65,000' }),
     );
     expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 0, limit: 100 }),
+      expect.objectContaining({ offset: 0, limit: PAGE_ROWS }),
     );
-    await userEvent.setup().click(
-      await screen.findByRole('button', {
-        name: (name) => visible(name) === message(language, 'common-list-more'),
-      }),
-    );
+    await userEvent.setup().click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(pageText()).toContain(showing(150));
+      expect(visible(pageText())).toContain(rangeText(language, 26, 50, 150));
     });
     expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
-      expect.objectContaining({ offset: 100, limit: 100 }),
+      expect.objectContaining({ offset: PAGE_ROWS, limit: PAGE_ROWS }),
     );
   });
 });

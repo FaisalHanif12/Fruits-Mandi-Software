@@ -30,7 +30,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Button, ErrorState, LoadingState, Notice, showToast } from '../../../shared/ui';
+import { Button, ErrorState, FormAside, LoadingState, Notice, showToast } from '../../../shared/ui';
 import { expensePreview } from '../api';
 import { previewRefusal, useFollowType } from '../entry-support';
 import { EntryFrame } from '../components/EntryFrame';
@@ -177,55 +177,55 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
   const partner = preview?.paid_to_partner ?? null;
 
   return (
-    <div className="flex max-w-page flex-col gap-4">
-      <ExpenseTabs />
-      <EntryFrame<ExpenseType>
-        titleId="cashbook-expense-title"
-        helpId="cashbook-expense-help"
-        typeLabelId="cashbook-expense-type"
-        types={EXPENSE_TYPES.map((value) => ({ value, labelId: `cashbook-type-${kindId(value)}` }))}
-        type={draft.type}
-        onType={onType}
-        path={EXPENSE_PATH}
-        filled={filled}
-        busy={flow.busy}
-        onSave={save}
-        onNew={startNew}
-        flow={flow}
-        error={error}
-        fieldsShown={EXPENSE_FIELD_PATHS[draft.type]}
-        formRef={formRef}
-        actions={
-          draft.type === 'shop_expense' ? (
-            <Button
-              onClick={() => {
-                setRepeatOpen((open) => !open);
+    <EntryFrame<ExpenseType>
+      titleId="cashbook-expense-title"
+      helpId="cashbook-expense-help"
+      tabs={<ExpenseTabs />}
+      typeLabelId="cashbook-expense-type"
+      types={EXPENSE_TYPES.map((value) => ({ value, labelId: `cashbook-type-${kindId(value)}` }))}
+      type={draft.type}
+      onType={onType}
+      path={EXPENSE_PATH}
+      filled={filled}
+      busy={flow.busy}
+      onSave={save}
+      onNew={startNew}
+      flow={flow}
+      error={error}
+      fieldsShown={EXPENSE_FIELD_PATHS[draft.type]}
+      formRef={formRef}
+      actions={
+        draft.type === 'shop_expense' ? (
+          <Button
+            onClick={() => {
+              setRepeatOpen((open) => !open);
+            }}
+          >
+            <CalendarClock aria-hidden="true" className="size-icon-md" />
+            <Localized id="cashbook-repeat-open" />
+          </Button>
+        ) : null
+      }
+      below={
+        <>
+          {repeatOpen && draft.type === 'shop_expense' ? (
+            <RepeatPanel
+              month={today.slice(0, 7)}
+              onFill={fillFrom}
+              onClose={() => {
+                setRepeatOpen(false);
               }}
-            >
-              <CalendarClock aria-hidden="true" className="size-icon-md" />
-              <Localized id="cashbook-repeat-open" />
-            </Button>
-          ) : null
-        }
-        below={
+            />
+          ) : null}
+          <ExpenseListSection type={draft.type} day={day} partnerId={chosenPartnerId(draft)} />
+        </>
+      }
+    >
+      <FormAside
+        form={<ExpenseForm draft={draft} onChange={change} error={error} />}
+        aside={
           <>
-            {repeatOpen && draft.type === 'shop_expense' ? (
-              <RepeatPanel
-                month={today.slice(0, 7)}
-                onFill={fillFrom}
-                onClose={() => {
-                  setRepeatOpen(false);
-                }}
-              />
-            ) : null}
-            <ExpenseListSection type={draft.type} day={day} partnerId={chosenPartnerId(draft)} />
-          </>
-        }
-      >
-        <ExpenseForm draft={draft} onChange={change} error={error} />
-        <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
-          <ExpensePreviewCard type={draft.type} preview={preview} />
-          <div className="flex flex-col gap-3">
+            <ExpensePreviewCard type={draft.type} preview={preview} />
             <EntryNotes warnings={warnings} cash={preview?.cash}>
               {partner !== null && draft.type === 'shop_expense' ? (
                 <Notice
@@ -256,10 +256,10 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
                 }}
               />
             ) : null}
-          </div>
-        </div>
-      </EntryFrame>
-    </div>
+          </>
+        }
+      />
+    </EntryFrame>
   );
 }
 

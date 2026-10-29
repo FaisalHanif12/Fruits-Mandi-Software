@@ -693,6 +693,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       rows,
       total_count: inRange.length,
       totals: { in_paisa: money(totalIn), out_paisa: money(totalOut) },
+      months: [],
     };
   }
 
@@ -714,6 +715,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
         cancelled_count: all.filter((row) => row.status === 'cancelled').length,
         total_paisa: found.length === 0 ? null : money(total),
       },
+      months: [],
     };
   }
 
@@ -760,6 +762,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
         returned_paisa: money(rows.reduce((total, row) => total + row.returned, 0)),
         open_paisa: money(openSum(rows)),
       },
+      months: [],
     };
   }
 
@@ -777,6 +780,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
         returned_paisa: money(rows.reduce((total, row) => total + row.returned, 0)),
         open_paisa: money(openSum(rows)),
       },
+      months: [],
     };
   }
 
@@ -806,6 +810,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       rows: entryRows,
       total_count: rows.length,
       totals: { paid_out_paisa: money(sum('paid_out')), received_paisa: money(sum('received')) },
+      months: [],
     };
   }
 

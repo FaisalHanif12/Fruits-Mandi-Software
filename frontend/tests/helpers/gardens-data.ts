@@ -561,6 +561,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
           rent_due_paisa: money(0),
           commission_paisa: money(8_000),
         },
+        months: [],
       };
     },
     get: (input: GardenGetInput): GardenDetail => {

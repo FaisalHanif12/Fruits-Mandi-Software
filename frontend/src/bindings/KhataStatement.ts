@@ -3,6 +3,7 @@ import type { Paisa } from '../shared/format/money';
 import type { KhataAccount } from './KhataAccount';
 import type { KhataEntryRow } from './KhataEntryRow';
 import type { KhataTotals } from './KhataTotals';
+import type { MonthSubtotal } from './MonthSubtotal';
 
 /**
  * A khata's statement, one page (PRD 16.6, FR-19.11). Read only.
@@ -32,4 +33,10 @@ export type KhataStatement = {
    * The totals over the whole range.
    */
   totals: KhataTotals;
+  /**
+   * The count and subtotals of each month of the whole range, in the order of the list, when
+   * asked with `group_by_month` and the list is in date order. Figures: `paid_out_paisa` and
+   * `received_paisa`.
+   */
+  months: Array<MonthSubtotal>;
 };

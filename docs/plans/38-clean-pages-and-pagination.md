@@ -43,3 +43,17 @@ Targeted checks only.
 ## 3. Acceptance
 
 R1 on every paged list (a test per list type); the A1 shots before and after; no sideways scroll at 1024 in both languages; no change in any saved number or fixture value.
+
+## 4. Contract and decisions (30-10-2026)
+
+B1 (backend): `coa_tree` gives heads and controls with `account_count`; the new `coa_control_accounts` pages one control's accounts. `advances_report`, `assist_collection_list` and `fruit_lots` are paged. A one-row-per-page test over R1 to R37 (not R31) and analytics A to K passes. Helper lists stay unpaged by design.
+B2 contract: `SortInput {column, direction}` and `sort` on every list (SQL over the whole filter; reports and analytics use a stable sort of the built list); `group_by_month` with `months: MonthSubtotal[]` over the whole filter on the date-ordered registers and ledgers, and on R2, R4, R11, R12, R13, R14, R15, R23, R25, R29 (D2); `show_finished` (default false); `search` where missing (D3); `chart` on every analytics page (D1: top 10 plus others, or every period, per month above 120 points); NFR-SPD-24 speed test on the 10-year data.
+D1: the analytics chart covers the whole filter, never the page or the sort.
+
+## 5. A1 audit and approved fixes (30-10-2026)
+
+The audit is in `frontend/tests/e2e/output/screenshots/plan38/FINDINGS.md`: 64 screens, ur and en, at 1366 and 1024. No page scrolls sideways. One table is cut (the cash book in English). Almost every screen's work is below the fold at 1024 x 600.
+
+The lead approved: G1 (form and filter columns follow the space they have, not the window), G2 (a fixed work area; the table scrolls inside with a fixed header, totals and pager), G3 (filter bar with search and "More filters"), G4 (default period box), G5 (hints as info icons), G6 (show-closed tick), G7 (title first; the numbers strip never covers a grid), G8 (a guard so a bad answer shows the designed error state).
+Screen decisions: the sale book first (one header row of date, truck, zamindar and adda; the rest behind "More"; the first sale line visible at 1024 x 600); partner overview as one table with Partner Total first; opening balances with search, a default "without an opening balance" filter and the pager (typed values kept across pages); reports catalogue with search, group jumps and 3 columns; analytics with 3 filters shown and 8 behind "More filters"; settings tabs as one row with overflow; the account form with a fixed Save bar; the cash book column plan fixed. Rules: the PRD 7.2 keyboard order stays; "More" can be reached by keyboard; both languages; before and after shots.
+For Umar (listed in the report, already decided by the lead): partner overview as a table, the opening-balances default filter, analytics filters folded.

@@ -183,5 +183,85 @@
       "type": "money",
       "paisa": 544800
     }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "total_comm",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "party",
+            "party": {
+              "account_id": 18,
+              "code": "0010",
+              "short_code": "0",
+              "name_ur": "رحیم",
+              "name_en": "Rahim",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": 18,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 392800
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "party",
+            "party": {
+              "account_id": 19,
+              "code": "0011",
+              "short_code": "1",
+              "name_ur": "کریم",
+              "name_en": "Karim",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": 19,
+            "buyer_id": null,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 152000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

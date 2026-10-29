@@ -14,7 +14,6 @@
 // (with a way out), and the data.
 
 import { Localized, useLocalization } from '@fluent/react';
-import type { InfiniteData } from '@tanstack/react-query';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { FileX, Printer, Rows3 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -47,7 +46,12 @@ import {
   type AnalyticsFilterState,
 } from '../filters';
 import { analyticsExportExcel } from '../api';
-import { useAnalyticsCatalog, useAnalyticsPages, type LinesRequest } from '../hooks';
+import {
+  useAnalyticsCatalog,
+  useAnalyticsChart,
+  useAnalyticsPages,
+  type LinesRequest,
+} from '../hooks';
 import { ANALYTICS_SCREEN, analyticsFromRemembered, rememberedAnalytics } from '../remember';
 import { useAnalyticsStore } from '../store';
 import type { AnalyticsKey, AnalyticsSavedView, AnalyticsView } from '../types';
@@ -103,6 +107,7 @@ function AnalyticsBody({
   const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
   const wire = useMemo(() => filtersToWire(settled, entry.filters), [settled, entry]);
   const query = useAnalyticsPages(entry.id, wire);
+  const chart = useAnalyticsChart(entry.id, wire);
   const language = useLanguage();
   // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
   const exporter = useExcelExport({
@@ -119,7 +124,7 @@ function AnalyticsBody({
 
   // The pages last shown, kept while a half-typed filter is refused (they stay under the box). They
   // are state set while rendering, which React allows when the value really changed.
-  const [kept, setKept] = useState<InfiniteData<AnalyticsPageData> | null>(null);
+  const [kept, setKept] = useState<{ pages: AnalyticsPageData[] } | null>(null);
   if (query.data !== undefined && !query.isPlaceholderData && query.data !== kept) {
     setKept(query.data);
   }
@@ -224,6 +229,7 @@ function AnalyticsBody({
         <AnalyticsResults
           view={entry.id}
           query={query}
+          chartPage={chart.data}
           kept={filterRefusal === null ? null : kept}
           filtering={filtering}
           onClear={() => {

@@ -186,14 +186,19 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
   // normal step. (R15 and R25 fit at every step; their narration waits for the wide step like any
   // narration.)
   R23: { collector: { from: 'normal' } },
-  // Trip profit or loss (R33) has up to 15 columns and a table never scrolls sideways, so the most
-  // used come first and the rest wait for a wider step. Keys that two layouts share are one entry
+  // Trip profit or loss (R33) has up to 16 columns and a table never scrolls sideways, so the most
+  // used come first and the rest wait for a wider step. The total commission (seller, buyer and
+  // Laga, plan 37) is always there, with the trip, the item, the sales money and the result; the
+  // cost bought and the quantity left come with the normal step, the purchase number and the
+  // seller's own commission with the wide one. Keys that two layouts share are one entry
   // here: the trip layout (trip, purchase, date, item and the figures), the item, day and month
   // layouts (the same figures), and the partner layout (trip, partner, share and his money). The
   // print holds every column.
   R33: {
-    purchase: { from: 'normal' },
+    purchase: { from: 'wide' },
+    bought_cost: { from: 'normal' },
     sold_qty: { from: 'normal' },
+    left_qty: { from: 'normal' },
     money_back: { from: 'normal' },
     commission: { from: 'wide' },
     cost_sold: { from: 'wide' },

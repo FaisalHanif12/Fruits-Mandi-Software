@@ -33,6 +33,7 @@ fn view(w: &World, v: AnalyticsView, f: AnalyticsFilters) -> AnalyticsPage {
     run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,
@@ -46,6 +47,7 @@ fn refused(w: &World, v: AnalyticsView, f: AnalyticsFilters) -> Vec<(ErrorCode, 
     match run(
         w.env.ctx.db(),
         &AnalyticsRunInput {
+            sort: None,
             view: v,
             filters: f,
             offset: 0,

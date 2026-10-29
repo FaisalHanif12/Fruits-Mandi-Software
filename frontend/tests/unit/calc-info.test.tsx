@@ -70,6 +70,29 @@ describe.each(LANGUAGES)('CalcInfo (%s)', (language) => {
     );
   });
 
+  it('plan 37: a per-lot charge of a later lot of a goods-arrived entry says it was charged on the first lot of the entry, with the entry number and the rule’s amount', async () => {
+    // What the backend sends for the second lot of entry 3 with a per-lot munshiana of 50.
+    await open({
+      message_id: 'working-per-lot-charged-on-entry',
+      args: [
+        { name: 'entry', value: { kind: 'count', value: 3 } },
+        { name: 'value', value: { kind: 'money', paisa: money(50) } },
+        { name: 'result', value: { kind: 'money', paisa: money(0) } },
+      ],
+      rule_id: 4,
+    });
+    const text = visible(document.body.textContent);
+    expect(text).toContain(
+      message(language, 'working-per-lot-charged-on-entry', {
+        entry: '3',
+        value: '50',
+        result: '0',
+      }),
+    );
+    // The entry number, the rule's 50 and the 0 that is charged are all in the words.
+    for (const figure of ['3', '50', '0']) expect(text).toContain(figure);
+  });
+
   it('a per-Nag charge of a lot says the quantity was the quantity received', async () => {
     await open({
       message_id: 'working-per-unit',

@@ -157,6 +157,10 @@ describe('the canned data of the component tests has the real shape', () => {
       person_key: null,
       offset: 0,
       limit: 0,
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
     });
     expect(same(real.LIST_PAYMENTS, list)).toBeNull();
     expect(same(real.LIST_ALL, list)).toBeNull();

@@ -1,6 +1,6 @@
 // The garden box of a filter bar (PRD 18.1, PRD 19.2 R36): one garden, or all of them. The gardens are
 // a short list (a few each season), so the box is the shared drop-down, not a picker. The list is
-// the gardens module's own (`useGardensList`); its pages are loaded one after the other until it is
+// the gardens module's own (`useAllGardens`); its pages are loaded one after the other until it is
 // whole, because a drop-down has to hold every choice. A garden is named by `displayName` (Code
 // Standards F38). The report page and the analytics page both use it, with their own label.
 
@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { useLoadRest } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { Field, Select } from '../../../shared/ui';
-import { useGardensList } from '../hooks';
+import { useAllGardens } from '../hooks';
 
 /** The value of the "all gardens" choice. A garden's own value is its id as text. */
 const ALL = 'all';
@@ -21,6 +21,7 @@ const EVERY_GARDEN = {
   status: null,
   partner_id: null,
   search: null,
+  group_by_month: false,
 } as const;
 
 interface GardenFilterSelectProps {
@@ -36,7 +37,7 @@ interface GardenFilterSelectProps {
 export function GardenFilterSelect({ garden, onChange, labelId, error }: GardenFilterSelectProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
-  const gardens = useGardensList(EVERY_GARDEN);
+  const gardens = useAllGardens(EVERY_GARDEN);
   useLoadRest(gardens, true);
   const rows = gardens.data?.pages.flatMap((page) => page.rows) ?? [];
   let value = ALL;

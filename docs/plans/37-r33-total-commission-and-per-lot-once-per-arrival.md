@@ -18,3 +18,11 @@ R3. **Money and tests.** Only R2 changes an amount, and only for per-lot rules o
 | F1 | R33 screen column and words (کل کمیشن / Total Commission, the seller column label), the "charged on the entry's first lot" working words, tests, screenshots | frontend |
 
 Targeted checks only.
+
+## Built and decisions (29-10-2026)
+
+Backend T1: the R33 column `report-col-total-comm` after the seller commission (`report-col-seller-comm`), using `mandi_db::commission::by_purchases`. Per-lot once per entry: a settle loop in `calc_posting`, `db/src/bikri/edit.rs arrival_charges`, and the working `working-per-lot-charged-on-entry`. Money review before (4 must-fix, all taken) and after (no must-fix). Frontend F1: the R33 columns by step, the working words.
+
+D1 (lead): a per-lot amount above 0 typed by hand on a lot of the entry also counts as carrying the charge, so a later lot gets 0 by the rule ("once per entry" means once). The typed amount is kept as typed.
+D2: the settle loop's fail-loud guard (CalcError::Inconsistent) stays. If the coverage gate flags it, it is handled at the final gate.
+D3 (30-10-2026): a typed amount spares only lots AFTER it. If lot 1 took the rule's charge and lot 2 is then typed, both stand, and the preview warns "this charge was already taken on lot N of this entry" (the save is allowed). The settle loop was removed (one pass; saved lots keep their stored charge; new lots come after saved ones), so the D2 guard is gone.

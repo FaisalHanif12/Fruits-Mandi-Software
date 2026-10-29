@@ -55,6 +55,8 @@ const hit = (id: number, kind: 'item' | 'packing', ur: string, en: string) => ({
   extra_ur: '',
   extra_en: '',
   is_active: true,
+  // Item 5 is the one sold by weight in the backend's files.
+  sold_by_weight: kind === 'item' && id === 5,
 });
 const masters = (scope: string) =>
   scope === 'item'

@@ -426,6 +426,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         ("coa_tree", json!({}), true),
+        (
+            "coa_control_accounts",
+            json!({ "input": { "control_id": 1, "offset": 0, "limit": 25 } }),
+            true,
+        ),
         ("coa_heads_list", json!({}), true),
         ("coa_controls_list", json!({}), true),
         (

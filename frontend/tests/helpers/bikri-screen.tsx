@@ -92,7 +92,9 @@ export async function typeHeaderAndLot(user: User, language: Language) {
       screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
     ).toHaveValue(names(language).rahim);
   });
-  await user.keyboard('{Enter}{Enter}{Enter}');
+  // The زمیندار, then the اڈا: the rest of the header (bill date, freight, store, driver) is behind
+  // "More", so Enter on the اڈا goes on to the lots.
+  await user.keyboard('{Enter}{Enter}');
   const lots = lotsGrid(language);
   await waitFor(() => {
     expect(focusedIn(lots)).toBe('0:seller');
@@ -140,8 +142,8 @@ export async function typeAndPick(user: User, text: string) {
 export async function typeEvent1Lot(user: User, language: Language) {
   await user.keyboard('LES-1234{Enter}');
   await typeAndPick(user, 'rahim');
-  // The adda and the total freight stay empty; the freight is typed on the lot.
-  await user.keyboard('{Enter}{Enter}');
+  // The adda stays empty; the total freight is behind "More" and the freight is typed on the lot.
+  await user.keyboard('{Enter}');
   const lots = lotsGrid(language);
   await waitFor(() => {
     expect(focusedIn(lots)).toBe('0:seller');

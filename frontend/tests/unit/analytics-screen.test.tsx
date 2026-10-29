@@ -26,7 +26,9 @@ import {
   signedIn,
 } from '../helpers/app';
 import { printFirmName } from '../helpers/print-frame';
+import { PAGE_ROWS } from '../helpers/pager';
 import { message, visible, paragraph } from '../helpers/render';
+import { CHART_ROWS } from '../../src/features/analytics/hooks';
 import {
   ANALYTICS_PRINT_DATA_D_UR,
   ANALYTICS_RUN_A_REQUEST,
@@ -111,8 +113,21 @@ function pick(selector: string): Element {
   return found;
 }
 
+/** The last request of the TABLE (one page of the pager). The chart asks for its own rows. */
 function lastRun() {
-  return vi.mocked(analyticsApi.analyticsRun).mock.calls.at(-1)?.[0];
+  return vi
+    .mocked(analyticsApi.analyticsRun)
+    .mock.calls.map((call) => call[0])
+    .filter((input) => input.limit === PAGE_ROWS)
+    .at(-1);
+}
+
+/** The requests of the chart: the first rows of the view, never the page of the table (plan 38 D1). */
+function chartRuns() {
+  return vi
+    .mocked(analyticsApi.analyticsRun)
+    .mock.calls.map((call) => call[0])
+    .filter((input) => input.limit === CHART_ROWS);
 }
 
 function lastLines() {
@@ -152,6 +167,8 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       await waitFor(() => {
         expect(lastRun()).toEqual(ANALYTICS_RUN_A_REQUEST_WITH_PAGE);
       }, SLOW_MS);
+      // The chart is drawn from the first rows of the whole filter, whatever page the table is on.
+      expect(chartRuns()[0]).toEqual({ ...ANALYTICS_RUN_A_REQUEST, limit: CHART_ROWS });
     });
 
     it('moves between the views with the tabs, and keeps the filters', async () => {
@@ -551,7 +568,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
         row_key: { item_id: 1 },
         column_key: null,
         offset: 0,
-        limit: 100,
+        limit: PAGE_ROWS,
       });
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(2);
@@ -887,8 +904,9 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
     it('says what happened and tries again when the backend fails', async () => {
       let failing = true;
       const { user } = await openView('C', {
-        refuse: () => {
-          if (!failing) return null;
+        refuse: (input) => {
+          // The table's first request fails; the chart asks for its own rows and is not counted.
+          if (!failing || input.limit !== PAGE_ROWS) return null;
           failing = false;
           return {
             ok: false,
@@ -1003,8 +1021,8 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   });
 });
 
-/** The first request of view A: the backend's own request, one page of 100. */
-const ANALYTICS_RUN_A_REQUEST_WITH_PAGE = { ...ANALYTICS_RUN_A_REQUEST, limit: 100 };
+/** The first request of view A: the backend's own request, one page of the pager. */
+const ANALYTICS_RUN_A_REQUEST_WITH_PAGE = { ...ANALYTICS_RUN_A_REQUEST, limit: PAGE_ROWS };
 
 /** View A with nothing in it. */
 const ANALYTICS_RUN_A_EMPTY = {

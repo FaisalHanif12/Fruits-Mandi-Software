@@ -7,7 +7,6 @@
 // Four states: loading, an error with a retry, nothing found (with a way out), and the data.
 
 import { Localized } from '@fluent/react';
-import type { InfiniteData } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AuditPage } from '../../../bindings/AuditPage';
 import type { UiError } from '../../../bindings/UiError';
@@ -73,9 +72,9 @@ function AuditLogBody() {
   const query = useAuditPages(wire);
   const options = useAuditOptions();
 
-  // The pages last shown, kept while a half-typed filter is refused. They are state set while
+  // The page last shown, kept while a half-typed filter is refused. They are state set while
   // rendering, which React allows when the value really changed.
-  const [kept, setKept] = useState<InfiniteData<AuditPage> | null>(null);
+  const [kept, setKept] = useState<{ pages: AuditPage[] } | null>(null);
   if (query.data !== undefined && !query.isPlaceholderData && query.data !== kept) {
     setKept(query.data);
   }

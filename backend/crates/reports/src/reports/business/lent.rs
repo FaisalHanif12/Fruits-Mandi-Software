@@ -279,6 +279,7 @@ fn with_day(mut page: ReportPage, as_of: &str) -> ReportPage {
 /// The report with its columns and no rows.
 fn empty(typed: &Typed, spec: PageSpec) -> ReportPage {
     ReportPage {
+        group_above: None,
         id: ReportId::R32,
         title_id: ids::title_id("R32"),
         filters: typed.resolved.clone(),

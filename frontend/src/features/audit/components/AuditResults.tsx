@@ -1,26 +1,26 @@
-// The list of audit entries under the filters (PRD FR-21.3, FR-19.11): page by page with the backend's
-// count of the whole filter, never a sum of the rows on screen (Code Standards F34). Enter (or a double
+// The list of audit entries under the filters (PRD FR-21.3, FR-19.11): one page at a time with the
+// backend's count of the whole filter, never a sum of the rows on screen (Code Standards F34). Enter (or a double
 // click) on an entry opens its changed fields. Four states: loading, an error with a retry, nothing
 // found (with a way out), and the data. The log is read only: nothing here edits or deletes.
 
 import { Localized } from '@fluent/react';
-import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { SearchX } from 'lucide-react';
 import { useMemo } from 'react';
 import type { AuditPage } from '../../../bindings/AuditPage';
 import type { AuditRow } from '../../../bindings/AuditRow';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { AUDIT_COLUMNS } from '../columns';
+import type { useAuditPages } from '../hooks';
 
 /** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
 const SHORT_LIST_ROWS = 30;
 
 interface AuditResultsProps {
-  query: UseInfiniteQueryResult<InfiniteData<AuditPage>>;
-  /** The pages last shown, kept while a half-typed filter is refused (they stay under the box). */
-  kept: InfiniteData<AuditPage> | null;
+  query: ReturnType<typeof useAuditPages>;
+  /** The page last shown, kept while a half-typed filter is refused (it stays under the box). */
+  kept: { pages: AuditPage[] } | null;
   /** A box is filled: the empty state offers to clear it. */
   filtering: boolean;
   onClear: () => void;
@@ -44,6 +44,7 @@ export function AuditResults({
     () => data?.pages.flatMap((page) => page.rows),
     [data],
   );
+  const paging = useListPaging(query.pager);
 
   if (last === undefined || rows === undefined) {
     if (query.isError) {
@@ -88,27 +89,10 @@ export function AuditResults({
           onFocusRow={onFocusRow}
           focusRowId={focusRowId}
           heightMode={long ? 'fill' : 'auto'}
+          paging={paging}
         />
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Localized
-          id="audit-count"
-          vars={{ shown: String(rows.length), total: String(last.total_count) }}
-        >
-          <p className="type-body text-ink-muted" />
-        </Localized>
-        {query.hasNextPage ? (
-          <Button
-            disabled={query.isFetchingNextPage}
-            busy={query.isFetchingNextPage}
-            onClick={() => {
-              void query.fetchNextPage();
-            }}
-          >
-            <Localized id="audit-more" />
-          </Button>
-        ) : null}
-      </div>
+      <Pager pager={query.pager} />
       <Localized id="audit-open-hint">
         <p className="type-body text-ink-muted" />
       </Localized>

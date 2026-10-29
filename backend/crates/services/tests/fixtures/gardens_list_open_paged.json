@@ -131,5 +131,6 @@
     "balance_paisa": 1140000,
     "rent_due_paisa": 0,
     "commission_paisa": 800000
-  }
+  },
+  "months": []
 }

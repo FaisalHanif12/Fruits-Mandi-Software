@@ -318,6 +318,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     }
 
     Ok(Table {
+        charts: Vec::new(),
         columns,
         total_count: count_of(all_rows.len()),
         rows: spec.slice(&all_rows),

@@ -121,12 +121,6 @@ backup-list-empty = ابھی کوئی کاپی نہیں
 backup-list-empty-help = پہلی کاپی ابھی بنانے کے لیے بٹن دبائیں۔
 
 # review: pending
-backup-list-count = { $total } میں سے { $shown } کاپیاں دکھائی جا رہی ہیں
-
-# review: pending
-backup-list-more = مزید دکھائیں
-
-# review: pending
 backup-list-how = کاپی چن کر Enter دبائیں، یا اس پر ڈبل کلک کریں، تو وہ بحال ہو گی۔
 
 # review: pending

@@ -42,6 +42,7 @@ function ventures(scope: VentureScope): SearchHit[] {
     extra_ur: 'لاہور منڈی',
     extra_en: 'Lahore Mandi',
     is_active: true,
+    sold_by_weight: false,
   }));
 }
 

@@ -10,6 +10,7 @@ use mandi_domain::core::bikri::{
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::MonthSubtotal;
 use mandi_domain::core::validate::{self, FieldErrors};
 
 use crate::context::Context;
@@ -76,14 +77,48 @@ pub fn list(ctx: &Context, input: &BikriListInput) -> Result<BikriList, ServiceE
         Some(day) => (Some(day.clone()), Some(day)),
         None => (from, to),
     };
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|s| {
+            s.order_by(&repo::SORT_COLUMNS).map(|order| {
+                // Rows of the same day follow the same direction by number.
+                if s.column == "entry_date" {
+                    format!("{order}, e.number {}", s.direction.sql())
+                } else {
+                    order
+                }
+            })
+        })
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let search = input
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned);
+    // Cancelled بکری step aside unless asked for, or unless a status was chosen.
+    let status = match (input.status, input.show_finished) {
+        (None, false) => Some(BikriStatus::Saved),
+        (chosen, _) => chosen,
+    };
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_none_or(|s| s.direction == mandi_domain::core::paging::SortDirection::Desc);
     let filter = ListFilter {
         from,
         to,
         seller_id: input.seller_id,
         item_id: input.item_id,
-        status: input.status,
+        status,
         number: None,
         truck_prefix: None,
+        search,
+        order_by,
         limit: crate::page::limit_of(input.limit),
         offset: i64::from(input.offset),
     };
@@ -92,6 +127,26 @@ pub fn list(ctx: &Context, input: &BikriListInput) -> Result<BikriList, ServiceE
         let totals = repo::list_totals(conn, &filter)?;
         let rows = repo::list(conn, &filter)?;
         let paisa = |value: i64| Paisa::try_from_paisa(value).map_err(crate::error::money_error);
+        // Month headings with their subtotals, over the whole filter (plan 38 R4).
+        let mut months = Vec::new();
+        if input.group_by_month && in_date_order {
+            for rec in repo::list_months(conn, &filter)? {
+                months.push(MonthSubtotal {
+                    month: rec.month,
+                    count: rec.count,
+                    figures: vec![
+                        MonthSubtotal::count_of("qty_received", rec.qty_received),
+                        MonthSubtotal::count_of("qty_sold", rec.qty_sold),
+                        MonthSubtotal::money("gross", rec.gross_paisa),
+                        MonthSubtotal::money("net", rec.net_paisa),
+                        MonthSubtotal::money("buyer_total", rec.buyer_total_paisa),
+                    ],
+                });
+            }
+            if newest_first {
+                months.reverse();
+            }
+        }
         Ok(BikriList {
             rows,
             total_count: totals.count,
@@ -102,6 +157,7 @@ pub fn list(ctx: &Context, input: &BikriListInput) -> Result<BikriList, ServiceE
                 net: paisa(totals.net_paisa)?,
                 buyer_total: paisa(totals.buyer_total_paisa)?,
             },
+            months,
         })
     })
 }
@@ -130,6 +186,8 @@ pub fn find(ctx: &Context, input: &BikriFindInput) -> Result<Vec<BikriListRow>, 
         status: None,
         number: input.number,
         truck_prefix,
+        search: None,
+        order_by: None,
         limit: FIND_LIMIT,
         offset: 0,
     };

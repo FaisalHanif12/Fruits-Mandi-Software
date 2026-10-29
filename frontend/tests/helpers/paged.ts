@@ -53,6 +53,7 @@ export function bikriListOf(
       buyer_total: paisaForTest(0),
       ...totals,
     },
+    months: [],
   };
 }
 
@@ -68,6 +69,7 @@ export function pukhtaRegisterOf(
     // As the backend: with no side chosen the totals are null (buyers and sellers would be added
     // together); a test that chooses a side gives the totals it wants to see.
     totals: { qty: null, amount: null, commission: null, open: null, ...totals },
+    months: [],
   };
 }
 

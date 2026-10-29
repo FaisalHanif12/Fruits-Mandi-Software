@@ -411,6 +411,15 @@ pub(crate) fn balances_by_account(
     Ok(repo::account_totals(conn, as_of)?.into_iter().collect())
 }
 
+/// The balances of these accounts only (a page of a list), as a map. An account with no posted
+/// line is not in it.
+pub(crate) fn balances_for_accounts(
+    conn: &Connection,
+    ids: &[i64],
+) -> Result<HashMap<i64, repo::Totals>, ServiceError> {
+    Ok(repo::totals_for_accounts(conn, ids)?)
+}
+
 /// A date given to a query must be `YYYY-MM-DD`: SQL compares it as text, so a wrong form would
 /// give a wrong range without any error.
 fn check_iso_date(date: Option<&str>) -> Result<(), ServiceError> {

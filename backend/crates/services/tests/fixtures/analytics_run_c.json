@@ -262,5 +262,118 @@
     {
       "type": "empty"
     }
+  ],
+  "charts": [
+    {
+      "kind": "ranked",
+      "title": null,
+      "series": [
+        {
+          "key": "purchase_value",
+          "kind": "money"
+        }
+      ],
+      "points": [
+        {
+          "label": {
+            "type": "party",
+            "party": {
+              "account_id": 21,
+              "code": "0021",
+              "short_code": "1",
+              "name_ur": "ارشد ملتانی",
+              "name_en": "Arshad Multani",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": 21,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 1740000
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "party",
+            "party": {
+              "account_id": 20,
+              "code": "0020",
+              "short_code": "0",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
+              "tag": null,
+              "person_key": null
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": 20,
+            "person_key": null,
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 1200000
+            }
+          ],
+          "is_others": false
+        },
+        {
+          "label": {
+            "type": "party",
+            "party": {
+              "account_id": 9,
+              "code": "0030",
+              "short_code": null,
+              "name_ur": "شاہد",
+              "name_en": "Shahid",
+              "tag": null,
+              "person_key": "شاہد|03000000000",
+              "phone": "0300-0000000"
+            }
+          },
+          "key": {
+            "item_id": null,
+            "seller_id": null,
+            "buyer_id": 9,
+            "person_key": "شاہد|03000000000",
+            "from": null,
+            "to": null,
+            "not_item_ids": [],
+            "partner_id": null,
+            "purchase_ids": []
+          },
+          "values": [
+            {
+              "type": "money",
+              "paisa": 1200000
+            }
+          ],
+          "is_others": false
+        }
+      ],
+      "others_count": 0,
+      "by_month": false
+    }
   ]
 }

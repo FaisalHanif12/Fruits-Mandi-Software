@@ -264,6 +264,8 @@ fn r12_is_the_cash_book_of_the_screen_row_for_row() {
     let screen = cashbook::get(
         &w.env.ctx,
         &CashbookInput {
+            group_by_month: false,
+            sort: None,
             from: Some("10-10-2026".into()),
             to: Some("10-10-2026".into()),
             offset: 0,
@@ -367,6 +369,8 @@ fn r12_shows_cash_below_zero_on_the_credit_side_and_agrees_with_the_cash_book() 
     let screen = cashbook::get(
         &w.env.ctx,
         &CashbookInput {
+            group_by_month: false,
+            sort: None,
             from: Some("10-10-2026".into()),
             to: Some("10-10-2026".into()),
             offset: 0,
@@ -683,6 +687,8 @@ fn r32_e2e_30_the_loan_is_settled_by_cash_and_salary_and_the_figures_are_the_scr
     let screen = lent::report(
         &w.env.ctx,
         &LentReportInput {
+            search: None,
+            sort: None,
             as_of: None,
             offset: 0,
             limit: 0,
@@ -759,6 +765,8 @@ fn r31(
     let statement = partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: request.partner_id,
             from: day(&request.from),
             to: day(&request.to),
@@ -979,6 +987,8 @@ fn the_engine_alone_does_not_build_r31() {
     let error = mandi_reports::reports::run(
         w.env.ctx.db(),
         &mandi_reports::reports::ReportRunInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R31,
             filters: partner(w.partners[0]),
             offset: 0,
@@ -1162,6 +1172,8 @@ fn r32_lists_those_with_something_open_first_like_the_screen_and_leaves_out_peop
     let screen = lent::report(
         &w.env.ctx,
         &LentReportInput {
+            search: None,
+            sort: None,
             as_of: None,
             offset: 0,
             limit: 0,

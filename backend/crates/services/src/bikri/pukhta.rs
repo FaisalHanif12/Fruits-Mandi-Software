@@ -28,6 +28,7 @@ use mandi_domain::core::bikri::{
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::{MonthSubtotal, SortDirection};
 use mandi_domain::core::text;
 use mandi_domain::core::validate::{self, FieldErrors};
 use mandi_domain::matching::{Open, match_bills};
@@ -251,6 +252,11 @@ pub fn register(
     let from = bound(&mut errors, "from", &input.from);
     let to = bound(&mut errors, "to", &input.to);
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&SORT_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
     let want = |side: PukhtaSide| input.side.is_none_or(|s| s == side);
     ctx.db.read(|conn| {
         let mut rows: Vec<(RegisterLine, Paisa)> = Vec::new();
@@ -286,6 +292,11 @@ pub fn register(
             .map(str::trim)
             .filter(|n| !n.is_empty());
         let phone = input.phone.as_deref().map(digits).filter(|p| !p.is_empty());
+        let search = input
+            .search
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty());
         let mut out = Vec::with_capacity(rows.len());
         for (line, open) in rows {
             if name.is_some_and(|n| !matches(n, &line.name_ur, &line.name_en, "")) {
@@ -295,6 +306,18 @@ pub fn register(
                 .as_ref()
                 .is_some_and(|p| !line.phone.contains(p.as_str()))
             {
+                continue;
+            }
+            if search.is_some_and(|t| {
+                !(matches(t, &line.name_ur, &line.name_en, &line.phone)
+                    || matches(t, &line.item.name_ur, &line.item.name_en, "")
+                    || line.item.code.to_lowercase().starts_with(&t.to_lowercase())
+                    || t.parse::<i64>().is_ok_and(|n| n == line.bikri_number))
+            }) {
+                continue;
+            }
+            // Lines of cancelled بکری step aside unless asked for (plan 38 R5).
+            if line.cancelled && !input.show_finished {
                 continue;
             }
             let open = if line.cancelled { Paisa::ZERO } else { open };
@@ -349,10 +372,121 @@ pub fn register(
         };
         let total_count =
             i64::try_from(out.len()).map_err(|_| ServiceError::Data("too many rows".to_owned()))?;
+        // The sort is of the whole filter, before the page is cut. The sort is stable, so equal
+        // rows keep the order by day and number.
+        if let Some(sort) = &input.sort {
+            sort_rows(&mut out, &sort.column, sort.direction);
+        }
+        // Month headings with their subtotals, over the whole filter (plan 38 R4).
+        let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+        let newest_first = input
+            .sort
+            .as_ref()
+            .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
+        let months = if input.group_by_month && in_date_order {
+            months_of(&out, one_side, newest_first)?
+        } else {
+            Vec::new()
+        };
         Ok(PukhtaRegister {
             rows: crate::page::slice(out, input.offset, input.limit),
             total_count,
             totals,
+            months,
         })
     })
+}
+
+/// The columns the register can be sorted by: the names of the fields of the row.
+const SORT_COLUMNS: [&str; 12] = [
+    "entry_date",
+    "bikri_number",
+    "side",
+    "name_ur",
+    "name_en",
+    "phone",
+    "item",
+    "qty",
+    "amount",
+    "commission",
+    "paid",
+    "open",
+];
+
+/// Sorts the whole register by a column (checked by [`SORT_COLUMNS`]). A stable sort.
+fn sort_rows(rows: &mut [PukhtaRegisterRow], column: &str, direction: SortDirection) {
+    use std::cmp::Ordering;
+    let cmp: fn(&PukhtaRegisterRow, &PukhtaRegisterRow) -> Ordering = match column {
+        "entry_date" => |a, b| {
+            (a.entry_date.as_str(), a.bikri_number).cmp(&(b.entry_date.as_str(), b.bikri_number))
+        },
+        "bikri_number" => |a, b| a.bikri_number.cmp(&b.bikri_number),
+        "side" => |a, b| (a.side as u8).cmp(&(b.side as u8)),
+        "name_ur" => |a, b| a.name_ur.cmp(&b.name_ur),
+        "name_en" => |a, b| a.name_en.to_lowercase().cmp(&b.name_en.to_lowercase()),
+        "phone" => |a, b| a.phone.cmp(&b.phone),
+        "item" => |a, b| a.item.code.cmp(&b.item.code),
+        "qty" => |a, b| a.qty.cmp(&b.qty),
+        "amount" => |a, b| a.amount.cmp(&b.amount),
+        "commission" => |a, b| a.commission.cmp(&b.commission),
+        "paid" => |a, b| a.paid.cmp(&b.paid),
+        "open" => |a, b| a.open.cmp(&b.open),
+        _ => |_, _| Ordering::Equal,
+    };
+    rows.sort_by(|a, b| direction.apply(cmp(a, b)));
+}
+
+/// The count and subtotals of each month of the register rows (the cancelled lines count in the
+/// month and add no money). The money figures are given only when one side is chosen, like the
+/// totals.
+fn months_of(
+    rows: &[PukhtaRegisterRow],
+    one_side: bool,
+    newest_first: bool,
+) -> Result<Vec<MonthSubtotal>, ServiceError> {
+    #[derive(Default)]
+    struct Sums {
+        count: i64,
+        qty: i64,
+        amount: Paisa,
+        commission: Paisa,
+        open: Paisa,
+    }
+    let overflow = || ServiceError::reject(ErrorCode::ErrOverflow);
+    let mut by_month: BTreeMap<&str, Sums> = BTreeMap::new();
+    for row in rows {
+        let month = row.entry_date.get(..7).unwrap_or(row.entry_date.as_str());
+        let sums = by_month.entry(month).or_default();
+        sums.count = sums.count.checked_add(1).ok_or_else(overflow)?;
+        if !row.cancelled {
+            sums.qty = sums.qty.checked_add(row.qty).ok_or_else(overflow)?;
+            sums.amount = sums.amount.checked_add(row.amount).map_err(money_error)?;
+            sums.commission = sums
+                .commission
+                .checked_add(row.commission)
+                .map_err(money_error)?;
+            sums.open = sums.open.checked_add(row.open).map_err(money_error)?;
+        }
+    }
+    let mut months: Vec<MonthSubtotal> = by_month
+        .into_iter()
+        .map(|(month, sums)| MonthSubtotal {
+            month: month.to_owned(),
+            count: sums.count,
+            figures: if one_side {
+                vec![
+                    MonthSubtotal::count_of("qty", sums.qty),
+                    MonthSubtotal::money("amount", sums.amount.as_paisa()),
+                    MonthSubtotal::money("commission", sums.commission.as_paisa()),
+                    MonthSubtotal::money("open", sums.open.as_paisa()),
+                ]
+            } else {
+                Vec::new()
+            },
+        })
+        .collect();
+    if newest_first {
+        months.reverse();
+    }
+    Ok(months)
 }

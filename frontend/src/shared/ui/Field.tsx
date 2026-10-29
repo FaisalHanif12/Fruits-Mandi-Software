@@ -8,6 +8,7 @@
 
 import { CircleAlert } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
+import { InfoHint } from './InfoHint';
 
 /** What a field passes to its control. Every input of shared/ui accepts these. */
 export interface FieldControlProps {
@@ -21,6 +22,11 @@ interface FieldProps {
   label: ReactNode;
   /** A short grey line under the field saying what to type (PRD FR-7.1). */
   hint?: ReactNode;
+  /**
+   * The same kind of words, behind a small ⓘ next to the label instead of a line under the field,
+   * so the form stays short (plan 38 G5). Use it for a hint that is not needed every time.
+   */
+  info?: ReactNode;
   /** What is wrong and what to do (PRD FR-7.6). Shown instead of the hint. */
   error?: ReactNode;
   /** A value the app works out: shown on the page ground, cannot be typed into. */
@@ -36,6 +42,7 @@ interface FieldProps {
 export function Field({
   label,
   hint,
+  info,
   error,
   readOnly = false,
   hideLabel = false,
@@ -48,9 +55,18 @@ export function Field({
   const note = hasError || hasHint;
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
-        {label}
-      </label>
+      {info === undefined ? (
+        <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
+          {label}
+        </label>
+      ) : (
+        <div className="flex items-center gap-1">
+          <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
+            {label}
+          </label>
+          <InfoHint>{info}</InfoHint>
+        </div>
+      )}
       {children({
         id,
         'aria-describedby': note ? noteId : undefined,

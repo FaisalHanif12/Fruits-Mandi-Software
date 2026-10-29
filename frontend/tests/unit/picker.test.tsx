@@ -30,6 +30,7 @@ function hit(id: number, code: string, ur: string, en: string, active = true): S
     extra_ur: '',
     extra_en: '',
     is_active: active,
+    sold_by_weight: false,
   };
 }
 

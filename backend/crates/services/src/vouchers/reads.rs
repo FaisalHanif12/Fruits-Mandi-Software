@@ -20,8 +20,8 @@ use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{
     AdvancesReport, AdvancesReportInput, AdvancesReportRow, CollectionBuyer, CollectionGroup,
-    CollectionList, CollectionListInput, LineSource, MAX_OPEN_ROWS, OpenBill, OpenBills,
-    OpenBillsInput, OpenPayables, OpenPayablesInput, PayablePosting,
+    CollectionGroupTotal, CollectionList, CollectionListInput, LineSource, MAX_OPEN_ROWS, OpenBill,
+    OpenBills, OpenBillsInput, OpenPayables, OpenPayablesInput, PayablePosting,
 };
 use mandi_domain::payables;
 
@@ -420,9 +420,20 @@ pub fn advances_report(
             });
         }
         rows.sort_by(|a, b| a.account.code.cmp(&b.account.code));
+        let total_count = u32::try_from(rows.len())
+            .map_err(|_| ServiceError::Data("the number of sellers does not fit".to_owned()))?;
+        let limit = if input.limit == 0 {
+            crate::page::DEFAULT_PAGE
+        } else {
+            input.limit
+        };
+        let rows = crate::page::slice(rows, input.offset, limit);
         Ok(AdvancesReport {
             as_of: as_of_iso,
             rows,
+            total_count,
+            offset: input.offset,
+            limit,
             given_paisa: given,
             returned_paisa: returned,
             adjusted_paisa: adjusted,
@@ -505,10 +516,50 @@ pub fn collection_list(
                 oldest_days,
             });
         }
+        // The page counts buyers down the groups; a group keeps its whole total.
+        let groups: Vec<CollectionGroup> = groups.into_values().collect();
+        let group_totals: Vec<CollectionGroupTotal> = groups
+            .iter()
+            .map(|g| {
+                Ok(CollectionGroupTotal {
+                    collector: g.collector.clone(),
+                    city: g.city.clone(),
+                    count: u32::try_from(g.buyers.len()).map_err(|_| {
+                        ServiceError::Data("the number of buyers does not fit".to_owned())
+                    })?,
+                    total_paisa: g.total_paisa,
+                })
+            })
+            .collect::<Result<_, ServiceError>>()?;
+        let total_count = u32::try_from(groups.iter().map(|g| g.buyers.len()).sum::<usize>())
+            .map_err(|_| ServiceError::Data("the number of buyers does not fit".to_owned()))?;
+        let limit = if input.limit == 0 {
+            crate::page::DEFAULT_PAGE
+        } else {
+            input.limit
+        };
+        let mut skip = usize::try_from(input.offset).unwrap_or(usize::MAX);
+        let mut room = usize::try_from(limit).unwrap_or(usize::MAX);
+        let mut page = Vec::new();
+        for mut group in groups {
+            let buyers = std::mem::take(&mut group.buyers);
+            let skipped = skip.min(buyers.len());
+            skip -= skipped;
+            let taken: Vec<CollectionBuyer> = buyers.into_iter().skip(skipped).take(room).collect();
+            room -= taken.len();
+            if !taken.is_empty() {
+                group.buyers = taken;
+                page.push(group);
+            }
+        }
         Ok(CollectionList {
             date: date.to_iso(),
             weekday,
-            groups: groups.into_values().collect(),
+            groups: page,
+            total_count,
+            group_totals,
+            offset: input.offset,
+            limit,
             total_paisa: grand,
         })
     })

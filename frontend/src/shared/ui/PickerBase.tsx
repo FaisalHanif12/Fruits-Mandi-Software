@@ -413,35 +413,39 @@ export function PickerBase<H extends PickerHit>({
   const noMatch = open && !isPending && !isError && hits.length === 0;
   const canAdd = showAdd && (onAddRecord !== undefined || onAddNew !== undefined);
 
+  const inputProps = getInputProps({
+    type: 'text',
+    readOnly,
+    placeholder,
+    'aria-invalid': invalid,
+    'aria-describedby': describedBy,
+    autoComplete: 'off',
+    spellCheck: false,
+    onKeyDown,
+    onClick: (event: { currentTarget: HTMLInputElement }) => {
+      // A click on a field that shows a chosen name selects the whole name, so typing
+      // replaces it, as it does when the field is entered by keyboard (PRD FR-7.15).
+      if (readOnly !== true && typed === null) event.currentTarget.select();
+    },
+    onFocus: () => {
+      setFocused(true);
+    },
+    onBlur,
+    onChange: (event: { currentTarget: HTMLInputElement }) => {
+      if (readOnly !== true) {
+        setTypedNow(event.currentTarget.value);
+        onTyping?.();
+      }
+    },
+  });
+
   return (
     <div ref={boxRef} className="relative">
+      {/* A name wider than the box is cut with an ellipsis and read in full on hover (plan 38). */}
       <input
-        {...getInputProps({
-          type: 'text',
-          readOnly,
-          placeholder,
-          'aria-invalid': invalid,
-          'aria-describedby': describedBy,
-          autoComplete: 'off',
-          spellCheck: false,
-          onKeyDown,
-          onClick: (event: { currentTarget: HTMLInputElement }) => {
-            // A click on a field that shows a chosen name selects the whole name, so typing
-            // replaces it, as it does when the field is entered by keyboard (PRD FR-7.15).
-            if (readOnly !== true && typed === null) event.currentTarget.select();
-          },
-          onFocus: () => {
-            setFocused(true);
-          },
-          onBlur,
-          onChange: (event: { currentTarget: HTMLInputElement }) => {
-            if (readOnly !== true) {
-              setTypedNow(event.currentTarget.value);
-              onTyping?.();
-            }
-          },
-        })}
-        className={`${controlClasses({ invalid, readOnly })} type-field pe-control`}
+        {...inputProps}
+        title={typeof inputProps.value === 'string' ? inputProps.value : undefined}
+        className={`${controlClasses({ invalid, readOnly })} type-field pe-control text-ellipsis`}
       />
       {readOnly === true ? null : (
         <button

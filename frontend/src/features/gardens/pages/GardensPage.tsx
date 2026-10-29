@@ -41,6 +41,7 @@ export function GardensPage() {
       status: status === 'all' ? null : status,
       partner_id: null,
       search: textOrNull(search),
+      group_by_month: false,
     }),
     [from, to, status, search],
   );
@@ -133,7 +134,6 @@ export function GardensPage() {
         <PagedList<GardenRow>
           columns={GARDEN_COLUMNS}
           rows={rows}
-          totalCount={first?.total_count}
           getRowId={(row) => String(row.id)}
           labelId="gardens-list-label"
           failedId="gardens-list-failed"
@@ -141,11 +141,7 @@ export function GardensPage() {
           onRetry={() => {
             void list.refetch();
           }}
-          hasMore={list.hasNextPage}
-          loadingMore={list.isFetchingNextPage}
-          onLoadMore={() => {
-            void list.fetchNextPage();
-          }}
+          pager={list.pager}
           empty={empty}
           onOpen={(row) => {
             void navigate({ to: '/gardens/$id', params: { id: String(row.id) } });

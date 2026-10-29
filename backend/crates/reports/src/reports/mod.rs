@@ -32,6 +32,7 @@ mod model;
 pub(crate) mod print_data;
 mod sales;
 pub mod statement;
+pub(crate) mod view;
 mod vouchers;
 #[doc(hidden)]
 pub mod workings;
@@ -513,7 +514,65 @@ fn build_in(
 /// a database or money error.
 pub fn run(db: &Db, input: &ReportRunInput) -> Result<ReportPage, ReportsError> {
     let spec = page_spec(input.offset, input.limit)?;
-    db.read(|conn| build(conn, db, input.id, &input.filters, spec))
+    let wants_months = input.group_by_month && view::has_months(input.id);
+    db.read(|conn| {
+        common::in_snapshot(conn, |conn| {
+            // A sort or month headings need every row of the filter: the report is built whole,
+            // sorted, given its headings and cut after (plan 38 R4). The totals are the same
+            // whole-filter totals as ever.
+            if input.sort.is_some() || wants_months {
+                let all = PageSpec {
+                    offset: 0,
+                    limit: None,
+                };
+                let mut page = build_in(conn, db, input.id, &input.filters, all)?;
+                if let Some(sort) = &input.sort {
+                    view::sort_page(&mut page, sort)?;
+                }
+                if wants_months && view::in_date_order(&page.columns, input.sort.as_ref()) {
+                    view::add_month_headings(&mut page)?;
+                }
+                view::cut(&mut page, spec);
+                return Ok(page);
+            }
+            let mut page = build_in(conn, db, input.id, &input.filters, spec)?;
+            // A page that starts inside a group needs the heading of that group, with the totals
+            // of the whole group (plan 38 B2). Only the reports with group rows pay for it, and
+            // only on a later page.
+            let starts_with_heading = page.rows.first().is_some_and(|r| r.kind == RowKind::Group);
+            if spec.offset > 0 && emits_group_rows(input.id) && !starts_with_heading {
+                let all = PageSpec {
+                    offset: 0,
+                    limit: None,
+                };
+                let full = build_in(conn, db, input.id, &input.filters, all)?;
+                let upto = usize::try_from(spec.offset)
+                    .unwrap_or(usize::MAX)
+                    .min(full.rows.len());
+                page.group_above = full
+                    .rows
+                    .get(..upto)
+                    .and_then(|rows| rows.iter().rev().find(|r| r.kind == RowKind::Group))
+                    .cloned();
+            }
+            Ok(page)
+        })
+    })
+}
+
+/// The reports that put group rows (a heading with the totals of its group) among their rows.
+fn emits_group_rows(id: ReportId) -> bool {
+    matches!(
+        id,
+        ReportId::R17
+            | ReportId::R20
+            | ReportId::R21
+            | ReportId::R22
+            | ReportId::R24
+            | ReportId::R29
+            | ReportId::R33
+            | ReportId::R35
+    )
 }
 
 /// The print data of a report: every row of the filter, formatted for the print language.

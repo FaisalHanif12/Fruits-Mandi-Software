@@ -75,9 +75,16 @@ pub fn next_code(
 /// assert!(mandi_db::codes::order_by_code("a.code").starts_with("CASE WHEN a.code GLOB"));
 /// ```
 pub fn order_by_code(column: &str) -> String {
+    order_by_code_dir(column, "")
+}
+
+/// The same order as [`order_by_code`], every term in one direction (`"ASC"`, `"DESC"` or `""`),
+/// for a list sorted by its code column (plan 38 R4). `direction` is never input.
+pub fn order_by_code_dir(column: &str, direction: &str) -> String {
     let scheme = format!("{column} GLOB '00[1-6][0-9]*'");
     format!(
-        "CASE WHEN {scheme} THEN 0 ELSE 1 END, CASE WHEN {scheme} THEN substr({column}, 1, 3) ELSE '' END, \
-         CASE WHEN {scheme} THEN length({column}) ELSE 0 END, {column}"
+        "CASE WHEN {scheme} THEN 0 ELSE 1 END {direction}, \
+         CASE WHEN {scheme} THEN substr({column}, 1, 3) ELSE '' END {direction}, \
+         CASE WHEN {scheme} THEN length({column}) ELSE 0 END {direction}, {column} {direction}"
     )
 }

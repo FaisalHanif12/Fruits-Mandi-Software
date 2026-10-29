@@ -11,6 +11,7 @@ use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as repo, EntryRec, PartRec, PurchaseFigures, VentureRec};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::rules::{Working, WorkingArg, WorkingValue};
 use mandi_domain::core::trips::{
     CostSpreadPart, TripDefaults, TripDetail, TripEntryKind, TripEntryRow, TripGetInput,
@@ -263,6 +264,19 @@ pub(super) fn list(ctx: &Context, input: &TripsListInput) -> Result<TripsList, S
         .as_ref()
         .map(|t| t.trim().to_lowercase())
         .filter(|t| !t.is_empty());
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| sort.order_by(&repo::SORT_COLUMNS))
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    // The natural order is newest first, as is a sort by the day when it is descending.
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_none_or(|s| s.direction == SortDirection::Desc);
     let filter = repo::ListFilter {
         kind: "trip".to_owned(),
         from,
@@ -270,6 +284,7 @@ pub(super) fn list(ctx: &Context, input: &TripsListInput) -> Result<TripsList, S
         status: input.status.map(|s| s.as_str().to_owned()),
         partner_id: input.partner_id,
         search,
+        order_by,
     };
     let limit = if input.limit == 0 {
         DEFAULT_PAGE
@@ -324,11 +339,18 @@ pub(super) fn list(ctx: &Context, input: &TripsListInput) -> Result<TripsList, S
                 .checked_add(money.result)
                 .map_err(money_error)?;
         }
+        // Month headings with the count of trips, over the whole filter (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            crate::page::month_subtotals(repo::list_months(conn, &filter)?, &[], newest_first)
+        } else {
+            Vec::new()
+        };
         Ok(TripsList {
             rows,
             total_count: u32::try_from(ids.len())
                 .map_err(|_| data("the number of trips does not fit"))?,
             totals,
+            months,
         })
     })
 }

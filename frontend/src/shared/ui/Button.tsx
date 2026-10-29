@@ -23,6 +23,11 @@ interface ButtonProps {
    * for example "Statement of Partner A". The words on the button stay the short ones.
    */
   accessibleName?: string;
+  /**
+   * A button that holds only an icon (the arrows that turn a page): as wide as it is tall, so a row
+   * of them is narrow. Its name is a visually hidden text inside it (plan 38).
+   */
+  iconOnly?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -40,6 +45,7 @@ export function Button({
   disabled = false,
   busy = false,
   accessibleName,
+  iconOnly = false,
   ref,
 }: ButtonProps) {
   return (
@@ -50,7 +56,7 @@ export function Button({
       disabled={disabled || busy}
       aria-busy={busy}
       aria-label={accessibleName}
-      className={`inline-flex h-control shrink-0 items-center gap-2 rounded-2 border px-4 type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT_CLASSES[variant]}`}
+      className={`inline-flex h-control shrink-0 items-center gap-2 rounded-2 border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? 'w-control justify-center px-0' : 'px-4'} ${VARIANT_CLASSES[variant]}`}
     >
       {children}
       {shortcut === undefined ? null : (

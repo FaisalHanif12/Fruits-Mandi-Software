@@ -13,6 +13,7 @@ import type { SaleInput } from '../../src/bindings/SaleInput';
 import * as bikriApi from '../../src/features/bikri/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
+import { PAGE_ROWS } from '../helpers/pager';
 import { GET_EVENT1, GET_EVENT2 } from '../helpers/bikri-real';
 import {
   CANCEL_DONE,
@@ -139,7 +140,7 @@ describe('goods left against the backend files', () => {
       include_written_off: false,
       lot_id: null,
       offset: 0,
-      limit: 100,
+      limit: PAGE_ROWS,
     });
   });
 

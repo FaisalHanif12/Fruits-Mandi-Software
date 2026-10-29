@@ -26,6 +26,7 @@ mod regular;
 use mandi_db::vouchers as repo;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::Paisa;
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{VoucherRow, VouchersList, VouchersListInput, VouchersTotals};
 
@@ -73,15 +74,30 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
     let from = bound(&mut errors, "from", &input.from);
     let to = bound(&mut errors, "to", &input.to);
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    let order_by = input
+        .sort
+        .as_ref()
+        .map(|sort| sort.order_by(&repo::SORT_COLUMNS))
+        .transpose()
+        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
+    let newest_first = input
+        .sort
+        .as_ref()
+        .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
     let filter = repo::ListFilter {
         voucher_type: input.voucher_type,
         from: from.as_deref(),
         to: to.as_deref(),
         account_id: input.account_id,
         person_key: input.person_key.as_deref(),
+        search: input.search.as_deref(),
+        order_by: order_by.as_deref(),
+        hide_cancelled: !input.show_finished,
     };
     // One page and the totals over the whole filter, each from one query (PRD FR-19.11, B31).
-    let (mut rows, totals) = ctx.db.read(|conn| {
+    let (mut rows, totals, months) = ctx.db.read(|conn| {
         let totals = repo::list_totals(conn, &filter)?;
         let rows = repo::list_page(
             conn,
@@ -89,12 +105,25 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
             i64::from(input.offset),
             crate::page::limit_of(input.limit),
         )?;
-        Ok::<_, ServiceError>((rows, totals))
+        // Month headings with their subtotals, over the whole filter (plan 38 R4).
+        let months = if input.group_by_month && in_date_order {
+            repo::list_months(conn, &filter)?
+        } else {
+            Vec::new()
+        };
+        Ok::<_, ServiceError>((rows, totals, months))
     })?;
     mark_editable(&mut rows, closed);
     // The total is of what is saved: a cancelled voucher no longer moves money. It is given only
     // for one type (PRD FR-15.1).
     let saved = Paisa::try_from_paisa(totals.saved_paisa).map_err(money_error)?;
+    // The money total of a month is given only for one type, like the list's own total.
+    let figures: &[(&str, bool)] = if input.voucher_type.is_some() {
+        &[("cancelled_count", false), ("total_paisa", true)]
+    } else {
+        &[("cancelled_count", false)]
+    };
+    let month_rows = crate::page::month_subtotals(months, figures, newest_first);
     Ok(VouchersList {
         rows,
         total_count: totals.count,
@@ -102,6 +131,7 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
             cancelled_count: totals.cancelled,
             total_paisa: input.voucher_type.map(|_| saved),
         },
+        months: month_rows,
     })
 }
 

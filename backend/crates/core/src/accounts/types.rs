@@ -5,6 +5,7 @@ use ts_rs::TS;
 
 use crate::error::ErrorCode;
 use crate::money::Paisa;
+use crate::paging::SortInput;
 
 /// The four kinds of account a user can make (PRD 10.2 "قسم کھاتہ").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
@@ -459,6 +460,12 @@ pub struct AccountsListInput {
     /// gives the most, so a list with no limit returns every matching account.
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole filter by: `code`, `serial`, `name_ur`, `name_en`, `phone1`,
+    /// `city`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `credit_allowed` or
+    /// `balance` (debit minus credit, so the biggest dues are last when ascending). Null is by
+    /// code (plan 38 R4). Inactive accounts are left out unless `filter.include_inactive` is true.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
 }
 
 /// The rows of the list and the totals of all rows that match (not only this page).
@@ -679,8 +686,43 @@ pub struct ControlNode {
     pub party_type: String,
     /// The balance of everything under it.
     pub balance: Balance,
-    /// Its accounts, by code.
-    pub accounts: Vec<AccountNode>,
+    /// How many accounts it has. They load when the control is opened, a page at a time, with
+    /// `coa_control_accounts` (plan 38 B1).
+    #[ts(type = "number")]
+    pub account_count: i64,
+}
+
+/// Input of `coa_control_accounts`: one page of the accounts of one control (plan 38 B1, Code
+/// Standards B31).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct CoaControlAccountsInput {
+    /// The control. `ERR_NOT_FOUND` on `control_id`.
+    #[ts(type = "number")]
+    pub control_id: i64,
+    /// How many accounts to skip. 0 for the first page.
+    #[serde(default)]
+    pub offset: u32,
+    /// The page size: 25, 50 or 100. 0 gives 100.
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One page of the accounts of one control, with the control's own balance over all of them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct CoaControlAccounts {
+    /// The control.
+    #[ts(type = "number")]
+    pub control_id: i64,
+    /// The accounts of this page, by code, each with its balance now.
+    pub rows: Vec<AccountNode>,
+    /// How many accounts the control has in all.
+    pub total_count: u32,
+    /// The offset that was asked.
+    pub offset: u32,
+    /// The page size used.
+    pub limit: u32,
+    /// The balance of everything under the control (all its accounts, not only this page).
+    pub balance: Balance,
 }
 
 /// An account in the tree.

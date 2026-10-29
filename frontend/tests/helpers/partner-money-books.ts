@@ -346,6 +346,7 @@ export function createPartnerMoneyBooks(
       rows: rows.slice(input.offset, input.offset + size).map((one) => one.row),
       total_count: rows.length,
       totals: { invested_paisa: money(invested), taken_back_paisa: money(taken) },
+      months: [],
     };
   }
 
@@ -401,6 +402,7 @@ export function createPartnerMoneyBooks(
       lines,
       total_count: inRange.length,
       totals: { plus_paisa: money(plus), minus_paisa: money(minus) },
+      months: [],
     };
   }
 

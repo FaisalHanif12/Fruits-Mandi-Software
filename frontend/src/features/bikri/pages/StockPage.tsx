@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { StockListInput } from '../../../bindings/StockListInput';
 import type { StockRow } from '../../../bindings/StockRow';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, PagedFooter, type ListContext } from '../../../shared/grid';
+import { ListGrid, Pager, type ListContext } from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
@@ -207,15 +207,7 @@ function StockBody({ saved, remember }: MemoryProps) {
         {gardenRows.length === 0 || first === undefined ? null : (
           <GardenStockSection rows={gardenRows} list={first} />
         )}
-        <PagedFooter
-          shown={rows.length + ownRows.length + gardenRows.length}
-          total={first?.total_count ?? rows.length + ownRows.length + gardenRows.length}
-          hasMore={list.hasNextPage}
-          loadingMore={list.isFetchingNextPage}
-          onLoadMore={() => {
-            void list.fetchNextPage();
-          }}
-        />
+        <Pager pager={list.pager} />
       </>
     );
   }

@@ -12,6 +12,8 @@ import {
   DateInput,
   ErrorState,
   Field,
+  FormCard,
+  FormSpan,
   FreeTextInput,
   MoneyInput,
   Select,
@@ -99,7 +101,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
   );
 
   return (
-    <div className="grid grid-cols-1 gap-4 rounded-3 border border-border bg-surface p-3 normal:grid-cols-2">
+    <FormCard>
       <Field label={<Localized id="cashbook-field-date" />} error={fieldError(error, 'date')}>
         {(props) => (
           <DateInput
@@ -185,7 +187,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
           </Field>
         </>
       ) : null}
-      <div className="normal:col-span-2">
+      <FormSpan>
         <Field
           label={<Localized id="cashbook-field-narration" />}
           error={fieldError(error, 'narration')}
@@ -200,7 +202,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
             />
           )}
         </Field>
-      </div>
-    </div>
+      </FormSpan>
+    </FormCard>
   );
 }

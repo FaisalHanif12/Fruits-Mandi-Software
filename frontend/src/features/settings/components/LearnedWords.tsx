@@ -9,7 +9,7 @@ import { useState } from 'react';
 import type { PairRow } from '../../../bindings/PairRow';
 import { uiErrorOf } from '../../../shared/api';
 import { utcToLocalDisplay } from '../../../shared/format';
-import { PagedFooter } from '../../../shared/grid';
+import { Pager } from '../../../shared/grid';
 import {
   Button,
   Code,
@@ -39,7 +39,6 @@ export function LearnedWords() {
   const [asking, setAsking] = useState<PairRow | null>(null);
 
   const body = () => {
-    if (pairs.isPending) return <LoadingState />;
     if (pairs.isError) {
       return (
         <ErrorState
@@ -51,6 +50,7 @@ export function LearnedWords() {
         />
       );
     }
+    if (pairs.isPending || pairs.data === undefined) return <LoadingState />;
     const rows = pairs.data.pages.flatMap((page) => page.rows);
     if (rows.length === 0) {
       return (
@@ -114,15 +114,7 @@ export function LearnedWords() {
             rowKey={(pair) => String(pair.id)}
           />
         </div>
-        <PagedFooter
-          shown={rows.length}
-          total={pairs.data.pages[0]?.total_count ?? rows.length}
-          hasMore={pairs.hasNextPage}
-          loadingMore={pairs.isFetchingNextPage}
-          onLoadMore={() => {
-            void pairs.fetchNextPage();
-          }}
-        />
+        <Pager pager={pairs.pager} />
       </>
     );
   };

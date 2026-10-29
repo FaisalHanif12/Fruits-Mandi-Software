@@ -92,6 +92,8 @@ const NO_LIST = {
   search: null,
   offset: 0,
   limit: 0,
+  sort: null,
+  group_by_month: false,
 };
 
 describe('the canned data of the trip tests has the real shape', () => {

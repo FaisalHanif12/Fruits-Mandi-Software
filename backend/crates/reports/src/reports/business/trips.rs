@@ -8,7 +8,10 @@
 //!
 //! * sales money = the partners' parts of the seller credits of the purchase's own lots (C25: the
 //!   sale after commission and any lot charge) plus the money of its sales in other shops. The
-//!   commission column is the seller commission only (E2E-34: 540);
+//!   commission column is the seller commission only (E2E-34: 540); next to it the total
+//!   commission column (plan 37) is seller commission + buyer commission + لاگا of the sales in our
+//!   shop, as the trip screens and analytics view J have it (E2E-34: 1,200). No result changes:
+//!   the result stays after the seller commission, as before;
 //! * cost released = what sales and write-offs took out of the purchase's cost (C21), kept on the
 //!   purchase; cost sold = cost released less the cost written off;
 //! * result = sales money less cost released (FR-12.27). It can be below 0 (a loss).
@@ -59,6 +62,9 @@ pub(crate) struct Figures {
     pub(crate) sold_qty: i64,
     pub(crate) sales_money: Paisa,
     pub(crate) commission: Paisa,
+    /// Seller commission + buyer commission + لاگا (plan 37). Only R33 shows it; analytics view J
+    /// puts this number in `commission` and does not read this field.
+    pub(crate) total_commission: Paisa,
     pub(crate) cost_sold: Paisa,
     pub(crate) written_off_qty: i64,
     pub(crate) written_off_cost: Paisa,
@@ -82,6 +88,7 @@ impl Figures {
         add_qty(&mut self.sold_qty, other.sold_qty)?;
         add(&mut self.sales_money, other.sales_money)?;
         add(&mut self.commission, other.commission)?;
+        add(&mut self.total_commission, other.total_commission)?;
         add(&mut self.cost_sold, other.cost_sold)?;
         add_qty(&mut self.written_off_qty, other.written_off_qty)?;
         add(&mut self.written_off_cost, other.written_off_cost)?;
@@ -91,7 +98,20 @@ impl Figures {
         Ok(())
     }
 
-    /// The eleven cells of the figures, in the order of the columns.
+    /// The twelve cells of R33: the eleven figures with the total commission after the seller
+    /// commission, in the order of its columns.
+    pub(crate) fn r33_cells(&self) -> Vec<Cell> {
+        let mut cells = self.cells();
+        cells.insert(
+            5,
+            Cell::Money {
+                paisa: self.total_commission,
+            },
+        );
+        cells
+    }
+
+    /// The eleven cells of the figures, in the order of the columns (analytics view J).
     pub(crate) fn cells(&self) -> Vec<Cell> {
         let money = |paisa| Cell::Money { paisa };
         let qty = |value| Cell::Number { value };
@@ -134,6 +154,7 @@ pub(crate) fn figures_of(
         sold_qty: purchase.qty_sold,
         sales_money,
         commission,
+        total_commission: Paisa::ZERO,
         cost_sold,
         written_off_qty: purchase.qty_written_off,
         written_off_cost,
@@ -173,6 +194,9 @@ struct Line {
 
 fn load(conn: &Connection, typed: &Typed) -> Result<Vec<Line>, ReportsError> {
     let filter = ListFilter {
+        hide_cancelled: false,
+        order_by: None,
+        search: None,
         trip_id: None,
         from: typed.from.clone(),
         to: typed.to.clone(),
@@ -191,27 +215,38 @@ fn load(conn: &Connection, typed: &Typed) -> Result<Vec<Line>, ReportsError> {
         sold.extend(sold_figures(conn, chunk)?);
     }
     let commission = commissions(conn, &ids_of)?;
+    // The total commission (plan 37): the same grouped read as the trip screens and analytics J.
+    let total_commission = mandi_db::commission::by_purchases(conn, &ids_of)?;
     purchases
         .into_iter()
         .map(|purchase| {
-            let figures = figures_of(
+            let mut figures = figures_of(
                 &purchase,
                 sold.get(&purchase.id).copied().unwrap_or_default(),
                 commission.get(&purchase.id).copied().unwrap_or(Paisa::ZERO),
             )?;
+            if let Some(c) = total_commission.get(&purchase.id) {
+                let total = c.total_paisa().filter(|t| *t >= 0).ok_or_else(|| {
+                    ReportsError::Data(
+                        "the commission on a purchase's goods is not valid".to_owned(),
+                    )
+                })?;
+                figures.total_commission = paisa(total)?;
+            }
             Ok(Line { purchase, figures })
         })
         .collect()
 }
 
-/// The eleven figure columns.
+/// The twelve figure columns of R33.
 fn figure_columns() -> Vec<Column> {
     vec![
         col("bought_qty", ids::COL_BOUGHT_QTY, ColumnKind::Number),
         col("bought_cost", ids::COL_BOUGHT_COST, ColumnKind::Money),
         col("sold_qty", ids::COL_SOLD, ColumnKind::Number),
         col("sales_money", ids::COL_SALES_MONEY, ColumnKind::Money),
-        col("commission", ids::COL_COMMISSION, ColumnKind::Money),
+        col("commission", ids::COL_SELLER_COMM, ColumnKind::Money),
+        col("total_commission", ids::COL_TOTAL_COMM, ColumnKind::Money),
         col("cost_sold", ids::COL_COST_SOLD, ColumnKind::Money),
         col("written_off_qty", ids::COL_WRITTEN_OFF, ColumnKind::Number),
         col(
@@ -225,10 +260,10 @@ fn figure_columns() -> Vec<Column> {
     ]
 }
 
-/// A row: its identifying cells, then the eleven figures.
+/// A row: its identifying cells, then the twelve figures.
 fn figure_row(lead: Vec<Cell>, figures: &Figures, kind: RowKind, source: Option<RowSource>) -> Row {
     let mut cells = lead;
-    cells.extend(figures.cells());
+    cells.extend(figures.r33_cells());
     Row {
         cells,
         source,
@@ -395,8 +430,9 @@ pub(crate) fn run(
     let lead_len = columns.len();
     columns.extend(figure_columns());
     let mut totals = vec![Cell::Empty; lead_len];
-    totals.extend(total.cells());
+    totals.extend(total.r33_cells());
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R33,
         title_id: ids::title_id("R33"),
         filters: typed.resolved.clone(),
@@ -443,6 +479,9 @@ fn partners(
         let all = mandi_db::purchases::list(
             conn,
             &ListFilter {
+                hide_cancelled: false,
+                order_by: None,
+                search: None,
                 trip_id: Some(trip.trip_id),
                 from: None,
                 to: None,
@@ -526,6 +565,7 @@ fn partners(
     }
 
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R33,
         title_id: ids::title_id("R33"),
         filters: typed.resolved.clone(),

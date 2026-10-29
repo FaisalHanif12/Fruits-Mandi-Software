@@ -42,7 +42,6 @@ export function CapitalHistorySection({ partnerId }: { partnerId: number | null 
           <PagedList
             columns={CAPITAL_COLUMNS}
             rows={rows}
-            totalCount={first?.total_count}
             getRowId={(row) => [row.kind, row.voucher_id ?? 0, row.entry_date].join('-')}
             labelId="partners-capital-label"
             failedId="partners-capital-failed"
@@ -50,11 +49,7 @@ export function CapitalHistorySection({ partnerId }: { partnerId: number | null 
             onRetry={() => {
               void history.refetch();
             }}
-            hasMore={history.hasNextPage}
-            loadingMore={history.isFetchingNextPage}
-            onLoadMore={() => {
-              void history.fetchNextPage();
-            }}
+            pager={history.pager}
             empty={
               <EmptyState
                 icon={Landmark}

@@ -1,11 +1,9 @@
 // The audit commands as hooks (Code Standards F6).
 
-import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { usePagedQuery } from '../../shared/hooks';
 import { auditList, auditOptions } from './api';
 import type { AuditFilters } from './types';
-
-/** A page of the log (Code Standards B31, NFR-SPD-24). */
-export const AUDIT_PAGE_SIZE = 100;
 
 /** The lists behind the filter boxes. They change only when something new is written, so a minute. */
 export function useAuditOptions() {
@@ -17,19 +15,18 @@ export function useAuditOptions() {
 }
 
 /**
- * The log, page by page. The total is the backend's count of the whole filter, so the screen never
- * adds up the rows it holds. While the filters change, the rows already on screen stay until the new
- * ones come.
+ * The log, one page at a time (Code Standards B31, NFR-SPD-24). The total is the backend's count of
+ * the whole filter, so the screen never adds up the rows it holds. While the filters change, the
+ * rows already on screen stay until the new ones come.
  */
-export function useAuditPages(filters: AuditFilters) {
-  return useInfiniteQuery({
-    queryKey: ['audit_list', filters],
-    queryFn: ({ pageParam }) => auditList({ filters, offset: pageParam, limit: AUDIT_PAGE_SIZE }),
-    initialPageParam: 0,
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce((count, page) => count + page.rows.length, 0);
-      return last.rows.length > 0 && loaded < last.total_count ? loaded : undefined;
-    },
-    placeholderData: keepPreviousData,
+export function useAuditPages(filters: AuditFilters, groupByMonth = false) {
+  return usePagedQuery({
+    screen: 'audit.log',
+    queryKey: ['audit_list', filters, groupByMonth],
+    fetchPage: (offset, limit, sort) =>
+      auditList({ filters, offset, limit, sort, group_by_month: groupByMonth && sort === null }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
   });
 }

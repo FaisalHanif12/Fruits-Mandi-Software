@@ -3,6 +3,7 @@ import type { Balance } from './Balance';
 import type { LentPerson } from './LentPerson';
 import type { LentRow } from './LentRow';
 import type { LentTotals } from './LentTotals';
+import type { MonthSubtotal } from './MonthSubtotal';
 
 /**
  * A person's loans, one page (PRD FR-16.5, FR-19.11). Read only.
@@ -28,4 +29,9 @@ export type LentList = {
    * The totals over all his loans.
    */
   totals: LentTotals;
+  /**
+   * The count and subtotals of each month of the whole range, in the order of the list, when
+   * asked with `group_by_month` and the list is in date order. Figures: `lent_paisa`, `returned_paisa` and `open_paisa`.
+   */
+  months: Array<MonthSubtotal>;
 };

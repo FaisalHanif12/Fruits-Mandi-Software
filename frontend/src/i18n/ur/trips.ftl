@@ -58,13 +58,6 @@ trips-list-no-match-help = دوسری تاریخیں، کھلے یا بند سف
 # review: pending
 trips-list-clear = سب سفر دکھائیں
 
-# $shown: how many are on screen; $total: how many match.
-# review: pending
-trips-list-count = { $total } میں سے { $shown } نظر آ رہے ہیں
-
-# review: pending
-trips-list-more = مزید دکھائیں
-
 ## Numbers: a trip has a code of type 007 (plan 34); its entries have series with their own letters.
 
 # A trip cost.
@@ -393,9 +386,6 @@ trips-entries-empty-help = اس سفر کی خریداریاں، خرچ اور �
 # $shown: how many are on screen; $total: how many the trip has.
 # review: pending
 trips-entries-count = { $total } میں سے { $shown } نظر آ رہے ہیں
-
-# review: pending
-trips-entries-more = مزید دکھائیں
 
 # review: pending
 trips-entries-cancel = اندراج منسوخ کریں

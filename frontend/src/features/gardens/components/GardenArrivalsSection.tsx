@@ -14,7 +14,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { ListGrid, PagedFooter, type ListContext } from '../../../shared/grid';
+import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   Button,
@@ -53,6 +53,7 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const list = useArrivalsList(garden.id);
+  const paging = useListPaging(list.pager);
   const setSellDate = useSetArrivalSellDate();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [sellDateOpen, setSellDateOpen] = useState(false);
@@ -148,16 +149,9 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
           focusRowId={selectedId === null ? null : String(selectedId)}
           heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
           totals={totals}
+          paging={paging}
         />
-        <PagedFooter
-          shown={rows.length}
-          total={first?.total_count ?? rows.length}
-          hasMore={list.hasNextPage}
-          loadingMore={list.isFetchingNextPage}
-          onLoadMore={() => {
-            void list.fetchNextPage();
-          }}
-        />
+        <Pager pager={list.pager} />
         {selected === null ? null : (
           <div className="flex flex-col gap-3 rounded-3 border border-border bg-surface p-3">
             <Localized

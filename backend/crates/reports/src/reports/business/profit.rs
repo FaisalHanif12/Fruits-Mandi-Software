@@ -198,6 +198,7 @@ pub(crate) fn run(
     let [income, expense, profit, taken, returned, net] = sums;
     let money = |paisa| Cell::Money { paisa };
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R30,
         title_id: ids::title_id("R30"),
         filters: typed.resolved.clone(),

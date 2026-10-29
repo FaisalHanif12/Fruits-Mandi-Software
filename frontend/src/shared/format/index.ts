@@ -25,3 +25,10 @@ export {
   utcToLocalDisplay,
   utcToLocalTime,
 } from './dates';
+export {
+  PERIOD_KINDS,
+  periodMessageId,
+  periodRange,
+  type PeriodKind,
+  type PeriodRange,
+} from './period';

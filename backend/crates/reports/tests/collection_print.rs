@@ -66,8 +66,12 @@ fn golden_list() -> CollectionList {
         ),
     ];
     CollectionList {
+        group_totals: Vec::new(),
         date: "2026-10-10".into(),
         weekday: 5,
+        total_count: 2,
+        offset: 0,
+        limit: 100,
         groups: vec![CollectionGroup {
             collector: None,
             city: None,
@@ -101,8 +105,12 @@ fn grouped_list() -> CollectionList {
         Some(("2026-10-01", 9)),
     )];
     CollectionList {
+        group_totals: Vec::new(),
         date: "2026-10-10".into(),
         weekday: 5,
+        total_count: 3,
+        offset: 0,
+        limit: 100,
         groups: vec![
             CollectionGroup {
                 collector: None,
@@ -417,8 +425,12 @@ fn a_buyer_with_negative_dues_is_not_printed() {
 #[test]
 fn an_empty_list_has_no_groups_and_a_zero_total() {
     let list = CollectionList {
+        group_totals: Vec::new(),
         date: "2026-10-10".into(),
         weekday: 5,
+        total_count: 0,
+        offset: 0,
+        limit: 100,
         groups: Vec::new(),
         total_paisa: Paisa::ZERO,
     };

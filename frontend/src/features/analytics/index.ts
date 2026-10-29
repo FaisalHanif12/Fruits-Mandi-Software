@@ -8,7 +8,6 @@ export {
   analyticsViewsSave,
 } from './api';
 export {
-  ANALYTICS_PAGE_SIZE,
   useAnalyticsCatalog,
   useAnalyticsLines,
   useAnalyticsPages,

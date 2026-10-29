@@ -112,12 +112,6 @@ report-pick-party-help = This report is for one account. Type its code or name a
 report-balance-only-help = Only the balances are shown. Tick "With detail" to see every line.
 
 # review: pending
-report-count = Showing <num>{ $shown }</num> of <num>{ $total }</num> rows
-
-# review: pending
-report-more = Show more rows
-
-# review: pending
 report-open-hint = Use ↑ ↓ to pick a row and Enter to open its source.
 
 # review: pending
@@ -1307,3 +1301,27 @@ report-col-other-left = Other Shop Left
 
 # review: pending
 report-col-shop-name = Other Shop Name
+
+## The catalogue's search and jump list (plan 38).
+
+# review: pending
+reports-search-label = Find a report
+
+# review: pending
+reports-search-placeholder = The name or number of a report
+
+# review: pending
+reports-jump-label = Go to
+
+# $group: the name of a group of reports.
+# review: pending
+reports-jump-to = Go to the reports of { $group }
+
+# review: pending
+reports-search-none = No report matches
+
+# review: pending
+reports-search-none-help = Check the spelling, or clear the search to see every report.
+
+# review: pending
+reports-search-clear = Clear the search

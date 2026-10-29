@@ -43,7 +43,6 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
           <PagedList
             columns={KHATA_COLUMNS}
             rows={rows}
-            totalCount={first?.total_count}
             getRowId={(row) => `${String(row.entry_id)}-${String(row.voucher_id ?? 0)}`}
             labelId="cashbook-khata-label"
             failedId="cashbook-khata-failed"
@@ -51,11 +50,7 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
             onRetry={() => {
               void statement.refetch();
             }}
-            hasMore={statement.hasNextPage}
-            loadingMore={statement.isFetchingNextPage}
-            onLoadMore={() => {
-              void statement.fetchNextPage();
-            }}
+            pager={statement.pager}
             empty={
               <EmptyState
                 icon={Wallet}

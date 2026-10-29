@@ -45,6 +45,7 @@ import {
   EmptyState,
   ErrorNotice,
   ErrorState,
+  InfoHint,
   LinkButton,
   LoadingState,
   Notice,
@@ -490,85 +491,93 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     edit === null ? isFilledByUser(stores, draft) : !edit.done && !(diff?.unchanged ?? true);
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-3">
-      {edit === null ? (
-        <BikriToolbar
-          currentId={null}
-          onOpen={onOpenSaved}
-          findOpen={findOpen}
-          onFindOpenChange={setFindOpen}
-          lastSaved={
-            lastSaved === null ? null : (
-              <span className="flex items-center gap-2 type-body text-ink-muted">
-                <Localized id="bikri-last-saved" vars={{ number: String(lastSaved.number) }}>
-                  <span />
+    <div ref={rootRef} className="flex h-full min-h-0 flex-col gap-3 short:gap-2">
+      {/* The screen scrolls in this area. The numbers strip is docked under it, never over it, so it
+          cannot cover a grid (plan 38, sale book). */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto short:gap-2">
+        {edit === null ? (
+          <BikriToolbar
+            title={
+              // The side menu already says where we are, so the name gives its room to the grids
+              // in the smallest window (design system 8, plan 12). Screen readers still hear it.
+              // The line of help is behind an ⓘ, so the name and the buttons are one row (plan 38).
+              <div className="flex items-center gap-1">
+                <Localized id="glossary-bikri-book">
+                  <h1 className="sr-only normal:not-sr-only normal:type-title" />
                 </Localized>
-                <LinkButton
-                  onClick={() => {
-                    onOpenSaved(lastSaved.id);
-                  }}
-                >
-                  <Localized id="bikri-truck-open" />
-                </LinkButton>
-              </span>
-            )
-          }
-        >
-          <PrintAction target={lastSaved} enabled={!dialogOpen} />
-          <Button
-            variant="primary"
-            shortcut={SHORTCUTS.save}
-            busy={flow.busy}
-            onClick={() => {
-              trySave(false);
-            }}
+                <div className="hidden normal:block">
+                  <InfoHint>
+                    <Localized id="bikri-help">
+                      <p />
+                    </Localized>
+                  </InfoHint>
+                </div>
+              </div>
+            }
+            currentId={null}
+            onOpen={onOpenSaved}
+            findOpen={findOpen}
+            onFindOpenChange={setFindOpen}
+            lastSaved={
+              lastSaved === null ? null : (
+                <span className="flex items-center gap-2 type-body text-ink-muted">
+                  <Localized id="bikri-last-saved" vars={{ number: String(lastSaved.number) }}>
+                    <span />
+                  </Localized>
+                  <LinkButton
+                    onClick={() => {
+                      onOpenSaved(lastSaved.id);
+                    }}
+                  >
+                    <Localized id="bikri-truck-open" />
+                  </LinkButton>
+                </span>
+              )
+            }
           >
-            <Localized id="bikri-save" />
-          </Button>
-        </BikriToolbar>
-      ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button shortcut={SHORTCUTS.back} onClick={edit.onBack}>
-            <Localized id="bikri-edit-back" />
-          </Button>
-          <div className="ms-auto flex flex-wrap items-center gap-2">
+            <PrintAction target={lastSaved} enabled={!dialogOpen} />
             <Button
               variant="primary"
               shortcut={SHORTCUTS.save}
               busy={flow.busy}
-              disabled={!edit.editable.editable}
               onClick={() => {
                 trySave(false);
               }}
             >
-              <Localized id="bikri-edit-save" />
+              <Localized id="bikri-save" />
             </Button>
-          </div>
-        </div>
-      )}
-      {edit !== null && !edit.editable.editable ? (
-        <ClosedDayNotice date={edit.editable.entry_date} />
-      ) : null}
-      {refused === null ? null : (
-        <ErrorNotice
-          error={refused}
-          fieldsShown={refusalErrors(refused).map((item) => item.field)}
-        />
-      )}
-      <div className="flex flex-wrap items-baseline gap-x-4">
-        {/* The side menu already says where we are, so the heading gives its room to the grids in
-            the smallest window (design system 8, plan 12). Screen readers still hear it. */}
-        {edit === null ? (
-          <>
-            <Localized id="glossary-bikri-book">
-              <h1 className="sr-only normal:not-sr-only normal:type-title" />
-            </Localized>
-            <Localized id="bikri-help">
-              <p className="type-body hidden text-ink-muted normal:block" />
-            </Localized>
-          </>
+          </BikriToolbar>
         ) : (
-          <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button shortcut={SHORTCUTS.back} onClick={edit.onBack}>
+              <Localized id="bikri-edit-back" />
+            </Button>
+            <div className="ms-auto flex flex-wrap items-center gap-2">
+              <Button
+                variant="primary"
+                shortcut={SHORTCUTS.save}
+                busy={flow.busy}
+                disabled={!edit.editable.editable}
+                onClick={() => {
+                  trySave(false);
+                }}
+              >
+                <Localized id="bikri-edit-save" />
+              </Button>
+            </div>
+          </div>
+        )}
+        {edit !== null && !edit.editable.editable ? (
+          <ClosedDayNotice date={edit.editable.entry_date} />
+        ) : null}
+        {refused === null ? null : (
+          <ErrorNotice
+            error={refused}
+            fieldsShown={refusalErrors(refused).map((item) => item.field)}
+          />
+        )}
+        {edit === null ? null : (
+          <div className="flex flex-wrap items-baseline gap-x-4">
             <Localized id="bikri-edit-title" vars={{ number: String(edit.editable.number) }}>
               <h1 className="type-title" />
             </Localized>
@@ -578,128 +587,130 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             >
               <p className="type-body text-ink-muted" />
             </Localized>
-          </>
-        )}
-      </div>
-      <div
-        onFocusCapture={() => {
-          setRegion('header');
-        }}
-      >
-        <HeaderCard
-          error={formError}
-          onOpenBikri={openByNumber}
-          editing={edit !== null}
-          onDone={() => {
-            // The ready lots are there: the next thing to type is the buyer of the first one.
-            const first = stores.lots.getState().rows[0];
-            if (first !== undefined && first.rowId in stores.view.getState().readyLots) {
-              stores.focusSaleLine(first.rowId, 0, SALE.buyer);
-              return;
-            }
-            stores.lots.getState().setPendingFocus({ rowIndex: 0, field: LOT.seller });
-          }}
-        />
-      </div>
-      <ProblemList problems={problems} selectedLot={lotIndex} activeLine={activeLine} />
-      <div className="grid grid-cols-1 gap-3 wide:grid-cols-3">
-        <div className="flex min-w-0 flex-col gap-3 wide:col-span-2">
-          <div
-            className="flex flex-col gap-2"
-            onFocusCapture={() => {
-              setRegion('lots');
-            }}
-          >
-            <LotsSection
-              view={views.lots}
-              note={
-                readyLotCount === 0 ? null : (
-                  <Notice tone="info">
-                    <Localized
-                      id="bikri-ready-lots-note"
-                      elems={{ num: <Num /> }}
-                      vars={{ count: readyLotCount }}
-                    >
-                      <span />
-                    </Localized>{' '}
-                    <Localized
-                      id="bikri-ready-lots-note-hint"
-                      elems={{ key: <Code /> }}
-                      vars={{ key: SHORTCUTS.removeRow.label }}
-                    >
-                      <span />
-                    </Localized>
-                  </Notice>
-                )
-              }
-              onCardAccount={setEditorCard}
-              moreForced={lotMoreForced}
-              cellChanged={lotChanged}
-              canRemoveRow={edit === null ? undefined : isNewLot}
-            />
-            {lotRow === undefined || !isOwnLot(lotRow) ? null : (
-              <OwnLotPanel row={lotRow} lotIndex={lotIndex} error={formError} lot={lotPreview} />
-            )}
-            {lotRow === undefined || !isArrivalLot(lotRow) ? null : (
-              <ArrivalLotPanel
-                row={lotRow}
-                lotIndex={lotIndex}
-                error={formError}
-                lot={lotPreview}
-              />
-            )}
-            {lotRow === undefined ? null : (
-              <LotMore
-                row={lotRow}
-                lotIndex={lotIndex}
-                lot={lotPreview}
-                error={formError}
-                hasProblem={lotProblems.length > 0}
-              />
-            )}
           </div>
-          <div
-            onFocusCapture={() => {
-              setRegion('sales');
+        )}
+        <div
+          onFocusCapture={() => {
+            setRegion('header');
+          }}
+        >
+          <HeaderCard
+            error={formError}
+            onOpenBikri={openByNumber}
+            editing={edit !== null}
+            onDone={() => {
+              // The ready lots are there: the next thing to type is the buyer of the first one.
+              const first = stores.lots.getState().rows[0];
+              if (first !== undefined && first.rowId in stores.view.getState().readyLots) {
+                stores.focusSaleLine(first.rowId, 0, SALE.buyer);
+                return;
+              }
+              stores.lots.getState().setPendingFocus({ rowIndex: 0, field: LOT.seller });
             }}
-          >
-            <SalesSection
+          />
+        </div>
+        <ProblemList problems={problems} selectedLot={lotIndex} activeLine={activeLine} />
+        <div className="grid grid-cols-1 gap-3 wide:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-3 wide:col-span-2">
+            <div
+              className="flex flex-col gap-2"
+              onFocusCapture={() => {
+                setRegion('lots');
+              }}
+            >
+              <LotsSection
+                view={views.lots}
+                note={
+                  readyLotCount === 0 ? null : (
+                    <Notice tone="info">
+                      <Localized
+                        id="bikri-ready-lots-note"
+                        elems={{ num: <Num /> }}
+                        vars={{ count: readyLotCount }}
+                      >
+                        <span />
+                      </Localized>{' '}
+                      <Localized
+                        id="bikri-ready-lots-note-hint"
+                        elems={{ key: <Code /> }}
+                        vars={{ key: SHORTCUTS.removeRow.label }}
+                      >
+                        <span />
+                      </Localized>
+                    </Notice>
+                  )
+                }
+                onCardAccount={setEditorCard}
+                moreForced={lotMoreForced}
+                cellChanged={lotChanged}
+                canRemoveRow={edit === null ? undefined : isNewLot}
+              />
+              {lotRow === undefined || !isOwnLot(lotRow) ? null : (
+                <OwnLotPanel row={lotRow} lotIndex={lotIndex} error={formError} lot={lotPreview} />
+              )}
+              {lotRow === undefined || !isArrivalLot(lotRow) ? null : (
+                <ArrivalLotPanel
+                  row={lotRow}
+                  lotIndex={lotIndex}
+                  error={formError}
+                  lot={lotPreview}
+                />
+              )}
+              {lotRow === undefined ? null : (
+                <LotMore
+                  row={lotRow}
+                  lotIndex={lotIndex}
+                  lot={lotPreview}
+                  error={formError}
+                  hasProblem={lotProblems.length > 0}
+                />
+              )}
+            </div>
+            <div
+              onFocusCapture={() => {
+                setRegion('sales');
+              }}
+            >
+              <SalesSection
+                lotKey={lotKey}
+                lotIndex={lotIndex}
+                whole={whole}
+                view={views.sales}
+                onCardAccount={setEditorCard}
+                card={wide ? null : card}
+                cellChanged={saleChanged}
+              />
+            </div>
+            {wide ? null : numbers}
+            <ActiveLine
               lotKey={lotKey}
               lotIndex={lotIndex}
-              whole={whole}
-              view={views.sales}
-              onCardAccount={setEditorCard}
-              card={wide ? null : card}
-              cellChanged={saleChanged}
+              preview={preview}
+              error={formError}
+              usesWeight={usesWeight}
             />
+            {diff === null ? null : (
+              <EditChangesCard
+                items={diff.items}
+                before={beforeTotals}
+                after={lotPreview?.totals ?? null}
+              />
+            )}
           </div>
-          {wide ? null : numbers}
-          <ActiveLine
-            lotKey={lotKey}
-            lotIndex={lotIndex}
-            preview={preview}
-            error={formError}
-            usesWeight={usesWeight}
-          />
-          {diff === null ? null : (
-            <EditChangesCard
-              items={diff.items}
-              before={beforeTotals}
-              after={lotPreview?.totals ?? null}
-            />
-          )}
+          {wide ? (
+            <div className="flex min-w-0 flex-col gap-3">
+              {card}
+              {numbers}
+            </div>
+          ) : null}
         </div>
-        {wide ? (
-          <div className="flex min-w-0 flex-col gap-3">
-            {card}
-            {numbers}
-          </div>
-        ) : null}
       </div>
       {/* The key numbers stay in view under the grids where the summary is far below (F22). */}
       {wide || preview === undefined ? null : (
         <NumbersStrip
           lotNumber={lotIndex + 1}
+          lotCount={preview.lots.length}
+          showWhole={whole}
           lot={{
             totals: lotPreview?.totals ?? null,
             netIsNegative: lotPreview?.net_is_negative ?? false,

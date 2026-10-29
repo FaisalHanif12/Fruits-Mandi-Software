@@ -38,6 +38,7 @@ use crate::bikri::WriteOffRow;
 use crate::cash::CashCheck;
 use crate::error::FieldError;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 use crate::rules::Working;
 use crate::ventures::{EntryPart, EntryPartInput, EntryParts, TripRef};
 
@@ -434,6 +435,22 @@ pub struct PurchasesListInput {
     /// How many rows to return. 0 gives the default page of 100 rows (PRD FR-19.11).
     #[serde(default)]
     pub limit: u32,
+    /// True to list the cancelled purchases too. False (the default) leaves them out of the rows,
+    /// the count and the totals, unless `state` is `cancelled` (plan 38 R5).
+    #[serde(default)]
+    pub show_finished: bool,
+    /// Only purchases whose number, supplier, other shop, item (code or name) or trip name holds
+    /// this text.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort the whole filter by: `number`, `entry_date`, `sell_date`, `status`,
+    /// `supplier`, `item`, `trip`, `qty`, `qty_sold`, `qty_left`, `rate_paisa`, `value_paisa`,
+    /// `total_cost_paisa` or `cost_left_paisa`. Null is newest day first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// An own lot that took goods from a purchase, for the purchase's view (PRD FR-12.27).
@@ -642,6 +659,11 @@ pub struct PurchasesList {
     pub total_count: u32,
     /// The totals over all of them.
     pub totals: PurchasesTotals,
+    /// The count and subtotals of each month of the whole filter (the day bought), in the order of
+    /// the list, when asked with `group_by_month` and the list is in date order. Figures:
+    /// `total_cost_paisa`, `cost_left_paisa` and `qty_left` of the saved purchases. The result and
+    /// the commission are in the rows and `totals` only.
+    pub months: Vec<MonthSubtotal>,
 }
 
 /// Input of `purchases_write_off` (PRD FR-12.28): spoiled trip goods. It is dated today, which must

@@ -32,12 +32,14 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     field: 'number',
     type: 'code',
     headerId: 'bikri-list-col-number',
+    sortKey: 'number',
     value: (row) => String(row.number),
   },
   {
     field: 'when',
     type: 'datetime',
     headerId: 'bikri-list-col-when',
+    sortKey: 'entry_date',
     from: 'normal',
     // The day of the posting is the day typed; the time is when it was saved, in Pakistan time.
     value: (row) => `${isoToDisplayDate(row.entry_date)} ${utcToLocalTime(row.created_at)}`,
@@ -46,6 +48,7 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     field: 'truck',
     type: 'code',
     headerId: 'bikri-list-col-truck',
+    sortKey: 'truck_no',
     from: 'wide',
     value: (row) => row.truck_no ?? '',
   },
@@ -68,18 +71,21 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     field: 'gross',
     type: 'money',
     headerId: 'glossary-kham-bikri',
+    sortKey: 'gross',
     value: (row, { money }) => money(row.gross),
   },
   {
     field: 'net',
     type: 'money',
     headerId: 'glossary-safi-bikri',
+    sortKey: 'net',
     value: (row, { money }) => money(row.net),
   },
   {
     field: 'buyer_total',
     type: 'money',
     headerId: 'bikri-list-col-buyer-total',
+    sortKey: 'buyer_total',
     from: 'wide',
     value: (row, { money }) => money(row.buyer_total),
   },
@@ -87,6 +93,7 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     field: 'status',
     type: 'status',
     headerId: 'bikri-list-col-status',
+    sortKey: 'status',
     value: (row, { text }) =>
       text(row.status === 'cancelled' ? 'bikri-status-cancelled' : 'bikri-status-saved'),
   },
@@ -100,6 +107,7 @@ const QTY_COLUMN: ListColumn<BikriListRow> = {
   field: 'qty',
   type: 'number',
   headerId: 'bikri-list-col-qty',
+  sortKey: 'qty_received',
   value: (row, { text }) =>
     text('bikri-list-qty', { sold: String(row.qty_sold), received: String(row.qty_received) }),
 };

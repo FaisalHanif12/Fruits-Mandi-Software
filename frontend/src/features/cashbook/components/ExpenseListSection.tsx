@@ -29,6 +29,9 @@ function ShopDay({ day }: { day: string }) {
     to: day,
     account_id: null,
     person_key: null,
+    show_finished: false,
+    search: null,
+    group_by_month: false,
   });
   const first = list.data?.pages[0];
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
@@ -36,7 +39,6 @@ function ShopDay({ day }: { day: string }) {
     <PagedList
       columns={EXPENSE_DAY_COLUMNS}
       rows={rows}
-      totalCount={first?.total_count}
       getRowId={(row) => String(row.id)}
       labelId="cashbook-day-label"
       failedId="cashbook-day-failed"
@@ -44,11 +46,7 @@ function ShopDay({ day }: { day: string }) {
       onRetry={() => {
         void list.refetch();
       }}
-      hasMore={list.hasNextPage}
-      loadingMore={list.isFetchingNextPage}
-      onLoadMore={() => {
-        void list.fetchNextPage();
-      }}
+      pager={list.pager}
       empty={
         <EmptyState
           icon={ReceiptText}
@@ -82,7 +80,6 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
     <PagedList
       columns={TAKE_COLUMNS}
       rows={rows}
-      totalCount={first?.total_count}
       getRowId={(row) => `${row.source}-${String(row.voucher_id ?? row.entry_date)}`}
       labelId="cashbook-takes-label"
       failedId="cashbook-takes-failed"
@@ -90,11 +87,7 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
       onRetry={() => {
         void takes.refetch();
       }}
-      hasMore={takes.hasNextPage}
-      loadingMore={takes.isFetchingNextPage}
-      onLoadMore={() => {
-        void takes.fetchNextPage();
-      }}
+      pager={takes.pager}
       empty={
         <EmptyState
           icon={HandCoins}

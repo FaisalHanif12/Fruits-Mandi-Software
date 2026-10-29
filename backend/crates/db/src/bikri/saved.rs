@@ -521,6 +521,10 @@ pub struct ListFilter {
     pub number: Option<i64>,
     /// The start of the truck number (letter case ignored).
     pub truck_prefix: Option<String>,
+    /// A search text: the بکری with this number, or the trucks that start with it (plan 38 R4).
+    pub search: Option<String>,
+    /// The `ORDER BY` expressions chosen by a sort, from [`SORT_COLUMNS`]. `None` is newest first.
+    pub order_by: Option<String>,
     /// The most rows.
     pub limit: i64,
     /// How many rows to skip (0 for the first page).
@@ -578,6 +582,17 @@ fn list_where(filter: &ListFilter) -> (String, Vec<Value>) {
         conditions.push("e.truck_no LIKE ? ESCAPE '\\'");
         binds.push(Value::Text(like_prefix(prefix)));
     }
+    if let Some(text) = &filter.search {
+        // A number finds that بکری or the trucks that start with the same digits.
+        match text.parse::<i64>() {
+            Ok(number) => {
+                conditions.push("(e.number = ? OR e.truck_no LIKE ? ESCAPE '\\')");
+                binds.push(Value::Integer(number));
+            }
+            Err(_) => conditions.push("e.truck_no LIKE ? ESCAPE '\\'"),
+        }
+        binds.push(Value::Text(like_prefix(text)));
+    }
     if conditions.is_empty() {
         (String::new(), binds)
     } else {
@@ -601,12 +616,45 @@ pub fn list_query(filter: &ListFilter) -> (String, Vec<Value>) {
                 (SELECT COALESCE(SUM(s.buyer_total_paisa), 0) FROM bikri_sales s
                    WHERE s.bikri_id = e.id AND s.is_active = 1)
              FROM bikri_entries e{condition}
-             ORDER BY e.entry_date DESC, e.number DESC
-             LIMIT ? OFFSET ?"
+             ORDER BY {order}
+             LIMIT ? OFFSET ?",
+            order = filter.order_by.as_deref().map_or_else(
+                || "e.entry_date DESC, e.number DESC".to_owned(),
+                |o| format!("{o}, e.entry_date DESC, e.number DESC"),
+            )
         ),
         binds,
     )
 }
+
+/// The columns a list of بکری can be sorted by: the field of the row and its SQL. The sums are the
+/// same `SUM()` of stored columns the row shows.
+pub const SORT_COLUMNS: [(&str, &str); 9] = [
+    ("number", "e.number"),
+    ("entry_date", "e.entry_date"),
+    ("truck_no", "e.truck_no"),
+    ("status", "e.status"),
+    (
+        "qty_received",
+        "(SELECT COALESCE(SUM(l.qty_received), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+    ),
+    (
+        "qty_sold",
+        "(SELECT COALESCE(SUM(l.qty_sold), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+    ),
+    (
+        "gross",
+        "(SELECT COALESCE(SUM(l.gross_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+    ),
+    (
+        "net",
+        "(SELECT COALESCE(SUM(l.net_paisa), 0) FROM bikri_lots l WHERE l.bikri_id = e.id)",
+    ),
+    (
+        "buyer_total",
+        "(SELECT COALESCE(SUM(s.buyer_total_paisa), 0) FROM bikri_sales s WHERE s.bikri_id = e.id AND s.is_active = 1)",
+    ),
+];
 
 /// The rows of the list of بکری (PRD FR-12.7), newest first (day, then number). Sums are
 /// `SUM()` of stored columns. The sellers and items are read with one more statement for all
@@ -720,6 +768,106 @@ pub fn list_totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<L
         net_paisa,
         buyer_total_paisa,
     })
+}
+
+/// One month of the list: the count and the sums of its rows, over the whole filter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MonthRec {
+    /// `YYYY-MM`.
+    pub month: String,
+    /// How many بکری are in the month.
+    pub count: i64,
+    /// `SUM(qty_received)` of the saved ones.
+    pub qty_received: i64,
+    /// `SUM(qty_sold)`.
+    pub qty_sold: i64,
+    /// `SUM(gross_paisa)`.
+    pub gross_paisa: i64,
+    /// `SUM(net_paisa)`.
+    pub net_paisa: i64,
+    /// `SUM(buyer_total_paisa)` of the live sale lines.
+    pub buyer_total_paisa: i64,
+}
+
+/// The same totals as [`list_totals`], one row for each month of the filter, oldest month first.
+/// Three grouped queries on the indexed day (plan 38 R4). Only `SUM()` on INTEGER columns.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_months(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<MonthRec>> {
+    let (condition, binds) = list_where(filter);
+    let and = condition.replacen(" WHERE ", " AND ", 1);
+    let mut months: std::collections::BTreeMap<String, MonthRec> =
+        std::collections::BTreeMap::new();
+    let slot = |months: &mut std::collections::BTreeMap<String, MonthRec>, month: String| {
+        months
+            .entry(month.clone())
+            .or_insert(MonthRec {
+                month,
+                count: 0,
+                qty_received: 0,
+                qty_sold: 0,
+                gross_paisa: 0,
+                net_paisa: 0,
+                buyer_total_paisa: 0,
+            })
+            .clone()
+    };
+    let put = |months: &mut std::collections::BTreeMap<String, MonthRec>, rec: MonthRec| {
+        months.insert(rec.month.clone(), rec);
+    };
+    let mut statement = conn.prepare(&format!(
+        "SELECT substr(e.entry_date, 1, 7), COUNT(*) FROM bikri_entries e{condition} GROUP BY 1"
+    ))?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (month, count) = row?;
+        let mut rec = slot(&mut months, month);
+        rec.count = count;
+        put(&mut months, rec);
+    }
+    let mut statement = conn.prepare(&format!(
+        "SELECT substr(e.entry_date, 1, 7), COALESCE(SUM(l.qty_received), 0),
+                COALESCE(SUM(l.qty_sold), 0), COALESCE(SUM(l.gross_paisa), 0),
+                COALESCE(SUM(l.net_paisa), 0)
+         FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id
+         WHERE e.status = 'saved'{and} GROUP BY 1"
+    ))?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, i64>(1)?,
+            r.get::<_, i64>(2)?,
+            r.get::<_, i64>(3)?,
+            r.get::<_, i64>(4)?,
+        ))
+    })?;
+    for row in rows {
+        let (month, qty_received, qty_sold, gross_paisa, net_paisa) = row?;
+        let mut rec = slot(&mut months, month);
+        rec.qty_received = qty_received;
+        rec.qty_sold = qty_sold;
+        rec.gross_paisa = gross_paisa;
+        rec.net_paisa = net_paisa;
+        put(&mut months, rec);
+    }
+    let mut statement = conn.prepare(&format!(
+        "SELECT substr(e.entry_date, 1, 7), COALESCE(SUM(s.buyer_total_paisa), 0)
+         FROM bikri_entries e JOIN bikri_sales s ON s.bikri_id = e.id
+         WHERE e.status = 'saved' AND s.is_active = 1{and} GROUP BY 1"
+    ))?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (month, buyer_total_paisa) = row?;
+        let mut rec = slot(&mut months, month);
+        rec.buyer_total_paisa = buyer_total_paisa;
+        put(&mut months, rec);
+    }
+    Ok(months.into_values().collect())
 }
 
 /// Adds the sellers (each once, in lot order) and the items of each row, from one statement.

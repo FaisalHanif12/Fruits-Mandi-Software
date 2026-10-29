@@ -19,8 +19,8 @@ use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
     accounts, arrivals, bikri, capital, cash, cashbook, drafts, expenses, fruit, gardens, general,
-    khata, lent, masters, partners, printing, purchases, rules, search, split, statement, trips,
-    ventures, vouchers,
+    khata, lent, masters, paging, partners, printing, purchases, rules, search, split, statement,
+    trips, ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -83,6 +83,8 @@ const EXPECTED_FILES: &[&str] = &[
     "OpeningsPreview.ts",
     "OpeningsSaved.ts",
     "CoaTree.ts",
+    "CoaControlAccounts.ts",
+    "CoaControlAccountsInput.ts",
     "HeadNode.ts",
     "ControlNode.ts",
     "AccountNode.ts",
@@ -208,6 +210,7 @@ const EXPECTED_FILES: &[&str] = &[
     "CollectionListInput.ts",
     "CollectionBuyer.ts",
     "CollectionGroup.ts",
+    "CollectionGroupTotal.ts",
     "CollectionList.ts",
     "ReceiptsInput.ts",
     "ReceiptRowResult.ts",
@@ -318,6 +321,10 @@ const EXPECTED_FILES: &[&str] = &[
     "SavedSplit.ts",
     "BikriDetail.ts",
     "BikriListInput.ts",
+    "SortDirection.ts",
+    "SortInput.ts",
+    "MonthFigure.ts",
+    "MonthSubtotal.ts",
     "BikriListRow.ts",
     "BikriList.ts",
     "BikriListTotals.ts",
@@ -626,6 +633,10 @@ const EXPECTED_FILES: &[&str] = &[
     "AnalyticsRow.ts",
     "AnalyticsRunInput.ts",
     "AnalyticsPage.ts",
+    "AnalyticsChart.ts",
+    "AnalyticsChartKind.ts",
+    "AnalyticsChartPoint.ts",
+    "AnalyticsChartSeries.ts",
     "AnalyticsLinesInput.ts",
     "AnalyticsLinesPage.ts",
     "AnalyticsPrintInput.ts",
@@ -764,6 +775,8 @@ fn export_bindings() {
     accounts::OpeningsPreview::export_all(&cfg).unwrap();
     accounts::OpeningsSaved::export_all(&cfg).unwrap();
     accounts::CoaTree::export_all(&cfg).unwrap();
+    accounts::CoaControlAccounts::export_all(&cfg).unwrap();
+    accounts::CoaControlAccountsInput::export_all(&cfg).unwrap();
     accounts::CoaHead::export_all(&cfg).unwrap();
     accounts::CoaControl::export_all(&cfg).unwrap();
     accounts::SearchAccountsInput::export_all(&cfg).unwrap();
@@ -824,6 +837,7 @@ fn export_bindings() {
     vouchers::CollectionListInput::export_all(&cfg).unwrap();
     vouchers::CollectionBuyer::export_all(&cfg).unwrap();
     vouchers::CollectionGroup::export_all(&cfg).unwrap();
+    vouchers::CollectionGroupTotal::export_all(&cfg).unwrap();
     vouchers::CollectionList::export_all(&cfg).unwrap();
     vouchers::ReceiptsInput::export_all(&cfg).unwrap();
     vouchers::ReceiptRowResult::export_all(&cfg).unwrap();
@@ -924,6 +938,10 @@ fn export_bindings() {
     bikri::BikriSaved::export_all(&cfg).unwrap();
     bikri::BikriGetInput::export_all(&cfg).unwrap();
     bikri::BikriDetail::export_all(&cfg).unwrap();
+    paging::SortDirection::export_all(&cfg).unwrap();
+    paging::SortInput::export_all(&cfg).unwrap();
+    paging::MonthFigure::export_all(&cfg).unwrap();
+    paging::MonthSubtotal::export_all(&cfg).unwrap();
     bikri::BikriListInput::export_all(&cfg).unwrap();
     bikri::BikriListRow::export_all(&cfg).unwrap();
     bikri::BikriList::export_all(&cfg).unwrap();
@@ -1158,6 +1176,10 @@ fn export_bindings() {
     mandi_reports::analytics::AnalyticsCatalogEntry::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsRunInput::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsPage::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChart::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChartKind::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChartPoint::export_all(&cfg).unwrap();
+    mandi_reports::analytics::AnalyticsChartSeries::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsLinesInput::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsLinesPage::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsPrintInput::export_all(&cfg).unwrap();

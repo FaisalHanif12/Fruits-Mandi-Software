@@ -333,6 +333,10 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
     let list = vouchers::list(
         &w.env.ctx,
         &mandi_services::core::vouchers::VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
             voucher_type: Some(VoucherType::Receipt),
             from: String::new(),
             to: String::new(),
@@ -1460,6 +1464,8 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
             date: "10-10-2026".into(),
             collector_staff_id: None,
             city_id: None,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();
@@ -1489,6 +1495,74 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
             (Some("Aslam".to_owned()), w.akram, 12_880, Some(0)),
         ]
     );
+    // Plan 38 B1: the list pages by buyer down the groups; the count and the total are over every
+    // buyer, and a group keeps its own total.
+    assert_eq!(list.total_count, 2);
+    let page = |offset: u32, limit: u32| {
+        vouchers::collection_list(
+            &w.env.ctx,
+            &CollectionListInput {
+                date: "10-10-2026".into(),
+                collector_staff_id: None,
+                city_id: None,
+                offset,
+                limit,
+            },
+        )
+        .unwrap()
+    };
+    let mut paged = Vec::new();
+    for offset in [0, 1, 2] {
+        let p = page(offset, 1);
+        assert_eq!(
+            (p.total_count, p.total_paisa.rupees()),
+            (2, 12_880 + 18_684)
+        );
+        assert_eq!(
+            p.groups.iter().map(|g| g.buyers.len()).sum::<usize>(),
+            usize::from(offset < 2)
+        );
+        paged.extend(
+            p.groups
+                .iter()
+                .flat_map(|g| g.buyers.iter().map(|b| b.account.id)),
+        );
+        for group in &p.groups {
+            // A group's total is over all its buyers, not the page.
+            assert_eq!(
+                group.total_paisa,
+                list.groups
+                    .iter()
+                    .find(|x| x.collector == group.collector && x.city == group.city)
+                    .unwrap()
+                    .total_paisa
+            );
+        }
+    }
+    let whole: Vec<i64> = list
+        .groups
+        .iter()
+        .flat_map(|g| g.buyers.iter().map(|b| b.account.id))
+        .collect();
+    assert_eq!(paged, whole);
+    for limit in [25, 50, 100] {
+        assert_eq!(page(0, limit).groups, list.groups);
+    }
+    // Every group of the whole filter with its count and total, on every page (plan 38 B2).
+    assert_eq!(list.group_totals.len(), list.groups.len());
+    assert_eq!(
+        list.group_totals.iter().map(|g| g.count).sum::<u32>(),
+        list.total_count
+    );
+    for (total, group) in list.group_totals.iter().zip(&list.groups) {
+        assert_eq!(
+            (&total.collector, &total.city, total.total_paisa),
+            (&group.collector, &group.city, group.total_paisa)
+        );
+    }
+    for offset in [0, 1, 2] {
+        assert_eq!(page(offset, 1).group_totals, list.group_totals);
+    }
     // Another day of the week lists nobody.
     let monday = vouchers::collection_list(
         &w.env.ctx,
@@ -1496,6 +1570,8 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
             date: "05-10-2026".into(),
             collector_staff_id: None,
             city_id: None,
+            offset: 0,
+            limit: 0,
         },
     )
     .unwrap();

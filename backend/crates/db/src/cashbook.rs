@@ -72,6 +72,54 @@ pub fn range(
     )
 }
 
+/// The number of the voucher or بکری of an entry, as the page query reads it.
+const NUMBER_OF_ENTRY: &str = "CASE r.source_type
+    WHEN 'voucher' THEN (SELECT v.number FROM vouchers v WHERE v.id = r.source_id)
+    WHEN 'bikri' THEN (SELECT b.number FROM bikri_entries b WHERE b.id = r.source_id)
+END";
+
+/// The columns the cash book can be sorted by: the name of the field of the row and its SQL
+/// expression over the page query's `r` (plan 38 R4). `running_paisa` is cash after the entry,
+/// without the opening of the range, so it sorts the same as the true running cash.
+pub const SORT_COLUMNS: [(&str, &str); 7] = [
+    ("entry_date", "r.entry_date"),
+    ("posting_type", "r.posting_type"),
+    ("number", NUMBER_OF_ENTRY),
+    ("narration", "r.narration"),
+    ("in_paisa", "r.in_p"),
+    ("out_paisa", "r.out_p"),
+    ("running_paisa", "(r.run_in - r.run_out)"),
+];
+
+/// The count of entries and the cash in and out of each month of the range, oldest month first,
+/// in one grouped query (plan 38 R4).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn months(
+    conn: &Connection,
+    cash_id: i64,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> rusqlite::Result<Vec<crate::listing::MonthSums>> {
+    let mut statement = conn.prepare(
+        "SELECT substr(e.entry_date, 1, 7), COUNT(DISTINCT e.id),
+                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE l.account_id = ?1 AND e.status = 'posted'
+           AND (?2 IS NULL OR e.entry_date >= ?2) AND (?3 IS NULL OR e.entry_date <= ?3)
+         GROUP BY 1 ORDER BY 1",
+    )?;
+    let rows = statement.query_map(params![cash_id, from, to], |r| {
+        Ok(crate::listing::MonthSums {
+            month: r.get(0)?,
+            count: r.get(1)?,
+            sums: vec![r.get(2)?, r.get(3)?],
+        })
+    })?;
+    rows.collect()
+}
+
 /// One page of the entries of the range, by day and entry id, with the running sums. The sums
 /// are over the whole range, not the page, so a page far down has the right running cash.
 ///
@@ -82,10 +130,18 @@ pub fn page(
     cash_id: i64,
     from: Option<&str>,
     to: Option<&str>,
+    order_by: Option<&str>,
     offset: i64,
     limit: i64,
 ) -> rusqlite::Result<Vec<CashRow>> {
-    let mut statement = conn.prepare(
+    // The running sums are worked out in the natural order over the whole range inside the
+    // query, so a sorted page still shows the true running cash of each row (plan 38 R4). A chosen
+    // sort puts its column first; ties keep the natural order, so pages are stable.
+    let order = match order_by {
+        Some(chosen) => format!("{chosen}, r.entry_date, r.entry_id"),
+        None => "r.entry_date, r.entry_id".to_owned(),
+    };
+    let mut statement = conn.prepare(&format!(
         "WITH per_entry AS (
              SELECT e.id AS entry_id, e.entry_date AS entry_date, e.posting_type AS posting_type,
                     e.source_type AS source_type, e.source_id AS source_id,
@@ -111,9 +167,9 @@ pub fn page(
                     ELSE ''
                 END
          FROM running r
-         ORDER BY r.entry_date, r.entry_id
-         LIMIT ?4 OFFSET ?5",
-    )?;
+         ORDER BY {order}
+         LIMIT ?4 OFFSET ?5"
+    ))?;
     let rows = statement.query_map(params![cash_id, from, to, limit, offset], |r| {
         Ok(CashRow {
             entry_id: r.get(0)?,

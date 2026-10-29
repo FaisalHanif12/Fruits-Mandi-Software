@@ -112,12 +112,6 @@ report-pick-party-help = یہ رپورٹ ایک کھاتے کی ہوتی ہے۔ 
 report-balance-only-help = صرف بقایا دکھائے گئے ہیں۔ ہر اندراج دیکھنے کے لیے "تفصیل کے ساتھ" پر نشان لگائیں۔
 
 # review: pending
-report-count = <num>{ $total }</num> میں سے <num>{ $shown }</num> قطاریں دکھائی گئی ہیں
-
-# review: pending
-report-more = مزید قطاریں
-
-# review: pending
 report-open-hint = ↑ ↓ سے قطار چنیں اور Enter سے اس کا اصل اندراج کھولیں۔
 
 # review: pending
@@ -1308,3 +1302,27 @@ report-col-other-left = دوسری دکان کا باقی مال
 
 # review: pending
 report-col-shop-name = دوسری دکان کا نام
+
+## The catalogue's search and jump list (plan 38).
+
+# review: pending
+reports-search-label = رپورٹ تلاش کریں
+
+# review: pending
+reports-search-placeholder = رپورٹ کا نام یا نمبر لکھیں
+
+# review: pending
+reports-jump-label = یہاں جائیں
+
+# $group: the name of a group of reports.
+# review: pending
+reports-jump-to = { $group } کی رپورٹوں پر جائیں
+
+# review: pending
+reports-search-none = کوئی رپورٹ نہیں ملی
+
+# review: pending
+reports-search-none-help = ہجے دیکھ لیں، یا تلاش ہٹائیں تاکہ ساری رپورٹیں نظر آئیں۔
+
+# review: pending
+reports-search-clear = تلاش ہٹائیں

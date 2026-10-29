@@ -24,6 +24,7 @@ import type {
 } from './types';
 import type { AccountBalance } from '../../bindings/AccountBalance';
 import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
+import type { CoaControlAccounts } from '../../bindings/CoaControlAccounts';
 import type { CoaTree } from '../../bindings/CoaTree';
 import type { GlobalHit as GlobalHitBinding } from '../../bindings/GlobalHit';
 import type { ResolvedCode as ResolvedCodeBinding } from '../../bindings/ResolvedCode';
@@ -32,6 +33,20 @@ import type { ResolvedCode as ResolvedCodeBinding } from '../../bindings/Resolve
 export async function coaTree(): Promise<ChartHead[]> {
   const tree = await callCommand<CoaTree>('coa_tree');
   return tree.heads;
+}
+
+/**
+ * One page of the accounts of one control, with the control's own balance over all of them (plan 38
+ * B1, Code Standards B31). A control can hold thousands of accounts, so the tree asks when it opens.
+ */
+export function coaControlAccounts(
+  controlId: number,
+  offset: number,
+  limit: number,
+): Promise<CoaControlAccounts> {
+  return callCommand<CoaControlAccounts>('coa_control_accounts', {
+    input: { control_id: controlId, offset, limit },
+  });
 }
 
 export function coaHeadsList(): Promise<HeadItem[]> {

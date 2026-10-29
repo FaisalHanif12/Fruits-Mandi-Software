@@ -30,6 +30,7 @@ use crate::accounts::RecordRef;
 use crate::cash::CashCheck;
 use crate::error::FieldError;
 use crate::money::Paisa;
+use crate::paging::{MonthSubtotal, SortInput};
 use crate::rules::Working;
 use crate::vouchers::VoucherType;
 
@@ -227,6 +228,13 @@ pub struct PartnerTakesInput {
     /// How many rows to return. 0 gives the default page of 100 rows (PRD FR-19.11).
     #[serde(default)]
     pub limit: u32,
+    /// The column to sort the whole range by: `entry_date`, `source`, `number`, `amount_paisa`, `reason`, `taken_by`, `return_by`, `returned_paisa`, `open_paisa` or `days_past_return_by`. Null is the natural order (plan 38
+    /// R4). A sorted row still shows its true running figure of the natural order.
+    #[serde(default)]
+    pub sort: Option<SortInput>,
+    /// True to give the subtotal of each month in `months`. Used only in date order.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// Where a row of money taken came from.
@@ -298,6 +306,9 @@ pub struct PartnerTakes {
     pub total_count: i64,
     /// The totals over all the rows.
     pub totals: TakesTotals,
+    /// The count and subtotals of each month of the whole range, in the order of the list, when
+    /// asked with `group_by_month` and the list is in date order. Figures: `taken_paisa`, `returned_paisa` and `open_paisa`.
+    pub months: Vec<MonthSubtotal>,
 }
 
 // ---- Repeat last month (PRD FR-7.62) ----

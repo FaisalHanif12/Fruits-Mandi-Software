@@ -27,6 +27,7 @@ import {
 import { e40Closed, e40Garden, e40History, fakeGardens, gardenRow } from '../helpers/gardens';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
+import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import { settlePreview } from '../helpers/preview-settled';
 
@@ -146,7 +147,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     expect(gardensApi.gardensGet).toHaveBeenCalledWith({
       id: 1,
       history_offset: 0,
-      history_limit: 100,
+      history_limit: PAGE_ROWS,
     });
   });
 
@@ -602,30 +603,20 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
   it('the history loads page by page', async () => {
     const first = e40History()[0];
     if (first === undefined) throw new Error('no history');
-    const many = Array.from({ length: 130 }, (_, index) => ({ ...first, entry_id: 200 + index }));
+    const many = Array.from({ length: 60 }, (_, index) => ({ ...first, entry_id: 200 + index }));
     fakeGardens({ history: many });
     const { user } = await open();
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          said(message(language, 'gardens-history-count', { shown: 100, total: 130 })),
-        ),
-      ).toBeInTheDocument();
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 60));
     });
-    await user.click(
-      screen.getByRole('button', { name: message(language, 'gardens-history-more') }),
-    );
+    await user.click(await pagerButton(language, 'next'));
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          said(message(language, 'gardens-history-count', { shown: 130, total: 130 })),
-        ),
-      ).toBeInTheDocument();
+      expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 60));
     });
     expect(gardensApi.gardensGet).toHaveBeenLastCalledWith({
       id: 1,
-      history_offset: 100,
-      history_limit: 100,
+      history_offset: PAGE_ROWS,
+      history_limit: PAGE_ROWS,
     });
   });
 

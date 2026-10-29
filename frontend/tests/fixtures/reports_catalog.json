@@ -4,7 +4,9 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r1-title",
-    "filters": ["bikri"],
+    "filters": [
+      "bikri"
+    ],
     "party_required": true
   },
   {
@@ -12,7 +14,15 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r2-title",
-    "filters": ["date_range", "party", "seller", "zamindar", "item", "city", "adda"],
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -20,7 +30,15 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r3-title",
-    "filters": ["date_range", "party", "seller", "zamindar", "item", "city", "adda"],
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -28,7 +46,15 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r4-title",
-    "filters": ["date_range", "party", "seller", "zamindar", "item", "city", "adda"],
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -36,7 +62,15 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r5-title",
-    "filters": ["date_range", "party", "seller", "zamindar", "item", "city", "adda"],
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "zamindar",
+      "item",
+      "city",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -44,7 +78,13 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r6-title",
-    "filters": ["date_range", "seller", "zamindar", "item", "adda"],
+    "filters": [
+      "date_range",
+      "seller",
+      "zamindar",
+      "item",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -52,7 +92,14 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r7-title",
-    "filters": ["date_range", "party", "seller", "item", "city", "adda"],
+    "filters": [
+      "date_range",
+      "party",
+      "seller",
+      "item",
+      "city",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -60,7 +107,10 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r8-title",
-    "filters": ["date_range", "adda"],
+    "filters": [
+      "date_range",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -68,7 +118,11 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r9-title",
-    "filters": ["date_range", "party", "status"],
+    "filters": [
+      "date_range",
+      "party",
+      "status"
+    ],
     "party_required": false
   },
   {
@@ -76,7 +130,11 @@
     "group": "sales",
     "group_title_id": "report-group-sales",
     "title_id": "report-r10-title",
-    "filters": ["date_range", "seller", "item"],
+    "filters": [
+      "date_range",
+      "seller",
+      "item"
+    ],
     "party_required": false
   },
   {
@@ -84,7 +142,10 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r11-title",
-    "filters": ["date_range", "party"],
+    "filters": [
+      "date_range",
+      "party"
+    ],
     "party_required": false
   },
   {
@@ -92,7 +153,9 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r12-title",
-    "filters": ["date_range"],
+    "filters": [
+      "date_range"
+    ],
     "party_required": false
   },
   {
@@ -100,7 +163,10 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r13-title",
-    "filters": ["date_range", "party"],
+    "filters": [
+      "date_range",
+      "party"
+    ],
     "party_required": true
   },
   {
@@ -108,7 +174,11 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r14-title",
-    "filters": ["date_range", "party", "detail"],
+    "filters": [
+      "date_range",
+      "party",
+      "detail"
+    ],
     "party_required": true
   },
   {
@@ -116,7 +186,11 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r15-title",
-    "filters": ["date_range", "party", "voucher_type"],
+    "filters": [
+      "date_range",
+      "party",
+      "voucher_type"
+    ],
     "party_required": false
   },
   {
@@ -124,7 +198,10 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r16-title",
-    "filters": ["as_of", "city"],
+    "filters": [
+      "as_of",
+      "city"
+    ],
     "party_required": false
   },
   {
@@ -132,7 +209,9 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r17-title",
-    "filters": ["as_of"],
+    "filters": [
+      "as_of"
+    ],
     "party_required": false
   },
   {
@@ -140,7 +219,9 @@
     "group": "accounts",
     "group_title_id": "report-group-accounts",
     "title_id": "report-r18-title",
-    "filters": ["as_of"],
+    "filters": [
+      "as_of"
+    ],
     "party_required": false
   },
   {
@@ -156,7 +237,11 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r20-title",
-    "filters": ["as_of", "party", "city"],
+    "filters": [
+      "as_of",
+      "party",
+      "city"
+    ],
     "party_required": false
   },
   {
@@ -164,7 +249,11 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r21-title",
-    "filters": ["as_of", "party", "city"],
+    "filters": [
+      "as_of",
+      "party",
+      "city"
+    ],
     "party_required": false
   },
   {
@@ -172,7 +261,11 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r22-title",
-    "filters": ["as_of", "party", "city"],
+    "filters": [
+      "as_of",
+      "party",
+      "city"
+    ],
     "party_required": false
   },
   {
@@ -180,7 +273,10 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r23-title",
-    "filters": ["date_range", "party"],
+    "filters": [
+      "date_range",
+      "party"
+    ],
     "party_required": false
   },
   {
@@ -188,7 +284,10 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r24-title",
-    "filters": ["as_of", "party"],
+    "filters": [
+      "as_of",
+      "party"
+    ],
     "party_required": false
   },
   {
@@ -196,7 +295,10 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r25-title",
-    "filters": ["date_range", "party"],
+    "filters": [
+      "date_range",
+      "party"
+    ],
     "party_required": false
   },
   {
@@ -204,7 +306,10 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r26-title",
-    "filters": ["as_of", "seller"],
+    "filters": [
+      "as_of",
+      "seller"
+    ],
     "party_required": false
   },
   {
@@ -212,7 +317,13 @@
     "group": "collections",
     "group_title_id": "report-group-collections",
     "title_id": "report-r27-title",
-    "filters": ["date_range", "seller", "zamindar", "item", "adda"],
+    "filters": [
+      "date_range",
+      "seller",
+      "zamindar",
+      "item",
+      "adda"
+    ],
     "party_required": false
   },
   {
@@ -220,7 +331,11 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r28-title",
-    "filters": ["date_range", "party", "group_by"],
+    "filters": [
+      "date_range",
+      "party",
+      "group_by"
+    ],
     "party_required": false
   },
   {
@@ -228,7 +343,10 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r29-title",
-    "filters": ["date_range", "partner"],
+    "filters": [
+      "date_range",
+      "partner"
+    ],
     "party_required": false
   },
   {
@@ -236,7 +354,9 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r30-title",
-    "filters": ["date_range"],
+    "filters": [
+      "date_range"
+    ],
     "party_required": false
   },
   {
@@ -244,7 +364,10 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r31-title",
-    "filters": ["date_range", "partner"],
+    "filters": [
+      "date_range",
+      "partner"
+    ],
     "party_required": true
   },
   {
@@ -252,7 +375,10 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r32-title",
-    "filters": ["as_of", "party"],
+    "filters": [
+      "as_of",
+      "party"
+    ],
     "party_required": false
   },
   {
@@ -260,7 +386,11 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r33-title",
-    "filters": ["date_range", "item", "trip_view"],
+    "filters": [
+      "date_range",
+      "item",
+      "trip_view"
+    ],
     "party_required": false
   },
   {
@@ -268,7 +398,9 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r34-title",
-    "filters": ["date_range"],
+    "filters": [
+      "date_range"
+    ],
     "party_required": false
   },
   {
@@ -276,7 +408,10 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r35-title",
-    "filters": ["as_of", "party"],
+    "filters": [
+      "as_of",
+      "party"
+    ],
     "party_required": false
   },
   {
@@ -284,7 +419,13 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r36-title",
-    "filters": ["date_range", "item", "partner", "garden", "garden_view"],
+    "filters": [
+      "date_range",
+      "item",
+      "partner",
+      "garden",
+      "garden_view"
+    ],
     "party_required": false
   },
   {
@@ -292,7 +433,13 @@
     "group": "business",
     "group_title_id": "report-group-business",
     "title_id": "report-r37-title",
-    "filters": ["date_range", "partner", "guests", "item", "garden"],
+    "filters": [
+      "date_range",
+      "partner",
+      "guests",
+      "item",
+      "garden"
+    ],
     "party_required": false
   }
 ]

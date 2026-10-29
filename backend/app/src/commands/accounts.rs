@@ -5,8 +5,9 @@
 use mandi_services::core::accounts::{
     AccountBalance, AccountInput, AccountRow, AccountsBalancesInput, AccountsGetInput,
     AccountsList, AccountsListInput, AccountsNextCodeInput, AccountsSetActiveInput,
-    AccountsSimilarInput, CoaControl, CoaHead, CoaTree, OpeningsInput, OpeningsPreview,
-    OpeningsSaved, ResolveCodeInput, ResolvedCode, SimilarAccount,
+    AccountsSimilarInput, CoaControl, CoaControlAccounts, CoaControlAccountsInput, CoaHead,
+    CoaTree, OpeningsInput, OpeningsPreview, OpeningsSaved, ResolveCodeInput, ResolvedCode,
+    SimilarAccount,
 };
 use mandi_services::{accounts, auth, coa, search};
 
@@ -139,6 +140,20 @@ pub async fn coa_tree<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<Coa
     run(app, "coa_tree", |ctx| {
         auth::require(ctx)?;
         coa::tree(ctx)
+    })
+    .await
+}
+
+/// One page of the accounts of one control with the control's own balance (plan 38 B1, Code
+/// Standards B31). Errors: `ERR_NOT_FOUND` (`control_id`), `ERR_OUT_OF_RANGE` (`limit` above 500).
+#[tauri::command]
+pub async fn coa_control_accounts<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: CoaControlAccountsInput,
+) -> Result<CoaControlAccounts, UiError> {
+    run(app, "coa_control_accounts", move |ctx| {
+        auth::require(ctx)?;
+        coa::control_accounts(ctx, &input)
     })
     .await
 }

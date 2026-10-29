@@ -1568,6 +1568,8 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
         partners::statement(
             &w.env.ctx,
             &PartnersStatementInput {
+                group_by_month: false,
+                sort: None,
                 partner_id: a,
                 from: None,
                 to: None,
@@ -1718,6 +1720,8 @@ fn d4_a33_the_statement_of_partner_a_on_the_trip_run() {
     let ranged = partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: a,
             from: Some("11-10-2026".into()),
             to: None,
@@ -1748,6 +1752,8 @@ fn the_statement_of_a_cancelled_trip_sale_nets_to_the_total_of_the_books() {
         let st = partners::statement(
             &w.env.ctx,
             &PartnersStatementInput {
+                group_by_month: false,
+                sort: None,
                 partner_id: *partner,
                 from: None,
                 to: None,

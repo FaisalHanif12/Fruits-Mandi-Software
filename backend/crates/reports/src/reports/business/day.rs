@@ -764,6 +764,7 @@ pub(crate) fn run(
     filters.from = Some(from);
     filters.to = Some(to);
     Ok(ReportPage {
+        group_above: None,
         id: ReportId::R34,
         title_id: ids::title_id("R34"),
         filters,

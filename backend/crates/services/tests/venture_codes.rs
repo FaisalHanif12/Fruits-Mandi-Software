@@ -370,6 +370,8 @@ fn the_partners_statement_lines_of_a_garden_and_a_trip_carry_the_code() {
     let statement = partners::statement(
         &w.env.ctx,
         &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
             partner_id: a,
             from: None,
             to: None,

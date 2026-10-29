@@ -357,6 +357,7 @@ export function createFruitBooks(options: FruitOptions = {}) {
           qty: saved.reduce((sum, row) => sum + row.qty, 0),
           value_paisa: money(saved.reduce((sum, row) => sum + (rupees.get(row.id) ?? 0), 0)),
         },
+        months: [],
       };
     },
     lots: (input: FruitLotsInput): FruitLots => {
@@ -377,8 +378,10 @@ export function createFruitBooks(options: FruitOptions = {}) {
               .includes(text)),
       );
       return {
-        rows: rows.slice(0, input.limit === 0 ? 100 : input.limit),
+        rows: rows.slice(input.offset, input.offset + (input.limit === 0 ? 100 : input.limit)),
         total_count: rows.length,
+        offset: input.offset,
+        limit: input.limit === 0 ? 100 : input.limit,
       };
     },
   };

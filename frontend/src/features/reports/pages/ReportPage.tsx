@@ -15,7 +15,6 @@
 // found (with a way out), and the rows.
 
 import { Localized } from '@fluent/react';
-import type { InfiniteData } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, FileX, Files, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -165,9 +164,9 @@ function ReportBody({
         : Promise.reject(new Error('the report cannot run before its filters are filled')),
   });
 
-  // The pages last shown, kept while a half-typed filter is refused (they stay under the box). They
+  // The page last shown, kept while a half-typed filter is refused (they stay under the box). They
   // are state set while rendering, which React allows when the value really changed.
-  const [kept, setKept] = useState<InfiniteData<ReportPageData> | null>(null);
+  const [kept, setKept] = useState<{ pages: ReportPageData[] } | null>(null);
   if (query.data !== undefined && !query.isPlaceholderData && query.data !== kept) {
     setKept(query.data);
   }

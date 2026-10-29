@@ -35,6 +35,8 @@ interface BikriToolbarProps {
   children?: ReactNode;
   /** What was saved last, with a way to open it. */
   lastSaved?: ReactNode;
+  /** The name of the screen, at the start of the row (it replaces a line of its own above). */
+  title?: ReactNode;
 }
 
 const STEPS: readonly {
@@ -61,6 +63,7 @@ export function BikriToolbar({
   onFindOpenChange,
   children,
   lastSaved,
+  title,
 }: BikriToolbarProps) {
   const { l10n } = useLocalization();
   const [noteId, setNoteId] = useState<string | null>(null);
@@ -95,10 +98,12 @@ export function BikriToolbar({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
+        {title}
         <div role="group" aria-label={l10n.getString('bikri-nav-label')} className="flex gap-2">
           {STEPS.map(({ to, labelId, noneId, icon: Icon }) => (
             <Button
               key={to}
+              iconOnly
               busy={busy}
               onClick={() => {
                 void go(to, noneId);

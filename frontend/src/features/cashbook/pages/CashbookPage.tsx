@@ -93,7 +93,6 @@ function CashbookScreen({ today }: { today: string }) {
         <PagedList
           columns={CASHBOOK_COLUMNS}
           rows={rows}
-          totalCount={first?.total_count}
           getRowId={(row) => `${String(row.entry_id)}-${row.posting_type}`}
           labelId="cashbook-list-label"
           failedId="cashbook-load-failed"
@@ -101,11 +100,7 @@ function CashbookScreen({ today }: { today: string }) {
           onRetry={() => {
             void book.refetch();
           }}
-          hasMore={book.hasNextPage}
-          loadingMore={book.isFetchingNextPage}
-          onLoadMore={() => {
-            void book.fetchNextPage();
-          }}
+          pager={book.pager}
           empty={
             <EmptyState
               icon={Landmark}

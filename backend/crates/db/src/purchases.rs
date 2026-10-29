@@ -11,7 +11,10 @@
 use std::collections::HashMap;
 
 use mandi_core::accounts::RecordRef;
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use rusqlite::types::Value;
+use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
+
+use crate::listing::{MonthSums, like_contains, like_prefix, month_sums};
 
 /// The columns of a new purchase. The money is final: the table checks that the paid-now amount is
 /// the value plus the other costs and that the value is `qty x rate` for an item sold by نگ. The total
@@ -515,22 +518,101 @@ pub struct ListFilter {
     pub item_id: Option<i64>,
     /// Only this state.
     pub state: Option<StateFilter>,
+    /// Only purchases whose number, supplier, other shop, item (code or name) or trip name holds
+    /// this text.
+    pub search: Option<String>,
+    /// The `ORDER BY` expressions chosen by a sort, from [`SORT_COLUMNS`]. `None` is newest day
+    /// first.
+    pub order_by: Option<String>,
+    /// True to leave the cancelled purchases out when no state is chosen (plan 38 R5).
+    pub hide_cancelled: bool,
 }
 
-const FILTER_WHERE: &str = "WHERE (?1 IS NULL OR p.venture_id = ?1)
-           AND (?2 IS NULL OR p.entry_date >= ?2) AND (?3 IS NULL OR p.entry_date <= ?3)
-           AND (?4 IS NULL OR p.item_id = ?4)
-           AND (?5 = 0
-                OR (?5 = 1 AND p.status = 'saved' AND p.qty - p.qty_sold - p.qty_written_off > 0)
-                OR (?5 = 2 AND p.status = 'saved' AND p.qty - p.qty_sold - p.qty_written_off = 0)
-                OR (?5 = 3 AND p.status = 'cancelled'))";
+/// The columns a list can be sorted by: the name of the field of the row and its SQL expression
+/// (the list query joins the item, the packing and the trip as `it`, `pk` and `v`).
+pub const SORT_COLUMNS: [(&str, &str); 14] = [
+    ("number", "p.number"),
+    ("entry_date", "p.entry_date"),
+    ("sell_date", "COALESCE(p.sell_date, p.entry_date)"),
+    ("status", "p.status"),
+    ("supplier", "p.supplier_text"),
+    ("item", "it.code"),
+    ("trip", "v.number"),
+    ("qty", "p.qty"),
+    ("qty_sold", "p.qty_sold"),
+    ("qty_left", "(p.qty - p.qty_sold - p.qty_written_off)"),
+    ("rate_paisa", "p.rate_paisa"),
+    ("value_paisa", "p.value_paisa"),
+    ("total_cost_paisa", "p.total_cost_paisa"),
+    (
+        "cost_left_paisa",
+        "(p.total_cost_paisa - p.cost_released_paisa)",
+    ),
+];
 
-fn state_code(filter: &ListFilter) -> i64 {
+/// The `WHERE` of a filter and the values it binds, in order. Written with `?` only, and with
+/// subqueries instead of joins for the search, so the same text serves the page query, the totals
+/// and the month sums. An empty filter gives an empty text.
+fn filter_where(filter: &ListFilter) -> (String, Vec<Value>) {
+    let mut conditions: Vec<String> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
+    if let Some(trip) = filter.trip_id {
+        conditions.push("p.venture_id = ?".to_owned());
+        binds.push(Value::Integer(trip));
+    }
+    if let Some(from) = &filter.from {
+        conditions.push("p.entry_date >= ?".to_owned());
+        binds.push(Value::Text(from.clone()));
+    }
+    if let Some(to) = &filter.to {
+        conditions.push("p.entry_date <= ?".to_owned());
+        binds.push(Value::Text(to.clone()));
+    }
+    if let Some(item) = filter.item_id {
+        conditions.push("p.item_id = ?".to_owned());
+        binds.push(Value::Integer(item));
+    }
     match filter.state {
-        None => 0,
-        Some(StateFilter::InStock) => 1,
-        Some(StateFilter::SoldOut) => 2,
-        Some(StateFilter::Cancelled) => 3,
+        None if filter.hide_cancelled => conditions.push("p.status = 'saved'".to_owned()),
+        None => {}
+        Some(StateFilter::InStock) => conditions
+            .push("p.status = 'saved' AND p.qty - p.qty_sold - p.qty_written_off > 0".to_owned()),
+        Some(StateFilter::SoldOut) => conditions
+            .push("p.status = 'saved' AND p.qty - p.qty_sold - p.qty_written_off = 0".to_owned()),
+        Some(StateFilter::Cancelled) => conditions.push("p.status = 'cancelled'".to_owned()),
+    }
+    if let Some(text) = filter
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
+        let mut parts = String::new();
+        if let Ok(number) = text.parse::<i64>() {
+            parts.push_str("p.number = ? OR ");
+            binds.push(Value::Integer(number));
+        }
+        parts.push_str(
+            "p.supplier_text LIKE ? ESCAPE '\\' OR p.shop_name LIKE ? ESCAPE '\\'
+             OR p.item_id IN (SELECT id FROM items WHERE code LIKE ? ESCAPE '\\'
+                 OR name_ur LIKE ? ESCAPE '\\' OR name_en LIKE ? ESCAPE '\\')
+             OR p.venture_id IN (SELECT id FROM ventures
+                 WHERE name_ur LIKE ? ESCAPE '\\' OR name_en LIKE ? ESCAPE '\\')",
+        );
+        conditions.push(format!("({parts})"));
+        let contains = like_contains(text);
+        for _ in 0..2 {
+            binds.push(Value::Text(contains.clone()));
+        }
+        binds.push(Value::Text(like_prefix(text)));
+        for _ in 0..4 {
+            binds.push(Value::Text(contains.clone()));
+        }
+    }
+    if conditions.is_empty() {
+        (String::new(), binds)
+    } else {
+        (format!(" WHERE {}", conditions.join(" AND ")), binds)
     }
 }
 
@@ -544,22 +626,24 @@ pub fn list(
     offset: i64,
     limit: i64,
 ) -> rusqlite::Result<Vec<PurchaseRec>> {
+    let (condition, mut binds) = filter_where(filter);
+    binds.push(Value::Integer(limit));
+    binds.push(Value::Integer(offset));
+    // Newest day first, then by number. A sort puts its column first and keeps that order after
+    // it, so ties come out the same on every page. A sort by the day keeps the numbers in the
+    // same direction.
+    let order = match filter.order_by.as_deref() {
+        None => "p.entry_date DESC, p.number DESC".to_owned(),
+        Some(o) if o.starts_with("p.entry_date") => {
+            let direction = if o.ends_with("DESC") { "DESC" } else { "ASC" };
+            format!("{o}, p.number {direction}, p.id {direction}")
+        }
+        Some(o) => format!("{o}, p.entry_date DESC, p.number DESC, p.id DESC"),
+    };
     let mut statement = conn.prepare(&format!(
-        "SELECT {REC_COLUMNS} {REC_FROM} {FILTER_WHERE}
-         ORDER BY p.entry_date DESC, p.number DESC LIMIT ?6 OFFSET ?7"
+        "SELECT {REC_COLUMNS} {REC_FROM}{condition} ORDER BY {order} LIMIT ? OFFSET ?"
     ))?;
-    let rows = statement.query_map(
-        params![
-            filter.trip_id,
-            filter.from,
-            filter.to,
-            filter.item_id,
-            state_code(filter),
-            limit,
-            offset
-        ],
-        read_rec,
-    )?;
+    let rows = statement.query_map(params_from_iter(binds.iter()), read_rec)?;
     rows.collect()
 }
 
@@ -590,22 +674,23 @@ pub struct Totals {
 /// # Errors
 /// Any SQLite error.
 pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals> {
-    let args = params![
-        filter.trip_id,
-        filter.from,
-        filter.to,
-        filter.item_id,
-        state_code(filter)
-    ];
+    let (condition, binds) = filter_where(filter);
+    // The second and later queries read only the saved ones.
+    let saved = if condition.is_empty() {
+        " WHERE"
+    } else {
+        " AND"
+    };
+    let args = || params_from_iter(binds.iter());
     let mut out = conn.query_row(
         &format!(
             "SELECT COUNT(*),
                     COALESCE(SUM(CASE WHEN p.status = 'saved' THEN p.total_cost_paisa END), 0),
                     COALESCE(SUM(CASE WHEN p.status = 'saved' THEN p.qty - p.qty_sold - p.qty_written_off END), 0),
                     COALESCE(SUM(CASE WHEN p.status = 'saved' THEN p.cost_released_paisa END), 0)
-             FROM purchases p {FILTER_WHERE}"
+             FROM purchases p{condition}"
         ),
-        args,
+        args(),
         |r| {
             Ok(Totals {
                 count: r.get(0)?,
@@ -633,9 +718,9 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
              FROM purchases p
              JOIN bikri_lots l ON l.purchase_id = p.id
              JOIN lot_credit_parts c ON c.lot_id = l.id
-             {FILTER_WHERE} AND p.status = 'saved'"
+             {condition}{saved} p.status = 'saved'"
         ),
-        args,
+        args(),
         |r| r.get(0),
     )?;
     out.other_shop_paisa = conn.query_row(
@@ -643,13 +728,35 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
             "SELECT COALESCE(SUM(x.amount_paisa), 0)
              FROM purchases p
              JOIN venture_entries x ON x.purchase_id = p.id AND x.kind = 'other_sale' AND x.status = 'saved'
-             {FILTER_WHERE} AND p.status = 'saved'"
+             {condition}{saved} p.status = 'saved'"
         ),
-        args,
+        args(),
         |r| r.get(0),
     )?;
-    out.commission = crate::commission::of_purchases_where(conn, FILTER_WHERE, args)?;
+    out.commission = crate::commission::of_purchases_where(conn, &condition, args())?;
     Ok(out)
+}
+
+/// The count of each month of the filter (the day bought) with the total cost, the cost left and
+/// the نگ left of the saved ones, oldest month first, in one grouped query (plan 38 R4). The
+/// result and the commission need the sales, so they are in the page and the totals only.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_months(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<MonthSums>> {
+    let (condition, binds) = filter_where(filter);
+    month_sums(
+        conn,
+        "purchases p",
+        &condition,
+        "p.entry_date",
+        &[
+            "CASE WHEN p.status = 'saved' THEN p.total_cost_paisa ELSE 0 END",
+            "CASE WHEN p.status = 'saved' THEN p.total_cost_paisa - p.cost_released_paisa ELSE 0 END",
+            "CASE WHEN p.status = 'saved' THEN p.qty - p.qty_sold - p.qty_written_off ELSE 0 END",
+        ],
+        &binds,
+    )
 }
 
 /// What the purchases brought in and gave up, from stored rows: the money of the own lots (the sum of

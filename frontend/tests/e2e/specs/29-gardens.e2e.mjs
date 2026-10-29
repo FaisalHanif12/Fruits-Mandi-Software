@@ -242,7 +242,7 @@ describe('a garden in English', () => {
     await shootScreen('gardens-one', 'en');
     await type(Key.Escape);
     await waitForHeading('en', 'gardens-title');
-    await waitForText(t('en', 'common-list-count', { shown: 1, total: 1 }));
+    await waitForText(t('en', 'common-pager-range', { from: 1, to: 1, total: 1 }));
     await shootScreen('gardens-list', 'en');
     await switchLanguage('ur');
   });

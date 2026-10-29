@@ -3,7 +3,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { usePagedQuery } from '../../shared/hooks';
+import { useAllPagesQuery } from '../../shared/hooks';
 import { searchMasters } from '../../shared/search';
 import { mastersGetOne, mastersList, mastersNextCode, mastersSave, mastersSetActive } from './api';
 import type { MasterDraft, MasterKind } from './types';
@@ -16,11 +16,12 @@ const FILTER_LIMIT = 500;
 const FILTER_DELAY_MS = 150;
 
 /**
- * The masters of a kind, page by page, with the count and the totals of the whole filter (PRD
- * FR-19.11). Inactive ones are in it only when asked for.
+ * Every master of a kind, page after page (`useLoadRest`): a master list is short, so the screen
+ * filters it and turns its pages in memory (`useClientPager`). Inactive ones are in it only when
+ * asked for (PRD FR-19.11).
  */
 export function useMasterList(kind: MasterKind, includeInactive: boolean) {
-  return usePagedQuery({
+  return useAllPagesQuery({
     queryKey: [...MASTERS_KEY, kind, 'list', includeInactive],
     fetchPage: (offset, limit) => mastersList(kind, includeInactive, offset, limit),
     rowsIn: (page) => page.rows.length,

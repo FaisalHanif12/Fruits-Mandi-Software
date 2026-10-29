@@ -67,7 +67,14 @@ describe('the canned data of the cash book tests has the real shape', () => {
         running: 4100 + index * 100,
       })),
     });
-    const input = { from: '10-10-2026', to: '10-10-2026', offset: 0, limit: 5 };
+    const input = {
+      from: '10-10-2026',
+      to: '10-10-2026',
+      offset: 0,
+      limit: 5,
+      sort: null,
+      group_by_month: false,
+    };
     expect(same(real.CASHBOOK_DAY, books.cashbook(input))).toBeNull();
     expect(same(real.CASHBOOK_SECOND_PAGE, books.cashbook({ ...input, offset: 5 }))).toBeNull();
     // The rows have the account the money came from or went to, or nothing.
@@ -104,7 +111,16 @@ describe('the canned data of the cash book tests has the real shape', () => {
     const books = createCashbookBooks({ cash: 50_000 });
     books.saveExpense(buildExpense(personalDraft(), false));
     expect(
-      same(real.PARTNER_TAKES, books.partnerTakes({ partner_id: 1, offset: 0, limit: 0 })),
+      same(
+        real.PARTNER_TAKES,
+        books.partnerTakes({
+          partner_id: 1,
+          offset: 0,
+          limit: 0,
+          sort: null,
+          group_by_month: false,
+        }),
+      ),
     ).toBeNull();
     const electricity = HEADS[0];
     if (electricity === undefined) throw new Error('no head');
@@ -131,7 +147,16 @@ describe('the canned data of the cash book tests has the real shape', () => {
     );
     expect(same(real.SAVED_LENT, books.saveLentOrKhata(lent))).toBeNull();
     expect(
-      same(real.LENT_LIST, books.lentList({ person_id: ASLAM.id, offset: 0, limit: 0 })),
+      same(
+        real.LENT_LIST,
+        books.lentList({
+          person_id: ASLAM.id,
+          offset: 0,
+          limit: 0,
+          sort: null,
+          group_by_month: false,
+        }),
+      ),
     ).toBeNull();
     expect(
       same(
