@@ -11,7 +11,8 @@
       "extra_en": "",
       "account_type": "buyer",
       "control_id": 6,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   }
 ]

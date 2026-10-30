@@ -12,7 +12,7 @@ masters-rules-help = { -commission }، { -laga } اور باقی چارجز کے
 rules-title = { -commission } اصول
 
 # review: pending
-rules-help = ہر چارج کا اصول یہاں لکھا جاتا ہے۔ سب سے خاص اصول جیتتا ہے۔ کوئی اصول نہ ہو تو عام اصول لگتا ہے۔
+rules-help = ہر چارج کا اصول یہاں لکھا جاتا ہے۔ سب سے مخصوص اصول لگتا ہے۔ کوئی اصول نہ ہو تو عام اصول لگتا ہے۔
 
 # review: pending
 rules-new = نیا اصول
@@ -121,7 +121,7 @@ rules-group-fruit = پھل
 rules-group-vegetable = سبزی
 
 # review: pending
-rules-level-line-override = لائن پر لکھی گئی رقم
+rules-level-line-override = لائن پر لکھی گئی شرح
 
 # review: pending
 rules-level-party-item = کھاتہ اور { -qism-maal }
@@ -304,7 +304,7 @@ rules-test-rate = ریٹ
 rules-test-run = آزمائیں
 
 # review: pending
-rules-test-nothing = نتیجہ دیکھنے کے لیے اوپر کی باتیں لکھ کر آزمائیں دبائیں۔
+rules-test-nothing = نتیجہ دیکھنے کے لیے اوپر کے خانے بھر کر آزمائیں دبائیں۔
 
 # review: pending
 rules-test-failed = اصول نہیں آزمایا جا سکا
@@ -352,7 +352,7 @@ settings-charges-buyer = { -gahak } { -commission }
 settings-charges-laga = پھلوں پر { -laga }
 
 # review: pending
-settings-charges-note = { -mazdoori }، { -munshiana } اور { -phone } کا کوئی عام اصول نہیں؛ وہ ہر { -lot } پر لکھے جاتے ہیں۔
+settings-charges-note = { -mazdoori }، { -munshiana } اور { -phone } کی کوئی عام شرح نہیں؛ وہ ہر { -lot } پر لکھے جاتے ہیں۔
 
 # review: pending
 settings-charges-saved = چارجز محفوظ ہو گئے
@@ -422,7 +422,7 @@ rules-status-default-ended = عام، { $to } تک
 # review: pending
 settings-overrides-rate-check = ریٹ بہت مختلف ہو تو خبردار کریں
 # review: pending
-settings-overrides-rate-check-hint = ریٹ پچھلے 7 دن کی اوسط سے بہت زیادہ یا کم ہو تو لائن پر تنبیہ آتی ہے۔ یہ محفوظ کرنے سے نہیں روکتی۔
+settings-overrides-rate-check-hint = ریٹ اس { -qism-maal } کی پچھلے 7 دن کی اوسط سے بہت زیادہ یا کم ہو تو لائن پر تنبیہ آتی ہے۔ یہ محفوظ کرنے سے نہیں روکتی۔
 # review: pending
 settings-overrides-rate-check-percent = کتنے فیصد فرق پر
 # review: pending

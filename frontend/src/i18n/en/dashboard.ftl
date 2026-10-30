@@ -280,3 +280,26 @@ soon-help = It is being built. Go back to the dashboard.
 
 # review: pending
 soon-back = Go to the dashboard
+
+## The dues tiles (plan 40, PRD 9.1, FR-10.10). Buyers' dues is dashboard-tile-dues above.
+
+# review: pending
+dashboard-tile-dues-sellers = Sellers' dues
+
+# review: pending
+dashboard-tile-dues-total = { -kul-agrahi }
+
+# review: pending
+dashboard-tile-dues-total-note = Buyers + sellers + { -doobi-raqam }
+
+# review: pending
+dashboard-tile-dead = { -doobi-raqam }
+
+# review: pending
+dashboard-tile-dead-note = { $count ->
+    [one] <num>{ $count }</num> person
+   *[other] <num>{ $count }</num> people
+}
+
+# review: pending
+dashboard-tile-dead-none = Nobody

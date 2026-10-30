@@ -103,7 +103,10 @@ export function VoucherForm({
     onChange({ amount: formatPaisa(amount, { grouping }) });
   };
 
+  // The one-time person picked who is in the dead amount: he cannot be made a regular account.
+  const [deadKey, setDeadKey] = useState<string | null>(null);
   const personPicked = (person: PukhtaPerson) => {
+    setDeadKey(person.is_dead ? person.person_key : null);
     onChange({
       person: {
         name_ur: person.name_ur,
@@ -164,8 +167,11 @@ export function VoucherForm({
             <AccountPicker
               {...props}
               // A new key per scope: the picker starts from its own list when the side changes.
-              key={accountScope(draft)}
+              key={`${accountScope(draft)}-${draft.type}`}
               scope={accountScope(draft)}
+              // A person in the dead amount can still pay: a receipt offers him, tagged "ڈوبی"
+              // (PRD FR-10.10). No other entry does.
+              includeDead={draft.type === 'receipt'}
               value={draft.account}
               onChange={(hit) => {
                 onChange({
@@ -196,6 +202,9 @@ export function VoucherForm({
                 <PukhtaPersonPicker
                   {...props}
                   side={personSide(draft)}
+                  // A one-time person in the dead amount can still pay: a receipt lists him, tagged
+                  // "ڈوبی" (PRD FR-10.10). No other entry does.
+                  includeDead={draft.type === 'receipt'}
                   text={draft.personText}
                   onTextChange={(personText) => {
                     onChange({ personText, person: null });
@@ -210,13 +219,15 @@ export function VoucherForm({
                   <span className="type-field">{displayName(draft.person, language)}</span>
                   {draft.person.phone === '' ? null : <Code>{draft.person.phone}</Code>}
                 </span>
-                <Button
-                  onClick={() => {
-                    setRegularOpen(true);
-                  }}
-                >
-                  <Localized id="vouchers-make-regular" />
-                </Button>
+                {draft.person.person_key === deadKey ? null : (
+                  <Button
+                    onClick={() => {
+                      setRegularOpen(true);
+                    }}
+                  >
+                    <Localized id="vouchers-make-regular" />
+                  </Button>
+                )}
                 <MakeRegularDialog
                   open={regularOpen}
                   onOpenChange={setRegularOpen}

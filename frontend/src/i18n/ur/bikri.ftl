@@ -82,7 +82,7 @@ bikri-truck-continue = نئی { -bikri } جاری رکھیں
 bikri-lots-title = { -lot }
 
 # review: pending
-bikri-lots-label = { -lot } کی فہرست
+bikri-lots-label = اس { -bikri } کے { -lot }
 
 # review: pending
 bikri-lots-add = { -lot } شامل کریں
@@ -149,13 +149,13 @@ bikri-more-freight-paid-by = { -kiraya } کس نے دیا
 bikri-more-adjust-advance = { -peshgi } سے کاٹیں
 
 # review: pending
-bikri-more-advance-open = کھلی { -peshgi }: <num>{ $amount }</num>
+bikri-more-advance-open = { -peshgi } باقی: <num>{ $amount }</num>
 
 # review: pending
 bikri-more-charge-method = { -mazdoori }، { -munshiana } اور { -phone } کی لکھی ہوئی رقم کا مطلب
 
 # review: pending
-bikri-method-manual = کل رقم
+bikri-method-manual = پوری رقم
 
 # review: pending
 bikri-method-per-unit = فی { -nag }
@@ -252,7 +252,7 @@ bikri-summary-deductions = کل اخراجات
 bikri-summary-buyer-comm = { -commission } { -gahak }
 
 # review: pending
-bikri-summary-buyer-total = { -gahak } کی کل رقم
+bikri-summary-buyer-total = { -gahak } کے بل
 
 # PRD FR-12.7. The save is allowed.
 # review: pending
@@ -389,7 +389,7 @@ bikri-hit-cancelled = { bikri-status-cancelled }
 bikri-draft-title = پچھلی { -bikri } مکمل کریں؟
 
 # review: pending
-bikri-draft-text = ایپ بند ہونے سے پہلے ایک { -bikri } لکھی جا رہی تھی۔ وہ { $time } پر محفوظ کی گئی تھی۔ کیا اسے دوبارہ کھولنا ہے؟
+bikri-draft-text = ایپ بند ہونے سے پہلے ایک { -bikri } لکھی جا رہی تھی۔ وہ { $time } پر رکھ لی گئی تھی۔ کیا اسے دوبارہ کھولنا ہے؟
 
 # review: pending
 bikri-draft-later = ابھی نہیں
@@ -549,16 +549,16 @@ bikri-stock-no-match = کوئی { -lot } نہیں ملا
 bikri-stock-no-match-help = دن، { -beopari } یا { -qism-maal } بدل کر دیکھیں۔
 
 # review: pending
-bikri-stock-from = وصول ہونے کی تاریخ سے
+bikri-stock-from = مال آنے کی تاریخ سے
 
 # review: pending
-bikri-stock-to = وصول ہونے کی تاریخ تک
+bikri-stock-to = مال آنے کی تاریخ تک
 
 # review: pending
 bikri-stock-include-written-off = وہ { -lot } بھی جن کا سارا مال ضائع ہو چکا ہے، تاکہ ضائع مال واپس کیا جا سکے
 
 # review: pending
-bikri-stock-col-received-date = وصولی کا دن
+bikri-stock-col-received-date = مال آنے کا دن
 
 # review: pending
 bikri-stock-col-item = { -qism-maal } اور { -packing }
@@ -801,7 +801,7 @@ bikri-posting-edit = یہ اندراج بدلیں
 bikri-cancel-title = یہ { -bikri } منسوخ کریں؟
 
 # review: pending
-bikri-cancel-text = { -bikri } { $number } منسوخ ہو جائے گی۔ کچھ مٹایا نہیں جاتا: نیچے لکھا ہر اندراج اپنے ہی دن پر الٹ دیا جائے گا، رقم واپس چلی جائے گی، اور { -gahak } کی وصولیاں اس کا جمع بن کر اس کے اگلے پرانے بلوں سے مل جائیں گی۔ یہ نمبر دوبارہ استعمال نہیں ہوگا۔
+bikri-cancel-text = { -bikri } { $number } منسوخ ہو جائے گی۔ کچھ مٹایا نہیں جاتا: نیچے لکھا ہر اندراج اپنے ہی دن پر الٹ دیا جائے گا، رقم واپس چلی جائے گی، اور { -gahak } کی وصولیاں اس کی جمع رقم بن کر اس کے اگلے سب سے پرانے بلوں پر لگ جائیں گی۔ یہ نمبر دوبارہ استعمال نہیں ہوگا۔
 
 # review: pending
 bikri-cancel-reverses = یہ اندراج الٹ دیے جائیں گے:
@@ -852,7 +852,7 @@ bikri-own-title = { -apna-maal }: { -market-safar } کا مال
 bikri-own-purchase = { -khareedari }
 
 # review: pending
-bikri-own-purchase-hint = { -qism-maal }، { -packing } اور مقدار خریداری سے آتے ہیں۔ لائنوں میں ساری مقدار بکنی چاہیے۔ اس مال پر { -naqd } اور پیشگی کا نشان لاگو نہیں ہوتے۔
+bikri-own-purchase-hint = { -qism-maal }، { -packing } اور تعداد خریداری سے آتے ہیں۔ لائنوں میں ساری تعداد بکنی چاہیے۔ اس مال پر { -naqd } اور پیشگی کا نشان لاگو نہیں ہوتے۔
 
 # $number: the purchase; $trip: its trip; $qty_left: how many { -nag } it has left.
 # review: pending
@@ -866,7 +866,7 @@ bikri-own-none = کسی خریداری میں مال باقی نہیں۔ پہل�
 
 # Shown until the numbers of the lot can be worked out.
 # review: pending
-bikri-own-numbers-pending = سفر کے شراکت داروں کو اس { -lot } سے کیا ملتا ہے، یہ دیکھنے کے لیے مقدار اور لائنیں لکھیں۔
+bikri-own-numbers-pending = سفر کے شراکت داروں کو اس { -lot } سے کیا ملتا ہے، یہ دیکھنے کے لیے تعداد اور لائنیں لکھیں۔
 
 # The commission of the shop on this lot is income of the firm (PRD FR-12.26).
 # review: pending

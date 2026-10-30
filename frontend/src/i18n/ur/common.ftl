@@ -145,7 +145,7 @@ common-period-last-year = پچھلا سال
 common-period-all = پہلی تاریخ سے
 
 # review: pending
-common-period-custom = تاریخیں خود لکھیں
+common-period-custom = تاریخیں چنیں
 
 # review: pending
 common-period-from = از

@@ -141,6 +141,8 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             city_en,
             phone: row.phone1.clone(),
             is_active: row.is_active,
+            // The move to the dead amount (PRD FR-7.38, FR-10.10), if he is in it.
+            dead: crate::dead::info_of(conn, account_id)?,
             balance,
             last_entry_date,
             credit_limit: if is_buyer {

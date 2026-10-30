@@ -4,7 +4,9 @@
 //! * today's sales, count and commission: the sales facts of today, as R34 and the day close
 //!   (PRD 4.9: 41,400 in 2 بکری, commission 5,448, which is NOT the shared income 5,488);
 //! * cash in hand: Σ debit − Σ credit of 01010001, as R12 (it can be below 0, FR-6.7);
-//! * buyers' dues: Σ of the R20 rows, so it equals the R20 total (FR-19.9);
+//! * buyers' dues: Σ of the R20 rows, so it equals the R20 total (FR-19.9); sellers' dues: Σ of the
+//!   "بیوپاری کے ذمے" column of R24; the dead amount: the R38 total (FR-10.10); کل اگراہی is the three
+//!   added;
 //! * sellers payable and advances open: Σ of the R24 workings (`open` and `advances_open`,
 //!   FR-7.59, FR-15.8); advances are not taken off the payable;
 //! * goods not sold: lots of saved بکری with goods left, from the stock moves up to today (a
@@ -67,13 +69,23 @@ pub(crate) fn build(
     for buyer in &facts.buyers {
         add(&mut buyers_dues, buyer.balance)?;
     }
-    let (mut sellers_payable, mut advances_open) = (Paisa::ZERO, Paisa::ZERO);
+    let (mut sellers_payable, mut advances_open, mut sellers_dues) =
+        (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
     for seller in &facts.sellers {
         if let Some(working) = seller.working {
             add(&mut sellers_payable, working.open)?;
             add(&mut advances_open, working.advances_open)?;
+            // What a seller owes beyond his advances: the "بیوپاری کے ذمے" total of R24 (PRD
+            // FR-15.9, 9.1).
+            add(&mut sellers_dues, working.owes_firm)?;
         }
     }
+    // The dead amount (PRD FR-10.10): what the people moved to it still owe. The rows above leave
+    // them out, so nothing is counted twice, and کل اگراہی is the three together (FR-19.9).
+    let (dead_amount, dead_count) = super::super::dead::tile(conn)?;
+    let mut total_dues = buyers_dues;
+    add(&mut total_dues, sellers_dues)?;
+    add(&mut total_dues, dead_amount)?;
 
     let (stock_lots, stock_qty) = mandi_db::vouchers::open_stock(conn, today)?;
     let (trips_open, trips_purchases, trips_qty, trips_cost) =
@@ -92,6 +104,10 @@ pub(crate) fn build(
         commission_paisa: commission,
         cash_in_hand_paisa: cash_in_hand,
         buyers_dues_paisa: buyers_dues,
+        sellers_dues_paisa: sellers_dues,
+        total_dues_paisa: total_dues,
+        dead_amount_paisa: dead_amount,
+        dead_count,
         sellers_payable_paisa: sellers_payable,
         advances_open_paisa: advances_open,
         stock_lots,

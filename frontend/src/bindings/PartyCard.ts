@@ -3,6 +3,7 @@ import type { Paisa } from '../shared/format/money';
 import type { AccountType } from './AccountType';
 import type { Balance } from './Balance';
 import type { CardWarning } from './CardWarning';
+import type { DeadInfo } from './DeadInfo';
 
 /**
  * Everything the card next to an account field shows (PRD FR-7.38). Read only. Balances come
@@ -57,6 +58,11 @@ export type PartyCard = {
    * False when hidden from pickers.
    */
   is_active: boolean;
+  /**
+   * The move to the dead amount, if the person is in it (PRD FR-7.38, FR-10.10): the card says
+   * ڈوبی رقم with its date and reason. Null otherwise.
+   */
+  dead: DeadInfo | null;
   /**
    * The balance now, with its side (بنام or جمع).
    */

@@ -61,7 +61,9 @@ fn the_business_group_is_in_the_catalogue_with_its_filters() {
             ReportId::R34,
             ReportId::R35,
             ReportId::R36,
-            ReportId::R37
+            ReportId::R37,
+            // Plan 40: the dead amount.
+            ReportId::R38
         ]
     );
     assert_eq!(

@@ -1479,3 +1479,7 @@ mod gardens;
 // Plan 17d: fruit taken (E2E-42, C27) and its refusals.
 #[path = "golden_day/fruit.rs"]
 mod fruit_taken;
+
+// Plan 40: the dead amount (E2E-44): the tiles, the refusals and the trial balance.
+#[path = "golden_day/dead_amount.rs"]
+mod dead_amount;

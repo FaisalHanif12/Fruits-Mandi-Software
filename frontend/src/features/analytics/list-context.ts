@@ -4,7 +4,7 @@
 
 import { useLocalization } from '@fluent/react';
 import { useMemo } from 'react';
-import { formatPaisa, useGrouping } from '../../shared/format';
+import { formatPaisa, formatPaisaValue, useGrouping } from '../../shared/format';
 import type { ListContext } from '../../shared/grid';
 import { useLanguage } from '../../shared/i18n';
 
@@ -17,6 +17,7 @@ export function useListContext(): ListContext {
       language,
       text: (id, vars) => l10n.getString(id, vars),
       money: (amount, plain = false) => formatPaisa(amount, { grouping, plain }),
+      signedMoney: (value) => formatPaisaValue(value, { grouping, plain: false }),
     }),
     [language, l10n, grouping],
   );

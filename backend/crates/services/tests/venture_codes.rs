@@ -200,6 +200,7 @@ fn the_first_garden_is_0080_and_its_account_has_the_same_code() {
         &w.env.ctx,
         &w.owner,
         &mandi_services::core::accounts::SearchAccountsInput {
+            include_dead: None,
             scope: mandi_services::core::accounts::AccountScope::LotSeller,
             control_id: None,
             text: String::new(),
@@ -218,6 +219,7 @@ fn the_first_garden_is_0080_and_its_account_has_the_same_code() {
         &w.env.ctx,
         &w.owner,
         &mandi_services::core::accounts::SearchAccountsInput {
+            include_dead: None,
             scope: mandi_services::core::accounts::AccountScope::Seller,
             control_id: None,
             text: String::new(),

@@ -100,6 +100,14 @@ pub fn make_regular(
                 "person_key",
             ));
         }
+        // A person in the dead amount is not made regular (PRD FR-13.8, FR-10.10): his balance
+        // stays where it is until it is recovered or he is made active again.
+        if crate::dead::is_dead(tx, pukhta_id, Some(key))? {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrPersonInDeadAmount,
+                "person_key",
+            ));
+        }
         let (new_id, learned) = accounts::create_in(ctx, actor, tx, &input.account_input, window)?;
         let record = account_repo::get(tx, new_id)?
             .map(|row| RecordRef {

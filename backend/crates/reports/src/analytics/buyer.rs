@@ -358,10 +358,19 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         columns.extend(compare_columns());
     }
 
+    // A buyer in the dead amount keeps his balance in "dues now" and is marked ڈوبی (PRD FR-10.10,
+    // view C).
+    let marks = mandi_db::dead::marks_on(conn, None)?;
     let mut rows: Vec<AnalyticsRow> = Vec::with_capacity(page_entries.len());
     for entry in page_entries {
         let buyer = party_of(&entry.key)
-            .map(|party| Cell::Party { party })
+            .map(|mut party| {
+                party.dead = marks
+                    .iter()
+                    .find(|m| m.account_id == entry.key.0 && m.person_key == entry.key.1)
+                    .map(|m| m.info());
+                Cell::Party { party }
+            })
             .unwrap_or(Cell::Empty);
         let dues_cell = dues
             .get(&entry.key)

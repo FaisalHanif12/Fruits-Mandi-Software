@@ -331,6 +331,16 @@
 # review: pending
 -baqaya = بقایا
 
+# Everything people owe the shop: buyers' dues + sellers' dues + the dead amount (PRD Section 3, 9.1)
+# review: pending
+-kul-agrahi = کل اگراہی
+    .gender = feminine
+
+# What a person still owes after he has died or left the business (PRD Section 3, FR-10.10)
+# review: pending
+-doobi-raqam = ڈوبی رقم
+    .gender = feminine
+
 ## The words on their own, for labels that show only the word.
 
 # A partner's total in the firm: his investment plus his share of commission and profit, less what he took (PRD Section 3, C22)
@@ -456,6 +466,8 @@ glossary-taza-banam = { -taza-banam }
 glossary-sabiqa-raqam = { -sabiqa-raqam }
 glossary-total-raqam = { -total-raqam }
 glossary-baqaya = { -baqaya }
+glossary-kul-agrahi = { -kul-agrahi }
+glossary-doobi-raqam = { -doobi-raqam }
 
 glossary-baghat = { -baghat }
 glossary-thaika = { -thaika }

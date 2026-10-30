@@ -62,6 +62,8 @@ export const REPORT_IDS: readonly ReportId[] = [
   'R35',
   'R36',
   'R37',
+  // The dead amount (plan 40): printed, saved as PDF and exported like any report.
+  'R38',
 ];
 
 export const LANGUAGE_VALUES: readonly Language[] = ['ur', 'en'];

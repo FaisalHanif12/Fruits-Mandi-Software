@@ -121,7 +121,9 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             ReportId::R34,
             ReportId::R35,
             ReportId::R36,
-            ReportId::R37
+            ReportId::R37,
+            // Plan 40: the dead amount.
+            ReportId::R38
         ]
     );
     let r2 = entries.iter().find(|e| e.id == ReportId::R2).unwrap();

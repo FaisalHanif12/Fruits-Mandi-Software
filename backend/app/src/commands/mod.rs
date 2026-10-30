@@ -9,6 +9,7 @@ pub mod bikri;
 pub mod capital;
 pub mod cashbook;
 pub mod day;
+pub mod dead;
 pub mod drafts;
 pub mod expenses;
 pub mod fruit;

@@ -35,6 +35,7 @@ import { Remembered, type ScreenMemory } from '../../../shared/screen-state';
 import { Button, EmptyState, ErrorState, ListPage, LoadingState } from '../../../shared/ui';
 import { PrintAction } from '../../bikri';
 import { useOpenArrival } from '../../gardens';
+import { DeadMoveButton } from '../components/DeadMoveButton';
 import { ReportFilterBar } from '../components/ReportFilterBar';
 import { BuyerBillsPreview } from '../components/BuyerBillsPreview';
 import { ReportPreview } from '../components/ReportPreview';
@@ -48,6 +49,7 @@ import {
   type ReportFilterState,
 } from '../filters';
 import { reportsExportExcel } from '../api';
+import { MOVABLE_REPORTS, partyOfFocusedRow } from '../dead-row';
 import { useReportCatalog, useReportPages } from '../hooks';
 import { filtersFromRemembered, reportScreen, rememberedFilters } from '../remember';
 import { parseReportSearch, stateFromSearch } from '../search';
@@ -192,6 +194,10 @@ function ReportBody({
   if (query.data !== undefined && !query.isPlaceholderData && query.data !== kept) {
     setKept(query.data);
   }
+  // The person of the row that has focus, for "Move to dead amount" on the dues reports (FR-10.10).
+  const focusedParty = MOVABLE_REPORTS.has(entry.id)
+    ? partyOfFocusedRow((query.data ?? kept)?.pages, focusRowId)
+    : null;
   const refusal = query.isError ? uiErrorOf(query.error) : null;
   const filterRefusal = refusal !== null && isFilterRefusal(refusal) ? refusal : null;
 
@@ -335,6 +341,9 @@ function ReportBody({
             <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
             <Localized id="report-back" />
           </Button>
+          {MOVABLE_REPORTS.has(entry.id) && tableView ? (
+            <DeadMoveButton party={focusedParty} />
+          ) : null}
           {printsBill && state.bikri !== null ? (
             <PrintAction target={{ id: state.bikri.id, number: state.bikri.number }} />
           ) : (

@@ -39,7 +39,7 @@ analytics-view-b-help = ہر { -beopari }: بکری، تعداد، { -kham-bikri
 analytics-view-c-title = گاہک وار
 
 # review: pending
-analytics-view-c-help = ہر { -gahak }: خریداری، { -commission }، { -laga }، موجودہ بقایا اور ادائیگی میں لگنے والے اوسط دن۔
+analytics-view-c-help = ہر { -gahak }: خریداری، { -commission }، { -laga }، اس وقت اس کے ذمے رقم اور رقم ادا کرنے میں لگنے والے اوسط دن۔
 
 # review: pending
 analytics-view-d-title = قسم مال × مدت
@@ -71,10 +71,10 @@ analytics-col-bikri-count = بکری
 analytics-col-purchase-value = خریداری کی رقم
 
 # review: pending
-analytics-col-dues-now = موجودہ بقایا
+analytics-col-dues-now = موجودہ ذمے
 
 # review: pending
-analytics-col-avg-days-to-pay = ادائیگی کے اوسط دن
+analytics-col-avg-days-to-pay = رقم ادا کرنے کے اوسط دن
 
 # review: pending
 analytics-col-compare = موازنے کی مدت
@@ -98,7 +98,7 @@ analytics-col-item-column = { -qism-maal }
 analytics-col-row-total = کل { -commission }
 
 # review: pending
-analytics-col-other-items = باقی اقسام
+analytics-col-other-items = دیگر اقسام
 
 ## The three lists of the top 10 (view H).
 
@@ -211,7 +211,7 @@ analytics-lines-empty = اس رقم کے پیچھے کوئی لائن نہیں
 analytics-lines-empty-help = ہو سکتا ہے کسی اور اندراج سے رقم بدل گئی ہو۔ واپس جا کر دوبارہ دیکھیں۔
 
 # review: pending
-analytics-lines-hint = لائن چننے کے لیے ↑ ↓ اور اس کی { -bikri } کھولنے کے لیے Enter دبائیں۔ واپس کی گئی بکری کی رقم صفر سے نیچے دکھائی جاتی ہے، تاکہ لائنیں رقم کے برابر رہیں۔
+analytics-lines-hint = لائن چننے کے لیے ↑ ↓ اور اس کی { -bikri } کھولنے کے لیے Enter دبائیں۔ الٹ اندراج کی رقم صفر سے نیچے دکھائی جاتی ہے، تاکہ لائنیں رقم کے برابر رہیں۔
 
 # review: pending
 analytics-lines-grid-label = اس رقم کی تفصیل
@@ -490,7 +490,7 @@ analytics-chart-k = ہماری دکان اور دوسری دکانوں سے لی
 ## The bar of the rows beyond the biggest ten in a chart (plan 38 R4).
 
 # review: pending
-analytics-chart-others = باقی
+analytics-chart-others = دیگر
 
 # The button that folds the charts of a view, and the one that shows them again.
 # review: pending

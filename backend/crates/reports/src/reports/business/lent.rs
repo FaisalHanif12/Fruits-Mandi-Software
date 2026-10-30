@@ -140,11 +140,15 @@ pub(crate) fn run(
         .ok_or_else(|| ReportsError::Data("the report day is not a date".to_owned()))?;
 
     let wanted: Vec<i64> = typed.party_id.into_iter().collect();
-    let persons: HashMap<i64, PersonFacts> = open_lines::persons(conn, &wanted)?;
+    let mut persons: HashMap<i64, PersonFacts> = open_lines::persons(conn, &wanted)?;
     // A picked account that is not under control 0103 has no loans: the report is empty.
     if persons.is_empty() && !wanted.is_empty() {
         return Ok(with_day(empty(typed, spec), &as_of_iso));
     }
+    // A person in the dead amount has his open loans in R38 and the tile ڈوبی رقم (PRD FR-10.10,
+    // A66), not here.
+    let dead = mandi_db::dead::dead_set(conn, Some(&as_of_iso))?;
+    persons.retain(|id, _| !dead.has_account(*id));
     let ids: Vec<i64> = persons.keys().copied().collect();
     let lines = open_lines::live_lines(conn, &ids)?;
     let grouped = loans_by_person(&lines, &as_of_iso)?;

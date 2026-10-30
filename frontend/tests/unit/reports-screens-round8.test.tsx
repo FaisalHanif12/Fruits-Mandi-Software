@@ -710,9 +710,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('5', 'item')).toBe(m('report-r34-cash-closing'));
       expect(cell('5', 'amount')).toBe('58,484');
       expect(drawnColumns()).toEqual(['date', 'item', 'count', 'amount']);
-      // The page says how many lines the backend has: 27 for the day, 25 on the first page.
+      // The page says how many lines the backend has: 30 for the day (with the three dues rows of plan 40), 25 on the first page.
       expect(
-        await screen.findByText(paragraph(m('common-pager-range', { from: 1, to: 25, total: 27 }))),
+        await screen.findByText(paragraph(m('common-pager-range', { from: 1, to: 25, total: 30 }))),
       ).toBeInTheDocument();
     });
 
@@ -782,7 +782,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
       await screen.findByText(printFirmName(language), undefined, SLOW_MS);
-      expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(27);
+      expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(30);
       expect(document.querySelector('.print-report tfoot')).toBeNull();
       expect(visible(document.querySelector('.print-report tbody')?.textContent)).toContain(
         '58,484',

@@ -13,6 +13,7 @@ pub mod clean_data;
 pub mod coa;
 pub mod context;
 pub mod day;
+pub mod dead;
 pub mod drafts;
 pub mod error;
 mod floor;

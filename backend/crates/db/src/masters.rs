@@ -50,6 +50,9 @@ pub struct SearchSource {
     /// True only for an item that is sold by weight (`items.sold_by = 'weight'`, plan 35 D3).
     /// False for every other record.
     pub sold_by_weight: bool,
+    /// True for an account that is in the dead amount (PRD FR-10.10, plan 40): inactive, but still
+    /// offered to the receipt picker and the ادھار رقم واپسی picker. False for every other record.
+    pub is_dead: bool,
 }
 
 fn value(v: &ColValue) -> Value {
@@ -761,6 +764,7 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         control_code: None,
         tag: None,
         sold_by_weight: r.get(11)?,
+        is_dead: false,
     })
 }
 

@@ -42,7 +42,7 @@ partners-load-failed = { -shirakat-dar } کی معلومات نہیں کھل س�
 partners-overview-empty = ابھی کوئی { -shirakat-dar } نہیں
 
 # review: pending
-partners-overview-empty-help = { -shirakat-dar } شامل کریں اور ان کے { -hissa } لکھیں، تب ہر { -bikri } کی آمدن ان میں بٹے گی۔
+partners-overview-empty-help = { -shirakat-dar } شامل کریں اور ان کے حصے لکھیں، تب ہر { -bikri } کی آمدن ان میں بٹے گی۔
 
 # review: pending
 partners-overview-empty-action = { -shirakat-dar } شامل کریں
@@ -56,7 +56,7 @@ partners-setup-title = { -shirakat-dar } کی ترتیب
 partners-setup-help = ہر { -shirakat-dar } کا { -hissa } فیصد میں لکھیں۔ کل ٹھیک 100 فیصد ہونا چاہیے۔
 
 # review: pending
-partners-list-label = { -shirakat-dar } اور ان کے { -hissa }
+partners-list-label = { -shirakat-dar } اور ان کے حصے
 
 # review: pending
 partners-column-partner = { -shirakat-dar }
@@ -88,7 +88,7 @@ partners-inactive-title = غیر فعال { -shirakat-dar }
 partners-badge-inactive = غیر فعال
 
 # review: pending
-partners-field-from = { -hissa } کب سے لاگو ہوں
+partners-field-from = حصے کب سے لاگو ہوں
 
 # review: pending
 partners-field-from-hint = آج یا اس کے بعد کی تاریخ لکھیں۔ پرانی تاریخ نہیں چلتی۔ پہلے سے محفوظ { -bikri } کا بٹوارہ نہیں بدلتا۔
@@ -106,11 +106,11 @@ partners-total-bad = کل ٹھیک 100 فیصد ہونا چاہیے
 partners-total-checking = جانچ ہو رہی ہے…
 
 # review: pending
-partners-save = { -hissa } محفوظ کریں
+partners-save = حصے محفوظ کریں
 
 # $date: the day the shares start, DD-MM-YYYY.
 # review: pending
-partners-saved = { -hissa } محفوظ ہو گئے۔ یہ <num>{ $date }</num> سے لاگو ہیں۔
+partners-saved = حصے محفوظ ہو گئے۔ یہ <num>{ $date }</num> سے لاگو ہیں۔
 
 # $name: the partner's name.
 # review: pending
@@ -162,7 +162,7 @@ partners-field-active = فعال
 partners-field-active-hint = غیر فعال { -shirakat-dar } کا ریکارڈ رہتا ہے، مگر پہلے اس کا { -hissa } 0 ہونا چاہیے۔
 
 # review: pending
-partners-history-title = { -hissa } کی تاریخ
+partners-history-title = { -hissa } کا تاریخچہ
 
 # $date: the first day the share applies, DD-MM-YYYY. $share: the percent.
 # review: pending
@@ -217,13 +217,13 @@ partners-capital-screen-help = { -shirakat-dar } جو رقم دکان میں ل�
 partners-capital-type = { -sarmaya } اندراج کی قسم
 
 # review: pending
-partners-capital-history-title = { -sarmaya } کی تاریخ
+partners-capital-history-title = { -sarmaya } کا تاریخچہ
 
 # review: pending
 partners-capital-pick = { -shirakat-dar } چنیں
 
 # review: pending
-partners-capital-pick-help = اس کے { -sarmaya } کی تاریخ اور بقایا یہاں نظر آئے گا۔
+partners-capital-pick-help = اس کے { -sarmaya } کا تاریخچہ اور بقایا یہاں نظر آئیں گے۔
 
 # review: pending
 partners-capital-balance = { -sarmaya } بقایا
@@ -235,10 +235,10 @@ partners-capital-invested = کل { -sarmaya } جمع
 partners-capital-taken-back = کل { -sarmaya } واپسی
 
 # review: pending
-partners-capital-label = { -shirakat-dar } کے { -sarmaya } کی تاریخ
+partners-capital-label = { -shirakat-dar } کے { -sarmaya } کا تاریخچہ
 
 # review: pending
-partners-capital-failed = { -sarmaya } کی تاریخ نہیں کھل سکی
+partners-capital-failed = { -sarmaya } کا تاریخچہ نہیں کھل سکا
 
 # review: pending
 partners-capital-empty = ابھی کوئی { -sarmaya } اندراج نہیں
@@ -285,7 +285,7 @@ partners-statement-minus = کمی
 partners-statement-pick = { -shirakat-dar } چنیں
 
 # review: pending
-partners-statement-pick-help = اس کی تفصیل یہاں نظر آئے گی۔
+partners-statement-pick-help = اس کا { -fard-hisab } یہاں نظر آئے گا۔
 
 # review: pending
 partners-statement-empty = ان دنوں میں کچھ نہیں
@@ -372,7 +372,7 @@ partners-statement-detail-trip-credit = { $source ->
 }
 
 # review: pending
-partners-statement-detail-trip-write-off = { -market-safar } { $trip }: سفر کا مال ضائع کیا گیا۔ کوئی اندراج نہیں ہوا؛ نقصان سفر کے نتیجے میں نظر آتا ہے۔
+partners-statement-detail-trip-write-off = { -market-safar } { $trip }: سفر کا مال ضائع کیا گیا۔ کچھ پوسٹ نہیں ہوتا؛ نقصان سفر کے نتیجے میں نظر آتا ہے۔
 
 # review: pending
 partners-statement-detail-trip-closed = { -market-safar } { $trip } بند: لاگت { $cost }، فروخت { $sales }، نتیجہ { $result }، آپ کا { $share } فیصد، آپ کا { -khalis } { $net }
@@ -404,7 +404,7 @@ partners-statement-detail-fruit-taken = { $for ->
 
 # $fruit: the entry's number. The details of an entry are shown only for the posting in force.
 # review: pending
-partners-statement-detail-fruit-earlier = { -phal } { $fruit }: ایسے اندراج کی پرانی پوسٹنگ جو بعد میں بدلا گیا، یا اس کی الٹ
+partners-statement-detail-fruit-earlier = { -phal } { $fruit }: ایسے اندراج کی پرانی پوسٹنگ جو بعد میں بدلا گیا، یا اسے الٹنے والی پوسٹنگ
 
 # review: pending
 partners-statement-detail-other = { $reason }
@@ -431,11 +431,11 @@ partners-ventures-col-shop = دکان سے ادا
 partners-ventures-col-pocket = اپنی جیب سے ادا
 
 # review: pending
-partners-ventures-col-back = واپس ملنے والی رقم
+partners-ventures-col-back = واپس ملی رقم
 
 # The running balance of a garden, or the result of a trip.
 # review: pending
-partners-ventures-col-balance = چلتا حساب یا نتیجہ
+partners-ventures-col-balance = بقایا یا نتیجہ
 
 # The name of the table of partners on the overview, read by a screen reader (plan 38).
 # review: pending

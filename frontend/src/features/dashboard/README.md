@@ -39,3 +39,9 @@ The screen after sign-in, and the attention list that the bell and the dashboard
 `dashboard-charts.test.ts`, `dashboard-api-contract.test.ts`; Windows spec `48-dashboard.e2e.mjs`;
 screenshot snippet `tests/e2e/shots-plan26.playwright.txt` on the development page `/dev/dashboard`
 (flags in `tests/helpers/dev-bridge-dashboard.ts`).
+
+## The four dues tiles (plan 40, PRD 9.1)
+
+گاہکوں کے ذمے, بیوپاریوں کے ذمے, کل اگراہی and ڈوبی رقم (with the number of people) come from
+`DashboardTiles` as the backend sends them. The dead tile opens R38 (`{ kind: 'dead-amount' }` in
+`destinations.ts`). The development page flags `?dead` and `?recovered` show the E2E-44 numbers.

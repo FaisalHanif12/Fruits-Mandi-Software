@@ -62,8 +62,11 @@ export function nameWithTag(
  * screen because a short code alone can mean a seller or a buyer; a print uses the short code
  * where there is one (FR-19.13).
  */
-export function partyText(party: ReportParty, language: Language): string {
-  const text = `${party.code} ${nameWithTag(party, party.tag, language)}`;
+export function partyText(party: ReportParty, language: Language, deadWord?: string): string {
+  const name = `${party.code} ${nameWithTag(party, party.tag, language)}`;
+  // A person in the dead amount carries the word after his name, on the day sheet R35 and in the
+  // dues of the analytics (PRD FR-10.10).
+  const text = party.dead === undefined || deadWord === undefined ? name : `${name} (${deadWord})`;
   // A one-time person has his phone after his name, so two people with one name are two rows
   // (PRD FR-13.5): the dash form 03XX-XXXXXXX, English digits.
   return party.phone === undefined ? text : `${text} ${party.phone}`;
@@ -171,7 +174,11 @@ export function cellText(cell: ReportCell, context: ListContext, shortSale = fal
     case 'percent':
       return percentText(cell.hundredths);
     case 'party':
-      return partyText(cell.party, context.language);
+      return partyText(
+        cell.party,
+        context.language,
+        cell.party.dead === undefined ? undefined : context.text('dead-tag'),
+      );
     case 'names':
       return displayName({ name_ur: cell.names.ur, name_en: cell.names.en }, context.language);
     case 'doc': {

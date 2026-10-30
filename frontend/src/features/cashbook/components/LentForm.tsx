@@ -63,6 +63,8 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
           <ControlAccountPicker
             {...props}
             controlCode={LENT_CONTROL}
+            // A person in the dead amount can still give money back, tagged "ڈوبی" (PRD FR-10.10).
+            includeDead={!lent}
             value={draft.person}
             onChange={(account) => {
               onChange({

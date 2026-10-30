@@ -1166,6 +1166,7 @@ fn a_long_run_of_many_operations_shows_no_slowdown_and_no_memory_growth() {
                         &env.ctx,
                         &owner,
                         &mandi_services::core::accounts::SearchAccountsInput {
+                            include_dead: None,
                             scope: mandi_services::core::accounts::AccountScope::Any,
                             control_id: None,
                             text: text.into(),

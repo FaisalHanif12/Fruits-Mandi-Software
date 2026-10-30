@@ -149,6 +149,25 @@ pub fn insert_draft_ordered(
     Ok(conn.last_insert_rowid())
 }
 
+/// The (account, person key) pairs that the entries with this order key have lines on. An edit
+/// posts a new entry with the order key of the entry it replaces, so these are the accounts and
+/// people that the replaced posting had (the original, its reversal and earlier versions).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn lines_with_order_key(
+    conn: &Connection,
+    order_key: i64,
+) -> rusqlite::Result<Vec<(i64, Option<String>)>> {
+    let mut statement = conn.prepare(
+        "SELECT DISTINCT l.account_id, l.pukhta_person_key
+         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         WHERE COALESCE(e.order_key, e.id) = ?1",
+    )?;
+    let rows = statement.query_map([order_key], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    rows.collect()
+}
+
 /// The key that places an entry among the others of its day for matching: its order key, or its
 /// own id when it has none. An edit gives this to the posting that replaces it.
 ///

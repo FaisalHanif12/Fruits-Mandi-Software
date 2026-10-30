@@ -15,6 +15,7 @@ import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, Notice } from '../../../shared/ui';
 import { reportColumns, signedColumnsOf, totalsFor, type ReportRowView } from '../columns';
 import type { useReportPages } from '../hooks';
+import { DeadHeading } from './DeadHeading';
 import { ReportRange } from './ReportRange';
 import { ReportSummary } from './ReportSummary';
 
@@ -159,6 +160,7 @@ export function ReportResults({
   const showsStrip = showsRange || (!sheet && last.summary.length > 0);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2" aria-busy={query.isFetching}>
+      <DeadHeading party={last.filters.party} />
       {showsStrip ? (
         <div className="flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 rounded-3 border border-border bg-surface px-3 py-2">
           <ReportRange filters={last.filters} takes={takes} day={sheet} />

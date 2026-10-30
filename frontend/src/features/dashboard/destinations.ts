@@ -21,6 +21,8 @@ export type Destination =
   /** The garden screen of a goods arrived entry, found by the entry's id (PRD FR-12.40). */
   | { kind: 'arrival'; id: number }
   | { kind: 'backup' }
+  /** The dead amount (R38, PRD FR-10.10): everyone moved to ڈوبی رقم. */
+  | { kind: 'dead-amount' }
   | { kind: 'index' }
   | { kind: 'analytics' }
   | { kind: 'personal-drawings' }
@@ -145,6 +147,9 @@ export function useOpenDestination(): (destination: Destination) => void {
         return;
       case 'backup':
         void navigate({ to: '/backup' });
+        return;
+      case 'dead-amount':
+        void navigate({ to: '/reports/dead-amount' });
         return;
       case 'index':
         void navigate({ to: '/index' });

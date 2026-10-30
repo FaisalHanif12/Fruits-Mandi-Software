@@ -7,7 +7,7 @@
 # review: pending
 gardens-title = { -baghat }
 # review: pending
-gardens-help = کچھ شراکت دار ایک موسم کے لیے باغ ٹھیکے پر لیتے ہیں۔ وہ { -thaika } کی رقم { -qist } وار ادا کرتے ہیں اور باغ کے خرچ بھی دیتے ہیں۔ اس کا پھل دکان پر عام { -commission } کے ساتھ بکتا ہے، یا کسی اور دکان میں۔ باغ کا نفع یا نقصان صرف انہی شراکت داروں کا ہوتا ہے جو اس میں شامل ہیں۔
+gardens-help = کچھ شراکت دار ایک موسم کے لیے باغ ٹھیکے پر لیتے ہیں۔ وہ { -thaika } کی رقم { -qist } وار ادا کرتے ہیں اور باغ کے خرچ بھی دیتے ہیں۔ اس کا پھل دکان پر عام { -commission } کے ساتھ بکتا ہے، یا کسی اور دکان میں۔ باغ کا منافع یا نقصان صرف انہی شراکت داروں کا ہوتا ہے جو اس میں شامل ہیں۔
 # review: pending
 gardens-new = نیا باغ
 # review: pending
@@ -35,7 +35,7 @@ gardens-list-empty = ابھی کوئی باغ نہیں
 # review: pending
 gardens-list-empty-help = بٹن دبا کر پہلا باغ بنائیں۔ اس میں شامل شراکت دار چنیں، پھر { -thaika } اور ادا شدہ رقم درج کریں۔
 # review: pending
-gardens-list-no-match = ان انتخابات سے کوئی باغ نہیں ملا
+gardens-list-no-match = ان فلٹروں سے کوئی باغ نہیں ملا
 # review: pending
 gardens-list-no-match-help = دوسری تاریخیں، کھلے یا بند باغ، یا دوسرے الفاظ آزمائیں۔
 # review: pending
@@ -51,21 +51,21 @@ gardens-col-date = تاریخ
 # review: pending
 gardens-col-status = حالت
 # review: pending
-gardens-col-balance = چلتا حساب
+gardens-col-balance = چلتا بقایا
 # review: pending
-gardens-col-rent-due = باقی ٹھیکہ
+gardens-col-rent-due = ٹھیکہ باقی
 # review: pending
 gardens-col-rent = { -thaika }
 # review: pending
 gardens-col-paid = ادا شدہ
 # review: pending
-gardens-col-money-in = آنے والی رقم
+gardens-col-money-in = آئی ہوئی رقم
 # review: pending
 gardens-col-entry = اندراج
 # review: pending
 gardens-col-effect = رقم
 # review: pending
-gardens-col-running-balance = اس کے بعد کا حساب
+gardens-col-running-balance = اس کے بعد کا بقایا
 # review: pending
 gardens-col-state = منسوخ
 # review: pending
@@ -74,7 +74,7 @@ gardens-status-open = کھلا
 gardens-status-closed = بند
 # $date: the closing day as DD-MM-YYYY.
 # review: pending
-gardens-status-closed-on = بند ہوا { $date } کو
+gardens-status-closed-on = { $date } کو بند ہوا
 # review: pending
 gardens-entry-cancelled = منسوخ
 
@@ -109,7 +109,7 @@ gardens-new-save = باغ بنائیں
 # review: pending
 gardens-new-shares-title = شراکت دار اور حصے
 # review: pending
-gardens-new-from-defaults = فرم کے { -hissa } یا پچھلے باغ کے مطابق بھرا گیا ہے۔ دیکھ لیں اور جو مختلف ہو وہ بدل دیں۔
+gardens-new-from-defaults = فرم کے حصوں یا پچھلے باغ کے مطابق بھرا گیا ہے۔ دیکھ لیں اور جو مختلف ہو وہ بدل دیں۔
 # review: pending
 gardens-new-shares-help = باغ میں شامل شراکت داروں کے حصے ٹھیک 100 فیصد ہونے چاہییں۔ جس کا حصہ نہ ہو وہ اس میں شامل نہیں۔ پہلے اندراج کے بعد حصے بدلے نہیں جا سکتے۔
 # review: pending
@@ -168,9 +168,9 @@ gardens-none = کوئی نہیں
 # review: pending
 gardens-closed-on = بند ہوا
 # review: pending
-gardens-balance = چلتا حساب (آنے والی رقم منفی کل ادائیگی)
+gardens-balance = چلتا بقایا (آئی ہوئی رقم منفی کل ادا شدہ)
 # review: pending
-gardens-rent-due = باقی ٹھیکہ
+gardens-rent-due = ٹھیکہ باقی
 # review: pending
 gardens-figures-title = باغ کے اعداد
 # review: pending
@@ -190,7 +190,7 @@ gardens-fact-paid-shop = دکان کی رقم سے ادا شدہ
 # review: pending
 gardens-fact-paid-pocket = جیبوں سے ادا شدہ
 # review: pending
-gardens-fact-money-in = آنے والی رقم ({ -commission } کے بعد فروخت)
+gardens-fact-money-in = آئی ہوئی رقم ({ -commission } کے بعد فروخت)
 # review: pending
 gardens-fact-other-shop = اس میں سے دوسری دکانوں کی فروخت
 # review: pending
@@ -209,11 +209,11 @@ gardens-partner-paid-shop = دکان سے ادا
 # review: pending
 gardens-partner-paid-pocket = اپنی جیب سے ادا
 # review: pending
-gardens-partner-back = واپس ملنے والی رقم
+gardens-partner-back = واپس ملی رقم
 # review: pending
-gardens-partner-net-open = اب تک کا نتیجہ
+gardens-partner-net-open = اب تک کا خالص
 # review: pending
-gardens-partner-net-closed = آخری نتیجہ
+gardens-partner-net-closed = خالص نتیجہ
 # review: pending
 gardens-partner-loss = نقصان
 
@@ -239,7 +239,7 @@ gardens-installment-amount = { -qist } کی رقم
 # review: pending
 gardens-cost-amount = خرچ کی رقم
 # review: pending
-gardens-payment-amount-hint = پورے روپے۔ آپ جمع بھی لکھ سکتے ہیں، مثلاً 20000+5000۔
+gardens-payment-amount-hint = پورے روپے۔ آپ جوڑ بھی لکھ سکتے ہیں، مثلاً 20000+5000۔
 # review: pending
 gardens-payment-reason = وجہ
 # review: pending
@@ -251,9 +251,9 @@ gardens-sale-shop = دکان
 # review: pending
 gardens-sale-qty = بکے ہوئے { -nag }
 # review: pending
-gardens-sale-qty-hint = پورا عدد۔ آپ جمع بھی لکھ سکتے ہیں، مثلاً 20+25۔
+gardens-sale-qty-hint = پورا عدد۔ آپ جوڑ بھی لکھ سکتے ہیں، مثلاً 20+25۔
 # review: pending
-gardens-sale-amount = ملنے والی رقم
+gardens-sale-amount = ملی ہوئی رقم
 # review: pending
 gardens-sale-arrival = مال کہاں سے
 
@@ -284,11 +284,11 @@ gardens-numbers-incomplete = فارم مکمل ہوگا تو اعداد نظر �
 # review: pending
 gardens-numbers-amount = رقم
 # review: pending
-gardens-numbers-balance-before = اس سے پہلے کا چلتا حساب
+gardens-numbers-balance-before = اس سے پہلے کا چلتا بقایا
 # review: pending
-gardens-numbers-balance-after = اس کے بعد کا چلتا حساب
+gardens-numbers-balance-after = اس کے بعد کا چلتا بقایا
 # review: pending
-gardens-numbers-rent-due-after = اس کے بعد باقی ٹھیکہ
+gardens-numbers-rent-due-after = اس کے بعد ٹھیکہ باقی
 
 ## The history of the garden (PRD FR-12.37, FR-19.11).
 # review: pending
@@ -312,7 +312,7 @@ gardens-entry-cancelled-reason = یہ اندراج منسوخ ہو چکا ہے۔
 gardens-cancel-title = یہ اندراج منسوخ کریں؟
 # $entry: what the entry is, for example Sale in another shop.
 # review: pending
-gardens-cancel-text = { $entry } منسوخ ہو جائے گا۔ اس کی پوسٹنگ الٹ دی جائے گی، ہر شراکت دار کا حصہ جیسا تھا ویسا ہو جائے گا، اور اندراج منسوخ کے نشان کے ساتھ تاریخچے میں رہے گا۔
+gardens-cancel-text = { $entry } کو منسوخ کر دیا جائے گا۔ اس کی پوسٹنگ الٹ دی جائے گی، ہر شراکت دار کا حصہ جیسا تھا ویسا ہو جائے گا، اور اندراج منسوخ کے نشان کے ساتھ تاریخچے میں رہے گا۔
 # review: pending
 gardens-cancel-reason = وجہ
 # review: pending
@@ -326,7 +326,7 @@ gardens-cancelled = { $entry } کو منسوخ کر دیا گیا۔
 # review: pending
 gardens-close-title = باغ بند کریں
 # review: pending
-gardens-close-help = جب پھل آنا بند ہو جائے تو باغ بند کریں۔ اس کی رقم شراکت داروں میں ان کے حصوں کے مطابق بٹ جاتی ہے: ہر ایک کو اس کی ادا کی ہوئی رقم واپس ملتی ہے، اور نفع یا نقصان میں اس کا حصہ جمع یا منفی ہوتا ہے۔ اس کے بعد باغ میں مزید اندراج نہیں ہوتا۔
+gardens-close-help = جب مال آنا بند ہو جائے تو باغ بند کریں۔ اس کی رقم شراکت داروں میں ان کے حصوں کے مطابق بٹ جاتی ہے: ہر ایک کو اس کی ادا کی ہوئی رقم واپس ملتی ہے، اس کے ساتھ منافع میں اس کا حصہ ملتا ہے یا نقصان میں اس کا حصہ کٹ جاتا ہے۔ اس کے بعد باغ میں مزید اندراج نہیں ہوتا۔
 # review: pending
 gardens-close-date = بندش کا دن
 # $date: the day of the latest entry as DD-MM-YYYY.
@@ -335,13 +335,13 @@ gardens-close-earliest = { $date } سے پہلے نہیں، یہ باغ کا آ�
 # review: pending
 gardens-close-numbers-empty = بندش کا دن چنیں تو اعداد یہاں نظر آئیں گے۔
 # review: pending
-gardens-close-money-in = آنے والی رقم
+gardens-close-money-in = آئی ہوئی رقم
 # review: pending
 gardens-close-total-cost = کل لاگت
 # review: pending
 gardens-close-balance = شراکت داروں کو ملنے والی رقم
 # review: pending
-gardens-close-loss-note = باغ کو نقصان ہوا۔ ہر شراکت دار کا نقصان کا حصہ نیچے اس کے آخری نتیجے میں ہے۔
+gardens-close-loss-note = باغ کو نقصان ہوا۔ نقصان میں ہر شراکت دار کا حصہ نیچے اس کے خالص نتیجے میں ہے۔
 # review: pending
 gardens-close-credits-title = ہر شراکت دار کی واپس ملنے والی رقم
 # review: pending
@@ -376,7 +376,7 @@ gardens-reopened-toast = { $code } دوبارہ کھل گیا
 gardens-filter-all = تمام باغات
 
 # review: pending
-gardens-filter-failed = باغات کی فہرست نہیں کھل سکی
+gardens-filter-failed = باغات کی فہرست پڑھی نہیں جا سکی
 
 ## The number of a goods arrived entry: its own series (plan 33 version 1.1, PRD FR-12.40).
 
@@ -401,7 +401,7 @@ gardens-saved-arrivals = { -maal-aaya } کے { $count } اندراج محفوظ 
 gardens-arrival-qty = آئے ہوئے { -nag }
 
 # review: pending
-gardens-arrival-qty-hint = پورا عدد۔ آپ جمع بھی لکھ سکتے ہیں، مثلاً 20+25۔
+gardens-arrival-qty-hint = پورا عدد۔ آپ جوڑ بھی لکھ سکتے ہیں، مثلاً 20+25۔
 
 # review: pending
 gardens-arrival-sell-date-hint = شروع میں مال آنے کا دن ہوتا ہے۔ اس دن سے مال ہر نئی { -bikri } میں آتا رہتا ہے جب تک بک نہ جائے۔

@@ -30,7 +30,7 @@ err-amount-too-large = رقم بہت زیادہ ہے۔ زیادہ سے زیاد�
 # A journal entry: one line, or the total of the entry, is over the largest amount allowed.
 # $max: the largest amount in rupees.
 # review: pending
-err-entry-too-large = یہ اندراج بہت بڑا ہے۔ ایک سطر، یا پورے اندراج کا { -meezan }، زیادہ سے زیادہ { $max } روپے ہو سکتا ہے۔
+err-entry-too-large = یہ اندراج بہت بڑا ہے۔ ایک لائن، یا پورے اندراج کا { -meezan }، زیادہ سے زیادہ { $max } روپے ہو سکتا ہے۔
 # PRD E24.
 # review: pending
 err-must-be-more-than-zero = صفر سے بڑا نمبر لکھیں۔
@@ -83,7 +83,7 @@ err-shares-not-100 = تمام { -shirakat-dar } کا کل { -hissa } { $total } 
 
 # PRD FR-17.2, E18, A31. $today: today, DD-MM-YYYY.
 # review: pending
-err-share-backdated = { -hissa } کی نئی تاریخ پرانی نہیں ہو سکتی۔ آج ({ $today }) یا اس کے بعد کی تاریخ لکھیں۔
+err-share-backdated = نیا { -hissa } پچھلی تاریخ سے شروع نہیں ہو سکتا۔ آج ({ $today }) یا اس کے بعد کی تاریخ لکھیں۔
 
 # PRD FR-17.1. A partner with a share cannot be made inactive.
 # review: pending
@@ -131,7 +131,7 @@ err-wrong-password = صارف کا نام یا پاس ورڈ غلط ہے۔ با�
 # review: pending
 err-locked-wait = بہت زیادہ غلط کوششیں ہو گئیں۔ { $seconds } سیکنڈ رک کر دوبارہ کوشش کریں۔
 # review: pending
-err-user-inactive = اس کھاتے سے لاگ ان نہیں ہو سکتا۔ ریکوری کوڈ استعمال کریں۔
+err-user-inactive = اس صارف سے لاگ ان نہیں ہو سکتا۔ ریکوری کوڈ استعمال کریں۔
 # review: pending
 err-already-signed-in = آپ پہلے ہی لاگ ان ہیں۔
 # review: pending
@@ -159,7 +159,7 @@ err-spelling-unconfirmed = ان لفظوں کے ہجے کی تصدیق نہیں 
 # review: pending
 err-code-taken = یہ کوڈ کسی اور کے پاس ہے۔ کوئی دوسرا کوڈ لکھیں۔
 # review: pending
-err-version-changed = آپ کے کھولنے کے بعد یہ اندراج بدل چکا ہے۔ اسے دوبارہ کھولیں۔
+err-version-changed = آپ کے کھولنے کے بعد یہ بدل چکا ہے۔ اسے دوبارہ کھولیں۔
 # review: pending
 err-format-invalid = یہاں لکھی ہوئی بات درست شکل میں نہیں۔ دیکھ کر دوبارہ لکھیں۔
 # review: pending
@@ -220,7 +220,7 @@ err-nothing-to-close = آج تک کے سب دن پہلے ہی بند ہیں، ا
 
 # PRD 11.2, 11.3. The field says which part.
 # review: pending
-err-rule-not-allowed = اصول کی یہ ترتیب درست نہیں۔ چارج اور طریقہ فہرست میں سے چنیں، اور گروپ صرف اسی وقت چنیں جب کوئی کھاتہ یا { -qism-maal } نہ چنا ہو۔ عام شرحیں ترتیبات کے چارجز میں بدلتی ہیں۔
+err-rule-not-allowed = اصول کی یہ ترتیب درست نہیں۔ چارج اور طریقہ فہرست میں سے چنیں، اور گروپ صرف اسی وقت چنیں جب کوئی کھاتہ یا { -qism-maal } نہ چنا ہو۔ عام شرحیں ترتیبات کے چارجز میں بدلی جاتی ہیں۔
 # review: pending
 err-date-range = آخری تاریخ پہلی تاریخ سے پہلے ہے۔ آخری تاریخ پہلی تاریخ کے دن یا اس کے بعد کی لکھیں۔
 
@@ -256,7 +256,7 @@ err-no-sale-lines = کم از کم { -bikri } کی ایک لائن لکھیں۔
 err-weight-required = وزن کلو میں لکھیں۔ یہ مال وزن کے حساب سے بکتا ہے۔
 # PRD FR-6.7. $cash_after is cash in hand after the entry, in rupees.
 # review: pending
-err-cash-below-zero-not-confirmed = اس اندراج کے بعد { -rokar } { $cash_after } ہو جائے گی۔ محفوظ کرنے کے لیے اندراج کی تصدیق کریں۔
+err-cash-below-zero-not-confirmed = اس اندراج کے بعد موجود { -rokar } { $cash_after } ہو جائے گی۔ محفوظ کرنے کے لیے اندراج کی تصدیق کریں۔
 # review: pending
 err-not-a-buyer = یہ { -gahak } کا کھاتہ نہیں۔ کوئی { -gahak } چنیں۔
 # PRD 12.4, 10.2. The buyer's credit is off, or he is the nameless cash buyer.
@@ -312,7 +312,7 @@ err-person-required = { -pukhta-khata } کے لیے اس شخص کا نام یا
 # A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
 # amount is more than it, both in rupees.
 # review: pending
-err-payment-above-payable = یہ رقم { -beopari } کی قابل ادائیگی رقم ({ $payable }) سے { $over } زیادہ ہے۔ آپ پھر بھی محفوظ کر سکتے ہیں۔ زیادہ رقم { -beopari } کے ذمے دکھائی جائے گی، یہ { -peshgi } نہیں ہوگی۔
+err-payment-above-payable = { -beopari } کو جو رقم دینی ہے ({ $payable }) یہ اس سے { $over } زیادہ ہے۔ آپ پھر بھی محفوظ کر سکتے ہیں۔ زیادہ رقم { -beopari } کے ذمے دکھائی جائے گی، یہ { -peshgi } نہیں ہوگی۔
 
 ## بعد کی فروخت، ترمیم، منسوخی اور ضائع مال (پلان 16)۔
 
@@ -327,7 +327,7 @@ err-nothing-to-sell = اس { -lot } میں بیچنے کے لیے کچھ باق�
 
 # $available: { -lot } میں کتنے { -nag } باقی ہیں۔
 # review: pending
-err-write-off-exceeds-balance = باقی مال سے زیادہ ضائع نہیں ہو سکتا۔ صرف { $available } { -nag } باقی ہیں۔
+err-write-off-exceeds-balance = جتنا مال باقی ہے اس سے زیادہ ضائع نہیں کیا جا سکتا۔ صرف { $available } { -nag } باقی ہیں۔
 
 # review: pending
 err-date-before-received = دن مال وصول ہونے کے دن سے پہلے کا نہیں ہو سکتا۔
@@ -363,7 +363,7 @@ err-own-goods-account-restricted = { -apna-maal } صرف { -bikri } کے { -lot 
 
 # PRD FR-12.24. $qty_sold and $qty_written_off: how many { -nag }.
 # review: pending
-err-purchase-has-sales = یہ خریداری منسوخ نہیں ہو سکتی، کیونکہ { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس لیں۔
+err-purchase-has-sales = یہ خریداری منسوخ نہیں ہو سکتی، کیونکہ { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس کریں۔
 
 # review: pending
 err-purchase-cancelled = یہ خریداری منسوخ ہو چکی ہے۔ کوئی اور خریداری چنیں۔
@@ -377,8 +377,8 @@ err-own-lot-freight-in-cost = خریداری کا { -kiraya } اس کی لاگت
 # message chooses by $bikri_number_zero) and $entry the goods-arrived entry.
 # review: pending
 err-entry-charge-already-taken = { $bikri_number_zero ->
-    [yes] یہ خرچہ { -maal-aaya } اندراج { $entry } کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
-   *[no] یہ خرچہ { -bikri } { $bikri_number } ({ -maal-aaya } اندراج { $entry }) کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
+    [yes] یہ چارج { -maal-aaya } اندراج { $entry } کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
+   *[no] یہ چارج { -bikri } { $bikri_number } ({ -maal-aaya } اندراج { $entry }) کی { -lot } { $lot_no } پر پہلے ہی لگ چکا ہے۔ آپ کی لکھی ہوئی رقم برقرار رہے گی۔
 }
 
 # PRD FR-12.31, FR-12.33: a closed trip takes no new purchase or cost.
@@ -399,7 +399,7 @@ err-purchase-before-trip = تاریخ { -market-safar } کی تاریخ ({ $trip
 
 # PRD FR-12.31. $qty_sold and $qty_written_off: how many { -nag } of the purchases it was spread over.
 # review: pending
-err-trip-cost-has-sales = یہ خرچ منسوخ نہیں ہو سکتا، کیونکہ جن خریداریوں پر یہ بانٹا گیا ان کے { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس لیں۔
+err-trip-cost-has-sales = یہ خرچ منسوخ نہیں ہو سکتا، کیونکہ جن خریداریوں پر یہ بانٹا گیا ان کے { $qty_sold } { -nag } بک چکے ہیں اور { $qty_written_off } { -nag } ضائع ہو چکے ہیں۔ پہلے { -bikri } منسوخ کریں یا ضائع واپس کریں۔
 
 # PRD A63: a partner cannot be made inactive while he is in an open trip.
 # review: pending
@@ -581,7 +581,7 @@ err-arrival-lot-not-fully-sold = { -bagh } کے مال کا یہ { -lot } اسی
 
 # PRD FR-12.40. $qty_left: how many { -nag } of garden goods are still left.
 # review: pending
-err-garden-has-stock = اس { -bagh } میں ابھی بغیر بکا مال ہے ({ $qty_left } { -nag })۔ بند کرنے سے پہلے اسے بیچیں یا ضائع لکھیں۔
+err-garden-has-stock = اس { -bagh } میں ابھی ایسا مال ہے جو بکا نہیں ({ $qty_left } { -nag })۔ بند کرنے سے پہلے اسے بیچیں یا ضائع کریں۔
 
 # PRD FR-12.41. $min_other: the most that other shops have sold; $max_other: the { -nag } less what { -apni-dukan } has sold.
 # review: pending
@@ -594,3 +594,27 @@ err-split-above-qty = { -dusri-dukan } کے { -nag } اس اندراج کے کل
 # PRD FR-12.41. $max: the most lines an entry can have.
 # review: pending
 err-too-many-lines = ایک اندراج میں زیادہ سے زیادہ { $max } لائنیں ہو سکتی ہیں۔
+
+# PRD FR-10.10, plan 40. The person owes nothing, so there is nothing to move.
+# review: pending
+err-nothing-owed = اس کے ذمے کچھ نہیں، اس لیے ڈالنے کے لیے کچھ نہیں۔ اگر وہ جا چکا ہے تو صرف کھاتہ غیر فعال کر دیں۔
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-dead-not-allowed = شراکت دار، { -alag-khata }، { -bagh } اور نظام کے کھاتے کو { -doobi-raqam } میں نہیں ڈالا جا سکتا۔
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-already-dead = وہ پہلے ہی { -doobi-raqam } میں ہے۔ اسے فعال کرنے کے لیے «دوبارہ فعال کریں» استعمال کریں۔
+
+# PRD FR-10.10, plan 40. The reason Other needs a note.
+# review: pending
+err-note-required = وجہ دیگر ہو تو نوٹ لکھنا ضروری ہے۔
+
+# PRD FR-10.10, E72, plan 40. A line, a lot or an entry for a person who is in the dead amount.
+# review: pending
+err-person-in-dead-amount = یہ شخص { -doobi-raqam } میں ہے۔ اس کے لیے صرف { -wasooli } یا { -adhar-raqam } کی { -wapsi } لکھی جا سکتی ہے۔
+
+# PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
+# review: pending
+err-date-before-last-posting = تاریخ اس کے آخری اندراج ({ $last_posting_date }) سے پہلے کی نہیں ہو سکتی۔

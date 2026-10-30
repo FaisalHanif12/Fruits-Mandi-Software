@@ -388,11 +388,27 @@ pub enum ErrorCode {
     /// `.phone`. Values: `lot_no` (that earlier lot), `bikri_number` (its بکری, 0 when it is in
     /// this same بکری) and `entry` (the number of the goods-arrived entry).
     ErrEntryChargeAlreadyTaken,
+    /// The person owes the shop nothing, so he cannot be moved to the dead amount; an account
+    /// is simply made inactive (PRD FR-10.10). Field `account_id`.
+    ErrNothingOwed,
+    /// This kind of account is never moved to the dead amount: a partner, a الگ کھاتہ, a garden or
+    /// a system account (PRD FR-10.10). Field `account_id`.
+    ErrDeadNotAllowed,
+    /// The person is in the dead amount already (PRD FR-10.10). Field `account_id`.
+    ErrAlreadyDead,
+    /// A note is needed (the reason دیگر of a move to the dead amount, PRD FR-10.10). Field `note`.
+    ErrNoteRequired,
+    /// A new line or lot names a پختہ کھاتہ person who is in the dead amount (PRD FR-10.10, D1 of
+    /// plan 40). Field `person_key` or `pukhta_person_key`. The account itself stays active.
+    ErrPersonInDeadAmount,
+    /// The move to the dead amount is dated before the person's last posting (PRD FR-10.10, plan 40
+    /// D6). Field `entry_date`. Value `last_posting_date` (`YYYY-MM-DD`).
+    ErrDateBeforeLastPosting,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 139] = [
+    pub const ALL: [ErrorCode; 145] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -532,6 +548,12 @@ impl ErrorCode {
         ErrorCode::ErrSplitBelowSold,
         ErrorCode::ErrTooManyLines,
         ErrorCode::ErrEntryChargeAlreadyTaken,
+        ErrorCode::ErrNothingOwed,
+        ErrorCode::ErrDeadNotAllowed,
+        ErrorCode::ErrAlreadyDead,
+        ErrorCode::ErrNoteRequired,
+        ErrorCode::ErrPersonInDeadAmount,
+        ErrorCode::ErrDateBeforeLastPosting,
     ];
 }
 

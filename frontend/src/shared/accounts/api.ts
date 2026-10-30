@@ -164,6 +164,8 @@ export async function searchAccounts(input: {
   text: string;
   offset?: number;
   limit: number;
+  /** A person in the dead amount may be offered (PRD FR-10.10): the receipt and ادھار رقم واپسی fields only. */
+  includeDead?: boolean;
 }): Promise<AccountHit[]> {
   const hits = await callCommand<AccountHitBinding[]>('search_accounts', {
     input: {
@@ -172,6 +174,8 @@ export async function searchAccounts(input: {
       text: input.text,
       offset: input.offset ?? 0,
       limit: input.limit,
+      // Sent only when it is true: a missing key is "no dead people" (plan 40).
+      ...(input.includeDead === true ? { include_dead: true } : {}),
     },
   });
   return withBalances(hits);
@@ -184,9 +188,10 @@ export async function searchAccounts(input: {
 export async function searchAccountsRecent(
   scope: AccountScope,
   controlId: number | null,
+  includeDead = false,
 ): Promise<AccountHit[]> {
   const hits = await callCommand<AccountHitBinding[]>('search_accounts_recent', {
-    input: { scope, control_id: controlId },
+    input: { scope, control_id: controlId, ...(includeDead ? { include_dead: true } : {}) },
   });
   return withBalances(hits);
 }

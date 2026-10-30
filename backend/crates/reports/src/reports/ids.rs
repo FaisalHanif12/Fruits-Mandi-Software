@@ -192,6 +192,9 @@ pub(crate) const R34_GARDENS_PAID: &str = "report-r34-gardens-paid";
 pub(crate) const R34_GARDENS_IN: &str = "report-r34-gardens-in";
 pub(crate) const R34_PARTNER_SHARES: &str = "report-r34-partner-shares";
 pub(crate) const R34_BUYERS_DUES: &str = "report-r34-buyers-dues";
+pub(crate) const R34_SELLERS_DUES: &str = "report-r34-sellers-dues";
+pub(crate) const R34_DEAD_AMOUNT: &str = "report-r34-dead-amount";
+pub(crate) const R34_TOTAL_DUES: &str = "report-r34-total-dues";
 pub(crate) const R34_OPEN_LOTS: &str = "report-r34-open-lots";
 pub(crate) const R34_OPEN_QTY: &str = "report-r34-open-qty";
 pub(crate) const SECTION_SHOP_EXPENSES: &str = "report-section-shop-expenses";
@@ -261,6 +264,10 @@ pub(crate) const FILTER_BALANCE_ONLY: &str = "report-filter-balance-only";
 
 /// The ID of the title of a report: `report-r11-title`.
 pub(crate) fn title_id(code: &str) -> String {
+    // R38 is the dead amount; its title is the one of its own screen (`dead.ftl`, plan 40).
+    if code == "R38" {
+        return "dead-report-title".to_owned();
+    }
     format!("report-{}-title", code.to_ascii_lowercase())
 }
 
@@ -309,6 +316,32 @@ pub(crate) fn doc_id(posting_type: &str) -> String {
 pub fn posting_types() -> &'static [&'static str] {
     POSTING_TYPES
 }
+
+pub(crate) const R35_TOTAL_WITH_DEAD: &str = "report-r35-total-with-dead";
+// Column headings and labels of R38, the dead amount (plan 40, PRD FR-10.10). The words are the
+// ones of `dead.ftl`, which the screen of the dead amount uses too.
+pub(crate) const COL_DEAD_PARTY: &str = "dead-col-party";
+pub(crate) const COL_DEAD_TYPE: &str = "dead-col-type";
+pub(crate) const COL_DEAD_REASON: &str = "dead-col-reason";
+pub(crate) const COL_DEAD_NOTE: &str = "dead-col-note";
+pub(crate) const COL_DEAD_DATE: &str = "dead-col-date";
+pub(crate) const COL_OWED_THEN: &str = "dead-col-owed-then";
+pub(crate) const COL_RECOVERED: &str = "dead-col-recovered";
+pub(crate) const COL_CORRECTIONS: &str = "dead-col-corrections";
+pub(crate) const COL_STILL_OWED: &str = "dead-col-still-owed";
+pub(crate) const COL_LAST_RECOVERY: &str = "dead-col-last-recovery";
+pub(crate) const COL_DEAD_STATUS: &str = "dead-col-status";
+pub(crate) const R38_TYPE_BUYER: &str = "dead-type-buyer";
+pub(crate) const R38_TYPE_SELLER: &str = "dead-type-seller";
+pub(crate) const R38_TYPE_PUKHTA: &str = "dead-type-pukhta";
+pub(crate) const R38_TYPE_MONEY_LENT: &str = "dead-type-money_lent";
+pub(crate) const R38_REASON_DIED: &str = "dead-reason-died";
+pub(crate) const R38_REASON_LEFT: &str = "dead-reason-left";
+pub(crate) const R38_REASON_OTHER: &str = "dead-reason-other";
+pub(crate) const R38_STATUS_OWING: &str = "dead-status-owing";
+pub(crate) const R38_STATUS_RECOVERED: &str = "dead-status-recovered";
+pub(crate) const R38_STATUS_UNDONE: &str = "dead-status-undone";
+pub(crate) const R38_STATUS_CREDIT: &str = "dead-status-credit";
 
 #[cfg(test)]
 mod tests {

@@ -59,6 +59,11 @@ interface AccountPickerProps extends FieldControlProps {
   initialText?: string | undefined;
   startOpen?: boolean | undefined;
   onEnterPicked?: (() => void) | undefined;
+  /**
+   * A person in the dead amount may be offered and picked (PRD FR-10.10): only the receipt field and
+   * the ادھار رقم واپسی field say yes. He shows with the tag "ڈوبی".
+   */
+  includeDead?: boolean | undefined;
 }
 
 /** What the screen says about a code that did not give one account. */
@@ -84,6 +89,7 @@ function hitOfRow(row: AccountRow): AccountHit {
       .filter((part) => part !== '')
       .join(', '),
     is_active: row.is_active,
+    is_dead: false,
     balance: row.balance,
   };
 }
@@ -119,10 +125,14 @@ export function AccountPicker({
   onCardAccount,
   onEnterPicked,
   canAdd = true,
+  includeDead = false,
   ...field
 }: AccountPickerProps) {
   const language = useLanguage();
-  const source = useMemo(() => accountSource(scope, controlId ?? null), [scope, controlId]);
+  const source = useMemo(
+    () => accountSource(scope, controlId ?? null, includeDead),
+    [scope, controlId, includeDead],
+  );
   const [note, setNote] = useState<CodeNote | null>(null);
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
@@ -142,7 +152,11 @@ export function AccountPicker({
       .then((result) => {
         const byEnter = enterPending.current;
         enterPending.current = false;
-        if (result.status === 'found' && result.account !== null) {
+        // A person in the dead amount comes back as "inactive" with his account; only the fields that
+        // take him (the receipt, the ادھار رقم واپسی) pick him by his code (PRD FR-10.10).
+        const deadPick =
+          includeDead && result.status === 'inactive' && result.account?.is_dead === true;
+        if ((result.status === 'found' || deadPick) && result.account !== null) {
           setNote(null);
           onChange(result.account);
           if (byEnter) onEnterPicked?.();

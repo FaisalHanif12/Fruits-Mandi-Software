@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.8 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026 and 27-10-2026, and his answers of 15-10-2026) |
-| Date | 27 October 2026 |
+| Version | 1.9 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, and his answers of 15-10-2026) |
+| Date | 30 October 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.9 (the master), NFR v1.6, Tech Stack v1.7, Code Standards v1.10 |
+| Derived from | PRD v1.10 (the master), NFR v1.6, Tech Stack v1.7, Code Standards v1.11 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -308,6 +308,7 @@ flowchart LR
     SAVE_CAP --> JRN & AUD
     SAVE_GEN --> JRN & SPLIT & MATCH & AUD
     SAVE_ACC(["Save or edit an account"]) --> JRN & AUD & SIDX[("Search index - after commit")]
+    SAVE_DEAD(["Move to dead amount or make active"]) --> AUD & DASHV
     DAYC --> DAYS & BACKUP & AUD
 
     JRN & SPLIT & STOCK & FACTS & MATCH --> DASHV
@@ -717,6 +718,7 @@ erDiagram
 | `expense_heads` | `code`, `name_ur`, `name_en`, + search columns, `account_id`, `is_active` |
 | `staff` | `code` (unique; type number 006 + running number, PRD 10.2, v1.8), `name_ur`, `name_en`, + search columns, `role` (munshi, collector, labour; the job, not a login role), `phone`, `account_id` (null; his ادھار رقم account under control 0103, made the first time he is lent money), `is_active` |
 | `bank_accounts` | `bank_name`, `title`, `number` (all as typed, one script), `account_id`, `is_active`. Kept from migration 0001; not used from v1.6 (PRD FR-10.4: all money is روکڑ). |
+| `dead_marks` | A person moved to the dead amount (PRD FR-10.10, v1.10). `account_id`, `pukhta_person_key` (null; a پختہ کھاتہ person), `entry_date`, `reason` (died, left, other), `note`, `owed_paisa` (what he owed on that date, shown only), `is_active` (0 when undone), `undone_at`, `undone_by`, `undo_reason`, `after_entry_id` (the last posted entry when he was moved; later entries count as recoveries or corrections), `undone_after_entry_id` and `undone_date` (freeze the figures of an undone move). Nothing posts: what he still owes is his balance, read from `journal_lines`. At most one active mark per account or person key. |
 
 ### 15.5 Rules and partners
 
@@ -779,6 +781,7 @@ erDiagram
 | `staff` | unique (`code`) (`idx_staff_code`, migration 0007) |
 | `user_prefs` | unique (`user_id`, `key`) |
 | `translit_pairs` | unique (`roman`, `urdu`) |
+| `dead_marks` | unique (`account_id`, `COALESCE(pukhta_person_key, '')`) where `is_active = 1` (SQLite treats two NULLs as different, so the plain pair would allow two active marks on one account) |
 | `charge_rules` | (`side`, `charge_type`, `account_id`, `item_id`, `item_group`, `from_date`) |
 
 ---
@@ -947,3 +950,4 @@ Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter;
 | 1.6 | 19-10-2026 | PRD v1.6, approved by Umar: gardens and market trips (diagrams 4, 5, 6, 9 and 15.1; tables `ventures`, `venture_partners`, `venture_entries`, `venture_entry_parts`; `partners.venture_account_id`; party type garden; `purchases` belongs to a trip, with no supplier account, credit or bank; `analytics_facts.venture_id`; posting types trip_cost, garden_payment, venture_receipt, garden_close, fruit_taken, own_write_off no longer used). Fruit taken (`fruit_takes`, `bikri_lots.qty_taken`, stock move kind taken). One cash account: `bank_accounts`, voucher bank and cheque columns kept but not used. The unreleased migration 0006 of plan 16b carries every v1.6 table, column, posting type and seeded account, for trips, gardens and fruit alike, so later plans need no new migration. |
 | 1.7 | 22-10-2026 | PRD v1.7, approved by Umar: `accounts.tag` (15.4), added by the same unreleased migration 0006; the settings keys `firm_contacts` and `trade_mark` (15.3). No posting type changed. |
 | 1.8 | 27-10-2026 | PRD v1.8, approved by Umar: codes by type (`accounts.code` for sellers, buyers and پختہ کھاتہ, and the codes of items, packings and staff, are the type number + `serial` from 0 with no padding; a new numbered migration renumbers existing rows); diagrams 5 and 20. |
+| 1.9 | 30-10-2026 | PRD v1.10, approved by Umar: table `dead_marks` for the dead amount (15.4, 15.8, diagram 6), in a new numbered migration. No posting type changed. |

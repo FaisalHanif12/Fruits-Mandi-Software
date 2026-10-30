@@ -347,6 +347,18 @@ pub fn save(
             "is_active",
         ));
     }
+    // A person in the dead amount is made active again only by "دوبارہ فعال کریں" with a reason
+    // (PRD FR-10.10), never by the box on this form.
+    if input.is_active
+        && stored.as_ref().is_some_and(|facts| !facts.is_active)
+        && let Some(id) = input.id
+        && ctx.db.read(|conn| crate::dead::is_dead(conn, id, None))?
+    {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrAlreadyDead,
+            "is_active",
+        ));
+    }
     let in_force = stored.as_ref().map(current_opening).transpose()?;
     let prepared = prepare_account(input, closed, today, in_force.as_ref())?;
     let checks = spelling_checks(ctx, &prepared)?;
@@ -547,6 +559,11 @@ pub fn set_active(
         }
         if old.is_active == is_active {
             return Ok::<_, ServiceError>(false);
+        }
+        // A person in the dead amount is made active again only by "دوبارہ فعال کریں" (PRD
+        // FR-10.10).
+        if is_active && crate::dead::is_dead(tx, id, None)? {
+            return Err(ServiceError::reject_field(ErrorCode::ErrAlreadyDead, "id"));
         }
         repo::set_active(tx, id, is_active, actor.user_id, &ctx.now_text())?;
         ctx.db.auditor().write(

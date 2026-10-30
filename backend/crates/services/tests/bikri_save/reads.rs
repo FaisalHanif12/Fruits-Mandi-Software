@@ -331,6 +331,7 @@ fn people(w: &World, text: &str, side: PukhtaSide) -> Vec<String> {
         &PukhtaPeopleInput {
             text: text.into(),
             side,
+            include_dead: None,
         },
     )
     .unwrap()
@@ -389,6 +390,7 @@ fn the_known_one_time_people_are_listed_newest_first_and_found_by_either_name_or
         &PukhtaPeopleInput {
             text: "nasir".into(),
             side: PukhtaSide::Buyer,
+            include_dead: None,
         },
     )
     .unwrap()[0];

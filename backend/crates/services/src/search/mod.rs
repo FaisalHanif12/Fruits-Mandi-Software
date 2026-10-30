@@ -24,7 +24,7 @@ use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
 use serde_json::{Value, json};
 
-pub use index::{Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, Usage, short_running};
+pub use index::{AccountPage, Index, MAX_FULL_LIST, MAX_HITS, RECENT_KEPT, Usage, short_running};
 
 use crate::auth::Actor;
 use crate::context::Context;
@@ -329,7 +329,12 @@ pub fn recent_accounts(
         actor,
         &account_usage_key(input.scope, input.control_id),
     )?;
-    Ok(index.recent_accounts(input.scope, input.control_id, &usage))
+    Ok(index.recent_accounts(
+        input.scope,
+        input.control_id,
+        &usage,
+        input.include_dead.unwrap_or(false),
+    ))
 }
 
 /// Records that an account was chosen in a field, so it comes first next time (PRD FR-7.41).
@@ -392,8 +397,11 @@ pub fn search_accounts(
         input.scope,
         input.control_id,
         &input.text,
-        offset,
-        limit,
+        AccountPage {
+            offset,
+            limit,
+            include_dead: input.include_dead.unwrap_or(false),
+        },
         &usage,
     ))
 }
@@ -654,6 +662,7 @@ pub fn global(
             text: input.text.clone(),
             limit: u32::try_from(account_limit).unwrap_or(input.limit),
             offset: 0,
+            include_dead: None,
         },
     )?;
     let mut out: Vec<GlobalHit> = hits

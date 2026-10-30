@@ -80,9 +80,20 @@ pub(super) fn table(
     spec: PageSpec,
     day: &str,
 ) -> Result<ReportPage, ReportsError> {
+    // People in the dead amount on this day (PRD FR-10.10, plan 40 D8): a row only on a day he has
+    // an entry, marked ڈوبی; it is left out of the totals of its section, and a second total row
+    // adds it back.
+    let marks = mandi_db::dead::marks_on(conn, Some(day))?;
+    let dead_of = |account: i64, key: Option<&str>| {
+        marks
+            .iter()
+            .find(|m| m.account_id == account && m.person_key.as_deref() == key)
+    };
     let mut items = Vec::new();
     for item in activities(conn, day, None, None)? {
-        if item.worth_a_row()? {
+        let is_dead = dead_of(item.account_id, item.person_key.as_deref()).is_some();
+        let has_entry = item.day_dr > Paisa::ZERO || item.day_cr > Paisa::ZERO;
+        if item.worth_a_row()? && (!is_dead || has_entry) {
             items.push(item);
         }
     }
@@ -126,16 +137,26 @@ pub(super) fn table(
             continue;
         }
         let mut sums = Sums::default();
+        let mut with_dead = Sums::default();
+        let mut any_dead = false;
         let mut section_rows = Vec::with_capacity(section.len());
         for item in &section {
-            sums.add(item)?;
-            if buyers && item.end_net()? > Paisa::ZERO {
-                add(&mut collection, item.end_net()?)?;
+            let mark = dead_of(item.account_id, item.person_key.as_deref());
+            with_dead.add(item)?;
+            if mark.is_none() {
+                sums.add(item)?;
+                if buyers && item.end_net()? > Paisa::ZERO {
+                    add(&mut collection, item.end_net()?)?;
+                }
+            } else {
+                any_dead = true;
             }
-            let party = parties
+            let mut party = parties
                 .get(&(item.account_id, item.person_key.clone()))
-                .ok_or_else(|| ReportsError::Data("a party of the sheet is missing".to_owned()))?;
-            section_rows.push(party_row(item, party)?);
+                .ok_or_else(|| ReportsError::Data("a party of the sheet is missing".to_owned()))?
+                .clone();
+            party.dead = mark.map(|m| m.info());
+            section_rows.push(party_row(item, &party)?);
         }
         // The buyers' total stays in the heading row of their section and in the collection
         // line; the sellers' total in its summary lines. The two are never added together
@@ -151,6 +172,16 @@ pub(super) fn table(
             kind: RowKind::Group,
         });
         rows.extend(section_rows);
+        // The second total row: with the people in the dead amount (PRD FR-10.10).
+        if any_dead {
+            rows.push(Row {
+                cells: with_dead.cells(Cell::Label {
+                    id: ids::R35_TOTAL_WITH_DEAD.to_owned(),
+                })?,
+                source: None,
+                kind: RowKind::Group,
+            });
+        }
     }
 
     let mut summary = vec![line(ids::R35_COLLECTION, Cell::Money { paisa: collection })];

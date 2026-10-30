@@ -7,7 +7,7 @@
 cashbook-title = { -rokar }
 
 # review: pending
-cashbook-help = دکان کا سارا نقد ایک جگہ: ایپ کے ہر حصے سے آنے اور جانے والی ہر رقم، اور ہر ایک کے بعد ہاتھ میں موجود نقد۔
+cashbook-help = دکان کا سارا نقد ایک جگہ: ایپ کے ہر حصے سے آنے اور جانے والی ہر رقم، اور ہر ایک کے بعد موجود روکڑ۔
 
 # review: pending
 cashbook-new-expense = نیا { -dukan-kharcha }
@@ -19,10 +19,10 @@ cashbook-filter-from = از
 cashbook-filter-to = تا
 
 # review: pending
-cashbook-opening = شروع میں نقد
+cashbook-opening = شروع میں روکڑ
 
 # review: pending
-cashbook-closing = آخر میں نقد
+cashbook-closing = آخر میں روکڑ
 
 # review: pending
 cashbook-list-label = { -rokar }
@@ -54,10 +54,10 @@ cashbook-col-narration = تفصیل
 cashbook-col-in = آمد
 
 # review: pending
-cashbook-col-out = رخصت
+cashbook-col-out = نکاسی
 
 # review: pending
-cashbook-col-running = بعد میں نقد
+cashbook-col-running = بعد میں روکڑ
 
 # review: pending
 cashbook-col-number = نمبر
@@ -90,7 +90,7 @@ cashbook-col-returned = واپس
 cashbook-col-open = باقی
 
 # review: pending
-cashbook-col-days-past = دن گزرے
+cashbook-col-days-past = تاخیر کے دن
 
 # review: pending
 cashbook-col-lent = دی گئی
@@ -111,7 +111,7 @@ cashbook-kind-number = { $kind } { $number }
 cashbook-kind-bikri-first = { -bikri }
 
 # review: pending
-cashbook-kind-bikri-later = بعد کی بکری
+cashbook-kind-bikri-later = بعد کی فروخت
 
 # review: pending
 cashbook-kind-reversal = الٹا اندراج
@@ -174,7 +174,7 @@ cashbook-kind-fruit-taken = پھل
 cashbook-kind-general = { -general }
 
 # review: pending
-cashbook-kind-opening = ابتدائی بیلنس
+cashbook-kind-opening = ابتدائی بقایا
 
 # review: pending
 cashbook-kind-month-close = مہینہ بند
@@ -395,7 +395,7 @@ cashbook-takes-pick = شراکت دار چنیں
 cashbook-takes-pick-help = اس کی لی ہوئی اور واپس کی ہوئی رقم یہاں نظر آئے گی۔
 
 # review: pending
-cashbook-take-opening = ابتدائی بیلنس
+cashbook-take-opening = ابتدائی بقایا
 
 ## The { -adhar-raqam } screen (PRD 16.5, FR-16.4, FR-16.5).
 
@@ -483,7 +483,7 @@ cashbook-khata-opening = شروع میں بقایا
 cashbook-khata-closing = اب بقایا
 
 # review: pending
-cashbook-khata-sign-hint = مثبت: دکان کے پاس اس کھاتے کی رقم ہے۔ منفی: اس نے لایا کم اور لیا زیادہ۔ اندراج کے بعد کے بقایا میں { -jama } مثبت ہے اور { -banaam } منفی۔
+cashbook-khata-sign-hint = مثبت: دکان کے پاس اس کھاتے کی رقم ہے۔ منفی: اس کھاتے نے لائی ہوئی رقم سے زیادہ رقم لی ہے۔ اندراج کے بعد کے بقایا میں { -jama } مثبت ہے اور { -banaam } منفی۔
 
 # review: pending
 cashbook-khata-empty = اس کھاتے میں کوئی اندراج نہیں
@@ -620,4 +620,4 @@ cashbook-show-returned = واپس شدہ بھی دکھائیں
 
 # Shown above the list when it is sorted by anything but the day: the cash after a line needs the order of days.
 # review: pending
-cashbook-running-date-only = ہر اندراج کے بعد کی نقد صرف تاریخ کی ترتیب میں نظر آتی ہے۔
+cashbook-running-date-only = ہر اندراج کے بعد کی روکڑ صرف تاریخ کی ترتیب میں نظر آتی ہے۔

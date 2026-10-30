@@ -113,6 +113,7 @@ pub(crate) fn load_parties(
             let short_code = mandi_core::accounts::short_code_of(&code);
             Ok(PartyRef {
                 phone: None,
+                dead: None,
                 account_id: r.get(0)?,
                 code,
                 short_code,

@@ -145,7 +145,7 @@ print-page-of = از
 print-cancelled-stamp = منسوخ
 
 # review: pending
-print-preview-empty = اس دستاویز میں چھاپنے کے لیے کچھ نہیں۔
+print-preview-empty = اس دستاویز میں پرنٹ کرنے کے لیے کچھ نہیں۔
 
 ## The documents of a بکری (the names in the print box and in the Printing settings)
 
@@ -217,7 +217,7 @@ print-box-done-printed = پرنٹر کو بھیج دیا گیا: { $docs }
 print-box-done-pdf = PDF فائلیں محفوظ ہو گئیں:
 
 # review: pending
-print-box-nothing-printed = چھاپنے کے لیے کچھ نہیں تھا۔
+print-box-nothing-printed = پرنٹ کرنے کے لیے کچھ نہیں تھا۔
 
 # review: pending
 print-save-first = پرنٹ کرنے کے لیے پہلے { -bikri } محفوظ کریں۔
@@ -232,7 +232,7 @@ print-toast-printed = پرنٹر کو بھیج دیا گیا
 print-preview-title = پیش منظر
 
 # review: pending
-print-preview-help = کاغذ پر دستاویز ایسے ہی چھپے گی۔
+print-preview-help = کاغذ پر دستاویز ایسے ہی پرنٹ ہو گی۔
 
 # review: pending
 print-preview-failed = پیش منظر نہیں کھل سکا
@@ -394,7 +394,7 @@ print-collection-col-party = پارٹی
 
 
 # review: pending
-print-collection-col-dues = بقایا
+print-collection-col-dues = ذمے
 
 # The date of the oldest bill still open, and how many days old it is.
 # review: pending

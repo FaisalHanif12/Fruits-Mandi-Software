@@ -1,0 +1,32 @@
+{
+  "rows": [
+    {
+      "mark_id": 1,
+      "account_id": 21,
+      "code": "0021",
+      "name_ur": "ارشد ملتانی",
+      "name_en": "Arshad Multani",
+      "tag": null,
+      "party_type": "buyer",
+      "pukhta_person_key": null,
+      "pukhta_name_ur": null,
+      "pukhta_name_en": null,
+      "reason": "died",
+      "note": "فوت ہو گئے",
+      "entry_date": "2026-10-11",
+      "owed_then_paisa": 1868400,
+      "recovered_paisa": 400000,
+      "corrections_paisa": 0,
+      "still_owed_paisa": 1468400,
+      "last_recovery_date": "2026-10-12",
+      "status": "owing"
+    }
+  ],
+  "row_count": 1,
+  "totals": {
+    "owed_then_paisa": 1868400,
+    "recovered_paisa": 400000,
+    "corrections_paisa": 0,
+    "still_owed_paisa": 1468400
+  }
+}

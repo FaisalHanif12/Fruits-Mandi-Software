@@ -67,7 +67,15 @@ export interface PickerHit extends Named {
   extra_ur: string;
   extra_en: string;
   is_active: boolean;
+  /**
+   * A person in the dead amount (PRD FR-10.10). He is inactive but the receipt picker and the
+   * ادھار رقم واپسی picker still offer him, marked "ڈوبی". Only an account hit has it.
+   */
+  is_dead?: boolean | undefined;
 }
+
+/** A row the picker may offer: an active record, or a person in the dead amount. */
+const isOffered = (hit: PickerHit) => hit.is_active || hit.is_dead === true;
 
 export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps {
   /** Where the records come from (a master list, the accounts). */
@@ -181,7 +189,7 @@ export function PickerBase<H extends PickerHit>({
     loadMore,
   } = usePickerHits(source, typed ?? '', open && readOnly !== true);
   const fetchHits = useFetchHits(source);
-  const hits = useMemo(() => rows.filter((hit) => hit.is_active), [rows]);
+  const hits = useMemo(() => rows.filter(isOffered), [rows]);
   const boxRef = useRef<HTMLDivElement | null>(null);
   // True while the Index form of the "add" button is open above the screen. The field loses focus
   // to it, and that must not drop what was typed or send it as a code (plan 32, R8).
@@ -337,7 +345,7 @@ export function PickerBase<H extends PickerHit>({
         void fetchHits(text)
           .then((answer) => {
             if ((readTyped() ?? '').trim() !== text) return;
-            const best = answer.find((candidate) => candidate.is_active);
+            const best = answer.find(isOffered);
             if (best === undefined) {
               closeList();
               onEnterNoMatch?.(text);
@@ -495,7 +503,14 @@ export function PickerBase<H extends PickerHit>({
                   >
                     <span className="flex items-baseline justify-between gap-3">
                       <span className="type-field truncate">{displayName(hit, language)}</span>
-                      <Code>{hit.code}</Code>
+                      <span className="flex shrink-0 items-baseline gap-2">
+                        {hit.is_dead === true ? (
+                          <Localized id="dead-tag">
+                            <span className="type-chip rounded-1 bg-warn-soft px-2 text-warn" />
+                          </Localized>
+                        ) : null}
+                        <Code>{hit.code}</Code>
+                      </span>
                     </span>
                     <span className="flex items-baseline gap-2 truncate type-body text-ink-muted">
                       <span lang={otherScriptLang(language)} dir="auto" className="truncate">

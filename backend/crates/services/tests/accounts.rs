@@ -254,6 +254,7 @@ fn ashiq_k_finds_the_tagged_account_in_both_scripts_and_the_hit_carries_the_tag(
             &env.ctx,
             &owner,
             &SearchAccountsInput {
+                include_dead: None,
                 scope: AccountScope::Any,
                 control_id: None,
                 text: text.into(),
@@ -362,6 +363,7 @@ fn an_edit_changes_the_tag_and_the_keys_and_the_search_follows() {
             &env.ctx,
             &owner,
             &SearchAccountsInput {
+                include_dead: None,
                 scope: AccountScope::Buyer,
                 control_id: None,
                 text: text.into(),

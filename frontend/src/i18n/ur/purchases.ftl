@@ -30,7 +30,7 @@ purchases-supplier-hint = جیسا آپ لکھنا چاہیں۔ اسے کچھ د
 purchases-field-qty = خریدے ہوئے { -nag }
 
 # review: pending
-purchases-qty-hint = آپ جمع بھی لکھ سکتے ہیں، مثلاً 20+25۔
+purchases-qty-hint = آپ جوڑ بھی لکھ سکتے ہیں، مثلاً 20+25۔
 
 # review: pending
 purchases-field-weight = وزن (کلو)
@@ -146,7 +146,7 @@ purchases-detail-parts-title = ہر شراکت دار نے کیا دیا
 purchases-result-title = اس خریداری کا منافع یا نقصان
 
 # review: pending
-purchases-detail-sales = ہماری دکان میں فروخت کی رقم
+purchases-detail-sales = { -apni-dukan } میں فروخت کی رقم
 
 # review: pending
 purchases-detail-other-shop = دوسری دکانوں سے ملی رقم
@@ -331,7 +331,7 @@ purchases-entry-line-incomplete = ابھی مکمل نہیں
 purchases-entry-no-lines = کوئی لائن بھریں تو اس کی لاگت یہاں نظر آئے گی۔
 
 # review: pending
-purchases-entry-total = پورے اندراج کی ادا شدہ رقم
+purchases-entry-total = پورے اندراج کی ابھی ادا شدہ رقم
 
 ## Changing the split between { -apni-dukan } and { -dusri-dukan } (used by a trip purchase and by a garden's goods arrived entry).
 

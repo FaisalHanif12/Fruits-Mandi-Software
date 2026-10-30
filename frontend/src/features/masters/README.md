@@ -52,3 +52,9 @@ The Index form from a picker (plan 32, R8): the "add a new …" button of an emp
 the Esc order. The screen under it is never closed, so an entry in progress keeps every value.
 `app/AddRecordHost` gives the dialog to the pickers (`shared/ui/add-record.ts`); the pickers inside
 the dialog get none, so there is no second Index form on top of the first.
+
+The dead amount (plan 40, PRD FR-10.10): `components/DeadMarkDialog` ("ڈوبی رقم میں ڈالیں": the backend's
+preview, the date, the reason, a note) and `components/DeadUndoDialog` ("دوبارہ فعال کریں", a reason) with
+`deadPreview`, `deadMark` and `deadUndo` in `api.ts`. They are opened by `app/DeadAmountHost` through
+`shared/ui/dead-amount.ts` from the party card, this form and the dues reports; the form shows the
+move and swaps "make active" for "make active again" for a person who is in the dead amount.

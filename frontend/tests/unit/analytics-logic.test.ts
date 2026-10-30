@@ -314,6 +314,7 @@ const context: ListContext = {
   language: 'en',
   text: (id) => `<${id}>`,
   money: (amount) => formatPaisa(amount, { grouping: 'international' }),
+  signedMoney: (value) => String(value / 100),
 };
 
 describe('the headings of the columns of D and E', () => {

@@ -16,7 +16,7 @@ reports-catalog-failed = رپورٹوں کی فہرست نہیں کھل سکی
 reports-catalog-empty = ابھی کوئی رپورٹ تیار نہیں
 
 # review: pending
-reports-catalog-empty-help = رپورٹیں اگلے ورژن میں آئیں گی۔ اس وقت آپ کا کوئی ڈیٹا ضائع نہیں ہوتا۔
+reports-catalog-empty-help = رپورٹیں اگلے ورژن میں آئیں گی۔ اس سے آپ کا کوئی ڈیٹا متاثر نہیں ہوتا۔
 
 # review: pending
 reports-group-label = رپورٹ کا گروپ: { $group }
@@ -44,13 +44,13 @@ report-group-business = کاروبار
 report-r11-title = { -roznamcha }
 
 # review: pending
-report-r11-help = چنے ہوئے دنوں کی ہر اندراج، { -banaam } اور { -jama } کے ساتھ۔
+report-r11-help = چنے ہوئے دنوں کا ہر اندراج، { -banaam } اور { -jama } کے ساتھ۔
 
 # review: pending
 report-r13-title = { -khata }
 
 # review: pending
-report-r13-help = ایک کھاتے کی ہر اندراج، سامان کی تفصیل اور چلتے بقایا کے ساتھ۔
+report-r13-help = ایک کھاتے کا ہر اندراج، مال کی تفصیل اور چلتے بقایا کے ساتھ۔
 
 # review: pending
 report-r14-title = { -fard-hisab }
@@ -94,7 +94,7 @@ report-load-failed = رپورٹ نہیں کھل سکی
 report-grid-label = رپورٹ کی جدول
 
 # review: pending
-report-empty = ان تاریخوں میں کوئی اندراج نہیں
+report-empty = ان فلٹروں میں کوئی اندراج نہیں
 
 # review: pending
 report-empty-help = تاریخیں یا کھاتہ بدل کر دیکھیں۔
@@ -254,7 +254,7 @@ report-col-credit = { -jama }
 report-col-balance = بقایا
 
 # review: pending
-report-col-detail = سامان
+report-col-detail = مال
 
 # review: pending
 report-col-city = شہر
@@ -436,7 +436,7 @@ report-r9-title = { -pukhta-khata } رپورٹ
 report-r9-help = { -pukhta-khata } کے ایک بار آنے والے لوگوں کی ہر لائن، ادا اور باقی کے ساتھ۔
 
 # review: pending
-report-r20-title = { -agrahi } رپورٹ
+report-r20-title = گاہکوں کے ذمے
 
 # review: pending
 report-r20-help = ہر { -gahak } کا بقایا اور اس کے کھلے بلوں کی عمر۔ { -meezan } دکان کی کل { -agrahi } ہے۔
@@ -445,19 +445,19 @@ report-r20-help = ہر { -gahak } کا بقایا اور اس کے کھلے بل
 report-r21-title = { -agrahi } بحساب شہر
 
 # review: pending
-report-r21-help = یہی بقایا، شہر کے حساب سے، ہر شہر کے { -meezan } کے ساتھ۔
+report-r21-help = گاہکوں کے ذمے یہی رقم، شہر کے حساب سے، ہر شہر کے { -meezan } کے ساتھ۔
 
 # review: pending
 report-r22-title = { -agrahi } بحساب اگراہی والا
 
 # review: pending
-report-r22-help = یہی بقایا، اگراہی والے کے حساب سے، ہر ایک کے { -meezan } کے ساتھ۔
+report-r22-help = گاہکوں کے ذمے یہی رقم، اگراہی والے کے حساب سے، ہر ایک کے { -meezan } کے ساتھ۔
 
 # review: pending
-report-r24-title = { -adaigi } باقی
+report-r24-title = بیوپاریوں کو { -adaigi } باقی
 
 # review: pending
-report-r24-help = دکان کے ذمے ہر { -beopari } کا بقایا، اس کی کھلی { -peshgi } اور جو وہ اس سے زیادہ دکان کا دینا ہے۔
+report-r24-help = ہر { -beopari } کو دکان کی کتنی { -adaigi } باقی ہے، اس کی باقی { -peshgi } اور اس سے زیادہ جو رقم اس کے ذمے ہے۔
 
 # review: pending
 report-r26-title = { -peshgi-khata }
@@ -604,7 +604,7 @@ report-col-payable = { -adaigi } باقی
 report-col-advance-open = { -peshgi } باقی
 
 # review: pending
-report-col-owes-firm = دکان کا دینا
+report-col-owes-firm = بیوپاری کے ذمے
 
 # review: pending
 report-col-last-date = آخری تاریخ
@@ -657,7 +657,7 @@ report-side-buyer = { -gahak }
 report-side-seller = { -beopari }
 
 # review: pending
-report-section-payable = بیوپاریوں کو دینا
+report-section-payable = بیوپاریوں کو { -adaigi } باقی
 
 # review: pending
 report-section-owes-firm = وہ بیوپاری جن کے ذمے دکان کی رقم ہے
@@ -827,7 +827,7 @@ report-r31-help = ایک { -shirakat-dar } کی ہر تاریخ وار حرکت�
 report-r32-title = { -adhar-raqam } رپورٹ
 
 # review: pending
-report-r32-help = دکان سے ادھار لینے والا ہر شخص: دی ہوئی، واپس ہوئی اور کھلی رقم، اور واپسی کی تاریخ کے بعد گزرے دن۔
+report-r32-help = دکان سے ادھار لینے والا ہر شخص: دی ہوئی، واپس ہوئی اور ابھی باقی رقم، اور واپسی کی تاریخ کے بعد گزرے دن۔
 
 # review: pending
 report-col-cash-in = رقم آئی
@@ -863,7 +863,7 @@ report-col-days-past = تاخیر کے دن
 report-staff-yes = ہاں
 
 # review: pending
-report-r32-overdue = واپسی کی تاریخ کے بعد بھی کھلی رقم
+report-r32-overdue = واپسی کی تاریخ کے بعد بھی باقی رقم
 
 # review: pending
 report-section-shop-expenses = { -dukan-kharcha }
@@ -892,7 +892,7 @@ report-pick-partner-help = یہ کھاتہ ایک شراکت دار کا ہوت�
 report-r10-title = { -baqi-maal }
 
 # review: pending
-report-r10-help = وصول ہوا مال جو ابھی بکا نہیں: کتنا آیا، کتنا بکا، کتنا باقی ہے اور کتنے دن سے۔
+report-r10-help = آیا ہوا مال جو ابھی بکا نہیں: کتنا آیا، کتنا بکا، کتنا باقی ہے اور کتنے دن سے۔
 
 # review: pending
 report-r15-title = واؤچر
@@ -904,7 +904,7 @@ report-r15-help = ہر واؤچر قسم اور تاریخ کے حساب سے۔ 
 report-r23-title = { -wasooli } رجسٹر
 
 # review: pending
-report-r23-help = ہر وصولی خریدار، رقم اور اگراہی والے کے ساتھ۔ پیشگی واپس کرنے والا بیوپاری بھی یہاں ہے۔ منسوخ وصولی فہرست میں رہتی ہے مگر رقم میں شمار نہیں ہوتی۔
+report-r23-help = ہر وصولی { -gahak }، رقم اور اگراہی والے کے ساتھ۔ پیشگی واپس کرنے والا بیوپاری بھی یہاں ہے۔ منسوخ وصولی فہرست میں رہتی ہے مگر رقم میں شمار نہیں ہوتی۔
 
 # review: pending
 report-r25-title = { -adaigi } رجسٹر
@@ -1084,7 +1084,7 @@ report-r34-trips-sold = { -market-safar }: { -bikri }
 report-r34-partner-shares = { -shirakat-dar } کا { -hissa }
 
 # review: pending
-report-r34-buyers-dues = وصولی باقی
+report-r34-buyers-dues = گاہکوں کے ذمے
 
 # review: pending
 report-r34-open-lots = باقی { -lot }
@@ -1098,7 +1098,7 @@ report-r34-open-qty = باقی { -nag }
 report-r35-title = پارٹی کی روزانہ پرچی
 
 # review: pending
-report-r35-help = ایک دن کا: ہر پارٹی کا شروع کا بقایا، اس دن کا بنام اور جمع، اور جو باقی ہے۔ پرچی دیکھنے کے لیے پارٹی چنیں۔ جو بل اسی دن بدلا یا منسوخ ہوا وہ دن کے خانوں میں ایک ہی بار گنا جاتا ہے؛ بقایا کھاتے سے ملتے ہیں۔
+report-r35-help = ایک دن کا: ہر پارٹی کے ذمے شروع میں کتنی رقم تھی، اس دن کا بنام اور جمع، اور جو باقی ہے۔ پرچی دیکھنے کے لیے پارٹی چنیں۔ جو بل اسی دن بدلا یا منسوخ ہوا وہ دن کے خانوں میں ایک ہی بار گنا جاتا ہے؛ بقایا کھاتے سے ملتے ہیں۔
 
 # review: pending
 report-col-code = کوڈ
@@ -1192,7 +1192,7 @@ report-col-garden = { -bagh }
 report-col-rent = { -thaika }
 
 # review: pending
-report-col-installments = { -qist }
+report-col-installments = قسطیں
 
 # review: pending
 report-col-garden-costs = باغ خرچ
@@ -1331,3 +1331,19 @@ reports-jump-placeholder = گروپ چنیں
 # the running balance is empty there (plan 38 R4).
 # review: pending
 report-balance-date-order-only = بقایا صرف تاریخ کی ترتیب میں نظر آتا ہے۔
+
+## The dues rows of R34 and R35 that come with the dead amount (plan 40, PRD FR-10.10). R38 itself uses
+## the `dead-*` messages in dead.ftl, on the screen, in the print and in Excel.
+
+# review: pending
+report-r34-sellers-dues = بیوپاریوں کے ذمے
+
+# review: pending
+report-r34-dead-amount = { -doobi-raqam }
+
+# review: pending
+report-r34-total-dues = { -kul-agrahi }
+
+# The second total row of the party day sheet: the total with the people in the dead amount.
+# review: pending
+report-r35-total-with-dead = { -doobi-raqam } سمیت میزان

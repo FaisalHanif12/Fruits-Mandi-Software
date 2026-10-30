@@ -866,7 +866,11 @@ pub fn search_sources(
                 -- The account of a closed garden is offered in no picker and no search (PRD FR-12.38).
                 (a.is_active = 1 AND NOT EXISTS (SELECT 1 FROM ventures g WHERE g.account_id = a.id
                                                  AND g.kind = 'garden' AND g.status = 'closed')),
-                {TYPE_SQL}, a.control_id, a.tag, c.code
+                {TYPE_SQL}, a.control_id, a.tag, c.code,
+                -- A person moved to the dead amount (PRD FR-10.10); a one-time person's account stays
+                -- active, so only a plain account can be dead here.
+                EXISTS (SELECT 1 FROM dead_marks d WHERE d.account_id = a.id AND d.is_active = 1
+                        AND d.pukhta_person_key IS NULL)
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
@@ -900,6 +904,7 @@ pub fn search_sources(
                 tag: r.get(13)?,
                 control_code: Some(r.get(14)?),
                 sold_by_weight: false,
+                is_dead: r.get(15)?,
             })
         },
     )?;

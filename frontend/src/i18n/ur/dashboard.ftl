@@ -45,16 +45,16 @@ dashboard-tile-sales-count = <num>{ $count }</num> { -bikri }
 dashboard-tile-commission = آج کا { -commission }
 
 # review: pending
-dashboard-tile-cash = روکڑ بقایا
+dashboard-tile-cash = موجود { -rokar }
 
 # review: pending
 dashboard-tile-cash-below = صفر سے کم
 
 # review: pending
-dashboard-tile-dues = وصولی باقی
+dashboard-tile-dues = گاہکوں کے ذمے
 
 # review: pending
-dashboard-tile-payable = ادائیگی باقی
+dashboard-tile-payable = بیوپاریوں کو { -adaigi } باقی
 
 # review: pending
 dashboard-tile-advances = پیشگی باقی
@@ -198,10 +198,10 @@ dashboard-bikri-all = آج کی ساری { -bikri }
 dashboard-bikri-empty-title = آج کوئی { -bikri } نہیں
 
 # review: pending
-dashboard-bikri-empty-help = نئی { -bikri } کے لیے <key>{ $key }</key> دبائیں۔
+dashboard-bikri-empty-help = پہلی { -bikri } لکھنے کے لیے <key>{ $key }</key> دبائیں۔
 
 # review: pending
-dashboard-dues-title = سب سے پرانے بقایا
+dashboard-dues-title = گاہکوں کے سب سے پرانے ذمے
 
 # review: pending
 dashboard-dues-col-party = { -gahak }
@@ -216,13 +216,13 @@ dashboard-dues-col-balance = بقایا
 dashboard-dues-col-days = دن
 
 # review: pending
-dashboard-dues-all = تمام گاہکوں کے بقایا
+dashboard-dues-all = گاہکوں کے تمام ذمے
 
 # review: pending
 dashboard-dues-empty-title = کسی گاہک کے ذمے کچھ نہیں
 
 # review: pending
-dashboard-dues-empty-help = بقایا یہاں نظر آئیں گے، سب سے پرانا سب سے اوپر۔
+dashboard-dues-empty-help = ذمے یہاں نظر آئیں گے، سب سے پرانے سب سے اوپر۔
 
 # review: pending
 dashboard-tasks-title = آج کے کام
@@ -246,7 +246,7 @@ dashboard-chart-days-label = پچھلے 30 دنوں میں ہر دن کی { -kha
 dashboard-chart-items-title = اس مہینے کا { -commission } بلحاظ { -qism-maal }
 
 # review: pending
-dashboard-chart-items-label = اس مہینے کی سب سے اوپر { -qism-maal } کا { -commission }
+dashboard-chart-items-label = اس مہینے کی سرفہرست { -qism-maal } کا { -commission }
 
 # review: pending
 dashboard-chart-gross = { -kham-bikri }
@@ -274,3 +274,26 @@ soon-help = اس کی تیاری ہو رہی ہے۔ ڈیش بورڈ پر واپ�
 
 # review: pending
 soon-back = ڈیش بورڈ پر جائیں
+
+## The dues tiles (plan 40, PRD 9.1, FR-10.10). Buyers' dues is dashboard-tile-dues above.
+
+# review: pending
+dashboard-tile-dues-sellers = بیوپاریوں کے ذمے
+
+# review: pending
+dashboard-tile-dues-total = { -kul-agrahi }
+
+# review: pending
+dashboard-tile-dues-total-note = گاہک + بیوپاری + { -doobi-raqam }
+
+# review: pending
+dashboard-tile-dead = { -doobi-raqam }
+
+# review: pending
+dashboard-tile-dead-note = { $count ->
+    [one] <num>{ $count }</num> شخص
+   *[other] <num>{ $count }</num> افراد
+}
+
+# review: pending
+dashboard-tile-dead-none = کوئی نہیں

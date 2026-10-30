@@ -264,11 +264,14 @@ pub(super) fn resolve_partner(
     }
 }
 
-/// The person of money lent: an account under control 0103 that is active.
+/// The person of money lent: an account under control 0103 that is active. `allow_dead` is true
+/// for a return: a person in the dead amount has an inactive account, and a return from him is a
+/// recovery that is still allowed (PRD FR-10.10).
 fn resolve_person(
     conn: &Connection,
     errors: &mut FieldErrors,
     id: Option<i64>,
+    allow_dead: bool,
 ) -> Result<Option<RecordRef>, ServiceError> {
     let field = "person_account_id";
     let Some(id) = id else {
@@ -283,7 +286,7 @@ fn resolve_person(
         errors.push(FieldError::new(ErrorCode::ErrFormatInvalid, field));
         return Ok(None);
     }
-    if !facts.is_active {
+    if !facts.is_active && !(allow_dead && crate::dead::is_dead(conn, id, None)?) {
         errors.push(FieldError::new(ErrorCode::ErrAccountInactive, field));
         return Ok(None);
     }
@@ -566,7 +569,7 @@ pub(super) fn plan_money_lent(
         &input.amount,
         input.narration.as_deref(),
     )?;
-    let account = resolve_person(conn, &mut errors, input.person_account_id)?;
+    let account = resolve_person(conn, &mut errors, input.person_account_id, false)?;
     let reason = required_reason(&mut errors, &input.reason);
     let return_by = return_by_day(
         &mut errors,
@@ -635,7 +638,7 @@ pub(super) fn plan_money_lent_return(
         &input.amount,
         input.narration.as_deref(),
     )?;
-    let account = resolve_person(conn, &mut errors, input.person_account_id)?;
+    let account = resolve_person(conn, &mut errors, input.person_account_id, true)?;
     let salary = input.mode == LentReturnMode::Salary;
     let head = if salary {
         // The default is the head called تنخواہ (PRD FR-16.4).

@@ -40,4 +40,5 @@ export type ReportId =
   | 'R34'
   | 'R35'
   | 'R36'
-  | 'R37';
+  | 'R37'
+  | 'R38';

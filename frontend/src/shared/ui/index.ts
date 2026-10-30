@@ -75,6 +75,15 @@ export { Table, type TableColumn, type TableColumnKind, type TableColumnSize } f
 export { Tabs, type TabItem } from './Tabs';
 export { TagInput } from './TagInput';
 export { Tile, type TileTone } from './Tile';
+export {
+  DeadAmountContext,
+  useDeadAmountActions,
+  type DeadAmountActions,
+  type DeadMoveRequest,
+  type DeadPartyNames,
+  type DeadUndoRequest,
+} from './dead-amount';
+export { DeadInfoLine } from './DeadInfoLine';
 export { TextInput } from './TextInput';
 export { TOAST_DURATION_MS, Toaster } from './Toaster';
 export {

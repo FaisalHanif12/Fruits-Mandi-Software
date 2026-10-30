@@ -122,14 +122,47 @@ fn check_person_keys(tx: &Connection, entry: &BalancedEntry) -> Result<(), Servi
     Ok(())
 }
 
+/// What a new posting may do with people in the dead amount (PRD FR-10.10, A67).
+#[derive(Debug, Clone, Copy)]
+struct DeadRules<'a> {
+    /// A recovery (a وصولی or an ادھار رقم واپسی): it may touch a person in the dead amount.
+    recovery: bool,
+    /// The (account, person key) pairs of the posting an edit replaces. An edit of an earlier
+    /// posting may keep a person in the dead amount who is already in it, and may not add one.
+    replaced: &'a [(i64, Option<String>)],
+}
+
+impl DeadRules<'_> {
+    /// True when the posting may touch this account (or person) although he is in the dead amount.
+    fn allows(&self, account: i64, key: Option<&str>) -> bool {
+        self.recovery
+            || self
+                .replaced
+                .iter()
+                .any(|(a, k)| *a == account && k.as_deref() == key)
+    }
+}
+
 /// A new posting may only touch active accounts (PRD FR-10.2: inactive = hidden from pickers,
 /// "must exist and be active for new postings", Code Standards 4.2). One query for the whole
 /// entry. A reversal does not come here (see [`post`]).
-fn check_accounts_active(tx: &Connection, entry: &BalancedEntry) -> Result<(), ServiceError> {
+///
+/// A person in the dead amount has an inactive account (PRD FR-10.10); `rules` lets him through for
+/// a recovery and for an edit of a posting he is already in (PRD A67). Every other new posting on
+/// him is refused as on any inactive account.
+fn check_accounts_active(
+    tx: &Connection,
+    entry: &BalancedEntry,
+    rules: DeadRules<'_>,
+) -> Result<(), ServiceError> {
     let mut ids: Vec<i64> = entry.lines().iter().map(|l| l.account_id.get()).collect();
     ids.sort_unstable();
     ids.dedup();
-    let inactive = account_repo::inactive_among(tx, &ids)?;
+    let mut inactive = account_repo::inactive_among(tx, &ids)?;
+    if !inactive.is_empty() {
+        let dead = mandi_db::dead::dead_set(tx, None)?;
+        inactive.retain(|id| !(dead.has_account(*id) && rules.allows(*id, None)));
+    }
     match inactive.first() {
         Some(id) => Err(ServiceError::Rejected(vec![Rejection {
             code: ErrorCode::ErrAccountInactive,
@@ -141,6 +174,65 @@ fn check_accounts_active(tx: &Connection, entry: &BalancedEntry) -> Result<(), S
         }])),
         None => Ok(()),
     }
+}
+
+/// The people in the dead amount inside a new posting (PRD FR-10.10, plan 40 D1 and D2).
+///
+/// * A line with a one-time person's key that is in the dead amount is refused with
+///   `ERR_PERSON_IN_DEAD_AMOUNT` (the account stays active, so only the key is checked), unless the
+///   posting is a recovery or an edit of a posting that person is already in.
+/// * A recovery (`receipt`, `money_lent_return`) may not put more credit on a person in the dead
+///   amount than he still owes: `ERR_RETURN_EXCEEDS_OPEN`, value `open_paisa`, field `amount`. The
+///   balance is read inside the transaction, so the second of two receipts in one batch sees the
+///   first, and an edit sees its own reversal already posted.
+fn check_dead_people(
+    tx: &Connection,
+    entry: &BalancedEntry,
+    rules: DeadRules<'_>,
+) -> Result<(), ServiceError> {
+    let dead = mandi_db::dead::dead_set(tx, None)?;
+    if dead.is_empty() {
+        return Ok(());
+    }
+    let mut credits: Vec<((i64, Option<String>), Paisa)> = Vec::new();
+    for line in entry.lines() {
+        let account = line.account_id.get();
+        let key = line.person_key.as_deref().map(str::trim);
+        if !dead.has(account, key) {
+            continue;
+        }
+        if key.is_some() && !rules.allows(account, key) {
+            return Err(ServiceError::Rejected(vec![Rejection {
+                code: ErrorCode::ErrPersonInDeadAmount,
+                field: None,
+                values: std::collections::BTreeMap::from([(
+                    "account_id".to_owned(),
+                    ErrorValue::Number(account),
+                )]),
+            }]));
+        }
+        if rules.recovery && line.side == Side::Cr {
+            let slot = (account, key.map(str::to_owned));
+            match credits.iter_mut().find(|(k, _)| *k == slot) {
+                Some((_, total)) => *total = total.checked_add(line.amount).map_err(money_error)?,
+                None => credits.push((slot, line.amount)),
+            }
+        }
+    }
+    for ((account, key), credit) in credits {
+        let still = crate::dead::still_owed(tx, account, key.as_deref())?;
+        if credit > still {
+            return Err(ServiceError::Rejected(vec![Rejection {
+                code: ErrorCode::ErrReturnExceedsOpen,
+                field: Some("amount".to_owned()),
+                values: std::collections::BTreeMap::from([(
+                    "open_paisa".to_owned(),
+                    ErrorValue::Number(still.as_paisa()),
+                )]),
+            }]));
+        }
+    }
+    Ok(())
 }
 
 /// The اپنا مال account (030119998) never holds a balance: a trip lot credits the trip's partners
@@ -213,7 +305,22 @@ pub fn post_ordered(
     // PRD FR-17.6: a month close only moves balances that are already posted, so it may touch an
     // expense head that was made inactive after the month (like a reversal, it skips this check).
     if event.reverses.is_none() && event.posting_type != PostingType::MonthClose {
-        check_accounts_active(tx, &event.entry)?;
+        // A person in the dead amount: a recovery may touch him, and so may an edit of a posting he
+        // is already in (PRD FR-10.10, A67). An `order_key` is the mark of an edit: it is the key of
+        // the entry the new posting replaces.
+        let replaced = match order_key {
+            Some(key) => repo::lines_with_order_key(tx, key)?,
+            None => Vec::new(),
+        };
+        let rules = DeadRules {
+            recovery: matches!(
+                event.posting_type,
+                PostingType::Receipt | PostingType::MoneyLentReturn
+            ),
+            replaced: &replaced,
+        };
+        check_accounts_active(tx, &event.entry, rules)?;
+        check_dead_people(tx, &event.entry, rules)?;
     }
     check_person_keys(tx, &event.entry)?;
     // PRD FR-6.5: the partner share rows are planned first, so a refusal (shares not 100%)

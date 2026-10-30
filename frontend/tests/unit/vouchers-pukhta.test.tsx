@@ -13,6 +13,7 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { account, fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
 import { NASIR, SHAHID } from '../helpers/bikri-saved';
+import { PEOPLE_DEAD_HIDDEN, PEOPLE_INCLUDE_DEAD } from '../helpers/dead-real';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -144,6 +145,30 @@ describe.each(LANGUAGES)('one-time people on the voucher screen (%s)', (language
       type: 'receipt',
       input: { account_id: 23, person_key: 'shahid|03000000000', amount: '1000' },
     });
+  });
+
+  it('the receipt asks for dead people too: a one-time person in the dead amount is listed with the tag and can be picked, but not made regular', async () => {
+    vi.mocked(pukhtaApi.searchPukhtaPeople).mockImplementation((_text, _side, includeDead) =>
+      Promise.resolve(includeDead === true ? PEOPLE_INCLUDE_DEAD : PEOPLE_DEAD_HIDDEN),
+    );
+    const { user } = await atTheOneTimeBuyer();
+    const person = await labelled(language, 'vouchers-field-person');
+    await user.click(person);
+    await user.keyboard('nasir');
+    const option = await screen.findByRole('option');
+    expect(visible(option.textContent)).toContain(message(language, 'dead-tag'));
+    expect(pukhtaApi.searchPukhtaPeople).toHaveBeenCalledWith('nasir', 'buyer', true);
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(vouchersApi.assistOpenBills).toHaveBeenCalledWith({
+        account_id: 23,
+        person_key: PEOPLE_INCLUDE_DEAD[0]?.person_key,
+      });
+    });
+    // A dead person cannot be made a regular account: the button is not offered for him.
+    expect(
+      screen.queryByRole('button', { name: named(message(language, 'vouchers-make-regular')) }),
+    ).toBeNull();
   });
 
   it('editing the text after taking a person drops him, so the key never fits other words', async () => {

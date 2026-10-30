@@ -78,6 +78,7 @@ export const SHAHID = {
   phone: '03000000000',
   last_date: '2026-10-10',
   person_key: 'shahid|03000000000',
+  is_dead: false,
 };
 
 function refused(code: string, field: string | null, values: Record<string, string | number> = {}) {

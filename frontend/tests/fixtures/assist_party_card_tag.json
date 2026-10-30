@@ -11,6 +11,7 @@
   "city_en": "",
   "phone": "",
   "is_active": true,
+  "dead": null,
   "balance": {
     "amount_paisa": 288000,
     "side": "dr"

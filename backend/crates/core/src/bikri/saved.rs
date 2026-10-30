@@ -840,6 +840,12 @@ pub struct PukhtaPeopleInput {
     pub text: String,
     /// Which account the field belongs to.
     pub side: PukhtaSide,
+    /// True only on the receipt screen: a one-time person in the dead amount is listed too (marked
+    /// `is_dead`), because a recovery from him is still allowed (PRD FR-10.10). Missing or false
+    /// leaves him out, as every other field does.
+    #[serde(default)]
+    #[ts(optional)]
+    pub include_dead: Option<bool>,
 }
 
 /// A one-time person already recorded, for the one merged list of PRD FR-7.29.
@@ -855,6 +861,9 @@ pub struct PukhtaPerson {
     pub last_date: String,
     /// The key that ties his lines together (PRD FR-13.5).
     pub person_key: String,
+    /// True when he is in the dead amount (PRD FR-10.10). He is listed only when the input asked
+    /// for dead people (`include_dead`).
+    pub is_dead: bool,
 }
 
 /// Paid or still due (PRD FR-13.6).

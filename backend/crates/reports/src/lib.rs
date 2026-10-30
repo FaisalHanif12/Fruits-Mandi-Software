@@ -15,6 +15,7 @@
 pub mod analytics;
 pub mod audit;
 pub mod dashboard;
+pub mod dead;
 pub mod error;
 pub mod export;
 mod gardens;

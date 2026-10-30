@@ -1053,6 +1053,7 @@ pub fn search_sources(
             control_code: None,
             tag: None,
             sold_by_weight: false,
+            is_dead: false,
         })
     })?;
     rows.collect()

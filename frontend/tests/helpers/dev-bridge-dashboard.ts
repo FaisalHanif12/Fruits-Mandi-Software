@@ -27,7 +27,7 @@ import { ATTENTION_18_10, DASHBOARD_GARDEN, DASHBOARD_WORKED_DAY } from './dashb
 import { devFlag } from './dev-bridge';
 import { paisaForTest } from './paisa';
 
-type Input = Record<string, unknown>;
+export type Input = Record<string, unknown>;
 
 /** What screens remembered while the page is open: the screen's name to its text. */
 const remembered = new Map<string, string>();
@@ -38,6 +38,10 @@ const EMPTY_TILES = {
   commission_paisa: paisaForTest(0),
   cash_in_hand_paisa: paisaForTest(5_000_000),
   buyers_dues_paisa: paisaForTest(0),
+  sellers_dues_paisa: paisaForTest(0),
+  total_dues_paisa: paisaForTest(0),
+  dead_amount_paisa: paisaForTest(0),
+  dead_count: 0,
   sellers_payable_paisa: paisaForTest(0),
   advances_open_paisa: paisaForTest(0),
   stock_lots: 0,
@@ -204,6 +208,21 @@ function dashboard(): Dashboard {
       },
     };
   }
+  // Plan 40 (E2E-44): ارشد is in the dead amount; `dead` is after the move, `recovered` after the 4,000.
+  if (devFlag('dead') || devFlag('recovered')) {
+    const recovered = devFlag('recovered');
+    result = {
+      ...result,
+      tiles: {
+        ...result.tiles,
+        buyers_dues_paisa: paisaForTest(288_000),
+        sellers_dues_paisa: paisaForTest(0),
+        total_dues_paisa: paisaForTest(recovered ? 1_756_400 : 2_156_400),
+        dead_amount_paisa: paisaForTest(recovered ? 1_468_400 : 1_868_400),
+        dead_count: 1,
+      },
+    };
+  }
   if (devFlag('cashneg')) {
     result = { ...result, tiles: { ...result.tiles, cash_in_hand_paisa: paisaForTest(-500_000) } };
   }
@@ -243,7 +262,7 @@ function stateOf(screen: string): ScreenState {
   return { screen, value: remembered.get(screen) ?? null };
 }
 
-const handlers: Record<string, (input: Input) => unknown> = {
+export const dashboardHandlers: Record<string, (input: Input) => unknown> = {
   auth_status: () => AUTH,
   day_status: () => ({ today: '2026-10-10', closed_up_to: null, today_open: true }),
   dashboard_get: () => {
@@ -269,7 +288,7 @@ const handlers: Record<string, (input: Input) => unknown> = {
 };
 
 /** What Tauri rejects with for a command this page does not answer, or for a failure. */
-function refusal(code: string): Error {
+export function refusal(code: string): Error {
   return Object.assign(new Error(code), {
     ok: false,
     errors: [{ code, field: null, values: {} }],
@@ -277,7 +296,7 @@ function refusal(code: string): Error {
   });
 }
 
-function inputOf(args: unknown): Input {
+export function inputOf(args: unknown): Input {
   if (typeof args !== 'object' || args === null) return {};
   const inner = (args as Input)['input'];
   return typeof inner === 'object' && inner !== null ? (inner as Input) : {};
@@ -293,7 +312,7 @@ export function installDashboardDevBridge(): void {
       invoke: (command: string, args: unknown): Promise<unknown> =>
         new Promise((resolve, reject) => {
           window.setTimeout(() => {
-            const handler = handlers[command];
+            const handler = dashboardHandlers[command];
             if (handler === undefined) {
               reject(refusal('ERR_NOT_IMPLEMENTED'));
               return;

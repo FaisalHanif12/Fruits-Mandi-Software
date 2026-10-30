@@ -89,6 +89,10 @@ pub(super) fn plan_receipt(
             removed: &input.removed,
         },
     )?;
+    // A person in the dead amount has an inactive account; a وصولی from him is the recovery that
+    // is still allowed (PRD FR-10.10). The ledger caps it at what he still owes. A one-time
+    // person's account stays active, so only a plain account needs this.
+    let dead = crate::dead::is_dead(conn, input.account_id, None)?;
     let party = resolve_party(
         conn,
         &mut errors,
@@ -98,7 +102,7 @@ pub(super) fn plan_receipt(
             buyer: true,
             seller: true,
             payable: false,
-            allow_inactive: false,
+            allow_inactive: dead,
             refusal: ErrorCode::ErrNotABuyer,
         },
     )?;

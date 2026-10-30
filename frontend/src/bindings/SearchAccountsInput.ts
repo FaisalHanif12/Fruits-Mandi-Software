@@ -28,4 +28,10 @@ export type SearchAccountsInput = {
    * fewer than `limit` hits is the last one. Missing means 0.
    */
   offset: number;
+  /**
+   * True only in the field of a وصولی and of an ادھار رقم واپسی: a person in the dead amount is
+   * listed too (marked `is_dead`), because a recovery from him is still allowed (PRD FR-10.10).
+   * Missing or false leaves him out, like any inactive account.
+   */
+  include_dead?: boolean;
 };

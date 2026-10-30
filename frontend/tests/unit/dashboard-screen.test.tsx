@@ -584,9 +584,10 @@ describe.each(LANGUAGES)('by keyboard, and across a language switch (%s)', (lang
     expect(tile(language, 'dashboard-tile-commission')).toHaveFocus();
     await user.keyboard(language === 'ur' ? '{ArrowRight}' : '{ArrowLeft}');
     expect(first).toHaveFocus();
-    // Down moves to the tile below it (a row has four tiles at the normal width).
+    // Down moves to the tile below it (a row has four tiles at the normal width): the sellers' dues
+    // (plan 40), which opens R24 like the payable tile.
     await user.keyboard('{ArrowDown}');
-    expect(tile(language, 'dashboard-tile-payable')).toHaveFocus();
+    expect(tile(language, 'dashboard-tile-dues-sellers')).toHaveFocus();
     await user.keyboard('{Enter}');
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/reports/R24');

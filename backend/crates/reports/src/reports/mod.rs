@@ -380,6 +380,14 @@ const SPECS: &[Spec] = &[
         ],
         false,
     ),
+    // The dead amount: one row for each person moved to it. The status filter (`due`) keeps the
+    // people who still owe something; with none, every move (PRD FR-10.10, R38).
+    spec(
+        ReportId::R38,
+        ReportGroup::Business,
+        &[FilterKind::Status],
+        false,
+    ),
 ];
 
 fn spec_of(id: ReportId) -> Result<&'static Spec, ReportsError> {
@@ -548,6 +556,7 @@ fn build_in_with(
         ReportId::R35 => business::run_r35(conn, &typed, spec),
         ReportId::R36 => business::run_r36(conn, &typed, spec),
         ReportId::R37 => business::run_r37(conn, &typed, spec),
+        ReportId::R38 => business::run_r38(conn, &typed, spec),
         ReportId::R10 => sales::run_r10(conn, &typed, spec),
         ReportId::R15 => vouchers::run(conn, &typed, spec, vouchers::Layout::All),
         ReportId::R23 => vouchers::run(conn, &typed, spec, vouchers::Layout::Receipts),

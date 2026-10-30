@@ -18,6 +18,11 @@ interface PukhtaPersonPickerProps extends FieldControlProps {
   onTextChange: (text: string) => void;
   /** A person was taken from the list. */
   onPick: (person: PukhtaPerson) => void;
+  /**
+   * A person in the dead amount is listed too, with the tag "ڈوبی" (PRD FR-10.10): only the receipt
+   * screen says yes, because a recovery from him is allowed.
+   */
+  includeDead?: boolean | undefined;
 }
 
 export function PukhtaPersonPicker({
@@ -25,9 +30,10 @@ export function PukhtaPersonPicker({
   text,
   onTextChange,
   onPick,
+  includeDead = false,
   ...control
 }: PukhtaPersonPickerProps) {
-  const people = usePukhtaPeople(text, side).data ?? [];
+  const people = usePukhtaPeople(text, side, includeDead).data ?? [];
   return (
     <SuggestInput
       {...control}

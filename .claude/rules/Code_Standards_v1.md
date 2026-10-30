@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.10 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026 and 30-10-2026) |
+| Version | 1.11 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026 and 30-10-2026) |
 | Date | 30 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.9 (the master), NFR v1.6, Tech Stack v1.7 |
+| Depends on | PRD v1.10 (the master), NFR v1.6, Tech Stack v1.7 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -99,7 +99,7 @@ Rule V0: the backend MUST treat everything from the frontend as untrusted, even 
 | Quantity (نگ) | Whole number, 1 to 1,000,000. A simple sum such as `20+25` (PRD FR-7.48) is evaluated by the backend parser `core::validate::parse_sum`, then checked like a typed number. The same applies to money. | 0, negative, decimals, `×` or `÷`, a sum below 0 | `INTEGER` |
 | Weight | Up to 3 decimals, more than 0 | | `INTEGER` grams |
 | Date | `DD-MM-YYYY`, or shortcuts (PRD FR-7.19) | Impossible dates; for postings, dates on or before the "closed up to" date or after today (PRD FR-6.6) | `TEXT` `YYYY-MM-DD` |
-| Account code | Digits only. Sellers, buyers, پختہ کھاتہ, items, packings and staff: the 3-digit type number + a running number from 0 with no padding (0010, 00110; PRD FR-10.2). Other accounts: control code + 4-digit serial. The running number alone is a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller, buyer, item, packing or staff field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that running number, each with its type. Must exist and be active for new postings. | Inactive accounts in new postings; a code already used; a code of another type | `TEXT` |
+| Account code | Digits only. Sellers, buyers, پختہ کھاتہ, items, packings and staff: the 3-digit type number + a running number from 0 with no padding (0010, 00110; PRD FR-10.2). Other accounts: control code + 4-digit serial. The running number alone is a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller, buyer, item, packing or staff field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that running number, each with its type. Must exist and be active for new postings, except a وصولی or ادھار رقم واپسی on an account in the dead amount (PRD FR-10.10). | Inactive accounts in new postings; a code already used; a code of another type | `TEXT` |
 | Name (Urdu) | 1 to 100 characters: Urdu letters, digits, spaces and `. - ' ( ) / &`; at least one Urdu letter (PRD FR-7.28) | Empty, only spaces, any Latin letter, control characters | `TEXT` `name_ur` (original) + `search_ur` (normalised) |
 | Name (English) | 1 to 100 characters: Latin letters, digits, spaces and `. - ' ( ) / &`; at least one Latin letter | Empty, only spaces, any Urdu letter, control characters | `TEXT` `name_en` (original) + `search_en` (lower case) + `search_phonetic` |
 | Tag (نشان) | Empty, or 1 to 4 characters: English capital letters A to Z and `.`, at least one letter; lower-case letters are made capital (PRD 10.2) | Urdu letters, digits, spaces, any other sign | `TEXT` `tag` (null), added to `search_en` and `search_phonetic` |
@@ -350,8 +350,9 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 
 | Tests | Where | When |
 |---|---|---|
-| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, the preview numbers of E2E-39, E2E-40, E2E-40b, E2E-41 and E2E-42 | `backend/crates/services/tests/golden_day.rs` | Every commit |
-| E2E-33 (ledger with items, R20 total), E2E-36 (day summary R34, filtered print data) and E2E-43 (party day sheet R35) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
+| E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, the preview numbers of E2E-39, E2E-40, E2E-40b, E2E-41, E2E-42 and E2E-44 (tiles, refusals, trial balance) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-33 (ledger with items, R20 total), E2E-36 (day summary R34, filtered print data), E2E-43 (party day sheet R35) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
+| E2E-44 (R20, R21, R22 and R38 rows) | `backend/crates/services/tests/reports_dead.rs` | Every commit |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
 | E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
 | E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
@@ -436,3 +437,4 @@ A change is done only when every box is ticked:
 | 1.8 | 23-10-2026 | Approved by Umar: the same exception also covers whole-number quantities, through `count_as_f64` in the same file (M13). |
 | 1.9 | 27-10-2026 | Approved by Umar (PRD v1.8): account and master codes by type, short code = running number (4.2). |
 | 1.10 | 30-10-2026 | Approved by Umar (PRD v1.9): number cells, their headings and totals centred in table columns; values in cards stay on the right edge (F17, F24). |
+| 1.11 | 30-10-2026 | Approved by Umar (PRD v1.10): golden test E2E-44, the dead amount (9.2); a وصولی or ادھار رقم واپسی may post on an account in the dead amount (4.2). |

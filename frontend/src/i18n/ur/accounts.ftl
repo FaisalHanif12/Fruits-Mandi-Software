@@ -37,7 +37,7 @@ accounts-make-inactive = غیر فعال کریں
 accounts-system-stays-active = یہ نظام کا کھاتہ ہے۔ حساب کتاب میں اس کا استعمال ہوتا ہے، اس لیے اسے غیر فعال نہیں کیا جا سکتا۔
 
 # review: pending
-accounts-inactive-title = غیر فعال کریں؟
+accounts-inactive-title = اسے غیر فعال کریں؟
 
 # review: pending
 accounts-inactive-description = { $name } نئے اندراج میں نہیں دکھایا جائے گا، لیکن اس کا پرانا حساب اور رپورٹیں ویسی ہی رہیں گی۔ جب چاہیں دوبارہ فعال کر سکتے ہیں۔
@@ -240,7 +240,7 @@ accounts-field-opening-dr = ابتدائی { -banaam }
 accounts-field-opening-cr = ابتدائی { -jama }
 
 # review: pending
-accounts-field-opening-advance = یہ ابتدائی رقم { -peshgi-khata } ہے
+accounts-field-opening-advance = یہ ابتدائی رقم { -peshgi } ہے
 
 # review: pending
 accounts-field-credit-allowed = ادھار کی اجازت ہے
@@ -276,7 +276,7 @@ accounts-similar-tag-help = ایک ہی نام کے دو لوگوں میں فر�
 ## The chart of accounts (PRD FR-10.1).
 
 # review: pending
-accounts-tree-label = کھاتوں کا درخت
+accounts-tree-label = کھاتوں کی ترتیب کا درخت
 
 # review: pending
 chart-title = کھاتوں کی ترتیب
@@ -320,7 +320,7 @@ openings-open = ابتدائی بقایا لکھیں
 openings-title = ابتدائی بقایا
 
 # review: pending
-openings-help = ہر کھاتے کے سامنے اس کا ابتدائی { -banaam } یا { -jama } لکھیں۔ جن کھاتوں کا کچھ نہیں، انہیں خالی چھوڑ دیں۔
+openings-help = ہر کھاتے کے سامنے اس کا ابتدائی { -banaam } یا { -jama } لکھیں۔ جن کھاتوں کا ابتدائی بقایا نہیں ہے، انہیں خالی چھوڑ دیں۔
 
 # review: pending
 openings-grid-label = ابتدائی بقایا کی فہرست
@@ -374,7 +374,7 @@ openings-locked-help = جن کھاتوں کے خانے بند ہیں، ان کا
 
 # The name of a seller whose opening debit is an advance, in the opening balances grid.
 # review: pending
-openings-name-advance = { $name } ({ -peshgi-khata })
+openings-name-advance = { $name } ({ -peshgi })
 
 # The title of the warning when an account with the same name, tag and phone already exists.
 # review: pending

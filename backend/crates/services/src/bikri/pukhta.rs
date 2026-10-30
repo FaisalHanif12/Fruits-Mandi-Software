@@ -84,11 +84,28 @@ pub fn search_people(
     ctx: &Context,
     input: &PukhtaPeopleInput,
 ) -> Result<Vec<PukhtaPerson>, ServiceError> {
-    let everyone = ctx
-        .db
-        .read(|conn| repo::pukhta_people(conn, input.side).map_err(ServiceError::from))?;
+    let include_dead = input.include_dead.unwrap_or(false);
+    let everyone = ctx.db.read(|conn| {
+        let mut people = repo::pukhta_people(conn, input.side)?;
+        // A person in the dead amount is marked by his key on the account of the side (PRD
+        // FR-10.10); without `include_dead` he is not listed at all.
+        let code = match input.side {
+            PukhtaSide::Buyer => mandi_domain::core::codes::PUKHTA_BUYER_CODE,
+            PukhtaSide::Seller => mandi_domain::core::codes::PUKHTA_SELLER_CODE,
+        };
+        if let Some(account) = mandi_db::accounts::id_by_code(conn, code)? {
+            let dead = mandi_db::dead::dead_set(conn, None)?;
+            if !dead.is_empty() {
+                for person in &mut people {
+                    person.is_dead = dead.has(account, Some(&person.person_key));
+                }
+            }
+        }
+        Ok::<_, ServiceError>(people)
+    })?;
     Ok(everyone
         .into_iter()
+        .filter(|p| include_dead || !p.is_dead)
         .filter(|p| matches(&input.text, &p.name_ur, &p.name_en, &p.phone))
         .take(PEOPLE_LIMIT)
         .collect())

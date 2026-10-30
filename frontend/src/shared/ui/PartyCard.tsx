@@ -14,6 +14,8 @@ import { isoToDisplayDate } from '../format';
 import { displayName, useLanguage } from '../i18n';
 import { Balance } from './Balance';
 import { Code } from './Code';
+import { useDeadAmountActions } from './dead-amount';
+import { DeadInfoLine } from './DeadInfoLine';
 import { ErrorMessage } from './ErrorMessage';
 import { LinkButton } from './LinkButton';
 import { Num } from './Num';
@@ -76,6 +78,45 @@ function ReportButtons({ accountId }: { accountId: number }) {
         }}
       >
         <Localized id="report-card-statement" />
+      </LinkButton>
+    </div>
+  );
+}
+
+/**
+ * The two actions of the dead amount (PRD FR-10.10): move a person who owes the shop and is gone,
+ * or make him active again. A person can be moved when he is active, is a seller, a buyer or
+ * someone with money lent, and his balance is بنام; the backend still decides when the dialog asks
+ * (`masters_dead_preview`). Shown only where the app frame can open the dialogs.
+ */
+function DeadButtons({ card }: { card: PartyCardData }) {
+  const actions = useDeadAmountActions();
+  if (actions === null) return null;
+  const names = { name_ur: card.name_ur, name_en: card.name_en, tag: card.tag ?? null };
+  if (card.dead !== null) {
+    const markId = card.dead.mark_id;
+    return (
+      <div className="flex flex-wrap items-center gap-x-5">
+        <LinkButton
+          onClick={() => {
+            actions.undo({ markId, names });
+          }}
+        >
+          <Localized id="dead-undo-button" />
+        </LinkButton>
+      </div>
+    );
+  }
+  const movable = card.is_active && card.account_type !== 'other' && card.balance.side === 'dr';
+  if (!movable) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-5">
+      <LinkButton
+        onClick={() => {
+          actions.move({ accountId: card.id, personKey: null, names });
+        }}
+      >
+        <Localized id="dead-move-button" />
       </LinkButton>
     </div>
   );
@@ -147,7 +188,9 @@ function CardBody({ card }: { card: PartyCardData }) {
           ))}
         </ul>
       )}
+      {card.dead === null ? null : <DeadInfoLine info={card.dead} />}
       <ReportButtons accountId={card.id} />
+      <DeadButtons card={card} />
     </>
   );
 }

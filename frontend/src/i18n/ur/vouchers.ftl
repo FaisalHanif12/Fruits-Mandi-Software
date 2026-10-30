@@ -20,7 +20,7 @@ vouchers-type-advance = { -peshgi-khata }
 vouchers-receipt-title = { -wasooli }
 
 # review: pending
-vouchers-receipt-help = { -gahak } سے رقم لیں۔ رقم اس کے پرانے بلوں پر پہلے لگتی ہے۔ اگر { -beopari } اپنی { -peshgi } واپس کر رہا ہو تو "وصولی کس سے" میں { -beopari } چن لیں۔
+vouchers-receipt-help = { -gahak } سے رقم لیں۔ رقم اس کے سب سے پرانے بلوں پر پہلے لگتی ہے۔ اگر { -beopari } اپنی { -peshgi } واپس کر رہا ہو تو "وصولی کس سے" میں { -beopari } چن لیں۔
 
 # review: pending
 vouchers-payment-title = { -adaigi }
@@ -92,7 +92,7 @@ vouchers-editing-note = { $kind ->
     [receipt] آپ { -wasooli } { $number } میں تبدیلی کر رہے ہیں۔
     [payment] آپ { -adaigi } { $number } میں تبدیلی کر رہے ہیں۔
    *[advance] آپ { -peshgi-khata } { $number } میں تبدیلی کر رہے ہیں۔
-} محفوظ کرنے پر پرانا اندراج الٹ دیا جاتا ہے اور تاریخ میں موجود رہتا ہے۔
+} محفوظ کرنے پر پرانا اندراج الٹ دیا جاتا ہے اور تاریخچے میں موجود رہتا ہے۔
 
 ## The fields of a voucher.
 
@@ -133,7 +133,7 @@ vouchers-field-amount = رقم
 vouchers-fill-full = پورا بقایا
 
 # review: pending
-vouchers-fill-oldest = پرانا بل
+vouchers-fill-oldest = سب سے پرانا بل
 
 # review: pending
 vouchers-field-collector = اگراہی والا
@@ -142,7 +142,7 @@ vouchers-field-collector = اگراہی والا
 vouchers-field-reason-lent = { -naqd-udhar } کی وجہ
 
 # review: pending
-vouchers-reason-lent-hint = یہ رقم اس کے بلوں میں شامل ہو جاتی ہے اور باقی بلوں کے ساتھ { -agrahi } میں آتی ہے۔
+vouchers-reason-lent-hint = یہ رقم اس کے بلوں میں شامل ہو جاتی ہے اور اس کے باقی ذمے کے ساتھ { -agrahi } میں آتی ہے۔
 
 # review: pending
 vouchers-field-expected = متوقع مال یا موسم
@@ -171,13 +171,13 @@ vouchers-new-balance = نیا بقایا
 vouchers-return-limit = زیادہ سے زیادہ واپسی
 
 # review: pending
-vouchers-extra-credit-note = یہ رقم اس کے سب بلوں سے زیادہ ہے۔ زائد رقم اس کا کریڈٹ رہے گی اور اگلے بل میں خود لگ جائے گی:
+vouchers-extra-credit-note = یہ رقم اس کے سب بلوں سے زیادہ ہے۔ زائد رقم اس کی جمع رقم رہے گی اور اس کے اگلے بل میں خود لگ جائے گی:
 
 # review: pending
-vouchers-owes-settled-note = اتنی رقم اس کے ذمے کے بقایا میں لگے گی:
+vouchers-owes-settled-note = اتنی رقم سے اس کے ذمے دکان کی رقم ادا ہو جائے گی:
 
 # review: pending
-vouchers-advance-hint = اس { -beopari } کا کوئی بقایا نہیں۔ کیا یہ { -peshgi } ہے؟
+vouchers-advance-hint = اس { -beopari } کو دینے کے لیے کچھ باقی نہیں۔ کیا یہ { -peshgi } ہے؟
 
 # review: pending
 vouchers-make-advance = { -peshgi } بنائیں
@@ -194,13 +194,13 @@ vouchers-bills-failed = کھلے بل نہیں کھل سکے
 vouchers-bills-none = اس { -gahak } کا کوئی بل کھلا نہیں۔
 
 # review: pending
-vouchers-bills-open = کل کھلا بقایا
+vouchers-bills-open = کل کھلی رقم
 
 # review: pending
 vouchers-bills-oldest = سب سے پرانا بل
 
 # review: pending
-vouchers-bills-credit = بلوں سے الگ کریڈٹ
+vouchers-bills-credit = بلوں سے الگ جمع رقم
 
 # review: pending
 vouchers-days = { $days ->
@@ -244,16 +244,16 @@ vouchers-source-other = دیگر اندراج
 ## What is payable to a seller, under the form (PRD FR-7.59).
 
 # review: pending
-vouchers-payables-title = قابل ادائیگی
+vouchers-payables-title = ادائیگی باقی
 
 # review: pending
-vouchers-payables-failed = قابل ادائیگی رقم نہیں کھل سکی
+vouchers-payables-failed = ادائیگی باقی کی رقم نہیں کھل سکی
 
 # review: pending
 vouchers-payables-none = اس { -beopari } کو دینے کے لیے کچھ باقی نہیں۔
 
 # review: pending
-vouchers-payables-open = کل قابل ادائیگی
+vouchers-payables-open = کل ادائیگی باقی
 
 # review: pending
 vouchers-payables-owes = { -beopari } کے ذمے
@@ -261,16 +261,16 @@ vouchers-payables-owes = { -beopari } کے ذمے
 ## The advances of a seller, under his party card (PRD FR-7.60).
 
 # review: pending
-vouchers-advances-title = اس { -beopari } کی { -peshgi-khata }
+vouchers-advances-title = اس { -beopari } کا { -peshgi-khata }
 
 # review: pending
 vouchers-advances-none = اس { -beopari } کو ابھی کوئی { -peshgi } نہیں دی گئی۔
 
 # review: pending
-vouchers-advances-open = باقی { -peshgi-khata }
+vouchers-advances-open = { -peshgi } باقی
 
 # review: pending
-vouchers-advances-last = آخری { -peshgi-khata }
+vouchers-advances-last = آخری { -peshgi }
 
 # review: pending
 vouchers-advances-failed = { -peshgi-khata } کی فہرست کھل نہیں سکی
@@ -400,7 +400,7 @@ vouchers-other-screen-open = { -rokar } کھولیں
 ## Cancelling a voucher (PRD FR-7.8, FR-15.3). $number is its number, $amount its amount, $name the party.
 
 # review: pending
-vouchers-cancel-title = واؤچر منسوخ کریں؟
+vouchers-cancel-title = یہ واؤچر منسوخ کریں؟
 
 # review: pending
 vouchers-cancel-text-receipt = { -wasooli } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گی۔ { -rokar } اور اس کا کھاتہ پہلے جیسے ہو جائیں گے، اور جو بل اس سے نمٹے تھے وہ دوبارہ کھل جائیں گے۔
@@ -409,13 +409,13 @@ vouchers-cancel-text-receipt = { -wasooli } { $number } (<num>{ $amount }</num>�
 vouchers-cancel-text-payment = { -adaigi } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گی۔ { -rokar } اور اس کا کھاتہ پہلے جیسے ہو جائیں گے۔ اگر یہ { -gahak } کو { -naqd-udhar } تھا تو اس کا بل بھی ختم ہو جائے گا۔
 
 # review: pending
-vouchers-cancel-text-advance = { -peshgi-khata } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گا۔ { -rokar } اور اس کا کھاتہ پہلے جیسے ہو جائیں گے، اور جو رقم اس { -peshgi } سے منہا ہو چکی تھی وہ دوبارہ { -beopari } کو قابل ادائیگی ہو جائے گی۔
+vouchers-cancel-text-advance = { -peshgi-khata } { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گا۔ { -rokar } اور اس کا کھاتہ پہلے جیسے ہو جائیں گے، اور جو رقم اس { -peshgi } سے منہا ہو چکی تھی وہ دوبارہ { -beopari } کو دینی ہوگی۔
 
 # review: pending
 vouchers-cancel-reason = وجہ
 
 # review: pending
-vouchers-cancel-confirm = منسوخ کریں
+vouchers-cancel-confirm = واؤچر منسوخ کریں
 
 # review: pending
 vouchers-cancel-confirm-cash = ہاں، منسوخ کریں
@@ -432,7 +432,7 @@ vouchers-print-title = واؤچر { $number } پرنٹ کریں
 vouchers-collection-title = { -agrahi } فہرست
 
 # review: pending
-vouchers-collection-help = اس دن جن { -gahak } سے وصولی کرنی ہے ان کی فہرست۔ صرف وصول ہونے والی رقم لکھیں اور سب ایک ساتھ محفوظ کریں۔ خالی یا 0 والی لائن چھوڑ دی جاتی ہے۔
+vouchers-collection-help = اس دن جن گاہکوں سے وصولی کرنی ہے ان کی فہرست۔ صرف وصول ہونے والی رقم لکھیں اور سب ایک ساتھ محفوظ کریں۔ خالی یا 0 والی لائن چھوڑ دی جاتی ہے۔
 
 # review: pending
 vouchers-collection-back = { -wasooli } پر واپس
@@ -445,13 +445,13 @@ vouchers-collection-count = { $count ->
 }
 
 # review: pending
-vouchers-collection-total = کل بقایا
+vouchers-collection-total = کل ذمے
 
 # review: pending
 vouchers-collection-col-group = اگراہی والا اور شہر
 
 # review: pending
-vouchers-collection-col-dues = بقایا
+vouchers-collection-col-dues = ذمے
 
 # review: pending
 vouchers-collection-col-received = وصول رقم

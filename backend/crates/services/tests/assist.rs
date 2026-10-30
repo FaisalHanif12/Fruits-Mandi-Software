@@ -174,6 +174,7 @@ fn find(
         &env.ctx,
         owner,
         &SearchAccountsInput {
+            include_dead: None,
             scope,
             control_id: None,
             text: text.into(),
@@ -514,6 +515,7 @@ fn a_field_for_one_control_has_no_short_codes_but_finds_by_full_code_and_name() 
         &env.ctx,
         &owner,
         &SearchAccountsInput {
+            include_dead: None,
             scope: AccountScope::Control,
             control_id: Some(control),
             text: "nasir".into(),
@@ -530,6 +532,7 @@ fn a_field_for_one_control_has_no_short_codes_but_finds_by_full_code_and_name() 
         &env.ctx,
         &owner,
         &SearchAccountsInput {
+            include_dead: None,
             scope: AccountScope::Control,
             control_id: None,
             text: "x".into(),
@@ -549,6 +552,7 @@ fn text_limits_and_empty_codes_are_refused() {
         &env.ctx,
         &owner,
         &SearchAccountsInput {
+            include_dead: None,
             scope: AccountScope::Any,
             control_id: None,
             text: long.clone(),
@@ -1213,11 +1217,19 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
     let (_dir, env, owner) = ready();
     let [rahim, karim, akram, arshad] = the_parties(&env, &owner);
     let recent = |scope: AccountScope, control_id: Option<i64>| {
-        search::recent_accounts(&env.ctx, &owner, &AccountsRecentInput { scope, control_id })
-            .unwrap()
-            .into_iter()
-            .map(|h| (h.id, h.account_type))
-            .collect::<Vec<_>>()
+        search::recent_accounts(
+            &env.ctx,
+            &owner,
+            &AccountsRecentInput {
+                include_dead: None,
+                scope,
+                control_id,
+            },
+        )
+        .unwrap()
+        .into_iter()
+        .map(|h| (h.id, h.account_type))
+        .collect::<Vec<_>>()
     };
     let touch = |scope: AccountScope, control_id: Option<i64>, id: i64| {
         search::touch_account(
@@ -1274,6 +1286,7 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
         &env.ctx,
         &owner,
         &SearchAccountsInput {
+            include_dead: None,
             scope: AccountScope::Control,
             control_id: control,
             text: "nas".into(),
@@ -1297,6 +1310,7 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
         &env.ctx,
         &owner,
         &AccountsRecentInput {
+            include_dead: None,
             scope: AccountScope::Control,
             control_id: None,
         },

@@ -1,5 +1,6 @@
-// The tiles of the dashboard (PRD 9.1, FR-9.1): today's sales and commission, cash in hand, the
-// shop's dues, payables and advances, stock, market trips, gardens, money lent and today's expenses. Every
+// The tiles of the dashboard (PRD 9.1, FR-9.1): today's sales and commission, cash in hand, the four
+// dues tiles (buyers' dues, sellers' dues, total dues, dead amount, plan 40), the payables and
+// advances, stock, market trips, gardens, money lent and today's expenses. Every
 // tile is one button that opens the screen or report behind it. The figures are the backend's, shown
 // by `Num` and `formatPaisa`; nothing is added up here (CLAUDE.md rule 1). A figure that is below
 // zero or past its date also says so in words, never by colour alone (NFR-USE-12). ↑ ↓ ← → move
@@ -27,6 +28,8 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
   const open = useOpenDestination();
   const cashBelowZero = isNegativePaisa(tiles.cash_in_hand_paisa);
   const lentOverdue = isPositivePaisa(tiles.lent_overdue_paisa);
+  // Someone is in the dead amount: the tile is amber, with the count in words (NFR-USE-12).
+  const deadAmount = isPositivePaisa(tiles.dead_amount_paisa);
   return (
     <div
       {...formNavigationProps}
@@ -76,6 +79,45 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
         }}
       >
         <Num inherit paisa={tiles.buyers_dues_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-dues-sellers" />}
+        onOpen={() => {
+          open({ kind: 'report', id: 'R24' });
+        }}
+      >
+        <Num inherit paisa={tiles.sellers_dues_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-dues-total" />}
+        note={<Localized id="dashboard-tile-dues-total-note" />}
+        onOpen={() => {
+          open({ kind: 'report', id: 'R20' });
+        }}
+      >
+        <Num inherit paisa={tiles.total_dues_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-dead" />}
+        tone={deadAmount ? 'warn' : 'neutral'}
+        note={
+          deadAmount ? (
+            <Localized
+              id="dashboard-tile-dead-note"
+              vars={{ count: tiles.dead_count }}
+              elems={{ num: <Num /> }}
+            >
+              <span />
+            </Localized>
+          ) : (
+            <Localized id="dashboard-tile-dead-none" />
+          )
+        }
+        onOpen={() => {
+          open({ kind: 'dead-amount' });
+        }}
+      >
+        <Num inherit paisa={tiles.dead_amount_paisa} />
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-payable" />}

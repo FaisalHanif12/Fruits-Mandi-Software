@@ -50,6 +50,11 @@ export interface ListContext {
    * `plain` the separators are left out, for a rate inside a line of words ("2600", PRD 19.2 R5).
    */
   money: (amount: Paisa, plain?: boolean) => string;
+  /**
+   * A signed amount that came as a plain number from the backend (a correction, below 0 or above 0):
+   * the same text as `money`, with a minus sign when it is below zero. Never worked out here.
+   */
+  signedMoney: (value: number) => string;
 }
 
 export interface ListColumn<T> {
@@ -407,6 +412,7 @@ function GridInner<T>({
       language,
       text: (id, vars) => l10n.getString(id, vars),
       money: (amount, plain = false) => formatPaisa(amount, { grouping, plain }),
+      signedMoney: (value) => formatPaisaValue(value, { grouping, plain: false }),
     }),
     [language, l10n, grouping],
   );

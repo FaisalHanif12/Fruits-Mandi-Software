@@ -39,6 +39,9 @@ pub(crate) fn run(
         .to_iso();
     let as_of = typed.as_of.clone().unwrap_or(today);
     let mut totals = advance_totals(conn, &as_of, typed.seller_id)?;
+    // A seller in the dead amount has his advance netted into R38 (PRD FR-10.10, A66).
+    let dead = mandi_db::dead::dead_set(conn, Some(&as_of))?;
+    totals.retain(|t| !dead.has_account(t.account_id));
     let ids_found: Vec<i64> = totals.iter().map(|t| t.account_id).collect();
     let parties = load_parties(conn, &ids_found)?;
     // By account code, like the voucher screen's report.

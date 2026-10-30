@@ -56,6 +56,10 @@ pub struct Entry {
     order: (u8, &'static str, u64, usize, String),
     /// For an account: what it is and the control it is under. `None` for masters.
     account: Option<AccountFacts>,
+    /// True for an account in the dead amount (PRD FR-10.10). Its `hit.is_active` is true so it can
+    /// be listed, but only a field that asks for it (`include_dead`) sees it; the hit it makes says
+    /// `is_active: false` and `is_dead: true`.
+    dead: bool,
 }
 
 /// What an account entry knows besides its search keys.
@@ -139,6 +143,7 @@ impl Entry {
             scheme,
             order,
             account,
+            dead: source.is_dead,
             code: source.code.to_lowercase(),
             words_ur: words(&key_ur),
             words_en: words(&key_en),
@@ -153,7 +158,7 @@ impl Entry {
                 name_en: source.name_en,
                 extra_ur: source.extra_ur,
                 extra_en: source.extra_en,
-                is_active: source.is_active,
+                is_active: source.is_active || source.is_dead,
                 sold_by_weight: source.sold_by_weight,
             },
         }
@@ -563,7 +568,8 @@ fn account_hit(entry: &Entry) -> Option<AccountHit> {
         extra_en: entry.hit.extra_en.clone(),
         account_type: facts.account_type,
         control_id: facts.control_id,
-        is_active: entry.hit.is_active,
+        is_active: entry.hit.is_active && !entry.dead,
+        is_dead: entry.dead,
         tag: entry.tag.clone(),
     })
 }
@@ -601,6 +607,18 @@ fn full_list<'a>(
     rest.sort_by(|a, b| by_code(a, b));
     out.extend(rest);
     out.into_iter().skip(offset).take(limit).collect()
+}
+
+/// Which page of an account search, and whether a person in the dead amount is listed too (PRD
+/// FR-10.10: only the receipt picker and the ادھار رقم واپسی picker ask for him).
+#[derive(Debug, Clone, Copy)]
+pub struct AccountPage {
+    /// How many hits to skip.
+    pub offset: usize,
+    /// The most hits in this page.
+    pub limit: usize,
+    /// True to list the people in the dead amount (marked `is_dead`).
+    pub include_dead: bool,
 }
 
 impl Index {
@@ -654,12 +672,16 @@ impl Index {
         scope: AccountScope,
         control_id: Option<i64>,
         typed: &str,
-        offset: usize,
-        limit: usize,
+        page: AccountPage,
         usage: &Usage,
     ) -> Vec<AccountHit> {
+        let AccountPage {
+            offset,
+            limit,
+            include_dead,
+        } = page;
         let limit = limit.clamp(1, MAX_HITS);
-        let (list, in_control) = self.account_list(scope, control_id);
+        let (list, in_control) = self.account_list(scope, control_id, include_dead);
         if typed.trim().is_empty() {
             return full_list(list, in_control, usage, offset, limit)
                 .into_iter()
@@ -682,7 +704,12 @@ impl Index {
         limit: usize,
         usage: &Usage,
     ) -> Vec<AccountHit> {
-        self.search_accounts_page(scope, control_id, typed, 0, limit, usage)
+        let page = AccountPage {
+            offset: 0,
+            limit,
+            include_dead: false,
+        };
+        self.search_accounts_page(scope, control_id, typed, page, usage)
     }
 
     /// The list for `Alt+Down` in an account field (PRD FR-7.41): the accounts this user chose
@@ -693,8 +720,9 @@ impl Index {
         scope: AccountScope,
         control_id: Option<i64>,
         usage: &Usage,
+        include_dead: bool,
     ) -> Vec<AccountHit> {
-        let (list, in_control) = self.account_list(scope, control_id);
+        let (list, in_control) = self.account_list(scope, control_id, include_dead);
         full_list(list, in_control, usage, 0, MAX_FULL_LIST)
             .into_iter()
             .filter_map(|e| account_hit(e))
@@ -708,7 +736,7 @@ impl Index {
         control_id: Option<i64>,
         id: i64,
     ) -> bool {
-        let (list, in_control) = self.account_list(scope, control_id);
+        let (list, in_control) = self.account_list(scope, control_id, false);
         list.binary_search_by_key(&id, |e| e.id)
             .ok()
             .and_then(|at| list.get(at))
@@ -722,7 +750,7 @@ impl Index {
         if scope == AccountScope::Control {
             return Vec::new();
         }
-        let (list, _) = self.account_list(scope, None);
+        let (list, _) = self.account_list(scope, None, true);
         list.iter()
             .filter(|e| e.running == Some(running))
             .filter_map(|e| account_hit(e))
@@ -736,7 +764,7 @@ impl Index {
         control_id: Option<i64>,
         code: &str,
     ) -> Option<AccountHit> {
-        let (list, in_control) = self.account_list(scope, control_id);
+        let (list, in_control) = self.account_list(scope, control_id, true);
         list.iter()
             .filter(|e| in_control(e))
             .find(|e| e.code == code.to_lowercase())
@@ -745,10 +773,15 @@ impl Index {
 
     /// The list a scope searches, and the test that an entry is in the control (only scope
     /// `control` narrows further).
+    ///
+    /// An account in the dead amount (PRD FR-10.10) is in the test only when `include_dead` is
+    /// true: the receipt picker and the ادھار رقم واپسی picker ask for it, every other field leaves
+    /// it out like any inactive account.
     fn account_list(
         &self,
         scope: AccountScope,
         control_id: Option<i64>,
+        include_dead: bool,
     ) -> (&[Arc<Entry>], impl Fn(&Entry) -> bool) {
         let list = match scope {
             AccountScope::Seller => self.entries(SearchScope::Seller),
@@ -763,6 +796,7 @@ impl Index {
         (list, move |e: &Entry| {
             (!narrow || e.account.map(|a| a.control_id) == control_id)
                 && (with_own || e.code != mandi_domain::core::accounts::OWN_GOODS_CODE)
+                && (include_dead || !e.dead)
         })
     }
 

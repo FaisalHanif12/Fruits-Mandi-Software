@@ -259,3 +259,14 @@ Plan 17e adds `reports_collection_print_data`, `reports_print_collection` and `r
 command every report print asks for its header and footer (title and facts in, `PrintFrame` out); the
 layout is `shared/print` (`PrintRoot`, `PrintHeader`). The collection list template and its print box
 are in `features/vouchers/print/`.
+
+## The dead amount, R38 (plan 40, PRD FR-10.10)
+
+`pages/DeadAmountPage.tsx` (route `/reports/dead-amount`, opened by the tile ڈوبی رقم) lists everyone moved
+to the dead amount from `reports_dead_amount` (`reportsDeadAmount`, `useDeadAmount`), one page at a time
+with the backend's totals over the whole filter. `dead-columns.ts` has its columns; the wide ones (type,
+reason, corrections, last recovery) come with the wide layout step. Enter on a row opens his ledger;
+"دوبارہ فعال کریں" asks for a reason through the shared dialogs. The dues reports R20, R24 and R32 have
+`components/DeadMoveButton` ("ڈوبی رقم میں ڈالیں" for the row that has focus, found by `dead-row.ts`), and a
+ledger of a person in the dead amount has `components/DeadHeading`. Print and Excel of R38 come with the
+report engine once the backend adds `R38` to `ReportId`.

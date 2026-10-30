@@ -77,6 +77,12 @@ fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, Reports
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
+    // A buyer in the dead amount is in R38, not in the bell (PRD FR-10.10, FR-7.44).
+    let dead = mandi_db::dead::dead_set(conn, None)?;
+    let limits: Vec<_> = limits
+        .into_iter()
+        .filter(|l| !dead.has_account(l.0))
+        .collect();
     let ids: Vec<i64> = limits.iter().map(|l| l.0).collect();
     let mut totals = HashMap::new();
     for chunk in ids.chunks(IN_CHUNK) {

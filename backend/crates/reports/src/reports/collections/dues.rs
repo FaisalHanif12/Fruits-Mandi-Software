@@ -127,6 +127,9 @@ fn owing(
     accounts: &[Account],
 ) -> Result<Vec<Buyer>, ReportsError> {
     let as_of = typed.as_of.as_deref();
+    // People in the dead amount are not in the dues: they are in R38 and the tile ڈوبی رقم (PRD
+    // FR-10.10). For a past day, only those moved by that day are left out.
+    let dead = mandi_db::dead::dead_set(conn, as_of)?;
     let all: HashMap<i64, Totals> = if typed.party_id.is_some() {
         HashMap::new()
     } else {
@@ -155,6 +158,9 @@ fn owing(
                 if typed.person_key.is_some() && typed.person_key != key {
                     continue;
                 }
+                if dead.has(account.id, key.as_deref()) {
+                    continue;
+                }
                 let balance = paisa(dr)?.checked_sub(paisa(cr)?)?;
                 if balance <= Paisa::ZERO {
                     continue;
@@ -177,6 +183,9 @@ fn owing(
                 });
             }
         } else {
+            if dead.has_account(account.id) {
+                continue;
+            }
             let totals = if typed.party_id.is_some() {
                 totals_of(conn, account.id, None, as_of)?
             } else {

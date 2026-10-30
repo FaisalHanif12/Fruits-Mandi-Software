@@ -20,7 +20,7 @@ pukhta-no-match = کوئی لائن نہیں ملی
 pukhta-no-match-help = تاریخ، نام یا فون بدل کر دیکھیں۔
 
 # review: pending
-pukhta-clear = چھانٹیاں ہٹائیں
+pukhta-clear = فلٹر ہٹائیں
 
 # review: pending
 pukhta-register-label = { -pukhta-khata } کی فہرست

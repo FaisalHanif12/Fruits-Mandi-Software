@@ -544,6 +544,25 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "sign",
             ],
         ),
+        // 15.4 (v1.9, migration 0011): the people moved to the dead amount (PRD FR-10.10).
+        (
+            "dead_marks",
+            vec![
+                "account_id",
+                "pukhta_person_key",
+                "entry_date",
+                "reason",
+                "note",
+                "owed_paisa",
+                "after_entry_id",
+                "is_active",
+                "undone_at",
+                "undone_by",
+                "undo_reason",
+                "undone_after_entry_id",
+                "undone_date",
+            ],
+        ),
         // 15.7
         (
             "vouchers",
@@ -657,7 +676,8 @@ fn table_list_equals_architecture_15() {
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
-    assert_eq!(want.len(), 46);
+    // 46 tables of migrations 1 to 10, and `dead_marks` of migration 11.
+    assert_eq!(want.len(), 47);
     assert_eq!(tables(&conn), want);
 }
 
@@ -690,7 +710,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 46);
+    assert_eq!(rows.len(), 47);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn
@@ -747,8 +767,8 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     // journal_entries 1, journal_lines 2, bill_allocations 1, advance_allocations 1; and of
     // migration 6: purchases 9, bikri_sales 1, analytics_facts 1, stock_moves 1, ventures 1,
     // venture_entries 2, venture_entry_parts 1, purchase_cost_parts 1, lot_credit_parts 1 and
-    // fruit_takes 2 more.
-    assert_eq!(found, 63);
+    // fruit_takes 2 more; and of migration 11: dead_marks 1.
+    assert_eq!(found, 64);
 }
 
 /// Every `*_date` column checks for a real date.
@@ -868,9 +888,12 @@ fn index_columns(conn: &Connection, table: &str) -> Vec<Vec<String>> {
     names
         .iter()
         .map(|name| {
+            // An expression column (migration 11, `COALESCE(pukhta_person_key, '')`) has no name.
             conn.prepare("SELECT name FROM pragma_index_info(?1) ORDER BY seqno")
                 .unwrap()
-                .query_map([name], |row| row.get::<_, String>(0))
+                .query_map([name], |row| {
+                    Ok(row.get::<_, Option<String>>(0)?.unwrap_or_default())
+                })
                 .unwrap()
                 .map(Result::unwrap)
                 .collect()

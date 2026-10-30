@@ -1,0 +1,33 @@
+{
+  "id": 21,
+  "code": "0021",
+  "account_type": "buyer",
+  "name_ur": "ارشد ملتانی",
+  "name_en": "Arshad Multani",
+  "father_or_firm_ur": "",
+  "father_or_firm_en": "",
+  "city_ur": "",
+  "city_en": "",
+  "phone": "",
+  "is_active": false,
+  "dead": {
+    "mark_id": 1,
+    "entry_date": "2026-10-11",
+    "reason": "died",
+    "note": "فوت ہو گئے"
+  },
+  "balance": {
+    "amount_paisa": 1868400,
+    "side": "dr"
+  },
+  "last_entry_date": "2026-10-10",
+  "credit_limit": null,
+  "credit_used": 1868400,
+  "advance_open": null,
+  "warnings": [
+    {
+      "kind": "inactive",
+      "amount_paisa": null
+    }
+  ]
+}

@@ -32,7 +32,7 @@ accountpicker-unknown-buyer = اس کوڈ کا کوئی { -gahak } نہیں
 # review: pending
 accountpicker-unknown-any = اس کوڈ کا کوئی کھاتہ نہیں
 # review: pending
-accountpicker-reserved = یہ کوڈ خاص کھاتوں کے لیے ہے۔ عام کھاتے کا یہ کوڈ نہیں ہو سکتا۔
+accountpicker-reserved = یہ کوڈ نظام کے کھاتوں کے لیے رکھا گیا ہے۔ عام کھاتے کا یہ کوڈ نہیں ہو سکتا۔
 # review: pending
 accountpicker-inactive = { $name } ({ $code }) غیر فعال ہے۔ نئے اندراج میں اسے استعمال نہیں کیا جا سکتا۔
 # review: pending
@@ -79,7 +79,7 @@ working-manual-per-unit-received = ہاتھ سے لکھا گیا: <num>{ $qty_re
 # review: pending
 working-manual-per-lot = ہاتھ سے لکھا گیا: <num>{ $value }</num> فی { -lot } = <num>{ $result }</num>
 # review: pending
-working-per-lot-already-charged = { -lot } کا یہ چارج پہلی { -bikri } میں لگ چکا ہے، اس لیے اب کچھ نہیں لگا۔
+working-per-lot-already-charged = یہ چارج ہر { -lot } پر ایک ہی بار لگتا ہے اور پہلی { -bikri } میں لگ چکا ہے، اس لیے اب کچھ نہیں جڑتا۔
 # PRD FR-12.41, plan 37: a charge a rule works out for each lot is made once for each goods-arrived entry, on its first lot. $entry: the number of the entry; $value: the amount the rule gives for a lot; $result: what is charged on this lot (0).
 # review: pending
 working-per-lot-charged-on-entry = یہ چارج { -maal-aaya } کے ہر اندراج پر ایک بار لیا جاتا ہے، اور اندراج <num>{ $entry }</num> کی پہلی { -lot } پر (<num>{ $value }</num>) لیا جا چکا ہے، اس لیے اب کچھ نہیں جڑتا: <num>{ $result }</num>
@@ -197,7 +197,7 @@ working-own-lot-cost = اس لاٹ کے بکے ہوئے <num>{ $qty }</num> { -n
 working-own-lot-result = بیوپاری کی جمع <num>{ $credit }</num> − بکے ہوئے مال کی لاگت <num>{ $cost }</num> = <num>{ $result }</num>
 # FR-12.24: the total cost of a purchase: what was paid now and its part of the trip costs.
 # review: pending
-working-purchase-total-cost = ادا شدہ <num>{ $paid_now }</num> + { -market-safar } کے خرچ کا حصہ <num>{ $trip_cost }</num> = <num>{ $result }</num>
+working-purchase-total-cost = ابھی ادا شدہ <num>{ $paid_now }</num> + { -market-safar } کے خرچ کا حصہ <num>{ $trip_cost }</num> = <num>{ $result }</num>
 # PRD A45: the cost of one { -nag }, worked out for the whole purchase.
 # review: pending
 working-purchase-avg-cost = <num>{ $total }</num> ÷ <num>{ $qty }</num> = <num>{ $result }</num> (قریب ترین روپے تک)
@@ -256,16 +256,16 @@ attention-stock-waiting-aged = { -baqi-maal } میں <num>{ $count }</num> { -lo
 attention-over-credit-limit = <num>{ $count }</num> { -gahak } ادھار کی حد سے آگے ہیں
 
 # review: pending
-attention-dues-old = <num>{ $count }</num> { -gahak } کے پرانے بقایا: <num>{ $amount }</num>
+attention-dues-old = <num>{ $count }</num> { -gahak } کے ذمے پرانی رقم ہے: <num>{ $amount }</num>
 
 # review: pending
-attention-dues-old-aged = <num>{ $count }</num> { -gahak } کے پرانے بقایا: <num>{ $amount }</num>، سب سے پرانا بل <num>{ $days }</num> دن پرانا ہے
+attention-dues-old-aged = <num>{ $count }</num> { -gahak } کے ذمے پرانی رقم ہے: <num>{ $amount }</num>، سب سے پرانا بل <num>{ $days }</num> دن پرانا ہے
 
 # review: pending
-attention-payables-old = <num>{ $count }</num> { -beopari } کی ادائیگی باقی ہے: <num>{ $amount }</num>
+attention-payables-old = <num>{ $count }</num> { -beopari } ادائیگی کے انتظار میں ہیں: <num>{ $amount }</num>
 
 # review: pending
-attention-payables-old-aged = <num>{ $count }</num> { -beopari } کی ادائیگی باقی ہے: <num>{ $amount }</num>، سب سے پرانی <num>{ $days }</num> دن سے
+attention-payables-old-aged = <num>{ $count }</num> { -beopari } ادائیگی کے انتظار میں ہیں: <num>{ $amount }</num>، سب سے زیادہ <num>{ $days }</num> دن سے
 
 # review: pending
 attention-backup-old = آخری کلاؤڈ بیک اپ <num>{ $days }</num> دن پرانا ہے
@@ -274,16 +274,28 @@ attention-backup-old = آخری کلاؤڈ بیک اپ <num>{ $days }</num> دن
 attention-backup-never = ابھی تک کلاؤڈ بیک اپ نہیں بنا
 
 # review: pending
-attention-loans-overdue = <num>{ $count }</num> { -adhar-raqam } کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+attention-loans-overdue = { $count ->
+    [one] { -adhar-raqam } کے <num>{ $count }</num> اندراج کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+   *[other] { -adhar-raqam } کے <num>{ $count }</num> اندراجات کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+}
 
 # review: pending
-attention-loans-overdue-aged = <num>{ $count }</num> { -adhar-raqam } کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+attention-loans-overdue-aged = { $count ->
+    [one] { -adhar-raqam } کے <num>{ $count }</num> اندراج کی واپسی کی تاریخ کو <num>{ $days }</num> دن گزر چکے ہیں: <num>{ $amount }</num>
+   *[other] { -adhar-raqam } کے <num>{ $count }</num> اندراجات کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+}
 
 # review: pending
-attention-takes-overdue = شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+attention-takes-overdue = { $count ->
+    [one] شراکت دار کی لی ہوئی <num>{ $count }</num> رقم کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+   *[other] شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے: <num>{ $amount }</num>
+}
 
 # review: pending
-attention-takes-overdue-aged = شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+attention-takes-overdue-aged = { $count ->
+    [one] شراکت دار کی لی ہوئی <num>{ $count }</num> رقم کی واپسی کی تاریخ کو <num>{ $days }</num> دن گزر چکے ہیں: <num>{ $amount }</num>
+   *[other] شراکت داروں کی لی ہوئی <num>{ $count }</num> رقموں کی واپسی کی تاریخ گزر چکی ہے، زیادہ سے زیادہ <num>{ $days }</num> دن: <num>{ $amount }</num>
+}
 
 # review: pending
 attention-names-missing = <num>{ $count }</num> ریکارڈ میں دو ناموں میں سے ایک ہی نام ہے

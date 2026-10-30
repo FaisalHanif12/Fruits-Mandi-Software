@@ -24,4 +24,9 @@ export type PukhtaPerson = {
    * The key that ties his lines together (PRD FR-13.5).
    */
   person_key: string;
+  /**
+   * True when he is in the dead amount (PRD FR-10.10). He is listed only when the input asked
+   * for dead people (`include_dead`).
+   */
+  is_dead: boolean;
 };

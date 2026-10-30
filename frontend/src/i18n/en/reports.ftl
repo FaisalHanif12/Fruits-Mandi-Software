@@ -1330,3 +1330,19 @@ reports-jump-placeholder = Choose a group
 # the running balance is empty there (plan 38 R4).
 # review: pending
 report-balance-date-order-only = The balance shows in date order only.
+
+## The dues rows of R34 and R35 that come with the dead amount (plan 40, PRD FR-10.10). R38 itself uses
+## the `dead-*` messages in dead.ftl, on the screen, in the print and in Excel.
+
+# review: pending
+report-r34-sellers-dues = Sellers' Dues
+
+# review: pending
+report-r34-dead-amount = { -doobi-raqam }
+
+# review: pending
+report-r34-total-dues = { -kul-agrahi }
+
+# The second total row of the party day sheet: the total with the people in the dead amount.
+# review: pending
+report-r35-total-with-dead = Total with { -doobi-raqam }

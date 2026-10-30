@@ -163,7 +163,7 @@ audit-action-day-close = دن بند کیا
 audit-action-day-auto-close = دن خود بخود بند ہوا
 
 # review: pending
-audit-action-day-reopen = دن کھولا
+audit-action-day-reopen = دن دوبارہ کھولا گیا
 
 # review: pending
 audit-action-month-close = مہینہ بند کیا
@@ -190,7 +190,14 @@ audit-action-recover = پاس ورڈ نیا بنایا گیا
 audit-action-change-password = پاس ورڈ بدلا گیا
 
 # review: pending
-audit-action-make-regular = مستقل کھاتہ بنایا گیا
+audit-action-make-regular = باقاعدہ کھاتہ بنایا گیا
+
+# Plan 40, PRD FR-10.10: a person moved to the dead amount, and made active again.
+# review: pending
+audit-action-dead-mark = { -doobi-raqam } میں ڈالا گیا
+
+# review: pending
+audit-action-dead-undo = { -doobi-raqam } سے دوبارہ فعال کیا گیا
 
 # review: pending
 audit-action-update = تبدیل کیا گیا
@@ -226,10 +233,10 @@ audit-action-check-failed = جانچ ناکام ہوئی
 audit-action-restore = بحال کیا گیا
 
 # review: pending
-audit-entity-backup-cloud-keys = کلاؤڈ بیک اپ کی کنجیاں
+audit-entity-backup-cloud-keys = کلاؤڈ بیک اپ کی چابیاں
 
 # review: pending
-audit-entity-backup-key = بیک اپ کی
+audit-entity-backup-key = بیک اپ کی چابی
 
 # review: pending
 audit-entity-backup = بیک اپ
@@ -265,7 +272,7 @@ audit-entity-narration = تفصیل
 audit-entity-expense-head = خرچہ مد
 
 # review: pending
-audit-entity-bank-account = بینک اکاؤنٹ
+audit-entity-bank-account = بینک کھاتہ
 
 # review: pending
 audit-entity-charge-rule = کمیشن اصول

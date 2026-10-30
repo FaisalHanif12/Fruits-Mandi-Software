@@ -37,6 +37,9 @@ export const KNOWN_ACTIONS = [
   'confirm',
   'check_failed',
   'restore',
+  // The dead amount (PRD FR-10.10, plan 40): a person moved to it, and made active again.
+  'dead_mark',
+  'dead_undo',
 ] as const;
 
 /** The areas that have words (audit.ftl `audit-entity-<code>`). */

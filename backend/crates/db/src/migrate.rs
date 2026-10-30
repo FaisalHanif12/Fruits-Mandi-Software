@@ -72,6 +72,11 @@ pub const DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL: &str =
 /// its goods from. No amount, id or chain hash changes.
 pub const SHOP_SPLIT_SQL: &str = include_str!("../migrations/0010_shop_split.sql");
 
+/// The eleventh migration (plan 40, PRD FR-10.10): `dead_marks`, the people moved to the dead amount
+/// (ڈوبی رقم). A table that sorts people into a group and holds no balance: nothing posts, and no
+/// existing row, amount, id or chain hash changes.
+pub const DEAD_MARKS_SQL: &str = include_str!("../migrations/0011_dead_marks.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -94,6 +99,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, trip_names_hook),
         M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
         M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
     ])
 }
 

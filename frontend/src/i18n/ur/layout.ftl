@@ -154,7 +154,7 @@ guide-done = مکمل
 guide-step-dashboard-title = ڈیش بورڈ
 
 # review: pending
-guide-step-dashboard-body = آج کی تصویر ایک نظر میں: بکری، روکڑ، بقایا، شراکت دار اور توجہ طلب کام۔ کسی بھی خانے کو دبائیں تو اس کے پیچھے کی اسکرین کھل جائے گی۔
+guide-step-dashboard-body = آج کی تصویر ایک نظر میں: بکری، روکڑ، گاہکوں اور بیوپاریوں کے ذمے، شراکت دار اور توجہ طلب کام۔ کسی بھی خانے کو دبائیں تو اس کے پیچھے کی اسکرین کھل جائے گی۔
 
 # review: pending
 guide-step-index-title = { -index }

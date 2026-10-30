@@ -450,6 +450,7 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
         extra_ur: '',
         extra_en: '',
         is_active: true,
+        is_dead: false,
         balance: null,
       },
     ]);

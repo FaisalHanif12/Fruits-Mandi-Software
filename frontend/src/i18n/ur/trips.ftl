@@ -50,7 +50,7 @@ trips-list-empty = ابھی کوئی سفر نہیں
 trips-list-empty-help = بٹن دبا کر پہلا سفر بنائیں۔ اس میں شامل شراکت دار چنیں، پھر جو خریدا گیا وہ درج کریں۔
 
 # review: pending
-trips-list-no-match = ان انتخابات سے کوئی سفر نہیں ملا
+trips-list-no-match = ان فلٹروں سے کوئی سفر نہیں ملا
 
 # review: pending
 trips-list-no-match-help = دوسری تاریخیں، کھلے یا بند سفر، یا دوسرے الفاظ آزمائیں۔
@@ -120,7 +120,7 @@ trips-new-from-last = پچھلے سفر کے مطابق بھرا گیا ہے۔ �
 
 # The first trip starts from the firm's shares.
 # review: pending
-trips-new-firm-shares = فرم کے { -hissa } کے مطابق بھرا گیا ہے۔ دیکھ لیں اور جو مختلف ہو وہ بدل دیں۔
+trips-new-firm-shares = فرم کے حصوں کے مطابق بھرا گیا ہے۔ دیکھ لیں اور جو مختلف ہو وہ بدل دیں۔
 
 # review: pending
 trips-new-shares-help = سفر میں شامل شراکت داروں کے حصے ٹھیک 100 فیصد ہونے چاہییں۔ جس کا حصہ نہ ہو وہ اس میں شامل نہیں۔ پہلے اندراج کے بعد حصے بدلے نہیں جا سکتے۔
@@ -205,13 +205,13 @@ trips-loss-note = اس سفر میں نقصان ہو رہا ہے۔
 trips-partner-results-title = اس سفر میں ہر شراکت دار کی رقم
 
 # review: pending
-trips-partner-results-empty = ابھی کوئی رقم نہیں چلی۔
+trips-partner-results-empty = ابھی رقم کا کوئی لین دین نہیں ہوا۔
 
 # review: pending
-trips-partner-in-shop = دکان سے لگائی
+trips-partner-in-shop = دکان سے ادا
 
 # review: pending
-trips-partner-in-pocket = اپنی جیب سے لگائی
+trips-partner-in-pocket = اپنی جیب سے ادا
 
 # review: pending
 trips-partner-back = واپس ملی رقم
@@ -260,7 +260,7 @@ trips-saved-purchase = { -khareedari } { $number } محفوظ ہو گئی
 
 # $count: how many lines were saved; $first, $last: the first and the last number.
 # review: pending
-trips-saved-purchases = { $count } { -khareedari } محفوظ ہو گئیں: { $first } سے { $last } تک
+trips-saved-purchases = { -khareedari } کے { $count } اندراج محفوظ ہو گئے: { $first } سے { $last } تک
 
 # $number: the number of the trip cost.
 # review: pending
@@ -279,7 +279,7 @@ trips-saved-sale-closed = دوسری دکان میں فروخت { $number } مح
 trips-cost-amount = رقم
 
 # review: pending
-trips-cost-amount-hint = پورے سفر کا خرچ۔ آپ جمع بھی لکھ سکتے ہیں، مثلاً 3000+1000۔
+trips-cost-amount-hint = پورے سفر کا خرچ۔ آپ جوڑ بھی لکھ سکتے ہیں، مثلاً 3000+1000۔
 
 # review: pending
 trips-cost-reason = وجہ
@@ -320,7 +320,7 @@ trips-sale-purchase-option = { $number }: { $item }، { $packing } ({ -dusri-duk
 trips-sale-shop = دکان
 
 # review: pending
-trips-sale-qty = بیچے ہوئے { -nag }
+trips-sale-qty = بکے ہوئے { -nag }
 
 # review: pending
 trips-sale-amount = ملی ہوئی رقم
@@ -371,10 +371,10 @@ trips-purchases-select-help = ↑ ↓ سے خریداری پر جائیں۔ اس
 ## The history of the trip (PRD FR-19.11).
 
 # review: pending
-trips-entries-title = اس سفر کا ریکارڈ
+trips-entries-title = اس سفر کا تاریخچہ
 
 # review: pending
-trips-entries-label = اس سفر کا ریکارڈ
+trips-entries-label = اس سفر کا تاریخچہ
 
 # review: pending
 trips-entries-empty = ابھی کچھ درج نہیں ہوا

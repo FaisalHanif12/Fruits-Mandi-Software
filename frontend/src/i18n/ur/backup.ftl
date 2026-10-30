@@ -187,7 +187,7 @@ backup-size-gb = جی بی
 backup-restore-title = یہ بیک اپ بحال کریں
 
 # review: pending
-backup-restore-help = آپ کے کھاتے اس کاپی کے کھاتوں سے بدل جائیں گے۔ پہلے دیکھ لیں کہ اس میں کیا ہے۔
+backup-restore-help = آپ کا حساب اس کاپی کے حساب سے بدل جائے گا۔ پہلے دیکھ لیں کہ اس میں کیا ہے۔
 
 # review: pending
 backup-restore-key-help = یہ کاپی بیک اپ کی چابی سے بند ہے اور اس کمپیوٹر پر چابی نہیں ہے۔ پرنٹ کی ہوئی پرچی سے چابی لکھیں۔
@@ -208,7 +208,7 @@ backup-restore-preview-failed = یہ کاپی پڑھی نہیں جا سکی
 backup-restore-made-on = یہ کاپی <num>{ $date }</num> کو بنی تھی۔
 
 # review: pending
-backup-restore-totals-label = اس کاپی کے کھاتے اور اب کے کھاتے
+backup-restore-totals-label = اس کاپی کا حساب اور اب کا حساب
 
 # review: pending
 backup-restore-lost-none = کچھ ضائع نہیں ہو گا: اس کاپی کے بعد کا کوئی اندراج نہیں ہے۔
@@ -217,7 +217,7 @@ backup-restore-lost-none = کچھ ضائع نہیں ہو گا: اس کاپی ک�
 backup-restore-lost = اس کاپی کے بعد کیے گئے سب اندراج ضائع ہو جائیں گے: <num>{ $journal }</num> پوسٹ شدہ اندراج، <num>{ $bikri }</num> { -bikri } اندراج اور <num>{ $vouchers }</num> واؤچر۔
 
 # review: pending
-backup-restore-upgrade = یہ کاپی ایپ کے پرانے ورژن کی ہے۔ بحالی کے بعد وہ خود بخود نئی کر دی جائے گی۔
+backup-restore-upgrade = یہ کاپی ایپ کے پرانے ورژن کی ہے۔ بحالی کے بعد وہ خود بخود نئے ورژن کے مطابق ہو جائے گی۔
 
 # review: pending
 backup-restore-safety = کچھ بدلنے سے پہلے آپ کے موجودہ ڈیٹا کی حفاظتی کاپی بنا کر جانچی جاتی ہے۔ بحالی کے بعد آپ باہر ہو جائیں گے اور دوبارہ داخل ہوں گے۔
@@ -232,17 +232,17 @@ backup-restore-confirm-title = کیا یہ بیک اپ بحال کریں؟
 # review: pending
 backup-restore-confirm-description =
     { $lost ->
-        [0] پہلے آپ کے موجودہ ڈیٹا کی حفاظتی کاپی بنے گی۔ پھر آپ کے سب کھاتے <num>{ $date }</num> کو بنی کاپی سے بدل جائیں گے۔ آپ باہر ہو جائیں گے۔
-       *[other] پہلے آپ کے موجودہ ڈیٹا کی حفاظتی کاپی بنے گی۔ پھر آپ کے سب کھاتے <num>{ $date }</num> کو بنی کاپی سے بدل جائیں گے۔ یہ ضائع ہو جائیں گے: <num>{ $journal }</num> پوسٹ شدہ اندراج، <num>{ $bikri }</num> { -bikri } اندراج اور <num>{ $vouchers }</num> واؤچر۔ آپ باہر ہو جائیں گے۔
+        [0] پہلے آپ کے موجودہ ڈیٹا کی حفاظتی کاپی بنے گی۔ پھر آپ کا سارا حساب <num>{ $date }</num> کو بنی کاپی سے بدل جائے گا۔ آپ باہر ہو جائیں گے۔
+       *[other] پہلے آپ کے موجودہ ڈیٹا کی حفاظتی کاپی بنے گی۔ پھر آپ کا سارا حساب <num>{ $date }</num> کو بنی کاپی سے بدل جائے گا۔ یہ ضائع ہو جائیں گے: <num>{ $journal }</num> پوسٹ شدہ اندراج، <num>{ $bikri }</num> { -bikri } اندراج اور <num>{ $vouchers }</num> واؤچر۔ آپ باہر ہو جائیں گے۔
     }
 
 # review: pending
-backup-restored = کاپی { $date } سے بحال ہو گئی۔ براہ کرم دوبارہ داخل ہوں۔
+backup-restored = { $date } کی کاپی سے ڈیٹا بحال ہو گیا۔ براہ کرم دوبارہ داخل ہوں۔
 
 ## کاپی کے کھاتے اور اب کے کھاتے۔
 
 # review: pending
-backup-totals-what = کھاتے
+backup-totals-what = حساب
 
 # review: pending
 backup-totals-in-backup = اس کاپی میں
@@ -257,7 +257,7 @@ backup-totals-restored = بحال کی ہوئی ٹیسٹ کاپی
 backup-totals-live = موجودہ ڈیٹا
 
 # review: pending
-backup-totals-accounts = کھاتوں کی تعداد
+backup-totals-accounts = کھاتے
 
 # review: pending
 backup-totals-bikri = { -bikri } اندراج
@@ -278,7 +278,7 @@ backup-totals-debit = کل { -banaam }
 backup-totals-credit = کل { -jama }
 
 # review: pending
-backup-totals-cash = روکڑ بقایا
+backup-totals-cash = موجود روکڑ
 
 # review: pending
 backup-totals-none = کوئی نہیں
@@ -304,13 +304,13 @@ backup-test-failed = بحالی کی جانچ نہیں ہو سکی
 backup-test-close = بند کریں
 
 # review: pending
-backup-test-ok = یہ کاپی ٹھیک ہے۔ یہ درست بحال ہوتی ہے اور اس کے کھاتے برابر ہیں۔
+backup-test-ok = یہ کاپی ٹھیک ہے۔ یہ درست بحال ہوتی ہے اور اس کا حساب برابر ہے۔
 
 # review: pending
 backup-test-not-ok = یہ کاپی ایک جانچ میں ناکام رہی۔ اس پر بھروسا نہ کریں۔ ابھی نئی کاپی بنائیں۔
 
 # review: pending
-backup-test-totals-label = ٹیسٹ کاپی کے کھاتے اور موجودہ کھاتے
+backup-test-totals-label = ٹیسٹ کاپی کا حساب اور موجودہ حساب
 
 # review: pending
 backup-check-opens = کاپی کھل جاتی ہے
@@ -325,7 +325,7 @@ backup-check-integrity = ڈیٹا فائل درست ہے
 backup-check-counts = اندراجات کی تعداد درست ہے
 
 # review: pending
-backup-check-balanced = کھاتے برابر ہیں
+backup-check-balanced = حساب برابر ہے
 
 # review: pending
 backup-check-passed = پاس

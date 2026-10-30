@@ -192,6 +192,13 @@ audit-action-change-password = Password changed
 # review: pending
 audit-action-make-regular = Made a regular account
 
+# Plan 40, PRD FR-10.10: a person moved to the dead amount, and made active again.
+# review: pending
+audit-action-dead-mark = Moved to { -doobi-raqam }
+
+# review: pending
+audit-action-dead-undo = Made active again from { -doobi-raqam }
+
 # review: pending
 audit-action-update = Updated
 

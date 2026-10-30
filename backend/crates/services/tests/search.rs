@@ -504,6 +504,7 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
             &w.env.ctx,
             &w.owner,
             &SearchAccountsInput {
+                include_dead: None,
                 scope,
                 control_id: None,
                 text: text.into(),
@@ -583,6 +584,7 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
             &w.env.ctx,
             &w.owner,
             &mandi_services::core::accounts::AccountsRecentInput {
+                include_dead: None,
                 scope,
                 control_id: None,
             },
@@ -633,6 +635,7 @@ fn the_bank_account_is_offered_in_no_picker_and_no_search() {
             &w.env.ctx,
             &w.owner,
             &SearchAccountsInput {
+                include_dead: None,
                 scope,
                 control_id: None,
                 text: text.into(),

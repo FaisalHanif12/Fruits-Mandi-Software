@@ -240,6 +240,7 @@ export const SHAHID: PukhtaPerson = {
   phone: '03000000000',
   last_date: '2026-10-10',
   person_key: 'shahid|03000000000',
+  is_dead: false,
 };
 
 export const NASIR: PukhtaPerson = {
@@ -248,6 +249,7 @@ export const NASIR: PukhtaPerson = {
   phone: '03111111111',
   last_date: '2026-10-08',
   person_key: 'nasir|03111111111',
+  is_dead: false,
 };
 
 /** The register line of Event 2: Shahid bought 10 boxes of apples at 1,200 and paid (E2E-5). */

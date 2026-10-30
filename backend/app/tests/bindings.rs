@@ -18,9 +18,9 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, arrivals, bikri, capital, cash, cashbook, drafts, expenses, fruit, gardens, general,
-    khata, lent, masters, paging, partners, printing, purchases, rules, search, split, statement,
-    trips, ventures, vouchers,
+    accounts, arrivals, bikri, capital, cash, cashbook, dead, drafts, expenses, fruit, gardens,
+    general, khata, lent, masters, paging, partners, printing, purchases, rules, search, split,
+    statement, trips, ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -463,6 +463,22 @@ const EXPECTED_FILES: &[&str] = &[
     "FruitLotsInput.ts",
     "FruitLotRow.ts",
     "FruitLots.ts",
+    "DeadReason.ts",
+    "DeadPartyType.ts",
+    "DeadInfo.ts",
+    "DeadLinked.ts",
+    "DeadPreviewInput.ts",
+    "DeadPreview.ts",
+    "DeadMarkInput.ts",
+    "DeadMarked.ts",
+    "DeadUndoInput.ts",
+    "DeadUndone.ts",
+    "DeadFilter.ts",
+    "DeadStatus.ts",
+    "DeadAmountInput.ts",
+    "DeadRow.ts",
+    "DeadTotals.ts",
+    "DeadAmountPage.ts",
     "GardenInput.ts",
     "GardenSetPartnersInput.ts",
     "GardenDefaults.ts",
@@ -1103,6 +1119,22 @@ fn export_bindings() {
     fruit::FruitLotsInput::export_all(&cfg).unwrap();
     fruit::FruitLotRow::export_all(&cfg).unwrap();
     fruit::FruitLots::export_all(&cfg).unwrap();
+    dead::DeadReason::export_all(&cfg).unwrap();
+    dead::DeadPartyType::export_all(&cfg).unwrap();
+    dead::DeadInfo::export_all(&cfg).unwrap();
+    dead::DeadLinked::export_all(&cfg).unwrap();
+    dead::DeadPreviewInput::export_all(&cfg).unwrap();
+    dead::DeadPreview::export_all(&cfg).unwrap();
+    dead::DeadMarkInput::export_all(&cfg).unwrap();
+    dead::DeadMarked::export_all(&cfg).unwrap();
+    dead::DeadUndoInput::export_all(&cfg).unwrap();
+    dead::DeadUndone::export_all(&cfg).unwrap();
+    dead::DeadFilter::export_all(&cfg).unwrap();
+    dead::DeadStatus::export_all(&cfg).unwrap();
+    dead::DeadAmountInput::export_all(&cfg).unwrap();
+    dead::DeadRow::export_all(&cfg).unwrap();
+    dead::DeadTotals::export_all(&cfg).unwrap();
+    dead::DeadAmountPage::export_all(&cfg).unwrap();
     partners::PartnerVentureCard::export_all(&cfg).unwrap();
     bikri::LaterSaleInput::export_all(&cfg).unwrap();
     bikri::LaterSaleSaveInput::export_all(&cfg).unwrap();

@@ -441,5 +441,15 @@
       "garden"
     ],
     "party_required": false
+  },
+  {
+    "id": "R38",
+    "group": "business",
+    "group_title_id": "report-group-business",
+    "title_id": "dead-report-title",
+    "filters": [
+      "status"
+    ],
+    "party_required": false
   }
 ]

@@ -75,7 +75,7 @@ day-closed = { $date } تک کے دن بند ہو گئے
 day-reopen-title = دن دوبارہ کھولیں
 
 # review: pending
-day-reopen-help = ایک تاریخ کھولنے سے اس کے بعد کی ہر تاریخ بھی کھل جاتی ہے۔ وجہ لکھنا ضروری ہے اور وہ آڈٹ لاگ میں لکھی جاتی ہے۔
+day-reopen-help = ایک تاریخ دوبارہ کھولنے سے اس کے بعد کی ہر تاریخ بھی دوبارہ کھل جاتی ہے۔ وجہ لکھنا ضروری ہے اور وہ آڈٹ لاگ میں لکھی جاتی ہے۔
 
 # review: pending
 day-reopen-date = کھولنے کی تاریخ
@@ -90,10 +90,10 @@ day-reopen-button = دوبارہ کھولیں
 day-reopen-confirm-title = دن دوبارہ کھولیں؟
 
 # review: pending
-day-reopen-confirm-description = { $date } اور اس کے بعد کی ہر تاریخ کھل جائے گی۔ وجہ آڈٹ لاگ میں لکھی جائے گی۔
+day-reopen-confirm-description = { $date } اور اس کے بعد کی ہر تاریخ دوبارہ کھل جائے گی۔ وجہ آڈٹ لاگ میں لکھی جائے گی۔
 
 # review: pending
-day-reopened = { $date } اور اس کے بعد کے دن کھل گئے
+day-reopened = { $date } اور اس کے بعد کے دن دوبارہ کھل گئے
 
 # review: pending
 day-reopen-none-title = ابھی کوئی دن بند نہیں

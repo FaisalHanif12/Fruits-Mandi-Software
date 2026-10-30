@@ -197,13 +197,27 @@ export function useSetAccountActive() {
 export function accountSource(
   scope: AccountScope,
   controlId: number | null = null,
+  includeDead = false,
 ): PickerSource<AccountHit> {
   return {
-    key: ['search', 'accounts', scope, String(controlId)],
-    search: (text, limit) => searchAccounts({ scope, controlId, text, limit }),
-    recent: () => searchAccountsRecent(scope, controlId),
+    key: ['search', 'accounts', scope, String(controlId), ...(includeDead ? ['dead'] : [])],
+    // `includeDead` is passed only where it is true (the receipt and ادھار رقم واپسی fields).
+    search: (text, limit) =>
+      searchAccounts({ scope, controlId, text, limit, ...(includeDead ? { includeDead } : {}) }),
+    recent: () =>
+      includeDead
+        ? searchAccountsRecent(scope, controlId, true)
+        : searchAccountsRecent(scope, controlId),
     // The click-open list and every typed search are read a page at a time (plan 32, R7).
-    page: (text, offset, limit) => searchAccounts({ scope, controlId, text, offset, limit }),
+    page: (text, offset, limit) =>
+      searchAccounts({
+        scope,
+        controlId,
+        text,
+        offset,
+        limit,
+        ...(includeDead ? { includeDead } : {}),
+      }),
     touch: (id) => searchAccountsTouch(scope, controlId, id),
   };
 }

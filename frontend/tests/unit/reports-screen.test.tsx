@@ -120,7 +120,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     it('lists the reports of each group, as the backend sent them, with a line about each', async () => {
       await open('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
-      expect(CATALOG).toHaveLength(37);
+      expect(CATALOG).toHaveLength(38);
       for (const entry of CATALOG) {
         const group = await groupRegion(entry.group_title_id);
         const link = within(group)
@@ -195,6 +195,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         'R35',
         'R36',
         'R37',
+        'R38',
       ]);
     });
 

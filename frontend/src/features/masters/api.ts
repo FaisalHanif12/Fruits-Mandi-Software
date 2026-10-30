@@ -2,6 +2,12 @@
 // Components never call invoke() (Code Standards F4). The commands speak one row type per kind
 // (bindings/); `wire.ts` turns them into the `MasterRecord` and `MasterDraft` the screens use.
 
+import type { DeadMarked } from '../../bindings/DeadMarked';
+import type { DeadMarkInput } from '../../bindings/DeadMarkInput';
+import type { DeadPreview } from '../../bindings/DeadPreview';
+import type { DeadPreviewInput } from '../../bindings/DeadPreviewInput';
+import type { DeadUndone } from '../../bindings/DeadUndone';
+import type { DeadUndoInput } from '../../bindings/DeadUndoInput';
 import type { MasterRow } from '../../bindings/MasterRow';
 import type { MastersList } from '../../bindings/MastersList';
 import { callCommand } from '../../shared/api';
@@ -67,4 +73,22 @@ export async function mastersSetActive(
 /** The next free code of a kind, to put in the code field of a new master. Empty if it has none. */
 export function mastersNextCode(kind: MasterKind): Promise<string> {
   return callCommand<string>('masters_next_code', { input: { kind } });
+}
+
+/**
+ * What moving a person to the dead amount would do (PRD FR-10.10): what he owes now, whether he can
+ * be moved and why not (an error code), his last entry and his linked account. Read only.
+ */
+export function deadPreview(input: DeadPreviewInput): Promise<DeadPreview> {
+  return callCommand<DeadPreview>('masters_dead_preview', { input });
+}
+
+/** Moves a person who owes the shop to the dead amount: nothing posts, the account turns inactive. */
+export function deadMark(input: DeadMarkInput): Promise<DeadMarked> {
+  return callCommand<DeadMarked>('masters_dead_mark', { input });
+}
+
+/** Makes a person active again ("دوبارہ فعال کریں"): the move ends. A reason is required. */
+export function deadUndo(input: DeadUndoInput): Promise<DeadUndone> {
+  return callCommand<DeadUndone>('masters_dead_undo', { input });
 }

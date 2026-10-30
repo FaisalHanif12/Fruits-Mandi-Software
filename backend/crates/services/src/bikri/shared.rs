@@ -379,6 +379,27 @@ fn load_lookups(
         Some(entry_id) => ledger_repo::entry_totals_for_accounts(conn, entry_id, &limited)?,
         None => HashMap::new(),
     };
+    // PRD A67: an edit of an earlier posting is still allowed for a person in the dead amount who
+    // already has a line in the posting being replaced (his account is inactive). He counts as
+    // active there; a person who is not in that posting does not, so an edit cannot add a new line
+    // for him.
+    let dead_here: Vec<i64> = match replaces {
+        Some(_) => {
+            let dead = mandi_db::dead::dead_set(conn, None)?;
+            found
+                .iter()
+                .filter(|a| !a.is_active && dead.has_account(a.id))
+                .map(|a| a.id)
+                .collect()
+        }
+        None => Vec::new(),
+    };
+    let in_replaced = match replaces {
+        Some(entry_id) if !dead_here.is_empty() => {
+            ledger_repo::entry_totals_for_accounts(conn, entry_id, &dead_here)?
+        }
+        _ => HashMap::new(),
+    };
     let mut accounts = HashMap::with_capacity(found.len());
     for a in found {
         let balance = match totals.get(&a.id) {
@@ -413,7 +434,7 @@ fn load_lookups(
                 is_naqdi_mandi: a.code == NAQDI_MANDI_CODE,
                 is_own_goods: a.code == OWN_GOODS_CODE,
                 garden_closed,
-                is_active: a.is_active,
+                is_active: a.is_active || in_replaced.contains_key(&a.id),
                 credit_allowed: a.credit_allowed,
                 credit_limit: a.credit_limit_paisa.map(paisa).transpose()?,
                 balance,

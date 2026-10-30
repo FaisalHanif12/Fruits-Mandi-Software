@@ -160,6 +160,7 @@ fn find(
         &w.env.ctx,
         &w.owner,
         &SearchAccountsInput {
+            include_dead: None,
             scope,
             control_id: None,
             text: text.to_owned(),

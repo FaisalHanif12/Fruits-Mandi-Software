@@ -553,6 +553,67 @@
         },
         {
           "type": "label",
+          "id": "report-r34-sellers-dues"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-dead-amount"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-total-dues"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "21,564"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
           "id": "report-r34-open-lots"
         },
         {
@@ -586,7 +647,7 @@
       "kind": "normal"
     }
   ],
-  "row_count": "27",
+  "row_count": "30",
   "totals_label_id": "report-total",
   "totals": [
     {

@@ -1049,6 +1049,8 @@ pub fn pukhta_people(conn: &Connection, side: PukhtaSide) -> rusqlite::Result<Ve
             phone: phone.unwrap_or_default(),
             last_date,
             person_key,
+            // The service marks the people in the dead amount (it knows the account of the side).
+            is_dead: false,
         })
     })?;
     rows.collect()

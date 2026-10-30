@@ -150,7 +150,7 @@ fruit-list-empty = ابھی کوئی پھل درج نہیں ہوا
 # review: pending
 fruit-list-empty-help = اوپر کا فارم بھر کر محفوظ کریں۔ ہر اندراج یہاں نظر آئے گا۔
 # review: pending
-fruit-list-no-match = ان انتخابات سے کوئی اندراج نہیں ملا
+fruit-list-no-match = ان فلٹروں سے کوئی اندراج نہیں ملا
 # review: pending
 fruit-list-no-match-help = دوسرا شراکت دار، قسم مال یا مدت آزمائیں۔
 # review: pending

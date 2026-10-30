@@ -13,4 +13,10 @@ export type PukhtaPeopleInput = {
    * Which account the field belongs to.
    */
   side: PukhtaSide;
+  /**
+   * True only on the receipt screen: a one-time person in the dead amount is listed too (marked
+   * `is_dead`), because a recovery from him is still allowed (PRD FR-10.10). Missing or false
+   * leaves him out, as every other field does.
+   */
+  include_dead?: boolean;
 };

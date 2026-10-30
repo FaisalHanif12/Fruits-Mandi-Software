@@ -87,7 +87,7 @@ describe.each(LANGUAGES)('the global search, people and screens (%s)', (language
   });
 
   it('finds a report by its name in this language, and by its name in the other', async () => {
-    const { box, user } = await searchFor(language === 'ur' ? 'اگراہی' : 'Dues');
+    const { box, user } = await searchFor(language === 'ur' ? 'ذمے' : 'Dues');
     await screen.findByRole(
       'option',
       { name: (name) => visible(name).includes(m('report-r20-title')) },
@@ -95,7 +95,7 @@ describe.each(LANGUAGES)('the global search, people and screens (%s)', (language
     );
     await user.clear(box);
     // A report is found by the name it has in the other language too (PRD FR-7.35).
-    await user.type(box, language === 'ur' ? 'Buyer Dues' : 'رپورٹ');
+    await user.type(box, language === 'ur' ? 'Buyer Dues' : 'ذمے');
     expect((await screen.findAllByRole('option', undefined, SLOW_MS)).length).toBeGreaterThan(0);
   });
 

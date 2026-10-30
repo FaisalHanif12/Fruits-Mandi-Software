@@ -25,6 +25,8 @@ interface ControlAccountPickerProps extends FieldControlProps {
   placeholder?: string | undefined;
   /** Show the party card under the field. Default: yes (PRD FR-7.38). */
   showCard?: boolean | undefined;
+  /** A person in the dead amount may be offered (the ادھار رقم واپسی field, PRD FR-10.10). */
+  includeDead?: boolean | undefined;
 }
 
 export function ControlAccountPicker({
@@ -35,12 +37,16 @@ export function ControlAccountPicker({
   addLabelId = 'search-add-account',
   placeholder,
   showCard = true,
+  includeDead = false,
   readOnly,
   ...field
 }: ControlAccountPickerProps) {
   const controls = useCoaControls();
   const controlId = controls.data?.find((control) => control.code === controlCode)?.id ?? null;
-  const source = useMemo(() => accountSource('control', controlId), [controlId]);
+  const source = useMemo(
+    () => accountSource('control', controlId, includeDead),
+    [controlId, includeDead],
+  );
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
   const cardId = highlight?.id ?? value?.id ?? null;
   return (

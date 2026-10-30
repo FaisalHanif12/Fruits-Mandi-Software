@@ -592,6 +592,26 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("fruit_list", json!({ "input": {} }), true),
         ("fruit_lots", json!({ "input": {} }), true),
         (
+            "masters_dead_preview",
+            json!({ "input": { "account_id": 1, "pukhta_person_key": null } }),
+            true,
+        ),
+        (
+            "masters_dead_mark",
+            json!({ "input": { "account_id": 1, "pukhta_person_key": null, "entry_date": "11-10-2026", "reason": "died", "note": "" } }),
+            true,
+        ),
+        (
+            "masters_dead_undo",
+            json!({ "input": { "mark_id": 1, "reason": "x" } }),
+            true,
+        ),
+        (
+            "reports_dead_amount",
+            json!({ "input": { "filter": "owed", "search": "", "offset": 0, "limit": 10 } }),
+            true,
+        ),
+        (
             "vouchers_save_advance",
             json!({ "input": { "date": "10-10-2026", "seller_account_id": 1, "amount": "15,000", "expected_goods": "", "narration": "" } }),
             true,

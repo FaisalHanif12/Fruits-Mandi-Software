@@ -758,6 +758,7 @@ fn hostile_names_are_kept_as_plain_text_cleaned_or_refused_and_never_run() {
                 &env.ctx,
                 &actor,
                 &SearchAccountsInput {
+                    include_dead: None,
                     scope: AccountScope::Any,
                     control_id: None,
                     text: text.chars().take(60).collect(),
@@ -1020,6 +1021,7 @@ fn the_search_index_rebuilt_from_the_database_gives_the_same_answers() {
                     &env.ctx,
                     &actor,
                     &SearchAccountsInput {
+                        include_dead: None,
                         scope,
                         control_id: None,
                         text: (*q).into(),

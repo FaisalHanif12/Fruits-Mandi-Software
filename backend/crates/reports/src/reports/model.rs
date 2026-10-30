@@ -127,6 +127,9 @@ pub enum ReportId {
     /// Fruit taken, پھل رجسٹر.
     #[serde(rename = "R37")]
     R37,
+    /// Dead amount, ڈوبی رقم رپورٹ (PRD FR-10.10, plan 40).
+    #[serde(rename = "R38")]
+    R38,
 }
 
 impl ReportId {
@@ -170,6 +173,7 @@ impl ReportId {
             ReportId::R35 => "R35",
             ReportId::R36 => "R36",
             ReportId::R37 => "R37",
+            ReportId::R38 => "R38",
         }
     }
 
@@ -434,6 +438,11 @@ pub struct PartyRef {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub phone: Option<String>,
+    /// The move to the dead amount, when this party (this person of a پختہ کھاتہ account) is in it
+    /// (PRD FR-10.10): the ledger heading says ڈوبی رقم with its date and reason. Missing otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub dead: Option<mandi_core::dead::DeadInfo>,
 }
 
 /// The filters as the backend read them, echoed back (PRD FR-19.10). Dates are `YYYY-MM-DD`.

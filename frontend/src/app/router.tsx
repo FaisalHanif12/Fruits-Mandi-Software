@@ -22,14 +22,18 @@ import { parseFruitSearch } from '../features/fruit/screen-search';
 import { parseCapitalSearch, parseStatementSearch } from '../features/partners/screen-type';
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
 import { AddRecordHost } from './AddRecordHost';
+import { DeadAmountHost } from './DeadAmountHost';
 import { moveDevPathToHash } from './dev/hash-route';
 import { RouteError } from './RouteError';
 
-// The root holds the Index form that the "add" button of any picker opens (plan 32, R8).
+// The root holds the Index form that the "add" button of any picker opens (plan 32, R8) and the two
+// dialogs of the dead amount (plan 40).
 function RootLayout() {
   return (
     <AddRecordHost>
-      <Outlet />
+      <DeadAmountHost>
+        <Outlet />
+      </DeadAmountHost>
     </AddRecordHost>
   );
 }
@@ -485,10 +489,28 @@ const reportsRoute = createRoute({
   ),
 });
 
+// R38, the dead amount (plan 40, PRD FR-10.10). Its own address, found before `/reports/$id`: the
+// people moved to ڈوبی رقم, with a way to make one active again.
+const deadAmountRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/reports/dead-amount',
+  component: lazyRouteComponent(
+    () => import('../features/reports/pages/DeadAmountPage'),
+    'DeadAmountPage',
+  ),
+});
+
 const reportRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/reports/$id',
   validateSearch: parseReportSearch,
+  // R38 has its own screen (it can make a person active again); the catalogue, the search and the
+  // links that name `R38` all land on it.
+  beforeLoad: ({ params }) => {
+    // Like the voucher addresses above: the redirect is returned, which the router follows.
+    if (params.id === 'R38') return redirect({ to: '/reports/dead-amount', replace: true });
+    return undefined;
+  },
   component: lazyRouteComponent(() => import('../features/reports/pages/ReportPage'), 'ReportPage'),
 });
 // ---- end of Run B block ----
@@ -563,6 +585,7 @@ const appRoutes = [
   analyticsViewRoute,
   backupRoute,
   reportsRoute,
+  deadAmountRoute,
   reportRoute,
 ];
 
@@ -696,6 +719,12 @@ const monthDevRoutes = import.meta.env.DEV
 // ---- Run B, round 9: the development page of the dashboard and the bell (dev only, like the others). ----
 const dashboardDevRoutes = import.meta.env.DEV
   ? [
+      // Plan 40: the dead amount (R38, the move box, the party card) with the worked numbers of E2E-44.
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/dead-amount',
+        component: lazyRouteComponent(() => import('./dev/DeadAmountDevPage'), 'DeadAmountDevPage'),
+      }),
       createRoute({
         getParentRoute: () => rootRoute,
         path: '/dev/dashboard',

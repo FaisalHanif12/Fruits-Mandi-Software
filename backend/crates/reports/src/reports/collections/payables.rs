@@ -145,6 +145,9 @@ pub(crate) fn candidates(
             .collect::<Result<HashMap<_, _>, _>>()?
     };
 
+    // People in the dead amount are not in the payables or the sellers' dues: their whole balance
+    // is in R38 and the tile ڈوبی رقم (PRD FR-10.10, A66).
+    let dead = mandi_db::dead::dead_set(conn, as_of)?;
     let mut found = Vec::new();
     for (id, pukhta) in accounts {
         let party = parties
@@ -164,6 +167,9 @@ pub(crate) fn candidates(
                 .collect::<Result<Vec<_>, _>>()?;
             for (key, dr, cr) in persons {
                 if typed.person_key.is_some() && typed.person_key != key {
+                    continue;
+                }
+                if dead.has(id, key.as_deref()) {
                     continue;
                 }
                 let balance = Balance::from_totals(paisa(dr)?, paisa(cr)?)?;
@@ -191,6 +197,9 @@ pub(crate) fn candidates(
                 });
             }
         } else {
+            if dead.has_account(id) {
+                continue;
+            }
             let own = if typed.party_id.is_some() {
                 totals_of(conn, id, None, as_of)?
             } else {

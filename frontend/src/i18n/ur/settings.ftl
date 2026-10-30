@@ -107,7 +107,7 @@ settings-text-smaller = چھوٹا کریں
 settings-text-normal = عام سائز
 
 # review: pending
-settings-lock-minutes = خودکار تالا (منٹ)
+settings-lock-minutes = خودکار تالا (منٹ بعد)
 
 # review: pending
 settings-lock-hint = اتنے منٹ کوئی کلید نہ دبانے پر ایپ لاک ہو جائے گی۔ آپ کا کام جوں کا توں رہے گا۔
@@ -139,16 +139,16 @@ settings-day-closing-time-hint = 24 گھنٹے کے وقت میں گھنٹے ا�
 settings-day-auto-close = بندش کے وقت دن خود بند ہو جائے
 
 # review: pending
-settings-day-auto-close-help = یہ آن ہو تو ایپ بند کرنے کے وقت پر آج کا دن خود بند کر دیتی ہے۔ اس کے بعد آج کی تاریخ میں کوئی اندراج نہیں ہو سکتا جب تک آپ وجہ لکھ کر دن دوبارہ نہ کھولیں۔ اگر کوئی مسودہ محفوظ نہ ہو تو یہ انتظار کرتی ہے۔
+settings-day-auto-close-help = یہ آن ہو تو ایپ بندش کے وقت پر آج کا دن خود بند کر دیتی ہے۔ اس کے بعد آج کی تاریخ میں کوئی اندراج نہیں ہو سکتا جب تک آپ وجہ لکھ کر دن دوبارہ نہ کھولیں۔ اگر کوئی مسودہ محفوظ نہ ہو تو یہ انتظار کرتی ہے۔
 
 # review: pending
-settings-day-auto-close-off-note = بند: آپ دن خود «دن بند کریں» اسکرین سے بند کرتے ہیں۔
+settings-day-auto-close-off-note = آف: آپ دن خود «دن بند کریں» اسکرین سے بند کرتے ہیں۔
 
 # review: pending
-settings-grouping-title = ہندسوں کی ترتیب
+settings-grouping-title = ہندسوں کی گروپ بندی
 
 # review: pending
-settings-grouping-help = بڑی رقمیں اسکرین اور پرنٹ پر کیسے لکھی جائیں۔ لاکھ کی ترتیب میں پہلے تین ہندسوں کے بعد دو دو ہندسے ساتھ آتے ہیں۔
+settings-grouping-help = بڑی رقمیں اسکرین اور پرنٹ پر کیسے لکھی جائیں۔ لاکھ کے انداز میں پہلے تین ہندسوں کے بعد دو دو ہندسے ساتھ آتے ہیں۔
 
 # review: pending
 settings-grouping-international = بین الاقوامی (<num>1,316,040</num>)
@@ -160,7 +160,7 @@ settings-grouping-lakh = لاکھ (<num>13,16,040</num>)
 settings-check-title = حساب کی جانچ
 
 # review: pending
-settings-check-help = یہ دیکھتی ہے کہ حساب برابر ہے، ایپ کے باہر کسی نے ریکارڈ نہیں بدلا، ڈیٹا فائل ٹھیک ہے اور بیک اپ تازہ ہیں۔ یہ دن میں ایک بار خود بھی چلتی ہے۔
+settings-check-help = یہ دیکھتی ہے کہ حساب برابر ہے، ایپ کے باہر کسی نے ریکارڈ نہیں بدلا، ڈیٹا فائل ٹھیک ہے اور بیک اپ تازہ ہیں۔ یہ دن میں تقریباً ایک بار خود بھی چلتی ہے۔
 
 # review: pending
 settings-check-run = ابھی جانچیں
@@ -196,14 +196,14 @@ settings-check-books-difference = { -banaam } اور { -jama } کے میزان �
 settings-check-books-not-run = حساب کی جانچ نہیں ہو سکی۔ دوبارہ کوشش کریں۔ پھر بھی نہ ہو تو مدد کے لیے رابطہ کریں۔
 
 # review: pending
-settings-check-journal-ok = ایپ کے باہر کوئی اندراج نہیں بدلا گیا۔
+settings-check-journal-ok = ایپ کے باہر کوئی پوسٹ شدہ اندراج نہیں بدلا گیا۔
 
 # $entry is the first entry that does not match, or the word none.
 # review: pending
-settings-check-journal-bad = اندراج { $entry } اپنی مہر سے نہیں ملتا۔ ہو سکتا ہے کسی نے ایپ کے باہر ریکارڈ بدلا ہو۔ مدد کے لیے رابطہ کریں۔
+settings-check-journal-bad = پوسٹ شدہ اندراج { $entry } اپنی مہر سے نہیں ملتا۔ ہو سکتا ہے کسی نے ایپ کے باہر ریکارڈ بدلا ہو۔ مدد کے لیے رابطہ کریں۔
 
 # review: pending
-settings-check-journal-bad-unknown = ایک اندراج اپنی مہر سے نہیں ملتا۔ ہو سکتا ہے کسی نے ایپ کے باہر ریکارڈ بدلا ہو۔ مدد کے لیے رابطہ کریں۔
+settings-check-journal-bad-unknown = ایک پوسٹ شدہ اندراج اپنی مہر سے نہیں ملتا۔ ہو سکتا ہے کسی نے ایپ کے باہر ریکارڈ بدلا ہو۔ مدد کے لیے رابطہ کریں۔
 
 # review: pending
 settings-check-audit-ok = آڈٹ لاگ بدلا نہیں گیا۔
@@ -219,7 +219,7 @@ settings-check-audit-bad-unknown = آڈٹ کا ایک اندراج اپنی مہ
 settings-check-data = ڈیٹا فائل
 
 # review: pending
-settings-check-data-ok = شروع میں ڈیٹا فائل کی جانچ ٹھیک رہی۔
+settings-check-data-ok = ایپ شروع ہوتے وقت ڈیٹا فائل کی جانچ ٹھیک رہی۔
 
 # review: pending
 settings-check-data-checking = ڈیٹا فائل کی جانچ ابھی ہو رہی ہے۔
@@ -234,7 +234,7 @@ settings-check-data-reference = حوالہ: <code>{ $reference }</code>
 settings-check-backup = بیک اپ
 
 # review: pending
-settings-check-backup-unknown = بیک اپ کا حال معلوم نہیں۔
+settings-check-backup-unknown = بیک اپ کی حالت معلوم نہیں۔
 
 # review: pending
 settings-check-backup-off = کلاؤڈ بیک اپ ابھی ترتیب نہیں دیا گیا۔
@@ -252,10 +252,16 @@ settings-check-backup-red = آخری کلاؤڈ کاپی { $hours } گھنٹے �
 settings-check-backup-alert = آخری کلاؤڈ کاپی { $hours } گھنٹے پرانی ہے: دو دن سے زیادہ۔
 
 # review: pending
-settings-check-backup-queue = { $count } کاپیاں بھیجنے کے انتظار میں ہیں۔
+settings-check-backup-queue = { $count ->
+    [one] { $count } کاپی بھیجنے کے انتظار میں ہے۔
+   *[other] { $count } کاپیاں بھیجنے کے انتظار میں ہیں۔
+}
 
 # review: pending
-settings-check-backup-errors = بیک اپ کی { $count } خرابیاں ہیں۔ بیک اپ کی اسکرین دیکھیں۔
+settings-check-backup-errors = { $count ->
+    [one] بیک اپ کی { $count } خرابی ہے۔ بیک اپ کی اسکرین دیکھیں۔
+   *[other] بیک اپ کی { $count } خرابیاں ہیں۔ بیک اپ کی اسکرین دیکھیں۔
+}
 
 # review: pending
 settings-app-title = اپڈیٹ
@@ -291,7 +297,7 @@ settings-update-check-again = دوبارہ دیکھیں
 settings-update-install = ابھی اپڈیٹ کریں
 
 # review: pending
-settings-update-has-drafts = غیر محفوظ اندراجات ہیں ({ $drafts })۔ اپڈیٹ سے پہلے انہیں محفوظ کریں یا چھوڑ دیں۔
+settings-update-has-drafts = غیر محفوظ اندراجات ہیں ({ $drafts })۔ اپڈیٹ سے پہلے انہیں محفوظ کریں یا ختم کر دیں۔
 
 # review: pending
 settings-update-confirm-title = ورژن { $version } پر اپڈیٹ کریں؟
@@ -312,7 +318,7 @@ settings-update-done = ورژن { $version } انسٹال ہو گیا۔ حفاظ
 settings-support-title = مدد کے لیے معلومات
 
 # review: pending
-settings-support-help = لاگ، ایپ کا ورژن اور جانچ کے نتیجے ایک فائل میں جمع کرتی ہے جو آپ ہمیں بھیج سکتے ہیں۔ اس میں کوئی پاس ورڈ، کوئی کلید اور کوئی بقایا نہیں ہوتا۔
+settings-support-help = لاگ، ایپ کا ورژن اور جانچ کے نتیجے ایک فائل میں جمع کرتی ہے جو آپ ہمیں بھیج سکتے ہیں۔ اس میں کوئی پاس ورڈ، کوئی چابی اور کوئی بقایا نہیں ہوتا۔
 
 # review: pending
 settings-support-save = مدد کی فائل محفوظ کریں

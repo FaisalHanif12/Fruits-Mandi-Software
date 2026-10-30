@@ -293,6 +293,14 @@ pub(crate) fn resolve(
                             names.map(|n| n.name_en.as_str()),
                         );
                     }
+                    // The heading of the ledger says ڈوبی رقم when he is in it (PRD FR-7.38,
+                    // FR-10.10).
+                    party.dead = mandi_db::dead::active_for(
+                        conn,
+                        party.account_id,
+                        typed.person_key.as_deref(),
+                    )?
+                    .map(|mark| mark.info());
                     typed.resolved.party = Some(party);
                 }
                 None => problems.push(FieldError::new(

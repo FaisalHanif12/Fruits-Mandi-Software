@@ -309,6 +309,56 @@ fn stock_moves(
     Ok((before, during))
 }
 
+/// The people in the dead amount on one day, and what they still owed at its end (PRD FR-10.10).
+struct DeadDay {
+    /// Σ what the people in the dead amount owed at the end of the day.
+    amount: Paisa,
+    /// How many of them owed something.
+    count: i64,
+    /// The part of it that is a buyer's, which the buyers' dues leave out.
+    buyers: Paisa,
+}
+
+/// The dead amount at the end of `day`: the moves dated on or before it and not undone by then,
+/// each with his balance at the end of that day (never below 0). Nothing is read when nobody has
+/// ever been moved.
+fn dead_on(
+    conn: &Connection,
+    marks: &[mandi_db::dead::MarkRow],
+    buyer_accounts: &std::collections::HashSet<i64>,
+    day: &str,
+) -> Result<DeadDay, ReportsError> {
+    let mut out = DeadDay {
+        amount: Paisa::ZERO,
+        count: 0,
+        buyers: Paisa::ZERO,
+    };
+    for mark in marks {
+        let alive_then = mark.entry_date.as_str() <= day
+            && mark
+                .undone_date
+                .as_deref()
+                .is_none_or(|undone| undone > day);
+        if !alive_then {
+            continue;
+        }
+        let t = totals_of(conn, mark.account_id, mark.person_key.as_deref(), Some(day))?;
+        let owed = owing(paisa(t.dr_paisa)?, paisa(t.cr_paisa)?)?;
+        if owed == Paisa::ZERO {
+            continue;
+        }
+        add(&mut out.amount, owed)?;
+        out.count = out
+            .count
+            .checked_add(1)
+            .ok_or_else(|| ReportsError::Data("the dead count does not fit".to_owned()))?;
+        if buyer_accounts.contains(&mark.account_id) {
+            add(&mut out.buyers, owed)?;
+        }
+    }
+    Ok(out)
+}
+
 /// The positive part of a balance: what the account owes.
 fn owing(dr: Paisa, cr: Paisa) -> Result<Paisa, ReportsError> {
     Ok(if dr > cr {
@@ -598,6 +648,40 @@ pub(crate) fn run(
     let mut cash_next = 0_usize;
     let (dues_before, dues_moves) = buyer_moves(conn, &from, &to)?;
     let mut dues = Dues::new(dues_before, dues_moves)?;
+    // The dead amount (PRD FR-10.10): the moves, and which of the moved accounts are buyers'.
+    let dead_marks = mandi_db::dead::all_marks(conn)?;
+    let mut buyer_accounts = std::collections::HashSet::new();
+    for mark in &dead_marks {
+        if let Some(facts) = account_repo::facts(conn, mark.account_id)?
+            && facts.control_code == mandi_core::accounts::BUYER_CONTROL
+        {
+            buyer_accounts.insert(mark.account_id);
+        }
+    }
+    // Sellers' dues are the read-time working of PRD FR-7.59, which is not dated: it is given for
+    // today or later only, and nothing is guessed for an earlier day (as R24 does).
+    let today_iso = typed.today.map(|t| t.to_iso());
+    let sellers_dues_now = match &today_iso {
+        Some(today) => {
+            let (sellers, _) = crate::reports::collections::payables::candidates(
+                conn,
+                &Typed {
+                    today: typed.today,
+                    ..Typed::default()
+                },
+                today,
+                true,
+            )?;
+            let mut total = Paisa::ZERO;
+            for seller in &sellers {
+                if let Some(working) = seller.working {
+                    add(&mut total, working.owes_firm)?;
+                }
+            }
+            Some(total)
+        }
+        None => None,
+    };
     let (stock_before, stock_during) = stock_moves(conn, &from, &to)?;
     let mut stock = Stock::new(stock_before, stock_during)?;
 
@@ -633,8 +717,20 @@ pub(crate) fn run(
         let (garden_payments, garden_paid) = gardens_paid.get(day).copied().unwrap_or((0, 0));
         let (garden_dr, garden_cr) = pair(&gardens_in, day)?;
         let (fruit_qty, fruit_value) = fruit_taken.get(day).copied().unwrap_or((0, 0));
-        let dues_now = dues.at_end_of(day)?;
+        let dues_all = dues.at_end_of(day)?;
         let (open_lots, open_qty) = stock.at_end_of(day)?;
+        // PRD FR-10.10: the buyers' dues leave out the people in the dead amount, whose balances
+        // are in the dead amount; the total dues are the three together (FR-19.9).
+        let dead = dead_on(conn, &dead_marks, &buyer_accounts, day)?;
+        let dues_now = dues_all.checked_sub(dead.buyers)?;
+        let sellers_now = match (&sellers_dues_now, &today_iso) {
+            (Some(total), Some(today)) if day.as_str() >= today.as_str() => Some(*total),
+            _ => None,
+        };
+        let total_dues = match sellers_now {
+            Some(sellers) => Some(dues_now.checked_add(sellers)?.checked_add(dead.amount)?),
+            None => None,
+        };
 
         let amount = |p: Paisa| Some(p);
         all_rows.push(row(
@@ -756,6 +852,14 @@ pub(crate) fn run(
             None,
             amount(dues_now),
         ));
+        all_rows.push(row(day, label(ids::R34_SELLERS_DUES), None, sellers_now));
+        all_rows.push(row(
+            day,
+            label(ids::R34_DEAD_AMOUNT),
+            Some(dead.count),
+            amount(dead.amount),
+        ));
+        all_rows.push(row(day, label(ids::R34_TOTAL_DUES), None, total_dues));
         all_rows.push(row(day, label(ids::R34_OPEN_LOTS), Some(open_lots), None));
         all_rows.push(row(day, label(ids::R34_OPEN_QTY), Some(open_qty), None));
     }

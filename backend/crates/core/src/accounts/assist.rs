@@ -48,6 +48,12 @@ pub struct SearchAccountsInput {
     /// fewer than `limit` hits is the last one. Missing means 0.
     #[serde(default)]
     pub offset: u32,
+    /// True only in the field of a وصولی and of an ادھار رقم واپسی: a person in the dead amount is
+    /// listed too (marked `is_dead`), because a recovery from him is still allowed (PRD FR-10.10).
+    /// Missing or false leaves him out, like any inactive account.
+    #[serde(default)]
+    #[ts(optional)]
+    pub include_dead: Option<bool>,
 }
 
 /// The last accounts used in a field, then the rest (`Alt+Down`, PRD FR-7.41).
@@ -59,6 +65,10 @@ pub struct AccountsRecentInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
+    /// As on `SearchAccountsInput`: true in the field of a وصولی and of an ادھار رقم واپسی.
+    #[serde(default)]
+    #[ts(optional)]
+    pub include_dead: Option<bool>,
 }
 
 /// Tell the app that an account was chosen in a field, so it comes first next time (PRD
@@ -104,6 +114,10 @@ pub struct AccountHit {
     pub control_id: i64,
     /// False for an account hidden from pickers.
     pub is_active: bool,
+    /// True when the person is in the dead amount (PRD FR-10.10): the account is inactive and the
+    /// picker marks it "ڈوبی". Only the receipt picker and the ادھار رقم واپسی picker return such an
+    /// account; every other picker leaves it out (plan 40).
+    pub is_dead: bool,
 }
 
 /// A code typed in an account field, to be taken on `Enter` or on leaving the field (never
@@ -237,6 +251,9 @@ pub struct PartyCard {
     pub phone: String,
     /// False when hidden from pickers.
     pub is_active: bool,
+    /// The move to the dead amount, if the person is in it (PRD FR-7.38, FR-10.10): the card says
+    /// ڈوبی رقم with its date and reason. Null otherwise.
+    pub dead: Option<crate::dead::DeadInfo>,
     /// The balance now, with its side (بنام or جمع).
     pub balance: Balance,
     /// The date of the last posted entry on this account, `YYYY-MM-DD`, or null if none.

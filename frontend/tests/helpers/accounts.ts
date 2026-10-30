@@ -354,6 +354,7 @@ function hitOf(row: AccountRow): AccountHit {
     extra_ur: row.city?.name_ur ?? '',
     extra_en: row.city?.name_en ?? '',
     is_active: row.is_active,
+    is_dead: false,
     balance: row.balance,
   };
 }
@@ -492,6 +493,7 @@ export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): Par
     city_ur: row.city?.name_ur ?? '',
     city_en: row.city?.name_en ?? '',
     phone: row.phone1,
+    dead: null,
     balance: row.balance,
     last_entry_date: '2026-10-10',
     credit_limit: row.account_type === 'buyer' ? row.credit_limit_paisa : null,

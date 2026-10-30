@@ -10,7 +10,8 @@
       "extra_en": "",
       "account_type": "buyer",
       "control_id": 6,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {
@@ -24,7 +25,8 @@
       "extra_en": "",
       "account_type": "seller",
       "control_id": 5,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {
@@ -39,7 +41,8 @@
       "extra_en": "",
       "account_type": "buyer",
       "control_id": 6,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {
@@ -53,7 +56,8 @@
       "extra_en": "",
       "account_type": "other",
       "control_id": 14,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {
@@ -67,7 +71,8 @@
       "extra_en": "",
       "account_type": "other",
       "control_id": 14,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {
@@ -81,7 +86,8 @@
       "extra_en": "",
       "account_type": "other",
       "control_id": 14,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {
@@ -95,7 +101,8 @@
       "extra_en": "",
       "account_type": "other",
       "control_id": 11,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {
@@ -109,7 +116,8 @@
       "extra_en": "",
       "account_type": "other",
       "control_id": 11,
-      "is_active": true
+      "is_active": true,
+      "is_dead": false
     }
   },
   {

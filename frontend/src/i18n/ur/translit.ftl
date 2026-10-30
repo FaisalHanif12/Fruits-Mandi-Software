@@ -65,7 +65,7 @@ translit-words-load-failed = سیکھے ہوئے الفاظ نہیں کھل سک
 # review: pending
 translit-pair-urdu-hint = اردو حروف میں لکھیں، یا انگریزی حروف لکھیں تو اردو بن جائے گی۔ طریقہ بدلنے کے لیے { $key } دبائیں۔
 # review: pending
-translit-pair-english-hint = انگریزی حروف میں لکھیں۔ یہ اردو نام سے خود بھر جاتا ہے، اسے بدل سکتے ہیں۔
+translit-pair-english-hint = صرف انگریزی حروف میں لکھیں۔ یہ اردو نام سے خود بھر جاتا ہے، اسے بدل سکتے ہیں۔
 # review: pending
 translit-pair-english-hint-first = نام انگریزی حروف میں لکھیں۔ اردو نام خود بھر جائے گا۔
 # review: pending

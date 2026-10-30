@@ -9,6 +9,8 @@ import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { BuyerBillsPrintData } from '../../bindings/BuyerBillsPrintData';
 import type { CollectionPrintData } from '../../bindings/CollectionPrintData';
 import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
+import type { DeadAmountInput } from '../../bindings/DeadAmountInput';
+import type { DeadAmountPage } from '../../bindings/DeadAmountPage';
 import type { FindPeopleInput } from '../../bindings/FindPeopleInput';
 import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
 import type { PrintData } from '../../bindings/PrintData';
@@ -140,4 +142,13 @@ export function reportsPrintCollection(input: PrintCollectionInput): Promise<Pri
  */
 export function reportsPrintHeader(input: PrintFrameInput): Promise<PrintFrame> {
   return callCommand<PrintFrame>('reports_print_header', { input });
+}
+
+/**
+ * One page of R38, the dead amount (PRD FR-10.10, R38): everyone moved to ڈوبی رقم, with what he
+ * owed then, what was recovered since and what he still owes. The count and the totals are over the
+ * whole filter (PRD FR-19.11), never a sum of the page.
+ */
+export function reportsDeadAmount(input: DeadAmountInput): Promise<DeadAmountPage> {
+  return callCommand<DeadAmountPage>('reports_dead_amount', { input });
 }

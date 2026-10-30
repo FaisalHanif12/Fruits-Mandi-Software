@@ -17,6 +17,7 @@ pub mod clock;
 pub mod codes;
 pub mod commission;
 mod db;
+pub mod dead;
 pub mod disk;
 pub mod drafts;
 mod error;

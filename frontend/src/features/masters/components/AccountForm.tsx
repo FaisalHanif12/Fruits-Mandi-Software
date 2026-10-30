@@ -48,8 +48,10 @@ import {
   TagInput,
   TextInput,
   ActionBar,
+  DeadInfoLine,
   FoldSection,
   FormGrid,
+  useDeadAmountActions,
 } from '../../../shared/ui';
 import {
   accountValuesOf,
@@ -61,6 +63,7 @@ import {
   pickedOf,
   useAccountNextCode,
   useCoaControls,
+  usePartyCard,
   useSaveAccount,
   useSetAccountActive,
   useSimilarAccounts,
@@ -172,6 +175,18 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   const [quickAdd, setQuickAdd] = useState<{ kind: QuickMasterKind; typed: string } | null>(null);
   const save = useSaveAccount();
   const setActive = useSetAccountActive();
+  // A person moved to the dead amount (PRD FR-10.10): the form says so, and "make active" becomes
+  // "make active again", which asks for a reason and ends the move. A seller, a buyer or someone with
+  // money lent whose balance is بنام can be moved (the dialog asks the backend again).
+  const deadActions = useDeadAmountActions();
+  const card = usePartyCard(account === null ? null : account.id);
+  const dead = card.data?.dead ?? null;
+  const movable =
+    account !== null &&
+    account.is_active &&
+    !account.is_system &&
+    account.account_type !== 'other' &&
+    account.balance.side === 'dr';
   const containerRef = useFocusFirstField<HTMLFormElement>();
   const formRef = useRef<HTMLFormElement>(null);
   const similar = useSimilarAccounts(
@@ -357,6 +372,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
           <p className="type-body text-ink-muted" />
         </Localized>
       ) : null}
+      {dead === null ? null : <DeadInfoLine info={dead} />}
       <div className={embedded === undefined ? 'min-h-0 flex-1 overflow-auto' : undefined}>
         <form
           ref={(element) => {
@@ -740,16 +756,46 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
               </Localized>
             </>
           ) : account.is_active ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="danger"
+                busy={setActive.isPending}
+                onClick={() => {
+                  setConfirmInactive(true);
+                }}
+              >
+                <Localized id="accounts-make-inactive" />
+              </Button>
+              {movable && deadActions !== null ? (
+                <Button
+                  onClick={() => {
+                    deadActions.move({
+                      accountId: account.id,
+                      personKey: null,
+                      names: {
+                        name_ur: account.name_ur,
+                        name_en: account.name_en,
+                        tag: account.tag,
+                      },
+                    });
+                  }}
+                >
+                  <Localized id="dead-move-button" />
+                </Button>
+              ) : null}
+            </div>
+          ) : dead !== null && deadActions !== null ? (
             <Button
-              variant="danger"
-              busy={setActive.isPending}
               onClick={() => {
-                setConfirmInactive(true);
+                deadActions.undo({
+                  markId: dead.mark_id,
+                  names: { name_ur: account.name_ur, name_en: account.name_en, tag: account.tag },
+                });
               }}
             >
-              <Localized id="accounts-make-inactive" />
+              <Localized id="dead-undo-button" />
             </Button>
-          ) : (
+          ) : dead !== null ? null : (
             <Button
               busy={setActive.isPending}
               onClick={() => {

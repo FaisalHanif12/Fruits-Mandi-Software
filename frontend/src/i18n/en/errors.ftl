@@ -596,3 +596,27 @@ err-split-above-qty = The { -nag } for { -dusri-dukan } cannot be more than all 
 # PRD FR-12.41. $max: the most lines an entry can have.
 # review: pending
 err-too-many-lines = An entry can have at most { $max } lines.
+
+# PRD FR-10.10, plan 40. The person owes nothing, so there is nothing to move.
+# review: pending
+err-nothing-owed = He owes nothing, so there is nothing to move. If he has gone, only make the account inactive.
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-dead-not-allowed = A partner, a { -alag-khata }, a { -bagh } or a system account cannot be moved to { -doobi-raqam }.
+
+# PRD FR-10.10, plan 40.
+# review: pending
+err-already-dead = He is already in { -doobi-raqam }. To make him active, use "Make active again".
+
+# PRD FR-10.10, plan 40. The reason Other needs a note.
+# review: pending
+err-note-required = Write a note when the reason is Other.
+
+# PRD FR-10.10, E72, plan 40. A line, a lot or an entry for a person who is in the dead amount.
+# review: pending
+err-person-in-dead-amount = This person is in { -doobi-raqam }. Only a { -wasooli } or a { -wapsi } of { -adhar-raqam } can be entered for him.
+
+# PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
+# review: pending
+err-date-before-last-posting = The date cannot be before his last entry ({ $last_posting_date }).

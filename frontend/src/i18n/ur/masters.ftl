@@ -160,7 +160,7 @@ masters-status-inactive = غیر فعال
 masters-empty-help = نیا شامل کرنے کے لیے { $key } دبائیں۔
 
 # review: pending
-masters-no-match-title = کوئی نام نہیں ملا
+masters-no-match-title = کچھ نہیں ملا
 
 # review: pending
 masters-no-match-help = کوئی اور کوڈ یا نام لکھ کر دیکھیں، یا غیر فعال بھی دکھائیں۔
@@ -175,7 +175,7 @@ masters-load-failed = فہرست نہیں کھل سکی
 masters-filter-failed = تلاش نہیں ہو سکی
 
 # review: pending
-masters-not-found-title = یہ نام نہیں ملا
+masters-not-found-title = یہ نہیں ملا
 
 # review: pending
 masters-not-found-help = ہو سکتا ہے یہ بدل چکا ہو۔ فہرست دوبارہ کھولیں۔

@@ -713,6 +713,7 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
         &w.env.ctx,
         &w.owner,
         &mandi_services::core::accounts::SearchAccountsInput {
+            include_dead: None,
             scope: mandi_services::core::accounts::AccountScope::LotSeller,
             control_id: None,
             text: "shahpur".into(),
@@ -747,6 +748,7 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
         &w.env.ctx,
         &w.owner,
         &mandi_services::core::accounts::SearchAccountsInput {
+            include_dead: None,
             scope: mandi_services::core::accounts::AccountScope::LotSeller,
             control_id: None,
             text: "shahpur".into(),

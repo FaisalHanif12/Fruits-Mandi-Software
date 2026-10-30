@@ -17,6 +17,7 @@ pub mod cash;
 pub mod cashbook;
 pub mod codes;
 pub mod dates;
+pub mod dead;
 pub mod drafts;
 pub mod english_words;
 pub mod error;

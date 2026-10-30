@@ -389,6 +389,7 @@ describe.each(LANGUAGES)(
           phone: '03000000000',
           last_date: '2026-10-10',
           person_key: real.REQUEST_MAKE_REGULAR.person_key,
+          is_dead: false,
         },
       ]);
       vi.mocked(pukhtaApi.pukhtaMakeRegular).mockResolvedValue(real.MADE_REGULAR);

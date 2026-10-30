@@ -14,11 +14,12 @@ const PEOPLE_DELAY_MS = 150;
  * The one-time people that fit the text typed in a name or phone field (PRD FR-7.29). Nothing is
  * asked while the field is empty. The last answer stays while the next one is on its way.
  */
-export function usePukhtaPeople(text: string, side: PukhtaSide) {
+export function usePukhtaPeople(text: string, side: PukhtaSide, includeDead = false) {
   const settled = useDebouncedValue(text.trim(), PEOPLE_DELAY_MS);
   return useQuery({
-    queryKey: ['pukhta', 'people', side, settled],
-    queryFn: () => searchPukhtaPeople(settled, side),
+    queryKey: ['pukhta', 'people', side, settled, ...(includeDead ? ['dead'] : [])],
+    queryFn: () =>
+      includeDead ? searchPukhtaPeople(settled, side, true) : searchPukhtaPeople(settled, side),
     enabled: settled !== '',
     placeholderData: keepPreviousData,
     staleTime: 0,

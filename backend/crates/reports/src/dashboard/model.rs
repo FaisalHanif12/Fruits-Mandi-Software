@@ -57,10 +57,27 @@ pub struct DashboardTiles {
     /// روکڑ بقایا: the balance of the cash account now.
     #[ts(type = "Paisa")]
     pub cash_in_hand_paisa: Paisa,
-    /// وصولی باقی: the shop's total اگراہی, the total row of R20 (FR-19.9).
+    /// گاہکوں کے ذمے: what buyers owe, leaving out anyone in the dead amount. The total row of R20
+    /// (PRD 9.1, FR-19.9, FR-10.10).
     #[ts(type = "Paisa")]
     pub buyers_dues_paisa: Paisa,
-    /// ادائیگی باقی: Σ of each seller's open payable (FR-7.59), the payable total of R24.
+    /// بیوپاریوں کے ذمے: what sellers owe beyond their open advances, leaving out anyone in the dead
+    /// amount. The "بیوپاری کے ذمے" total of R24 (PRD 9.1, FR-15.9).
+    #[ts(type = "Paisa")]
+    pub sellers_dues_paisa: Paisa,
+    /// کل اگراہی: buyers' dues + sellers' dues + the dead amount, everything people owe the shop
+    /// (PRD 9.1, FR-19.9). Open advances and money lent have their own tiles.
+    #[ts(type = "Paisa")]
+    pub total_dues_paisa: Paisa,
+    /// ڈوبی رقم: what the people moved to the dead amount still owe (PRD FR-10.10). The total of R38
+    /// with the filter "owed". It opens R38.
+    #[ts(type = "Paisa")]
+    pub dead_amount_paisa: Paisa,
+    /// ڈوبی رقم: how many people still owe something in it.
+    #[ts(type = "number")]
+    pub dead_count: i64,
+    /// بیوپاریوں کو ادائیگی باقی: Σ of each seller's open payable (FR-7.59), the payable total of R24,
+    /// leaving out anyone in the dead amount.
     #[ts(type = "Paisa")]
     pub sellers_payable_paisa: Paisa,
     /// پیشگی باقی: Σ of the advances not yet adjusted (FR-15.8), the open total of R26.

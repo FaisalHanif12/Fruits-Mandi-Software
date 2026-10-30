@@ -185,6 +185,7 @@ fn account_page(
         &env.ctx,
         owner,
         &SearchAccountsInput {
+            include_dead: None,
             scope,
             control_id: None,
             text: text.into(),

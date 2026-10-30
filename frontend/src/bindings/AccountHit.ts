@@ -46,4 +46,10 @@ export type AccountHit = {
    * False for an account hidden from pickers.
    */
   is_active: boolean;
+  /**
+   * True when the person is in the dead amount (PRD FR-10.10): the account is inactive and the
+   * picker marks it "ڈوبی". Only the receipt picker and the ادھار رقم واپسی picker return such an
+   * account; every other picker leaves it out (plan 40).
+   */
+  is_dead: boolean;
 };

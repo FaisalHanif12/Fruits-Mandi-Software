@@ -3,7 +3,7 @@
 # review: pending
 search-open-list = فہرست کھولیں
 # review: pending
-search-list-label = ملتے جلتے ناموں کی فہرست
+search-list-label = ملنے والے ناموں کی فہرست
 # review: pending
 search-searching = تلاش جاری ہے…
 # review: pending

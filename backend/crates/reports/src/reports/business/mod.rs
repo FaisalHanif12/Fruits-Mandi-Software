@@ -6,6 +6,7 @@
 //! (PRD FR-18.8).
 
 pub(crate) mod day;
+mod dead;
 mod expenses;
 pub(crate) mod fruit;
 mod gardens;
@@ -16,6 +17,7 @@ mod sheet;
 pub(crate) mod trips;
 
 pub(super) use day::run as run_r34;
+pub(super) use dead::run as run_r38;
 pub(super) use expenses::run as run_r29;
 pub(super) use fruit::run as run_r37;
 pub(super) use gardens::run as run_r36;
