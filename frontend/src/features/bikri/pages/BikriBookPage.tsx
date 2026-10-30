@@ -503,7 +503,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
               // The line of help is behind an ⓘ, so the name and the buttons are one row (plan 38).
               <div className="flex items-center gap-1">
                 <Localized id="glossary-bikri-book">
-                  <h1 className="sr-only normal:not-sr-only normal:type-title" />
+                  <h1 className="sr-only normal:not-sr-only normal:type-section" />
                 </Localized>
                 <div className="hidden normal:block">
                   <InfoHint>
@@ -595,6 +595,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           }}
         >
           <HeaderCard
+            folded={region === 'lots' || region === 'sales'}
             error={formError}
             onOpenBikri={openByNumber}
             editing={edit !== null}

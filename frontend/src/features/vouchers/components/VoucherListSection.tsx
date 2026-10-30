@@ -11,22 +11,28 @@ import { useMemo, useState } from 'react';
 import type { VouchersListInput } from '../../../bindings/VouchersListInput';
 import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
-import { isoToDisplayDate } from '../../../shared/format';
 import { PagedList } from '../../../shared/grid';
+import { useDebouncedValue, usePeriod } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps } from '../../../shared/keyboard';
 import {
   AccountPicker,
   Button,
   Card,
-  DateInput,
   EmptyState,
   Field,
+  FilterBar,
+  FormSpan,
+  PeriodBox,
+  ShowClosedTick,
   type PickerValue,
 } from '../../../shared/ui';
 import { VOUCHER_COLUMNS } from '../list-columns';
 import { useVouchersList } from '../hooks';
 import type { ScreenType } from '../screen-type';
 import type { VoucherRow } from '../types';
+
+/** A pause so a burst of key presses in the search box asks once. */
+const SEARCH_DELAY_MS = 150;
 
 interface VoucherListSectionProps {
   type: ScreenType;
@@ -49,27 +55,33 @@ export function VoucherListSection({
   onCancel,
   onPrint,
 }: VoucherListSectionProps) {
-  const todayText = isoToDisplayDate(today);
-  const [from, setFrom] = useState(todayText);
-  const [to, setTo] = useState(todayText);
+  // The list opens on today, and the Owner's last choice of period is kept for this kind of voucher
+  // (plan 38 R4). Rows of finished (cancelled) vouchers are left out until the tick is on.
+  const period = usePeriod(`vouchers.${type}`, 'today', today);
   const [account, setAccount] = useState<PickerValue | null>(null);
+  const [search, setSearch] = useState('');
+  const [showFinished, setShowFinished] = useState(false);
+  const searchText = useDebouncedValue(search.trim(), SEARCH_DELAY_MS);
   const input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'> = {
     voucher_type: type,
-    from: from.trim(),
-    to: to.trim(),
+    from: period.range.from,
+    to: period.range.to,
     account_id: account?.id ?? null,
     person_key: null,
-    show_finished: false,
-    search: null,
-    group_by_month: false,
+    show_finished: showFinished,
+    search: searchText === '' ? null : searchText,
+    // A month heading is worth its row only when the list covers more than one day.
+    group_by_month: period.state.kind !== 'today',
   };
-  const list = useVouchersList(input);
+  const list = useVouchersList(input, period.ready);
   const first = list.data?.pages[0];
   // A refusal shows as the state, not as the rows of the filter before it.
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
   const columns = useMemo(() => VOUCHER_COLUMNS, []);
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
-  const onlyToday = from.trim() === todayText && to.trim() === todayText && account === null;
+  const onlyToday =
+    period.state.kind === 'today' && account === null && searchText === '' && !showFinished;
+  const months = first === undefined || first.months.length === 0 ? undefined : first.months;
 
   const empty = onlyToday ? (
     <EmptyState
@@ -85,9 +97,10 @@ export function VoucherListSection({
       action={
         <Button
           onClick={() => {
-            setFrom(todayText);
-            setTo(todayText);
+            period.change({ kind: 'today', from: '', to: '' });
             setAccount(null);
+            setSearch('');
+            setShowFinished(false);
           }}
         >
           <Localized id="vouchers-list-clear" />
@@ -110,6 +123,10 @@ export function VoucherListSection({
         void list.refetch();
       }}
       pager={list.pager}
+      sort={{ value: list.sort, onChange: list.setSort }}
+      months={
+        months === undefined ? undefined : { months, monthOf: (row) => row.entry_date.slice(0, 7) }
+      }
       empty={empty}
       onOpen={(row) => {
         if (row.editable) onEdit(row);
@@ -138,29 +155,33 @@ export function VoucherListSection({
 
   return (
     <Card compact title={<Localized id={`vouchers-list-title-${type}`} />}>
-      <div {...formNavigationProps} className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4">
-        <Field label={<Localized id="vouchers-list-from" />}>
-          {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
-        </Field>
-        <Field label={<Localized id="vouchers-list-to" />}>
-          {(control) => <DateInput {...control} value={to} onChange={setTo} />}
-        </Field>
-        <div className="col-span-2">
-          <Field label={<Localized id="vouchers-list-account" />}>
-            {(control) => (
-              <AccountPicker
-                {...control}
-                canAdd={false}
-                scope="any"
-                showCard={false}
-                value={account}
-                onChange={(hit) => {
-                  setAccount(hit === null ? null : pickedOf(hit));
-                }}
-              />
-            )}
-          </Field>
-        </div>
+      <div {...formNavigationProps}>
+        <FilterBar
+          screen={`vouchers.list.${type}`}
+          search={{ value: search, onChange: setSearch }}
+          moreSet={account === null ? 0 : 1}
+          more={
+            <FormSpan span="two">
+              <Field label={<Localized id="vouchers-list-account" />}>
+                {(control) => (
+                  <AccountPicker
+                    {...control}
+                    canAdd={false}
+                    scope="any"
+                    showCard={false}
+                    value={account}
+                    onChange={(hit) => {
+                      setAccount(hit === null ? null : pickedOf(hit));
+                    }}
+                  />
+                )}
+              </Field>
+            </FormSpan>
+          }
+          extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
+        >
+          {period.ready ? <PeriodBox period={period} /> : null}
+        </FilterBar>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button

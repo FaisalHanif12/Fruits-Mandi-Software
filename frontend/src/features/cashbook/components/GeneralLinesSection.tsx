@@ -132,6 +132,7 @@ export function GeneralLinesSection({
           onCardAccount={onCardAccount}
           fit
           heightMode="auto"
+          minRows={4}
         />
       </section>
       <div className="flex min-w-0 flex-col gap-3">

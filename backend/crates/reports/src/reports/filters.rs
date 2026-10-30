@@ -16,6 +16,22 @@ use super::model::{
 };
 use crate::error::ReportsError;
 
+/// A sort a page of journal lines can do in SQL (plan 38 B2). The lines with the same amount keep
+/// the order of the days. Oldest first is the natural order and needs no sort.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LineSort {
+    /// By debit or by credit.
+    Amount {
+        /// True sorts by credit, false by debit.
+        credit: bool,
+        /// True is biggest first.
+        desc: bool,
+    },
+    /// By the day, newest first: the exact reverse of the natural order, with the running
+    /// balance the lines have in the natural order.
+    Newest,
+}
+
 /// The filters of a run, read and checked. `resolved` is echoed back to the screen.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Typed {
@@ -61,6 +77,9 @@ pub(crate) struct Typed {
     pub(crate) detail: bool,
     /// Only the fruit taken for the shop's guests (R37).
     pub(crate) guests_only: bool,
+    /// The sort of a ledger or day book page that the SQL can do (debit or credit), set by the run
+    /// when the screen sorted by it (plan 38 B2). Missing: the order of the days.
+    pub(crate) line_sort: Option<LineSort>,
     /// What goes back to the screen.
     pub(crate) resolved: ResolvedFilters,
 }

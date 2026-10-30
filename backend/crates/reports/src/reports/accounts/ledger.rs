@@ -3,10 +3,10 @@
 //!
 //! Both read the posted lines of one account (or one person of a پختہ کھاتہ account). The
 //! opening balance is everything dated before the first day; each line carries the balance after
-//! it. A balance is `Σ debit − Σ credit` of stored paisa, worked out in Rust with checked maths;
-//! the running sums come from `SUM() OVER` on the stored `INTEGER` columns, so a page that starts
-//! at line 5,000 still has the right balance on its first row without reading the rows before it
-//! into memory.
+//! it. A balance is `Σ debit − Σ credit` of stored paisa, worked out in Rust with checked maths.
+//! The balance of a page's first row is the sum of the lines before it, read from the nearer end of
+//! the account (`lines::page_with_running`), and each next row adds its own line, so a page that
+//! starts at line 5,000 has the right balance without reading the rows before it into memory.
 //!
 //! R13 lists every line with its items (FR-19.8). R14 is the same data as a statement: opening,
 //! total bought or sold, paid, closing (balance only), and with detail the lines of R13.
@@ -16,16 +16,16 @@
 //! 2,880; closing 2,880 بنام.
 
 use mandi_core::accounts::Balance;
-use mandi_core::dates::BusinessDate;
 use mandi_core::money::Paisa;
-use mandi_db::ledger::totals_of;
+use mandi_db::memo;
 use mandi_db::rusqlite::{Connection, OptionalExtension, params};
 
 use super::PageSpec;
 use super::ledger_items::{DetailQuery, load};
+use super::lines::{self, LineFilter, RawLine};
 use crate::error::ReportsError;
 use crate::reports::common::{LIVE, amount_or_empty, balance_cell, paisa, source_of};
-use crate::reports::filters::Typed;
+use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
 use crate::reports::model::{
     Cell, Column, ColumnKind, DetailPart, ReportId, ReportPage, Row, RowKind, SummaryLine,
@@ -72,16 +72,6 @@ pub(crate) fn run_r14(
     run(conn, ReportId::R14, typed, spec, typed.detail)
 }
 
-/// Count and totals over the whole filter, from one query (public for the query plan test,
-/// Code Standards B18).
-#[doc(hidden)]
-pub const TOTALS_SQL: &str =
-    "SELECT COUNT(*), COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE e.status = 'posted' AND l.account_id = ?1
-           AND (?2 IS NULL OR l.pukhta_person_key = ?2)
-           AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)";
-
 /// The sums of the live lines only, for the "bought or sold" and "paid" lines of R14. An entry
 /// that was reversed and the reversal itself cancel each other, so neither counts as bought, sold
 /// or paid (PRD FR-18.7 in spirit, C13). The closing balance still uses [`TOTALS_SQL`]: the pair
@@ -94,42 +84,6 @@ fn live_totals_sql() -> String {
            AND (?2 IS NULL OR l.pukhta_person_key = ?2)
            AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)"
     )
-}
-
-/// One page of the ledger with the running sums (public for the query plan test).
-#[doc(hidden)]
-pub const PAGE_SQL: &str = "SELECT e.id, e.entry_date, l.line_no, e.posting_type, e.source_type, e.source_id,
-                e.reverses_entry_id, COALESCE(l.narration, e.narration), l.pukhta_person_key,
-                l.dr_paisa, l.cr_paisa,
-                SUM(l.dr_paisa) OVER w, SUM(l.cr_paisa) OVER w,
-                COALESCE(b.number, v.number), v.type, v.reason
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
-         LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id
-         WHERE e.status = 'posted' AND l.account_id = ?1
-           AND (?2 IS NULL OR l.pukhta_person_key = ?2)
-           AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)
-         WINDOW w AS (ORDER BY e.entry_date, e.id, l.line_no ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
-         ORDER BY e.entry_date, e.id, l.line_no
-         LIMIT ?5 OFFSET ?6";
-
-struct Raw {
-    entry_id: i64,
-    entry_date: String,
-    line_no: i64,
-    posting_type: String,
-    source_type: String,
-    source_id: i64,
-    reverses: Option<i64>,
-    narration: Option<String>,
-    person_key: Option<String>,
-    dr: i64,
-    cr: i64,
-    run_dr: i64,
-    run_cr: i64,
-    doc_number: Option<i64>,
-    voucher_type: Option<String>,
-    voucher_reason: Option<String>,
 }
 
 fn run(
@@ -146,24 +100,28 @@ fn run(
     let from = typed.from.as_deref();
     let to = typed.to.as_deref();
 
-    // The balance before the first day: everything dated before `from`.
-    let (open_dr, open_cr) = match from
-        .and_then(BusinessDate::parse_iso)
-        .and_then(BusinessDate::previous_day)
-    {
-        Some(day) => {
-            let t = totals_of(conn, account_id, person, Some(&day.to_iso()))?;
-            (paisa(t.dr_paisa)?, paisa(t.cr_paisa)?)
+    // The lines asked for: the account (or one person of it) and the days.
+    let filter = LineFilter {
+        account: Some(account_id),
+        person: typed.person_key.clone(),
+        from: typed.from.clone(),
+        to: typed.to.clone(),
+    };
+    // The balance before the first day: everything dated before `from`, as the whole account less
+    // what is dated from that day on (both are kept sums, so the next page does not read the
+    // account again).
+    let (open_dr, open_cr) = match from {
+        Some(first) => {
+            let (dr, cr) = lines::before_day(conn, &filter, first)?;
+            (paisa(dr)?, paisa(cr)?)
         }
         None => (Paisa::ZERO, Paisa::ZERO),
     };
     let opening = Balance::from_totals(open_dr, open_cr)?;
 
-    // Count and totals over the whole filter, from one query.
-    let (count, sum_dr, sum_cr): (i64, i64, i64) =
-        conn.query_row(TOTALS_SQL, params![account_id, person, from, to], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
-        })?;
+    // Count and totals over the whole filter.
+    let sums = lines::totals(conn, &filter)?;
+    let (count, sum_dr, sum_cr) = (sums.count, sums.dr_paisa, sums.cr_paisa);
     let (total_dr, total_cr) = (paisa(sum_dr)?, paisa(sum_cr)?);
     let closing = Balance::from_totals(
         open_dr.checked_add(total_dr)?,
@@ -183,10 +141,9 @@ fn run(
         page_rows(
             conn,
             typed,
+            &filter,
             spec,
-            account_id,
-            open_dr,
-            open_cr,
+            (open_dr, open_cr),
             party_type == "buyer",
         )?
     } else {
@@ -202,12 +159,24 @@ fn run(
         // credited for what he paid; a seller is credited for what he sold and debited for what
         // was paid to him. Only live entries count: an edited or cancelled bill and its reversal
         // are left out, so the lines read what is really owed (E2E-13: bought 13,092, not 25,972).
-        let (live_dr, live_cr): (i64, i64) = conn.query_row(
-            &live_totals_sql(),
-            params![account_id, person, from, to],
-            |r| Ok((r.get(0)?, r.get(1)?)),
+        let live = memo::sums(
+            conn,
+            &format!("live {account_id} {person:?} {from:?} {to:?}"),
+            || {
+                conn.query_row(
+                    &live_totals_sql(),
+                    params![account_id, person, from, to],
+                    |r| {
+                        Ok(memo::Sums {
+                            count: 0,
+                            dr_paisa: r.get(0)?,
+                            cr_paisa: r.get(1)?,
+                        })
+                    },
+                )
+            },
         )?;
-        let (total_dr, total_cr) = (paisa(live_dr)?, paisa(live_cr)?);
+        let (total_dr, total_cr) = (paisa(live.dr_paisa)?, paisa(live.cr_paisa)?);
         let (first, first_label, second, second_label) = match party_type.as_str() {
             "buyer" => (
                 total_dr,
@@ -264,45 +233,24 @@ fn run(
 fn page_rows(
     conn: &Connection,
     typed: &Typed,
+    filter: &LineFilter,
     spec: PageSpec,
-    account_id: i64,
-    open_dr: Paisa,
-    open_cr: Paisa,
+    (open_dr, open_cr): (Paisa, Paisa),
     ledger_is_buyer: bool,
 ) -> Result<Vec<Row>, ReportsError> {
-    let mut statement = conn.prepare(PAGE_SQL)?;
-    let raws = statement
-        .query_map(
-            params![
-                account_id,
-                typed.person_key.as_deref(),
-                typed.from.as_deref(),
-                typed.to.as_deref(),
-                spec.sql_limit(),
-                spec.offset
-            ],
-            |r| {
-                Ok(Raw {
-                    entry_id: r.get(0)?,
-                    entry_date: r.get(1)?,
-                    line_no: r.get(2)?,
-                    posting_type: r.get(3)?,
-                    source_type: r.get(4)?,
-                    source_id: r.get(5)?,
-                    reverses: r.get(6)?,
-                    narration: r.get(7)?,
-                    person_key: r.get(8)?,
-                    dr: r.get(9)?,
-                    cr: r.get(10)?,
-                    run_dr: r.get(11)?,
-                    run_cr: r.get(12)?,
-                    doc_number: r.get(13)?,
-                    voucher_type: r.get(14)?,
-                    voucher_reason: r.get(15)?,
-                })
-            },
-        )?
-        .collect::<Result<Vec<_>, _>>()?;
+    // Sorted by an amount, the page is the best lines of the filter by SQL and has no running
+    // balance (it is the order of the days that gives one, plan 38 B2).
+    let window = (spec.offset, spec.sql_limit());
+    let sorted = matches!(typed.line_sort, Some(LineSort::Amount { .. }));
+    let page: Vec<(RawLine, i64, i64)> = match typed.line_sort {
+        Some(sort @ LineSort::Amount { .. }) => lines::page_by(conn, filter, Some(sort), window)?
+            .into_iter()
+            .map(|raw| (raw, 0, 0))
+            .collect(),
+        Some(LineSort::Newest) => lines::page_with_running_newest(conn, filter, window)?,
+        None => lines::page_with_running(conn, filter, window)?,
+    };
+    let raws: Vec<&RawLine> = page.iter().map(|(raw, _, _)| raw).collect();
 
     let queries: Vec<DetailQuery> = raws
         .iter()
@@ -322,11 +270,11 @@ fn page_rows(
         .collect();
     let mut details = load(conn, &queries, ledger_is_buyer)?;
 
-    let mut rows = Vec::with_capacity(raws.len());
-    for raw in raws {
+    let mut rows = Vec::with_capacity(page.len());
+    for (raw, run_dr, run_cr) in &page {
         let balance = Balance::from_totals(
-            open_dr.checked_add(paisa(raw.run_dr)?)?,
-            open_cr.checked_add(paisa(raw.run_cr)?)?,
+            open_dr.checked_add(paisa(*run_dr)?)?,
+            open_cr.checked_add(paisa(*run_cr)?)?,
         )?;
         let mut parts = details
             .remove(&(raw.entry_id, raw.line_no))
@@ -367,7 +315,11 @@ fn page_rows(
                 narration,
                 amount_or_empty(paisa(raw.dr)?),
                 amount_or_empty(paisa(raw.cr)?),
-                balance_cell(balance),
+                if sorted {
+                    Cell::Empty
+                } else {
+                    balance_cell(balance)
+                },
             ],
             source: Some(source_of(&raw.source_type, raw.source_id, raw.entry_id)),
             kind: RowKind::Normal,

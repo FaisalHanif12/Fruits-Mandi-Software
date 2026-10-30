@@ -297,6 +297,7 @@ fn check(w: &World, lent_person: i64) {
         let takes = partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                show_finished: true,
                 group_by_month: false,
                 sort: None,
                 partner_id: partner,
@@ -340,6 +341,7 @@ fn check(w: &World, lent_person: i64) {
     let loans = lent::list(
         &w.env.ctx,
         &LentListInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             person_id: lent_person,

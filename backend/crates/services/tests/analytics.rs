@@ -1409,6 +1409,7 @@ fn print_data_has_every_row_in_both_languages() {
     let data = print_data(
         w.env.ctx.db(),
         &AnalyticsPrintInput {
+            sort: None,
             view: AnalyticsView::A,
             filters: AnalyticsFilters {
                 compare: AnalyticsCompare::Previous,
@@ -1458,6 +1459,7 @@ fn print_data_has_every_row_in_both_languages() {
     let ur = print_data(
         w.env.ctx.db(),
         &AnalyticsPrintInput {
+            sort: None,
             view: AnalyticsView::D,
             filters: filters(),
             language: Language::Ur,
@@ -1605,6 +1607,7 @@ fn analytics_writes_nothing_of_the_books() {
         print_data(
             w.env.ctx.db(),
             &AnalyticsPrintInput {
+                sort: None,
                 view: v,
                 filters: filters(),
                 language: Language::Ur,

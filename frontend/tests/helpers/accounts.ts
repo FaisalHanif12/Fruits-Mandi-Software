@@ -382,6 +382,15 @@ function inScope(row: AccountRow, scope: AccountScope): boolean {
 /** A typed number that can be a running number: `0`, or digits with no leading zero (plan 32, R5). */
 const SHORT_CODE = /^(0|[1-9]\d{0,6})$/;
 
+/** The English name without vowels and doubled letters, as the backend keeps it (Tech Stack 4.7). */
+function phoneticKey(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+    .replace(/[aeiou]/g, '')
+    .replace(/(.)\1+/g, '$1');
+}
+
 /**
  * Search, short codes and the party card as the backend answers them (plan 32): an exact full code
  * first, then the running number (a short code) within the scope, then the code or the names with
@@ -407,9 +416,18 @@ export function fakeAccountSearch(
         if (byRunning.length > 0) return byRunning;
       }
     }
-    return scoped.filter((row) =>
+    // The backend also forgives a near spelling (PRD FR-7.40): "nazir" finds "Nazeer". Its phonetic
+    // key is the English name without vowels and doubled letters (Tech Stack 4.7). Close matches
+    // come after the exact ones, so they are only looked for when nothing matches the letters as
+    // typed, and only from three letters of key, so one typed letter never matches everything.
+    const literal = scoped.filter((row) =>
       [row.code, row.name_ur, row.name_en].some((part) => part.toLowerCase().includes(wanted)),
     );
+    if (literal.length > 0) return literal;
+    const wantedKey = phoneticKey(wanted);
+    return wantedKey.length < 3
+      ? []
+      : scoped.filter((row) => phoneticKey(row.name_en).includes(wantedKey));
   };
   vi.mocked(accountApi.searchAccounts).mockImplementation(({ scope, text, offset = 0, limit }) =>
     Promise.resolve(

@@ -15,7 +15,8 @@ import { useMemo } from 'react';
 import type { AnalyticsKey } from '../../../bindings/AnalyticsKey';
 import type { AnalyticsPage } from '../../../bindings/AnalyticsPage';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
+import { ListGrid, ListRegion, Pager, listHeightMode, useListPaging } from '../../../shared/grid';
+import { useRememberedFlag } from '../../../shared/hooks';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, RUNNING_NUMBER } from '../../../shared/ui';
 import { cellText, totalsFor } from '../../reports';
@@ -32,10 +33,23 @@ import type { AnalyticsView } from '../types';
 import { AnalyticsChart } from './AnalyticsChart';
 import { AnalyticsRange } from './AnalyticsRange';
 
-/** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
-const SHORT_LIST_ROWS = 30;
-
 /** The key of the whole filter: the lines behind a total (the backend reads an empty key so). */
+/**
+ * A window this high or lower starts with the chart folded: the table, its totals and its page
+ * buttons are what the user came for, and the chart is one click away (plan 38). 1366 x 768 is
+ * included; 1920 x 1080 shows the chart.
+ */
+const CHART_FOLD_HEIGHT_PX = 800;
+
+/** True in a window where the chart starts folded (read where no local name hides `window`). */
+function isShortWindow(): boolean {
+  // The same rule as a style: the height of the window, not of the page.
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(`(max-height: ${String(CHART_FOLD_HEIGHT_PX)}px)`).matches
+  );
+}
+
 export const WHOLE_FILTER_KEY: AnalyticsKey = {
   item_id: null,
   seller_id: null,
@@ -51,8 +65,6 @@ export const WHOLE_FILTER_KEY: AnalyticsKey = {
 interface AnalyticsResultsProps {
   view: AnalyticsView;
   query: ReturnType<typeof useAnalyticsPages>;
-  /** The rows the chart is drawn from: the first rows of the view, whatever page the table is on. */
-  chartPage: AnalyticsPage | undefined;
   /** The page last shown, kept while a half-typed filter is refused (see AnalyticsBody). */
   kept: { pages: AnalyticsPage[] } | null;
   /** A filter that the view takes is filled: the empty state offers to clear it. */
@@ -76,7 +88,6 @@ interface AnalyticsResultsProps {
 export function AnalyticsResults({
   view,
   query,
-  chartPage,
   kept,
   filtering,
   onClear,
@@ -89,6 +100,9 @@ export function AnalyticsResults({
   onFocusRow,
 }: AnalyticsResultsProps) {
   const step = useLayoutStep();
+  // The chart starts folded in a short window, where it would push the table out of view; the
+  // choice is kept for the screen.
+  const [chartOpen, setChartOpen] = useRememberedFlag('analytics.chart_open', !isShortWindow());
   const context = useListContext();
   const paging = useListPaging(query.pager);
   const data = query.data ?? kept ?? undefined;
@@ -140,7 +154,6 @@ export function AnalyticsResults({
     );
   };
 
-  const long = rows.length > SHORT_LIST_ROWS;
   const window = plan.window;
   let body;
   if (rows.length === 0) {
@@ -218,7 +231,7 @@ export function AnalyticsResults({
             </Button>
           </div>
         )}
-        <div className={long ? 'h-list-region' : undefined}>
+        <ListRegion rowCount={rows.length}>
           <ListGrid<AnalyticsRowView>
             columns={columns}
             rows={rows}
@@ -239,8 +252,9 @@ export function AnalyticsResults({
             }}
             onFocusRow={onFocusRow}
             focusRowId={focusRowId}
-            heightMode={long ? 'fill' : 'auto'}
+            heightMode={listHeightMode(rows.length)}
             paging={paging}
+            sort={{ value: query.sort, onChange: query.setSort }}
             isGroup={(item) => item.row.kind === 'group'}
             totals={(ctx) =>
               totalsFor(
@@ -251,22 +265,31 @@ export function AnalyticsResults({
               )
             }
           />
+        </ListRegion>
+        <div className="shrink-0">
+          <Pager pager={query.pager} />
         </div>
-        <Pager pager={query.pager} />
-        <Localized id="analytics-open-hint">
-          <p className="type-body text-ink-muted" />
-        </Localized>
       </>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4" aria-busy={query.isFetching}>
-      <AnalyticsRange filters={last.filters} />
-      {/* The chart shows the first rows of the whole filter, on every page of the table (plan 38). */}
-      {rows.length === 0 || chartPage === undefined ? null : (
-        <AnalyticsChart view={view} page={chartPage} />
-      )}
+    <div className="flex min-h-0 flex-1 flex-col gap-2" aria-busy={query.isFetching}>
+      {/* The days of the view, and the choice to show or fold the chart (kept for the screen). */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <AnalyticsRange filters={last.filters} />
+        {rows.length === 0 || last.charts.length === 0 ? null : (
+          <Button
+            onClick={() => {
+              setChartOpen(!chartOpen);
+            }}
+          >
+            <Localized id={chartOpen ? 'analytics-chart-hide' : 'analytics-chart-show'} />
+          </Button>
+        )}
+      </div>
+      {/* The charts cover the whole filter, whatever page or order the table has (plan 38 R4). */}
+      {rows.length === 0 || !chartOpen ? null : <AnalyticsChart view={view} page={last} />}
       {body}
     </div>
   );

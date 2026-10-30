@@ -50,6 +50,8 @@ import {
   fieldError,
   showToast,
   useErrorText,
+  FormAside,
+  InfoHint,
 } from '../../../shared/ui';
 import {
   GoodsLinesGrid,
@@ -333,81 +335,92 @@ export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
         className="flex flex-col gap-4"
       >
         {error === null ? null : <ErrorNotice error={error} fieldsShown={fieldsShown} />}
-        <div className="grid grid-cols-1 gap-4 normal:grid-cols-5">
-          <div className="grid grid-cols-2 gap-4 rounded-3 border border-border bg-surface p-3 normal:col-span-3">
-            <Field label={<Localized id="gardens-field-date" />} error={fieldError(error, 'date')}>
-              {(props) => (
-                <DateInput
-                  {...props}
-                  value={draft.date}
-                  onChange={(date) => {
-                    change({ date });
-                  }}
-                />
-              )}
-            </Field>
-            <div />
-            <GardenEntryFieldsForm
-              draft={draft}
-              onChange={change}
-              error={error}
-              arrivals={arrivals}
-            />
-            {payment ? (
-              <div className="col-span-2 flex flex-col gap-1">
-                <Localized id="gardens-sources-title">
-                  <h3 className="type-label text-ink-muted" />
-                </Localized>
-                <Localized id="gardens-sources-hint">
-                  <p className="type-body text-ink-muted" />
-                </Localized>
-                <EntrySources
-                  partners={garden.partners}
-                  value={draft.sources}
-                  onChange={(partnerId, source) => {
-                    change({ sources: { ...draft.sources, [partnerId]: source } });
-                  }}
-                />
-              </div>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-3 normal:col-span-2">
-            {arrival ? (
-              <Notice tone="info">
-                <Localized id="gardens-arrival-posts-nothing" />
-              </Notice>
-            ) : (
-              <GardenEntryNumbersCard numbers={preview?.numbers ?? null} empty={!filled} />
-            )}
-            {payment ? (
-              <EntryPartsCard parts={parts} title={l10n.getString('gardens-parts-title')} />
-            ) : null}
-            {preview === undefined || arrival ? null : <CashNote cash={preview.cash} />}
-            {warnings.length === 0 ? null : (
-              <ul className="flex flex-col gap-1">
-                {warnings.map((item) => (
-                  <li
-                    key={`${item.code}-${item.field}`}
-                    role="status"
-                    className="flex items-start gap-2 type-body text-warn"
-                  >
-                    <TriangleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
-                    <span>{errorText(item)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {previewFailed ? (
-              <ErrorState
-                title={<Localized id="gardens-preview-failed" />}
-                error={uiErrorOf(view.query.error)}
-                onRetry={() => {
-                  void view.query.refetch();
-                }}
+        <FormAside
+          form={
+            <div className="grid grid-cols-2 gap-4 rounded-3 border border-border bg-surface p-3">
+              <Field
+                label={<Localized id="gardens-field-date" />}
+                error={fieldError(error, 'date')}
+              >
+                {(props) => (
+                  <DateInput
+                    {...props}
+                    value={draft.date}
+                    onChange={(date) => {
+                      change({ date });
+                    }}
+                  />
+                )}
+              </Field>
+              <div />
+              <GardenEntryFieldsForm
+                draft={draft}
+                onChange={change}
+                error={error}
+                arrivals={arrivals}
               />
-            ) : null}
-          </div>
-        </div>
+              {payment ? (
+                <div className="col-span-2 flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <Localized id="gardens-sources-title">
+                      <h3 className="type-label text-ink-muted" />
+                    </Localized>
+                    <InfoHint>
+                      <Localized id="gardens-sources-hint">
+                        <p />
+                      </Localized>
+                    </InfoHint>
+                  </div>
+                  <EntrySources
+                    partners={garden.partners}
+                    value={draft.sources}
+                    onChange={(partnerId, source) => {
+                      change({ sources: { ...draft.sources, [partnerId]: source } });
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          }
+          aside={
+            <>
+              {arrival ? (
+                <Notice tone="info">
+                  <Localized id="gardens-arrival-posts-nothing" />
+                </Notice>
+              ) : (
+                <GardenEntryNumbersCard numbers={preview?.numbers ?? null} empty={!filled} />
+              )}
+              {payment ? (
+                <EntryPartsCard parts={parts} title={l10n.getString('gardens-parts-title')} />
+              ) : null}
+              {preview === undefined || arrival ? null : <CashNote cash={preview.cash} />}
+              {warnings.length === 0 ? null : (
+                <ul className="flex flex-col gap-1">
+                  {warnings.map((item) => (
+                    <li
+                      key={`${item.code}-${item.field}`}
+                      role="status"
+                      className="flex items-start gap-2 type-body text-warn"
+                    >
+                      <TriangleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
+                      <span>{errorText(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {previewFailed ? (
+                <ErrorState
+                  title={<Localized id="gardens-preview-failed" />}
+                  error={uiErrorOf(view.query.error)}
+                  onRetry={() => {
+                    void view.query.refetch();
+                  }}
+                />
+              ) : null}
+            </>
+          }
+        />
         {arrival ? (
           // The grid owns its keys (PRD 7.2); the form's own Enter and arrows leave it alone.
           <div data-nav-owns-keys>

@@ -88,7 +88,15 @@ describe('the address of the print window for a report', () => {
     expect(params).toEqual({
       job: 'job-1',
       slips: true,
-      input: { id: 'R5', language: 'ur', paper: 'a5', filters: R37_FRUIT_REQUEST.filters },
+      // The print window asks for the report in the order of the page (plan 38: no sort, no month rows).
+      input: {
+        id: 'R5',
+        language: 'ur',
+        paper: 'a5',
+        filters: R37_FRUIT_REQUEST.filters,
+        sort: null,
+        group_by_month: false,
+      },
     });
   });
 
@@ -130,6 +138,7 @@ describe('the address of the print window for an analytics view', () => {
         language: 'en',
         paper: 'a4',
         filters: ANALYTICS_RUN_K_FRUIT_REQUEST.filters,
+        sort: null,
       },
     });
   });

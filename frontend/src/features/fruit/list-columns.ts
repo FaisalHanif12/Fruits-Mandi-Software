@@ -22,6 +22,7 @@ export function fruitNumberText(number: number, text: Say): string {
 export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
   {
     field: 'number',
+    sortKey: 'number',
     type: 'code',
     headerId: 'fruit-col-number',
     from: 'wide',
@@ -29,6 +30,7 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
   },
   {
     field: 'date',
+    sortKey: 'entry_date',
     type: 'date',
     headerId: 'fruit-col-date',
     from: 'normal',
@@ -36,6 +38,7 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
   },
   {
     field: 'for',
+    sortKey: 'partner',
     type: 'name',
     headerId: 'fruit-col-for',
     grow: true,
@@ -47,6 +50,7 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
   },
   {
     field: 'item',
+    sortKey: 'item',
     type: 'name',
     headerId: 'fruit-col-item',
     grow: true,
@@ -55,6 +59,7 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
   },
   {
     field: 'qty',
+    sortKey: 'qty',
     type: 'number',
     headerId: 'fruit-col-qty',
     value: (row) => String(row.qty),
@@ -68,6 +73,7 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
   },
   {
     field: 'rate',
+    sortKey: 'rate_paisa',
     type: 'money',
     headerId: 'fruit-col-rate',
     from: 'wide',
@@ -75,6 +81,7 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
   },
   {
     field: 'value',
+    sortKey: 'value_paisa',
     type: 'money',
     headerId: 'fruit-col-value',
     value: (row, { money }) => money(row.value_paisa),

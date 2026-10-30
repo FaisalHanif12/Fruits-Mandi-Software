@@ -3,6 +3,7 @@ import type { Language } from './Language';
 import type { Paper } from './Paper';
 import type { ReportFilters } from './ReportFilters';
 import type { ReportId } from './ReportId';
+import type { SortInput } from './SortInput';
 
 /**
  * Input of `reports_print_data`.
@@ -24,4 +25,12 @@ export type ReportPrintInput = {
    * The paper. Missing means A4.
    */
   paper: Paper | null;
+  /**
+   * The sort of the screen: the print has the same order, with every row (plan 38 R4).
+   */
+  sort: SortInput | null;
+  /**
+   * The month headings of the screen: the print has them too.
+   */
+  group_by_month: boolean;
 };

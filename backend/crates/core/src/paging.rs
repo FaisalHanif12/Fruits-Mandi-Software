@@ -53,6 +53,11 @@ pub struct SortInput {
     pub column: String,
     /// The direction.
     pub direction: SortDirection,
+    /// The script a name column is sorted in: `ur` sorts names in Urdu alphabetical order
+    /// (ا ب پ ت ٹ, NFR-URD-19), `en` or null in English order. Send the app language. A column
+    /// that is not a name ignores it.
+    #[serde(default)]
+    pub language: Option<crate::auth::Language>,
 }
 
 impl SortInput {

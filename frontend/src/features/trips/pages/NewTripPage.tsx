@@ -35,6 +35,7 @@ import {
   PartnerSharesEditor,
   fieldError,
   showToast,
+  InfoHint,
 } from '../../../shared/ui';
 import { SharesTotal, useSharesCheck, type SharesCheck, type TotalState } from '../../partners';
 import {
@@ -130,14 +131,18 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
   return (
     <div ref={rootRef} className="flex max-w-page flex-col gap-4">
       <LeaveGuard dirty={changed && createdId === null} onSave={save} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
           <Localized id="trips-new-title">
             <h1 className="sr-only normal:not-sr-only normal:type-title" />
           </Localized>
-          <Localized id="trips-new-help">
-            <p className="hidden type-body text-ink-muted normal:block" />
-          </Localized>
+          <div className="hidden normal:block">
+            <InfoHint>
+              <Localized id="trips-new-help">
+                <p />
+              </Localized>
+            </InfoHint>
+          </div>
         </div>
         <Button
           variant="primary"
@@ -169,13 +174,25 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
             ]}
           />
         )}
-        <Card compact title={<Localized id="trips-new-shares-title" />}>
-          <Localized id={defaults.from_last_trip ? 'trips-new-from-last' : 'trips-new-firm-shares'}>
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          <Localized id="trips-new-shares-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
+        <Card
+          compact
+          title={
+            <span className="flex items-center gap-1">
+              <Localized id="trips-new-shares-title" />
+              {/* Where the shares came from and what they mean, behind an ⓘ (plan 38 G5). */}
+              <InfoHint>
+                <Localized
+                  id={defaults.from_last_trip ? 'trips-new-from-last' : 'trips-new-firm-shares'}
+                >
+                  <p />
+                </Localized>
+                <Localized id="trips-new-shares-help">
+                  <p />
+                </Localized>
+              </InfoHint>
+            </span>
+          }
+        >
           {draft.partners.length === 0 ? (
             <Notice
               tone="warn"
@@ -225,7 +242,11 @@ function NewTripForm({ defaults, today }: { defaults: TripDefaults; today: strin
             <div />
             <Field
               label={<Localized id="trips-field-market" />}
-              hint={<Localized id="trips-field-market-hint" />}
+              info={
+                <Localized id="trips-field-market-hint">
+                  <p />
+                </Localized>
+              }
               error={fieldError(error, 'market')}
             >
               {(props) => (

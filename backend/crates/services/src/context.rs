@@ -148,6 +148,8 @@ impl Context {
         *self.rules_lock() = None;
         *self.search_lock() = None;
         *self.learned_lock() = None;
+        // The kept ledger and cash sums belong to the data that was replaced.
+        mandi_db::memo::clear();
     }
 
     pub(crate) fn rules_lock(&self) -> MutexGuard<'_, Option<Arc<mandi_domain::rules::RuleSet>>> {

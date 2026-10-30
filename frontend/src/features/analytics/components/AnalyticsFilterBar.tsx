@@ -13,15 +13,16 @@
 // themselves when one of them holds a value or a refusal (Code Standards F22).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useState, type ReactNode, type Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import type { UiError } from '../../../bindings/UiError';
-import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
+import { useRememberedFlag } from '../../../shared/hooks';
 import { formNavigationProps } from '../../../shared/keyboard';
 import {
   AccountPicker,
   Button,
   DateInput,
   Field,
+  Num,
   Picker,
   Select,
   fieldError,
@@ -96,15 +97,9 @@ export function AnalyticsFilterBar({
   const { l10n } = useLocalization();
   const has = (kind: AnalyticsFilterKind) => takes.includes(kind);
   const custom = state.period === 'custom';
-  const step = useLayoutStep();
-  // The trend (G) and the trips (J) take thirteen boxes: at the normal step they would push the chart
-  // and the table below the fold, so the less used ones wait behind "More filters" there too. The
-  // other views fold only in the compact step (Code Standards F22).
-  const crowded = has('partner') && has('item') && has('seller');
   // The gardens view (I) is about gardens, so its garden box stays in view; on the other views that
   // take it, the box is one of those that wait behind "More filters".
   const aboutGardens = has('garden') && !has('seller');
-  const compact = step === 'compact' || (step === 'normal' && crowded);
 
   const primary: ReactNode[] = [];
   const folded: ReactNode[] = [];
@@ -486,6 +481,16 @@ export function AnalyticsFilterBar({
     );
   }
 
+  const filledCount = [
+    state.buyer !== null,
+    state.city !== null,
+    state.adda !== null,
+    state.side !== 'both',
+    state.trip !== null && !has('trip_view'),
+    state.garden !== null && !aboutGardens,
+    state.goods !== 'all',
+    state.compare !== 'off',
+  ].filter(Boolean).length;
   const filled =
     state.buyer !== null ||
     state.city !== null ||
@@ -501,9 +506,11 @@ export function AnalyticsFilterBar({
     return found !== undefined && found !== null;
   });
   const forced = filled || refused || (!custom && state.compare !== 'off' && error !== null);
-  const [more, setMore] = useState(false);
+  // The less used boxes wait behind "More filters" in every window: the period, the grouping and the
+  // item are what is changed every day, and the chart and the table stay in view (plan 38, G3). The
+  // choice is kept for the screen, and a box that holds a value or a refusal keeps the part open.
+  const [more, setMore] = useRememberedFlag('analytics.more_filters', false);
   const open = more || forced;
-  const foldedShown = !compact || open;
 
   if (primary.length + folded.length === 0) return null;
   return (
@@ -512,11 +519,11 @@ export function AnalyticsFilterBar({
       role="group"
       aria-label={l10n.getString('analytics-filters-label')}
       {...formNavigationProps}
-      className="grid grid-cols-5 items-end gap-4"
+      className="grid grid-cols-6 items-end gap-3"
     >
       {primary}
-      {compact && folded.length > 0 ? (
-        <div key="more" className="flex items-end">
+      {folded.length > 0 ? (
+        <div key="more" className="flex items-end gap-2">
           <Button
             disabled={forced}
             onClick={() => {
@@ -525,9 +532,18 @@ export function AnalyticsFilterBar({
           >
             <Localized id={open ? 'report-filters-fewer' : 'report-filters-more'} />
           </Button>
+          {forced ? (
+            <Localized
+              id="common-filters-set"
+              vars={{ count: String(filledCount) }}
+              elems={{ num: <Num /> }}
+            >
+              <span className="type-body text-ink-muted" />
+            </Localized>
+          ) : null}
         </div>
       ) : null}
-      {foldedShown ? folded : null}
+      {open ? folded : null}
     </div>
   );
 }

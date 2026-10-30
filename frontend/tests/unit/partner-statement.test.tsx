@@ -7,12 +7,13 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as appApi from '../../src/app/api';
 import * as partnersApi from '../../src/features/partners/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { cellOf, gridOf, textOf } from '../helpers/bikri-screen';
 import { choose, named, pageText, startsWith } from '../helpers/cashbook-screen';
-import { fail, leaveAppWindow, renderApp } from '../helpers/app';
+import { DAY, fail, leaveAppWindow, renderApp } from '../helpers/app';
 import { preparePartnerMoney, type PartnerMoney } from '../helpers/partner-money';
 import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
@@ -45,6 +46,8 @@ describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
 
   beforeEach(() => {
     books = preparePartnerMoney(language);
+    // The statement opens on this year up to today: the days of the books (to 11-11-2026) are in it.
+    vi.mocked(appApi.dayStatus).mockResolvedValue({ ...DAY, today: '2026-12-31' });
   });
 
   const grid = () => gridOf(language, 'partners-statement-label');
@@ -162,10 +165,19 @@ describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
     await waitFor(() => {
       expect(rows()).toBe(3);
     });
-    const from = await screen.findByLabelText<HTMLInputElement>(
-      named(message(language, 'cashbook-filter-from')),
+    // "Choose the dates" starts from the days of the period, to be edited.
+    await user.click(
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'common-period-label')),
+      }),
     );
-    await user.click(from);
+    await user.click(
+      await screen.findByRole('option', { name: named(message(language, 'common-period-custom')) }),
+    );
+    const from = await screen.findByLabelText<HTMLInputElement>(
+      named(message(language, 'common-period-from')),
+    );
+    await user.clear(from);
     await user.keyboard('11-10-2026');
     await waitFor(() => {
       expect(partnersApi.partnersStatement).toHaveBeenLastCalledWith(
@@ -233,6 +245,27 @@ describe.each(LANGUAGES)('the partner statement (%s)', (language) => {
     });
     expect(textOf(rebuilt, 0, 'heading')).toBe(message(other, 'partners-statement-heading-trip'));
     expect(cellOf(rebuilt, 0, 'detail')).toBeInTheDocument();
+  });
+
+  it('opens on this year, with "from the first date" among the choices of the period box', async () => {
+    const { user } = await open('?partner=2');
+    await waitFor(() => {
+      expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          partner_id: 2,
+          from: '01-01-2026',
+          to: '31-12-2026',
+        }),
+      );
+    });
+    const period = await screen.findByRole('combobox', {
+      name: named(message(language, 'common-period-label')),
+    });
+    expect(period).toHaveTextContent(message(language, 'common-period-year'));
+    await user.click(period);
+    expect(
+      await screen.findByRole('option', { name: named(message(language, 'common-period-all')) }),
+    ).toBeInTheDocument();
   });
 
   it("pages 25 lines at a time and the count is the backend's over the whole range", async () => {

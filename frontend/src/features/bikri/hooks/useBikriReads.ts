@@ -67,13 +67,19 @@ export function useBikriFind(input: BikriFindInput, enabled: boolean) {
  * then the firm's own goods, then the gardens' goods, counted together. The first page has the totals of the whole filter.
  * The last answer stays while the next comes.
  */
-export function useStockList(filter: Omit<StockListInput, 'offset' | 'limit'>, enabled = true) {
+export function useStockList(
+  filter: Omit<StockListInput, 'offset' | 'limit' | 'sort' | 'search'> & {
+    search?: string | null;
+  },
+  enabled = true,
+) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
   return usePagedQuery({
     screen: 'bikri.stock',
     queryKey: ['bikri', 'stock', settled],
     enabled,
-    fetchPage: (offset, limit) => bikriStockList({ ...settled, offset, limit }),
+    fetchPage: (offset, limit, sort) =>
+      bikriStockList({ ...settled, search: settled.search ?? null, offset, limit, sort }),
     rowsIn: (page) => page.rows.length + page.own_rows.length + page.garden_rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,

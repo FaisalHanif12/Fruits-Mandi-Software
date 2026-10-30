@@ -121,10 +121,14 @@ export interface TaggedPreview {
 }
 
 /** One partner's money taken, page by page (PRD FR-16.2). Never kept: a save changes it. */
-export function usePartnerTakes(partnerId: number | null, groupByMonth = false) {
+export function usePartnerTakes(
+  partnerId: number | null,
+  groupByMonth = false,
+  showFinished = false,
+) {
   return usePagedQuery({
     screen: 'cashbook.takes',
-    queryKey: [...CASHBOOK_KEY, 'takes', partnerId, groupByMonth],
+    queryKey: [...CASHBOOK_KEY, 'takes', partnerId, groupByMonth, showFinished],
     enabled: partnerId !== null,
     fetchPage: (offset, limit, sort) =>
       partnerTakes({
@@ -133,6 +137,7 @@ export function usePartnerTakes(partnerId: number | null, groupByMonth = false) 
         limit,
         sort,
         group_by_month: groupByMonth && sort === null,
+        show_finished: showFinished,
       }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
@@ -150,10 +155,10 @@ export function useRepeatLastMonth(month: string, enabled: boolean) {
 }
 
 /** One person's loans, page by page (PRD FR-16.5). */
-export function useLentList(personId: number | null, groupByMonth = false) {
+export function useLentList(personId: number | null, groupByMonth = false, showFinished = false) {
   return usePagedQuery({
     screen: 'cashbook.lent',
-    queryKey: [...CASHBOOK_KEY, 'lent', personId, groupByMonth],
+    queryKey: [...CASHBOOK_KEY, 'lent', personId, groupByMonth, showFinished],
     enabled: personId !== null,
     fetchPage: (offset, limit, sort) =>
       lentList({
@@ -162,6 +167,7 @@ export function useLentList(personId: number | null, groupByMonth = false) {
         limit,
         sort,
         group_by_month: groupByMonth && sort === null,
+        show_finished: showFinished,
       }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,

@@ -378,8 +378,12 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
       );
     });
     vi.mocked(fruitApi.fruitList).mockResolvedValue(real.FRUIT_LIST_CANCELLED);
+    // "From the first date" is a choice of the period box (plan 38 G4).
     await user.click(
-      screen.getByRole('button', { name: named(message(language, 'fruit-period-all')) }),
+      screen.getByRole('combobox', { name: named(message(language, 'common-period-label')) }),
+    );
+    await user.click(
+      await screen.findByRole('option', { name: named(message(language, 'common-period-all')) }),
     );
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'fruit-for-cancelled', { name: partnerA }));

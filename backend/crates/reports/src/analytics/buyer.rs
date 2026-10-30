@@ -253,7 +253,12 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     let charts = {
         let mut points = Vec::new();
         let (mut rest, mut rest_count) = (Paisa::ZERO, 0_i64);
-        for (rank, entry) in entries.iter().enumerate() {
+        // A buyer who only bought in the compared period has nothing in this one.
+        for (rank, entry) in entries
+            .iter()
+            .filter(|e| e.sums.buyer_value > Paisa::ZERO)
+            .enumerate()
+        {
             if rank < chart::TOP {
                 points.push(AnalyticsChartPoint {
                     label: party_of(&entry.key)
@@ -271,7 +276,9 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
                 });
             } else {
                 add(&mut rest, entry.sums.buyer_value)?;
-                rest_count = rest_count.saturating_add(1);
+                rest_count = rest_count
+                    .checked_add(1)
+                    .ok_or(mandi_core::money::MoneyError::Overflow)?;
             }
         }
         if rest_count > 0 {

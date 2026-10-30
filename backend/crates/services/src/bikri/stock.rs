@@ -10,12 +10,14 @@
 //! written off 5, balance 0) and the lot leaves the list; its undo puts the 5 back.
 
 use mandi_db::bikri::edit::{self as edit_repo, NewMove, StockFilter};
+use mandi_domain::core::auth::Language;
 use mandi_domain::core::bikri::{
-    StockList, StockListInput, StockRow, WriteOffDone, WriteOffInput, WriteOffRow,
-    WriteOffUndoInput, WriteOffUndone,
+    GardenStockRow, OwnStockRow, StockList, StockListInput, StockRow, WriteOffDone, WriteOffInput,
+    WriteOffRow, WriteOffUndoInput, WriteOffUndone,
 };
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
+use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::validate::{self, FieldErrors};
 use serde_json::json;
 
@@ -40,6 +42,16 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
     let from = optional_date(&mut errors, "from", input.from.as_ref(), today);
     let to = optional_date(&mut errors, "to", input.to.as_ref(), today);
     errors.finish()?;
+    // The sort is checked first: an unknown column is refused (plan 38 R4).
+    if let Some(sort) = &input.sort {
+        sort.check(&SORT_COLUMNS)
+            .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+    }
+    let search = input
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty());
     let (from, to) = match date {
         Some(day) => (Some(day.clone()), Some(day)),
         None => (from, to),
@@ -67,7 +79,6 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
         let ids: Vec<i64> = lots.iter().map(|l| l.lot_id).collect();
         let write_offs = edit_repo::write_offs_of_lots(conn, &ids)?;
         let mut rows = Vec::with_capacity(lots.len());
-        let mut balance_total = 0_i64;
         for lot in lots {
             let balance = lot
                 .qty_received
@@ -75,9 +86,6 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 .and_then(|v| v.checked_sub(lot.qty_written_off))
                 .and_then(|v| v.checked_sub(lot.qty_taken))
                 .ok_or_else(|| data("the quantity of a lot does not fit"))?;
-            balance_total = balance_total
-                .checked_add(balance)
-                .ok_or_else(|| data("the quantity of the stock does not fit"))?;
             let days_waiting = BusinessDate::parse_iso(&lot.received_date)
                 .map_or(0, |received| today.days_after(received).max(0));
             rows.push(StockRow {
@@ -126,16 +134,6 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
         } else {
             Vec::new()
         };
-        let mut own_balance_total = 0_i64;
-        let mut own_cost_left = mandi_domain::core::money::Paisa::ZERO;
-        for row in &own_rows {
-            own_balance_total = own_balance_total
-                .checked_add(row.balance)
-                .ok_or_else(|| data("the quantity of the stock does not fit"))?;
-            own_cost_left = own_cost_left
-                .checked_add(row.cost_left_paisa)
-                .map_err(crate::error::money_error)?;
-        }
         // The garden arrivals with goods left (PRD FR-12.40). A seller filter keeps the arrivals
         // whose garden account is that seller; a single lot asked for lists none.
         let garden_rows = if input.lot_id.is_some() {
@@ -150,6 +148,41 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 today,
             )?
         };
+        let mut own_rows = own_rows;
+        let mut garden_rows = garden_rows;
+        // A search keeps the rows it names, and a sort reorders each kind of row, before any
+        // total is added: the totals are over what the search leaves (plan 38 R4).
+        if let Some(text) = search {
+            rows.retain(|r| lot_matches(r, text));
+            own_rows.retain(|r| own_matches(r, text));
+            garden_rows.retain(|r| garden_matches(r, text));
+        }
+        if let Some(sort) = &input.sort {
+            sort_lots(&mut rows, &sort.column, sort.direction, sort.language);
+            sort_own(&mut own_rows, &sort.column, sort.direction, sort.language);
+            sort_gardens(
+                &mut garden_rows,
+                &sort.column,
+                sort.direction,
+                sort.language,
+            );
+        }
+        let mut balance_total = 0_i64;
+        for row in &rows {
+            balance_total = balance_total
+                .checked_add(row.balance)
+                .ok_or_else(|| data("the quantity of the stock does not fit"))?;
+        }
+        let mut own_balance_total = 0_i64;
+        let mut own_cost_left = mandi_domain::core::money::Paisa::ZERO;
+        for row in &own_rows {
+            own_balance_total = own_balance_total
+                .checked_add(row.balance)
+                .ok_or_else(|| data("the quantity of the stock does not fit"))?;
+            own_cost_left = own_cost_left
+                .checked_add(row.cost_left_paisa)
+                .map_err(crate::error::money_error)?;
+        }
         let mut garden_balance_total = 0_i64;
         for row in &garden_rows {
             garden_balance_total = garden_balance_total
@@ -476,4 +509,167 @@ pub fn ready_goods(
         rows.truncate(100);
         Ok(ReadyGoods { rows })
     })
+}
+
+/// The columns the stock list can be sorted by: the names of the fields of the rows.
+const SORT_COLUMNS: [&str; 10] = [
+    "received_date",
+    "number",
+    "seller",
+    "item",
+    "packing",
+    "qty_received",
+    "qty_sold",
+    "qty_written_off",
+    "balance",
+    "days_waiting",
+];
+
+/// True if the text is in a name or code (either script) or equals the number.
+fn named(text: &str, code: &str, name_ur: &str, name_en: &str) -> bool {
+    use mandi_domain::core::text;
+    let ur = text::search_ur(text);
+    let en = text::search_en(text);
+    code.to_lowercase().contains(&text.to_lowercase())
+        || (!ur.is_empty() && text::search_ur(name_ur).contains(&ur))
+        || (!en.is_empty() && text::search_en(name_en).contains(&en))
+}
+
+fn lot_matches(row: &StockRow, text: &str) -> bool {
+    named(
+        text,
+        &row.seller.code,
+        &row.seller.name_ur,
+        &row.seller.name_en,
+    ) || named(text, &row.item.code, &row.item.name_ur, &row.item.name_en)
+        || row
+            .pukhta
+            .as_ref()
+            .is_some_and(|p| named(text, "", &p.name_ur, &p.name_en) || p.phone.contains(text))
+        || text.parse::<i64>().is_ok_and(|n| n == row.bikri_number)
+}
+
+fn own_matches(row: &OwnStockRow, text: &str) -> bool {
+    named(text, &row.item.code, &row.item.name_ur, &row.item.name_en)
+        || named(text, &row.trip.code, &row.trip.name_ur, &row.trip.name_en)
+        || row
+            .supplier
+            .as_deref()
+            .is_some_and(|s| s.to_lowercase().contains(&text.to_lowercase()))
+        || row
+            .shop_name
+            .as_deref()
+            .is_some_and(|s| s.to_lowercase().contains(&text.to_lowercase()))
+        || text.parse::<i64>().is_ok_and(|n| n == row.number)
+}
+
+fn garden_matches(row: &GardenStockRow, text: &str) -> bool {
+    named(text, &row.item.code, &row.item.name_ur, &row.item.name_en)
+        || named(
+            text,
+            &row.garden.code,
+            &row.garden.name_ur,
+            &row.garden.name_en,
+        )
+        || row
+            .shop_name
+            .as_deref()
+            .is_some_and(|s| s.to_lowercase().contains(&text.to_lowercase()))
+        || text.parse::<i64>().is_ok_and(|n| n == row.number)
+}
+
+/// Orders two names in the script asked for: Urdu alphabetical order or English.
+fn name_order(language: Option<Language>, a: (&str, &str), b: (&str, &str)) -> std::cmp::Ordering {
+    if language == Some(Language::Ur) {
+        crate::page::urdu_compare(a.0, b.0)
+    } else {
+        a.1.to_lowercase().cmp(&b.1.to_lowercase())
+    }
+}
+
+/// Sorts the lots by a column (checked by [`SORT_COLUMNS`]). A stable sort.
+fn sort_lots(
+    rows: &mut [StockRow],
+    column: &str,
+    direction: SortDirection,
+    language: Option<Language>,
+) {
+    rows.sort_by(|a, b| {
+        let ordering = match column {
+            "received_date" => a.received_date.cmp(&b.received_date),
+            "number" => a.bikri_number.cmp(&b.bikri_number),
+            "seller" => name_order(
+                language,
+                (&a.seller.name_ur, &a.seller.name_en),
+                (&b.seller.name_ur, &b.seller.name_en),
+            ),
+            "item" => a.item.code.cmp(&b.item.code),
+            "packing" => a.packing.code.cmp(&b.packing.code),
+            "qty_received" => a.qty_received.cmp(&b.qty_received),
+            "qty_sold" => a.qty_sold.cmp(&b.qty_sold),
+            "qty_written_off" => a.qty_written_off.cmp(&b.qty_written_off),
+            "balance" => a.balance.cmp(&b.balance),
+            _ => a.days_waiting.cmp(&b.days_waiting),
+        };
+        direction.apply(ordering)
+    });
+}
+
+/// Sorts the trip goods by a column. A stable sort.
+fn sort_own(
+    rows: &mut [OwnStockRow],
+    column: &str,
+    direction: SortDirection,
+    language: Option<Language>,
+) {
+    rows.sort_by(|a, b| {
+        let ordering = match column {
+            "received_date" => a.received_date.cmp(&b.received_date),
+            "number" => a.number.cmp(&b.number),
+            // The supplier is typed in one script, so it sorts as typed.
+            "seller" => {
+                let _ = language;
+                a.supplier
+                    .as_deref()
+                    .map(str::to_lowercase)
+                    .cmp(&b.supplier.as_deref().map(str::to_lowercase))
+            }
+            "item" => a.item.code.cmp(&b.item.code),
+            "packing" => a.packing.code.cmp(&b.packing.code),
+            "qty_received" => a.qty_bought.cmp(&b.qty_bought),
+            "qty_sold" => a.qty_sold.cmp(&b.qty_sold),
+            "qty_written_off" => a.qty_written_off.cmp(&b.qty_written_off),
+            "balance" => a.balance.cmp(&b.balance),
+            _ => a.days_waiting.cmp(&b.days_waiting),
+        };
+        direction.apply(ordering)
+    });
+}
+
+/// Sorts the garden arrivals by a column. A stable sort.
+fn sort_gardens(
+    rows: &mut [GardenStockRow],
+    column: &str,
+    direction: SortDirection,
+    language: Option<Language>,
+) {
+    rows.sort_by(|a, b| {
+        let ordering = match column {
+            "received_date" => a.received_date.cmp(&b.received_date),
+            "number" => a.number.cmp(&b.number),
+            "seller" => name_order(
+                language,
+                (&a.garden.name_ur, &a.garden.name_en),
+                (&b.garden.name_ur, &b.garden.name_en),
+            ),
+            "item" => a.item.code.cmp(&b.item.code),
+            "packing" => a.packing.code.cmp(&b.packing.code),
+            "qty_received" => a.qty_arrived.cmp(&b.qty_arrived),
+            "qty_sold" => a.qty_sold.cmp(&b.qty_sold),
+            "qty_written_off" => a.qty_written_off.cmp(&b.qty_written_off),
+            "balance" => a.balance.cmp(&b.balance),
+            _ => a.days_waiting.cmp(&b.days_waiting),
+        };
+        direction.apply(ordering)
+    });
 }

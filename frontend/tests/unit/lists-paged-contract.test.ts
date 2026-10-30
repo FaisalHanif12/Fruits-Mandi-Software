@@ -81,7 +81,10 @@ describe('each paged wrapper sends exactly the request the backend’s own test 
       paged.REQUEST_RULES_ALL_PAGE_2.offset,
       paged.REQUEST_RULES_ALL_PAGE_2.limit,
     );
-    expect(call).toHaveBeenLastCalledWith('rules_list', { input: paged.REQUEST_RULES_ALL_PAGE_2 });
+    // The search and the order are sent as null when none is chosen (the backend's file predates them).
+    expect(call).toHaveBeenLastCalledWith('rules_list', {
+      input: { ...paged.REQUEST_RULES_ALL_PAGE_2, search: null, sort: null },
+    });
     call.mockResolvedValue(paged.PAIRS);
     await urduApi.translitPairsList(
       paged.REQUEST_PAIRS_PAGE_2.offset,
@@ -94,18 +97,29 @@ describe('each paged wrapper sends exactly the request the backend’s own test 
 
   it('accounts_list sends the page it is asked for, and no longer asks for every account', async () => {
     call.mockResolvedValue({ rows: [], count: 0, total_dr_paisa: 0, total_cr_paisa: 0 });
-    const filter = { kind: 'all' as const, text: '', include_inactive: false };
+    const filter = { kind: 'all' as const, text: '', include_inactive: false, has_opening: null };
     await accountsApi.accountsList(filter, 100, 100);
     expect(call).toHaveBeenLastCalledWith('accounts_list', {
-      input: { filter, offset: 100, limit: 100 },
+      input: { filter, offset: 100, limit: 100, sort: null },
     });
   });
 });
 
 describe('the real answers are pages: rows, the count and the totals of the whole filter', () => {
   it('the list of بکری, the register and the stock list have the keys of a page', () => {
-    expect(Object.keys(bikriReal.LIST_DAY).sort()).toEqual(['rows', 'total_count', 'totals']);
-    expect(Object.keys(bikriReal.REGISTER_DAY).sort()).toEqual(['rows', 'total_count', 'totals']);
+    // `months`: the subtotals of each month, empty unless the list asked for them (plan 38 R4).
+    expect(Object.keys(bikriReal.LIST_DAY).sort()).toEqual([
+      'months',
+      'rows',
+      'total_count',
+      'totals',
+    ]);
+    expect(Object.keys(bikriReal.REGISTER_DAY).sort()).toEqual([
+      'months',
+      'rows',
+      'total_count',
+      'totals',
+    ]);
     for (const answer of [stock, stockOwn]) {
       expect(Object.keys(answer)).toEqual(
         expect.arrayContaining(['rows', 'own_rows', 'total_count']),
@@ -190,6 +204,8 @@ describe('one record by its id: the lot of a later sale and the master of a form
       seller_id: null,
       item_id: null,
       include_written_off: false,
+      search: null,
+      sort: null,
       lot_id: oneLotRequest.lot_id,
       offset: oneLotRequest.offset,
       limit: oneLotRequest.limit,

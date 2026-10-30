@@ -5,7 +5,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useSearch } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ErrorState, LoadingState, Tabs } from '../../../shared/ui';
 import { AuditLog } from '../../audit';
@@ -53,12 +53,18 @@ export function SettingsPage() {
     );
   }
   const data = settings.data;
+  // A panel of fields scrolls inside its own area; the audit log fills the room itself (plan 38).
+  const scrolls = (content: ReactNode) => (
+    <div className="min-h-0 flex-1 overflow-auto">{content}</div>
+  );
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       <Localized id="settings-title">
         <h1 className="type-title" />
       </Localized>
+      {/* ONE row of tabs: the ones that do not fit are behind its More menu. */}
       <Tabs
+        overflow
         label={l10n.getString('settings-tabs')}
         value={tab}
         onValueChange={setTab}
@@ -66,42 +72,42 @@ export function SettingsPage() {
           {
             id: 'firm',
             label: <Localized id="settings-tab-firm" />,
-            content: <FirmTab firm={data.firm} />,
+            content: scrolls(<FirmTab firm={data.firm} />),
           },
           {
             id: 'charges',
             label: <Localized id="settings-tab-charges" />,
-            content: <ChargesTab />,
+            content: scrolls(<ChargesTab />),
           },
           {
             id: 'overrides',
             label: <Localized id="settings-tab-overrides" />,
-            content: <OverridesTab />,
+            content: scrolls(<OverridesTab />),
           },
           {
             id: 'printing',
             label: <Localized id="settings-tab-printing" />,
-            content: <PrintingTab />,
+            content: scrolls(<PrintingTab />),
           },
           {
             id: 'language',
             label: <Localized id="settings-tab-language" />,
-            content: (
+            content: scrolls(
               <LanguageTab
                 defaultLanguage={data.default_language}
                 numberGrouping={data.number_grouping}
-              />
+              />,
             ),
           },
           {
             id: 'lock',
             label: <Localized id="settings-tab-lock" />,
-            content: <LockTab minutes={data.idle_lock_minutes} />,
+            content: scrolls(<LockTab minutes={data.idle_lock_minutes} />),
           },
           {
             id: 'day',
             label: <Localized id="settings-tab-day" />,
-            content: <DayTab />,
+            content: scrolls(<DayTab />),
           },
           {
             id: 'audit',
@@ -111,7 +117,7 @@ export function SettingsPage() {
           {
             id: 'app',
             label: <Localized id="settings-tab-app" />,
-            content: <AppTab />,
+            content: scrolls(<AppTab />),
           },
         ]}
       />

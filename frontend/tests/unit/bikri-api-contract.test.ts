@@ -210,7 +210,7 @@ describe('the canned data of the component tests has the real shape', () => {
   it('a list row', () => {
     expect(firstDifference(shapeOf(LIST_DAY.rows[0]), shapeOf(listRow()))).toBeNull();
     // A page: the rows, the count of the whole filter, and the totals over all of it.
-    expect(Object.keys(LIST_DAY).sort()).toEqual(['rows', 'total_count', 'totals']);
+    expect(Object.keys(LIST_DAY).sort()).toEqual(['months', 'rows', 'total_count', 'totals']);
     expect(Object.keys(LIST_DAY.totals).sort()).toEqual([
       'buyer_total',
       'gross',

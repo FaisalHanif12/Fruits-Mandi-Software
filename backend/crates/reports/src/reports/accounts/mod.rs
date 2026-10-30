@@ -12,14 +12,11 @@ mod cash;
 mod journal;
 mod ledger;
 mod ledger_items;
+pub(crate) mod lines;
 
 pub(super) use balances::{run_r16, run_r17, run_r18, run_r19};
 pub(super) use cash::run as run_r12;
 pub(super) use journal::run_r11;
-#[doc(hidden)]
-pub use journal::{PAGE_SQL as R11_PAGE_SQL, TOTALS_SQL as R11_TOTALS_SQL};
-#[doc(hidden)]
-pub use ledger::{PAGE_SQL as R13_PAGE_SQL, TOTALS_SQL as R13_TOTALS_SQL};
 pub(super) use ledger::{run_r13, run_r14};
 
 /// Which rows a run returns.

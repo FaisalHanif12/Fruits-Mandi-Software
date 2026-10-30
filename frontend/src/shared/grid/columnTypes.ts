@@ -52,6 +52,8 @@ export const FIT_MIN = {
   heading: 84,
   /** A plain figure with no icon. */
   figure: 72,
+  /** A choice column whose heading is two short words ("ادھاری / نقدی"). */
+  choiceHeading: 108,
 } as const;
 
 /**

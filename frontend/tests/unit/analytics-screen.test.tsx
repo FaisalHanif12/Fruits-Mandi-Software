@@ -28,7 +28,6 @@ import {
 import { printFirmName } from '../helpers/print-frame';
 import { PAGE_ROWS } from '../helpers/pager';
 import { message, visible, paragraph } from '../helpers/render';
-import { CHART_ROWS } from '../../src/features/analytics/hooks';
 import {
   ANALYTICS_PRINT_DATA_D_UR,
   ANALYTICS_RUN_A_REQUEST,
@@ -63,6 +62,8 @@ beforeEach(() => {
   act(() => {
     useAnalyticsStore.getState().reset();
   });
+  // "More filters" and the chart are kept on this computer; a test starts with neither remembered.
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -113,21 +114,13 @@ function pick(selector: string): Element {
   return found;
 }
 
-/** The last request of the TABLE (one page of the pager). The chart asks for its own rows. */
+/** The last request of the view (one page of the pager). The charts come with the page. */
 function lastRun() {
   return vi
     .mocked(analyticsApi.analyticsRun)
     .mock.calls.map((call) => call[0])
     .filter((input) => input.limit === PAGE_ROWS)
     .at(-1);
-}
-
-/** The requests of the chart: the first rows of the view, never the page of the table (plan 38 D1). */
-function chartRuns() {
-  return vi
-    .mocked(analyticsApi.analyticsRun)
-    .mock.calls.map((call) => call[0])
-    .filter((input) => input.limit === CHART_ROWS);
 }
 
 function lastLines() {
@@ -141,6 +134,21 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   });
 
   const m = (id: string, vars: Record<string, string | number> = {}) => message(language, id, vars);
+  /** The boxes used less wait behind "More filters" in every window (plan 38): opens them. */
+  async function openMoreFilters(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(await screen.findByRole('button', { name: named(m('report-filters-more')) }));
+  }
+
+  /** The saved views are one menu button: opens it. */
+  async function openSavedMenu(user: ReturnType<typeof userEvent.setup>) {
+    // With a view open its name follows the words on the button.
+    await user.click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name).startsWith(m('analytics-saved-label')),
+      }),
+    );
+  }
+
   const names = (ur: string, en: string) => (language === 'ur' ? ur : en);
   const VIEW_IDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'] as const;
 
@@ -167,8 +175,8 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       await waitFor(() => {
         expect(lastRun()).toEqual(ANALYTICS_RUN_A_REQUEST_WITH_PAGE);
       }, SLOW_MS);
-      // The chart is drawn from the first rows of the whole filter, whatever page the table is on.
-      expect(chartRuns()[0]).toEqual({ ...ANALYTICS_RUN_A_REQUEST, limit: CHART_ROWS });
+      // The chart comes with the page, from the backend: no second request for it (plan 38 R4).
+      expect(vi.mocked(analyticsApi.analyticsRun)).toHaveBeenCalledTimes(1);
     });
 
     it('moves between the views with the tabs, and keeps the filters', async () => {
@@ -230,6 +238,32 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       );
       expect(chart.getAttribute('data-chart')).toBe('bar');
       expect(chart.getAttribute('dir')).toBe(language === 'ur' ? 'rtl' : 'ltr');
+    });
+
+    it('starts with the chart folded in a window not higher than 800, and one button shows it (plan 38)', async () => {
+      // A short window: the style rule (max-height 800) matches, so the table is what is in view.
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        value: (query: string) => ({
+          matches: query.includes('max-height'),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }),
+      });
+      try {
+        const { user } = await openView('A');
+        await waitFor(() => {
+          expect(drawnRows()).toHaveLength(2);
+        }, SLOW_MS);
+        expect(screen.queryByRole('img', { name: named(m('analytics-chart-a')) })).toBeNull();
+        await user.click(screen.getByRole('button', { name: named(m('analytics-chart-show')) }));
+        expect(
+          await screen.findByRole('img', { name: named(m('analytics-chart-a')) }, SLOW_MS),
+        ).toBeInTheDocument();
+      } finally {
+        Reflect.deleteProperty(window, 'matchMedia');
+      }
     });
 
     it('draws only the columns that fit the window, the print has the rest', async () => {
@@ -358,10 +392,16 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       expect(cell('1', 'name')).toBe(names('کیلا', 'Banana'));
       expect(cell('1', 'share')).toBe('72.10%');
       expect(document.querySelector('.ag-row[row-id="0"]')?.className).toContain('row-group');
-      // A chart of the first list only.
-      expect(
-        await screen.findByRole('img', { name: named(m('analytics-chart-h')) }),
-      ).toBeInTheDocument();
+      // One chart for each list, named by its list (the backend's charts, plan 38 R4).
+      const charts = await screen.findAllByRole('img', {
+        name: (name) => visible(name).startsWith(m('analytics-chart-h')),
+      });
+      expect(charts).toHaveLength(3);
+      expect(charts.map((chart) => visible(chart.getAttribute('aria-label')))).toEqual([
+        `${m('analytics-chart-h')} · ${m('analytics-top-items')}`,
+        `${m('analytics-chart-h')} · ${m('analytics-top-sellers')}`,
+        `${m('analytics-chart-h')} · ${m('analytics-top-buyers')}`,
+      ]);
     });
   });
 
@@ -381,6 +421,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       const { user } = await openView('A');
       await user.type(screen.getByLabelText(m('report-filter-from')), '10-10-2026');
       await user.type(screen.getByLabelText(m('report-filter-to')), '10-10-2026');
+      await openMoreFilters(user);
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-compare') }));
       await user.click(
         await screen.findByRole('option', { name: m('analytics-compare-previous') }),
@@ -411,6 +452,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(2);
       }, SLOW_MS);
+      await openMoreFilters(user);
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-compare') }));
       await user.click(
         await screen.findByRole('option', { name: m('analytics-compare-last-year') }),
@@ -436,6 +478,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       });
       await user.click(screen.getByRole('combobox', { name: m('report-filter-period') }));
       await user.click(await screen.findByRole('option', { name: m('report-period-this-month') }));
+      await openMoreFilters(user);
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-compare') }));
       await user.click(
         await screen.findByRole('option', { name: m('analytics-compare-previous') }),
@@ -462,6 +505,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
 
     it('sends the side asked for, and the seller side leaves the buyer side blank', async () => {
       const { user } = await openView('A');
+      await openMoreFilters(user);
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-side') }));
       await user.click(
         await screen.findByRole('option', { name: named(m('analytics-side-seller')) }),
@@ -475,6 +519,7 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
       const { user } = await openView('A', {
         pages: { A: { ...ANALYTICS_RUN_A_EMPTY } },
       });
+      await openMoreFilters(user);
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-side') }));
       await user.click(
         await screen.findByRole('option', { name: named(m('analytics-side-buyer')) }),
@@ -682,14 +727,18 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   describe('saved views (FR-18.5)', () => {
     it('lists them, and opening one goes to its view with its filters', async () => {
       const { router, user } = await openView('A', { saved: VIEWS_GET_TWO });
-      await user.click(await screen.findByRole('combobox', { name: m('analytics-saved-label') }));
-      await user.click(await screen.findByRole('option', { name: 'Top 10' }));
+      await openSavedMenu(user);
+      await user.click(await screen.findByRole('menuitem', { name: 'Top 10' }));
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/analytics/H');
       }, SLOW_MS);
       await screen.findByRole('heading', { level: 1, name: named(m('analytics-view-h-title')) });
-      await user.click(screen.getByRole('combobox', { name: m('analytics-saved-label') }));
-      await user.click(await screen.findByRole('option', { name: VIEWS_GET_TWO[0]?.name ?? '' }));
+      await openSavedMenu(user);
+      await user.click(
+        await screen.findByRole('menuitem', {
+          name: (name) => visible(name).includes(VIEWS_GET_TWO[0]?.name ?? ''),
+        }),
+      );
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/analytics/D');
       }, SLOW_MS);
@@ -703,7 +752,8 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
     });
 
     it('says there are none yet', async () => {
-      await openView('A', { saved: [] });
+      const { user } = await openView('A', { saved: [] });
+      await openSavedMenu(user);
       expect(await screen.findByText(named(m('analytics-saved-none')))).toBeInTheDocument();
     });
 
@@ -717,8 +767,9 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
           item: { id: 1, name_ur: 'کیلا', name_en: 'Banana', code: undefined },
         });
       });
+      await openSavedMenu(user);
       await user.click(
-        await screen.findByRole('button', { name: named(m('analytics-saved-save')) }),
+        await screen.findByRole('menuitem', { name: named(m('analytics-saved-save')) }),
       );
       const box = await screen.findByLabelText(m('analytics-saved-name'));
       await user.type(box, VIEWS_SAVE_TWO_REQUEST.views[0]?.name ?? '');
@@ -739,8 +790,9 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
 
     it('shows the refusal of an empty name under the name box, and saves nothing', async () => {
       const { fake, user } = await openView('A', { saved: [] });
+      await openSavedMenu(user);
       await user.click(
-        await screen.findByRole('button', { name: named(m('analytics-saved-save')) }),
+        await screen.findByRole('menuitem', { name: named(m('analytics-saved-save')) }),
       );
       await screen.findByLabelText(m('analytics-saved-name'));
       await user.click(screen.getByRole('button', { name: named(m('analytics-saved-confirm')) }));
@@ -750,11 +802,12 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
 
     it('deletes the one that is open, after asking', async () => {
       const { fake, user } = await openView('A', { saved: VIEWS_GET_TWO });
-      await user.click(await screen.findByRole('combobox', { name: m('analytics-saved-label') }));
-      await user.click(await screen.findByRole('option', { name: 'Top 10' }));
+      await openSavedMenu(user);
+      await user.click(await screen.findByRole('menuitem', { name: 'Top 10' }));
       await screen.findByRole('heading', { level: 1, name: named(m('analytics-view-h-title')) });
+      await openSavedMenu(user);
       await user.click(
-        await screen.findByRole('button', { name: named(m('analytics-saved-delete')) }),
+        await screen.findByRole('menuitem', { name: named(m('analytics-saved-delete')) }),
       );
       expect(await screen.findByText(named(m('analytics-saved-delete-title')))).toBeVisible();
       const dialog = screen.getByRole('alertdialog');
@@ -1022,7 +1075,12 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
 });
 
 /** The first request of view A: the backend's own request, one page of the pager. */
-const ANALYTICS_RUN_A_REQUEST_WITH_PAGE = { ...ANALYTICS_RUN_A_REQUEST, limit: PAGE_ROWS };
+// The backend's request file was written before the sort: no sort chosen is `null` (plan 38 R4).
+const ANALYTICS_RUN_A_REQUEST_WITH_PAGE = {
+  ...ANALYTICS_RUN_A_REQUEST,
+  limit: PAGE_ROWS,
+  sort: null,
+};
 
 /** View A with nothing in it. */
 const ANALYTICS_RUN_A_EMPTY = {

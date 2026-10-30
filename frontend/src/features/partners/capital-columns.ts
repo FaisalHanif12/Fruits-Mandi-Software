@@ -20,12 +20,14 @@ function numberId(row: CapitalRow): string | null {
 export const CAPITAL_COLUMNS: readonly ListColumn<CapitalRow>[] = [
   {
     field: 'date',
+    sortKey: 'entry_date',
     type: 'date',
     headerId: 'cashbook-col-date',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
     field: 'kind',
+    sortKey: 'kind',
     type: 'text',
     headerId: 'cashbook-col-kind',
     grow: true,
@@ -33,6 +35,7 @@ export const CAPITAL_COLUMNS: readonly ListColumn<CapitalRow>[] = [
   },
   {
     field: 'number',
+    sortKey: 'number',
     type: 'code',
     headerId: 'cashbook-col-number',
     from: 'normal',
@@ -43,6 +46,7 @@ export const CAPITAL_COLUMNS: readonly ListColumn<CapitalRow>[] = [
   },
   {
     field: 'narration',
+    sortKey: 'narration',
     type: 'name',
     headerId: 'cashbook-col-narration',
     from: 'wide',
@@ -52,12 +56,14 @@ export const CAPITAL_COLUMNS: readonly ListColumn<CapitalRow>[] = [
   },
   {
     field: 'amount',
+    sortKey: 'amount_paisa',
     type: 'money',
     headerId: 'cashbook-col-amount',
     value: (row, { money }) => money(row.amount_paisa),
   },
   {
     field: 'running',
+    sortKey: 'running_paisa',
     type: 'money',
     headerId: 'partners-capital-col-balance',
     value: (row, { money }) => money(row.running_paisa),

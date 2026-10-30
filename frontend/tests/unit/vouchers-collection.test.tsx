@@ -142,6 +142,7 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
       date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
+      search: null,
       offset: 0,
       limit: 100,
     });
@@ -149,6 +150,7 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
       date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
+      search: null,
       offset: 100,
       limit: 100,
     });
@@ -158,12 +160,40 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
     });
   });
 
+  it('the search box sends the text to the backend; the collector and the city are behind "More filters"', async () => {
+    await open();
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByRole('textbox', { name: named(message(language, 'common-search-label')) }),
+      'akram',
+    );
+    await waitFor(() => {
+      expect(vouchersApi.assistCollectionList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'akram' }),
+      );
+    });
+    expect(
+      screen.queryByRole('combobox', {
+        name: named(message(language, 'vouchers-field-collector')),
+      }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
+    expect(
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'vouchers-field-collector')),
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('asks for today with no collector or city, and lists each buyer with his dues and days from the backend', async () => {
     await open();
     expect(vouchersApi.assistCollectionList).toHaveBeenCalledWith({
       date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
+      search: null,
       offset: 0,
       limit: 100,
     });

@@ -49,11 +49,12 @@ export function usePartnerStatement(
   partnerId: number | null,
   range: StatementRange,
   groupByMonth = false,
+  ready = true,
 ) {
   return usePagedQuery({
     screen: 'partners.statement',
     queryKey: [...PARTNERS_KEY, 'statement', partnerId, range, groupByMonth],
-    enabled: partnerId !== null,
+    enabled: partnerId !== null && ready,
     fetchPage: (offset, limit, sort) =>
       partnersStatement({
         partner_id: partnerId ?? 0,

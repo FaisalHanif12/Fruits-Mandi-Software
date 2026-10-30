@@ -1461,6 +1461,7 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
     let list = vouchers::collection_list(
         &w.env.ctx,
         &CollectionListInput {
+            search: None,
             date: "10-10-2026".into(),
             collector_staff_id: None,
             city_id: None,
@@ -1502,6 +1503,7 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
         vouchers::collection_list(
             &w.env.ctx,
             &CollectionListInput {
+                search: None,
                 date: "10-10-2026".into(),
                 collector_staff_id: None,
                 city_id: None,
@@ -1567,6 +1569,7 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
     let monday = vouchers::collection_list(
         &w.env.ctx,
         &CollectionListInput {
+            search: None,
             date: "05-10-2026".into(),
             collector_staff_id: None,
             city_id: None,

@@ -44,7 +44,9 @@ export type CashbookRow = {
    */
   out_paisa: Paisa;
   /**
-   * Cash in hand after this row (signed: cash can go below 0, PRD FR-6.7).
+   * Cash in hand after this row (signed: cash can go below 0, PRD FR-6.7). Null when the list
+   * is sorted by a column other than the day: the running cash shows in day order only (plan
+   * 38 B2). The screen then says "balance shows in date order only".
    */
-  running_paisa: Paisa;
+  running_paisa: Paisa | null;
 };

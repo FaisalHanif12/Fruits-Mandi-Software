@@ -46,7 +46,7 @@ use mandi_db::rusqlite::Connection;
 /// gives the query a report runs for a date range, with the values to bind.
 #[doc(hidden)]
 pub mod plans {
-    pub use super::accounts::{R11_PAGE_SQL, R11_TOTALS_SQL, R13_PAGE_SQL, R13_TOTALS_SQL};
+    pub use super::accounts::lines::plans::{journal_page, ledger_page};
     use super::filters::Typed;
     use mandi_db::rusqlite::types::Value;
 
@@ -105,7 +105,7 @@ pub use print_data::{
 pub use statement::{StatementRequest, statement_page, statement_paging, statement_request};
 
 pub(crate) use accounts::PageSpec;
-use filters::{Takes, Typed, resolve};
+use filters::{LineSort, Takes, Typed, resolve};
 
 use crate::error::ReportsError;
 use crate::print::load::{load_firm, load_grouping, load_setup};
@@ -449,9 +449,69 @@ fn build_in(
     input_filters: &ReportFilters,
     spec: PageSpec,
 ) -> Result<ReportPage, ReportsError> {
+    build_in_with(conn, db, id, input_filters, spec, None)
+}
+
+/// The sorts of the ledger and day book reports that are one SQL page, so such a sort never builds
+/// the whole report (plan 38 B2): debit and credit (R11, R13, R14), and the date (R11 to R14: oldest
+/// first is the natural order, newest first its reverse). The outer `None` is any other sort, which
+/// builds the whole report; `Some(None)` is the natural order.
+fn fast_sort_of(id: ReportId, sort: &mandi_core::paging::SortInput) -> Option<Option<LineSort>> {
+    use mandi_core::paging::SortDirection;
+    let desc = sort.direction == SortDirection::Desc;
+    match (id, sort.column.as_str()) {
+        (ReportId::R11 | ReportId::R12 | ReportId::R13 | ReportId::R14, "date") => {
+            Some(desc.then_some(LineSort::Newest))
+        }
+        (ReportId::R11 | ReportId::R13 | ReportId::R14, "debit") => Some(Some(LineSort::Amount {
+            credit: false,
+            desc,
+        })),
+        (ReportId::R11 | ReportId::R13 | ReportId::R14, "credit") => {
+            Some(Some(LineSort::Amount { credit: true, desc }))
+        }
+        _ => None,
+    }
+}
+
+/// Gives a page the heading of each month it touches, from that month's own totals (one totals read
+/// for each month), never a pass over the whole filter (plan 38 B2).
+fn page_months(
+    conn: &Connection,
+    db: &Db,
+    id: ReportId,
+    filters: &ReportFilters,
+    page: &mut ReportPage,
+) -> Result<(), ReportsError> {
+    let plan = view::MonthPlan {
+        filters,
+        first_day: page.filters.from.clone(),
+        last_day: page
+            .filters
+            .to
+            .clone()
+            .unwrap_or_else(|| view::OPEN_END_DAY.to_owned()),
+    };
+    view::add_page_months(page, &plan, |sub| {
+        let none = PageSpec {
+            offset: 0,
+            limit: Some(0),
+        };
+        build_in(conn, db, id, sub, none)
+    })
+}
+
+fn build_in_with(
+    conn: &Connection,
+    db: &Db,
+    id: ReportId,
+    input_filters: &ReportFilters,
+    spec: PageSpec,
+    line_sort: Option<LineSort>,
+) -> Result<ReportPage, ReportsError> {
     let entry = spec_of(id)?;
     let today = common::today(db.clock().now_utc())?;
-    let typed: Typed = resolve(
+    let mut typed: Typed = resolve(
         conn,
         today,
         Takes {
@@ -460,6 +520,7 @@ fn build_in(
         },
         input_filters,
     )?;
+    typed.line_sort = line_sort;
     match id {
         ReportId::R2 => sales::run_register(conn, &typed, spec, sales::RegisterKind::All),
         ReportId::R3 => sales::run_register(conn, &typed, spec, sales::RegisterKind::Cash),
@@ -517,22 +578,37 @@ pub fn run(db: &Db, input: &ReportRunInput) -> Result<ReportPage, ReportsError> 
     let wants_months = input.group_by_month && view::has_months(input.id);
     db.read(|conn| {
         common::in_snapshot(conn, |conn| {
-            // A sort or month headings need every row of the filter: the report is built whole,
-            // sorted, given its headings and cut after (plan 38 R4). The totals are the same
+            // A sort needs every row of the filter: the report is built whole, sorted, given its
+            // month headings if asked and cut after (plan 38 R4). The totals are the same
             // whole-filter totals as ever.
-            if input.sort.is_some() || wants_months {
+            if let Some(sort) = &input.sort
+                && let Some(fast) = fast_sort_of(input.id, sort)
+            {
+                // A sort by the date, debit or credit of a ledger or the day book is one SQL page.
+                // By an amount the balance is left empty (it shows in date order only).
+                let mut page = build_in_with(conn, db, input.id, &input.filters, spec, fast)?;
+                let in_date_order = !matches!(fast, Some(LineSort::Amount { .. }));
+                if wants_months && in_date_order {
+                    page_months(conn, db, input.id, &input.filters, &mut page)?;
+                }
+                return Ok(page);
+            }
+            if input.sort.is_some() {
                 let all = PageSpec {
                     offset: 0,
                     limit: None,
                 };
                 let mut page = build_in(conn, db, input.id, &input.filters, all)?;
-                if let Some(sort) = &input.sort {
-                    view::sort_page(&mut page, sort)?;
-                }
-                if wants_months && view::in_date_order(&page.columns, input.sort.as_ref()) {
-                    view::add_month_headings(&mut page)?;
-                }
+                view::shape(&mut page, input.id, input.sort.as_ref(), wants_months)?;
                 view::cut(&mut page, spec);
+                return Ok(page);
+            }
+            // Month headings in the order of the report: the page is built alone, and each month
+            // it touches gets a heading made from that month's own totals (one totals read per
+            // month), never a pass over the whole filter (plan 38 B2).
+            if wants_months {
+                let mut page = build_in(conn, db, input.id, &input.filters, spec)?;
+                page_months(conn, db, input.id, &input.filters, &mut page)?;
                 return Ok(page);
             }
             let mut page = build_in(conn, db, input.id, &input.filters, spec)?;
@@ -584,7 +660,14 @@ pub fn print_data(db: &Db, input: &ReportPrintInput) -> Result<ReportPrintData, 
         offset: 0,
         limit: None,
     };
-    let page = db.read(|conn| build(conn, db, input.id, &input.filters, all))?;
+    let mut page = db.read(|conn| build(conn, db, input.id, &input.filters, all))?;
+    // The print follows the screen: its sort and its month headings, with every row.
+    view::shape(
+        &mut page,
+        input.id,
+        input.sort.as_ref(),
+        input.group_by_month,
+    )?;
     print_data_for_page(db, &page, input)
 }
 
@@ -657,6 +740,8 @@ pub(crate) fn export_page(
     db: &Db,
     id: ReportId,
     filters: &ReportFilters,
+    sort: Option<&mandi_core::paging::SortInput>,
+    group_by_month: bool,
 ) -> Result<
     (
         ReportPage,
@@ -670,7 +755,9 @@ pub(crate) fn export_page(
         limit: None,
     };
     db.read(|conn| {
-        let page = build(conn, db, id, filters, all)?;
+        let mut page = build(conn, db, id, filters, all)?;
+        // The export follows the screen: its sort and its month headings, with every row.
+        view::shape(&mut page, id, sort, group_by_month)?;
         Ok::<_, ReportsError>((page, load_firm(conn)?, load_grouping(conn)?))
     })
 }

@@ -19,6 +19,7 @@ import {
   Code,
   ConfirmDialog,
   Fact,
+  InfoHint,
   LoadingState,
   Num,
   ScriptText,
@@ -104,45 +105,58 @@ export function MonthPreviewCard({ row, onClosed }: MonthPreviewCardProps) {
   ];
 
   return (
-    <Card title={<Localized id="month-preview-title" vars={{ month: name }} />}>
+    <Card compact>
+      {/* The button that closes the month is on the row of the card's title, so it is in view
+          whatever the length of the entry's lines below it (plan 38). */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
+          <Localized id="month-preview-title" vars={{ month: name }}>
+            <h2 className="type-section text-ink" />
+          </Localized>
+          <InfoHint>
+            <Localized id="month-preview-help">
+              <p />
+            </Localized>
+          </InfoHint>
+        </div>
+        {data === undefined ? null : (
+          <Button
+            variant="primary"
+            busy={flight.busy || close.isPending}
+            onClick={() => {
+              setConfirming(true);
+            }}
+          >
+            <Localized id="month-close-button" />
+          </Button>
+        )}
+      </div>
       {refusal === null ? null : <MonthRefusal error={refusal} month={row.month} />}
       {preview.isPending ? <LoadingState /> : null}
       {data === undefined ? null : (
         <>
-          <Localized id="month-preview-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          <dl className="grid grid-cols-2 gap-4 normal:grid-cols-4">
-            <Fact label={<Localized id="month-fact-income" />}>
-              <Num paisa={data.income_paisa} />
-            </Fact>
-            <Fact label={<Localized id="month-fact-expense" />}>
-              <Num paisa={data.expense_paisa} />
-            </Fact>
-            <Fact label={<Localized id="month-fact-profit" />}>
-              <Num paisa={data.profit_paisa} />
-            </Fact>
-            <Fact label={<Localized id="month-fact-date" />}>
-              <Num>{isoToDisplayDate(data.entry_date)}</Num>
-            </Fact>
-          </dl>
+          <div className="@container min-w-0">
+            <dl className="grid grid-cols-2 gap-4 @form3:grid-cols-4">
+              <Fact label={<Localized id="month-fact-income" />}>
+                <Num paisa={data.income_paisa} />
+              </Fact>
+              <Fact label={<Localized id="month-fact-expense" />}>
+                <Num paisa={data.expense_paisa} />
+              </Fact>
+              <Fact label={<Localized id="month-fact-profit" />}>
+                <Num paisa={data.profit_paisa} />
+              </Fact>
+              <Fact label={<Localized id="month-fact-date" />}>
+                <Num>{isoToDisplayDate(data.entry_date)}</Num>
+              </Fact>
+            </dl>
+          </div>
           <Table
             label={l10n.getString('month-lines-label')}
             columns={columns}
             rows={data.lines}
             rowKey={(line) => `${line.kind}-${String(line.account.id)}`}
           />
-          <div>
-            <Button
-              variant="primary"
-              busy={flight.busy || close.isPending}
-              onClick={() => {
-                setConfirming(true);
-              }}
-            >
-              <Localized id="month-close-button" />
-            </Button>
-          </div>
           <ConfirmDialog
             open={confirming}
             onOpenChange={setConfirming}

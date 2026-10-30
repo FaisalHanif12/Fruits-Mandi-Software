@@ -1,6 +1,6 @@
 // The analytics commands as hooks (Code Standards F6).
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PrintAnalyticsViewInput } from '../../bindings/PrintAnalyticsViewInput';
 import { usePagedQuery } from '../../shared/hooks';
 import { reportsPrintHeader } from '../reports';
@@ -48,26 +48,6 @@ export function useAnalyticsPages(view: AnalyticsView, filters: AnalyticsFilters
     totalOf: (page) => page.total_count,
     enabled: filters !== null,
     keepPrevious: true,
-  });
-}
-
-/**
- * How many rows the chart is drawn from: the first rows of the view in its own order. The chart
- * never follows the page or the order of the table under it (plan 38 D1). This asks for the rows
- * itself until the backend sends a chart series of the whole filter.
- */
-export const CHART_ROWS = 100;
-
-/** The rows the chart of a view is drawn from. `filters` null means the view cannot run yet. */
-export function useAnalyticsChart(view: AnalyticsView, filters: AnalyticsFilters | null) {
-  return useQuery({
-    queryKey: ['analytics_run', view, filters, 'chart'],
-    queryFn: () => {
-      if (filters === null) throw new Error('no filters');
-      return analyticsRun({ view, filters, offset: 0, limit: CHART_ROWS, sort: null });
-    },
-    enabled: filters !== null,
-    placeholderData: keepPreviousData,
   });
 }
 

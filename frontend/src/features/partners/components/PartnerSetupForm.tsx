@@ -14,13 +14,13 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { Users } from 'lucide-react';
-import { useMemo, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import type { UiError } from '../../../bindings/UiError';
 import { formatBps, isoToDisplayDate } from '../../../shared/format';
-import { useFocusFirstField, useSingleFlight } from '../../../shared/hooks';
+import { useSingleFlight } from '../../../shared/hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
@@ -46,6 +46,8 @@ import { SharesTotal, type TotalState } from './SharesTotal';
 
 const NO_PARTNERS: readonly PartnerRow[] = [];
 const SHARE_FIELD = /^shares\[(\d+)]\.share$/;
+/** The first share box of the list of partners. */
+const SHARE_BOX = 'ul[data-share-list] input';
 
 interface PartnerSetupFormProps {
   /** The Fluent message of the Save button. */
@@ -91,13 +93,19 @@ export function PartnerSetupForm({
   const shares = useMemo(() => shareInputs(partners, edits), [partners, edits]);
   const { query: checked, current } = useSharesCheck(shares);
   const setShares = useSetShares();
-  const container = useFocusFirstField<HTMLDivElement>(list.isSuccess);
+  // The day the shares start has focus when the list is there: it is the first field on the page and
+  // in the Tab order, and Enter goes on to each share and then saves (plan 38, tech lead).
+  const container = useRef<HTMLDivElement>(null);
+  const loaded = list.isSuccess;
+  useEffect(() => {
+    if (loaded) container.current?.querySelector<HTMLElement>('input')?.focus();
+  }, [loaded]);
   const dialogOpen = adding || editing !== null;
   // After a partner is added, focus goes to the first share box, to type the shares next.
   const firstShareBox = useMemo<RefObject<HTMLElement | null>>(
     () => ({
       get current() {
-        return container.current?.querySelector<HTMLElement>('input') ?? null;
+        return container.current?.querySelector<HTMLElement>(SHARE_BOX) ?? null;
       },
     }),
     [container],
@@ -191,6 +199,32 @@ export function PartnerSetupForm({
         {saveError === null ? null : (
           <ErrorNotice error={saveError} fieldsShown={[...rowPaths, 'effective_from']} />
         )}
+        {/* The total of the shares and the day they start are the first thing on the page, so they
+            are in view at 1024 x 600 whatever the number of partners (plan 38). */}
+        <Card compact>
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <div className="min-w-0 flex-1 basis-field">
+              <SharesTotal
+                compact
+                state={totalState}
+                total={check === undefined ? null : formatBps(check.total_bps)}
+              />
+            </div>
+            <div className="w-date shrink-0">
+              <Field
+                label={<Localized id="partners-field-from" />}
+                info={
+                  <Localized id="partners-field-from-hint">
+                    <p />
+                  </Localized>
+                }
+                error={fieldError(saveError, 'effective_from')}
+              >
+                {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
+              </Field>
+            </div>
+          </div>
+        </Card>
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Localized id="partners-list-label">
@@ -207,7 +241,7 @@ export function PartnerSetupForm({
                 <span className="type-body" />
               </Localized>
             </div>
-            <ul aria-label={l10n.getString('partners-list-label')}>
+            <ul data-share-list aria-label={l10n.getString('partners-list-label')}>
               {active.map((partner, index) => {
                 const path = rowPaths[index] ?? '';
                 return (
@@ -227,28 +261,9 @@ export function PartnerSetupForm({
               })}
             </ul>
           </div>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <Localized id="partners-blank-hint">
-              <p className="type-body min-w-0 flex-1 text-ink-muted" />
-            </Localized>
-            <div className="w-full max-w-field">
-              <SharesTotal
-                state={totalState}
-                total={check === undefined ? null : formatBps(check.total_bps)}
-              />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="max-w-field">
-            <Field
-              label={<Localized id="partners-field-from" />}
-              hint={<Localized id="partners-field-from-hint" />}
-              error={fieldError(saveError, 'effective_from')}
-            >
-              {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
-            </Field>
-          </div>
+          <Localized id="partners-blank-hint">
+            <p className="type-body min-w-0 text-ink-muted" />
+          </Localized>
         </Card>
         {inactive.length === 0 ? null : (
           <Card title={<Localized id="partners-inactive-title" />}>
@@ -273,7 +288,7 @@ export function PartnerSetupForm({
 
   const showSave = list.isSuccess && active.length > 0;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 short:gap-2">
       {leaveGuard ? (
         <LeaveGuard
           dirty={dirty}

@@ -122,6 +122,11 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       person_key: null,
       offset: 0,
       limit: PAGE_ROWS,
+      // Cancelled vouchers step aside until the tick is on; today needs no month heading (plan 38).
+      show_finished: false,
+      search: null,
+      sort: null,
+      group_by_month: false,
     });
   });
 

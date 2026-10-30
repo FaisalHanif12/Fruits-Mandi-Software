@@ -82,6 +82,8 @@ function pageOf(offset: number, limit: number): AuditPage {
     offset,
     limit,
     total_count: TOTAL,
+    // The fixture of the audit page was written before the month headings; no month here.
+    months: [],
   };
 }
 
@@ -118,6 +120,8 @@ beforeEach(() => {
   act(() => {
     useAuditStore.getState().reset();
   });
+  // "More filters" is kept on this computer; a test starts with it shut.
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -129,10 +133,11 @@ function rowCells(rowId: string, colId: string): string {
   return visible(row?.querySelector(`[col-id="${colId}"]`)?.textContent);
 }
 
+/** The entries drawn, without the heading row of each month. */
 function drawnRows(): string[] {
-  return Array.from(document.querySelectorAll('.ag-row[row-id]:not(.ag-row-pinned)')).map(
-    (row) => row.getAttribute('row-id') ?? '',
-  );
+  return Array.from(document.querySelectorAll('.ag-row[row-id]:not(.ag-row-pinned)'))
+    .map((row) => row.getAttribute('row-id') ?? '')
+    .filter((id) => !id.startsWith('month:'));
 }
 
 function lastRequest() {
@@ -174,6 +179,9 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
       },
       offset: 0,
       limit: PAGE_ROWS,
+      // The log is in date order, so it asks for the heading of each month (plan 38 R4).
+      sort: null,
+      group_by_month: true,
     });
     // The newest first, as the backend sent it: the Pakistan day and time (without seconds), who,
     // what and to what.
@@ -219,7 +227,9 @@ describe.each(LANGUAGES)('the audit log (%s)', (language: Language) => {
     await waitFor(() => {
       expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
-    await user.click(screen.getByRole('combobox', { name: m('audit-filter-action') }));
+    // Who, the action, the area and the record are behind "More filters" (plan 38).
+    await user.click(screen.getByRole('button', { name: named(language, 'common-filters-more') }));
+    await user.click(await screen.findByRole('combobox', { name: m('audit-filter-action') }));
     await user.click(await screen.findByRole('option', { name: m('audit-action-edit') }));
     await user.click(screen.getByRole('combobox', { name: m('audit-filter-entity') }));
     await user.click(await screen.findByRole('option', { name: m('audit-entity-settings') }));

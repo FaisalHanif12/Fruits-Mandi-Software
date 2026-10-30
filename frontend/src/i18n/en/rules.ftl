@@ -427,3 +427,7 @@ settings-overrides-rate-check-hint = A warning shows on the line when a rate is 
 settings-overrides-rate-check-percent = How far apart, in percent
 # review: pending
 settings-overrides-rate-check-percent-hint = Enter a whole number from 1 to 1,000, for example 30.
+
+# The hint inside the search box of the rule list (the party, the item or the note).
+# review: pending
+rules-search-placeholder = Party, item or note

@@ -1,6 +1,7 @@
 // Typed wrappers around the account and chart commands (plan 07 contract; `accounts_*`, `coa_*`).
 // Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
 
+import type { SortInput } from '../../bindings/SortInput';
 import { callCommand } from '../api';
 import { accountInputOf } from './account-input';
 import type {
@@ -72,8 +73,9 @@ export function accountsList(
   filter: AccountFilter,
   offset: number,
   limit: number,
+  sort: SortInput | null = null,
 ): Promise<AccountList> {
-  return callCommand<AccountList>('accounts_list', { input: { filter, offset, limit } });
+  return callCommand<AccountList>('accounts_list', { input: { filter, offset, limit, sort } });
 }
 
 /** The next free code for a type (and a control, for "other"), to fill the code field. */

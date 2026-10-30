@@ -6,7 +6,7 @@
 // the narrowest compact window. A cancelled entry says so in words (colour is never the only
 // signal, NFR-USE-12).
 
-import { isoToDisplayDate } from '../../shared/format';
+import { isoToDisplayDate, type Paisa } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 import { voucherNumberText } from '../vouchers';
@@ -27,17 +27,27 @@ export function cashbookKindText(row: Pick<CashbookRow, 'posting_type' | 'number
     : text('cashbook-kind-number', { kind, number: String(row.number) });
 }
 
+/**
+ * The cash in hand after a line. The backend sends it in date order only; a list sorted by anything
+ * else has no running cash and the cell stays empty (the screen says so in words above the list).
+ */
+function runningText(running: Paisa | null, money: (amount: Paisa) => string): string {
+  return running === null ? '' : money(running);
+}
+
 export const CASHBOOK_COLUMNS: readonly ListColumn<CashbookRow>[] = [
   {
     field: 'date',
     type: 'date',
     headerId: 'cashbook-col-date',
+    sortKey: 'entry_date',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
     field: 'kind',
     type: 'text',
     headerId: 'cashbook-col-kind',
+    sortKey: 'posting_type',
     grow: true,
     value: (row, { text }) => cashbookKindText(row, text),
   },
@@ -53,6 +63,7 @@ export const CASHBOOK_COLUMNS: readonly ListColumn<CashbookRow>[] = [
     field: 'narration',
     type: 'name',
     headerId: 'cashbook-col-narration',
+    sortKey: 'narration',
     from: 'wide',
     grow: true,
     // A narration is free text, shown as typed (PRD FR-7.25).
@@ -60,21 +71,23 @@ export const CASHBOOK_COLUMNS: readonly ListColumn<CashbookRow>[] = [
   },
   {
     field: 'in',
-    type: 'money',
+    type: 'figure',
     headerId: 'cashbook-col-in',
+    sortKey: 'in_paisa',
     value: (row, { money }) => money(row.in_paisa),
   },
   {
     field: 'out',
-    type: 'money',
+    type: 'figure',
     headerId: 'cashbook-col-out',
+    sortKey: 'out_paisa',
     value: (row, { money }) => money(row.out_paisa),
   },
   {
     field: 'running',
-    type: 'money',
+    type: 'figure',
     headerId: 'cashbook-col-running',
-    value: (row, { money }) => money(row.running_paisa),
+    value: (row, { money }) => runningText(row.running_paisa, money),
   },
 ];
 
@@ -82,12 +95,14 @@ export const CASHBOOK_COLUMNS: readonly ListColumn<CashbookRow>[] = [
 export const EXPENSE_DAY_COLUMNS: readonly ListColumn<VoucherRow>[] = [
   {
     field: 'number',
+    sortKey: 'number',
     type: 'code',
     headerId: 'cashbook-col-number',
     value: (row, { text }) => voucherNumberText(row, text),
   },
   {
     field: 'head',
+    sortKey: 'account',
     type: 'name',
     headerId: 'cashbook-col-head',
     grow: true,
@@ -95,12 +110,14 @@ export const EXPENSE_DAY_COLUMNS: readonly ListColumn<VoucherRow>[] = [
   },
   {
     field: 'amount',
+    sortKey: 'amount_paisa',
     type: 'money',
     headerId: 'cashbook-col-amount',
     value: (row, { money }) => money(row.amount_paisa),
   },
   {
     field: 'state',
+    sortKey: 'status',
     type: 'status',
     headerId: 'cashbook-col-state',
     value: (row, { text }) => (row.status === 'cancelled' ? text('cashbook-state-cancelled') : ''),
@@ -119,12 +136,14 @@ export const EXPENSE_DAY_COLUMNS: readonly ListColumn<VoucherRow>[] = [
 export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
   {
     field: 'date',
+    sortKey: 'entry_date',
     type: 'date',
     headerId: 'cashbook-col-date',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
     field: 'reason',
+    sortKey: 'reason',
     type: 'name',
     headerId: 'cashbook-col-reason',
     grow: true,
@@ -134,6 +153,7 @@ export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
   },
   {
     field: 'taken_by',
+    sortKey: 'taken_by',
     type: 'name',
     headerId: 'cashbook-col-taken-by',
     from: 'wide',
@@ -141,6 +161,7 @@ export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
   },
   {
     field: 'return_by',
+    sortKey: 'return_by',
     type: 'date',
     headerId: 'cashbook-col-return-by',
     from: 'normal',
@@ -148,12 +169,14 @@ export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
   },
   {
     field: 'amount',
+    sortKey: 'amount_paisa',
     type: 'money',
     headerId: 'cashbook-col-taken',
     value: (row, { money }) => money(row.amount_paisa),
   },
   {
     field: 'returned',
+    sortKey: 'returned_paisa',
     type: 'money',
     headerId: 'cashbook-col-returned',
     from: 'normal',
@@ -161,12 +184,14 @@ export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
   },
   {
     field: 'open',
+    sortKey: 'open_paisa',
     type: 'money',
     headerId: 'cashbook-col-open',
     value: (row, { money }) => money(row.open_paisa),
   },
   {
     field: 'days_past',
+    sortKey: 'days_past_return_by',
     type: 'number',
     headerId: 'cashbook-col-days-past',
     from: 'wide',
@@ -178,6 +203,7 @@ export const TAKE_COLUMNS: readonly ListColumn<TakeRow>[] = [
 export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [
   {
     field: 'number',
+    sortKey: 'number',
     type: 'code',
     headerId: 'cashbook-col-number',
     // An opening debit on his account is a loan with no voucher: the backend sends voucher_id 0
@@ -189,6 +215,7 @@ export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [
   },
   {
     field: 'date',
+    sortKey: 'entry_date',
     type: 'date',
     headerId: 'cashbook-col-date',
     from: 'normal',
@@ -196,6 +223,7 @@ export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [
   },
   {
     field: 'reason',
+    sortKey: 'reason',
     type: 'name',
     headerId: 'cashbook-col-reason',
     grow: true,
@@ -204,6 +232,7 @@ export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [
   },
   {
     field: 'return_by',
+    sortKey: 'return_by',
     type: 'date',
     headerId: 'cashbook-col-return-by',
     from: 'normal',
@@ -211,12 +240,14 @@ export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [
   },
   {
     field: 'amount',
+    sortKey: 'amount_paisa',
     type: 'money',
     headerId: 'cashbook-col-lent',
     value: (row, { money }) => money(row.amount_paisa),
   },
   {
     field: 'returned',
+    sortKey: 'returned_paisa',
     type: 'money',
     headerId: 'cashbook-col-returned',
     from: 'normal',
@@ -224,12 +255,14 @@ export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [
   },
   {
     field: 'open',
+    sortKey: 'open_paisa',
     type: 'money',
     headerId: 'cashbook-col-open',
     value: (row, { money }) => money(row.open_paisa),
   },
   {
     field: 'days_past',
+    sortKey: 'days_past_return_by',
     type: 'number',
     headerId: 'cashbook-col-days-past',
     from: 'wide',
@@ -241,12 +274,14 @@ export const LENT_COLUMNS: readonly ListColumn<LentRow>[] = [
 export const KHATA_COLUMNS: readonly ListColumn<KhataEntryRow>[] = [
   {
     field: 'date',
+    sortKey: 'entry_date',
     type: 'date',
     headerId: 'cashbook-col-date',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
     field: 'kind',
+    sortKey: 'kind',
     type: 'text',
     headerId: 'cashbook-col-kind',
     from: 'normal',
@@ -255,6 +290,7 @@ export const KHATA_COLUMNS: readonly ListColumn<KhataEntryRow>[] = [
   },
   {
     field: 'reason',
+    sortKey: 'reason',
     type: 'name',
     headerId: 'cashbook-col-reason',
     grow: true,
@@ -262,14 +298,16 @@ export const KHATA_COLUMNS: readonly ListColumn<KhataEntryRow>[] = [
   },
   {
     field: 'amount',
+    sortKey: 'amount_paisa',
     type: 'money',
     headerId: 'cashbook-col-amount',
     value: (row, { money }) => money(row.amount_paisa),
   },
   {
     field: 'running',
+    sortKey: 'running_paisa',
     type: 'money',
     headerId: 'cashbook-col-balance',
-    value: (row, { money }) => money(row.running_paisa),
+    value: (row, { money }) => runningText(row.running_paisa, money),
   },
 ];

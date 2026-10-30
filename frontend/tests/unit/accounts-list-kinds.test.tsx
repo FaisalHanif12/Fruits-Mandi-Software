@@ -98,7 +98,7 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
       expect(rowIds()).toEqual(['31', '21', '23', '33']);
     });
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
-      { kind: 'all', text: '', include_inactive: false },
+      { kind: 'all', text: '', include_inactive: false, has_opening: null },
       0,
       PAGE_ROWS,
     );
@@ -130,7 +130,7 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
       expect(rowIds()).toEqual(['23', '33']);
     });
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
-      { kind: 'pukhta', text: '', include_inactive: false },
+      { kind: 'pukhta', text: '', include_inactive: false, has_opening: null },
       0,
       PAGE_ROWS,
     );

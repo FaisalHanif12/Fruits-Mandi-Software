@@ -44,6 +44,7 @@ fn list_input(text: &str, limit: u32) -> AccountsListInput {
             kind: mandi_services::core::accounts::AccountListKind::All,
             text: text.to_owned(),
             include_inactive: true,
+            has_opening: None,
         },
         offset: 0,
         limit,

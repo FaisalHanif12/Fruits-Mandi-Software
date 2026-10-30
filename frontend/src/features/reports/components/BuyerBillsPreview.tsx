@@ -26,14 +26,22 @@ export function BuyerBillsPreview({ filters, onBack }: BuyerBillsPreviewProps) {
   const appLanguage = useLanguage();
   const [language, setLanguage] = useState<Language>(appLanguage);
   const [paper, setPaper] = useState<Paper>('a4');
-  const query = useBuyerBillsPrintData({ id: 'R5', filters, language, paper });
+  // One slip for each buyer: the slips are in the report's own order.
+  const query = useBuyerBillsPrintData({
+    id: 'R5',
+    filters,
+    language,
+    paper,
+    sort: null,
+    group_by_month: false,
+  });
   // The ONE header and footer of every print: the backend builds them from the title and the filters.
   const frame = usePrintFrameOf(language, query.data);
   // "Print" and "Save as PDF": the slips of all the credit buyers, in the language and paper chosen here.
   const printReport = usePrintReport();
   const job = usePrintJob((to) =>
     printReport.mutateAsync({
-      report: { id: 'R5', filters, language, paper },
+      report: { id: 'R5', filters, language, paper, sort: null, group_by_month: false },
       slips: true,
       to,
       copies: null,

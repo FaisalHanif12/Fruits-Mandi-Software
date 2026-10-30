@@ -361,6 +361,21 @@ pub fn collection_for_print(
     collector_staff_id: Option<i64>,
     city_id: Option<i64>,
 ) -> Result<(CollectionList, CollectionFilterNames), ServiceError> {
+    collection_for_print_searching(ctx, date, collector_staff_id, city_id, None)
+}
+
+/// As [`collection_for_print`], for the rows the screen's search keeps: what is printed is what is
+/// on the screen, with every row (plan 38 R4).
+///
+/// # Errors
+/// As [`collection_for_print`].
+pub fn collection_for_print_searching(
+    ctx: &Context,
+    date: &str,
+    collector_staff_id: Option<i64>,
+    city_id: Option<i64>,
+    search: Option<&str>,
+) -> Result<(CollectionList, CollectionFilterNames), ServiceError> {
     let names = |conn: &Connection, sql: &str, id: Option<i64>, field: &str| {
         let Some(id) = id else {
             return Ok(None);
@@ -391,6 +406,7 @@ pub fn collection_for_print(
     let list = crate::vouchers::collection_list(
         ctx,
         &CollectionListInput {
+            search: search.map(str::to_owned),
             date: date.to_owned(),
             collector_staff_id,
             city_id,
@@ -441,8 +457,13 @@ pub fn plan_collection(
         .filter(|text| !text.is_empty());
     let copies = typed_copies.and_then(|text| errors.take(printing::parse_copies("copies", text)));
     errors.finish()?;
-    let (list, filters) =
-        collection_for_print(ctx, &input.date, input.collector_staff_id, input.city_id)?;
+    let (list, filters) = collection_for_print_searching(
+        ctx,
+        &input.date,
+        input.collector_staff_id,
+        input.city_id,
+        input.search.as_deref(),
+    )?;
     let file_number = list
         .date
         .replace('-', "")

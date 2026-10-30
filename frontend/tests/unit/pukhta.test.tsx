@@ -237,18 +237,22 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
   const cell = (index: number, colId: string) =>
     visible(rowOf(index)?.querySelector(`[col-id="${colId}"]`)?.textContent);
 
-  it('asks for every line when no filter is given', async () => {
+  it('opens on this month, with the other filters empty and month rows asked for', async () => {
     await open();
     await waitFor(() => {
       expect(pukhtaApi.pukhtaRegister).toHaveBeenCalledWith({
-        from: '',
-        to: '',
+        from: '01-10-2026',
+        to: '10-10-2026',
         side: null,
         name: null,
         phone: null,
         state: null,
         offset: 0,
         limit: PAGE_ROWS,
+        show_finished: false,
+        search: null,
+        sort: null,
+        group_by_month: true,
       });
     });
   });
@@ -273,47 +277,53 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
     });
   });
 
-  it('the name and the phone are searched as typed, never converted', async () => {
+  it('the name, the phone, the item or the number are one search box, sent as typed, never converted', async () => {
     await open();
     const user = userEvent.setup();
-    const name = await screen.findByRole('textbox', {
-      name: named(message(language, 'pukhta-col-name')),
+    const search = await screen.findByRole('textbox', {
+      name: named(message(language, 'common-search-label')),
     });
-    await user.click(name);
+    await user.click(search);
     await user.keyboard('shah');
     await waitFor(() => {
       expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
-        expect.objectContaining({ name: 'shah' }),
+        expect.objectContaining({ search: 'shah', name: null, phone: null }),
       );
     });
     expect(urduApi.translitSuggest).not.toHaveBeenCalled();
-    const phone = screen.getByRole('textbox', {
-      name: named(message(language, 'pukhta-col-phone')),
-    });
-    await user.click(phone);
     await user.keyboard('0300');
     await waitFor(() => {
       expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
-        expect.objectContaining({ name: 'shah', phone: '0300' }),
+        expect.objectContaining({ search: 'shah0300' }),
       );
     });
   });
 
-  it('the dates are sent as typed, and "due" is a filter', async () => {
+  it('the period is a choice (remembered), and "due" is a filter behind "More filters"', async () => {
     await open();
     const user = userEvent.setup();
-    const from = await screen.findByRole('textbox', {
-      name: named(message(language, 'pukhta-filter-from')),
-    });
-    await user.click(from);
-    await user.keyboard('01-10-2026');
+    await user.click(
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'common-period-label')),
+      }),
+    );
+    await user.click(
+      await screen.findByRole('option', { name: named(message(language, 'common-period-all')) }),
+    );
     await waitFor(() => {
       expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
-        expect.objectContaining({ from: '01-10-2026' }),
+        expect.objectContaining({ from: '', to: '' }),
       );
     });
+    // "Paid or due" is the rare filter: it is behind the button.
+    expect(
+      screen.queryByRole('combobox', { name: named(message(language, 'pukhta-col-state')) }),
+    ).not.toBeInTheDocument();
     await user.click(
-      screen.getByRole('combobox', { name: named(message(language, 'pukhta-col-state')) }),
+      screen.getByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
+    await user.click(
+      await screen.findByRole('combobox', { name: named(message(language, 'pukhta-col-state')) }),
     );
     await user.click(
       await screen.findByRole('option', { name: named(message(language, 'pukhta-filter-due')) }),
@@ -321,6 +331,32 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
     await waitFor(() => {
       expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
         expect.objectContaining({ state: 'due' }),
+      );
+    });
+  });
+
+  it('the tick "show closed and cancelled" sends show_finished, off by default', async () => {
+    await open();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('checkbox', { name: named(message(language, 'common-show-closed')) }),
+    );
+    await waitFor(() => {
+      expect(pukhtaApi.pukhtaRegister).toHaveBeenLastCalledWith(
+        expect.objectContaining({ show_finished: true }),
+      );
+    });
+  });
+
+  it('the backend’s month rows come above their lines, with its count', async () => {
+    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue({
+      ...pukhtaRegisterOf([registerRow()]),
+      months: [{ month: '2026-10', count: 31, figures: [] }],
+    });
+    await open();
+    await waitFor(() => {
+      expect(visible(document.querySelector('.month-heading')?.textContent)).toContain(
+        message(language, 'common-month-count', { count: 31 }),
       );
     });
   });
@@ -344,14 +380,8 @@ describe.each(LANGUAGES)('the پختہ کھاتہ register (%s)', (language: Lan
   it('with no line it says why; with a filter and no match it offers to clear the filters', async () => {
     vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(pukhtaRegisterOf([]));
     await open();
-    await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'pukhta-empty'));
-    });
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole('textbox', { name: named(message(language, 'pukhta-col-name')) }),
-    );
-    await user.keyboard('zz');
+    // This month has no line: that is a filter, so it offers a way out.
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'pukhta-no-match'));
     });

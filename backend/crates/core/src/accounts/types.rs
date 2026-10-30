@@ -446,6 +446,12 @@ pub struct AccountFilter {
     pub text: String,
     /// True to list the inactive accounts too.
     pub include_inactive: bool,
+    /// Whether the account has an opening balance (PRD FR-10.9): `false` lists the accounts that
+    /// can take an opening (`can_take_opening`) and have none yet, `true` the accounts with an
+    /// opening (a debit or a credit), null all. The Opening balances screen opens on `false`
+    /// (plan 38). Missing means null.
+    #[serde(default)]
+    pub has_opening: Option<bool>,
 }
 
 /// The account list with its footer (PRD FR-10.5).
@@ -461,9 +467,8 @@ pub struct AccountsListInput {
     #[serde(default)]
     pub limit: u32,
     /// The column to sort the whole filter by: `code`, `serial`, `name_ur`, `name_en`, `phone1`,
-    /// `city`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `credit_allowed` or
-    /// `balance` (debit minus credit, so the biggest dues are last when ascending). Null is by
-    /// code (plan 38 R4). Inactive accounts are left out unless `filter.include_inactive` is true.
+    /// `city`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa` or `credit_allowed`. There is no
+    /// sort by balance (R20 ranks the dues). Null is by code (plan 38 R4). Inactive accounts are left out unless `filter.include_inactive` is true.
     #[serde(default)]
     pub sort: Option<SortInput>,
 }

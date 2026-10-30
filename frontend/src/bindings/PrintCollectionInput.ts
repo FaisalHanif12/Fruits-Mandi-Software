@@ -21,6 +21,11 @@ export type PrintCollectionInput = {
    */
   city_id: number | null;
   /**
+   * Only buyers whose code, name or phone holds this text: the print has the rows of the
+   * screen's search (plan 38 R4).
+   */
+  search: string | null;
+  /**
    * The print language (PRD FR-7.36).
    */
   language: Language;

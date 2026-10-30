@@ -238,6 +238,8 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         },
         offset: 0,
         limit: PAGE_ROWS,
+        sort: null,
+        group_by_month: false,
       });
       // The first row is the cash account: its code and its name in this language.
       expect(cell('0', 'account')).toBe(`01010001 ${language === 'ur' ? 'روکڑ' : 'Cash'}`);

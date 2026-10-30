@@ -177,7 +177,7 @@ pub const SORT_COLUMNS: [(&str, &str); 11] = [
     ("number", "v.number"),
     ("code", "v.number"),
     ("entry_date", "v.entry_date"),
-    ("name_ur", "v.name_ur"),
+    ("name_ur", "v.name_ur COLLATE URDU"),
     ("name_en", "v.name_en COLLATE NOCASE"),
     ("market", "v.market"),
     ("sent_person", "v.sent_person"),

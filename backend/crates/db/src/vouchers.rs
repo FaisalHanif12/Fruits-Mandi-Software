@@ -537,9 +537,11 @@ pub fn list_page(
 /// # Errors
 /// Any SQLite error.
 pub fn list_months(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<Vec<MonthSums>> {
-    let (condition, binds) = list_where(filter, filter.hide_cancelled);
+    // The cancelled vouchers are read too, so each month can say how many it holds (the sum of the
+    // months equals `ListTotals::cancelled`); when they are hidden they are taken off the count.
+    let (condition, binds) = list_where(filter, false);
     let from = format!("vouchers v{}", account_join(filter));
-    month_sums(
+    let mut months = month_sums(
         conn,
         &from,
         &condition,
@@ -549,7 +551,14 @@ pub fn list_months(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Resu
             "CASE WHEN v.status = 'saved' THEN v.amount_paisa ELSE 0 END",
         ],
         &binds,
-    )
+    )?;
+    if filter.hide_cancelled {
+        for month in &mut months {
+            let cancelled = month.sums.first().copied().unwrap_or(0);
+            month.count = month.count.saturating_sub(cancelled);
+        }
+    }
+    Ok(months)
 }
 
 /// One voucher by id.

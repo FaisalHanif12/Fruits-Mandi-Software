@@ -17,4 +17,11 @@ export type AccountFilter = {
    * True to list the inactive accounts too.
    */
   include_inactive: boolean;
+  /**
+   * Whether the account has an opening balance (PRD FR-10.9): `false` lists the accounts that
+   * can take an opening (`can_take_opening`) and have none yet, `true` the accounts with an
+   * opening (a debit or a credit), null all. The Opening balances screen opens on `false`
+   * (plan 38). Missing means null.
+   */
+  has_opening: boolean | null;
 };

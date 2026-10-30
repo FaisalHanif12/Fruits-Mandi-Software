@@ -44,26 +44,28 @@ export function DaySummary({ summary }: { summary: DayCloseSummary }) {
       <Localized id="day-summary-title">
         <h2 id="day-summary-heading" className="type-section text-ink" />
       </Localized>
-      <dl className="grid grid-cols-2 gap-4 normal:grid-cols-4">
-        <Fact label={<Localized id="day-summary-bikri-count" />}>
-          <Num>{String(summary.bikri_count)}</Num>
-        </Fact>
-        <Fact label={<Localized id="day-summary-gross" />}>
-          <Num paisa={summary.gross_paisa} />
-        </Fact>
-        <Fact label={<Localized id="day-summary-commission" />}>
-          <Num paisa={summary.commission_paisa} />
-        </Fact>
-        <Fact label={<Localized id="day-summary-shared-income" />}>
-          <Num paisa={summary.shared_income_paisa} />
-        </Fact>
-        <Fact label={<Localized id="day-summary-open-lots" />}>
-          <Num>{String(summary.open_lots)}</Num>
-        </Fact>
-        <Fact label={<Localized id="day-summary-open-qty" />}>
-          <Num>{String(summary.open_qty)}</Num>
-        </Fact>
-      </dl>
+      <div className="@container min-w-0">
+        <dl className="grid grid-cols-2 gap-4 @form3:grid-cols-3 @form4:grid-cols-6">
+          <Fact label={<Localized id="day-summary-bikri-count" />}>
+            <Num>{String(summary.bikri_count)}</Num>
+          </Fact>
+          <Fact label={<Localized id="day-summary-gross" />}>
+            <Num paisa={summary.gross_paisa} />
+          </Fact>
+          <Fact label={<Localized id="day-summary-commission" />}>
+            <Num paisa={summary.commission_paisa} />
+          </Fact>
+          <Fact label={<Localized id="day-summary-shared-income" />}>
+            <Num paisa={summary.shared_income_paisa} />
+          </Fact>
+          <Fact label={<Localized id="day-summary-open-lots" />}>
+            <Num>{String(summary.open_lots)}</Num>
+          </Fact>
+          <Fact label={<Localized id="day-summary-open-qty" />}>
+            <Num>{String(summary.open_qty)}</Num>
+          </Fact>
+        </dl>
+      </div>
       {summary.open_lots > 0 ? (
         <Notice tone="warn">
           <Localized

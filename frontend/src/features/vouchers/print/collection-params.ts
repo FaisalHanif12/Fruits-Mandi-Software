@@ -66,6 +66,7 @@ export function parseCollectionPrintParams(searchStr: string): CollectionPrintPa
       date: isoToDisplayDate(day),
       collector_staff_id: collector,
       city_id: city,
+      search: search.get('search'),
       language,
     },
   };

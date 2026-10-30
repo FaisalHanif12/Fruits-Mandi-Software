@@ -242,13 +242,13 @@ pub fn sort_columns(kind: MasterKind) -> &'static [(&'static str, &'static str)]
     match kind {
         MasterKind::City | MasterKind::Store => &[
             ("code", "m.code"),
-            ("name_ur", "m.name_ur"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
             ("name_en", "m.name_en COLLATE NOCASE"),
             ("is_active", "m.is_active"),
         ],
         MasterKind::Item => &[
             ("code", "m.code"),
-            ("name_ur", "m.name_ur"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
             ("name_en", "m.name_en COLLATE NOCASE"),
             ("item_group", "m.item_group"),
             ("default_packing_name_en", "p.name_en COLLATE NOCASE"),
@@ -257,14 +257,14 @@ pub fn sort_columns(kind: MasterKind) -> &'static [(&'static str, &'static str)]
         ],
         MasterKind::Packing => &[
             ("code", "m.code"),
-            ("name_ur", "m.name_ur"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
             ("name_en", "m.name_en COLLATE NOCASE"),
             ("approx_kg", "m.approx_grams"),
             ("is_active", "m.is_active"),
         ],
         MasterKind::Adda => &[
             ("code", "m.code"),
-            ("name_ur", "m.name_ur"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
             ("name_en", "m.name_en COLLATE NOCASE"),
             ("city_name_en", "c.name_en COLLATE NOCASE"),
             ("is_active", "m.is_active"),
@@ -276,20 +276,20 @@ pub fn sort_columns(kind: MasterKind) -> &'static [(&'static str, &'static str)]
             ("is_active", "m.is_active"),
         ],
         MasterKind::Narration => &[
-            ("text_ur", "m.text_ur"),
+            ("text_ur", "m.text_ur COLLATE URDU"),
             ("text_en", "m.text_en COLLATE NOCASE"),
             ("is_active", "m.is_active"),
         ],
         MasterKind::ExpenseHead => &[
             ("code", "m.code"),
-            ("name_ur", "m.name_ur"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
             ("name_en", "m.name_en COLLATE NOCASE"),
             ("account_code", "a.code"),
             ("is_active", "m.is_active"),
         ],
         MasterKind::Staff => &[
             ("code", "m.code"),
-            ("name_ur", "m.name_ur"),
+            ("name_ur", "m.name_ur COLLATE URDU"),
             ("name_en", "m.name_en COLLATE NOCASE"),
             ("job", "m.role"),
             ("phone", "m.phone"),

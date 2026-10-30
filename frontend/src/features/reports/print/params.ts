@@ -1,5 +1,6 @@
 // The address of the hidden print window for a report: `#/print?report=<id>&language=<ur|en>&paper=
-// <a4|a5>[&slips=1]&filters=<percent-encoded JSON of ReportFilters>&job=<job>` (17e contract). The window
+// <a4|a5>[&slips=1]&filters=<percent-encoded JSON of ReportFilters>[&sort=<percent-encoded JSON of the
+// screen's SortInput>][&months=1]&job=<job>` (17e contract, plan 38). The window
 // is opened by the backend, so every value is read as plain text and checked here. A value that is not
 // right is a failed print, never a guess. The job name is checked by the same function as every other
 // print window's (one rule for the window). The filters are the backend's own JSON for the same filters
@@ -11,6 +12,7 @@ import type { Paper } from '../../../bindings/Paper';
 import type { ReportFilters } from '../../../bindings/ReportFilters';
 import type { ReportId } from '../../../bindings/ReportId';
 import type { ReportPrintInput } from '../../../bindings/ReportPrintInput';
+import type { SortInput } from '../../../bindings/SortInput';
 import { jobOf } from '../../../shared/print';
 
 export interface ReportPrintParams {
@@ -70,6 +72,22 @@ const filtersSchema = z.custom<ReportFilters>(
   (value) => typeof value === 'object' && value !== null && !Array.isArray(value),
 );
 
+/** The order the screen had, as the backend wrote it into the address. */
+const sortSchema = z.object({
+  column: z.string().min(1),
+  direction: z.enum(['asc', 'desc']),
+  language: z.enum(['ur', 'en']).nullable(),
+});
+
+/**
+ * The `sort` of an address: absent means the report's own order (null); a value that is not a
+ * sort is wrong (undefined), so the print fails rather than prints in another order.
+ */
+export function sortOf(text: string | null): SortInput | null | undefined {
+  if (text === null) return null;
+  return readJsonObject<SortInput>(text, sortSchema) ?? undefined;
+}
+
 /** Reads the `filters` of an address: percent-decoded JSON that holds an object, or null. */
 export function readJsonObject<T>(text: string | null, schema: z.ZodType<T>): T | null {
   if (text === null || text === '') return null;
@@ -101,9 +119,18 @@ export function parseReportPrintParams(searchStr: string): ReportPrintParams | n
   const paper = paperOf(search.get('paper'));
   const filters = readJsonObject(search.get('filters'), filtersSchema);
   const slipsText = search.get('slips');
+  const sort = sortOf(search.get('sort'));
+  const monthsText = search.get('months');
   if (job === null || id === undefined || language === undefined || paper === undefined) {
     return null;
   }
   if (filters === null || (slipsText !== null && slipsText !== '1')) return null;
-  return { job, slips: slipsText === '1', input: { id, filters, language, paper } };
+  // The order and the month headings of the screen are in the address when it had them: the print
+  // has every row in that order, with the month heading rows (plan 38).
+  if (sort === undefined || (monthsText !== null && monthsText !== '1')) return null;
+  return {
+    job,
+    slips: slipsText === '1',
+    input: { id, filters, language, paper, sort, group_by_month: monthsText === '1' },
+  };
 }

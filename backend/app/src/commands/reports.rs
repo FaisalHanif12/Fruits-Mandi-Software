@@ -64,11 +64,12 @@ pub async fn reports_collection_print_data<R: tauri::Runtime>(
     run(app, "reports_collection_print_data", move |ctx| {
         auth::require(ctx)?;
         // Two reads of the same value (accepted deviation from Code Standards B2, plan 17e).
-        let (list, filters) = printing::collection_for_print(
+        let (list, filters) = printing::collection_for_print_searching(
             ctx,
             &input.date,
             input.collector_staff_id,
             input.city_id,
+            input.search.as_deref(),
         )?;
         collection_print_data(ctx.db(), &list, &filters, input.language)
             .map_err(print_job::reports_service_error)

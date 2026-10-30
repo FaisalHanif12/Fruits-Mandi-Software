@@ -31,6 +31,8 @@ use reports_world::*;
 
 fn input(filters: ReportFilters, language: Language) -> ReportPrintInput {
     ReportPrintInput {
+        group_by_month: false,
+        sort: None,
         id: ReportId::R5,
         filters,
         language,

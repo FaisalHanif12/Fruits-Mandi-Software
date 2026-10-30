@@ -612,3 +612,12 @@ cashbook-type-capital-in = { -sarmaya } جمع
 
 # review: pending
 cashbook-type-capital-out = { -sarmaya } واپسی
+
+# The tick of the lists of money taken and money lent: a take or a loan that is fully returned is
+# left out until it is on.
+# review: pending
+cashbook-show-returned = واپس شدہ بھی دکھائیں
+
+# Shown above the list when it is sorted by anything but the day: the cash after a line needs the order of days.
+# review: pending
+cashbook-running-date-only = ہر اندراج کے بعد کی نقد صرف تاریخ کی ترتیب میں نظر آتی ہے۔

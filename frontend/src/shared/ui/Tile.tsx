@@ -47,7 +47,7 @@ export function Tile({
       data-nav-field
       onClick={onOpen}
       aria-label={accessibleName}
-      className="flex min-w-0 flex-col items-start gap-1 rounded-3 border border-border bg-surface p-4 text-start transition-calm hover:border-border-control"
+      className="flex min-w-0 flex-col items-start gap-1 rounded-3 border border-border bg-surface p-3 text-start transition-calm hover:border-border-control"
     >
       <span className="type-label text-ink-muted">{label}</span>
       <span

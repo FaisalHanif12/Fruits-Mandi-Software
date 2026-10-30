@@ -281,11 +281,13 @@ export function NamePair({
   const urduField = (
     <Field
       label={urduLabel}
-      hint={
+      info={
         <Localized
           id={englishFirst ? 'translit-pair-urdu-hint-second' : 'translit-pair-urdu-hint'}
           vars={{ key: SHORTCUTS.typingMode.label }}
-        />
+        >
+          <p />
+        </Localized>
       }
       error={urduError ?? (urduHintId === null ? undefined : <Localized id={urduHintId} />)}
     >
@@ -308,10 +310,12 @@ export function NamePair({
   const englishField = (
     <Field
       label={englishLabel}
-      hint={
+      info={
         <Localized
           id={englishFirst ? 'translit-pair-english-hint-first' : 'translit-pair-english-hint'}
-        />
+        >
+          <p />
+        </Localized>
       }
       error={
         englishError ?? (englishHintId === null ? undefined : <Localized id={englishHintId} />)

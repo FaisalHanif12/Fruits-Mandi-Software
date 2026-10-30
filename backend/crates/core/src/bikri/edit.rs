@@ -30,6 +30,7 @@ use super::saved::{BikriStatus, SavedLot, SavedPosting, SavedPukhta};
 use crate::accounts::RecordRef;
 use crate::cash::CashCheck;
 use crate::money::Paisa;
+use crate::paging::SortInput;
 use crate::ventures::{GardenRef, TripRef};
 
 /// The reason an undo (PRD FR-7.47) writes to the audit log and to `cancel_reason`. It is a Fluent
@@ -78,6 +79,19 @@ pub struct StockListInput {
     /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// Only rows whose party (seller, supplier, garden or trip name or code, either script), item
+    /// (code or name) or number holds this text. The totals are over these rows.
+    #[serde(default)]
+    pub search: Option<String>,
+    /// The column to sort by: `received_date`, `number`, `seller`, `item`, `packing`,
+    /// `qty_received`, `qty_sold`, `qty_written_off`, `balance` or `days_waiting`. The lots, the
+    /// trip goods and the garden arrivals are three kinds of row, so each is sorted among its
+    /// own kind and the page still runs over the lots first, then the trip goods, then the
+    /// arrivals. `seller` is the seller of a lot, the supplier of trip goods and the garden of an
+    /// arrival. `qty_received` is `qty_bought` and `qty_arrived` for the other two. Null is the
+    /// oldest day first (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<SortInput>,
 }
 
 /// A write-off of a lot that has not been undone (PRD FR-12.16).

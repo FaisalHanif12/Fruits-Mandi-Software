@@ -3,6 +3,7 @@ import type { AnalyticsFilters } from './AnalyticsFilters';
 import type { AnalyticsView } from './AnalyticsView';
 import type { Language } from './Language';
 import type { Paper } from './Paper';
+import type { SortInput } from './SortInput';
 
 /**
  * The input of `analytics_print_data`.
@@ -24,4 +25,8 @@ export type AnalyticsPrintInput = {
    * The paper class. A4 when left out.
    */
   paper: Paper | null;
+  /**
+   * The sort of the screen: the print has the same order, with every row (plan 38 R4).
+   */
+  sort: SortInput | null;
 };

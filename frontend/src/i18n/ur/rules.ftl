@@ -427,3 +427,7 @@ settings-overrides-rate-check-hint = ریٹ پچھلے 7 دن کی اوسط سے
 settings-overrides-rate-check-percent = کتنے فیصد فرق پر
 # review: pending
 settings-overrides-rate-check-percent-hint = 1 سے 1,000 کے درمیان پورا عدد لکھیں، مثلاً 30۔
+
+# The hint inside the search box of the rule list (the party, the item or the note).
+# review: pending
+rules-search-placeholder = کھاتہ، قسم مال یا نوٹ لکھیں

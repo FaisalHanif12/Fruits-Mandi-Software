@@ -32,7 +32,7 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
       {...formNavigationProps}
       role="group"
       aria-labelledby="dashboard-tiles-title"
-      className="grid grid-cols-3 gap-4 normal:grid-cols-4 wide:grid-cols-5"
+      className="grid grid-cols-4 gap-3 wide:grid-cols-5"
     >
       <Tile
         label={<Localized id="dashboard-tile-sales" />}
@@ -92,6 +92,33 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
         }}
       >
         <Num inherit paisa={tiles.advances_open_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-lent" />}
+        tone={lentOverdue ? 'warn' : 'neutral'}
+        note={
+          lentOverdue ? (
+            <Localized
+              id="dashboard-tile-lent-overdue"
+              elems={{ money: <Num paisa={tiles.lent_overdue_paisa} /> }}
+            >
+              <span />
+            </Localized>
+          ) : undefined
+        }
+        onOpen={() => {
+          open({ kind: 'report', id: 'R32' });
+        }}
+      >
+        <Num inherit paisa={tiles.lent_open_paisa} />
+      </Tile>
+      <Tile
+        label={<Localized id="dashboard-tile-expenses" />}
+        onOpen={() => {
+          open({ kind: 'report', id: 'R29' });
+        }}
+      >
+        <Num inherit paisa={tiles.expenses_today_paisa} />
       </Tile>
       <Tile
         label={<Localized id="dashboard-tile-stock" />}
@@ -159,33 +186,6 @@ export function DashboardTiles({ tiles, children }: DashboardTilesProps) {
         }}
       >
         <Num inherit paisa={tiles.gardens_balance_paisa} />
-      </Tile>
-      <Tile
-        label={<Localized id="dashboard-tile-lent" />}
-        tone={lentOverdue ? 'warn' : 'neutral'}
-        note={
-          lentOverdue ? (
-            <Localized
-              id="dashboard-tile-lent-overdue"
-              elems={{ money: <Num paisa={tiles.lent_overdue_paisa} /> }}
-            >
-              <span />
-            </Localized>
-          ) : undefined
-        }
-        onOpen={() => {
-          open({ kind: 'report', id: 'R32' });
-        }}
-      >
-        <Num inherit paisa={tiles.lent_open_paisa} />
-      </Tile>
-      <Tile
-        label={<Localized id="dashboard-tile-expenses" />}
-        onOpen={() => {
-          open({ kind: 'report', id: 'R29' });
-        }}
-      >
-        <Num inherit paisa={tiles.expenses_today_paisa} />
       </Tile>
       {children}
     </div>

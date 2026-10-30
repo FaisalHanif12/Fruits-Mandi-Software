@@ -77,33 +77,35 @@ export function GardenHeaderCard({ garden }: GardenCardProps) {
         </span>
       }
     >
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 normal:grid-cols-4">
-        <Fact label={<Localized id="gardens-field-date" />}>
-          <Code>{isoToDisplayDate(garden.entry_date)}</Code>
-        </Fact>
-        <Fact label={<Localized id="glossary-qism-maal" />}>
-          {garden.item === null ? (
-            <Localized id="gardens-none" />
-          ) : (
-            <span lang={language}>{displayName(garden.item, language)}</span>
-          )}
-        </Fact>
-        <Fact label={<Localized id="gardens-field-season-end" />}>
-          {garden.season_end_date === null ? (
-            <Localized id="gardens-none" />
-          ) : (
-            <Code>{isoToDisplayDate(garden.season_end_date)}</Code>
-          )}
-        </Fact>
-        {garden.closed_date === null ? null : (
-          <Fact label={<Localized id="gardens-closed-on" />}>
-            <Code>{isoToDisplayDate(garden.closed_date)}</Code>
+      <div className="@container min-w-0">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 @form3:grid-cols-4">
+          <Fact label={<Localized id="gardens-field-date" />}>
+            <Code>{isoToDisplayDate(garden.entry_date)}</Code>
           </Fact>
-        )}
-        {garden.note === null ? null : (
-          <Fact label={<Localized id="gardens-field-note" />}>{garden.note}</Fact>
-        )}
-      </dl>
+          <Fact label={<Localized id="glossary-qism-maal" />}>
+            {garden.item === null ? (
+              <Localized id="gardens-none" />
+            ) : (
+              <span lang={language}>{displayName(garden.item, language)}</span>
+            )}
+          </Fact>
+          <Fact label={<Localized id="gardens-field-season-end" />}>
+            {garden.season_end_date === null ? (
+              <Localized id="gardens-none" />
+            ) : (
+              <Code>{isoToDisplayDate(garden.season_end_date)}</Code>
+            )}
+          </Fact>
+          {garden.closed_date === null ? null : (
+            <Fact label={<Localized id="gardens-closed-on" />}>
+              <Code>{isoToDisplayDate(garden.closed_date)}</Code>
+            </Fact>
+          )}
+          {garden.note === null ? null : (
+            <Fact label={<Localized id="gardens-field-note" />}>{garden.note}</Fact>
+          )}
+        </dl>
+      </div>
       <BalanceLines garden={garden} />
     </Card>
   );
@@ -125,58 +127,62 @@ export function GardenFiguresCard({ garden }: GardenCardProps) {
   ];
   return (
     <Card compact title={<Localized id="gardens-figures-title" />}>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-4 normal:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Localized id="gardens-partners-title">
-            <h3 className="type-label text-ink-muted" />
-          </Localized>
-          <ul aria-label={l10n.getString('gardens-partners-title')} className="flex flex-col">
-            {garden.partners.map((partner) => (
-              <li
-                key={partner.partner.id}
-                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border py-1 type-body text-ink"
-              >
-                <span className="flex items-baseline gap-2">
-                  <span lang={language}>{displayName(partner.partner, language)}</span>
-                  <span className="text-ink-muted">
-                    <Num>
-                      {l10n.getString('ventures-share-percent', {
-                        value: formatBps(partner.share_bps),
-                      })}
-                    </Num>
-                  </span>
-                </span>
-                <Localized
-                  id={partner.source === 'shop' ? 'ventures-source-shop' : 'ventures-source-pocket'}
-                >
-                  <span className="text-ink-muted" />
-                </Localized>
-              </li>
-            ))}
-          </ul>
-          {garden.shares_locked ? (
-            <Localized id="gardens-shares-locked">
-              <p className="type-body text-ink-muted" />
+      <div className="@container min-w-0">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-4 @form3:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-1">
+            <Localized id="gardens-partners-title">
+              <h3 className="type-label text-ink-muted" />
             </Localized>
-          ) : null}
-        </div>
-        <div className="flex min-w-0 flex-col gap-3">
-          <dl className="flex flex-col">
-            {rows.map((row) => (
-              <Line key={row.id} label={l10n.getString(row.message)}>
-                <Num paisa={row.paisa} />
+            <ul aria-label={l10n.getString('gardens-partners-title')} className="flex flex-col">
+              {garden.partners.map((partner) => (
+                <li
+                  key={partner.partner.id}
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border py-1 type-body text-ink"
+                >
+                  <span className="flex items-baseline gap-2">
+                    <span lang={language}>{displayName(partner.partner, language)}</span>
+                    <span className="text-ink-muted">
+                      <Num>
+                        {l10n.getString('ventures-share-percent', {
+                          value: formatBps(partner.share_bps),
+                        })}
+                      </Num>
+                    </span>
+                  </span>
+                  <Localized
+                    id={
+                      partner.source === 'shop' ? 'ventures-source-shop' : 'ventures-source-pocket'
+                    }
+                  >
+                    <span className="text-ink-muted" />
+                  </Localized>
+                </li>
+              ))}
+            </ul>
+            {garden.shares_locked ? (
+              <Localized id="gardens-shares-locked">
+                <p className="type-body text-ink-muted" />
+              </Localized>
+            ) : null}
+          </div>
+          <div className="flex min-w-0 flex-col gap-3">
+            <dl className="flex flex-col">
+              {rows.map((row) => (
+                <Line key={row.id} label={l10n.getString(row.message)}>
+                  <Num paisa={row.paisa} />
+                </Line>
+              ))}
+            </dl>
+            <dl className="flex flex-col">
+              <Line label={l10n.getString('glossary-commission')}>
+                <span className="flex items-center gap-1">
+                  <Num paisa={garden.commission_paisa} />
+                  <CalcInfo working={garden.commission_working} inCell />
+                </span>
               </Line>
-            ))}
-          </dl>
-          <dl className="flex flex-col">
-            <Line label={l10n.getString('glossary-commission')}>
-              <span className="flex items-center gap-1">
-                <Num paisa={garden.commission_paisa} />
-                <CalcInfo working={garden.commission_working} inCell />
-              </span>
-            </Line>
-          </dl>
-          <BalanceLines garden={garden} />
+            </dl>
+            <BalanceLines garden={garden} />
+          </div>
         </div>
       </div>
     </Card>

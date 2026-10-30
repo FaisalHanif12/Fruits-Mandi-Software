@@ -14,6 +14,7 @@ import { CommandError } from '../../src/shared/api';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { named } from '../helpers/bikri-screen';
+import { openInfo } from '../helpers/info';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -98,7 +99,7 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
       level: 1,
       name: named(message(language, 'gardens-new-title')),
     });
-    await screen.findByText(said(message(language, 'gardens-new-from-defaults')));
+    await screen.findByText(said(message(language, 'gardens-new-shares-title')));
     return { ...view, user: userEvent.setup() };
   };
 
@@ -162,9 +163,11 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
 
   it('says in words that a part paid from a pocket posts nothing', async () => {
     fakeGardens();
-    await open();
+    const { user } = await open();
+    // The words about the sources are behind the ⓘ of the shares card (plan 38 G5).
+    await openInfo(user, language, message(language, 'gardens-new-shares-title'));
     expect(
-      screen.getByText(said(message(language, 'gardens-new-sources-help'))),
+      await screen.findByText(said(message(language, 'gardens-new-sources-help'))),
     ).toBeInTheDocument();
   });
 
@@ -439,7 +442,7 @@ describe.each(LANGUAGES)('a new garden (%s)', (language) => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: message(language, 'common-retry') }));
     expect(
-      await screen.findByText(said(message(language, 'gardens-new-from-defaults'))),
+      await screen.findByText(said(message(language, 'gardens-new-shares-title'))),
     ).toBeInTheDocument();
   });
 

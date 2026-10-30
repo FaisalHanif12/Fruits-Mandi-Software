@@ -14,7 +14,7 @@ import { KHATA_COLUMNS } from '../list-columns';
 import { SignedNum } from './SignedNum';
 
 export function KhataListSection({ khataId }: { khataId: number | null }) {
-  const statement = useKhataStatement(khataId);
+  const statement = useKhataStatement(khataId, true);
   const first = statement.data?.pages[0];
   const rows = statement.data?.pages.flatMap((page) => page.rows);
   return (
@@ -51,6 +51,12 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
               void statement.refetch();
             }}
             pager={statement.pager}
+            sort={{ value: statement.sort, onChange: statement.setSort }}
+            months={
+              first === undefined || first.months.length === 0
+                ? undefined
+                : { months: first.months, monthOf: (row) => row.entry_date.slice(0, 7) }
+            }
             empty={
               <EmptyState
                 icon={Wallet}

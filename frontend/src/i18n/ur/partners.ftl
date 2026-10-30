@@ -436,3 +436,7 @@ partners-ventures-col-back = واپس ملنے والی رقم
 # The running balance of a garden, or the result of a trip.
 # review: pending
 partners-ventures-col-balance = چلتا حساب یا نتیجہ
+
+# The name of the table of partners on the overview, read by a screen reader (plan 38).
+# review: pending
+partners-overview-label = شراکت دار اور ان کے اعداد

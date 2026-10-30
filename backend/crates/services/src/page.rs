@@ -59,6 +59,21 @@ pub(crate) fn slice_three<A, B, C>(
     (first_page, second_page, slice(third, skip, room))
 }
 
+/// Urdu alphabetical order of two texts (ا ب پ ت ٹ, NFR-URD-19), for the lists that are sorted in
+/// memory. The ICU4X collator is made once. If its data were missing, the texts compare as code
+/// points.
+pub(crate) fn urdu_compare(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::sync::OnceLock;
+    static COLLATOR: OnceLock<Option<mandi_domain::core::text::UrduCollator>> = OnceLock::new();
+    match COLLATOR
+        .get_or_init(|| mandi_domain::core::text::UrduCollator::new().ok())
+        .as_ref()
+    {
+        Some(collator) => collator.compare(a, b),
+        None => a.cmp(b),
+    }
+}
+
 /// The limit a database query asks for: 100 when the screen sends 0.
 pub(crate) fn limit_of(limit: u32) -> i64 {
     i64::from(if limit == 0 { DEFAULT_PAGE } else { limit })
@@ -123,6 +138,7 @@ impl MonthAcc {
         date: &str,
         sums: &[i64],
     ) -> Result<(), crate::error::ServiceError> {
+        debug_assert_eq!(sums.len(), self.figures, "one sum for each figure");
         let month = date.get(..7).unwrap_or(date).to_owned();
         let figures = self.figures;
         let (count, totals) = self

@@ -486,3 +486,15 @@ analytics-view-k-help = ہر شراکت دار (یا دکان کے { -mehman }) 
 
 # review: pending
 analytics-chart-k = ہماری دکان اور دوسری دکانوں سے لیا گیا پھل
+
+## The bar of the rows beyond the biggest ten in a chart (plan 38 R4).
+
+# review: pending
+analytics-chart-others = باقی
+
+# The button that folds the charts of a view, and the one that shows them again.
+# review: pending
+analytics-chart-hide = چارٹ چھپائیں
+
+# review: pending
+analytics-chart-show = چارٹ دکھائیں

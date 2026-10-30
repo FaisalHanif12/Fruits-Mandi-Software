@@ -110,6 +110,12 @@ export function resetClientState(language: Language = 'ur') {
     useToastStore.setState({ toasts: [] });
   });
   document.documentElement.style.zoom = '';
+  try {
+    // What a screen keeps on this computer ("More filters" open, "More columns" ticked) starts fresh.
+    window.localStorage.clear();
+  } catch {
+    // Storage can be blocked; nothing is kept then either.
+  }
 }
 
 /** Renders the whole app on a path, as the window does after the start-up check. */

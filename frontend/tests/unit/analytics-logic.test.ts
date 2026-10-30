@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AnalyticsRunInput } from '../../src/bindings/AnalyticsRunInput';
 import type { AnalyticsView } from '../../src/bindings/AnalyticsView';
-import { chartFor, MAX_CHART_ROWS } from '../../src/features/analytics/chart';
+import { chartsOf } from '../../src/features/analytics/chart';
 import {
   analyticsColumns,
   headingText,
@@ -54,8 +54,8 @@ import {
   ANALYTICS_RUN_G_DAY,
   ANALYTICS_RUN_G_DAY_REQUEST,
   ANALYTICS_RUN_G_MONTH_REQUEST,
-  ANALYTICS_RUN_G_TRIP_DAY,
   ANALYTICS_RUN_G_TRIP_WRITTEN_OFF,
+  ANALYTICS_RUN_J_EMPTY,
   ANALYTICS_RUN_J_TRIP,
   ANALYTICS_RUN_J_TRIP_BY_PURCHASE,
   ANALYTICS_RUN_J_TRIP_BY_PURCHASE_REQUEST,
@@ -338,12 +338,17 @@ describe('the headings of the columns of D and E', () => {
   });
 });
 
-describe('what each chart draws (from the rows of the backend, never worked out)', () => {
+/** The first chart of a page, as the bar chart draws it. */
+const firstChart = (view: AnalyticsView, page: Parameters<typeof chartsOf>[1]) =>
+  chartsOf(view, page, context)[0];
+
+describe('what each chart draws (the backend’s charts of the whole filter, never worked out here)', () => {
   it('A: the total commission of each item, with the written figure of each bar', () => {
-    const plan = chartFor('A', ANALYTICS_RUN_A, context);
+    const plan = firstChart('A', ANALYTICS_RUN_A);
     expect(plan?.labelId).toBe('analytics-chart-a');
     expect(plan?.data.categories).toEqual(['Banana', 'Apple']);
     expect(plan?.data.series).toHaveLength(1);
+    expect(plan?.data.series[0]?.name).toBe('<report-col-total-comm>');
     expect(plan?.data.series[0]?.labels).toEqual(['3,928', '1,520']);
     // The heights are paisa, for the drawing only.
     expect(plan?.data.series[0]?.values).toEqual([392_800, 152_000]);
@@ -352,57 +357,68 @@ describe('what each chart draws (from the rows of the backend, never worked out)
   });
 
   it('B: the total commission of each seller, by his name', () => {
-    const plan = chartFor('B', ANALYTICS_RUN_B, context);
+    const plan = firstChart('B', ANALYTICS_RUN_B);
     expect(plan?.data.categories).toEqual(['Rahim', 'Karim']);
     expect(plan?.data.series[0]?.labels).toEqual(['3,928', '1,520']);
   });
 
   it('C: the purchase value of each buyer, one-time buyers included', () => {
-    const plan = chartFor('C', ANALYTICS_RUN_C, context);
+    const plan = firstChart('C', ANALYTICS_RUN_C);
     expect(plan?.data.categories).toEqual(['Arshad Multani', 'Akram Toll Tax', 'Shahid']);
     expect(plan?.data.series[0]?.labels).toEqual(['17,400', '12,000', '12,000']);
   });
 
-  it('D: one stack for each period with a part for each item', () => {
-    const plan = chartFor('D', ANALYTICS_RUN_D_MONTH, context);
+  it('D: a trend with one bar for each period', () => {
+    const plan = firstChart('D', ANALYTICS_RUN_D_MONTH);
     expect(plan?.data.categories).toEqual(['<report-month-10> 2026']);
-    expect(plan?.data.series.map((series) => series.name)).toEqual(['Banana', 'Apple']);
-    expect(plan?.data.series.map((series) => series.labels[0])).toEqual(['3,928', '1,520']);
-    expect(plan?.data.stacked).toBe(true);
+    expect(plan?.data.series.map((series) => series.labels[0])).toEqual(['5,448']);
+    expect(plan?.data.dense).toBe(false);
   });
 
-  it('E: one stack for each seller with a part for each item; an item he did not sell is a bar of nothing', () => {
-    const plan = chartFor('E', ANALYTICS_RUN_E, context);
+  it('E: the total of each seller', () => {
+    const plan = firstChart('E', ANALYTICS_RUN_E);
     expect(plan?.data.categories).toEqual(['Rahim', 'Karim']);
-    expect(plan?.data.series.map((series) => series.name)).toEqual(['Banana', 'Apple']);
-    expect(plan?.data.series[0]?.values).toEqual([392_800, 0]);
-    expect(plan?.data.series[0]?.labels).toEqual(['3,928', '']);
+    expect(plan?.data.series[0]?.values).toEqual([392_800, 152_000]);
   });
 
-  it('H: the top items, from the first list only', () => {
-    const plan = chartFor('H', ANALYTICS_RUN_H, context);
-    expect(plan?.labelId).toBe('analytics-chart-h');
-    expect(plan?.data.categories).toEqual(['Banana', 'Apple']);
-    expect(plan?.data.series[0]?.labels).toEqual(['3,928', '1,520']);
+  it('H: one chart for each section, named by the section', () => {
+    const plans = chartsOf('H', ANALYTICS_RUN_H, context);
+    expect(plans.map((plan) => plan.caption)).toEqual([
+      '<analytics-top-items>',
+      '<analytics-top-sellers>',
+      '<analytics-top-buyers>',
+    ]);
+    expect(plans.every((plan) => plan.labelId === 'analytics-chart-h')).toBe(true);
+    expect(plans[0]?.data.series[0]?.labels).toEqual(['3,928', '1,520']);
   });
 
-  it('shows the first rows only and says how many there are', () => {
-    const row = ANALYTICS_RUN_A.rows[0];
-    if (row === undefined) throw new Error('no row');
-    const many = { ...ANALYTICS_RUN_A, rows: Array.from({ length: 25 }, () => row) };
-    const plan = chartFor('A', many, context);
-    expect(plan?.shown).toBe(MAX_CHART_ROWS);
-    expect(plan?.total).toBe(25);
+  it('adds the bar of the rows beyond the biggest ten, and says how many rows the chart covers', () => {
+    const chart = ANALYTICS_RUN_A.charts[0];
+    const point = chart?.points[0];
+    if (chart === undefined || point === undefined) throw new Error('no chart');
+    const page = {
+      ...ANALYTICS_RUN_A,
+      charts: [
+        {
+          ...chart,
+          points: [...chart.points, { ...point, is_others: true, key: null }],
+          others_count: 5,
+        },
+      ],
+    };
+    const plan = firstChart('A', page);
+    expect(plan?.data.categories.at(-1)).toBe('<analytics-chart-others>');
+    expect([plan?.shown, plan?.total]).toEqual([2, 7]);
   });
 
-  it('draws nothing when there are no rows', () => {
-    expect(chartFor('A', { ...ANALYTICS_RUN_A, rows: [] }, context)).toBeNull();
-    expect(chartFor('D', { ...ANALYTICS_RUN_D_MONTH, rows: [] }, context)).toBeNull();
+  it('draws nothing when the backend sent no chart (F, K, no rows)', () => {
+    expect(chartsOf('A', { ...ANALYTICS_RUN_A, charts: [] }, context)).toEqual([]);
+    expect(chartsOf('F', ANALYTICS_RUN_F, context)).toEqual([]);
   });
 });
 
 describe('the chart is placed for the direction of the app', () => {
-  const data = chartFor('D', ANALYTICS_RUN_D_MONTH, context)?.data;
+  const data = firstChart('D', ANALYTICS_RUN_D_MONTH)?.data;
   const style = (direction: 'rtl' | 'ltr') => ({
     direction,
     fontFamily: 'Inter',
@@ -623,76 +639,66 @@ describe('round 11: the columns of views F, G and J', () => {
   });
 });
 
-describe('round 11: what the charts of F, G and J draw', () => {
-  it('F: each partner’s profit share and net change side by side; the empty columns have no bar', () => {
-    const plan = chartFor('F', ANALYTICS_RUN_F, context);
-    expect(plan?.labelId).toBe('analytics-chart-f');
-    expect(plan?.data.categories).toEqual(['Partner A', 'Partner B', 'Partner C']);
-    expect(plan?.data.series.map((series) => series.name)).toEqual([
-      '<report-col-profit-share>',
-      '<analytics-col-net-change>',
-    ]);
-    expect(plan?.data.series[0]?.labels).toEqual(['996', '746', '746']);
-    expect(plan?.data.stacked).toBe(false);
+describe('round 11: what the charts of G and J draw', () => {
+  it('F: has no chart', () => {
+    expect(chartsOf('F', ANALYTICS_RUN_F, context)).toEqual([]);
+    expect(chartsOf('F', ANALYTICS_RUN_F_TRIP, context)).toEqual([]);
   });
 
-  it('F: a loss is a bar below the line, written with its sign', () => {
-    const plan = chartFor('F', ANALYTICS_RUN_F_TRIP, context);
-    const net = plan?.data.series[1];
-    expect(net?.labels).toEqual(['-296', '-222', '-222']);
-    expect(net?.values.every((value) => value < 0)).toBe(true);
-  });
-
-  it('G: the money of each period side by side; a column with no figure in any row has no bar', () => {
-    const day = chartFor('G', ANALYTICS_RUN_G_DAY, context);
+  it('G: the money of each period side by side, five measures', () => {
+    const day = firstChart('G', ANALYTICS_RUN_G_DAY);
     expect(day?.labelId).toBe('analytics-chart-g');
     expect(day?.data.categories).toEqual(['10-10-2026']);
-    // The trips' result is empty on the worked day: five bars, not six (the movement of the garden
-    // balances is a figure, a 0, so it has its bar).
     expect(day?.data.series.map((series) => series.name)).toEqual([
+      '<report-col-gross>',
       '<report-col-total-comm>',
       '<analytics-col-shared-income>',
       '<analytics-col-shop-expenses>',
       '<analytics-col-profit>',
-      '<analytics-col-gardens-result>',
     ]);
-    const trip = chartFor('G', ANALYTICS_RUN_G_TRIP_DAY, context);
-    expect(trip?.data.series).toHaveLength(6);
-    expect(trip?.data.series[4]?.labels).toEqual(['660']);
+    expect(day?.data.series.map((series) => series.labels[0])).toEqual([
+      '41,400',
+      '5,448',
+      '5,488',
+      '3,000',
+      '2,488',
+    ]);
+    expect(day?.data.stacked).toBe(false);
   });
 
-  it('G: a day with no profit but a trip loss still shows its bar', () => {
-    const plan = chartFor('G', ANALYTICS_RUN_G_TRIP_WRITTEN_OFF, context);
+  it('G: a day with a trip loss still shows its bar', () => {
+    const plan = firstChart('G', ANALYTICS_RUN_G_TRIP_WRITTEN_OFF);
     expect(plan?.data.categories).toEqual(['10-10-2026', '11-10-2026']);
-    expect(plan?.data.series[4]?.labels).toEqual(['660', '-2,600']);
+    expect(plan?.data.series[4]?.labels).toEqual(['1,200', '0']);
   });
 
-  it('G: many days are many thin bars with no figure written on them', () => {
-    const row = ANALYTICS_RUN_G_DAY.rows[0];
-    if (row === undefined) throw new Error('no row');
-    const month = { ...ANALYTICS_RUN_G_DAY, rows: Array.from({ length: 30 }, () => row) };
-    const plan = chartFor('G', month, context);
+  it('G: many periods are many thin bars with no figure written on them', () => {
+    const chart = ANALYTICS_RUN_G_DAY.charts[0];
+    const point = chart?.points[0];
+    if (chart === undefined || point === undefined) throw new Error('no chart');
+    const many = {
+      ...ANALYTICS_RUN_G_DAY,
+      charts: [{ ...chart, points: Array.from({ length: 30 }, () => point) }],
+    };
+    const plan = firstChart('G', many);
     expect(plan?.data.dense).toBe(true);
-    // Every day is drawn: the bars are thin, not cut, so the picture is of the whole period.
-    expect(plan?.shown).toBe(30);
-    expect(chartFor('G', ANALYTICS_RUN_G_DAY, context)?.data.dense).toBe(false);
+    // Every period is drawn: the bars are thin, not cut, so the picture is of the whole filter.
+    expect(plan?.data.categories).toHaveLength(30);
+    expect(firstChart('G', ANALYTICS_RUN_G_DAY)?.data.dense).toBe(false);
   });
 
-  it('J: the sales money and the result of each trip, a loss below the line', () => {
-    const plan = chartFor('J', ANALYTICS_RUN_J_TRIP, context);
+  it('J: the result of each trip, a loss below the line', () => {
+    const plan = firstChart('J', ANALYTICS_RUN_J_TRIP);
     expect(plan?.labelId).toBe('analytics-chart-j');
     expect(plan?.data.categories).toEqual(['0070 10-10-2026']);
-    expect(plan?.data.series[0]?.labels).toEqual(['8,460']);
-    expect(plan?.data.series[1]?.labels).toEqual(['660']);
-    const lost = chartFor('J', ANALYTICS_RUN_J_TRIP_WRITTEN_OFF, context);
-    expect(lost?.data.series[1]?.labels).toEqual(['-1,940']);
-    expect(lost?.data.series[1]?.values[0]).toBeLessThan(0);
+    expect(plan?.data.series[0]?.labels).toEqual(['660']);
+    const lost = firstChart('J', ANALYTICS_RUN_J_TRIP_WRITTEN_OFF);
+    expect(lost?.data.series[0]?.labels).toEqual(['-1,940']);
+    expect(lost?.data.series[0]?.values[0]).toBeLessThan(0);
   });
 
-  it('draws nothing when F, G or J has no rows', () => {
-    expect(chartFor('F', { ...ANALYTICS_RUN_F, rows: [] }, context)).toBeNull();
-    expect(chartFor('G', { ...ANALYTICS_RUN_G_DAY, rows: [] }, context)).toBeNull();
-    expect(chartFor('J', { ...ANALYTICS_RUN_J_TRIP, rows: [] }, context)).toBeNull();
+  it('draws nothing for a view with no rows', () => {
+    expect(chartsOf('J', ANALYTICS_RUN_J_EMPTY, context)).toEqual([]);
   });
 });
 
@@ -769,29 +775,19 @@ describe('the garden slice: the columns and the chart of view I', () => {
     );
   });
 
-  it('I: the sales in our shop and in other shops and the result of each garden side by side', () => {
-    const plan = chartFor('I', ANALYTICS_RUN_I_GARDEN, context);
+  it('I: the result of each garden', () => {
+    const plan = firstChart('I', ANALYTICS_RUN_I_GARDEN);
     expect(plan?.labelId).toBe('analytics-chart-i');
     expect(plan?.data.categories).toEqual(['Shahpur Garden']);
     expect(plan?.data.series.map((series) => series.name)).toEqual([
-      '<analytics-col-sales-our-shop>',
-      '<analytics-col-sales-other-shops>',
       '<analytics-col-garden-result>',
     ]);
-    expect(plan?.data.series.map((series) => series.labels[0])).toEqual([
-      '56,400',
-      '10,000',
-      '11,400',
-    ]);
-    expect(chartFor('I', { ...ANALYTICS_RUN_I_GARDEN, rows: [] }, context)).toBeNull();
+    expect(plan?.data.series[0]?.labels).toEqual(['11,400']);
   });
 
-  it('G: the movement of the garden balances is a bar below the line on a day of payments', () => {
-    const plan = chartFor('G', ANALYTICS_RUN_G_GARDEN_DAY, context);
-    const movement = plan?.data.series.find(
-      (series) => series.name === '<analytics-col-gardens-result>',
-    );
-    expect(movement?.labels).toEqual(['-30,000', '-25,000', '66,400']);
-    expect(movement?.values.slice(0, 2).every((value) => value < 0)).toBe(true);
+  it('G: the days of a garden’s payments and sales, one bar for each day', () => {
+    const plan = firstChart('G', ANALYTICS_RUN_G_GARDEN_DAY);
+    expect(plan?.data.categories).toEqual(['10-10-2026', '11-10-2026', '12-10-2026']);
+    expect(plan?.data.series[0]?.labels).toEqual(['0', '0', '60,000']);
   });
 });

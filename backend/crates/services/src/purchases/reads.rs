@@ -334,8 +334,21 @@ pub(super) fn list(
             .map_err(money_error)?;
         // Month headings with their subtotals, over the whole filter (plan 38 R4).
         let months = if input.group_by_month && in_date_order {
+            // The database gives the total cost and the cost released; the cost left of a month
+            // is their difference, worked out here with checked maths (the same as the totals).
+            let mut rows = repo::list_months(conn, &filter)?;
+            for row in &mut rows {
+                let total = row.sums.first().copied().unwrap_or(0);
+                let released = row.sums.get(1).copied().unwrap_or(0);
+                let left = total
+                    .checked_sub(released)
+                    .ok_or_else(|| data("the cost of a month does not fit"))?;
+                if let Some(slot) = row.sums.get_mut(1) {
+                    *slot = left;
+                }
+            }
             crate::page::month_subtotals(
-                repo::list_months(conn, &filter)?,
+                rows,
                 &[
                     ("total_cost_paisa", true),
                     ("cost_left_paisa", true),

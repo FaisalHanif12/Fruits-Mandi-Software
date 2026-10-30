@@ -85,7 +85,7 @@ export function AppShell({
                 window, outside this scroll area, and the whole page scrolled (finding 29). */}
             <main
               ref={screen}
-              className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 short:py-3 wide:mx-auto wide:w-full wide:max-w-page"
+              className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 short:py-2 wide:mx-auto wide:w-full wide:max-w-page"
             >
               {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
               <PartyReportLinks>{children}</PartyReportLinks>

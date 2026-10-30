@@ -11,28 +11,28 @@ import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { Plus, Route, SearchX } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
+import { PagedList, type ListContext } from '../../../shared/grid';
+import { usePeriod } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
-  Card,
-  DateInput,
   EmptyState,
-  ErrorState,
   Field,
-  LoadingState,
+  FilterBar,
+  ListPage,
+  PeriodBox,
   Select,
-  TextInput,
 } from '../../../shared/ui';
 import { useTripsList } from '../hooks';
 import { TRIP_COLUMNS } from '../list-columns';
 import { TRIPS_SCREEN, tripChoicesFrom, tripChoicesText } from '../remember';
 import type { TripRow, VentureStatus } from '../types';
 
-/** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
-const SHORT_LIST_ROWS = 30;
+/** The month of a trip's day, `YYYY-MM`: the list is in date order. */
+const TRIP_MONTH_OF = (row: TripRow) => row.entry_date.slice(0, 7);
 
 type StatusChoice = VentureStatus | 'all';
 const STATUSES: readonly StatusChoice[] = ['all', 'open', 'closed'];
@@ -51,28 +51,31 @@ export function TripsPage() {
 function TripsBody({ saved, remember }: MemoryProps) {
   const navigate = useNavigate();
   const start = useMemo(() => tripChoicesFrom(saved), [saved]);
-  const [from, setFrom] = useState(start.from);
-  const [to, setTo] = useState(start.to);
+  const day = useDayStatus();
+  // The trip list opens on every trip; the Owner may narrow it by days (remembered by the period box).
+  const period = usePeriod('trips.list', 'all', day.data?.today);
   const [status, setStatus] = useState<StatusChoice>(start.status);
   const [search, setSearch] = useState(start.search);
   useEffect(() => {
-    remember(tripChoicesText({ from, to, status, search }));
-  }, [from, to, status, search, remember]);
-  const [focusId, setFocusId] = useState<string | null>(null);
+    remember(tripChoicesText({ from: '', to: '', status, search }));
+  }, [status, search, remember]);
   const filter = useMemo(
     () => ({
-      from: textOrNull(from),
-      to: textOrNull(to),
+      from: textOrNull(period.range.from),
+      to: textOrNull(period.range.to),
       status: status === 'all' ? null : status,
       partner_id: null,
       search: textOrNull(search),
-      group_by_month: false,
+      group_by_month: true,
     }),
-    [from, to, status, search],
+    [period.range.from, period.range.to, status, search],
   );
-  const list = useTripsList(filter);
-  const paging = useListPaging(list.pager);
-  const rows = useMemo(() => list.data?.pages.flatMap((page) => page.rows), [list.data]);
+  const list = useTripsList(filter, period.ready);
+  // A refusal shows as the state, not as the rows of the filter before it.
+  const rows = useMemo(
+    () => (list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows)),
+    [list.data, list.isError],
+  );
   const first = list.data?.pages[0];
   const newTrip = () => {
     void navigate({ to: '/trips/new' });
@@ -104,122 +107,98 @@ function TripsBody({ saved, remember }: MemoryProps) {
   const noFilter =
     filter.from === null && filter.to === null && filter.status === null && filter.search === null;
 
-  let body;
-  if (rows === undefined && list.isPending) {
-    body = <LoadingState />;
-  } else if (list.isError && rows === undefined) {
-    body = (
-      <ErrorState
-        title={<Localized id="trips-list-failed" />}
-        error={uiErrorOf(list.error)}
-        onRetry={() => {
-          void list.refetch();
-        }}
-      />
-    );
-  } else if (rows?.length === 0) {
-    body = noFilter ? (
-      <EmptyState
-        icon={Route}
-        title={<Localized id="trips-list-empty" />}
-        help={<Localized id="trips-list-empty-help" />}
-        action={
-          <Button variant="primary" shortcut={SHORTCUTS.newEntry} onClick={newTrip}>
-            <Localized id="trips-new" />
-          </Button>
-        }
-      />
-    ) : (
-      <EmptyState
-        icon={SearchX}
-        title={<Localized id="trips-list-no-match" />}
-        help={<Localized id="trips-list-no-match-help" />}
-        action={
-          <Button
-            onClick={() => {
-              setFrom('');
-              setTo('');
-              setStatus('all');
-              setSearch('');
-            }}
-          >
-            <Localized id="trips-list-clear" />
-          </Button>
-        }
-      />
-    );
-  } else if (rows !== undefined) {
-    const long = rows.length > SHORT_LIST_ROWS;
-    body = (
-      <>
-        <div className={long ? 'h-list-region' : undefined}>
-          <ListGrid<TripRow>
-            columns={TRIP_COLUMNS}
-            rows={rows}
-            getRowId={(row) => String(row.id)}
-            labelId="trips-list-label"
-            onOpen={(row) => {
-              void navigate({ to: '/trips/$id', params: { id: String(row.id) } });
-            }}
-            onFocusRow={setFocusId}
-            focusRowId={focusId}
-            heightMode={long ? 'fill' : 'auto'}
-            isInactive={(row) => row.status === 'closed'}
-            totals={totals}
-            paging={paging}
-          />
-        </div>
-        <Pager pager={list.pager} />
-      </>
-    );
-  }
+  const empty = noFilter ? (
+    <EmptyState
+      icon={Route}
+      title={<Localized id="trips-list-empty" />}
+      help={<Localized id="trips-list-empty-help" />}
+      action={
+        <Button variant="primary" shortcut={SHORTCUTS.newEntry} onClick={newTrip}>
+          <Localized id="trips-new" />
+        </Button>
+      }
+    />
+  ) : (
+    <EmptyState
+      icon={SearchX}
+      title={<Localized id="trips-list-no-match" />}
+      help={<Localized id="trips-list-no-match-help" />}
+      action={
+        <Button
+          onClick={() => {
+            period.change({ kind: 'all', from: '', to: '' });
+            setStatus('all');
+            setSearch('');
+          }}
+        >
+          <Localized id="trips-list-clear" />
+        </Button>
+      }
+    />
+  );
 
   return (
-    <div className="flex max-w-page flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="trips-title">
-            <h1 className="sr-only normal:not-sr-only normal:type-title" />
-          </Localized>
-          <Localized id="trips-help">
-            <p className="hidden type-body text-ink-muted normal:block" />
-          </Localized>
-        </div>
+    <ListPage
+      titleId="trips-title"
+      help={
+        <Localized id="trips-help">
+          <p />
+        </Localized>
+      }
+      actions={
         <Button variant="primary" shortcut={SHORTCUTS.newEntry} onClick={newTrip}>
           <Plus aria-hidden="true" className="size-icon-md" />
           <Localized id="trips-new" />
         </Button>
-      </div>
-      <Card compact>
-        <div
-          {...formNavigationProps}
-          className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4"
-        >
-          <Field label={<Localized id="trips-list-from" />}>
-            {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
-          </Field>
-          <Field label={<Localized id="trips-list-to" />}>
-            {(control) => <DateInput {...control} value={to} onChange={setTo} />}
-          </Field>
-          <Field label={<Localized id="trips-list-status" />}>
-            {(control) => (
-              <Select
-                {...control}
-                value={status}
-                onChange={setStatus}
-                options={STATUSES.map((choice) => ({
-                  value: choice,
-                  label: <Localized id={`trips-state-${choice}`} />,
-                }))}
-              />
-            )}
-          </Field>
-          <Field label={<Localized id="trips-list-search" />}>
-            {(control) => <TextInput {...control} value={search} onChange={setSearch} />}
-          </Field>
+      }
+      filters={
+        <div {...formNavigationProps}>
+          <FilterBar
+            screen="trips.list"
+            search={{ value: search, onChange: setSearch, labelId: 'trips-list-search' }}
+          >
+            {period.ready ? <PeriodBox period={period} /> : null}
+            <Field label={<Localized id="trips-list-status" />}>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={status}
+                  onChange={setStatus}
+                  options={STATUSES.map((choice) => ({
+                    value: choice,
+                    label: <Localized id={`trips-state-${choice}`} />,
+                  }))}
+                />
+              )}
+            </Field>
+          </FilterBar>
         </div>
-        {body}
-      </Card>
-    </div>
+      }
+    >
+      <PagedList<TripRow>
+        columns={TRIP_COLUMNS}
+        rows={rows}
+        getRowId={(row) => String(row.id)}
+        labelId="trips-list-label"
+        failedId="trips-list-failed"
+        error={list.isError ? uiErrorOf(list.error) : null}
+        onRetry={() => {
+          void list.refetch();
+        }}
+        pager={list.pager}
+        sort={{ value: list.sort, onChange: list.setSort }}
+        months={
+          first === undefined
+            ? undefined
+            : { months: first.months, monthOf: TRIP_MONTH_OF, columnOf: undefined }
+        }
+        empty={empty}
+        onOpen={(row) => {
+          void navigate({ to: '/trips/$id', params: { id: String(row.id) } });
+        }}
+        isInactive={(row) => row.status === 'closed'}
+        totals={totals}
+      />
+    </ListPage>
   );
 }

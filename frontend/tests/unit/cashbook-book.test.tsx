@@ -92,8 +92,12 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
 
   it("shows the day: the opening and closing cash, every movement and the backend's totals", async () => {
     await open();
-    expect((await labelled(language, 'cashbook-filter-from')).value).toBe('10-10-2026');
-    expect((await labelled(language, 'cashbook-filter-to')).value).toBe('10-10-2026');
+    // The book opens on today, as the period box says (remembered per screen, plan 38 R4).
+    expect(
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'common-period-label')),
+      }),
+    ).toHaveTextContent(message(language, 'common-period-today'));
     const list = await screen.findByRole('group', {
       name: named(message(language, 'cashbook-list-label')),
     });
@@ -118,9 +122,9 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
 
   it('has no box to type counted cash (PRD FR-16.1)', async () => {
     await open();
-    const inputs = screen.getAllByRole('textbox');
-    // The two dates, and nothing else to type in.
-    expect(inputs).toHaveLength(2);
+    await screen.findByRole('combobox', { name: named(message(language, 'common-period-label')) });
+    // The period is a choice, not a box to type in, and there is nothing else to type in.
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
     expect(pageText()).not.toMatch(/count/i);
   });
 
@@ -142,6 +146,8 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
         to: '10-10-2026',
         offset: 0,
         limit: PAGE_ROWS,
+        sort: null,
+        group_by_month: true,
       });
     });
     const range = (from: number, to: number) =>
@@ -170,6 +176,51 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
     await user.click(last);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/rokar/expense');
+    });
+  });
+
+  it('a month row heads its lines with the count the backend sent for the whole range', async () => {
+    const real = vi.mocked(cashbookApi.cashbookGet).getMockImplementation();
+    if (real === undefined) throw new Error('the fake book is not set up');
+    vi.mocked(cashbookApi.cashbookGet).mockImplementation(async (input) => ({
+      ...(await real(input)),
+      months: [{ month: '2026-10', count: 42, figures: [] }],
+    }));
+    await open();
+    await waitFor(() => {
+      expect(visible(document.querySelector('.month-heading')?.textContent)).toContain(
+        message(language, 'common-month-count', { count: 42 }),
+      );
+    });
+  });
+
+  it('a click on a title sorts by the backend; a sort by anything but the day has no running cash and says so', async () => {
+    const real = vi.mocked(cashbookApi.cashbookGet).getMockImplementation();
+    if (real === undefined) throw new Error('the fake book is not set up');
+    // As the backend: only the book in date order has the cash in hand after each line.
+    vi.mocked(cashbookApi.cashbookGet).mockImplementation(async (input) => {
+      const page = await real(input);
+      return input.sort === null
+        ? page
+        : { ...page, rows: page.rows.map((row) => ({ ...row, running_paisa: null })) };
+    });
+    const { user } = await open();
+    await waitFor(() => {
+      expect(visible(pageText())).toContain('60,000');
+    });
+    expect(pageText()).not.toContain(message(language, 'cashbook-running-date-only'));
+    await user.click(await screen.findByText(named(message(language, 'cashbook-col-in'))));
+    await waitFor(() => {
+      expect(cashbookApi.cashbookGet).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: { column: 'in_paisa', direction: 'asc', language } }),
+      );
+    });
+    expect(
+      await screen.findByText(message(language, 'cashbook-running-date-only')),
+    ).toBeInTheDocument();
+    // The cash after each line is not shown for a list in another order.
+    await waitFor(() => {
+      expect(visible(pageText())).not.toContain('60,000');
     });
   });
 
@@ -235,18 +286,26 @@ describe.each(LANGUAGES)('the روکڑ بک (%s)', (language) => {
 
   it('a language switch redraws the book in the other language and keeps the range', async () => {
     const { user } = await open();
-    const from = await labelled(language, 'cashbook-filter-from');
+    await user.click(
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'common-period-label')),
+      }),
+    );
+    await user.click(
+      await screen.findByRole('option', { name: named(message(language, 'common-period-custom')) }),
+    );
+    const from = await labelled(language, 'common-period-from');
     await user.clear(from);
     await user.keyboard('01-10-2026');
     const other: Language = language === 'ur' ? 'en' : 'ur';
     act(() => {
       useLanguageStore.setState({ language: other });
     });
-    expect((await labelled(other, 'cashbook-filter-from')).value).toBe('01-10-2026');
+    expect((await labelled(other, 'common-period-from')).value).toBe('01-10-2026');
     expect(
       await screen.findByRole('group', { name: named(message(other, 'cashbook-list-label')) }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText(named(message(language, 'cashbook-filter-from')))).toBeNull();
+    expect(screen.queryByLabelText(named(message(language, 'common-period-from')))).toBeNull();
     // Alt+L is the same switch from the keyboard.
     press('KeyL', { altKey: true });
     expect(

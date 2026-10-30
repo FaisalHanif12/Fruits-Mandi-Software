@@ -119,6 +119,7 @@ describe('the canned data of the cash book tests has the real shape', () => {
           limit: 0,
           sort: null,
           group_by_month: false,
+          show_finished: false,
         }),
       ),
     ).toBeNull();
@@ -155,6 +156,7 @@ describe('the canned data of the cash book tests has the real shape', () => {
           limit: 0,
           sort: null,
           group_by_month: false,
+          show_finished: false,
         }),
       ),
     ).toBeNull();

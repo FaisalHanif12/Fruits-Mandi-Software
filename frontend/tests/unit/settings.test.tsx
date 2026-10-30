@@ -21,6 +21,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { PAGE_ROWS, pagerButton, rangeText } from '../helpers/pager';
+import { openInfo } from '../helpers/info';
 import { message, visible } from '../helpers/render';
 import { at } from '../helpers/sample';
 import { suggestionsFor } from '../helpers/translit';
@@ -245,19 +246,24 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
           document.getElementById(english.getAttribute('aria-describedby') ?? '')?.textContent,
         ),
       ).toBe(message(language, 'err-name-en-script'));
-      expect(visible(document.body.textContent)).toContain(
+      // What each name takes is behind the ⓘ of its label (plan 38 G5).
+      await openInfo(user, language, message(language, 'settings-firm-name-en'));
+      expect(visible(screen.getByRole('dialog').textContent)).toBe(
         message(
           language,
           language === 'ur' ? 'translit-pair-english-hint' : 'translit-pair-english-hint-first',
         ),
       );
-      expect(visible(document.body.textContent)).toContain(
+      await user.keyboard('{Escape}');
+      await openInfo(user, language, message(language, 'settings-firm-name-ur'));
+      expect(visible(screen.getByRole('dialog').textContent)).toBe(
         message(
           language,
           language === 'ur' ? 'translit-pair-urdu-hint' : 'translit-pair-urdu-hint-second',
           { key: 'Alt+U' },
         ),
       );
+      await user.keyboard('{Escape}');
     });
 
     it('asks "Save changes?" when he leaves with unsaved text, and each button does what it says', async () => {

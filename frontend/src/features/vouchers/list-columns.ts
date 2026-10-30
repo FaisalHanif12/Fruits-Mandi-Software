@@ -28,12 +28,14 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     field: 'number',
     type: 'code',
     headerId: 'vouchers-col-number',
+    sortKey: 'number',
     value: (row, { text }) => voucherNumberText(row, text),
   },
   {
     field: 'date',
     type: 'date',
     headerId: 'vouchers-col-date',
+    sortKey: 'entry_date',
     from: 'normal',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
@@ -41,6 +43,7 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     field: 'account',
     type: 'name',
     headerId: 'vouchers-col-account',
+    sortKey: 'account',
     grow: true,
     value: (row, { language }) =>
       row.person !== null
@@ -53,12 +56,14 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     field: 'amount',
     type: 'money',
     headerId: 'vouchers-col-amount',
+    sortKey: 'amount_paisa',
     value: (row, { money }) => money(row.amount_paisa),
   },
   {
     field: 'status',
     type: 'status',
     headerId: 'vouchers-col-state',
+    sortKey: 'status',
     value: (row, { text }) =>
       text(row.status === 'cancelled' ? 'vouchers-state-cancelled' : 'vouchers-state-saved'),
   },

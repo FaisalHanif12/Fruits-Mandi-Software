@@ -8,6 +8,7 @@ import { FileX } from 'lucide-react';
 import { useState } from 'react';
 import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
+import type { SortInput } from '../../../bindings/SortInput';
 import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { ExcelExportButton, type ExcelExporter } from '../../../shared/export';
@@ -25,22 +26,24 @@ import type { AnalyticsFilters, AnalyticsView } from '../types';
 interface AnalyticsPreviewProps {
   view: AnalyticsView;
   filters: AnalyticsFilters;
+  /** The order of the screen: the print has the same (plan 38 R4). */
+  sort: SortInput | null;
   onBack: () => void;
   /** The Excel export of the screen: its button sits in the frame, with the language chosen here. */
   exporter: ExcelExporter;
 }
 
-export function AnalyticsPreview({ view, filters, onBack, exporter }: AnalyticsPreviewProps) {
+export function AnalyticsPreview({ view, filters, sort, onBack, exporter }: AnalyticsPreviewProps) {
   const appLanguage = useLanguage();
   const [language, setLanguage] = useState<Language>(appLanguage);
   const [paper, setPaper] = useState<Paper>('a4');
-  const query = useAnalyticsPrintData({ view, filters, language, paper });
+  const query = useAnalyticsPrintData({ view, filters, language, paper, sort });
   // The ONE header and footer of every print: the backend builds them from the title and the filters.
   const frame = usePrintFrameOf(language, query.data);
   // "Print" and "Save as PDF": the same view, language and paper as the page on screen.
   const printView = useAnalyticsPrintView();
   const job = usePrintJob((to) =>
-    printView.mutateAsync({ view: { view, filters, language, paper }, to, copies: null }),
+    printView.mutateAsync({ view: { view, filters, language, paper, sort }, to, copies: null }),
   );
 
   let body;

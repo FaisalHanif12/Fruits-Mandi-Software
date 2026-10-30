@@ -12,6 +12,7 @@ import { CommandError } from '../../src/shared/api';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { named } from '../helpers/bikri-screen';
+import { openInfo } from '../helpers/info';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -78,7 +79,7 @@ describe.each(LANGUAGES)('a new trip (%s)', (language) => {
       name: named(message(language, 'trips-new-title')),
     });
     // The form waits for the defaults and the partners.
-    await screen.findByText(said(message(language, 'trips-new-firm-shares')));
+    await screen.findByText(said(message(language, 'trips-new-shares-title')));
     return { ...view, user: userEvent.setup() };
   };
 
@@ -118,6 +119,10 @@ describe.each(LANGUAGES)('a new trip (%s)', (language) => {
       defaults: { partners: tripPartners(['shop', 'pocket', 'shop']), from_last_trip: true },
     });
     await renderApp('/trips/new');
+    const user = userEvent.setup();
+    // Where the form came from is behind the ⓘ of the shares card (plan 38 G5).
+    await screen.findByText(said(message(language, 'trips-new-shares-title')));
+    await openInfo(user, language, message(language, 'trips-new-shares-title'));
     expect(
       await screen.findByText(said(message(language, 'trips-new-from-last'))),
     ).toBeInTheDocument();
@@ -289,7 +294,7 @@ describe.each(LANGUAGES)('a new trip (%s)', (language) => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: message(language, 'common-retry') }));
     expect(
-      await screen.findByText(said(message(language, 'trips-new-firm-shares'))),
+      await screen.findByText(said(message(language, 'trips-new-shares-title'))),
     ).toBeInTheDocument();
   });
 

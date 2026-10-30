@@ -49,6 +49,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'number',
     type: 'code',
     headerId: 'gardens-col-number',
+    sortKey: 'code',
     // The code of a garden, type 008 (plan 34). Its account has the same code.
     value: (row) => row.code,
   },
@@ -56,6 +57,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'name',
     type: 'name',
     headerId: 'gardens-col-name',
+    sortKey: (language) => (language === 'ur' ? 'name_ur' : 'name_en'),
     grow: true,
     value: (row, { language }) => displayName(row, language),
   },
@@ -63,6 +65,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'date',
     type: 'date',
     headerId: 'gardens-col-date',
+    sortKey: 'entry_date',
     // The commission takes the room of the date at the narrowest window (plan 36); the date is on
     // the garden's own screen.
     from: 'normal',
@@ -72,6 +75,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'status',
     type: 'text',
     headerId: 'gardens-col-status',
+    sortKey: 'status',
     value: (row, { text }) => {
       if (row.status === 'open') return text('gardens-status-open');
       return row.closed_date === null
@@ -83,6 +87,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'balance',
     type: 'money',
     headerId: 'gardens-col-balance',
+    sortKey: 'balance_paisa',
     value: (row, { money }) => money(row.balance_paisa),
   },
   // The shop's commission on the garden's goods sold in our shop (PRD FR-12.37): the backend's figure.
@@ -90,12 +95,14 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'commission',
     type: 'money',
     headerId: 'glossary-commission',
+    sortKey: 'commission_paisa',
     value: (row, { money }) => money(row.commission_paisa),
   },
   {
     field: 'rent_due',
     type: 'money',
     headerId: 'gardens-col-rent-due',
+    sortKey: 'rent_due_paisa',
     from: 'normal',
     value: (row, { money }) => money(row.rent_due_paisa),
   },
@@ -103,6 +110,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'rent',
     type: 'money',
     headerId: 'gardens-col-rent',
+    sortKey: 'rent_paisa',
     from: 'wide',
     value: (row, { money }) => money(row.rent_paisa),
   },
@@ -110,6 +118,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'paid',
     type: 'money',
     headerId: 'gardens-col-paid',
+    sortKey: 'paid_paisa',
     from: 'wide',
     value: (row, { money }) => money(row.paid_paisa),
   },
@@ -117,6 +126,7 @@ export const GARDEN_COLUMNS: readonly ListColumn<GardenRow>[] = [
     field: 'money_in',
     type: 'money',
     headerId: 'gardens-col-money-in',
+    sortKey: 'money_in_paisa',
     from: 'wide',
     value: (row, { money }) => money(row.money_in_paisa),
   },

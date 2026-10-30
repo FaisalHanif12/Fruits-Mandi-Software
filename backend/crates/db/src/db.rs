@@ -101,6 +101,21 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+/// The name of the Urdu collation (NFR-URD-19, Tech Stack 4.3): `ORDER BY name_ur COLLATE URDU`
+/// puts ا ب پ ت ٹ in the order of the Urdu alphabet, not in the order of the Unicode code points.
+/// It is made on every connection from the ICU4X data compiled into the app. It is used in
+/// queries only: no index and no table definition names it, so a file opened without it still
+/// reads.
+pub const URDU_COLLATION: &str = "URDU";
+
+/// Makes the Urdu collation on a connection.
+fn register_collations(conn: &Connection) -> Result<(), DbError> {
+    let collator = mandi_core::text::UrduCollator::new()
+        .map_err(|e| DbError::DataCheckFailed(e.to_string()))?;
+    conn.create_collation(URDU_COLLATION, move |a, b| collator.compare(a, b))?;
+    Ok(())
+}
+
 /// Opens a connection and sets the pragmas of B13. The first statement that touches the
 /// file fails with `DataCheckFailed` if the file is not a database.
 fn open_connection(
@@ -115,6 +130,9 @@ fn open_connection(
             | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )?;
     conn.busy_timeout(busy_timeout)?;
+    register_collations(&conn)?;
+    // A data file was opened (a restore opens it again): forget the kept sums.
+    crate::memo::clear();
     if !read_only {
         let mode: String =
             conn.pragma_update_and_check(None, "journal_mode", "WAL", |row| row.get(0))?;
@@ -180,6 +198,8 @@ impl Db {
                 OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
             )?;
             conn.busy_timeout(options.busy_timeout)?;
+            register_collations(&conn)?;
+            crate::memo::clear();
             conn.pragma_update(None, "foreign_keys", "ON")?;
             conn.pragma_update(None, "query_only", "ON")?;
             Ok(conn)
@@ -370,6 +390,28 @@ impl Db {
         action(&conn)
     }
 
+    /// Like [`Db::read`], but all the statements of `action` see the same moment of the data
+    /// (one read transaction). Use it for any read that adds up figures with several statements,
+    /// such as a running balance, a page and its totals: a save that commits in between must not
+    /// show in some of them and not in others (PRD FR-6.1).
+    ///
+    /// # Errors
+    /// Whatever `action` returns; a database error when the transaction cannot start.
+    pub fn read_snapshot<T, E: From<rusqlite::Error>>(
+        &self,
+        action: impl FnOnce(&Connection) -> Result<T, E>,
+    ) -> Result<T, E> {
+        let conn = lock(&self.reader);
+        if !conn.is_autocommit() {
+            return action(&conn);
+        }
+        let tx = conn.unchecked_transaction()?;
+        let result = action(&tx);
+        // Nothing was written, so ending the transaction is a rollback.
+        drop(tx);
+        result
+    }
+
     /// Replaces the whole content of the data file with the content of `source`, a complete and
     /// already checked SQLite file, while the app keeps its connections (PRD FR-20.9, plan 18).
     ///
@@ -407,6 +449,9 @@ impl Db {
                     }
                 }
             }
+            // The kept sums belong to the file that was replaced. Forget them while both
+            // connections are still held, so no read can use one against the new content.
+            crate::memo::clear();
         }
         match self.run_quick_check() {
             DataState::Ok => Ok(()),

@@ -221,12 +221,45 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 25, 150));
     });
-    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, PAGE_ROWS);
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, PAGE_ROWS, {
+      search: null,
+      sort: null,
+    });
     await userEvent.setup().click(await pagerButton(language, 'next'));
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain(rangeText(language, 26, 50, 150));
     });
-    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), PAGE_ROWS, PAGE_ROWS);
+    expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), PAGE_ROWS, PAGE_ROWS, {
+      search: null,
+      sort: null,
+    });
+  });
+
+  it('the search box sends the text, and the party and the item are behind "More filters"', async () => {
+    fakeRules();
+    await renderApp('/index/rules');
+    await waitFor(() => {
+      expect(rowIds()).toEqual(['1', '2', '3']);
+    });
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByRole('textbox', { name: named(message(language, 'common-search-label')) }),
+      'rahim',
+    );
+    await waitFor(() => {
+      expect(rulesApi.rulesList).toHaveBeenLastCalledWith(expect.anything(), 0, PAGE_ROWS, {
+        search: 'rahim',
+        sort: null,
+      });
+    });
+    expect(
+      screen.queryByRole('combobox', { name: named(message(language, 'rules-filter-party')) }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
+    expect(await dropdown(language, 'rules-filter-party')).toBeInTheDocument();
+    expect(await dropdown(language, 'rules-filter-item')).toBeInTheDocument();
   });
 
   it('the side, the charge and the inactive tick go to the backend filter', async () => {
@@ -255,6 +288,7 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
       },
       0,
       PAGE_ROWS,
+      { search: null, sort: null },
     );
     await user.click(
       screen.getByRole('checkbox', { name: message(language, 'rules-show-inactive') }),
@@ -264,6 +298,7 @@ describe.each(LANGUAGES)('the rule list (%s)', (language) => {
         expect.objectContaining({ include_inactive: true }),
         0,
         PAGE_ROWS,
+        { search: null, sort: null },
       );
     });
   });

@@ -12,7 +12,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, TriangleAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { accountsGet, pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
@@ -39,6 +39,7 @@ import {
 } from '../../../shared/ui';
 import { assistTruckMemory } from '../api';
 import { useBikriDraft, type HeaderState } from '../draft-store';
+import { HeaderSummary } from './HeaderSummary';
 import { useSplitFreight } from '../hooks/useSplitFreight';
 import { useTruckMemory } from '../hooks/useTruckMemory';
 
@@ -54,6 +55,11 @@ interface HeaderCardProps {
    * same-truck notice is left out, because the sale it would point at is this one.
    */
   editing?: boolean;
+  /**
+   * The user is typing in the lots or the sale lines: in a short window the header folds to one
+   * summary line (`HeaderSummary`). It stays open while it holds a problem or the same-truck notice.
+   */
+  folded?: boolean;
 }
 
 /** The fields behind "More" that the backend can point at, so a problem on one opens the part. */
@@ -63,12 +69,19 @@ function pickedOrNull(hit: SearchHit | null): PickedRecord | null {
   return hit === null ? null : pickedOf(hit);
 }
 
-export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: HeaderCardProps) {
+export function HeaderCard({
+  error,
+  onOpenBikri,
+  onDone,
+  editing = false,
+  folded = false,
+}: HeaderCardProps) {
   const { l10n } = useLocalization();
   const stores = useBikriDraft();
   const queryClient = useQueryClient();
   const header = stores.header();
   const [more, setMore] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   // The same-truck notice is dismissed for this truck and day only.
   const [continued, setContinued] = useState<string | null>(null);
   const [filledFrom, setFilledFrom] = useState<{ number: number; date: string } | null>(null);
@@ -136,265 +149,294 @@ export function HeaderCard({ error, onOpenBikri, onDone, editing = false }: Head
     ].filter((value) => value.trim() !== '').length + (header.store === null ? 0 : 1);
   const moreProblem = MORE_FIELDS.some((field) => fieldError(error, field) !== undefined);
   const open = more || moreProblem;
+  // Any problem the backend pointed at in the header keeps it open, so it is never folded away.
+  const headerProblem =
+    error?.errors.some(
+      (item) => typeof item.field === 'string' && item.field.startsWith('header.'),
+    ) ?? false;
+  const showFolded = folded && notice === null && !headerProblem;
 
   return (
-    <Card compact>
-      <form
-        {...navigation}
-        onSubmit={(event) => {
-          event.preventDefault();
-        }}
-        className="@container flex flex-col gap-2"
-      >
-        {/* The fields typed on every بکری are one row: date, truck, زمیندار, اڈا. The rest of the
-            header is behind the button at its end (plan 38, sale book). */}
-        <div className="flex items-end gap-x-3">
-          <div className="w-date shrink-0">
-            <Field
-              label={<Localized id="bikri-header-date" />}
-              error={fieldError(error, 'header.entry_date')}
-              readOnly={editing}
-            >
-              {(control) => (
-                <DateInput
-                  {...control}
-                  value={header.entryDate}
-                  onChange={(entryDate) => {
-                    patch({ entryDate });
-                  }}
-                />
-              )}
-            </Field>
-          </div>
-          <div className="w-date shrink-0">
-            <Field
-              label={<Localized id="bikri-header-truck" />}
-              error={fieldError(error, 'header.truck_no')}
-            >
-              {(control) => (
-                <SuggestInput
-                  {...control}
-                  value={header.truckNo}
-                  onChange={(truckNo) => {
-                    patch({ truckNo });
-                  }}
-                  suggestions={(memory.data?.suggestions ?? []).map((suggestion) => ({
-                    value: suggestion.truck_no,
-                    note: isoToDisplayDate(suggestion.date),
-                  }))}
-                  onCommit={(text) => {
-                    // An entry open for edit is never filled from the truck's last sale.
-                    if (!editing) void fillFromTruck(text);
-                  }}
-                />
-              )}
-            </Field>
-          </div>
-          <div className="min-w-0 flex-1 basis-mid">
-            <Field label={<Localized id="glossary-zamindar" />}>
-              {(control) => (
-                <AccountPicker
-                  {...control}
-                  scope="seller"
-                  showCard={false}
-                  value={header.zamindar}
-                  onChange={(hit) => {
-                    patch({
-                      zamindar: hit === null ? null : pickedOf(hit),
-                    });
-                  }}
-                />
-              )}
-            </Field>
-          </div>
-          <div className="min-w-0 flex-1 basis-mid">
-            <Field label={<Localized id="glossary-adda" />}>
-              {(control) => (
-                <Picker
-                  {...control}
-                  scope="adda"
-                  value={header.adda}
-                  onChange={(hit) => {
-                    patch({ adda: pickedOrNull(hit) });
-                  }}
-                />
-              )}
-            </Field>
-          </div>
-          <Button
-            accessibleName={l10n.getString(open ? 'bikri-header-less' : 'bikri-header-more')}
-            onClick={() => {
-              setMore(!open);
+    <div ref={rootRef}>
+      {showFolded ? (
+        <HeaderSummary
+          header={header}
+          onOpen={() => {
+            rootRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+          }}
+        />
+      ) : null}
+      {/* Folded, the real card is hidden by sight only: its fields stay in the Tab order, and the one
+          that gets focus opens the header again (the screen unfolds it on focus). */}
+      <div className={showFolded ? 'short:sr-only' : undefined}>
+        <Card compact>
+          <form
+            {...navigation}
+            onSubmit={(event) => {
+              event.preventDefault();
             }}
+            className="@container flex flex-col gap-2"
           >
-            {open ? (
-              <ChevronUp aria-hidden="true" className="size-icon-md" />
-            ) : (
-              <ChevronDown aria-hidden="true" className="size-icon-md" />
-            )}
-            <span className="sr-only @row-roomy:not-sr-only">
-              <Localized id={open ? 'bikri-header-less' : 'bikri-header-more'} />
-            </span>
-            {moreValues > 0 && !open ? (
-              <span className="rounded-2 bg-primary-soft px-2 type-label text-primary">
-                <Num>{String(moreValues)}</Num>
-              </span>
-            ) : null}
-          </Button>
-        </div>
-        {open ? (
-          <FormGrid columns={4} alignEnd>
-            <Field
-              label={<Localized id="bikri-header-bill-date" />}
-              error={fieldError(error, 'header.bill_date')}
-            >
-              {(control) => (
-                <DateInput
-                  {...control}
-                  value={header.billDate}
-                  placeholder={header.entryDate}
-                  onChange={(billDate) => {
-                    patch({ billDate });
-                  }}
-                />
-              )}
-            </Field>
-            <FormSpan span="two">
-              <Field
-                label={<Localized id="bikri-header-total-freight" />}
-                error={fieldError(error, 'header.total_freight')}
-              >
-                {(control) => (
-                  <div className="flex items-start gap-2">
-                    <MoneyInput
+            {/* The fields typed on every بکری are one row: date, truck, زمیندار, اڈا. The rest of the
+            header is behind the button at its end (plan 38, sale book). */}
+            <div className="flex items-end gap-x-2">
+              <div className="w-date shrink-0">
+                <Field
+                  label={<Localized id="bikri-header-date" />}
+                  error={fieldError(error, 'header.entry_date')}
+                  readOnly={editing}
+                >
+                  {(control) => (
+                    <DateInput
                       {...control}
-                      value={header.totalFreight}
-                      onChange={(totalFreight) => {
-                        patch({ totalFreight });
+                      value={header.entryDate}
+                      onChange={(entryDate) => {
+                        patch({ entryDate });
                       }}
                     />
-                    <Button
-                      disabled={header.totalFreight.trim() === ''}
-                      busy={split.isPending}
-                      onClick={splitFreight}
-                    >
-                      <Localized id="bikri-header-split-freight" />
-                    </Button>
-                  </div>
+                  )}
+                </Field>
+              </div>
+              <div className="w-date shrink-0">
+                <Field
+                  label={<Localized id="bikri-header-truck" />}
+                  error={fieldError(error, 'header.truck_no')}
+                  // The last sale of this truck, with its date (PRD FR-7.49), is behind the ⓘ so the header
+                  // stays one row; once the truck is taken, the "filled from" line below says it too.
+                  info={
+                    last === null || notice !== null || filledFrom !== null ? undefined : (
+                      <Localized
+                        id="bikri-truck-last"
+                        vars={{
+                          number: String(last.bikri_number),
+                          date: isoToDisplayDate(last.date),
+                        }}
+                      >
+                        <p />
+                      </Localized>
+                    )
+                  }
+                >
+                  {(control) => (
+                    <SuggestInput
+                      {...control}
+                      value={header.truckNo}
+                      onChange={(truckNo) => {
+                        patch({ truckNo });
+                      }}
+                      suggestions={(memory.data?.suggestions ?? []).map((suggestion) => ({
+                        value: suggestion.truck_no,
+                        note: isoToDisplayDate(suggestion.date),
+                      }))}
+                      onCommit={(text) => {
+                        // An entry open for edit is never filled from the truck's last sale.
+                        if (!editing) void fillFromTruck(text);
+                      }}
+                    />
+                  )}
+                </Field>
+              </div>
+              <div className="min-w-0 flex-1 basis-mid">
+                <Field label={<Localized id="glossary-zamindar" />}>
+                  {(control) => (
+                    <AccountPicker
+                      {...control}
+                      scope="seller"
+                      showCard={false}
+                      value={header.zamindar}
+                      onChange={(hit) => {
+                        patch({
+                          zamindar: hit === null ? null : pickedOf(hit),
+                        });
+                      }}
+                    />
+                  )}
+                </Field>
+              </div>
+              <div className="min-w-0 flex-1 basis-mid">
+                <Field label={<Localized id="glossary-adda" />}>
+                  {(control) => (
+                    <Picker
+                      {...control}
+                      scope="adda"
+                      value={header.adda}
+                      onChange={(hit) => {
+                        patch({ adda: pickedOrNull(hit) });
+                      }}
+                    />
+                  )}
+                </Field>
+              </div>
+              <Button
+                accessibleName={l10n.getString(open ? 'bikri-header-less' : 'bikri-header-more')}
+                onClick={() => {
+                  setMore(!open);
+                }}
+              >
+                {open ? (
+                  <ChevronUp aria-hidden="true" className="size-icon-md" />
+                ) : (
+                  <ChevronDown aria-hidden="true" className="size-icon-md" />
                 )}
-              </Field>
-            </FormSpan>
-            <Field label={<Localized id="bikri-header-store" />}>
-              {(control) => (
-                <Picker
-                  {...control}
-                  scope="store"
-                  value={header.store}
-                  onChange={(hit) => {
-                    patch({ store: pickedOrNull(hit) });
-                  }}
-                />
-              )}
-            </Field>
-            <Field label={<Localized id="bikri-header-book" />}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={header.book}
-                  onChange={(book) => {
-                    patch({ book });
-                  }}
-                />
-              )}
-            </Field>
-            <Field label={<Localized id="bikri-header-driver" />}>
-              {(control) => (
-                <FreeTextInput
-                  {...control}
-                  value={header.driverName}
-                  onChange={(driverName) => {
-                    patch({ driverName });
-                  }}
-                />
-              )}
-            </Field>
-            <Field
-              label={<Localized id="bikri-header-driver-phone" />}
-              error={fieldError(error, 'header.driver_phone')}
+                <Localized id={open ? 'bikri-header-less' : 'bikri-header-more'} />
+                {moreValues > 0 && !open ? (
+                  <span className="rounded-2 bg-primary-soft px-2 type-label text-primary">
+                    <Num>{String(moreValues)}</Num>
+                  </span>
+                ) : null}
+              </Button>
+            </div>
+            {open ? (
+              <FormGrid columns={4} alignEnd>
+                <Field
+                  label={<Localized id="bikri-header-bill-date" />}
+                  error={fieldError(error, 'header.bill_date')}
+                >
+                  {(control) => (
+                    <DateInput
+                      {...control}
+                      value={header.billDate}
+                      placeholder={header.entryDate}
+                      onChange={(billDate) => {
+                        patch({ billDate });
+                      }}
+                    />
+                  )}
+                </Field>
+                <FormSpan span="two">
+                  <Field
+                    label={<Localized id="bikri-header-total-freight" />}
+                    error={fieldError(error, 'header.total_freight')}
+                  >
+                    {(control) => (
+                      <div className="flex items-start gap-2">
+                        <MoneyInput
+                          {...control}
+                          value={header.totalFreight}
+                          onChange={(totalFreight) => {
+                            patch({ totalFreight });
+                          }}
+                        />
+                        <Button
+                          disabled={header.totalFreight.trim() === ''}
+                          busy={split.isPending}
+                          onClick={splitFreight}
+                        >
+                          <Localized id="bikri-header-split-freight" />
+                        </Button>
+                      </div>
+                    )}
+                  </Field>
+                </FormSpan>
+                <Field label={<Localized id="bikri-header-store" />}>
+                  {(control) => (
+                    <Picker
+                      {...control}
+                      scope="store"
+                      value={header.store}
+                      onChange={(hit) => {
+                        patch({ store: pickedOrNull(hit) });
+                      }}
+                    />
+                  )}
+                </Field>
+                <Field label={<Localized id="bikri-header-book" />}>
+                  {(control) => (
+                    <TextInput
+                      {...control}
+                      value={header.book}
+                      onChange={(book) => {
+                        patch({ book });
+                      }}
+                    />
+                  )}
+                </Field>
+                <Field label={<Localized id="bikri-header-driver" />}>
+                  {(control) => (
+                    <FreeTextInput
+                      {...control}
+                      value={header.driverName}
+                      onChange={(driverName) => {
+                        patch({ driverName });
+                      }}
+                    />
+                  )}
+                </Field>
+                <Field
+                  label={<Localized id="bikri-header-driver-phone" />}
+                  error={fieldError(error, 'header.driver_phone')}
+                >
+                  {(control) => (
+                    <TextInput
+                      {...control}
+                      value={header.driverPhone}
+                      onChange={(driverPhone) => {
+                        patch({ driverPhone });
+                      }}
+                    />
+                  )}
+                </Field>
+                <FormSpan span="two">
+                  <Field label={<Localized id="bikri-header-note" />}>
+                    {(control) => (
+                      <FreeTextInput
+                        {...control}
+                        value={header.note}
+                        onChange={(note) => {
+                          patch({ note });
+                        }}
+                      />
+                    )}
+                  </Field>
+                </FormSpan>
+              </FormGrid>
+            ) : null}
+            {filledFrom !== null ? (
+              <Localized
+                id="bikri-header-filled-from"
+                vars={{
+                  number: String(filledFrom.number),
+                  date: isoToDisplayDate(filledFrom.date),
+                }}
+              >
+                <p className="type-body text-ink-muted" />
+              </Localized>
+            ) : null}
+            {split.isError ? <ErrorNotice error={uiErrorOf(split.error)} /> : null}
+          </form>
+          {notice === null ? null : (
+            <div
+              role="status"
+              className="flex items-center gap-3 rounded-2 border border-warn-border bg-warn-soft px-3 py-1 text-warn"
             >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={header.driverPhone}
-                  onChange={(driverPhone) => {
-                    patch({ driverPhone });
+              <TriangleAlert aria-hidden="true" className="size-icon-md shrink-0" />
+              <Localized
+                id="bikri-truck-same-day"
+                vars={{ number: String(notice.bikri_number), date: header.entryDate }}
+              >
+                <p className="min-w-0 flex-1 type-body" />
+              </Localized>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  disabled={onOpenBikri === undefined}
+                  onClick={() => {
+                    onOpenBikri?.(notice.bikri_number);
                   }}
-                />
-              )}
-            </Field>
-            <FormSpan span="two">
-              <Field label={<Localized id="bikri-header-note" />}>
-                {(control) => (
-                  <FreeTextInput
-                    {...control}
-                    value={header.note}
-                    onChange={(note) => {
-                      patch({ note });
-                    }}
-                  />
-                )}
-              </Field>
-            </FormSpan>
-          </FormGrid>
-        ) : null}
-        {filledFrom !== null ? (
-          <Localized
-            id="bikri-header-filled-from"
-            vars={{ number: String(filledFrom.number), date: isoToDisplayDate(filledFrom.date) }}
-          >
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        ) : last === null || notice !== null ? null : (
-          <Localized
-            id="bikri-truck-last"
-            vars={{ number: String(last.bikri_number), date: isoToDisplayDate(last.date) }}
-          >
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        )}
-        {split.isError ? <ErrorNotice error={uiErrorOf(split.error)} /> : null}
-      </form>
-      {notice === null ? null : (
-        <div
-          role="status"
-          className="flex items-center gap-3 rounded-2 border border-warn-border bg-warn-soft px-3 py-2 text-warn"
-        >
-          <TriangleAlert aria-hidden="true" className="size-icon-md shrink-0" />
-          <Localized
-            id="bikri-truck-same-day"
-            vars={{ number: String(notice.bikri_number), date: header.entryDate }}
-          >
-            <p className="min-w-0 flex-1 type-body" />
-          </Localized>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              disabled={onOpenBikri === undefined}
-              onClick={() => {
-                onOpenBikri?.(notice.bikri_number);
-              }}
-            >
-              <Localized id="bikri-truck-open" />
-            </Button>
-            <Button
-              onClick={() => {
-                setContinued(truckKey);
-              }}
-            >
-              <Localized id="bikri-truck-continue" />
-            </Button>
-          </div>
-        </div>
-      )}
-    </Card>
+                >
+                  <Localized id="bikri-truck-open" />
+                </Button>
+                <Button
+                  onClick={() => {
+                    setContinued(truckKey);
+                  }}
+                >
+                  <Localized id="bikri-truck-continue" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
   );
 }

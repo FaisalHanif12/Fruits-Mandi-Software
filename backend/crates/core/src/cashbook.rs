@@ -30,8 +30,8 @@ pub struct CashbookInput {
     #[serde(default)]
     pub limit: u32,
     /// The column to sort the whole range by: `entry_date`, `posting_type`, `number`, `narration`,
-    /// `in_paisa`, `out_paisa` or `running_paisa`. Null is by day and entry (plan 38 R4). A sorted
-    /// row still shows its true running cash of the natural order.
+    /// `in_paisa` or `out_paisa`. Null is by day and entry, oldest first (plan 38 R4). Only the day
+    /// order (either way) has the running cash: for any other column `running_paisa` is null.
     #[serde(default)]
     pub sort: Option<SortInput>,
     /// True to give the subtotal of each month in `months`. Used only in date order.
@@ -67,9 +67,11 @@ pub struct CashbookRow {
     /// Cash out (0 if the row is cash in).
     #[ts(type = "Paisa")]
     pub out_paisa: Paisa,
-    /// Cash in hand after this row (signed: cash can go below 0, PRD FR-6.7).
-    #[ts(type = "Paisa")]
-    pub running_paisa: Paisa,
+    /// Cash in hand after this row (signed: cash can go below 0, PRD FR-6.7). Null when the list
+    /// is sorted by a column other than the day: the running cash shows in day order only (plan
+    /// 38 B2). The screen then says "balance shows in date order only".
+    #[ts(type = "Paisa | null")]
+    pub running_paisa: Option<Paisa>,
 }
 
 /// What the range adds up to, over the whole range (B31).
@@ -99,8 +101,8 @@ pub struct Cashbook {
     pub total_count: i64,
     /// The totals over the whole range.
     pub totals: CashbookTotals,
-    /// The count and subtotals of each month of the whole range, in the order of the list, when
-    /// asked with `group_by_month` and the list is in date order. Figures: `in_paisa` and
-    /// `out_paisa`.
+    /// The count and subtotals of the months THIS PAGE touches (each whole month, not only its rows
+    /// on the page), in the order of the list, when asked with `group_by_month` and the list is in
+    /// day order. Figures: `in_paisa` and `out_paisa`.
     pub months: Vec<MonthSubtotal>,
 }

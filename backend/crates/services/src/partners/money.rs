@@ -112,6 +112,11 @@ pub fn takes(ctx: &Context, input: &PartnerTakesInput) -> Result<PartnerTakes, S
             let Some(figures) = open.get(&line.line_id) else {
                 continue;
             };
+            // A fully returned take is finished: it steps aside, with its money, unless asked for
+            // (plan 38 R5). The totals and the months are over the rows listed.
+            if !input.show_finished && figures.open == Paisa::ZERO {
+                continue;
+            }
             let amount = paisa(line.dr_paisa)?;
             totals.taken_paisa = totals
                 .taken_paisa

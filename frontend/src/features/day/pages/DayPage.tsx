@@ -26,7 +26,7 @@ export function DayPage() {
   }
   const { today, closed_up_to, today_open } = day.data;
   return (
-    <div className="flex max-w-form flex-col gap-5">
+    <div className="flex max-w-form flex-col gap-3 short:gap-2">
       <div className="flex flex-col gap-1">
         <Localized id="day-title">
           <h1 className="type-title" />

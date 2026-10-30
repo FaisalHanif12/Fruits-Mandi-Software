@@ -64,6 +64,8 @@ const PARTNERS = [
 ];
 
 beforeEach(() => {
+  // "More filters" and the chart are kept on this computer; a test starts with neither remembered.
+  window.localStorage.clear();
   vi.resetAllMocks();
   vi.mocked(useLayoutStep).mockReturnValue('normal');
   healthyBackend();
@@ -202,14 +204,12 @@ describe.each(LANGUAGES)('تجزیات, view K and the fruit of view F (%s)', (l
       expect(heading('other_shops')).toBe(m('fruit-source-other'));
     });
 
-    it('draws a chart labelled for a screen reader, with the value of each row from our shop and from other shops', async () => {
+    it('has no chart: the backend sends none for the fruit taken (plan 38 R4)', async () => {
       await openView('K');
-      const chart = await screen.findByRole(
-        'img',
-        { name: named(m('analytics-chart-k')) },
-        SLOW_MS,
-      );
-      expect(chart).toBeVisible();
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(2);
+      }, SLOW_MS);
+      expect(screen.queryByRole('img')).toBeNull();
     });
 
     it('offers no comparison, no side and no trip goods, because the backend has none of them for the fruit', async () => {
@@ -217,6 +217,10 @@ describe.each(LANGUAGES)('تجزیات, view K and the fruit of view F (%s)', (l
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(2);
       }, SLOW_MS);
+      // The boxes used less are behind "More filters" (plan 38): open them, then look.
+      await user.click(
+        await screen.findByRole('button', { name: named(m('report-filters-more')) }),
+      );
       expect(screen.queryByRole('combobox', { name: m('analytics-filter-compare') })).toBeNull();
       expect(screen.queryByRole('combobox', { name: m('analytics-filter-side') })).toBeNull();
       // The goods box holds all, consigned and the gardens' goods only.

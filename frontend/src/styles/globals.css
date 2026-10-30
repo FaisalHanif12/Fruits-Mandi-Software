@@ -14,9 +14,9 @@
 @import '../features/reports/reports.css';
 @import '../shared/export/export.css';
 
-/* A window that is short, like 1024 x 600 (NFR-USE-15): a screen gives back some of its padding so
-   more of the work is in view (plan 38). `short:` is used like `normal:`. */
-@custom-variant short (@media (max-height: 700px));
+/* A window that is short, like 1366 x 768 or 1024 x 600 (NFR-USE-15, NFR-USE-17): a screen gives back
+   some of its padding so more of the work is in view (plan 38). `short:` is used like `normal:`. */
+@custom-variant short (@media (max-height: 800px));
 
 html {
   background-color: var(--color-bg);

@@ -14,19 +14,24 @@ import {
   Button,
   EmptyState,
   ErrorState,
+  Field,
   FilterBar,
-  FormSpan,
   ListPage,
+  Select,
   LoadingState,
 } from '../../../shared/ui';
 import { groupCatalog, helpIdOf } from '../catalog';
 import { useReportCatalog } from '../hooks';
+
+const ISOLATION_MARKS = /[\u2066-\u2069]/g;
 
 export function ReportsHomePage() {
   const { l10n } = useLocalization();
   const catalog = useReportCatalog();
   const onKeyDown = useRovingKeys();
   const ref = useRef<HTMLElement>(null);
+  // The group chosen in "Go to"; the focus moves to it once the list has closed.
+  const jumpGroup = useRef<string | null>(null);
   const [text, setText] = useState('');
   const ready = catalog.data !== undefined;
   // The first report has focus when the area opens, so ↓ and Enter work at once.
@@ -43,7 +48,10 @@ export function ReportsHomePage() {
       l10n.getString(entry.title_id),
       l10n.getBundle(helpIdOf(entry)) === null ? '' : l10n.getString(helpIdOf(entry)),
     ];
-    return haystack.some((part) => part.toLowerCase().includes(needle));
+    // Fluent puts invisible isolation marks round a term (like Buyer); the user does not type them.
+    return haystack.some((part) =>
+      part.replace(ISOLATION_MARKS, '').toLowerCase().includes(needle),
+    );
   };
   const groups = useMemo(() => groupCatalog(catalog.data ?? []), [catalog.data]);
   const shown = groups
@@ -163,30 +171,26 @@ export function ReportsHomePage() {
                 placeholderId: 'reports-search-placeholder',
               }}
             >
-              <FormSpan span="two">
-                <div
-                  role="group"
-                  aria-label={l10n.getString('reports-jump-label')}
-                  className="flex flex-wrap items-center gap-2"
-                >
-                  <Localized id="reports-jump-label">
-                    <span className="type-label text-ink" />
-                  </Localized>
-                  {groups.map((group) => (
-                    <Button
-                      key={group.group}
-                      onClick={() => {
-                        jumpTo(group.group);
-                      }}
-                      accessibleName={l10n.getString('reports-jump-to', {
-                        group: l10n.getString(group.titleId),
-                      })}
-                    >
-                      {l10n.getString(group.titleId)}
-                    </Button>
-                  ))}
-                </div>
-              </FormSpan>
+              {/* A jump to a group: a choice that takes the user to its first report (plan 38). */}
+              <Field label={<Localized id="reports-jump-label" />}>
+                {(control) => (
+                  <Select<string>
+                    {...control}
+                    value={undefined}
+                    placeholder={<Localized id="reports-jump-placeholder" />}
+                    onChange={(group) => {
+                      jumpGroup.current = group;
+                    }}
+                    afterChoose={() => {
+                      if (jumpGroup.current !== null) jumpTo(jumpGroup.current);
+                    }}
+                    options={groups.map((group) => ({
+                      value: group.group,
+                      label: l10n.getString(group.titleId),
+                    }))}
+                  />
+                )}
+              </Field>
             </FilterBar>
           </div>
         ) : undefined

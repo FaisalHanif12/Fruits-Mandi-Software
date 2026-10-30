@@ -34,7 +34,11 @@ export function OtherSaleFieldsForm({
       <div className="col-span-2">
         <Field
           label={<Localized id="trips-sale-purchase" />}
-          hint={<Localized id="trips-sale-purchase-hint" />}
+          info={
+            <Localized id="trips-sale-purchase-hint">
+              <p />
+            </Localized>
+          }
           error={fieldError(error, 'purchase_id')}
         >
           {(props) => (
@@ -73,7 +77,11 @@ export function OtherSaleFieldsForm({
       </div>
       <Field
         label={<Localized id="trips-sale-qty" />}
-        hint={<Localized id="purchases-qty-hint" />}
+        info={
+          <Localized id="purchases-qty-hint">
+            <p />
+          </Localized>
+        }
         error={fieldError(error, 'qty')}
       >
         {(props) => (
@@ -88,7 +96,11 @@ export function OtherSaleFieldsForm({
       </Field>
       <Field
         label={<Localized id="trips-sale-amount" />}
-        hint={<Localized id="trips-sale-amount-hint" />}
+        info={
+          <Localized id="trips-sale-amount-hint">
+            <p />
+          </Localized>
+        }
         error={fieldError(error, 'amount')}
       >
         {(props) => (

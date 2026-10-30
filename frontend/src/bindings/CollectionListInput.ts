@@ -25,4 +25,9 @@ export type CollectionListInput = {
    * The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
    */
   limit: number;
+  /**
+   * Only buyers whose code, name (either script) or phone holds this text. The group totals
+   * and the grand total are over these buyers.
+   */
+  search: string | null;
 };

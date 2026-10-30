@@ -29,6 +29,8 @@ vi.mock('../../src/shared/urdu/api');
 const nameOf = (language: Language, ur: string, en: string) => (language === 'ur' ? ur : en);
 
 beforeEach(() => {
+  // "More columns" is kept on this computer; a test starts with it off.
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -50,18 +52,39 @@ describe.each(LANGUAGES)('the partner overview, plan 17 columns (%s)', (language
     return { ...app, user: userEvent.setup() };
   }
 
-  /** The card of a partner: the region that holds his name and his figures. */
+  /**
+   * The row of a partner in the table, with the row of his other figures under it when "More
+   * columns" is ticked: what holds his name and his figures (plan 38).
+   */
   async function cardOf(name: string): Promise<HTMLElement> {
-    const heading = await screen.findByText(name);
-    const card = heading.closest('section');
-    if (!(card instanceof HTMLElement)) throw new Error('no card');
-    return card;
+    const found = await screen.findAllByText(name);
+    const row = found.map((one) => one.closest('tr')).find((one) => one !== null);
+    if (!(row instanceof HTMLElement)) throw new Error('no row');
+    const wrapper = document.createElement('div');
+    wrapper.append(row.cloneNode(true));
+    const more = row.nextElementSibling;
+    if (more instanceof HTMLElement && more.hasAttribute('data-partner-more')) {
+      wrapper.append(more.cloneNode(true));
+    }
+    return wrapper;
+  }
+
+  /** Ticks "More columns": the other figures of every partner are drawn under his row. */
+  async function showMore(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: named(message(language, 'common-more-columns')),
+      }),
+    );
   }
 
   it('shows returned, خالص, capital put in, the trips column and کل رقم for each partner', async () => {
-    await open();
-    const a = await cardOf(nameOf(language, 'الف', 'Partner A'));
-    const text = visible(a.textContent);
+    const { user } = await open();
+    await showMore(user);
+    // The headings of the table and the labels of the other figures under each row.
+    const table = await screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
+    });
     for (const id of [
       'partners-metric-returned',
       'partners-metric-net',
@@ -69,8 +92,10 @@ describe.each(LANGUAGES)('the partner overview, plan 17 columns (%s)', (language
       'partners-metric-ventures',
       'partners-metric-total',
     ]) {
-      expect(text).toContain(message(language, id));
+      expect(visible(table.textContent)).toContain(message(language, id));
     }
+    const a = await cardOf(nameOf(language, 'الف', 'Partner A'));
+    const text = visible(a.textContent);
     // E2E-9 and E2E-37: his profit share 996, taken 2,000, خالص and کل رقم -1,004.
     expect(text).toContain('996');
     expect(text).toContain('2,000');
@@ -81,13 +106,19 @@ describe.each(LANGUAGES)('the partner overview, plan 17 columns (%s)', (language
     expect(visible(c.textContent)).toContain('746');
   });
 
-  it('a negative total reads in the due colour and with its minus sign', async () => {
+  it('puts the کل رقم first among the figures, and a negative one reads in the due colour with its minus sign', async () => {
     await open();
+    const table = await screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
+    });
+    const heads = within(table)
+      .getAllByRole('columnheader')
+      .map((head) => visible(head.textContent));
+    expect(heads[1]).toBe(message(language, 'partners-metric-total'));
     const a = await cardOf(nameOf(language, 'الف', 'Partner A'));
-    const total = within(a).getByText(named(message(language, 'partners-metric-total')));
-    const value = total.closest('div')?.querySelector('dd');
-    expect(visible(value?.textContent)).toBe('-1,004');
-    expect(value?.querySelector('.text-due')).not.toBeNull();
+    const total = a.querySelector('td');
+    expect(visible(total?.textContent)).toBe('-1,004');
+    expect(total?.querySelector('.text-due')).not.toBeNull();
   });
 
   it("the buttons open the partner's statement and his capital", async () => {

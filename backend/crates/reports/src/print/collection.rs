@@ -46,6 +46,10 @@ pub struct CollectionPrintDataInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub city_id: Option<i64>,
+    /// Only buyers whose code, name or phone holds this text: the print has the rows of the
+    /// screen's search (plan 38 R4).
+    #[serde(default)]
+    pub search: Option<String>,
     /// The print language (PRD FR-7.36): names, digits and dates follow it.
     pub language: Language,
 }

@@ -169,7 +169,13 @@ describe.each(LANGUAGES)('the tag on the account form (%s)', (language) => {
     const father = await labelled(language, 'accounts-field-father-ur');
     expect(order.indexOf(tag)).toBeGreaterThan(order.indexOf(english));
     expect(order.indexOf(tag)).toBeLessThan(order.indexOf(father));
-    expect(screen.getByText(message(language, 'accounts-field-tag-hint'))).toBeInTheDocument();
+    // The hint is behind the ⓘ next to the label of the field (plan 38 G5).
+    const label = screen.getByText(named(message(language, 'accounts-field-tag')));
+    const info = within(label.parentElement ?? document.body).getByRole('button', {
+      name: named(message(language, 'common-info-label')),
+    });
+    await userEvent.setup().click(info);
+    expect(await screen.findByText(message(language, 'accounts-field-tag-hint'))).toBeVisible();
   });
 
   it('makes the letters capital when he leaves the field, and never turns them into Urdu', async () => {

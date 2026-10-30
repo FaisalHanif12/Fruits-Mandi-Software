@@ -8,12 +8,13 @@ import { Localized, useLocalization } from '@fluent/react';
 import { DatabaseBackup, HardDriveDownload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
+import { ListGrid, ListRegion, Pager, listHeightMode, useListPaging } from '../../../shared/grid';
 import {
   Button,
   Card,
   EmptyState,
   ErrorState,
+  InfoHint,
   LoadingState,
   Notice,
   SegmentedControl,
@@ -22,9 +23,6 @@ import {
 import { BACKUP_COLUMNS, backupRowId } from '../list-columns';
 import { useBackupList } from '../hooks';
 import type { BackupKind, BackupRow } from '../types';
-
-/** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
-const SHORT_LIST_ROWS = 30;
 
 type KindChoice = BackupKind | 'all';
 const CHOICES: readonly KindChoice[] = ['all', 'local', 'usb', 'cloud'];
@@ -80,10 +78,9 @@ export function BackupListSection({ onRestore, onTest, onBackupNow }: BackupList
       />
     );
   } else if (rows !== undefined) {
-    const long = rows.length > SHORT_LIST_ROWS;
     body = (
       <>
-        <div className={long ? 'h-list-region' : undefined}>
+        <ListRegion rowCount={rows.length}>
           <ListGrid<BackupRow>
             columns={BACKUP_COLUMNS}
             rows={rows}
@@ -92,47 +89,57 @@ export function BackupListSection({ onRestore, onTest, onBackupNow }: BackupList
             onOpen={onRestore}
             onFocusRow={setFocusId}
             focusRowId={focusId}
-            heightMode={long ? 'fill' : 'auto'}
+            heightMode={listHeightMode(rows.length)}
             isInactive={(row) => row.status === 'bad'}
             paging={paging}
           />
-        </div>
-        <Pager pager={list.pager} />
-        <Localized id="backup-list-how">
-          <p className="type-body text-ink-muted" />
-        </Localized>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="danger"
-            disabled={focused === undefined}
-            onClick={() => {
-              if (focused !== undefined) onRestore(focused);
-            }}
-          >
-            <HardDriveDownload aria-hidden="true" className="size-icon-md" />
-            <Localized id="backup-restore-selected" />
-          </Button>
-          <Button
-            disabled={focused === undefined}
-            onClick={() => {
-              if (focused !== undefined) onTest(focused);
-            }}
-          >
-            <Localized id="backup-test-selected" />
-          </Button>
+        </ListRegion>
+        <div className="shrink-0">
+          <Pager pager={list.pager} />
         </div>
       </>
     );
   }
 
   return (
-    <Card title={<Localized id="backup-list-title" />}>
-      <SegmentedControl<KindChoice>
-        options={options}
-        value={choice}
-        onChange={setChoice}
-        groupLabel={l10n.getString('backup-filter-label')}
-      />
+    <Card compact fill title={<Localized id="backup-list-title" />}>
+      {/* The place choice and the two actions on the copy that has focus are one row; how to
+          restore with the keys is behind the ⓘ (plan 38). */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SegmentedControl<KindChoice>
+          options={options}
+          value={choice}
+          onChange={setChoice}
+          groupLabel={l10n.getString('backup-filter-label')}
+        />
+        {rows === undefined || rows.length === 0 ? null : (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="danger"
+              disabled={focused === undefined}
+              onClick={() => {
+                if (focused !== undefined) onRestore(focused);
+              }}
+            >
+              <HardDriveDownload aria-hidden="true" className="size-icon-md" />
+              <Localized id="backup-restore-selected" />
+            </Button>
+            <Button
+              disabled={focused === undefined}
+              onClick={() => {
+                if (focused !== undefined) onTest(focused);
+              }}
+            >
+              <Localized id="backup-test-selected" />
+            </Button>
+            <InfoHint>
+              <Localized id="backup-list-how">
+                <p />
+              </Localized>
+            </InfoHint>
+          </div>
+        )}
+      </div>
       {first?.cloud_reachable === false ? (
         <Notice tone="warn">
           <Localized id="backup-list-cloud-unreachable" />

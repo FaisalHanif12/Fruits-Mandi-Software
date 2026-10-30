@@ -7,14 +7,14 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { FileText, Plus, SearchX } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { BikriListInput } from '../../../bindings/BikriListInput';
 import type { BikriListRow } from '../../../bindings/BikriListRow';
 import type { BikriStatus } from '../../../bindings/BikriStatus';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { PagedList } from '../../../shared/grid';
+import { PagedList, type ListContext } from '../../../shared/grid';
 import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
@@ -129,6 +129,27 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
       }
     />
   );
+  // The callback depends on the loaded page, not on an amount, and is made once per page: a new one
+  // on every render would rebuild the grid's columns under a click on a title (F3).
+  const totals = useCallback(
+    (context: ListContext) =>
+      first === undefined
+        ? { labelField: 'sellers', values: {} }
+        : {
+            labelField: 'sellers',
+            values: {
+              sellers: context.text('glossary-meezan'),
+              qty: context.text('bikri-list-qty', {
+                sold: String(first.totals.qty_sold),
+                received: String(first.totals.qty_received),
+              }),
+              gross: context.money(first.totals.gross),
+              net: context.money(first.totals.net),
+              buyer_total: context.money(first.totals.buyer_total),
+            },
+          },
+    [first],
+  );
   // The four states and the paging are the shared list's; the totals row is the backend's, over the
   // whole filter and not over the rows loaded (PRD FR-19.11).
   const body = (
@@ -149,23 +170,7 @@ function TodayBikriBody({ saved, remember }: MemoryProps) {
         void navigate({ to: '/bikri/book', search: { id: row.id } });
       }}
       isInactive={(row) => row.status === 'cancelled'}
-      totals={
-        first === undefined
-          ? undefined
-          : (context) => ({
-              labelField: 'sellers',
-              values: {
-                sellers: context.text('glossary-meezan'),
-                qty: context.text('bikri-list-qty', {
-                  sold: String(first.totals.qty_sold),
-                  received: String(first.totals.qty_received),
-                }),
-                gross: context.money(first.totals.gross),
-                net: context.money(first.totals.net),
-                buyer_total: context.money(first.totals.buyer_total),
-              },
-            })
-      }
+      totals={totals}
     />
   );
 

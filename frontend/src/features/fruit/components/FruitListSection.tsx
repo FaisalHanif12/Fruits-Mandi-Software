@@ -13,16 +13,20 @@ import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import { PagedList } from '../../../shared/grid';
+import { useDebouncedValue, usePeriod, type PeriodControl } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { formNavigationProps } from '../../../shared/keyboard';
 import {
   Button,
   Card,
-  DateInput,
   EmptyState,
   Field,
+  FilterBar,
+  FormSpan,
+  PeriodBox,
   Picker,
   Select,
+  ShowClosedTick,
   type PickerValue,
 } from '../../../shared/ui';
 import { usePartnerList } from '../../partners';
@@ -33,6 +37,8 @@ import { FOR_GUESTS, type FruitListInput, type FruitRow } from '../types';
 
 /** The value of the "for" filter that means everyone. */
 const EVERYONE = 'everyone';
+/** A pause so a burst of key presses in the search box asks once. */
+const SEARCH_DELAY_MS = 150;
 
 interface FruitListSectionProps {
   /** Today, `YYYY-MM-DD`: the list starts with today's entries. */
@@ -49,14 +55,6 @@ interface FruitListSectionProps {
   onCancel: (row: FruitRow) => void;
 }
 
-/** The first day of the month and of the year of `DD-MM-YYYY` text, for the period buttons. */
-function monthStart(today: string): string {
-  return `01-${today.slice(3)}`;
-}
-function yearStart(today: string): string {
-  return `01-01-${today.slice(6)}`;
-}
-
 export function FruitListSection({
   today,
   day,
@@ -69,24 +67,41 @@ export function FruitListSection({
   const language = useLanguage();
   const partners = usePartnerList();
   const openReport = useOpenReport();
-  const todayText = isoToDisplayDate(today);
-  const startText = day === undefined ? todayText : isoToDisplayDate(day);
-  const [from, setFrom] = useState(startText);
-  const [to, setTo] = useState(startText);
+  // The list opens on today and the Owner's last period is kept (plan 38 R4). A list the address
+  // opened on one entry starts on that entry's day, until he chooses another period.
+  const saved = usePeriod('fruit.list', 'today', today);
+  const startText = day === undefined ? null : isoToDisplayDate(day);
+  const [dayOnly, setDayOnly] = useState(startText !== null && day !== today);
+  const period: PeriodControl =
+    dayOnly && startText !== null
+      ? {
+          state: { kind: 'custom', from: startText, to: startText },
+          range: { from: startText, to: startText },
+          ready: true,
+          change: (next) => {
+            setDayOnly(false);
+            saved.change(next);
+          },
+        }
+      : saved;
   const [forWhom, setForWhom] = useState(EVERYONE);
   const [item, setItem] = useState<PickerValue | null>(null);
+  const [search, setSearch] = useState('');
+  const [showFinished, setShowFinished] = useState(false);
+  const searchText = useDebouncedValue(search.trim(), SEARCH_DELAY_MS);
   const partnerId = forWhom === EVERYONE || forWhom === FOR_GUESTS ? null : Number(forWhom);
   const input: Omit<FruitListInput, 'offset' | 'limit' | 'sort'> = {
     partner_id: partnerId,
     guests_only: forWhom === FOR_GUESTS,
     item_id: item?.id ?? null,
     source: null,
-    from: from.trim() === '' ? null : from.trim(),
-    to: to.trim() === '' ? null : to.trim(),
+    from: period.range.from === '' ? null : period.range.from,
+    to: period.range.to === '' ? null : period.range.to,
     status: null,
-    show_finished: false,
-    search: null,
-    group_by_month: false,
+    show_finished: showFinished,
+    search: searchText === '' ? null : searchText,
+    // A month heading is worth its row only when the list covers more than one day.
+    group_by_month: period.state.kind !== 'today' && !dayOnly,
   };
   const list = useFruitList(input);
   const first = list.data?.pages[0];
@@ -95,13 +110,13 @@ export function FruitListSection({
   const columns = useMemo(() => FRUIT_COLUMNS, []);
   const selected = rows?.find((row) => row.id === selectedId) ?? null;
   const onlyToday =
-    from.trim() === todayText && to.trim() === todayText && forWhom === EVERYONE && item === null;
-  // The list the address opened starts on the entry's day; "nothing yet" is still the plain empty
-  // message only for today.
-  const period = (nextFrom: string, nextTo: string) => {
-    setFrom(nextFrom);
-    setTo(nextTo);
-  };
+    period.state.kind === 'today' &&
+    !dayOnly &&
+    forWhom === EVERYONE &&
+    item === null &&
+    searchText === '' &&
+    !showFinished;
+  const months = first === undefined || first.months.length === 0 ? undefined : first.months;
 
   const empty = onlyToday ? (
     <EmptyState
@@ -117,9 +132,11 @@ export function FruitListSection({
       action={
         <Button
           onClick={() => {
-            period(todayText, todayText);
+            period.change({ kind: 'today', from: '', to: '' });
             setForWhom(EVERYONE);
             setItem(null);
+            setSearch('');
+            setShowFinished(false);
           }}
         >
           <Localized id="fruit-list-clear" />
@@ -130,74 +147,50 @@ export function FruitListSection({
 
   return (
     <Card compact title={<Localized id="fruit-list-title" />}>
-      <div {...formNavigationProps} className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4">
-        <Field label={<Localized id="fruit-filter-from" />}>
-          {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
-        </Field>
-        <Field label={<Localized id="fruit-filter-to" />}>
-          {(control) => <DateInput {...control} value={to} onChange={setTo} />}
-        </Field>
-        <Field label={<Localized id="fruit-filter-for" />}>
-          {(control) => (
-            <Select
-              {...control}
-              value={forWhom}
-              onChange={setForWhom}
-              options={[
-                { value: EVERYONE, label: l10n.getString('fruit-filter-for-all') },
-                ...(partners.data ?? []).map((partner) => ({
-                  value: String(partner.id),
-                  label: displayName(partner, language),
-                })),
-                { value: FOR_GUESTS, label: l10n.getString('fruit-for-guests') },
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="fruit-filter-item" />}>
-          {(control) => (
-            <Picker
-              {...control}
-              canAdd={false}
-              scope="item"
-              value={item}
-              placeholder={l10n.getString('fruit-filter-item-all')}
-              onChange={(hit) => {
-                setItem(hit === null ? null : pickedOf(hit));
-              }}
-            />
-          )}
-        </Field>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          onClick={() => {
-            period(todayText, todayText);
-          }}
+      <div {...formNavigationProps}>
+        <FilterBar
+          screen="fruit.list"
+          search={{ value: search, onChange: setSearch }}
+          moreSet={item === null ? 0 : 1}
+          more={
+            <FormSpan span="two">
+              <Field label={<Localized id="fruit-filter-item" />}>
+                {(control) => (
+                  <Picker
+                    {...control}
+                    canAdd={false}
+                    scope="item"
+                    value={item}
+                    placeholder={l10n.getString('fruit-filter-item-all')}
+                    onChange={(hit) => {
+                      setItem(hit === null ? null : pickedOf(hit));
+                    }}
+                  />
+                )}
+              </Field>
+            </FormSpan>
+          }
+          extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
         >
-          <Localized id="fruit-period-today" />
-        </Button>
-        <Button
-          onClick={() => {
-            period(monthStart(todayText), todayText);
-          }}
-        >
-          <Localized id="fruit-period-month" />
-        </Button>
-        <Button
-          onClick={() => {
-            period(yearStart(todayText), todayText);
-          }}
-        >
-          <Localized id="fruit-period-year" />
-        </Button>
-        <Button
-          onClick={() => {
-            period('', '');
-          }}
-        >
-          <Localized id="fruit-period-all" />
-        </Button>
+          {period.ready ? <PeriodBox period={period} /> : null}
+          <Field label={<Localized id="fruit-filter-for" />}>
+            {(control) => (
+              <Select
+                {...control}
+                value={forWhom}
+                onChange={setForWhom}
+                options={[
+                  { value: EVERYONE, label: l10n.getString('fruit-filter-for-all') },
+                  ...(partners.data ?? []).map((partner) => ({
+                    value: String(partner.id),
+                    label: displayName(partner, language),
+                  })),
+                  { value: FOR_GUESTS, label: l10n.getString('fruit-for-guests') },
+                ]}
+              />
+            )}
+          </Field>
+        </FilterBar>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button
@@ -224,8 +217,8 @@ export function FruitListSection({
           <Button
             onClick={() => {
               openReport('R37', {
-                ...(from.trim() === '' ? {} : { from: from.trim() }),
-                ...(to.trim() === '' ? {} : { to: to.trim() }),
+                ...(period.range.from === '' ? {} : { from: period.range.from }),
+                ...(period.range.to === '' ? {} : { to: period.range.to }),
                 ...(partnerId === null ? {} : { partner: partnerId }),
                 ...(forWhom === FOR_GUESTS ? { guests: true } : {}),
                 ...(item === null ? {} : { item }),
@@ -251,6 +244,12 @@ export function FruitListSection({
           void list.refetch();
         }}
         pager={list.pager}
+        sort={{ value: list.sort, onChange: list.setSort }}
+        months={
+          months === undefined
+            ? undefined
+            : { months, monthOf: (row) => row.entry_date.slice(0, 7) }
+        }
         empty={empty}
         onOpen={(row) => {
           if (row.can_change) onEdit(row);

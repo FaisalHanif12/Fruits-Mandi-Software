@@ -377,6 +377,11 @@ pub fn advances_report(
         let mut rows = Vec::new();
         let (mut given, mut returned, mut adjusted, mut open) =
             (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
+        let search = input
+            .search
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty());
         for totals in repo::advance_totals(conn, &as_of_iso, input.seller_id)? {
             let account = account_repo::get(conn, totals.account_id)?
                 .map(|row| RecordRef {
@@ -387,6 +392,10 @@ pub fn advances_report(
                     tag: row.tag,
                 })
                 .ok_or_else(|| ServiceError::Data("an advance names no account".to_owned()))?;
+            // A search keeps the sellers it names, before anything is added to the totals.
+            if search.is_some_and(|t| !account_named(t, &account, "")) {
+                continue;
+            }
             let (g, r, a) = (
                 paisa(totals.given_paisa)?,
                 paisa(totals.returned_paisa)?,
@@ -469,7 +478,16 @@ pub fn collection_list(
         // (collector id, city id) in id order; a buyer with none sorts first.
         let mut groups: BTreeMap<(Option<i64>, Option<i64>), CollectionGroup> = BTreeMap::new();
         let mut grand = Paisa::ZERO;
+        let search = input
+            .search
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty());
         for candidate in candidates {
+            // A search keeps the buyers it names, before anything is added to the totals.
+            if search.is_some_and(|t| !account_named(t, &candidate.account, &candidate.phone)) {
+                continue;
+            }
             let balance =
                 ledger::balance_of(totals.get(&candidate.account.id).copied().unwrap_or(
                     ledger_repo::Totals {
@@ -563,4 +581,21 @@ pub fn collection_list(
             total_paisa: grand,
         })
     })
+}
+
+/// True if the text is in the account's code, in its name in either script, or in the phone.
+fn account_named(text: &str, account: &RecordRef, phone: &str) -> bool {
+    use mandi_domain::core::text;
+    let ur = text::search_ur(text);
+    let en = text::search_en(text);
+    let digits: String = text.chars().filter(char::is_ascii_digit).collect();
+    account.code.to_lowercase().contains(&text.to_lowercase())
+        || (!ur.is_empty() && text::search_ur(&account.name_ur).contains(&ur))
+        || (!en.is_empty() && text::search_en(&account.name_en).contains(&en))
+        || (!digits.is_empty()
+            && phone
+                .chars()
+                .filter(char::is_ascii_digit)
+                .collect::<String>()
+                .contains(&digits))
 }

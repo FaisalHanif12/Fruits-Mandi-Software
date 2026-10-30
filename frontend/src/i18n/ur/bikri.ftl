@@ -967,3 +967,7 @@ bikri-stock-garden-col-arrived = آیا
 # The hint inside the search box of today's list.
 # review: pending
 bikri-list-search-placeholder = بکری نمبر یا ٹرک نمبر لکھیں
+
+# The hint inside the search box of the unsold goods list (the seller, the item or the sale number).
+# review: pending
+bikri-stock-search-placeholder = بیوپاری، قسم مال یا بکری نمبر لکھیں

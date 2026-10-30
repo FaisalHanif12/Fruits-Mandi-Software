@@ -612,3 +612,12 @@ cashbook-type-capital-in = { -sarmaya } put in
 
 # review: pending
 cashbook-type-capital-out = { -sarmaya } taken back
+
+# The tick of the lists of money taken and money lent: a take or a loan that is fully returned is
+# left out until it is on.
+# review: pending
+cashbook-show-returned = Show returned too
+
+# Shown above the list when it is sorted by anything but the day: the cash after a line needs the order of days.
+# review: pending
+cashbook-running-date-only = The cash after each line shows in date order only.

@@ -30,6 +30,7 @@ import {
   fieldError,
   FormCard,
   FormSpan,
+  InfoHint,
 } from '../../../shared/ui';
 import { usePartnerList } from '../../partners';
 import { changeSource, chosenLotOf, valueOfRef } from '../draft';
@@ -89,7 +90,11 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
   ) : (
     <Field
       label={<Localized id="fruit-field-for" />}
-      hint={<Localized id="fruit-for-hint" />}
+      info={
+        <Localized id="fruit-for-hint">
+          <p />
+        </Localized>
+      }
       error={fieldError(error, 'partner_id')}
     >
       {(props) => (
@@ -116,9 +121,17 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
 
   const sourceField = (
     <div className="flex min-w-0 flex-col gap-2">
-      <Localized id="fruit-field-source">
-        <span className="type-label text-ink" />
-      </Localized>
+      <div className="flex items-center gap-1">
+        <Localized id="fruit-field-source">
+          <span className="type-label text-ink" />
+        </Localized>
+        {/* What the chosen source means, behind an ⓘ so the form stays short (plan 38 G5). */}
+        <InfoHint>
+          <Localized id={shop ? 'fruit-source-own-help' : 'fruit-source-other-help'}>
+            <p />
+          </Localized>
+        </InfoHint>
+      </div>
       <SegmentedControl<FruitSource>
         groupLabel={l10n.getString('fruit-field-source')}
         value={draft.source}
@@ -130,16 +143,17 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
           { value: 'other_shop', label: <Localized id="fruit-source-other" /> },
         ]}
       />
-      <Localized id={shop ? 'fruit-source-own-help' : 'fruit-source-other-help'}>
-        <p className="type-body text-ink-muted" />
-      </Localized>
     </div>
   );
 
   const lotField = (
     <Field
       label={<Localized id="fruit-field-lot" />}
-      hint={<Localized id="fruit-lot-hint" />}
+      info={
+        <Localized id="fruit-lot-hint">
+          <p />
+        </Localized>
+      }
       error={fieldError(error, 'lot_id')}
     >
       {(props) => (
@@ -168,7 +182,11 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
     <>
       <Field
         label={<Localized id="fruit-field-agent" />}
-        hint={<Localized id="fruit-agent-hint" />}
+        info={
+          <Localized id="fruit-agent-hint">
+            <p />
+          </Localized>
+        }
         error={fieldError(error, 'agent_account_id')}
       >
         {(props) => (

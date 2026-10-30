@@ -33,6 +33,7 @@ export function statementColumns(
       field: 'date',
       type: 'date',
       headerId: 'cashbook-col-date',
+      sortKey: 'entry_date',
       value: (row) => isoToDisplayDate(row.line.entry_date),
     },
     {
@@ -53,6 +54,7 @@ export function statementColumns(
       field: 'amount',
       type: 'money',
       headerId: 'cashbook-col-amount',
+      sortKey: 'amount_paisa',
       value: (row, { money }) =>
         row.line.amount_paisa === null ? '' : money(row.line.amount_paisa),
     },
@@ -60,6 +62,7 @@ export function statementColumns(
       field: 'running',
       type: 'money',
       headerId: 'partners-statement-col-running',
+      sortKey: 'running_paisa',
       value: (row, { money }) => money(row.line.running_paisa),
     },
   ];

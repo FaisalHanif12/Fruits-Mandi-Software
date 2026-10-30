@@ -626,6 +626,7 @@ fn r26_shows_rahims_advance_fully_adjusted_e2e_7() {
     let screen = vouchers::advances_report(
         &w.env.ctx,
         &mandi_services::core::vouchers::AdvancesReportInput {
+            search: None,
             as_of: String::new(),
             offset: 0,
             limit: 0,
@@ -830,6 +831,8 @@ fn every_collections_report_prints_in_both_languages_with_the_totals_of_the_scre
             let data = print_data(
                 w.env.ctx.db(),
                 &ReportPrintInput {
+                    group_by_month: false,
+                    sort: None,
                     id,
                     filters: ReportFilters::default(),
                     language,
@@ -851,6 +854,8 @@ fn every_collections_report_prints_in_both_languages_with_the_totals_of_the_scre
     let en = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R20,
             filters: ReportFilters::default(),
             language: Language::En,
@@ -873,6 +878,8 @@ fn every_collections_report_prints_in_both_languages_with_the_totals_of_the_scre
     let dated = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R20,
             filters: as_of("10-10-2026"),
             language: Language::En,
@@ -892,6 +899,8 @@ fn every_collections_report_prints_in_both_languages_with_the_totals_of_the_scre
     let r24 = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R24,
             filters: ReportFilters::default(),
             language: Language::Ur,

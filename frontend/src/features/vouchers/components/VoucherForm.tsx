@@ -30,6 +30,8 @@ import {
   SegmentedControl,
   fieldError,
   type SegmentedOption,
+  FormGrid,
+  FormSpan,
 } from '../../../shared/ui';
 import { MakeRegularDialog, PukhtaPersonPicker } from '../../pukhta_khata';
 import type { MadeRegular } from '../../../bindings/MadeRegular';
@@ -114,7 +116,7 @@ export function VoucherForm({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <FormGrid columns={3}>
       <Field label={<Localized id="vouchers-field-date" />} error={fieldError(error, 'date')}>
         {(props) => (
           <DateInput
@@ -153,7 +155,7 @@ export function VoucherForm({
           )}
         </Field>
       ) : null}
-      <div className="col-span-2">
+      <div className="min-w-0">
         <Field
           label={<Localized id={accountLabelId(draft)} />}
           error={fieldError(error, accountPath(draft))}
@@ -179,48 +181,54 @@ export function VoucherForm({
         </Field>
       </div>
       {needsPerson(draft) ? (
-        <div className="flex flex-col gap-2 col-span-2">
-          <Field
-            label={<Localized id="vouchers-field-person" />}
-            hint={<Localized id="vouchers-person-hint" />}
-            error={fieldError(error, 'person_key')}
-          >
-            {(props) => (
-              <PukhtaPersonPicker
-                {...props}
-                side={personSide(draft)}
-                text={draft.personText}
-                onTextChange={(personText) => {
-                  onChange({ personText, person: null });
-                }}
-                onPick={personPicked}
-              />
+        <FormSpan>
+          <div className="flex flex-col gap-2">
+            <Field
+              label={<Localized id="vouchers-field-person" />}
+              info={
+                <Localized id="vouchers-person-hint">
+                  <p />
+                </Localized>
+              }
+              error={fieldError(error, 'person_key')}
+            >
+              {(props) => (
+                <PukhtaPersonPicker
+                  {...props}
+                  side={personSide(draft)}
+                  text={draft.personText}
+                  onTextChange={(personText) => {
+                    onChange({ personText, person: null });
+                  }}
+                  onPick={personPicked}
+                />
+              )}
+            </Field>
+            {draft.person === null ? null : (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2 border border-border bg-surface-sunken p-3">
+                <span className="flex flex-wrap items-baseline gap-x-3">
+                  <span className="type-field">{displayName(draft.person, language)}</span>
+                  {draft.person.phone === '' ? null : <Code>{draft.person.phone}</Code>}
+                </span>
+                <Button
+                  onClick={() => {
+                    setRegularOpen(true);
+                  }}
+                >
+                  <Localized id="vouchers-make-regular" />
+                </Button>
+                <MakeRegularDialog
+                  open={regularOpen}
+                  onOpenChange={setRegularOpen}
+                  person={draft.person}
+                  side={personSide(draft)}
+                  onMake={makeRegular.mutateAsync}
+                  onDone={onMadeRegular}
+                />
+              </div>
             )}
-          </Field>
-          {draft.person === null ? null : (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2 border border-border bg-surface-sunken p-3">
-              <span className="flex flex-wrap items-baseline gap-x-3">
-                <span className="type-field">{displayName(draft.person, language)}</span>
-                {draft.person.phone === '' ? null : <Code>{draft.person.phone}</Code>}
-              </span>
-              <Button
-                onClick={() => {
-                  setRegularOpen(true);
-                }}
-              >
-                <Localized id="vouchers-make-regular" />
-              </Button>
-              <MakeRegularDialog
-                open={regularOpen}
-                onOpenChange={setRegularOpen}
-                person={draft.person}
-                side={personSide(draft)}
-                onMake={makeRegular.mutateAsync}
-                onDone={onMadeRegular}
-              />
-            </div>
-          )}
-        </div>
+          </div>
+        </FormSpan>
       ) : null}
       <div className="flex flex-col gap-1">
         <Field label={<Localized id="vouchers-field-amount" />} error={fieldError(error, 'amount')}>
@@ -281,7 +289,11 @@ export function VoucherForm({
       {isCashLent(draft) ? (
         <Field
           label={<Localized id="vouchers-field-reason-lent" />}
-          hint={<Localized id="vouchers-reason-lent-hint" />}
+          info={
+            <Localized id="vouchers-reason-lent-hint">
+              <p />
+            </Localized>
+          }
           error={fieldError(error, 'reason')}
         >
           {(props) => (
@@ -298,7 +310,11 @@ export function VoucherForm({
       {draft.type === 'advance' ? (
         <Field
           label={<Localized id="vouchers-field-expected" />}
-          hint={<Localized id="vouchers-field-expected-hint" />}
+          info={
+            <Localized id="vouchers-field-expected-hint">
+              <p />
+            </Localized>
+          }
           error={fieldError(error, 'expected_goods')}
         >
           {(props) => (
@@ -327,16 +343,20 @@ export function VoucherForm({
         )}
       </Field>
       {editing ? (
-        <div className="col-span-2">
+        <FormSpan>
           <Field
             label={<Localized id="vouchers-field-edit-reason" />}
-            hint={<Localized id="vouchers-edit-reason-hint" />}
+            info={
+              <Localized id="vouchers-edit-reason-hint">
+                <p />
+              </Localized>
+            }
             error={fieldError(error, 'edit_reason')}
           >
             {(props) => <FreeTextInput {...props} value={editReason} onChange={onEditReason} />}
           </Field>
-        </div>
+        </FormSpan>
       ) : null}
-    </div>
+    </FormGrid>
   );
 }

@@ -211,43 +211,57 @@ fn page_of(view: AnalyticsView, typed: &Typed, table: Table, spec: PageSpec) -> 
 pub fn run(db: &Db, input: &AnalyticsRunInput) -> Result<AnalyticsPage, ReportsError> {
     let spec = page_spec(input.offset, input.limit)?;
     db.read(|conn| {
-        // View C cuts its page early, because the dues and the days to pay are worked out for the
-        // page only: it sorts and makes its chart itself (see `buyer`). Every other view builds
-        // its whole table, which costs no more reading than before (they all work out every row),
-        // so the chart and a sort come from the whole filter (plan 38 R4, D1).
-        if input.view == AnalyticsView::C {
-            let (typed, table) = crate::reports::common::in_snapshot(conn, |conn| {
-                build_with_sort(
-                    conn,
-                    db,
-                    input.view,
-                    &input.filters,
-                    spec,
-                    input.sort.as_ref(),
-                )
-            })?;
-            return Ok(page_of(input.view, &typed, table, spec));
-        }
-        let all = PageSpec {
-            offset: 0,
-            limit: None,
-        };
-        let (typed, mut table) = build(conn, db, input.view, &input.filters, all)?;
-        let charts = chart::build(
+        let (typed, table) = table_for(
+            conn,
+            db,
             input.view,
-            Some(typed.trip_view),
-            &table.columns,
-            &table.rows,
-            &table.totals,
+            &input.filters,
+            spec,
+            input.sort.as_ref(),
         )?;
-        if let Some(sort) = &input.sort {
-            table.rows = chart::sort_rows(&table.columns, std::mem::take(&mut table.rows), sort)?;
-        }
-        table.charts = charts;
-        table.total_count = i64::try_from(table.rows.len()).unwrap_or(i64::MAX);
-        table.rows = spec.slice(&table.rows);
         Ok(page_of(input.view, &typed, table, spec))
     })
+}
+
+/// Builds a view as the screen asked: sorted, with its charts and the page of `spec`. The run, the
+/// print and the Excel export use it, so what is printed is what is on the screen (plan 38 R4).
+///
+/// View C cuts its page early, because the dues and the days to pay are worked out for the page
+/// only: it sorts and makes its chart itself (see `buyer`). Every other view builds its whole
+/// table, which costs no more reading than before (they all work out every row), so the chart and
+/// a sort come from the whole filter (decision D1).
+fn table_for(
+    conn: &Connection,
+    db: &Db,
+    view: AnalyticsView,
+    filters: &AnalyticsFilters,
+    spec: PageSpec,
+    sort: Option<&mandi_core::paging::SortInput>,
+) -> Result<(Typed, Table), ReportsError> {
+    if view == AnalyticsView::C {
+        return crate::reports::common::in_snapshot(conn, |conn| {
+            build_with_sort(conn, db, view, filters, spec, sort)
+        });
+    }
+    let all = PageSpec {
+        offset: 0,
+        limit: None,
+    };
+    let (typed, mut table) = build(conn, db, view, filters, all)?;
+    let charts = chart::build(
+        view,
+        Some(typed.trip_view),
+        &table.columns,
+        &table.rows,
+        &table.totals,
+    )?;
+    if let Some(sort) = sort {
+        table.rows = chart::sort_rows(&table.columns, std::mem::take(&mut table.rows), sort)?;
+    }
+    table.charts = charts;
+    table.total_count = i64::try_from(table.rows.len()).unwrap_or(i64::MAX);
+    table.rows = spec.slice(&table.rows);
+    Ok((typed, table))
 }
 
 fn build_with_sort(
@@ -288,6 +302,7 @@ pub(crate) fn export_page(
     db: &Db,
     view: AnalyticsView,
     filters: &AnalyticsFilters,
+    sort: Option<&mandi_core::paging::SortInput>,
 ) -> Result<
     (
         AnalyticsPage,
@@ -301,7 +316,7 @@ pub(crate) fn export_page(
         limit: None,
     };
     db.read(|conn| {
-        let (typed, table) = build(conn, db, view, filters, all)?;
+        let (typed, table) = table_for(conn, db, view, filters, all, sort)?;
         Ok::<_, ReportsError>((
             page_of(view, &typed, table, all),
             load_firm(conn)?,
@@ -323,7 +338,14 @@ pub fn print_data(
         limit: None,
     };
     let (page, grouping, setup) = db.read(|conn| {
-        let (typed, table) = build(conn, db, input.view, &input.filters, all)?;
+        let (typed, table) = table_for(
+            conn,
+            db,
+            input.view,
+            &input.filters,
+            all,
+            input.sort.as_ref(),
+        )?;
         Ok::<_, ReportsError>((
             page_of(input.view, &typed, table, all),
             load_grouping(conn)?,

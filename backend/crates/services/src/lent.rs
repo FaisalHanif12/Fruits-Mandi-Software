@@ -282,6 +282,11 @@ pub fn list(ctx: &Context, input: &LentListInput) -> Result<LentList, ServiceErr
         let mut rows = Vec::with_capacity(loans.len());
         let mut month_acc = page::MonthAcc::new(3);
         for loan in &loans {
+            // A fully returned loan is finished: it steps aside, with its money, unless asked for
+            // (plan 38 R5). The totals and the months are over the rows listed.
+            if !input.show_finished && loan.figures.open == Paisa::ZERO {
+                continue;
+            }
             let amount = paisa(loan.line.dr_paisa)?;
             add(&mut totals.lent_paisa, amount)?;
             add(&mut totals.returned_paisa, loan.figures.returned)?;

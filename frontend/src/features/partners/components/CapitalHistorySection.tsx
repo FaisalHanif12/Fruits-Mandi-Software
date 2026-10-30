@@ -13,7 +13,7 @@ import { CAPITAL_COLUMNS } from '../capital-columns';
 import { useCapitalHistory } from '../money-hooks';
 
 export function CapitalHistorySection({ partnerId }: { partnerId: number | null }) {
-  const history = useCapitalHistory(partnerId);
+  const history = useCapitalHistory(partnerId, true);
   const first = history.data?.pages[0];
   const rows = history.data?.pages.flatMap((page) => page.rows);
   return (
@@ -50,6 +50,12 @@ export function CapitalHistorySection({ partnerId }: { partnerId: number | null 
               void history.refetch();
             }}
             pager={history.pager}
+            sort={{ value: history.sort, onChange: history.setSort }}
+            months={
+              first === undefined || first.months.length === 0
+                ? undefined
+                : { months: first.months, monthOf: (row) => row.entry_date.slice(0, 7) }
+            }
             empty={
               <EmptyState
                 icon={Landmark}

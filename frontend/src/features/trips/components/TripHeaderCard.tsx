@@ -66,25 +66,27 @@ export function TripHeaderCard({ trip }: TripCardProps) {
         </span>
       }
     >
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 normal:grid-cols-4">
-        <Fact label={<Localized id="trips-field-date" />}>
-          <Code>{isoToDisplayDate(trip.entry_date)}</Code>
-        </Fact>
-        <Fact label={<Localized id="trips-field-market" />}>
-          {trip.market ?? <Localized id="trips-none" />}
-        </Fact>
-        <Fact label={<Localized id="trips-field-sent" />}>
-          {trip.sent_person ?? <Localized id="trips-none" />}
-        </Fact>
-        {trip.closed_date === null ? null : (
-          <Fact label={<Localized id="trips-closed-on" />}>
-            <Code>{isoToDisplayDate(trip.closed_date)}</Code>
+      <div className="@container min-w-0">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 @form3:grid-cols-4">
+          <Fact label={<Localized id="trips-field-date" />}>
+            <Code>{isoToDisplayDate(trip.entry_date)}</Code>
           </Fact>
-        )}
-        {trip.note === null ? null : (
-          <Fact label={<Localized id="trips-field-note" />}>{trip.note}</Fact>
-        )}
-      </dl>
+          <Fact label={<Localized id="trips-field-market" />}>
+            {trip.market ?? <Localized id="trips-none" />}
+          </Fact>
+          <Fact label={<Localized id="trips-field-sent" />}>
+            {trip.sent_person ?? <Localized id="trips-none" />}
+          </Fact>
+          {trip.closed_date === null ? null : (
+            <Fact label={<Localized id="trips-closed-on" />}>
+              <Code>{isoToDisplayDate(trip.closed_date)}</Code>
+            </Fact>
+          )}
+          {trip.note === null ? null : (
+            <Fact label={<Localized id="trips-field-note" />}>{trip.note}</Fact>
+          )}
+        </dl>
+      </div>
       <ResultLine trip={trip} />
       <LossNote trip={trip} />
     </Card>
@@ -102,87 +104,91 @@ export function TripFiguresCard({ trip }: TripCardProps) {
   ];
   return (
     <Card compact title={<Localized id="trips-figures-title" />}>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-4 normal:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Localized id="trips-partners-title">
-            <h3 className="type-label text-ink-muted" />
-          </Localized>
-          <ul aria-label={l10n.getString('trips-partners-title')} className="flex flex-col">
-            {trip.partners.map((partner) => (
-              <li
-                key={partner.partner.id}
-                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border py-1 type-body text-ink"
-              >
-                <span className="flex items-baseline gap-2">
-                  <span lang={language}>{displayName(partner.partner, language)}</span>
-                  <span className="text-ink-muted">
-                    <Num>
-                      {l10n.getString('ventures-share-percent', {
-                        value: formatBps(partner.share_bps),
-                      })}
-                    </Num>
-                  </span>
-                </span>
-                <Localized
-                  id={partner.source === 'shop' ? 'ventures-source-shop' : 'ventures-source-pocket'}
-                >
-                  <span className="text-ink-muted" />
-                </Localized>
-              </li>
-            ))}
-          </ul>
-          {trip.shares_locked ? (
-            <Localized id="trips-shares-locked">
-              <p className="type-body text-ink-muted" />
+      <div className="@container min-w-0">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-4 @form3:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-1">
+            <Localized id="trips-partners-title">
+              <h3 className="type-label text-ink-muted" />
             </Localized>
-          ) : null}
-        </div>
-        <div className="flex min-w-0 flex-col gap-3">
-          <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
-            <Fact label={<Localized id="trips-fact-bought" />}>
-              <Num>{String(trip.qty_bought)}</Num>
-            </Fact>
-            <Fact label={<Localized id="purchases-lot-qty-sold" />}>
-              <Num>{String(trip.qty_sold)}</Num>
-            </Fact>
-            <Fact label={<Localized id="purchases-detail-written-off" />}>
-              <Num>{String(trip.qty_written_off)}</Num>
-            </Fact>
-            <Fact label={<Localized id="purchases-col-left" />}>
-              <Num>{String(trip.qty_left)}</Num>
-            </Fact>
-            <Fact label={<Localized id="trips-fact-cost" />}>
-              <Num paisa={trip.cost_paisa} />
-            </Fact>
-            <Fact label={<Localized id="purchases-col-cost-left" />}>
-              <Num paisa={trip.cost_left_paisa} />
-            </Fact>
-          </dl>
-          <dl className="flex flex-col">
-            {rows.map((row) => (
-              <div
-                key={row.id}
-                className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink"
-              >
-                <dt>{l10n.getString(row.message)}</dt>
-                <dd>
-                  <Num paisa={row.paisa} />
+            <ul aria-label={l10n.getString('trips-partners-title')} className="flex flex-col">
+              {trip.partners.map((partner) => (
+                <li
+                  key={partner.partner.id}
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border py-1 type-body text-ink"
+                >
+                  <span className="flex items-baseline gap-2">
+                    <span lang={language}>{displayName(partner.partner, language)}</span>
+                    <span className="text-ink-muted">
+                      <Num>
+                        {l10n.getString('ventures-share-percent', {
+                          value: formatBps(partner.share_bps),
+                        })}
+                      </Num>
+                    </span>
+                  </span>
+                  <Localized
+                    id={
+                      partner.source === 'shop' ? 'ventures-source-shop' : 'ventures-source-pocket'
+                    }
+                  >
+                    <span className="text-ink-muted" />
+                  </Localized>
+                </li>
+              ))}
+            </ul>
+            {trip.shares_locked ? (
+              <Localized id="trips-shares-locked">
+                <p className="type-body text-ink-muted" />
+              </Localized>
+            ) : null}
+          </div>
+          <div className="flex min-w-0 flex-col gap-3">
+            <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
+              <Fact label={<Localized id="trips-fact-bought" />}>
+                <Num>{String(trip.qty_bought)}</Num>
+              </Fact>
+              <Fact label={<Localized id="purchases-lot-qty-sold" />}>
+                <Num>{String(trip.qty_sold)}</Num>
+              </Fact>
+              <Fact label={<Localized id="purchases-detail-written-off" />}>
+                <Num>{String(trip.qty_written_off)}</Num>
+              </Fact>
+              <Fact label={<Localized id="purchases-col-left" />}>
+                <Num>{String(trip.qty_left)}</Num>
+              </Fact>
+              <Fact label={<Localized id="trips-fact-cost" />}>
+                <Num paisa={trip.cost_paisa} />
+              </Fact>
+              <Fact label={<Localized id="purchases-col-cost-left" />}>
+                <Num paisa={trip.cost_left_paisa} />
+              </Fact>
+            </dl>
+            <dl className="flex flex-col">
+              {rows.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink"
+                >
+                  <dt>{l10n.getString(row.message)}</dt>
+                  <dd>
+                    <Num paisa={row.paisa} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <dl className="flex flex-col">
+              <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-label text-ink">
+                <Localized id="glossary-commission">
+                  <dt />
+                </Localized>
+                <dd className="flex items-center gap-1">
+                  <Num paisa={trip.commission_paisa} />
+                  <CalcInfo working={trip.commission_working} inCell />
                 </dd>
               </div>
-            ))}
-          </dl>
-          <dl className="flex flex-col">
-            <div className="flex items-center justify-between gap-3 border-b border-border py-1 type-label text-ink">
-              <Localized id="glossary-commission">
-                <dt />
-              </Localized>
-              <dd className="flex items-center gap-1">
-                <Num paisa={trip.commission_paisa} />
-                <CalcInfo working={trip.commission_working} inCell />
-              </dd>
-            </div>
-          </dl>
-          <ResultLine trip={trip} />
+            </dl>
+            <ResultLine trip={trip} />
+          </div>
         </div>
       </div>
     </Card>

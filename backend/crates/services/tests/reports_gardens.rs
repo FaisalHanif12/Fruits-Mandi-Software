@@ -581,6 +581,8 @@ fn r36_exports_to_excel_with_the_numbers_of_the_page_in_both_layouts() {
         export_report(
             w.env.ctx.db(),
             &ReportExportInput {
+                group_by_month: false,
+                sort: None,
                 id: ReportId::R36,
                 filters: ReportFilters {
                     garden_view: Some(view),
@@ -615,6 +617,7 @@ fn view_i_exports_to_excel_with_the_numbers_of_the_page() {
     export_analytics(
         w.env.ctx.db(),
         &AnalyticsExportInput {
+            sort: None,
             view: mandi_reports::analytics::AnalyticsView::I,
             filters: AnalyticsFilters::default(),
             language: Language::En,
@@ -640,6 +643,8 @@ fn r36_prints_in_both_languages_with_the_filters_in_the_header() {
         let data = print_data(
             w.env.ctx.db(),
             &ReportPrintInput {
+                group_by_month: false,
+                sort: None,
                 id: ReportId::R36,
                 filters: ReportFilters {
                     garden_id: Some(garden.id),

@@ -5,14 +5,17 @@
 
 import { Localized } from '@fluent/react';
 import { HandCoins } from 'lucide-react';
+import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { Balance, Card, EmptyState } from '../../../shared/ui';
+import { Balance, Card, Checkbox, EmptyState } from '../../../shared/ui';
 import { useLentList } from '../hooks';
 import { LENT_COLUMNS } from '../list-columns';
 
 export function LentListSection({ personId }: { personId: number | null }) {
-  const lent = useLentList(personId);
+  // A loan that is fully returned is left out until the tick is on (plan 38 G6).
+  const [showReturned, setShowReturned] = useState(false);
+  const lent = useLentList(personId, true, showReturned);
   const first = lent.data?.pages[0];
   const rows = lent.data?.pages.flatMap((page) => page.rows);
   return (
@@ -31,6 +34,11 @@ export function LentListSection({ personId }: { personId: number | null }) {
               <Balance balance={first.balance} />
             </p>
           )}
+          <Checkbox
+            checked={showReturned}
+            onChange={setShowReturned}
+            label={<Localized id="cashbook-show-returned" />}
+          />
           <PagedList
             columns={LENT_COLUMNS}
             rows={rows}
@@ -42,6 +50,12 @@ export function LentListSection({ personId }: { personId: number | null }) {
               void lent.refetch();
             }}
             pager={lent.pager}
+            sort={{ value: lent.sort, onChange: lent.setSort }}
+            months={
+              first === undefined || first.months.length === 0
+                ? undefined
+                : { months: first.months, monthOf: (row) => row.entry_date.slice(0, 7) }
+            }
             empty={
               <EmptyState
                 icon={HandCoins}

@@ -21,19 +21,23 @@ use mandi_services::core::arrivals::{
 };
 use mandi_services::core::bikri::{
     BikriDraft, BikriListInput, BikriListRow, BikriSaveInput, BikriSaved, BikriStatus, CancelInput,
-    PaymentType, PukhtaInput, PukhtaRegister, PukhtaRegisterInput, PukhtaSide,
+    PaymentType, PukhtaInput, PukhtaRegister, PukhtaRegisterInput, PukhtaSide, StockListInput,
 };
 use mandi_services::core::capital::{CapitalHistoryInput, CapitalInput};
 use mandi_services::core::cashbook::{Cashbook, CashbookInput};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::error::ErrorValue;
-use mandi_services::core::expenses::{PartnerTakesInput, PersonalExpenseInput};
+use mandi_services::core::expenses::{
+    PartnerTakesInput, PersonalExpenseInput, PersonalReturnInput,
+};
 use mandi_services::core::fruit::{
     FruitCancelInput, FruitInput, FruitList, FruitListInput, FruitSaved, FruitSource,
 };
 use mandi_services::core::gardens::{GardenInput, GardensListInput};
 use mandi_services::core::khata::{KhataCreateInput, KhataOutInput, KhataStatementInput};
-use mandi_services::core::lent::{LentListInput, LentPersonCreateInput, LentReportInput};
+use mandi_services::core::lent::{
+    LentListInput, LentPersonCreateInput, LentReportInput, LentReturnMode, MoneyLentReturnInput,
+};
 use mandi_services::core::masters::{MasterKind, MastersList, MastersListInput};
 use mandi_services::core::paging::{MonthSubtotal, SortDirection, SortInput};
 use mandi_services::core::purchases::{
@@ -47,8 +51,8 @@ use mandi_services::core::translit::Kind;
 use mandi_services::core::trips::{TripInput, TripsListInput};
 use mandi_services::core::ventures::{MoneySource, VenturePartnerInput};
 use mandi_services::core::vouchers::{
-    AdvanceInput, ReceiptInput, RemovedPaymentFields, VoucherCancelInput, VoucherType,
-    VouchersList, VouchersListInput,
+    AdvanceInput, AdvancesReportInput, ReceiptInput, RemovedPaymentFields, VoucherCancelInput,
+    VoucherType, VouchersList, VouchersListInput,
 };
 use mandi_services::translit::NewPair;
 use mandi_services::{
@@ -59,6 +63,7 @@ use support::World;
 
 fn sort(column: &str, direction: SortDirection) -> Option<SortInput> {
     Some(SortInput {
+        language: None,
         column: column.into(),
         direction,
     })
@@ -469,7 +474,16 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
         list.totals.total_paisa.map(|p| p.as_paisa())
     );
     assert_eq!(month_figure(&list.months[0], "total_paisa"), 400_000);
-    assert_eq!(month_figure(&list.months[0], "cancelled_count"), 0);
+    // The cancelled one is hidden from the rows and the count, but the month still says how many
+    // it holds, and the months add up to the total.
+    assert_eq!(month_figure(&list.months[0], "cancelled_count"), 1);
+    assert_eq!(
+        list.months
+            .iter()
+            .map(|m| month_figure(m, "cancelled_count"))
+            .sum::<i64>(),
+        list.totals.cancelled_count
+    );
     // With the cancelled shown the October month counts it, and its money still leaves it out.
     let list = monthly(shown_input.clone());
     assert_eq!(list.months[0].count, 3);
@@ -1325,6 +1339,7 @@ fn the_list_of_accounts_sorts_the_whole_filter_by_a_column() {
                     kind: AccountListKind::default(),
                     text: String::new(),
                     include_inactive: false,
+                    has_opening: None,
                 },
                 offset,
                 limit,
@@ -1354,12 +1369,23 @@ fn the_list_of_accounts_sorts_the_whole_filter_by_a_column() {
     let mut desc = in_pages(sort("code", SortDirection::Desc));
     desc.reverse();
     assert_eq!(desc, asc);
-    // By balance: debit minus credit, so the biggest dues are last when ascending.
-    let by_balance = list(sort("balance", SortDirection::Desc), 0, 0);
-    assert_eq!(by_balance.rows[0].code, w_code(&w, w.rahim));
-    assert_eq!(by_balance.rows[1].code, w_code(&w, w.karim));
-    let page_two = list(sort("balance", SortDirection::Desc), 1, 1);
-    assert_eq!(page_two.rows[0].code, w_code(&w, w.karim));
+    // There is no sort by balance (it would read every journal line); the dues are ranked by R20.
+    let balance = accounts::list(
+        &w.env.ctx,
+        &AccountsListInput {
+            filter: AccountFilter {
+                kind: AccountListKind::default(),
+                text: String::new(),
+                include_inactive: false,
+                has_opening: None,
+            },
+            offset: 0,
+            limit: 0,
+            sort: sort("balance", SortDirection::Desc),
+        },
+    )
+    .unwrap_err();
+    assert!(rejected_column(&balance));
     // By English name: case does not matter, and every account is once in the answer.
     let names: Vec<String> = list(sort("name_en", SortDirection::Asc), 0, 0)
         .rows
@@ -1377,6 +1403,7 @@ fn the_list_of_accounts_sorts_the_whole_filter_by_a_column() {
                 kind: AccountListKind::default(),
                 text: String::new(),
                 include_inactive: false,
+                has_opening: None,
             },
             offset: 0,
             limit: 0,
@@ -1385,10 +1412,6 @@ fn the_list_of_accounts_sorts_the_whole_filter_by_a_column() {
     )
     .unwrap_err();
     assert!(rejected_column(&error));
-}
-
-fn w_code(w: &World, id: i64) -> String {
-    accounts::get(&w.env.ctx, id).unwrap().code
 }
 
 // ---- Masters ----
@@ -1502,7 +1525,7 @@ fn cash_book(w: &World, input: CashbookInput) -> Cashbook {
 }
 
 #[test]
-fn the_cash_book_sorts_the_whole_range_keeps_the_true_running_cash_and_gives_months() {
+fn the_cash_book_pages_in_day_order_with_the_true_running_cash_and_sorts_by_amount() {
     let w = support::world();
     advance_on(&w, "10-10-2026", w.rahim, "1,000", "");
     advance_on(&w, "10-10-2026", w.karim, "3,000", "");
@@ -1511,47 +1534,129 @@ fn the_cash_book_sorts_the_whole_range_keeps_the_true_running_cash_and_gives_mon
     let base = CashbookInput::default();
     let natural = cash_book(&w, base.clone());
     assert_eq!(natural.rows.len() as i64, natural.total_count);
-    // Sorted by the cash paid out, biggest first, read in pages of one: every entry once, and each
-    // row keeps the running cash it has in the natural order (not a running sum of the new order).
-    let sorted_rows: Vec<_> = (0..natural.total_count)
-        .map(|offset| {
+    assert!(natural.total_count >= 4);
+    assert!(natural.rows.iter().all(|r| r.running_paisa.is_some()));
+    assert_eq!(
+        natural.rows.last().and_then(|r| r.running_paisa),
+        Some(natural.closing_paisa)
+    );
+    // Pages of one, oldest first and newest first, from both ends of the book: each row has the
+    // running cash it has in the one big page (the prefix is taken from the nearer end).
+    for desc in [false, true] {
+        let direction = if desc {
+            SortDirection::Desc
+        } else {
+            SortDirection::Asc
+        };
+        let mut seen = Vec::new();
+        for offset in 0..natural.total_count {
             let page = cash_book(
                 &w,
                 CashbookInput {
                     offset: u32::try_from(offset).unwrap(),
                     limit: 1,
-                    sort: sort("out_paisa", SortDirection::Desc),
+                    sort: sort("entry_date", direction),
                     ..base.clone()
                 },
             );
             assert_eq!(page.rows.len(), 1);
-            page.rows[0].clone()
-        })
-        .collect();
-    let outs: Vec<i64> = sorted_rows.iter().map(|r| r.out_paisa.as_paisa()).collect();
+            let row = page.rows[0].clone();
+            let same = natural
+                .rows
+                .iter()
+                .find(|r| r.entry_id == row.entry_id)
+                .expect("the same entry");
+            assert_eq!(row.running_paisa, same.running_paisa, "desc {desc}");
+            assert_eq!(
+                (row.in_paisa, row.out_paisa),
+                (same.in_paisa, same.out_paisa)
+            );
+            seen.push(row.entry_id);
+        }
+        let mut expected: Vec<i64> = natural.rows.iter().map(|r| r.entry_id).collect();
+        if desc {
+            expected.reverse();
+        }
+        assert_eq!(seen, expected);
+    }
+    // A date range: the opening is the cash before the first day, and the pages still add up.
+    let november = cash_book(
+        &w,
+        CashbookInput {
+            from: Some("01-11-2026".into()),
+            ..base.clone()
+        },
+    );
+    assert_eq!(november.total_count, 1);
+    assert_eq!(november.closing_paisa, natural.closing_paisa);
+    assert_eq!(
+        november.rows[0].running_paisa,
+        natural.rows.last().and_then(|r| r.running_paisa)
+    );
+    assert_eq!(
+        november
+            .opening_paisa
+            .checked_add(november.totals.in_paisa)
+            .and_then(|v| v.checked_sub(november.totals.out_paisa))
+            .unwrap(),
+        november.closing_paisa
+    );
+    // By the cash paid out, biggest first: every entry once, in order, with no running cash.
+    let by_amount = |direction| {
+        (0..natural.total_count)
+            .map(|offset| {
+                let page = cash_book(
+                    &w,
+                    CashbookInput {
+                        offset: u32::try_from(offset).unwrap(),
+                        limit: 1,
+                        sort: sort("out_paisa", direction),
+                        ..base.clone()
+                    },
+                );
+                assert_eq!(page.rows.len(), 1);
+                page.rows[0].clone()
+            })
+            .collect::<Vec<_>>()
+    };
+    let rows = by_amount(SortDirection::Desc);
+    assert!(rows.iter().all(|r| r.running_paisa.is_none()));
+    let outs: Vec<i64> = rows.iter().map(|r| r.out_paisa.as_paisa()).collect();
     let mut expected = outs.clone();
     expected.sort_by(|a, b| b.cmp(a));
     assert_eq!(outs, expected);
     assert_eq!(outs[0], 300_000);
-    for row in &sorted_rows {
-        let same = natural
-            .rows
-            .iter()
-            .find(|r| r.entry_id == row.entry_id)
-            .expect("the same entry");
-        assert_eq!(row.running_paisa, same.running_paisa, "true running cash");
-    }
-    let bad = cashbook::get(
-        &w.env.ctx,
-        &CashbookInput {
-            sort: sort("account", SortDirection::Asc),
+    let ups: Vec<i64> = by_amount(SortDirection::Asc)
+        .iter()
+        .map(|r| r.out_paisa.as_paisa())
+        .collect();
+    let mut expected = ups.clone();
+    expected.sort_unstable();
+    assert_eq!(ups, expected);
+    // Another column is sorted too (the slow path), without the running cash; the running cash is
+    // the day order, so it is not a column to sort by.
+    let by_type = cash_book(
+        &w,
+        CashbookInput {
+            sort: sort("posting_type", SortDirection::Asc),
             ..base.clone()
         },
-    )
-    .unwrap_err();
-    assert!(rejected_column(&bad));
+    );
+    assert_eq!(by_type.rows.len(), natural.rows.len());
+    assert!(by_type.rows.iter().all(|r| r.running_paisa.is_none()));
+    for column in ["running_paisa", "account"] {
+        let bad = cashbook::get(
+            &w.env.ctx,
+            &CashbookInput {
+                sort: sort(column, SortDirection::Asc),
+                ..base.clone()
+            },
+        )
+        .unwrap_err();
+        assert!(rejected_column(&bad), "{column}");
+    }
 
-    // Months over the whole range, oldest first; they add up to the totals.
+    // Months: the months THIS PAGE touches, each whole month.
     let monthly = |input: CashbookInput| {
         cash_book(
             &w,
@@ -1562,12 +1667,10 @@ fn the_cash_book_sorts_the_whole_range_keeps_the_true_running_cash_and_gives_mon
         )
     };
     let list = monthly(base.clone());
-    assert!(list.months.len() >= 2);
     assert_eq!(
         list.months.last().map(|m| m.month.as_str()),
         Some("2026-11")
     );
-    assert_eq!(list.months.last().map(|m| m.count), Some(1));
     assert_eq!(
         list.months.iter().map(|m| m.count).sum::<i64>(),
         list.total_count
@@ -1575,6 +1678,15 @@ fn the_cash_book_sorts_the_whole_range_keeps_the_true_running_cash_and_gives_mon
     let sum_of = |key: &str| -> i64 { list.months.iter().map(|m| month_figure(m, key)).sum() };
     assert_eq!(sum_of("in_paisa"), list.totals.in_paisa.as_paisa());
     assert_eq!(sum_of("out_paisa"), list.totals.out_paisa.as_paisa());
+    // The last row alone is in November: only that month, with the whole month's sums.
+    let last_page = monthly(CashbookInput {
+        offset: u32::try_from(natural.total_count - 1).unwrap(),
+        limit: 1,
+        ..base.clone()
+    });
+    assert_eq!(last_page.months.len(), 1);
+    assert_eq!(last_page.months[0].month, "2026-11");
+    assert_eq!(last_page.months[0].count, 1);
     // Newest first when sorted by the day, descending; none for another sort.
     let list = monthly(CashbookInput {
         sort: sort("entry_date", SortDirection::Desc),
@@ -1586,6 +1698,28 @@ fn the_cash_book_sorts_the_whole_range_keeps_the_true_running_cash_and_gives_mon
         ..base
     });
     assert!(list.months.is_empty());
+}
+
+#[test]
+fn a_cash_book_page_over_a_gap_has_headings_only_for_months_with_entries() {
+    let w = support::world();
+    advance_on(&w, "10-10-2026", w.rahim, "1,000", "");
+    set_today(&w.env, 2027, 1, 5);
+    advance_on(&w, "05-01-2027", w.rahim, "2,000", "");
+    // One page holds both rows: October and January, and no entry in the three months between.
+    let list = cash_book(
+        &w,
+        CashbookInput {
+            group_by_month: true,
+            ..CashbookInput::default()
+        },
+    );
+    let months: Vec<&str> = list.months.iter().map(|m| m.month.as_str()).collect();
+    assert_eq!(months, ["2026-10", "2027-01"]);
+    assert_eq!(
+        list.months.iter().map(|m| m.count).sum::<i64>(),
+        list.total_count
+    );
 }
 
 // ---- Ledgers of one partner, khata, person ----
@@ -1722,6 +1856,7 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     // ---- Money taken by a partner ----
     let takes = |input: PartnerTakesInput| partners::takes(&w.env.ctx, &input).unwrap();
     let take_base = PartnerTakesInput {
+        show_finished: true,
         partner_id: a,
         offset: 0,
         limit: 0,
@@ -1902,6 +2037,7 @@ fn the_ledger_lists_of_one_partner_khata_and_person_sort_and_give_months() {
     // ---- One person's loans ----
     let loans = |input: LentListInput| lent::list(&w.env.ctx, &input).unwrap();
     let lent_base = LentListInput {
+        show_finished: true,
         person_id: aslam,
         offset: 0,
         limit: 0,
@@ -2430,4 +2566,371 @@ fn the_lent_report_searches_and_sorts_over_every_person() {
     )
     .unwrap_err();
     assert!(rejected_column(&error));
+}
+
+// ---- Urdu alphabetical order (NFR-URD-19) ----
+
+#[test]
+fn urdu_names_sort_in_the_order_of_the_urdu_alphabet() {
+    use mandi_services::core::accounts::AccountType;
+    let w = support::world();
+    // ا ب پ ت ٹ is the Urdu order. As code points the order is ا ب ت ٹ پ, which is wrong.
+    let names = [
+        ("ٹیپو", "Tipu"),
+        ("پرویز", "Parvez"),
+        ("تنویر", "Tanvir"),
+        ("اسلم", "Aslam"),
+        ("بلال", "Bilal"),
+    ];
+    for (ur, en) in names {
+        support::add_account(&w.env, &w.owner, AccountType::Buyer, ur, en, true, "");
+    }
+    let mine: Vec<&str> = names.iter().map(|n| n.1).collect();
+    let listed = |direction| -> Vec<String> {
+        accounts::list(
+            &w.env.ctx,
+            &AccountsListInput {
+                filter: AccountFilter {
+                    kind: AccountListKind::Buyer,
+                    text: String::new(),
+                    include_inactive: false,
+                    has_opening: None,
+                },
+                offset: 0,
+                limit: 0,
+                sort: sort("name_ur", direction),
+            },
+        )
+        .unwrap()
+        .rows
+        .iter()
+        .map(|r| r.name_en.clone())
+        .filter(|n| mine.contains(&n.as_str()))
+        .collect()
+    };
+    assert_eq!(
+        listed(SortDirection::Asc),
+        ["Aslam", "Bilal", "Parvez", "Tanvir", "Tipu"]
+    );
+    assert_eq!(
+        listed(SortDirection::Desc),
+        ["Tipu", "Tanvir", "Parvez", "Bilal", "Aslam"]
+    );
+    // The learned pairs are sorted in memory with the same order.
+    for (ur, en) in names {
+        translit::learn(
+            &w.env.ctx,
+            &w.owner,
+            &NewPair {
+                roman: en.to_lowercase(),
+                urdu: ur.into(),
+                kind: Kind::Name,
+            },
+        )
+        .unwrap();
+    }
+    let (rows, _, _) = translit::list_page_with(
+        &w.env.ctx,
+        0,
+        0,
+        None,
+        sort("urdu", SortDirection::Asc).as_ref(),
+    )
+    .unwrap();
+    let urdu: Vec<&str> = rows.iter().map(|r| r.urdu.as_str()).collect();
+    assert_eq!(urdu, ["اسلم", "بلال", "پرویز", "تنویر", "ٹیپو"]);
+}
+
+#[test]
+fn a_fully_returned_take_or_loan_is_finished_and_the_totals_follow_the_rows_shown() {
+    let w = support::world();
+    let a = w.partners[0];
+    // Partner الف takes 2,000 and 500 on 10-10 and returns 2,000 on 11-05: the first take is
+    // returned in full (oldest first), the second is still open.
+    for (amount, reason) in [("2,000", "home"), ("500", "tea")] {
+        vouchers::save_personal_expense(
+            &w.env.ctx,
+            &w.owner,
+            &PersonalExpenseInput {
+                date: "10-10-2026".into(),
+                partner_id: Some(a),
+                amount: amount.into(),
+                reason: reason.into(),
+                return_by: None,
+                taken_by: None,
+                narration: None,
+                confirm_cash_below_zero: false,
+            },
+        )
+        .unwrap();
+    }
+    set_today(&w.env, 2026, 11, 5);
+    vouchers::save_personal_return(
+        &w.env.ctx,
+        &w.owner,
+        &PersonalReturnInput {
+            date: "05-11-2026".into(),
+            partner_id: Some(a),
+            amount: "2,000".into(),
+            narration: None,
+        },
+    )
+    .unwrap();
+    let takes = |show_finished: bool| {
+        partners::takes(
+            &w.env.ctx,
+            &PartnerTakesInput {
+                partner_id: a,
+                offset: 0,
+                limit: 0,
+                sort: None,
+                group_by_month: true,
+                show_finished,
+            },
+        )
+        .unwrap()
+    };
+    let open_only = takes(false);
+    assert_eq!(open_only.rows.len(), 1);
+    assert_eq!(open_only.total_count, 1);
+    assert_eq!(open_only.rows[0].amount_paisa.as_paisa(), 50_000);
+    // The totals are over the rows listed: only the open take.
+    assert_eq!(
+        (
+            open_only.totals.taken_paisa.as_paisa(),
+            open_only.totals.returned_paisa.as_paisa(),
+            open_only.totals.open_paisa.as_paisa()
+        ),
+        (50_000, 0, 50_000)
+    );
+    assert_eq!(
+        open_only.months.iter().map(|m| m.count).sum::<i64>(),
+        1,
+        "the months follow the rows"
+    );
+    let everything = takes(true);
+    assert_eq!(everything.rows.len(), 2);
+    assert_eq!(
+        (
+            everything.totals.taken_paisa.as_paisa(),
+            everything.totals.returned_paisa.as_paisa(),
+            everything.totals.open_paisa.as_paisa()
+        ),
+        (250_000, 200_000, 50_000)
+    );
+    // In both views the totals equal the sums of the rows.
+    for list in [&open_only, &everything] {
+        let sum = |f: fn(&mandi_services::core::expenses::TakeRow) -> i64| -> i64 {
+            list.rows.iter().map(f).sum()
+        };
+        assert_eq!(
+            sum(|r| r.amount_paisa.as_paisa()),
+            list.totals.taken_paisa.as_paisa()
+        );
+        assert_eq!(
+            sum(|r| r.returned_paisa.as_paisa()),
+            list.totals.returned_paisa.as_paisa()
+        );
+        assert_eq!(
+            sum(|r| r.open_paisa.as_paisa()),
+            list.totals.open_paisa.as_paisa()
+        );
+    }
+
+    // The same for the loans of one person.
+    let aslam = confirming(|words| {
+        lent::person_create(
+            &w.env.ctx,
+            &w.owner,
+            &LentPersonCreateInput {
+                name_ur: "اسلم".into(),
+                name_en: "Aslam".into(),
+                phone: None,
+                staff_id: None,
+                confirmed_rules_words: words.to_vec(),
+            },
+        )
+    })
+    .account
+    .id;
+    for (date, amount) in [("10-10-2026", "4,000"), ("05-11-2026", "1,000")] {
+        vouchers::save_money_lent(
+            &w.env.ctx,
+            &w.owner,
+            &mandi_services::core::lent::MoneyLentInput {
+                date: date.into(),
+                person_account_id: Some(aslam),
+                amount: amount.into(),
+                reason: "ضرورت".into(),
+                return_by: None,
+                narration: None,
+                confirm_cash_below_zero: false,
+            },
+        )
+        .unwrap();
+    }
+    vouchers::save_money_lent_return(
+        &w.env.ctx,
+        &w.owner,
+        &MoneyLentReturnInput {
+            date: "05-11-2026".into(),
+            person_account_id: Some(aslam),
+            amount: "4,000".into(),
+            mode: LentReturnMode::Cash,
+            salary_head_id: None,
+            narration: None,
+        },
+    )
+    .unwrap();
+    let loans = |show_finished: bool| {
+        lent::list(
+            &w.env.ctx,
+            &LentListInput {
+                person_id: aslam,
+                offset: 0,
+                limit: 0,
+                sort: None,
+                group_by_month: false,
+                show_finished,
+            },
+        )
+        .unwrap()
+    };
+    let open_loans = loans(false);
+    assert_eq!(open_loans.rows.len(), 1);
+    assert_eq!(
+        (
+            open_loans.totals.lent_paisa.as_paisa(),
+            open_loans.totals.returned_paisa.as_paisa(),
+            open_loans.totals.open_paisa.as_paisa()
+        ),
+        (100_000, 0, 100_000)
+    );
+    let all_loans = loans(true);
+    assert_eq!(all_loans.rows.len(), 2);
+    assert_eq!(
+        (
+            all_loans.totals.lent_paisa.as_paisa(),
+            all_loans.totals.returned_paisa.as_paisa(),
+            all_loans.totals.open_paisa.as_paisa()
+        ),
+        (500_000, 400_000, 100_000)
+    );
+    for list in [&open_loans, &all_loans] {
+        let lent_sum: i64 = list.rows.iter().map(|r| r.amount_paisa.as_paisa()).sum();
+        let returned_sum: i64 = list.rows.iter().map(|r| r.returned_paisa.as_paisa()).sum();
+        let open_sum: i64 = list.rows.iter().map(|r| r.open_paisa.as_paisa()).sum();
+        assert_eq!(
+            (lent_sum, returned_sum, open_sum),
+            (
+                list.totals.lent_paisa.as_paisa(),
+                list.totals.returned_paisa.as_paisa(),
+                list.totals.open_paisa.as_paisa()
+            )
+        );
+    }
+}
+
+// ---- The stock list and the advances report ----
+
+#[test]
+fn the_stock_list_searches_and_sorts_each_kind_and_the_totals_follow_the_search() {
+    let w = support::world();
+    // Three lots with goods left: 10 from Rahim (6 left), 20 from Karim (16), 15 from Rahim (11).
+    for (n, seller, item, qty) in [
+        (1, w.rahim, w.banana, "10"),
+        (2, w.karim, w.apple, "20"),
+        (3, w.rahim, w.apple, "15"),
+    ] {
+        let lot = support::with_sales(
+            support::bare_lot(&w, "lot-1", seller, item, qty),
+            vec![support::sale("s-1", w.akram, "4", &format!("{}", 600 + n))],
+        );
+        let mut draft: BikriDraft = support::draft(vec![lot]);
+        draft.header.truck_no = Some(format!("STK-{n}"));
+        bikri::save(
+            &w.env.ctx,
+            &w.owner,
+            &BikriSaveInput {
+                draft,
+                confirm_cash_below_zero: false,
+            },
+        )
+        .unwrap();
+    }
+    let read = |search: Option<&str>, sort_input: Option<SortInput>| {
+        bikri::stock_list(
+            &w.env.ctx,
+            &StockListInput {
+                search: search.map(str::to_owned),
+                sort: sort_input,
+                ..StockListInput::default()
+            },
+        )
+        .unwrap()
+    };
+    let balances = |list: &mandi_services::core::bikri::StockList| -> Vec<i64> {
+        list.rows.iter().map(|r| r.balance).collect()
+    };
+    assert_eq!(balances(&read(None, None)), [6, 16, 11]);
+    assert_eq!(
+        balances(&read(None, sort("balance", SortDirection::Desc))),
+        [16, 11, 6]
+    );
+    assert_eq!(
+        balances(&read(None, sort("balance", SortDirection::Asc))),
+        [6, 11, 16]
+    );
+    assert_eq!(
+        balances(&read(None, sort("number", SortDirection::Desc))),
+        [11, 16, 6]
+    );
+    // A search keeps the rows it names; the total follows it, and a number finds a بکری.
+    let karim = read(Some("karim"), None);
+    assert_eq!((karim.total_count, karim.balance_total), (1, 16));
+    let rahim = read(Some("Rahim"), None);
+    assert_eq!((rahim.total_count, rahim.balance_total), (2, 17));
+    let apples = read(Some("Apple"), None);
+    assert_eq!((apples.total_count, apples.balance_total), (2, 27));
+    assert_eq!(read(Some("3"), None).balance_total, 11);
+    assert_eq!(read(Some("%"), None).total_count, 0);
+    let error = bikri::stock_list(
+        &w.env.ctx,
+        &StockListInput {
+            sort: sort("truck_no", SortDirection::Asc),
+            ..StockListInput::default()
+        },
+    )
+    .unwrap_err();
+    assert!(rejected_column(&error));
+}
+
+#[test]
+fn the_advances_report_searches_and_its_totals_follow() {
+    let w = support::world();
+    advance_on(&w, "10-10-2026", w.rahim, "3,000", "");
+    advance_on(&w, "10-10-2026", w.karim, "1,000", "");
+    let read = |search: Option<&str>| {
+        vouchers::advances_report(
+            &w.env.ctx,
+            &AdvancesReportInput {
+                seller_id: None,
+                as_of: String::new(),
+                offset: 0,
+                limit: 0,
+                search: search.map(str::to_owned),
+            },
+        )
+        .unwrap()
+    };
+    let all = read(None);
+    assert_eq!((all.total_count, all.given_paisa.as_paisa()), (2, 400_000));
+    let karim = read(Some("karim"));
+    assert_eq!(
+        (karim.total_count, karim.given_paisa.as_paisa()),
+        (1, 100_000)
+    );
+    assert_eq!(karim.open_paisa.as_paisa(), 100_000);
+    assert_eq!(read(Some("رحیم")).given_paisa.as_paisa(), 300_000);
+    assert_eq!(read(Some("nobody")).total_count, 0);
 }

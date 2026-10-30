@@ -18,7 +18,7 @@ import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
-import { ErrorState, LoadingState, showToast } from '../../../shared/ui';
+import { ErrorState, LoadingState, showToast, FormAside } from '../../../shared/ui';
 import { vouchersPreview } from '../../vouchers';
 import { EntryBalances } from '../components/EntryBalances';
 import { EntryFrame } from '../components/EntryFrame';
@@ -135,20 +135,24 @@ function KhataEditor({ today, urlType }: { today: string; urlType: KhataType }) 
       formRef={formRef}
       below={<KhataListSection khataId={draft.khata?.id ?? null} />}
     >
-      <KhataForm draft={draft} onChange={change} error={error} />
-      <div className="flex flex-col gap-3">
-        <EntryBalances preview={preview} />
-        <EntryNotes warnings={preview?.warnings ?? []} cash={preview?.cash} />
-        {query.isError && entry !== null ? (
-          <ErrorState
-            title={<Localized id="cashbook-preview-failed" />}
-            error={uiErrorOf(query.error)}
-            onRetry={() => {
-              void query.refetch();
-            }}
-          />
-        ) : null}
-      </div>
+      <FormAside
+        form={<KhataForm draft={draft} onChange={change} error={error} />}
+        aside={
+          <>
+            <EntryBalances preview={preview} />
+            <EntryNotes warnings={preview?.warnings ?? []} cash={preview?.cash} />
+            {query.isError && entry !== null ? (
+              <ErrorState
+                title={<Localized id="cashbook-preview-failed" />}
+                error={uiErrorOf(query.error)}
+                onRetry={() => {
+                  void query.refetch();
+                }}
+              />
+            ) : null}
+          </>
+        }
+      />
     </EntryFrame>
   );
 }

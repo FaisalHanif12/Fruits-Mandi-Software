@@ -29,9 +29,9 @@ export type Cashbook = {
    */
   totals: CashbookTotals;
   /**
-   * The count and subtotals of each month of the whole range, in the order of the list, when
-   * asked with `group_by_month` and the list is in date order. Figures: `in_paisa` and
-   * `out_paisa`.
+   * The count and subtotals of the months THIS PAGE touches (each whole month, not only its rows
+   * on the page), in the order of the list, when asked with `group_by_month` and the list is in
+   * day order. Figures: `in_paisa` and `out_paisa`.
    */
   months: Array<MonthSubtotal>;
 };

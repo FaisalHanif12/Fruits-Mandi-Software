@@ -46,7 +46,11 @@ export function GardenEntryFieldsForm({
       <>
         <Field
           label={<Localized id="glossary-sell-date" />}
-          hint={<Localized id="gardens-arrival-sell-date-hint" />}
+          info={
+            <Localized id="gardens-arrival-sell-date-hint">
+              <p />
+            </Localized>
+          }
           error={fieldError(error, 'sell_date')}
         >
           {(props) => (
@@ -88,7 +92,11 @@ export function GardenEntryFieldsForm({
           <div className="col-span-2">
             <Field
               label={<Localized id="gardens-sale-arrival" />}
-              hint={<Localized id="gardens-sale-arrival-hint" />}
+              info={
+                <Localized id="gardens-sale-arrival-hint">
+                  <p />
+                </Localized>
+              }
               error={fieldError(error, 'arrival_id')}
             >
               {(props) => (
@@ -130,7 +138,11 @@ export function GardenEntryFieldsForm({
         </div>
         <Field
           label={<Localized id="gardens-sale-qty" />}
-          hint={<Localized id="gardens-sale-qty-hint" />}
+          info={
+            <Localized id="gardens-sale-qty-hint">
+              <p />
+            </Localized>
+          }
           error={fieldError(error, 'qty')}
         >
           {(props) => (
@@ -145,7 +157,11 @@ export function GardenEntryFieldsForm({
         </Field>
         <Field
           label={<Localized id="gardens-sale-amount" />}
-          hint={<Localized id="gardens-sale-amount-hint" />}
+          info={
+            <Localized id="gardens-sale-amount-hint">
+              <p />
+            </Localized>
+          }
           error={fieldError(error, 'amount')}
         >
           {(props) => (
@@ -179,7 +195,11 @@ export function GardenEntryFieldsForm({
     <>
       <Field
         label={<Localized id={costType ? 'gardens-cost-amount' : 'gardens-installment-amount'} />}
-        hint={<Localized id="gardens-payment-amount-hint" />}
+        info={
+          <Localized id="gardens-payment-amount-hint">
+            <p />
+          </Localized>
+        }
         error={fieldError(error, 'amount')}
       >
         {(props) => (
@@ -195,10 +215,12 @@ export function GardenEntryFieldsForm({
       <div className="col-span-2">
         <Field
           label={<Localized id="gardens-payment-reason" />}
-          hint={
+          info={
             <Localized
               id={costType ? 'gardens-cost-reason-hint' : 'gardens-installment-reason-hint'}
-            />
+            >
+              <p />
+            </Localized>
           }
           error={fieldError(error, 'reason')}
         >

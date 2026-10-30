@@ -94,7 +94,7 @@ export function NumbersStrip({
   return (
     <section
       aria-label={l10n.getString('bikri-strip-label')}
-      className="flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 rounded-3 border border-border bg-surface px-3 py-2"
+      className="flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 rounded-3 border border-border bg-surface px-3 py-1"
     >
       {showWhole ? (
         <StripRow label={lotCount > 1 ? <Localized id="bikri-summary-whole" /> : null} {...whole} />

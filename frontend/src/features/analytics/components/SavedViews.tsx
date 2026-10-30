@@ -9,15 +9,17 @@
 // backend in words, under the name field (an empty name, a name too long, a record that is gone).
 
 import { Localized, useLocalization } from '@fluent/react';
+import { Bookmark, Check, ChevronDown } from 'lucide-react';
+import { DropdownMenu } from 'radix-ui';
 import { useRef, useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
+import { useUiLanguage } from '../../../shared/i18n';
 import {
   Button,
   ConfirmDialog,
   Field,
   FormDialog,
   FreeTextInput,
-  Select,
   ErrorNotice,
   fieldError,
   showToast,
@@ -34,8 +36,12 @@ interface SavedViewsProps {
   onSaved: (name: string | null) => void;
 }
 
+const ITEM_CLASSES =
+  'type-body flex h-control cursor-pointer items-center gap-2 rounded-1 px-3 text-ink data-[highlighted]:bg-primary-soft data-[disabled]:cursor-default';
+
 export function SavedViews({ current, savedName, onOpen, onSaved }: SavedViewsProps) {
   const { l10n } = useLocalization();
+  const { language, direction } = useUiLanguage();
   const views = useSavedViews();
   const save = useSaveViews();
   const [naming, setNaming] = useState(false);
@@ -73,47 +79,74 @@ export function SavedViews({ current, savedName, onOpen, onSaved }: SavedViewsPr
   const fieldIndex = index === -1 ? list.length : index;
 
   return (
-    <div
-      role="group"
-      aria-label={l10n.getString('analytics-saved-label')}
-      className="flex flex-wrap items-end gap-3"
-    >
-      <Field label={<Localized id="analytics-saved-label" />}>
-        {(control) => (
-          <Select<string>
-            {...control}
-            value={savedName ?? undefined}
-            onChange={(chosen) => {
-              const found = list.find((saved) => saved.name === chosen);
-              if (found !== undefined) onOpen(found);
-            }}
-            options={list.map((saved) => ({ value: saved.name, label: saved.name }))}
-            placeholder={
-              <Localized id={list.length === 0 ? 'analytics-saved-none' : 'analytics-saved-open'} />
-            }
-          />
-        )}
-      </Field>
-      <Button
-        ref={saveButton}
-        onClick={() => {
-          setName(savedName ?? '');
-          save.reset();
-          setNaming(true);
-        }}
-      >
-        <Localized id="analytics-saved-save" />
-      </Button>
-      {savedName === null ? null : (
-        <Button
-          variant="danger"
-          onClick={() => {
-            setDeleting(true);
-          }}
+    <>
+      {/* The saved views are one menu button (plan 38): the views, then "save this view" and, when one
+          is open, "delete". Arrows, Enter and Esc work like any menu. */}
+      <DropdownMenu.Root dir={direction}>
+        <DropdownMenu.Trigger
+          ref={saveButton}
+          className="inline-flex h-control shrink-0 items-center gap-2 rounded-2 border border-border-control bg-surface px-4 type-control text-ink transition-calm"
         >
-          <Localized id="analytics-saved-delete" />
-        </Button>
-      )}
+          <Bookmark aria-hidden="true" className="size-icon-md" />
+          <Localized id="analytics-saved-label" />
+          {savedName === null ? null : (
+            <span className="rounded-2 bg-primary-soft px-2 text-primary">{savedName}</span>
+          )}
+          <ChevronDown aria-hidden="true" className="size-icon-md" />
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            lang={language}
+            align="end"
+            sideOffset={4}
+            className="z-50 min-w-nav max-w-form rounded-2 border border-border bg-surface p-1 shadow-overlay"
+          >
+            {list.length === 0 ? (
+              <DropdownMenu.Item disabled className={`${ITEM_CLASSES} text-ink-muted`}>
+                <Localized id="analytics-saved-none" />
+              </DropdownMenu.Item>
+            ) : (
+              list.map((saved) => (
+                <DropdownMenu.Item
+                  key={saved.name}
+                  className={ITEM_CLASSES}
+                  onSelect={() => {
+                    onOpen(saved);
+                  }}
+                >
+                  <span className="flex size-icon-md shrink-0 items-center justify-center">
+                    {saved.name === savedName ? (
+                      <Check aria-hidden="true" className="size-icon-md" />
+                    ) : null}
+                  </span>
+                  {saved.name}
+                </DropdownMenu.Item>
+              ))
+            )}
+            <DropdownMenu.Separator className="my-1 h-px bg-border" />
+            <DropdownMenu.Item
+              className={ITEM_CLASSES}
+              onSelect={() => {
+                setName(savedName ?? '');
+                save.reset();
+                setNaming(true);
+              }}
+            >
+              <Localized id="analytics-saved-save" />
+            </DropdownMenu.Item>
+            {savedName === null ? null : (
+              <DropdownMenu.Item
+                className={`${ITEM_CLASSES} text-due`}
+                onSelect={() => {
+                  setDeleting(true);
+                }}
+              >
+                <Localized id="analytics-saved-delete" />
+              </DropdownMenu.Item>
+            )}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
       {views.isError ? (
         <Localized id="analytics-saved-failed">
           <p role="alert" className="type-body text-due" />
@@ -177,6 +210,6 @@ export function SavedViews({ current, savedName, onOpen, onSaved }: SavedViewsPr
           );
         }}
       />
-    </div>
+    </>
   );
 }

@@ -598,6 +598,7 @@ fn the_eleventh_seller_is_00110_and_a_code_is_never_reused() {
                 kind: AccountListKind::Seller,
                 text: String::new(),
                 include_inactive: false,
+                has_opening: None,
             },
             offset: 0,
             limit: 0,
@@ -842,6 +843,7 @@ fn the_list_has_the_columns_and_the_footer_of_fr_10_5() {
                     kind,
                     text: text.into(),
                     include_inactive: inactive,
+                    has_opening: None,
                 },
                 offset: 0,
                 limit: 0,
@@ -1734,6 +1736,7 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
                 kind: AccountListKind::All,
                 text: String::new(),
                 include_inactive: true,
+                has_opening: None,
             },
             offset: 0,
             limit: 0,
@@ -1770,6 +1773,7 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
                 kind: AccountListKind::Buyer,
                 text: String::new(),
                 include_inactive: true,
+                has_opening: None,
             },
             offset: 5,
             limit: 3,
@@ -2198,6 +2202,7 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
                     kind,
                     text: String::new(),
                     include_inactive: false,
+                    has_opening: None,
                 },
                 offset: 0,
                 limit: 0,
@@ -2269,6 +2274,7 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
                 kind: AccountListKind::Every,
                 text: "cash".into(),
                 include_inactive: false,
+                has_opening: None,
             },
             offset: 0,
             limit: 0,
@@ -2333,4 +2339,88 @@ fn an_account_that_is_not_in_the_list_still_opens_and_saves_from_the_chart() {
         assert_eq!(saved.phone1, "03001234567");
         assert_eq!(saved.version, row.version + 1);
     }
+}
+
+#[test]
+fn the_opening_filter_lists_the_accounts_that_can_take_an_opening_and_have_none() {
+    // Plan 38 (PRD FR-10.9): the Opening balances screen opens on "no opening yet".
+    let (_dir, env, owner) = ready();
+    let rahim = seller(&env, &owner, "رحیم", "Rahim");
+    buyer(&env, &owner, "اکرم ٹول ٹیکس", "Akram Toll Tax");
+    buyer(&env, &owner, "ارشد ملتانی", "Arshad Multani");
+    let arshad = account_id(&env, "0021");
+    let list = |has_opening: Option<bool>| {
+        accounts::list(
+            &env.ctx,
+            &AccountsListInput {
+                sort: None,
+                filter: AccountFilter {
+                    kind: AccountListKind::Every,
+                    text: String::new(),
+                    include_inactive: false,
+                    has_opening,
+                },
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    let codes = |l: &mandi_services::core::accounts::AccountsList| -> Vec<String> {
+        l.rows.iter().map(|r| r.code.clone()).collect()
+    };
+    let none_yet = list(Some(false));
+    let names = codes(&none_yet);
+    // Cash, the capital account and the people can take an opening.
+    for code in ["01010001", "06010001", "0010", "0020", "0021"] {
+        assert!(names.contains(&code.to_owned()), "{code} is missing");
+    }
+    // Income, ابتدائی فرق, نقدی منڈی and the two پختہ کھاتہ accounts never can.
+    for code in ["04010001", "06019999", "03040000", "0030", "0031"] {
+        assert!(!names.contains(&code.to_owned()), "{code} cannot take one");
+    }
+    // The SQL and `can_take_opening` say the same: this is the whole list, less the rows that
+    // cannot take an opening or already have one.
+    let every = list(None);
+    let expected: Vec<String> = every
+        .rows
+        .iter()
+        .filter(|r| {
+            r.can_take_opening
+                && r.opening_dr_paisa.as_paisa() == 0
+                && r.opening_cr_paisa.as_paisa() == 0
+        })
+        .map(|r| r.code.clone())
+        .collect();
+    assert_eq!(names, expected);
+    assert_eq!(none_yet.total_dr_paisa.as_paisa(), 0);
+    assert_eq!(none_yet.total_cr_paisa.as_paisa(), 0);
+
+    // Two openings are entered: those two accounts move from "none yet" to "has one".
+    let grid = OpeningsInput {
+        lines: vec![
+            line(&env, rahim.id, "31-08-2026", "15,000", "", true),
+            line(&env, arshad, "31-08-2026", "", "3000", false),
+        ],
+    };
+    accounts::openings_save(&env.ctx, &owner, &grid).unwrap();
+    let after = list(Some(false));
+    let names_after = codes(&after);
+    assert!(!names_after.contains(&"0010".to_owned()) && !names_after.contains(&"0021".to_owned()));
+    assert_eq!(after.count, none_yet.count - 2);
+    let with = list(Some(true));
+    assert_eq!(codes(&with), ["0010", "0021"]);
+    assert_eq!(with.total_dr_paisa.as_paisa(), 1_500_000);
+    assert_eq!(with.total_cr_paisa.as_paisa(), 300_000);
+    // The three lists add up to the whole list: with an opening, without, and the accounts that
+    // cannot take one.
+    let cannot = every.rows.iter().filter(|r| !r.can_take_opening).count();
+    let all = list(None);
+    assert_eq!(
+        usize::try_from(with.count + after.count).unwrap() + cannot,
+        usize::try_from(all.count).unwrap()
+    );
+    // The totals of the whole list are the totals of the accounts with an opening.
+    assert_eq!(all.total_dr_paisa, with.total_dr_paisa);
+    assert_eq!(all.total_cr_paisa, with.total_cr_paisa);
 }

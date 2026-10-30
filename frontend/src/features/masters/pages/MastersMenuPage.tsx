@@ -1,5 +1,6 @@
 // The انڈکس menu (PRD FR-5.2, 10.3): the nine master lists, one big card each. ↑ ↓ move between
-// them, Enter opens one. The accounts and the commission rules join it in plans 07 and 09.
+// them, Enter opens one. The cards are two columns in every window width (plan 38), so the whole
+// menu is about one screen at 1024 x 600.
 
 import { Localized } from '@fluent/react';
 import { Link } from '@tanstack/react-router';
@@ -42,7 +43,7 @@ type MenuCardProps = {
 function MenuCard(props: MenuCardProps) {
   const { icon: Icon, titleId, helpId } = props;
   const className =
-    'flex min-h-control items-center gap-4 rounded-3 border border-border bg-surface p-4';
+    'flex min-h-control items-center gap-3 rounded-3 border border-border bg-surface p-3';
   const body = (
     <>
       <span className="flex size-badge shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
@@ -77,7 +78,7 @@ export function MastersMenuPage() {
     ref.current?.querySelector<HTMLElement>('[data-nav-item]')?.focus();
   }, []);
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <Localized id="masters-menu-title">
           <h1 className="type-title" />
@@ -86,7 +87,7 @@ export function MastersMenuPage() {
           <p className="type-body text-ink-muted" />
         </Localized>
       </div>
-      <nav ref={ref} onKeyDown={onKeyDown} className="grid grid-cols-1 gap-3 normal:grid-cols-2">
+      <nav ref={ref} onKeyDown={onKeyDown} className="grid grid-cols-2 gap-3">
         {STATIC_ENTRIES.map(({ to, icon: Icon, titleId, helpId }) => (
           <MenuCard key={to} to={to} icon={Icon} titleId={titleId} helpId={helpId} />
         ))}

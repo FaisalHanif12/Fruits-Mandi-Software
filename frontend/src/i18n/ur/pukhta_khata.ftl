@@ -88,3 +88,7 @@ pukhta-make-regular-help = اس شخص کا نام اور فون یہاں بھر
 
 # review: pending
 pukhta-make-regular-done = کھاتہ بن گیا اور بقایا اس میں منتقل ہو گیا
+
+# The hint inside the search box of the register (the name, the phone, the item or the sale number).
+# review: pending
+pukhta-search-placeholder = نام، فون، قسم مال یا بکری نمبر لکھیں

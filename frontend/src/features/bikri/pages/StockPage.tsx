@@ -18,7 +18,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { StockListInput } from '../../../bindings/StockListInput';
 import type { StockRow } from '../../../bindings/StockRow';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, Pager, type ListContext } from '../../../shared/grid';
+import {
+  ListGrid,
+  ListRegion,
+  Pager,
+  listHeightMode,
+  type ListContext,
+} from '../../../shared/grid';
 import { useFocusFirstField } from '../../../shared/hooks';
 import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
@@ -30,6 +36,8 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FilterBar,
+  ListPage,
   LoadingState,
   Picker,
   type PickerValue,
@@ -41,9 +49,6 @@ import { UndoWriteOffDialog, WriteOffDialog } from '../components/stock/WriteOff
 import { useStockList } from '../hooks/useBikriReads';
 import { STOCK_SCREEN, stockChoicesFrom, stockChoicesText } from '../remember';
 import { STOCK_COLUMNS } from '../stock-columns';
-
-/** A list with more rows than this fills the room and scrolls inside; shorter ones are as tall as their rows. */
-const SHORT_LIST_ROWS = 30;
 
 /** Text or nothing: an empty filter is sent as no limit. */
 function textOrNull(text: string): string | null {
@@ -64,10 +69,12 @@ function StockBody({ saved, remember }: MemoryProps) {
   const [seller, setSeller] = useState<PickerValue | null>(start.seller);
   const [item, setItem] = useState<PickerValue | null>(start.item);
   const [includeWrittenOff, setIncludeWrittenOff] = useState(start.includeWrittenOff);
+  // The seller, the item or the number of a lot (the backend's `search`).
+  const [search, setSearch] = useState('');
   useEffect(() => {
     remember(stockChoicesText({ from, to, seller, item, includeWrittenOff }));
   }, [from, to, seller, item, includeWrittenOff, remember]);
-  const filter: Omit<StockListInput, 'offset' | 'limit'> = {
+  const filter: Omit<StockListInput, 'offset' | 'limit' | 'sort'> = {
     date: null,
     from: textOrNull(from),
     to: textOrNull(to),
@@ -75,6 +82,7 @@ function StockBody({ saved, remember }: MemoryProps) {
     item_id: item?.id ?? null,
     include_written_off: includeWrittenOff,
     lot_id: null,
+    search: textOrNull(search),
   };
   const list = useStockList(filter);
   // Every page loaded so far: the lots, then the firm's own goods. The first page carries the
@@ -84,7 +92,13 @@ function StockBody({ saved, remember }: MemoryProps) {
   const ownRows = list.data?.pages.flatMap((page) => page.own_rows) ?? [];
   const gardenRows = list.data?.pages.flatMap((page) => page.garden_rows) ?? [];
   const containerRef = useFocusFirstField<HTMLDivElement>();
-  const noFilter = filter.from === null && filter.to === null && seller === null && item === null;
+  const moreSet = [seller !== null, item !== null].filter(Boolean).length;
+  const noFilter =
+    filter.from === null &&
+    filter.to === null &&
+    seller === null &&
+    item === null &&
+    filter.search === null;
 
   // The lot that has focus in the list. If it leaves the list (sold out), the first row is used.
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -159,6 +173,7 @@ function StockBody({ saved, remember }: MemoryProps) {
               setTo('');
               setSeller(null);
               setItem(null);
+              setSearch('');
             }}
           >
             <Localized id="bikri-list-clear" />
@@ -171,20 +186,27 @@ function StockBody({ saved, remember }: MemoryProps) {
       <>
         {rows.length === 0 ? null : (
           <>
-            <ListGrid<StockRow>
-              columns={columns}
-              rows={rows}
-              getRowId={(row) => String(row.lot_id)}
-              labelId="bikri-stock-label"
-              onOpen={sell}
-              onFocusRow={(rowId) => {
-                setSelectedId(Number(rowId));
-              }}
-              focusRowId={selectedId === null ? null : String(selectedId)}
-              heightMode={rows.length <= SHORT_LIST_ROWS ? 'auto' : 'fill'}
-              isInactive={(row) => row.balance <= 0}
-              totals={totals}
-            />
+            <ListRegion rowCount={rows.length}>
+              <ListGrid<StockRow>
+                columns={columns}
+                rows={rows}
+                getRowId={(row) => String(row.lot_id)}
+                labelId="bikri-stock-label"
+                onOpen={sell}
+                onFocusRow={(rowId) => {
+                  setSelectedId(Number(rowId));
+                }}
+                focusRowId={selectedId === null ? null : String(selectedId)}
+                heightMode={listHeightMode(rows.length)}
+                isInactive={(row) => row.balance <= 0}
+                totals={totals}
+                sort={{ value: list.sort, onChange: list.setSort }}
+              />
+            </ListRegion>
+            {/* The page buttons stay right under the list, and the card of the lot under them. */}
+            <div className="shrink-0">
+              <Pager pager={list.pager} />
+            </div>
             {selected === null ? null : (
               <StockLotCard
                 row={selected}
@@ -207,63 +229,76 @@ function StockBody({ saved, remember }: MemoryProps) {
         {gardenRows.length === 0 || first === undefined ? null : (
           <GardenStockSection rows={gardenRows} list={first} />
         )}
-        <Pager pager={list.pager} />
+        {rows.length === 0 ? <Pager pager={list.pager} /> : null}
       </>
     );
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <Localized id="layout-module-stock">
-          <h1 className="type-title" />
-        </Localized>
+    <ListPage
+      titleId="layout-module-stock"
+      help={
         <Localized id="bikri-stock-help">
-          <p className="type-body text-ink-muted" />
+          <p />
         </Localized>
-      </div>
-      <div
-        ref={containerRef}
-        {...formNavigationProps}
-        className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4"
-      >
-        <Field label={<Localized id="bikri-stock-from" />}>
-          {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
-        </Field>
-        <Field label={<Localized id="bikri-stock-to" />}>
-          {(control) => <DateInput {...control} value={to} onChange={setTo} />}
-        </Field>
-        <Field label={<Localized id="glossary-beopari" />}>
-          {(control) => (
-            <AccountPicker
-              {...control}
-              canAdd={false}
-              scope="seller"
-              showCard={false}
-              value={seller}
-              onChange={setSeller}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="glossary-qism-maal" />}>
-          {(control) => (
-            <Picker
-              {...control}
-              canAdd={false}
-              scope="item"
-              value={item}
-              onChange={(hit) => {
-                setItem(hit);
-              }}
-            />
-          )}
-        </Field>
-      </div>
-      <Checkbox
-        checked={includeWrittenOff}
-        onChange={setIncludeWrittenOff}
-        label={<Localized id="bikri-stock-include-written-off" />}
-      />
+      }
+      filters={
+        <div ref={containerRef} {...formNavigationProps}>
+          <FilterBar
+            screen="bikri.stock"
+            search={{
+              value: search,
+              onChange: setSearch,
+              placeholderId: 'bikri-stock-search-placeholder',
+            }}
+            moreSet={moreSet}
+            more={
+              <>
+                <Field label={<Localized id="glossary-beopari" />}>
+                  {(control) => (
+                    <AccountPicker
+                      {...control}
+                      canAdd={false}
+                      scope="seller"
+                      showCard={false}
+                      value={seller}
+                      onChange={setSeller}
+                    />
+                  )}
+                </Field>
+                <Field label={<Localized id="glossary-qism-maal" />}>
+                  {(control) => (
+                    <Picker
+                      {...control}
+                      canAdd={false}
+                      scope="item"
+                      value={item}
+                      onChange={(hit) => {
+                        setItem(hit);
+                      }}
+                    />
+                  )}
+                </Field>
+              </>
+            }
+            extra={
+              <Checkbox
+                checked={includeWrittenOff}
+                onChange={setIncludeWrittenOff}
+                label={<Localized id="bikri-stock-include-written-off" />}
+              />
+            }
+          >
+            <Field label={<Localized id="bikri-stock-from" />}>
+              {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
+            </Field>
+            <Field label={<Localized id="bikri-stock-to" />}>
+              {(control) => <DateInput {...control} value={to} onChange={setTo} />}
+            </Field>
+          </FilterBar>
+        </div>
+      }
+    >
       {body}
       <WriteOffDialog
         row={writeOffRow}
@@ -277,6 +312,6 @@ function StockBody({ saved, remember }: MemoryProps) {
           setUndoRow(null);
         }}
       />
-    </div>
+    </ListPage>
   );
 }

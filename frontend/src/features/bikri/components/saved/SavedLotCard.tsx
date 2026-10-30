@@ -132,72 +132,76 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
         </span>
       }
     >
-      <dl className="grid grid-cols-3 gap-x-4 gap-y-3 normal:grid-cols-4">
-        <Fact label={<Localized id="glossary-qism-maal" />}>{displayName(lot.item, language)}</Fact>
-        <Fact label={<Localized id="glossary-packing" />}>
-          {displayName(lot.packing, language)}
-        </Fact>
-        <Fact label={<Localized id="bikri-col-qty-received" />}>
-          <Num>{String(lot.qty_received)}</Num>
-        </Fact>
-        <Fact label={<Localized id="bikri-saved-qty-sold" />}>
-          <Num>{String(lot.qty_sold)}</Num>
-        </Fact>
-        {lot.qty_written_off === 0 ? null : (
-          <Fact label={<Localized id="bikri-saved-qty-written-off" />}>
-            <Num>{String(lot.qty_written_off)}</Num>
+      <div className="@container min-w-0">
+        <dl className="grid grid-cols-3 gap-x-4 gap-y-3 @form3:grid-cols-4">
+          <Fact label={<Localized id="glossary-qism-maal" />}>
+            {displayName(lot.item, language)}
           </Fact>
-        )}
-        {lot.qty_taken === 0 ? null : (
-          <Fact label={<Localized id="bikri-saved-qty-taken" />}>
-            <Num>{String(lot.qty_taken)}</Num>
+          <Fact label={<Localized id="glossary-packing" />}>
+            {displayName(lot.packing, language)}
           </Fact>
-        )}
-        {purchase === null ? null : (
-          <Fact label={<Localized id="bikri-saved-purchase" />}>
-            <LinkButton
-              onClick={() => {
-                void navigate({
-                  to: '/trips/$id',
-                  params: { id: String(purchase.trip_id) },
-                  search: { purchase: purchase.id },
-                });
-              }}
-            >
-              <Localized
-                id="bikri-saved-purchase-open"
-                vars={{
-                  number: purchaseNumberText(purchase.number, (id, vars) =>
-                    l10n.getString(id, vars),
-                  ),
-                  trip: purchase.trip_code,
+          <Fact label={<Localized id="bikri-col-qty-received" />}>
+            <Num>{String(lot.qty_received)}</Num>
+          </Fact>
+          <Fact label={<Localized id="bikri-saved-qty-sold" />}>
+            <Num>{String(lot.qty_sold)}</Num>
+          </Fact>
+          {lot.qty_written_off === 0 ? null : (
+            <Fact label={<Localized id="bikri-saved-qty-written-off" />}>
+              <Num>{String(lot.qty_written_off)}</Num>
+            </Fact>
+          )}
+          {lot.qty_taken === 0 ? null : (
+            <Fact label={<Localized id="bikri-saved-qty-taken" />}>
+              <Num>{String(lot.qty_taken)}</Num>
+            </Fact>
+          )}
+          {purchase === null ? null : (
+            <Fact label={<Localized id="bikri-saved-purchase" />}>
+              <LinkButton
+                onClick={() => {
+                  void navigate({
+                    to: '/trips/$id',
+                    params: { id: String(purchase.trip_id) },
+                    search: { purchase: purchase.id },
+                  });
                 }}
-              />
-            </LinkButton>
-          </Fact>
-        )}
-        {lot.arrival === null ? null : (
-          <Fact label={<Localized id="glossary-maal-aaya" />}>
-            <LinkButton
-              onClick={() => {
-                // The garden screen: the entry sits in its list.
-                void navigate({
-                  to: '/gardens/$id',
-                  params: { id: String(lot.arrival?.garden_id ?? 0) },
-                });
-              }}
-            >
-              <Localized
-                id="bikri-saved-arrival-open"
-                vars={{ number: lot.arrival.number, garden: lot.arrival.garden_code }}
-              />
-            </LinkButton>
-          </Fact>
-        )}
-        {lot.marka_text === null ? null : (
-          <Fact label={<Localized id="glossary-marka" />}>{lot.marka_text}</Fact>
-        )}
-      </dl>
+              >
+                <Localized
+                  id="bikri-saved-purchase-open"
+                  vars={{
+                    number: purchaseNumberText(purchase.number, (id, vars) =>
+                      l10n.getString(id, vars),
+                    ),
+                    trip: purchase.trip_code,
+                  }}
+                />
+              </LinkButton>
+            </Fact>
+          )}
+          {lot.arrival === null ? null : (
+            <Fact label={<Localized id="glossary-maal-aaya" />}>
+              <LinkButton
+                onClick={() => {
+                  // The garden screen: the entry sits in its list.
+                  void navigate({
+                    to: '/gardens/$id',
+                    params: { id: String(lot.arrival?.garden_id ?? 0) },
+                  });
+                }}
+              >
+                <Localized
+                  id="bikri-saved-arrival-open"
+                  vars={{ number: lot.arrival.number, garden: lot.arrival.garden_code }}
+                />
+              </LinkButton>
+            </Fact>
+          )}
+          {lot.marka_text === null ? null : (
+            <Fact label={<Localized id="glossary-marka" />}>{lot.marka_text}</Fact>
+          )}
+        </dl>
+      </div>
       {lot.own === null ? null : (
         <div className="flex flex-col gap-1">
           <Localized id="bikri-saved-own-title">

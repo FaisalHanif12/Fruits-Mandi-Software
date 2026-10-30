@@ -271,7 +271,7 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
         for row in &page.rows {
             in_sum = in_sum.checked_add(row.in_paisa).unwrap();
             out_sum = out_sum.checked_add(row.out_paisa).unwrap();
-            last = row.running_paisa;
+            last = row.running_paisa.unwrap();
             seen += 1;
         }
         offset += 3;
@@ -283,7 +283,7 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
     );
     assert_eq!(last, all.closing_paisa);
     // The pages together are the rows of the single big page, with the same running cash.
-    let running: Vec<Paisa> = all.rows.iter().map(|r| r.running_paisa).collect();
+    let running: Vec<Paisa> = all.rows.iter().map(|r| r.running_paisa.unwrap()).collect();
     assert_eq!(running.last().copied(), Some(rupees(58_484)));
     // The shop expense shows the account of its head and its voucher number.
     let expense_row = all
@@ -407,6 +407,7 @@ fn e2e_29_a_partner_returns_2000_and_the_take_shows_fully_returned() {
         partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                show_finished: true,
                 group_by_month: false,
                 sort: None,
                 partner_id: a,
@@ -546,6 +547,7 @@ fn open_of_person(w: &support::World, person: i64) -> i64 {
     lent::list(
         &w.env.ctx,
         &LentListInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             person_id: person,
@@ -743,6 +745,7 @@ fn a_partner_take_past_its_return_by_day_is_in_the_attention_data() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             partner_id: w.partners[1],

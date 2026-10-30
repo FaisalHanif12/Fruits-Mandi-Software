@@ -10,11 +10,11 @@ import type { RuleDraft, RuleFilter } from './types';
 const RULES_KEY = ['rules'] as const;
 
 /** The rules for the filter, page by page, with the count and the totals of the whole filter. */
-export function useRuleList(filter: RuleFilter) {
+export function useRuleList(filter: RuleFilter, search: string | null = null) {
   return usePagedQuery({
     screen: 'rules.list',
-    queryKey: [...RULES_KEY, 'list', filter],
-    fetchPage: (offset, limit) => rulesList(filter, offset, limit),
+    queryKey: [...RULES_KEY, 'list', filter, search],
+    fetchPage: (offset, limit, sort) => rulesList(filter, offset, limit, { search, sort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,

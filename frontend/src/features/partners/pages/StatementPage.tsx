@@ -15,7 +15,8 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { ScrollText } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
@@ -23,17 +24,20 @@ import { SHORTCUTS, formNavigationProps, useEscape } from '../../../shared/keybo
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
-  Card,
-  DateInput,
   EmptyState,
   ErrorState,
   Fact,
   Field,
+  FilterBar,
+  FormSpan,
+  ListPage,
   Num,
+  PeriodBox,
   Select,
 } from '../../../shared/ui';
 import { SignedNum } from '../../cashbook';
 import { PagedList } from '../../../shared/grid';
+import { usePeriod } from '../../../shared/hooks';
 import { usePartnerList } from '../hooks';
 import { usePartnerStatement } from '../money-hooks';
 import { STATEMENT_SCREEN, statementChoicesFrom, statementChoicesText } from '../remember';
@@ -52,6 +56,11 @@ export function StatementPage() {
     <Remembered screen={STATEMENT_SCREEN}>{(memory) => <StatementBody {...memory} />}</Remembered>
   );
 }
+
+/** The month of a statement line, `YYYY-MM`: the statement is in date order. */
+const LINE_MONTH_OF = (row: StatementRow) => row.line.entry_date.slice(0, 7);
+/** The backend names the subtotal of a month like the field of its totals. */
+const LINE_MONTH_COLUMNS = { amount_paisa: 'amount', running_paisa: 'running' } as const;
 
 function StatementBody({ saved, remember }: MemoryProps) {
   const { l10n } = useLocalization();
@@ -75,18 +84,32 @@ function StatementBody({ saved, remember }: MemoryProps) {
       : statementChoicesFrom(saved),
   );
   const [partnerId, setPartnerId] = useState(start.partnerId);
-  const [from, setFrom] = useState(start.from);
-  const [to, setTo] = useState(start.to);
+  const day = useDayStatus();
+  // The statement opens on this year, and "from the first date" is one choice of the period box. Days
+  // in the address (the dashboard's partner card) win over what was kept, once, when it opens.
+  const period = usePeriod('partners.statement', 'year', day.data?.today);
+  const { change: changePeriod } = period;
+  const applied = useRef(false);
   useEffect(() => {
-    remember(statementChoicesText({ partnerId, from, to }));
-  }, [partnerId, from, to, remember]);
+    if (applied.current) return;
+    applied.current = true;
+    if (start.from !== '' || start.to !== '') {
+      changePeriod({ kind: 'custom', from: start.from, to: start.to });
+    }
+  }, [changePeriod, start.from, start.to]);
+  useEffect(() => {
+    remember(statementChoicesText({ partnerId, from: '', to: '' }));
+  }, [partnerId, remember]);
   useEscape('leave', () => {
     void navigate({ to: '/partners' });
   });
 
   const id = partnerId === '' ? null : Number(partnerId);
-  const range = useMemo(() => ({ from: textOrNull(from), to: textOrNull(to) }), [from, to]);
-  const statement = usePartnerStatement(id, range);
+  const range = useMemo(
+    () => ({ from: textOrNull(period.range.from), to: textOrNull(period.range.to) }),
+    [period.range.from, period.range.to],
+  );
+  const statement = usePartnerStatement(id, range, true, period.ready);
   const first = statement.data?.pages[0];
   const lines = useMemo(
     () =>
@@ -101,16 +124,14 @@ function StatementBody({ saved, remember }: MemoryProps) {
   );
 
   return (
-    <div className="flex max-w-page flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="partners-statement-title">
-            <h1 className="sr-only normal:not-sr-only normal:type-title" />
-          </Localized>
-          <Localized id="partners-statement-help">
-            <p className="hidden type-body text-ink-muted normal:block" />
-          </Localized>
-        </div>
+    <ListPage
+      titleId="partners-statement-title"
+      help={
+        <Localized id="partners-statement-help">
+          <p />
+        </Localized>
+      }
+      actions={
         <Button
           shortcut={SHORTCUTS.back}
           onClick={() => {
@@ -119,87 +140,92 @@ function StatementBody({ saved, remember }: MemoryProps) {
         >
           <Localized id="common-back" />
         </Button>
-      </div>
-      <Card compact>
-        <div
-          {...formNavigationProps}
-          className="grid grid-cols-1 items-end gap-4 normal:grid-cols-3"
-        >
-          {partners.isError ? (
-            <ErrorState
-              title={<Localized id="cashbook-partners-failed" />}
-              error={uiErrorOf(partners.error)}
-              onRetry={() => {
-                void partners.refetch();
-              }}
-            />
-          ) : (
-            <Field label={<Localized id="cashbook-field-partner" />}>
-              {(props) => (
-                <Select
-                  {...props}
-                  readOnly={props.readOnly === true || partners.isPending}
-                  value={partnerId === '' ? undefined : partnerId}
-                  onChange={setPartnerId}
-                  options={(partners.data ?? []).map((partner) => ({
-                    value: String(partner.id),
-                    label: displayName(partner, language),
-                  }))}
+      }
+      filters={
+        <div {...formNavigationProps}>
+          {/* The three filters are one row: the partner, and the period with "from the first date" among
+              its choices (plan 38 R4). */}
+          <FilterBar screen="partners.statement">
+            {partners.isError ? (
+              <FormSpan>
+                <ErrorState
+                  title={<Localized id="cashbook-partners-failed" />}
+                  error={uiErrorOf(partners.error)}
+                  onRetry={() => {
+                    void partners.refetch();
+                  }}
                 />
-              )}
-            </Field>
-          )}
-          <Field label={<Localized id="cashbook-filter-from" />}>
-            {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
-          </Field>
-          <Field label={<Localized id="cashbook-filter-to" />}>
-            {(control) => <DateInput {...control} value={to} onChange={setTo} />}
-          </Field>
+              </FormSpan>
+            ) : (
+              <Field label={<Localized id="cashbook-field-partner" />}>
+                {(props) => (
+                  <Select
+                    {...props}
+                    readOnly={props.readOnly === true || partners.isPending}
+                    value={partnerId === '' ? undefined : partnerId}
+                    onChange={setPartnerId}
+                    options={(partners.data ?? []).map((partner) => ({
+                      value: String(partner.id),
+                      label: displayName(partner, language),
+                    }))}
+                  />
+                )}
+              </Field>
+            )}
+            {period.ready ? <PeriodBox period={period} /> : null}
+          </FilterBar>
         </div>
-        {first === undefined ? null : (
-          <dl className="grid grid-cols-2 gap-4 normal:grid-cols-4">
-            <Fact label={<Localized id="partners-statement-opening" />}>
-              <SignedNum paisa={first.opening_total_paisa} />
-            </Fact>
-            <Fact label={<Localized id="partners-statement-plus" />}>
-              <Num paisa={first.totals.plus_paisa} />
-            </Fact>
-            <Fact label={<Localized id="partners-statement-minus" />}>
-              <Num paisa={first.totals.minus_paisa} />
-            </Fact>
-            <Fact label={<Localized id="partners-statement-closing" />}>
-              <SignedNum paisa={first.closing_total_paisa} />
-            </Fact>
-          </dl>
-        )}
-        {id === null ? (
-          <EmptyState
-            icon={ScrollText}
-            title={<Localized id="partners-statement-pick" />}
-            help={<Localized id="partners-statement-pick-help" />}
-          />
-        ) : (
-          <PagedList
-            columns={columns}
-            rows={lines}
-            getRowId={(row) => row.id}
-            labelId="partners-statement-label"
-            failedId="partners-statement-failed"
-            error={statement.isError ? uiErrorOf(statement.error) : null}
-            onRetry={() => {
-              void statement.refetch();
-            }}
-            pager={statement.pager}
-            empty={
-              <EmptyState
-                icon={ScrollText}
-                title={<Localized id="partners-statement-empty" />}
-                help={<Localized id="partners-statement-empty-help" />}
-              />
-            }
-          />
-        )}
-      </Card>
-    </div>
+      }
+    >
+      {first === undefined ? null : (
+        <dl className="grid shrink-0 grid-cols-2 gap-4 normal:grid-cols-4">
+          <Fact label={<Localized id="partners-statement-opening" />}>
+            <SignedNum paisa={first.opening_total_paisa} />
+          </Fact>
+          <Fact label={<Localized id="partners-statement-plus" />}>
+            <Num paisa={first.totals.plus_paisa} />
+          </Fact>
+          <Fact label={<Localized id="partners-statement-minus" />}>
+            <Num paisa={first.totals.minus_paisa} />
+          </Fact>
+          <Fact label={<Localized id="partners-statement-closing" />}>
+            <SignedNum paisa={first.closing_total_paisa} />
+          </Fact>
+        </dl>
+      )}
+      {id === null ? (
+        <EmptyState
+          icon={ScrollText}
+          title={<Localized id="partners-statement-pick" />}
+          help={<Localized id="partners-statement-pick-help" />}
+        />
+      ) : (
+        <PagedList
+          columns={columns}
+          rows={lines}
+          getRowId={(row) => row.id}
+          labelId="partners-statement-label"
+          failedId="partners-statement-failed"
+          error={statement.isError ? uiErrorOf(statement.error) : null}
+          onRetry={() => {
+            void statement.refetch();
+          }}
+          pager={statement.pager}
+          sort={{ value: statement.sort, onChange: statement.setSort }}
+          months={
+            first === undefined
+              ? undefined
+              : { months: first.months, monthOf: LINE_MONTH_OF, columnOf: LINE_MONTH_COLUMNS }
+          }
+          empty={
+            <EmptyState
+              icon={ScrollText}
+              title={<Localized id="partners-statement-empty" />}
+              help={<Localized id="partners-statement-empty-help" />}
+            />
+          }
+        />
+      )}
+    </ListPage>
   );
 }

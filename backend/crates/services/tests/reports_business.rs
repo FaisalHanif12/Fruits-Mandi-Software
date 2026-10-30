@@ -506,6 +506,8 @@ fn r30_and_r28_write_nothing_and_print_in_both_languages() {
             let data = print_data(
                 w.env.ctx.db(),
                 &ReportPrintInput {
+                    group_by_month: false,
+                    sort: None,
                     id,
                     filters: ReportFilters::default(),
                     language,
@@ -523,6 +525,8 @@ fn r30_and_r28_write_nothing_and_print_in_both_languages() {
     let en = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R30,
             filters: ReportFilters::default(),
             language: Language::En,
@@ -537,6 +541,8 @@ fn r30_and_r28_write_nothing_and_print_in_both_languages() {
     let month = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R28,
             filters: ReportFilters::default(),
             language: Language::En,
@@ -560,6 +566,8 @@ fn r30_and_r28_write_nothing_and_print_in_both_languages() {
     let day = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R28,
             filters: by_day(),
             language: Language::Ur,

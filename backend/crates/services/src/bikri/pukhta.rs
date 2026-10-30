@@ -422,7 +422,7 @@ fn sort_rows(rows: &mut [PukhtaRegisterRow], column: &str, direction: SortDirect
         },
         "bikri_number" => |a, b| a.bikri_number.cmp(&b.bikri_number),
         "side" => |a, b| (a.side as u8).cmp(&(b.side as u8)),
-        "name_ur" => |a, b| a.name_ur.cmp(&b.name_ur),
+        "name_ur" => |a, b| crate::page::urdu_compare(&a.name_ur, &b.name_ur),
         "name_en" => |a, b| a.name_en.to_lowercase().cmp(&b.name_en.to_lowercase()),
         "phone" => |a, b| a.phone.cmp(&b.phone),
         "item" => |a, b| a.item.code.cmp(&b.item.code),

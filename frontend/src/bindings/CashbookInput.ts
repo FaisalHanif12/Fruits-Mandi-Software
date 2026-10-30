@@ -24,8 +24,8 @@ export type CashbookInput = {
   limit: number;
   /**
    * The column to sort the whole range by: `entry_date`, `posting_type`, `number`, `narration`,
-   * `in_paisa`, `out_paisa` or `running_paisa`. Null is by day and entry (plan 38 R4). A sorted
-   * row still shows its true running cash of the natural order.
+   * `in_paisa` or `out_paisa`. Null is by day and entry, oldest first (plan 38 R4). Only the day
+   * order (either way) has the running cash: for any other column `running_paisa` is null.
    */
   sort: SortInput | null;
   /**

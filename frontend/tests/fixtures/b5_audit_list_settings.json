@@ -9,6 +9,7 @@
     "user": null
   },
   "limit": 100,
+  "months": [],
   "offset": 0,
   "rows": [
     {

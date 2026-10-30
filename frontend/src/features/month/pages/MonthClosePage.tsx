@@ -18,7 +18,7 @@ import { useState } from 'react';
 import type { MonthRow } from '../../../bindings/MonthRow';
 import { uiErrorOf } from '../../../shared/api';
 import { useEscape } from '../../../shared/keyboard';
-import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { EmptyState, ErrorState, InfoHint, LoadingState } from '../../../shared/ui';
 import { MonthClosedCard } from '../components/MonthClosedCard';
 import { MonthListGrid } from '../components/MonthListGrid';
 import { MonthPreviewCard } from '../components/MonthPreviewCard';
@@ -55,13 +55,15 @@ export function MonthClosePage() {
   }
   const rows = list.data.rows;
   const header = (
-    <div className="flex flex-col gap-1">
+    <div className="flex items-center gap-1">
       <Localized id="month-title">
         <h1 className="type-title" />
       </Localized>
-      <Localized id="month-help">
-        <p className="max-w-reading type-body text-ink-muted" />
-      </Localized>
+      <InfoHint>
+        <Localized id="month-help">
+          <p />
+        </Localized>
+      </InfoHint>
     </div>
   );
   if (rows.length === 0) {
@@ -80,7 +82,7 @@ export function MonthClosePage() {
   const opened = firstMonth(rows, picked ?? search.month);
   const row = rows.find((candidate) => candidate.month === opened);
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 short:gap-2">
       {header}
       <MonthListGrid rows={rows} selected={opened} onOpen={setPicked} />
       {row === undefined ? null : row.state === 'closed' ? (

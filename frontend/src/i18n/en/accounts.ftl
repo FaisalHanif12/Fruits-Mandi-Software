@@ -383,3 +383,31 @@ accounts-similar-duplicate-title = This account may already exist
 # A word on the row of that account, so colour is never the only signal.
 # review: pending
 accounts-similar-duplicate-chip = Same name, tag and phone
+
+# What the opening balances list shows: the accounts that still need one, those that have one, or all.
+# review: pending
+openings-show-label = Show
+
+# review: pending
+openings-show-without = No opening balance yet
+
+# review: pending
+openings-show-with = With an opening balance
+
+# review: pending
+openings-show-all = All accounts
+
+# review: pending
+openings-none-without = No account is waiting for an opening balance
+
+# review: pending
+openings-none-without-help = Every account already has one, or there are no accounts yet. Choose "All accounts" to see them.
+
+# review: pending
+openings-none-with = No account has an opening balance yet
+
+# review: pending
+openings-none-with-help = Choose "No opening balance yet" to write the first ones.
+
+# review: pending
+openings-show-all-button = Show all accounts

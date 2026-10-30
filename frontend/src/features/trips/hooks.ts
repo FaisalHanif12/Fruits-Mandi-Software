@@ -70,7 +70,14 @@ function tripsListQuery(settled: Omit<TripsListInput, 'offset' | 'limit' | 'sort
   return {
     queryKey: [...TRIPS_KEY, 'list', settled],
     fetchPage: (offset: number, limit: number, sort: SortInput | null = null) =>
-      tripsList({ ...settled, offset, limit, sort }),
+      tripsList({
+        ...settled,
+        offset,
+        limit,
+        sort,
+        // Month rows only while the list is in date order.
+        group_by_month: settled.group_by_month && (sort === null || sort.column === 'entry_date'),
+      }),
     rowsIn: (page: { rows: readonly unknown[] }) => page.rows.length,
     totalOf: (page: { total_count: number }) => page.total_count,
     keepPrevious: true,
@@ -81,9 +88,12 @@ function tripsListQuery(settled: Omit<TripsListInput, 'offset' | 'limit' | 'sort
  * The trips for the filters, one page at a time, with the totals over the whole filter (PRD
  * FR-19.11). The first page carries the count and the totals.
  */
-export function useTripsList(filter: Omit<TripsListInput, 'offset' | 'limit' | 'sort'>) {
+export function useTripsList(
+  filter: Omit<TripsListInput, 'offset' | 'limit' | 'sort'>,
+  enabled = true,
+) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return usePagedQuery({ screen: 'trips.list', ...tripsListQuery(settled) });
+  return usePagedQuery({ screen: 'trips.list', ...tripsListQuery(settled), enabled });
 }
 
 /** Every trip of the filter, page after page, for a choice list (`useLoadRest`). */

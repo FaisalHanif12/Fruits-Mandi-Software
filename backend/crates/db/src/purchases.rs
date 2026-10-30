@@ -737,8 +737,8 @@ pub fn totals(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Totals
     Ok(out)
 }
 
-/// The count of each month of the filter (the day bought) with the total cost, the cost left and
-/// the نگ left of the saved ones, oldest month first, in one grouped query (plan 38 R4). The
+/// The count of each month of the filter (the day bought) with the total cost, the cost released
+/// and the نگ left of the saved ones (the cost left is worked out by the caller, in Rust), oldest month first, in one grouped query (plan 38 R4). The
 /// result and the commission need the sales, so they are in the page and the totals only.
 ///
 /// # Errors
@@ -752,7 +752,7 @@ pub fn list_months(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<V
         "p.entry_date",
         &[
             "CASE WHEN p.status = 'saved' THEN p.total_cost_paisa ELSE 0 END",
-            "CASE WHEN p.status = 'saved' THEN p.total_cost_paisa - p.cost_released_paisa ELSE 0 END",
+            "CASE WHEN p.status = 'saved' THEN p.cost_released_paisa ELSE 0 END",
             "CASE WHEN p.status = 'saved' THEN p.qty - p.qty_sold - p.qty_written_off ELSE 0 END",
         ],
         &binds,

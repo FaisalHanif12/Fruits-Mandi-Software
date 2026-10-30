@@ -486,3 +486,15 @@ analytics-view-k-help = The fruit taken for each partner (or the shop's { -mehma
 
 # review: pending
 analytics-chart-k = Fruit taken from our shop and from other shops
+
+## The bar of the rows beyond the biggest ten in a chart (plan 38 R4).
+
+# review: pending
+analytics-chart-others = Others
+
+# The button that folds the charts of a view, and the one that shows them again.
+# review: pending
+analytics-chart-hide = Hide the chart
+
+# review: pending
+analytics-chart-show = Show the chart

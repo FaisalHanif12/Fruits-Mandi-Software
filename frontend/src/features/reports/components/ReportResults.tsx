@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import type { ReportFilterKind } from '../../../bindings/ReportFilterKind';
 import type { ReportPage } from '../../../bindings/ReportPage';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
+import { ListGrid, ListRegion, Pager, listHeightMode, useListPaging } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, Notice } from '../../../shared/ui';
 import { reportColumns, signedColumnsOf, totalsFor, type ReportRowView } from '../columns';
@@ -18,8 +18,8 @@ import type { useReportPages } from '../hooks';
 import { ReportRange } from './ReportRange';
 import { ReportSummary } from './ReportSummary';
 
-/** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
-const SHORT_LIST_ROWS = 30;
+/** The reports with a running balance: it shows in date order only (plan 38 R4). */
+const BALANCE_REPORTS: ReadonlySet<string> = new Set(['R12', 'R13', 'R14']);
 
 interface ReportResultsProps {
   /** The filter boxes the report takes, so the line under them knows what to say. */
@@ -54,9 +54,14 @@ export function ReportResults({
   const last = pages?.at(-1);
   const rows = useMemo<ReportRowView[] | undefined>(
     () =>
-      pages?.flatMap((page) =>
-        page.rows.map((row, index) => ({ key: String(page.offset + index), row })),
-      ),
+      pages?.flatMap((page) => [
+        // A page that starts in the middle of a group has the group's heading above its first row,
+        // with the totals of the WHOLE group (plan 38 R4).
+        ...(page.group_above === null
+          ? []
+          : [{ key: `above-${String(page.offset)}`, row: page.group_above }]),
+        ...page.rows.map((row, index) => ({ key: String(page.offset + index), row })),
+      ]),
     [pages],
   );
   const step = useLayoutStep();
@@ -81,7 +86,14 @@ export function ReportResults({
     return <LoadingState />;
   }
 
-  const long = rows.length > SHORT_LIST_ROWS;
+  // The running balance of a ledger or a day book needs the date order: sorted by another column the
+  // backend leaves the balance cells empty and the screen says why (plan 38 R4).
+  const dateKey = last.columns.find((column) => column.kind === 'date')?.key;
+  const balanceNote =
+    BALANCE_REPORTS.has(last.id) &&
+    query.sort !== null &&
+    dateKey !== undefined &&
+    query.sort.column !== dateKey;
   // The party day sheet (R35) is laid out like the client's own slip: its lines first, and what the
   // day comes to underneath, right under them (PRD FR-19.12). Every other report has its figures
   // above the table.
@@ -109,7 +121,7 @@ export function ReportResults({
   } else {
     body = (
       <>
-        <div className={long ? 'h-list-region' : undefined}>
+        <ListRegion rowCount={rows.length}>
           <ListGrid<ReportRowView>
             columns={columns}
             rows={rows}
@@ -118,9 +130,11 @@ export function ReportResults({
             onOpen={onOpen}
             onFocusRow={onFocusRow}
             focusRowId={focusRowId}
-            heightMode={long ? 'fill' : 'auto'}
+            heightMode={listHeightMode(rows.length)}
             paging={paging}
-            isGroup={(view) => view.row.kind === 'group'}
+            sort={{ value: query.sort, onChange: query.setSort }}
+            // A group heading and a month heading read stronger and open nothing.
+            isGroup={(view) => view.row.kind !== 'normal'}
             totals={(context) =>
               totalsFor(
                 last.columns,
@@ -130,21 +144,32 @@ export function ReportResults({
               )
             }
           />
-        </div>
+        </ListRegion>
         {/* The slip's footer sits right under its lines, like the client's own (PRD FR-19.12). */}
-        {sheet ? <ReportSummary lines={last.summary} /> : null}
-        <Pager pager={query.pager} />
-        <Localized id="report-open-hint">
-          <p className="type-body text-ink-muted" />
-        </Localized>
+        {sheet ? <ReportSummary lines={last.summary} card /> : null}
+        <div className="shrink-0">
+          <Pager pager={query.pager} />
+        </div>
       </>
     );
   }
 
+  // The days of the report and its summary lines are one strip under the filters (plan 38).
+  const showsRange = takes.includes('as_of') || takes.includes('date_range');
+  const showsStrip = showsRange || (!sheet && last.summary.length > 0);
   return (
-    <div className="flex flex-col gap-4" aria-busy={query.isFetching}>
-      <ReportRange filters={last.filters} takes={takes} day={sheet} />
-      {sheet ? null : <ReportSummary lines={last.summary} />}
+    <div className="flex min-h-0 flex-1 flex-col gap-2" aria-busy={query.isFetching}>
+      {showsStrip ? (
+        <div className="flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 rounded-3 border border-border bg-surface px-3 py-2">
+          <ReportRange filters={last.filters} takes={takes} day={sheet} />
+          {sheet ? null : <ReportSummary lines={last.summary} />}
+        </div>
+      ) : null}
+      {balanceNote ? (
+        <Notice tone="info">
+          <Localized id="report-balance-date-order-only" />
+        </Notice>
+      ) : null}
       {body}
     </div>
   );

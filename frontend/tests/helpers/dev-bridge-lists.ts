@@ -321,6 +321,7 @@ export const listsHandlers: Record<string, Handler> = {
       offset,
       limit,
       total_count: all.length,
+      months: [],
     };
   },
   partners_list: () => {

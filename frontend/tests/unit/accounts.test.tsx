@@ -101,6 +101,18 @@ afterEach(() => {
   leaveAppWindow();
 });
 
+/** Opens a part of the account form that starts shut (plan 38): the credit part, the more part. */
+async function openSection(
+  user: ReturnType<typeof userEvent.setup>,
+  language: Language,
+  id: string,
+) {
+  const heading = message(language, id);
+  await user.click(
+    await screen.findByRole('button', { name: (name) => visible(name).startsWith(heading) }),
+  );
+}
+
 describe.each(LANGUAGES)('the account list (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
@@ -208,7 +220,7 @@ describe.each(LANGUAGES)('the account list (%s)', (language) => {
       expect(rowIds()).toEqual(['21', '31', '41']);
     });
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
-      { kind: 'all', text: '', include_inactive: true },
+      { kind: 'all', text: '', include_inactive: true, has_opening: null },
       0,
       PAGE_ROWS,
     );
@@ -404,6 +416,8 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
       await screen.findByRole('option', { name: named(message(language, 'accounts-type-seller')) }),
     );
     expect(credit()).not.toBeInTheDocument();
+    // The default mark is in the "more" part, which starts shut.
+    await openSection(user, language, 'accounts-section-more');
     expect(
       await screen.findByRole('combobox', {
         name: named(message(language, 'accounts-field-marka')),
@@ -414,6 +428,8 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
   it('a new buyer starts with credit allowed ticked (PRD 10.2)', async () => {
     fakeAccounts([]);
     await renderApp('/index/accounts/new');
+    // The credit part starts shut and opens with its heading.
+    await openSection(userEvent.setup(), language, 'accounts-section-credit');
     expect(
       await screen.findByRole('checkbox', {
         name: named(message(language, 'accounts-field-credit-allowed')),
@@ -549,6 +565,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     fakeAccounts([buyer]);
     await renderApp('/index/accounts/23');
     const user = userEvent.setup();
+    await openSection(user, language, 'accounts-section-more');
     await user.click(await labelled(language, 'accounts-field-note'));
     await user.keyboard('x');
     press('F10');
@@ -585,6 +602,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     fakeAccounts([plain]);
     await renderApp('/index/accounts/24');
     const user = userEvent.setup();
+    await openSection(user, language, 'accounts-section-more');
     await user.click(await labelled(language, 'accounts-field-note'));
     await user.keyboard('x');
     press('F10');

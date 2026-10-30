@@ -174,14 +174,11 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
         ],
       });
     });
-    const summary = await screen.findByRole('heading', {
-      name: named(message(language, 'openings-summary-title')),
-    });
-    const panel = summary.closest('section');
+    // The one line under the filters holds what will be saved and the backend's figures.
     await waitFor(() => {
-      expect(visible(panel?.textContent)).toContain('5,000');
+      expect(visible(document.body.textContent)).toContain('5,000');
     });
-    const words = visible(panel?.textContent);
+    const words = visible(document.body.textContent);
     expect(words).toContain('2,500');
     expect(words).toContain(message(language, 'openings-changed', { count: '2' }));
     // Debit 65,000 + 15,000 + 5,000 and credit 2,500: the difference is the backend's, 82,500 credit.
@@ -253,10 +250,15 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
       const { user } = await open([...ROWS]);
       expect(text(61, 'opening_date')).toBe('');
       expect(cell(61, 'opening_dr').getAttribute('aria-readonly') ?? '').not.toBe('false');
-      // The help line says why a row is locked.
-      expect(visible(document.body.textContent)).toContain(
-        message(language, 'openings-locked-help'),
+      // The help behind the ⓘ of the title says why a row is locked.
+      await user.click(
+        screen.getAllByRole('button', { name: named(message(language, 'common-info-label')) })[0] ??
+          document.body,
       );
+      expect(
+        await screen.findByText(named(message(language, 'openings-locked-help'))),
+      ).toBeVisible();
+      await user.keyboard('{Escape}');
       // Typing on a locked cell changes nothing.
       await user.click(cell(61, 'opening_dr'));
       await user.keyboard('5000');
@@ -367,10 +369,29 @@ describe.each(LANGUAGES)('the opening balances grid (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('with no accounts it says why and offers to make one', async () => {
+  it('opens on the accounts without an opening balance, and says so when none is waiting', async () => {
     fakeAccounts([]);
     await renderApp('/index/openings');
+    expect(await screen.findByText(message(language, 'openings-none-without'))).toBeInTheDocument();
+    // The first asking carries the filter: only accounts that can take an opening and have none.
+    expect(vi.mocked(accountApi.accountsList).mock.calls[0]?.[0]).toMatchObject({
+      kind: 'every',
+      has_opening: false,
+    });
+  });
+
+  it('with no accounts at all it says why and offers to make one, once all accounts are chosen', async () => {
+    fakeAccounts([]);
+    await renderApp('/index/openings');
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole('button', { name: message(language, 'openings-show-all-button') }),
+      );
     expect(await screen.findByText(message(language, 'openings-empty'))).toBeInTheDocument();
+    expect(vi.mocked(accountApi.accountsList).mock.calls.at(-1)?.[0]).toMatchObject({
+      has_opening: null,
+    });
     expect(
       within(document.body).getByRole('button', {
         name: new RegExp(message(language, 'accounts-new')),

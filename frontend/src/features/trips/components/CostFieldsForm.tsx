@@ -20,7 +20,11 @@ export function CostFieldsForm({ fields, amount, onChange, error }: CostFieldsFo
     <>
       <Field
         label={<Localized id="trips-cost-amount" />}
-        hint={<Localized id="trips-cost-amount-hint" />}
+        info={
+          <Localized id="trips-cost-amount-hint">
+            <p />
+          </Localized>
+        }
         error={fieldError(error, 'amount')}
       >
         {(props) => (
@@ -36,7 +40,11 @@ export function CostFieldsForm({ fields, amount, onChange, error }: CostFieldsFo
       <div className="col-span-2">
         <Field
           label={<Localized id="trips-cost-reason" />}
-          hint={<Localized id="trips-cost-reason-hint" />}
+          info={
+            <Localized id="trips-cost-reason-hint">
+              <p />
+            </Localized>
+          }
           error={fieldError(error, 'reason')}
         >
           {(props) => (

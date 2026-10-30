@@ -8,7 +8,17 @@ import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
-import { named, openBook } from '../helpers/bikri-screen';
+import { previewFor } from '../helpers/bikri-data';
+import {
+  cellOf,
+  focusedIn,
+  lotsGrid,
+  named,
+  names,
+  openBook,
+  typeHeaderAndLot,
+  type User,
+} from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -103,3 +113,108 @@ describe.each(LANGUAGES)('the header of the sale book (%s)', (language) => {
     expect(again).toHaveDisplayValue(/^4,?000$/);
   });
 });
+
+// In a short window the header folds to one summary line while the user types in the lots or the sale
+// lines (tech lead, plan 38). The test window has no height, so the rule `short:` does not apply: what
+// is tested is the screen's own part of it. The summary is in the page, the real fields stay in the
+// page and in the Tab order, focus opens it at once, and a problem or the same-truck notice keeps it open.
+describe.each(LANGUAGES)(
+  'the header folds to one line while the lines are typed (%s)',
+  (language) => {
+    beforeEach(() => {
+      resetClientState(language);
+      signedIn(sessionUser({ language }));
+    });
+
+    const summary = () =>
+      document.querySelector<HTMLElement>('button[aria-hidden="true"][tabindex="-1"]');
+    const dateField = () =>
+      screen.getByRole('textbox', { name: named(message(language, 'bikri-header-date')) });
+
+    /** The header and the lot typed, the same-truck notice answered, the cursor in the lots. */
+    async function inTheLots(user: User) {
+      await typeHeaderAndLot(user, language);
+      await user.click(
+        await screen.findByRole('button', {
+          name: named(message(language, 'bikri-truck-continue')),
+        }),
+      );
+      await user.click(cellOf(lotsGrid(language), 0, 'seller'));
+    }
+
+    it('is open at the start and folds when the cursor goes to the lots; the fields stay in the page', async () => {
+      const { user } = await openBook(language);
+      expect(summary()).toBeNull();
+      await inTheLots(user);
+      await waitFor(() => {
+        expect(summary()).not.toBeNull();
+      });
+      // The summary says the four daily values as text.
+      const words = visible(summary()?.textContent);
+      expect(words).toContain('LES-1234');
+      expect(words).toContain(names(language).rahim);
+      expect(words).toContain(names(language).swat);
+      // The real fields are still in the page, in the same order: the date is the first one.
+      expect(dateField()).toBeInTheDocument();
+    });
+
+    it('stays open while the same-truck notice asks a question', async () => {
+      const { user } = await openBook(language);
+      await typeHeaderAndLot(user, language);
+      expect(
+        await screen.findByRole('button', {
+          name: named(message(language, 'bikri-truck-continue')),
+        }),
+      ).toBeInTheDocument();
+      expect(summary()).toBeNull();
+    });
+
+    it('opens at once when the cursor comes back into a header field, and folds again when it leaves', async () => {
+      const { user } = await openBook(language);
+      await inTheLots(user);
+      await waitFor(() => {
+        expect(summary()).not.toBeNull();
+      });
+      await user.click(dateField());
+      await waitFor(() => {
+        expect(summary()).toBeNull();
+      });
+      expect(document.activeElement).toBe(dateField());
+      // Enter walks on through the header to the lots as before (date, truck, زمیندار, اڈا) and it folds.
+      await user.keyboard('{Enter}{Enter}{Enter}{Enter}');
+      await waitFor(() => {
+        expect(focusedIn(lotsGrid(language))).not.toBeNull();
+      });
+      await waitFor(() => {
+        expect(summary()).not.toBeNull();
+      });
+    });
+
+    it('a click on the summary line puts the cursor in the date field and opens the header', async () => {
+      const { user } = await openBook(language);
+      await inTheLots(user);
+      await waitFor(() => {
+        expect(summary()).not.toBeNull();
+      });
+      const line = summary();
+      if (line === null) throw new Error('no summary');
+      await user.click(line);
+      await waitFor(() => {
+        expect(summary()).toBeNull();
+      });
+      expect(document.activeElement).toBe(dateField());
+    });
+
+    it('stays open while the backend points at a header field', async () => {
+      const { user } = await openBook(language, (draft) => ({
+        ...previewFor(draft),
+        errors: [{ code: 'ERR_DATE_INVALID', field: 'header.entry_date', values: {} }],
+      }));
+      await inTheLots(user);
+      expect(
+        await screen.findByText((text) => visible(text) === message(language, 'err-date-invalid')),
+      ).toBeInTheDocument();
+      expect(summary()).toBeNull();
+    });
+  },
+);

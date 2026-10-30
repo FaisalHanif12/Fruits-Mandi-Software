@@ -104,11 +104,11 @@ describe.each(LANGUAGES)('a list with sorting and month rows (%s)', (language: L
     });
     await user.click(await title());
     await waitFor(() => {
-      expect(calls.at(-1)).toEqual({ column: 'name', direction: 'asc' });
+      expect(calls.at(-1)).toEqual({ column: 'name', direction: 'asc', language });
     });
     await user.click(await title());
     await waitFor(() => {
-      expect(calls.at(-1)).toEqual({ column: 'name', direction: 'desc' });
+      expect(calls.at(-1)).toEqual({ column: 'name', direction: 'desc', language });
     });
     await user.click(await title());
     await waitFor(() => {

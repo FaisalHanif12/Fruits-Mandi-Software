@@ -42,7 +42,7 @@ export { ReportPersonPicker } from './components/ReportPersonPicker';
 export { ReportPartnerSelect } from './components/ReportPartnerSelect';
 export { PrintPreviewFrame } from './components/PrintPreviewFrame';
 export { usePrintJob } from './components/usePrintJob';
-export { LANGUAGE_VALUES, isReportAddress, paperOf, readJsonObject } from './print/params';
+export { LANGUAGE_VALUES, isReportAddress, paperOf, readJsonObject, sortOf } from './print/params';
 export { ReportPrintPage } from './print/ReportPrintPage';
 export {
   ReportPrintDocument,

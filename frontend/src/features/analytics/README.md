@@ -18,12 +18,14 @@ nothing (FR-18.8) except the user's list of saved views.
   When a window cannot hold every column of A, B, C or H, a line says "8 of 9 columns fit" and a
   button swaps in the columns that were waiting (the average rate of E2E-11 at 1,366 px), so every
   column of PRD 18.2 can be read on screen. The choice is kept in `store.ts`.
-- `chart.ts` and `components/AnalyticsChart.tsx`: the chart above each table, drawn from its own
-  query, `useAnalyticsChart` (the first 100 rows of the view in its own order, never the page, the
-  rows per page or the order of the table; plan 38 D1, until the backend sends a chart series of the
-  whole filter), through `shared/charts`. Each bar carries the
-  figure the backend sent (`cellText`); the heights are numbers for the drawing only
-  (`chartValueOfPaisa`). The chart shows the first ten rows and says so when it cut.
+- `chart.ts` and `components/AnalyticsChart.tsx`: the charts above each table, drawn from the
+  `charts` the backend sends with every page (plan 38 R4): they cover the whole filter and never
+  change with the page or the sort. A ranked chart is bars with an `others` bar for the rest, a trend
+  is one group of bars for each period, view H has one chart for each section (named by it), views F
+  and K have none. They are drawn through `shared/charts`. Each bar carries the figure the backend sent
+  (`cellText`); the heights are numbers for the drawing only (`chartValueOfPaisa`). A button folds the
+  charts (kept for the screen); in a window not higher than 800 (1366 x 768 and 1024 x 600) they start
+  folded, so the table, its totals and its page buttons are in view.
 - `components/AnalyticsResults.tsx`: the table one page at a time (the shared pager) with the backend's
   totals over the whole filter, the four states, the days covered (and the days compared with), the window buttons.
 - Drill-down (FR-18.2): Enter or a double click on a figure sends the row's key (and the column's

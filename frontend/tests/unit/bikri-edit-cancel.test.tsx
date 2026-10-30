@@ -35,6 +35,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { openInfo } from '../helpers/info';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
@@ -450,7 +451,9 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
 
     it('shows the lot and the day read-only and only the lines of that entry', async () => {
       fakePlan16();
-      await openLater();
+      const { user } = await openLater();
+      // The line of help is behind the ⓘ of the title (plan 38 G5).
+      await openInfo(user, language, message(language, 'bikri-edit-title', { number: 1 }));
       expect(pageText()).toContain(
         message(language, 'bikri-edit-help-later', { date: '10-10-2026' }),
       );

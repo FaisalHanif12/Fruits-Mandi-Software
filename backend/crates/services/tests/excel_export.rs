@@ -124,6 +124,8 @@ fn export_to(w: &support::World, id: ReportId, language: Language, dir: &Path) -
     let done = export_report(
         w.env.ctx.db(),
         &ReportExportInput {
+            group_by_month: false,
+            sort: None,
             id,
             filters: day_filters(w, id),
             language,
@@ -427,6 +429,7 @@ fn check_view(w: &support::World, view: AnalyticsView, language: Language, dir: 
     export_analytics(
         w.env.ctx.db(),
         &AnalyticsExportInput {
+            sort: None,
             view,
             filters: AnalyticsFilters::default(),
             language,
@@ -515,6 +518,8 @@ fn a_bad_path_or_filter_is_refused_with_its_field_and_leaves_no_file() {
         export_report(
             w.env.ctx.db(),
             &ReportExportInput {
+                group_by_month: false,
+                sort: None,
                 id: ReportId::R18,
                 filters: ReportFilters::default(),
                 language: Language::En,
@@ -549,6 +554,8 @@ fn a_bad_path_or_filter_is_refused_with_its_field_and_leaves_no_file() {
     let result = export_report(
         w.env.ctx.db(),
         &ReportExportInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R11,
             filters: ReportFilters {
                 from: "not a date".into(),

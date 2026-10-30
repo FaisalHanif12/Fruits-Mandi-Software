@@ -2284,7 +2284,7 @@ fn the_voucher_commands_work_through_the_ipc() {
     );
     let listed = h.ok(
         "vouchers_list",
-        json!({ "input": { "voucher_type": "receipt", "from": "", "to": "", "account_id": akram, "person_key": null } }),
+        json!({ "input": { "voucher_type": "receipt", "from": "", "to": "", "account_id": akram, "person_key": null, "show_finished": true } }),
     );
     assert_eq!(listed["rows"].as_array().unwrap().len(), 2);
     // Printing needs Windows.

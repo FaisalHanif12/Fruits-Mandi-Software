@@ -157,33 +157,45 @@ describe.each(LANGUAGES)('the partner overview with the real answers (%s)', (lan
     vi.mocked(partnersApi.partnersOverview).mockResolvedValue(real.OVERVIEW);
   });
 
-  const cardOf = async (name: string) => {
-    const heading = await screen.findByText(name);
-    const card = heading.closest('section');
-    if (!(card instanceof HTMLElement)) throw new Error('no card');
-    return card;
+  /** The row of a partner in the overview table, and the row of his other figures once "More columns" is on. */
+  const rowOf = async (name: string) => {
+    const cell = await screen.findByText(name);
+    const row = cell.closest('tr');
+    if (!(row instanceof HTMLElement)) throw new Error('no row');
+    return row;
+  };
+  const moreOf = (row: HTMLElement) => {
+    const id = row.getAttribute('data-partner');
+    const more = document.querySelector<HTMLElement>(`tr[data-partner-more="${String(id)}"]`);
+    if (more === null) throw new Error('no more row');
+    return more;
   };
 
   it('shows the figures of E2E-37 and E2E-35 for each partner, with the total in the due colour when minus', async () => {
-    await renderApp('/partners');
+    const { user } = await renderApp('/partners').then((app) => ({
+      ...app,
+      user: userEvent.setup(),
+    }));
     await screen.findByRole('heading', {
       level: 1,
       name: named(message(language, 'partners-title')),
     });
-    const a = await cardOf(nameOf(language, 'الف', 'Partner A'));
     // The real fixture of the backend: A took 2,000 and has -1,620 in all; B has 50,284; C 284.
-    expect(visible(a.textContent)).toContain('2,000');
-    const total = within(a)
-      .getByText(named(message(language, 'partners-metric-total')))
-      .closest('div')
-      ?.querySelector('dd');
+    // The total is the first figure of the row, in the due colour when it is minus.
+    const a = await rowOf(nameOf(language, 'الف', 'Partner A'));
+    const total = within(a).getAllByRole('cell')[0];
     expect(visible(total?.textContent)).toBe('-1,620');
     expect(total?.querySelector('.text-due')).not.toBeNull();
-    const b = await cardOf(nameOf(language, 'ب', 'Partner B'));
-    expect(visible(b.textContent)).toContain('50,284');
-    expect(visible(b.textContent)).toContain('50,000');
-    const c = await cardOf(nameOf(language, 'ج', 'Partner C'));
-    expect(visible(c.textContent)).toContain('284');
+    const b = await rowOf(nameOf(language, 'ب', 'Partner B'));
+    expect(visible(within(b).getAllByRole('cell')[0]?.textContent)).toBe('50,284');
+    const c = await rowOf(nameOf(language, 'ج', 'Partner C'));
+    expect(visible(within(c).getAllByRole('cell')[0]?.textContent)).toBe('284');
+    // The other figures (money taken, capital) are in the row under each one with "More columns".
+    await user.click(
+      screen.getByRole('checkbox', { name: message(language, 'common-more-columns') }),
+    );
+    expect(visible(moreOf(a).textContent)).toContain('2,000');
+    expect(visible(moreOf(b).textContent)).toContain('50,000');
     expect(pageText()).not.toContain('ERR_');
   });
 });
@@ -234,7 +246,8 @@ describe.each(LANGUAGES)('the partner statement with the real answers (%s)', (la
     );
     expect(textOf(grid(), 2, 'date')).toBe('11-10-2026');
     expect(partnersApi.partnersStatement).toHaveBeenCalledWith(
-      expect.objectContaining({ partner_id: 2, from: null, to: null, offset: 0 }),
+      // The statement opens on this year (plan 38), so the range is the year's, not open.
+      expect.objectContaining({ partner_id: 2, offset: 0 }),
     );
     expect(pageText()).not.toContain('ERR_');
   });

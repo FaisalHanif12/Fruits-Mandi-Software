@@ -32,7 +32,7 @@ import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import { useScreenMemory } from '../../../shared/screen-state';
 import type { PickerValue } from '../../../shared/ui';
-import { Button, EmptyState, ErrorState, LoadingState, Tabs } from '../../../shared/ui';
+import { Button, EmptyState, ErrorState, ListPage, LoadingState, Tabs } from '../../../shared/ui';
 import { AnalyticsFilterBar } from '../components/AnalyticsFilterBar';
 import { AnalyticsLines } from '../components/AnalyticsLines';
 import { AnalyticsPreview } from '../components/AnalyticsPreview';
@@ -46,12 +46,7 @@ import {
   type AnalyticsFilterState,
 } from '../filters';
 import { analyticsExportExcel } from '../api';
-import {
-  useAnalyticsCatalog,
-  useAnalyticsChart,
-  useAnalyticsPages,
-  type LinesRequest,
-} from '../hooks';
+import { useAnalyticsCatalog, useAnalyticsPages, type LinesRequest } from '../hooks';
 import { ANALYTICS_SCREEN, analyticsFromRemembered, rememberedAnalytics } from '../remember';
 import { useAnalyticsStore } from '../store';
 import type { AnalyticsKey, AnalyticsSavedView, AnalyticsView } from '../types';
@@ -107,7 +102,6 @@ function AnalyticsBody({
   const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
   const wire = useMemo(() => filtersToWire(settled, entry.filters), [settled, entry]);
   const query = useAnalyticsPages(entry.id, wire);
-  const chart = useAnalyticsChart(entry.id, wire);
   const language = useLanguage();
   // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
   const exporter = useExcelExport({
@@ -119,6 +113,8 @@ function AnalyticsBody({
         filters: filtersToWire(filters, entry.filters),
         language: sheet,
         path,
+        // The sheet has the order that is on screen (plan 38 R4).
+        sort: query.sort,
       }),
   });
 
@@ -203,6 +199,7 @@ function AnalyticsBody({
       <AnalyticsPreview
         view={entry.id}
         filters={wire}
+        sort={query.sort}
         onBack={() => {
           setMode('table');
         }}
@@ -211,54 +208,47 @@ function AnalyticsBody({
     );
   } else {
     body = (
-      <>
-        <SavedViews
-          current={{ view: entry.id, filters: filtersToWire(filters, entry.filters) }}
-          savedName={savedName}
-          onOpen={openSaved}
-          onSaved={setSavedName}
-        />
-        <AnalyticsFilterBar
-          view={entry.id}
-          takes={entry.filters}
-          state={shown}
-          onChange={change}
-          error={filterRefusal}
-          containerRef={containerRef}
-        />
-        <AnalyticsResults
-          view={entry.id}
-          query={query}
-          chartPage={chart.data}
-          kept={filterRefusal === null ? null : kept}
-          filtering={filtering}
-          onClear={() => {
-            replace(EMPTY_ANALYTICS_FILTERS);
-          }}
-          windowStart={windowStart}
-          onWindow={setWindowStart}
-          otherColumns={otherColumns}
-          onOtherColumns={setOtherColumns}
-          onDrill={openDrill}
-          focusRowId={focusRowId}
-          onFocusRow={setFocusRowId}
-        />
-      </>
+      <AnalyticsResults
+        view={entry.id}
+        query={query}
+        kept={filterRefusal === null ? null : kept}
+        filtering={filtering}
+        onClear={() => {
+          replace(EMPTY_ANALYTICS_FILTERS);
+        }}
+        windowStart={windowStart}
+        onWindow={setWindowStart}
+        otherColumns={otherColumns}
+        onOtherColumns={setOtherColumns}
+        onDrill={openDrill}
+        focusRowId={focusRowId}
+        onFocusRow={setFocusRowId}
+      />
     );
   }
 
+  const table = drill === null && mode === 'table';
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id={entry.title_id}>
-            <h1 className="type-title" />
-          </Localized>
+    <ListPage
+      titleId={entry.title_id}
+      help={
+        <>
           <Localized id={entry.title_id.replace(/-title$/, '-help')}>
-            <p className="type-body text-ink-muted" />
+            <p />
           </Localized>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          <Localized id="analytics-open-hint">
+            <p className="text-ink-muted" />
+          </Localized>
+        </>
+      }
+      actions={
+        <>
+          <SavedViews
+            current={{ view: entry.id, filters: filtersToWire(filters, entry.filters) }}
+            savedName={savedName}
+            onOpen={openSaved}
+            onSaved={setSavedName}
+          />
           <Button
             disabled={drill !== null || mode === 'preview'}
             onClick={() => {
@@ -282,25 +272,42 @@ function AnalyticsBody({
           {mode === 'preview' ? null : (
             <ExcelExportButton exporter={exporter} language={language} disabled={drill !== null} />
           )}
+        </>
+      }
+      filters={
+        <div className="flex flex-col gap-3">
+          <ExcelExportNotices exporter={exporter} />
+          {/* The eleven views are ONE row of tabs; the ones that do not fit are in its More menu. */}
+          <Tabs
+            overflow
+            label={l10n.getString('analytics-views-label')}
+            value={entry.id}
+            onValueChange={(view) => {
+              setDrill(null);
+              setMode('table');
+              void navigate({ to: '/analytics/$view', params: { view } });
+            }}
+            items={catalog.map((candidate) => ({
+              id: candidate.id,
+              label: l10n.getString(candidate.title_id),
+              content: null,
+            }))}
+          />
+          {table ? (
+            <AnalyticsFilterBar
+              view={entry.id}
+              takes={entry.filters}
+              state={shown}
+              onChange={change}
+              error={filterRefusal}
+              containerRef={containerRef}
+            />
+          ) : null}
         </div>
-      </div>
-      <ExcelExportNotices exporter={exporter} />
-      <Tabs
-        label={l10n.getString('analytics-views-label')}
-        value={entry.id}
-        onValueChange={(view) => {
-          setDrill(null);
-          setMode('table');
-          void navigate({ to: '/analytics/$view', params: { view } });
-        }}
-        items={catalog.map((candidate) => ({
-          id: candidate.id,
-          label: l10n.getString(candidate.title_id),
-          content: null,
-        }))}
-      />
-      {body}
-    </div>
+      }
+    >
+      {table ? body : <div className="min-h-0 flex-1 overflow-auto">{body}</div>}
+    </ListPage>
   );
 }
 

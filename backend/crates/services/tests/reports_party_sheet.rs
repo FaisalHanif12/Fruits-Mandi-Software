@@ -445,6 +445,8 @@ fn the_table_pages_with_totals_over_the_whole_filter_and_prints_in_both_language
         let data = print_data(
             w.env.ctx.db(),
             &ReportPrintInput {
+                group_by_month: false,
+                sort: None,
                 id: ReportId::R35,
                 filters: sheet("10-10-2026", None),
                 language,
@@ -459,6 +461,8 @@ fn the_table_pages_with_totals_over_the_whole_filter_and_prints_in_both_language
     let slip = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R35,
             filters: sheet("10-10-2026", account(w.akram)),
             language: Language::En,

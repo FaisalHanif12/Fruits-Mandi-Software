@@ -32,7 +32,7 @@ import { useDebouncedValue, useFocusFirstField } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Remembered, type ScreenMemory } from '../../../shared/screen-state';
-import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { Button, EmptyState, ErrorState, ListPage, LoadingState } from '../../../shared/ui';
 import { PrintAction } from '../../bikri';
 import { useOpenArrival } from '../../gardens';
 import { ReportFilterBar } from '../components/ReportFilterBar';
@@ -54,6 +54,24 @@ import { parseReportSearch, stateFromSearch } from '../search';
 
 /** How long the filters rest before the backend is asked (Code Standards F35). */
 const FILTER_SETTLE_MS = 250;
+
+/**
+ * The reports whose rows are in date order. They ask the backend for a heading row above each
+ * month, with the count and sums of the whole month (plan 38 R4); a sort by another column turns
+ * the headings off by itself.
+ */
+const MONTH_REPORTS: ReadonlySet<string> = new Set([
+  'R2',
+  'R3',
+  'R4',
+  'R11',
+  'R12',
+  'R13',
+  'R14',
+  'R15',
+  'R23',
+  'R25',
+]);
 
 /** True when the refusal points at a filter box: the box shows it and the rows stay. */
 function isFilterRefusal(error: UiError): boolean {
@@ -146,7 +164,8 @@ function ReportBody({
     () => (canRun(settled, entry) ? filtersToWire(settled, entry.filters) : null),
     [settled, entry],
   );
-  const query = useReportPages(entry.id, wire);
+  const monthsOn = MONTH_REPORTS.has(entry.id);
+  const query = useReportPages(entry.id, wire, monthsOn);
   const openSource = useOpenSource(catalog, entry.id);
   const language = useLanguage();
   // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
@@ -160,6 +179,9 @@ function ReportBody({
             filters: filtersToWire(state, entry.filters),
             language: sheet,
             path,
+            // The sheet has the order and the month headings that are on screen (plan 38 R4).
+            sort: query.sort,
+            group_by_month: monthsOn && query.sort === null,
           })
         : Promise.reject(new Error('the report cannot run before its filters are filled')),
   });
@@ -259,6 +281,8 @@ function ReportBody({
       <ReportPreview
         id={entry.id}
         filters={wire}
+        sort={query.sort}
+        groupByMonth={monthsOn && query.sort === null}
         onBack={() => {
           setView('table');
         }}
@@ -291,18 +315,22 @@ function ReportBody({
     );
   }
 
+  const tableView = view === 'table';
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id={entry.title_id}>
-            <h1 className="type-title" />
-          </Localized>
+    <ListPage
+      titleId={entry.title_id}
+      help={
+        <>
           <Localized id={entry.title_id.replace(/-title$/, '-help')}>
-            <p className="type-body text-ink-muted" />
+            <p />
           </Localized>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          <Localized id="report-open-hint">
+            <p className="text-ink-muted" />
+          </Localized>
+        </>
+      }
+      actions={
+        <>
           <Button onClick={backToList}>
             <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
             <Localized id="report-back" />
@@ -312,7 +340,7 @@ function ReportBody({
           ) : (
             <Button
               shortcut={SHORTCUTS.print}
-              disabled={wire === null || view !== 'table'}
+              disabled={wire === null || !tableView}
               onClick={() => {
                 setView('preview');
               }}
@@ -324,7 +352,7 @@ function ReportBody({
           {/* The credit buyers' details (R5) can print one slip for each buyer (PRD 19.2 R5). */}
           {entry.id === 'R5' ? (
             <Button
-              disabled={wire === null || view !== 'table'}
+              disabled={wire === null || !tableView}
               onClick={() => {
                 setView('slips');
               }}
@@ -334,39 +362,44 @@ function ReportBody({
             </Button>
           ) : null}
           {/* In the preview the frame has its own Excel button, with the print language chosen there. */}
-          {view !== 'table' ? null : (
+          {tableView ? (
             <ExcelExportButton
               exporter={exporter}
               language={language}
               disabled={!canRun(state, entry)}
             />
-          )}
+          ) : null}
+        </>
+      }
+      filters={
+        <div className="flex flex-col gap-3">
+          <ExcelExportNotices exporter={exporter} />
+          {tableView ? (
+            <ReportFilterBar
+              entry={entry}
+              state={{ ...state, party }}
+              onChange={change}
+              error={filterRefusal}
+              containerRef={containerRef}
+            />
+          ) : null}
+          {entry.id === 'R35' && state.party !== null && tableView ? (
+            <div>
+              <Button
+                onClick={() => {
+                  change({ party: null, person: null, personText: '' });
+                }}
+              >
+                <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
+                <Localized id="report-r35-all-parties" />
+              </Button>
+            </div>
+          ) : null}
         </div>
-      </div>
-      <ExcelExportNotices exporter={exporter} />
-      {view !== 'table' ? null : (
-        <ReportFilterBar
-          entry={entry}
-          state={{ ...state, party }}
-          onChange={change}
-          error={filterRefusal}
-          containerRef={containerRef}
-        />
-      )}
-      {entry.id === 'R35' && state.party !== null && view === 'table' ? (
-        <div>
-          <Button
-            onClick={() => {
-              change({ party: null, person: null, personText: '' });
-            }}
-          >
-            <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
-            <Localized id="report-r35-all-parties" />
-          </Button>
-        </div>
-      ) : null}
-      {body}
-    </div>
+      }
+    >
+      {tableView ? body : <div className="min-h-0 flex-1 overflow-auto">{body}</div>}
+    </ListPage>
   );
 }
 

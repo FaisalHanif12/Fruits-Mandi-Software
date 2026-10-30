@@ -903,4 +903,10 @@ pub struct ReportPrintInput {
     /// The paper. Missing means A4.
     #[serde(default)]
     pub paper: Option<Paper>,
+    /// The sort of the screen: the print has the same order, with every row (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<mandi_core::paging::SortInput>,
+    /// The month headings of the screen: the print has them too.
+    #[serde(default)]
+    pub group_by_month: bool,
 }

@@ -46,7 +46,7 @@ pub(crate) fn sheet(
     for row in &page.rows {
         rows.push(ExportRow {
             cells: ctx.cells(&row.cells)?,
-            bold: row.kind == RowKind::Group,
+            bold: row.kind != RowKind::Normal,
         });
     }
     let title = l10n.text(&page.title_id);

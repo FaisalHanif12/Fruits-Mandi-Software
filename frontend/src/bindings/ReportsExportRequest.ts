@@ -2,6 +2,7 @@
 import type { Language } from './Language';
 import type { ReportFilters } from './ReportFilters';
 import type { ReportId } from './ReportId';
+import type { SortInput } from './SortInput';
 
 /**
  * The input of `reports_export_excel`: the export plus the screen's job id.
@@ -27,4 +28,12 @@ export type ReportsExportRequest = {
    * Where to save: an absolute path ending in `.xlsx`, in a folder that exists.
    */
   path: string;
+  /**
+   * The sort of the screen: the sheet has the same order, with every row (plan 38 R4).
+   */
+  sort: SortInput | null;
+  /**
+   * The month headings of the screen: the sheet has them too.
+   */
+  group_by_month: boolean;
 };

@@ -80,6 +80,32 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     return { ...view, user: userEvent.setup() };
   };
 
+  it('the search box sends the text; the seller and the item are behind "More filters"', async () => {
+    fakePlan16();
+    const { user } = await open();
+    await waitFor(() => {
+      expect(cell(40, 'number')).toBe('1');
+    });
+    await user.type(
+      await screen.findByRole('textbox', { name: named(message(language, 'common-search-label')) }),
+      'rahim',
+    );
+    await waitFor(() => {
+      expect(bikriApi.bikriStockList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'rahim', sort: null }),
+      );
+    });
+    expect(
+      screen.queryByRole('combobox', { name: named(message(language, 'glossary-beopari')) }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
+    expect(
+      await screen.findByRole('combobox', { name: named(message(language, 'glossary-beopari')) }),
+    ).toBeInTheDocument();
+  });
+
   it('lists the lots with goods left, as the backend counted them, with the total', async () => {
     fakePlan16();
     await open();
@@ -108,6 +134,8 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
       lot_id: null,
       offset: 0,
       limit: PAGE_ROWS,
+      search: null,
+      sort: null,
     });
   });
 

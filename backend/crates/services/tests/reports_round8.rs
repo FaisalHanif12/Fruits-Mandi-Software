@@ -1253,6 +1253,8 @@ fn r10_counts_the_days_of_an_arrival_from_its_day_to_sell_and_prints_its_row() {
     let printed = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R10,
             filters: ReportFilters::default(),
             language: Language::En,
@@ -1353,6 +1355,8 @@ fn the_trip_report_in_every_layout_and_the_day_summary_export_with_the_numbers_o
         let done = export_report(
             w.env.ctx.db(),
             &ReportExportInput {
+                group_by_month: false,
+                sort: None,
                 id,
                 filters,
                 language,
@@ -1409,6 +1413,8 @@ fn the_trip_report_in_every_layout_and_the_day_summary_export_with_the_numbers_o
     let done = export_report(
         w2.env.ctx.db(),
         &ReportExportInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R34,
             filters: dates("10-10-2026", "10-10-2026"),
             language: Language::Ur,
@@ -1440,6 +1446,8 @@ fn the_print_data_of_the_day_summary_and_the_trip_layouts_names_their_filters() 
         print_data(
             w.env.ctx.db(),
             &ReportPrintInput {
+                group_by_month: false,
+                sort: None,
                 id,
                 filters,
                 language: Language::En,

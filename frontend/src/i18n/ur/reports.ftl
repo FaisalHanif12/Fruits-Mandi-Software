@@ -1314,10 +1314,6 @@ reports-search-placeholder = رپورٹ کا نام یا نمبر لکھیں
 # review: pending
 reports-jump-label = یہاں جائیں
 
-# $group: the name of a group of reports.
-# review: pending
-reports-jump-to = { $group } کی رپورٹوں پر جائیں
-
 # review: pending
 reports-search-none = کوئی رپورٹ نہیں ملی
 
@@ -1326,3 +1322,12 @@ reports-search-none-help = ہجے دیکھ لیں، یا تلاش ہٹائیں �
 
 # review: pending
 reports-search-clear = تلاش ہٹائیں
+
+# The grey words in the "Go to" choice of the catalogue, before a group is chosen.
+# review: pending
+reports-jump-placeholder = گروپ چنیں
+
+# Shown above a ledger, the cash book or a statement that is sorted by a column other than the date:
+# the running balance is empty there (plan 38 R4).
+# review: pending
+report-balance-date-order-only = بقایا صرف تاریخ کی ترتیب میں نظر آتا ہے۔

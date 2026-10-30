@@ -29,6 +29,8 @@ export interface CollectionPrintTarget {
   date: string;
   collectorStaffId: number | null;
   cityId: number | null;
+  /** The search text of the screen: only the buyers it finds are printed. Null: no search. */
+  search: string | null;
 }
 
 interface CollectionPrintBoxProps {
@@ -59,6 +61,7 @@ function PrintBoxForm({ target, onClose }: { target: CollectionPrintTarget; onCl
           date: target.date,
           collector_staff_id: target.collectorStaffId,
           city_id: target.cityId,
+          search: target.search,
           language,
           copies: copies.trim() === '' ? null : copies,
           to,
@@ -91,6 +94,7 @@ function PrintBoxForm({ target, onClose }: { target: CollectionPrintTarget; onCl
             date: target.date,
             collector_staff_id: target.collectorStaffId,
             city_id: target.cityId,
+            search: target.search,
             language,
           }}
         />

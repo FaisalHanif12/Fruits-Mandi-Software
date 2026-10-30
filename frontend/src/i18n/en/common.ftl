@@ -182,3 +182,7 @@ common-screen-failed = This screen could not be opened
 # $count: how many rows the filter has in one month, on the heading row of that month.
 # review: pending
 common-month-count = { $count } entries
+
+# The button at the end of a row of tabs that opens the tabs that did not fit.
+# review: pending
+common-tabs-more = More

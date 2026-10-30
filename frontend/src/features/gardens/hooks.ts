@@ -103,7 +103,14 @@ function gardensListQuery(settled: Omit<GardensListInput, 'offset' | 'limit' | '
   return {
     queryKey: [...GARDENS_KEY, 'list', settled],
     fetchPage: (offset: number, limit: number, sort: SortInput | null = null) =>
-      gardensList({ ...settled, offset, limit, sort }),
+      gardensList({
+        ...settled,
+        offset,
+        limit,
+        sort,
+        // Month rows only while the list is in date order.
+        group_by_month: settled.group_by_month && (sort === null || sort.column === 'entry_date'),
+      }),
     rowsIn: (page: { rows: readonly unknown[] }) => page.rows.length,
     totalOf: (page: { total_count: number }) => page.total_count,
     keepPrevious: true,
@@ -114,9 +121,12 @@ function gardensListQuery(settled: Omit<GardensListInput, 'offset' | 'limit' | '
  * The gardens for the filters, one page at a time, with the totals over the whole filter (PRD
  * FR-19.11). The first page carries the count and the totals.
  */
-export function useGardensList(filter: Omit<GardensListInput, 'offset' | 'limit' | 'sort'>) {
+export function useGardensList(
+  filter: Omit<GardensListInput, 'offset' | 'limit' | 'sort'>,
+  enabled = true,
+) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
-  return usePagedQuery({ screen: 'gardens.list', ...gardensListQuery(settled) });
+  return usePagedQuery({ screen: 'gardens.list', ...gardensListQuery(settled), enabled });
 }
 
 /** Every garden of the filter, page after page, for a choice list (`useLoadRest`). */

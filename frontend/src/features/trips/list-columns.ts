@@ -33,6 +33,7 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
     field: 'number',
     type: 'code',
     headerId: 'trips-col-number',
+    sortKey: 'code',
     // The code of a trip, type 007 (plan 34): 0070, 0071 ... The backend makes it; it is shown as it is.
     value: (row) => row.code,
   },
@@ -40,12 +41,14 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
     field: 'date',
     type: 'date',
     headerId: 'trips-col-date',
+    sortKey: 'entry_date',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
     field: 'market',
     type: 'name',
     headerId: 'trips-col-market',
+    sortKey: 'market',
     grow: true,
     // The market is free text, shown as typed (PRD FR-7.25).
     value: (row) => row.market ?? '',
@@ -54,6 +57,7 @@ export const TRIP_COLUMNS: readonly ListColumn<TripRow>[] = [
     field: 'status',
     type: 'text',
     headerId: 'trips-col-status',
+    sortKey: 'status',
     value: (row, { text }) =>
       text(row.status === 'open' ? 'trips-status-open' : 'trips-status-closed'),
   },

@@ -9,30 +9,43 @@
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { SearchX, UsersRound } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDayStatus } from '../../../app/use-day-status';
 import type { PaidState } from '../../../bindings/PaidState';
 import type { PukhtaRegisterInput } from '../../../bindings/PukhtaRegisterInput';
 import type { PukhtaRegisterRow } from '../../../bindings/PukhtaRegisterRow';
 import type { PukhtaSide } from '../../../bindings/PukhtaSide';
 import { uiErrorOf } from '../../../shared/api';
-import { PagedList } from '../../../shared/grid';
-import { useFocusFirstField, useLayoutStep, useRememberedFlag } from '../../../shared/hooks';
+import { PagedList, type ListContext } from '../../../shared/grid';
+import {
+  useFocusFirstField,
+  useLayoutStep,
+  usePeriod,
+  useRememberedFlag,
+} from '../../../shared/hooks';
 import { formNavigationProps, useEscape } from '../../../shared/keyboard';
 import { Remembered, type MemoryProps } from '../../../shared/screen-state';
 import {
   Button,
   Checkbox,
-  DateInput,
   EmptyState,
   Field,
+  FilterBar,
+  ListPage,
+  PeriodBox,
   Select,
-  TextInput,
+  ShowClosedTick,
 } from '../../../shared/ui';
 import { pukhtaColumns } from '../columns';
 import { usePukhtaRegister } from '../hooks';
 import { PUKHTA_REGISTER_SCREEN, registerChoicesFrom, registerChoicesText } from '../remember';
 
 const ALL = 'all';
+
+/** The month of a register line, `YYYY-MM`: the rows come in date order. */
+const MONTH_OF = (row: PukhtaRegisterRow) => row.entry_date.slice(0, 7);
+/** The backend's open amount of a month goes under the column of paid or due. */
+const MONTH_COLUMNS = { open: 'state' } as const;
 
 /** A register row has no id of its own (two equal lines are possible), so its place is its key. */
 type KeyedRow = PukhtaRegisterRow & { key: string };
@@ -49,34 +62,35 @@ export function PukhtaRegisterPage() {
 function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
   const navigate = useNavigate();
   const start = useMemo(() => registerChoicesFrom(saved), [saved]);
-  const [from, setFrom] = useState(start.from);
-  const [to, setTo] = useState(start.to);
+  const day = useDayStatus();
+  // The register opens on this month, as the Owner last chose (plan 38 R4); the name, the phone, the
+  // item and the number are one search box.
+  const period = usePeriod('pukhta.register', 'month', day.data?.today);
+  const [search, setSearch] = useState('');
   const [side, setSide] = useState<PukhtaSide | typeof ALL>(start.side);
-  const [name, setName] = useState(start.name);
-  const [phone, setPhone] = useState(start.phone);
   const [state, setState] = useState<PaidState | typeof ALL>(start.state);
+  // Lines of a cancelled بکری step aside until the tick is on.
+  const [showFinished, setShowFinished] = useState(false);
   useEffect(() => {
-    remember(registerChoicesText({ from, to, side, name, phone, state }));
-  }, [from, to, side, name, phone, state, remember]);
+    remember(registerChoicesText({ from: '', to: '', side, name: '', phone: '', state }));
+  }, [side, state, remember]);
   const filter: Omit<PukhtaRegisterInput, 'offset' | 'limit' | 'sort'> = {
-    from: from.trim(),
-    to: to.trim(),
+    from: period.range.from,
+    to: period.range.to,
     side: side === ALL ? null : side,
-    name: name.trim() === '' ? null : name.trim(),
-    phone: phone.trim() === '' ? null : phone.trim(),
+    name: null,
+    phone: null,
     state: state === ALL ? null : state,
-    show_finished: false,
-    search: null,
-    group_by_month: false,
+    show_finished: showFinished,
+    search: search.trim() === '' ? null : search.trim(),
+    group_by_month: true,
   };
   const filtering =
-    filter.from !== '' ||
-    filter.to !== '' ||
+    period.state.kind !== 'all' ||
     filter.side !== null ||
-    filter.name !== null ||
-    filter.phone !== null ||
+    filter.search !== null ||
     filter.state !== null;
-  const list = usePukhtaRegister(filter);
+  const list = usePukhtaRegister(filter, period.ready);
   // The tick that adds the نگ column, which does not fit beside the others (FR-13.6). It is kept.
   const [moreColumns, setMoreColumns] = useRememberedFlag('pukhta.more_columns', false);
   const step = useLayoutStep();
@@ -86,12 +100,11 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
     void navigate({ to: '/' });
   });
   const clear = () => {
-    setFrom('');
-    setTo('');
+    period.change({ kind: 'all', from: '', to: '' });
     setSide(ALL);
-    setName('');
-    setPhone('');
+    setSearch('');
     setState(ALL);
+    setShowFinished(false);
   };
 
   const first = list.data?.pages[0];
@@ -127,7 +140,35 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
       help={<Localized id="pukhta-empty-help" />}
     />
   );
-  // The totals row is the backend's, over every line of the filter and not over the rows loaded.
+  // The totals row is the backend's, over every line of the filter and not over the rows loaded. The
+  // callback depends on the loaded page and is made once per page (F3).
+  const totals = useCallback(
+    (context: ListContext) => {
+      const sumsOfPage = first?.totals;
+      return {
+        labelField: 'name',
+        values:
+          sumsOfPage === undefined
+            ? {}
+            : {
+                name: context.text('glossary-meezan'),
+                ...(sumsOfPage.qty === null ? {} : { qty: String(sumsOfPage.qty) }),
+                ...(sumsOfPage.amount === null ? {} : { amount: context.money(sumsOfPage.amount) }),
+                ...(sumsOfPage.commission === null
+                  ? {}
+                  : { commission: context.money(sumsOfPage.commission) }),
+                ...(sumsOfPage.open === null
+                  ? {}
+                  : {
+                      state: context.text('pukhta-state-due', {
+                        amount: context.money(sumsOfPage.open),
+                      }),
+                    }),
+              },
+      };
+    },
+    [first],
+  );
   const body = (
     <PagedList<KeyedRow>
       columns={columns}
@@ -140,97 +181,86 @@ function PukhtaRegisterBody({ saved, remember }: MemoryProps) {
         void list.refetch();
       }}
       pager={list.pager}
+      sort={{ value: list.sort, onChange: list.setSort }}
+      months={
+        first === undefined
+          ? undefined
+          : { months: first.months, monthOf: MONTH_OF, columnOf: MONTH_COLUMNS }
+      }
       empty={empty}
       onOpen={(row) => {
         void navigate({ to: '/bikri/book', search: { id: row.bikri_id } });
       }}
       isInactive={(row) => row.cancelled}
-      totals={
-        first === undefined || noSums
-          ? undefined
-          : (context) => {
-              const { qty, amount, commission, open } = first.totals;
-              return {
-                labelField: 'name',
-                values: {
-                  name: context.text('glossary-meezan'),
-                  ...(qty === null ? {} : { qty: String(qty) }),
-                  ...(amount === null ? {} : { amount: context.money(amount) }),
-                  ...(commission === null ? {} : { commission: context.money(commission) }),
-                  ...(open === null
-                    ? {}
-                    : { state: context.text('pukhta-state-due', { amount: context.money(open) }) }),
-                },
-              };
-            }
-      }
+      totals={noSums ? undefined : totals}
     />
   );
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="glossary-pukhta-khata">
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id="pukhta-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
+    <ListPage
+      titleId="glossary-pukhta-khata"
+      help={
+        <Localized id="pukhta-help">
+          <p />
+        </Localized>
+      }
+      filters={
+        <div ref={containerRef} {...formNavigationProps}>
+          <FilterBar
+            screen="pukhta.register"
+            search={{
+              value: search,
+              onChange: setSearch,
+              placeholderId: 'pukhta-search-placeholder',
+            }}
+            moreSet={state === ALL ? 0 : 1}
+            more={
+              <Field label={<Localized id="pukhta-col-state" />}>
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={state}
+                    onChange={setState}
+                    options={[
+                      { value: ALL, label: <Localized id="pukhta-all" /> },
+                      { value: 'paid', label: <Localized id="pukhta-state-paid" /> },
+                      { value: 'due', label: <Localized id="pukhta-filter-due" /> },
+                    ]}
+                  />
+                )}
+              </Field>
+            }
+            extra={
+              <>
+                <ShowClosedTick checked={showFinished} onChange={setShowFinished} />
+                <Checkbox
+                  checked={moreColumns}
+                  onChange={setMoreColumns}
+                  label={<Localized id="common-more-columns" />}
+                />
+              </>
+            }
+          >
+            {period.ready ? <PeriodBox period={period} /> : null}
+            <Field label={<Localized id="pukhta-col-side" />}>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={side}
+                  onChange={setSide}
+                  options={[
+                    { value: ALL, label: <Localized id="pukhta-all" /> },
+                    { value: 'seller', label: <Localized id="pukhta-side-seller" /> },
+                    { value: 'buyer', label: <Localized id="pukhta-side-buyer" /> },
+                  ]}
+                />
+              )}
+            </Field>
+          </FilterBar>
         </div>
-        <Checkbox
-          checked={moreColumns}
-          onChange={setMoreColumns}
-          label={<Localized id="common-more-columns" />}
-        />
-      </div>
-      <div
-        ref={containerRef}
-        {...formNavigationProps}
-        className="grid grid-cols-3 items-end gap-4 wide:grid-cols-6"
-      >
-        <Field label={<Localized id="pukhta-filter-from" />}>
-          {(control) => <DateInput {...control} value={from} onChange={setFrom} />}
-        </Field>
-        <Field label={<Localized id="pukhta-filter-to" />}>
-          {(control) => <DateInput {...control} value={to} onChange={setTo} />}
-        </Field>
-        <Field label={<Localized id="pukhta-col-side" />}>
-          {(control) => (
-            <Select
-              {...control}
-              value={side}
-              onChange={setSide}
-              options={[
-                { value: ALL, label: <Localized id="pukhta-all" /> },
-                { value: 'seller', label: <Localized id="pukhta-side-seller" /> },
-                { value: 'buyer', label: <Localized id="pukhta-side-buyer" /> },
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="pukhta-col-name" />}>
-          {(control) => <TextInput {...control} value={name} onChange={setName} />}
-        </Field>
-        <Field label={<Localized id="pukhta-col-phone" />}>
-          {(control) => <TextInput {...control} value={phone} onChange={setPhone} lang="en" />}
-        </Field>
-        <Field label={<Localized id="pukhta-col-state" />}>
-          {(control) => (
-            <Select
-              {...control}
-              value={state}
-              onChange={setState}
-              options={[
-                { value: ALL, label: <Localized id="pukhta-all" /> },
-                { value: 'paid', label: <Localized id="pukhta-state-paid" /> },
-                { value: 'due', label: <Localized id="pukhta-filter-due" /> },
-              ]}
-            />
-          )}
-        </Field>
-      </div>
+      }
+    >
       {body}
-    </div>
+    </ListPage>
   );
 }

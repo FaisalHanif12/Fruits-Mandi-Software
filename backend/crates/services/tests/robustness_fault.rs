@@ -1057,6 +1057,7 @@ fn damaged_files_never_crash_the_program_and_a_file_that_fails_its_check_stops_s
                             kind: mandi_services::core::accounts::AccountListKind::All,
                             text: String::new(),
                             include_inactive: true,
+                            has_opening: None,
                         },
                         offset: 0,
                         limit: 0,

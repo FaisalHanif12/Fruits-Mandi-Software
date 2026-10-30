@@ -578,6 +578,7 @@ fn a_take_or_loan_cannot_be_cancelled_or_made_smaller_than_its_returns() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             partner_id: a,
@@ -654,6 +655,7 @@ fn a_take_with_returns_cannot_be_edited_to_another_partner() {
         partners::takes(
             &w.env.ctx,
             &PartnerTakesInput {
+                show_finished: true,
                 group_by_month: false,
                 sort: None,
                 partner_id: partner,
@@ -736,6 +738,7 @@ fn a_loan_with_returns_cannot_be_edited_to_another_person() {
         lent::list(
             &w.env.ctx,
             &LentListInput {
+                show_finished: true,
                 group_by_month: false,
                 sort: None,
                 person_id,
@@ -819,6 +822,7 @@ fn a_return_dated_before_its_take_cannot_be_saved() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             partner_id: a,
@@ -998,6 +1002,7 @@ fn cancelling_a_salary_return_gives_the_loan_back_and_its_shares_net_to_zero() {
     let list = lent::list(
         &w.env.ctx,
         &LentListInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             person_id: aslam,
@@ -1016,6 +1021,7 @@ fn cancelling_a_salary_return_gives_the_loan_back_and_its_shares_net_to_zero() {
         lent::list(
             &w.env.ctx,
             &LentListInput {
+                show_finished: true,
                 group_by_month: false,
                 sort: None,
                 person_id: aslam,
@@ -1048,6 +1054,7 @@ fn open_amounts_equal_the_account_balance_and_pages_add_up() {
         let list = lent::list(
             &w.env.ctx,
             &LentListInput {
+                show_finished: true,
                 group_by_month: false,
                 sort: None,
                 person_id: aslam,
@@ -1065,6 +1072,7 @@ fn open_amounts_equal_the_account_balance_and_pages_add_up() {
     let whole = lent::list(
         &w.env.ctx,
         &LentListInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             person_id: aslam,
@@ -1083,6 +1091,7 @@ fn open_amounts_equal_the_account_balance_and_pages_add_up() {
         let page = lent::list(
             &w.env.ctx,
             &LentListInput {
+                show_finished: true,
                 group_by_month: false,
                 sort: None,
                 person_id: aslam,
@@ -1134,6 +1143,7 @@ fn a_staff_member_becomes_a_lent_person_once() {
     let list = lent::list(
         &w.env.ctx,
         &LentListInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             person_id: account,
@@ -1401,7 +1411,7 @@ fn the_cash_book_filters_by_day_and_gives_the_opening_before_it() {
     assert_eq!(day.opening_paisa, rupees(-1_000));
     assert_eq!(day.closing_paisa, rupees(-3_000));
     assert_eq!(day.total_count, 1);
-    assert_eq!(day.rows[0].running_paisa, rupees(-3_000));
+    assert_eq!(day.rows[0].running_paisa, Some(rupees(-3_000)));
     assert_eq!(day.totals.out_paisa, rupees(2_000));
     let last = book(Some("10-10-2026"), None);
     assert_eq!(last.opening_paisa, rupees(-3_000));
@@ -1455,6 +1465,7 @@ fn a_drawings_opening_debit_is_money_taken_dated_its_opening_day() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             partner_id: w.partners[0],
@@ -1904,6 +1915,7 @@ fn an_opening_on_money_taken_is_a_debit_and_cannot_be_cleared_under_its_returns(
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             partner_id: a,

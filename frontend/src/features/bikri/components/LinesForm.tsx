@@ -34,6 +34,7 @@ import {
   PartyCard,
   ReasonDialog,
   useErrorText,
+  InfoHint,
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
 import { buildGridViews } from '../grid-views';
@@ -278,10 +279,30 @@ export function LinesForm<R extends { number: number }>({
   }
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <h1 className="type-title">{title}</h1>
-        <p className="type-body text-ink-muted">{help}</p>
+    <div ref={rootRef} className="flex flex-col gap-3 short:gap-2">
+      {/* The name with its help behind an ⓘ, and Back and Save on the same row, so the buttons are in
+          view whatever the length of the lines below (plan 38, later sale). */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex items-center gap-1">
+          <h1 className="type-title">{title}</h1>
+          <InfoHint>
+            <p>{help}</p>
+          </InfoHint>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button shortcut={SHORTCUTS.back} onClick={onBack}>
+            <Localized id="common-back" />
+          </Button>
+          <Button
+            variant="primary"
+            shortcut={SHORTCUTS.save}
+            busy={flow.busy}
+            disabled={!canSave}
+            onClick={trySave}
+          >
+            <Localized id={saveId} />
+          </Button>
+        </div>
       </div>
       {notice}
       {children}
@@ -329,20 +350,6 @@ export function LinesForm<R extends { number: number }>({
           <PartyCard accountId={cardAccount} />
           {numbersBody}
         </div>
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button shortcut={SHORTCUTS.back} onClick={onBack}>
-          <Localized id="common-back" />
-        </Button>
-        <Button
-          variant="primary"
-          shortcut={SHORTCUTS.save}
-          busy={flow.busy}
-          disabled={!canSave}
-          onClick={trySave}
-        >
-          <Localized id={saveId} />
-        </Button>
       </div>
       {flow.cashAfter === null ? null : (
         <CashConfirmDialog

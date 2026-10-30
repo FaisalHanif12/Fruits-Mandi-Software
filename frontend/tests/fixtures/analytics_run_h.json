@@ -465,8 +465,11 @@
       "points": [
         {
           "label": {
-            "type": "number",
-            "value": 1
+            "type": "names",
+            "names": {
+              "ur": "کیلا",
+              "en": "Banana"
+            }
           },
           "key": {
             "item_id": 1,
@@ -489,8 +492,11 @@
         },
         {
           "label": {
-            "type": "number",
-            "value": 2
+            "type": "names",
+            "names": {
+              "ur": "سیب",
+              "en": "Apple"
+            }
           },
           "key": {
             "item_id": 2,
@@ -530,8 +536,16 @@
       "points": [
         {
           "label": {
-            "type": "number",
-            "value": 1
+            "type": "party",
+            "party": {
+              "account_id": 18,
+              "code": "0010",
+              "short_code": "0",
+              "name_ur": "رحیم",
+              "name_en": "Rahim",
+              "tag": null,
+              "person_key": null
+            }
           },
           "key": {
             "item_id": null,
@@ -554,8 +568,16 @@
         },
         {
           "label": {
-            "type": "number",
-            "value": 2
+            "type": "party",
+            "party": {
+              "account_id": 19,
+              "code": "0011",
+              "short_code": "1",
+              "name_ur": "کریم",
+              "name_en": "Karim",
+              "tag": null,
+              "person_key": null
+            }
           },
           "key": {
             "item_id": null,
@@ -595,8 +617,16 @@
       "points": [
         {
           "label": {
-            "type": "number",
-            "value": 1
+            "type": "party",
+            "party": {
+              "account_id": 21,
+              "code": "0021",
+              "short_code": "1",
+              "name_ur": "ارشد ملتانی",
+              "name_en": "Arshad Multani",
+              "tag": null,
+              "person_key": null
+            }
           },
           "key": {
             "item_id": null,
@@ -619,8 +649,16 @@
         },
         {
           "label": {
-            "type": "number",
-            "value": 2
+            "type": "party",
+            "party": {
+              "account_id": 20,
+              "code": "0020",
+              "short_code": "0",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
+              "tag": null,
+              "person_key": null
+            }
           },
           "key": {
             "item_id": null,
@@ -643,8 +681,17 @@
         },
         {
           "label": {
-            "type": "number",
-            "value": 3
+            "type": "party",
+            "party": {
+              "account_id": 9,
+              "code": "0030",
+              "short_code": null,
+              "name_ur": "شاہد",
+              "name_en": "Shahid",
+              "tag": null,
+              "person_key": "شاہد|03000000000",
+              "phone": "0300-0000000"
+            }
           },
           "key": {
             "item_id": null,

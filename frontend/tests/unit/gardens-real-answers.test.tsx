@@ -13,6 +13,7 @@ import { LANGUAGES } from '../../src/i18n';
 import { CommandError } from '../../src/shared/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { named } from '../helpers/bikri-screen';
+import { openInfo } from '../helpers/info';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -423,6 +424,13 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     ).toBeInTheDocument();
   });
 
+  /** The note that the shares came from the firm's shares is behind the ⓘ of the shares card (plan 38 G5). */
+  const readDefaultsNote = async (user: ReturnType<typeof userEvent.setup>) => {
+    await openInfo(user, language, message(language, 'gardens-new-shares-title'));
+    await screen.findByText(said(message(language, 'gardens-new-from-defaults')));
+    await user.keyboard('{Escape}');
+  };
+
   it('a new garden: the real preview shows the first installment’s parts, the save opens the garden', async () => {
     vi.mocked(gardensApi.gardensDefaults).mockResolvedValue(real.GARDENS_DEFAULTS_FIRST);
     vi.mocked(gardensApi.gardensCreatePreview).mockResolvedValue(
@@ -431,8 +439,8 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
     vi.mocked(gardensApi.gardensCreate).mockResolvedValue(real.GARDENS_CREATE_E2E40);
     vi.mocked(gardensApi.gardensGet).mockResolvedValue(real.GARDENS_GET_OPEN);
     const view = await renderApp('/gardens/new');
-    await screen.findByText(said(message(language, 'gardens-new-from-defaults')));
     const user = userEvent.setup();
+    await readDefaultsNote(user);
     await user.type(field('gardens-field-rent'), '50000');
     await user.type(field('gardens-field-paid-now'), '30000');
     const parts = await screen.findByRole('list', {
@@ -469,8 +477,8 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
       refused(real.GARDENS_CREATE_SHARES_NOT_100),
     );
     await renderApp('/gardens/new');
-    await screen.findByText(said(message(language, 'gardens-new-from-defaults')));
     const user = userEvent.setup();
+    await readDefaultsNote(user);
     await user.type(field('gardens-field-rent'), '50000');
     await screen.findByText(said(message(language, 'partners-total-ok')));
     press('F10');

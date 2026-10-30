@@ -119,7 +119,14 @@ const keys = (value: object) => Object.keys(value).toSorted();
 
 describe('the answers carry exactly the fields of the generated types', () => {
   it('AuditPage, AuditRow, AuditChange, AuditValue and the resolved filters', () => {
-    expect(keys(AUDIT_FIRST_PAGE)).toEqual(['filters', 'limit', 'offset', 'rows', 'total_count']);
+    expect(keys(AUDIT_FIRST_PAGE)).toEqual([
+      'filters',
+      'limit',
+      'months',
+      'offset',
+      'rows',
+      'total_count',
+    ]);
     expect(keys(AUDIT_FIRST_PAGE.filters)).toEqual([
       'action',
       'entity',

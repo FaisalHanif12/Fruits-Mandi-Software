@@ -134,6 +134,7 @@ fn the_print_has_the_buyers_of_the_day_and_a_total_below_the_shops_dues() {
     let screen = mandi_services::vouchers::collection_list(
         &env.ctx,
         &mandi_services::core::vouchers::CollectionListInput {
+            search: None,
             date: "10-10-2026".into(),
             collector_staff_id: None,
             city_id: None,
@@ -206,6 +207,7 @@ fn the_plan_checks_copies_names_the_pdf_by_the_day_and_the_audit_row_records_the
     let (dir, env, owner) = ready();
     buyers(&env, &owner);
     let input = |copies: Option<&str>| PrintCollectionInput {
+        search: None,
         date: "10-10-2026".into(),
         collector_staff_id: None,
         city_id: None,
@@ -265,5 +267,79 @@ fn a_bikri_print_refuses_the_voucher_slip_and_the_collection_list() {
             (ErrorCode::ErrFormatInvalid, Some("docs".to_owned())),
             "{doc:?}"
         );
+    }
+}
+
+#[test]
+fn a_search_keeps_the_buyers_it_names_and_the_print_and_totals_follow() {
+    let (_dir, env, owner) = ready();
+    buyers(&env, &owner);
+    let all = printing::collection_for_print(&env.ctx, "10-10-2026", None, None)
+        .unwrap()
+        .0;
+    assert_eq!(all.total_count, 2);
+    // The screen's search and the print's search give the same list.
+    let searched = |text: &str| {
+        printing::collection_for_print_searching(&env.ctx, "10-10-2026", None, None, Some(text))
+            .unwrap()
+            .0
+    };
+    let arshad = searched("arshad");
+    assert_eq!(arshad.total_count, 1);
+    assert_eq!(arshad.groups[0].buyers[0].dues_paisa, rupees(18_684));
+    // The group total and the grand total are over the buyers the search keeps.
+    assert_eq!(arshad.group_totals.len(), 1);
+    assert_eq!(arshad.group_totals[0].total_paisa, rupees(18_684));
+    assert_eq!(arshad.total_paisa, rupees(18_684));
+    // Urdu name, phone and code are searched too.
+    assert_eq!(searched("اکرم").total_count, 1);
+    assert_eq!(searched("1234567").total_count, 2);
+    assert_eq!(searched("zzz").total_count, 0);
+    assert_eq!(searched("zzz").total_paisa, rupees(0));
+}
+
+#[test]
+fn the_print_job_and_the_print_data_have_the_list_the_screen_shows_for_the_same_search() {
+    let (_dir, env, owner) = ready();
+    buyers(&env, &owner);
+    for text in ["arshad", "اکرم", "1234567", "zzz", ""] {
+        let screen = mandi_services::vouchers::collection_list(
+            &env.ctx,
+            &mandi_services::core::vouchers::CollectionListInput {
+                search: Some(text.to_owned()),
+                date: "10-10-2026".into(),
+                collector_staff_id: None,
+                city_id: None,
+                offset: 0,
+                // A print holds every buyer, so the screen is read with a page that holds them all.
+                limit: u32::MAX,
+            },
+        )
+        .unwrap();
+        // The print job (what the printer or the PDF gets) is planned from the same text.
+        let plan = printing::plan_collection(
+            &env.ctx,
+            &PrintCollectionInput {
+                search: Some(text.to_owned()),
+                date: "10-10-2026".into(),
+                collector_staff_id: None,
+                city_id: None,
+                language: Language::En,
+                copies: None,
+                to: PrintTo::Pdf,
+            },
+        )
+        .unwrap();
+        assert_eq!(plan.list, screen, "print job, search {text:?}");
+        // The print data of the preview window is the same list.
+        let (data_list, _) = printing::collection_for_print_searching(
+            &env.ctx,
+            "10-10-2026",
+            None,
+            None,
+            Some(text),
+        )
+        .unwrap();
+        assert_eq!(data_list, screen, "print data, search {text:?}");
     }
 }

@@ -63,7 +63,13 @@ describe('the address of the hidden print window for the collection list', () =>
   it('reads a good address, the day as the command takes it', () => {
     expect(parseCollectionPrintParams(`?${GOOD}`)).toEqual({
       job: 'job-1',
-      input: { date: '10-10-2026', collector_staff_id: null, city_id: null, language: 'en' },
+      input: {
+        date: '10-10-2026',
+        collector_staff_id: null,
+        city_id: null,
+        search: null,
+        language: 'en',
+      },
     });
     expect(isCollectionAddress(`?${GOOD}`)).toBe(true);
     expect(isCollectionAddress('?voucher=5&doc=receipt_slip&language=ur&job=a')).toBe(false);
@@ -76,7 +82,13 @@ describe('the address of the hidden print window for the collection list', () =>
       ),
     ).toEqual({
       job: 'a_b-1',
-      input: { date: '10-10-2026', collector_staff_id: 81, city_id: 91, language: 'ur' },
+      input: {
+        date: '10-10-2026',
+        collector_staff_id: 81,
+        city_id: 91,
+        search: null,
+        language: 'ur',
+      },
     });
   });
 
@@ -113,7 +125,13 @@ describe('the print route for the collection list', () => {
       {
         command: 'reports_collection_print_data',
         args: {
-          input: { date: '10-10-2026', collector_staff_id: null, city_id: null, language: 'en' },
+          input: {
+            date: '10-10-2026',
+            collector_staff_id: null,
+            city_id: null,
+            search: null,
+            language: 'en',
+          },
         },
       },
     ]);
@@ -136,7 +154,13 @@ describe('the print route for the collection list', () => {
       expect(calls).toHaveLength(1);
     });
     expect(calls[0]?.args).toEqual({
-      input: { date: '10-10-2026', collector_staff_id: 81, city_id: 91, language: 'ur' },
+      input: {
+        date: '10-10-2026',
+        collector_staff_id: 81,
+        city_id: 91,
+        search: null,
+        language: 'ur',
+      },
     });
     expect(document.documentElement.lang).toBe('ur');
   });

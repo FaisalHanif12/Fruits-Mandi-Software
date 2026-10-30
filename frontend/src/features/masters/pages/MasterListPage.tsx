@@ -3,7 +3,7 @@
 // one. Keys (PRD FR-7.17): F2 new, ↑ ↓ and Page Up / Page Down between rows, Enter opens the row,
 // Esc goes back to the menu. Four states: loading, error with a retry, empty with a button, rows.
 
-import { Localized, useLocalization } from '@fluent/react';
+import { Localized } from '@fluent/react';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { Plus, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -11,7 +11,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useClientPager, useFocusFirstField, useLoadRest } from '../../../shared/hooks';
 import { PagedList } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
-import { Button, Checkbox, EmptyState, ErrorState, Field, TextInput } from '../../../shared/ui';
+import { Button, Checkbox, EmptyState, ErrorState, FilterBar, ListPage } from '../../../shared/ui';
 import { columnsOf, configOfPath, type MasterConfig } from '../configs';
 import { useMasterFilter, useMasterList } from '../hooks';
 import { useMasterFocus } from '../store';
@@ -26,7 +26,6 @@ export function MasterListPage() {
 }
 
 function MasterList({ config }: { config: MasterConfig }) {
-  const { l10n } = useLocalization();
   const navigate = useNavigate();
   const [filterText, setFilterText] = useState('');
   const [showInactive, setShowInactive] = useState(false);
@@ -135,39 +134,37 @@ function MasterList({ config }: { config: MasterConfig }) {
   );
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id={config.titleId}>
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id={config.helpId}>
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        </div>
-        {/* An empty list has the same button in its empty state. */}
-        {first === undefined || first.total_count === 0 ? null : newButton}
-      </div>
-      <div ref={containerRef} {...formNavigationProps} className="flex flex-wrap items-end gap-4">
-        <div className="min-w-0 flex-1 basis-field">
-          <Field label={<Localized id="masters-filter-label" />}>
-            {(props) => (
-              <TextInput
-                {...props}
-                value={filterText}
-                onChange={setFilterText}
-                placeholder={l10n.getString('masters-filter-placeholder')}
+    <ListPage
+      titleId={config.titleId}
+      help={
+        <Localized id={config.helpId}>
+          <p />
+        </Localized>
+      }
+      // An empty list has the same button in its empty state.
+      actions={first === undefined || first.total_count === 0 ? undefined : newButton}
+      filters={
+        <div ref={containerRef} {...formNavigationProps}>
+          <FilterBar
+            screen={`masters.${config.kind}`}
+            search={{
+              value: filterText,
+              onChange: setFilterText,
+              labelId: 'masters-filter-label',
+              placeholderId: 'masters-filter-placeholder',
+            }}
+            extra={
+              <Checkbox
+                checked={showInactive}
+                onChange={setShowInactive}
+                label={<Localized id="masters-show-inactive" />}
               />
-            )}
-          </Field>
+            }
+          />
         </div>
-        <Checkbox
-          checked={showInactive}
-          onChange={setShowInactive}
-          label={<Localized id="masters-show-inactive" />}
-        />
-      </div>
-      <div className="min-h-0 flex-1">{body}</div>
-    </div>
+      }
+    >
+      {body}
+    </ListPage>
   );
 }

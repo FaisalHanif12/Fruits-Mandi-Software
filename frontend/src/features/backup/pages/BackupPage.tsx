@@ -11,7 +11,14 @@ import { DatabaseBackup, FlaskConical } from 'lucide-react';
 import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
-import { Button, ErrorNotice, ErrorState, LoadingState, showToast } from '../../../shared/ui';
+import {
+  Button,
+  ErrorNotice,
+  ErrorState,
+  ListPage,
+  LoadingState,
+  showToast,
+} from '../../../shared/ui';
 import { BackupListSection } from '../components/BackupListSection';
 import { KeyPanel } from '../components/KeyPanel';
 import { RestoreDialog } from '../components/RestoreDialog';
@@ -70,17 +77,15 @@ export function BackupPage() {
   };
 
   return (
-    <div className="flex max-w-page flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="backup-title">
-            <h1 className="sr-only normal:not-sr-only normal:type-title" />
-          </Localized>
-          <Localized id="backup-help">
-            <p className="hidden type-body text-ink-muted normal:block" />
-          </Localized>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <ListPage
+      titleId="backup-title"
+      help={
+        <Localized id="backup-help">
+          <p />
+        </Localized>
+      }
+      actions={
+        <>
           <Button
             onClick={() => {
               setTestTarget(null);
@@ -93,25 +98,30 @@ export function BackupPage() {
             <DatabaseBackup aria-hidden="true" className="size-icon-md" />
             <Localized id="backup-now" />
           </Button>
-        </div>
+        </>
+      }
+    >
+      {/* The screen scrolls in this area. The state is one row of chips, the copies fill the room
+          that is left with their page buttons under them, and the settings come last. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+        {nowError === null ? null : <ErrorNotice error={nowError} />}
+        {report === null ? null : <RunReportNotices report={report} />}
+        <KeyPanel status={state} />
+        <StatusCard
+          status={state}
+          onTest={() => {
+            setTestTarget(null);
+          }}
+        />
+        <BackupListSection
+          onRestore={setRestoreRow}
+          onTest={(row) => {
+            setTestTarget({ kind: row.kind, name: row.name });
+          }}
+          onBackupNow={backUpNow}
+        />
+        <SettingsCard />
       </div>
-      {nowError === null ? null : <ErrorNotice error={nowError} />}
-      {report === null ? null : <RunReportNotices report={report} />}
-      <KeyPanel status={state} />
-      <StatusCard
-        status={state}
-        onTest={() => {
-          setTestTarget(null);
-        }}
-      />
-      <BackupListSection
-        onRestore={setRestoreRow}
-        onTest={(row) => {
-          setTestTarget({ kind: row.kind, name: row.name });
-        }}
-        onBackupNow={backUpNow}
-      />
-      <SettingsCard />
       {restoreRow === null ? null : (
         <RestoreDialog
           key={`${restoreRow.kind}:${restoreRow.name}`}
@@ -131,6 +141,6 @@ export function BackupPage() {
           }}
         />
       )}
-    </div>
+    </ListPage>
   );
 }

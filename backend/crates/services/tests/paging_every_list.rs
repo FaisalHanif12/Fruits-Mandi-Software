@@ -275,6 +275,7 @@ fn the_advances_report_pages_with_the_totals_over_every_seller() {
         vouchers::advances_report(
             &w.env.ctx,
             &AdvancesReportInput {
+                search: None,
                 seller_id: None,
                 as_of: String::new(),
                 offset,

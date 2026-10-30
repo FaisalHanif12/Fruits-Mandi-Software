@@ -171,60 +171,64 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
                 <p role="status" className="type-label text-due" />
               </Localized>
             ) : null}
-            <dl className="grid grid-cols-3 gap-x-4 gap-y-3 normal:grid-cols-5">
-              <Fact label={<Localized id="gardens-arrival-col-date" />}>
-                <Code>{isoToDisplayDate(selected.entry_date)}</Code>
-              </Fact>
-              <Fact label={<Localized id="glossary-sell-date" />}>
-                <Code>{isoToDisplayDate(selected.sell_date)}</Code>
-              </Fact>
-              <Fact label={<Localized id="glossary-qism-maal" />}>
-                {displayName(selected.item, language)}
-              </Fact>
-              <Fact label={<Localized id="glossary-packing" />}>
-                {displayName(selected.packing, language)}
-              </Fact>
-              <Fact label={<Localized id="gardens-arrival-col-qty" />}>
-                <Num>{String(selected.qty)}</Num>
-              </Fact>
-              <Fact label={<Localized id="bikri-saved-qty-sold" />}>
-                <Num>{String(selected.qty_sold)}</Num>
-              </Fact>
-              <Fact label={<Localized id="bikri-stock-col-written-off" />}>
-                <Num>{String(selected.qty_written_off)}</Num>
-              </Fact>
-              <Fact label={<Localized id="gardens-arrival-col-left" />}>
-                <Num>{String(selected.qty_left)}</Num>
-              </Fact>
-              <Fact label={<Localized id="purchases-detail-qty-other" />}>
-                <Num>{String(selected.qty_other)}</Num>
-              </Fact>
-              <Fact label={<Localized id="goods-line-col-shop" />}>{selected.shop_name ?? ''}</Fact>
-              <Fact label={<Localized id="purchases-detail-our-sold" />}>
-                <Num>{String(selected.qty_our_sold)}</Num>
-              </Fact>
-              <Fact label={<Localized id="purchases-detail-other-sold" />}>
-                <Num>{String(selected.qty_other_sold)}</Num>
-              </Fact>
-              <Fact label={<Localized id="purchases-detail-our-left" />}>
-                <Num>{String(selected.qty_our_left)}</Num>
-              </Fact>
-              <Fact label={<Localized id="purchases-detail-other-left" />}>
-                <Num>{String(selected.qty_other_left)}</Num>
-              </Fact>
-              <Fact label={<Localized id="glossary-commission" />}>
-                <span className="inline-flex items-center gap-1">
-                  <Num paisa={selected.commission_paisa} />
-                  <CalcInfo working={selected.commission_working} inCell />
-                </span>
-              </Fact>
-              <Fact label={<Localized id="bikri-stock-col-days" />}>
-                <Num>{String(selected.days_waiting)}</Num>
-              </Fact>
-              {selected.note === null || selected.note === '' ? null : (
-                <Fact label={<Localized id="gardens-field-note" />}>{selected.note}</Fact>
-              )}
-            </dl>
+            <div className="@container min-w-0">
+              <dl className="grid grid-cols-3 gap-x-4 gap-y-3 @form3:grid-cols-5">
+                <Fact label={<Localized id="gardens-arrival-col-date" />}>
+                  <Code>{isoToDisplayDate(selected.entry_date)}</Code>
+                </Fact>
+                <Fact label={<Localized id="glossary-sell-date" />}>
+                  <Code>{isoToDisplayDate(selected.sell_date)}</Code>
+                </Fact>
+                <Fact label={<Localized id="glossary-qism-maal" />}>
+                  {displayName(selected.item, language)}
+                </Fact>
+                <Fact label={<Localized id="glossary-packing" />}>
+                  {displayName(selected.packing, language)}
+                </Fact>
+                <Fact label={<Localized id="gardens-arrival-col-qty" />}>
+                  <Num>{String(selected.qty)}</Num>
+                </Fact>
+                <Fact label={<Localized id="bikri-saved-qty-sold" />}>
+                  <Num>{String(selected.qty_sold)}</Num>
+                </Fact>
+                <Fact label={<Localized id="bikri-stock-col-written-off" />}>
+                  <Num>{String(selected.qty_written_off)}</Num>
+                </Fact>
+                <Fact label={<Localized id="gardens-arrival-col-left" />}>
+                  <Num>{String(selected.qty_left)}</Num>
+                </Fact>
+                <Fact label={<Localized id="purchases-detail-qty-other" />}>
+                  <Num>{String(selected.qty_other)}</Num>
+                </Fact>
+                <Fact label={<Localized id="goods-line-col-shop" />}>
+                  {selected.shop_name ?? ''}
+                </Fact>
+                <Fact label={<Localized id="purchases-detail-our-sold" />}>
+                  <Num>{String(selected.qty_our_sold)}</Num>
+                </Fact>
+                <Fact label={<Localized id="purchases-detail-other-sold" />}>
+                  <Num>{String(selected.qty_other_sold)}</Num>
+                </Fact>
+                <Fact label={<Localized id="purchases-detail-our-left" />}>
+                  <Num>{String(selected.qty_our_left)}</Num>
+                </Fact>
+                <Fact label={<Localized id="purchases-detail-other-left" />}>
+                  <Num>{String(selected.qty_other_left)}</Num>
+                </Fact>
+                <Fact label={<Localized id="glossary-commission" />}>
+                  <span className="inline-flex items-center gap-1">
+                    <Num paisa={selected.commission_paisa} />
+                    <CalcInfo working={selected.commission_working} inCell />
+                  </span>
+                </Fact>
+                <Fact label={<Localized id="bikri-stock-col-days" />}>
+                  <Num>{String(selected.days_waiting)}</Num>
+                </Fact>
+                {selected.note === null || selected.note === '' ? null : (
+                  <Fact label={<Localized id="gardens-field-note" />}>{selected.note}</Fact>
+                )}
+              </dl>
+            </div>
             {selected.lots.length === 0 ? null : (
               <Table
                 columns={lotColumns}

@@ -22,7 +22,7 @@ import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
-import { ErrorState, LoadingState, Notice, showToast } from '../../../shared/ui';
+import { ErrorState, LoadingState, Notice, showToast, FormAside } from '../../../shared/ui';
 import { EntryFrame, EntryNotes, ExpenseTabs, previewRefusal } from '../../cashbook';
 import { CancelFruitDialog } from '../components/CancelFruitDialog';
 import { FruitEntryView } from '../components/FruitEntryView';
@@ -146,8 +146,7 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
   };
 
   return (
-    <div className="flex max-w-page flex-col gap-4">
-      <ExpenseTabs />
+    <div className="flex max-w-page flex-col gap-3 short:gap-2">
       {openEntry === undefined ? null : (
         <FruitEntryView
           entry={openEntry}
@@ -161,6 +160,7 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
       <EntryFrame<string>
         titleId="fruit-title"
         helpId="fruit-help"
+        tabs={<ExpenseTabs />}
         path={FRUIT_PATH}
         filled={filled}
         busy={flow.busy}
@@ -206,28 +206,32 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
             }}
           />
         ) : null}
-        <FruitForm
-          draft={draft}
-          onChange={change}
-          error={error}
-          preview={preview}
-          editing={editing !== null}
+        <FormAside
+          form={
+            <FruitForm
+              draft={draft}
+              onChange={change}
+              error={error}
+              preview={preview}
+              editing={editing !== null}
+            />
+          }
+          aside={
+            <>
+              <FruitPreviewCard preview={preview} guests={draft.forWhom === FOR_GUESTS} />
+              <EntryNotes warnings={warnings} cash={undefined} />
+              {query.isError && entry !== null ? (
+                <ErrorState
+                  title={<Localized id="fruit-numbers-failed" />}
+                  error={uiErrorOf(query.error)}
+                  onRetry={() => {
+                    void query.refetch();
+                  }}
+                />
+              ) : null}
+            </>
+          }
         />
-        <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
-          <FruitPreviewCard preview={preview} guests={draft.forWhom === FOR_GUESTS} />
-          <div className="flex flex-col gap-3">
-            <EntryNotes warnings={warnings} cash={undefined} />
-            {query.isError && entry !== null ? (
-              <ErrorState
-                title={<Localized id="fruit-numbers-failed" />}
-                error={uiErrorOf(query.error)}
-                onRetry={() => {
-                  void query.refetch();
-                }}
-              />
-            ) : null}
-          </div>
-        </div>
       </EntryFrame>
     </div>
   );

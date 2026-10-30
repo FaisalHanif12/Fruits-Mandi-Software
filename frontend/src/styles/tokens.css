@@ -64,6 +64,7 @@
      takes all the room the screen leaves, and the rows scroll inside it with only the rows in view
      drawn (plan 38 G2, Code Standards F34). */
   --list-region-h: 264px;
+
   /* A row of a read-only list: tight enough for 25 rows to fit a window with the page buttons. */
   --list-row-h: 40px;
 
@@ -94,14 +95,14 @@
   --field-short-w: 320px;
 
   /* Fields of a one-row form (plan 38 G1): a date or a truck number, and a picker of a name. The row
-     keeps the words of its buttons from 760 px of free width and only their icons below it. */
-  --field-date-w: 144px;
+     keeps the words of its buttons from 760 px of free width and only their icons below it
+     (`@row-roomy:`, set below). A screen puts its preview beside the form from 820 px of free
+     width: the form takes two thirds and the preview one third (`@beside:`, set below). */
+  --field-date-w: 128px;
   --field-mid-w: 168px;
-  --row-roomy-w: 760px;
 
-  /* A screen puts its preview beside the form from 820 px of free width (plan 38, forms): the form
-     takes two thirds and the preview one third. Tailwind variant `@beside:`. */
-  --beside-w: 820px;
+  /* A filter of a filter bar (a period, a side, a status): wide enough for "From the first date". */
+  --field-filter-w: 192px;
 
   /* Toast and dialog sizes (UsersEn, FormEn boards). */
   --toast-max-w: 480px;
@@ -217,6 +218,9 @@
   --container-form3: 640px;
   --container-form4: 900px;
 
+  /* A filter bar has its search box, its fields and its button in one row from here. */
+  --container-filter-wide: 880px;
+
   /* Layout steps as Tailwind variants: `normal:` and `wide:` (compact is the default). */
   --breakpoint-normal: 1366px;
   --breakpoint-wide: 1920px;
@@ -305,8 +309,11 @@
   --container-field: var(--field-short-w);
   --container-date: var(--field-date-w);
   --container-mid: var(--field-mid-w);
-  --container-row-roomy: var(--row-roomy-w);
-  --container-beside: var(--beside-w);
+  --container-filter: var(--field-filter-w);
+
+  /* A container query needs a plain length, never var(): these two are written out. */
+  --container-row-roomy: 760px;
+  --container-beside: 820px;
 }
 
 /*

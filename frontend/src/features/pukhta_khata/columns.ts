@@ -19,18 +19,21 @@ export const PUKHTA_COLUMNS: readonly ListColumn<PukhtaRegisterRow>[] = [
     field: 'date',
     type: 'date',
     headerId: 'pukhta-col-date',
+    sortKey: 'entry_date',
     value: (row) => isoToDisplayDate(row.entry_date),
   },
   {
     field: 'bikri',
     type: 'code',
     headerId: 'pukhta-col-bikri',
+    sortKey: 'bikri_number',
     value: (row) => String(row.bikri_number),
   },
   {
     field: 'side',
     type: 'status',
     headerId: 'pukhta-col-side',
+    sortKey: 'side',
     from: 'wide',
     value: (row, { text }) =>
       text(row.side === 'seller' ? 'pukhta-side-seller' : 'pukhta-side-buyer'),
@@ -39,6 +42,7 @@ export const PUKHTA_COLUMNS: readonly ListColumn<PukhtaRegisterRow>[] = [
     field: 'name',
     type: 'name',
     headerId: 'pukhta-col-name',
+    sortKey: (language) => (language === 'ur' ? 'name_ur' : 'name_en'),
     grow: true,
     value: (row, { language }) => displayName(row, language),
   },
@@ -47,6 +51,7 @@ export const PUKHTA_COLUMNS: readonly ListColumn<PukhtaRegisterRow>[] = [
     // Eleven digits do not fit the 120 px of a code.
     type: 'number',
     headerId: 'pukhta-col-phone',
+    sortKey: 'phone',
     from: 'normal',
     value: (row) => row.phone,
   },
@@ -54,6 +59,7 @@ export const PUKHTA_COLUMNS: readonly ListColumn<PukhtaRegisterRow>[] = [
     field: 'item',
     type: 'text',
     headerId: 'pukhta-col-item',
+    sortKey: 'item',
     from: 'wide',
     value: (row, { language }) => displayName(row.item, language),
   },
@@ -61,12 +67,14 @@ export const PUKHTA_COLUMNS: readonly ListColumn<PukhtaRegisterRow>[] = [
     field: 'amount',
     type: 'money',
     headerId: 'pukhta-col-amount',
+    sortKey: 'amount',
     value: (row, { money }) => money(row.amount),
   },
   {
     field: 'commission',
     type: 'money',
     headerId: 'glossary-commission',
+    sortKey: 'commission',
     from: 'wide',
     value: (row, { money }) => money(row.commission),
   },
@@ -74,6 +82,7 @@ export const PUKHTA_COLUMNS: readonly ListColumn<PukhtaRegisterRow>[] = [
     field: 'state',
     type: 'status',
     headerId: 'pukhta-col-state',
+    sortKey: 'paid',
     value: (row, { text, money }) =>
       row.cancelled
         ? text('pukhta-state-cancelled')
@@ -88,6 +97,7 @@ const QTY_COLUMN: ListColumn<PukhtaRegisterRow> = {
   field: 'qty',
   type: 'number',
   headerId: 'glossary-nag',
+  sortKey: 'qty',
   value: (row) => String(row.qty),
 };
 

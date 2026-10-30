@@ -16,17 +16,15 @@ import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
 import {
   Button,
-  Card,
   DateInput,
   EmptyState,
   ErrorState,
   Field,
   LoadingState,
-  Notice,
   fieldError,
 } from '../../../shared/ui';
 import { LinesForm } from '../components/LinesForm';
-import { LotFacts } from '../components/stock/StockLotCard';
+import { LotStrip } from '../components/stock/LotStrip';
 import { BikriDraftProvider, createBikriDraft, type BikriDraftStores } from '../draft-store';
 import { useStockList } from '../hooks/useBikriReads';
 import { useSaveLaterSale } from '../hooks/useSaveBikri';
@@ -130,12 +128,11 @@ function LaterSaleForm({ row, today }: { row: StockRow; today: string }) {
           void navigate({ to: '/bikri/stock' });
         }}
       >
-        <Card compact title={<Localized id="bikri-later-lot-title" />}>
-          <LotFacts row={row} />
-          <Notice tone="info">
-            <Localized id="bikri-later-no-lot-charges" />
-          </Notice>
-        </Card>
+        <LotStrip row={row} />
+        {/* One short line: the lot's charges were taken at its first posting (PRD FR-12.17). */}
+        <Localized id="bikri-later-no-lot-charges">
+          <p className="type-body text-ink-muted" />
+        </Localized>
       </LinesForm>
     </BikriDraftProvider>
   );

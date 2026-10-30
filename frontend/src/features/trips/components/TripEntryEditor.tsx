@@ -54,6 +54,8 @@ import {
   fieldError,
   showToast,
   useErrorText,
+  FormAside,
+  InfoHint,
 } from '../../../shared/ui';
 import {
   GoodsLinesGrid,
@@ -460,121 +462,129 @@ export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: Tri
         className="flex flex-col gap-4"
       >
         {error === null ? null : <ErrorNotice error={error} fieldsShown={fieldsShown} />}
-        <div className="grid grid-cols-1 gap-4 normal:grid-cols-5">
-          <div className="grid grid-cols-2 gap-4 rounded-3 border border-border bg-surface p-3 normal:col-span-3">
-            <Field label={<Localized id="trips-field-date" />} error={fieldError(error, 'date')}>
-              {(props) => (
-                <DateInput
-                  {...props}
-                  value={draft.date}
-                  onChange={(date) => {
-                    change({ date });
+        <FormAside
+          form={
+            <div className="grid grid-cols-2 gap-4 rounded-3 border border-border bg-surface p-3">
+              <Field label={<Localized id="trips-field-date" />} error={fieldError(error, 'date')}>
+                {(props) => (
+                  <DateInput
+                    {...props}
+                    value={draft.date}
+                    onChange={(date) => {
+                      change({ date });
+                    }}
+                  />
+                )}
+              </Field>
+              {draft.type === 'purchase' ? null : <div />}
+              {draft.type === 'purchase' ? (
+                <PurchaseEntryFieldsForm
+                  fields={draft.purchase}
+                  onChange={(patch) => {
+                    change({ purchase: { ...draft.purchase, ...patch } });
+                  }}
+                  error={error}
+                  purchaseDate={draft.date}
+                />
+              ) : draft.type === 'cost' ? (
+                <CostFieldsForm
+                  fields={draft.cost}
+                  amount={draft.amount}
+                  error={error}
+                  onChange={({ reason, amount }) => {
+                    change({
+                      ...(reason === undefined ? {} : { cost: { reason } }),
+                      ...(amount === undefined ? {} : { amount }),
+                    });
+                  }}
+                />
+              ) : (
+                <OtherSaleFieldsForm
+                  fields={draft.sale}
+                  amount={draft.amount}
+                  purchases={withStock}
+                  error={error}
+                  onChange={({ shop, purchaseId, qty, amount }) => {
+                    change({
+                      sale: {
+                        shop: shop ?? draft.sale.shop,
+                        purchaseId: purchaseId ?? draft.sale.purchaseId,
+                        qty: qty ?? draft.sale.qty,
+                      },
+                      ...(amount === undefined ? {} : { amount }),
+                    });
                   }}
                 />
               )}
-            </Field>
-            {draft.type === 'purchase' ? null : <div />}
-            {draft.type === 'purchase' ? (
-              <PurchaseEntryFieldsForm
-                fields={draft.purchase}
-                onChange={(patch) => {
-                  change({ purchase: { ...draft.purchase, ...patch } });
-                }}
-                error={error}
-                purchaseDate={draft.date}
-              />
-            ) : draft.type === 'cost' ? (
-              <CostFieldsForm
-                fields={draft.cost}
-                amount={draft.amount}
-                error={error}
-                onChange={({ reason, amount }) => {
-                  change({
-                    ...(reason === undefined ? {} : { cost: { reason } }),
-                    ...(amount === undefined ? {} : { amount }),
-                  });
-                }}
-              />
-            ) : (
-              <OtherSaleFieldsForm
-                fields={draft.sale}
-                amount={draft.amount}
-                purchases={withStock}
-                error={error}
-                onChange={({ shop, purchaseId, qty, amount }) => {
-                  change({
-                    sale: {
-                      shop: shop ?? draft.sale.shop,
-                      purchaseId: purchaseId ?? draft.sale.purchaseId,
-                      qty: qty ?? draft.sale.qty,
-                    },
-                    ...(amount === undefined ? {} : { amount }),
-                  });
-                }}
-              />
-            )}
-            {draft.type === 'cost' ? null : (
-              <div className="col-span-2">
-                <Field
-                  label={<Localized id="trips-field-note" />}
-                  error={fieldError(error, 'note')}
-                >
-                  {(props) => (
-                    <FreeTextInput
-                      {...props}
-                      value={draft.note}
-                      onChange={(note) => {
-                        change({ note });
-                      }}
-                    />
-                  )}
-                </Field>
-              </div>
-            )}
-            {payment ? (
-              <div className="col-span-2 flex flex-col gap-1">
-                <Localized id="trips-sources-title">
-                  <h3 className="type-label text-ink-muted" />
-                </Localized>
-                <Localized id="trips-sources-hint">
-                  <p className="type-body text-ink-muted" />
-                </Localized>
-                <EntrySources
-                  partners={trip.partners}
-                  value={draft.sources}
-                  onChange={(partnerId, source) => {
-                    change({ sources: { ...draft.sources, [partnerId]: source } });
-                  }}
-                />
-              </div>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-3 normal:col-span-2">
-            {numbers}
-            {active.cash === undefined ? null : <CashNote cash={active.cash} />}
-            {active.warnings.length === 0 ? null : (
-              <ul className="flex flex-col gap-1">
-                {active.warnings.map((item) => (
-                  <li
-                    key={`${item.code}-${item.field}`}
-                    role="status"
-                    className="flex items-start gap-2 type-body text-warn"
+              {draft.type === 'cost' ? null : (
+                <div className="col-span-2">
+                  <Field
+                    label={<Localized id="trips-field-note" />}
+                    error={fieldError(error, 'note')}
                   >
-                    <TriangleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
-                    <span>{errorText(item)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {active.failed ? (
-              <ErrorState
-                title={<Localized id="trips-preview-failed" />}
-                error={uiErrorOf(active.failure)}
-                onRetry={active.retry}
-              />
-            ) : null}
-          </div>
-        </div>
+                    {(props) => (
+                      <FreeTextInput
+                        {...props}
+                        value={draft.note}
+                        onChange={(note) => {
+                          change({ note });
+                        }}
+                      />
+                    )}
+                  </Field>
+                </div>
+              )}
+              {payment ? (
+                <div className="col-span-2 flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <Localized id="trips-sources-title">
+                      <h3 className="type-label text-ink-muted" />
+                    </Localized>
+                    <InfoHint>
+                      <Localized id="trips-sources-hint">
+                        <p />
+                      </Localized>
+                    </InfoHint>
+                  </div>
+                  <EntrySources
+                    partners={trip.partners}
+                    value={draft.sources}
+                    onChange={(partnerId, source) => {
+                      change({ sources: { ...draft.sources, [partnerId]: source } });
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          }
+          aside={
+            <>
+              {numbers}
+              {active.cash === undefined ? null : <CashNote cash={active.cash} />}
+              {active.warnings.length === 0 ? null : (
+                <ul className="flex flex-col gap-1">
+                  {active.warnings.map((item) => (
+                    <li
+                      key={`${item.code}-${item.field}`}
+                      role="status"
+                      className="flex items-start gap-2 type-body text-warn"
+                    >
+                      <TriangleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
+                      <span>{errorText(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {active.failed ? (
+                <ErrorState
+                  title={<Localized id="trips-preview-failed" />}
+                  error={uiErrorOf(active.failure)}
+                  onRetry={active.retry}
+                />
+              ) : null}
+            </>
+          }
+        />
         {draft.type === 'purchase' ? (
           // The grid owns its keys (PRD 7.2); the form's own Enter and arrows leave it alone.
           <div data-nav-owns-keys>

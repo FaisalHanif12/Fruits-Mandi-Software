@@ -21,7 +21,6 @@ use crate::cash::CASH_ACCOUNT_CODE;
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
-use crate::ledger;
 use crate::page;
 
 fn paisa(value: i64) -> Result<Paisa, ServiceError> {
@@ -52,28 +51,50 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
     errors.finish()?;
     let (from_iso, to_iso) = (from.map(BusinessDate::to_iso), to.map(BusinessDate::to_iso));
     // The sort is checked first: an unknown column is refused (plan 38 R4).
-    let order_by = input
-        .sort
-        .as_ref()
-        .map(|sort| sort.order_by(&repo::SORT_COLUMNS))
-        .transpose()
-        .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
-    let in_date_order = input.sort.as_ref().is_none_or(|s| s.column == "entry_date");
-    let newest_first = input
-        .sort
-        .as_ref()
-        .is_some_and(|s| s.column == "entry_date" && s.direction == SortDirection::Desc);
-    ctx.db.read(|conn| {
+    let order = match &input.sort {
+        None => repo::Order::Date { desc: false },
+        Some(sort) => {
+            let chosen = sort
+                .order_by(&repo::SORT_COLUMNS)
+                .map_err(|e| ServiceError::reject_field(e.code, &e.field))?;
+            match sort.column.as_str() {
+                "entry_date" => repo::Order::Date {
+                    desc: sort.direction == SortDirection::Desc,
+                },
+                "in_paisa" | "out_paisa" => repo::Order::Amount {
+                    out: sort.column == "out_paisa",
+                    desc: sort.direction == SortDirection::Desc,
+                },
+                _ => repo::Order::Other(chosen),
+            }
+        }
+    };
+    let in_date_order = matches!(order, repo::Order::Date { .. });
+    ctx.db.read_snapshot(|conn| {
         let cash = account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
             .ok_or_else(|| ServiceError::Data("the cash account is missing".to_owned()))?;
-        // The opening is the cash at the end of the day before the first day of the range.
-        let opening = match from.and_then(BusinessDate::previous_day) {
-            Some(day) => {
-                ledger::signed(ledger::balance_in(conn, cash, None, Some(&day.to_iso()))?)?
+        let range = repo::range(conn, cash, from_iso.as_deref(), to_iso.as_deref())?;
+        // The opening is the cash at the end of the day before the first day of the range: the
+        // whole book less what is dated from the first day on (both are kept sums, so a page
+        // after the first does not read the book again).
+        let opening = match from_iso.as_deref() {
+            Some(first) => {
+                let whole = repo::range(conn, cash, None, None)?;
+                let from_first = repo::range(conn, cash, Some(first), None)?;
+                let before_in = whole
+                    .in_paisa
+                    .checked_sub(from_first.in_paisa)
+                    .ok_or_else(|| ServiceError::Data("cash before the range".to_owned()))?;
+                let before_out = whole
+                    .out_paisa
+                    .checked_sub(from_first.out_paisa)
+                    .ok_or_else(|| ServiceError::Data("cash before the range".to_owned()))?;
+                paisa(before_in)?
+                    .checked_sub(paisa(before_out)?)
+                    .map_err(money_error)?
             }
             None => Paisa::ZERO,
         };
-        let range = repo::range(conn, cash, from_iso.as_deref(), to_iso.as_deref())?;
         let (total_in, total_out) = (paisa(range.in_paisa)?, paisa(range.out_paisa)?);
         let closing = opening
             .checked_add(total_in)
@@ -84,7 +105,7 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
             cash,
             from_iso.as_deref(),
             to_iso.as_deref(),
-            order_by.as_deref(),
+            &order,
             i64::from(input.offset),
             page::limit_of(input.limit),
         )?;
@@ -92,11 +113,16 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
         let others = repo::counterparts(conn, cash, &ids)?;
         let mut rows = Vec::with_capacity(stored.len());
         for row in &stored {
-            let running = opening
-                .checked_add(paisa(row.run_in_paisa)?)
-                .map_err(money_error)?
-                .checked_sub(paisa(row.run_out_paisa)?)
-                .map_err(money_error)?;
+            let running = match (row.run_in_paisa, row.run_out_paisa) {
+                (Some(run_in), Some(run_out)) => Some(
+                    opening
+                        .checked_add(paisa(run_in)?)
+                        .map_err(money_error)?
+                        .checked_sub(paisa(run_out)?)
+                        .map_err(money_error)?,
+                ),
+                _ => None,
+            };
             // The other side is shown only when it is one account: the entry of a بکری has many.
             let account = counterpart(&others, row);
             rows.push(CashbookRow {
@@ -115,15 +141,26 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
                 running_paisa: running,
             });
         }
-        // Month headings with their subtotals, over the whole range (plan 38 R4).
-        let months = if input.group_by_month && in_date_order {
-            page::month_subtotals(
-                repo::months(conn, cash, from_iso.as_deref(), to_iso.as_deref())?,
-                &[("in_paisa", true), ("out_paisa", true)],
-                newest_first,
-            )
-        } else {
-            Vec::new()
+        // Month headings with their subtotals, for the months this page touches (plan 38 B2).
+        let months = match (
+            input.group_by_month && in_date_order,
+            stored.first(),
+            stored.last(),
+        ) {
+            (true, Some(first), Some(last)) => {
+                let newest_first = matches!(order, repo::Order::Date { desc: true });
+                page::month_subtotals(
+                    repo::months_between(
+                        conn,
+                        cash,
+                        (from_iso.as_deref(), to_iso.as_deref()),
+                        (&first.entry_date, &last.entry_date),
+                    )?,
+                    &[("in_paisa", true), ("out_paisa", true)],
+                    newest_first,
+                )
+            }
+            _ => Vec::new(),
         };
         Ok(Cashbook {
             opening_paisa: opening,

@@ -133,7 +133,7 @@ settings-day-title = بندش کا وقت اور خودکار بندش
 settings-day-closing-time = بندش کا وقت
 
 # review: pending
-settings-day-closing-time-hint = 24 گھنٹے کے وقت میں گھنٹے اور منٹ لکھیں، مثلاً 21:00 (پاکستان کا وقت)۔ روزانہ کلاؤڈ اور USB بیک اپ اسی وقت ہوتا ہے۔ یہ وہی وقت ہے جو بیک اپ کی سکرین پر ہے۔
+settings-day-closing-time-hint = 24 گھنٹے کے وقت میں گھنٹے اور منٹ لکھیں، مثلاً 21:00 (پاکستان کا وقت)۔ روزانہ کلاؤڈ اور USB بیک اپ اسی وقت ہوتا ہے۔ یہ وہی وقت ہے جو بیک اپ کی اسکرین پر ہے۔
 
 # review: pending
 settings-day-auto-close = بندش کے وقت دن خود بند ہو جائے
@@ -148,7 +148,7 @@ settings-day-auto-close-off-note = بند: آپ دن خود «دن بند کری
 settings-grouping-title = ہندسوں کی ترتیب
 
 # review: pending
-settings-grouping-help = بڑی رقمیں سکرین اور پرنٹ پر کیسے لکھی جائیں۔ لاکھ کی ترتیب میں پہلے تین ہندسوں کے بعد دو دو ہندسے ساتھ آتے ہیں۔
+settings-grouping-help = بڑی رقمیں اسکرین اور پرنٹ پر کیسے لکھی جائیں۔ لاکھ کی ترتیب میں پہلے تین ہندسوں کے بعد دو دو ہندسے ساتھ آتے ہیں۔
 
 # review: pending
 settings-grouping-international = بین الاقوامی (<num>1,316,040</num>)
@@ -255,7 +255,7 @@ settings-check-backup-alert = آخری کلاؤڈ کاپی { $hours } گھنٹے
 settings-check-backup-queue = { $count } کاپیاں بھیجنے کے انتظار میں ہیں۔
 
 # review: pending
-settings-check-backup-errors = بیک اپ کی { $count } خرابیاں ہیں۔ بیک اپ کی سکرین دیکھیں۔
+settings-check-backup-errors = بیک اپ کی { $count } خرابیاں ہیں۔ بیک اپ کی اسکرین دیکھیں۔
 
 # review: pending
 settings-app-title = اپڈیٹ

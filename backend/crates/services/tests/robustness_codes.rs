@@ -974,6 +974,7 @@ fn the_search_index_rebuilt_from_the_database_gives_the_same_answers() {
                 kind: mandi_services::core::accounts::AccountListKind::All,
                 text: String::new(),
                 include_inactive: true,
+                has_opening: None,
             },
             offset: 0,
             limit: 0,

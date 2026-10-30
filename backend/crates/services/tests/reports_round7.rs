@@ -279,7 +279,10 @@ fn r12_is_the_cash_book_of_the_screen_row_for_row() {
     for (row, shown) in page.rows.iter().zip(&screen.rows) {
         assert_eq!(money(&row.cells[4]), shown.in_paisa.rupees());
         assert_eq!(money(&row.cells[5]), shown.out_paisa.rupees());
-        assert_eq!(balance(&row.cells[6]).1, shown.running_paisa.rupees());
+        assert_eq!(
+            balance(&row.cells[6]).1,
+            shown.running_paisa.unwrap().rupees()
+        );
         assert!(matches!(&row.cells[0], Cell::Date { iso } if *iso == shown.entry_date));
         assert!(
             matches!(&row.cells[1], Cell::Doc { number, .. } if *number == shown.number),
@@ -1012,6 +1015,8 @@ fn r31_prints_its_sentences_in_the_print_language_with_the_numbers_already_writt
             w.env.ctx.db(),
             &page,
             &ReportPrintInput {
+                group_by_month: false,
+                sort: None,
                 id: ReportId::R31,
                 filters: partner(w.partners[1]),
                 language,
@@ -1074,6 +1079,8 @@ fn r31_exports_to_a_sheet_with_the_sentences_and_the_numbers_in_both_languages()
             w.env.ctx.db(),
             &page,
             &ReportExportInput {
+                group_by_month: false,
+                sort: None,
                 id: ReportId::R31,
                 filters: ReportFilters::default(),
                 language,

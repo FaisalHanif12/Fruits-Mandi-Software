@@ -67,6 +67,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
       kind: type,
       text: text.trim(),
       include_inactive: showInactive,
+      has_opening: null,
     }),
     [type, text, showInactive],
   );
@@ -175,6 +176,7 @@ function AccountListBody({ saved, remember: keepChoices }: MemoryProps) {
             isInactive={(row) => !row.is_active}
             totals={totalsUnderColumns ? totals : undefined}
             paging={paging}
+            sort={{ value: list.sort, onChange: list.setSort }}
             focusRowId={focusRowId === undefined ? null : String(focusRowId)}
             onFocusRow={(rowId) => {
               remember('account', Number(rowId));

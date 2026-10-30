@@ -101,9 +101,17 @@ export interface ListColumn<T> {
   /**
    * The name the backend sorts this column by (a field of its rows, plan 38 R4). A column with one
    * has a clickable title: the first click sorts ascending, the second descending, the third goes
-   * back to the list's own order. The backend sorts the whole filter, never only the page.
+   * back to the list's own order. The backend sorts the whole filter, never only the page. A name
+   * column gives a function of the language (`name_ur` or `name_en`), so it sorts in the order of
+   * the script on screen.
    */
-  readonly sortKey?: string | undefined;
+  readonly sortKey?: string | ((language: Language) => string) | undefined;
+}
+
+/** The name the backend sorts a column by, in the language on screen. */
+function sortKeyOf<T>(column: ListColumn<T>, language: Language): string | undefined {
+  const key = column.sortKey;
+  return typeof key === 'function' ? key(language) : key;
 }
 
 /** The order of a list chosen on a column title, and how to change it. */
@@ -120,6 +128,11 @@ export interface ListSort {
 export interface ListMonths<T> {
   months: readonly MonthSubtotal[];
   monthOf: (row: T) => string;
+  /**
+   * The column a subtotal of the backend is shown under, when its name is not the column's (the
+   * register's `open` figure goes under the column of paid or due).
+   */
+  columnOf?: Readonly<Record<string, string>> | undefined;
 }
 
 /** The heading row of a month, among the rows of the grid. Never a record: no key opens it. */
@@ -134,15 +147,16 @@ function isMonthHeading(row: unknown): row is MonthHeading {
 /** The rows with a heading before the first row of each month the backend sent a subtotal for. */
 function withMonthHeadings<T>(
   rows: readonly T[],
-  months: ListMonths<T> | undefined,
+  subtotals: readonly MonthSubtotal[] | undefined,
+  monthOf: ((row: T) => string) | undefined,
 ): (T | MonthHeading)[] {
-  if (months === undefined || months.months.length === 0) return [...rows];
+  if (subtotals === undefined || monthOf === undefined || subtotals.length === 0) return [...rows];
   const made: (T | MonthHeading)[] = [];
   let previous: string | null = null;
   for (const row of rows) {
-    const month = months.monthOf(row);
+    const month = monthOf(row);
     if (month !== previous) {
-      const found = months.months.find((candidate) => candidate.month === month);
+      const found = subtotals.find((candidate) => candidate.month === month);
       if (found !== undefined) made.push({ monthHeading: found });
       previous = month;
     }
@@ -218,10 +232,11 @@ function toColDef<T>(
   headerName: string,
   context: ListContext,
   total: Record<string, string> | undefined,
-  sort: ListSort | undefined,
+  sort: { value: SortInput | null } | undefined,
 ): ColDef<T> {
   const unitOf = column.unit;
-  const sortable = sort !== undefined && column.sortKey !== undefined;
+  const sortKey = sortKeyOf(column, context.language);
+  const sortable = sort !== undefined && sortKey !== undefined;
   return {
     colId: column.field,
     headerName,
@@ -236,7 +251,7 @@ function toColDef<T>(
       ? {
           comparator: () => 0,
           sortingOrder: ['asc', 'desc', null] as ('asc' | 'desc' | null)[],
-          sort: sort.value?.column === column.sortKey ? sort.value.direction : null,
+          sort: sort.value?.column === sortKey ? sort.value.direction : null,
         }
       : {}),
     suppressMovable: true,
@@ -383,13 +398,21 @@ function GridInner<T>({
     [language, l10n, grouping],
   );
   // The rows with the heading of each month among them, when the list is in date order.
-  const displayRows = useMemo(() => withMonthHeadings(rows, months), [rows, months]);
+  // The parts are used, not the `months` object the screen makes anew on every render.
+  const monthSubtotals = months?.months;
+  const monthOf = months?.monthOf;
+  const monthColumnOf = months?.columnOf;
+  const displayRows = useMemo(
+    () => withMonthHeadings(rows, monthSubtotals, monthOf),
+    [rows, monthSubtotals, monthOf],
+  );
   /** The words of a month heading: the month, its count and the subtotals under their column names. */
   const describeMonth = useCallback(
     (heading: MonthSubtotal) => {
       const [year = '', month = ''] = heading.month.split('-');
       const figures = heading.figures.flatMap((figure) => {
-        const column = shown.find((candidate) => candidate.field === figure.key);
+        const field = monthColumnOf?.[figure.key] ?? figure.key;
+        const column = shown.find((candidate) => candidate.field === field);
         if (column === undefined) return [];
         return [
           {
@@ -407,7 +430,7 @@ function GridInner<T>({
         figures,
       };
     },
-    [shown, context, l10n, grouping],
+    [shown, context, l10n, grouping, monthColumnOf],
   );
   // The total row exists while one of its columns is on screen.
   const total = useMemo(() => {
@@ -418,6 +441,11 @@ function GridInner<T>({
       ? { ...made.values, [made.labelField]: made.values[made.labelField] ?? '' }
       : undefined;
   }, [totals, context, shown]);
+  // The grid takes the current order, not the `sort` object the screen makes anew on every render:
+  // new column definitions on every render would rebuild the headings under a click.
+  const sortOn = sort !== undefined;
+  const sortValue = sort?.value ?? null;
+  const sortState = useMemo(() => (sortOn ? { value: sortValue } : undefined), [sortOn, sortValue]);
   const columnDefs = useMemo(
     () =>
       shown.map((column) =>
@@ -426,10 +454,10 @@ function GridInner<T>({
           column.headerText?.(context) ?? l10n.getString(column.headerId),
           context,
           total,
-          sort,
+          sortState,
         ),
       ),
-    [shown, l10n, context, total, sort],
+    [shown, l10n, context, total, sortState],
   );
   // The total row and the columns can change together (the "More columns" tick of the account
   // list). The grid then draws the new total row with the value getters it had before, so the
@@ -452,15 +480,34 @@ function GridInner<T>({
     // and the next Page Down would reach nothing. The new row is drawn a moment later, so focus is
     // asked for again until it is inside the grid (a few frames at most).
     let frames = 0;
+    // The first row of records: a month heading above it is not a place to type or open.
+    const firstIndex = (): number => {
+      const api = apiRef.current;
+      if (api === null) return 0;
+      for (let index = 0; index < api.getDisplayedRowCount(); index += 1) {
+        if (!isMonthHeading(api.getDisplayedRowAtIndex(index)?.data)) return index;
+      }
+      return 0;
+    };
     const focusFirstRow = () => {
-      apiRef.current?.setFocusedCell(0, firstField);
-      apiRef.current?.ensureIndexVisible(0);
+      const index = firstIndex();
+      apiRef.current?.setFocusedCell(index, firstField);
+      apiRef.current?.ensureIndexVisible(index);
       // The grid marks the cell but leaves the browser focus where it lost it: it is put on the
       // marked cell, so the next key reaches the grid.
       rootRef.current?.querySelector<HTMLElement>('.ag-cell-focus')?.focus();
     };
+    // Focus is settled when it is inside the grid and on the first row. The grid keeps the cells
+    // of the rows it draws again, so the cell that was clicked on the old page can still hold the
+    // browser focus while it now shows another row.
+    const focusIsOnFirstRow = (): boolean => {
+      const root = rootRef.current;
+      if (!root?.contains(document.activeElement)) return false;
+      const row = root.querySelector('.ag-cell-focus')?.closest('.ag-row');
+      return row?.getAttribute('row-index') === String(firstIndex());
+    };
     const settle = () => {
-      if (rootRef.current?.contains(document.activeElement) === true || frames >= FOCUS_RETRIES) {
+      if (focusIsOnFirstRow() || frames >= FOCUS_RETRIES) {
         return;
       }
       frames += 1;
@@ -477,21 +524,31 @@ function GridInner<T>({
     [],
   );
 
-  const onPage = paging?.onPage;
-  const suppressKeyboardEvent = useCallback(
-    (params: SuppressKeyboardEventParams<T>) => {
-      const key = params.event;
-      if (onPage === undefined || key.ctrlKey || key.altKey || key.metaKey || key.shiftKey) {
-        return false;
-      }
-      if (key.key !== 'PageDown' && key.key !== 'PageUp') return false;
-      // The grid would scroll a screenful; the list turns its page instead.
-      key.preventDefault();
-      if (key.type === 'keydown') onPage(key.key === 'PageDown' ? 'next' : 'previous');
-      return true;
-    },
-    [onPage],
+  // The page turn of the screen is made anew on every render. It is read at the moment of the key,
+  // so the options handed to the grid below stay the same object: a new `defaultColDef` on every
+  // render made the grid rebuild its columns, and a click on a title or a row was lost (plan 38).
+  const onPageRef = useRef(paging?.onPage);
+  useEffect(() => {
+    onPageRef.current = paging?.onPage;
+  });
+  const suppressKeyboardEvent = useCallback((params: SuppressKeyboardEventParams<T>) => {
+    const key = params.event;
+    const onPage = onPageRef.current;
+    if (onPage === undefined || key.ctrlKey || key.altKey || key.metaKey || key.shiftKey) {
+      return false;
+    }
+    if (key.key !== 'PageDown' && key.key !== 'PageUp') return false;
+    // The grid would scroll a screenful; the list turns its page instead.
+    key.preventDefault();
+    if (key.type === 'keydown') onPage(key.key === 'PageDown' ? 'next' : 'previous');
+    return true;
+  }, []);
+  const defaultColDef = useMemo(() => ({ suppressKeyboardEvent }), [suppressKeyboardEvent]);
+  const isFullWidthRow = useCallback(
+    (params: IsFullWidthRowParams<T>) => isMonthHeading(params.rowNode.data),
+    [],
   );
+  const fullWidthParams = useMemo(() => ({ describe: describeMonth }), [describeMonth]);
 
   const onGridReady = (event: GridReadyEvent<T>) => {
     apiRef.current = event.api;
@@ -516,11 +573,13 @@ function GridInner<T>({
     if (sort === undefined || event.source !== 'uiColumnSorted') return;
     const marked = event.api.getColumnState().find((state) => state.sort != null);
     const column = columns.find((candidate) => candidate.field === marked?.colId);
-    if (marked?.sort == null || column?.sortKey === undefined) {
+    const key = column === undefined ? undefined : sortKeyOf(column, language);
+    if (marked?.sort == null || key === undefined) {
       sort.onChange(null);
       return;
     }
-    sort.onChange({ column: column.sortKey, direction: marked.sort });
+    // The script of the names on screen goes with the sort: Urdu names sort in Urdu order.
+    sort.onChange({ column: key, direction: marked.sort, language });
   };
 
   const onCellKeyDown = (event: CellKeyDownEvent<T>) => {
@@ -554,14 +613,13 @@ function GridInner<T>({
         {...(months === undefined
           ? {}
           : {
-              isFullWidthRow: (params: IsFullWidthRowParams<T>) =>
-                isMonthHeading(params.rowNode.data),
+              isFullWidthRow,
               fullWidthCellRenderer: MonthHeadingCell,
-              fullWidthCellRendererParams: { describe: describeMonth },
+              fullWidthCellRendererParams: fullWidthParams,
             })}
         pinnedBottomRowData={total === undefined ? [] : [{} as T]}
         columnDefs={columnDefs}
-        defaultColDef={{ suppressKeyboardEvent }}
+        defaultColDef={defaultColDef}
         getRowId={(params) =>
           isMonthHeading(params.data)
             ? `month:${params.data.monthHeading.month}`

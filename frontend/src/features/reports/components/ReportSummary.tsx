@@ -23,14 +23,39 @@ function SummaryValue({ cell }: { cell: ReportCell }) {
   }
 }
 
-export function ReportSummary({ lines }: { lines: readonly ReportSummaryLine[] }) {
+interface ReportSummaryProps {
+  lines: readonly ReportSummaryLine[];
+  /**
+   * The lines as a card of their own (the footer of the party day sheet). Without it they are one
+   * strip, a label and its figure side by side, under the days of the report (plan 38).
+   */
+  card?: boolean;
+}
+
+export function ReportSummary({ lines, card = false }: ReportSummaryProps) {
   if (lines.length === 0) return null;
+  if (card) {
+    return (
+      <dl className="grid grid-cols-4 gap-4 rounded-3 border border-border bg-surface p-3">
+        {lines.map((line) => (
+          <Fact key={line.label_id} label={<Localized id={line.label_id} />}>
+            <SummaryValue cell={line.cell} />
+          </Fact>
+        ))}
+      </dl>
+    );
+  }
   return (
-    <dl className="grid grid-cols-4 gap-4 rounded-3 border border-border bg-surface p-3">
+    <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
       {lines.map((line) => (
-        <Fact key={line.label_id} label={<Localized id={line.label_id} />}>
-          <SummaryValue cell={line.cell} />
-        </Fact>
+        <div key={line.label_id} className="flex items-baseline gap-2">
+          <dt className="type-label text-ink-muted">
+            <Localized id={line.label_id} />
+          </dt>
+          <dd className="type-field min-w-0 break-words text-ink">
+            <SummaryValue cell={line.cell} />
+          </dd>
+        </div>
       ))}
     </dl>
   );

@@ -188,6 +188,7 @@ describe("the report print wrappers send the backend's requests and read its ans
       date: '10-10-2026',
       collector_staff_id: 81,
       city_id: null,
+      search: null,
       language: 'ur' as const,
       copies: '2',
       to: 'printer' as const,

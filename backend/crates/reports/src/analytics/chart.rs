@@ -66,6 +66,13 @@ fn plan_of(view: AnalyticsView, trip_view: Option<AnalyticsTripView>) -> Plan {
     }
 }
 
+/// The index of the column that names a row: the first one that is not the rank (view H puts the
+/// rank first and the name second; the point is called by the name, in both scripts like the
+/// table, never by "1", "2").
+fn label_index(columns: &[AnalyticsColumn]) -> usize {
+    columns.iter().position(|c| c.key != "rank").unwrap_or(0)
+}
+
 /// The index of the column with this key.
 fn index_of(columns: &[AnalyticsColumn], key: &str) -> Option<usize> {
     columns.iter().position(|c| c.key == key)
@@ -109,6 +116,7 @@ fn ranked(
         key: measure.to_owned(),
         kind,
     }];
+    let named_by = label_index(columns);
     // The sections: the rows between two heading rows. Without heading rows, one section.
     let mut sections: Vec<(Option<&AnalyticsRow>, Vec<&AnalyticsRow>)> = Vec::new();
     for row in rows {
@@ -138,7 +146,7 @@ fn ranked(
             let value = row.cells.get(at).and_then(amount).map_or(0, |v| v.0);
             if rank < TOP {
                 points.push(AnalyticsChartPoint {
-                    label: row.cells.first().cloned().unwrap_or(Cell::Empty),
+                    label: row.cells.get(named_by).cloned().unwrap_or(Cell::Empty),
                     key: row.key.clone(),
                     values: vec![cell_of(kind, value)?],
                     is_others: false,
@@ -366,11 +374,13 @@ pub(crate) fn sort_rows(
                 .with("allowed", ErrorValue::Text(allowed)),
         ]));
     };
+    let urdu = sort.language == Some(mandi_core::auth::Language::Ur);
     let by = |a: &AnalyticsRow, b: &AnalyticsRow| -> Ordering {
         let empty = Cell::Empty;
         sort.direction.apply(compare(
             a.cells.get(at).unwrap_or(&empty),
             b.cells.get(at).unwrap_or(&empty),
+            urdu,
         ))
     };
     let mut out = Vec::with_capacity(rows.len());

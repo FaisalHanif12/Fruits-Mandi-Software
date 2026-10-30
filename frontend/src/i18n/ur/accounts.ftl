@@ -383,3 +383,31 @@ accounts-similar-duplicate-title = یہ کھاتہ پہلے سے موجود ہو
 # A word on the row of that account, so colour is never the only signal.
 # review: pending
 accounts-similar-duplicate-chip = نام، نشان اور فون ایک جیسے ہیں
+
+# What the opening balances list shows: the accounts that still need one, those that have one, or all.
+# review: pending
+openings-show-label = دکھائیں
+
+# review: pending
+openings-show-without = ابھی ابتدائی بقایا نہیں
+
+# review: pending
+openings-show-with = ابتدائی بقایا والے
+
+# review: pending
+openings-show-all = تمام کھاتے
+
+# review: pending
+openings-none-without = کوئی کھاتہ ابتدائی بقایا کے انتظار میں نہیں
+
+# review: pending
+openings-none-without-help = یا تو ہر کھاتے کا ابتدائی بقایا لکھا جا چکا ہے یا ابھی کوئی کھاتہ نہیں بنا۔ انہیں دیکھنے کے لیے «تمام کھاتے» چنیں۔
+
+# review: pending
+openings-none-with = کسی کھاتے کا ابتدائی بقایا ابھی نہیں لکھا گیا
+
+# review: pending
+openings-none-with-help = پہلے بقایا لکھنے کے لیے «ابھی ابتدائی بقایا نہیں» چنیں۔
+
+# review: pending
+openings-show-all-button = تمام کھاتے دکھائیں

@@ -8,6 +8,7 @@ import { FileX } from 'lucide-react';
 import { useState } from 'react';
 import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
+import type { SortInput } from '../../../bindings/SortInput';
 import type { ReportFilters } from '../../../bindings/ReportFilters';
 import type { ReportId } from '../../../bindings/ReportId';
 import { uiErrorOf } from '../../../shared/api';
@@ -22,23 +23,40 @@ import { usePrintJob } from './usePrintJob';
 interface ReportPreviewProps {
   id: ReportId;
   filters: ReportFilters;
+  /** The order and the month headings of the screen: the print has the same (plan 38 R4). */
+  sort: SortInput | null;
+  groupByMonth: boolean;
   onBack: () => void;
   /** The Excel export of the screen: its button sits in the frame, with the language chosen here. */
   exporter: ExcelExporter;
 }
 
-export function ReportPreview({ id, filters, onBack, exporter }: ReportPreviewProps) {
+export function ReportPreview({
+  id,
+  filters,
+  sort,
+  groupByMonth,
+  onBack,
+  exporter,
+}: ReportPreviewProps) {
   const appLanguage = useLanguage();
   const [language, setLanguage] = useState<Language>(appLanguage);
   const [paper, setPaper] = useState<Paper>('a4');
-  const query = useReportPrintData({ id, filters, language, paper });
+  const query = useReportPrintData({
+    id,
+    filters,
+    language,
+    paper,
+    sort,
+    group_by_month: groupByMonth,
+  });
   // The ONE header and footer of every print: the backend builds them from the title and the filters.
   const frame = usePrintFrameOf(language, query.data);
   // "Print" and "Save as PDF": the same report, language and paper as the page on screen.
   const printReport = usePrintReport();
   const job = usePrintJob((to) =>
     printReport.mutateAsync({
-      report: { id, filters, language, paper },
+      report: { id, filters, language, paper, sort, group_by_month: groupByMonth },
       slips: false,
       to,
       copies: null,

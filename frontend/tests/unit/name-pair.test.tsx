@@ -12,6 +12,7 @@ import { formNavigationProps, useEscapeDispatcher } from '../../src/shared/keybo
 import { NamePair, type NamePairValue } from '../../src/shared/ui';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fail } from '../helpers/app';
+import { openInfo } from '../helpers/info';
 import { message, renderIn, visible } from '../helpers/render';
 import { suggestionsFor } from '../helpers/translit';
 
@@ -211,19 +212,25 @@ describe.each(LANGUAGES)('NamePair (%s)', (language) => {
   it('says what each field takes, and flags a wrong script at once', async () => {
     const { urdu, english, user } = render(language);
     // The name to type says how; the one that fills says so (the roles swap in the English app).
-    expect(noteOf(urdu)).toBe(
+    // The words are behind the ⓘ of each label (plan 38 G5), not in a line under the field.
+    const bubble = () => visible(screen.getByRole('dialog').textContent);
+    await openInfo(user, language, message('en', 'common-loading'));
+    expect(bubble()).toBe(
       message(
         language,
         language === 'ur' ? 'translit-pair-urdu-hint' : 'translit-pair-urdu-hint-second',
         { key: 'Alt+U' },
       ),
     );
-    expect(noteOf(english)).toBe(
+    await user.keyboard('{Escape}');
+    await openInfo(user, language, message('en', 'common-retry'));
+    expect(bubble()).toBe(
       message(
         language,
         language === 'ur' ? 'translit-pair-english-hint' : 'translit-pair-english-hint-first',
       ),
     );
+    await user.keyboard('{Escape}');
     await user.click(english);
     await user.keyboard('ارشد');
     expect(english).toHaveAttribute('aria-invalid', 'true');

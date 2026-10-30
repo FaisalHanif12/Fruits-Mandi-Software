@@ -25,17 +25,28 @@ import { DashboardTiles } from '../components/DashboardTiles';
 import { OpenGardens } from '../components/OpenGardens';
 import { OldestDues } from '../components/OldestDues';
 import { PartnerStrip } from '../components/PartnerStrip';
-import { QuickActions } from '../components/QuickActions';
+import { DayBookButton, QuickActions } from '../components/QuickActions';
 import { BackupTile, HealthTile } from '../components/StatusTiles';
 import { TodayBikriList } from '../components/TodayBikriList';
 import { UpdateNote } from '../components/UpdateNote';
 import { useOpenDestination } from '../destinations';
 import { useDashboard } from '../hooks';
 
-function Section({ id, title, children }: { id: string; title: ReactNode; children: ReactNode }) {
+function Section({
+  id,
+  title,
+  quiet = false,
+  children,
+}: {
+  id: string;
+  title: ReactNode;
+  /** The name is read by a screen reader and not drawn (the quick actions are plain buttons). */
+  quiet?: boolean;
+  children: ReactNode;
+}) {
   return (
     <section aria-labelledby={id} className="flex min-w-0 flex-col gap-3">
-      <h2 id={id} className="type-section text-ink">
+      <h2 id={id} className={quiet ? 'sr-only' : 'type-section text-ink'}>
         {title}
       </h2>
       {children}
@@ -71,10 +82,7 @@ export function DashboardPage() {
             void dashboard.refetch();
           }}
         />
-        <div
-          {...formNavigationProps}
-          className="grid grid-cols-3 gap-4 normal:grid-cols-4 wide:grid-cols-5"
-        >
+        <div {...formNavigationProps} className="grid grid-cols-4 gap-3 wide:grid-cols-5">
           {statusTiles}
         </div>
       </>
@@ -121,30 +129,33 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <Localized id="dashboard-greeting" vars={{ name }} elems={{ name: <ScriptText /> }}>
-          <h1 className="type-title" />
-        </Localized>
-        <p className="type-body flex items-center gap-2 text-ink-muted">
-          {today === '' ? null : (
-            <Localized
-              id="dashboard-today"
-              vars={{ date: isoToDisplayDate(today) }}
-              elems={{ num: <Num /> }}
-            >
-              <span />
-            </Localized>
-          )}
-          {today === '' ? null : (
-            <Localized id={dayOpen ? 'layout-status-day-open' : 'layout-status-day-closed'}>
-              <span />
-            </Localized>
-          )}
-        </p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <Localized id="dashboard-greeting" vars={{ name }} elems={{ name: <ScriptText /> }}>
+            <h1 className="type-title" />
+          </Localized>
+          <p className="type-body flex items-center gap-2 text-ink-muted">
+            {today === '' ? null : (
+              <Localized
+                id="dashboard-today"
+                vars={{ date: isoToDisplayDate(today) }}
+                elems={{ num: <Num /> }}
+              >
+                <span />
+              </Localized>
+            )}
+            {today === '' ? null : (
+              <Localized id={dayOpen ? 'layout-status-day-open' : 'layout-status-day-closed'}>
+                <span />
+              </Localized>
+            )}
+          </p>
+        </div>
+        <DayBookButton />
       </div>
       <UpdateNote />
-      <Section id="dashboard-quick-title" title={<Localized id="dashboard-quick-title" />}>
+      <Section id="dashboard-quick-title" title={<Localized id="dashboard-quick-title" />} quiet>
         <QuickActions />
       </Section>
       {body}

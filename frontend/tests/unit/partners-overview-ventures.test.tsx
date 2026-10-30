@@ -69,6 +69,8 @@ const TRIP_CARD: PartnerVentureCard = {
 };
 
 beforeEach(() => {
+  // "More columns" is kept on this computer; a test starts with it off.
+  window.localStorage.clear();
   vi.resetAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
@@ -105,11 +107,20 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
     return { ...view, user: userEvent.setup() };
   }
 
+  /** The card of the open gardens and trips of a partner: his name is its title (plan 38). */
   async function cardOf(name: string): Promise<HTMLElement> {
-    const heading = await screen.findByText(name);
-    const card = heading.closest('section');
+    // The name is also the heading of his row in the table, so the card is the one that is a section.
+    const found = await screen.findAllByText(name);
+    const card = found.map((one) => one.closest('section')).find((one) => one !== null);
     if (!(card instanceof HTMLElement)) throw new Error('no card');
     return card;
+  }
+
+  /** Whether a partner has a card of open gardens and trips under the table. */
+  async function hasCard(name: string): Promise<boolean> {
+    // Wait for the table (his row), then look for a section with his name as the title.
+    const found = await screen.findAllByText(name);
+    return found.some((one) => one.closest('section') !== null);
   }
 
   it('shows the garden and the trip a partner is in, with his % and his money, as the backend sent them', async () => {
@@ -134,9 +145,16 @@ describe.each(LANGUAGES)('open gardens and trips under a partner card (%s)', (la
 
   it('a partner in no garden or trip has no list under his card', async () => {
     await open();
-    const card = await cardOf(nameOf(language, 'ب', 'Partner B'));
-    expect(within(card).queryByRole('table')).toBeNull();
-    expect(visible(card.textContent)).not.toContain(message(language, 'partners-ventures-title'));
+    expect(await hasCard(nameOf(language, 'ب', 'Partner B'))).toBe(false);
+    expect(
+      screen.queryByRole('table', {
+        name: named(
+          message(language, 'partners-ventures-label', {
+            name: nameOf(language, 'ب', 'Partner B'),
+          }),
+        ),
+      }),
+    ).toBeNull();
   });
 
   it('the garden opens from its name', async () => {
@@ -185,11 +203,28 @@ describe.each(LANGUAGES)('the overview with the backend’s real answers (%s)', 
     });
   }
 
+  /** The card of the open gardens and trips of a partner: his name is its title (plan 38). */
   async function cardOf(name: string): Promise<HTMLElement> {
-    const heading = await screen.findByText(name);
-    const card = heading.closest('section');
+    // The name is also the heading of his row in the table, so the card is the one that is a section.
+    const found = await screen.findAllByText(name);
+    const card = found.map((one) => one.closest('section')).find((one) => one !== null);
     if (!(card instanceof HTMLElement)) throw new Error('no card');
     return card;
+  }
+
+  /** Whether a partner has a card of open gardens and trips under the table. */
+  async function hasCard(name: string): Promise<boolean> {
+    // Wait for the table (his row), then look for a section with his name as the title.
+    const found = await screen.findAllByText(name);
+    return found.some((one) => one.closest('section') !== null);
+  }
+
+  /** The row of a partner in the table: what holds his name and his figures. */
+  async function rowOf(name: string): Promise<HTMLElement> {
+    const found = await screen.findAllByText(name);
+    const row = found.map((one) => one.closest('tr')).find((one) => one !== null);
+    if (!(row instanceof HTMLElement)) throw new Error('no row');
+    return row;
   }
 
   it('E2E-40 before the closing: A is in the garden with 60%, 33,000 from the shop and a balance of 11,400', async () => {
@@ -199,18 +234,25 @@ describe.each(LANGUAGES)('the overview with the backend’s real answers (%s)', 
     const text = visible(table.textContent);
     for (const figure of ['60%', '33,000', '11,400']) expect(text).toContain(figure);
     // His کل رقم is the backend's, −29,800 with the commission share of the sale in it.
-    expect(visible(a.textContent)).toContain('-29,800');
+    expect(visible((await rowOf(nameOf('الف', 'Partner A'))).textContent)).toContain('-29,800');
     const b = await cardOf(nameOf('ب', 'Partner B'));
     expect(visible((await within(b).findByRole('table')).textContent)).toContain('22,000');
-    const c = await cardOf(nameOf('ج', 'Partner C'));
-    expect(within(c).queryByRole('table')).toBeNull();
+    expect(await hasCard(nameOf('ج', 'Partner C'))).toBe(false);
   });
 
   it('after the closing no card shows a garden any more, and A’s total is 10,040', async () => {
     await openWith(real.PARTNERS_OVERVIEW_AFTER_GARDEN_CLOSE);
-    const a = await cardOf(nameOf('الف', 'Partner A'));
-    expect(within(a).queryByRole('table')).toBeNull();
-    expect(visible(a.textContent)).toContain('10,040');
-    expect(visible(a.textContent)).toContain('6,840');
+    expect(await hasCard(nameOf('الف', 'Partner A'))).toBe(false);
+    const user = userEvent.setup();
+    // The month's garden figure is among the other figures: tick "More columns" to see it.
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: named(message(language, 'common-more-columns')),
+      }),
+    );
+    const row = await rowOf(nameOf('الف', 'Partner A'));
+    const figures = visible(`${row.textContent}${row.nextElementSibling?.textContent ?? ''}`);
+    expect(figures).toContain('10,040');
+    expect(figures).toContain('6,840');
   });
 });

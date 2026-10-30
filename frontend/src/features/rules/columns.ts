@@ -20,18 +20,21 @@ export const RULE_COLUMNS: readonly ListColumn<RuleRow>[] = [
     field: 'side',
     type: 'status',
     headerId: 'rules-col-side',
+    sortKey: 'side',
     value: (row, { text }) => text(`rules-side-${row.side}`),
   },
   {
     field: 'charge',
     type: 'status',
     headerId: 'rules-col-charge',
+    sortKey: 'charge_type',
     value: (row, { text }) => text(`rules-charge-${row.charge_type}`),
   },
   {
     field: 'party',
     type: 'name',
     headerId: 'rules-col-party',
+    sortKey: 'account',
     grow: true,
     value: (row, { language, text }) =>
       row.account === null ? text('rules-any-party') : displayName(row.account, language),
@@ -40,6 +43,7 @@ export const RULE_COLUMNS: readonly ListColumn<RuleRow>[] = [
     field: 'item',
     type: 'text',
     headerId: 'rules-col-item',
+    sortKey: 'item',
     value: (row, { language, text }) =>
       row.item !== null
         ? displayName(row.item, language)
@@ -51,12 +55,14 @@ export const RULE_COLUMNS: readonly ListColumn<RuleRow>[] = [
     field: 'value',
     type: 'status',
     headerId: 'rules-col-value',
+    sortKey: 'method',
     value: (row, { text }) => text(VALUE_ID[row.method], { value: row.value_text }),
   },
   {
     field: 'level',
     type: 'text',
     headerId: 'rules-col-level',
+    sortKey: 'level',
     from: 'wide',
     value: (row, { text }) => text(levelMessageId(row.level)),
   },
@@ -64,6 +70,7 @@ export const RULE_COLUMNS: readonly ListColumn<RuleRow>[] = [
     field: 'from_date',
     type: 'date',
     headerId: 'rules-col-from',
+    sortKey: 'from_date',
     from: 'wide',
     value: (row) => isoToDisplayDate(row.from_date),
   },
@@ -71,6 +78,7 @@ export const RULE_COLUMNS: readonly ListColumn<RuleRow>[] = [
     field: 'to_date',
     type: 'date',
     headerId: 'rules-col-to',
+    sortKey: 'to_date',
     from: 'wide',
     value: (row) => (row.to_date === null ? '' : isoToDisplayDate(row.to_date)),
   },
@@ -79,6 +87,7 @@ export const RULE_COLUMNS: readonly ListColumn<RuleRow>[] = [
     // A default that has ended says until when, so the old defaults can be told apart.
     type: 'text',
     headerId: 'rules-col-status',
+    sortKey: 'is_active',
     from: 'normal',
     value: (row, { text }) =>
       row.is_default

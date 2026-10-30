@@ -26,4 +26,10 @@ export type PartnerTakesInput = {
    * True to give the subtotal of each month in `months`. Used only in date order.
    */
   group_by_month: boolean;
+  /**
+   * True to list the loans that are fully returned too. False (the default) leaves them out
+   * of the rows, the count, the totals and the months: a fully returned one is finished (plan
+   * 38 R5). The totals are always over the rows listed.
+   */
+  show_finished: boolean;
 };

@@ -970,6 +970,7 @@ fn the_new_views_print_in_both_languages_with_the_rows_of_the_page() {
             let data = print_data(
                 w.env.ctx.db(),
                 &AnalyticsPrintInput {
+                    sort: None,
                     view: v,
                     filters: filters(),
                     language,

@@ -1,5 +1,6 @@
 // The address of the hidden print window for an analytics view: `#/print?analytics=<view>&language=
-// <ur|en>&paper=<a4|a5>&filters=<percent-encoded JSON of AnalyticsFilters>&job=<job>` (17e contract).
+// <ur|en>&paper=<a4|a5>&filters=<percent-encoded JSON of AnalyticsFilters>[&sort=<percent-encoded JSON of
+// the screen's SortInput>]&job=<job>` (17e contract, plan 38).
 // The window is opened by the backend, so every value is read as plain text and checked here. A value
 // that is not right is a failed print, never a guess. The filters are the backend's own JSON for the
 // same filters the screen asked with; the print-data command checks them again (Code Standards V0).
@@ -9,7 +10,7 @@ import type { AnalyticsFilters } from '../../../bindings/AnalyticsFilters';
 import type { AnalyticsPrintInput } from '../../../bindings/AnalyticsPrintInput';
 import type { AnalyticsView } from '../../../bindings/AnalyticsView';
 import { jobOf } from '../../../shared/print';
-import { LANGUAGE_VALUES, paperOf, readJsonObject } from '../../reports';
+import { LANGUAGE_VALUES, paperOf, readJsonObject, sortOf } from '../../reports';
 
 export interface AnalyticsPrintParams {
   /** The job name; the events are `print-ready-<job>` and `print-error-<job>`. */
@@ -52,6 +53,8 @@ export function parseAnalyticsPrintParams(searchStr: string): AnalyticsPrintPara
   if (job === null || view === undefined || language === undefined || paper === undefined) {
     return null;
   }
-  if (filters === null) return null;
-  return { job, input: { view, filters, language, paper } };
+  const sort = sortOf(search.get('sort'));
+  if (filters === null || sort === undefined) return null;
+  // The order of the screen is in the address when the screen had one: the print has every row in it.
+  return { job, input: { view, filters, language, paper, sort } };
 }

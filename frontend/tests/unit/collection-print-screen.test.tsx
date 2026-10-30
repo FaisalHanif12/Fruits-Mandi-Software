@@ -128,6 +128,7 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
       date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
+      search: null,
       language,
       copies: null,
       to: 'printer',
@@ -149,6 +150,10 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
 
   it('prints the day and the filters of the screen: the collector and the city he picked', async () => {
     const { user } = await open();
+    // The collector and the city are behind "More filters".
+    await user.click(
+      await screen.findByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
     for (const [id, typed, shown] of [
       ['vouchers-field-collector', 'aslam', language === 'ur' ? 'اسلم' : 'Aslam'],
       ['accounts-field-city', 'kot', language === 'ur' ? 'کوٹ رادھا کشن' : 'Kot Radha Kishan'],
@@ -170,6 +175,7 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
       date: '10-10-2026',
       collector_staff_id: 81,
       city_id: 91,
+      search: null,
     });
   });
 
@@ -182,6 +188,7 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
     // The request is the one the backend's own test sent for the same day.
     expect(reportsApi.reportsCollectionPrintData).toHaveBeenCalledWith({
       ...real.COLLECTION_UR_REQUEST,
+      search: null,
       language,
     });
     const text = visible(sheet.textContent);

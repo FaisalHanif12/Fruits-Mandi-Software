@@ -20,4 +20,9 @@ export type AdvancesReportInput = {
    * The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
    */
   limit: number;
+  /**
+   * Only sellers whose code or name (either script) holds this text. The totals are over
+   * these sellers.
+   */
+  search: string | null;
 };

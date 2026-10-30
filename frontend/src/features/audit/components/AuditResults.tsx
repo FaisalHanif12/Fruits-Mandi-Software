@@ -9,13 +9,10 @@ import { useMemo } from 'react';
 import type { AuditPage } from '../../../bindings/AuditPage';
 import type { AuditRow } from '../../../bindings/AuditRow';
 import { uiErrorOf } from '../../../shared/api';
-import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
+import { ListGrid, ListRegion, Pager, listHeightMode, useListPaging } from '../../../shared/grid';
 import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { AUDIT_COLUMNS } from '../columns';
 import type { useAuditPages } from '../hooks';
-
-/** A list with more rows than this scrolls inside its region and draws only the rows in view (F34). */
-const SHORT_LIST_ROWS = 30;
 
 interface AuditResultsProps {
   query: ReturnType<typeof useAuditPages>;
@@ -76,10 +73,9 @@ export function AuditResults({
       />
     );
   }
-  const long = rows.length > SHORT_LIST_ROWS;
   return (
-    <div className="flex flex-col gap-3" aria-busy={query.isFetching}>
-      <div className={long ? 'h-list-region' : undefined}>
+    <div className="flex min-h-0 flex-1 flex-col gap-2" aria-busy={query.isFetching}>
+      <ListRegion rowCount={rows.length}>
         <ListGrid<AuditRow>
           columns={AUDIT_COLUMNS}
           rows={rows}
@@ -88,14 +84,16 @@ export function AuditResults({
           onOpen={onOpen}
           onFocusRow={onFocusRow}
           focusRowId={focusRowId}
-          heightMode={long ? 'fill' : 'auto'}
+          heightMode={listHeightMode(rows.length)}
           paging={paging}
+          sort={{ value: query.sort, onChange: query.setSort }}
+          // A heading above each month, with how many entries it has: the log is in date order.
+          months={{ months: last.months, monthOf: (row) => row.date.slice(0, 7) }}
         />
+      </ListRegion>
+      <div className="shrink-0">
+        <Pager pager={query.pager} />
       </div>
-      <Pager pager={query.pager} />
-      <Localized id="audit-open-hint">
-        <p className="type-body text-ink-muted" />
-      </Localized>
     </div>
   );
 }

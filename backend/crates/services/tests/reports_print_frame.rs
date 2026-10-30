@@ -186,6 +186,8 @@ fn the_tag_shows_after_the_name_in_every_report_and_the_same_name_without_a_tag_
     let printed = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R35,
             filters: one,
             language: Language::En,
@@ -266,6 +268,8 @@ fn the_tag_shows_in_the_analytics_views_the_buyer_bills_slips_and_the_dashboard(
     let slips = buyer_bills_print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R5,
             filters: day10(),
             language: Language::En,
@@ -344,6 +348,8 @@ fn every_report_and_analytics_print_gets_its_header_and_footer_from_the_one_comm
             let data = print_data(
                 w.env.ctx.db(),
                 &ReportPrintInput {
+                    group_by_month: false,
+                    sort: None,
                     id: entry.id,
                     filters: minimal_filters(&w, entry.id, entry.party_required),
                     language,
@@ -389,6 +395,7 @@ fn every_report_and_analytics_print_gets_its_header_and_footer_from_the_one_comm
             let data = a_print(
                 w.env.ctx.db(),
                 &AnalyticsPrintInput {
+                    sort: None,
                     view,
                     filters: AnalyticsFilters {
                         from: "10-10-2026".into(),
@@ -443,6 +450,8 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
         let data = print_data(
             w.env.ctx.db(),
             &ReportPrintInput {
+                group_by_month: false,
+                sort: None,
                 id,
                 filters: minimal_filters(w, id, entry.party_required),
                 language,
@@ -472,6 +481,7 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
             let data = a_print(
                 w.env.ctx.db(),
                 &AnalyticsPrintInput {
+                    sort: None,
                     view,
                     filters: AnalyticsFilters::default(),
                     language,
@@ -487,6 +497,8 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
         let slips = buyer_bills_print_data(
             w.env.ctx.db(),
             &ReportPrintInput {
+                group_by_month: false,
+                sort: None,
                 id: ReportId::R5,
                 filters: day10(),
                 language,
@@ -530,6 +542,7 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
             &a_print(
                 w.env.ctx.db(),
                 &AnalyticsPrintInput {
+                    sort: None,
                     view: AnalyticsView::A,
                     filters: AnalyticsFilters::default(),
                     language,
@@ -547,6 +560,8 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
             &buyer_bills_print_data(
                 w.env.ctx.db(),
                 &ReportPrintInput {
+                    group_by_month: false,
+                    sort: None,
                     id: ReportId::R5,
                     filters: day10(),
                     language,
@@ -660,6 +675,8 @@ fn a_one_time_person_shows_his_phone_in_the_dash_form_in_his_party_cell_and_in_t
     let data = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R20,
             filters: ReportFilters::default(),
             language: Language::Ur,
@@ -684,6 +701,8 @@ fn a_one_time_person_shows_his_phone_in_the_dash_form_in_his_party_cell_and_in_t
     let ledger = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R13,
             filters: ReportFilters {
                 party: Some(PartyFilter {

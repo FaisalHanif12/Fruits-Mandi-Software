@@ -3,8 +3,10 @@
 //! (PRD FR-10.6). Balances are not here: they come from the journal (`crate::ledger`).
 
 use mandi_core::accounts::{
-    AccountFilter, AccountListKind, AccountRow, AccountType, BUYER_CONTROL, Balance, CoaControl,
-    CoaHead, RecordRef, SELLER_CONTROL, SimilarAccount, can_take_opening,
+    AccountFilter, AccountListKind, AccountRow, AccountType, BANK_ACCOUNT_CODE, BUYER_CONTROL,
+    Balance, CoaControl, CoaHead, EXPENSE_HEAD, GARDEN_CONTROL_CODE, INCOME_HEAD, NAQDI_MANDI_CODE,
+    OPENING_DIFFERENCE_CODE, OWN_GOODS_CODE, RecordRef, SELLER_CONTROL, SimilarAccount,
+    VENTURE_CONTROL_CODE, can_take_opening,
 };
 use mandi_core::masters::ColValue;
 use mandi_core::money::Paisa;
@@ -363,6 +365,22 @@ fn kind_condition(kind: AccountListKind) -> Option<String> {
     }
 }
 
+/// The condition of the opening filter (PRD FR-10.9). `Some(true)`: the account has an opening, a
+/// debit or a credit. `Some(false)`: it has none and CAN take one, by the same list as
+/// `core::accounts::can_take_opening` (a test holds the two together). `None`: no condition.
+fn opening_condition(has_opening: Option<bool>) -> Option<String> {
+    match has_opening {
+        None => None,
+        Some(true) => Some("(a.opening_dr_paisa > 0 OR a.opening_cr_paisa > 0)".to_owned()),
+        Some(false) => Some(format!(
+            "(a.opening_dr_paisa = 0 AND a.opening_cr_paisa = 0 AND a.is_pukhta_khata = 0 \
+             AND c.head_id NOT IN (SELECT id FROM account_heads WHERE code IN ('{INCOME_HEAD}', '{EXPENSE_HEAD}')) \
+             AND a.code NOT IN ('{OPENING_DIFFERENCE_CODE}', '{NAQDI_MANDI_CODE}', '{OWN_GOODS_CODE}', '{BANK_ACCOUNT_CODE}') \
+             AND c.code NOT IN ('{VENTURE_CONTROL_CODE}', '{GARDEN_CONTROL_CODE}'))"
+        )),
+    }
+}
+
 /// The WHERE part and its parameters for a filter. `text_ur` and `text_en` are search keys made
 /// by `core::text`. Parameters are numbered from 1 in the order of the returned values.
 fn filter_sql(filter: &AccountFilter, text_ur: &str, text_en: &str) -> (String, Vec<Value>) {
@@ -376,6 +394,9 @@ fn filter_sql(filter: &AccountFilter, text_ur: &str, text_en: &str) -> (String, 
     // out اپنا مال, نقدی منڈی and the two پختہ کھاتہ accounts); everything else (cash, payables,
     // income, capital, money-lent people, khatas, gardens) is under another control.
     if let Some(condition) = kind_condition(filter.kind) {
+        conditions.push(condition);
+    }
+    if let Some(condition) = opening_condition(filter.has_opening) {
         conditions.push(condition);
     }
     if !text_ur.is_empty() || !text_en.is_empty() {
@@ -407,12 +428,12 @@ pub struct ListTotals {
 }
 
 /// The columns a list can be sorted by: the name of the field of the row and its SQL expression.
-/// `code` is sorted by the chart-of-accounts order (`codes::order_by_code_dir`) and `balance` by the
-/// net of the journal lines (debit minus credit), so the biggest dues are last when ascending.
-pub const SORT_COLUMNS: [(&str, &str); 11] = [
+/// `code` is sorted by the chart-of-accounts order (`codes::order_by_code_dir`). There is no sort by
+/// balance: it would read every journal line (NFR-SPD-24); report R20 ranks the dues.
+pub const SORT_COLUMNS: [(&str, &str); 10] = [
     ("code", "a.code"),
     ("serial", "a.serial"),
-    ("name_ur", "a.name_ur"),
+    ("name_ur", "a.name_ur COLLATE URDU"),
     ("name_en", "a.name_en COLLATE NOCASE"),
     ("phone1", "a.phone1"),
     ("city", "ci.code"),
@@ -420,7 +441,6 @@ pub const SORT_COLUMNS: [(&str, &str); 11] = [
     ("opening_dr_paisa", "a.opening_dr_paisa"),
     ("opening_cr_paisa", "a.opening_cr_paisa"),
     ("credit_allowed", "a.credit_allowed"),
-    ("balance", "COALESCE(bal.net, 0)"),
 ];
 
 /// One page of accounts by code, and the totals of all that match (PRD FR-10.5).
@@ -468,16 +488,8 @@ pub fn list(
         Some(chosen) => format!("{chosen}, {natural}"),
         None => natural,
     };
-    // The balance of an account is the net of its journal lines. It is joined only for a sort by
-    // balance, in one grouped read of the lines (plan 38 R4).
-    let join = if order_by.is_some_and(|o| o.contains("bal.net")) {
-        " LEFT JOIN (SELECT account_id, SUM(dr_paisa) - SUM(cr_paisa) AS net
-                      FROM journal_lines GROUP BY account_id) bal ON bal.account_id = a.id"
-    } else {
-        ""
-    };
     let mut statement = conn.prepare(&format!(
-        "{ROW_SELECT}{join}{where_sql} ORDER BY {order}, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
+        "{ROW_SELECT}{where_sql} ORDER BY {order}, a.id LIMIT ?{limit_mark} OFFSET ?{offset_mark}"
     ))?;
     let rows = statement
         .query_map(params_from_iter(page.iter()), row_from)?

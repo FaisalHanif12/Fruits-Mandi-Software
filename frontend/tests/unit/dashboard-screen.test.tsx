@@ -274,9 +274,12 @@ describe.each(LANGUAGES)('a tile or a name opens the screen behind it (%s)', (la
   it.each(QUICK)('the quick action %s opens %s', async (id, path, search) => {
     const { router } = await openDashboard(language);
     await whenLoaded(language);
+    // The five buttons are one row of the group; the day book is at the end of the greeting's row
+    // (plan 38), so it is looked for on the whole screen.
     const group = screen.getByRole('group', { name: named(language, 'dashboard-quick-title') });
+    const scope = id === 'dashboard-open-daybook' ? within(document.body) : within(group);
     await userEvent.setup().click(
-      within(group).getByRole('button', {
+      scope.getByRole('button', {
         name: (name) => visible(name).startsWith(message(language, id)),
       }),
     );

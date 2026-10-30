@@ -195,7 +195,7 @@ describe.each(LANGUAGES)('the collection list template (%s)', (language: Languag
   });
 });
 
-const TARGET = { date: '10-10-2026', collectorStaffId: 7, cityId: null };
+const TARGET = { date: '10-10-2026', collectorStaffId: 7, cityId: null, search: null };
 
 describe.each(LANGUAGES)('the print box of the collection list (%s)', (language: Language) => {
   beforeEach(() => {
@@ -254,6 +254,7 @@ describe.each(LANGUAGES)('the print box of the collection list (%s)', (language:
       date: '10-10-2026',
       collector_staff_id: 7,
       city_id: null,
+      search: null,
       language,
       copies: '3',
       to: 'printer',
@@ -300,6 +301,7 @@ describe.each(LANGUAGES)('the print box of the collection list (%s)', (language:
       date: '10-10-2026',
       collector_staff_id: 7,
       city_id: null,
+      search: null,
       language,
     });
     expect(textOf(sheet)).toContain('23,564');

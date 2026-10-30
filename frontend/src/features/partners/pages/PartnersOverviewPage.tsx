@@ -1,21 +1,30 @@
-// The partner overview (route /partners; PRD 17.3): one card per active partner with his share
-// and his income, expense, profit, money taken and capital. Every number comes from the backend
-// (partners_overview). A button opens the setup page. Four states: loading, error with a retry,
-// empty with a button, and the cards. Each card also shows the returned, خالص, capital and کل رقم
-// columns of plan 17 and opens the partner's statement and capital.
+// The partner overview (route /partners; PRD 17.3): ONE table, one row per active partner, with his
+// کل رقم first and in bold, his share, profit and خالص, and "More columns" for the rest (plan 38).
+// Every number comes from the backend (partners_overview). A button opens the setup page. Four
+// states: loading, error with a retry, empty with a button, and the table. A row opens the
+// partner's statement and capital.
 
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CalendarCheck, Landmark, Settings2, Users } from 'lucide-react';
 import { uiErrorOf } from '../../../shared/api';
+import { useRememberedFlag } from '../../../shared/hooks';
 import { SHORTCUTS, useShortcut } from '../../../shared/keyboard';
-import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
-import { OverviewCard } from '../components/OverviewCard';
+import {
+  Button,
+  Checkbox,
+  EmptyState,
+  ErrorState,
+  ListPage,
+  LoadingState,
+} from '../../../shared/ui';
+import { OverviewTable } from '../components/OverviewTable';
 import { usePartnerOverview } from '../hooks';
 
 export function PartnersOverviewPage() {
   const navigate = useNavigate();
   const overview = usePartnerOverview();
+  const [more, setMore] = useRememberedFlag('partners.overview_more', false);
   const openSetup = () => {
     void navigate({ to: '/partners/setup' });
   };
@@ -48,27 +57,25 @@ export function PartnersOverviewPage() {
       />
     );
   } else {
-    body = (
-      <div className="flex flex-col gap-4">
-        {overview.data.map((row) => (
-          <OverviewCard key={row.partner_id} row={row} />
-        ))}
-      </div>
-    );
+    body = <OverviewTable rows={overview.data} more={more} />;
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="partners-title">
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id="partners-overview-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <ListPage
+      titleId="partners-title"
+      help={
+        <Localized id="partners-overview-help">
+          <p />
+        </Localized>
+      }
+      actions={
+        <>
+          {/* The rest of the figures of every partner, under his row (plan 38). */}
+          <Checkbox
+            checked={more}
+            onChange={setMore}
+            label={<Localized id="common-more-columns" />}
+          />
           <Button
             onClick={() => {
               void navigate({ to: '/partners/capital' });
@@ -90,9 +97,10 @@ export function PartnersOverviewPage() {
             <Settings2 aria-hidden="true" className="size-icon-md" />
             <Localized id="partners-setup-open" />
           </Button>
-        </div>
-      </div>
-      {body}
-    </div>
+        </>
+      }
+    >
+      <div className="min-h-0 flex-1 overflow-auto">{body}</div>
+    </ListPage>
   );
 }

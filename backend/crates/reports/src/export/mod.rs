@@ -58,6 +58,12 @@ pub struct ReportExportInput {
     pub language: Language,
     /// Where to save: an absolute path ending in `.xlsx`, in a folder that exists.
     pub path: String,
+    /// The sort of the screen: the sheet has the same order, with every row (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<mandi_core::paging::SortInput>,
+    /// The month headings of the screen: the sheet has them too.
+    #[serde(default)]
+    pub group_by_month: bool,
 }
 
 /// The input of `analytics_export_excel`.
@@ -71,6 +77,9 @@ pub struct AnalyticsExportInput {
     pub language: Language,
     /// Where to save: an absolute path ending in `.xlsx`, in a folder that exists.
     pub path: String,
+    /// The sort of the screen: the sheet has the same order, with every row (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<mandi_core::paging::SortInput>,
 }
 
 /// What an export made.
@@ -133,7 +142,13 @@ pub fn export_report(
         done: 0,
         total: 0,
     });
-    let (page, firm, grouping) = crate::reports::export_page(db, input.id, &input.filters)?;
+    let (page, firm, grouping) = crate::reports::export_page(
+        db,
+        input.id,
+        &input.filters,
+        input.sort.as_ref(),
+        input.group_by_month,
+    )?;
     write_report_page(db, &page, &firm, grouping, input, &path, progress)
 }
 
@@ -210,7 +225,8 @@ pub fn export_analytics(
         done: 0,
         total: 0,
     });
-    let (page, firm, grouping) = crate::analytics::export_page(db, input.view, &input.filters)?;
+    let (page, firm, grouping) =
+        crate::analytics::export_page(db, input.view, &input.filters, input.sort.as_ref())?;
     let now = db.clock().now_utc();
     let l10n = L10n::new(input.language)?;
     let fmt = fmt_of(input.language, grouping);

@@ -323,6 +323,22 @@ export function planColumns(
   };
 }
 
+/**
+ * The buyers' view (C) works out the dues and the days to pay for the page only, so the backend
+ * sorts it by these columns alone (plan 38 R4). Every column of another view can be sorted.
+ */
+const SORTABLE_IN_C: ReadonlySet<string> = new Set([
+  'buyer',
+  'qty',
+  'purchase_value',
+  'buyer_comm',
+  'laga',
+]);
+
+function isSortable(view: AnalyticsView, key: string): boolean {
+  return view !== 'C' || SORTABLE_IN_C.has(key);
+}
+
 /** The grid's columns for the columns of the plan, in the backend's order. */
 export function analyticsColumns(
   view: AnalyticsView,
@@ -331,7 +347,14 @@ export function analyticsColumns(
 ): ListColumn<AnalyticsRowView>[] {
   return columns.flatMap((column, index) => {
     if (!plan.visible.has(index)) return [];
-    const base = listColumnOf<AnalyticsRowView>(column, index, undefined, signModeOf(view, column));
+    const base = listColumnOf<AnalyticsRowView>(
+      column,
+      index,
+      undefined,
+      signModeOf(view, column),
+      false,
+      isSortable(view, column.key),
+    );
     const heading = column.heading;
     // The rank of H shares its column with the headings of the three lists, which are words.
     const named: ListColumn<AnalyticsRowView> =

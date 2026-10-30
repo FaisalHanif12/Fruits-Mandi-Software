@@ -80,6 +80,8 @@ const PARTNERS = [
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // "More filters" and the chart are kept on this computer; a test starts with neither remembered.
+  window.localStorage.clear();
   vi.mocked(useLayoutStep).mockReturnValue('normal');
   healthyBackend();
   fakePartners(PARTNERS);
@@ -194,15 +196,12 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       expect(cell('0', 'fruit')).toBe('0');
     });
 
-    it('draws a chart labelled for a screen reader, in the direction of the app', async () => {
+    it('has no chart: the backend sends none for the partners (plan 38 R4)', async () => {
       await openView('F');
-      const chart = await screen.findByRole(
-        'img',
-        { name: named(m('analytics-chart-f')) },
-        SLOW_MS,
-      );
-      expect(chart.getAttribute('data-chart')).toBe('bar');
-      expect(chart.getAttribute('dir')).toBe(language === 'ur' ? 'rtl' : 'ltr');
+      await waitFor(() => {
+        expect(drawnRows()).toHaveLength(3);
+      }, SLOW_MS);
+      expect(screen.queryByRole('img')).toBeNull();
     });
 
     it('does not offer a comparison, which the backend refuses on this view', async () => {
@@ -629,6 +628,9 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       await waitFor(() => {
         expect(drawnRows()).toHaveLength(1);
       }, SLOW_MS);
+      await user.click(
+        await screen.findByRole('button', { name: named(m('report-filters-more')) }),
+      );
       await user.click(await screen.findByRole('combobox', { name: m('analytics-filter-side') }));
       await user.click(
         await screen.findByRole('option', { name: named(m('analytics-side-seller')) }),
@@ -717,6 +719,9 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       await waitFor(() => {
         expect(lastRun()?.filters.garden_id).toBeNull();
       }, SLOW_MS);
+      await user.click(
+        await screen.findByRole('button', { name: named(m('report-filters-more')) }),
+      );
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-garden') }));
       await user.click(
         await screen.findByRole(
@@ -737,6 +742,9 @@ describe.each(LANGUAGES)('تجزیات, views F, G and J (%s)', (language: Langu
       await waitFor(() => {
         expect(lastRun()?.filters.goods).toBe('all');
       }, SLOW_MS);
+      await user.click(
+        await screen.findByRole('button', { name: named(m('report-filters-more')) }),
+      );
       await user.click(screen.getByRole('combobox', { name: m('analytics-filter-goods') }));
       await user.click(await screen.findByRole('option', { name: m('analytics-goods-trip') }));
       await waitFor(() => {

@@ -300,6 +300,22 @@ export function listColumnOf<V extends RowLike>(
   emptyName: (rowKind: ReportRowKind) => string | null = () => null,
   signed: SignMode = false,
   shortSale = false,
+  sortable = false,
+): ListColumn<V> {
+  const made = plainListColumnOf<V>(column, index, emptyName, signed, shortSale);
+  // The title of a column is a sort button, except a column of lines of words (plan 38 R4): the
+  // backend sorts the whole filter by the `key` of the column.
+  return sortable && column.kind !== 'detail' && column.kind !== 'message'
+    ? { ...made, sortKey: column.key }
+    : made;
+}
+
+function plainListColumnOf<V extends RowLike>(
+  column: Pick<ReportColumn, 'key' | 'title_id' | 'kind'>,
+  index: number,
+  emptyName: (rowKind: ReportRowKind) => string | null,
+  signed: SignMode,
+  shortSale: boolean,
 ): ListColumn<V> {
   const cell = (view: V, context: ListContext) => {
     const found = view.row.cells[index];
@@ -396,6 +412,7 @@ export function reportColumns(
             signModeOf(id, column.key),
             // The buyers' list writes each sale line as the client's own print does (R5).
             id === 'R5',
+            true,
           ),
         ]
       : [],

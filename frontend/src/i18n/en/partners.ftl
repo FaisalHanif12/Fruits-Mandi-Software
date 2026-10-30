@@ -436,3 +436,7 @@ partners-ventures-col-back = Money back
 # The running balance of a garden, or the result of a trip.
 # review: pending
 partners-ventures-col-balance = Balance or result
+
+# The name of the table of partners on the overview, read by a screen reader (plan 38).
+# review: pending
+partners-overview-label = The partners and their figures

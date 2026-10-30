@@ -54,6 +54,7 @@ import {
   fieldError,
   showToast,
   type PickerValue,
+  InfoHint,
 } from '../../../shared/ui';
 import { SharesTotal, useSharesCheck, type SharesCheck, type TotalState } from '../../partners';
 import { gardensCreatePreview } from '../api';
@@ -211,14 +212,18 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
   return (
     <div ref={rootRef} className="flex max-w-page flex-col gap-4">
       <LeaveGuard dirty={changed && createdId === null} onSave={save} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
           <Localized id="gardens-new-title">
             <h1 className="sr-only normal:not-sr-only normal:type-title" />
           </Localized>
-          <Localized id="gardens-new-help">
-            <p className="hidden type-body text-ink-muted normal:block" />
-          </Localized>
+          <div className="hidden normal:block">
+            <InfoHint>
+              <Localized id="gardens-new-help">
+                <p />
+              </Localized>
+            </InfoHint>
+          </div>
         </div>
         <Button
           variant="primary"
@@ -250,13 +255,26 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
             ]}
           />
         )}
-        <Card compact title={<Localized id="gardens-new-shares-title" />}>
-          <Localized id="gardens-new-from-defaults">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          <Localized id="gardens-new-shares-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
+        <Card
+          compact
+          title={
+            <span className="flex items-center gap-1">
+              <Localized id="gardens-new-shares-title" />
+              {/* What the shares and the sources mean, behind an ⓘ so the rows are in view first. */}
+              <InfoHint>
+                <Localized id="gardens-new-from-defaults">
+                  <p />
+                </Localized>
+                <Localized id="gardens-new-shares-help">
+                  <p />
+                </Localized>
+                <Localized id="gardens-new-sources-help">
+                  <p />
+                </Localized>
+              </InfoHint>
+            </span>
+          }
+        >
           {draft.partners.length === 0 ? (
             <Notice
               tone="warn"
@@ -289,9 +307,6 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
             total={check === undefined || !sharesCurrent ? null : formatBps(check.total_bps)}
           />
           {fieldError(error, 'partners')}
-          <Localized id="gardens-new-sources-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
         </Card>
         <Card compact title={<Localized id="gardens-new-details-title" />}>
           <div className="grid grid-cols-2 gap-4">
@@ -320,7 +335,11 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
             </Field>
             <Field
               label={<Localized id="glossary-qism-maal" />}
-              hint={<Localized id="gardens-field-item-hint" />}
+              info={
+                <Localized id="gardens-field-item-hint">
+                  <p />
+                </Localized>
+              }
               error={fieldError(error, 'item_id')}
             >
               {(props) => (
@@ -336,7 +355,11 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
             </Field>
             <Field
               label={<Localized id="gardens-field-rent" />}
-              hint={<Localized id="gardens-field-rent-hint" />}
+              info={
+                <Localized id="gardens-field-rent-hint">
+                  <p />
+                </Localized>
+              }
               error={fieldError(error, 'rent')}
             >
               {(props) => (
@@ -366,7 +389,11 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
             <div data-paid-now="" className="col-span-2">
               <Field
                 label={<Localized id="gardens-field-paid-now" />}
-                hint={<Localized id="gardens-field-paid-now-hint" />}
+                info={
+                  <Localized id="gardens-field-paid-now-hint">
+                    <p />
+                  </Localized>
+                }
                 error={fieldError(error, 'paid_now')}
               >
                 {(props) => (
@@ -394,7 +421,11 @@ function NewGardenForm({ defaults, today }: { defaults: GardenDefaults; today: s
               <div className="col-span-2">
                 <Field
                   label={<Localized id="gardens-field-paid-now-reason" />}
-                  hint={<Localized id="gardens-field-paid-now-reason-hint" />}
+                  info={
+                    <Localized id="gardens-field-paid-now-reason-hint">
+                      <p />
+                    </Localized>
+                  }
                   error={fieldError(error, 'paid_now_reason')}
                 >
                   {(props) => (

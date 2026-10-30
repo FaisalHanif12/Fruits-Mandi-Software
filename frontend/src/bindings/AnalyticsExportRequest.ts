@@ -2,6 +2,7 @@
 import type { AnalyticsFilters } from './AnalyticsFilters';
 import type { AnalyticsView } from './AnalyticsView';
 import type { Language } from './Language';
+import type { SortInput } from './SortInput';
 
 /**
  * The input of `analytics_export_excel`.
@@ -27,4 +28,8 @@ export type AnalyticsExportRequest = {
    * Where to save: an absolute path ending in `.xlsx`, in a folder that exists.
    */
   path: string;
+  /**
+   * The sort of the screen: the sheet has the same order, with every row (plan 38 R4).
+   */
+  sort: SortInput | null;
 };

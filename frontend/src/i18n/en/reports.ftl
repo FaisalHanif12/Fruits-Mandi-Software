@@ -1313,10 +1313,6 @@ reports-search-placeholder = The name or number of a report
 # review: pending
 reports-jump-label = Go to
 
-# $group: the name of a group of reports.
-# review: pending
-reports-jump-to = Go to the reports of { $group }
-
 # review: pending
 reports-search-none = No report matches
 
@@ -1325,3 +1321,12 @@ reports-search-none-help = Check the spelling, or clear the search to see every 
 
 # review: pending
 reports-search-clear = Clear the search
+
+# The grey words in the "Go to" choice of the catalogue, before a group is chosen.
+# review: pending
+reports-jump-placeholder = Choose a group
+
+# Shown above a ledger, the cash book or a statement that is sorted by a column other than the date:
+# the running balance is empty there (plan 38 R4).
+# review: pending
+report-balance-date-order-only = The balance shows in date order only.

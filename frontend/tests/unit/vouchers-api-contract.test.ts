@@ -155,6 +155,7 @@ describe('each wrapper sends the command and the input of the backend', () => {
       date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
+      search: null,
       offset: 0,
       limit: 100,
     };

@@ -86,6 +86,11 @@ interface EntryGridProps {
    */
   heightMode?: 'fill' | 'auto';
   /**
+   * An 'auto' grid keeps the room of four rows even with fewer, so a screen of lines (the journal)
+   * does not look empty and does not jump as lines are added (plan 38).
+   */
+  minRows?: 4;
+  /**
    * The columns share the free width of the grid down to a least width each, so the grid never
    * scrolls sideways at the smallest window (NFR-USE-15). Default: fixed widths per type.
    */
@@ -361,6 +366,7 @@ function GridInner({
   cellChanged,
   canRemoveRow,
   heightMode = 'fill',
+  minRows,
   fit = false,
   workings,
   interceptors,
@@ -527,7 +533,7 @@ function GridInner({
   return (
     <div
       ref={setRoot}
-      className={`entry-grid ag-theme-quartz ${fit ? 'entry-grid-fit' : ''}`}
+      className={`entry-grid ag-theme-quartz ${fit ? 'entry-grid-fit' : ''} ${minRows === 4 ? 'entry-grid-min4' : ''}`}
       role="group"
       aria-label={l10n.getString(labelId)}
       dir={direction}

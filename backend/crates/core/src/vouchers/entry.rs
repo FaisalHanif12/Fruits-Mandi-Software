@@ -464,6 +464,10 @@ pub struct AdvancesReportInput {
     /// The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// Only sellers whose code or name (either script) holds this text. The totals are over
+    /// these sellers.
+    #[serde(default)]
+    pub search: Option<String>,
 }
 
 /// One seller's advances (PRD R26): given, returned, adjusted and open.
@@ -537,6 +541,10 @@ pub struct CollectionListInput {
     /// The page size: 25, 50 or 100. 0 gives 100 (Code Standards B31).
     #[serde(default)]
     pub limit: u32,
+    /// Only buyers whose code, name (either script) or phone holds this text. The group totals
+    /// and the grand total are over these buyers.
+    #[serde(default)]
+    pub search: Option<String>,
 }
 
 /// A buyer on the collection list.

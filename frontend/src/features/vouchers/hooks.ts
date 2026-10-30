@@ -163,10 +163,14 @@ export function useVoucher(id: number | null) {
  * The vouchers of a kind in a date range (the list under the form), page by page, with the count
  * and the totals of the whole filter (PRD FR-19.11).
  */
-export function useVouchersList(input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'>) {
+export function useVouchersList(
+  input: Omit<VouchersListInput, 'offset' | 'limit' | 'sort'>,
+  enabled = true,
+) {
   return usePagedQuery({
     screen: 'vouchers.list',
     queryKey: [...VOUCHERS_KEY, 'list', input],
+    enabled,
     fetchPage: (offset, limit, sort) => vouchersList({ ...input, offset, limit, sort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,

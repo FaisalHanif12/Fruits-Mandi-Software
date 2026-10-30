@@ -983,6 +983,8 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
             let data = print_data(
                 w.env.ctx.db(),
                 &ReportPrintInput {
+                    group_by_month: false,
+                    sort: None,
                     id,
                     filters: ReportFilters::default(),
                     language,
@@ -1003,6 +1005,8 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
     let en = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R2,
             filters: ReportFilters::default(),
             language: Language::En,
@@ -1030,6 +1034,8 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
     let filtered = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R4,
             filters: ReportFilters {
                 from: "10-10-2026".into(),
@@ -1058,6 +1064,8 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
     let due = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id: ReportId::R9,
             filters: ReportFilters {
                 status: Some(PaidFilter::Due),

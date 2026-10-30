@@ -20,7 +20,6 @@ use mandi_core::dates::BusinessDate;
 use mandi_core::money::Paisa;
 use mandi_db::accounts as account_repo;
 use mandi_db::cashbook as cash_repo;
-use mandi_db::ledger::totals_of;
 use mandi_db::rusqlite::Connection;
 
 use super::PageSpec;
@@ -29,7 +28,7 @@ use crate::reports::common::{
     IN_CHUNK, amount_or_empty, balance_cell, col, load_parties, paisa, party_of_line, placeholders,
     source_of, text_cell,
 };
-use crate::reports::filters::Typed;
+use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
 use crate::reports::model::{Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, SummaryLine};
 
@@ -83,8 +82,10 @@ pub(crate) fn run(
         .and_then(BusinessDate::previous_day)
     {
         Some(day) => {
-            let t = totals_of(conn, cash, None, Some(&day.to_iso()))?;
-            (paisa(t.dr_paisa)?, paisa(t.cr_paisa)?)
+            // The kept sums of the cash book, so a month heading or a later page does not read
+            // every earlier cash line again (plan 38 B2).
+            let t = cash_repo::range(conn, cash, None, Some(&day.to_iso()))?;
+            (paisa(t.in_paisa)?, paisa(t.out_paisa)?)
         }
         None => (Paisa::ZERO, Paisa::ZERO),
     };
@@ -97,7 +98,17 @@ pub(crate) fn run(
         open_cr.checked_add(total_out)?,
     )?;
 
-    let stored = cash_repo::page(conn, cash, from, to, None, spec.offset, spec.sql_limit())?;
+    let stored = cash_repo::page(
+        conn,
+        cash,
+        from,
+        to,
+        &cash_repo::Order::Date {
+            desc: matches!(typed.line_sort, Some(LineSort::Newest)),
+        },
+        spec.offset,
+        spec.sql_limit(),
+    )?;
     let entry_ids: Vec<i64> = stored.iter().map(|r| r.entry_id).collect();
     let others = cash_repo::counterparts(conn, cash, &entry_ids)?;
     let account_ids: Vec<i64> = stored
@@ -110,8 +121,8 @@ pub(crate) fn run(
     let mut rows = Vec::with_capacity(stored.len());
     for row in &stored {
         let balance = Balance::from_totals(
-            open_dr.checked_add(paisa(row.run_in_paisa)?)?,
-            open_cr.checked_add(paisa(row.run_out_paisa)?)?,
+            open_dr.checked_add(paisa(row.run_in_paisa.ok_or_else(missing_run)?)?)?,
+            open_cr.checked_add(paisa(row.run_out_paisa.ok_or_else(missing_run)?)?)?,
         )?;
         let party = match counterpart_of(&others, row) {
             Some(id) => Cell::Party {
@@ -215,4 +226,10 @@ fn sources_of(
         }
     }
     Ok(found)
+}
+
+/// The page of R12 is in day order, so every row has its running sums; a row without them is a
+/// bug in the page query.
+fn missing_run() -> ReportsError {
+    ReportsError::Data("a cash book row has no running sums".to_owned())
 }

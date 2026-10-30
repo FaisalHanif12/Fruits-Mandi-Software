@@ -141,6 +141,8 @@ describe('goods left against the backend files', () => {
       lot_id: null,
       offset: 0,
       limit: PAGE_ROWS,
+      search: null,
+      sort: null,
     });
   });
 

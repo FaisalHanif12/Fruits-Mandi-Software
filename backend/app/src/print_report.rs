@@ -31,6 +31,7 @@ use mandi_reports::reports::{
 use mandi_services::auth::{self, Actor};
 use mandi_services::core::auth::Language;
 use mandi_services::core::error::ErrorCode;
+use mandi_services::core::paging::SortInput;
 use mandi_services::core::printing::{Paper, PrintOutcome, PrintTo, parse_copies};
 use mandi_services::db::audit::AuditEntry;
 use mandi_services::{Context, ServiceError, printing};
@@ -109,7 +110,21 @@ fn paper_text(paper: Paper) -> String {
         .unwrap_or_else(|| "a4".to_owned())
 }
 
-/// The route query of a report print: `report=R20&language=ur&paper=a4[&slips=1]&filters=<json>`.
+/// The sort of a print as the route reads it: `&sort=<json of the screen's sort>`, or nothing.
+fn sort_query(sort: Option<&SortInput>) -> Result<String, UiError> {
+    match sort {
+        Some(sort) => {
+            let json = serde_json::to_string(sort).map_err(UiError::internal)?;
+            Ok(format!("&sort={}", encode_query(&json)))
+        }
+        None => Ok(String::new()),
+    }
+}
+
+/// The route query of a report print:
+/// `report=R20&language=ur&paper=a4[&slips=1]&filters=<json>[&sort=<json>][&months=1]`.
+/// `sort` and `months` are the screen's order and month rows (plan 38 R4), so the window has the
+/// rows in the order of the screen.
 fn report_query(input: &PrintReportInput, paper: Paper) -> Result<String, UiError> {
     let filters = serde_json::to_string(&input.report.filters).map_err(UiError::internal)?;
     let mut query = format!(
@@ -122,18 +137,24 @@ fn report_query(input: &PrintReportInput, paper: Paper) -> Result<String, UiErro
         query.push_str("&slips=1");
     }
     query.push_str(&format!("&filters={}", encode_query(&filters)));
+    query.push_str(&sort_query(input.report.sort.as_ref())?);
+    if input.report.group_by_month {
+        query.push_str("&months=1");
+    }
     Ok(query)
 }
 
-/// The route query of an analytics print: `analytics=A&language=ur&paper=a4&filters=<json>`.
+/// The route query of an analytics print:
+/// `analytics=A&language=ur&paper=a4&filters=<json>[&sort=<json>]`.
 fn analytics_query(input: &PrintAnalyticsViewInput, paper: Paper) -> Result<String, UiError> {
     let filters = serde_json::to_string(&input.view.filters).map_err(UiError::internal)?;
     Ok(format!(
-        "analytics={}&language={}&paper={}&filters={}",
+        "analytics={}&language={}&paper={}&filters={}{}",
         input.view.view.code(),
         input.view.language.as_str(),
         paper_text(paper),
-        encode_query(&filters)
+        encode_query(&filters),
+        sort_query(input.view.sort.as_ref())?
     ))
 }
 
@@ -238,6 +259,8 @@ fn prepare_report(
         "report": input.report.id.code(),
         "slips": input.slips,
         "filters": input.report.filters,
+        "sort": input.report.sort,
+        "group_by_month": input.report.group_by_month,
         "language": input.report.language.as_str(),
         "to": input.to,
         "copies": copies,
@@ -274,6 +297,7 @@ fn prepare_analytics(
     let audit = json!({
         "view": input.view.view.code(),
         "filters": input.view.filters,
+        "sort": input.view.sort,
         "language": input.view.language.as_str(),
         "to": input.to,
         "copies": copies,
@@ -447,6 +471,41 @@ mod tests {
         assert!(
             slips.starts_with("report=R5&language=ur&paper=a5&slips=1&filters="),
             "{slips}"
+        );
+    }
+
+    #[test]
+    fn the_route_query_carries_the_sort_and_the_month_rows_of_the_screen() {
+        let input: PrintReportInput = serde_json::from_value(json!({
+            "report": { "id": "R13", "filters": {}, "language": "en",
+                        "sort": { "column": "debit", "direction": "desc" },
+                        "group_by_month": true },
+            "to": "pdf"
+        }))
+        .unwrap();
+        let query = report_query(&input, Paper::A4).unwrap();
+        assert!(
+            query.ends_with(
+                "&sort=%7B%22column%22%3A%22debit%22%2C%22direction%22%3A%22desc%22%2C%22language%22%3Anull%7D&months=1"
+            ),
+            "{query}"
+        );
+        // A screen with no sort and no months adds nothing.
+        let plain = report_query(&report_input(false), Paper::A4).unwrap();
+        assert!(
+            !plain.contains("&sort=") && !plain.contains("&months="),
+            "{plain}"
+        );
+        let analytics: PrintAnalyticsViewInput = serde_json::from_value(json!({
+            "view": { "view": "A", "filters": {}, "language": "ur",
+                      "sort": { "column": "gross_paisa", "direction": "asc" } },
+            "to": "pdf"
+        }))
+        .unwrap();
+        let query = analytics_query(&analytics, Paper::A4).unwrap();
+        assert!(
+            query.contains("&sort=%7B%22column%22%3A%22gross_paisa%22"),
+            "{query}"
         );
     }
 }

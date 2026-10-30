@@ -119,8 +119,38 @@ describe.each(LANGUAGES)('باغات, the list (%s)', (language) => {
       search: null,
       offset: 0,
       limit: PAGE_ROWS,
+      sort: null,
+      // The list is in date order, so the month rows are asked for.
+      group_by_month: true,
     });
     expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 1, 1));
+  });
+
+  it('the search box sends the text, and the period opens on every garden and can be narrowed', async () => {
+    fakeGardens();
+    const { user } = await open();
+    const period = await screen.findByRole('combobox', {
+      name: named(message(language, 'common-period-label')),
+    });
+    expect(period).toHaveTextContent(message(language, 'common-period-all'));
+    await user.type(
+      await screen.findByRole('textbox', { name: named(message(language, 'gardens-list-search')) }),
+      'shah',
+    );
+    await waitFor(() => {
+      expect(gardensApi.gardensList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'shah', from: null, to: null }),
+      );
+    });
+    await user.click(period);
+    await user.click(
+      await screen.findByRole('option', { name: named(message(language, 'common-period-year')) }),
+    );
+    await waitFor(() => {
+      expect(gardensApi.gardensList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ from: '01-01-2026', to: '10-10-2026' }),
+      );
+    });
   });
 
   it('a closed garden stays in the list, marked closed with the day it was closed', async () => {

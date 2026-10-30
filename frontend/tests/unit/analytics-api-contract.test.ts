@@ -205,6 +205,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       ANALYTICS_RUN_F_FRUIT,
     ]) {
       expect(keysOf(page)).toEqual([
+        'charts',
         'columns',
         'filters',
         'limit',

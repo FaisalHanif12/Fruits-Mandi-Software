@@ -746,6 +746,7 @@ fn d4_a31_a_drawings_opening_debit_counts_as_money_taken() {
     let takes = partners::takes(
         &w.env.ctx,
         &PartnerTakesInput {
+            show_finished: true,
             group_by_month: false,
             sort: None,
             partner_id: a,

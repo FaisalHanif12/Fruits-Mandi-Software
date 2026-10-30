@@ -69,6 +69,33 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
     return { ...view, user: userEvent.setup() };
   };
 
+  it('the search box sends the text, and the period opens on every trip and can be narrowed', async () => {
+    fakeTrips();
+    const { user } = await open();
+    const period = await screen.findByRole('combobox', {
+      name: named(message(language, 'common-period-label')),
+    });
+    expect(period).toHaveTextContent(message(language, 'common-period-all'));
+    await user.type(
+      await screen.findByRole('textbox', { name: named(message(language, 'trips-list-search')) }),
+      'lahore',
+    );
+    await waitFor(() => {
+      expect(tripsApi.tripsList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'lahore', from: null, to: null }),
+      );
+    });
+    await user.click(period);
+    await user.click(
+      await screen.findByRole('option', { name: named(message(language, 'common-period-month')) }),
+    );
+    await waitFor(() => {
+      expect(tripsApi.tripsList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ from: '01-10-2026', to: '10-10-2026' }),
+      );
+    });
+  });
+
   it('the main bar has the item and it opens this screen, not a coming soon page', async () => {
     fakeTrips();
     const { router, user } = await open();
@@ -121,6 +148,9 @@ describe.each(LANGUAGES)('مارکیٹ سفر, the list (%s)', (language) => {
       search: null,
       offset: 0,
       limit: PAGE_ROWS,
+      sort: null,
+      // The list is in date order, so the month rows are asked for.
+      group_by_month: true,
     });
     expect(visible(document.body.textContent)).toContain(rangeText(language, 1, 1, 1));
   });

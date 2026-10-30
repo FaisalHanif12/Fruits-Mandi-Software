@@ -66,18 +66,16 @@
 .entry-grid .header-num .ag-header-cell-label {
   direction: ltr;
   justify-content: flex-end;
+  overflow: visible;
 }
 
 .entry-grid .header-num .ag-header-cell-text {
   text-align: end;
+
   /* The ink of a Nastaliq letter can lean past the width of its line box. The heading of a column
      of figures is set left to right and stands on the right edge, so the first letter of an Urdu
      word, the one on the right, was cut off ("کمیشن" read "میشن", plan 36). It may now reach into
      the padding of its cell. */
-  overflow: visible;
-}
-
-.entry-grid .header-num .ag-header-cell-label {
   overflow: visible;
 }
 
@@ -163,17 +161,20 @@
   cursor: pointer;
 }
 
-/* A grid that must fit a 1024 px window (the بکری grids): the columns sit closer. */
+/* A grid that must fit a 1024 px window (the بکری grids): the columns sit closer. In a short window
+   its rows are a little tighter too, so the lots and the first sale lines are on screen together
+   (plan 38, sale book). */
 .entry-grid.entry-grid-fit.ag-theme-quartz {
   --ag-cell-horizontal-padding: var(--space-2);
-}
 
-/* In a short window the rows of a grid that must fit it are a little tighter, so the lots and the
-   first sale lines are on screen together (plan 38, sale book). */
-@media (max-height: 700px) {
-  .entry-grid.entry-grid-fit.ag-theme-quartz {
+  @variant short {
     --ag-row-height: var(--control-h-compact);
   }
+}
+
+/* A grid of lines that keeps the room of four rows, its heading and its total row (the journal). */
+.entry-grid.entry-grid-min4.ag-theme-quartz {
+  --ag-auto-height-min-body-height: calc(var(--control-h) * 4);
 }
 
 /* The row with focus, and the focused cell: always clearly visible (NFR-USE-22). */

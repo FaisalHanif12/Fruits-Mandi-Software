@@ -79,6 +79,8 @@ function stackFields(language: Language) {
 const totalBox = () => visible(screen.getByRole('status').textContent);
 
 beforeEach(() => {
+  // "More columns" is kept on this computer; a test starts with it off.
+  window.localStorage.clear();
   vi.clearAllMocks();
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
@@ -126,27 +128,56 @@ describe.each(LANGUAGES)('the partner overview (%s)', (language) => {
     return { ...app, store, user: userEvent.setup() };
   }
 
-  it("shows one card per partner with his share and the backend's numbers, signs included", async () => {
-    await open();
-    const first = await screen.findByRole('heading', {
-      level: 2,
-      name: (name) => visible(name).startsWith(NAMES[language][0] ?? ''),
+  /** The table of the partners, with the rest of the figures shown under each row ("More columns"). */
+  async function tableWithMore(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: named(message(language, 'common-more-columns')),
+      }),
+    );
+    return screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
     });
-    const card = visible(first.closest('section')?.textContent);
-    expect(card).toContain(message(language, 'partners-metric-today'));
-    expect(card).toContain('40%');
-    expect(card).toContain('1,580');
-    expect(card).toContain('996');
-    expect(card).toContain('2,000');
+  }
+
+  it("shows one row per partner with his share and the backend's numbers, signs included", async () => {
+    const { user } = await open();
+    const table = await tableWithMore(user);
+    const text = visible(table.textContent);
+    expect(text).toContain(message(language, 'partners-metric-today'));
+    expect(text).toContain('40%');
+    expect(text).toContain('1,580');
+    expect(text).toContain('996');
+    expect(text).toContain('2,000');
     // A capital on the debit side is shown with its minus sign (PartnerOverviewRow).
-    expect(card).toContain('-4,000');
-    // The other partners have their own cards.
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3);
+    expect(text).toContain('-4,000');
+    // One row for each partner: the name is the heading of its row.
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(3);
+  });
+
+  it('the other figures wait behind "More columns", and the table keeps the کل رقم first', async () => {
+    const { user } = await open();
+    const table = await screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
+    });
+    // Without the tick: the کل رقم comes first among the figures, the rest is not drawn.
+    const heads = within(table)
+      .getAllByRole('columnheader')
+      .map((head) => visible(head.textContent));
+    expect(heads[1]).toBe(message(language, 'partners-metric-total'));
+    expect(visible(table.textContent)).not.toContain(message(language, 'partners-metric-today'));
+    await user.click(
+      screen.getByRole('checkbox', { name: named(message(language, 'common-more-columns')) }),
+    );
+    expect(visible(table.textContent)).toContain(message(language, 'partners-metric-today'));
   });
 
   it('shows the name of the language of the app first and the other script as a second line', async () => {
     await open();
-    const first = at(await screen.findAllByRole('heading', { level: 2 }), 0);
+    const table = await screen.findByRole('table', {
+      name: named(message(language, 'partners-overview-label')),
+    });
+    const first = at(within(table).getAllByRole('rowheader'), 0);
     const [primary, secondary] = Array.from(first.querySelectorAll('span[lang]'));
     expect(primary?.textContent).toBe(NAMES[language][0]);
     expect(primary?.getAttribute('lang')).toBe(language);
@@ -239,8 +270,9 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
     expect(totalBox()).toContain('100%');
     expect(saveButton(language)).toBeEnabled();
     // The first field has focus, and today is the default start day.
-    expect(await shareBox(language, 0)).toHaveFocus();
-    expect((await field(language, 'partners-field-from')).value).toBe('10-10-2026');
+    const from = await field(language, 'partners-field-from');
+    expect(from).toHaveFocus();
+    expect(from.value).toBe('10-10-2026');
   });
 
   it("sends each share as typed and shows the backend's total: red at 90, green again at 100", async () => {
@@ -266,9 +298,42 @@ describe.each(LANGUAGES)('the partner setup (%s)', (language) => {
     expect(saveButton(language)).toBeEnabled();
   });
 
+  it('Enter flows from the start day to each share and the last Enter saves', async () => {
+    const { user, store } = await open();
+    expect(await field(language, 'partners-field-from')).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(await shareBox(language, 0)).toHaveFocus();
+    await user.keyboard('50{Enter}');
+    expect(await shareBox(language, 1)).toHaveFocus();
+    await user.keyboard('30{Enter}');
+    expect(await shareBox(language, 2)).toHaveFocus();
+    await user.keyboard('20');
+    // The backend's check of the total (100) has to come back before the screen may save.
+    await waitFor(() => {
+      expect(totalBox()).toContain(message(language, 'partners-total-ok'));
+    });
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(partnersApi.partnersSetShares).toHaveBeenCalledTimes(1);
+    });
+    expect(store.setShares).toEqual([
+      {
+        effective_from: '10-10-2026',
+        shares: [
+          { partner_id: 1, share: '50' },
+          { partner_id: 2, share: '30' },
+          { partner_id: 3, share: '20' },
+        ],
+      },
+    ]);
+  });
+
   it('by keyboard only: arrows between the boxes, a new split, F10 saves, and the list shows what was saved', async () => {
     const { user, store } = await open();
     const first = await shareBox(language, 0);
+    // The start day has focus; Enter accepts it and goes to the first share.
+    expect(await field(language, 'partners-field-from')).toHaveFocus();
+    await user.keyboard('{Enter}');
     expect(first).toHaveFocus();
     await waitFor(() => {
       expect(totalBox()).toContain(message(language, 'partners-total-ok'));

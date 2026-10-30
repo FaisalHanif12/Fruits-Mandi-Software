@@ -103,23 +103,28 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
         <p className="type-body text-ink-muted" />
       </Localized>
       {error === null ? null : <ErrorNotice error={error} fieldsShown={['date']} />}
-      <div {...formNavigationProps} className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4">
-        <Field
-          label={<Localized id="gardens-close-date" />}
-          hint={
-            preview?.earliest_date == null ? undefined : (
-              <Localized
-                id="gardens-close-earliest"
-                vars={{ date: isoToDisplayDate(preview.earliest_date) }}
-              >
-                <span />
-              </Localized>
-            )
-          }
-          error={fieldError(error, 'date')}
+      <div className="@container min-w-0">
+        <div
+          {...formNavigationProps}
+          className="grid grid-cols-2 items-end gap-4 @form3:grid-cols-4"
         >
-          {(props) => <DateInput {...props} value={date} onChange={setDate} />}
-        </Field>
+          <Field
+            label={<Localized id="gardens-close-date" />}
+            hint={
+              preview?.earliest_date == null ? undefined : (
+                <Localized
+                  id="gardens-close-earliest"
+                  vars={{ date: isoToDisplayDate(preview.earliest_date) }}
+                >
+                  <span />
+                </Localized>
+              )
+            }
+            error={fieldError(error, 'date')}
+          >
+            {(props) => <DateInput {...props} value={date} onChange={setDate} />}
+          </Field>
+        </div>
       </div>
       {numbers === null ? (
         <Localized id="gardens-close-numbers-empty">

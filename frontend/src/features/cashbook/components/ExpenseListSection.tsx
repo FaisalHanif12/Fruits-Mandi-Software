@@ -6,13 +6,19 @@
 
 import { Localized } from '@fluent/react';
 import { HandCoins, ReceiptText } from 'lucide-react';
+import { useState } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
-import { Card, EmptyState } from '../../../shared/ui';
+import { useDebouncedValue } from '../../../shared/hooks';
+import { formNavigationProps } from '../../../shared/keyboard';
+import { Card, Checkbox, EmptyState, FilterBar, ShowClosedTick } from '../../../shared/ui';
 import { useVouchersList } from '../../vouchers';
 import { EXPENSE_DAY_COLUMNS, TAKE_COLUMNS } from '../list-columns';
 import { usePartnerTakes } from '../hooks';
 import type { ExpenseType } from '../screen-type';
+
+/** A pause so a burst of key presses in the search box asks once. */
+const SEARCH_DELAY_MS = 150;
 
 interface ExpenseListSectionProps {
   type: ExpenseType;
@@ -23,92 +29,122 @@ interface ExpenseListSectionProps {
 }
 
 function ShopDay({ day }: { day: string }) {
+  // The cancelled expenses of the day step aside until the tick is on (plan 38 G6); the search box
+  // finds a number, a head or the words of the narration.
+  const [search, setSearch] = useState('');
+  const [showFinished, setShowFinished] = useState(false);
+  const searchText = useDebouncedValue(search.trim(), SEARCH_DELAY_MS);
   const list = useVouchersList({
     voucher_type: 'shop_expense',
     from: day,
     to: day,
     account_id: null,
     person_key: null,
-    show_finished: false,
-    search: null,
+    show_finished: showFinished,
+    search: searchText === '' ? null : searchText,
     group_by_month: false,
   });
   const first = list.data?.pages[0];
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
   return (
-    <PagedList
-      columns={EXPENSE_DAY_COLUMNS}
-      rows={rows}
-      getRowId={(row) => String(row.id)}
-      labelId="cashbook-day-label"
-      failedId="cashbook-day-failed"
-      error={list.isError ? uiErrorOf(list.error) : null}
-      onRetry={() => {
-        void list.refetch();
-      }}
-      pager={list.pager}
-      empty={
-        <EmptyState
-          icon={ReceiptText}
-          title={<Localized id="cashbook-day-empty" />}
-          help={<Localized id="cashbook-day-empty-help" />}
+    <>
+      <div {...formNavigationProps}>
+        <FilterBar
+          screen="cashbook.day"
+          search={{ value: search, onChange: setSearch }}
+          extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
         />
-      }
-      isInactive={(row) => row.status === 'cancelled'}
-      totals={
-        first === undefined
-          ? undefined
-          : (context) => ({
-              labelField: 'head',
-              values: {
-                head: context.text('glossary-meezan'),
-                ...(first.totals.total_paisa === null
-                  ? {}
-                  : { amount: context.money(first.totals.total_paisa) }),
-              },
-            })
-      }
-    />
+      </div>
+      <PagedList
+        columns={EXPENSE_DAY_COLUMNS}
+        rows={rows}
+        getRowId={(row) => String(row.id)}
+        labelId="cashbook-day-label"
+        failedId="cashbook-day-failed"
+        error={list.isError ? uiErrorOf(list.error) : null}
+        onRetry={() => {
+          void list.refetch();
+        }}
+        pager={list.pager}
+        sort={{ value: list.sort, onChange: list.setSort }}
+        empty={
+          <EmptyState
+            icon={ReceiptText}
+            title={<Localized id="cashbook-day-empty" />}
+            help={<Localized id="cashbook-day-empty-help" />}
+          />
+        }
+        isInactive={(row) => row.status === 'cancelled'}
+        totals={
+          first === undefined
+            ? undefined
+            : (context) => ({
+                labelField: 'head',
+                values: {
+                  head: context.text('glossary-meezan'),
+                  ...(first.totals.total_paisa === null
+                    ? {}
+                    : { amount: context.money(first.totals.total_paisa) }),
+                },
+              })
+        }
+      />
+    </>
   );
 }
 
 function PartnerTakesList({ partnerId }: { partnerId: number }) {
-  const takes = usePartnerTakes(partnerId);
+  // A take that is fully returned is left out until the tick is on (plan 38 G6).
+  const [showReturned, setShowReturned] = useState(false);
+  const takes = usePartnerTakes(partnerId, true, showReturned);
   const first = takes.data?.pages[0];
   const rows = takes.data?.pages.flatMap((page) => page.rows);
   return (
-    <PagedList
-      columns={TAKE_COLUMNS}
-      rows={rows}
-      getRowId={(row) => `${row.source}-${String(row.voucher_id ?? row.entry_date)}`}
-      labelId="cashbook-takes-label"
-      failedId="cashbook-takes-failed"
-      error={takes.isError ? uiErrorOf(takes.error) : null}
-      onRetry={() => {
-        void takes.refetch();
-      }}
-      pager={takes.pager}
-      empty={
-        <EmptyState
-          icon={HandCoins}
-          title={<Localized id="cashbook-takes-empty" />}
-          help={<Localized id="cashbook-takes-empty-help" />}
-        />
-      }
-      totals={
-        first === undefined
-          ? undefined
-          : (context) => ({
-              labelField: 'reason',
-              values: {
-                reason: context.text('glossary-meezan'),
-                amount: context.money(first.totals.taken_paisa),
-                returned: context.money(first.totals.returned_paisa),
-                open: context.money(first.totals.open_paisa),
-              },
-            })
-      }
-    />
+    <>
+      <Checkbox
+        checked={showReturned}
+        onChange={setShowReturned}
+        label={<Localized id="cashbook-show-returned" />}
+      />
+      <PagedList
+        columns={TAKE_COLUMNS}
+        rows={rows}
+        getRowId={(row) => `${row.source}-${String(row.voucher_id ?? row.entry_date)}`}
+        labelId="cashbook-takes-label"
+        failedId="cashbook-takes-failed"
+        error={takes.isError ? uiErrorOf(takes.error) : null}
+        onRetry={() => {
+          void takes.refetch();
+        }}
+        pager={takes.pager}
+        sort={{ value: takes.sort, onChange: takes.setSort }}
+        months={
+          first === undefined || first.months.length === 0
+            ? undefined
+            : { months: first.months, monthOf: (row) => row.entry_date.slice(0, 7) }
+        }
+        empty={
+          <EmptyState
+            icon={HandCoins}
+            title={<Localized id="cashbook-takes-empty" />}
+            help={<Localized id="cashbook-takes-empty-help" />}
+          />
+        }
+        totals={
+          first === undefined
+            ? undefined
+            : (context) => ({
+                labelField: 'reason',
+                values: {
+                  reason: context.text('glossary-meezan'),
+                  amount: context.money(first.totals.taken_paisa),
+                  returned: context.money(first.totals.returned_paisa),
+                  open: context.money(first.totals.open_paisa),
+                },
+              })
+        }
+      />
+    </>
   );
 }
 

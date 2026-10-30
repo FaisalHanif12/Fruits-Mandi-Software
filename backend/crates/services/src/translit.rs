@@ -335,7 +335,7 @@ pub fn list_page_with(
         use std::cmp::Ordering;
         let cmp: fn(&LearnedRow, &LearnedRow) -> Ordering = match sort.column.as_str() {
             "roman" => |a, b| a.roman.cmp(&b.roman),
-            "urdu" => |a, b| a.urdu.cmp(&b.urdu),
+            "urdu" => |a, b| crate::page::urdu_compare(&a.urdu, &b.urdu),
             "kind" => |a, b| (a.kind as u8).cmp(&(b.kind as u8)),
             "use_count" => |a, b| a.use_count.cmp(&b.use_count),
             "last_used_at" => |a, b| a.last_used_at.cmp(&b.last_used_at),

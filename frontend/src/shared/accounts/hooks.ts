@@ -1,6 +1,7 @@
 // The accounts and the chart as hooks (Code Standards F6). A save or a change of active state
 // refreshes the lists, the chart and every picker, so a new account is found at once everywhere.
 
+import type { SortInput } from '../../bindings/SortInput';
 import {
   keepPreviousData,
   useMutation,
@@ -47,7 +48,11 @@ const SIMILAR_DELAY_MS = 300;
 function accountListQuery(filter: AccountFilter) {
   return {
     queryKey: [...ACCOUNTS_KEY, 'list', filter],
-    fetchPage: (offset: number, limit: number) => accountsList(filter, offset, limit),
+    // The order is sent only when one is chosen, so the list in its own order asks as before.
+    fetchPage: (offset: number, limit: number, sort: SortInput | null = null) =>
+      sort === null
+        ? accountsList(filter, offset, limit)
+        : accountsList(filter, offset, limit, sort),
     rowsIn: (page: { rows: readonly unknown[] }) => page.rows.length,
     totalOf: (page: { count: number }) => page.count,
     keepPrevious: true,
@@ -58,8 +63,8 @@ function accountListQuery(filter: AccountFilter) {
  * The accounts for the filter, one page at a time, with the count of the whole filter and the
  * opening totals over all of it (PRD FR-10.5, FR-19.11).
  */
-export function useAccountList(filter: AccountFilter) {
-  return usePagedQuery({ screen: 'accounts.list', ...accountListQuery(filter) });
+export function useAccountList(filter: AccountFilter, screen = 'accounts.list') {
+  return usePagedQuery({ screen, ...accountListQuery(filter) });
 }
 
 /** Every account of the filter, page after page (the opening balances, `useLoadRest`). */

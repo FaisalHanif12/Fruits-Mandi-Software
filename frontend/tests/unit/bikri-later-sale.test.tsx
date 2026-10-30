@@ -11,6 +11,8 @@ import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
+import { openInfo } from '../helpers/info';
+import { settlePreview } from '../helpers/preview-settled';
 import { cash, fakePlan16, laterSaleAnswer, refused, stockRow } from '../helpers/bikri-plan16';
 import {
   cellOf,
@@ -115,15 +117,19 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
 
   it('shows the lot read-only and asks the backend about it on the day of today', async () => {
     const plan = fakePlan16();
-    await open();
+    const { user } = await open();
     const card = await screen.findByRole('heading', {
       name: named(message(language, 'bikri-later-lot-title')),
     });
-    const text = visible(card.closest('section')?.textContent);
-    expect(text).toContain(names.rahim);
-    expect(text).toContain('09-10-2026');
-    // The lot's other charges are not charged again, and the screen says so.
-    expect(text).toContain(visible(message(language, 'bikri-later-no-lot-charges')));
+    expect(visible(card.closest('section')?.textContent)).toContain(names.rahim);
+    // The day the lot came is among the other figures, behind the ⓘ of the one-line strip.
+    await openInfo(user, language, message(language, 'bikri-later-lot-title'));
+    expect(visible(document.body.textContent)).toContain('09-10-2026');
+    await user.keyboard('{Escape}');
+    // The lot's other charges are not charged again, and the screen says so in one line.
+    expect(visible(document.body.textContent)).toContain(
+      visible(message(language, 'bikri-later-no-lot-charges')),
+    );
     await waitFor(() => {
       expect(plan.laterPreviews.length).toBeGreaterThan(0);
     });
@@ -210,6 +216,12 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
     );
     const { user } = await open();
     await typeLine(user);
+    // The preview fills the quantity of the next line; F10 after that, so the refusal is for the
+    // draft that stays on screen (a refusal goes when the draft changes).
+    await waitFor(() => {
+      expect(textOf(salesGrid(language), 1, 'qty')).not.toBe('');
+    });
+    await settlePreview();
     press('F10');
     expect(
       await screen.findByText(
@@ -226,6 +238,12 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
     );
     const { user } = await open();
     await typeLine(user);
+    // The preview fills the quantity of the next line; F10 after that, so the refusal is for the
+    // draft that stays on screen (a refusal goes when the draft changes).
+    await waitFor(() => {
+      expect(textOf(salesGrid(language), 1, 'qty')).not.toBe('');
+    });
+    await settlePreview();
     press('F10');
     const words = said(message(language, 'err-date-before-received'));
     expect(await screen.findByText(words)).toBeInTheDocument();

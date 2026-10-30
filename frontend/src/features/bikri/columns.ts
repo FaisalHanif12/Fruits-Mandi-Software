@@ -117,6 +117,9 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       field: SALE.payment,
       type: 'choice',
       headerId: 'bikri-col-payment',
+      // "ادھاری / نقدی" stays on one line, so the heading row of the grid is one line high. The
+      // wide window has the room for the commission and لاگا columns instead, and the height.
+      ...(isFromStep(step, 'wide') ? {} : { minWidth: FIT_MIN.choiceHeading }),
       enterStop: false,
       choices: [
         { value: 'credit', labelId: 'glossary-udhari' },

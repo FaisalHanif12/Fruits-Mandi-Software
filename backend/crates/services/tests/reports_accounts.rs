@@ -895,6 +895,8 @@ fn print(
     print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
+            group_by_month: false,
+            sort: None,
             id,
             filters,
             language,
@@ -1704,31 +1706,20 @@ fn the_paged_queries_use_indexes_and_never_scan_the_whole_journal() {
             .collect::<Vec<_>>();
         rows.join(" | ")
     };
-    let none: Option<String> = None;
-    let account: Option<i64> = Some(w.akram);
-    let ledger_plan = plan(
-        R13_PAGE_SQL,
-        &[&account, &none, &none, &none, &100_i64, &0_i64],
-    );
+    let plan_of = |(sql, binds): (String, Vec<mandi_services::db::rusqlite::types::Value>)| {
+        let refs: Vec<&dyn mandi_services::db::rusqlite::ToSql> = binds
+            .iter()
+            .map(|v| v as &dyn mandi_services::db::rusqlite::ToSql)
+            .collect();
+        plan(&sql, &refs)
+    };
+    let ledger_plan = plan_of(ledger_page(&conn, w.akram, None, None));
     assert!(
         ledger_plan.contains("USING INDEX") || ledger_plan.contains("USING COVERING INDEX"),
         "{ledger_plan}"
     );
     assert!(!ledger_plan.contains("SCAN l "), "{ledger_plan}");
-    let ledger_totals = plan(R13_TOTALS_SQL, &[&account, &none, &none, &none]);
-    assert!(!ledger_totals.contains("SCAN l "), "{ledger_totals}");
-    let no_account: Option<i64> = None;
-    let journal_plan = plan(
-        R11_PAGE_SQL,
-        &[
-            &Some("2026-10-10".to_owned()),
-            &Some("2026-10-10".to_owned()),
-            &no_account,
-            &none,
-            &100_i64,
-            &0_i64,
-        ],
-    );
+    let journal_plan = plan_of(journal_page(&conn, Some("2026-10-10"), Some("2026-10-10")));
     assert!(
         journal_plan.contains("idx_") || journal_plan.contains("USING INDEX"),
         "{journal_plan}"

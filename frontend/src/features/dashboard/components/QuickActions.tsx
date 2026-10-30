@@ -10,7 +10,7 @@ import { useOpenDestination } from '../destinations';
 export function QuickActions() {
   const open = useOpenDestination();
   return (
-    <div role="group" aria-labelledby="dashboard-quick-title" className="flex flex-wrap gap-3">
+    <div role="group" aria-labelledby="dashboard-quick-title" className="flex flex-wrap gap-2">
       <Button
         variant="primary"
         shortcut={SHORTCUTS.newBikri}
@@ -52,13 +52,20 @@ export function QuickActions() {
       >
         <Localized id="dashboard-new-expense" />
       </Button>
-      <Button
-        onClick={() => {
-          open({ kind: 'report', id: 'R11' });
-        }}
-      >
-        <Localized id="dashboard-open-daybook" />
-      </Button>
     </div>
+  );
+}
+
+/** The day book, at the end of the greeting's row: the five buttons above are then one row (plan 38). */
+export function DayBookButton() {
+  const open = useOpenDestination();
+  return (
+    <Button
+      onClick={() => {
+        open({ kind: 'report', id: 'R11' });
+      }}
+    >
+      <Localized id="dashboard-open-daybook" />
+    </Button>
   );
 }

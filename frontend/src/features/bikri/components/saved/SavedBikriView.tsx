@@ -118,7 +118,8 @@ export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
   ];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 short:gap-2">
+      {/* That this page only reads stays in words beside the name: it says what mode the page is in. */}
       <div className="flex flex-wrap items-baseline gap-x-4">
         <Localized id="bikri-saved-title" vars={{ number: String(detail.number) }}>
           <h1 className="type-title" />
@@ -153,72 +154,76 @@ export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
         </div>
       ) : null}
       <Card compact>
-        <dl className="grid grid-cols-3 gap-x-4 gap-y-3 normal:grid-cols-4">
-          <Fact label={<Localized id="bikri-header-date" />}>
-            <Code>{isoToDisplayDate(detail.entry_date)}</Code>
-          </Fact>
-          <Fact label={<Localized id="bikri-header-bill-date" />}>
-            <Code>{isoToDisplayDate(detail.bill_date)}</Code>
-          </Fact>
-          {detail.truck_no === null ? null : (
-            <Fact label={<Localized id="bikri-header-truck" />}>
-              <Code>{detail.truck_no}</Code>
+        <div className="@container min-w-0">
+          <dl className="grid grid-cols-3 gap-x-4 gap-y-3 @form3:grid-cols-4">
+            <Fact label={<Localized id="bikri-header-date" />}>
+              <Code>{isoToDisplayDate(detail.entry_date)}</Code>
             </Fact>
-          )}
-          {detail.zamindar === null ? null : (
-            <Fact label={<Localized id="glossary-zamindar" />}>
-              {displayName(detail.zamindar, language)}
+            <Fact label={<Localized id="bikri-header-bill-date" />}>
+              <Code>{isoToDisplayDate(detail.bill_date)}</Code>
             </Fact>
-          )}
-          {adda === null ? null : <Fact label={<Localized id="glossary-adda" />}>{adda}</Fact>}
-          {detail.total_freight === null ? null : (
-            <Fact label={<Localized id="bikri-header-total-freight" />}>
-              <Num paisa={detail.total_freight} />
+            {detail.truck_no === null ? null : (
+              <Fact label={<Localized id="bikri-header-truck" />}>
+                <Code>{detail.truck_no}</Code>
+              </Fact>
+            )}
+            {detail.zamindar === null ? null : (
+              <Fact label={<Localized id="glossary-zamindar" />}>
+                {displayName(detail.zamindar, language)}
+              </Fact>
+            )}
+            {adda === null ? null : <Fact label={<Localized id="glossary-adda" />}>{adda}</Fact>}
+            {detail.total_freight === null ? null : (
+              <Fact label={<Localized id="bikri-header-total-freight" />}>
+                <Num paisa={detail.total_freight} />
+              </Fact>
+            )}
+            {store === null ? null : (
+              <Fact label={<Localized id="bikri-header-store" />}>{store}</Fact>
+            )}
+            {detail.book === null ? null : (
+              <Fact label={<Localized id="bikri-header-book" />}>{detail.book}</Fact>
+            )}
+            {detail.driver_name === null ? null : (
+              <Fact label={<Localized id="bikri-header-driver" />}>{detail.driver_name}</Fact>
+            )}
+            {detail.driver_phone === null ? null : (
+              <Fact label={<Localized id="bikri-header-driver-phone" />}>
+                <Code>{detail.driver_phone}</Code>
+              </Fact>
+            )}
+            {detail.note === null ? null : (
+              <Fact label={<Localized id="bikri-header-note" />}>{detail.note}</Fact>
+            )}
+            <Fact label={<Localized id="bikri-saved-at" />}>
+              <Code>{utcToLocalDisplay(detail.created_at)}</Code>
             </Fact>
-          )}
-          {store === null ? null : (
-            <Fact label={<Localized id="bikri-header-store" />}>{store}</Fact>
-          )}
-          {detail.book === null ? null : (
-            <Fact label={<Localized id="bikri-header-book" />}>{detail.book}</Fact>
-          )}
-          {detail.driver_name === null ? null : (
-            <Fact label={<Localized id="bikri-header-driver" />}>{detail.driver_name}</Fact>
-          )}
-          {detail.driver_phone === null ? null : (
-            <Fact label={<Localized id="bikri-header-driver-phone" />}>
-              <Code>{detail.driver_phone}</Code>
-            </Fact>
-          )}
-          {detail.note === null ? null : (
-            <Fact label={<Localized id="bikri-header-note" />}>{detail.note}</Fact>
-          )}
-          <Fact label={<Localized id="bikri-saved-at" />}>
-            <Code>{utcToLocalDisplay(detail.created_at)}</Code>
-          </Fact>
-        </dl>
+          </dl>
+        </div>
       </Card>
       {detail.lots.map((lot) => (
         <SavedLotCard key={lot.id} lot={lot} />
       ))}
       <SavedSummary detail={detail} />
-      <div className="grid grid-cols-1 gap-3 wide:grid-cols-2">
-        <Card compact title={<Localized id="bikri-split-title" />}>
-          <Table
-            label={l10n.getString('bikri-split-title')}
-            columns={splitColumns}
-            rows={detail.split}
-            rowKey={(row) => String(row.partner_id)}
-          />
-        </Card>
-        <Card compact title={<Localized id="bikri-postings-title" />}>
-          <Table
-            label={l10n.getString('bikri-postings-title')}
-            columns={postingColumns}
-            rows={detail.postings}
-            rowKey={(row) => String(row.entry_id)}
-          />
-        </Card>
+      <div className="@container min-w-0">
+        <div className="grid grid-cols-1 gap-3 @form4:grid-cols-2">
+          <Card compact title={<Localized id="bikri-split-title" />}>
+            <Table
+              label={l10n.getString('bikri-split-title')}
+              columns={splitColumns}
+              rows={detail.split}
+              rowKey={(row) => String(row.partner_id)}
+            />
+          </Card>
+          <Card compact title={<Localized id="bikri-postings-title" />}>
+            <Table
+              label={l10n.getString('bikri-postings-title')}
+              columns={postingColumns}
+              rows={detail.postings}
+              rowKey={(row) => String(row.entry_id)}
+            />
+          </Card>
+        </div>
       </div>
     </div>
   );

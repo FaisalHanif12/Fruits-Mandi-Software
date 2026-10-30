@@ -862,7 +862,7 @@ pub fn statement(
                 continue;
             }
             let (plus, minus) = match event.amount {
-                Some(a) if a.is_negative() => (0, a.as_paisa().saturating_neg()),
+                Some(a) if a.is_negative() => (0, a.checked_neg().map_err(money_error)?.as_paisa()),
                 Some(a) => (a.as_paisa(), 0),
                 None => (0, 0),
             };

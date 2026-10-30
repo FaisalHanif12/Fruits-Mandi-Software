@@ -14,7 +14,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useDebouncedValue } from '../../../shared/hooks';
 import { useEscape } from '../../../shared/keyboard';
 import { useScreenMemory } from '../../../shared/screen-state';
-import { LoadingState } from '../../../shared/ui';
+import { InfoHint, LoadingState } from '../../../shared/ui';
 import { AuditDetail } from '../components/AuditDetail';
 import { AuditFilterBar } from '../components/AuditFilterBar';
 import { AuditResults } from '../components/AuditResults';
@@ -69,7 +69,7 @@ function AuditLogBody() {
   const { change, clear, open, setFocusRowId } = useAuditStore.getState();
   const settled = useDebouncedValue(filters, FILTER_SETTLE_MS);
   const wire = useMemo(() => filtersToWire(settled), [settled]);
-  const query = useAuditPages(wire);
+  const query = useAuditPages(wire, true);
   const options = useAuditOptions();
 
   // The page last shown, kept while a half-typed filter is refused. They are state set while
@@ -90,14 +90,19 @@ function AuditLogBody() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="flex shrink-0 items-center gap-1">
         <Localized id="audit-title">
           <h2 className="type-section" />
         </Localized>
-        <Localized id="audit-help">
-          <p className="type-body text-ink-muted" />
-        </Localized>
+        <InfoHint>
+          <Localized id="audit-help">
+            <p />
+          </Localized>
+          <Localized id="audit-open-hint">
+            <p className="text-ink-muted" />
+          </Localized>
+        </InfoHint>
       </div>
       {opened === null ? (
         <>

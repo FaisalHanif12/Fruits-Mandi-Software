@@ -32,12 +32,24 @@ const FILTER_DELAY_MS = 150;
  * The register for the filters, page by page, with the count and the totals of the whole filter
  * (PRD FR-13.6, FR-19.11).
  */
-export function usePukhtaRegister(filter: Omit<PukhtaRegisterInput, 'offset' | 'limit' | 'sort'>) {
+export function usePukhtaRegister(
+  filter: Omit<PukhtaRegisterInput, 'offset' | 'limit' | 'sort'>,
+  enabled = true,
+) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
   return usePagedQuery({
     screen: 'pukhta.register',
     queryKey: ['pukhta', 'register', settled],
-    fetchPage: (offset, limit, sort) => pukhtaRegister({ ...settled, offset, limit, sort }),
+    enabled,
+    fetchPage: (offset, limit, sort) =>
+      pukhtaRegister({
+        ...settled,
+        offset,
+        limit,
+        sort,
+        // Month rows only while the list is in date order (BikriListInput.group_by_month rule).
+        group_by_month: settled.group_by_month && (sort === null || sort.column === 'entry_date'),
+      }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,

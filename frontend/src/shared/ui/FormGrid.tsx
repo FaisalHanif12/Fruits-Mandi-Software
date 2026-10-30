@@ -10,12 +10,15 @@
 import type { ReactNode } from 'react';
 
 /** How many columns the grid reaches at most; it uses fewer when the box is narrow. */
-type Columns = 2 | 3 | 4;
+type Columns = 2 | 3 | 4 | 6;
 
 const COLUMN_CLASSES: Record<Columns, string> = {
   2: 'grid grid-cols-1 gap-x-4 gap-y-3 @form2:grid-cols-2',
   3: 'grid grid-cols-1 gap-x-4 gap-y-3 @form2:grid-cols-2 @form3:grid-cols-3',
   4: 'grid grid-cols-1 gap-x-4 gap-y-3 @form2:grid-cols-2 @form3:grid-cols-3 @form4:grid-cols-4',
+  // A filter bar: a search box (two columns), a few short fields and a button in one row, from
+  // 880 px of free width (plan 38).
+  6: 'grid grid-cols-1 gap-x-4 gap-y-3 @form2:grid-cols-2 @form3:grid-cols-3 @filter-wide:grid-cols-6',
 };
 
 interface FormGridProps {

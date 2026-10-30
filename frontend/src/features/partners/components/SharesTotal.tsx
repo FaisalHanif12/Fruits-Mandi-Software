@@ -10,6 +10,8 @@ export type TotalState = 'ok' | 'bad' | 'checking';
 
 interface SharesTotalProps {
   state: TotalState;
+  /** One row: the words, the number and the verdict side by side (the strip under the title). */
+  compact?: boolean;
   /** The total as percent text, for example "90", or null before the first answer. */
   total: string | null;
 }
@@ -20,7 +22,7 @@ const BOX: Record<TotalState, string> = {
   checking: 'bg-surface-sunken text-ink-muted',
 };
 
-export function SharesTotal({ state, total }: SharesTotalProps) {
+export function SharesTotal({ state, total, compact = false }: SharesTotalProps) {
   const Icon = state === 'ok' ? Check : state === 'bad' ? CircleAlert : LoaderCircle;
   const messageId =
     state === 'ok'
@@ -29,7 +31,10 @@ export function SharesTotal({ state, total }: SharesTotalProps) {
         ? 'partners-total-bad'
         : 'partners-total-checking';
   return (
-    <div role="status" className={`flex min-w-0 flex-col gap-1 rounded-2 px-4 py-3 ${BOX[state]}`}>
+    <div
+      role="status"
+      className={`flex min-w-0 gap-1 rounded-2 px-4 py-2 ${compact ? 'flex-row flex-wrap items-center gap-x-4' : 'flex-col'} ${BOX[state]}`}
+    >
       <div className="flex items-center justify-between gap-3">
         <Localized id="partners-total-label">
           <span className="type-label" />

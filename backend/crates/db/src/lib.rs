@@ -28,6 +28,7 @@ pub mod ledger;
 pub mod listing;
 pub mod masters;
 pub mod matching;
+pub mod memo;
 pub mod migrate;
 pub mod month;
 pub mod open_lines;
@@ -39,7 +40,7 @@ pub mod statement;
 pub mod ventures;
 pub mod vouchers;
 
-pub use db::{BUSY_TIMEOUT, CHECK_WAIT, DataState, Db, DbOptions};
+pub use db::{BUSY_TIMEOUT, CHECK_WAIT, DataState, Db, DbOptions, URDU_COLLATION};
 pub use error::DbError;
 /// SQLite types, re-exported so services use the same version (`Transaction`, `params!`).
 pub use rusqlite;

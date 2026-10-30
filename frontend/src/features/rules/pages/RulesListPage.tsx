@@ -19,6 +19,8 @@ import {
   Checkbox,
   EmptyState,
   Field,
+  FilterBar,
+  ListPage,
   Picker,
   Select,
   type PickerValue,
@@ -44,6 +46,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
   const [party, setParty] = useState<PickerValue | null>(start.party);
   const [item, setItem] = useState<PickerValue | null>(start.item);
   const [showInactive, setShowInactive] = useState(start.showInactive);
+  const [search, setSearch] = useState('');
   useEffect(() => {
     remember(ruleChoicesText({ side, charge, party, item, showInactive }));
   }, [side, charge, party, item, showInactive, remember]);
@@ -57,14 +60,15 @@ function RulesBody({ saved, remember }: MemoryProps) {
     }),
     [side, charge, party, item, showInactive],
   );
-  const list = useRuleList(filter);
+  const list = useRuleList(filter, search.trim() === '' ? null : search.trim());
   const containerRef = useFocusFirstField<HTMLDivElement>();
   const filtering =
     filter.side !== null ||
     filter.charge_type !== null ||
     filter.account_id !== null ||
     filter.item_id !== null ||
-    filter.include_inactive;
+    filter.include_inactive ||
+    search.trim() !== '';
 
   const openNew = () => {
     void navigate({ to: '/index/rules/new' });
@@ -94,6 +98,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
             setCharge(ALL);
             setParty(null);
             setItem(null);
+            setSearch('');
             setShowInactive(true);
           }}
         >
@@ -121,6 +126,7 @@ function RulesBody({ saved, remember }: MemoryProps) {
         void list.refetch();
       }}
       pager={list.pager}
+      sort={{ value: list.sort, onChange: list.setSort }}
       empty={empty}
       onOpen={(row) => {
         void navigate({ to: '/index/rules/$id', params: { id: String(row.id) } });
@@ -130,17 +136,15 @@ function RulesBody({ saved, remember }: MemoryProps) {
   );
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="rules-title">
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id="rules-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <ListPage
+      titleId="rules-title"
+      help={
+        <Localized id="rules-help">
+          <p />
+        </Localized>
+      }
+      actions={
+        <>
           <Button
             onClick={() => {
               void navigate({ to: '/index/rules/test' });
@@ -150,80 +154,95 @@ function RulesBody({ saved, remember }: MemoryProps) {
             <Localized id="rules-test-open" />
           </Button>
           {rows === undefined || rows.length === 0 ? null : newButton}
+        </>
+      }
+      filters={
+        <div ref={containerRef} {...formNavigationProps}>
+          <FilterBar
+            screen="rules"
+            search={{
+              value: search,
+              onChange: setSearch,
+              placeholderId: 'rules-search-placeholder',
+            }}
+            moreSet={[party !== null, item !== null].filter(Boolean).length}
+            more={
+              <>
+                <Field label={<Localized id="rules-filter-party" />}>
+                  {(props) => (
+                    <AccountPicker
+                      {...props}
+                      // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                      canAdd={false}
+                      scope="any"
+                      value={party}
+                      onChange={(hit) => {
+                        setParty(hit === null ? null : pickedOf(hit));
+                      }}
+                    />
+                  )}
+                </Field>
+                <Field label={<Localized id="rules-filter-item" />}>
+                  {(props) => (
+                    <Picker
+                      {...props}
+                      // A filter looks for what is already there; it has nothing to add (plan 32, R8).
+                      canAdd={false}
+                      scope="item"
+                      value={item}
+                      onChange={(hit) => {
+                        setItem(hit === null ? null : pickedOf(hit));
+                      }}
+                    />
+                  )}
+                </Field>
+              </>
+            }
+            extra={
+              <Checkbox
+                checked={showInactive}
+                onChange={setShowInactive}
+                label={<Localized id="rules-show-inactive" />}
+              />
+            }
+          >
+            <Field label={<Localized id="rules-filter-side" />}>
+              {(props) => (
+                <Select
+                  {...props}
+                  value={side}
+                  onChange={setSide}
+                  options={[
+                    { value: ALL, label: <Localized id="rules-all" /> },
+                    ...SIDES.map((option) => ({
+                      value: option,
+                      label: <Localized id={`rules-side-${option}`} />,
+                    })),
+                  ]}
+                />
+              )}
+            </Field>
+            <Field label={<Localized id="rules-filter-charge" />}>
+              {(props) => (
+                <Select
+                  {...props}
+                  value={charge}
+                  onChange={setCharge}
+                  options={[
+                    { value: ALL, label: <Localized id="rules-all" /> },
+                    ...ALL_CHARGES.map((option) => ({
+                      value: option,
+                      label: <Localized id={`rules-charge-${option}`} />,
+                    })),
+                  ]}
+                />
+              )}
+            </Field>
+          </FilterBar>
         </div>
-      </div>
-      <div
-        ref={containerRef}
-        {...formNavigationProps}
-        className="grid grid-cols-1 items-end gap-4 normal:grid-cols-4"
-      >
-        <Field label={<Localized id="rules-filter-side" />}>
-          {(props) => (
-            <Select
-              {...props}
-              value={side}
-              onChange={setSide}
-              options={[
-                { value: ALL, label: <Localized id="rules-all" /> },
-                ...SIDES.map((option) => ({
-                  value: option,
-                  label: <Localized id={`rules-side-${option}`} />,
-                })),
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="rules-filter-charge" />}>
-          {(props) => (
-            <Select
-              {...props}
-              value={charge}
-              onChange={setCharge}
-              options={[
-                { value: ALL, label: <Localized id="rules-all" /> },
-                ...ALL_CHARGES.map((option) => ({
-                  value: option,
-                  label: <Localized id={`rules-charge-${option}`} />,
-                })),
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="rules-filter-party" />}>
-          {(props) => (
-            <AccountPicker
-              {...props}
-              // A filter looks for what is already there; it has nothing to add (plan 32, R8).
-              canAdd={false}
-              scope="any"
-              value={party}
-              onChange={(hit) => {
-                setParty(hit === null ? null : pickedOf(hit));
-              }}
-            />
-          )}
-        </Field>
-        <Field label={<Localized id="rules-filter-item" />}>
-          {(props) => (
-            <Picker
-              {...props}
-              // A filter looks for what is already there; it has nothing to add (plan 32, R8).
-              canAdd={false}
-              scope="item"
-              value={item}
-              onChange={(hit) => {
-                setItem(hit === null ? null : pickedOf(hit));
-              }}
-            />
-          )}
-        </Field>
-        <Checkbox
-          checked={showInactive}
-          onChange={setShowInactive}
-          label={<Localized id="rules-show-inactive" />}
-        />
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col">{body}</div>
-    </div>
+      }
+    >
+      {body}
+    </ListPage>
   );
 }

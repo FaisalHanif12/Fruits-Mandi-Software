@@ -597,6 +597,9 @@ pub struct AnalyticsPrintInput {
     pub language: Language,
     /// The paper class. A4 when left out.
     pub paper: Option<Paper>,
+    /// The sort of the screen: the print has the same order, with every row (plan 38 R4).
+    #[serde(default)]
+    pub sort: Option<mandi_core::paging::SortInput>,
 }
 
 /// A dynamic column heading, formatted for print.

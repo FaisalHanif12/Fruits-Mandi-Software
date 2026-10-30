@@ -8,7 +8,7 @@ import { Localized } from '@fluent/react';
 import { Check, CircleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { utcToLocalDisplay } from '../../../shared/format';
-import { Button, Card, ErrorMessage, Notice, Num } from '../../../shared/ui';
+import { Button, ErrorMessage, Notice, Num } from '../../../shared/ui';
 import { kindId } from '../format';
 import type { BackupStatus } from '../types';
 
@@ -18,13 +18,14 @@ interface StatusCardProps {
   onTest: () => void;
 }
 
-function Row({ labelId, children }: { labelId: string; children: ReactNode }) {
+/** One fact of the state as a chip: what it is, then its value (plan 38). */
+function Chip({ labelId, children }: { labelId: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-2 items-baseline gap-x-4">
+    <div className="flex items-center gap-2 rounded-2 border border-border bg-surface px-3 py-2">
       <Localized id={labelId}>
-        <dt className="text-ink-muted" />
+        <dt className="type-body text-ink-muted" />
       </Localized>
-      <dd className="flex items-center justify-end gap-2 text-end">{children}</dd>
+      <dd className="flex items-center gap-2 type-body">{children}</dd>
     </div>
   );
 }
@@ -45,12 +46,16 @@ function When({ at }: { at: string | null }) {
 export function StatusCard({ status, onTest }: StatusCardProps) {
   const cloudBad = status.cloud_level === 'red' || status.cloud_level === 'alert';
   return (
-    <Card title={<Localized id="backup-state-title" />}>
-      <dl className="flex max-w-dialog flex-col gap-2 type-body">
-        <Row labelId="backup-state-local">
+    <section aria-labelledby="backup-state-heading" className="flex shrink-0 flex-col gap-2">
+      <Localized id="backup-state-title">
+        <h2 id="backup-state-heading" className="sr-only" />
+      </Localized>
+      {/* The four copies the Owner asks about, as one row of chips (plan 38). */}
+      <dl className="flex flex-wrap gap-2">
+        <Chip labelId="backup-state-local">
           <When at={status.last_local_at} />
-        </Row>
-        <Row labelId="backup-state-usb">
+        </Chip>
+        <Chip labelId="backup-state-usb">
           {!status.usb_enabled ? (
             <Localized id="backup-state-off">
               <span className="text-ink-muted" />
@@ -65,8 +70,8 @@ export function StatusCard({ status, onTest }: StatusCardProps) {
               )}
             </>
           )}
-        </Row>
-        <Row labelId="backup-state-cloud">
+        </Chip>
+        <Chip labelId="backup-state-cloud">
           {!status.cloud_enabled ? (
             <Localized id="backup-state-off">
               <span className="text-ink-muted" />
@@ -84,15 +89,15 @@ export function StatusCard({ status, onTest }: StatusCardProps) {
               </Localized>
             </>
           )}
-        </Row>
+        </Chip>
         {status.queue_len > 0 ? (
-          <Row labelId="backup-state-queue">
+          <Chip labelId="backup-state-queue">
             <Num>{String(status.queue_len)}</Num>
-          </Row>
+          </Chip>
         ) : null}
-        <Row labelId="backup-state-last-test">
+        <Chip labelId="backup-state-last-test">
           <When at={status.last_test_restore_at} />
-        </Row>
+        </Chip>
       </dl>
       {status.running ? (
         <Notice tone="info">
@@ -131,6 +136,6 @@ export function StatusCard({ status, onTest }: StatusCardProps) {
           <p className="type-body text-ink-muted" />
         </Localized>
       ) : null}
-    </Card>
+    </section>
   );
 }

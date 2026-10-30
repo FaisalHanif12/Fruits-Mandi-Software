@@ -26,7 +26,6 @@ mod common;
 #[allow(dead_code)]
 #[path = "bikri_preview/support.rs"]
 mod support;
-#[allow(dead_code)]
 #[path = "../benches/support/mod.rs"]
 mod volume;
 
@@ -54,6 +53,7 @@ const VOUCHERS: i64 = 110_000;
 
 fn sort(column: &str, direction: SortDirection) -> Option<SortInput> {
     Some(SortInput {
+        language: None,
         column: column.into(),
         direction,
     })
@@ -68,6 +68,8 @@ struct Line {
 
 /// Times a list: the first page (offset 0) and the next one (offset `PAGE`), each a fresh call.
 fn measure<T>(name: &str, mut page: impl FnMut(u32) -> T) -> Line {
+    // A first page is cold: the kept sums of an earlier line must not help it.
+    mandi_services::db::memo::clear();
     let started = Instant::now();
     let first_page = page(0);
     let first = started.elapsed();
@@ -141,6 +143,7 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
     volume::describe(&big);
     let (env, _actor) = volume::open(&big.dir);
     let ctx = &env.ctx;
+    check_running_sums(&big, ctx);
 
     let account_list = |sort_input: Option<SortInput>, offset: u32| {
         accounts::list(
@@ -150,6 +153,7 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
                     kind: AccountListKind::default(),
                     text: String::new(),
                     include_inactive: false,
+                    has_opening: None,
                 },
                 offset,
                 limit: PAGE,
@@ -158,12 +162,11 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
         )
         .expect("the account list")
     };
-    lines.push(measure("accounts_list (natural)", |o| account_list(None, o)));
+    lines.push(measure("accounts_list (natural)", |o| {
+        account_list(None, o)
+    }));
     lines.push(measure("accounts_list sort name_en", |o| {
         account_list(sort("name_en", SortDirection::Asc), o)
-    }));
-    lines.push(measure("accounts_list sort balance", |o| {
-        account_list(sort("balance", SortDirection::Desc), o)
     }));
     lines.push(measure("masters_list items (natural)", |o| {
         masters::list_page(
@@ -250,6 +253,60 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
     lines.push(measure("reports R13 busiest buyer sort debit", |o| {
         ledger(sort("debit", SortDirection::Desc), false, o)
     }));
+    lines.push(measure("reports R13 busiest buyer sort credit", |o| {
+        ledger(sort("credit", SortDirection::Asc), false, o)
+    }));
+    // The middle of the ledger: the running balance is the furthest from both ends.
+    lines.push(measure("reports R13 busiest buyer middle page", |o| {
+        ledger(None, false, 27_000 + o)
+    }));
+    lines.push(measure(
+        "reports R13 busiest buyer middle with months",
+        |o| ledger(None, true, 27_000 + o),
+    ));
+    lines.push(measure("reports R13 busiest buyer newest first", |o| {
+        ledger(sort("date", SortDirection::Desc), false, o)
+    }));
+    lines.push(measure(
+        "reports R13 busiest buyer newest first, middle",
+        |o| ledger(sort("date", SortDirection::Desc), true, 27_000 + o),
+    ));
+    lines.push(measure("reports R11 ten years newest first", |o| {
+        run_report(
+            ctx.db(),
+            &ReportRunInput {
+                id: ReportId::R11,
+                filters: ReportFilters {
+                    from: "11-10-2016".into(),
+                    to: "10-10-2026".into(),
+                    ..ReportFilters::default()
+                },
+                offset: i64::from(o),
+                limit: i64::from(PAGE),
+                sort: sort("date", SortDirection::Desc),
+                group_by_month: false,
+            },
+        )
+        .expect("the day book")
+    }));
+    lines.push(measure("reports R11 ten years sort debit", |o| {
+        run_report(
+            ctx.db(),
+            &ReportRunInput {
+                id: ReportId::R11,
+                filters: ReportFilters {
+                    from: "11-10-2016".into(),
+                    to: "10-10-2026".into(),
+                    ..ReportFilters::default()
+                },
+                offset: i64::from(o),
+                limit: i64::from(PAGE),
+                sort: sort("debit", SortDirection::Desc),
+                group_by_month: false,
+            },
+        )
+        .expect("the day book")
+    }));
     lines.push(measure("reports R11 day book (10 years)", |o| {
         run_report(
             ctx.db(),
@@ -314,7 +371,13 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
         voucher_list(Some(VoucherType::Receipt), None, None, false, o)
     }));
     lines.push(measure("vouchers_list sort amount_paisa", |o| {
-        voucher_list(None, sort("amount_paisa", SortDirection::Desc), None, false, o)
+        voucher_list(
+            None,
+            sort("amount_paisa", SortDirection::Desc),
+            None,
+            false,
+            o,
+        )
     }));
     lines.push(measure("vouchers_list sort account", |o| {
         voucher_list(None, sort("account", SortDirection::Asc), None, false, o)
@@ -347,5 +410,183 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
     }
     if std::env::var("MANDI_SPEED_REPORT_ONLY").is_err() {
         assert!(missed.is_empty(), "too slow: {missed:?}");
+    }
+}
+
+/// The running sums of the big paths are right, whichever end of the account they are read from:
+/// a few rows at the start, near the middle and at the end of the busiest buyer's ledger and of the
+/// cash book are compared with the window sums the old queries gave (read from the same file by a
+/// second, plain connection). Not timed.
+fn check_running_sums(big: &volume::Volume, ctx: &mandi_services::Context) {
+    use mandi_reports::reports::Cell;
+    let raw = mandi_services::db::rusqlite::Connection::open_with_flags(
+        big.dir.join("data").join("mandi.db"),
+        mandi_services::db::rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("the volume file");
+    // ---- The party ledger R13 of the busiest buyer ----
+    // Whole account, a wide range with no end, a 61-day range (walked by the day index) and a
+    // range with no start. The balance is the balance of the whole account after the line, so the
+    // truth is the old window sum over every line, cut to the days afterwards. Offsets near both
+    // ends and at 1/4, 1/2 and 3/4 reach every plan of `lines.rs`: the walk from the near end and
+    // the account-first plan far from both ends.
+    let dmy = |iso: &str| format!("{}-{}-{}", &iso[8..10], &iso[5..7], &iso[..4]);
+    let scenarios: [(Option<&str>, Option<&str>); 4] = [
+        (None, None),
+        (Some("2022-01-01"), None),
+        (Some("2023-03-01"), Some("2023-04-30")),
+        (None, Some("2019-06-30")),
+    ];
+    for (from_iso, to_iso) in scenarios {
+        let in_filter: i64 = raw
+            .query_row(
+                "SELECT COUNT(*) FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+                 WHERE l.account_id = ?1 AND e.status = 'posted'
+                   AND (?2 IS NULL OR e.entry_date >= ?2) AND (?3 IS NULL OR e.entry_date <= ?3)",
+                mandi_services::db::rusqlite::params![big.busy_buyer, from_iso, to_iso],
+                |r| r.get(0),
+            )
+            .expect("a count");
+        assert!(in_filter > 10, "{from_iso:?} {to_iso:?}: {in_filter} lines");
+        let mut offsets = vec![
+            0,
+            100.min(in_filter - 3),
+            in_filter / 4,
+            in_filter / 2 - 2,
+            3 * in_filter / 4,
+            in_filter - 4,
+        ];
+        offsets.dedup();
+        for (offset, newest) in offsets
+            .iter()
+            .flat_map(|o| [(*o, false), (*o, true)])
+            .collect::<Vec<_>>()
+        {
+            let way = if newest { "DESC" } else { "ASC" };
+            let truth: Vec<i64> = raw
+                .prepare(&format!(
+                    "SELECT rd - rc FROM (
+                         SELECT SUM(dr_paisa) OVER w AS rd, SUM(cr_paisa) OVER w AS rc, entry_date, id, line_no
+                         FROM (SELECT l.dr_paisa, l.cr_paisa, e.entry_date, e.id, l.line_no
+                               FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+                               WHERE l.account_id = ?1 AND e.status = 'posted')
+                         WINDOW w AS (ORDER BY entry_date, id, line_no
+                                      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
+                     WHERE (?3 IS NULL OR entry_date >= ?3) AND (?4 IS NULL OR entry_date <= ?4)
+                     ORDER BY entry_date {way}, id {way}, line_no {way} LIMIT 3 OFFSET ?2",
+                ))
+                .expect("a statement")
+                .query_map(
+                    mandi_services::db::rusqlite::params![big.busy_buyer, offset, from_iso, to_iso],
+                    |r| r.get(0),
+                )
+                .expect("rows")
+                .collect::<Result<_, _>>()
+                .expect("values");
+            let page = run_report(
+                ctx.db(),
+                &ReportRunInput {
+                    id: ReportId::R13,
+                    filters: ReportFilters {
+                        party: Some(PartyFilter {
+                            account_id: big.busy_buyer,
+                            person_key: None,
+                        }),
+                        from: from_iso.map(dmy).unwrap_or_default(),
+                        to: to_iso.map(dmy).unwrap_or_default(),
+                        ..ReportFilters::default()
+                    },
+                    offset,
+                    limit: 3,
+                    sort: if newest {
+                        sort("date", SortDirection::Desc)
+                    } else {
+                        None
+                    },
+                    group_by_month: false,
+                },
+            )
+            .expect("the ledger page");
+            assert_eq!(page.total_count, in_filter, "{from_iso:?} {to_iso:?}");
+            let shown: Vec<i64> = page
+                .rows
+                .iter()
+                .map(|row| match row.cells.last() {
+                    Some(Cell::Balance { paisa, side }) => match side {
+                        mandi_services::core::accounts::BalanceSide::Dr => paisa.as_paisa(),
+                        mandi_services::core::accounts::BalanceSide::Cr => -paisa.as_paisa(),
+                        mandi_services::core::accounts::BalanceSide::Zero => 0,
+                    },
+                    other => panic!("not a balance: {other:?}"),
+                })
+                .collect();
+            assert_eq!(
+                shown, truth,
+                "R13 running balance at offset {offset}, days {from_iso:?} to {to_iso:?}, newest first {newest}"
+            );
+        }
+    }
+    // ---- The cash book ----
+    let entries: i64 = raw
+        .query_row(
+            "SELECT COUNT(DISTINCT entry_id) FROM journal_lines WHERE account_id = 1",
+            [],
+            |r| r.get(0),
+        )
+        .expect("a count");
+    for offset in [0, 100, entries / 2 - 2, entries - 4] {
+        let truth: Vec<i64> = raw
+            .prepare(
+                "WITH p AS (SELECT e.id AS entry_id, e.entry_date AS d, SUM(l.dr_paisa) AS i, SUM(l.cr_paisa) AS o
+                            FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+                            WHERE l.account_id = 1 AND e.status = 'posted' GROUP BY e.id)
+                 SELECT ri - ro FROM (SELECT d, entry_id, SUM(i) OVER w AS ri, SUM(o) OVER w AS ro FROM p
+                                      WINDOW w AS (ORDER BY d, entry_id))
+                 ORDER BY d, entry_id LIMIT 3 OFFSET ?1",
+            )
+            .expect("a statement")
+            .query_map([offset], |r| r.get(0))
+            .expect("rows")
+            .collect::<Result<_, _>>()
+            .expect("values");
+        let book = cashbook::get(
+            ctx,
+            &CashbookInput {
+                from: None,
+                to: None,
+                offset: u32::try_from(offset).expect("an offset"),
+                limit: 3,
+                sort: None,
+                group_by_month: false,
+            },
+        )
+        .expect("the cash book page");
+        let shown: Vec<i64> = book
+            .rows
+            .iter()
+            .map(|r| r.running_paisa.expect("a running cash").as_paisa())
+            .collect();
+        assert_eq!(shown, truth, "cash book running cash at offset {offset}");
+        // The same rows from the other end of the book, newest first.
+        let newest = u32::try_from(entries - offset - 3).expect("an offset");
+        let back = cashbook::get(
+            ctx,
+            &CashbookInput {
+                from: None,
+                to: None,
+                offset: newest,
+                limit: 3,
+                sort: sort("entry_date", SortDirection::Desc),
+                group_by_month: false,
+            },
+        )
+        .expect("the newest-first page");
+        let mut backwards: Vec<i64> = back
+            .rows
+            .iter()
+            .map(|r| r.running_paisa.expect("a running cash").as_paisa())
+            .collect();
+        backwards.reverse();
+        assert_eq!(backwards, truth, "newest-first running cash at {offset}");
     }
 }

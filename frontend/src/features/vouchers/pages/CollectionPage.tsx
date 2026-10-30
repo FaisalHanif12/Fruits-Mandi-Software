@@ -16,6 +16,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { ClipboardList, Printer } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { CollectionListInput } from '../../../bindings/CollectionListInput';
@@ -29,18 +30,27 @@ import {
 } from '../../../shared/api';
 import { pickedOf } from '../../../shared/accounts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
-import { EntryGrid, FIT_MIN, createEntryStore, type EntryColumn } from '../../../shared/grid';
+import {
+  EntryGrid,
+  FIT_MIN,
+  ListRegion,
+  createEntryStore,
+  listHeightMode,
+  type EntryColumn,
+} from '../../../shared/grid';
 import { useSingleFlight } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
-import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
+import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import {
   Button,
-  Card,
   DateInput,
   EmptyState,
   ErrorNotice,
   ErrorState,
+  Fact,
   Field,
+  FilterBar,
+  ListPage,
   LoadingState,
   Num,
   Picker,
@@ -58,9 +68,6 @@ import {
 import { useCollectionList, useSaveReceiptsBatch } from '../hooks';
 import { CollectionPrintBox } from '../print/CollectionPrintBox';
 import type { CollectionList, ReceiptsSaved } from '../types';
-
-/** A grid of this many rows or fewer is as tall as its rows; a longer one fills the screen. */
-const SHORT_GRID_ROWS = 30;
 
 const COLUMNS: readonly EntryColumn[] = [
   { field: 'code', type: 'calc', headerId: 'accounts-col-code' },
@@ -90,10 +97,12 @@ interface RoundProps {
   carried: ReadonlyMap<number, Refused>;
   /** The round was saved: the screen reads the list again and builds a new round. */
   onSaved: (saved: ReceiptsSaved, refused: ReadonlyMap<number, Refused>) => void;
+  /** Where the "save all" button is drawn: the row of the screen's buttons (plan 38). */
+  saveSlot: HTMLElement | null;
 }
 
 /** One round: the grid of the list, the problems of a refused save, and the buttons. */
-function CollectionRound({ list, date, carried, onSaved }: RoundProps) {
+function CollectionRound({ list, date, carried, onSaved, saveSlot }: RoundProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const grouping = useGrouping();
@@ -216,22 +225,23 @@ function CollectionRound({ list, date, carried, onSaved }: RoundProps) {
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <LeaveGuard dirty={filled > 0} onSave={submit} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Localized id="vouchers-collection-count" vars={{ count: String(rows.length) }}>
-          <p className="type-body text-ink-muted" />
-        </Localized>
-        <Button
-          variant="primary"
-          shortcut={SHORTCUTS.save}
-          busy={flight.busy || save.isPending}
-          disabled={filled === 0}
-          onClick={submitNow}
-        >
-          <Localized id="vouchers-collection-save" />
-        </Button>
-      </div>
+      {/* The button sits in the row of the screen's buttons, with the dues and the filters in view. */}
+      {saveSlot === null
+        ? null
+        : createPortal(
+            <Button
+              variant="primary"
+              shortcut={SHORTCUTS.save}
+              busy={flight.busy || save.isPending}
+              disabled={filled === 0}
+              onClick={submitNow}
+            >
+              <Localized id="vouchers-collection-save" />
+            </Button>,
+            saveSlot,
+          )}
       {notice === null ? null : <ErrorNotice error={notice} />}
       {lines.length === 0 ? null : (
         <section role="alert" className="flex flex-col gap-1 text-due">
@@ -248,7 +258,7 @@ function CollectionRound({ list, date, carried, onSaved }: RoundProps) {
           </ul>
         </section>
       )}
-      <div className={rows.length <= SHORT_GRID_ROWS ? '' : 'min-h-0 flex-1'}>
+      <ListRegion rowCount={rows.length}>
         <EntryGrid
           columns={COLUMNS}
           store={store}
@@ -257,9 +267,9 @@ function CollectionRound({ list, date, carried, onSaved }: RoundProps) {
           cellErrors={cellErrors}
           fixedRows
           fit
-          heightMode={rows.length <= SHORT_GRID_ROWS ? 'auto' : 'fill'}
+          heightMode={listHeightMode(rows.length)}
         />
-      </div>
+      </ListRegion>
     </div>
   );
 }
@@ -271,8 +281,12 @@ export function CollectionPage() {
   const [dayText, setDayText] = useState<string | null>(null);
   const [collector, setCollector] = useState<PickerValue | null>(null);
   const [city, setCity] = useState<PickerValue | null>(null);
+  // Only the buyers whose code, name or phone holds this text are on the list (`search`).
+  const [search, setSearch] = useState('');
   // The print box of the list (PRD FR-15.6): it prints the day and the filters typed here.
   const [printOpen, setPrintOpen] = useState(false);
+  // Where the round puts its "save all" button (the row of the screen's buttons).
+  const [saveSlot, setSaveSlot] = useState<HTMLElement | null>(null);
   // A new round is built when the list is read again after a save; the refused amounts carry over.
   const [round, setRound] = useState<{ n: number; carried: ReadonlyMap<number, Refused> }>({
     n: 0,
@@ -283,7 +297,12 @@ export function CollectionPage() {
   const input: Omit<CollectionListInput, 'offset' | 'limit'> | null =
     date.trim() === ''
       ? null
-      : { date: date.trim(), collector_staff_id: collector?.id ?? null, city_id: city?.id ?? null };
+      : {
+          date: date.trim(),
+          collector_staff_id: collector?.id ?? null,
+          city_id: city?.id ?? null,
+          search: search.trim() === '' ? null : search.trim(),
+        };
   const list = useCollectionList(input);
   const total = list.data;
   useShortcut(
@@ -327,10 +346,11 @@ export function CollectionPage() {
   } else if (total !== undefined) {
     body = (
       <CollectionRound
-        key={`${String(round.n)}-${date}-${String(collector?.id)}-${String(city?.id)}`}
+        key={`${String(round.n)}-${date}-${String(collector?.id)}-${String(city?.id)}-${search.trim()}`}
         list={total}
         date={date}
         carried={round.carried}
+        saveSlot={saveSlot}
         onSaved={(_saved, refused) => {
           setRound((current) => ({ n: current.n + 1, carried: refused }));
         }}
@@ -339,17 +359,15 @@ export function CollectionPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Localized id="vouchers-collection-title">
-            <h1 className="type-title" />
-          </Localized>
-          <Localized id="vouchers-collection-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <ListPage
+      titleId="vouchers-collection-title"
+      help={
+        <Localized id="vouchers-collection-help">
+          <p />
+        </Localized>
+      }
+      actions={
+        <>
           <Button
             shortcut={SHORTCUTS.print}
             disabled={input === null}
@@ -368,47 +386,74 @@ export function CollectionPage() {
           >
             <Localized id="vouchers-collection-back" />
           </Button>
-        </div>
-      </div>
-      <Card compact>
-        <div className="grid grid-cols-2 items-end gap-4 normal:grid-cols-4">
-          <Field label={<Localized id="vouchers-field-date" />}>
-            {(control) => <DateInput {...control} value={date} onChange={setDayText} />}
-          </Field>
-          <Field label={<Localized id="vouchers-field-collector" />}>
-            {(control) => (
-              <Picker
-                {...control}
-                canAdd={false}
-                scope="staff"
-                value={collector}
-                onChange={(hit) => {
-                  setCollector(hit === null ? null : pickedOf(hit));
-                }}
-              />
+          {/* The round draws its "save all" button here. */}
+          <span ref={setSaveSlot} />
+        </>
+      }
+      filters={
+        <div {...formNavigationProps}>
+          <FilterBar
+            screen="vouchers.collection"
+            search={{
+              value: search,
+              onChange: setSearch,
+              placeholderId: 'vouchers-collection-search',
+            }}
+            moreSet={[collector !== null, city !== null].filter(Boolean).length}
+            more={
+              <>
+                <Field label={<Localized id="vouchers-field-collector" />}>
+                  {(control) => (
+                    <Picker
+                      {...control}
+                      canAdd={false}
+                      scope="staff"
+                      value={collector}
+                      onChange={(hit) => {
+                        setCollector(hit === null ? null : pickedOf(hit));
+                      }}
+                    />
+                  )}
+                </Field>
+                <Field label={<Localized id="accounts-field-city" />}>
+                  {(control) => (
+                    <Picker
+                      {...control}
+                      canAdd={false}
+                      scope="city"
+                      value={city}
+                      onChange={(hit) => {
+                        setCity(hit === null ? null : pickedOf(hit));
+                      }}
+                    />
+                  )}
+                </Field>
+              </>
+            }
+          >
+            <Field label={<Localized id="vouchers-field-date" />}>
+              {(control) => <DateInput {...control} value={date} onChange={setDayText} />}
+            </Field>
+            {/* The dues of the round are the backend's total, beside the filters. */}
+            {total === undefined ? null : (
+              <div className="flex flex-col gap-1">
+                <dl>
+                  <Fact label={<Localized id="vouchers-collection-total" />}>
+                    <Num paisa={total.total_paisa} />
+                  </Fact>
+                </dl>
+                <Localized
+                  id="vouchers-collection-count"
+                  vars={{ count: String(collectionRows(total).length) }}
+                >
+                  <p className="type-body text-ink-muted" />
+                </Localized>
+              </div>
             )}
-          </Field>
-          <Field label={<Localized id="accounts-field-city" />}>
-            {(control) => (
-              <Picker
-                {...control}
-                canAdd={false}
-                scope="city"
-                value={city}
-                onChange={(hit) => {
-                  setCity(hit === null ? null : pickedOf(hit));
-                }}
-              />
-            )}
-          </Field>
-          {total === undefined ? null : (
-            <p className="flex items-baseline gap-2 type-body">
-              <Localized id="vouchers-collection-total" />
-              <Num paisa={total.total_paisa} />
-            </p>
-          )}
+          </FilterBar>
         </div>
-      </Card>
+      }
+    >
       {body}
       {input === null ? null : (
         <CollectionPrintBox
@@ -418,9 +463,10 @@ export function CollectionPage() {
             date: input.date,
             collectorStaffId: input.collector_staff_id,
             cityId: input.city_id,
+            search: input.search,
           }}
         />
       )}
-    </div>
+    </ListPage>
   );
 }

@@ -35,7 +35,7 @@ vouchers-advance-title = { -peshgi-khata }
 vouchers-advance-help = { -beopari } کو اس کا مال بکنے سے پہلے رقم دیں۔ محفوظ کرنے کے بعد اس کا نیا بقایا نظر آتا ہے۔
 
 # review: pending
-vouchers-load-failed = واؤچر کی سکرین کھل نہیں سکی
+vouchers-load-failed = واؤچر کی اسکرین کھل نہیں سکی
 
 # review: pending
 vouchers-new = نیا اندراج
@@ -389,7 +389,7 @@ vouchers-view-cancelled = یہ واؤچر منسوخ ہو چکا ہے۔ وجہ:
 vouchers-view-closed = اس واؤچر کا دن بند ہو چکا ہے، اس لیے اسے تبدیل نہیں کیا جا سکتا۔ مالک دن دوبارہ کھولے تو تبدیلی ہو سکتی ہے۔
 
 # review: pending
-vouchers-other-screen = یہ واؤچر کسی اور سکرین کا ہے
+vouchers-other-screen = یہ واؤچر کسی اور اسکرین کا ہے
 
 # review: pending
 vouchers-other-screen-help = اسے { -rokar } میں کھولیں۔
@@ -586,4 +586,8 @@ vouchers-collection-print-title = { -agrahi } فہرست پرنٹ کریں
 
 # $date is the day of the list, for example 10-10-2026.
 # review: pending
-vouchers-collection-print-help = { $date } کی { -agrahi } فہرست، جیسی سکرین پر ہے ویسی ہی پرنٹ ہوگی۔ زبان اور پرنٹ کی جگہ چنیں۔
+vouchers-collection-print-help = { $date } کی { -agrahi } فہرست، جیسی اسکرین پر ہے ویسی ہی پرنٹ ہوگی۔ زبان اور پرنٹ کی جگہ چنیں۔
+
+# The hint inside the search box of the collection list (the code, the name or the phone of a buyer).
+# review: pending
+vouchers-collection-search = گاہک کا کوڈ، نام یا فون لکھیں

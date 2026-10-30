@@ -21,9 +21,8 @@ export type AccountsListInput = {
   limit: number;
   /**
    * The column to sort the whole filter by: `code`, `serial`, `name_ur`, `name_en`, `phone1`,
-   * `city`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `credit_allowed` or
-   * `balance` (debit minus credit, so the biggest dues are last when ascending). Null is by
-   * code (plan 38 R4). Inactive accounts are left out unless `filter.include_inactive` is true.
+   * `city`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa` or `credit_allowed`. There is no
+   * sort by balance (R20 ranks the dues). Null is by code (plan 38 R4). Inactive accounts are left out unless `filter.include_inactive` is true.
    */
   sort: SortInput | null;
 };

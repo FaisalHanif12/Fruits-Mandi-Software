@@ -373,7 +373,7 @@ fn sort_gardens(rows: &mut [GardenEntry], column: &str, direction: SortDirection
             (a.0.rec.entry_date.as_str(), a.0.rec.number)
                 .cmp(&(b.0.rec.entry_date.as_str(), b.0.rec.number))
         },
-        "name_ur" => |a, b| a.0.rec.name_ur.cmp(&b.0.rec.name_ur),
+        "name_ur" => |a, b| crate::page::urdu_compare(&a.0.rec.name_ur, &b.0.rec.name_ur),
         "name_en" => |a, b| {
             a.0.rec
                 .name_en

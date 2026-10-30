@@ -15,6 +15,7 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { named } from '../helpers/bikri-screen';
+import { openInfo } from '../helpers/info';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -294,8 +295,11 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     expect(
       within(parts).getAllByText(said(message(language, 'ventures-part-pocket'))),
     ).toHaveLength(1);
-    // The words under the sources say what each source does.
-    expect(screen.getByText(said(message(language, 'gardens-sources-hint')))).toBeInTheDocument();
+    // The words about the sources are behind the ⓘ of their title and say what each source does.
+    await openInfo(user, language, message(language, 'gardens-sources-title'));
+    expect(
+      await screen.findByText(said(message(language, 'gardens-sources-hint'))),
+    ).toBeInTheDocument();
     // The balance after the entry is the backend's, with the rent still due.
     expect(
       screen.getByText(said(message(language, 'gardens-numbers-balance-after'))).closest('div')

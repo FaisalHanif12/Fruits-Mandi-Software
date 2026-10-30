@@ -38,6 +38,7 @@ import {
   SegmentedControl,
   showToast,
   type SegmentedOption,
+  InfoHint,
 } from '../../../shared/ui';
 import { CancelVoucherDialog } from '../components/CancelVoucherDialog';
 import { AdvanceHistory } from '../components/AdvanceHistory';
@@ -362,7 +363,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
   const live = preview !== undefined && current ? preview : undefined;
 
   return (
-    <div className="flex max-w-page flex-col gap-4">
+    <div className="flex max-w-page flex-col gap-3 short:gap-2">
       <LeaveGuard
         dirty={dirty}
         onSave={() => (list.length > 0 ? saveAll() : flow.save(false))}
@@ -371,16 +372,35 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
           (next.search['id'] === undefined ? editing === null : next.search['id'] === editing?.id)
         }
       />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {/* The name, the type list and the buttons are one row where they fit (plan 38). The line
+            of help is behind an ⓘ. */}
+        <div className="flex items-center gap-1">
           <Localized id={`vouchers-${draft.type}-title`}>
             <h1 className="sr-only normal:not-sr-only normal:type-title" />
           </Localized>
-          <Localized id={`vouchers-${draft.type}-help`}>
-            <p className="hidden type-body text-ink-muted normal:block" />
-          </Localized>
+          <div className="hidden normal:block">
+            <InfoHint>
+              <Localized id={`vouchers-${draft.type}-help`}>
+                <p />
+              </Localized>
+            </InfoHint>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <Field label={<Localized id="vouchers-field-type" />} hideLabel>
+          {() => (
+            <div>
+              <SegmentedControl
+                options={TYPE_OPTIONS}
+                value={draft.type}
+                groupLabel={l10n.getString('vouchers-field-type')}
+                disabled={editing !== null}
+                onChange={onType}
+              />
+            </div>
+          )}
+        </Field>
+        <div className="ms-auto flex flex-wrap items-center gap-2">
           {list.length === 0 ? null : (
             <Localized id="vouchers-waiting-count" vars={{ count: list.length }}>
               <span className="type-body text-ink-muted" />
@@ -419,19 +439,6 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
           </Button>
         </div>
       </div>
-      <Field label={<Localized id="vouchers-field-type" />} hideLabel>
-        {() => (
-          <div>
-            <SegmentedControl
-              options={TYPE_OPTIONS}
-              value={draft.type}
-              groupLabel={l10n.getString('vouchers-field-type')}
-              disabled={editing !== null}
-              onChange={onType}
-            />
-          </div>
-        )}
-      </Field>
       {editing === null ? null : (
         <Notice
           tone="info"

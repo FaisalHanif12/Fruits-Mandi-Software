@@ -88,3 +88,7 @@ pukhta-make-regular-help = The name and phone of this person are filled in. When
 
 # review: pending
 pukhta-make-regular-done = The account is made and the balance moved to it
+
+# The hint inside the search box of the register (the name, the phone, the item or the sale number).
+# review: pending
+pukhta-search-placeholder = Name, phone, item or sale number
