@@ -1,7 +1,7 @@
 // The books of one backup next to the books now (PRD FR-20.9 before a restore, NFR-BAK-11 after a
 // test restore). Every figure is the backend's, read from the copy itself; the screen only lines
-// them up. Money is shown with `Num`, counts as plain numbers, the date as DD-MM-YYYY. Numbers sit
-// on the physical right edge, so units line up under units (NFR-USE-19).
+// them up. Money is shown with `Num`, counts as plain numbers, the date as DD-MM-YYYY. Numbers are
+// centred under their heading (NFR-USE-19, plan 39 R1).
 
 import { Localized, useLocalization } from '@fluent/react';
 import type { ReactNode } from 'react';
@@ -82,12 +82,14 @@ export function TotalsTable({ variant, copy, now }: TotalsTableProps) {
       id: 'copy',
       header: <Localized id={words.copy} />,
       kind: 'number',
+      size: 'qty',
       cell: (line) => line.of(copy),
     },
     {
       id: 'now',
       header: <Localized id={words.now} />,
       kind: 'number',
+      size: 'qty',
       cell: (line) => line.of(now),
     },
   ];

@@ -20,7 +20,7 @@ import { PrintHeader, PrintRoot, PrintScreenFooter, type PrintFrame } from '../.
 import { Num } from '../../../shared/ui/Num';
 import { ScriptText } from '../../../shared/ui/ScriptText';
 import { emptyNameMessageId, monthMessageId } from '../cells';
-import { Cell, cellClass } from './PrintCell';
+import { Cell, alignOf, cellClass } from './PrintCell';
 import { fitZoom } from './fit';
 
 /** A table of more columns than this is set in the smaller print size (reports.css). */
@@ -148,6 +148,13 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
   const sheet = data.report === 'R35';
   // The buyers' list (R5) writes each sale line as "(item qty . rate)", like the client's own print.
   const buyersList = data.report === 'R5';
+  // The word "Total" stands in the first column of words that has no total of its own, never in a
+  // column of figures such as a date (plan 39 R6).
+  const labelColumn = data.columns.findIndex(
+    (column, position) =>
+      alignOf(column.kind) !== 'num' && (data.totals[position]?.type ?? 'empty') === 'empty',
+  );
+  const totalsLabelAt = labelColumn === -1 ? 0 : labelColumn;
   const summaryLines =
     (data.summary ?? []).length === 0 ? null : (
       <dl className="print-facts print-summary-lines">
@@ -175,7 +182,12 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
           <thead>
             <tr>
               {data.columns.map((column, position) => (
-                <th key={column.key} scope="col" className={cellClass(column.kind)}>
+                <th
+                  key={column.key}
+                  scope="col"
+                  data-align={alignOf(column.kind)}
+                  className={cellClass(column.kind)}
+                >
                   <ColumnHeading
                     heading={data.headings?.[position] ?? null}
                     titleId={column.title_id}
@@ -194,7 +206,11 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
                       ? emptyNameMessageId(data.report, row.kind)
                       : null;
                   return (
-                    <td key={position} className={columnClass(data, position)}>
+                    <td
+                      key={position}
+                      data-align={alignOf(data.columns[position]?.kind ?? 'text')}
+                      className={columnClass(data, position)}
+                    >
                       {none === null ? (
                         <Cell
                           cell={cell}
@@ -215,8 +231,12 @@ function ReportPrintBody({ data, frame }: Pick<ReportPrintDocumentProps, 'data' 
             <tfoot>
               <tr>
                 {data.totals.map((cell, position) => (
-                  <td key={position} className={columnClass(data, position)}>
-                    {position === 0 && cell.type === 'empty' ? (
+                  <td
+                    key={position}
+                    data-align={alignOf(data.columns[position]?.kind ?? 'text')}
+                    className={columnClass(data, position)}
+                  >
+                    {position === totalsLabelAt && cell.type === 'empty' ? (
                       l10n.getString(data.totals_label_id)
                     ) : (
                       <Cell cell={cell} />

@@ -50,32 +50,43 @@
   font-size: var(--text-1);
 }
 
-/* Numbers, codes and dates: Inter, equal-width digits, written left to right and set against
-   the physical right edge in both languages (NFR-USE-19, F17). */
+/* Numbers, codes and dates: Inter, equal-width digits, written left to right and CENTRED in the
+   column, in both languages (plan 39 R1, NFR-USE-19 v1.6, F17). The heading and the total of the
+   column are centred the same way, so a figure stands under the middle of its heading. */
 .entry-grid .cell-num,
 .entry-grid .cell-num input {
   direction: ltr;
-  text-align: end;
+  text-align: center;
   font-family: var(--font-latin);
   font-variant-numeric: tabular-nums;
   font-size: var(--text-latin-1);
 }
 
-/* The heading of a number column: the same physical right edge as its figures, in both
-   languages, so a heading stands over its column (NFR-USE-19, F17). */
-.entry-grid .header-num .ag-header-cell-label {
-  direction: ltr;
-  justify-content: flex-end;
+/* A small column (a tick, a chip, a choice, an icon): the content and the heading in the middle
+   (plan 39 R3). */
+.entry-grid .cell-center {
+  text-align: center;
+}
+
+/* The heading of a number column and of a small column: centred over its figures, in both
+   languages (plan 39 R1, R3). */
+.entry-grid .header-num .ag-header-cell-label,
+.entry-grid .header-center .ag-header-cell-label {
+  justify-content: center;
   overflow: visible;
 }
 
-.entry-grid .header-num .ag-header-cell-text {
-  text-align: end;
+.entry-grid .header-num .ag-header-cell-label {
+  direction: ltr;
+}
+
+.entry-grid .header-num .ag-header-cell-text,
+.entry-grid .header-center .ag-header-cell-text {
+  text-align: center;
 
   /* The ink of a Nastaliq letter can lean past the width of its line box. The heading of a column
-     of figures is set left to right and stands on the right edge, so the first letter of an Urdu
-     word, the one on the right, was cut off ("کمیشن" read "میشن", plan 36). It may now reach into
-     the padding of its cell. */
+     of figures is set left to right, so the first letter of an Urdu word, the one on the right, was
+     cut off ("کمیشن" read "میشن", plan 36). It may now reach into the padding of its cell. */
   overflow: visible;
 }
 
@@ -148,10 +159,10 @@
   color: var(--color-ink-placeholder);
 }
 
-/* A hint that is a number (the last rate) stays on the physical right edge like the figures. */
+/* A hint that is a number (the last rate) is centred like the figures (plan 39 R1). */
 .entry-grid .cell-num.cell-hint.cell-hint-number {
   direction: ltr;
-  text-align: end;
+  text-align: center;
   font-family: var(--font-latin);
   font-size: var(--text-latin-1);
 }
@@ -273,15 +284,23 @@
   padding-block: var(--space-2);
 }
 
-/* A figure with a short word after it in a slot of fixed width: the figures keep one right edge
-   whatever the word is (NFR-USE-19). The cell is left to right and set against the right edge, so
-   the slot sits on the physical right edge in both languages. */
+/* A figure with a short word after it (a balance's side, بنام or جمع): the figure stands in the
+   middle of the column, under the middle of its heading, and the word hangs after it in the room on
+   its other side (plan 39 R1, NFR-USE-19). Three columns: room, figure, word. The cell is left to
+   right, so the word is on the physical right in both languages. */
 .entry-grid .cell-with-unit {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: baseline;
-  justify-content: flex-end;
-  gap: var(--space-2);
+
+  /* The gap, not a margin: the word has its own direction (a Urdu word is right to left) and a
+     margin on its start side would be on the wrong side of it. */
+  column-gap: var(--space-2);
   inline-size: 100%;
+}
+
+.entry-grid .cell-with-unit > :first-child {
+  grid-column: 2;
 }
 
 /* A figure that reads as a loss (a trip that lost money). The word after it and the minus sign
@@ -291,16 +310,56 @@
 }
 
 .entry-grid .cell-unit {
-  flex: none;
-  inline-size: var(--unit-slot);
+  grid-column: 3;
+  justify-self: start;
+  white-space: nowrap;
   text-align: start;
   font-family: var(--font-text);
   font-size: var(--text-1);
 }
 
-/* The heading of a figure that has a word after it stands over the figure, not over the word. */
-.entry-grid .header-unit .ag-header-cell-label {
-  padding-inline-end: calc(var(--unit-slot) + var(--space-2));
+/* A list that has a column of long words (the goods behind a ledger line) has rows that grow with
+   them. The other cells of such a row keep their words in the middle of it, top to bottom, whatever
+   the height of the row (plan 39 R7). The cell holds one `cell-fill` element, which centres its one
+   inner element; the inner element fills the width, so the figures stay centred and the words
+   stay at the start edge. */
+.entry-grid .cell-fill {
+  display: flex;
+  align-items: center;
+  block-size: 100%;
+}
+
+.entry-grid .cell-fill > * {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* A text of figures only has the font and line of a figure (plan 39 R7). */
+.entry-grid .cell-latin {
+  font-family: var(--font-latin);
+  line-height: var(--leading-latin);
+}
+
+.entry-grid .cell-fill > .cell-with-unit {
+  align-self: center;
+}
+
+/* A cell whose height follows its words (the long column) stands in the middle of a row that is
+   taller than it, because a neighbour has more lines (plan 39 R7). */
+.entry-grid .ag-cell.ag-cell-auto-height {
+  display: flex;
+  align-items: center;
+}
+
+.entry-grid .ag-cell.ag-cell-auto-height > .ag-cell-wrapper {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* Inside a wrapping cell a number run has no line height of its own, so a line with figures in it is
+   as tall as a line of words only and every row of the list has one height (plan 39 R7). */
+.entry-grid .cell-wrap .number-run {
+  line-height: var(--leading-chip);
 }
 
 /*

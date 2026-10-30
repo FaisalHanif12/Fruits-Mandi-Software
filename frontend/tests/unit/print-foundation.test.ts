@@ -1,6 +1,6 @@
 // The foundation of every printed page (plan 14, reference.md of the print skill): the page footer
 // text, the print stylesheet (one literal @page rule per paper class, repeating table headers,
-// rows that never split, numbers on the physical right edge, Nastaliq line height), the Fluent ids
+// rows that never split, numbers centred in their column, Nastaliq line height), the Fluent ids
 // the backend sends (plan 14 contract 6) in both languages, and the five print commands.
 
 import { invoke } from '@tauri-apps/api/core';
@@ -103,11 +103,22 @@ describe('the print stylesheet', () => {
     expect(PRINT_CSS).toMatch(/\.print-summary \{[^}]*break-inside: avoid;/);
   });
 
-  it('puts every number on the physical right edge with equal-width digits', () => {
+  it('centres every number of a table, with its heading and total, in equal-width digits (plan 39 R1)', () => {
     expect(PRINT_CSS).toMatch(
-      /\.print-table \.print-num,\s*\.print-amounts \.print-num \{\s*direction: ltr;\s*text-align: end;/,
+      /\.print-table \.print-num \{\s*direction: ltr;\s*text-align: center;/,
     );
     expect(PRINT_CSS).toContain('font-variant-numeric: tabular-nums');
+  });
+
+  it('keeps the figures of the amounts card on the physical right edge (plan 39 R8)', () => {
+    expect(PRINT_CSS).toMatch(
+      /\.print-amounts \.print-num \{\s*inline-size: 20mm;\s*direction: ltr;\s*text-align: end;/,
+    );
+  });
+
+  it('puts the words of a row in the middle of it and never breaks a heading inside a word (R4, R7)', () => {
+    expect(PRINT_CSS).toMatch(/\.print-table td \{[^}]*vertical-align: middle;/);
+    expect(PRINT_CSS).toMatch(/\.print-table th \{[^}]*overflow-wrap: normal;/);
   });
 
   it('starts each party on a new sheet on A4 and A5, and cuts the 80 mm roll with a line', () => {

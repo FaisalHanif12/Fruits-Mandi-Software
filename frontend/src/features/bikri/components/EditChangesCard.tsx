@@ -91,12 +91,14 @@ export function EditChangesCard({ items, before, after }: EditChangesCardProps) 
       id: 'before',
       header: l10n.getString('bikri-edit-before'),
       kind: 'number',
+      size: 'money',
       cell: (row) => (row.before === null ? '' : <Num paisa={row.before} />),
     },
     {
       id: 'after',
       header: l10n.getString('bikri-edit-after'),
       kind: 'number',
+      size: 'money',
       cell: (row) => (row.after === null ? '' : <Num paisa={row.after} />),
     },
   ];

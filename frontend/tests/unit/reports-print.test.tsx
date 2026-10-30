@@ -186,7 +186,9 @@ describe('the ledger of اکرم in Urdu (R13)', () => {
     const totals = Array.from(must(root.querySelector('tfoot tr')).querySelectorAll('td')).map(
       textOf,
     );
-    expect(totals[0]).toBe(message('ur', 'report-total'));
+    // The word "Total" stands in the first column of words, not in the date column (plan 39 R6).
+    expect(totals[0]).toBe('');
+    expect(totals.indexOf(message('ur', 'report-total'))).toBe(1);
     expect(totals[4]).toBe('12,880');
     expect(totals[5]).toBe('10,000');
     expect(totals[6]).toContain('2,880');

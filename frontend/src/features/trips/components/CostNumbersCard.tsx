@@ -32,7 +32,7 @@ export function CostNumbersCard({ numbers, empty }: CostNumbersCardProps) {
               <Localized id="trips-cost-amount">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.amount} />
               </dd>
             </div>

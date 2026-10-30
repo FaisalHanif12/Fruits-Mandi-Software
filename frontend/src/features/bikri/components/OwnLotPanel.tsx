@@ -229,7 +229,7 @@ function OwnResult({ lot }: { lot: LotPreview | undefined }) {
             <Localized id="bikri-own-commission">
               <dt />
             </Localized>
-            <dd className="flex items-center gap-1">
+            <dd className="value-col">
               <Num paisa={totals.seller_comm} />
               <CalcInfo working={totals.workings.seller_comm} inCell />
             </dd>
@@ -239,7 +239,7 @@ function OwnResult({ lot }: { lot: LotPreview | undefined }) {
           <Localized id="bikri-own-credit">
             <dt />
           </Localized>
-          <dd>
+          <dd className="value-col">
             <Num paisa={own.credit_paisa} />
           </dd>
         </div>
@@ -250,7 +250,7 @@ function OwnResult({ lot }: { lot: LotPreview | undefined }) {
           <Localized id="purchases-detail-cost-sold">
             <dt />
           </Localized>
-          <dd className="flex items-center gap-1">
+          <dd className="value-col">
             <Num paisa={own.cost_paisa} />
             <CalcInfo working={own.cost_working} inCell />
           </dd>
@@ -261,7 +261,7 @@ function OwnResult({ lot }: { lot: LotPreview | undefined }) {
           <Localized id={loss ? 'glossary-tijarati-nuqsan' : 'glossary-tijarati-munafa'}>
             <dt />
           </Localized>
-          <dd className="flex items-center gap-1">
+          <dd className="value-col">
             <Num paisa={own.result_paisa} />
             <CalcInfo working={own.result_working} inCell />
           </dd>

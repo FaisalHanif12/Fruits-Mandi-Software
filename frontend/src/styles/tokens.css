@@ -68,6 +68,25 @@
   /* A row of a read-only list: tight enough for 25 rows to fit a window with the page buttons. */
   --list-row-h: 40px;
 
+  /* One width for each kind of column, in every grid, table and print (plan 39 R5, Code Standards
+     F18): a money column, a quantity column, a date column and a code column are the same width in
+     today's sales, the ledger and the cash book. The grids read the same numbers from
+     shared/grid/columnTypes.ts; a test keeps the two lists equal. A name column takes the room left. */
+  --col-code-w: 120px;
+  --col-money-w: 140px;
+  --col-qty-w: 100px;
+  --col-date-w: 140px;
+  --col-datetime-w: 170px;
+  --col-status-w: 120px;
+
+  /* The least a column of names keeps in a plain table, so a name is not broken over three lines when
+     the figure columns around it share a narrow card (plan 39 R5). */
+  --col-name-min-w: 180px;
+
+  /* The column of figures in a card of labels and values (plan 39 R8): wide enough for a figure of
+     nine digits and its ⓘ, so every figure of the card ends on the same right edge. */
+  --value-col-w: 144px;
+
   /* The height of the chart above an analytics table (plan 21). */
   --chart-h: 224px;
 
@@ -252,6 +271,14 @@
   --spacing-pager-size: var(--pager-size-w);
   --spacing-strip: var(--strip-clearance);
   --spacing-list-region: var(--list-region-h);
+  --spacing-col-code: var(--col-code-w);
+  --spacing-col-money: var(--col-money-w);
+  --spacing-col-qty: var(--col-qty-w);
+  --spacing-col-date: var(--col-date-w);
+  --spacing-col-datetime: var(--col-datetime-w);
+  --spacing-col-status: var(--col-status-w);
+  --spacing-col-name: var(--col-name-min-w);
+  --spacing-value-col: var(--value-col-w);
   --spacing-tree: var(--tree-min-h);
   --spacing-tree-view: var(--tree-view-h);
 

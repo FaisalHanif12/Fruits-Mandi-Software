@@ -16,7 +16,7 @@ import { Code } from '../../../shared/ui/Code';
 import { Num } from '../../../shared/ui/Num';
 import { monthMessageId } from '../cells';
 
-/** The column kinds that hold figures: they sit on the physical right edge (NFR-USE-19). */
+/** The column kinds that hold figures: they are centred in their column (NFR-USE-19, plan 39 R1). */
 const FIGURE_KINDS: ReadonlySet<ReportColumnKind> = new Set([
   'number',
   'money',
@@ -209,10 +209,21 @@ export function Cell({ cell, shortSale = false, nameOnly = false }: CellProps) {
   }
 }
 
-/** Figures sit on the right edge; a date and the kind of an entry stay on one line. */
+/**
+ * Which edge a column stands on, for the alignment check (plan 39): `num` is centred, `name` is words
+ * at the start edge even when they are made of digits (a trip is its number and its day), `text` is
+ * words at the start edge.
+ */
+export function alignOf(kind: ReportColumnKind): 'num' | 'name' | 'text' {
+  if (FIGURE_KINDS.has(kind) || kind === 'date' || kind === 'month') return 'num';
+  return kind === 'names' || kind === 'party' ? 'name' : 'text';
+}
+
+/** Figures are centred in their column; a date and the kind of an entry stay on one line. */
 export function cellClass(kind: ReportColumnKind): string {
   if (FIGURE_KINDS.has(kind)) return 'print-num';
-  if (kind === 'date' || kind === 'month') return 'print-col-date print-nowrap';
+  // A date is a figure: centred with its heading, in the width of a date (plan 39 R1, R5).
+  if (kind === 'date' || kind === 'month') return 'print-num print-col-date';
   if (kind === 'doc') return 'print-nowrap';
   return '';
 }

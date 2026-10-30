@@ -61,6 +61,7 @@ export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
       id: 'income',
       header: l10n.getString('bikri-split-income'),
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.income_paisa} />,
     },
   ];
@@ -74,12 +75,14 @@ export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
       id: 'date',
       header: l10n.getString('bikri-header-date'),
       kind: 'number',
+      size: 'date',
       cell: (row) => <Code>{isoToDisplayDate(row.entry_date)}</Code>,
     },
     {
       id: 'total',
       header: l10n.getString('bikri-posting-total'),
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.total} />,
     },
     {

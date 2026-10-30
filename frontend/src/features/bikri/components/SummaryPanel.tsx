@@ -93,7 +93,7 @@ function Rows({ lines, negativeNet }: { lines: readonly Line[]; negativeNet: boo
             <Localized id={line.labelId}>
               <dt />
             </Localized>
-            <dd className="flex items-center gap-1">
+            <dd className="value-col">
               <Num paisa={line.paisa} />
               <CalcInfo working={line.working} inCell />
             </dd>

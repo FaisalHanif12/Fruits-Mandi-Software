@@ -206,7 +206,8 @@ describe.each(LANGUAGES)('the fruit screen (%s)', (language) => {
     if (table === undefined) throw new Error('no parts table');
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(3);
-    expect(rows.map((row) => visible(within(row).getAllByRole('cell')[0]?.textContent))).toEqual([
+    // The partner's name is the first cell of the shared table; his part is the second (plan 39).
+    expect(rows.map((row) => visible(within(row).getAllByRole('cell')[1]?.textContent))).toEqual([
       '334',
       '333',
       '333',

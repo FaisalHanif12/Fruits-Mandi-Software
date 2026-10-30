@@ -46,7 +46,7 @@ export function EntryPartsList({ parts, label }: EntryPartsListProps) {
                 </Num>
               </span>
             </span>
-            <span className="flex items-center gap-2">
+            <span className="value-col">
               <span className="inline-flex items-center gap-1 text-ink-muted">
                 <Icon aria-hidden="true" className="size-icon-sm shrink-0" />
                 <Localized id={shop ? 'ventures-part-shop' : 'ventures-part-pocket'} />
@@ -89,7 +89,7 @@ export function EntryPartsCard({
               <Localized id="ventures-parts-shop-total">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={parts.shop_total_paisa} />
               </dd>
             </div>
@@ -97,7 +97,7 @@ export function EntryPartsCard({
               <Localized id="ventures-parts-pocket-total">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={parts.pocket_total_paisa} />
               </dd>
             </div>

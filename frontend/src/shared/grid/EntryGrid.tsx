@@ -33,6 +33,7 @@ import { useLatest } from '../hooks/useLatest';
 import { directionOf, displayName, useLanguage } from '../i18n';
 import { useEscape } from '../keyboard';
 import { CalcInfo, CalcInfoAt, type Working } from '../ui/CalcInfo';
+import { FigureCell } from '../ui/FigureCell';
 import { displayText } from '../ui/NumberTextInput';
 import './agGridSetup';
 import { COLUMN_WIDTHS, FIT_MIN_WIDTHS, FIT_WEIGHTS, isNumberLike } from './columnTypes';
@@ -205,7 +206,7 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     suppressMovable: true,
     editable: (params) => params.data !== undefined && isEditable(column, params.data),
     cellClass: numberLike ? ['cell-num'] : [],
-    // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
+    // The heading of a number column is centred over its figures (NFR-USE-19, plan 39 R1).
     headerClass: numberLike ? ['header-num'] : [],
     tooltipValueGetter: (params) => {
       const row = params.data;
@@ -294,7 +295,9 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
         params.data === undefined ? '' : shown(params.data),
       valueFormatter: (params: ValueFormatterParams<EntryRow>) =>
         choiceLabel(column, typeof params.value === 'string' ? params.value : '', word) ?? '',
-      cellClass: ['cell-choice'],
+      // A choice (ادھاری / نقدی) is a small column: its words and its heading are centred (plan 39 R3).
+      cellClass: ['cell-choice', 'cell-center'],
+      headerClass: ['header-center'],
       onCellClicked: (event) => {
         if (event.data === undefined || !isEditable(column, event.data)) return;
         env.cycle({ rowId: event.data.rowId, field: column.field });
@@ -332,11 +335,13 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
             const working =
               row === undefined ? undefined : live().workings?.[row.rowId]?.[column.field];
             const text = params.valueFormatted ?? String(params.value ?? '');
+            // The figure stands in the middle of the column; the ⓘ hangs after it (plan 39 R1).
             return (
-              <span className="flex items-center justify-between gap-1">
-                {working === undefined ? <span /> : <CalcInfo working={working} inCell />}
-                <span>{text}</span>
-              </span>
+              <FigureCell
+                extra={working === undefined ? undefined : <CalcInfo working={working} inCell />}
+              >
+                {text}
+              </FigureCell>
             );
           },
         }

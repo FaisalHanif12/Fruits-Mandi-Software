@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.5 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026 and 27-10-2026) |
-| Date | 27 October 2026 |
+| Version | 1.6 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026 and 30-10-2026) |
+| Date | 30 October 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.8, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.9, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -246,7 +246,7 @@ The client's main complaint was poor user experience. These targets make "easy t
 | NFR-USE-16 | Window resize | Layout adjusts smoothly when the window is resized. The window cannot be made smaller than 1024 × 600. Nothing overlaps or gets cut off. |
 | NFR-USE-17 | Windows display scaling | Supported combinations: 1366 × 768 at 100% and 125%; 1920 × 1080 at 100%, 125% and 150%. (1366 × 768 at 150% leaves less than 1024 points of width and is not supported; the app shows a tip to use 125%.) |
 | NFR-USE-18 | In-app zoom | Text size 80% to 150% (`Ctrl +` / `Ctrl −`), remembered per user, but zooming in stops at the step where the content area would become narrower than 1024 points. Layout still aligned at every step. |
-| NFR-USE-19 | Alignment | All fields, labels, columns and numbers line up on a common grid. Numbers are written left to right even inside the Urdu layout, and every number cell aligns its numbers to the **physical right edge** of the cell, with digits of equal width, so units, tens and hundreds line up under each other in every column. |
+| NFR-USE-19 | Alignment | All fields, labels, columns and numbers line up on a common grid. Numbers are written left to right even inside the Urdu layout, and in a table, grid or print every number cell is **centred under its column heading**, with digits of equal width, and the column's total is centred under it too. Example: under تعداد / Quantity, 17, 250 and the total 272 each sit in the middle of the column, under the middle of the heading (v1.6, Umar 30-10-2026). Text columns and their headings start at the start edge. A label and value card (a summary) keeps its values in one column on the physical right edge. |
 
 ### 6.5 Accessibility
 
@@ -380,3 +380,4 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | 1.3 | 15-10-2026 | Approved by Umar (PRD v1.5): the word list size and the accuracy gates of NFR-URD-24 and NFR-URD-25 must be met before go-live (D5), not at the end of D2; until then the numbers are reported and must not drop. |
 | 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): large lists load page by page, with a speed target (NFR-SPD-24); the spelling example in NFR-URD-21 no longer names a cheque. |
 | 1.5 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type have no upper limit (NFR-SCL-1). |
+| 1.6 | 30-10-2026 | Approved by Umar (PRD v1.9): numbers in a table column are centred under their heading, with the total centred under them (NFR-USE-19). |

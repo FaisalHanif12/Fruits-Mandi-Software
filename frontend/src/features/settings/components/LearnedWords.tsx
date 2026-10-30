@@ -81,6 +81,7 @@ export function LearnedWords() {
         id: 'count',
         header: <Localized id="translit-words-col-count" />,
         kind: 'number',
+        size: 'qty',
         cell: (pair) => <Num>{String(pair.use_count)}</Num>,
       },
       {

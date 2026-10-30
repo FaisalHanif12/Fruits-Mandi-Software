@@ -1,0 +1,911 @@
+// The alignment check of plan 39 (A1, A3): one function that runs INSIDE a page and measures every
+// table, grid and label-and-value card on it against the rules R1 to R8 of the plan. It reads the
+// layout the browser really made (Range rectangles of the text), so it sees what Umar sees. jsdom has
+// no layout, so this cannot run in a component test; it is used by
+//   - tests/e2e/alignment/run.mjs   (Playwright on the development pages, both languages, both sizes),
+//   - tests/e2e/specs/54-table-alignment.e2e.mjs   (the real app on Windows).
+// It is a snippet for the page, not a module: its source text is read and sent to the page (a function
+// expression, with no imports and no outer variables), so it is kept as .txt and the linter does not
+// read it, like the shots-plan*.playwright.txt snippets. Allowed difference between two edges: 2 px.
+//
+// What it reports, per table: for every column its kind (num, text, centre), the edge of the
+// heading text, the edges of the cell texts and of the total, and the rule that fails. A "kind" is
+// read from the content, not from a class, so a column that forgot its class is still caught:
+//   num     every cell is a figure, a code, a date or a number of a record  -> centre (R1, v1.1)
+//   text    words                                                           -> start edge (R2)
+//   centre  a tick, a chip or an icon                                       -> centre (R3)
+
+/**
+ * Measures the page. `options.root` is a CSS selector to measure inside (default: the whole page),
+ * `options.tolerance` the allowed difference in px.
+ * Returns { dir, lang, tables: [...], cards: [...], violations: [...] }.
+ */
+function measureAlignment(options) {
+  const TOL = options && options.tolerance !== undefined ? options.tolerance : 2;
+  const rootEl = (options && options.root && document.querySelector(options.root)) || document.body;
+  const appDir = document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr';
+  const lang = document.documentElement.lang;
+  const violations = [];
+  const tables = [];
+  const cards = [];
+
+  // ---------- small helpers ----------
+  const clean = (s) =>
+    (s || '')
+      .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\u00a0]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const NUM_RE = /^[+\-−–(]?\s*\d[\d,.\s:/\-−–()%+@×x]*$/;
+  const BLANK_RE = /^[-−–—.\s]*$/;
+  const isBlank = (s) => BLANK_RE.test(s);
+  const isNumeric = (s) => NUM_RE.test(s);
+  const round = (n) => Math.round(n * 10) / 10;
+
+  function isHidden(el) {
+    return !!el.closest('.sr-only, .ag-hidden, [hidden], .ag-sort-indicator-container');
+  }
+
+  /** Rectangles of the visible text inside `el`, one per line fragment. */
+  function textRects(el) {
+    const rects = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const value = node.nodeValue || '';
+      const parent = node.parentElement;
+      if (value.trim() !== '' && parent && !isHidden(parent)) {
+        const cs = getComputedStyle(parent);
+        if (cs.visibility !== 'hidden' && cs.display !== 'none') {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const r of range.getClientRects()) {
+            if (r.width > 0.5 && r.height > 0.5) rects.push(r);
+          }
+        }
+      }
+      node = walker.nextNode();
+    }
+    return rects;
+  }
+
+  /** The ink box of an element's text: the edges and the centre, and the number of lines. */
+  function ink(el, withIcons) {
+    if (!el) return null;
+    // A figure with a short word after it (cell-with-unit): the figure is the first span.
+    const unitWrap = el.querySelector(':scope .cell-with-unit, :scope .print-balance');
+    const target = unitWrap && unitWrap.firstElementChild ? unitWrap.firstElementChild : el;
+    const rects = textRects(target);
+    // A column of words that start with an icon (a tick before "Settled") starts at the icon.
+    if (withIcons && rects.length > 0) {
+      for (const icon of target.querySelectorAll('svg')) {
+        const r = icon.getBoundingClientRect();
+        if (r.width > 0 && !icon.closest('button, [role="button"]')) rects.push(r);
+      }
+    }
+    if (rects.length === 0) return null;
+    let left = Infinity;
+    let right = -Infinity;
+    let top = Infinity;
+    let bottom = -Infinity;
+    for (const r of rects) {
+      left = Math.min(left, r.left);
+      right = Math.max(right, r.right);
+      top = Math.min(top, r.top);
+      bottom = Math.max(bottom, r.bottom);
+    }
+    const tops = rects.map((r) => r.top).sort((a, b) => a - b);
+    let lines = 1;
+    for (let i = 1; i < tops.length; i += 1) {
+      if (tops[i] - tops[i - 1] > rects[0].height * 0.6) lines += 1;
+    }
+    return {
+      left,
+      right,
+      top,
+      bottom,
+      cx: (left + right) / 2,
+      cy: (top + bottom) / 2,
+      lines,
+    };
+  }
+
+  function boxOf(el) {
+    const r = el.getBoundingClientRect();
+    return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: r.width, h: r.height };
+  }
+
+  /** The words of an element as text, for a kind guess. */
+  function wordsOf(el) {
+    const clone = el.cloneNode(true);
+    // The short word after a figure (a balance's side) is not part of what the column holds.
+    for (const n of clone.querySelectorAll('.sr-only, .ag-hidden, svg, style, script, .cell-unit, .print-balance-side')) n.remove();
+    return clean(clone.textContent);
+  }
+
+  function hasControl(el) {
+    return !!el.querySelector('svg, input, button, img, [role="checkbox"], [role="switch"]');
+  }
+
+  function isChip(el, text) {
+    if (text === '') return false;
+    const candidates = el.querySelectorAll('span, div, strong');
+    for (const c of candidates) {
+      if (clean(c.textContent) !== text) continue;
+      const cs = getComputedStyle(c);
+      const radius = parseFloat(cs.borderTopLeftRadius) || 0;
+      const filled =
+        cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent';
+      if (
+        radius >= 6 &&
+        filled &&
+        c.getBoundingClientRect().width < el.getBoundingClientRect().width - 8
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The kind a column says it is: `data-align` on its cells (num, text, centre), or the grid's own
+   * class `cell-num`. Undefined when the cells say nothing, then the content decides.
+   */
+  function declaredKind(cells) {
+    const found = new Set();
+    for (const cell of cells) {
+      const own =
+        cell.getAttribute('data-align') ||
+        (cell.classList.contains('cell-num')
+          ? 'num'
+          : cell.classList.contains('cell-center')
+            ? 'centre'
+            : cell.classList.contains('cell-name')
+              ? 'name'
+              : '');
+      if (own) found.add(own);
+    }
+    return found.size === 1 ? Array.from(found)[0] : undefined;
+  }
+
+  /** The kind of a column from its body cells: num, text, centre, empty or mixed. */
+  function kindOf(cells) {
+    let numeric = 0;
+    let words = 0;
+    let chips = 0;
+    let icons = 0;
+    for (const cell of cells) {
+      const text = wordsOf(cell);
+      if (isBlank(text)) {
+        if (hasControl(cell)) icons += 1;
+        continue;
+      }
+      if (isChip(cell, text)) chips += 1;
+      else if (isNumeric(text)) numeric += 1;
+      else words += 1;
+    }
+    if (numeric === 0 && words === 0 && chips === 0 && icons === 0) return 'empty';
+    if (chips > 0 && numeric === 0 && words === 0) return 'centre';
+    if (icons > 0 && numeric === 0 && words === 0 && chips === 0) return 'centre';
+    if (numeric > 0 && words === 0 && chips === 0) return 'num';
+    if (words > 0 && numeric === 0 && chips === 0) return 'text';
+    return 'mixed';
+  }
+
+  const startEdge = (box) => (appDir === 'rtl' ? box.right : box.left);
+
+  function edgeOf(kind, box) {
+    if (!box) return null;
+    // R1 (v1.1, Umar 30-10-2026): figures, their heading and their total are CENTRED in the column.
+    if (kind === 'num' || kind === 'centre') return box.cx;
+    return startEdge(box);
+  }
+
+  const edgeName = (kind) =>
+    kind === 'num' || kind === 'centre'
+      ? 'centre'
+      : appDir === 'rtl'
+        ? 'right (start)'
+        : 'left (start)';
+  const ruleOf = (kind) => (kind === 'num' ? 'R1' : kind === 'centre' ? 'R3' : 'R2');
+
+  function report(rule, where, what, extra) {
+    violations.push(Object.assign({ rule, where, what }, extra || {}));
+  }
+
+  // ---------- header checks (R4) ----------
+  /** `holder` is the element that clips (the heading cell); `textEl` holds the words. */
+  function checkHeader(tableId, colId, holder, textEl) {
+    const rects = textRects(textEl);
+    if (rects.length === 0) return null;
+    const cell = boxOf(holder);
+    const ib = ink(textEl);
+    const where = tableId + ' / ' + colId;
+    // Cut off: the words reach outside their heading cell, or the element clips them.
+    if (ib.left < cell.left - 1 || ib.right > cell.right + 1) {
+      report('R4', where, 'heading reaches outside its cell', {
+        text: clean(textEl.textContent),
+        ink: [round(ib.left), round(ib.right)],
+        cell: [round(cell.left), round(cell.right)],
+      });
+    }
+    let clipper = textEl;
+    while (clipper && clipper !== holder.parentElement) {
+      const cs = getComputedStyle(clipper);
+      const clips = cs.overflowX === 'hidden' || cs.overflowX === 'clip';
+      if (clips && clipper.scrollWidth > clipper.clientWidth + 1) {
+        report(
+          'R4',
+          where,
+          'heading is cut off (scrollWidth ' +
+            clipper.scrollWidth +
+            ' > ' +
+            clipper.clientWidth +
+            ')',
+          {
+            text: clean(textEl.textContent),
+          },
+        );
+        break;
+      }
+      if (cs.textOverflow === 'ellipsis' && clipper.scrollWidth > clipper.clientWidth + 1) {
+        report('R4', where, 'heading ends in an ellipsis', { text: clean(textEl.textContent) });
+        break;
+      }
+      clipper = clipper.parentElement;
+    }
+    // More than two lines. A dense print table (more than eight columns, `print-table-dense`) is
+    // the one exception: its headings take up to four lines on a portrait sheet (a question for
+    // Umar in FINDINGS.md: landscape paper or shorter headings).
+    const dense = !!holder.closest('.print-table-dense');
+    if (ib.lines > (dense ? 4 : 2)) {
+      report('R4', where, 'heading takes ' + ib.lines + ' lines', {
+        text: clean(textEl.textContent),
+      });
+    }
+    // A word broken across two lines.
+    const walker = document.createTreeWalker(textEl, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const value = node.nodeValue || '';
+      // A hyphen is a place where a word may break ("Written-off"), so the pieces are the words.
+      const re = /[^\s\-\u2010\u2011]+/g;
+      let m = re.exec(value);
+      while (m) {
+        const range = document.createRange();
+        range.setStart(node, m.index);
+        range.setEnd(node, m.index + m[0].length);
+        const parts = Array.from(range.getClientRects()).filter((r) => r.width > 0.5);
+        if (parts.length > 1) {
+          const sameLine = parts.every(
+            (r) => Math.abs(r.top - parts[0].top) < parts[0].height * 0.5,
+          );
+          if (!sameLine) {
+            report('R4', where, 'a word is broken across lines: "' + m[0] + '"', {
+              text: clean(textEl.textContent),
+            });
+          }
+        }
+        m = re.exec(value);
+      }
+      node = walker.nextNode();
+    }
+    // In the middle of the heading row, top to bottom.
+    const dy = Math.abs(ib.cy - (cell.top + cell.bottom) / 2);
+    if (dy > TOL + 1) {
+      report('R4', where, 'heading is ' + round(dy) + ' px off the middle of its row', {
+        text: clean(textEl.textContent),
+      });
+    }
+    return ib;
+  }
+
+  // ---------- one column ----------
+  /**
+   * `column`: { id, header: {holder, textEl}, body: [cell elements], total: [cell elements] }.
+   * Returns the record kept in the report.
+   */
+  function checkColumn(tableId, column) {
+    const where = tableId + ' / ' + column.id;
+    const content = kindOf(column.body.length > 0 ? column.body : column.total);
+    const declared = declaredKind(column.body.length > 0 ? column.body : column.total);
+    // A column of figures that is not set as a figure column is its own finding (R1): it would stand
+    // on the start edge with its heading and never be centred.
+    // A name column (a trip is named by its number and its date) is text whatever its digits say.
+    const kind =
+      declared === 'name'
+        ? 'text'
+        : declared !== undefined && content !== 'empty'
+          ? content === 'num' || content === 'centre'
+            ? content
+            : declared
+          : content;
+    if (declared === 'text' && content === 'num') {
+      report(
+        'R1',
+        where,
+        'a column of figures is set as text (it stands on the start edge, not centred)',
+        { header: column.header ? clean(column.header.textEl.textContent) : '' },
+      );
+    }
+    const headerInk = column.header
+      ? checkHeader(tableId, column.id, column.header.holder, column.header.textEl)
+      : null;
+    const withIcons = kind === 'text';
+    const cellInks = column.body
+      .map((cell) => ({ cell, ink: ink(cell, withIcons) }))
+      .filter((x) => x.ink);
+    const totalInks = column.total
+      .map((cell) => ({ cell, ink: ink(cell, withIcons) }))
+      .filter((x) => x.ink);
+    const record = {
+      id: column.id,
+      header: column.header ? clean(column.header.textEl.textContent) : '',
+      kind,
+      declared: declared || '',
+      width: column.header ? round(boxOf(column.header.holder).w) : null,
+      headerEdge: headerInk ? round(edgeOf(kind, headerInk)) : null,
+      cellEdges: [],
+      totalEdges: [],
+    };
+    if (kind === 'empty' || kind === 'mixed') {
+      if (kind === 'mixed') {
+        record.note = 'mixed content (figures and words); not checked';
+      }
+      return record;
+    }
+    const cellEdges = cellInks.map((x) => edgeOf(kind, x.ink));
+    const totalEdges = totalInks.map((x) => edgeOf(kind, x.ink));
+    record.declared = declared || '';
+    record.cellEdges = [Math.min(...cellEdges), Math.max(...cellEdges)].map(round);
+    record.totalEdges = totalEdges.map(round);
+    const all = cellEdges.slice();
+    // R1 / R2 / R3: the cells of the column share one edge.
+    if (cellEdges.length > 1) {
+      const spread = Math.max(...cellEdges) - Math.min(...cellEdges);
+      if (spread > TOL) {
+        report(
+          ruleOf(kind),
+          where,
+          'cells are not level on the ' +
+            edgeName(kind) +
+            (kind === 'num' || kind === 'centre' ? '' : ' edge') +
+            ' (spread ' +
+            round(spread) +
+            ' px)',
+          {
+            kind,
+            edges: record.cellEdges,
+          },
+        );
+      }
+    }
+    // The heading stands over its cells.
+    if (headerInk && all.length > 0) {
+      const ref = all.slice().sort((a, b) => a - b)[Math.floor(all.length / 2)];
+      const diff = edgeOf(kind, headerInk) - ref;
+      if (Math.abs(diff) > TOL + (kind === 'centre' ? 1 : 0)) {
+        report(
+          ruleOf(kind),
+          where,
+          'heading is ' +
+            round(Math.abs(diff)) +
+            ' px ' +
+            (diff > 0 ? 'right' : 'left') +
+            ' of its ' +
+            (kind === 'centre' || kind === 'num'
+              ? 'cells (centre)'
+              : 'cells on the ' + edgeName(kind) + ' edge'),
+          {
+            kind,
+            header: record.header,
+            headerEdge: record.headerEdge,
+            cellEdge: round(ref),
+          },
+        );
+      }
+    }
+    // R6: a total sits under its column with the column's alignment.
+    if (totalEdges.length > 0 && all.length > 0) {
+      const ref = all.slice().sort((a, b) => a - b)[Math.floor(all.length / 2)];
+      for (const x of totalInks) {
+        const totalText = wordsOf(x.cell);
+        const totalKind = isNumeric(totalText) ? 'num' : 'text';
+        if (kind === 'num' && totalKind === 'text') continue; // the word "Total" is checked as a label
+        const diff = edgeOf(kind, x.ink) - ref;
+        if (Math.abs(diff) > TOL + (kind === 'centre' ? 1 : 0)) {
+          report(
+            'R6',
+            where,
+            'total is ' +
+              round(Math.abs(diff)) +
+              ' px ' +
+              (diff > 0 ? 'right' : 'left') +
+              ' of its column',
+            {
+              kind,
+              total: totalText,
+            },
+          );
+        }
+      }
+    }
+    // R7: one row height and the words in the middle of the row; the words keep off the border.
+    let lastRowTop = null;
+    for (const x of cellInks.concat(totalInks)) {
+      const box = boxOf(x.cell);
+      if (x.ink.lines === 1) {
+        // The middle of what the cell holds: the box of its one wrapper element when it has one (a
+        // figure and a word of two fonts in a flex line), else the text. The text of a Nastaliq font
+        // has a content area far taller than its line, so the text alone is not a fair middle then.
+        const kids = Array.from(x.cell.children).filter(
+          (k) => k.getBoundingClientRect().height > 0 && !k.matches('.sr-only'),
+        );
+        const only = kids.length === 1 ? kids[0].getBoundingClientRect() : null;
+        const middle =
+          only && only.height > 0 && getComputedStyle(kids[0]).display !== 'inline'
+            ? (only.top + only.bottom) / 2
+            : x.ink.cy;
+        const dy = Math.abs(middle - (box.top + box.bottom) / 2);
+        if (dy > TOL + 2) {
+          report('R7', where, 'cell words are ' + round(dy) + ' px off the middle of the row', {
+            text: wordsOf(x.cell).slice(0, 40),
+          });
+          break;
+        }
+      }
+      lastRowTop = box.top;
+    }
+    void lastRowTop;
+    for (const x of cellInks.concat(totalInks)) {
+      const box = boxOf(x.cell);
+      const gapLeft = x.ink.left - box.left;
+      const gapRight = box.right - x.ink.right;
+      const sideGap =
+        kind === 'num' || kind === 'centre'
+          ? Math.min(gapLeft, gapRight)
+          : appDir === 'rtl'
+            ? gapRight
+            : gapLeft;
+      if (sideGap < 3 && box.w > 0 && !x.cell.querySelector('button')) {
+        report('R7', where, 'cell words touch the cell border (' + round(sideGap) + ' px)', {
+          text: wordsOf(x.cell).slice(0, 40),
+        });
+        break;
+      }
+    }
+    return record;
+  }
+
+  // ---------- AG Grid ----------
+  const gridRoots = Array.from(rootEl.querySelectorAll('.ag-root-wrapper'));
+  let gridNo = 0;
+  for (const gridEl of gridRoots) {
+    if (gridEl.getBoundingClientRect().width === 0) continue;
+    gridNo += 1;
+    const label = gridEl.closest('[aria-label]')
+      ? gridEl.closest('[aria-label]').getAttribute('aria-label')
+      : '';
+    const tableId = 'grid#' + gridNo + (label ? ' (' + label + ')' : '');
+    const headerCells = Array.from(gridEl.querySelectorAll('.ag-header-cell[col-id]'));
+    const columns = [];
+    const heights = new Set();
+    for (const hc of headerCells) {
+      const id = hc.getAttribute('col-id');
+      const sel = '.ag-cell[col-id="' + CSS.escape(id) + '"]';
+      const cells = Array.from(gridEl.querySelectorAll(sel));
+      const body = cells.filter((c) => !c.closest('.ag-row-pinned'));
+      const total = cells.filter((c) => c.closest('.ag-row-pinned'));
+      const textEl = hc.querySelector('.ag-header-cell-text') || hc;
+      heights.add(Math.round(hc.getBoundingClientRect().height));
+      columns.push({ id, header: { holder: hc, textEl }, body, total });
+    }
+    const records = columns.map((c) => checkColumn(tableId, c));
+    // R4: all headings of a row have one height.
+    if (heights.size > 1) {
+      report(
+        'R4',
+        tableId,
+        'heading cells have different heights: ' + Array.from(heights).join(', ') + ' px',
+      );
+    }
+    // R7: one row height per grid (a wrapping column may grow its own rows).
+    const rowHeights = new Set(
+      Array.from(
+        gridEl.querySelectorAll(
+          '.ag-row:not(.ag-row-pinned):not(.ag-full-width-row):not(.row-group)',
+        ),
+      ).map((r) => Math.round(r.getBoundingClientRect().height)),
+    );
+    // R6: the word "Total" is in the first text column.
+    const firstText = records.findIndex(
+      (r) =>
+        r.kind === 'text' ||
+        (r.declared !== 'num' &&
+          r.declared !== 'centre' &&
+          r.kind !== 'empty' &&
+          r.kind !== 'centre'),
+    );
+    const totalRow = gridEl.querySelector('.ag-row-pinned');
+    if (totalRow) {
+      const cellsWithWords = Array.from(totalRow.querySelectorAll('.ag-cell[col-id]')).filter(
+        (c) => {
+          const t = wordsOf(c);
+          return t !== '' && !isNumeric(t) && !isBlank(t) && !c.querySelector('.cell-with-unit');
+        },
+      );
+      for (const c of cellsWithWords) {
+        const idx = columns.findIndex((col) => col.id === c.getAttribute('col-id'));
+        if (firstText !== -1 && idx !== -1 && idx !== firstText && records[idx]) {
+          report(
+            'R6',
+            tableId + ' / ' + c.getAttribute('col-id'),
+            'the word in the totals row is in "' +
+              c.getAttribute('col-id') +
+              '", not in the first text column (' +
+              records[firstText].id +
+              ')',
+            {
+              text: wordsOf(c).slice(0, 30),
+            },
+          );
+        }
+      }
+    }
+    if (rowHeights.size > 1 && Math.max(...rowHeights) - Math.min(...rowHeights) > 2) {
+      const wrapped = Array.from(
+        gridEl.querySelectorAll('.ag-row:not(.ag-row-pinned) .ag-cell'),
+      ).some((c) => {
+        const i = ink(c);
+        return i && i.lines > 1;
+      });
+      if (!wrapped)
+        report(
+          'R7',
+          tableId,
+          'rows have different heights: ' + Array.from(rowHeights).join(', ') + ' px',
+        );
+    }
+    tables.push({
+      id: tableId,
+      type: 'ag-grid',
+      columns: records,
+      rows: gridEl.querySelectorAll('.ag-row:not(.ag-row-pinned)').length,
+      rowHeights: Array.from(rowHeights),
+      hasTotal: !!totalRow,
+    });
+  }
+
+  // ---------- plain <table> ----------
+  const tableEls = Array.from(rootEl.querySelectorAll('table')).filter(
+    (t) => !t.closest('.ag-root-wrapper') && !t.classList.contains('print-amounts'),
+  );
+  let tableNo = 0;
+  for (const tableEl of tableEls) {
+    if (tableEl.getBoundingClientRect().width === 0) continue;
+    tableNo += 1;
+    const label =
+      tableEl.getAttribute('aria-label') ||
+      (tableEl.closest('section') && tableEl.closest('section').querySelector('h2, h3')
+        ? clean(tableEl.closest('section').querySelector('h2, h3').textContent)
+        : '');
+    const tableId = 'table#' + tableNo + (label ? ' (' + label.slice(0, 40) + ')' : '');
+    // Map every cell to its first column index (colspan counted); keep only single-column cells.
+    function grid(rows) {
+      const out = [];
+      for (const row of rows) {
+        let col = 0;
+        const line = [];
+        for (const cell of Array.from(row.children)) {
+          const span = cell.colSpan || 1;
+          if (span === 1) line[col] = cell;
+          else line[col] = null;
+          col += span;
+        }
+        out.push({ row, line, cols: col });
+      }
+      return out;
+    }
+    const headRows = grid(Array.from(tableEl.querySelectorAll('thead tr')));
+    const bodyRows = grid(Array.from(tableEl.querySelectorAll('tbody tr')));
+    const footRows = grid(Array.from(tableEl.querySelectorAll('tfoot tr')));
+    const widest = Math.max(0, ...headRows.concat(bodyRows, footRows).map((r) => r.cols));
+    const headerRow = headRows.length > 0 ? headRows[headRows.length - 1] : null;
+    const columns = [];
+    const heights = new Set();
+    for (let i = 0; i < widest; i += 1) {
+      const hc = headerRow ? headerRow.line[i] : null;
+      const body = bodyRows.map((r) => r.line[i]).filter(Boolean);
+      const total = footRows.map((r) => r.line[i]).filter(Boolean);
+      if (hc) heights.add(Math.round(hc.getBoundingClientRect().height));
+      columns.push({
+        id: String(i) + (hc ? ':' + clean(hc.textContent).slice(0, 20) : ''),
+        header: hc ? { holder: hc, textEl: hc } : null,
+        body,
+        total,
+      });
+    }
+    const records = columns.map((c) => checkColumn(tableId, c));
+    if (heights.size > 1) {
+      report(
+        'R4',
+        tableId,
+        'heading cells have different heights: ' + Array.from(heights).join(', ') + ' px',
+      );
+    }
+    // A row that heads a group or a month, and a total row, is not a row of the table's own kind.
+    const rowHeights = new Set(
+      bodyRows
+        .filter(
+          (r) =>
+            !/total/.test(r.row.className) &&
+            (r.row.getAttribute('data-row') || 'normal') === 'normal',
+        )
+        .map((r) => Math.round(r.row.getBoundingClientRect().height)),
+    );
+    const firstText = records.findIndex(
+      (r) =>
+        r.kind === 'text' ||
+        (r.declared !== 'num' &&
+          r.declared !== 'centre' &&
+          r.kind !== 'empty' &&
+          r.kind !== 'centre'),
+    );
+    for (const fr of footRows) {
+      fr.line.forEach((cell, idx) => {
+        if (!cell) return;
+        const t = wordsOf(cell);
+        if (
+          t !== '' &&
+          !isNumeric(t) &&
+          !isBlank(t) &&
+          !cell.querySelector('.cell-with-unit') &&
+          firstText !== -1 &&
+          idx !== firstText &&
+          records[idx]
+        ) {
+          report(
+            'R6',
+            tableId + ' / ' + records[idx].id,
+            'the word in the totals row is not in the first text column',
+            { text: t.slice(0, 30) },
+          );
+        }
+      });
+    }
+    if (rowHeights.size > 1 && Math.max(...rowHeights) - Math.min(...rowHeights) > 2) {
+      const wrapped = Array.from(tableEl.querySelectorAll('tbody td')).some((c) => {
+        const i = ink(c);
+        return i && i.lines > 1;
+      });
+      if (!wrapped)
+        report(
+          'R7',
+          tableId,
+          'rows have different heights: ' + Array.from(rowHeights).join(', ') + ' px',
+        );
+    }
+    tables.push({
+      id: tableId,
+      type: 'table',
+      columns: records,
+      rows: bodyRows.length,
+      rowHeights: Array.from(rowHeights),
+      hasTotal: footRows.length > 0,
+    });
+  }
+
+  // ---------- label and value cards (R8) ----------
+  const dls = Array.from(rootEl.querySelectorAll('dl')).filter(
+    (d) => !d.closest('.ag-root-wrapper'),
+  );
+  let cardNo = 0;
+  for (const dl of dls) {
+    if (dl.getBoundingClientRect().width === 0) continue;
+    const dts = Array.from(dl.querySelectorAll('dt'));
+    const dds = Array.from(dl.querySelectorAll('dd'));
+    if (dts.length === 0 || dds.length === 0) continue;
+    cardNo += 1;
+    const head = dl.closest('section') && dl.closest('section').querySelector('h2, h3');
+    const cardId =
+      'card#' + cardNo + (head ? ' (' + clean(head.textContent).slice(0, 40) + ')' : '');
+    const pairs = [];
+    for (let i = 0; i < Math.min(dts.length, dds.length); i += 1) {
+      const a = ink(dts[i]);
+      const b = ink(dds[i]);
+      if (a && b) pairs.push({ dt: dts[i], dd: dds[i], a, b, valueText: wordsOf(dds[i]) });
+    }
+    if (pairs.length === 0) continue;
+    // Stacked (label above its value) or side by side (label and value on one line).
+    const stacked = pairs.every((p) => p.b.top >= p.a.bottom - 2);
+    const record = {
+      id: cardId,
+      layout: stacked ? 'stacked' : 'row',
+      pairs: pairs.length,
+      labelEdges: [],
+      valueEdges: [],
+    };
+    if (stacked) {
+      // Each value stands under its label, on the start edge.
+      for (const p of pairs) {
+        const d = startEdge(p.b) - startEdge(p.a);
+        if (Math.abs(d) > TOL) {
+          report(
+            'R8',
+            cardId,
+            'value is ' + round(Math.abs(d)) + ' px off the start edge of its label',
+            { label: wordsOf(p.dt).slice(0, 30), value: p.valueText.slice(0, 30) },
+          );
+          break;
+        }
+      }
+    } else {
+      // Row layout: the labels share the start edge; the values share one physical right edge.
+      const labelEdges = pairs.map((p) => startEdge(p.a));
+      const lSpread = Math.max(...labelEdges) - Math.min(...labelEdges);
+      record.labelEdges = [round(Math.min(...labelEdges)), round(Math.max(...labelEdges))];
+      // Labels on different lines (a grid of two-line rows) can sit in different columns; only a
+      // single column of rows is held to one edge.
+      const oneColumn = (list) => list.every((p, i) => i === 0 || p.b.top >= list[i - 1].b.bottom - 2);
+      if (lSpread > TOL && oneColumn(pairs)) {
+        report(
+          'R8',
+          cardId,
+          'labels are not level on the start edge (spread ' + round(lSpread) + ' px)',
+          {},
+        );
+      }
+      const numeric = pairs.filter((p) => isNumeric(p.valueText));
+      if (numeric.length > 1) {
+        const rights = numeric.map((p) => p.b.right);
+        const rSpread = Math.max(...rights) - Math.min(...rights);
+        record.valueEdges = [round(Math.min(...rights)), round(Math.max(...rights))];
+        if (rSpread > TOL && oneColumn(numeric)) {
+          report(
+            'R8',
+            cardId,
+            'figures are not level on the right edge (spread ' + round(rSpread) + ' px)',
+            {
+              edges: record.valueEdges,
+            },
+          );
+        } else if (rSpread > TOL) {
+          record.note = 'values in several columns; each checked on its own is not done';
+        }
+      }
+    }
+    cards.push(record);
+  }
+
+  // ---------- the amounts table of a print: a card of labels and values (R8) ----------
+  for (const amounts of Array.from(rootEl.querySelectorAll('table.print-amounts'))) {
+    if (amounts.getBoundingClientRect().width === 0) continue;
+    const pairs = [];
+    for (const tr of Array.from(amounts.querySelectorAll('tr'))) {
+      const th = tr.querySelector('th');
+      const td = tr.querySelector('td');
+      const a = th ? ink(th) : null;
+      const b = td ? ink(td) : null;
+      if (a && b && td && isNumeric(wordsOf(td))) pairs.push({ a, b });
+    }
+    cardNo += 1;
+    const cardId = 'amounts#' + cardNo;
+    if (pairs.length > 1) {
+      const lefts = pairs.map((p) => startEdge(p.a));
+      const rights = pairs.map((p) => p.b.right);
+      cards.push({
+        id: cardId,
+        layout: 'amounts',
+        pairs: pairs.length,
+        labelEdges: [round(Math.min(...lefts)), round(Math.max(...lefts))],
+        valueEdges: [round(Math.min(...rights)), round(Math.max(...rights))],
+      });
+      if (Math.max(...lefts) - Math.min(...lefts) > TOL)
+        report('R8', cardId, 'labels are not level on the start edge');
+      if (Math.max(...rights) - Math.min(...rights) > TOL)
+        report(
+          'R8',
+          cardId,
+          'figures are not level on the right edge (spread ' +
+            round(Math.max(...rights) - Math.min(...rights)) +
+            ' px)',
+        );
+    }
+  }
+
+  // ---------- stacked rows that end in a figure (R8), not made of a <dl> ----------
+  // A card of lines (a list of partners and their parts, a summary made of divs): every line is a
+  // label and, at its end, a figure. The figures stand in one column on the physical right edge.
+  const checkedParents = new Set();
+  const FIGURE_SEL = 'bdi[dir="ltr"], .type-number';
+  for (const parent of Array.from(rootEl.querySelectorAll('ul, ol, div, dl, section'))) {
+    if (parent.closest('.ag-root-wrapper, table')) continue;
+    if (checkedParents.has(parent)) continue;
+    // The lines under a printed page (printed at, rows) and the firm header (contact persons with their
+    // phones) are separate lines, not a column of values.
+    if (parent.closest('.print-screen-footer, .print-header')) continue;
+    const rows = Array.from(parent.children).filter((c) => c.getBoundingClientRect().height > 0);
+    if (rows.length < 2 || rows.length > 40) continue;
+    const entries = [];
+    for (const row of rows) {
+      if (row.querySelector('ul, ol, dl, table, .ag-root-wrapper')) continue;
+      const figures = Array.from(row.querySelectorAll(FIGURE_SEL)).filter(
+        (f) => isNumeric(clean(f.textContent)) && !f.closest('.sr-only'),
+      );
+      if (figures.length === 0) continue;
+      const last = figures[figures.length - 1];
+      // The figure ends the line: no words after it but the short unit.
+      const lineInk = ink(row);
+      const figInk = ink(last);
+      if (!lineInk || !figInk) continue;
+      const label = Array.from(row.querySelectorAll('*')).some(
+        (n) =>
+          !FIGURE_SEL.split(',').some((q) => n.matches(q.trim())) &&
+          n.children.length === 0 &&
+          clean(n.textContent) !== '' &&
+          !isNumeric(clean(n.textContent)) &&
+          !n.closest(FIGURE_SEL),
+      );
+      if (!label) continue;
+      // Only a line with its label and its figure at the two ends is a value column; a figure that
+      // follows its words closely (a count after a task, "Buyers over their limit 3") is part of them.
+      const others = textRects(row).filter(
+        (r) =>
+          !(
+            r.left >= figInk.left - 1 &&
+            r.right <= figInk.right + 1 &&
+            r.top >= figInk.top - 2 &&
+            r.bottom <= figInk.bottom + 2
+          ),
+      );
+      if (others.length === 0) continue;
+      const nearest = Math.min(
+        ...others.map((r) =>
+          Math.min(Math.abs(r.left - figInk.right), Math.abs(figInk.left - r.right)),
+        ),
+      );
+      if (nearest < 24) continue;
+      entries.push({ row, fig: figInk });
+    }
+    if (entries.length < 2) continue;
+    // The rows of one card are alike: one kind of element with one class (not a summary line, then a
+    // table, under one section).
+    const alike = entries.every(
+      (e) =>
+        e.row.tagName === entries[0].row.tagName &&
+        String(e.row.className).slice(0, 30) === String(entries[0].row.className).slice(0, 30),
+    );
+    if (!alike) continue;
+    // Stacked: each row starts below the one before.
+    const stackedRows = entries.every(
+      (e, i) =>
+        i === 0 ||
+        e.row.getBoundingClientRect().top >= entries[i - 1].row.getBoundingClientRect().bottom - 2,
+    );
+    if (!stackedRows) continue;
+    for (const e of entries) checkedParents.add(e.row);
+    const rights = entries.map((e) => e.fig.right);
+    const spread = Math.max(...rights) - Math.min(...rights);
+    const head = parent.closest('section') && parent.closest('section').querySelector('h2, h3');
+    const cardId =
+      'rows#' +
+      (cards.length + 1) +
+      (head ? ' (' + clean(head.textContent).slice(0, 40) + ')' : '');
+    cards.push({
+      id: cardId,
+      layout: 'rows',
+      pairs: entries.length,
+      valueEdges: [round(Math.min(...rights)), round(Math.max(...rights))],
+      rows: entries.map((e) => clean(e.row.textContent).slice(0, 40) + ' <' + e.row.tagName + '.' + String(e.row.className).slice(0, 24) + '>'),
+    });
+    if (spread > TOL) {
+      report(
+        'R8',
+        cardId,
+        'figures are not level on the right edge (spread ' + round(spread) + ' px)',
+        { edges: [round(Math.min(...rights)), round(Math.max(...rights))] },
+      );
+    }
+  }
+
+  return { dir: appDir, lang, tables, cards, violations };
+}

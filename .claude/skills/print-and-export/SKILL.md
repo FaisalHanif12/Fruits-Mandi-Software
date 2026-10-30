@@ -57,7 +57,7 @@ Backend: WebView2 Print (printer) or PrintToPdf (PDF), through with_webview + we
    - Use the shared print layout: header, body table, totals, words, and a footer with "Page x of y" and the print time.
    - `dir` and `lang` come from the print language.
    - Use the bundled fonts only: Gulzar or Noto Nastaliq Urdu for Urdu, Inter for numbers and English. Nastaliq line height is at least 1.8, so tall letters are not clipped in table rows (NFR-URD-11).
-   - Numbers sit on the physical right edge with tabular digits (F17). Mixed text uses `<Num>` and `<Code>` so `(16 @ 900)` never flips (FR-19.6, NFR-URD-28).
+   - Numbers use tabular digits and are centred under their column heading, with the total centred too (F17). Mixed text uses `<Num>` and `<Code>` so `(16 @ 900)` never flips (FR-19.6, NFR-URD-28).
    - Table headers repeat on every page, and rows never split across pages.
 5. **Paper.** Set the page size in the print CSS (one literal `@page` rule per paper class) **and** in the WebView2 print settings, so both agree (see reference.md):
    - A4: 210 × 297 mm;

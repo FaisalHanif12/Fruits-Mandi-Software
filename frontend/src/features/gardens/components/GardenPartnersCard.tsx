@@ -8,7 +8,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';
 import { formatBps, isNegativePaisa } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { CalcInfo, Card, Num, Table, type TableColumn } from '../../../shared/ui';
+import { CalcInfo, Card, FigureCell, Num, Table, type TableColumn } from '../../../shared/ui';
 import type { GardenPartnerResult } from '../types';
 
 interface GardenPartnersCardProps {
@@ -39,38 +39,46 @@ export function GardenPartnersCard({ results, closed }: GardenPartnersCardProps)
       id: 'paid-shop',
       header: l10n.getString('gardens-partner-paid-shop'),
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.paid_shop_paisa} />,
     },
     {
       id: 'paid-pocket',
       header: l10n.getString('gardens-partner-paid-pocket'),
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.paid_pocket_paisa} />,
     },
     {
       id: 'back',
       header: l10n.getString('gardens-partner-back'),
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.money_back_paisa} />,
     },
     {
       id: 'net',
       header: l10n.getString(closed ? 'gardens-partner-net-closed' : 'gardens-partner-net-open'),
       kind: 'number',
+      size: 'money',
+      // The figure under the middle of its heading; the loss mark before it, the ⓘ after it (plan 39 R1).
       cell: (row) => (
-        <span
-          className={`inline-flex items-center gap-1 ${isNegativePaisa(row.net_paisa) ? 'text-due' : ''}`}
-        >
-          {closed && isNegativePaisa(row.net_paisa) ? (
-            <>
-              <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-              <Localized id="gardens-partner-loss">
-                <span className="sr-only" />
-              </Localized>
-            </>
-          ) : null}
-          <Num paisa={row.net_paisa} />
-          <CalcInfo working={row.working} inCell />
+        <span className={isNegativePaisa(row.net_paisa) ? 'text-due' : ''}>
+          <FigureCell
+            lead={
+              closed && isNegativePaisa(row.net_paisa) ? (
+                <>
+                  <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+                  <Localized id="gardens-partner-loss">
+                    <span className="sr-only" />
+                  </Localized>
+                </>
+              ) : undefined
+            }
+            extra={<CalcInfo working={row.working} inCell />}
+          >
+            <Num paisa={row.net_paisa} />
+          </FigureCell>
         </span>
       ),
     },

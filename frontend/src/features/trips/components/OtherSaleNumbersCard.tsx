@@ -45,7 +45,7 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
               <Localized id="trips-sale-amount">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.amount} />
               </dd>
             </div>
@@ -53,7 +53,7 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
               <Localized id="purchases-detail-cost-sold">
                 <dt />
               </Localized>
-              <dd className="flex items-center gap-1">
+              <dd className="value-col">
                 <Num paisa={numbers.cost_paisa} />
                 <CalcInfo working={numbers.cost_working} inCell />
               </dd>
@@ -64,7 +64,7 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
               <Localized id={loss ? 'glossary-tijarati-nuqsan' : 'glossary-tijarati-munafa'}>
                 <dt />
               </Localized>
-              <dd className="flex items-center gap-1">
+              <dd className="value-col">
                 <Num paisa={numbers.result_paisa} />
                 <CalcInfo working={numbers.result_working} inCell />
               </dd>
@@ -73,7 +73,7 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
               <Localized id="trips-sale-left-after">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num>{String(numbers.qty_left_after)}</Num>
               </dd>
             </div>
@@ -81,7 +81,7 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
               <Localized id="trips-sale-other-left-after">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num>{String(numbers.qty_other_left_after)}</Num>
               </dd>
             </div>
@@ -89,7 +89,7 @@ export function OtherSaleNumbersCard({ numbers, empty }: OtherSaleNumbersCardPro
               <Localized id="trips-sale-cost-left-after">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.cost_left_after_paisa} />
               </dd>
             </div>

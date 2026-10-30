@@ -102,24 +102,28 @@ export function PurchaseDetail({
       id: 'date',
       header: l10n.getString('purchases-col-date'),
       kind: 'number',
+      size: 'date',
       cell: (lot) => <Code>{isoToDisplayDate(lot.entry_date)}</Code>,
     },
     {
       id: 'qty',
       header: l10n.getString('purchases-lot-qty-sold'),
       kind: 'number',
+      size: 'qty',
       cell: (lot) => <Num>{String(lot.qty_sold)}</Num>,
     },
     {
       id: 'sales',
       header: l10n.getString('purchases-lot-sales'),
       kind: 'number',
+      size: 'money',
       cell: (lot) => <Num paisa={lot.sales_paisa} />,
     },
     {
       id: 'cost',
       header: l10n.getString('purchases-detail-cost-sold'),
       kind: 'number',
+      size: 'money',
       cell: (lot) => <Num paisa={lot.cost_paisa} />,
     },
   ];
@@ -128,12 +132,14 @@ export function PurchaseDetail({
       id: 'date',
       header: l10n.getString('purchases-col-date'),
       kind: 'number',
+      size: 'date',
       cell: (item) => <Code>{isoToDisplayDate(item.move_date)}</Code>,
     },
     {
       id: 'qty',
       header: l10n.getString('purchases-write-off-qty'),
       kind: 'number',
+      size: 'qty',
       cell: (item) => <Num>{String(item.qty)}</Num>,
     },
     {
@@ -273,7 +279,7 @@ export function PurchaseDetail({
               className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink"
             >
               <dt>{l10n.getString(item.label)}</dt>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={item.paisa} />
               </dd>
             </div>
@@ -284,7 +290,7 @@ export function PurchaseDetail({
             <Localized id={loss ? 'glossary-tijarati-nuqsan' : 'glossary-tijarati-munafa'}>
               <dt />
             </Localized>
-            <dd className="flex items-center gap-1">
+            <dd className="value-col">
               <Num paisa={row.result_paisa} />
               <CalcInfo working={row.result_working} inCell />
             </dd>

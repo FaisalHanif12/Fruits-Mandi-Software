@@ -1,7 +1,7 @@
 // The columns of a report as the list grid wants them (PRD 19.1, NFR-USE-15, Code Standards F18,
 // F22). The backend sends the columns of each report with a kind; the kind picks the grid's column
-// type, so the same kind has the same width on every report. A balance has its side word in a slot
-// after the figure, so the figures keep one right edge (NFR-USE-19). The names and the goods of a
+// type, so the same kind has the same width on every report. A balance has its side word after the
+// figure, and the figure stays in the middle of its column (NFR-USE-19, plan 39 R1). The names and the goods of a
 // ledger line grow into the free width; the narration keeps its own width and waits for a wider
 // window, so nothing scrolls sideways.
 

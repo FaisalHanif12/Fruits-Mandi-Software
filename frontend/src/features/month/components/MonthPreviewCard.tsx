@@ -91,6 +91,7 @@ export function MonthPreviewCard({ row, onClosed }: MonthPreviewCardProps) {
     {
       id: 'debit',
       kind: 'number',
+      size: 'money',
       header: <Localized id="month-col-debit" />,
       cell: (line) => (isZeroPaisa(line.dr_paisa) ? null : <Num paisa={line.dr_paisa} />),
       total: data === undefined ? undefined : <Num paisa={data.total_paisa} />,
@@ -98,6 +99,7 @@ export function MonthPreviewCard({ row, onClosed }: MonthPreviewCardProps) {
     {
       id: 'credit',
       kind: 'number',
+      size: 'money',
       header: <Localized id="month-col-credit" />,
       cell: (line) => (isZeroPaisa(line.cr_paisa) ? null : <Num paisa={line.cr_paisa} />),
       total: data === undefined ? undefined : <Num paisa={data.total_paisa} />,

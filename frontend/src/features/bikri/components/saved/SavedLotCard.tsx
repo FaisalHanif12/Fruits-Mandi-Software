@@ -39,18 +39,21 @@ function lineColumns(
       id: 'qty',
       header: say('bikri-col-qty'),
       kind: 'number',
+      size: 'qty',
       cell: (sale) => <Num>{String(sale.qty)}</Num>,
     },
     {
       id: 'rate',
       header: say('bikri-col-rate'),
       kind: 'number',
+      size: 'money',
       cell: (sale) => <Num paisa={sale.seller_rate} />,
     },
     {
       id: 'amount',
       header: say('bikri-col-seller-amount'),
       kind: 'number',
+      size: 'money',
       cell: (sale) => <Num paisa={sale.seller_amount} />,
     },
     ...(isFromStep(step, 'normal')
@@ -59,12 +62,14 @@ function lineColumns(
             id: 'seller-comm',
             header: say('bikri-col-seller-comm'),
             kind: 'number',
+            size: 'money',
             cell: (sale) => <Num paisa={sale.seller_comm.amount} />,
           },
           {
             id: 'buyer-comm',
             header: say('bikri-col-buyer-comm'),
             kind: 'number',
+            size: 'money',
             cell: (sale) => <Num paisa={sale.buyer_comm.amount} />,
           },
         ] satisfies readonly TableColumn<SavedSale>[])
@@ -75,6 +80,7 @@ function lineColumns(
             id: 'laga',
             header: say('glossary-laga'),
             kind: 'number',
+            size: 'money',
             cell: (sale) => <Num paisa={sale.laga.amount} />,
           },
         ] satisfies readonly TableColumn<SavedSale>[])
@@ -83,6 +89,7 @@ function lineColumns(
       id: 'buyer-total',
       header: say('bikri-col-buyer-total'),
       kind: 'number',
+      size: 'money',
       cell: (sale) => <Num paisa={sale.buyer_total} />,
     },
     ...(own && isFromStep(step, 'wide')
@@ -91,6 +98,7 @@ function lineColumns(
             id: 'cost',
             header: say('bikri-saved-cost'),
             kind: 'number',
+            size: 'money',
             cell: (sale) => <Num paisa={sale.cost_paisa} />,
           },
         ] satisfies readonly TableColumn<SavedSale>[])
@@ -98,6 +106,9 @@ function lineColumns(
     {
       id: 'payment',
       header: say('bikri-col-payment'),
+      // A short choice (credit or cash): a small column, centred with its heading (plan 39 R3).
+      kind: 'centre',
+      size: 'status',
       cell: (sale) => say(sale.payment_type === 'cash' ? 'glossary-naqdi' : 'glossary-udhari'),
     },
   ];
@@ -212,7 +223,7 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
               <Localized id="bikri-own-credit">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={lot.own.credit_paisa} />
               </dd>
             </div>
@@ -222,7 +233,7 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
                 className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink"
               >
                 <dt lang={language}>{displayName(credit.partner, language)}</dt>
-                <dd>
+                <dd className="value-col">
                   <Num paisa={credit.amount_paisa} />
                 </dd>
               </div>
@@ -231,7 +242,7 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
               <Localized id="purchases-detail-cost-sold">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={lot.own.cost_paisa} />
               </dd>
             </div>
@@ -247,7 +258,7 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
               >
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={lot.own.result_paisa} />
               </dd>
             </div>

@@ -10,10 +10,17 @@ with the `entry-grid` skill. A grid never holds unsaved data on its own (F39).
 ## ListGrid (read-only lists)
 
 `ListGrid` is the one grid for reading a list. Besides the plain text, number, date and status
-columns, it has (plan 20, for the report tables): `unit`, a short word after a figure in a slot of
-fixed width so the figures keep one right edge (the side of a balance; column type `balance`);
-`wrap`, a long text that wraps and makes its row taller; and `isGroup`, a row that heads a group.
-The totals row is pinned under the last row and carries the backend's figures.
+columns, it has (plan 20, for the report tables): `unit`, a short word after a figure, which stays in
+the middle of the column (the side of a balance; column type `balance`); `wrap`, a long text that
+wraps and makes its row taller (the other cells of such a list keep their words in the middle of the
+row); and `isGroup`, a row that heads a group. The totals row is pinned under the last row and
+carries the backend's figures; its word "Total" stands in the first text column (plan 39 R6).
+
+Alignment (plan 39, NFR-USE-19 v1.6): a number column (money, quantity, date, code, days), its heading
+and its total are centred in both languages (`cell-num`, `header-num`); a text column starts at the start
+edge; a small column (a choice, a tick) is centred (`cell-center`, `header-center`). Every kind of column
+has one width (`SHARED_COLUMN_WIDTHS`, the same numbers as the `--col-*-w` tokens). The proof is
+`tests/e2e/alignment/` (see its README).
 
 ## Dense column types (plan 20, step F3)
 

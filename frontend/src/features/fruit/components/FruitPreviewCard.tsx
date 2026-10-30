@@ -4,11 +4,13 @@
 // equally between the partners, not by the commission shares (C27). Every figure and every working
 // is the backend's (the same function as the save); the screen shows them and works nothing out.
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { CalcInfo, Card, Fact, Notice, Num } from '../../../shared/ui';
+import { CalcInfo, Card, Fact, Notice, Num, Table, type TableColumn } from '../../../shared/ui';
 import { SignedNum } from '../../cashbook';
 import type { FruitPreview } from '../types';
+
+type Part = NonNullable<FruitPreview['numbers']>['parts'][number];
 
 interface FruitPreviewCardProps {
   /** The backend's answer, or undefined while there is nothing to ask about. */
@@ -19,6 +21,7 @@ interface FruitPreviewCardProps {
 
 export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
   const language = useLanguage();
+  const { l10n } = useLocalization();
   const numbers = preview?.numbers ?? null;
   if (preview === undefined) {
     return (
@@ -39,6 +42,35 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
     );
   }
   const credited = numbers.credit.pukhta ?? numbers.credit.account;
+  // Each partner's part with his total now and after (plan 39: the shared table, figures centred).
+  const partColumns: TableColumn<Part>[] = [
+    {
+      id: 'partner',
+      header: <Localized id="fruit-parts-col-partner" />,
+      cell: (part) => displayName(part.partner, language),
+    },
+    {
+      id: 'amount',
+      header: <Localized id="fruit-parts-col-amount" />,
+      kind: 'number',
+      size: 'money',
+      cell: (part) => <Num paisa={part.amount_paisa} />,
+    },
+    {
+      id: 'now',
+      header: <Localized id="fruit-parts-col-now" />,
+      kind: 'number',
+      size: 'money',
+      cell: (part) => <SignedNum paisa={part.total_before_paisa} />,
+    },
+    {
+      id: 'after',
+      header: <Localized id="fruit-parts-col-after" />,
+      kind: 'number',
+      size: 'money',
+      cell: (part) => <SignedNum paisa={part.total_after_paisa} />,
+    },
+  ];
   return (
     <Card compact title={<Localized id="fruit-numbers-title" />}>
       <dl className="grid grid-cols-2 gap-3">
@@ -82,42 +114,18 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
           )}
           {numbers.parts_working === null ? null : <CalcInfo working={numbers.parts_working} />}
         </div>
-        <table className="w-full type-body">
-          <thead>
-            <tr className="text-ink-muted">
-              <Localized id="fruit-parts-col-partner">
-                <th scope="col" className="py-1 pe-2 text-start font-normal" />
-              </Localized>
-              <Localized id="fruit-parts-col-amount">
-                <th scope="col" className="py-1 text-end font-normal" />
-              </Localized>
-              <Localized id="fruit-parts-col-now">
-                <th scope="col" className="py-1 text-end font-normal" />
-              </Localized>
-              <Localized id="fruit-parts-col-after">
-                <th scope="col" className="py-1 text-end font-normal" />
-              </Localized>
-            </tr>
-          </thead>
-          <tbody>
-            {numbers.parts.map((part) => (
-              <tr key={part.partner.id} className="border-t border-border">
-                <th scope="row" className="py-1 pe-2 text-start font-normal">
-                  {displayName(part.partner, language)}
-                </th>
-                <td className="py-1 text-end">
-                  <Num paisa={part.amount_paisa} />
-                </td>
-                <td className="py-1 text-end">
-                  <SignedNum paisa={part.total_before_paisa} />
-                </td>
-                <td className="py-1 text-end">
-                  <SignedNum paisa={part.total_after_paisa} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table
+          label={
+            guests
+              ? l10n.getString('fruit-parts-title-guests')
+              : l10n.getString('fruit-parts-title-home', {
+                  name: displayName(numbers.parts[0]?.partner ?? credited, language),
+                })
+          }
+          columns={partColumns}
+          rows={numbers.parts}
+          rowKey={(part) => String(part.partner.id)}
+        />
         {guests ? (
           <Notice tone="info">
             <Localized id="fruit-parts-note" />

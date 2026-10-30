@@ -81,6 +81,19 @@ body {
   }
 }
 
+/*
+ * A cell of figures has the font and the line of a figure. The line of an Urdu cell is Nastaliq tall, and
+ * a figure in Inter sits on its baseline, 4 px above the middle of the row. With the figure's own
+ * font in the cell, the figure stands in the middle of the row like the words in the cells beside it
+ * (plan 39 R7). The table sets `data-align="num"` on a number column.
+ */
+@layer base {
+  td[data-align='num'] {
+    font-family: var(--font-latin);
+    line-height: var(--leading-latin);
+  }
+}
+
 /* Design system 7: no motion for people who ask for none. */
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -208,6 +221,61 @@ body {
   line-height: var(--leading-latin);
   direction: ltr;
   text-align: end;
+}
+
+/*
+ * The figure of a line in a card of labels and values (a summary, the parts of a payment, a partner's
+ * line; plan 39 R8). The label stands at the start edge, the figure at the other end, and every
+ * figure of the card ends on the same physical right edge: the value has one width (`--value-col-w`)
+ * and is written left to right, so a row with a short figure and a row with a long one end level, in
+ * Urdu and in English. The ⓘ of a row hangs after its figure in room kept for it at the end, so a row
+ * with an ⓘ and a row without one end level too. Spacing between the parts is a margin, never a gap,
+ * because a gap before the ⓘ would push the figure.
+ */
+@utility value-col {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-inline-size: var(--value-col-w);
+  padding-inline-end: var(--target-min);
+  direction: ltr;
+
+  & > button {
+    margin-inline-end: calc(-1 * var(--target-min));
+  }
+
+  & > * + *:not(button) {
+    margin-inline-start: var(--space-1);
+  }
+}
+
+/*
+ * A figure in a cell with something beside it (an ⓘ, a loss mark): the figure stands in the middle of
+ * the column, under the middle of its heading (plan 39 R1), and what goes with it hangs on its sides
+ * in the room that is left. Three columns: room for a mark before the figure, the figure, room for
+ * the ⓘ after it. Left to right in both languages, like every figure.
+ */
+@utility figure-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-1);
+  inline-size: 100%;
+  direction: ltr;
+
+  & > [data-slot='lead'] {
+    grid-column: 1;
+    justify-self: end;
+  }
+
+  & > [data-slot='figure'] {
+    grid-column: 2;
+  }
+
+  & > [data-slot='extra'] {
+    grid-column: 3;
+    justify-self: start;
+  }
 }
 
 /* Only colour and opacity move, at most 150 ms (design system 7). */

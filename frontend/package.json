@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "lint": "eslint --max-warnings 0 . && stylelint \"src/**/*.css\"",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.node.json",
-    "test": "vitest run --project main && vitest run --project sensitive"
+    "test": "vitest run --project main && vitest run --project sensitive",
+    "align": "node tests/e2e/alignment/run.mjs",
+    "align:selftest": "node tests/e2e/alignment/selftest.mjs",
+    "align:sheets": "python3 tests/e2e/alignment/make_sheets.py"
   },
   "dependencies": {
     "@fluent/bundle": "0.19.1",

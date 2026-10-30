@@ -43,7 +43,7 @@ export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCar
               <Localized id="gardens-numbers-amount">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.amount} />
               </dd>
             </div>
@@ -51,7 +51,7 @@ export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCar
               <Localized id="gardens-numbers-balance-before">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.balance_before_paisa} />
               </dd>
             </div>
@@ -59,7 +59,7 @@ export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCar
               <Localized id="gardens-numbers-balance-after">
                 <dt />
               </Localized>
-              <dd className="flex items-center gap-1">
+              <dd className="value-col">
                 <Num paisa={numbers.balance_after_paisa} />
                 <CalcInfo working={numbers.balance_working} inCell />
               </dd>
@@ -68,7 +68,7 @@ export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCar
               <Localized id="gardens-numbers-rent-due-after">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.rent_due_after_paisa} />
               </dd>
             </div>
@@ -78,7 +78,7 @@ export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCar
                   <Localized id="gardens-numbers-left-after">
                     <dt />
                   </Localized>
-                  <dd>
+                  <dd className="value-col">
                     <Num>{String(numbers.qty_left_after)}</Num>
                   </dd>
                 </div>
@@ -86,7 +86,7 @@ export function GardenEntryNumbersCard({ numbers, empty }: GardenEntryNumbersCar
                   <Localized id="trips-sale-other-left-after">
                     <dt />
                   </Localized>
-                  <dd>
+                  <dd className="value-col">
                     <Num>{String(numbers.qty_other_left_after)}</Num>
                   </dd>
                 </div>

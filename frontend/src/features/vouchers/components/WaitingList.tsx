@@ -51,6 +51,7 @@ export function WaitingList({ vouchers, previews, onRemove, disabled }: WaitingL
       id: 'amount',
       header: <Localized id="vouchers-col-amount" />,
       kind: 'number',
+      size: 'money',
       cell: (voucher) => {
         const preview = previews.get(voucher.id);
         return preview === undefined ? null : <Num paisa={preview.amount_paisa} />;
@@ -60,6 +61,7 @@ export function WaitingList({ vouchers, previews, onRemove, disabled }: WaitingL
       id: 'balance',
       header: <Localized id="vouchers-new-balance" />,
       kind: 'number',
+      size: 'money',
       cell: (voucher) => {
         const preview = previews.get(voucher.id);
         return preview === undefined ? null : <Balance balance={preview.new_balance} />;

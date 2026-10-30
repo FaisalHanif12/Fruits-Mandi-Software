@@ -16,11 +16,19 @@ interface PrintGoodsProps {
   paper: Paper;
 }
 
-/** The column types that hold figures: they sit on the physical right edge. */
-const FIGURE_COLUMNS: ReadonlySet<PrintColumn> = new Set(['qty', 'weight', 'rate', 'amount']);
+/** The column types that hold figures: they are centred in their column (plan 39 R1). */
+const FIGURE_COLUMNS: ReadonlySet<PrintColumn> = new Set([
+  'date',
+  'qty',
+  'weight',
+  'rate',
+  'amount',
+]);
 
+/** A column of figures, dates included, is centred with its heading (plan 39 R1). */
 function figureClass(column: PrintColumn): string {
   if (!FIGURE_COLUMNS.has(column)) return '';
+  if (column === 'date') return 'print-num print-col-date';
   return column === 'qty' ? 'print-num print-col-qty' : 'print-num print-col-num';
 }
 

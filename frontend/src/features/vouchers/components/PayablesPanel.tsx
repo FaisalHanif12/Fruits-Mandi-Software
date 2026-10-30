@@ -31,6 +31,7 @@ export function PayablesPanel({ sellerId, personKey }: PayablesPanelProps) {
             id: 'date',
             header: <Localized id="vouchers-col-date" />,
             kind: 'number',
+            size: 'date',
             cell: (posting) => <Num>{isoToDisplayDate(posting.entry_date)}</Num>,
           },
           {
@@ -42,24 +43,28 @@ export function PayablesPanel({ sellerId, personKey }: PayablesPanelProps) {
             id: 'credit',
             header: <Localized id="vouchers-col-credit" />,
             kind: 'number',
+            size: 'money',
             cell: (posting) => <Num paisa={posting.credit_paisa} />,
           },
           {
             id: 'adjusted',
             header: <Localized id="vouchers-col-adjusted" />,
             kind: 'number',
+            size: 'money',
             cell: (posting) => <Num paisa={posting.advance_adjusted_paisa} />,
           },
           {
             id: 'paid',
             header: <Localized id="vouchers-col-paid" />,
             kind: 'number',
+            size: 'money',
             cell: (posting) => <Num paisa={posting.paid_paisa} />,
           },
           {
             id: 'open',
             header: <Localized id="vouchers-col-open" />,
             kind: 'number',
+            size: 'money',
             cell: (posting) => <Num paisa={posting.still_open_paisa} />,
           },
         ];

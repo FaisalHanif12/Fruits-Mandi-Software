@@ -49,7 +49,7 @@ Go through the acceptance checklist line by line. For each item, prove it, with 
 Check against Code Standards Section 6:
 
 - **Consistency.** Only shared components and design tokens are used. There are no raw colours or pixel sizes, and no one-off buttons, inputs or key handlers.
-- **Visual design.** Look at the screenshots in both Urdu and English. Spacing, alignment and hierarchy should be clean. Numbers sit on the physical right edge with tabular digits. Totals line up under their columns.
+- **Visual design.** Look at the screenshots in both Urdu and English. Spacing, alignment and hierarchy should be clean. Numbers use tabular digits; in a table column the numbers, the heading and the total are centred (F17). Totals line up under their columns.
 - **Responsiveness.** Every screen works from 1024 × 600 to 2560 × 1440 with no sideways scrolling, at the supported scaling and zoom levels (NFR-USE-15 to NFR-USE-18).
 - **Rendering.** Urdu never breaks into letters or shows boxes. Numbers and codes never flip inside Urdu text. Right-to-left and left-to-right layouts are both correct. All four states (loading, empty, error, data) are designed.
 - **Behaviour.** The keyboard works exactly as PRD 7.2 and 7.3 say. The language switch loses nothing. No money is calculated in the frontend. No text is hard-coded.

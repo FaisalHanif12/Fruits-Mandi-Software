@@ -39,12 +39,14 @@ export function OpenGardens({ rows }: { rows: readonly DashboardGarden[] }) {
       id: 'balance',
       header: <Localized id="dashboard-gardens-col-balance" />,
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.balance_paisa} />,
     },
     {
       id: 'rent_due',
       header: <Localized id="dashboard-gardens-col-rent-due" />,
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.rent_due_paisa} />,
     },
   ];

@@ -24,18 +24,21 @@ export function DaySummary({ summary }: { summary: DayCloseSummary }) {
       id: 'income',
       header: <Localized id="day-summary-col-income" />,
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.income_paisa} />,
     },
     {
       id: 'expense',
       header: <Localized id="day-summary-col-expense" />,
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.expense_paisa} />,
     },
     {
       id: 'profit',
       header: <Localized id="day-summary-col-profit" />,
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.profit_paisa} />,
     },
   ];

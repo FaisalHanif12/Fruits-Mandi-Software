@@ -41,7 +41,7 @@ export function ShareAmounts({ credits, label }: ShareAmountsProps) {
               </Num>
             </span>
           </span>
-          <span className="flex items-center gap-1">
+          <span className="value-col">
             <Num paisa={credit.amount_paisa} />
             <CalcInfo working={credit.working} inCell />
           </span>

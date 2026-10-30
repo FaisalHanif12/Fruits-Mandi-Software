@@ -9,7 +9,8 @@
  *  - The footer text is a custom property `--print-footer`, set by script on the root element
  *    (shared/print/footer.ts). A <style> element would be refused by the Content Security Policy
  *    (style-src 'self'), a custom property set through the CSS object model is not.
- *  - Numbers sit on the physical right edge with equal-width digits (NFR-USE-19). The numbers
+ *  - Numbers are centred in their column, with their heading and total, in equal-width digits
+ *    (NFR-USE-19 v1.6, plan 39 R1); the figures of a card of lines keep the right edge. The numbers
  *    come from <Num> and <Code>; the class `type-number` they carry gets the print size here.
  *  - Sizes, colours and fonts are tokens (Code Standards F9). Lengths are millimetres.
  *  - Logical properties only (CLAUDE.md rule 8). The one direction a sheet has is its `dir`
@@ -286,6 +287,8 @@ html:has(.print-doc[data-paper='mm80']) {
   break-inside: avoid;
 }
 
+/* A heading is never cut and never broken inside a word: it wraps between words, in the middle of its
+   row (plan 39 R4). */
 .print-table th {
   --print-num-size: var(--print-latin-2);
 
@@ -295,23 +298,32 @@ html:has(.print-doc[data-paper='mm80']) {
   font-weight: var(--weight-strong);
   color: var(--color-ink-muted);
   text-align: start;
+  vertical-align: middle;
+  overflow-wrap: normal;
+  text-wrap: balance;
 }
 
 .print-table td {
   padding: var(--print-gap-1) var(--print-gap-2);
   border-block-end: var(--print-rule) solid var(--color-border);
-  vertical-align: top;
+
+  /* The words of a row stand in the middle of it, top to bottom (plan 39 R7). */
+  vertical-align: middle;
   overflow-wrap: anywhere;
 }
 
-/* A number cell: left to right, on the physical right edge of its cell. The heading above it
-   has the same edge (NFR-USE-19, Code Standards F17). */
-.print-table .print-num,
-.print-amounts .print-num {
+/* A number cell: left to right and CENTRED in its column, in both languages. The heading above it
+   and the total under it are centred the same way (plan 39 R1, NFR-USE-19 v1.6, Code Standards
+   F17). The heading may wrap, the figures never. */
+.print-table .print-num {
   direction: ltr;
-  text-align: end;
+  text-align: center;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.print-table th.print-num {
+  white-space: normal;
 }
 
 .print-table .print-col-num {
@@ -329,7 +341,7 @@ html:has(.print-doc[data-paper='mm80']) {
 /* The buyer's bill in the client's layout (R5): the lines of تفصیل are the backend's own text, one
    under the other, and never wrap inside a line, so "(سیب 8 . 2600)" stays in one piece. */
 .print-r5 td {
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .print-r5-details {
@@ -378,6 +390,12 @@ html:has(.print-doc[data-paper='mm80']) {
   inline-size: 12mm;
 }
 
+/* A date written DD-MM-YYYY with its padding needs 28 mm on A4 and 26 mm on A5, so it never reaches the
+   border of its cell (plan 39 R7). */
+.print-collection .print-col-date {
+  inline-size: 28mm;
+}
+
 /* The name has a width of its own, so the dues stay close to it. The note column is the one that
    takes what remains: the collector writes there, so it has a rule round it and room to write. */
 .print-collection .print-col-party {
@@ -409,7 +427,7 @@ html:has(.print-doc[data-paper='mm80']) {
 }
 
 .print-doc[data-paper='a5'] .print-collection .print-col-date {
-  inline-size: 23mm;
+  inline-size: 26mm;
 }
 
 .print-doc[data-paper='a5'] .print-collection .print-col-days {
@@ -489,10 +507,14 @@ html:has(.print-doc[data-paper='mm80']) {
   max-inline-size: none;
 }
 
-/* The amount column has the width of the amount column of the goods table, at the end side, so the
-   figures of the amounts stand under the figures of the goods (NFR-USE-19). */
+/* The amounts under the goods are a card of labels and values: the figures stand in one column on the
+   physical right edge (plan 39 R8). The column is as wide as the amount column of the goods table. */
 .print-amounts .print-num {
   inline-size: 20mm;
+  direction: ltr;
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .print-amounts th {

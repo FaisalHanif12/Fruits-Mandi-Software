@@ -45,6 +45,7 @@ export function BillsPanel({ accountId, personKey, effects }: BillsPanelProps) {
             id: 'date',
             header: <Localized id="vouchers-col-date" />,
             kind: 'number',
+            size: 'date',
             cell: (bill) => <Num>{isoToDisplayDate(bill.entry_date)}</Num>,
           },
           {
@@ -56,18 +57,21 @@ export function BillsPanel({ accountId, personKey, effects }: BillsPanelProps) {
             id: 'amount',
             header: <Localized id="vouchers-col-bill" />,
             kind: 'number',
+            size: 'money',
             cell: (bill) => <Num paisa={bill.amount_paisa} />,
           },
           {
             id: 'open',
             header: <Localized id="vouchers-col-open" />,
             kind: 'number',
+            size: 'money',
             cell: (bill) => <Num paisa={bill.open_paisa} />,
           },
           {
             id: 'days',
             header: <Localized id="vouchers-col-days" />,
             kind: 'number',
+            size: 'qty',
             cell: (bill) => <Num>{String(bill.days)}</Num>,
           },
           ...(effects === null
@@ -83,7 +87,7 @@ export function BillsPanel({ accountId, personKey, effects }: BillsPanelProps) {
                     }
                     const full = !isPositivePaisa(effect.still_open_paisa);
                     return (
-                      <span className="flex flex-wrap items-baseline gap-x-2 text-money-in">
+                      <span className="flex flex-wrap items-center gap-x-2 text-money-in">
                         <Check aria-hidden="true" className="size-icon-sm self-center" />
                         <Num paisa={effect.settled_paisa} />
                         <Localized id={full ? 'vouchers-effect-full' : 'vouchers-effect-part'} />

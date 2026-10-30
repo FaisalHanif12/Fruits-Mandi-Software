@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.9 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026 and 27-10-2026) |
-| Date | 27 October 2026 |
+| Version | 1.10 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026 and 30-10-2026) |
+| Date | 30 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.8 (the master), NFR v1.5, Tech Stack v1.6 |
+| Depends on | PRD v1.9 (the master), NFR v1.6, Tech Stack v1.7 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -243,7 +243,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 |---|---|
 | F15 | Every screen uses the layout grid from `shared/ui` (12 columns, gutters from tokens). Fields line up on that grid. |
 | F16 | Labels sit above fields, aligned to the field's start edge (right edge in RTL) |
-| F17 | Numbers use tabular digits and sit on the **physical right edge** of their cell in every table, grid, tile and print, so units line up under units (NFR-USE-19). Number cells use `direction: ltr; text-align: end`, set once in `shared/grid` column types and the `<Num>` component. |
+| F17 | Numbers use tabular digits and are written left to right. In every table, grid and print column, a number cell, its heading and its total are **centred** (NFR-USE-19, v1.10): number cells use `direction: ltr; text-align: center`, set once in `shared/grid` column types, `shared/ui/Table` and the print tables. Text columns and their headings use `text-align: start`. In a label and value card or tile, the value sits on the physical right edge (`direction: ltr; text-align: end`) through `<Num>`. Example: 17 and 250 centred under تعداد / Quantity. |
 | F18 | In grids, column widths are set per column type (money, qty, account, date) in `shared/grid`, so the same column type has the same width everywhere |
 | F19 | Totals rows align exactly under their columns |
 
@@ -260,7 +260,7 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 
 | # | Rule |
 |---|---|
-| F24 | Use logical CSS properties only (`margin-inline-start`, Tailwind `ms-`, `pe-`, `start-`, `text-align: end`). MUST NOT use `left`/`right` or `ml-`/`pr-`. Lint rule enforces this. (Number cells reach the physical right edge with `direction: ltr; text-align: end`, so they need no exception.) |
+| F24 | Use logical CSS properties only (`margin-inline-start`, Tailwind `ms-`, `pe-`, `start-`, `text-align: end`). MUST NOT use `left`/`right` or `ml-`/`pr-`. Lint rule enforces this. (Number cells use `text-align: center`, or `direction: ltr; text-align: end` in a card, so they need no exception.) |
 | F25 | Every number, code, phone and truck number inside text uses `<Num>` or `<Code>` (bidi isolation, NFR-URD-13) |
 | F26 | Direction-sensitive icons (arrows, chevrons, "back") are mirrored in RTL; others are not |
 
@@ -435,3 +435,4 @@ A change is done only when every box is ticked:
 | 1.7 | 23-10-2026 | Approved by Umar (D5-Q1): one exception to the no-float rule, at the Excel export boundary only (M3, M13). |
 | 1.8 | 23-10-2026 | Approved by Umar: the same exception also covers whole-number quantities, through `count_as_f64` in the same file (M13). |
 | 1.9 | 27-10-2026 | Approved by Umar (PRD v1.8): account and master codes by type, short code = running number (4.2). |
+| 1.10 | 30-10-2026 | Approved by Umar (PRD v1.9): number cells, their headings and totals centred in table columns; values in cards stay on the right edge (F17, F24). |

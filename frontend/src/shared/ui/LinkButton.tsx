@@ -14,7 +14,7 @@ export function LinkButton({ children, onClick }: LinkButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="type-body inline-flex min-h-target items-center self-start rounded-1 text-primary underline transition-calm"
+      className="type-body inline-flex min-h-target items-center self-start rounded-1 text-start text-primary underline transition-calm"
     >
       {children}
     </button>

@@ -80,7 +80,7 @@ export function PurchaseNumbersCard({ numbers, empty }: PurchaseNumbersCardProps
               className={`flex items-center justify-between gap-3 border-b border-border py-1 text-ink ${line.emphasis === true ? 'type-label' : 'type-body'}`}
             >
               <dt>{line.label}</dt>
-              <dd className="flex items-center gap-1">
+              <dd className="value-col">
                 <Num paisa={line.paisa} />
                 {line.working === undefined ? null : <CalcInfo working={line.working} inCell />}
               </dd>

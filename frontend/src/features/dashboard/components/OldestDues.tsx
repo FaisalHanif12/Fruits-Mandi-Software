@@ -73,12 +73,14 @@ export function OldestDues({ rows }: { rows: readonly DashboardDue[] }) {
       id: 'balance',
       header: <Localized id="dashboard-dues-col-balance" />,
       kind: 'number',
+      size: 'money',
       cell: (row) => <Num paisa={row.balance_paisa} />,
     },
     {
       id: 'days',
       header: <Localized id="dashboard-dues-col-days" />,
       kind: 'number',
+      size: 'qty',
       cell: (row) => (row.days === null ? null : <Num>{row.days}</Num>),
     },
   ];

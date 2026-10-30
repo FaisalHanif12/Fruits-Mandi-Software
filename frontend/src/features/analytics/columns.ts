@@ -357,8 +357,14 @@ export function analyticsColumns(
     );
     const heading = column.heading;
     // The rank of H shares its column with the headings of the three lists, which are words.
+    // The days to pay (C) has a long heading ("Days to pay (average)"): it takes the room of a figure,
+    // so the heading has two lines at most (plan 39 R4).
     const named: ListColumn<AnalyticsRowView> =
-      column.key === 'rank' ? { ...base, type: 'short', wrap: true } : base;
+      column.key === 'rank'
+        ? { ...base, type: 'short', wrap: true }
+        : column.key === 'avg_days'
+          ? { ...base, type: 'figure' }
+          : base;
     return [
       heading === null
         ? named

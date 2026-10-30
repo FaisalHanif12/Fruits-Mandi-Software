@@ -94,18 +94,21 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
       id: 'bikri',
       header: l10n.getString('gardens-arrival-lot-bikri'),
       kind: 'number',
+      size: 'qty',
       cell: (lot) => <Num>{String(lot.bikri_number)}</Num>,
     },
     {
       id: 'date',
       header: l10n.getString('purchases-col-date'),
       kind: 'number',
+      size: 'date',
       cell: (lot) => <Code>{isoToDisplayDate(lot.entry_date)}</Code>,
     },
     {
       id: 'qty',
       header: l10n.getString('purchases-lot-qty-sold'),
       kind: 'number',
+      size: 'qty',
       cell: (lot) => <Num>{String(lot.qty_sold)}</Num>,
     },
   ];

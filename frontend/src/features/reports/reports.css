@@ -41,17 +41,23 @@
   font-weight: var(--weight-strong);
 }
 
-/* A balance: the figure on the physical right edge, its side word in a slot of fixed width after
-   it, so the figures of the column keep one edge whatever the word is (NFR-USE-19). */
+/* A balance: the figure CENTRED in its column, under the middle of its heading (plan 39 R1), and its
+   side word after it in a slot of fixed width. The same slot is kept before the figure, so the figure
+   is in the middle of the cell whatever the word is (NFR-USE-19). The cell is left to right, so the
+   word is on the physical right in both languages. */
 .print-report .print-balance {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: var(--print-unit-slot) auto var(--print-unit-slot);
   align-items: baseline;
-  justify-content: flex-end;
-  gap: var(--print-gap-2);
+  column-gap: var(--print-gap-2);
+}
+
+.print-report .print-balance > :first-child {
+  grid-column: 2;
 }
 
 .print-report .print-balance-side {
-  inline-size: var(--print-unit-slot);
+  grid-column: 3;
   text-align: start;
 }
 

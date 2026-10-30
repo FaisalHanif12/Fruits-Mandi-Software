@@ -50,6 +50,7 @@ export function AdvanceHistory({ sellerId, effects = null }: AdvanceHistoryProps
             id: 'date',
             header: <Localized id="vouchers-col-date" />,
             kind: 'number',
+            size: 'date',
             cell: (item) => <Num>{isoToDisplayDate(item.entry_date)}</Num>,
           },
           {
@@ -71,18 +72,21 @@ export function AdvanceHistory({ sellerId, effects = null }: AdvanceHistoryProps
             id: 'given',
             header: <Localized id="vouchers-col-amount" />,
             kind: 'number',
+            size: 'money',
             cell: (item) => <Num paisa={item.given_paisa} />,
           },
           {
             id: 'adjusted',
             header: <Localized id="vouchers-col-adjusted" />,
             kind: 'number',
+            size: 'money',
             cell: (item) => <Num paisa={item.adjusted_paisa} />,
           },
           {
             id: 'open',
             header: <Localized id="vouchers-col-open" />,
             kind: 'number',
+            size: 'money',
             cell: (item) => <Num paisa={item.open_paisa} />,
           },
           ...(effects === null

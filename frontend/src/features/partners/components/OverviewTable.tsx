@@ -24,10 +24,15 @@ interface OverviewTableProps {
   more: boolean;
 }
 
-/** A heading of a number column: on the physical right edge, over its figures (NFR-USE-19). */
+/** A heading of a number column: centred over its figures (NFR-USE-19, plan 39 R1). */
 function NumberHead({ labelId }: { labelId: string }) {
   return (
-    <th scope="col" dir="ltr" className="px-3 py-2 text-end font-normal">
+    <th
+      scope="col"
+      dir="ltr"
+      data-align="num"
+      className="px-3 py-2 text-center align-middle font-normal"
+    >
       <Localized id={labelId}>
         <span dir="auto" className="inline-block" />
       </Localized>
@@ -35,15 +40,14 @@ function NumberHead({ labelId }: { labelId: string }) {
   );
 }
 
+/** A label and its figure on one line: the label at the start edge, the figure at the right edge. */
 function Detail({ labelId, children }: { labelId: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex min-w-0 items-baseline justify-between gap-3">
       <Localized id={labelId}>
         <dt className="type-body text-ink-muted" />
       </Localized>
-      <dd dir="ltr" className="type-body text-end">
-        {children}
-      </dd>
+      <dd className="value-col type-body">{children}</dd>
     </div>
   );
 }
@@ -95,7 +99,7 @@ export function OverviewTable({ rows, more }: OverviewTableProps) {
       >
         <thead className="bg-surface-sunken text-ink-muted">
           <tr>
-            <th scope="col" className="px-3 py-2 text-start font-normal">
+            <th scope="col" data-align="text" className="px-3 py-2 text-start font-normal">
               <Localized id="partners-column-partner" />
             </th>
             {/* The کل رقم comes first among the figures: it is the one number he asks for. */}
@@ -103,7 +107,7 @@ export function OverviewTable({ rows, more }: OverviewTableProps) {
             <NumberHead labelId="partners-share-now" />
             <NumberHead labelId="partners-metric-profit" />
             <NumberHead labelId="partners-metric-net" />
-            <th scope="col" className="px-3 py-2 text-end font-normal">
+            <th scope="col" data-align="centre" className="px-3 py-2 text-center font-normal">
               <span className="sr-only">
                 <Localized id="partners-open-statement" />
               </span>
@@ -129,20 +133,20 @@ export function OverviewTable({ rows, more }: OverviewTableProps) {
                       </span>
                     </span>
                   </th>
-                  <td dir="ltr" className="px-3 py-2 text-end type-section">
+                  <td dir="ltr" data-align="num" className="px-3 py-2 text-center">
                     <SignedNum paisa={row.total_paisa} />
                   </td>
-                  <td dir="ltr" className="px-3 py-2 text-end">
+                  <td dir="ltr" data-align="num" className="px-3 py-2 text-center">
                     <Num>{`${formatBps(row.share_bps)}%`}</Num>
                   </td>
-                  <td dir="ltr" className="px-3 py-2 text-end">
+                  <td dir="ltr" data-align="num" className="px-3 py-2 text-center">
                     <Num paisa={row.month_profit_paisa} />
                   </td>
-                  <td dir="ltr" className="px-3 py-2 text-end">
+                  <td dir="ltr" data-align="num" className="px-3 py-2 text-center">
                     <SignedNum paisa={row.month_net_paisa} />
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex justify-end gap-2">
+                  <td data-align="centre" className="px-3 py-2">
+                    <div className="flex justify-center gap-2">
                       <Button
                         accessibleName={l10n.getString('partners-open-statement-of', { name })}
                         onClick={() => {

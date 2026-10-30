@@ -1,19 +1,34 @@
 // Fixed widths and looks per column type (Code Standards F17, F18): the same type has the same
-// width on every screen. Number-like cells sit on the physical right edge in both languages
-// (NFR-USE-19); the CSS class `cell-num` does that in grid.css.
+// width on every screen. Number-like cells, their heading and their total are centred in the column,
+// written left to right, in both languages (NFR-USE-19 v1.6, plan 39 R1); the CSS classes `cell-num`
+// and `header-num` do that in grid.css.
 
 import type { EntryColumnType } from './types';
+
+/**
+ * The widths that are the same in every grid and table (plan 39 R5, F18): a money column, a quantity
+ * column, a date column and a code column. `styles/tokens.css` has the same numbers as `--col-*-w`
+ * for the plain tables; tests/unit/column-width-tokens.test.ts keeps the two lists equal.
+ */
+export const SHARED_COLUMN_WIDTHS = {
+  code: 120,
+  money: 140,
+  qty: 100,
+  date: 140,
+  datetime: 170,
+  status: 120,
+} as const;
 
 /** Column width in pixels, one per type (F18). */
 export const COLUMN_WIDTHS: Record<EntryColumnType, number> = {
   account: 280,
-  money: 140,
-  qty: 100,
+  money: SHARED_COLUMN_WIDTHS.money,
+  qty: SHARED_COLUMN_WIDTHS.qty,
   weight: 120,
   rate: 160,
-  date: 140,
+  date: SHARED_COLUMN_WIDTHS.date,
   text: 240,
-  calc: 140,
+  calc: SHARED_COLUMN_WIDTHS.money,
   label: 280,
   picker: 200,
   choice: 120,
@@ -116,17 +131,17 @@ export type ListColumnType =
   | 'balance';
 
 export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
-  code: 120,
+  code: SHARED_COLUMN_WIDTHS.code,
   name: 260,
   text: 200,
   // A phrase from a short fixed list, such as "sold by weight" (Urdu needs about 135 px for it).
   choice: 160,
-  number: 140,
-  money: 140,
-  date: 140,
-  datetime: 170,
-  status: 120,
-  count: 100,
+  number: SHARED_COLUMN_WIDTHS.money,
+  money: SHARED_COLUMN_WIDTHS.money,
+  date: SHARED_COLUMN_WIDTHS.date,
+  datetime: SHARED_COLUMN_WIDTHS.datetime,
+  status: SHARED_COLUMN_WIDTHS.status,
+  count: SHARED_COLUMN_WIDTHS.qty,
   figure: 120,
   short: 140,
   // The figure keeps the width of a money column and the side word has its own slot after it.
@@ -140,7 +155,7 @@ export const LIST_COLUMN_WIDTHS: Record<ListColumnType, number> = {
  */
 export const LIST_GROW_MIN_WIDTH = 160;
 
-/** Codes and numbers are Latin digits, written left to right and set against the right edge. */
+/** Codes and numbers are Latin digits, written left to right and centred in their column (R1). */
 export function isListNumberLike(type: ListColumnType): boolean {
   return (
     type === 'code' ||

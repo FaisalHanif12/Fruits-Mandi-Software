@@ -137,7 +137,7 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
               <Localized id="gardens-close-money-in">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.money_in_paisa} />
               </dd>
             </div>
@@ -145,7 +145,7 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
               <Localized id="gardens-close-total-cost">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.total_cost_paisa} />
               </dd>
             </div>
@@ -155,7 +155,7 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
               <Localized id={loss ? 'glossary-tijarati-nuqsan' : 'glossary-tijarati-munafa'}>
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.result_paisa} />
               </dd>
             </div>
@@ -163,7 +163,7 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
               <Localized id="gardens-close-balance">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={numbers.balance_paisa} />
               </dd>
             </div>

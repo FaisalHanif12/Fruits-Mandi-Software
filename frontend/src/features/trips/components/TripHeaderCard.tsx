@@ -26,7 +26,7 @@ function ResultLine({ trip }: TripCardProps) {
       <Localized id={loss ? 'glossary-tijarati-nuqsan' : 'glossary-tijarati-munafa'}>
         <span />
       </Localized>
-      <span className="flex items-center gap-1">
+      <span className="value-col">
         <Num paisa={trip.result_paisa} />
         <CalcInfo working={trip.result_working} inCell />
       </span>
@@ -170,7 +170,7 @@ export function TripFiguresCard({ trip }: TripCardProps) {
                   className="flex items-center justify-between gap-3 border-b border-border py-1 type-body text-ink"
                 >
                   <dt>{l10n.getString(row.message)}</dt>
-                  <dd>
+                  <dd className="value-col">
                     <Num paisa={row.paisa} />
                   </dd>
                 </div>
@@ -181,7 +181,7 @@ export function TripFiguresCard({ trip }: TripCardProps) {
                 <Localized id="glossary-commission">
                   <dt />
                 </Localized>
-                <dd className="flex items-center gap-1">
+                <dd className="value-col">
                   <Num paisa={trip.commission_paisa} />
                   <CalcInfo working={trip.commission_working} inCell />
                 </dd>

@@ -95,7 +95,7 @@ export interface EntryColumn {
   readonly minWidth?: number;
   /** Grey hint inside an empty cell, for example the last rate. Never saved (PRD FR-7.53). */
   readonly placeholder?: (row: EntryRow) => string | undefined;
-  /** The hint is a number: it stays on the physical right edge like the figures (NFR-USE-19). */
+  /** The hint is a number: it is centred like the figures (NFR-USE-19, plan 39 R1). */
   readonly hintIsNumber?: boolean;
   /**
    * The grey hint of an empty cell is the text the backend sent for this field (the grid's

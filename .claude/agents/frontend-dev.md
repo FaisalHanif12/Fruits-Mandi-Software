@@ -48,7 +48,7 @@ Do not edit `backend/` or `docs/`. If you need a change there, message the owner
 - **Keyboard behaviour follows PRD 7.2 and 7.3 exactly.** Enter stops on every editable cell, including the ones the app filled. Arrow keys follow what the user sees.
 - **Unsaved data lives in the screen's store or form state,** never only inside a grid. A language switch re-creates grids and must lose nothing.
 - **Never fill a rate or money from a hint.** The last rate is placeholder text only.
-- **Design tokens only.** Colours, spacing, font sizes and radii come from `styles/tokens.css`. Numbers use tabular digits and sit on the physical right edge of their cell.
+- **Design tokens only.** Colours, spacing, font sizes and radii come from `styles/tokens.css`. Numbers use tabular digits; in a table column they, their heading and their total are centred, and in a card the value sits on the physical right edge (F17).
 - **Every screen handles four states:** loading, empty (with a helpful message and a button), error, and data.
 
 ## Working with the team

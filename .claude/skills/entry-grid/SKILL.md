@@ -45,7 +45,7 @@ Every column uses one of the shared types from `shared/grid/column_types.ts`. Ne
 | `text` | yes | Urdu text uses `RomanUrduInput` | Notes, narration |
 | `calc` | **no** | a value from the preview | Has the ⓘ (`CalcInfo`) that shows the backend's working (FR-7.43) |
 
-Number cells (`money`, `qty`, `rate`, `calc`) use tabular digits and sit on the **physical right edge** of the cell in both languages (NFR-USE-19, Code Standards F17).
+Number cells (`money`, `qty`, `rate`, `calc`) use tabular digits and are **centred** in the cell, under the centred heading, in both languages (NFR-USE-19, Code Standards F17).
 
 ## Keyboard behaviour (PRD FR-7.13 to FR-7.20)
 

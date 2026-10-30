@@ -19,7 +19,7 @@ function Figure({ label, paisa }: { label: string; paisa: Paisa }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="type-body text-ink-muted">{label}</dt>
-      <dd className={`type-number ${isNegativePaisa(paisa) ? 'text-due' : 'text-ink'}`}>
+      <dd className={`value-col type-number ${isNegativePaisa(paisa) ? 'text-due' : 'text-ink'}`}>
         <Num paisa={paisa} />
       </dd>
     </div>

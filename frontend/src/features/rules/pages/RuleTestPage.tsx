@@ -22,6 +22,7 @@ import {
   ErrorNotice,
   Field,
   fieldError,
+  FigureCell,
   LinkButton,
   MoneyInput,
   Num,
@@ -125,15 +126,13 @@ const RESULT_COLUMNS: TableColumn<ChargeTest>[] = [
     id: 'amount',
     header: <Localized id="rules-test-amount" />,
     kind: 'number',
-    // The ⓘ has a slot of its own at the start of the cell, so the icons line up and the number
-    // sits on the physical right edge (NFR-USE-19).
+    size: 'money',
+    // The figure stands in the middle of the column, under its heading; the ⓘ hangs after it
+    // (NFR-USE-19, plan 39 R1).
     cell: (charge) => (
-      <div className="flex items-center justify-between gap-1">
-        <span className="inline-flex size-control-compact shrink-0 items-center justify-center">
-          <CalcInfo working={charge.working} />
-        </span>
+      <FigureCell extra={<CalcInfo working={charge.working} inCell />}>
         <Num paisa={charge.amount_paisa} />
-      </div>
+      </FigureCell>
     ),
   },
 ];

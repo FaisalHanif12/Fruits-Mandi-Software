@@ -34,7 +34,7 @@ function Line({
       className={`flex items-center justify-between gap-3 border-b border-border py-1 text-ink ${strong ? 'type-label' : 'type-body'}`}
     >
       <dt>{label}</dt>
-      <dd className="flex items-center gap-1">{children}</dd>
+      <dd className="value-col">{children}</dd>
     </div>
   );
 }
@@ -175,10 +175,8 @@ export function GardenFiguresCard({ garden }: GardenCardProps) {
             </dl>
             <dl className="flex flex-col">
               <Line label={l10n.getString('glossary-commission')}>
-                <span className="flex items-center gap-1">
-                  <Num paisa={garden.commission_paisa} />
-                  <CalcInfo working={garden.commission_working} inCell />
-                </span>
+                <Num paisa={garden.commission_paisa} />
+                <CalcInfo working={garden.commission_working} inCell />
               </Line>
             </dl>
             <BalanceLines garden={garden} />

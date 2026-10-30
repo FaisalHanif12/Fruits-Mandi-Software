@@ -17,6 +17,9 @@ import { Fragment, type ReactNode } from 'react';
 const NUMBER = String.raw`\d+(?:,\d{3})*(?:\.\d+)?`;
 const NUMBER_RUN = new RegExp(String.raw`${NUMBER}(?:[-/:]${NUMBER})*`, 'g');
 
+/** A text of digits and the signs between them only. */
+const FIGURES_ONLY = /^[\d\s.,:/+\-−–()%]+$/;
+
 /** True when the text holds a number, which the isolate protects. */
 export function hasNumberRun(text: unknown): text is string {
   return typeof text === 'string' && new RegExp(NUMBER_RUN.source).test(text);
@@ -43,4 +46,31 @@ export function NumberRuns({ text }: { text: string }): ReactNode {
 /** The cell renderer AG Grid uses for a text cell that holds a number run. */
 export function NumberRunsCell({ value }: ICellRendererParams) {
   return typeof value === 'string' ? <NumberRuns text={value} /> : null;
+}
+
+/**
+ * The words of a cell in a list whose rows grow with a long column (`list-grid-wrap`), put in the
+ * middle of the row top to bottom (plan 39 R7). One inner element holds the whole text, so the spaces
+ * next to a number stay (a flex container would trim them): `cell-fill` centres that one element.
+ */
+export function FillCell({ value }: ICellRendererParams) {
+  // A text that is only figures (a trip's number and day) has the line of a figure, so it stands in the
+  // middle of the row like the figures beside it, not 4 px higher on the baseline of an Urdu line.
+  const figures = typeof value === 'string' && FIGURES_ONLY.test(value);
+  return (
+    <span className="cell-fill">
+      <span className={figures ? 'cell-latin' : undefined}>
+        {typeof value === 'string' ? <NumberRuns text={value} /> : null}
+      </span>
+    </span>
+  );
+}
+
+/** The same for a cell of figures, which is drawn as it is (no number run inside it). */
+export function FillNumberCell({ value }: ICellRendererParams) {
+  return (
+    <span className="cell-fill">
+      <span>{typeof value === 'string' ? value : null}</span>
+    </span>
+  );
 }

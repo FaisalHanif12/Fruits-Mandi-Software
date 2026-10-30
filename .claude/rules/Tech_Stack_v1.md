@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.6 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026 and 27-10-2026) |
-| Date | 27 October 2026 |
+| Version | 1.7 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026) |
+| Date | 30 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.8 (the master), NFR v1.5 |
+| Depends on | PRD v1.9 (the master), NFR v1.6 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---
@@ -165,7 +165,7 @@ common-saved-toast = { $kind ->
 | Direction follows the language | One `language` value in the app store drives everything: `<html dir lang>` (`rtl`/`ur` or `ltr`/`en`), Radix `DirectionProvider`, the Fluent bundle, the chart wrapper and the grids. Styles use only logical properties (`ps-`, `me-`, `start`, `end`), so one stylesheet serves both directions. |
 | Switching without losing work | Unsaved entry data lives in Zustand stores and React Hook Form state that sit above the screens, never inside a grid. On a switch, AG Grid instances are re-created (`enableRtl` is fixed at creation) from that data, and the focused row and column are restored. Target: NFR-SPD-19. |
 | Numbers and codes inside Urdu text never flip | Every number, code, phone and truck number is wrapped in `<bdi>` (or `unicode-bidi: isolate`). Shared `<Num>` and `<Code>` components do this, so nobody forgets. |
-| Money and number columns | `font-variant-numeric: tabular-nums`; each number cell is set to `direction: ltr; text-align: end`, which puts numbers on the cell's physical right edge so units line up (NFR-USE-19). Shared grid column types and the `<Num>` component do this. |
+| Money and number columns | `font-variant-numeric: tabular-nums`; in a table, grid or print column each number cell, its heading and its total are centred (`direction: ltr; text-align: center`, NFR-USE-19, v1.7); in a label and value card the value is on the physical right edge (`text-align: end`). Shared grid column types, `shared/ui/Table`, the print tables and the `<Num>` component do this. |
 | Urdu letter variants | Search keys are normalised in Rust before saving and before searching: ي→ی, ى→ی, ك→ک, ه (Arabic heh)→ہ, ۃ→ہ, while ھ (do-chashmi heh) stays as it is, remove diacritics (zabar, zer, pesh, shadd), unify spaces and zero-width joiners. Example: "اكرم" and "اکرم" both match. |
 | Sorting | ICU4X collator with the Urdu (`ur`) locale in Rust |
 | Search in both scripts | Every named record has a required English name. Each record keeps three search keys, built in Rust on save: the normalised Urdu name, the lower-case English name, and a phonetic key (the English name with vowels and doubled letters removed, so "arshd" and "arshad" give the same key). Details in Section 4.7. |
@@ -439,3 +439,4 @@ Urdu words in code: we use simple English transliteration for business terms tha
 | 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): module names trips, purchases, gardens, ventures and fruit (5.2). |
 | 1.5 | 22-10-2026 | Approved by Umar (PRD v1.7): the tag is in the search index (4.7). |
 | 1.6 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type, short code = running number, empty-text search for a click (4.7). |
+| 1.7 | 30-10-2026 | Approved by Umar (PRD v1.9): numbers centred under their column heading (4.3). |

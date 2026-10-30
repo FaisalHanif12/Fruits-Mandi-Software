@@ -30,6 +30,7 @@ export function columnWidth(kind: ReportColumnKind, key: string, signed = false)
       return LIST_COLUMN_WIDTHS.figure;
     case 'number':
       // A rank has the room of a short word: the headings of H are written in its column.
+      if (key === 'avg_days') return LIST_COLUMN_WIDTHS.figure;
       return key === 'rank' ? LIST_COLUMN_WIDTHS.short : LIST_COLUMN_WIDTHS.count;
     case 'balance':
       return LIST_COLUMN_WIDTHS.balance;

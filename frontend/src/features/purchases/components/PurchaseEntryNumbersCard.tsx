@@ -41,6 +41,7 @@ export function PurchaseEntryNumbersCard({ lines, total, empty }: PurchaseEntryN
       id: 'paid',
       header: <Localized id="purchases-line-paid-now" />,
       kind: 'number',
+      size: 'money',
       ...(total === null ? {} : { total: <Num paisa={total} /> }),
       cell: (line) =>
         line.numbers === null ? (
@@ -58,6 +59,7 @@ export function PurchaseEntryNumbersCard({ lines, total, empty }: PurchaseEntryN
       id: 'total',
       header: <Localized id="purchases-line-total-cost" />,
       kind: 'number',
+      size: 'money',
       cell: (line) => (line.numbers === null ? '' : <Num paisa={line.numbers.total_cost} />),
     },
   ];

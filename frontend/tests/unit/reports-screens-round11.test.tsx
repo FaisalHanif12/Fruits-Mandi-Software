@@ -352,7 +352,10 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(lines[5]).toContain('0');
       // A seller's rate is the lot's, so the backend sends none and the cell is blank.
       expect(cell('0', 'rate')).toBe('');
-      expect(cell('0', 'amount')).toBe('24,316');
+      // The cells of a list whose rows grow are drawn by the grid a moment after the row (plan 39 R7).
+      await waitFor(() => {
+        expect(cell('0', 'amount')).toBe('24,316');
+      }, SLOW_MS);
     });
 
     it('a one-time buyer is asked for with his own key, so his slip is his and not the whole account’s', async () => {

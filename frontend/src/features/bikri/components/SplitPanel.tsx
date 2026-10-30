@@ -30,7 +30,7 @@ export function SplitPanel({ preview }: SplitPanelProps) {
           <Localized id="bikri-split-shared">
             <dt />
           </Localized>
-          <dd className="flex items-center gap-1">
+          <dd className="value-col">
             <Num paisa={preview.summary.shared_income} />
             <CalcInfo working={preview.summary.workings.shared_income} inCell />
           </dd>
@@ -48,7 +48,7 @@ export function SplitPanel({ preview }: SplitPanelProps) {
                 </Num>
               </span>
             </dt>
-            <dd className="flex items-center gap-1">
+            <dd className="value-col">
               <Num paisa={part.income_paisa} />
               <CalcInfo working={part.working} inCell />
             </dd>

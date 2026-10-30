@@ -57,7 +57,7 @@ function Rows({ lines, negativeNet }: { lines: readonly Line[]; negativeNet: boo
             <Localized id={line.labelId}>
               <dt />
             </Localized>
-            <dd>
+            <dd className="value-col">
               <Num paisa={line.paisa} />
             </dd>
           </div>
@@ -150,7 +150,7 @@ export function SavedSummary({ detail }: { detail: BikriDetail }) {
               <Localized id="bikri-split-shared">
                 <dt />
               </Localized>
-              <dd>
+              <dd className="value-col">
                 <Num paisa={totals.shared_income} />
               </dd>
             </div>

@@ -29,7 +29,7 @@ import { formatPaisa, formatPaisaValue, groupDigits, useGrouping, type Paisa } f
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
 import { directionOf, useLanguage } from '../i18n';
 import './agGridSetup';
-import { NumberRuns, NumberRunsCell, hasNumberRun } from './NumberRuns';
+import { FillCell, FillNumberCell, NumberRuns, NumberRunsCell, hasNumberRun } from './NumberRuns';
 import {
   LIST_COLUMN_WIDTHS,
   LIST_GROW_MIN_WIDTH,
@@ -87,8 +87,8 @@ export interface ListColumn<T> {
    */
   readonly wrap?: boolean | undefined;
   /**
-   * A short word set after the figure in a slot of fixed width, so figures keep one right edge
-   * whatever the word is (a balance's side, بنام or جمع; NFR-USE-19). The total row asks for the
+   * A short word set after the figure, which stays in the middle of the column, whatever the word is
+   * (a balance's side, بنام or جمع; NFR-USE-19, plan 39 R1). The total row asks for the
    * word of this column under the key `<field>:unit` of the totals values.
    */
   readonly unit?: ((row: T, context: ListContext) => string) | undefined;
@@ -233,6 +233,8 @@ function toColDef<T>(
   context: ListContext,
   total: Record<string, string> | undefined,
   sort: { value: SortInput | null } | undefined,
+  /** The rows of this list grow with a long column: the other cells keep their words in the middle. */
+  growing: boolean,
 ): ColDef<T> {
   const unitOf = column.unit;
   const sortKey = sortKeyOf(column, context.language);
@@ -267,6 +269,8 @@ function toColDef<T>(
           : column.value(params.data, context),
     cellClass: [
       ...(isListNumberLike(column.type) ? ['cell-num'] : []),
+      // A name: words at the start edge, even when it is made of digits (a trip is its number and day).
+      ...(column.type === 'name' ? ['cell-name'] : []),
       ...(column.wrap === true ? ['cell-wrap'] : []),
     ],
     ...(column.tone === undefined
@@ -280,28 +284,36 @@ function toColDef<T>(
           },
         }),
     ...(column.wrap === true ? { wrapText: true, autoHeight: true } : {}),
-    // The heading of a number column sits on the same edge as its figures (NFR-USE-19).
-    headerClass: [
-      ...(isListNumberLike(column.type) ? ['header-num'] : []),
-      // The figure is set back from the edge by the slot of its word, so its heading is too.
-      ...(column.unit === undefined ? [] : ['header-unit']),
-    ],
+    // The heading of a number column is centred over its figures (NFR-USE-19, plan 39 R1).
+    headerClass: isListNumberLike(column.type) ? ['header-num'] : [],
     ...(column.script === undefined
       ? {}
       : {
-          cellRenderer: (params: ICellRendererParams<T>) => (
-            <span lang={column.script?.(context.language)} className="cell-lang">
-              {typeof params.value === 'string' ? <NumberRuns text={params.value} /> : ''}
-            </span>
-          ),
+          cellRenderer: (params: ICellRendererParams<T>) => {
+            const words = (
+              <span lang={column.script?.(context.language)} className="cell-lang">
+                {typeof params.value === 'string' ? <NumberRuns text={params.value} /> : ''}
+              </span>
+            );
+            return growing ? <span className="cell-fill">{words}</span> : words;
+          },
         }),
     // A text cell with a number inside keeps it in order and in Inter in Urdu (F25). Only a cell that
-    // holds a number gets the renderer; every other cell is drawn by the grid as before.
+    // holds a number gets the renderer; every other cell is drawn by the grid as before. In a list
+    // whose rows grow with a long column, every other cell is put in the middle of its row too.
     ...(column.script === undefined && unitOf === undefined && !isListNumberLike(column.type)
-      ? {
-          cellRendererSelector: (params: ICellRendererParams<T>) =>
-            hasNumberRun(params.value) ? { component: NumberRunsCell } : undefined,
-        }
+      ? growing
+        ? { cellRenderer: FillCell }
+        : {
+            cellRendererSelector: (params: ICellRendererParams<T>) =>
+              hasNumberRun(params.value) ? { component: NumberRunsCell } : undefined,
+          }
+      : {}),
+    ...(growing &&
+    column.script === undefined &&
+    unitOf === undefined &&
+    isListNumberLike(column.type)
+      ? { cellRenderer: FillNumberCell }
       : {}),
     ...(unitOf === undefined
       ? {}
@@ -313,7 +325,7 @@ function toColDef<T>(
                 : params.data === undefined
                   ? ''
                   : unitOf(params.data, context);
-            return (
+            const figure = (
               <span className="cell-with-unit">
                 <span>{typeof params.value === 'string' ? params.value : ''}</span>
                 <span className="cell-unit" dir="auto">
@@ -321,6 +333,7 @@ function toColDef<T>(
                 </span>
               </span>
             );
+            return growing ? <span className="cell-fill">{figure}</span> : figure;
           },
         }),
   };
@@ -432,20 +445,31 @@ function GridInner<T>({
     },
     [shown, context, l10n, grouping, monthColumnOf],
   );
-  // The total row exists while one of its columns is on screen.
+  // The total row exists while one of its columns is on screen. The word "Total" stands in the first
+  // text column, never in a column of figures (plan 39 R6): a screen that names a column of figures
+  // as the label's place has the word moved to the first text column that has no total of its own.
   const total = useMemo(() => {
     const made = totals?.(context);
     if (made === undefined) return undefined;
     const visible = shown.some((column) => made.values[column.field] !== undefined);
-    return visible
-      ? { ...made.values, [made.labelField]: made.values[made.labelField] ?? '' }
-      : undefined;
+    if (!visible) return undefined;
+    const label = made.values[made.labelField] ?? '';
+    const labelColumn = shown.find((column) => column.field === made.labelField);
+    const home =
+      labelColumn !== undefined && isListNumberLike(labelColumn.type)
+        ? shown.find(
+            (column) => !isListNumberLike(column.type) && made.values[column.field] === undefined,
+          )
+        : undefined;
+    if (home === undefined) return { ...made.values, [made.labelField]: label };
+    return { ...made.values, [made.labelField]: '', [home.field]: label };
   }, [totals, context, shown]);
   // The grid takes the current order, not the `sort` object the screen makes anew on every render:
   // new column definitions on every render would rebuild the headings under a click.
   const sortOn = sort !== undefined;
   const sortValue = sort?.value ?? null;
   const sortState = useMemo(() => (sortOn ? { value: sortValue } : undefined), [sortOn, sortValue]);
+  const growing = shown.some((column) => column.wrap === true);
   const columnDefs = useMemo(
     () =>
       shown.map((column) =>
@@ -455,9 +479,10 @@ function GridInner<T>({
           context,
           total,
           sortState,
+          growing,
         ),
       ),
-    [shown, l10n, context, total, sortState],
+    [shown, l10n, context, total, sortState, growing],
   );
   // The total row and the columns can change together (the "More columns" tick of the account
   // list). The grid then draws the new total row with the value getters it had before, so the
@@ -600,7 +625,7 @@ function GridInner<T>({
   return (
     <div
       ref={rootRef}
-      className={`entry-grid list-grid ag-theme-quartz ${heightMode === 'fill' ? 'list-grid-fill' : ''}`}
+      className={`entry-grid list-grid ag-theme-quartz ${heightMode === 'fill' ? 'list-grid-fill' : ''} ${growing ? 'list-grid-wrap' : ''}`}
       role="group"
       aria-label={l10n.getString(labelId)}
       dir={direction}
