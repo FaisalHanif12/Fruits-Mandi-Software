@@ -45,7 +45,9 @@ import {
   SaveChangesPrompt,
   Select,
   showToast,
+  SimilarAccounts,
   TagInput,
+  type AddedRecord,
   TextInput,
   ActionBar,
   DeadInfoLine,
@@ -69,8 +71,6 @@ import {
   useSimilarAccounts,
 } from '../../../shared/accounts';
 import type { AccountRef, AccountRow, AccountType } from '../../../shared/accounts';
-import { QuickAddMaster, type QuickMasterKind } from './QuickAddMaster';
-import { SimilarAccounts } from './SimilarAccounts';
 
 /**
  * The form opened above another screen by the "add" button of a picker (plan 32, R8): a new seller
@@ -83,8 +83,8 @@ export interface EmbeddedAccount {
   type: 'seller' | 'buyer';
   /** What was typed in the picker. */
   text: string;
-  /** The form closed: saved (true) or left (false). */
-  onDone: (saved: boolean) => void;
+  /** The form closed: with the account that was saved, or null if it was left. */
+  onDone: (saved: AddedRecord | null) => void;
 }
 
 interface AccountFormProps {
@@ -171,8 +171,6 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   const [confirmInactive, setConfirmInactive] = useState(false);
   // The question "save changes?" of Esc above another screen (the route guard cannot ask it there).
   const [askLeave, setAskLeave] = useState(false);
-  // A city or an اڈا being added on the spot (FR-7.64): what was typed in its picker starts the name.
-  const [quickAdd, setQuickAdd] = useState<{ kind: QuickMasterKind; typed: string } | null>(null);
   const save = useSaveAccount();
   const setActive = useSetAccountActive();
   // A person moved to the dead amount (PRD FR-10.10): the form says so, and "make active" becomes
@@ -223,13 +221,15 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   useEffect(() => {
     if (isEmbedded && codeReady) focusFirstEmptyField(formRef.current);
   }, [isEmbedded, codeReady]);
+  // The account the last save made, handed back when the form closes.
+  const savedRef = useRef<AddedRecord | null>(null);
   const doneRef = useRef(embedded?.onDone);
   useEffect(() => {
     doneRef.current = embedded?.onDone;
   });
   useEffect(() => {
     if (!leaving) return;
-    if (isEmbedded) doneRef.current?.(true);
+    if (isEmbedded) doneRef.current?.(savedRef.current);
     else void navigate({ to: '/index/accounts' });
   }, [leaving, isEmbedded, navigate]);
 
@@ -252,6 +252,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
         ),
       );
       if (saved === undefined) return false;
+      savedRef.current = { id: saved.id, code: saved.code };
       setBaseline(accountValuesOf(saved, grouping));
       showToast('success', l10n.getString('accounts-saved'));
       return true;
@@ -273,7 +274,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
     } else if (dirty) {
       setAskLeave(true);
     } else {
-      embedded.onDone(false);
+      embedded.onDone(null);
     }
   };
   useEscape('leave', goBack, !askLeave);
@@ -520,15 +521,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                 error={fieldError(error, 'city_id')}
               >
                 {(props) => (
-                  <Picker
-                    {...props}
-                    scope="city"
-                    value={values.city}
-                    onChange={ref('city')}
-                    onAddNew={(typed) => {
-                      setQuickAdd({ kind: 'city', typed });
-                    }}
-                  />
+                  <Picker {...props} scope="city" value={values.city} onChange={ref('city')} />
                 )}
               </Field>
               <Field
@@ -536,15 +529,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                 error={fieldError(error, 'adda_id')}
               >
                 {(props) => (
-                  <Picker
-                    {...props}
-                    scope="adda"
-                    value={values.adda}
-                    onChange={ref('adda')}
-                    onAddNew={(typed) => {
-                      setQuickAdd({ kind: 'adda', typed });
-                    }}
-                  />
+                  <Picker {...props} scope="adda" value={values.adda} onChange={ref('adda')} />
                 )}
               </Field>
               <Field
@@ -831,22 +816,10 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
           }}
           onLeave={() => {
             setAskLeave(false);
-            embedded.onDone(false);
+            embedded.onDone(null);
           }}
         />
       )}
-      <QuickAddMaster
-        open={quickAdd !== null}
-        onOpenChange={(open) => {
-          if (!open) setQuickAdd(null);
-        }}
-        kind={quickAdd?.kind ?? 'city'}
-        typed={quickAdd?.typed ?? ''}
-        onSaved={(saved) => {
-          const kind = quickAdd?.kind ?? 'city';
-          setValues((current) => ({ ...current, [kind]: saved }));
-        }}
-      />
       {account === null ? null : (
         <ConfirmDialog
           open={confirmInactive}

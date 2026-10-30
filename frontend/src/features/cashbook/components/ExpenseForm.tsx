@@ -5,6 +5,7 @@
 // backend found shows under the field it points at.
 
 import { Localized } from '@fluent/react';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import type { UiError } from '../../../bindings/UiError';
 import { displayName, useLanguage } from '../../../shared/i18n';
@@ -16,12 +17,12 @@ import {
   FormSpan,
   FreeTextInput,
   MoneyInput,
+  Picker,
   Select,
   fieldError,
 } from '../../../shared/ui';
 import { usePartnerList } from '../../partners';
 import type { ExpenseDraft } from '../expense-draft';
-import { useExpenseHeads } from '../hooks';
 
 interface ExpenseFormProps {
   draft: ExpenseDraft;
@@ -32,42 +33,28 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
   const language = useLanguage();
-  const heads = useExpenseHeads();
   const partners = usePartnerList();
   const shop = draft.type === 'shop_expense';
   const personal = draft.type === 'personal_expense';
 
+  // The head is chosen from the expense heads with the shared picker: a head that is missing is
+  // added from its list (PRD FR-7.69), so the user never goes to the Index for it.
   const headField = shop ? (
-    heads.isError ? (
-      <ErrorState
-        title={<Localized id="cashbook-heads-failed" />}
-        error={uiErrorOf(heads.error)}
-        onRetry={() => {
-          void heads.refetch();
-        }}
-      />
-    ) : (
-      <Field
-        label={<Localized id="cashbook-field-head" />}
-        error={fieldError(error, 'expense_head_id')}
-      >
-        {(props) => (
-          <Select
-            {...props}
-            readOnly={props.readOnly === true || heads.isPending}
-            value={draft.headId === '' ? undefined : draft.headId}
-            onChange={(headId) => {
-              onChange({ headId });
-            }}
-            // The backend sends the most used heads first (PRD FR-7.62); the list keeps that order.
-            options={(heads.data?.rows ?? []).map((choice) => ({
-              value: String(choice.id),
-              label: displayName(choice.head, language),
-            }))}
-          />
-        )}
-      </Field>
-    )
+    <Field
+      label={<Localized id="cashbook-field-head" />}
+      error={fieldError(error, 'expense_head_id')}
+    >
+      {(props) => (
+        <Picker
+          {...props}
+          scope="expense_head"
+          value={draft.head}
+          onChange={(hit) => {
+            onChange({ head: hit === null ? null : pickedOf(hit) });
+          }}
+        />
+      )}
+    </Field>
   ) : partners.isError ? (
     <ErrorState
       title={<Localized id="cashbook-partners-failed" />}

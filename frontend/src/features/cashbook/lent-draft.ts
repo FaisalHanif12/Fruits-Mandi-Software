@@ -21,8 +21,8 @@ export interface LentDraft {
   returnBy: string;
   /** Returned only: in cash, or deducted from his salary (PRD FR-16.4). */
   mode: LentReturnMode;
-  /** Returned by salary: the expense head's id, or empty for the default تنخواہ. */
-  salaryHeadId: string;
+  /** Returned by salary: the expense head the picker holds, or null for the default تنخواہ. */
+  salaryHead: PickerValue | null;
   narration: string;
 }
 
@@ -37,7 +37,7 @@ export function newLentDraft(type: LentType, today: string): LentDraft {
     reason: '',
     returnBy: '',
     mode: 'cash',
-    salaryHeadId: '',
+    salaryHead: null,
     narration: '',
   };
 }
@@ -77,11 +77,6 @@ function textOrNull(text: string): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-function idOrNull(text: string): number | null {
-  const id = Number(text);
-  return text.trim() !== '' && Number.isSafeInteger(id) && id > 0 ? id : null;
-}
-
 export function buildLent(draft: LentDraft, confirm: boolean): LentEntry {
   const date = draft.date.trim();
   const amount = draft.amount.trim();
@@ -104,7 +99,7 @@ export function buildLent(draft: LentDraft, confirm: boolean): LentEntry {
     person_account_id: person,
     amount,
     mode: draft.mode,
-    salary_head_id: draft.mode === 'salary' ? idOrNull(draft.salaryHeadId) : null,
+    salary_head_id: draft.mode === 'salary' ? (draft.salaryHead?.id ?? null) : null,
     narration: textOrNull(draft.narration),
   };
 }

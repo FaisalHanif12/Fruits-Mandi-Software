@@ -7,12 +7,10 @@
 //   the top one. The backend resolves the code (found, several, unknown, reserved). A code has no
 //   fixed length (plan 32), so any run of digits is sent.
 // - The party card under the field as soon as an account is known, or highlighted (FR-7.38).
-// - Adding an account on the spot: `F4`, or the button of the unknown-code message, opens the
-//   quick add over the screen with the typed code filled in (FR-7.42, FR-10.8). The new account
-//   comes back into the field.
-// - The button of an empty list opens the Index form of a seller or a buyer above the screen,
-//   with the typed text in the name box (plan 32, R8). The new account is not put in the field:
-//   the list opens again and he is picked from it.
+// - Adding an account on the spot (plan 41, PRD FR-7.69): the add row that ends the open list, `F4`,
+//   Enter on a name that matches nothing, or the button of the unknown-code message open the quick
+//   add over the screen with what was typed filled in (FR-7.42, FR-10.8). The new account is put in
+//   the field. The quick add has a link to the full Index form for fields it does not ask.
 //
 // Pickers never convert English letters to Urdu (F41): the text is searched as typed.
 
@@ -97,14 +95,14 @@ function hitOfRow(row: AccountRow): AccountHit {
 /** Only digits can be a code (PRD FR-7.39). Codes grow without a limit (plan 32, R2). */
 const CODE_TEXT = /^\d{1,18}$/;
 
-/** What the empty list's button says, and what Index form it opens, for each kind of field. */
-const ADD: Record<AccountScope, { label: string; kind: AddRecordKind | null }> = {
-  seller: { label: 'search-add-seller', kind: 'seller' },
-  lot_seller: { label: 'search-add-seller', kind: 'seller' },
-  buyer: { label: 'search-add-buyer', kind: 'buyer' },
-  any: { label: 'search-add-account', kind: 'any' },
+/** The word of each kind of field in the add row's and the empty list's messages, and its form. */
+const ADD: Record<AccountScope, { noun: string; kind: AddRecordKind | null }> = {
+  seller: { noun: 'seller', kind: 'seller' },
+  lot_seller: { noun: 'seller', kind: 'seller' },
+  buyer: { noun: 'buyer', kind: 'buyer' },
+  any: { noun: 'account', kind: 'any' },
   // The accounts of one control have their own forms (money lent, separate khata).
-  control: { label: 'search-add-account', kind: null },
+  control: { noun: 'account', kind: null },
 };
 
 const UNKNOWN_ID: Record<AccountScope, string> = {
@@ -135,7 +133,10 @@ export function AccountPicker({
   );
   const [note, setNote] = useState<CodeNote | null>(null);
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
+  // The quick add that is open: the text it starts with. Who is waiting for the new account is kept
+  // in a ref, so the form closing after a save calls it once.
   const [adding, setAdding] = useState<string | null>(null);
+  const waiting = useRef<((added: AccountHit | null) => void) | null>(null);
   const addRecord = useAddRecord();
   const add = ADD[scope];
   // True while a code that Enter sent to the backend is being answered: when it is found, the
@@ -169,12 +170,64 @@ export function AccountPicker({
       });
   };
 
+  // Opens the quick add. `done` is told which account was saved, or null when the form closed
+  // without one (Esc). The message path (`null`) puts a saved account in the field itself.
+  function openQuickAdd(text: string, done: ((added: AccountHit | null) => void) | null) {
+    waiting.current =
+      done ??
+      ((hit) => {
+        if (hit === null) return;
+        setNote(null);
+        onChange(hit);
+      });
+    setAdding(text);
+  }
+  function finishQuickAdd(hit: AccountHit | null) {
+    const done = waiting.current;
+    waiting.current = null;
+    setAdding(null);
+    done?.(hit);
+  }
+
+  // The full Index form, for fields the quick add does not ask (plan 41, R3). The quick add closes
+  // and the picker waits for the Index form instead.
+  const fullForm =
+    addRecord !== null && add.kind !== null
+      ? (text: string) => {
+          const done = waiting.current;
+          waiting.current = null;
+          setAdding(null);
+          const kind = add.kind;
+          if (kind === null) return;
+          addRecord({
+            kind,
+            text,
+            form: 'full',
+            onClosed: (added) => {
+              if (added === null) {
+                done?.(null);
+                return;
+              }
+              // The account the form saved, as the list shows it.
+              accountsResolveCode(scope, controlId ?? null, added.code).then(
+                (result) => {
+                  done?.(result.status === 'found' ? result.account : null);
+                },
+                () => {
+                  done?.(null);
+                },
+              );
+            },
+          });
+        }
+      : undefined;
+
   const unknown = note?.result.status === 'unknown';
   // F4 works from the message too, after the field has been left.
   useShortcut(
     SHORTCUTS.addAccount,
     () => {
-      if (note !== null) setAdding(note.text);
+      if (note !== null) openQuickAdd(note.text, null);
     },
     { enabled: unknown && adding === null },
   );
@@ -214,16 +267,10 @@ export function AccountPicker({
         onTyping={() => {
           setNote(null);
         }}
-        onAddNew={setAdding}
-        addLabelId={add.label}
-        showAdd={canAdd}
-        onAddRecord={
-          addRecord !== null && add.kind !== null
-            ? (text, done) => {
-                if (add.kind !== null) addRecord({ kind: add.kind, text, onClosed: done });
-              }
-            : undefined
-        }
+        addNoun={canAdd ? add.noun : undefined}
+        onAddRecord={(text, done) => {
+          openQuickAdd(text, done);
+        }}
         renderEnd={(hit) => (
           <span className="flex items-baseline gap-3">
             {scope === 'any' ? (
@@ -283,7 +330,7 @@ export function AccountPicker({
               <Button
                 shortcut={SHORTCUTS.addAccount}
                 onClick={() => {
-                  setAdding(note.text);
+                  openQuickAdd(note.text, null);
                 }}
               >
                 <Localized id="accountpicker-add" />
@@ -296,14 +343,20 @@ export function AccountPicker({
       <QuickAddAccount
         open={adding !== null}
         onOpenChange={(open) => {
-          if (!open) setAdding(null);
+          if (!open) finishQuickAdd(null);
         }}
         scope={scope}
         typed={adding ?? ''}
         suggestedCode={note?.result.suggested_code ?? null}
         onSaved={(row) => {
-          setNote(null);
-          onChange(hitOfRow(row));
+          finishQuickAdd(hitOfRow(row));
+        }}
+        onFullForm={fullForm}
+        onPickExisting={(match) => {
+          // A look-alike that is already there is the one he means: take it, save nothing.
+          void accountsResolveCode(scope, controlId ?? null, match.code).then((result) => {
+            if (result.status === 'found') finishQuickAdd(result.account);
+          });
         }}
       />
     </div>

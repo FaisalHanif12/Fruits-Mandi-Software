@@ -41,7 +41,7 @@ function refusalOf(make: () => unknown) {
 
 const shopDraft = () => ({
   ...newExpenseDraft('shop_expense', '2026-10-10'),
-  headId: '1',
+  head: { id: 1, code: '05010001', name_ur: 'بجلی', name_en: 'Electricity' },
   amount: '3,000',
   paidTo: 'Partner A',
 });
@@ -275,7 +275,7 @@ describe('the screen builds the request the backend’s own test sent', () => {
         person,
         amount: '2,000',
         mode: 'salary',
-        salaryHeadId: '2',
+        salaryHead: { id: 2, code: '05010002', name_ur: 'تنخواہ', name_en: 'Salaries' },
       },
       false,
     );

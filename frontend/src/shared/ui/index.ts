@@ -5,6 +5,7 @@ export { useWorkAreaStore } from './work-area';
 export {
   AddRecordContext,
   useAddRecord,
+  type AddedRecord,
   type AddRecord,
   type AddRecordKind,
   type AddRecordRequest,
@@ -62,6 +63,7 @@ export { PickerBase, type PickerBaseProps, type PickerHit } from './PickerBase';
 export { QtyInput } from './QtyInput';
 export { ReasonDialog } from './ReasonDialog';
 export { QuickAddAccount } from './QuickAddAccount';
+export { SimilarAccounts } from './SimilarAccounts';
 export { RomanUrduInput, type ConvertedWord, type ListExtra } from './RomanUrduInput';
 export { FreeTextInput } from './FreeTextInput';
 export { SaveChangesPrompt, type PromptWords } from './SaveChangesPrompt';

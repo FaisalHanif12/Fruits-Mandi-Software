@@ -26,6 +26,7 @@ import { CalendarClock } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FieldError } from '../../../bindings/FieldError';
 import { useDayStatus } from '../../../app/use-day-status';
+import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
@@ -161,7 +162,7 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
   const fillFrom = (row: RepeatedExpense) => {
     setDraft((previous) => ({
       ...previous,
-      headId: String(row.expense_head_id),
+      head: pickedOf(row.head),
       amount: formatPaisa(row.amount_paisa, { grouping }),
       paidTo: row.paid_to,
       narration: row.narration,

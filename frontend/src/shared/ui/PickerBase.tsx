@@ -9,12 +9,17 @@
 //   forgiven, by the backend. The picker never converts English letters to Urdu (F41): the text
 //   goes to the search exactly as typed.
 // - A list that is long is read page by page and draws only the rows in view (B31, F34).
-// - When nothing is found, or nothing has been added yet, the list shows a button that opens the
-//   Index form of that kind above the screen (plan 32, R8, shared/ui/add-record.ts).
+// - Add it here (plan 41, PRD FR-7.69): an entry picker ends its open list with one row, "+ New
+//   expense head", pinned under the rows. When text was typed, the row names it: "+ «Electricity»
+//   as a new expense head". A click on it, ↓ then Enter, or F4 in the field opens the short form of
+//   that kind over the screen (shared/ui/add-record.ts). The record that is saved is put in the
+//   field at once. An empty list says so in words ("No expense heads yet"), above the row. A
+//   filter box has no such row.
 // - Keys (PRD FR-7.16): with the list open ↑ ↓ move through the matches, Enter picks the
 //   highlighted one (the best match is highlighted at once) and moves on, Esc closes the list.
-//   With the list closed ↑ ↓ move between fields like in any other field. Alt+↓ opens the full
-//   list without typing, the recent records first. F4 adds a new record when the screen allows.
+//   ↓ on the last match moves to the add row, and Enter there adds. Enter on text that matches
+//   nothing (and is not a code) adds it too. With the list closed ↑ ↓ move between fields like in
+//   any other field. Alt+↓ opens the full list without typing, the recent records first.
 // - Esc order (FR-7.18): close the list, else bring back the chosen name, else leave the screen.
 // - The chosen record belongs to the screen (`value`). The field shows its name for the current
 //   language, so a language switch keeps the value and changes only the words (FR-7.33).
@@ -24,7 +29,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useCombobox, type UseComboboxStateChange } from 'downshift';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import {
   useEffect,
   useId,
@@ -48,8 +53,8 @@ import {
   type PickerSource,
 } from '../search';
 import { usePickerFlag, usePickerText } from './usePickerText';
-import { Button } from './Button';
 import { Code } from './Code';
+import { KeyChip } from './KeyChip';
 import { controlClasses } from './control-classes';
 import { ErrorMessage } from './ErrorMessage';
 import type { FieldControlProps } from './Field';
@@ -84,18 +89,25 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   /** The record chosen, or null when the field was emptied. */
   onChange: (hit: H | null) => void;
   placeholder?: string | undefined;
-  /** Called with the typed text on F4 and from the button of an empty result. Leave out to hide both. */
-  onAddNew?: ((text: string) => void) | undefined;
   /**
-   * The button of an empty result opens the Index form with this (plan 32, R8). `done` is called
-   * when that form closes, saved or not; the picker then takes the focus back with the same text
-   * and opens its list. Without it the button uses `onAddNew`, and F4 is not changed by it.
+   * The word for the kind of record this field takes, the key of the add row's and the empty
+   * list's Fluent messages (`search-add-row`, `search-empty-kind`), for example `expense-head`.
+   * Without it the field offers no add row: a filter box has nothing to add (plan 41, R5).
    */
-  onAddRecord?: ((text: string, done: () => void) => void) | undefined;
-  /** False hides the button of an empty result (a filter has nothing to add). F4 is not changed. */
-  showAdd?: boolean | undefined;
-  /** The Fluent id of the button's words, for example `search-add-seller`. Default: "Add new". */
-  addLabelId?: string | undefined;
+  addNoun?: string | undefined;
+  /**
+   * Opens the short form of the kind (plan 41). The row, `F4` and `Enter` on text that matches
+   * nothing call it with the typed text. `done` is called when the form closes: with the row of
+   * the record that was saved, which the field then takes, or with null when the user left
+   * without saving, and the field is as it was.
+   */
+  onAddRecord?: ((text: string, done: (added: H | null) => void) => void) | undefined;
+  /**
+   * A screen that opens its own form and puts the new record in the field itself (the person who
+   * can borrow, a separate khata). Called with the typed text from the row and from `F4`. Used
+   * only where `onAddRecord` is not given.
+   */
+  onAddNew?: ((text: string) => void) | undefined;
   /** Something at the end of each row, for example a balance. */
   renderEnd?: ((hit: H) => ReactNode) | undefined;
   /** The record the list highlights now, or null: a screen can preview it (the party card). */
@@ -130,6 +142,8 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
 }
 
 /** The sizes the style sheet gives the list, used when it cannot be read (tests have no CSS). */
+/** Only digits are a code or a short code (PRD FR-7.39). */
+const CODE_TEXT = /^\d+$/;
 const FALLBACK_ROW_PX = 72;
 const FALLBACK_LIST_PX = 360;
 /** Rows drawn above and below the view, so scrolling never shows a gap. */
@@ -152,10 +166,9 @@ export function PickerBase<H extends PickerHit>({
   value,
   onChange,
   placeholder,
-  onAddNew,
+  addNoun,
   onAddRecord,
-  showAdd = true,
-  addLabelId = 'search-add-new',
+  onAddNew,
   renderEnd,
   onHighlight,
   onLeave,
@@ -194,11 +207,23 @@ export function PickerBase<H extends PickerHit>({
   // True while the Index form of the "add" button is open above the screen. The field loses focus
   // to it, and that must not drop what was typed or send it as a code (plan 32, R8).
   const adding = usePickerFlag();
+  // The add row is the last stop of the list: ↓ on the last match moves to it (plan 41, R1). It is
+  // not one of the matches, so Downshift does not know it and the matches keep their old meaning.
+  const [addActive, setAddActive] = useState(false);
+  const addRowId = `${listId}-add`;
+  const canAdd =
+    addNoun !== undefined &&
+    readOnly !== true &&
+    (onAddRecord !== undefined || onAddNew !== undefined);
+  // The add row ends the open list. It waits for the first answer, so an empty list is known to
+  // be empty, and for the last page, so it is the end of the list (plan 41, R1).
+  const addShown = open && canAdd && !isPending && !isError && !hasMore;
 
   const shown = typed ?? (value === null ? '' : displayName(value, language));
 
   const closeList = () => {
     setOpen(false);
+    setAddActive(false);
     // A closed list forgets how far it was scrolled; the next one opens at the top.
     setScrollTop(0);
   };
@@ -210,46 +235,51 @@ export function PickerBase<H extends PickerHit>({
     closeList();
   };
 
-  const { highlightedIndex, getInputProps, getItemProps, getMenuProps, getToggleButtonProps } =
-    useCombobox<H>({
-      items: hits,
-      ...(id === undefined ? {} : { inputId: id }),
-      menuId: listId,
-      itemToString: (hit) => (hit === null ? '' : displayName(hit, language)),
-      // The value belongs to the screen; picking tells it through onChange.
-      selectedItem: null,
-      inputValue: shown,
-      isOpen: open,
-      defaultHighlightedIndex: 0,
-      // The list scrolls itself (windowed rows), so Downshift's own scrolling is off.
-      scrollIntoView: () => undefined,
-      stateReducer: (state, { type, changes }) => {
-        // Leaving the field never picks the highlighted record by itself.
-        if (type === useCombobox.stateChangeTypes.InputBlur) {
-          return { ...changes, selectedItem: state.selectedItem, inputValue: state.inputValue };
-        }
-        // A click on the field opens the list and never closes it again (plan 32, R7): the list
-        // closes with Esc, a pick, or leaving the field. The chevron button is the one that toggles.
-        if (type === useCombobox.stateChangeTypes.InputClick) {
-          return {
-            ...changes,
-            isOpen: true,
-            highlightedIndex:
-              (state.isOpen ? state.highlightedIndex : changes.highlightedIndex) ?? 0,
-          };
-        }
-        return changes;
-      },
-      onIsOpenChange: ({ isOpen }: UseComboboxStateChange<H>) => {
-        // A field that cannot be changed (read only) opens no list, whatever is clicked.
-        if (isOpen) {
-          if (readOnly !== true) setOpen(true);
-        } else closeList();
-      },
-      onSelectedItemChange: ({ selectedItem }: UseComboboxStateChange<H>) => {
-        if (selectedItem !== null && selectedItem !== undefined) pick(selectedItem);
-      },
-    });
+  const {
+    highlightedIndex,
+    setHighlightedIndex,
+    getInputProps,
+    getItemProps,
+    getMenuProps,
+    getToggleButtonProps,
+  } = useCombobox<H>({
+    items: hits,
+    ...(id === undefined ? {} : { inputId: id }),
+    menuId: listId,
+    itemToString: (hit) => (hit === null ? '' : displayName(hit, language)),
+    // The value belongs to the screen; picking tells it through onChange.
+    selectedItem: null,
+    inputValue: shown,
+    isOpen: open,
+    defaultHighlightedIndex: 0,
+    // The list scrolls itself (windowed rows), so Downshift's own scrolling is off.
+    scrollIntoView: () => undefined,
+    stateReducer: (state, { type, changes }) => {
+      // Leaving the field never picks the highlighted record by itself.
+      if (type === useCombobox.stateChangeTypes.InputBlur) {
+        return { ...changes, selectedItem: state.selectedItem, inputValue: state.inputValue };
+      }
+      // A click on the field opens the list and never closes it again (plan 32, R7): the list
+      // closes with Esc, a pick, or leaving the field. The chevron button is the one that toggles.
+      if (type === useCombobox.stateChangeTypes.InputClick) {
+        return {
+          ...changes,
+          isOpen: true,
+          highlightedIndex: (state.isOpen ? state.highlightedIndex : changes.highlightedIndex) ?? 0,
+        };
+      }
+      return changes;
+    },
+    onIsOpenChange: ({ isOpen }: UseComboboxStateChange<H>) => {
+      // A field that cannot be changed (read only) opens no list, whatever is clicked.
+      if (isOpen) {
+        if (readOnly !== true) setOpen(true);
+      } else closeList();
+    },
+    onSelectedItemChange: ({ selectedItem }: UseComboboxStateChange<H>) => {
+      if (selectedItem !== null && selectedItem !== undefined) pick(selectedItem);
+    },
+  });
 
   // A screen can show the record the list highlights while the user is still typing.
   const highlightRef = useRef(onHighlight);
@@ -310,15 +340,37 @@ export function PickerBase<H extends PickerHit>({
       setOpen(true);
       return;
     }
-    if (onAddNew !== undefined && matchesShortcut(event.nativeEvent, SHORTCUTS.addAccount)) {
+    if (canAdd && matchesShortcut(event.nativeEvent, SHORTCUTS.addAccount)) {
       event.preventDefault();
       event.stopPropagation();
       keepKeyForApp(event);
-      closeList();
-      onAddNew(typed ?? '');
+      startAdd(typed ?? '', event.currentTarget);
       return;
     }
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (open && addShown && event.key === 'ArrowDown') {
+      // ↓ on the last match (or on an empty list) moves to the add row, and stays there.
+      if (addActive || hits.length === 0 || highlightedIndex >= hits.length - 1) {
+        event.preventDefault();
+        keepKeyForApp(event);
+        setHighlightedIndex(-1);
+        setAddActive(true);
+        return;
+      }
+    }
+    if (open && addActive && event.key === 'ArrowUp') {
+      event.preventDefault();
+      keepKeyForApp(event);
+      setAddActive(false);
+      setHighlightedIndex(hits.length - 1);
+      return;
+    }
+    if (open && addActive && event.key === 'Enter') {
+      event.preventDefault();
+      keepKeyForApp(event);
+      startAdd(typed ?? '', event.currentTarget);
+      return;
+    }
     if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !open) {
       // A closed picker is a field like any other: the arrows go on to the form (FR-7.16).
       keepKeyForApp(event);
@@ -348,7 +400,7 @@ export function PickerBase<H extends PickerHit>({
             const best = answer.find(isOffered);
             if (best === undefined) {
               closeList();
-              onEnterNoMatch?.(text);
+              enterNoMatch(text, field);
               return;
             }
             pick(best);
@@ -360,7 +412,7 @@ export function PickerBase<H extends PickerHit>({
       const hit = hits[highlightedIndex];
       if (hit === undefined) {
         closeList();
-        onEnterNoMatch?.(typed ?? '');
+        enterNoMatch(typed ?? '', event.currentTarget);
         return;
       }
       pick(hit);
@@ -369,27 +421,43 @@ export function PickerBase<H extends PickerHit>({
     }
   };
 
-  // The "add" button: the Index form above the screen, or the small form of the screen's own.
-  const addFromList = () => {
-    const text = typed ?? '';
+  // Adds a record from the list: the short form over the screen, or the screen's own form. When
+  // the form closes with a saved record, the field takes it and the cursor stays in the field, with
+  // the name selected, so Enter carries on (plan 41, R4). Without one, the field is as it was.
+  function startAdd(text: string, field: HTMLInputElement | null | undefined) {
     closeList();
     if (onAddRecord === undefined) {
       onAddNew?.(text);
       return;
     }
     adding.set(true);
-    onAddRecord(text, () => {
+    onAddRecord(text, (added) => {
       // Radix gives the focus back to the field after the form has closed; take it from there.
       window.setTimeout(() => {
         adding.set(false);
-        const field = boxRef.current?.querySelector('input');
         if (!field?.isConnected) return;
-        setTypedNow(text);
+        if (added === null) {
+          setTypedNow(text);
+          field.focus();
+          setOpen(true);
+          return;
+        }
+        pick(added);
         field.focus();
-        setOpen(true);
+        // The screen shows the new name after it has taken the pick; select it then.
+        window.setTimeout(() => {
+          if (field.isConnected) field.select();
+        }, 0);
       }, 0);
     });
-  };
+  }
+
+  // Enter on text that matches nothing. A code is the account picker's to resolve (FR-7.39); other
+  // text is a new record, and the add form opens with it (plan 41, R1).
+  function enterNoMatch(text: string, field: HTMLInputElement) {
+    if (canAdd && text.trim() !== '' && !CODE_TEXT.test(text.trim())) startAdd(text, field);
+    else onEnterNoMatch?.(text);
+  }
 
   const onBlur = () => {
     setFocused(false);
@@ -419,7 +487,9 @@ export function PickerBase<H extends PickerHit>({
   const error = isError ? uiErrorOf(queryError) : null;
   const searching = open && isPending;
   const noMatch = open && !isPending && !isError && hits.length === 0;
-  const canAdd = showAdd && (onAddRecord !== undefined || onAddNew !== undefined);
+
+  // What the add row names: the text typed, trimmed. Empty while the field is not being typed in.
+  const addTyped = (typed ?? '').trim();
 
   const inputProps = getInputProps({
     type: 'text',
@@ -442,6 +512,7 @@ export function PickerBase<H extends PickerHit>({
     onChange: (event: { currentTarget: HTMLInputElement }) => {
       if (readOnly !== true) {
         setTypedNow(event.currentTarget.value);
+        setAddActive(false);
         onTyping?.();
       }
     },
@@ -452,6 +523,7 @@ export function PickerBase<H extends PickerHit>({
       {/* A name wider than the box is cut with an ellipsis and read in full on hover (plan 38). */}
       <input
         {...inputProps}
+        {...(addActive ? { 'aria-activedescendant': addRowId } : {})}
         title={typeof inputProps.value === 'string' ? inputProps.value : undefined}
         className={`${controlClasses({ invalid, readOnly })} type-field pe-control text-ellipsis`}
       />
@@ -496,7 +568,14 @@ export function PickerBase<H extends PickerHit>({
                 return (
                   <li
                     key={hit.id}
-                    {...getItemProps({ item: hit, index })}
+                    {...getItemProps({
+                      item: hit,
+                      index,
+                      // The mouse over a match takes the highlight from the add row.
+                      onMouseMove: () => {
+                        setAddActive(false);
+                      },
+                    })}
                     aria-setsize={hits.length}
                     aria-posinset={index + 1}
                     className={`flex h-picker-row cursor-pointer flex-col justify-center rounded-1 px-3 ${index === highlightedIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
@@ -551,27 +630,56 @@ export function PickerBase<H extends PickerHit>({
           </div>
         )}
         {noMatch ? (
+          <div role="status" className="px-3 py-2">
+            {(typed ?? '').trim() !== '' ? (
+              <Localized id="search-no-match">
+                <p className="type-body text-ink-muted" />
+              </Localized>
+            ) : addNoun === undefined ? (
+              <Localized id="search-empty">
+                <p className="type-body text-ink-muted" />
+              </Localized>
+            ) : (
+              // The list says in words what it holds none of, for example "No expense heads yet".
+              <Localized id="search-empty-kind" vars={{ noun: addNoun }}>
+                <p className="type-body text-ink-muted" />
+              </Localized>
+            )}
+          </div>
+        ) : null}
+        {addShown ? (
           <div
-            role="status"
-            className="flex flex-col items-start gap-2 px-3 py-2"
-            // A press on the button must not take focus from the field, or the list would close
+            className="mt-1 border-t border-border pt-1"
+            // A press on the row must not take focus from the field, or the list would close
             // before the click lands and the typed text would be lost.
             onMouseDown={(event) => {
               event.preventDefault();
             }}
           >
-            <Localized id={(typed ?? '').trim() === '' ? 'search-empty' : 'search-no-match'}>
-              <p className="type-body text-ink-muted" />
-            </Localized>
-            {canAdd ? (
-              <Button
-                // F4 is shown on the button only where F4 does the same (the small form).
-                {...(onAddRecord === undefined ? { shortcut: SHORTCUTS.addAccount } : {})}
-                onClick={addFromList}
+            <button
+              type="button"
+              id={addRowId}
+              tabIndex={-1}
+              aria-current={addActive}
+              onClick={() => {
+                startAdd(typed ?? '', boxRef.current?.querySelector('input'));
+              }}
+              onMouseMove={() => {
+                if (addActive) return;
+                setHighlightedIndex(-1);
+                setAddActive(true);
+              }}
+              className={`flex min-h-control w-full items-center gap-2 rounded-1 px-3 py-1 text-start type-field text-primary ${addActive ? 'bg-primary-soft' : ''}`}
+            >
+              <Plus aria-hidden="true" className="size-icon-md shrink-0" />
+              <Localized
+                id={addTyped === '' ? 'search-add-row' : 'search-add-row-named'}
+                vars={{ noun: addNoun, text: addTyped }}
               >
-                <Localized id={addLabelId} />
-              </Button>
-            ) : null}
+                <span className="min-w-0 flex-1 text-balance break-words" />
+              </Localized>
+              <KeyChip shortcut={SHORTCUTS.addAccount} tone="on-light" />
+            </button>
           </div>
         ) : null}
         {footer}

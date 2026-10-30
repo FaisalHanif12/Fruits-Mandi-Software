@@ -452,9 +452,14 @@ describe.each(LANGUAGES)('the tag in the picker and the party card (%s)', (langu
     expect(order.indexOf(field('accounts-field-tag'))).toBeGreaterThan(
       order.indexOf(field('accounts-field-name-en')),
     );
+    // The short form asks the names, the tag, the phone and the city (plan 41); father or firm is the
+    // full form's.
     expect(order.indexOf(field('accounts-field-tag'))).toBeLessThan(
-      order.indexOf(field('accounts-field-father-ur')),
+      order.indexOf(field('accounts-field-phone1')),
     );
+    expect(
+      within(dialog).queryByLabelText(named(message(language, 'accounts-field-father-ur'))),
+    ).toBeNull();
     await user.clear(field('accounts-field-name-en'));
     await user.type(field('accounts-field-name-en'), 'Ashiq Zafar');
     await user.clear(field('accounts-field-name-ur'));

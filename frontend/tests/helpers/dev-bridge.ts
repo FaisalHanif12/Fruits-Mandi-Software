@@ -32,6 +32,8 @@ import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
 import { indexHandlers, isIndexPage } from './dev-bridge-index';
 import { isListsPage, listsHandlers } from './dev-bridge-lists';
 import * as tagReal from './tag-real';
+import { HEADS } from './cashbook-books';
+import { suggestionsFor } from './translit';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
@@ -174,6 +176,9 @@ interface Master {
   ur: string;
   en: string;
 }
+
+/** Records made on the page with the short form of "add it here" (plan 41), found from then on. */
+const ADDED_MASTERS: Master[] = [];
 
 const MASTERS: readonly Master[] = [
   { id: IDS.banana, scope: 'item', code: '0001', ur: 'کیلا', en: 'Banana' },
@@ -384,7 +389,25 @@ const handlers: Record<string, Handler> = {
   // The Index form a picker's "add" button opens (plan 32, R8): the next code of a type, no
   // look-alikes, and a save that makes the account findable by the pickers.
   accounts_next_code: (input) => (asText(input['account_type']) === 'seller' ? '0013' : '0023'),
-  accounts_similar: () => [],
+  // `&similar`: one seller who looks like the name typed, to photograph the short form's warning.
+  accounts_similar: () =>
+    hasFlag('similar')
+      ? [
+          {
+            id: IDS.rahim,
+            code: '0010',
+            name_ur: 'رحیم',
+            name_en: 'Rahim',
+            father_or_firm_ur: 'اللہ دتہ',
+            father_or_firm_en: 'Allah Ditta',
+            city_ur: 'کوٹ رادھا کشن',
+            city_en: 'Kot Radha Kishan',
+            phone1: '03001234567',
+            account_type: 'seller',
+            is_duplicate: false,
+          },
+        ]
+      : [],
   coa_controls_list: () => [],
   accounts_save: (input) => {
     NEXT_ID.value += 1;
@@ -458,6 +481,7 @@ const handlers: Record<string, Handler> = {
         credit_used: null,
         advance_open: null,
         warnings: [],
+        dead: null,
       };
     }
     const party = parties().find((candidate) => candidate.id === asNumber(input['account_id']));
@@ -481,20 +505,45 @@ const handlers: Record<string, Handler> = {
       credit_used: buyer ? party.paisa : null,
       advance_open: buyer ? null : 1500000,
       warnings: [],
+      dead: null,
     };
   },
   search_masters: (input) =>
-    MASTERS.filter(
-      (master) =>
-        master.scope === asText(input['scope']) &&
-        [master.code, master.ur, master.en].some((part) =>
-          part.toLowerCase().includes(asText(input['text']).trim().toLowerCase()),
-        ),
-    ).map(masterHit),
+    allMasters()
+      .filter(
+        (master) =>
+          master.scope === asText(input['scope']) &&
+          [master.code, master.ur, master.en].some((part) =>
+            part.toLowerCase().includes(asText(input['text']).trim().toLowerCase()),
+          ),
+      )
+      .map(masterHit),
   search_recent: (input) =>
-    MASTERS.filter((master) => master.scope === asText(input['scope'])).map(masterHit),
+    allMasters()
+      .filter((master) => master.scope === asText(input['scope']))
+      .map(masterHit),
   search_touch: () => null,
-  translit_suggest: () => ({ items: [] }),
+  // The short form of "add it here" (plan 41): the record is kept on the page, in memory, and the
+  // backend's habit of giving the next code for an empty one is kept.
+  masters_next_code: (input) => nextMasterCode(asText(input['kind'])),
+  masters_save: (input) => saveMaster(input),
+  // A few words in both scripts, so the other name of a pair fills by itself on the pages (FR-7.24).
+  // "nadeem" has only a rule-made spelling, so its mark "check the spelling" can be photographed.
+  translit_suggest: (input) =>
+    suggestionsFor(
+      {
+        toUrdu: {
+          electricity: ['بجلی'],
+          mango: ['آم'],
+          nadeem: ['ندیم'],
+          khan: ['خان'],
+        },
+        toEnglish: { بجلی: 'Bijli', آم: 'Aam', ندیم: 'Nadeem', خان: 'Khan' },
+        rulesOnly: ['nadeem', 'ندیم'],
+      },
+      asText(input['text']),
+      asText(input['direction']) === 'to_english' ? 'to_english' : 'to_urdu',
+    ),
   translit_pairs_list: () => EMPTY_PAIRS,
   bikri_preview: (input) => {
     // `?own` is the lot of trip goods of E2E-34, the backend's real answer.
@@ -718,6 +767,68 @@ const handlers: Record<string, Handler> = {
           },
     ),
 };
+
+const hasFlag = (name: string): boolean =>
+  new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
+
+/**
+ * Every master the page knows: the few of Event 1, the expense heads of the worked day (none with
+ * the flag `noheads`, so the empty list of Umar's picture can be photographed), and what was made
+ * on the page.
+ */
+function allMasters(): readonly Master[] {
+  const heads: Master[] = hasFlag('noheads')
+    ? []
+    : HEADS.map((head) => ({
+        id: head.id,
+        scope: 'expense_head',
+        code: head.code,
+        ur: head.name_ur,
+        en: head.name_en,
+      }));
+  return [...MASTERS, ...heads, ...ADDED_MASTERS];
+}
+
+function nextMasterCode(kind: string): string {
+  const highest = Math.max(
+    0,
+    ...allMasters()
+      .filter((master) => master.scope === kind)
+      .map((master) => Number(master.code) || 0),
+  );
+  return String(highest + 1).padStart(4, '0');
+}
+
+/** Saves a master the way the backend answers: the row, with the next code if none was typed. */
+function saveMaster(input: Input): unknown {
+  const kind = asText(input['kind']);
+  const code = asText(input['code']).trim() === '' ? nextMasterCode(kind) : asText(input['code']);
+  const ur = asText(input['name_ur']) || asText(input['text_ur']);
+  const en = asText(input['name_en']) || asText(input['text_en']);
+  NEXT_ID.value += 1;
+  ADDED_MASTERS.push({ id: NEXT_ID.value, scope: kind, code, ur, en });
+  // One row with the fields of every kind: the screen reads the ones its kind has.
+  return {
+    kind,
+    id: NEXT_ID.value,
+    version: 1,
+    code,
+    name_ur: ur,
+    name_en: en,
+    is_active: true,
+    account_id: 0,
+    account_code: '',
+    item_group: asText(input['item_group']),
+    sold_by: asText(input['sold_by']),
+    default_packing_id: null,
+    default_packing_name_ur: null,
+    default_packing_name_en: null,
+    approx_kg: null,
+    city_id: null,
+    city_name_ur: null,
+    city_name_en: null,
+  };
+}
 
 function masterHit(master: Master) {
   return {

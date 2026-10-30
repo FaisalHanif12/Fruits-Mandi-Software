@@ -116,6 +116,8 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
                 <Picker
                   {...control}
                   scope="marka"
+                  // A مارکہ added from a lot belongs to the lot's seller (PRD FR-7.69).
+                  addOwner={row.picked?.[LOT.seller] ?? null}
                   value={row.picked?.[LOT.marka] ?? null}
                   onChange={(hit) => {
                     setPicked(LOT.marka, hit);

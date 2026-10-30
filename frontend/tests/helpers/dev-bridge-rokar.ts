@@ -370,6 +370,7 @@ export const rokarHandlers: Record<string, Handler> = {
       credit_used: null,
       advance_open: null,
       warnings: [],
+      dead: null,
     };
   },
 };

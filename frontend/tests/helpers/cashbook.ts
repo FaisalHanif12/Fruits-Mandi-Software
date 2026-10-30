@@ -69,7 +69,6 @@ export function fakeCashbook(options: CashbookBooksOptions = {}): FakeCashbook {
   vi.mocked(cashbookApi.cashbookGet).mockImplementation((input) =>
     answer(() => books.cashbook(input)),
   );
-  vi.mocked(cashbookApi.expenseHeads).mockImplementation(() => answer(() => books.heads()));
   vi.mocked(cashbookApi.expensePreview).mockImplementation((entry) =>
     answer(() => books.expensePreview(entry)),
   );

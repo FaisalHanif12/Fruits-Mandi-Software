@@ -276,9 +276,7 @@
         "to": null,
         "not_item_ids": [],
         "partner_id": null,
-        "purchase_ids": [
-          1
-        ]
+        "purchase_ids": [1]
       },
       "kind": "normal"
     }
@@ -385,9 +383,7 @@
             "to": null,
             "not_item_ids": [],
             "partner_id": null,
-            "purchase_ids": [
-              1
-            ]
+            "purchase_ids": [1]
           },
           "values": [
             {

@@ -60,11 +60,10 @@ function fakeSearch(rows: SearchHit[] = ALL) {
 
 interface HarnessProps {
   initial?: PickerValue | null;
-  onAddNew?: (text: string) => void;
   onValue?: (value: PickerValue | null) => void;
 }
 
-function Harness({ initial = null, onAddNew, onValue }: HarnessProps) {
+function Harness({ initial = null, onValue }: HarnessProps) {
   const [value, setValue] = useState<PickerValue | null>(initial);
   useEscapeDispatcher();
   return (
@@ -84,7 +83,6 @@ function Harness({ initial = null, onAddNew, onValue }: HarnessProps) {
               setValue(chosen);
               onValue?.(chosen);
             }}
-            onAddNew={onAddNew}
           />
         )}
       </Field>
@@ -290,39 +288,6 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     });
     // The inactive one is still not offered.
     expect(options()).toHaveLength(3);
-  });
-
-  it('F4 adds a new one with the typed text; an empty result offers the same by button', async () => {
-    const onAddNew = vi.fn();
-    const { input, user } = setup(language, { onAddNew });
-    await user.click(input);
-    await user.keyboard('zzz');
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
-    });
-    await user.click(
-      screen.getByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
-    );
-    expect(onAddNew).toHaveBeenLastCalledWith('zzz');
-    await user.click(input);
-    await user.keyboard('{F4}');
-    // user-event does not know F4 by code, so press it the way the window gets it.
-    act(() => {
-      input.dispatchEvent(new KeyboardEvent('keydown', { code: 'F4', key: 'F4', bubbles: true }));
-    });
-    expect(onAddNew).toHaveBeenCalledTimes(2);
-  });
-
-  it('without an add action there is no add button and F4 does nothing', async () => {
-    const { input, user } = setup(language);
-    await user.click(input);
-    await user.keyboard('zzz');
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
-    });
-    expect(
-      screen.queryByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
-    ).not.toBeInTheDocument();
   });
 
   it('emptying the field and leaving clears the value; other typing is dropped on leaving', async () => {

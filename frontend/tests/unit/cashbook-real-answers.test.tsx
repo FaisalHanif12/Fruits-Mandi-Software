@@ -16,8 +16,10 @@ import { ASLAM_ROW } from '../helpers/cashbook';
 import { ASLAM } from '../helpers/cashbook-books';
 import { paisaForTest as paisaOf } from '../helpers/paisa';
 import * as real from '../helpers/cashbook-real';
+import { fakeMasters, record } from '../helpers/masters';
 import {
   choose,
+  chooseRecord,
   labelled,
   named,
   pageText,
@@ -55,6 +57,16 @@ beforeEach(() => {
 afterEach(() => {
   leaveAppWindow();
 });
+
+/** The heads the backend sent (the real fixture) are the masters the head picker finds (plan 41). */
+function seedRealHeads() {
+  fakeMasters({
+    staff: [record('staff', 81, '0001', 'اسلم', 'Aslam')],
+    expense_head: real.EXPENSE_HEADS.rows.map((row) =>
+      record('expense_head', row.head.id, row.head.code, row.head.name_ur, row.head.name_en),
+    ),
+  });
+}
 
 describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (language) => {
   beforeEach(() => {
@@ -122,7 +134,7 @@ describe.each(LANGUAGES)('the روکڑ بک with the real answers (%s)', (langua
 describe.each(LANGUAGES)('the خرچہ screen with the real answers (%s)', (language) => {
   beforeEach(() => {
     prepareCashbook(language);
-    vi.mocked(cashbookApi.expenseHeads).mockResolvedValue(real.EXPENSE_HEADS);
+    seedRealHeads();
   });
 
   const electricity = nameOf(language, 'بجلی', 'Electricity');
@@ -136,7 +148,7 @@ describe.each(LANGUAGES)('the خرچہ screen with the real answers (%s)', (lang
     return { ...app, user: userEvent.setup() };
   }
 
-  it('lists the heads by the names inside `head`, in the order the backend sent', async () => {
+  it('lists the heads by the names the search sends, in its order', async () => {
     const { user } = await open();
     await user.click(
       await screen.findByRole('combobox', {
@@ -144,16 +156,16 @@ describe.each(LANGUAGES)('the خرچہ screen with the real answers (%s)', (lang
       }),
     );
     const options = await screen.findAllByRole('option');
-    expect(options.map((option) => visible(option.textContent))).toEqual([
-      electricity,
-      nameOf(language, 'تنخواہ', 'Salaries'),
-    ]);
+    // Each row starts with the name in the language of the screen, then its code.
+    expect(options).toHaveLength(2);
+    expect(visible(options[0]?.textContent)).toContain(electricity);
+    expect(visible(options[1]?.textContent)).toContain(nameOf(language, 'تنخواہ', 'Salaries'));
   });
 
   it('a shop expense: the three shares and their workings are the backend’s, and the note offers ذاتی خرچہ', async () => {
     vi.mocked(cashbookApi.expensePreview).mockResolvedValue(real.PREVIEW_SHOP);
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', electricity);
+    await chooseRecord(user, language, 'cashbook-field-head', electricity);
     await typeAmount(user, language, '3000');
     await user.click(await labelled(language, 'cashbook-field-paid-to'));
     await user.keyboard('x');
@@ -323,7 +335,7 @@ describe.each(LANGUAGES)('the خرچہ screen with the real answers (%s)', (lang
 describe.each(LANGUAGES)('the ادھار رقم screen with the real answers (%s)', (language) => {
   beforeEach(() => {
     prepareCashbook(language, [ASLAM_ROW]);
-    vi.mocked(cashbookApi.expenseHeads).mockResolvedValue(real.EXPENSE_HEADS);
+    seedRealHeads();
     vi.mocked(cashbookApi.lentList).mockResolvedValue(real.LENT_LIST);
   });
 
@@ -398,7 +410,7 @@ describe.each(LANGUAGES)('the ادھار رقم screen with the real answers (%s
     const { user } = await open('money_lent_return');
     await pickAccount(user, language, 'cashbook-field-person', 'aslam', aslam);
     await choose(user, language, 'cashbook-field-mode', message(language, 'cashbook-mode-salary'));
-    await choose(
+    await chooseRecord(
       user,
       language,
       'cashbook-field-salary-head',

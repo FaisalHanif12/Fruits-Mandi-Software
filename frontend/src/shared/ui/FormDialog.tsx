@@ -6,6 +6,7 @@
 
 import { Dialog } from 'radix-ui';
 import { useRef, type ReactNode, type RefObject } from 'react';
+import { focusFirstEmptyField } from '../hooks';
 import { useUiLanguage } from '../i18n';
 import { ModalLayerContext, runEscape, useModalLayer } from '../keyboard';
 
@@ -35,6 +36,12 @@ interface FormDialogProps {
   layout?: 'dialog' | 'screen' | undefined;
   /** The element a `screen` dialog fills (the work area of the shell). */
   container?: HTMLElement | null | undefined;
+  /**
+   * The cursor goes to the first box that is still empty when the dialog opens, because the form
+   * starts with what was typed in the picker (the short form of "add it here", plan 41). Without
+   * it the first control that can take focus has it.
+   */
+  focusFirstEmpty?: boolean | undefined;
 }
 
 export function FormDialog({
@@ -47,6 +54,7 @@ export function FormDialog({
   escapeToApp = false,
   layout = 'dialog',
   container,
+  focusFirstEmpty = false,
 }: FormDialogProps) {
   const asScreen = layout === 'screen';
   const { language, direction } = useUiLanguage();
@@ -77,14 +85,22 @@ export function FormDialog({
             // A click on the scrim must not drop an Index form with a half-typed record.
             if (escapeToApp) event.preventDefault();
           }}
-          onOpenAutoFocus={() => {
+          onOpenAutoFocus={(event) => {
             const before = document.activeElement;
             returnFocusRef.current = before instanceof HTMLElement ? before : null;
+            if (focusFirstEmpty && event.target instanceof HTMLElement) {
+              event.preventDefault();
+              focusFirstEmptyField(event.target);
+            }
           }}
           onCloseAutoFocus={(event) => {
             const target = returnFocusTo?.current ?? returnFocusRef.current;
             if (!target?.isConnected) return;
             event.preventDefault();
+            // Another form dialog took this one's place (the link "Full form" of the short form of
+            // "add it here", plan 41): the field is under it, and the new dialog keeps the focus.
+            const top = Array.from(document.querySelectorAll('[role="dialog"]')).at(-1);
+            if (top !== undefined && !top.contains(target)) return;
             target.focus();
           }}
           className={

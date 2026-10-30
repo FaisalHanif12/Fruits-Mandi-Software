@@ -1,9 +1,14 @@
-// Quick add of an account without leaving the screen (PRD FR-10.8, FR-7.42): `F4` in an account
-// picker, or the "add" button of the unknown-code message, opens this small form over the screen,
-// with the typed code filled in. The fields are the ones that tell one party from another: type
-// (when the field takes any account), code, name in two scripts, father or firm, phone and city.
-// Everything else is the account form's, later. A saved account comes back to the field.
+// Quick add of an account without leaving the screen (PRD FR-7.69, FR-10.8, FR-7.42): the add row
+// of an account picker, `F4`, or the "add" button of the unknown-code message opens this small form
+// over the screen, with the typed text filled in. The fields are the ones that tell one party from
+// another: type (when the field takes any account), code, name in two scripts, tag, phone and city.
+// Everything else is the account form's, later, reached by the link "Full form". A saved account
+// comes back to the field.
 //
+// - Accounts that look like the name being typed show under it (PRD FR-7.63, FR-10.7, E75). One of
+//   them can be taken instead of making a new one.
+// - Father or firm is not asked here (the full form has it), except when a one-time person is made
+//   regular.
 // - The names go through NamePair, and a word made by the spelling rules alone is checked before
 //   the save (useSpellingFlow, PRD FR-7.66), once for each pair.
 // - Keys: F10 saves, Esc closes (the screen under it keeps what was typed there).
@@ -17,7 +22,9 @@ import {
   pickedOf,
   useAccountNextCode,
   useSaveAccount,
+  useSimilarAccounts,
   type AccountDraft,
+  type AccountMatch,
   type AccountRow,
   type AccountScope,
   type AccountType,
@@ -32,9 +39,11 @@ import { CodeInput } from './CodeInput';
 import { ErrorNotice } from './ErrorNotice';
 import { Field } from './Field';
 import { FormDialog } from './FormDialog';
+import { LinkButton } from './LinkButton';
 import { NamePair, type NamePairValue } from './NamePair';
 import { Picker } from './Picker';
 import { Select } from './Select';
+import { SimilarAccounts } from './SimilarAccounts';
 import { TagInput } from './TagInput';
 import { TextInput } from './TextInput';
 import { fieldError } from './field-error';
@@ -51,6 +60,13 @@ interface QuickAddAccountProps {
   suggestedCode?: string | null;
   /** The saved account, to put in the field. */
   onSaved: (account: AccountRow) => void;
+  /**
+   * Opens the full Index form instead, with the name typed so far. Leave out where there is none
+   * (the one-time person made regular, a field with its own form). The link shows only with it.
+   */
+  onFullForm?: ((text: string) => void) | undefined;
+  /** Takes a look-alike that is already there, instead of making a new account. */
+  onPickExisting?: ((match: AccountMatch) => void) | undefined;
   /** Names and phone to start with, for example those of a one-time person. */
   initial?: { names: NamePairValue; phone: string } | undefined;
   /**
@@ -85,11 +101,20 @@ function startingType(scope: AccountScope): AccountType {
   return scope === 'seller' ? 'seller' : 'buyer';
 }
 
+/** Can this look-alike be taken in this field? A seller field takes sellers, a buyer field buyers. */
+function fitsField(scope: AccountScope, match: AccountMatch): boolean {
+  if (scope === 'control') return false;
+  if (scope === 'any') return match.account_type === 'seller' || match.account_type === 'buyer';
+  return match.account_type === startingType(scope);
+}
+
 function QuickAddForm({
   scope,
   typed,
   suggestedCode,
   onSaved,
+  onFullForm,
+  onPickExisting,
   initial,
   saveWith,
   onClose,
@@ -114,10 +139,14 @@ function QuickAddForm({
   );
   const [tag, setTag] = useState('');
   const [father, setFather] = useState<NamePairValue>({ urdu: '', english: '' });
+  // The short form asks the names, the tag, the phone and the city (PRD FR-7.69). Father or firm is
+  // the full form's, except when a one-time person is made regular (PRD FR-13.8).
+  const askFather = initial !== undefined;
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [city, setCity] = useState<AccountDraft['city']>(null);
   const save = useSaveAccount();
   const nextCode = useAccountNextCode(type, null, code === null);
+  const similar = useSimilarAccounts(names.urdu, names.english, phone, tag, null);
   const spelling = useSpellingFlow();
   // What the backend refused in the last try, to show at the fields. The next try clears it.
   const [error, setError] = useState<UiError | null>(null);
@@ -216,9 +245,6 @@ function QuickAddForm({
             )}
           </Field>
         ) : null}
-        <Field label={<Localized id="accounts-field-code" />} error={fieldError(error, 'code')}>
-          {(props) => <CodeInput {...props} value={codeShown} onChange={setCode} />}
-        </Field>
         <NamePair
           value={names}
           onChange={setNames}
@@ -235,14 +261,16 @@ function QuickAddForm({
         >
           {(props) => <TagInput {...props} value={tag} onChange={setTag} />}
         </Field>
-        <NamePair
-          value={father}
-          onChange={setFather}
-          urduLabel={<Localized id="accounts-field-father-ur" />}
-          englishLabel={<Localized id="accounts-field-father-en" />}
-          urduError={fieldError(error, 'father_or_firm_ur')}
-          englishError={fieldError(error, 'father_or_firm_en')}
-        />
+        {askFather ? (
+          <NamePair
+            value={father}
+            onChange={setFather}
+            urduLabel={<Localized id="accounts-field-father-ur" />}
+            englishLabel={<Localized id="accounts-field-father-en" />}
+            urduError={fieldError(error, 'father_or_firm_ur')}
+            englishError={fieldError(error, 'father_or_firm_en')}
+          />
+        ) : null}
         <Field label={<Localized id="accounts-field-phone1" />} error={fieldError(error, 'phone1')}>
           {(props) => <TextInput {...props} value={phone} onChange={setPhone} lang="en" />}
         </Field>
@@ -258,19 +286,47 @@ function QuickAddForm({
             />
           )}
         </Field>
+        {/* The code comes last: it is given by itself, so the cursor starts at the names. */}
+        <Field label={<Localized id="accounts-field-code" />} error={fieldError(error, 'code')}>
+          {(props) => <CodeInput {...props} value={codeShown} onChange={setCode} />}
+        </Field>
       </div>
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button shortcut={SHORTCUTS.back} onClick={onClose}>
-          <Localized id="common-back" />
-        </Button>
-        <Button
-          variant="primary"
-          shortcut={SHORTCUTS.save}
-          busy={flight.busy || save.isPending}
-          onClick={submitNow}
-        >
-          <Localized id="layout-save-save" />
-        </Button>
+      <SimilarAccounts
+        matches={similar.data ?? []}
+        onPick={
+          onPickExisting === undefined
+            ? undefined
+            : (match) => {
+                onPickExisting(match);
+              }
+        }
+        canPick={(match) => fitsField(scope, match)}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {onFullForm === undefined ? (
+          <span />
+        ) : (
+          <LinkButton
+            onClick={() => {
+              onFullForm(names.urdu.trim() !== '' ? names.urdu.trim() : names.english.trim());
+            }}
+          >
+            <Localized id="search-quick-full-form" />
+          </LinkButton>
+        )}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button shortcut={SHORTCUTS.back} onClick={onClose}>
+            <Localized id="common-back" />
+          </Button>
+          <Button
+            variant="primary"
+            shortcut={SHORTCUTS.save}
+            busy={flight.busy || save.isPending}
+            onClick={submitNow}
+          >
+            <Localized id="layout-save-save" />
+          </Button>
+        </div>
       </div>
       {spelling.dialog}
     </form>
@@ -288,6 +344,7 @@ export function QuickAddAccount({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
+      focusFirstEmpty
       title={title ?? <Localized id="accountpicker-add-title" />}
       description={help ?? <Localized id="accountpicker-add-help" />}
     >

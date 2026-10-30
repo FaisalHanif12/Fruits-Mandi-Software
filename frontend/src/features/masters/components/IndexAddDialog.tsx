@@ -1,24 +1,26 @@
-// The Index form of a new record, opened above any screen by the "add" button of a picker that
-// found nothing (plan 32, R8). It is the real Index form (the account form, or the form of a
-// master), with the type chosen and what was typed in the picker already in the name box.
+// The full Index form of a new record, opened above any screen by the link "Full form" of the short
+// form of "add it here" (plan 41, PRD FR-7.69; before, plan 32 R8, it was the picker's own button).
+// It is the real Index form (the account form, or the form of a master), with the type chosen and
+// what was typed in the picker already in the name box. It has the fields the short form does not
+// ask: the opening balance, the credit limit and the others.
 //
 // It is a dialog, not a new address: the screen underneath stays as it is, so a sale in progress, a
 // voucher, the lines of a grid and the selected row are all still there when the form closes. Save
-// or Esc closes it; the picker takes the focus back and lists the same text, and the new record is
-// there to be picked. Nothing is filled in by itself.
+// or Esc closes it; the picker takes the focus back. If a record was saved, the picker puts it in
+// the field.
 //
-// Pickers inside this form do not offer the button again (no nested Index form); they keep their
-// own F4 quick add of a city or an اڈا.
+// Pickers inside this form can add a record of their own with the short form (a city for the
+// account), because the host's dialogs are still in reach; they get no second full form.
 
 import { Localized } from '@fluent/react';
 import { uiErrorOf } from '../../../shared/api';
 import { useEscape } from '../../../shared/keyboard';
 import {
-  AddRecordContext,
   ErrorState,
   FormDialog,
   LoadingState,
   useWorkAreaStore,
+  type AddedRecord,
   type AddRecordKind,
   type AddRecordRequest,
 } from '../../../shared/ui';
@@ -32,8 +34,8 @@ import { MasterForm } from './MasterForm';
 interface IndexAddDialogProps {
   /** What the picker asked for, or null while the dialog is closed. */
   request: AddRecordRequest | null;
-  /** The form closed: saved (true) or left (false). */
-  onClose: (saved: boolean) => void;
+  /** The form closed: with the record that was saved, or null if it was left. */
+  onClose: (added: AddedRecord | null) => void;
 }
 
 function NewAccount({
@@ -43,7 +45,7 @@ function NewAccount({
 }: {
   type: 'seller' | 'buyer';
   text: string;
-  onDone: (saved: boolean) => void;
+  onDone: (added: AddedRecord | null) => void;
 }) {
   const day = useDayStatus();
   if (day.isPending) return <LoadingState />;
@@ -68,7 +70,7 @@ function NewMaster({
 }: {
   kind: MasterKind;
   text: string;
-  onDone: (saved: boolean) => void;
+  onDone: (added: AddedRecord | null) => void;
 }) {
   const config = configOfKind(kind);
   const nextCode = useNextCode(config.kind, config.hasCode);
@@ -115,9 +117,9 @@ function targetOf(kind: AddRecordKind): Target {
  * is open, and its handler comes later, so it answers first (shared/keyboard/escape.ts). It sits
  * inside the dialog, so it belongs to the dialog's layer.
  */
-function EscapeToClose({ onClose }: { onClose: (saved: boolean) => void }) {
+function EscapeToClose({ onClose }: { onClose: (added: AddedRecord | null) => void }) {
   useEscape('leave', () => {
-    onClose(false);
+    onClose(null);
   });
   return null;
 }
@@ -142,15 +144,14 @@ export function IndexAddDialog({ request, onClose }: IndexAddDialogProps) {
       }
     >
       {request === null || target === null ? null : (
-        // The pickers in this form do not open another Index form.
-        <AddRecordContext.Provider value={null}>
+        <>
           <EscapeToClose onClose={onClose} />
           {'account' in target ? (
             <NewAccount type={target.account} text={request.text} onDone={onClose} />
           ) : (
             <NewMaster kind={target.master} text={request.text} onDone={onClose} />
           )}
-        </AddRecordContext.Provider>
+        </>
       )}
     </FormDialog>
   );

@@ -99,17 +99,21 @@ export function fakeMasters(
   vi.mocked(mastersApi.mastersGetOne).mockImplementation((kind, id) =>
     Promise.resolve(store.rows[kind].find((row) => row.id === id) ?? null),
   );
-  vi.mocked(mastersApi.mastersNextCode).mockImplementation((kind) => {
+  const nextCodeOf = (kind: MasterKind) => {
     const highest = Math.max(0, ...store.rows[kind].map((row) => Number(row.code) || 0));
-    return Promise.resolve(String(highest + 1).padStart(4, '0'));
-  });
+    return String(highest + 1).padStart(4, '0');
+  };
+  vi.mocked(mastersApi.mastersNextCode).mockImplementation((kind) =>
+    Promise.resolve(nextCodeOf(kind)),
+  );
   vi.mocked(mastersApi.mastersSave).mockImplementation((kind, draft) => {
     const names = { name_ur: draft.names.urdu, name_en: draft.names.english };
     const saved: MasterRecord = {
       kind,
       id: draft.id ?? (nextId += 1),
       version: (draft.version ?? 0) + 1,
-      code: draft.code,
+      // An empty code asks for the next one, as the backend does (PRD FR-10.3); a narration has none.
+      code: draft.code === '' && kind !== 'narration' ? nextCodeOf(kind) : draft.code,
       is_active: true,
       names: kind === 'marka' ? null : names,
       text: draft.text,
@@ -148,6 +152,13 @@ export function fakeMasters(
   );
   vi.mocked(searchApi.searchRecent).mockImplementation(({ scope }) =>
     Promise.resolve(rowsOf(scope).map(hitOf)),
+  );
+  vi.mocked(searchApi.findMaster).mockImplementation((scope, id) =>
+    Promise.resolve(
+      rowsOf(scope)
+        .map(hitOf)
+        .find((found) => found.id === id) ?? null,
+    ),
   );
   vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
   return store;

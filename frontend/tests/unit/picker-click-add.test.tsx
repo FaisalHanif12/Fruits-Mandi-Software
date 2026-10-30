@@ -1,7 +1,7 @@
-// Plan 32, R7 and R8 on the shared master picker: a mouse click opens the list of every record of
-// the kind (recent first, then by code), a long list is read page by page, arriving by keyboard
-// does not open it (PRD 7.2 stays), and an empty list offers a button that asks the app for the
-// Index form of that kind with the typed text. Both languages, against a fake of the search.
+// Plan 32, R7 on the shared master picker: a mouse click opens the list of every record of the kind
+// (recent first, then by code), a long list is read page by page, and arriving by keyboard does not
+// open it (PRD 7.2 stays). Adding a missing record from the list (plan 41) is in
+// picker-add-on-the-spot.test.tsx. Both languages, against a fake of the search.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
@@ -233,77 +233,5 @@ describe('Picker, a long list is read page by page', () => {
       await Promise.resolve();
     });
     expect(searchApi.searchMasters).toHaveBeenCalledTimes(3);
-  });
-});
-
-describe.each(LANGUAGES)('Picker, nothing found (%s)', (language) => {
-  it('says nothing has been added yet and offers the button when the list is empty', async () => {
-    fakeSearch(0);
-    const host = vi.fn();
-    const { input, user } = setup(language, { host });
-    await user.click(input);
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-empty'))).toBeInTheDocument();
-    });
-    await user.click(
-      screen.getByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
-    );
-    expect(host).toHaveBeenCalledWith(expect.objectContaining({ kind: 'city', text: '' }));
-  });
-
-  it('asks the app for the Index form with the typed text, and takes the field back when it closes', async () => {
-    const host = vi.fn();
-    const { input, user } = setup(language, { host });
-    await user.click(input);
-    await user.keyboard('zzz');
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
-    });
-    await user.click(
-      screen.getByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
-    );
-    expect(host).toHaveBeenCalledTimes(1);
-    const request = host.mock.calls[0]?.[0] as { kind: string; text: string; onClosed: () => void };
-    expect(request.kind).toBe('city');
-    expect(request.text).toBe('zzz');
-    // The form was opened above the screen: the field loses focus to it. Nothing typed is dropped.
-    act(() => {
-      input.blur();
-    });
-    expect(input.value).toBe('zzz');
-    // The form closed: the field has the same text, the focus, and its list is open again.
-    act(() => {
-      request.onClosed();
-    });
-    await waitFor(() => {
-      expect(input).toHaveFocus();
-    });
-    expect(input.value).toBe('zzz');
-    expect(input).toHaveAttribute('aria-expanded', 'true');
-  });
-
-  it('without the app Index form the empty list has no button; a filter can turn it off', async () => {
-    const { input, user } = setup(language, { host: null });
-    await user.click(input);
-    await user.keyboard('zzz');
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
-    });
-    expect(
-      screen.queryByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('showAdd false hides the button even when the app has the Index form', async () => {
-    const host = vi.fn();
-    const { input, user } = setup(language, { host, showAdd: false });
-    await user.click(input);
-    await user.keyboard('zzz');
-    await waitFor(() => {
-      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
-    });
-    expect(
-      screen.queryByRole('button', { name: new RegExp(message(language, 'search-add-city')) }),
-    ).not.toBeInTheDocument();
   });
 });

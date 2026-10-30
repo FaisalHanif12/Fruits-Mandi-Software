@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Version | 1.10 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, and his answers of 15-10-2026 and 30-10-2026) |
-| Date | 30 October 2026 |
+| Version | 1.11 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, and 31-10-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Date | 31 October 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
 | Platform | Windows desktop app, one computer, works offline |
@@ -20,14 +20,14 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.10 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.11 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality | v1.6 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.7 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.11 |
 | 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.9 |
 | 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.7 |
 
-**Versions.** All six documents started at version 1.1, the baseline for build. Version 1.2 (12-10-2026) applies Umar's changes of 11-10-2026: one user with no roles, a choice to deduct an advance or not, partner money taken and returned, money lent to staff and others, cash lent to buyers, items in party ledgers, the shop's total اگراہی, and stricter Urdu spelling checks. Version 1.3 (15-10-2026) applies Umar's changes of 14-10-2026: partner capital (the money partners invest), the firm's own goods (bought and sold by the firm for profit or loss), and printing for any day and any party. Version 1.4 (15-10-2026) applies Umar's change of 15-10-2026: one خرچہ screen for shop expenses and a partner's personal spending, and related entries kept on one screen so the app is easy to use. Version 1.5 (15-10-2026) applies Umar's answers to the team's open questions after D1 and D2: commission typed on the بکری line by default, the rule tie, opening balances, a seller's opening credit, the cash warning and return-by dates. Version 1.6 (19-10-2026) applies Umar's changes of 18-10-2026 and 19-10-2026: gardens and market trips owned by the partners in them, one cash account with no bank, fruit taken by partners, complete analytics, the party day sheet, page-by-page lists, and dated lines in each partner's statement. Version 1.7 (22-10-2026) applies what Umar settled from the client's own prints of 18-10-2026: the buyer pays commission and لاگا and the seller commission only, three prints in the client's own layout (the buyer's day slip, ادھاری تفصیل and the all-buyers balance sheet), a clear layout for every other print, a short tag (نشان) after a name, and the firm's contact persons and trade mark on every print. Version 1.8 (27-10-2026) applies Umar's change of 27-10-2026, made while he tested the app himself: short codes by type (the first seller is 0010), an accounts list of sellers, buyers and پختہ کھاتہ only, and pickers that open on a click with a button to add what is missing. Version 1.9 (30-10-2026) applies Umar's change of 30-10-2026: in every table and print, a column of numbers and its total are centred under the column heading. Version 1.10 (30-10-2026) applies Umar's second change of that day: the dashboard shows buyers' dues, sellers' dues, the total اگراہی and the dead amount (ڈوبی رقم); a person who owes and has died or left the business is moved to the dead amount; and every Urdu word says exactly what its English says. From now on, any change to a document raises its version (1.2, 1.3 ...) and adds a line to its change log. If the change affects other documents, they are updated in the same step.
+**Versions.** All six documents started at version 1.1, the baseline for build. Version 1.2 (12-10-2026) applies Umar's changes of 11-10-2026: one user with no roles, a choice to deduct an advance or not, partner money taken and returned, money lent to staff and others, cash lent to buyers, items in party ledgers, the shop's total اگراہی, and stricter Urdu spelling checks. Version 1.3 (15-10-2026) applies Umar's changes of 14-10-2026: partner capital (the money partners invest), the firm's own goods (bought and sold by the firm for profit or loss), and printing for any day and any party. Version 1.4 (15-10-2026) applies Umar's change of 15-10-2026: one خرچہ screen for shop expenses and a partner's personal spending, and related entries kept on one screen so the app is easy to use. Version 1.5 (15-10-2026) applies Umar's answers to the team's open questions after D1 and D2: commission typed on the بکری line by default, the rule tie, opening balances, a seller's opening credit, the cash warning and return-by dates. Version 1.6 (19-10-2026) applies Umar's changes of 18-10-2026 and 19-10-2026: gardens and market trips owned by the partners in them, one cash account with no bank, fruit taken by partners, complete analytics, the party day sheet, page-by-page lists, and dated lines in each partner's statement. Version 1.7 (22-10-2026) applies what Umar settled from the client's own prints of 18-10-2026: the buyer pays commission and لاگا and the seller commission only, three prints in the client's own layout (the buyer's day slip, ادھاری تفصیل and the all-buyers balance sheet), a clear layout for every other print, a short tag (نشان) after a name, and the firm's contact persons and trade mark on every print. Version 1.8 (27-10-2026) applies Umar's change of 27-10-2026, made while he tested the app himself: short codes by type (the first seller is 0010), an accounts list of sellers, buyers and پختہ کھاتہ only, and pickers that open on a click with a button to add what is missing. Version 1.9 (30-10-2026) applies Umar's change of 30-10-2026: in every table and print, a column of numbers and its total are centred under the column heading. Version 1.10 (30-10-2026) applies Umar's second change of that day: the dashboard shows buyers' dues, sellers' dues, the total اگراہی and the dead amount (ڈوبی رقم); a person who owes and has died or left the business is moved to the dead amount; and every Urdu word says exactly what its English says. Version 1.11 (31-10-2026) applies Umar's change of 31-10-2026: any missing list entry (an expense head, an item, a packing, a city, a seller ...) is added on the spot, from the list where it is needed, and is chosen at once. From now on, any change to a document raises its version (1.2, 1.3 ...) and adds a line to its change log. If the change affects other documents, they are updated in the same step.
 
 ### 0.2 What we take from the old software
 
@@ -508,7 +508,7 @@ FR-7.6 [A] Mistakes are explained in plain words (in the app language) next to t
 FR-7.7 [A] Success is shown as a small message that disappears by itself ("بکری 1 محفوظ ہو گئی"). It never needs an OK click.
 FR-7.8 [A] Before anything that cannot be undone easily (cancel, day close, restore), a simple confirm box in Urdu says exactly what will happen.
 FR-7.9 [A] Leaving a screen with unsaved work asks "محفوظ کریں؟" with three buttons: محفوظ کریں، محفوظ کیے بغیر جائیں، واپس.
-FR-7.10 [A] Pickers search as you type, by code, short code, Urdu name or English name (FR-7.39, FR-7.40). [C] A mouse click on a picker opens its list with every record of that field's type (sellers in a seller field, items in an item field ...), recent first and then by code (Umar, 27-10-2026). Typing filters it by code or by name. A new account can be added from the picker without leaving the screen (`F4`), and a list with no match offers a button to add one in the انڈکس (FR-7.42).
+FR-7.10 [A] Pickers search as you type, by code, short code, Urdu name or English name (FR-7.39, FR-7.40). [C] A mouse click on a picker opens its list with every record of that field's type (sellers in a seller field, items in an item field ...), recent first and then by code (Umar, 27-10-2026). Typing filters it by code or by name. A new record of the field's type is added on the spot from the picker, without leaving the screen (FR-7.69).
 FR-7.11 [A] Large, easy click targets and readable text for older users. Text size can be changed with `Ctrl +` / `Ctrl −` (within the limits in NFR-USE-18), and the app remembers it per user.
 FR-7.12 [A] First-run guide: on first login, a 5-step guided tour of the dashboard, انڈکس, بکری بک, وصولی and reports. Can be replayed from the help menu.
 FR-7.67 [C] **Related entries share one screen.** (Numbered after FR-7.66 because it was added in v1.4.) Umar (15-10-2026): the app must not feel like many separate programs. Entries that do the same kind of job are made on one screen. A type list (قسم) at the top says what the entry is. Only the fields for that type show, always in the same places, and the list below the form shows that type's history. Changing the type keeps what the types share (date, amount, narration) and clears the rest. Each type keeps its own number series, its own posting and its own checks, so nothing about the money changes.
@@ -528,6 +528,29 @@ Example: the munshi opens خرچہ with `Alt+K` and types 3,000 as دکان خر
 FR-7.68 [A] **The app points to the right type.** When an entry looks like another type on the same screen, a note under it offers to switch, keeping what was typed. It never switches by itself. Two cases:
 - An ادائیگی to a seller with nothing payable: "اس بیوپاری کو دینے کے لیے کچھ باقی نہیں۔ کیا یہ پیشگی ہے؟" with a button پیشگی بنائیں.
 - A دکان خرچہ whose "ادا کیا" is a partner's name (in either script): "یہ شراکت دار کا ذاتی خرچہ تو نہیں؟" with a button ذاتی خرچہ بنائیں.
+
+FR-7.69 [C] **Add on the spot, from any list.** (Added in v1.11.) Umar (31-10-2026): "if there is something available or not, we can add it here and it will save in the list, and the next time it should be shown in the drop down. I'm talking about any kind of drop down: packing, items, any kind of things which we need to add, whether in بکری, خرچہ, روکڑ." The user never leaves his entry to add a missing record.
+- **Where.** Every picker on an entry screen: accounts (seller, buyer, ادھار رقم person, الگ کھاتہ), item, packing, city, اڈا, مارکہ, store, standard narration, expense head and staff. Not on filter boxes (reports, analytics, list filters, find, the rule test).
+- **How.** The open list always ends with one row, for example "+ نئی خرچہ مد شامل کریں" (Add a new expense head). If text was typed, the row names it: "+ «بجلی» کو نئی خرچہ مد بنائیں". A click, or `↓` to the row and `Enter`, or `F4` in the picker, opens a short form over the screen. The typed text is already in the name.
+- **The short form** asks only what the record needs: both names (filled from each other, FR-7.24) and the tag for an account, plus:
+
+| List | Also asks |
+|---|---|
+| Seller, buyer | City, phone (both optional) |
+| Item | Item group (پھل / سبزی), sold by (نگ / وزن, starts at نگ) |
+| Packing | Approx weight kg (optional) |
+| اڈا | City (optional) |
+| مارکہ | The mark text; the owner is the lot's seller when it is opened from a lot |
+| Narration | Urdu and English text |
+| Staff | Job, phone (optional) |
+| Expense head, city, store | Nothing more |
+| ادھار رقم person, الگ کھاتہ | As their own `F4` forms (16.5, 16.6) |
+
+  The code is given by itself (FR-10.3). Similar records already in the list show under the name while typing (FR-7.63, FR-10.7), and one can be picked instead.
+- **After save.** The record is saved in its master list, is chosen in the field at once, and the cursor moves on with `Enter` as usual. It is in the list next time, on every screen. `Esc` closes the form and leaves the field as it was. Nothing typed on the screen underneath is lost.
+- **More details.** A link "مکمل فارم" (Full form) in the short form opens the انڈکس form of that type over the screen, as in v1.8, for fields the short form does not ask (opening balance, credit limit and others).
+
+Example: on the خرچہ screen the munshi opens خرچہ مد and the list is empty, saying "ابھی کوئی خرچہ مد نہیں". He types بجلی and presses `Enter` on "+ «بجلی» کو نئی خرچہ مد بنائیں". The short form shows بجلی and Electricity. He presses `F10`, and بجلی is chosen in the field. Next time بجلی is in the list.
 
 ### 7.2 Arrow-key navigation [C]
 
@@ -677,7 +700,7 @@ FR-7.40 [A] **Smart search in every picker.**
 
 FR-7.41 [A] **Recent first.** Opening a picker without typing (a mouse click or `Alt+↓`) shows the last 10 records used on that screen, then the rest by code.
 
-FR-7.42 [A] **Unknown code.** A code that does not exist shows "اس کوڈ کا کوئی گاہک نہیں" (or بیوپاری) with an `F4` button to add a new account with that code. [C] When a picker's list has no match, or nothing of that type exists yet, the list shows a button, for example "نیا بیوپاری بنائیں" (Add a new seller) or "نئی قسم مال بنائیں" (Add a new item). It opens the انڈکس form of that type with the typed text in the name. After save, or `Esc`, the app returns to the same screen with everything typed still there; the user then picks the new record (Umar, 27-10-2026).
+FR-7.42 [A] **Unknown code.** A code that does not exist shows "اس کوڈ کا کوئی گاہک نہیں" (or بیوپاری) with an `F4` button to add a new account with that code. [C] When a picker's list has no match, or nothing of that type exists yet, the list says so in words and offers to add one on the spot (FR-7.69). (v1.11: this replaces the button of v1.8 that opened the انڈکس form.)
 
 FR-7.43 [A] **How was this worked out?** Every calculated amount (commission, لاگا, صافی بکری, partner share, balance, aging days) has a small ⓘ. Clicking it, or `Ctrl+I` on it, shows the working with the real numbers and the rule used, for example "12,000 × 6 ÷ 100 = 720 (اصول: عام بیوپاری کمیشن 6%)".
 
@@ -740,7 +763,7 @@ FR-7.62 [A] **Expenses.** The most used expense heads are at the top of the list
 
 FR-7.63 [A] **Duplicate check while typing.** While a new account's name is typed, similar existing accounts show below it (in both scripts, with code, father or firm, city and phone), before save. This extends FR-10.7.
 
-FR-7.64 [A] **Add a missing city or اڈا on the spot** from the account form with `F4` (FR-10.8), without losing what is already typed.
+FR-7.64 [A] **Add a missing city or اڈا on the spot** from the account form (FR-7.69), without losing what is already typed.
 
 FR-7.65 [A] **Party reports from the card.** The party card has buttons کھاتہ (ledger, R13) and فرد حساب (statement, R14) for that party, with the date range already filled.
 
@@ -906,7 +929,7 @@ Seller and buyer commission go to two income accounts, so analytics and the prof
 FR-10.5 [S] List screen columns: code, Urdu name, English name, city, opening date, opening debit, opening credit, credit allowed, current balance. Footer: total debit, total credit. [C] The list shows only sellers, buyers and the two پختہ کھاتہ accounts, with a type filter: all, بیوپاری, گاہک, پختہ کھاتہ (Umar, 27-10-2026). روکڑ, the payables, income, capital and every other account are seen in the chart of accounts (FR-10.1).
 FR-10.6 [A] An account with postings cannot be deleted, only made inactive.
 FR-10.7 [A] Duplicate warning when name, tag and phone match an existing account. اسلم BA and اسلم are two different people. Similar names show while typing (FR-7.63).
-FR-10.8 [A] Quick add (`F4` or a "+" button in any picker) opens a small form without leaving the current screen.
+FR-10.8 [C] Quick add from any picker (FR-7.69) opens a short form without leaving the current screen. The full انڈکس form is still used to edit a record later.
 FR-10.9 [A] **Opening balances post.** An opening debit or credit posts as an opening entry dated the opening date: the account on its side, and ابتدائی فرق (06019999) on the other side. When all openings are entered correctly, ابتدائی فرق is 0. The trial balance shows it, so a wrong opening is visible. Changing an opening reverses the old opening posting and posts the new one.
 - [C] (Umar, 15-10-2026) Each account has at most one opening balance: one debit or one credit. Changing it reverses that account's opening posting and posts the new one, as above.
 - [C] An opening is refused on income (head 04) and expense (head 05) accounts, ابتدائی فرق, نقدی منڈی, the two پختہ کھاتہ accounts and اپنا مال (030119998, which never holds a balance, FR-12.26). From v1.6 it is also refused on بینک (01020001), a garden's account (0306) and a partner's garden, trip and fruit account (0604) [A].
@@ -1964,6 +1987,8 @@ Money rule: every money input and every stored money result is a **whole number 
 | E71 | A person who owes dies or leaves the business | Move him to ڈوبی رقم: his account is inactive, the money stays owed and in the total اگراہی; a recovery is a وصولی (FR-10.10) |
 | E72 | A sale, payment or advance typed for a person in the dead amount | Refused as on any inactive account; only a وصولی, or an ادھار رقم واپسی, is allowed (FR-10.10) |
 | E73 | A person in the dead amount comes back | دوبارہ فعال کریں with a reason; his balance returns to the normal tiles (FR-10.10) |
+| E74 | A record is missing from a list in the middle of an entry | Added on the spot from the list and chosen at once; the entry is kept (FR-7.69) |
+| E75 | The name added on the spot is like one already in the list | The similar records show under the name; one can be picked instead (FR-7.69, FR-10.7) |
 
 ---
 
@@ -2275,4 +2300,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.8 | 27-10-2026 | Umar's change of 27-10-2026, made while testing the app himself, approved by Umar. Codes by type: seller 001, buyer 002, پختہ کھاتہ 003, item 004, packing 005, staff 006, each code the type number + a running number from 0 with no padding (FR-10.2, FR-10.3, FR-10.4, FR-13.1, Section 21, E29, A14 resolved). Short codes are the running number (FR-7.39, A35). The accounts list shows sellers, buyers and پختہ کھاتہ only, and the account form makes sellers and buyers only (10.2, FR-10.5). A click opens a picker's list; a list with no match offers a button to add one in the انڈکس and comes back with nothing lost (FR-7.10, FR-7.16, FR-7.41, FR-7.42). The worked day's codes change (4.3 to 4.5, 4.10, E2E-23, E2E-24, E2E-25, E2E-42, demo step 4). Trip goods (with a date to sell) and garden goods arrived come into a new sale as ready lots (FR-12.39, FR-12.40). Many items in one purchase or goods-arrived entry, with each line split between our shop and another shop (FR-12.41). Market trips (007) and gardens (008) get codes by type (FR-10.2, 12.10, 12.11); purchase numbers (خ-1) stay. No money rule, posting or test number changed. |
 | 1.9 | 30-10-2026 | Umar's change of 30-10-2026, made while testing the app himself, approved by Umar: in every table, grid and print, the numbers of a column and its total are centred under the column heading (FR-19.13, NFR-USE-19). Example: 17 sits under the middle of تعداد. No money rule, posting or test number changed. |
 | 1.10 | 30-10-2026 | Umar's second change of 30-10-2026, made while testing the app himself, approved by Umar. The dashboard tiles گاہکوں کے ذمے, بیوپاریوں کے ذمے, کل اگراہی and ڈوبی رقم (9.1). A person who owes and has died or left the business is moved to the dead amount: nothing posts, his account is inactive, a recovery is a وصولی (FR-10.10, R38, FR-19.9, R20 to R22, R24, R26, R34, R35, 6.2, FR-6.1, FR-7.29, FR-7.38, FR-7.44, FR-7.61, FR-13.8, FR-15.5, FR-15.6, view C, E71 to E73, A65 to A68, E2E-44); R20 and R24 Urdu titles. Every Urdu word says exactly what its English says (FR-7.23); tile names in 9.1 changed. Glossary: کل اگراہی, ڈوبی رقم. No posting or earlier test number changed. |
+| 1.11 | 31-10-2026 | Umar's change of 31-10-2026, made while testing the app himself, approved by Umar: any missing record (expense head, item, packing, city, اڈا, مارکہ, store, narration, staff, account) is added on the spot from the picker with a short form and chosen at once (FR-7.69, new; FR-7.10, FR-7.42, FR-7.64, FR-10.8 updated; E74, E75). It replaces the v1.8 button that opened the انڈکس form. No money rule, posting or test number changed. |
 

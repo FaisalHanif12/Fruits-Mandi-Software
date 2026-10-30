@@ -91,6 +91,24 @@ export function useMasterFilter(kind: MasterKind, text: string) {
   };
 }
 
+/** How many look-alikes the short form of "add it here" shows. */
+const SIMILAR_LIMIT = 5;
+
+/**
+ * Records of a kind that look like the name being typed (PRD FR-7.63, FR-10.7): the same search the
+ * pickers use, so both scripts, look-alike letters and small mistakes count. Asked after a pause,
+ * and only when something has been typed.
+ */
+export function useSimilarMasters(kind: MasterKind, text: string) {
+  const settled = useSettled(text.trim(), FILTER_DELAY_MS);
+  return useQuery({
+    queryKey: [...MASTERS_KEY, kind, 'similar', settled],
+    queryFn: () => searchMasters({ scope: kind, text: settled, limit: SIMILAR_LIMIT }),
+    enabled: settled !== '',
+    placeholderData: keepPreviousData,
+  });
+}
+
 /** The code the next new master of a kind gets, asked each time the form for a new one opens. */
 export function useNextCode(kind: MasterKind, enabled: boolean) {
   return useQuery({

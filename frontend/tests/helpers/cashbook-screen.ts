@@ -21,6 +21,7 @@ import type { CashbookBooksOptions } from './cashbook-books';
 import { healthyBackend, resetClientState, sessionUser, signedIn } from './app';
 import { fakePartners, THREE_PARTNERS } from './partners';
 import { fakeMasters, record } from './masters';
+import { HEADS } from './cashbook-books';
 import { message, visible } from './render';
 import { EMPTY_PAIRS } from './paged';
 
@@ -42,7 +43,13 @@ export function prepareCashbook(
   fakeAccounts(rows, cashbookTree());
   fakeAccountSearch(rows);
   fakePartners(THREE_PARTNERS);
-  fakeMasters({ staff: [record('staff', 81, '0001', 'اسلم', 'Aslam')] });
+  // The expense heads are found by the shared picker, from the masters (plan 41).
+  fakeMasters({
+    staff: [record('staff', 81, '0001', 'اسلم', 'Aslam')],
+    expense_head: HEADS.map((rec) =>
+      record('expense_head', rec.id, rec.code, rec.name_ur, rec.name_en),
+    ),
+  });
   return fakeCashbook(options);
 }
 
@@ -71,6 +78,17 @@ export async function choose(
 ) {
   await user.click(await dropdown(language, fieldId));
   await user.click(await screen.findByRole('option', { name: named(optionText) }));
+}
+
+/** Opens a record picker (the expense head) and takes the row that starts with this name. */
+export async function chooseRecord(
+  user: ReturnType<typeof userEvent.setup>,
+  language: Language,
+  fieldId: string,
+  name: string,
+) {
+  await user.click(await dropdown(language, fieldId));
+  await user.click(await screen.findByRole('option', { name: startsWith(name) }));
 }
 
 /** Types an amount in the amount field of the screen. */

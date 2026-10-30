@@ -4,11 +4,10 @@
 // field adds a new person. There is no mode other than cash or salary, no bank and no cheque
 // (PRD FR-10.4). Everything typed is text; the backend reads it (CLAUDE.md rule 1).
 
-import { Localized } from '@fluent/react';
+import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { pickedOf } from '../../../shared/accounts';
-import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   ControlAccountPicker,
   DateInput,
@@ -16,13 +15,13 @@ import {
   FreeTextInput,
   MoneyInput,
   Notice,
+  Picker,
   Select,
   fieldError,
   FormCard,
   FormSpan,
 } from '../../../shared/ui';
 import type { LentDraft } from '../lent-draft';
-import { useExpenseHeads } from '../hooks';
 import type { LentReturnMode } from '../types';
 import { AddAccountDialog } from './AddAccountDialog';
 
@@ -37,8 +36,7 @@ interface LentFormProps {
 }
 
 export function LentForm({ draft, onChange, error }: LentFormProps) {
-  const language = useLanguage();
-  const heads = useExpenseHeads();
+  const { l10n } = useLocalization();
   const [adding, setAdding] = useState<string | null>(null);
   const lent = draft.type === 'money_lent';
   const salary = draft.type === 'money_lent_return' && draft.mode === 'salary';
@@ -72,7 +70,6 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
               });
             }}
             onAddNew={setAdding}
-            addLabelId="search-add-lent-person"
           />
         )}
       </Field>
@@ -142,18 +139,14 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
               error={fieldError(error, 'salary_head_id')}
             >
               {(props) => (
-                <Select
+                <Picker
                   {...props}
-                  readOnly={props.readOnly === true || heads.isPending}
-                  value={draft.salaryHeadId === '' ? undefined : draft.salaryHeadId}
-                  placeholder={<Localized id="cashbook-salary-head-default" />}
-                  onChange={(salaryHeadId) => {
-                    onChange({ salaryHeadId });
+                  scope="expense_head"
+                  value={draft.salaryHead}
+                  placeholder={l10n.getString('cashbook-salary-head-default')}
+                  onChange={(hit) => {
+                    onChange({ salaryHead: hit === null ? null : pickedOf(hit) });
                   }}
-                  options={(heads.data?.rows ?? []).map((choice) => ({
-                    value: String(choice.id),
-                    label: displayName(choice.head, language),
-                  }))}
                 />
               )}
             </Field>

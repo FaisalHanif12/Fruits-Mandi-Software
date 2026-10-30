@@ -1,7 +1,7 @@
 // The picker for the accounts of one control that has people or khatas of its own: the persons who
 // can borrow (control 0103, PRD 16.5) and the الگ کھاتے (control 0305, PRD 16.6). It is the shared
-// account picker's base with the control found by its code, the party card under it, and `F4` (or
-// the button of an empty result) asking the screen to add one, because adding such an account is
+// account picker's base with the control found by its code, the party card under it, and the add row
+// (or `F4`) asking the screen to add one, because adding such an account is
 // its own action with its own command (`lent_person_create`, `khata_create`), not the plain
 // account form. Pickers never convert English letters to Urdu (F41): the text is searched as typed.
 
@@ -18,10 +18,11 @@ interface ControlAccountPickerProps extends FieldControlProps {
   value: PickerValue | null;
   /** The account chosen, or null when the field was emptied. */
   onChange: (account: AccountHit | null) => void;
-  /** Called with the typed text on F4 and from the button of an empty result. */
+  /**
+   * Called with the typed text from the add row and from `F4` (plan 41). The screen opens its own
+   * form and puts the new account in the field itself. Leave out and the field has no add row.
+   */
   onAddNew?: ((text: string) => void) | undefined;
-  /** The Fluent id of the words of the empty list's button. Default: "Add a new account". */
-  addLabelId?: string | undefined;
   placeholder?: string | undefined;
   /** Show the party card under the field. Default: yes (PRD FR-7.38). */
   showCard?: boolean | undefined;
@@ -29,12 +30,22 @@ interface ControlAccountPickerProps extends FieldControlProps {
   includeDead?: boolean | undefined;
 }
 
+/** The word of each control's accounts in the add row's and the empty list's messages (plan 41). */
+const ADD_NOUN: Readonly<Record<string, string>> = {
+  // The persons who can borrow, and the separate khatas.
+  '0103': 'lent-person',
+  '0305': 'khata',
+};
+
+function nounOf(controlCode: string): string {
+  return ADD_NOUN[controlCode] ?? 'account';
+}
+
 export function ControlAccountPicker({
   controlCode,
   value,
   onChange,
   onAddNew,
-  addLabelId = 'search-add-account',
   placeholder,
   showCard = true,
   includeDead = false,
@@ -60,7 +71,7 @@ export function ControlAccountPicker({
         onChange={onChange}
         onHighlight={setHighlight}
         onAddNew={onAddNew}
-        addLabelId={addLabelId}
+        addNoun={onAddNew === undefined ? undefined : nounOf(controlCode)}
         placeholder={placeholder}
         renderEnd={(hit) => (hit.balance === null ? null : <Balance balance={hit.balance} />)}
       />

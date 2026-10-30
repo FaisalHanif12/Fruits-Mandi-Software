@@ -4,10 +4,11 @@
 // simple sum such as `2000+500` is read by the backend, FR-7.48), and the backend reads it.
 
 import { isoToDisplayDate } from '../../shared/format';
+import type { PickerValue } from '../../shared/ui';
 import type { ExpenseEntry } from './types';
 import type { ExpenseType } from './screen-type';
 
-/** One expense entry as the form holds it, all as text. Ids of picked records are text too. */
+/** One expense entry as the form holds it, all as text. A picked record is the one its picker holds. */
 export interface ExpenseDraft {
   type: ExpenseType;
   /** `DD-MM-YYYY` as typed. */
@@ -15,8 +16,8 @@ export interface ExpenseDraft {
   /** Whole rupees as typed. */
   amount: string;
   narration: string;
-  /** دکان خرچہ only: the expense head's id, or empty. */
-  headId: string;
+  /** دکان خرچہ only: the expense head the picker holds, or null. */
+  head: PickerValue | null;
   /** دکان خرچہ only: who was paid, as typed (one script, PRD FR-7.25). */
   paidTo: string;
   /** ذاتی خرچہ and its واپسی: the partner's id, or empty. */
@@ -36,7 +37,7 @@ export function newExpenseDraft(type: ExpenseType, today: string): ExpenseDraft 
     date: today === '' ? '' : isoToDisplayDate(today),
     amount: '',
     narration: '',
-    headId: '',
+    head: null,
     paidTo: '',
     partnerId: '',
     reason: '',
@@ -108,7 +109,7 @@ export function buildExpense(draft: ExpenseDraft, confirm: boolean): ExpenseEntr
       return {
         type: 'shop_expense',
         date,
-        expense_head_id: idOrNull(draft.headId),
+        expense_head_id: draft.head?.id ?? null,
         amount,
         paid_to: textOrNull(draft.paidTo),
         narration: textOrNull(draft.narration),

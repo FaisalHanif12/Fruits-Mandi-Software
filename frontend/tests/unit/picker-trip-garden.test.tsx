@@ -165,7 +165,8 @@ describe.each(LANGUAGES)('the picker of trips and gardens (%s)', (language) => {
       await user.click(input);
       await user.keyboard('zzz');
       expect(await screen.findByText(message(language, 'search-no-match'))).toBeInTheDocument();
-      expect(screen.queryByText(message(language, 'search-add-new'))).not.toBeInTheDocument();
+      // The list ends with no add row (the id of the row ends with -add).
+      expect(document.querySelector('[id$="-add"]')).toBeNull();
       expect(host).not.toHaveBeenCalled();
     },
   );

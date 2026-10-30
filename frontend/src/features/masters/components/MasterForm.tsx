@@ -24,7 +24,6 @@ import {
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import {
-  AccountPicker,
   Button,
   Checkbox,
   CodeInput,
@@ -32,16 +31,16 @@ import {
   ErrorNotice,
   Field,
   NamePair,
-  Picker,
   SaveChangesPrompt,
-  Select,
   TextInput,
   fieldError,
   showToast,
+  type AddedRecord,
   type PickerValue,
 } from '../../../shared/ui';
 import type { SearchHit } from '../../../shared/search';
 import type { FieldSpec, MasterConfig } from '../configs';
+import { MasterFieldInput, fieldPath } from './MasterFieldInput';
 import { labelOf, newValues, sameValues, valuesOf, type FormValues } from '../draft';
 import { useSaveMaster, useSetMasterActive } from '../hooks';
 import { useMasterFocus } from '../store';
@@ -55,8 +54,8 @@ import type { MasterRecord } from '../types';
 export interface EmbeddedMaster {
   /** What was typed in the picker. */
   text: string;
-  /** The form closed: saved (true) or left (false). */
-  onDone: (saved: boolean) => void;
+  /** The form closed: with the record that was saved, or null if it was left. */
+  onDone: (saved: AddedRecord | null) => void;
 }
 
 interface MasterFormProps {
@@ -70,18 +69,6 @@ interface MasterFormProps {
 }
 
 const URDU_LETTER = /[؀-ۿ]/;
-
-/** The path the backend names a field by when it refuses it. */
-function fieldPath(spec: FieldSpec): string {
-  switch (spec.control.type) {
-    case 'picker':
-      return `${spec.key}_id`;
-    case 'account':
-      return `${spec.key}_account_id`;
-    default:
-      return spec.key;
-  }
-}
 
 function toPickerValue(hit: Pick<SearchHit, 'id' | 'code' | 'name_ur' | 'name_en'>): PickerValue {
   return pickedOf(hit);
@@ -145,6 +132,8 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
   useEffect(() => {
     if (isEmbedded) focusFirstEmptyField(nameRef.current);
   }, [isEmbedded]);
+  // The record the last save made, handed back when the form closes.
+  const savedRef = useRef<AddedRecord | null>(null);
   const doneRef = useRef(embedded?.onDone);
   useEffect(() => {
     doneRef.current = embedded?.onDone;
@@ -152,7 +141,7 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
   // Go back to the list once a save or a change of state is finished and the form is clean.
   useEffect(() => {
     if (!leaving) return;
-    if (isEmbedded) doneRef.current?.(true);
+    if (isEmbedded) doneRef.current?.(savedRef.current);
     else void navigate({ to: listPath });
   }, [leaving, isEmbedded, listPath, navigate]);
 
@@ -167,6 +156,7 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
       );
       if (saved === undefined) return false;
       remember(config.kind, saved.id);
+      savedRef.current = { id: saved.id, code: saved.code };
       setBaseline(valuesOf(config, saved));
       showToast('success', l10n.getString('masters-saved'));
       return true;
@@ -189,7 +179,7 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
     } else if (dirty) {
       setAskLeave(true);
     } else {
-      embedded.onDone(false);
+      embedded.onDone(null);
     }
   };
   useEscape('leave', goBack, !askLeave);
@@ -261,64 +251,18 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
       );
     }
     return (
-      <Field
+      <MasterFieldInput
         key={spec.key}
-        label={<Localized id={spec.labelId} />}
-        hint={spec.hintId === undefined ? undefined : <Localized id={spec.hintId} />}
-        error={fieldError(error, fieldPath(spec))}
-      >
-        {(props) => {
-          switch (kind.type) {
-            case 'text':
-              return (
-                <TextInput
-                  {...props}
-                  value={values.text[spec.key] ?? ''}
-                  onChange={setText(spec.key)}
-                />
-              );
-            case 'latin':
-              return (
-                <TextInput
-                  {...props}
-                  value={values.text[spec.key] ?? ''}
-                  onChange={setText(spec.key)}
-                  lang="en"
-                />
-              );
-            case 'select':
-              return (
-                <Select
-                  {...props}
-                  value={values.text[spec.key]}
-                  onChange={setText(spec.key)}
-                  options={kind.options.map((option) => ({
-                    value: option.value,
-                    label: <Localized id={option.labelId} />,
-                  }))}
-                />
-              );
-            case 'picker':
-              return (
-                <Picker
-                  {...props}
-                  scope={kind.scope}
-                  value={values.refs[spec.key] ?? null}
-                  onChange={setRef(spec.key)}
-                />
-              );
-            case 'account':
-              return (
-                <AccountPicker
-                  {...props}
-                  scope={kind.scope}
-                  value={values.refs[spec.key] ?? null}
-                  onChange={setRef(spec.key)}
-                />
-              );
-          }
+        spec={spec}
+        values={values}
+        error={error}
+        onText={(key, text) => {
+          setText(key)(text);
         }}
-      </Field>
+        onRef={(key, hit) => {
+          setRef(key)(hit);
+        }}
+      />
     );
   };
 
@@ -469,7 +413,7 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
           }}
           onLeave={() => {
             setAskLeave(false);
-            embedded.onDone(false);
+            embedded.onDone(null);
           }}
         />
       )}

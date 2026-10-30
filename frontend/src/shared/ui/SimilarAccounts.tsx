@@ -8,15 +8,22 @@
 
 import { Localized } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';
-import { useLanguage, displayName } from '../../../shared/i18n';
-import { Code } from '../../../shared/ui';
-import type { AccountMatch } from '../../../shared/accounts';
+import type { AccountMatch } from '../accounts';
+import { displayName, useLanguage } from '../i18n';
+import { Code } from './Code';
+import { LinkButton } from './LinkButton';
 
 interface SimilarAccountsProps {
   matches: readonly AccountMatch[];
+  /**
+   * Takes the account instead of making a new one (the quick add from a picker, plan 41). A row
+   * has the button only where `canPick` says its account fits the field.
+   */
+  onPick?: ((match: AccountMatch) => void) | undefined;
+  canPick?: ((match: AccountMatch) => boolean) | undefined;
 }
 
-export function SimilarAccounts({ matches }: SimilarAccountsProps) {
+export function SimilarAccounts({ matches, onPick, canPick }: SimilarAccountsProps) {
   const language = useLanguage();
   if (matches.length === 0) return null;
   return (
@@ -53,6 +60,17 @@ export function SimilarAccounts({ matches }: SimilarAccountsProps) {
               <Localized id="accounts-similar-duplicate-chip">
                 <span className="rounded-1 border border-due bg-due-soft px-2 type-chip text-due" />
               </Localized>
+            ) : null}
+            {onPick !== undefined && (canPick?.(match) ?? true) ? (
+              <span className="ms-auto">
+                <LinkButton
+                  onClick={() => {
+                    onPick(match);
+                  }}
+                >
+                  <Localized id="search-quick-pick" />
+                </LinkButton>
+              </span>
             ) : null}
           </li>
         ))}

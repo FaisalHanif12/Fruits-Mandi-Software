@@ -60,7 +60,6 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
               });
             }}
             onAddNew={setAdding}
-            addLabelId="search-add-khata"
           />
         )}
       </Field>

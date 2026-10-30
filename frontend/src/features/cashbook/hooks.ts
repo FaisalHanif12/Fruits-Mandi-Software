@@ -9,7 +9,6 @@ import { usePagedQuery, usePreviewQuery } from '../../shared/hooks';
 import { VOUCHERS_KEY, vouchersPreview } from '../vouchers';
 import {
   cashbookGet,
-  expenseHeads,
   expensePreview,
   generalPreview,
   generalSave,
@@ -75,15 +74,6 @@ export function useCashbook(
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,
-  });
-}
-
-/** The shop expense heads, the most used first (PRD FR-7.62). */
-export function useExpenseHeads() {
-  return useQuery({
-    queryKey: [...CASHBOOK_KEY, 'heads'],
-    queryFn: expenseHeads,
-    staleTime: 0,
   });
 }
 

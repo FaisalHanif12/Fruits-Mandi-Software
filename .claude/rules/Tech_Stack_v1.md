@@ -6,7 +6,7 @@
 | Version | 1.7 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026) |
 | Date | 30 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.10 (the master), NFR v1.6 |
+| Depends on | PRD v1.11 (the master), NFR v1.6 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---

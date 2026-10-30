@@ -9,11 +9,13 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as cashbookApi from '../../src/features/cashbook/api';
+import * as searchApi from '../../src/shared/search/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { HEADS } from '../helpers/cashbook-books';
 import {
   choose,
+  chooseRecord,
   dropdown,
   labelled,
   named,
@@ -25,7 +27,8 @@ import {
 import { FORMER_PAYMENT_LABELS, labelIs } from '../helpers/former-payment-labels';
 import type { FakeCashbook } from '../helpers/cashbook';
 import { fail, leaveAppWindow, press, renderApp } from '../helpers/app';
-import { message, visible } from '../helpers/render';
+import { fakeMasters, record } from '../helpers/masters';
+import { message, paragraph, visible } from '../helpers/render';
 import { settlePreview } from '../helpers/preview-settled';
 
 vi.mock('../../src/app/api');
@@ -106,18 +109,24 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('the heads come most used first, as the backend sent them', async () => {
+  it('the head field lists every head, with the add row at the end of the list (plan 41)', async () => {
     const { user } = await open();
     await user.click(await dropdown(language, 'cashbook-field-head'));
     const options = await screen.findAllByRole('option');
-    expect(options.map((option) => visible(option.textContent))).toEqual(
-      HEADS.map((_, index) => headName(index)),
-    );
+    expect(options).toHaveLength(HEADS.length);
+    options.forEach((option, index) => {
+      expect(visible(option.textContent)).toContain(headName(index));
+    });
+    expect(
+      screen.getByRole('button', {
+        name: startsWith(message(language, 'search-add-row', { noun: 'expense-head' })),
+      }),
+    ).toBeInTheDocument();
   });
 
   it("shows each partner's share before the save, with the backend's workings (E2E-39, E2E-20)", async () => {
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     await typeAmount(user, language, '3000');
     await waitFor(() => {
       expect(cashbookApi.expensePreview).toHaveBeenLastCalledWith(
@@ -150,7 +159,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
 
   it('F10 saves it as typed, says so, keeps the date, clears the rest and lists it with the total', async () => {
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     await typeAmount(user, language, '3000');
     await user.click(await labelled(language, 'cashbook-field-narration'));
     await user.keyboard('x');
@@ -193,7 +202,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
 
   it('changing the type keeps the date, amount and narration and clears the rest (FR-7.67)', async () => {
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     await typeAmount(user, language, '3000');
     await user.click(await labelled(language, 'cashbook-field-narration'));
     await user.keyboard('n');
@@ -289,7 +298,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
 
   it('a name of a partner in "paid to" offers ذاتی خرچہ with a button; only the button switches (FR-7.68)', async () => {
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     await typeAmount(user, language, '3000');
     await user.click(await labelled(language, 'cashbook-field-paid-to'));
     await user.keyboard('x');
@@ -329,7 +338,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
   it('cash below zero shows the amber note, F10 asks with No focused, No saves nothing, Yes saves', async () => {
     books.store.cash = 1000;
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     await typeAmount(user, language, '3000');
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'common-cash-confirm-title'));
@@ -389,7 +398,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
       }),
     );
     expect((await labelled(language, 'cashbook-field-amount')).value).toBe('25,000');
-    expect(await dropdown(language, 'cashbook-field-head')).toHaveTextContent(headName(1));
+    expect(await dropdown(language, 'cashbook-field-head')).toHaveValue(headName(1));
     // It fills the form only: nothing was saved, and the panel closed.
     expect(cashbookApi.saveShopExpense).not.toHaveBeenCalled();
     expect(
@@ -409,7 +418,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
 
   it('a refused field shows at the field and nothing typed is lost', async () => {
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     await typeAmount(user, language, '3000');
     vi.mocked(cashbookApi.saveShopExpense).mockRejectedValueOnce(
       fail({ code: 'ERR_DATE_CLOSED', field: 'date', values: { closed_up_to: '09-10-2026' } }),
@@ -444,7 +453,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
 
   it('switching the language in the middle of an entry loses nothing', async () => {
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     await typeAmount(user, language, '3000');
     await user.click(await labelled(language, 'cashbook-field-narration'));
     await user.keyboard('n');
@@ -456,7 +465,7 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     expect((await labelled(other, 'cashbook-field-narration')).value).toBe('n');
     const head = HEADS[0];
     if (head === undefined) throw new Error('no head');
-    expect(await dropdown(other, 'cashbook-field-head')).toHaveTextContent(
+    expect(await dropdown(other, 'cashbook-field-head')).toHaveValue(
       nameOf(other, head.name_ur, head.name_en),
     );
     const group = screen.getByRole('group', {
@@ -469,26 +478,17 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     ).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('the heads failing to load says so with a retry that works', async () => {
-    vi.mocked(cashbookApi.expenseHeads).mockRejectedValueOnce(
-      fail({ code: 'ERR_NOT_IMPLEMENTED' }),
-    );
-    await open();
-    const title = await screen.findByText(message(language, 'cashbook-heads-failed'));
-    const section = title.closest('[role="alert"]');
-    if (!(section instanceof HTMLElement)) throw new Error('no alert');
-    expect(visible(section.textContent)).toContain(message(language, 'err-not-implemented'));
-    await userEvent.setup().click(
-      within(section).getByRole('button', {
-        name: startsWith(message(language, 'common-retry')),
-      }),
-    );
-    expect(await dropdown(language, 'cashbook-field-head')).toBeInTheDocument();
+  it('the heads failing to load says so inside the list of the head field', async () => {
+    vi.mocked(searchApi.searchMasters).mockRejectedValue(fail({ code: 'ERR_NOT_IMPLEMENTED' }));
+    const { user } = await open();
+    await user.click(await dropdown(language, 'cashbook-field-head'));
+    expect(await screen.findByText(message(language, 'search-error'))).toBeInTheDocument();
+    expect(screen.getByText(message(language, 'err-not-implemented'))).toBeInTheDocument();
   });
 
   it('a failing preview says so with a retry, and nothing is made up', async () => {
     const { user } = await open();
-    await choose(user, language, 'cashbook-field-head', headName(0));
+    await chooseRecord(user, language, 'cashbook-field-head', headName(0));
     vi.mocked(cashbookApi.expensePreview).mockRejectedValueOnce(
       fail({ code: 'ERR_NOT_IMPLEMENTED' }),
     );
@@ -516,14 +516,18 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     await waitFor(() => {
       expect(date).toHaveFocus();
     });
-    // Enter walks the fields; the head is a drop-down the keyboard opens.
+    // Enter walks the fields; the head is a picker: its first letters and Enter choose it.
     await user.keyboard('{Enter}');
     const head = await dropdown(language, 'cashbook-field-head');
     await waitFor(() => {
       expect(head).toHaveFocus();
     });
+    await user.keyboard(headName(0).slice(0, 2));
+    await screen.findByRole('option', { name: startsWith(headName(0)) });
     await user.keyboard('{Enter}');
-    await user.click(await screen.findByRole('option', { name: named(headName(0)) }));
+    await waitFor(() => {
+      expect(head).toHaveValue(headName(0));
+    });
     await typeAmount(user, language, '3000');
     press('F10');
     await waitFor(() => {
@@ -537,5 +541,220 @@ describe.each(LANGUAGES)('the خرچہ screen (%s)', (language) => {
     });
     press('F2');
     expect((await labelled(language, 'cashbook-field-date')).value).toBe('10-10-2026');
+  });
+});
+
+// Plan 41, PRD FR-7.69, E74, E75: Umar's own words, "I go to the Index, add the expense head and
+// come back. We should add it here, it saves in the list, and next time it shows in the drop down."
+describe.each(LANGUAGES)('adding an expense head on the spot (%s)', (language) => {
+  let masters: ReturnType<typeof fakeMasters>;
+
+  beforeEach(() => {
+    prepareCashbook(language);
+  });
+
+  /** The masters again: with or without heads, keeping the store so a test can read what was saved. */
+  function withHeads(...heads: (readonly [number, string, string, string])[]) {
+    masters = fakeMasters({
+      staff: [record('staff', 81, '0001', 'اسلم', 'Aslam')],
+      expense_head: heads.map(([id, code, ur, en]) => record('expense_head', id, code, ur, en)),
+    });
+  }
+
+  // The head he types, in the script of the screen.
+  const typed = nameOf(language, 'بجلی', 'Electricity');
+  const nameBox = nameOf(language, 'masters-field-name-ur', 'masters-field-name-en');
+  const dialogTitle = () => ({ name: named(message(language, 'masters-expense-head-new')) });
+  const headBox = () => dropdown(language, 'cashbook-field-head');
+  const addRowName = (text?: string) => (name: string) =>
+    visible(name).startsWith(
+      text === undefined
+        ? message(language, 'search-add-row', { noun: 'expense-head' })
+        : message(language, 'search-add-row-named', { noun: 'expense-head', text }),
+    );
+
+  async function open() {
+    const app = await renderApp('/rokar/expense?type=shop_expense');
+    await screen.findByRole('heading', {
+      level: 1,
+      name: message(language, 'cashbook-expense-title'),
+    });
+    return { ...app, user: userEvent.setup() };
+  }
+
+  it('with no heads the list says so in words, never an empty box, and the row adds one', async () => {
+    withHeads();
+    const { user } = await open();
+    await typeAmount(user, language, '3000');
+    await user.click(await headBox());
+    expect(
+      await screen.findByText(
+        paragraph(message(language, 'search-empty-kind', { noun: 'expense-head' })),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(await screen.findByRole('button', { name: addRowName() })).toBeInTheDocument();
+  });
+
+  it('type the head, ↓ then Enter on the row, F10: the head is saved and chosen, the amount is kept, and the next entry lists it', async () => {
+    withHeads();
+    const { user } = await open();
+    await typeAmount(user, language, '3000');
+    await user.click(await headBox());
+    await user.keyboard(typed);
+    await screen.findByRole('button', { name: addRowName(typed) });
+    await user.keyboard('{ArrowDown}{Enter}');
+    const dialog = await screen.findByRole('dialog', dialogTitle());
+    expect(
+      (await within(dialog).findByLabelText<HTMLInputElement>(named(message(language, nameBox))))
+        .value,
+    ).toBe(typed);
+    press('F10');
+    await waitFor(() => {
+      expect(masters.rows.expense_head).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', dialogTitle())).not.toBeInTheDocument();
+    });
+    // It is chosen in the field, the cursor is there, and the amount typed before is still there.
+    const head = await headBox();
+    await waitFor(() => {
+      expect(head).toHaveValue(typed);
+    });
+    expect(head).toHaveFocus();
+    expect((await labelled(language, 'cashbook-field-amount')).value).toBe('3,000');
+    // F10 in the form saved the head only, not the expense under it.
+    expect(cashbookApi.saveShopExpense).not.toHaveBeenCalled();
+    // Now the expense itself saves with the new head.
+    press('F10');
+    await waitFor(() => {
+      expect(cashbookApi.saveShopExpense).toHaveBeenCalledTimes(1);
+    });
+    const saved = masters.rows.expense_head[0];
+    expect(vi.mocked(cashbookApi.saveShopExpense).mock.calls[0]?.[0]).toMatchObject({
+      expense_head_id: saved?.id,
+      amount: '3000',
+    });
+    // Next time it shows in the drop down.
+    press('F2');
+    await user.click(await headBox());
+    const rows = await screen.findAllByRole('option');
+    expect(rows).toHaveLength(1);
+    expect(visible(rows[0]?.textContent)).toContain(typed);
+  });
+
+  it('the mouse does the same: the row, then Save', async () => {
+    withHeads();
+    const { user } = await open();
+    await user.click(await headBox());
+    await user.keyboard(typed);
+    await user.click(await screen.findByRole('button', { name: addRowName(typed) }));
+    await screen.findByRole('dialog', dialogTitle());
+    await user.click(
+      screen.getByRole('button', { name: startsWith(message(language, 'layout-save-save')) }),
+    );
+    await waitFor(() => {
+      expect(masters.rows.expense_head).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', dialogTitle())).not.toBeInTheDocument();
+    });
+    expect(await headBox()).toHaveValue(typed);
+  });
+
+  it('F4 in the head field opens the same form', async () => {
+    withHeads([1, '05010001', 'چائے', 'Tea']);
+    const { user } = await open();
+    const head = await headBox();
+    await user.click(head);
+    await user.keyboard('zz');
+    act(() => {
+      head.dispatchEvent(new KeyboardEvent('keydown', { code: 'F4', key: 'F4', bubbles: true }));
+    });
+    const dialog = await screen.findByRole('dialog', dialogTitle());
+    // Letters of the English script start the English name, in either language of the screen.
+    expect(
+      (
+        await within(dialog).findByLabelText<HTMLInputElement>(
+          named(message(language, 'masters-field-name-en')),
+        )
+      ).value,
+    ).toBe('zz');
+  });
+
+  it('Esc in the form leaves the field as it was and the amount typed', async () => {
+    withHeads();
+    const { user } = await open();
+    await typeAmount(user, language, '3000');
+    await user.click(await headBox());
+    await user.keyboard(typed);
+    await screen.findByRole('button', { name: addRowName(typed) });
+    await user.keyboard('{ArrowDown}{Enter}');
+    await screen.findByRole('dialog', dialogTitle());
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', dialogTitle())).not.toBeInTheDocument();
+    });
+    expect(masters.rows.expense_head).toHaveLength(0);
+    const head = await headBox();
+    await waitFor(() => {
+      expect(head).toHaveFocus();
+    });
+    expect(head).toHaveValue(typed);
+    expect((await labelled(language, 'cashbook-field-amount')).value).toBe('3,000');
+  });
+
+  it('a name like a head already there shows it under the name, and it can be taken instead', async () => {
+    withHeads([1, '05010001', 'بجلی', 'Electricity']);
+    const { user } = await open();
+    await user.click(await headBox());
+    // The list is open: the row is at its end, whatever the text.
+    await user.click(await screen.findByRole('button', { name: addRowName() }));
+    const dialog = await screen.findByRole('dialog', dialogTitle());
+    const box = await within(dialog).findByLabelText<HTMLInputElement>(
+      named(message(language, nameBox)),
+    );
+    await user.type(box, nameOf(language, 'بجلی', 'Electric'));
+    const panel = (
+      await within(dialog).findByRole('heading', {
+        name: named(message(language, 'search-quick-similar-title')),
+      })
+    ).closest('section');
+    if (panel === null) throw new Error('no panel');
+    expect(visible(panel.textContent)).toContain(nameOf(language, 'بجلی', 'Electricity'));
+    await user.click(
+      within(panel).getByRole('button', { name: named(message(language, 'search-quick-pick')) }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', dialogTitle())).not.toBeInTheDocument();
+    });
+    expect(masters.rows.expense_head).toHaveLength(1);
+    expect(await headBox()).toHaveValue(nameOf(language, 'بجلی', 'Electricity'));
+  });
+
+  it('switching the language with the form open loses nothing typed in it or under it', async () => {
+    withHeads();
+    const { user } = await open();
+    await typeAmount(user, language, '3000');
+    await user.click(await headBox());
+    await user.keyboard(typed);
+    await screen.findByRole('button', { name: addRowName(typed) });
+    await user.keyboard('{ArrowDown}{Enter}');
+    await screen.findByRole('dialog', dialogTitle());
+    const other: Language = language === 'ur' ? 'en' : 'ur';
+    act(() => {
+      useLanguageStore.setState({ language: other });
+    });
+    const dialog = await screen.findByRole('dialog', {
+      name: named(message(other, 'masters-expense-head-new')),
+    });
+    expect(
+      (
+        await within(dialog).findByLabelText<HTMLInputElement>(
+          named(message(other, nameOf(language, 'masters-field-name-ur', 'masters-field-name-en'))),
+        )
+      ).value,
+    ).toBe(typed);
+    expect((await labelled(other, 'cashbook-field-amount')).value).toBe('3,000');
   });
 });
